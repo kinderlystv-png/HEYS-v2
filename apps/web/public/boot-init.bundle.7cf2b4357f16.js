@@ -592,16 +592,18 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
   }
 
   // ─────────────────────────────────────────────────────
-  // v3.0.0 CRS (Cascade Rate Score) CONSTANTS
+  // v3.7.0 CRS (Cascade Rate Score) CONSTANTS
   // ─────────────────────────────────────────────────────
 
-  const CRS_DECAY = 0.95;            // EMA decay factor (α) (v3.3.0: 0.92→0.95, half-life 14d вместо 8d)
+  const CRS_DECAY = 0.95;            // EMA decay factor (α) (half-life ~14d)
   const CRS_WINDOW = 30;             // days for EMA computation
   const CRS_DCS_CLAMP_NEG = -0.3;    // inertia protection for normal bad days
-  const CRS_TODAY_BOOST = 0.03;      // v3.6.0: today's DCS contribution to display CRS (max +3%)
+  const CRS_TODAY_BOOST = 0.03;      // today's DCS positive contribution (max +3%)
+  const CRS_TODAY_PENALTY = 0.10;    // v3.7.0: intraday severe penalty (max -10%)
+  const CRS_NEGATIVE_GRAVITY = 2.0;  // v3.7.0: bad days are weighted heavier in EMA
   const CRS_CEILING_BASE = 0.65;     // starting ceiling for all users
-  const CRS_KEY_VERSION = 'v7';      // localStorage schema version (v7: chronotype-adaptive meals, MT=8.5)
-  const CRS_PREV_KEY_VERSION = 'v6';  // for migration detection
+  const CRS_KEY_VERSION = 'v8';      // localStorage schema version (v8: asymmetric penalty)
+  const CRS_PREV_KEY_VERSION = 'v7'; // for migration detection
 
   const CRS_THRESHOLDS = {
     STRONG: 0.75,    // Устойчивый импульс
@@ -1557,17 +1559,15 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
   /**
    * Compute CRS base via Exponential Moving Average (EMA).
-   * v3.6.0: only completed days (i≥1). Today's DCS is added as
-   * todayBonus = DCS × CRS_TODAY_BOOST in computeCascadeState.
-   * This prevents incomplete day from suppressing CRS while
-   * still giving instant feedback via the boost term.
+   * v3.7.0: only completed days (i≥1). Asymmetric gravity applied to bad days.
+   * Today's DCS is handled in computeCascadeState.
    */
   function computeCascadeRate(dcsByDate, ceiling, todayDate) {
     var weights = [];
     var values = [];
     var today = todayDate ? new Date(todayDate + 'T12:00:00') : new Date();
 
-    // v3.6.0: start from i=1 (yesterday) — today excluded from base EMA
+    // start from i=1 (yesterday) — today excluded from base EMA
     for (var i = 1; i < CRS_WINDOW; i++) {
       var d = new Date(today);
       d.setDate(d.getDate() - i);
@@ -1576,6 +1576,12 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
       if (dcsVal !== undefined && dcsVal !== null) {
         var weight = Math.pow(CRS_DECAY, i - 1); // yesterday = α⁰ = 1.0
+
+        // v3.7.0: Asymmetric gravity — critical bad days drop CRS much faster
+        if (dcsVal < -0.1) {
+          weight *= CRS_NEGATIVE_GRAVITY;
+        }
+
         weights.push(weight);
         values.push(dcsVal * weight);
       }
@@ -2727,18 +2733,28 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
     console.info('[HEYS.cascade.crs] 🏔️ Individual ceiling:', ceilingResult);
 
-    // 5. Compute CRS via EMA (base = completed days only) + today's boost
+    // 5. Compute CRS via EMA (base = completed days only) + today's direct effect
     var crsBase = computeCascadeRate(dcsHistory, ceiling, todayStr);
-    // v3.6.0: today's actions give instant visible boost to CRS
-    // DCS 0→1 maps to 0→+3% on top of base. Clamped to ceiling.
-    var todayBoost = Math.max(0, todayDcs) * CRS_TODAY_BOOST;
+
+    // v3.7.0: today's actions give instant visible impact to CRS
+    // Positive DCS gives slight boost (up to +3%).
+    // Negative DCS (violations) gives heavy penalty (up to -10%).
+    var todayBoost = 0;
+    if (todayDcs > 0) {
+      todayBoost = todayDcs * CRS_TODAY_BOOST;
+    } else if (todayDcs < -0.1) {
+      // Intraday negative DCS instantly affects CRS to show immediate consequence
+      // e.g. DCS -0.7 means -0.07 (-7%) instant drop in addition to EMA.
+      todayBoost = todayDcs * CRS_TODAY_PENALTY;
+    }
+
     var crs = +clamp(crsBase + todayBoost, 0, ceiling).toFixed(3);
 
-    console.info('[HEYS.cascade.crs] 📈 CRS (Cascade Rate Score) v3.6.0:', {
+    console.info('[HEYS.cascade.crs] 📈 CRS (Cascade Rate Score) v3.7.0:', {
       crsBase: +crsBase.toFixed(3),
       todayBoost: +todayBoost.toFixed(4),
       crs: crs,
-      formula: 'CRS_base(' + crsBase.toFixed(3) + ') + DCS(' + todayDcs.toFixed(3) + ') × ' + CRS_TODAY_BOOST + ' = ' + crs,
+      formula: 'CRS_base(' + crsBase.toFixed(3) + ') + todayBoost(' + todayBoost.toFixed(3) + ') = ' + crs,
       ceiling: ceiling,
       dcsToday: +todayDcs.toFixed(3),
       dcsHistoryDays: Object.keys(dcsHistory).length,

@@ -1,58 +1,58 @@
 {
   "boot-core": {
-    "file": "boot-core.bundle.16e82d745029.js",
-    "hash": "16e82d745029",
+    "file": "boot-core.bundle.e620c40d1985.js",
+    "hash": "e620c40d1985",
     "fileCount": 25,
     "size": 1178519,
-    "builtAt": "2026-02-27T17:29:46.732Z"
+    "builtAt": "2026-02-27T20:18:31.233Z"
   },
   "boot-calc": {
     "file": "boot-calc.bundle.9701e1633ac1.js",
     "hash": "9701e1633ac1",
     "fileCount": 19,
     "size": 897632,
-    "builtAt": "2026-02-27T17:29:46.757Z"
+    "builtAt": "2026-02-27T20:18:31.260Z"
   },
   "boot-day": {
     "file": "boot-day.bundle.0f10e7bf96dc.js",
     "hash": "0f10e7bf96dc",
     "fileCount": 51,
     "size": 901365,
-    "builtAt": "2026-02-27T17:29:46.788Z"
+    "builtAt": "2026-02-27T20:18:31.299Z"
   },
   "boot-app": {
     "file": "boot-app.bundle.3af03331a49b.js",
     "hash": "3af03331a49b",
     "fileCount": 48,
     "size": 1091749,
-    "builtAt": "2026-02-27T17:29:46.822Z"
+    "builtAt": "2026-02-27T20:18:31.335Z"
   },
   "boot-init": {
-    "file": "boot-init.bundle.034ea703f881.js",
-    "hash": "034ea703f881",
+    "file": "boot-init.bundle.7cf2b4357f16.js",
+    "hash": "7cf2b4357f16",
     "fileCount": 8,
-    "size": 359869,
-    "builtAt": "2026-02-27T17:29:46.834Z"
+    "size": 360336,
+    "builtAt": "2026-02-27T20:18:31.345Z"
   },
   "postboot-1-game": {
     "file": "postboot-1-game.bundle.d05687516b76.js",
     "hash": "d05687516b76",
     "fileCount": 29,
     "size": 1387945,
-    "builtAt": "2026-02-27T17:29:46.871Z"
+    "builtAt": "2026-02-27T20:18:31.384Z"
   },
   "postboot-2-insights": {
     "file": "postboot-2-insights.bundle.92f88e068db2.js",
     "hash": "92f88e068db2",
     "fileCount": 39,
     "size": 1802185,
-    "builtAt": "2026-02-27T17:29:46.918Z"
+    "builtAt": "2026-02-27T20:18:31.439Z"
   },
   "postboot-3-ui": {
     "file": "postboot-3-ui.bundle.9df20d00d993.js",
     "hash": "9df20d00d993",
     "fileCount": 25,
     "size": 1312349,
-    "builtAt": "2026-02-27T17:29:46.953Z"
+    "builtAt": "2026-02-27T20:18:31.471Z"
   }
 }
