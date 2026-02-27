@@ -7,6 +7,8 @@ import Image from 'next/image'
 import { useEffect, useState } from 'react'
 
 import { LandingVariant, VariantContent } from '@/config/landing-variants'
+import { getHeroHeadline, getHeroSubheadline } from '@/lib/ab-test'
+import { useABTest } from '@/lib/useABTest'
 
 interface HeroSSRProps {
   content: VariantContent
@@ -27,6 +29,9 @@ export default function HeroSSR({ content }: HeroSSRProps) {
   const [menuOpen, setMenuOpen] = useState(false)
   const [mounted, setMounted] = useState(false)
   const [scrolled, setScrolled] = useState(false)
+  const heroCopyVariant = useABTest('hero_copy')
+  const abHeadline = getHeroHeadline(heroCopyVariant)
+  const abSubheadline = getHeroSubheadline(heroCopyVariant)
 
   // Trigger animations after mount
   useEffect(() => {
@@ -153,19 +158,23 @@ export default function HeroSSR({ content }: HeroSSRProps) {
             </div>
           </div>
 
-          {/* H1 — Main headline with animation */}
+          {/* H1 — Main headline with A/B test */}
           <h1 className={`text-[26px] sm:text-[28px] md:text-[36px] lg:text-[40px] font-light text-[#374151] mb-3 md:mb-8 leading-[1.15] text-center lg:text-left transition-all duration-700 ease-out ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'
             }`} style={{ transitionDelay: '500ms' }}>
             <span className="text-[#111827] font-semibold">
-              HEYS — для тех, кто хочет управлять<br className="hidden sm:inline" /> своей жизнью.
+              {abHeadline}
             </span>
           </h1>
 
-          {/* H2 — Subheadline with animation (visible on first screen for mobile too) */}
+          {/* H2 — Subheadline with A/B test (visible on first screen for mobile too) */}
           <h2 className={`lg:hidden text-[13px] sm:text-[14px] text-[#374151] font-normal mb-6 leading-[1.5] text-center transition-all duration-700 ease-out ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'
             }`} style={{ transitionDelay: '1000ms' }}>
-            Вы управляете решениями. Мы держим процесс.<br /> За счет системы, а не силы воли:<br />
-            <span className="text-[#111827] font-semibold">контекст → решения → поддержка → контроль.</span>
+            {abSubheadline.split('\n').map((line, i) => (
+              <span key={i}>
+                {i > 0 && <br />}
+                {line}
+              </span>
+            ))}
           </h2>
 
         </div>
@@ -175,7 +184,7 @@ export default function HeroSSR({ content }: HeroSSRProps) {
       <div className={`lg:hidden pointer-events-none fixed bottom-8 left-1/2 -translate-x-1/2 z-20 transition-all duration-700 ease-out ${mounted && !scrolled ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
         }`} style={{ transitionDelay: scrolled ? '0ms' : '3000ms' }}>
         <a
-          href="#what-is-heys"
+          href="#pain"
           aria-label="Прокрутить вниз"
           className="pointer-events-auto inline-flex h-12 w-12 items-center justify-center rounded-full border border-[#111827]/15 bg-white/80 text-[#111827] shadow-sm backdrop-blur-sm transition-all hover:translate-y-[2px] hover:border-[#111827]/25 hover:bg-white hover:shadow-md active:scale-95"
         >
@@ -202,7 +211,7 @@ export default function HeroSSR({ content }: HeroSSRProps) {
       <div className={`hidden lg:block pointer-events-none fixed bottom-8 left-1/2 -translate-x-1/2 z-20 transition-all duration-700 ease-out ${mounted && !scrolled ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
         }`} style={{ transitionDelay: scrolled ? '0ms' : '5000ms' }}>
         <a
-          href="#what-is-heys"
+          href="#pain"
           aria-label="Прокрутить вниз"
           className="pointer-events-auto inline-flex h-12 w-12 items-center justify-center rounded-full border border-[#111827]/15 bg-white/80 text-[#111827] shadow-sm backdrop-blur-sm transition-all hover:translate-y-[2px] hover:border-[#111827]/25 hover:bg-white hover:shadow-md active:scale-95"
         >
@@ -232,11 +241,15 @@ export default function HeroSSR({ content }: HeroSSRProps) {
 
             {/* Left Column — Text Content */}
             <div className="text-center lg:text-left">
-              {/* H2 — Subheadline (с переносом строки если есть \n) */}
+              {/* H2 — Subheadline desktop with A/B test */}
               <h2 className={`text-[14px] md:text-[17px] text-[#374151] font-normal mb-5 md:mb-6 leading-[1.5] hidden lg:block transition-all duration-700 ease-out ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'
                 }`} style={{ transitionDelay: '1000ms' }}>
-                Вы управляете решениями. Мы держим процесс. За счет системы, а не силы воли:<br />
-                <span className="text-[#111827] font-semibold">контекст → решения → поддержка → контроль.</span>
+                {abSubheadline.split('\n').map((line, i) => (
+                  <span key={i}>
+                    {i > 0 && <br />}
+                    {line}
+                  </span>
+                ))}
               </h2>
 
               {/* H3 — Features (если есть) */}

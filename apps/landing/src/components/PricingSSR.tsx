@@ -36,7 +36,7 @@ export default function PricingSSR({ content, variant: _variant }: PricingSSRPro
         'Всё из Base',
         'Куратор ведёт ваш дневник питания',
         'Чат: 09:00–21:00 (время клиента)',
-        'Ответ ≤60 минут в рабочие часы',
+        'Ответ ≤30 минут в рабочие часы',
         'Выходные/праздники: дежурный режим',
         'Еженедельный созвон 20–45 минут',
         'Анти‑срыв сигнал — приоритет',
@@ -54,7 +54,7 @@ export default function PricingSSR({ content, variant: _variant }: PricingSSRPro
       features: [
         'Всё из Pro',
         '09:00–21:00 — полный режим 7/7 (без дежурного)',
-        'Приоритет в очереди ответов в рабочие часы (≤60 мин)',
+        'Приоритет в очереди ответов в рабочие часы (≤30 мин)',
         'Разбор в середине недели',
       ],
       cta: 'Выбрать Pro+',
@@ -76,11 +76,10 @@ export default function PricingSSR({ content, variant: _variant }: PricingSSRPro
             {plans.map((plan) => (
               <div
                 key={plan.name}
-                className={`relative rounded-2xl p-8 ${
-                  plan.featured
+                className={`relative rounded-2xl p-8 ${plan.featured
                     ? 'bg-white border-2 border-blue-600 shadow-lg'
                     : 'bg-white border border-gray-200'
-                }`}
+                  }`}
               >
                 {plan.badge ? (
                   <div className="absolute -top-3 left-1/2 -translate-x-1/2">
@@ -110,11 +109,10 @@ export default function PricingSSR({ content, variant: _variant }: PricingSSRPro
 
                 <a
                   href="#trial"
-                  className={`block w-full text-center py-3 rounded-xl font-semibold transition-colors ${
-                    plan.featured
+                  className={`block w-full text-center py-3 rounded-xl font-semibold transition-colors ${plan.featured
                       ? 'bg-blue-600 text-white hover:bg-blue-700'
                       : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
-                  }`}
+                    }`}
                 >
                   {plan.cta}
                 </a>

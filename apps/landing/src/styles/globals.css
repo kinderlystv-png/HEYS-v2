@@ -88,6 +88,7 @@ body {
   from {
     opacity: 0;
   }
+
   to {
     opacity: 1;
   }
@@ -99,6 +100,7 @@ body {
     transform: translateY(18px);
     filter: blur(4px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -127,6 +129,7 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
+
   .hero-anim-bg,
   .hero-anim-fade,
   .hero-anim-rise {
@@ -142,10 +145,12 @@ body {
     transform: scale(0.92);
     opacity: 0.55;
   }
+
   70% {
     transform: scale(1.25);
     opacity: 0;
   }
+
   100% {
     transform: scale(1.25);
     opacity: 0;
@@ -157,10 +162,12 @@ body {
     transform: scale(0.9);
     opacity: 0.75;
   }
+
   65% {
     transform: scale(1.35);
     opacity: 0;
   }
+
   100% {
     transform: scale(1.35);
     opacity: 0;
@@ -189,5 +196,54 @@ body {
   .hero-scroll-cue::after {
     animation: none;
     display: none;
+  }
+}
+
+/* ═══════════════════════════════════════════════
+   Navigator Section — CRS Scale & Timer animations
+   ═══════════════════════════════════════════════ */
+
+@keyframes heysCrsPulse {
+
+  0%,
+  100% {
+    opacity: 0.7;
+  }
+
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes heysTimerPulse {
+
+  0%,
+  100% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.03);
+  }
+}
+
+.crs-bar-active {
+  animation: heysCrsPulse 2s ease-in-out infinite;
+}
+
+.timer-ring-active {
+  animation: heysTimerPulse 1.5s ease-in-out infinite;
+}
+
+/* Comparison table row hover highlight */
+.comparison-row-hover:hover {
+  background-color: rgba(59, 130, 246, 0.03);
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+  .crs-bar-active,
+  .timer-ring-active {
+    animation: none;
   }
 }

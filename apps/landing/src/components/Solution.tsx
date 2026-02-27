@@ -17,7 +17,7 @@ export default function Solution() {
               Куратор, который ведёт ваш дневник, держит фокус и рядом в моменты слабости.
             </p>
           </div>
-          
+
           {/* Central card - Curator */}
           <div className="bg-white rounded-3xl p-8 md:p-12 shadow-xl border border-gray-100 mb-12">
             <div className="flex flex-col md:flex-row gap-8 items-center">
@@ -31,7 +31,7 @@ export default function Solution() {
                   Ваш личный куратор
                 </h3>
                 <p className="text-lg text-gray-600 mb-4">
-                  Живой человек, который ведёт ваш дневник питания — вам не нужно ничего считать. 
+                  Живой человек, который ведёт ваш дневник питания — вам не нужно ничего считать.
                   Присылаете фото еды → куратор вносит. Просто и без рутины.
                 </p>
                 <div className="flex flex-wrap gap-3 justify-center md:justify-start">
@@ -39,7 +39,7 @@ export default function Solution() {
                     Ведёт дневник
                   </span>
                   <span className="bg-blue-100 text-blue-700 text-sm font-medium px-4 py-1.5 rounded-full">
-                    Ответ ≤60 мин
+                    Ответ ≤30 мин
                   </span>
                   <span className="bg-purple-100 text-purple-700 text-sm font-medium px-4 py-1.5 rounded-full">
                     Рядом при срыве
@@ -48,7 +48,7 @@ export default function Solution() {
               </div>
             </div>
           </div>
-          
+
           {/* What else you get */}
           <div className="grid md:grid-cols-3 gap-6 mb-12">
             <div className="bg-white rounded-2xl p-6 border border-gray-100 text-center">
@@ -58,7 +58,7 @@ export default function Solution() {
                 Где я сейчас? Что дальше? Вся аналитика понятно и без перегруза.
               </p>
             </div>
-            
+
             <div className="bg-white rounded-2xl p-6 border border-gray-100 text-center">
               <div className="text-3xl mb-3">🎯</div>
               <h4 className="font-semibold text-gray-900 mb-2">Ритм</h4>
@@ -66,7 +66,7 @@ export default function Solution() {
                 Утро → план. День → корректировка. Вечер → итоги. Неделя → созвон.
               </p>
             </div>
-            
+
             <div className="bg-white rounded-2xl p-6 border border-gray-100 text-center">
               <div className="text-3xl mb-3">🛟</div>
               <h4 className="font-semibold text-gray-900 mb-2">Анти-срыв</h4>
@@ -75,11 +75,11 @@ export default function Solution() {
               </p>
             </div>
           </div>
-          
+
           {/* Key message */}
           <div className="text-center">
             <p className="text-2xl md:text-3xl font-medium text-gray-900">
-              «Вас <span className="text-blue-600 font-bold">ведут</span>, 
+              «Вас <span className="text-blue-600 font-bold">ведут</span>,
               <br className="md:hidden" />
               а не оставляют с цифрами»
             </p>

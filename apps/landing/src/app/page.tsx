@@ -1,14 +1,21 @@
 // Главная страница — единственный лендинг (вариант A)
-// SSR версия с полным контентом в HTML
+// Порядок секций по COPY_FINAL v2.1:
+// Hero → Pain → Context → Decisions → Support → Control →
+// Comparison → Navigator → Trust → Objections → Formats → Pricing → Trial → FAQ → Footer
 
 import { Metadata } from 'next'
 
 import HeroSSR from '@/components/HeroSSR'
 import {
+  ComparisonSection,
   ContextSection,
   ControlSection,
   DecisionsSection,
+  NavigatorSection,
+  ObjectionsSection,
+  PainSection,
   SupportSection,
+  TrustSection,
 } from '@/components/sections'
 import VariantLandingSectionsSSR from '@/components/VariantLandingSectionsSSR'
 import { VARIANTS } from '@/config/landing-variants'
@@ -28,23 +35,39 @@ export default function Home() {
 
   return (
     <main>
-      {/* SSR Hero — контент в HTML */}
+      {/* 1. SSR Hero — первый экран, CTA, навигация */}
       <HeroSSR content={content} variant="A" />
 
-      {/* Секция Контекст — карта реальности */}
+      {/* 2. Боль — «Знакомо?» 5 болевых точек */}
+      <PainSection />
+
+      {/* 3. Контекст — карта реальности: какие данные собираем */}
       <ContextSection />
 
-      {/* Секция Решения — следующий шаг */}
+      {/* 4. Решения — 4-шаговый воркфлоу куратора */}
       <DecisionsSection />
 
-      {/* Секция Поддержка — система выдерживает жизнь */}
+      {/* 5. Поддержка — протокол восстановления при срыве */}
       <SupportSection />
 
-      {/* Секция Контроль — ощущение управления */}
+      {/* 6. Контроль — ощущение управления, финальные бенефиты */}
       <ControlSection />
 
-      {/* SSR секции — контент в HTML */}
+      {/* 7. Сравнение — 6-строчная таблица vs обычных приложений */}
+      <ComparisonSection />
+
+      {/* 8. Навигатор — CRS-шкала, причины, без наказания, инсулиновая волна */}
+      <NavigatorSection />
+
+      {/* 9. Доверие — куратор, наука, 3 принципа */}
+      <TrustSection />
+
+      {/* 10. Возражения — 4 частых сомнения в аккордеоне */}
+      <ObjectionsSection />
+
+      {/* 11-15. Форматы → Прайсинг → Триал → FAQ → Футер */}
       <VariantLandingSectionsSSR content={content} variant="A" />
     </main>
   )
 }
+
