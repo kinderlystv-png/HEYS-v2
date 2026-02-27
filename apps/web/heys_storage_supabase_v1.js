@@ -395,10 +395,15 @@
         }
 
         let result;
-        if (isPinAuth && typeof cloud.syncClientViaRPC === 'function') {
-          result = await cloud.syncClientViaRPC(clientId);
-        } else if (typeof cloud.bootstrapClientSync === 'function') {
+        // v60 FIX: PIN clients now use bootstrapClientSync (paginated REST)
+        // instead of syncClientViaRPC (monolithic RPC that 502s on 530+ keys).
+        // bootstrapClientSync uses heys-api-rest CF with PAGE_SIZE=400 pagination,
+        // Phase A fast-load (5 critical keys → UI unblocked), and delta sync.
+        if (typeof cloud.bootstrapClientSync === 'function') {
           result = await cloud.bootstrapClientSync(clientId, options);
+        } else if (isPinAuth && typeof cloud.syncClientViaRPC === 'function') {
+          // Legacy fallback: syncClientViaRPC only if bootstrapClientSync unavailable
+          result = await cloud.syncClientViaRPC(clientId);
         }
 
         // ⚡ v5.2.0: Invalidate pattern cache after successful sync
@@ -2349,7 +2354,7 @@
           // Нет сессии куратора — восстанавливаем PIN auth режим
           _pinAuthClientId = pinAuthClient;
           _rpcOnlyMode = true;
-          _rpcSyncInProgress = true; // 🔐 Блокируем bootstrapClientSync
+          // v60: _rpcSyncInProgress guard removed — PIN now uses bootstrapClientSync
           logCritical('🔐 PIN auth восстановлен для клиента:', pinAuthClient.substring(0, 8) + '...');
 
           // 🔄 v53 FIX: Используем cloud.syncClient() вместо прямого syncClientViaRPC
@@ -3740,17 +3745,9 @@
     // 🔐 PIN-авторизация: работаем без user, если client_id проверен через verify_client_pin
     const isPinAuth = _pinAuthClientId && _pinAuthClientId === client_id;
 
-    // 🔐 Если Yandex sync в процессе или уже завершён — пропускаем
-    if (_rpcOnlyMode && isPinAuth) {
-      if (_rpcSyncInProgress) {
-        log('[YANDEX MODE] Skipping bootstrapClientSync — Yandex sync in progress');
-        return;
-      }
-      if (initialSyncCompleted) {
-        log('[YANDEX MODE] Skipping bootstrapClientSync — already synced via Yandex');
-        return;
-      }
-    }
+    // v60: PIN clients now use bootstrapClientSync (paginated REST).
+    // Old guard (_rpcOnlyMode && isPinAuth → skip) removed.
+    // Deduplication handled by _syncInProgress + _syncInFlight in syncClient().
 
     // Проверка: нужен client_id
     // 🔧 FIX 2025-12-24: Убрана проверка `client` — для Yandex API режима client=null
