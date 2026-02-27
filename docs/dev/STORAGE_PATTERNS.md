@@ -5,7 +5,8 @@
 > Правила работы с localStorage и cloud sync
 >
 > См. также: [SYNC_REFERENCE.md](../SYNC_REFERENCE.md) |
-> [SYNC_PERFORMANCE_REPORT.md](../SYNC_PERFORMANCE_REPORT.md)
+> [SYNC_PERFORMANCE_REPORT.md](../SYNC_PERFORMANCE_REPORT.md) |
+> [CURATOR_VS_CLIENT.md](../CURATOR_VS_CLIENT.md)
 
 ---
 
@@ -155,8 +156,12 @@ const data = await HEYS.YandexAPI.rest('clients', { method: 'GET' });
 
 | Режим        | Кто использует        | Cloud auth    | Sync метод            | Флаг                 |
 | ------------ | --------------------- | ------------- | --------------------- | -------------------- |
-| **Curator**  | Нутрициолог (куратор) | JWT           | `bootstrapClientSync` | `_rpcOnlyMode=false` |
+| **Curator**  | Нутрициолог (куратор) | JWT           | `bootstrapClientSync` | `_rpcOnlyMode=true*` |
 | **PIN auth** | Клиент (телефон+PIN)  | session_token | `syncClientViaRPC`    | `_rpcOnlyMode=true`  |
+
+\* После миграции на Yandex API `_rpcOnlyMode=true` также у curator. Различие
+роутинга определяется наличием `_pinAuthClientId` (PIN-контекст), подробнее:
+`docs/CURATOR_VS_CLIENT.md`.
 
 ### Универсальный sync
 

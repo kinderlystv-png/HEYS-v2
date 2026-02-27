@@ -1,6 +1,6 @@
 # HEYS Sync Architecture Reference
 
-> **Version:** v2.0.0 | **Updated:** 26.02.2026 **Status:** Production Reference
+> **Version:** v2.1.0 | **Updated:** 27.02.2026 **Status:** Production Reference
 
 ---
 
@@ -11,6 +11,7 @@
 | [SYNC_PERFORMANCE_REPORT.md](SYNC_PERFORMANCE_REPORT.md)                   | History of 5 optimization phases, metrics, incident analysis |
 | [SYNC_PERFORMANCE_SESSIONS_LOG.md](SYNC_PERFORMANCE_SESSIONS_LOG.md)       | Bundle file mapping, session journals, PERF data             |
 | [dev/STORAGE_PATTERNS.md](dev/STORAGE_PATTERNS.md)                         | Storage API cheat sheet (localStorage, Store API)            |
+| [CURATOR_VS_CLIENT.md](CURATOR_VS_CLIENT.md)                               | Detailed curator vs client flow/feature differences          |
 | [DATA_LOSS_PROTECTION.md](DATA_LOSS_PROTECTION.md)                         | SQL guards against empty meal overwrites                     |
 | [EWS_WEEKLY_CLOUD_SYNC_DEPLOYMENT.md](EWS_WEEKLY_CLOUD_SYNC_DEPLOYMENT.md) | EWS weekly snapshots cloud sync subsystem                    |
 | [ARCHITECTURE.md](ARCHITECTURE.md)                                         | Overall system architecture                                  |
@@ -59,7 +60,7 @@ On client load, sync is split into two phases to unblock UI faster.
 4. `heys_hr_zones`
 5. `heys_dayv2_{today}`
 
-UI shows skeleton until Phase A completes. Fires `heysSyncCompleted` with
+UI shows skeleton (loads in ~0.2s) until Phase A completes. Fires `heysSyncCompleted` with
 `{ clientId, phaseA: true }` to unblock DayTab. **Does NOT contain historical
 day records** — cascade guard must reject this event.
 
@@ -124,8 +125,12 @@ blocked to prevent parasitic re-upload of just-downloaded data.
 
 | Mode         | Who                | Cloud auth    | Sync method           | Flag                 |
 | ------------ | ------------------ | ------------- | --------------------- | -------------------- |
-| **Curator**  | Nutritionist       | JWT           | `bootstrapClientSync` | `_rpcOnlyMode=false` |
+| **Curator**  | Nutritionist       | JWT           | `bootstrapClientSync` | `_rpcOnlyMode=true*` |
 | **PIN auth** | Client (phone+PIN) | session_token | `syncClientViaRPC`    | `_rpcOnlyMode=true`  |
+
+\* `_rpcOnlyMode=true` актуален после миграции на Yandex API. Реальное
+ветвление идет по признаку PIN-клиента (`_pinAuthClientId`), см.
+`docs/CURATOR_VS_CLIENT.md`.
 
 ### Universal sync
 
@@ -135,6 +140,9 @@ await HEYS.cloud.syncClient(clientId);
 
 // Never call bootstrapClientSync directly -- curator-only
 ```
+
+For complete mode-by-mode behavior (auth, events, gamification, UI gates), see
+`docs/CURATOR_VS_CLIENT.md`.
 
 ### Session-based RPC (IDOR protection)
 

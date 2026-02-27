@@ -751,38 +751,38 @@
                         // Inherit screen choice from HTML gate (curator/client)
                         var _inheritedMode = window.__hlgCurrentScreen === 'curator' ? 'curator' : 'client';
                         return React.createElement(
-                        HEYS.LoginScreen,
-                        {
-                            initialMode: _inheritedMode,
-                            onCuratorLogin: async ({ email, password }) => {
-                                const res = await cloudSignIn(email, password, { rememberMe: true });
-                                return res && res.error ? { error: res.error } : { ok: true };
-                            },
-                            initialEmail: window.__hlgCuratorEmail || '',
-                            onClientLogin: async ({ phone, pin }) => {
-                                const auth = HEYS && HEYS.auth;
-                                const fn = auth && auth.loginClient;
-                                const res = fn ? await fn({ phone, pin }) : { ok: false, error: 'cloud_not_ready' };
-                                if (res && res.ok && res.clientId) {
-                                    try {
-                                        if (HEYS.cloud && HEYS.cloud.switchClient) {
-                                            await HEYS.cloud.switchClient(res.clientId);
-                                        } else {
-                                            U.lsSet('heys_client_current', res.clientId);
-                                        }
-                                        writeGlobalValue('heys_last_client_id', res.clientId);
-                                        // 📱 Сохраняем телефон для ПЭП (SMS-верификация согласий)
+                            HEYS.LoginScreen,
+                            {
+                                initialMode: _inheritedMode,
+                                onCuratorLogin: async ({ email, password }) => {
+                                    const res = await cloudSignIn(email, password, { rememberMe: true });
+                                    return res && res.error ? { error: res.error } : { ok: true };
+                                },
+                                initialEmail: window.__hlgCuratorEmail || '',
+                                onClientLogin: async ({ phone, pin }) => {
+                                    const auth = HEYS && HEYS.auth;
+                                    const fn = auth && auth.loginClient;
+                                    const res = fn ? await fn({ phone, pin }) : { ok: false, error: 'cloud_not_ready' };
+                                    if (res && res.ok && res.clientId) {
                                         try {
-                                            const phoneNorm = HEYS.auth?.normalizePhone?.(phone) || phone;
-                                            writeGlobalValue('heys_client_phone', phoneNorm);
+                                            if (HEYS.cloud && HEYS.cloud.switchClient) {
+                                                await HEYS.cloud.switchClient(res.clientId);
+                                            } else {
+                                                U.lsSet('heys_client_current', res.clientId);
+                                            }
+                                            writeGlobalValue('heys_last_client_id', res.clientId);
+                                            // 📱 Сохраняем телефон для ПЭП (SMS-верификация согласий)
+                                            try {
+                                                const phoneNorm = HEYS.auth?.normalizePhone?.(phone) || phone;
+                                                writeGlobalValue('heys_client_phone', phoneNorm);
+                                            } catch (_) { }
+                                            setClientId(res.clientId);
                                         } catch (_) { }
-                                        setClientId(res.clientId);
-                                    } catch (_) { }
-                                }
-                                return res;
-                            },
-                        }
-                    );
+                                    }
+                                    return res;
+                                },
+                            }
+                        );
                     })()
                     : React.createElement(
                         'div',

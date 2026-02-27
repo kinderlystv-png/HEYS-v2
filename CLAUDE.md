@@ -61,6 +61,7 @@ For detailed context, read the relevant file before starting work:
 | Security                   | `docs/SECURITY_RUNBOOK.md`                 |
 | Meal planner               | `docs/MEAL_PLANNER_DOCUMENTATION.md`       |
 | **Sync architecture**      | `docs/SYNC_REFERENCE.md`                   |
+| **Curator vs client diff** | `docs/CURATOR_VS_CLIENT.md`                |
 | **Sync performance**       | `docs/SYNC_PERFORMANCE_REPORT.md`          |
 | **Sync sessions log**      | `docs/SYNC_PERFORMANCE_SESSIONS_LOG.md`    |
 | **Storage patterns**       | `docs/dev/STORAGE_PATTERNS.md`             |
@@ -91,11 +92,12 @@ with cross-references:
 
 1. `docs/SYNC_REFERENCE.md` — core sync architecture, data flow, auth modes,
    events
-2. `docs/SYNC_PERFORMANCE_REPORT.md` — 5 optimization phases, metrics, incidents
-3. `docs/SYNC_PERFORMANCE_SESSIONS_LOG.md` — implementation details, session
+2. `docs/CURATOR_VS_CLIENT.md` — curator vs PIN client flow and functional differences
+3. `docs/SYNC_PERFORMANCE_REPORT.md` — 5 optimization phases, metrics, incidents
+4. `docs/SYNC_PERFORMANCE_SESSIONS_LOG.md` — implementation details, session
    journals
-4. `docs/dev/STORAGE_PATTERNS.md` — localStorage API, Store API, namespacing
+5. `docs/dev/STORAGE_PATTERNS.md` — localStorage API, Store API, namespacing
    rules
-5. `docs/DATA_LOSS_PROTECTION.md` — SQL guards, overwrite protection at all
+6. `docs/DATA_LOSS_PROTECTION.md` — SQL guards, overwrite protection at all
    levels
-6. `docs/EWS_WEEKLY_CLOUD_SYNC_DEPLOYMENT.md` — EWS weekly snapshots cloud sync
+7. `docs/EWS_WEEKLY_CLOUD_SYNC_DEPLOYMENT.md` — EWS weekly snapshots cloud sync

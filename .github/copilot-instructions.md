@@ -201,7 +201,7 @@ console.error('[HEYS.module] ❌ Failed:', { error, retryIn });
 ### Auth modes
 
 - **Curator** (nutritionist): JWT via heys-api-auth, full sync,
-  `_rpcOnlyMode=false`
+  `_rpcOnlyMode=true` (routing differs by context, see docs below)
 - **PIN auth** (client): phone+PIN via session_token, `_rpcOnlyMode=true`
 - Universal: `await HEYS.cloud.syncClient(clientId)` auto-selects strategy
 
@@ -260,6 +260,7 @@ console.error('[HEYS.module] ❌ Failed:', { error, retryIn });
 | Business context                                | `docs/HEYS_BRIEF.md`                                                 |
 | Technical architecture (detailed)               | `docs/ARCHITECTURE.md` (v18.0.0, merged from TECHNICAL_ARCHITECTURE) |
 | **Sync architecture**                           | `docs/SYNC_REFERENCE.md`                                             |
+| **Curator vs client differences**              | `docs/CURATOR_VS_CLIENT.md`                                          |
 | **Sync performance**                            | `docs/SYNC_PERFORMANCE_REPORT.md`                                    |
 | **Sync sessions log**                           | `docs/SYNC_PERFORMANCE_SESSIONS_LOG.md`                              |
 | **Storage patterns**                            | `docs/dev/STORAGE_PATTERNS.md`                                       |
@@ -292,11 +293,12 @@ with cross-references:
 
 1. `docs/SYNC_REFERENCE.md` — core sync architecture, data flow, auth modes,
    events
-2. `docs/SYNC_PERFORMANCE_REPORT.md` — 5 optimization phases, metrics, incidents
-3. `docs/SYNC_PERFORMANCE_SESSIONS_LOG.md` — implementation details, session
+2. `docs/CURATOR_VS_CLIENT.md` — curator vs PIN client flow and functional differences
+3. `docs/SYNC_PERFORMANCE_REPORT.md` — 5 optimization phases, metrics, incidents
+4. `docs/SYNC_PERFORMANCE_SESSIONS_LOG.md` — implementation details, session
    journals
-4. `docs/dev/STORAGE_PATTERNS.md` — localStorage API, Store API, namespacing
+5. `docs/dev/STORAGE_PATTERNS.md` — localStorage API, Store API, namespacing
    rules
-5. `docs/DATA_LOSS_PROTECTION.md` — SQL guards, overwrite protection at all
+6. `docs/DATA_LOSS_PROTECTION.md` — SQL guards, overwrite protection at all
    levels
-6. `docs/EWS_WEEKLY_CLOUD_SYNC_DEPLOYMENT.md` — EWS weekly snapshots cloud sync
+7. `docs/EWS_WEEKLY_CLOUD_SYNC_DEPLOYMENT.md` — EWS weekly snapshots cloud sync

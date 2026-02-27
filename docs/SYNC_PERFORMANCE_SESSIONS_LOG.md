@@ -1,7 +1,7 @@
 # HEYS Sync & Performance — Журнал сессий и реализации
 
-> **Версия:** 2026-02-26 (актуально)  
-> **Период:** 2026-02-25 — 2026-02-26
+> **Версия:** 2026-02-27 (актуально)  
+> **Период:** 2026-02-25 — 2026-02-27
 
 ---
 
@@ -9,8 +9,8 @@
 
 | Документ                                                                                   | Назначение                                                |
 | ------------------------------------------------------------------------------------------ | --------------------------------------------------------- |
-| [SYNC_PERFORMANCE_REPORT.md](./SYNC_PERFORMANCE_REPORT.md)                                 | Сводный отчёт: цели, метрики, фазы 1–5, инцидент, чеклист |
-| **SYNC_PERFORMANCE_SESSIONS_LOG.md** ← текущий файл                                        | Детали реализации: маппинг файлов, журнал сессий 1–6      |
+| [SYNC_PERFORMANCE_REPORT.md](./SYNC_PERFORMANCE_REPORT.md)                                 | Сводный отчёт: цели, метрики, фазы 1–6, инцидент, чеклист |
+| **SYNC_PERFORMANCE_SESSIONS_LOG.md** ← текущий файл                                        | Детали реализации: маппинг файлов, журнал сессий 1–7      |
 | [archive/performance-baseline-2025-09.md](./archive/performance-baseline-2025-09.md)       | ⚠️ Архив: baseline Sept 2025 (Supabase-эпоха)             |
 | [archive/bundle-splitting-report-2025-09.md](./archive/bundle-splitting-report-2025-09.md) | ⚠️ Архив: отчёт о bundle splitting Sept 2025              |
 | [SYNC_REFERENCE.md](./SYNC_REFERENCE.md)                                                   | Справочник sync-архитектуры                               |
@@ -849,6 +849,32 @@ Throttled flash — **принятый компромисс**: на реальн
 - `__heysCascadeAllowEmptyHistory`: false → true при batch или 8s
 - CrsProgressBar: маятник до `getCrsNumber() !== null` (historicalDays ≥ 1)
 - Верифицировано: Phase A rejected ✅, guard holds ✅, renders STRONG ✅
+
+---
+
+## Session 7: Skeleton Loader & Auth Handover (27.02.2026)
+
+**Цель:** Устранить долгую загрузку скелетона (6-7 секунд) и исправить баг сброса формы логина куратора на ввод PIN-кода.
+
+**Проблема 1 (Skeleton Loader):**
+Скелетон загружался слишком долго из-за неоптимального кэширования и блокирующих ресурсов.
+
+**Решение 1:**
+- Оптимизирована загрузка ассетов через Service Worker.
+- Настроено мгновенное обнаружение `main.css`.
+- **Результат:** Время загрузки скелетона сокращено до **0.2с** (Total Load: 0.4-0.6с).
+
+**Проблема 2 (Auth Handover):**
+При входе куратора форма логина сбрасывалась на ввод PIN-кода. Это происходило из-за конфликта между статичным HTML login gate и React `LoginScreen` при гидратации.
+
+**Решение 2:**
+- Реализовано корректное удаление HTML login gate в момент, когда React берет управление на себя (`✅ HTML login gate removed — React LoginScreen takes over`).
+- Настроено бесшовное восстановление сессии куратора (`poplanton@mail.ru`) и `clientId` при refresh страницы.
+- **Результат:** Устранён баг сброса состояния формы. Сессия восстанавливается без морганий UI и повторных запросов авторизации.
+
+**Верификация (по логам):**
+- **Cold Start:** Skeleton 0.2s, Total 0.4s, CSS detected instantly, HTML gate removed cleanly, Curator login OK.
+- **Refresh:** Skeleton 0.2s, Total 0.6s, Session restored, Prefetch HIT, Gate already hidden (no flashing).
 
 ---
 

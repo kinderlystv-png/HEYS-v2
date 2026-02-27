@@ -6,15 +6,15 @@
 > @heys/web@13.0.1 prebuild /Users/poplavskijanton/HEYS-v2/apps/web
 > node ../../scripts/sync-iw-inline-config.cjs && node scripts/bundle-advice.cjs && node scripts/bundle-meals.cjs && node scripts/bundle-day.cjs && node scripts/update-version.cjs && node -e "const fs=require('fs');const f=process.cwd()+'/public/sw.js';let c=fs.readFileSync(f,'utf8');c=c.replace(/heys-[\w.-]+/,'heys-'+Date.now());fs.writeFileSync(f,c);console.log('SW version:',Date.now())"
 
-IW config synced to public/.
+IW config already up to date.
 [bundle-meals] ✅ Generated /Users/poplavskijanton/HEYS-v2/apps/web/heys_day_meals_bundle_v1.js (6 modules)
 ⚠️ APP_VERSION not found in file
-✅ heys_pwa_module_v1.js APP_VERSION updated to: 2026.02.26.2224.56af750b
-✅ build-meta.json created: 2026.02.26.2224.56af750b
-✅ version.json created: 2026.02.26.2224.56af750b
-✅ SW CACHE_VERSION updated to: heys-1772133898584
+✅ heys_pwa_module_v1.js APP_VERSION updated to: 2026.02.27.1314.96423c19
+✅ build-meta.json created: 2026.02.27.1314.96423c19
+✅ version.json created: 2026.02.27.1314.96423c19
+✅ SW CACHE_VERSION updated to: heys-1772187243071
 ⚠️ heys_app_v12.js not found in index.html (looking for src="heys_app_v12.js?v=...")
-SW version: 1772133898689
+SW version: 1772187243150
 
 > @heys/web@13.0.1 build:react /Users/poplavskijanton/HEYS-v2/apps/web
 > npx esbuild src/react-globals-sync.ts --bundle --format=iife --minify --outfile=react-bundle.js --target=es2020
@@ -22,16 +22,16 @@ SW version: 1772133898689
 
   react-bundle.js  138.8kb
 
-⚡ Done in 67ms
+⚡ Done in 44ms
 polyfillModulePreload is deprecated. Use modulePreload.polyfill instead.
 vite v4.5.14 building for production...
 <script src="react-bundle.js"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_dark_theme_interceptor.js"> in "/index.html" can't be bundled without type="module" attribute
-<script src="boot-core.bundle.11e1203df3d1.js"> in "/index.html" can't be bundled without type="module" attribute
-<script src="boot-calc.bundle.35b159a72e66.js"> in "/index.html" can't be bundled without type="module" attribute
-<script src="boot-day.bundle.7320c50778ec.js"> in "/index.html" can't be bundled without type="module" attribute
-<script src="boot-app.bundle.82f8201d13bf.js"> in "/index.html" can't be bundled without type="module" attribute
-<script src="boot-init.bundle.965ff6f2560f.js"> in "/index.html" can't be bundled without type="module" attribute
+<script src="boot-core.bundle.dffe9b518737.js"> in "/index.html" can't be bundled without type="module" attribute
+<script src="boot-calc.bundle.9701e1633ac1.js"> in "/index.html" can't be bundled without type="module" attribute
+<script src="boot-day.bundle.0f10e7bf96dc.js"> in "/index.html" can't be bundled without type="module" attribute
+<script src="boot-app.bundle.8f833e7623d1.js"> in "/index.html" can't be bundled without type="module" attribute
+<script src="boot-init.bundle.26d91a786979.js"> in "/index.html" can't be bundled without type="module" attribute
 transforming...
 ✓ 7 modules transformed.
 warnings when minifying css:
@@ -46,11 +46,11 @@ rendering chunks...
 computing gzip size...
 dist/assets/heys_simple_analytics-9b513004.js     11.96 kB
 dist/assets/heys_models_v1-6d1041bc.js            72.69 kB
-dist/index.html                                   97.84 kB │ gzip:  21.47 kB
+dist/index.html                                  101.07 kB │ gzip:  22.29 kB
 dist/assets/heys_core_v12-fd1229e4.js            251.24 kB
 dist/assets/index-c3d985c8.css                 1,026.43 kB │ gzip: 164.70 kB
 [vite-plugin-static-copy] Copied 6 items.
-✓ built in 2.00s
+✓ built in 1.17s
 [strip-console] Removed 59 console.log statements:
   - pi_early_warning.js: 24
   - pi_feedback_loop.js: 4
