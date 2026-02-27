@@ -56,8 +56,12 @@ export default function ObjectionsSection() {
         <section
             ref={sectionRef}
             id="objections"
-            className="py-16 md:py-20 bg-white"
+            className="py-16 md:py-20 bg-white relative"
         >
+                        {/* Sticky Header Badge */}
+            <div className="sticky top-0 z-[100] bg-white/90 backdrop-blur-md border-b border-gray-100/50 py-3 mb-8 px-6 text-center shadow-sm w-full">
+                <span className="inline-block px-3 py-1 bg-blue-50 text-blue-600 text-[11px] font-bold tracking-widest uppercase rounded-full">06 — ЧАСТЫЕ СОМНЕНИЯ</span>
+            </div>
             <div className="container mx-auto px-4 md:px-6">
                 <div className="max-w-3xl mx-auto">
                     {/* Section header */}

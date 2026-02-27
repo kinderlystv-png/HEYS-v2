@@ -1,7 +1,9 @@
-import { ABTestSwitcher } from '@/components/ABTestSwitcher'
 import type { Metadata } from 'next'
 import { Open_Sans } from 'next/font/google'
 import Script from 'next/script'
+
+import { ABTestSwitcher } from '@/components/ABTestSwitcher'
+
 import '../styles/globals.css'
 
 const openSans = Open_Sans({

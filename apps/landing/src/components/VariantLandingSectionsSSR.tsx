@@ -28,7 +28,7 @@ function SocialProofSection({ content }: { content: VariantContent }) {
   const sp = content.socialProof
 
   return (
-    <section className="py-16 md:py-20 bg-white" id="socialProof">
+    <section className="py-16 md:py-20 bg-white relative" id="socialProof">
       <div className="container mx-auto px-4 md:px-6">
         <div className="max-w-5xl mx-auto">
           <SectionHeading eyebrow={sp.eyebrow} title={sp.title} />
@@ -50,7 +50,7 @@ function DelegateSection({ content }: { content: VariantContent }) {
   const d = content.delegate
 
   return (
-    <section className="py-16 md:py-20 bg-slate-50 border-y border-slate-200" id="delegate">
+    <section className="py-16 md:py-20 bg-slate-50 border-y border-slate-200 relative" id="delegate">
       <div className="container mx-auto px-4 md:px-6">
         <div className="max-w-5xl mx-auto">
           <SectionHeading eyebrow={d.eyebrow} title={d.title} />
@@ -74,7 +74,7 @@ function InteractionSection({ content }: { content: VariantContent }) {
   const inter = content.interaction
 
   return (
-    <section className="py-16 md:py-20 bg-white" id="interaction">
+    <section className="py-16 md:py-20 bg-white relative" id="interaction">
       <div className="container mx-auto px-4 md:px-6">
         <div className="max-w-5xl mx-auto">
           <SectionHeading eyebrow={inter.eyebrow} title={inter.title} subtitle={inter.note} />
@@ -98,8 +98,12 @@ function FormatsSection({ content }: { content: VariantContent }) {
   const f = content.formats
 
   return (
-    <section className="py-16 md:py-20 bg-slate-50 border-y border-slate-200" id="formats">
-      <div className="container mx-auto px-4 md:px-6">
+    <section className="py-16 md:py-20 bg-slate-50 border-y border-slate-200 relative" id="formats">
+                  {/* Sticky Header Badge */}
+            <div className="sticky top-0 z-[100] bg-white/90 backdrop-blur-md border-b border-gray-100/50 py-3 mb-8 px-6 text-center shadow-sm w-full">
+                <span className="inline-block px-3 py-1 bg-blue-50 text-blue-600 text-[11px] font-bold tracking-widest uppercase rounded-full">07 — ФОРМАТЫ РАБОТЫ</span>
+            </div>
+            <div className="container mx-auto px-4 md:px-6">
         <div className="max-w-5xl mx-auto">
           <SectionHeading eyebrow={f.eyebrow} title={f.title} />
 
@@ -134,7 +138,7 @@ function LayersSection({ content }: { content: VariantContent }) {
   const layers = content.layers
 
   return (
-    <section className="py-16 md:py-20 bg-white" id="layers">
+    <section className="py-16 md:py-20 bg-white relative" id="layers">
       <div className="container mx-auto px-4 md:px-6">
         <div className="max-w-5xl mx-auto">
           <SectionHeading eyebrow={layers.eyebrow} title={layers.title} />
@@ -159,7 +163,7 @@ function MatrixSection({ content }: { content: VariantContent }) {
   if (!m?.rows?.length) return null
 
   return (
-    <section className="py-16 md:py-20 bg-slate-50 border-y border-slate-200" id="matrix">
+    <section className="py-16 md:py-20 bg-slate-50 border-y border-slate-200 relative" id="matrix">
       <div className="container mx-auto px-4 md:px-6">
         <div className="max-w-5xl mx-auto">
           <SectionHeading eyebrow={m.eyebrow} title={m.title} subtitle={m.subtitle} />
@@ -197,7 +201,7 @@ function SlaSection({ content }: { content: VariantContent }) {
   if (!s?.title) return null
 
   return (
-    <section className="py-16 md:py-20 bg-white" id="sla">
+    <section className="py-16 md:py-20 bg-white relative" id="sla">
       <div className="container mx-auto px-4 md:px-6">
         <div className="max-w-5xl mx-auto">
           <SectionHeading eyebrow={s.eyebrow} title={s.title} />
@@ -241,7 +245,7 @@ function ProblemSection({ content }: { content: VariantContent }) {
   if (!p?.title) return null
 
   return (
-    <section className="py-16 md:py-20 bg-slate-50 border-y border-slate-200" id="problem">
+    <section className="py-16 md:py-20 bg-slate-50 border-y border-slate-200 relative" id="problem">
       <div className="container mx-auto px-4 md:px-6">
         <div className="max-w-5xl mx-auto">
           <SectionHeading eyebrow={p.eyebrow} title={p.title} />
@@ -268,7 +272,7 @@ function SolutionSection({ content }: { content: VariantContent }) {
   if (!sol?.title) return null
 
   return (
-    <section className="py-16 md:py-20 bg-white" id="solution">
+    <section className="py-16 md:py-20 bg-white relative" id="solution">
       <div className="container mx-auto px-4 md:px-6">
         <div className="max-w-5xl mx-auto">
           <SectionHeading eyebrow={sol.eyebrow} title={sol.title} />
@@ -295,7 +299,7 @@ function HowItWorksSection({ content }: { content: VariantContent }) {
   if (!hiw?.title) return null
 
   return (
-    <section className="py-16 md:py-20 bg-slate-50 border-y border-slate-200" id="howItWorks">
+    <section className="py-16 md:py-20 bg-slate-50 border-y border-slate-200 relative" id="howItWorks">
       <div className="container mx-auto px-4 md:px-6">
         <div className="max-w-5xl mx-auto">
           <SectionHeading eyebrow={hiw.eyebrow} title={hiw.title} />
@@ -326,7 +330,7 @@ function SecuritySection({ content }: { content: VariantContent }) {
   if (!sec?.title) return null
 
   return (
-    <section className="py-16 md:py-20 bg-slate-50 border-y border-slate-200" id="security">
+    <section className="py-16 md:py-20 bg-slate-50 border-y border-slate-200 relative" id="security">
       <div className="container mx-auto px-4 md:px-6">
         <div className="max-w-5xl mx-auto">
           <SectionHeading eyebrow={sec.eyebrow} title={sec.title} />
