@@ -155,7 +155,7 @@ export default function TrialForm({ ctaLabel }: TrialFormProps) {
         <div className="text-5xl mb-4">🎉</div>
         <h3 className="text-2xl font-bold text-gray-900 mb-2">Заявка отправлена!</h3>
         <p className="text-gray-600 mb-4">
-          Ваш куратор свяжется с вами в течение 30 минут
+          Ваш куратор свяжется с вами в рабочее время (с 10:00 до 20:00)
           {messenger === 'telegram' ? ' в Telegram' : messenger === 'whatsapp' ? ' в WhatsApp' : ' в MAX'}
         </p>
         <p className="text-gray-500 text-sm">
@@ -211,8 +211,8 @@ export default function TrialForm({ ctaLabel }: TrialFormProps) {
             type="button"
             onClick={() => setMessenger('telegram')}
             className={`py-3 px-2 rounded-xl border-2 transition-all flex items-center justify-center gap-1 text-sm ${messenger === 'telegram'
-                ? 'bg-blue-600 text-white border-blue-600'
-                : 'bg-white text-gray-700 border-gray-200 hover:border-gray-300'
+              ? 'bg-blue-600 text-white border-blue-600'
+              : 'bg-white text-gray-700 border-gray-200 hover:border-gray-300'
               }`}
             disabled={formState === 'loading'}
           >
@@ -226,8 +226,8 @@ export default function TrialForm({ ctaLabel }: TrialFormProps) {
             type="button"
             onClick={() => setMessenger('whatsapp')}
             className={`py-3 px-2 rounded-xl border-2 transition-all flex items-center justify-center gap-1 text-sm ${messenger === 'whatsapp'
-                ? 'bg-emerald-600 text-white border-emerald-600'
-                : 'bg-white text-gray-700 border-gray-200 hover:border-gray-300'
+              ? 'bg-emerald-600 text-white border-emerald-600'
+              : 'bg-white text-gray-700 border-gray-200 hover:border-gray-300'
               }`}
             disabled={formState === 'loading'}
           >
@@ -241,8 +241,8 @@ export default function TrialForm({ ctaLabel }: TrialFormProps) {
             type="button"
             onClick={() => setMessenger('max')}
             className={`py-3 px-2 rounded-xl border-2 transition-all flex items-center justify-center gap-1 text-sm ${messenger === 'max'
-                ? 'bg-purple-600 text-white border-purple-600'
-                : 'bg-white text-gray-700 border-gray-200 hover:border-gray-300'
+              ? 'bg-purple-600 text-white border-purple-600'
+              : 'bg-white text-gray-700 border-gray-200 hover:border-gray-300'
               }`}
             disabled={formState === 'loading'}
           >

@@ -54,13 +54,13 @@ export default function TrustSection() {
         <section
             ref={sectionRef}
             id="trust"
-            className="py-20 bg-gray-50"
+            className="py-16 md:py-20 bg-slate-50 border-y border-slate-200"
         >
-            <div className="container mx-auto px-6">
+            <div className="container mx-auto px-4 md:px-6">
                 <div className="max-w-4xl mx-auto">
                     {/* Section header */}
                     <h2
-                        className={`text-3xl md:text-4xl font-bold text-gray-900 mb-12 text-center transition-all duration-700 ease-out ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
+                        className={`text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900 mb-12 text-center transition-all duration-700 ease-out ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
                             }`}
                     >
                         Кто создал HEYS и почему это работает

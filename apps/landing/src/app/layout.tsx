@@ -1,3 +1,4 @@
+import { ABTestSwitcher } from '@/components/ABTestSwitcher'
 import type { Metadata } from 'next'
 import { Open_Sans } from 'next/font/google'
 import Script from 'next/script'
@@ -193,6 +194,7 @@ export default function RootLayout({
       </head>
       <body className={openSans.className}>
         {children}
+        <ABTestSwitcher />
 
         {/* Яндекс.Метрика noscript fallback */}
         {YM_ID && (

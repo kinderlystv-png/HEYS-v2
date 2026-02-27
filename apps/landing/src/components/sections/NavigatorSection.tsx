@@ -24,12 +24,10 @@ function CRSScaleBlock({ isVisible }: { isVisible: boolean }) {
             style={{ transitionDelay: '200ms' }}
         >
             <h3 className="text-xl md:text-2xl font-bold text-gray-900 mb-2">
-                Система знает, куда вы движетесь — раньше вас.
+                Адаптивный Поведенческий Каскад (10 метрик).
             </h3>
             <p className="text-gray-600 mb-6 leading-relaxed">
-                Каждые несколько часов HEYS оценивает ваше состояние по 6 факторам: питание,
-                распределение еды по дню, белок, эмоциональный фон, история последних 7 дней
-                и качество сна. Из этого складывается ваш «импульс» — растущий или падающий.
+                Обычные фитнес-приложения сравнивают вас с шаблонным "идеалом". HEYS оценивает 10 факторов (от качества сна до гормезиса), изучает <strong className="font-semibold text-gray-900">ваши последние 14 дней</strong> и строит персональный baseline. Ваш "импульс" высчитывается непрерывно.
             </p>
 
             {/* CRS Scale — animated bars */}
@@ -58,8 +56,8 @@ function CRSScaleBlock({ isVisible }: { isVisible: boolean }) {
             </div>
 
             <p className="mt-6 text-sm text-gray-500 italic">
-                Это как навигатор в машине. Обычное приложение — одометр: показывает, сколько проехали.
-                HEYS — навигатор, который видит пробку впереди и предлагает объезд.
+                Обычное приложение жестко говорит: «сегодня ты молодец, а вчера плохой».
+                Система каскадов HEYS изучает непрерывные графики: мы видим перекосы кортизола и спасаем вас без жестких диет.
             </p>
         </div>
     )
@@ -90,11 +88,10 @@ function CausesBlock({ isVisible }: { isVisible: boolean }) {
             style={{ transitionDelay: '400ms' }}
         >
             <h3 className="text-xl md:text-2xl font-bold text-gray-900 mb-2">
-                Наконец-то ответ на вопрос «ПОЧЕМУ у меня так?»
+                Байесовский анализ и циркадная осведомленность
             </h3>
             <p className="text-gray-600 mb-6 leading-relaxed">
-                HEYS не просто показывает «плохой день». Система находит причину
-                и объясняет человеческим языком:
+                Калорий в вакууме не существует. Алгоритм учитывает вашу <strong className="font-semibold text-gray-900">аллостатическую нагрузку</strong> (накопленный стресс) и гормональные ритмы:
             </p>
 
             <div className="space-y-4">
@@ -130,8 +127,8 @@ const noPunishmentItems = [
     },
     {
         icon: '📊',
-        title: 'Недоели?',
-        text: 'Система восполнит дефицит постепенно и частично — потому что тело уже адаптировалось, и резкая компенсация уйдёт в жир. Это не мнение — это доказано исследованиями.',
+        title: 'Недоели вчера?',
+        text: 'Система восполнит дефицит плавно. Потому что тело уже в режиме стресса — если резко добавить еды или урезать еще больше, запустится каскад запасания в жир.',
     },
     {
         icon: '🎉',
@@ -153,12 +150,10 @@ function NoPunishmentBlock({ isVisible }: { isVisible: boolean }) {
             style={{ transitionDelay: '600ms' }}
         >
             <h3 className="text-xl md:text-2xl font-bold text-gray-900 mb-2">
-                Без наказания. Вообще. Никогда.
+                Мы предвидим "яму". И не ругаем за срывы.
             </h3>
             <p className="text-gray-600 mb-6 leading-relaxed">
-                HEYS не ругает вас за переедание. Ни в каком случае. Обычные приложения
-                после переедания: «красная зона», -500 ккал завтра, чувство вины.
-                HEYS работает иначе:
+                Доказано: резкая компенсация недоедания уйдет в жир, а упреки приведут к срыву. Оценивая кумулятивный стресс, мы рассчитываем <strong className="font-semibold text-gray-900">Crash Risk Score</strong> за 3 дня до потенциальной ямы:
             </p>
 
             <div className="grid sm:grid-cols-2 gap-4">
@@ -184,91 +179,145 @@ function NoPunishmentBlock({ isVisible }: { isVisible: boolean }) {
 /* ──────────────────────────── Insulin Wave Block (Block 4) ──────────────────────────── */
 
 function InsulinWaveBlock({ isVisible }: { isVisible: boolean }) {
-    const [minutes, setMinutes] = useState(45)
+    const [secondsLeft, setSecondsLeft] = useState(3 * 3600 + 30 * 60 + 48) // 03:30:48
     const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
     useEffect(() => {
         if (!isVisible) return
-        // Animated countdown from 45 to 0
         intervalRef.current = setInterval(() => {
-            setMinutes((prev) => {
-                if (prev <= 0) {
-                    if (intervalRef.current) clearInterval(intervalRef.current)
-                    return 0
-                }
-                return prev - 1
-            })
-        }, 80)
+            setSecondsLeft((prev) => (prev > 0 ? prev - 1 : 0))
+        }, 1000)
         return () => {
             if (intervalRef.current) clearInterval(intervalRef.current)
         }
     }, [isVisible])
 
+    const h = Math.floor(secondsLeft / 3600).toString().padStart(2, '0')
+    const m = Math.floor((secondsLeft % 3600) / 60).toString().padStart(2, '0')
+    const s = (secondsLeft % 60).toString().padStart(2, '0')
+
     return (
         <div
-            className={`rounded-2xl bg-white border border-gray-200 p-6 md:p-8 transition-all duration-700 ease-out ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
+            className={`rounded-2xl bg-white border border-gray-200 p-6 md:p-8 transition-all duration-700 ease-out flex flex-col xl:flex-row gap-8 items-center ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
                 }`}
             style={{ transitionDelay: '800ms' }}
         >
-            <h3 className="text-xl md:text-2xl font-bold text-gray-900 mb-2">
-                Когда горит жир?
-            </h3>
-            <p className="text-gray-600 mb-6 leading-relaxed">
-                Впервые вы видите это — не по ощущениям, а по науке. После каждого приёма пищи
-                тело сначала накапливает, потом переключается в режим сжигания. HEYS рассчитывает
-                этот момент персонально для вас — с учётом вашей еды, активности, сна
-                и десятков других параметров.
-            </p>
+            <div className="flex-1">
+                <h3 className="text-xl md:text-2xl font-bold text-gray-900 mb-4">
+                    Когда горит жир? Не по ощущениям, а по науке.
+                </h3>
+                <p className="text-gray-600 mb-4 leading-relaxed">
+                    После каждого приёма пищи тело сначала запасает энергию, а потом возвращается к сжиганию жира. Обычные диеты говорят: «не ешь после 18:00» или «окошко 2 часа».
+                </p>
+                <p className="text-gray-600 mb-6 leading-relaxed">
+                    HEYS не гадает. Система выстраивает <strong className="font-semibold text-gray-900">Инсулиновую волну</strong> индивидуально для каждого приёма пищи по <strong className="font-semibold text-gray-900">37 параметрам</strong>
+                    {' '}(БЖУ, клетчатка, гликемический индекс, текущий стресс и качество сна).
+                </p>
+                <ul className="space-y-3 mb-6">
+                    <li className="flex items-start gap-2 text-sm text-gray-700">
+                        <span className="text-orange-500 mt-0.5">⚡</span>
+                        <span><b>Быстрые (Углеводный пик):</b> первая реакция на сладкое/быстрые углеводы.</span>
+                    </li>
+                    <li className="flex items-start gap-2 text-sm text-gray-700">
+                        <span className="text-green-500 mt-0.5">🌿</span>
+                        <span><b>Основной (Пищеварительный):</b> переваривание сложных углеводов и жиров.</span>
+                    </li>
+                    <li className="flex items-start gap-2 text-sm text-gray-700">
+                        <span className="text-purple-500 mt-0.5">🫀</span>
+                        <span><b>Печёночный (Белковый):</b> долгий хвост усвоения протеина.</span>
+                    </li>
+                </ul>
+                <p className="text-sm text-gray-500 italic border-l-2 border-orange-200 pl-3">
+                    Вы точно знаете, когда уровень инсулина опустится, и ваше тело начнёт работать на вас.
+                </p>
+            </div>
 
-            {/* Timer visual */}
-            <div className="flex flex-col items-center py-8">
-                <div className="relative w-40 h-40 md:w-48 md:h-48">
-                    {/* Background ring */}
-                    <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
-                        <circle
-                            cx="50"
-                            cy="50"
-                            r="42"
-                            fill="none"
-                            stroke="#f3f4f6"
-                            strokeWidth="6"
-                        />
-                        {/* Animated progress ring */}
-                        <circle
-                            cx="50"
-                            cy="50"
-                            r="42"
-                            fill="none"
-                            stroke="url(#timerGradient)"
-                            strokeWidth="6"
-                            strokeLinecap="round"
-                            strokeDasharray={`${2 * Math.PI * 42}`}
-                            strokeDashoffset={`${2 * Math.PI * 42 * (minutes / 45)}`}
-                            className="transition-all duration-200 ease-linear"
-                        />
-                        <defs>
-                            <linearGradient id="timerGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                                <stop offset="0%" stopColor="#f97316" />
-                                <stop offset="100%" stopColor="#ef4444" />
-                            </linearGradient>
-                        </defs>
+            {/* UI Mockup of the App */}
+            <div className="w-full max-w-sm flex-shrink-0 bg-slate-50 p-4 rounded-3xl shadow-inner border border-slate-100 relative overflow-hidden">
+
+                {/* Header inside the mock */}
+                <div className="flex items-center gap-2 mb-4 px-2 text-slate-700 font-semibold text-sm">
+                    <svg className="w-5 h-5 text-red-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M2 12h4l3-9 5 18 3-9h5" strokeLinecap="round" strokeLinejoin="round" />
                     </svg>
+                    Инсулиновая волна
+                    <svg className="w-4 h-4 ml-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
+                </div>
 
-                    {/* Center text */}
-                    <div className="absolute inset-0 flex flex-col items-center justify-center">
-                        <span className="text-3xl md:text-4xl font-bold text-gray-900">
-                            {minutes}
-                        </span>
-                        <span className="text-xs text-gray-500 uppercase tracking-wider">минут</span>
+                {/* Blue Card */}
+                <div className="bg-[#3B82F6] rounded-2xl p-6 text-white shadow-lg relative z-10">
+                    <div className="text-center mb-6">
+                        <div className="text-blue-100 text-sm font-medium mb-2 flex items-center justify-center gap-1.5">
+                            ⏱ Жиросжигание начнётся через
+                        </div>
+                        <div className="flex items-end justify-center gap-1 font-mono font-bold tracking-tight">
+                            <div className="flex flex-col items-center">
+                                <span className="text-5xl">{h}</span>
+                                <span className="text-[10px] text-blue-200 mt-1 uppercase font-sans">часов</span>
+                            </div>
+                            <span className="text-3xl mb-4 opacity-75">:</span>
+                            <div className="flex flex-col items-center">
+                                <span className="text-5xl">{m}</span>
+                                <span className="text-[10px] text-blue-200 mt-1 uppercase font-sans">минут</span>
+                            </div>
+                            <span className="text-3xl mb-4 opacity-75">:</span>
+                            <div className="flex flex-col items-center">
+                                <span className="text-5xl">{s}</span>
+                                <span className="text-[10px] text-blue-200 mt-1 uppercase font-sans">секунд</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Chart Area inside Blue Card */}
+                    <div className="bg-white/10 rounded-xl p-4 relative h-32 border border-white/20 backdrop-blur-sm">
+                        {/* Dummy Graph Line */}
+                        <svg className="absolute inset-0 w-full h-full" preserveAspectRatio="none" viewBox="0 0 200 100">
+                            {/* Guideline */}
+                            <line x1="20" y1="80" x2="180" y2="80" stroke="rgba(255,255,255,0.3)" strokeWidth="1" strokeDasharray="4 4" />
+                            {/* Curve */}
+                            <path d="M 20,80 C 40,40 50,30 60,35 C 80,45 90,65 100,60 C 130,50 150,70 180,80" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" />
+
+                            {/* Vertical "Now" line */}
+                            <line x1="60" y1="35" x2="60" y2="80" stroke="rgba(255,255,255,0.5)" strokeWidth="1" strokeDasharray="2 2" />
+
+                            {/* Dots */}
+                            {/* Fast */}
+                            <circle cx="60" cy="35" r="4" fill="#F97316" stroke="white" strokeWidth="2" />
+                            <circle cx="60" cy="35" r="10" fill="rgba(249,115,22,0.3)" />
+                            {/* Main */}
+                            <circle cx="100" cy="60" r="4" fill="#22C55E" stroke="white" strokeWidth="2" />
+                            {/* Hepatic */}
+                            <circle cx="150" cy="70" r="4" fill="#A855F7" stroke="white" strokeWidth="2" />
+
+                            {/* Start Time / End Fire */}
+                            <text x="25" y="80" fill="white" fontSize="8" alignmentBaseline="middle">12:15</text>
+                            <text x="175" y="80" fill="white" fontSize="10" alignmentBaseline="middle">🔥</text>
+                        </svg>
+
+                        <div className="absolute top-2 left-[25%] bg-white text-blue-600 text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm">
+                            Сейчас
+                        </div>
+                    </div>
+
+                    {/* Legend */}
+                    <div className="mt-4 flex justify-between items-center text-[11px] font-medium px-1">
+                        <div className="flex gap-1.5 items-center text-orange-200">
+                            <span className="text-orange-400">⚡</span> Быстрые
+                        </div>
+                        <div className="flex gap-1.5 items-center text-green-200">
+                            <span className="text-green-400">🌿</span> Основной
+                        </div>
+                        <div className="flex gap-1.5 items-center text-purple-200">
+                            <span className="text-purple-400">🫀</span> Печёночный
+                        </div>
                     </div>
                 </div>
 
-                <p className="mt-4 text-lg font-semibold text-gray-900">
-                    До жиросжигания — {minutes} минут
-                </p>
-                <p className="text-sm text-gray-500 mt-1">
-                    Это не мотивационная фраза. Это расчёт на основе ваших данных.
-                </p>
+                {/* Status White Card */}
+                <div className="bg-white rounded-xl mx-4 -mt-3 relative z-20 shadow-md p-3 flex items-center gap-2 border border-slate-100">
+                    <div className="w-1.5 h-6 bg-orange-400 rounded-full"></div>
+                    <span className="text-slate-700 font-medium text-sm">Инсулин высокий, жир запасается</span>
+                </div>
             </div>
         </div>
     )
@@ -298,16 +347,16 @@ export default function NavigatorSection() {
         <section
             ref={sectionRef}
             id="navigator"
-            className="py-20 bg-white"
+            className="py-16 md:py-20 bg-white"
         >
-            <div className="container mx-auto px-6">
+            <div className="container mx-auto px-4 md:px-6">
                 <div className="max-w-4xl mx-auto">
                     {/* Section header */}
                     <h2
-                        className={`text-3xl md:text-4xl font-bold text-gray-900 mb-4 text-center transition-all duration-700 ease-out ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
+                        className={`text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900 mb-4 text-center transition-all duration-700 ease-out ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
                             }`}
                     >
-                        Мы видим, куда движется ваше поведение.{' '}
+                        Мы видим, куда движется ваше поведение.<br />
                         <span className="text-blue-600">И разворачиваем его вовремя.</span>
                     </h2>
                     <p
@@ -326,6 +375,20 @@ export default function NavigatorSection() {
                         <CausesBlock isVisible={isVisible} />
                         <NoPunishmentBlock isVisible={isVisible} />
                         <InsulinWaveBlock isVisible={isVisible} />
+                    </div>
+
+                    {/* CTA */}
+                    <div
+                        className={`text-center mt-12 transition-all duration-700 ease-out ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}
+                        style={{ transitionDelay: '800ms' }}
+                    >
+                        <a
+                            href="#trial"
+                            className="inline-flex items-center justify-center px-8 py-3.5 bg-blue-600 text-white font-semibold rounded-2xl hover:bg-blue-700 active:scale-95 transition-all text-[15px] tracking-wide shadow-lg shadow-blue-600/25"
+                        >
+                            Попробовать бесплатно
+                        </a>
+                        <p className="mt-3 text-sm text-gray-400">7 дней без карты. Без автосписаний.</p>
                     </div>
                 </div>
             </div>

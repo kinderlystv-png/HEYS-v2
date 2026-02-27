@@ -55,13 +55,13 @@ export default function ComparisonSection() {
         <section
             ref={sectionRef}
             id="comparison"
-            className="py-20 bg-gray-50"
+            className="py-16 md:py-20 bg-slate-50 border-y border-slate-200"
         >
-            <div className="container mx-auto px-6">
+            <div className="container mx-auto px-4 md:px-6">
                 <div className="max-w-4xl mx-auto">
                     {/* Section header */}
                     <h2
-                        className={`text-3xl md:text-4xl font-bold text-gray-900 mb-12 text-center transition-all duration-700 ease-out ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
+                        className={`text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900 mb-12 text-center transition-all duration-700 ease-out ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
                             }`}
                     >
                         Чем HEYS отличается от калорийников и диет
@@ -76,8 +76,8 @@ export default function ComparisonSection() {
                         <div className="rounded-2xl overflow-hidden border border-gray-200 bg-white">
                             {/* Table header */}
                             <div className="grid grid-cols-2">
-                                <div className="bg-gray-100 px-6 py-4 border-r border-gray-200">
-                                    <span className="text-sm font-semibold text-gray-500 uppercase tracking-wider">
+                                <div className="bg-red-50/50 px-6 py-4 border-r border-red-100">
+                                    <span className="text-sm font-semibold text-red-800/60 uppercase tracking-wider">
                                         Обычное приложение
                                     </span>
                                 </div>
@@ -95,7 +95,7 @@ export default function ComparisonSection() {
                                     className={`grid grid-cols-2 ${index < comparisonRows.length - 1 ? 'border-b border-gray-100' : ''
                                         }`}
                                 >
-                                    <div className="px-6 py-5 border-r border-gray-100 flex items-start gap-3">
+                                    <div className="px-6 py-5 bg-red-50/30 border-r border-red-100 flex items-start gap-3">
                                         <span className="text-red-400 mt-1 flex-shrink-0">✕</span>
                                         <span className="text-gray-600">{row.usual}</span>
                                     </div>
@@ -117,7 +117,7 @@ export default function ComparisonSection() {
                                     }`}
                                 style={{ transitionDelay: `${200 + index * 100}ms` }}
                             >
-                                <div className="px-5 py-4 bg-gray-50 border-b border-gray-100 flex items-start gap-3">
+                                <div className="px-5 py-4 bg-red-50/50 border-b border-red-100 flex items-start gap-3">
                                     <span className="text-red-400 mt-0.5 flex-shrink-0">✕</span>
                                     <span className="text-gray-600 text-sm">{row.usual}</span>
                                 </div>

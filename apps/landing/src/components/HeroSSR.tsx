@@ -57,7 +57,7 @@ export default function HeroSSR({ content }: HeroSSRProps) {
       {/* Header */}
       <header className={`relative w-full transition-all duration-700 ease-out ${mounted ? 'opacity-100' : 'opacity-0'
         }`}>
-        <div className="mx-auto w-full max-w-[1024px] px-6 py-4 flex items-center justify-between">
+        <div className="mx-auto w-full max-w-[1024px] px-4 md:px-6 py-4 flex items-center justify-between">
           <div className="flex items-center">
             <Image
               src="/logo.png"
@@ -140,7 +140,7 @@ export default function HeroSSR({ content }: HeroSSRProps) {
 
       {/* Hero Content — First Screen: Logo + Phone + H1 + H2 */}
       <div className="relative w-full min-h-[calc(100vh-72px)] md:min-h-0 flex flex-col md:block">
-        <div className="relative mx-auto w-full max-w-[1024px] px-6 pt-16 md:pt-20 pb-32 md:pb-0 flex flex-col md:block flex-1">
+        <div className="relative mx-auto w-full max-w-[1024px] px-4 md:px-6 pt-16 md:pt-20 pb-32 md:pb-0 flex flex-col md:block flex-1">
 
           {/* Mobile: Phone - adaptive size with animation */}
           <div className={`flex lg:hidden justify-center flex-1 items-center py-2 transition-all duration-700 ease-out ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'
@@ -236,7 +236,7 @@ export default function HeroSSR({ content }: HeroSSRProps) {
 
       {/* Hero Content — Second part (scrollable on mobile) */}
       <div className="relative w-full bg-white">
-        <div className="mx-auto w-full max-w-[1024px] px-6 pb-16 md:pb-24">
+        <div className="mx-auto w-full max-w-[1024px] px-4 md:px-6 pb-16 md:pb-24">
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-0 items-start">
 
             {/* Left Column — Text Content */}
@@ -252,45 +252,28 @@ export default function HeroSSR({ content }: HeroSSRProps) {
                 ))}
               </h2>
 
-              {/* H3 — Features (если есть) */}
-              {content.hero.features && content.hero.features.length > 0 && (
-                <div className={`space-y-3 mb-16 md:mb-20 transition-all duration-700 ease-out ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'
-                  }`} style={{ transitionDelay: '1000ms' }}>
-                  {content.hero.features.map((feature, i) => (
-                    <p key={i} className="text-[14px] md:text-[15px] text-[#4b5563] font-normal leading-[1.6]" dangerouslySetInnerHTML={{ __html: feature }} />
-                  ))}
-                </div>
-              )}
-
-              {/* Two CTA buttons */}
-              <div className={`flex flex-col sm:flex-row gap-4 mb-3 transition-all duration-700 ease-out ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'
-                }`} style={{ transitionDelay: '4000ms' }}>
-                <a
-                  href="#pricing"
-                  className="inline-flex items-center justify-center px-6 py-2.5 bg-[#4b5563] text-white/90 font-normal rounded-full hover:bg-[#374151] transition-all text-[14px] tracking-wide"
-                >
-                  {content.hero.ctaPrimary}
-                </a>
-
+              {/* CTA — единственная кнопка из COPY_FINAL */}
+              <div className={`flex mb-3 justify-center lg:justify-start transition-all duration-700 ease-out ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'
+                }`} style={{ transitionDelay: '1500ms' }}>
                 <a
                   href="#trial"
-                  className="inline-flex items-center justify-center px-6 py-2.5 bg-white/40 text-[#4b5563] font-normal rounded-full border border-[#9ca3af]/30 hover:bg-white/60 hover:border-[#9ca3af]/50 transition-all text-[14px] tracking-wide backdrop-blur-sm"
+                  className="inline-flex items-center justify-center px-8 py-3.5 bg-blue-600 text-white font-semibold rounded-2xl hover:bg-blue-700 active:scale-95 transition-all text-[15px] tracking-wide shadow-lg shadow-blue-600/25"
                 >
-                  {content.hero.ctaSecondary}
+                  Попробовать бесплатно — 7 дней
                 </a>
               </div>
 
               {/* Friction reduction note */}
               {content.hero.frictionNote && (
-                <p className={`text-[13px] text-[#4b5563] mb-5 leading-[1.5] transition-all duration-700 ease-out ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'
-                  }`} style={{ transitionDelay: '4000ms' }}>
+                <p className={`text-[13px] text-gray-500 mb-5 leading-[1.5] transition-all duration-700 ease-out ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'
+                  }`} style={{ transitionDelay: '2000ms' }}>
                   {content.hero.frictionNote}
                 </p>
               )}
 
               {/* Microtext */}
               <div className={`space-y-1 transition-all duration-700 ease-out ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'
-                }`} style={{ transitionDelay: '4000ms' }}>
+                }`} style={{ transitionDelay: '2000ms' }}>
                 <p className="text-[12px] text-[#6b7280] leading-[1.5]">
                   {content.hero.microtext}
                 </p>
