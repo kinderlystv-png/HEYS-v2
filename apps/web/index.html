@@ -303,10 +303,10 @@
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
     <link rel="dns-prefetch" href="https://cdn.jsdelivr.net" />
     <!-- Preload критических boot-бандлов (2026-02-25 bundle migration) -->
-    <link rel="preload" href="boot-core.bundle.d78546fb6349.js" as="script" />
+    <link rel="preload" href="boot-core.bundle.dffe9b518737.js" as="script" />
     <link rel="preload" href="boot-calc.bundle.9701e1633ac1.js" as="script" />
     <link rel="preload" href="boot-day.bundle.0f10e7bf96dc.js" as="script" />
-    <link rel="preload" href="boot-app.bundle.e539ebd7a716.js" as="script" />
+    <link rel="preload" href="boot-app.bundle.8f833e7623d1.js" as="script" />
     <link rel="preload" href="boot-init.bundle.26d91a786979.js" as="script" />
 
     <!-- React теперь бандлится локально через Vite (миграция с CDN 2026-01-21) -->
@@ -965,6 +965,8 @@
                 document.getElementById('hlg-screen-client').style.display = screen === 'client' ? '' : 'none';
                 document.getElementById('hlg-screen-curator').style.display = screen === 'curator' ? '' : 'none';
                 currentScreen = screen;
+                // v9.11: Export current screen globally so React LoginScreen can inherit user's choice
+                window.__hlgCurrentScreen = screen;
                 // Фокус
                 if (screen === 'client') {
                     setTimeout(function () {
@@ -1731,10 +1733,10 @@
          Сгенерировано: node scripts/bundle-legacy.mjs  (pnpm bundle:legacy)
          Состав и хеши: bundle-manifest.json
          Хеш в имени = вечный кэш (cache-first SW). -->
-    <script defer src="boot-core.bundle.d78546fb6349.js" fetchpriority="high"></script>
+    <script defer src="boot-core.bundle.dffe9b518737.js" fetchpriority="high"></script>
     <script defer src="boot-calc.bundle.9701e1633ac1.js"></script>
     <script defer src="boot-day.bundle.0f10e7bf96dc.js"></script>
-    <script defer src="boot-app.bundle.e539ebd7a716.js"></script>
+    <script defer src="boot-app.bundle.8f833e7623d1.js"></script>
     <script defer src="boot-init.bundle.26d91a786979.js"
         onerror="window.__heysShowRecoveryUI && window.__heysShowRecoveryUI('CRITICAL_SCRIPT_LOAD: boot-init.bundle')"></script>
 

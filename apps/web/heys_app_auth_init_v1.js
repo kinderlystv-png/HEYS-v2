@@ -336,14 +336,15 @@
             // v12: Если __heysReturningUser но сессия пропала — восстанавливаем форму
             __heysShowGateLogin();
 
-            // Anti-flash guard: if HTML gate is still fading out (curator/client just logged in),
-            // keep isInitializing=true so React doesn't flash LoginScreen during fade.
-            // staticLoginHandler (below) calls setIsInitializing(false) after heys-auth-ready.
+            // v9.11: For users with no session, transition to React LoginScreen quickly.
+            // Previous 2s safety timer caused AppLoader → LoginScreen flash that reset curator form.
+            // Now: if no session detected at HTML level, skip the timer entirely.
             var _loginGate = document.getElementById('heys-login-gate');
-            if (!_loginGate || _loginGate.style.display === 'none') {
+            if (!_loginGate || _loginGate.style.display === 'none' || !window.__heysHasSession) {
+                // No gate, gate hidden, or no session — mount React LoginScreen immediately
                 setIsInitializing(false);
             } else {
-                // Gate still visible — auth completing or user logging in. Safety fallback after 2s.
+                // Gate visible AND has session — auth completing or user logging in. Safety fallback after 2s.
                 var _safetyTimer = setTimeout(function () { setIsInitializing(false); }, 2000);
                 window.addEventListener('heys-auth-ready', function () { clearTimeout(_safetyTimer); }, { once: true });
             }

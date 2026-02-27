@@ -732,14 +732,33 @@
                     });
                 })()
                 : !cloudUser
-                    ? React.createElement(
+                    ? (() => {
+                        // v9.11: Remove HTML login gate before mounting React LoginScreen
+                        // to prevent two overlapping login UIs (HTML gate shows PIN form,
+                        // React LoginScreen would overlay it and reset user's curator choice).
+                        var _htmlGate = document.getElementById('heys-login-gate');
+                        if (_htmlGate) {
+                            // Preserve curator email if user was typing in HTML gate
+                            try {
+                                var _curEmail = document.getElementById('hlg-curator-email');
+                                if (_curEmail && _curEmail.value) {
+                                    window.__hlgCuratorEmail = _curEmail.value;
+                                }
+                            } catch (_e) { }
+                            _htmlGate.remove();
+                            console.info('[HEYS.gate] ✅ HTML login gate removed — React LoginScreen takes over');
+                        }
+                        // Inherit screen choice from HTML gate (curator/client)
+                        var _inheritedMode = window.__hlgCurrentScreen === 'curator' ? 'curator' : 'client';
+                        return React.createElement(
                         HEYS.LoginScreen,
                         {
-                            initialMode: 'client',
+                            initialMode: _inheritedMode,
                             onCuratorLogin: async ({ email, password }) => {
                                 const res = await cloudSignIn(email, password, { rememberMe: true });
                                 return res && res.error ? { error: res.error } : { ok: true };
                             },
+                            initialEmail: window.__hlgCuratorEmail || '',
                             onClientLogin: async ({ phone, pin }) => {
                                 const auth = HEYS && HEYS.auth;
                                 const fn = auth && auth.loginClient;
@@ -763,7 +782,8 @@
                                 return res;
                             },
                         }
-                    )
+                    );
+                    })()
                     : React.createElement(
                         'div',
                         {

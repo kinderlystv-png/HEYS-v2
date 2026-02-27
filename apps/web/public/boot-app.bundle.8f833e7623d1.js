@@ -8716,6 +8716,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
       onClientLogin,
       onCuratorLogin,
       initialMode = 'client',
+      initialEmail = '',
     } = props || {};
 
     const React = global.React;
@@ -8735,8 +8736,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
     const pinRefs = useRef([]);
     const pinHideTimers = useRef([null, null, null, null]);
 
-    // curator
-    const [email, setEmail] = useState('');
+    // curator — inherit email from HTML gate if user was already typing
+    const [email, setEmail] = useState(initialEmail || '');
     const [password, setPassword] = useState('');
 
     const [busy, setBusy] = useState(false);
@@ -17845,14 +17846,33 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                     });
                 })()
                 : !cloudUser
-                    ? React.createElement(
+                    ? (() => {
+                        // v9.11: Remove HTML login gate before mounting React LoginScreen
+                        // to prevent two overlapping login UIs (HTML gate shows PIN form,
+                        // React LoginScreen would overlay it and reset user's curator choice).
+                        var _htmlGate = document.getElementById('heys-login-gate');
+                        if (_htmlGate) {
+                            // Preserve curator email if user was typing in HTML gate
+                            try {
+                                var _curEmail = document.getElementById('hlg-curator-email');
+                                if (_curEmail && _curEmail.value) {
+                                    window.__hlgCuratorEmail = _curEmail.value;
+                                }
+                            } catch (_e) { }
+                            _htmlGate.remove();
+                            console.info('[HEYS.gate] ✅ HTML login gate removed — React LoginScreen takes over');
+                        }
+                        // Inherit screen choice from HTML gate (curator/client)
+                        var _inheritedMode = window.__hlgCurrentScreen === 'curator' ? 'curator' : 'client';
+                        return React.createElement(
                         HEYS.LoginScreen,
                         {
-                            initialMode: 'client',
+                            initialMode: _inheritedMode,
                             onCuratorLogin: async ({ email, password }) => {
                                 const res = await cloudSignIn(email, password, { rememberMe: true });
                                 return res && res.error ? { error: res.error } : { ok: true };
                             },
+                            initialEmail: window.__hlgCuratorEmail || '',
                             onClientLogin: async ({ phone, pin }) => {
                                 const auth = HEYS && HEYS.auth;
                                 const fn = auth && auth.loginClient;
@@ -17876,7 +17896,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                                 return res;
                             },
                         }
-                    )
+                    );
+                    })()
                     : React.createElement(
                         'div',
                         {
@@ -19496,14 +19517,15 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
             // v12: Если __heysReturningUser но сессия пропала — восстанавливаем форму
             __heysShowGateLogin();
 
-            // Anti-flash guard: if HTML gate is still fading out (curator/client just logged in),
-            // keep isInitializing=true so React doesn't flash LoginScreen during fade.
-            // staticLoginHandler (below) calls setIsInitializing(false) after heys-auth-ready.
+            // v9.11: For users with no session, transition to React LoginScreen quickly.
+            // Previous 2s safety timer caused AppLoader → LoginScreen flash that reset curator form.
+            // Now: if no session detected at HTML level, skip the timer entirely.
             var _loginGate = document.getElementById('heys-login-gate');
-            if (!_loginGate || _loginGate.style.display === 'none') {
+            if (!_loginGate || _loginGate.style.display === 'none' || !window.__heysHasSession) {
+                // No gate, gate hidden, or no session — mount React LoginScreen immediately
                 setIsInitializing(false);
             } else {
-                // Gate still visible — auth completing or user logging in. Safety fallback after 2s.
+                // Gate visible AND has session — auth completing or user logging in. Safety fallback after 2s.
                 var _safetyTimer = setTimeout(function () { setIsInitializing(false); }, 2000);
                 window.addEventListener('heys-auth-ready', function () { clearTimeout(_safetyTimer); }, { once: true });
             }

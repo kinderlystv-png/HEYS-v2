@@ -49,6 +49,7 @@
       onClientLogin,
       onCuratorLogin,
       initialMode = 'client',
+      initialEmail = '',
     } = props || {};
 
     const React = global.React;
@@ -68,8 +69,8 @@
     const pinRefs = useRef([]);
     const pinHideTimers = useRef([null, null, null, null]);
 
-    // curator
-    const [email, setEmail] = useState('');
+    // curator — inherit email from HTML gate if user was already typing
+    const [email, setEmail] = useState(initialEmail || '');
     const [password, setPassword] = useState('');
 
     const [busy, setBusy] = useState(false);
