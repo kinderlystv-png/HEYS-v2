@@ -143,7 +143,7 @@ export default function PricingSSR({ content, variant: _variant }: PricingSSRPro
                     planName={plan.name}
                     planPrice={`${plan.price} ${plan.period}`}
                     featured={plan.featured ?? false}
-                    premium={plan.premium ?? false} ctaText={plan.directCta}
+                    premium={plan.premium ?? false}
                     ctaText={plan.directCta}
                     isPrimary={true}
                   />
