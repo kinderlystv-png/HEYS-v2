@@ -2,6 +2,7 @@
 // Рендерится на сервере для SEO
 
 import type { LandingVariant, VariantContent } from '@/config/landing-variants'
+import PurchaseButton from './PurchaseButton'
 
 interface PricingSSRProps {
   content: VariantContent
@@ -57,9 +58,11 @@ export default function PricingSSR({ content, variant: _variant }: PricingSSRPro
         '09:00–21:00 — полная поддержка без выходных',
         'Приоритет в очереди ответов (реакция мгновенная)',
         'Дополнительный разбор состояний посреди недели',
+        'Онлайн-тренировка раз в неделю: куратор подключится по видеосвязи и проконтролирует технику (по желанию, вы ставите штатив)',
       ],
       cta: 'Выбрать Pro+',
       featured: false,
+      premium: true,
     },
   ]
 
@@ -82,46 +85,55 @@ export default function PricingSSR({ content, variant: _variant }: PricingSSRPro
             {plans.map((plan) => (
               <div
                 key={plan.name}
-                className={`relative rounded-2xl p-8 ${plan.featured
-                  ? 'bg-white border-2 border-blue-600 shadow-lg'
-                  : 'bg-white border border-gray-200'
+                className={`relative rounded-2xl p-8 ${plan.premium
+                  ? 'bg-slate-900 border-2 border-slate-800 text-white shadow-xl shadow-slate-900/20'
+                  : plan.featured
+                    ? 'bg-white border-2 border-blue-600 shadow-lg'
+                    : 'bg-white border border-gray-200'
                   }`}
               >
                 {plan.badge ? (
                   <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                    <span className="bg-blue-600 text-white text-sm font-medium px-4 py-1 rounded-full">
+                    <span className={`text-sm font-medium px-4 py-1 rounded-full ${plan.premium ? 'bg-amber-500 text-amber-950' : 'bg-blue-600 text-white'}`}>
                       {plan.badge}
                     </span>
                   </div>
                 ) : null}
 
                 <div className="text-center mb-6">
-                  <h3 className="text-xl font-bold text-gray-900 mb-2">{plan.name}</h3>
+                  <h3 className={`text-xl font-bold mb-2 ${plan.premium ? 'text-white' : 'text-gray-900'}`}>{plan.name}</h3>
                   <div className="flex items-baseline justify-center gap-1">
-                    <span className="text-4xl font-bold text-gray-900">{plan.price}</span>
-                    <span className="text-gray-500">{plan.period}</span>
+                    <span className={`text-4xl font-bold ${plan.premium ? 'text-white' : 'text-gray-900'}`}>{plan.price}</span>
+                    <span className={plan.premium ? 'text-slate-400' : 'text-gray-500'}>{plan.period}</span>
                   </div>
-                  <p className="mt-2 text-gray-600 text-sm">{plan.description}</p>
+                  <p className={`mt-2 text-sm ${plan.premium ? 'text-slate-300' : 'text-gray-600'}`}>{plan.description}</p>
                 </div>
 
                 <ul className="space-y-3 mb-8">
                   {plan.features.map((feature, index) => (
                     <li key={index} className="flex items-start gap-3">
-                      <span className="text-green-500 mt-1">✓</span>
-                      <span className="text-gray-700">{feature}</span>
+                      <span className={`${plan.premium ? 'text-amber-500' : 'text-green-500'} mt-1`}>✓</span>
+                      <span className={plan.premium ? 'text-slate-200' : 'text-gray-700'}>{feature}</span>
                     </li>
                   ))}
                 </ul>
 
                 <a
                   href="#trial"
-                  className={`block w-full text-center py-3 rounded-xl font-semibold transition-colors ${plan.featured
-                    ? 'bg-blue-600 text-white hover:bg-blue-700'
-                    : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
+                  className={`block w-full text-center py-3 rounded-xl font-semibold transition-colors ${plan.premium
+                    ? 'bg-white text-slate-900 hover:bg-gray-100'
+                    : plan.featured
+                      ? 'bg-blue-600 text-white hover:bg-blue-700'
+                      : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
                     }`}
                 >
                   {plan.cta}
                 </a>
+                <PurchaseButton
+                  planName={plan.name}
+                  planPrice={`${plan.price} ${plan.period}`}
+                  featured={plan.featured ?? false}
+                />
               </div>
             ))}
           </div>
