@@ -3,6 +3,7 @@ import { Open_Sans } from 'next/font/google'
 import Script from 'next/script'
 
 import { ABTestSwitcher } from '@/components/ABTestSwitcher'
+import { ScrollToTopFAB } from '@/components/ScrollToTopFAB'
 
 import '../styles/globals.css'
 
@@ -196,6 +197,7 @@ export default function RootLayout({
       </head>
       <body className={openSans.className}>
         {children}
+        <ScrollToTopFAB />
         <ABTestSwitcher />
 
         {/* Яндекс.Метрика noscript fallback */}

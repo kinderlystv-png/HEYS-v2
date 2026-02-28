@@ -140,10 +140,10 @@ export default function HeroSSR({ content }: HeroSSRProps) {
 
       {/* Hero Content — First Screen: Logo + Phone + H1 + H2 */}
       <div className="relative w-full min-h-[calc(100vh-72px)] md:min-h-0 flex flex-col md:block">
-        <div className="relative mx-auto w-full max-w-[1024px] px-4 md:px-6 pt-16 md:pt-20 pb-32 md:pb-0 flex flex-col md:block flex-1">
+        <div className="relative mx-auto w-full max-w-[1024px] px-4 md:px-6 pt-4 md:pt-20 pb-24 md:pb-0 flex flex-col md:block flex-1">
 
           {/* Mobile: Phone - adaptive size with animation */}
-          <div className={`flex lg:hidden justify-center flex-1 items-center py-2 transition-all duration-700 ease-out ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'
+          <div className={`flex lg:hidden justify-center flex-1 items-center transition-all duration-700 ease-out ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'
             }`} style={{ transitionDelay: '200ms' }}>
             <div className="relative w-full max-w-[200px] sm:max-w-[240px]">
               <Image
@@ -153,7 +153,7 @@ export default function HeroSSR({ content }: HeroSSRProps) {
                 height={480}
                 priority
                 className="w-full h-auto object-contain drop-shadow-xl"
-                style={{ maxHeight: 'calc(100vh - 400px)', height: 'auto' }}
+                style={{ maxHeight: 'max(40vh, 320px)', height: 'auto' }}
               />
             </div>
           </div>
@@ -161,13 +161,16 @@ export default function HeroSSR({ content }: HeroSSRProps) {
           {/* H1 — Main headline with A/B test */}
           <h1 className={`text-[26px] sm:text-[28px] md:text-[36px] lg:text-[40px] font-light text-[#374151] mb-3 md:mb-8 leading-[1.15] text-center lg:text-left transition-all duration-700 ease-out ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'
             }`} style={{ transitionDelay: '500ms' }}>
-            <span className="text-[#111827] font-semibold">
-              {abHeadline}
+            <span className="text-[#111827] font-semibold block px-2">
+              Энергия, вес, ясность —
+              <br />
+              под вашим управлением.
+              <br className="sm:hidden" /> Без силы воли.
             </span>
           </h1>
 
           {/* H2 — Subheadline with A/B test (visible on first screen for mobile too) */}
-          <h2 className={`lg:hidden text-[13px] sm:text-[14px] text-[#374151] font-normal mb-6 leading-[1.5] text-center transition-all duration-700 ease-out ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'
+          <h2 className={`px-4 lg:hidden text-[13px] sm:text-[14px] text-[#374151] font-normal mb-8 leading-[1.5] text-center transition-all duration-700 ease-out ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'
             }`} style={{ transitionDelay: '1000ms' }}>
             {abSubheadline.split('\n').map((line, i) => (
               <span key={i}>
@@ -181,7 +184,7 @@ export default function HeroSSR({ content }: HeroSSRProps) {
       </div>
 
       {/* Scroll cue — fixed at bottom of viewport (Mobile: 3000ms delay) */}
-      <div className={`lg:hidden pointer-events-none fixed bottom-8 left-1/2 -translate-x-1/2 z-20 transition-all duration-700 ease-out ${mounted && !scrolled ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
+      <div className={`lg:hidden pointer-events-none fixed bottom-4 sm:bottom-8 left-1/2 -translate-x-1/2 z-20 transition-all duration-700 ease-out ${mounted && !scrolled ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
         }`} style={{ transitionDelay: scrolled ? '0ms' : '3000ms' }}>
         <a
           href="#pain"

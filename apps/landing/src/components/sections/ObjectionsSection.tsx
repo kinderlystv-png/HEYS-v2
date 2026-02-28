@@ -8,24 +8,34 @@ import { useEffect, useRef, useState } from 'react'
 
 const objections = [
     {
-        question: '«У меня нет времени на ещё одно приложение»',
+        question: 'Что будет, если я сорвусь и съем пиццу на ночь?',
         answer:
-            'Куратор ведёт дневник за вас. Вам не нужно ничего считать, заполнять таблицы или разбираться в графиках. Ваше участие — 5 минут в день: скинуть фото еды и ответить на пару вопросов. Остальное делает система.',
+            'Ничего страшного. Ваш куратор — не школьный учитель с указкой. Наш подход — абсолютный ноль осуждения. Срыв для нас — это не проблема вашей силы воли, а системный сигнал. Мы просто найдем причину (например, вчерашний недосып или долгий перерыв между приемами пищи) и мягко скорректируем план на следующий день.',
     },
     {
-        question: '«Я уже всё пробовал — ничего не работает»',
+        question: '«У меня нет времени всё взвешивать и вносить в приложение»',
         answer:
-            'Диеты и приложения не работают, потому что оставляют вас один на один с собой. В HEYS — система + живой человек. Мы не бросаем вас после регистрации. Куратор рядом каждый день, а система предвидит проблемы до того, как вы их заметите.',
+            'Вам и не придется. В HEYS вам не нужно собирать пазлы из калорий, взвешивать еду до грамма или заполнять бесконечные таблицы. Ваше участие — 3 минуты в день: просто сфотографируйте еду и скиньте в Telegram. Всю рутину, расчёты, ведение дневника и аналитику берет на себя ваш личный куратор и наши алгоритмы.',
     },
     {
-        question: '«Дорого»',
+        question: 'Придется ли мне готовить себе отдельно от семьи?',
         answer:
-            'Посчитайте, сколько вы уже потратили на диетологов, фитнес-клубы и добавки, которые не дали устойчивого результата. HEYS — первый сервис, который включает и технологию, и живого человека рядом. Пробный период бесплатный — проверьте без риска.',
+            'Нет. HEYS не выдает жестких меню в стиле «гречка с грудкой». Мы работаем с тем, что вы уже едите — будь то бизнес-ланч в ресторане, ужин с семьей или заказ из доставки. Куратор подскажет, как правильно скомбинировать продукты из вашей привычной тарелки, чтобы получить нужный результат.',
     },
     {
-        question: '«А вдруг куратор будет меня стыдить за срывы?»',
+        question: '«Я уже всё пробовал: диеты, марафоны, приложения. Ничего не работает»',
         answer:
-            'Наш подход — ноль осуждения. Срыв — это не проблема клиента, а сигнал системе пересмотреть план. Куратор обучен работать именно так: не мотивировать через вину, а находить причину и корректировать процесс.',
+            'Стандартные подходы не работают, потому что оставляют вас один на один с жестким шаблоном. Как только случается стресс или поездка — шаблон рушится. В HEYS вас поддерживает живой человек, который каждый день адаптирует систему под ваш график и состояние. Мы выстраиваем процесс, где правильные решения становятся лёгкими.',
+    },
+    {
+        question: 'А если у меня частые командировки и непредсказуемый график?',
+        answer:
+            'Именно в таких случаях HEYS работает лучше всего. Куратор заранее учтет ваш перелет, смену часовых поясов и питание в отелях. Если вы не успеваете пообедать, он быстро пришлет варианты перекуса из ближайшей кофейни. Система подстраивается под вашу жизнь, а не наоборот.',
+    },
+    {
+        question: '«Действительно ли это стоит своих денег?»',
+        answer:
+            'Оплачивая HEYS, вы покупаете не просто доступ к приложению, а личного project-менеджера по вашему здоровью. Он экономит десятки часов вашего времени, ограждает от противоречивой информации из интернета и уберегает от бесполезных трат на неработающие добавки и очередные марафоны.',
     },
 ]
 
@@ -58,7 +68,7 @@ export default function ObjectionsSection() {
             id="objections"
             className="py-16 md:py-20 bg-white relative"
         >
-                        {/* Sticky Header Badge */}
+            {/* Sticky Header Badge */}
             <div className="sticky top-0 z-[100] bg-white/90 backdrop-blur-md border-b border-gray-100/50 py-3 mb-8 px-6 text-center shadow-sm w-full">
                 <span className="inline-block px-3 py-1 bg-blue-50 text-blue-600 text-[11px] font-bold tracking-widest uppercase rounded-full">06 — ЧАСТЫЕ СОМНЕНИЯ</span>
             </div>
@@ -73,36 +83,38 @@ export default function ObjectionsSection() {
                     </h2>
 
                     {/* Accordion */}
-                    <div className="space-y-3">
+                    <div className="space-y-4">
                         {objections.map((item, index) => (
                             <div
                                 key={index}
-                                className={`rounded-2xl border border-gray-200 bg-white overflow-hidden transition-all duration-700 ease-out ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
-                                    }`}
+                                className={`rounded-2xl border border-gray-100 bg-white shadow-sm overflow-hidden transition-all hover:border-blue-100 hover:shadow-md duration-500 ease-out ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
+                                    } ${openIndex === index ? 'ring-1 ring-blue-50 bg-blue-50/10' : ''}`}
                                 style={{ transitionDelay: `${150 + index * 100}ms` }}
                             >
                                 <button
                                     onClick={() => toggleIndex(index)}
-                                    className="w-full flex items-center justify-between px-6 py-5 text-left hover:bg-gray-50 transition-colors"
+                                    className="w-full flex items-center justify-between px-6 py-5 md:py-6 text-left transition-colors"
                                     aria-expanded={openIndex === index}
                                 >
                                     <span className="text-gray-900 font-semibold text-base md:text-lg pr-4">
                                         {item.question}
                                     </span>
-                                    <svg
-                                        className={`w-5 h-5 flex-shrink-0 text-gray-400 transition-transform duration-300 ${openIndex === index ? 'rotate-180' : ''
-                                            }`}
-                                        fill="none"
-                                        viewBox="0 0 24 24"
-                                        stroke="currentColor"
-                                    >
-                                        <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            strokeWidth={2}
-                                            d="M19 9l-7 7-7-7"
-                                        />
-                                    </svg>
+                                    <div className={`p-2 rounded-full transition-colors ${openIndex === index ? 'bg-blue-100' : 'bg-gray-100'}`}>
+                                        <svg
+                                            className={`w-5 h-5 flex-shrink-0 transition-transform duration-300 ${openIndex === index ? 'rotate-180 text-blue-600' : 'text-gray-500'
+                                                }`}
+                                            fill="none"
+                                            viewBox="0 0 24 24"
+                                            stroke="currentColor"
+                                        >
+                                            <path
+                                                strokeLinecap="round"
+                                                strokeLinejoin="round"
+                                                strokeWidth={2}
+                                                d="M19 9l-7 7-7-7"
+                                            />
+                                        </svg>
+                                    </div>
                                 </button>
 
                                 <div

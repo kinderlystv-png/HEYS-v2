@@ -17,11 +17,13 @@ export default function PricingSSR({ content, variant: _variant }: PricingSSRPro
       name: 'Base',
       price: '1 990',
       period: '₽/мес',
-      description: 'Приложение + умные подсказки + обратная связь раз в неделю',
+      description: 'Самостоятельный контроль + мощная аналитика HEYS',
       features: [
-        'Полный доступ к приложению',
-        'Умные подсказки и аналитика',
-        '1 обратная связь в неделю (async)',
+        'Вы ведете дневник питания сами',
+        'Полный доступ к приложению и виджетам',
+        'Алгоритмы предсказывают риск срывов',
+        'Глубокая аналитика метрик под капотом',
+        'Ревью и объективная оценка ситуации 1 раз в неделю',
       ],
       cta: 'Выбрать Base',
       featured: false,
@@ -31,31 +33,30 @@ export default function PricingSSR({ content, variant: _variant }: PricingSSRPro
       name: 'Pro',
       price: '12 990',
       period: '₽/мес',
-      description: 'Сопровождение: чат + ведение дневника + созвон раз в неделю',
+      description: 'Максимальный результат. Вы живёте — куратор берёт рутину на себя.',
       features: [
-        'Всё из Base',
-        'Куратор ведёт ваш дневник питания',
-        'Чат: 09:00–21:00 (время клиента)',
-        'Ответ ≤30 минут в рабочие часы',
-        'Выходные/праздники: дежурный режим',
-        'Еженедельный созвон 20–45 минут',
-        'Анти‑срыв сигнал — приоритет',
+        'Куратор сам ведёт ваш дневник (по фото/аудио)',
+        'Чат 09:00–21:00: живой наставник, не бот',
+        'Анти-срыв: подхватываем до того, как вы сдадитесь',
+        'Ответы в течение 30 минут',
+        'Еженедельный видео-созвон 20–45 минут',
+        'Выходные: дежурный режим',
       ],
       cta: 'Выбрать Pro',
       featured: true,
-      badge: 'Популярный',
+      badge: 'Хит',
     },
     {
       id: 'pro-plus',
       name: 'Pro+',
       price: '19 990',
       period: '₽/мес',
-      description: 'Максимальный режим 7/7 + приоритет в очереди ответов',
+      description: 'Премиум-поддержка 7/7 без выходных + приоритет',
       features: [
-        'Всё из Pro',
-        '09:00–21:00 — полный режим 7/7 (без дежурного)',
-        'Приоритет в очереди ответов в рабочие часы (≤30 мин)',
-        'Разбор в середине недели',
+        'Все опции тарифа Pro',
+        '09:00–21:00 — полная поддержка без выходных',
+        'Приоритет в очереди ответов (реакция мгновенная)',
+        'Дополнительный разбор состояний посреди недели',
       ],
       cta: 'Выбрать Pro+',
       featured: false,
@@ -64,12 +65,12 @@ export default function PricingSSR({ content, variant: _variant }: PricingSSRPro
 
   return (
     <section className="relative py-20 bg-gray-50" id="pricing">
-      
-            {/* Sticky Header Badge */}
-            <div className="sticky top-0 z-[100] bg-white/90 backdrop-blur-md border-b border-gray-100/50 py-3 mb-8 px-6 text-center shadow-sm w-full">
-                <span className="inline-block px-3 py-1 bg-blue-50 text-blue-600 text-[11px] font-bold tracking-widest uppercase rounded-full">08 — ТАРИФЫ</span>
-            </div>
-            <div className="container mx-auto px-6">
+
+      {/* Sticky Header Badge */}
+      <div className="sticky top-0 z-[100] bg-white/90 backdrop-blur-md border-b border-gray-100/50 py-3 mb-8 px-6 text-center shadow-sm w-full">
+        <span className="inline-block px-3 py-1 bg-blue-50 text-blue-600 text-[11px] font-bold tracking-widest uppercase rounded-full">08 — ТАРИФЫ</span>
+      </div>
+      <div className="container mx-auto px-6">
         <div className="max-w-5xl mx-auto">
           {/* Section header */}
           <div className="text-center mb-16">
@@ -82,8 +83,8 @@ export default function PricingSSR({ content, variant: _variant }: PricingSSRPro
               <div
                 key={plan.name}
                 className={`relative rounded-2xl p-8 ${plan.featured
-                    ? 'bg-white border-2 border-blue-600 shadow-lg'
-                    : 'bg-white border border-gray-200'
+                  ? 'bg-white border-2 border-blue-600 shadow-lg'
+                  : 'bg-white border border-gray-200'
                   }`}
               >
                 {plan.badge ? (
@@ -115,8 +116,8 @@ export default function PricingSSR({ content, variant: _variant }: PricingSSRPro
                 <a
                   href="#trial"
                   className={`block w-full text-center py-3 rounded-xl font-semibold transition-colors ${plan.featured
-                      ? 'bg-blue-600 text-white hover:bg-blue-700'
-                      : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
+                    ? 'bg-blue-600 text-white hover:bg-blue-700'
+                    : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
                     }`}
                 >
                   {plan.cta}

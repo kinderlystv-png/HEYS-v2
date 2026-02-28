@@ -38,9 +38,9 @@ export function ABTestSwitcher() {
     }
 
     return (
-        <div className="fixed bottom-6 right-6 z-[9999] font-sans">
+        <div className="fixed bottom-6 left-6 z-[9999] font-sans">
             {isOpen && (
-                <div className="absolute bottom-14 right-0 mb-2 w-56 bg-white rounded-xl shadow-2xl border border-slate-200 overflow-hidden text-sm animate-in fade-in slide-in-from-bottom-2">
+                <div className="absolute bottom-16 left-0 mb-2 w-56 bg-white rounded-xl shadow-2xl border border-slate-200 overflow-hidden text-sm animate-in fade-in slide-in-from-bottom-2">
                     <div className="p-3 bg-slate-50 border-b border-slate-100 font-semibold text-slate-700 flex justify-between items-center">
                         <span>🧪 A/B Тест Hero</span>
                         <button onClick={() => setIsOpen(false)} className="text-slate-400 hover:text-slate-600">
