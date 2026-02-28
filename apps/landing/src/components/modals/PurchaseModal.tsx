@@ -1,8 +1,9 @@
 'use client'
 
-import { logger } from '@heys/logger'
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
+
+import { logger } from '../../lib/logger'
 
 type FormState = 'idle' | 'loading' | 'success' | 'error'
 type Messenger = 'telegram' | 'whatsapp' | 'call'
