@@ -7,7 +7,7 @@ import Image from 'next/image'
 import { useEffect, useState } from 'react'
 
 import { LandingVariant, VariantContent } from '@/config/landing-variants'
-import { getHeroHeadline, getHeroSubheadline } from '@/lib/ab-test'
+import { getHeroSubheadline } from '@/lib/ab-test'
 import { useABTest } from '@/lib/useABTest'
 
 interface HeroSSRProps {
@@ -30,7 +30,6 @@ export default function HeroSSR({ content }: HeroSSRProps) {
   const [mounted, setMounted] = useState(false)
   const [scrolled, setScrolled] = useState(false)
   const heroCopyVariant = useABTest('hero_copy')
-  const abHeadline = getHeroHeadline(heroCopyVariant)
   const abSubheadline = getHeroSubheadline(heroCopyVariant)
 
   // Trigger animations after mount
