@@ -269,7 +269,7 @@ export default function TrialForm({ ctaLabel }: TrialFormProps) {
       <button
         type="submit"
         disabled={formState === 'loading'}
-        className="w-full py-4 bg-blue-600 text-white font-semibold text-lg rounded-xl shadow-lg hover:bg-blue-700 hover:shadow-xl transition-all duration-200 disabled:opacity-70 disabled:cursor-not-allowed"
+        className="w-full py-4 px-6 bg-blue-600 text-white font-semibold text-lg rounded-xl shadow-lg hover:bg-blue-700 hover:shadow-xl transition-all duration-200 disabled:opacity-70 disabled:cursor-not-allowed"
       >
         {formState === 'loading' ? (
           <span className="flex items-center justify-center gap-2">
