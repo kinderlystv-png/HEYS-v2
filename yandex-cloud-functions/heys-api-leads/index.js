@@ -92,12 +92,16 @@ async function sendTelegramNotification(lead) {
   // ⚠️ МИНИМИЗАЦИЯ ПДн: Telegram сервера за рубежом (ст.12 152-ФЗ)
   // Отправляем ТОЛЬКО lead_id для идентификации, без ПДн
   // Куратор смотрит полные данные в PostgreSQL (Yandex.Cloud РФ)
-  const text = `🆕 *Новая заявка #${lead.id || 'N/A'}*
+  let text = `🆕 *Новая заявка #${lead.id || 'N/A'}*
 
 📋 Мессенджер: ${messengerLabels[lead.messenger] || lead.messenger}
 ${lead.utm_source ? `📊 UTM: ${lead.utm_source}` : ''}
 
 👉 Полные данные в базе (PostgreSQL РФ)`;
+
+  if (lead.intent === 'direct_purchase') {
+    text = `🚨 *ПРЯМАЯ ПОКУПКА - ${lead.plan || 'Неизвестный тариф'}*\n\n` + text;
+  }
 
   const keyboard = {
     inline_keyboard: [
@@ -160,7 +164,9 @@ module.exports.handler = async function (event, context) {
       utm_term,
       utm_content,
       referrer,
-      landing_page
+      landing_page,
+      intent,
+      plan
     } = body;
 
     // Валидация
@@ -207,10 +213,10 @@ module.exports.handler = async function (event, context) {
       } else {
         // 2. Вставляем новый лид
         const result = await client.query(`
-          INSERT INTO leads (name, phone, messenger, utm_source, utm_medium, utm_campaign, utm_term, utm_content, referrer, landing_page)
-          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+          INSERT INTO leads (name, phone, messenger, utm_source, utm_medium, utm_campaign, utm_term, utm_content, referrer, landing_page, intent, plan)
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
           RETURNING id
-        `, [name, normalizedPhone, messenger, utm_source, utm_medium, utm_campaign, utm_term, utm_content, referrer, landing_page]);
+        `, [name, normalizedPhone, messenger, utm_source, utm_medium, utm_campaign, utm_term, utm_content, referrer, landing_page, intent, plan]);
 
         leadId = result.rows[0].id;
       }
@@ -223,7 +229,9 @@ module.exports.handler = async function (event, context) {
           phone: normalizedPhone,
           messenger,
           utm_source,
-          referrer
+          referrer,
+          intent,
+          plan
         });
 
         console.log('[Leads] New lead saved:', leadId);

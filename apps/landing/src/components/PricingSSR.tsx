@@ -26,7 +26,7 @@ export default function PricingSSR({ content, variant: _variant }: PricingSSRPro
         'Глубокая аналитика метрик под капотом',
         'Ревью и объективная оценка ситуации 1 раз в неделю',
       ],
-      cta: 'Выбрать Base',
+      cta: 'Попробовать Pro (0 ₽)', hasTrial: true, directCta: 'Выбрать Base',
       featured: false,
     },
     {
@@ -43,7 +43,7 @@ export default function PricingSSR({ content, variant: _variant }: PricingSSRPro
         'Еженедельный видео-созвон 20–45 минут',
         'Выходные: дежурный режим',
       ],
-      cta: 'Выбрать Pro',
+      cta: 'Попробовать неделю (0 ₽)', hasTrial: true, directCta: 'Оформить подписку',
       featured: true,
       badge: 'Хит',
     },
@@ -58,9 +58,9 @@ export default function PricingSSR({ content, variant: _variant }: PricingSSRPro
         '09:00–21:00 — полная поддержка без выходных',
         'Приоритет в очереди ответов (реакция мгновенная)',
         'Дополнительный разбор состояний посреди недели',
-        'Онлайн-тренировка раз в неделю: куратор подключится по видеосвязи и проконтролирует технику (по желанию, вы ставите штатив)',
+        'Персональная онлайн-тренировка 1 раз в неделю (контроль техники по видео)',
       ],
-      cta: 'Выбрать Pro+',
+      cta: 'Попробовать Pro (0 ₽)', hasTrial: true, directCta: 'Выбрать Pro+',
       featured: false,
       premium: true,
     },
@@ -86,7 +86,7 @@ export default function PricingSSR({ content, variant: _variant }: PricingSSRPro
               <div
                 key={plan.name}
                 className={`relative rounded-2xl p-8 ${plan.premium
-                  ? 'bg-slate-900 border-2 border-slate-800 text-white shadow-xl shadow-slate-900/20'
+                  ? 'bg-gradient-to-br from-indigo-900 to-slate-900 border-2 border-indigo-400/30 text-white shadow-xl shadow-indigo-900/10'
                   : plan.featured
                     ? 'bg-white border-2 border-blue-600 shadow-lg'
                     : 'bg-white border border-gray-200'
@@ -94,7 +94,7 @@ export default function PricingSSR({ content, variant: _variant }: PricingSSRPro
               >
                 {plan.badge ? (
                   <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                    <span className={`text-sm font-medium px-4 py-1 rounded-full ${plan.premium ? 'bg-amber-500 text-amber-950' : 'bg-blue-600 text-white'}`}>
+                    <span className={`text-sm font-medium px-4 py-1 rounded-full ${plan.premium ? 'bg-indigo-500 text-white shadow-md shadow-indigo-500/20' : 'bg-blue-600 text-white'}`}>
                       {plan.badge}
                     </span>
                   </div>
@@ -104,36 +104,50 @@ export default function PricingSSR({ content, variant: _variant }: PricingSSRPro
                   <h3 className={`text-xl font-bold mb-2 ${plan.premium ? 'text-white' : 'text-gray-900'}`}>{plan.name}</h3>
                   <div className="flex items-baseline justify-center gap-1">
                     <span className={`text-4xl font-bold ${plan.premium ? 'text-white' : 'text-gray-900'}`}>{plan.price}</span>
-                    <span className={plan.premium ? 'text-slate-400' : 'text-gray-500'}>{plan.period}</span>
+                    <span className={plan.premium ? 'text-indigo-200/70' : 'text-gray-500'}>{plan.period}</span>
                   </div>
-                  <p className={`mt-2 text-sm ${plan.premium ? 'text-slate-300' : 'text-gray-600'}`}>{plan.description}</p>
+                  <p className={`mt-2 text-sm ${plan.premium ? 'text-indigo-100/90' : 'text-gray-600'}`}>{plan.description}</p>
                 </div>
 
                 <ul className="space-y-3 mb-8">
                   {plan.features.map((feature, index) => (
                     <li key={index} className="flex items-start gap-3">
-                      <span className={`${plan.premium ? 'text-amber-500' : 'text-green-500'} mt-1`}>✓</span>
-                      <span className={plan.premium ? 'text-slate-200' : 'text-gray-700'}>{feature}</span>
+                      <span className={`${plan.premium ? 'text-indigo-400' : 'text-green-500'} mt-1`}>✓</span>
+                      <span className={plan.premium ? 'text-indigo-50/90' : 'text-gray-700'}>{feature}</span>
                     </li>
                   ))}
                 </ul>
 
-                <a
-                  href="#trial"
-                  className={`block w-full text-center py-3 rounded-xl font-semibold transition-colors ${plan.premium
-                    ? 'bg-white text-slate-900 hover:bg-gray-100'
-                    : plan.featured
-                      ? 'bg-blue-600 text-white hover:bg-blue-700'
-                      : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
-                    }`}
-                >
-                  {plan.cta}
-                </a>
-                <PurchaseButton
-                  planName={plan.name}
-                  planPrice={`${plan.price} ${plan.period}`}
-                  featured={plan.featured ?? false}
-                />
+                {plan.hasTrial ? (
+                  <>
+                    <a
+                      href="#trial"
+                      className={`block w-full text-center py-3 rounded-xl font-semibold transition-colors ${plan.premium
+                        ? 'bg-white/10 text-white hover:bg-white/20 border border-white/10'
+                        : plan.featured
+                          ? 'bg-blue-600 text-white hover:bg-blue-700'
+                          : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
+                        }`}
+                    >
+                      {plan.cta}
+                    </a>
+                    <PurchaseButton
+                      planName={plan.name}
+                      planPrice={`${plan.price} ${plan.period}`}
+                      featured={plan.featured ?? false}
+                      premium={plan.premium ?? false} ctaText={plan.directCta}
+                    />
+                  </>
+                ) : (
+                  <PurchaseButton
+                    planName={plan.name}
+                    planPrice={`${plan.price} ${plan.period}`}
+                    featured={plan.featured ?? false}
+                    premium={plan.premium ?? false} ctaText={plan.directCta}
+                    ctaText={plan.directCta}
+                    isPrimary={true}
+                  />
+                )}
               </div>
             ))}
           </div>

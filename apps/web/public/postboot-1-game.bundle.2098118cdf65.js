@@ -30503,7 +30503,8 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
           'Всё из Pro',
           '7/7 без дежурного режима',
           'Приоритетный SLA',
-          'Mid-week чек-ин'
+          'Mid-week чек-ин',
+          'Онлайн-присутствие на 1 тренировке/нед.'
         ]
       }
     },

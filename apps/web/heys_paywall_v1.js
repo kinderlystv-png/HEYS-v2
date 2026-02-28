@@ -364,7 +364,7 @@
         id: 'proPlus',
         name: 'Pro+',
         price: PAYWALL_CONFIG.prices.proPlus,
-        desc: 'Полный режим 7/7 + приоритетный SLA',
+        desc: 'Полный режим 7/7 + приоритетный SLA + онлайн на 1 тренировке',
         popular: false
       }
     ];

@@ -2,5 +2,3 @@
 > @heys/core@14.0.0 type-check /Users/poplavskijanton/HEYS-v2/packages/core
 > tsc --noEmit
 
-../shared/src/security/validation.ts(69,20): error TS6133: 'dompurify' is declared but its value is never read.
- ELIFECYCLE  Command failed with exit code 2.

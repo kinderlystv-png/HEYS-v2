@@ -1,58 +1,58 @@
 {
   "boot-core": {
-    "file": "boot-core.bundle.e620c40d1985.js",
-    "hash": "e620c40d1985",
+    "file": "boot-core.bundle.cc6b33299856.js",
+    "hash": "cc6b33299856",
     "fileCount": 25,
     "size": 1178519,
-    "builtAt": "2026-02-27T20:18:31.233Z"
+    "builtAt": "2026-02-28T20:11:33.404Z"
   },
   "boot-calc": {
     "file": "boot-calc.bundle.9701e1633ac1.js",
     "hash": "9701e1633ac1",
     "fileCount": 19,
     "size": 897632,
-    "builtAt": "2026-02-27T20:18:31.260Z"
+    "builtAt": "2026-02-28T20:11:33.432Z"
   },
   "boot-day": {
     "file": "boot-day.bundle.0f10e7bf96dc.js",
     "hash": "0f10e7bf96dc",
     "fileCount": 51,
     "size": 901365,
-    "builtAt": "2026-02-27T20:18:31.299Z"
+    "builtAt": "2026-02-28T20:11:33.467Z"
   },
   "boot-app": {
-    "file": "boot-app.bundle.3af03331a49b.js",
-    "hash": "3af03331a49b",
+    "file": "boot-app.bundle.7fb2d3bb5c82.js",
+    "hash": "7fb2d3bb5c82",
     "fileCount": 48,
-    "size": 1091749,
-    "builtAt": "2026-02-27T20:18:31.335Z"
+    "size": 1091792,
+    "builtAt": "2026-02-28T20:11:33.504Z"
   },
   "boot-init": {
     "file": "boot-init.bundle.7cf2b4357f16.js",
     "hash": "7cf2b4357f16",
     "fileCount": 8,
     "size": 360336,
-    "builtAt": "2026-02-27T20:18:31.345Z"
+    "builtAt": "2026-02-28T20:11:33.517Z"
   },
   "postboot-1-game": {
-    "file": "postboot-1-game.bundle.d05687516b76.js",
-    "hash": "d05687516b76",
+    "file": "postboot-1-game.bundle.2098118cdf65.js",
+    "hash": "2098118cdf65",
     "fileCount": 29,
-    "size": 1387945,
-    "builtAt": "2026-02-27T20:18:31.384Z"
+    "size": 1388030,
+    "builtAt": "2026-02-28T20:11:33.555Z"
   },
   "postboot-2-insights": {
     "file": "postboot-2-insights.bundle.92f88e068db2.js",
     "hash": "92f88e068db2",
     "fileCount": 39,
     "size": 1802185,
-    "builtAt": "2026-02-27T20:18:31.439Z"
+    "builtAt": "2026-02-28T20:11:33.605Z"
   },
   "postboot-3-ui": {
     "file": "postboot-3-ui.bundle.9df20d00d993.js",
     "hash": "9df20d00d993",
     "fileCount": 25,
     "size": 1312349,
-    "builtAt": "2026-02-27T20:18:31.471Z"
+    "builtAt": "2026-02-28T20:11:33.641Z"
   }
 }

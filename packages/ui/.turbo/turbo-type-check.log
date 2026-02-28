@@ -2,3 +2,29 @@
 > @heys/ui@14.0.0 type-check /Users/poplavskijanton/HEYS-v2/packages/ui
 > tsc --noEmit
 
+[96m../shared/src/logging/AppLogger.ts[0m:[93m61[0m:[93m5[0m - [91merror[0m[90m TS2375: [0mType '{ msg: string; meta: LogMeta | undefined; }' is not assignable to type '{ msg: string; meta?: LogMeta; }' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Types of property 'meta' are incompatible.
+    Type 'LogMeta | undefined' is not assignable to type 'LogMeta'.
+      Type 'undefined' is not assignable to type 'LogMeta'.
+
+[7m61[0m     return { msg: a, meta: b as LogMeta | undefined };
+[7m  [0m [91m    ~~~~~~[0m
+
+[96m../shared/src/security/validation.ts[0m:[93m69[0m:[93m20[0m - [91merror[0m[90m TS6133: [0m'dompurify' is declared but its value is never read.
+
+[7m69[0m   private readonly dompurify: typeof DOMPurify;
+[7m  [0m [91m                   ~~~~~~~~~[0m
+
+[96m../shared/src/security/validation.ts[0m:[93m75[0m:[93m5[0m - [91merror[0m[90m TS2412: [0mType '((input: string, config?: Config | undefined) => unknown) | undefined' is not assignable to type '(input: string, config?: Config | undefined) => unknown' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the type of the target.
+  Type 'undefined' is not assignable to type '(input: string, config?: Config | undefined) => unknown'.
+
+[7m75[0m     this.sanitizeFn = this.resolveSanitizeFn(purifier);
+[7m  [0m [91m    ~~~~~~~~~~~~~~~[0m
+
+
+Found 3 errors in 2 files.
+
+Errors  Files
+     1  ../shared/src/logging/AppLogger.ts[90m:61[0m
+     2  ../shared/src/security/validation.ts[90m:69[0m
+[41m[30m ELIFECYCLE [39m[49m [31mCommand failed with exit code 2.[39m
