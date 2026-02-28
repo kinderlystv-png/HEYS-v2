@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+
 import PurchaseModal from './modals/PurchaseModal'
 
 interface PurchaseButtonProps {

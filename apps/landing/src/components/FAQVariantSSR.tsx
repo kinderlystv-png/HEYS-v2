@@ -1,6 +1,8 @@
 // FAQVariantSSR.tsx — Server Component версия FAQ
 // Рендерится на сервере для SEO
 
+import FAQAccordion from './FAQAccordion'
+
 import type { LandingVariant, VariantContent } from '@/config/landing-variants'
 
 interface FAQVariantSSRProps {
@@ -13,12 +15,12 @@ export default function FAQVariantSSR({ content, variant: _variant }: FAQVariant
 
   return (
     <section className="relative py-16 md:py-20 bg-white" id="faq">
-      
-            {/* Sticky Header Badge */}
-            <div className="sticky top-0 z-[100] bg-white/90 backdrop-blur-md border-b border-gray-100/50 py-3 mb-8 px-6 text-center shadow-sm w-full">
-                <span className="inline-block px-3 py-1 bg-blue-50 text-blue-600 text-[11px] font-bold tracking-widest uppercase rounded-full">10 — ОТВЕТЫ НА ВОПРОСЫ</span>
-            </div>
-            <div className="container mx-auto px-4 md:px-6">
+
+      {/* Sticky Header Badge */}
+      <div className="sticky top-0 z-[100] bg-white/90 backdrop-blur-md border-b border-gray-100/50 py-3 mb-8 px-6 text-center shadow-sm w-full">
+        <span className="inline-block px-3 py-1 bg-blue-50 text-blue-600 text-[11px] font-bold tracking-widest uppercase rounded-full">10 — ОТВЕТЫ НА ВОПРОСЫ</span>
+      </div>
+      <div className="container mx-auto px-4 md:px-6">
         <div className="max-w-4xl mx-auto">
           <div className="text-center mb-14">
             {faq.eyebrow ? (
@@ -28,16 +30,8 @@ export default function FAQVariantSSR({ content, variant: _variant }: FAQVariant
             {faq.subtitle ? <p className="text-base md:text-lg text-gray-600">{faq.subtitle}</p> : null}
           </div>
 
-          <div className="space-y-6">
-            {faq.items.map((item, i) => (
-              <details key={i} className="group rounded-2xl border border-gray-200 bg-gray-50 px-6 py-5">
-                <summary className="flex cursor-pointer list-none items-center justify-between gap-6">
-                  <span className="text-base md:text-lg font-semibold text-gray-900">{item.q}</span>
-                  <span className="text-gray-500 transition-transform group-open:rotate-180">▼</span>
-                </summary>
-                <div className="mt-4 text-gray-700 leading-relaxed whitespace-pre-line">{item.a}</div>
-              </details>
-            ))}
+          <div className="mt-8">
+            <FAQAccordion items={faq.items} />
           </div>
         </div>
       </div>

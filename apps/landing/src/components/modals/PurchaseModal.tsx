@@ -1,5 +1,6 @@
 'use client'
 
+import { logger } from '@heys/logger'
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 
@@ -111,7 +112,7 @@ export default function PurchaseModal({ isOpen, onClose, planName, planPrice }: 
         } catch (err: any) {
             setFormState('error')
             setErrorMessage(err.message || 'Произошла ошибка. Пожалуйста, попробуйте позже или напишите нам в Telegram.')
-            console.error('[PurchaseModal] Submit error:', err)
+            logger.error('[PurchaseModal] ❌ Submit error:', err)
         }
     }
 

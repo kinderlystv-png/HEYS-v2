@@ -1,8 +1,9 @@
 // PricingSSR.tsx — Server Component версия прайсинга
 // Рендерится на сервере для SEO
 
-import type { LandingVariant, VariantContent } from '@/config/landing-variants'
 import PurchaseButton from './PurchaseButton'
+
+import type { LandingVariant, VariantContent } from '@/config/landing-variants'
 
 interface PricingSSRProps {
   content: VariantContent
