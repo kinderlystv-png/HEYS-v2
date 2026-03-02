@@ -483,7 +483,7 @@
 
         const consentData = [{
           type: 'payment_oferta',
-          version: '1.4',
+          version: '1.2',
           granted: true,
           signature_method: 'checkbox'
         }];

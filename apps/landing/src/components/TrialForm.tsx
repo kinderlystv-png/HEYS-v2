@@ -28,7 +28,7 @@ interface TrialFormProps {
 
 export default function TrialForm({ ctaLabel }: TrialFormProps) {
   const [name, setName] = useState('')
-  const [phone, setPhone] = useState('')
+  const [phoneDigits, setPhoneDigits] = useState('') // только 10 цифр без ведущей 7
   const [messenger, setMessenger] = useState<Messenger>('telegram')
   const [formState, setFormState] = useState<FormState>('idle')
   const [errorMessage, setErrorMessage] = useState('')
@@ -48,22 +48,19 @@ export default function TrialForm({ ctaLabel }: TrialFormProps) {
     }
   }, [])
 
-  const formatPhone = (value: string) => {
-    // Убираем всё кроме цифр
-    const digits = value.replace(/\D/g, '')
-
-    // Форматируем как +7 (XXX) XXX-XX-XX
+  // Форматирует локальную часть (10 цифр без кода страны) в маску XXX) XXX-XX-XX
+  const formatLocalDisplay = (digits: string) => {
     if (digits.length === 0) return ''
-    if (digits.length <= 1) return `+${digits}`
-    if (digits.length <= 4) return `+${digits.slice(0, 1)} (${digits.slice(1)}`
-    if (digits.length <= 7) return `+${digits.slice(0, 1)} (${digits.slice(1, 4)}) ${digits.slice(4)}`
-    if (digits.length <= 9) return `+${digits.slice(0, 1)} (${digits.slice(1, 4)}) ${digits.slice(4, 7)}-${digits.slice(7)}`
-    return `+${digits.slice(0, 1)} (${digits.slice(1, 4)}) ${digits.slice(4, 7)}-${digits.slice(7, 9)}-${digits.slice(9, 11)}`
+    if (digits.length <= 3) return digits
+    if (digits.length <= 6) return `${digits.slice(0, 3)}) ${digits.slice(3)}`
+    if (digits.length <= 8) return `${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`
+    return `${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6, 8)}-${digits.slice(8, 10)}`
   }
 
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const formatted = formatPhone(e.target.value)
-    setPhone(formatted)
+    // Берём только цифры из введённого значения, ограничиваем 10
+    const digits = e.target.value.replace(/\D/g, '').slice(0, 10)
+    setPhoneDigits(digits)
   }
 
   const validateForm = (): boolean => {
@@ -72,8 +69,7 @@ export default function TrialForm({ ctaLabel }: TrialFormProps) {
       return false
     }
 
-    const digits = phone.replace(/\D/g, '')
-    if (digits.length !== 11) {
+    if (phoneDigits.length !== 10) {
       setErrorMessage('Введите корректный номер телефона')
       return false
     }
@@ -98,7 +94,7 @@ export default function TrialForm({ ctaLabel }: TrialFormProps) {
         },
         body: JSON.stringify({
           name: name.trim(),
-          phone: phone.replace(/\D/g, ''),
+          phone: '7' + phoneDigits,
           messenger,
           // UTM параметры
           ...utmParams,
@@ -190,15 +186,19 @@ export default function TrialForm({ ctaLabel }: TrialFormProps) {
         <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-2">
           Номер телефона
         </label>
-        <input
-          type="tel"
-          id="phone"
-          value={phone}
-          onChange={handlePhoneChange}
-          placeholder="+7 (___) ___-__-__"
-          className="w-full px-4 py-3 rounded-xl border border-gray-300 bg-gray-50 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-all"
-          disabled={formState === 'loading'}
-        />
+        <div className="flex items-center w-full px-4 py-3 rounded-xl border border-gray-300 bg-gray-50 focus-within:ring-2 focus-within:ring-blue-500/30 transition-all">
+          <span className="text-gray-900 select-none whitespace-nowrap mr-0.5">+7 (</span>
+          <input
+            type="tel"
+            id="phone"
+            value={formatLocalDisplay(phoneDigits)}
+            onChange={handlePhoneChange}
+            placeholder="___) ___-__-__"
+            inputMode="numeric"
+            className="flex-1 bg-transparent outline-none text-gray-900 placeholder-gray-400 min-w-0"
+            disabled={formState === 'loading'}
+          />
+        </div>
       </div>
 
       {/* Выбор мессенджера */}

@@ -3708,7 +3708,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
   // ============================================================================
 
   // === App Version & Auto-logout on Update ===
-  const APP_VERSION = '2026.02.28.0012.1ca916fe'; // synced with build-meta.json on 2026-02-26
+  const APP_VERSION = '2026.03.02.2320.a88fd3b1'; // synced with build-meta.json on 2026-02-26
 
   HEYS.version = APP_VERSION;
 
@@ -26251,6 +26251,202 @@ NOVA: 1-4
     const updated = presets.filter((p) => p.id !== id);
     Store.set(MEAL_PRESETS_KEY, updated);
     console.info('[HEYS.storage] ✅ Meal preset deleted:', { id });
+  };
+
+  // ═══════════════════════════════════════════════════════════════════
+  // 🤖 РЕКОМЕНДУЕМЫЕ НАБОРЫ (SUGGESTED PRESETS — из анализа истории)
+  // ═══════════════════════════════════════════════════════════════════
+  const SUGGESTED_PRESETS_KEY = 'heys_suggested_presets_v1';
+
+  /**
+   * Получить все рекомендованные (неодобренные) наборы
+   * @returns {Array}
+   */
+  Store.getSuggestedPresets = function () {
+    const arr = Store.get(SUGGESTED_PRESETS_KEY, []);
+    return Array.isArray(arr) ? arr : [];
+  };
+
+  /**
+   * Подтвердить рекомендованный набор → переводит его в confirmed presets
+   * @param {string} id
+   * @returns {string|null} id сохранённого набора
+   */
+  Store.confirmSuggestedPreset = function (id) {
+    const suggested = Store.getSuggestedPresets();
+    const preset = suggested.find((p) => p.id === id);
+    if (!preset) return null;
+    // Убираем из рекомендаций
+    Store.set(SUGGESTED_PRESETS_KEY, suggested.filter((p) => p.id !== id));
+    // Сохраняем как обычный набор
+    const savedId = Store.saveMealPreset({
+      name: preset.name,
+      items: (preset.items || []).map((item) => ({ ...item, grams: item.grams || 100 })),
+    });
+    console.info('[HEYS.storage] ✅ Suggested preset confirmed:', { id, name: preset.name });
+    return savedId;
+  };
+
+  /**
+   * Отклонить рекомендованный набор (удаляет его)
+   * @param {string} id
+   */
+  Store.dismissSuggestedPreset = function (id) {
+    const suggested = Store.getSuggestedPresets();
+    Store.set(SUGGESTED_PRESETS_KEY, suggested.filter((p) => p.id !== id));
+    console.info('[HEYS.storage] ✅ Suggested preset dismissed:', { id });
+  };
+
+  /**
+   * Анализирует историю приёмов пищи и формирует рекомендации наборов.
+   * Ищет сочетания продуктов (по product_id, без учёта граммовки), которые
+   * встречаются в истории не менее minFrequency раз.
+   *
+   * @param {{ minFrequency?: number, maxComboSize?: number }} [options]
+   * @returns {number} количество актуальных рекомендаций
+   */
+  Store.runPresetSuggestionEngine = function (options) {
+    const MIN_FREQUENCY = (options && options.minFrequency) || 3;
+    const MAX_COMBO_SIZE = (options && options.maxComboSize) || 8;
+    const MIN_COMBO_SIZE = (options && options.minComboSize) || 2;
+
+    // --- Собираем все дни из localStorage ---
+    const allDays = [];
+    try {
+      const lsKeys = Object.keys(localStorage);
+      const dayKeyPattern = /dayv2_\d{4}-\d{2}-\d{2}$/;
+      lsKeys.forEach(function (key) {
+        if (!dayKeyPattern.test(key)) return;
+        try {
+          const raw = localStorage.getItem(key);
+          if (!raw) return;
+          const data = JSON.parse(raw);
+          if (data && Array.isArray(data.meals)) allDays.push(data);
+        } catch (e) { /* пропускаем битые дни */ }
+      });
+    } catch (e) {
+      console.warn('[HEYS.storage] ⚠️ runPresetSuggestionEngine: ошибка чтения LS', e);
+      return 0;
+    }
+
+    if (allDays.length === 0) {
+      console.info('[HEYS.storage] ℹ️ runPresetSuggestionEngine: нет данных о днях');
+      return 0;
+    }
+
+    // --- Строим карту частотности сочетаний ---
+    var comboMap = new Map();
+
+    allDays.forEach(function (day) {
+      (day.meals || []).forEach(function (meal) {
+        var items = (meal.items || []).filter(function (item) {
+          return item.product_id || item.id;
+        });
+        if (items.length < MIN_COMBO_SIZE || items.length > MAX_COMBO_SIZE) return;
+
+        var productIds = items.map(function (i) { return String(i.product_id || i.id); }).sort();
+        var signature = productIds.join(',');
+
+        if (comboMap.has(signature)) {
+          var entry = comboMap.get(signature);
+          entry.count++;
+          var dayTs = day.date ? new Date(day.date).getTime() : Date.now();
+          if (dayTs > entry.lastSeenAt) entry.lastSeenAt = dayTs;
+        } else {
+          var dayTs = day.date ? new Date(day.date).getTime() : Date.now();
+          comboMap.set(signature, {
+            productIds: productIds,
+            sampleItems: items.map(function (item) {
+              return {
+                product_id: item.product_id || item.id,
+                name: item.name || '',
+                grams: 100,
+                kcal100: item.kcal100 || 0,
+                protein100: item.protein100 || 0,
+                fat100: item.fat100 || 0,
+                simple100: item.simple100 || 0,
+                complex100: item.complex100 || 0,
+                badFat100: item.badFat100 || 0,
+                goodFat100: item.goodFat100 || 0,
+                trans100: item.trans100 || 0,
+                fiber100: item.fiber100 || 0,
+                gi: item.gi || 0,
+                harm: item.harm || 0,
+              };
+            }),
+            count: 1,
+            lastSeenAt: dayTs,
+          });
+        }
+      });
+    });
+
+    // --- Фильтруем: только частые сочетания ---
+    var frequentCombos = [];
+    comboMap.forEach(function (entry, signature) {
+      if (entry.count >= MIN_FREQUENCY) {
+        frequentCombos.push(Object.assign({ signature: signature }, entry));
+      }
+    });
+
+    if (frequentCombos.length === 0) {
+      console.info('[HEYS.storage] ℹ️ runPresetSuggestionEngine: частых сочетаний не найдено', { days: allDays.length, minFreq: MIN_FREQUENCY });
+      return 0;
+    }
+
+    // --- Исключаем уже подтверждённые наборы ---
+    var confirmedPresets = Store.getMealPresets();
+    var confirmedSignatures = new Set(
+      confirmedPresets.map(function (p) {
+        return (p.items || []).map(function (i) { return String(i.product_id); }).sort().join(',');
+      })
+    );
+
+    // --- Обновляем или создаём рекомендации ---
+    var existingSuggested = Store.getSuggestedPresets();
+    var existingMap = new Map(existingSuggested.map(function (p) { return [p.signature, p]; }));
+    var now = Date.now();
+    var newSuggested = [];
+
+    frequentCombos.forEach(function (combo) {
+      if (confirmedSignatures.has(combo.signature)) return; // уже подтверждён
+
+      var names = combo.sampleItems.map(function (i) { return i.name; }).filter(Boolean);
+      var displayName = names.length > 3
+        ? names.slice(0, 3).join(' + ') + ' +' + (names.length - 3)
+        : names.join(' + ');
+
+      if (existingMap.has(combo.signature)) {
+        var existing = existingMap.get(combo.signature);
+        newSuggested.push(Object.assign({}, existing, {
+          frequency: combo.count,
+          lastSeenAt: combo.lastSeenAt,
+        }));
+      } else {
+        newSuggested.push({
+          id: 'sp_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+          name: displayName,
+          items: combo.sampleItems,
+          signature: combo.signature,
+          suggested: true,
+          frequency: combo.count,
+          lastSeenAt: combo.lastSeenAt,
+          createdAt: now,
+        });
+      }
+    });
+
+    // Сортируем по частоте (самые частые → первыми)
+    newSuggested.sort(function (a, b) { return (b.frequency || 0) - (a.frequency || 0); });
+
+    Store.set(SUGGESTED_PRESETS_KEY, newSuggested);
+    console.info('[HEYS.storage] ✅ runPresetSuggestionEngine завершён:', {
+      days: allDays.length,
+      frequentCombos: frequentCombos.length,
+      suggestions: newSuggested.length,
+      minFrequency: MIN_FREQUENCY,
+    });
+    return newSuggested.length;
   };
 
   // ═══════════════════════════════════════════════════════════════════

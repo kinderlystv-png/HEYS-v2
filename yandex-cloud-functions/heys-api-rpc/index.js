@@ -243,6 +243,7 @@ const ALLOWED_FUNCTIONS = [
   // (требуют JWT-авторизацию, см. ниже)
 
   // === KV STORAGE (🔐 P1: session-версии — IDOR fix!) ===
+  'update_client_profile_by_session',     // 🔐 P1: Обновление профиля клиента (name)
   'get_client_data_by_session',           // 🔐 P1: session-версия (IDOR fix)
   'get_client_kv_by_session',             // 🔐 P1: чтение KV (session-safe)
   'upsert_client_kv_by_session',          // 🔐 P1: запись KV (session-safe)
@@ -649,6 +650,10 @@ module.exports.handler = async function (event, context) {
       'delete_client_kv_by_session': {
         'p_session_token': '::text',
         'p_key': '::text'
+      },
+      'update_client_profile_by_session': {
+        'p_session_token': '::text',
+        'p_name': '::text'
       },
       'get_client_data_by_session': {
         'p_session_token': '::text',

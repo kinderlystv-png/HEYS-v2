@@ -933,6 +933,48 @@
             setClients(result.data);
         }, [clients, cloudUser, fetchClientsFromCloud, setClients, U]);
 
+        // Редактирование клиента: имя, телефон и/или PIN
+        const editClient = useCallback(async (id, { name, phone, newPin } = {}) => {
+            console.info('[HEYS.clients] ✅ editClient start:', { id, hasName: !!name, hasPhone: !!phone, hasPin: !!newPin });
+
+            const updates = {};
+            if (name) updates.name = name;
+            if (phone) updates.phone = phone;
+
+            if (!cloudUser || !cloudUser.id) {
+                // Оффлайн — обновляем только имя локально
+                if (updates.name) {
+                    const updatedClients = clients.map((c) => (c.id === id ? { ...c, ...updates } : c));
+                    setClients(updatedClients);
+                    writeGlobalValue('heys_clients', updatedClients);
+                }
+                return;
+            }
+
+            try {
+                // Обновляем имя и/или телефон через API
+                if (Object.keys(updates).length > 0) {
+                    await HEYS.YandexAPI.updateClient(id, updates);
+                }
+
+                // Обновляем PIN — отдельный RPC
+                if (newPin) {
+                    const pinResult = await HEYS.auth.resetClientPin({ clientId: id, newPin });
+                    if (!pinResult.ok) {
+                        throw new Error(pinResult.message || 'PIN update failed');
+                    }
+                }
+
+                const result = await fetchClientsFromCloud(cloudUser.id);
+                setClients(result.data);
+
+                console.info('[HEYS.clients] ✅ editClient done:', { id, changedFields: Object.keys(updates), pinChanged: !!newPin });
+            } catch (err) {
+                console.error('[HEYS.clients] ❌ editClient error:', { id, error: err.message });
+                throw err;
+            }
+        }, [clients, cloudUser, fetchClientsFromCloud, setClients, U]);
+
         const removeClient = useCallback(async (id) => {
             if (!cloudUser || !cloudUser.id) {
                 const updatedClients = clients.filter((c) => c.id !== id);
@@ -1068,6 +1110,7 @@
             fetchClientsFromCloud,
             addClientToCloud,
             renameClient,
+            editClient,
             removeClient,
             cloudSignIn,
             cloudSignOut,

@@ -1597,6 +1597,140 @@
   cursor: not-allowed;
 }
 
+/* ═══════════════════════════════════════════════════════════════
+   ✨ РЕКОМЕНДУЕМЫЕ НАБОРЫ — Suggested Presets
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Бэйдж на кнопке "Готовые наборы" */
+.aps-ready-sets-btn {
+  position: relative;
+}
+
+.aps-ready-sets-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  background: #ef4444;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: 9px;
+  line-height: 1;
+  margin-left: 2px;
+  animation: mpr-badge-pop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+@keyframes mpr-badge-pop {
+  from {
+    transform: scale(0);
+    opacity: 0;
+  }
+
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* Секция-заголовок */
+.mpr-section-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 0 2px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-secondary, #64748b);
+}
+
+.mpr-section-label--suggested {
+  color: #7c3aed;
+}
+
+.mpr-section-label--my {
+  color: var(--color-text-secondary, #94a3b8);
+  margin-top: 4px;
+}
+
+.mpr-section-label-icon {
+  font-size: 14px;
+}
+
+.mpr-section-label-hint {
+  font-size: 11px;
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--color-text-secondary, #94a3b8);
+  margin-left: 2px;
+}
+
+/* Карточка рекомендуемого набора */
+.mpr-card--suggested {
+  background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%);
+  border-color: #c4b5fd;
+}
+
+.mpr-card--suggested .mpr-card-name {
+  color: #5b21b6;
+}
+
+.mpr-card--suggested .mpr-card-meta {
+  color: #7c3aed;
+}
+
+/* Кнопка «Подтвердить» (зелёная) */
+.mpr-btn--confirm {
+  background: #dcfce7;
+  color: #166534;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.mpr-btn--confirm:hover {
+  background: #bbf7d0;
+}
+
+/* Кнопка «Отклонить» (серая) */
+.mpr-btn--dismiss {
+  background: var(--color-bg-secondary, #f1f5f9);
+  color: var(--color-text-secondary, #64748b);
+}
+
+.mpr-btn--dismiss:hover {
+  background: #e2e8f0;
+}
+
+/* Секция рекомендаций */
+.mpr-suggested-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Dark mode */
+[data-theme="dark"] .mpr-card--suggested {
+  background: linear-gradient(135deg, #2e1065 0%, #3b0764 100%);
+  border-color: #7c3aed;
+}
+
+[data-theme="dark"] .mpr-card--suggested .mpr-card-name {
+  color: #c4b5fd;
+}
+
+[data-theme="dark"] .mpr-card--suggested .mpr-card-meta {
+  color: #a78bfa;
+}
+
+[data-theme="dark"] .mpr-section-label--suggested {
+  color: #a78bfa;
+}
+
 /* Dark mode */
 [data-theme="dark"] .mpr-overlay {
   background: var(--color-bg-primary, #1e293b);

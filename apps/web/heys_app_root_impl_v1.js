@@ -177,6 +177,7 @@
                         fetchClientsFromCloud: async () => [],
                         addClientToCloud: async () => ({}),
                         renameClient: async () => ({}),
+                        editClient: async () => ({}),
                         removeClient: async () => ({}),
                         cloudSignIn: async () => ({}),
                         cloudSignOut: async () => ({}),
@@ -208,6 +209,7 @@
                 fetchClientsFromCloud,
                 addClientToCloud,
                 renameClient,
+                editClient,
                 removeClient,
                 cloudSignIn,
                 cloudSignOut,
@@ -537,6 +539,7 @@
                 getAvatarColor,
                 getClientInitials,
                 renameClient,
+                editClient,
                 removeClient,
                 addClientToCloud,
                 newName,
@@ -803,7 +806,7 @@
                 AppShell,
                 appShellProps,
                 // eslint-disable-next-line react-hooks/exhaustive-deps
-            }), [isConsentBlocking, isMorningCheckinBlocking, showMorningCheckin,
+            }), [gate, desktopGate, consentGate, isConsentBlocking, isMorningCheckinBlocking, showMorningCheckin,
                 showOfflineBanner, showOnlineBanner, offlineDuration, pendingCount,
                 showPwaBanner, showIosPwaBanner, showUpdateToast, notification,
                 widgetsEditMode, tab, appShellProps]);

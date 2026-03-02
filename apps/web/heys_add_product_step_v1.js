@@ -1316,14 +1316,43 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
   function MealPresetsOverlay({ context, onClose }) {
     const [view, setView] = useState('list'); // 'list' | 'preview' | 'create'
     const [presets, setPresets] = useState(() => HEYS.store?.getMealPresets?.() || []);
+    const [suggestedPresets, setSuggestedPresets] = useState(() => HEYS.store?.getSuggestedPresets?.() || []);
     const [selectedPreset, setSelectedPreset] = useState(null);
     const [previewItems, setPreviewItems] = useState([]);
     const [createName, setCreateName] = useState('');
     const [editPreset, setEditPreset] = useState(null);
     const [createSearch, setCreateSearch] = useState('');
 
+    // Запускаем анализ истории при открытии оверлея
+    useEffect(() => {
+      const count = HEYS.store?.runPresetSuggestionEngine?.();
+      if (count != null) {
+        setSuggestedPresets(HEYS.store?.getSuggestedPresets?.() || []);
+        console.info('[HEYS.presets] ✅ Suggestion engine run, suggestions:', count);
+      }
+    }, []);
+
     const refreshPresets = () => {
       setPresets(HEYS.store?.getMealPresets?.() || []);
+      setSuggestedPresets(HEYS.store?.getSuggestedPresets?.() || []);
+    };
+
+    const handleConfirmSuggested = (preset) => {
+      HEYS.store?.confirmSuggestedPreset?.(preset.id);
+      refreshPresets();
+      console.info('[HEYS.presets] ✅ Рекомендация подтверждена:', preset.name);
+    };
+
+    const handleDismissSuggested = (preset) => {
+      HEYS.store?.dismissSuggestedPreset?.(preset.id);
+      refreshPresets();
+      console.info('[HEYS.presets] ✅ Рекомендация отклонена:', preset.name);
+    };
+
+    const handlePreviewSuggested = (preset) => {
+      setSelectedPreset(preset);
+      setPreviewItems((preset.items || []).map((item) => ({ ...item })));
+      setView('preview');
     };
 
     const handleCreateFromMeal = () => {
@@ -1491,7 +1520,47 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     // --- List view ---
     const renderList = () =>
       React.createElement('div', { className: 'mpr-list' },
-        presets.length === 0
+        // 🤖 Секция рекомендаций (если есть)
+        suggestedPresets.length > 0 && React.createElement('div', { className: 'mpr-suggested-section' },
+          React.createElement('div', { className: 'mpr-section-label mpr-section-label--suggested' },
+            React.createElement('span', { className: 'mpr-section-label-icon' }, '✨'),
+            React.createElement('span', null, 'Рекомендуемые'),
+            React.createElement('span', { className: 'mpr-section-label-hint' }, 'из вашей истории')
+          ),
+          suggestedPresets.map((preset) =>
+            React.createElement('div', { key: preset.id, className: 'mpr-card mpr-card--suggested' },
+              React.createElement('div', { className: 'mpr-card-info' },
+                React.createElement('div', { className: 'mpr-card-name' }, preset.name),
+                React.createElement('div', { className: 'mpr-card-meta' },
+                  `${preset.items.length} ${pluralProduct(preset.items.length)} · повторялось ${preset.frequency}×`
+                )
+              ),
+              React.createElement('div', { className: 'mpr-card-actions' },
+                React.createElement('button', {
+                  className: 'mpr-btn mpr-btn--apply',
+                  onClick: () => handlePreviewSuggested(preset),
+                  title: 'Просмотреть и применить'
+                }, '▶'),
+                React.createElement('button', {
+                  className: 'mpr-btn mpr-btn--confirm',
+                  onClick: () => handleConfirmSuggested(preset),
+                  title: 'Сохранить в мои наборы'
+                }, '✓'),
+                React.createElement('button', {
+                  className: 'mpr-btn mpr-btn--dismiss',
+                  onClick: () => handleDismissSuggested(preset),
+                  title: 'Скрыть рекомендацию'
+                }, '✕')
+              )
+            )
+          )
+        ),
+        // Разделитель если есть и рекомендации, и пользовательские наборы
+        suggestedPresets.length > 0 && presets.length > 0 && React.createElement('div', { className: 'mpr-section-label mpr-section-label--my' },
+          React.createElement('span', { className: 'mpr-section-label-icon' }, '💾'),
+          React.createElement('span', null, 'Мои наборы')
+        ),
+        presets.length === 0 && suggestedPresets.length === 0
           ? React.createElement('div', { className: 'mpr-empty' },
             React.createElement('div', { className: 'mpr-empty-icon' }, '🍽️'),
             React.createElement('div', { className: 'mpr-empty-text' }, 'Нет сохранённых наборов'),
@@ -1736,6 +1805,16 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     const [showPhotoConfirm, setShowPhotoConfirm] = useState(false); // Модалка подтверждения
     const [pendingPhotoData, setPendingPhotoData] = useState(null);  // Данные для подтверждения
     const [presetsOpen, setPresetsOpen] = useState(false);           // 🍽️ Готовые наборы overlay
+    const [suggestedPresetsCount, setSuggestedPresetsCount] = useState(
+      () => (HEYS.store?.getSuggestedPresets?.() || []).length
+    );
+
+    // Обновляем счётчик рекомендаций при изменении продуктов или monunt
+    useEffect(() => {
+      const count = (HEYS.store?.getSuggestedPresets?.() || []).length;
+      setSuggestedPresetsCount(count);
+    }, [productsVersion]);
+
     const inputRef = useRef(null);
     const fileInputRef = useRef(null);
 
@@ -2688,7 +2767,11 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       // 🍽️ Overlay «Готовые наборы»
       presetsOpen && React.createElement(MealPresetsOverlay, {
         context,
-        onClose: () => setPresetsOpen(false)
+        onClose: () => {
+          setPresetsOpen(false);
+          // Обновляем счётчик рекомендаций после закрытия оверлея
+          setSuggestedPresetsCount((HEYS.store?.getSuggestedPresets?.() || []).length);
+        }
       }),
 
       // Модалка подтверждения фото
@@ -2770,7 +2853,11 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           }
         },
           React.createElement('span', { className: 'aps-ready-sets-icon' }, '🍽️'),
-          React.createElement('span', null, 'Готовые наборы')
+          React.createElement('span', null, 'Готовые наборы'),
+          suggestedPresetsCount > 0 && React.createElement('span', {
+            className: 'aps-ready-sets-badge',
+            title: `${suggestedPresetsCount} рекомендаций ждут подтверждения`
+          }, suggestedPresetsCount)
         ),
 
         // Поле поиска

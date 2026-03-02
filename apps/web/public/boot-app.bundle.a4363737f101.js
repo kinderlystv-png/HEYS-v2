@@ -7003,7 +7003,13 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
 
       if (res.success) {
         loadData(true);
-        setActiveTab('pending'); // Переключаем на вкладку "Ждут триала"
+        setActiveTab('active'); // Переключаем на вкладку "Активные" сразу после активации
+
+        // Сигнализируем о том, что нужно обновить глобальный список клиентов
+        window.dispatchEvent(new CustomEvent('heys:clients-updated', {
+          detail: { action: 'trialActivated', clientId }
+        }));
+
         const isToday = !trialStartDate || trialStartDate === new Date().toISOString().split('T')[0];
         if (isToday) {
           alert('✅ Триал активирован! Клиент получил доступ на 7 дней.');
@@ -7166,78 +7172,90 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
     const LeadRow = ({ item }) => React.createElement('div', {
       style: {
         display: 'flex',
-        alignItems: 'center',
+        alignItems: 'flex-start',
         gap: 12,
         padding: '12px 14px',
         borderRadius: 12,
         background: '#fff',
         border: '1px solid var(--border, #e5e7eb)',
-        transition: 'box-shadow 0.2s'
+        transition: 'box-shadow 0.2s',
+        flexWrap: 'wrap'
       },
       onMouseEnter: (e) => { e.currentTarget.style.boxShadow = '0 6px 16px -8px rgba(0,0,0,0.25)'; },
       onMouseLeave: (e) => { e.currentTarget.style.boxShadow = 'none'; }
     },
-      React.createElement('div', {
-        style: {
-          width: 40,
-          height: 40,
-          borderRadius: '50%',
-          background: item.messenger === 'telegram' ? '#0088cc'
-            : item.messenger === 'whatsapp' ? '#25d366'
-              : item.messenger === 'max' ? '#8b5cf6' : '#9ca3af',
-          color: '#fff',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontSize: 16,
-          flexShrink: 0
-        }
-      }, item.messenger === 'telegram' ? '📱' : item.messenger === 'whatsapp' ? '💬' : item.messenger === 'max' ? '🟣' : '👤'),
-      React.createElement('div', { style: { flex: 1, minWidth: 0, paddingRight: 8 } },
+      React.createElement('div', { style: { display: 'flex', gap: 12, flex: '1 1 200px', alignItems: 'center' } },
         React.createElement('div', {
           style: {
-            fontWeight: 700,
-            fontSize: 15,
-            color: 'var(--text, #111827)',
-            lineHeight: 1.2,
-            whiteSpace: 'nowrap',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis'
-          }
-        }, item.name || '—'),
-        React.createElement('div', {
-          style: {
-            fontSize: 13,
-            color: '#6b7280',
-            fontFamily: 'monospace',
-            lineHeight: 1.3,
-            marginTop: 2
-          }
-        }, item.phone || '—'),
-        React.createElement('div', {
-          style: {
-            fontSize: 11,
-            color: '#9ca3af',
-            marginTop: 4,
+            width: 40,
+            height: 40,
+            borderRadius: '50%',
+            background: item.messenger === 'telegram' ? '#0088cc'
+              : item.messenger === 'whatsapp' ? '#25d366'
+                : item.messenger === 'max' ? '#8b5cf6' : '#9ca3af',
+            color: '#fff',
             display: 'flex',
             alignItems: 'center',
-            gap: 6,
-            overflow: 'hidden'
+            justifyContent: 'center',
+            fontSize: 16,
+            flexShrink: 0
           }
-        },
-          React.createElement('span', { style: { whiteSpace: 'nowrap' } }, formatDate(item.created_at)),
-          item.utm_source && React.createElement('span', { style: { opacity: 0.5 } }, '|'),
-          item.utm_source && React.createElement('span', {
+        }, item.messenger === 'telegram' ? '📱' : item.messenger === 'whatsapp' ? '💬' : item.messenger === 'max' ? '🟣' : '👤'),
+        React.createElement('div', { style: { flex: 1, minWidth: 0 } },
+          React.createElement('div', {
             style: {
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-              maxWidth: 100
+              fontWeight: 700,
+              fontSize: 15,
+              color: 'var(--text, #111827)',
+              lineHeight: 1.3,
+              wordBreak: 'break-word'
             }
-          }, item.utm_source)
+          }, item.name || '—'),
+          React.createElement('div', {
+            style: {
+              fontSize: 13,
+              color: '#6b7280',
+              fontFamily: 'monospace',
+              lineHeight: 1.3,
+              marginTop: 4
+            }
+          }, item.phone || '—'),
+          React.createElement('div', {
+            style: {
+              fontSize: 11,
+              color: '#9ca3af',
+              marginTop: 6,
+              display: 'flex',
+              alignItems: 'center',
+              flexWrap: 'wrap',
+              gap: 6
+            }
+          },
+            React.createElement('span', null, formatDate(item.created_at)),
+            item.utm_source && React.createElement('span', { style: { opacity: 0.5 } }, '|'),
+            item.utm_source && React.createElement('span', {
+              style: {
+                background: '#f3f4f6',
+                color: '#4b5563',
+                padding: '2px 6px',
+                borderRadius: 4,
+                wordBreak: 'break-all'
+              }
+            }, item.utm_source),
+            item.intent === 'direct_purchase' && React.createElement('span', {
+              style: {
+                background: '#fee2e2',
+                color: '#dc2626',
+                padding: '2px 6px',
+                borderRadius: 4,
+                fontWeight: 'bold',
+                marginLeft: 'auto'
+              }
+            }, '🔥 КУПИЛ')
+          )
         )
       ),
-      React.createElement('div', { style: { display: 'flex', gap: 6, flexShrink: 0 } },
+      React.createElement('div', { style: { display: 'flex', gap: 6, flexShrink: 0, marginLeft: 'auto', alignItems: 'center', alignSelf: 'center' } },
         React.createElement('button', {
           onClick: () => handleConvertLead(item),
           disabled: actionLoading === 'lead-' + item.id || actionLoading === 'lead-reject-' + item.id,
@@ -7282,54 +7300,69 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
       return React.createElement('div', {
         style: {
           display: 'flex',
-          alignItems: 'center',
+          alignItems: 'flex-start',
           gap: 12,
           padding: '14px 16px',
           borderRadius: 12,
           background: '#fff',
           border: '1px solid var(--border, #e5e7eb)',
-          transition: 'box-shadow 0.2s'
+          transition: 'box-shadow 0.2s',
+          flexWrap: 'wrap'
         },
         onMouseEnter: (e) => { e.currentTarget.style.boxShadow = '0 6px 16px -8px rgba(0,0,0,0.25)'; },
         onMouseLeave: (e) => { e.currentTarget.style.boxShadow = 'none'; }
       },
-        React.createElement('div', {
-          style: {
-            width: 42,
-            height: 42,
-            borderRadius: '50%',
-            background: 'linear-gradient(135deg, #0ea5e9, #6366f1)',
-            color: '#fff',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: 16,
-            fontWeight: 700,
-            flexShrink: 0
-          }
-        }, (item.client_name || item.name || '?')[0].toUpperCase()),
-        React.createElement('div', { style: { flex: 1, minWidth: 0 } },
-          React.createElement('div', {
-            style: { fontWeight: 700, fontSize: 15, color: 'var(--text, #111827)' }
-          }, item.client_name || item.name || '—'),
-          React.createElement('div', {
-            style: { fontSize: 13, color: '#6b7280', fontFamily: 'monospace' }
-          }, item.client_phone || item.phone_normalized || '—'),
+        React.createElement('div', { style: { display: 'flex', gap: 12, flex: '1 1 200px', alignItems: 'center' } },
           React.createElement('div', {
             style: {
-              display: 'inline-flex',
+              width: 42,
+              height: 42,
+              borderRadius: '50%',
+              background: 'linear-gradient(135deg, #0ea5e9, #6366f1)',
+              color: '#fff',
+              display: 'flex',
               alignItems: 'center',
-              padding: '2px 8px',
-              borderRadius: 6,
-              background: statusColor.bg,
-              color: statusColor.text,
-              fontSize: 11,
+              justifyContent: 'center',
+              fontSize: 16,
               fontWeight: 700,
-              marginTop: 4
+              flexShrink: 0
             }
-          }, statusColor.label)
+          }, (item.client_name || item.name || '?')[0].toUpperCase()),
+          React.createElement('div', { style: { flex: 1, minWidth: 0 } },
+            React.createElement('div', {
+              style: {
+                fontWeight: 700,
+                fontSize: 15,
+                color: 'var(--text, #111827)',
+                lineHeight: 1.3,
+                wordBreak: 'break-word'
+              }
+            }, item.client_name || item.name || '—'),
+            React.createElement('div', {
+              style: {
+                fontSize: 13,
+                color: '#6b7280',
+                fontFamily: 'monospace',
+                lineHeight: 1.3,
+                marginTop: 4
+              }
+            }, item.client_phone || item.phone_normalized || '—'),
+            React.createElement('div', {
+              style: {
+                display: 'inline-flex',
+                alignItems: 'center',
+                padding: '2px 8px',
+                borderRadius: 6,
+                background: statusColor.bg,
+                color: statusColor.text,
+                fontSize: 11,
+                fontWeight: 700,
+                marginTop: 6
+              }
+            }, statusColor.label)
+          )
         ),
-        allowActions && React.createElement('div', { style: { display: 'flex', gap: 6 } },
+        allowActions && React.createElement('div', { style: { display: 'flex', gap: 6, flexShrink: 0, marginLeft: 'auto', alignItems: 'center', alignSelf: 'center' } },
           React.createElement('button', {
             onClick: () => handleActivateTrial(item.client_id, item.client_name || item.name),
             disabled: actionLoading === item.client_id,
@@ -11961,6 +11994,48 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
             setClients(result.data);
         }, [clients, cloudUser, fetchClientsFromCloud, setClients, U]);
 
+        // Редактирование клиента: имя, телефон и/или PIN
+        const editClient = useCallback(async (id, { name, phone, newPin } = {}) => {
+            console.info('[HEYS.clients] ✅ editClient start:', { id, hasName: !!name, hasPhone: !!phone, hasPin: !!newPin });
+
+            const updates = {};
+            if (name) updates.name = name;
+            if (phone) updates.phone = phone;
+
+            if (!cloudUser || !cloudUser.id) {
+                // Оффлайн — обновляем только имя локально
+                if (updates.name) {
+                    const updatedClients = clients.map((c) => (c.id === id ? { ...c, ...updates } : c));
+                    setClients(updatedClients);
+                    writeGlobalValue('heys_clients', updatedClients);
+                }
+                return;
+            }
+
+            try {
+                // Обновляем имя и/или телефон через API
+                if (Object.keys(updates).length > 0) {
+                    await HEYS.YandexAPI.updateClient(id, updates);
+                }
+
+                // Обновляем PIN — отдельный RPC
+                if (newPin) {
+                    const pinResult = await HEYS.auth.resetClientPin({ clientId: id, newPin });
+                    if (!pinResult.ok) {
+                        throw new Error(pinResult.message || 'PIN update failed');
+                    }
+                }
+
+                const result = await fetchClientsFromCloud(cloudUser.id);
+                setClients(result.data);
+
+                console.info('[HEYS.clients] ✅ editClient done:', { id, changedFields: Object.keys(updates), pinChanged: !!newPin });
+            } catch (err) {
+                console.error('[HEYS.clients] ❌ editClient error:', { id, error: err.message });
+                throw err;
+            }
+        }, [clients, cloudUser, fetchClientsFromCloud, setClients, U]);
+
         const removeClient = useCallback(async (id) => {
             if (!cloudUser || !cloudUser.id) {
                 const updatedClients = clients.filter((c) => c.id !== id);
@@ -12096,6 +12171,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
             fetchClientsFromCloud,
             addClientToCloud,
             renameClient,
+            editClient,
             removeClient,
             cloudSignIn,
             cloudSignOut,
@@ -17643,6 +17719,189 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
         );
     }
 
+    // ✏️ Модалка редактирования клиента (имя, телефон, PIN)
+    function EditClientButton({ client, editClient }) {
+        const [open, setOpen] = React.useState(false);
+        const [loading, setLoading] = React.useState(false);
+        const [name, setName] = React.useState(client.name || '');
+        const [phone, setPhone] = React.useState(client.phone_normalized || client.phone || '');
+        const [pin, setPin] = React.useState('');
+
+        const formatPhone = (val) => {
+            const d = (val || '').replace(/\D/g, '').slice(0, 11);
+            if (!d) return '';
+            let result = '+7';
+            const body = d.startsWith('7') ? d.slice(1) : d.startsWith('8') ? d.slice(1) : d;
+            if (body.length > 0) result += ' (' + body.slice(0, 3);
+            if (body.length >= 3) result += ') ';
+            if (body.length > 3) result += body.slice(3, 6);
+            if (body.length >= 6) result += '-';
+            if (body.length > 6) result += body.slice(6, 8);
+            if (body.length >= 8) result += '-';
+            if (body.length > 8) result += body.slice(8, 10);
+            return result;
+        };
+
+        const closeModal = () => {
+            setOpen(false);
+            setName(client.name || '');
+            setPhone(client.phone_normalized || client.phone || '');
+            setPin('');
+        };
+
+        const handleSave = async () => {
+            if (!name.trim()) return HEYS.Toast?.error?.('Имя не может быть пустым');
+
+            // Если телефон меняют — нужна проверка
+            const phoneDigits = (phone || '').replace(/\D/g, '');
+            let finalPhone = phone;
+            if (phoneDigits && phoneDigits !== (client.phone_normalized || '').replace(/\D/g, '')) {
+                if (phoneDigits.length < 10) {
+                    return HEYS.Toast?.error?.('Некорректный номер телефона');
+                }
+                const bodyLength = phoneDigits.startsWith('7') || phoneDigits.startsWith('8') ? phoneDigits.slice(1) : phoneDigits;
+                if (bodyLength.length !== 10) {
+                    return HEYS.Toast?.error?.('Телефон должен содержать 10 цифр (не считая код страны)');
+                }
+                finalPhone = '+7' + bodyLength;
+            } else {
+                finalPhone = undefined; // Не менялся
+            }
+
+            if (pin && !/^\d{4,6}$/.test(pin)) {
+                return HEYS.Toast?.error?.('PIN должен быть 4-6 цифр');
+            }
+
+            setLoading(true);
+            try {
+                const updates = {};
+                if (name.trim() !== client.name) updates.name = name.trim();
+                if (finalPhone) updates.phone = finalPhone;
+                if (pin) updates.newPin = pin;
+
+                if (Object.keys(updates).length > 0) {
+                    await editClient(client.id, updates);
+                    HEYS.Toast?.success?.('Данные клиента обновлены');
+                }
+                closeModal();
+            } catch (err) {
+                HEYS.Toast?.error?.(err.message || 'Ошибка обновления клиента');
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        const triggerBtn = React.createElement('button', {
+            className: 'btn-icon',
+            title: 'Редактировать профиль',
+            onClick: (e) => {
+                e.stopPropagation();
+                setName(client.name || '');
+                setPhone(client.phone_normalized || client.phone || '');
+                setPin('');
+                setOpen(true);
+            },
+            style: { width: 30, height: 30, borderRadius: 6, border: '1px solid var(--border)', background: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }
+        }, '✏️');
+
+        const modalContent = React.createElement('div', {
+            style: {
+                width: 440, maxWidth: '92vw', background: '#fff',
+                borderRadius: 20, boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)',
+                display: 'flex', flexDirection: 'column', overflow: 'hidden',
+                animation: 'scaleIn 0.2s ease-out'
+            },
+            onClick: (e) => e.stopPropagation()
+        },
+            // Header
+            React.createElement('div', {
+                style: {
+                    padding: '16px 20px', background: 'linear-gradient(135deg, #0f172a, #334155)',
+                    color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'space-between'
+                }
+            },
+                React.createElement('div', { style: { fontWeight: 700, fontSize: 16 } }, 'Редактировать профиль'),
+                React.createElement('button', {
+                    onClick: closeModal,
+                    style: { width: 30, height: 30, borderRadius: 8, background: 'rgba(255,255,255,0.1)', border: 'none', color: '#fff', fontSize: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }
+                }, '✕')
+            ),
+            // Body
+            React.createElement('div', { style: { padding: 20, display: 'grid', gap: 16 } },
+                // Name
+                React.createElement('div', null,
+                    React.createElement('label', { style: { display: 'block', fontSize: 13, fontWeight: 600, color: '#374151', marginBottom: 6 } }, 'Имя клиента'),
+                    React.createElement('input', {
+                        placeholder: 'Иван Иванов',
+                        value: name,
+                        onChange: (e) => setName(e.target.value),
+                        style: { width: '100%', padding: '12px', borderRadius: 10, border: '1px solid #d1d5db', fontSize: 15, outline: 'none' }
+                    })
+                ),
+                // Phone
+                React.createElement('div', null,
+                    React.createElement('label', { style: { display: 'block', fontSize: 13, fontWeight: 600, color: '#374151', marginBottom: 6 } }, 'Номер телефона'),
+                    React.createElement('input', {
+                        placeholder: '+7 (999) 000-00-00',
+                        value: formatPhone(phone),
+                        onChange: (e) => setPhone((e.target.value || '').replace(/\D/g, '').slice(0, 11)),
+                        style: { width: '100%', padding: '12px', borderRadius: 10, border: '1px solid #d1d5db', fontSize: 15, outline: 'none', fontFamily: 'monospace' }
+                    })
+                ),
+                // PIN
+                React.createElement('div', null,
+                    React.createElement('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 } },
+                        React.createElement('label', { style: { fontSize: 13, fontWeight: 600, color: '#374151' } }, 'Новый PIN'),
+                        client.has_pin
+                            ? React.createElement('span', { style: { fontSize: 12, color: '#6b7280', background: '#f3f4f6', borderRadius: 6, padding: '2px 8px', letterSpacing: '2px' } }, 'Текущий: ••••')
+                            : React.createElement('span', { style: { fontSize: 12, color: '#ef4444', background: '#fef2f2', borderRadius: 6, padding: '2px 8px' } }, 'PIN не установлен')
+                    ),
+                    React.createElement('input', {
+                        placeholder: 'Оставьте пустым, если не меняется',
+                        value: pin,
+                        type: 'text',
+                        maxLength: 6,
+                        onChange: (e) => setPin(e.target.value.replace(/\D/g, '')),
+                        onKeyDown: (e) => { if (e.key === 'Enter') handleSave(); },
+                        style: { width: '100%', padding: '12px', borderRadius: 10, border: '1px solid #d1d5db', fontSize: 15, outline: 'none', letterSpacing: pin ? '2px' : 'normal' }
+                    })
+                ),
+                // Buttons
+                React.createElement('div', { style: { display: 'flex', gap: 10, marginTop: 10 } },
+                    React.createElement('button', {
+                        onClick: closeModal,
+                        style: { flex: 1, padding: '12px', borderRadius: 10, background: '#f3f4f6', color: '#4b5563', fontWeight: 600, border: 'none', cursor: 'pointer' }
+                    }, 'Отмена'),
+                    React.createElement('button', {
+                        onClick: handleSave,
+                        disabled: loading || (!name.trim()),
+                        style: {
+                            flex: 2, padding: '12px', borderRadius: 10,
+                            background: name.trim() && !loading ? '#3b82f6' : '#9ca3af',
+                            color: '#fff', fontWeight: 600, border: 'none',
+                            cursor: name.trim() && !loading ? 'pointer' : 'default',
+                            transition: 'background 0.2s', opacity: loading ? 0.7 : 1
+                        }
+                    }, loading ? 'Сохранение...' : 'Сохранить изменения')
+                )
+            )
+        );
+
+        const modalOverlay = open && ReactDOM.createPortal(
+            React.createElement('div', {
+                style: {
+                    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                    zIndex: 9999, background: 'rgba(15, 23, 42, 0.65)', backdropFilter: 'blur(4px)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20
+                },
+                onClick: closeModal
+            }, modalContent),
+            document.body
+        );
+
+        return React.createElement(React.Fragment, null, triggerBtn, modalOverlay);
+    }
+
     // 🆕 Модалка создания клиента
     function CreateClientModal(props) {
         const {
@@ -17834,6 +18093,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
             getAvatarColor,
             getClientInitials,
             renameClient,
+            editClient,
             removeClient,
             addClientToCloud,
             newName,
@@ -18321,15 +18581,10 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                                                                         },
                                                                         style: { width: 30, height: 30, borderRadius: 6, border: '1px solid var(--border)', background: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }
                                                                     }, '🆔'),
-                                                                    React.createElement('button', {
-                                                                        className: 'btn-icon',
-                                                                        title: 'Переименовать',
-                                                                        onClick: () => {
-                                                                            const nm = prompt('Новое имя', c.name) || c.name;
-                                                                            if (nm !== c.name) renameClient(c.id, nm);
-                                                                        },
-                                                                        style: { width: 30, height: 30, borderRadius: 6, border: '1px solid var(--border)', background: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }
-                                                                    }, '✏️'),
+                                                                    React.createElement(EditClientButton, {
+                                                                        client: c,
+                                                                        editClient
+                                                                    }),
                                                                     // Settings
                                                                     React.createElement(ClientSubscriptionButton, {
                                                                         client: c,
@@ -21821,6 +22076,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
         getAvatarColor,
         getClientInitials,
         renameClient,
+        editClient,
         removeClient,
         addClientToCloud,
         newName,
@@ -21854,6 +22110,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
             getAvatarColor,
             getClientInitials,
             renameClient,
+            editClient,
             removeClient,
             addClientToCloud,
             newName,
@@ -22496,6 +22753,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                         fetchClientsFromCloud: async () => [],
                         addClientToCloud: async () => ({}),
                         renameClient: async () => ({}),
+                        editClient: async () => ({}),
                         removeClient: async () => ({}),
                         cloudSignIn: async () => ({}),
                         cloudSignOut: async () => ({}),
@@ -22527,6 +22785,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                 fetchClientsFromCloud,
                 addClientToCloud,
                 renameClient,
+                editClient,
                 removeClient,
                 cloudSignIn,
                 cloudSignOut,
@@ -22856,6 +23115,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                 getAvatarColor,
                 getClientInitials,
                 renameClient,
+                editClient,
                 removeClient,
                 addClientToCloud,
                 newName,
@@ -23122,7 +23382,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                 AppShell,
                 appShellProps,
                 // eslint-disable-next-line react-hooks/exhaustive-deps
-            }), [isConsentBlocking, isMorningCheckinBlocking, showMorningCheckin,
+            }), [gate, desktopGate, consentGate, isConsentBlocking, isMorningCheckinBlocking, showMorningCheckin,
                 showOfflineBanner, showOnlineBanner, offlineDuration, pendingCount,
                 showPwaBanner, showIosPwaBanner, showUpdateToast, notification,
                 widgetsEditMode, tab, appShellProps]);

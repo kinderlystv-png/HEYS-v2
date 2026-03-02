@@ -979,13 +979,19 @@
         deficitPctTarget: step3.deficitPctTarget ?? profile.deficitPctTarget ?? 0,
         sleepHours: step4.sleepHours || profile.sleepHours || 8,
         insulinWaveHours: step4.insulinWaveHours || profile.insulinWaveHours || 3,
-        profileCompleted: true
+        profileCompleted: true,
+        updatedAt: Date.now()
       };
 
       lsSet('heys_profile', updatedProfile);
 
-      // 🛡️ Очищаем флаг "регистрация в процессе" — регистрация успешно завершена
-      localStorage.removeItem('heys_registration_in_progress');
+      // ⚠️ v1.16 FIX: Инвалидируем кэш HEYS.store.memory
+      // Без этого Settings tab читает stale cache и показывает пустой профиль
+      if (HEYS.store && typeof HEYS.store.invalidate === 'function') {
+        HEYS.store.invalidate('heys_profile');
+        HEYS.store.invalidate('heys_norms');
+        console.info('[HEYS.profileSteps] 🔄 Cache invalidated for heys_profile & heys_norms');
+      }
 
       // Диспатчим событие для обновления UI профиля (настройки)
       window.dispatchEvent(new CustomEvent('heys:profile-updated', {
@@ -1033,8 +1039,23 @@
           }));
 
           // ⚠️ Cloud sync отключен: REST API read-only (см. SECURITY_RUNBOOK.md P3)
-          // Имя клиента синхронизируется только локально через heys_clients
-          // Для cloud sync потребуется отдельный RPC с session token (v2)
+          // Отправляем новое имя в базу через RPC (session-safe) 
+          const sessionToken = typeof HEYS !== 'undefined' && HEYS.auth && HEYS.auth.getSessionToken ? HEYS.auth.getSessionToken() : localStorage.getItem('heys_session_token');
+          if (sessionToken) {
+            const tokenStr = typeof sessionToken === 'string' ? sessionToken : JSON.stringify(sessionToken);
+            HEYS.YandexAPI.rpc('update_client_profile_by_session', {
+              p_session_token: tokenStr.replace(/"/g, ''), // на случай если распарсится криво
+              p_name: updatedProfile.firstName
+            }).then(result => {
+              if (result && result.error) {
+                console.error('[ProfileSteps] failed to update profile in cloud:', result.error);
+              } else {
+                console.log('[ProfileSteps] client profile name synced to cloud successfully!');
+              }
+            }).catch(e => console.error('[ProfileSteps] RPC error:', e));
+          } else {
+            console.warn('[ProfileSteps] No session token, cloud sync skipped');
+          }
         } catch (e) {
           console.warn('[ProfileSteps] Failed to sync client name:', e);
         }
@@ -1084,7 +1105,8 @@
       deficitPctTarget: step3.deficitPctTarget ?? profile.deficitPctTarget ?? 0,
       sleepHours: step4.sleepHours || profile.sleepHours || 8,
       insulinWaveHours: step4.insulinWaveHours || profile.insulinWaveHours || 3,
-      profileCompleted: true
+      profileCompleted: true,
+      updatedAt: Date.now()
     };
 
     lsSet('heys_profile', updatedProfile);
@@ -1107,7 +1129,7 @@
     if (HEYS.store && typeof HEYS.store.invalidate === 'function') {
       HEYS.store.invalidate('heys_profile');
       HEYS.store.invalidate('heys_norms');
-      console.log('[saveProfileFromStepData] 🔄 Cache invalidated for heys_profile & heys_norms');
+      console.info('[HEYS.profileSteps] 🔄 Cache invalidated for heys_profile & heys_norms');
     }
 
     // НЕ записываем вес в данные дня при пропуске!

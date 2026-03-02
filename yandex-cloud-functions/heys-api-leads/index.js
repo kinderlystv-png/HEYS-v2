@@ -213,10 +213,10 @@ module.exports.handler = async function (event, context) {
       } else {
         // 2. Вставляем новый лид
         const result = await client.query(`
-          INSERT INTO leads (name, phone, messenger, utm_source, utm_medium, utm_campaign, utm_term, utm_content, referrer, landing_page, intent, plan)
-          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+          INSERT INTO leads (name, phone, messenger, utm_source, utm_medium, utm_campaign, utm_term, utm_content, referrer, landing_page)
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
           RETURNING id
-        `, [name, normalizedPhone, messenger, utm_source, utm_medium, utm_campaign, utm_term, utm_content, referrer, landing_page, intent, plan]);
+        `, [name, normalizedPhone, messenger, utm_source, utm_medium, utm_campaign, utm_term, utm_content, referrer, landing_page]);
 
         leadId = result.rows[0].id;
       }

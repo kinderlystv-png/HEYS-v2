@@ -2,7 +2,8 @@
 # Deploy landing to Yandex Object Storage
 
 OUT_DIR="/Users/poplavskijanton/HEYS-v2/apps/landing/out"
-BUCKET="heyslab.ru"
+# CDN origin for heyslab.ru points to heys-static.website.yandexcloud.net
+BUCKET="heys-static"
 
 echo "🚀 Deploying landing to $BUCKET..."
 

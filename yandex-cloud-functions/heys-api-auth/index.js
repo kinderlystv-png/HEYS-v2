@@ -311,7 +311,8 @@ async function handleGetClients(curatorId) {
          c.updated_at, 
          c.subscription_status, 
          c.trial_ends_at,
-         s.active_until
+         s.active_until,
+         CASE WHEN c.pin_hash IS NOT NULL THEN true ELSE false END AS has_pin
        FROM clients c
        LEFT JOIN subscriptions s ON s.client_id = c.id
        WHERE c.curator_id = $1 
@@ -378,6 +379,7 @@ async function handleCreateClient(curatorId, body) {
 
 // ═══════════════════════════════════════════════════════════════════════════
 // 🔐 UPDATE CLIENT — Curator-only endpoint (JWT required)
+// Supports: name, phone, pin (all optional, at least one required)
 // ═══════════════════════════════════════════════════════════════════════════
 
 async function handleUpdateClient(curatorId, clientId, body) {
@@ -388,27 +390,85 @@ async function handleUpdateClient(curatorId, clientId, body) {
     };
   }
 
-  const { name } = body;
+  const { name, phone, pin } = body;
 
-  if (!name) {
+  if (!name && !phone && !pin) {
     return {
       statusCode: 400,
-      body: JSON.stringify({ error: 'Name required' })
+      body: JSON.stringify({ error: 'At least one field required: name, phone, or pin' })
     };
+  }
+
+  // Normalize phone if provided
+  let phoneNormalized = null;
+  if (phone) {
+    const digits = (phone + '').replace(/\D/g, '');
+    // Accept 10 digits (without country code) or 11 digits starting with 7/8
+    let body10;
+    if (digits.length === 10) {
+      body10 = digits;
+    } else if (digits.length === 11 && (digits[0] === '7' || digits[0] === '8')) {
+      body10 = digits.slice(1);
+    } else {
+      return {
+        statusCode: 400,
+        body: JSON.stringify({ error: 'Invalid phone format. Expected +7XXXXXXXXXX' })
+      };
+    }
+    phoneNormalized = '+7' + body10;
+  }
+
+  // Validate pin if provided
+  let pinHash = null;
+  let pinSalt = null;
+  if (pin) {
+    if (!/^\d{4,6}$/.test(pin)) {
+      return {
+        statusCode: 400,
+        body: JSON.stringify({ error: 'PIN must be 4–6 digits' })
+      };
+    }
+    const crypto = require('crypto');
+    pinSalt = crypto.randomBytes(16).toString('hex');
+    pinHash = crypto.createHash('sha256').update(`${pin}:${pinSalt}`).digest('hex');
   }
 
   const client = await getClient();
 
   try {
+    // Build dynamic UPDATE — only include provided fields
+    const setClauses = [];
+    const params = [];
+    let idx = 1;
 
-    // Проверяем что клиент принадлежит куратору
-    const result = await client.query(
-      `UPDATE clients 
-       SET name = $1, updated_at = NOW()
-       WHERE id = $2 AND curator_id = $3
-       RETURNING id, name, updated_at`,
-      [name, clientId, curatorId]
-    );
+    if (name) {
+      setClauses.push(`name = $${idx++}`);
+      params.push(name);
+    }
+    if (phoneNormalized) {
+      setClauses.push(`phone = $${idx++}`);
+      params.push(phoneNormalized);
+      setClauses.push(`phone_normalized = $${idx++}`);
+      params.push(phoneNormalized);
+    }
+    if (pinHash) {
+      setClauses.push(`pin_hash = $${idx++}`);
+      params.push(pinHash);
+      setClauses.push(`pin_salt = $${idx++}`);
+      params.push(pinSalt);
+    }
+    setClauses.push(`updated_at = NOW()`);
+    params.push(clientId);
+    params.push(curatorId);
+
+    const sql = `
+      UPDATE clients
+      SET ${setClauses.join(', ')}
+      WHERE id = $${idx++} AND curator_id = $${idx++}
+      RETURNING id, name, phone_normalized, updated_at
+    `;
+
+    const result = await client.query(sql, params);
 
     if (result.rows.length === 0) {
       return {
@@ -417,6 +477,8 @@ async function handleUpdateClient(curatorId, clientId, body) {
       };
     }
 
+    console.info('[heys-api-auth] ✅ updateClient:', { clientId, updatedFields: Object.keys({ name, phone, pin }).filter(k => body[k]) });
+
     return {
       statusCode: 200,
       body: JSON.stringify({ data: result.rows[0] })
@@ -424,6 +486,13 @@ async function handleUpdateClient(curatorId, clientId, body) {
 
   } catch (e) {
     console.error('UpdateClient error:', e);
+    // Phone uniqueness violation
+    if (e.constraint === 'clients_phone_normalized_key' || (e.message && e.message.includes('unique') && e.message.includes('phone'))) {
+      return {
+        statusCode: 409,
+        body: JSON.stringify({ error: 'Phone already in use by another client' })
+      };
+    }
     return {
       statusCode: 500,
       body: JSON.stringify({ error: 'Internal server error', details: e.message })

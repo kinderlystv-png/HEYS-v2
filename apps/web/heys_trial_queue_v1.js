@@ -1467,7 +1467,13 @@
 
       if (res.success) {
         loadData(true);
-        setActiveTab('pending'); // Переключаем на вкладку "Ждут триала"
+        setActiveTab('active'); // Переключаем на вкладку "Активные" сразу после активации
+
+        // Сигнализируем о том, что нужно обновить глобальный список клиентов
+        window.dispatchEvent(new CustomEvent('heys:clients-updated', {
+          detail: { action: 'trialActivated', clientId }
+        }));
+
         const isToday = !trialStartDate || trialStartDate === new Date().toISOString().split('T')[0];
         if (isToday) {
           alert('✅ Триал активирован! Клиент получил доступ на 7 дней.');
@@ -1630,78 +1636,90 @@
     const LeadRow = ({ item }) => React.createElement('div', {
       style: {
         display: 'flex',
-        alignItems: 'center',
+        alignItems: 'flex-start',
         gap: 12,
         padding: '12px 14px',
         borderRadius: 12,
         background: '#fff',
         border: '1px solid var(--border, #e5e7eb)',
-        transition: 'box-shadow 0.2s'
+        transition: 'box-shadow 0.2s',
+        flexWrap: 'wrap'
       },
       onMouseEnter: (e) => { e.currentTarget.style.boxShadow = '0 6px 16px -8px rgba(0,0,0,0.25)'; },
       onMouseLeave: (e) => { e.currentTarget.style.boxShadow = 'none'; }
     },
-      React.createElement('div', {
-        style: {
-          width: 40,
-          height: 40,
-          borderRadius: '50%',
-          background: item.messenger === 'telegram' ? '#0088cc'
-            : item.messenger === 'whatsapp' ? '#25d366'
-              : item.messenger === 'max' ? '#8b5cf6' : '#9ca3af',
-          color: '#fff',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontSize: 16,
-          flexShrink: 0
-        }
-      }, item.messenger === 'telegram' ? '📱' : item.messenger === 'whatsapp' ? '💬' : item.messenger === 'max' ? '🟣' : '👤'),
-      React.createElement('div', { style: { flex: 1, minWidth: 0, paddingRight: 8 } },
+      React.createElement('div', { style: { display: 'flex', gap: 12, flex: '1 1 200px', alignItems: 'center' } },
         React.createElement('div', {
           style: {
-            fontWeight: 700,
-            fontSize: 15,
-            color: 'var(--text, #111827)',
-            lineHeight: 1.2,
-            whiteSpace: 'nowrap',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis'
-          }
-        }, item.name || '—'),
-        React.createElement('div', {
-          style: {
-            fontSize: 13,
-            color: '#6b7280',
-            fontFamily: 'monospace',
-            lineHeight: 1.3,
-            marginTop: 2
-          }
-        }, item.phone || '—'),
-        React.createElement('div', {
-          style: {
-            fontSize: 11,
-            color: '#9ca3af',
-            marginTop: 4,
+            width: 40,
+            height: 40,
+            borderRadius: '50%',
+            background: item.messenger === 'telegram' ? '#0088cc'
+              : item.messenger === 'whatsapp' ? '#25d366'
+                : item.messenger === 'max' ? '#8b5cf6' : '#9ca3af',
+            color: '#fff',
             display: 'flex',
             alignItems: 'center',
-            gap: 6,
-            overflow: 'hidden'
+            justifyContent: 'center',
+            fontSize: 16,
+            flexShrink: 0
           }
-        },
-          React.createElement('span', { style: { whiteSpace: 'nowrap' } }, formatDate(item.created_at)),
-          item.utm_source && React.createElement('span', { style: { opacity: 0.5 } }, '|'),
-          item.utm_source && React.createElement('span', {
+        }, item.messenger === 'telegram' ? '📱' : item.messenger === 'whatsapp' ? '💬' : item.messenger === 'max' ? '🟣' : '👤'),
+        React.createElement('div', { style: { flex: 1, minWidth: 0 } },
+          React.createElement('div', {
             style: {
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-              maxWidth: 100
+              fontWeight: 700,
+              fontSize: 15,
+              color: 'var(--text, #111827)',
+              lineHeight: 1.3,
+              wordBreak: 'break-word'
             }
-          }, item.utm_source)
+          }, item.name || '—'),
+          React.createElement('div', {
+            style: {
+              fontSize: 13,
+              color: '#6b7280',
+              fontFamily: 'monospace',
+              lineHeight: 1.3,
+              marginTop: 4
+            }
+          }, item.phone || '—'),
+          React.createElement('div', {
+            style: {
+              fontSize: 11,
+              color: '#9ca3af',
+              marginTop: 6,
+              display: 'flex',
+              alignItems: 'center',
+              flexWrap: 'wrap',
+              gap: 6
+            }
+          },
+            React.createElement('span', null, formatDate(item.created_at)),
+            item.utm_source && React.createElement('span', { style: { opacity: 0.5 } }, '|'),
+            item.utm_source && React.createElement('span', {
+              style: {
+                background: '#f3f4f6',
+                color: '#4b5563',
+                padding: '2px 6px',
+                borderRadius: 4,
+                wordBreak: 'break-all'
+              }
+            }, item.utm_source),
+            item.intent === 'direct_purchase' && React.createElement('span', {
+              style: {
+                background: '#fee2e2',
+                color: '#dc2626',
+                padding: '2px 6px',
+                borderRadius: 4,
+                fontWeight: 'bold',
+                marginLeft: 'auto'
+              }
+            }, '🔥 КУПИЛ')
+          )
         )
       ),
-      React.createElement('div', { style: { display: 'flex', gap: 6, flexShrink: 0 } },
+      React.createElement('div', { style: { display: 'flex', gap: 6, flexShrink: 0, marginLeft: 'auto', alignItems: 'center', alignSelf: 'center' } },
         React.createElement('button', {
           onClick: () => handleConvertLead(item),
           disabled: actionLoading === 'lead-' + item.id || actionLoading === 'lead-reject-' + item.id,
@@ -1746,54 +1764,69 @@
       return React.createElement('div', {
         style: {
           display: 'flex',
-          alignItems: 'center',
+          alignItems: 'flex-start',
           gap: 12,
           padding: '14px 16px',
           borderRadius: 12,
           background: '#fff',
           border: '1px solid var(--border, #e5e7eb)',
-          transition: 'box-shadow 0.2s'
+          transition: 'box-shadow 0.2s',
+          flexWrap: 'wrap'
         },
         onMouseEnter: (e) => { e.currentTarget.style.boxShadow = '0 6px 16px -8px rgba(0,0,0,0.25)'; },
         onMouseLeave: (e) => { e.currentTarget.style.boxShadow = 'none'; }
       },
-        React.createElement('div', {
-          style: {
-            width: 42,
-            height: 42,
-            borderRadius: '50%',
-            background: 'linear-gradient(135deg, #0ea5e9, #6366f1)',
-            color: '#fff',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: 16,
-            fontWeight: 700,
-            flexShrink: 0
-          }
-        }, (item.client_name || item.name || '?')[0].toUpperCase()),
-        React.createElement('div', { style: { flex: 1, minWidth: 0 } },
-          React.createElement('div', {
-            style: { fontWeight: 700, fontSize: 15, color: 'var(--text, #111827)' }
-          }, item.client_name || item.name || '—'),
-          React.createElement('div', {
-            style: { fontSize: 13, color: '#6b7280', fontFamily: 'monospace' }
-          }, item.client_phone || item.phone_normalized || '—'),
+        React.createElement('div', { style: { display: 'flex', gap: 12, flex: '1 1 200px', alignItems: 'center' } },
           React.createElement('div', {
             style: {
-              display: 'inline-flex',
+              width: 42,
+              height: 42,
+              borderRadius: '50%',
+              background: 'linear-gradient(135deg, #0ea5e9, #6366f1)',
+              color: '#fff',
+              display: 'flex',
               alignItems: 'center',
-              padding: '2px 8px',
-              borderRadius: 6,
-              background: statusColor.bg,
-              color: statusColor.text,
-              fontSize: 11,
+              justifyContent: 'center',
+              fontSize: 16,
               fontWeight: 700,
-              marginTop: 4
+              flexShrink: 0
             }
-          }, statusColor.label)
+          }, (item.client_name || item.name || '?')[0].toUpperCase()),
+          React.createElement('div', { style: { flex: 1, minWidth: 0 } },
+            React.createElement('div', {
+              style: {
+                fontWeight: 700,
+                fontSize: 15,
+                color: 'var(--text, #111827)',
+                lineHeight: 1.3,
+                wordBreak: 'break-word'
+              }
+            }, item.client_name || item.name || '—'),
+            React.createElement('div', {
+              style: {
+                fontSize: 13,
+                color: '#6b7280',
+                fontFamily: 'monospace',
+                lineHeight: 1.3,
+                marginTop: 4
+              }
+            }, item.client_phone || item.phone_normalized || '—'),
+            React.createElement('div', {
+              style: {
+                display: 'inline-flex',
+                alignItems: 'center',
+                padding: '2px 8px',
+                borderRadius: 6,
+                background: statusColor.bg,
+                color: statusColor.text,
+                fontSize: 11,
+                fontWeight: 700,
+                marginTop: 6
+              }
+            }, statusColor.label)
+          )
         ),
-        allowActions && React.createElement('div', { style: { display: 'flex', gap: 6 } },
+        allowActions && React.createElement('div', { style: { display: 'flex', gap: 6, flexShrink: 0, marginLeft: 'auto', alignItems: 'center', alignSelf: 'center' } },
           React.createElement('button', {
             onClick: () => handleActivateTrial(item.client_id, item.client_name || item.name),
             disabled: actionLoading === item.client_id,

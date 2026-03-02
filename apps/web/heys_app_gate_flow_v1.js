@@ -492,6 +492,189 @@
         );
     }
 
+    // ✏️ Модалка редактирования клиента (имя, телефон, PIN)
+    function EditClientButton({ client, editClient }) {
+        const [open, setOpen] = React.useState(false);
+        const [loading, setLoading] = React.useState(false);
+        const [name, setName] = React.useState(client.name || '');
+        const [phone, setPhone] = React.useState(client.phone_normalized || client.phone || '');
+        const [pin, setPin] = React.useState('');
+
+        const formatPhone = (val) => {
+            const d = (val || '').replace(/\D/g, '').slice(0, 11);
+            if (!d) return '';
+            let result = '+7';
+            const body = d.startsWith('7') ? d.slice(1) : d.startsWith('8') ? d.slice(1) : d;
+            if (body.length > 0) result += ' (' + body.slice(0, 3);
+            if (body.length >= 3) result += ') ';
+            if (body.length > 3) result += body.slice(3, 6);
+            if (body.length >= 6) result += '-';
+            if (body.length > 6) result += body.slice(6, 8);
+            if (body.length >= 8) result += '-';
+            if (body.length > 8) result += body.slice(8, 10);
+            return result;
+        };
+
+        const closeModal = () => {
+            setOpen(false);
+            setName(client.name || '');
+            setPhone(client.phone_normalized || client.phone || '');
+            setPin('');
+        };
+
+        const handleSave = async () => {
+            if (!name.trim()) return HEYS.Toast?.error?.('Имя не может быть пустым');
+
+            // Если телефон меняют — нужна проверка
+            const phoneDigits = (phone || '').replace(/\D/g, '');
+            let finalPhone = phone;
+            if (phoneDigits && phoneDigits !== (client.phone_normalized || '').replace(/\D/g, '')) {
+                if (phoneDigits.length < 10) {
+                    return HEYS.Toast?.error?.('Некорректный номер телефона');
+                }
+                const bodyLength = phoneDigits.startsWith('7') || phoneDigits.startsWith('8') ? phoneDigits.slice(1) : phoneDigits;
+                if (bodyLength.length !== 10) {
+                    return HEYS.Toast?.error?.('Телефон должен содержать 10 цифр (не считая код страны)');
+                }
+                finalPhone = '+7' + bodyLength;
+            } else {
+                finalPhone = undefined; // Не менялся
+            }
+
+            if (pin && !/^\d{4,6}$/.test(pin)) {
+                return HEYS.Toast?.error?.('PIN должен быть 4-6 цифр');
+            }
+
+            setLoading(true);
+            try {
+                const updates = {};
+                if (name.trim() !== client.name) updates.name = name.trim();
+                if (finalPhone) updates.phone = finalPhone;
+                if (pin) updates.newPin = pin;
+
+                if (Object.keys(updates).length > 0) {
+                    await editClient(client.id, updates);
+                    HEYS.Toast?.success?.('Данные клиента обновлены');
+                }
+                closeModal();
+            } catch (err) {
+                HEYS.Toast?.error?.(err.message || 'Ошибка обновления клиента');
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        const triggerBtn = React.createElement('button', {
+            className: 'btn-icon',
+            title: 'Редактировать профиль',
+            onClick: (e) => {
+                e.stopPropagation();
+                setName(client.name || '');
+                setPhone(client.phone_normalized || client.phone || '');
+                setPin('');
+                setOpen(true);
+            },
+            style: { width: 30, height: 30, borderRadius: 6, border: '1px solid var(--border)', background: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }
+        }, '✏️');
+
+        const modalContent = React.createElement('div', {
+            style: {
+                width: 440, maxWidth: '92vw', background: '#fff',
+                borderRadius: 20, boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)',
+                display: 'flex', flexDirection: 'column', overflow: 'hidden',
+                animation: 'scaleIn 0.2s ease-out'
+            },
+            onClick: (e) => e.stopPropagation()
+        },
+            // Header
+            React.createElement('div', {
+                style: {
+                    padding: '16px 20px', background: 'linear-gradient(135deg, #0f172a, #334155)',
+                    color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'space-between'
+                }
+            },
+                React.createElement('div', { style: { fontWeight: 700, fontSize: 16 } }, 'Редактировать профиль'),
+                React.createElement('button', {
+                    onClick: closeModal,
+                    style: { width: 30, height: 30, borderRadius: 8, background: 'rgba(255,255,255,0.1)', border: 'none', color: '#fff', fontSize: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }
+                }, '✕')
+            ),
+            // Body
+            React.createElement('div', { style: { padding: 20, display: 'grid', gap: 16 } },
+                // Name
+                React.createElement('div', null,
+                    React.createElement('label', { style: { display: 'block', fontSize: 13, fontWeight: 600, color: '#374151', marginBottom: 6 } }, 'Имя клиента'),
+                    React.createElement('input', {
+                        placeholder: 'Иван Иванов',
+                        value: name,
+                        onChange: (e) => setName(e.target.value),
+                        style: { width: '100%', padding: '12px', borderRadius: 10, border: '1px solid #d1d5db', fontSize: 15, outline: 'none' }
+                    })
+                ),
+                // Phone
+                React.createElement('div', null,
+                    React.createElement('label', { style: { display: 'block', fontSize: 13, fontWeight: 600, color: '#374151', marginBottom: 6 } }, 'Номер телефона'),
+                    React.createElement('input', {
+                        placeholder: '+7 (999) 000-00-00',
+                        value: formatPhone(phone),
+                        onChange: (e) => setPhone((e.target.value || '').replace(/\D/g, '').slice(0, 11)),
+                        style: { width: '100%', padding: '12px', borderRadius: 10, border: '1px solid #d1d5db', fontSize: 15, outline: 'none', fontFamily: 'monospace' }
+                    })
+                ),
+                // PIN
+                React.createElement('div', null,
+                    React.createElement('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 } },
+                        React.createElement('label', { style: { fontSize: 13, fontWeight: 600, color: '#374151' } }, 'Новый PIN'),
+                        client.has_pin
+                            ? React.createElement('span', { style: { fontSize: 12, color: '#6b7280', background: '#f3f4f6', borderRadius: 6, padding: '2px 8px', letterSpacing: '2px' } }, 'Текущий: ••••')
+                            : React.createElement('span', { style: { fontSize: 12, color: '#ef4444', background: '#fef2f2', borderRadius: 6, padding: '2px 8px' } }, 'PIN не установлен')
+                    ),
+                    React.createElement('input', {
+                        placeholder: 'Оставьте пустым, если не меняется',
+                        value: pin,
+                        type: 'text',
+                        maxLength: 6,
+                        onChange: (e) => setPin(e.target.value.replace(/\D/g, '')),
+                        onKeyDown: (e) => { if (e.key === 'Enter') handleSave(); },
+                        style: { width: '100%', padding: '12px', borderRadius: 10, border: '1px solid #d1d5db', fontSize: 15, outline: 'none', letterSpacing: pin ? '2px' : 'normal' }
+                    })
+                ),
+                // Buttons
+                React.createElement('div', { style: { display: 'flex', gap: 10, marginTop: 10 } },
+                    React.createElement('button', {
+                        onClick: closeModal,
+                        style: { flex: 1, padding: '12px', borderRadius: 10, background: '#f3f4f6', color: '#4b5563', fontWeight: 600, border: 'none', cursor: 'pointer' }
+                    }, 'Отмена'),
+                    React.createElement('button', {
+                        onClick: handleSave,
+                        disabled: loading || (!name.trim()),
+                        style: {
+                            flex: 2, padding: '12px', borderRadius: 10,
+                            background: name.trim() && !loading ? '#3b82f6' : '#9ca3af',
+                            color: '#fff', fontWeight: 600, border: 'none',
+                            cursor: name.trim() && !loading ? 'pointer' : 'default',
+                            transition: 'background 0.2s', opacity: loading ? 0.7 : 1
+                        }
+                    }, loading ? 'Сохранение...' : 'Сохранить изменения')
+                )
+            )
+        );
+
+        const modalOverlay = open && ReactDOM.createPortal(
+            React.createElement('div', {
+                style: {
+                    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                    zIndex: 9999, background: 'rgba(15, 23, 42, 0.65)', backdropFilter: 'blur(4px)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20
+                },
+                onClick: closeModal
+            }, modalContent),
+            document.body
+        );
+
+        return React.createElement(React.Fragment, null, triggerBtn, modalOverlay);
+    }
+
     // 🆕 Модалка создания клиента
     function CreateClientModal(props) {
         const {
@@ -683,6 +866,7 @@
             getAvatarColor,
             getClientInitials,
             renameClient,
+            editClient,
             removeClient,
             addClientToCloud,
             newName,
@@ -1170,15 +1354,10 @@
                                                                         },
                                                                         style: { width: 30, height: 30, borderRadius: 6, border: '1px solid var(--border)', background: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }
                                                                     }, '🆔'),
-                                                                    React.createElement('button', {
-                                                                        className: 'btn-icon',
-                                                                        title: 'Переименовать',
-                                                                        onClick: () => {
-                                                                            const nm = prompt('Новое имя', c.name) || c.name;
-                                                                            if (nm !== c.name) renameClient(c.id, nm);
-                                                                        },
-                                                                        style: { width: 30, height: 30, borderRadius: 6, border: '1px solid var(--border)', background: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }
-                                                                    }, '✏️'),
+                                                                    React.createElement(EditClientButton, {
+                                                                        client: c,
+                                                                        editClient
+                                                                    }),
                                                                     // Settings
                                                                     React.createElement(ClientSubscriptionButton, {
                                                                         client: c,
