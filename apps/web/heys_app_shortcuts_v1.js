@@ -30,6 +30,72 @@
         const url = new URL(window.location.href);
         let needsUrlCleanup = false;
 
+        // 💳 Обработка возврата с ЮKassa (/payment-result?clientId=...)
+        if (window.location.pathname === '/payment-result') {
+            console.info('[HEYS.shortcuts] ✅ Payment result redirect detected');
+            // Очищаем pathname → корень
+            window.history.replaceState({}, '', '/' + window.location.search);
+
+            // Запускаем проверку pending payment
+            const checkPayment = async () => {
+                const Subs = HEYS.Subscriptions;
+                if (!Subs?.checkPendingPayment) {
+                    // Модуль ещё не загружен — ждём
+                    setTimeout(checkPayment, 300);
+                    return;
+                }
+                try {
+                    const result = await Subs.checkPendingPayment();
+                    if (result.success) {
+                        console.info('[HEYS.shortcuts] ✅ Payment confirmed:', result.plan);
+                        if (typeof setNotification === 'function') {
+                            setNotification({
+                                message: '✅ Подписка успешно активирована!',
+                                type: 'success',
+                                duration: 5000,
+                            });
+                        }
+                        // Обновляем статус подписки
+                        if (HEYS.cloud?.syncClient) {
+                            const clientId = params.get('clientId') || HEYS.currentClientId;
+                            if (clientId) HEYS.cloud.syncClient(clientId);
+                        }
+                    } else if (result.pending) {
+                        // Платёж ещё обрабатывается — запускаем polling
+                        Subs.waitForPayment?.(
+                            (res) => {
+                                console.info('[HEYS.shortcuts] ✅ Payment polling success:', res.plan);
+                                if (typeof setNotification === 'function') {
+                                    setNotification({
+                                        message: '✅ Подписка успешно активирована!',
+                                        type: 'success',
+                                        duration: 5000,
+                                    });
+                                }
+                            },
+                            (err) => {
+                                console.error('[HEYS.shortcuts] ❌ Payment polling failed:', err);
+                                if (typeof setNotification === 'function') {
+                                    setNotification({
+                                        message: '❌ Не удалось подтвердить оплату. Обратитесь в поддержку.',
+                                        type: 'error',
+                                        duration: 8000,
+                                    });
+                                }
+                            }
+                        );
+                    } else {
+                        console.warn('[HEYS.shortcuts] ⚠️ Payment not found or failed:', result);
+                    }
+                } catch (err) {
+                    console.error('[HEYS.shortcuts] ❌ checkPendingPayment error:', err);
+                }
+            };
+
+            setTimeout(checkPayment, 500);
+            return; // Не продолжаем обработку других shortcut-ов
+        }
+
         if (action === 'add-meal') {
             // Блокируем переключение вкладки при смене clientId
             if (skipTabSwitchRef) skipTabSwitchRef.current = true;

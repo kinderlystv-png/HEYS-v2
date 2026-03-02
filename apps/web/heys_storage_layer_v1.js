@@ -391,6 +391,58 @@
   };
 
   // ═══════════════════════════════════════════════════════════════════
+  // 🍽️ ГОТОВЫЕ НАБОРЫ (MEAL PRESETS)
+  // ═══════════════════════════════════════════════════════════════════
+  const MEAL_PRESETS_KEY = 'heys_meal_presets_v1';
+
+  /**
+   * Получить все сохранённые наборы
+   * @returns {Array<{id: string, name: string, items: Array, createdAt: number, updatedAt: number}>}
+   */
+  Store.getMealPresets = function () {
+    const arr = Store.get(MEAL_PRESETS_KEY, []);
+    return Array.isArray(arr) ? arr : [];
+  };
+
+  /**
+   * Сохранить или обновить набор (upsert по id)
+   * @param {{id?: string, name: string, items: Array, createdAt?: number, updatedAt?: number}} preset
+   * @returns {string} id сохранённого набора
+   */
+  Store.saveMealPreset = function (preset) {
+    const presets = Store.getMealPresets();
+    const id = preset.id || ('mp_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7));
+    const now = Date.now();
+    const normalized = {
+      id,
+      name: preset.name || 'Набор',
+      items: Array.isArray(preset.items) ? preset.items : [],
+      createdAt: preset.createdAt || now,
+      updatedAt: now,
+    };
+    const idx = presets.findIndex((p) => p.id === id);
+    if (idx >= 0) {
+      presets[idx] = normalized;
+    } else {
+      presets.unshift(normalized);
+    }
+    Store.set(MEAL_PRESETS_KEY, presets);
+    console.info('[HEYS.storage] ✅ Meal preset saved:', { id, name: normalized.name, itemCount: normalized.items.length });
+    return id;
+  };
+
+  /**
+   * Удалить набор по id
+   * @param {string} id
+   */
+  Store.deleteMealPreset = function (id) {
+    const presets = Store.getMealPresets();
+    const updated = presets.filter((p) => p.id !== id);
+    Store.set(MEAL_PRESETS_KEY, updated);
+    console.info('[HEYS.storage] ✅ Meal preset deleted:', { id });
+  };
+
+  // ═══════════════════════════════════════════════════════════════════
   // 🙈 СКРЫТЫЕ ПРОДУКТЫ (в списке "Ваши продукты")
   // ═══════════════════════════════════════════════════════════════════
   const HIDDEN_PRODUCTS_KEY = 'heys_hidden_products';

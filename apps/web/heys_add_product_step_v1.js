@@ -1310,6 +1310,402 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     return cat.match.some(m => name.includes(m) || pCat.includes(m));
   }
 
+  // ═══════════════════════════════════════════════════════════════════
+  // 🍽️ ГОТОВЫЕ НАБОРЫ — Meal Presets Overlay
+  // ═══════════════════════════════════════════════════════════════════
+  function MealPresetsOverlay({ context, onClose }) {
+    const [view, setView] = useState('list'); // 'list' | 'preview' | 'create'
+    const [presets, setPresets] = useState(() => HEYS.store?.getMealPresets?.() || []);
+    const [selectedPreset, setSelectedPreset] = useState(null);
+    const [previewItems, setPreviewItems] = useState([]);
+    const [createName, setCreateName] = useState('');
+    const [editPreset, setEditPreset] = useState(null);
+    const [createSearch, setCreateSearch] = useState('');
+
+    const refreshPresets = () => {
+      setPresets(HEYS.store?.getMealPresets?.() || []);
+    };
+
+    const handleCreateFromMeal = () => {
+      const mealItems = context?.day?.meals?.[context?.mealIndex]?.items || [];
+      if (mealItems.length === 0) {
+        console.warn('[HEYS.presets] ⚠️ No items in current meal');
+        return;
+      }
+      const mealName = context?.day?.meals?.[context?.mealIndex]?.name || 'Набор';
+      const items = mealItems.map(item => ({
+        product_id: item.product_id,
+        name: item.name,
+        grams: item.grams || 100,
+        kcal100: item.kcal100,
+        protein100: item.protein100,
+        fat100: item.fat100,
+        simple100: item.simple100 || 0,
+        complex100: item.complex100 || 0,
+        badFat100: item.badFat100 || 0,
+        goodFat100: item.goodFat100 || 0,
+        trans100: item.trans100 || 0,
+        fiber100: item.fiber100 || 0,
+        gi: item.gi || 0,
+        harm: item.harm || 0,
+      }));
+      setCreateName(mealName);
+      setEditPreset({ id: null, items, createdAt: null });
+      setView('create');
+    };
+
+    const handleCreateFromScratch = () => {
+      setCreateName('');
+      setCreateSearch('');
+      setEditPreset({ id: null, items: [], createdAt: null });
+      setView('create');
+    };
+
+    const addProductToCreate = (product) => {
+      setCreateSearch('');
+      setEditPreset(ep => {
+        const exists = (ep?.items || []).findIndex(i => String(i.product_id) === String(product.id ?? product.product_id));
+        if (exists >= 0) return ep; // уже добавлен
+        const newItem = {
+          product_id: product.id ?? product.product_id,
+          name: product.name,
+          grams: 100,
+          kcal100: product.kcal100 || 0,
+          protein100: product.protein100 || 0,
+          fat100: product.fat100 || 0,
+          simple100: product.simple100 || 0,
+          complex100: product.complex100 || 0,
+          badFat100: product.badFat100 || 0,
+          goodFat100: product.goodFat100 || 0,
+          trans100: product.trans100 || 0,
+          fiber100: product.fiber100 || 0,
+          gi: product.gi || 0,
+          harm: product.harm || 0,
+        };
+        return { ...ep, items: [...(ep?.items || []), newItem] };
+      });
+    };
+
+    const handleEditPreset = (preset) => {
+      setCreateName(preset.name);
+      setEditPreset({ ...preset });
+      setView('create');
+    };
+
+    const handleApplyPreset = (preset) => {
+      setSelectedPreset(preset);
+      setPreviewItems((preset.items || []).map(item => ({ ...item })));
+      setView('preview');
+    };
+
+    const handleDeletePreset = (preset) => {
+      HEYS.store?.deleteMealPreset?.(preset.id);
+      refreshPresets();
+      console.info('[HEYS.presets] ✅ Preset deleted:', preset.name);
+    };
+
+    const handleSavePreset = () => {
+      if (!createName.trim()) return;
+      const preset = {
+        id: editPreset?.id || undefined,
+        name: createName.trim(),
+        items: editPreset?.items || [],
+        createdAt: editPreset?.createdAt || undefined,
+      };
+      HEYS.store?.saveMealPreset?.(preset);
+      refreshPresets();
+      setView('list');
+      console.info('[HEYS.presets] ✅ Preset saved:', { name: preset.name, itemCount: preset.items.length });
+    };
+
+    const handleAddAll = () => {
+      const itemsToAdd = previewItems.filter(item => !item._excluded);
+      if (itemsToAdd.length === 0) return;
+      itemsToAdd.forEach(item => {
+        const product = {
+          id: item.product_id,
+          product_id: item.product_id,
+          name: item.name,
+          grams: item.grams,
+          kcal100: item.kcal100,
+          protein100: item.protein100,
+          fat100: item.fat100,
+          simple100: item.simple100 || 0,
+          complex100: item.complex100 || 0,
+          badFat100: item.badFat100 || 0,
+          goodFat100: item.goodFat100 || 0,
+          trans100: item.trans100 || 0,
+          fiber100: item.fiber100 || 0,
+          gi: item.gi || 0,
+          harm: item.harm || 0,
+        };
+        context?.onAdd?.({ product, grams: item.grams, mealIndex: context?.mealIndex });
+      });
+      console.info('[HEYS.presets] ✅ Applied preset:', { name: selectedPreset?.name, count: itemsToAdd.length });
+      if (HEYS.StepModal?.hide) {
+        HEYS.StepModal.hide({ scrollToDiary: true });
+      } else {
+        onClose?.();
+      }
+    };
+
+    const updateItemGrams = (idx, delta) => {
+      setPreviewItems(items => items.map((item, i) =>
+        i !== idx ? item : { ...item, grams: Math.max(5, (item.grams || 100) + delta) }
+      ));
+    };
+
+    const setItemGrams = (idx, val) => {
+      const g = parseInt(val, 10);
+      setPreviewItems(items => items.map((item, i) =>
+        i !== idx ? item : { ...item, grams: isNaN(g) ? item.grams : Math.max(5, g) }
+      ));
+    };
+
+    const toggleExclude = (idx) => {
+      setPreviewItems(items => items.map((item, i) =>
+        i !== idx ? item : { ...item, _excluded: !item._excluded }
+      ));
+    };
+
+    const removeCreateItem = (idx) => {
+      setEditPreset(ep => ({ ...ep, items: (ep?.items || []).filter((_, i) => i !== idx) }));
+    };
+
+    const updateCreateItemGrams = (idx, val) => {
+      const g = parseInt(val, 10);
+      setEditPreset(ep => ({
+        ...ep,
+        items: (ep?.items || []).map((item, i) =>
+          i !== idx ? item : { ...item, grams: isNaN(g) ? item.grams : Math.max(5, g) }
+        )
+      }));
+    };
+
+    const calcKcal = (item) =>
+      item.kcal100 ? Math.round((item.kcal100 * (item.grams || 100)) / 100) : 0;
+
+    const pluralProduct = (n) =>
+      n === 1 ? 'продукт' : n <= 4 ? 'продукта' : 'продуктов';
+
+    // --- List view ---
+    const renderList = () =>
+      React.createElement('div', { className: 'mpr-list' },
+        presets.length === 0
+          ? React.createElement('div', { className: 'mpr-empty' },
+            React.createElement('div', { className: 'mpr-empty-icon' }, '🍽️'),
+            React.createElement('div', { className: 'mpr-empty-text' }, 'Нет сохранённых наборов'),
+            React.createElement('div', { className: 'mpr-empty-hint' }, 'Создайте набор из текущего приёма')
+          )
+          : presets.map(preset =>
+            React.createElement('div', { key: preset.id, className: 'mpr-card' },
+              React.createElement('div', { className: 'mpr-card-info' },
+                React.createElement('div', { className: 'mpr-card-name' }, preset.name),
+                React.createElement('div', { className: 'mpr-card-meta' },
+                  `${preset.items.length} ${pluralProduct(preset.items.length)}`
+                )
+              ),
+              React.createElement('div', { className: 'mpr-card-actions' },
+                React.createElement('button', {
+                  className: 'mpr-btn mpr-btn--apply',
+                  onClick: () => handleApplyPreset(preset),
+                  title: 'Применить набор'
+                }, '▶'),
+                React.createElement('button', {
+                  className: 'mpr-btn mpr-btn--edit',
+                  onClick: () => handleEditPreset(preset),
+                  title: 'Редактировать'
+                }, '✏️'),
+                React.createElement('button', {
+                  className: 'mpr-btn mpr-btn--delete',
+                  onClick: () => handleDeletePreset(preset),
+                  title: 'Удалить'
+                }, '🗑️')
+              )
+            )
+          ),
+        React.createElement('div', { className: 'mpr-create-buttons' },
+          React.createElement('button', {
+            className: 'mpr-create-btn mpr-create-btn--scratch',
+            onClick: handleCreateFromScratch
+          },
+            React.createElement('span', null, '✏️'),
+            React.createElement('span', null, ' Создать новый набор')
+          ),
+          (context?.day?.meals?.[context?.mealIndex]?.items || []).length > 0 &&
+          React.createElement('button', {
+            className: 'mpr-create-btn',
+            onClick: handleCreateFromMeal
+          },
+            React.createElement('span', null, '💾'),
+            React.createElement('span', null, ' Сохранить текущий приём')
+          )
+        )
+      );
+
+    // --- Preview view ---
+    const renderPreview = () => {
+      const active = previewItems.filter(i => !i._excluded);
+      const totalKcal = active.reduce((s, i) => s + calcKcal(i), 0);
+      return React.createElement('div', { className: 'mpr-preview' },
+        React.createElement('div', { className: 'mpr-preview-items' },
+          previewItems.map((item, idx) =>
+            React.createElement('div', {
+              key: idx,
+              className: 'mpr-preview-item' + (item._excluded ? ' mpr-preview-item--excluded' : '')
+            },
+              React.createElement('div', { className: 'mpr-preview-item-info' },
+                React.createElement('div', { className: 'mpr-preview-item-name' }, item.name),
+                React.createElement('div', { className: 'mpr-preview-item-kcal' },
+                  item._excluded ? 'убран' : `${calcKcal(item)} ккал`
+                )
+              ),
+              !item._excluded && React.createElement('div', { className: 'mpr-preview-item-grams' },
+                React.createElement('button', {
+                  className: 'mpr-grams-btn',
+                  onClick: () => updateItemGrams(idx, -10)
+                }, '−'),
+                React.createElement('input', {
+                  className: 'mpr-grams-input',
+                  type: 'number',
+                  value: item.grams,
+                  min: 5,
+                  onChange: (e) => setItemGrams(idx, e.target.value),
+                  onFocus: (e) => e.target.select()
+                }),
+                React.createElement('span', { className: 'mpr-grams-unit' }, 'г'),
+                React.createElement('button', {
+                  className: 'mpr-grams-btn',
+                  onClick: () => updateItemGrams(idx, 10)
+                }, '+')
+              ),
+              React.createElement('button', {
+                className: 'mpr-preview-item-toggle',
+                onClick: () => toggleExclude(idx),
+                title: item._excluded ? 'Включить' : 'Убрать'
+              }, item._excluded ? '✓' : '✕')
+            )
+          )
+        ),
+        React.createElement('div', { className: 'mpr-preview-total' },
+          `Итого: ${totalKcal} ккал · ${active.length} ${pluralProduct(active.length)}`
+        ),
+        React.createElement('button', {
+          className: 'mpr-add-all-btn',
+          onClick: handleAddAll,
+          disabled: active.length === 0
+        },
+          `✓ Добавить ${active.length} ${pluralProduct(active.length)} в приём`
+        )
+      );
+    };
+
+    // --- Create/Edit view ---
+    const renderCreate = () => {
+      const allProducts = context?.products || [];
+      const lc = createSearch.toLowerCase().trim();
+      const searchResults = lc.length >= 1
+        ? allProducts.filter(p => (p.name || '').toLowerCase().includes(lc)).slice(0, 6)
+        : [];
+      return React.createElement('div', { className: 'mpr-create' },
+        React.createElement('input', {
+          className: 'mpr-create-name-input',
+          type: 'text',
+          placeholder: 'Название набора...',
+          value: createName,
+          maxLength: 40,
+          autoFocus: !createSearch,
+          onChange: (e) => setCreateName(e.target.value)
+        }),
+        // Поиск для добавления продуктов
+        React.createElement('div', { className: 'mpr-search-wrap' },
+          React.createElement('div', { className: 'mpr-search-row' },
+            React.createElement('span', { className: 'mpr-search-icon' }, '🔍'),
+            React.createElement('input', {
+              className: 'mpr-search-input',
+              type: 'text',
+              placeholder: 'Добавить продукт в набор...',
+              value: createSearch,
+              onChange: (e) => setCreateSearch(e.target.value),
+              autoComplete: 'off'
+            }),
+            createSearch && React.createElement('button', {
+              className: 'mpr-search-clear',
+              onClick: () => setCreateSearch('')
+            }, '×')
+          ),
+          searchResults.length > 0 && React.createElement('div', { className: 'mpr-search-results' },
+            searchResults.map(p =>
+              React.createElement('button', {
+                key: p.id ?? p.product_id,
+                className: 'mpr-search-result-item',
+                onClick: () => addProductToCreate(p)
+              },
+                React.createElement('span', { className: 'mpr-search-result-name' }, p.name),
+                React.createElement('span', { className: 'mpr-search-result-kcal' }, `${p.kcal100 || 0} ккал/100г`)
+              )
+            )
+          )
+        ),
+        // Список добавленных продуктов
+        React.createElement('div', { className: 'mpr-create-items' },
+          (editPreset?.items || []).length === 0
+            ? React.createElement('div', { className: 'mpr-empty' },
+              React.createElement('div', { className: 'mpr-empty-text' }, 'Добавьте продукты через поиск')
+            )
+            : (editPreset?.items || []).map((item, idx) =>
+              React.createElement('div', { key: idx, className: 'mpr-create-item' },
+                React.createElement('div', { className: 'mpr-create-item-name' }, item.name),
+                React.createElement('input', {
+                  className: 'mpr-grams-input',
+                  type: 'number',
+                  value: item.grams,
+                  min: 5,
+                  onChange: (e) => updateCreateItemGrams(idx, e.target.value),
+                  onFocus: (e) => e.target.select()
+                }),
+                React.createElement('span', { className: 'mpr-grams-unit' }, 'г'),
+                React.createElement('button', {
+                  className: 'mpr-btn mpr-btn--delete',
+                  onClick: () => removeCreateItem(idx)
+                }, '✕')
+              )
+            )
+        ),
+        React.createElement('button', {
+          className: 'mpr-save-btn',
+          disabled: !createName.trim() || (editPreset?.items || []).length === 0,
+          onClick: handleSavePreset
+        }, '💾 Сохранить набор')
+      );
+    };
+
+    const viewTitle = view === 'list' ? 'Готовые наборы'
+      : view === 'preview' ? (selectedPreset?.name || 'Просмотр набора')
+        : (editPreset?.id ? 'Редактировать набор' : 'Создать набор');
+
+    return React.createElement('div', { className: 'mpr-overlay' },
+      React.createElement('div', { className: 'mpr-header' },
+        view !== 'list'
+          ? React.createElement('button', {
+            className: 'mpr-back-btn',
+            onClick: () => setView('list')
+          }, '←')
+          : React.createElement('button', {
+            className: 'mpr-back-btn',
+            onClick: onClose
+          }, '✕'),
+        React.createElement('div', { className: 'mpr-title' }, viewTitle),
+        React.createElement('div', { className: 'mpr-header-spacer' })
+      ),
+      React.createElement('div', { className: 'mpr-body' },
+        view === 'list' ? renderList()
+          : view === 'preview' ? renderPreview()
+            : renderCreate()
+      )
+    );
+  }
+
   // === Компонент поиска продукта (Шаг 1) ===
   function ProductSearchStep({ data, onChange, context }) {
     const [searchInput, setSearchInput] = useState(data?.searchQuery || '');
@@ -1339,6 +1735,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     const [photoPreview, setPhotoPreview] = useState(null);
     const [showPhotoConfirm, setShowPhotoConfirm] = useState(false); // Модалка подтверждения
     const [pendingPhotoData, setPendingPhotoData] = useState(null);  // Данные для подтверждения
+    const [presetsOpen, setPresetsOpen] = useState(false);           // 🍽️ Готовые наборы overlay
     const inputRef = useRef(null);
     const fileInputRef = useRef(null);
 
@@ -2288,6 +2685,12 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     const canAddPhoto = currentPhotoCount < photoLimit;
 
     return React.createElement('div', { className: 'aps-search-step' },
+      // 🍽️ Overlay «Готовые наборы»
+      presetsOpen && React.createElement(MealPresetsOverlay, {
+        context,
+        onClose: () => setPresetsOpen(false)
+      }),
+
       // Модалка подтверждения фото
       showPhotoConfirm && pendingPhotoData && React.createElement('div', {
         className: 'photo-confirm-overlay',
@@ -2356,6 +2759,18 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             React.createElement('span', { className: 'aps-new-icon' }, '+'),
             React.createElement('span', null, 'Новый продукт')
           )
+        ),
+
+        // Кнопка "Готовые наборы"
+        React.createElement('button', {
+          className: 'aps-ready-sets-btn',
+          onClick: () => {
+            console.info('[HEYS.presets] ✅ Открываем Готовые наборы');
+            setPresetsOpen(true);
+          }
+        },
+          React.createElement('span', { className: 'aps-ready-sets-icon' }, '🍽️'),
+          React.createElement('span', null, 'Готовые наборы')
         ),
 
         // Поле поиска
@@ -3001,8 +3416,9 @@ NOVA: 1
         React.createElement('button', {
           type: 'button',
           className: 'aps-create-example-btn',
-          onClick: () => setPasteText(CREATE_PRODUCT_AI_EXAMPLE)
-        }, '🧪 Вставить пример'),
+          onClick: () => setPasteText(''),
+          disabled: !pasteText
+        }, '🗑 Очистить поле'),
         React.createElement('span', { className: 'aps-create-example-note' }, 'Формат для поля вставки')
       ),
 
@@ -4875,6 +5291,17 @@ NOVA: 1
         inputMode === 'grams' ? 'грамм' : 'ккал'
       ),
 
+      // Быстрые кнопки граммовки — сразу под вводом, всегда видны
+      React.createElement('div', { className: 'aps-quick-grams' },
+        quickPortions.map(g =>
+          React.createElement('button', {
+            key: g,
+            className: 'aps-quick-btn' + (grams === g ? ' active' : ''),
+            onClick: () => setGrams(g)
+          }, g + 'г')
+        )
+      ),
+
       // Вторичная информация (калории или граммы)
       React.createElement('div', { className: 'aps-kcal-secondary' },
         React.createElement('span', { className: 'aps-kcal-secondary-value' },
@@ -4944,17 +5371,6 @@ NOVA: 1
         onTouchEnd: (e) => e.stopPropagation(),
         onTouchMove: (e) => e.stopPropagation()
       }),
-
-      // Быстрые кнопки
-      React.createElement('div', { className: 'aps-quick-grams' },
-        quickPortions.map(g =>
-          React.createElement('button', {
-            key: g,
-            className: 'aps-quick-btn' + (grams === g ? ' active' : ''),
-            onClick: () => setGrams(g)
-          }, g + 'г')
-        )
-      ),
 
       // Порции продукта
       localPortions?.length > 0 && React.createElement('div', { className: 'aps-portions' },

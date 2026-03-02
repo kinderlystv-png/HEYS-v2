@@ -1491,6 +1491,31 @@
   }
 
   /**
+   * 🔐 Session-safe логирование согласий (IDOR protection)
+   * Используется PIN-клиентами — client_id определяется из session_token на сервере
+   * @param {Array<{type, version, granted}>} consents - Согласия
+   * @param {string} userAgent - User agent
+   * @returns {Promise<{data: object, error: any}>}
+   */
+  async function logConsentsBySession(consents, userAgent = null) {
+    try {
+      log('logConsentsBySession (session-safe)', consents);
+
+      const result = await rpc('log_consents_by_session', {
+        p_session_token: getSessionTokenForKV(),
+        p_consents: JSON.stringify(consents),
+        p_ip: null,
+        p_user_agent: userAgent || (typeof navigator !== 'undefined' ? navigator.userAgent : null)
+      });
+
+      return result;
+    } catch (e) {
+      err('logConsentsBySession failed:', e.message);
+      return { data: null, error: { message: e.message } };
+    }
+  }
+
+  /**
    * Проверить наличие обязательных согласий
    * @param {string} clientId - ID клиента
    * @returns {Promise<{data: {valid, missing}, error: any}>}
@@ -1546,7 +1571,7 @@
       log(`createPendingProduct:`, product.name);
 
       // 🔐 P1: Используем session-версию (IDOR fix)
-      const sessionToken = getSessionToken();
+      const sessionToken = getSessionTokenForKV();
       if (!sessionToken) {
         return { data: null, error: { message: 'No session token' } };
       }
