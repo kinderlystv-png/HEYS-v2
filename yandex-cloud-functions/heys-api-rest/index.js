@@ -401,8 +401,8 @@ module.exports.handler = async function (event, context) {
             const actualValue = value.replace('lte.', '');
             conditions.push(`"${key}" <= $${i++}`);
             values.push(actualValue);
-          } else if (typeof value === 'string' && value.startsWith('like.')) {
-            const actualValue = value.replace('like.', '').replace(/\*/g, '%');
+          } else if (typeof value === 'string' && (value.startsWith('like.') || value.startsWith('ilike.'))) {
+            const actualValue = value.replace(/^(i?like)\./, '').replace(/\*/g, '%');
             conditions.push(`"${key}" ILIKE $${i++}`);
             values.push(actualValue);
           } else if (typeof value === 'string' && value.startsWith('in.')) {
