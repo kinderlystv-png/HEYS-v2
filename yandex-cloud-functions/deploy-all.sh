@@ -1,7 +1,8 @@
 #!/bin/bash
 # 🚀 Centralized Deployment Script for Yandex Cloud Functions
 # Reads secrets from .env file and deploys all functions with consistent configuration
-# Usage: ./deploy-all.sh [function-name] or ./deploy-all.sh (deploys all)
+# Usage: ./deploy-all.sh [function-name] [--skip-checks] [--skip-health]
+# v2.0 — auto health-check after deploy, .env checksum on success
 
 set -e  # Exit on error
 
@@ -15,6 +16,22 @@ NC='\033[0m' # No Color
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 ENV_FILE="$SCRIPT_DIR/.env"
 VALIDATE_SCRIPT="$SCRIPT_DIR/validate-env.sh"
+HEALTH_SCRIPT="$SCRIPT_DIR/health-check.sh"
+CHECKSUM_FILE="$SCRIPT_DIR/.env.checksum"
+
+# Parse flags
+TARGET_FUNC=""
+SKIP_CHECKS=false
+SKIP_HEALTH=false
+
+for arg in "$@"; do
+    case "$arg" in
+        --skip-checks) SKIP_CHECKS=true ;;
+        --skip-health) SKIP_HEALTH=true ;;
+        -*) echo -e "${RED}Unknown flag: $arg${NC}"; exit 1 ;;
+        *) TARGET_FUNC="$arg" ;;
+    esac
+done
 
 # Check if .env exists
 if [ ! -f "$ENV_FILE" ]; then
@@ -25,10 +42,13 @@ if [ ! -f "$ENV_FILE" ]; then
 fi
 
 # Run validation script if available
-if [ -f "$VALIDATE_SCRIPT" ]; then
+if [ "$SKIP_CHECKS" = true ]; then
+    echo -e "${YELLOW}⏭️  Skipping .env validation (--skip-checks)${NC}"
+elif [ -f "$VALIDATE_SCRIPT" ]; then
     echo -e "${BLUE}🔍 Running .env validation...${NC}"
     if ! "$VALIDATE_SCRIPT"; then
         echo -e "${RED}❌ .env validation failed! Fix errors before deploying.${NC}"
+        echo -e "${YELLOW}💡 Use --skip-checks to bypass (NOT recommended)${NC}"
         exit 1
     fi
     echo ""
@@ -85,6 +105,8 @@ get_function_config() {
             echo "nodejs18 index.handler 128m 10s" ;;
         "heys-api-health")
             echo "nodejs18 index.handler 128m 5s" ;;
+        "heys-api-payments")
+            echo "nodejs18 index.handler 256m 15s" ;;
         *)
             echo "" ;;
     esac
@@ -129,6 +151,16 @@ build_env_flags() {
 
     if [[ "$func_name" == "heys-api-auth" ]]; then
         env_flags+=" --environment SESSION_SECRET=$SESSION_SECRET"
+    fi
+
+    # Payment secrets (for payments function)
+    if [[ "$func_name" == "heys-api-payments" ]]; then
+        if [ -n "$YUKASSA_SHOP_ID" ]; then
+            env_flags+=" --environment YUKASSA_SHOP_ID=$YUKASSA_SHOP_ID"
+        fi
+        if [ -n "$YUKASSA_SECRET_KEY" ]; then
+            env_flags+=" --environment YUKASSA_SECRET_KEY=$YUKASSA_SECRET_KEY"
+        fi
     fi
     
     echo "$env_flags"
@@ -186,9 +218,9 @@ deploy_function() {
 }
 
 # Main execution
-if [ -n "$1" ]; then
+if [ -n "$TARGET_FUNC" ]; then
     # Deploy single function
-    deploy_function "$1"
+    deploy_function "$TARGET_FUNC"
 else
     # Deploy all functions
     echo -e "${YELLOW}🚀 Deploying all functions...${NC}"
@@ -200,4 +232,35 @@ else
     echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
     echo -e "${GREEN}✅ All functions deployed successfully!${NC}"
     echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+fi
+
+# ─── Post-deploy: health check ──────────────────────────────────────
+if [ "$SKIP_HEALTH" = true ]; then
+    echo -e "${YELLOW}⏭️  Skipping health check (--skip-health)${NC}"
+else
+    echo ""
+    echo -e "${BLUE}⏳ Waiting 10s for function warmup...${NC}"
+    sleep 10
+
+    if [ -f "$HEALTH_SCRIPT" ]; then
+        echo -e "${BLUE}🧪 Running post-deploy health check...${NC}"
+        if "$HEALTH_SCRIPT"; then
+            echo -e "${GREEN}✅ Post-deploy health check PASSED${NC}"
+            
+            # Save .env checksum on successful deploy + health check
+            shasum -a 256 "$ENV_FILE" | cut -d' ' -f1 > "$CHECKSUM_FILE"
+            echo -e "${GREEN}🔒 .env checksum saved (deploy verified)${NC}"
+        else
+            echo ""
+            echo -e "${RED}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+            echo -e "${RED}⚠️  DEPLOY SUCCEEDED but HEALTH CHECK FAILED!${NC}"
+            echo -e "${RED}   Functions deployed with current .env — verify manually.${NC}"
+            echo -e "${YELLOW}   Run: ./health-check.sh --watch${NC}"
+            echo -e "${RED}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+            # Do NOT save checksum — deploy is questionable
+            exit 1
+        fi
+    else
+        echo -e "${YELLOW}⚠️  health-check.sh not found — skipping post-deploy verification${NC}"
+    fi
 fi

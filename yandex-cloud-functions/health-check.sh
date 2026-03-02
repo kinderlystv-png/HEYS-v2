@@ -1,6 +1,7 @@
 #!/bin/bash
 # Health Check Script — проверка всех production endpoints
-# Usage: ./health-check.sh [--watch]
+# Usage: ./health-check.sh [--watch] [--verbose]
+# v2.0 — adds DB-dependent RPC check, proper exit codes for deploy-all.sh
 
 set -e
 
@@ -13,9 +14,16 @@ NC='\033[0m' # No Color
 
 API_URL="https://api.heyslab.ru"
 WATCH_MODE=false
+VERBOSE=false
 
-if [[ "$1" == "--watch" ]]; then
-    WATCH_MODE=true
+for arg in "$@"; do
+    case "$arg" in
+        --watch) WATCH_MODE=true ;;
+        --verbose) VERBOSE=true ;;
+    esac
+done
+
+if [ "$WATCH_MODE" = true ]; then
     echo -e "${BLUE}🔄 Watch mode enabled (checking every 30s, Ctrl+C to stop)${NC}"
 fi
 
@@ -52,17 +60,26 @@ check_endpoint() {
 
 run_checks() {
     echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-    echo -e "${BLUE}🧪 HEYS API Health Check — $(date '+%Y-%m-%d %H:%M:%S')${NC}"
+    echo -e "${BLUE}🧪 HEYS API Health Check v2.0 — $(date '+%Y-%m-%d %H:%M:%S')${NC}"
     echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
     
     FAILED=0
     
+    # Basic endpoint checks
+    echo -e "${BLUE}── Basic endpoints ──${NC}"
     check_endpoint "Health" "GET" "$API_URL/health" "" "200" || FAILED=$((FAILED+1))
-    check_endpoint "RPC" "POST" "$API_URL/rpc?fn=get_shared_products" '{}' "200" || FAILED=$((FAILED+1))
+    check_endpoint "RPC (shared)" "POST" "$API_URL/rpc?fn=get_shared_products" '{}' "200" || FAILED=$((FAILED+1))
     check_endpoint "REST" "GET" "$API_URL/rest/shared_products?limit=1" "" "200" || FAILED=$((FAILED+1))
+    
+    # Auth endpoints (expected to reject invalid creds, but should NOT return 502/503)
+    echo -e "${BLUE}── Auth endpoints ──${NC}"
     check_endpoint "Auth Login" "POST" "$API_URL/auth/login" '{"email":"test@test.com","password":"test"}' "400,401,403" || FAILED=$((FAILED+1))
     check_endpoint "SMS" "POST" "$API_URL/sms" '{"phone":"79999999999","action":"send_pin"}' "200,400,429" || FAILED=$((FAILED+1))
     check_endpoint "Leads" "POST" "$API_URL/leads" '{"name":"Test","phone":"79999999999","source":"health_check"}' "200,400,409" || FAILED=$((FAILED+1))
+    
+    # DB-dependent check: RPC that requires a live DB connection (catches wrong PG_PASSWORD)
+    echo -e "${BLUE}── DB-dependent checks ──${NC}"
+    check_endpoint "RPC→DB (categories)" "POST" "$API_URL/rpc?fn=get_shared_categories" '{}' "200" || FAILED=$((FAILED+1))
     
     echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
     
