@@ -6335,8 +6335,17 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
     // Обновляем счётчик рекомендаций при изменении продуктов или mount
     useEffect(() => {
-      const count = (HEYS.store?.getSuggestedPresets?.() || []).length;
-      setSuggestedPresetsCount(count);
+      // Запускаем движок рекомендаций в фоне (сразу при открытии шага добавления или прилетах синка)
+      const timer = setTimeout(() => {
+        try {
+          HEYS.store?.runPresetSuggestionEngine?.();
+          const count = (HEYS.store?.getSuggestedPresets?.() || []).length;
+          setSuggestedPresetsCount(count);
+        } catch (e) {
+          console.error('[AddProductStep] runPresetSuggestionEngine error', e);
+        }
+      }, 50);
+      return () => clearTimeout(timer);
     }, [productsVersion]);
     const [usageStatsVersion, setUsageStatsVersion] = useState(0);
 

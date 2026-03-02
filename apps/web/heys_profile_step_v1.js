@@ -1063,6 +1063,20 @@
 
       console.log('[ProfileSteps] Profile saved:', updatedProfile);
       console.log('[ProfileSteps] Norms calculated:', norms);
+
+      // 🔐 v1.17: Явный flush в облако — гарантирует что profileCompleted попадёт в cloud
+      // Без этого при signOut → re-login профиль терялся (localStorage очищается, cloud пуст)
+      try {
+        if (HEYS.cloud && typeof HEYS.cloud.flushPendingQueue === 'function') {
+          HEYS.cloud.flushPendingQueue(10000).then((flushed) => {
+            console.info('[HEYS.profileSteps] ☁️ Cloud flush after registration:', flushed ? 'OK' : 'timeout');
+          }).catch((e) => {
+            console.warn('[HEYS.profileSteps] ⚠️ Cloud flush failed:', e?.message || e);
+          });
+        }
+      } catch (e) {
+        console.warn('[HEYS.profileSteps] ⚠️ Cloud flush error:', e);
+      }
     }
   });
 
@@ -1160,6 +1174,19 @@
 
     console.log('[saveProfileFromStepData] Profile saved:', updatedProfile);
     console.log('[saveProfileFromStepData] Norms calculated:', norms);
+
+    // 🔐 v1.17: Явный flush в облако (дублирует логику из step-4 save)
+    try {
+      if (HEYS.cloud && typeof HEYS.cloud.flushPendingQueue === 'function') {
+        HEYS.cloud.flushPendingQueue(10000).then((flushed) => {
+          console.info('[HEYS.profileSteps] ☁️ Cloud flush after saveProfileFromStepData:', flushed ? 'OK' : 'timeout');
+        }).catch((e) => {
+          console.warn('[HEYS.profileSteps] ⚠️ Cloud flush failed:', e?.message || e);
+        });
+      }
+    } catch (e) {
+      console.warn('[HEYS.profileSteps] ⚠️ Cloud flush error:', e);
+    }
   }
 
   /**

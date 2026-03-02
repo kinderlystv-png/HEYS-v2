@@ -6437,14 +6437,20 @@
 
     log(`💾 [SAVE] ${dataType} | key: ${k} | items: ${itemsCount} | client: ${client_id.substring(0, 8)}...`);
 
-    // 🛡️ GRACE PERIOD v3: Сразу после sync не отправляем ЛЮБЫЕ ключи обратно в облако
+    // 🛡️ GRACE PERIOD v4: Сразу после sync не отправляем ЛЮБЫЕ ключи обратно в облако
     // v3: НЕ push в очередь вообще — иначе savePendingQueue персистирует и на следующем входе
     // flushPendingQueue отправит 405KB обратно (бесконечный цикл mirror)
+    // v4: Исключение для profileCompleted — регистрационный профиль ДОЛЖЕН попасть в облако,
+    //     иначе при signOut → re-login данные теряются и модалка регистрации повторяется
     const _graceAge = cloud._syncCompletedAt ? (Date.now() - cloud._syncCompletedAt) : Infinity;
     const _inGracePeriod = _graceAge < 10000;
-    if (_inGracePeriod) {
+    const _isProfileCompleted = normalizedKey === 'heys_profile' && value && typeof value === 'object' && value.profileCompleted === true;
+    if (_inGracePeriod && !_isProfileCompleted) {
       // 🔇 Silent skip — data was just downloaded from cloud, no need to re-upload
       return;
+    }
+    if (_inGracePeriod && _isProfileCompleted) {
+      console.info('[HEYS.sync] 🔓 Grace period bypassed for profileCompleted save');
     }
 
     // Добавляем в очередь вместо немедленной отправки
@@ -6459,12 +6465,13 @@
 
     // ⚡ IMMEDIATE: для критичных ключей отправляем в облако сразу
     // Требование: любые изменения дня/профиля/норм/продуктов должны попасть в облако без задержки
-    const isCriticalKey = k && (
-      k.includes('dayv2_') ||
-      k === 'heys_profile' ||
-      k === 'heys_norms' ||
-      k === 'heys_hr_zones' ||
-      k === 'heys_products'
+    // v4: Используем normalizedKey вместо k — scoped ключ heys_{clientId}_profile не совпадал с 'heys_profile'
+    const isCriticalKey = normalizedKey && (
+      normalizedKey.includes('dayv2_') ||
+      normalizedKey === 'heys_profile' ||
+      normalizedKey === 'heys_norms' ||
+      normalizedKey === 'heys_hr_zones' ||
+      normalizedKey === 'heys_products'
     );
     if (isCriticalKey && navigator.onLine && !waitingForSync) {
       console.info('[HEYS.sync] ⚡ Immediate upload', { key: k, client: client_id?.slice(0, 8) });

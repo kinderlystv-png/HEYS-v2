@@ -530,24 +530,20 @@
     function getComboSignature(items) {
       var uMap = new Map();
       items.forEach(function (item) {
-        var n = (item.name || '').trim().toLowerCase();
+        var n = String(item.name || '').toLowerCase().replace(/[^a-zа-яё0-9]/g, '');
         var fallbackId = String(item.product_id || item.id);
         var key = n || fallbackId;
         if (!uMap.has(key)) uMap.set(key, item);
       });
       var uniqueItems = Array.from(uMap.values());
       
-      // Сортируем элементы по имени для красивого и предсказуемого отображения
+      // Сортируем элементы по имени для предсказуемого отображения
       uniqueItems.sort(function (a, b) {
         return String(a.name || '').localeCompare(String(b.name || ''));
       });
       
       var signature = uniqueItems.map(function (i) {
-        return String(i.name || '').trim().toLowerCase() || String(i.product_id || i.id);
-      }).join('|');
-      
-      return { signature: signature, uniqueItems: uniqueItems };
-    }
+        return String(i.name || '').toLowerCase().replace(/[^a-zа-яё0-9]/g, '') || String(i.product_id || i.id);
 
     allDays.forEach(function (day) {
       (day.meals || []).forEach(function (meal) {
