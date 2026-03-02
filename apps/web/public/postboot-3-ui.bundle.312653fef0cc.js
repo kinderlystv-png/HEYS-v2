@@ -6318,12 +6318,6 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       () => (HEYS.store?.getSuggestedPresets?.() || []).length
     );
 
-    // Обновляем счётчик рекомендаций при изменении продуктов или monunt
-    useEffect(() => {
-      const count = (HEYS.store?.getSuggestedPresets?.() || []).length;
-      setSuggestedPresetsCount(count);
-    }, [productsVersion]);
-
     const inputRef = useRef(null);
     const fileInputRef = useRef(null);
 
@@ -6338,6 +6332,12 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     // Это решает проблему: при открытии модалки сразу после создания приёма
     // продукты ещё не загружены из облака, но после heysSyncCompleted они появятся
     const [productsVersion, setProductsVersion] = useState(globalProductsVersion);
+
+    // Обновляем счётчик рекомендаций при изменении продуктов или mount
+    useEffect(() => {
+      const count = (HEYS.store?.getSuggestedPresets?.() || []).length;
+      setSuggestedPresetsCount(count);
+    }, [productsVersion]);
     const [usageStatsVersion, setUsageStatsVersion] = useState(0);
 
     // 🔒 Ref для пропуска первого sync (предотвращает мерцание)
@@ -17930,6 +17930,20 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
       console.log('[ProfileSteps] Profile saved:', updatedProfile);
       console.log('[ProfileSteps] Norms calculated:', norms);
+
+      // 🔐 v1.17: Явный flush в облако — гарантирует что profileCompleted попадёт в cloud
+      // Без этого при signOut → re-login профиль терялся (localStorage очищается, cloud пуст)
+      try {
+        if (HEYS.cloud && typeof HEYS.cloud.flushPendingQueue === 'function') {
+          HEYS.cloud.flushPendingQueue(10000).then((flushed) => {
+            console.info('[HEYS.profileSteps] ☁️ Cloud flush after registration:', flushed ? 'OK' : 'timeout');
+          }).catch((e) => {
+            console.warn('[HEYS.profileSteps] ⚠️ Cloud flush failed:', e?.message || e);
+          });
+        }
+      } catch (e) {
+        console.warn('[HEYS.profileSteps] ⚠️ Cloud flush error:', e);
+      }
     }
   });
 
@@ -18027,6 +18041,19 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
     console.log('[saveProfileFromStepData] Profile saved:', updatedProfile);
     console.log('[saveProfileFromStepData] Norms calculated:', norms);
+
+    // 🔐 v1.17: Явный flush в облако (дублирует логику из step-4 save)
+    try {
+      if (HEYS.cloud && typeof HEYS.cloud.flushPendingQueue === 'function') {
+        HEYS.cloud.flushPendingQueue(10000).then((flushed) => {
+          console.info('[HEYS.profileSteps] ☁️ Cloud flush after saveProfileFromStepData:', flushed ? 'OK' : 'timeout');
+        }).catch((e) => {
+          console.warn('[HEYS.profileSteps] ⚠️ Cloud flush failed:', e?.message || e);
+        });
+      }
+    } catch (e) {
+      console.warn('[HEYS.profileSteps] ⚠️ Cloud flush error:', e);
+    }
   }
 
   /**

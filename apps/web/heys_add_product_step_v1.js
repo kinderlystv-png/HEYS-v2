@@ -1809,12 +1809,6 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       () => (HEYS.store?.getSuggestedPresets?.() || []).length
     );
 
-    // Обновляем счётчик рекомендаций при изменении продуктов или monunt
-    useEffect(() => {
-      const count = (HEYS.store?.getSuggestedPresets?.() || []).length;
-      setSuggestedPresetsCount(count);
-    }, [productsVersion]);
-
     const inputRef = useRef(null);
     const fileInputRef = useRef(null);
 
@@ -1829,6 +1823,12 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     // Это решает проблему: при открытии модалки сразу после создания приёма
     // продукты ещё не загружены из облака, но после heysSyncCompleted они появятся
     const [productsVersion, setProductsVersion] = useState(globalProductsVersion);
+
+    // Обновляем счётчик рекомендаций при изменении продуктов или mount
+    useEffect(() => {
+      const count = (HEYS.store?.getSuggestedPresets?.() || []).length;
+      setSuggestedPresetsCount(count);
+    }, [productsVersion]);
     const [usageStatsVersion, setUsageStatsVersion] = useState(0);
 
     // 🔒 Ref для пропуска первого sync (предотвращает мерцание)
