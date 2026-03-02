@@ -7,7 +7,7 @@ import Image from 'next/image'
 import { useEffect, useState } from 'react'
 
 import { LandingVariant, VariantContent } from '@/config/landing-variants'
-import { getHeroSubheadline } from '@/lib/ab-test'
+import { getHeroHeadline, getHeroSubheadline } from '@/lib/ab-test'
 import { useABTest } from '@/lib/useABTest'
 
 interface HeroSSRProps {
@@ -15,21 +15,12 @@ interface HeroSSRProps {
   variant: LandingVariant
 }
 
-// Время сборки (фиксируется при старте сервера / компиляции)
-const BUILD_TIME = new Date().toLocaleString('ru-RU', {
-  day: '2-digit',
-  month: '2-digit',
-  hour: '2-digit',
-  minute: '2-digit',
-  second: '2-digit',
-  timeZone: 'Europe/Moscow'
-})
-
 export default function HeroSSR({ content }: HeroSSRProps) {
   const [menuOpen, setMenuOpen] = useState(false)
   const [mounted, setMounted] = useState(false)
   const [scrolled, setScrolled] = useState(false)
   const heroCopyVariant = useABTest('hero_copy')
+  const abHeadline = getHeroHeadline(heroCopyVariant)
   const abSubheadline = getHeroSubheadline(heroCopyVariant)
 
   // Trigger animations after mount
@@ -49,7 +40,7 @@ export default function HeroSSR({ content }: HeroSSRProps) {
   }, [])
 
   return (
-    <section className="relative h-screen overflow-hidden">
+    <section className="relative h-screen overflow-hidden flex flex-col">
       {/* Background */}
       <div className="absolute inset-0 bg-white" aria-hidden="true" />
 
@@ -137,53 +128,97 @@ export default function HeroSSR({ content }: HeroSSRProps) {
         </div>
       </header>
 
-      {/* Hero Content — First Screen: Logo + Phone + H1 + H2 */}
-      <div className="relative w-full min-h-[calc(100vh-72px)] md:min-h-0 flex flex-col md:block">
-        <div className="relative mx-auto w-full max-w-[1024px] px-4 md:px-6 pt-4 md:pt-20 pb-24 md:pb-0 flex flex-col md:block flex-1">
+      {/* Hero Content — unified grid: left=all text, right=phone */}
+      <div className="relative w-full flex-1 flex items-center bg-white">
+        <div className="mx-auto w-full max-w-[1024px] px-4 md:px-6 pt-4 pb-6 md:pt-8 md:pb-24">
+          <div className="grid grid-cols-1 lg:grid-cols-[1fr_260px] gap-6 lg:gap-16 items-center">
 
-          {/* Mobile: Phone - adaptive size with animation */}
-          <div className={`flex lg:hidden justify-center flex-1 items-center transition-all duration-700 ease-out ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'
-            }`} style={{ transitionDelay: '200ms' }}>
-            <div className="relative w-full max-w-[200px] sm:max-w-[240px]">
-              <Image
-                src="/phone3.jpg"
-                alt="HEYS App Interface"
-                width={240}
-                height={480}
-                priority
-                className="w-full h-auto object-contain drop-shadow-xl"
-                style={{ maxHeight: 'max(40vh, 320px)', height: 'auto' }}
-              />
+            {/* Mobile: Phone — above text */}
+            <div className={`flex lg:hidden justify-center order-1 transition-all duration-700 ease-out ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'
+              }`} style={{ transitionDelay: '200ms' }}>
+              <div className="relative w-full max-w-[180px] sm:max-w-[210px]">
+                <Image
+                  src="/phone3.jpg"
+                  alt="HEYS App Interface"
+                  width={210}
+                  height={420}
+                  priority
+                  className="w-full h-auto object-contain drop-shadow-xl"
+                  style={{ maxHeight: 'max(36vh, 280px)', height: 'auto' }}
+                />
+              </div>
             </div>
+
+            {/* Left Column — ALL text content */}
+            <div className="text-center lg:text-left order-2 lg:order-1 lg:mt-10">
+
+              {/* H1 */}
+              <h1 className={`text-[26px] sm:text-[28px] md:text-[36px] lg:text-[42px] font-semibold text-[#111827] mb-8 md:mb-10 leading-[1.15] transition-all duration-700 ease-out ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'
+                }`} style={{ transitionDelay: '400ms' }}>
+                {abHeadline}
+              </h1>
+
+              {/* H2 */}
+              <h2 className={`text-[14px] md:text-[16px] text-[#6b7280] font-normal mb-6 md:mb-16 leading-[1.6] transition-all duration-700 ease-out ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'
+                }`} style={{ transitionDelay: '800ms' }}>
+                {abSubheadline.split('\n').map((line, i) => (
+                  <span key={i}>
+                    {i > 0 && <br />}
+                    {line}
+                  </span>
+                ))}
+              </h2>
+
+              {/* CTA — две кнопки */}
+              <div className={`flex flex-row flex-wrap gap-3 mb-4 justify-center lg:justify-start transition-all duration-700 ease-out ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'
+                }`} style={{ transitionDelay: '1200ms' }}>
+                <a
+                  href="#pain"
+                  className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 text-white font-semibold rounded-2xl hover:bg-blue-700 active:scale-95 transition-all text-[14px] tracking-wide shadow-lg shadow-blue-600/25"
+                >
+                  Как это работает?
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path d="M12 5v12m0 0 6-6m-6 6-6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </a>
+                <a
+                  href="#trial"
+                  className="inline-flex items-center justify-center px-6 py-3 border border-[#111827]/20 text-[#374151] font-normal rounded-2xl hover:border-[#111827]/40 hover:text-[#111827] hover:bg-[#f9fafb] active:scale-95 transition-all text-[14px] tracking-wide"
+                >
+                  Начать бесплатно
+                </a>
+              </div>
+
+              {/* Microtext */}
+              <p className={`text-[12px] text-[#9ca3af] leading-[1.5] transition-all duration-700 ease-out ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'
+                }`} style={{ transitionDelay: '1600ms' }}>
+                {content.hero.microtext}
+              </p>
+
+            </div>
+
+            {/* Right Column — Phone (desktop only) */}
+            <div className={`hidden lg:flex order-2 justify-center items-center transition-all duration-700 ease-out ${mounted ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-12'
+              }`} style={{ transitionDelay: '600ms' }}>
+              <div className="relative w-full max-w-[220px]">
+                <Image
+                  src="/phone3.jpg"
+                  alt="HEYS App Interface"
+                  width={220}
+                  height={440}
+                  priority
+                  className="w-full h-auto object-contain drop-shadow-2xl"
+                  style={{ height: 'auto' }}
+                />
+              </div>
+            </div>
+
           </div>
-
-          {/* H1 — Main headline with A/B test */}
-          <h1 className={`text-[26px] sm:text-[28px] md:text-[36px] lg:text-[40px] font-light text-[#374151] mb-3 md:mb-8 leading-[1.15] text-center lg:text-left transition-all duration-700 ease-out ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'
-            }`} style={{ transitionDelay: '500ms' }}>
-            <span className="text-[#111827] font-semibold block px-2">
-              Энергия, вес, ясность —
-              <br />
-              под вашим управлением.
-              <br className="sm:hidden" /> Без силы воли.
-            </span>
-          </h1>
-
-          {/* H2 — Subheadline with A/B test (visible on first screen for mobile too) */}
-          <h2 className={`px-4 lg:hidden text-[13px] sm:text-[14px] text-[#374151] font-normal mb-8 leading-[1.5] text-center transition-all duration-700 ease-out ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'
-            }`} style={{ transitionDelay: '1000ms' }}>
-            {abSubheadline.split('\n').map((line, i) => (
-              <span key={i}>
-                {i > 0 && <br />}
-                {line}
-              </span>
-            ))}
-          </h2>
-
         </div>
       </div>
 
-      {/* Scroll cue — fixed at bottom of viewport (Mobile: 3000ms delay) */}
-      <div className={`lg:hidden pointer-events-none fixed bottom-4 sm:bottom-8 left-1/2 -translate-x-1/2 z-20 transition-all duration-700 ease-out ${mounted && !scrolled ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
+      {/* Scroll cue — fixed at bottom of viewport (Mobile: hidden) */}
+      <div className={`hidden pointer-events-none fixed bottom-4 sm:bottom-8 left-1/2 -translate-x-1/2 z-20 transition-all duration-700 ease-out ${mounted && !scrolled ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
         }`} style={{ transitionDelay: scrolled ? '0ms' : '3000ms' }}>
         <a
           href="#pain"
@@ -236,77 +271,6 @@ export default function HeroSSR({ content }: HeroSSRProps) {
         </a>
       </div>
 
-      {/* Hero Content — Second part (scrollable on mobile) */}
-      <div className="relative w-full bg-white">
-        <div className="mx-auto w-full max-w-[1024px] px-4 md:px-6 pb-16 md:pb-24">
-          <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-0 items-start">
-
-            {/* Left Column — Text Content */}
-            <div className="text-center lg:text-left">
-              {/* H2 — Subheadline desktop with A/B test */}
-              <h2 className={`text-[14px] md:text-[17px] text-[#374151] font-normal mb-5 md:mb-6 leading-[1.5] hidden lg:block transition-all duration-700 ease-out ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'
-                }`} style={{ transitionDelay: '1000ms' }}>
-                {abSubheadline.split('\n').map((line, i) => (
-                  <span key={i}>
-                    {i > 0 && <br />}
-                    {line}
-                  </span>
-                ))}
-              </h2>
-
-              {/* CTA — единственная кнопка из COPY_FINAL */}
-              <div className={`flex mb-3 justify-center lg:justify-start transition-all duration-700 ease-out ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'
-                }`} style={{ transitionDelay: '1500ms' }}>
-                <a
-                  href="#trial"
-                  className="inline-flex items-center justify-center px-8 py-3.5 bg-blue-600 text-white font-semibold rounded-2xl hover:bg-blue-700 active:scale-95 transition-all text-[15px] tracking-wide shadow-lg shadow-blue-600/25"
-                >
-                  Попробовать бесплатно — 7 дней
-                </a>
-              </div>
-
-              {/* Friction reduction note */}
-              {content.hero.frictionNote && (
-                <p className={`text-[13px] text-gray-500 mb-5 leading-[1.5] transition-all duration-700 ease-out ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'
-                  }`} style={{ transitionDelay: '2000ms' }}>
-                  {content.hero.frictionNote}
-                </p>
-              )}
-
-              {/* Microtext */}
-              <div className={`space-y-1 transition-all duration-700 ease-out ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'
-                }`} style={{ transitionDelay: '2000ms' }}>
-                <p className="text-[12px] text-[#6b7280] leading-[1.5]">
-                  {content.hero.microtext}
-                </p>
-                {content.hero.microtextLine2 && (
-                  <p className="text-[12px] text-[#6b7280] leading-[1.5] flex items-center gap-2">
-                    <span>{content.hero.microtextLine2}</span>
-                    <span suppressHydrationWarning className="text-[10px] font-mono text-[#9ca3af]">v{BUILD_TIME}</span>
-                  </p>
-                )}
-              </div>
-            </div>
-
-            {/* Right Column — iPhone Screenshot */}
-            <div className={`hidden lg:flex justify-center items-center transition-all duration-700 ease-out ${mounted ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-12'
-              }`} style={{ transitionDelay: '2500ms' }}>
-              <div className="relative w-full max-w-[180px]">
-                <Image
-                  src="/phone3.jpg"
-                  alt="HEYS App Interface"
-                  width={180}
-                  height={360}
-                  priority
-                  className="w-full h-auto object-contain drop-shadow-2xl"
-                  style={{ height: 'auto' }}
-                />
-              </div>
-            </div>
-
-          </div>
-        </div>
-      </div>
     </section>
   )
 }

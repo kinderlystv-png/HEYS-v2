@@ -180,9 +180,7 @@ export const VARIANTS: Record<LandingVariant, VariantContent> = {
       features: [],
       ctaPrimary: 'Попробовать бесплатно — 7 дней',
       ctaSecondary: '',
-      frictionNote: 'Без карты. Без автосписаний.',
-      microtext: 'Тестовый период доступен по записи. 0 ₽ без карты, автосписаний нет.',
-      microtextLine2: 'Не медицинская услуга.',
+      microtext: 'Без карты · Без автосписаний · Не медицинская услуга',
     },
     nav: {
       links: [
