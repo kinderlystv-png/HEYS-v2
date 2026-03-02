@@ -3708,7 +3708,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
   // ============================================================================
 
   // === App Version & Auto-logout on Update ===
-  const APP_VERSION = '2026.03.02.2320.a88fd3b1'; // synced with build-meta.json on 2026-02-26
+  const APP_VERSION = '2026.03.03.0058.05bb90f8'; // synced with build-meta.json on 2026-02-26
 
   HEYS.version = APP_VERSION;
 
@@ -22815,14 +22815,20 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
 
     log(`💾 [SAVE] ${dataType} | key: ${k} | items: ${itemsCount} | client: ${client_id.substring(0, 8)}...`);
 
-    // 🛡️ GRACE PERIOD v3: Сразу после sync не отправляем ЛЮБЫЕ ключи обратно в облако
+    // 🛡️ GRACE PERIOD v4: Сразу после sync не отправляем ЛЮБЫЕ ключи обратно в облако
     // v3: НЕ push в очередь вообще — иначе savePendingQueue персистирует и на следующем входе
     // flushPendingQueue отправит 405KB обратно (бесконечный цикл mirror)
+    // v4: Исключение для profileCompleted — регистрационный профиль ДОЛЖЕН попасть в облако,
+    //     иначе при signOut → re-login данные теряются и модалка регистрации повторяется
     const _graceAge = cloud._syncCompletedAt ? (Date.now() - cloud._syncCompletedAt) : Infinity;
     const _inGracePeriod = _graceAge < 10000;
-    if (_inGracePeriod) {
+    const _isProfileCompleted = normalizedKey === 'heys_profile' && value && typeof value === 'object' && value.profileCompleted === true;
+    if (_inGracePeriod && !_isProfileCompleted) {
       // 🔇 Silent skip — data was just downloaded from cloud, no need to re-upload
       return;
+    }
+    if (_inGracePeriod && _isProfileCompleted) {
+      console.info('[HEYS.sync] 🔓 Grace period bypassed for profileCompleted save');
     }
 
     // Добавляем в очередь вместо немедленной отправки
@@ -22837,12 +22843,13 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
 
     // ⚡ IMMEDIATE: для критичных ключей отправляем в облако сразу
     // Требование: любые изменения дня/профиля/норм/продуктов должны попасть в облако без задержки
-    const isCriticalKey = k && (
-      k.includes('dayv2_') ||
-      k === 'heys_profile' ||
-      k === 'heys_norms' ||
-      k === 'heys_hr_zones' ||
-      k === 'heys_products'
+    // v4: Используем normalizedKey вместо k — scoped ключ heys_{clientId}_profile не совпадал с 'heys_profile'
+    const isCriticalKey = normalizedKey && (
+      normalizedKey.includes('dayv2_') ||
+      normalizedKey === 'heys_profile' ||
+      normalizedKey === 'heys_norms' ||
+      normalizedKey === 'heys_hr_zones' ||
+      normalizedKey === 'heys_products'
     );
     if (isCriticalKey && navigator.onLine && !waitingForSync) {
       console.info('[HEYS.sync] ⚡ Immediate upload', { key: k, client: client_id?.slice(0, 8) });
@@ -26337,15 +26344,41 @@ NOVA: 1-4
     // --- Строим карту частотности сочетаний ---
     var comboMap = new Map();
 
+    // -- Хелпер для нормализации продуктов и создания сигнатуры --
+    function getComboSignature(items) {
+      var uMap = new Map();
+      items.forEach(function (item) {
+        var n = (item.name || '').trim().toLowerCase();
+        var fallbackId = String(item.product_id || item.id);
+        var key = n || fallbackId;
+        if (!uMap.has(key)) uMap.set(key, item);
+      });
+      var uniqueItems = Array.from(uMap.values());
+      
+      // Сортируем элементы по имени для красивого и предсказуемого отображения
+      uniqueItems.sort(function (a, b) {
+        return String(a.name || '').localeCompare(String(b.name || ''));
+      });
+      
+      var signature = uniqueItems.map(function (i) {
+        return String(i.name || '').trim().toLowerCase() || String(i.product_id || i.id);
+      }).join('|');
+      
+      return { signature: signature, uniqueItems: uniqueItems };
+    }
+
     allDays.forEach(function (day) {
       (day.meals || []).forEach(function (meal) {
         var items = (meal.items || []).filter(function (item) {
           return item.product_id || item.id;
         });
-        if (items.length < MIN_COMBO_SIZE || items.length > MAX_COMBO_SIZE) return;
 
-        var productIds = items.map(function (i) { return String(i.product_id || i.id); }).sort();
-        var signature = productIds.join(',');
+        // Получаем уникальные продукты и сигнатуру по ИМЕНИ (или ID)
+        var comboData = getComboSignature(items);
+        var uniqueItems = comboData.uniqueItems;
+        var signature = comboData.signature;
+
+        if (uniqueItems.length < MIN_COMBO_SIZE || uniqueItems.length > MAX_COMBO_SIZE) return;
 
         if (comboMap.has(signature)) {
           var entry = comboMap.get(signature);
@@ -26355,8 +26388,7 @@ NOVA: 1-4
         } else {
           var dayTs = day.date ? new Date(day.date).getTime() : Date.now();
           comboMap.set(signature, {
-            productIds: productIds,
-            sampleItems: items.map(function (item) {
+            sampleItems: uniqueItems.map(function (item) {
               return {
                 product_id: item.product_id || item.id,
                 name: item.name || '',
@@ -26398,7 +26430,7 @@ NOVA: 1-4
     var confirmedPresets = Store.getMealPresets();
     var confirmedSignatures = new Set(
       confirmedPresets.map(function (p) {
-        return (p.items || []).map(function (i) { return String(i.product_id); }).sort().join(',');
+        return getComboSignature(p.items || []).signature;
       })
     );
 

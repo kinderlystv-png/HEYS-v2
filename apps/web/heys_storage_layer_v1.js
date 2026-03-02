@@ -526,15 +526,41 @@
     // --- Строим карту частотности сочетаний ---
     var comboMap = new Map();
 
+    // -- Хелпер для нормализации продуктов и создания сигнатуры --
+    function getComboSignature(items) {
+      var uMap = new Map();
+      items.forEach(function (item) {
+        var n = (item.name || '').trim().toLowerCase();
+        var fallbackId = String(item.product_id || item.id);
+        var key = n || fallbackId;
+        if (!uMap.has(key)) uMap.set(key, item);
+      });
+      var uniqueItems = Array.from(uMap.values());
+      
+      // Сортируем элементы по имени для красивого и предсказуемого отображения
+      uniqueItems.sort(function (a, b) {
+        return String(a.name || '').localeCompare(String(b.name || ''));
+      });
+      
+      var signature = uniqueItems.map(function (i) {
+        return String(i.name || '').trim().toLowerCase() || String(i.product_id || i.id);
+      }).join('|');
+      
+      return { signature: signature, uniqueItems: uniqueItems };
+    }
+
     allDays.forEach(function (day) {
       (day.meals || []).forEach(function (meal) {
         var items = (meal.items || []).filter(function (item) {
           return item.product_id || item.id;
         });
-        if (items.length < MIN_COMBO_SIZE || items.length > MAX_COMBO_SIZE) return;
 
-        var productIds = items.map(function (i) { return String(i.product_id || i.id); }).sort();
-        var signature = productIds.join(',');
+        // Получаем уникальные продукты и сигнатуру по ИМЕНИ (или ID)
+        var comboData = getComboSignature(items);
+        var uniqueItems = comboData.uniqueItems;
+        var signature = comboData.signature;
+
+        if (uniqueItems.length < MIN_COMBO_SIZE || uniqueItems.length > MAX_COMBO_SIZE) return;
 
         if (comboMap.has(signature)) {
           var entry = comboMap.get(signature);
@@ -544,8 +570,7 @@
         } else {
           var dayTs = day.date ? new Date(day.date).getTime() : Date.now();
           comboMap.set(signature, {
-            productIds: productIds,
-            sampleItems: items.map(function (item) {
+            sampleItems: uniqueItems.map(function (item) {
               return {
                 product_id: item.product_id || item.id,
                 name: item.name || '',
@@ -587,7 +612,7 @@
     var confirmedPresets = Store.getMealPresets();
     var confirmedSignatures = new Set(
       confirmedPresets.map(function (p) {
-        return (p.items || []).map(function (i) { return String(i.product_id); }).sort().join(',');
+        return getComboSignature(p.items || []).signature;
       })
     );
 
