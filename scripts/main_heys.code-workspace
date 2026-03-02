@@ -2,6 +2,9 @@
 	"folders": [
 		{
 			"path": ".."
+		},
+		{
+			"path": "../../kinderly-events"
 		}
 	],
 	"settings": {
