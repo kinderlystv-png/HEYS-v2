@@ -276,7 +276,9 @@ const ALLOWED_FUNCTIONS = [
 
   // === CONSENTS ===
   'log_consents',                     // Логирование согласий с ПЭП
+  'log_consents_by_session',          // 🔐 Session-safe: client_id из сессии (IDOR protection)
   'check_required_consents',          // Проверка обязательных согласий
+  'check_payment_consent_by_session', // 🔐 Session-safe: проверка payment_oferta перед оплатой
   'revoke_consent',                   // Отзыв согласия
   'get_client_consents',              // Получение всех согласий клиента
 
@@ -483,6 +485,15 @@ module.exports.handler = async function (event, context) {
     params.p_ip = clientIp || null;
     params.p_user_agent = event.headers?.['user-agent'] || event.headers?.['User-Agent'] || null;
     debugLog('[RPC Handler] Added p_ip and p_user_agent to verify_client_pin_v3');
+  }
+
+  // 🔐 Для log_consents: IP-адрес берём с сервера (надёжнее, чем от клиента)
+  if (fnName === 'log_consents') {
+    params.p_ip = clientIp || params.p_ip || null;
+    if (!params.p_user_agent) {
+      params.p_user_agent = event.headers?.['user-agent'] || event.headers?.['User-Agent'] || null;
+    }
+    debugLog('[RPC Handler] Added server-side p_ip to log_consents');
   }
 
   // Подключаемся к PostgreSQL через connection pool

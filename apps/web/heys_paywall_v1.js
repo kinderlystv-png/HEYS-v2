@@ -344,6 +344,7 @@
    */
   function PaywallModal({ onClose, onSelectPlan, reason }) {
     const [selectedPlan, setSelectedPlan] = React.useState('pro');
+    const [showPaymentScreen, setShowPaymentScreen] = React.useState(false);
 
     const plans = [
       {
@@ -369,12 +370,48 @@
       }
     ];
 
-    const handleCTA = () => {
-      // Пока без ЮKassa — открываем Telegram для связи
-      const message = encodeURIComponent(`Привет! Хочу оформить подписку ${selectedPlan.toUpperCase()} на HEYS`);
-      window.open(`https://t.me/heyslab_support?text=${message}`, '_blank');
-      if (onSelectPlan) onSelectPlan(selectedPlan);
+    // Получаем clientId по стандартному паттерну HEYS
+    const getClientId = () => {
+      const U = window.HEYS?.utils || window.U;
+      return (U && U.getCurrentClientId && U.getCurrentClientId()) || window.HEYS?.currentClientId || '';
     };
+
+    const handleCTA = () => {
+      const clientId = getClientId();
+      if (clientId && window.HEYS?.YandexAPI?.createPayment) {
+        // ЮKassa доступна — показываем PaymentScreen с чекбоксом оферты
+        setShowPaymentScreen(true);
+      } else {
+        // Fallback — Telegram для связи
+        const message = encodeURIComponent(`Привет! Хочу оформить подписку ${selectedPlan.toUpperCase()} на HEYS`);
+        window.open(`https://t.me/heyslab_support?text=${message}`, '_blank');
+        if (onSelectPlan) onSelectPlan(selectedPlan);
+      }
+    };
+
+    // Если показываем PaymentScreen — рендерим его вместо плана
+    if (showPaymentScreen) {
+      const clientId = getClientId();
+      const SubscriptionsModule = window.HEYS?.Subscriptions;
+
+      if (SubscriptionsModule?.PaymentScreen) {
+        return React.createElement('div', { className: 'paywall-overlay', onClick: (e) => e.target === e.currentTarget && setShowPaymentScreen(false) },
+          React.createElement('div', { className: 'paywall-modal', style: { position: 'relative', maxHeight: '90vh', overflowY: 'auto' } },
+            React.createElement('button', { className: 'paywall-close', onClick: () => setShowPaymentScreen(false) }, '✕'),
+            React.createElement(SubscriptionsModule.PaymentScreen, {
+              clientId,
+              onSuccess: (result) => {
+                console.info('[HEYS.paywall] ✅ Оплата успешна:', result);
+                onClose?.();
+              },
+              onCancel: () => setShowPaymentScreen(false)
+            })
+          )
+        );
+      }
+      // Fallback если PaymentScreen не загружен
+      setShowPaymentScreen(false);
+    }
 
     return React.createElement('div', { className: 'paywall-overlay', onClick: (e) => e.target === e.currentTarget && onClose?.() },
       React.createElement('div', { className: 'paywall-modal', style: { position: 'relative' } },

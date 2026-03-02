@@ -14,8 +14,8 @@ export default function LegalLayout({
       {/* Header */}
       <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-100">
         <div className="max-w-4xl mx-auto px-4 py-4">
-          <a 
-            href="/" 
+          <a
+            href="/"
             className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
           >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -34,14 +34,22 @@ export default function LegalLayout({
       {/* Footer */}
       <footer className="border-t border-gray-100 py-8 mt-12">
         <div className="max-w-4xl mx-auto px-4 text-center text-sm text-gray-500">
-          <p>© 2025 HEYS. Все права защищены.</p>
+          <p>© {new Date().getFullYear()} HEYS. Все права защищены.</p>
           <p className="mt-2">
+            <a href="/legal/agreements" className="hover:text-gray-700 transition-colors">
+              Все документы
+            </a>
+            {' · '}
             <a href="/legal/privacy-policy" className="hover:text-gray-700 transition-colors">
               Политика конфиденциальности
             </a>
             {' · '}
             <a href="/legal/user-agreement" className="hover:text-gray-700 transition-colors">
               Пользовательское соглашение
+            </a>
+            {' · '}
+            <a href="/legal/health-data-consent" className="hover:text-gray-700 transition-colors">
+              Данные о здоровье
             </a>
           </p>
         </div>

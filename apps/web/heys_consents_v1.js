@@ -17,14 +17,16 @@
     USER_AGREEMENT: 'user_agreement',
     PERSONAL_DATA: 'personal_data',
     HEALTH_DATA: 'health_data',
-    MARKETING: 'marketing'
+    MARKETING: 'marketing',
+    PAYMENT_OFERTA: 'payment_oferta'
   };
 
   const CURRENT_VERSIONS = {
-    user_agreement: '1.2',
-    personal_data: '1.2',
-    health_data: '1.0',  // Отдельный документ согласия на данные о здоровье
-    marketing: '1.2'
+    user_agreement: '1.4',
+    personal_data: '1.4',
+    health_data: '1.2',  // Отдельный документ согласия на данные о здоровье
+    marketing: '1.2',
+    payment_oferta: '1.4'  // Акцепт оферты при оплате (ст. 438 ГК РФ)
   };
 
   const REQUIRED_CONSENTS = [
@@ -68,6 +70,12 @@
         label: 'Согласен получать информационные и рекламные материалы сервиса',
         link: null,
         required: false
+      },
+      payment_oferta: {
+        label: 'Нажимая «Оплатить», принимаю условия Публичной оферты и Политики конфиденциальности',
+        link: 'https://heyslab.ru/legal/user-agreement',
+        secondaryLink: 'https://heyslab.ru/legal/privacy-policy',
+        required: true
       }
     },
 

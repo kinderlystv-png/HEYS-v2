@@ -467,13 +467,68 @@
     const [selectedPlan, setSelectedPlan] = useState('pro');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
+    const [ofertaAccepted, setOfertaAccepted] = useState(false);
+
+    /**
+     * Логирование согласия payment_oferta перед оплатой (ст. 438 ГК РФ)
+     */
+    const logPaymentConsent = async () => {
+      try {
+        const Consents = window.HEYS?.Consents;
+        const YandexAPI = window.HEYS?.YandexAPI;
+        if (!YandexAPI?.logConsents) {
+          devWarn('[Subscriptions] YandexAPI.logConsents недоступен, пропускаем');
+          return true;
+        }
+
+        const consentData = [{
+          type: 'payment_oferta',
+          version: '1.4',
+          granted: true,
+          signature_method: 'checkbox'
+        }];
+
+        // Предпочитаем session-safe вариант (IDOR protection)
+        const result = YandexAPI.logConsentsBySession
+          ? await YandexAPI.logConsentsBySession(consentData, navigator.userAgent)
+          : await YandexAPI.logConsents(clientId, consentData, navigator.userAgent);
+        if (result.error) {
+          console.error('[HEYS.subscriptions] ❌ Ошибка логирования payment_oferta:', result.error);
+          return false;
+        }
+
+        console.info('[HEYS.subscriptions] ✅ payment_oferta consent записан:', {
+          clientId,
+          plan: selectedPlan,
+          version: '1.4'
+        });
+        return true;
+      } catch (err) {
+        console.error('[HEYS.subscriptions] ❌ logPaymentConsent error:', err);
+        trackError(err, { scope: 'Subscriptions', action: 'logPaymentConsent' });
+        return false;
+      }
+    };
 
     const handlePayment = async () => {
+      if (!ofertaAccepted) {
+        setError('Необходимо принять условия Оферты для оплаты');
+        return;
+      }
+
       setLoading(true);
       setError(null);
 
       try {
-        // Используем YandexAPI для создания реального платежа ЮKassa
+        // 1. Логируем согласие с офертой перед оплатой
+        const consentLogged = await logPaymentConsent();
+        if (!consentLogged) {
+          setError('Не удалось зафиксировать согласие. Попробуйте ещё раз.');
+          setLoading(false);
+          return;
+        }
+
+        // 2. Используем YandexAPI для создания реального платежа ЮKassa
         const YandexAPI = window.HEYS?.YandexAPI;
 
         if (!YandexAPI?.createPayment) {
@@ -489,7 +544,7 @@
           return;
         }
 
-        // Создаём платёж через ЮKassa
+        // 3. Создаём платёж через ЮKassa
         const returnUrl = window.location.origin + '/payment-result?clientId=' + clientId;
         const { data, error: apiError } = await YandexAPI.createPayment(clientId, selectedPlan, returnUrl);
 
@@ -547,11 +602,12 @@
       fontSize: '16px',
       fontWeight: '600',
       color: '#fff',
-      backgroundColor: loading ? '#9ca3af' : '#22c55e',
+      backgroundColor: (loading || !ofertaAccepted) ? '#9ca3af' : '#22c55e',
       border: 'none',
       borderRadius: '12px',
-      cursor: loading ? 'not-allowed' : 'pointer',
-      marginTop: '16px'
+      cursor: (loading || !ofertaAccepted) ? 'not-allowed' : 'pointer',
+      marginTop: '16px',
+      opacity: !ofertaAccepted ? 0.7 : 1
     };
 
     const cancelStyle = {
@@ -591,10 +647,65 @@
         }
       }, error),
 
+      // Чекбокс согласия с офертой (ст. 438 ГК РФ — акцепт при оплате)
+      h('div', {
+        style: {
+          display: 'flex',
+          alignItems: 'flex-start',
+          gap: '10px',
+          marginTop: '16px',
+          padding: '12px',
+          backgroundColor: ofertaAccepted ? '#f0fdf4' : '#f9fafb',
+          border: '1px solid ' + (ofertaAccepted ? '#86efac' : '#e5e7eb'),
+          borderRadius: '10px',
+          cursor: 'pointer',
+          transition: 'all 0.2s ease'
+        },
+        onClick: () => setOfertaAccepted(!ofertaAccepted)
+      },
+        h('input', {
+          type: 'checkbox',
+          checked: ofertaAccepted,
+          onChange: (e) => { e.stopPropagation(); setOfertaAccepted(e.target.checked); },
+          style: {
+            marginTop: '2px',
+            width: '18px',
+            height: '18px',
+            flexShrink: 0,
+            accentColor: '#22c55e',
+            cursor: 'pointer'
+          }
+        }),
+        h('span', {
+          style: {
+            fontSize: '13px',
+            lineHeight: '1.4',
+            color: '#374151'
+          }
+        },
+          'Нажимая «Оплатить», я принимаю условия ',
+          h('a', {
+            href: 'https://heyslab.ru/legal/user-agreement',
+            target: '_blank',
+            rel: 'noopener noreferrer',
+            onClick: (e) => e.stopPropagation(),
+            style: { color: '#2563eb', textDecoration: 'underline' }
+          }, 'Публичной оферты'),
+          ' и ',
+          h('a', {
+            href: 'https://heyslab.ru/legal/privacy-policy',
+            target: '_blank',
+            rel: 'noopener noreferrer',
+            onClick: (e) => e.stopPropagation(),
+            style: { color: '#2563eb', textDecoration: 'underline' }
+          }, 'Политики конфиденциальности')
+        )
+      ),
+
       h('button', {
         style: buttonStyle,
         onClick: handlePayment,
-        disabled: loading
+        disabled: loading || !ofertaAccepted
       },
         loading ? 'Обработка...' : `Оплатить ${formatPrice(selectedInfo?.price || 0)}`
       ),
