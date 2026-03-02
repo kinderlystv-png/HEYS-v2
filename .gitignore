@@ -55,6 +55,7 @@ jspm_packages/
 .env.test.local
 .env.production.local
 .env.yandex
+.env.checksum
 
 # parcel-bundler cache (https://parceljs.org/)
 .cache

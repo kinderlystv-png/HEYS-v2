@@ -13799,6 +13799,31 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
   }
 
   /**
+   * 🔐 Session-safe логирование согласий (IDOR protection)
+   * Используется PIN-клиентами — client_id определяется из session_token на сервере
+   * @param {Array<{type, version, granted}>} consents - Согласия
+   * @param {string} userAgent - User agent
+   * @returns {Promise<{data: object, error: any}>}
+   */
+  async function logConsentsBySession(consents, userAgent = null) {
+    try {
+      log('logConsentsBySession (session-safe)', consents);
+
+      const result = await rpc('log_consents_by_session', {
+        p_session_token: getSessionTokenForKV(),
+        p_consents: JSON.stringify(consents),
+        p_ip: null,
+        p_user_agent: userAgent || (typeof navigator !== 'undefined' ? navigator.userAgent : null)
+      });
+
+      return result;
+    } catch (e) {
+      err('logConsentsBySession failed:', e.message);
+      return { data: null, error: { message: e.message } };
+    }
+  }
+
+  /**
    * Проверить наличие обязательных согласий
    * @param {string} clientId - ID клиента
    * @returns {Promise<{data: {valid, missing}, error: any}>}
@@ -13854,7 +13879,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
       log(`createPendingProduct:`, product.name);
 
       // 🔐 P1: Используем session-версию (IDOR fix)
-      const sessionToken = getSessionToken();
+      const sessionToken = getSessionTokenForKV();
       if (!sessionToken) {
         return { data: null, error: { message: 'No session token' } };
       }
@@ -26174,6 +26199,58 @@ NOVA: 1-4
       favorites.delete(id);
       Store.set(FAVORITES_KEY, Array.from(favorites));
     }
+  };
+
+  // ═══════════════════════════════════════════════════════════════════
+  // 🍽️ ГОТОВЫЕ НАБОРЫ (MEAL PRESETS)
+  // ═══════════════════════════════════════════════════════════════════
+  const MEAL_PRESETS_KEY = 'heys_meal_presets_v1';
+
+  /**
+   * Получить все сохранённые наборы
+   * @returns {Array<{id: string, name: string, items: Array, createdAt: number, updatedAt: number}>}
+   */
+  Store.getMealPresets = function () {
+    const arr = Store.get(MEAL_PRESETS_KEY, []);
+    return Array.isArray(arr) ? arr : [];
+  };
+
+  /**
+   * Сохранить или обновить набор (upsert по id)
+   * @param {{id?: string, name: string, items: Array, createdAt?: number, updatedAt?: number}} preset
+   * @returns {string} id сохранённого набора
+   */
+  Store.saveMealPreset = function (preset) {
+    const presets = Store.getMealPresets();
+    const id = preset.id || ('mp_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7));
+    const now = Date.now();
+    const normalized = {
+      id,
+      name: preset.name || 'Набор',
+      items: Array.isArray(preset.items) ? preset.items : [],
+      createdAt: preset.createdAt || now,
+      updatedAt: now,
+    };
+    const idx = presets.findIndex((p) => p.id === id);
+    if (idx >= 0) {
+      presets[idx] = normalized;
+    } else {
+      presets.unshift(normalized);
+    }
+    Store.set(MEAL_PRESETS_KEY, presets);
+    console.info('[HEYS.storage] ✅ Meal preset saved:', { id, name: normalized.name, itemCount: normalized.items.length });
+    return id;
+  };
+
+  /**
+   * Удалить набор по id
+   * @param {string} id
+   */
+  Store.deleteMealPreset = function (id) {
+    const presets = Store.getMealPresets();
+    const updated = presets.filter((p) => p.id !== id);
+    Store.set(MEAL_PRESETS_KEY, updated);
+    console.info('[HEYS.storage] ✅ Meal preset deleted:', { id });
   };
 
   // ═══════════════════════════════════════════════════════════════════

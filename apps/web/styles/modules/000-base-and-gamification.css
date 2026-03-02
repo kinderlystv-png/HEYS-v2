@@ -8062,7 +8062,8 @@ body:has(.offline-banner) .wrap {
   }
 
   .mpc-toggle-add-row .mpc-products-toggle {
-    flex: 1;
+    flex: 0 0 30%;
+    min-width: 0;
     margin-bottom: 0;
     justify-content: center;
   }
@@ -8073,9 +8074,18 @@ body:has(.offline-banner) .wrap {
 
   .mpc-toggle-add-row .aps-open-btn {
     flex: 1;
-    padding: 8px 12px;
+    padding: 7px 10px;
     font-size: 12px;
     justify-content: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    border-radius: 8px;
+    width: auto;
+  }
+
+  .mpc-toggle-add-row .aps-open-icon {
+    font-size: 14px;
   }
 
   /* Когда нет продуктов — кнопка добавить на всю ширину */

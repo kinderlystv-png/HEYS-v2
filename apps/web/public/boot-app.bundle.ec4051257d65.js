@@ -8087,6 +8087,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
    */
   function PaywallModal({ onClose, onSelectPlan, reason }) {
     const [selectedPlan, setSelectedPlan] = React.useState('pro');
+    const [showPaymentScreen, setShowPaymentScreen] = React.useState(false);
 
     const plans = [
       {
@@ -8112,12 +8113,48 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
       }
     ];
 
-    const handleCTA = () => {
-      // Пока без ЮKassa — открываем Telegram для связи
-      const message = encodeURIComponent(`Привет! Хочу оформить подписку ${selectedPlan.toUpperCase()} на HEYS`);
-      window.open(`https://t.me/heyslab_support?text=${message}`, '_blank');
-      if (onSelectPlan) onSelectPlan(selectedPlan);
+    // Получаем clientId по стандартному паттерну HEYS
+    const getClientId = () => {
+      const U = window.HEYS?.utils || window.U;
+      return (U && U.getCurrentClientId && U.getCurrentClientId()) || window.HEYS?.currentClientId || '';
     };
+
+    const handleCTA = () => {
+      const clientId = getClientId();
+      if (clientId && window.HEYS?.YandexAPI?.createPayment) {
+        // ЮKassa доступна — показываем PaymentScreen с чекбоксом оферты
+        setShowPaymentScreen(true);
+      } else {
+        // Fallback — Telegram для связи
+        const message = encodeURIComponent(`Привет! Хочу оформить подписку ${selectedPlan.toUpperCase()} на HEYS`);
+        window.open(`https://t.me/heyslab_support?text=${message}`, '_blank');
+        if (onSelectPlan) onSelectPlan(selectedPlan);
+      }
+    };
+
+    // Если показываем PaymentScreen — рендерим его вместо плана
+    if (showPaymentScreen) {
+      const clientId = getClientId();
+      const SubscriptionsModule = window.HEYS?.Subscriptions;
+
+      if (SubscriptionsModule?.PaymentScreen) {
+        return React.createElement('div', { className: 'paywall-overlay', onClick: (e) => e.target === e.currentTarget && setShowPaymentScreen(false) },
+          React.createElement('div', { className: 'paywall-modal', style: { position: 'relative', maxHeight: '90vh', overflowY: 'auto' } },
+            React.createElement('button', { className: 'paywall-close', onClick: () => setShowPaymentScreen(false) }, '✕'),
+            React.createElement(SubscriptionsModule.PaymentScreen, {
+              clientId,
+              onSuccess: (result) => {
+                console.info('[HEYS.paywall] ✅ Оплата успешна:', result);
+                onClose?.();
+              },
+              onCancel: () => setShowPaymentScreen(false)
+            })
+          )
+        );
+      }
+      // Fallback если PaymentScreen не загружен
+      setShowPaymentScreen(false);
+    }
 
     return React.createElement('div', { className: 'paywall-overlay', onClick: (e) => e.target === e.currentTarget && onClose?.() },
       React.createElement('div', { className: 'paywall-modal', style: { position: 'relative' } },
@@ -18891,6 +18928,72 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
         // Очищаем URL в любом случае
         const url = new URL(window.location.href);
         let needsUrlCleanup = false;
+
+        // 💳 Обработка возврата с ЮKassa (/payment-result?clientId=...)
+        if (window.location.pathname === '/payment-result') {
+            console.info('[HEYS.shortcuts] ✅ Payment result redirect detected');
+            // Очищаем pathname → корень
+            window.history.replaceState({}, '', '/' + window.location.search);
+
+            // Запускаем проверку pending payment
+            const checkPayment = async () => {
+                const Subs = HEYS.Subscriptions;
+                if (!Subs?.checkPendingPayment) {
+                    // Модуль ещё не загружен — ждём
+                    setTimeout(checkPayment, 300);
+                    return;
+                }
+                try {
+                    const result = await Subs.checkPendingPayment();
+                    if (result.success) {
+                        console.info('[HEYS.shortcuts] ✅ Payment confirmed:', result.plan);
+                        if (typeof setNotification === 'function') {
+                            setNotification({
+                                message: '✅ Подписка успешно активирована!',
+                                type: 'success',
+                                duration: 5000,
+                            });
+                        }
+                        // Обновляем статус подписки
+                        if (HEYS.cloud?.syncClient) {
+                            const clientId = params.get('clientId') || HEYS.currentClientId;
+                            if (clientId) HEYS.cloud.syncClient(clientId);
+                        }
+                    } else if (result.pending) {
+                        // Платёж ещё обрабатывается — запускаем polling
+                        Subs.waitForPayment?.(
+                            (res) => {
+                                console.info('[HEYS.shortcuts] ✅ Payment polling success:', res.plan);
+                                if (typeof setNotification === 'function') {
+                                    setNotification({
+                                        message: '✅ Подписка успешно активирована!',
+                                        type: 'success',
+                                        duration: 5000,
+                                    });
+                                }
+                            },
+                            (err) => {
+                                console.error('[HEYS.shortcuts] ❌ Payment polling failed:', err);
+                                if (typeof setNotification === 'function') {
+                                    setNotification({
+                                        message: '❌ Не удалось подтвердить оплату. Обратитесь в поддержку.',
+                                        type: 'error',
+                                        duration: 8000,
+                                    });
+                                }
+                            }
+                        );
+                    } else {
+                        console.warn('[HEYS.shortcuts] ⚠️ Payment not found or failed:', result);
+                    }
+                } catch (err) {
+                    console.error('[HEYS.shortcuts] ❌ checkPendingPayment error:', err);
+                }
+            };
+
+            setTimeout(checkPayment, 500);
+            return; // Не продолжаем обработку других shortcut-ов
+        }
 
         if (action === 'add-meal') {
             // Блокируем переключение вкладки при смене clientId
