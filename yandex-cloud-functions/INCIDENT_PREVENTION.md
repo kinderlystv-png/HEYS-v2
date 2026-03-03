@@ -62,7 +62,7 @@
 - ✅ Health endpoint (было пропущено)
 - ✅ RPC endpoint
 - ✅ REST endpoint (критичный — именно он падал)
-- ⏱️ Увеличен warmup timeout: 10s → 15s
+- ⏱️ Явный warmup timeout перед post-deploy проверкой
 
 ### 4. **Улучшенные Telegram alerts**
 
@@ -88,8 +88,8 @@ cd yandex-cloud-functions
 # 3. Deploy changed function
 ./deploy-all.sh heys-api-rest  # или ./deploy-all.sh для всех
 
-# 4. Подождать 15 секунд (warmup)
-sleep 15
+# 4. Подождать 10 секунд (warmup)
+sleep 10
 
 # 5. Verify deployment
 ./health-check.sh
@@ -118,7 +118,7 @@ gh run watch  # или открой https://github.com/kinderlystv-png/HEYS-v2/a
 ```bash
 cd yandex-cloud-functions
 ./deploy-all.sh heys-api-rest
-sleep 15
+sleep 10
 ./health-check.sh
 ```
 
@@ -127,7 +127,7 @@ sleep 15
 ```bash
 cd yandex-cloud-functions
 ./deploy-all.sh  # Все функции
-sleep 30
+sleep 10
 ./health-check.sh --watch  # Continuous monitoring
 ```
 
@@ -209,8 +209,8 @@ cd yandex-cloud-functions
 
 ### 4. **Cold start timeout**
 
-- Функция не прогрелась за 10s (было)
-- Решено: увеличен warmup до 15s
+- Функция не успела прогреться к моменту ранней проверки
+- Решение: всегда ждать warmup перед `health-check.sh`
 
 ### 5. **Broken dependencies** (редко)
 
@@ -240,7 +240,7 @@ cd yandex-cloud-functions
 1. ✅ 24/7 мониторинг вместо 09:00-23:00
 2. ✅ Автоматический re-deploy при обнаружении 502
 3. ✅ Расширенные проверки в CI/CD (Health + RPC + REST)
-4. ✅ Warmup увеличен 10s → 15s
+4. ✅ Единый warmup в runbook/скриптах/CI
 5. ✅ Улучшенные Telegram alerts с HTTP кодами
 
 ---
@@ -262,7 +262,7 @@ cd yandex-cloud-functions
 **После улучшений (прогноз)**:
 
 - 🔔 Detection: < 15 мин (автомониторинг каждые 15 мин)
-- ⚡ Recovery: < 10 мин (автоматический re-deploy + 15s warmup)
+- ⚡ Recovery: < 10 мин (автоматический re-deploy + warmup)
 - 🎯 Uptime: 99.95%+ (благодаря auto-healing)
 
 ---

@@ -11,8 +11,8 @@ cd yandex-cloud-functions
 # 2. Редеплой всех функций
 ./deploy-all.sh
 
-# 3. Проверка через 15 секунд (увеличенный warmup)
-sleep 15 && ./health-check.sh
+# 3. Проверка через 10 секунд (текущий warmup)
+sleep 10 && ./health-check.sh
 ```
 
 ---
@@ -56,7 +56,7 @@ cd yandex-cloud-functions
 
 - ✅ Круглосуточный мониторинг вместо дневного
 - ✅ Автоматический redeploy при REST/RPC 502
-- ✅ Увеличенный warmup timeout (10s → 15s)
+- ✅ Введён явный warmup timeout перед health-check
 - ✅ Расширенные проверки в CI/CD (Health + RPC + REST)
 - ✅ Улучшенные alerts с HTTP кодами
 

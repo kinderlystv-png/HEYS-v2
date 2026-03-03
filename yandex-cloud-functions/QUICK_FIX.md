@@ -23,7 +23,7 @@ cd yandex-cloud-functions
 ./deploy-all.sh heys-api-<name>  # или ./deploy-all.sh для всех
 
 # 3. Ждём прогрева
-sleep 15
+sleep 10
 
 # 4. Проверка после деплоя
 ./health-check.sh

@@ -10,12 +10,12 @@
 | Function            | Endpoint    | Назначение                  | Memory | Timeout |
 | ------------------- | ----------- | --------------------------- | ------ | ------- |
 | `heys-api-health`   | `/health`   | Health checks + DB status   | 128 MB | 10s     |
-| `heys-api-rpc`      | `/rpc`      | PostgreSQL RPC functions    | 256 MB | 30s     |
-| `heys-api-rest`     | `/rest`     | REST API (CRUD)             | 256 MB | 30s     |
+| `heys-api-rpc`      | `/rpc`      | PostgreSQL RPC functions    | 512 MB | 30s     |
+| `heys-api-rest`     | `/rest`     | REST API (CRUD)             | 512 MB | 30s     |
 | `heys-api-auth`     | `/auth`     | JWT + PIN authentication    | 256 MB | 15s     |
 | `heys-api-sms`      | `/sms`      | SMS verification via SMS.RU | 128 MB | 10s     |
-| `heys-api-leads`    | `/leads`    | Landing page leads          | 128 MB | 10s     |
-| `heys-api-payments` | `/payments` | YooKassa integration        | 256 MB | 30s     |
+| `heys-api-leads`    | `/leads`    | Landing page leads          | 256 MB | 10s     |
+| `heys-api-payments` | `/payments` | YooKassa integration        | 256 MB | 15s     |
 
 **Shared**: `shared/db-pool.js` — централизованный connection pool PostgreSQL
 
@@ -39,7 +39,7 @@ cd yandex-cloud-functions
 ### 3. Проверка после деплоя
 
 ```bash
-sleep 15                # Ждём warmup
+sleep 10                # Ждём warmup
 ./health-check.sh       # Проверка всех endpoints
 ```
 
@@ -72,7 +72,7 @@ sleep 15                # Ждём warmup
 ```bash
 cd yandex-cloud-functions
 ./deploy-all.sh              # Re-deploy всех функций
-sleep 15                     # Warmup
+sleep 10                     # Warmup
 ./health-check.sh            # Проверка
 ```
 
@@ -139,7 +139,7 @@ GitHub Actions: cloud-functions-deploy.yml
 1. Setup Yandex Cloud CLI
 2. Create .env from GitHub Secrets
 3. Deploy changed functions (или все)
-4. Wait 15s warmup
+4. Wait 10s warmup
 5. Verify: Health + RPC + REST
 6. Send Telegram notification
 ```
@@ -210,7 +210,7 @@ https://console.yandex.cloud/folders/b1gnv1a4q8i6de6atl6n/serverless/functions
 ```bash
 cd yandex-cloud-functions
 ./deploy-all.sh heys-api-rest
-sleep 15
+sleep 10
 ./health-check.sh
 ```
 
@@ -262,7 +262,7 @@ https://console.yandex.cloud/folders/b1gnv1a4q8i6de6atl6n/managed-postgresql
 - [ ] `./validate-env.sh` — проверка секретов
 - [ ] `./health-check.sh` — состояние до деплоя
 - [ ] `./deploy-all.sh <function>` — деплой изменений
-- [ ] `sleep 15` — ожидание warmup
+- [ ] `sleep 10` — ожидание warmup
 - [ ] `./health-check.sh` — проверка после деплоя
 - [ ] Push в `main` — CI/CD auto-deploy + verification
 - [ ] Мониторинг GitHub Actions — проверка, что CI/CD прошёл
