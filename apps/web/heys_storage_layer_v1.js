@@ -536,15 +536,20 @@
         if (!uMap.has(key)) uMap.set(key, item);
       });
       var uniqueItems = Array.from(uMap.values());
-      
+
       // Сортируем элементы по имени для предсказуемого отображения
       uniqueItems.sort(function (a, b) {
         return String(a.name || '').localeCompare(String(b.name || ''));
       });
-      
+
       var signature = uniqueItems.map(function (i) {
         return String(i.name || '').toLowerCase().replace(/[^a-zа-яё0-9]/g, '') || String(i.product_id || i.id);
+      }).join('|');
 
+      return { uniqueItems: uniqueItems, signature: signature };
+    }
+
+    // --- Собираем все приёмы пищи ---
     allDays.forEach(function (day) {
       (day.meals || []).forEach(function (meal) {
         var items = (meal.items || []).filter(function (item) {
@@ -650,6 +655,14 @@
     newSuggested.sort(function (a, b) { return (b.frequency || 0) - (a.frequency || 0); });
 
     Store.set(SUGGESTED_PRESETS_KEY, newSuggested);
+
+    console.groupCollapsed('[HEYS.storage] 🔍 Сгенерированные ML-рекомендации (детали)');
+    newSuggested.forEach(function (s, i) {
+      var itemNames = s.items.map(function (item) { return item.name || 'Без названия'; }).join(' + ');
+      console.info('  [' + (i + 1) + '] Частота: ' + s.frequency + '. Состав: ' + itemNames);
+    });
+    console.groupEnd();
+
     console.info('[HEYS.storage] ✅ runPresetSuggestionEngine завершён:', {
       days: allDays.length,
       frequentCombos: frequentCombos.length,

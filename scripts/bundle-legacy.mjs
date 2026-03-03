@@ -11,6 +11,7 @@
  *   node scripts/bundle-legacy.mjs --bundle=boot-core — один бандл
  */
 
+import { execSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import {
     existsSync,
@@ -364,7 +365,38 @@ function buildBundle(name, files) {
     const outPath = resolve(PUB_DIR, outName);
     const size = Buffer.byteLength(content, 'utf8');
 
-    if (!DRY_RUN) writeFileSync(outPath, content, 'utf8');
+    if (!DRY_RUN) {
+        writeFileSync(outPath, content, 'utf8');
+
+        // 🛡️ Syntax validation — catch broken bundles before deploy
+        try {
+            execSync(`node --check "${outPath}"`, { stdio: 'pipe' });
+        } catch (err) {
+            const stderr = err.stderr ? err.stderr.toString() : '';
+            // Count parens to give actionable hint
+            let opens = 0, closes = 0;
+            for (const ch of content) {
+                if (ch === '(') opens++;
+                if (ch === ')') closes++;
+            }
+            console.error(`\n[bundle-legacy] ❌ SYNTAX ERROR in ${outName}!`);
+            console.error(`  Paren balance: ( = ${opens}, ) = ${closes}, diff = ${opens - closes}`);
+            if (stderr) console.error(`  Node says: ${stderr.split('\n')[0]}`);
+            // Find which source file is probably broken
+            const errorLine = stderr.match(/:([0-9]+)/);
+            if (errorLine) {
+                const lineNum = parseInt(errorLine[1], 10);
+                const lines = content.split('\n');
+                for (let i = lineNum - 1; i >= 0; i--) {
+                    if (lines[i] && lines[i].includes('===== heys_')) {
+                        console.error(`  Likely broken source: ${lines[i].replace(/[\/\* =]+/g, '').trim()}`);
+                        break;
+                    }
+                }
+            }
+            throw new Error(`${name}: bundle has syntax errors — fix source files before deploying`);
+        }
+    }
 
     return { name, file: outName, hash, fileCount: files.length, size };
 }
