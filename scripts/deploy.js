@@ -1,6 +1,10 @@
 #!/usr/bin/env node
 
 /**
+ * DEPRECATED — Docker-based deploy pipeline. NOT USED in production.
+ * Actual deploy: git push main → .github/workflows/deploy-yandex.yml
+ * For manual local deploy: bash scripts/deploy-frontend.sh
+ *
  * Production Deployment Script for HEYS
  * Автоматизирует процесс деплоя в продакшн
  */

@@ -24,6 +24,9 @@ for f in boot-app.bundle.*.js boot-app.bundle.*.js.gz \
           boot-calc.bundle.*.js boot-calc.bundle.*.js.gz \
           boot-day.bundle.*.js boot-day.bundle.*.js.gz \
           boot-init.bundle.*.js boot-init.bundle.*.js.gz \
+          postboot-1-game.bundle.*.js postboot-1-game.bundle.*.js.gz \
+          postboot-2-insights.bundle.*.js postboot-2-insights.bundle.*.js.gz \
+          postboot-3-ui.bundle.*.js postboot-3-ui.bundle.*.js.gz \
           react-bundle.js react-bundle.js.gz \
           index.html bundle-manifest.json; do
   [[ -f "$f" ]] || continue

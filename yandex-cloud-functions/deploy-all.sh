@@ -224,7 +224,7 @@ if [ -n "$TARGET_FUNC" ]; then
 else
     # Deploy all functions
     echo -e "${YELLOW}🚀 Deploying all functions...${NC}"
-    for func_name in heys-api-rpc heys-api-rest heys-api-auth heys-api-leads heys-api-sms heys-api-health; do
+    for func_name in heys-api-rpc heys-api-rest heys-api-auth heys-api-leads heys-api-sms heys-api-health heys-api-payments; do
         deploy_function "$func_name"
     done
     

@@ -24,6 +24,7 @@ on:
           - "heys-api-leads"
           - "heys-api-sms"
           - "heys-api-health"
+          - "heys-api-payments"
 
 jobs:
   deploy:
@@ -96,8 +97,8 @@ jobs:
 
       - name: Verify deployment
         run: |
-          echo "⏳ Waiting 15s for functions to warm up..."
-          sleep 15
+          echo "⏳ Waiting 10s for functions to warm up..."
+          sleep 10
 
           echo "🧪 Testing deployed functions..."
 

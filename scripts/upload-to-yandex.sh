@@ -1,4 +1,8 @@
 #!/bin/bash
+# DEPRECATED — no Content-Encoding/gzip, no cache-control headers.
+# Use: bash scripts/deploy-frontend.sh   (local)
+# Or:  git push main                     (CI/CD via deploy-yandex.yml)
+#
 # Upload script for Yandex Object Storage
 
 DIST_DIR="/Users/poplavskijanton/HEYS-v2/apps/web/dist"
