@@ -109,8 +109,8 @@ ru-central1). Supabase SDK removed 2025-12-24.
 ### Backend
 
 - **Runtime**: Node.js 18+ (Express.js 4.x on port 4001 locally)
-- **Serverless**: Yandex Cloud Functions (Node.js 18 runtime, 9 functions: 7
-  API + backup + maintenance)
+- **Serverless**: Yandex Cloud Functions (Node.js 18 runtime, 7 API + 2 utility
+  functions)
 - **Database**: Yandex Cloud PostgreSQL 16
   (`rc1b-obkgs83tnrd6a2m3.mdb.yandexcloud.net:6432`)
 - **Auth**: `heys-api-auth` YCF -> JWT (curator) + phone+PIN -> session_token
@@ -229,7 +229,7 @@ attempts.
 
 ### JS Bundling & Load Performance (v9.7, February 2026)
 
-> **Before:** 246 `<script defer>` files — 63s on Mid-tier mobile. **After:** 9
+> **Before:** 246 `<script defer>` files — 63s on Mid-tier mobile. **After:** 8
 > GZIP bundles in Yandex Object Storage — FCP **~0ms** (Skeleton) / full UI
 > **2.6s** on mobile.
 
@@ -243,10 +243,9 @@ attempts.
 | `postboot-1-game`     | gamification, advice                    | ~270 KB     |
 | `postboot-2-insights` | all pi\_\*.js                           | ~350 KB     |
 | `postboot-3-ui`       | modals, reports, widgets                | ~256 KB     |
-| `boot-app-tabs`       | app_tabs additional                     | ~35 KB      |
 
-Rebuild: `node scripts/bundle-legacy.mjs` ->
-`upload-to-yandex.ps1 -distDir apps/web/public`.
+Rebuild: `node scripts/bundle-legacy.mjs`. Local deploy:
+`bash scripts/deploy-frontend.sh`.
 
 ### Caching Strategy
 
@@ -341,7 +340,7 @@ Direct `localStorage.setItem/getItem` breaks namespacing.
 Key techniques:
 
 1. **JS Bundling & GZIP**: 246 individual `<script defer>` files concatenated
-   into 9 bundles, served with GZIP from Yandex Object Storage. Network time 63s
+   into 8 bundles, served with GZIP from Yandex Object Storage. Network time 63s
    -> 1.5s.
 2. **Speculative Prefetch**: `index.html` initiates a real REST API delta fetch
    _before_ React loads, saving ~0.8-1.0s.
@@ -410,7 +409,7 @@ cd yandex-cloud-functions
 ./validate-env.sh            # Verify secrets before deploy
 ./health-check.sh            # Current endpoint status
 ./deploy-all.sh <function>   # Deploy one or all functions
-sleep 15                     # Wait for warmup
+sleep 10                     # Wait for warmup
 ./health-check.sh            # Verify deployment succeeded
 ```
 

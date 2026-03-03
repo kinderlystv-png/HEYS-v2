@@ -4,14 +4,14 @@
 
 HEYS развёрнут полностью в Yandex Cloud (152-ФЗ compliance). Платформа:
 
-| Компонент           | Где                                    | URL                                              |
-| ------------------- | -------------------------------------- | ------------------------------------------------ |
-| PWA (фронтенд)      | Yandex Object Storage (9 бандлов GZIP) | `app.heyslab.ru`                                 |
-| Landing             | Yandex CDN → S3                        | `heyslab.ru`                                     |
-| Cloud Functions (9) | Yandex Cloud Functions                 | `api.heyslab.ru`                                 |
-| База данных         | Yandex Cloud PostgreSQL 16             | `rc1b-obkgs83tnrd6a2m3.mdb.yandexcloud.net:6432` |
-| SMS                 | SMSC.ru API (через YCF)                | —                                                |
-| Платежи             | ЮKassa (через YCF)                     | —                                                |
+| Компонент             | Где                                    | URL                                              |
+| --------------------- | -------------------------------------- | ------------------------------------------------ |
+| PWA (фронтенд)        | Yandex Object Storage (8 бандлов GZIP) | `app.heyslab.ru`                                 |
+| Landing               | Yandex CDN → S3                        | `heyslab.ru`                                     |
+| Cloud Functions (7+2) | Yandex Cloud Functions                 | `api.heyslab.ru`                                 |
+| База данных           | Yandex Cloud PostgreSQL 16             | `rc1b-obkgs83tnrd6a2m3.mdb.yandexcloud.net:6432` |
+| SMS                   | SMSC.ru API (через YCF)                | —                                                |
+| Платежи               | ЮKassa (через YCF)                     | —                                                |
 
 ---
 
@@ -56,8 +56,8 @@ HEYS_ENCRYPTION_KEY=your_32_byte_hex_key_here
 SMS_API_KEY=your_smsc_api_key
 
 # Payments (ЮКassa)
-YOO_SHOP_ID=your_shop_id
-YOO_SECRET_KEY=your_secret_key
+YUKASSA_SHOP_ID=your_shop_id
+YUKASSA_SECRET_KEY=your_secret_key
 
 # Telegram Monitoring Alerts
 TELEGRAM_BOT_TOKEN=your_bot_token
@@ -145,43 +145,15 @@ node yandex-cloud-functions/heys-api-rpc/apply_migrations.js
 
 ## 🚀 CI/CD Pipeline
 
-### GitHub Actions (реальная конфигурация)
+### GitHub Actions (фактическая конфигурация)
 
-```yaml
-# .github/workflows/ci.yml
-on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
-
-jobs:
-  quality-check:
-    steps:
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-      - name: Lint
-        run: pnpm run lint
-      - name: Type Check
-        run: pnpm run type-check
-      - name: Unit Tests
-        run: pnpm run test:run
-      - name: Build
-        run: pnpm run build
-
-  deploy-cloud-functions:
-    # Запускается при изменениях в yandex-cloud-functions/**
-    needs: quality-check
-    if: github.ref == 'refs/heads/main'
-    steps:
-      - name: Deploy to Yandex Cloud
-        run: |
-          cd yandex-cloud-functions
-          ./validate-env.sh
-          ./deploy-all.sh
-          sleep 15
-          ./health-check.sh
-```
+- `.github/workflows/deploy-yandex.yml` — основной прод-деплой фронтенда
+  (`app.heyslab.ru` + `heyslab.ru`) при `push` в `main`
+- `.github/workflows/cloud-functions-deploy.yml` — деплой cloud functions при
+  изменениях в `yandex-cloud-functions/**`
+- Деплой функций выполняется **только** через `cloud-functions-deploy.yml` (без
+  дублирующего job в `deploy-yandex.yml`)
+- После деплоя функций: `sleep 10` и обязательная проверка health/RPC/REST
 
 ### API Health Monitor (24/7 автомониторинг)
 
@@ -213,26 +185,30 @@ steps:
 
 ### 1. Frontend (PWA — `app.heyslab.ru`)
 
-PWA — статические файлы в Yandex Object Storage. JS-код состоит из **9
-GZIP-бандлов** (246 файлов → 9, 63с → 1.5с на mobile):
+PWA — статические файлы в Yandex Object Storage.
+
+**Стандартный путь (CI/CD):**
 
 ```bash
-# Шаг 1: Production build legacy бандлов
-node scripts/bundle-legacy.mjs   # пересобрать все 9 бандлов с новым hash
-
-# Шаг 2: Загрузить в Yandex Object Storage
-# (скрипт автоматически сжимает .js в GZIP, устанавливает Content-Encoding: gzip)
-.\upload-to-yandex.ps1 -distDir apps/web/public
-
-# Шаг 3: Отдельно загрузить index.html (не входит в public/)
-yc storage s3api put-object --bucket heys-app --key index.html --body apps/web/index.html
-
-# Быстрая проверка
-curl -sI https://app.heyslab.ru/index.html | grep -i etag
+git push origin main
 ```
 
-> **Важно**: `apps/web/index.html` обновляется автоматически при бандлинге
-> (новый hash). Всегда загружайте его отдельной командой после бандлов.
+**Локальный быстрый деплой (все бандлы + index.html):**
+
+```bash
+bash scripts/deploy-frontend.sh
+```
+
+**Пересборка legacy-бандлов без деплоя:**
+
+```bash
+node scripts/bundle-legacy.mjs
+node scripts/bundle-legacy.mjs --bundle=boot-core
+node scripts/bundle-legacy.mjs --dry-run
+```
+
+`bundle-legacy.mjs` автоматически делает `node --check` для каждого бандла. При
+синтаксической ошибке сборка прерывается.
 
 ### 2. Landing (`heyslab.ru`)
 
@@ -260,7 +236,7 @@ cd yandex-cloud-functions
 ./deploy-all.sh heys-api-rpc        # Только одну
 
 # Шаг 4: Дождаться прогрева
-sleep 15
+sleep 10
 
 # Шаг 5: Проверить результат
 ./health-check.sh
@@ -433,7 +409,7 @@ yc serverless function logs heys-api-rpc --follow
 
 # 3. Redeploy
 ./deploy-all.sh
-sleep 15
+sleep 10
 ./health-check.sh
 ```
 

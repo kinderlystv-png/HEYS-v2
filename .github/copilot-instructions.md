@@ -1,9 +1,9 @@
 ---
-description: HEYS v2 — AI Development Guide v6.0.0
+description: HEYS v2 — AI Development Guide v7.0.0
 applyTo: '**/*'
 ---
 
-# HEYS v2 — AI Agent Guide v6.0.0
+# HEYS v2 — AI Agent Guide v7.0.0
 
 > Ответы по-русски, код на английском.
 
@@ -77,8 +77,10 @@ Do NOT convert legacy to TypeScript unless explicitly asked.
 security), `packages/ui`, `packages/analytics`, `packages/storage`,
 `packages/search`
 
-**Serverless**: 9 Yandex Cloud Functions at `api.heyslab.ru` —
-`yandex-cloud-functions/`
+**Serverless**: 7 API functions at `api.heyslab.ru` + 2 utility —
+`yandex-cloud-functions/` 6 auto-deployed (rpc, rest, auth, leads, sms,
+health) + `heys-api-payments` (manual) + `heys-backup`/`heys-maintenance`
+(utility, not at api.heyslab.ru)
 
 | Component   | URL                          |
 | ----------- | ---------------------------- |
@@ -116,7 +118,33 @@ pnpm test:e2e             # Playwright
 pnpm arch:check           # Architecture rule check
 ```
 
-### Pre-commit checklist
+### Deploying Frontend (PWA)
+
+**Primary (CI/CD) — standard path:**
+
+```bash
+git push origin main  # → deploy-yandex.yml runs automatically
+```
+
+**Quick local deploy (all bundles + index.html):**
+
+```bash
+bash scripts/deploy-frontend.sh
+```
+
+**Rebuild legacy bundles only (without full deploy):**
+
+```bash
+node scripts/bundle-legacy.mjs                    # all 8 bundles
+node scripts/bundle-legacy.mjs --bundle=boot-core # one bundle only
+node scripts/bundle-legacy.mjs --dry-run           # preview, no writes
+```
+
+Each bundle is automatically validated with `node --check` after build. If
+syntax error is found — build FAILS with actionable diagnostic: paren balance +
+name of the broken source file. Fix the source, then rebuild.
+
+### Pre-commit checklist (manual steps — hooks don't run these automatically)
 
 1. `pnpm type-check` — must pass
 2. `pnpm test:run` — must pass
@@ -124,13 +152,19 @@ pnpm arch:check           # Architecture rule check
 4. Commit format: `feat|fix|docs|refactor|perf|test|chore: message` (max 100
    chars)
 
+> Git hooks: `pre-commit` runs `lint-staged` (prettier + eslint). `pre-push`
+> runs 12 critical tests (sync, auth, storage, models, PWA).
+
 ### Deploying Cloud Functions
+
+6 functions auto-deploy via `cloud-functions-deploy.yml` when their files
+change. `heys-api-payments` is manual-deploy only.
 
 1. `cd yandex-cloud-functions`
 2. `./validate-env.sh` — validate secrets
 3. `./health-check.sh` — check current state
-4. `./deploy-all.sh <function>` — deploy changed function
-5. `sleep 15` — wait for warmup
+4. `./deploy-all.sh <function>` — deploy changed function (or all)
+5. `sleep 10` — wait for warmup
 6. `./health-check.sh` — verify deployment
 
 **If 502 Bad Gateway**: `./deploy-all.sh && ./health-check.sh --watch`
@@ -260,7 +294,7 @@ console.error('[HEYS.module] ❌ Failed:', { error, retryIn });
 | Business context                                | `docs/HEYS_BRIEF.md`                                                 |
 | Technical architecture (detailed)               | `docs/ARCHITECTURE.md` (v18.0.0, merged from TECHNICAL_ARCHITECTURE) |
 | **Sync architecture**                           | `docs/SYNC_REFERENCE.md`                                             |
-| **Curator vs client differences**              | `docs/CURATOR_VS_CLIENT.md`                                          |
+| **Curator vs client differences**               | `docs/CURATOR_VS_CLIENT.md`                                          |
 | **Sync performance**                            | `docs/SYNC_PERFORMANCE_REPORT.md`                                    |
 | **Sync sessions log**                           | `docs/SYNC_PERFORMANCE_SESSIONS_LOG.md`                              |
 | **Storage patterns**                            | `docs/dev/STORAGE_PATTERNS.md`                                       |
@@ -293,7 +327,8 @@ with cross-references:
 
 1. `docs/SYNC_REFERENCE.md` — core sync architecture, data flow, auth modes,
    events
-2. `docs/CURATOR_VS_CLIENT.md` — curator vs PIN client flow and functional differences
+2. `docs/CURATOR_VS_CLIENT.md` — curator vs PIN client flow and functional
+   differences
 3. `docs/SYNC_PERFORMANCE_REPORT.md` — 5 optimization phases, metrics, incidents
 4. `docs/SYNC_PERFORMANCE_SESSIONS_LOG.md` — implementation details, session
    journals

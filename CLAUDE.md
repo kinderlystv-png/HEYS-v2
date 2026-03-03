@@ -2,7 +2,7 @@
 
 > Ответы по-русски, код на английском.
 
-**Основные инструкции находятся в `.github/copilot-instructions.md` (v6.0.0).**
+**Основные инструкции находятся в `.github/copilot-instructions.md` (v7.0.0).**
 Этот файл содержит минимальный контекст для Claude Code. При работе над любой
 задачей используй `read_file` для чтения полных инструкций и документации.
 
@@ -23,6 +23,25 @@ pnpm dev                  # Dev server (HMR) → localhost:3001
 pnpm test:run             # Vitest single pass
 pnpm type-check           # TypeScript validation
 pnpm build                # Production build (only before commit!)
+```
+
+### Deploying
+
+```bash
+# Frontend (PWA) — primary path:
+git push origin main                               # → deploy-yandex.yml (CI/CD)
+bash scripts/deploy-frontend.sh                   # local: all 8 bundles + index.html
+
+# Bundle rebuild only (no upload):
+node scripts/bundle-legacy.mjs                    # all 8 bundles (with node --check validation)
+node scripts/bundle-legacy.mjs --bundle=boot-core # single bundle
+node scripts/bundle-legacy.mjs --dry-run           # preview only
+
+# Cloud Functions:
+cd yandex-cloud-functions
+./validate-env.sh && ./health-check.sh
+./deploy-all.sh [function-name]                   # 7 API functions (payments = manual only)
+sleep 10 && ./health-check.sh
 ```
 
 ### Key Forbidden Patterns
@@ -92,7 +111,8 @@ with cross-references:
 
 1. `docs/SYNC_REFERENCE.md` — core sync architecture, data flow, auth modes,
    events
-2. `docs/CURATOR_VS_CLIENT.md` — curator vs PIN client flow and functional differences
+2. `docs/CURATOR_VS_CLIENT.md` — curator vs PIN client flow and functional
+   differences
 3. `docs/SYNC_PERFORMANCE_REPORT.md` — 5 optimization phases, metrics, incidents
 4. `docs/SYNC_PERFORMANCE_SESSIONS_LOG.md` — implementation details, session
    journals

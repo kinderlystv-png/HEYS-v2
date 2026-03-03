@@ -97,14 +97,14 @@
 
 ## Load Optimisation (v9.6, обновлено 26.02.2026)
 
-> 246 legacy JS-файлов конкатенированы в 9 бандлов. Все бандлы отдаются с GZIP
-> (Yandex Object Storage). Запросов при старте: 246 → 9. Время загрузки JS на
+> 246 legacy JS-файлов конкатенированы в 8 бандлов. Все бандлы отдаются с GZIP
+> (Yandex Object Storage). Запросов при старте: 246 → 8. Время загрузки JS на
 > Mid-tier mobile: 63с → **1.5с**.
 
 | File                                          | Role                                                                                                  |
 | --------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
 | `scripts/bundle-legacy.mjs` _(repo root)_     | Генератор бандлов: конкатенация + content-hash + `bundle-manifest.json`. Запуск: `pnpm bundle:legacy` |
-| `bundle-manifest.json`                        | Сгенерированный артефакт с именами и хешами 9 бандлов                                                 |
+| `bundle-manifest.json`                        | Сгенерированный артефакт с именами и хешами 8 бандлов                                                 |
 | `public/boot-core.bundle.{hash}.js`           | Boot-бандл 1: dev_utils, platform, yandex_api, models, storage (1.14 MB raw / ~230 KB GZIP)           |
 | `public/boot-calc.bundle.{hash}.js`           | Boot-бандл 2: ratio_zones, tef, tdee, harm, day core (893 KB raw)                                     |
 | `public/boot-day.bundle.{hash}.js`            | Boot-бандл 3: все heys*day*\* компоненты (896 KB raw)                                                 |
@@ -124,5 +124,5 @@
 >   таба при каждом фул-синке).
 > - `heys_app_shell_v1.js` — React `key` у `DayTabWithCloudSync`: должен быть
 >   `'day_' + clientId + '_' + date` (без syncVer).
-> - `upload-to-yandex.ps1` — загружает `public/` в Yandex Object Storage с
->   автоматическим GZIP для `.js` файлов.
+> - `scripts/deploy-frontend.sh` — локальный быстрый деплой: пересборка
+>   бандлов + upload boot/postboot/react/index/bundle-manifest.
