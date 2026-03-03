@@ -7,8 +7,9 @@
 
 > **⚠️ АРХИВ.** Документ от 04.09.2025. Описывает Vite `manualChunks`
 > конфигурацию (Supabase-эпоха). Неактуален: Supabase SDK удалён, стратегия
-> чанков заменена на `bundle-legacy.mjs` (9 бандлов, 246 файлов).  
-> Актуальная информация: [SYNC_PERFORMANCE_REPORT.md](../SYNC_PERFORMANCE_REPORT.md)
+> чанков заменена на `bundle-legacy.mjs` (legacy bundle pipeline).  
+> Актуальная информация:
+> [SYNC_PERFORMANCE_REPORT.md](../SYNC_PERFORMANCE_REPORT.md)
 
 ---
 

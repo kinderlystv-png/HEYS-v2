@@ -1,5 +1,8 @@
 # 🎉 HEYS MODERNIZATION PROJECT - FINAL REPORT
 
+> ⚠️ Исторический отчёт (snapshot на 31.08.2025). Ниже могут встречаться
+> устаревшие названия скриптов/CI-файлов, не отражающие текущий production flow.
+
 ## 📊 Общая статистика
 
 ### Тесты
@@ -117,12 +120,12 @@ tests/
 └── unit/          # Unit тесты
 
 scripts/
-├── deploy.js      # Автоматический деплой
+├── deploy.js      # Исторический скрипт (в текущем прод-процессе deprecated)
 ├── healthcheck.js # Проверка здоровья
 └── monitoring.js  # Мониторинг
 
 .github/workflows/
-└── ci-cd.yml      # CI/CD пайплайн
+└── ci-cd.yml      # Исторический пример пайплайна
 ```
 
 ## 🔧 КОМАНДЫ ДЛЯ РАБОТЫ

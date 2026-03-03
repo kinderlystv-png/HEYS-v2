@@ -31,10 +31,10 @@
 Файлы из спринта оптимизации Sept 2025. Устарели после перехода на
 `bundle-legacy.mjs` и удаления Supabase SDK.
 
-| Файл                                                                     | Дата       | Почему архивировано                                                                        |
-| ------------------------------------------------------------------------ | ---------- | ------------------------------------------------------------------------------------------ |
-| [performance-baseline-2025-09.md](performance-baseline-2025-09.md)       | 04.09.2025 | 189KB Vite-бандл (Supabase-эпоха). Текущий baseline — 8.65MB raw / 1.95MB gzip (9 бандлов) |
-| [bundle-splitting-report-2025-09.md](bundle-splitting-report-2025-09.md) | 04.09.2025 | Vite `manualChunks` + Supabase. Заменён на `scripts/bundle-legacy.mjs`                     |
+| Файл                                                                     | Дата       | Почему архивировано                                                                           |
+| ------------------------------------------------------------------------ | ---------- | --------------------------------------------------------------------------------------------- |
+| [performance-baseline-2025-09.md](performance-baseline-2025-09.md)       | 04.09.2025 | 189KB Vite-бандл (Supabase-эпоха). Актуальные baseline и метрики — в текущих performance docs |
+| [bundle-splitting-report-2025-09.md](bundle-splitting-report-2025-09.md) | 04.09.2025 | Vite `manualChunks` + Supabase. Заменён на `scripts/bundle-legacy.mjs`                        |
 
 **Актуальная документация:**
 [docs/SYNC_PERFORMANCE_REPORT.md](../SYNC_PERFORMANCE_REPORT.md)
