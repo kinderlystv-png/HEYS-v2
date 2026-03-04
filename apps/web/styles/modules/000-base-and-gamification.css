@@ -4113,13 +4113,25 @@ td:first-child input {
   }
 }
 
+/* Header: самые узкие экраны — убираем кнопку "Вчера" */
+@media (max-width: 380px) {
+  .yesterday-quick-btn {
+    display: none;
+  }
+
+  .hdr-bottom {
+    gap: 4px;
+    padding: 5px 8px;
+  }
+}
+
 /* Нижняя линия: клиент + действия */
 .hdr-bottom {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 6px;
-  padding: 6px 10px;
+  gap: 4px;
+  padding: 5px 8px;
   background: #f0f0f0;
   border: 1px solid #4285f4;
   border-top: none;
@@ -4137,17 +4149,25 @@ td:first-child input {
 .hdr-client {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 3px;
   flex-shrink: 1;
+  flex-grow: 1;
   min-width: 0;
   overflow: visible;
+}
+
+/* Кликабельный блок имени — даёт усечение длинных имён */
+.hdr-client-clickable {
+  flex-shrink: 1;
+  min-width: 0;
+  overflow: hidden;
 }
 
 /* Группа кнопок даты в header */
 .hdr-date-group {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   flex-shrink: 0;
   margin-left: auto;
 }
@@ -4378,6 +4398,7 @@ td:first-child input {
   transition: all 0.2s ease;
   animation: ewsBadgeAppear 0.4s ease;
   flex-shrink: 0;
+  margin-left: -2px;
 }
 
 .ews-badge__icon {
@@ -4822,7 +4843,8 @@ body:has(.offline-banner) .wrap {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 9px 13px;
+  padding: 0 13px;
+  height: 34px;
   background: white;
   border: 1px solid var(--color-slate-200);
   border-radius: 10px;
@@ -5231,8 +5253,10 @@ body:has(.offline-banner) .wrap {
 /* Mobile responsive */
 @media (max-width: 640px) {
   .date-picker-trigger {
-    padding: 4px 6px;
-    min-width: 90px;
+    padding: 0 6px;
+    height: 34px;
+    min-width: 80px;
+    max-width: 100px;
     gap: 4px;
   }
 
@@ -5244,8 +5268,9 @@ body:has(.offline-banner) .wrap {
     font-size: 12px;
   }
 
+  /* Скрываем дополнительную строку даты — экономим место в шапке */
   .date-picker-sub {
-    font-size: 9px;
+    display: none;
   }
 
   .date-picker-arrow {

@@ -3416,6 +3416,14 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           window.__heysCascadeBatchSyncReceived = true;
           _cascadeCache.signature = null;
           console.info('[HEYS.cascade] ⏱️ Batch-sync timeout: unblocking history guard (5s after client switch, likely new user)');
+          // v10.1: Force parent re-render immediately after guard unlock.
+          // Without this, parent waits for next periodic heysSyncCompleted (~15-25s gap).
+          // source:'cascade-guard-unlock' is ignored by cascade cache invalidator (not batch/force-sync).
+          try {
+            window.dispatchEvent(new CustomEvent('heys:day-updated', {
+              detail: { source: 'cascade-guard-unlock', date: new Date().toISOString().slice(0, 10) }
+            }));
+          } catch (_) { }
         }
       }, 5000);
       // v6.2: Empty-history bypass — 8s fallback for genuinely new users with 0 days in cloud.
@@ -3425,6 +3433,12 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           window.__heysCascadeAllowEmptyHistory = true;
           _cascadeCache.signature = null;
           console.info('[HEYS.cascade] ⏱️ Empty-history bypass: allowing render with 0 historical days (8s, genuinely new user)');
+          // v10.1: Force parent re-render after empty-history bypass (for genuinely new users).
+          try {
+            window.dispatchEvent(new CustomEvent('heys:day-updated', {
+              detail: { source: 'cascade-guard-unlock', date: new Date().toISOString().slice(0, 10) }
+            }));
+          } catch (_) { }
         }
       }, 8000);
       console.info('[HEYS.cascade] 🔄 Client changed: guard reset, 5s/8s timeouts restarted');
@@ -3437,6 +3451,12 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         window.__heysCascadeBatchSyncReceived = true;
         _cascadeCache.signature = null;
         console.info('[HEYS.cascade] ⏱️ Batch-sync timeout: unblocking history guard (5s, likely new user)');
+        // v10.1: Force parent re-render immediately after guard unlock (page-boot path).
+        try {
+          window.dispatchEvent(new CustomEvent('heys:day-updated', {
+            detail: { source: 'cascade-guard-unlock', date: new Date().toISOString().slice(0, 10) }
+          }));
+        } catch (_) { }
       }
     }, 5000);
     // v6.2: Empty-history bypass — 8s fallback for genuinely new users.
@@ -3445,6 +3465,12 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         window.__heysCascadeAllowEmptyHistory = true;
         _cascadeCache.signature = null;
         console.info('[HEYS.cascade] ⏱️ Empty-history bypass: allowing render with 0 historical days (8s, genuinely new user)');
+        // v10.1: Force parent re-render after empty-history bypass (page-boot, new user).
+        try {
+          window.dispatchEvent(new CustomEvent('heys:day-updated', {
+            detail: { source: 'cascade-guard-unlock', date: new Date().toISOString().slice(0, 10) }
+          }));
+        } catch (_) { }
       }
     }, 8000);
   }

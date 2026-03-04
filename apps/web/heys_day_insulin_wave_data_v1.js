@@ -24,7 +24,13 @@
     // (postboot-1-game грузится позже boot-бандлов — нужен re-render при готовности модуля)
     const [iwVersion, setIwVersion] = React.useState(() => HEYSRef.InsulinWave?.calculate ? 1 : 0);
     React.useEffect(function () {
-      if (HEYSRef.InsulinWave?.calculate) return; // уже загружен
+      // v1.1: Race condition fix — postboot-1-game may fire heys-insulinwave-ready
+      // BEFORE this effect runs (React runs effects after DOM commit, scripts run earlier).
+      // So we re-check availability here; if already loaded, bump version immediately.
+      if (HEYSRef.InsulinWave?.calculate) {
+        setIwVersion(function (v) { return v === 0 ? 1 : v; });
+        return;
+      }
       function onIWReady() {
         setIwVersion(function (v) { return v + 1; });
         console.info('[HEYS.dayInsulinWaveData] ✅ InsulinWave ready, re-computing wave data');

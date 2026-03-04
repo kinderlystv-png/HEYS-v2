@@ -188,8 +188,8 @@
                     console.info('ews / badge 📦 Days loaded:', days.length);
 
                     if (days.length < 3) {
-                        console.info('ews / badge ⏸️ Insufficient data:', days.length, 'days (need 3+)');
-                        setEWSData(null);
+                        console.info('ews / badge ⏸️ Insufficient data:', days.length, 'days (need 3+) — showing neutral badge');
+                        setEWSData({ count: 0, highSeverityCount: 0, available: false, warnings: [] });
                         return;
                     }
 
@@ -226,15 +226,15 @@
                             });
                         }
                     } else {
-                        setEWSData(null);
-                        console.info('ews / badge ℹ️ EWS unavailable:', {
+                        setEWSData({ count: 0, highSeverityCount: 0, available: false, warnings: [] });
+                        console.info('ews / badge ℹ️ EWS unavailable — showing neutral badge:', {
                             reason: result.reason || 'insufficient_data',
                             daysAnalyzed: days.length,
                         });
                     }
                 } catch (err) {
                     console.warn('ews / badge ⚠️ Failed to load EWS data:', err.message);
-                    setEWSData(null);
+                    setEWSData({ count: 0, highSeverityCount: 0, available: false, warnings: [] });
                 }
             };
 
@@ -382,21 +382,13 @@
                             style: {
                                 display: 'flex',
                                 alignItems: 'center',
-                                gap: 8,
+                                gap: 4,
                                 cursor: 'pointer',
-                                padding: '4px 8px 4px 4px',
-                                borderRadius: 12,
+                                padding: '4px 6px 4px 4px',
+                                borderRadius: 10,
                                 transition: 'background 0.2s'
                             }
                         },
-                        React.createElement(
-                            'div',
-                            {
-                                className: 'hdr-client-avatar',
-                                style: { background: getAvatarColor(currentClientName) }
-                            },
-                            getClientInitials(currentClientName)
-                        ),
                         React.createElement(
                             'div',
                             { className: 'hdr-client-info' },

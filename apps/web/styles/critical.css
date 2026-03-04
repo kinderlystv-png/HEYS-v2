@@ -172,8 +172,17 @@ body {
 .hdr-client {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 3px;
+  flex-grow: 1;
+  flex-shrink: 1;
   min-width: 0;
+}
+
+/* Кликабельный блок имени — даёт усечение длинных имён */
+.hdr-client-clickable {
+  flex-shrink: 1;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .hdr-client-avatar {
