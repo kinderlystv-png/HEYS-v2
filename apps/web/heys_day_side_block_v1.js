@@ -74,7 +74,7 @@
     };
 
     return React.createElement('div', { className: 'area-side right-col' },
-      React.createElement('div', { className: 'compact-sleep compact-card' },
+      React.createElement('div', { className: 'compact-sleep compact-card widget-shadow-diary-glass widget-outline-diary-glass' },
         React.createElement('div', { className: 'compact-card-header' }, '😴 СОН И САМОЧУВСТВИЕ'),
 
         // Ряд с двумя плашками
@@ -250,7 +250,7 @@
 
       // Карточка замеров тела
       React.createElement('div', {
-        className: 'measurements-card compact-card' + (measurementsNeedUpdate ? ' measurements-card--needs-update' : ''),
+        className: 'measurements-card compact-card widget-shadow-diary-glass widget-outline-diary-glass' + (measurementsNeedUpdate ? ' measurements-card--needs-update' : ''),
         onClick: (e) => {
           // Клик по карточке открывает редактор (если не по кнопке)
           if (!e.target.closest('button')) {

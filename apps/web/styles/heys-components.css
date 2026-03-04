@@ -846,11 +846,11 @@ body.tour-active .ios-pwa-banner {
 
 /* === WEEKLY REPORTS v2 === */
 .weekly-report-card {
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
-  border-radius: 16px;
-  padding: 16px;
-  box-shadow: 0 10px 30px -20px rgba(15, 23, 42, 0.2);
+  background: var(--widget-glass-bg, var(--heys-bg-card, #ffffff));
+  border: 1px solid var(--heys-diary-outline-border-current, #e5e7eb);
+  border-radius: var(--widget-radius-lg, 20px);
+  padding: var(--heys-diary-card-padding, 14px 16px);
+  box-shadow: var(--heys-diary-glass-card-shadow, 0 10px 30px -20px rgba(15, 23, 42, 0.2));
 }
 
 .weekly-report-card--empty {
@@ -1565,6 +1565,23 @@ body.tour-active .ios-pwa-banner {
 
 .reports-sparkline-card {
   display: flex;
+  flex-direction: column;
+  background: var(--widget-glass-bg, var(--heys-bg-card, #ffffff));
+  border: 1px solid var(--heys-diary-outline-border-current, #e5e7eb);
+  border-radius: var(--widget-radius-lg, 20px);
+  box-shadow: var(--heys-diary-glass-card-shadow, 0 10px 30px -20px rgba(15, 23, 42, 0.2));
+  padding: var(--heys-diary-card-padding, 14px 16px);
+}
+
+.page.page-reports>.card,
+.page.page-reports .card.tone-slate,
+.page.page-reports .card.tone-violet,
+.page.page-reports .card.tone-indigo {
+  background: var(--widget-glass-bg, var(--heys-bg-card, #ffffff));
+  border: 1px solid var(--heys-diary-outline-border-current, #e5e7eb);
+  border-radius: var(--widget-radius-lg, 20px);
+  box-shadow: var(--heys-diary-glass-card-shadow, 0 10px 30px -20px rgba(15, 23, 42, 0.2));
+  padding: var(--heys-diary-card-padding, 14px 16px);
 }
 
 /* === LEGACY REPORTS BANNER === */
@@ -3752,9 +3769,9 @@ body.tour-active .ios-pwa-banner {
  * DARK MODE — Weekly Reports
  * ══════════════════════════════════════════════════════════════ */
 [data-theme="dark"] .weekly-report-card {
-  background: var(--heys-bg-card);
-  border-color: var(--heys-border-default);
-  box-shadow: 0 10px 30px -20px rgba(0, 0, 0, 0.5);
+  background: var(--widget-glass-bg, var(--heys-bg-card));
+  border-color: var(--heys-diary-outline-border-current, var(--heys-border-default));
+  box-shadow: var(--heys-diary-glass-card-shadow, 0 10px 30px -20px rgba(0, 0, 0, 0.5));
 }
 
 [data-theme="dark"] .weekly-report-card--empty {
@@ -4012,10 +4029,11 @@ body.tour-active .ios-pwa-banner {
 }
 
 .monthly-week-card {
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
-  padding: 10px;
+  background: var(--widget-glass-bg, var(--heys-bg-card, #ffffff));
+  border: 1px solid var(--heys-diary-outline-border-current, #e5e7eb);
+  border-radius: var(--widget-radius-lg, 20px);
+  padding: var(--heys-diary-card-padding, 14px 16px);
+  box-shadow: var(--heys-diary-glass-card-shadow, 0 10px 30px -20px rgba(15, 23, 42, 0.2));
   transition: all 0.2s ease;
 }
 
@@ -4395,8 +4413,9 @@ body.tour-active .ios-pwa-banner {
 }
 
 [data-theme="dark"] .monthly-week-card {
-  background: #111827;
-  border-color: #1f2937;
+  background: var(--widget-glass-bg, #111827);
+  border-color: var(--heys-diary-outline-border-current, #1f2937);
+  box-shadow: var(--heys-diary-glass-card-shadow, 0 10px 30px -20px rgba(0, 0, 0, 0.5));
 }
 
 [data-theme="dark"] .monthly-week-card--current {
@@ -4937,14 +4956,14 @@ body.tour-active .ios-pwa-banner {
 
 .meal-rec-card__badge {
   display: inline-block;
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.6px;
-  color: #15803d;
-  background: #dcfce7;
-  padding: 3px 8px;
-  border-radius: 4px;
+  font-size: var(--heys-diary-card-title-size, 14px);
+  font-weight: var(--heys-diary-card-title-weight, 600);
+  color: var(--heys-diary-card-title-color, var(--text, #1e293b));
+  text-transform: none;
+  letter-spacing: normal;
+  background: transparent;
+  padding: 0;
+  border-radius: 0;
   margin-bottom: 0;
 }
 
@@ -4952,8 +4971,8 @@ body.tour-active .ios-pwa-banner {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 2px;
-  margin-bottom: 6px;
+  gap: 0;
+  margin-bottom: 4px;
 }
 
 .meal-rec-card__science-refs {
@@ -5370,6 +5389,187 @@ body.tour-active .ios-pwa-banner {
   font-weight: 500;
 }
 
+.meal-rec-card__logic-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.meal-rec-card__logic-row {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.meal-rec-card__logic-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.35px;
+  text-transform: uppercase;
+  color: #9ca3af;
+}
+
+.meal-rec-card__logic-text {
+  font-size: 12px;
+  line-height: 1.4;
+  color: #374151;
+}
+
+.meal-rec-card__open-products-btn {
+  width: 100%;
+  margin-top: 10px;
+  margin-bottom: 8px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid #93c5fd;
+  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+  color: #1e40af;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.meal-rec-card__open-products-btn:hover {
+  border-color: #60a5fa;
+  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+}
+
+.meal-rec-card__open-products-btn:active {
+  transform: scale(0.99);
+}
+
+.meal-rec-card__products-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.42);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  z-index: 120;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.meal-rec-card__products-modal {
+  width: min(560px, 100%);
+  max-height: min(78vh, 720px);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.24);
+}
+
+.meal-rec-card__products-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 10px 6px;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.meal-rec-card__products-modal-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.meal-rec-card__products-modal-close {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  border: 1px solid #d1d5db;
+  background: #ffffff;
+  color: #6b7280;
+  cursor: pointer;
+  line-height: 1;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.meal-rec-card__products-modal-subtitle {
+  font-size: 9px;
+  color: #9ca3af;
+  padding: 4px 10px 6px;
+}
+
+.meal-rec-card__products-modal-body {
+  overflow: auto;
+  padding: 0 8px 8px;
+}
+
+.meal-rec-card__products-modal .meal-rec-card__grouped-products {
+  margin-top: 2px;
+  margin-bottom: 2px;
+}
+
+.meal-rec-card__products-modal .meal-rec-card__product-group {
+  margin-bottom: 4px;
+}
+
+.meal-rec-card__products-modal .meal-rec-card__group-header {
+  padding: 2px 0;
+  margin-bottom: 1px;
+  gap: 4px;
+}
+
+.meal-rec-card__products-modal .meal-rec-card__group-emoji {
+  font-size: 12px;
+}
+
+.meal-rec-card__products-modal .meal-rec-card__group-name {
+  font-size: 9px;
+  letter-spacing: 0.35px;
+}
+
+.meal-rec-card__products-modal .meal-rec-card__group-products {
+  gap: 2px;
+}
+
+.meal-rec-card__products-modal .meal-rec-card__product-item {
+  padding: 3px 5px;
+  border-radius: 5px;
+}
+
+.meal-rec-card__products-modal .meal-rec-card__product-name-wrapper {
+  gap: 4px;
+}
+
+.meal-rec-card__products-modal .meal-rec-card__product-name {
+  font-size: 10px;
+  line-height: 1.2;
+}
+
+.meal-rec-card__products-modal .meal-rec-card__product-badge {
+  font-size: 10px;
+}
+
+.meal-rec-card__products-modal .meal-rec-card__product-grams {
+  font-size: 9px;
+}
+
+.meal-rec-card__products-modal .meal-rec-card__product-add-btn {
+  width: 20px;
+  height: 20px;
+  min-width: 20px;
+  border-radius: 5px;
+  font-size: 14px;
+  margin-left: 6px;
+}
+
+.meal-rec-card__products-modal .meal-rec-card__add-selected-btn {
+  margin-top: 6px;
+  padding: 7px 8px;
+  font-size: 10px;
+  border-radius: 6px;
+}
+
 /* Footer: confidence + feedback on one line */
 .meal-rec-card__footer {
   display: flex;
@@ -5548,8 +5748,8 @@ body.tour-active .ios-pwa-banner {
 }
 
 [data-theme="dark"] .meal-rec-card__badge {
-  color: #86efac;
-  background: rgba(34, 197, 94, 0.15);
+  color: var(--heys-diary-card-title-color, var(--text, #e5e7eb));
+  background: transparent;
 }
 
 [data-theme="dark"] .meal-rec-card__science-refs {
@@ -5697,6 +5897,49 @@ body.tour-active .ios-pwa-banner {
 [data-theme="dark"] .meal-rec-card__reason-tag {
   color: #d1d5db;
   background: transparent;
+}
+
+[data-theme="dark"] .meal-rec-card__logic-label {
+  color: #6b7280;
+}
+
+[data-theme="dark"] .meal-rec-card__logic-text {
+  color: #d1d5db;
+}
+
+[data-theme="dark"] .meal-rec-card__open-products-btn {
+  border-color: #1d4ed8;
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.24) 0%, rgba(30, 64, 175, 0.3) 100%);
+  color: #bfdbfe;
+}
+
+[data-theme="dark"] .meal-rec-card__open-products-btn:hover {
+  border-color: #2563eb;
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.3) 0%, rgba(30, 64, 175, 0.38) 100%);
+}
+
+[data-theme="dark"] .meal-rec-card__products-modal {
+  background: #111827;
+  border-color: #374151;
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.45);
+}
+
+[data-theme="dark"] .meal-rec-card__products-modal-header {
+  border-bottom-color: #1f2937;
+}
+
+[data-theme="dark"] .meal-rec-card__products-modal-title {
+  color: #f3f4f6;
+}
+
+[data-theme="dark"] .meal-rec-card__products-modal-close {
+  background: #1f2937;
+  border-color: #374151;
+  color: #9ca3af;
+}
+
+[data-theme="dark"] .meal-rec-card__products-modal-subtitle {
+  color: #9ca3af;
 }
 
 [data-theme="dark"] .meal-rec-card__footer {

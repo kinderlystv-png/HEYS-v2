@@ -1729,6 +1729,8 @@
             isMobile,
             mobileSubTab,
             insulinWaveData,
+            getDailyNutrientColor,
+            getDailyNutrientTooltip,
             balanceViz,
             mealChartHintShown,
             newMealAnimatingIndex,

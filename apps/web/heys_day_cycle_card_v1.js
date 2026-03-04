@@ -21,7 +21,7 @@
     if (!showCycleCard) return null;
 
     return React.createElement('div', {
-      className: 'cycle-card compact-card' + (cycleEditMode ? ' cycle-card--editing' : ''),
+      className: 'cycle-card compact-card widget-shadow-diary-glass widget-outline-diary-glass' + (cycleEditMode ? ' cycle-card--editing' : ''),
       key: 'cycle-card'
     },
       // Если есть данные — показываем фазу
@@ -47,15 +47,15 @@
           )
         )
       )
-      // Если нет данных — показываем "Указать"
-      : React.createElement('div', {
-        className: 'cycle-card__header cycle-card__header--empty',
-        onClick: () => setCycleEditMode(true)
-      },
-        React.createElement('span', { className: 'cycle-card__icon' }, '🌸'),
-        React.createElement('span', { className: 'cycle-card__title' }, 'Особый период'),
-        React.createElement('span', { className: 'cycle-card__empty-hint' }, 'Указать день →')
-      ),
+        // Если нет данных — показываем "Указать"
+        : React.createElement('div', {
+          className: 'cycle-card__header cycle-card__header--empty',
+          onClick: () => setCycleEditMode(true)
+        },
+          React.createElement('span', { className: 'cycle-card__icon' }, '🌸'),
+          React.createElement('span', { className: 'cycle-card__title' }, 'Особый период'),
+          React.createElement('span', { className: 'cycle-card__empty-hint' }, 'Указать день →')
+        ),
 
       // Режим редактирования — кнопки выбора дня
       cycleEditMode && React.createElement('div', { className: 'cycle-card__edit' },

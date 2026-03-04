@@ -241,63 +241,72 @@
             deferredSlot(supplementsReady, supplementsCard, 'slot-supplements', 96, '💊', 'Подготавливаем план добавок на сегодня'),
             mealsChart,
             insulinIndicator,
-            React.createElement('h2', {
-                id: 'diary-heading',
+            React.createElement('div', {
+                className: 'diary-section-separator diary-section-separator--full-width',
                 style: {
-                    fontSize: '24px',
-                    fontWeight: '800',
-                    color: 'var(--text, #1e293b)',
-                    margin: '28px 0 20px 0',
-                    textTransform: 'uppercase',
-                    letterSpacing: '1px',
-                    textAlign: 'center',
-                    scrollMarginTop: '150px'
-                }
-            }, 'ДНЕВНИК ПИТАНИЯ'),
-            React.createElement('button', {
-                className: 'add-meal-btn-full',
-                onClick: addMeal,
-                style: {
-                    width: '100%',
-                    padding: '18px 24px',
-                    marginBottom: '20px',
-                    fontSize: '17px',
-                    fontWeight: '700',
-                    color: '#fff',
-                    background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
-                    border: 'none',
-                    borderRadius: '16px',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '10px',
-                    boxShadow: '0 4px 14px rgba(59, 130, 246, 0.35)',
-                    transition: 'all 0.2s ease',
-                    WebkitTapHighlightColor: 'transparent'
+                    margin: '36px -18px 0 -18px',
+                    padding: '16px 18px 18px 18px',
+                    borderTop: '1px solid rgba(37, 99, 235, 0.24)'
                 }
             },
-                React.createElement('span', { style: { fontSize: '22px' } }, '➕'),
-                'Добавить приём пищи'
-            ),
-            (!day?.meals || day.meals.length === 0) && React.createElement('div', { className: 'empty-state' },
-                React.createElement('div', { className: 'empty-state-icon' }, '🍽️'),
-                React.createElement('div', { className: 'empty-state-title' }, 'Пока нет приёмов пищи'),
-                React.createElement('div', { className: 'empty-state-text' }, 'Добавьте первый приём, чтобы начать отслеживание'),
+                React.createElement('h2', {
+                    id: 'diary-heading',
+                    style: {
+                        fontSize: '24px',
+                        fontWeight: '800',
+                        color: 'var(--text, #1e293b)',
+                        margin: '12px 0 20px 0',
+                        textTransform: 'uppercase',
+                        letterSpacing: '1px',
+                        textAlign: 'center',
+                        scrollMarginTop: '150px'
+                    }
+                }, 'ДНЕВНИК ПИТАНИЯ'),
                 React.createElement('button', {
-                    className: 'btn btn-primary empty-state-btn',
+                    className: 'add-meal-btn-full',
                     onClick: addMeal,
                     style: {
+                        width: '100%',
+                        padding: '18px 24px',
+                        marginBottom: '20px',
+                        fontSize: '17px',
+                        fontWeight: '700',
+                        color: '#fff',
                         background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
-                        boxShadow: '0 4px 14px rgba(59, 130, 246, 0.35)'
+                        border: 'none',
+                        borderRadius: '16px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '10px',
+                        boxShadow: '0 4px 14px rgba(59, 130, 246, 0.35)',
+                        transition: 'all 0.2s ease',
+                        WebkitTapHighlightColor: 'transparent'
                     }
-                }, '+ Добавить приём')
+                },
+                    React.createElement('span', { style: { fontSize: '22px' } }, '➕'),
+                    'Добавить приём пищи'
+                ),
+                (!day?.meals || day.meals.length === 0) && React.createElement('div', { className: 'empty-state' },
+                    React.createElement('div', { className: 'empty-state-icon' }, '🍽️'),
+                    React.createElement('div', { className: 'empty-state-title' }, 'Пока нет приёмов пищи'),
+                    React.createElement('div', { className: 'empty-state-text' }, 'Добавьте первый приём, чтобы начать отслеживание'),
+                    React.createElement('button', {
+                        className: 'btn btn-primary empty-state-btn',
+                        onClick: addMeal,
+                        style: {
+                            background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+                            boxShadow: '0 4px 14px rgba(59, 130, 246, 0.35)'
+                        }
+                    }, '+ Добавить приём')
+                ),
+                mealsUI,
+                daySummary,
+                React.createElement('div', { className: 'row desktop-only', style: { justifyContent: 'flex-start', marginTop: '8px' } },
+                    React.createElement('button', { className: 'btn', onClick: addMeal }, '+ Приём')
+                )
             ),
-            mealsUI,
-            daySummary,
-            React.createElement('div', { className: 'row desktop-only', style: { justifyContent: 'flex-start', marginTop: '8px' } },
-                React.createElement('button', { className: 'btn', onClick: addMeal }, '+ Приём')
-            )
         );
     };
 

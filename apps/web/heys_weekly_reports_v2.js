@@ -351,13 +351,13 @@
         }, [lsGet, profile, pIndex, anchorDate]);
 
         if (!report || report.daysWithData === 0) {
-            return h('div', { className: 'weekly-report-card weekly-report-card--empty' },
+            return h('div', { className: 'weekly-report-card weekly-report-card--empty widget-shadow-diary-glass widget-outline-diary-glass' },
                 h('div', { className: 'weekly-report-card__title' }, 'Неделя без данных'),
                 h('div', { className: 'weekly-report-card__subtitle' }, 'Добавьте 3+ дня, чтобы увидеть итоги')
             );
         }
 
-        return h('div', { className: 'weekly-report-card' },
+        return h('div', { className: 'weekly-report-card widget-shadow-diary-glass widget-outline-diary-glass' },
             h('div', { className: 'weekly-report-card__header' },
                 h('div', { className: 'weekly-report-card__title' }, 'Итоги недели'),
                 h('div', { className: 'weekly-report-card__range' }, report.rangeLabel)

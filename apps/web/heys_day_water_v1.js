@@ -2,9 +2,9 @@
 // Extracted from heys_day_v12.js (PR-2: Step 1/2)
 // Renders water intake tracking with ring progress and presets
 
-;(function(global){
+; (function (global) {
   const HEYS = global.HEYS = global.HEYS || {};
-  
+
   /**
    * Render water card
    * @param {Object} params - Render parameters
@@ -17,29 +17,29 @@
    */
   function renderWaterCard({ React, ctx, actions }) {
     // Destructure all context variables
-    const { 
-      day, prof, 
-      waterGoal, waterGoalBreakdown, waterPresets, 
-      waterMotivation, waterLastDrink, waterAddedAnim, 
-      showWaterDrop, showWaterTooltip 
+    const {
+      day, prof,
+      waterGoal, waterGoalBreakdown, waterPresets,
+      waterMotivation, waterLastDrink, waterAddedAnim,
+      showWaterDrop, showWaterTooltip
     } = ctx;
-    
+
     // Destructure all actions
-    const { 
-      setDay, haptic, 
+    const {
+      setDay, haptic,
       setWaterAddedAnim, setShowWaterDrop, setShowWaterTooltip,
       handleWaterRingDown, handleWaterRingUp, handleWaterRingLeave,
-      openExclusivePopup, addWater, removeWater 
+      openExclusivePopup, addWater, removeWater
     } = actions;
-    
-    return React.createElement('div', { id: 'water-card', className: 'compact-water compact-card' },
+
+    return React.createElement('div', { id: 'water-card', className: 'compact-water compact-card widget-shadow-diary-glass widget-outline-diary-glass' },
       React.createElement('div', { className: 'compact-card-header' }, '💧 ВОДА'),
-      
+
       // Основной контент: кольцо + инфо + пресеты
       React.createElement('div', { className: 'water-card-content' },
         // Левая часть: кольцо прогресса + breakdown
         React.createElement('div', { className: 'water-ring-container' },
-          React.createElement('div', { 
+          React.createElement('div', {
             className: 'water-ring-large',
             onMouseDown: handleWaterRingDown,
             onMouseUp: handleWaterRingUp,
@@ -49,13 +49,13 @@
           },
             React.createElement('svg', { viewBox: '0 0 36 36', className: 'water-ring-svg' },
               React.createElement('circle', { className: 'water-ring-bg', cx: 18, cy: 18, r: 15.9 }),
-              React.createElement('circle', { 
-                className: 'water-ring-fill', 
+              React.createElement('circle', {
+                className: 'water-ring-fill',
                 cx: 18, cy: 18, r: 15.9,
                 style: { strokeDasharray: Math.min(100, ((day.waterMl || 0) / waterGoal) * 100) + ' 100' }
               })
             ),
-            React.createElement('div', { 
+            React.createElement('div', {
               className: 'water-ring-center',
               onClick: (e) => {
                 e.stopPropagation();
@@ -77,7 +77,7 @@
               style: { cursor: 'pointer' }
             },
               React.createElement('span', { className: 'water-ring-value' },
-                (day.waterMl || 0) >= 1000 
+                (day.waterMl || 0) >= 1000
                   ? ((day.waterMl || 0) / 1000).toFixed(1).replace('.0', '')
                   : (day.waterMl || 0)
               ),
@@ -87,7 +87,7 @@
             )
           ),
           // Анимация добавления (над кольцом)
-          waterAddedAnim && React.createElement('span', { 
+          waterAddedAnim && React.createElement('span', {
             className: 'water-card-anim water-card-anim-above',
             key: 'water-anim-' + Date.now()
           }, waterAddedAnim),
@@ -114,9 +114,9 @@
             className: 'water-reminder'
           }, '⏰ ' + waterLastDrink.text)
         ),
-        
+
         // Тултип с полной формулой (при долгом нажатии)
-        showWaterTooltip && React.createElement('div', { 
+        showWaterTooltip && React.createElement('div', {
           className: 'water-formula-tooltip',
           onClick: () => setShowWaterTooltip(false)
         },
@@ -144,7 +144,7 @@
           ),
           React.createElement('div', { className: 'water-formula-hint' }, 'Нажми, чтобы закрыть')
         ),
-        
+
         // Правая часть: пресеты + прогресс
         React.createElement('div', { className: 'water-card-right' },
           // Верхняя строка: мотивация + кнопка удаления
@@ -159,7 +159,7 @@
               onClick: () => removeWater(100)
             }, '−100')
           ),
-          
+
           // Прогресс-бар с волной
           React.createElement('div', { className: 'water-progress-inline' },
             // 💧 Падающая капля
@@ -168,7 +168,7 @@
               React.createElement('div', { className: 'water-splash' })
             ),
             // Заливка
-            React.createElement('div', { 
+            React.createElement('div', {
               className: 'water-progress-fill',
               style: { width: Math.min(100, ((day.waterMl || 0) / waterGoal) * 100) + '%' }
             }),
@@ -188,10 +188,10 @@
               style: { left: Math.min(100, ((day.waterMl || 0) / waterGoal) * 100) + '%' }
             })
           ),
-          
+
           // Пресеты в ряд
           React.createElement('div', { className: 'water-presets-row' },
-            waterPresets.map(preset => 
+            waterPresets.map(preset =>
               React.createElement('button', {
                 key: preset.ml,
                 className: 'water-preset-compact',
@@ -204,7 +204,7 @@
           )
         )
       ),
-      
+
       // Лайфхак внизу карточки — на всю ширину
       React.createElement('div', { className: 'water-tip' },
         React.createElement('span', { className: 'water-tip-icon' }, '💡'),
@@ -214,10 +214,10 @@
       )
     );
   }
-  
+
   // Export
   HEYS.dayWater = {
     render: renderWaterCard
   };
-  
+
 })(window);

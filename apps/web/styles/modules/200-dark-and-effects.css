@@ -602,21 +602,29 @@
  * ═══════════════════════════════════════════════════════════════════════════ */
 
 [data-theme="dark"] .insulin-wave-indicator {
-  background: linear-gradient(135deg, #0c4a6e 0%, #0e7490 100%);
+  --iw-bg-from: rgba(14, 116, 144, 0.18);
+  --iw-bg-mid: rgba(8, 145, 178, 0.15);
+  --iw-bg-to: rgba(6, 182, 212, 0.12);
   border-color: var(--heys-diary-outline-border-current, var(--heys-diary-outline-border-dark, #22d3ee));
   box-shadow: var(--heys-diary-glass-card-shadow, 0 2px 8px rgba(6, 182, 212, 0.2));
 }
 
 [data-theme="dark"] .insulin-wave-indicator.insulin-lipolysis {
-  background: linear-gradient(135deg, #065f46 0%, #047857 100%);
+  --iw-bg-from: rgba(22, 101, 52, 0.2);
+  --iw-bg-mid: rgba(21, 128, 61, 0.17);
+  --iw-bg-to: rgba(34, 197, 94, 0.12);
 }
 
 [data-theme="dark"] .insulin-wave-indicator.insulin-almost {
-  background: linear-gradient(135deg, #7c2d12 0%, #9a3412 100%);
+  --iw-bg-from: rgba(154, 52, 18, 0.2);
+  --iw-bg-mid: rgba(194, 65, 12, 0.17);
+  --iw-bg-to: rgba(251, 146, 60, 0.12);
 }
 
 [data-theme="dark"] .insulin-wave-indicator.insulin-soon {
-  background: linear-gradient(135deg, #713f12 0%, #854d0e 100%);
+  --iw-bg-from: rgba(133, 77, 14, 0.2);
+  --iw-bg-mid: rgba(161, 98, 7, 0.17);
+  --iw-bg-to: rgba(250, 204, 21, 0.12);
 }
 
 [data-theme="dark"] .insulin-wave-bg {

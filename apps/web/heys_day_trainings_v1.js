@@ -1,7 +1,7 @@
 // heys_day_trainings_v1.js — Trainings + household block renderer
 // Extracted from heys_day_v12.js (trainings block)
 
-;(function(global) {
+; (function (global) {
   'use strict';
 
   const HEYS = global.HEYS = global.HEYS || {};
@@ -127,7 +127,7 @@
 
         return React.createElement('div', {
           key: 'tr' + ti,
-          className: 'compact-card compact-train compact-train--minimal'
+          className: 'compact-card compact-train compact-train--minimal widget-shadow-diary-glass widget-outline-diary-glass'
         },
           React.createElement('div', {
             className: 'compact-train-header',
@@ -177,7 +177,7 @@
         const hKcal = safeR0((+h.minutes || 0) * (typeof kcalPerMin === 'function' ? kcalPerMin(2.5, weight) : 0));
         return React.createElement('div', {
           key: 'household-' + hi,
-          className: 'compact-card compact-household'
+          className: 'compact-card compact-household widget-shadow-diary-glass widget-outline-diary-glass'
         },
           React.createElement('div', {
             className: 'compact-train-header',

@@ -4427,6 +4427,12 @@
   align-items: center;
   text-align: center;
   line-height: 1.1;
+  background: rgba(255, 255, 255, 0.32);
+  padding: 4px 9px;
+  border-radius: 9px;
+  border: 1px solid rgba(255, 255, 255, 0.48);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
 }
 
 .goal-bonus-wrap {

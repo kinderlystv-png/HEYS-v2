@@ -17002,12 +17002,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
             },
             shouldRenderContent && React.createElement(MemoAppHeader, props),
             shouldRenderContent && React.createElement(MemoAppTabsNav, props),
-            shouldRenderContent && React.createElement(MemoAppTabContent, props),
-            shouldRenderContent && React.createElement(
-                'div',
-                { className: 'text-center text-[11px] text-slate-400 pb-6 pt-2' },
-                'Версия ' + (HEYS.version || window.APP_VERSION || 'dev')
-            )
+            shouldRenderContent && React.createElement(MemoAppTabContent, props)
         );
     }
 

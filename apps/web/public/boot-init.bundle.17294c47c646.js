@@ -3417,9 +3417,51 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       });
     }
 
+    // ── Адаптивный тон карточки v2 — на основе весов, не счётчиков ──
+    // Логика: смотрим на долю «негативного веса» относительно суммарного.
+    // negativeRatio = |neg| / (pos + |neg|) → 0.0 (всё позитивно) … 1.0 (всё плохо)
+    // Пороги: < 0.22 → green, 0.22–0.48 → amber, > 0.48 → red
+    // Бонус: при высоком импульсе (progressPct ≥ 55) порог amber поднимается до 0.32
+    // Ранний день (< 3 событий): порог amber поднимается до 0.40 — не пугаем раньше времени
+    var totalPositiveWeight = events.reduce(function (s, e) {
+      return e.positive ? s + (typeof e.weight === 'number' ? Math.abs(e.weight) : 0) : s;
+    }, 0);
+    var totalNegativeWeight = events.reduce(function (s, e) {
+      return !e.positive ? s + (typeof e.weight === 'number' ? Math.abs(e.weight) : 0) : s;
+    }, 0);
+    var totalWeight = totalPositiveWeight + totalNegativeWeight;
+    var negativeRatio = totalWeight > 0.001 ? totalNegativeWeight / totalWeight : 0;
+
+    // Адаптивный порог перехода в amber:
+    //   — ранний день (< 3 события) → 0.40 (не реагируем на единичный минус)
+    //   — хороший импульс (≥ 55%) → 0.32 (допускаем чуть больше негатива)
+    //   — иначе → 0.22
+    var amberThreshold = events.length < 3 ? 0.40 : (progressPct >= 55 ? 0.32 : 0.22);
+    // Порог перехода в red: > 0.48, и только если прогресс < 65% (иначе amber, ведь день ещё хорош)
+    var redThreshold = 0.48;
+
+    var cardTone;
+    if (events.length === 0) {
+      cardTone = 'neutral';
+    } else if (negativeRatio > redThreshold && progressPct < 65) {
+      cardTone = 'red';
+    } else if (negativeRatio > amberThreshold) {
+      cardTone = 'amber';
+    } else {
+      cardTone = 'green';
+    }
+
+    console.info('[HEYS.cascade] 🎨 cardTone:', cardTone, {
+      negativeRatio: +negativeRatio.toFixed(3),
+      totalPositiveWeight: +totalPositiveWeight.toFixed(2),
+      totalNegativeWeight: +totalNegativeWeight.toFixed(2),
+      amberThreshold: amberThreshold,
+      progressPct: progressPct
+    });
+
     return React.createElement('div', {
-      className: 'cascade-card cascade-card--' + state.toLowerCase(),
-      style: { borderLeft: '3px solid ' + config.color }
+      className: 'cascade-card cascade-card--' + state.toLowerCase() + ' cascade-card--tone-' + cardTone,
+      style: {}
     },
 
       // ── Header (кликабельный toggle) ─────────────────
@@ -3436,8 +3478,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
         // Заголовок
         React.createElement('div', { className: 'cascade-card__title-row' },
-          React.createElement('span', { className: 'cascade-card__icon' }, config.icon),
-          React.createElement('span', { className: 'cascade-card__title' }, 'Ваш позитивный каскад'),
+          React.createElement('span', { className: 'cascade-card__title' }, (config.icon || '✨') + ' Ваш позитивный каскад'),
           progressPct > 0 && React.createElement('span', {
             className: 'cascade-card__badge',
             style: { background: config.color }
@@ -6621,7 +6662,9 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         className: 'compact-card supplements-card widget widget--supplements-diary',
         style: {
           display: 'block',
-          marginBottom: '12px'
+          marginBottom: '12px',
+          padding: 'var(--heys-diary-card-padding, 14px 16px)',
+          boxSizing: 'border-box'
         }
       },
         React.createElement('div', {
@@ -6633,7 +6676,11 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           }
         },
           React.createElement('span', {
-            style: { fontWeight: '600', fontSize: '15px' }
+            style: {
+              fontWeight: 'var(--heys-diary-card-title-weight, 600)',
+              fontSize: 'var(--heys-diary-card-title-size, 14px)',
+              color: 'var(--heys-diary-card-title-color, var(--text, #1e293b))'
+            }
           }, '💊 Витамины')
         ),
         React.createElement('div', {
@@ -6911,11 +6958,13 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     };
 
     return React.createElement('div', {
-      className: 'compact-card supplements-card widget widget--supplements-diary',
+      className: 'compact-card supplements-card widget widget--supplements-diary' + (allTaken ? ' widget--supplements-diary--all-taken' : ''),
       onClick: handleCardClick,
       style: {
         display: 'block',
-        marginBottom: '12px'
+        marginBottom: '12px',
+        padding: 'var(--heys-diary-card-padding, 14px 16px)',
+        boxSizing: 'border-box'
       }
     },
       // v4.1: Шапка (1 строка)
@@ -6930,7 +6979,11 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         // Левая часть: название + прогресс
         React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '10px' } },
           React.createElement('span', {
-            style: { fontWeight: '600', fontSize: '15px' }
+            style: {
+              fontWeight: 'var(--heys-diary-card-title-weight, 600)',
+              fontSize: 'var(--heys-diary-card-title-size, 14px)',
+              color: 'var(--heys-diary-card-title-color, var(--text, #1e293b))'
+            }
           }, '💊 Витамины'),
           // Прогресс-бар
           React.createElement('div', {

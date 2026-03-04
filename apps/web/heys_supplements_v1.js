@@ -2180,7 +2180,9 @@
         className: 'compact-card supplements-card widget widget--supplements-diary',
         style: {
           display: 'block',
-          marginBottom: '12px'
+          marginBottom: '12px',
+          padding: 'var(--heys-diary-card-padding, 14px 16px)',
+          boxSizing: 'border-box'
         }
       },
         React.createElement('div', {
@@ -2192,7 +2194,11 @@
           }
         },
           React.createElement('span', {
-            style: { fontWeight: '600', fontSize: '15px' }
+            style: {
+              fontWeight: 'var(--heys-diary-card-title-weight, 600)',
+              fontSize: 'var(--heys-diary-card-title-size, 14px)',
+              color: 'var(--heys-diary-card-title-color, var(--text, #1e293b))'
+            }
           }, '💊 Витамины')
         ),
         React.createElement('div', {
@@ -2470,11 +2476,13 @@
     };
 
     return React.createElement('div', {
-      className: 'compact-card supplements-card widget widget--supplements-diary',
+      className: 'compact-card supplements-card widget widget--supplements-diary' + (allTaken ? ' widget--supplements-diary--all-taken' : ''),
       onClick: handleCardClick,
       style: {
         display: 'block',
-        marginBottom: '12px'
+        marginBottom: '12px',
+        padding: 'var(--heys-diary-card-padding, 14px 16px)',
+        boxSizing: 'border-box'
       }
     },
       // v4.1: Шапка (1 строка)
@@ -2489,7 +2497,11 @@
         // Левая часть: название + прогресс
         React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '10px' } },
           React.createElement('span', {
-            style: { fontWeight: '600', fontSize: '15px' }
+            style: {
+              fontWeight: 'var(--heys-diary-card-title-weight, 600)',
+              fontSize: 'var(--heys-diary-card-title-size, 14px)',
+              color: 'var(--heys-diary-card-title-color, var(--text, #1e293b))'
+            }
           }, '💊 Витамины'),
           // Прогресс-бар
           React.createElement('div', {

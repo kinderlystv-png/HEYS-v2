@@ -21499,7 +21499,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             });
         };
 
-        return h('div', { className: 'monthly-week-card' + (isCurrent ? ' monthly-week-card--current' : '') },
+        return h('div', { className: 'monthly-week-card widget-shadow-diary-glass widget-outline-diary-glass' + (isCurrent ? ' monthly-week-card--current' : '') },
             h('div', { className: 'monthly-week-card__header' },
                 h('div', { className: 'monthly-week-card__title' }, rangeLabel + daysLabel),
                 h('div', { className: 'monthly-week-card__header-actions' },
@@ -22387,7 +22387,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             bodyChildren.push(React.cloneElement(normRow, { key: 'norm' }), React.cloneElement(devRow, { key: 'dev' }));
         }
         const tbody = React.createElement('tbody', null, bodyChildren);
-        return React.createElement('div', { className: 'card ' + (tone || 'tone-slate'), style: { margin: '8px 0' } },
+        return React.createElement('div', { className: 'card ' + (tone || 'tone-slate') + ' widget-shadow-diary-glass widget-outline-diary-glass', style: { margin: '8px 0' } },
             React.createElement('div', { style: { margin: '4px 0', fontWeight: 700 } }, title),
             React.createElement('div', { style: { overflowX: 'auto' } }, React.createElement('table', { className: 'tbl', style: { fontSize: '96%', tableLayout: 'fixed', minWidth: '1150px' } },
                 colgroup,
@@ -22497,7 +22497,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             return React.createElement('th', { key: 'month-head-' + i + '-' + (h || 'empty'), style }, parts.map((p, pi) => React.createElement(React.Fragment, { key: 'month-hfrag-' + i + '-' + pi }, p, pi < parts.length - 1 ? React.createElement('br', { key: 'month-br-' + i + '-' + pi }) : null)));
         })));
         const tbody = React.createElement('tbody', null, [React.createElement(AvgRow, { avg, label: 'среднее за месяц (28 дней)', key: 'avg' }), React.cloneElement(normRow, { key: 'norm' }), React.cloneElement(devRow, { key: 'dev' })]);
-        return React.createElement('div', { className: 'card tone-violet', style: { margin: '10px 0' } },
+        return React.createElement('div', { className: 'card tone-violet widget-shadow-diary-glass widget-outline-diary-glass', style: { margin: '10px 0' } },
             React.createElement('div', { style: { margin: '4px 0', fontWeight: 700 } }, 'Итог за месяц — средние значения'),
             React.createElement('div', { style: { overflowX: 'auto' } }, React.createElement('table', { className: 'tbl', style: { fontSize: '80%' } },
                 colgroup,
@@ -22532,7 +22532,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             })
             : { values: [], targets: [], labels: [] };
 
-        return React.createElement('div', { className: 'card tone-indigo', style: { margin: '8px 0', width: '700px', background: 'var(--card, #fff)', border: '1px dashed #9ca3af', borderRadius: '12px' } },
+        return React.createElement('div', { className: 'card tone-indigo widget-shadow-diary-glass widget-outline-diary-glass', style: { margin: '8px 0', width: '700px' } },
             React.createElement('div', { style: { margin: '4px 0', fontWeight: 600, textAlign: 'center' } }, 'Съедено vs цель (7 дней)'),
             React.createElement('div', { className: 'reports-sparkline' },
                 Sparklines.renderMiniSparkline?.({
@@ -22745,14 +22745,14 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
         // Показываем индикатор загрузки пока инициализируется
         if (!isInitialized || isLoading) {
-            return React.createElement('div', { className: 'card', style: { margin: '8px 0', padding: '24px', textAlign: 'center' } },
+            return React.createElement('div', { className: 'card widget-shadow-diary-glass widget-outline-diary-glass', style: { margin: '8px 0', padding: '24px', textAlign: 'center' } },
                 React.createElement('div', { style: { marginBottom: '8px' } }, 'Загрузка отчетов...'),
                 React.createElement('div', { className: 'muted', style: { fontSize: '90%' } }, 'Подготовка данных и кэширование результатов')
             );
         }
 
         return React.createElement('div', { className: 'page page-reports' },
-            React.createElement('div', { className: 'card' },
+            React.createElement('div', { className: 'card widget-shadow-diary-glass widget-outline-diary-glass' },
                 React.createElement('h2', { className: 'reports-title' }, 'Месячные отчёты'),
                 HEYS.monthlyReports?.MonthlyReportsContent
                     ? React.createElement(HEYS.monthlyReports.MonthlyReportsContent)
@@ -23146,13 +23146,13 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         }, [lsGet, profile, pIndex, anchorDate]);
 
         if (!report || report.daysWithData === 0) {
-            return h('div', { className: 'weekly-report-card weekly-report-card--empty' },
+            return h('div', { className: 'weekly-report-card weekly-report-card--empty widget-shadow-diary-glass widget-outline-diary-glass' },
                 h('div', { className: 'weekly-report-card__title' }, 'Неделя без данных'),
                 h('div', { className: 'weekly-report-card__subtitle' }, 'Добавьте 3+ дня, чтобы увидеть итоги')
             );
         }
 
-        return h('div', { className: 'weekly-report-card' },
+        return h('div', { className: 'weekly-report-card widget-shadow-diary-glass widget-outline-diary-glass' },
             h('div', { className: 'weekly-report-card__header' },
                 h('div', { className: 'weekly-report-card__title' }, 'Итоги недели'),
                 h('div', { className: 'weekly-report-card__range' }, report.rangeLabel)

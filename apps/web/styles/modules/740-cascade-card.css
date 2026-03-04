@@ -11,7 +11,54 @@
   box-shadow: var(--heys-diary-glass-card-shadow, 0 2px 12px rgba(0, 0, 0, 0.06));
   margin-bottom: var(--heys-diary-stack-gap, 12px);
   overflow: hidden;
-  transition: box-shadow 0.2s ease;
+  transition: box-shadow 0.2s ease, background 0.6s ease;
+}
+
+/* ─────────────────────────────────────────────────────
+   CASCADE CARD — АДАПТИВНЫЙ ТОН ДНЯ
+   Градиент тяжелее в верхнем левом углу, растворяется вправо-вниз.
+   Тон вычисляется по кол-ву негативных событий + прогрессу.
+───────────────────────────────────────────────────── */
+
+/* Зелёный — день в основном позитивный (≤ 1 негативное событие) */
+.cascade-card--tone-green {
+  background-image: linear-gradient(135deg,
+      rgba(16, 185, 129, 0.20) 0%,
+      rgba(16, 185, 129, 0.09) 42%,
+      rgba(16, 185, 129, 0.02) 72%,
+      transparent 100%);
+  background-size: 100% 180px;
+  background-repeat: no-repeat;
+  background-color: var(--card-bg, #fff);
+}
+
+/* Янтарный — 2-4 негативных события */
+.cascade-card--tone-amber {
+  background-image: linear-gradient(135deg,
+      rgba(245, 158, 11, 0.22) 0%,
+      rgba(245, 158, 11, 0.10) 42%,
+      rgba(245, 158, 11, 0.03) 72%,
+      transparent 100%);
+  background-size: 100% 180px;
+  background-repeat: no-repeat;
+  background-color: var(--card-bg, #fff);
+}
+
+/* Красный — 5+ негативных событий */
+.cascade-card--tone-red {
+  background-image: linear-gradient(135deg,
+      rgba(239, 68, 68, 0.20) 0%,
+      rgba(239, 68, 68, 0.09) 42%,
+      rgba(239, 68, 68, 0.02) 72%,
+      transparent 100%);
+  background-size: 100% 180px;
+  background-repeat: no-repeat;
+  background-color: var(--card-bg, #fff);
+}
+
+/* Нейтральный — нет событий ещё */
+.cascade-card--tone-neutral {
+  background: var(--card-bg, #fff);
 }
 
 .cascade-card:hover {
@@ -28,7 +75,7 @@
   border: none;
   cursor: pointer;
   text-align: left;
-  padding: 14px 16px 10px;
+  padding: var(--heys-diary-card-padding-y, 14px) var(--heys-diary-card-padding-x, 16px) 10px;
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -61,9 +108,9 @@
 }
 
 .cascade-card__title {
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--text, #1e293b);
+  font-size: var(--heys-diary-card-title-size, 14px);
+  font-weight: var(--heys-diary-card-title-weight, 600);
+  color: var(--heys-diary-card-title-color, var(--text, #1e293b));
   flex: 1;
 }
 
@@ -146,7 +193,7 @@
 ───────────────────────────────────────────────────── */
 
 .cascade-card__body {
-  padding: 0 16px 14px;
+  padding: 0 var(--heys-diary-card-padding-x, 16px) var(--heys-diary-card-padding-y, 14px);
   border-top: 1px solid var(--heys-diary-outline-divider-light, rgba(255, 255, 255, 0.5));
 }
 
@@ -319,7 +366,7 @@
   margin-top: 10px;
   border: 1px solid rgba(0, 0, 0, 0.07);
   border-radius: 10px;
-  background: var(--bg-card, #fff);
+  background: transparent;
   /* Fade at bottom to hint more content */
   -webkit-mask-image: linear-gradient(to bottom, black 80%, transparent 100%);
   mask-image: linear-gradient(to bottom, black 80%, transparent 100%);
@@ -628,17 +675,8 @@
    STATE MODIFIERS
 ───────────────────────────────────────────────────── */
 
-.cascade-card--strong .cascade-card__title {
-  color: #92400e;
-}
-
-.cascade-card--strong {
-  background: linear-gradient(135deg, #fff 85%, rgba(234, 179, 8, 0.06) 100%);
-}
-
-.cascade-card--recovery .cascade-card__title {
-  color: #0369a1;
-}
+/* .cascade-card--strong переопределяется tone-классом — оставляем пустым для обратной совместимости */
+.cascade-card--strong {}
 
 /* ─────────────────────────────────────────────────────
    DARK MODE
@@ -648,10 +686,6 @@
   background: var(--card-bg, #1e293b);
   border-color: var(--heys-diary-outline-border-dark, rgba(244, 63, 94, 0.42));
   box-shadow: var(--heys-diary-glass-card-shadow, 0 2px 12px rgba(0, 0, 0, 0.3));
-}
-
-[data-theme="dark"] .cascade-card__title {
-  color: var(--text, #f1f5f9);
 }
 
 [data-theme="dark"] .cascade-card__subtitle,
@@ -732,9 +766,49 @@
   background: rgba(245, 158, 11, 0.1);
 }
 
-[data-theme="dark"] .cascade-card--strong {
-  background: linear-gradient(135deg, #1e293b 85%, rgba(234, 179, 8, 0.08) 100%);
+/* dark: tone-green */
+[data-theme="dark"] .cascade-card--tone-green {
+  background-image: linear-gradient(135deg,
+      rgba(16, 185, 129, 0.28) 0%,
+      rgba(16, 185, 129, 0.13) 42%,
+      rgba(16, 185, 129, 0.04) 72%,
+      transparent 100%);
+  background-size: 100% 180px;
+  background-repeat: no-repeat;
+  background-color: var(--card-bg, #1e293b);
 }
+
+/* dark: tone-amber */
+[data-theme="dark"] .cascade-card--tone-amber {
+  background-image: linear-gradient(135deg,
+      rgba(245, 158, 11, 0.28) 0%,
+      rgba(245, 158, 11, 0.13) 42%,
+      rgba(245, 158, 11, 0.04) 72%,
+      transparent 100%);
+  background-size: 100% 180px;
+  background-repeat: no-repeat;
+  background-color: var(--card-bg, #1e293b);
+}
+
+/* dark: tone-red */
+[data-theme="dark"] .cascade-card--tone-red {
+  background-image: linear-gradient(135deg,
+      rgba(239, 68, 68, 0.28) 0%,
+      rgba(239, 68, 68, 0.12) 42%,
+      rgba(239, 68, 68, 0.04) 72%,
+      transparent 100%);
+  background-size: 100% 180px;
+  background-repeat: no-repeat;
+  background-color: var(--card-bg, #1e293b);
+}
+
+/* dark: tone-neutral */
+[data-theme="dark"] .cascade-card--tone-neutral {
+  background: var(--card-bg, #1e293b);
+}
+
+/* dark: strong — переопределяется tone-классом */
+[data-theme="dark"] .cascade-card--strong {}
 
 /* ─── CRS History — dark mode ─── */
 [data-theme="dark"] .cascade-crs-history {

@@ -132,7 +132,7 @@
                 },
             });
             return React.createElement('div', {
-                className: 'card tone-slate meal-card',
+                className: 'card tone-slate meal-card widget-shadow-diary-glass widget-outline-diary-glass',
                 style: { padding: '12px', marginTop: '8px' },
             }, 'Загрузка...');
         }
@@ -209,18 +209,14 @@
             ? mealQuality.color
             : (meal?.items?.length > 0 ? '#9ca3af' : 'transparent');
 
-        const mealCardClass = isCurrentMeal ? 'card tone-green meal-card meal-card--current' : 'card tone-slate meal-card';
+        const mealCardClass = isCurrentMeal
+            ? 'card tone-green meal-card meal-card--current widget-shadow-diary-glass widget-outline-diary-glass'
+            : 'card tone-slate meal-card widget-shadow-diary-glass widget-outline-diary-glass';
         const mealCardStyle = {
             marginTop: '8px',
             width: '100%',
             position: 'relative',
             paddingLeft: '12px',
-            ...(isCurrentMeal
-                ? {
-                    border: '2px solid #22c55e',
-                    boxShadow: '0 4px 12px rgba(34,197,94,0.25)',
-                }
-                : {}),
         };
         const computeDerivedProductFn = M.computeDerivedProduct || ((prod) => prod || {});
 
@@ -312,7 +308,13 @@
             }).length;
         }, [meal, totals, dayData, profile, products, pIndex]);
 
-        return React.createElement('div', { className: mealCardClass, 'data-meal-index': mealIndex, style: mealCardStyle },
+        return React.createElement('div', {
+            className: mealCardClass,
+            'data-meal-index': mealIndex,
+            'data-meal-id': meal?.id || '',
+            'data-meal-time': meal?.time || '',
+            style: mealCardStyle,
+        },
             qualityLineColor !== 'transparent' && React.createElement('div', {
                 className: 'meal-quality-line',
                 style: {
@@ -1921,17 +1923,17 @@
                                 : '0 2px 8px rgba(59,130,246,0.35)',
                         },
                     }, mealNumber),
-                    isCurrentMeal && React.createElement('span', {
+                    React.createElement('span', {
                         className: 'meal-current-label',
                         style: {
                             fontSize: '14px',
                             fontWeight: '800',
                             textTransform: 'uppercase',
                             letterSpacing: '1px',
-                            color: '#22c55e',
+                            color: isCurrentMeal ? '#22c55e' : '#3b82f6',
                             marginTop: '4px',
                         },
-                    }, 'ТЕКУЩИЙ ПРИЁМ'),
+                    }, isCurrentMeal ? 'ТЕКУЩИЙ ПРИЁМ' : 'ПРИЁМ'),
                 ),
                 React.createElement(MealCard, {
                     meal,
@@ -2096,6 +2098,12 @@
         React,
         mealsChartData,
         statsVm,
+        day,
+        dayTot,
+        normAbs,
+        pIndex,
+        getDailyNutrientColor,
+        getDailyNutrientTooltip,
         mealChartHintShown,
         setMealChartHintShown,
         setShowConfetti,
@@ -2109,13 +2117,11 @@
         const utils = U || HEYS.utils || {};
 
         return React.createElement('div', {
-            className: 'meals-chart-container',
+            className: 'meals-chart-container widget-shadow-diary-glass widget-outline-diary-glass',
             style: {
-                margin: '12px 0',
-                padding: '12px 16px',
+                margin: '0 0 var(--heys-diary-stack-gap, 12px) 0',
+                padding: 'var(--heys-diary-card-padding, 14px 16px)',
                 background: 'var(--surface, #fff)',
-                borderRadius: '12px',
-                border: '1px solid var(--border, #e5e7eb)',
             },
         },
             React.createElement('div', {
@@ -2129,7 +2135,13 @@
                 },
             },
                 React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '8px' } },
-                    React.createElement('span', { style: { fontSize: '13px', fontWeight: '600', color: 'var(--text-secondary, #6b7280)' } }, '📊 Распределение'),
+                    React.createElement('span', {
+                        style: {
+                            fontSize: 'var(--heys-diary-card-title-size, 14px)',
+                            fontWeight: 'var(--heys-diary-card-title-weight, 600)',
+                            color: 'var(--heys-diary-card-title-color, var(--text, #1e293b))',
+                        },
+                    }, 'Распределение'),
                     mealsChartData.avgQualityScore > 0 && React.createElement('span', {
                         className: 'meal-avg-score-badge',
                         style: {
@@ -2154,11 +2166,20 @@
                     })(),
                 ),
             ),
+            HEYS.dayDailySummary?.renderDailySummaryTable?.({
+                React,
+                day,
+                pIndex,
+                dayTot,
+                normAbs,
+                getDailyNutrientColor,
+                getDailyNutrientTooltip,
+            }),
             !mealChartHintShown && React.createElement('div', { className: 'meal-chart-hint' },
                 React.createElement('span', null, '👆'),
                 'Нажми на полоску для деталей',
             ),
-            mealsChartData.meals.length > 1 && React.createElement('div', {
+            false && mealsChartData.meals.length > 1 && React.createElement('div', {
                 className: 'meals-day-sparkline',
                 style: {
                     position: 'relative',
@@ -2368,7 +2389,17 @@
                     );
                 })(),
             ),
-            React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: '10px', position: 'relative' } },
+            React.createElement('div', {
+                style: {
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '6px',
+                    position: 'relative',
+                    marginTop: '10px',
+                    paddingTop: '8px',
+                    borderTop: '1px solid rgba(148,163,184,0.28)',
+                },
+            },
                 React.createElement('div', {
                     className: 'meals-target-line',
                     style: {
@@ -2419,16 +2450,45 @@
                             y: rect.bottom,
                         });
                     };
+
+                    const scrollToMealCard = (e) => {
+                        e.stopPropagation();
+                        try {
+                            let target = null;
+                            if (meal?.id) {
+                                target = document.querySelector(`[data-meal-id="${meal.id}"]`);
+                            }
+                            if (!target && meal?.time) {
+                                target = document.querySelector(`[data-meal-time="${meal.time}"]`);
+                            }
+                            if (!target && Number.isFinite(originalIndex)) {
+                                target = document.querySelector(`[data-meal-index="${originalIndex}"]`);
+                            }
+                            if (target && typeof target.scrollIntoView === 'function') {
+                                target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            }
+                        } catch (err) {
+                            console.warn('[HEYS.day] ⚠️ Scroll to meal failed:', err?.message || err);
+                        }
+                    };
+
                     const isLowScore = quality && quality.score < 50;
                     const isNewMeal = newMealAnimatingIndex === originalIndex;
+                    const qualityBadgeStyle = quality ? (
+                        quality.score >= 80
+                            ? { background: 'rgba(34, 197, 94, 0.14)', color: '#16a34a', borderColor: 'rgba(34, 197, 94, 0.28)' }
+                            : quality.score >= 50
+                                ? { background: 'rgba(245, 158, 11, 0.14)', color: '#b45309', borderColor: 'rgba(245, 158, 11, 0.28)' }
+                                : { background: 'rgba(239, 68, 68, 0.14)', color: '#dc2626', borderColor: 'rgba(239, 68, 68, 0.28)' }
+                    ) : null;
                     return React.createElement('div', {
                         key: i,
                         className: 'meal-bar-row' + (isNewMeal ? ' meal-bar-new' : ''),
                         style: {
                             display: 'flex',
                             alignItems: 'center',
-                            gap: '6px',
-                            padding: '4px 6px',
+                            gap: '4px',
+                            padding: '2px 4px',
                             marginLeft: '-6px',
                             marginRight: '-6px',
                             borderRadius: '6px',
@@ -2438,8 +2498,8 @@
                     },
                         meal.time && React.createElement('span', {
                             style: {
-                                width: '50px',
-                                fontSize: '14px',
+                                width: '46px',
+                                fontSize: '11px',
                                 fontWeight: '600',
                                 color: 'var(--text-primary, #374151)',
                                 textAlign: 'left',
@@ -2450,17 +2510,34 @@
                             style: {
                                 display: 'flex',
                                 alignItems: 'center',
-                                justifyContent: 'center',
-                                gap: '4px',
-                                minWidth: '90px',
-                                fontSize: '15px',
+                                justifyContent: 'flex-start',
+                                gap: '3px',
+                                minWidth: '84px',
+                                fontSize: '11px',
                                 fontWeight: '600',
                                 color: 'var(--text-primary, #1e293b)',
                                 flexShrink: 0,
+                                textAlign: 'left',
                             },
                         },
-                            React.createElement('span', { style: { fontSize: '16px' } }, meal.icon),
-                            React.createElement('span', null, meal.name),
+                            React.createElement('span', { style: { fontSize: '14px' } }, meal.icon),
+                            React.createElement('button', {
+                                type: 'button',
+                                onClick: scrollToMealCard,
+                                title: 'Прокрутить к этому приёму',
+                                style: {
+                                    border: 'none',
+                                    background: 'transparent',
+                                    padding: '0',
+                                    margin: '0',
+                                    fontSize: '14px',
+                                    fontWeight: '600',
+                                    color: 'inherit',
+                                    cursor: 'pointer',
+                                    textDecoration: 'none',
+                                    textAlign: 'left',
+                                },
+                            }, meal.name),
                         ),
                         React.createElement('div', {
                             className: 'meal-bar-container' + (isBest ? ' meal-bar-best' : '') + (quality && quality.score >= 80 ? ' meal-bar-excellent' : ''),
@@ -2471,7 +2548,7 @@
                             style: {
                                 flex: 1,
                                 minWidth: 0,
-                                height: '22px',
+                                height: '18px',
                                 background: 'var(--meal-bar-track, rgba(148,163,184,0.24))',
                                 borderRadius: '4px',
                                 overflow: 'visible',
@@ -2495,7 +2572,7 @@
                                     left: `calc(${barWidthPct}% + 6px)`,
                                     top: '50%',
                                     transform: 'translateY(-50%)',
-                                    fontSize: '10px',
+                                    fontSize: '9px',
                                     fontWeight: '600',
                                     color: 'var(--text-primary, #1f2937)',
                                     whiteSpace: 'nowrap',
@@ -2507,7 +2584,7 @@
                                 meal.kcal + ' ккал',
                                 React.createElement('span', {
                                     style: {
-                                        fontSize: '9px',
+                                        fontSize: '8px',
                                         color: 'var(--text-tertiary, #9ca3af)',
                                         fontWeight: '500',
                                     },
@@ -2538,7 +2615,28 @@
                                 ),
                             ),
                         ),
-                        quality && React.createElement('span', { className: 'meal-quality-score', style: { color: quality.color, flexShrink: 0 } }, '⭐' + quality.score),
+                        quality && React.createElement('span', {
+                            className: 'meal-quality-score',
+                            style: {
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '4px',
+                                minWidth: '46px',
+                                padding: '2px 6px',
+                                borderRadius: '999px',
+                                border: `1px solid ${qualityBadgeStyle?.borderColor || 'rgba(148,163,184,0.25)'}`,
+                                background: qualityBadgeStyle?.background || 'rgba(148,163,184,0.12)',
+                                color: qualityBadgeStyle?.color || quality.color,
+                                fontWeight: 700,
+                                fontSize: '11px',
+                                lineHeight: 1,
+                                flexShrink: 0,
+                            },
+                        },
+                            React.createElement('span', { style: { fontSize: '12px' } }, '⭐'),
+                            React.createElement('span', null, String(quality.score)),
+                        ),
                     );
                 }),
                 mealsChartData.qualityStreak >= 3 && React.createElement('div', { className: 'meal-quality-streak-banner' },

@@ -127,33 +127,219 @@
 
 /* ===== Tab Container ===== */
 /* Убираем ограничения родительских контейнеров для виджетов */
-/* Общий фон для вкладки Виджеты и Дневник */
-.wrap:has(.widgets-tab),
+/* Общий фон для вкладки Виджеты (НЕ Day — у него прозрачный фон) */
+.wrap:has(.widgets-tab) {
+  max-width: 100% !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  background-color: transparent !important;
+  background-image: none !important;
+}
+
+/* Для Day-вкладки — контейнеры прозрачные, виден ::before фон */
 .wrap:has(.page-day) {
   max-width: 100% !important;
   padding-left: 0 !important;
   padding-right: 0 !important;
-  background-color: var(--bg-primary, #ffffff);
-  /* Скролл работает через body — как на всех остальных вкладках.
-     overflow-y НЕ блокируем. */
+  background-color: transparent !important;
+  background-image: none !important;
 }
 
-[data-theme="dark"] .wrap:has(.widgets-tab),
+/* ───────────────────────────────────────────────────────────────────
+   НОВАЯ КОНЦЕПЦИЯ: фиксированный фон через ::before
+   Решает обе проблемы сразу:
+     1) Gradient единый от верха экрана — нет швов (::before не скроллится)
+     2) Хедер — frosted glass — маскирует контент без перекрытия gradient
+   ─────────────────────────────────────────────────────────────────── */
+
+/* Фиксированный слой-подложка — не скроллируется, всегда за контентом */
+body:has(.widgets-tab)::before,
+body:has(.page-day)::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-color: var(--bg-primary, #ffffff);
+  background-image:
+    linear-gradient(180deg, rgba(10, 132, 255, 0.22) 0px, rgba(10, 132, 255, 0.09) 100px, transparent 280px),
+    radial-gradient(1400px 1200px at 15% 0px, rgba(10, 132, 255, 0.13), transparent 62%);
+}
+
+/* body/html прозрачные — не перекрывают ::before */
+html:has(.widgets-tab),
+body:has(.widgets-tab),
+html:has(.page-day),
+body:has(.page-day) {
+  background: transparent;
+}
+
+/* Шапка: frosted glass + однотонный синеватый фон
+   - background ~90% опацитет → контент не просвечивает в padding-зоне
+   - Синеватый тон совпадает с gradient ::before → нет разрыва */
+body:has(.page-day) .hdr {
+  background: rgba(228, 241, 255, 0.91) !important;
+  backdrop-filter: blur(20px) saturate(1.6);
+  -webkit-backdrop-filter: blur(20px) saturate(1.6);
+  /* overflow visible чтобы ::after мог выступать ниже */
+  overflow: visible;
+}
+
+/* Плавный fade вниз — стирает жёсткую линию между шапкой и контентом */
+body:has(.page-day) .hdr::after {
+  content: '';
+  position: absolute;
+  bottom: -28px;
+  left: 0;
+  right: 0;
+  height: 28px;
+  background: linear-gradient(to bottom, rgba(228, 241, 255, 0.91) 0%, transparent 100%);
+  pointer-events: none;
+  z-index: -1;
+}
+
+[data-theme="dark"] .wrap:has(.widgets-tab) {
+  background-color: transparent !important;
+  background-image: none !important;
+}
+
 [data-theme="dark"] .wrap:has(.page-day) {
-  background-color: var(--bg-primary, #1a1a1a);
+  background-color: transparent !important;
+  background-image: none !important;
+}
+
+/* Тёмная тема: ::before с более высокой opacity */
+[data-theme="dark"] body:has(.widgets-tab)::before,
+[data-theme="dark"] body:has(.page-day)::before {
+  background-color: var(--bg-primary, #0f0f13);
+  background-image:
+    linear-gradient(180deg, rgba(10, 132, 255, 0.28) 0px, rgba(10, 132, 255, 0.12) 100px, transparent 280px),
+    radial-gradient(1400px 1200px at 15% 0px, rgba(10, 132, 255, 0.18), transparent 62%);
+}
+
+/* Тёмный frosted glass */
+[data-theme="dark"] body:has(.page-day) .hdr {
+  background: rgba(14, 20, 36, 0.88) !important;
+  backdrop-filter: blur(20px) saturate(1.6);
+  -webkit-backdrop-filter: blur(20px) saturate(1.6);
+  overflow: visible;
+}
+
+[data-theme="dark"] body:has(.page-day) .hdr::after {
+  content: '';
+  position: absolute;
+  bottom: -28px;
+  left: 0;
+  right: 0;
+  height: 28px;
+  background: linear-gradient(to bottom, rgba(14, 20, 36, 0.88) 0%, transparent 100%);
+  pointer-events: none;
+  z-index: -1;
+}
+
+/* ── Виджеты: frosted glass хедер (синеватый тон как у дневника) ── */
+body:has(.widgets-tab) .hdr {
+  background: rgba(228, 241, 255, 0.91) !important;
+  backdrop-filter: blur(20px) saturate(1.6);
+  -webkit-backdrop-filter: blur(20px) saturate(1.6);
+  overflow: visible;
+}
+
+body:has(.widgets-tab) .hdr::after {
+  content: '';
+  position: absolute;
+  bottom: -28px;
+  left: 0;
+  right: 0;
+  height: 28px;
+  background: linear-gradient(to bottom, rgba(228, 241, 255, 0.91) 0%, transparent 100%);
+  pointer-events: none;
+  z-index: -1;
+}
+
+[data-theme="dark"] body:has(.widgets-tab) .hdr {
+  background: rgba(14, 20, 36, 0.88) !important;
+  backdrop-filter: blur(20px) saturate(1.6);
+  -webkit-backdrop-filter: blur(20px) saturate(1.6);
+  overflow: visible;
+}
+
+[data-theme="dark"] body:has(.widgets-tab) .hdr::after {
+  content: '';
+  position: absolute;
+  bottom: -28px;
+  left: 0;
+  right: 0;
+  height: 28px;
+  background: linear-gradient(to bottom, rgba(14, 20, 36, 0.88) 0%, transparent 100%);
+  pointer-events: none;
+  z-index: -1;
+}
+
+/* ── Отчёты: frosted glass хедер ── */
+body:has(.page-reports) .hdr {
+  background: rgba(248, 250, 255, 0.92) !important;
+  backdrop-filter: blur(20px) saturate(1.6);
+  -webkit-backdrop-filter: blur(20px) saturate(1.6);
+  overflow: visible;
+}
+
+body:has(.page-reports) .hdr::after {
+  content: '';
+  position: absolute;
+  bottom: -28px;
+  left: 0;
+  right: 0;
+  height: 28px;
+  background: linear-gradient(to bottom, rgba(248, 250, 255, 0.92) 0%, transparent 100%);
+  pointer-events: none;
+  z-index: -1;
+}
+
+[data-theme="dark"] body:has(.page-reports) .hdr {
+  background: rgba(18, 18, 28, 0.90) !important;
+  backdrop-filter: blur(20px) saturate(1.6);
+  -webkit-backdrop-filter: blur(20px) saturate(1.6);
+  overflow: visible;
+}
+
+[data-theme="dark"] body:has(.page-reports) .hdr::after {
+  content: '';
+  position: absolute;
+  bottom: -28px;
+  left: 0;
+  right: 0;
+  height: 28px;
+  background: linear-gradient(to bottom, rgba(18, 18, 28, 0.90) 0%, transparent 100%);
+  pointer-events: none;
+  z-index: -1;
 }
 
 /* tab-content-swipeable для вкладок — не переопределяем overflow.
    Скролл работает через body нативно. */
-.tab-content-swipeable:has(.widgets-tab),
-.tab-content-swipeable:has(.page-day) {
+.tab-content-swipeable:has(.widgets-tab) {
   padding: 0 !important;
-  background-color: var(--bg-primary, #ffffff);
+  background-color: transparent !important;
+  background-image: none !important;
 }
 
-[data-theme="dark"] .tab-content-swipeable:has(.widgets-tab),
+.tab-content-swipeable:has(.page-day) {
+  padding: 0 !important;
+  background-color: transparent !important;
+  background-image: none !important;
+}
+
+[data-theme="dark"] .tab-content-swipeable:has(.widgets-tab) {
+  background-color: transparent !important;
+  background-image: none !important;
+}
+
 [data-theme="dark"] .tab-content-swipeable:has(.page-day) {
-  background-color: var(--bg-primary, #1a1a1a);
+  background-color: transparent !important;
+  background-image: none !important;
 }
 
 .widgets-tab,
@@ -173,8 +359,16 @@
   /* Предотвращаем горизонтальный overflow */
   width: 100%;
   overflow-x: hidden;
-  /* Базовый фон */
-  background-color: var(--bg-primary, #ffffff);
+}
+
+/* Виджеты: прозрачный — виден фиксированный gradient ::before */
+.widgets-tab {
+  background-color: transparent;
+}
+
+/* Day: прозрачный — виден фиксированный gradient ::before */
+.page-day {
+  background-color: transparent;
 }
 
 .widgets-tab {
@@ -188,21 +382,25 @@
 .page-day {
   /* Повторяющийся паттерн голубой - песочный для длинного скролла */
   background-image:
-    /* 1. Голубой слева вверху */
-    radial-gradient(1400px 1200px at 15% 400px, rgba(10, 132, 255, 0.08), transparent 60%),
-    /* 2. Песочный справа */
+    /* 1. Песочный справа */
     radial-gradient(1300px 1100px at 85% 1200px, rgba(255, 149, 0, 0.06), transparent 60%),
-    /* 3. Голубой справа */
+    /* 2. Голубой справа */
     radial-gradient(1400px 1200px at 85% 2000px, rgba(10, 132, 255, 0.08), transparent 60%),
-    /* 4. Песочный слева */
-    radial-gradient(1300px 1100px at 15% 2800px, rgba(255, 149, 0, 0.06), transparent 60%);
+    /* 3. Песочный слева */
+    radial-gradient(1300px 1100px at 15% 2800px, rgba(255, 149, 0, 0.06), transparent 60%),
+    /* 4. Голубой внизу — плавный переход в следующий тайл */
+    linear-gradient(to bottom, transparent 78%, rgba(10, 132, 255, 0.10) 100%);
   background-size: 100% 3200px;
   background-repeat: repeat-y;
 }
 
-[data-theme="dark"] .widgets-tab,
+[data-theme="dark"] .widgets-tab {
+  background-color: transparent;
+}
+
+/* [data-theme="dark"] .page-day — прозрачный, виден ::before со своим dark gradient */
 [data-theme="dark"] .page-day {
-  background-color: var(--bg-primary, #1a1a1a);
+  background-color: transparent;
 }
 
 [data-theme="dark"] .widgets-tab {
@@ -215,17 +413,19 @@
 
 [data-theme="dark"] .page-day {
   background-image:
-    /* 1. Голубой слева вверху */
-    radial-gradient(1400px 1200px at 15% 400px, rgba(10, 132, 255, 0.12), transparent 60%),
-    /* 2. Песочный справа */
+    /* 1. Песочный справа */
     radial-gradient(1300px 1100px at 85% 1200px, rgba(255, 149, 0, 0.10), transparent 60%),
-    /* 3. Голубой справа */
+    /* 2. Голубой справа */
     radial-gradient(1400px 1200px at 85% 2000px, rgba(10, 132, 255, 0.12), transparent 60%),
-    /* 4. Песочный слева */
-    radial-gradient(1300px 1100px at 15% 2800px, rgba(255, 149, 0, 0.10), transparent 60%);
+    /* 3. Песочный слева */
+    radial-gradient(1300px 1100px at 15% 2800px, rgba(255, 149, 0, 0.10), transparent 60%),
+    /* 4. Голубой внизу — плавный переход в следующий тайл */
+    linear-gradient(to bottom, transparent 78%, rgba(10, 132, 255, 0.14) 100%);
   background-size: 100% 3200px;
   background-repeat: repeat-y;
 }
+
+/* [data-theme="dark"] body:has(.page-day) .hdr — описан выше в новой концепции */
 
 .widgets-tab__header {
   display: flex;
@@ -5290,6 +5490,12 @@
 :root {
   --heys-diary-glass-card-shadow: var(--widget-shadow-card);
   --heys-diary-stack-gap: 18px;
+  --heys-diary-card-padding-y: 14px;
+  --heys-diary-card-padding-x: 16px;
+  --heys-diary-card-padding: var(--heys-diary-card-padding-y) var(--heys-diary-card-padding-x);
+  --heys-diary-card-title-size: 14px;
+  --heys-diary-card-title-weight: 600;
+  --heys-diary-card-title-color: var(--text, #1e293b);
   /* Shared outline tokens (border + expanded dividers) */
   --heys-diary-outline-border-light: rgba(255, 255, 255, 0.5);
   --heys-diary-outline-border-dark: rgba(244, 63, 94, 0.42);
@@ -5349,6 +5555,7 @@
   background: var(--widget-glass-bg) !important;
   border: 1px solid var(--widget-glass-border, var(--heys-diary-outline-border-light)) !important;
   border-radius: var(--widget-radius-lg) !important;
+  padding: var(--heys-diary-card-padding, 14px 16px) !important;
   margin-bottom: var(--heys-diary-stack-gap, 12px) !important;
   box-shadow: var(--heys-diary-glass-card-shadow);
 }
@@ -5362,6 +5569,19 @@
 [data-theme="dark"] .supplements-card.widget--supplements-diary {
   border-color: var(--heys-diary-outline-border-dark) !important;
   box-shadow: var(--heys-diary-glass-card-shadow);
+}
+
+/* Витамины: все выпиты → зелёный фон */
+.supplements-card.widget--supplements-diary.widget--supplements-diary--all-taken {
+  --widget-glass-bg: rgba(236, 253, 245, 0.72);
+  --widget-accent: rgba(16, 185, 129, 0.15);
+  --widget-accent-strong: rgba(16, 185, 129, 0.32);
+}
+
+[data-theme="dark"] .widget--supplements-diary--all-taken {
+  --widget-glass-bg: rgba(16, 185, 129, 0.12);
+  --widget-accent-strong: rgba(16, 185, 129, 0.25);
+  --widget-glass-border: rgba(16, 185, 129, 0.2);
 }
 
 /* Витамины: без tap-смещения карточки, только раскрытие вниз */
@@ -5393,10 +5613,11 @@
   background: var(--widget-glass-bg) !important;
   border: 1px solid var(--widget-glass-border, var(--heys-diary-outline-border-light)) !important;
   border-radius: var(--widget-radius-lg) !important;
+  padding: var(--heys-diary-card-padding, 14px 16px) !important;
   margin-bottom: var(--heys-diary-stack-gap, 12px) !important;
-  --widget-glass-bg: rgba(236, 253, 245, 0.72);
-  --widget-accent: rgba(16, 185, 129, 0.15);
-  --widget-accent-strong: rgba(16, 185, 129, 0.32);
+  --widget-glass-bg: rgba(224, 242, 254, 0.72);
+  --widget-accent: rgba(14, 165, 233, 0.15);
+  --widget-accent-strong: rgba(14, 165, 233, 0.32);
   box-shadow: var(--heys-diary-glass-card-shadow);
 }
 
@@ -5408,9 +5629,9 @@
 }
 
 [data-theme="dark"] .meal-rec-card.widget--meal-rec-diary {
-  --widget-glass-bg: rgba(16, 185, 129, 0.12);
-  --widget-accent-strong: rgba(16, 185, 129, 0.25);
-  --widget-glass-border: rgba(244, 63, 94, 0.2);
+  --widget-glass-bg: rgba(14, 165, 233, 0.12);
+  --widget-accent-strong: rgba(14, 165, 233, 0.25);
+  --widget-glass-border: rgba(14, 165, 233, 0.2);
   box-shadow: var(--heys-diary-glass-card-shadow);
 }
 
@@ -5424,6 +5645,7 @@
   background: var(--widget-glass-bg) !important;
   border: 1px solid var(--widget-glass-border, rgba(59, 130, 246, 0.2)) !important;
   border-radius: var(--widget-radius-lg) !important;
+  padding: var(--heys-diary-card-padding, 14px 16px) !important;
   margin-bottom: var(--heys-diary-stack-gap, 12px) !important;
   --widget-glass-bg: rgba(239, 246, 255, 0.72);
   --widget-accent: rgba(59, 130, 246, 0.15);
@@ -5443,6 +5665,23 @@
 .meal-rec-card.widget--meal-rec-diary:active,
 .meal-rec-card.widget--meal-rec-diary-water:active {
   transform: none !important;
+}
+
+.meal-rec-card.widget--meal-rec-diary .meal-rec-card__header,
+.meal-rec-card.widget--meal-rec-diary-water .meal-rec-card__header {
+  padding: 0 0 6px 0 !important;
+}
+
+.meal-rec-card.widget--meal-rec-diary .meal-rec-card__macros,
+.meal-rec-card.widget--meal-rec-diary-water .meal-rec-card__macros {
+  padding: 6px 0 12px 0 !important;
+}
+
+.meal-rec-card.widget--meal-rec-diary .meal-rec-card__details,
+.meal-rec-card.widget--meal-rec-diary-water .meal-rec-card__details,
+.meal-rec-card.widget--meal-rec-diary .meal-rec-card__details--multi,
+.meal-rec-card.widget--meal-rec-diary-water .meal-rec-card__details--multi {
+  padding: 0 0 10px 0 !important;
 }
 
 /* Плавное раскрытие вниз без сдвига карточки */

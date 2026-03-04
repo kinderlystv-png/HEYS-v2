@@ -212,7 +212,7 @@
             });
         };
 
-        return h('div', { className: 'monthly-week-card' + (isCurrent ? ' monthly-week-card--current' : '') },
+        return h('div', { className: 'monthly-week-card widget-shadow-diary-glass widget-outline-diary-glass' + (isCurrent ? ' monthly-week-card--current' : '') },
             h('div', { className: 'monthly-week-card__header' },
                 h('div', { className: 'monthly-week-card__title' }, rangeLabel + daysLabel),
                 h('div', { className: 'monthly-week-card__header-actions' },

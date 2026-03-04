@@ -12,41 +12,75 @@
       fmtVal,
       pct,
       getDailyNutrientColor,
-      getDailyNutrientTooltip
+      getDailyNutrientTooltip,
+      tableOnly
     } = params || {};
 
     if (!React) return null;
 
-    const factKeys = ['kcal', 'carbs', 'simple', 'complex', 'prot', 'fat', 'bad', 'good', 'trans', 'fiber', 'gi', 'harm'];
+    const factKeys = ['kcal', 'prot', 'fat', 'carbs', 'harm', 'fiber', 'gi'];
+    const effectiveNormAbs = normAbs || {};
+    const effectiveDayTot = { ...(dayTot || {}) };
+    const GOOD_GREEN = '#16a34a';
+    const BAD_RED = '#dc2626';
+    const safeTooltip = typeof getDailyNutrientTooltip === 'function'
+      ? getDailyNutrientTooltip
+      : () => '';
+    const safeFmtVal = typeof fmtVal === 'function'
+      ? fmtVal
+      : (k, v) => {
+        const n = +v || 0;
+        if (k === 'harm') return Number.isFinite(n) ? n.toFixed(1) : '0.0';
+        return String(Math.round(n));
+      };
+
+    function isHigherBetter(k) {
+      return k === 'prot' || k === 'fiber';
+    }
+
+    function getFactColor(k, f, n) {
+      if (!n) return null;
+      const higherBetter = isHigherBetter(k);
+      if (higherBetter) return f >= n ? GOOD_GREEN : BAD_RED;
+      return f <= n ? GOOD_GREEN : BAD_RED;
+    }
+
+    function getDeviationColor(k, diff) {
+      const higherBetter = isHigherBetter(k);
+      if (higherBetter) return diff >= 0 ? GOOD_GREEN : BAD_RED;
+      return diff <= 0 ? GOOD_GREEN : BAD_RED;
+    }
 
     function devCell(k) {
-      const n = +normAbs[k] || 0; if (!n) return React.createElement('td', { key: 'ds-dv' + k }, '-');
-      const f = +dayTot[k] || 0; const d = ((f - n) / n) * 100; const diff = Math.round(d);
-      const color = diff > 0 ? '#dc2626' : (diff < 0 ? '#059669' : '#111827'); const fw = diff !== 0 ? 600 : 400;
+      const n = +effectiveNormAbs[k] || 0; if (!n) return React.createElement('td', { key: 'ds-dv' + k }, '-');
+      const f = +effectiveDayTot[k] || 0;
+
+      if (k === 'harm') {
+        const deltaUnits = Math.round((f - n) * 10) / 10;
+        const color = getDeviationColor(k, deltaUnits);
+        const fw = deltaUnits !== 0 ? 600 : 400;
+        const value = (deltaUnits > 0 ? '+' : '') + deltaUnits.toFixed(1);
+        return React.createElement('td', { key: 'ds-dv' + k, style: { color, fontWeight: fw } }, value);
+      }
+
+      const d = ((f - n) / n) * 100; const diff = Math.round(d);
+      const color = getDeviationColor(k, diff);
+      const fw = diff !== 0 ? 600 : 400;
       return React.createElement('td', { key: 'ds-dv' + k, style: { color, fontWeight: fw } }, (diff > 0 ? '+' : '') + diff + '%');
     }
 
     function factCell(k) {
-      const f = +dayTot[k] || 0; const n = +normAbs[k] || 0; if (!n) return React.createElement('td', { key: 'ds-fv' + k }, fmtVal(k, f));
-      const over = f > n, under = f < n; let color = null; let fw = 600;
-      if (['bad', 'trans'].includes(k)) { if (under) color = '#059669'; else if (over) color = '#dc2626'; else fw = 400; }
-      else if (k === 'simple') { if (under) color = '#059669'; else if (over) color = '#dc2626'; else fw = 400; }
-      else if (k === 'complex') { if (over) color = '#059669'; else if (under) color = '#dc2626'; else fw = 400; }
-      else if (k === 'fiber') { if (over) color = '#059669'; else if (under) color = '#dc2626'; else fw = 400; }
-      else if (k === 'kcal') { if (over) color = '#dc2626'; else fw = 400; }
-      else if (k === 'prot') { if (over) color = '#059669'; else fw = 400; }
-      else if (k === 'carbs' || k === 'fat') { if (over) color = '#dc2626'; else fw = 400; }
-      else if (k === 'good') { if (over) color = '#059669'; else if (under) color = '#dc2626'; else fw = 400; }
-      else if (k === 'gi' || k === 'harm') { if (over) color = '#dc2626'; else if (under) color = '#059669'; else fw = 400; }
-      else { fw = 400; }
+      const f = +effectiveDayTot[k] || 0; const n = +effectiveNormAbs[k] || 0; if (!n) return React.createElement('td', { key: 'ds-fv' + k }, safeFmtVal(k, f));
+      const color = getFactColor(k, f, n);
+      const fw = 600;
       const style = color ? { color, fontWeight: fw } : { fontWeight: fw };
-      return React.createElement('td', { key: 'ds-fv' + k, style }, fmtVal(k, f));
+      return React.createElement('td', { key: 'ds-fv' + k, style }, safeFmtVal(k, f));
     }
 
-    function normVal(k) { const n = +normAbs[k] || 0; return n ? fmtVal(k, n) : '-'; }
+    function normVal(k) { const n = +effectiveNormAbs[k] || 0; return n ? safeFmtVal(k, n) : '-'; }
 
     const per100Head = ['', '', '', '', '', '', '', '', '', '']; // 10 per100 columns blank (соответствует таблице приёма)
-    const factHead = ['ккал', 'У', 'Прост', 'Сл', 'Б', 'Ж', 'ВрЖ', 'ПолЖ', 'СупЖ', 'Клет', 'ГИ', 'Вред', '']; // последний пустой (кнопка)
+    const factHead = ['ккал', 'Б', 'Ж', 'У', 'вред', 'клет', 'Глик', '']; // последний пустой (кнопка)
 
     function getProblemStyle(k, f, mt) {
       if (!f) return {};
@@ -70,69 +104,153 @@
     const mealRowsDesktop = [];
     const mealRowsMobile = [];
 
+    function timeToMinutes(time) {
+      if (!time || typeof time !== 'string') return Number.MAX_SAFE_INTEGER;
+      const m = time.match(/^(\d{1,2}):(\d{2})$/);
+      if (!m) return Number.MAX_SAFE_INTEGER;
+      const h = Number(m[1]);
+      const mm = Number(m[2]);
+      if (!Number.isFinite(h) || !Number.isFinite(mm)) return Number.MAX_SAFE_INTEGER;
+      return (h * 60) + mm;
+    }
+
+    function fallbackMealNameByTime(time) {
+      const t = timeToMinutes(time);
+      if (!Number.isFinite(t) || t === Number.MAX_SAFE_INTEGER) return 'Приём';
+      if (t < 11 * 60) return 'Завтрак';
+      if (t < 16 * 60) return 'Обед';
+      if (t < 21 * 60) return 'Ужин';
+      return 'Перекус';
+    }
+
     if (day && day.meals && Array.isArray(day.meals) && window.HEYS?.models?.mealTotals) {
       const getMT = window.HEYS.getMealType || null;
-      day.meals.forEach((m, idx) => {
+      const totalsFromMeals = { kcal: 0, prot: 0, fat: 0, carbs: 0, fiber: 0, giWeighted: 0, harmWeighted: 0, grams: 0 };
+
+      function readGiFromSources(item, product) {
+        const v = product?.gi ?? product?.gi100 ?? product?.GI ?? product?.giIndex
+          ?? item?.gi ?? item?.gi100 ?? item?.GI ?? item?.giIndex;
+        return Number.isFinite(+v) ? (+v) : null;
+      }
+
+      function readHarmFromSources(item, product) {
+        const pHarm = window.HEYS?.models?.normalizeHarm
+          ? window.HEYS.models.normalizeHarm(product)
+          : (product?.harm ?? product?.harmScore ?? product?.harmscore ?? product?.harm100);
+        const iHarm = item?.harm ?? item?.harmScore ?? item?.harmscore ?? item?.harm100;
+        const v = pHarm ?? iHarm;
+        return Number.isFinite(+v) ? (+v) : null;
+      }
+
+      const mealsSorted = day.meals
+        .map((m, originalIndex) => ({ m, originalIndex }))
+        .sort((a, b) => {
+          const ta = timeToMinutes(a.m?.time);
+          const tb = timeToMinutes(b.m?.time);
+          if (ta !== tb) return ta - tb;
+          return a.originalIndex - b.originalIndex;
+        });
+
+      mealsSorted.forEach(({ m, originalIndex }, idx) => {
         if (!m.items || m.items.length === 0) return;
         const mt = window.HEYS.models.mealTotals(m, pIndex) || {};
 
-        let label = m.time || `П${idx + 1}`;
+        // Fallback quality metrics (gi/harm) if current totals provider does not expose them
+        if (mt.gi == null || mt.harm == null) {
+          let gramsSum = 0;
+          let giWeighted = 0;
+          let harmWeighted = 0;
+          (m.items || []).forEach((it) => {
+            const grams = +it.grams || 0;
+            if (!grams) return;
+            const product = window.HEYS?.models?.getProductFromItem
+              ? window.HEYS.models.getProductFromItem(it, pIndex)
+              : null;
+
+            const gi = readGiFromSources(it, product);
+            const harm = readHarmFromSources(it, product);
+            gramsSum += grams;
+            if (gi != null) giWeighted += (+gi || 0) * grams;
+            if (harm != null) harmWeighted += (+harm || 0) * grams;
+          });
+          if (gramsSum > 0) {
+            if (mt.gi == null) mt.gi = giWeighted / gramsSum;
+            if (mt.harm == null) mt.harm = harmWeighted / gramsSum;
+          }
+        }
+
+        // Aggregate for robust day-level fallback (fix for missing harm/gi in day totals)
+        totalsFromMeals.kcal += +mt.kcal || 0;
+        totalsFromMeals.prot += +mt.prot || 0;
+        totalsFromMeals.fat += +mt.fat || 0;
+        totalsFromMeals.carbs += +mt.carbs || 0;
+        totalsFromMeals.fiber += +mt.fiber || 0;
+
+        let mealGrams = 0;
+        (m.items || []).forEach((it) => { mealGrams += (+it.grams || 0); });
+        if (mealGrams > 0) {
+          totalsFromMeals.grams += mealGrams;
+          totalsFromMeals.giWeighted += (+mt.gi || 0) * mealGrams;
+          totalsFromMeals.harmWeighted += (+mt.harm || 0) * mealGrams;
+        }
+
+        let label = fallbackMealNameByTime(m.time);
         if (getMT) {
           try {
             const tInfo = getMT(m);
             if (tInfo && tInfo.name) {
-              label = m.time ? `${tInfo.name.substring(0, 1)} ${m.time}` : tInfo.name;
+              label = tInfo.name;
             }
           } catch (e) { }
         }
 
         mealRowsDesktop.push(
-          React.createElement('tr', { key: `md-${idx}`, className: 'meal-summary-row', style: { opacity: 0.85, fontSize: '0.95em' } },
+          React.createElement('tr', { key: `md-${originalIndex}`, className: 'meal-summary-row', style: { opacity: 0.85, fontSize: '0.95em' } },
             React.createElement('td', null, ''),
             React.createElement('td', null, ''),
             per100Head.map((_, i) => i === per100Head.length - 1
-              ? React.createElement('td', { key: `m-${idx}-L${i}`, style: { textAlign: 'right', paddingRight: '6px', whiteSpace: 'nowrap', color: '#6b7280' }, title: 'Приём пищи' }, label)
-              : React.createElement('td', { key: `m-${idx}-ph${i}` }, '')),
+              ? React.createElement('td', { key: `m-${originalIndex}-L${i}`, style: { textAlign: 'right', paddingRight: '6px', whiteSpace: 'nowrap', color: '#6b7280' }, title: 'Приём пищи' }, label)
+              : React.createElement('td', { key: `m-${originalIndex}-ph${i}` }, '')),
             factKeys.map(k => {
               const f = +(mt[k] || 0);
-              return React.createElement('td', { key: `m-${idx}-${k}`, style: getProblemStyle(k, f, mt) }, fmtVal(k, f));
+              return React.createElement('td', { key: `m-${originalIndex}-${k}`, style: getProblemStyle(k, f, mt) }, safeFmtVal(k, f));
             }),
             React.createElement('td', null, '')
           )
         );
 
-        let shortLabel = label.length > 5 ? label.substring(0, 5) : label;
-        if (m.time) shortLabel = m.time;
+        const shortLabel = label;
 
         mealRowsMobile.push(
-          React.createElement('div', { key: `mm-${idx}`, className: 'mds-row mds-meal-row', style: { opacity: 0.9, borderBottom: '1px dashed rgba(0,0,0,0.05)' } },
+          React.createElement('div', { key: `mm-${originalIndex}`, className: 'mds-row mds-meal-row', style: { opacity: 0.9, borderBottom: '1px dashed rgba(0,0,0,0.05)' } },
             React.createElement('span', { className: 'mds-label', style: { fontSize: '0.85em', color: '#6b7280' }, title: label }, shortLabel),
             React.createElement('span', { style: getProblemStyle('kcal', mt.kcal, mt) }, Math.round(mt.kcal || 0)),
-            React.createElement('span', { style: getProblemStyle('carbs', mt.carbs, mt) }, Math.round(mt.carbs || 0)),
-            React.createElement('span', { className: 'mds-dim' },
-              React.createElement('span', { style: getProblemStyle('simple', mt.simple, mt) }, pct(mt.simple, mt.carbs)),
-              '/',
-              React.createElement('span', { style: getProblemStyle('complex', mt.complex, mt) }, pct(mt.complex, mt.carbs))
-            ),
             React.createElement('span', { style: getProblemStyle('prot', mt.prot, mt) }, Math.round(mt.prot || 0)),
             React.createElement('span', { style: getProblemStyle('fat', mt.fat, mt) }, Math.round(mt.fat || 0)),
-            React.createElement('span', { className: 'mds-dim' },
-              React.createElement('span', { style: getProblemStyle('bad', mt.bad, mt) }, pct(mt.bad, mt.fat)),
-              '/',
-              React.createElement('span', { style: getProblemStyle('good', mt.good, mt) }, pct(mt.good, mt.fat)),
-              '/',
-              React.createElement('span', { style: getProblemStyle('trans', mt.trans, mt) }, pct(mt.trans, mt.fat))
-            ),
+            React.createElement('span', { style: getProblemStyle('carbs', mt.carbs, mt) }, Math.round(mt.carbs || 0)),
+            React.createElement('span', { style: getProblemStyle('harm', mt.harm, mt) }, safeFmtVal('harm', mt.harm || 0)),
             React.createElement('span', { style: getProblemStyle('fiber', mt.fiber, mt) }, Math.round(mt.fiber || 0)),
-            React.createElement('span', { style: getProblemStyle('gi', mt.gi, mt) }, Math.round(mt.gi || 0)),
-            React.createElement('span', { style: getProblemStyle('harm', mt.harm, mt) }, fmtVal('harm', mt.harm || 0))
+            React.createElement('span', { style: getProblemStyle('gi', mt.gi, mt) }, Math.round(mt.gi || 0))
           )
         );
       });
+
+      // Apply fallback totals only when source totals are missing/zero but meals clearly have values
+      const sourceHarm = +effectiveDayTot.harm || 0;
+      const sourceGi = +effectiveDayTot.gi || 0;
+      const harmFallback = totalsFromMeals.grams > 0 ? (totalsFromMeals.harmWeighted / totalsFromMeals.grams) : 0;
+      const giFallback = totalsFromMeals.grams > 0 ? (totalsFromMeals.giWeighted / totalsFromMeals.grams) : 0;
+
+      if (sourceHarm <= 0 && harmFallback > 0) effectiveDayTot.harm = harmFallback;
+      if (sourceGi <= 0 && giFallback > 0) effectiveDayTot.gi = giFallback;
+      if ((+effectiveDayTot.prot || 0) <= 0 && totalsFromMeals.prot > 0) effectiveDayTot.prot = totalsFromMeals.prot;
+      if ((+effectiveDayTot.carbs || 0) <= 0 && totalsFromMeals.carbs > 0) effectiveDayTot.carbs = totalsFromMeals.carbs;
+      if ((+effectiveDayTot.fat || 0) <= 0 && totalsFromMeals.fat > 0) effectiveDayTot.fat = totalsFromMeals.fat;
+      if ((+effectiveDayTot.fiber || 0) <= 0 && totalsFromMeals.fiber > 0) effectiveDayTot.fiber = totalsFromMeals.fiber;
+      if ((+effectiveDayTot.kcal || 0) <= 0 && totalsFromMeals.kcal > 0) effectiveDayTot.kcal = totalsFromMeals.kcal;
     }
 
-    return React.createElement('div', { className: 'card tone-slate', style: { marginTop: '8px', overflowX: 'auto' } },
-      React.createElement('div', { className: 'section-title', style: { marginBottom: '4px' } }, 'СУТОЧНЫЕ ИТОГИ'),
+    const tableContent = React.createElement(React.Fragment, null,
       React.createElement('table', { className: 'tbl meals-table daily-summary' },
         React.createElement('thead', null, React.createElement('tr', null,
           React.createElement('th', null, ''),
@@ -143,18 +261,18 @@
         React.createElement('tbody', null,
           ...mealRowsDesktop,
           // Факт
-          React.createElement('tr', null,
+          React.createElement('tr', { style: { borderTop: '1px solid rgba(59, 130, 246, 0.22)' } },
             React.createElement('td', null, ''),
             React.createElement('td', null, ''),
-            per100Head.map((_, i) => i === per100Head.length - 1 ? React.createElement('td', { key: 'ds-pvL' + i, style: { fontWeight: 600, textAlign: 'right', paddingRight: '6px' }, title: 'Факт' }, 'Ф') : React.createElement('td', { key: 'ds-pv' + i }, '')),
+            per100Head.map((_, i) => i === per100Head.length - 1 ? React.createElement('td', { key: 'ds-pvL' + i, style: { fontWeight: 600, textAlign: 'right', paddingRight: '6px' }, title: 'Факт' }, 'Факт') : React.createElement('td', { key: 'ds-pv' + i }, '')),
             factKeys.map(k => factCell(k)),
             React.createElement('td', null, '')
           ),
           // Норма
-          React.createElement('tr', null,
+          React.createElement('tr', { style: { borderTop: '1px solid rgba(148, 163, 184, 0.28)' } },
             React.createElement('td', null, ''),
             React.createElement('td', null, ''),
-            per100Head.map((_, i) => i === per100Head.length - 1 ? React.createElement('td', { key: 'ds-npL' + i, style: { fontWeight: 600, textAlign: 'right', paddingRight: '6px' }, title: 'Норма' }, 'Н') : React.createElement('td', { key: 'ds-np' + i }, '')),
+            per100Head.map((_, i) => i === per100Head.length - 1 ? React.createElement('td', { key: 'ds-npL' + i, style: { fontWeight: 600, textAlign: 'right', paddingRight: '6px' }, title: 'Норма' }, 'Норма') : React.createElement('td', { key: 'ds-np' + i }, '')),
             factKeys.map(k => React.createElement('td', { key: 'ds-nv' + k }, normVal(k))),
             React.createElement('td', null, '')
           ),
@@ -162,7 +280,7 @@
           React.createElement('tr', { className: 'daily-dev-row' },
             React.createElement('td', null, ''),
             React.createElement('td', null, ''),
-            per100Head.map((_, i) => i === per100Head.length - 1 ? React.createElement('td', { key: 'ds-dpL' + i, style: { fontWeight: 600, textAlign: 'right', paddingRight: '6px' }, title: 'Отклонение' }, 'Δ') : React.createElement('td', { key: 'ds-dp' + i }, '')),
+            per100Head.map((_, i) => i === per100Head.length - 1 ? React.createElement('td', { key: 'ds-dpL' + i, style: { fontWeight: 600, textAlign: 'right', paddingRight: '6px' }, title: 'Отклонение' }, 'Откл.') : React.createElement('td', { key: 'ds-dp' + i }, '')),
             factKeys.map(k => devCell(k)),
             React.createElement('td', null, '')
           )
@@ -174,108 +292,95 @@
         React.createElement('div', { className: 'mds-header' },
           React.createElement('span', { className: 'mds-label' }, ''),
           React.createElement('span', null, 'ккал'),
-          React.createElement('span', null, 'У'),
-          React.createElement('span', { className: 'mds-dim' }, 'пр/сл'),
           React.createElement('span', null, 'Б'),
           React.createElement('span', null, 'Ж'),
-          React.createElement('span', { className: 'mds-dim' }, 'вр/пол/суп'),
-          React.createElement('span', null, 'Кл'),
-          React.createElement('span', null, 'ГИ'),
-          React.createElement('span', null, 'Вр')
+          React.createElement('span', null, 'У'),
+          React.createElement('span', null, 'вред'),
+          React.createElement('span', null, 'клет'),
+          React.createElement('span', null, 'Глик')
         ),
         ...mealRowsMobile,
         // Fact row - с цветовой индикацией относительно нормы
-        React.createElement('div', { className: 'mds-row' },
-          React.createElement('span', { className: 'mds-label', title: 'Факт' }, 'Ф'),
-          React.createElement('span', { title: getDailyNutrientTooltip('kcal', dayTot.kcal, normAbs.kcal), style: { color: getDailyNutrientColor('kcal', dayTot.kcal, normAbs.kcal), fontWeight: getDailyNutrientColor('kcal', dayTot.kcal, normAbs.kcal) ? 600 : 400, cursor: 'help' } }, Math.round(dayTot.kcal)),
-          React.createElement('span', { title: getDailyNutrientTooltip('carbs', dayTot.carbs, normAbs.carbs), style: { color: getDailyNutrientColor('carbs', dayTot.carbs, normAbs.carbs), fontWeight: getDailyNutrientColor('carbs', dayTot.carbs, normAbs.carbs) ? 600 : 400, cursor: 'help' } }, Math.round(dayTot.carbs)),
-          React.createElement('span', { className: 'mds-dim' },
-            React.createElement('span', { title: getDailyNutrientTooltip('simple', dayTot.simple, normAbs.simple), style: { color: getDailyNutrientColor('simple', dayTot.simple, normAbs.simple), fontWeight: getDailyNutrientColor('simple', dayTot.simple, normAbs.simple) ? 600 : 400, cursor: 'help' } }, pct(dayTot.simple, dayTot.carbs)),
-            '/',
-            React.createElement('span', { title: getDailyNutrientTooltip('complex', dayTot.complex, normAbs.complex), style: { color: getDailyNutrientColor('complex', dayTot.complex, normAbs.complex), cursor: 'help' } }, pct(dayTot.complex, dayTot.carbs))
-          ),
-          React.createElement('span', { title: getDailyNutrientTooltip('prot', dayTot.prot, normAbs.prot), style: { color: getDailyNutrientColor('prot', dayTot.prot, normAbs.prot), fontWeight: getDailyNutrientColor('prot', dayTot.prot, normAbs.prot) ? 600 : 400, cursor: 'help' } }, Math.round(dayTot.prot)),
-          React.createElement('span', { title: getDailyNutrientTooltip('fat', dayTot.fat, normAbs.fat), style: { color: getDailyNutrientColor('fat', dayTot.fat, normAbs.fat), fontWeight: getDailyNutrientColor('fat', dayTot.fat, normAbs.fat) ? 600 : 400, cursor: 'help' } }, Math.round(dayTot.fat)),
-          React.createElement('span', { className: 'mds-dim' },
-            React.createElement('span', { title: getDailyNutrientTooltip('bad', dayTot.bad, normAbs.bad), style: { color: getDailyNutrientColor('bad', dayTot.bad, normAbs.bad), fontWeight: getDailyNutrientColor('bad', dayTot.bad, normAbs.bad) ? 600 : 400, cursor: 'help' } }, pct(dayTot.bad, dayTot.fat)),
-            '/',
-            React.createElement('span', { title: getDailyNutrientTooltip('good', dayTot.good, normAbs.good), style: { color: getDailyNutrientColor('good', dayTot.good, normAbs.good), fontWeight: getDailyNutrientColor('good', dayTot.good, normAbs.good) ? 600 : 400, cursor: 'help' } }, pct(dayTot.good, dayTot.fat)),
-            '/',
-            React.createElement('span', { title: getDailyNutrientTooltip('trans', dayTot.trans, normAbs.trans), style: { color: getDailyNutrientColor('trans', dayTot.trans, normAbs.trans), fontWeight: getDailyNutrientColor('trans', dayTot.trans, normAbs.trans) ? 600 : 400, cursor: 'help' } }, pct(dayTot.trans || 0, dayTot.fat))
-          ),
-          React.createElement('span', { title: getDailyNutrientTooltip('fiber', dayTot.fiber, normAbs.fiber), style: { color: getDailyNutrientColor('fiber', dayTot.fiber, normAbs.fiber), fontWeight: getDailyNutrientColor('fiber', dayTot.fiber, normAbs.fiber) ? 600 : 400, cursor: 'help' } }, Math.round(dayTot.fiber)),
-          React.createElement('span', { title: getDailyNutrientTooltip('gi', dayTot.gi, normAbs.gi), style: { color: getDailyNutrientColor('gi', dayTot.gi, normAbs.gi), fontWeight: getDailyNutrientColor('gi', dayTot.gi, normAbs.gi) ? 600 : 400, cursor: 'help' } }, Math.round(dayTot.gi || 0)),
-          React.createElement('span', { title: getDailyNutrientTooltip('harm', dayTot.harm, normAbs.harm), style: { color: getDailyNutrientColor('harm', dayTot.harm, normAbs.harm), fontWeight: getDailyNutrientColor('harm', dayTot.harm, normAbs.harm) ? 600 : 400, cursor: 'help' } }, fmtVal('harm', dayTot.harm || 0))
+        React.createElement('div', { className: 'mds-row', style: { borderTop: '1px solid rgba(59, 130, 246, 0.22)', marginTop: '4px', paddingTop: '4px' } },
+          React.createElement('span', { className: 'mds-label', title: 'Факт' }, 'Факт'),
+          React.createElement('span', { title: safeTooltip('kcal', effectiveDayTot.kcal, effectiveNormAbs.kcal), style: { color: getFactColor('kcal', +effectiveDayTot.kcal || 0, +effectiveNormAbs.kcal || 0) || undefined, fontWeight: 600, cursor: 'help' } }, Math.round(effectiveDayTot.kcal || 0)),
+          React.createElement('span', { title: safeTooltip('prot', effectiveDayTot.prot, effectiveNormAbs.prot), style: { color: getFactColor('prot', +effectiveDayTot.prot || 0, +effectiveNormAbs.prot || 0) || undefined, fontWeight: 600, cursor: 'help' } }, Math.round(effectiveDayTot.prot || 0)),
+          React.createElement('span', { title: safeTooltip('fat', effectiveDayTot.fat, effectiveNormAbs.fat), style: { color: getFactColor('fat', +effectiveDayTot.fat || 0, +effectiveNormAbs.fat || 0) || undefined, fontWeight: 600, cursor: 'help' } }, Math.round(effectiveDayTot.fat || 0)),
+          React.createElement('span', { title: safeTooltip('carbs', effectiveDayTot.carbs, effectiveNormAbs.carbs), style: { color: getFactColor('carbs', +effectiveDayTot.carbs || 0, +effectiveNormAbs.carbs || 0) || undefined, fontWeight: 600, cursor: 'help' } }, Math.round(effectiveDayTot.carbs || 0)),
+          React.createElement('span', { title: safeTooltip('harm', effectiveDayTot.harm, effectiveNormAbs.harm), style: { color: getFactColor('harm', +effectiveDayTot.harm || 0, +effectiveNormAbs.harm || 0) || undefined, fontWeight: 600, cursor: 'help' } }, safeFmtVal('harm', effectiveDayTot.harm || 0)),
+          React.createElement('span', { title: safeTooltip('fiber', effectiveDayTot.fiber, effectiveNormAbs.fiber), style: { color: getFactColor('fiber', +effectiveDayTot.fiber || 0, +effectiveNormAbs.fiber || 0) || undefined, fontWeight: 600, cursor: 'help' } }, Math.round(effectiveDayTot.fiber || 0)),
+          React.createElement('span', { title: safeTooltip('gi', effectiveDayTot.gi, effectiveNormAbs.gi), style: { color: getFactColor('gi', +effectiveDayTot.gi || 0, +effectiveNormAbs.gi || 0) || undefined, fontWeight: 600, cursor: 'help' } }, Math.round(effectiveDayTot.gi || 0))
         ),
         // Norm row
-        React.createElement('div', { className: 'mds-row' },
-          React.createElement('span', { className: 'mds-label', title: 'Норма' }, 'Н'),
-          React.createElement('span', null, Math.round(normAbs.kcal || 0)),
-          React.createElement('span', null, Math.round(normAbs.carbs || 0)),
-          React.createElement('span', { className: 'mds-dim' }, pct(normAbs.simple || 0, normAbs.carbs || 1) + '/' + pct(normAbs.complex || 0, normAbs.carbs || 1)),
-          React.createElement('span', null, Math.round(normAbs.prot || 0)),
-          React.createElement('span', null, Math.round(normAbs.fat || 0)),
-          React.createElement('span', { className: 'mds-dim' }, pct(normAbs.bad || 0, normAbs.fat || 1) + '/' + pct(normAbs.good || 0, normAbs.fat || 1) + '/' + pct(normAbs.trans || 0, normAbs.fat || 1)),
-          React.createElement('span', null, Math.round(normAbs.fiber || 0)),
-          React.createElement('span', null, Math.round(normAbs.gi || 0)),
-          React.createElement('span', null, fmtVal('harm', normAbs.harm || 0))
+        React.createElement('div', { className: 'mds-row', style: { borderTop: '1px solid rgba(148, 163, 184, 0.28)', marginTop: '4px', paddingTop: '4px' } },
+          React.createElement('span', { className: 'mds-label', title: 'Норма' }, 'Норма'),
+          React.createElement('span', null, Math.round(effectiveNormAbs.kcal || 0)),
+          React.createElement('span', null, Math.round(effectiveNormAbs.prot || 0)),
+          React.createElement('span', null, Math.round(effectiveNormAbs.fat || 0)),
+          React.createElement('span', null, Math.round(effectiveNormAbs.carbs || 0)),
+          React.createElement('span', null, safeFmtVal('harm', effectiveNormAbs.harm || 0)),
+          React.createElement('span', null, Math.round(effectiveNormAbs.fiber || 0)),
+          React.createElement('span', null, Math.round(effectiveNormAbs.gi || 0))
         ),
         // Deviation row - custom layout matching header columns
         React.createElement('div', { className: 'mds-row mds-dev' },
-          React.createElement('span', { className: 'mds-label', title: 'Отклонение' }, 'Δ'),
+          React.createElement('span', { className: 'mds-label', title: 'Отклонение' }, 'Откл.'),
           // kcal
-          (() => { const n = normAbs.kcal || 0, f = dayTot.kcal || 0; if (!n) return React.createElement('span', { key: 'dev-kcal' }, '-'); const d = Math.round(((f - n) / n) * 100); return React.createElement('span', { key: 'dev-kcal', style: { color: d > 0 ? '#dc2626' : d < 0 ? '#059669' : '#6b7280' } }, (d > 0 ? '+' : '') + d + '%'); })(),
-          // carbs
-          (() => { const n = normAbs.carbs || 0, f = dayTot.carbs || 0; if (!n) return React.createElement('span', { key: 'dev-carbs' }, '-'); const d = Math.round(((f - n) / n) * 100); return React.createElement('span', { key: 'dev-carbs', style: { color: d > 0 ? '#dc2626' : d < 0 ? '#059669' : '#6b7280' } }, (d > 0 ? '+' : '') + d + '%'); })(),
-          // simple/complex (combined)
-          (() => {
-            const ns = normAbs.simple || 0, fs = dayTot.simple || 0;
-            const nc = normAbs.complex || 0, fc = dayTot.complex || 0;
-            const ds = ns ? Math.round(((fs - ns) / ns) * 100) : 0;
-            const dc = nc ? Math.round(((fc - nc) / nc) * 100) : 0;
-            const cs = ds > 0 ? '#dc2626' : ds < 0 ? '#059669' : '#6b7280';
-            const cc = dc > 0 ? '#dc2626' : dc < 0 ? '#059669' : '#6b7280';
-            return React.createElement('span', { key: 'dev-sc', className: 'mds-dim' },
-              React.createElement('span', { style: { color: cs } }, (ds > 0 ? '+' : '') + ds),
-              '/',
-              React.createElement('span', { style: { color: cc } }, (dc > 0 ? '+' : '') + dc)
-            );
-          })(),
+          (() => { const n = effectiveNormAbs.kcal || 0, f = effectiveDayTot.kcal || 0; if (!n) return React.createElement('span', { key: 'dev-kcal' }, '-'); const d = Math.round(((f - n) / n) * 100); return React.createElement('span', { key: 'dev-kcal', style: { color: getDeviationColor('kcal', d) } }, (d > 0 ? '+' : '') + d + '%'); })(),
           // prot
-          (() => { const n = normAbs.prot || 0, f = dayTot.prot || 0; if (!n) return React.createElement('span', { key: 'dev-prot' }, '-'); const d = Math.round(((f - n) / n) * 100); return React.createElement('span', { key: 'dev-prot', style: { color: d > 0 ? '#dc2626' : d < 0 ? '#059669' : '#6b7280' } }, (d > 0 ? '+' : '') + d + '%'); })(),
+          (() => { const n = effectiveNormAbs.prot || 0, f = effectiveDayTot.prot || 0; if (!n) return React.createElement('span', { key: 'dev-prot' }, '-'); const d = Math.round(((f - n) / n) * 100); return React.createElement('span', { key: 'dev-prot', style: { color: getDeviationColor('prot', d) } }, (d > 0 ? '+' : '') + d + '%'); })(),
           // fat
-          (() => { const n = normAbs.fat || 0, f = dayTot.fat || 0; if (!n) return React.createElement('span', { key: 'dev-fat' }, '-'); const d = Math.round(((f - n) / n) * 100); return React.createElement('span', { key: 'dev-fat', style: { color: d > 0 ? '#dc2626' : d < 0 ? '#059669' : '#6b7280' } }, (d > 0 ? '+' : '') + d + '%'); })(),
-          // bad/good/trans (combined)
+          (() => { const n = effectiveNormAbs.fat || 0, f = effectiveDayTot.fat || 0; if (!n) return React.createElement('span', { key: 'dev-fat' }, '-'); const d = Math.round(((f - n) / n) * 100); return React.createElement('span', { key: 'dev-fat', style: { color: getDeviationColor('fat', d) } }, (d > 0 ? '+' : '') + d + '%'); })(),
+          // carbs
+          (() => { const n = effectiveNormAbs.carbs || 0, f = effectiveDayTot.carbs || 0; if (!n) return React.createElement('span', { key: 'dev-carbs' }, '-'); const d = Math.round(((f - n) / n) * 100); return React.createElement('span', { key: 'dev-carbs', style: { color: getDeviationColor('carbs', d) } }, (d > 0 ? '+' : '') + d + '%'); })(),
+          // harm
           (() => {
-            const nb = normAbs.bad || 0, fb = dayTot.bad || 0;
-            const ng = normAbs.good || 0, fg = dayTot.good || 0;
-            const nt = normAbs.trans || 0, ft = dayTot.trans || 0;
-            const db = nb ? Math.round(((fb - nb) / nb) * 100) : 0;
-            const dg = ng ? Math.round(((fg - ng) / ng) * 100) : 0;
-            const dt = nt ? Math.round(((ft - nt) / nt) * 100) : 0;
-            const cb = db > 0 ? '#dc2626' : db < 0 ? '#059669' : '#6b7280';
-            const cg = dg > 0 ? '#dc2626' : dg < 0 ? '#059669' : '#6b7280';
-            const ct = dt > 0 ? '#dc2626' : dt < 0 ? '#059669' : '#6b7280';
-            return React.createElement('span', { key: 'dev-bgt', className: 'mds-dim' },
-              React.createElement('span', { style: { color: cb } }, (db > 0 ? '+' : '') + db),
-              '/',
-              React.createElement('span', { style: { color: cg } }, (dg > 0 ? '+' : '') + dg),
-              '/',
-              React.createElement('span', { style: { color: ct } }, (dt > 0 ? '+' : '') + dt)
-            );
+            const n = effectiveNormAbs.harm || 0, f = effectiveDayTot.harm || 0;
+            if (!n) return React.createElement('span', { key: 'dev-harm' }, '-');
+            const d = Math.round((f - n) * 10) / 10;
+            return React.createElement('span', { key: 'dev-harm', style: { color: getDeviationColor('harm', d) } }, (d > 0 ? '+' : '') + d.toFixed(1));
           })(),
           // fiber
-          (() => { const n = normAbs.fiber || 0, f = dayTot.fiber || 0; if (!n) return React.createElement('span', { key: 'dev-fiber' }, '-'); const d = Math.round(((f - n) / n) * 100); return React.createElement('span', { key: 'dev-fiber', style: { color: d > 0 ? '#dc2626' : d < 0 ? '#059669' : '#6b7280' } }, (d > 0 ? '+' : '') + d + '%'); })(),
+          (() => { const n = effectiveNormAbs.fiber || 0, f = effectiveDayTot.fiber || 0; if (!n) return React.createElement('span', { key: 'dev-fiber' }, '-'); const d = Math.round(((f - n) / n) * 100); return React.createElement('span', { key: 'dev-fiber', style: { color: getDeviationColor('fiber', d) } }, (d > 0 ? '+' : '') + d + '%'); })(),
           // gi
-          (() => { const n = normAbs.gi || 0, f = dayTot.gi || 0; if (!n) return React.createElement('span', { key: 'dev-gi' }, '-'); const d = Math.round(((f - n) / n) * 100); return React.createElement('span', { key: 'dev-gi', style: { color: d > 0 ? '#dc2626' : d < 0 ? '#059669' : '#6b7280' } }, (d > 0 ? '+' : '') + d + '%'); })(),
-          // harm
-          (() => { const n = normAbs.harm || 0, f = dayTot.harm || 0; if (!n) return React.createElement('span', { key: 'dev-harm' }, '-'); const d = Math.round(((f - n) / n) * 100); return React.createElement('span', { key: 'dev-harm', style: { color: d > 0 ? '#dc2626' : d < 0 ? '#059669' : '#6b7280' } }, (d > 0 ? '+' : '') + d + '%'); })()
+          (() => { const n = effectiveNormAbs.gi || 0, f = effectiveDayTot.gi || 0; if (!n) return React.createElement('span', { key: 'dev-gi' }, '-'); const d = Math.round(((f - n) / n) * 100); return React.createElement('span', { key: 'dev-gi', style: { color: getDeviationColor('gi', d) } }, (d > 0 ? '+' : '') + d + '%'); })()
         )
       )
     );
+
+    if (tableOnly) return tableContent;
+
+    return React.createElement('div', {
+      className: 'card tone-slate daily-summary-card widget-shadow-diary-glass widget-outline-diary-glass',
+      style: {
+        margin: 'calc(var(--heys-diary-stack-gap, 12px) * 1.75) 0 var(--heys-diary-stack-gap, 12px) 0',
+        padding: 'var(--heys-diary-card-padding, 16px 18px)',
+        background: 'var(--surface, #fff)',
+        overflowX: 'auto'
+      }
+    },
+      React.createElement('div', {
+        className: 'section-title',
+        style: {
+          marginBottom: '6px',
+          fontSize: 'var(--heys-diary-card-title-size, 14px)',
+          fontWeight: 'var(--heys-diary-card-title-weight, 600)',
+          color: 'var(--heys-diary-card-title-color, var(--text, #1e293b))',
+          textTransform: 'none',
+          letterSpacing: 'normal',
+          textAlign: 'center'
+        }
+      }, 'Суточные итоги'),
+      tableContent
+    );
+  }
+
+  function renderDailySummaryTable(params) {
+    return renderDailySummary({ ...(params || {}), tableOnly: true });
   }
 
   HEYS.dayDailySummary = {
-    renderDailySummary
+    renderDailySummary,
+    renderDailySummaryTable
   };
 })(window);

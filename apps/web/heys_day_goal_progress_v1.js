@@ -93,6 +93,65 @@
     // Цвет заголовка — общий статус дня
     let titleColor, titleIcon, titleText;
 
+    // Адаптивный оттенок "съедено": учитывает время дня + близость к норме
+    const getExpectedRatioByTime = () => {
+      const now = new Date();
+      const h = now.getHours() + (now.getMinutes() / 60);
+      if (h <= 7) return 0.08;
+      if (h <= 12) return 0.08 + ((h - 7) / 5) * 0.37;   // к 12:00 ~45%
+      if (h <= 17) return 0.45 + ((h - 12) / 5) * 0.30;  // к 17:00 ~75%
+      if (h <= 22) return 0.75 + ((h - 17) / 5) * 0.25;  // к 22:00 ~100%
+      return 1.0;
+    };
+
+    const expectedRatioNow = getExpectedRatioByTime();
+    const deltaFromExpected = ratio - expectedRatioNow;
+    const distanceToGoal = Math.abs(1 - ratio);
+
+    // 3 состояния: ok / warn / alert
+    // ok: в адекватном коридоре времени дня или близко к норме
+    // warn: умеренное отклонение
+    // alert: сильное отклонение
+    let eatenTone = 'ok';
+    if (distanceToGoal <= 0.08 && expectedRatioNow >= 0.7) {
+      eatenTone = 'ok';
+    } else if (Math.abs(deltaFromExpected) <= 0.10) {
+      eatenTone = 'ok';
+    } else if (Math.abs(deltaFromExpected) <= 0.20) {
+      eatenTone = 'warn';
+    } else {
+      eatenTone = 'alert';
+    }
+
+    let eatenBadgeStyle;
+    let eatenValueColor;
+    let eatenLabelColor;
+    if (eatenTone === 'ok') {
+      eatenBadgeStyle = {
+        background: 'rgba(16, 185, 129, 0.20)',
+        borderColor: 'rgba(16, 185, 129, 0.40)',
+        boxShadow: '0 1px 6px rgba(16,185,129,0.16)'
+      };
+      eatenValueColor = '#047857';
+      eatenLabelColor = '#065f46';
+    } else if (eatenTone === 'warn') {
+      eatenBadgeStyle = {
+        background: 'rgba(245, 158, 11, 0.20)',
+        borderColor: 'rgba(245, 158, 11, 0.42)',
+        boxShadow: '0 1px 6px rgba(245,158,11,0.18)'
+      };
+      eatenValueColor = '#b45309';
+      eatenLabelColor = '#92400e';
+    } else {
+      eatenBadgeStyle = {
+        background: 'rgba(251, 113, 133, 0.18)',
+        borderColor: 'rgba(244, 63, 94, 0.34)',
+        boxShadow: '0 1px 6px rgba(244,63,94,0.14)'
+      };
+      eatenValueColor = '#be123c';
+      eatenLabelColor = '#9f1239';
+    }
+
     // === REFEED DAY — особый статус ===
     if (day.isRefeedDay && Refeed) {
       const refeedZone = Refeed.getRefeedZone(ratio, true);
@@ -133,12 +192,18 @@
             style: { color: titleColor }
           }, titleIcon + ' ' + titleText),
           React.createElement('span', { className: 'goal-progress-stats' },
-            React.createElement('span', { className: 'goal-eaten-wrap' },
+            React.createElement('span', {
+              className: 'goal-eaten-wrap',
+              style: eatenBadgeStyle
+            },
               React.createElement('span', {
                 className: 'goal-eaten',
-                style: { color: titleColor }
+                style: { color: eatenValueColor }
               }, r0Safe(animatedKcal)),
-              React.createElement('span', { className: 'goal-eaten-label' }, 'съедено')
+              React.createElement('span', {
+                className: 'goal-eaten-label',
+                style: { color: eatenLabelColor }
+              }, 'съедено')
             ),
             React.createElement('span', { className: 'goal-divider' }, '/'),
             React.createElement('span', { className: 'goal-target-wrap' },
@@ -268,13 +333,19 @@
                   : animatedProgress;
                 const isInsideBar = effectiveProgress >= 80;
 
-                if (isInsideBar) {
-                  // Внутри заполненной части — справа, с пульсацией
+                const hasDebt = displayOptimum > optimum;
+                const markerPos = hasDebt
+                  ? Math.min(animatedMarkerPos * (optimum / displayOptimum), 100)
+                  : Math.min(animatedProgress, 100);
+
+                // В debt-режиме всегда показываем слева от маркера — иначе текст залезет в штриховку долга
+                if (isInsideBar || hasDebt) {
+                  // Показываем СЛЕВА от маркера — внутри заполненной части, на контрасте с заливкой
                   return React.createElement('div', {
                     className: 'goal-remaining-inside pulse-glow',
                     style: {
                       position: 'absolute',
-                      right: (100 - Math.min(effectiveProgress, 100) + 2) + '%',
+                      right: (100 - markerPos + 2) + '%',
                       top: '50%',
                       transform: 'translateY(-50%)',
                       display: 'flex',
@@ -290,16 +361,17 @@
                       zIndex: 10
                     }
                   },
-                    React.createElement('span', { style: { fontSize: '10px', fontWeight: '500', color: '#6b7280' } }, 'Осталось всего'),
+                    React.createElement('span', { style: { fontSize: '10px', fontWeight: '500', color: '#6b7280' } }, 'Ещё'),
                     React.createElement('span', { style: { fontSize: '13px', fontWeight: '800', color: remainingColor } }, effectiveRemaining)
                   );
                 } else {
-                  // На пустой части полосы
+                  // На пустой части полосы (только в режиме без долга)
+                  const inlineLeft = Math.max(markerPos + 2, 5);
                   return React.createElement('div', {
                     className: 'goal-remaining-inline',
                     style: {
                       position: 'absolute',
-                      left: Math.max(effectiveProgress + 2, 5) + '%',
+                      left: inlineLeft + '%',
                       right: '8px',
                       top: '50%',
                       transform: 'translateY(-50%)',

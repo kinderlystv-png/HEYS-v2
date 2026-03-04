@@ -248,7 +248,7 @@
       applyDate();
     };
 
-    const statsBlock = React.createElement('div', { className: 'compact-stats compact-card' },
+    const statsBlock = React.createElement('div', { className: 'compact-stats compact-card widget-shadow-diary-glass widget-outline-diary-glass' },
       React.createElement('div', { className: 'compact-card-header stats-header-with-badge' },
         React.createElement('span', null, '📊 СТАТИСТИКА'),
         React.createElement('span', {
