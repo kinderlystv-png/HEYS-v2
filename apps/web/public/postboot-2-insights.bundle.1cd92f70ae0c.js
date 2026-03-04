@@ -28424,7 +28424,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
         // 🚀 PERF v6.0: Skeleton пока идёт async расчёт рекомендации (useEffect)
         if (isCalculating) {
-            return h('div', { className: 'meal-rec-card meal-rec-card--skeleton', 'aria-busy': true },
+            return h('div', { className: 'meal-rec-card widget widget--meal-rec-diary meal-rec-card--skeleton', 'aria-busy': true },
                 h('div', { className: 'meal-rec-card__skeleton-pulse' })
             );
         }
@@ -28492,7 +28492,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                 carbs: macros?.carbs
             });
             // Show "goal complete, drink water" card instead of hiding
-            return h('div', { className: 'meal-rec-card p-4 rounded-2xl bg-gradient-to-br from-blue-50 to-cyan-50 border border-blue-100' },
+            return h('div', { className: 'meal-rec-card widget widget--meal-rec-diary-water p-4 rounded-2xl' },
                 h('div', { className: 'flex items-center gap-3 mb-2' },
                     h('span', { className: 'text-3xl' }, '💧'),
                     h('div', null,
@@ -28706,7 +28706,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                     );
                 });
 
-                expandedDetails = h('div', { className: 'meal-rec-card__details meal-rec-card__details--multi' },
+                expandedDetails = h('div', { className: 'meal-rec-card__details meal-rec-card__details--multi meal-rec-card__details--expanded' },
                     ...mealSubCards,
 
                     // Footer с feedback
@@ -28737,7 +28737,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                 );
             } else {
                 // Original single-meal layout (v25.9)
-                expandedDetails = h('div', { className: 'meal-rec-card__details' },
+                expandedDetails = h('div', { className: 'meal-rec-card__details meal-rec-card__details--expanded' },
                     // v27: Grouped products mode (multiple products per category with checkboxes)
                     mode === 'grouped' && groups && groups.length > 0 ?
                         h('div', { className: 'meal-rec-card__grouped-products' },
@@ -28826,7 +28826,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
         // Main card container
         const cardElement = h('div', {
-            className: `meal-rec-card ${expanded ? 'meal-rec-card--expanded' : ''}`,
+            className: `meal-rec-card widget widget--meal-rec-diary ${expanded ? 'meal-rec-card--expanded' : ''}`,
             'data-testid': 'meal-rec-card',
             style: { position: 'relative' }
         },

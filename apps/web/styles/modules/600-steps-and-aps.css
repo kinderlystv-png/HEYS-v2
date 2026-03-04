@@ -1131,9 +1131,8 @@
   font-size: 14px;
   font-weight: 600;
   color: var(--color-text-primary, #0f172a);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  word-break: break-word;
+  white-space: normal;
 }
 
 .mpr-card-meta {
@@ -1396,9 +1395,9 @@
   font-size: 13px;
   font-weight: 600;
   color: var(--color-text-primary, #0f172a);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: normal;
+  word-break: break-word;
+  line-height: 1.3;
 }
 
 .mpr-preview-item-kcal {
@@ -1670,10 +1669,55 @@
   margin-left: 2px;
 }
 
+/* Список продуктов в карточке */
+.mpr-card-items {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-bottom: 3px;
+}
+
+.mpr-card-item-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.mpr-card-item-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-primary, #0f172a);
+  line-height: 1.35;
+  flex: 1;
+  word-break: break-word;
+}
+
+.mpr-card-item-grams {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-text-secondary, #64748b);
+  white-space: nowrap;
+  background: rgba(0, 0, 0, 0.06);
+  padding: 1px 5px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
 /* Карточка рекомендуемого набора */
 .mpr-card--suggested {
   background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%);
   border-color: #c4b5fd;
+  align-items: flex-start;
+}
+
+.mpr-card--suggested .mpr-card-item-name {
+  color: #5b21b6;
+}
+
+.mpr-card--suggested .mpr-card-item-grams {
+  background: rgba(139, 92, 246, 0.12);
+  color: #7c3aed;
 }
 
 .mpr-card--suggested .mpr-card-name {
@@ -1724,6 +1768,23 @@
 }
 
 [data-theme="dark"] .mpr-card--suggested .mpr-card-meta {
+  color: #a78bfa;
+}
+
+[data-theme="dark"] .mpr-card-item-name {
+  color: var(--color-text-primary, #f1f5f9);
+}
+
+[data-theme="dark"] .mpr-card-item-grams {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+[data-theme="dark"] .mpr-card--suggested .mpr-card-item-name {
+  color: #c4b5fd;
+}
+
+[data-theme="dark"] .mpr-card--suggested .mpr-card-item-grams {
+  background: rgba(139, 92, 246, 0.2);
   color: #a78bfa;
 }
 

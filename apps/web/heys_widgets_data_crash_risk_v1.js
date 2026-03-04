@@ -200,10 +200,20 @@
 
             if (HEYS.InsightsPI && HEYS.InsightsPI.earlyWarning) {
                 try {
-                    ewsData = HEYS.InsightsPI.earlyWarning.detect(days, profile, pIndex, {
-                        includeDetails: true
-                    });
-                    ewsCount = ewsData?.count || 0;
+                    // Используем getRecentDays, так как earlyWarning.detect ожидает массив дней, а не число
+                    const U = HEYS.utils || {};
+                    let daysArray = [];
+                    if (HEYS.InsightsPI.analyticsAPI && typeof HEYS.InsightsPI.analyticsAPI.getRecentDays === 'function') {
+                        daysArray = HEYS.InsightsPI.analyticsAPI.getRecentDays(days);
+                    }
+                    
+                    // Не спамим ошибки если дней мало для аналитики EWS
+                    if (daysArray && daysArray.length >= 6) {
+                        ewsData = HEYS.InsightsPI.earlyWarning.detect(daysArray, profile, pIndex, {
+                            includeDetails: true
+                        });
+                        ewsCount = ewsData?.count || 0;
+                    }
                 } catch (ewsError) {
                     console.warn('[HEYS.widgets.crashRisk] ⚠️ EWS detection failed:', ewsError);
                 }

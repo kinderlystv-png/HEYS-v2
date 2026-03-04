@@ -30,6 +30,8 @@
         const dailyTableState = ctx.dayDailyTable?.buildDailyTableState
             ? ctx.dayDailyTable.buildDailyTableState({
                 React,
+                day,
+                pIndex,
                 dayTot,
                 normAbs,
                 getDailyNutrientColor,

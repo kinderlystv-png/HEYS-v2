@@ -127,7 +127,9 @@
 
 /* ===== Tab Container ===== */
 /* Убираем ограничения родительских контейнеров для виджетов */
-.wrap:has(.widgets-tab) {
+/* Общий фон для вкладки Виджеты и Дневник */
+.wrap:has(.widgets-tab),
+.wrap:has(.page-day) {
   max-width: 100% !important;
   padding-left: 0 !important;
   padding-right: 0 !important;
@@ -136,22 +138,26 @@
      overflow-y НЕ блокируем. */
 }
 
-[data-theme="dark"] .wrap:has(.widgets-tab) {
+[data-theme="dark"] .wrap:has(.widgets-tab),
+[data-theme="dark"] .wrap:has(.page-day) {
   background-color: var(--bg-primary, #1a1a1a);
 }
 
-/* tab-content-swipeable для виджетов — не переопределяем overflow.
+/* tab-content-swipeable для вкладок — не переопределяем overflow.
    Скролл работает через body нативно. */
-.tab-content-swipeable:has(.widgets-tab) {
+.tab-content-swipeable:has(.widgets-tab),
+.tab-content-swipeable:has(.page-day) {
   padding: 0 !important;
   background-color: var(--bg-primary, #ffffff);
 }
 
-[data-theme="dark"] .tab-content-swipeable:has(.widgets-tab) {
+[data-theme="dark"] .tab-content-swipeable:has(.widgets-tab),
+[data-theme="dark"] .tab-content-swipeable:has(.page-day) {
   background-color: var(--bg-primary, #1a1a1a);
 }
 
-.widgets-tab {
+.widgets-tab,
+.page-day {
   position: relative;
   /* Контент определяет высоту + большой отступ для воздуха снизу */
   padding-bottom: calc(150px + env(safe-area-inset-bottom, 0px));
@@ -167,8 +173,11 @@
   /* Предотвращаем горизонтальный overflow */
   width: 100%;
   overflow-x: hidden;
-  /* Фон с бесшовным переходом */
+  /* Базовый фон */
   background-color: var(--bg-primary, #ffffff);
+}
+
+.widgets-tab {
   background-image:
     /* Декоративные радиальные градиенты */
     radial-gradient(1200px 800px at 20% 25%, rgba(10, 132, 255, 0.08), transparent 55%),
@@ -176,13 +185,46 @@
     radial-gradient(900px 700px at 50% 100%, rgba(255, 149, 0, 0.06), transparent 60%);
 }
 
-[data-theme="dark"] .widgets-tab {
+.page-day {
+  /* Повторяющийся паттерн голубой - песочный для длинного скролла */
+  background-image:
+    /* 1. Голубой слева вверху */
+    radial-gradient(1400px 1200px at 15% 400px, rgba(10, 132, 255, 0.08), transparent 60%),
+    /* 2. Песочный справа */
+    radial-gradient(1300px 1100px at 85% 1200px, rgba(255, 149, 0, 0.06), transparent 60%),
+    /* 3. Голубой справа */
+    radial-gradient(1400px 1200px at 85% 2000px, rgba(10, 132, 255, 0.08), transparent 60%),
+    /* 4. Песочный слева */
+    radial-gradient(1300px 1100px at 15% 2800px, rgba(255, 149, 0, 0.06), transparent 60%);
+  background-size: 100% 3200px;
+  background-repeat: repeat-y;
+}
+
+[data-theme="dark"] .widgets-tab,
+[data-theme="dark"] .page-day {
   background-color: var(--bg-primary, #1a1a1a);
+}
+
+[data-theme="dark"] .widgets-tab {
   background-image:
     /* Декоративные радиальные градиенты — сдвинуты вниз */
     radial-gradient(1200px 800px at 20% 25%, rgba(10, 132, 255, 0.12), transparent 55%),
     radial-gradient(900px 600px at 80% 35%, rgba(175, 82, 222, 0.12), transparent 55%),
     radial-gradient(900px 700px at 50% 100%, rgba(255, 149, 0, 0.10), transparent 60%);
+}
+
+[data-theme="dark"] .page-day {
+  background-image:
+    /* 1. Голубой слева вверху */
+    radial-gradient(1400px 1200px at 15% 400px, rgba(10, 132, 255, 0.12), transparent 60%),
+    /* 2. Песочный справа */
+    radial-gradient(1300px 1100px at 85% 1200px, rgba(255, 149, 0, 0.10), transparent 60%),
+    /* 3. Голубой справа */
+    radial-gradient(1400px 1200px at 85% 2000px, rgba(10, 132, 255, 0.12), transparent 60%),
+    /* 4. Песочный слева */
+    radial-gradient(1300px 1100px at 15% 2800px, rgba(255, 149, 0, 0.10), transparent 60%);
+  background-size: 100% 3200px;
+  background-repeat: repeat-y;
 }
 
 .widgets-tab__header {
@@ -5240,4 +5282,193 @@
 
 [data-theme="dark"] .widget-crash-risk__ews-preview-item-text {
   color: var(--text-dark-primary, #f3f4f6);
+}
+/* ===== Supplements Diary Widget Card ===== */
+.widget--supplements-diary {
+  --widget-glass-bg: rgba(255, 241, 242, 0.72);
+  --widget-accent: rgba(244, 63, 94, 0.15);
+  --widget-accent-strong: rgba(244, 63, 94, 0.32);
+}
+
+[data-theme="dark"] .widget--supplements-diary {
+  --widget-glass-bg: rgba(244, 63, 94, 0.12);
+  --widget-accent-strong: rgba(244, 63, 94, 0.25);
+  --widget-glass-border: rgba(244, 63, 94, 0.2);
+}
+
+/* Витамины: без tap-смещения карточки, только раскрытие вниз */
+.supplements-card.widget--supplements-diary,
+.supplements-card.widget--supplements-diary:active {
+  transform: none !important;
+}
+
+.supplements-card.widget--supplements-diary .supplements-card__expanded {
+  overflow: hidden;
+  transform-origin: top center;
+  animation: supplements-expand-down 220ms ease-out;
+}
+
+@keyframes supplements-expand-down {
+  from {
+    max-height: 0;
+    opacity: 0;
+  }
+
+  to {
+    max-height: 1400px;
+    opacity: 1;
+  }
+}
+
+/* ===== Smart Planner (Meal Rec) Diary Widget Card ===== */
+.meal-rec-card.widget--meal-rec-diary {
+  background: var(--widget-glass-bg) !important;
+  border: 1px solid var(--widget-glass-border, rgba(16, 185, 129, 0.38)) !important;
+  border-radius: var(--widget-radius-lg) !important;
+  --widget-glass-bg: rgba(236, 253, 245, 0.72);
+  --widget-accent: rgba(16, 185, 129, 0.15);
+  --widget-accent-strong: rgba(16, 185, 129, 0.32);
+  box-shadow: var(--widget-shadow-card);
+}
+
+/* Свернутый planner: более читаемая премиальная окантовка без потери glass-эффекта */
+.meal-rec-card.widget--meal-rec-diary:not(.meal-rec-card--expanded),
+.meal-rec-card.widget--meal-rec-diary-water:not(.meal-rec-card--expanded) {
+  border-color: rgba(16, 185, 129, 0.52) !important;
+  box-shadow: var(--widget-shadow-card);
+}
+
+[data-theme="dark"] .meal-rec-card.widget--meal-rec-diary {
+  --widget-glass-bg: rgba(16, 185, 129, 0.12);
+  --widget-accent-strong: rgba(16, 185, 129, 0.25);
+  --widget-glass-border: rgba(16, 185, 129, 0.42);
+  box-shadow: var(--widget-shadow-card);
+}
+
+[data-theme="dark"] .meal-rec-card.widget--meal-rec-diary:not(.meal-rec-card--expanded),
+[data-theme="dark"] .meal-rec-card.widget--meal-rec-diary-water:not(.meal-rec-card--expanded) {
+  border-color: rgba(16, 185, 129, 0.62) !important;
+  box-shadow: var(--widget-shadow-card);
+}
+
+.meal-rec-card.widget--meal-rec-diary-water {
+  background: var(--widget-glass-bg) !important;
+  border: 1px solid var(--widget-glass-border, rgba(59, 130, 246, 0.2)) !important;
+  border-radius: var(--widget-radius-lg) !important;
+  --widget-glass-bg: rgba(239, 246, 255, 0.72);
+  --widget-accent: rgba(59, 130, 246, 0.15);
+  --widget-accent-strong: rgba(59, 130, 246, 0.32);
+  box-shadow: 0 4px 24px -6px rgba(0, 0, 0, 0.05);
+}
+
+[data-theme="dark"] .meal-rec-card.widget--meal-rec-diary-water {
+  --widget-glass-bg: rgba(59, 130, 246, 0.12);
+  --widget-accent-strong: rgba(59, 130, 246, 0.25);
+  --widget-glass-border: rgba(59, 130, 246, 0.2);
+}
+
+/* Планировщик: убрать tap-scale смещение, оставив карточку на месте */
+.meal-rec-card.widget--meal-rec-diary,
+.meal-rec-card.widget--meal-rec-diary-water,
+.meal-rec-card.widget--meal-rec-diary:active,
+.meal-rec-card.widget--meal-rec-diary-water:active {
+  transform: none !important;
+}
+
+/* Плавное раскрытие вниз без сдвига карточки */
+.meal-rec-card.widget--meal-rec-diary .meal-rec-card__details--expanded,
+.meal-rec-card.widget--meal-rec-diary-water .meal-rec-card__details--expanded {
+  position: relative;
+  overflow: hidden;
+  border-left: 1px solid rgba(16, 185, 129, 0.36);
+  border-right: 1px solid rgba(16, 185, 129, 0.36);
+  transform-origin: top center;
+  animation: meal-rec-expand-down 220ms ease-out;
+}
+
+[data-theme="dark"] .meal-rec-card.widget--meal-rec-diary .meal-rec-card__details--expanded,
+[data-theme="dark"] .meal-rec-card.widget--meal-rec-diary-water .meal-rec-card__details--expanded {
+  border-left-color: rgba(16, 185, 129, 0.48);
+  border-right-color: rgba(16, 185, 129, 0.48);
+}
+
+.meal-rec-card.widget--meal-rec-diary.meal-rec-card--expanded,
+.meal-rec-card.widget--meal-rec-diary-water.meal-rec-card--expanded {
+  border-left-color: rgba(16, 185, 129, 0.42) !important;
+  border-right-color: rgba(16, 185, 129, 0.42) !important;
+}
+
+[data-theme="dark"] .meal-rec-card.widget--meal-rec-diary.meal-rec-card--expanded,
+[data-theme="dark"] .meal-rec-card.widget--meal-rec-diary-water.meal-rec-card--expanded {
+  border-left-color: rgba(16, 185, 129, 0.52) !important;
+  border-right-color: rgba(16, 185, 129, 0.52) !important;
+}
+
+@keyframes meal-rec-expand-down {
+  from {
+    max-height: 0;
+    opacity: 0;
+  }
+
+  to {
+    max-height: 1400px;
+    opacity: 1;
+  }
+}
+
+/* Фикс: glow-градиент не должен смещаться при раскрытии длинной карточки */
+.meal-rec-card.widget--meal-rec-diary::before,
+.meal-rec-card.widget--meal-rec-diary-water::before {
+  background:
+    radial-gradient(220px 180px at 8% 42px, var(--widget-accent-strong), transparent 60%),
+    radial-gradient(320px 260px at calc(100% + 40px) calc(100% + 80px), rgba(255, 255, 255, 0.18), transparent 55%);
+}
+
+[data-theme="dark"] .meal-rec-card.widget--meal-rec-diary::before,
+[data-theme="dark"] .meal-rec-card.widget--meal-rec-diary-water::before {
+  background:
+    radial-gradient(220px 180px at 8% 42px, var(--widget-accent-strong), transparent 60%),
+    radial-gradient(320px 260px at calc(100% + 40px) calc(100% + 80px), rgba(255, 255, 255, 0.06), transparent 55%);
+}
+
+/* Очистка белых фонов внутри планировщика, чтобы сохранить эффект стекла при раскрытии */
+.meal-rec-card.widget--meal-rec-diary .meal-rec-card__meal-subcard,
+.meal-rec-card.widget--meal-rec-diary-water .meal-rec-card__meal-subcard {
+  background: rgba(255, 255, 255, 0.4) !important;
+  border-color: rgba(255, 255, 255, 0.5) !important;
+  box-shadow: none !important;
+}
+
+.meal-rec-card.widget--meal-rec-diary .meal-rec-card__product-item,
+.meal-rec-card.widget--meal-rec-diary-water .meal-rec-card__product-item {
+  background: rgba(255, 255, 255, 0.5) !important;
+  border-color: rgba(255, 255, 255, 0.6) !important;
+}
+
+.meal-rec-card.widget--meal-rec-diary .meal-rec-card__product-item:hover,
+.meal-rec-card.widget--meal-rec-diary-water .meal-rec-card__product-item:hover {
+  background: rgba(255, 255, 255, 0.7) !important;
+}
+
+[data-theme="dark"] .meal-rec-card.widget--meal-rec-diary .meal-rec-card__meal-subcard,
+[data-theme="dark"] .meal-rec-card.widget--meal-rec-diary-water .meal-rec-card__meal-subcard {
+  background: rgba(0, 0, 0, 0.25) !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+[data-theme="dark"] .meal-rec-card.widget--meal-rec-diary .meal-rec-card__product-item,
+[data-theme="dark"] .meal-rec-card.widget--meal-rec-diary-water .meal-rec-card__product-item {
+  background: rgba(0, 0, 0, 0.35) !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+[data-theme="dark"] .meal-rec-card.widget--meal-rec-diary .meal-rec-card__product-item:hover,
+[data-theme="dark"] .meal-rec-card.widget--meal-rec-diary-water .meal-rec-card__product-item:hover {
+  background: rgba(0, 0, 0, 0.5) !important;
+}
+
+/* Эффект свечения на фоне всей страницы за карточкой витаминов (edge-to-edge) */
+.deferred-card-slot--supplements {
+  position: relative;
+  z-index: 0; /* Не поднимаем слот над соседними карточками, избегаем наложений */
 }

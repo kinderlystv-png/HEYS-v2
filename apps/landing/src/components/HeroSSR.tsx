@@ -42,7 +42,7 @@ export default function HeroSSR({ content }: HeroSSRProps) {
   return (
     <section className="relative h-screen overflow-hidden flex flex-col">
       {/* Background */}
-      <div className="absolute inset-0 bg-white" aria-hidden="true" />
+      <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg, #8EBFE0 0%, #D8ECF8 50%, #FCFBF9 90%, #FAE5D5 100%)' }} aria-hidden="true" />
 
       {/* Header */}
       <header className={`relative w-full transition-all duration-700 ease-out ${mounted ? 'opacity-100' : 'opacity-0'
@@ -129,7 +129,7 @@ export default function HeroSSR({ content }: HeroSSRProps) {
       </header>
 
       {/* Hero Content — unified grid: left=all text, right=phone */}
-      <div className="relative w-full flex-1 flex items-center bg-white">
+      <div className="relative w-full flex-1 flex items-center">
         <div className="mx-auto w-full max-w-[1024px] px-4 md:px-6 pt-4 pb-6 md:pt-8 md:pb-24">
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_260px] gap-6 lg:gap-16 items-center">
 

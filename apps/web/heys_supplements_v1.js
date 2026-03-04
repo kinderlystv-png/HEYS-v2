@@ -2177,13 +2177,10 @@
     // v4.0: Если ничего не запланировано — приглашаем настроить
     if (planned.length === 0) {
       return React.createElement('div', {
-        className: 'compact-card supplements-card',
+        className: 'compact-card supplements-card widget widget--supplements-diary',
         style: {
-          background: '#fff1f2',
-          borderRadius: '16px',
-          padding: '16px',
-          marginBottom: '12px',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.08)'
+          display: 'block',
+          marginBottom: '12px'
         }
       },
         React.createElement('div', {
@@ -2473,14 +2470,11 @@
     };
 
     return React.createElement('div', {
-      className: 'compact-card supplements-card',
+      className: 'compact-card supplements-card widget widget--supplements-diary',
       onClick: handleCardClick,
       style: {
-        background: '#fff1f2',
-        borderRadius: '16px',
-        padding: '16px',
-        marginBottom: '12px',
-        boxShadow: '0 1px 3px rgba(0,0,0,0.08)'
+        display: 'block',
+        marginBottom: '12px'
       }
     },
       // v4.1: Шапка (1 строка)
@@ -2624,7 +2618,7 @@
           React.createElement('span', { style: { fontSize: '12px', color: '#16a34a', fontWeight: '600' } }, '🎉 Все витамины приняты')
         )
       ),
-      isExpanded && React.createElement(React.Fragment, null,
+      isExpanded && React.createElement('div', { className: 'supplements-card__expanded' },
         // v3.1: Напоминание по времени
         (() => {
           const reminder = getTimeReminder(planned, taken);

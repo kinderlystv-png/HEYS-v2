@@ -6,6 +6,8 @@
     function buildDailyTableState(params) {
         const {
             React,
+            day,
+            pIndex,
             dayTot,
             normAbs,
             getDailyNutrientColor,
@@ -71,6 +73,8 @@
 
         const daySummary = HEYS.dayDailySummary?.renderDailySummary?.({
             React,
+            day,
+            pIndex,
             dayTot,
             normAbs,
             fmtVal,

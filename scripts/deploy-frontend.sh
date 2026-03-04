@@ -28,11 +28,13 @@ for f in boot-app.bundle.*.js boot-app.bundle.*.js.gz \
           postboot-2-insights.bundle.*.js postboot-2-insights.bundle.*.js.gz \
           postboot-3-ui.bundle.*.js postboot-3-ui.bundle.*.js.gz \
           react-bundle.js react-bundle.js.gz \
+          assets/*.css \
           index.html bundle-manifest.json; do
   [[ -f "$f" ]] || continue
   case "$f" in
     *.html) ct="text/html; charset=utf-8";;
     *.json) ct="application/json";;
+    *.css)  ct="text/css; charset=utf-8";;
     *)      ct="application/javascript";;
   esac
   echo -n "  ⬆️  $f... "

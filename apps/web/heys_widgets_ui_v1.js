@@ -935,10 +935,15 @@
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
 
+    // Ref: когда поставили оптимистичное обновление воды, блокируем loadData до этого времени
+    const skipLoadUntilRef = useRef(0);
+
     // Подписка на обновления данных
     useEffect(() => {
       // Первоначальная загрузка
       const loadData = () => {
+        // Пропускаем перезагрузку если недавно было оптимистичное обновление воды (чтобы не мигало)
+        if (widget.type === 'water' && Date.now() < skipLoadUntilRef.current) return;
         try {
           const newData = HEYS.Widgets.data?.getDataForWidget?.(widget) || {};
           setData(newData);
@@ -959,8 +964,8 @@
       // Подписка на события обновления данных
       const unsubData = HEYS.Widgets.on?.('data:updated', loadData);
 
-      // Подписка на глобальные события HEYS (meal:added, water:added, etc.)
-      const heysEvents = ['day:updated', 'meal:added', 'water:added', 'profile:updated'];
+      // Подписка на глобальные события HEYS (water:added НЕ включаем — обрабатывается оптимистично через heysWaterAdded DOM event)
+      const heysEvents = ['day:updated', 'meal:added', 'profile:updated'];
       heysEvents.forEach(evt => {
         if (typeof HEYS.events?.on === 'function') {
           HEYS.events.on(evt, loadData);
@@ -972,8 +977,10 @@
       // Это решает проблему debounce 500ms в useDayAutosave
       const handleWaterAdded = (e) => {
         if (widget.type !== 'water') return;
-        const { total, ml } = e.detail || {};
+        const { total } = e.detail || {};
         if (typeof total === 'number') {
+          // Блокируем loadData на 1 сек, чтобы не перетёр оптимистичное значение
+          skipLoadUntilRef.current = Date.now() + 1000;
           // Оптимистично обновляем данные с актуальным total
           setData(prev => ({
             ...prev,
@@ -1188,6 +1195,7 @@
   }
 
   function WaterWidgetContent({ widget, data }) {
+
     const drunk = data.drunk || 0;
     const target = data.target || 2000;
     const pct = target > 0 ? Math.round((drunk / target) * 100) : 0;
@@ -2909,7 +2917,7 @@
     const [catalogOpen, setCatalogOpen] = useState(false);
     const [settingsWidget, setSettingsWidget] = useState(null);
     const [historyInfo, setHistoryInfo] = useState({ canUndo: false, canRedo: false });
-    const [waterAnim, setWaterAnim] = useState(null); // '+200ml' или null
+    const [waterAnim, setWaterAnim] = useState(null); // { text: '+200мл', id: 123 } или null
     const [showGridOverlay, setShowGridOverlay] = useState(false); // Grid overlay toggle
     const containerRef = useRef(null);
     const gridRef = useRef(null);
@@ -3130,11 +3138,96 @@
 
     // 💧 Добавить воду БЕЗ переключения вкладки — анимация прямо здесь
     const handleAddWater = useCallback((ml = 200) => {
+      const persistWaterLocally = () => {
+        try {
+          const dateKey = selectedDate || new Date().toISOString().slice(0, 10);
+          const U = HEYS.utils || {};
+          const store = HEYS.store || {};
+          const baseKey = `heys_dayv2_${dateKey}`;
+
+          // Берём clientId из единого источника (с fallback на legacy localStorage)
+          let clientCurrent = (typeof U.getCurrentClientId === 'function' ? U.getCurrentClientId() : '') || '';
+          if (!clientCurrent) {
+            try {
+              const raw = localStorage.getItem('heys_client_current');
+              clientCurrent = raw ? JSON.parse(raw) : '';
+            } catch (e) {
+              clientCurrent = localStorage.getItem('heys_client_current') || '';
+            }
+          }
+
+          const scopedKey = clientCurrent
+            ? `heys_${clientCurrent}_dayv2_${dateKey}`
+            : baseKey;
+
+          // Читаем через тот же storage-контур, который используется в app
+          let dayData = (typeof U.lsGet === 'function' ? U.lsGet(baseKey, null) : null)
+            || (typeof store.get === 'function' ? store.get(scopedKey, null) : null)
+            || {};
+
+          if (typeof dayData === 'string') {
+            try {
+              dayData = JSON.parse(dayData);
+            } catch (e) {
+              dayData = {};
+            }
+          }
+
+          if (!dayData.date) dayData.date = dateKey;
+          dayData.waterMl = (dayData.waterMl || 0) + ml;
+          dayData.lastWaterTime = Date.now();
+          dayData.updatedAt = Date.now();
+
+          // Пишем через приоритетный API (чтобы не терять namespacing и sync hooks)
+          if (typeof U.lsSet === 'function') {
+            U.lsSet(baseKey, dayData);
+          } else if (typeof store.set === 'function') {
+            store.set(scopedKey, dayData);
+          } else {
+            localStorage.setItem(scopedKey, JSON.stringify(dayData));
+            // Trigger cloud sync only for raw-localStorage fallback
+            window.dispatchEvent(new CustomEvent('heys:data-saved', { detail: { key: scopedKey, type: 'meal' } }));
+          }
+
+          // Универсальное событие обновления дня (для дневника/отчётов/виджетов)
+          window.dispatchEvent(new CustomEvent('heys:day-updated', {
+            detail: { date: dateKey, dayData, source: 'widgets_fab_water' }
+          }));
+
+          // Dispatch event для синхронизации других компонентов
+          window.dispatchEvent(new CustomEvent('heysWaterAdded', {
+            detail: { ml, total: dayData.waterMl }
+          }));
+          // Также отправляем событие для виджетов
+          if (typeof HEYS.events?.emit === 'function') {
+            HEYS.events.emit('day:updated', { date: dateKey, dayData });
+            HEYS.events.emit('water:added', { ml, total: dayData.waterMl });
+          }
+        } catch (e) {
+          // silent
+        }
+      };
+
       // Сначала показываем локальную анимацию
-      setWaterAnim('+' + ml + 'мл');
+      const animId = Date.now();
+      setWaterAnim({ text: '+' + ml + 'мл', id: animId });
 
       // Вибрация
       if (navigator.vibrate) navigator.vibrate(50);
+
+      // 💧 Анимация падающей капли через DOM (не React state — не вызывает re-render и не обрезается overflow:hidden)
+      try {
+        const fabBtn = document.querySelector('.water-fab');
+        if (fabBtn) {
+          const rect = fabBtn.getBoundingClientRect();
+          const drop = document.createElement('div');
+          drop.className = 'water-drop-container';
+          drop.style.cssText = 'position:fixed;left:' + (rect.left + rect.width / 2) + 'px;top:' + (rect.top - 20) + 'px;z-index:9999;pointer-events:none;transform:translateX(-50%);';
+          drop.innerHTML = '<div class="water-drop"></div><div class="water-splash"></div>';
+          document.body.appendChild(drop);
+          setTimeout(() => { if (drop.parentNode) drop.parentNode.removeChild(drop); }, 1200);
+        }
+      } catch (e) { /* silent */ }
 
       // Вызываем HEYS.Day.addWater напрямую (skipScroll=true, чтобы не скроллить)
       const addWaterFn = window.HEYS?.Day?.addWater;
@@ -3143,44 +3236,18 @@
           addWaterFn(ml, true); // skipScroll = true
           // Виджет воды обновится через DOM событие heysWaterAdded (оптимистичное обновление)
         } catch (e) {
-          // silent
+          // Fallback: HEYS.Day.addWater есть, но вызов мог упасть из-за неготового DayTab
+          persistWaterLocally();
         }
       } else {
         // Fallback: если Day еще не смонтирован, сохраняем напрямую в localStorage
-        try {
-          const dateKey = selectedDate || new Date().toISOString().slice(0, 10);
-          // heys_client_current хранится как JSON-строка, нужно распарсить
-          let clientCurrent = '';
-          try {
-            const raw = localStorage.getItem('heys_client_current');
-            clientCurrent = raw ? JSON.parse(raw) : '';
-          } catch (e) {
-            clientCurrent = localStorage.getItem('heys_client_current') || '';
-          }
-          const storageKey = clientCurrent
-            ? `heys_${clientCurrent}_dayv2_${dateKey}`
-            : `heys_dayv2_${dateKey}`;
-          const dayData = JSON.parse(localStorage.getItem(storageKey) || '{}');
-          dayData.waterMl = (dayData.waterMl || 0) + ml;
-          dayData.lastWaterTime = Date.now();
-          dayData.updatedAt = Date.now();
-          localStorage.setItem(storageKey, JSON.stringify(dayData));
-
-          // Dispatch event для синхронизации других компонентов
-          window.dispatchEvent(new CustomEvent('heysWaterAdded', {
-            detail: { ml, total: dayData.waterMl }
-          }));
-          // Также отправляем событие для виджетов
-          if (typeof HEYS.events?.emit === 'function') {
-            HEYS.events.emit('water:added', { ml, total: dayData.waterMl });
-          }
-        } catch (e) {
-          // silent
-        }
+        persistWaterLocally();
       }
 
-      // Скрыть анимацию через 800мс
-      setTimeout(() => setWaterAnim(null), 800);
+      // Скрыть анимацию через 800мс, только если это всё ещё текущая анимация
+      setTimeout(() => {
+        setWaterAnim(prev => (prev && prev.id === animId ? null : prev));
+      }, 800);
     }, [selectedDate]);
 
     // Undo/Redo handlers
@@ -3334,16 +3401,18 @@
             onClick: () => goToDayAndRun('diary', 'addMeal', []),
             'aria-label': 'Добавить приём пищи'
           }, '🍽️'),
-          React.createElement('button', {
-            className: 'water-fab',
-            onClick: () => handleAddWater(200),
-            'aria-label': 'Добавить стакан воды'
-          }, '🥛'),
-          // 💧 Анимация добавления воды
-          waterAnim && React.createElement('div', {
-            className: 'water-fab-anim',
-            key: Date.now() // Force re-render for animation
-          }, waterAnim)
+          React.createElement('div', { style: { position: 'relative' } },
+            React.createElement('button', {
+              className: 'water-fab',
+              onClick: () => handleAddWater(200),
+              'aria-label': 'Добавить стакан воды'
+            }, '🥛'),
+            // 💧 Анимация добавления воды
+            waterAnim && React.createElement('div', {
+              className: 'water-fab-anim',
+              key: waterAnim.id // Force re-render just once per addition
+            }, waterAnim.text)
+          )
         )
       )
     );

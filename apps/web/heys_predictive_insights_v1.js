@@ -224,7 +224,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
   // Используем извлечённые константы, fallback на локальные если модуль не загружен
   const SECTIONS_CONFIG = piConst.SECTIONS_CONFIG || (() => {
     // Fallback секции если pi_constants.js не загружен
-    console.warn('[PI] pi_constants.js not loaded, using fallback SECTIONS_CONFIG');
+    console.info('[PI] using fallback SECTIONS_CONFIG');
     return {
       STATUS_SCORE: { id: 'status_score', component: 'StatusScoreCard', priority: 'CRITICAL', order: 1, alwaysShow: true, title: 'Метаболический статус', icon: '🎯' },
       CRASH_RISK: { id: 'crash_risk', component: 'MetabolicQuickStatus', priority: 'CRITICAL', order: 2, alwaysShow: true, title: 'Риск срыва', icon: '⚠️' },

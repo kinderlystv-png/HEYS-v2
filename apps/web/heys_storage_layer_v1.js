@@ -446,6 +446,7 @@
   // 🤖 РЕКОМЕНДУЕМЫЕ НАБОРЫ (SUGGESTED PRESETS — из анализа истории)
   // ═══════════════════════════════════════════════════════════════════
   const SUGGESTED_PRESETS_KEY = 'heys_suggested_presets_v1';
+  const SUGGESTED_PRESETS_DISMISSED_KEY = 'heys_suggested_presets_dismissed_v1';
 
   /**
    * Получить все рекомендованные (неодобренные) наборы
@@ -477,13 +478,28 @@
   };
 
   /**
-   * Отклонить рекомендованный набор (удаляет его)
+   * Отклонить рекомендованный набор (удаляет его и заносит в черный список)
    * @param {string} id
    */
   Store.dismissSuggestedPreset = function (id) {
     const suggested = Store.getSuggestedPresets();
+    const preset = suggested.find((p) => p.id === id);
+    if (!preset) return;
+
+    // Удаляем из активных
     Store.set(SUGGESTED_PRESETS_KEY, suggested.filter((p) => p.id !== id));
-    console.info('[HEYS.storage] ✅ Suggested preset dismissed:', { id });
+
+    // Добавляем сигнатуру в черный список, чтобы движок больше не предлагал
+    if (preset.signature) {
+      const dismissed = Store.get(SUGGESTED_PRESETS_DISMISSED_KEY, []);
+      if (!dismissed.includes(preset.signature)) {
+        dismissed.push(preset.signature);
+        if (dismissed.length > 500) dismissed.shift(); // защита от переполнения
+        Store.set(SUGGESTED_PRESETS_DISMISSED_KEY, dismissed);
+      }
+    }
+
+    console.info('[HEYS.storage] ✅ Suggested preset dismissed (blacklisted):', { id });
   };
 
   /**
@@ -549,6 +565,51 @@
       return { uniqueItems: uniqueItems, signature: signature };
     }
 
+    // -- Нормализованный ключ продукта (для gramsHistory) --
+    function normalizedItemKey(item) {
+      return String(item.name || '').toLowerCase().replace(/[^a-zа-яё0-9]/g, '') || String(item.product_id || item.id);
+    }
+
+    // -- Извлечение граммов из item (только валидные числа > 0) --
+    function extractItemGrams(item) {
+      var g = Number(item && (item.grams != null ? item.grams : item.weight));
+      return Number.isFinite(g) && g > 0 ? Math.round(g) : null;
+    }
+
+    // -- Самая частая граммовка (MODE). При равной частоте: ближе к 100г, затем меньшее значение --
+    function computeMostFrequentGrams(arr) {
+      if (!arr || arr.length === 0) return 100;
+
+      var freq = new Map();
+      arr.forEach(function (val) {
+        var g = Number(val);
+        if (!Number.isFinite(g) || g <= 0) return;
+        g = Math.round(g);
+        freq.set(g, (freq.get(g) || 0) + 1);
+      });
+
+      if (freq.size === 0) return 100;
+
+      var bestVal = 100;
+      var bestCount = -1;
+      freq.forEach(function (count, val) {
+        if (count > bestCount) {
+          bestCount = count;
+          bestVal = val;
+          return;
+        }
+        if (count === bestCount) {
+          var currentDist = Math.abs(val - 100);
+          var bestDist = Math.abs(bestVal - 100);
+          if (currentDist < bestDist || (currentDist === bestDist && val < bestVal)) {
+            bestVal = val;
+          }
+        }
+      });
+
+      return bestVal;
+    }
+
     // --- Собираем все приёмы пищи ---
     allDays.forEach(function (day) {
       (day.meals || []).forEach(function (meal) {
@@ -568,9 +629,22 @@
           entry.count++;
           var dayTs = day.date ? new Date(day.date).getTime() : Date.now();
           if (dayTs > entry.lastSeenAt) entry.lastSeenAt = dayTs;
+          // накапливаем граммы для последующего выбора самого частого значения
+          uniqueItems.forEach(function (item) {
+            var key = normalizedItemKey(item);
+            if (!entry.gramsHistory[key]) entry.gramsHistory[key] = [];
+            var gramsVal = extractItemGrams(item);
+            if (gramsVal != null) entry.gramsHistory[key].push(gramsVal);
+          });
         } else {
           var dayTs = day.date ? new Date(day.date).getTime() : Date.now();
+          var initGramsHistory = {};
+          uniqueItems.forEach(function (item) {
+            var gramsVal = extractItemGrams(item);
+            initGramsHistory[normalizedItemKey(item)] = gramsVal != null ? [gramsVal] : [];
+          });
           comboMap.set(signature, {
+            gramsHistory: initGramsHistory,
             sampleItems: uniqueItems.map(function (item) {
               return {
                 product_id: item.product_id || item.id,
@@ -596,6 +670,14 @@
       });
     });
 
+    // --- Пересчитываем grams по наиболее частому значению из истории ---
+    comboMap.forEach(function (entry) {
+      entry.sampleItems.forEach(function (item) {
+        var history = entry.gramsHistory[normalizedItemKey(item)] || [];
+        item.grams = computeMostFrequentGrams(history);
+      });
+    });
+
     // --- Фильтруем: только частые сочетания ---
     var frequentCombos = [];
     comboMap.forEach(function (entry, signature) {
@@ -617,14 +699,63 @@
       })
     );
 
+    // --- Исключаем отклонённые пользователем наборы (dismissed) ---
+    var dismissedSignatures = new Set(Store.get(SUGGESTED_PRESETS_DISMISSED_KEY, []));
+
     // --- Обновляем или создаём рекомендации ---
     var existingSuggested = Store.getSuggestedPresets();
     var existingMap = new Map(existingSuggested.map(function (p) { return [p.signature, p]; }));
     var now = Date.now();
     var newSuggested = [];
 
+    // --- Лог всех частых комбо до фильтрации ---
+    console.groupCollapsed('[HEYS.storage] 📊 ML-presets: все частые комбо до фильтрации (' + frequentCombos.length + ')');
+    frequentCombos.forEach(function (combo, i) {
+      var names = combo.sampleItems.map(function (x) { return x.name || '?'; }).join(' + ');
+      var isConfirmed = confirmedSignatures.has(combo.signature);
+      console.info('[HEYS.storage] combo[' + (i + 1) + '] freq=' + combo.count + (isConfirmed ? ' ⛔ уже сохранён' : ' ✅ кандидат') + ' → ' + names);
+    });
+    console.groupEnd();
+
+    // --- Детекция и исключение подмножеств среди кандидатов ---
+    var candidateCombos = frequentCombos.filter(function (c) { return !confirmedSignatures.has(c.signature); });
+
+    // Строим Set сигнатур-подмножеств: если все ключи A входят в B и A меньше B — A исключается
+    var subsetSignatures = new Set();
+    candidateCombos.forEach(function (comboA, iA) {
+      var keysA = new Set(comboA.sampleItems.map(function (x) {
+        return String(x.name || '').toLowerCase().replace(/[^a-zа-яё0-9]/g, '') || String(x.product_id || x.id);
+      }));
+      candidateCombos.forEach(function (comboB, iB) {
+        if (iA === iB) return;
+        var keysB = new Set(comboB.sampleItems.map(function (x) {
+          return String(x.name || '').toLowerCase().replace(/[^a-zа-яё0-9]/g, '') || String(x.product_id || x.id);
+        }));
+        var isSubset = Array.from(keysA).every(function (k) { return keysB.has(k); });
+        if (isSubset && keysA.size < keysB.size) {
+          var namesA = comboA.sampleItems.map(function (x) { return x.name || '?'; }).join(' + ');
+          var namesB = comboB.sampleItems.map(function (x) { return x.name || '?'; }).join(' + ');
+          var diffKeys = Array.from(keysB).filter(function (k) { return !keysA.has(k); });
+          console.info('[HEYS.storage] ⛔ SUBSET исключён: freq=' + comboA.count + ', лишние в большем: ' + diffKeys.join(', ') + '\n  исключаем: ' + namesA + '\n  оставляем: ' + namesB);
+          subsetSignatures.add(comboA.signature);
+        }
+      });
+    });
+
     frequentCombos.forEach(function (combo) {
-      if (confirmedSignatures.has(combo.signature)) return; // уже подтверждён
+      if (confirmedSignatures.has(combo.signature)) {
+        var skippedNames = combo.sampleItems.map(function (x) { return x.name || '?'; }).join(' + ');
+        console.info('[HEYS.storage] ⛔ ML-presets: пропущен (уже в пресетах): freq=' + combo.count + ' → ' + skippedNames);
+        return;
+      }
+      if (dismissedSignatures.has(combo.signature)) {
+        var skippedNamesDisp = combo.sampleItems.map(function (x) { return x.name || '?'; }).join(' + ');
+        console.info('[HEYS.storage] ⛔ ML-presets: пропущен (был отменён): freq=' + combo.count + ' → ' + skippedNamesDisp);
+        return;
+      }
+      if (subsetSignatures.has(combo.signature)) {
+        return; // подмножество более крупного комбо — молча пропускаем
+      }
 
       var names = combo.sampleItems.map(function (i) { return i.name; }).filter(Boolean);
       var displayName = names.length > 3
@@ -634,6 +765,7 @@
       if (existingMap.has(combo.signature)) {
         var existing = existingMap.get(combo.signature);
         newSuggested.push(Object.assign({}, existing, {
+          items: combo.sampleItems,
           frequency: combo.count,
           lastSeenAt: combo.lastSeenAt,
         }));
@@ -656,10 +788,10 @@
 
     Store.set(SUGGESTED_PRESETS_KEY, newSuggested);
 
-    console.groupCollapsed('[HEYS.storage] 🔍 Сгенерированные ML-рекомендации (детали)');
+    console.groupCollapsed('[HEYS.storage] 🔍 ML-presets: сгенерировано ' + newSuggested.length + ' наборов (развернуть)');
     newSuggested.forEach(function (s, i) {
       var itemNames = s.items.map(function (item) { return item.name || 'Без названия'; }).join(' + ');
-      console.info('  [' + (i + 1) + '] Частота: ' + s.frequency + '. Состав: ' + itemNames);
+      console.info('[HEYS.storage] preset[' + (i + 1) + '] freq=' + s.frequency + ' → ' + itemNames);
     });
     console.groupEnd();
 

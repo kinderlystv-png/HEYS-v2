@@ -4699,7 +4699,8 @@ body.tour-active .ios-pwa-banner {
   overflow: hidden;
   max-height: 0;
   opacity: 0;
-  --deferred-unfold-max: 2200px;
+  /* Safe upper bound to avoid clipping expanded cards after unfold */
+  --deferred-unfold-max: 4200px;
   will-change: max-height, opacity;
   animation: deferred-card-unfold 2s cubic-bezier(0.4, 0, 0.2, 1) both;
 }
@@ -4720,11 +4721,19 @@ body.tour-active .ios-pwa-banner {
 }
 
 .deferred-card-slot--loaded.deferred-card-slot--mealrec {
-  --deferred-unfold-max: 980px;
+  /* Planner can significantly grow in expanded state */
+  --deferred-unfold-max: 3200px;
+  /* Shadow bleed buffer: keeps premium shadow visible beyond card bounds
+     while preserving unfold clipping behavior of deferred slot */
+  padding: 6px 16px 8px;
+  /* Extra vertical rhythm below planner card */
+  margin: -6px -16px 2px;
+  box-sizing: border-box;
 }
 
 .deferred-card-slot--loaded.deferred-card-slot--supplements {
-  --deferred-unfold-max: 560px;
+  /* Vitamins can also expand and must not overlap following blocks */
+  --deferred-unfold-max: 1800px;
 }
 
 /* Keep child from enforcing unexpected intrinsic minimums */
