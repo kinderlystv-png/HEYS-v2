@@ -198,3 +198,8 @@ heys_shared_products_export_backup.json
 # Accidental log/temp files in .github
 .github/log*.yml
 .github/Untitled*.yml
+
+# AI agent temp files
+tmpclaude-*-cwd
+docs/archive/tmpclaude-*
+docs/tmpclaude-*
