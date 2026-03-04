@@ -341,8 +341,15 @@
 }
 
 @keyframes comment-prompt-appear {
-  0% { opacity: 0; transform: translateY(-8px); }
-  100% { opacity: 1; transform: translateY(0); }
+  0% {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .day-score-comment-icon {
@@ -587,8 +594,15 @@
 }
 
 @keyframes smartTipFade {
-  from { opacity: 0; transform: translateY(-4px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* ============================================
@@ -598,29 +612,26 @@
 .insulin-wave-indicator {
   position: relative;
   background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
-  border: 1px solid #bae6fd;
+  border: 1px solid var(--heys-diary-outline-border-current, var(--heys-diary-outline-border-light, #bae6fd));
   border-radius: 16px;
   padding: 14px 16px;
-  margin-bottom: 8px;
+  margin: 0 0 var(--heys-diary-stack-gap, 12px) 0 !important;
   overflow: hidden;
   transition: all 0.3s ease;
+  box-shadow: var(--heys-diary-glass-card-shadow, 0 2px 8px rgba(6, 182, 212, 0.2));
 }
 
 /* Градиент статуса */
 .insulin-wave-indicator.insulin-lipolysis {
   background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
-  border-color: #6ee7b7;
-  box-shadow: 0 0 20px rgba(34, 197, 94, 0.2);
 }
 
 .insulin-wave-indicator.insulin-almost {
   background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%);
-  border-color: #fdba74;
 }
 
 .insulin-wave-indicator.insulin-soon {
   background: linear-gradient(135deg, #fefce8 0%, #fef9c3 100%);
-  border-color: #fde047;
 }
 
 /* Статичный фон — без анимации для снижения отвлечения */
@@ -630,25 +641,26 @@
   left: 0;
   width: 100%;
   height: 100%;
-  background: linear-gradient(
-    135deg,
-    rgba(255, 255, 255, 0.1) 0%,
-    rgba(255, 255, 255, 0.05) 100%
-  );
+  background: linear-gradient(135deg,
+      rgba(255, 255, 255, 0.1) 0%,
+      rgba(255, 255, 255, 0.05) 100%);
   pointer-events: none;
 }
 
 .insulin-lipolysis .insulin-wave-bg {
-  background: linear-gradient(
-    135deg,
-    rgba(34, 197, 94, 0.08) 0%,
-    rgba(34, 197, 94, 0.04) 100%
-  );
+  background: linear-gradient(135deg,
+      rgba(34, 197, 94, 0.08) 0%,
+      rgba(34, 197, 94, 0.04) 100%);
 }
 
 @keyframes waveMove {
-  0% { transform: translateX(0); }
-  100% { transform: translateX(33.33%); }
+  0% {
+    transform: translateX(0);
+  }
+
+  100% {
+    transform: translateX(33.33%);
+  }
 }
 
 .insulin-wave-content {
@@ -675,8 +687,15 @@
 }
 
 @keyframes floatIcon {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-3px); }
+
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-3px);
+  }
 }
 
 .insulin-wave-label {
@@ -702,8 +721,17 @@
 }
 
 @keyframes lipolysisPulse {
-  0%, 100% { transform: scale(1); opacity: 1; }
-  50% { transform: scale(1.3); opacity: 0.6; }
+
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+
+  50% {
+    transform: scale(1.3);
+    opacity: 0.6;
+  }
 }
 
 /* 🔥 Таймер липолиза — огонёк пульсирует */
@@ -712,10 +740,23 @@
 }
 
 @keyframes fireWobble {
-  0%, 100% { transform: scale(1) rotate(-3deg); }
-  25% { transform: scale(1.1) rotate(3deg); }
-  50% { transform: scale(1) rotate(-2deg); }
-  75% { transform: scale(1.05) rotate(2deg); }
+
+  0%,
+  100% {
+    transform: scale(1) rotate(-3deg);
+  }
+
+  25% {
+    transform: scale(1.1) rotate(3deg);
+  }
+
+  50% {
+    transform: scale(1) rotate(-2deg);
+  }
+
+  75% {
+    transform: scale(1.05) rotate(2deg);
+  }
 }
 
 /* Прогресс-бар липолиза — мерцающий градиент */
@@ -725,8 +766,15 @@
 }
 
 @keyframes lipolysisShimmer {
-  0%, 100% { filter: brightness(1); }
-  50% { filter: brightness(1.15); }
+
+  0%,
+  100% {
+    filter: brightness(1);
+  }
+
+  50% {
+    filter: brightness(1.15);
+  }
 }
 
 .insulin-wave-progress {
@@ -760,11 +808,9 @@
   left: 0;
   right: 0;
   height: 50%;
-  background: linear-gradient(
-    180deg,
-    rgba(255, 255, 255, 0.4) 0%,
-    transparent 100%
-  );
+  background: linear-gradient(180deg,
+      rgba(255, 255, 255, 0.4) 0%,
+      transparent 100%);
   border-radius: 5px 5px 0 0;
 }
 
@@ -775,19 +821,23 @@
   left: 0;
   width: 100%;
   height: 100%;
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    rgba(255, 255, 255, 0.5) 50%,
-    transparent 100%
-  );
+  background: linear-gradient(90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.5) 50%,
+      transparent 100%);
   /* animation: barShine 1.5s ease-in-out infinite; */
-  display: none; /* ТЕСТ: полностью скрываем */
+  display: none;
+  /* ТЕСТ: полностью скрываем */
 }
 
 @keyframes barShine {
-  0% { transform: translateX(-100%); }
-  100% { transform: translateX(200%); }
+  0% {
+    transform: translateX(-100%);
+  }
+
+  100% {
+    transform: translateX(200%);
+  }
 }
 
 .insulin-wave-times {
@@ -823,8 +873,15 @@
 }
 
 @keyframes fadeInUp {
-  0% { opacity: 0; transform: translateY(5px); }
-  100% { opacity: 1; transform: translateY(0); }
+  0% {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .insulin-lipolysis .insulin-wave-suggestion {
@@ -847,15 +904,37 @@
 }
 
 @keyframes insulinShakeSubtle {
+
   /* 0-84% — неподвижно (4.2 сек) */
-  0%, 84% { transform: translateX(0); }
+  0%,
+  84% {
+    transform: translateX(0);
+  }
+
   /* 84-100% — мягкий shake (0.8 сек) */
-  86% { transform: translateX(-2px); }
-  89% { transform: translateX(2px); }
-  92% { transform: translateX(-1px); }
-  95% { transform: translateX(1px); }
-  98% { transform: translateX(-0.5px); }
-  100% { transform: translateX(0); }
+  86% {
+    transform: translateX(-2px);
+  }
+
+  89% {
+    transform: translateX(2px);
+  }
+
+  92% {
+    transform: translateX(-1px);
+  }
+
+  95% {
+    transform: translateX(1px);
+  }
+
+  98% {
+    transform: translateX(-0.5px);
+  }
+
+  100% {
+    transform: translateX(0);
+  }
 }
 
 /* === SVG Wave container === */
@@ -884,18 +963,39 @@
 }
 
 @keyframes waveFloat1 {
-  0%, 100% { transform: translateX(0) translateY(0); }
-  50% { transform: translateX(10px) translateY(-2px); }
+
+  0%,
+  100% {
+    transform: translateX(0) translateY(0);
+  }
+
+  50% {
+    transform: translateX(10px) translateY(-2px);
+  }
 }
 
 @keyframes waveFloat2 {
-  0%, 100% { transform: translateX(0) translateY(0); }
-  50% { transform: translateX(-8px) translateY(1px); }
+
+  0%,
+  100% {
+    transform: translateX(0) translateY(0);
+  }
+
+  50% {
+    transform: translateX(-8px) translateY(1px);
+  }
 }
 
 @keyframes waveFloat3 {
-  0%, 100% { transform: translateX(0) translateY(0); }
-  50% { transform: translateX(5px) translateY(-1px); }
+
+  0%,
+  100% {
+    transform: translateX(0) translateY(0);
+  }
+
+  50% {
+    transform: translateX(5px) translateY(-1px);
+  }
 }
 
 /* === GI Badge in times === */
@@ -924,13 +1024,14 @@
 }
 
 @keyframes expandIn {
-  0% { 
-    opacity: 0; 
+  0% {
+    opacity: 0;
     max-height: 0;
     transform: translateY(-10px);
   }
-  100% { 
-    opacity: 1; 
+
+  100% {
+    opacity: 1;
     max-height: 600px;
     transform: translateY(0);
   }
@@ -953,8 +1054,15 @@
 
 /* Пульсация активной волны */
 @keyframes wave-pulse {
-  0%, 100% { opacity: 0.3; }
-  50% { opacity: 0.8; }
+
+  0%,
+  100% {
+    opacity: 0.3;
+  }
+
+  50% {
+    opacity: 0.8;
+  }
 }
 
 .wave-active-pulse {
@@ -979,8 +1087,13 @@
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
 /* === FOCUS MODE для Expandable Cards === */
@@ -1018,6 +1131,7 @@
     opacity: 0;
     transform: translateY(-8px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -1093,8 +1207,13 @@
 }
 
 @keyframes moodAreaFadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
 .mood-point-best {
@@ -1102,8 +1221,15 @@
 }
 
 @keyframes moodBestPulse {
-  0%, 100% { filter: drop-shadow(0 0 2px #fbbf24); }
-  50% { filter: drop-shadow(0 0 6px #fbbf24); }
+
+  0%,
+  100% {
+    filter: drop-shadow(0 0 2px #fbbf24);
+  }
+
+  50% {
+    filter: drop-shadow(0 0 6px #fbbf24);
+  }
 }
 
 .mood-point-worst {
@@ -1111,8 +1237,15 @@
 }
 
 @keyframes moodWorstPulse {
-  0%, 100% { filter: drop-shadow(0 0 2px #f87171); }
-  50% { filter: drop-shadow(0 0 4px #f87171); }
+
+  0%,
+  100% {
+    filter: drop-shadow(0 0 2px #f87171);
+  }
+
+  50% {
+    filter: drop-shadow(0 0 4px #f87171);
+  }
 }
 
 /* Dark theme для mood sparkline */
@@ -1135,7 +1268,8 @@
 /* Зона без свайпа — увеличенный padding для touch */
 .steps-slider-container.no-swipe-zone {
   padding: 50px 0;
-  margin: -50px 0 -30px 0; /* Компенсируем padding визуально */
+  margin: -50px 0 -30px 0;
+  /* Компенсируем padding визуально */
 }
 
 .steps-motivation {
@@ -1151,8 +1285,13 @@
 
 /* === 03. SKELETON LOADER === */
 @keyframes shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
+  0% {
+    background-position: -200% 0;
+  }
+
+  100% {
+    background-position: 200% 0;
+  }
 }
 
 .skeleton-page {
@@ -1278,8 +1417,13 @@
 }
 
 @keyframes appLoaderFadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
 .app-loader-header {
@@ -1294,8 +1438,15 @@
 }
 
 @keyframes appLoaderPulse {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.1); }
+
+  0%,
+  100% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.1);
+  }
 }
 
 .app-loader-title {
@@ -1393,8 +1544,15 @@
 }
 
 @keyframes skeletonDotPulse {
-  0%, 100% { opacity: 0.2; }
-  50% { opacity: 0.5; }
+
+  0%,
+  100% {
+    opacity: 0.2;
+  }
+
+  50% {
+    opacity: 0.5;
+  }
 }
 
 .app-loader-skeleton .skeleton-cards {
@@ -1450,8 +1608,13 @@
 }
 
 @keyframes appLoaderSpin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* Dark mode */
@@ -1517,23 +1680,48 @@
 }
 
 /* Stagger animation delays */
-.skeleton-metric:nth-child(1) { animation-delay: 0s; }
-.skeleton-metric:nth-child(2) { animation-delay: 0.1s; }
-.skeleton-metric:nth-child(3) { animation-delay: 0.2s; }
-.skeleton-metric:nth-child(4) { animation-delay: 0.3s; }
+.skeleton-metric:nth-child(1) {
+  animation-delay: 0s;
+}
 
-.skeleton-ring:nth-child(1) { animation-delay: 0s; }
-.skeleton-ring:nth-child(2) { animation-delay: 0.15s; }
-.skeleton-ring:nth-child(3) { animation-delay: 0.3s; }
+.skeleton-metric:nth-child(2) {
+  animation-delay: 0.1s;
+}
 
-.skeleton-item:nth-child(1) { animation-delay: 0s; }
-.skeleton-item:nth-child(2) { animation-delay: 0.1s; }
+.skeleton-metric:nth-child(3) {
+  animation-delay: 0.2s;
+}
+
+.skeleton-metric:nth-child(4) {
+  animation-delay: 0.3s;
+}
+
+.skeleton-ring:nth-child(1) {
+  animation-delay: 0s;
+}
+
+.skeleton-ring:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.skeleton-ring:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+.skeleton-item:nth-child(1) {
+  animation-delay: 0s;
+}
+
+.skeleton-item:nth-child(2) {
+  animation-delay: 0.1s;
+}
 
 @keyframes fadeInUp {
   from {
     opacity: 0;
     transform: translateY(5px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -1759,75 +1947,75 @@
   .metrics-cards {
     gap: 6px;
   }
-  
+
   .metrics-card {
     flex: 1 1 0;
     min-width: 0;
     padding: 8px 4px;
   }
-  
+
   /* Первые 4 карточки в ряд */
   .metrics-card:not(.metrics-card-wide) {
     flex: 1 1 calc(25% - 5px);
   }
-  
+
   /* Goal progress bar mobile */
   .goal-progress-bar {
     padding: 10px 12px 30px 12px;
   }
-  
+
   .goal-progress-title {
     font-size: 12px;
   }
-  
+
   .goal-eaten {
     font-size: 15px;
   }
-  
+
   .goal-target {
     font-size: 13px;
   }
-  
+
   .goal-progress-footer {
     font-size: 11px;
   }
-  
+
   .metrics-icon {
     font-size: 14px;
   }
-  
+
   .metrics-value {
     font-size: 16px;
   }
-  
+
   .metrics-label {
     font-size: 8px;
     letter-spacing: 0;
   }
-  
+
   /* Убираем стрелки на мобильных */
   .metrics-card::after {
     display: none;
   }
-  
+
   /* Скрываем тренд и подсказки на маленьких экранах */
   .metrics-trend,
   .metrics-hint {
     display: none;
   }
-  
+
   .compact-activity-inputs {
     gap: 12px;
   }
-  
+
   .compact-activity-field {
     flex: 1 1 calc(50% - 6px);
   }
-  
+
   .compact-activity-field .compact-input {
     width: 60px;
   }
-  
+
   .compact-activity-stats {
     gap: 12px;
     font-size: 11px;
@@ -1851,9 +2039,11 @@
   .mobile-products-list {
     display: none;
   }
+
   .mobile-daily-summary {
     display: none;
   }
+
   .mobile-only {
     display: none;
   }
@@ -1885,8 +2075,8 @@
 }
 
 /* Zebra striping для столбцов */
-.mds-header > span,
-.mds-row > span {
+.mds-header>span,
+.mds-row>span {
   display: table-cell;
   padding: 1px 3px;
   text-align: center;
@@ -1895,20 +2085,20 @@
 }
 
 /* Чётные столбцы (2, 4, 6, 8, 10) - затемнённые */
-.mds-header > span:nth-child(even),
-.mds-row > span:nth-child(even) {
+.mds-header>span:nth-child(even),
+.mds-row>span:nth-child(even) {
   background: rgba(237, 233, 254, 0.5);
 }
 
 /* Нечётные столбцы - светлые (по умолчанию) */
-.mds-header > span:nth-child(odd),
-.mds-row > span:nth-child(odd) {
+.mds-header>span:nth-child(odd),
+.mds-row>span:nth-child(odd) {
   background: transparent;
 }
 
 /* Первый столбец (метка) - без фона */
-.mds-header > span:first-child,
-.mds-row > span:first-child {
+.mds-header>span:first-child,
+.mds-row>span:first-child {
   background: transparent;
   text-align: left;
   padding-right: 6px;
@@ -1999,29 +2189,58 @@
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
 @keyframes slideUp {
-  from { transform: translateY(100%); }
-  to { transform: translateY(0); }
+  from {
+    transform: translateY(100%);
+  }
+
+  to {
+    transform: translateY(0);
+  }
 }
 
 @keyframes slideDown {
-  from { transform: translateY(0); }
-  to { transform: translateY(100%); }
+  from {
+    transform: translateY(0);
+  }
+
+  to {
+    transform: translateY(100%);
+  }
 }
 
 /* Анимации переходов между шагами */
 @keyframes slideInFromRight {
-  from { transform: translateX(100%); opacity: 0; }
-  to { transform: translateX(0); opacity: 1; }
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
 }
 
 @keyframes slideInFromLeft {
-  from { transform: translateX(-100%); opacity: 0; }
-  to { transform: translateX(0); opacity: 1; }
+  from {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
 }
 
 .time-picker-step {
@@ -2108,13 +2327,14 @@
 }
 
 @keyframes fadeInHint {
-  from { 
-    opacity: 0; 
-    transform: translateY(-8px); 
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
   }
-  to { 
-    opacity: 1; 
-    transform: translateY(0); 
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 
@@ -2218,18 +2438,47 @@
 
 /* Emoji bounce animation on value change */
 @keyframes emoji-bounce {
-  0%, 100% { transform: scale(1); }
-  25% { transform: scale(1.25) rotate(-5deg); }
-  50% { transform: scale(1.15) rotate(5deg); }
-  75% { transform: scale(1.2) rotate(-3deg); }
+
+  0%,
+  100% {
+    transform: scale(1);
+  }
+
+  25% {
+    transform: scale(1.25) rotate(-5deg);
+  }
+
+  50% {
+    transform: scale(1.15) rotate(5deg);
+  }
+
+  75% {
+    transform: scale(1.2) rotate(-3deg);
+  }
 }
 
 @keyframes emoji-shake {
-  0%, 100% { transform: translateX(0); }
-  20% { transform: translateX(-4px) rotate(-5deg); }
-  40% { transform: translateX(4px) rotate(5deg); }
-  60% { transform: translateX(-3px) rotate(-3deg); }
-  80% { transform: translateX(3px) rotate(3deg); }
+
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+
+  20% {
+    transform: translateX(-4px) rotate(-5deg);
+  }
+
+  40% {
+    transform: translateX(4px) rotate(5deg);
+  }
+
+  60% {
+    transform: translateX(-3px) rotate(-3deg);
+  }
+
+  80% {
+    transform: translateX(3px) rotate(3deg);
+  }
 }
 
 .mood-emoji-dynamic.animate-bounce {
@@ -2373,6 +2622,7 @@
     transform: translateY(0) rotate(0deg) scale(1);
     opacity: 1;
   }
+
   100% {
     transform: translateY(250px) rotate(720deg) scale(0.5);
     opacity: 0;
@@ -2385,11 +2635,27 @@
 }
 
 @keyframes celebrate-bounce {
-  0%, 100% { transform: scale(1); }
-  20% { transform: scale(1.3) rotate(-10deg); }
-  40% { transform: scale(1.2) rotate(10deg); }
-  60% { transform: scale(1.25) rotate(-5deg); }
-  80% { transform: scale(1.15) rotate(5deg); }
+
+  0%,
+  100% {
+    transform: scale(1);
+  }
+
+  20% {
+    transform: scale(1.3) rotate(-10deg);
+  }
+
+  40% {
+    transform: scale(1.2) rotate(10deg);
+  }
+
+  60% {
+    transform: scale(1.25) rotate(-5deg);
+  }
+
+  80% {
+    transform: scale(1.15) rotate(5deg);
+  }
 }
 
 /* Correlation hint */
@@ -2412,6 +2678,7 @@
     opacity: 0;
     transform: translateY(8px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -2514,9 +2781,19 @@
 }
 
 @keyframes mood-face-appear {
-  0% { transform: scale(0.5); opacity: 0; }
-  60% { transform: scale(1.1); }
-  100% { transform: scale(1); opacity: 1; }
+  0% {
+    transform: scale(0.5);
+    opacity: 0;
+  }
+
+  60% {
+    transform: scale(1.1);
+  }
+
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
 
 .mood-face-text {
@@ -2574,9 +2851,17 @@
 }
 
 @keyframes value-pulse {
-  0% { transform: scale(1); }
-  50% { transform: scale(1.3); }
-  100% { transform: scale(1); }
+  0% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.3);
+  }
+
+  100% {
+    transform: scale(1);
+  }
 }
 
 /* Mood Journal Wrapper - фиксированная высота чтобы не прыгало */
@@ -2721,26 +3006,24 @@
 
 /* Positive gradient: red → blue → green */
 .mood-slider-positive {
-  background: linear-gradient(to right, 
-    var(--color-red-500) 0%, 
-    #f97316 20%, 
-    #eab308 35%,
-    var(--color-blue-500) 50%, 
-    #22c55e 70%,
-    var(--color-emerald-500) 100%
-  );
+  background: linear-gradient(to right,
+      var(--color-red-500) 0%,
+      #f97316 20%,
+      #eab308 35%,
+      var(--color-blue-500) 50%,
+      #22c55e 70%,
+      var(--color-emerald-500) 100%);
 }
 
 /* Negative gradient (stress): green → blue → red */
 .mood-slider-negative {
-  background: linear-gradient(to right, 
-    var(--color-emerald-500) 0%, 
-    #22c55e 30%,
-    var(--color-blue-500) 50%, 
-    #eab308 65%,
-    #f97316 80%, 
-    var(--color-red-500) 100%
-  );
+  background: linear-gradient(to right,
+      var(--color-emerald-500) 0%,
+      #22c55e 30%,
+      var(--color-blue-500) 50%,
+      #eab308 65%,
+      #f97316 80%,
+      var(--color-red-500) 100%);
 }
 
 /* Slider thumb */
@@ -2751,7 +3034,7 @@
   height: 28px;
   border-radius: 50%;
   background: var(--color-white);
-  box-shadow: 0 2px 8px rgba(0,0,0,0.2), 0 0 0 1px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2), 0 0 0 1px rgba(0, 0, 0, 0.1);
   cursor: pointer;
   transition: transform 0.1s ease;
 }
@@ -2765,7 +3048,7 @@
   height: 28px;
   border-radius: 50%;
   background: var(--color-white);
-  box-shadow: 0 2px 8px rgba(0,0,0,0.2), 0 0 0 1px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2), 0 0 0 1px rgba(0, 0, 0, 0.1);
   cursor: pointer;
   border: none;
 }
@@ -2813,8 +3096,10 @@
   overflow: hidden;
   position: relative;
   width: 100%;
-  touch-action: none; /* Полный контроль над touch */
-  -webkit-overflow-scrolling: auto; /* Отключаем нативный скролл */
+  touch-action: none;
+  /* Полный контроль над touch */
+  -webkit-overflow-scrolling: auto;
+  /* Отключаем нативный скролл */
 }
 
 .wheel-track {
@@ -2985,9 +3270,11 @@
 .grams-preview-kcal.kcal-low {
   color: #34c759;
 }
+
 .grams-preview-kcal.kcal-mid {
   color: #ff9500;
 }
+
 .grams-preview-kcal.kcal-high {
   color: #ff3b30;
 }
@@ -2997,9 +3284,17 @@
 }
 
 @keyframes kcal-pulse {
-  0% { transform: scale(1); }
-  50% { transform: scale(1.15); }
-  100% { transform: scale(1); }
+  0% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.15);
+  }
+
+  100% {
+    transform: scale(1);
+  }
 }
 
 /* "Обычно вы едите" hint */
@@ -3011,9 +3306,11 @@
   cursor: pointer;
   transition: color 0.15s;
 }
+
 .grams-hint:hover {
   color: var(--color-blue-ios);
 }
+
 .grams-hint:active {
   opacity: 0.7;
 }
@@ -3027,6 +3324,7 @@
   gap: 8px;
   padding: 8px 16px;
 }
+
 .kcal-calc-toggle {
   font-size: 14px;
   padding: 6px 12px;
@@ -3037,19 +3335,23 @@
   cursor: pointer;
   transition: all 0.15s;
 }
+
 .kcal-calc-toggle:hover {
   background: #f0f0f0;
 }
+
 .kcal-calc-toggle.active {
   background: var(--color-blue-ios);
   border-color: var(--color-blue-ios);
   color: var(--color-white);
 }
+
 .kcal-calc-input {
   display: flex;
   align-items: center;
   gap: 8px;
 }
+
 .kcal-calc-input input {
   width: 80px;
   padding: 6px 10px;
@@ -3059,10 +3361,12 @@
   text-align: center;
   background: var(--color-white);
 }
+
 .kcal-calc-input input:focus {
   outline: none;
   border-color: var(--color-blue-ios);
 }
+
 .kcal-calc-result {
   font-size: 14px;
   color: #666;
@@ -3111,9 +3415,17 @@
 }
 
 @keyframes portion-bounce {
-  0% { transform: scale(0.96); }
-  50% { transform: scale(1.05); }
-  100% { transform: scale(1); }
+  0% {
+    transform: scale(0.96);
+  }
+
+  50% {
+    transform: scale(1.05);
+  }
+
+  100% {
+    transform: scale(1);
+  }
 }
 
 .grams-portion-btn.active {
@@ -3405,9 +3717,11 @@
 [data-theme="dark"] .grams-preview-kcal.kcal-low {
   color: #30d158;
 }
+
 [data-theme="dark"] .grams-preview-kcal.kcal-mid {
   color: #ffd60a;
 }
+
 [data-theme="dark"] .grams-preview-kcal.kcal-high {
   color: #ff453a;
 }
@@ -3415,6 +3729,7 @@
 [data-theme="dark"] .grams-hint {
   color: #98989d;
 }
+
 [data-theme="dark"] .grams-hint:hover {
   color: #0a84ff;
 }
@@ -3425,22 +3740,27 @@
   border-color: #48484a;
   color: #98989d;
 }
+
 [data-theme="dark"] .kcal-calc-toggle:hover {
   background: #3a3a3c;
 }
+
 [data-theme="dark"] .kcal-calc-toggle.active {
   background: #0a84ff;
   border-color: #0a84ff;
   color: var(--color-white);
 }
+
 [data-theme="dark"] .kcal-calc-input input {
   background: #1c1c1e;
   border-color: #48484a;
   color: var(--color-white);
 }
+
 [data-theme="dark"] .kcal-calc-input input:focus {
   border-color: #0a84ff;
 }
+
 [data-theme="dark"] .kcal-calc-result {
   color: #98989d;
 }
@@ -3480,8 +3800,13 @@
 
 /* Pull-to-refresh */
 @keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .pull-refresh-indicator {
@@ -3496,20 +3821,63 @@
 }
 
 /* Utility classes для замены inline стилей (modals/day scope) */
-.dev-positive { color: #dc2626; font-weight: 600; }
-.dev-negative { color: #059669; font-weight: 600; }
-.dev-neutral { color: var(--color-gray-500); }
-.fw-600 { font-weight: 600; }
-.text-right { text-align: right; }
-.mt-4 { margin-top: 4px; }
-.mt-8 { margin-top: 8px; }
-.mt-16 { margin-top: 16px; }
-.mb-4 { margin-bottom: 4px; }
-.mb-6 { margin-bottom: 6px; }
-.w-100 { width: 100%; }
-.overflow-hidden { overflow: hidden; }
-.overflow-x-auto { overflow-x: auto; }
-.pos-relative { position: relative; }
+.dev-positive {
+  color: #dc2626;
+  font-weight: 600;
+}
+
+.dev-negative {
+  color: #059669;
+  font-weight: 600;
+}
+
+.dev-neutral {
+  color: var(--color-gray-500);
+}
+
+.fw-600 {
+  font-weight: 600;
+}
+
+.text-right {
+  text-align: right;
+}
+
+.mt-4 {
+  margin-top: 4px;
+}
+
+.mt-8 {
+  margin-top: 8px;
+}
+
+.mt-16 {
+  margin-top: 16px;
+}
+
+.mb-4 {
+  margin-bottom: 4px;
+}
+
+.mb-6 {
+  margin-bottom: 6px;
+}
+
+.w-100 {
+  width: 100%;
+}
+
+.overflow-hidden {
+  overflow: hidden;
+}
+
+.overflow-x-auto {
+  overflow-x: auto;
+}
+
+.pos-relative {
+  position: relative;
+}
 
 /* Muted text helper */
 .text-muted-small {
@@ -3520,9 +3888,17 @@
 }
 
 /* Table column widths */
-.col-40 { width: 40%; }
-.col-20 { width: 20%; }
-.col-15 { width: 15%; }
+.col-40 {
+  width: 40%;
+}
+
+.col-20 {
+  width: 20%;
+}
+
+.col-15 {
+  width: 15%;
+}
 
 /* Deficit input styling */
 .input-deficit {
@@ -3560,52 +3936,75 @@
 
 /* --- Keyframes --- */
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
 @keyframes fadeInUp {
-  from { 
-    opacity: 0; 
-    transform: translateY(12px); 
+  from {
+    opacity: 0;
+    transform: translateY(12px);
   }
-  to { 
-    opacity: 1; 
-    transform: translateY(0); 
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 
 @keyframes slideInRight {
-  from { 
-    opacity: 0; 
-    transform: translateX(-16px); 
+  from {
+    opacity: 0;
+    transform: translateX(-16px);
   }
-  to { 
-    opacity: 1; 
-    transform: translateX(0); 
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
   }
 }
 
 @keyframes scaleIn {
-  from { 
-    opacity: 0; 
-    transform: scale(0.95); 
+  from {
+    opacity: 0;
+    transform: scale(0.95);
   }
-  to { 
-    opacity: 1; 
-    transform: scale(1); 
+
+  to {
+    opacity: 1;
+    transform: scale(1);
   }
 }
 
 @keyframes pulse {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.05); }
+
+  0%,
+  100% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.05);
+  }
 }
 
 @keyframes starPop {
-  0% { transform: scale(1); }
-  50% { transform: scale(1.3); }
-  100% { transform: scale(1); }
+  0% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.3);
+  }
+
+  100% {
+    transform: scale(1);
+  }
 }
 
 /* --- Meal Cards Animation --- */
@@ -3632,6 +4031,7 @@
   animation: scaleIn 0.15s ease-out;
   transform-origin: top center;
 }
+
 .suggest-list-portal {
   /* duplicate intentional: layout (fixed/z-index) in 000 module, animation here */
 }
@@ -3681,7 +4081,7 @@
   .card {
     transition: box-shadow 0.2s ease, transform 0.15s ease;
   }
-  
+
   .card.clickable:hover {
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
     transform: translateY(-1px);
@@ -3689,7 +4089,9 @@
 }
 
 /* --- Input Focus Animation --- */
-input, textarea, select {
+input,
+textarea,
+select {
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
@@ -3710,6 +4112,7 @@ input, textarea, select {
 /* --- Reduce motion for accessibility --- */
 /* Исключаем .animate-always — графики всегда анимируются (это часть UX) */
 @media (prefers-reduced-motion: reduce) {
+
   *:not(.animate-always):not(.animate-always *),
   *:not(.animate-always):not(.animate-always *)::before,
   *:not(.animate-always):not(.animate-always *)::after {
@@ -3718,6 +4121,7 @@ input, textarea, select {
     transition-duration: 0.01ms !important;
   }
 }
+
 /* MODULE 04 — Modals & Day UI
  * Scope: day score/sleep pickers, modals/bottom-sheets, forms, loaders.
  */
@@ -4008,8 +4412,8 @@ input, textarea, select {
   background: var(--heys-bg-card);
 }
 
-[data-theme="dark"] .mds-header > span:nth-child(even),
-[data-theme="dark"] .mds-row > span:nth-child(even) {
+[data-theme="dark"] .mds-header>span:nth-child(even),
+[data-theme="dark"] .mds-row>span:nth-child(even) {
   background: rgba(99, 102, 241, 0.08);
 }
 

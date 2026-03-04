@@ -6,9 +6,10 @@
 
 .cascade-card {
   background: var(--card-bg, #fff);
+  border: 1px solid var(--heys-diary-outline-border-light, rgba(255, 255, 255, 0.5));
   border-radius: 16px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
-  margin-bottom: 12px;
+  box-shadow: var(--heys-diary-glass-card-shadow, 0 2px 12px rgba(0, 0, 0, 0.06));
+  margin-bottom: var(--heys-diary-stack-gap, 12px);
   overflow: hidden;
   transition: box-shadow 0.2s ease;
 }
@@ -146,7 +147,7 @@
 
 .cascade-card__body {
   padding: 0 16px 14px;
-  border-top: 1px solid rgba(0, 0, 0, 0.05);
+  border-top: 1px solid var(--heys-diary-outline-divider-light, rgba(255, 255, 255, 0.5));
 }
 
 .cascade-card__copy-wrap {
@@ -645,7 +646,8 @@
 
 [data-theme="dark"] .cascade-card {
   background: var(--card-bg, #1e293b);
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
+  border-color: var(--heys-diary-outline-border-dark, rgba(244, 63, 94, 0.42));
+  box-shadow: var(--heys-diary-glass-card-shadow, 0 2px 12px rgba(0, 0, 0, 0.3));
 }
 
 [data-theme="dark"] .cascade-card__title {
@@ -658,7 +660,7 @@
 }
 
 [data-theme="dark"] .cascade-card__body {
-  border-top-color: rgba(255, 255, 255, 0.07);
+  border-top-color: var(--heys-diary-outline-divider-dark, rgba(244, 63, 94, 0.48));
 }
 
 [data-theme="dark"] .cascade-card__copy-btn {

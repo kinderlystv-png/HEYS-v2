@@ -5283,6 +5283,61 @@
 [data-theme="dark"] .widget-crash-risk__ews-preview-item-text {
   color: var(--text-dark-primary, #f3f4f6);
 }
+
+/* ===== Shared Shadow Token (reusable) =====
+   Меняется в одном месте и применяется ко всем карточкам с utility-классом.
+   Для новых карточек: просто добавь class="widget-shadow-diary-glass". */
+:root {
+  --heys-diary-glass-card-shadow: var(--widget-shadow-card);
+  --heys-diary-stack-gap: 18px;
+  /* Shared outline tokens (border + expanded dividers) */
+  --heys-diary-outline-border-light: rgba(255, 255, 255, 0.5);
+  --heys-diary-outline-border-dark: rgba(244, 63, 94, 0.42);
+  --heys-diary-outline-divider-light: rgba(255, 255, 255, 0.5);
+  --heys-diary-outline-divider-dark: rgba(244, 63, 94, 0.48);
+
+  /* Current theme-resolved aliases (for inline styles and shared usage) */
+  --heys-diary-outline-border-current: var(--heys-diary-outline-border-light);
+  --heys-diary-outline-divider-current: var(--heys-diary-outline-divider-light);
+
+  /* Backward aliases (keep compatibility for existing rules) */
+  --heys-diary-glass-border-light: var(--heys-diary-outline-border-light);
+  --heys-diary-glass-border-dark: var(--heys-diary-outline-border-dark);
+  --heys-diary-glass-divider-light: var(--heys-diary-outline-divider-light);
+  --heys-diary-glass-divider-dark: var(--heys-diary-outline-divider-dark);
+}
+
+[data-theme="dark"] {
+  --heys-diary-outline-border-current: var(--heys-diary-outline-border-dark);
+  --heys-diary-outline-divider-current: var(--heys-diary-outline-divider-dark);
+}
+
+.widget-shadow-diary-glass {
+  box-shadow: var(--heys-diary-glass-card-shadow) !important;
+}
+
+/* Reusable outline utilities:
+   - widget-outline-diary-glass: card border/radius
+   - widget-outline-diary-expanded: side dividers for expanded sections */
+.widget-outline-diary-glass {
+  border: 1px solid var(--heys-diary-outline-border-light) !important;
+  border-radius: var(--widget-radius-lg) !important;
+}
+
+[data-theme="dark"] .widget-outline-diary-glass {
+  border-color: var(--heys-diary-outline-border-dark) !important;
+}
+
+.widget-outline-diary-expanded {
+  border-left: 1px solid var(--heys-diary-outline-divider-light);
+  border-right: 1px solid var(--heys-diary-outline-divider-light);
+}
+
+[data-theme="dark"] .widget-outline-diary-expanded {
+  border-left-color: var(--heys-diary-outline-divider-dark);
+  border-right-color: var(--heys-diary-outline-divider-dark);
+}
+
 /* ===== Supplements Diary Widget Card ===== */
 .widget--supplements-diary {
   --widget-glass-bg: rgba(255, 241, 242, 0.72);
@@ -5290,10 +5345,23 @@
   --widget-accent-strong: rgba(244, 63, 94, 0.32);
 }
 
+.supplements-card.widget--supplements-diary {
+  background: var(--widget-glass-bg) !important;
+  border: 1px solid var(--widget-glass-border, var(--heys-diary-outline-border-light)) !important;
+  border-radius: var(--widget-radius-lg) !important;
+  margin-bottom: var(--heys-diary-stack-gap, 12px) !important;
+  box-shadow: var(--heys-diary-glass-card-shadow);
+}
+
 [data-theme="dark"] .widget--supplements-diary {
   --widget-glass-bg: rgba(244, 63, 94, 0.12);
   --widget-accent-strong: rgba(244, 63, 94, 0.25);
   --widget-glass-border: rgba(244, 63, 94, 0.2);
+}
+
+[data-theme="dark"] .supplements-card.widget--supplements-diary {
+  border-color: var(--heys-diary-outline-border-dark) !important;
+  box-shadow: var(--heys-diary-glass-card-shadow);
 }
 
 /* Витамины: без tap-смещения карточки, только раскрытие вниз */
@@ -5323,38 +5391,40 @@
 /* ===== Smart Planner (Meal Rec) Diary Widget Card ===== */
 .meal-rec-card.widget--meal-rec-diary {
   background: var(--widget-glass-bg) !important;
-  border: 1px solid var(--widget-glass-border, rgba(16, 185, 129, 0.38)) !important;
+  border: 1px solid var(--widget-glass-border, var(--heys-diary-outline-border-light)) !important;
   border-radius: var(--widget-radius-lg) !important;
+  margin-bottom: var(--heys-diary-stack-gap, 12px) !important;
   --widget-glass-bg: rgba(236, 253, 245, 0.72);
   --widget-accent: rgba(16, 185, 129, 0.15);
   --widget-accent-strong: rgba(16, 185, 129, 0.32);
-  box-shadow: var(--widget-shadow-card);
+  box-shadow: var(--heys-diary-glass-card-shadow);
 }
 
 /* Свернутый planner: более читаемая премиальная окантовка без потери glass-эффекта */
 .meal-rec-card.widget--meal-rec-diary:not(.meal-rec-card--expanded),
 .meal-rec-card.widget--meal-rec-diary-water:not(.meal-rec-card--expanded) {
-  border-color: rgba(16, 185, 129, 0.52) !important;
-  box-shadow: var(--widget-shadow-card);
+  border-color: var(--heys-diary-outline-border-light) !important;
+  box-shadow: var(--heys-diary-glass-card-shadow);
 }
 
 [data-theme="dark"] .meal-rec-card.widget--meal-rec-diary {
   --widget-glass-bg: rgba(16, 185, 129, 0.12);
   --widget-accent-strong: rgba(16, 185, 129, 0.25);
-  --widget-glass-border: rgba(16, 185, 129, 0.42);
-  box-shadow: var(--widget-shadow-card);
+  --widget-glass-border: rgba(244, 63, 94, 0.2);
+  box-shadow: var(--heys-diary-glass-card-shadow);
 }
 
 [data-theme="dark"] .meal-rec-card.widget--meal-rec-diary:not(.meal-rec-card--expanded),
 [data-theme="dark"] .meal-rec-card.widget--meal-rec-diary-water:not(.meal-rec-card--expanded) {
-  border-color: rgba(16, 185, 129, 0.62) !important;
-  box-shadow: var(--widget-shadow-card);
+  border-color: var(--heys-diary-outline-border-dark) !important;
+  box-shadow: var(--heys-diary-glass-card-shadow);
 }
 
 .meal-rec-card.widget--meal-rec-diary-water {
   background: var(--widget-glass-bg) !important;
   border: 1px solid var(--widget-glass-border, rgba(59, 130, 246, 0.2)) !important;
   border-radius: var(--widget-radius-lg) !important;
+  margin-bottom: var(--heys-diary-stack-gap, 12px) !important;
   --widget-glass-bg: rgba(239, 246, 255, 0.72);
   --widget-accent: rgba(59, 130, 246, 0.15);
   --widget-accent-strong: rgba(59, 130, 246, 0.32);
@@ -5380,28 +5450,28 @@
 .meal-rec-card.widget--meal-rec-diary-water .meal-rec-card__details--expanded {
   position: relative;
   overflow: hidden;
-  border-left: 1px solid rgba(16, 185, 129, 0.36);
-  border-right: 1px solid rgba(16, 185, 129, 0.36);
+  border-left: 1px solid var(--heys-diary-outline-divider-light);
+  border-right: 1px solid var(--heys-diary-outline-divider-light);
   transform-origin: top center;
   animation: meal-rec-expand-down 220ms ease-out;
 }
 
 [data-theme="dark"] .meal-rec-card.widget--meal-rec-diary .meal-rec-card__details--expanded,
 [data-theme="dark"] .meal-rec-card.widget--meal-rec-diary-water .meal-rec-card__details--expanded {
-  border-left-color: rgba(16, 185, 129, 0.48);
-  border-right-color: rgba(16, 185, 129, 0.48);
+  border-left-color: var(--heys-diary-outline-divider-dark);
+  border-right-color: var(--heys-diary-outline-divider-dark);
 }
 
 .meal-rec-card.widget--meal-rec-diary.meal-rec-card--expanded,
 .meal-rec-card.widget--meal-rec-diary-water.meal-rec-card--expanded {
-  border-left-color: rgba(16, 185, 129, 0.42) !important;
-  border-right-color: rgba(16, 185, 129, 0.42) !important;
+  border-left-color: var(--heys-diary-outline-divider-light) !important;
+  border-right-color: var(--heys-diary-outline-divider-light) !important;
 }
 
 [data-theme="dark"] .meal-rec-card.widget--meal-rec-diary.meal-rec-card--expanded,
 [data-theme="dark"] .meal-rec-card.widget--meal-rec-diary-water.meal-rec-card--expanded {
-  border-left-color: rgba(16, 185, 129, 0.52) !important;
-  border-right-color: rgba(16, 185, 129, 0.52) !important;
+  border-left-color: var(--heys-diary-outline-divider-dark) !important;
+  border-right-color: var(--heys-diary-outline-divider-dark) !important;
 }
 
 @keyframes meal-rec-expand-down {
@@ -5470,5 +5540,6 @@
 /* Эффект свечения на фоне всей страницы за карточкой витаминов (edge-to-edge) */
 .deferred-card-slot--supplements {
   position: relative;
-  z-index: 0; /* Не поднимаем слот над соседними карточками, избегаем наложений */
+  z-index: 0;
+  /* Не поднимаем слот над соседними карточками, избегаем наложений */
 }

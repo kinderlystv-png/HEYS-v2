@@ -4332,18 +4332,22 @@
 
 /* Карточка-обёртка для diary tab */
 .goal-progress-card {
-  margin: 4px 0 14px 0;
+  margin: 4px 0 var(--heys-diary-stack-gap, 12px) 0;
   position: relative;
 }
 
 .goal-progress-bar {
-  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
-  border: 2px solid #3b82f6;
+  background: linear-gradient(135deg, #dff0ff 0%, #b8e2ff 48%, #86d0ff 100%);
+  border: 2px solid var(--heys-diary-outline-border-light, rgba(255, 255, 255, 0.5));
   border-radius: 16px;
   padding: 18px 18px 44px 18px;
   position: relative;
   transition: all 0.3s ease;
-  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.08);
+  box-shadow: var(--heys-diary-glass-card-shadow, 0 2px 8px rgba(59, 130, 246, 0.08));
+}
+
+[data-theme="dark"] .goal-progress-bar {
+  border-color: var(--heys-diary-outline-border-dark, rgba(244, 63, 94, 0.42));
 }
 
 /* ⭐ Pulse на "Идеально" (ratio 0.9-1.1) */
@@ -4532,7 +4536,11 @@
   height: 100%;
   border-radius: 14px;
   overflow: visible;
-  border: 1px solid #334155;
+  border: 1px solid var(--heys-diary-outline-divider-light, rgba(255, 255, 255, 0.5));
+}
+
+[data-theme="dark"] .goal-progress-track-inner {
+  border-color: var(--heys-diary-outline-divider-dark, rgba(244, 63, 94, 0.48));
 }
 
 /* Серый фон только до маркера при переборе */

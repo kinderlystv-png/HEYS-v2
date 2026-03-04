@@ -4718,6 +4718,10 @@ body.tour-active .ios-pwa-banner {
 /* Per-card limits prevent end-of-animation overexpansion artifacts */
 .deferred-card-slot--loaded.deferred-card-slot--cascade {
   --deferred-unfold-max: 880px;
+  /* Shadow bleed buffer: prevent cascade card shadow clipping */
+  padding: 0 16px;
+  margin: 0 -16px;
+  box-sizing: border-box;
 }
 
 .deferred-card-slot--loaded.deferred-card-slot--mealrec {
@@ -4725,15 +4729,18 @@ body.tour-active .ios-pwa-banner {
   --deferred-unfold-max: 3200px;
   /* Shadow bleed buffer: keeps premium shadow visible beyond card bounds
      while preserving unfold clipping behavior of deferred slot */
-  padding: 6px 16px 8px;
-  /* Extra vertical rhythm below planner card */
-  margin: -6px -16px 2px;
+  padding: 0 16px;
+  margin: 0 -16px;
   box-sizing: border-box;
 }
 
 .deferred-card-slot--loaded.deferred-card-slot--supplements {
   /* Vitamins can also expand and must not overlap following blocks */
   --deferred-unfold-max: 1800px;
+  /* Shadow bleed buffer: parity with planner card */
+  padding: 0 16px;
+  margin: 0 -16px;
+  box-sizing: border-box;
 }
 
 /* Keep child from enforcing unexpected intrinsic minimums */
