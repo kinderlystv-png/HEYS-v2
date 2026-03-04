@@ -5615,9 +5615,9 @@ body:has(.page-reports) .hdr::after {
   border-radius: var(--widget-radius-lg) !important;
   padding: var(--heys-diary-card-padding, 14px 16px) !important;
   margin-bottom: var(--heys-diary-stack-gap, 12px) !important;
-  --widget-glass-bg: rgba(224, 242, 254, 0.72);
-  --widget-accent: rgba(14, 165, 233, 0.15);
-  --widget-accent-strong: rgba(14, 165, 233, 0.32);
+  --widget-glass-bg: rgba(240, 249, 255, 0.92);
+  --widget-accent: rgba(14, 165, 233, 0.10);
+  --widget-accent-strong: rgba(14, 165, 233, 0.25);
   box-shadow: var(--heys-diary-glass-card-shadow);
 }
 
@@ -5629,7 +5629,7 @@ body:has(.page-reports) .hdr::after {
 }
 
 [data-theme="dark"] .meal-rec-card.widget--meal-rec-diary {
-  --widget-glass-bg: rgba(14, 165, 233, 0.12);
+  --widget-glass-bg: rgba(14, 165, 233, 0.08);
   --widget-accent-strong: rgba(14, 165, 233, 0.25);
   --widget-glass-border: rgba(14, 165, 233, 0.2);
   box-shadow: var(--heys-diary-glass-card-shadow);
