@@ -29226,7 +29226,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             const prevKeys = Object.keys(prev);
             const newKeys = Object.keys(newData);
             if (prevKeys.length === newKeys.length &&
-                prevKeys.every(k => prev[k] === newData[k])) return prev;
+              prevKeys.every(k => prev[k] === newData[k])) return prev;
             return newData;
           });
           setError(null);
