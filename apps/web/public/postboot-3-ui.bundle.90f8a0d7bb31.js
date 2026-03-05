@@ -29041,10 +29041,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       onPointerUp: handlePointerUp,
       onPointerCancel: handlePointerUp
     },
-      // Widget Header (mini = без хедера)
-      !isMini && React.createElement('div', { className: 'widget__header' },
-        React.createElement('span', { className: 'widget__title' }, widgetType?.name || widget.type)
-      ),
+
 
       // Widget Content (placeholder - будет заменён конкретными виджетами)
       // В edit-mode блокируем pointer-события на контенте: DnD/resize обрабатывает карточка
@@ -31248,9 +31245,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                 className: `widget widget--${previewWidget.size || '2x2'} widget--${previewWidget.type}`,
                 style: { position: 'absolute', inset: 0, width: '100%', height: '100%', cursor: 'default' }
               },
-                React.createElement('div', { className: 'widget__header' },
-                  React.createElement('span', { className: 'widget__title' }, widgetType?.name)
-                ),
+
                 React.createElement('div', { className: 'widget__content' },
                   React.createElement(WidgetContent, { widget: previewWidget, widgetType })
                 )
