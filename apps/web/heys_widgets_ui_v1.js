@@ -89,7 +89,9 @@
   }
 
   // === Widget Card Component ===
-  function WidgetCard({ widget, isEditMode, onRemove, onSettings, index = 0 }) {
+  // Обёрнут в React.memo — изолирует от ре-рендеров родителя (setWaterAnim и т.п.),
+  // чтобы CSS transition на кольце калорий не перезапускался попусту.
+  const WidgetCard = React.memo(function WidgetCard({ widget, isEditMode, onRemove, onSettings, index = 0 }) {
     const registry = HEYS.Widgets.registry;
     const widgetType = registry?.getType(widget.type);
     const category = registry?.getCategory(widgetType?.category);
@@ -924,7 +926,7 @@
         })
       )
     );
-  }
+  }); // end React.memo(WidgetCard)
 
   // === Widget Content Component (renders actual widget data) ===
   function WidgetContent({ widget, widgetType }) {
@@ -946,7 +948,15 @@
         if (widget.type === 'water' && Date.now() < skipLoadUntilRef.current) return;
         try {
           const newData = HEYS.Widgets.data?.getDataForWidget?.(widget) || {};
-          setData(newData);
+          // Умное обновление: если данные не изменились — возвращаем прежний объект.
+          // Это предотвращает ре-рендер CaloriesWidgetContent и перезапуск CSS animation кольца.
+          setData(prev => {
+            const prevKeys = Object.keys(prev);
+            const newKeys = Object.keys(newData);
+            if (prevKeys.length === newKeys.length &&
+              prevKeys.every(k => prev[k] === newData[k])) return prev;
+            return newData;
+          });
           setError(null);
         } catch (e) {
           trackWidgetIssue('widgets_loadData_failed', {
@@ -3347,9 +3357,10 @@
           window.dispatchEvent(new CustomEvent('heysWaterAdded', {
             detail: { ml, total: dayData.waterMl }
           }));
-          // Также отправляем событие для виджетов
+          // Только water:added — day:updated намеренно НЕ эмитим, чтобы
+          // не триггерить ре-рендер кольца калорий и других виджетов.
+          // Вода обновляется оптимистично через heysWaterAdded DOM event.
           if (typeof HEYS.events?.emit === 'function') {
-            HEYS.events.emit('day:updated', { date: dateKey, dayData });
             HEYS.events.emit('water:added', { ml, total: dayData.waterMl });
           }
         } catch (e) {
@@ -3380,7 +3391,7 @@
 
       // 🌊 Полноэкранная анимация воды (только если есть активный water-виджет)
       try {
-        const waterWidgetCard = document.querySelector('.widget-card[data-type="water"]');
+        const waterWidgetCard = document.querySelector('.widget[data-widget-type="water"]');
         if (waterWidgetCard) {
           // --- Overlay ---
           const overlay = document.createElement('div');
@@ -3427,9 +3438,9 @@
           }, 1050);
 
           // --- Пульс виджета ---
-          waterWidgetCard.classList.add('widget-card--water-pulse');
+          waterWidgetCard.classList.add('widget--water-pulse');
           setTimeout(() => {
-            waterWidgetCard.classList.remove('widget-card--water-pulse');
+            waterWidgetCard.classList.remove('widget--water-pulse');
           }, 1800);
 
           // --- Gradient-перелив самого виджета ---

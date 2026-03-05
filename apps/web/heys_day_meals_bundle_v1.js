@@ -1498,712 +1498,712 @@
 // Contains: MealAddProduct component, ProductRow component
 
 ; (function (global) {
-    const HEYS = global.HEYS = global.HEYS || {};
-    const React = global.React;
+  const HEYS = global.HEYS = global.HEYS || {};
+  const React = global.React;
 
-    // Import utilities from dayUtils
-    const U = HEYS.dayUtils || {};
-    const uid = U.uid || (() => 'id_' + Date.now());
-    const buildProductIndex = U.buildProductIndex || (() => ({}));
-    const getProductFromItem = U.getProductFromItem || (() => null);
-    const per100 = U.per100 || ((p) => ({ kcal100: 0, carbs100: 0, prot100: 0, fat100: 0, simple100: 0, complex100: 0, bad100: 0, good100: 0, trans100: 0, fiber100: 0 }));
-    const scale = U.scale || ((v, g) => Math.round(((+v || 0) * (+g || 0) / 100) * 10) / 10);
+  // Import utilities from dayUtils
+  const U = HEYS.dayUtils || {};
+  const uid = U.uid || (() => 'id_' + Date.now());
+  const buildProductIndex = U.buildProductIndex || (() => ({}));
+  const getProductFromItem = U.getProductFromItem || (() => null);
+  const per100 = U.per100 || ((p) => ({ kcal100: 0, carbs100: 0, prot100: 0, fat100: 0, simple100: 0, complex100: 0, bad100: 0, good100: 0, trans100: 0, fiber100: 0 }));
+  const scale = U.scale || ((v, g) => Math.round(((+v || 0) * (+g || 0) / 100) * 10) / 10);
 
-    // ✅ Общий helper: summary-модалка для multiProductMode
-    async function showMultiProductSummary({
-        day,
-        mealIndex,
-        pIndex,
-        getProductFromItem,
-        per100,
-        scale,
-        onAddMore
-    }) {
-        if (!HEYS.ConfirmModal?.show) return;
+  // ✅ Общий helper: summary-модалка для multiProductMode
+  async function showMultiProductSummary({
+    day,
+    mealIndex,
+    pIndex,
+    getProductFromItem,
+    per100,
+    scale,
+    onAddMore
+  }) {
+    if (!HEYS.ConfirmModal?.show) return;
 
-        const currentDay = day || HEYS.Day?.getDay?.() || {};
-        const currentMeal = currentDay?.meals?.[mealIndex];
-        if (!currentMeal) return;
+    const currentDay = day || HEYS.Day?.getDay?.() || {};
+    const currentMeal = currentDay?.meals?.[mealIndex];
+    if (!currentMeal) return;
 
-        const localPIndex = pIndex || HEYS.dayUtils?.buildProductIndex?.() || HEYS.products?.buildIndex?.() || {};
-        const mealTotals = HEYS.models?.mealTotals?.(currentMeal, localPIndex) || {};
-        const mealKcal = Math.round(mealTotals.kcal || 0);
+    const localPIndex = pIndex || HEYS.dayUtils?.buildProductIndex?.() || HEYS.products?.buildIndex?.() || {};
+    const mealTotals = HEYS.models?.mealTotals?.(currentMeal, localPIndex) || {};
+    const mealKcal = Math.round(mealTotals.kcal || 0);
 
-        const optimumData = HEYS.dayUtils?.getOptimumForDay?.(currentDay) || {};
-        const optimum = Math.round(optimumData.optimum || 2000);
+    const optimumData = HEYS.dayUtils?.getOptimumForDay?.(currentDay) || {};
+    const optimum = Math.round(optimumData.optimum || 2000);
 
-        const dayTotals = HEYS.dayCalculations?.calculateDayTotals?.(currentDay, localPIndex) || {};
-        const eatenKcal = Math.round(dayTotals.kcal || 0);
-        const remainingKcal = optimum - eatenKcal;
+    const dayTotals = HEYS.dayCalculations?.calculateDayTotals?.(currentDay, localPIndex) || {};
+    const eatenKcal = Math.round(dayTotals.kcal || 0);
+    const remainingKcal = optimum - eatenKcal;
 
-        const mealScore = HEYS.mealScoring?.calcKcalScore?.(mealKcal, null, optimum, currentMeal.time, null);
-        const mealQuality = HEYS.mealScoring?.getMealQualityScore?.(currentMeal, null, optimum, localPIndex, null);
-        const mealKcalStatus = (() => {
-            let status = 'good';
-            if (mealScore?.ok === false) status = 'bad';
-            else if ((mealScore?.issues || []).length > 0) status = 'warn';
-            if (mealQuality?.score != null) {
-                if (mealQuality.score < 50) status = 'bad';
-                else if (mealQuality.score < 75 && status !== 'bad') status = 'warn';
-            }
-            return status;
-        })();
-        const mealKcalColor = mealKcalStatus === 'bad'
-            ? '#ef4444'
-            : mealKcalStatus === 'warn'
-                ? '#eab308'
-                : '#22c55e';
+    const mealScore = HEYS.mealScoring?.calcKcalScore?.(mealKcal, null, optimum, currentMeal.time, null);
+    const mealQuality = HEYS.mealScoring?.getMealQualityScore?.(currentMeal, null, optimum, localPIndex, null);
+    const mealKcalStatus = (() => {
+      let status = 'good';
+      if (mealScore?.ok === false) status = 'bad';
+      else if ((mealScore?.issues || []).length > 0) status = 'warn';
+      if (mealQuality?.score != null) {
+        if (mealQuality.score < 50) status = 'bad';
+        else if (mealQuality.score < 75 && status !== 'bad') status = 'warn';
+      }
+      return status;
+    })();
+    const mealKcalColor = mealKcalStatus === 'bad'
+      ? '#ef4444'
+      : mealKcalStatus === 'warn'
+        ? '#eab308'
+        : '#22c55e';
 
-        const heroMetrics = HEYS.dayHeroMetrics?.computeHeroMetrics?.({
-            day: currentDay,
-            eatenKcal,
-            optimum,
-            dayTargetDef: currentDay?.deficitPct,
-            factDefPct: currentDay?.deficitPct,
-            r0: (v) => Math.round(v),
-            ratioZones: HEYS.ratioZones
-        });
-        const remainingColor = heroMetrics?.remainCol?.text
-            || (remainingKcal > 100 ? '#22c55e' : remainingKcal >= 0 ? '#eab308' : '#ef4444');
+    const heroMetrics = HEYS.dayHeroMetrics?.computeHeroMetrics?.({
+      day: currentDay,
+      eatenKcal,
+      optimum,
+      dayTargetDef: currentDay?.deficitPct,
+      factDefPct: currentDay?.deficitPct,
+      r0: (v) => Math.round(v),
+      ratioZones: HEYS.ratioZones
+    });
+    const remainingColor = heroMetrics?.remainCol?.text
+      || (remainingKcal > 100 ? '#22c55e' : remainingKcal >= 0 ? '#eab308' : '#ef4444');
 
-        const mealOverLimit = (mealScore?.issues || []).some((issue) =>
-            String(issue).includes('переед') || String(issue).includes('много')
-        ) || mealScore?.ok === false;
+    const mealOverLimit = (mealScore?.issues || []).some((issue) =>
+      String(issue).includes('переед') || String(issue).includes('много')
+    ) || mealScore?.ok === false;
 
-        const isGoalReached = remainingKcal <= 0;
-        const mealName = currentMeal.name || `Приём ${mealIndex + 1}`;
+    const isGoalReached = remainingKcal <= 0;
+    const mealName = currentMeal.name || `Приём ${mealIndex + 1}`;
 
-        const mealItems = (currentMeal.items || []).map((item) => {
-            const product = getProductFromItem(item, localPIndex) || { name: item.name || '?' };
-            const grams = +item.grams || 0;
-            const p100 = per100(product);
-            const itemKcal = Math.round(scale(p100.kcal100, grams));
-            let name = product.name || item.name || '?';
-            if (name.length > 22) name = name.slice(0, 20) + '…';
-            return { name, grams, kcal: itemKcal };
-        });
-
-        const ProductsList = mealItems.length > 0 ? React.createElement('div', {
-            className: 'confirm-modal-products-list',
-            style: {
-                margin: '10px 0',
-                padding: '8px 10px',
-                background: 'var(--bg-secondary, #f8fafc)',
-                borderRadius: '8px',
-                fontSize: '13px'
-            }
-        },
-            React.createElement('div', {
-                style: {
-                    fontSize: '11px',
-                    fontWeight: '600',
-                    color: '#64748b',
-                    marginBottom: '6px',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.3px'
-                }
-            }, 'В приёме:'),
-            mealItems.slice(0, 6).map((item, idx) =>
-                React.createElement('div', {
-                    key: idx,
-                    style: {
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        padding: '3px 0',
-                        borderBottom: idx < Math.min(mealItems.length, 6) - 1 ? '1px dotted #e2e8f0' : 'none'
-                    }
-                },
-                    React.createElement('span', { style: { color: '#334155' } },
-                        item.name,
-                        ' ',
-                        React.createElement('span', { style: { color: '#94a3b8', fontSize: '11px' } }, item.grams + 'г')
-                    ),
-                    React.createElement('span', {
-                        style: { fontWeight: '600', color: '#475569', minWidth: '45px', textAlign: 'right' }
-                    }, item.kcal)
-                )
-            ),
-            mealItems.length > 6 && React.createElement('div', {
-                style: { fontSize: '11px', color: '#94a3b8', marginTop: '4px', textAlign: 'center' }
-            }, '...и ещё ' + (mealItems.length - 6)),
-            React.createElement('div', {
-                style: {
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    marginTop: '6px',
-                    paddingTop: '6px',
-                    borderTop: '1px solid #cbd5e1',
-                    fontWeight: '700'
-                }
-            },
-                React.createElement('span', { style: { color: '#334155' } }, 'Итого'),
-                React.createElement('span', { style: { color: mealKcalColor } }, mealKcal + ' ккал')
-            )
-        ) : null;
-
-        let modalResult = false;
-
-        if (isGoalReached) {
-            modalResult = await HEYS.ConfirmModal.show({
-                icon: '🎉',
-                title: 'Норма выполнена!',
-                text: React.createElement('div', { className: 'confirm-modal-text-block' },
-                    React.createElement('div', null,
-                        'Отличная работа! В "',
-                        mealName,
-                        '" уже ',
-                        React.createElement('span', {
-                            className: 'confirm-modal-kcal',
-                            style: { color: mealKcalColor }
-                        }, mealKcal + ' ккал'),
-                        '.'
-                    ),
-                    ProductsList,
-                    React.createElement('div', { style: { marginTop: '8px' } },
-                        'Всего за день: ',
-                        React.createElement('span', {
-                            className: 'confirm-modal-kcal',
-                            style: { color: remainingColor }
-                        }, eatenKcal + ' ккал')
-                    )
-                ),
-                confirmText: 'Добавить ещё',
-                cancelText: 'Завершить 🎊',
-                confirmStyle: 'success',
-                cancelStyle: 'primary',
-                confirmVariant: 'fill',
-                cancelVariant: 'fill'
-            });
-
-            if (!modalResult && HEYS.Confetti?.fire) {
-                HEYS.Confetti.fire();
-            }
-        } else {
-            modalResult = await HEYS.ConfirmModal.show({
-                icon: '🍽️',
-                title: `Добавить ещё в ${String(mealName).toLowerCase()}?`,
-                text: React.createElement('div', { className: 'confirm-modal-text-block' },
-                    ProductsList,
-                    React.createElement('div', { style: { marginTop: ProductsList ? '8px' : '0' } },
-                        'До нормы сегодня осталось ',
-                        React.createElement('span', {
-                            className: 'confirm-modal-remaining',
-                            style: { color: remainingColor }
-                        }, Math.max(0, remainingKcal) + ' ккал'),
-                        '.'
-                    ),
-                    mealOverLimit && React.createElement('div', { className: 'confirm-modal-warning' },
-                        '⚠️ Похоже, приём уже тяжеловат.'
-                    )
-                ),
-                confirmText: 'Добавить ещё',
-                cancelText: 'Завершить',
-                confirmStyle: 'success',
-                cancelStyle: 'primary',
-                confirmVariant: 'fill',
-                cancelVariant: 'fill'
-            });
-        }
-
-        if (modalResult && onAddMore) {
-            onAddMore(currentDay);
-        }
-    }
-
-    HEYS.dayAddProductSummary = HEYS.dayAddProductSummary || {};
-    HEYS.dayAddProductSummary.show = showMultiProductSummary;
-
-    // === MealAddProduct Component (extracted for stable identity) ===
-    const MealAddProduct = React.memo(function MealAddProduct({
-        mi,
-        products,
-        date,
-        day,
-        setDay,
-        isCurrentMeal = false,
-        multiProductMode = false,
-        buttonText = 'Добавить еще продукт',
-        buttonIcon = '🔍',
-        buttonClassName = '',
-        highlightCurrent = true,
-        ariaLabel = 'Добавить продукт'
-    }) {
-        const getLatestProducts = React.useCallback(() => {
-            const fromHeys = HEYS.products?.getAll?.() || [];
-            const fromStore = HEYS.store?.get?.('heys_products', []) || [];
-            const fromLs = U.lsGet ? U.lsGet('heys_products', []) : [];
-
-            if (fromHeys.length > 0) return fromHeys;
-            if (fromStore.length > 0) return fromStore;
-            if (fromLs.length > 0) return fromLs;
-            return Array.isArray(products) ? products : [];
-        }, [products]);
-
-        const getLatestDay = React.useCallback(() => {
-            return day || HEYS.Day?.getDay?.() || {};
-        }, [day]);
-
-        const handleOpenModal = React.useCallback(() => {
-            try { navigator.vibrate?.(10); } catch (e) { }
-
-            const handleAddPhoto = async ({ mealIndex, photo, filename, timestamp }) => {
-                const activeDay = getLatestDay();
-                const activeMeal = activeDay?.meals?.[mealIndex];
-
-                // Проверяем лимит фото (10 на приём)
-                const currentPhotos = activeMeal?.photos?.length || 0;
-                if (currentPhotos >= PHOTO_LIMIT_PER_MEAL) {
-                    HEYS.Toast?.warning(`Максимум ${PHOTO_LIMIT_PER_MEAL} фото на приём пищи`) || alert(`Максимум ${PHOTO_LIMIT_PER_MEAL} фото на приём пищи`);
-                    return;
-                }
-
-                // Получаем данные для загрузки
-                const clientId = HEYS.utils?.getCurrentClientId?.() || 'default';
-                const mealId = activeMeal?.id || uid('meal_');
-                const photoId = uid('photo_');
-
-                // Пытаемся загрузить в облако
-                let photoData = {
-                    id: photoId,
-                    data: photo,
-                    filename,
-                    timestamp,
-                    pending: true,
-                    uploading: true,
-                    uploaded: false
-                };
-
-                // Сначала добавляем в UI (для мгновенного отображения)
-                setDay((prevDay = {}) => {
-                    const meals = (prevDay.meals || []).map((m, i) =>
-                        i === mealIndex
-                            ? {
-                                ...m,
-                                photos: [...(m.photos || []), photoData]
-                            }
-                            : m
-                    );
-                    return { ...prevDay, meals, updatedAt: Date.now() };
-                });
-
-                try { navigator.vibrate?.(10); } catch (e) { }
-
-                // Асинхронно загружаем в облако
-                if (HEYS.cloud?.uploadPhoto) {
-                    try {
-                        const result = await HEYS.cloud.uploadPhoto(photo, clientId, date, mealId);
-
-                        if (result?.uploaded && result?.url) {
-                            setDay((prevDay = {}) => {
-                                const meals = (prevDay.meals || []).map((m, i) => {
-                                    if (i !== mealIndex || !m.photos) return m;
-                                    return {
-                                        ...m,
-                                        photos: m.photos.map(p =>
-                                            p.id === photoId
-                                                ? { ...p, url: result.url, data: undefined, pending: false, uploading: false, uploaded: true }
-                                                : p
-                                        )
-                                    };
-                                });
-                                return { ...prevDay, meals, updatedAt: Date.now() };
-                            });
-                        } else if (result?.pending) {
-                            setDay((prevDay = {}) => {
-                                const meals = (prevDay.meals || []).map((m, i) => {
-                                    if (i !== mealIndex || !m.photos) return m;
-                                    return {
-                                        ...m,
-                                        photos: m.photos.map(p =>
-                                            p.id === photoId
-                                                ? { ...p, uploading: false }
-                                                : p
-                                        )
-                                    };
-                                });
-                                return { ...prevDay, meals, updatedAt: Date.now() };
-                            });
-                        }
-                    } catch (e) {
-                        setDay((prevDay = {}) => {
-                            const meals = (prevDay.meals || []).map((m, i) => {
-                                if (i !== mealIndex || !m.photos) return m;
-                                return {
-                                    ...m,
-                                    photos: m.photos.map(p =>
-                                        p.id === photoId
-                                            ? { ...p, uploading: false }
-                                            : p
-                                    )
-                                };
-                            });
-                            return { ...prevDay, meals, updatedAt: Date.now() };
-                        });
-                        console.warn('[HEYS] Photo upload failed, will retry later:', e);
-                    }
-                }
-            };
-
-            const handleNewProduct = () => {
-                if (window.HEYS?.products?.showAddModal) {
-                    window.HEYS.products.showAddModal();
-                }
-            };
-
-            const openAddModal = (override = {}) => {
-                const latestDay = override.day || getLatestDay();
-                const latestMeal = latestDay?.meals?.[mi] || {};
-                const latestProducts = getLatestProducts();
-
-                if (window.HEYS?.AddProductStep?.show) {
-                    window.HEYS.AddProductStep.show({
-                        mealIndex: mi,
-                        mealPhotos: latestMeal.photos || [],
-                        products: latestProducts,
-                        day: latestDay,
-                        dateKey: date,
-                        multiProductMode,
-                        onAdd: handleAdd,
-                        onAddPhoto: handleAddPhoto,
-                        onNewProduct: handleNewProduct
-                    });
-                } else {
-                    console.error('[HEYS] AddProductStep not loaded');
-                }
-            };
-
-            const handleAdd = ({ product, grams, mealIndex }) => {
-                console.info('[HEYS.day] ➕ Add product to meal (modal)', {
-                    mealIndex,
-                    grams,
-                    productId: product?.id ?? product?.product_id ?? null,
-                    productName: product?.name || null,
-                    source: product?._source || (product?._fromShared ? 'shared' : 'personal')
-                });
-                // 🌐 Если продукт из общей базы — автоматически клонируем в личную
-                let finalProduct = product;
-                if (product?._fromShared || product?._source === 'shared') {
-                    const cloned = window.HEYS?.products?.addFromShared?.(product);
-                    if (cloned) {
-                        finalProduct = cloned;
-                    }
-                }
-
-                // 🔍 DEBUG: Подробный лог при добавлении продукта в meal
-                const hasNutrients = !!(finalProduct?.kcal100 || finalProduct?.protein100 || finalProduct?.carbs100);
-                if (!hasNutrients) {
-                    console.error('🚨 [DayTab] CRITICAL: Received product with NO nutrients!', finalProduct);
-                }
-
-                const productId = finalProduct.id ?? finalProduct.product_id ?? finalProduct.name;
-                const computeTEFKcal100 = (p) => {
-                    const carbs = (+p.carbs100) || ((+p.simple100 || 0) + (+p.complex100 || 0));
-                    const fat = (+p.fat100) || ((+p.badFat100 || 0) + (+p.goodFat100 || 0) + (+p.trans100 || 0));
-                    // NET Atwater: protein 3 kcal/g (TEF 25% built-in: 4×0.75=3), carbs 4 kcal/g, fat 9 kcal/g
-                    return Math.round((3 * (+p.protein100 || 0) + 4 * carbs + 9 * fat) * 10) / 10;
-                };
-                const additivesList = Array.isArray(finalProduct.additives) ? finalProduct.additives : undefined;
-                const novaGroup = finalProduct.nova_group ?? finalProduct.novaGroup;
-                const nutrientDensity = finalProduct.nutrient_density ?? finalProduct.nutrientDensity;
-                const newItem = {
-                    id: uid('it_'),
-                    product_id: finalProduct.id ?? finalProduct.product_id,
-                    name: finalProduct.name,
-                    fingerprint: finalProduct.fingerprint,
-                    grams: grams || 100,
-                    portions: Array.isArray(finalProduct.portions) ? finalProduct.portions : undefined,
-                    ...(finalProduct.kcal100 !== undefined && {
-                        kcal100: computeTEFKcal100(finalProduct),
-                        protein100: finalProduct.protein100,
-                        carbs100: finalProduct.carbs100,
-                        fat100: finalProduct.fat100,
-                        simple100: finalProduct.simple100,
-                        complex100: finalProduct.complex100,
-                        badFat100: finalProduct.badFat100,
-                        goodFat100: finalProduct.goodFat100,
-                        trans100: finalProduct.trans100,
-                        fiber100: finalProduct.fiber100,
-                        sodium100: finalProduct.sodium100,
-                        omega3_100: finalProduct.omega3_100,
-                        omega6_100: finalProduct.omega6_100,
-                        nova_group: novaGroup,
-                        additives: additivesList,
-                        nutrient_density: nutrientDensity,
-                        is_organic: finalProduct.is_organic,
-                        is_whole_grain: finalProduct.is_whole_grain,
-                        is_fermented: finalProduct.is_fermented,
-                        is_raw: finalProduct.is_raw,
-                        vitamin_a: finalProduct.vitamin_a,
-                        vitamin_c: finalProduct.vitamin_c,
-                        vitamin_d: finalProduct.vitamin_d,
-                        vitamin_e: finalProduct.vitamin_e,
-                        vitamin_k: finalProduct.vitamin_k,
-                        vitamin_b1: finalProduct.vitamin_b1,
-                        vitamin_b2: finalProduct.vitamin_b2,
-                        vitamin_b3: finalProduct.vitamin_b3,
-                        vitamin_b6: finalProduct.vitamin_b6,
-                        vitamin_b9: finalProduct.vitamin_b9,
-                        vitamin_b12: finalProduct.vitamin_b12,
-                        calcium: finalProduct.calcium,
-                        iron: finalProduct.iron,
-                        magnesium: finalProduct.magnesium,
-                        phosphorus: finalProduct.phosphorus,
-                        potassium: finalProduct.potassium,
-                        zinc: finalProduct.zinc,
-                        selenium: finalProduct.selenium,
-                        iodine: finalProduct.iodine,
-                        gi: finalProduct.gi,
-                        harm: HEYS.models?.normalizeHarm?.(finalProduct)
-                    })
-                };
-
-                const itemHasNutrients = !!(newItem.kcal100 || newItem.protein100 || newItem.carbs100);
-                if (!itemHasNutrients) {
-                    console.error('🚨 [DayTab] CRITICAL: newItem has NO nutrients! Will be saved without data.', {
-                        newItem,
-                        finalProduct,
-                        spreadCondition: finalProduct.kcal100 !== undefined
-                    });
-                }
-
-                const newUpdatedAt = Date.now();
-                if (HEYS.Day?.setBlockCloudUpdates) {
-                    HEYS.Day.setBlockCloudUpdates(newUpdatedAt + 3000);
-                } else {
-                    console.warn('[HEYS.day] ⚠️ setBlockCloudUpdates missing');
-                }
-                if (HEYS.Day?.setLastLoadedUpdatedAt) {
-                    HEYS.Day.setLastLoadedUpdatedAt(newUpdatedAt);
-                } else {
-                    console.warn('[HEYS.day] ⚠️ setLastLoadedUpdatedAt missing');
-                }
-
-                setDay((prevDay = {}) => {
-                    const mealsList = prevDay.meals || [];
-                    if (!mealsList[mealIndex]) {
-                        console.warn('[HEYS.day] ❌ Meal index not found for add', {
-                            mealIndex,
-                            mealsCount: mealsList.length,
-                            productName: finalProduct?.name || null
-                        });
-                    }
-                    const meals = mealsList.map((m, i) =>
-                        i === mealIndex
-                            ? { ...m, items: [...(m.items || []), newItem] }
-                            : m
-                    );
-                    return { ...prevDay, meals, updatedAt: newUpdatedAt };
-                });
-
-                requestAnimationFrame(() => {
-                    setTimeout(() => {
-                        if (HEYS.Day?.requestFlush) {
-                            HEYS.Day.requestFlush();
-                        }
-                    }, 50);
-                });
-
-                try { navigator.vibrate?.(10); } catch (e) { }
-
-                window.dispatchEvent(new CustomEvent('heysProductAdded', {
-                    detail: { product, grams }
-                }));
-
-                try {
-                    if (HEYS.store?.set) {
-                        HEYS.store.set(`heys_last_grams_${productId}`, grams);
-                    } else if (U.lsSet) {
-                        U.lsSet(`heys_last_grams_${productId}`, grams);
-                    } else {
-                        localStorage.setItem(`heys_last_grams_${productId}`, JSON.stringify(grams));
-                    }
-
-                    const history = HEYS.store?.get
-                        ? HEYS.store.get('heys_grams_history', {})
-                        : (U.lsGet ? U.lsGet('heys_grams_history', {}) : {});
-                    if (!history[productId]) history[productId] = [];
-                    history[productId].push(grams);
-                    if (history[productId].length > 20) history[productId].shift();
-
-                    if (HEYS.store?.set) {
-                        HEYS.store.set('heys_grams_history', history);
-                    } else if (U.lsSet) {
-                        U.lsSet('heys_grams_history', history);
-                    } else {
-                        localStorage.setItem('heys_grams_history', JSON.stringify(history));
-                    }
-                } catch (e) { }
-
-                if (multiProductMode && HEYS.dayAddProductSummary?.show) {
-                    requestAnimationFrame(() => {
-                        setTimeout(() => {
-                            HEYS.dayAddProductSummary.show({
-                                day: HEYS.Day?.getDay?.() || day || {},
-                                mealIndex,
-                                pIndex: HEYS.dayUtils?.buildProductIndex?.() || HEYS.products?.buildIndex?.() || {},
-                                getProductFromItem,
-                                per100,
-                                scale,
-                                onAddMore: (updatedDay) => openAddModal({ day: updatedDay })
-                            });
-                        }, 100);
-                    });
-                }
-            };
-
-            openAddModal();
-        }, [mi, date, day, setDay, getLatestDay, getLatestProducts, multiProductMode]);
-
-        return React.createElement('button', {
-            className: 'aps-open-btn'
-                + ((highlightCurrent && isCurrentMeal) ? ' aps-open-btn--current' : '')
-                + (buttonClassName ? ` ${buttonClassName}` : ''),
-            onClick: handleOpenModal,
-            'aria-label': ariaLabel
-        },
-            React.createElement('span', { className: 'aps-open-icon' }, buttonIcon),
-            React.createElement('span', { className: 'aps-open-text' }, buttonText)
-        );
-    }, (prev, next) => {
-        if (prev.mi !== next.mi) return false;
-        if (prev.products !== next.products) return false;
-
-        const prevItems = prev.day?.meals?.[prev.mi]?.items;
-        const nextItems = next.day?.meals?.[next.mi]?.items;
-        if (prevItems !== nextItems) return false;
-
-        return true;
+    const mealItems = (currentMeal.items || []).map((item) => {
+      const product = getProductFromItem(item, localPIndex) || { name: item.name || '?' };
+      const grams = +item.grams || 0;
+      const p100 = per100(product);
+      const itemKcal = Math.round(scale(p100.kcal100, grams));
+      let name = product.name || item.name || '?';
+      if (name.length > 22) name = name.slice(0, 20) + '…';
+      return { name, grams, kcal: itemKcal };
     });
 
-    const MEAL_HEADER_META = [
-        { label: '' },
-        { label: 'г' },
-        { label: 'ккал<br>/100', per100: true },
-        { label: 'У<br>/100', per100: true },
-        { label: 'Прост<br>/100', per100: true },
-        { label: 'Сл<br>/100', per100: true },
-        { label: 'Б<br>/100', per100: true },
-        { label: 'Ж<br>/100', per100: true },
-        { label: 'ВрЖ<br>/100', per100: true },
-        { label: 'ПолЖ<br>/100', per100: true },
-        { label: 'СупЖ<br>/100', per100: true },
-        { label: 'Клет<br>/100', per100: true },
-        { label: 'ккал' },
-        { label: 'У' },
-        { label: 'Прост' },
-        { label: 'Сл' },
-        { label: 'Б' },
-        { label: 'Ж' },
-        { label: 'ВрЖ' },
-        { label: 'ПолЖ' },
-        { label: 'СупЖ' },
-        { label: 'Клет' },
-        { label: 'ГИ' },
-        { label: 'Вред' },
-        { label: '' }
-    ];
+    const ProductsList = mealItems.length > 0 ? React.createElement('div', {
+      className: 'confirm-modal-products-list',
+      style: {
+        margin: '10px 0',
+        padding: '8px 10px',
+        background: 'var(--bg-secondary, #f8fafc)',
+        borderRadius: '8px',
+        fontSize: '13px'
+      }
+    },
+      React.createElement('div', {
+        style: {
+          fontSize: '11px',
+          fontWeight: '600',
+          color: '#64748b',
+          marginBottom: '6px',
+          textTransform: 'uppercase',
+          letterSpacing: '0.3px'
+        }
+      }, 'В приёме:'),
+      mealItems.slice(0, 6).map((item, idx) =>
+        React.createElement('div', {
+          key: idx,
+          style: {
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            padding: '3px 0',
+            borderBottom: idx < Math.min(mealItems.length, 6) - 1 ? '1px dotted #e2e8f0' : 'none'
+          }
+        },
+          React.createElement('span', { style: { color: '#334155' } },
+            item.name,
+            ' ',
+            React.createElement('span', { style: { color: '#94a3b8', fontSize: '11px' } }, item.grams + 'г')
+          ),
+          React.createElement('span', {
+            style: { fontWeight: '600', color: '#475569', minWidth: '45px', textAlign: 'right' }
+          }, item.kcal)
+        )
+      ),
+      mealItems.length > 6 && React.createElement('div', {
+        style: { fontSize: '11px', color: '#94a3b8', marginTop: '4px', textAlign: 'center' }
+      }, '...и ещё ' + (mealItems.length - 6)),
+      React.createElement('div', {
+        style: {
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginTop: '6px',
+          paddingTop: '6px',
+          borderTop: '1px solid #cbd5e1',
+          fontWeight: '700'
+        }
+      },
+        React.createElement('span', { style: { color: '#334155' } }, 'Итого'),
+        React.createElement('span', { style: { color: mealKcalColor } }, mealKcal + ' ккал')
+      )
+    ) : null;
 
-    function fmtVal(key, v) {
-        if (v == null || v === '') return '-';
-        const num = +v || 0;
-        if (key === 'harm') return Math.round(num * 10) / 10; // вредность с одной десятичной
-        if (!num) return '-';
-        return Math.round(num); // всё остальное до целых
+    let modalResult = false;
+
+    if (isGoalReached) {
+      modalResult = await HEYS.ConfirmModal.show({
+        icon: '🎉',
+        title: 'Норма выполнена!',
+        text: React.createElement('div', { className: 'confirm-modal-text-block' },
+          React.createElement('div', null,
+            'Отличная работа! В "',
+            mealName,
+            '" уже ',
+            React.createElement('span', {
+              className: 'confirm-modal-kcal',
+              style: { color: mealKcalColor }
+            }, mealKcal + ' ккал'),
+            '.'
+          ),
+          ProductsList,
+          React.createElement('div', { style: { marginTop: '8px' } },
+            'Всего за день: ',
+            React.createElement('span', {
+              className: 'confirm-modal-kcal',
+              style: { color: remainingColor }
+            }, eatenKcal + ' ккал')
+          )
+        ),
+        confirmText: 'Добавить ещё',
+        cancelText: 'Завершить 🎊',
+        confirmStyle: 'success',
+        cancelStyle: 'primary',
+        confirmVariant: 'fill',
+        cancelVariant: 'fill'
+      });
+
+      if (!modalResult && HEYS.Confetti?.fire) {
+        HEYS.Confetti.fire();
+      }
+    } else {
+      modalResult = await HEYS.ConfirmModal.show({
+        icon: '🍽️',
+        title: `Добавить ещё в ${String(mealName).toLowerCase()}?`,
+        text: React.createElement('div', { className: 'confirm-modal-text-block' },
+          ProductsList,
+          React.createElement('div', { style: { marginTop: ProductsList ? '8px' : '0' } },
+            'До нормы сегодня осталось ',
+            React.createElement('span', {
+              className: 'confirm-modal-remaining',
+              style: { color: remainingColor }
+            }, Math.max(0, remainingKcal) + ' ккал'),
+            '.'
+          ),
+          mealOverLimit && React.createElement('div', { className: 'confirm-modal-warning' },
+            '⚠️ Похоже, приём уже тяжеловат.'
+          )
+        ),
+        confirmText: 'Добавить ещё',
+        cancelText: 'Завершить',
+        confirmStyle: 'success',
+        cancelStyle: 'primary',
+        confirmVariant: 'fill',
+        cancelVariant: 'fill'
+      });
     }
 
-    const harmMissingLogged = new Set();
-    function logMissingHarm(name, item, source) {
-        if (!HEYS.analytics?.trackDataOperation) return;
-        const key = `${source || 'meal-table'}:${(name || 'unknown').toLowerCase()}`;
-        if (harmMissingLogged.has(key)) return;
-        harmMissingLogged.add(key);
-        HEYS.analytics.trackDataOperation('harm_missing_in_meal_card', {
-            source: source || 'meal-table',
-            name: name || null,
-            productId: item?.product_id ?? item?.productId ?? item?.id ?? null,
-            hasItemHarm: HEYS.models?.normalizeHarm?.(item) != null,
-        });
+    if (modalResult && onAddMore) {
+      onAddMore(currentDay);
     }
+  }
 
-    const ProductRow = React.memo(function ProductRow({
-        item,
-        mealIndex,
-        isNew,
-        pIndex,
-        setGrams,
-        removeItem
-    }) {
-        const p = getProductFromItem(item, pIndex) || { name: item.name || '?' };
-        const grams = +item.grams || 0;
-        const per = per100(p);
-        const row = {
-            kcal: scale(per.kcal100, grams),
-            carbs: scale(per.carbs100, grams),
-            simple: scale(per.simple100, grams),
-            complex: scale(per.complex100, grams),
-            prot: scale(per.prot100, grams),
-            fat: scale(per.fat100, grams),
-            bad: scale(per.bad100, grams),
-            good: scale(per.good100, grams),
-            trans: scale(per.trans100, grams),
-            fiber: scale(per.fiber100, grams)
+  HEYS.dayAddProductSummary = HEYS.dayAddProductSummary || {};
+  HEYS.dayAddProductSummary.show = showMultiProductSummary;
+
+  // === MealAddProduct Component (extracted for stable identity) ===
+  const MealAddProduct = React.memo(function MealAddProduct({
+    mi,
+    products,
+    date,
+    day,
+    setDay,
+    isCurrentMeal = false,
+    multiProductMode = false,
+    buttonText = 'Добавить еще продукт',
+    buttonIcon = '🔍',
+    buttonClassName = '',
+    highlightCurrent = true,
+    ariaLabel = 'Добавить продукт'
+  }) {
+    const getLatestProducts = React.useCallback(() => {
+      const fromHeys = HEYS.products?.getAll?.() || [];
+      const fromStore = HEYS.store?.get?.('heys_products', []) || [];
+      const fromLs = U.lsGet ? U.lsGet('heys_products', []) : [];
+
+      if (fromHeys.length > 0) return fromHeys;
+      if (fromStore.length > 0) return fromStore;
+      if (fromLs.length > 0) return fromLs;
+      return Array.isArray(products) ? products : [];
+    }, [products]);
+
+    const getLatestDay = React.useCallback(() => {
+      return day || HEYS.Day?.getDay?.() || {};
+    }, [day]);
+
+    const handleOpenModal = React.useCallback(() => {
+      try { navigator.vibrate?.(10); } catch (e) { }
+
+      const handleAddPhoto = async ({ mealIndex, photo, filename, timestamp }) => {
+        const activeDay = getLatestDay();
+        const activeMeal = activeDay?.meals?.[mealIndex];
+
+        // Проверяем лимит фото (10 на приём)
+        const currentPhotos = activeMeal?.photos?.length || 0;
+        if (currentPhotos >= PHOTO_LIMIT_PER_MEAL) {
+          HEYS.Toast?.warning(`Максимум ${PHOTO_LIMIT_PER_MEAL} фото на приём пищи`) || alert(`Максимум ${PHOTO_LIMIT_PER_MEAL} фото на приём пищи`);
+          return;
+        }
+
+        // Получаем данные для загрузки
+        const clientId = HEYS.utils?.getCurrentClientId?.() || 'default';
+        const mealId = activeMeal?.id || uid('meal_');
+        const photoId = uid('photo_');
+
+        // Пытаемся загрузить в облако
+        let photoData = {
+          id: photoId,
+          data: photo,
+          filename,
+          timestamp,
+          pending: true,
+          uploading: true,
+          uploaded: false
         };
-        const giVal = p.gi ?? p.gi100 ?? p.GI ?? p.giIndex ?? item.gi;
-        // Use centralized harm normalization with fallback to item
-        const harmVal = HEYS.models?.normalizeHarm?.(p) ?? HEYS.models?.normalizeHarm?.(item);
-        if (harmVal == null) {
-            logMissingHarm(p.name, item, 'meal-table');
-        }
-        return React.createElement('tr', { 'data-new': isNew ? 'true' : 'false' },
-            React.createElement('td', { 'data-cell': 'name' }, p.name),
-            React.createElement('td', { 'data-cell': 'grams' }, React.createElement('input', {
-                type: 'number',
-                value: grams,
-                'data-grams-input': true,
-                'data-meal-index': mealIndex,
-                'data-item-id': item.id,
-                onChange: e => setGrams(mealIndex, item.id, e.target.value),
-                onKeyDown: e => {
-                    if (e.key === 'Enter') {
-                        e.target.blur(); // Убрать фокус после подтверждения
-                    }
-                },
-                onFocus: e => e.target.select(), // Выделить текст при фокусе
-                placeholder: 'грамм',
-                style: { textAlign: 'center' }
-            })),
-            React.createElement('td', { 'data-cell': 'per100' }, fmtVal('kcal100', per.kcal100)),
-            React.createElement('td', { 'data-cell': 'per100' }, fmtVal('carbs100', per.carbs100)),
-            React.createElement('td', { 'data-cell': 'per100' }, fmtVal('simple100', per.simple100)),
-            React.createElement('td', { 'data-cell': 'per100' }, fmtVal('complex100', per.complex100)),
-            React.createElement('td', { 'data-cell': 'per100' }, fmtVal('prot100', per.prot100)),
-            React.createElement('td', { 'data-cell': 'per100' }, fmtVal('fat100', per.fat100)),
-            React.createElement('td', { 'data-cell': 'per100' }, fmtVal('bad', per.bad100)),
-            React.createElement('td', { 'data-cell': 'per100' }, fmtVal('good100', per.good100)),
-            React.createElement('td', { 'data-cell': 'per100' }, fmtVal('trans100', per.trans100)),
-            React.createElement('td', { 'data-cell': 'per100' }, fmtVal('fiber100', per.fiber100)),
-            React.createElement('td', { 'data-cell': 'kcal' }, fmtVal('kcal', row.kcal)),
-            React.createElement('td', { 'data-cell': 'carbs' }, fmtVal('carbs', row.carbs)),
-            React.createElement('td', { 'data-cell': 'hidden' }, fmtVal('simple', row.simple)),
-            React.createElement('td', { 'data-cell': 'hidden' }, fmtVal('complex', row.complex)),
-            React.createElement('td', { 'data-cell': 'prot' }, fmtVal('prot', row.prot)),
-            React.createElement('td', { 'data-cell': 'fat' }, fmtVal('fat', row.fat)),
-            React.createElement('td', { 'data-cell': 'hidden' }, fmtVal('bad', row.bad)),
-            React.createElement('td', { 'data-cell': 'hidden' }, fmtVal('good', row.good)),
-            React.createElement('td', { 'data-cell': 'hidden' }, fmtVal('trans', row.trans)),
-            React.createElement('td', { 'data-cell': 'hidden' }, fmtVal('fiber', row.fiber)),
-            React.createElement('td', { 'data-cell': 'hidden' }, fmtVal('gi', giVal)),
-            React.createElement('td', { 'data-cell': 'hidden' }, fmtVal('harm', harmVal)),
-            React.createElement('td', { 'data-cell': 'delete' }, React.createElement('button', { className: 'btn secondary', onClick: () => removeItem(mealIndex, item.id) }, '×'))
-        );
-    });
 
-    // Export to HEYS namespace
-    HEYS.dayComponents = HEYS.dayComponents || {};
-    HEYS.dayComponents.MealAddProduct = MealAddProduct;
-    HEYS.dayComponents.ProductRow = ProductRow;
+        // Сначала добавляем в UI (для мгновенного отображения)
+        setDay((prevDay = {}) => {
+          const meals = (prevDay.meals || []).map((m, i) =>
+            i === mealIndex
+              ? {
+                ...m,
+                photos: [...(m.photos || []), photoData]
+              }
+              : m
+          );
+          return { ...prevDay, meals, updatedAt: Date.now() };
+        });
+
+        try { navigator.vibrate?.(10); } catch (e) { }
+
+        // Асинхронно загружаем в облако
+        if (HEYS.cloud?.uploadPhoto) {
+          try {
+            const result = await HEYS.cloud.uploadPhoto(photo, clientId, date, mealId);
+
+            if (result?.uploaded && result?.url) {
+              setDay((prevDay = {}) => {
+                const meals = (prevDay.meals || []).map((m, i) => {
+                  if (i !== mealIndex || !m.photos) return m;
+                  return {
+                    ...m,
+                    photos: m.photos.map(p =>
+                      p.id === photoId
+                        ? { ...p, url: result.url, data: undefined, pending: false, uploading: false, uploaded: true }
+                        : p
+                    )
+                  };
+                });
+                return { ...prevDay, meals, updatedAt: Date.now() };
+              });
+            } else if (result?.pending) {
+              setDay((prevDay = {}) => {
+                const meals = (prevDay.meals || []).map((m, i) => {
+                  if (i !== mealIndex || !m.photos) return m;
+                  return {
+                    ...m,
+                    photos: m.photos.map(p =>
+                      p.id === photoId
+                        ? { ...p, uploading: false }
+                        : p
+                    )
+                  };
+                });
+                return { ...prevDay, meals, updatedAt: Date.now() };
+              });
+            }
+          } catch (e) {
+            setDay((prevDay = {}) => {
+              const meals = (prevDay.meals || []).map((m, i) => {
+                if (i !== mealIndex || !m.photos) return m;
+                return {
+                  ...m,
+                  photos: m.photos.map(p =>
+                    p.id === photoId
+                      ? { ...p, uploading: false }
+                      : p
+                  )
+                };
+              });
+              return { ...prevDay, meals, updatedAt: Date.now() };
+            });
+            console.warn('[HEYS] Photo upload failed, will retry later:', e);
+          }
+        }
+      };
+
+      const handleNewProduct = () => {
+        if (window.HEYS?.products?.showAddModal) {
+          window.HEYS.products.showAddModal();
+        }
+      };
+
+      const openAddModal = (override = {}) => {
+        const latestDay = override.day || getLatestDay();
+        const latestMeal = latestDay?.meals?.[mi] || {};
+        const latestProducts = getLatestProducts();
+
+        if (window.HEYS?.AddProductStep?.show) {
+          window.HEYS.AddProductStep.show({
+            mealIndex: mi,
+            mealPhotos: latestMeal.photos || [],
+            products: latestProducts,
+            day: latestDay,
+            dateKey: date,
+            multiProductMode,
+            onAdd: handleAdd,
+            onAddPhoto: handleAddPhoto,
+            onNewProduct: handleNewProduct
+          });
+        } else {
+          console.error('[HEYS] AddProductStep not loaded');
+        }
+      };
+
+      const handleAdd = ({ product, grams, mealIndex }) => {
+        console.info('[HEYS.day] ➕ Add product to meal (modal)', {
+          mealIndex,
+          grams,
+          productId: product?.id ?? product?.product_id ?? null,
+          productName: product?.name || null,
+          source: product?._source || (product?._fromShared ? 'shared' : 'personal')
+        });
+        // 🌐 Если продукт из общей базы — автоматически клонируем в личную
+        let finalProduct = product;
+        if (product?._fromShared || product?._source === 'shared') {
+          const cloned = window.HEYS?.products?.addFromShared?.(product);
+          if (cloned) {
+            finalProduct = cloned;
+          }
+        }
+
+        // 🔍 DEBUG: Подробный лог при добавлении продукта в meal
+        const hasNutrients = !!(finalProduct?.kcal100 || finalProduct?.protein100 || finalProduct?.carbs100);
+        if (!hasNutrients) {
+          console.error('🚨 [DayTab] CRITICAL: Received product with NO nutrients!', finalProduct);
+        }
+
+        const productId = finalProduct.id ?? finalProduct.product_id ?? finalProduct.name;
+        const computeTEFKcal100 = (p) => {
+          const carbs = (+p.carbs100) || ((+p.simple100 || 0) + (+p.complex100 || 0));
+          const fat = (+p.fat100) || ((+p.badFat100 || 0) + (+p.goodFat100 || 0) + (+p.trans100 || 0));
+          // NET Atwater: protein 3 kcal/g (TEF 25% built-in: 4×0.75=3), carbs 4 kcal/g, fat 9 kcal/g
+          return Math.round((3 * (+p.protein100 || 0) + 4 * carbs + 9 * fat) * 10) / 10;
+        };
+        const additivesList = Array.isArray(finalProduct.additives) ? finalProduct.additives : undefined;
+        const novaGroup = finalProduct.nova_group ?? finalProduct.novaGroup;
+        const nutrientDensity = finalProduct.nutrient_density ?? finalProduct.nutrientDensity;
+        const newItem = {
+          id: uid('it_'),
+          product_id: finalProduct.id ?? finalProduct.product_id,
+          name: finalProduct.name,
+          fingerprint: finalProduct.fingerprint,
+          grams: grams || 100,
+          portions: Array.isArray(finalProduct.portions) ? finalProduct.portions : undefined,
+          ...(finalProduct.kcal100 !== undefined && {
+            kcal100: computeTEFKcal100(finalProduct),
+            protein100: finalProduct.protein100,
+            carbs100: finalProduct.carbs100,
+            fat100: finalProduct.fat100,
+            simple100: finalProduct.simple100,
+            complex100: finalProduct.complex100,
+            badFat100: finalProduct.badFat100,
+            goodFat100: finalProduct.goodFat100,
+            trans100: finalProduct.trans100,
+            fiber100: finalProduct.fiber100,
+            sodium100: finalProduct.sodium100,
+            omega3_100: finalProduct.omega3_100,
+            omega6_100: finalProduct.omega6_100,
+            nova_group: novaGroup,
+            additives: additivesList,
+            nutrient_density: nutrientDensity,
+            is_organic: finalProduct.is_organic,
+            is_whole_grain: finalProduct.is_whole_grain,
+            is_fermented: finalProduct.is_fermented,
+            is_raw: finalProduct.is_raw,
+            vitamin_a: finalProduct.vitamin_a,
+            vitamin_c: finalProduct.vitamin_c,
+            vitamin_d: finalProduct.vitamin_d,
+            vitamin_e: finalProduct.vitamin_e,
+            vitamin_k: finalProduct.vitamin_k,
+            vitamin_b1: finalProduct.vitamin_b1,
+            vitamin_b2: finalProduct.vitamin_b2,
+            vitamin_b3: finalProduct.vitamin_b3,
+            vitamin_b6: finalProduct.vitamin_b6,
+            vitamin_b9: finalProduct.vitamin_b9,
+            vitamin_b12: finalProduct.vitamin_b12,
+            calcium: finalProduct.calcium,
+            iron: finalProduct.iron,
+            magnesium: finalProduct.magnesium,
+            phosphorus: finalProduct.phosphorus,
+            potassium: finalProduct.potassium,
+            zinc: finalProduct.zinc,
+            selenium: finalProduct.selenium,
+            iodine: finalProduct.iodine,
+            gi: finalProduct.gi,
+            harm: HEYS.models?.normalizeHarm?.(finalProduct)
+          })
+        };
+
+        const itemHasNutrients = !!(newItem.kcal100 || newItem.protein100 || newItem.carbs100);
+        if (!itemHasNutrients) {
+          console.error('🚨 [DayTab] CRITICAL: newItem has NO nutrients! Will be saved without data.', {
+            newItem,
+            finalProduct,
+            spreadCondition: finalProduct.kcal100 !== undefined
+          });
+        }
+
+        const newUpdatedAt = Date.now();
+        if (HEYS.Day?.setBlockCloudUpdates) {
+          HEYS.Day.setBlockCloudUpdates(newUpdatedAt + 3000);
+        } else {
+          console.warn('[HEYS.day] ⚠️ setBlockCloudUpdates missing');
+        }
+        if (HEYS.Day?.setLastLoadedUpdatedAt) {
+          HEYS.Day.setLastLoadedUpdatedAt(newUpdatedAt);
+        } else {
+          console.warn('[HEYS.day] ⚠️ setLastLoadedUpdatedAt missing');
+        }
+
+        setDay((prevDay = {}) => {
+          const mealsList = prevDay.meals || [];
+          if (!mealsList[mealIndex]) {
+            console.warn('[HEYS.day] ❌ Meal index not found for add', {
+              mealIndex,
+              mealsCount: mealsList.length,
+              productName: finalProduct?.name || null
+            });
+          }
+          const meals = mealsList.map((m, i) =>
+            i === mealIndex
+              ? { ...m, items: [...(m.items || []), newItem] }
+              : m
+          );
+          return { ...prevDay, meals, updatedAt: newUpdatedAt };
+        });
+
+        requestAnimationFrame(() => {
+          setTimeout(() => {
+            if (HEYS.Day?.requestFlush) {
+              HEYS.Day.requestFlush();
+            }
+          }, 50);
+        });
+
+        try { navigator.vibrate?.(10); } catch (e) { }
+
+        window.dispatchEvent(new CustomEvent('heysProductAdded', {
+          detail: { product, grams }
+        }));
+
+        try {
+          if (HEYS.store?.set) {
+            HEYS.store.set(`heys_last_grams_${productId}`, grams);
+          } else if (U.lsSet) {
+            U.lsSet(`heys_last_grams_${productId}`, grams);
+          } else {
+            localStorage.setItem(`heys_last_grams_${productId}`, JSON.stringify(grams));
+          }
+
+          const history = HEYS.store?.get
+            ? HEYS.store.get('heys_grams_history', {})
+            : (U.lsGet ? U.lsGet('heys_grams_history', {}) : {});
+          if (!history[productId]) history[productId] = [];
+          history[productId].push(grams);
+          if (history[productId].length > 20) history[productId].shift();
+
+          if (HEYS.store?.set) {
+            HEYS.store.set('heys_grams_history', history);
+          } else if (U.lsSet) {
+            U.lsSet('heys_grams_history', history);
+          } else {
+            localStorage.setItem('heys_grams_history', JSON.stringify(history));
+          }
+        } catch (e) { }
+
+        if (multiProductMode && HEYS.dayAddProductSummary?.show) {
+          requestAnimationFrame(() => {
+            setTimeout(() => {
+              HEYS.dayAddProductSummary.show({
+                day: HEYS.Day?.getDay?.() || day || {},
+                mealIndex,
+                pIndex: HEYS.dayUtils?.buildProductIndex?.() || HEYS.products?.buildIndex?.() || {},
+                getProductFromItem,
+                per100,
+                scale,
+                onAddMore: (updatedDay) => openAddModal({ day: updatedDay })
+              });
+            }, 100);
+          });
+        }
+      };
+
+      openAddModal();
+    }, [mi, date, day, setDay, getLatestDay, getLatestProducts, multiProductMode]);
+
+    return React.createElement('button', {
+      className: 'aps-open-btn'
+        + ((highlightCurrent && isCurrentMeal) ? ' aps-open-btn--current' : '')
+        + (buttonClassName ? ` ${buttonClassName}` : ''),
+      onClick: handleOpenModal,
+      'aria-label': ariaLabel
+    },
+      React.createElement('span', { className: 'aps-open-icon' }, buttonIcon),
+      React.createElement('span', { className: 'aps-open-text' }, buttonText)
+    );
+  }, (prev, next) => {
+    if (prev.mi !== next.mi) return false;
+    if (prev.products !== next.products) return false;
+
+    const prevItems = prev.day?.meals?.[prev.mi]?.items;
+    const nextItems = next.day?.meals?.[next.mi]?.items;
+    if (prevItems !== nextItems) return false;
+
+    return true;
+  });
+
+  const MEAL_HEADER_META = [
+    { label: '' },
+    { label: 'г' },
+    { label: 'ккал<br>/100', per100: true },
+    { label: 'У<br>/100', per100: true },
+    { label: 'Прост<br>/100', per100: true },
+    { label: 'Сл<br>/100', per100: true },
+    { label: 'Б<br>/100', per100: true },
+    { label: 'Ж<br>/100', per100: true },
+    { label: 'ВрЖ<br>/100', per100: true },
+    { label: 'ПолЖ<br>/100', per100: true },
+    { label: 'СупЖ<br>/100', per100: true },
+    { label: 'Клет<br>/100', per100: true },
+    { label: 'ккал' },
+    { label: 'У' },
+    { label: 'Прост' },
+    { label: 'Сл' },
+    { label: 'Б' },
+    { label: 'Ж' },
+    { label: 'ВрЖ' },
+    { label: 'ПолЖ' },
+    { label: 'СупЖ' },
+    { label: 'Клет' },
+    { label: 'ГИ' },
+    { label: 'Вред' },
+    { label: '' }
+  ];
+
+  function fmtVal(key, v) {
+    if (v == null || v === '') return '-';
+    const num = +v || 0;
+    if (key === 'harm') return Math.round(num * 10) / 10; // вредность с одной десятичной
+    if (!num) return '-';
+    return Math.round(num); // всё остальное до целых
+  }
+
+  const harmMissingLogged = new Set();
+  function logMissingHarm(name, item, source) {
+    if (!HEYS.analytics?.trackDataOperation) return;
+    const key = `${source || 'meal-table'}:${(name || 'unknown').toLowerCase()}`;
+    if (harmMissingLogged.has(key)) return;
+    harmMissingLogged.add(key);
+    HEYS.analytics.trackDataOperation('harm_missing_in_meal_card', {
+      source: source || 'meal-table',
+      name: name || null,
+      productId: item?.product_id ?? item?.productId ?? item?.id ?? null,
+      hasItemHarm: HEYS.models?.normalizeHarm?.(item) != null,
+    });
+  }
+
+  const ProductRow = React.memo(function ProductRow({
+    item,
+    mealIndex,
+    isNew,
+    pIndex,
+    setGrams,
+    removeItem
+  }) {
+    const p = getProductFromItem(item, pIndex) || { name: item.name || '?' };
+    const grams = +item.grams || 0;
+    const per = per100(p);
+    const row = {
+      kcal: scale(per.kcal100, grams),
+      carbs: scale(per.carbs100, grams),
+      simple: scale(per.simple100, grams),
+      complex: scale(per.complex100, grams),
+      prot: scale(per.prot100, grams),
+      fat: scale(per.fat100, grams),
+      bad: scale(per.bad100, grams),
+      good: scale(per.good100, grams),
+      trans: scale(per.trans100, grams),
+      fiber: scale(per.fiber100, grams)
+    };
+    const giVal = p.gi ?? p.gi100 ?? p.GI ?? p.giIndex ?? item.gi;
+    // Use centralized harm normalization with fallback to item
+    const harmVal = HEYS.models?.normalizeHarm?.(p) ?? HEYS.models?.normalizeHarm?.(item);
+    if (harmVal == null) {
+      logMissingHarm(p.name, item, 'meal-table');
+    }
+    return React.createElement('tr', { 'data-new': isNew ? 'true' : 'false' },
+      React.createElement('td', { 'data-cell': 'name' }, p.name),
+      React.createElement('td', { 'data-cell': 'grams' }, React.createElement('input', {
+        type: 'number',
+        value: grams,
+        'data-grams-input': true,
+        'data-meal-index': mealIndex,
+        'data-item-id': item.id,
+        onChange: e => setGrams(mealIndex, item.id, e.target.value),
+        onKeyDown: e => {
+          if (e.key === 'Enter') {
+            e.target.blur(); // Убрать фокус после подтверждения
+          }
+        },
+        onFocus: e => e.target.select(), // Выделить текст при фокусе
+        placeholder: 'грамм',
+        style: { textAlign: 'center' }
+      })),
+      React.createElement('td', { 'data-cell': 'per100' }, fmtVal('kcal100', per.kcal100)),
+      React.createElement('td', { 'data-cell': 'per100' }, fmtVal('carbs100', per.carbs100)),
+      React.createElement('td', { 'data-cell': 'per100' }, fmtVal('simple100', per.simple100)),
+      React.createElement('td', { 'data-cell': 'per100' }, fmtVal('complex100', per.complex100)),
+      React.createElement('td', { 'data-cell': 'per100' }, fmtVal('prot100', per.prot100)),
+      React.createElement('td', { 'data-cell': 'per100' }, fmtVal('fat100', per.fat100)),
+      React.createElement('td', { 'data-cell': 'per100' }, fmtVal('bad', per.bad100)),
+      React.createElement('td', { 'data-cell': 'per100' }, fmtVal('good100', per.good100)),
+      React.createElement('td', { 'data-cell': 'per100' }, fmtVal('trans100', per.trans100)),
+      React.createElement('td', { 'data-cell': 'per100' }, fmtVal('fiber100', per.fiber100)),
+      React.createElement('td', { 'data-cell': 'kcal' }, fmtVal('kcal', row.kcal)),
+      React.createElement('td', { 'data-cell': 'carbs' }, fmtVal('carbs', row.carbs)),
+      React.createElement('td', { 'data-cell': 'hidden' }, fmtVal('simple', row.simple)),
+      React.createElement('td', { 'data-cell': 'hidden' }, fmtVal('complex', row.complex)),
+      React.createElement('td', { 'data-cell': 'prot' }, fmtVal('prot', row.prot)),
+      React.createElement('td', { 'data-cell': 'fat' }, fmtVal('fat', row.fat)),
+      React.createElement('td', { 'data-cell': 'hidden' }, fmtVal('bad', row.bad)),
+      React.createElement('td', { 'data-cell': 'hidden' }, fmtVal('good', row.good)),
+      React.createElement('td', { 'data-cell': 'hidden' }, fmtVal('trans', row.trans)),
+      React.createElement('td', { 'data-cell': 'hidden' }, fmtVal('fiber', row.fiber)),
+      React.createElement('td', { 'data-cell': 'hidden' }, fmtVal('gi', giVal)),
+      React.createElement('td', { 'data-cell': 'hidden' }, fmtVal('harm', harmVal)),
+      React.createElement('td', { 'data-cell': 'delete' }, React.createElement('button', { className: 'btn secondary', onClick: () => removeItem(mealIndex, item.id) }, '×'))
+    );
+  });
+
+  // Export to HEYS namespace
+  HEYS.dayComponents = HEYS.dayComponents || {};
+  HEYS.dayComponents.MealAddProduct = MealAddProduct;
+  HEYS.dayComponents.ProductRow = ProductRow;
 
 })(window);
 // ===== End heys_day_add_product.js =====
@@ -2518,7 +2518,7 @@
                 },
             });
             return React.createElement('div', {
-                className: 'card tone-slate meal-card',
+                className: 'card tone-slate meal-card widget-shadow-diary-glass widget-outline-diary-glass',
                 style: { padding: '12px', marginTop: '8px' },
             }, 'Загрузка...');
         }
@@ -2595,18 +2595,14 @@
             ? mealQuality.color
             : (meal?.items?.length > 0 ? '#9ca3af' : 'transparent');
 
-        const mealCardClass = isCurrentMeal ? 'card tone-green meal-card meal-card--current' : 'card tone-slate meal-card';
+        const mealCardClass = isCurrentMeal
+            ? 'card tone-green meal-card meal-card--current widget-shadow-diary-glass widget-outline-diary-glass'
+            : 'card tone-slate meal-card widget-shadow-diary-glass widget-outline-diary-glass';
         const mealCardStyle = {
             marginTop: '8px',
             width: '100%',
             position: 'relative',
             paddingLeft: '12px',
-            ...(isCurrentMeal
-                ? {
-                    border: '2px solid #22c55e',
-                    boxShadow: '0 4px 12px rgba(34,197,94,0.25)',
-                }
-                : {}),
         };
         const computeDerivedProductFn = M.computeDerivedProduct || ((prod) => prod || {});
 
@@ -2698,7 +2694,13 @@
             }).length;
         }, [meal, totals, dayData, profile, products, pIndex]);
 
-        return React.createElement('div', { className: mealCardClass, 'data-meal-index': mealIndex, style: mealCardStyle },
+        return React.createElement('div', {
+            className: mealCardClass,
+            'data-meal-index': mealIndex,
+            'data-meal-id': meal?.id || '',
+            'data-meal-time': meal?.time || '',
+            style: mealCardStyle,
+        },
             qualityLineColor !== 'transparent' && React.createElement('div', {
                 className: 'meal-quality-line',
                 style: {
@@ -4307,17 +4309,17 @@
                                 : '0 2px 8px rgba(59,130,246,0.35)',
                         },
                     }, mealNumber),
-                    isCurrentMeal && React.createElement('span', {
+                    React.createElement('span', {
                         className: 'meal-current-label',
                         style: {
                             fontSize: '14px',
                             fontWeight: '800',
                             textTransform: 'uppercase',
                             letterSpacing: '1px',
-                            color: '#22c55e',
+                            color: isCurrentMeal ? '#22c55e' : '#3b82f6',
                             marginTop: '4px',
                         },
-                    }, 'ТЕКУЩИЙ ПРИЁМ'),
+                    }, isCurrentMeal ? 'ТЕКУЩИЙ ПРИЁМ' : 'ПРИЁМ'),
                 ),
                 React.createElement(MealCard, {
                     meal,
@@ -4482,6 +4484,12 @@
         React,
         mealsChartData,
         statsVm,
+        day,
+        dayTot,
+        normAbs,
+        pIndex,
+        getDailyNutrientColor,
+        getDailyNutrientTooltip,
         mealChartHintShown,
         setMealChartHintShown,
         setShowConfetti,
@@ -4495,14 +4503,11 @@
         const utils = U || HEYS.utils || {};
 
         return React.createElement('div', {
-            className: 'meals-chart-container',
+            className: 'meals-chart-container widget-shadow-diary-glass widget-outline-diary-glass',
             style: {
                 margin: '0 0 var(--heys-diary-stack-gap, 12px) 0',
-                padding: '12px 16px',
+                padding: 'var(--heys-diary-card-padding, 14px 16px)',
                 background: 'var(--surface, #fff)',
-                borderRadius: 'var(--widget-radius-lg, 16px)',
-                border: '1px solid var(--heys-diary-outline-border-current, var(--heys-diary-outline-border-light, #e5e7eb))',
-                boxShadow: 'var(--heys-diary-glass-card-shadow, 0 2px 12px rgba(0,0,0,0.06))',
             },
         },
             React.createElement('div', {
@@ -4516,7 +4521,13 @@
                 },
             },
                 React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '8px' } },
-                    React.createElement('span', { style: { fontSize: '13px', fontWeight: '600', color: 'var(--text-secondary, #6b7280)' } }, '📊 Распределение'),
+                    React.createElement('span', {
+                        style: {
+                            fontSize: 'var(--heys-diary-card-title-size, 14px)',
+                            fontWeight: 'var(--heys-diary-card-title-weight, 600)',
+                            color: 'var(--heys-diary-card-title-color, var(--text, #1e293b))',
+                        },
+                    }, 'Распределение'),
                     mealsChartData.avgQualityScore > 0 && React.createElement('span', {
                         className: 'meal-avg-score-badge',
                         style: {
@@ -4541,11 +4552,20 @@
                     })(),
                 ),
             ),
+            HEYS.dayDailySummary?.renderDailySummaryTable?.({
+                React,
+                day,
+                pIndex,
+                dayTot,
+                normAbs,
+                getDailyNutrientColor,
+                getDailyNutrientTooltip,
+            }),
             !mealChartHintShown && React.createElement('div', { className: 'meal-chart-hint' },
                 React.createElement('span', null, '👆'),
                 'Нажми на полоску для деталей',
             ),
-            mealsChartData.meals.length > 1 && React.createElement('div', {
+            false && mealsChartData.meals.length > 1 && React.createElement('div', {
                 className: 'meals-day-sparkline',
                 style: {
                     position: 'relative',
@@ -4755,7 +4775,17 @@
                     );
                 })(),
             ),
-            React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: '10px', position: 'relative' } },
+            React.createElement('div', {
+                style: {
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '6px',
+                    position: 'relative',
+                    marginTop: '10px',
+                    paddingTop: '8px',
+                    borderTop: '1px solid rgba(148,163,184,0.28)',
+                },
+            },
                 React.createElement('div', {
                     className: 'meals-target-line',
                     style: {
@@ -4806,16 +4836,45 @@
                             y: rect.bottom,
                         });
                     };
+
+                    const scrollToMealCard = (e) => {
+                        e.stopPropagation();
+                        try {
+                            let target = null;
+                            if (meal?.id) {
+                                target = document.querySelector(`[data-meal-id="${meal.id}"]`);
+                            }
+                            if (!target && meal?.time) {
+                                target = document.querySelector(`[data-meal-time="${meal.time}"]`);
+                            }
+                            if (!target && Number.isFinite(originalIndex)) {
+                                target = document.querySelector(`[data-meal-index="${originalIndex}"]`);
+                            }
+                            if (target && typeof target.scrollIntoView === 'function') {
+                                target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            }
+                        } catch (err) {
+                            console.warn('[HEYS.day] ⚠️ Scroll to meal failed:', err?.message || err);
+                        }
+                    };
+
                     const isLowScore = quality && quality.score < 50;
                     const isNewMeal = newMealAnimatingIndex === originalIndex;
+                    const qualityBadgeStyle = quality ? (
+                        quality.score >= 80
+                            ? { background: 'rgba(34, 197, 94, 0.14)', color: '#16a34a', borderColor: 'rgba(34, 197, 94, 0.28)' }
+                            : quality.score >= 50
+                                ? { background: 'rgba(245, 158, 11, 0.14)', color: '#b45309', borderColor: 'rgba(245, 158, 11, 0.28)' }
+                                : { background: 'rgba(239, 68, 68, 0.14)', color: '#dc2626', borderColor: 'rgba(239, 68, 68, 0.28)' }
+                    ) : null;
                     return React.createElement('div', {
                         key: i,
                         className: 'meal-bar-row' + (isNewMeal ? ' meal-bar-new' : ''),
                         style: {
                             display: 'flex',
                             alignItems: 'center',
-                            gap: '6px',
-                            padding: '4px 6px',
+                            gap: '4px',
+                            padding: '2px 4px',
                             marginLeft: '-6px',
                             marginRight: '-6px',
                             borderRadius: '6px',
@@ -4825,8 +4884,8 @@
                     },
                         meal.time && React.createElement('span', {
                             style: {
-                                width: '50px',
-                                fontSize: '14px',
+                                width: '46px',
+                                fontSize: '11px',
                                 fontWeight: '600',
                                 color: 'var(--text-primary, #374151)',
                                 textAlign: 'left',
@@ -4837,17 +4896,34 @@
                             style: {
                                 display: 'flex',
                                 alignItems: 'center',
-                                justifyContent: 'center',
-                                gap: '4px',
-                                minWidth: '90px',
-                                fontSize: '15px',
+                                justifyContent: 'flex-start',
+                                gap: '3px',
+                                minWidth: '84px',
+                                fontSize: '11px',
                                 fontWeight: '600',
                                 color: 'var(--text-primary, #1e293b)',
                                 flexShrink: 0,
+                                textAlign: 'left',
                             },
                         },
-                            React.createElement('span', { style: { fontSize: '16px' } }, meal.icon),
-                            React.createElement('span', null, meal.name),
+                            React.createElement('span', { style: { fontSize: '14px' } }, meal.icon),
+                            React.createElement('button', {
+                                type: 'button',
+                                onClick: scrollToMealCard,
+                                title: 'Прокрутить к этому приёму',
+                                style: {
+                                    border: 'none',
+                                    background: 'transparent',
+                                    padding: '0',
+                                    margin: '0',
+                                    fontSize: '14px',
+                                    fontWeight: '600',
+                                    color: 'inherit',
+                                    cursor: 'pointer',
+                                    textDecoration: 'none',
+                                    textAlign: 'left',
+                                },
+                            }, meal.name),
                         ),
                         React.createElement('div', {
                             className: 'meal-bar-container' + (isBest ? ' meal-bar-best' : '') + (quality && quality.score >= 80 ? ' meal-bar-excellent' : ''),
@@ -4858,7 +4934,7 @@
                             style: {
                                 flex: 1,
                                 minWidth: 0,
-                                height: '22px',
+                                height: '18px',
                                 background: 'var(--meal-bar-track, rgba(148,163,184,0.24))',
                                 borderRadius: '4px',
                                 overflow: 'visible',
@@ -4882,7 +4958,7 @@
                                     left: `calc(${barWidthPct}% + 6px)`,
                                     top: '50%',
                                     transform: 'translateY(-50%)',
-                                    fontSize: '10px',
+                                    fontSize: '9px',
                                     fontWeight: '600',
                                     color: 'var(--text-primary, #1f2937)',
                                     whiteSpace: 'nowrap',
@@ -4894,7 +4970,7 @@
                                 meal.kcal + ' ккал',
                                 React.createElement('span', {
                                     style: {
-                                        fontSize: '9px',
+                                        fontSize: '8px',
                                         color: 'var(--text-tertiary, #9ca3af)',
                                         fontWeight: '500',
                                     },
@@ -4925,7 +5001,28 @@
                                 ),
                             ),
                         ),
-                        quality && React.createElement('span', { className: 'meal-quality-score', style: { color: quality.color, flexShrink: 0 } }, '⭐' + quality.score),
+                        quality && React.createElement('span', {
+                            className: 'meal-quality-score',
+                            style: {
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '4px',
+                                minWidth: '46px',
+                                padding: '2px 6px',
+                                borderRadius: '999px',
+                                border: `1px solid ${qualityBadgeStyle?.borderColor || 'rgba(148,163,184,0.25)'}`,
+                                background: qualityBadgeStyle?.background || 'rgba(148,163,184,0.12)',
+                                color: qualityBadgeStyle?.color || quality.color,
+                                fontWeight: 700,
+                                fontSize: '11px',
+                                lineHeight: 1,
+                                flexShrink: 0,
+                            },
+                        },
+                            React.createElement('span', { style: { fontSize: '12px' } }, '⭐'),
+                            React.createElement('span', null, String(quality.score)),
+                        ),
                     );
                 }),
                 mealsChartData.qualityStreak >= 3 && React.createElement('div', { className: 'meal-quality-streak-banner' },
@@ -5568,7 +5665,7 @@
 // ===== End day/_meals.js =====
 
 // ===== Begin heys_day_diary_section.js =====
-; (function (HEYS) {
+;(function (HEYS) {
     'use strict';
 
     const renderDiarySection = (params) => {
@@ -5811,63 +5908,72 @@
             deferredSlot(supplementsReady, supplementsCard, 'slot-supplements', 96, '💊', 'Подготавливаем план добавок на сегодня'),
             mealsChart,
             insulinIndicator,
-            React.createElement('h2', {
-                id: 'diary-heading',
+            React.createElement('div', {
+                className: 'diary-section-separator diary-section-separator--full-width',
                 style: {
-                    fontSize: '24px',
-                    fontWeight: '800',
-                    color: 'var(--text, #1e293b)',
-                    margin: '28px 0 20px 0',
-                    textTransform: 'uppercase',
-                    letterSpacing: '1px',
-                    textAlign: 'center',
-                    scrollMarginTop: '150px'
-                }
-            }, 'ДНЕВНИК ПИТАНИЯ'),
-            React.createElement('button', {
-                className: 'add-meal-btn-full',
-                onClick: addMeal,
-                style: {
-                    width: '100%',
-                    padding: '18px 24px',
-                    marginBottom: '20px',
-                    fontSize: '17px',
-                    fontWeight: '700',
-                    color: '#fff',
-                    background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
-                    border: 'none',
-                    borderRadius: '16px',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '10px',
-                    boxShadow: '0 4px 14px rgba(59, 130, 246, 0.35)',
-                    transition: 'all 0.2s ease',
-                    WebkitTapHighlightColor: 'transparent'
+                    margin: '36px -18px 0 -18px',
+                    padding: '16px 18px 18px 18px',
+                    borderTop: '1px solid rgba(37, 99, 235, 0.24)'
                 }
             },
-                React.createElement('span', { style: { fontSize: '22px' } }, '➕'),
-                'Добавить приём пищи'
-            ),
-            (!day?.meals || day.meals.length === 0) && React.createElement('div', { className: 'empty-state' },
-                React.createElement('div', { className: 'empty-state-icon' }, '🍽️'),
-                React.createElement('div', { className: 'empty-state-title' }, 'Пока нет приёмов пищи'),
-                React.createElement('div', { className: 'empty-state-text' }, 'Добавьте первый приём, чтобы начать отслеживание'),
+                React.createElement('h2', {
+                    id: 'diary-heading',
+                    style: {
+                        fontSize: '24px',
+                        fontWeight: '800',
+                        color: 'var(--text, #1e293b)',
+                        margin: '12px 0 20px 0',
+                        textTransform: 'uppercase',
+                        letterSpacing: '1px',
+                        textAlign: 'center',
+                        scrollMarginTop: '150px'
+                    }
+                }, 'ДНЕВНИК ПИТАНИЯ'),
                 React.createElement('button', {
-                    className: 'btn btn-primary empty-state-btn',
+                    className: 'add-meal-btn-full',
                     onClick: addMeal,
                     style: {
+                        width: '100%',
+                        padding: '18px 24px',
+                        marginBottom: '20px',
+                        fontSize: '17px',
+                        fontWeight: '700',
+                        color: '#fff',
                         background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
-                        boxShadow: '0 4px 14px rgba(59, 130, 246, 0.35)'
+                        border: 'none',
+                        borderRadius: '16px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '10px',
+                        boxShadow: '0 4px 14px rgba(59, 130, 246, 0.35)',
+                        transition: 'all 0.2s ease',
+                        WebkitTapHighlightColor: 'transparent'
                     }
-                }, '+ Добавить приём')
+                },
+                    React.createElement('span', { style: { fontSize: '22px' } }, '➕'),
+                    'Добавить приём пищи'
+                ),
+                (!day?.meals || day.meals.length === 0) && React.createElement('div', { className: 'empty-state' },
+                    React.createElement('div', { className: 'empty-state-icon' }, '🍽️'),
+                    React.createElement('div', { className: 'empty-state-title' }, 'Пока нет приёмов пищи'),
+                    React.createElement('div', { className: 'empty-state-text' }, 'Добавьте первый приём, чтобы начать отслеживание'),
+                    React.createElement('button', {
+                        className: 'btn btn-primary empty-state-btn',
+                        onClick: addMeal,
+                        style: {
+                            background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+                            boxShadow: '0 4px 14px rgba(59, 130, 246, 0.35)'
+                        }
+                    }, '+ Добавить приём')
+                ),
+                mealsUI,
+                daySummary,
+                React.createElement('div', { className: 'row desktop-only', style: { justifyContent: 'flex-start', marginTop: '8px' } },
+                    React.createElement('button', { className: 'btn', onClick: addMeal }, '+ Приём')
+                )
             ),
-            mealsUI,
-            daySummary,
-            React.createElement('div', { className: 'row desktop-only', style: { justifyContent: 'flex-start', marginTop: '8px' } },
-                React.createElement('button', { className: 'btn', onClick: addMeal }, '+ Приём')
-            )
         );
     };
 
@@ -5880,120 +5986,120 @@
 ;// heys_day_orphan_alert.js — Orphan products alert component
 // Phase 13A of HEYS Day v12 refactoring
 // Extracted from heys_day_v12.js lines 11,923-12,012
-(function (global) {
-    'use strict';
-
-    const HEYS = global.HEYS = global.HEYS || {};
-    const React = global.React;
-
-    /**
-     * Render orphan products alert (products not found in database)
-     * @param {Object} params - Parameters
-     * @returns {React.Element|boolean} Alert element or false if no orphans
-     */
-    function renderOrphanAlert(params) {
-        const { orphanCount } = params;
-
-        if (!orphanCount || orphanCount === 0) {
-            return false;
-        }
-
-        return React.createElement('div', {
-            className: 'orphan-alert compact-card',
-            style: {
-                background: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)',
-                border: '1px solid #f59e0b',
-                borderRadius: '12px',
-                padding: '12px 16px',
-                marginBottom: '12px',
-                display: 'flex',
-                alignItems: 'flex-start',
-                gap: '12px'
-            }
-        },
-            React.createElement('span', { style: { fontSize: '20px' } }, '⚠️'),
-            React.createElement('div', { style: { flex: 1, minWidth: 0 } },
-                React.createElement('div', {
-                    style: {
-                        fontWeight: 600,
-                        color: '#92400e',
-                        marginBottom: '4px',
-                        fontSize: '14px'
-                    }
-                }, `${orphanCount} продукт${orphanCount === 1 ? '' : orphanCount < 5 ? 'а' : 'ов'} не найден${orphanCount === 1 ? '' : 'о'} в базе`),
-                React.createElement('div', {
-                    style: {
-                        color: '#a16207',
-                        fontSize: '12px',
-                        lineHeight: '1.4'
-                    }
-                }, 'Калории считаются по сохранённым данным. Нажми чтобы увидеть список.'),
-                // Список orphan-продуктов
-                React.createElement('details', {
-                    style: { marginTop: '8px' }
-                },
-                    React.createElement('summary', {
-                        style: {
-                            cursor: 'pointer',
-                            color: '#92400e',
-                            fontSize: '12px',
-                            fontWeight: 500
-                        }
-                    }, 'Показать продукты'),
-                    React.createElement('ul', {
-                        style: {
-                            margin: '8px 0 0 0',
-                            padding: '0 0 0 20px',
-                            fontSize: '12px',
-                            color: '#78350f'
-                        }
-                    },
-                        (HEYS.orphanProducts?.getAll?.() || []).map((o, i) =>
-                            React.createElement('li', { key: o.name || i, style: { marginBottom: '4px' } },
-                                React.createElement('strong', null, o.name),
-                                ` — ${o.hasInlineData ? '✓ можно восстановить' : '⚠️ нет данных'}`,
-                                // Показываем даты использования
-                                o.usedInDays && o.usedInDays.length > 0 && React.createElement('div', {
-                                    style: { fontSize: '11px', color: '#92400e', marginTop: '2px' }
-                                }, `📅 ${o.usedInDays.slice(0, 5).join(', ')}${o.usedInDays.length > 5 ? ` и ещё ${o.usedInDays.length - 5}...` : ''}`)
-                            )
-                        )
-                    ),
-                    // Кнопка восстановления
-                    React.createElement('button', {
-                        style: {
-                            marginTop: '10px',
-                            padding: '8px 16px',
-                            background: '#f59e0b',
-                            color: '#fff',
-                            border: 'none',
-                            borderRadius: '8px',
-                            fontWeight: 600,
-                            fontSize: '13px',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '6px'
-                        },
-                        onClick: async () => {
-                            const result = await HEYS.orphanProducts?.restore?.();
-                            if (result?.success) {
-                                HEYS.Toast?.success(`Восстановлено ${result.count} продуктов! Обновите страницу для применения.`) || alert(`✅ Восстановлено ${result.count} продуктов!\nОбновите страницу для применения.`);
-                                window.location.reload();
-                            } else {
-                                HEYS.Toast?.warning('Не удалось восстановить — нет данных в штампах.') || alert('⚠️ Не удалось восстановить — нет данных в штампах.');
-                            }
-                        }
-                    }, '🔧 Восстановить в базу')
-                )
-            )
-        );
+(function(global) {
+  'use strict';
+  
+  const HEYS = global.HEYS = global.HEYS || {};
+  const React = global.React;
+  
+  /**
+   * Render orphan products alert (products not found in database)
+   * @param {Object} params - Parameters
+   * @returns {React.Element|boolean} Alert element or false if no orphans
+   */
+  function renderOrphanAlert(params) {
+    const { orphanCount } = params;
+    
+    if (!orphanCount || orphanCount === 0) {
+      return false;
     }
-
-    // Export module
-    HEYS.dayOrphanAlert = {
-        renderOrphanAlert
-    };
-
+    
+    return React.createElement('div', {
+      className: 'orphan-alert compact-card',
+      style: {
+        background: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)',
+        border: '1px solid #f59e0b',
+        borderRadius: '12px',
+        padding: '12px 16px',
+        marginBottom: '12px',
+        display: 'flex',
+        alignItems: 'flex-start',
+        gap: '12px'
+      }
+    },
+      React.createElement('span', { style: { fontSize: '20px' } }, '⚠️'),
+      React.createElement('div', { style: { flex: 1, minWidth: 0 } },
+        React.createElement('div', { 
+          style: { 
+            fontWeight: 600, 
+            color: '#92400e', 
+            marginBottom: '4px',
+            fontSize: '14px'
+          } 
+        }, `${orphanCount} продукт${orphanCount === 1 ? '' : orphanCount < 5 ? 'а' : 'ов'} не найден${orphanCount === 1 ? '' : 'о'} в базе`),
+        React.createElement('div', { 
+          style: { 
+            color: '#a16207', 
+            fontSize: '12px',
+            lineHeight: '1.4'
+          } 
+        }, 'Калории считаются по сохранённым данным. Нажми чтобы увидеть список.'),
+        // Список orphan-продуктов
+        React.createElement('details', { 
+          style: { marginTop: '8px' }
+        },
+          React.createElement('summary', { 
+            style: { 
+              cursor: 'pointer', 
+              color: '#92400e',
+              fontSize: '12px',
+              fontWeight: 500
+            } 
+          }, 'Показать продукты'),
+          React.createElement('ul', { 
+            style: { 
+              margin: '8px 0 0 0', 
+              padding: '0 0 0 20px',
+              fontSize: '12px',
+              color: '#78350f'
+            } 
+          },
+            (HEYS.orphanProducts?.getAll?.() || []).map((o, i) => 
+              React.createElement('li', { key: o.name || i, style: { marginBottom: '4px' } },
+                React.createElement('strong', null, o.name),
+                ` — ${o.hasInlineData ? '✓ можно восстановить' : '⚠️ нет данных'}`,
+                // Показываем даты использования
+                o.usedInDays && o.usedInDays.length > 0 && React.createElement('div', {
+                  style: { fontSize: '11px', color: '#92400e', marginTop: '2px' }
+                }, `📅 ${o.usedInDays.slice(0, 5).join(', ')}${o.usedInDays.length > 5 ? ` и ещё ${o.usedInDays.length - 5}...` : ''}`)
+              )
+            )
+          ),
+          // Кнопка восстановления
+          React.createElement('button', {
+            style: {
+              marginTop: '10px',
+              padding: '8px 16px',
+              background: '#f59e0b',
+              color: '#fff',
+              border: 'none',
+              borderRadius: '8px',
+              fontWeight: 600,
+              fontSize: '13px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px'
+            },
+            onClick: async () => {
+              const result = await HEYS.orphanProducts?.restore?.();
+              if (result?.success) {
+                HEYS.Toast?.success(`Восстановлено ${result.count} продуктов! Обновите страницу для применения.`) || alert(`✅ Восстановлено ${result.count} продуктов!\nОбновите страницу для применения.`);
+                window.location.reload();
+              } else {
+                HEYS.Toast?.warning('Не удалось восстановить — нет данных в штампах.') || alert('⚠️ Не удалось восстановить — нет данных в штампах.');
+              }
+            }
+          }, '🔧 Восстановить в базу')
+        )
+      )
+    );
+  }
+  
+  // Export module
+  HEYS.dayOrphanAlert = {
+    renderOrphanAlert
+  };
+  
 })(window);
 // ===== End heys_day_orphan_alert.js =====

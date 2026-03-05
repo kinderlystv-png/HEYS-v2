@@ -28361,7 +28361,9 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
   }
 
   // === Widget Card Component ===
-  function WidgetCard({ widget, isEditMode, onRemove, onSettings, index = 0 }) {
+  // Обёрнут в React.memo — изолирует от ре-рендеров родителя (setWaterAnim и т.п.),
+  // чтобы CSS transition на кольце калорий не перезапускался попусту.
+  const WidgetCard = React.memo(function WidgetCard({ widget, isEditMode, onRemove, onSettings, index = 0 }) {
     const registry = HEYS.Widgets.registry;
     const widgetType = registry?.getType(widget.type);
     const category = registry?.getCategory(widgetType?.category);
@@ -29196,7 +29198,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         })
       )
     );
-  }
+  }); // end React.memo(WidgetCard)
 
   // === Widget Content Component (renders actual widget data) ===
   function WidgetContent({ widget, widgetType }) {
@@ -29218,7 +29220,15 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         if (widget.type === 'water' && Date.now() < skipLoadUntilRef.current) return;
         try {
           const newData = HEYS.Widgets.data?.getDataForWidget?.(widget) || {};
-          setData(newData);
+          // Умное обновление: если данные не изменились — возвращаем прежний объект.
+          // Это предотвращает ре-рендер CaloriesWidgetContent и перезапуск CSS animation кольца.
+          setData(prev => {
+            const prevKeys = Object.keys(prev);
+            const newKeys = Object.keys(newData);
+            if (prevKeys.length === newKeys.length &&
+                prevKeys.every(k => prev[k] === newData[k])) return prev;
+            return newData;
+          });
           setError(null);
         } catch (e) {
           trackWidgetIssue('widgets_loadData_failed', {
@@ -31619,9 +31629,10 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           window.dispatchEvent(new CustomEvent('heysWaterAdded', {
             detail: { ml, total: dayData.waterMl }
           }));
-          // Также отправляем событие для виджетов
+          // Только water:added — day:updated намеренно НЕ эмитим, чтобы
+          // не триггерить ре-рендер кольца калорий и других виджетов.
+          // Вода обновляется оптимистично через heysWaterAdded DOM event.
           if (typeof HEYS.events?.emit === 'function') {
-            HEYS.events.emit('day:updated', { date: dateKey, dayData });
             HEYS.events.emit('water:added', { ml, total: dayData.waterMl });
           }
         } catch (e) {
@@ -31636,7 +31647,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       // Вибрация
       if (navigator.vibrate) navigator.vibrate(50);
 
-      // 💧 Анимация падающей капли через DOM (не React state — не вызывает re-render и не обрезается overflow:hidden)
+      // 💧 Анимация падающей капли через DOM
       try {
         const fabBtn = document.querySelector('.water-fab');
         if (fabBtn) {
@@ -31647,6 +31658,70 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           drop.innerHTML = '<div class="water-drop"></div><div class="water-splash"></div>';
           document.body.appendChild(drop);
           setTimeout(() => { if (drop.parentNode) drop.parentNode.removeChild(drop); }, 1200);
+        }
+      } catch (e) { /* silent */ }
+
+      // 🌊 Полноэкранная анимация воды (только если есть активный water-виджет)
+      try {
+        const waterWidgetCard = document.querySelector('.widget[data-widget-type="water"]');
+        if (waterWidgetCard) {
+          // --- Overlay ---
+          const overlay = document.createElement('div');
+          overlay.className = 'water-screen-fill';
+
+          const body = document.createElement('div');
+          body.className = 'water-screen-fill__body';
+
+          const wave = document.createElement('div');
+          wave.className = 'water-screen-fill__wave';
+
+          const shimmer = document.createElement('div');
+          shimmer.className = 'water-screen-fill__shimmer';
+
+          body.appendChild(wave);
+          body.appendChild(shimmer);
+
+          // Пузырьки
+          for (let b = 0; b < 8; b++) {
+            const bubble = document.createElement('div');
+            bubble.className = 'water-screen-fill__bubble';
+            const size = 6 + Math.random() * 14;
+            const delay = Math.random() * 0.6;
+            const dur = 0.7 + Math.random() * 0.8;
+            bubble.style.cssText = 'width:' + size + 'px;height:' + size + 'px;left:' + (5 + Math.random() * 90) + '%;bottom:' + (10 + Math.random() * 50) + '%;animation-duration:' + dur + 's;animation-delay:' + delay + 's;';
+            body.appendChild(bubble);
+          }
+
+          overlay.appendChild(body);
+          document.body.appendChild(overlay);
+
+          // Запускаем подъём
+          requestAnimationFrame(() => {
+            body.classList.add('rising');
+          });
+
+          // Через 850ms (конец подъёма) держим 200ms, потом — отток
+          setTimeout(() => {
+            body.classList.remove('rising');
+            body.classList.add('draining');
+            setTimeout(() => {
+              if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+            }, 950);
+          }, 1050);
+
+          // --- Пульс виджета ---
+          waterWidgetCard.classList.add('widget--water-pulse');
+          setTimeout(() => {
+            waterWidgetCard.classList.remove('widget--water-pulse');
+          }, 1800);
+
+          // --- Gradient-перелив самого виджета ---
+          waterWidgetCard.style.transition = 'background 0.4s ease';
+          waterWidgetCard.style.background = 'linear-gradient(135deg, rgba(10,132,255,0.12) 0%, rgba(100,210,255,0.18) 50%, rgba(0,238,255,0.10) 100%)';
+          setTimeout(() => {
+            waterWidgetCard.style.background = '';
+            waterWidgetCard.style.transition = '';
+          }, 1400);
         }
       } catch (e) { /* silent */ }
 

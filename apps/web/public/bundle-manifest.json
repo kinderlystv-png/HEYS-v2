@@ -1,58 +1,58 @@
 {
   "boot-core": {
-    "file": "boot-core.bundle.73a7627bc4cb.js",
-    "hash": "73a7627bc4cb",
+    "file": "boot-core.bundle.71b2569be69a.js",
+    "hash": "71b2569be69a",
     "fileCount": 25,
     "size": 1199131,
-    "builtAt": "2026-03-05T02:04:54.627Z"
+    "builtAt": "2026-03-05T17:02:07.357Z"
   },
   "boot-calc": {
-    "file": "boot-calc.bundle.2a55370dd408.js",
-    "hash": "2a55370dd408",
+    "file": "boot-calc.bundle.4dbb706da1b4.js",
+    "hash": "4dbb706da1b4",
     "fileCount": 19,
-    "size": 904381,
-    "builtAt": "2026-03-05T02:04:54.769Z"
+    "size": 903100,
+    "builtAt": "2026-03-05T17:02:07.490Z"
   },
   "boot-day": {
     "file": "boot-day.bundle.e5688e3d7732.js",
     "hash": "e5688e3d7732",
     "fileCount": 51,
     "size": 917379,
-    "builtAt": "2026-03-05T02:04:54.918Z"
+    "builtAt": "2026-03-05T17:02:07.630Z"
   },
   "boot-app": {
     "file": "boot-app.bundle.98be2b10976e.js",
     "hash": "98be2b10976e",
     "fileCount": 48,
     "size": 1109887,
-    "builtAt": "2026-03-05T02:04:55.078Z"
+    "builtAt": "2026-03-05T17:02:07.786Z"
   },
   "boot-init": {
     "file": "boot-init.bundle.925c24feabd2.js",
     "hash": "925c24feabd2",
     "fileCount": 8,
     "size": 364661,
-    "builtAt": "2026-03-05T02:04:55.190Z"
+    "builtAt": "2026-03-05T17:02:07.892Z"
   },
   "postboot-1-game": {
     "file": "postboot-1-game.bundle.2b5f910c8502.js",
     "hash": "2b5f910c8502",
     "fileCount": 29,
     "size": 1392686,
-    "builtAt": "2026-03-05T02:04:55.366Z"
+    "builtAt": "2026-03-05T17:02:08.081Z"
   },
   "postboot-2-insights": {
     "file": "postboot-2-insights.bundle.96b0522959f1.js",
     "hash": "96b0522959f1",
     "fileCount": 39,
     "size": 1802974,
-    "builtAt": "2026-03-05T02:04:55.596Z"
+    "builtAt": "2026-03-05T17:02:08.342Z"
   },
   "postboot-3-ui": {
-    "file": "postboot-3-ui.bundle.a1c9f4562eba.js",
-    "hash": "a1c9f4562eba",
+    "file": "postboot-3-ui.bundle.52eecdde5406.js",
+    "hash": "52eecdde5406",
     "fileCount": 25,
-    "size": 1346071,
-    "builtAt": "2026-03-05T02:04:55.764Z"
+    "size": 1354379,
+    "builtAt": "2026-03-05T17:02:08.501Z"
   }
 }
