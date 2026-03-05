@@ -847,6 +847,7 @@ body:has(.page-reports) .hdr::after {
   flex-direction: column;
   min-height: 0;
   /* важно для flex: даём дочерним блокам ужиматься вместо вылезания за границы */
+  overflow: hidden;
   --widget-safe-bottom: 0px;
   padding-bottom: var(--widget-safe-bottom);
 }
@@ -854,6 +855,13 @@ body:has(.page-reports) .hdr::after {
 /* ===== Safe Zones (внутренний “air gap”, чтобы ничего не прилипало к границам) =====
    Идея: лучше слегка ужать контент, чем позволять ему упираться/обрезаться.
 */
+.widget--1x2 .widget__content,
+.widget--2x2 .widget__content,
+.widget--3x2 .widget__content,
+.widget--4x2 .widget__content {
+  --widget-safe-bottom: 6px;
+}
+
 .widget--1x3 .widget__content,
 .widget--2x3 .widget__content,
 .widget--3x3 .widget__content,
@@ -1482,6 +1490,11 @@ body:has(.page-reports) .hdr::after {
   display: none;
 }
 
+/* Calories 2x2: без заголовка — кольцо занимает всю доступную высоту */
+.widget:has(.widget-calories--2x2) .widget__header {
+  display: none;
+}
+
 /* 1x1 (mini): компактный стиль */
 .widget--1x1 {
   padding: 10px;
@@ -1500,10 +1513,10 @@ body:has(.page-reports) .hdr::after {
 /* Delete Button — внутри виджета */
 .widget__delete-btn {
   position: absolute;
-  top: 6px;
-  right: 6px;
-  width: 22px;
-  height: 22px;
+  top: 15px;
+  right: 15px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   background: rgba(239, 68, 68, 0.9);
   color: white;
@@ -1511,7 +1524,7 @@ body:has(.page-reports) .hdr::after {
   display: none;
   align-items: center;
   justify-content: center;
-  font-size: 12px;
+  font-size: 16px;
   font-weight: bold;
   cursor: pointer;
   z-index: 15;
@@ -1532,13 +1545,32 @@ body:has(.page-reports) .hdr::after {
   transform: scale(0.95);
 }
 
+/* 1x1 edit mode: кнопки под виджетом, чтобы не перекрывать drag-зону */
+.widget--1x1.widget--editing {
+  z-index: 10;
+}
+
+.widget--1x1.widget--editing .widget__delete-btn {
+  top: auto;
+  right: 4px;
+  bottom: -38px;
+  z-index: 20;
+}
+
+.widget--1x1.widget--editing .widget__settings-btn {
+  top: auto;
+  left: 4px;
+  bottom: -38px;
+  z-index: 20;
+}
+
 /* Settings Button — внутри виджета */
 .widget__settings-btn {
   position: absolute;
-  top: 6px;
-  left: 6px;
-  width: 22px;
-  height: 22px;
+  top: 15px;
+  left: 15px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   background: rgba(59, 130, 246, 0.9);
   color: white;
@@ -1546,7 +1578,7 @@ body:has(.page-reports) .hdr::after {
   display: none;
   align-items: center;
   justify-content: center;
-  font-size: 12px;
+  font-size: 20px;
   cursor: pointer;
   z-index: 10;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
@@ -2174,7 +2206,8 @@ body:has(.page-reports) .hdr::after {
     --widget-row-height: 70px;
   }
 
-  .widgets-grid {
+  .widgets-grid,
+  .widgets-grid-overlay {
     padding: 6px;
   }
 
@@ -2292,10 +2325,8 @@ body:has(.page-reports) .hdr::after {
   font-weight: 700;
   line-height: 1;
   letter-spacing: -0.02em;
-  background: var(--widget-gradient-orange);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: #FF9500;
+  /* overridden by JS inline style based on ratio */
   font-feature-settings: 'tnum' on;
 }
 
@@ -3510,8 +3541,116 @@ body:has(.page-reports) .hdr::after {
 .widget-calories--2x2 {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 12px;
+  gap: 4px;
+  /* padding убран — родительский .widget уже даёт отступы */
+  padding: 0;
+  /* Заполняем всю высоту widget__content, чтобы flex-дети могли реально делить пространство */
+  flex: 1;
+  min-height: 0;
+}
+
+/* Ring / donut progress */
+.widget-calories__ring-wrap {
+  position: relative;
+  flex: 1 1 0;
+  min-height: 0;
+  max-height: 160px;
+  max-width: min(calc(100% - 4px), 160px);
+  aspect-ratio: 1;
+  align-self: center;
+}
+
+.widget-calories__info-bar {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-around;
+  align-items: flex-start;
+  gap: 4px;
+  flex-shrink: 0;
+  padding: 0 2px;
+}
+
+.widget-calories__info-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  text-align: center;
+  min-width: 0;
+  flex: 1;
+}
+
+.widget-calories__ring {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+  overflow: visible;
+}
+
+.widget-calories__ring-track {
+  fill: none;
+  stroke: var(--widget-surface-muted);
+  stroke-width: 9;
+  stroke-linecap: round;
+}
+
+.widget-calories__ring-fill {
+  fill: none;
+  stroke-width: 9;
+  stroke-linecap: round;
+  stroke-dashoffset: var(--ring-start-offset, -9);
+  filter: drop-shadow(0 0 4px rgba(255, 149, 0, 0.45));
+  animation: calRingFillIn 1.2s cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
+}
+
+.widget-calories__ring-fill--over {
+  fill: none;
+  stroke: #ef4444;
+  stroke-width: 9;
+  stroke-linecap: round;
+  stroke-dashoffset: var(--over-offset, 0);
+  animation: calRingOverFillIn 0.9s cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
+}
+
+@keyframes calRingFillIn {
+  from {
+    stroke-dasharray: 0 100;
+  }
+
+  to {
+    stroke-dasharray: var(--ring-dasharray, 0 100);
+  }
+}
+
+@keyframes calRingOverFillIn {
+  from {
+    stroke-dasharray: 0 100;
+  }
+
+  to {
+    stroke-dasharray: var(--over-dasharray, 0 100);
+  }
+}
+
+.widget-calories__ring-inner {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  text-align: center;
+}
+
+.widget-calories__ring-sublabel {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-tertiary);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .widget-calories__header {
@@ -3522,13 +3661,11 @@ body:has(.page-reports) .hdr::after {
 }
 
 .widget-calories__value--lg {
-  font-size: 32px;
+  font-size: clamp(18px, 9vw, 26px);
   font-weight: 800;
   letter-spacing: -0.03em;
-  background: var(--widget-gradient-orange);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: #FF9500;
+  /* overridden by JS inline style */
   font-feature-settings: 'tnum' on;
   line-height: 1;
 }
@@ -3536,22 +3673,42 @@ body:has(.page-reports) .hdr::after {
 .widget-calories__pct-badge {
   font-size: 12px;
   font-weight: 700;
-  padding: 4px 10px;
+  padding: 4px 8px;
   border-radius: 999px;
   line-height: 1;
+  flex-shrink: 0;
+}
+
+.widget-calories__info-row {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 1px;
+  text-align: center;
 }
 
 .widget-calories__footer {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-top: auto;
+  gap: 4px;
+  /* не даём footer уходить за границы */
+  min-width: 0;
+  overflow: hidden;
 }
 
 .widget-calories__meta {
   display: flex;
   flex-direction: column;
   gap: 2px;
+  /* позволяет сжиматься при нехватке места */
+  min-width: 0;
+  flex: 1 1 0;
+}
+
+.widget-calories__meta--right {
+  text-align: right;
 }
 
 .widget-calories__meta-label {
@@ -3560,13 +3717,20 @@ body:has(.page-reports) .hdr::after {
   color: var(--text-tertiary);
   text-transform: uppercase;
   letter-spacing: 0.05em;
+  /* обрезать если не влезает */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .widget-calories__meta-val {
-  font-size: 14px;
+  font-size: clamp(11px, 3.2vw, 13px);
   font-weight: 700;
   color: var(--text-secondary);
   font-feature-settings: 'tnum' on;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .widget-calories__meta--accent .widget-calories__meta-val {
@@ -4250,8 +4414,39 @@ body:has(.page-reports) .hdr::after {
   flex: 1;
 }
 
+.widget-heatmap__day-date {
+  font-size: 9px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  font-feature-settings: 'tnum' on;
+  line-height: 1;
+}
+
+.widget-heatmap__day-date--weekend {
+  color: #ef4444;
+}
+
 .widget-heatmap__day-col--today {
-  transform: scale(1.1);
+  transform: scale(1.15);
+}
+
+/* Красивый бейдж для сегодняшней даты в виджете */
+.widget-heatmap__day-col--today .widget-heatmap__day-date {
+  color: #fff;
+  background: var(--color-blue-500, #3b82f6);
+  padding: 2px 4px;
+  border-radius: 4px;
+  box-shadow: 0 2px 6px rgba(59, 130, 246, 0.4);
+  font-weight: 700;
+  margin-top: -2px;
+  margin-bottom: -2px;
+}
+
+/* Спокойный статичный акцент для ячейки в виджете (без glow-анимации) */
+.widget-heatmap__day-col--today .widget-heatmap__cell {
+  position: relative;
+  z-index: 1;
+  box-shadow: 0 0 0 1.5px var(--color-blue-500, #3b82f6);
 }
 
 .widget-heatmap__day-label {
@@ -4259,10 +4454,16 @@ body:has(.page-reports) .hdr::after {
   font-weight: 600;
   color: var(--text-tertiary);
   text-transform: uppercase;
+  line-height: 1;
+}
+
+.widget-heatmap__day-label--weekend {
+  color: #ef4444;
 }
 
 .widget-heatmap__day-col--today .widget-heatmap__day-label {
-  color: var(--text-primary);
+  color: var(--color-blue-500, #3b82f6);
+  font-weight: 700;
 }
 
 .widget-heatmap__cell--2x2 {
@@ -5774,6 +5975,218 @@ body:has(.page-reports) .hdr::after {
 [data-theme="dark"] .meal-rec-card.widget--meal-rec-diary .meal-rec-card__product-item:hover,
 [data-theme="dark"] .meal-rec-card.widget--meal-rec-diary-water .meal-rec-card__product-item:hover {
   background: rgba(0, 0, 0, 0.5) !important;
+}
+
+/* ===================================================================
+ * Widget Settings Modal
+ * =================================================================== */
+.widgets-settings-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 1200;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  animation: catalogFadeIn 0.2s ease;
+}
+
+.widgets-settings {
+  background: var(--bg-primary, #fff);
+  border-radius: 24px 24px 0 0;
+  width: 100%;
+  max-width: 500px;
+  max-height: 85vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.15);
+  animation: slideUp 0.3s ease;
+}
+
+.widgets-settings__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 20px 12px;
+  border-bottom: 1px solid var(--border, rgba(0, 0, 0, 0.08));
+}
+
+.widgets-settings__header h2 {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text, #1e293b);
+  margin: 0;
+}
+
+.widgets-settings__close {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  background: var(--bg-secondary, #f1f5f9);
+  color: var(--text-muted, #64748b);
+  font-size: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.widgets-settings__close:hover {
+  background: var(--bg-hover, #e2e8f0);
+}
+
+.widgets-settings__content {
+  padding: 16px 20px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.widgets-settings__field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.widgets-settings__field>label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted, #64748b);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.widgets-settings__field input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+  accent-color: var(--accent, #3b82f6);
+}
+
+.widgets-settings__field input[type="number"],
+.widgets-settings__field select {
+  height: 40px;
+  border-radius: 10px;
+  border: 1px solid var(--border, rgba(0, 0, 0, 0.12));
+  background: var(--bg-secondary, #f8fafc);
+  color: var(--text, #1e293b);
+  padding: 0 12px;
+  font-size: 14px;
+}
+
+.widgets-settings__sizes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.widgets-settings__size {
+  padding: 6px 14px;
+  border-radius: 20px;
+  border: 1.5px solid var(--border, rgba(0, 0, 0, 0.12));
+  background: var(--bg-secondary, #f8fafc);
+  color: var(--text, #1e293b);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.widgets-settings__size.active {
+  background: var(--accent, #3b82f6);
+  border-color: var(--accent, #3b82f6);
+  color: #fff;
+  font-weight: 600;
+}
+
+.widgets-settings__size:hover:not(.active) {
+  background: var(--bg-hover, #e2e8f0);
+}
+
+.widgets-settings__footer {
+  display: flex;
+  gap: 10px;
+  padding: 12px 20px 24px;
+  border-top: 1px solid var(--border, rgba(0, 0, 0, 0.08));
+}
+
+.widgets-settings__btn {
+  flex: 1;
+  height: 44px;
+  border-radius: 12px;
+  border: none;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.widgets-settings__btn:active {
+  opacity: 0.75;
+}
+
+.widgets-settings__btn--cancel {
+  background: var(--bg-secondary, #f1f5f9);
+  color: var(--text-muted, #64748b);
+}
+
+.widgets-settings__btn--save {
+  background: var(--accent, #3b82f6);
+  color: #fff;
+}
+
+/* ── Widget preview in settings modal ─────────────── */
+.widgets-settings__preview-wrap {
+  position: relative;
+  height: 220px;
+  overflow: hidden;
+  background: var(--bg-secondary, #f1f5f9);
+  border-radius: 16px;
+}
+
+.widgets-settings__preview-stage {
+  position: absolute;
+  width: 180px;
+  height: 180px;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  border-radius: 20px;
+  overflow: hidden;
+}
+
+[data-theme="dark"] .widgets-settings__preview-wrap {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+[data-theme="dark"] .widgets-settings__preview-stage {
+  background: var(--widget-bg, var(--bg-card, #1e293b));
+}
+
+[data-theme="dark"] .widgets-settings {
+  background: var(--bg-primary, #1e293b);
+}
+
+[data-theme="dark"] .widgets-settings__close {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-muted, #94a3b8);
+}
+
+[data-theme="dark"] .widgets-settings__size {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.12);
+  color: var(--text, #f1f5f9);
+}
+
+[data-theme="dark"] .widgets-settings__btn--cancel {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-muted, #94a3b8);
 }
 
 /* Эффект свечения на фоне всей страницы за карточкой витаминов (edge-to-edge) */

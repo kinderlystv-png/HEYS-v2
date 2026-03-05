@@ -2449,9 +2449,20 @@
   box-shadow: inset 0 0 0 1.5px rgba(251, 113, 133, 0.5);
 }
 
-.week-heatmap-day.today .week-heatmap-date,
+.week-heatmap-day.today .week-heatmap-date {
+  background: var(--color-blue-500);
+  color: white;
+  padding: 2px 5px;
+  border-radius: 6px;
+  box-shadow: 0 2px 6px rgba(59, 130, 246, 0.4);
+  font-weight: 700;
+  margin-top: -2px;
+  /* Компенсация паддингов для выравнивания */
+  margin-bottom: -2px;
+}
+
 .week-heatmap-day.today .week-heatmap-name {
-  color: var(--color-blue-500);
+  color: var(--color-blue-600);
   font-weight: 700;
 }
 
@@ -2517,22 +2528,11 @@
   }
 }
 
-/* Today ring с анимацией */
+/* Today ring — статичный акцент без свечения и пульса */
 .week-heatmap-day.today .week-heatmap-cell {
   box-shadow: 0 0 0 2px var(--color-blue-500);
-  animation: todayPulse 2s ease-in-out infinite;
-}
-
-@keyframes todayPulse {
-
-  0%,
-  100% {
-    box-shadow: 0 0 0 2px var(--color-blue-500);
-  }
-
-  50% {
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.5);
-  }
+  z-index: 1;
+  /* чтобы свечение было поверх соседей */
 }
 
 /* Паттерн-инсайт */

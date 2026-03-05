@@ -6,12 +6,6 @@
     "composite": true
   },
   "include": ["src/**/*", "../../levels.config.d.ts", "config/**/*.d.ts"],
-  "files": [
-    "src/index.ts",
-    "src/config.ts",
-    "src/transports.ts",
-    "src/LevelManager.ts",
-    "src/log-level.ts"
-  ],
+  "files": ["src/index.ts", "src/config.ts", "src/transports.ts", "src/LevelManager.ts", "src/log-level.ts"],
   "exclude": ["dist", "node_modules"]
 }

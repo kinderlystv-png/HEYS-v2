@@ -43,15 +43,6 @@
   },
   "references": [
     {
-      "path": "./packages/logger"
-    },
-    {
-      "path": "./packages/core"
-    },
-    {
-      "path": "./packages/ui"
-    },
-    {
       "path": "./packages/search"
     },
     {

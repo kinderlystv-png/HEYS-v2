@@ -1444,6 +1444,7 @@
     handlePointerDown(widgetId, event) {
       // CRITICAL: Если resize активен — НЕ начинаем DnD
       if (this._resizeActive) {
+        console.info('[HEYS.dnd] ⛔ pointerDown BLOCKED: resizeActive', { widgetId });
         return;
       }
 
@@ -1451,6 +1452,7 @@
       const t = event?.target;
       if (t && typeof t.closest === 'function') {
         if (t.closest('.widget__resize-handle')) {
+          console.info('[HEYS.dnd] ⛔ pointerDown BLOCKED: resize-handle target', { widgetId });
           return;
         }
       }
@@ -1464,6 +1466,8 @@
       const isTouchEvent = !!(event?.touches || event?.changedTouches || event?.pointerType === 'touch');
       // Touch grace: даём жесту шанс стать нативным scroll до старта drag.
       this._touchDragReadyAt = isTouchEvent ? (Date.now() + 140) : 0;
+
+      console.info('[HEYS.dnd] 👇 pointerDown', { widgetId, isEditMode: state.isEditMode(), isTouchEvent, pointerType: event?.pointerType, tagName: t?.tagName, targetClass: t?.className?.substring?.(0, 60) });
 
       // Если уже в edit mode — сразу начинаем drag
       if (state.isEditMode()) {
@@ -1528,7 +1532,7 @@
 
       // Если уже распознали намерение скролла (touch) — не перехватываем жесты
       if (this._scrollIntent) {
-        return;
+        return; // quiet - слишком часто
       }
 
       // На iOS/Safari без preventDefault страница может скроллиться и ломать drag
@@ -1536,18 +1540,16 @@
         event.preventDefault();
       }
 
-      // 🆕 Scroll intent cancel: в edit-mode пользователь часто хочет просто
-      // проскроллить страницу. Если до старта drag (порог 5px) движение явно
-      // вертикальное — отменяем подготовленный drag и не блокируем скролл.
-      if (this._draggedWidget && !this._dragging && state.isEditMode()) {
+      // Scroll intent cancel: только вне edit-mode — в edit-mode пользователь
+      // тянет виджеты в любом направлении, scrollIntent не нужен.
+      if (this._draggedWidget && !this._dragging && !state.isEditMode()) {
         const cx = event.clientX || event.touches?.[0]?.clientX || 0;
         const cy = event.clientY || event.touches?.[0]?.clientY || 0;
         const dx = Math.abs(cx - (this._startPos?.x || 0));
         const dy = Math.abs(cy - (this._startPos?.y || 0));
 
-        // Если свайп вертикальный и заметный — считаем это скроллом
-        // и больше не перехватываем события до отпускания пальца.
         if (dy > 10 && dy > dx * 1.15) {
+          console.info('[HEYS.dnd] 📜 scrollIntent: vertical swipe detected, cancelling drag', { widgetId: this._draggedWidget?.id, dx: dx.toFixed(1), dy: dy.toFixed(1) });
           this._scrollIntent = true;
           return;
         }
@@ -1584,7 +1586,11 @@
       }
 
       const widget = state.getWidget(widgetId);
-      if (!widget) return;
+      if (!widget) {
+        console.warn('[HEYS.dnd] ⚠️ _prepareForDrag: widget not found in state!', { widgetId });
+        return;
+      }
+      console.info('[HEYS.dnd] ✅ _prepareForDrag', { widgetId, widgetType: widget.type, size: widget.size });
 
       this._draggedWidget = widget;
       this._startPos = {
@@ -1797,13 +1803,14 @@
         // Для touch: не стартуем drag мгновенно, чтобы свайп вверх/вниз
         // всегда оставался прокруткой.
         if (isTouchEvent && this._touchDragReadyAt && Date.now() < this._touchDragReadyAt) {
-          return;
+          return; // grace period
         }
 
         const dx = Math.abs((event.clientX || event.touches?.[0]?.clientX || 0) - this._startPos.x);
         const dy = Math.abs((event.clientY || event.touches?.[0]?.clientY || 0) - this._startPos.y);
 
         const dragThreshold = isTouchEvent ? 14 : 5;
+        console.info('[HEYS.dnd] 📐 move threshold check', { widgetId: this._draggedWidget?.id, dx: dx.toFixed(1), dy: dy.toFixed(1), threshold: dragThreshold, willStart: dx > dragThreshold || dy > dragThreshold });
 
         // На touch ждём более уверенное движение, чтобы не ломать вертикальный скролл.
         if (dx > dragThreshold || dy > dragThreshold) {

@@ -2094,16 +2094,19 @@
   align-items: center;
   justify-content: center;
   gap: 4px;
-  min-height: 16px;
+  min-height: 22px;
 }
 
 .insights-ring-mini-header__name {
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 600;
   color: var(--text-secondary, #6b7280);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  overflow-wrap: anywhere;
+  text-align: center;
+  line-height: 1.05;
   max-width: 100%;
 }
 

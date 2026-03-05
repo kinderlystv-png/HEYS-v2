@@ -112,7 +112,7 @@
       icon: '🔥',
       description: 'Текущие калории и норма',
       defaultSize: '2x2',
-      availableSizes: ALL_SIZES_4X4,
+      availableSizes: ['2x2'],
       dataKeys: ['dayTot.kcal', 'optimum'],
       component: 'WidgetCalories',
       settings: {
@@ -193,12 +193,21 @@
       icon: '💧',
       description: 'Выпито воды и норма',
       defaultSize: '2x2',
-      availableSizes: ALL_SIZES_4X4,
+      availableSizes: ['1x1', '2x1', '2x2'],
       dataKeys: ['day.waterMl', 'waterGoal'],
       component: 'WidgetWater',
       settings: {
         showMilliliters: { type: 'boolean', default: true, label: 'Показывать мл' },
         showGlasses: { type: 'boolean', default: false, label: 'Показывать стаканы' }
+      },
+      settingsBySize: {
+        '1x1': {
+          showGlasses: { type: 'boolean', default: false, label: 'Показывать стаканы (🥛)' }
+        },
+        '2x1': {
+          showGlasses: { type: 'boolean', default: false, label: 'Показывать стаканы вместо мл' }
+        },
+        '2x2': {}
       }
     },
 

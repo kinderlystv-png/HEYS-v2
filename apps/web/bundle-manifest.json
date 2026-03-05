@@ -4,55 +4,55 @@
     "hash": "73a7627bc4cb",
     "fileCount": 25,
     "size": 1199131,
-    "builtAt": "2026-03-04T19:59:21.851Z"
+    "builtAt": "2026-03-05T02:04:54.627Z"
   },
   "boot-calc": {
     "file": "boot-calc.bundle.2a55370dd408.js",
     "hash": "2a55370dd408",
     "fileCount": 19,
     "size": 904381,
-    "builtAt": "2026-03-04T19:59:22.032Z"
+    "builtAt": "2026-03-05T02:04:54.769Z"
   },
   "boot-day": {
-    "file": "boot-day.bundle.6ebfab72ee41.js",
-    "hash": "6ebfab72ee41",
+    "file": "boot-day.bundle.e5688e3d7732.js",
+    "hash": "e5688e3d7732",
     "fileCount": 51,
-    "size": 917057,
-    "builtAt": "2026-03-04T19:59:22.262Z"
+    "size": 917379,
+    "builtAt": "2026-03-05T02:04:54.918Z"
   },
   "boot-app": {
-    "file": "boot-app.bundle.913ecc139301.js",
-    "hash": "913ecc139301",
+    "file": "boot-app.bundle.98be2b10976e.js",
+    "hash": "98be2b10976e",
     "fileCount": 48,
-    "size": 1110035,
-    "builtAt": "2026-03-04T19:59:22.438Z"
+    "size": 1109887,
+    "builtAt": "2026-03-05T02:04:55.078Z"
   },
   "boot-init": {
-    "file": "boot-init.bundle.17294c47c646.js",
-    "hash": "17294c47c646",
+    "file": "boot-init.bundle.925c24feabd2.js",
+    "hash": "925c24feabd2",
     "fileCount": 8,
-    "size": 363202,
-    "builtAt": "2026-03-04T19:59:22.563Z"
+    "size": 364661,
+    "builtAt": "2026-03-05T02:04:55.190Z"
   },
   "postboot-1-game": {
     "file": "postboot-1-game.bundle.2b5f910c8502.js",
     "hash": "2b5f910c8502",
     "fileCount": 29,
     "size": 1392686,
-    "builtAt": "2026-03-04T19:59:22.754Z"
+    "builtAt": "2026-03-05T02:04:55.366Z"
   },
   "postboot-2-insights": {
     "file": "postboot-2-insights.bundle.96b0522959f1.js",
     "hash": "96b0522959f1",
     "fileCount": 39,
     "size": 1802974,
-    "builtAt": "2026-03-04T19:59:22.966Z"
+    "builtAt": "2026-03-05T02:04:55.596Z"
   },
   "postboot-3-ui": {
-    "file": "postboot-3-ui.bundle.b39f1f5ae464.js",
-    "hash": "b39f1f5ae464",
+    "file": "postboot-3-ui.bundle.a1c9f4562eba.js",
+    "hash": "a1c9f4562eba",
     "fileCount": 25,
-    "size": 1342533,
-    "builtAt": "2026-03-04T19:59:23.145Z"
+    "size": 1346071,
+    "builtAt": "2026-03-05T02:04:55.764Z"
   }
 }

@@ -457,7 +457,7 @@
         // Сохраняем handlers в ref для возможности cleanup
         ref.touchMoveHandler = (te) => {
           if (!ref.active) return;
-          te.preventDefault();
+          if (te.cancelable) te.preventDefault();
           te.stopPropagation(); // Не даём другим handlers перехватить
 
           const touch = te.touches[0];
@@ -616,7 +616,7 @@
         if (!ref.active) return;
 
         // CRITICAL: preventDefault чтобы iOS не скроллил страницу
-        e.preventDefault();
+        if (e.cancelable) e.preventDefault();
 
         // Проверяем pointerId только для pointer events
         if (!ref.isTouchBased && ref.pointerId != null && e.pointerId != null && e.pointerId !== ref.pointerId) return;
@@ -759,8 +759,8 @@
         // 1-based линии в CSS Grid
         gridColumn: hasGridPos ? `${gridCol + 1} / span ${previewCols}` : `span ${previewCols}`,
         gridRow: hasGridPos ? `${gridRow + 1} / span ${previewRows}` : `span ${previewRows}`,
-        // В edit-mode оставляем вертикальный скролл, drag работает через pointer-хендлеры
-        touchAction: isResizing ? 'none' : 'pan-y',
+        // В edit-mode отключаем touchAction чтобы браузер не перехватывал жест для scroll
+        touchAction: (isEditMode || isResizing) ? 'none' : 'pan-y',
         zIndex: isResizing ? 60 : undefined
       },
       onClick: handleClick,
@@ -771,12 +771,15 @@
     },
       // Widget Header (mini = без хедера)
       !isMini && React.createElement('div', { className: 'widget__header' },
-        React.createElement('span', { className: 'widget__icon' }, widgetType?.icon || '📊'),
         React.createElement('span', { className: 'widget__title' }, widgetType?.name || widget.type)
       ),
 
       // Widget Content (placeholder - будет заменён конкретными виджетами)
-      React.createElement('div', { className: 'widget__content' },
+      // В edit-mode блокируем pointer-события на контенте: DnD/resize обрабатывает карточка
+      React.createElement('div', {
+        className: 'widget__content',
+        style: isEditMode ? { pointerEvents: 'none' } : undefined
+      },
         React.createElement(WidgetContent, { widget: effectiveWidget, widgetType })
       ),
 
@@ -1110,56 +1113,120 @@
     const remaining = Math.max(0, target - eaten);
     const burned = data.burned || 0; // Тренировки
     const deficit = data.deficit || 0; // Дефицит
+    const formatKcal = (value) => Math.round(Number(value) || 0).toLocaleString('ru-RU');
 
     const d = getWidgetDims(widget);
     const size = widget?.size || '2x2';
     const variant = d.isMicro ? 'micro' : d.isShort ? 'short' : d.isTall ? 'tall' : 'std';
 
     const getColor = () => {
-      if (pct < 50) return 'var(--ratio-crash)';
-      if (pct < 75) return 'var(--ratio-low)';
-      if (pct < 110) return 'var(--ratio-good)';
-      return 'var(--ratio-over)';
+      if (pct < 50) return 'var(--heys-ratio-crash)';
+      if (pct < 75) return 'var(--heys-ratio-low)';
+      if (pct < 110) return 'var(--heys-ratio-good)';
+      return 'var(--heys-ratio-over)';
     };
 
     // 1x1 Micro
     if (d.isMicro) {
       return React.createElement('div', { className: 'widget-calories widget-calories--micro' },
         React.createElement('div', { className: 'widget-micro__label' }, 'ккал'),
-        React.createElement('div', { className: 'widget-calories__value', style: { color: getColor() } }, eaten)
+        React.createElement('div', { className: 'widget-calories__value', style: { color: getColor() } }, formatKcal(eaten))
       );
     }
 
-    // 2x2 — Оптимальный layout
+    // 2x2 — Thick volumetric ring layout (pathLength=100, overeat red arc)
     if (size === '2x2') {
+      const ringStartOffset = 9;
+      const ringCapComp = 5;
+      const ratio = target > 0 ? eaten / target : 0;
+      const gradientId = `cal-ring-grad-${widget?.id || '0'}`;
+
+      // Time-aware color: compare eaten pace vs expected pace for current time of day
+      const getTimeAwareColor = () => {
+        const now = new Date();
+        const hour = now.getHours() + now.getMinutes() / 60;
+        const EATING_START = 7;
+        const EATING_END = 22;
+        const actualFraction = target > 0 ? eaten / target : 0;
+        if (actualFraction >= 1.1) return 'var(--heys-ratio-over)';
+        if (hour <= EATING_START) return actualFraction < 0.05 ? 'var(--heys-ratio-good)' : 'var(--heys-ratio-over)';
+        const dayProgress = Math.min(1, (hour - EATING_START) / (EATING_END - EATING_START));
+        const paceRatio = dayProgress > 0 ? actualFraction / dayProgress : actualFraction;
+        if (paceRatio >= 1.05) return 'var(--heys-ratio-over)';
+        if (paceRatio >= 0.75) return 'var(--heys-ratio-good)';
+        if (paceRatio >= 0.45) return 'var(--heys-ratio-low)';
+        return 'var(--heys-ratio-crash)';
+      };
+      const color = getTimeAwareColor();
+      // Gradient colors mapped to time-aware color state
+      const getGradientColors = (c) => {
+        if (c === 'var(--heys-ratio-good)') return ['#86efac', '#22c55e']; // green
+        if (c === 'var(--heys-ratio-over)') return ['#fcd34d', '#f59e0b']; // amber (overeat)
+        if (c === 'var(--heys-ratio-low)') return ['#fde68a', '#eab308']; // yellow (low)
+        if (c === 'var(--heys-ratio-crash)') return ['#fca5a5', '#ef4444']; // red (crash)
+        return ['#ffd166', '#ff9500'];
+      };
+      const [gradStart, gradEnd] = getGradientColors(color);
+      // Font size: shrink for 4+ digit numbers to fit inside ring
+      const valueFontSize = eaten >= 10000 ? '18px' : eaten >= 1000 ? '21px' : '26px';
+      // Main arc: up to 100%
+      const basePctRaw = Math.min(100, Math.round(ratio * 100));
+      const basePct = Math.max(0, basePctRaw - ringCapComp);
+      // Overeat arc: beyond 100%
+      const hasOver = ratio > 1;
+      const overPctRaw = hasOver ? Math.min(50, Math.round((ratio - 1) * 100)) : 0;
+      const overPct = Math.max(0, overPctRaw - ringCapComp);
+
+      const showPct2x2 = widget.settings?.showPercentage !== false;
+      const showRemaining2x2 = widget.settings?.showRemaining !== false;
+
       return React.createElement('div', { className: 'widget-calories widget-calories--2x2' },
-        // Верхняя строка: значение + процент
-        React.createElement('div', { className: 'widget-calories__header' },
-          React.createElement('div', { className: 'widget-calories__value widget-calories__value--lg', style: { color: getColor() } },
-            eaten.toLocaleString('ru-RU')
+        React.createElement('div', { className: 'widget-calories__ring-wrap' },
+          React.createElement('svg', { className: 'widget-calories__ring', viewBox: '0 0 44 44' },
+            React.createElement('defs', null,
+              React.createElement('linearGradient', { id: gradientId, x1: '0%', y1: '0%', x2: '100%', y2: '100%' },
+                React.createElement('stop', { offset: '0%', stopColor: gradStart }),
+                React.createElement('stop', { offset: '100%', stopColor: gradEnd })
+              )
+            ),
+            React.createElement('circle', {
+              className: 'widget-calories__ring-track', cx: '22', cy: '22', r: '18', pathLength: '100'
+            }),
+            React.createElement('circle', {
+              className: 'widget-calories__ring-fill', cx: '22', cy: '22', r: '18', pathLength: '100',
+              style: {
+                strokeDasharray: `${basePct} 100`,
+                '--ring-dasharray': `${basePct} 100`,
+                '--ring-start-offset': -ringStartOffset,
+                stroke: `url(#${gradientId})`
+              }
+            }),
+            hasOver ? React.createElement('circle', {
+              className: 'widget-calories__ring-fill--over', cx: '22', cy: '22', r: '18', pathLength: '100',
+              style: {
+                strokeDasharray: `${overPct} ${100 - overPct}`,
+                '--over-dasharray': `${overPct} ${100 - overPct}`,
+                '--over-offset': -(100 - overPct)
+              }
+            }) : null
           ),
-          React.createElement('div', { className: 'widget-calories__pct-badge', style: { background: `${getColor()}20`, color: getColor() } },
-            `${pct}%`
+          React.createElement('div', { className: 'widget-calories__ring-inner' },
+            React.createElement('div', { className: 'widget-calories__value--lg', style: { color, fontSize: valueFontSize } }, formatKcal(eaten)),
+            React.createElement('div', { className: 'widget-calories__ring-sublabel' },
+              showPct2x2 ? `${pct}%` : 'ккал'
+            )
           )
         ),
-        // Прогресс-бар
-        React.createElement('div', { className: 'widget-calories__progress' },
-          React.createElement('div', {
-            className: 'widget-calories__bar',
-            style: { width: `${Math.min(100, pct)}%`, background: getColor() }
-          })
-        ),
-        // Нижняя строка: цель и осталось
-        React.createElement('div', { className: 'widget-calories__footer' },
-          React.createElement('div', { className: 'widget-calories__meta' },
+        showRemaining2x2 ? React.createElement('div', { className: 'widget-calories__info-bar' },
+          React.createElement('div', { className: 'widget-calories__info-cell' },
             React.createElement('span', { className: 'widget-calories__meta-label' }, 'Цель'),
-            React.createElement('span', { className: 'widget-calories__meta-val' }, target.toLocaleString('ru-RU'))
+            React.createElement('span', { className: 'widget-calories__meta-val' }, formatKcal(target))
           ),
-          remaining > 0 && React.createElement('div', { className: 'widget-calories__meta widget-calories__meta--accent' },
-            React.createElement('span', { className: 'widget-calories__meta-label' }, 'Осталось'),
-            React.createElement('span', { className: 'widget-calories__meta-val' }, remaining.toLocaleString('ru-RU'))
+          React.createElement('div', { className: 'widget-calories__info-cell' },
+            React.createElement('span', { className: 'widget-calories__meta-label' }, remaining > 0 ? 'Ост.' : (hasOver ? 'Пер.' : 'Ок')),
+            React.createElement('span', { className: 'widget-calories__meta-val' }, remaining > 0 ? formatKcal(remaining) : (hasOver ? formatKcal(eaten - target) : '✓'))
           )
-        )
+        ) : null
       );
     }
 
@@ -1173,12 +1240,12 @@
     return React.createElement('div', { className: `widget-calories widget-calories--${variant}` },
       React.createElement('div', { className: 'widget-calories__top' },
         React.createElement('div', { className: 'widget-calories__value', style: { color: getColor() } },
-          eaten.toLocaleString('ru-RU')
+          formatKcal(eaten)
         ),
         showPct ? React.createElement('div', { className: 'widget-calories__pct' }, `${pct}%`) : null
       ),
       showLabel
-        ? React.createElement('div', { className: 'widget-calories__label' }, `из ${target.toLocaleString('ru-RU')} ккал`)
+        ? React.createElement('div', { className: 'widget-calories__label' }, `из ${formatKcal(target)} ккал`)
         : null,
       showProgress
         ? React.createElement('div', { className: 'widget-calories__progress' },
@@ -1189,7 +1256,7 @@
         )
         : null,
       showRemainingLine
-        ? React.createElement('div', { className: 'widget-calories__remaining' }, `Осталось: ${remaining.toLocaleString('ru-RU')}`)
+        ? React.createElement('div', { className: 'widget-calories__remaining' }, `Осталось: ${formatKcal(remaining)}`)
         : null
     );
   }
@@ -2387,7 +2454,14 @@
         // Сетка с метками дней
         React.createElement('div', { className: 'widget-heatmap__week-grid' },
           weekDays.map((day, i) => {
-            const dayIndex = (startDayIndex - 6 + i + 7) % 7;
+            const fallbackDayIndex = (startDayIndex - 6 + i + 7) % 7;
+            const dateObj = day?.date ? new Date(day.date) : null;
+            const hasValidDate = !!(dateObj && Number.isFinite(dateObj.getTime()));
+            const dayIndex = hasValidDate ? ((dateObj.getDay() + 6) % 7) : fallbackDayIndex;
+            const dayNum = hasValidDate
+              ? dateObj.getDate()
+              : (typeof day?.date === 'string' ? parseInt(day.date.split('-').pop(), 10) : null);
+            const isWeekend = dayIndex === 5 || dayIndex === 6;
             const isToday = i === weekDays.length - 1;
             // 🆕 v3.22.0: training/stress indicators
             const hasTraining = day.hasTraining;
@@ -2397,7 +2471,9 @@
               key: i,
               className: `widget-heatmap__day-col ${isToday ? 'widget-heatmap__day-col--today' : ''} ${hasTraining ? 'widget-heatmap__day-col--training' : ''}`
             },
-              React.createElement('div', { className: 'widget-heatmap__day-label' }, dayLabels[dayIndex]),
+              React.createElement('div', {
+                className: `widget-heatmap__day-date ${isWeekend ? 'widget-heatmap__day-date--weekend' : ''}`
+              }, Number.isFinite(dayNum) ? dayNum : '—'),
               React.createElement('div', {
                 className: `widget-heatmap__cell widget-heatmap__cell--${day.status || 'empty'} ${hasTraining ? 'widget-heatmap__cell--training' : ''} ${highStress ? 'widget-heatmap__cell--stress' : ''}`,
                 title: `${day.date}${hasTraining ? ' 💪' : ''}${highStress ? ' 😰' : ''}`
@@ -2407,7 +2483,10 @@
                   hasTraining && React.createElement('span', { className: 'widget-heatmap__cell-badge widget-heatmap__cell-badge--training' }, '💪'),
                   highStress && React.createElement('span', { className: 'widget-heatmap__cell-badge widget-heatmap__cell-badge--stress' }, '😰')
                 )
-              )
+              ),
+              React.createElement('div', {
+                className: `widget-heatmap__day-label ${isWeekend ? 'widget-heatmap__day-label--weekend' : ''}`
+              }, dayLabels[dayIndex])
             );
           })
         ),
@@ -2422,15 +2501,46 @@
       );
     }
 
+    const weekLabels = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
+    const today = new Date();
+    const weekStartDayIndex = (today.getDay() + 6) % 7;
+
     return React.createElement('div', { className: `widget-heatmap widget-heatmap--${variant}` },
       React.createElement('div', { className: `widget-heatmap__grid widget-heatmap__grid--${period}` },
-        renderDays.map((day, i) =>
-          React.createElement('div', {
-            key: i,
-            className: `widget-heatmap__cell widget-heatmap__cell--${day.status || 'empty'}`,
-            title: day.date
+        period === 'week'
+          ? renderDays.map((day, i) => {
+            const fallbackDayIndex = (weekStartDayIndex - 6 + i + 7) % 7;
+            const dateObj = day?.date ? new Date(day.date) : null;
+            const hasValidDate = !!(dateObj && Number.isFinite(dateObj.getTime()));
+            const dayIndex = hasValidDate ? ((dateObj.getDay() + 6) % 7) : fallbackDayIndex;
+            const dayNum = hasValidDate
+              ? dateObj.getDate()
+              : (typeof day?.date === 'string' ? parseInt(day.date.split('-').pop(), 10) : null);
+            const isWeekend = dayIndex === 5 || dayIndex === 6;
+
+            return React.createElement('div', {
+              key: i,
+              className: 'widget-heatmap__day-col'
+            },
+              React.createElement('div', {
+                className: `widget-heatmap__day-date ${isWeekend ? 'widget-heatmap__day-date--weekend' : ''}`
+              }, Number.isFinite(dayNum) ? dayNum : '—'),
+              React.createElement('div', {
+                className: `widget-heatmap__cell widget-heatmap__cell--${day.status || 'empty'}`,
+                title: day.date
+              }),
+              React.createElement('div', {
+                className: `widget-heatmap__day-label ${isWeekend ? 'widget-heatmap__day-label--weekend' : ''}`
+              }, weekLabels[dayIndex])
+            );
           })
-        )
+          : renderDays.map((day, i) =>
+            React.createElement('div', {
+              key: i,
+              className: `widget-heatmap__cell widget-heatmap__cell--${day.status || 'empty'}`,
+              title: day.date
+            })
+          )
       )
     );
   }
@@ -2816,12 +2926,16 @@
     const registry = HEYS.Widgets.registry;
     const widgetType = widget ? registry?.getType(widget.type) : null;
     const [settings, setSettings] = useState({});
+    const [selectedSize, setSelectedSize] = useState(widget?.size || '2x2');
 
     useEffect(() => {
       if (widget) {
         setSettings({ ...widget.settings });
+        setSelectedSize(widget.size || '2x2');
       }
     }, [widget]);
+
+    const previewWidget = useMemo(() => ({ ...widget, settings, size: selectedSize }), [widget, settings, selectedSize]);
 
     if (!isOpen || !widget || !widgetType) return null;
 
@@ -2848,6 +2962,29 @@
         ),
 
         React.createElement('div', { className: 'widgets-settings__content' },
+          // Widget preview
+          React.createElement('div', { className: 'widgets-settings__preview-wrap' },
+            React.createElement('div', {
+              className: 'widgets-settings__preview-stage',
+              style: (() => {
+                const CELL = 75;
+                const si = registry.getSize(selectedSize) || { cols: 2, rows: 2 };
+                return { width: (si.cols * CELL) + 'px', height: (si.rows * CELL) + 'px' };
+              })()
+            },
+              React.createElement('div', {
+                className: `widget widget--${previewWidget.size || '2x2'} widget--${previewWidget.type}`,
+                style: { position: 'absolute', inset: 0, width: '100%', height: '100%', cursor: 'default' }
+              },
+                React.createElement('div', { className: 'widget__header' },
+                  React.createElement('span', { className: 'widget__title' }, widgetType?.name)
+                ),
+                React.createElement('div', { className: 'widget__content' },
+                  React.createElement(WidgetContent, { widget: previewWidget, widgetType })
+                )
+              )
+            )
+          ),
           // Size selector
           React.createElement('div', { className: 'widgets-settings__field' },
             React.createElement('label', null, 'Размер'),
@@ -2856,15 +2993,22 @@
                 const size = registry.getSize(sizeId);
                 return React.createElement('button', {
                   key: sizeId,
-                  className: `widgets-settings__size ${widget.size === sizeId ? 'active' : ''}`,
-                  onClick: () => HEYS.Widgets.state.resizeWidget(widget.id, sizeId)
+                  className: `widgets-settings__size ${selectedSize === sizeId ? 'active' : ''}`,
+                  onClick: () => {
+                    setSelectedSize(sizeId);
+                    HEYS.Widgets.state.resizeWidget(widget.id, sizeId);
+                  }
                 }, size.label);
               })
             )
           ),
 
-          // Custom settings
-          widgetType.settings && Object.entries(widgetType.settings).map(([key, def]) =>
+          // Custom settings — если задан settingsBySize, используем настройки для текущего размера
+          Object.entries(
+            widgetType.settingsBySize
+              ? (widgetType.settingsBySize[selectedSize] || {})
+              : (widgetType.settings || {})
+          ).map(([key, def]) =>
             React.createElement('div', { key, className: 'widgets-settings__field' },
               React.createElement('label', null, def.label),
               def.type === 'boolean' ?
@@ -2948,7 +3092,17 @@
           if (!Number.isFinite(cellW) || cellW <= 0) return;
 
           const target = Math.max(60, Math.min(Math.round(cellW), 140));
-          grid.style.setProperty('--widget-row-height', `${target}px`);
+          const rowHeight = `${target}px`;
+
+          // Важно: overlay — соседний элемент внутри .widgets-grid-container,
+          // поэтому переменная, заданная только на .widgets-grid, туда не наследуется.
+          // Синхронизируем на обоих уровнях, чтобы «техническая» сетка совпадала
+          // с реальными размерами карточек.
+          grid.style.setProperty('--widget-row-height', rowHeight);
+          const gridContainer = grid.parentElement;
+          if (gridContainer) {
+            gridContainer.style.setProperty('--widget-row-height', rowHeight);
+          }
         } catch (e) {
           // silent
         }

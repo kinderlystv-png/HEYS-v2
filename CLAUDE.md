@@ -49,11 +49,14 @@ sleep 10 && ./health-check.sh
 ```javascript
 // ❌ → ✅
 cloud.client.rpc()           → HEYS.YandexAPI.rpc('fn', {})
+cloud.client.from('table')   → HEYS.YandexAPI.rest('table', { method: 'GET' })
 localStorage.setItem()       → U.lsSet('key', value)
 console.log('debug')         → console.info('[HEYS.module] ✅ ...')
 dayTot.protein               → dayTot.prot
 item.category                → getProductFromItem(item, pIndex).category
 heys_day_{date}              → heys_dayv2_{date}
+product.harmScore            → product.harm
+heys_ews_weekly              → heys_ews_weekly_v1
 protein = 4 kcal/g           → protein = 3 kcal/g (TEF-adjusted)
 passing client_id to RPC     → Use *_by_session pattern with session_token
 ```
