@@ -4,9 +4,9 @@ name: API Health Monitor
 # При падении критических endpoints отправляет алерт в Telegram
 
 on:
-  schedule:
-    # Каждые 15 минут 24/7 (увеличен интервал для снижения нагрузки)
-    - cron: "*/15 * * * *" # Круглосуточно
+  # schedule отключён — экономия токенов Copilot
+  # schedule:
+  #   - cron: "*/15 * * * *"
   workflow_dispatch: # Ручной запуск для тестирования
   push:
     branches: [main]
