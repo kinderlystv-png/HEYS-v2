@@ -3605,7 +3605,9 @@ body:has(.page-reports) .hdr::after {
   stroke-linecap: round;
   stroke-dashoffset: var(--ring-start-offset, -9);
   filter: drop-shadow(0 0 4px rgba(255, 149, 0, 0.45));
-  animation: calRingFillIn 1.2s cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
+  /* transition instead of keyframe animation: only plays when value actually changes,
+     not on browser recompositing (e.g. when water fill overlay is added/removed) */
+  transition: stroke-dasharray 1.2s cubic-bezier(0.22, 0.61, 0.36, 1);
 }
 
 .widget-calories__ring-fill--over {
@@ -3614,27 +3616,7 @@ body:has(.page-reports) .hdr::after {
   stroke-width: 9;
   stroke-linecap: round;
   stroke-dashoffset: var(--over-offset, 0);
-  animation: calRingOverFillIn 0.9s cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
-}
-
-@keyframes calRingFillIn {
-  from {
-    stroke-dasharray: 0 100;
-  }
-
-  to {
-    stroke-dasharray: var(--ring-dasharray, 0 100);
-  }
-}
-
-@keyframes calRingOverFillIn {
-  from {
-    stroke-dasharray: 0 100;
-  }
-
-  to {
-    stroke-dasharray: var(--over-dasharray, 0 100);
-  }
+  transition: stroke-dasharray 0.9s cubic-bezier(0.22, 0.61, 0.36, 1);
 }
 
 .widget-calories__ring-wrap::before {

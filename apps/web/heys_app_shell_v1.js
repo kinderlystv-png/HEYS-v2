@@ -1193,7 +1193,10 @@
                                     : tab === 'widgets'
                                         ? (window.HEYS && window.HEYS.Widgets && window.HEYS.Widgets.WidgetsTab
                                             ? React.createElement(window.HEYS.Widgets.WidgetsTab, {
-                                                key: 'widgets' + syncVer + '_' + String(clientId || '') + '_' + selectedDate,
+                                                // NOTE: syncVer намеренно убран из key — WidgetsTab подписан на
+                                                // data:updated/day:updated события и не нуждается в remount при синке.
+                                                // syncVer в key вызывает flash всего контента вкладки.
+                                                key: 'widgets_' + String(clientId || '') + '_' + selectedDate,
                                                 clientId,
                                                 selectedDate,
                                                 setTab,

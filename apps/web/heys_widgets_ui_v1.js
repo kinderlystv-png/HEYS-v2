@@ -1113,6 +1113,12 @@
     );
   }
 
+  // Module-level Set: tracks which widget IDs have already played the entry animation
+  // this session. On re-mount (caused by widget reinit/cascade), we skip back to
+  // the real value immediately instead of re-animating from 0.
+  if (!window._calRingAnimated) window._calRingAnimated = new Set();
+  const _calRingAnimated = window._calRingAnimated;
+
   function CaloriesWidgetContent({ widget, data }) {
     const eaten = data.eaten || 0;
     const target = data.target || 2000;
@@ -1132,6 +1138,43 @@
       if (pct < 110) return 'var(--heys-ratio-good)';
       return 'var(--heys-ratio-over)';
     };
+
+    // Hoist ring calculations to top level so hooks can reference them
+    // (React: hooks must run unconditionally, before any early returns)
+    const _ringRatio = target > 0 ? eaten / target : 0;
+    const _ringCapComp = 5;
+    const _basePct = Math.max(0, Math.min(100, Math.round(_ringRatio * 100)) - _ringCapComp);
+    const _hasOver = _ringRatio > 1;
+    const _overPct = _hasOver ? Math.max(0, Math.min(50, Math.round((_ringRatio - 1) * 100)) - _ringCapComp) : 0;
+
+    // JS-driven ring animation: only animate from 0 on the TRUE first mount this session.
+    // On subsequent mounts (widget system reinit/cascade), skip straight to the real value
+    // so the transition doesn't replay. CSS transition still fires when eaten changes.
+    const _widgetKey = `cal-ring-${widget?.id || '0'}`;
+    const _alreadyAnimated = _calRingAnimated.has(_widgetKey);
+    const [displayBasePct, setDisplayBasePct] = React.useState(_alreadyAnimated ? _basePct : 0);
+    const [displayOverPct, setDisplayOverPct] = React.useState(_alreadyAnimated ? _overPct : 0);
+    const _ringMounted = React.useRef(_alreadyAnimated);
+
+    React.useEffect(() => {
+      if (_alreadyAnimated) return; // already animated: skip rAF, start at real value
+      // First true mount: rAF ensures the 0 renders first, then transition animates in
+      const raf = requestAnimationFrame(() => {
+        _calRingAnimated.add(_widgetKey);
+        setDisplayBasePct(_basePct);
+        setDisplayOverPct(_overPct);
+        _ringMounted.current = true;
+      });
+      return () => cancelAnimationFrame(raf);
+    }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+    React.useEffect(() => {
+      // Calories actually changed (user logged food): update ring to new value
+      if (_ringMounted.current) {
+        setDisplayBasePct(_basePct);
+        setDisplayOverPct(_overPct);
+      }
+    }, [eaten]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // 1x1 Micro
     if (d.isMicro) {
@@ -1202,7 +1245,7 @@
             React.createElement('circle', {
               className: 'widget-calories__ring-fill', cx: '22', cy: '22', r: '18', pathLength: '100',
               style: {
-                strokeDasharray: `${basePct} 100`,
+                strokeDasharray: `${displayBasePct} 100`,
                 '--ring-dasharray': `${basePct} 100`,
                 '--ring-start-offset': -ringStartOffset,
                 stroke: `url(#${gradientId})`
@@ -1211,7 +1254,7 @@
             hasOver ? React.createElement('circle', {
               className: 'widget-calories__ring-fill--over', cx: '22', cy: '22', r: '18', pathLength: '100',
               style: {
-                strokeDasharray: `${overPct} ${100 - overPct}`,
+                strokeDasharray: `${displayOverPct} ${100 - displayOverPct}`,
                 '--over-dasharray': `${overPct} ${100 - overPct}`,
                 '--over-offset': -(100 - overPct)
               }
@@ -3133,11 +3176,11 @@
     // Критично: каждый клиент имеет свой layout виджетов!
     useEffect(() => {
       if (clientId) {
-        console.log(`[WidgetsTab] clientId changed: "${clientId.slice(0, 8)}...", reinitializing widgets`);
+        console.info(`[WidgetsTab] clientId changed: "${clientId.slice(0, 8)}...", reinitializing widgets`);
         // Передаём clientId явно, т.к. HEYS.currentClientId может ещё не обновиться (race condition)
         HEYS.Widgets.state?.reinit?.(clientId);
-        // Обновляем локальный state после reinit
-        setWidgets(HEYS.Widgets.state?.getWidgets?.() || []);
+        // НЕ вызываем setWidgets здесь — reinit асинхронный: getWidgets() вернёт []
+        // и вызовет вспышку empty-state. Подписка на layout:loaded обновит widgets когда данные готовы.
         updateHistoryInfo();
       }
     }, [clientId]);
