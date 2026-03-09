@@ -38,6 +38,23 @@
   // Импортируем утилиты из dayUtils
   const getDayUtils = () => HEYS.dayUtils || {};
 
+  function isSyntheticEstimatedItem(item) {
+    if (!item || typeof item !== 'object') return false;
+    const productId = String(item.product_id ?? item.productId ?? '');
+    const itemId = String(item.id ?? '');
+    const estimatedSource = String(item.estimatedSource ?? '');
+    return !!(
+      item.isEstimated ||
+      item.virtualProduct ||
+      item.skipProductRestore ||
+      item.skipOrphanTracking ||
+      estimatedSource === 'morning-checkin' ||
+      productId.startsWith('estimated_') ||
+      productId.startsWith('estimated_quickfill_') ||
+      itemId.startsWith('estimated_')
+    );
+  }
+
   // Хук для централизованного автосохранения дня с учётом гонок и межвкладочной синхронизации
   // Поддерживает ночную логику: приёмы 00:00-02:59 сохраняются под следующий календарный день
   function useDayAutosave({
@@ -198,6 +215,7 @@
       const emptyItems = [];
       (payload.meals || []).forEach((meal, mi) => {
         (meal.items || []).forEach((item, ii) => {
+          if (isSyntheticEstimatedItem(item)) return;
           if (!item.kcal100 && !item.protein100 && !item.carbs100) {
             emptyItems.push({
               mealIndex: mi,

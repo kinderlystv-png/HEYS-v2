@@ -448,8 +448,26 @@
   const orphanProductsMap = new Map(); // name => { name, usedInDays: Set, firstSeen }
   const orphanLoggedRecently = new Map(); // name => timestamp (throttle логов)
 
+  function isSyntheticEstimatedItem(item) {
+    if (!item || typeof item !== 'object') return false;
+    const productId = String(item.product_id ?? item.productId ?? '');
+    const itemId = String(item.id ?? '');
+    const estimatedSource = String(item.estimatedSource ?? '');
+    return !!(
+      item.isEstimated ||
+      item.virtualProduct ||
+      item.skipProductRestore ||
+      item.skipOrphanTracking ||
+      estimatedSource === 'morning-checkin' ||
+      productId.startsWith('estimated_') ||
+      productId.startsWith('estimated_quickfill_') ||
+      itemId.startsWith('estimated_')
+    );
+  }
+
   function trackOrphanProduct(item, dateStr) {
     if (!item || !item.name) return;
+    if (isSyntheticEstimatedItem(item)) return;
     const name = String(item.name).trim();
     if (!name) return;
 
@@ -595,6 +613,7 @@
 
           for (const meal of day.meals) {
             for (const item of (meal.items || [])) {
+              if (isSyntheticEstimatedItem(item)) continue;
               checkedItems++;
               const itemName = String(item.name || '').trim();
               const itemNameLower = itemName.toLowerCase();
@@ -744,6 +763,7 @@
 
           for (const meal of day.meals) {
             for (const item of (meal.items || [])) {
+              if (isSyntheticEstimatedItem(item)) continue;
               const productId = item.product_id ? String(item.product_id) : null;
               const itemName = String(item.name || '').trim();
               const itemNameNorm = normalizeName(itemName); // 🆕 v4.6.0: Используем normalizeProductName
@@ -1748,7 +1768,7 @@
 
           // Трекаем orphan-продукты (когда используется штамп вместо базы)
           // НЕ трекаем если база продуктов пуста или синхронизация не завершена
-          if (!product && itemName) {
+          if (!product && itemName && !isSyntheticEstimatedItem(item)) {
             // Получаем продукты из всех возможных источников
             let freshProducts = global.HEYS?.products?.getAll?.() || [];
 

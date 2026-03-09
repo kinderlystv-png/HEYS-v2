@@ -759,9 +759,33 @@
     });
   }
 
+  function mealItemSnapshotSignature(it) {
+    if (!it || typeof it !== 'object') return '';
+    return [
+      it.product_id || it.productId || it.name || '',
+      it.grams || 0,
+      it.kcal100 ?? '',
+      it.protein100 ?? it.prot100 ?? '',
+      it.carbs100 ?? '',
+      it.fat100 ?? '',
+      it.simple100 ?? '',
+      it.complex100 ?? '',
+      it.badFat100 ?? '',
+      it.goodFat100 ?? '',
+      it.trans100 ?? '',
+      it.fiber100 ?? '',
+      it.gi ?? it.gi100 ?? it.GI ?? it.giIndex ?? '',
+      normalizeHarm(it) ?? '',
+      it.isEstimated ? 1 : 0,
+      it.virtualProduct ? 1 : 0,
+      it.skipProductRestore ? 1 : 0,
+      it.skipOrphanTracking ? 1 : 0
+    ].join(':');
+  }
+
   function mealSignature(meal) {
     if (!meal || !Array.isArray(meal.items)) return '';
-    return meal.items.map(it => `${it.product_id || it.productId || it.name || ''}:${it.grams || 0}`).join('|');
+    return meal.items.map(mealItemSnapshotSignature).join('|');
   }
   function idxSignature(idx) {
     if (!idx || !idx.byId) return '';

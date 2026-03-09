@@ -1,5 +1,5 @@
 ---
-applyTo: 'apps/web/**/*.{js,jsx,ts,tsx}'
+name: heys-code-style
 description: Стиль кода HEYS — запреты, паттерны, CSS
 ---
 

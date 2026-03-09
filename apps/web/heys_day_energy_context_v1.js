@@ -38,10 +38,12 @@
         const trainK = (t) => (t.z || [0, 0, 0, 0]).reduce((s, min, i) => s + r0((+min || 0) * (kcalMin[i] || 0)), 0);
         const profileTargetDef = +(lsGet?.('heys_profile', {})?.deficitPctTarget) || 0;
 
-        const eatenKcal = (day?.meals || []).reduce((a, m) => {
+        const recalculatedEatenKcal = (day?.meals || []).reduce((a, m) => {
             const t = (M?.mealTotals ? M.mealTotals(m, pIndex) : { kcal: 0 });
             return a + (t.kcal || 0);
         }, 0);
+        const savedEatenKcal = Math.max(0, Number(day?.savedEatenKcal || 0));
+        const eatenKcal = recalculatedEatenKcal > 0 ? recalculatedEatenKcal : savedEatenKcal;
         const factDefPct = tdee ? r0(((eatenKcal - tdee) / tdee) * 100) : 0; // <0 значит дефицит
 
         if (window._HEYS_DEBUG_TDEE) {

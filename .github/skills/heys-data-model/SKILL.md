@@ -1,5 +1,5 @@
 ---
-applyTo: 'apps/web/**/*.{js,jsx,ts,tsx}'
+name: heys-data-model
 description: Модель данных HEYS — dayTot, meals, products, формулы
 ---
 

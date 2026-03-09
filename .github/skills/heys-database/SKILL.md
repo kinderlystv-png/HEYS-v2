@@ -1,7 +1,7 @@
 ---
+name: heys-database
 description:
   'Database, SQL migrations, RLS policies, PostgreSQL functions for HEYS'
-applyTo: '**/*.sql'
 ---
 
 # 🗄️ HEYS Database Skill

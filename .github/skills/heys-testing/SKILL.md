@@ -1,6 +1,6 @@
 ---
+name: heys-testing
 description: 'Testing patterns for HEYS: Vitest unit tests, Playwright e2e'
-applyTo: '**/*.{test,spec}.{js,ts}'
 ---
 
 # 🧪 HEYS Testing Skill
