@@ -222,6 +222,19 @@
   let _refreshInProgress = null; // Deduplication
   const TOKEN_REFRESH_BUFFER_MS = 5 * 60 * 1000; // 5 минут до истечения — уже обновляем
 
+  async function waitForSyncMethodReady(timeoutMs = 1500) {
+    const hasSyncMethod = () => typeof cloud.bootstrapClientSync === 'function' || typeof cloud.syncClientViaRPC === 'function';
+    if (hasSyncMethod()) return true;
+
+    const startedAt = Date.now();
+    while ((Date.now() - startedAt) < timeoutMs) {
+      await new Promise(resolve => setTimeout(resolve, 50));
+      if (hasSyncMethod()) return true;
+    }
+
+    return hasSyncMethod();
+  }
+
   cloud.ensureValidToken = async function () {
     // PIN auth не использует токены куратора
     if (_rpcOnlyMode) {
@@ -380,6 +393,11 @@
     // before ensureValidToken resolves, slipping past the dedup check.
     const syncPromise = (async () => {
       try {
+        const syncMethodReady = await waitForSyncMethodReady();
+        if (!syncMethodReady) {
+          return { success: false, deferred: true, error: 'sync_method_not_ready' };
+        }
+
         // 🔄 AUTO REFRESH: Проверяем и обновляем токен перед sync (только для куратора)
         if (!isPinAuth && typeof cloud.ensureValidToken === 'function') {
           const tokenResult = await cloud.ensureValidToken();
@@ -397,20 +415,26 @@
         }
 
         let result;
+        let usedSyncStrategy = false;
         // v60 FIX: PIN clients now use bootstrapClientSync (paginated REST)
         // instead of syncClientViaRPC (monolithic RPC that 502s on 530+ keys).
         // bootstrapClientSync uses heys-api-rest CF with PAGE_SIZE=400 pagination,
         // Phase A fast-load (5 critical keys → UI unblocked), and delta sync.
         if (typeof cloud.bootstrapClientSync === 'function') {
+          usedSyncStrategy = true;
           result = await cloud.bootstrapClientSync(clientId, options);
         } else if (isPinAuth && typeof cloud.syncClientViaRPC === 'function') {
           // Legacy fallback: syncClientViaRPC only if bootstrapClientSync unavailable
+          usedSyncStrategy = true;
           result = await cloud.syncClientViaRPC(clientId);
         }
 
-        // v61: Guard against undefined result (no sync method available yet at cold boot)
-        if (!result) {
+        // v61.1: distinguish benign no-op/skip from real missing strategy.
+        if (!usedSyncStrategy) {
           result = { success: false, error: 'No sync method available at boot time' };
+        } else if (typeof result === 'undefined') {
+          result = { success: true, skipped: true, reason: 'noop_or_throttled' };
+          log('[SYNC] Strategy finished without payload — treating as benign no-op');
         }
 
         // ⚡ v5.2.0: Invalidate pattern cache after successful sync
@@ -1112,6 +1136,153 @@
 
   const PENDING_QUEUE_KEY = 'heys_pending_sync_queue';
   const PENDING_CLIENT_QUEUE_KEY = 'heys_pending_client_sync_queue';
+  const PENDING_QUEUE_COMPRESS_MIN_BYTES = 16 * 1024;
+  const PENDING_QUEUE_INLINE_VALUE_MAX_BYTES = 32 * 1024;
+
+  function getPendingQueueIdentity(item, storageKey, fallbackIndex) {
+    if (!item || typeof item !== 'object') return `__pending_invalid_${fallbackIndex}`;
+    const normalizedKey = String(item.k || '');
+    if (!normalizedKey) return `__pending_missing_key_${fallbackIndex}`;
+    if (storageKey === PENDING_CLIENT_QUEUE_KEY || item.client_id) {
+      return `${item.client_id || ''}:${normalizedKey}`;
+    }
+    return `${item.user_id || ''}:${normalizedKey}`;
+  }
+
+  function compactPendingQueue(queue, storageKey, options = {}) {
+    if (!Array.isArray(queue) || queue.length <= 1) return Array.isArray(queue) ? queue : [];
+
+    const dedupedReverse = [];
+    const seen = new Set();
+
+    for (let i = queue.length - 1; i >= 0; i--) {
+      const item = queue[i];
+      const identity = getPendingQueueIdentity(item, storageKey, i);
+      if (seen.has(identity)) continue;
+      seen.add(identity);
+      dedupedReverse.push(item);
+    }
+
+    const compacted = dedupedReverse.reverse();
+    if (options.mutate && Array.isArray(queue)) {
+      queue.splice(0, queue.length, ...compacted);
+      return queue;
+    }
+
+    return compacted;
+  }
+
+  function getPendingQueueLocalStorageKey(item) {
+    if (!item || typeof item !== 'object') return '';
+
+    const normalizedKey = String(item.k || '');
+    if (!normalizedKey) return '';
+
+    if (item.client_id && normalizedKey.startsWith('heys_') && !normalizedKey.startsWith(`heys_${item.client_id}_`)) {
+      return `heys_${item.client_id}_${normalizedKey.slice('heys_'.length)}`;
+    }
+
+    return normalizedKey;
+  }
+
+  const LOCAL_ONLY_STORAGE_EXACT_KEYS = new Set([
+    'heys_advice_trace_day_v1'
+  ]);
+
+  const LOCAL_ONLY_STORAGE_SUFFIXES = [
+    '_advice_trace_day_v1'
+  ];
+
+  function isLocalOnlyStorageKey(key) {
+    const normalizedKey = String(key || '');
+    if (!normalizedKey) return false;
+    if (LOCAL_ONLY_STORAGE_EXACT_KEYS.has(normalizedKey)) return true;
+    return LOCAL_ONLY_STORAGE_SUFFIXES.some((suffix) => normalizedKey.endsWith(suffix));
+  }
+
+  function filterLocalOnlyPendingQueueItems(queue, storageKey, options = {}) {
+    const safeQueue = Array.isArray(queue) ? queue : [];
+    const filtered = safeQueue.filter((item) => {
+      if (!item || typeof item !== 'object') return false;
+      const itemKey = String(item.k || '');
+      const persistKey = getPendingQueueLocalStorageKey(item);
+      return !isLocalOnlyStorageKey(itemKey) && !isLocalOnlyStorageKey(persistKey);
+    });
+
+    if (options.mutate && Array.isArray(queue)) {
+      queue.splice(0, queue.length, ...filtered);
+    }
+
+    const removedCount = safeQueue.length - filtered.length;
+    if (removedCount > 0) {
+      logQuotaThrottled(
+        `pending-queue-local-only:${storageKey}`,
+        `🧹 [SYNC] Dropped ${removedCount} local-only pending item(s) from ${storageKey}`
+      );
+    }
+
+    return options.mutate && Array.isArray(queue) ? queue : filtered;
+  }
+
+  function createPersistablePendingQueueItem(item, storageKey) {
+    if (!item || typeof item !== 'object') return item;
+
+    const persistable = { ...item };
+    const isClientQueue = storageKey === PENDING_CLIENT_QUEUE_KEY || !!persistable.client_id;
+    if (!isClientQueue) return persistable;
+
+    try {
+      const rawValue = JSON.stringify(persistable.v);
+      const valueBytes = (rawValue || '').length * 2;
+      if (valueBytes < PENDING_QUEUE_INLINE_VALUE_MAX_BYTES) {
+        return persistable;
+      }
+
+      const localStorageKey = getPendingQueueLocalStorageKey(persistable);
+      delete persistable.v;
+      persistable.__persistRef = true;
+      if (localStorageKey) {
+        persistable.__persistKey = localStorageKey;
+      }
+      logQuotaThrottled(`pending-queue-ref:${storageKey}:${persistable.k}`, `🪶 [SYNC] Pending queue stores large value by ref: ${persistable.k} (${formatStorageBytes(valueBytes)})`);
+      return persistable;
+    } catch (_) {
+      return persistable;
+    }
+  }
+
+  function hydratePendingQueueItem(item) {
+    if (!item || typeof item !== 'object' || !item.__persistRef || typeof item.v !== 'undefined') {
+      return item;
+    }
+
+    if (isLocalOnlyStorageKey(item.k) || isLocalOnlyStorageKey(item.__persistKey)) {
+      return null;
+    }
+
+    const localStorageKey = item.__persistKey || getPendingQueueLocalStorageKey(item);
+    const fallbackKeys = [localStorageKey, item.k].filter(Boolean);
+
+    for (const key of fallbackKeys) {
+      try {
+        const raw = global.localStorage.getItem(key);
+        if (!raw) continue;
+
+        const Store = global.HEYS?.store;
+        const value = (typeof raw === 'string' && raw.startsWith('¤Z¤') && typeof Store?.decompress === 'function')
+          ? Store.decompress(raw)
+          : JSON.parse(raw);
+
+        return {
+          ...item,
+          v: value
+        };
+      } catch (_) { }
+    }
+
+    logQuotaThrottled(`pending-queue-hydrate-miss:${item.k}`, `⚠️ [SYNC] Pending queue ref hydrate missed local value: ${item.k}`);
+    return null;
+  }
 
   // ═══════════════════════════════════════════════════════════════════
   // 🧹 QUOTA MANAGEMENT — ЗАЩИТА ОТ ПЕРЕПОЛНЕНИЯ STORAGE
@@ -1119,6 +1290,12 @@
 
   const MAX_STORAGE_MB = 4.5; // Лимит ~5MB, оставляем запас
   const OLD_DATA_DAYS = 90; // Удаляем данные старше 90 дней
+  const HYDRATION_DAY_QUOTA_SKIP_AFTER_DAYS = 45; // Старые dayv2 оставляем в cloud, если localStorage уже упёрся в quota
+  const QUOTA_LOG_THROTTLE_MS = 5000;
+  const QUOTA_CLEANUP_COOLDOWN_MS = 3000;
+  const CLIENT_SCOPED_KEY_RE = /^heys_([a-f0-9-]{36})_/i;
+  const quotaLogTimestamps = new Map();
+  let _lastAggressiveCleanupAt = 0;
 
   /** Получить размер localStorage в MB */
   function getStorageSize() {
@@ -1142,6 +1319,223 @@
       return new Date(match[1]);
     }
     return null;
+  }
+
+  function getDayAgeDaysFromKey(key, nowTs = Date.now()) {
+    const date = getDateFromDayKey(key);
+    if (!(date instanceof Date) || Number.isNaN(date.getTime())) return null;
+    return Math.floor((nowTs - date.getTime()) / (24 * 60 * 60 * 1000));
+  }
+
+  function shouldSkipHydrationDayOnQuota(key, options = {}) {
+    if (!options?.preserveRecentDuringHydration) return false;
+    if (!String(key || '').includes('dayv2_')) return false;
+    const ageDays = getDayAgeDaysFromKey(key, options.nowTs || Date.now());
+    return Number.isFinite(ageDays) && ageDays > HYDRATION_DAY_QUOTA_SKIP_AFTER_DAYS;
+  }
+
+  function logQuotaThrottled(kind, message) {
+    try {
+      const now = Date.now();
+      const lastTs = quotaLogTimestamps.get(kind) || 0;
+      if ((now - lastTs) >= QUOTA_LOG_THROTTLE_MS) {
+        quotaLogTimestamps.set(kind, now);
+        logCritical(message);
+      }
+    } catch (e) {
+      logCritical(message);
+    }
+  }
+
+  function getCurrentQuotaClientId() {
+    try {
+      const utilsClientId = global.HEYS?.utils?.getCurrentClientId?.();
+      if (utilsClientId) return utilsClientId;
+
+      const globalClientId = global.HEYS?.currentClientId;
+      if (globalClientId) return globalClientId;
+
+      const storedClientId = global.localStorage.getItem('heys_client_current');
+      if (!storedClientId) return '';
+      try {
+        return JSON.parse(storedClientId) || '';
+      } catch (_) {
+        return storedClientId;
+      }
+    } catch (e) {
+      return '';
+    }
+  }
+
+  function isRecoverableStorageKey(key) {
+    const normalizedKey = String(key || '');
+    return normalizedKey === 'heys_shared_products_cache_v1' ||
+      normalizedKey === 'heys_sync_log' ||
+      normalizedKey.includes('_debug') ||
+      normalizedKey.includes('_temp') ||
+      normalizedKey.includes('_cache') ||
+      normalizedKey.includes('_log') ||
+      normalizedKey.includes('_backup') ||
+      normalizedKey.includes('heys_ews_') ||
+      normalizedKey.includes('heys_insights_') ||
+      normalizedKey.includes('heys_adaptive_');
+  }
+
+  function formatStorageBytes(bytes) {
+    const safeBytes = Number.isFinite(bytes) ? bytes : 0;
+    if (safeBytes >= 1024 * 1024) {
+      return `${(safeBytes / (1024 * 1024)).toFixed(2)} MB`;
+    }
+    return `${(safeBytes / 1024).toFixed(1)} KB`;
+  }
+
+  function getStorageWriteMeta(key, value) {
+    try {
+      const normalizedKey = String(key || '');
+      const rawValue = typeof value === 'string' ? value : JSON.stringify(value);
+      const payloadBytes = (rawValue || '').length * 2;
+      const currentSizeBytes = Math.round(getStorageSize() * 1024 * 1024);
+      let kind = 'other';
+      if (isRecoverableStorageKey(normalizedKey)) kind = 'recoverable_cache';
+      else if (normalizedKey.includes('dayv2_')) kind = 'dayv2';
+      else if (normalizedKey.includes('_products')) kind = 'products';
+      else if (normalizedKey === PENDING_QUEUE_KEY || normalizedKey === PENDING_CLIENT_QUEUE_KEY) kind = 'pending_queue';
+      return {
+        key: normalizedKey,
+        kind,
+        payloadBytes,
+        currentSizeBytes,
+        summary: `key=${normalizedKey} kind=${kind} payload=${formatStorageBytes(payloadBytes)} storage=${formatStorageBytes(currentSizeBytes)}`
+      };
+    } catch (e) {
+      return {
+        key: String(key || ''),
+        kind: 'unknown',
+        payloadBytes: 0,
+        currentSizeBytes: 0,
+        summary: `key=${String(key || '')} kind=unknown`
+      };
+    }
+  }
+
+  function cleanupRecoverableStorage() {
+    try {
+      const currentClientId = getCurrentQuotaClientId();
+      const scopedProductsKey = currentClientId ? `heys_${currentClientId}_products` : '';
+      const recoverableKeys = [];
+
+      for (let i = 0; i < global.localStorage.length; i++) {
+        const key = global.localStorage.key(i);
+        if (!key) continue;
+
+        const isRecoverableCache = isRecoverableStorageKey(key);
+
+        const isOtherClientProducts =
+          key.includes('_products') &&
+          key !== scopedProductsKey &&
+          key !== 'heys_products' &&
+          !key.includes('_hidden_products') &&
+          !key.includes('_favorite_products') &&
+          !key.includes('_deleted_products');
+
+        const clientScopedMatch = key.match(CLIENT_SCOPED_KEY_RE);
+        const isOtherClientScopedKey = !!(clientScopedMatch && currentClientId && clientScopedMatch[1] !== currentClientId);
+
+        if (isRecoverableCache || isOtherClientProducts || isOtherClientScopedKey) {
+          recoverableKeys.push(key);
+        }
+      }
+
+      if (scopedProductsKey && global.localStorage.getItem(scopedProductsKey) && global.localStorage.getItem('heys_products')) {
+        recoverableKeys.push('heys_products');
+      }
+
+      const uniqueKeys = Array.from(new Set(recoverableKeys));
+      uniqueKeys.forEach((key) => global.localStorage.removeItem(key));
+
+      if (uniqueKeys.length > 0) {
+        logCritical(`🧹 Очищено ${uniqueKeys.length} восстанавливаемых cache/backup ключей`);
+      }
+
+      return uniqueKeys.length;
+    } catch (e) {
+      return 0;
+    }
+  }
+
+  function cleanupOptionalPreferenceStorage() {
+    try {
+      const optionalKeys = [];
+      const exactKeys = new Set([
+        'heys_hidden_products',
+        'heys_favorite_products',
+        'heys_deleted_products',
+        'heys_deleted_products_ignore_list',
+        'heys_widget_layout_v1',
+        'heys_widget_layout_meta_v1',
+        'heys_grams_history',
+        'heys_advice_trace_day_v1',
+        'test_large'
+      ]);
+      const suffixMatchers = [
+        '_hidden_products',
+        '_favorite_products',
+        '_deleted_products',
+        '_widget_layout_v1',
+        '_widget_layout_meta_v1',
+        '_advice_trace_day_v1'
+      ];
+
+      for (let i = 0; i < global.localStorage.length; i++) {
+        const key = global.localStorage.key(i);
+        if (!key) continue;
+        const matchesSuffix = suffixMatchers.some((suffix) => key.endsWith(suffix));
+        const isInsightsFeedbackKey = key.includes('_insights_feedback_') || key.startsWith('heys_insights_feedback_');
+        const isTestKey = /^test_/i.test(key);
+        if (exactKeys.has(key) || key.startsWith('heys_last_grams_') || matchesSuffix || isInsightsFeedbackKey || isTestKey) {
+          optionalKeys.push(key);
+        }
+      }
+
+      optionalKeys.forEach((key) => global.localStorage.removeItem(key));
+
+      if (optionalKeys.length > 0) {
+        logCritical(`🧹 Очищено ${optionalKeys.length} optional preference/layout ключей`);
+      }
+
+      return optionalKeys.length;
+    } catch (e) {
+      return 0;
+    }
+  }
+
+  function logLargestStorageKeys(limit = 8) {
+    try {
+      const entries = [];
+      for (let i = 0; i < global.localStorage.length; i++) {
+        const key = global.localStorage.key(i);
+        if (!key) continue;
+        const raw = global.localStorage.getItem(key) || '';
+        const bytes = raw.length * 2;
+        entries.push({ key, bytes });
+      }
+
+      entries
+        .sort((a, b) => b.bytes - a.bytes)
+        .slice(0, limit)
+        .forEach((entry, index) => {
+          logCritical(`📦 [STORAGE TOP ${index + 1}] ${entry.key} = ${(entry.bytes / 1024).toFixed(1)} KB`);
+        });
+    } catch (e) { }
+  }
+
+  function logLargestStorageKeysThrottled(limit = 8) {
+    const kind = `quota-top-keys-${limit}`;
+    const now = Date.now();
+    const lastTs = quotaLogTimestamps.get(kind) || 0;
+    if ((now - lastTs) < QUOTA_LOG_THROTTLE_MS) return;
+    quotaLogTimestamps.set(kind, now);
+    logLargestStorageKeys(limit);
   }
 
   /** Очистить старые данные для освобождения места */
@@ -1181,22 +1575,12 @@
 
   /** Агрессивная очистка при критическом переполнении */
   function aggressiveCleanup() {
-    logCritical('🚨 Агрессивная очистка storage...');
+    logQuotaThrottled('quota-aggressive', '🚨 Агрессивная очистка storage...');
 
-    // 1. Удаляем данные старше 14 дней (более агрессивно)
-    cleanupOldData(14);
+    // 1. Сначала удаляем то, что можно безопасно восстановить
+    cleanupRecoverableStorage();
 
-    // 2. Удаляем debug/temp/cache ключи
-    const tempKeys = [];
-    for (let i = 0; i < global.localStorage.length; i++) {
-      const key = global.localStorage.key(i);
-      if (key && (key.includes('_debug') || key.includes('_temp') || key.includes('_cache') || key.includes('_log'))) {
-        tempKeys.push(key);
-      }
-    }
-    tempKeys.forEach(k => global.localStorage.removeItem(k));
-
-    // 3. Очищаем pending queues и тяжёлые кэши insights
+    // 2. Очищаем pending queues и тяжёлые кэши insights
     global.localStorage.removeItem(PENDING_QUEUE_KEY);
     global.localStorage.removeItem(PENDING_CLIENT_QUEUE_KEY);
     global.localStorage.removeItem(SYNC_LOG_KEY);
@@ -1207,41 +1591,66 @@
     ];
     insightsKeys.forEach(k => global.localStorage.removeItem(k));
 
+    // 3. Лишь затем начинаем ужимать историю dayv2
+    cleanupOldData(30);
+
     // 4. Показываем размер после очистки
     let sizeMB = getStorageSize();
     logCritical(`📊 Размер после очистки: ${sizeMB.toFixed(2)} MB`);
 
-    // 5. Если всё ещё > 4MB — удаляем ещё старее (7 дней) и insights
+    // 5. Если всё ещё > 4MB — ужимаем dayv2 агрессивнее и ещё раз чистим recoverable
     if (sizeMB > 4) {
-      cleanupOldData(7);
+      cleanupRecoverableStorage();
+      cleanupOldData(14);
 
-      // Самая агрессивная очистка - удаляем всё что можем восстановить
-      const aggressiveKeys = [];
-      for (let i = 0; i < global.localStorage.length; i++) {
-        const key = global.localStorage.key(i);
-        if (key && (key.includes('heys_ews_') || key.includes('heys_insights_') || key.includes('heys_adaptive_'))) {
-          aggressiveKeys.push(key);
+      sizeMB = getStorageSize();
+      if (sizeMB > 4) {
+        cleanupOptionalPreferenceStorage();
+        cleanupOldData(7);
+
+        // Самая агрессивная очистка - удаляем всё что можем восстановить
+        const aggressiveKeys = [];
+        for (let i = 0; i < global.localStorage.length; i++) {
+          const key = global.localStorage.key(i);
+          if (key && (key.includes('heys_ews_') || key.includes('heys_insights_') || key.includes('heys_adaptive_'))) {
+            aggressiveKeys.push(key);
+          }
         }
+        aggressiveKeys.forEach(k => global.localStorage.removeItem(k));
       }
-      aggressiveKeys.forEach(k => global.localStorage.removeItem(k));
 
       sizeMB = getStorageSize();
       logCritical(`📊 После ultra-aggressive очистки: ${sizeMB.toFixed(2)} MB`);
+      if (sizeMB > 4) {
+        logLargestStorageKeys();
+      }
     }
   }
 
   /** Безопасная запись в localStorage с обработкой QuotaExceeded */
-  function safeSetItem(key, value) {
+  function safeSetItem(key, value, options = {}) {
     // Используем оригинальный setItem если доступен (избегаем рекурсии через перехват)
     const setFn = originalSetItem || global.localStorage.setItem.bind(global.localStorage);
+    const writeMeta = getStorageWriteMeta(key, value);
 
     try {
       setFn(key, value);
       return true;
     } catch (e) {
       if (e.name === 'QuotaExceededError' || e.code === 22) {
-        // Пробуем очистить старые данные
-        logCritical('⚠️ localStorage переполнен, очищаем старые данные...');
+        if (shouldSkipHydrationDayOnQuota(key, options)) {
+          logQuotaThrottled('quota-hydration-skip', `⚠️ [SYNC] Quota: старый dayv2 оставлен только в cloud: ${writeMeta.summary}`);
+          return false;
+        }
+
+        if (writeMeta.kind === 'recoverable_cache') {
+          try { global.localStorage.removeItem(key); } catch (_) { }
+          logQuotaThrottled('quota-recoverable-skip', `⚠️ [STORAGE] Quota: пропускаем recoverable cache write: ${writeMeta.summary}`);
+          return false;
+        }
+        // Сначала очищаем безопасно-восстановимые ключи и старые данные
+        logQuotaThrottled('quota-warning', `⚠️ localStorage переполнен, очищаем старые данные... ${writeMeta.summary}`);
+        cleanupRecoverableStorage();
         cleanupOldData();
 
         // Пробуем ещё раз
@@ -1258,13 +1667,18 @@
             setFn(key, value);
             return true;
           } catch (e3) {
-            // Агрессивная очистка — удаляем старые дни за 30 дней вместо 90
-            aggressiveCleanup();
+            // Агрессивная очистка — но не чаще чем раз в несколько секунд
+            const now = Date.now();
+            if ((now - _lastAggressiveCleanupAt) >= QUOTA_CLEANUP_COOLDOWN_MS) {
+              _lastAggressiveCleanupAt = now;
+              aggressiveCleanup();
+            }
             try {
               setFn(key, value);
               return true;
             } catch (e4) {
-              logCritical('❌ Не удалось сохранить данные: storage критически переполнен');
+              logQuotaThrottled('quota-critical', `❌ Не удалось сохранить данные: storage критически переполнен (${writeMeta.summary})`);
+              logLargestStorageKeysThrottled();
               return false;
             }
           }
@@ -1274,11 +1688,39 @@
     }
   }
 
+  function writeDayKeyWithQuotaGuard(key, valueToSave, options = {}) {
+    const rawValue = JSON.stringify(valueToSave);
+    const written = safeSetItem(key, rawValue, {
+      preserveRecentDuringHydration: !!options.preserveRecentDuringHydration,
+      nowTs: options.nowTs || Date.now()
+    });
+
+    if (!written && options.preserveRecentDuringHydration) {
+      window.console.warn('[HEYS.sinhron] ⚠️ SKIP_LOCAL_QUOTA ' + key + ' — старый dayv2 оставлен только в cloud');
+    }
+
+    return written;
+  }
+
   /** Загрузить очередь из localStorage */
   function loadPendingQueue(key) {
     try {
       const data = global.localStorage.getItem(key);
-      return data ? JSON.parse(data) : [];
+      if (!data) return [];
+
+      const Store = global.HEYS?.store;
+      const parsed = (typeof data === 'string' && data.startsWith('¤Z¤') && typeof Store?.decompress === 'function')
+        ? Store.decompress(data)
+        : JSON.parse(data);
+
+      const localOnlyFiltered = filterLocalOnlyPendingQueueItems(Array.isArray(parsed) ? parsed : [], key);
+      const compacted = compactPendingQueue(localOnlyFiltered, key);
+
+      if (Array.isArray(parsed) && (localOnlyFiltered.length !== parsed.length || compacted.length !== localOnlyFiltered.length)) {
+        savePendingQueue(key, compacted);
+      }
+
+      return compacted;
     } catch (e) {
       return [];
     }
@@ -1287,8 +1729,29 @@
   /** Сохранить очередь в localStorage */
   function savePendingQueue(key, queue) {
     try {
-      if (queue.length > 0) {
-        safeSetItem(key, JSON.stringify(queue));
+      const queueRef = Array.isArray(queue) ? queue : [];
+      const filteredQueue = filterLocalOnlyPendingQueueItems(queueRef, key, { mutate: true });
+      const originalLength = filteredQueue.length;
+      const compactedQueue = compactPendingQueue(filteredQueue, key, { mutate: true });
+
+      if (compactedQueue.length > 0) {
+        const persistableQueue = compactedQueue.map(item => createPersistablePendingQueueItem(item, key));
+        let serializedQueue = JSON.stringify(persistableQueue);
+        const Store = global.HEYS?.store;
+        if ((serializedQueue.length * 2) >= PENDING_QUEUE_COMPRESS_MIN_BYTES && typeof Store?.compress === 'function') {
+          try {
+            const compressedQueue = Store.compress(persistableQueue);
+            if (typeof compressedQueue === 'string' && compressedQueue.length < serializedQueue.length) {
+              serializedQueue = compressedQueue;
+            }
+          } catch (_) { }
+        }
+
+        if ((originalLength - compactedQueue.length) >= 3) {
+          logQuotaThrottled(`pending-queue-compacted:${key}`, `🗜️ [SYNC] Pending queue compacted: ${key} ${originalLength} → ${compactedQueue.length}`);
+        }
+
+        safeSetItem(key, serializedQueue);
       } else {
         global.localStorage.removeItem(key);
       }
@@ -2117,6 +2580,10 @@
           }
         } catch (_) { }
 
+            if (isLocalOnlyStorageKey(k)) {
+              return;
+            }
+
         // Во время signIn не зеркалим вообще ничего — это источник гонок и RTR refresh 400
         if (typeof _signInInProgress !== 'undefined' && _signInInProgress) {
           return;
@@ -2747,6 +3214,9 @@
 
     // Фильтруем валидные продукты
     const valid = products.filter(p => p && typeof p.name === 'string' && p.name.trim().length > 0);
+    if (valid.length === 0) {
+      return { error: 'Empty products array' };
+    }
 
     // 🔇 v4.7.1: Debug логи отключены
 
@@ -4045,6 +4515,7 @@
         let allData = [];
         let pageOffset = 0;
         let fetchError = null;
+          let paginatedFetchPages = 0;
 
         // 🚀 SPECULATIVE PREFETCH: check if HTML-time prefetch matches current request
         // If prefetch was fired at +0.0s and matches clientId+since → reuse data, save ~1s
@@ -4089,12 +4560,19 @@
 
             const rows = pageData || [];
             allData = allData.concat(rows);
-            logCritical(`🔍 [SYNC PAGINATED] page offset=${pageOffset}, rows=${rows.length}, total=${allData.length}`);
+            paginatedFetchPages += 1;
+            if (isDebugSync()) {
+              logCritical(`🔍 [SYNC PAGINATED] page offset=${pageOffset}, rows=${rows.length}, total=${allData.length}`);
+            }
 
             // Если получили меньше PAGE_SIZE — это последняя страница
             if (rows.length < PAGE_SIZE) break;
             pageOffset += PAGE_SIZE;
           }
+        }
+
+        if (!usedPrefetch && (paginatedFetchPages > 1 || isDebugSync())) {
+          logCritical(`🔍 [SYNC PAGINATED] fetched ${paginatedFetchPages} page(s), total=${allData.length}${isDeltaSync ? ' (DELTA)' : ' (FULL)'}`);
         }
 
         const data = allData;
@@ -4401,6 +4879,17 @@
         }).sort();
         window.console.info('[HEYS.sinhron] 📦 dayv2 после дедупа (' + dayv2AfterDedup.length + '):', dayv2AfterDedup.join(', '));
 
+        deduped.sort((a, b) => {
+          const aDate = getDateFromDayKey(a.scopedKey);
+          const bDate = getDateFromDayKey(b.scopedKey);
+          const aHasDate = aDate instanceof Date && !Number.isNaN(aDate.getTime());
+          const bHasDate = bDate instanceof Date && !Number.isNaN(bDate.getTime());
+          if (aHasDate && bHasDate) return bDate.getTime() - aDate.getTime();
+          if (aHasDate) return 1;
+          if (bHasDate) return -1;
+          return String(a.scopedKey || '').localeCompare(String(b.scopedKey || ''));
+        });
+
         log(`📊 [DEDUP] ${data?.length || 0} DB keys → ${deduped.length} unique scoped keys`);
 
         // ⏱️ TIMING: Отслеживаем время обработки 
@@ -4413,6 +4902,7 @@
         let previousProducts = null;
         // 🚀 PERF: Collect dayv2 writes and dispatch ONE event after loop
         const batchedDayV2Writes = [];
+        const skippedDayMirrorKeys = [];
 
         // 🔄 ФАЗ 2: ОБРАБОТКА дедуплицированных ключей
         deduped.forEach(({ scopedKey, row }) => {
@@ -4572,7 +5062,14 @@
                 // logCritical(`🔄 [FORCE SYNC] Saving ${valueToSave.meals?.length || 0} meals to localStorage | key: ${key}`);
                 // 🧷 Backup перед возможной перезаписью dayv2
                 backupDayV2BeforeOverwrite(key, valueToSave, 'force-sync');
-                ls.setItem(key, JSON.stringify(valueToSave));
+                const wroteDay = writeDayKeyWithQuotaGuard(key, valueToSave, {
+                  preserveRecentDuringHydration: true,
+                  nowTs: now
+                });
+                if (!wroteDay) {
+                  skippedDayMirrorKeys.push(key);
+                  return;
+                }
                 window.console.info('[HEYS.sinhron] ✅ FORCE_WRITE ' + key + ' meals=' + (valueToSave?.meals?.length || 0));
 
                 const dateMatch = key.match(/dayv2_(\d{4}-\d{2}-\d{2})$/);
@@ -4597,7 +5094,14 @@
                 if (merged) {
                   // 🔇 PERF: Отключено
                   // logCritical(`🔀 [MERGE] Day conflict resolved | key: ${key} | local: ${new Date(localUpdatedAt).toLocaleTimeString()} | remote: ${new Date(remoteUpdatedAt).toLocaleTimeString()}`);
-                  ls.setItem(key, JSON.stringify(merged));
+                  const wroteMergedDay = writeDayKeyWithQuotaGuard(key, merged, {
+                    preserveRecentDuringHydration: true,
+                    nowTs: now
+                  });
+                  if (!wroteMergedDay) {
+                    skippedDayMirrorKeys.push(key);
+                    return;
+                  }
                   window.console.info('[HEYS.sinhron] ✅ MERGE ' + key + ' meals=' + (merged?.meals?.length || 0));
 
                   // Уведомляем UI об обновлении данных дня (для pull-to-refresh)
@@ -5368,7 +5872,14 @@
         if (batchedDayV2Writes.length > 0) {
           const updatedDates = [];
           batchedDayV2Writes.forEach(({ key, valueToSave }) => {
-            ls.setItem(key, JSON.stringify(valueToSave));
+            const wroteDay = writeDayKeyWithQuotaGuard(key, valueToSave, {
+              preserveRecentDuringHydration: true,
+              nowTs: now
+            });
+            if (!wroteDay) {
+              skippedDayMirrorKeys.push(key);
+              return;
+            }
             if (global.HEYS?.store?.invalidate) {
               global.HEYS.store.invalidate(key);
             }
@@ -5387,6 +5898,10 @@
             }));
             log('📅 [EVENT] heys:day-updated BATCH dispatched for ' + updatedDates.length + ' dates (cloud-sync)');
           }
+        }
+
+        if (skippedDayMirrorKeys.length > 0) {
+          window.console.warn('[HEYS.sinhron] ⚠️ dayv2 оставлены только в cloud из-за quota (' + skippedDayMirrorKeys.length + '):', skippedDayMirrorKeys.join(', '));
         }
 
         if (productsUpdated && Array.isArray(latestProducts)) {
@@ -5735,7 +6250,12 @@
           if (isDayKey) {
             backupDayV2BeforeOverwrite(targetKey, valueToStore, 'fetchDays');
           }
-          ls.setItem(targetKey, JSON.stringify(valueToStore));
+          const wroteDay = isDayKey
+            ? writeDayKeyWithQuotaGuard(targetKey, valueToStore, { preserveRecentDuringHydration: false })
+            : safeSetItem(targetKey, JSON.stringify(valueToStore));
+          if (!wroteDay) {
+            return;
+          }
 
           // 🔧 FIX: Инвалидируем memory кэш Store чтобы следующий lsGet прочитал новые данные
           // Без этого Store.get возвращает старый кэш, игнорируя прямую запись в localStorage
@@ -5806,6 +6326,42 @@
   let clientUpsertQueue = loadPendingQueue(PENDING_CLIENT_QUEUE_KEY);
   let clientUpsertTimer = null;
   let _uploadInProgress = false;  // 🔄 Флаг: данные в процессе отправки (in-flight)
+  let _uploadLogTimer = null;
+  let _uploadLogBufferedTotal = 0;
+  let _uploadLogBufferedBatches = 0;
+    const UPLOAD_SUMMARY_LOG_MIN_ITEMS = 5;
+    const UPLOAD_SUMMARY_LOG_MIN_BATCHES = 3;
+    const UPLOAD_SUMMARY_BUFFER_MS = 2500;
+
+  function flushBufferedUploadLog() {
+    if (_uploadLogTimer) {
+      clearTimeout(_uploadLogTimer);
+      _uploadLogTimer = null;
+    }
+    if (_uploadLogBufferedTotal <= 0) return;
+    const suffix = _uploadLogBufferedBatches > 1 ? ` (${_uploadLogBufferedBatches} batch)` : '';
+      if (_uploadLogBufferedTotal >= UPLOAD_SUMMARY_LOG_MIN_ITEMS || _uploadLogBufferedBatches >= UPLOAD_SUMMARY_LOG_MIN_BATCHES) {
+        logCritical(`☁️ [YANDEX] Сохранено в облако: ${_uploadLogBufferedTotal} записей${suffix}`);
+      } else {
+        log(`☁️ [YANDEX] Small upload batch hidden from normal logs: ${_uploadLogBufferedTotal} items${suffix}`);
+      }
+    _uploadLogBufferedTotal = 0;
+    _uploadLogBufferedBatches = 0;
+  }
+
+  function logUploadSummaryBuffered(savedCount) {
+    if (!(savedCount > 0)) return;
+    _uploadLogBufferedTotal += savedCount;
+    _uploadLogBufferedBatches += 1;
+
+      if (savedCount >= UPLOAD_SUMMARY_LOG_MIN_ITEMS || _uploadLogBufferedTotal >= 10) {
+      flushBufferedUploadLog();
+      return;
+    }
+
+    if (_uploadLogTimer) return;
+      _uploadLogTimer = setTimeout(() => flushBufferedUploadLog(), UPLOAD_SUMMARY_BUFFER_MS);
+  }
   let _uploadInFlightCount = 0;   // 🔄 Кол-во записей в in-flight запросе
 
   /**
@@ -5837,7 +6393,10 @@
     const gamificationKeys = ['heys_game', 'heys_gamification', 'heys_sound_settings'];
     const filteredBatch = batch.filter(item => {
       const normalizedKey = item.k?.replace(/^heys_[0-9a-f-]+_/, 'heys_');
-      return !gamificationKeys.includes(normalizedKey) && !gamificationKeys.includes(item.k);
+      return !gamificationKeys.includes(normalizedKey)
+        && !gamificationKeys.includes(item.k)
+        && !isLocalOnlyStorageKey(item.k)
+        && !isLocalOnlyStorageKey(getPendingQueueLocalStorageKey(item));
     });
 
     // Если отфильтровали всё — выходим
@@ -5896,6 +6455,19 @@
       }
     }
 
+    const hydratedBatch = uniqueBatch
+      .map(item => hydratePendingQueueItem(item))
+      .filter(Boolean);
+
+    if (!hydratedBatch.length) {
+      _uploadInProgress = false;
+      _uploadInFlightCount = 0;
+      savePendingQueue(PENDING_CLIENT_QUEUE_KEY, clientUpsertQueue);
+      notifyPendingChange();
+      notifySyncCompletedIfDrained();
+      return;
+    }
+
     try {
       // ═══════════════════════════════════════════════════════════════
       // 🔐 v=54 FIX: ВСЕГДА используем RPC режим (Yandex API)
@@ -5905,7 +6477,7 @@
       if (_rpcOnlyMode) {
         // Группируем по client_id
         const byClientId = {};
-        uniqueBatch.forEach(item => {
+        hydratedBatch.forEach(item => {
           const cid = item.client_id;
           if (!byClientId[cid]) byClientId[cid] = [];
           byClientId[cid].push({ k: item.k, v: item.v, updated_at: item.updated_at });
@@ -5948,7 +6520,7 @@
           }
         } else {
           resetRetry();
-          logCritical(`☁️ [YANDEX] Сохранено в облако: ${totalSaved} записей`);
+          logUploadSummaryBuffered(totalSaved);
         }
 
         savePendingQueue(PENDING_CLIENT_QUEUE_KEY, clientUpsertQueue);
@@ -5971,7 +6543,7 @@
       // 🔐 Если нет user — нельзя сохранять в обычном режиме
       if (!user) {
         log('⚠️ [SAVE] No user session, returning items to queue');
-        clientUpsertQueue.push(...uniqueBatch);
+        clientUpsertQueue.push(...hydratedBatch);
         savePendingQueue(PENDING_CLIENT_QUEUE_KEY, clientUpsertQueue);
         notifyPendingChange();
         _uploadInProgress = false;
@@ -5980,7 +6552,7 @@
         return;
       }
 
-      const promises = uniqueBatch.map(item => {
+      const promises = hydratedBatch.map(item => {
         // Добавляем user_id если его нет (таблица требует NOT NULL)
         const itemWithUser = item.user_id ? item : { ...item, user_id: user.id };
 
@@ -6200,6 +6772,10 @@
     }
 
     if (!client_id) {
+      return;
+    }
+
+    if (isLocalOnlyStorageKey(k)) {
       return;
     }
 
@@ -6626,7 +7202,7 @@
       }
 
       // Прогресс и завершение
-      syncProgressDone += uniqueBatch.length;
+      syncProgressDone += hydratedBatch.length;
       if (syncProgressTotal < syncProgressDone) {
         syncProgressTotal = syncProgressDone;
       }
@@ -6637,6 +7213,8 @@
 
   cloud.saveKey = function (k, v) {
     if (!user || !k) return;
+
+    if (isLocalOnlyStorageKey(k)) return;
 
     // 🛡️ GRACE PERIOD v3: Skip re-upload of data just downloaded from cloud
     const _skGrace = cloud._syncCompletedAt ? (Date.now() - cloud._syncCompletedAt) : Infinity;
@@ -7244,10 +7822,21 @@
 
       // 🚀 Сохраняем в localStorage для быстрого восстановления при следующей загрузке
       try {
-        global.localStorage.setItem(SHARED_PRODUCTS_LS_KEY, JSON.stringify({
-          ts: Date.now(),
-          data: filtered
-        }));
+        if (getStorageSize() < 3.8) {
+          const cachedPayload = JSON.stringify({
+            ts: Date.now(),
+            data: filtered
+          });
+          const cached = safeSetItem(SHARED_PRODUCTS_LS_KEY, cachedPayload, {
+            allowRecoverableCacheDrop: true
+          });
+          if (!cached) {
+            log('[SHARED PRODUCTS] localStorage cache skipped — quota guard rejected recoverable write');
+          }
+        } else {
+          global.localStorage.removeItem(SHARED_PRODUCTS_LS_KEY);
+          log('[SHARED PRODUCTS] localStorage cache skipped — storage near limit');
+        }
       } catch (_) { /* localStorage может быть переполнен */ }
 
       return { data: filtered, error: null };

@@ -1785,6 +1785,12 @@ body.tour-active .ios-pwa-banner {
   gap: 10px;
 }
 
+.advice-diagnostics-section__hint {
+  font-size: 12px;
+  line-height: 1.45;
+  color: #64748b;
+}
+
 .advice-diagnostics-list {
   margin: 0;
   padding-left: 18px;
@@ -1943,16 +1949,31 @@ body.tour-active .ios-pwa-banner {
   justify-content: flex-start;
 }
 
+.advice-list-details__actions--subtle {
+  margin-top: 6px;
+}
+
+.advice-list-details__description {
+  color: #334155;
+}
+
 .advice-technical-trigger {
-  min-height: 36px;
-  border: 1px solid rgba(37, 99, 235, 0.18);
+  min-height: 24px;
+  border: none;
   border-radius: 999px;
-  padding: 7px 12px;
-  background: rgba(239, 246, 255, 0.95);
-  color: #1d4ed8;
-  font-size: 12px;
-  font-weight: 700;
+  padding: 2px 6px;
+  background: transparent;
+  color: #94a3b8;
+  font-size: 11px;
+  font-weight: 600;
   cursor: pointer;
+  opacity: 0.72;
+}
+
+.advice-technical-trigger:hover {
+  opacity: 1;
+  color: #64748b;
+  text-decoration: underline;
 }
 
 .advice-diagnostics-modal--technical .advice-diagnostics-modal__subtitle {
@@ -1982,6 +2003,7 @@ body.tour-active .ios-pwa-banner {
 [data-theme="dark"] .advice-diagnostics-stat-card__label,
 [data-theme="dark"] .advice-diagnostics-chip__label,
 [data-theme="dark"] .advice-diagnostics-section__title,
+[data-theme="dark"] .advice-diagnostics-section__hint,
 [data-theme="dark"] .advice-diagnostics-summary-card__score-label,
 [data-theme="dark"] .advice-diagnostics-summary-card__issue,
 [data-theme="dark"] .advice-diagnostics-list__item,
@@ -2044,6 +2066,10 @@ body.tour-active .ios-pwa-banner {
   color: #94a3b8;
 }
 
+[data-theme="dark"] .advice-list-details__description {
+  color: #e2e8f0;
+}
+
 [data-theme="dark"] .advice-expert-evidence__list-item,
 [data-theme="dark"] .advice-expert-evidence__text,
 [data-theme="dark"] .advice-diagnostics-modal--technical .advice-diagnostics-modal__subtitle {
@@ -2055,9 +2081,12 @@ body.tour-active .ios-pwa-banner {
 }
 
 [data-theme="dark"] .advice-technical-trigger {
-  background: rgba(30, 41, 59, 0.95);
-  border-color: rgba(59, 130, 246, 0.24);
-  color: #bfdbfe;
+  background: transparent;
+  color: #64748b;
+}
+
+[data-theme="dark"] .advice-technical-trigger:hover {
+  color: #94a3b8;
 }
 
 @media (min-width: 768px) {

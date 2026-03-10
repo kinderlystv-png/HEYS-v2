@@ -28,8 +28,8 @@
     HEYS.InsightsPI = HEYS.InsightsPI || {};
 
     const STORAGE_KEY_PREFIX = 'heys_insights_feedback_';
-    const MAX_HISTORY = 50; // v1.2: was 100, trimmed for localStorage budget
-    const MAX_STORAGE_KB = 200; // Max size per feedback key in KB
+    const MAX_HISTORY = 30; // Extra conservative to protect localStorage budget
+    const MAX_STORAGE_KB = 96; // Hard cap per feedback key in KB
 
     /**
      * v1.2.1: Extract product IDs from any recommendation format.
@@ -191,8 +191,7 @@
         const U = global.HEYS.dayUtils;
         if (!U) return [];
 
-        const storageKey = getStorageKey(profile);
-        const history = U.lsGet(storageKey) || [];
+        const history = loadNormalizedHistory(profile);
 
         return history.slice(-limit);
     }
@@ -453,6 +452,122 @@
         return `${STORAGE_KEY_PREFIX}${clientId}`;
     }
 
+    function sanitizeOutcome(outcome) {
+        if (!outcome || typeof outcome !== 'object') return null;
+        return {
+            satiety: outcome.satiety ?? null,
+            energy: outcome.energy ?? null,
+            mood: outcome.mood ?? null,
+            quickRating: outcome.quickRating ?? null,
+            submittedAt: outcome.submittedAt || null
+        };
+    }
+
+    function sanitizeReminders(reminders) {
+        if (!reminders || typeof reminders !== 'object') return null;
+        var compact = {};
+        Object.keys(reminders).slice(0, 5).forEach(function (key) {
+            compact[key] = {
+                shown: !!reminders[key]?.shown,
+                shownAt: reminders[key]?.shownAt || null
+            };
+        });
+        return compact;
+    }
+
+    function sanitizeRecommendationRecord(record) {
+        if (!record || typeof record !== 'object') {
+            return {
+                id: generateRecommendationId('unknown'),
+                type: 'unknown',
+                timestamp: new Date().toISOString(),
+                clientId: 'unknown',
+                recommendation: { scenario: 'UNKNOWN', productIds: [] },
+                followed: null,
+                followedAt: null,
+                outcome: null,
+                context: { date: new Date().toISOString().split('T')[0] },
+                reminders: null
+            };
+        }
+
+        var recommendation = record.recommendation || {};
+        var productIds = Array.isArray(recommendation.productIds) && recommendation.productIds.length > 0
+            ? recommendation.productIds
+            : extractProductIds(recommendation);
+
+        return {
+            id: record.id || generateRecommendationId(record.type || 'unknown'),
+            type: record.type || 'unknown',
+            timestamp: record.timestamp || new Date().toISOString(),
+            clientId: record.clientId || 'unknown',
+            recommendation: {
+                scenario: recommendation.scenario || 'UNKNOWN',
+                productIds: productIds.slice(0, 20),
+                score: recommendation.score,
+                mealType: recommendation.mealType || recommendation.meal_type || null
+            },
+            followed: record.followed == null ? null : !!record.followed,
+            followedAt: record.followedAt || null,
+            outcome: sanitizeOutcome(record.outcome),
+            context: {
+                date: record?.context?.date || (record.timestamp ? String(record.timestamp).split('T')[0] : new Date().toISOString().split('T')[0])
+            },
+            reminders: sanitizeReminders(record.reminders)
+        };
+    }
+
+    function normalizeRecommendationHistory(history) {
+        if (!Array.isArray(history)) return [];
+
+        var normalized = history
+            .map(function (record) { return sanitizeRecommendationRecord(record); })
+            .filter(Boolean);
+
+        if (normalized.length > MAX_HISTORY) {
+            normalized = normalized.slice(-MAX_HISTORY);
+        }
+
+        return normalized;
+    }
+
+    function pruneHistoryToStorageBudget(history, storageKey) {
+        var normalized = normalizeRecommendationHistory(history);
+        var serialized = JSON.stringify(normalized);
+
+        while (normalized.length > 1 && serialized.length > MAX_STORAGE_KB * 1024) {
+            var nextLength = normalized.length > 10
+                ? Math.max(10, Math.ceil(normalized.length * 0.7))
+                : normalized.length - 1;
+            var pruneCount = Math.max(1, normalized.length - nextLength);
+            normalized = normalized.slice(pruneCount);
+            serialized = JSON.stringify(normalized);
+            console.warn('[HEYS.insights.feedbackLoop] ⚠️ Pruned ' + pruneCount + ' old records for ' + storageKey + ' (' + Math.round(serialized.length / 1024) + 'KB)');
+        }
+
+        return normalized;
+    }
+
+    function loadNormalizedHistory(profile) {
+        const U = global.HEYS.dayUtils;
+        if (!U) return [];
+
+        const storageKey = getStorageKey(profile);
+        const rawHistory = U.lsGet(storageKey) || [];
+        let history = trimLegacyRecords(normalizeRecommendationHistory(rawHistory));
+        history = pruneHistoryToStorageBudget(history, storageKey);
+
+        try {
+            const rawSerialized = JSON.stringify(Array.isArray(rawHistory) ? rawHistory : []);
+            const normalizedSerialized = JSON.stringify(history);
+            if (rawSerialized !== normalizedSerialized) {
+                U.lsSet(storageKey, history);
+            }
+        } catch (e) { }
+
+        return history;
+    }
+
     /**
      * v1.2: Trim legacy records that stored full recommendation objects.
      * Converts them to trimmed format (scenario + productIds only).
@@ -461,7 +576,8 @@
     function trimLegacyRecords(history) {
         var trimmed = false;
         for (var i = 0; i < history.length; i++) {
-            var rec = history[i];
+            var rec = sanitizeRecommendationRecord(history[i]);
+            history[i] = rec;
             if (!rec.recommendation) continue;
             var r = rec.recommendation;
             // Detect legacy format: has full product objects in suggestions/groups/mealPlan
@@ -498,31 +614,18 @@
         }
 
         const storageKey = getStorageKey(profile);
-        var history = U.lsGet(storageKey) || [];
-
-        // v1.2: One-time migration — trim legacy bloated records
-        history = trimLegacyRecords(history);
+        var history = loadNormalizedHistory(profile);
+        var safeRecord = sanitizeRecommendationRecord(record);
 
         // Update existing record or add new
-        const existingIndex = history.findIndex(r => r.id === record.id);
+        const existingIndex = history.findIndex(r => r.id === safeRecord.id);
         if (existingIndex >= 0) {
-            history[existingIndex] = record;
+            history[existingIndex] = safeRecord;
         } else {
-            history.push(record);
+            history.push(safeRecord);
         }
 
-        // v1.2: Keep last MAX_HISTORY recommendations (was 100)
-        if (history.length > MAX_HISTORY) {
-            history.splice(0, history.length - MAX_HISTORY);
-        }
-
-        // v1.2: Size guard — if serialized > MAX_STORAGE_KB, prune oldest half
-        var serialized = JSON.stringify(history);
-        if (serialized.length > MAX_STORAGE_KB * 1024) {
-            var pruneCount = Math.ceil(history.length / 2);
-            history.splice(0, pruneCount);
-            console.warn('[MEALREC][FeedbackLoop] ⚠️ Pruned ' + pruneCount + ' old records (size guard: ' + Math.round(serialized.length / 1024) + 'KB)');
-        }
+        history = pruneHistoryToStorageBudget(history, storageKey);
 
         U.lsSet(storageKey, history);
     }
@@ -535,8 +638,7 @@
         const U = global.HEYS.dayUtils;
         if (!U) return null;
 
-        const storageKey = getStorageKey(profile);
-        const history = U.lsGet(storageKey) || [];
+        const history = loadNormalizedHistory(profile);
 
         return history.find(r => r.id === recId);
     }

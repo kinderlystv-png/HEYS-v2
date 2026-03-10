@@ -10782,19 +10782,11 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
         };
     }
 
-    function renderAdviceEvidence(advice) {
-        if (!hasExpertContent(advice)) return null;
-
+    function getHumanWhyNowParts(advice) {
         const expertMeta = advice?.expertMeta || {};
-        const confidenceLabel = advice.confidenceLabel || (
-            advice.confidence === 'high' ? 'высокая'
-                : advice.confidence === 'medium' ? 'средняя'
-                    : advice.confidence === 'low' ? 'базовая'
-                        : ''
-        );
-
         const parts = [];
-        if (advice.evidenceSummary) {
+
+        if (advice?.evidenceSummary) {
             advice.evidenceSummary
                 .split('•')
                 .map(part => humanizeAdviceInsight(part))
@@ -10806,11 +10798,50 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
             parts.push(humanizeAdviceInsight(expertMeta.whyNow));
         }
 
+        return parts.slice(0, 3);
+    }
+
+    function getAdviceDescription(advice) {
+        if (!advice) return '';
+
+        if (typeof advice.details === 'string' && advice.details.trim()) {
+            return advice.details.trim();
+        }
+
+        const whyNowParts = getHumanWhyNowParts(advice);
+        if (whyNowParts.length > 0) {
+            return whyNowParts[0];
+        }
+
+        const actionNowLabel = advice?.expertMeta?.actionNow?.label;
+        if (typeof actionNowLabel === 'string' && actionNowLabel.trim()) {
+            return actionNowLabel.trim();
+        }
+
+        return '';
+    }
+
+    function renderAdviceEvidence(advice, options = {}) {
+        if (!hasExpertContent(advice)) return null;
+
+        const expertMeta = advice?.expertMeta || {};
+        const confidenceLabel = advice.confidenceLabel || (
+            advice.confidence === 'high' ? 'высокая'
+                : advice.confidence === 'medium' ? 'средняя'
+                    : advice.confidence === 'low' ? 'базовая'
+                        : ''
+        );
+
+        const parts = getHumanWhyNowParts(advice);
+        const showWhyNow = options.showWhyNow !== false;
+        const showActionNow = options.showActionNow !== false;
+        const showCausal = options.showCausal !== false;
+
         if (
-            parts.length === 0 &&
-            !expertMeta.actionNow?.label &&
+            (!showWhyNow || parts.length === 0) &&
+            (!showActionNow || !expertMeta.actionNow?.label) &&
             !expertMeta.science?.rationale &&
-            !expertMeta.causal?.mechanism &&
+            (!showCausal || !expertMeta.causal?.mechanism) &&
             !expertMeta.uncertainty?.message
         ) {
             return null;
@@ -10819,7 +10850,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
         return React.createElement('div', {
             className: 'advice-expert-evidence advice-expert-evidence--human'
         },
-            parts.length > 0 && React.createElement(React.Fragment, null,
+            showWhyNow && parts.length > 0 && React.createElement(React.Fragment, null,
                 React.createElement('div', { className: 'advice-expert-evidence__title' }, 'Почему этот совет сейчас к месту'),
                 React.createElement('ul', { className: 'advice-expert-evidence__list' },
                     parts.slice(0, 3).map((part, index) => React.createElement('li', {
@@ -10828,7 +10859,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
                     }, part))
                 )
             ),
-            expertMeta.actionNow?.label && React.createElement('div', { className: 'advice-expert-evidence__block' },
+            showActionNow && expertMeta.actionNow?.label && React.createElement('div', { className: 'advice-expert-evidence__block' },
                 React.createElement('div', { className: 'advice-expert-evidence__label' }, 'Что лучше сделать сейчас'),
                 React.createElement('div', { className: 'advice-expert-evidence__text is-accent' }, expertMeta.actionNow.label)
             ),
@@ -10836,7 +10867,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
                 React.createElement('div', { className: 'advice-expert-evidence__label' }, 'Почему это обычно работает'),
                 React.createElement('div', { className: 'advice-expert-evidence__text' }, expertMeta.science.rationale)
             ),
-            expertMeta.causal?.mechanism && React.createElement('div', { className: 'advice-expert-evidence__block' },
+            showCausal && expertMeta.causal?.mechanism && React.createElement('div', { className: 'advice-expert-evidence__block' },
                 React.createElement('div', { className: 'advice-expert-evidence__label' }, 'Какой механизм здесь важен'),
                 React.createElement('div', { className: 'advice-expert-evidence__text' }, expertMeta.causal.mechanism)
             ),
@@ -10901,6 +10932,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
             ? summary.topIssues
             : (Array.isArray(quality.findings) ? quality.findings : []);
         const activeModules = moduleReport.filter(item => (item?.withOutput || 0) > 0).slice(0, 4);
+        const manualEventsExceedShown = (eventFunnel.manualOpen || 0) > 0 && (eventFunnel.click || 0) > (eventFunnel.shown || 0);
         const blockerLabels = {
             trigger_mismatch: 'триггер не совпал',
             global_cooldown: 'глобальный cooldown',
@@ -10987,7 +11019,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
                     ),
 
                     React.createElement('section', { className: 'advice-diagnostics-section' },
-                        React.createElement('div', { className: 'advice-diagnostics-section__title' }, 'Воронка взаимодействий'),
+                        React.createElement('div', { className: 'advice-diagnostics-section__title' }, 'События взаимодействий'),
                         React.createElement('div', { className: 'advice-diagnostics-chip-grid' },
                             [
                                 ['shown', 'shown'],
@@ -11004,7 +11036,10 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
                                 React.createElement('span', { className: 'advice-diagnostics-chip__label' }, label),
                                 React.createElement('span', { className: 'advice-diagnostics-chip__value' }, eventFunnel[key] || 0)
                             ))
-                        )
+                        ),
+                        manualEventsExceedShown && React.createElement('div', {
+                            className: 'advice-diagnostics-section__hint'
+                        }, 'Клики могут приходить из manual drawer, поэтому это не strict toast funnel.')
                     ),
 
                     findings.length > 0 && React.createElement('section', { className: 'advice-diagnostics-section' },
@@ -11100,6 +11135,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
         if (!advice || !hasExpertContent(advice)) return null;
 
         const facts = getAdviceTechnicalFacts(advice);
+        const whyNowParts = getHumanWhyNowParts(advice);
         const science = facts.science;
         const causal = facts.causal;
         const responseMemory = facts.responseMemory;
@@ -11140,6 +11176,15 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
                             facts.summary.map((item, index) => React.createElement('span', {
                                 key: `summary_${index}`,
                                 className: 'advice-diagnostics-tag is-muted'
+                            }, item))
+                        )
+                    ),
+                    whyNowParts.length > 0 && React.createElement('section', { className: 'advice-diagnostics-section' },
+                        React.createElement('div', { className: 'advice-diagnostics-section__title' }, 'Почему этот совет сейчас к месту'),
+                        React.createElement('ul', { className: 'advice-diagnostics-list' },
+                            whyNowParts.map((item, index) => React.createElement('li', {
+                                key: `why_now_${index}`,
+                                className: 'advice-diagnostics-list__item'
                             }, item))
                         )
                     ),
@@ -11258,7 +11303,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
     }) {
         const [scheduledConfirm, setScheduledConfirm] = React.useState(false);
         const [ratedState, setRatedState] = React.useState(null); // 'positive' | 'negative' | null
-        const hasExpandedContent = !!(advice?.details || hasExpertContent(advice));
+        const adviceDescription = getAdviceDescription(advice);
+        const hasExpandedContent = !!(adviceDescription || hasExpertContent(advice));
 
         const swipeX = swipeState?.x || 0;
         const swipeDirection = swipeState?.direction;
@@ -11554,18 +11600,17 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
                     isExpanded && hasExpandedContent && React.createElement('div', {
                         className: 'advice-list-details',
                     },
-                        advice.details && React.createElement('div', null, advice.details),
-                        renderAdviceEvidence(advice),
-                        hasExpertContent(advice) && React.createElement('div', { className: 'advice-list-details__actions' },
-                            React.createElement('button', {
-                                type: 'button',
-                                className: 'advice-technical-trigger',
-                                onClick: (e) => {
-                                    e.stopPropagation();
-                                    onOpenTechnicalDetails && onOpenTechnicalDetails(advice, e);
-                                }
-                            }, '⚙️ Тех. детали')
-                        )
+                        adviceDescription && React.createElement('div', { className: 'advice-list-details__description' }, adviceDescription)
+                    ),
+                    hasExpertContent(advice) && isExpanded && React.createElement('div', { className: 'advice-list-details__actions advice-list-details__actions--subtle' },
+                        React.createElement('button', {
+                            type: 'button',
+                            className: 'advice-technical-trigger',
+                            onClick: (e) => {
+                                e.stopPropagation();
+                                onOpenTechnicalDetails && onOpenTechnicalDetails(advice, e);
+                            }
+                        }, 'Тех. детали')
                     )
                 )
             )
@@ -11851,7 +11896,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
     }) {
         if (adviceTrigger === 'manual' || adviceTrigger === 'manual_empty') return null;
         if (!displayedAdvice || !toastVisible) return null;
-        const hasDetailsContent = !!(displayedAdvice.details || hasExpertContent(displayedAdvice));
+        const adviceDescription = getAdviceDescription(displayedAdvice);
+        const hasDetailsContent = !!(adviceDescription || hasExpertContent(displayedAdvice));
 
         return React.createElement('div', {
             className: 'macro-toast macro-toast-' + displayedAdvice.type +
@@ -12094,18 +12140,17 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
                     marginBottom: '4px',
                 },
             },
-                displayedAdvice.details && React.createElement('div', null, displayedAdvice.details),
-                renderAdviceEvidence(displayedAdvice),
-                hasExpertContent(displayedAdvice) && React.createElement('div', { className: 'advice-list-details__actions' },
-                    React.createElement('button', {
-                        type: 'button',
-                        className: 'advice-technical-trigger',
-                        onClick: (e) => {
-                            e.stopPropagation();
-                            openAdviceTechnicalDetails && openAdviceTechnicalDetails(displayedAdvice, e);
-                        }
-                    }, '⚙️ Тех. детали')
-                )
+                adviceDescription && React.createElement('div', { className: 'advice-list-details__description' }, adviceDescription)
+            ),
+            !toastSwiped && toastDetailsOpen && hasExpertContent(displayedAdvice) && React.createElement('div', { className: 'advice-list-details__actions advice-list-details__actions--subtle' },
+                React.createElement('button', {
+                    type: 'button',
+                    className: 'advice-technical-trigger',
+                    onClick: (e) => {
+                        e.stopPropagation();
+                        openAdviceTechnicalDetails && openAdviceTechnicalDetails(displayedAdvice, e);
+                    }
+                }, 'Тех. детали')
             ),
             adviceTechnicalDetailsOpen && React.createElement(AdviceTechnicalModal, {
                 React,
@@ -12570,9 +12615,9 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
             const dailyFormatter = HEYSRef?.advice?.formatDailyAdviceTraceForClipboard;
             const formatter = HEYSRef?.advice?.formatAdviceTraceForClipboard;
             const payload = (dailyLog && typeof dailyFormatter === 'function')
-                ? dailyFormatter(dailyLog)
+                ? dailyFormatter(dailyLog, { mode: 'clipboard', timelineLimit: 8 })
                 : typeof formatter === 'function'
-                    ? formatter(adviceTrace)
+                    ? formatter(adviceTrace, { mode: 'clipboard' })
                     : JSON.stringify(adviceTrace, null, 2);
 
             try {
@@ -12905,7 +12950,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
                 setTimeout(() => setShowConfetti(false), 2000);
             }
 
-            if (markShown) markShown(advicePrimary);
+            if (!isManualTrigger && markShown) markShown(advicePrimary);
         }, [advicePrimary?.id, adviceTrigger, adviceSoundEnabled, dismissedAdvices, markShown, toastsEnabled, setShowConfetti, haptic, HEYSRef, safeAdviceRelevant]);
 
         useEffect(() => {

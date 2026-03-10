@@ -2930,7 +2930,15 @@
     }
 
     function formatAdviceTraceForClipboard(trace) {
+        const options = arguments[1] || {};
         if (!trace) return 'HEYS advice trace unavailable';
+
+        const mode = options?.mode === 'full'
+            ? 'full'
+            : options?.mode === 'clipboard'
+                ? 'clipboard'
+                : 'compact';
+        const includeRaw = mode === 'full' || options?.includeRaw === true;
 
         const lines = [];
         const pushSection = (title) => {
@@ -2941,9 +2949,71 @@
         lines.push(`HEYS advice trace ${trace.version || 'v1'}`);
         lines.push(`generatedAt: ${trace.generatedAt || ''}`);
         lines.push(`trigger: ${trace.trigger || trace?.input?.trigger || 'unknown'}`);
+        lines.push(`mode: ${mode}`);
+
+        if (mode === 'clipboard') {
+            const blockerCounts = {};
+            (trace.stages || []).forEach(stage => {
+                (stage?.removed || []).forEach(item => {
+                    const code = item?.reason?.code;
+                    if (!code) return;
+                    blockerCounts[code] = (blockerCounts[code] || 0) + 1;
+                });
+            });
+
+            pushSection('SUMMARY');
+            lines.push(JSON.stringify({
+                date: trace?.input?.date || null,
+                hour: trace?.input?.hour ?? null,
+                mealCount: trace?.input?.mealCount || 0,
+                waterMl: trace?.input?.dayTotals?.waterMl || 0,
+                kcal: trace?.input?.dayTotals?.kcal || 0,
+                visibleForManualCount: trace?.outputs?.visibleForManualCount || trace?.outputs?.relevantCount || 0,
+                eligibleForAutoToastCount: trace?.outputs?.eligibleForAutoToastCount || trace?.outputs?.cooldownEligibleCount || 0,
+                primaryId: trace?.outputs?.primaryId || null,
+                topIssues: Array.isArray(trace?.summary?.topIssues) ? trace.summary.topIssues.slice(0, 3) : []
+            }, null, 2));
+
+            pushSection('MODULES');
+            (trace.modules || []).forEach(moduleRun => {
+                lines.push(`- ${moduleRun.module}: ${moduleRun.outputCount || 0} advice (${moduleRun.status || 'unknown'})`);
+                if (moduleRun.note) lines.push(`  note: ${moduleRun.note}`);
+            });
+
+            pushSection('TOP_BLOCKERS');
+            Object.entries(blockerCounts)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 6)
+                .forEach(([code, count]) => {
+                    lines.push(`- ${code}: ${count}`);
+                });
+
+            pushSection('OUTPUT');
+            lines.push(JSON.stringify({
+                relevantIds: Array.isArray(trace?.outputs?.relevant)
+                    ? trace.outputs.relevant.slice(0, 8).map(item => item?.id || null)
+                    : [],
+                cooldownEligibleIds: Array.isArray(trace?.outputs?.cooldownEligible)
+                    ? trace.outputs.cooldownEligible.slice(0, 8).map(item => item?.id || null)
+                    : []
+            }, null, 2));
+
+            return lines.join('\n');
+        }
 
         pushSection('INPUT');
-        lines.push(JSON.stringify(trace.input || {}, null, 2));
+        if (mode === 'full') {
+            lines.push(JSON.stringify(trace.input || {}, null, 2));
+        } else {
+            lines.push(JSON.stringify({
+                date: trace?.input?.date || null,
+                hour: trace?.input?.hour ?? null,
+                mealCount: trace?.input?.mealCount || 0,
+                waterMl: trace?.input?.dayTotals?.waterMl || 0,
+                kcal: trace?.input?.dayTotals?.kcal || 0,
+                trigger: trace?.trigger || trace?.input?.trigger || null
+            }, null, 2));
+        }
 
         pushSection('MODULES');
         (trace.modules || []).forEach(moduleRun => {
@@ -2955,8 +3025,10 @@
             }
         });
 
-        pushSection('SOURCES');
-        lines.push(JSON.stringify(trace.sources || {}, null, 2));
+        if (mode === 'full') {
+            pushSection('SOURCES');
+            lines.push(JSON.stringify(trace.sources || {}, null, 2));
+        }
 
         pushSection('PIPELINE');
         (trace.stages || []).forEach(stage => {
@@ -2983,13 +3055,30 @@
         });
 
         pushSection('OUTPUT');
-        lines.push(JSON.stringify(trace.outputs || {}, null, 2));
+        if (mode === 'full') {
+            lines.push(JSON.stringify(trace.outputs || {}, null, 2));
 
-        pushSection('EXPERT_SIGNALS');
-        lines.push(JSON.stringify(trace.expertSignals || {}, null, 2));
+            pushSection('EXPERT_SIGNALS');
+            lines.push(JSON.stringify(trace.expertSignals || {}, null, 2));
+        } else {
+            lines.push(JSON.stringify({
+                visibleForManualCount: trace?.outputs?.visibleForManualCount || trace?.outputs?.relevantCount || 0,
+                eligibleForAutoToastCount: trace?.outputs?.eligibleForAutoToastCount || trace?.outputs?.cooldownEligibleCount || 0,
+                primaryId: trace?.outputs?.primaryId || null,
+                relevantIds: Array.isArray(trace?.outputs?.relevant)
+                    ? trace.outputs.relevant.slice(0, 10).map(item => item?.id || null)
+                    : [],
+                cooldownEligibleIds: Array.isArray(trace?.outputs?.cooldownEligible)
+                    ? trace.outputs.cooldownEligible.slice(0, 10).map(item => item?.id || null)
+                    : [],
+                topIssues: Array.isArray(trace?.summary?.topIssues) ? trace.summary.topIssues.slice(0, 5) : []
+            }, null, 2));
+        }
 
-        pushSection('RAW_JSON');
-        lines.push(JSON.stringify(trace, null, 2));
+        if (includeRaw) {
+            pushSection('RAW_JSON');
+            lines.push(JSON.stringify(trace, null, 2));
+        }
 
         return lines.join('\n');
     }
@@ -3028,13 +3117,167 @@
         return {
             version: 'advice-day-log-v2',
             date: safeDate,
-            entries: Array.isArray(log?.entries) ? log.entries : [],
+            entries: Array.isArray(log?.entries)
+                ? log.entries.map(sanitizeStoredDailyAdviceEntry).filter(Boolean)
+                : [],
             updatedAt: log?.updatedAt || 0
         };
     }
 
     function createEmptyDailyAdviceTraceLog(date) {
         return normalizeDailyAdviceTraceLog(null, date);
+    }
+
+    function sanitizeDailyAdviceSummary(summary, trace) {
+        const source = summary || buildAdviceTraceEntrySummary(trace) || {};
+        return {
+            trigger: source?.trigger || trace?.trigger || null,
+            hour: source?.hour ?? trace?.input?.hour ?? null,
+            mealCount: source?.mealCount || 0,
+            waterMl: source?.waterMl || 0,
+            kcal: source?.kcal || 0,
+            visibleForManualCount: source?.visibleForManualCount || 0,
+            eligibleForAutoToastCount: source?.eligibleForAutoToastCount || 0,
+            primaryId: source?.primaryId || null,
+            topIssues: Array.isArray(source?.topIssues) ? source.topIssues.slice(0, 3) : [],
+            topBlockers: Array.isArray(source?.topBlockers)
+                ? source.topBlockers.slice(0, 4).map(item => ({
+                    code: item?.code || null,
+                    count: item?.count || 0
+                }))
+                : [],
+            modulesWithOutput: Array.isArray(source?.modulesWithOutput) ? source.modulesWithOutput.slice(0, 8) : [],
+            silentModules: Array.isArray(source?.silentModules) ? source.silentModules.slice(0, 8) : []
+        };
+    }
+
+    function sanitizeAdviceTracePayload(payload, depth = 0) {
+        if (payload == null) return null;
+
+        if (depth >= 2) {
+            if (Array.isArray(payload)) return payload.length;
+            if (typeof payload === 'object') return Object.keys(payload).slice(0, 8);
+            return payload;
+        }
+
+        if (Array.isArray(payload)) {
+            return payload.slice(0, 8).map(item => sanitizeAdviceTracePayload(item, depth + 1));
+        }
+
+        if (typeof payload === 'object') {
+            const compact = {};
+            Object.keys(payload).slice(0, 10).forEach(key => {
+                const value = payload[key];
+                if (typeof value === 'string') {
+                    compact[key] = value.length > 180 ? `${value.slice(0, 177)}…` : value;
+                } else {
+                    compact[key] = sanitizeAdviceTracePayload(value, depth + 1);
+                }
+            });
+            return compact;
+        }
+
+        return payload;
+    }
+
+    function sanitizeStoredAdviceTrace(trace) {
+        if (!trace) return null;
+
+        return {
+            version: trace?.version || null,
+            generatedAt: trace?.generatedAt || null,
+            trigger: trace?.trigger || null,
+            input: {
+                date: trace?.input?.date || null,
+                hour: trace?.input?.hour ?? null,
+                mealCount: trace?.input?.mealCount || 0,
+                dayTotals: {
+                    waterMl: trace?.input?.dayTotals?.waterMl || 0,
+                    kcal: trace?.input?.dayTotals?.kcal || 0
+                }
+            },
+            modules: Array.isArray(trace?.modules)
+                ? trace.modules.slice(0, 12).map(moduleRun => ({
+                    module: moduleRun?.module || 'unknown',
+                    status: moduleRun?.status || null,
+                    mode: moduleRun?.mode || null,
+                    outputCount: moduleRun?.outputCount || 0,
+                    adviceIds: Array.isArray(moduleRun?.adviceIds) ? moduleRun.adviceIds.slice(0, 8) : [],
+                    note: moduleRun?.note || null,
+                    error: moduleRun?.error || null
+                }))
+                : [],
+            stages: Array.isArray(trace?.stages)
+                ? trace.stages.slice(0, 20).map(stage => ({
+                    stage: stage?.stage || 'unknown',
+                    beforeCount: stage?.beforeCount || 0,
+                    afterCount: stage?.afterCount || 0,
+                    removed: Array.isArray(stage?.removed)
+                        ? stage.removed.slice(0, 20).map(item => ({
+                            id: item?.id || null,
+                            module: item?.module || null,
+                            reason: item?.reason
+                                ? {
+                                    code: item.reason.code || null,
+                                    message: item.reason.message || null
+                                }
+                                : null
+                        }))
+                        : [],
+                    added: Array.isArray(stage?.added)
+                        ? stage.added.slice(0, 10).map(item => ({ id: item?.id || null }))
+                        : [],
+                    moved: Array.isArray(stage?.moved)
+                        ? stage.moved.slice(0, 10).map(item => ({
+                            id: item?.id || null,
+                            fromIndex: item?.fromIndex ?? null,
+                            toIndex: item?.toIndex ?? null
+                        }))
+                        : []
+                }))
+                : [],
+            outputs: {
+                visibleForManualCount: trace?.outputs?.visibleForManualCount || trace?.outputs?.relevantCount || 0,
+                eligibleForAutoToastCount: trace?.outputs?.eligibleForAutoToastCount || trace?.outputs?.cooldownEligibleCount || 0,
+                primaryId: trace?.outputs?.primaryId || null,
+                relevant: Array.isArray(trace?.outputs?.relevant)
+                    ? trace.outputs.relevant.slice(0, 12).map(item => ({ id: item?.id || null }))
+                    : [],
+                cooldownEligible: Array.isArray(trace?.outputs?.cooldownEligible)
+                    ? trace.outputs.cooldownEligible.slice(0, 12).map(item => ({ id: item?.id || null }))
+                    : []
+            },
+            summary: {
+                topIssues: Array.isArray(trace?.summary?.topIssues) ? trace.summary.topIssues.slice(0, 4) : []
+            }
+        };
+    }
+
+    function sanitizeStoredDailyAdviceEntry(entry) {
+        if (!entry || typeof entry !== 'object') return null;
+
+        if (entry.type === 'snapshot') {
+            return {
+                type: 'snapshot',
+                recordedAt: entry?.recordedAt || Date.now(),
+                lastSeenAt: entry?.lastSeenAt || entry?.recordedAt || Date.now(),
+                repeatCount: Math.max(1, entry?.repeatCount || 1),
+                fingerprint: entry?.fingerprint || 'trace:none',
+                summary: sanitizeDailyAdviceSummary(entry?.summary, entry?.trace),
+                trace: sanitizeStoredAdviceTrace(entry?.trace)
+            };
+        }
+
+        if (entry.type === 'event') {
+            return {
+                type: 'event',
+                eventType: entry?.eventType || 'unknown',
+                recordedAt: entry?.recordedAt || Date.now(),
+                payload: sanitizeAdviceTracePayload(entry?.payload)
+            };
+        }
+
+        return null;
     }
 
     function getDailyAdviceTraceLog(date) {
@@ -3051,7 +3294,9 @@
         setAdviceTraceStoreValue(DAILY_TRACE_LOG_KEY, {
             ...normalizeDailyAdviceTraceLog(log, log.date),
             updatedAt: Date.now(),
-            entries: Array.isArray(log.entries) ? log.entries.slice(-250) : []
+            entries: Array.isArray(log.entries)
+                ? log.entries.map(sanitizeStoredDailyAdviceEntry).filter(Boolean).slice(-60)
+                : []
         });
     }
 
@@ -3439,6 +3684,11 @@
             findings.push(`Coverage низкий (${Math.round((analyticsEffectiveness?.coverage || 0) * 100)}% snapshot runs с хоть каким-то advice).`);
         }
 
+        const severeCooldownSuppression = (analyticsEffectiveness?.suppressedByCooldownRate || 0) >= 0.85;
+        const elevatedCooldownSuppression = (analyticsEffectiveness?.suppressedByCooldownRate || 0) >= 0.6;
+        const weakAutoDelivery = ((analyticsEffectiveness?.showThroughRate || 0) < 0.35)
+            || ((analyticsEffectiveness?.autoCoverage || 0) < 0.1);
+
         let heuristicScore = 52;
         heuristicScore += Math.min(14, snapshotEntries.length * 3);
         heuristicScore += Math.min(10, uniqueTriggers.length * 4);
@@ -3450,6 +3700,13 @@
         heuristicScore -= Math.min(12, silentModules.length * 2);
         heuristicScore -= Math.round((analyticsEffectiveness?.ignoredRate || 0) * 14);
         heuristicScore -= Math.round((analyticsEffectiveness?.suppressedByCooldownRate || 0) * 16);
+
+        if (severeCooldownSuppression && weakAutoDelivery) {
+            heuristicScore = Math.min(heuristicScore, 68);
+        } else if (elevatedCooldownSuppression && weakAutoDelivery) {
+            heuristicScore = Math.min(heuristicScore, 79);
+        }
+
         heuristicScore = Math.max(0, Math.min(100, heuristicScore));
 
         const grade = heuristicScore >= 85
@@ -3531,7 +3788,7 @@
         if (lastEntry?.type === 'snapshot' && lastEntry?.fingerprint === fingerprint) {
             lastEntry.repeatCount = (lastEntry.repeatCount || 1) + 1;
             lastEntry.lastSeenAt = Date.now();
-            lastEntry.summary = buildAdviceTraceEntrySummary(trace);
+            lastEntry.summary = sanitizeDailyAdviceSummary(buildAdviceTraceEntrySummary(trace), trace);
             saveDailyAdviceTraceLog(log);
             return log;
         }
@@ -3542,8 +3799,8 @@
             lastSeenAt: Date.now(),
             repeatCount: 1,
             fingerprint,
-            summary: buildAdviceTraceEntrySummary(trace),
-            trace: cloneTracePayload(trace)
+            summary: sanitizeDailyAdviceSummary(buildAdviceTraceEntrySummary(trace), trace),
+            trace: sanitizeStoredAdviceTrace(trace)
         });
         saveDailyAdviceTraceLog(log);
         return log;
@@ -3556,14 +3813,25 @@
             type: 'event',
             eventType,
             recordedAt: Date.now(),
-            payload: cloneTracePayload(payload) || null
+            payload: sanitizeAdviceTracePayload(payload)
         });
         saveDailyAdviceTraceLog(log);
         return log;
     }
 
     function formatDailyAdviceTraceForClipboard(log) {
+        const options = arguments[1] || {};
         if (!log?.date) return 'HEYS daily advice log unavailable';
+
+        const mode = options?.mode === 'full'
+            ? 'full'
+            : options?.mode === 'clipboard'
+                ? 'clipboard'
+                : 'compact';
+        const includeRaw = mode === 'full' || options?.includeRaw === true;
+        const timelineLimit = Number.isFinite(options?.timelineLimit)
+            ? Math.max(1, Math.floor(options.timelineLimit))
+            : (mode === 'full' ? Number.POSITIVE_INFINITY : mode === 'clipboard' ? 8 : 18);
 
         const lines = [];
         const pushSection = (title) => {
@@ -3580,35 +3848,164 @@
         lines.push(`updatedAt: ${log.updatedAt || 0}`);
         lines.push(`snapshotCount: ${snapshotEntries.length}`);
         lines.push(`eventCount: ${eventEntries.length}`);
+        lines.push(`mode: ${mode}`);
+
+        if (mode === 'clipboard') {
+            const formatRecentEntry = (entry, index) => {
+                if (entry?.type === 'snapshot') {
+                    const summary = entry?.summary || {};
+                    const blockers = Array.isArray(summary?.topBlockers)
+                        ? summary.topBlockers.slice(0, 2).map(item => `${item?.code || 'unknown'}:${item?.count || 0}`).join(', ')
+                        : '';
+                    return `- [${index + 1}] snapshot x${entry?.repeatCount || 1} · trigger=${summary?.trigger || 'unknown'} · manual=${summary?.visibleForManualCount || 0} · auto=${summary?.eligibleForAutoToastCount || 0} · primary=${summary?.primaryId || '—'}${blockers ? ` · blockers=${blockers}` : ''}`;
+                }
+
+                const payload = entry?.payload || {};
+                const payloadParts = [
+                    payload?.adviceId ? `advice=${payload.adviceId}` : null,
+                    payload?.trigger ? `trigger=${payload.trigger}` : null,
+                    payload?.module ? `module=${payload.module}` : null,
+                    payload?.visibleAdviceCount != null ? `visible=${payload.visibleAdviceCount}` : null,
+                    payload?.badgeCount != null ? `badge=${payload.badgeCount}` : null
+                ].filter(Boolean).join(' · ');
+                return `- [${index + 1}] event:${entry?.eventType || 'unknown'}${payloadParts ? ` · ${payloadParts}` : ''}`;
+            };
+
+            pushSection('SUMMARY');
+            lines.push(JSON.stringify({
+                executiveSummary: diagnostics.executiveSummary || {},
+                lastSnapshot: snapshotEntries[snapshotEntries.length - 1]?.summary || null,
+                lastEvent: eventEntries[eventEntries.length - 1] || null
+            }, null, 2));
+
+            pushSection('FINDINGS');
+            (diagnostics?.quality?.findings || []).slice(0, 4).forEach(item => {
+                lines.push(`- ${item}`);
+            });
+
+            pushSection('TOP_BLOCKERS');
+            (diagnostics.blockerReport?.topReasons || []).slice(0, 6).forEach(item => {
+                lines.push(`- ${item.key}: ${item.count}`);
+            });
+
+            pushSection('ACTIVE_MODULES');
+            (diagnostics.moduleReport || [])
+                .filter(item => item.withOutput > 0)
+                .slice(0, 6)
+                .forEach(item => {
+                    lines.push(`- ${item.module}: ${item.withOutput}/${item.runs} запусков дали совет`);
+                    if (item.topBlockers?.[0]) {
+                        lines.push(`  blocker: ${item.topBlockers[0].key} · ${item.topBlockers[0].count}`);
+                    }
+                });
+
+            pushSection('EVENT_FUNNEL');
+            lines.push(JSON.stringify(diagnostics.analyticsEffectiveness?.eventFunnel || {}, null, 2));
+
+            pushSection('RECENT_ACTIVITY');
+            const safeEntries = Array.isArray(log.entries) ? log.entries : [];
+            const skippedEntries = Math.max(0, safeEntries.length - timelineLimit);
+            const visibleEntries = safeEntries.slice(-timelineLimit);
+            if (skippedEntries > 0) {
+                lines.push(`... omitted ${skippedEntries} earlier entries`);
+            }
+            visibleEntries.forEach((entry, visibleIndex) => {
+                lines.push(formatRecentEntry(entry, skippedEntries + visibleIndex));
+            });
+
+            return lines.join('\n');
+        }
 
         pushSection('SUMMARY');
-        lines.push(JSON.stringify({
-            executiveSummary: diagnostics.executiveSummary || {},
-            quality: diagnostics.quality,
-            lastSnapshot: snapshotEntries[snapshotEntries.length - 1]?.summary || null,
-            lastEvent: eventEntries[eventEntries.length - 1] || null
-        }, null, 2));
+        lines.push(JSON.stringify(mode === 'full'
+            ? {
+                executiveSummary: diagnostics.executiveSummary || {},
+                quality: diagnostics.quality,
+                lastSnapshot: snapshotEntries[snapshotEntries.length - 1]?.summary || null,
+                lastEvent: eventEntries[eventEntries.length - 1] || null
+            }
+            : {
+                executiveSummary: diagnostics.executiveSummary || {},
+                quality: {
+                    heuristicScore: diagnostics?.quality?.heuristicScore ?? null,
+                    grade: diagnostics?.quality?.grade || null
+                },
+                lastSnapshot: snapshotEntries[snapshotEntries.length - 1]?.summary || null,
+                lastEvent: eventEntries[eventEntries.length - 1] || null
+            }, null, 2));
 
-        pushSection('QUALITY');
-        lines.push(JSON.stringify(diagnostics.quality || {}, null, 2));
+        if (mode === 'full') {
+            pushSection('QUALITY');
+            lines.push(JSON.stringify(diagnostics.quality || {}, null, 2));
 
-        pushSection('ANALYTICS_EFFECTIVENESS');
-        lines.push(JSON.stringify(diagnostics.analyticsEffectiveness || {}, null, 2));
+            pushSection('ANALYTICS_EFFECTIVENESS');
+            lines.push(JSON.stringify(diagnostics.analyticsEffectiveness || {}, null, 2));
 
-        pushSection('MODULE_REPORT');
-        lines.push(JSON.stringify(diagnostics.moduleReport || [], null, 2));
+            pushSection('MODULE_REPORT');
+            lines.push(JSON.stringify(diagnostics.moduleReport || [], null, 2));
 
-        pushSection('TRIGGER_REPORT');
-        lines.push(JSON.stringify(diagnostics.triggerReport || [], null, 2));
+            pushSection('TRIGGER_REPORT');
+            lines.push(JSON.stringify(diagnostics.triggerReport || [], null, 2));
 
-        pushSection('BLOCKERS');
-        lines.push(JSON.stringify(diagnostics.blockerReport || {}, null, 2));
+            pushSection('BLOCKERS');
+            lines.push(JSON.stringify(diagnostics.blockerReport || {}, null, 2));
 
-        pushSection('EVENT_REPORT');
-        lines.push(JSON.stringify(diagnostics.eventReport || {}, null, 2));
+            pushSection('EVENT_REPORT');
+            lines.push(JSON.stringify(diagnostics.eventReport || {}, null, 2));
+        } else {
+            pushSection('QUALITY');
+            lines.push(JSON.stringify({
+                heuristicScore: diagnostics?.quality?.heuristicScore ?? null,
+                grade: diagnostics?.quality?.grade || null,
+                dominantBlocker: diagnostics?.quality?.dominantBlocker || null,
+                findings: Array.isArray(diagnostics?.quality?.findings) ? diagnostics.quality.findings.slice(0, 5) : []
+            }, null, 2));
+
+            pushSection('ANALYTICS_EFFECTIVENESS');
+            lines.push(JSON.stringify({
+                snapshotRuns: diagnostics?.analyticsEffectiveness?.snapshotRuns || 0,
+                coverage: diagnostics?.analyticsEffectiveness?.coverage ?? null,
+                autoCoverage: diagnostics?.analyticsEffectiveness?.autoCoverage ?? null,
+                showThroughRate: diagnostics?.analyticsEffectiveness?.showThroughRate ?? null,
+                precisionProxy: diagnostics?.analyticsEffectiveness?.precisionProxy ?? null,
+                ignoredRate: diagnostics?.analyticsEffectiveness?.ignoredRate ?? null,
+                suppressedByCooldownRate: diagnostics?.analyticsEffectiveness?.suppressedByCooldownRate ?? null,
+                eventFunnel: diagnostics?.analyticsEffectiveness?.eventFunnel || {}
+            }, null, 2));
+
+            pushSection('TOP_MODULES');
+            (diagnostics.moduleReport || []).slice(0, 6).forEach(item => {
+                lines.push(`- ${item.module}: ${item.withOutput}/${item.runs} запусков дали совет`);
+                if (item.topBlockers?.[0]) {
+                    lines.push(`  главный блокер: ${item.topBlockers[0].key} · ${item.topBlockers[0].count}`);
+                }
+            });
+
+            pushSection('TOP_TRIGGERS');
+            (diagnostics.triggerReport || []).slice(0, 5).forEach(item => {
+                lines.push(`- ${item.trigger}: snapshots=${item.snapshots}, x=${item.repeatedSnapshots}, manual≈${item.avgManualVisible}, auto≈${item.avgAutoEligible}`);
+            });
+
+            pushSection('TOP_BLOCKERS');
+            (diagnostics.blockerReport?.topReasons || []).slice(0, 8).forEach(item => {
+                lines.push(`- ${item.key}: ${item.count}`);
+            });
+
+            pushSection('EVENT_FUNNEL');
+            Object.entries(diagnostics.eventReport || {}).forEach(([section, values]) => {
+                lines.push(`${section}: ${JSON.stringify(values || [])}`);
+            });
+        }
 
         pushSection('TIMELINE');
-        (log.entries || []).forEach((entry, index) => {
+        const safeEntries = Array.isArray(log.entries) ? log.entries : [];
+        const skippedEntries = Number.isFinite(timelineLimit) ? Math.max(0, safeEntries.length - timelineLimit) : 0;
+        const visibleEntries = Number.isFinite(timelineLimit) ? safeEntries.slice(-timelineLimit) : safeEntries;
+        if (skippedEntries > 0) {
+            lines.push(`... omitted ${skippedEntries} earlier entries`);
+        }
+        visibleEntries.forEach((entry, visibleIndex) => {
+            const index = skippedEntries + visibleIndex;
             if (entry?.type === 'snapshot') {
                 lines.push(`- [${index + 1}] snapshot @ ${entry.recordedAt} x${entry.repeatCount || 1}`);
                 lines.push(`  summary: ${JSON.stringify(entry.summary || {})}`);
@@ -3618,8 +4015,10 @@
             }
         });
 
-        pushSection('RAW_JSON');
-        lines.push(JSON.stringify(log, null, 2));
+        if (includeRaw) {
+            pushSection('RAW_JSON');
+            lines.push(JSON.stringify(log, null, 2));
+        }
 
         return lines.join('\n');
     }
@@ -5518,13 +5917,25 @@
 
         // Советы которые можно показать (с проверкой cooldown)
         const relevantAdvices = (() => {
+            if (trigger === 'manual' || trigger === 'manual_empty') {
+                return [];
+            }
             return allForTrigger.filter(a => canShowAdvice(a.id, { canSkipCooldown: a.canSkipCooldown }));
         })();
 
         appendAdviceTraceStage(adviceTrace, 'cooldown_filter', allForTrigger, relevantAdvices, {
-            sessionAware: true
+            sessionAware: true,
+            manualDisablesAutoToast: trigger === 'manual' || trigger === 'manual_empty'
         }, {
             reasonMap: (allForTrigger || []).reduce((acc, advice) => {
+                if (trigger === 'manual' || trigger === 'manual_empty') {
+                    acc[advice.id] = {
+                        code: 'manual_mode_no_auto_toast',
+                        message: 'Manual drawer показывает советы списком, но не формирует auto-toast primary.',
+                        trigger
+                    };
+                    return acc;
+                }
                 const visibility = explainAdviceVisibility(advice?.id, { canSkipCooldown: advice?.canSkipCooldown });
                 if (!visibility.allowed) {
                     acc[advice.id] = {
@@ -5587,7 +5998,9 @@
             autoEligibleCount: relevantAdvices.length,
             primaryId: primaryWithAnimation?.id || null,
             whyNoPrimary: !primaryWithAnimation && allForTrigger.length > 0 && relevantAdvices.length === 0
-                ? 'Manual drawer показывает советы, но auto-toast заблокирован session cooldown / duplicate rules.'
+                ? ((trigger === 'manual' || trigger === 'manual_empty')
+                    ? 'Manual drawer intentionally disables auto-toast primary; список советов доступен только вручную.'
+                    : 'Manual drawer показывает советы, но auto-toast заблокирован session cooldown / duplicate rules.')
                 : null,
             topIssues: [
                 adviceTrace.expertSignals?.earlyWarnings?.warnings?.[0]?.type || null,
