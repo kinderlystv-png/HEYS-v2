@@ -10502,7 +10502,9 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
                         errors: 0,
                         totalOutputCount: 0,
                         notes: {},
-                        adviceIds: {}
+                        adviceIds: {},
+                        blockerCodes: {},
+                        blockerStages: {}
                     };
                 }
 
@@ -10515,6 +10517,30 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
                 if (moduleRun?.note) incrementCounter(bucket.notes, moduleRun.note);
                 (moduleRun?.adviceIds || []).forEach(adviceId => incrementCounter(bucket.adviceIds, adviceId));
             });
+
+            (entry?.trace?.stages || []).forEach(stage => {
+                (stage?.removed || []).forEach(item => {
+                    const moduleKey = item?.module || 'unknown';
+                    if (!stats[moduleKey]) {
+                        stats[moduleKey] = {
+                            module: moduleKey,
+                            runs: 0,
+                            withOutput: 0,
+                            noOutput: 0,
+                            errors: 0,
+                            totalOutputCount: 0,
+                            notes: {},
+                            adviceIds: {},
+                            blockerCodes: {},
+                            blockerStages: {}
+                        };
+                    }
+
+                    const bucket = stats[moduleKey];
+                    incrementCounter(bucket.blockerCodes, item?.reason?.code || 'unknown');
+                    incrementCounter(bucket.blockerStages, stage?.stage || 'unknown');
+                });
+            });
         });
 
         return Object.values(stats)
@@ -10526,7 +10552,9 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
                 errors: bucket.errors,
                 avgOutputCount: bucket.runs > 0 ? roundTraceNumber(bucket.totalOutputCount / bucket.runs, 2) : 0,
                 topAdviceIds: topCounterEntries(bucket.adviceIds, 4),
-                topNotes: topCounterEntries(bucket.notes, 2)
+                topNotes: topCounterEntries(bucket.notes, 2),
+                topBlockers: topCounterEntries(bucket.blockerCodes, 4),
+                blockerStages: topCounterEntries(bucket.blockerStages, 3)
             }))
             .sort((a, b) => a.module.localeCompare(b.module));
     }
@@ -10607,13 +10635,148 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
         };
     }
 
-    function buildDailyQualitySummary(snapshotEntries, eventEntries, moduleReport, blockerReport, triggerReport) {
+    function getEventCount(eventEntries, eventType) {
+        return (eventEntries || []).reduce((sum, entry) => {
+            return sum + (entry?.eventType === eventType ? 1 : 0);
+        }, 0);
+    }
+
+    function sumRepeatedSnapshots(snapshotEntries) {
+        return (snapshotEntries || []).reduce((sum, entry) => {
+            return sum + Math.max(1, entry?.repeatCount || 1);
+        }, 0);
+    }
+
+    function sumWeightedSnapshots(snapshotEntries, predicate) {
+        return (snapshotEntries || []).reduce((sum, entry) => {
+            if (!predicate(entry)) return sum;
+            return sum + Math.max(1, entry?.repeatCount || 1);
+        }, 0);
+    }
+
+    function buildDailyEventFunnel(eventEntries) {
+        return {
+            shown: getEventCount(eventEntries, 'shown'),
+            click: getEventCount(eventEntries, 'click'),
+            read: getEventCount(eventEntries, 'read'),
+            hidden: getEventCount(eventEntries, 'hidden'),
+            positive: getEventCount(eventEntries, 'positive'),
+            negative: getEventCount(eventEntries, 'negative'),
+            scheduled: getEventCount(eventEntries, 'scheduled'),
+            manualOpen: getEventCount(eventEntries, 'manual_open'),
+            manualEmpty: getEventCount(eventEntries, 'manual_empty'),
+            traceExported: getEventCount(eventEntries, 'trace_exported')
+        };
+    }
+
+    function buildAnalyticsEffectiveness(snapshotEntries, eventEntries, blockerReport, moduleReport) {
+        const totalSnapshotRuns = sumRepeatedSnapshots(snapshotEntries);
+        const snapshotsWithAnyAdvice = sumWeightedSnapshots(snapshotEntries, entry => (entry?.summary?.visibleForManualCount || 0) > 0);
+        const snapshotsWithAutoEligible = sumWeightedSnapshots(snapshotEntries, entry => (entry?.summary?.eligibleForAutoToastCount || 0) > 0);
+        const manualVisibleTotal = (snapshotEntries || []).reduce((sum, entry) => {
+            return sum + ((entry?.summary?.visibleForManualCount || 0) * Math.max(1, entry?.repeatCount || 1));
+        }, 0);
+        const autoEligibleTotal = (snapshotEntries || []).reduce((sum, entry) => {
+            return sum + ((entry?.summary?.eligibleForAutoToastCount || 0) * Math.max(1, entry?.repeatCount || 1));
+        }, 0);
+
+        const cooldownSuppressedCount = (blockerReport?.topReasons || []).reduce((sum, item) => {
+            if (item?.key === 'global_cooldown' || item?.key === 'already_shown_in_session') {
+                return sum + (item.count || 0);
+            }
+            return sum;
+        }, 0);
+
+        const funnel = buildDailyEventFunnel(eventEntries);
+        const engagedActions = funnel.read + funnel.click + funnel.positive + funnel.negative + funnel.hidden + funnel.scheduled;
+        const positiveSignals = funnel.read + funnel.click + funnel.positive;
+        const negativeSignals = funnel.hidden + funnel.negative;
+        const shownBase = Math.max(1, funnel.shown);
+        const actionableBase = Math.max(1, manualVisibleTotal || autoEligibleTotal || totalSnapshotRuns || 1);
+        const silentModuleRate = moduleReport.length > 0
+            ? roundTraceNumber(moduleReport.filter(item => item.withOutput === 0).length / moduleReport.length, 3)
+            : null;
+
+        const coverage = totalSnapshotRuns > 0 ? roundTraceNumber(snapshotsWithAnyAdvice / totalSnapshotRuns, 3) : null;
+        const autoCoverage = totalSnapshotRuns > 0 ? roundTraceNumber(snapshotsWithAutoEligible / totalSnapshotRuns, 3) : null;
+        const showThroughRate = autoEligibleTotal > 0 ? roundTraceNumber(funnel.shown / autoEligibleTotal, 3) : null;
+        const precisionProxyRaw = shownBase > 0
+            ? ((positiveSignals * 1.0) - (negativeSignals * 0.7)) / shownBase
+            : null;
+        const precisionProxy = precisionProxyRaw == null
+            ? null
+            : roundTraceNumber(Math.max(0, Math.min(1, precisionProxyRaw)), 3);
+        const ignoredRate = shownBase > 0
+            ? roundTraceNumber(Math.max(0, funnel.shown - engagedActions) / shownBase, 3)
+            : null;
+        const suppressedByCooldownRate = actionableBase > 0
+            ? roundTraceNumber(cooldownSuppressedCount / actionableBase, 3)
+            : null;
+
+        return {
+            snapshotRuns: totalSnapshotRuns,
+            coverage,
+            autoCoverage,
+            showThroughRate,
+            precisionProxy,
+            ignoredRate,
+            suppressedByCooldownRate,
+            silentModuleRate,
+            manualVisibleTotal,
+            autoEligibleTotal,
+            cooldownSuppressedCount,
+            engagedActions,
+            positiveSignals,
+            negativeSignals,
+            eventFunnel: funnel
+        };
+    }
+
+    function buildDailyExecutiveSummary(log, diagnostics) {
+        const snapshotEntries = (log?.entries || []).filter(entry => entry?.type === 'snapshot');
+        const eventEntries = (log?.entries || []).filter(entry => entry?.type === 'event');
+        const repeatedSnapshots = sumRepeatedSnapshots(snapshotEntries);
+        const effect = diagnostics?.analyticsEffectiveness || {};
+        const quality = diagnostics?.quality || {};
+        const moduleReport = diagnostics?.moduleReport || [];
+        const blockerReport = diagnostics?.blockerReport || {};
+        const dominantIssue = blockerReport?.topReasons?.[0] || null;
+        const topSilentModules = moduleReport
+            .filter(item => item.withOutput === 0)
+            .map(item => item.module)
+            .slice(0, 4);
+
+        return {
+            date: log?.date || null,
+            uniqueSnapshots: snapshotEntries.length,
+            repeatedSnapshots,
+            events: eventEntries.length,
+            qualityScore: quality.heuristicScore ?? null,
+            qualityGrade: quality.grade || null,
+            shownCount: effect?.eventFunnel?.shown || 0,
+            hiddenCount: effect?.eventFunnel?.hidden || 0,
+            negativeCount: effect?.eventFunnel?.negative || 0,
+            positiveCount: effect?.eventFunnel?.positive || 0,
+            readCount: effect?.eventFunnel?.read || 0,
+            clickCount: effect?.eventFunnel?.click || 0,
+            coverage: effect?.coverage ?? null,
+            precisionProxy: effect?.precisionProxy ?? null,
+            ignoredRate: effect?.ignoredRate ?? null,
+            suppressedByCooldownRate: effect?.suppressedByCooldownRate ?? null,
+            dominantIssue,
+            topSilentModules,
+            topIssues: quality.findings || []
+        };
+    }
+
+    function buildDailyQualitySummary(snapshotEntries, eventEntries, moduleReport, blockerReport, triggerReport, analyticsEffectiveness) {
         const repeatedSnapshots = snapshotEntries.reduce((sum, entry) => sum + Math.max(1, entry?.repeatCount || 1), 0);
         const uniqueTriggers = [...new Set(snapshotEntries.map(entry => entry?.summary?.trigger || entry?.trace?.trigger).filter(Boolean))];
         const uniqueAdviceIds = [...new Set(snapshotEntries.flatMap(entry => (entry?.trace?.outputs?.relevant || []).map(item => item?.id).filter(Boolean)))];
         const modulesWithOutput = moduleReport.filter(item => item.withOutput > 0).length;
         const silentModules = moduleReport.filter(item => item.withOutput === 0).map(item => item.module);
         const dominantBlocker = blockerReport?.topReasons?.[0] || null;
+        const eventFunnel = analyticsEffectiveness?.eventFunnel || buildDailyEventFunnel(eventEntries);
         const findings = [];
 
         if (dominantBlocker?.key === 'global_cooldown') {
@@ -10633,13 +10796,29 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
             findings.push(`Модули без выдачи в течение дня: ${silentModules.join(', ')}.`);
         }
 
+        if ((analyticsEffectiveness?.ignoredRate || 0) >= 0.35) {
+            findings.push(`Ignored rate высокий (${Math.round((analyticsEffectiveness.ignoredRate || 0) * 100)}%): много показов не дошли до явной реакции.`);
+        }
+
+        if ((analyticsEffectiveness?.suppressedByCooldownRate || 0) >= 0.2) {
+            findings.push(`Cooldown сильно душит выдачу (${Math.round((analyticsEffectiveness.suppressedByCooldownRate || 0) * 100)}% suppression).`);
+        }
+
+        if ((analyticsEffectiveness?.coverage || 0) < 0.45) {
+            findings.push(`Coverage низкий (${Math.round((analyticsEffectiveness?.coverage || 0) * 100)}% snapshot runs с хоть каким-то advice).`);
+        }
+
         let heuristicScore = 52;
         heuristicScore += Math.min(14, snapshotEntries.length * 3);
         heuristicScore += Math.min(10, uniqueTriggers.length * 4);
         heuristicScore += Math.min(12, modulesWithOutput * 2);
         heuristicScore += Math.min(12, eventEntries.length * 2);
+        heuristicScore += Math.round((analyticsEffectiveness?.coverage || 0) * 12);
+        heuristicScore += Math.round((analyticsEffectiveness?.precisionProxy || 0) * 10);
         heuristicScore -= dominantBlocker?.key === 'global_cooldown' ? Math.min(18, dominantBlocker.count * 2) : 0;
         heuristicScore -= Math.min(12, silentModules.length * 2);
+        heuristicScore -= Math.round((analyticsEffectiveness?.ignoredRate || 0) * 14);
+        heuristicScore -= Math.round((analyticsEffectiveness?.suppressedByCooldownRate || 0) * 16);
         heuristicScore = Math.max(0, Math.min(100, heuristicScore));
 
         const grade = heuristicScore >= 85
@@ -10661,6 +10840,7 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
             modulesWithOutput,
             silentModules,
             dominantBlocker,
+            eventFunnel,
             findings: findings.slice(0, 5)
         };
     }
@@ -10672,10 +10852,19 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
         const triggerReport = buildDailyTriggerReport(snapshotEntries);
         const blockerReport = buildDailyBlockerReport(snapshotEntries);
         const eventReport = buildDailyEventReport(eventEntries);
-        const quality = buildDailyQualitySummary(snapshotEntries, eventEntries, moduleReport, blockerReport, triggerReport);
+        const analyticsEffectiveness = buildAnalyticsEffectiveness(snapshotEntries, eventEntries, blockerReport, moduleReport);
+        const quality = buildDailyQualitySummary(snapshotEntries, eventEntries, moduleReport, blockerReport, triggerReport, analyticsEffectiveness);
+        const executiveSummary = buildDailyExecutiveSummary(log, {
+            analyticsEffectiveness,
+            quality,
+            moduleReport,
+            blockerReport
+        });
 
         return {
+            executiveSummary,
             quality,
+            analyticsEffectiveness,
             moduleReport,
             triggerReport,
             blockerReport,
@@ -10745,9 +10934,7 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
 
         pushSection('SUMMARY');
         lines.push(JSON.stringify({
-            date: log.date,
-            snapshotCount: snapshotEntries.length,
-            eventCount: eventEntries.length,
+            executiveSummary: diagnostics.executiveSummary || {},
             quality: diagnostics.quality,
             lastSnapshot: snapshotEntries[snapshotEntries.length - 1]?.summary || null,
             lastEvent: eventEntries[eventEntries.length - 1] || null
@@ -10755,6 +10942,9 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
 
         pushSection('QUALITY');
         lines.push(JSON.stringify(diagnostics.quality || {}, null, 2));
+
+        pushSection('ANALYTICS_EFFECTIVENESS');
+        lines.push(JSON.stringify(diagnostics.analyticsEffectiveness || {}, null, 2));
 
         pushSection('MODULE_REPORT');
         lines.push(JSON.stringify(diagnostics.moduleReport || [], null, 2));

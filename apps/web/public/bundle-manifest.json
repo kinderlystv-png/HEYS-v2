@@ -35,11 +35,11 @@
     "builtAt": "2026-03-10T05:28:44.101Z"
   },
   "postboot-1-game": {
-    "file": "postboot-1-game.bundle.3ae19ec16410.js",
-    "hash": "3ae19ec16410",
+    "file": "postboot-1-game.bundle.a281ddfeb047.js",
+    "hash": "a281ddfeb047",
     "fileCount": 29,
-    "size": 1540870,
-    "builtAt": "2026-03-10T05:28:44.297Z"
+    "size": 1550419,
+    "builtAt": "2026-03-10T05:40:24.307Z"
   },
   "postboot-2-insights": {
     "file": "postboot-2-insights.bundle.166ac9d8c132.js",
