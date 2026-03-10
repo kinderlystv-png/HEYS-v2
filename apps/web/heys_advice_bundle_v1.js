@@ -3507,6 +3507,24 @@
         };
     }
 
+    function getDailyAdviceTraceDiagnostics(date) {
+        const log = getDailyAdviceTraceLog(date);
+        const snapshotEntries = (log?.entries || []).filter(entry => entry?.type === 'snapshot');
+        const eventEntries = (log?.entries || []).filter(entry => entry?.type === 'event');
+        const diagnostics = buildDailyAdviceDiagnostics(log);
+
+        return {
+            version: log?.version || 'advice-day-log-v2',
+            date: log?.date || date || null,
+            updatedAt: log?.updatedAt || 0,
+            snapshotCount: snapshotEntries.length,
+            eventCount: eventEntries.length,
+            lastSnapshot: snapshotEntries[snapshotEntries.length - 1]?.summary || null,
+            lastEvent: eventEntries[eventEntries.length - 1] || null,
+            ...diagnostics
+        };
+    }
+
     function appendDailyAdviceTraceSnapshot(trace) {
         if (!trace?.input?.date) return null;
 
@@ -5890,6 +5908,7 @@
         collectSoftExpertSignals,
         explainAdviceVisibility,
         getDailyAdviceTraceLog,
+        getDailyAdviceTraceDiagnostics,
         appendDailyAdviceTraceSnapshot,
         recordDailyAdviceTraceEvent,
         enrichAdvicesWithExpertContext,

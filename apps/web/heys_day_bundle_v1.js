@@ -87,6 +87,225 @@
         );
     }
 
+    function formatPercentValue(value) {
+        if (typeof value !== 'number' || !Number.isFinite(value)) return '—';
+        return `${Math.round(value * 100)}%`;
+    }
+
+    function getQualityGradeLabel(grade) {
+        if (grade === 'strong') return 'сильный';
+        if (grade === 'good') return 'хороший';
+        if (grade === 'mixed') return 'смешанный';
+        if (grade === 'weak') return 'слабый';
+        return '—';
+    }
+
+    function getQualityGradeClass(grade) {
+        if (grade === 'strong') return 'is-strong';
+        if (grade === 'good') return 'is-good';
+        if (grade === 'mixed') return 'is-mixed';
+        if (grade === 'weak') return 'is-weak';
+        return 'is-neutral';
+    }
+
+    function AdviceDiagnosticsModal({
+        React,
+        diagnostics,
+        onClose,
+        onCopyTrace,
+        copyState,
+    }) {
+        if (!diagnostics) return null;
+
+        const summary = diagnostics.executiveSummary || {};
+        const quality = diagnostics.quality || {};
+        const effect = diagnostics.analyticsEffectiveness || {};
+        const lastSnapshot = diagnostics.lastSnapshot || null;
+        const eventFunnel = effect.eventFunnel || quality.eventFunnel || {};
+        const moduleReport = Array.isArray(diagnostics.moduleReport) ? diagnostics.moduleReport : [];
+        const silentModules = Array.isArray(summary.topSilentModules) && summary.topSilentModules.length > 0
+            ? summary.topSilentModules
+            : (Array.isArray(quality.silentModules) ? quality.silentModules : []);
+        const topReasons = Array.isArray(diagnostics.blockerReport?.topReasons)
+            ? diagnostics.blockerReport.topReasons.slice(0, 4)
+            : [];
+        const findings = Array.isArray(summary.topIssues) && summary.topIssues.length > 0
+            ? summary.topIssues
+            : (Array.isArray(quality.findings) ? quality.findings : []);
+        const activeModules = moduleReport.filter(item => (item?.withOutput || 0) > 0).slice(0, 4);
+
+        return React.createElement('div', {
+            className: 'advice-diagnostics-modal-overlay',
+            role: 'presentation',
+            onClick: (e) => {
+                e.stopPropagation();
+                onClose && onClose();
+            }
+        },
+            React.createElement('div', {
+                className: 'advice-diagnostics-modal',
+                role: 'dialog',
+                'aria-modal': 'true',
+                'aria-label': 'Диагностика advice engine',
+                onClick: (e) => e.stopPropagation()
+            },
+                React.createElement('div', { className: 'advice-diagnostics-modal__header' },
+                    React.createElement('div', { className: 'advice-diagnostics-modal__title-wrap' },
+                        React.createElement('div', { className: 'advice-diagnostics-modal__eyebrow' }, 'Advice diagnostics'),
+                        React.createElement('div', { className: 'advice-diagnostics-modal__title' }, 'Что реально происходило сегодня'),
+                        React.createElement('div', { className: 'advice-diagnostics-modal__subtitle' },
+                            `Лог за ${diagnostics.date || 'сегодня'} · snapshots ${diagnostics.snapshotCount || 0} · events ${diagnostics.eventCount || 0}`
+                        )
+                    ),
+                    React.createElement('button', {
+                        className: 'advice-diagnostics-modal__close',
+                        onClick: onClose,
+                        type: 'button',
+                        'aria-label': 'Закрыть диагностику'
+                    }, '×')
+                ),
+
+                React.createElement('div', { className: 'advice-diagnostics-modal__body' },
+                    React.createElement('div', { className: 'advice-diagnostics-summary-card' },
+                        React.createElement('div', { className: 'advice-diagnostics-summary-card__row' },
+                            React.createElement('div', null,
+                                React.createElement('div', { className: 'advice-diagnostics-summary-card__score' }, summary.qualityScore ?? '—'),
+                                React.createElement('div', { className: 'advice-diagnostics-summary-card__score-label' }, 'качество дня')
+                            ),
+                            React.createElement('div', {
+                                className: `advice-diagnostics-grade ${getQualityGradeClass(summary.qualityGrade || quality.grade)}`
+                            }, getQualityGradeLabel(summary.qualityGrade || quality.grade))
+                        ),
+                        summary.dominantIssue?.key && React.createElement('div', { className: 'advice-diagnostics-summary-card__issue' },
+                            `Главный блокер: ${summary.dominantIssue.key} · ${summary.dominantIssue.count || 0}`
+                        )
+                    ),
+
+                    React.createElement('div', { className: 'advice-diagnostics-stat-grid' },
+                        React.createElement('div', { className: 'advice-diagnostics-stat-card' },
+                            React.createElement('div', { className: 'advice-diagnostics-stat-card__label' }, 'Coverage'),
+                            React.createElement('div', { className: 'advice-diagnostics-stat-card__value' }, formatPercentValue(effect.coverage))
+                        ),
+                        React.createElement('div', { className: 'advice-diagnostics-stat-card' },
+                            React.createElement('div', { className: 'advice-diagnostics-stat-card__label' }, 'Precision proxy'),
+                            React.createElement('div', { className: 'advice-diagnostics-stat-card__value' }, formatPercentValue(effect.precisionProxy))
+                        ),
+                        React.createElement('div', { className: 'advice-diagnostics-stat-card' },
+                            React.createElement('div', { className: 'advice-diagnostics-stat-card__label' }, 'Ignored rate'),
+                            React.createElement('div', { className: 'advice-diagnostics-stat-card__value' }, formatPercentValue(effect.ignoredRate))
+                        ),
+                        React.createElement('div', { className: 'advice-diagnostics-stat-card' },
+                            React.createElement('div', { className: 'advice-diagnostics-stat-card__label' }, 'Cooldown suppression'),
+                            React.createElement('div', { className: 'advice-diagnostics-stat-card__value' }, formatPercentValue(effect.suppressedByCooldownRate))
+                        )
+                    ),
+
+                    React.createElement('section', { className: 'advice-diagnostics-section' },
+                        React.createElement('div', { className: 'advice-diagnostics-section__title' }, 'Воронка взаимодействий'),
+                        React.createElement('div', { className: 'advice-diagnostics-chip-grid' },
+                            [
+                                ['shown', 'shown'],
+                                ['read', 'read'],
+                                ['click', 'click'],
+                                ['hidden', 'hidden'],
+                                ['positive', 'positive'],
+                                ['negative', 'negative'],
+                                ['manualOpen', 'manual open']
+                            ].map(([key, label]) => React.createElement('div', {
+                                key,
+                                className: 'advice-diagnostics-chip'
+                            },
+                                React.createElement('span', { className: 'advice-diagnostics-chip__label' }, label),
+                                React.createElement('span', { className: 'advice-diagnostics-chip__value' }, eventFunnel[key] || 0)
+                            ))
+                        )
+                    ),
+
+                    findings.length > 0 && React.createElement('section', { className: 'advice-diagnostics-section' },
+                        React.createElement('div', { className: 'advice-diagnostics-section__title' }, 'Что бросается в глаза'),
+                        React.createElement('ul', { className: 'advice-diagnostics-list' },
+                            findings.slice(0, 4).map((item, index) => React.createElement('li', {
+                                key: `finding_${index}`,
+                                className: 'advice-diagnostics-list__item'
+                            }, item))
+                        )
+                    ),
+
+                    silentModules.length > 0 && React.createElement('section', { className: 'advice-diagnostics-section' },
+                        React.createElement('div', { className: 'advice-diagnostics-section__title' }, 'Silent modules'),
+                        React.createElement('div', { className: 'advice-diagnostics-tags' },
+                            silentModules.map(moduleName => React.createElement('span', {
+                                key: moduleName,
+                                className: 'advice-diagnostics-tag is-muted'
+                            }, moduleName))
+                        )
+                    ),
+
+                    topReasons.length > 0 && React.createElement('section', { className: 'advice-diagnostics-section' },
+                        React.createElement('div', { className: 'advice-diagnostics-section__title' }, 'Top blockers'),
+                        React.createElement('div', { className: 'advice-diagnostics-tags' },
+                            topReasons.map(item => React.createElement('span', {
+                                key: item.key,
+                                className: 'advice-diagnostics-tag'
+                            }, `${item.key} · ${item.count || 0}`))
+                        )
+                    ),
+
+                    activeModules.length > 0 && React.createElement('section', { className: 'advice-diagnostics-section' },
+                        React.createElement('div', { className: 'advice-diagnostics-section__title' }, 'Активные модули'),
+                        React.createElement('div', { className: 'advice-diagnostics-module-list' },
+                            activeModules.map(item => React.createElement('div', {
+                                key: item.module,
+                                className: 'advice-diagnostics-module-row'
+                            },
+                                React.createElement('div', { className: 'advice-diagnostics-module-row__name' }, item.module),
+                                React.createElement('div', { className: 'advice-diagnostics-module-row__meta' }, `${item.withOutput}/${item.runs} runs с выдачей`),
+                                React.createElement('div', { className: 'advice-diagnostics-module-row__sub' },
+                                    item.topBlockers?.[0]
+                                        ? `top blocker: ${item.topBlockers[0].key} · ${item.topBlockers[0].count || 0}`
+                                        : `avg output: ${item.avgOutputCount ?? 0}`
+                                )
+                            ))
+                        )
+                    ),
+
+                    lastSnapshot && React.createElement('section', { className: 'advice-diagnostics-section' },
+                        React.createElement('div', { className: 'advice-diagnostics-section__title' }, 'Последний snapshot'),
+                        React.createElement('div', { className: 'advice-diagnostics-last-snapshot' },
+                            React.createElement('div', { className: 'advice-diagnostics-last-snapshot__row' },
+                                React.createElement('span', null, `trigger: ${lastSnapshot.trigger || '—'}`),
+                                React.createElement('span', null, `manual visible: ${lastSnapshot.visibleForManualCount || 0}`)
+                            ),
+                            React.createElement('div', { className: 'advice-diagnostics-last-snapshot__row' },
+                                React.createElement('span', null, `auto eligible: ${lastSnapshot.eligibleForAutoToastCount || 0}`),
+                                React.createElement('span', null, `primary: ${lastSnapshot.primaryId || '—'}`)
+                            )
+                        )
+                    )
+                ),
+
+                React.createElement('div', { className: 'advice-diagnostics-modal__footer' },
+                    React.createElement('button', {
+                        className: 'advice-diagnostics-modal__action advice-diagnostics-modal__action--secondary',
+                        onClick: onClose,
+                        type: 'button'
+                    }, 'Закрыть'),
+                    React.createElement('button', {
+                        className: 'advice-diagnostics-modal__action advice-diagnostics-modal__action--primary',
+                        onClick: onCopyTrace,
+                        type: 'button'
+                    },
+                        copyState === 'success'
+                            ? '✅ Техлог скопирован'
+                            : copyState === 'error'
+                                ? '⚠️ Ошибка копии'
+                                : '📋 Скопировать техлог'
+                    )
+                )
+            )
+        );
+    }
+
     // --- AdviceCard component ---
     const AdviceCard = React.memo(function AdviceCard({
         advice,
@@ -458,6 +677,10 @@
         copyAdviceTrace,
         adviceTraceAvailable,
         adviceTraceCopyState,
+        adviceDiagnostics,
+        adviceDiagnosticsOpen,
+        openAdviceDiagnostics,
+        closeAdviceDiagnostics,
         ADVICE_CATEGORY_NAMES,
         AdviceCard,
     }) {
@@ -493,6 +716,11 @@
                                         ? '⚠️ Ошибка копии'
                                         : '📋 Техлог'
                             ),
+                            adviceDiagnostics && React.createElement('button', {
+                                className: 'advice-list-dismiss-all advice-list-dismiss-all--diagnostics',
+                                onClick: openAdviceDiagnostics,
+                                title: 'Показать компактную диагностику advice engine',
+                            }, '📊 Диагностика'),
                             activeCount > 1 && React.createElement('button', {
                                 className: 'advice-list-dismiss-all',
                                 onClick: handleDismissAll,
@@ -604,7 +832,14 @@
                     React.createElement('span', { className: 'advice-list-hint-divider' }, '•'),
                     React.createElement('span', { className: 'advice-list-hint-item' }, 'удерживать = детали')
                 )
-            )
+            ),
+            adviceDiagnosticsOpen && React.createElement(AdviceDiagnosticsModal, {
+                React,
+                diagnostics: adviceDiagnostics,
+                onClose: closeAdviceDiagnostics,
+                onCopyTrace: copyAdviceTrace,
+                copyState: adviceTraceCopyState
+            })
         );
     };
 
@@ -1068,6 +1303,7 @@
             }
         });
         const [adviceTraceCopyState, setAdviceTraceCopyState] = useState('idle');
+        const [adviceDiagnosticsOpen, setAdviceDiagnosticsOpen] = useState(false);
 
         // On mount: re-read settings early (before 1500ms tab_open timer) in case
         // store was not ready during useState initializer (slow network race condition)
@@ -1395,11 +1631,41 @@
             }
         }, [adviceTrace, HEYSRef, copyTextFallback, haptic]);
 
+        const adviceDiagnostics = useMemo(() => {
+            try {
+                if (!date || typeof HEYSRef?.advice?.getDailyAdviceTraceDiagnostics !== 'function') return null;
+                return HEYSRef.advice.getDailyAdviceTraceDiagnostics(date);
+            } catch (e) {
+                console.error('[HEYS.advice] failed to build diagnostics modal payload:', e?.message || e);
+                return null;
+            }
+        }, [date, HEYSRef, adviceTrace, toastVisible, adviceTrigger, adviceTraceCopyState]);
+
+        const openAdviceDiagnostics = useCallback((e) => {
+            if (e?.stopPropagation) e.stopPropagation();
+            setAdviceDiagnosticsOpen(true);
+            if (typeof haptic === 'function') haptic('light');
+        }, [haptic]);
+
+        const closeAdviceDiagnostics = useCallback((e) => {
+            if (e?.stopPropagation) e.stopPropagation();
+            setAdviceDiagnosticsOpen(false);
+        }, []);
+
         useEffect(() => {
             if (adviceTraceCopyState === 'idle') return undefined;
             const timer = setTimeout(() => setAdviceTraceCopyState('idle'), 2200);
             return () => clearTimeout(timer);
         }, [adviceTraceCopyState]);
+
+        useEffect(() => {
+            if (!adviceDiagnosticsOpen) return undefined;
+            const handleEscape = (event) => {
+                if (event?.key === 'Escape') setAdviceDiagnosticsOpen(false);
+            };
+            window.addEventListener('keydown', handleEscape);
+            return () => window.removeEventListener('keydown', handleEscape);
+        }, [adviceDiagnosticsOpen]);
 
         useEffect(() => {
             if (!adviceTrace) return;
@@ -1679,6 +1945,7 @@
                 setAdviceSwipeState({});
                 setExpandedAdviceId(null);
                 setDismissAllAnimation(false);
+                setAdviceDiagnosticsOpen(false);
             }
         }, [adviceTrigger]);
 
@@ -2013,6 +2280,10 @@
             trackClick,
             scheduleAdvice,
             copyAdviceTrace,
+            adviceDiagnostics,
+            adviceDiagnosticsOpen,
+            openAdviceDiagnostics,
+            closeAdviceDiagnostics,
             scheduledCount,
             dismissedAdvices,
             setDismissedAdvices,
