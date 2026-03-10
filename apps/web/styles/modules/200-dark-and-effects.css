@@ -2740,6 +2740,107 @@
   border-radius: 6px;
 }
 
+.sleep-breakdown-row {
+  margin: -2px 0 10px;
+}
+
+.sleep-breakdown-main {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.sleep-breakdown-item {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 32px;
+  padding: 7px 10px;
+  border: 1px solid #f3e8ff;
+  border-radius: 10px;
+  background: #faf5ff;
+  color: #6d28d9;
+  font-size: 12px;
+  line-height: 1.2;
+}
+
+button.sleep-breakdown-item {
+  appearance: none;
+  cursor: pointer;
+  transition: transform 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+}
+
+button.sleep-breakdown-item:hover,
+button.sleep-breakdown-item:focus-visible {
+  outline: none;
+  transform: translateY(-1px);
+  background: #f3e8ff;
+  border-color: #d8b4fe;
+}
+
+.sleep-breakdown-item--nap.has-value {
+  background: linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%);
+  border-color: #c4b5fd;
+  color: #5b21b6;
+}
+
+.sleep-breakdown-cta {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 46px;
+  padding: 12px 14px;
+  border: 1px solid #d8b4fe;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%);
+  color: #5b21b6;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.25;
+  text-align: center;
+  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.12);
+  cursor: pointer;
+  pointer-events: auto;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+}
+
+.sleep-breakdown-cta:hover,
+.sleep-breakdown-cta:focus-visible,
+.sleep-breakdown-cta:active {
+  outline: none;
+  transform: translateY(-1px);
+  box-shadow: 0 8px 18px rgba(139, 92, 246, 0.18);
+}
+
+.sleep-breakdown-cta.subtle {
+  background: linear-gradient(135deg, #faf5ff 0%, #f5f3ff 100%);
+  border-color: #e9d5ff;
+  color: #6d28d9;
+}
+
+.sleep-breakdown-cta.recommended {
+  background: linear-gradient(135deg, #fff1c2 0%, #fdba74 100%);
+  border-color: #fb923c;
+  color: #7c2d12;
+  box-shadow: 0 10px 24px rgba(249, 115, 22, 0.24);
+}
+
+.sleep-breakdown-cta.has-value {
+  background: linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%);
+  border-color: #a78bfa;
+  color: #4c1d95;
+}
+
+.sleep-breakdown-reason {
+  width: 100%;
+  margin-top: 2px;
+  color: #9a3412;
+  font-size: 11px;
+  line-height: 1.35;
+}
+
 /* Score display enhancements */
 .score-main-row {
   display: flex;

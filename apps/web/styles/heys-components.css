@@ -4028,6 +4028,133 @@ body.tour-active .ios-pwa-banner {
   margin-top: 16px;
 }
 
+.reports-sleep-card {
+  background: var(--widget-glass-bg, var(--heys-bg-card, #ffffff));
+  border: 1px solid var(--heys-diary-outline-border-current, #e5e7eb);
+  border-radius: var(--widget-radius-lg, 20px);
+  padding: var(--heys-diary-card-padding, 14px 16px);
+  margin: 0 0 12px;
+}
+
+.reports-sleep-card__header,
+.reports-sleep-card__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.reports-sleep-card__title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.reports-sleep-card__subtitle,
+.reports-sleep-card__hint {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.reports-sleep-card__stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin: 14px 0;
+}
+
+.reports-sleep-card__stat {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: #f9fafb;
+}
+
+.reports-sleep-card__stat-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #6b7280;
+}
+
+.reports-sleep-card__stat-value {
+  font-size: 16px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.reports-sleep-card__button {
+  border: 1px solid transparent;
+  border-radius: 10px;
+  padding: 9px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.reports-sleep-card__button--primary {
+  background: #2563eb;
+  border-color: #2563eb;
+  color: #ffffff;
+}
+
+.reports-sleep-card__button--secondary {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+  color: #1d4ed8;
+}
+
+.mc-day-sleep-step {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.mc-day-sleep-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  text-align: center;
+}
+
+.mc-day-sleep-summary__value {
+  font-size: 24px;
+  font-weight: 800;
+  color: #111827;
+}
+
+.mc-day-sleep-summary__hint {
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.mc-day-sleep-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.mc-day-sleep-option {
+  min-height: 44px;
+  border: 1px solid #dbeafe;
+  border-radius: 12px;
+  background: #f8fbff;
+  color: #1e3a8a;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.mc-day-sleep-option--active {
+  background: #2563eb;
+  border-color: #2563eb;
+  color: #ffffff;
+  box-shadow: 0 8px 18px -14px rgba(37, 99, 235, 0.9);
+}
+
 .monthly-week-card {
   background: var(--widget-glass-bg, var(--heys-bg-card, #ffffff));
   border: 1px solid var(--heys-diary-outline-border-current, #e5e7eb);
@@ -4416,6 +4543,40 @@ body.tour-active .ios-pwa-banner {
   background: var(--widget-glass-bg, #111827);
   border-color: var(--heys-diary-outline-border-current, #1f2937);
   box-shadow: var(--heys-diary-glass-card-shadow, 0 10px 30px -20px rgba(0, 0, 0, 0.5));
+}
+
+[data-theme="dark"] .reports-sleep-card {
+  background: var(--widget-glass-bg, #111827);
+  border-color: var(--heys-diary-outline-border-current, #1f2937);
+}
+
+[data-theme="dark"] .reports-sleep-card__title,
+[data-theme="dark"] .reports-sleep-card__stat-value,
+[data-theme="dark"] .mc-day-sleep-summary__value {
+  color: #f3f4f6;
+}
+
+[data-theme="dark"] .reports-sleep-card__subtitle,
+[data-theme="dark"] .reports-sleep-card__hint,
+[data-theme="dark"] .reports-sleep-card__stat-label,
+[data-theme="dark"] .mc-day-sleep-summary__hint {
+  color: #9ca3af;
+}
+
+[data-theme="dark"] .reports-sleep-card__stat {
+  background: #0f172a;
+}
+
+[data-theme="dark"] .reports-sleep-card__button--secondary {
+  background: #172554;
+  border-color: #1d4ed8;
+  color: #bfdbfe;
+}
+
+[data-theme="dark"] .mc-day-sleep-option {
+  background: #0f172a;
+  border-color: #1e3a8a;
+  color: #bfdbfe;
 }
 
 [data-theme="dark"] .monthly-week-card--current {

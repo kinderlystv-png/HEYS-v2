@@ -67,6 +67,23 @@
         // ⚠️ WARNINGS (priority: 11-30) — Goal-aware + Refeed-aware
         // ─────────────────────────────────────────────────────────
 
+        if (hour >= 6 && hour < 11 && mealCount === 0 && kcalPct < 0.15) {
+            advices.push({
+                id: 'morning_breakfast_bootstrap',
+                icon: '🍳',
+                text: 'Первый приём лучше собрать вокруг белка + клетчатки',
+                details: '🍳 Для пустого утра лучший старт — белок + клетчатка + вода: яйца/творог/йогурт + ягоды/овсянка/овощи. Так будет меньше тяги к сладкому и проще добрать норму без вечернего перекоса.',
+                type: 'tip',
+                priority: 19,
+                category: 'nutrition',
+                triggers: ['tab_open'],
+                excludes: ['morning_breakfast', 'empty_stomach_late'],
+                ttl: 5000,
+                canSkipCooldown: true,
+                nutrient: 'prot'
+            });
+        }
+
         if (goal && helpers.isCriticallyOver(kcalPct, goal) && !isRefeedExcessOk) {
             const overPct = Math.round((kcalPct - 1) * 100);
             const goalText = goal.mode === 'bulk'

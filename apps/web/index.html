@@ -10,12 +10,343 @@
         (function () {
             window.__heysBootLog = [];
             window.__heysBootStart = Date.now();
+            var LOG_GROUPS_KEY = 'heys_log_groups_v1';
+            var LEGACY_VERBOSE_KEY = 'heys_debug_verbose';
+            var DEFAULT_LOG_GROUPS = ['startup', 'sync'];
+            var EXTRA_LOG_GROUPS = ['startup-detail', 'sync-detail', 'insights'];
+            var PREFIX_GROUP_MAP = {
+                '[HEYS.startup]': 'startup',
+                '[HEYS.entry]': 'startup',
+                '[HEYS.loginGate]': 'startup',
+                '[HEYS.css]': 'startup',
+                '[APP]': 'startup',
+                '[DEPS]': 'startup',
+                '[CRITICAL]': 'startup',
+                '[WATCHDOG]': 'startup',
+                '[RECOVERY]': 'startup',
+                '[LoginGate]': 'startup',
+
+                '[HEYS.sync]': 'sync',
+                '[HEYS.sinhron]': 'sync',
+                '[SYNC ERROR]': 'sync',
+
+                '[HEYS.cloud:ERR]': 'cloud',
+                '[HEYS.cloud]': 'cloud',
+
+                '[HEYS.api]': 'api',
+                '[HEYS.photos]': 'photos',
+
+                '[SW]': 'sw',
+
+                '[HEYS.day]': 'day',
+                '[HEYS.calendar]': 'day',
+                '[PullRefresh]': 'day',
+
+                '[HEYS.portions]': 'products',
+                '[HEYS.addProduct]': 'products',
+                '[HEYS.presets]': 'products',
+                '[HEYS.prodRec]': 'products',
+                '[HEYS.search]': 'products',
+                '[SharedSearch]': 'products',
+                '[AddProductStep]': 'products',
+                '[CreateProductStep]': 'products',
+                '[HarmSelectStep]': 'products',
+                '[ProductSearchStep]': 'products',
+                '[GramsStep]': 'products',
+                '[openProductPortionsEditor]': 'products',
+
+                '[PlatformAPIs]': 'platform',
+                '[Storage]': 'platform',
+                '[Device]': 'platform',
+                '[Idle]': 'platform',
+                '[WCO]': 'platform',
+                '[Barcode]': 'platform',
+                '[Share]': 'platform',
+                '[Contacts]': 'platform',
+                '[Speech]': 'platform',
+                '[Launch]': 'platform',
+                '[Protocol]': 'platform',
+                '[FileSystem]': 'platform',
+                '[Credentials]': 'platform',
+                '[Orientation]': 'platform',
+                '[Fullscreen]': 'platform',
+                '[Vibration]': 'platform',
+
+                '[PERF]': 'perf',
+
+                '[MEALREC]': 'insights',
+                '[HEYS.insights]': 'insights',
+                '[HEYS.InsightsPI]': 'insights',
+                '[HEYS.thresholds.compute]': 'insights',
+
+                '[Refeed]': 'ui',
+                '[CONSENTS]': 'ui',
+                '[Widgets Registry]': 'ui',
+                '[App]': 'ui'
+            };
+            var KNOWN_GROUPS = Array.from(new Set(DEFAULT_LOG_GROUPS.concat(EXTRA_LOG_GROUPS, Object.keys(PREFIX_GROUP_MAP).map(function (prefix) {
+                return PREFIX_GROUP_MAP[prefix];
+            })))).sort();
+            var nativeConsole = window.__heysNativeConsole = window.__heysNativeConsole || {
+                log: window.console && typeof window.console.log === 'function' ? window.console.log.bind(window.console) : function () { },
+                info: window.console && typeof window.console.info === 'function' ? window.console.info.bind(window.console) : function () { },
+                warn: window.console && typeof window.console.warn === 'function' ? window.console.warn.bind(window.console) : function () { },
+                error: window.console && typeof window.console.error === 'function' ? window.console.error.bind(window.console) : function () { },
+                debug: window.console && typeof window.console.debug === 'function' ? window.console.debug.bind(window.console) : function () { },
+                trace: window.console && typeof window.console.trace === 'function' ? window.console.trace.bind(window.console) : function () { },
+                group: window.console && typeof window.console.group === 'function' ? window.console.group.bind(window.console) : function () { },
+                groupCollapsed: window.console && typeof window.console.groupCollapsed === 'function' ? window.console.groupCollapsed.bind(window.console) : function () { },
+                groupEnd: window.console && typeof window.console.groupEnd === 'function' ? window.console.groupEnd.bind(window.console) : function () { },
+                table: window.console && typeof window.console.table === 'function' ? window.console.table.bind(window.console) : function () { }
+            };
+
+            function safeGetStorage(key) {
+                try {
+                    return localStorage.getItem(key);
+                } catch (_) {
+                    return null;
+                }
+            }
+
+            function safeSetStorage(key, value) {
+                try {
+                    localStorage.setItem(key, value);
+                } catch (_) { }
+            }
+
+            function safeRemoveStorage(key) {
+                try {
+                    localStorage.removeItem(key);
+                } catch (_) { }
+            }
+
+            function parseGroups(raw) {
+                if (!raw) return null;
+                try {
+                    var parsed = JSON.parse(raw);
+                    if (Array.isArray(parsed)) {
+                        return parsed.map(function (group) { return String(group || '').trim(); }).filter(Boolean);
+                    }
+                } catch (_) { }
+                return String(raw)
+                    .split(',')
+                    .map(function (group) { return String(group || '').trim(); })
+                    .filter(Boolean);
+            }
+
+            function normalizeGroup(group) {
+                return String(group || '').trim().toLowerCase();
+            }
+
+            function sanitizeGroups(groups) {
+                var normalized = [];
+                (groups || []).forEach(function (group) {
+                    var next = normalizeGroup(group);
+                    if (!next) return;
+                    if (next === 'all' || KNOWN_GROUPS.indexOf(next) !== -1) {
+                        if (normalized.indexOf(next) === -1) normalized.push(next);
+                    }
+                });
+                return normalized;
+            }
+
+            function getQueryGroups() {
+                try {
+                    var params = new URLSearchParams(window.location.search || '');
+                    return parseGroups(params.get('logs') || params.get('logGroups'));
+                } catch (_) {
+                    return null;
+                }
+            }
+
+            function extractPrefix(args) {
+                for (var i = 0; i < args.length; i++) {
+                    if (typeof args[i] !== 'string') continue;
+                    var match = args[i].match(/\[[^\]]+\]/);
+                    if (match) return match[0];
+                }
+                return '';
+            }
+
+            function joinStringArgs(args) {
+                return args.filter(function (arg) { return typeof arg === 'string'; }).join(' ');
+            }
+
+            function isStartupDetailLog(text) {
+                return /html parsing started|body parsing started|theme applied|session detected|returning user|auth token|dependency loader start|pwa standalone|vconsole loaded|gate hidden|skeleton visible|enabled log groups|log groups reset|verbose logging enabled/i.test(text);
+            }
+
+            function isSyncDetailLog(text) {
+                return /restoresession|\[delta|delta sync|delta light|delta fast-path|prefetch|sync debug|main data query|after sync|setproducts callback|react state updated|tombstone filter|used pre-fetched|loading only changes|dayv2 backup|yandex save|saved heys_|fetchdays|0 keys|ms=\d+/i.test(text);
+            }
+
+            function detectGroupFromArgs(args, fallbackGroup) {
+                var prefix = extractPrefix(args);
+                var text = joinStringArgs(args);
+                if (prefix && Object.prototype.hasOwnProperty.call(PREFIX_GROUP_MAP, prefix)) {
+                    var mappedGroup = PREFIX_GROUP_MAP[prefix];
+                    if (mappedGroup === 'startup' && isStartupDetailLog(text)) return 'startup-detail';
+                    if (mappedGroup === 'sync' && isSyncDetailLog(text)) return 'sync-detail';
+                    return mappedGroup;
+                }
+
+                if (fallbackGroup) return fallbackGroup;
+                if (!text) return null;
+                if (/\bmealrec\b|\bews\s*\/|heys\.insightspi|heys\.insights|priority\s*\/|thresholds\.compute/i.test(text)) {
+                    return 'insights';
+                }
+                if (/html parsing started|body parsing started|session detected|returning user|theme applied|appinitializer|dependency loader/i.test(text)) {
+                    return isStartupDetailLog(text) ? 'startup-detail' : 'startup';
+                }
+                if (/\[heys\.sync\]|\[heys\.sinhron\]|syncclient|bootstrap sync|сессия восстановлена|user установлен из restore|старт: online/i.test(text)) {
+                    return isSyncDetailLog(text) ? 'sync-detail' : 'sync';
+                }
+                return null;
+            }
+
+            function readStoredGroups() {
+                return sanitizeGroups(parseGroups(safeGetStorage(LOG_GROUPS_KEY)) || DEFAULT_LOG_GROUPS);
+            }
+
+            function readVerboseFlag() {
+                return window.location.search.indexOf('debug=verbose') !== -1 || safeGetStorage(LEGACY_VERBOSE_KEY) === 'true';
+            }
+
+            var queryGroups = sanitizeGroups(getQueryGroups());
+            var verboseAll = readVerboseFlag() || queryGroups.indexOf('all') !== -1;
+            var enabledGroups = verboseAll
+                ? KNOWN_GROUPS.slice()
+                : (queryGroups.length > 0 ? queryGroups : readStoredGroups());
+
+            function persistGroups() {
+                if (verboseAll) {
+                    safeSetStorage(LOG_GROUPS_KEY, JSON.stringify(['all']));
+                    return;
+                }
+                safeSetStorage(LOG_GROUPS_KEY, JSON.stringify(enabledGroups));
+            }
+
+            function isGroupEnabled(group) {
+                var normalized = normalizeGroup(group);
+                if (!normalized) return false;
+                return verboseAll || enabledGroups.indexOf(normalized) !== -1;
+            }
+
+            function shouldEmit(level, args, fallbackGroup) {
+                if (level === 'error') return true;
+                var group = detectGroupFromArgs(args, fallbackGroup);
+                if (!group) return false;
+                return isGroupEnabled(group);
+            }
+
+            function patchConsoleMethod(method) {
+                if (!window.console || typeof nativeConsole[method] !== 'function') return;
+                if (window.console[method] && window.console[method].__heysPatched) return;
+                var wrapped = function () {
+                    var args = Array.prototype.slice.call(arguments);
+                    if (shouldEmit(method, args)) {
+                        nativeConsole[method].apply(window.console, args);
+                    }
+                };
+                wrapped.__heysPatched = true;
+                window.console[method] = wrapped;
+            }
+
+            function patchConsolePassThroughMethod(method) {
+                if (!window.console || typeof nativeConsole[method] !== 'function') return;
+                if (window.console[method] && window.console[method].__heysPatched) return;
+                var wrapped = function () {
+                    var args = Array.prototype.slice.call(arguments);
+                    if (shouldEmit('log', args)) {
+                        nativeConsole[method].apply(window.console, args);
+                    }
+                };
+                wrapped.__heysPatched = true;
+                window.console[method] = wrapped;
+            }
+
+            ['log', 'info', 'warn', 'debug'].forEach(patchConsoleMethod);
+            ['group', 'groupCollapsed', 'table'].forEach(patchConsolePassThroughMethod);
+
+            window.__heysLogControl = window.__heysLogControl || {
+                getKnownGroups: function () {
+                    return KNOWN_GROUPS.slice();
+                },
+                getEnabledGroups: function () {
+                    return verboseAll ? ['all'] : enabledGroups.slice();
+                },
+                isEnabled: function (group) {
+                    return isGroupEnabled(group);
+                },
+                detectGroup: function () {
+                    var args = Array.prototype.slice.call(arguments);
+                    return detectGroupFromArgs(args, null);
+                },
+                enable: function () {
+                    var groups = sanitizeGroups(Array.prototype.slice.call(arguments));
+                    groups.forEach(function (group) {
+                        if (enabledGroups.indexOf(group) === -1) enabledGroups.push(group);
+                    });
+                    verboseAll = false;
+                    safeRemoveStorage(LEGACY_VERBOSE_KEY);
+                    persistGroups();
+                    nativeConsole.info('[HEYS.startup] enabled log groups:', enabledGroups.join(', '));
+                    return this.getEnabledGroups();
+                },
+                disable: function () {
+                    var groups = sanitizeGroups(Array.prototype.slice.call(arguments));
+                    if (groups.length === 0) return this.getEnabledGroups();
+                    enabledGroups = enabledGroups.filter(function (group) {
+                        return groups.indexOf(group) === -1;
+                    });
+                    verboseAll = false;
+                    safeRemoveStorage(LEGACY_VERBOSE_KEY);
+                    persistGroups();
+                    nativeConsole.info('[HEYS.startup] enabled log groups:', enabledGroups.join(', ') || '(none)');
+                    return this.getEnabledGroups();
+                },
+                only: function () {
+                    enabledGroups = sanitizeGroups(Array.prototype.slice.call(arguments));
+                    verboseAll = false;
+                    safeRemoveStorage(LEGACY_VERBOSE_KEY);
+                    persistGroups();
+                    nativeConsole.info('[HEYS.startup] enabled log groups:', enabledGroups.join(', ') || '(none)');
+                    return this.getEnabledGroups();
+                },
+                reset: function () {
+                    verboseAll = false;
+                    enabledGroups = DEFAULT_LOG_GROUPS.slice();
+                    safeRemoveStorage(LEGACY_VERBOSE_KEY);
+                    safeRemoveStorage(LOG_GROUPS_KEY);
+                    nativeConsole.info('[HEYS.startup] log groups reset:', enabledGroups.join(', '));
+                    return this.getEnabledGroups();
+                },
+                all: function () {
+                    verboseAll = true;
+                    enabledGroups = KNOWN_GROUPS.slice();
+                    safeSetStorage(LEGACY_VERBOSE_KEY, 'true');
+                    persistGroups();
+                    nativeConsole.info('[HEYS.startup] verbose logging enabled for all groups');
+                    return ['all'];
+                },
+                shouldEmit: function (level) {
+                    var args = Array.prototype.slice.call(arguments, 1);
+                    return shouldEmit(level, args);
+                }
+            };
+            window.HEYS = window.HEYS || {};
+            window.HEYS.logSettings = window.__heysLogControl;
+
             window.__heysLog = function (msg) {
                 var entry = { t: Date.now() - window.__heysBootStart, m: msg };
                 window.__heysBootLog.push(entry);
                 try {
                     localStorage.setItem('heys_boot_log', JSON.stringify(window.__heysBootLog.slice(-50)));
                 } catch (e) { }
+                var bootGroup = detectGroupFromArgs([msg], 'startup');
+                if (shouldEmit('info', [msg], bootGroup)) {
+                    nativeConsole.info('[HEYS.' + bootGroup + ']', msg);
+                }
                 // 🔇 v4.7.0: BOOT логи отключены (см. localStorage.heys_boot_log)
             };
             window.__heysLog('HTML parsing started');
@@ -317,11 +648,11 @@
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
     <link rel="dns-prefetch" href="https://cdn.jsdelivr.net" />
     <!-- Preload критических boot-бандлов (2026-02-25 bundle migration) -->
-    <link rel="preload" href="boot-core.bundle.148d6784c6f3.js" as="script" />
-    <link rel="preload" href="boot-calc.bundle.b5b942da9197.js" as="script" />
-    <link rel="preload" href="boot-day.bundle.3cb07376ab7d.js" as="script" />
-    <link rel="preload" href="boot-app.bundle.b304a038f7ae.js" as="script" />
-    <link rel="preload" href="boot-init.bundle.925c24feabd2.js" as="script" />
+    <link rel="preload" href="boot-core.bundle.1d20a7248916.js" as="script" />
+    <link rel="preload" href="boot-calc.bundle.e206a8ff6660.js" as="script" />
+    <link rel="preload" href="boot-day.bundle.634eb59dc87a.js" as="script" />
+    <link rel="preload" href="boot-app.bundle.000392023ad4.js" as="script" />
+    <link rel="preload" href="boot-init.bundle.31154d5ddda7.js" as="script" />
 
     <!-- React теперь бандлится локально через Vite (миграция с CDN 2026-01-21) -->
 
@@ -747,19 +1078,22 @@
                         style="margin-top:4px;font-size:14px;color:#64748b;font-family:system-ui,-apple-system,sans-serif">
                         Вход куратора</div>
                 </div>
-                <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:12px">
-                    <input id="hlg-curator-email" type="email" autocomplete="email" placeholder="Email"
-                        style="width:100%;box-sizing:border-box;border-radius:12px;border:2px solid #e2e8f0;background:white;padding:12px 16px;font-size:16px;color:#1e293b;outline:none;font-family:system-ui,-apple-system,sans-serif" />
-                    <input id="hlg-curator-pass" type="password" autocomplete="current-password" placeholder="Пароль"
-                        style="width:100%;box-sizing:border-box;border-radius:12px;border:2px solid #e2e8f0;background:white;padding:12px 16px;font-size:16px;color:#1e293b;outline:none;font-family:system-ui,-apple-system,sans-serif" />
-                </div>
-                <!-- Ошибка -->
-                <div id="hlg-curator-err"
-                    style="display:none;border-radius:12px;background:#fef2f2;border:1px solid #fee2e2;padding:12px 16px;text-align:center;font-size:14px;color:#dc2626;margin-bottom:12px;font-family:system-ui,-apple-system,sans-serif">
-                </div>
-                <button id="hlg-curator-submit" onclick="hlgCuratorLogin()"
-                    style="width:100%;border-radius:12px;background:linear-gradient(135deg,#3b82f6,#2563eb);border:none;padding:14px 16px;font-size:16px;font-weight:600;color:white;cursor:pointer;box-shadow:0 4px 14px rgba(59,130,246,0.4);font-family:system-ui,-apple-system,sans-serif">Войти
-                    →</button>
+                <form id="hlg-curator-form" onsubmit="event.preventDefault(); hlgCuratorLogin();">
+                    <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:12px">
+                        <input id="hlg-curator-email" name="email" type="email" autocomplete="email" placeholder="Email"
+                            style="width:100%;box-sizing:border-box;border-radius:12px;border:2px solid #e2e8f0;background:white;padding:12px 16px;font-size:16px;color:#1e293b;outline:none;font-family:system-ui,-apple-system,sans-serif" />
+                        <input id="hlg-curator-pass" name="password" type="password" autocomplete="current-password"
+                            placeholder="Пароль"
+                            style="width:100%;box-sizing:border-box;border-radius:12px;border:2px solid #e2e8f0;background:white;padding:12px 16px;font-size:16px;color:#1e293b;outline:none;font-family:system-ui,-apple-system,sans-serif" />
+                    </div>
+                    <!-- Ошибка -->
+                    <div id="hlg-curator-err"
+                        style="display:none;border-radius:12px;background:#fef2f2;border:1px solid #fee2e2;padding:12px 16px;text-align:center;font-size:14px;color:#dc2626;margin-bottom:12px;font-family:system-ui,-apple-system,sans-serif">
+                    </div>
+                    <button id="hlg-curator-submit" type="submit"
+                        style="width:100%;border-radius:12px;background:linear-gradient(135deg,#3b82f6,#2563eb);border:none;padding:14px 16px;font-size:16px;font-weight:600;color:white;cursor:pointer;box-shadow:0 4px 14px rgba(59,130,246,0.4);font-family:system-ui,-apple-system,sans-serif">Войти
+                        →</button>
+                </form>
                 <div style="margin-top:20px;text-align:center">
                     <div id="hlg-greeting-curator"
                         style="font-size:14px;color:#94a3b8;margin-bottom:8px;font-family:system-ui,-apple-system,sans-serif">
@@ -1747,11 +2081,11 @@
          Сгенерировано: node scripts/bundle-legacy.mjs  (pnpm bundle:legacy)
          Состав и хеши: bundle-manifest.json
          Хеш в имени = вечный кэш (cache-first SW). -->
-    <script defer src="boot-core.bundle.148d6784c6f3.js" fetchpriority="high"></script>
-    <script defer src="boot-calc.bundle.b5b942da9197.js"></script>
-    <script defer src="boot-day.bundle.3cb07376ab7d.js"></script>
-    <script defer src="boot-app.bundle.b304a038f7ae.js"></script>
-    <script defer src="boot-init.bundle.925c24feabd2.js"
+    <script defer src="boot-core.bundle.1d20a7248916.js" fetchpriority="high"></script>
+    <script defer src="boot-calc.bundle.e206a8ff6660.js"></script>
+    <script defer src="boot-day.bundle.634eb59dc87a.js"></script>
+    <script defer src="boot-app.bundle.000392023ad4.js"></script>
+    <script defer src="boot-init.bundle.31154d5ddda7.js"
         onerror="window.__heysShowRecoveryUI && window.__heysShowRecoveryUI('CRITICAL_SCRIPT_LOAD: boot-init.bundle')"></script>
 
     <!-- PERF: Detect returning user (localStorage has profile) → skip card unfold animations -->
@@ -1780,9 +2114,9 @@
     <script>
         (function () {
             var POST_BOOT_BUNDLES = [
-                'postboot-1-game.bundle.5eff7de1d742.js',
+                'postboot-1-game.bundle.3ae19ec16410.js',
                 'postboot-2-insights.bundle.166ac9d8c132.js',
-                'postboot-3-ui.bundle.985e76494f19.js'
+                'postboot-3-ui.bundle.dc0997201448.js'
             ];
             var total = POST_BOOT_BUNDLES.length;
 

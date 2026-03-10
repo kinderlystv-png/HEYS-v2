@@ -14,11 +14,27 @@
         const { rules } = helpers;
         const { THRESHOLDS } = rules;
 
-        const { day, waterGoal, hour } = ctx;
+        const { day, waterGoal, hour, mealCount } = ctx;
         const waterMl = day?.waterMl || 0;
         const waterPct = waterGoal > 0 ? waterMl / waterGoal : 0;
 
         const hoursSinceWater = helpers.getHoursSinceWater(day);
+
+        if (hour >= 6 && hour < 10 && mealCount === 0 && waterMl === 0 && waterGoal > 0) {
+            advices.push({
+                id: 'water_morning_start',
+                icon: '💧',
+                text: 'Начни утро с 300–500 мл воды — так легче запустить день',
+                details: '💧 После ночи организм просыпается слегка обезвоженным. Стакан воды с утра помогает концентрации, пищеварению и уменьшает путаницу между жаждой и голодом.',
+                type: 'tip',
+                priority: 18,
+                category: 'hydration',
+                triggers: ['tab_open'],
+                excludes: ['water_reminder'],
+                ttl: 5000,
+                canSkipCooldown: true
+            });
+        }
 
         if (hour >= 18 && waterPct < 0.5 && waterGoal > 0) {
             advices.push({

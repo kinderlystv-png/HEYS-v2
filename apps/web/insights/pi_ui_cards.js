@@ -68,7 +68,7 @@
         if (!day || typeof day !== 'object') return false;
         if ((day.meals || []).length > 0) return true;
         if ((day.trainings || []).length > 0) return true;
-        if ((day.sleepHours || 0) > 0) return true;
+        if (getDaySleepHours(day) > 0) return true;
         if (day.sleepStart || day.sleepEnd) return true;
         return false;
       };
@@ -85,6 +85,16 @@
       }
 
       return baseDate;
+    };
+
+    const getDaySleepHours = (day) => {
+      if (!day || typeof day !== 'object') return 0;
+      const totalSleepHours = HEYS.dayUtils?.getTotalSleepHours?.(day);
+      if (Number.isFinite(totalSleepHours) && totalSleepHours > 0) return totalSleepHours;
+      const storedSleepHours = Number(day.sleepHours);
+      if (Number.isFinite(storedSleepHours) && storedSleepHours > 0) return storedSleepHours;
+      const fallbackSleepHours = HEYS.dayUtils?.sleepHours?.(day.sleepStart, day.sleepEnd);
+      return Number.isFinite(fallbackSleepHours) && fallbackSleepHours > 0 ? fallbackSleepHours : 0;
     };
 
     // InfoButton is defined in pi_ui_dashboard.js which loads AFTER this module
@@ -865,7 +875,7 @@
         const hour = new Date().getHours();
         if (hour >= 20) bingeRisk += 20;
 
-        const sleepDeficit = (profile.sleepHours || 8) - (day.sleepHours || 0);
+        const sleepDeficit = (profile.sleepHours || 8) - getDaySleepHours(day);
         if (sleepDeficit > 2) { factors.push('Недосып'); bingeRisk += 15; }
 
         return {
@@ -1752,7 +1762,7 @@
         const totalDays = days.length;
         const daysWithMeals = days.filter(d => d.meals && d.meals.length > 0).length;
         const daysWithWeight = days.filter(d => d.weight && d.weight > 0).length;
-        const daysWithSleep = days.filter(d => d.sleepHours && d.sleepHours > 0).length;
+        const daysWithSleep = days.filter(d => getDaySleepHours(d) > 0).length;
         const daysWithSteps = days.filter(d => d.steps && d.steps > 0).length;
         const daysWithTraining = days.filter(d => d.hasTraining).length;
 

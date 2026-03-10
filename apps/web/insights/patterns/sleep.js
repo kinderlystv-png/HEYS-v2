@@ -136,6 +136,20 @@
         return (endMin - startMin) / 60;
     }
 
+    function getDaySleepHours(day) {
+        if (!day) return null;
+        if (window.HEYS?.dayUtils?.getTotalSleepHours) {
+            const total = window.HEYS.dayUtils.getTotalSleepHours(day);
+            return total > 0 ? total : null;
+        }
+        const base = day.sleepHours || (day.sleepStart && day.sleepEnd
+            ? calculateSleepHours(day.sleepStart, day.sleepEnd)
+            : null);
+        if (!base) return null;
+        const napHours = Math.max(0, Math.round(+day.daySleepMinutes || 0)) / 60;
+        return base + napHours;
+    }
+
     /**
      * Корреляция сна и веса.
      * @param {Array} days
@@ -145,9 +159,7 @@
         const pairs = [];
 
         for (const day of days) {
-            const sleep = day.sleepHours || (day.sleepStart && day.sleepEnd
-                ? calculateSleepHours(day.sleepStart, day.sleepEnd)
-                : null);
+            const sleep = getDaySleepHours(day);
             const weight = day.weightMorning;
 
             if (sleep && weight) {
@@ -275,9 +287,7 @@
         const sleepNorm = profile?.sleepHours || 8;
 
         for (const day of days) {
-            const sleep = day.sleepHours || (day.sleepStart && day.sleepEnd
-                ? calculateSleepHours(day.sleepStart, day.sleepEnd)
-                : null);
+            const sleep = getDaySleepHours(day);
 
             const dayKcal = calculateDayKcal(day, pIndex);
 

@@ -38,6 +38,25 @@
     };
   }
 
+  function getDaySleepHours(day) {
+    if (!day || typeof day !== 'object') return 0;
+
+    const totalSleepHours = HEYS.dayUtils?.getTotalSleepHours?.(day);
+    if (Number.isFinite(totalSleepHours) && totalSleepHours > 0) {
+      return totalSleepHours;
+    }
+
+    const storedSleepHours = Number(day.sleepHours);
+    if (Number.isFinite(storedSleepHours) && storedSleepHours > 0) {
+      return storedSleepHours;
+    }
+
+    const fallbackSleepHours = HEYS.dayUtils?.sleepHours?.(day.sleepStart, day.sleepEnd);
+    return Number.isFinite(fallbackSleepHours) && fallbackSleepHours > 0
+      ? fallbackSleepHours
+      : 0;
+  }
+
   // === КОНСТАНТЫ ===
   const CONFIG = {
     VERSION: '1.1.0', // v1.1.0 — Progressive phenotype disclosure
@@ -153,7 +172,7 @@
     return {
       // День
       hasMeals: Boolean(day.meals && day.meals.length > 0),
-      hasSleep: Boolean(day.sleepHours || (day.sleepStart && day.sleepEnd)),
+      hasSleep: getDaySleepHours(day) > 0,
       hasWeight: Boolean(day.weightMorning),
       hasWater: Boolean(day.waterMl),
       hasSteps: Boolean(day.steps),
@@ -288,7 +307,7 @@
     }
 
     // 4. Сон (вес: 15%)
-    const sleepHours = day.sleepHours || 0;
+    const sleepHours = getDaySleepHours(day);
     const sleepNorm = profile?.sleepHours || BASELINE.SLEEP_OPTIMAL_HOURS;
     if (sleepHours < sleepNorm - 1) {
       const sleepPenalty = sleepHours < sleepNorm - 2 ? 20 : 10;
@@ -345,7 +364,7 @@
     const factors = [];
 
     // 1. Недосып (+20-40)
-    const sleepHours = day.sleepHours || 0;
+    const sleepHours = getDaySleepHours(day);
     const sleepNorm = profile?.sleepHours || 8;
     const sleepDebt = sleepNorm - sleepHours;
     if (sleepDebt >= 3) {
@@ -1134,7 +1153,7 @@
 
     // 2. Недосып (прогноз на завтра) — вес из A/B теста
     const day = lsGet(`heys_dayv2_${dateStr}`, {});
-    const sleepHours = day.sleepHours || 0;
+    const sleepHours = getDaySleepHours(day);
     if (sleepHours < 6) {
       risk += abWeights.sleepDebt;
       triggers.push({
@@ -1295,8 +1314,9 @@
     const day = lsGet(`heys_dayv2_${dateStr}`, {});
 
     // Прогноз на основе сна
-    const sleepQuality = day.sleepQuality || (day.sleepHours >= 7 ? 7 : 5);
-    const sleepHours = day.sleepHours || 7;
+    const recordedSleepHours = getDaySleepHours(day);
+    const sleepQuality = day.sleepQuality || (recordedSleepHours >= 7 ? 7 : 5);
+    const sleepHours = recordedSleepHours || 7;
 
     const energyWindows = [];
 
@@ -2227,7 +2247,7 @@
 
       // Персональный порог недосыпа
       sleepThreshold: preCrashConditions.length > 0
-        ? Math.round(preCrashConditions.reduce((sum, d) => sum + (d.sleepHours || 7), 0) / preCrashConditions.length)
+        ? Math.round(preCrashConditions.reduce((sum, d) => sum + (getDaySleepHours(d) || 7), 0) / preCrashConditions.length)
         : 6,
 
       // Персональный порог стресса  

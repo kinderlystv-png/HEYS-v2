@@ -8,10 +8,15 @@
         const { React, day, setDay, sleepHours } = deps || {};
         const sleepStart = day ? day.sleepStart : '';
         const sleepEnd = day ? day.sleepEnd : '';
+        const daySleepMinutes = day ? day.daySleepMinutes : 0;
 
         React.useEffect(() => {
             if (!day) return;
-            const calculatedSleepH = sleepHours(sleepStart, sleepEnd);
+            const nightSleepHours = sleepHours(sleepStart, sleepEnd);
+            const napHours = (HEYS.dayUtils?.normalizeDaySleepMinutes?.(daySleepMinutes) || 0) / 60;
+            const calculatedSleepH = HEYS.dayUtils?.getTotalSleepHours
+                ? HEYS.dayUtils.getTotalSleepHours({ ...day, sleepHours: nightSleepHours, daySleepMinutes })
+                : Math.round((nightSleepHours + napHours) * 10) / 10;
             if (calculatedSleepH !== day.sleepHours) {
                 setDay(prevDay => ({
                     ...prevDay,
@@ -19,7 +24,7 @@
                     updatedAt: Date.now()
                 }));
             }
-        }, [sleepStart, sleepEnd]);
+        }, [sleepStart, sleepEnd, daySleepMinutes]);
     }
 
     HEYS.daySleepEffects = {

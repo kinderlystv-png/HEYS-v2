@@ -710,6 +710,8 @@
       return end;
     }), 0);
     const sleepHoursAvg = averagePositive(rawDays.map((day) => {
+      const totalSleepHours = HEYS.dayUtils?.getTotalSleepHours?.(day);
+      if (Number.isFinite(totalSleepHours) && totalSleepHours > 0) return totalSleepHours;
       if (day.sleepHours != null && Number(day.sleepHours) > 0) return Number(day.sleepHours);
       if (day.sleepStart && day.sleepEnd && HEYS.dayUtils?.sleepHours) {
         return HEYS.dayUtils.sleepHours(day.sleepStart, day.sleepEnd);

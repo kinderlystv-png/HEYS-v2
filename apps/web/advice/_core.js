@@ -83,6 +83,7 @@
 
     const OUTCOME_PROFILE_KEY = 'heys_advice_outcomes_v1';
     const OUTCOME_PENDING_KEY = 'heys_advice_pending_outcomes_v1';
+    const DAILY_TRACE_LOG_KEY = 'heys_advice_trace_day_v1';
 
     // ═══════════════════════════════════════════════════════════
     // 🚀 ADVICE CACHE — Кэширование результатов generateAdvices
@@ -1727,18 +1728,59 @@
      * @returns {boolean}
      */
     function canShowAdvice(adviceId, options = {}) {
+        return explainAdviceVisibility(adviceId, options).allowed;
+    }
+
+    function explainAdviceVisibility(adviceId, options = {}) {
         const data = getSessionData();
+        const now = Date.now();
+        const timeSinceLastShown = now - (data.lastShown || 0);
 
-        // Лимит советов за сессию
-        if (data.count >= MAX_ADVICES_PER_SESSION) return false;
+        if (data.count >= MAX_ADVICES_PER_SESSION) {
+            return {
+                allowed: false,
+                reason: 'session_limit',
+                message: `Достигнут лимит ${MAX_ADVICES_PER_SESSION} советов за сессию`,
+                sessionCount: data.count,
+                maxPerSession: MAX_ADVICES_PER_SESSION,
+                remainingMs: 0,
+                lastShownAt: data.lastShown || 0
+            };
+        }
 
-        // Cooldown между советами (если не canSkipCooldown)
-        if (!options.canSkipCooldown && Date.now() - data.lastShown < ADVICE_COOLDOWN_MS) return false;
+        if (!options.canSkipCooldown && timeSinceLastShown < ADVICE_COOLDOWN_MS) {
+            return {
+                allowed: false,
+                reason: 'global_cooldown',
+                message: `Глобальный cooldown активен ещё ${Math.ceil((ADVICE_COOLDOWN_MS - timeSinceLastShown) / 1000)}с`,
+                sessionCount: data.count,
+                maxPerSession: MAX_ADVICES_PER_SESSION,
+                remainingMs: Math.max(0, ADVICE_COOLDOWN_MS - timeSinceLastShown),
+                lastShownAt: data.lastShown || 0
+            };
+        }
 
-        // Уже показывали этот совет
-        if (data.shown.includes(adviceId)) return false;
+        if (data.shown.includes(adviceId)) {
+            return {
+                allowed: false,
+                reason: 'already_shown_in_session',
+                message: 'Этот advice.id уже показывался в текущей сессии',
+                sessionCount: data.count,
+                maxPerSession: MAX_ADVICES_PER_SESSION,
+                remainingMs: 0,
+                lastShownAt: data.lastShown || 0
+            };
+        }
 
-        return true;
+        return {
+            allowed: true,
+            reason: 'eligible',
+            message: 'Совет можно показывать',
+            sessionCount: data.count,
+            maxPerSession: MAX_ADVICES_PER_SESSION,
+            remainingMs: 0,
+            lastShownAt: data.lastShown || 0
+        };
     }
 
     /**
@@ -2470,6 +2512,910 @@
         };
     }
 
+    function cloneTracePayload(payload) {
+        if (payload == null) return payload;
+        try {
+            return JSON.parse(JSON.stringify(payload));
+        } catch (e) {
+            return null;
+        }
+    }
+
+    function roundTraceNumber(value, digits = 3) {
+        if (typeof value !== 'number' || !Number.isFinite(value)) return null;
+        const factor = 10 ** digits;
+        return Math.round(value * factor) / factor;
+    }
+
+    function getAdviceTraceKey(list, index) {
+        const advice = list[index];
+        const id = advice?.id || `unknown_${index}`;
+        let duplicateIndex = 0;
+
+        for (let cursor = 0; cursor < index; cursor += 1) {
+            const previousId = list[cursor]?.id || `unknown_${cursor}`;
+            if (previousId === id) duplicateIndex += 1;
+        }
+
+        return `${id}#${duplicateIndex}`;
+    }
+
+    function attachAdviceTraceMeta(advice, meta) {
+        if (!advice || typeof advice !== 'object') return advice;
+        return {
+            ...advice,
+            __traceModule: meta?.module || advice.__traceModule || null,
+            __traceSource: meta?.source || advice.__traceSource || null
+        };
+    }
+
+    function buildAdviceTraceInput(ctx) {
+        return {
+            date: ctx?.day?.date || null,
+            trigger: ctx?.trigger || null,
+            hour: ctx?.hour ?? null,
+            mealCount: ctx?.mealCount ?? 0,
+            hasTraining: !!ctx?.hasTraining,
+            emotionalState: ctx?.emotionalState || null,
+            tone: ctx?.tone || null,
+            goal: ctx?.goal?.mode || ctx?.goal || null,
+            specialDay: ctx?.specialDay || null,
+            kcalPct: roundTraceNumber(ctx?.kcalPct),
+            waterPct: roundTraceNumber(ctx?.waterPct),
+            proteinPct: roundTraceNumber(ctx?.proteinPct),
+            fatPct: roundTraceNumber(ctx?.fatPct),
+            carbsPct: roundTraceNumber(ctx?.carbsPct),
+            fiberPct: roundTraceNumber(ctx?.fiberPct),
+            simplePct: roundTraceNumber(ctx?.simplePct),
+            harmPct: roundTraceNumber(ctx?.harmPct),
+            dayTotals: {
+                kcal: ctx?.dayTot?.kcal || 0,
+                prot: ctx?.dayTot?.prot || 0,
+                fat: ctx?.dayTot?.fat || 0,
+                carbs: ctx?.dayTot?.carbs || 0,
+                fiber: ctx?.dayTot?.fiber || 0,
+                simple: ctx?.dayTot?.simple || 0,
+                harm: ctx?.dayTot?.harm || 0,
+                waterMl: ctx?.day?.waterMl || 0
+            },
+            norms: {
+                optimum: ctx?.optimum || 0,
+                displayOptimum: ctx?.displayOptimum || 0,
+                prot: ctx?.normAbs?.prot || 0,
+                fat: ctx?.normAbs?.fat || 0,
+                carbs: ctx?.normAbs?.carbs || 0,
+                fiber: ctx?.normAbs?.fiber || 0,
+                simple: ctx?.normAbs?.simple || 0,
+                harm: ctx?.normAbs?.harm || 0,
+                waterGoal: ctx?.waterGoal || 0
+            },
+            crashRisk: ctx?.crashRisk
+                ? {
+                    level: ctx.crashRisk.level || null,
+                    risk: ctx.crashRisk.risk ?? null,
+                    factors: Array.isArray(ctx.crashRisk.factors) ? ctx.crashRisk.factors.slice(0, 6) : []
+                }
+                : null
+        };
+    }
+
+    function buildAdviceTraceRefs(list, includeText = false) {
+        return (Array.isArray(list) ? list : []).map((advice, index) => {
+            const id = advice?.id || `unknown_${index}`;
+            const ref = {
+                key: getAdviceTraceKey(list, index),
+                id,
+                type: advice?.type || null,
+                category: advice?.category || null,
+                module: advice?.__traceModule || advice?.__traceSource || null,
+                priority: typeof advice?.priority === 'number' ? advice.priority : null,
+                smartScore: roundTraceNumber(advice?.smartScore),
+                confidence: advice?.confidence || null,
+                canSkipCooldown: !!advice?.canSkipCooldown
+            };
+
+            if (includeText) {
+                ref.text = advice?.text || '';
+                ref.evidenceSummary = advice?.evidenceSummary || null;
+                ref.whyNow = advice?.expertMeta?.whyNow || null;
+            }
+
+            return ref;
+        });
+    }
+
+    function buildTraceReasonMapEntries(reasonMap) {
+        if (!reasonMap || typeof reasonMap !== 'object') return {};
+        return Object.entries(reasonMap).reduce((acc, [key, value]) => {
+            if (value) acc[key] = value;
+            return acc;
+        }, {});
+    }
+
+    function explainTimeRestriction(advice, hour = new Date().getHours()) {
+        const restriction = TIME_RESTRICTIONS[advice?.id];
+        if (!restriction) return null;
+
+        if (restriction.notAfterHour !== undefined && hour >= restriction.notAfterHour) {
+            return {
+                code: 'not_after_hour',
+                message: `Не показывается после ${restriction.notAfterHour}:00`,
+                hour,
+                rule: cloneTracePayload(restriction)
+            };
+        }
+
+        if (restriction.notBeforeHour !== undefined && hour < restriction.notBeforeHour) {
+            return {
+                code: 'not_before_hour',
+                message: `Показывается только после ${restriction.notBeforeHour}:00`,
+                hour,
+                rule: cloneTracePayload(restriction)
+            };
+        }
+
+        if (restriction.onlyBetweenHours) {
+            const [from, to] = restriction.onlyBetweenHours;
+            if (hour < from || hour >= to) {
+                return {
+                    code: 'only_between_hours',
+                    message: `Показывается только в окне ${from}:00–${to}:00`,
+                    hour,
+                    rule: cloneTracePayload(restriction)
+                };
+            }
+        }
+
+        return null;
+    }
+
+    function buildDeduplicationReasonMap(beforeList, afterList) {
+        const keptIds = new Set((afterList || []).map(item => item?.id));
+
+        return buildTraceReasonMapEntries((beforeList || []).reduce((acc, advice) => {
+            if (!advice?.id || keptIds.has(advice.id)) return acc;
+            const groupEntry = Object.entries(DEDUPLICATION_RULES).find(([, ids]) => ids.includes(advice.id));
+            if (!groupEntry) return acc;
+            const [group, ids] = groupEntry;
+            const winner = (afterList || []).find(item => ids.includes(item?.id));
+            acc[advice.id] = {
+                code: 'deduplicated',
+                message: winner
+                    ? `Убран как дубль группы "${group}", победил ${winner.id}`
+                    : `Убран как дубль группы "${group}"`,
+                group,
+                winnerId: winner?.id || null
+            };
+            return acc;
+        }, {}));
+    }
+
+    function buildTriggerFilterReasonMap(beforeList, afterList, options = {}) {
+        const safeBefore = Array.isArray(beforeList) ? beforeList : [];
+        const safeAfter = Array.isArray(afterList) ? afterList : [];
+        const afterKeys = new Set(safeAfter.map((item, index) => getAdviceTraceKey(safeAfter, index)));
+        const trigger = options?.trigger || null;
+        const userBusy = !!options?.userBusy;
+
+        return buildTraceReasonMapEntries(safeBefore.reduce((acc, advice, index) => {
+            if (!advice?.id) return acc;
+
+            const adviceKey = getAdviceTraceKey(safeBefore, index);
+            if (afterKeys.has(adviceKey)) return acc;
+
+            if (userBusy) {
+                acc[advice.id] = {
+                    code: 'ui_busy',
+                    message: 'UI был занят модалкой или picker-экраном, поэтому trigger_filter не пропустил advice.',
+                    trigger,
+                    userBusy: true
+                };
+                return acc;
+            }
+
+            const adviceTriggers = Array.isArray(advice?.triggers) ? advice.triggers.filter(Boolean) : [];
+            if (!trigger) {
+                acc[advice.id] = {
+                    code: 'missing_trigger',
+                    message: 'Триггер не задан, поэтому advice не может пройти trigger_filter.',
+                    adviceTriggers
+                };
+                return acc;
+            }
+
+            acc[advice.id] = {
+                code: 'trigger_mismatch',
+                message: adviceTriggers.length > 0
+                    ? `Триггер ${trigger} не входит в triggers=[${adviceTriggers.join(', ')}]`
+                    : `У advice нет подходящего trigger для ${trigger}`,
+                trigger,
+                adviceTriggers
+            };
+            return acc;
+        }, {}));
+    }
+
+    function buildExcludeReasonMap(beforeList, afterList) {
+        const keptIds = new Set((afterList || []).map(item => item?.id));
+        const reasonMap = {};
+
+        (beforeList || []).forEach(advice => {
+            if (!keptIds.has(advice?.id) || !Array.isArray(advice?.excludes)) return;
+            advice.excludes.forEach(excludedId => {
+                if (keptIds.has(excludedId)) return;
+                reasonMap[excludedId] = {
+                    code: 'excluded_by_higher_priority',
+                    message: `Убран через excludes более приоритетного совета ${advice.id}`,
+                    winnerId: advice.id
+                };
+            });
+        });
+
+        return reasonMap;
+    }
+
+    function buildCategoryLimitReasonMap(beforeList, afterList) {
+        const keptIds = new Set((afterList || []).map(item => item?.id));
+        const keptByCategory = (afterList || []).reduce((acc, advice) => {
+            const category = advice?.category || 'other';
+            if (!acc[category]) acc[category] = [];
+            acc[category].push(advice.id);
+            return acc;
+        }, {});
+
+        return buildTraceReasonMapEntries((beforeList || []).reduce((acc, advice) => {
+            if (!advice?.id || keptIds.has(advice.id)) return acc;
+            const category = advice?.category || 'other';
+            acc[advice.id] = {
+                code: 'category_limit',
+                message: `Категория ${category} превысила лимит ${MAX_ADVICES_PER_CATEGORY}`,
+                category,
+                winners: (keptByCategory[category] || []).slice(0, MAX_ADVICES_PER_CATEGORY)
+            };
+            return acc;
+        }, {}));
+    }
+
+    function buildExpertConflictReasonMap(beforeList, afterList) {
+        const keptIds = new Set((afterList || []).map(item => item?.id));
+        const winnersByTheme = (afterList || []).reduce((acc, advice) => {
+            const theme = advice?.expertMeta?.theme || advice?.category || 'general';
+            if (!acc[theme]) acc[theme] = advice;
+            return acc;
+        }, {});
+
+        return buildTraceReasonMapEntries((beforeList || []).reduce((acc, advice) => {
+            if (!advice?.id || keptIds.has(advice.id)) return acc;
+            const theme = advice?.expertMeta?.theme || advice?.category || 'general';
+            const sameThemeWinner = winnersByTheme[theme];
+            const crossThemeWinner = (afterList || []).find(item => {
+                const itemTheme = item?.expertMeta?.theme || item?.category || 'general';
+                return getCrossThemeConflicts(theme).includes(itemTheme);
+            });
+            const winner = sameThemeWinner || crossThemeWinner || null;
+
+            acc[advice.id] = {
+                code: 'expert_conflict_resolution',
+                message: winner
+                    ? `Уступил более сильному совету ${winner.id}`
+                    : 'Уступил более сильному совету в expert conflict resolution',
+                theme,
+                winnerId: winner?.id || null
+            };
+            return acc;
+        }, {}));
+    }
+
+    function appendAdviceTraceStage(trace, stageName, beforeList, afterList, meta, options = {}) {
+        if (!trace) return;
+
+        const beforeRefs = buildAdviceTraceRefs(beforeList);
+        const afterRefs = buildAdviceTraceRefs(afterList);
+        const afterKeys = new Set(afterRefs.map(item => item.key));
+        const beforeKeys = new Set(beforeRefs.map(item => item.key));
+        const removed = beforeRefs.filter(item => !afterKeys.has(item.key));
+        const added = afterRefs.filter(item => !beforeKeys.has(item.key));
+        const beforeOrder = beforeRefs.map(item => item.id);
+        const afterOrder = afterRefs.map(item => item.id);
+        const reasonMap = buildTraceReasonMapEntries(options?.reasonMap);
+        const isPureReorder = removed.length === 0
+            && added.length === 0
+            && beforeOrder.length === afterOrder.length
+            && beforeOrder.some((id, index) => afterOrder[index] !== id);
+        const moved = isPureReorder
+            ? beforeRefs.reduce((acc, item, index) => {
+                const nextIndex = afterRefs.findIndex(candidate => candidate.key === item.key);
+                if (nextIndex !== -1 && nextIndex !== index) {
+                    acc.push({ id: item.id, fromIndex: index, toIndex: nextIndex });
+                }
+                return acc;
+            }, [])
+            : [];
+
+        trace.stages = trace.stages || [];
+        trace.stages.push({
+            stage: stageName,
+            beforeCount: beforeRefs.length,
+            afterCount: afterRefs.length,
+            removed: removed.map(({ key, ...rest }) => ({
+                ...rest,
+                reason: reasonMap[rest.id] || null
+            })),
+            added: added.map(({ key, ...rest }) => rest),
+            moved,
+            reordered: isPureReorder || !!options?.reordered,
+            orderBefore: isPureReorder ? beforeOrder : undefined,
+            orderAfter: isPureReorder ? afterOrder : undefined,
+            outputIds: afterRefs.map(item => item.id),
+            meta: cloneTracePayload(meta) || {}
+        });
+    }
+
+    function buildModuleNoOutputNote(moduleKey, ctx) {
+        if (moduleKey === 'hydration') {
+            if ((ctx?.day?.waterMl || 0) === 0 && (ctx?.hour || 0) < 10) {
+                return 'Раньше hydration-модуль почти не давал утренний bootstrap и в основном срабатывал после 10:00 или вечером.';
+            }
+            if ((ctx?.hour || 0) < 10) return 'У hydration-модуля исторически почти все правила были дневными/вечерними.';
+        }
+
+        if (moduleKey === 'nutrition') {
+            if ((ctx?.mealCount || 0) === 0 && (ctx?.hour || 0) < 12) {
+                return 'Большинство nutrition-правил завязаны на mealCount >= 1/2 или hour >= 12, поэтому пустое утро часто оставалось без nutrition advice.';
+            }
+            if ((ctx?.mealCount || 0) < 2) return 'Для части nutrition-правил требуется минимум 1–2 приёма пищи.';
+        }
+
+        if (moduleKey === 'training' && !ctx?.hasTraining) return 'Нет тренировочного триггера на сегодня.';
+        if (moduleKey === 'timing' && (ctx?.hour || 0) < 11) return 'Timing-правила часто завязаны на более поздние окна дня или близость ко сну.';
+        if (moduleKey === 'emotional' && (ctx?.day?.stressAvg || 0) <= 0 && !ctx?.crashRisk) return 'Нет выраженных stress/crash сигналов для emotional-модуля.';
+
+        return null;
+    }
+
+    function summarizeExpertSignalsForTrace(signals) {
+        if (!signals) return null;
+
+        const patternSignals = Object.entries(signals?.patternSignals || {}).reduce((acc, [key, value]) => {
+            if (!value || value.available === false) return acc;
+            acc[key] = {
+                score: roundTraceNumber(value.score),
+                correlation: roundTraceNumber(value.correlation),
+                pattern: value.pattern || key
+            };
+            return acc;
+        }, {});
+
+        const earlyWarnings = signals?.earlyWarnings;
+
+        return {
+            lowProteinDays7: signals?.lowProteinDays7 || 0,
+            lowFiberDays7: signals?.lowFiberDays7 || 0,
+            highSimpleDays7: signals?.highSimpleDays7 || 0,
+            lowWaterDays7: signals?.lowWaterDays7 || 0,
+            lateMealDays7: signals?.lateMealDays7 || 0,
+            sleepDebtDays7: signals?.sleepDebtDays7 || 0,
+            highStressDays7: signals?.highStressDays7 || 0,
+            underTargetDays7: signals?.underTargetDays7 || 0,
+            trainingDays7: signals?.trainingDays7 || 0,
+            poorRecoveryTrainingDays7: signals?.poorRecoveryTrainingDays7 || 0,
+            weeklyTrends: cloneTracePayload(signals?.weeklyTrends) || {},
+            phenotype: cloneTracePayload(signals?.phenotype) || null,
+            patternSignals,
+            earlyWarnings: earlyWarnings
+                ? {
+                    globalScore: earlyWarnings.globalScore || 0,
+                    highSeverityCount: earlyWarnings.highSeverityCount || 0,
+                    mediumSeverityCount: earlyWarnings.mediumSeverityCount || 0,
+                    criticalCount: earlyWarnings.criticalCount || 0,
+                    warnings: (earlyWarnings.warnings || []).slice(0, 8).map(warning => ({
+                        type: warning?.type || null,
+                        severity: warning?.severity || null,
+                        priorityScore: warning?.priorityScore || 0,
+                        patternName: warning?.patternName || null,
+                        message: warning?.message || null
+                    })),
+                    causalChains: (earlyWarnings.causalChains || []).slice(0, 4).map(chain => ({
+                        chainId: chain?.chainId || null,
+                        name: chain?.name || null,
+                        rootCause: chain?.rootCause || null,
+                        outcome: chain?.outcome || null,
+                        adjustedConfidence: roundTraceNumber(chain?.adjustedConfidence),
+                        matchRatio: roundTraceNumber(chain?.matchRatio),
+                        matchedNodes: Array.isArray(chain?.matchedNodes) ? chain.matchedNodes.slice(0, 8) : []
+                    }))
+                }
+                : null
+        };
+    }
+
+    function formatAdviceTraceForClipboard(trace) {
+        if (!trace) return 'HEYS advice trace unavailable';
+
+        const lines = [];
+        const pushSection = (title) => {
+            if (lines.length > 0) lines.push('');
+            lines.push(`=== ${title} ===`);
+        };
+
+        lines.push(`HEYS advice trace ${trace.version || 'v1'}`);
+        lines.push(`generatedAt: ${trace.generatedAt || ''}`);
+        lines.push(`trigger: ${trace.trigger || trace?.input?.trigger || 'unknown'}`);
+
+        pushSection('INPUT');
+        lines.push(JSON.stringify(trace.input || {}, null, 2));
+
+        pushSection('MODULES');
+        (trace.modules || []).forEach(moduleRun => {
+            lines.push(`- ${moduleRun.module}: status=${moduleRun.status} mode=${moduleRun.mode || 'n/a'} count=${moduleRun.outputCount || 0}`);
+            if (moduleRun.note) lines.push(`  note: ${moduleRun.note}`);
+            if (moduleRun.error) lines.push(`  error: ${moduleRun.error}`);
+            if (Array.isArray(moduleRun.adviceIds) && moduleRun.adviceIds.length > 0) {
+                lines.push(`  ids: ${moduleRun.adviceIds.join(', ')}`);
+            }
+        });
+
+        pushSection('SOURCES');
+        lines.push(JSON.stringify(trace.sources || {}, null, 2));
+
+        pushSection('PIPELINE');
+        (trace.stages || []).forEach(stage => {
+            lines.push(`- ${stage.stage}: ${stage.beforeCount} -> ${stage.afterCount}`);
+            if (stage.meta && Object.keys(stage.meta).length > 0) {
+                lines.push(`  meta: ${JSON.stringify(stage.meta)}`);
+            }
+            if (stage.reordered && Array.isArray(stage.orderBefore) && Array.isArray(stage.orderAfter)) {
+                lines.push(`  orderBefore: ${stage.orderBefore.join(', ')}`);
+                lines.push(`  orderAfter: ${stage.orderAfter.join(', ')}`);
+            }
+            if (Array.isArray(stage.moved) && stage.moved.length > 0) {
+                lines.push(`  moved: ${stage.moved.map(item => `${item.id} ${item.fromIndex}→${item.toIndex}`).join(', ')}`);
+            }
+            if (Array.isArray(stage.removed) && stage.removed.length > 0) {
+                lines.push(`  removed: ${stage.removed.map(item => {
+                    const reason = item.reason?.message ? ` (${item.reason.message})` : '';
+                    return `${item.id}${reason}`;
+                }).join(', ')}`);
+            }
+            if (Array.isArray(stage.added) && stage.added.length > 0) {
+                lines.push(`  added: ${stage.added.map(item => item.id).join(', ')}`);
+            }
+        });
+
+        pushSection('OUTPUT');
+        lines.push(JSON.stringify(trace.outputs || {}, null, 2));
+
+        pushSection('EXPERT_SIGNALS');
+        lines.push(JSON.stringify(trace.expertSignals || {}, null, 2));
+
+        pushSection('RAW_JSON');
+        lines.push(JSON.stringify(trace, null, 2));
+
+        return lines.join('\n');
+    }
+
+    function getAdviceTraceStoreValue(key, fallback) {
+        try {
+            const HEYS = window.HEYS || {};
+            const U = HEYS.utils || {};
+            const stored = HEYS.store?.get
+                ? HEYS.store.get(key, null)
+                : (U.lsGet ? U.lsGet(key, null) : JSON.parse(localStorage.getItem(key) || 'null'));
+            return stored == null ? fallback : stored;
+        } catch (e) {
+            return fallback;
+        }
+    }
+
+    function setAdviceTraceStoreValue(key, value) {
+        try {
+            const HEYS = window.HEYS || {};
+            const U = HEYS.utils || {};
+            if (HEYS.store?.set) {
+                HEYS.store.set(key, value);
+            } else if (U.lsSet) {
+                U.lsSet(key, value);
+            } else {
+                localStorage.setItem(key, JSON.stringify(value));
+            }
+        } catch (e) {
+            // Ignore storage errors
+        }
+    }
+
+    function normalizeDailyAdviceTraceLog(log, date) {
+        const safeDate = date || log?.date || new Date().toISOString().slice(0, 10);
+        return {
+            version: 'advice-day-log-v2',
+            date: safeDate,
+            entries: Array.isArray(log?.entries) ? log.entries : [],
+            updatedAt: log?.updatedAt || 0
+        };
+    }
+
+    function createEmptyDailyAdviceTraceLog(date) {
+        return normalizeDailyAdviceTraceLog(null, date);
+    }
+
+    function getDailyAdviceTraceLog(date) {
+        const safeDate = date || new Date().toISOString().slice(0, 10);
+        const stored = getAdviceTraceStoreValue(DAILY_TRACE_LOG_KEY, null);
+        if (!stored || stored.date !== safeDate || !Array.isArray(stored.entries)) {
+            return createEmptyDailyAdviceTraceLog(safeDate);
+        }
+        return normalizeDailyAdviceTraceLog(stored, safeDate);
+    }
+
+    function saveDailyAdviceTraceLog(log) {
+        if (!log || !log.date) return;
+        setAdviceTraceStoreValue(DAILY_TRACE_LOG_KEY, {
+            ...normalizeDailyAdviceTraceLog(log, log.date),
+            updatedAt: Date.now(),
+            entries: Array.isArray(log.entries) ? log.entries.slice(-250) : []
+        });
+    }
+
+    function buildAdviceTraceFingerprint(trace) {
+        if (!trace) return 'trace:none';
+        const payload = {
+            trigger: trace?.trigger || null,
+            hour: trace?.input?.hour || null,
+            mealCount: trace?.input?.mealCount || 0,
+            waterMl: trace?.input?.dayTotals?.waterMl || 0,
+            kcal: trace?.input?.dayTotals?.kcal || 0,
+            relevant: (trace?.outputs?.relevant || []).map(item => item?.id || null),
+            cooldownEligible: (trace?.outputs?.cooldownEligible || []).map(item => item?.id || null),
+            topIssues: trace?.summary?.topIssues || []
+        };
+        try {
+            return JSON.stringify(payload);
+        } catch (e) {
+            return String(Date.now());
+        }
+    }
+
+    function buildAdviceTraceEntrySummary(trace) {
+        const blockerCounts = {};
+
+        (trace?.stages || []).forEach(stage => {
+            (stage?.removed || []).forEach(item => {
+                const code = item?.reason?.code;
+                if (!code) return;
+                blockerCounts[code] = (blockerCounts[code] || 0) + 1;
+            });
+        });
+
+        const topBlockers = Object.entries(blockerCounts)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 3)
+            .map(([code, count]) => ({ code, count }));
+
+        return {
+            trigger: trace?.trigger || null,
+            hour: trace?.input?.hour || null,
+            mealCount: trace?.input?.mealCount || 0,
+            waterMl: trace?.input?.dayTotals?.waterMl || 0,
+            kcal: trace?.input?.dayTotals?.kcal || 0,
+            visibleForManualCount: trace?.outputs?.visibleForManualCount || trace?.outputs?.relevantCount || 0,
+            eligibleForAutoToastCount: trace?.outputs?.eligibleForAutoToastCount || trace?.outputs?.cooldownEligibleCount || 0,
+            primaryId: trace?.outputs?.primaryId || null,
+            topIssues: Array.isArray(trace?.summary?.topIssues) ? trace.summary.topIssues.slice(0, 3) : [],
+            topBlockers,
+            modulesWithOutput: (trace?.modules || []).filter(moduleRun => (moduleRun?.outputCount || 0) > 0).map(moduleRun => moduleRun.module),
+            silentModules: (trace?.modules || []).filter(moduleRun => (moduleRun?.outputCount || 0) === 0).map(moduleRun => moduleRun.module)
+        };
+    }
+
+    function incrementCounter(counter, key, amount = 1) {
+        if (!counter || !key) return;
+        counter[key] = (counter[key] || 0) + amount;
+    }
+
+    function topCounterEntries(counter, limit = 5) {
+        return Object.entries(counter || {})
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, limit)
+            .map(([key, count]) => ({ key, count }));
+    }
+
+    function buildDailyModuleReport(snapshotEntries) {
+        const stats = {};
+
+        snapshotEntries.forEach(entry => {
+            (entry?.trace?.modules || []).forEach(moduleRun => {
+                const moduleKey = moduleRun?.module || 'unknown';
+                if (!stats[moduleKey]) {
+                    stats[moduleKey] = {
+                        module: moduleKey,
+                        runs: 0,
+                        withOutput: 0,
+                        noOutput: 0,
+                        errors: 0,
+                        totalOutputCount: 0,
+                        notes: {},
+                        adviceIds: {}
+                    };
+                }
+
+                const bucket = stats[moduleKey];
+                bucket.runs += 1;
+                bucket.totalOutputCount += moduleRun?.outputCount || 0;
+                if ((moduleRun?.outputCount || 0) > 0) bucket.withOutput += 1;
+                if (moduleRun?.status === 'no_output') bucket.noOutput += 1;
+                if (moduleRun?.status === 'error') bucket.errors += 1;
+                if (moduleRun?.note) incrementCounter(bucket.notes, moduleRun.note);
+                (moduleRun?.adviceIds || []).forEach(adviceId => incrementCounter(bucket.adviceIds, adviceId));
+            });
+        });
+
+        return Object.values(stats)
+            .map(bucket => ({
+                module: bucket.module,
+                runs: bucket.runs,
+                withOutput: bucket.withOutput,
+                noOutput: bucket.noOutput,
+                errors: bucket.errors,
+                avgOutputCount: bucket.runs > 0 ? roundTraceNumber(bucket.totalOutputCount / bucket.runs, 2) : 0,
+                topAdviceIds: topCounterEntries(bucket.adviceIds, 4),
+                topNotes: topCounterEntries(bucket.notes, 2)
+            }))
+            .sort((a, b) => a.module.localeCompare(b.module));
+    }
+
+    function buildDailyTriggerReport(snapshotEntries) {
+        const stats = {};
+
+        snapshotEntries.forEach(entry => {
+            const summary = entry?.summary || {};
+            const trigger = summary?.trigger || entry?.trace?.trigger || 'unknown';
+            if (!stats[trigger]) {
+                stats[trigger] = {
+                    trigger,
+                    snapshots: 0,
+                    repeatedSnapshots: 0,
+                    totalManualVisible: 0,
+                    totalAutoEligible: 0,
+                    hours: {},
+                    primaryIds: {}
+                };
+            }
+
+            const bucket = stats[trigger];
+            bucket.snapshots += 1;
+            bucket.repeatedSnapshots += Math.max(1, entry?.repeatCount || 1);
+            bucket.totalManualVisible += summary?.visibleForManualCount || 0;
+            bucket.totalAutoEligible += summary?.eligibleForAutoToastCount || 0;
+            if (summary?.hour != null) incrementCounter(bucket.hours, String(summary.hour));
+            if (summary?.primaryId) incrementCounter(bucket.primaryIds, summary.primaryId);
+        });
+
+        return Object.values(stats).map(bucket => ({
+            trigger: bucket.trigger,
+            snapshots: bucket.snapshots,
+            repeatedSnapshots: bucket.repeatedSnapshots,
+            avgManualVisible: bucket.snapshots > 0 ? roundTraceNumber(bucket.totalManualVisible / bucket.snapshots, 2) : 0,
+            avgAutoEligible: bucket.snapshots > 0 ? roundTraceNumber(bucket.totalAutoEligible / bucket.snapshots, 2) : 0,
+            peakHours: topCounterEntries(bucket.hours, 3),
+            topPrimaryIds: topCounterEntries(bucket.primaryIds, 3)
+        })).sort((a, b) => b.repeatedSnapshots - a.repeatedSnapshots);
+    }
+
+    function buildDailyBlockerReport(snapshotEntries) {
+        const reasonCounts = {};
+        const stageCounts = {};
+        const culpritAdviceIds = {};
+
+        snapshotEntries.forEach(entry => {
+            const multiplier = Math.max(1, entry?.repeatCount || 1);
+            (entry?.trace?.stages || []).forEach(stage => {
+                (stage?.removed || []).forEach(item => {
+                    incrementCounter(reasonCounts, item?.reason?.code || 'unknown', multiplier);
+                    incrementCounter(stageCounts, stage?.stage || 'unknown', multiplier);
+                    if (item?.id) incrementCounter(culpritAdviceIds, item.id, multiplier);
+                });
+            });
+        });
+
+        return {
+            topReasons: topCounterEntries(reasonCounts, 8),
+            topStages: topCounterEntries(stageCounts, 6),
+            topAdviceIds: topCounterEntries(culpritAdviceIds, 8)
+        };
+    }
+
+    function buildDailyEventReport(eventEntries) {
+        const typeCounts = {};
+        const adviceCounts = {};
+
+        eventEntries.forEach(entry => {
+            incrementCounter(typeCounts, entry?.eventType || 'unknown');
+            if (entry?.payload?.adviceId) incrementCounter(adviceCounts, entry.payload.adviceId);
+        });
+
+        return {
+            byType: topCounterEntries(typeCounts, 10),
+            topAdviceIds: topCounterEntries(adviceCounts, 10)
+        };
+    }
+
+    function buildDailyQualitySummary(snapshotEntries, eventEntries, moduleReport, blockerReport, triggerReport) {
+        const repeatedSnapshots = snapshotEntries.reduce((sum, entry) => sum + Math.max(1, entry?.repeatCount || 1), 0);
+        const uniqueTriggers = [...new Set(snapshotEntries.map(entry => entry?.summary?.trigger || entry?.trace?.trigger).filter(Boolean))];
+        const uniqueAdviceIds = [...new Set(snapshotEntries.flatMap(entry => (entry?.trace?.outputs?.relevant || []).map(item => item?.id).filter(Boolean)))];
+        const modulesWithOutput = moduleReport.filter(item => item.withOutput > 0).length;
+        const silentModules = moduleReport.filter(item => item.withOutput === 0).map(item => item.module);
+        const dominantBlocker = blockerReport?.topReasons?.[0] || null;
+        const findings = [];
+
+        if (dominantBlocker?.key === 'global_cooldown') {
+            findings.push(`Главный блокер дня — global cooldown (${dominantBlocker.count} срабатываний). Auto-toast часто не доходил до показа.`);
+        }
+
+        const tabOpenStats = triggerReport.find(item => item.trigger === 'tab_open');
+        if (tabOpenStats && tabOpenStats.avgManualVisible > tabOpenStats.avgAutoEligible + 2) {
+            findings.push('tab_open заметно уже manual drawer: часть аналитики доступна только при ручном раскрытии советов.');
+        }
+
+        if (eventEntries.length === 0) {
+            findings.push('Пользовательских событий нет: лог хорошо описывает решения движка, но почти не отражает реакцию пользователя.');
+        }
+
+        if (silentModules.length > 0) {
+            findings.push(`Модули без выдачи в течение дня: ${silentModules.join(', ')}.`);
+        }
+
+        let heuristicScore = 52;
+        heuristicScore += Math.min(14, snapshotEntries.length * 3);
+        heuristicScore += Math.min(10, uniqueTriggers.length * 4);
+        heuristicScore += Math.min(12, modulesWithOutput * 2);
+        heuristicScore += Math.min(12, eventEntries.length * 2);
+        heuristicScore -= dominantBlocker?.key === 'global_cooldown' ? Math.min(18, dominantBlocker.count * 2) : 0;
+        heuristicScore -= Math.min(12, silentModules.length * 2);
+        heuristicScore = Math.max(0, Math.min(100, heuristicScore));
+
+        const grade = heuristicScore >= 85
+            ? 'strong'
+            : heuristicScore >= 70
+                ? 'good'
+                : heuristicScore >= 55
+                    ? 'mixed'
+                    : 'weak';
+
+        return {
+            heuristicScore,
+            grade,
+            snapshotCount: snapshotEntries.length,
+            repeatedSnapshots,
+            eventCount: eventEntries.length,
+            uniqueTriggers,
+            uniqueAdviceIds: uniqueAdviceIds.length,
+            modulesWithOutput,
+            silentModules,
+            dominantBlocker,
+            findings: findings.slice(0, 5)
+        };
+    }
+
+    function buildDailyAdviceDiagnostics(log) {
+        const snapshotEntries = (log?.entries || []).filter(entry => entry?.type === 'snapshot');
+        const eventEntries = (log?.entries || []).filter(entry => entry?.type === 'event');
+        const moduleReport = buildDailyModuleReport(snapshotEntries);
+        const triggerReport = buildDailyTriggerReport(snapshotEntries);
+        const blockerReport = buildDailyBlockerReport(snapshotEntries);
+        const eventReport = buildDailyEventReport(eventEntries);
+        const quality = buildDailyQualitySummary(snapshotEntries, eventEntries, moduleReport, blockerReport, triggerReport);
+
+        return {
+            quality,
+            moduleReport,
+            triggerReport,
+            blockerReport,
+            eventReport
+        };
+    }
+
+    function appendDailyAdviceTraceSnapshot(trace) {
+        if (!trace?.input?.date) return null;
+
+        const log = getDailyAdviceTraceLog(trace.input.date);
+        const fingerprint = buildAdviceTraceFingerprint(trace);
+        const lastEntry = log.entries[log.entries.length - 1];
+
+        if (lastEntry?.type === 'snapshot' && lastEntry?.fingerprint === fingerprint) {
+            lastEntry.repeatCount = (lastEntry.repeatCount || 1) + 1;
+            lastEntry.lastSeenAt = Date.now();
+            lastEntry.summary = buildAdviceTraceEntrySummary(trace);
+            saveDailyAdviceTraceLog(log);
+            return log;
+        }
+
+        log.entries.push({
+            type: 'snapshot',
+            recordedAt: Date.now(),
+            lastSeenAt: Date.now(),
+            repeatCount: 1,
+            fingerprint,
+            summary: buildAdviceTraceEntrySummary(trace),
+            trace: cloneTracePayload(trace)
+        });
+        saveDailyAdviceTraceLog(log);
+        return log;
+    }
+
+    function recordDailyAdviceTraceEvent(date, eventType, payload) {
+        if (!date || !eventType) return null;
+        const log = getDailyAdviceTraceLog(date);
+        log.entries.push({
+            type: 'event',
+            eventType,
+            recordedAt: Date.now(),
+            payload: cloneTracePayload(payload) || null
+        });
+        saveDailyAdviceTraceLog(log);
+        return log;
+    }
+
+    function formatDailyAdviceTraceForClipboard(log) {
+        if (!log?.date) return 'HEYS daily advice log unavailable';
+
+        const lines = [];
+        const pushSection = (title) => {
+            if (lines.length > 0) lines.push('');
+            lines.push(`=== ${title} ===`);
+        };
+
+        const snapshotEntries = (log.entries || []).filter(entry => entry?.type === 'snapshot');
+        const eventEntries = (log.entries || []).filter(entry => entry?.type === 'event');
+        const diagnostics = buildDailyAdviceDiagnostics(log);
+
+        lines.push(`HEYS advice daily log ${log.version || 'v2'}`);
+        lines.push(`date: ${log.date}`);
+        lines.push(`updatedAt: ${log.updatedAt || 0}`);
+        lines.push(`snapshotCount: ${snapshotEntries.length}`);
+        lines.push(`eventCount: ${eventEntries.length}`);
+
+        pushSection('SUMMARY');
+        lines.push(JSON.stringify({
+            date: log.date,
+            snapshotCount: snapshotEntries.length,
+            eventCount: eventEntries.length,
+            quality: diagnostics.quality,
+            lastSnapshot: snapshotEntries[snapshotEntries.length - 1]?.summary || null,
+            lastEvent: eventEntries[eventEntries.length - 1] || null
+        }, null, 2));
+
+        pushSection('QUALITY');
+        lines.push(JSON.stringify(diagnostics.quality || {}, null, 2));
+
+        pushSection('MODULE_REPORT');
+        lines.push(JSON.stringify(diagnostics.moduleReport || [], null, 2));
+
+        pushSection('TRIGGER_REPORT');
+        lines.push(JSON.stringify(diagnostics.triggerReport || [], null, 2));
+
+        pushSection('BLOCKERS');
+        lines.push(JSON.stringify(diagnostics.blockerReport || {}, null, 2));
+
+        pushSection('EVENT_REPORT');
+        lines.push(JSON.stringify(diagnostics.eventReport || {}, null, 2));
+
+        pushSection('TIMELINE');
+        (log.entries || []).forEach((entry, index) => {
+            if (entry?.type === 'snapshot') {
+                lines.push(`- [${index + 1}] snapshot @ ${entry.recordedAt} x${entry.repeatCount || 1}`);
+                lines.push(`  summary: ${JSON.stringify(entry.summary || {})}`);
+            } else {
+                lines.push(`- [${index + 1}] event:${entry?.eventType || 'unknown'} @ ${entry?.recordedAt || 0}`);
+                lines.push(`  payload: ${JSON.stringify(entry?.payload || {})}`);
+            }
+        });
+
+        pushSection('RAW_JSON');
+        lines.push(JSON.stringify(log, null, 2));
+
+        return lines.join('\n');
+    }
+
     function evaluateRules(rules, ctx, helpers) {
         const advices = [];
         for (const rule of rules) {
@@ -2481,27 +3427,68 @@
         return advices;
     }
 
-    function collectModuleAdvices(ctx) {
+    function collectModuleAdvices(ctx, traceCollector) {
         const advices = [];
         const modules = window.HEYS?.adviceModules || {};
         const helpers = window.HEYS?.adviceCoreHelpers || {};
         const order = ['nutrition', 'timing', 'training', 'emotional', 'hydration', 'other'];
 
+        if (traceCollector) {
+            traceCollector.moduleRuns = [];
+            traceCollector.moduleOrder = order.slice();
+        }
+
         for (const key of order) {
             const mod = modules[key];
-            if (!mod) continue;
+            const moduleTrace = {
+                module: key,
+                status: 'not_loaded',
+                mode: null,
+                outputCount: 0,
+                adviceIds: []
+            };
+
+            if (!mod) {
+                if (traceCollector?.moduleRuns) traceCollector.moduleRuns.push(moduleTrace);
+                continue;
+            }
+
             try {
                 if (typeof mod === 'function') {
+                    moduleTrace.mode = 'function';
                     const list = mod(ctx, helpers) || [];
-                    if (Array.isArray(list)) advices.push(...list);
+                    const taggedList = Array.isArray(list)
+                        ? list.map(advice => attachAdviceTraceMeta(advice, { module: key, source: 'module' }))
+                        : [];
+                    moduleTrace.outputCount = taggedList.length;
+                    moduleTrace.adviceIds = taggedList.map(advice => advice?.id || null).filter(Boolean);
+                    moduleTrace.status = taggedList.length > 0 ? 'ok' : 'no_output';
+                    moduleTrace.note = taggedList.length === 0 ? buildModuleNoOutputNote(key, ctx) : null;
+                    advices.push(...taggedList);
+                    if (traceCollector?.moduleRuns) traceCollector.moduleRuns.push(moduleTrace);
                     continue;
                 }
                 if (Array.isArray(mod)) {
-                    advices.push(...evaluateRules(mod, ctx, helpers));
+                    moduleTrace.mode = 'rules';
+                    const list = evaluateRules(mod, ctx, helpers);
+                    const taggedList = list.map(advice => attachAdviceTraceMeta(advice, { module: key, source: 'module' }));
+                    moduleTrace.outputCount = taggedList.length;
+                    moduleTrace.adviceIds = taggedList.map(advice => advice?.id || null).filter(Boolean);
+                    moduleTrace.status = taggedList.length > 0 ? 'ok' : 'no_output';
+                    moduleTrace.note = taggedList.length === 0 ? buildModuleNoOutputNote(key, ctx) : null;
+                    advices.push(...taggedList);
+                }
+                if (!moduleTrace.mode) {
+                    moduleTrace.mode = typeof mod;
+                    moduleTrace.status = 'unsupported';
                 }
             } catch (e) {
+                moduleTrace.status = 'error';
+                moduleTrace.error = e?.message || 'unknown module error';
                 console.error('[HEYS.advice] ❌ Module "' + key + '" error:', e?.message, e?.stack?.split('\n')[1]);
             }
+
+            if (traceCollector?.moduleRuns) traceCollector.moduleRuns.push(moduleTrace);
         }
 
         return advices;
@@ -2530,21 +3517,32 @@
      * @param {Object} ctx - Контекст дня
      * @returns {Array} Массив советов
      */
-    function generateAdvices(ctx) {
+    function generateAdvices(ctx, traceCollector) {
         // 🚀 Early exit: если контекст неполный — возвращаем пустой массив
         if (!ctx || !ctx.normAbs) {
+            if (traceCollector) {
+                traceCollector.cacheStatus = 'skipped';
+                traceCollector.moduleRuns = [];
+                traceCollector.note = 'missing_ctx_or_norms';
+            }
             return [];
         }
 
         // 🚀 CACHE CHECK: Если кэш валиден — возвращаем из кэша
         if (isCacheValid(ctx)) {
+            if (traceCollector) {
+                const cachedTrace = cloneTracePayload(adviceCache.trace) || {};
+                traceCollector.cacheStatus = 'hit';
+                traceCollector.moduleRuns = Array.isArray(cachedTrace.moduleRuns) ? cachedTrace.moduleRuns : [];
+                traceCollector.note = cachedTrace.note || null;
+            }
             return adviceCache.result;
         }
 
         const derived = buildDerivedContext(ctx);
         const fullCtx = { ...ctx, ...derived };
 
-        const advices = collectModuleAdvices(fullCtx);
+        const advices = collectModuleAdvices(fullCtx, traceCollector);
 
         // ─────────────────────────────────────────────────────────
         // 🎯 APPLY DISMISS PENALTY & DYNAMIC TTL (NEW!)
@@ -2568,8 +3566,19 @@
         adviceCache = {
             key: generateCacheKey(fullCtx),
             result: advices,
-            timestamp: Date.now()
+            timestamp: Date.now(),
+            trace: traceCollector
+                ? {
+                    moduleRuns: cloneTracePayload(traceCollector.moduleRuns) || [],
+                    cacheStatus: 'miss',
+                    note: traceCollector.note || null
+                }
+                : null
         };
+
+        if (traceCollector) {
+            traceCollector.cacheStatus = 'miss';
+        }
 
         return advices;
     }
@@ -4057,20 +5066,49 @@
             }
         })();
 
+        const traceDerived = buildDerivedContext(ctx);
+        const adviceTrace = {
+            version: 'advice-trace-v2',
+            generatedAt: new Date().toISOString(),
+            trigger: trigger || null,
+            input: buildAdviceTraceInput({ ...ctx, ...traceDerived, trigger }),
+            cache: {},
+            modules: [],
+            summary: {},
+            sources: {},
+            stages: [],
+            outputs: {},
+            expertSignals: null
+        };
+
         // Генерируем все советы
         const allAdvices = (() => {
             try {
                 if (!ctx) return [];
-                const baseAdvices = generateAdvices(ctx);
+                const baseTrace = {};
+                const baseAdvices = (generateAdvices(ctx, baseTrace) || []).map(advice =>
+                    attachAdviceTraceMeta(advice, { module: advice?.__traceModule || 'base', source: advice?.__traceSource || 'base' })
+                );
+                adviceTrace.cache = {
+                    generateAdvices: baseTrace.cacheStatus || 'miss',
+                    note: baseTrace.note || null
+                };
+                adviceTrace.modules = Array.isArray(baseTrace.moduleRuns) ? baseTrace.moduleRuns : [];
 
                 // 🔗 Добавляем chain follow-ups
-                const chainAdvices = generateChainAdvices();
+                const chainAdvices = (generateChainAdvices() || []).map(advice =>
+                    attachAdviceTraceMeta(advice, { module: 'chain_followup', source: 'chain' })
+                );
 
                 // ⏰ Добавляем отложенные советы
-                const scheduledAdvices = getScheduledAdvices();
+                const scheduledAdvices = (getScheduledAdvices() || []).map(advice =>
+                    attachAdviceTraceMeta(advice, { module: 'scheduled', source: 'scheduled' })
+                );
 
                 // 🎯 Добавляем goal-specific советы
-                const goalAdvices = getGoalSpecificAdvices(ctx.goal);
+                const goalAdvices = (getGoalSpecificAdvices(ctx.goal) || []).map(advice =>
+                    attachAdviceTraceMeta(advice, { module: 'goal_specific', source: 'goal' })
+                );
 
                 // 🏆 Проверяем personal bests
                 const personalBestAdvices = [];
@@ -4081,14 +5119,14 @@
                 const proteinRecord = checkAndUpdatePersonalBest('proteinPct', proteinPct * 100, todayISO);
                 if (proteinRecord?.isNewRecord) {
                     const advice = createPersonalBestAdvice('proteinPct', proteinRecord);
-                    if (advice) personalBestAdvices.push(advice);
+                    if (advice) personalBestAdvices.push(attachAdviceTraceMeta(advice, { module: 'personal_best', source: 'personal_best' }));
                 }
 
                 const fiberPct = (ctx.dayTot?.fiber || 0) / (ctx.normAbs?.fiber || 25);
                 const fiberRecord = checkAndUpdatePersonalBest('fiberPct', fiberPct * 100, todayISO);
                 if (fiberRecord?.isNewRecord) {
                     const advice = createPersonalBestAdvice('fiberPct', fiberRecord);
-                    if (advice) personalBestAdvices.push(advice);
+                    if (advice) personalBestAdvices.push(attachAdviceTraceMeta(advice, { module: 'personal_best', source: 'personal_best' }));
                 }
 
                 // Streak record
@@ -4096,9 +5134,17 @@
                     const streakRecord = checkAndUpdatePersonalBest('streak', ctx.currentStreak, todayISO);
                     if (streakRecord?.isNewRecord) {
                         const advice = createPersonalBestAdvice('streak', streakRecord);
-                        if (advice) personalBestAdvices.push(advice);
+                        if (advice) personalBestAdvices.push(attachAdviceTraceMeta(advice, { module: 'personal_best', source: 'personal_best' }));
                     }
                 }
+
+                adviceTrace.sources = {
+                    base: baseAdvices.length,
+                    chain: chainAdvices.length,
+                    scheduled: scheduledAdvices.length,
+                    goalSpecific: goalAdvices.length,
+                    personalBest: personalBestAdvices.length
+                };
 
                 return [
                     ...(Array.isArray(baseAdvices) ? baseAdvices : []),
@@ -4122,6 +5168,8 @@
             }
         })();
 
+        adviceTrace.expertSignals = summarizeExpertSignalsForTrace(expertSignals);
+
         const enrichedAdvices = (() => {
             try {
                 return enrichAdvicesWithExpertContext(allAdvices, ctx, expertSignals);
@@ -4144,15 +5192,28 @@
             });
         })();
 
+        appendAdviceTraceStage(adviceTrace, 'category_filter', enrichedAdvices, categoryFilteredAdvices, {
+            reminderAlwaysVisible: true
+        });
+
         // Применяем boost для goal-specific советов
         const boostedAdvices = (() => {
             return applyGoalBoost(categoryFilteredAdvices, ctx.goal);
         })();
 
+        appendAdviceTraceStage(adviceTrace, 'goal_boost', categoryFilteredAdvices, boostedAdvices, {
+            goal: ctx?.goal?.mode || ctx?.goal || null,
+            reordered: true
+        }, { reordered: true });
+
         // Фильтруем по эмоциональному состоянию
         const filteredAdvices = (() => {
             return filterByEmotionalState(boostedAdvices, ctx.emotionalState);
         })();
+
+        appendAdviceTraceStage(adviceTrace, 'emotional_filter', boostedAdvices, filteredAdvices, {
+            emotionalState: ctx?.emotionalState || null
+        });
 
         // 🎭 Адаптируем тексты под настроение
         const moodAdaptedAdvices = (() => {
@@ -4166,36 +5227,83 @@
             }).filter(Boolean);
         })();
 
+        appendAdviceTraceStage(adviceTrace, 'mood_adaptation', filteredAdvices, moodAdaptedAdvices, {
+            averageMood: roundTraceNumber(getAverageMoodToday(ctx.day))
+        });
+
         // Фильтруем по триггеру (для показа в развёрнутом виде — без canShowAdvice)
         // Спецтриггер 'manual' — показывает ВСЕ советы без фильтрации по триггеру
         const allForTrigger = (() => {
             if (!trigger) return [];
-            if (isUserBusy(uiState)) return [];
-
-            let advices = moodAdaptedAdvices;
+            const userBusy = isUserBusy(uiState);
+            const busyInputAdvices = moodAdaptedAdvices;
+            const busyFilteredAdvices = userBusy ? [] : busyInputAdvices;
+            let advices = busyFilteredAdvices;
 
             // Manual trigger — показываем все советы
             if (trigger !== 'manual') {
                 advices = advices.filter(a => a.triggers.includes(trigger));
             }
+            appendAdviceTraceStage(adviceTrace, 'trigger_filter', busyInputAdvices, advices, {
+                trigger,
+                manualBypass: trigger === 'manual',
+                userBusy
+            }, {
+                reasonMap: buildTriggerFilterReasonMap(busyInputAdvices, advices, {
+                    trigger,
+                    userBusy
+                })
+            });
 
             // 🧠 Smart Prioritization — ML-like scoring
-            advices = sortBySmartScore(advices, ctx);
+            const smartScoredAdvices = sortBySmartScore(advices, ctx);
+            appendAdviceTraceStage(adviceTrace, 'smart_score', advices, smartScoredAdvices, {
+                reordered: true
+            }, { reordered: true });
+            advices = smartScoredAdvices;
 
             // 🧠 Expert arbitrage — suppress weaker same-theme advices
-            advices = applyExpertConflictResolution(advices);
+            const expertResolvedAdvices = applyExpertConflictResolution(advices);
+            appendAdviceTraceStage(adviceTrace, 'expert_conflict_resolution', advices, expertResolvedAdvices, {
+                resolution: 'same-theme and cross-theme arbitration'
+            }, {
+                reasonMap: buildExpertConflictReasonMap(advices, expertResolvedAdvices)
+            });
+            advices = expertResolvedAdvices;
 
             // ⏰ Применяем временные ограничения
-            advices = filterByTimeRestrictions(advices);
+            const timeFilteredAdvices = filterByTimeRestrictions(advices);
+            appendAdviceTraceStage(adviceTrace, 'time_restrictions', advices, timeFilteredAdvices, {
+                hour: ctx?.hour || null
+            }, {
+                reasonMap: (advices || []).reduce((acc, advice) => {
+                    const reason = explainTimeRestriction(advice, ctx?.hour || new Date().getHours());
+                    if (reason) acc[advice.id] = reason;
+                    return acc;
+                }, {})
+            });
+            advices = timeFilteredAdvices;
 
             // 🔄 Дедупликация — из группы похожих показываем только один
-            advices = deduplicateAdvices(advices);
+            const deduplicatedAdvices = deduplicateAdvices(advices);
+            appendAdviceTraceStage(adviceTrace, 'deduplication', advices, deduplicatedAdvices, {}, {
+                reasonMap: buildDeduplicationReasonMap(advices, deduplicatedAdvices)
+            });
+            advices = deduplicatedAdvices;
 
             // Применяем систему excludes
-            advices = filterByExcludes(advices);
+            const excludeFilteredAdvices = filterByExcludes(advices);
+            appendAdviceTraceStage(adviceTrace, 'excludes', advices, excludeFilteredAdvices, {}, {
+                reasonMap: buildExcludeReasonMap(advices, excludeFilteredAdvices)
+            });
+            advices = excludeFilteredAdvices;
 
             // Ограничиваем по категориям (антиспам)
-            advices = limitByCategory(advices);
+            const limitedAdvices = limitByCategory(advices);
+            appendAdviceTraceStage(adviceTrace, 'category_limit', advices, limitedAdvices, {}, {
+                reasonMap: buildCategoryLimitReasonMap(advices, limitedAdvices)
+            });
+            advices = limitedAdvices;
 
             return advices;
         })();
@@ -4204,6 +5312,24 @@
         const relevantAdvices = (() => {
             return allForTrigger.filter(a => canShowAdvice(a.id, { canSkipCooldown: a.canSkipCooldown }));
         })();
+
+        appendAdviceTraceStage(adviceTrace, 'cooldown_filter', allForTrigger, relevantAdvices, {
+            sessionAware: true
+        }, {
+            reasonMap: (allForTrigger || []).reduce((acc, advice) => {
+                const visibility = explainAdviceVisibility(advice?.id, { canSkipCooldown: advice?.canSkipCooldown });
+                if (!visibility.allowed) {
+                    acc[advice.id] = {
+                        code: visibility.reason,
+                        message: visibility.message,
+                        remainingMs: visibility.remainingMs,
+                        lastShownAt: visibility.lastShownAt,
+                        sessionCount: visibility.sessionCount
+                    };
+                }
+                return acc;
+            }, {})
+        });
 
         // Основной совет (первый доступный)
         const primary = relevantAdvices[0] || null;
@@ -4248,6 +5374,34 @@
         // Количество отложенных
         const scheduledCount = getScheduledCount();
 
+        adviceTrace.summary = {
+            manualVisibleCount: allForTrigger.length,
+            autoEligibleCount: relevantAdvices.length,
+            primaryId: primaryWithAnimation?.id || null,
+            whyNoPrimary: !primaryWithAnimation && allForTrigger.length > 0 && relevantAdvices.length === 0
+                ? 'Manual drawer показывает советы, но auto-toast заблокирован session cooldown / duplicate rules.'
+                : null,
+            topIssues: [
+                adviceTrace.expertSignals?.earlyWarnings?.warnings?.[0]?.type || null,
+                adviceTrace.expertSignals?.lowWaterDays7 >= 5 ? 'LOW_WATER_TREND' : null,
+                adviceTrace.expertSignals?.underTargetDays7 >= 5 ? 'UNDER_TARGET_TREND' : null
+            ].filter(Boolean).slice(0, 3)
+        };
+
+        adviceTrace.outputs = {
+            primaryId: primaryWithAnimation?.id || null,
+            primaryText: primaryWithAnimation?.text || null,
+            relevantCount: allForTrigger.length,
+            cooldownEligibleCount: relevantAdvices.length,
+            visibleForManualCount: allForTrigger.length,
+            eligibleForAutoToastCount: relevantAdvices.length,
+            badgeCount: badgeAdvices.length,
+            scheduledCount,
+            relevant: buildAdviceTraceRefs(allForTrigger, true).map(({ key, ...rest }) => rest),
+            cooldownEligible: buildAdviceTraceRefs(relevantAdvices, true).map(({ key, ...rest }) => rest),
+            badge: buildAdviceTraceRefs(badgeAdvices).map(({ key, ...rest }) => rest)
+        };
+
         const resolveAdviceRef = (adviceRef) => {
             if (!adviceRef) return null;
             if (typeof adviceRef === 'object' && adviceRef.id) return adviceRef;
@@ -4262,6 +5416,7 @@
             badgeAdvices, // Для FAB badge — массив советов с полной фильтрацией
             scheduledCount,
             allAdvices: enrichedAdvices,
+            trace: adviceTrace,
             ctx,
             crashRisk: ctx?.crashRisk, // 🆕 Экспортируем crashRisk для UI
             expertSignals,
@@ -4275,6 +5430,13 @@
                 if (advice) {
                     recordAdviceOutcomeEvent(advice, ctx, 'shown');
                     recordPendingAdviceOutcome(advice, ctx);
+                    recordDailyAdviceTraceEvent(ctx?.day?.date, 'shown', {
+                        adviceId,
+                        trigger,
+                        module: advice?.__traceModule || null,
+                        type: advice?.type || null,
+                        category: advice?.category || null
+                    });
                 }
             },
             trackClick: (adviceRef) => {
@@ -4282,24 +5444,67 @@
                 const adviceId = advice?.id || String(adviceRef || '');
                 if (!adviceId) return;
                 trackAdviceClicked(adviceId);
-                if (advice) recordAdviceOutcomeEvent(advice, ctx, 'click');
+                if (advice) {
+                    recordAdviceOutcomeEvent(advice, ctx, 'click');
+                    recordDailyAdviceTraceEvent(ctx?.day?.date, 'click', {
+                        adviceId,
+                        trigger,
+                        module: advice?.__traceModule || null,
+                        category: advice?.category || null
+                    });
+                }
             },
             markRead: (adviceRef) => {
                 const advice = resolveAdviceRef(adviceRef);
-                if (advice) recordAdviceOutcomeEvent(advice, ctx, 'read');
+                if (advice) {
+                    recordAdviceOutcomeEvent(advice, ctx, 'read');
+                    recordDailyAdviceTraceEvent(ctx?.day?.date, 'read', {
+                        adviceId: advice?.id || null,
+                        trigger,
+                        module: advice?.__traceModule || null,
+                        category: advice?.category || null
+                    });
+                }
             },
             markHidden: (adviceRef) => {
                 const advice = resolveAdviceRef(adviceRef);
-                if (advice) recordAdviceOutcomeEvent(advice, ctx, 'hidden');
+                if (advice) {
+                    recordAdviceOutcomeEvent(advice, ctx, 'hidden');
+                    recordDailyAdviceTraceEvent(ctx?.day?.date, 'hidden', {
+                        adviceId: advice?.id || null,
+                        trigger,
+                        module: advice?.__traceModule || null,
+                        category: advice?.category || null
+                    });
+                }
             },
             rateAdvice: (adviceRef, isPositive) => {
                 const advice = resolveAdviceRef(adviceRef);
                 const adviceId = advice?.id || String(adviceRef || '');
                 if (!adviceId) return;
                 rateAdvice(adviceId, isPositive);
-                if (advice) recordAdviceOutcomeEvent(advice, ctx, isPositive ? 'positive' : 'negative');
+                if (advice) {
+                    recordAdviceOutcomeEvent(advice, ctx, isPositive ? 'positive' : 'negative');
+                    recordDailyAdviceTraceEvent(ctx?.day?.date, isPositive ? 'positive' : 'negative', {
+                        adviceId,
+                        trigger,
+                        module: advice?.__traceModule || null,
+                        category: advice?.category || null
+                    });
+                }
             },
-            scheduleAdvice, // ⏰ Отложить совет
+            scheduleAdvice: (adviceRef, minutes) => {
+                const advice = resolveAdviceRef(adviceRef);
+                if (!advice) return;
+                scheduleAdvice(advice, minutes);
+                recordDailyAdviceTraceEvent(ctx?.day?.date, 'scheduled', {
+                    adviceId: advice?.id || null,
+                    trigger,
+                    module: advice?.__traceModule || null,
+                    category: advice?.category || null,
+                    minutes: minutes || 0
+                });
+            },
             canShow: canShowAdvice,
             resetSession: resetSessionAdvices
         };
@@ -4489,8 +5694,14 @@
         getSmartRecommendation,
         calculateSmartScore,
         collectSoftExpertSignals,
+        explainAdviceVisibility,
+        getDailyAdviceTraceLog,
+        appendDailyAdviceTraceSnapshot,
+        recordDailyAdviceTraceEvent,
         enrichAdvicesWithExpertContext,
         applyExpertConflictResolution,
+        formatAdviceTraceForClipboard,
+        formatDailyAdviceTraceForClipboard,
         // 🆕 Phase 5 helpers
         // Settings
         getAdviceSettings,

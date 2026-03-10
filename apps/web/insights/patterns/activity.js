@@ -113,6 +113,16 @@
         return total;
     };
 
+    const getDaySleepHours = function (day) {
+        if (!day || typeof day !== 'object') return 0;
+        const totalSleepHours = HEYS.dayUtils?.getTotalSleepHours?.(day);
+        if (Number.isFinite(totalSleepHours) && totalSleepHours > 0) return totalSleepHours;
+        const storedSleepHours = Number(day.sleepHours);
+        if (Number.isFinite(storedSleepHours) && storedSleepHours > 0) return storedSleepHours;
+        const fallbackSleepHours = HEYS.dayUtils?.sleepHours?.(day.sleepStart, day.sleepEnd);
+        return Number.isFinite(fallbackSleepHours) && fallbackSleepHours > 0 ? fallbackSleepHours : 0;
+    };
+
     /**
      * Корреляция тренировок и калорий.
      * @param {Array} days
@@ -439,7 +449,7 @@
 
             if (i < days.length - 1) {
                 const nextDay = days[i + 1];
-                const sleepHours = nextDay.sleepHours || 0;
+                const sleepHours = getDaySleepHours(nextDay);
                 const mood = nextDay.moodAvg || 3;
                 const recoveryScore = (sleepHours >= 7 ? 50 : sleepHours * 7) + (mood * 10);
                 recoveryScores.push(recoveryScore);

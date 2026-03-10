@@ -70,6 +70,25 @@
     return total;
   }
 
+  function getDaySleepHours(day) {
+    if (!day || typeof day !== 'object') return 0;
+
+    const totalSleepHours = HEYS.dayUtils?.getTotalSleepHours?.(day);
+    if (Number.isFinite(totalSleepHours) && totalSleepHours > 0) {
+      return totalSleepHours;
+    }
+
+    const storedSleepHours = Number(day.sleepHours);
+    if (Number.isFinite(storedSleepHours) && storedSleepHours > 0) {
+      return storedSleepHours;
+    }
+
+    const fallbackSleepHours = HEYS.dayUtils?.sleepHours?.(day.sleepStart, day.sleepEnd);
+    return Number.isFinite(fallbackSleepHours) && fallbackSleepHours > 0
+      ? fallbackSleepHours
+      : 0;
+  }
+
   // === Stats helpers (lazy access) ===
   function average(arr) {
     const stats = getStats();
@@ -296,7 +315,7 @@
 
       // === Гормональный баланс (Leptin/Ghrelin) ===
       // Spiegel et al., 2004: Недосып повышает грелин +28%, снижает лептин -18%
-      const sleepHours = day.sleepHours || 0;
+      const sleepHours = getDaySleepHours(day);
       const sleepNorm = profile?.sleepHours || 8;
       const sleepDebt = Math.max(0, sleepNorm - sleepHours);
 
@@ -384,7 +403,7 @@
         let fields = 0;
         if (d.weightMorning > 0) fields++;
         if ((d.meals?.length || 0) > 0) fields++;
-        if (d.sleepHours > 0 || d.sleepStart) fields++;
+        if (getDaySleepHours(d) > 0 || d.sleepStart) fields++;
         if (d.steps > 0) fields++;
         if (d.waterMl > 0) fields++;
         return fields / 5 * 100;
@@ -482,7 +501,7 @@
           simple,
           fat,
           fiber,
-          sleep: d.sleepHours || 0,
+          sleep: getDaySleepHours(d),
           steps: d.steps || 0,
           water: d.waterMl || 0,
           weight: d.weightMorning || 0,
@@ -810,7 +829,7 @@
 
       // === 2. Sleep Debt — 25% веса ===
       const sleepNorm = profile.sleepHours || 8;
-      const sleepValues = days.map(d => d.sleepHours || 0).filter(s => s > 0);
+      const sleepValues = days.map(d => getDaySleepHours(d)).filter(s => s > 0);
       const sleepDebt = sleepValues.length > 0
         ? sleepValues.reduce((debt, sleep) => debt + Math.max(0, sleepNorm - sleep), 0)
         : 0;
@@ -948,7 +967,7 @@
       const modifiers = [];
 
       // 1. Сон прошлой ночи
-      const sleepHours = today.sleepHours || 0;
+      const sleepHours = getDaySleepHours(today);
       const sleepQuality = today.sleepQuality || 3;
       const sleepMod = sleepHours >= 7 ? 1.1 : sleepHours >= 6 ? 1.0 : sleepHours >= 5 ? 0.85 : 0.7;
       modifiers.push({ name: 'Сон', value: sleepMod, desc: `${sleepHours}ч сна` });
@@ -1184,7 +1203,7 @@
 
       // Извлекаем временные ряды
       const series = {
-        sleep: days.map(d => d.sleepHours || 0),
+        sleep: days.map(d => getDaySleepHours(d)),
         kcal: days.map(d => calculateDayKcal(d, pIndex)),
         weight: days.map(d => d.weightMorning || 0),
         mood: days.map(d => d.moodAvg || d.dayScore || 0),
@@ -1457,7 +1476,7 @@
 
       // === 2. Sleep Debt (недосып) — 20% ===
       const sleepNorm = profile.sleepHours || 8;
-      const sleepValues = days.map(d => d.sleepHours || 0).filter(s => s > 0);
+      const sleepValues = days.map(d => getDaySleepHours(d)).filter(s => s > 0);
       if (sleepValues.length >= 3) {
         const avgSleep = average(sleepValues);
         const sleepDeficit = Math.max(0, sleepNorm - avgSleep);
@@ -1778,7 +1797,7 @@
         ? parseInt(today.sleepEnd.split(':')[0]) + parseInt(today.sleepEnd.split(':')[1] || 0) / 60
         : 7; // default wake time
 
-      const sleepHours = today.sleepHours || 7;
+      const sleepHours = getDaySleepHours(today) || 7;
       const sleepDebt = Math.max(0, (profile.sleepHours || 8) - sleepHours);
 
       const hoursAwake = currentTime >= sleepEnd

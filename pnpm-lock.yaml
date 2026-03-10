@@ -482,8 +482,8 @@ importers:
         specifier: ^5.9.2
         version: 5.9.2
       vitest:
-        specifier: ^0.34.0
-        version: 0.34.6(@vitest/ui@3.2.4)(happy-dom@20.0.10)(jsdom@26.1.0)(terser@5.44.0)
+        specifier: ^3.2.4
+        version: 3.2.4(@types/node@20.19.11)(@vitest/ui@3.2.4)(happy-dom@20.0.10)(jsdom@26.1.0)(msw@2.11.1)(terser@5.44.0)(tsx@4.20.5)
 
   packages/ui:
     dependencies:

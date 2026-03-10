@@ -114,6 +114,7 @@
 | `public/postboot-2-insights.bundle.{hash}.js` | Postboot 2: все insights/pi\_\*.js (1.75 MB raw)                                                      |
 | `public/postboot-3-ui.bundle.{hash}.js`       | Postboot 3: modals, steps, reports, widgets (1.28 MB raw)                                             |
 | `vite.config.ts`                              | `bundleLegacy()` плагин **отключён** (2026-02-25) — заменён на статические бандлы в `public/`         |
+| `docs/dev/LOGGING_DEBUG_GROUPS.md`            | Карта существующих runtime log groups, debug-пресетов и правил, когда нужен новый preset              |
 | `docs/SYNC_PERFORMANCE_REPORT.md`             | Сводный отчёт: цели, метрики, фазы 1–5, инцидент, чеклист                                             |
 | `docs/SYNC_PERFORMANCE_SESSIONS_LOG.md`       | Детали реализации: маппинг 246 файлов по бандлам, журнал сессий 1–6                                   |
 

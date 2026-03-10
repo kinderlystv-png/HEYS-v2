@@ -97,6 +97,13 @@
     merged.sleepEnd = local.sleepEnd || remote.sleepEnd || '';
     merged.sleepQuality = local.sleepQuality || remote.sleepQuality || '';
     merged.sleepNote = local.sleepNote || remote.sleepNote || '';
+    merged.daySleepMinutes = (local.updatedAt || 0) >= (remote.updatedAt || 0)
+      ? (local.daySleepMinutes != null ? local.daySleepMinutes : (remote.daySleepMinutes || 0))
+      : (remote.daySleepMinutes != null ? remote.daySleepMinutes : (local.daySleepMinutes || 0));
+    merged.sleepHours = HEYS.dayUtils?.getTotalSleepHours?.(merged)
+      || local.sleepHours
+      || remote.sleepHours
+      || 0;
 
     if (local.dayScoreManual) {
       merged.dayScore = local.dayScore;

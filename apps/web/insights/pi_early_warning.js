@@ -2056,9 +2056,7 @@
         const recentDays = days.slice(-7); // Most recent first
 
         const sleepData = recentDays.map(day => {
-            const sleep = day.sleepHours || (day.sleepStart && day.sleepEnd
-                ? calculateSleepHours(day.sleepStart, day.sleepEnd)
-                : null);
+            const sleep = getTotalSleepHours(day);
             return { date: day.date, sleep, deficit: sleep ? Math.max(0, targetSleep - sleep) : 0 };
         }).filter(d => d.sleep !== null);
 
@@ -2533,7 +2531,8 @@
             // 1. Explicit stress field
             const explicitStress = day.stress || 0;
             // 2. Poor sleep (<6h)
-            const poorSleep = day.sleepHours && day.sleepHours < 6;
+            const totalSleepHours = getTotalSleepHours(day);
+            const poorSleep = totalSleepHours && totalSleepHours < 6;
             // 3. High training load without recovery
             const highTraining = day.training && day.training.duration > 90;
             // 4. Low status score (<50 or dynamic)
@@ -3748,6 +3747,29 @@
         } catch (e) {
             return 0;
         }
+    }
+
+    function getTotalSleepHours(day) {
+        if (!day || typeof day !== 'object') return null;
+
+        const totalSleepHours = HEYS.dayUtils?.getTotalSleepHours?.(day);
+        if (Number.isFinite(totalSleepHours) && totalSleepHours > 0) {
+            return totalSleepHours;
+        }
+
+        const storedSleepHours = Number(day.sleepHours);
+        if (Number.isFinite(storedSleepHours) && storedSleepHours > 0) {
+            return storedSleepHours;
+        }
+
+        if (day.sleepStart && day.sleepEnd) {
+            const fallbackSleepHours = calculateSleepHours(day.sleepStart, day.sleepEnd);
+            return Number.isFinite(fallbackSleepHours) && fallbackSleepHours > 0
+                ? fallbackSleepHours
+                : null;
+        }
+
+        return null;
     }
 
     /**

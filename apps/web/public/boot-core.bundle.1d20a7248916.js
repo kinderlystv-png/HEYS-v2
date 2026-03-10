@@ -15,13 +15,16 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
 (function () {
   'use strict';
 
+  const logControl = window.__heysLogControl || window.HEYS?.logSettings || null;
+
   // 🔇 v4.7.0: Логи отключены по умолчанию для чистоты консоли
   // Включить можно через:
   // 1. URL параметр: ?debug=verbose
   // 2. В консоли: DEV.enable()
   // 3. localStorage: localStorage.setItem('heys_debug_verbose', 'true')
   const forceVerbose = location.search.includes('debug=verbose') ||
-    localStorage.getItem('heys_debug_verbose') === 'true';
+    localStorage.getItem('heys_debug_verbose') === 'true' ||
+    logControl?.isEnabled?.('all') === true;
 
   let isVerbose = forceVerbose;
 
@@ -73,6 +76,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
     enable: function () {
       isVerbose = true;
       localStorage.setItem('heys_debug_verbose', 'true');
+      logControl?.all?.();
       console.log('🔊 DEV logging ENABLED. Reload to see all logs.');
     },
 
@@ -82,6 +86,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
     disable: function () {
       isVerbose = false;
       localStorage.removeItem('heys_debug_verbose');
+      logControl?.reset?.();
       console.log('🔇 DEV logging DISABLED.');
     },
 
@@ -91,6 +96,30 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
      */
     isVerbose: function () {
       return isVerbose;
+    },
+
+    logs: {
+      groups: function () {
+        return logControl?.getKnownGroups?.() || [];
+      },
+      enabled: function () {
+        return logControl?.getEnabledGroups?.() || [];
+      },
+      enable: function () {
+        return logControl?.enable?.apply(logControl, arguments);
+      },
+      disable: function () {
+        return logControl?.disable?.apply(logControl, arguments);
+      },
+      only: function () {
+        return logControl?.only?.apply(logControl, arguments);
+      },
+      reset: function () {
+        return logControl?.reset?.();
+      },
+      all: function () {
+        return logControl?.all?.();
+      }
     }
   };
 
@@ -12360,9 +12389,9 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
   // 🔧 УТИЛИТЫ
   // ═══════════════════════════════════════════════════════════════════
 
-  // Debug логи — только при localStorage.heys_debug_api = 'true'
+  // Debug логи — только при включённой группе api или localStorage.heys_debug_api = 'true'
   function log(...args) {
-    if (global.localStorage?.getItem('heys_debug_api') === 'true') {
+    if (global.__heysLogControl?.isEnabled?.('api') === true || global.localStorage?.getItem('heys_debug_api') === 'true') {
       console.info('[HEYS.api]', ...args);
     }
   }
@@ -16006,7 +16035,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
 
     const isDebug = () => {
         try {
-            return global.localStorage.getItem('heys_debug_photos') === 'true' ||
+            return global.__heysLogControl?.isEnabled?.('photos') === true ||
+                global.localStorage.getItem('heys_debug_photos') === 'true' ||
                 global.localStorage.getItem('heys_debug_sync') === 'true';
         } catch (_) {
             return false;
@@ -18052,7 +18082,9 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
 
   // Умное логирование: только критические операции
   // Включается через localStorage: localStorage.setItem('heys_debug_sync', 'true')
-  const isDebugSync = () => global.localStorage.getItem('heys_debug_sync') === 'true';
+  const isDebugSync = () =>
+    global.__heysLogControl?.isEnabled?.('cloud') === true ||
+    global.localStorage.getItem('heys_debug_sync') === 'true';
 
   function log() {
     // Тихий режим по умолчанию — только для debug

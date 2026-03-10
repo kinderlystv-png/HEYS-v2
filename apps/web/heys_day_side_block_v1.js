@@ -48,6 +48,45 @@
       }
     };
 
+    const openDaySleepCheckin = (event) => {
+      event?.preventDefault?.();
+      event?.stopPropagation?.();
+
+      const dateKey = date || new Date().toISOString().slice(0, 10);
+      const refreshDayFromStorage = () => {
+        const storedDay = HEYS.utils?.lsGet ? HEYS.utils.lsGet(`heys_dayv2_${dateKey}`, {}) : null;
+
+        if (storedDay) {
+          console.info('[HEYS.daySideBlock] daySleep updated from storage', { dateKey });
+          setDay(prev => ({
+            ...prev,
+            ...storedDay,
+            updatedAt: Date.now()
+          }));
+        }
+      };
+
+      if (HEYS.showCheckin?.daySleep) {
+        console.info('[HEYS.daySideBlock] opening daySleep via showCheckin', { dateKey });
+        HEYS.showCheckin.daySleep(dateKey, refreshDayFromStorage);
+        return;
+      }
+
+      if (HEYS.StepModal?.show) {
+        console.info('[HEYS.daySideBlock] opening daySleep via StepModal fallback', { dateKey });
+        HEYS.StepModal.show({
+          steps: ['daySleep'],
+          title: 'Дневной сон',
+          showProgress: false,
+          context: { dateKey },
+          onComplete: refreshDayFromStorage
+        });
+        return;
+      }
+
+      console.warn('[HEYS.daySideBlock] daySleep modal unavailable');
+    };
+
     const openMorningMoodCheckin = () => {
       if (HEYS.showCheckin?.morningMood) {
         HEYS.showCheckin.morningMood(date, () => {
@@ -85,6 +124,20 @@
             const sleepCompare = getCompareArrow(day.sleepQuality, yData?.sleepQuality);
             const sleepEmoji = getScoreEmoji(day.sleepQuality);
             const isPulse = (day.sleepQuality || 0) >= 9;
+            const napMinutes = HEYS.dayUtils?.normalizeDaySleepMinutes
+              ? HEYS.dayUtils.normalizeDaySleepMinutes(day.daySleepMinutes)
+              : Math.max(0, Math.round(Number(day.daySleepMinutes) || 0));
+            const totalSleepHours = HEYS.dayUtils?.getTotalSleepHours
+              ? HEYS.dayUtils.getTotalSleepHours(day)
+              : (sleepH || day.sleepHours || 0);
+            const nightSleepHours = Math.max(0, Math.round((totalSleepHours - napMinutes / 60) * 10) / 10);
+            const isNapRecommended = totalSleepHours > 0 && totalSleepHours < 6;
+            const napLabel = napMinutes >= 60
+              ? `${Math.floor(napMinutes / 60)} ч${napMinutes % 60 ? ` ${napMinutes % 60} мин` : ''}`
+              : `${napMinutes} мин`;
+            const napButtonLabel = napMinutes > 0
+              ? `😴 Доп. сон: ${napLabel}`
+              : (isNapRecommended ? '⚡ Рекомендуем доспать в обед' : '➕ Добавить доп. сон');
 
             // Умная подсказка при низкой оценке сна
             const sleepTip = (day.sleepQuality > 0 && day.sleepQuality <= 4)
@@ -127,7 +180,18 @@
                   className: 'score-compare',
                   style: { color: sleepCompare.color }
                 }, sleepCompare.icon + ' vs вчера'),
-                sleepH > 0 && React.createElement('span', { className: 'sleep-duration-hint' }, sleepH + ' ч сна')
+                totalSleepHours > 0 && React.createElement('span', { className: 'sleep-duration-hint' }, totalSleepHours + ' ч сна')
+              ),
+              React.createElement('div', { className: 'sleep-breakdown-row' },
+                React.createElement('div', { className: 'sleep-breakdown-main' },
+                  React.createElement('span', { className: 'sleep-breakdown-item' }, `🌙 Ночь: ${nightSleepHours > 0 ? `${nightSleepHours} ч` : '—'}`),
+                  React.createElement('button', {
+                    type: 'button',
+                    className: `sleep-breakdown-cta clickable${napMinutes > 0 ? ' has-value' : ''}${isNapRecommended ? ' recommended' : ' subtle'}`,
+                    onClick: openDaySleepCheckin
+                  }, napButtonLabel),
+                  isNapRecommended && React.createElement('div', { className: 'sleep-breakdown-reason' }, 'Если ночью вышло меньше 6 часов, короткий дневной сон может поддержать восстановление')
+                )
               ),
               // Умная подсказка
               sleepTip && React.createElement('div', { className: 'smart-tip' }, sleepTip),
@@ -154,7 +218,9 @@
             const lastMealTime = lastMeal?.time || null;
 
             // Корреляция сон→самочувствие (без dayTot, который ещё не объявлен)
-            const sleepH = day.sleepHours || 0;
+            const sleepH = HEYS.dayUtils?.getTotalSleepHours
+              ? HEYS.dayUtils.getTotalSleepHours(day)
+              : (day.sleepHours || 0);
             const sleepCorrelation = sleepH > 0 && sleepH < 6
               ? '😴 Мало сна — будь внимателен к аппетиту'
               : sleepH >= 8

@@ -1667,7 +1667,9 @@
 
   // Умное логирование: только критические операции
   // Включается через localStorage: localStorage.setItem('heys_debug_sync', 'true')
-  const isDebugSync = () => global.localStorage.getItem('heys_debug_sync') === 'true';
+  const isDebugSync = () =>
+    global.__heysLogControl?.isEnabled?.('cloud') === true ||
+    global.localStorage.getItem('heys_debug_sync') === 'true';
 
   function log() {
     // Тихий режим по умолчанию — только для debug

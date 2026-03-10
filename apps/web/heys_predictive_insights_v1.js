@@ -297,12 +297,72 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
   };
 
   // === КЭШ ===
-  let _cache = {
-    data: null,
-    timestamp: 0,
-    clientId: null,
-    daysBack: null
-  };
+  function createEmptyCache() {
+    return {
+      data: null,
+      timestamp: 0,
+      clientId: null,
+      daysBack: null,
+      daysFingerprint: null,
+      profileFingerprint: null,
+      productsFingerprint: null
+    };
+  }
+
+  let _cache = createEmptyCache();
+
+  function getMapLikeSize(value) {
+    if (!value) return 0;
+    if (typeof value.size === 'number') return value.size;
+    if (Array.isArray(value)) return value.length;
+    if (typeof value === 'object') return Object.keys(value).length;
+    return 0;
+  }
+
+  function getProductsFingerprint(pIndex) {
+    const productCount = HEYS.products?.getAll?.()?.length || 0;
+    const byIdSize = getMapLikeSize(pIndex?.byId);
+    const byNameSize = getMapLikeSize(pIndex?.byName);
+    return `${productCount}|${byIdSize}|${byNameSize}`;
+  }
+
+  function getProfileFingerprint(profile, clientId) {
+    const safeProfile = profile || {};
+    return [
+      safeProfile.id || clientId || 'anon',
+      safeProfile.weight || '',
+      safeProfile.height || '',
+      safeProfile.gender || '',
+      safeProfile.goal || '',
+      safeProfile.deficitPctTarget || ''
+    ].join('|');
+  }
+
+  function getDaysFingerprint(days) {
+    if (!Array.isArray(days) || days.length === 0) return '0';
+
+    return days.map((day) => {
+      const meals = Array.isArray(day?.meals)
+        ? day.meals.map((meal) => Array.isArray(meal?.items) ? meal.items.length : 0).join(',')
+        : '0';
+
+      return [
+        day?.date || 'unknown',
+        Array.isArray(day?.meals) ? day.meals.length : 0,
+        meals,
+        Array.isArray(day?.trainings) ? day.trainings.length : 0,
+        day?.steps || 0,
+        day?.waterMl || 0,
+        day?.weightMorning || '',
+        day?.sleepHours || '',
+        day?.sleepStart || '',
+        day?.sleepEnd || '',
+        day?.stressAvg || '',
+        day?.moodAvg || '',
+        day?.updatedAt || day?.updated_at || day?.ts || ''
+      ].join(':');
+    }).join('|');
+  }
 
   // === УТИЛИТЫ ===
 
@@ -558,19 +618,24 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       }
     }
 
-    // Проверяем кэш
     const clientId = lsGet('heys_client_current', 'default');
     const now = Date.now();
+    const productsFingerprint = getProductsFingerprint(pIndex);
+    const profileFingerprint = getProfileFingerprint(profile, clientId);
+
+    // Получаем данные до проверки кэша, чтобы не застревать на pre-sync/pre-products снимке
+    const days = getDaysData(daysBack, lsGet);
+    const daysFingerprint = getDaysFingerprint(days);
 
     if (_cache.data &&
       _cache.clientId === clientId &&
       _cache.daysBack === daysBack &&
+      _cache.daysFingerprint === daysFingerprint &&
+      _cache.profileFingerprint === profileFingerprint &&
+      _cache.productsFingerprint === productsFingerprint &&
       (now - _cache.timestamp) < CONFIG.CACHE_TTL_MS) {
       return _cache.data;
     }
-
-    // Получаем данные
-    const days = getDaysData(daysBack, lsGet);
 
     if (days.length < CONFIG.MIN_DAYS_FOR_INSIGHTS) {
       return {
@@ -737,6 +802,9 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       data: result,
       clientId,
       daysBack,
+      daysFingerprint,
+      profileFingerprint,
+      productsFingerprint,
       timestamp: now
     };
 
@@ -746,6 +814,16 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
   // === HealthRingsGrid Component ===
   function HealthRingsGrid({ healthScore, compact, onCategoryClick, lsGet }) {
     if (!healthScore || !healthScore.breakdown) return null;
+
+    const getDaySleepHours = (day) => {
+      if (!day || typeof day !== 'object') return 0;
+      const totalSleepHours = HEYS.dayUtils?.getTotalSleepHours?.(day);
+      if (Number.isFinite(totalSleepHours) && totalSleepHours > 0) return totalSleepHours;
+      const storedSleepHours = Number(day.sleepHours);
+      if (Number.isFinite(storedSleepHours) && storedSleepHours > 0) return storedSleepHours;
+      const fallbackSleepHours = HEYS.dayUtils?.sleepHours?.(day.sleepStart, day.sleepEnd);
+      return Number.isFinite(fallbackSleepHours) && fallbackSleepHours > 0 ? fallbackSleepHours : 0;
+    };
 
     // 🆕 v3.22.0: Вычисляем emotionalRisk для Recovery overlay
     const emotionalRiskData = useMemo(() => {
@@ -767,7 +845,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       const hour = new Date().getHours();
       if (hour >= 20) bingeRisk += 20;
 
-      const sleepDeficit = (profile.sleepHours || 8) - (day.sleepHours || 0);
+      const sleepDeficit = (profile.sleepHours || 8) - getDaySleepHours(day);
       if (sleepDeficit > 2) { factors.push('Недосып'); bingeRisk += 15; }
 
       return {
@@ -1171,7 +1249,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
   // clearCache() — очистка кэша анализа
   HEYS.PredictiveInsights.clearCache = function () {
-    _cache = {};
+    _cache = createEmptyCache();
     // console.log('[PI] Cache cleared');
   };
 

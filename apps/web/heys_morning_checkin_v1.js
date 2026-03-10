@@ -420,6 +420,22 @@
       }
     },
 
+    // Только дневной сон
+    daySleep: (dateKey, onComplete) => {
+      if (HEYS.StepModal) {
+        const actualDateKey = typeof dateKey === 'function' ? null : dateKey;
+        const actualOnComplete = typeof dateKey === 'function' ? dateKey : onComplete;
+
+        HEYS.StepModal.show({
+          steps: ['daySleep'],
+          title: 'Дневной сон',
+          showProgress: false,
+          context: { dateKey: actualDateKey || new Date().toISOString().slice(0, 10) },
+          onComplete: actualOnComplete
+        });
+      }
+    },
+
     // Только утреннее настроение
     morningMood: (dateKey, onComplete) => {
       if (HEYS.StepModal) {

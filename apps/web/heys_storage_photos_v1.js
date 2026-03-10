@@ -9,7 +9,8 @@
 
     const isDebug = () => {
         try {
-            return global.localStorage.getItem('heys_debug_photos') === 'true' ||
+            return global.__heysLogControl?.isEnabled?.('photos') === true ||
+                global.localStorage.getItem('heys_debug_photos') === 'true' ||
                 global.localStorage.getItem('heys_debug_sync') === 'true';
         } catch (_) {
             return false;

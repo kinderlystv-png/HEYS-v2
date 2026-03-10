@@ -2005,7 +2005,10 @@
    */
   I.calculateIRScore = (profile = {}, dayData = {}) => {
     const { weight = 70, height = 170, age = 30 } = profile;
-    const { sleepHours = 7, stressAvg = 3 } = dayData;
+    const sleepHours = HEYS.dayUtils?.getTotalSleepHours
+      ? (HEYS.dayUtils.getTotalSleepHours(dayData) || 7)
+      : (dayData.sleepHours || 7);
+    const { stressAvg = 3 } = dayData;
 
     // Рассчитываем BMI
     const heightM = height / 100;

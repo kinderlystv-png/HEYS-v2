@@ -323,6 +323,23 @@
     return (endMins - startMins) / 60;
   }
 
+  function normalizeDaySleepMinutes(value) {
+    if (HEYS.dayUtils?.normalizeDaySleepMinutes) {
+      return HEYS.dayUtils.normalizeDaySleepMinutes(value);
+    }
+    const num = Math.round(Number(value) || 0);
+    return num > 0 ? num : 0;
+  }
+
+  function getNightSleepHoursFromData(data) {
+    return calcSleepHours(data.sleepStartH, data.sleepStartM, data.sleepEndH, data.sleepEndM);
+  }
+
+  function getTotalSleepHoursFromData(data) {
+    const napHours = normalizeDaySleepMinutes(data.daySleepMinutes) / 60;
+    return Math.round((getNightSleepHoursFromData(data) + napHours) * 10) / 10;
+  }
+
   function SleepTimeStepComponent({ data, onChange }) {
     const lastSleep = useMemo(() => getLastSleepData(), []);
 
@@ -345,13 +362,15 @@
       const startM = newData.sleepStartM ?? sleepStartM;
       const endH = newData.sleepEndH ?? sleepEndH;
       const endM = newData.sleepEndM ?? sleepEndM;
+      const daySleepMinutes = normalizeDaySleepMinutes(newData.daySleepMinutes ?? data.daySleepMinutes);
 
       onChange({
         ...newData,
+        daySleepMinutes,
         // Форматированные поля для onComplete callback
         sleepStart: `${pad2(startH)}:${pad2(startM)}`,
         sleepEnd: `${pad2(endH)}:${pad2(endM)}`,
-        sleepHours: Math.round(calcSleepHours(startH, startM, endH, endM) * 10) / 10
+        sleepHours: Math.round((calcSleepHours(startH, startM, endH, endM) + daySleepMinutes / 60) * 10) / 10
       });
     };
 
@@ -479,9 +498,10 @@
             sleepStartM,
             sleepEndH,
             sleepEndM,
+            daySleepMinutes: normalizeDaySleepMinutes(dayData.daySleepMinutes),
             sleepStart: dayData.sleepStart,
             sleepEnd: dayData.sleepEnd,
-            sleepHours: dayData.sleepHours || Math.round(calcSleepHours(sleepStartH, sleepStartM, sleepEndH, sleepEndM) * 10) / 10
+            sleepHours: dayData.sleepHours || Math.round((calcSleepHours(sleepStartH, sleepStartM, sleepEndH, sleepEndM) + normalizeDaySleepMinutes(dayData.daySleepMinutes) / 60) * 10) / 10
           };
         }
       }
@@ -496,6 +516,7 @@
         sleepStartM,
         sleepEndH,
         sleepEndM,
+        daySleepMinutes: 0,
         // Форматированные поля для onComplete
         sleepStart: last.sleepStart,
         sleepEnd: last.sleepEnd,
@@ -507,17 +528,123 @@
       const dayData = lsGet(`heys_dayv2_${dateKey}`, {}) || {};
       const sleepStart = `${String(data.sleepStartH).padStart(2, '0')}:${String(data.sleepStartM).padStart(2, '0')}`;
       const sleepEnd = `${String(data.sleepEndH).padStart(2, '0')}:${String(data.sleepEndM).padStart(2, '0')}`;
+      const daySleepMinutes = normalizeDaySleepMinutes(dayData.daySleepMinutes ?? data.daySleepMinutes);
       const sleepHours = calcSleepHours(data.sleepStartH, data.sleepStartM, data.sleepEndH, data.sleepEndM);
 
       dayData.date = dateKey;
       dayData.sleepStart = sleepStart;
       dayData.sleepEnd = sleepEnd;
-      dayData.sleepHours = Math.round(sleepHours * 10) / 10;
+      dayData.daySleepMinutes = daySleepMinutes;
+      dayData.sleepHours = Math.round((sleepHours + daySleepMinutes / 60) * 10) / 10;
       dayData.updatedAt = Date.now();
       lsSet(`heys_dayv2_${dateKey}`, dayData);
-      console.info('[HEYS.sleepTime] ✅ Saved:', { dateKey, sleepStart, sleepEnd, sleepHours: dayData.sleepHours });
+      console.info('[HEYS.sleepTime] ✅ Saved:', { dateKey, sleepStart, sleepEnd, daySleepMinutes, sleepHours: dayData.sleepHours });
       window.dispatchEvent(new CustomEvent('heys:day-updated', {
         detail: { date: dateKey, field: 'sleep', source: 'sleep-step', forceReload: true }
+      }));
+    },
+    xpAction: 'sleep_logged'
+  });
+
+  // ============================================================
+  // DAY SLEEP STEP
+  // ============================================================
+
+  const DAY_SLEEP_OPTIONS = [0, 15, 20, 30, 45, 60, 90, 120, 150, 180];
+
+  function formatDaySleepLabel(minutes) {
+    if (!minutes) return 'Без досыпа';
+    if (minutes < 60) return `${minutes} мин`;
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    return mins ? `${hours} ч ${mins} мин` : `${hours} ч`;
+  }
+
+  function DaySleepStepComponent({ data, onChange }) {
+    const selectedMinutes = normalizeDaySleepMinutes(data.daySleepMinutes);
+    const nightSleepHours = Number.isFinite(data.nightSleepHours)
+      ? Number(data.nightSleepHours)
+      : null;
+    const totalSleepHours = nightSleepHours == null
+      ? selectedMinutes / 60
+      : Math.round((nightSleepHours + selectedMinutes / 60) * 10) / 10;
+
+    return React.createElement('div', { className: 'mc-day-sleep-step' },
+      React.createElement('div', { className: 'mc-day-sleep-summary' },
+        React.createElement('div', { className: 'mc-day-sleep-summary__value' }, formatDaySleepLabel(selectedMinutes)),
+        React.createElement('div', { className: 'mc-day-sleep-summary__hint' },
+          nightSleepHours == null
+            ? 'Укажи, сколько удалось доспать днём'
+            : `Итого сна за день: ${totalSleepHours.toFixed(1)} ч`
+        )
+      ),
+      React.createElement('div', { className: 'mc-day-sleep-options' },
+        DAY_SLEEP_OPTIONS.map((minutes) => React.createElement('button', {
+          key: minutes,
+          type: 'button',
+          className: `mc-day-sleep-option ${selectedMinutes === minutes ? 'mc-day-sleep-option--active' : ''}`,
+          onClick: () => onChange({
+            ...data,
+            daySleepMinutes: minutes,
+            nightSleepHours,
+            sleepHours: nightSleepHours == null ? undefined : Math.round((nightSleepHours + minutes / 60) * 10) / 10
+          })
+        }, formatDaySleepLabel(minutes))
+        )
+      )
+    );
+  }
+
+  registerStep('daySleep', {
+    title: 'Дневной сон',
+    hint: 'Добавь досып за день, если он был',
+    icon: '😴',
+    component: DaySleepStepComponent,
+    getInitialData: (context) => {
+      const dateKey = resolveDateKey(context?.dateKey);
+      const dayData = lsGet(`heys_dayv2_${dateKey}`, {}) || {};
+      const nightSleepHours = HEYS.dayUtils?.getNightSleepHours
+        ? HEYS.dayUtils.getNightSleepHours(dayData)
+        : ((dayData.sleepStart && dayData.sleepEnd)
+          ? Math.round(calcSleepHours(
+            parseInt(dayData.sleepStart.split(':')[0], 10),
+            parseInt(dayData.sleepStart.split(':')[1], 10),
+            parseInt(dayData.sleepEnd.split(':')[0], 10),
+            parseInt(dayData.sleepEnd.split(':')[1], 10)
+          ) * 10) / 10
+          : null);
+
+      return {
+        daySleepMinutes: normalizeDaySleepMinutes(dayData.daySleepMinutes),
+        nightSleepHours,
+        sleepHours: nightSleepHours == null
+          ? undefined
+          : Math.round((nightSleepHours + normalizeDaySleepMinutes(dayData.daySleepMinutes) / 60) * 10) / 10
+      };
+    },
+    save: (data, context) => {
+      const dateKey = resolveDateKey(context?.dateKey);
+      const dayData = lsGet(`heys_dayv2_${dateKey}`, {}) || {};
+      const daySleepMinutes = normalizeDaySleepMinutes(data.daySleepMinutes);
+      const nightSleepHours = HEYS.dayUtils?.getNightSleepHours
+        ? HEYS.dayUtils.getNightSleepHours(dayData)
+        : ((dayData.sleepStart && dayData.sleepEnd)
+          ? Math.round(calcSleepHours(
+            parseInt(dayData.sleepStart.split(':')[0], 10),
+            parseInt(dayData.sleepStart.split(':')[1], 10),
+            parseInt(dayData.sleepEnd.split(':')[0], 10),
+            parseInt(dayData.sleepEnd.split(':')[1], 10)
+          ) * 10) / 10
+          : 0);
+
+      dayData.date = dateKey;
+      dayData.daySleepMinutes = daySleepMinutes;
+      dayData.sleepHours = Math.round((nightSleepHours + daySleepMinutes / 60) * 10) / 10;
+      dayData.updatedAt = Date.now();
+      lsSet(`heys_dayv2_${dateKey}`, dayData);
+      console.info('[HEYS.daySleep] ✅ Saved:', { dateKey, daySleepMinutes, sleepHours: dayData.sleepHours });
+      window.dispatchEvent(new CustomEvent('heys:day-updated', {
+        detail: { date: dateKey, field: 'daySleepMinutes', source: 'day-sleep-step', forceReload: true }
       }));
     },
     xpAction: 'sleep_logged'
@@ -708,6 +835,7 @@
         if (st.sleepStart) dayData.sleepStart = st.sleepStart;
         if (st.sleepEnd) dayData.sleepEnd = st.sleepEnd;
         if (st.sleepHours !== undefined) dayData.sleepHours = st.sleepHours;
+        if (st.daySleepMinutes !== undefined) dayData.daySleepMinutes = normalizeDaySleepMinutes(st.daySleepMinutes);
       }
 
       if (data.sleepNote && data.sleepNote.trim()) {

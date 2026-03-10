@@ -52,9 +52,9 @@
   // 🔧 УТИЛИТЫ
   // ═══════════════════════════════════════════════════════════════════
 
-  // Debug логи — только при localStorage.heys_debug_api = 'true'
+  // Debug логи — только при включённой группе api или localStorage.heys_debug_api = 'true'
   function log(...args) {
-    if (global.localStorage?.getItem('heys_debug_api') === 'true') {
+    if (global.__heysLogControl?.isEnabled?.('api') === true || global.localStorage?.getItem('heys_debug_api') === 'true') {
       console.info('[HEYS.api]', ...args);
     }
   }

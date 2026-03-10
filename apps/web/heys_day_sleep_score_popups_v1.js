@@ -1,7 +1,7 @@
 // heys_day_sleep_score_popups_v1.js — Sleep quality + day score popups
 // Extracted from heys_day_v12.js
 
-;(function(global) {
+; (function (global) {
   'use strict';
 
   const HEYS = global.HEYS = global.HEYS || {};
@@ -44,7 +44,7 @@
         ReactDOM.createPortal(
           React.createElement('div', { className: 'time-picker-backdrop', onClick: cancelSleepQualityPicker },
             React.createElement('div', { className: 'time-picker-modal sleep-quality-picker-modal', onClick: e => e.stopPropagation() },
-              React.createElement('div', { 
+              React.createElement('div', {
                 className: 'bottom-sheet-handle',
                 onTouchStart: handleSheetTouchStart,
                 onTouchMove: handleSheetTouchMove,
@@ -57,34 +57,34 @@
               ),
               // Большой emoji и текст
               React.createElement('div', { className: 'sleep-quality-face' },
-                React.createElement('span', { className: 'sleep-quality-face-emoji' }, 
+                React.createElement('span', { className: 'sleep-quality-face-emoji' },
                   pendingSleepQuality === 0 ? '🤷' :
-                  pendingSleepQuality <= 2 ? '😫' :
-                  pendingSleepQuality <= 4 ? '😩' :
-                  pendingSleepQuality <= 5 ? '😐' :
-                  pendingSleepQuality <= 7 ? '😌' :
-                  pendingSleepQuality <= 9 ? '😊' : '🌟'
+                    pendingSleepQuality <= 2 ? '😫' :
+                      pendingSleepQuality <= 4 ? '😩' :
+                        pendingSleepQuality <= 5 ? '😐' :
+                          pendingSleepQuality <= 7 ? '😌' :
+                            pendingSleepQuality <= 9 ? '😊' : '🌟'
                 ),
-                React.createElement('span', { className: 'sleep-quality-face-text' }, 
+                React.createElement('span', { className: 'sleep-quality-face-text' },
                   pendingSleepQuality === 0 ? 'Не указано' :
-                  pendingSleepQuality <= 2 ? 'Ужасно спал' :
-                  pendingSleepQuality <= 4 ? 'Плохо спал' :
-                  pendingSleepQuality <= 5 ? 'Средне' :
-                  pendingSleepQuality <= 7 ? 'Нормально' :
-                  pendingSleepQuality <= 9 ? 'Хорошо выспался' : 'Отлично выспался!'
+                    pendingSleepQuality <= 2 ? 'Ужасно спал' :
+                      pendingSleepQuality <= 4 ? 'Плохо спал' :
+                        pendingSleepQuality <= 5 ? 'Средне' :
+                          pendingSleepQuality <= 7 ? 'Нормально' :
+                            pendingSleepQuality <= 9 ? 'Хорошо выспался' : 'Отлично выспался!'
                 )
               ),
               // Большое число
               React.createElement('div', { className: 'sleep-quality-big-value' },
-                React.createElement('span', { 
+                React.createElement('span', {
                   className: 'sleep-quality-number',
-                  style: { 
+                  style: {
                     color: pendingSleepQuality === 0 ? '#9ca3af' :
-                           pendingSleepQuality <= 2 ? '#ef4444' :
-                           pendingSleepQuality <= 4 ? '#f97316' :
-                           pendingSleepQuality <= 5 ? '#eab308' :
-                           pendingSleepQuality <= 7 ? '#84cc16' :
-                           pendingSleepQuality <= 9 ? '#22c55e' : '#10b981'
+                      pendingSleepQuality <= 2 ? '#ef4444' :
+                        pendingSleepQuality <= 4 ? '#f97316' :
+                          pendingSleepQuality <= 5 ? '#eab308' :
+                            pendingSleepQuality <= 7 ? '#84cc16' :
+                              pendingSleepQuality <= 9 ? '#22c55e' : '#10b981'
                   }
                 }, pendingSleepQuality === 0 ? '—' : sleepQualityValues[pendingSleepQuality]),
                 React.createElement('span', { className: 'sleep-quality-of-ten' }, pendingSleepQuality > 0 ? '/10' : '')
@@ -126,41 +126,41 @@
               // Комментарий всегда виден с динамическим стилем
               (() => {
                 const sleepState = pendingSleepQuality >= 8 ? 'positive' : pendingSleepQuality >= 1 && pendingSleepQuality <= 4 ? 'negative' : 'neutral';
-                
+
                 // Quick chips для сна
-                const sleepChips = sleepState === 'negative' 
+                const sleepChips = sleepState === 'negative'
                   ? ['Шум', 'Кошмары', 'Душно', 'Поздно лёг', 'Тревога', 'Кофе']
                   : sleepState === 'positive'
-                  ? ['Режим', 'Тишина', 'Прохлада', 'Без гаджетов', 'Прогулка']
-                  : [];
-                
+                    ? ['Режим', 'Тишина', 'Прохлада', 'Без гаджетов', 'Прогулка']
+                    : [];
+
                 const addSleepChip = (chip) => {
                   if (navigator.vibrate) navigator.vibrate(5);
                   const current = pendingSleepNote || '';
                   setPendingSleepNote(current ? current + ', ' + chip : chip);
                 };
-                
-                return React.createElement('div', { 
+
+                return React.createElement('div', {
                   className: 'sleep-quality-comment-wrapper ' + sleepState
                 },
-                  React.createElement('div', { 
+                  React.createElement('div', {
                     className: 'sleep-quality-comment-prompt ' + sleepState
                   },
                     React.createElement('div', { className: 'comment-prompt-header' },
-                      React.createElement('span', { className: 'sleep-quality-comment-icon' }, 
+                      React.createElement('span', { className: 'sleep-quality-comment-icon' },
                         sleepState === 'positive' ? '✨' : sleepState === 'negative' ? '📝' : '💭'
                       ),
-                      React.createElement('span', { className: 'sleep-quality-comment-text' }, 
-                        sleepState === 'positive' ? 'Секрет хорошего сна?' : 
-                        sleepState === 'negative' ? 'Что помешало?' : 'Заметка о сне'
+                      React.createElement('span', { className: 'sleep-quality-comment-text' },
+                        sleepState === 'positive' ? 'Секрет хорошего сна?' :
+                          sleepState === 'negative' ? 'Что помешало?' : 'Заметка о сне'
                       )
                     ),
                     // Quick chips
-                    sleepChips.length > 0 && React.createElement('div', { 
-                      className: 'quick-chips ' + sleepState 
+                    sleepChips.length > 0 && React.createElement('div', {
+                      className: 'quick-chips ' + sleepState
                     },
-                      sleepChips.map(chip => 
-                        React.createElement('button', { 
+                      sleepChips.map(chip =>
+                        React.createElement('button', {
                           key: chip,
                           className: 'quick-chip' + ((pendingSleepNote || '').includes(chip) ? ' selected' : ''),
                           onClick: () => addSleepChip(chip)
@@ -173,8 +173,8 @@
                     React.createElement('input', {
                       type: 'text',
                       className: 'sleep-quality-comment-input',
-                      placeholder: sleepState === 'positive' ? 'Режим, тишина, прохлада...' : 
-                                   sleepState === 'negative' ? 'Шум, кошмары, душно...' : 'Любые заметки...',
+                      placeholder: sleepState === 'positive' ? 'Режим, тишина, прохлада...' :
+                        sleepState === 'negative' ? 'Шум, кошмары, душно...' : 'Любые заметки...',
                       value: pendingSleepNote,
                       onChange: (e) => setPendingSleepNote(e.target.value),
                       onClick: (e) => e.stopPropagation()
@@ -183,10 +183,10 @@
                 );
               })(),
               // Часы сна
-              day.sleepHours > 0 && React.createElement('div', { className: 'sleep-quality-hours-info' },
+              (HEYS.dayUtils?.getTotalSleepHours?.(day) || day.sleepHours) > 0 && React.createElement('div', { className: 'sleep-quality-hours-info' },
                 '🛏️ Сегодня: ',
-                React.createElement('strong', null, day.sleepHours + ' ч'),
-                day.sleepHours < 6 ? ' — маловато!' : day.sleepHours >= 8 ? ' — отлично!' : ''
+                React.createElement('strong', null, (HEYS.dayUtils?.getTotalSleepHours?.(day) || day.sleepHours) + ' ч'),
+                (HEYS.dayUtils?.getTotalSleepHours?.(day) || day.sleepHours) < 6 ? ' — маловато!' : (HEYS.dayUtils?.getTotalSleepHours?.(day) || day.sleepHours) >= 8 ? ' — отлично!' : ''
               )
             )
           ),
@@ -200,7 +200,7 @@
         ReactDOM.createPortal(
           React.createElement('div', { className: 'time-picker-backdrop', onClick: cancelDayScorePicker },
             React.createElement('div', { className: 'time-picker-modal day-score-picker-modal', onClick: e => e.stopPropagation() },
-              React.createElement('div', { 
+              React.createElement('div', {
                 className: 'bottom-sheet-handle',
                 onTouchStart: handleSheetTouchStart,
                 onTouchMove: handleSheetTouchMove,
@@ -213,30 +213,30 @@
               ),
               // Большой emoji и текст
               React.createElement('div', { className: 'day-score-face' },
-                React.createElement('span', { className: 'day-score-face-emoji' }, 
+                React.createElement('span', { className: 'day-score-face-emoji' },
                   pendingDayScore === 0 ? '🤷' :
-                  pendingDayScore <= 3 ? '😢' :
-                  pendingDayScore <= 5 ? '😐' :
-                  pendingDayScore <= 7 ? '🙂' :
-                  pendingDayScore <= 9 ? '😊' : '🤩'
+                    pendingDayScore <= 3 ? '😢' :
+                      pendingDayScore <= 5 ? '😐' :
+                        pendingDayScore <= 7 ? '🙂' :
+                          pendingDayScore <= 9 ? '😊' : '🤩'
                 ),
-                React.createElement('span', { className: 'day-score-face-text' }, 
+                React.createElement('span', { className: 'day-score-face-text' },
                   pendingDayScore === 0 ? 'Не задано' :
-                  pendingDayScore <= 2 ? 'Плохой день' :
-                  pendingDayScore <= 4 ? 'Так себе' :
-                  pendingDayScore <= 6 ? 'Нормально' :
-                  pendingDayScore <= 8 ? 'Хороший день' : 'Отличный день!'
+                    pendingDayScore <= 2 ? 'Плохой день' :
+                      pendingDayScore <= 4 ? 'Так себе' :
+                        pendingDayScore <= 6 ? 'Нормально' :
+                          pendingDayScore <= 8 ? 'Хороший день' : 'Отличный день!'
                 )
               ),
               // Большое число
               React.createElement('div', { className: 'day-score-big-value' },
-                React.createElement('span', { 
+                React.createElement('span', {
                   className: 'day-score-number',
-                  style: { 
+                  style: {
                     color: pendingDayScore === 0 ? '#9ca3af' :
-                           pendingDayScore <= 3 ? '#ef4444' :
-                           pendingDayScore <= 5 ? '#eab308' :
-                           pendingDayScore <= 7 ? '#22c55e' : '#10b981'
+                      pendingDayScore <= 3 ? '#ef4444' :
+                        pendingDayScore <= 5 ? '#eab308' :
+                          pendingDayScore <= 7 ? '#22c55e' : '#10b981'
                   }
                 }, pendingDayScore === 0 ? '—' : pendingDayScore),
                 React.createElement('span', { className: 'day-score-of-ten' }, '/ 10')
@@ -276,22 +276,22 @@
                 )
               ),
               // Блок комментария — всегда виден, стиль меняется в зависимости от оценки
-              React.createElement('div', { 
-                className: 'day-score-comment-wrapper' + 
+              React.createElement('div', {
+                className: 'day-score-comment-wrapper' +
                   (pendingDayScore >= 7 ? ' positive' : pendingDayScore >= 1 && pendingDayScore <= 4 ? ' negative' : ' neutral')
               },
-                React.createElement('div', { 
-                  className: 'day-score-comment-prompt' + 
+                React.createElement('div', {
+                  className: 'day-score-comment-prompt' +
                     (pendingDayScore >= 7 ? ' positive' : pendingDayScore >= 1 && pendingDayScore <= 4 ? ' negative' : ' neutral')
                 },
                   React.createElement('div', { className: 'comment-prompt-header' },
-                    React.createElement('span', { className: 'day-score-comment-icon' }, 
+                    React.createElement('span', { className: 'day-score-comment-icon' },
                       pendingDayScore >= 7 ? '✨' : pendingDayScore >= 1 && pendingDayScore <= 4 ? '📝' : '💭'
                     ),
-                    React.createElement('span', { className: 'day-score-comment-text' }, 
-                      pendingDayScore >= 7 ? 'Что сделало день отличным?' 
-                      : pendingDayScore >= 1 && pendingDayScore <= 4 ? 'Что случилось?' 
-                      : 'Заметка о дне'
+                    React.createElement('span', { className: 'day-score-comment-text' },
+                      pendingDayScore >= 7 ? 'Что сделало день отличным?'
+                        : pendingDayScore >= 1 && pendingDayScore <= 4 ? 'Что случилось?'
+                          : 'Заметка о дне'
                     )
                   ),
                   // История комментариев
@@ -300,11 +300,11 @@
                   React.createElement('input', {
                     type: 'text',
                     className: 'day-score-comment-input',
-                    placeholder: pendingDayScore >= 7 
-                      ? 'Хорошо выспался, прогулка...' 
-                      : pendingDayScore >= 1 && pendingDayScore <= 4 
-                      ? 'Болела голова, плохо спал...' 
-                      : 'Обычный день...',
+                    placeholder: pendingDayScore >= 7
+                      ? 'Хорошо выспался, прогулка...'
+                      : pendingDayScore >= 1 && pendingDayScore <= 4
+                        ? 'Болела голова, плохо спал...'
+                        : 'Обычный день...',
                     value: pendingDayComment,
                     onChange: (e) => setPendingDayComment(e.target.value),
                     onClick: (e) => e.stopPropagation()

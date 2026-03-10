@@ -136,6 +136,20 @@
         return (endMin - startMin) / 60;
     }
 
+    function getDaySleepHours(day) {
+        if (!day) return null;
+        if (window.HEYS?.dayUtils?.getTotalSleepHours) {
+            const total = window.HEYS.dayUtils.getTotalSleepHours(day);
+            return total > 0 ? total : null;
+        }
+        const base = day.sleepHours || (day.sleepStart && day.sleepEnd
+            ? calculateSleepHours(day.sleepStart, day.sleepEnd)
+            : null);
+        if (!base) return null;
+        const napHours = Math.max(0, Math.round(+day.daySleepMinutes || 0)) / 60;
+        return base + napHours;
+    }
+
     /**
      * B2: Wellbeing Correlation — что влияет на самочувствие.
      * @param {Array} days
@@ -159,9 +173,7 @@
                 correlations.sleepQuality.pairs.push({ wellbeing, value: day.sleepQuality });
             }
 
-            const sleepHours = day.sleepHours || (day.sleepStart && day.sleepEnd
-                ? calculateSleepHours(day.sleepStart, day.sleepEnd)
-                : null);
+            const sleepHours = getDaySleepHours(day);
             if (sleepHours) {
                 correlations.sleepHours.pairs.push({ wellbeing, value: sleepHours });
             }
@@ -606,7 +618,7 @@
             const dayData = {
                 date: day.date,
                 kcal: calculateDayKcal(day, pIndex),
-                sleep: day.sleepHours || (day.sleepStart && day.sleepEnd ? calculateSleepHours(day.sleepStart, day.sleepEnd) : null),
+                sleep: getDaySleepHours(day),
                 steps: day.steps
             };
 

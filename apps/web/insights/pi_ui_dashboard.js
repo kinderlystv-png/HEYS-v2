@@ -100,7 +100,7 @@
         if (!day || typeof day !== 'object') return false;
         if ((day.meals || []).length > 0) return true;
         if ((day.trainings || []).length > 0) return true;
-        if ((day.sleepHours || 0) > 0) return true;
+        if (getDaySleepHours(day) > 0) return true;
         return false;
       };
 
@@ -118,6 +118,16 @@
       }
 
       return baseDate; // Если ничего не нашли, возвращаем базовую дату
+    }
+
+    function getDaySleepHours(day) {
+      if (!day || typeof day !== 'object') return 0;
+      const totalSleepHours = HEYS.dayUtils?.getTotalSleepHours?.(day);
+      if (Number.isFinite(totalSleepHours) && totalSleepHours > 0) return totalSleepHours;
+      const storedSleepHours = Number(day.sleepHours);
+      if (Number.isFinite(storedSleepHours) && storedSleepHours > 0) return storedSleepHours;
+      const fallbackSleepHours = HEYS.dayUtils?.sleepHours?.(day.sleepStart, day.sleepEnd);
+      return Number.isFinite(fallbackSleepHours) && fallbackSleepHours > 0 ? fallbackSleepHours : 0;
     }
 
     function WeightPrediction({ prediction }) {
@@ -248,7 +258,7 @@
         let dayRisk = 0;
         if (day.stressAvg >= 6) dayRisk += 35;
         else if (day.stressAvg >= 4) dayRisk += 15;
-        const sleepDef = (profile.sleepHours || 8) - (day.sleepHours || 0);
+        const sleepDef = (profile.sleepHours || 8) - getDaySleepHours(day);
         if (sleepDef > 2) dayRisk += 15;
         avgEmotionalRisk += dayRisk;
       }
@@ -747,7 +757,7 @@
               baseWaveHours: profile?.insulinWaveHours || 3,
               trainings: today.trainings || [],
               dayData: {
-                sleepHours: today.sleepHours,
+                sleepHours: getDaySleepHours(today),
                 sleepQuality: today.sleepQuality,
                 waterMl: today.waterMl,
                 stressAvg: today.stressAvg,
@@ -3274,7 +3284,7 @@
           bingeRisk += 10;
         }
 
-        const sleepDeficit = (profile.sleepHours || 8) - (day.sleepHours || 0);
+        const sleepDeficit = (profile.sleepHours || 8) - getDaySleepHours(day);
         if (sleepDeficit > 2) {
           factors.push('Недосып');
           bingeRisk += 15;

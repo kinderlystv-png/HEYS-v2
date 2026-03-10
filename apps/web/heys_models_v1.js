@@ -416,6 +416,7 @@
    * @property {string} sleepStart
    * @property {string} sleepEnd
    * @property {string} sleepNote
+    * @property {number} daySleepMinutes
    * @property {number} sleepQuality
    * @property {number} weightMorning
    * @property {number} deficitPct
@@ -458,6 +459,7 @@
       sleepStart: d.sleepStart || '',
       sleepEnd: d.sleepEnd || '',
       sleepNote: d.sleepNote || '',
+      daySleepMinutes: d.daySleepMinutes != null ? Math.max(0, Math.round(+d.daySleepMinutes || 0)) : 0,
       // Если явно передана пустая строка, оставляем пустую строку
       sleepQuality: (d.sleepQuality === '') ? '' : (d.sleepQuality != null ? d.sleepQuality : ''),
       // Вес: если явно задан, берём его; иначе пустое значение (не из профиля)
@@ -484,7 +486,7 @@
       measurements: d.measurements || undefined,
       // Холодовое воздействие (cold_exposure шаг)
       coldExposure: d.coldExposure || undefined,
-      // Расчётные часы сна
+      // Расчётные часы сна (ночной + дневной досып)
       sleepHours: d.sleepHours != null ? +d.sleepHours : undefined,
       // Время бытовой активности (legacy)
       householdTime: d.householdTime || undefined,

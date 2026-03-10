@@ -528,9 +528,18 @@
           React.createElement('div', { className: 'text-2xl font-extrabold tracking-tight text-slate-900' }, 'HEYS'),
           React.createElement('div', { className: 'mt-1 text-sm text-slate-500' }, 'Вход куратора'),
         ),
-        React.createElement('div', { className: 'mt-5 space-y-3' },
+        React.createElement(
+          'form',
+          {
+            className: 'mt-5 space-y-3',
+            onSubmit: (e) => {
+              e.preventDefault();
+              if (canCuratorLogin) handleCuratorLogin();
+            },
+          },
           Input({
             type: 'email',
+            name: 'email',
             autoComplete: 'email',
             placeholder: 'Email',
             value: email,
@@ -538,15 +547,15 @@
           }),
           Input({
             type: 'password',
+            name: 'password',
             autoComplete: 'current-password',
             placeholder: 'Пароль',
             value: password,
             onChange: (e) => { setErr(''); setPassword(e.target.value); },
-            onKeyDown: (e) => e.key === 'Enter' && canCuratorLogin && handleCuratorLogin(),
           }),
           err && React.createElement('div', { className: 'rounded-xl bg-red-50 px-3 py-2 text-center text-sm text-red-600' }, err),
           PrimaryBtn(
-            { onClick: handleCuratorLogin, disabled: !canCuratorLogin },
+            { type: 'submit', disabled: !canCuratorLogin },
             busy ? '⏳ Вход...' : 'Войти →',
           ),
         ),

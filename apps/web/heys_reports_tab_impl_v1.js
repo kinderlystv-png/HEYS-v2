@@ -28,6 +28,13 @@
         return round1(d);
     }
 
+    function getTotalSleepHours(day) {
+        if (HEYS.dayUtils?.getTotalSleepHours) {
+            return HEYS.dayUtils.getTotalSleepHours(day);
+        }
+        return round1((day?.sleepHours || 0) || sleepHours(day?.sleepStart, day?.sleepEnd));
+    }
+
     // ---------- Кэширование вычислений ----------
     const dayCache = new Map();
     const maxCacheSize = 200; // Увеличиваем размер кэша для хранения большего количества дней
@@ -282,7 +289,7 @@
         const dayTargetDef = (dayObj.deficitPct !== '' && dayObj.deficitPct != null) ? +dayObj.deficitPct : +(profile.deficitPctTarget) || 0;
         // Убрано избыточное логирование дефицита калорий
         // sleepComment в дневнике хранится как sleepNote (ранее) — поддержим оба поля
-        const calculatedSleepHours = sleepHours(dayObj.sleepStart, dayObj.sleepEnd);
+        const calculatedSleepHours = getTotalSleepHours(dayObj);
         return {
             dstr: dateStr, totals, bmr, activitySubtotal: actTotal, activitiesKcal: train1k + train2k,
             tefKcal, baseExpenditure, dailyExp, weight: weight, // 🆕 v3.9.1: TEF и baseExpenditure

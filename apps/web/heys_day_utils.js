@@ -1342,6 +1342,36 @@
     return r1(d);
   }
 
+  function normalizeDaySleepMinutes(value) {
+    const n = Math.round(+value || 0);
+    if (!Number.isFinite(n) || n <= 0) return 0;
+    return clamp(n, 0, 360);
+  }
+
+  function getNightSleepHours(day) {
+    if (!day) return 0;
+    const fromWindow = sleepHours(day.sleepStart, day.sleepEnd);
+    if (fromWindow > 0) return fromWindow;
+
+    const total = +day.sleepHours || 0;
+    const napHours = normalizeDaySleepMinutes(day.daySleepMinutes) / 60;
+    return r1(Math.max(0, total - napHours));
+  }
+
+  function getTotalSleepHours(day) {
+    if (!day) return 0;
+
+    const totalStored = +day.sleepHours || 0;
+    const napHours = normalizeDaySleepMinutes(day.daySleepMinutes) / 60;
+    const nightHours = getNightSleepHours(day);
+
+    if (nightHours > 0 || napHours > 0) {
+      return r1(nightHours + napHours);
+    }
+
+    return r1(Math.max(0, totalStored));
+  }
+
   // === Meal Type Classification ===
   // Типы приёмов пищи с иконками и названиями
   const MEAL_TYPES = {
@@ -1839,16 +1869,7 @@
         });
       });
 
-      // Вычисляем sleepHours из sleepStart/sleepEnd
-      let sleepHours = 0;
-      if (dayData.sleepStart && dayData.sleepEnd) {
-        const [sh, sm] = dayData.sleepStart.split(':').map(Number);
-        const [eh, em] = dayData.sleepEnd.split(':').map(Number);
-        let startMin = sh * 60 + sm;
-        let endMin = eh * 60 + em;
-        if (endMin < startMin) endMin += 24 * 60; // через полночь
-        sleepHours = (endMin - startMin) / 60;
-      }
+      const sleepHours = getTotalSleepHours(dayData);
 
       // Считаем общие минуты тренировок
       let trainingMinutes = 0;
@@ -2468,6 +2489,10 @@
     r0,
     r1,
     scale,
+    sleepHours,
+    normalizeDaySleepMinutes,
+    getNightSleepHours,
+    getTotalSleepHours,
     // Models
     ensureDay,
     buildProductIndex,

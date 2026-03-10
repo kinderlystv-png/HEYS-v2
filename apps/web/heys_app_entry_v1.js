@@ -5,7 +5,7 @@
     HEYS.AppEntry = HEYS.AppEntry || {};
 
     HEYS.AppEntry.start = function start() {
-        console.info('[HEYS] 🚀 Приложение запущено');
+        console.info('[HEYS.entry] 🚀 Приложение запущено');
 
         // Feature flags (local defaults)
         HEYS.features = HEYS.features || {

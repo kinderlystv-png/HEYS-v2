@@ -9123,21 +9123,43 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
       }
     };
 
-    const openDaySleepCheckin = () => {
-      if (HEYS.showCheckin?.daySleep) {
-        HEYS.showCheckin.daySleep(date, () => {
-          const dateKey = date || new Date().toISOString().slice(0, 10);
-          const storedDay = HEYS.utils?.lsGet ? HEYS.utils.lsGet(`heys_dayv2_${dateKey}`, {}) : null;
+    const openDaySleepCheckin = (event) => {
+      event?.preventDefault?.();
+      event?.stopPropagation?.();
 
-          if (storedDay) {
-            setDay(prev => ({
-              ...prev,
-              ...storedDay,
-              updatedAt: Date.now()
-            }));
-          }
-        });
+      const dateKey = date || new Date().toISOString().slice(0, 10);
+      const refreshDayFromStorage = () => {
+        const storedDay = HEYS.utils?.lsGet ? HEYS.utils.lsGet(`heys_dayv2_${dateKey}`, {}) : null;
+
+        if (storedDay) {
+          console.info('[HEYS.daySideBlock] daySleep updated from storage', { dateKey });
+          setDay(prev => ({
+            ...prev,
+            ...storedDay,
+            updatedAt: Date.now()
+          }));
+        }
+      };
+
+      if (HEYS.showCheckin?.daySleep) {
+        console.info('[HEYS.daySideBlock] opening daySleep via showCheckin', { dateKey });
+        HEYS.showCheckin.daySleep(dateKey, refreshDayFromStorage);
+        return;
       }
+
+      if (HEYS.StepModal?.show) {
+        console.info('[HEYS.daySideBlock] opening daySleep via StepModal fallback', { dateKey });
+        HEYS.StepModal.show({
+          steps: ['daySleep'],
+          title: 'Дневной сон',
+          showProgress: false,
+          context: { dateKey },
+          onComplete: refreshDayFromStorage
+        });
+        return;
+      }
+
+      console.warn('[HEYS.daySideBlock] daySleep modal unavailable');
     };
 
     const openMorningMoodCheckin = () => {
@@ -9184,10 +9206,13 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
               ? HEYS.dayUtils.getTotalSleepHours(day)
               : (sleepH || day.sleepHours || 0);
             const nightSleepHours = Math.max(0, Math.round((totalSleepHours - napMinutes / 60) * 10) / 10);
+            const isNapRecommended = totalSleepHours > 0 && totalSleepHours < 6;
             const napLabel = napMinutes >= 60
               ? `${Math.floor(napMinutes / 60)} ч${napMinutes % 60 ? ` ${napMinutes % 60} мин` : ''}`
               : `${napMinutes} мин`;
-            const napButtonLabel = napMinutes > 0 ? `😴 Доп. сон: ${napLabel}` : '➕ Добавить доп. сон';
+            const napButtonLabel = napMinutes > 0
+              ? `😴 Доп. сон: ${napLabel}`
+              : (isNapRecommended ? '⚡ Рекомендуем доспать в обед' : '➕ Добавить доп. сон');
 
             // Умная подсказка при низкой оценке сна
             const sleepTip = (day.sleepQuality > 0 && day.sleepQuality <= 4)
@@ -9237,9 +9262,10 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
                   React.createElement('span', { className: 'sleep-breakdown-item' }, `🌙 Ночь: ${nightSleepHours > 0 ? `${nightSleepHours} ч` : '—'}`),
                   React.createElement('button', {
                     type: 'button',
-                    className: `sleep-breakdown-item sleep-breakdown-item--nap clickable${napMinutes > 0 ? ' has-value' : ''}`,
+                    className: `sleep-breakdown-cta clickable${napMinutes > 0 ? ' has-value' : ''}${isNapRecommended ? ' recommended' : ' subtle'}`,
                     onClick: openDaySleepCheckin
-                  }, napButtonLabel)
+                  }, napButtonLabel),
+                  isNapRecommended && React.createElement('div', { className: 'sleep-breakdown-reason' }, 'Если ночью вышло меньше 6 часов, короткий дневной сон может поддержать восстановление')
                 )
               ),
               // Умная подсказка
@@ -11692,6 +11718,9 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             scheduleAdvice,
             undoLastDismiss,
             clearLastDismissed,
+            copyAdviceTrace,
+            adviceTraceAvailable,
+            adviceTraceCopyState,
             ADVICE_CATEGORY_NAMES,
             AdviceCard,
             displayedAdvice,
@@ -11979,6 +12008,9 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                     scheduleAdvice,
                     undoLastDismiss,
                     clearLastDismissed,
+                    copyAdviceTrace,
+                    adviceTraceAvailable,
+                    adviceTraceCopyState,
                     ADVICE_CATEGORY_NAMES,
                     AdviceCard
                 }) || null,
@@ -14123,6 +14155,9 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             scheduleAdvice: adviceState.scheduleAdvice,
             undoLastDismiss: adviceState.undoLastDismiss,
             clearLastDismissed: adviceState.clearLastDismissed,
+            copyAdviceTrace: adviceState.copyAdviceTrace,
+            adviceTraceAvailable: adviceState.adviceTraceAvailable,
+            adviceTraceCopyState: adviceState.adviceTraceCopyState,
             ADVICE_CATEGORY_NAMES: adviceState.ADVICE_CATEGORY_NAMES,
             AdviceCard: ctx.AdviceCard,
             displayedAdvice: adviceState.displayedAdvice,

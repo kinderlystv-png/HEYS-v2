@@ -11112,6 +11112,9 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
         scheduleAdvice,
         undoLastDismiss,
         clearLastDismissed,
+        copyAdviceTrace,
+        adviceTraceAvailable,
+        adviceTraceCopyState,
         ADVICE_CATEGORY_NAMES,
         AdviceCard,
     }) {
@@ -11135,12 +11138,25 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
                 React.createElement('div', { className: 'advice-list-header' },
                     React.createElement('div', { className: 'advice-list-header-top' },
                         React.createElement('span', null, `💡 Советы (${activeCount})`),
-                        activeCount > 1 && React.createElement('button', {
-                            className: 'advice-list-dismiss-all',
-                            onClick: handleDismissAll,
-                            disabled: dismissAllAnimation,
-                            title: 'Пометить все советы прочитанными',
-                        }, 'Прочитать все')
+                        React.createElement('div', { className: 'advice-list-header-actions' },
+                            adviceTraceAvailable && React.createElement('button', {
+                                className: 'advice-list-dismiss-all',
+                                onClick: copyAdviceTrace,
+                                title: 'Скопировать технический лог принятия решений по советам',
+                            },
+                                adviceTraceCopyState === 'success'
+                                    ? '✅ Лог скопирован'
+                                    : adviceTraceCopyState === 'error'
+                                        ? '⚠️ Ошибка копии'
+                                        : '📋 Техлог'
+                            ),
+                            activeCount > 1 && React.createElement('button', {
+                                className: 'advice-list-dismiss-all',
+                                onClick: handleDismissAll,
+                                disabled: dismissAllAnimation,
+                                title: 'Пометить все советы прочитанными',
+                            }, 'Прочитать все')
+                        )
                     ),
                     React.createElement('div', { className: 'advice-list-header-left' },
                         React.createElement('div', { className: 'advice-list-toggles' },
@@ -11708,6 +11724,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
                 return true;
             }
         });
+        const [adviceTraceCopyState, setAdviceTraceCopyState] = useState('idle');
 
         // On mount: re-read settings early (before 1500ms tab_open timer) in case
         // store was not ready during useState initializer (slow network race condition)
@@ -11934,6 +11951,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
             adviceCount: 0,
             allAdvices: [],
             badgeAdvices: [],
+            trace: null,
             markShown: null,
             markRead: null,
             markHidden: null,
@@ -11965,6 +11983,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
             adviceCount = 0,
             allAdvices = [],
             badgeAdvices = [],
+            trace: adviceTrace = null,
             markShown = null,
             markRead = null,
             markHidden = null,
@@ -11973,6 +11992,76 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
             scheduleAdvice = null,
             scheduledCount = 0,
         } = safeAdviceResult || {};
+
+        const copyTextFallback = useCallback((text) => {
+            try {
+                const textarea = document.createElement('textarea');
+                textarea.value = text;
+                textarea.setAttribute('readonly', 'true');
+                textarea.style.position = 'fixed';
+                textarea.style.opacity = '0';
+                textarea.style.pointerEvents = 'none';
+                document.body.appendChild(textarea);
+                textarea.select();
+                textarea.setSelectionRange(0, textarea.value.length);
+                const copied = document.execCommand('copy');
+                document.body.removeChild(textarea);
+                return copied;
+            } catch (e) {
+                return false;
+            }
+        }, []);
+
+        const copyAdviceTrace = useCallback(async () => {
+            if (!adviceTrace) {
+                setAdviceTraceCopyState('error');
+                return false;
+            }
+
+            const dailyLog = HEYSRef?.advice?.getDailyAdviceTraceLog?.(date);
+            const dailyFormatter = HEYSRef?.advice?.formatDailyAdviceTraceForClipboard;
+            const formatter = HEYSRef?.advice?.formatAdviceTraceForClipboard;
+            const payload = (dailyLog && typeof dailyFormatter === 'function')
+                ? dailyFormatter(dailyLog)
+                : typeof formatter === 'function'
+                    ? formatter(adviceTrace)
+                    : JSON.stringify(adviceTrace, null, 2);
+
+            try {
+                if (navigator?.clipboard?.writeText) {
+                    await navigator.clipboard.writeText(payload);
+                } else {
+                    const copied = copyTextFallback(payload);
+                    if (!copied) throw new Error('clipboard fallback failed');
+                }
+
+                setAdviceTraceCopyState('success');
+                if (typeof haptic === 'function') haptic('light');
+                HEYSRef?.advice?.recordDailyAdviceTraceEvent?.(date, 'trace_exported', {
+                    source: dailyLog ? 'daily_log' : 'single_trace',
+                    trigger: adviceTrace?.trigger || null,
+                    visibleForManualCount: adviceTrace?.outputs?.visibleForManualCount || 0,
+                    eligibleForAutoToastCount: adviceTrace?.outputs?.eligibleForAutoToastCount || 0
+                });
+                console.info('[HEYS.advice] trace copied to clipboard');
+                return true;
+            } catch (e) {
+                setAdviceTraceCopyState('error');
+                console.error('[HEYS.advice] failed to copy trace:', e?.message || e);
+                return false;
+            }
+        }, [adviceTrace, HEYSRef, copyTextFallback, haptic]);
+
+        useEffect(() => {
+            if (adviceTraceCopyState === 'idle') return undefined;
+            const timer = setTimeout(() => setAdviceTraceCopyState('idle'), 2200);
+            return () => clearTimeout(timer);
+        }, [adviceTraceCopyState]);
+
+        useEffect(() => {
+            if (!adviceTrace) return;
+            HEYSRef?.advice?.appendDailyAdviceTraceSnapshot?.(adviceTrace);
+        }, [adviceTrace, HEYSRef]);
 
         const safeAdviceRelevant = Array.isArray(adviceRelevant) ? adviceRelevant : [];
         const safeBadgeAdvices = Array.isArray(badgeAdvices) ? badgeAdvices : [];
@@ -12005,11 +12094,21 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
                     setAdviceExpanded(true);
                     setToastVisible(true);
                     setToastDismissed(false);
+                    HEYSRef?.advice?.recordDailyAdviceTraceEvent?.(date, 'manual_open', {
+                        trigger: 'manual',
+                        visibleAdviceCount: totalAdviceCount,
+                        badgeCount: Array.isArray(safeBadgeAdvices) ? safeBadgeAdvices.length : 0
+                    });
                     haptic('light');
                 } else {
                     setAdviceTrigger('manual_empty');
                     setToastVisible(true);
                     setToastDismissed(false);
+                    HEYSRef?.advice?.recordDailyAdviceTraceEvent?.(date, 'manual_empty', {
+                        trigger: 'manual_empty',
+                        visibleAdviceCount: 0,
+                        badgeCount: 0
+                    });
                     if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
                     toastTimeoutRef.current = setTimeout(() => {
                         setToastVisible(false);
@@ -12019,7 +12118,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
             };
             window.addEventListener('heysShowAdvice', handleShowAdvice);
             return () => window.removeEventListener('heysShowAdvice', handleShowAdvice);
-        }, [totalAdviceCount, haptic]);
+        }, [totalAdviceCount, haptic, HEYSRef, date, safeBadgeAdvices]);
 
         useEffect(() => {
             const handleProductAdded = () => {
@@ -12561,12 +12660,16 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
             adviceCount,
             allAdvices,
             badgeAdvices: safeBadgeAdvices,
+            adviceTrace,
+            adviceTraceAvailable: !!adviceTrace,
+            adviceTraceCopyState,
             markShown,
             markRead,
             markHidden,
             rateAdvice,
             trackClick,
             scheduleAdvice,
+            copyAdviceTrace,
             scheduledCount,
             dismissedAdvices,
             setDismissedAdvices,

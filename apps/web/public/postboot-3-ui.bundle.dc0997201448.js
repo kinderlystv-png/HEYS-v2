@@ -11254,12 +11254,72 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
   };
 
   // === КЭШ ===
-  let _cache = {
-    data: null,
-    timestamp: 0,
-    clientId: null,
-    daysBack: null
-  };
+  function createEmptyCache() {
+    return {
+      data: null,
+      timestamp: 0,
+      clientId: null,
+      daysBack: null,
+      daysFingerprint: null,
+      profileFingerprint: null,
+      productsFingerprint: null
+    };
+  }
+
+  let _cache = createEmptyCache();
+
+  function getMapLikeSize(value) {
+    if (!value) return 0;
+    if (typeof value.size === 'number') return value.size;
+    if (Array.isArray(value)) return value.length;
+    if (typeof value === 'object') return Object.keys(value).length;
+    return 0;
+  }
+
+  function getProductsFingerprint(pIndex) {
+    const productCount = HEYS.products?.getAll?.()?.length || 0;
+    const byIdSize = getMapLikeSize(pIndex?.byId);
+    const byNameSize = getMapLikeSize(pIndex?.byName);
+    return `${productCount}|${byIdSize}|${byNameSize}`;
+  }
+
+  function getProfileFingerprint(profile, clientId) {
+    const safeProfile = profile || {};
+    return [
+      safeProfile.id || clientId || 'anon',
+      safeProfile.weight || '',
+      safeProfile.height || '',
+      safeProfile.gender || '',
+      safeProfile.goal || '',
+      safeProfile.deficitPctTarget || ''
+    ].join('|');
+  }
+
+  function getDaysFingerprint(days) {
+    if (!Array.isArray(days) || days.length === 0) return '0';
+
+    return days.map((day) => {
+      const meals = Array.isArray(day?.meals)
+        ? day.meals.map((meal) => Array.isArray(meal?.items) ? meal.items.length : 0).join(',')
+        : '0';
+
+      return [
+        day?.date || 'unknown',
+        Array.isArray(day?.meals) ? day.meals.length : 0,
+        meals,
+        Array.isArray(day?.trainings) ? day.trainings.length : 0,
+        day?.steps || 0,
+        day?.waterMl || 0,
+        day?.weightMorning || '',
+        day?.sleepHours || '',
+        day?.sleepStart || '',
+        day?.sleepEnd || '',
+        day?.stressAvg || '',
+        day?.moodAvg || '',
+        day?.updatedAt || day?.updated_at || day?.ts || ''
+      ].join(':');
+    }).join('|');
+  }
 
   // === УТИЛИТЫ ===
 
@@ -11515,19 +11575,24 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       }
     }
 
-    // Проверяем кэш
     const clientId = lsGet('heys_client_current', 'default');
     const now = Date.now();
+    const productsFingerprint = getProductsFingerprint(pIndex);
+    const profileFingerprint = getProfileFingerprint(profile, clientId);
+
+    // Получаем данные до проверки кэша, чтобы не застревать на pre-sync/pre-products снимке
+    const days = getDaysData(daysBack, lsGet);
+    const daysFingerprint = getDaysFingerprint(days);
 
     if (_cache.data &&
       _cache.clientId === clientId &&
       _cache.daysBack === daysBack &&
+      _cache.daysFingerprint === daysFingerprint &&
+      _cache.profileFingerprint === profileFingerprint &&
+      _cache.productsFingerprint === productsFingerprint &&
       (now - _cache.timestamp) < CONFIG.CACHE_TTL_MS) {
       return _cache.data;
     }
-
-    // Получаем данные
-    const days = getDaysData(daysBack, lsGet);
 
     if (days.length < CONFIG.MIN_DAYS_FOR_INSIGHTS) {
       return {
@@ -11694,6 +11759,9 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       data: result,
       clientId,
       daysBack,
+      daysFingerprint,
+      profileFingerprint,
+      productsFingerprint,
       timestamp: now
     };
 
@@ -12138,7 +12206,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
   // clearCache() — очистка кэша анализа
   HEYS.PredictiveInsights.clearCache = function () {
-    _cache = {};
+    _cache = createEmptyCache();
     // console.log('[PI] Cache cleared');
   };
 
@@ -21896,97 +21964,11 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         return round1(d);
     }
 
-    function getSelectedDate(props) {
-        const raw = props?.selectedDate || props?.dateKey || props?.date;
-        if (typeof raw === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
-        return fmtDate(new Date());
-    }
-
-    function getDaySleepMinutes(day) {
-        if (HEYS.dayUtils?.normalizeDaySleepMinutes) {
-            return HEYS.dayUtils.normalizeDaySleepMinutes(day?.daySleepMinutes);
-        }
-        const value = Math.round(Number(day?.daySleepMinutes) || 0);
-        return value > 0 ? value : 0;
-    }
-
     function getTotalSleepHours(day) {
         if (HEYS.dayUtils?.getTotalSleepHours) {
             return HEYS.dayUtils.getTotalSleepHours(day);
         }
         return round1((day?.sleepHours || 0) || sleepHours(day?.sleepStart, day?.sleepEnd));
-    }
-
-    function formatNapDuration(minutes) {
-        if (!minutes) return 'Без дневного сна';
-        if (minutes < 60) return `${minutes} мин`;
-        const hours = Math.floor(minutes / 60);
-        const mins = minutes % 60;
-        return mins ? `${hours} ч ${mins} мин` : `${hours} ч`;
-    }
-
-    function ReportsSleepCard({ dateKey, dayData, onRefresh }) {
-        const React = global.React;
-        const napMinutes = getDaySleepMinutes(dayData);
-        const totalSleep = getTotalSleepHours(dayData);
-        const nightSleep = HEYS.dayUtils?.getNightSleepHours
-            ? HEYS.dayUtils.getNightSleepHours(dayData)
-            : sleepHours(dayData?.sleepStart, dayData?.sleepEnd);
-        const dateLabel = new Date(`${dateKey}T12:00:00`).toLocaleDateString('ru-RU', {
-            day: 'numeric',
-            month: 'long',
-            weekday: 'short'
-        });
-
-        const openSleep = () => {
-            if (!HEYS.showCheckin?.sleep) return;
-            HEYS.showCheckin.sleep(dateKey, () => onRefresh?.());
-        };
-
-        const openDaySleep = () => {
-            if (!HEYS.showCheckin?.daySleep) return;
-            HEYS.showCheckin.daySleep(dateKey, () => onRefresh?.());
-        };
-
-        return React.createElement('div', { className: 'reports-sleep-card widget-shadow-diary-glass widget-outline-diary-glass' },
-            React.createElement('div', { className: 'reports-sleep-card__header' },
-                React.createElement('div', null,
-                    React.createElement('div', { className: 'reports-sleep-card__title' }, 'Сон и досып'),
-                    React.createElement('div', { className: 'reports-sleep-card__subtitle' }, dateLabel)
-                ),
-                React.createElement('button', {
-                    type: 'button',
-                    className: 'reports-sleep-card__button reports-sleep-card__button--secondary',
-                    onClick: openSleep
-                }, dayData?.sleepStart && dayData?.sleepEnd ? 'Изменить ночной сон' : 'Добавить ночной сон')
-            ),
-            React.createElement('div', { className: 'reports-sleep-card__stats' },
-                React.createElement('div', { className: 'reports-sleep-card__stat' },
-                    React.createElement('span', { className: 'reports-sleep-card__stat-label' }, '🌙 Ночной сон'),
-                    React.createElement('span', { className: 'reports-sleep-card__stat-value' }, nightSleep > 0 ? `${nightSleep.toFixed(1)} ч` : '—')
-                ),
-                React.createElement('div', { className: 'reports-sleep-card__stat' },
-                    React.createElement('span', { className: 'reports-sleep-card__stat-label' }, '😴 Досып днём'),
-                    React.createElement('span', { className: 'reports-sleep-card__stat-value' }, formatNapDuration(napMinutes))
-                ),
-                React.createElement('div', { className: 'reports-sleep-card__stat' },
-                    React.createElement('span', { className: 'reports-sleep-card__stat-label' }, '📊 Всего сна'),
-                    React.createElement('span', { className: 'reports-sleep-card__stat-value' }, totalSleep > 0 ? `${totalSleep.toFixed(1)} ч` : '—')
-                )
-            ),
-            React.createElement('div', { className: 'reports-sleep-card__footer' },
-                React.createElement('div', { className: 'reports-sleep-card__hint' },
-                    napMinutes > 0
-                        ? 'Дневной сон уже попадёт в аналитику и общие sleep-метрики.'
-                        : 'Если доспал днём, добавь это здесь — аналитика учтёт общий сон.'
-                ),
-                React.createElement('button', {
-                    type: 'button',
-                    className: 'reports-sleep-card__button reports-sleep-card__button--primary',
-                    onClick: openDaySleep
-                }, napMinutes > 0 ? 'Изменить дневной сон' : 'Доспал днём')
-            )
-        );
     }
 
     // ---------- Кэширование вычислений ----------
@@ -22936,8 +22918,6 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
         // Форсируем обновление при изменении данных (используем timestamp)
         const [updateTrigger, setUpdateTrigger] = useState(Date.now());
-        const selectedDateKey = getSelectedDate(props);
-        const selectedDayData = U.lsGet('heys_dayv2_' + selectedDateKey, {}) || { date: selectedDateKey };
 
         // Подписываемся на события обновления дня (BroadcastChannel + storage) для актуализации отчётов
         useEffect(() => {
@@ -23021,11 +23001,6 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         }
 
         return React.createElement('div', { className: 'page page-reports' },
-            React.createElement(ReportsSleepCard, {
-                dateKey: selectedDateKey,
-                dayData: selectedDayData,
-                onRefresh: () => setUpdateTrigger(Date.now())
-            }),
             React.createElement('div', { className: 'card widget-shadow-diary-glass widget-outline-diary-glass' },
                 React.createElement('h2', { className: 'reports-title' }, 'Месячные отчёты'),
                 HEYS.monthlyReports?.MonthlyReportsContent
