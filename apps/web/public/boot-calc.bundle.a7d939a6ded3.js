@@ -10686,9 +10686,106 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
         );
     }
 
+    function getConfidenceNarrative(confidence) {
+        if (confidence === 'high') return 'Сигнал уверенный: тут есть несколько независимых подтверждений, поэтому совет стоит считать приоритетным.';
+        if (confidence === 'medium') return 'Сигнал хороший: это не жёсткая догма, но направление выглядит достаточно сильным.';
+        if (confidence === 'low') return 'Сигнал мягкий: это скорее бережная подсказка, чем срочная команда.';
+        return '';
+    }
+
+    function humanizeAdviceInsight(text) {
+        if (!text || typeof text !== 'string') return text || '';
+
+        const trimmed = text.trim();
+        const rules = [
+            [/^белок ниже цели (\d+)\/7 дн$/i, (_, days) => `Белок регулярно не дотягивал до цели: это повторялось ${days} дней из последних 7.`],
+            [/^клетчатка проседает (\d+)\/7 дн$/i, (_, days) => `Клетчатки было маловато уже ${days} дней из последних 7.`],
+            [/^вода ниже цели (\d+)\/7 дн$/i, (_, days) => `С водой есть повторяющийся недобор: ${days} дней из последних 7 цель не набиралась.`],
+            [/^поздние приёмы (\d+)\/7 дн$/i, (_, days) => `Поздние приёмы пищи повторялись ${days} дней из последних 7 и уже стали паттерном.`],
+            [/^недосып (\d+)\/7 дн$/i, (_, days) => `Недосып повторялся ${days} дней из последних 7, поэтому он уже влияет на аппетит и самоконтроль.`],
+            [/^стресс высокий (\d+)\/7 дн$/i, (_, days) => `Высокий стресс держался ${days} дней из последних 7 — это уже заметный фон для тяги к еде и усталости.`],
+            [/^энергия ниже цели (\d+)\/7 дн$/i, (_, days) => `Калорий регулярно не хватало: ${days} дней из последних 7 были ниже цели.`],
+            [/^нагрузка без восстановления (\d+) дн$/i, (_, days) => `Нагрузка накапливалась без достаточного восстановления уже ${days} дня.`],
+            [/^простые углеводы высокие (\d+)\/7 дн$/i, (_, days) => `Простые углеводы были высокими ${days} дней из последних 7, так что это уже не разовый эпизод.`],
+            [/^за неделю белок стал хуже относительно прошлой$/i, () => 'По сравнению с прошлой неделей белок просел — это уже не случайность одного дня.'],
+            [/^за неделю клетчатка снизилась$/i, () => 'По сравнению с прошлой неделей клетчатки стало меньше.'],
+            [/^за неделю вода просела$/i, () => 'По сравнению с прошлой неделей воды стало заметно меньше.'],
+            [/^за неделю поздние приёмы участились$/i, () => 'Поздние приёмы стали случаться чаще, чем на прошлой неделе.'],
+            [/^за неделю стресс усилился$/i, () => 'Стресс по неделе усилился, поэтому организм сейчас уязвимее к тяге и перееданию.'],
+            [/^за неделю быстрые углеводы выросли$/i, () => 'За неделю стало больше быстрых углеводов — это может усиливать тягу и качели энергии.'],
+            [/^подтверждено фенотипом insulin resistant$/i, () => 'Совет дополнительно согласуется с твоим метаболическим профилем и чувствительностью к углеводам.'],
+            [/^учтён вечерний циркадный тип$/i, () => 'Совет подстроен под твой вечерний ритм, а не взят из общего шаблона.'],
+            [/^учтён низкий satiety-профиль$/i, () => 'Совет учитывает, что для тебя особенно важно насыщение и устойчивость к перекусам.'],
+            [/^учтён stress-eating паттерн$/i, () => 'Совет учитывает твою склонность тянуться к еде на фоне стресса.'],
+            [/^pattern meal timing: (\d+)\/100$/i, (_, score) => `Ритм питания сейчас держится неидеально (${score}/100), поэтому мягкая коррекция к месту.`],
+            [/^pattern circadian: (\d+)\/100$/i, (_, score) => `Ритм еды и биологические часы сейчас согласованы неидеально (${score}/100).`],
+            [/^pattern sleep→hunger: (\d+)\/100$/i, (_, score) => `Связка «сон → голод» сейчас выглядит заметной (${score}/100).`],
+            [/^pattern hydration: (\d+)\/100$/i, (_, score) => `Паттерн по воде просел (${score}/100), так что совет появился не случайно.`],
+            [/^pattern stress-eating подтверждает риск$/i, () => 'Паттерн стрессового переедания тоже подтверждает, что совет сейчас вовремя.'],
+            [/^pattern insulin sensitivity: (\d+)\/100$/i, (_, score) => `Чувствительность к углеводам сейчас выглядит слабее обычного (${score}/100).`],
+            [/^высокий crash-risk 24ч$/i, () => 'На ближайшие сутки система видит высокий риск срыва, поэтому лучше подстелить соломку заранее.'],
+            [/^средний crash-risk 24ч$/i, () => 'На ближайшие сутки есть умеренный риск срыва, поэтому лучше слегка скорректировать курс заранее.'],
+            [/^EWS: (.+)$/i, (_, label) => `Система ранних сигналов тоже подсвечивает похожий риск: ${label}.`],
+            [/^EWS подтверждает ещё (\d+) связ\. сигн\.$/i, (_, count) => `Кроме основного сигнала, есть ещё ${count} связанных подтверждения.`],
+            [/^EWS risk (\d+)\/100$/i, (_, score) => `Система ранних сигналов оценивает общий риск на ${score}/100.`],
+            [/^causal root: (.+)$/i, (_, name) => `Совет бьёт не по симптому, а по корневой причине: ${name}.`],
+            [/^causal path: (.+)$/i, (_, name) => `Совет вмешивается в механизм, который сейчас толкает ситуацию в плохую сторону: ${name}.`],
+            [/^causal outcome: (.+)$/i, (_, name) => `Совет помогает сдержать уже заметное последствие: ${name}.`],
+            [/^response memory: (.+)$/i, (_, label) => `Похожие советы в похожем контексте раньше реагировали так: ${label}.`],
+        ];
+
+        for (const [pattern, formatter] of rules) {
+            if (pattern.test(trimmed)) {
+                return trimmed.replace(pattern, formatter);
+            }
+        }
+
+        return trimmed
+            .replace(/root cause/gi, 'корневую причину')
+            .replace(/outcome/gi, 'последствие')
+            .replace(/response memory/gi, 'реакцию на похожие советы')
+            .replace(/\bEWS\b/g, 'система ранних сигналов');
+    }
+
+    function getScienceEvidenceLabel(level) {
+        if (level === 'A') return 'сильная научная опора';
+        if (level === 'B') return 'хорошая научная опора';
+        if (level === 'C') return 'рабочая научная опора';
+        return 'научная опора';
+    }
+
+    function getSourceSupportLabel(count) {
+        if (!count || count <= 1) return 'Опора идёт хотя бы из одного надёжного слоя данных текущего дня.';
+        if (count === 2) return 'Совет подтверждён минимум двумя независимыми слоями данных.';
+        if (count === 3) return 'Совет опирается сразу на три слоя данных, а не на один показатель.';
+        return `Совет опирается сразу на ${count} независимых слоя данных.`;
+    }
+
+    function getAdviceTechnicalFacts(advice) {
+        const expertMeta = advice?.expertMeta || {};
+        return {
+            summary: [
+                advice?.id ? `id: ${advice.id}` : null,
+                advice?.category ? `category: ${advice.category}` : null,
+                advice?.confidenceLabel ? `confidence: ${advice.confidenceLabel}` : null,
+                typeof expertMeta.evidenceScore === 'number' ? `score: ${expertMeta.evidenceScore}` : null,
+                typeof expertMeta.sourceCount === 'number' ? `sources: ${expertMeta.sourceCount}` : null,
+            ].filter(Boolean),
+            drivers: Array.isArray(expertMeta.drivers) ? expertMeta.drivers : [],
+            crossConfirmedBy: Array.isArray(expertMeta.crossConfirmedBy) ? expertMeta.crossConfirmedBy : [],
+            contradictions: Array.isArray(expertMeta.contradictions) ? expertMeta.contradictions : [],
+            actionNow: expertMeta.actionNow || null,
+            science: expertMeta.science || null,
+            causal: expertMeta.causal || null,
+            responseMemory: expertMeta.responseMemory || null,
+            uncertainty: expertMeta.uncertainty || null,
+        };
+    }
+
     function renderAdviceEvidence(advice) {
         if (!hasExpertContent(advice)) return null;
 
+        const expertMeta = advice?.expertMeta || {};
         const confidenceLabel = advice.confidenceLabel || (
             advice.confidence === 'high' ? 'высокая'
                 : advice.confidence === 'medium' ? 'средняя'
@@ -10697,50 +10794,64 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
         );
 
         const parts = [];
-        if (confidenceLabel) parts.push(`Уверенность: ${confidenceLabel}`);
-        if (advice.evidenceSummary) parts.push(advice.evidenceSummary);
+        if (advice.evidenceSummary) {
+            advice.evidenceSummary
+                .split('•')
+                .map(part => humanizeAdviceInsight(part))
+                .filter(Boolean)
+                .forEach(part => parts.push(part));
+        }
 
-        if (parts.length === 0) return null;
+        if (parts.length === 0 && expertMeta.whyNow) {
+            parts.push(humanizeAdviceInsight(expertMeta.whyNow));
+        }
+
+        if (
+            parts.length === 0 &&
+            !expertMeta.actionNow?.label &&
+            !expertMeta.science?.rationale &&
+            !expertMeta.causal?.mechanism &&
+            !expertMeta.uncertainty?.message
+        ) {
+            return null;
+        }
 
         return React.createElement('div', {
-            className: 'advice-expert-evidence'
+            className: 'advice-expert-evidence advice-expert-evidence--human'
         },
-            React.createElement('div', null, '🧠 ' + parts.join(' · ')),
-            advice?.expertMeta?.whyNow && React.createElement('div', {
-                style: { marginTop: '4px', opacity: 0.9 }
-            }, 'Почему сейчас: ' + advice.expertMeta.whyNow),
-            advice?.expertMeta?.actionNow?.label && React.createElement('div', {
-                style: { marginTop: '4px', opacity: 0.92, fontWeight: 500 }
-            }, 'Следующий шаг: ' + advice.expertMeta.actionNow.label),
-            advice?.expertMeta?.science && React.createElement('div', {
-                style: { marginTop: '4px', opacity: 0.86 }
-            }, `Научная опора: ${advice.expertMeta.science.evidenceLevel} · ${advice.expertMeta.science.topic}`),
-            advice?.expertMeta?.causal && React.createElement('div', {
-                style: { marginTop: '4px', opacity: 0.84 }
-            }, `Причинная цепочка: ${advice.expertMeta.causal.relevance === 'root' ? 'бьём в root cause' : advice.expertMeta.causal.relevance === 'mechanism' ? 'работаем по механизму' : 'сдерживаем outcome'} · ${advice.expertMeta.causal.name}`),
-            advice?.expertMeta?.causal?.mechanism && React.createElement('div', {
-                style: { marginTop: '4px', fontSize: '12px', opacity: 0.72 }
-            }, advice.expertMeta.causal.mechanism),
-            advice?.expertMeta?.responseMemory && React.createElement('div', {
-                style: { marginTop: '4px', opacity: 0.82 }
-            }, `Response memory: ${advice.expertMeta.responseMemory.label}`),
-            advice?.expertMeta?.responseMemory?.message && React.createElement('div', {
-                style: { marginTop: '4px', fontSize: '12px', opacity: 0.72 }
-            }, advice.expertMeta.responseMemory.message),
-            advice?.expertMeta?.uncertainty && React.createElement('div', {
-                style: { marginTop: '4px', opacity: 0.82 }
-            }, `Статус вывода: ${advice.expertMeta.uncertainty.label}`),
-            advice?.expertMeta?.uncertainty?.message && React.createElement('div', {
-                style: { marginTop: '4px', fontSize: '12px', opacity: 0.72 }
-            }, advice.expertMeta.uncertainty.message),
-            (advice?.expertMeta?.sourceCount || advice?.expertMeta?.evidenceScore) && React.createElement('div', {
-                style: { marginTop: '4px', fontSize: '12px', opacity: 0.72 }
-            }, [
-                advice?.expertMeta?.sourceCount ? `источников: ${advice.expertMeta.sourceCount}` : null,
-                advice?.expertMeta?.evidenceScore ? `score: ${advice.expertMeta.evidenceScore}` : null,
-                advice?.expertMeta?.science?.confidenceScore ? `science: ${Math.round(advice.expertMeta.science.confidenceScore * 100)}%` : null,
-                advice?.expertMeta?.responseMemory?.sampleCount ? `feedback: ${advice.expertMeta.responseMemory.sampleCount}` : null
-            ].filter(Boolean).join(' · '))
+            parts.length > 0 && React.createElement(React.Fragment, null,
+                React.createElement('div', { className: 'advice-expert-evidence__title' }, 'Почему этот совет сейчас к месту'),
+                React.createElement('ul', { className: 'advice-expert-evidence__list' },
+                    parts.slice(0, 3).map((part, index) => React.createElement('li', {
+                        key: `human_${index}`,
+                        className: 'advice-expert-evidence__list-item'
+                    }, part))
+                )
+            ),
+            expertMeta.actionNow?.label && React.createElement('div', { className: 'advice-expert-evidence__block' },
+                React.createElement('div', { className: 'advice-expert-evidence__label' }, 'Что лучше сделать сейчас'),
+                React.createElement('div', { className: 'advice-expert-evidence__text is-accent' }, expertMeta.actionNow.label)
+            ),
+            expertMeta.science?.rationale && React.createElement('div', { className: 'advice-expert-evidence__block' },
+                React.createElement('div', { className: 'advice-expert-evidence__label' }, 'Почему это обычно работает'),
+                React.createElement('div', { className: 'advice-expert-evidence__text' }, expertMeta.science.rationale)
+            ),
+            expertMeta.causal?.mechanism && React.createElement('div', { className: 'advice-expert-evidence__block' },
+                React.createElement('div', { className: 'advice-expert-evidence__label' }, 'Какой механизм здесь важен'),
+                React.createElement('div', { className: 'advice-expert-evidence__text' }, expertMeta.causal.mechanism)
+            ),
+            expertMeta.science && React.createElement('div', { className: 'advice-expert-evidence__block' },
+                React.createElement('div', { className: 'advice-expert-evidence__label' }, 'На что опирается совет'),
+                React.createElement('div', { className: 'advice-expert-evidence__text' }, `${getScienceEvidenceLabel(expertMeta.science.evidenceLevel)} · ${expertMeta.science.topic}`)
+            ),
+            (expertMeta.sourceCount || confidenceLabel) && React.createElement('div', { className: 'advice-expert-evidence__block' },
+                React.createElement('div', { className: 'advice-expert-evidence__label' }, 'Насколько это надёжно'),
+                React.createElement('div', { className: 'advice-expert-evidence__text' }, [
+                    getConfidenceNarrative(advice.confidence),
+                    expertMeta.uncertainty?.message,
+                    expertMeta.sourceCount ? getSourceSupportLabel(expertMeta.sourceCount) : null
+                ].filter(Boolean).join(' '))
+            )
         );
     }
 
@@ -10790,6 +10901,24 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
             ? summary.topIssues
             : (Array.isArray(quality.findings) ? quality.findings : []);
         const activeModules = moduleReport.filter(item => (item?.withOutput || 0) > 0).slice(0, 4);
+        const blockerLabels = {
+            trigger_mismatch: 'триггер не совпал',
+            global_cooldown: 'глобальный cooldown',
+            expert_conflict_resolution: 'конфликт сигналов',
+            category_limit: 'лимит категории',
+            ui_busy: 'интерфейс был занят',
+            missing_trigger: 'триггер не был передан',
+            session_limit: 'лимит за сессию',
+        };
+        const humanizeBlocker = (key) => blockerLabels[key] || key;
+        const getKpiStatusClass = (metric, value) => {
+            if (typeof value !== 'number' || !Number.isFinite(value)) return 'is-neutral';
+            if (metric === 'coverage') return value >= 0.7 ? 'is-good' : value >= 0.45 ? 'is-mixed' : 'is-weak';
+            if (metric === 'precision') return value >= 0.6 ? 'is-good' : value >= 0.35 ? 'is-mixed' : 'is-weak';
+            if (metric === 'ignored') return value <= 0.35 ? 'is-good' : value <= 0.6 ? 'is-mixed' : 'is-weak';
+            if (metric === 'cooldown') return value <= 0.35 ? 'is-good' : value <= 0.65 ? 'is-mixed' : 'is-weak';
+            return 'is-neutral';
+        };
 
         return React.createElement('div', {
             className: 'advice-diagnostics-modal-overlay',
@@ -10834,25 +10963,25 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
                             }, getQualityGradeLabel(summary.qualityGrade || quality.grade))
                         ),
                         summary.dominantIssue?.key && React.createElement('div', { className: 'advice-diagnostics-summary-card__issue' },
-                            `Главный блокер: ${summary.dominantIssue.key} · ${summary.dominantIssue.count || 0}`
+                            `Главный блокер: ${humanizeBlocker(summary.dominantIssue.key)} · ${summary.dominantIssue.count || 0}`
                         )
                     ),
 
                     React.createElement('div', { className: 'advice-diagnostics-stat-grid' },
-                        React.createElement('div', { className: 'advice-diagnostics-stat-card' },
-                            React.createElement('div', { className: 'advice-diagnostics-stat-card__label' }, 'Coverage'),
+                        React.createElement('div', { className: `advice-diagnostics-stat-card ${getKpiStatusClass('coverage', effect.coverage)}` },
+                            React.createElement('div', { className: 'advice-diagnostics-stat-card__label' }, 'Покрытие'),
                             React.createElement('div', { className: 'advice-diagnostics-stat-card__value' }, formatPercentValue(effect.coverage))
                         ),
-                        React.createElement('div', { className: 'advice-diagnostics-stat-card' },
-                            React.createElement('div', { className: 'advice-diagnostics-stat-card__label' }, 'Precision proxy'),
+                        React.createElement('div', { className: `advice-diagnostics-stat-card ${getKpiStatusClass('precision', effect.precisionProxy)}` },
+                            React.createElement('div', { className: 'advice-diagnostics-stat-card__label' }, 'Точность сигнала'),
                             React.createElement('div', { className: 'advice-diagnostics-stat-card__value' }, formatPercentValue(effect.precisionProxy))
                         ),
-                        React.createElement('div', { className: 'advice-diagnostics-stat-card' },
-                            React.createElement('div', { className: 'advice-diagnostics-stat-card__label' }, 'Ignored rate'),
+                        React.createElement('div', { className: `advice-diagnostics-stat-card ${getKpiStatusClass('ignored', effect.ignoredRate)}` },
+                            React.createElement('div', { className: 'advice-diagnostics-stat-card__label' }, 'Проигнорировано'),
                             React.createElement('div', { className: 'advice-diagnostics-stat-card__value' }, formatPercentValue(effect.ignoredRate))
                         ),
-                        React.createElement('div', { className: 'advice-diagnostics-stat-card' },
-                            React.createElement('div', { className: 'advice-diagnostics-stat-card__label' }, 'Cooldown suppression'),
+                        React.createElement('div', { className: `advice-diagnostics-stat-card ${getKpiStatusClass('cooldown', effect.suppressedByCooldownRate)}` },
+                            React.createElement('div', { className: 'advice-diagnostics-stat-card__label' }, 'Подавлено cooldown'),
                             React.createElement('div', { className: 'advice-diagnostics-stat-card__value' }, formatPercentValue(effect.suppressedByCooldownRate))
                         )
                     ),
@@ -10884,12 +11013,12 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
                             findings.slice(0, 4).map((item, index) => React.createElement('li', {
                                 key: `finding_${index}`,
                                 className: 'advice-diagnostics-list__item'
-                            }, item))
+                            }, humanizeAdviceInsight(item)))
                         )
                     ),
 
                     silentModules.length > 0 && React.createElement('section', { className: 'advice-diagnostics-section' },
-                        React.createElement('div', { className: 'advice-diagnostics-section__title' }, 'Silent modules'),
+                        React.createElement('div', { className: 'advice-diagnostics-section__title' }, 'Модули без выдачи'),
                         React.createElement('div', { className: 'advice-diagnostics-tags' },
                             silentModules.map(moduleName => React.createElement('span', {
                                 key: moduleName,
@@ -10899,12 +11028,12 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
                     ),
 
                     topReasons.length > 0 && React.createElement('section', { className: 'advice-diagnostics-section' },
-                        React.createElement('div', { className: 'advice-diagnostics-section__title' }, 'Top blockers'),
+                        React.createElement('div', { className: 'advice-diagnostics-section__title' }, 'Главные блокеры'),
                         React.createElement('div', { className: 'advice-diagnostics-tags' },
                             topReasons.map(item => React.createElement('span', {
                                 key: item.key,
                                 className: 'advice-diagnostics-tag'
-                            }, `${item.key} · ${item.count || 0}`))
+                            }, `${humanizeBlocker(item.key)} · ${item.count || 0}`))
                         )
                     ),
 
@@ -10916,11 +11045,11 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
                                 className: 'advice-diagnostics-module-row'
                             },
                                 React.createElement('div', { className: 'advice-diagnostics-module-row__name' }, item.module),
-                                React.createElement('div', { className: 'advice-diagnostics-module-row__meta' }, `${item.withOutput}/${item.runs} runs с выдачей`),
+                                React.createElement('div', { className: 'advice-diagnostics-module-row__meta' }, `${item.withOutput}/${item.runs} запусков дали совет`),
                                 React.createElement('div', { className: 'advice-diagnostics-module-row__sub' },
                                     item.topBlockers?.[0]
-                                        ? `top blocker: ${item.topBlockers[0].key} · ${item.topBlockers[0].count || 0}`
-                                        : `avg output: ${item.avgOutputCount ?? 0}`
+                                        ? `главный блокер: ${humanizeBlocker(item.topBlockers[0].key)} · ${item.topBlockers[0].count || 0}`
+                                        : `средняя выдача: ${item.avgOutputCount ?? 0}`
                                 )
                             ))
                         )
@@ -10931,10 +11060,10 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
                         React.createElement('div', { className: 'advice-diagnostics-last-snapshot' },
                             React.createElement('div', { className: 'advice-diagnostics-last-snapshot__row' },
                                 React.createElement('span', null, `trigger: ${lastSnapshot.trigger || '—'}`),
-                                React.createElement('span', null, `manual visible: ${lastSnapshot.visibleForManualCount || 0}`)
+                                React.createElement('span', null, `видно вручную: ${lastSnapshot.visibleForManualCount || 0}`)
                             ),
                             React.createElement('div', { className: 'advice-diagnostics-last-snapshot__row' },
-                                React.createElement('span', null, `auto eligible: ${lastSnapshot.eligibleForAutoToastCount || 0}`),
+                                React.createElement('span', null, `подходит для auto-toast: ${lastSnapshot.eligibleForAutoToastCount || 0}`),
                                 React.createElement('span', null, `primary: ${lastSnapshot.primaryId || '—'}`)
                             )
                         )
@@ -10963,6 +11092,146 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
         );
     }
 
+    function AdviceTechnicalModal({
+        React,
+        advice,
+        onClose,
+    }) {
+        if (!advice || !hasExpertContent(advice)) return null;
+
+        const facts = getAdviceTechnicalFacts(advice);
+        const science = facts.science;
+        const causal = facts.causal;
+        const responseMemory = facts.responseMemory;
+        const uncertainty = facts.uncertainty;
+
+        return React.createElement('div', {
+            className: 'advice-diagnostics-modal-overlay',
+            role: 'presentation',
+            onClick: (e) => {
+                e.stopPropagation();
+                onClose && onClose();
+            }
+        },
+            React.createElement('div', {
+                className: 'advice-diagnostics-modal advice-diagnostics-modal--technical',
+                role: 'dialog',
+                'aria-modal': 'true',
+                'aria-label': 'Технические детали совета',
+                onClick: (e) => e.stopPropagation()
+            },
+                React.createElement('div', { className: 'advice-diagnostics-modal__header' },
+                    React.createElement('div', { className: 'advice-diagnostics-modal__title-wrap' },
+                        React.createElement('div', { className: 'advice-diagnostics-modal__eyebrow' }, 'Advice tech details'),
+                        React.createElement('div', { className: 'advice-diagnostics-modal__title' }, 'Технические детали по совету'),
+                        React.createElement('div', { className: 'advice-diagnostics-modal__subtitle' }, advice.text || advice.id || 'Совет')
+                    ),
+                    React.createElement('button', {
+                        className: 'advice-diagnostics-modal__close',
+                        onClick: onClose,
+                        type: 'button',
+                        'aria-label': 'Закрыть технические детали'
+                    }, '×')
+                ),
+                React.createElement('div', { className: 'advice-diagnostics-modal__body' },
+                    facts.summary.length > 0 && React.createElement('section', { className: 'advice-diagnostics-section' },
+                        React.createElement('div', { className: 'advice-diagnostics-section__title' }, 'Сводка решения'),
+                        React.createElement('div', { className: 'advice-diagnostics-tags' },
+                            facts.summary.map((item, index) => React.createElement('span', {
+                                key: `summary_${index}`,
+                                className: 'advice-diagnostics-tag is-muted'
+                            }, item))
+                        )
+                    ),
+                    facts.drivers.length > 0 && React.createElement('section', { className: 'advice-diagnostics-section' },
+                        React.createElement('div', { className: 'advice-diagnostics-section__title' }, 'Primary drivers'),
+                        React.createElement('ul', { className: 'advice-diagnostics-list' },
+                            facts.drivers.map((item, index) => React.createElement('li', {
+                                key: `driver_${index}`,
+                                className: 'advice-diagnostics-list__item'
+                            }, item))
+                        )
+                    ),
+                    facts.crossConfirmedBy.length > 0 && React.createElement('section', { className: 'advice-diagnostics-section' },
+                        React.createElement('div', { className: 'advice-diagnostics-section__title' }, 'Cross confirmation'),
+                        React.createElement('ul', { className: 'advice-diagnostics-list' },
+                            facts.crossConfirmedBy.map((item, index) => React.createElement('li', {
+                                key: `cross_${index}`,
+                                className: 'advice-diagnostics-list__item'
+                            }, item))
+                        )
+                    ),
+                    facts.contradictions.length > 0 && React.createElement('section', { className: 'advice-diagnostics-section' },
+                        React.createElement('div', { className: 'advice-diagnostics-section__title' }, 'Contradictions'),
+                        React.createElement('ul', { className: 'advice-diagnostics-list' },
+                            facts.contradictions.map((item, index) => React.createElement('li', {
+                                key: `contradiction_${index}`,
+                                className: 'advice-diagnostics-list__item'
+                            }, item))
+                        )
+                    ),
+                    facts.actionNow?.label && React.createElement('section', { className: 'advice-diagnostics-section' },
+                        React.createElement('div', { className: 'advice-diagnostics-section__title' }, 'Actionability'),
+                        React.createElement('div', { className: 'advice-diagnostics-module-row' },
+                            React.createElement('div', { className: 'advice-diagnostics-module-row__name' }, facts.actionNow.label),
+                            React.createElement('div', { className: 'advice-diagnostics-module-row__meta' }, `urgency: ${facts.actionNow.urgency || 'watch'}`),
+                            facts.actionNow.rationale && React.createElement('div', { className: 'advice-diagnostics-module-row__sub' }, facts.actionNow.rationale)
+                        )
+                    ),
+                    science && React.createElement('section', { className: 'advice-diagnostics-section' },
+                        React.createElement('div', { className: 'advice-diagnostics-section__title' }, 'Science registry'),
+                        React.createElement('div', { className: 'advice-diagnostics-module-row' },
+                            React.createElement('div', { className: 'advice-diagnostics-module-row__name' }, `${science.topic || '—'} (${science.key || 'no-key'})`),
+                            React.createElement('div', { className: 'advice-diagnostics-module-row__meta' }, [
+                                science.evidenceLevel ? `evidence: ${science.evidenceLevel}` : null,
+                                typeof science.confidenceScore === 'number' ? `confidence: ${Math.round(science.confidenceScore * 100)}%` : null,
+                                typeof science.impactScore === 'number' ? `impact: ${Math.round(science.impactScore * 100)}%` : null,
+                            ].filter(Boolean).join(' · ')),
+                            science.rationale && React.createElement('div', { className: 'advice-diagnostics-module-row__sub' }, science.rationale)
+                        )
+                    ),
+                    causal && React.createElement('section', { className: 'advice-diagnostics-section' },
+                        React.createElement('div', { className: 'advice-diagnostics-section__title' }, 'Causal model'),
+                        React.createElement('div', { className: 'advice-diagnostics-module-row' },
+                            React.createElement('div', { className: 'advice-diagnostics-module-row__name' }, `${causal.name || '—'} (${causal.relevance || 'unknown'})`),
+                            React.createElement('div', { className: 'advice-diagnostics-module-row__meta' }, [
+                                typeof causal.confidence === 'number' ? `confidence: ${Math.round(causal.confidence * 100)}%` : null,
+                                typeof causal.coverage === 'number' ? `coverage: ${Math.round(causal.coverage)}%` : null,
+                            ].filter(Boolean).join(' · ')),
+                            causal.mechanism && React.createElement('div', { className: 'advice-diagnostics-module-row__sub' }, causal.mechanism),
+                            causal.path && React.createElement('div', { className: 'advice-diagnostics-module-row__sub' }, `path: ${causal.path}`)
+                        )
+                    ),
+                    responseMemory && React.createElement('section', { className: 'advice-diagnostics-section' },
+                        React.createElement('div', { className: 'advice-diagnostics-section__title' }, 'Response memory'),
+                        React.createElement('div', { className: 'advice-diagnostics-module-row' },
+                            React.createElement('div', { className: 'advice-diagnostics-module-row__name' }, responseMemory.label || '—'),
+                            React.createElement('div', { className: 'advice-diagnostics-module-row__meta' }, [
+                                typeof responseMemory.score === 'number' ? `score: ${responseMemory.score}` : null,
+                                typeof responseMemory.sampleCount === 'number' ? `samples: ${responseMemory.sampleCount}` : null,
+                            ].filter(Boolean).join(' · ')),
+                            responseMemory.message && React.createElement('div', { className: 'advice-diagnostics-module-row__sub' }, responseMemory.message)
+                        )
+                    ),
+                    uncertainty && React.createElement('section', { className: 'advice-diagnostics-section' },
+                        React.createElement('div', { className: 'advice-diagnostics-section__title' }, 'Uncertainty model'),
+                        React.createElement('div', { className: 'advice-diagnostics-module-row' },
+                            React.createElement('div', { className: 'advice-diagnostics-module-row__name' }, uncertainty.label || '—'),
+                            uncertainty.message && React.createElement('div', { className: 'advice-diagnostics-module-row__sub' }, uncertainty.message)
+                        )
+                    )
+                ),
+                React.createElement('div', { className: 'advice-diagnostics-modal__footer' },
+                    React.createElement('button', {
+                        className: 'advice-diagnostics-modal__action advice-diagnostics-modal__action--secondary',
+                        onClick: onClose,
+                        type: 'button'
+                    }, 'Закрыть')
+                )
+            )
+        );
+    }
+
     // --- AdviceCard component ---
     const AdviceCard = React.memo(function AdviceCard({
         advice,
@@ -10985,6 +11254,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
         onLongPressStart,
         onLongPressEnd,
         registerCardRef,
+        onOpenTechnicalDetails,
     }) {
         const [scheduledConfirm, setScheduledConfirm] = React.useState(false);
         const [ratedState, setRatedState] = React.useState(null); // 'positive' | 'negative' | null
@@ -11285,7 +11555,17 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
                         className: 'advice-list-details',
                     },
                         advice.details && React.createElement('div', null, advice.details),
-                        renderAdviceEvidence(advice)
+                        renderAdviceEvidence(advice),
+                        hasExpertContent(advice) && React.createElement('div', { className: 'advice-list-details__actions' },
+                            React.createElement('button', {
+                                type: 'button',
+                                className: 'advice-technical-trigger',
+                                onClick: (e) => {
+                                    e.stopPropagation();
+                                    onOpenTechnicalDetails && onOpenTechnicalDetails(advice, e);
+                                }
+                            }, '⚙️ Тех. детали')
+                        )
                     )
                 )
             )
@@ -11338,6 +11618,10 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
         adviceDiagnosticsOpen,
         openAdviceDiagnostics,
         closeAdviceDiagnostics,
+        adviceTechnicalDetails,
+        adviceTechnicalDetailsOpen,
+        openAdviceTechnicalDetails,
+        closeAdviceTechnicalDetails,
         ADVICE_CATEGORY_NAMES,
         AdviceCard,
     }) {
@@ -11453,6 +11737,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
                                         onLongPressStart: handleAdviceLongPressStart,
                                         onLongPressEnd: handleAdviceLongPressEnd,
                                         registerCardRef: registerAdviceCardRef,
+                                        onOpenTechnicalDetails: openAdviceTechnicalDetails,
                                     })
                                 )
                             );
@@ -11480,6 +11765,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
                                 onLongPressStart: handleAdviceLongPressStart,
                                 onLongPressEnd: handleAdviceLongPressEnd,
                                 registerCardRef: registerAdviceCardRef,
+                                onOpenTechnicalDetails: openAdviceTechnicalDetails,
                             }))
                 ),
                 activeCount > 0 && React.createElement('div', { className: 'advice-list-hints' },
@@ -11496,6 +11782,11 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
                 onClose: closeAdviceDiagnostics,
                 onCopyTrace: copyAdviceTrace,
                 copyState: adviceTraceCopyState
+            }),
+            adviceTechnicalDetailsOpen && React.createElement(AdviceTechnicalModal, {
+                React,
+                advice: adviceTechnicalDetails,
+                onClose: closeAdviceTechnicalDetails
             })
         );
     };
@@ -11553,6 +11844,10 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
         handleToastTouchEnd,
         handleToastUndo,
         handleToastSchedule,
+        adviceTechnicalDetails,
+        adviceTechnicalDetailsOpen,
+        openAdviceTechnicalDetails,
+        closeAdviceTechnicalDetails,
     }) {
         if (adviceTrigger === 'manual' || adviceTrigger === 'manual_empty') return null;
         if (!displayedAdvice || !toastVisible) return null;
@@ -11800,8 +12095,23 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
                 },
             },
                 displayedAdvice.details && React.createElement('div', null, displayedAdvice.details),
-                renderAdviceEvidence(displayedAdvice)
-            )
+                renderAdviceEvidence(displayedAdvice),
+                hasExpertContent(displayedAdvice) && React.createElement('div', { className: 'advice-list-details__actions' },
+                    React.createElement('button', {
+                        type: 'button',
+                        className: 'advice-technical-trigger',
+                        onClick: (e) => {
+                            e.stopPropagation();
+                            openAdviceTechnicalDetails && openAdviceTechnicalDetails(displayedAdvice, e);
+                        }
+                    }, '⚙️ Тех. детали')
+                )
+            ),
+            adviceTechnicalDetailsOpen && React.createElement(AdviceTechnicalModal, {
+                React,
+                advice: adviceTechnicalDetails,
+                onClose: closeAdviceTechnicalDetails
+            })
         );
     };
 
@@ -11961,6 +12271,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
         });
         const [adviceTraceCopyState, setAdviceTraceCopyState] = useState('idle');
         const [adviceDiagnosticsOpen, setAdviceDiagnosticsOpen] = useState(false);
+        const [adviceTechnicalDetailsOpen, setAdviceTechnicalDetailsOpen] = useState(false);
+        const [adviceTechnicalDetails, setAdviceTechnicalDetails] = useState(null);
 
         // On mount: re-read settings early (before 1500ms tab_open timer) in case
         // store was not ready during useState initializer (slow network race condition)
@@ -12309,6 +12621,20 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
             setAdviceDiagnosticsOpen(false);
         }, []);
 
+        const openAdviceTechnicalDetails = useCallback((advice, e) => {
+            if (e?.stopPropagation) e.stopPropagation();
+            if (!advice) return;
+            setAdviceTechnicalDetails(advice);
+            setAdviceTechnicalDetailsOpen(true);
+            if (typeof haptic === 'function') haptic('light');
+        }, [haptic]);
+
+        const closeAdviceTechnicalDetails = useCallback((e) => {
+            if (e?.stopPropagation) e.stopPropagation();
+            setAdviceTechnicalDetailsOpen(false);
+            setAdviceTechnicalDetails(null);
+        }, []);
+
         useEffect(() => {
             if (adviceTraceCopyState === 'idle') return undefined;
             const timer = setTimeout(() => setAdviceTraceCopyState('idle'), 2200);
@@ -12316,13 +12642,16 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
         }, [adviceTraceCopyState]);
 
         useEffect(() => {
-            if (!adviceDiagnosticsOpen) return undefined;
+            if (!adviceDiagnosticsOpen && !adviceTechnicalDetailsOpen) return undefined;
             const handleEscape = (event) => {
-                if (event?.key === 'Escape') setAdviceDiagnosticsOpen(false);
+                if (event?.key === 'Escape') {
+                    setAdviceDiagnosticsOpen(false);
+                    setAdviceTechnicalDetailsOpen(false);
+                }
             };
             window.addEventListener('keydown', handleEscape);
             return () => window.removeEventListener('keydown', handleEscape);
-        }, [adviceDiagnosticsOpen]);
+        }, [adviceDiagnosticsOpen, adviceTechnicalDetailsOpen]);
 
         useEffect(() => {
             if (!adviceTrace) return;
@@ -12603,6 +12932,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
                 setExpandedAdviceId(null);
                 setDismissAllAnimation(false);
                 setAdviceDiagnosticsOpen(false);
+                setAdviceTechnicalDetailsOpen(false);
+                setAdviceTechnicalDetails(null);
             }
         }, [adviceTrigger]);
 
@@ -12885,6 +13216,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
             setAdviceTrigger(null);
             setDisplayedAdvice(null);
             setDisplayedAdviceList([]);
+            setAdviceTechnicalDetails(null);
+            setAdviceTechnicalDetailsOpen(false);
             if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
         };
 
@@ -12941,6 +13274,10 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
             adviceDiagnosticsOpen,
             openAdviceDiagnostics,
             closeAdviceDiagnostics,
+            adviceTechnicalDetails,
+            adviceTechnicalDetailsOpen,
+            openAdviceTechnicalDetails,
+            closeAdviceTechnicalDetails,
             scheduledCount,
             dismissedAdvices,
             setDismissedAdvices,

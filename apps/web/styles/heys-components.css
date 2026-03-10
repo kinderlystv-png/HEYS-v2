@@ -1744,6 +1744,21 @@ body.tour-active .ios-pwa-banner {
   padding: 12px;
 }
 
+.advice-diagnostics-stat-card.is-good {
+  background: linear-gradient(180deg, rgba(220, 252, 231, 0.92), rgba(255, 255, 255, 0.92));
+  border-color: rgba(34, 197, 94, 0.2);
+}
+
+.advice-diagnostics-stat-card.is-mixed {
+  background: linear-gradient(180deg, rgba(254, 243, 199, 0.92), rgba(255, 255, 255, 0.92));
+  border-color: rgba(245, 158, 11, 0.22);
+}
+
+.advice-diagnostics-stat-card.is-weak {
+  background: linear-gradient(180deg, rgba(254, 226, 226, 0.92), rgba(255, 255, 255, 0.92));
+  border-color: rgba(239, 68, 68, 0.18);
+}
+
 .advice-diagnostics-stat-card__label,
 .advice-diagnostics-chip__label,
 .advice-diagnostics-section__title {
@@ -1874,6 +1889,76 @@ body.tour-active .ios-pwa-banner {
   color: #ffffff;
 }
 
+.advice-expert-evidence--human {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.78);
+  border: 1px solid rgba(191, 219, 254, 0.7);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.advice-expert-evidence__title,
+.advice-expert-evidence__label,
+.advice-list-details__actions {
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.3;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #64748b;
+}
+
+.advice-expert-evidence__list {
+  margin: 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.advice-expert-evidence__list-item,
+.advice-expert-evidence__text {
+  font-size: 13px;
+  line-height: 1.45;
+  color: #334155;
+}
+
+.advice-expert-evidence__block {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.advice-expert-evidence__text.is-accent {
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.advice-list-details__actions {
+  margin-top: 10px;
+  display: flex;
+  justify-content: flex-start;
+}
+
+.advice-technical-trigger {
+  min-height: 36px;
+  border: 1px solid rgba(37, 99, 235, 0.18);
+  border-radius: 999px;
+  padding: 7px 12px;
+  background: rgba(239, 246, 255, 0.95);
+  color: #1d4ed8;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.advice-diagnostics-modal--technical .advice-diagnostics-modal__subtitle {
+  color: #475569;
+}
+
 [data-theme="dark"] .advice-diagnostics-modal {
   background: linear-gradient(180deg, rgba(15, 23, 42, 0.98), rgba(17, 24, 39, 0.98));
   border-color: rgba(51, 65, 85, 0.95);
@@ -1914,6 +1999,18 @@ body.tour-active .ios-pwa-banner {
   border-color: rgba(51, 65, 85, 0.95);
 }
 
+[data-theme="dark"] .advice-diagnostics-stat-card.is-good {
+  background: linear-gradient(180deg, rgba(20, 83, 45, 0.92), rgba(15, 23, 42, 0.84));
+}
+
+[data-theme="dark"] .advice-diagnostics-stat-card.is-mixed {
+  background: linear-gradient(180deg, rgba(120, 53, 15, 0.92), rgba(15, 23, 42, 0.84));
+}
+
+[data-theme="dark"] .advice-diagnostics-stat-card.is-weak {
+  background: linear-gradient(180deg, rgba(127, 29, 29, 0.92), rgba(15, 23, 42, 0.84));
+}
+
 [data-theme="dark"] .advice-diagnostics-summary-card {
   background: linear-gradient(135deg, rgba(37, 99, 235, 0.24), rgba(14, 165, 233, 0.16));
   border-color: rgba(96, 165, 250, 0.24);
@@ -1934,6 +2031,33 @@ body.tour-active .ios-pwa-banner {
   background: rgba(30, 41, 59, 0.95);
   border-color: rgba(51, 65, 85, 0.95);
   color: #e2e8f0;
+}
+
+[data-theme="dark"] .advice-expert-evidence--human {
+  background: rgba(15, 23, 42, 0.72);
+  border-color: rgba(59, 130, 246, 0.22);
+}
+
+[data-theme="dark"] .advice-expert-evidence__title,
+[data-theme="dark"] .advice-expert-evidence__label,
+[data-theme="dark"] .advice-list-details__actions {
+  color: #94a3b8;
+}
+
+[data-theme="dark"] .advice-expert-evidence__list-item,
+[data-theme="dark"] .advice-expert-evidence__text,
+[data-theme="dark"] .advice-diagnostics-modal--technical .advice-diagnostics-modal__subtitle {
+  color: #e2e8f0;
+}
+
+[data-theme="dark"] .advice-expert-evidence__text.is-accent {
+  color: #f8fafc;
+}
+
+[data-theme="dark"] .advice-technical-trigger {
+  background: rgba(30, 41, 59, 0.95);
+  border-color: rgba(59, 130, 246, 0.24);
+  color: #bfdbfe;
 }
 
 @media (min-width: 768px) {

@@ -65,6 +65,10 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             adviceDiagnosticsOpen,
             openAdviceDiagnostics,
             closeAdviceDiagnostics,
+            adviceTechnicalDetails,
+            adviceTechnicalDetailsOpen,
+            openAdviceTechnicalDetails,
+            closeAdviceTechnicalDetails,
             ADVICE_CATEGORY_NAMES,
             AdviceCard,
             displayedAdvice,
@@ -359,6 +363,10 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                     adviceDiagnosticsOpen,
                     openAdviceDiagnostics,
                     closeAdviceDiagnostics,
+                    adviceTechnicalDetails,
+                    adviceTechnicalDetailsOpen,
+                    openAdviceTechnicalDetails,
+                    closeAdviceTechnicalDetails,
                     ADVICE_CATEGORY_NAMES,
                     AdviceCard
                 }) || null,
@@ -393,6 +401,11 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                     handleToastTouchEnd,
                     handleToastUndo,
                     handleToastSchedule
+                    ,
+                    adviceTechnicalDetails,
+                    adviceTechnicalDetailsOpen,
+                    openAdviceTechnicalDetails,
+                    closeAdviceTechnicalDetails
                 }) || null,
 
                 null,
