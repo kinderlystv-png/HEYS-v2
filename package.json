@@ -23,6 +23,7 @@
     "build:apps": "turbo run build --filter='./apps/*'",
     "build:packages": "pnpm -r --filter=packages/* run build",
     "bundle:legacy": "node scripts/bundle-legacy.mjs",
+    "bundle:legacy:auto": "node scripts/auto-sync-legacy-bundles.mjs",
     "bundle:legacy:dry": "node scripts/bundle-legacy.mjs --dry-run",
     "changeset": "changeset",
     "changeset:publish": "changeset publish",

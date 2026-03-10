@@ -4957,6 +4957,20 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-2-insights: execute sta
         return (endMin - startMin) / 60;
     }
 
+    function getDaySleepHours(day) {
+        if (!day) return null;
+        if (window.HEYS?.dayUtils?.getTotalSleepHours) {
+            const total = window.HEYS.dayUtils.getTotalSleepHours(day);
+            return total > 0 ? total : null;
+        }
+        const base = day.sleepHours || (day.sleepStart && day.sleepEnd
+            ? calculateSleepHours(day.sleepStart, day.sleepEnd)
+            : null);
+        if (!base) return null;
+        const napHours = Math.max(0, Math.round(+day.daySleepMinutes || 0)) / 60;
+        return base + napHours;
+    }
+
     /**
      * Корреляция сна и веса.
      * @param {Array} days
@@ -4966,9 +4980,7 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-2-insights: execute sta
         const pairs = [];
 
         for (const day of days) {
-            const sleep = day.sleepHours || (day.sleepStart && day.sleepEnd
-                ? calculateSleepHours(day.sleepStart, day.sleepEnd)
-                : null);
+            const sleep = getDaySleepHours(day);
             const weight = day.weightMorning;
 
             if (sleep && weight) {
@@ -5096,9 +5108,7 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-2-insights: execute sta
         const sleepNorm = profile?.sleepHours || 8;
 
         for (const day of days) {
-            const sleep = day.sleepHours || (day.sleepStart && day.sleepEnd
-                ? calculateSleepHours(day.sleepStart, day.sleepEnd)
-                : null);
+            const sleep = getDaySleepHours(day);
 
             const dayKcal = calculateDayKcal(day, pIndex);
 
@@ -6115,6 +6125,16 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-2-insights: execute sta
         return total;
     };
 
+    const getDaySleepHours = function (day) {
+        if (!day || typeof day !== 'object') return 0;
+        const totalSleepHours = HEYS.dayUtils?.getTotalSleepHours?.(day);
+        if (Number.isFinite(totalSleepHours) && totalSleepHours > 0) return totalSleepHours;
+        const storedSleepHours = Number(day.sleepHours);
+        if (Number.isFinite(storedSleepHours) && storedSleepHours > 0) return storedSleepHours;
+        const fallbackSleepHours = HEYS.dayUtils?.sleepHours?.(day.sleepStart, day.sleepEnd);
+        return Number.isFinite(fallbackSleepHours) && fallbackSleepHours > 0 ? fallbackSleepHours : 0;
+    };
+
     /**
      * Корреляция тренировок и калорий.
      * @param {Array} days
@@ -6441,7 +6461,7 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-2-insights: execute sta
 
             if (i < days.length - 1) {
                 const nextDay = days[i + 1];
-                const sleepHours = nextDay.sleepHours || 0;
+                const sleepHours = getDaySleepHours(nextDay);
                 const mood = nextDay.moodAvg || 3;
                 const recoveryScore = (sleepHours >= 7 ? 50 : sleepHours * 7) + (mood * 10);
                 recoveryScores.push(recoveryScore);
@@ -6636,6 +6656,20 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-2-insights: execute sta
         return (endMin - startMin) / 60;
     }
 
+    function getDaySleepHours(day) {
+        if (!day) return null;
+        if (window.HEYS?.dayUtils?.getTotalSleepHours) {
+            const total = window.HEYS.dayUtils.getTotalSleepHours(day);
+            return total > 0 ? total : null;
+        }
+        const base = day.sleepHours || (day.sleepStart && day.sleepEnd
+            ? calculateSleepHours(day.sleepStart, day.sleepEnd)
+            : null);
+        if (!base) return null;
+        const napHours = Math.max(0, Math.round(+day.daySleepMinutes || 0)) / 60;
+        return base + napHours;
+    }
+
     /**
      * B2: Wellbeing Correlation — что влияет на самочувствие.
      * @param {Array} days
@@ -6659,9 +6693,7 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-2-insights: execute sta
                 correlations.sleepQuality.pairs.push({ wellbeing, value: day.sleepQuality });
             }
 
-            const sleepHours = day.sleepHours || (day.sleepStart && day.sleepEnd
-                ? calculateSleepHours(day.sleepStart, day.sleepEnd)
-                : null);
+            const sleepHours = getDaySleepHours(day);
             if (sleepHours) {
                 correlations.sleepHours.pairs.push({ wellbeing, value: sleepHours });
             }
@@ -7106,7 +7138,7 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-2-insights: execute sta
             const dayData = {
                 date: day.date,
                 kcal: calculateDayKcal(day, pIndex),
-                sleep: day.sleepHours || (day.sleepStart && day.sleepEnd ? calculateSleepHours(day.sleepStart, day.sleepEnd) : null),
+                sleep: getDaySleepHours(day),
                 steps: day.steps
             };
 
@@ -11779,6 +11811,25 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     return total;
   }
 
+  function getDaySleepHours(day) {
+    if (!day || typeof day !== 'object') return 0;
+
+    const totalSleepHours = HEYS.dayUtils?.getTotalSleepHours?.(day);
+    if (Number.isFinite(totalSleepHours) && totalSleepHours > 0) {
+      return totalSleepHours;
+    }
+
+    const storedSleepHours = Number(day.sleepHours);
+    if (Number.isFinite(storedSleepHours) && storedSleepHours > 0) {
+      return storedSleepHours;
+    }
+
+    const fallbackSleepHours = HEYS.dayUtils?.sleepHours?.(day.sleepStart, day.sleepEnd);
+    return Number.isFinite(fallbackSleepHours) && fallbackSleepHours > 0
+      ? fallbackSleepHours
+      : 0;
+  }
+
   // === Stats helpers (lazy access) ===
   function average(arr) {
     const stats = getStats();
@@ -12005,7 +12056,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
       // === Гормональный баланс (Leptin/Ghrelin) ===
       // Spiegel et al., 2004: Недосып повышает грелин +28%, снижает лептин -18%
-      const sleepHours = day.sleepHours || 0;
+      const sleepHours = getDaySleepHours(day);
       const sleepNorm = profile?.sleepHours || 8;
       const sleepDebt = Math.max(0, sleepNorm - sleepHours);
 
@@ -12093,7 +12144,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         let fields = 0;
         if (d.weightMorning > 0) fields++;
         if ((d.meals?.length || 0) > 0) fields++;
-        if (d.sleepHours > 0 || d.sleepStart) fields++;
+        if (getDaySleepHours(d) > 0 || d.sleepStart) fields++;
         if (d.steps > 0) fields++;
         if (d.waterMl > 0) fields++;
         return fields / 5 * 100;
@@ -12191,7 +12242,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           simple,
           fat,
           fiber,
-          sleep: d.sleepHours || 0,
+          sleep: getDaySleepHours(d),
           steps: d.steps || 0,
           water: d.waterMl || 0,
           weight: d.weightMorning || 0,
@@ -12519,7 +12570,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
       // === 2. Sleep Debt — 25% веса ===
       const sleepNorm = profile.sleepHours || 8;
-      const sleepValues = days.map(d => d.sleepHours || 0).filter(s => s > 0);
+      const sleepValues = days.map(d => getDaySleepHours(d)).filter(s => s > 0);
       const sleepDebt = sleepValues.length > 0
         ? sleepValues.reduce((debt, sleep) => debt + Math.max(0, sleepNorm - sleep), 0)
         : 0;
@@ -12657,7 +12708,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       const modifiers = [];
 
       // 1. Сон прошлой ночи
-      const sleepHours = today.sleepHours || 0;
+      const sleepHours = getDaySleepHours(today);
       const sleepQuality = today.sleepQuality || 3;
       const sleepMod = sleepHours >= 7 ? 1.1 : sleepHours >= 6 ? 1.0 : sleepHours >= 5 ? 0.85 : 0.7;
       modifiers.push({ name: 'Сон', value: sleepMod, desc: `${sleepHours}ч сна` });
@@ -12893,7 +12944,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
       // Извлекаем временные ряды
       const series = {
-        sleep: days.map(d => d.sleepHours || 0),
+        sleep: days.map(d => getDaySleepHours(d)),
         kcal: days.map(d => calculateDayKcal(d, pIndex)),
         weight: days.map(d => d.weightMorning || 0),
         mood: days.map(d => d.moodAvg || d.dayScore || 0),
@@ -13166,7 +13217,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
       // === 2. Sleep Debt (недосып) — 20% ===
       const sleepNorm = profile.sleepHours || 8;
-      const sleepValues = days.map(d => d.sleepHours || 0).filter(s => s > 0);
+      const sleepValues = days.map(d => getDaySleepHours(d)).filter(s => s > 0);
       if (sleepValues.length >= 3) {
         const avgSleep = average(sleepValues);
         const sleepDeficit = Math.max(0, sleepNorm - avgSleep);
@@ -13487,7 +13538,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         ? parseInt(today.sleepEnd.split(':')[0]) + parseInt(today.sleepEnd.split(':')[1] || 0) / 60
         : 7; // default wake time
 
-      const sleepHours = today.sleepHours || 7;
+      const sleepHours = getDaySleepHours(today) || 7;
       const sleepDebt = Math.max(0, (profile.sleepHours || 8) - sleepHours);
 
       const hoursAwake = currentTime >= sleepEnd
@@ -16627,9 +16678,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         const recentDays = days.slice(-7); // Most recent first
 
         const sleepData = recentDays.map(day => {
-            const sleep = day.sleepHours || (day.sleepStart && day.sleepEnd
-                ? calculateSleepHours(day.sleepStart, day.sleepEnd)
-                : null);
+            const sleep = getTotalSleepHours(day);
             return { date: day.date, sleep, deficit: sleep ? Math.max(0, targetSleep - sleep) : 0 };
         }).filter(d => d.sleep !== null);
 
@@ -17104,7 +17153,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             // 1. Explicit stress field
             const explicitStress = day.stress || 0;
             // 2. Poor sleep (<6h)
-            const poorSleep = day.sleepHours && day.sleepHours < 6;
+            const totalSleepHours = getTotalSleepHours(day);
+            const poorSleep = totalSleepHours && totalSleepHours < 6;
             // 3. High training load without recovery
             const highTraining = day.training && day.training.duration > 90;
             // 4. Low status score (<50 or dynamic)
@@ -18319,6 +18369,29 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         } catch (e) {
             return 0;
         }
+    }
+
+    function getTotalSleepHours(day) {
+        if (!day || typeof day !== 'object') return null;
+
+        const totalSleepHours = HEYS.dayUtils?.getTotalSleepHours?.(day);
+        if (Number.isFinite(totalSleepHours) && totalSleepHours > 0) {
+            return totalSleepHours;
+        }
+
+        const storedSleepHours = Number(day.sleepHours);
+        if (Number.isFinite(storedSleepHours) && storedSleepHours > 0) {
+            return storedSleepHours;
+        }
+
+        if (day.sleepStart && day.sleepEnd) {
+            const fallbackSleepHours = calculateSleepHours(day.sleepStart, day.sleepEnd);
+            return Number.isFinite(fallbackSleepHours) && fallbackSleepHours > 0
+                ? fallbackSleepHours
+                : null;
+        }
+
+        return null;
     }
 
     /**
@@ -29563,7 +29636,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         if (!day || typeof day !== 'object') return false;
         if ((day.meals || []).length > 0) return true;
         if ((day.trainings || []).length > 0) return true;
-        if ((day.sleepHours || 0) > 0) return true;
+        if (getDaySleepHours(day) > 0) return true;
         if (day.sleepStart || day.sleepEnd) return true;
         return false;
       };
@@ -29580,6 +29653,16 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       }
 
       return baseDate;
+    };
+
+    const getDaySleepHours = (day) => {
+      if (!day || typeof day !== 'object') return 0;
+      const totalSleepHours = HEYS.dayUtils?.getTotalSleepHours?.(day);
+      if (Number.isFinite(totalSleepHours) && totalSleepHours > 0) return totalSleepHours;
+      const storedSleepHours = Number(day.sleepHours);
+      if (Number.isFinite(storedSleepHours) && storedSleepHours > 0) return storedSleepHours;
+      const fallbackSleepHours = HEYS.dayUtils?.sleepHours?.(day.sleepStart, day.sleepEnd);
+      return Number.isFinite(fallbackSleepHours) && fallbackSleepHours > 0 ? fallbackSleepHours : 0;
     };
 
     // InfoButton is defined in pi_ui_dashboard.js which loads AFTER this module
@@ -30360,7 +30443,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         const hour = new Date().getHours();
         if (hour >= 20) bingeRisk += 20;
 
-        const sleepDeficit = (profile.sleepHours || 8) - (day.sleepHours || 0);
+        const sleepDeficit = (profile.sleepHours || 8) - getDaySleepHours(day);
         if (sleepDeficit > 2) { factors.push('Недосып'); bingeRisk += 15; }
 
         return {
@@ -31247,7 +31330,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         const totalDays = days.length;
         const daysWithMeals = days.filter(d => d.meals && d.meals.length > 0).length;
         const daysWithWeight = days.filter(d => d.weight && d.weight > 0).length;
-        const daysWithSleep = days.filter(d => d.sleepHours && d.sleepHours > 0).length;
+        const daysWithSleep = days.filter(d => getDaySleepHours(d) > 0).length;
         const daysWithSteps = days.filter(d => d.steps && d.steps > 0).length;
         const daysWithTraining = days.filter(d => d.hasTraining).length;
 
@@ -31912,7 +31995,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         if (!day || typeof day !== 'object') return false;
         if ((day.meals || []).length > 0) return true;
         if ((day.trainings || []).length > 0) return true;
-        if ((day.sleepHours || 0) > 0) return true;
+        if (getDaySleepHours(day) > 0) return true;
         return false;
       };
 
@@ -31930,6 +32013,16 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       }
 
       return baseDate; // Если ничего не нашли, возвращаем базовую дату
+    }
+
+    function getDaySleepHours(day) {
+      if (!day || typeof day !== 'object') return 0;
+      const totalSleepHours = HEYS.dayUtils?.getTotalSleepHours?.(day);
+      if (Number.isFinite(totalSleepHours) && totalSleepHours > 0) return totalSleepHours;
+      const storedSleepHours = Number(day.sleepHours);
+      if (Number.isFinite(storedSleepHours) && storedSleepHours > 0) return storedSleepHours;
+      const fallbackSleepHours = HEYS.dayUtils?.sleepHours?.(day.sleepStart, day.sleepEnd);
+      return Number.isFinite(fallbackSleepHours) && fallbackSleepHours > 0 ? fallbackSleepHours : 0;
     }
 
     function WeightPrediction({ prediction }) {
@@ -32060,7 +32153,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         let dayRisk = 0;
         if (day.stressAvg >= 6) dayRisk += 35;
         else if (day.stressAvg >= 4) dayRisk += 15;
-        const sleepDef = (profile.sleepHours || 8) - (day.sleepHours || 0);
+        const sleepDef = (profile.sleepHours || 8) - getDaySleepHours(day);
         if (sleepDef > 2) dayRisk += 15;
         avgEmotionalRisk += dayRisk;
       }
@@ -32559,7 +32652,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
               baseWaveHours: profile?.insulinWaveHours || 3,
               trainings: today.trainings || [],
               dayData: {
-                sleepHours: today.sleepHours,
+                sleepHours: getDaySleepHours(today),
                 sleepQuality: today.sleepQuality,
                 waterMl: today.waterMl,
                 stressAvg: today.stressAvg,
@@ -35086,7 +35179,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           bingeRisk += 10;
         }
 
-        const sleepDeficit = (profile.sleepHours || 8) - (day.sleepHours || 0);
+        const sleepDeficit = (profile.sleepHours || 8) - getDaySleepHours(day);
         if (sleepDeficit > 2) {
           factors.push('Недосып');
           bingeRisk += 15;

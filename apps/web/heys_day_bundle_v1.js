@@ -11,6 +11,82 @@
     const HEYS = global.HEYS = global.HEYS || {};
     const React = global.React;
 
+    function isAdviceStillRelevant(advice, advices) {
+        if (!advice?.id || !Array.isArray(advices)) return false;
+        return advices.some(item => item?.id === advice.id);
+    }
+
+    function hasExpertContent(advice) {
+        return !!(
+            advice?.confidence ||
+            advice?.evidenceSummary ||
+            advice?.expertMeta?.whyNow ||
+            advice?.expertMeta?.actionNow?.label ||
+            advice?.expertMeta?.science ||
+            advice?.expertMeta?.uncertainty ||
+            advice?.expertMeta?.causal ||
+            advice?.expertMeta?.responseMemory
+        );
+    }
+
+    function renderAdviceEvidence(advice) {
+        if (!hasExpertContent(advice)) return null;
+
+        const confidenceLabel = advice.confidenceLabel || (
+            advice.confidence === 'high' ? 'высокая'
+                : advice.confidence === 'medium' ? 'средняя'
+                    : advice.confidence === 'low' ? 'базовая'
+                        : ''
+        );
+
+        const parts = [];
+        if (confidenceLabel) parts.push(`Уверенность: ${confidenceLabel}`);
+        if (advice.evidenceSummary) parts.push(advice.evidenceSummary);
+
+        if (parts.length === 0) return null;
+
+        return React.createElement('div', {
+            className: 'advice-expert-evidence'
+        },
+            React.createElement('div', null, '🧠 ' + parts.join(' · ')),
+            advice?.expertMeta?.whyNow && React.createElement('div', {
+                style: { marginTop: '4px', opacity: 0.9 }
+            }, 'Почему сейчас: ' + advice.expertMeta.whyNow),
+            advice?.expertMeta?.actionNow?.label && React.createElement('div', {
+                style: { marginTop: '4px', opacity: 0.92, fontWeight: 500 }
+            }, 'Следующий шаг: ' + advice.expertMeta.actionNow.label),
+            advice?.expertMeta?.science && React.createElement('div', {
+                style: { marginTop: '4px', opacity: 0.86 }
+            }, `Научная опора: ${advice.expertMeta.science.evidenceLevel} · ${advice.expertMeta.science.topic}`),
+            advice?.expertMeta?.causal && React.createElement('div', {
+                style: { marginTop: '4px', opacity: 0.84 }
+            }, `Причинная цепочка: ${advice.expertMeta.causal.relevance === 'root' ? 'бьём в root cause' : advice.expertMeta.causal.relevance === 'mechanism' ? 'работаем по механизму' : 'сдерживаем outcome'} · ${advice.expertMeta.causal.name}`),
+            advice?.expertMeta?.causal?.mechanism && React.createElement('div', {
+                style: { marginTop: '4px', fontSize: '12px', opacity: 0.72 }
+            }, advice.expertMeta.causal.mechanism),
+            advice?.expertMeta?.responseMemory && React.createElement('div', {
+                style: { marginTop: '4px', opacity: 0.82 }
+            }, `Response memory: ${advice.expertMeta.responseMemory.label}`),
+            advice?.expertMeta?.responseMemory?.message && React.createElement('div', {
+                style: { marginTop: '4px', fontSize: '12px', opacity: 0.72 }
+            }, advice.expertMeta.responseMemory.message),
+            advice?.expertMeta?.uncertainty && React.createElement('div', {
+                style: { marginTop: '4px', opacity: 0.82 }
+            }, `Статус вывода: ${advice.expertMeta.uncertainty.label}`),
+            advice?.expertMeta?.uncertainty?.message && React.createElement('div', {
+                style: { marginTop: '4px', fontSize: '12px', opacity: 0.72 }
+            }, advice.expertMeta.uncertainty.message),
+            (advice?.expertMeta?.sourceCount || advice?.expertMeta?.evidenceScore) && React.createElement('div', {
+                style: { marginTop: '4px', fontSize: '12px', opacity: 0.72 }
+            }, [
+                advice?.expertMeta?.sourceCount ? `источников: ${advice.expertMeta.sourceCount}` : null,
+                advice?.expertMeta?.evidenceScore ? `score: ${advice.expertMeta.evidenceScore}` : null,
+                advice?.expertMeta?.science?.confidenceScore ? `science: ${Math.round(advice.expertMeta.science.confidenceScore * 100)}%` : null,
+                advice?.expertMeta?.responseMemory?.sampleCount ? `feedback: ${advice.expertMeta.responseMemory.sampleCount}` : null
+            ].filter(Boolean).join(' · '))
+        );
+    }
+
     // --- AdviceCard component ---
     const AdviceCard = React.memo(function AdviceCard({
         advice,
@@ -36,11 +112,13 @@
     }) {
         const [scheduledConfirm, setScheduledConfirm] = React.useState(false);
         const [ratedState, setRatedState] = React.useState(null); // 'positive' | 'negative' | null
+        const hasExpandedContent = !!(advice?.details || hasExpertContent(advice));
 
         const swipeX = swipeState?.x || 0;
         const swipeDirection = swipeState?.direction;
         const swipeProgress = Math.min(1, Math.abs(swipeX) / 100);
         const showUndo = isLastDismissed && (isDismissed || isHidden);
+        const showReadFeedback = showUndo && lastDismissedAction === 'read';
 
         const handleSchedule = React.useCallback((e) => {
             e.stopPropagation();
@@ -53,6 +131,24 @@
                 }, 1500);
             }
         }, [advice, onSchedule, onClearLastDismissed]);
+
+        const handleRate = React.useCallback((isPositive, e) => {
+            e.stopPropagation();
+            if (!onRate) return;
+            onRate(advice, isPositive);
+            setRatedState(isPositive ? 'positive' : 'negative');
+            if (navigator.vibrate) navigator.vibrate(30);
+            setTimeout(() => {
+                onClearLastDismissed && onClearLastDismissed();
+            }, 900);
+        }, [advice, onRate, onClearLastDismissed]);
+
+        React.useEffect(() => {
+            if (!showUndo) {
+                setScheduledConfirm(false);
+                setRatedState(null);
+            }
+        }, [showUndo]);
 
         if ((isDismissed || isHidden) && !showUndo) return null;
 
@@ -67,7 +163,6 @@
         },
             showUndo && React.createElement('div', {
                 className: `advice-undo-overlay advice-list-item-${advice.type}`,
-                onClick: onUndo,
                 style: {
                     position: 'absolute',
                     inset: 0,
@@ -84,47 +179,169 @@
                     zIndex: 10,
                 },
             },
-                scheduledConfirm
-                    ? React.createElement('span', {
-                        style: {
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '8px',
-                            color: '#3b82f6',
-                            animation: 'fadeIn 0.3s ease',
-                        },
-                    }, '⏰ Напомню через 2 часа ✓')
-                    : React.createElement(React.Fragment, null,
-                        React.createElement('span', {
-                            style: { color: lastDismissedAction === 'hidden' ? '#f97316' : '#22c55e' },
-                        }, lastDismissedAction === 'hidden' ? '🔕 Скрыто' : '✓ Прочитано'),
-                        React.createElement('div', { style: { display: 'flex', gap: '8px' } },
-                            React.createElement('span', {
-                                onClick: (e) => { e.stopPropagation(); onUndo(); },
+                showReadFeedback
+                    ? React.createElement(React.Fragment, null,
+                        React.createElement('button', {
+                            onClick: (e) => {
+                                e.stopPropagation();
+                                onClearLastDismissed && onClearLastDismissed();
+                            },
+                            style: {
+                                position: 'absolute',
+                                top: '8px',
+                                right: '8px',
+                                border: 'none',
+                                background: 'rgba(0,0,0,0.05)',
+                                borderRadius: '999px',
+                                width: '24px',
+                                height: '24px',
+                                cursor: 'pointer',
+                                color: '#64748b'
+                            }
+                        }, '×'),
+                        scheduledConfirm
+                            ? React.createElement('span', {
                                 style: {
-                                    background: 'rgba(0,0,0,0.08)',
-                                    padding: '4px 10px',
-                                    borderRadius: '12px',
-                                    fontSize: '13px',
-                                    cursor: 'pointer',
-                                },
-                            }, 'Отменить'),
-                            onSchedule && React.createElement('span', {
-                                onClick: handleSchedule,
-                                style: {
-                                    background: 'rgba(0,0,0,0.06)',
-                                    padding: '4px 10px',
-                                    borderRadius: '12px',
-                                    fontSize: '13px',
-                                    cursor: 'pointer',
                                     display: 'flex',
                                     alignItems: 'center',
-                                    gap: '4px',
+                                    gap: '8px',
+                                    color: '#3b82f6',
+                                    animation: 'fadeIn 0.3s ease',
                                 },
-                            }, 'Напомнить через 2ч.')
-                        )
+                            }, '⏰ Напомню через 2 часа ✓')
+                            : ratedState
+                                ? React.createElement('span', {
+                                    style: {
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '8px',
+                                        color: ratedState === 'positive' ? '#16a34a' : '#dc2626',
+                                        animation: 'fadeIn 0.2s ease',
+                                    }
+                                }, ratedState === 'positive' ? '👍 Учту как полезный' : '👎 Учту как слабый / вредный')
+                                : React.createElement('div', {
+                                    style: {
+                                        display: 'flex',
+                                        alignItems: 'stretch',
+                                        justifyContent: 'stretch',
+                                        gap: '10px',
+                                        width: '100%',
+                                        height: '100%',
+                                        padding: '8px 10px',
+                                        boxSizing: 'border-box',
+                                    }
+                                },
+                                    React.createElement('button', {
+                                        onClick: (e) => handleRate(false, e),
+                                        style: {
+                                            border: 'none',
+                                            background: 'rgba(220, 38, 38, 0.16)',
+                                            color: '#b91c1c',
+                                            padding: '10px 14px',
+                                            borderRadius: '18px',
+                                            fontSize: '15px',
+                                            fontWeight: 700,
+                                            cursor: 'pointer',
+                                            flex: '1 1 40%',
+                                            minWidth: '0',
+                                            minHeight: '72px',
+                                            display: 'inline-flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            textAlign: 'center',
+                                            lineHeight: 1.1,
+                                            boxShadow: 'inset 0 0 0 1px rgba(220, 38, 38, 0.06)'
+                                        }
+                                    }, '👎 Вредный'),
+                                    onSchedule && React.createElement('button', {
+                                        onClick: handleSchedule,
+                                        style: {
+                                            border: 'none',
+                                            background: 'rgba(59, 130, 246, 0.14)',
+                                            color: '#2563eb',
+                                            padding: '10px 8px',
+                                            borderRadius: '18px',
+                                            fontSize: '15px',
+                                            fontWeight: 700,
+                                            cursor: 'pointer',
+                                            flex: '0 0 20%',
+                                            minWidth: '70px',
+                                            minHeight: '72px',
+                                            display: 'inline-flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            textAlign: 'center',
+                                            lineHeight: 1.1,
+                                            boxShadow: 'inset 0 0 0 1px rgba(59, 130, 246, 0.06)'
+                                        }
+                                    }, '⏰ 2ч'),
+                                    React.createElement('button', {
+                                        onClick: (e) => handleRate(true, e),
+                                        style: {
+                                            border: 'none',
+                                            background: 'rgba(22, 163, 74, 0.16)',
+                                            color: '#15803d',
+                                            padding: '10px 14px',
+                                            borderRadius: '18px',
+                                            fontSize: '15px',
+                                            fontWeight: 700,
+                                            cursor: 'pointer',
+                                            flex: '1 1 40%',
+                                            minWidth: '0',
+                                            minHeight: '72px',
+                                            display: 'inline-flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            textAlign: 'center',
+                                            lineHeight: 1.1,
+                                            boxShadow: 'inset 0 0 0 1px rgba(22, 163, 74, 0.06)'
+                                        }
+                                    }, '👍 Полезный')
+                                )
+                    )
+                    : React.createElement(React.Fragment, null,
+                        scheduledConfirm
+                            ? React.createElement('span', {
+                                style: {
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '8px',
+                                    color: '#3b82f6',
+                                    animation: 'fadeIn 0.3s ease',
+                                },
+                            }, '⏰ Напомню через 2 часа ✓')
+                            : React.createElement(React.Fragment, null,
+                                React.createElement('span', {
+                                    style: { color: '#f97316' },
+                                }, '🔕 Скрыто'),
+                                React.createElement('div', { style: { display: 'flex', gap: '8px' } },
+                                    React.createElement('span', {
+                                        onClick: (e) => { e.stopPropagation(); onUndo(); },
+                                        style: {
+                                            background: 'rgba(0,0,0,0.08)',
+                                            padding: '4px 10px',
+                                            borderRadius: '12px',
+                                            fontSize: '13px',
+                                            cursor: 'pointer',
+                                        },
+                                    }, 'Отменить'),
+                                    onSchedule && React.createElement('span', {
+                                        onClick: handleSchedule,
+                                        style: {
+                                            background: 'rgba(0,0,0,0.06)',
+                                            padding: '4px 10px',
+                                            borderRadius: '12px',
+                                            fontSize: '13px',
+                                            cursor: 'pointer',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '4px',
+                                        },
+                                    }, 'Напомнить через 2ч.')
+                                )
+                            )
                     ),
-                !scheduledConfirm && React.createElement('div', {
+                !showReadFeedback && !scheduledConfirm && React.createElement('div', {
                     style: {
                         position: 'absolute',
                         bottom: 0,
@@ -155,7 +372,7 @@
                 onClick: (e) => {
                     if (showUndo || Math.abs(swipeX) > 10) return;
                     e.stopPropagation();
-                    if (!isExpanded && trackClick) trackClick(advice.id);
+                    if (!isExpanded && trackClick) trackClick(advice);
                     onToggleExpand && onToggleExpand(advice.id);
                 },
                 onTouchStart: (e) => {
@@ -177,7 +394,7 @@
                 React.createElement('span', { className: 'advice-list-icon' }, advice.icon),
                 React.createElement('div', { className: 'advice-list-content' },
                     React.createElement('span', { className: 'advice-list-text' }, advice.text),
-                    advice.details && React.createElement('span', {
+                    hasExpandedContent && React.createElement('span', {
                         className: 'advice-expand-arrow',
                         style: {
                             marginLeft: '6px',
@@ -188,9 +405,12 @@
                             transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
                         },
                     }, '▼'),
-                    isExpanded && advice.details && React.createElement('div', {
+                    isExpanded && hasExpandedContent && React.createElement('div', {
                         className: 'advice-list-details',
-                    }, advice.details)
+                    },
+                        advice.details && React.createElement('div', null, advice.details),
+                        renderAdviceEvidence(advice)
+                    )
                 )
             )
         );
@@ -214,6 +434,7 @@
         lastDismissedAdvice,
         adviceSwipeState,
         expandedAdviceId,
+        trackClick,
         handleAdviceToggleExpand,
         rateAdvice,
         handleAdviceSwipeStart,
@@ -323,6 +544,7 @@
                                         onClearLastDismissed: clearLastDismissed,
                                         onSchedule: scheduleAdvice,
                                         onToggleExpand: handleAdviceToggleExpand,
+                                        trackClick,
                                         onRate: rateAdvice,
                                         onSwipeStart: handleAdviceSwipeStart,
                                         onSwipeMove: handleAdviceSwipeMove,
@@ -349,6 +571,7 @@
                                 onClearLastDismissed: clearLastDismissed,
                                 onSchedule: scheduleAdvice,
                                 onToggleExpand: handleAdviceToggleExpand,
+                                trackClick,
                                 onRate: rateAdvice,
                                 onSwipeStart: handleAdviceSwipeStart,
                                 onSwipeMove: handleAdviceSwipeMove,
@@ -409,8 +632,11 @@
         toastSwipeX,
         toastDetailsOpen,
         toastAppearedAtRef,
+        toastRatedState,
         toastScheduledConfirm,
         haptic,
+        dismissToast,
+        handleToastRate,
         setToastDetailsOpen,
         setAdviceExpanded,
         setAdviceTrigger,
@@ -422,6 +648,7 @@
     }) {
         if (adviceTrigger === 'manual' || adviceTrigger === 'manual_empty') return null;
         if (!displayedAdvice || !toastVisible) return null;
+        const hasDetailsContent = !!(displayedAdvice.details || hasExpertContent(displayedAdvice));
 
         return React.createElement('div', {
             className: 'macro-toast macro-toast-' + displayedAdvice.type +
@@ -434,7 +661,7 @@
             'aria-live': 'polite',
             onClick: () => {
                 if (toastSwiped) return;
-                if (Math.abs(toastSwipeX) < 10 && displayedAdvice.details) {
+                if (Math.abs(toastSwipeX) < 10 && hasDetailsContent) {
                     haptic && haptic('light');
                     setToastDetailsOpen(!toastDetailsOpen);
                 }
@@ -466,42 +693,117 @@
                     zIndex: 10,
                 },
             },
+                React.createElement('button', {
+                    onClick: (e) => {
+                        e.stopPropagation();
+                        dismissToast && dismissToast();
+                    },
+                    style: {
+                        position: 'absolute',
+                        top: '8px',
+                        right: '8px',
+                        border: 'none',
+                        background: 'rgba(0,0,0,0.05)',
+                        borderRadius: '999px',
+                        width: '24px',
+                        height: '24px',
+                        cursor: 'pointer',
+                        color: '#64748b'
+                    }
+                }, '×'),
                 toastScheduledConfirm
                     ? React.createElement('span', {
                         style: { display: 'flex', alignItems: 'center', gap: '8px', color: '#3b82f6' },
                     }, '⏰ Напомню через 2 часа ✓')
-                    : React.createElement(React.Fragment, null,
-                        React.createElement('span', { style: { color: '#22c55e' } }, '✓ Прочитано'),
-                        React.createElement('div', { style: { display: 'flex', gap: '8px' } },
+                    : toastRatedState
+                        ? React.createElement('span', {
+                            style: {
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px',
+                                color: toastRatedState === 'positive' ? '#16a34a' : '#dc2626',
+                                animation: 'fadeIn 0.2s ease',
+                            }
+                        }, toastRatedState === 'positive' ? '👍 Учту как полезный' : '👎 Учту как слабый / вредный')
+                        : React.createElement('div', {
+                            style: {
+                                display: 'flex',
+                                alignItems: 'stretch',
+                                justifyContent: 'stretch',
+                                gap: '10px',
+                                width: '100%',
+                                height: '100%',
+                                padding: '8px 10px',
+                                boxSizing: 'border-box',
+                            }
+                        },
                             React.createElement('button', {
-                                onClick: (e) => { e.stopPropagation(); handleToastUndo(); },
+                                onClick: (e) => handleToastRate && handleToastRate(false, e),
                                 style: {
-                                    background: 'rgba(0,0,0,0.08)',
-                                    color: 'var(--color-slate-700, #334155)',
-                                    padding: '6px 12px',
-                                    borderRadius: '12px',
-                                    fontSize: '13px',
-                                    cursor: 'pointer',
                                     border: 'none',
+                                    background: 'rgba(220, 38, 38, 0.16)',
+                                    color: '#b91c1c',
+                                    padding: '10px 14px',
+                                    borderRadius: '18px',
+                                    fontSize: '15px',
+                                    fontWeight: 700,
+                                    cursor: 'pointer',
+                                    flex: '1 1 40%',
+                                    minWidth: '0',
+                                    minHeight: '72px',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    textAlign: 'center',
+                                    lineHeight: 1.1,
+                                    boxShadow: 'inset 0 0 0 1px rgba(220, 38, 38, 0.06)'
                                 },
-                            }, 'Отменить'),
+                            }, '👎 Вредный'),
                             React.createElement('button', {
                                 onClick: handleToastSchedule,
                                 style: {
-                                    background: 'rgba(0,0,0,0.06)',
-                                    color: 'var(--color-slate-700, #334155)',
-                                    padding: '6px 12px',
-                                    borderRadius: '12px',
-                                    fontSize: '13px',
-                                    cursor: 'pointer',
                                     border: 'none',
-                                    display: 'flex',
+                                    background: 'rgba(59, 130, 246, 0.14)',
+                                    color: '#2563eb',
+                                    padding: '10px 8px',
+                                    borderRadius: '18px',
+                                    fontSize: '15px',
+                                    fontWeight: 700,
+                                    cursor: 'pointer',
+                                    flex: '0 0 20%',
+                                    minWidth: '70px',
+                                    minHeight: '72px',
+                                    display: 'inline-flex',
                                     alignItems: 'center',
-                                    gap: '4px',
+                                    justifyContent: 'center',
+                                    textAlign: 'center',
+                                    lineHeight: 1.1,
+                                    boxShadow: 'inset 0 0 0 1px rgba(59, 130, 246, 0.06)'
                                 },
-                            }, '⏰ 2ч')
+                            }, '⏰ 2ч'),
+                            React.createElement('button', {
+                                onClick: (e) => handleToastRate && handleToastRate(true, e),
+                                style: {
+                                    border: 'none',
+                                    background: 'rgba(22, 163, 74, 0.16)',
+                                    color: '#15803d',
+                                    padding: '10px 14px',
+                                    borderRadius: '18px',
+                                    fontSize: '15px',
+                                    fontWeight: 700,
+                                    cursor: 'pointer',
+                                    flex: '1 1 40%',
+                                    minWidth: '0',
+                                    minHeight: '72px',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    textAlign: 'center',
+                                    lineHeight: 1.1,
+                                    boxShadow: 'inset 0 0 0 1px rgba(22, 163, 74, 0.06)'
+                                },
+                            }, '👍 Полезный')
                         )
-                    )
             ),
             React.createElement('div', {
                 className: 'macro-toast-main',
@@ -540,12 +842,12 @@
                     display: 'flex',
                     visibility: toastSwiped ? 'hidden' : 'visible',
                     alignItems: 'center',
-                    justifyContent: displayedAdvice.details ? 'space-between' : 'flex-end',
+                    justifyContent: hasDetailsContent ? 'space-between' : 'flex-end',
                     padding: '6px 0 2px 0',
                     marginTop: '2px',
                 },
             },
-                displayedAdvice.details && React.createElement('div', {
+                hasDetailsContent && React.createElement('div', {
                     onClick: (e) => {
                         e.stopPropagation();
                         haptic && haptic('light');
@@ -577,7 +879,7 @@
                     },
                 }, '← свайп — прочитано')
             ),
-            !toastSwiped && toastDetailsOpen && displayedAdvice.details && React.createElement('div', {
+            !toastSwiped && toastDetailsOpen && hasDetailsContent && React.createElement('div', {
                 style: {
                     padding: '8px 12px',
                     fontSize: '13px',
@@ -588,7 +890,10 @@
                     marginTop: '4px',
                     marginBottom: '4px',
                 },
-            }, displayedAdvice.details)
+            },
+                displayedAdvice.details && React.createElement('div', null, displayedAdvice.details),
+                renderAdviceEvidence(displayedAdvice)
+            )
         );
     };
 
@@ -658,6 +963,7 @@
         const toastTimeoutRef = useRef(null);
         const [toastSwipeX, setToastSwipeX] = useState(0);
         const [toastSwiped, setToastSwiped] = useState(false);
+        const [toastRatedState, setToastRatedState] = useState(null);
         const [toastScheduledConfirm, setToastScheduledConfirm] = useState(false);
         const [toastDetailsOpen, setToastDetailsOpen] = useState(false);
         const toastTouchStart = useRef(0);
@@ -965,7 +1271,20 @@
         const adviceEngine = adviceModuleReady ? HEYSRef.advice.useAdviceEngine : null;
 
         const hasClient = !!(HEYSRef?.currentClientId);
-        const emptyAdviceResult = { primary: null, relevant: [], adviceCount: 0, allAdvices: [], badgeAdvices: [], rateAdvice: null, scheduleAdvice: null, scheduledCount: 0 };
+        const emptyAdviceResult = {
+            primary: null,
+            relevant: [],
+            adviceCount: 0,
+            allAdvices: [],
+            badgeAdvices: [],
+            markShown: null,
+            markRead: null,
+            markHidden: null,
+            trackClick: null,
+            rateAdvice: null,
+            scheduleAdvice: null,
+            scheduledCount: 0
+        };
 
         const adviceResult = (adviceEngine && hasClient) ? adviceEngine({
             dayTot,
@@ -990,7 +1309,10 @@
             allAdvices = [],
             badgeAdvices = [],
             markShown = null,
+            markRead = null,
+            markHidden = null,
             rateAdvice = null,
+            trackClick = null,
             scheduleAdvice = null,
             scheduledCount = 0,
         } = safeAdviceResult || {};
@@ -1149,6 +1471,43 @@
         }, [date]); // eslint-disable-line react-hooks/exhaustive-deps
 
         useEffect(() => {
+            if (!toastVisible) return;
+
+            if (adviceTrigger === 'manual') {
+                if (safeAdviceRelevant.length === 0) {
+                    setExpandedAdviceId(null);
+                    setAdviceTrigger('manual_empty');
+                } else if (expandedAdviceId && !safeAdviceRelevant.some(item => item?.id === expandedAdviceId)) {
+                    setExpandedAdviceId(null);
+                }
+                return;
+            }
+
+            if (adviceTrigger !== 'manual_empty' && displayedAdvice) {
+                if (safeAdviceRelevant.length === 0) {
+                    setToastVisible(false);
+                    setDisplayedAdvice(null);
+                    setDisplayedAdviceList([]);
+                    setToastDetailsOpen(false);
+                    setToastSwiped(false);
+                    setToastRatedState(null);
+                    setToastScheduledConfirm(false);
+                    setAdviceTrigger(null);
+                    return;
+                }
+
+                if (!isAdviceStillRelevant(displayedAdvice, safeAdviceRelevant)) {
+                    setDisplayedAdvice(safeAdviceRelevant[0] || null);
+                    setDisplayedAdviceList(safeAdviceRelevant);
+                    setToastDetailsOpen(false);
+                    setToastSwiped(false);
+                    setToastRatedState(null);
+                    setToastScheduledConfirm(false);
+                }
+            }
+        }, [toastVisible, adviceTrigger, safeAdviceRelevant, displayedAdvice, expandedAdviceId]);
+
+        useEffect(() => {
             if (!advicePrimary) return;
 
             const isManualTrigger = adviceTrigger === 'manual' || adviceTrigger === 'manual_empty';
@@ -1161,7 +1520,7 @@
                 setDisplayedAdvice(advicePrimary);
                 setDisplayedAdviceList(safeAdviceRelevant);
                 setToastVisible(false);
-                if (markShown) markShown(advicePrimary.id);
+                if (markShown) markShown(advicePrimary);
                 return;
             }
 
@@ -1173,6 +1532,7 @@
             toastAppearedAtRef.current = Date.now();
             setToastDismissed(false);
             setToastDetailsOpen(false);
+            setToastRatedState(null);
 
             if (adviceSoundEnabled && HEYSRef?.sounds) {
                 if (advicePrimary.type === 'achievement' || advicePrimary.showConfetti) {
@@ -1194,7 +1554,7 @@
                 setTimeout(() => setShowConfetti(false), 2000);
             }
 
-            if (markShown) markShown(advicePrimary.id);
+            if (markShown) markShown(advicePrimary);
         }, [advicePrimary?.id, adviceTrigger, adviceSoundEnabled, dismissedAdvices, markShown, toastsEnabled, setShowConfetti, haptic, HEYSRef, safeAdviceRelevant]);
 
         useEffect(() => {
@@ -1251,17 +1611,19 @@
             e.stopPropagation();
             if (toastSwipeX < -80) {
                 setToastSwiped(true);
+                setToastRatedState(null);
                 setToastScheduledConfirm(false);
-                if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
-                toastTimeoutRef.current = setTimeout(() => {
-                    dismissToast();
-                }, 3000);
+                if (toastTimeoutRef.current) {
+                    clearTimeout(toastTimeoutRef.current);
+                    toastTimeoutRef.current = null;
+                }
             }
             setToastSwipeX(0);
         };
 
         const handleToastUndo = () => {
             setToastSwiped(false);
+            setToastRatedState(null);
             setToastScheduledConfirm(false);
             if (toastTimeoutRef.current) {
                 clearTimeout(toastTimeoutRef.current);
@@ -1269,10 +1631,24 @@
             }
         };
 
+        const handleToastRate = (isPositive, e) => {
+            e && e.stopPropagation();
+            if (displayedAdvice && rateAdvice) {
+                rateAdvice(displayedAdvice, isPositive);
+                setToastRatedState(isPositive ? 'positive' : 'negative');
+                setToastScheduledConfirm(false);
+                if (navigator.vibrate) navigator.vibrate(30);
+                setTimeout(() => {
+                    dismissToast();
+                }, 900);
+            }
+        };
+
         const handleToastSchedule = (e) => {
             e && e.stopPropagation();
             if (displayedAdvice && scheduleAdvice) {
                 scheduleAdvice(displayedAdvice, 120);
+                setToastRatedState(null);
                 setToastScheduledConfirm(true);
                 if (navigator.vibrate) navigator.vibrate(50);
                 setTimeout(() => {
@@ -1351,6 +1727,9 @@
                     HEYSRef.game.addXP(0, 'advice_read', cardEl);
                 }
 
+                const advice = safeAdviceRelevant.find(item => item?.id === adviceId) || safeBadgeAdvices.find(item => item?.id === adviceId);
+                if (advice && markRead) markRead(advice);
+
                 playAdviceSound();
                 haptic('light');
 
@@ -1385,6 +1764,9 @@
                     return newSet;
                 });
 
+                const advice = safeAdviceRelevant.find(item => item?.id === adviceId) || safeBadgeAdvices.find(item => item?.id === adviceId);
+                if (advice && markHidden) markHidden(advice);
+
                 playAdviceHideSound();
                 haptic('medium');
 
@@ -1398,7 +1780,7 @@
 
             setAdviceSwipeState(prev => ({ ...prev, [adviceId]: { x: 0, direction: null } }));
             delete adviceSwipeStart.current[adviceId];
-        }, [adviceSwipeState, haptic, lastDismissedAdvice, playAdviceSound, playAdviceHideSound, setStoredValue]);
+        }, [adviceSwipeState, haptic, lastDismissedAdvice, playAdviceSound, playAdviceHideSound, safeAdviceRelevant, safeBadgeAdvices, markRead, markHidden, setStoredValue]);
 
         const adviceLongPressTimer = useRef(null);
         const handleAdviceLongPressStart = useCallback((adviceId) => {
@@ -1464,6 +1846,8 @@
                     return newSet;
                 });
 
+                if (markRead) markRead(displayedAdvice);
+
                 if (HEYSRef?.game?.addXP) {
                     HEYSRef.game.addXP(0, 'advice_read', null);
                 }
@@ -1472,6 +1856,7 @@
             setToastVisible(false);
             setToastDismissed(true);
             setToastSwiped(false);
+            setToastRatedState(null);
             setToastScheduledConfirm(false);
             setAdviceExpanded(false);
             setAdviceTrigger(null);
@@ -1492,6 +1877,8 @@
             setToastSwipeX,
             toastSwiped,
             setToastSwiped,
+            toastRatedState,
+            setToastRatedState,
             toastScheduledConfirm,
             setToastScheduledConfirm,
             toastDetailsOpen,
@@ -1502,6 +1889,7 @@
             handleToastTouchMove,
             handleToastTouchEnd,
             handleToastUndo,
+            handleToastRate,
             handleToastSchedule,
             adviceTrigger,
             setAdviceTrigger,
@@ -1517,7 +1905,10 @@
             allAdvices,
             badgeAdvices: safeBadgeAdvices,
             markShown,
+            markRead,
+            markHidden,
             rateAdvice,
+            trackClick,
             scheduleAdvice,
             scheduledCount,
             dismissedAdvices,

@@ -81,11 +81,20 @@
         MEAL_ADVICE_THROTTLE_MS
     } = AdviceRules;
 
+    const OUTCOME_PROFILE_KEY = 'heys_advice_outcomes_v1';
+    const OUTCOME_PENDING_KEY = 'heys_advice_pending_outcomes_v1';
+
     // ═══════════════════════════════════════════════════════════
     // 🚀 ADVICE CACHE — Кэширование результатов generateAdvices
     // ═══════════════════════════════════════════════════════════
 
     let adviceCache = {
+        key: null,
+        result: null,
+        timestamp: 0
+    };
+
+    let expertSignalsCache = {
         key: null,
         result: null,
         timestamp: 0
@@ -666,6 +675,20 @@
                 score += 15;
             }
         }
+
+        // 6. Expert evidence factor
+        const evidenceScore = advice?.expertMeta?.evidenceScore || 0;
+        const sourceCount = advice?.expertMeta?.sourceCount || 0;
+        const contradictionsCount = Array.isArray(advice?.expertMeta?.contradictions)
+            ? advice.expertMeta.contradictions.length
+            : 0;
+        const urgency = advice?.expertMeta?.actionNow?.urgency;
+
+        score += Math.min(24, evidenceScore / 3.5);
+        score += Math.min(10, sourceCount * 3);
+        if (urgency === 'now') score += 12;
+        else if (urgency === 'today') score += 5;
+        score -= contradictionsCount * 10;
 
         return score;
     }
@@ -1934,6 +1957,325 @@
         }
     }
 
+    function getAdviceOutcomeProfiles() {
+        try {
+            const HEYS = window.HEYS || {};
+            const U = HEYS.utils || {};
+            const parsed = HEYS.store?.get
+                ? (HEYS.store.get(OUTCOME_PROFILE_KEY, null) || {})
+                : (U.lsGet ? (U.lsGet(OUTCOME_PROFILE_KEY, null) || {}) : JSON.parse(localStorage.getItem(OUTCOME_PROFILE_KEY) || 'null') || {});
+
+            return {
+                advice: parsed?.advice && typeof parsed.advice === 'object' ? parsed.advice : {},
+                theme: parsed?.theme && typeof parsed.theme === 'object' ? parsed.theme : {},
+                context: parsed?.context && typeof parsed.context === 'object' ? parsed.context : {},
+                lastUpdated: parsed?.lastUpdated || 0
+            };
+        } catch (e) {
+            return { advice: {}, theme: {}, context: {}, lastUpdated: 0 };
+        }
+    }
+
+    function saveAdviceOutcomeProfiles(profiles) {
+        try {
+            const HEYS = window.HEYS || {};
+            const U = HEYS.utils || {};
+            const payload = {
+                advice: profiles?.advice || {},
+                theme: profiles?.theme || {},
+                context: profiles?.context || {},
+                lastUpdated: Date.now()
+            };
+
+            if (HEYS.store?.set) {
+                HEYS.store.set(OUTCOME_PROFILE_KEY, payload);
+            } else if (U.lsSet) {
+                U.lsSet(OUTCOME_PROFILE_KEY, payload);
+            } else {
+                localStorage.setItem(OUTCOME_PROFILE_KEY, JSON.stringify(payload));
+            }
+        } catch (e) {
+            // Ignore storage errors
+        }
+    }
+
+    function getPendingAdviceOutcomes() {
+        try {
+            const HEYS = window.HEYS || {};
+            const U = HEYS.utils || {};
+            const parsed = HEYS.store?.get
+                ? (HEYS.store.get(OUTCOME_PENDING_KEY, null) || {})
+                : (U.lsGet ? (U.lsGet(OUTCOME_PENDING_KEY, null) || {}) : JSON.parse(localStorage.getItem(OUTCOME_PENDING_KEY) || 'null') || {});
+
+            return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+                ? parsed
+                : {};
+        } catch (e) {
+            return {};
+        }
+    }
+
+    function savePendingAdviceOutcomes(pending) {
+        try {
+            const HEYS = window.HEYS || {};
+            const U = HEYS.utils || {};
+            if (HEYS.store?.set) {
+                HEYS.store.set(OUTCOME_PENDING_KEY, pending || {});
+            } else if (U.lsSet) {
+                U.lsSet(OUTCOME_PENDING_KEY, pending || {});
+            } else {
+                localStorage.setItem(OUTCOME_PENDING_KEY, JSON.stringify(pending || {}));
+            }
+        } catch (e) {
+            // Ignore storage errors
+        }
+    }
+
+    function ensureOutcomeBucket(root, key) {
+        if (!root[key]) {
+            root[key] = {
+                shown: 0,
+                click: 0,
+                read: 0,
+                hidden: 0,
+                positive: 0,
+                negative: 0,
+                autoSuccess: 0,
+                autoFailure: 0,
+                autoNeutral: 0,
+                lastUpdated: 0
+            };
+        }
+
+        return root[key];
+    }
+
+    function applyOutcomeEvent(stats, eventType) {
+        if (!stats || !eventType) return;
+        if (typeof stats[eventType] !== 'number') stats[eventType] = 0;
+        stats[eventType] += 1;
+        stats.lastUpdated = Date.now();
+    }
+
+    function getOutcomeContextKey(advice, ctx) {
+        const theme = advice?.expertMeta?.theme || advice?.category || 'general';
+        const goalMode = ctx?.goal?.mode || 'maintenance';
+        const crashLevel = ctx?.crashRisk?.level || 'low';
+        const hour = ctx?.hour || 0;
+        const timeBucket = hour < 11 ? 'morning' : hour < 17 ? 'midday' : hour < 22 ? 'evening' : 'late';
+        const stressValue = ctx?.day?.stressAvg || 0;
+        const stressBucket = stressValue >= 6 ? 'high' : stressValue >= 4 ? 'medium' : 'low';
+        return [theme, goalMode, crashLevel, timeBucket, stressBucket].join('|');
+    }
+
+    function buildAdviceOutcomeSnapshot(advice, ctx) {
+        return {
+            theme: advice?.expertMeta?.theme || advice?.category || 'general',
+            contextKey: getOutcomeContextKey(advice, ctx),
+            date: ctx?.day?.date || new Date().toISOString().slice(0, 10),
+            shownAt: Date.now(),
+            hour: ctx?.hour || 0,
+            mealCount: ctx?.mealCount || 0,
+            lastMealHour: getLastMealHour(ctx?.day || {}),
+            proteinPct: ctx?.proteinPct || 0,
+            fiberPct: ctx?.fiberPct || 0,
+            waterPct: ctx?.waterPct || 0,
+            simplePct: ctx?.simplePct || 0,
+            kcalPct: ctx?.kcalPct || 0,
+            stressAvg: ctx?.day?.stressAvg || 0,
+            crashRiskLevel: ctx?.crashRisk?.level || 'low'
+        };
+    }
+
+    function resolveAdviceResponseMemory(advice, ctx, profiles) {
+        const safeProfiles = profiles || getAdviceOutcomeProfiles();
+        const adviceStats = safeProfiles.advice?.[advice?.id] || null;
+        const themeKey = advice?.expertMeta?.theme || advice?.category || 'general';
+        const themeStats = safeProfiles.theme?.[themeKey] || null;
+        const contextKey = getOutcomeContextKey(advice, ctx);
+        const contextStats = safeProfiles.context?.[contextKey] || null;
+
+        const weighted = [
+            { stats: adviceStats, weight: 1.15 },
+            { stats: themeStats, weight: 0.85 },
+            { stats: contextStats, weight: 1.0 }
+        ].filter(item => item.stats);
+
+        if (weighted.length === 0) return null;
+
+        let positiveScore = 0;
+        let negativeScore = 0;
+        let sampleCount = 0;
+        let autoSignals = 0;
+
+        weighted.forEach(({ stats, weight }) => {
+            positiveScore += ((stats.click || 0) * 1.1 + (stats.read || 0) * 0.45 + (stats.positive || 0) * 1.8 + (stats.autoSuccess || 0) * 1.5) * weight;
+            negativeScore += ((stats.hidden || 0) * 1.0 + (stats.negative || 0) * 1.8 + (stats.autoFailure || 0) * 1.45) * weight;
+            sampleCount += (stats.click || 0) + (stats.read || 0) + (stats.hidden || 0) + (stats.positive || 0) + (stats.negative || 0) + (stats.autoSuccess || 0) + (stats.autoFailure || 0);
+            autoSignals += (stats.autoSuccess || 0) + (stats.autoFailure || 0);
+        });
+
+        if (sampleCount < 2 && autoSignals === 0) return null;
+
+        const balance = positiveScore - negativeScore;
+        const score = Math.max(-18, Math.min(18, balance * 3.2));
+        let label = 'нейтральный отклик';
+        let message = 'Пока мало признаков, что этот тип совета заметно лучше или хуже обычного.';
+
+        if (score >= 9) {
+            label = 'обычно помогает';
+            message = 'Похожие советы в таком контексте чаще приводят к хорошей реакции пользователя.';
+        } else if (score <= -9) {
+            label = 'часто не заходит';
+            message = 'Похожие советы в таком контексте чаще игнорируются или не дают хорошего отклика.';
+        } else if (score >= 4) {
+            label = 'скорее полезен';
+            message = 'Есть умеренные признаки, что такой совет чаще оказывается уместным.';
+        } else if (score <= -4) {
+            label = 'скорее слабый';
+            message = 'Есть признаки, что в таком контексте совет стоит подавать осторожнее.';
+        }
+
+        return {
+            score,
+            label,
+            message,
+            sampleCount,
+            autoSignals,
+            contextKey
+        };
+    }
+
+    function evaluatePendingAdviceOutcome(pending, ctx) {
+        const ageHours = (Date.now() - (pending?.shownAt || Date.now())) / (1000 * 60 * 60);
+        const theme = pending?.theme || 'general';
+        const currentLastMealHour = getLastMealHour(ctx?.day || {});
+
+        const current = {
+            proteinPct: ctx?.proteinPct || 0,
+            fiberPct: ctx?.fiberPct || 0,
+            waterPct: ctx?.waterPct || 0,
+            simplePct: ctx?.simplePct || 0,
+            crashRiskLevel: ctx?.crashRisk?.level || 'low',
+            stressAvg: ctx?.day?.stressAvg || 0,
+            lastMealHour: currentLastMealHour
+        };
+
+        if (theme === 'protein') {
+            if (current.proteinPct >= Math.max(0.92, (pending?.proteinPct || 0) + 0.15)) return 'autoSuccess';
+            if (ageHours >= 6 && current.proteinPct < Math.max(0.85, (pending?.proteinPct || 0) + 0.05)) return 'autoFailure';
+            return null;
+        }
+
+        if (theme === 'fiber') {
+            if (current.fiberPct >= Math.max(0.85, (pending?.fiberPct || 0) + 0.12)) return 'autoSuccess';
+            if (ageHours >= 6 && current.fiberPct < Math.max(0.75, (pending?.fiberPct || 0) + 0.04)) return 'autoFailure';
+            return null;
+        }
+
+        if (theme === 'hydration') {
+            if (current.waterPct >= Math.max(0.85, (pending?.waterPct || 0) + 0.2)) return 'autoSuccess';
+            if (ageHours >= 4 && current.waterPct < Math.max(0.72, (pending?.waterPct || 0) + 0.08)) return 'autoFailure';
+            return null;
+        }
+
+        if (theme === 'timing') {
+            if (ageHours >= 3 && ctx?.hour >= 21 && current.lastMealHour !== null && current.lastMealHour <= 20) return 'autoSuccess';
+            if (ageHours >= 3 && ctx?.hour >= 21 && current.lastMealHour !== null && current.lastMealHour >= 21) return 'autoFailure';
+            return null;
+        }
+
+        if (theme === 'stress') {
+            const riskImproved = pending?.crashRiskLevel === 'high' && current.crashRiskLevel !== 'high';
+            const stressImproved = current.stressAvg > 0 && pending?.stressAvg > 0 && current.stressAvg <= (pending.stressAvg - 1);
+            const worsened = current.simplePct >= (pending?.simplePct || 0) + 0.2 || (pending?.crashRiskLevel === 'medium' && current.crashRiskLevel === 'high');
+            if (riskImproved || stressImproved) return 'autoSuccess';
+            if (ageHours >= 4 && worsened) return 'autoFailure';
+            return null;
+        }
+
+        if (theme === 'carbs') {
+            const stabilized = current.simplePct <= Math.max(0.95, (pending?.simplePct || 0) + 0.05)
+                && (current.proteinPct >= (pending?.proteinPct || 0) + 0.08 || current.fiberPct >= (pending?.fiberPct || 0) + 0.08);
+            if (stabilized) return 'autoSuccess';
+            if (ageHours >= 4 && current.simplePct >= (pending?.simplePct || 0) + 0.2) return 'autoFailure';
+            return null;
+        }
+
+        if (theme === 'training') {
+            const recovered = current.proteinPct >= Math.max(0.85, (pending?.proteinPct || 0) + 0.1)
+                || current.waterPct >= Math.max(0.8, (pending?.waterPct || 0) + 0.15);
+            if (recovered) return 'autoSuccess';
+            if (ageHours >= 6 && !recovered && current.crashRiskLevel === 'high') return 'autoFailure';
+            return null;
+        }
+
+        if (ageHours >= 20) return 'autoNeutral';
+        return null;
+    }
+
+    function resolvePendingAdviceOutcomes(ctx) {
+        const pending = getPendingAdviceOutcomes();
+        const keys = Object.keys(pending);
+        if (keys.length === 0) return getAdviceOutcomeProfiles();
+
+        const profiles = getAdviceOutcomeProfiles();
+        let changed = false;
+
+        keys.forEach(key => {
+            const snapshot = pending[key];
+            const ageHours = (Date.now() - (snapshot?.shownAt || Date.now())) / (1000 * 60 * 60);
+            const sameDay = snapshot?.date === (ctx?.day?.date || new Date().toISOString().slice(0, 10));
+            const canEvaluate = !sameDay || ageHours >= 1.5 || (ctx?.mealCount || 0) > (snapshot?.mealCount || 0);
+            if (!canEvaluate) return;
+
+            const eventType = evaluatePendingAdviceOutcome(snapshot, ctx);
+            if (!eventType && ageHours < 28) return;
+
+            const resolvedEvent = eventType || 'autoNeutral';
+            applyOutcomeEvent(ensureOutcomeBucket(profiles.advice, snapshot?.adviceId || 'unknown'), resolvedEvent);
+            applyOutcomeEvent(ensureOutcomeBucket(profiles.theme, snapshot?.theme || 'general'), resolvedEvent);
+            applyOutcomeEvent(ensureOutcomeBucket(profiles.context, snapshot?.contextKey || 'general|maintenance|low|midday|low'), resolvedEvent);
+            delete pending[key];
+            changed = true;
+        });
+
+        if (changed) {
+            saveAdviceOutcomeProfiles(profiles);
+            savePendingAdviceOutcomes(pending);
+        }
+
+        return profiles;
+    }
+
+    function recordPendingAdviceOutcome(advice, ctx) {
+        if (!advice || !ctx) return;
+
+        const pending = getPendingAdviceOutcomes();
+        const snapshot = buildAdviceOutcomeSnapshot(advice, ctx);
+        const key = `${advice.id}|${snapshot.shownAt}`;
+
+        pending[key] = {
+            adviceId: advice.id,
+            ...snapshot
+        };
+
+        savePendingAdviceOutcomes(pending);
+    }
+
+    function recordAdviceOutcomeEvent(advice, ctx, eventType) {
+        if (!advice || !eventType) return;
+
+        const profiles = getAdviceOutcomeProfiles();
+        const theme = advice?.expertMeta?.theme || advice?.category || 'general';
+        const contextKey = getOutcomeContextKey(advice, ctx || {});
+
+        applyOutcomeEvent(ensureOutcomeBucket(profiles.advice, advice.id), eventType);
+        applyOutcomeEvent(ensureOutcomeBucket(profiles.theme, theme), eventType);
+        applyOutcomeEvent(ensureOutcomeBucket(profiles.context, contextKey), eventType);
+        saveAdviceOutcomeProfiles(profiles);
+    }
+
     /**
      * Трекает показ совета
      * @param {string} adviceId
@@ -2238,7 +2580,14 @@
      * @returns {number}
      */
     function calculateSleepHours(day) {
-        if (!day?.sleepStart || !day?.sleepEnd) return 0;
+        if (window.HEYS?.dayUtils?.getTotalSleepHours) {
+            return window.HEYS.dayUtils.getTotalSleepHours(day);
+        }
+
+        if (!day?.sleepStart || !day?.sleepEnd) {
+            const napHours = Math.max(0, Math.round(+day?.daySleepMinutes || 0)) / 60;
+            return (day?.sleepHours || 0) || napHours;
+        }
 
         const [startH, startM] = day.sleepStart.split(':').map(Number);
         const [endH, endM] = day.sleepEnd.split(':').map(Number);
@@ -2246,10 +2595,10 @@
         let hours = endH - startH;
         let mins = endM - startM;
 
-        // Если легли вчера (например 23:00 → 07:00)
         if (hours < 0) hours += 24;
 
-        return hours + mins / 60;
+        const napHours = Math.max(0, Math.round(+day?.daySleepMinutes || 0)) / 60;
+        return hours + mins / 60 + napHours;
     }
 
     /**
@@ -2292,6 +2641,984 @@
         }
 
         return days;
+    }
+
+    function generateExpertSignalsKey(ctx) {
+        return [
+            ctx?.day?.date || '',
+            ctx?.dayTot?.kcal || 0,
+            ctx?.dayTot?.prot || 0,
+            ctx?.dayTot?.fiber || 0,
+            ctx?.day?.waterMl || 0,
+            ctx?.day?.stressAvg || 0,
+            ctx?.day?.steps || 0,
+            ctx?.hour || 0,
+            ctx?.mealCount || 0,
+            ctx?.currentStreak || 0,
+            ctx?.prof?.weight || 0,
+            ctx?.prof?.deficitPctTarget || 0,
+            ctx?.goal?.mode || ''
+        ].join('|');
+    }
+
+    function isExpertSignalsCacheValid(ctx) {
+        if (!expertSignalsCache.result) return false;
+        if (Date.now() - expertSignalsCache.timestamp > ADVICE_CACHE_TTL) return false;
+        return expertSignalsCache.key === generateExpertSignalsKey(ctx);
+    }
+
+    function buildHistoryWithToday(ctx, daysBack = 14) {
+        const previousDays = getRecentDays(Math.max(daysBack - 1, 0)) || [];
+        const todayDate = ctx?.day?.date || new Date().toISOString().slice(0, 10);
+        const todaySnapshot = {
+            ...(ctx?.day || {}),
+            date: todayDate,
+            dayTot: ctx?.dayTot || {},
+            meals: Array.isArray(ctx?.day?.meals) ? ctx.day.meals : [],
+            waterMl: ctx?.day?.waterMl || 0,
+            stressAvg: ctx?.day?.stressAvg || 0,
+            steps: ctx?.day?.steps || 0,
+            trainings: Array.isArray(ctx?.day?.trainings) ? ctx.day.trainings : [],
+            weightMorning: ctx?.day?.weightMorning || 0
+        };
+
+        const byDate = new Map();
+        [...previousDays, todaySnapshot].forEach(day => {
+            if (!day?.date) return;
+            byDate.set(day.date, day);
+        });
+
+        return [...byDate.values()].sort((a, b) => String(a.date).localeCompare(String(b.date)));
+    }
+
+    function getLastMealHour(day) {
+        const lastMeal = getLastMealWithItems(day);
+        if (!lastMeal?.time) return null;
+        const [h] = lastMeal.time.split(':').map(Number);
+        return Number.isFinite(h) ? h : null;
+    }
+
+    function matchesAdvice(advice, patterns) {
+        const haystack = ((advice?.id || '') + '|' + (advice?.category || '') + '|' + (advice?.type || '')).toLowerCase();
+        return patterns.some(pattern => pattern.test(haystack));
+    }
+
+    function collectPatternBridgeSignals(history14, history30, ctx) {
+        const patternsApi = window.HEYS?.InsightsPI?.patterns;
+        if (!patternsApi) return {};
+
+        const result = {};
+        const safeAnalyze = (key, analyzer) => {
+            try {
+                const data = analyzer();
+                if (!data || data.available === false) return;
+                const score = typeof data.score === 'number'
+                    ? data.score
+                    : (typeof data.currentScore === 'number' ? data.currentScore : null);
+                const correlation = typeof data.correlation === 'number'
+                    ? Math.abs(data.correlation)
+                    : null;
+
+                result[key] = {
+                    score,
+                    correlation,
+                    available: true,
+                    pattern: data.pattern || key
+                };
+            } catch (e) {
+                // Soft bridge only — ignore unavailable analytics
+            }
+        };
+
+        safeAnalyze('mealTiming', () => patternsApi.analyzeMealTiming(history14, ctx?.prof || {}, ctx?.pIndex || {}));
+        safeAnalyze('sleepHunger', () => patternsApi.analyzeSleepHunger(history14, ctx?.prof || {}, ctx?.pIndex || {}));
+        safeAnalyze('hydration', () => patternsApi.analyzeHydration(history14));
+        safeAnalyze('stressEating', () => patternsApi.analyzeStressEating(history14, ctx?.pIndex || {}));
+        safeAnalyze('insulinSensitivity', () => patternsApi.analyzeInsulinSensitivity(history30, ctx?.pIndex || {}, ctx?.prof || {}));
+        safeAnalyze('circadian', () => patternsApi.analyzeCircadianTiming(history14, ctx?.pIndex || {}, ctx?.prof || {}));
+
+        return result;
+    }
+
+    function averageBy(days, selector) {
+        const values = (Array.isArray(days) ? days : [])
+            .map(day => selector(day))
+            .filter(value => typeof value === 'number' && Number.isFinite(value));
+
+        if (values.length === 0) return null;
+        return values.reduce((sum, value) => sum + value, 0) / values.length;
+    }
+
+    function countBy(days, predicate) {
+        return (Array.isArray(days) ? days : []).filter(day => {
+            try {
+                return !!predicate(day);
+            } catch (e) {
+                return false;
+            }
+        }).length;
+    }
+
+    function buildWeeklyTrendSignals(history14, ctx) {
+        if (!Array.isArray(history14) || history14.length < 10) return {};
+
+        const previous7 = history14.slice(-14, -7);
+        const recent7 = history14.slice(-7);
+
+        if (previous7.length < 4 || recent7.length < 4) return {};
+
+        const proteinNorm = ctx?.normAbs?.prot || 1;
+        const fiberNorm = ctx?.normAbs?.fiber || 1;
+        const simpleNorm = ctx?.normAbs?.simple || 1;
+        const waterGoal = ctx?.waterGoal || 2000;
+
+        const prevProtein = averageBy(previous7, day => (day?.dayTot?.prot || 0) / proteinNorm);
+        const recentProtein = averageBy(recent7, day => (day?.dayTot?.prot || 0) / proteinNorm);
+        const prevFiber = averageBy(previous7, day => (day?.dayTot?.fiber || 0) / fiberNorm);
+        const recentFiber = averageBy(recent7, day => (day?.dayTot?.fiber || 0) / fiberNorm);
+        const prevWater = averageBy(previous7, day => (day?.waterMl || 0) / waterGoal);
+        const recentWater = averageBy(recent7, day => (day?.waterMl || 0) / waterGoal);
+        const prevSimple = averageBy(previous7, day => (day?.dayTot?.simple || 0) / simpleNorm);
+        const recentSimple = averageBy(recent7, day => (day?.dayTot?.simple || 0) / simpleNorm);
+
+        const prevLateMeals = countBy(previous7, day => {
+            const lastHour = getLastMealHour(day);
+            return lastHour !== null && lastHour >= 21;
+        });
+        const recentLateMeals = countBy(recent7, day => {
+            const lastHour = getLastMealHour(day);
+            return lastHour !== null && lastHour >= 21;
+        });
+
+        const prevStress = averageBy(previous7, day => day?.stressAvg || calculateAverageStress(day) || 0);
+        const recentStress = averageBy(recent7, day => day?.stressAvg || calculateAverageStress(day) || 0);
+
+        return {
+            proteinDown: prevProtein !== null && recentProtein !== null && (recentProtein - prevProtein) <= -0.12,
+            fiberDown: prevFiber !== null && recentFiber !== null && (recentFiber - prevFiber) <= -0.12,
+            waterDown: prevWater !== null && recentWater !== null && (recentWater - prevWater) <= -0.12,
+            simpleUp: prevSimple !== null && recentSimple !== null && (recentSimple - prevSimple) >= 0.15,
+            lateMealsUp: recentLateMeals - prevLateMeals >= 2,
+            stressUp: prevStress !== null && recentStress !== null && (recentStress - prevStress) >= 1,
+            snapshot: {
+                prevProtein,
+                recentProtein,
+                prevFiber,
+                recentFiber,
+                prevWater,
+                recentWater,
+                prevSimple,
+                recentSimple,
+                prevLateMeals,
+                recentLateMeals,
+                prevStress,
+                recentStress
+            }
+        };
+    }
+
+    function collectEarlyWarningBridgeSignals(history14, history30, ctx) {
+        const earlyWarningApi = window.HEYS?.InsightsPI?.earlyWarning;
+        if (!earlyWarningApi?.detect) return null;
+
+        const analysisDays = Array.isArray(history14) && history14.length >= 7
+            ? history14
+            : history30;
+
+        if (!Array.isArray(analysisDays) || analysisDays.length < 7) {
+            return null;
+        }
+
+        try {
+            const result = earlyWarningApi.detect(
+                analysisDays,
+                ctx?.prof || {},
+                ctx?.pIndex || {},
+                {
+                    mode: 'acute',
+                    includeDetails: false
+                }
+            );
+
+            if (!result?.available) return null;
+
+            const warnings = Array.isArray(result.warnings)
+                ? result.warnings.slice(0, 8)
+                : [];
+
+            const byType = new Map();
+            warnings.forEach(warning => {
+                if (warning?.type) byType.set(warning.type, warning);
+            });
+
+            return {
+                warnings,
+                byType,
+                globalScore: result?.globalScore || 0,
+                highSeverityCount: result?.highSeverityCount || warnings.filter(w => w?.severity === 'high').length,
+                mediumSeverityCount: result?.mediumSeverityCount || warnings.filter(w => w?.severity === 'medium').length,
+                criticalCount: Array.isArray(result?.criticalPriority) ? result.criticalPriority.length : 0,
+                causalChains: Array.isArray(result?.causalChains) ? result.causalChains.slice(0, 3) : []
+            };
+        } catch (e) {
+            return null;
+        }
+    }
+
+    function collectSoftExpertSignals(ctx) {
+        if (!ctx) return null;
+
+        if (isExpertSignalsCacheValid(ctx)) {
+            return expertSignalsCache.result;
+        }
+
+        const history7 = buildHistoryWithToday(ctx, 7);
+        const history14 = buildHistoryWithToday(ctx, 14);
+        const history30 = buildHistoryWithToday(ctx, 30);
+
+        const proteinNorm = ctx?.normAbs?.prot || 1;
+        const fiberNorm = ctx?.normAbs?.fiber || 1;
+        const simpleNorm = ctx?.normAbs?.simple || 1;
+        const waterGoal = ctx?.waterGoal || 2000;
+        const sleepNorm = ctx?.prof?.sleepHours || 8;
+
+        const signals = {
+            history7,
+            history14,
+            history30,
+            outcomeProfiles: resolvePendingAdviceOutcomes(ctx),
+            lowProteinDays7: history7.filter(day => ((day?.dayTot?.prot || 0) / proteinNorm) < 0.85).length,
+            lowFiberDays7: history7.filter(day => ((day?.dayTot?.fiber || 0) / fiberNorm) < 0.7).length,
+            highSimpleDays7: history7.filter(day => ((day?.dayTot?.simple || 0) / simpleNorm) > 1.15).length,
+            lowWaterDays7: history7.filter(day => ((day?.waterMl || 0) / waterGoal) < 0.7).length,
+            lateMealDays7: history7.filter(day => {
+                const lastHour = getLastMealHour(day);
+                return lastHour !== null && lastHour >= 21;
+            }).length,
+            sleepDebtDays7: history7.filter(day => calculateSleepHours(day) > 0 && calculateSleepHours(day) < (sleepNorm - 1)).length,
+            highStressDays7: history7.filter(day => {
+                const stress = day?.stressAvg || calculateAverageStress(day) || 0;
+                return stress >= 6;
+            }).length,
+            underTargetDays7: history7.filter(day => ((day?.dayTot?.kcal || 0) / (ctx?.optimum || 2000)) < 0.85).length,
+            trainingDays7: history7.filter(day => Array.isArray(day?.trainings) && day.trainings.some(t => t?.z && t.z.some(m => m > 0))).length,
+            poorRecoveryTrainingDays7: history7.filter(day => {
+                const hasTraining = Array.isArray(day?.trainings) && day.trainings.some(t => t?.z && t.z.some(m => m > 0));
+                if (!hasTraining) return false;
+                const sleepHours = calculateSleepHours(day);
+                const stress = day?.stressAvg || calculateAverageStress(day) || 0;
+                return (sleepHours > 0 && sleepHours < 6.5) || stress >= 6;
+            }).length,
+            weeklyTrends: {},
+            phenotype: null,
+            patternSignals: {},
+            earlyWarnings: null
+        };
+
+        try {
+            const phenotypeApi = window.HEYS?.InsightsPI?.phenotype;
+            if (phenotypeApi?.autoDetect && history30.length >= 30) {
+                signals.phenotype = phenotypeApi.autoDetect(history30, ctx?.prof || {}, ctx?.pIndex || {});
+            }
+        } catch (e) {
+            signals.phenotype = null;
+        }
+
+        signals.weeklyTrends = buildWeeklyTrendSignals(history14, ctx);
+        signals.patternSignals = collectPatternBridgeSignals(history14, history30, ctx);
+        signals.earlyWarnings = collectEarlyWarningBridgeSignals(history14, history30, ctx);
+
+        expertSignalsCache = {
+            key: generateExpertSignalsKey(ctx),
+            result: signals,
+            timestamp: Date.now()
+        };
+
+        return signals;
+    }
+
+    function normalizeAdviceConfidence(score) {
+        if (score >= 55) return 'high';
+        if (score >= 30) return 'medium';
+        if (score >= 14) return 'low';
+        return null;
+    }
+
+    function getConfidenceLabel(confidence) {
+        if (confidence === 'high') return 'высокая';
+        if (confidence === 'medium') return 'средняя';
+        if (confidence === 'low') return 'базовая';
+        return '';
+    }
+
+    function getEarlyWarningLabel(warning) {
+        if (!warning) return '';
+        if (warning.patternName) return warning.patternName;
+        if (warning.message) {
+            return String(warning.message)
+                .replace(/^[^\p{L}\p{N}]+/u, '')
+                .trim();
+        }
+        return String(warning.type || '').replace(/_/g, ' ').toLowerCase();
+    }
+
+    function getAdviceExpertFlags(advice) {
+        return {
+            isProteinAdvice: matchesAdvice(advice, [/protein/, /training.*recovery/, /bulk_/, /deficit_/]),
+            isFiberAdvice: matchesAdvice(advice, [/fiber/, /vegetable/, /veggies/, /gut/]),
+            isHydrationAdvice: matchesAdvice(advice, [/water/, /hydration/]),
+            isTimingAdvice: matchesAdvice(advice, [/timing/, /late/, /bedtime/, /sleep/, /circadian/, /breakfast/, /dinner/]),
+            isStressAdvice: matchesAdvice(advice, [/stress/, /mood/, /crash/, /emotional/, /binge/]),
+            isCarbAdvice: matchesAdvice(advice, [/carb/, /simple/, /sugar/, /gi/, /glycemic/]),
+            isTrainingAdvice: matchesAdvice(advice, [/train/, /workout/, /recovery/, /cardio/, /strength/])
+        };
+    }
+
+    function getAdviceTheme(advice, flags) {
+        if (flags.isProteinAdvice) return 'protein';
+        if (flags.isFiberAdvice) return 'fiber';
+        if (flags.isHydrationAdvice) return 'hydration';
+        if (flags.isTimingAdvice) return 'timing';
+        if (flags.isStressAdvice) return 'stress';
+        if (flags.isCarbAdvice) return 'carbs';
+        if (flags.isTrainingAdvice) return 'training';
+        return advice?.category || 'general';
+    }
+
+    function buildAdviceActionStep(advice, ctx, flags, signals) {
+        if (flags.isHydrationAdvice) {
+            return {
+                label: 'Выпей 300–500 мл воды в ближайшие 10 минут',
+                urgency: 'now'
+            };
+        }
+        if (flags.isProteinAdvice) {
+            return {
+                label: 'Добери 20–30 г белка в следующий приём пищи',
+                urgency: ctx?.hour >= 18 ? 'now' : 'today'
+            };
+        }
+        if (flags.isFiberAdvice) {
+            return {
+                label: 'Добавь овощи, ягоды или бобовые в следующий приём',
+                urgency: 'today'
+            };
+        }
+        if (flags.isTimingAdvice) {
+            const lateMeals = signals?.lateMealDays7 || 0;
+            return {
+                label: lateMeals >= 3
+                    ? 'Сдвинь последний приём на 30–60 минут раньше сегодня'
+                    : 'Сохрани ровный интервал до следующего приёма пищи',
+                urgency: 'today'
+            };
+        }
+        if (flags.isStressAdvice) {
+            return {
+                label: 'Сделай короткую паузу: вода, 5 глубоких вдохов и только потом решай про еду',
+                urgency: 'now'
+            };
+        }
+        if (flags.isCarbAdvice) {
+            return {
+                label: 'Следующий перекус собери вокруг белка и клетчатки, а не сахара',
+                urgency: 'today'
+            };
+        }
+        if (flags.isTrainingAdvice) {
+            return {
+                label: 'Проверь восстановление: белок, вода и сон сегодня важнее добивания нагрузкой',
+                urgency: 'today'
+            };
+        }
+
+        return {
+            label: 'Сделай один маленький следующий шаг по этому совету сегодня',
+            urgency: 'today'
+        };
+    }
+
+    function evaluateAdviceContradictions(advice, ctx, flags) {
+        const contradictions = [];
+        const add = (text) => {
+            if (text && !contradictions.includes(text) && contradictions.length < 2) contradictions.push(text);
+        };
+
+        if (flags.isProteinAdvice && (ctx?.proteinPct || 0) >= 0.95) {
+            add('сегодня белок уже близок к цели');
+        }
+        if (flags.isFiberAdvice && (ctx?.fiberPct || 0) >= 0.9) {
+            add('сегодня клетчатка уже почти в норме');
+        }
+        if (flags.isHydrationAdvice && (ctx?.waterPct || 0) >= 0.85) {
+            add('по воде сегодня уже хороший темп');
+        }
+        if (flags.isCarbAdvice && (ctx?.simplePct || 0) <= 0.9) {
+            add('сегодня простые углеводы пока под контролем');
+        }
+        if (flags.isStressAdvice && (ctx?.day?.stressAvg || 0) > 0 && (ctx?.day?.stressAvg || 0) <= 4 && ctx?.crashRisk?.level === 'low') {
+            add('сегодня острый стресс-сигнал низкий');
+        }
+        if (flags.isTrainingAdvice && !ctx?.hasTraining && !ctx?.day?.trainings?.length) {
+            add('сегодня нет явного тренировочного триггера');
+        }
+        if (flags.isTimingAdvice) {
+            const lastMealHour = getLastMealHour(ctx?.day || {});
+            if (lastMealHour !== null && lastMealHour <= 19 && (ctx?.hour || 0) < 21) {
+                add('сегодня тайминг еды пока выглядит ровнее');
+            }
+        }
+
+        return contradictions;
+    }
+
+    function getPiScienceRegistry() {
+        return window.HEYS?.InsightsPI?.constants?.SCIENCE_INFO
+            || window.piConst?.SCIENCE_INFO
+            || {};
+    }
+
+    function mapAdviceToScienceKeys(flags) {
+        if (flags.isProteinAdvice) {
+            return ['PROTEIN_DISTRIBUTION', 'NUTRIENT_TIMING', 'TRAINING_TYPE_MATCH'];
+        }
+        if (flags.isFiberAdvice) {
+            return ['NUTRITION_QUALITY', 'GUT_HEALTH', 'NUTRIENT_DENSITY'];
+        }
+        if (flags.isHydrationAdvice) {
+            return ['HYDRATION', 'HYDRATION_TREND', 'ELECTROLYTE_HOMEOSTASIS'];
+        }
+        if (flags.isTimingAdvice) {
+            return ['MEAL_TIMING', 'WAVE_OVERLAP', 'LATE_EATING', 'CIRCADIAN', 'NEXT_MEAL'];
+        }
+        if (flags.isStressAdvice) {
+            return ['HORMONES', 'PREDICTIVE_RISK', 'CRASH_RISK', 'EARLY_WARNING_SIGNALS', 'CATEGORY_RECOVERY'];
+        }
+        if (flags.isCarbAdvice) {
+            return ['GLYCEMIC_LOAD', 'GLYCEMIC_VARIABILITY', 'ADDED_SUGAR_DEPENDENCY', 'INSULIN_SENSITIVITY'];
+        }
+        if (flags.isTrainingAdvice) {
+            return ['TRAINING_TYPE_MATCH', 'TRAINING_RECOVERY', 'EPOC', 'PROTEIN_DISTRIBUTION'];
+        }
+
+        return ['HEALTH_SCORE', 'STATUS_SCORE'];
+    }
+
+    function normalizeAdviceActionability(actionability) {
+        if (actionability === 'IMMEDIATE') return 'now';
+        if (actionability === 'DAILY' || actionability === 'TODAY') return 'today';
+        if (actionability === 'WEEKLY' || actionability === 'LONG_TERM') return 'watch';
+        return 'watch';
+    }
+
+    function getAdviceScienceMeta(flags) {
+        const registry = getPiScienceRegistry();
+        const keys = mapAdviceToScienceKeys(flags).filter(key => registry[key]);
+
+        if (keys.length === 0) {
+            return {
+                key: null,
+                topic: 'behavioral nutrition',
+                evidenceLevel: 'C',
+                confidenceScore: 0.65,
+                impactScore: 0.35,
+                actionability: 'INFORMATIONAL',
+                actionUrgency: 'watch',
+                rationale: 'Совет опирается на общие поведенческие закономерности, но без прямой привязки к научной карточке PI.'
+            };
+        }
+
+        const metrics = keys.map(key => ({ key, ...registry[key] }));
+        metrics.sort((a, b) => {
+            const impactDiff = (b.impactScore || 0) - (a.impactScore || 0);
+            if (impactDiff !== 0) return impactDiff;
+            return (b.confidenceScore || 0) - (a.confidenceScore || 0);
+        });
+
+        const primary = metrics[0];
+        const avgConfidence = metrics.reduce((sum, metric) => sum + (metric.confidenceScore || 0), 0) / metrics.length;
+        const avgImpact = metrics.reduce((sum, metric) => sum + (metric.impactScore || 0), 0) / metrics.length;
+
+        return {
+            key: primary.key,
+            topic: primary.name || primary.key,
+            evidenceLevel: primary.evidenceLevel || 'C',
+            confidenceScore: avgConfidence,
+            impactScore: avgImpact,
+            actionability: primary.actionability || 'INFORMATIONAL',
+            actionUrgency: normalizeAdviceActionability(primary.actionability),
+            rationale: primary.whyImportant || primary.short || primary.interpretation || ''
+        };
+    }
+
+    function buildAdviceUncertaintyMeta(science, evidenceScore, contradictions, sourceCount) {
+        const contradictionCount = Array.isArray(contradictions) ? contradictions.length : 0;
+        const confidenceScore = science?.confidenceScore || 0.65;
+        const impactScore = science?.impactScore || 0.35;
+
+        let certainty = 'tentative';
+        let label = 'гипотеза';
+        let message = 'Сигнал полезный, но скорее как мягкая гипотеза, чем как жёсткий вывод.';
+
+        if (evidenceScore >= 58 && confidenceScore >= 0.84 && contradictionCount === 0 && sourceCount >= 3) {
+            certainty = 'robust';
+            label = 'сильный вывод';
+            message = 'Совет хорошо подтверждён несколькими слоями данных и подходит как приоритетное действие.';
+        } else if (evidenceScore >= 34 && confidenceScore >= 0.75 && contradictionCount <= 1 && sourceCount >= 2) {
+            certainty = 'supported';
+            label = 'подтверждённый сигнал';
+            message = 'Есть хорошая опора в данных, но контекст всё ещё важен сильнее любой одной метрики.';
+        } else if (evidenceScore >= 18 && impactScore >= 0.5) {
+            certainty = 'directional';
+            label = 'рабочий сигнал';
+            message = 'Направление выглядит разумным, но это скорее подсказка для мягкой коррекции, чем для жёсткого вывода.';
+        }
+
+        if (contradictionCount >= 2) {
+            certainty = 'tentative';
+            label = 'слабый сигнал';
+            message = 'Есть противоречащие факторы текущего дня, поэтому совет лучше трактовать аккуратно.';
+        }
+
+        return {
+            certainty,
+            label,
+            message
+        };
+    }
+
+    function getAdviceCausalMeta(advice, flags, signals) {
+        const chains = signals?.earlyWarnings?.causalChains || [];
+        if (!Array.isArray(chains) || chains.length === 0) return null;
+
+        const theme = getAdviceTheme(advice, flags);
+        const relevantNodesByTheme = {
+            protein: ['PROTEIN_DEFICIT', 'CALORIC_DEBT'],
+            fiber: ['FIBER_DEFICIT'],
+            hydration: ['HYDRATION_DEFICIT'],
+            timing: ['SLEEP_DEBT', 'CIRCADIAN_DISRUPTION', 'MEAL_TIMING_DRIFT', 'LOGGING_GAP'],
+            stress: ['STRESS_ACCUMULATION', 'MOOD_WELLBEING_DECLINE', 'BINGE_RISK', 'STATUS_SCORE_DECLINE'],
+            carbs: ['SUGAR_DEPENDENCY', 'EVENING_OVERCONSUMPTION', 'BINGE_RISK'],
+            training: ['TRAINING_WITHOUT_RECOVERY', 'WEIGHT_PLATEAU']
+        };
+
+        const relevantNodes = relevantNodesByTheme[theme] || [];
+        let best = null;
+
+        chains.forEach(chain => {
+            const matchedNodes = Array.isArray(chain?.matchedNodes) ? chain.matchedNodes : [];
+            const touchesRoot = relevantNodes.includes(chain?.rootCause);
+            const touchesOutcome = relevantNodes.includes(chain?.outcome);
+            const touchesMechanism = matchedNodes.some(node => relevantNodes.includes(node));
+            if (!touchesRoot && !touchesOutcome && !touchesMechanism) return;
+
+            const relevance = touchesRoot ? 'root' : touchesMechanism ? 'mechanism' : 'outcome';
+            const weight = relevance === 'root' ? 3 : relevance === 'mechanism' ? 2 : 1;
+            const score = ((chain?.adjustedConfidence || 0) * 100) + weight * 15 + (chain?.matchRatio || 0) / 10;
+
+            if (!best || score > best.score) {
+                best = {
+                    chainId: chain.chainId,
+                    name: chain.name,
+                    relevance,
+                    confidence: chain.adjustedConfidence || 0,
+                    coverage: chain.matchRatio || 0,
+                    rootCause: chain.rootCause,
+                    outcome: chain.outcome,
+                    path: matchedNodes.join(' → '),
+                    mechanism: chain.mechanism,
+                    actionableFix: Array.isArray(chain.actionableFix) ? chain.actionableFix.slice(0, 2) : [],
+                    score
+                };
+            }
+        });
+
+        return best;
+    }
+
+    function buildAdviceEvidence(advice, ctx, signals) {
+        if (!advice || !signals) return null;
+
+        const drivers = [];
+        const crossConfirmedBy = [];
+        const sourceTags = new Set();
+        const contradictions = [];
+
+        const addDriver = (text, source = 'history') => {
+            if (text && !drivers.includes(text) && drivers.length < 3) drivers.push(text);
+            if (text && source) sourceTags.add(source);
+        };
+        const addCross = (text, source = 'cross') => {
+            if (text && !crossConfirmedBy.includes(text) && crossConfirmedBy.length < 3) crossConfirmedBy.push(text);
+            if (text && source) sourceTags.add(source);
+        };
+        const addContradiction = (text) => {
+            if (text && !contradictions.includes(text) && contradictions.length < 2) contradictions.push(text);
+        };
+
+        const adviceFlags = getAdviceExpertFlags(advice);
+        const responseMemory = resolveAdviceResponseMemory(advice, ctx, signals?.outcomeProfiles);
+        const {
+            isProteinAdvice,
+            isFiberAdvice,
+            isHydrationAdvice,
+            isTimingAdvice,
+            isStressAdvice,
+            isCarbAdvice,
+            isTrainingAdvice
+        } = adviceFlags;
+
+        if (isProteinAdvice && signals.lowProteinDays7 >= 3) {
+            addDriver(`белок ниже цели ${signals.lowProteinDays7}/7 дн`, 'history');
+        }
+        if (isFiberAdvice && signals.lowFiberDays7 >= 3) {
+            addDriver(`клетчатка проседает ${signals.lowFiberDays7}/7 дн`, 'history');
+        }
+        if (isHydrationAdvice && signals.lowWaterDays7 >= 3) {
+            addDriver(`вода ниже цели ${signals.lowWaterDays7}/7 дн`, 'history');
+        }
+        if (isTimingAdvice && signals.lateMealDays7 >= 3) {
+            addDriver(`поздние приёмы ${signals.lateMealDays7}/7 дн`, 'history');
+        }
+        if (isTimingAdvice && signals.sleepDebtDays7 >= 3) {
+            addDriver(`недосып ${signals.sleepDebtDays7}/7 дн`, 'history');
+        }
+        if (isStressAdvice && signals.highStressDays7 >= 3) {
+            addDriver(`стресс высокий ${signals.highStressDays7}/7 дн`, 'history');
+        }
+        if ((isProteinAdvice || isCarbAdvice) && signals.underTargetDays7 >= 3) {
+            addDriver(`энергия ниже цели ${signals.underTargetDays7}/7 дн`, 'history');
+        }
+        if (isTrainingAdvice && signals.poorRecoveryTrainingDays7 >= 2) {
+            addDriver(`нагрузка без восстановления ${signals.poorRecoveryTrainingDays7} дн`, 'history');
+        }
+        if (isCarbAdvice && signals.highSimpleDays7 >= 3) {
+            addDriver(`простые углеводы высокие ${signals.highSimpleDays7}/7 дн`, 'history');
+        }
+
+        const weeklyTrends = signals.weeklyTrends || {};
+        if (isProteinAdvice && weeklyTrends.proteinDown) {
+            addCross('за неделю белок стал хуже относительно прошлой', 'weekly');
+        }
+        if (isFiberAdvice && weeklyTrends.fiberDown) {
+            addCross('за неделю клетчатка снизилась', 'weekly');
+        }
+        if (isHydrationAdvice && weeklyTrends.waterDown) {
+            addCross('за неделю вода просела', 'weekly');
+        }
+        if (isTimingAdvice && weeklyTrends.lateMealsUp) {
+            addCross('за неделю поздние приёмы участились', 'weekly');
+        }
+        if (isStressAdvice && weeklyTrends.stressUp) {
+            addCross('за неделю стресс усилился', 'weekly');
+        }
+        if (isCarbAdvice && weeklyTrends.simpleUp) {
+            addCross('за неделю быстрые углеводы выросли', 'weekly');
+        }
+
+        const phenotype = signals.phenotype;
+        if (phenotype?.metabolic === 'insulin_resistant' && (isCarbAdvice || isTimingAdvice || isFiberAdvice)) {
+            addCross('подтверждено фенотипом insulin resistant', 'phenotype');
+        }
+        if (phenotype?.circadian === 'evening_type' && isTimingAdvice) {
+            addCross('учтён вечерний циркадный тип', 'phenotype');
+        }
+        if (phenotype?.satiety === 'low_satiety' && (isProteinAdvice || isFiberAdvice || isHydrationAdvice)) {
+            addCross('учтён низкий satiety-профиль', 'phenotype');
+        }
+        if (phenotype?.stress === 'stress_eater' && isStressAdvice) {
+            addCross('учтён stress-eating паттерн', 'phenotype');
+        }
+
+        const patternSignals = signals.patternSignals || {};
+        if (isTimingAdvice && patternSignals.mealTiming?.score !== null && patternSignals.mealTiming?.score < 55) {
+            addCross(`pattern meal timing: ${Math.round(patternSignals.mealTiming.score)}/100`, 'pattern');
+        }
+        if (isTimingAdvice && patternSignals.circadian?.score !== null && patternSignals.circadian?.score < 55) {
+            addCross(`pattern circadian: ${Math.round(patternSignals.circadian.score)}/100`, 'pattern');
+        }
+        if ((isStressAdvice || isCarbAdvice) && patternSignals.sleepHunger?.score !== null && patternSignals.sleepHunger?.score < 55) {
+            addCross(`pattern sleep→hunger: ${Math.round(patternSignals.sleepHunger.score)}/100`, 'pattern');
+        }
+        if (isHydrationAdvice && patternSignals.hydration?.score !== null && patternSignals.hydration?.score < 55) {
+            addCross(`pattern hydration: ${Math.round(patternSignals.hydration.score)}/100`, 'pattern');
+        }
+        if (isStressAdvice && (
+            (patternSignals.stressEating?.score !== null && patternSignals.stressEating?.score < 55) ||
+            (patternSignals.stressEating?.correlation !== null && patternSignals.stressEating?.correlation > 0.3)
+        )) {
+            addCross('pattern stress-eating подтверждает риск', 'pattern');
+        }
+        if (isCarbAdvice && patternSignals.insulinSensitivity?.score !== null && patternSignals.insulinSensitivity?.score < 55) {
+            addCross(`pattern insulin sensitivity: ${Math.round(patternSignals.insulinSensitivity.score)}/100`, 'pattern');
+        }
+        if ((advice.category === 'nutrition' || isStressAdvice || isTimingAdvice) && ctx?.crashRisk?.level === 'high') {
+            addCross('высокий crash-risk 24ч', 'metabolic');
+        } else if (isStressAdvice && ctx?.crashRisk?.level === 'medium') {
+            addCross('средний crash-risk 24ч', 'metabolic');
+        }
+
+        const earlyWarnings = signals.earlyWarnings;
+        if (earlyWarnings?.warnings?.length) {
+            const relevantTypes = [];
+
+            if (isProteinAdvice) relevantTypes.push('PROTEIN_DEFICIT', 'CALORIC_DEBT', 'TRAINING_WITHOUT_RECOVERY');
+            if (isFiberAdvice) relevantTypes.push('FIBER_DEFICIT');
+            if (isHydrationAdvice) relevantTypes.push('HYDRATION_DEFICIT', 'ELECTROLYTE_IMBALANCE');
+            if (isTimingAdvice) relevantTypes.push('SLEEP_DEBT', 'CIRCADIAN_DISRUPTION', 'MEAL_TIMING_DRIFT');
+            if (isStressAdvice) relevantTypes.push('STRESS_ACCUMULATION', 'SLEEP_DEBT', 'STATUS_SCORE_DECLINE');
+            if (isCarbAdvice) relevantTypes.push('SUGAR_DEPENDENCY', 'BINGE_RISK', 'CALORIC_DEBT');
+            if (isTrainingAdvice) relevantTypes.push('TRAINING_WITHOUT_RECOVERY', 'PROTEIN_DEFICIT', 'CALORIC_DEBT');
+
+            const matchedWarnings = [...new Set(relevantTypes)]
+                .map(type => earlyWarnings.byType?.get(type))
+                .filter(Boolean)
+                .sort((a, b) => {
+                    const severityWeight = { high: 3, medium: 2, low: 1 };
+                    const aScore = (severityWeight[a?.severity] || 0) * 100 + (a?.priorityScore || 0);
+                    const bScore = (severityWeight[b?.severity] || 0) * 100 + (b?.priorityScore || 0);
+                    return bScore - aScore;
+                });
+
+            if (matchedWarnings[0]) {
+                addCross(`EWS: ${getEarlyWarningLabel(matchedWarnings[0])}`, 'ews');
+            }
+
+            if (matchedWarnings.length >= 2) {
+                addCross(`EWS подтверждает ещё ${matchedWarnings.length - 1} связ. сигн.`, 'ews');
+            }
+
+            if (matchedWarnings.length > 0 && earlyWarnings.globalScore >= 40) {
+                addCross(`EWS risk ${earlyWarnings.globalScore}/100`, 'ews');
+            }
+        }
+
+        const causal = getAdviceCausalMeta(advice, adviceFlags, signals);
+        if (causal) {
+            if (causal.relevance === 'root') {
+                addCross(`causal root: ${causal.name}`, 'causal');
+            } else if (causal.relevance === 'mechanism') {
+                addCross(`causal path: ${causal.name}`, 'causal');
+            } else {
+                addCross(`causal outcome: ${causal.name}`, 'causal');
+            }
+        }
+
+        if (responseMemory?.score >= 4) {
+            addCross(`response memory: ${responseMemory.label}`, 'outcome');
+        } else if (responseMemory?.score <= -4) {
+            addContradiction(`response memory: ${responseMemory.label}`);
+        }
+
+        evaluateAdviceContradictions(advice, ctx, adviceFlags).forEach(addContradiction);
+
+        const historyScore = drivers.length * 14;
+        const crossScore = crossConfirmedBy.length * 11;
+        const sourceDiversityBonus = Math.max(0, sourceTags.size - 1) * 6;
+        const causalBonus = causal?.relevance === 'root' ? 14 : causal?.relevance === 'mechanism' ? 8 : causal?.relevance === 'outcome' ? 4 : 0;
+        const responseAdjustment = responseMemory ? Math.max(-10, Math.min(10, responseMemory.score / 1.8)) : 0;
+        const contradictionPenalty = contradictions.length * 18;
+        const evidenceScore = Math.max(0, historyScore + crossScore + sourceDiversityBonus + causalBonus + responseAdjustment - contradictionPenalty);
+        const confidence = normalizeAdviceConfidence(evidenceScore);
+        if (!confidence) return null;
+
+        const priorityBoost = Math.max(0, Math.min(
+            confidence === 'high' ? 3 : confidence === 'medium' ? 2 : 1,
+            contradictions.length > 0 ? 2 : 3
+        ));
+        const whyNow = drivers[0] || crossConfirmedBy[0] || '';
+        const actionNow = buildAdviceActionStep(advice, ctx, adviceFlags, signals);
+        const theme = getAdviceTheme(advice, adviceFlags);
+        const science = getAdviceScienceMeta(adviceFlags);
+        const uncertainty = buildAdviceUncertaintyMeta(science, evidenceScore, contradictions, sourceTags.size);
+        const summaryParts = [];
+        if (drivers.length > 0) summaryParts.push(drivers.slice(0, 2).join(' · '));
+        if (crossConfirmedBy.length > 0) summaryParts.push(crossConfirmedBy.slice(0, 2).join(' · '));
+        if (contradictions.length > 0 && summaryParts.length === 0) {
+            summaryParts.push(`soft-signal: ${contradictions[0]}`);
+        }
+
+        return {
+            confidence,
+            confidenceLabel: getConfidenceLabel(confidence),
+            priorityBoost,
+            evidenceScore,
+            sourceCount: sourceTags.size,
+            whyNow,
+            actionNow,
+            theme,
+            science,
+            uncertainty,
+            causal,
+            responseMemory,
+            drivers,
+            crossConfirmedBy,
+            contradictions,
+            evidenceSummary: summaryParts.join(' • '),
+            phenotype: phenotype || null
+        };
+    }
+
+    function enrichAdvicesWithExpertContext(advices, ctx, signals) {
+        if (!Array.isArray(advices) || advices.length === 0) return advices || [];
+
+        return advices.map(advice => {
+            const evidence = buildAdviceEvidence(advice, ctx, signals);
+            if (!evidence) return advice;
+
+            return {
+                ...advice,
+                priority: Math.max(0, (advice.priority || 0) - evidence.priorityBoost),
+                confidence: evidence.confidence,
+                confidenceLabel: evidence.confidenceLabel,
+                evidenceSummary: evidence.evidenceSummary,
+                expertMeta: {
+                    whyNow: evidence.whyNow,
+                    evidenceScore: evidence.evidenceScore,
+                    sourceCount: evidence.sourceCount,
+                    actionNow: evidence.actionNow,
+                    theme: evidence.theme,
+                    science: evidence.science,
+                    uncertainty: evidence.uncertainty,
+                    causal: evidence.causal,
+                    responseMemory: evidence.responseMemory,
+                    drivers: evidence.drivers,
+                    crossConfirmedBy: evidence.crossConfirmedBy,
+                    contradictions: evidence.contradictions,
+                    phenotype: evidence.phenotype
+                }
+            };
+        });
+    }
+
+    function getCrossThemeConflicts(theme) {
+        const graph = {
+            timing: ['stress', 'carbs'],
+            stress: ['carbs'],
+            hydration: ['stress', 'carbs'],
+            protein: ['carbs'],
+            training: ['stress']
+        };
+
+        return graph[theme] || [];
+    }
+
+    function getAdviceExpertPriority(advice) {
+        const urgencyWeight = { now: 3, today: 2, watch: 1 };
+        const causalBonus = advice?.expertMeta?.causal?.relevance === 'root'
+            ? 22
+            : advice?.expertMeta?.causal?.relevance === 'mechanism'
+                ? 12
+                : advice?.expertMeta?.causal?.relevance === 'outcome'
+                    ? 4
+                    : 0;
+        const responseBonus = advice?.expertMeta?.responseMemory?.score || 0;
+
+        return (advice?.smartScore || 0)
+            + (advice?.expertMeta?.evidenceScore || 0)
+            + ((urgencyWeight[advice?.expertMeta?.actionNow?.urgency] || 0) * 8)
+            + causalBonus
+            + responseBonus;
+    }
+
+    function applyExpertConflictResolution(advices) {
+        if (!Array.isArray(advices) || advices.length <= 1) return advices || [];
+
+        const winnersByTheme = new Map();
+        const result = [];
+
+        for (const advice of advices) {
+            if (!advice || advice.isReminder === true || advice.category === 'health' || advice.type === 'achievement') {
+                result.push(advice);
+                continue;
+            }
+
+            const theme = advice?.expertMeta?.theme || advice?.category || 'general';
+            const currentEvidence = advice?.expertMeta?.evidenceScore || 0;
+            const currentUrgency = advice?.expertMeta?.actionNow?.urgency === 'now'
+                ? 3
+                : advice?.expertMeta?.actionNow?.urgency === 'today'
+                    ? 2
+                    : 1;
+            const currentScore = getAdviceExpertPriority(advice);
+            const winner = winnersByTheme.get(theme);
+
+            if (!winner) {
+                winnersByTheme.set(theme, {
+                    advice,
+                    score: currentScore,
+                    evidence: currentEvidence,
+                    urgency: currentUrgency,
+                    type: advice?.type
+                });
+                result.push(advice);
+                continue;
+            }
+
+            const strongerWarning = advice?.type === 'warning' && winner.type !== 'warning' && currentEvidence >= Math.max(20, winner.evidence - 8);
+            const clearlyStronger = currentScore >= winner.score + 16;
+            const moreUrgent = currentUrgency > winner.urgency && currentEvidence >= Math.max(14, winner.evidence - 6);
+
+            if (strongerWarning || clearlyStronger || moreUrgent) {
+                const previousIndex = result.findIndex(item => item?.id === winner.advice?.id);
+                if (previousIndex >= 0) {
+                    result.splice(previousIndex, 1);
+                }
+
+                winnersByTheme.set(theme, {
+                    advice,
+                    score: currentScore,
+                    evidence: currentEvidence,
+                    urgency: currentUrgency,
+                    type: advice?.type
+                });
+                result.push(advice);
+                continue;
+            }
+
+            const isClearlyRedundant = currentEvidence <= winner.evidence && currentUrgency <= winner.urgency;
+            if (isClearlyRedundant) {
+                continue;
+            }
+
+            result.push(advice);
+        }
+
+        const crossResolved = [];
+
+        for (const advice of result) {
+            const theme = advice?.expertMeta?.theme || advice?.category || 'general';
+            const conflictingThemes = getCrossThemeConflicts(theme);
+            const conflictIndex = crossResolved.findIndex(item => conflictingThemes.includes(item?.expertMeta?.theme || item?.category || 'general'));
+
+            if (conflictIndex === -1) {
+                crossResolved.push(advice);
+                continue;
+            }
+
+            const existing = crossResolved[conflictIndex];
+            const currentPriority = getAdviceExpertPriority(advice);
+            const existingPriority = getAdviceExpertPriority(existing);
+            const currentCausal = advice?.expertMeta?.causal?.relevance;
+            const existingCausal = existing?.expertMeta?.causal?.relevance;
+
+            const currentRootWins = currentCausal === 'root' && existingCausal !== 'root' && currentPriority >= (existingPriority - 8);
+            const existingRootWins = existingCausal === 'root' && currentCausal !== 'root' && existingPriority >= (currentPriority - 8);
+            const currentClearlyStronger = currentPriority >= existingPriority + 18;
+
+            if (currentRootWins || currentClearlyStronger) {
+                crossResolved.splice(conflictIndex, 1, advice);
+                continue;
+            }
+
+            if (existingRootWins || currentPriority <= existingPriority) {
+                continue;
+            }
+
+            crossResolved.push(advice);
+        }
+
+        return crossResolved;
     }
 
     /**
@@ -2659,64 +3986,64 @@
         // Вычисляем контекст
         const ctx = (() => {
             try {
-            const now = new Date();
-            const hour = now.getHours();
-            const meals = Array.isArray(day?.meals) ? day.meals : [];
-            const mealCount = meals.filter(m => m?.items?.length > 0).length;
-            const trainings = Array.isArray(day?.trainings) ? day.trainings : [];
-            const hasTraining = trainings.some(t => t?.z && Array.isArray(t.z) && t.z.some(m => m > 0));
+                const now = new Date();
+                const hour = now.getHours();
+                const meals = Array.isArray(day?.meals) ? day.meals : [];
+                const mealCount = meals.filter(m => m?.items?.length > 0).length;
+                const trainings = Array.isArray(day?.trainings) ? day.trainings : [];
+                const hasTraining = trainings.some(t => t?.z && Array.isArray(t.z) && t.z.some(m => m > 0));
 
-            // 🧠 Расширенный контекст
-            const kcalPct = (dayTot?.kcal || 0) / (optimum || 2000);
-            const tone = getToneForHour(hour);
-            const specialDay = getSpecialDay(now);
+                // 🧠 Расширенный контекст
+                const kcalPct = (dayTot?.kcal || 0) / (optimum || 2000);
+                const tone = getToneForHour(hour);
+                const specialDay = getSpecialDay(now);
 
-            // 🎯 Goal-aware: определяем режим по цели (дефицит/набор/поддержание)
-            const dayDeficit = day?.deficitPct;
-            const profileDeficit = prof?.deficitPctTarget;
-            const effectiveDeficit = dayDeficit ?? profileDeficit ?? 0;
-            const goal = getGoalMode(effectiveDeficit);
+                // 🎯 Goal-aware: определяем режим по цели (дефицит/набор/поддержание)
+                const dayDeficit = day?.deficitPct;
+                const profileDeficit = prof?.deficitPctTarget;
+                const effectiveDeficit = dayDeficit ?? profileDeficit ?? 0;
+                const goal = getGoalMode(effectiveDeficit);
 
-            const emotionalState = getEmotionalState({
-                day,
-                currentStreak: currentStreak || 0,
-                mealCount,
-                kcalPct,
-                goal, // Передаём goal для goal-aware определения
-                totalDaysTracked: 30 // Приблизительно
-            });
+                const emotionalState = getEmotionalState({
+                    day,
+                    currentStreak: currentStreak || 0,
+                    mealCount,
+                    kcalPct,
+                    goal, // Передаём goal для goal-aware определения
+                    totalDaysTracked: 30 // Приблизительно
+                });
 
-            // 🆕 Получаем crashRisk из Metabolic Intelligence
-            let crashRisk = null;
-            if (window.HEYS?.Metabolic?.calculateCrashRisk24h) {
-                try {
-                    crashRisk = window.HEYS.Metabolic.calculateCrashRisk24h();
-                } catch (e) {
-                    // Игнорируем ошибки при получении crashRisk
+                // 🆕 Получаем crashRisk из Metabolic Intelligence
+                let crashRisk = null;
+                if (window.HEYS?.Metabolic?.calculateCrashRisk24h) {
+                    try {
+                        crashRisk = window.HEYS.Metabolic.calculateCrashRisk24h();
+                    } catch (e) {
+                        // Игнорируем ошибки при получении crashRisk
+                    }
                 }
-            }
 
-            return {
-                dayTot: dayTot || {},
-                normAbs: normAbs || {},
-                optimum: optimum || 2000,
-                displayOptimum: displayOptimum || optimum || 2000, // С учётом долга (fallback на optimum)
-                caloricDebt: caloricDebt || null,                   // Данные о долге
-                day: day || {},
-                pIndex: pIndex || { byId: new Map(), byName: new Map() },
-                currentStreak: currentStreak || 0,
-                hour,
-                mealCount,
-                hasTraining,
-                kcalPct,
-                tone,
-                specialDay,
-                emotionalState,
-                prof: prof || {},           // Профиль пользователя
-                waterGoal: waterGoal || 2000, // Норма воды
-                goal,                        // 🎯 Goal режим (deficit/bulk/maintenance)
-                crashRisk                    // 🆕 Риск срыва из Metabolic Intelligence
-            };
+                return {
+                    dayTot: dayTot || {},
+                    normAbs: normAbs || {},
+                    optimum: optimum || 2000,
+                    displayOptimum: displayOptimum || optimum || 2000, // С учётом долга (fallback на optimum)
+                    caloricDebt: caloricDebt || null,                   // Данные о долге
+                    day: day || {},
+                    pIndex: pIndex || { byId: new Map(), byName: new Map() },
+                    currentStreak: currentStreak || 0,
+                    hour,
+                    mealCount,
+                    hasTraining,
+                    kcalPct,
+                    tone,
+                    specialDay,
+                    emotionalState,
+                    prof: prof || {},           // Профиль пользователя
+                    waterGoal: waterGoal || 2000, // Норма воды
+                    goal,                        // 🎯 Goal режим (deficit/bulk/maintenance)
+                    crashRisk                    // 🆕 Риск срыва из Metabolic Intelligence
+                };
             } catch (e) {
                 console.error('[HEYS.advice] ❌ ctx useMemo crash:', e?.message);
                 return {
@@ -2786,10 +4113,28 @@
             }
         })();
 
+        const expertSignals = (() => {
+            try {
+                return collectSoftExpertSignals(ctx);
+            } catch (e) {
+                console.warn('[HEYS.advice] ⚠️ expertSignals skipped:', e?.message);
+                return null;
+            }
+        })();
+
+        const enrichedAdvices = (() => {
+            try {
+                return enrichAdvicesWithExpertContext(allAdvices, ctx, expertSignals);
+            } catch (e) {
+                console.warn('[HEYS.advice] ⚠️ enrichAdvices skipped:', e?.message);
+                return allAdvices;
+            }
+        })();
+
         // 🔧 Фильтруем по включённым категориям
         // 💊 Советы с isReminder: true (напоминания) показываются ВСЕГДА
         const categoryFilteredAdvices = (() => {
-            return allAdvices.filter(a => {
+            return enrichedAdvices.filter(a => {
                 // Напоминания (витамины и т.д.) показываются всегда
                 if (a.isReminder === true) return true;
                 // Категория health — это напоминания, всегда показываем
@@ -2837,6 +4182,9 @@
             // 🧠 Smart Prioritization — ML-like scoring
             advices = sortBySmartScore(advices, ctx);
 
+            // 🧠 Expert arbitrage — suppress weaker same-theme advices
+            advices = applyExpertConflictResolution(advices);
+
             // ⏰ Применяем временные ограничения
             advices = filterByTimeRestrictions(advices);
 
@@ -2879,6 +4227,9 @@
             // 🧠 Smart Prioritization
             advices = sortBySmartScore(advices, ctx);
 
+            // 🧠 Expert arbitrage
+            advices = applyExpertConflictResolution(advices);
+
             // ⏰ Временные ограничения
             advices = filterByTimeRestrictions(advices);
 
@@ -2897,22 +4248,57 @@
         // Количество отложенных
         const scheduledCount = getScheduledCount();
 
+        const resolveAdviceRef = (adviceRef) => {
+            if (!adviceRef) return null;
+            if (typeof adviceRef === 'object' && adviceRef.id) return adviceRef;
+            const adviceId = String(adviceRef);
+            return enrichedAdvices.find(item => item?.id === adviceId) || null;
+        };
+
         return {
             primary: primaryWithAnimation,
             relevant: allForTrigger, // Все советы для развёртывания
             adviceCount,
             badgeAdvices, // Для FAB badge — массив советов с полной фильтрацией
             scheduledCount,
-            allAdvices,
+            allAdvices: enrichedAdvices,
             ctx,
             crashRisk: ctx?.crashRisk, // 🆕 Экспортируем crashRisk для UI
+            expertSignals,
             // Методы
-            markShown: (id) => {
-                markAdviceShown(id);
-                trackAdviceShown(id); // 📊 Tracking
+            markShown: (adviceRef) => {
+                const advice = resolveAdviceRef(adviceRef);
+                const adviceId = advice?.id || String(adviceRef || '');
+                if (!adviceId) return;
+                markAdviceShown(adviceId);
+                trackAdviceShown(adviceId); // 📊 Tracking
+                if (advice) {
+                    recordAdviceOutcomeEvent(advice, ctx, 'shown');
+                    recordPendingAdviceOutcome(advice, ctx);
+                }
             },
-            trackClick: trackAdviceClicked, // 📊 Tracking клика
-            rateAdvice, // 👍/👎 Rating
+            trackClick: (adviceRef) => {
+                const advice = resolveAdviceRef(adviceRef);
+                const adviceId = advice?.id || String(adviceRef || '');
+                if (!adviceId) return;
+                trackAdviceClicked(adviceId);
+                if (advice) recordAdviceOutcomeEvent(advice, ctx, 'click');
+            },
+            markRead: (adviceRef) => {
+                const advice = resolveAdviceRef(adviceRef);
+                if (advice) recordAdviceOutcomeEvent(advice, ctx, 'read');
+            },
+            markHidden: (adviceRef) => {
+                const advice = resolveAdviceRef(adviceRef);
+                if (advice) recordAdviceOutcomeEvent(advice, ctx, 'hidden');
+            },
+            rateAdvice: (adviceRef, isPositive) => {
+                const advice = resolveAdviceRef(adviceRef);
+                const adviceId = advice?.id || String(adviceRef || '');
+                if (!adviceId) return;
+                rateAdvice(adviceId, isPositive);
+                if (advice) recordAdviceOutcomeEvent(advice, ctx, isPositive ? 'positive' : 'negative');
+            },
             scheduleAdvice, // ⏰ Отложить совет
             canShow: canShowAdvice,
             resetSession: resetSessionAdvices
@@ -3033,6 +4419,7 @@
         getAdviceCTR,
         getTopAdvices,
         getTrackingStats,
+        getAdviceOutcomeProfiles,
         // 👍👎 Rating system
         rateAdvice,
         getAdviceRating,
@@ -3101,6 +4488,9 @@
         trackProductPattern,
         getSmartRecommendation,
         calculateSmartScore,
+        collectSoftExpertSignals,
+        enrichAdvicesWithExpertContext,
+        applyExpertConflictResolution,
         // 🆕 Phase 5 helpers
         // Settings
         getAdviceSettings,

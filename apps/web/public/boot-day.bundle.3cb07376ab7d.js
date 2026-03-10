@@ -9123,6 +9123,23 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
       }
     };
 
+    const openDaySleepCheckin = () => {
+      if (HEYS.showCheckin?.daySleep) {
+        HEYS.showCheckin.daySleep(date, () => {
+          const dateKey = date || new Date().toISOString().slice(0, 10);
+          const storedDay = HEYS.utils?.lsGet ? HEYS.utils.lsGet(`heys_dayv2_${dateKey}`, {}) : null;
+
+          if (storedDay) {
+            setDay(prev => ({
+              ...prev,
+              ...storedDay,
+              updatedAt: Date.now()
+            }));
+          }
+        });
+      }
+    };
+
     const openMorningMoodCheckin = () => {
       if (HEYS.showCheckin?.morningMood) {
         HEYS.showCheckin.morningMood(date, () => {
@@ -9160,6 +9177,17 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
             const sleepCompare = getCompareArrow(day.sleepQuality, yData?.sleepQuality);
             const sleepEmoji = getScoreEmoji(day.sleepQuality);
             const isPulse = (day.sleepQuality || 0) >= 9;
+            const napMinutes = HEYS.dayUtils?.normalizeDaySleepMinutes
+              ? HEYS.dayUtils.normalizeDaySleepMinutes(day.daySleepMinutes)
+              : Math.max(0, Math.round(Number(day.daySleepMinutes) || 0));
+            const totalSleepHours = HEYS.dayUtils?.getTotalSleepHours
+              ? HEYS.dayUtils.getTotalSleepHours(day)
+              : (sleepH || day.sleepHours || 0);
+            const nightSleepHours = Math.max(0, Math.round((totalSleepHours - napMinutes / 60) * 10) / 10);
+            const napLabel = napMinutes >= 60
+              ? `${Math.floor(napMinutes / 60)} ч${napMinutes % 60 ? ` ${napMinutes % 60} мин` : ''}`
+              : `${napMinutes} мин`;
+            const napButtonLabel = napMinutes > 0 ? `😴 Доп. сон: ${napLabel}` : '➕ Добавить доп. сон';
 
             // Умная подсказка при низкой оценке сна
             const sleepTip = (day.sleepQuality > 0 && day.sleepQuality <= 4)
@@ -9202,7 +9230,17 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
                   className: 'score-compare',
                   style: { color: sleepCompare.color }
                 }, sleepCompare.icon + ' vs вчера'),
-                sleepH > 0 && React.createElement('span', { className: 'sleep-duration-hint' }, sleepH + ' ч сна')
+                totalSleepHours > 0 && React.createElement('span', { className: 'sleep-duration-hint' }, totalSleepHours + ' ч сна')
+              ),
+              React.createElement('div', { className: 'sleep-breakdown-row' },
+                React.createElement('div', { className: 'sleep-breakdown-main' },
+                  React.createElement('span', { className: 'sleep-breakdown-item' }, `🌙 Ночь: ${nightSleepHours > 0 ? `${nightSleepHours} ч` : '—'}`),
+                  React.createElement('button', {
+                    type: 'button',
+                    className: `sleep-breakdown-item sleep-breakdown-item--nap clickable${napMinutes > 0 ? ' has-value' : ''}`,
+                    onClick: openDaySleepCheckin
+                  }, napButtonLabel)
+                )
               ),
               // Умная подсказка
               sleepTip && React.createElement('div', { className: 'smart-tip' }, sleepTip),
@@ -9229,7 +9267,9 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
             const lastMealTime = lastMeal?.time || null;
 
             // Корреляция сон→самочувствие (без dayTot, который ещё не объявлен)
-            const sleepH = day.sleepHours || 0;
+            const sleepH = HEYS.dayUtils?.getTotalSleepHours
+              ? HEYS.dayUtils.getTotalSleepHours(day)
+              : (day.sleepHours || 0);
             const sleepCorrelation = sleepH > 0 && sleepH < 6
               ? '😴 Мало сна — будь внимателен к аппетиту'
               : sleepH >= 8
@@ -11632,6 +11672,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             adviceSwipeState,
             expandedAdviceId,
             handleAdviceToggleExpand,
+            trackClick,
             rateAdvice,
             handleAdviceSwipeStart,
             handleAdviceSwipeMove,
@@ -11659,6 +11700,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             toastSwipeX,
             toastDetailsOpen,
             toastAppearedAtRef,
+            toastRatedState,
             toastScheduledConfirm,
             haptic,
             setToastDetailsOpen,
@@ -11668,6 +11710,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             handleToastTouchMove,
             handleToastTouchEnd,
             handleToastUndo,
+            handleToastRate,
             handleToastSchedule,
             showTimePicker,
             cancelTimePicker,
@@ -11915,6 +11958,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                     lastDismissedAdvice,
                     adviceSwipeState,
                     expandedAdviceId,
+                    trackClick,
                     handleAdviceToggleExpand,
                     rateAdvice,
                     handleAdviceSwipeStart,
@@ -11956,8 +12000,11 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                     toastSwipeX,
                     toastDetailsOpen,
                     toastAppearedAtRef,
+                    toastRatedState,
                     toastScheduledConfirm,
                     haptic,
+                    dismissToast,
+                    handleToastRate,
                     setToastDetailsOpen,
                     setAdviceExpanded,
                     setAdviceTrigger,
@@ -14056,6 +14103,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             adviceSwipeState: adviceState.adviceSwipeState,
             expandedAdviceId: adviceState.expandedAdviceId,
             handleAdviceToggleExpand: adviceState.handleAdviceToggleExpand,
+            trackClick: adviceState.trackClick,
             rateAdvice: adviceState.rateAdvice,
             handleAdviceSwipeStart: adviceState.handleAdviceSwipeStart,
             handleAdviceSwipeMove: adviceState.handleAdviceSwipeMove,
@@ -14083,6 +14131,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             toastSwipeX: adviceState.toastSwipeX,
             toastDetailsOpen: adviceState.toastDetailsOpen,
             toastAppearedAtRef: adviceState.toastAppearedAtRef,
+            toastRatedState: adviceState.toastRatedState,
             toastScheduledConfirm: adviceState.toastScheduledConfirm,
             haptic: ctx.haptic,
             setToastDetailsOpen: adviceState.setToastDetailsOpen,
@@ -14092,6 +14141,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             handleToastTouchMove: adviceState.handleToastTouchMove,
             handleToastTouchEnd: adviceState.handleToastTouchEnd,
             handleToastUndo: adviceState.handleToastUndo,
+            handleToastRate: adviceState.handleToastRate,
             handleToastSchedule: adviceState.handleToastSchedule,
             showTimePicker: ctx.showTimePicker,
             cancelTimePicker: ctx.cancelTimePicker,

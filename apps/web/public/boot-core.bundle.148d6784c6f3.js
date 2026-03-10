@@ -3708,7 +3708,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
   // ============================================================================
 
   // === App Version & Auto-logout on Update ===
-  const APP_VERSION = '2026.03.06.0001.d001732e'; // synced with build-meta.json on 2026-02-26
+  const APP_VERSION = '2026.03.09.2335.719c9dc4'; // synced with build-meta.json on 2026-02-26
 
   HEYS.version = APP_VERSION;
 
@@ -14209,6 +14209,13 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
     merged.sleepEnd = local.sleepEnd || remote.sleepEnd || '';
     merged.sleepQuality = local.sleepQuality || remote.sleepQuality || '';
     merged.sleepNote = local.sleepNote || remote.sleepNote || '';
+    merged.daySleepMinutes = (local.updatedAt || 0) >= (remote.updatedAt || 0)
+      ? (local.daySleepMinutes != null ? local.daySleepMinutes : (remote.daySleepMinutes || 0))
+      : (remote.daySleepMinutes != null ? remote.daySleepMinutes : (local.daySleepMinutes || 0));
+    merged.sleepHours = HEYS.dayUtils?.getTotalSleepHours?.(merged)
+      || local.sleepHours
+      || remote.sleepHours
+      || 0;
 
     if (local.dayScoreManual) {
       merged.dayScore = local.dayScore;
@@ -24568,6 +24575,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
    * @property {string} sleepStart
    * @property {string} sleepEnd
    * @property {string} sleepNote
+    * @property {number} daySleepMinutes
    * @property {number} sleepQuality
    * @property {number} weightMorning
    * @property {number} deficitPct
@@ -24610,6 +24618,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
       sleepStart: d.sleepStart || '',
       sleepEnd: d.sleepEnd || '',
       sleepNote: d.sleepNote || '',
+      daySleepMinutes: d.daySleepMinutes != null ? Math.max(0, Math.round(+d.daySleepMinutes || 0)) : 0,
       // Если явно передана пустая строка, оставляем пустую строку
       sleepQuality: (d.sleepQuality === '') ? '' : (d.sleepQuality != null ? d.sleepQuality : ''),
       // Вес: если явно задан, берём его; иначе пустое значение (не из профиля)
@@ -24636,7 +24645,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
       measurements: d.measurements || undefined,
       // Холодовое воздействие (cold_exposure шаг)
       coldExposure: d.coldExposure || undefined,
-      // Расчётные часы сна
+      // Расчётные часы сна (ночной + дневной досып)
       sleepHours: d.sleepHours != null ? +d.sleepHours : undefined,
       // Время бытовой активности (legacy)
       householdTime: d.householdTime || undefined,

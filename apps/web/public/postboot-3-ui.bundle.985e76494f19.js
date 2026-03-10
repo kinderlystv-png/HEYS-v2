@@ -1483,6 +1483,23 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-3-ui: execute start');
     return (endMins - startMins) / 60;
   }
 
+  function normalizeDaySleepMinutes(value) {
+    if (HEYS.dayUtils?.normalizeDaySleepMinutes) {
+      return HEYS.dayUtils.normalizeDaySleepMinutes(value);
+    }
+    const num = Math.round(Number(value) || 0);
+    return num > 0 ? num : 0;
+  }
+
+  function getNightSleepHoursFromData(data) {
+    return calcSleepHours(data.sleepStartH, data.sleepStartM, data.sleepEndH, data.sleepEndM);
+  }
+
+  function getTotalSleepHoursFromData(data) {
+    const napHours = normalizeDaySleepMinutes(data.daySleepMinutes) / 60;
+    return Math.round((getNightSleepHoursFromData(data) + napHours) * 10) / 10;
+  }
+
   function SleepTimeStepComponent({ data, onChange }) {
     const lastSleep = useMemo(() => getLastSleepData(), []);
 
@@ -1505,13 +1522,15 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-3-ui: execute start');
       const startM = newData.sleepStartM ?? sleepStartM;
       const endH = newData.sleepEndH ?? sleepEndH;
       const endM = newData.sleepEndM ?? sleepEndM;
+      const daySleepMinutes = normalizeDaySleepMinutes(newData.daySleepMinutes ?? data.daySleepMinutes);
 
       onChange({
         ...newData,
+        daySleepMinutes,
         // Форматированные поля для onComplete callback
         sleepStart: `${pad2(startH)}:${pad2(startM)}`,
         sleepEnd: `${pad2(endH)}:${pad2(endM)}`,
-        sleepHours: Math.round(calcSleepHours(startH, startM, endH, endM) * 10) / 10
+        sleepHours: Math.round((calcSleepHours(startH, startM, endH, endM) + daySleepMinutes / 60) * 10) / 10
       });
     };
 
@@ -1639,9 +1658,10 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-3-ui: execute start');
             sleepStartM,
             sleepEndH,
             sleepEndM,
+            daySleepMinutes: normalizeDaySleepMinutes(dayData.daySleepMinutes),
             sleepStart: dayData.sleepStart,
             sleepEnd: dayData.sleepEnd,
-            sleepHours: dayData.sleepHours || Math.round(calcSleepHours(sleepStartH, sleepStartM, sleepEndH, sleepEndM) * 10) / 10
+            sleepHours: dayData.sleepHours || Math.round((calcSleepHours(sleepStartH, sleepStartM, sleepEndH, sleepEndM) + normalizeDaySleepMinutes(dayData.daySleepMinutes) / 60) * 10) / 10
           };
         }
       }
@@ -1656,6 +1676,7 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-3-ui: execute start');
         sleepStartM,
         sleepEndH,
         sleepEndM,
+        daySleepMinutes: 0,
         // Форматированные поля для onComplete
         sleepStart: last.sleepStart,
         sleepEnd: last.sleepEnd,
@@ -1667,17 +1688,123 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-3-ui: execute start');
       const dayData = lsGet(`heys_dayv2_${dateKey}`, {}) || {};
       const sleepStart = `${String(data.sleepStartH).padStart(2, '0')}:${String(data.sleepStartM).padStart(2, '0')}`;
       const sleepEnd = `${String(data.sleepEndH).padStart(2, '0')}:${String(data.sleepEndM).padStart(2, '0')}`;
+      const daySleepMinutes = normalizeDaySleepMinutes(dayData.daySleepMinutes ?? data.daySleepMinutes);
       const sleepHours = calcSleepHours(data.sleepStartH, data.sleepStartM, data.sleepEndH, data.sleepEndM);
 
       dayData.date = dateKey;
       dayData.sleepStart = sleepStart;
       dayData.sleepEnd = sleepEnd;
-      dayData.sleepHours = Math.round(sleepHours * 10) / 10;
+      dayData.daySleepMinutes = daySleepMinutes;
+      dayData.sleepHours = Math.round((sleepHours + daySleepMinutes / 60) * 10) / 10;
       dayData.updatedAt = Date.now();
       lsSet(`heys_dayv2_${dateKey}`, dayData);
-      console.info('[HEYS.sleepTime] ✅ Saved:', { dateKey, sleepStart, sleepEnd, sleepHours: dayData.sleepHours });
+      console.info('[HEYS.sleepTime] ✅ Saved:', { dateKey, sleepStart, sleepEnd, daySleepMinutes, sleepHours: dayData.sleepHours });
       window.dispatchEvent(new CustomEvent('heys:day-updated', {
         detail: { date: dateKey, field: 'sleep', source: 'sleep-step', forceReload: true }
+      }));
+    },
+    xpAction: 'sleep_logged'
+  });
+
+  // ============================================================
+  // DAY SLEEP STEP
+  // ============================================================
+
+  const DAY_SLEEP_OPTIONS = [0, 15, 20, 30, 45, 60, 90, 120, 150, 180];
+
+  function formatDaySleepLabel(minutes) {
+    if (!minutes) return 'Без досыпа';
+    if (minutes < 60) return `${minutes} мин`;
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    return mins ? `${hours} ч ${mins} мин` : `${hours} ч`;
+  }
+
+  function DaySleepStepComponent({ data, onChange }) {
+    const selectedMinutes = normalizeDaySleepMinutes(data.daySleepMinutes);
+    const nightSleepHours = Number.isFinite(data.nightSleepHours)
+      ? Number(data.nightSleepHours)
+      : null;
+    const totalSleepHours = nightSleepHours == null
+      ? selectedMinutes / 60
+      : Math.round((nightSleepHours + selectedMinutes / 60) * 10) / 10;
+
+    return React.createElement('div', { className: 'mc-day-sleep-step' },
+      React.createElement('div', { className: 'mc-day-sleep-summary' },
+        React.createElement('div', { className: 'mc-day-sleep-summary__value' }, formatDaySleepLabel(selectedMinutes)),
+        React.createElement('div', { className: 'mc-day-sleep-summary__hint' },
+          nightSleepHours == null
+            ? 'Укажи, сколько удалось доспать днём'
+            : `Итого сна за день: ${totalSleepHours.toFixed(1)} ч`
+        )
+      ),
+      React.createElement('div', { className: 'mc-day-sleep-options' },
+        DAY_SLEEP_OPTIONS.map((minutes) => React.createElement('button', {
+          key: minutes,
+          type: 'button',
+          className: `mc-day-sleep-option ${selectedMinutes === minutes ? 'mc-day-sleep-option--active' : ''}`,
+          onClick: () => onChange({
+            ...data,
+            daySleepMinutes: minutes,
+            nightSleepHours,
+            sleepHours: nightSleepHours == null ? undefined : Math.round((nightSleepHours + minutes / 60) * 10) / 10
+          })
+        }, formatDaySleepLabel(minutes))
+        )
+      )
+    );
+  }
+
+  registerStep('daySleep', {
+    title: 'Дневной сон',
+    hint: 'Добавь досып за день, если он был',
+    icon: '😴',
+    component: DaySleepStepComponent,
+    getInitialData: (context) => {
+      const dateKey = resolveDateKey(context?.dateKey);
+      const dayData = lsGet(`heys_dayv2_${dateKey}`, {}) || {};
+      const nightSleepHours = HEYS.dayUtils?.getNightSleepHours
+        ? HEYS.dayUtils.getNightSleepHours(dayData)
+        : ((dayData.sleepStart && dayData.sleepEnd)
+          ? Math.round(calcSleepHours(
+            parseInt(dayData.sleepStart.split(':')[0], 10),
+            parseInt(dayData.sleepStart.split(':')[1], 10),
+            parseInt(dayData.sleepEnd.split(':')[0], 10),
+            parseInt(dayData.sleepEnd.split(':')[1], 10)
+          ) * 10) / 10
+          : null);
+
+      return {
+        daySleepMinutes: normalizeDaySleepMinutes(dayData.daySleepMinutes),
+        nightSleepHours,
+        sleepHours: nightSleepHours == null
+          ? undefined
+          : Math.round((nightSleepHours + normalizeDaySleepMinutes(dayData.daySleepMinutes) / 60) * 10) / 10
+      };
+    },
+    save: (data, context) => {
+      const dateKey = resolveDateKey(context?.dateKey);
+      const dayData = lsGet(`heys_dayv2_${dateKey}`, {}) || {};
+      const daySleepMinutes = normalizeDaySleepMinutes(data.daySleepMinutes);
+      const nightSleepHours = HEYS.dayUtils?.getNightSleepHours
+        ? HEYS.dayUtils.getNightSleepHours(dayData)
+        : ((dayData.sleepStart && dayData.sleepEnd)
+          ? Math.round(calcSleepHours(
+            parseInt(dayData.sleepStart.split(':')[0], 10),
+            parseInt(dayData.sleepStart.split(':')[1], 10),
+            parseInt(dayData.sleepEnd.split(':')[0], 10),
+            parseInt(dayData.sleepEnd.split(':')[1], 10)
+          ) * 10) / 10
+          : 0);
+
+      dayData.date = dateKey;
+      dayData.daySleepMinutes = daySleepMinutes;
+      dayData.sleepHours = Math.round((nightSleepHours + daySleepMinutes / 60) * 10) / 10;
+      dayData.updatedAt = Date.now();
+      lsSet(`heys_dayv2_${dateKey}`, dayData);
+      console.info('[HEYS.daySleep] ✅ Saved:', { dateKey, daySleepMinutes, sleepHours: dayData.sleepHours });
+      window.dispatchEvent(new CustomEvent('heys:day-updated', {
+        detail: { date: dateKey, field: 'daySleepMinutes', source: 'day-sleep-step', forceReload: true }
       }));
     },
     xpAction: 'sleep_logged'
@@ -1868,6 +1995,7 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-3-ui: execute start');
         if (st.sleepStart) dayData.sleepStart = st.sleepStart;
         if (st.sleepEnd) dayData.sleepEnd = st.sleepEnd;
         if (st.sleepHours !== undefined) dayData.sleepHours = st.sleepHours;
+        if (st.daySleepMinutes !== undefined) dayData.daySleepMinutes = normalizeDaySleepMinutes(st.daySleepMinutes);
       }
 
       if (data.sleepNote && data.sleepNote.trim()) {
@@ -11576,6 +11704,16 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
   function HealthRingsGrid({ healthScore, compact, onCategoryClick, lsGet }) {
     if (!healthScore || !healthScore.breakdown) return null;
 
+    const getDaySleepHours = (day) => {
+      if (!day || typeof day !== 'object') return 0;
+      const totalSleepHours = HEYS.dayUtils?.getTotalSleepHours?.(day);
+      if (Number.isFinite(totalSleepHours) && totalSleepHours > 0) return totalSleepHours;
+      const storedSleepHours = Number(day.sleepHours);
+      if (Number.isFinite(storedSleepHours) && storedSleepHours > 0) return storedSleepHours;
+      const fallbackSleepHours = HEYS.dayUtils?.sleepHours?.(day.sleepStart, day.sleepEnd);
+      return Number.isFinite(fallbackSleepHours) && fallbackSleepHours > 0 ? fallbackSleepHours : 0;
+    };
+
     // 🆕 v3.22.0: Вычисляем emotionalRisk для Recovery overlay
     const emotionalRiskData = useMemo(() => {
       const U = window.HEYS?.utils;
@@ -11596,7 +11734,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       const hour = new Date().getHours();
       if (hour >= 20) bingeRisk += 20;
 
-      const sleepDeficit = (profile.sleepHours || 8) - (day.sleepHours || 0);
+      const sleepDeficit = (profile.sleepHours || 8) - getDaySleepHours(day);
       if (sleepDeficit > 2) { factors.push('Недосып'); bingeRisk += 15; }
 
       return {
@@ -12672,6 +12810,25 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     };
   }
 
+  function getDaySleepHours(day) {
+    if (!day || typeof day !== 'object') return 0;
+
+    const totalSleepHours = HEYS.dayUtils?.getTotalSleepHours?.(day);
+    if (Number.isFinite(totalSleepHours) && totalSleepHours > 0) {
+      return totalSleepHours;
+    }
+
+    const storedSleepHours = Number(day.sleepHours);
+    if (Number.isFinite(storedSleepHours) && storedSleepHours > 0) {
+      return storedSleepHours;
+    }
+
+    const fallbackSleepHours = HEYS.dayUtils?.sleepHours?.(day.sleepStart, day.sleepEnd);
+    return Number.isFinite(fallbackSleepHours) && fallbackSleepHours > 0
+      ? fallbackSleepHours
+      : 0;
+  }
+
   // === КОНСТАНТЫ ===
   const CONFIG = {
     VERSION: '1.1.0', // v1.1.0 — Progressive phenotype disclosure
@@ -12787,7 +12944,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     return {
       // День
       hasMeals: Boolean(day.meals && day.meals.length > 0),
-      hasSleep: Boolean(day.sleepHours || (day.sleepStart && day.sleepEnd)),
+      hasSleep: getDaySleepHours(day) > 0,
       hasWeight: Boolean(day.weightMorning),
       hasWater: Boolean(day.waterMl),
       hasSteps: Boolean(day.steps),
@@ -12922,7 +13079,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     }
 
     // 4. Сон (вес: 15%)
-    const sleepHours = day.sleepHours || 0;
+    const sleepHours = getDaySleepHours(day);
     const sleepNorm = profile?.sleepHours || BASELINE.SLEEP_OPTIMAL_HOURS;
     if (sleepHours < sleepNorm - 1) {
       const sleepPenalty = sleepHours < sleepNorm - 2 ? 20 : 10;
@@ -12979,7 +13136,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     const factors = [];
 
     // 1. Недосып (+20-40)
-    const sleepHours = day.sleepHours || 0;
+    const sleepHours = getDaySleepHours(day);
     const sleepNorm = profile?.sleepHours || 8;
     const sleepDebt = sleepNorm - sleepHours;
     if (sleepDebt >= 3) {
@@ -13768,7 +13925,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
     // 2. Недосып (прогноз на завтра) — вес из A/B теста
     const day = lsGet(`heys_dayv2_${dateStr}`, {});
-    const sleepHours = day.sleepHours || 0;
+    const sleepHours = getDaySleepHours(day);
     if (sleepHours < 6) {
       risk += abWeights.sleepDebt;
       triggers.push({
@@ -13929,8 +14086,9 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     const day = lsGet(`heys_dayv2_${dateStr}`, {});
 
     // Прогноз на основе сна
-    const sleepQuality = day.sleepQuality || (day.sleepHours >= 7 ? 7 : 5);
-    const sleepHours = day.sleepHours || 7;
+    const recordedSleepHours = getDaySleepHours(day);
+    const sleepQuality = day.sleepQuality || (recordedSleepHours >= 7 ? 7 : 5);
+    const sleepHours = recordedSleepHours || 7;
 
     const energyWindows = [];
 
@@ -14861,7 +15019,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
       // Персональный порог недосыпа
       sleepThreshold: preCrashConditions.length > 0
-        ? Math.round(preCrashConditions.reduce((sum, d) => sum + (d.sleepHours || 7), 0) / preCrashConditions.length)
+        ? Math.round(preCrashConditions.reduce((sum, d) => sum + (getDaySleepHours(d) || 7), 0) / preCrashConditions.length)
         : 6,
 
       // Персональный порог стресса  
@@ -20926,6 +21084,22 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       }
     },
 
+    // Только дневной сон
+    daySleep: (dateKey, onComplete) => {
+      if (HEYS.StepModal) {
+        const actualDateKey = typeof dateKey === 'function' ? null : dateKey;
+        const actualOnComplete = typeof dateKey === 'function' ? dateKey : onComplete;
+
+        HEYS.StepModal.show({
+          steps: ['daySleep'],
+          title: 'Дневной сон',
+          showProgress: false,
+          context: { dateKey: actualDateKey || new Date().toISOString().slice(0, 10) },
+          onComplete: actualOnComplete
+        });
+      }
+    },
+
     // Только утреннее настроение
     morningMood: (dateKey, onComplete) => {
       if (HEYS.StepModal) {
@@ -21722,6 +21896,99 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         return round1(d);
     }
 
+    function getSelectedDate(props) {
+        const raw = props?.selectedDate || props?.dateKey || props?.date;
+        if (typeof raw === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
+        return fmtDate(new Date());
+    }
+
+    function getDaySleepMinutes(day) {
+        if (HEYS.dayUtils?.normalizeDaySleepMinutes) {
+            return HEYS.dayUtils.normalizeDaySleepMinutes(day?.daySleepMinutes);
+        }
+        const value = Math.round(Number(day?.daySleepMinutes) || 0);
+        return value > 0 ? value : 0;
+    }
+
+    function getTotalSleepHours(day) {
+        if (HEYS.dayUtils?.getTotalSleepHours) {
+            return HEYS.dayUtils.getTotalSleepHours(day);
+        }
+        return round1((day?.sleepHours || 0) || sleepHours(day?.sleepStart, day?.sleepEnd));
+    }
+
+    function formatNapDuration(minutes) {
+        if (!minutes) return 'Без дневного сна';
+        if (minutes < 60) return `${minutes} мин`;
+        const hours = Math.floor(minutes / 60);
+        const mins = minutes % 60;
+        return mins ? `${hours} ч ${mins} мин` : `${hours} ч`;
+    }
+
+    function ReportsSleepCard({ dateKey, dayData, onRefresh }) {
+        const React = global.React;
+        const napMinutes = getDaySleepMinutes(dayData);
+        const totalSleep = getTotalSleepHours(dayData);
+        const nightSleep = HEYS.dayUtils?.getNightSleepHours
+            ? HEYS.dayUtils.getNightSleepHours(dayData)
+            : sleepHours(dayData?.sleepStart, dayData?.sleepEnd);
+        const dateLabel = new Date(`${dateKey}T12:00:00`).toLocaleDateString('ru-RU', {
+            day: 'numeric',
+            month: 'long',
+            weekday: 'short'
+        });
+
+        const openSleep = () => {
+            if (!HEYS.showCheckin?.sleep) return;
+            HEYS.showCheckin.sleep(dateKey, () => onRefresh?.());
+        };
+
+        const openDaySleep = () => {
+            if (!HEYS.showCheckin?.daySleep) return;
+            HEYS.showCheckin.daySleep(dateKey, () => onRefresh?.());
+        };
+
+        return React.createElement('div', { className: 'reports-sleep-card widget-shadow-diary-glass widget-outline-diary-glass' },
+            React.createElement('div', { className: 'reports-sleep-card__header' },
+                React.createElement('div', null,
+                    React.createElement('div', { className: 'reports-sleep-card__title' }, 'Сон и досып'),
+                    React.createElement('div', { className: 'reports-sleep-card__subtitle' }, dateLabel)
+                ),
+                React.createElement('button', {
+                    type: 'button',
+                    className: 'reports-sleep-card__button reports-sleep-card__button--secondary',
+                    onClick: openSleep
+                }, dayData?.sleepStart && dayData?.sleepEnd ? 'Изменить ночной сон' : 'Добавить ночной сон')
+            ),
+            React.createElement('div', { className: 'reports-sleep-card__stats' },
+                React.createElement('div', { className: 'reports-sleep-card__stat' },
+                    React.createElement('span', { className: 'reports-sleep-card__stat-label' }, '🌙 Ночной сон'),
+                    React.createElement('span', { className: 'reports-sleep-card__stat-value' }, nightSleep > 0 ? `${nightSleep.toFixed(1)} ч` : '—')
+                ),
+                React.createElement('div', { className: 'reports-sleep-card__stat' },
+                    React.createElement('span', { className: 'reports-sleep-card__stat-label' }, '😴 Досып днём'),
+                    React.createElement('span', { className: 'reports-sleep-card__stat-value' }, formatNapDuration(napMinutes))
+                ),
+                React.createElement('div', { className: 'reports-sleep-card__stat' },
+                    React.createElement('span', { className: 'reports-sleep-card__stat-label' }, '📊 Всего сна'),
+                    React.createElement('span', { className: 'reports-sleep-card__stat-value' }, totalSleep > 0 ? `${totalSleep.toFixed(1)} ч` : '—')
+                )
+            ),
+            React.createElement('div', { className: 'reports-sleep-card__footer' },
+                React.createElement('div', { className: 'reports-sleep-card__hint' },
+                    napMinutes > 0
+                        ? 'Дневной сон уже попадёт в аналитику и общие sleep-метрики.'
+                        : 'Если доспал днём, добавь это здесь — аналитика учтёт общий сон.'
+                ),
+                React.createElement('button', {
+                    type: 'button',
+                    className: 'reports-sleep-card__button reports-sleep-card__button--primary',
+                    onClick: openDaySleep
+                }, napMinutes > 0 ? 'Изменить дневной сон' : 'Доспал днём')
+            )
+        );
+    }
+
     // ---------- Кэширование вычислений ----------
     const dayCache = new Map();
     const maxCacheSize = 200; // Увеличиваем размер кэша для хранения большего количества дней
@@ -21976,7 +22243,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         const dayTargetDef = (dayObj.deficitPct !== '' && dayObj.deficitPct != null) ? +dayObj.deficitPct : +(profile.deficitPctTarget) || 0;
         // Убрано избыточное логирование дефицита калорий
         // sleepComment в дневнике хранится как sleepNote (ранее) — поддержим оба поля
-        const calculatedSleepHours = sleepHours(dayObj.sleepStart, dayObj.sleepEnd);
+        const calculatedSleepHours = getTotalSleepHours(dayObj);
         return {
             dstr: dateStr, totals, bmr, activitySubtotal: actTotal, activitiesKcal: train1k + train2k,
             tefKcal, baseExpenditure, dailyExp, weight: weight, // 🆕 v3.9.1: TEF и baseExpenditure
@@ -22669,6 +22936,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
         // Форсируем обновление при изменении данных (используем timestamp)
         const [updateTrigger, setUpdateTrigger] = useState(Date.now());
+        const selectedDateKey = getSelectedDate(props);
+        const selectedDayData = U.lsGet('heys_dayv2_' + selectedDateKey, {}) || { date: selectedDateKey };
 
         // Подписываемся на события обновления дня (BroadcastChannel + storage) для актуализации отчётов
         useEffect(() => {
@@ -22752,6 +23021,11 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         }
 
         return React.createElement('div', { className: 'page page-reports' },
+            React.createElement(ReportsSleepCard, {
+                dateKey: selectedDateKey,
+                dayData: selectedDayData,
+                onRefresh: () => setUpdateTrigger(Date.now())
+            }),
             React.createElement('div', { className: 'card widget-shadow-diary-glass widget-outline-diary-glass' },
                 React.createElement('h2', { className: 'reports-title' }, 'Месячные отчёты'),
                 HEYS.monthlyReports?.MonthlyReportsContent
