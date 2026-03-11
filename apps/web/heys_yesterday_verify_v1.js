@@ -1,8 +1,8 @@
 // heys_yesterday_verify_v1.js — Верификация пропущенных прошлых дней
 // Показывается в утреннем чек-ине если после последнего заполненного дня есть пропуски
-// Спрашивает: дозаполнить эти дни позже или очистить/подтвердить как пустые
+// Спрашивает: дозаполнить эти дни позже, подтвердить как реальные данные/голодание или очистить как пустые
 //
-// Версия: 1.4.0
+// Версия: 1.4.1
 // 
 (function (global) {
   const HEYS = global.HEYS = global.HEYS || {};
@@ -1005,6 +1005,12 @@
   // === Действия для неполных данных ===
   const INCOMPLETE_ACTIONS = [
     {
+      id: 'confirm_real_data',
+      icon: '🍃',
+      title: 'Реальные данные',
+      desc: 'Данные корректны — ел меньше обычного или это был день голодания'
+    },
+    {
       id: 'fill_later',
       icon: '✏️',
       title: 'Дозаполнить позже',
@@ -1265,6 +1271,10 @@
           `⚠️ Оставшиеся ${unresolvedDaysCount} ${pluralizeDays(unresolvedDaysCount)} будут отмечены пустыми. Это действие необратимо.`
         ),
 
+        selectedAction === 'confirm_real_data' && React.createElement('div', { className: 'yv-hint yv-hint--success' },
+          `🍃 Оставшиеся ${unresolvedDaysCount} ${pluralizeDays(unresolvedDaysCount)} будут сохранены как корректные данные и учтутся в статистике как есть.`
+        ),
+
         selectedAction === 'fill_later' && React.createElement('div', { className: 'yv-hint' },
           '📅 Оставшиеся дни будут отмечены как неполные. Ты сможешь вернуться и дозаполнить их позже.'
         )
@@ -1329,6 +1339,19 @@
         lsSet(`heys_dayv2_${dateKey}`, dayData);
         window.dispatchEvent(new CustomEvent('heys:day-updated', {
           detail: { date: dateKey, source: 'yesterday-verify-estimated', data: dayData }
+        }));
+        return;
+      }
+
+      if (data.incompleteAction === 'confirm_real_data') {
+        dayData.isFastingDay = true;
+        dayData.isIncomplete = false;
+        clearEstimatedDayFields(dayData);
+        dayData.updatedAt = nowTs;
+        lsSet(`heys_dayv2_${dateKey}`, dayData);
+
+        window.dispatchEvent(new CustomEvent('heys:day-updated', {
+          detail: { date: dateKey, source: 'yesterday-verify-real-data', data: dayData }
         }));
         return;
       }
@@ -1428,6 +1451,6 @@
     QUICK_FILL_PRESETS
   };
 
-  devLog('[HEYS] YesterdayVerify v1.4.0 loaded');
+  devLog('[HEYS] YesterdayVerify v1.4.1 loaded');
 
 })(typeof window !== 'undefined' ? window : global);

@@ -254,8 +254,6 @@
         React,
         diagnostics,
         onClose,
-        onCopyTrace,
-        copyState,
     }) {
         if (!diagnostics) return null;
 
@@ -338,7 +336,9 @@
                             }, getQualityGradeLabel(summary.qualityGrade || quality.grade))
                         ),
                         summary.dominantIssue?.key && React.createElement('div', { className: 'advice-diagnostics-summary-card__issue' },
-                            `Главный блокер: ${humanizeBlocker(summary.dominantIssue.key)} · ${summary.dominantIssue.count || 0}`
+                            summary.dominantIssue?.message
+                                ? summary.dominantIssue.message
+                                : `Главный блокер: ${summary.dominantIssue?.label || humanizeBlocker(summary.dominantIssue.key)} · ${summary.dominantIssue.count || 0}`
                         )
                     ),
 
@@ -453,18 +453,7 @@
                         className: 'advice-diagnostics-modal__action advice-diagnostics-modal__action--secondary',
                         onClick: onClose,
                         type: 'button'
-                    }, 'Закрыть'),
-                    React.createElement('button', {
-                        className: 'advice-diagnostics-modal__action advice-diagnostics-modal__action--primary',
-                        onClick: onCopyTrace,
-                        type: 'button'
-                    },
-                        copyState === 'success'
-                            ? '✅ Техлог скопирован'
-                            : copyState === 'error'
-                                ? '⚠️ Ошибка копии'
-                                : '📋 Скопировать техлог'
-                    )
+                    }, 'Закрыть')
                 )
             )
         );
@@ -1167,9 +1156,7 @@
             adviceDiagnosticsOpen && React.createElement(AdviceDiagnosticsModal, {
                 React,
                 diagnostics: adviceDiagnostics,
-                onClose: closeAdviceDiagnostics,
-                onCopyTrace: copyAdviceTrace,
-                copyState: adviceTraceCopyState
+                onClose: closeAdviceDiagnostics
             }),
             adviceTechnicalDetailsOpen && React.createElement(AdviceTechnicalModal, {
                 React,
@@ -1224,6 +1211,7 @@
         haptic,
         dismissToast,
         handleToastRate,
+        handleToastInteraction,
         setToastDetailsOpen,
         setAdviceExpanded,
         setAdviceTrigger,
@@ -1254,6 +1242,7 @@
             onClick: () => {
                 if (toastSwiped) return;
                 if (Math.abs(toastSwipeX) < 10 && hasDetailsContent) {
+                    handleToastInteraction && handleToastInteraction('details_toggle');
                     haptic && haptic('light');
                     setToastDetailsOpen(!toastDetailsOpen);
                 }
@@ -1409,6 +1398,7 @@
                         e.stopPropagation();
                         const timeSinceAppear = Date.now() - toastAppearedAtRef.current;
                         if (timeSinceAppear < 500) return;
+                        handleToastInteraction && handleToastInteraction('expand_all', e);
                         haptic && haptic('light');
                         setAdviceExpanded(true);
                         setAdviceTrigger('manual');
@@ -1442,6 +1432,7 @@
                 hasDetailsContent && React.createElement('div', {
                     onClick: (e) => {
                         e.stopPropagation();
+                        handleToastInteraction && handleToastInteraction('details_toggle', e);
                         haptic && haptic('light');
                         setToastDetailsOpen(!toastDetailsOpen);
                     },
@@ -1573,6 +1564,8 @@
         const [toastScheduledConfirm, setToastScheduledConfirm] = useState(false);
         const [toastDetailsOpen, setToastDetailsOpen] = useState(false);
         const toastTouchStart = useRef(0);
+        const toastInteractionTrackedRef = useRef(false);
+        const autoSuppressionTrackedRef = useRef(new Set());
 
         const [adviceTrigger, setAdviceTrigger] = useState(null);
         const [adviceExpanded, setAdviceExpanded] = useState(false);
@@ -2073,6 +2066,9 @@
         useEffect(() => {
             const handleShowAdvice = () => {
                 if (totalAdviceCount > 0) {
+                    const engineVisibleAdviceCount = Array.isArray(safeBadgeAdvices)
+                        ? safeBadgeAdvices.length
+                        : 0;
                     setAdviceTrigger('manual');
                     setAdviceExpanded(true);
                     setToastVisible(true);
@@ -2080,7 +2076,10 @@
                     HEYSRef?.advice?.recordDailyAdviceTraceEvent?.(date, 'manual_open', {
                         trigger: 'manual',
                         visibleAdviceCount: totalAdviceCount,
-                        badgeCount: Array.isArray(safeBadgeAdvices) ? safeBadgeAdvices.length : 0
+                        displayedAdviceCount: totalAdviceCount,
+                        engineVisibleAdviceCount,
+                        badgeCount: Array.isArray(safeBadgeAdvices) ? safeBadgeAdvices.length : 0,
+                        filteredOutCount: Math.max(0, engineVisibleAdviceCount - totalAdviceCount)
                     });
                     haptic('light');
                 } else {
@@ -2101,7 +2100,7 @@
             };
             window.addEventListener('heysShowAdvice', handleShowAdvice);
             return () => window.removeEventListener('heysShowAdvice', handleShowAdvice);
-        }, [totalAdviceCount, haptic, HEYSRef, date, safeBadgeAdvices]);
+        }, [totalAdviceCount, haptic, HEYSRef, date, safeBadgeAdvices, adviceTrace]);
 
         useEffect(() => {
             const handleProductAdded = () => {
@@ -2251,6 +2250,19 @@
 
             const isManualTrigger = adviceTrigger === 'manual' || adviceTrigger === 'manual_empty';
             if (!isManualTrigger && dismissedAdvices.has(advicePrimary.id)) {
+                const suppressionKey = `${date || 'unknown'}|${adviceTrigger || 'unknown'}|${advicePrimary.id}`;
+                if (!autoSuppressionTrackedRef.current.has(suppressionKey)) {
+                    autoSuppressionTrackedRef.current.add(suppressionKey);
+                    HEYSRef?.advice?.recordDailyAdviceTraceEvent?.(date, 'auto_suppressed_ui', {
+                        adviceId: advicePrimary.id,
+                        trigger: adviceTrigger || null,
+                        reason: hiddenUntilTomorrow.has(advicePrimary.id)
+                            ? 'hidden_until_tomorrow'
+                            : 'dismissed_today',
+                        module: advicePrimary?.__traceModule || null,
+                        category: advicePrimary?.category || null
+                    });
+                }
                 return;
             }
 
@@ -2294,7 +2306,7 @@
             }
 
             if (!isManualTrigger && markShown) markShown(advicePrimary);
-        }, [advicePrimary?.id, adviceTrigger, adviceSoundEnabled, dismissedAdvices, markShown, toastsEnabled, setShowConfetti, haptic, HEYSRef, safeAdviceRelevant]);
+        }, [advicePrimary?.id, adviceTrigger, adviceSoundEnabled, dismissedAdvices, hiddenUntilTomorrow, markShown, toastsEnabled, setShowConfetti, haptic, HEYSRef, safeAdviceRelevant, date]);
 
         useEffect(() => {
             setAdviceTrigger(null);
@@ -2372,6 +2384,14 @@
                 toastTimeoutRef.current = null;
             }
         };
+
+        const handleToastInteraction = useCallback((source, e) => {
+            if (e?.stopPropagation) e.stopPropagation();
+            if (!displayedAdvice || !trackClick) return;
+            if (toastInteractionTrackedRef.current) return;
+            trackClick(displayedAdvice, { source: source || 'toast_interaction' });
+            toastInteractionTrackedRef.current = true;
+        }, [displayedAdvice, trackClick]);
 
         const handleToastRate = (isPositive, e) => {
             e && e.stopPropagation();
@@ -2604,10 +2624,19 @@
             setAdviceTrigger(null);
             setDisplayedAdvice(null);
             setDisplayedAdviceList([]);
+            toastInteractionTrackedRef.current = false;
             setAdviceTechnicalDetails(null);
             setAdviceTechnicalDetailsOpen(false);
             if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
         };
+
+        useEffect(() => {
+            toastInteractionTrackedRef.current = false;
+        }, [displayedAdvice?.id, toastVisible, adviceTrigger]);
+
+        useEffect(() => {
+            autoSuppressionTrackedRef.current = new Set();
+        }, [date]);
 
         dismissToastRef.current = dismissToast;
 
@@ -2633,6 +2662,7 @@
             handleToastTouchMove,
             handleToastTouchEnd,
             handleToastUndo,
+            handleToastInteraction,
             handleToastRate,
             handleToastSchedule,
             adviceTrigger,

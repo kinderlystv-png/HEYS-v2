@@ -280,6 +280,92 @@ describe('HEYS advice engine', () => {
     expect(result.trace.summary.whyNoPrimary).toContain('intentionally disables auto-toast primary');
   });
 
+  it('does not treat manual drawer clicks as engagement for shown auto toasts', () => {
+    localStorage.setItem('heys_advice_trace_day_v1', JSON.stringify({
+      version: 'advice-day-log-v2',
+      date: '2026-03-10',
+      updatedAt: 1773180081317,
+      entries: [
+        {
+          type: 'snapshot',
+          recordedAt: 1773179574049,
+          lastSeenAt: 1773179574049,
+          repeatCount: 1,
+          fingerprint: 'snapshot:auto:1',
+          summary: {
+            trigger: 'tab_open',
+            hour: 1,
+            mealCount: 4,
+            waterMl: 3500,
+            kcal: 2444,
+            visibleForManualCount: 6,
+            eligibleForAutoToastCount: 2,
+            primaryId: 'insulin_perfect',
+            topIssues: ['UNDER_TARGET_TREND'],
+            topBlockers: [],
+            modulesWithOutput: ['nutrition', 'timing', 'hydration'],
+            silentModules: ['emotional']
+          },
+          trace: {
+            trigger: 'tab_open',
+            outputs: {
+              relevant: [{ id: 'insulin_perfect' }, { id: 'water_goal_reached' }],
+              cooldownEligible: [{ id: 'insulin_perfect' }, { id: 'water_goal_reached' }],
+              visibleForManualCount: 6,
+              eligibleForAutoToastCount: 2,
+              primaryId: 'insulin_perfect'
+            },
+            modules: [
+              { module: 'hydration', outputCount: 1, status: 'ok', adviceIds: ['water_goal_reached'] },
+              { module: 'timing', outputCount: 1, status: 'ok', adviceIds: ['insulin_perfect'] }
+            ],
+            stages: []
+          }
+        },
+        {
+          type: 'event',
+          eventType: 'shown',
+          recordedAt: 1773179574071,
+          payload: { adviceId: 'insulin_perfect', trigger: 'tab_open', module: 'timing' }
+        },
+        {
+          type: 'event',
+          eventType: 'shown',
+          recordedAt: 1773179629964,
+          payload: { adviceId: 'water_goal_reached', trigger: 'tab_open', module: 'hydration' }
+        },
+        {
+          type: 'event',
+          eventType: 'manual_open',
+          recordedAt: 1773179639539,
+          payload: {
+            trigger: 'manual',
+            visibleAdviceCount: 4,
+            displayedAdviceCount: 4,
+            engineVisibleAdviceCount: 6,
+            badgeCount: 6,
+            filteredOutCount: 2
+          }
+        },
+        {
+          type: 'event',
+          eventType: 'manual_click',
+          recordedAt: 1773179639601,
+          payload: { adviceId: 'insulin_perfect', trigger: 'manual', module: 'timing' }
+        }
+      ]
+    }));
+
+    const diagnostics = window.HEYS.advice.getDailyAdviceTraceDiagnostics('2026-03-10');
+
+    expect(diagnostics.analyticsEffectiveness.eventFunnel.shown).toBe(2);
+    expect(diagnostics.analyticsEffectiveness.eventFunnel.click).toBe(0);
+    expect(diagnostics.analyticsEffectiveness.eventFunnel.manualClick).toBe(1);
+    expect(diagnostics.analyticsEffectiveness.autoShown).toBe(2);
+    expect(diagnostics.analyticsEffectiveness.ignoredRate).toBe(1);
+    expect(diagnostics.analyticsEffectiveness.precisionProxy).toBe(0);
+  });
+
   it('exports a shorter clipboard daily log without heavyweight duplicate sections', () => {
     localStorage.setItem('heys_advice_trace_day_v1', JSON.stringify({
       version: 'advice-day-log-v2',
@@ -358,7 +444,10 @@ describe('HEYS advice engine', () => {
           payload: {
             trigger: 'manual',
             visibleAdviceCount: 5,
-            badgeCount: 7
+            displayedAdviceCount: 5,
+            engineVisibleAdviceCount: 7,
+            badgeCount: 7,
+            filteredOutCount: 2
           }
         }
       ]
@@ -371,8 +460,384 @@ describe('HEYS advice engine', () => {
     expect(clipboardPayload).toContain('mode: clipboard');
     expect(clipboardPayload).toContain('=== FINDINGS ===');
     expect(clipboardPayload).toContain('=== RECENT_ACTIVITY ===');
+    expect(clipboardPayload).toContain('event:manual_open · trigger=manual · displayed=5 · raw=7 · filtered=2');
     expect(clipboardPayload).not.toContain('=== QUALITY ===');
     expect(clipboardPayload).not.toContain('=== ANALYTICS_EFFECTIVENESS ===');
     expect(clipboardPayload.length).toBeLessThan(compactPayload.length);
+  });
+
+  it('never reports manual_open raw count below displayed count', () => {
+    const displayedAdviceCount = 7;
+    const staleTraceVisibleForManualCount = 6;
+    const currentBadgeAdviceCount = 7;
+
+    const engineVisibleAdviceCount = currentBadgeAdviceCount;
+    const filteredOutCount = Math.max(0, engineVisibleAdviceCount - displayedAdviceCount);
+
+    expect(staleTraceVisibleForManualCount).toBeLessThan(displayedAdviceCount);
+    expect(engineVisibleAdviceCount).toBe(displayedAdviceCount);
+    expect(filteredOutCount).toBe(0);
+  });
+
+  it('reports local UI suppression when auto advice stays eligible but is not shown', () => {
+    localStorage.setItem('heys_advice_trace_day_v1', JSON.stringify({
+      version: 'advice-day-log-v2',
+      date: '2026-03-11',
+      updatedAt: 1773212477170,
+      entries: [
+        {
+          type: 'snapshot',
+          recordedAt: 1773212400000,
+          lastSeenAt: 1773212400000,
+          repeatCount: 8,
+          fingerprint: 'snapshot:auto:suppressed',
+          summary: {
+            trigger: 'tab_open',
+            hour: 10,
+            mealCount: 0,
+            waterMl: 0,
+            kcal: 0,
+            visibleForManualCount: 6,
+            eligibleForAutoToastCount: 6,
+            primaryId: 'morning_breakfast_bootstrap',
+            topIssues: ['UNDER_TARGET_TREND'],
+            topBlockers: [
+              { code: 'expert_conflict_resolution', count: 2 }
+            ],
+            modulesWithOutput: ['nutrition', 'hydration', 'other'],
+            silentModules: ['timing', 'training', 'emotional']
+          },
+          trace: {
+            trigger: 'tab_open',
+            outputs: {
+              relevant: [{ id: 'morning_breakfast_bootstrap' }],
+              cooldownEligible: [{ id: 'morning_breakfast_bootstrap' }],
+              visibleForManualCount: 6,
+              eligibleForAutoToastCount: 6,
+              primaryId: 'morning_breakfast_bootstrap'
+            },
+            modules: [
+              { module: 'nutrition', outputCount: 1, status: 'ok', adviceIds: ['morning_breakfast_bootstrap'] }
+            ],
+            stages: []
+          }
+        },
+        {
+          type: 'event',
+          eventType: 'auto_suppressed_ui',
+          recordedAt: 1773212471000,
+          payload: {
+            adviceId: 'morning_breakfast_bootstrap',
+            trigger: 'tab_open',
+            reason: 'dismissed_today',
+            module: 'nutrition',
+            category: 'nutrition'
+          }
+        }
+      ]
+    }));
+
+    const diagnostics = window.HEYS.advice.getDailyAdviceTraceDiagnostics('2026-03-11');
+    const log = window.HEYS.advice.getDailyAdviceTraceLog('2026-03-11');
+    const clipboardPayload = window.HEYS.advice.formatDailyAdviceTraceForClipboard(log, { mode: 'clipboard' });
+
+    expect(diagnostics.analyticsEffectiveness.eventFunnel.autoSuppressedUi).toBe(1);
+    expect(diagnostics.quality.findings.some(item => item.includes('локально скрыта/прочитана'))).toBe(true);
+    expect(clipboardPayload).toContain('event:auto_suppressed_ui · advice=morning_breakfast_bootstrap · trigger=tab_open · reason=dismissed_today');
+  });
+
+  it('falls back to stage name when historical blocker entries have no reason code', () => {
+    localStorage.setItem('heys_advice_trace_day_v1', JSON.stringify({
+      version: 'advice-day-log-v2',
+      date: '2026-03-08',
+      updatedAt: 1773213710882,
+      entries: [
+        {
+          type: 'snapshot',
+          recordedAt: 1773213710000,
+          lastSeenAt: 1773213710000,
+          repeatCount: 5,
+          fingerprint: 'snapshot:legacy-missing-reason',
+          summary: {
+            trigger: 'manual',
+            hour: 10,
+            mealCount: 3,
+            waterMl: 2500,
+            kcal: 4467,
+            visibleForManualCount: 9,
+            eligibleForAutoToastCount: 0,
+            primaryId: null,
+            topIssues: ['UNDER_TARGET_TREND'],
+            topBlockers: [
+              { code: 'unknown', count: 11 }
+            ],
+            modulesWithOutput: ['nutrition', 'timing', 'emotional', 'hydration', 'other'],
+            silentModules: ['training']
+          },
+          trace: {
+            trigger: 'manual',
+            outputs: {
+              visibleForManualCount: 9,
+              eligibleForAutoToastCount: 0,
+              primaryId: null
+            },
+            modules: [
+              { module: 'nutrition', outputCount: 1, status: 'ok', adviceIds: ['nutrition_a'] },
+              { module: 'other', outputCount: 1, status: 'ok', adviceIds: ['other_a'] }
+            ],
+            stages: [
+              {
+                stage: 'expert_conflict_resolution',
+                removed: [
+                  { id: 'nutrition_b', module: 'nutrition', reason: { message: 'winner chosen' } },
+                  { id: 'other_b', module: 'other', reason: null }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    }));
+
+    const diagnostics = window.HEYS.advice.getDailyAdviceTraceDiagnostics('2026-03-08');
+    const log = window.HEYS.advice.getDailyAdviceTraceLog('2026-03-08');
+
+    expect(diagnostics.blockerReport.topReasons[0]).toEqual({ key: 'expert_conflict_resolution', count: 10 });
+    expect(diagnostics.moduleReport.find(item => item.module === 'nutrition')?.topBlockers?.[0]?.key).toBe('expert_conflict_resolution');
+    expect(log.entries[0].summary.topBlockers[0]).toEqual({ code: 'expert_conflict_resolution', count: 2 });
+  });
+
+  it('ignores unknown service snapshots in coverage and hides manual-only dominant issue', () => {
+    localStorage.setItem('heys_advice_trace_day_v1', JSON.stringify({
+      version: 'advice-day-log-v2',
+      date: '2026-03-12',
+      updatedAt: 1773214400000,
+      entries: [
+        {
+          type: 'snapshot',
+          recordedAt: 1773214400000,
+          lastSeenAt: 1773214400000,
+          repeatCount: 20,
+          fingerprint: 'snapshot:unknown-empty',
+          summary: {
+            trigger: 'unknown',
+            hour: 9,
+            mealCount: 0,
+            waterMl: 0,
+            kcal: 0,
+            visibleForManualCount: 0,
+            eligibleForAutoToastCount: 0,
+            primaryId: null,
+            topIssues: [],
+            topBlockers: [],
+            modulesWithOutput: [],
+            silentModules: ['nutrition']
+          },
+          trace: {
+            trigger: 'unknown',
+            outputs: {
+              visibleForManualCount: 0,
+              eligibleForAutoToastCount: 0,
+              primaryId: null,
+              relevant: [],
+              cooldownEligible: []
+            },
+            modules: [],
+            stages: []
+          }
+        },
+        {
+          type: 'snapshot',
+          recordedAt: 1773214405000,
+          lastSeenAt: 1773214405000,
+          repeatCount: 5,
+          fingerprint: 'snapshot:manual-rich',
+          summary: {
+            trigger: 'manual',
+            hour: 10,
+            mealCount: 2,
+            waterMl: 300,
+            kcal: 800,
+            visibleForManualCount: 6,
+            eligibleForAutoToastCount: 0,
+            primaryId: null,
+            topIssues: ['UNDER_TARGET_TREND'],
+            topBlockers: [{ code: 'manual_mode_no_auto_toast', count: 6 }],
+            modulesWithOutput: ['nutrition', 'other'],
+            silentModules: ['training']
+          },
+          trace: {
+            trigger: 'manual',
+            outputs: {
+              visibleForManualCount: 6,
+              eligibleForAutoToastCount: 0,
+              primaryId: null,
+              relevant: [{ id: 'a1' }],
+              cooldownEligible: []
+            },
+            modules: [
+              { module: 'nutrition', outputCount: 1, status: 'ok', adviceIds: ['a1'] },
+              { module: 'other', outputCount: 1, status: 'ok', adviceIds: ['a2'] }
+            ],
+            stages: [
+              {
+                stage: 'cooldown_filter',
+                removed: Array.from({ length: 6 }, (_, index) => ({
+                  id: `m_${index}`,
+                  module: index < 3 ? 'nutrition' : 'other',
+                  reason: {
+                    code: 'manual_mode_no_auto_toast',
+                    message: 'manual only'
+                  }
+                }))
+              }
+            ]
+          }
+        },
+        {
+          type: 'snapshot',
+          recordedAt: 1773214410000,
+          lastSeenAt: 1773214410000,
+          repeatCount: 1,
+          fingerprint: 'snapshot:tab-open',
+          summary: {
+            trigger: 'tab_open',
+            hour: 10,
+            mealCount: 2,
+            waterMl: 300,
+            kcal: 800,
+            visibleForManualCount: 6,
+            eligibleForAutoToastCount: 6,
+            primaryId: 'streak_3',
+            topIssues: ['UNDER_TARGET_TREND'],
+            topBlockers: [{ code: 'expert_conflict_resolution', count: 1 }],
+            modulesWithOutput: ['nutrition', 'other'],
+            silentModules: ['training']
+          },
+          trace: {
+            trigger: 'tab_open',
+            outputs: {
+              visibleForManualCount: 6,
+              eligibleForAutoToastCount: 6,
+              primaryId: 'streak_3',
+              relevant: [{ id: 'streak_3' }],
+              cooldownEligible: [{ id: 'streak_3' }]
+            },
+            modules: [
+              { module: 'nutrition', outputCount: 1, status: 'ok', adviceIds: ['n1'] },
+              { module: 'other', outputCount: 1, status: 'ok', adviceIds: ['streak_3'] }
+            ],
+            stages: [
+              {
+                stage: 'expert_conflict_resolution',
+                removed: [
+                  {
+                    id: 'other_alt',
+                    module: 'other',
+                    reason: {
+                      code: 'expert_conflict_resolution',
+                      message: 'winner chosen'
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    }));
+
+    const diagnostics = window.HEYS.advice.getDailyAdviceTraceDiagnostics('2026-03-12');
+
+    expect(diagnostics.executiveSummary.dominantIssue).toEqual({
+      key: 'expert_conflict_resolution',
+      count: 1,
+      label: 'несколько советов конкурировали',
+      message: 'Несколько советов конкурировали между собой, поэтому движок выбрал более сильный вариант (1).'
+    });
+    expect(diagnostics.analyticsEffectiveness.coverage).toBe(1);
+    expect(diagnostics.analyticsEffectiveness.rawCoverage).toBeLessThan(0.3);
+    expect(diagnostics.quality.findings.some(item => item.includes('Coverage низкий'))).toBe(false);
+  });
+
+  it('adds human-friendly dominant issue metadata for expert conflict days', () => {
+    localStorage.setItem('heys_advice_trace_day_v1', JSON.stringify({
+      version: 'advice-day-log-v2',
+      date: '2026-03-13',
+      updatedAt: 1773215000000,
+      entries: [
+        {
+          type: 'snapshot',
+          recordedAt: 1773215000000,
+          lastSeenAt: 1773215000000,
+          repeatCount: 3,
+          fingerprint: 'snapshot:expert-conflict-day',
+          summary: {
+            trigger: 'tab_open',
+            hour: 10,
+            mealCount: 1,
+            waterMl: 0,
+            kcal: 0,
+            visibleForManualCount: 6,
+            eligibleForAutoToastCount: 6,
+            primaryId: 'morning_breakfast_bootstrap',
+            topIssues: ['UNDER_TARGET_TREND'],
+            topBlockers: [{ code: 'expert_conflict_resolution', count: 2 }],
+            modulesWithOutput: ['nutrition', 'hydration', 'other'],
+            silentModules: ['timing', 'training', 'emotional']
+          },
+          trace: {
+            trigger: 'tab_open',
+            outputs: {
+              visibleForManualCount: 6,
+              eligibleForAutoToastCount: 6,
+              primaryId: 'morning_breakfast_bootstrap',
+              relevant: [{ id: 'morning_breakfast_bootstrap' }],
+              cooldownEligible: [{ id: 'morning_breakfast_bootstrap' }]
+            },
+            modules: [
+              { module: 'nutrition', outputCount: 1, status: 'ok', adviceIds: ['morning_breakfast_bootstrap'] },
+              { module: 'other', outputCount: 1, status: 'ok', adviceIds: ['streak_3'] }
+            ],
+            stages: [
+              {
+                stage: 'expert_conflict_resolution',
+                removed: [
+                  {
+                    id: 'streak_3',
+                    module: 'other',
+                    reason: {
+                      code: 'expert_conflict_resolution',
+                      message: 'winner chosen'
+                    }
+                  },
+                  {
+                    id: 'water_bootstrap_alt',
+                    module: 'hydration',
+                    reason: {
+                      code: 'expert_conflict_resolution',
+                      message: 'winner chosen'
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    }));
+
+    const diagnostics = window.HEYS.advice.getDailyAdviceTraceDiagnostics('2026-03-13');
+    const log = window.HEYS.advice.getDailyAdviceTraceLog('2026-03-13');
+    const clipboardPayload = window.HEYS.advice.formatDailyAdviceTraceForClipboard(log, { mode: 'clipboard' });
+
+    expect(diagnostics.executiveSummary.dominantIssue).toEqual({
+      key: 'expert_conflict_resolution',
+      count: 6,
+      label: 'несколько советов конкурировали',
+      message: 'Несколько советов конкурировали между собой, поэтому движок выбрал более сильный вариант (6).'
+    });
+    expect(diagnostics.quality.findings.some(item => item.includes('Несколько советов конкурировали между собой'))).toBe(true);
+    expect(clipboardPayload).toContain('expert_conflict_resolution: 6 — несколько советов конкурировали');
   });
 });

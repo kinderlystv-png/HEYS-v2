@@ -2632,6 +2632,16 @@
         }, {});
     }
 
+    function getTraceBlockerCode(stage, item) {
+        const explicitCode = item?.reason?.code;
+        if (explicitCode) return explicitCode;
+
+        const stageName = typeof stage?.stage === 'string' ? stage.stage.trim() : '';
+        if (stageName) return stageName;
+
+        return 'unknown';
+    }
+
     function explainTimeRestriction(advice, hour = new Date().getHours()) {
         const restriction = TIME_RESTRICTIONS[advice?.id];
         if (!restriction) return null;
@@ -3130,6 +3140,12 @@
 
     function sanitizeDailyAdviceSummary(summary, trace) {
         const source = summary || buildAdviceTraceEntrySummary(trace) || {};
+        const generated = trace ? (buildAdviceTraceEntrySummary(trace) || {}) : {};
+        const sourceTopBlockers = Array.isArray(source?.topBlockers) ? source.topBlockers : [];
+        const normalizedTopBlockers = (sourceTopBlockers.length === 0 || sourceTopBlockers.some(item => !item?.code || item.code === 'unknown'))
+            ? (Array.isArray(generated?.topBlockers) && generated.topBlockers.length > 0 ? generated.topBlockers : sourceTopBlockers)
+            : sourceTopBlockers;
+
         return {
             trigger: source?.trigger || trace?.trigger || null,
             hour: source?.hour ?? trace?.input?.hour ?? null,
@@ -3140,8 +3156,8 @@
             eligibleForAutoToastCount: source?.eligibleForAutoToastCount || 0,
             primaryId: source?.primaryId || null,
             topIssues: Array.isArray(source?.topIssues) ? source.topIssues.slice(0, 3) : [],
-            topBlockers: Array.isArray(source?.topBlockers)
-                ? source.topBlockers.slice(0, 4).map(item => ({
+            topBlockers: Array.isArray(normalizedTopBlockers)
+                ? normalizedTopBlockers.slice(0, 4).map(item => ({
                     code: item?.code || null,
                     count: item?.count || 0
                 }))
@@ -3324,7 +3340,7 @@
 
         (trace?.stages || []).forEach(stage => {
             (stage?.removed || []).forEach(item => {
-                const code = item?.reason?.code;
+                const code = getTraceBlockerCode(stage, item);
                 if (!code) return;
                 blockerCounts[code] = (blockerCounts[code] || 0) + 1;
             });
@@ -3413,7 +3429,7 @@
                     }
 
                     const bucket = stats[moduleKey];
-                    incrementCounter(bucket.blockerCodes, item?.reason?.code || 'unknown');
+                    incrementCounter(bucket.blockerCodes, getTraceBlockerCode(stage, item));
                     incrementCounter(bucket.blockerStages, stage?.stage || 'unknown');
                 });
             });
@@ -3482,7 +3498,7 @@
             const multiplier = Math.max(1, entry?.repeatCount || 1);
             (entry?.trace?.stages || []).forEach(stage => {
                 (stage?.removed || []).forEach(item => {
-                    incrementCounter(reasonCounts, item?.reason?.code || 'unknown', multiplier);
+                    incrementCounter(reasonCounts, getTraceBlockerCode(stage, item), multiplier);
                     incrementCounter(stageCounts, stage?.stage || 'unknown', multiplier);
                     if (item?.id) incrementCounter(culpritAdviceIds, item.id, multiplier);
                 });
@@ -3517,6 +3533,70 @@
         }, 0);
     }
 
+    function getFilteredEventCount(eventEntries, eventType, predicate) {
+        return (eventEntries || []).reduce((sum, entry) => {
+            if (entry?.eventType !== eventType) return sum;
+            if (typeof predicate === 'function' && !predicate(entry)) return sum;
+            return sum + 1;
+        }, 0);
+    }
+
+    function isAutoAdviceEvent(entry) {
+        const trigger = entry?.payload?.trigger;
+        return !!trigger && trigger !== 'manual' && trigger !== 'manual_empty';
+    }
+
+    function getSnapshotTrigger(entry) {
+        const trigger = entry?.summary?.trigger || entry?.trace?.trigger || null;
+        return typeof trigger === 'string' ? trigger.trim() : null;
+    }
+
+    function isMeaningfulCoverageTrigger(trigger) {
+        return !!trigger && trigger !== 'unknown';
+    }
+
+    function pickDominantBlocker(blockerReport) {
+        const topReasons = Array.isArray(blockerReport?.topReasons) ? blockerReport.topReasons : [];
+        const nonInformational = topReasons.filter(item => item?.key && item.key !== 'manual_mode_no_auto_toast');
+        if (nonInformational.length > 0) return nonInformational[0];
+        return null;
+    }
+
+    function getBlockerHumanMeta(key, count = 0) {
+        switch (key) {
+            case 'expert_conflict_resolution':
+                return {
+                    label: 'несколько советов конкурировали',
+                    message: `Несколько советов конкурировали между собой, поэтому движок выбрал более сильный вариант${count ? ` (${count})` : ''}.`
+                };
+            case 'trigger_mismatch':
+                return {
+                    label: 'часть советов не подошла под триггер',
+                    message: `Часть советов не подошла под текущий триггер показа${count ? ` (${count})` : ''}.`
+                };
+            case 'emotional_filter':
+                return {
+                    label: 'эмоциональный фильтр смягчил выдачу',
+                    message: `Эмоциональный фильтр отсеял часть более жёстких советов${count ? ` (${count})` : ''}.`
+                };
+            case 'global_cooldown':
+                return {
+                    label: 'глобальный cooldown мешал показу',
+                    message: `Глобальный cooldown часто блокировал auto-toast${count ? ` (${count})` : ''}.`
+                };
+            case 'category_limit':
+                return {
+                    label: 'лимит категории срезал часть советов',
+                    message: `В одной категории оказалось слишком много советов, поэтому часть была срезана${count ? ` (${count})` : ''}.`
+                };
+            default:
+                return {
+                    label: key,
+                    message: null
+                };
+        }
+    }
+
     function sumRepeatedSnapshots(snapshotEntries) {
         return (snapshotEntries || []).reduce((sum, entry) => {
             return sum + Math.max(1, entry?.repeatCount || 1);
@@ -3534,6 +3614,8 @@
         return {
             shown: getEventCount(eventEntries, 'shown'),
             click: getEventCount(eventEntries, 'click'),
+            manualClick: getEventCount(eventEntries, 'manual_click'),
+            autoSuppressedUi: getEventCount(eventEntries, 'auto_suppressed_ui'),
             read: getEventCount(eventEntries, 'read'),
             hidden: getEventCount(eventEntries, 'hidden'),
             positive: getEventCount(eventEntries, 'positive'),
@@ -3547,8 +3629,16 @@
 
     function buildAnalyticsEffectiveness(snapshotEntries, eventEntries, blockerReport, moduleReport) {
         const totalSnapshotRuns = sumRepeatedSnapshots(snapshotEntries);
-        const snapshotsWithAnyAdvice = sumWeightedSnapshots(snapshotEntries, entry => (entry?.summary?.visibleForManualCount || 0) > 0);
-        const snapshotsWithAutoEligible = sumWeightedSnapshots(snapshotEntries, entry => (entry?.summary?.eligibleForAutoToastCount || 0) > 0);
+        const meaningfulSnapshotRuns = sumWeightedSnapshots(snapshotEntries, entry => isMeaningfulCoverageTrigger(getSnapshotTrigger(entry)));
+        const coverageBase = meaningfulSnapshotRuns > 0 ? meaningfulSnapshotRuns : totalSnapshotRuns;
+        const snapshotsWithAnyAdvice = sumWeightedSnapshots(snapshotEntries, entry => {
+            if (!isMeaningfulCoverageTrigger(getSnapshotTrigger(entry)) && meaningfulSnapshotRuns > 0) return false;
+            return (entry?.summary?.visibleForManualCount || 0) > 0;
+        });
+        const snapshotsWithAutoEligible = sumWeightedSnapshots(snapshotEntries, entry => {
+            if (!isMeaningfulCoverageTrigger(getSnapshotTrigger(entry)) && meaningfulSnapshotRuns > 0) return false;
+            return (entry?.summary?.eligibleForAutoToastCount || 0) > 0;
+        });
         const manualVisibleTotal = (snapshotEntries || []).reduce((sum, entry) => {
             return sum + ((entry?.summary?.visibleForManualCount || 0) * Math.max(1, entry?.repeatCount || 1));
         }, 0);
@@ -3564,18 +3654,27 @@
         }, 0);
 
         const funnel = buildDailyEventFunnel(eventEntries);
-        const engagedActions = funnel.read + funnel.click + funnel.positive + funnel.negative + funnel.hidden + funnel.scheduled;
-        const positiveSignals = funnel.read + funnel.click + funnel.positive;
-        const negativeSignals = funnel.hidden + funnel.negative;
-        const shownBase = Math.max(1, funnel.shown);
+        const autoShown = getFilteredEventCount(eventEntries, 'shown', isAutoAdviceEvent);
+        const autoClick = getFilteredEventCount(eventEntries, 'click', isAutoAdviceEvent);
+        const autoRead = getFilteredEventCount(eventEntries, 'read', isAutoAdviceEvent);
+        const autoHidden = getFilteredEventCount(eventEntries, 'hidden', isAutoAdviceEvent);
+        const autoPositive = getFilteredEventCount(eventEntries, 'positive', isAutoAdviceEvent);
+        const autoNegative = getFilteredEventCount(eventEntries, 'negative', isAutoAdviceEvent);
+        const autoScheduled = getFilteredEventCount(eventEntries, 'scheduled', isAutoAdviceEvent);
+        const engagedActions = autoRead + autoPositive + autoNegative + autoHidden + autoScheduled;
+        const positiveSignals = autoRead + autoPositive;
+        const negativeSignals = autoHidden + autoNegative;
+        const shownBase = Math.max(1, autoShown);
         const actionableBase = Math.max(1, manualVisibleTotal || autoEligibleTotal || totalSnapshotRuns || 1);
         const silentModuleRate = moduleReport.length > 0
             ? roundTraceNumber(moduleReport.filter(item => item.withOutput === 0).length / moduleReport.length, 3)
             : null;
 
-        const coverage = totalSnapshotRuns > 0 ? roundTraceNumber(snapshotsWithAnyAdvice / totalSnapshotRuns, 3) : null;
-        const autoCoverage = totalSnapshotRuns > 0 ? roundTraceNumber(snapshotsWithAutoEligible / totalSnapshotRuns, 3) : null;
-        const showThroughRate = autoEligibleTotal > 0 ? roundTraceNumber(funnel.shown / autoEligibleTotal, 3) : null;
+        const rawCoverage = totalSnapshotRuns > 0 ? roundTraceNumber(snapshotsWithAnyAdvice / totalSnapshotRuns, 3) : null;
+        const coverage = coverageBase > 0 ? roundTraceNumber(snapshotsWithAnyAdvice / coverageBase, 3) : null;
+        const rawAutoCoverage = totalSnapshotRuns > 0 ? roundTraceNumber(snapshotsWithAutoEligible / totalSnapshotRuns, 3) : null;
+        const autoCoverage = coverageBase > 0 ? roundTraceNumber(snapshotsWithAutoEligible / coverageBase, 3) : null;
+        const showThroughRate = autoEligibleTotal > 0 ? roundTraceNumber(autoShown / autoEligibleTotal, 3) : null;
         const precisionProxyRaw = shownBase > 0
             ? ((positiveSignals * 1.0) - (negativeSignals * 0.7)) / shownBase
             : null;
@@ -3591,7 +3690,11 @@
 
         return {
             snapshotRuns: totalSnapshotRuns,
+            meaningfulSnapshotRuns,
+            coverageBase,
+            rawCoverage,
             coverage,
+            rawAutoCoverage,
             autoCoverage,
             showThroughRate,
             precisionProxy,
@@ -3601,6 +3704,8 @@
             manualVisibleTotal,
             autoEligibleTotal,
             cooldownSuppressedCount,
+            autoShown,
+            autoClick,
             engagedActions,
             positiveSignals,
             negativeSignals,
@@ -3616,7 +3721,8 @@
         const quality = diagnostics?.quality || {};
         const moduleReport = diagnostics?.moduleReport || [];
         const blockerReport = diagnostics?.blockerReport || {};
-        const dominantIssue = blockerReport?.topReasons?.[0] || null;
+        const dominantIssue = pickDominantBlocker(blockerReport);
+        const dominantIssueMeta = dominantIssue?.key ? getBlockerHumanMeta(dominantIssue.key, dominantIssue.count || 0) : null;
         const topSilentModules = moduleReport
             .filter(item => item.withOutput === 0)
             .map(item => item.module)
@@ -3639,7 +3745,13 @@
             precisionProxy: effect?.precisionProxy ?? null,
             ignoredRate: effect?.ignoredRate ?? null,
             suppressedByCooldownRate: effect?.suppressedByCooldownRate ?? null,
-            dominantIssue,
+            dominantIssue: dominantIssue
+                ? {
+                    ...dominantIssue,
+                    label: dominantIssueMeta?.label || dominantIssue.key,
+                    message: dominantIssueMeta?.message || null
+                }
+                : null,
             topSilentModules,
             topIssues: quality.findings || []
         };
@@ -3651,12 +3763,14 @@
         const uniqueAdviceIds = [...new Set(snapshotEntries.flatMap(entry => (entry?.trace?.outputs?.relevant || []).map(item => item?.id).filter(Boolean)))];
         const modulesWithOutput = moduleReport.filter(item => item.withOutput > 0).length;
         const silentModules = moduleReport.filter(item => item.withOutput === 0).map(item => item.module);
-        const dominantBlocker = blockerReport?.topReasons?.[0] || null;
+        const dominantBlocker = pickDominantBlocker(blockerReport);
         const eventFunnel = analyticsEffectiveness?.eventFunnel || buildDailyEventFunnel(eventEntries);
         const findings = [];
 
         if (dominantBlocker?.key === 'global_cooldown') {
             findings.push(`Главный блокер дня — global cooldown (${dominantBlocker.count} срабатываний). Auto-toast часто не доходил до показа.`);
+        } else if (dominantBlocker?.key === 'expert_conflict_resolution') {
+            findings.push(`Несколько советов конкурировали между собой, поэтому движок чаще выбирал один более сильный вариант (${dominantBlocker.count}).`);
         }
 
         const tabOpenStats = triggerReport.find(item => item.trigger === 'tab_open');
@@ -3672,6 +3786,10 @@
             findings.push(`Модули без выдачи в течение дня: ${silentModules.join(', ')}.`);
         }
 
+        if ((eventFunnel?.autoSuppressedUi || 0) > 0) {
+            findings.push(`Часть auto-toast была локально скрыта/прочитана раньше, поэтому движок видел primary, но показ не произошёл (${eventFunnel.autoSuppressedUi}).`);
+        }
+
         if ((analyticsEffectiveness?.ignoredRate || 0) >= 0.35) {
             findings.push(`Ignored rate высокий (${Math.round((analyticsEffectiveness.ignoredRate || 0) * 100)}%): много показов не дошли до явной реакции.`);
         }
@@ -3681,7 +3799,7 @@
         }
 
         if ((analyticsEffectiveness?.coverage || 0) < 0.45) {
-            findings.push(`Coverage низкий (${Math.round((analyticsEffectiveness?.coverage || 0) * 100)}% snapshot runs с хоть каким-то advice).`);
+            findings.push(`Coverage низкий (${Math.round((analyticsEffectiveness?.coverage || 0) * 100)}% meaningful snapshot runs с хоть каким-то advice).`);
         }
 
         const severeCooldownSuppression = (analyticsEffectiveness?.suppressedByCooldownRate || 0) >= 0.85;
@@ -3864,9 +3982,20 @@
                 const payloadParts = [
                     payload?.adviceId ? `advice=${payload.adviceId}` : null,
                     payload?.trigger ? `trigger=${payload.trigger}` : null,
+                    payload?.reason ? `reason=${payload.reason}` : null,
+                    payload?.source ? `source=${payload.source}` : null,
                     payload?.module ? `module=${payload.module}` : null,
-                    payload?.visibleAdviceCount != null ? `visible=${payload.visibleAdviceCount}` : null,
-                    payload?.badgeCount != null ? `badge=${payload.badgeCount}` : null
+                    payload?.displayedAdviceCount != null
+                        ? `displayed=${payload.displayedAdviceCount}`
+                        : payload?.visibleAdviceCount != null
+                            ? `visible=${payload.visibleAdviceCount}`
+                            : null,
+                    payload?.engineVisibleAdviceCount != null
+                        ? `raw=${payload.engineVisibleAdviceCount}`
+                        : payload?.badgeCount != null
+                            ? `badge=${payload.badgeCount}`
+                            : null,
+                    payload?.filteredOutCount != null ? `filtered=${payload.filteredOutCount}` : null
                 ].filter(Boolean).join(' · ');
                 return `- [${index + 1}] event:${entry?.eventType || 'unknown'}${payloadParts ? ` · ${payloadParts}` : ''}`;
             };
@@ -3885,7 +4014,8 @@
 
             pushSection('TOP_BLOCKERS');
             (diagnostics.blockerReport?.topReasons || []).slice(0, 6).forEach(item => {
-                lines.push(`- ${item.key}: ${item.count}`);
+                const meta = getBlockerHumanMeta(item.key, item.count || 0);
+                lines.push(`- ${item.key}: ${item.count}${meta?.label && meta.label !== item.key ? ` — ${meta.label}` : ''}`);
             });
 
             pushSection('ACTIVE_MODULES');
@@ -3895,7 +4025,8 @@
                 .forEach(item => {
                     lines.push(`- ${item.module}: ${item.withOutput}/${item.runs} запусков дали совет`);
                     if (item.topBlockers?.[0]) {
-                        lines.push(`  blocker: ${item.topBlockers[0].key} · ${item.topBlockers[0].count}`);
+                        const meta = getBlockerHumanMeta(item.topBlockers[0].key, item.topBlockers[0].count || 0);
+                        lines.push(`  blocker: ${item.topBlockers[0].key} · ${item.topBlockers[0].count}${meta?.label && meta.label !== item.topBlockers[0].key ? ` (${meta.label})` : ''}`);
                     }
                 });
 
@@ -6060,16 +6191,22 @@
                     });
                 }
             },
-            trackClick: (adviceRef) => {
+            trackClick: (adviceRef, meta = null) => {
                 const advice = resolveAdviceRef(adviceRef);
                 const adviceId = advice?.id || String(adviceRef || '');
                 if (!adviceId) return;
-                trackAdviceClicked(adviceId);
+                const isManualClick = trigger === 'manual' || trigger === 'manual_empty';
+                if (!isManualClick) {
+                    trackAdviceClicked(adviceId);
+                }
                 if (advice) {
-                    recordAdviceOutcomeEvent(advice, ctx, 'click');
-                    recordDailyAdviceTraceEvent(ctx?.day?.date, 'click', {
+                    if (!isManualClick) {
+                        recordAdviceOutcomeEvent(advice, ctx, 'click');
+                    }
+                    recordDailyAdviceTraceEvent(ctx?.day?.date, isManualClick ? 'manual_click' : 'click', {
                         adviceId,
                         trigger,
+                        source: meta?.source || null,
                         module: advice?.__traceModule || null,
                         category: advice?.category || null
                     });

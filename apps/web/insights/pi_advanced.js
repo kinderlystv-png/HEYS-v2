@@ -15,6 +15,26 @@
   const SCIENCE_INFO = HEYS.InsightsPI?.constants?.SCIENCE_INFO || window.piConst?.SCIENCE_INFO || HEYS.InsightsPI?.science || window.piScience || {};
   const piConst = HEYS.InsightsPI?.constants || window.piConst || {};
 
+  function isInsightsDebugEnabled() {
+    try {
+      if (HEYS.PredictiveInsights?.debug?.isEnabled?.()) return true;
+      if (global.__HEYS_INSIGHTS_DEBUG === true) return true;
+      if (global.location?.search?.includes('heysInsightsDebug=1')) return true;
+      if (global.localStorage?.getItem('heys_insights_debug') === '1') return true;
+    } catch (_) { }
+    return false;
+  }
+
+  function insightsDebug(level, message, payload) {
+    if (!isInsightsDebugEnabled()) return;
+    const logger = console[level] || console.info;
+    if (payload !== undefined) {
+      logger(`[HEYS.insights.debug] ${message}`, payload);
+      return;
+    }
+    logger(`[HEYS.insights.debug] ${message}`);
+  }
+
   // Импорт констант (полный список включая v5.0)
   const PATTERNS = piConst.PATTERNS || {
     MEAL_TIMING: 'meal_timing',
@@ -151,9 +171,24 @@
       metabolism: []
     };
 
+    const excludedByCategory = {
+      uncategorized: []
+    };
+
     // Распределяем паттерны по категориям (включая новые v4.0 и v5.0)
     for (const p of patterns) {
-      if (!p.available || p.score === undefined) continue;
+      const hasNumericScore = Number.isFinite(Number(p?.score));
+      if (!p?.available || !hasNumericScore) {
+        excludedByCategory.uncategorized.push({
+          pattern: p?.pattern || 'unknown',
+          available: !!p?.available,
+          score: p?.score,
+          confidence: p?.confidence,
+          reason: p?.reason || null,
+          message: p?.message || p?.insight || null
+        });
+        continue;
+      }
 
       switch (p.pattern) {
         case PATTERNS.MEAL_QUALITY_TREND:
@@ -231,6 +266,17 @@
             pattern: p.pattern
           });
           break;
+
+        default:
+          excludedByCategory.uncategorized.push({
+            pattern: p.pattern,
+            available: !!p.available,
+            score: p.score,
+            confidence: p.confidence,
+            reason: p.reason || null,
+            message: p.message || p.insight || null
+          });
+          break;
       }
     }
 
@@ -268,6 +314,37 @@
     }
 
     const totalScore = totalWeight > 0 ? Math.round(weightedSum / totalWeight) : 0;
+
+    const usedByCategory = Object.fromEntries(
+      Object.entries(scores).map(([cat, items]) => [cat, items.map((item) => ({
+        pattern: item.pattern,
+        score: item.score,
+        reliability: Math.round((item.reliability || 0) * 100) / 100
+      }))])
+    );
+
+    const zeroScoreReason = totalWeight > 0 ? null : 'no_available_patterns_with_numeric_score';
+
+    insightsDebug('info', 'calculateHealthScore summary', {
+      goalMode,
+      deficitPct,
+      weights,
+      totalWeight: Math.round(totalWeight * 1000) / 1000,
+      weightedSum: Math.round(weightedSum * 1000) / 1000,
+      totalScore,
+      zeroScoreReason,
+      usedByCategory,
+      excludedByCategory
+    });
+
+    if (zeroScoreReason) {
+      insightsDebug('warn', 'Health score fallback to zero', {
+        reason: zeroScoreReason,
+        patternCount: Array.isArray(patterns) ? patterns.length : 0,
+        usedByCategory,
+        excludedByCategory
+      });
+    }
 
     return {
       total: totalScore,
@@ -312,7 +389,10 @@
         deficitPct,
         weights,
         confidenceWeighted: true,
-        patternCount: patterns.filter(p => p.available).length
+        patternCount: patterns.filter(p => p.available).length,
+        usedByCategory,
+        excludedByCategory,
+        zeroScoreReason
       }
     };
   }

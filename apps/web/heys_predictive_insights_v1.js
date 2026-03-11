@@ -20,6 +20,37 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
   const HEYS = global.HEYS = global.HEYS || {};
   const U = HEYS.utils || {};
 
+  function isInsightsDebugEnabled() {
+    try {
+      if (global.__HEYS_INSIGHTS_DEBUG === true) return true;
+      if (global.location?.search?.includes('heysInsightsDebug=1')) return true;
+      if (global.localStorage?.getItem('heys_insights_debug') === '1') return true;
+    } catch (_) { }
+    return false;
+  }
+
+  function insightsDebug(level, message, payload) {
+    if (!isInsightsDebugEnabled()) return;
+    const logger = console[level] || console.info;
+    if (payload !== undefined) {
+      logger(`[HEYS.insights.debug] ${message}`, payload);
+      return;
+    }
+    logger(`[HEYS.insights.debug] ${message}`);
+  }
+
+  (function ensureInsightsDebugForLocalDev() {
+    try {
+      const hostname = global.location?.hostname;
+      const isLocalDev = hostname === 'localhost' || hostname === '127.0.0.1';
+      if (!isLocalDev) return;
+      if (global.localStorage?.getItem('heys_insights_debug') == null) {
+        global.localStorage.setItem('heys_insights_debug', '1');
+        console.info('[HEYS.insights] 🧪 Local insights debug enabled (heys_insights_debug=1)');
+      }
+    } catch (_) { }
+  })();
+
   // === КОНСТАНТЫ (из pi_constants.js) ===
   // Используем извлечённые константы, fallback на локальные если модуль не загружен
   const piConst = HEYS.InsightsPI?.constants || window.piConst || {};
@@ -622,6 +653,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     const now = Date.now();
     const productsFingerprint = getProductsFingerprint(pIndex);
     const profileFingerprint = getProfileFingerprint(profile, clientId);
+    const debugEnabled = isInsightsDebugEnabled();
 
     // Получаем данные до проверки кэша, чтобы не застревать на pre-sync/pre-products снимке
     const days = getDaysData(daysBack, lsGet);
@@ -634,7 +666,18 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       _cache.profileFingerprint === profileFingerprint &&
       _cache.productsFingerprint === productsFingerprint &&
       (now - _cache.timestamp) < CONFIG.CACHE_TTL_MS) {
-      return _cache.data;
+      insightsDebug('info', debugEnabled ? 'Cache bypass requested by debug mode' : 'Cache hit', {
+        daysBack,
+        ageMs: now - _cache.timestamp,
+        daysWithData: days.length,
+        clientId,
+        productsFingerprint,
+        profileFingerprint
+      });
+
+      if (!debugEnabled) {
+        return _cache.data;
+      }
     }
 
     if (days.length < CONFIG.MIN_DAYS_FOR_INSIGHTS) {
@@ -744,11 +787,36 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         return p;
       });
 
+    const availablePatterns = patterns.filter((p) => p?.available);
+    const availableWithScore = availablePatterns.filter((p) => Number.isFinite(Number(p?.score)));
+    const unavailablePatterns = patterns.filter((p) => !p?.available);
+    const availableWithoutScore = availablePatterns.filter((p) => !Number.isFinite(Number(p?.score)));
+
+    insightsDebug('info', 'Pattern analysis snapshot', {
+      daysBack,
+      daysWithData: days.length,
+      totalPatterns: patterns.length,
+      availablePatterns: availablePatterns.length,
+      availableWithScore: availableWithScore.length,
+      availableWithoutScore: availableWithoutScore.length,
+      unavailablePatterns: unavailablePatterns.length
+    });
+
+    if (availableWithoutScore.length > 0) {
+      insightsDebug('warn', 'Available patterns without numeric score', availableWithoutScore.map((p) => ({
+        pattern: p.pattern,
+        score: p.score,
+        confidence: p.confidence,
+        reason: p.reason || null,
+        message: p.message || p.insight || null
+      })));
+    }
+
     console.info(`[HEYS.insights] 📊 v6.0 | daysBack=${daysBack}, days=${days.length}, patterns=${patterns.length}/41 possible (v6.0: +C13+C22+C14+C15+C16+C18+C17+C19+C20+C21)`,
       patterns.map(p => `${p.pattern || 'unknown_pattern'}:${p.score ?? 'n/a'}`));
 
     // Detailed unavailable patterns logging
-    const unavailable = patterns.filter(p => !p.available);
+    const unavailable = unavailablePatterns;
     if (unavailable.length > 0) {
       console.group(`[HEYS.insights] ⏸️ Недоступные паттерны (${unavailable.length}/${patterns.length})`);
       unavailable.forEach(p => {
@@ -775,6 +843,34 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
     console.info(`[HEYS.insights] 🎯 healthScore=${healthScore.total}, categories=`, healthScore.categories);
 
+    insightsDebug('info', 'Health score result', {
+      total: healthScore.total,
+      goalMode: healthScore.goalMode,
+      categories: healthScore.categories,
+      debug: healthScore.debug,
+      zeroScoreReason: healthScore.debug?.zeroScoreReason || null,
+      excludedByCategory: healthScore.debug?.excludedByCategory || null,
+      usedByCategory: healthScore.debug?.usedByCategory || null
+    });
+
+    if ((healthScore.total || 0) <= 0) {
+      insightsDebug('warn', 'Health score is zero or empty after analysis', {
+        total: healthScore.total,
+        categories: healthScore.categories,
+        availableWithScore: availableWithScore.map((p) => ({
+          pattern: p.pattern,
+          score: p.score,
+          confidence: p.confidence
+        })),
+        availableWithoutScore: availableWithoutScore.map((p) => ({
+          pattern: p.pattern,
+          score: p.score,
+          reason: p.reason || null,
+          message: p.message || p.insight || null
+        }))
+      });
+    }
+
     // What-If Scenarios
     const whatIfScenarios = generateWhatIfScenarios(patterns, healthScore, days, profile);
 
@@ -797,6 +893,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       weeklyWrap,
       generatedAt: now
     };
+
+    HEYS.PredictiveInsights.debug.lastAnalysis = result;
 
     _cache = {
       data: result,
@@ -1246,6 +1344,175 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
   // === Экспорт основных функций ===
   // analyze() — главная точка входа для анализа данных
   HEYS.PredictiveInsights.analyze = analyze;
+
+  HEYS.PredictiveInsights.debug = {
+    isEnabled: isInsightsDebugEnabled,
+    enable: function () {
+      try {
+        global.__HEYS_INSIGHTS_DEBUG = true;
+        global.localStorage?.setItem('heys_insights_debug', '1');
+        console.info('[HEYS.insights] ✅ Debug enabled');
+      } catch (_) { }
+      return true;
+    },
+    disable: function () {
+      try {
+        global.__HEYS_INSIGHTS_DEBUG = false;
+        global.localStorage?.removeItem('heys_insights_debug');
+        console.info('[HEYS.insights] 📴 Debug disabled');
+      } catch (_) { }
+      return false;
+    },
+    lastAnalysis: null,
+
+    /**
+     * diagnoseDays — диагностика структуры дней и причин, по которым паттерны не работают.
+     * Запусти в консоли: HEYS.PredictiveInsights.debug.diagnoseDays()
+     */
+    diagnoseDays: function (daysBack) {
+      const lsGet = HEYS.utils?.lsGet || HEYS.lsGet || function (k, d) {
+        try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; }
+      };
+      const days = getDaysData(daysBack || 30, lsGet);
+      console.group('[HEYS.insights.diagnoseDays] 🔍 Day Structure Diagnosis');
+      console.info('Total days found:', days.length);
+
+      if (days.length === 0) {
+        console.warn('❌ No days found at all. Check lsGet / namespace.');
+        console.groupEnd();
+        return { days: 0 };
+      }
+
+      // Sample first 3 days raw
+      console.group('📋 First 3 days (raw keys)');
+      for (let i = 0; i < Math.min(3, days.length); i++) {
+        const d = days[i];
+        console.info(`Day[${i}] ${d.date}:`, Object.keys(d));
+      }
+      console.groupEnd();
+
+      // Meals analysis
+      let daysWithMeals = 0;
+      let daysWithNoMeals = 0;
+      let daysWithOneMeal = 0;
+      let daysWithTwoPlus = 0;
+      let totalMeals = 0;
+      let mealsWithTime = 0;
+      let mealsWithoutTime = 0;
+      let mealsWithItems = 0;
+      let mealsWithoutItems = 0;
+      let itemsWithProductId = 0;
+      let itemsWithoutProductId = 0;
+      let daysWithWater = 0;
+      let daysWithWeight = 0;
+      let daysWithSteps = 0;
+      let daysWithSleep = 0;
+
+      const sampleMealStructure = null;
+      let sampleMeal = null;
+
+      for (const day of days) {
+        const mealsArr = day.meals;
+        if (!mealsArr || !Array.isArray(mealsArr) || mealsArr.length === 0) {
+          daysWithNoMeals++;
+        } else {
+          daysWithMeals++;
+          if (mealsArr.length === 1) daysWithOneMeal++;
+          else daysWithTwoPlus++;
+          for (const meal of mealsArr) {
+            totalMeals++;
+            if (meal.time) mealsWithTime++;
+            else mealsWithoutTime++;
+            if (meal.items && meal.items.length > 0) {
+              mealsWithItems++;
+              for (const item of meal.items) {
+                if (item.product_id || item.productId) itemsWithProductId++;
+                else itemsWithoutProductId++;
+              }
+            } else {
+              mealsWithoutItems++;
+            }
+            if (!sampleMeal) sampleMeal = meal;
+          }
+        }
+        if (Number(day.waterMl) > 0) daysWithWater++;
+        if (Number(day.weightMorning) > 0) daysWithWeight++;
+        if (Number(day.steps) > 0) daysWithSteps++;
+        if (Number(day.sleepHours) > 0) daysWithSleep++;
+      }
+
+      const report = {
+        totalDays: days.length,
+        daysWithMeals,
+        daysWithNoMeals,
+        daysWithOneMeal,
+        daysWithTwoPlus,
+        totalMeals,
+        mealsWithTime,
+        mealsWithoutTime,
+        mealsWithItems,
+        mealsWithoutItems,
+        itemsWithProductId,
+        itemsWithoutProductId,
+        daysWithWater,
+        daysWithWeight,
+        daysWithSteps,
+        daysWithSleep
+      };
+
+      console.table(report);
+      console.info('📦 Sample meal structure:', sampleMeal);
+
+      // Diagnose issues
+      console.group('🩺 Pattern Blockers:');
+      if (daysWithTwoPlus < 3) {
+        console.warn(`❌ MealTiming/WaveOverlap: только ${daysWithTwoPlus} дней с 2+ приёмами (нужно хотя бы 3)`);
+      } else if (mealsWithTime < totalMeals * 0.5) {
+        console.warn(`❌ Timing patterns: только ${mealsWithTime}/${totalMeals} приёмов имеют поле 'time'`);
+      } else {
+        console.info(`✅ MealTiming: ${daysWithTwoPlus} дней с 2+ приёмами, ${mealsWithTime}/${totalMeals} имеют time`);
+      }
+      if (mealsWithItems < totalMeals * 0.3) {
+        console.warn(`❌ Quality/Nutrient patterns: только ${mealsWithItems}/${totalMeals} приёмов имеют 'items'`);
+      } else {
+        console.info(`✅ Items: ${mealsWithItems}/${totalMeals} приёмов имеют items`);
+      }
+      if (itemsWithoutProductId > 0 && itemsWithProductId === 0) {
+        console.warn('❌ ALL items missing product_id — pIndex lookups will fail → kcal=0');
+      }
+      if (daysWithWater < 3) {
+        console.warn(`❌ Hydration: только ${daysWithWater} дней с waterMl > 0`);
+      } else {
+        console.info(`✅ Hydration: ${daysWithWater} дней с водой`);
+      }
+      if (daysWithWeight < 3) {
+        console.warn(`❌ Weight patterns: только ${daysWithWeight} дней с weightMorning`);
+      } else {
+        console.info(`✅ Weight: ${daysWithWeight} дней с весом`);
+      }
+      if (daysWithSleep < 3) {
+        console.warn(`❌ Sleep patterns: только ${daysWithSleep} дней с sleepHours`);
+      } else {
+        console.info(`✅ Sleep: ${daysWithSleep} дней со сном`);
+      }
+      console.groupEnd();
+
+      // Also run simplest patterns directly
+      console.group('🧪 Direct pattern test (analyzeHydration, analyzeLateEating):');
+      try {
+        const hydResult = analyzeHydration(days);
+        console.info('analyzeHydration:', { available: hydResult.available, reason: hydResult.reason, score: hydResult.score, daysWithData: hydResult.daysWithData });
+      } catch (e) { console.error('analyzeHydration error:', e); }
+      try {
+        const lateResult = analyzeLateEating(days, HEYS.InsightsPI?.thresholds?.get?.(days, {}, null)?.thresholds || {});
+        console.info('analyzeLateEating:', { available: lateResult.available, reason: lateResult.reason, score: lateResult.score, totalMeals: lateResult.totalMeals });
+      } catch (e) { console.error('analyzeLateEating error:', e); }
+      console.groupEnd();
+
+      console.groupEnd();
+      return report;
+    }
+  };
 
   // clearCache() — очистка кэша анализа
   HEYS.PredictiveInsights.clearCache = function () {

@@ -1260,13 +1260,45 @@
       const realInsights = useMemo(() => {
         // 🔧 v6.0.2: Динамический daysBack в зависимости от выбранного таба
         const daysBack = activeTab === 'today' ? 7 : 30;
-        return HEYS.PredictiveInsights.analyze({
+        const insightsDebugEnabled = (() => {
+          try {
+            return window.__HEYS_INSIGHTS_DEBUG === true ||
+              window.localStorage?.getItem('heys_insights_debug') === '1' ||
+              window.location?.search?.includes('heysInsightsDebug=1');
+          } catch (_) {
+            return false;
+          }
+        })();
+
+        if (insightsDebugEnabled) {
+          console.info('[HEYS.insights.debug] InsightsTab -> analyze() start', {
+            activeTab,
+            daysBack,
+            hasLsGet: !!(lsGet || window.HEYS?.utils?.lsGet),
+            profileId: effectiveData.profile?.id || null,
+            pIndexSize: effectiveData.pIndex?.byId?.size || 0,
+            optimum: effectiveData.optimum || null
+          });
+        }
+
+        const analysis = HEYS.PredictiveInsights.analyze({
           lsGet: lsGet || (window.HEYS?.utils?.lsGet),
           daysBack,
           profile: effectiveData.profile,
           pIndex: effectiveData.pIndex,
           optimum: effectiveData.optimum
         });
+
+        if (insightsDebugEnabled) {
+          console.info('[HEYS.insights.debug] InsightsTab -> analyze() done', {
+            available: analysis?.available,
+            daysWithData: analysis?.daysWithData,
+            healthScore: analysis?.healthScore?.total,
+            patterns: Array.isArray(analysis?.patterns) ? analysis.patterns.length : 0
+          });
+        }
+
+        return analysis;
       }, [lsGet, activeTab, selectedDate, effectiveData.profile, effectiveData.pIndex, effectiveData.optimum]);
 
       // 🎭 Используем демо-данные если тур не пройден И реальных данных нет

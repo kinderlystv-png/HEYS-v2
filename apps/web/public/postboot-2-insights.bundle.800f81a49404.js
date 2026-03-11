@@ -10897,6 +10897,26 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
   const SCIENCE_INFO = HEYS.InsightsPI?.constants?.SCIENCE_INFO || window.piConst?.SCIENCE_INFO || HEYS.InsightsPI?.science || window.piScience || {};
   const piConst = HEYS.InsightsPI?.constants || window.piConst || {};
 
+  function isInsightsDebugEnabled() {
+    try {
+      if (HEYS.PredictiveInsights?.debug?.isEnabled?.()) return true;
+      if (global.__HEYS_INSIGHTS_DEBUG === true) return true;
+      if (global.location?.search?.includes('heysInsightsDebug=1')) return true;
+      if (global.localStorage?.getItem('heys_insights_debug') === '1') return true;
+    } catch (_) { }
+    return false;
+  }
+
+  function insightsDebug(level, message, payload) {
+    if (!isInsightsDebugEnabled()) return;
+    const logger = console[level] || console.info;
+    if (payload !== undefined) {
+      logger(`[HEYS.insights.debug] ${message}`, payload);
+      return;
+    }
+    logger(`[HEYS.insights.debug] ${message}`);
+  }
+
   // Импорт констант (полный список включая v5.0)
   const PATTERNS = piConst.PATTERNS || {
     MEAL_TIMING: 'meal_timing',
@@ -11033,9 +11053,24 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       metabolism: []
     };
 
+    const excludedByCategory = {
+      uncategorized: []
+    };
+
     // Распределяем паттерны по категориям (включая новые v4.0 и v5.0)
     for (const p of patterns) {
-      if (!p.available || p.score === undefined) continue;
+      const hasNumericScore = Number.isFinite(Number(p?.score));
+      if (!p?.available || !hasNumericScore) {
+        excludedByCategory.uncategorized.push({
+          pattern: p?.pattern || 'unknown',
+          available: !!p?.available,
+          score: p?.score,
+          confidence: p?.confidence,
+          reason: p?.reason || null,
+          message: p?.message || p?.insight || null
+        });
+        continue;
+      }
 
       switch (p.pattern) {
         case PATTERNS.MEAL_QUALITY_TREND:
@@ -11113,6 +11148,17 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             pattern: p.pattern
           });
           break;
+
+        default:
+          excludedByCategory.uncategorized.push({
+            pattern: p.pattern,
+            available: !!p.available,
+            score: p.score,
+            confidence: p.confidence,
+            reason: p.reason || null,
+            message: p.message || p.insight || null
+          });
+          break;
       }
     }
 
@@ -11150,6 +11196,37 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     }
 
     const totalScore = totalWeight > 0 ? Math.round(weightedSum / totalWeight) : 0;
+
+    const usedByCategory = Object.fromEntries(
+      Object.entries(scores).map(([cat, items]) => [cat, items.map((item) => ({
+        pattern: item.pattern,
+        score: item.score,
+        reliability: Math.round((item.reliability || 0) * 100) / 100
+      }))])
+    );
+
+    const zeroScoreReason = totalWeight > 0 ? null : 'no_available_patterns_with_numeric_score';
+
+    insightsDebug('info', 'calculateHealthScore summary', {
+      goalMode,
+      deficitPct,
+      weights,
+      totalWeight: Math.round(totalWeight * 1000) / 1000,
+      weightedSum: Math.round(weightedSum * 1000) / 1000,
+      totalScore,
+      zeroScoreReason,
+      usedByCategory,
+      excludedByCategory
+    });
+
+    if (zeroScoreReason) {
+      insightsDebug('warn', 'Health score fallback to zero', {
+        reason: zeroScoreReason,
+        patternCount: Array.isArray(patterns) ? patterns.length : 0,
+        usedByCategory,
+        excludedByCategory
+      });
+    }
 
     return {
       total: totalScore,
@@ -11194,7 +11271,10 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         deficitPct,
         weights,
         confidenceWeighted: true,
-        patternCount: patterns.filter(p => p.available).length
+        patternCount: patterns.filter(p => p.available).length,
+        usedByCategory,
+        excludedByCategory,
+        zeroScoreReason
       }
     };
   }
@@ -33257,13 +33337,45 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       const realInsights = useMemo(() => {
         // 🔧 v6.0.2: Динамический daysBack в зависимости от выбранного таба
         const daysBack = activeTab === 'today' ? 7 : 30;
-        return HEYS.PredictiveInsights.analyze({
+        const insightsDebugEnabled = (() => {
+          try {
+            return window.__HEYS_INSIGHTS_DEBUG === true ||
+              window.localStorage?.getItem('heys_insights_debug') === '1' ||
+              window.location?.search?.includes('heysInsightsDebug=1');
+          } catch (_) {
+            return false;
+          }
+        })();
+
+        if (insightsDebugEnabled) {
+          console.info('[HEYS.insights.debug] InsightsTab -> analyze() start', {
+            activeTab,
+            daysBack,
+            hasLsGet: !!(lsGet || window.HEYS?.utils?.lsGet),
+            profileId: effectiveData.profile?.id || null,
+            pIndexSize: effectiveData.pIndex?.byId?.size || 0,
+            optimum: effectiveData.optimum || null
+          });
+        }
+
+        const analysis = HEYS.PredictiveInsights.analyze({
           lsGet: lsGet || (window.HEYS?.utils?.lsGet),
           daysBack,
           profile: effectiveData.profile,
           pIndex: effectiveData.pIndex,
           optimum: effectiveData.optimum
         });
+
+        if (insightsDebugEnabled) {
+          console.info('[HEYS.insights.debug] InsightsTab -> analyze() done', {
+            available: analysis?.available,
+            daysWithData: analysis?.daysWithData,
+            healthScore: analysis?.healthScore?.total,
+            patterns: Array.isArray(analysis?.patterns) ? analysis.patterns.length : 0
+          });
+        }
+
+        return analysis;
       }, [lsGet, activeTab, selectedDate, effectiveData.profile, effectiveData.pIndex, effectiveData.optimum]);
 
       // 🎭 Используем демо-данные если тур не пройден И реальных данных нет

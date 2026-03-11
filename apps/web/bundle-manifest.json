@@ -4,55 +4,55 @@
     "hash": "608cfda729f5",
     "fileCount": 25,
     "size": 1252018,
-    "builtAt": "2026-03-10T22:05:30.167Z"
+    "builtAt": "2026-03-11T06:29:54.269Z"
   },
   "boot-calc": {
-    "file": "boot-calc.bundle.d6f27e07776b.js",
-    "hash": "d6f27e07776b",
+    "file": "boot-calc.bundle.13a142b1f4e8.js",
+    "hash": "13a142b1f4e8",
     "fileCount": 19,
-    "size": 995940,
-    "builtAt": "2026-03-10T22:05:30.278Z"
+    "size": 997825,
+    "builtAt": "2026-03-11T07:50:27.197Z"
   },
   "boot-day": {
     "file": "boot-day.bundle.bfdb7187c200.js",
     "hash": "bfdb7187c200",
     "fileCount": 51,
     "size": 943633,
-    "builtAt": "2026-03-10T20:19:01.958Z"
+    "builtAt": "2026-03-11T06:29:54.516Z"
   },
   "boot-app": {
     "file": "boot-app.bundle.fe07490e45f7.js",
     "hash": "fe07490e45f7",
     "fileCount": 48,
     "size": 1133824,
-    "builtAt": "2026-03-10T20:19:02.125Z"
+    "builtAt": "2026-03-11T06:29:54.635Z"
   },
   "boot-init": {
     "file": "boot-init.bundle.de9e044af096.js",
     "hash": "de9e044af096",
     "fileCount": 8,
     "size": 372853,
-    "builtAt": "2026-03-10T20:19:02.235Z"
+    "builtAt": "2026-03-11T06:29:54.732Z"
   },
   "postboot-1-game": {
-    "file": "postboot-1-game.bundle.1428092e5dde.js",
-    "hash": "1428092e5dde",
+    "file": "postboot-1-game.bundle.6f12d541fb03.js",
+    "hash": "6f12d541fb03",
     "fileCount": 29,
-    "size": 1607466,
-    "builtAt": "2026-03-10T22:05:30.410Z"
+    "size": 1616723,
+    "builtAt": "2026-03-11T07:50:27.351Z"
   },
   "postboot-2-insights": {
-    "file": "postboot-2-insights.bundle.e21a703de581.js",
-    "hash": "e21a703de581",
+    "file": "postboot-2-insights.bundle.800f81a49404.js",
+    "hash": "800f81a49404",
     "fileCount": 39,
-    "size": 1848050,
-    "builtAt": "2026-03-10T22:05:30.542Z"
+    "size": 1851837,
+    "builtAt": "2026-03-11T07:50:27.492Z"
   },
   "postboot-3-ui": {
-    "file": "postboot-3-ui.bundle.4395cc947767.js",
-    "hash": "4395cc947767",
+    "file": "postboot-3-ui.bundle.09004a3f59f4.js",
+    "hash": "09004a3f59f4",
     "fileCount": 25,
-    "size": 1400249,
-    "builtAt": "2026-03-10T20:19:02.733Z"
+    "size": 1410677,
+    "builtAt": "2026-03-11T07:50:27.630Z"
   }
 }
