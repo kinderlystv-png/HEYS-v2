@@ -18995,9 +18995,9 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
           }
         } catch (_) { }
 
-            if (isLocalOnlyStorageKey(k)) {
-              return;
-            }
+        if (isLocalOnlyStorageKey(k)) {
+          return;
+        }
 
         // Во время signIn не зеркалим вообще ничего — это источник гонок и RTR refresh 400
         if (typeof _signInInProgress !== 'undefined' && _signInInProgress) {
@@ -20930,7 +20930,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
         let allData = [];
         let pageOffset = 0;
         let fetchError = null;
-          let paginatedFetchPages = 0;
+        let paginatedFetchPages = 0;
 
         // 🚀 SPECULATIVE PREFETCH: check if HTML-time prefetch matches current request
         // If prefetch was fired at +0.0s and matches clientId+since → reuse data, save ~1s
@@ -21138,26 +21138,44 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
         // ⏱️ TIMING: засекаем время обработки
         const syncStartTime = performance.now();
 
+        const isSyncDetailLogsEnabled = () =>
+          global.__heysLogControl?.isEnabled?.('sync-detail') === true ||
+          global.localStorage.getItem('heys_debug_sync') === 'true';
+        const extractDayv2Date = (value) => {
+          const match = String(value || '').match(/dayv2_(\d{4}-\d{2}-\d{2})$/);
+          return match ? match[1] : null;
+        };
+        const isDayv2MetaKey = (value) => /(^|_)dayv2_date$/.test(String(value || ''));
+        const uniqSorted = (values) => Array.from(new Set((values || []).filter(Boolean))).sort();
+        const formatListForSyncLog = (values, options = {}) => {
+          const items = Array.isArray(values) ? values.filter(Boolean) : [];
+          const maxItems = options.maxItems || 8;
+          if (items.length === 0) return '(empty)';
+          if (isSyncDetailLogsEnabled() || items.length <= maxItems) return items.join(', ');
+          const headCount = Math.max(1, Math.floor(maxItems / 2));
+          const tailCount = Math.max(1, maxItems - headCount);
+          return `${items.slice(0, headCount).join(', ')}, …, ${items.slice(-tailCount).join(', ')}`;
+        };
+
         // ── [HEYS.sinhron] ДИАГНОСТИКА dayv2 ─────────────────
-        const cloudDayKeys = (data || []).filter(r => r.k && r.k.includes('dayv2_')).map(r => {
-          const dm = r.k.match(/(\d{4}-\d{2}-\d{2})/);
-          return dm ? dm[1] : r.k;
-        }).sort();
+        const cloudDayKeys = uniqSorted((data || [])
+          .filter(r => r.k && r.k.includes('dayv2_') && !isDayv2MetaKey(r.k))
+          .map(r => extractDayv2Date(r.k)));
         const localDayKeys = [];
         for (let lsi = 0; lsi < ls.length; lsi++) {
           const lsk = ls.key(lsi);
           if (lsk && lsk.includes('dayv2_') && !lsk.includes('dayv2_backup_') && (lsk.includes(client_id) || !client_id)) {
-            const ldm = lsk.match(/(\d{4}-\d{2}-\d{2})/);
-            if (ldm) localDayKeys.push(ldm[1]);
+            const localDate = extractDayv2Date(lsk);
+            if (localDate) localDayKeys.push(localDate);
           }
         }
-        localDayKeys.sort();
-        window.console.info('[HEYS.sinhron] ☁️ dayv2 из облака (' + cloudDayKeys.length + '):', cloudDayKeys.join(', '));
-        window.console.info('[HEYS.sinhron] 💾 dayv2 в localStorage (' + localDayKeys.length + '):', localDayKeys.join(', '));
-        const onlyCloud = cloudDayKeys.filter(d => !localDayKeys.includes(d));
-        const onlyLocal = localDayKeys.filter(d => !cloudDayKeys.includes(d));
-        if (onlyCloud.length) window.console.warn('[HEYS.sinhron] ⚠️ Только в облаке (нет локально):', onlyCloud.join(', '));
-        if (onlyLocal.length) window.console.warn('[HEYS.sinhron] ⚠️ Только локально (нет в облаке):', onlyLocal.join(', '));
+        const uniqueLocalDayKeys = uniqSorted(localDayKeys);
+        window.console.info('[HEYS.sinhron] ☁️ dayv2 из облака (' + cloudDayKeys.length + '):', formatListForSyncLog(cloudDayKeys));
+        window.console.info('[HEYS.sinhron] 💾 dayv2 в localStorage (' + uniqueLocalDayKeys.length + '):', formatListForSyncLog(uniqueLocalDayKeys));
+        const onlyCloud = cloudDayKeys.filter(d => !uniqueLocalDayKeys.includes(d));
+        const onlyLocal = uniqueLocalDayKeys.filter(d => !cloudDayKeys.includes(d));
+        if (onlyCloud.length) window.console.warn('[HEYS.sinhron] ⚠️ Только в облаке (нет локально):', formatListForSyncLog(onlyCloud));
+        if (onlyLocal.length) window.console.warn('[HEYS.sinhron] ⚠️ Только локально (нет в облаке):', formatListForSyncLog(onlyLocal));
         // ─────────────────────────────────────────────────────
         muteMirror = true;
         // ❌ КРИТИЧНО: НЕ ОЧИЩАЕМ ВСЁ ПРОСТРАНСТВО КЛИЕНТА
@@ -21277,22 +21295,22 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
               logCritical(`🔀 [DEDUP] Key '${scopedKey}' has ${group.length} versions in DB. Using '${winner.originalKey}' (${new Date(winner.updated_at_ts).toISOString()}) over '${loser.originalKey}' (${new Date(loser.updated_at_ts).toISOString()})`);
               deduped.push({ scopedKey, row: winner.row });
               // Трекаем отброшенные dayv2 дубли для [HEYS.sinhron]
-              if (scopedKey.includes('dayv2_')) {
-                const ddm = scopedKey.match(/(\d{4}-\d{2}-\d{2})/);
-                dayv2DedupDropped.push(ddm ? ddm[1] : scopedKey);
+              if (scopedKey.includes('dayv2_') && !isDayv2MetaKey(scopedKey)) {
+                const droppedDate = extractDayv2Date(scopedKey);
+                if (droppedDate) dayv2DedupDropped.push(droppedDate);
               }
             }
           }
         });
 
         if (dayv2DedupDropped.length > 0) {
-          window.console.warn('[HEYS.sinhron] 🔀 dayv2 дедупликация: ' + dayv2DedupDropped.length + ' дублей отброшено:', dayv2DedupDropped.join(', '));
+          const uniqueDroppedDays = uniqSorted(dayv2DedupDropped);
+          window.console.warn('[HEYS.sinhron] 🔀 dayv2 дедупликация: ' + uniqueDroppedDays.length + ' дублей отброшено:', formatListForSyncLog(uniqueDroppedDays));
         }
-        const dayv2AfterDedup = deduped.filter(d => d.scopedKey.includes('dayv2_')).map(d => {
-          const dm = d.scopedKey.match(/(\d{4}-\d{2}-\d{2})/);
-          return dm ? dm[1] : d.scopedKey;
-        }).sort();
-        window.console.info('[HEYS.sinhron] 📦 dayv2 после дедупа (' + dayv2AfterDedup.length + '):', dayv2AfterDedup.join(', '));
+        const dayv2AfterDedup = uniqSorted(deduped
+          .filter(d => d.scopedKey.includes('dayv2_') && !isDayv2MetaKey(d.scopedKey))
+          .map(d => extractDayv2Date(d.scopedKey)));
+        window.console.info('[HEYS.sinhron] 📦 dayv2 после дедупа (' + dayv2AfterDedup.length + '):', formatListForSyncLog(dayv2AfterDedup));
 
         deduped.sort((a, b) => {
           const aDate = getDateFromDayKey(a.scopedKey);
@@ -21317,6 +21335,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
         let previousProducts = null;
         // 🚀 PERF: Collect dayv2 writes and dispatch ONE event after loop
         const batchedDayV2Writes = [];
+        const forceWrittenDayV2 = [];
         const skippedDayMirrorKeys = [];
 
         // 🔄 ФАЗ 2: ОБРАБОТКА дедуплицированных ключей
@@ -21485,10 +21504,13 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
                   skippedDayMirrorKeys.push(key);
                   return;
                 }
-                window.console.info('[HEYS.sinhron] ✅ FORCE_WRITE ' + key + ' meals=' + (valueToSave?.meals?.length || 0));
-
                 const dateMatch = key.match(/dayv2_(\d{4}-\d{2}-\d{2})$/);
                 if (dateMatch) {
+                  const mealsCount = valueToSave?.meals?.length || 0;
+                  forceWrittenDayV2.push(`${dateMatch[1]}(${mealsCount}m)`);
+                  if (isSyncDetailLogsEnabled()) {
+                    window.console.info('[HEYS.sinhron] ✅ FORCE_WRITE ' + key + ' meals=' + mealsCount);
+                  }
                   window.dispatchEvent(new CustomEvent('heys:day-updated', {
                     detail: {
                       date: dateMatch[1],
@@ -22284,6 +22306,10 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
         });
 
         // 🚀 PERF: Batch process all dayv2 writes at once — prevents skeleton flicker
+        if (forceWrittenDayV2.length > 0) {
+          window.console.info('[HEYS.sinhron] ✅ FORCE_WRITE dayv2 (' + forceWrittenDayV2.length + '):', formatListForSyncLog(forceWrittenDayV2));
+        }
+
         if (batchedDayV2Writes.length > 0) {
           const updatedDates = [];
           batchedDayV2Writes.forEach(({ key, valueToSave }) => {
@@ -22301,7 +22327,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
             const dateMatch = key.match(/dayv2_(\d{4}-\d{2}-\d{2})$/);
             if (dateMatch) updatedDates.push(dateMatch[1]);
           });
-          window.console.info('[HEYS.sinhron] ✅ BATCH WRITE ' + batchedDayV2Writes.length + ' dayv2 records: ' + updatedDates.join(', '));
+          window.console.info('[HEYS.sinhron] ✅ BATCH WRITE ' + batchedDayV2Writes.length + ' dayv2 records:', formatListForSyncLog(updatedDates));
           // � FIX v65: Помечаем sync завершённым ДО heys:day-updated, чтобы cascade pre-sync guard
           // не блокировал recompute: когда renderCard вызывается из day-updated обработчика,
           // _cascadeSyncDone=true → cache MISS → computeCascadeState с реальной историей → CRS ≠ null → bar settling
@@ -22361,7 +22387,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
             }
           }
           postSyncDayKeys.sort();
-          window.console.info('[HEYS.sinhron] 🏁 ИТОГ: dayv2 в localStorage ПОСЛЕ синхронизации (' + postSyncDayKeys.length + '):', postSyncDayKeys.join(', '));
+          window.console.info('[HEYS.sinhron] 🏁 ИТОГ: dayv2 в localStorage ПОСЛЕ синхронизации (' + postSyncDayKeys.length + '):', formatListForSyncLog(postSyncDayKeys));
           if (postSyncDuplicateDetails.length > 0) {
             window.console.warn('[HEYS.sinhron] 🐛 ДУБЛИКАТЫ dayv2 в localStorage (' + postSyncDuplicateDetails.length + '):', postSyncDuplicateDetails.join(' | '));
             // Также логируем ВСЕ ключи с дублирующимися датами
@@ -22744,9 +22770,9 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
   let _uploadLogTimer = null;
   let _uploadLogBufferedTotal = 0;
   let _uploadLogBufferedBatches = 0;
-    const UPLOAD_SUMMARY_LOG_MIN_ITEMS = 5;
-    const UPLOAD_SUMMARY_LOG_MIN_BATCHES = 3;
-    const UPLOAD_SUMMARY_BUFFER_MS = 2500;
+  const UPLOAD_SUMMARY_LOG_MIN_ITEMS = 5;
+  const UPLOAD_SUMMARY_LOG_MIN_BATCHES = 3;
+  const UPLOAD_SUMMARY_BUFFER_MS = 2500;
 
   function flushBufferedUploadLog() {
     if (_uploadLogTimer) {
@@ -22755,11 +22781,11 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
     }
     if (_uploadLogBufferedTotal <= 0) return;
     const suffix = _uploadLogBufferedBatches > 1 ? ` (${_uploadLogBufferedBatches} batch)` : '';
-      if (_uploadLogBufferedTotal >= UPLOAD_SUMMARY_LOG_MIN_ITEMS || _uploadLogBufferedBatches >= UPLOAD_SUMMARY_LOG_MIN_BATCHES) {
-        logCritical(`☁️ [YANDEX] Сохранено в облако: ${_uploadLogBufferedTotal} записей${suffix}`);
-      } else {
-        log(`☁️ [YANDEX] Small upload batch hidden from normal logs: ${_uploadLogBufferedTotal} items${suffix}`);
-      }
+    if (_uploadLogBufferedTotal >= UPLOAD_SUMMARY_LOG_MIN_ITEMS || _uploadLogBufferedBatches >= UPLOAD_SUMMARY_LOG_MIN_BATCHES) {
+      logCritical(`☁️ [YANDEX] Сохранено в облако: ${_uploadLogBufferedTotal} записей${suffix}`);
+    } else {
+      log(`☁️ [YANDEX] Small upload batch hidden from normal logs: ${_uploadLogBufferedTotal} items${suffix}`);
+    }
     _uploadLogBufferedTotal = 0;
     _uploadLogBufferedBatches = 0;
   }
@@ -22769,13 +22795,13 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
     _uploadLogBufferedTotal += savedCount;
     _uploadLogBufferedBatches += 1;
 
-      if (savedCount >= UPLOAD_SUMMARY_LOG_MIN_ITEMS || _uploadLogBufferedTotal >= 10) {
+    if (savedCount >= UPLOAD_SUMMARY_LOG_MIN_ITEMS || _uploadLogBufferedTotal >= 10) {
       flushBufferedUploadLog();
       return;
     }
 
     if (_uploadLogTimer) return;
-      _uploadLogTimer = setTimeout(() => flushBufferedUploadLog(), UPLOAD_SUMMARY_BUFFER_MS);
+    _uploadLogTimer = setTimeout(() => flushBufferedUploadLog(), UPLOAD_SUMMARY_BUFFER_MS);
   }
   let _uploadInFlightCount = 0;   // 🔄 Кол-во записей в in-flight запросе
 

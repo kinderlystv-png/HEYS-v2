@@ -559,12 +559,20 @@
         if (mood <= 2) toneKey = 'low';
         else if (mood >= 4) toneKey = 'high';
 
+        const highMoodDecoratedTypes = new Set(['achievement', 'motivation', 'support']);
+
         const tone = MOOD_TONES[toneKey];
         if (!tone) return text;
 
         // При низком настроении избегаем жёстких советов
         if (tone.avoid.includes(adviceType)) {
             return null; // Сигнал не показывать
+        }
+
+        // При хорошем настроении не превращаем warning/tip в праздничные тосты.
+        // Подсвечиваем только явно поддерживающие и достиженческие сообщения.
+        if (toneKey === 'high' && !highMoodDecoratedTypes.has(adviceType)) {
+            return text;
         }
 
         // Добавляем prefix/suffix случайно
@@ -599,6 +607,300 @@
         return calculateSmartScoreCached(advice, ctx, getTrackingStats(), getAllRatings());
     }
 
+    function clampAdviceScore(value, min, max) {
+        if (typeof value !== 'number' || !Number.isFinite(value)) return min;
+        return Math.max(min, Math.min(max, value));
+    }
+
+    function getAdviceActionabilityBoost(advice, ctx) {
+        const urgency = advice?.expertMeta?.actionNow?.urgency;
+        const trigger = ctx?.trigger || null;
+        const hasActionLabel = !!advice?.expertMeta?.actionNow?.label;
+
+        if (!hasActionLabel) return 0;
+        if (urgency === 'now') return trigger === 'manual' ? 8 : 10;
+        if (urgency === 'today') return trigger === 'manual' ? 4 : 6;
+        if (urgency === 'watch') return 2;
+        return 1;
+    }
+
+    function getAdviceActionabilityPenalty(advice, ctx) {
+        const trigger = ctx?.trigger || null;
+        const urgency = advice?.expertMeta?.actionNow?.urgency;
+        const hasActionLabel = !!advice?.expertMeta?.actionNow?.label;
+        const mealCount = ctx?.mealCount || 0;
+        const isAutoContext = trigger && trigger !== 'manual' && trigger !== 'manual_empty';
+
+        let penalty = 0;
+
+        if (isAutoContext && !hasActionLabel) penalty += 4;
+        if (isAutoContext && urgency === 'watch') penalty += 3;
+        if (isAutoContext && !urgency) penalty += 2;
+
+        if (
+            isAutoContext
+            && advice?.category === 'nutrition'
+            && mealCount === 0
+            && !String(advice?.id || '').includes('breakfast')
+            && !String(advice?.id || '').includes('bootstrap')
+        ) {
+            penalty += 3;
+        }
+
+        if (isAutoContext && advice?.type === 'warning' && urgency !== 'now') penalty += 2;
+
+        return roundTraceNumber(penalty, 2);
+    }
+
+    function getAdviceTrustPenalty(advice, ctx) {
+        const evidenceScore = advice?.expertMeta?.evidenceScore || 0;
+        const sourceCount = advice?.expertMeta?.sourceCount || 0;
+        const responseMemoryScore = advice?.expertMeta?.responseMemory?.score || 0;
+        const contradictionsCount = Array.isArray(advice?.expertMeta?.contradictions)
+            ? advice.expertMeta.contradictions.length
+            : 0;
+        const trigger = ctx?.trigger || null;
+        const isAutoContext = trigger && trigger !== 'manual' && trigger !== 'manual_empty';
+        const confidence = advice?.confidence || null;
+
+        let penalty = 0;
+
+        if (!isAutoContext) return 0;
+
+        if (advice?.type === 'warning' && evidenceScore < 18) penalty += 6;
+        else if (advice?.type === 'warning' && evidenceScore < 28) penalty += 3;
+
+        if (advice?.type === 'warning' && sourceCount <= 1) penalty += 3;
+        if (confidence === 'low' && advice?.type === 'warning') penalty += 4;
+        if (contradictionsCount > 0 && advice?.type === 'warning') penalty += 2;
+        if (responseMemoryScore <= -4) penalty += 4;
+        else if (responseMemoryScore < 0) penalty += 2;
+
+        return roundTraceNumber(penalty, 2);
+    }
+
+    function summarizeOutcomeSignals(stats) {
+        if (!stats || typeof stats !== 'object') return null;
+
+        const explicitSignals = (stats.click || 0) + (stats.read || 0) + (stats.hidden || 0) + (stats.positive || 0) + (stats.negative || 0);
+        const decisiveSignals = explicitSignals + (stats.autoSuccess || 0) + (stats.autoFailure || 0);
+        const autoSignals = (stats.autoSuccess || 0) + (stats.autoFailure || 0) + (stats.autoNeutral || 0);
+        const exposureCount = stats.shown || 0;
+        const positiveRaw = (stats.click || 0) * 1.1 + (stats.read || 0) * 0.45 + (stats.positive || 0) * 1.8 + (stats.autoSuccess || 0) * 1.25;
+        const negativeRaw = (stats.hidden || 0) * 1.0 + (stats.negative || 0) * 1.8 + (stats.autoFailure || 0) * 1.2;
+        const priorStrength = explicitSignals > 0 ? 3.5 : 4.5;
+        const signalConfidence = decisiveSignals > 0 ? decisiveSignals / (decisiveSignals + priorStrength) : 0;
+        const exposureCoverage = exposureCount > 0
+            ? clampAdviceScore(decisiveSignals / Math.max(1, exposureCount), 0.35, 1)
+            : 1;
+        const modalityAdjustment = explicitSignals > 0 && autoSignals > 0
+            ? 1.05
+            : explicitSignals > 0
+                ? 1
+                : autoSignals > 0
+                    ? 0.78
+                    : 0;
+        const calibrationFactor = roundTraceNumber(clampAdviceScore(signalConfidence * exposureCoverage * modalityAdjustment, 0.08, 1), 3);
+        const adjustedPositive = roundTraceNumber(positiveRaw * calibrationFactor, 3);
+        const adjustedNegative = roundTraceNumber(negativeRaw * calibrationFactor, 3);
+        const effectiveSamples = roundTraceNumber((decisiveSignals + (stats.autoNeutral || 0) * 0.35) * calibrationFactor, 3);
+
+        return {
+            explicitSignals,
+            decisiveSignals,
+            autoSignals,
+            exposureCount,
+            positiveRaw: roundTraceNumber(positiveRaw, 3),
+            negativeRaw: roundTraceNumber(negativeRaw, 3),
+            calibrationFactor,
+            adjustedPositive,
+            adjustedNegative,
+            effectiveSamples
+        };
+    }
+
+    function getAdviceFatiguePenalty(advice, adviceStats, outcomeProfiles) {
+        const safeStats = adviceStats || {};
+        const safeProfiles = outcomeProfiles || {};
+        const themeKey = advice?.expertMeta?.theme || advice?.category || 'general';
+        const adviceOutcome = safeProfiles?.advice?.[advice?.id] || null;
+        const themeOutcome = safeProfiles?.theme?.[themeKey] || null;
+        const adviceOutcomeSummary = summarizeOutcomeSignals(adviceOutcome);
+        const themeOutcomeSummary = summarizeOutcomeSignals(themeOutcome);
+        const shownCount = safeStats?.shown || 0;
+        const clickedCount = safeStats?.clicked || 0;
+        const lastShownAt = safeStats?.lastShown || 0;
+
+        let exposurePenalty = 0;
+        if (shownCount >= 12) exposurePenalty += 8;
+        else if (shownCount >= 8) exposurePenalty += 5;
+        else if (shownCount >= 5) exposurePenalty += 2;
+
+        let recentRepeatPenalty = 0;
+        if (lastShownAt) {
+            const hoursSince = (Date.now() - lastShownAt) / (1000 * 60 * 60);
+            if (hoursSince < 3) recentRepeatPenalty += 8;
+            else if (hoursSince < 8) recentRepeatPenalty += 5;
+            else if (hoursSince < 24) recentRepeatPenalty += 2;
+        }
+
+        let lowEngagementPenalty = 0;
+        if (shownCount >= 4 && clickedCount === 0) lowEngagementPenalty += 4;
+        else if (shownCount >= 6 && clickedCount / Math.max(1, shownCount) < 0.08) lowEngagementPenalty += 2;
+
+        const adviceNegativeSignals = adviceOutcomeSummary?.adjustedNegative || 0;
+        const advicePositiveSignals = adviceOutcomeSummary?.adjustedPositive || 0;
+        let adviceOutcomePenalty = 0;
+        if ((adviceOutcomeSummary?.effectiveSamples || 0) >= 2.5 && adviceNegativeSignals >= advicePositiveSignals + 2.2) adviceOutcomePenalty += 6;
+        else if ((adviceOutcomeSummary?.effectiveSamples || 0) >= 1.6 && adviceNegativeSignals >= advicePositiveSignals + 1.1) adviceOutcomePenalty += 3;
+
+        const themeShown = themeOutcomeSummary?.exposureCount || themeOutcome?.shown || 0;
+        const themePositiveSignals = themeOutcomeSummary?.adjustedPositive || 0;
+        const themeNegativeSignals = themeOutcomeSummary?.adjustedNegative || 0;
+        let themeFatiguePenalty = 0;
+        if (themeShown >= 14 && (themeOutcomeSummary?.effectiveSamples || 0) >= 3.5 && themePositiveSignals <= themeNegativeSignals) themeFatiguePenalty += 5;
+        else if (themeShown >= 8 && (themeOutcomeSummary?.effectiveSamples || 0) >= 2.2 && themePositiveSignals < themeNegativeSignals) themeFatiguePenalty += 3;
+
+        const fatiguePenalty = exposurePenalty + recentRepeatPenalty + lowEngagementPenalty + adviceOutcomePenalty + themeFatiguePenalty;
+
+        return {
+            total: roundTraceNumber(fatiguePenalty, 2),
+            parts: {
+                exposurePenalty: roundTraceNumber(exposurePenalty, 2),
+                recentRepeatPenalty: roundTraceNumber(recentRepeatPenalty, 2),
+                lowEngagementPenalty: roundTraceNumber(lowEngagementPenalty, 2),
+                adviceOutcomePenalty: roundTraceNumber(adviceOutcomePenalty, 2),
+                themeFatiguePenalty: roundTraceNumber(themeFatiguePenalty, 2)
+            }
+        };
+    }
+
+    function buildAdviceScoreProfile(advice, ctx, stats, ratings, outcomeProfiles) {
+        const adviceStats = stats?.[advice?.id] || null;
+        const ratingStats = ratings?.[advice?.id] || { positive: 0, negative: 0 };
+        const totalRatings = (ratingStats?.positive || 0) + (ratingStats?.negative || 0);
+        const evidenceScore = advice?.expertMeta?.evidenceScore || 0;
+        const sourceCount = advice?.expertMeta?.sourceCount || 0;
+        const contradictionsCount = Array.isArray(advice?.expertMeta?.contradictions)
+            ? advice.expertMeta.contradictions.length
+            : 0;
+        const responseMemoryScore = advice?.expertMeta?.responseMemory?.score || 0;
+
+        const basePriority = 100 - (advice?.priority || 0);
+
+        let ctrBoost = 0;
+        if (adviceStats && adviceStats.shown >= 3) {
+            const ctr = adviceStats.clicked / Math.max(1, adviceStats.shown);
+            ctrBoost = ctr * 50 * CTR_WEIGHT;
+        }
+
+        let ratingBoost = 0;
+        if (totalRatings >= 2) {
+            const ratingScore = ((ratingStats?.positive || 0) - (ratingStats?.negative || 0)) / totalRatings;
+            ratingBoost = ratingScore * 30 * CTR_WEIGHT;
+        }
+
+        let recencyBoost = 10 * RECENCY_WEIGHT;
+        let noveltyBoost = 4;
+        if (adviceStats?.lastShown) {
+            const hoursSince = (Date.now() - adviceStats.lastShown) / (1000 * 60 * 60);
+            recencyBoost = hoursSince > 24
+                ? Math.min(hoursSince / 24, 5) * 10 * RECENCY_WEIGHT
+                : 0;
+            noveltyBoost = hoursSince >= 72
+                ? 6
+                : hoursSince >= 24
+                    ? 3
+                    : 0;
+        }
+
+        let relevanceBoost = 0;
+        if (advice?.category === 'nutrition' && advice?.nutrient) {
+            const pct = (ctx?.dayTot?.[advice.nutrient] || 0) / (ctx?.normAbs?.[advice.nutrient] || 100);
+            if (pct < 0.5) relevanceBoost = 20 * RELEVANCE_WEIGHT;
+        }
+
+        let crashBoost = 0;
+        if (ctx?.crashRisk?.level === 'high') {
+            const crashPreventionCategories = ['emotional', 'nutrition', 'recovery'];
+            const crashPreventionIds = [
+                'crash_support', 'stress_support', 'sleep_hunger_correlation',
+                'undereating_warning', 'evening_undereating', 'chronic_undereating_pattern'
+            ];
+
+            if (crashPreventionCategories.includes(advice?.category) || crashPreventionIds.includes(advice?.id)) {
+                crashBoost = 30;
+            }
+        } else if (ctx?.crashRisk?.level === 'medium') {
+            if (advice?.category === 'emotional' || advice?.id?.includes('stress')) {
+                crashBoost = 15;
+            }
+        }
+
+        const evidenceBoost = Math.min(24, evidenceScore / 3.5);
+        const sourceBoost = Math.min(10, sourceCount * 3);
+        const urgencyBoost = advice?.expertMeta?.actionNow?.urgency === 'now'
+            ? 12
+            : advice?.expertMeta?.actionNow?.urgency === 'today'
+                ? 5
+                : 0;
+        const actionabilityBoost = getAdviceActionabilityBoost(advice, ctx);
+        const actionabilityPenalty = getAdviceActionabilityPenalty(advice, ctx);
+        const responseMemoryBoost = clampAdviceScore(responseMemoryScore, -10, 10);
+        const contradictionPenalty = contradictionsCount * 10;
+        const fatiguePenalty = getAdviceFatiguePenalty(advice, adviceStats, outcomeProfiles);
+        const trustPenalty = getAdviceTrustPenalty(advice, ctx);
+
+        const finalScore = basePriority
+            + ctrBoost
+            + ratingBoost
+            + recencyBoost
+            + relevanceBoost
+            + crashBoost
+            + evidenceBoost
+            + sourceBoost
+            + urgencyBoost
+            + actionabilityBoost
+            + responseMemoryBoost
+            + noveltyBoost
+            - contradictionPenalty
+            - actionabilityPenalty
+            - trustPenalty
+            - fatiguePenalty.total;
+
+        return {
+            finalScore: roundTraceNumber(finalScore, 2),
+            components: {
+                basePriority: roundTraceNumber(basePriority, 2),
+                ctrBoost: roundTraceNumber(ctrBoost, 2),
+                ratingBoost: roundTraceNumber(ratingBoost, 2),
+                recencyBoost: roundTraceNumber(recencyBoost, 2),
+                relevanceBoost: roundTraceNumber(relevanceBoost, 2),
+                crashBoost: roundTraceNumber(crashBoost, 2),
+                evidenceBoost: roundTraceNumber(evidenceBoost, 2),
+                sourceBoost: roundTraceNumber(sourceBoost, 2),
+                urgencyBoost: roundTraceNumber(urgencyBoost, 2),
+                actionabilityBoost: roundTraceNumber(actionabilityBoost, 2),
+                actionabilityPenalty: roundTraceNumber(actionabilityPenalty, 2),
+                responseMemoryBoost: roundTraceNumber(responseMemoryBoost, 2),
+                noveltyBoost: roundTraceNumber(noveltyBoost, 2),
+                contradictionPenalty: roundTraceNumber(contradictionPenalty, 2),
+                trustPenalty: roundTraceNumber(trustPenalty, 2),
+                fatiguePenalty: roundTraceNumber(fatiguePenalty.total, 2),
+                fatigueParts: cloneTracePayload(fatiguePenalty.parts) || null
+            },
+            dimensions: {
+                evidence: roundTraceNumber(clampAdviceScore((evidenceBoost + sourceBoost) / 34, 0, 1), 3),
+                actionability: roundTraceNumber(clampAdviceScore((urgencyBoost + actionabilityBoost - actionabilityPenalty) / 22, 0, 1), 3),
+                personalization: roundTraceNumber(clampAdviceScore((responseMemoryBoost + 10) / 20, 0, 1), 3),
+                novelty: roundTraceNumber(clampAdviceScore(noveltyBoost / 6, 0, 1), 3),
+                safety: roundTraceNumber(clampAdviceScore(1 - (contradictionPenalty / 30), 0, 1), 3),
+                fatigueResistance: roundTraceNumber(clampAdviceScore(1 - (fatiguePenalty.total / 24), 0, 1), 3),
+                trust: roundTraceNumber(clampAdviceScore(1 - (trustPenalty / 12), 0, 1), 3)
+            }
+        };
+    }
+
     /**
      * Сортирует советы по smart score
      * @param {Array} advices
@@ -609,9 +911,17 @@
         // 🚀 Оптимизация: кэшируем stats и ratings для всей сортировки
         const cachedStats = getTrackingStats();
         const cachedRatings = getAllRatings();
+        const cachedOutcomeProfiles = getAdviceOutcomeProfiles();
 
         return advices
-            .map(a => ({ ...a, smartScore: calculateSmartScoreCached(a, ctx, cachedStats, cachedRatings) }))
+            .map(a => {
+                const scoreProfile = buildAdviceScoreProfile(a, ctx, cachedStats, cachedRatings, cachedOutcomeProfiles);
+                return {
+                    ...a,
+                    smartScore: scoreProfile.finalScore,
+                    scoreProfile
+                };
+            })
             .sort((a, b) => b.smartScore - a.smartScore);
     }
 
@@ -624,74 +934,7 @@
      * @returns {number}
      */
     function calculateSmartScoreCached(advice, ctx, stats, ratings) {
-        let score = 100 - advice.priority;
-
-        // 1. CTR factor
-        const adviceStats = stats[advice.id];
-        if (adviceStats && adviceStats.shown >= 3) {
-            const ctr = adviceStats.clicked / adviceStats.shown;
-            score += ctr * 50 * CTR_WEIGHT;
-        }
-
-        // 2. Rating factor
-        const r = ratings[advice.id] || { positive: 0, negative: 0 };
-        const total = r.positive + r.negative;
-        if (total >= 2) {
-            const ratingScore = (r.positive - r.negative) / total;
-            score += ratingScore * 30 * CTR_WEIGHT;
-        }
-
-        // 3. Recency factor
-        if (adviceStats?.lastShown) {
-            const hoursSince = (Date.now() - adviceStats.lastShown) / (1000 * 60 * 60);
-            if (hoursSince > 24) {
-                score += Math.min(hoursSince / 24, 5) * 10 * RECENCY_WEIGHT;
-            }
-        } else {
-            score += 10 * RECENCY_WEIGHT;
-        }
-
-        // 4. Relevance
-        if (advice.category === 'nutrition' && advice.nutrient) {
-            const pct = (ctx.dayTot?.[advice.nutrient] || 0) / (ctx.normAbs?.[advice.nutrient] || 100);
-            if (pct < 0.5) score += 20 * RELEVANCE_WEIGHT;
-        }
-
-        // 5. 🆕 Crash Risk boost — повышаем приоритет советов при высоком риске срыва
-        if (ctx.crashRisk && ctx.crashRisk.level === 'high') {
-            // Советы, связанные с предотвращением срыва, получают бонус
-            const crashPreventionCategories = ['emotional', 'nutrition', 'recovery'];
-            const crashPreventionIds = [
-                'crash_support', 'stress_support', 'sleep_hunger_correlation',
-                'undereating_warning', 'evening_undereating', 'chronic_undereating_pattern'
-            ];
-
-            if (crashPreventionCategories.includes(advice.category) ||
-                crashPreventionIds.includes(advice.id)) {
-                score += 30; // Значительный бонус при высоком риске
-            }
-        } else if (ctx.crashRisk && ctx.crashRisk.level === 'medium') {
-            // Умеренный бонус при среднем риске
-            if (advice.category === 'emotional' || advice.id?.includes('stress')) {
-                score += 15;
-            }
-        }
-
-        // 6. Expert evidence factor
-        const evidenceScore = advice?.expertMeta?.evidenceScore || 0;
-        const sourceCount = advice?.expertMeta?.sourceCount || 0;
-        const contradictionsCount = Array.isArray(advice?.expertMeta?.contradictions)
-            ? advice.expertMeta.contradictions.length
-            : 0;
-        const urgency = advice?.expertMeta?.actionNow?.urgency;
-
-        score += Math.min(24, evidenceScore / 3.5);
-        score += Math.min(10, sourceCount * 3);
-        if (urgency === 'now') score += 12;
-        else if (urgency === 'today') score += 5;
-        score -= contradictionsCount * 10;
-
-        return score;
+        return buildAdviceScoreProfile(advice, ctx, stats, ratings, getAdviceOutcomeProfiles()).finalScore;
     }
 
     // ═══════════════════════════════════════════════════════════
@@ -2151,16 +2394,18 @@
         let autoSignals = 0;
 
         weighted.forEach(({ stats, weight }) => {
-            positiveScore += ((stats.click || 0) * 1.1 + (stats.read || 0) * 0.45 + (stats.positive || 0) * 1.8 + (stats.autoSuccess || 0) * 1.5) * weight;
-            negativeScore += ((stats.hidden || 0) * 1.0 + (stats.negative || 0) * 1.8 + (stats.autoFailure || 0) * 1.45) * weight;
-            sampleCount += (stats.click || 0) + (stats.read || 0) + (stats.hidden || 0) + (stats.positive || 0) + (stats.negative || 0) + (stats.autoSuccess || 0) + (stats.autoFailure || 0);
-            autoSignals += (stats.autoSuccess || 0) + (stats.autoFailure || 0);
+            const summary = summarizeOutcomeSignals(stats);
+            if (!summary) return;
+            positiveScore += (summary.adjustedPositive || 0) * weight;
+            negativeScore += (summary.adjustedNegative || 0) * weight;
+            sampleCount += (summary.effectiveSamples || 0) * weight;
+            autoSignals += summary.autoSignals || 0;
         });
 
-        if (sampleCount < 2 && autoSignals === 0) return null;
+        if (sampleCount < 1.25 && autoSignals < 2) return null;
 
         const balance = positiveScore - negativeScore;
-        const score = Math.max(-18, Math.min(18, balance * 3.2));
+        const score = Math.max(-18, Math.min(18, balance * 2.7));
         let label = 'нейтральный отклик';
         let message = 'Пока мало признаков, что этот тип совета заметно лучше или хуже обычного.';
 
@@ -2182,7 +2427,7 @@
             score,
             label,
             message,
-            sampleCount,
+            sampleCount: roundTraceNumber(sampleCount, 2),
             autoSignals,
             contextKey
         };
@@ -2602,6 +2847,7 @@
     function buildAdviceTraceRefs(list, includeText = false) {
         return (Array.isArray(list) ? list : []).map((advice, index) => {
             const id = advice?.id || `unknown_${index}`;
+            const scoreProfile = advice?.scoreProfile || null;
             const ref = {
                 key: getAdviceTraceKey(list, index),
                 id,
@@ -2610,6 +2856,22 @@
                 module: advice?.__traceModule || advice?.__traceSource || null,
                 priority: typeof advice?.priority === 'number' ? advice.priority : null,
                 smartScore: roundTraceNumber(advice?.smartScore),
+                scoreProfile: scoreProfile
+                    ? {
+                        finalScore: roundTraceNumber(scoreProfile?.finalScore, 2),
+                        dimensions: cloneTracePayload(scoreProfile?.dimensions) || null,
+                        components: {
+                            evidenceBoost: roundTraceNumber(scoreProfile?.components?.evidenceBoost, 2),
+                            actionabilityBoost: roundTraceNumber(scoreProfile?.components?.actionabilityBoost, 2),
+                            actionabilityPenalty: roundTraceNumber(scoreProfile?.components?.actionabilityPenalty, 2),
+                            responseMemoryBoost: roundTraceNumber(scoreProfile?.components?.responseMemoryBoost, 2),
+                            noveltyBoost: roundTraceNumber(scoreProfile?.components?.noveltyBoost, 2),
+                            contradictionPenalty: roundTraceNumber(scoreProfile?.components?.contradictionPenalty, 2),
+                            trustPenalty: roundTraceNumber(scoreProfile?.components?.trustPenalty, 2),
+                            fatiguePenalty: roundTraceNumber(scoreProfile?.components?.fatiguePenalty, 2)
+                        }
+                    }
+                    : null,
                 confidence: advice?.confidence || null,
                 canSkipCooldown: !!advice?.canSkipCooldown
             };
@@ -2786,31 +3048,130 @@
         }, {}));
     }
 
+    function getAdviceConflictTheme(advice) {
+        return advice?.expertMeta?.theme || advice?.category || 'general';
+    }
+
+    function getAdviceUrgencyRank(advice) {
+        const urgency = advice?.expertMeta?.actionNow?.urgency;
+        if (urgency === 'now') return 3;
+        if (urgency === 'today') return 2;
+        if (urgency === 'watch') return 0;
+        return 1;
+    }
+
+    function getAdviceCausalRank(advice) {
+        const relevance = advice?.expertMeta?.causal?.relevance;
+        if (relevance === 'root') return 3;
+        if (relevance === 'mechanism') return 2;
+        if (relevance === 'outcome') return 1;
+        return 0;
+    }
+
+    function explainExpertConflictOutcome(winner, loser, options = {}) {
+        if (!winner || !loser) return null;
+
+        const winnerProfile = winner?.scoreProfile || {};
+        const loserProfile = loser?.scoreProfile || {};
+        const winnerComponents = winnerProfile?.components || {};
+        const loserComponents = loserProfile?.components || {};
+        const winnerMeta = winner?.expertMeta || {};
+        const loserMeta = loser?.expertMeta || {};
+        const candidates = [];
+
+        const pushCandidate = (key, delta, message) => {
+            if (typeof delta !== 'number' || !Number.isFinite(delta)) return;
+            if (delta <= 0.25 || !message) return;
+            candidates.push({
+                key,
+                delta: roundTraceNumber(delta, 2),
+                message
+            });
+        };
+
+        const winnerActionabilityNet = (winnerComponents?.actionabilityBoost || 0) - (winnerComponents?.actionabilityPenalty || 0);
+        const loserActionabilityNet = (loserComponents?.actionabilityBoost || 0) - (loserComponents?.actionabilityPenalty || 0);
+        const actionabilityDelta = winnerActionabilityNet - loserActionabilityNet;
+        pushCandidate('actionability', actionabilityDelta, `лучше по actionability (+${roundTraceNumber(actionabilityDelta, 1)})`);
+
+        const trustDelta = (loserComponents?.trustPenalty || 0) - (winnerComponents?.trustPenalty || 0);
+        pushCandidate('trust', trustDelta, `выше trust (+${roundTraceNumber(trustDelta, 1)})`);
+
+        const fatigueDelta = (loserComponents?.fatiguePenalty || 0) - (winnerComponents?.fatiguePenalty || 0);
+        pushCandidate('fatigue', fatigueDelta, `меньше fatigue (+${roundTraceNumber(fatigueDelta, 1)})`);
+
+        const evidenceDelta = (winnerMeta?.evidenceScore || 0) - (loserMeta?.evidenceScore || 0);
+        pushCandidate('evidence', evidenceDelta, `сильнее evidence (+${roundTraceNumber(evidenceDelta, 1)})`);
+
+        const responseDelta = (winnerComponents?.responseMemoryBoost || 0) - (loserComponents?.responseMemoryBoost || 0);
+        pushCandidate('response_memory', responseDelta, `лучше response memory (+${roundTraceNumber(responseDelta, 1)})`);
+
+        const noveltyDelta = (winnerComponents?.noveltyBoost || 0) - (loserComponents?.noveltyBoost || 0);
+        pushCandidate('novelty', noveltyDelta, `выше novelty (+${roundTraceNumber(noveltyDelta, 1)})`);
+
+        const urgencyDelta = getAdviceUrgencyRank(winner) - getAdviceUrgencyRank(loser);
+        pushCandidate('urgency', urgencyDelta * 6, 'более срочный actionNow');
+
+        const causalDelta = getAdviceCausalRank(winner) - getAdviceCausalRank(loser);
+        pushCandidate('causal', causalDelta * 5, 'ближе к root-cause логике');
+
+        if (winner?.type === 'warning' && loser?.type !== 'warning') {
+            pushCandidate('risk_priority', 4, 'warning получил приоритет по риску');
+        }
+
+        const finalScoreDelta = (winnerProfile?.finalScore || winner?.smartScore || 0) - (loserProfile?.finalScore || loser?.smartScore || 0);
+        const drivers = candidates
+            .sort((a, b) => (b.delta || 0) - (a.delta || 0))
+            .slice(0, 3);
+
+        return {
+            conflictScope: options?.conflictScope || 'same_theme',
+            winnerId: winner?.id || null,
+            loserId: loser?.id || null,
+            winnerTheme: getAdviceConflictTheme(winner),
+            loserTheme: getAdviceConflictTheme(loser),
+            finalScoreDelta: roundTraceNumber(finalScoreDelta, 2),
+            summary: drivers.length > 0
+                ? `победил, потому что ${drivers.map(item => item.message).join(', ')}`
+                : `победил по суммарному expert priority (+${roundTraceNumber(finalScoreDelta, 1)})`,
+            drivers
+        };
+    }
+
     function buildExpertConflictReasonMap(beforeList, afterList) {
         const keptIds = new Set((afterList || []).map(item => item?.id));
         const winnersByTheme = (afterList || []).reduce((acc, advice) => {
-            const theme = advice?.expertMeta?.theme || advice?.category || 'general';
+            const theme = getAdviceConflictTheme(advice);
             if (!acc[theme]) acc[theme] = advice;
             return acc;
         }, {});
 
         return buildTraceReasonMapEntries((beforeList || []).reduce((acc, advice) => {
             if (!advice?.id || keptIds.has(advice.id)) return acc;
-            const theme = advice?.expertMeta?.theme || advice?.category || 'general';
+            const theme = getAdviceConflictTheme(advice);
             const sameThemeWinner = winnersByTheme[theme];
             const crossThemeWinner = (afterList || []).find(item => {
-                const itemTheme = item?.expertMeta?.theme || item?.category || 'general';
+                const itemTheme = getAdviceConflictTheme(item);
                 return getCrossThemeConflicts(theme).includes(itemTheme);
             });
             const winner = sameThemeWinner || crossThemeWinner || null;
+            const counterfactual = winner
+                ? explainExpertConflictOutcome(winner, advice, {
+                    conflictScope: sameThemeWinner ? 'same_theme' : 'cross_theme'
+                })
+                : null;
 
             acc[advice.id] = {
                 code: 'expert_conflict_resolution',
                 message: winner
-                    ? `Уступил более сильному совету ${winner.id}`
+                    ? `Уступил более сильному совету ${winner.id}${counterfactual?.summary ? `: ${counterfactual.summary}` : ''}`
                     : 'Уступил более сильному совету в expert conflict resolution',
                 theme,
-                winnerId: winner?.id || null
+                winnerId: winner?.id || null,
+                conflictScope: counterfactual?.conflictScope || null,
+                counterfactualSummary: counterfactual?.summary || null,
+                finalScoreDelta: counterfactual?.finalScoreDelta ?? null,
+                drivers: Array.isArray(counterfactual?.drivers) ? counterfactual.drivers : []
             };
             return acc;
         }, {}));
@@ -3055,7 +3416,8 @@
             }
             if (Array.isArray(stage.removed) && stage.removed.length > 0) {
                 lines.push(`  removed: ${stage.removed.map(item => {
-                    const reason = item.reason?.message ? ` (${item.reason.message})` : '';
+                    const reasonMessage = item.reason?.message || item.reason?.counterfactualSummary || '';
+                    const reason = reasonMessage ? ` (${reasonMessage})` : '';
                     return `${item.id}${reason}`;
                 }).join(', ')}`);
             }
@@ -3235,7 +3597,18 @@
                             reason: item?.reason
                                 ? {
                                     code: item.reason.code || null,
-                                    message: item.reason.message || null
+                                    message: item.reason.message || null,
+                                    winnerId: item.reason.winnerId || null,
+                                    conflictScope: item.reason.conflictScope || null,
+                                    counterfactualSummary: item.reason.counterfactualSummary || null,
+                                    finalScoreDelta: item.reason.finalScoreDelta ?? null,
+                                    drivers: Array.isArray(item.reason.drivers)
+                                        ? item.reason.drivers.slice(0, 3).map(driver => ({
+                                            key: driver?.key || null,
+                                            delta: driver?.delta ?? null,
+                                            message: driver?.message || null
+                                        }))
+                                        : []
                                 }
                                 : null
                         }))
@@ -5295,12 +5668,17 @@
                     ? 4
                     : 0;
         const responseBonus = advice?.expertMeta?.responseMemory?.score || 0;
+        const scoreProfile = advice?.scoreProfile || null;
+        const profileActionability = scoreProfile?.components?.actionabilityBoost || 0;
+        const profileNovelty = scoreProfile?.components?.noveltyBoost || 0;
 
-        return (advice?.smartScore || 0)
+        return (scoreProfile?.finalScore || advice?.smartScore || 0)
             + (advice?.expertMeta?.evidenceScore || 0)
             + ((urgencyWeight[advice?.expertMeta?.actionNow?.urgency] || 0) * 8)
             + causalBonus
-            + responseBonus;
+            + responseBonus
+            + profileActionability
+            + profileNovelty;
     }
 
     function applyExpertConflictResolution(advices) {
@@ -6494,8 +6872,12 @@
         getDailyAdviceTraceDiagnostics,
         appendDailyAdviceTraceSnapshot,
         recordDailyAdviceTraceEvent,
+        resolveAdviceResponseMemory,
         enrichAdvicesWithExpertContext,
         applyExpertConflictResolution,
+        buildExpertConflictReasonMap,
+        explainExpertConflictOutcome,
+        getAdviceFatiguePenalty,
         formatAdviceTraceForClipboard,
         formatDailyAdviceTraceForClipboard,
         // 🆕 Phase 5 helpers

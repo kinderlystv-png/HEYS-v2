@@ -61,6 +61,7 @@ const makeCtx = (overrides = {}) => {
     hour: overrides.hour ?? 19,
     mealCount: overrides.mealCount ?? 1,
     hasTraining: overrides.hasTraining ?? false,
+    trigger: overrides.trigger ?? 'tab_open',
     kcalPct,
     tone: overrides.tone ?? 'active',
     specialDay: overrides.specialDay ?? null,
@@ -75,6 +76,31 @@ const makeCtx = (overrides = {}) => {
     }
   };
 };
+
+const makeOtherHelpers = (overrides = {}) => ({
+  rules: window.HEYS.adviceRules,
+  pickRandomText: (items) => Array.isArray(items) ? (items[0] || '') : (items || ''),
+  personalizeText: (text) => text,
+  getRecentDays: overrides.getRecentDays || (() => overrides.recentDays || []),
+  getProductForItem: overrides.getProductForItem || (() => null),
+  calculateSleepHours: overrides.calculateSleepHours || (() => 8),
+  isInTargetRange: overrides.isInTargetRange || (() => false),
+  isCriticallyOver: overrides.isCriticallyOver || (() => false),
+  isMilestoneShown: overrides.isMilestoneShown || (() => false),
+  markMilestoneShown: overrides.markMilestoneShown || (() => {}),
+  updatePersonalBestStreak: overrides.updatePersonalBestStreak || (() => false),
+  getWeeklyComparison: overrides.getWeeklyComparison || (() => null),
+  getWeeklySummary: overrides.getWeeklySummary || (() => null),
+  getNextStreakMilestone: overrides.getNextStreakMilestone || (() => null),
+  checkComboAchievements: overrides.checkComboAchievements || (() => null),
+  markComboShown: overrides.markComboShown || (() => {}),
+  getSmartRecommendation: overrides.getSmartRecommendation || (() => null),
+  getTotalDaysTracked: overrides.getTotalDaysTracked || (() => 0)
+});
+
+const buildOtherAdvices = (ctxOverrides = {}, helperOverrides = {}) => (
+  window.HEYS.adviceModules.other(makeCtx(ctxOverrides), makeOtherHelpers(helperOverrides))
+);
 
 beforeAll(async () => {
   ensureWindow();
@@ -150,6 +176,404 @@ describe('HEYS advice engine', () => {
     const result = window.HEYS.advice.adaptTextToMood('Текст', 1, 'warning');
 
     expect(result).toBeNull();
+  });
+
+  it('does not add celebratory tone to warnings on high mood', () => {
+    const result = window.HEYS.advice.adaptTextToMood('Вес растёт — проверь калории', 5, 'warning');
+
+    expect(result).toBe('Вес растёт — проверь калории');
+  });
+
+  it('still decorates achievements on high mood', () => {
+    const result = window.HEYS.advice.adaptTextToMood('План выдержан', 5, 'achievement');
+
+    expect(result).toMatch(/^(Отлично! |Супер! |Так держать! )План выдержан( 🎉| 💪)?$/);
+  });
+
+  it('treats downward weight trend as warning for bulk goal', () => {
+    const advices = buildOtherAdvices({
+      goal: {
+        mode: 'bulk',
+        targetRange: { min: 0.95, max: 1.1 },
+        criticalOver: 1.2,
+        criticalUnder: 0.8
+      },
+      prof: { deficitPctTarget: 10, weightGoal: 85 },
+      day: { weightMorning: 79, meals: [], trainings: [], waterMl: 0, deficitPct: 10 }
+    }, {
+      recentDays: [
+        { weightMorning: 79.8 },
+        { weightMorning: 79.7 },
+        { weightMorning: 79.6 },
+        { weightMorning: 79.4 },
+        { weightMorning: 79.2 },
+        { weightMorning: 79.1 },
+        { weightMorning: 79.0 }
+      ]
+    });
+
+    const advice = advices.find(item => item.id === 'weight_trend_down');
+
+    expect(advice).toMatchObject({
+      type: 'warning',
+      text: 'Вес снижается — проверь калории и восстановление'
+    });
+    expect(advice.details).toContain('Для набора это сигнал');
+  });
+
+  it('treats moderate upward weight trend as achievement for bulk goal', () => {
+    const advices = buildOtherAdvices({
+      goal: {
+        mode: 'bulk',
+        targetRange: { min: 0.95, max: 1.1 },
+        criticalOver: 1.2,
+        criticalUnder: 0.8
+      },
+      prof: { deficitPctTarget: 10, weightGoal: 78 },
+      day: { weightMorning: 71, meals: [], trainings: [], waterMl: 0, deficitPct: 10 }
+    }, {
+      recentDays: [
+        { weightMorning: 70.0 },
+        { weightMorning: 70.2 },
+        { weightMorning: 70.4 },
+        { weightMorning: 70.5 },
+        { weightMorning: 70.6 },
+        { weightMorning: 70.8 },
+        { weightMorning: 71.0 }
+      ]
+    });
+
+    const advice = advices.find(item => item.id === 'weight_trend_up');
+
+    expect(advice).toMatchObject({
+      type: 'achievement',
+      text: 'Вес растёт в нужную сторону'
+    });
+    expect(advice.details).toContain('рабочим темпом');
+  });
+
+  it('uses multi-factor score profile to prioritize actionable personalized advice', () => {
+    const ctx = makeCtx({
+      trigger: 'tab_open',
+      crashRisk: { level: 'low' }
+    });
+
+    const sorted = window.HEYS.advice.sortBySmartScore([
+      {
+        id: 'baseline_tip',
+        text: 'Baseline tip',
+        type: 'tip',
+        priority: 40,
+        category: 'other',
+        expertMeta: {}
+      },
+      {
+        id: 'actionable_personalized_tip',
+        text: 'Actionable tip',
+        type: 'tip',
+        priority: 40,
+        category: 'other',
+        expertMeta: {
+          actionNow: { urgency: 'now', label: 'Сделай это сейчас' },
+          responseMemory: { score: 7, label: 'обычно помогает' },
+          evidenceScore: 28,
+          sourceCount: 2
+        }
+      }
+    ], ctx);
+
+    expect(sorted[0].id).toBe('actionable_personalized_tip');
+    expect(sorted[0].scoreProfile).toBeTruthy();
+    expect(sorted[0].scoreProfile.components.actionabilityBoost).toBeGreaterThan(0);
+    expect(sorted[0].scoreProfile.components.responseMemoryBoost).toBeGreaterThan(0);
+    expect(sorted[0].smartScore).toBeGreaterThan(sorted[1].smartScore);
+  });
+
+  it('applies fatigue penalty to over-shown low-response advice', () => {
+    localStorage.setItem(window.HEYS.adviceRules.TRACKING_KEY, JSON.stringify({
+      repeated_tip: {
+        shown: 14,
+        clicked: 0,
+        lastShown: Date.now() - (2 * 60 * 60 * 1000)
+      }
+    }));
+    localStorage.setItem('heys_advice_outcomes_v1', JSON.stringify({
+      advice: {
+        repeated_tip: {
+          shown: 14,
+          click: 0,
+          read: 0,
+          hidden: 5,
+          positive: 0,
+          negative: 3,
+          autoSuccess: 0,
+          autoFailure: 4,
+          autoNeutral: 0,
+          lastUpdated: Date.now()
+        }
+      },
+      theme: {
+        hydration: {
+          shown: 18,
+          click: 0,
+          read: 1,
+          hidden: 6,
+          positive: 0,
+          negative: 3,
+          autoSuccess: 0,
+          autoFailure: 4,
+          autoNeutral: 0,
+          lastUpdated: Date.now()
+        }
+      },
+      context: {},
+      lastUpdated: Date.now()
+    }));
+
+    const ctx = makeCtx({ trigger: 'tab_open' });
+    const sorted = window.HEYS.advice.sortBySmartScore([
+      {
+        id: 'repeated_tip',
+        text: 'Repeated tip',
+        type: 'tip',
+        priority: 40,
+        category: 'hydration',
+        expertMeta: {
+          theme: 'hydration',
+          evidenceScore: 18,
+          sourceCount: 1
+        }
+      },
+      {
+        id: 'fresh_tip',
+        text: 'Fresh tip',
+        type: 'tip',
+        priority: 40,
+        category: 'hydration',
+        expertMeta: {
+          theme: 'hydration',
+          evidenceScore: 18,
+          sourceCount: 1
+        }
+      }
+    ], ctx);
+
+    const repeated = sorted.find(item => item.id === 'repeated_tip');
+    const fresh = sorted.find(item => item.id === 'fresh_tip');
+
+    expect(sorted[0].id).toBe('fresh_tip');
+    expect(repeated.scoreProfile.components.fatiguePenalty).toBeGreaterThan(0);
+    expect(repeated.scoreProfile.dimensions.fatigueResistance).toBeLessThan(fresh.scoreProfile.dimensions.fatigueResistance);
+    expect(repeated.smartScore).toBeLessThan(fresh.smartScore);
+  });
+
+  it('demotes low-trust low-actionability warning in auto context', () => {
+    const ctx = makeCtx({
+      trigger: 'tab_open',
+      mealCount: 0,
+      day: { meals: [] }
+    });
+
+    const sorted = window.HEYS.advice.sortBySmartScore([
+      {
+        id: 'low_trust_warning',
+        text: 'Weak warning',
+        type: 'warning',
+        priority: 35,
+        category: 'nutrition',
+        confidence: 'low',
+        expertMeta: {
+          evidenceScore: 8,
+          sourceCount: 1,
+          contradictions: ['soft contradiction'],
+          responseMemory: { score: -6, label: 'часто не заходит' },
+          actionNow: { urgency: 'watch' }
+        }
+      },
+      {
+        id: 'actionable_supportive_tip',
+        text: 'Supportive tip',
+        type: 'tip',
+        priority: 40,
+        category: 'other',
+        confidence: 'medium',
+        expertMeta: {
+          evidenceScore: 18,
+          sourceCount: 2,
+          actionNow: { urgency: 'now', label: 'Сделай маленький шаг сейчас' },
+          responseMemory: { score: 2, label: 'скорее полезен' }
+        }
+      }
+    ], ctx);
+
+    const weakWarning = sorted.find(item => item.id === 'low_trust_warning');
+    const actionableTip = sorted.find(item => item.id === 'actionable_supportive_tip');
+
+    expect(sorted[0].id).toBe('actionable_supportive_tip');
+    expect(weakWarning.scoreProfile.components.trustPenalty).toBeGreaterThan(0);
+    expect(weakWarning.scoreProfile.components.actionabilityPenalty).toBeGreaterThan(0);
+    expect(weakWarning.scoreProfile.dimensions.trust).toBeLessThan(actionableTip.scoreProfile.dimensions.trust);
+    expect(weakWarning.smartScore).toBeLessThan(actionableTip.smartScore);
+  });
+
+  it('adds counterfactual explainability for expert conflict losers', () => {
+    const ctx = makeCtx({
+      trigger: 'tab_open',
+      mealCount: 1,
+      day: { meals: [{ time: '10:00', items: [{ name: 'Meal', grams: 100 }] }] }
+    });
+
+    const scored = window.HEYS.advice.sortBySmartScore([
+      {
+        id: 'lower_signal_hydration_tip',
+        text: 'Drink more water later',
+        type: 'tip',
+        priority: 42,
+        category: 'hydration',
+        confidence: 'low',
+        expertMeta: {
+          theme: 'hydration',
+          evidenceScore: 10,
+          sourceCount: 1,
+          contradictions: ['late for this reminder'],
+          actionNow: { urgency: 'watch' },
+          responseMemory: { score: -3, label: 'часто откладывается' }
+        }
+      },
+      {
+        id: 'strong_hydration_tip',
+        text: 'Drink a glass of water now',
+        type: 'tip',
+        priority: 42,
+        category: 'hydration',
+        confidence: 'medium',
+        expertMeta: {
+          theme: 'hydration',
+          evidenceScore: 24,
+          sourceCount: 2,
+          actionNow: { urgency: 'now', label: 'Сделай это сейчас' },
+          responseMemory: { score: 5, label: 'обычно помогает' }
+        }
+      }
+    ], ctx);
+
+    const resolved = window.HEYS.advice.applyExpertConflictResolution(scored);
+    const reasonMap = window.HEYS.advice.buildExpertConflictReasonMap(scored, resolved);
+    const reason = reasonMap.lower_signal_hydration_tip;
+
+    expect(resolved).toHaveLength(1);
+    expect(resolved[0].id).toBe('strong_hydration_tip');
+    expect(reason.winnerId).toBe('strong_hydration_tip');
+    expect(reason.counterfactualSummary).toContain('победил, потому что');
+    expect(reason.drivers.length).toBeGreaterThan(0);
+    expect(reason.drivers.some(item => item.key === 'actionability' || item.key === 'evidence')).toBe(true);
+    expect(reason.finalScoreDelta).toBeGreaterThan(0);
+  });
+
+  it('calibrates sparse negative outcome history conservatively', () => {
+    const advice = {
+      id: 'hydration_probe',
+      category: 'hydration',
+      expertMeta: { theme: 'hydration' }
+    };
+
+    const responseMemory = window.HEYS.advice.resolveAdviceResponseMemory(advice, makeCtx(), {
+      advice: {
+        hydration_probe: {
+          shown: 1,
+          hidden: 1,
+          click: 0,
+          read: 0,
+          positive: 0,
+          negative: 0,
+          autoSuccess: 0,
+          autoFailure: 0,
+          autoNeutral: 0
+        }
+      },
+      theme: {},
+      context: {}
+    });
+
+    const fatigue = window.HEYS.advice.getAdviceFatiguePenalty(advice, {
+      shown: 5,
+      clicked: 0,
+      lastShown: Date.now() - (10 * 60 * 60 * 1000)
+    }, {
+      advice: {
+        hydration_probe: {
+          shown: 5,
+          hidden: 1,
+          click: 0,
+          read: 0,
+          positive: 0,
+          negative: 0,
+          autoSuccess: 0,
+          autoFailure: 0,
+          autoNeutral: 0
+        }
+      },
+      theme: {},
+      context: {}
+    });
+
+    expect(responseMemory).toBeNull();
+    expect(fatigue.parts.adviceOutcomePenalty).toBe(0);
+  });
+
+  it('keeps strong repeated positive outcome history meaningful after calibration', () => {
+    const advice = {
+      id: 'protein_recovery',
+      category: 'nutrition',
+      expertMeta: { theme: 'protein' }
+    };
+
+    const responseMemory = window.HEYS.advice.resolveAdviceResponseMemory(advice, makeCtx(), {
+      advice: {
+        protein_recovery: {
+          shown: 8,
+          click: 3,
+          read: 2,
+          hidden: 0,
+          positive: 2,
+          negative: 0,
+          autoSuccess: 2,
+          autoFailure: 0,
+          autoNeutral: 1
+        }
+      },
+      theme: {
+        protein: {
+          shown: 14,
+          click: 4,
+          read: 3,
+          hidden: 1,
+          positive: 3,
+          negative: 0,
+          autoSuccess: 3,
+          autoFailure: 0,
+          autoNeutral: 2
+        }
+      },
+      context: {
+        'protein|deficit|low|evening|low': {
+          shown: 6,
+          click: 2,
+          read: 1,
+          hidden: 0,
+          positive: 1,
+          negative: 0,
+          autoSuccess: 1,
+          autoFailure: 0,
+          autoNeutral: 0
+        }
+      }
+    });
+
+    expect(responseMemory).toBeTruthy();
+    expect(responseMemory.score).toBeGreaterThanOrEqual(4);
+    expect(responseMemory.label === 'скорее полезен' || responseMemory.label === 'обычно помогает').toBe(true);
+    expect(responseMemory.sampleCount).toBeGreaterThan(2);
   });
 
   it('downgrades daily quality when cooldown suppresses almost all auto delivery', () => {
@@ -278,6 +702,8 @@ describe('HEYS advice engine', () => {
     expect(result.trace.outputs.visibleForManualCount).toBeGreaterThan(0);
     expect(result.trace.outputs.eligibleForAutoToastCount).toBe(0);
     expect(result.trace.summary.whyNoPrimary).toContain('intentionally disables auto-toast primary');
+    expect(result.trace.outputs.relevant[0]?.scoreProfile?.finalScore).toEqual(expect.any(Number));
+    expect(result.trace.outputs.relevant[0]?.scoreProfile?.dimensions?.actionability).toEqual(expect.any(Number));
   });
 
   it('does not treat manual drawer clicks as engagement for shown auto toasts', () => {

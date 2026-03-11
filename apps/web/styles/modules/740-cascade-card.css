@@ -5,13 +5,30 @@
 ───────────────────────────────────────────────────── */
 
 .cascade-card {
-  background: var(--card-bg, #fff);
+  position: relative;
+  isolation: isolate;
+  background-color: var(--card-bg, #fff);
   border: 1px solid var(--heys-diary-outline-border-light, rgba(255, 255, 255, 0.5));
   border-radius: 16px;
   box-shadow: var(--heys-diary-glass-card-shadow, 0 2px 12px rgba(0, 0, 0, 0.06));
   margin-bottom: var(--heys-diary-stack-gap, 12px);
   overflow: hidden;
   transition: box-shadow 0.2s ease, background 0.6s ease;
+}
+
+.cascade-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--cascade-tone-overlay, none);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.cascade-card>* {
+  position: relative;
+  z-index: 1;
 }
 
 /* ─────────────────────────────────────────────────────
@@ -22,43 +39,37 @@
 
 /* Зелёный — день в основном позитивный (negativeRatio ≤ amberThreshold) */
 .cascade-card--tone-green {
-  background-image: linear-gradient(135deg,
-      rgba(134, 239, 172, 0.50) 0%,
-      rgba(134, 239, 172, 0.20) 42%,
-      rgba(134, 239, 172, 0.05) 72%,
+  --cascade-tone-overlay: radial-gradient(circle at top left,
+      rgba(134, 239, 172, 0.52) 0%,
+      rgba(134, 239, 172, 0.22) 34%,
+      rgba(134, 239, 172, 0.08) 58%,
+      rgba(134, 239, 172, 0.03) 74%,
       transparent 100%);
-  background-size: 100% 180px;
-  background-repeat: no-repeat;
-  background-color: var(--card-bg, #fff);
 }
 
 /* Янтарный — 2-4 негативных события */
 .cascade-card--tone-amber {
-  background-image: linear-gradient(135deg,
-      rgba(245, 158, 11, 0.22) 0%,
-      rgba(245, 158, 11, 0.10) 42%,
-      rgba(245, 158, 11, 0.03) 72%,
+  --cascade-tone-overlay: radial-gradient(circle at top left,
+      rgba(245, 158, 11, 0.24) 0%,
+      rgba(245, 158, 11, 0.11) 34%,
+      rgba(245, 158, 11, 0.05) 58%,
+      rgba(245, 158, 11, 0.02) 74%,
       transparent 100%);
-  background-size: 100% 180px;
-  background-repeat: no-repeat;
-  background-color: var(--card-bg, #fff);
 }
 
 /* Красный — 5+ негативных событий */
 .cascade-card--tone-red {
-  background-image: linear-gradient(135deg,
-      rgba(239, 68, 68, 0.20) 0%,
-      rgba(239, 68, 68, 0.09) 42%,
-      rgba(239, 68, 68, 0.02) 72%,
+  --cascade-tone-overlay: radial-gradient(circle at top left,
+      rgba(239, 68, 68, 0.22) 0%,
+      rgba(239, 68, 68, 0.10) 34%,
+      rgba(239, 68, 68, 0.05) 58%,
+      rgba(239, 68, 68, 0.02) 74%,
       transparent 100%);
-  background-size: 100% 180px;
-  background-repeat: no-repeat;
-  background-color: var(--card-bg, #fff);
 }
 
 /* Нейтральный — нет событий ещё */
 .cascade-card--tone-neutral {
-  background: var(--card-bg, #fff);
+  --cascade-tone-overlay: none;
 }
 
 .cascade-card:hover {
@@ -683,7 +694,7 @@
 ───────────────────────────────────────────────────── */
 
 [data-theme="dark"] .cascade-card {
-  background: var(--card-bg, #1e293b);
+  background-color: var(--card-bg, #1e293b);
   border-color: var(--heys-diary-outline-border-dark, rgba(244, 63, 94, 0.42));
   box-shadow: var(--heys-diary-glass-card-shadow, 0 2px 12px rgba(0, 0, 0, 0.3));
 }
@@ -768,43 +779,37 @@
 
 /* dark: tone-green */
 [data-theme="dark"] .cascade-card--tone-green {
-  background-image: linear-gradient(135deg,
-      rgba(14, 165, 233, 0.22) 0%,
-      rgba(14, 165, 233, 0.10) 42%,
-      rgba(14, 165, 233, 0.03) 72%,
+  --cascade-tone-overlay: radial-gradient(circle at top left,
+      rgba(14, 165, 233, 0.24) 0%,
+      rgba(14, 165, 233, 0.12) 34%,
+      rgba(14, 165, 233, 0.05) 58%,
+      rgba(14, 165, 233, 0.02) 74%,
       transparent 100%);
-  background-size: 100% 180px;
-  background-repeat: no-repeat;
-  background-color: var(--card-bg, #1e293b);
 }
 
 /* dark: tone-amber */
 [data-theme="dark"] .cascade-card--tone-amber {
-  background-image: linear-gradient(135deg,
-      rgba(245, 158, 11, 0.28) 0%,
-      rgba(245, 158, 11, 0.13) 42%,
-      rgba(245, 158, 11, 0.04) 72%,
+  --cascade-tone-overlay: radial-gradient(circle at top left,
+      rgba(245, 158, 11, 0.30) 0%,
+      rgba(245, 158, 11, 0.15) 34%,
+      rgba(245, 158, 11, 0.06) 58%,
+      rgba(245, 158, 11, 0.02) 74%,
       transparent 100%);
-  background-size: 100% 180px;
-  background-repeat: no-repeat;
-  background-color: var(--card-bg, #1e293b);
 }
 
 /* dark: tone-red */
 [data-theme="dark"] .cascade-card--tone-red {
-  background-image: linear-gradient(135deg,
-      rgba(239, 68, 68, 0.28) 0%,
-      rgba(239, 68, 68, 0.12) 42%,
-      rgba(239, 68, 68, 0.04) 72%,
+  --cascade-tone-overlay: radial-gradient(circle at top left,
+      rgba(239, 68, 68, 0.30) 0%,
+      rgba(239, 68, 68, 0.14) 34%,
+      rgba(239, 68, 68, 0.06) 58%,
+      rgba(239, 68, 68, 0.02) 74%,
       transparent 100%);
-  background-size: 100% 180px;
-  background-repeat: no-repeat;
-  background-color: var(--card-bg, #1e293b);
 }
 
 /* dark: tone-neutral */
 [data-theme="dark"] .cascade-card--tone-neutral {
-  background: var(--card-bg, #1e293b);
+  --cascade-tone-overlay: none;
 }
 
 /* dark: strong — переопределяется tone-классом */

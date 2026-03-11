@@ -9,6 +9,10 @@
   // React imports
   const { createElement: h, useState, useMemo } = window.React || {};
 
+  function formatScoreValue(score) {
+    return Number.isFinite(score) ? score : '—';
+  }
+
   /**
    * Pattern metadata — маппинг ID паттерна на метаданные
    */
@@ -567,7 +571,7 @@
           h('div', { className: 'pattern-debug-modal__stat' },
             h('span', { className: 'pattern-debug-modal__stat-label' }, 'Health Score'),
             h('span', { className: 'pattern-debug-modal__stat-value pattern-debug-modal__stat-value--score' },
-              healthScore?.total || '—'
+              formatScoreValue(healthScore?.total)
             )
           ),
           h('div', { className: 'pattern-debug-modal__stat' },

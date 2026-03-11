@@ -16,6 +16,10 @@
   // Зависимости (reserved for future use)
   const _SCIENCE_INFO = piConst.SCIENCE_INFO || HEYS.InsightsPI?.science || window.piScience || {}; // eslint-disable-line no-unused-vars
 
+  function formatScoreValue(score) {
+    return Number.isFinite(score) ? score : '—';
+  }
+
   // === LAZY GETTER для InfoButton (fix load order) ===
   // InfoButton определён в pi_ui_dashboard.js который загружается ПОСЛЕ этого модуля
   const getInfoButton = () => {
@@ -93,7 +97,7 @@
         })
       ),
       h('div', { className: 'insights-ring__center' },
-        h('span', { className: 'insights-ring__score' }, score || '—'),
+        h('span', { className: 'insights-ring__score' }, formatScoreValue(score)),
         h('span', { className: 'insights-ring__label' }, label
           // InfoButton removed — TotalHealthRing is h()-factory (no hooks allowed)
         ),
@@ -174,7 +178,7 @@
           })
         ),
         h('div', { className: 'insights-total__center' },
-          h('span', { className: 'insights-total__score' }, score || '—'),
+          h('span', { className: 'insights-total__score' }, formatScoreValue(score)),
           h('span', { className: 'insights-total__label' },
             label,
             h(getInfoButton(), { infoKey: 'HEALTH_SCORE', debugData })

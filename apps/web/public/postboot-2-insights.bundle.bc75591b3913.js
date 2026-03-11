@@ -29313,6 +29313,10 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
   // Зависимости (reserved for future use)
   const _SCIENCE_INFO = piConst.SCIENCE_INFO || HEYS.InsightsPI?.science || window.piScience || {}; // eslint-disable-line no-unused-vars
 
+  function formatScoreValue(score) {
+    return Number.isFinite(score) ? score : '—';
+  }
+
   // === LAZY GETTER для InfoButton (fix load order) ===
   // InfoButton определён в pi_ui_dashboard.js который загружается ПОСЛЕ этого модуля
   const getInfoButton = () => {
@@ -29390,7 +29394,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         })
       ),
       h('div', { className: 'insights-ring__center' },
-        h('span', { className: 'insights-ring__score' }, score || '—'),
+        h('span', { className: 'insights-ring__score' }, formatScoreValue(score)),
         h('span', { className: 'insights-ring__label' }, label
           // InfoButton removed — TotalHealthRing is h()-factory (no hooks allowed)
         ),
@@ -29471,7 +29475,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           })
         ),
         h('div', { className: 'insights-total__center' },
-          h('span', { className: 'insights-total__score' }, score || '—'),
+          h('span', { className: 'insights-total__score' }, formatScoreValue(score)),
           h('span', { className: 'insights-total__label' },
             label,
             h(getInfoButton(), { infoKey: 'HEALTH_SCORE', debugData })
@@ -33152,6 +33156,339 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       );
     }
 
+    const SCORE_EXPLAINER_CATEGORY_CONFIG = [
+      { key: 'nutrition', infoKey: 'CATEGORY_NUTRITION', emoji: '🍽️', label: 'Питание', color: '#22c55e' },
+      { key: 'timing', infoKey: 'CATEGORY_TIMING', emoji: '⏰', label: 'Тайминг', color: '#3b82f6' },
+      { key: 'activity', infoKey: 'CATEGORY_ACTIVITY', emoji: '🏃', label: 'Активность', color: '#f59e0b' },
+      { key: 'recovery', infoKey: 'CATEGORY_RECOVERY', emoji: '😴', label: 'Восстановление', color: '#8b5cf6' },
+      { key: 'metabolism', infoKey: 'CATEGORY_METABOLISM', emoji: '🔥', label: 'Метаболизм', color: '#f43f5e' }
+    ];
+
+    function getScoreExplainerTone(score) {
+      const safeScore = Number(score);
+      if (!Number.isFinite(safeScore)) {
+        return { key: 'unknown', label: 'недостаточно данных', accent: '#94a3b8' };
+      }
+      if (safeScore >= 80) return { key: 'excellent', label: 'сильная зона', accent: '#10b981' };
+      if (safeScore >= 60) return { key: 'good', label: 'хорошая база', accent: '#0ea5e9' };
+      if (safeScore >= 40) return { key: 'fair', label: 'зона роста', accent: '#f59e0b' };
+      return { key: 'poor', label: 'тянет score вниз', accent: '#ef4444' };
+    }
+
+    function getScoreExplainerAction(categoryKey, weakestSignal) {
+      const weakestName = weakestSignal?.name ? ` Начни с: ${weakestSignal.name.toLowerCase()}.` : '';
+
+      switch (categoryKey) {
+        case 'nutrition':
+          return `Добавь сегодня один понятный апгрейд рациона: белок в приём пищи и источник клетчатки.${weakestName}`;
+        case 'timing':
+          return `Сохрани 3–5 часов между приёмами и не сдвигай основной ужин слишком поздно.${weakestName}`;
+        case 'activity':
+          return `Добери движение самым дешёвым способом: шаги, короткая прогулка или короткая тренировка.${weakestName}`;
+        case 'recovery':
+          return `Самый быстрый апгрейд здесь — сон и снижение вечернего стресса.${weakestName}`;
+        case 'metabolism':
+          return `Сделай ставку на более ровную энергию: меньше резких углеводов, больше белка и овощей.${weakestName}`;
+        default:
+          return `Сфокусируйся на одном улучшении за раз.${weakestName}`;
+      }
+    }
+
+    function ScoreExplainerModal({ healthScore, patterns, activeTab, onClose, onOpenDebug }) {
+      const modalScrollRef = useRef(null);
+      const categoryRefs = useRef({});
+      const spotlightTimeoutRef = useRef(null);
+      const [hasScrolledCategories, setHasScrolledCategories] = useState(false);
+      const [spotlightCategoryKey, setSpotlightCategoryKey] = useState(null);
+
+      useEffect(() => {
+        const handleKeyDown = (event) => {
+          if (event.key === 'Escape') onClose?.();
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+      }, [onClose]);
+
+      useEffect(() => {
+        const container = modalScrollRef.current;
+        if (!container) return undefined;
+
+        const handleScroll = () => {
+          setHasScrolledCategories(container.scrollTop > 10);
+        };
+
+        handleScroll();
+        container.addEventListener('scroll', handleScroll, { passive: true });
+        return () => container.removeEventListener('scroll', handleScroll);
+      }, []);
+
+      useEffect(() => () => {
+        if (spotlightTimeoutRef.current) {
+          clearTimeout(spotlightTimeoutRef.current);
+        }
+      }, []);
+
+      const model = useMemo(() => {
+        const healthInfo = SCIENCE_INFO?.HEALTH_SCORE || {};
+        const patternMeta = HEYS.InsightsPI?.patternDebugger?.PATTERN_METADATA || {};
+        const debug = healthScore?.debug || {};
+        const usedByCategory = debug.usedByCategory || {};
+        const periodDays = activeTab === 'week' ? 30 : 7;
+
+        const categories = SCORE_EXPLAINER_CATEGORY_CONFIG.map((config) => {
+          const breakdown = healthScore?.breakdown?.[config.key] || {};
+          const score = Number.isFinite(Number(breakdown.score)) ? Math.round(Number(breakdown.score)) : null;
+          const weightPct = Number.isFinite(Number(breakdown.weight)) ? Math.round(Number(breakdown.weight) * 100) : null;
+          const reliability = Number.isFinite(Number(breakdown.reliability)) ? Math.round(Number(breakdown.reliability) * 100) : null;
+          const info = SCIENCE_INFO?.[config.infoKey] || {};
+          const signals = Array.isArray(usedByCategory[config.key])
+            ? usedByCategory[config.key]
+              .map((item) => ({
+                ...item,
+                name: patternMeta[item.pattern]?.name || item.pattern,
+                emoji: patternMeta[item.pattern]?.emoji || config.emoji,
+                score: Number.isFinite(Number(item.score)) ? Math.round(Number(item.score)) : null
+              }))
+              .filter((item) => item.score !== null)
+            : [];
+
+          const strongestSignals = [...signals].sort((a, b) => (b.score || 0) - (a.score || 0)).slice(0, 2);
+          const weakestSignals = [...signals].sort((a, b) => (a.score || 0) - (b.score || 0)).slice(0, 2);
+          const tone = getScoreExplainerTone(score);
+
+          let summary = info.short || '';
+          if (score !== null) {
+            if (score >= 80) {
+              summary = `Сильная зона. ${info.short || `${config.label} сейчас поддерживает общий score.`}`;
+            } else if (score >= 60) {
+              summary = `База уже есть, но здесь ещё есть запас роста. ${info.short || ''}`.trim();
+            } else if (score >= 40) {
+              summary = `Именно здесь score теряет устойчивость чаще всего. ${info.short || ''}`.trim();
+            } else {
+              summary = `Это главный источник просадки общего score. ${info.short || ''}`.trim();
+            }
+          }
+
+          if (weakestSignals[0]?.name) {
+            summary += ` Главный ограничитель сейчас — ${weakestSignals[0].name.toLowerCase()}.`;
+          }
+
+          return {
+            ...config,
+            score,
+            weightPct,
+            reliability,
+            tone,
+            info,
+            summary,
+            strongestSignals,
+            weakestSignals,
+            action: getScoreExplainerAction(config.key, weakestSignals[0])
+          };
+        }).filter((item) => item.score !== null);
+
+        const strengths = [...categories].sort((a, b) => (b.score || 0) - (a.score || 0)).slice(0, 2);
+        const growthAreas = [...categories].sort((a, b) => (a.score || 0) - (b.score || 0)).slice(0, 2);
+        const totalScore = Number.isFinite(Number(healthScore?.total)) ? Math.round(Number(healthScore.total)) : null;
+        const totalTone = getScoreExplainerTone(totalScore);
+        const leadingStrength = strengths[0];
+        const mainFocus = growthAreas[0];
+
+        return {
+          periodDays,
+          totalScore,
+          totalTone,
+          confidence: debug.patternCount || 0,
+          headline: mainFocus
+            ? `Сейчас общий score сильнее всего ограничивает категория «${mainFocus.label.toLowerCase()}».`
+            : 'Система уже выглядит устойчиво — здесь скорее тонкая настройка, чем спасательная операция.',
+          subline: leadingStrength
+            ? `Лучше всего картину держит «${leadingStrength.label.toLowerCase()}» — это стоит сохранить как опору.`
+            : healthInfo.short || 'Health Score собирает питание, режим, активность и восстановление в один ориентир.',
+          healthInfo,
+          strengths,
+          growthAreas,
+          categories
+        };
+      }, [activeTab, healthScore]);
+
+      const scrollToCategory = (categoryKey) => {
+        const container = modalScrollRef.current;
+        const node = categoryRefs.current?.[categoryKey];
+        if (!container || !node) return;
+
+        const containerRect = container.getBoundingClientRect();
+        const nodeRect = node.getBoundingClientRect();
+        const top = Math.max(0, container.scrollTop + (nodeRect.top - containerRect.top) - 12);
+        container.scrollTo({ top, behavior: 'smooth' });
+        setSpotlightCategoryKey(categoryKey);
+
+        if (spotlightTimeoutRef.current) {
+          clearTimeout(spotlightTimeoutRef.current);
+        }
+        spotlightTimeoutRef.current = setTimeout(() => {
+          setSpotlightCategoryKey((current) => (current === categoryKey ? null : current));
+        }, 1800);
+      };
+
+      return h('div', {
+        className: 'pattern-debug-modal score-explainer-modal',
+        onClick: (event) => {
+          if (event.target === event.currentTarget) onClose?.();
+        }
+      },
+        h('div', {
+          ref: modalScrollRef,
+          className: 'pattern-debug-modal__content score-explainer-modal__content',
+          onClick: (event) => event.stopPropagation()
+        },
+          h('div', { className: 'score-explainer-modal__header' },
+            h('div', { className: 'score-explainer-modal__title-wrap' },
+              h('div', { className: 'score-explainer-modal__eyebrow' }, 'Почему такой score?'),
+              h('h3', { className: 'score-explainer-modal__title' }, 'Разбор оценки без сухой технички'),
+              h('p', { className: 'score-explainer-modal__subtitle' },
+                `${model.totalScore ?? '—'} баллов за ${model.periodDays} ${model.periodDays === 30 ? 'дней' : 'дней'} • ${model.totalTone.label}`
+              )
+            ),
+            h('button', {
+              className: 'pattern-debug-modal__close',
+              onClick: onClose,
+              'aria-label': 'Закрыть'
+            }, '✕')
+          ),
+
+          h('div', { className: 'score-explainer-modal__hero' },
+            h('div', { className: 'score-explainer-modal__score-pill' },
+              h('span', { className: 'score-explainer-modal__score-number' }, model.totalScore ?? '—'),
+              h('span', { className: 'score-explainer-modal__score-label' }, 'Health Score')
+            ),
+            h('div', { className: 'score-explainer-modal__hero-copy' },
+              h('p', { className: 'score-explainer-modal__headline' }, model.headline),
+              h('p', { className: 'score-explainer-modal__subline' }, model.subline),
+              h('div', { className: 'score-explainer-modal__hero-meta' },
+                h('span', { className: 'score-explainer-modal__meta-chip' }, `${model.confidence} активных паттернов`),
+                model.healthInfo?.whyImportant && h('span', { className: 'score-explainer-modal__meta-chip' }, model.healthInfo.whyImportant)
+              )
+            )
+          ),
+
+          h('div', { className: 'score-explainer-modal__summary-grid' },
+            h('div', { className: 'score-explainer-modal__summary-card score-explainer-modal__summary-card--strength' },
+              h('div', { className: 'score-explainer-modal__summary-title' }, 'Что уже держит оценку'),
+              model.strengths.map((item) =>
+                h('button', {
+                  key: item.key,
+                  type: 'button',
+                  className: 'score-explainer-modal__summary-row score-explainer-modal__summary-row--clickable',
+                  onClick: () => scrollToCategory(item.key),
+                  title: `Показать карточку «${item.label}»`
+                },
+                  h('span', { className: 'score-explainer-modal__summary-label' }, `${item.emoji} ${item.label}`),
+                  h('span', { className: 'score-explainer-modal__summary-row-meta' },
+                    h('span', { className: 'score-explainer-modal__summary-value' }, item.score),
+                    h('span', { className: 'score-explainer-modal__summary-jump' }, '↓')
+                  )
+                )
+              )
+            ),
+            h('div', { className: 'score-explainer-modal__summary-card score-explainer-modal__summary-card--focus' },
+              h('div', { className: 'score-explainer-modal__summary-title' }, 'Куда смотреть в первую очередь'),
+              model.growthAreas.map((item) =>
+                h('button', {
+                  key: item.key,
+                  type: 'button',
+                  className: 'score-explainer-modal__summary-row score-explainer-modal__summary-row--clickable',
+                  onClick: () => scrollToCategory(item.key),
+                  title: `Показать карточку «${item.label}»`
+                },
+                  h('span', { className: 'score-explainer-modal__summary-label' }, `${item.emoji} ${item.label}`),
+                  h('span', { className: 'score-explainer-modal__summary-row-meta' },
+                    h('span', { className: 'score-explainer-modal__summary-value score-explainer-modal__summary-value--warn' }, item.score),
+                    h('span', { className: 'score-explainer-modal__summary-jump' }, '↓')
+                  )
+                )
+              )
+            )
+          ),
+
+          h('div', { className: 'score-explainer-modal__categories' },
+            model.categories.map((category) =>
+              h('section', {
+                key: category.key,
+                ref: (node) => {
+                  if (node) {
+                    categoryRefs.current[category.key] = node;
+                  } else {
+                    delete categoryRefs.current[category.key];
+                  }
+                },
+                className: `score-explainer-modal__category score-explainer-modal__category--${category.tone.key}${spotlightCategoryKey === category.key ? ' score-explainer-modal__category--spotlight' : ''}`
+              },
+                h('div', { className: 'score-explainer-modal__category-header' },
+                  h('div', { className: 'score-explainer-modal__category-title-wrap' },
+                    h('span', { className: 'score-explainer-modal__category-emoji' }, category.emoji),
+                    h('div', null,
+                      h('div', { className: 'score-explainer-modal__category-title' }, category.label),
+                      h('div', { className: 'score-explainer-modal__category-meta' },
+                        `${category.weightPct ?? '—'}% веса в score`,
+                        category.reliability !== null ? ` • надёжность ${category.reliability}%` : ''
+                      )
+                    )
+                  ),
+                  h('div', {
+                    className: `score-explainer-modal__category-score score-explainer-modal__category-score--${category.tone.key}`
+                  }, category.score)
+                ),
+                h('p', { className: 'score-explainer-modal__category-summary' }, category.summary),
+                category.strongestSignals.length > 0 && h('div', { className: 'score-explainer-modal__signal-block' },
+                  h('div', { className: 'score-explainer-modal__signal-title' }, 'Что помогает'),
+                  h('div', { className: 'score-explainer-modal__signal-list' },
+                    category.strongestSignals.map((signal) =>
+                      h('span', { key: `${category.key}-${signal.pattern}-up`, className: 'score-explainer-modal__signal-chip' },
+                        `${signal.emoji} ${signal.name} · ${signal.score}`
+                      )
+                    )
+                  )
+                ),
+                category.weakestSignals.length > 0 && h('div', { className: 'score-explainer-modal__signal-block' },
+                  h('div', { className: 'score-explainer-modal__signal-title' }, 'Что тянет вниз'),
+                  h('div', { className: 'score-explainer-modal__signal-list' },
+                    category.weakestSignals.map((signal) =>
+                      h('span', {
+                        key: `${category.key}-${signal.pattern}-down`,
+                        className: 'score-explainer-modal__signal-chip score-explainer-modal__signal-chip--weak'
+                      }, `${signal.emoji} ${signal.name} · ${signal.score}`)
+                    )
+                  )
+                ),
+                h('div', { className: 'score-explainer-modal__action' },
+                  h('span', { className: 'score-explainer-modal__action-label' }, 'Сегодняшний ход'),
+                  h('span', { className: 'score-explainer-modal__action-text' }, category.action)
+                )
+              )
+            )
+          ),
+
+          h('div', {
+            className: `score-explainer-modal__footer${hasScrolledCategories ? ' score-explainer-modal__footer--elevated' : ''}`
+          },
+            h('button', {
+              className: 'score-explainer-modal__footer-btn score-explainer-modal__footer-btn--secondary',
+              onClick: () => {
+                onClose?.();
+                onOpenDebug?.();
+              }
+            }, 'Технический разбор'),
+            h('button', {
+              className: 'score-explainer-modal__footer-btn score-explainer-modal__footer-btn--primary',
+              onClick: onClose
+            }, 'Понятно')
+          )
+        )
+      );
+    }
+
     // === INSIGHTS TAB — Полноэкранная вкладка ===
     // Секции отсортированы по приоритету: CRITICAL → HIGH → MEDIUM → LOW
     // 🎭 Демо-данные для показа тура новым пользователям
@@ -33262,6 +33599,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       const [selectedCategory, setSelectedCategory] = useState(null);
       const [priorityFilter, setPriorityFilter] = useState(null); // null = показать всё
       const [showPatternDebug, setShowPatternDebug] = useState(false); // Pattern Transparency Modal
+      const [showScoreExplainer, setShowScoreExplainer] = useState(false); // Human-friendly score explainer
       const [showPhenotypeClassifier, setShowPhenotypeClassifier] = useState(false); // Phenotype Classifier Panel
       const [showWhatIfScenarios, setShowWhatIfScenarios] = useState(false); // What-If Scenarios Panel
       const [ewsWarnings, setEwsWarnings] = useState([]);
@@ -33923,6 +34261,20 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                     onCategoryClick: setSelectedCategory,
                     compact: true
                   })
+                ),
+                h('button', {
+                  className: 'score-explainer-cta',
+                  onClick: (event) => {
+                    event.stopPropagation();
+                    setShowScoreExplainer(true);
+                  }
+                },
+                  h('span', { className: 'score-explainer-cta__icon' }, '🧠'),
+                  h('span', { className: 'score-explainer-cta__content' },
+                    h('span', { className: 'score-explainer-cta__title' }, 'Почему такой score?'),
+                    h('span', { className: 'score-explainer-cta__subtitle' }, 'Коротко покажем, что поддерживает оценку и что сейчас тянет её вниз')
+                  ),
+                  h('span', { className: 'score-explainer-cta__arrow' }, '→')
                 )
               ),
 
@@ -34141,6 +34493,15 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
           ) // закрытие insights-tab__content
           ,
+
+          // Human-friendly score explainer modal
+          showScoreExplainer && h(ScoreExplainerModal, {
+            healthScore: insights.healthScore,
+            patterns: insights.patterns,
+            activeTab,
+            onClose: () => setShowScoreExplainer(false),
+            onOpenDebug: () => setShowPatternDebug(true)
+          }),
 
           // Pattern Debug Modal — показывается при клике на Health Score
           showPatternDebug && window.PatternDebugModal && h(window.PatternDebugModal, {
@@ -36603,6 +36964,10 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
   // React imports
   const { createElement: h, useState, useMemo } = window.React || {};
 
+  function formatScoreValue(score) {
+    return Number.isFinite(score) ? score : '—';
+  }
+
   /**
    * Pattern metadata — маппинг ID паттерна на метаданные
    */
@@ -37161,7 +37526,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           h('div', { className: 'pattern-debug-modal__stat' },
             h('span', { className: 'pattern-debug-modal__stat-label' }, 'Health Score'),
             h('span', { className: 'pattern-debug-modal__stat-value pattern-debug-modal__stat-value--score' },
-              healthScore?.total || '—'
+              formatScoreValue(healthScore?.total)
             )
           ),
           h('div', { className: 'pattern-debug-modal__stat' },

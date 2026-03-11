@@ -431,41 +431,41 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
   const MESSAGES = {
     BUILDING: [
-      { short: 'Каскад разгоняется. Хорошие решения уже заметно поднимают планку.' },
-      { short: 'Фундамент собран. Сейчас каждый стабильный день ускоряет рост.' }
+      { short: 'Хорошее начало — каскад уже откликается.' },
+      { short: 'Ты уже задал хороший ритм на сегодня.' }
     ],
     GROWING: [
-      { short: 'Каскад уже устойчиво растёт. Ты входишь в сильную рабочую зону.' },
-      { short: 'Серия хороших решений работает на тебя. Инерция уже накапливается.' },
-      { short: 'Прогресс уверенный. До пикового уровня осталось совсем немного.' }
+      { short: 'Ты держишь хороший ритм — каскад уверенно растёт.' },
+      { short: 'Хорошие решения уже начинают работать в твою пользу.' },
+      { short: 'Сейчас ты двигаешься очень правильно.' }
     ],
     STRONG: [
-      { short: 'Импульс высокий: сейчас важнее удерживать ритм, чем разгоняться.' },
-      { short: 'Каскад сильный: один хороший день больше поддерживает серию, чем строит её с нуля.' },
-      { short: 'Ты в верхней зоне: держи сон и ритм еды ровными, это лучше всего защищает прогресс.' }
+      { short: 'Очень сильный ритм — главное просто его беречь.' },
+      { short: 'Сейчас ты в сильной зоне, без лишнего напряжения.' },
+      { short: 'Каскад уже работает на тебя — просто не сбивай темп.' }
     ],
     BROKEN: [
-      { short: 'Сейчас каскад растёт быстрее всего: 2–3 спокойных дня подряд дадут заметный подъём.' },
-      { short: 'Старт уже не с нуля: сон, первый приём пищи и чекин сейчас особенно быстро двигают прогресс.' },
-      { short: 'Это лучшая зона для разгона: несколько базовых решений подряд быстро поднимут уровень.' }
+      { short: 'Ничего страшного — каскад можно быстро вернуть.' },
+      { short: 'Сейчас лучшее время спокойно начать заново.' },
+      { short: 'Пары базовых шагов уже хватит, чтобы снова пойти вверх.' }
     ],
     RECOVERY: [
-      { short: 'База уже собрана: сейчас цель — закрепить ещё пару ровных дней подряд.' },
-      { short: 'Импульс вернулся. Самый быстрый рост сейчас даёт стабильный ритм без срывов.' },
-      { short: 'После отката каскад снова на рельсах: теперь важнее ровная серия, чем идеальный день.' }
+      { short: 'Ты уже возвращаешь ритм — это главное.' },
+      { short: 'Каскад снова оживает, и это уже хороший знак.' },
+      { short: 'Сейчас важно просто спокойно закрепиться.' }
     ],
     ANTI_LICENSING: [
-      { short: 'Тренировка — сама по себе победа. Не «награждай» себя едой.' },
-      { short: 'После нагрузки организм лучше всего усвоит белок и овощи.' },
-      { short: 'Классная тренировка! Выбери качество, а не количество.' }
+      { short: 'После тренировки лучше поддержать себя спокойно и без лишнего.' },
+      { short: 'Нагрузка уже засчитана — дальше важны качество и ритм.' },
+      { short: 'Сейчас телу нужна поддержка, а не компенсация едой.' }
     ],
     // v3.1.0: показывается при перебор калорий в режиме дефицита (похудение)
     // Акцент — CRS защитил инерцию, один срыв не перечёркивает прогресс
     DEFICIT_OVERSHOOT: [
-      { short: 'Перебор, но накопленный прогресс защищает тебя. Завтра — новый шанс.' },
-      { short: 'Один перебор не перечёркивает неделю дисциплины. Импульс сохранён.' },
-      { short: 'Перебрал — бывает. Посмотри на свою неделю: ты справляешься.' },
-      { short: 'Калории выше цели, но каскад инерции на твоей стороне.' }
+      { short: 'Ничего критичного — завтра просто вернись к своему ритму.' },
+      { short: 'Один перебор не перечёркивает весь твой прогресс.' },
+      { short: 'Сегодня было сложнее, но каскад всё ещё можно удержать.' },
+      { short: 'Срыв не обнуляет путь — важнее, что будет дальше.' }
     ]
   };
 
@@ -923,22 +923,218 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     return null;
   }
 
-  function getCascadeHeaderHint(state, crs, trend, nextMilestone, nextStepHint) {
-    var progressPct = Math.round((Number(crs) || 0) * 100);
-    var trendCopy = trend === 'up' ? '↗ тренд вверх' : trend === 'down' ? '↘ лучше стабилизировать' : '→ без резких изменений';
+  function normalizeCascadeSentence(text) {
+    return String(text || '')
+      .replace(/\s+/g, ' ')
+      .replace(/[.\s]+$/, '')
+      .trim();
+  }
 
-    if (nextMilestone) {
-      if (nextStepHint) {
-        return progressPct + '% · до «' + nextMilestone.label + '» осталось ' + nextMilestone.gapPct + '% · ' + nextStepHint;
+  function capitalizeFirst(text) {
+    var value = String(text || '').trim();
+    if (!value) return '';
+    return value.charAt(0).toUpperCase() + value.slice(1);
+  }
+
+  function joinHumanList(items) {
+    var clean = (items || []).filter(Boolean);
+    if (!clean.length) return '';
+    if (clean.length === 1) return clean[0];
+    if (clean.length === 2) return clean[0] + ' и ' + clean[1];
+    return clean.slice(0, clean.length - 1).join(', ') + ' и ' + clean[clean.length - 1];
+  }
+
+  function getCascadeContextSnapshot(events) {
+    var list = Array.isArray(events) ? events : [];
+    var trainingCount = 0;
+    var mealCount = 0;
+    var hasCheckin = false;
+    var hasSleep = false;
+    var hasMeasurements = false;
+    var hasPositiveMeal = false;
+
+    for (var i = 0; i < list.length; i++) {
+      var event = list[i] || {};
+      if (event.type === 'training') trainingCount++;
+      if (event.type === 'meal') {
+        mealCount++;
+        if (event.positive) hasPositiveMeal = true;
       }
-      return progressPct + '% · до «' + nextMilestone.label + '» осталось ' + nextMilestone.gapPct + '% · ' + trendCopy;
+      if (event.type === 'checkin') hasCheckin = true;
+      if (event.type === 'sleep') hasSleep = true;
+      if (event.type === 'measurements') hasMeasurements = true;
     }
 
-    if (nextStepHint) {
-      return progressPct + '% · верхняя зона · задача сейчас — удерживать ритм · ' + nextStepHint;
+    var highlights = [];
+    if (trainingCount > 0) highlights.push(trainingCount > 1 ? 'тренировки' : 'тренировка');
+    if (mealCount >= 2 && hasPositiveMeal) highlights.push('ритм еды');
+    else if (mealCount === 1 && hasPositiveMeal) highlights.push('первый приём пищи');
+    if (hasCheckin) highlights.push('утренний чекин');
+    if (hasSleep) highlights.push('сон');
+    if (hasMeasurements) highlights.push('замеры');
+
+    return {
+      trainingCount: trainingCount,
+      mealCount: mealCount,
+      hasCheckin: hasCheckin,
+      hasSleep: hasSleep,
+      hasMeasurements: hasMeasurements,
+      hasPositiveMeal: hasPositiveMeal,
+      highlightList: highlights.slice(0, 2),
+      highlightText: joinHumanList(highlights.slice(0, 2))
+    };
+  }
+
+  function getCascadeToneMode(options, ctx) {
+    var opts = options || {};
+    var state = opts.state || STATES.EMPTY;
+    var poolKey = opts.poolKey || state;
+    var warningsCount = Number(opts.warningsCount) || 0;
+    var dayType = opts.dayType || 'normal';
+    var dailyContribution = Number(opts.dailyContribution) || 0;
+    var chainLength = Number(opts.chainLength) || 0;
+
+    if (poolKey === 'DEFICIT_OVERSHOOT' || state === STATES.BROKEN || warningsCount >= 2) {
+      return 'soft_strict';
     }
 
-    return progressPct + '% · верхняя зона · задача сейчас — удерживать ритм · ' + trendCopy;
+    if (state === STATES.STRONG || (state === STATES.GROWING && warningsCount === 0 && chainLength >= 4)) {
+      return 'composed';
+    }
+
+    if (dayType === 'rest_day' && dailyContribution > 0.2) {
+      return 'composed';
+    }
+
+    if (ctx && ctx.trainingCount > 0 && dailyContribution > 0.4 && warningsCount === 0) {
+      return 'composed';
+    }
+
+    return 'supportive';
+  }
+
+  function buildCascadeContextMessage(baseMessage, options) {
+    var opts = options || {};
+    var state = opts.state || STATES.EMPTY;
+    var poolKey = opts.poolKey || state;
+    var ctx = getCascadeContextSnapshot(opts.events || []);
+    var baseText = normalizeCascadeSentence(baseMessage && baseMessage.short);
+    var highlightText = ctx.highlightText ? capitalizeFirst(ctx.highlightText) : '';
+    var warningsCount = Number(opts.warningsCount) || 0;
+    var trend = opts.crsTrend || 'flat';
+    var dayType = opts.dayType || 'normal';
+    var dailyContribution = Number(opts.dailyContribution) || 0;
+    var chainLength = Number(opts.chainLength) || 0;
+    var synergies = Array.isArray(opts.synergies) ? opts.synergies : [];
+    var synergyNames = synergies.map(function (s) { return s && s.name; }).filter(Boolean);
+    var hasRecoverySynergy = synergyNames.indexOf('sleep_training_recovery') !== -1 || synergyNames.indexOf('full_recovery') !== -1;
+    var hasMorningSynergy = synergyNames.indexOf('morning_ritual') !== -1;
+    var hasMealSynergy = synergyNames.indexOf('meals_insulin') !== -1;
+    var stableDay = warningsCount === 0 && chainLength >= 4;
+    var strongToday = dailyContribution >= 0.45;
+    var gentleProgress = dailyContribution > 0.15;
+    var toneMode = getCascadeToneMode(opts, ctx);
+
+    function make(short) {
+      return { short: short, tone: toneMode };
+    }
+
+    if (poolKey === 'ANTI_LICENSING' && ctx.trainingCount > 0) {
+      if (toneMode === 'composed') return make('Тренировка уже в плюс — дальше важны спокойный ритм и нормальная еда.');
+      return make('Тренировка уже засчитана — дальше лучше просто держать ритм.');
+    }
+
+    if (poolKey === 'DEFICIT_OVERSHOOT') {
+      if (highlightText) {
+        return make(highlightText + ' уже дают опору — завтра просто вернись в свой ритм.');
+      }
+      return make(baseText || 'Сегодня было сложнее, но завтра можно спокойно вернуться в свой ритм.');
+    }
+
+    if (dayType === 'rest_day' && hasRecoverySynergy) {
+      return make(toneMode === 'composed'
+        ? 'Сегодняшнее восстановление тоже работает на каскад — это хороший день.'
+        : 'Спокойное восстановление сегодня тоже идёт каскаду в плюс.');
+    }
+
+    if (dayType === 'training_day' && ctx.trainingCount > 0 && strongToday && warningsCount === 0) {
+      return make(toneMode === 'composed'
+        ? 'Сегодня тренировка легла в ритм — каскад это хорошо подхватил.'
+        : 'Сегодня тренировка хорошо поддержала каскад.');
+    }
+
+    if (hasMorningSynergy && strongToday) {
+      return make(toneMode === 'composed'
+        ? 'Утро сработало хорошо — каскад с самого начала пошёл ровно.'
+        : 'Хорошее утро уже дало каскаду правильный старт.');
+    }
+
+    if (hasMealSynergy && gentleProgress) {
+      return make(toneMode === 'composed'
+        ? 'Сегодня еда и ритм дня хорошо поддерживают каскад.'
+        : 'Сегодня ритм еды работает на каскад.');
+    }
+
+    if (state === STATES.STRONG) {
+      if (warningsCount > 0 && highlightText) return make(highlightText + ' удерживают каскад даже после сбоя.');
+      if (stableDay && highlightText) return make(highlightText + ' уже держат каскад сильным.');
+      if (highlightText) return make(highlightText + ' уже держат каскад сильным.');
+      if (warningsCount > 0) return make('Даже с небольшим сбоем каскад остаётся сильным.');
+      return make(baseText || 'Очень сильный ритм — главное просто его беречь.');
+    }
+
+    if (state === STATES.GROWING) {
+      if (stableDay && highlightText) return make(highlightText + ' собирают сегодня очень ровный день.');
+      if (warningsCount > 0 && highlightText) return make('Несмотря на сбой, ' + highlightText.toLowerCase() + ' всё ещё двигают каскад вверх.');
+      if (highlightText) return make(highlightText + ' уже двигают каскад вверх.');
+      if (trend === 'up') return make('Сегодня каскад идёт вверх — ты держишь хороший темп.');
+      return make(baseText || 'Ты держишь хороший ритм — каскад уверенно растёт.');
+    }
+
+    if (state === STATES.BUILDING) {
+      if (strongToday && highlightText) return make(highlightText + ' уже хорошо запускают каскад.');
+      if (highlightText) return make(highlightText + ' уже дают каскаду опору.');
+      return make(baseText || 'Хорошее начало — каскад уже откликается.');
+    }
+
+    if (state === STATES.RECOVERY) {
+      if (warningsCount > 0 && highlightText) return make('После сбоя ' + highlightText.toLowerCase() + ' уже возвращают день в ритм.');
+      if (stableDay && highlightText) return make(highlightText + ' спокойно возвращают каскад вверх.');
+      if (highlightText) return make(highlightText + ' уже возвращают каскад в ритм.');
+      return make(baseText || 'Ты уже возвращаешь ритм — это главное.');
+    }
+
+    if (state === STATES.BROKEN) {
+      if (gentleProgress && highlightText) return make('У тебя уже есть опора: ' + highlightText.toLowerCase() + ' начинают возвращать каскад.');
+      if (highlightText) return make('У тебя уже есть опора: ' + highlightText.toLowerCase() + '.');
+      if (warningsCount > 0) return make('День неровный, но каскад ещё можно спокойно вернуть.');
+      return make(baseText || 'Ничего страшного — каскад можно быстро вернуть.');
+    }
+
+    if (state === STATES.EMPTY && highlightText) {
+      return make(highlightText + ' уже могут запустить каскад.');
+    }
+
+    return make(baseText || 'Позитивный каскад активен.');
+  }
+
+  function getCascadeStateLead(state, message, fallbackLabel) {
+    var fromMessage = normalizeCascadeSentence(message && message.short);
+    if (fromMessage) return fromMessage;
+
+    var map = {};
+    map[STATES.BUILDING] = 'Хорошее начало — каскад уже откликается';
+    map[STATES.GROWING] = 'Ты держишь хороший ритм — каскад уверенно растёт';
+    map[STATES.STRONG] = 'Очень сильный ритм — главное просто его беречь';
+    map[STATES.BROKEN] = 'Ничего страшного — каскад можно быстро вернуть';
+    map[STATES.RECOVERY] = 'Ты уже возвращаешь ритм — это главное';
+    map[STATES.EMPTY] = 'Позитивный каскад ещё не запущен';
+
+    return map[state] || normalizeCascadeSentence(fallbackLabel) || 'Позитивный каскад активен';
+  }
+
+  function getCascadePrimaryCopy(message, fallbackLabel, state) {
+    return getCascadeStateLead(state, message, fallbackLabel);
   }
 
   function median(arr) {
@@ -2961,7 +3157,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     var nextStepHint = null;
     if (hasDeficitOvershoot) {
       // v3.1.0: срыв по калориям при дефиците — специальная подсказка
-      nextStepHint = 'Завтра верни калории в норму — один день всегда можно компенсировать';
+      nextStepHint = 'завтра верни калории в норму';
     } else if (state !== STATES.EMPTY) {
       var hasMeal = events.some(function (e) { return e.type === 'meal'; });
       var hasTraining = events.some(function (e) { return e.type === 'training'; });
@@ -2970,17 +3166,17 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       var hasMeasEv = events.some(function (e) { return e.type === 'measurements'; });
 
       if (!hasMeal && currentHour < 20) {
-        nextStepHint = 'Добавь первый приём пищи';
+        nextStepHint = 'добавь первый приём пищи';
       } else if (!hasTraining && currentHour >= 6 && currentHour < 20) {
-        nextStepHint = 'Тренировка или прогулка добавят звено в цепочку';
+        nextStepHint = 'тренировка или прогулка дадут +1 звено';
       } else if (!hasCheckinEv && currentHour < 11) {
-        nextStepHint = 'Взвесься утром — это поможет отслеживать прогресс';
+        nextStepHint = 'утром добавь взвешивание';
       } else if (!hasMeasEv && currentHour < 11) {
-        nextStepHint = 'Сними замеры — это повысит точность анализа';
+        nextStepHint = 'сними замеры';
       } else if (!hasSleepEv) {
-        nextStepHint = 'Зафиксируй время засыпания для анализа сна';
+        nextStepHint = 'зафиксируй время сна';
       } else if (currentHour < 21 && chain > 0) {
-        nextStepHint = 'Продолжай — следующее решение усилит цепочку';
+        nextStepHint = 'ещё одно решение усилит цепочку';
       }
 
       console.info('[HEYS.cascade] 💡 Next step hint:', {
@@ -2989,6 +3185,25 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         currentHour: currentHour, hint: nextStepHint
       });
     }
+
+    message = buildCascadeContextMessage(message, {
+      state: state,
+      poolKey: messagePoolKey,
+      events: events,
+      warningsCount: warnings.length,
+      crsTrend: crsTrend,
+      dayType: dayType,
+      synergies: synergies,
+      dailyContribution: todayDcs,
+      chainLength: chain
+    });
+
+    console.info('[HEYS.cascade] 🫶 Context message:', {
+      pool: messagePoolKey,
+      state: state,
+      tone: message.tone || 'supportive',
+      message: message.short
+    });
 
     // ── ИТОГОВЫЙ РЕЗУЛЬТАТ ────────────────────────────────
     var elapsed = ((typeof performance !== 'undefined') ? performance.now() : Date.now()) - t0;
@@ -3021,6 +3236,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       hasDeficitOvershoot: hasDeficitOvershoot,
       deficitOvershootRatio: deficitOvershootRatio ? +deficitOvershootRatio.toFixed(2) : null,
       deficitViolationType: dcsResult.violationType,
+      messageTone: message.tone || 'supportive',
       message: message.short,
       nextStepHint: nextStepHint,
       elapsed: elapsed.toFixed(2) + 'ms'
@@ -3106,6 +3322,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       momentumScore: momentumScore,
       postTrainingWindow: postTrainingWindow,
       message: message,
+      messageTone: message.tone || 'supportive',
       nextStepHint: nextStepHint,
       dayType: dayType,
       synergies: synergies,
@@ -3323,7 +3540,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     var peakDaysLabel = daysAtPeak === 1 ? '1 день' : (daysAtPeak >= 2 && daysAtPeak <= 4) ? daysAtPeak + ' дня' : daysAtPeak + ' дней';
     var currentLevelLabel = getDisplayStateLabel(state);
     var nextMilestone = getNextCrsMilestone(crs);
-    var headerHint = getCascadeHeaderHint(state, crs, crsTrend, nextMilestone, nextStepHint);
+    var primaryCopy = getCascadePrimaryCopy(message, config.label, state);
 
     // Animate progress bar 0 → progressPct on mount via CSS transition (double-rAF pump)
     var animBarState = React.useState(0);
@@ -3600,13 +3817,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
         // Подзаголовок / сообщение
         React.createElement('div', { className: 'cascade-card__subtitle' },
-          (message && message.short) || config.label
-        ),
-
-        React.createElement('div', {
-          className: 'cascade-card__hint'
-        },
-          '🎯 ' + headerHint
+          primaryCopy
         ),
 
         // Хинт anti-licensing (2ч после тренировки)

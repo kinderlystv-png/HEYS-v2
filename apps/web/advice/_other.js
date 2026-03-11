@@ -622,15 +622,55 @@
             const firstAvg = weightsForTrend.slice(0, 3).reduce((a, b) => a + b, 0) / 3;
             const lastAvg = weightsForTrend.slice(-3).reduce((a, b) => a + b, 0) / 3;
             const trendPerWeek = ((lastAvg - firstAvg) / weightsForTrend.length) * 7;
+            const weightGoal = prof?.weightGoal;
+            const currentWeight = day?.weightMorning || weightsForTrend[weightsForTrend.length - 1];
+            const hasWeightGoal = Number.isFinite(weightGoal) && weightGoal > 0 && Number.isFinite(currentWeight) && currentWeight > 0;
+            const aimingToLose = goal?.mode === 'deficit' || (hasWeightGoal && currentWeight > weightGoal + 0.5);
+            const aimingToGain = goal?.mode === 'bulk' || (hasWeightGoal && currentWeight < weightGoal - 0.5);
+            const aimingToMaintain = goal?.mode === 'maintenance' || (!aimingToLose && !aimingToGain);
+            const trendLabel = `${trendPerWeek > 0 ? '+' : ''}${trendPerWeek.toFixed(1)} кг/нед`;
+            const trendMagnitude = Math.abs(trendPerWeek);
 
             if (trendPerWeek < -0.3 && !sessionStorage.getItem('heys_weight_trend_down')) {
+                let weightTrendDownAdvice;
+
+                if (aimingToGain) {
+                    weightTrendDownAdvice = {
+                        icon: '📉',
+                        text: 'Вес снижается — проверь калории и восстановление',
+                        details: `⚠️ Текущий тренд ${trendLabel}. Для набора это сигнал: возможно, профицит слишком маленький или не хватает восстановления.`,
+                        type: 'warning',
+                        priority: 7
+                    };
+                } else if (aimingToMaintain) {
+                    weightTrendDownAdvice = {
+                        icon: '📉',
+                        text: 'Вес снижается — проверь баланс калорий',
+                        details: `⚠️ Текущий тренд ${trendLabel}. Если цель — поддержание, стоит немного поднять калораж или проверить активность.`,
+                        type: 'warning',
+                        priority: 7
+                    };
+                } else if (trendMagnitude > 1.0) {
+                    weightTrendDownAdvice = {
+                        icon: '📉',
+                        text: 'Вес снижается слишком быстро — проверь дефицит',
+                        details: `⚠️ Текущий тренд ${trendLabel}. Слишком резкое снижение веса часто означает слишком жёсткий дефицит и риск потери мышц.`,
+                        type: 'warning',
+                        priority: 7
+                    };
+                } else {
+                    weightTrendDownAdvice = {
+                        icon: '📉',
+                        text: 'Вес снижается в нужную сторону',
+                        details: `📉 Текущий тренд ${trendLabel}. Для снижения веса это рабочий темп — продолжай держать план.`,
+                        type: 'achievement',
+                        priority: 6
+                    };
+                }
+
                 advices.push({
                     id: 'weight_trend_down',
-                    icon: '📉',
-                    text: 'Вес уходит! Так держать',
-                    details: '🏆 Тренд вниз = дефицит работает! 0.5-1 кг/неделя — здоровый темп похудения.',
-                    type: 'achievement',
-                    priority: 6,
+                    ...weightTrendDownAdvice,
                     category: 'weight',
                     triggers: ['tab_open'],
                     ttl: 5000,
@@ -639,22 +679,51 @@
             }
 
             if (trendPerWeek > 0.5 && !sessionStorage.getItem('heys_weight_trend_up')) {
+                let weightTrendUpAdvice;
+
+                if (aimingToGain && trendPerWeek <= 1.0) {
+                    weightTrendUpAdvice = {
+                        icon: '📈',
+                        text: 'Вес растёт в нужную сторону',
+                        details: `📈 Текущий тренд ${trendLabel}. Для набора это выглядит рабочим темпом, если самочувствие и замеры тоже ок.`,
+                        type: 'achievement',
+                        priority: 6
+                    };
+                } else if (aimingToGain) {
+                    weightTrendUpAdvice = {
+                        icon: '📈',
+                        text: 'Вес растёт слишком быстро — проверь профицит',
+                        details: `⚠️ Текущий тренд ${trendLabel}. Для набора слишком быстрый рост чаще означает лишний жир, а не только мышцы.`,
+                        type: 'warning',
+                        priority: 7
+                    };
+                } else if (aimingToMaintain) {
+                    weightTrendUpAdvice = {
+                        icon: '📈',
+                        text: 'Вес растёт — проверь баланс калорий',
+                        details: `⚠️ Текущий тренд ${trendLabel}. Если цель — удержание веса, проверь калораж, напитки и скрытые перекусы.`,
+                        type: 'warning',
+                        priority: 7
+                    };
+                } else {
+                    weightTrendUpAdvice = {
+                        icon: '📈',
+                        text: 'Вес растёт — проверь калории и перекусы',
+                        details: `⚠️ Текущий тренд ${trendLabel}. При цели снижения веса это сигнал пересмотреть калораж, напитки и перекусы.`,
+                        type: 'warning',
+                        priority: 7
+                    };
+                }
+
                 advices.push({
                     id: 'weight_trend_up',
-                    icon: '📈',
-                    text: 'Вес растёт быстро — проверь калории',
-                    details: '⚠️ >0.5 кг/неделя = слишком быстрый набор. Проверь калораж и скрытые перекусы.',
-                    type: 'warning',
-                    priority: 7,
+                    ...weightTrendUpAdvice,
                     category: 'weight',
                     triggers: ['tab_open'],
                     ttl: 5000,
                     onShow: () => { try { sessionStorage.setItem('heys_weight_trend_up', '1'); } catch (e) { } }
                 });
             }
-
-            const weightGoal = prof?.weightGoal;
-            const currentWeight = day?.weightMorning || weightsForTrend[weightsForTrend.length - 1];
 
             if (weightGoal && currentWeight && Math.abs(currentWeight - weightGoal) > 0.5) {
                 const deficitPct = Math.abs(prof?.deficitPctTarget || day?.deficitPct || 10);
