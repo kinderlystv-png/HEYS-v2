@@ -421,38 +421,38 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
   };
 
   const STATE_CONFIG = {
-    EMPTY: { icon: '🌅', color: '#94a3b8', label: 'Начни день' },
-    BUILDING: { icon: '🔗', color: '#3b82f6', label: 'Импульс формируется' },
-    GROWING: { icon: '⚡', color: '#22c55e', label: 'Каскад набирает силу' },
-    STRONG: { icon: '🔥', color: '#eab308', label: 'Устойчивый импульс' },
-    BROKEN: { icon: '💪', color: '#f59e0b', label: 'Начни с малого' },
-    RECOVERY: { icon: '🌱', color: '#0ea5e9', label: 'Возвращение' }
+    EMPTY: { icon: '🌅', color: '#94a3b8', label: 'Ещё нет сигнала' },
+    BUILDING: { icon: '🔗', color: '#3b82f6', label: 'Разгон каскада' },
+    GROWING: { icon: '⚡', color: '#22c55e', label: 'Устойчивый рост' },
+    STRONG: { icon: '🔥', color: '#eab308', label: 'Пиковая инерция' },
+    BROKEN: { icon: '💪', color: '#f59e0b', label: 'Быстрый старт' },
+    RECOVERY: { icon: '🌱', color: '#0ea5e9', label: 'База есть' }
   };
 
   const MESSAGES = {
     BUILDING: [
-      { short: 'Импульс формируется. Позитивные действия начинают складываться.' },
-      { short: 'Первые дни — самые важные. Каждое решение закладывает фундамент.' }
+      { short: 'Каскад разгоняется. Хорошие решения уже заметно поднимают планку.' },
+      { short: 'Фундамент собран. Сейчас каждый стабильный день ускоряет рост.' }
     ],
     GROWING: [
-      { short: 'Каскад набирает силу. Позитивные действия накапливаются день за днём.' },
-      { short: 'На восходящей. Каждый хороший день поднимает тебя выше.' },
-      { short: 'Прогресс виден. Ещё немного — и импульс станет устойчивым.' }
+      { short: 'Каскад уже устойчиво растёт. Ты входишь в сильную рабочую зону.' },
+      { short: 'Серия хороших решений работает на тебя. Инерция уже накапливается.' },
+      { short: 'Прогресс уверенный. До пикового уровня осталось совсем немного.' }
     ],
     STRONG: [
-      { short: 'Устойчивый импульс. Ты на пике — каждый день поддерживает привычку.' },
-      { short: 'Мощная инерция. Даже небольшой сбой не перечеркнёт твой прогресс.' },
-      { short: 'Система работает. Две+ недели позитивных решений — это уже фундамент.' }
+      { short: 'Импульс высокий: сейчас важнее удерживать ритм, чем разгоняться.' },
+      { short: 'Каскад сильный: один хороший день больше поддерживает серию, чем строит её с нуля.' },
+      { short: 'Ты в верхней зоне: держи сон и ритм еды ровными, это лучше всего защищает прогресс.' }
     ],
     BROKEN: [
-      { short: 'Начни с малого — каждое действие запускает новый каскад.' },
-      { short: 'Нулевой импульс — это чистый старт. Первый день строит всё остальное.' },
-      { short: 'Не всё или ничего. Даже 70% хороших решений — отличный день.' }
+      { short: 'Сейчас каскад растёт быстрее всего: 2–3 спокойных дня подряд дадут заметный подъём.' },
+      { short: 'Старт уже не с нуля: сон, первый приём пищи и чекин сейчас особенно быстро двигают прогресс.' },
+      { short: 'Это лучшая зона для разгона: несколько базовых решений подряд быстро поднимут уровень.' }
     ],
     RECOVERY: [
-      { short: 'Один шаг назад не отменяет неделю прогресса. Ты уже возвращаешься.' },
-      { short: 'Импульс снизился, но не обнулился. Один хороший день — и ты на пути.' },
-      { short: 'После перерыва каждое решение имеет значение. Ты уже на пути.' }
+      { short: 'База уже собрана: сейчас цель — закрепить ещё пару ровных дней подряд.' },
+      { short: 'Импульс вернулся. Самый быстрый рост сейчас даёт стабильный ритм без срывов.' },
+      { short: 'После отката каскад снова на рельсах: теперь важнее ровная серия, чем идеальный день.' }
     ],
     ANTI_LICENSING: [
       { short: 'Тренировка — сама по себе победа. Не «награждай» себя едой.' },
@@ -605,11 +605,15 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
   const CRS_KEY_VERSION = 'v8';      // localStorage schema version (v8: asymmetric penalty)
   const CRS_PREV_KEY_VERSION = 'v7'; // for migration detection
 
+  const CRS_DISPLAY_BASE = 0.50;         // UX baseline: стартуем с 50% даже при сыром CRS≈0
+  const CRS_DISPLAY_SOFTCAP = 0.80;      // до 80% рост ощущается заметнее
+  const CRS_DISPLAY_SOFTCAP_INPUT = 0.40; // raw CRS ~40% → display ~80%
+
   const CRS_THRESHOLDS = {
-    STRONG: 0.75,    // Устойчивый импульс
-    GROWING: 0.45,   // Каскад набирает силу
-    BUILDING: 0.20,  // Импульс формируется
-    RECOVERY: 0.05   // Возвращение (> 0.05)
+    STRONG: 0.90,    // Устойчивый импульс
+    GROWING: 0.75,   // Каскад набирает силу
+    BUILDING: 0.60,  // Импульс формируется
+    RECOVERY: 0.53   // Возвращение (> 0.53)
   };
 
   // ─────────────────────────────────────────────────────
@@ -864,6 +868,77 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
   function clamp(val, lo, hi) {
     return val < lo ? lo : val > hi ? hi : val;
+  }
+
+  function easeOutSine(t) {
+    var safeT = clamp(Number(t) || 0, 0, 1);
+    return Math.sin((safeT * Math.PI) / 2);
+  }
+
+  function easeInQuad(t) {
+    var safeT = clamp(Number(t) || 0, 0, 1);
+    return safeT * safeT;
+  }
+
+  function mapRawCrsToDisplay(rawValue) {
+    var raw = clamp(Number(rawValue) || 0, 0, 1);
+    var display;
+
+    if (raw <= CRS_DISPLAY_SOFTCAP_INPUT) {
+      var earlyT = raw / CRS_DISPLAY_SOFTCAP_INPUT;
+      display = CRS_DISPLAY_BASE + (CRS_DISPLAY_SOFTCAP - CRS_DISPLAY_BASE) * easeOutSine(earlyT);
+    } else {
+      var lateT = (raw - CRS_DISPLAY_SOFTCAP_INPUT) / (1 - CRS_DISPLAY_SOFTCAP_INPUT);
+      display = CRS_DISPLAY_SOFTCAP + (1 - CRS_DISPLAY_SOFTCAP) * easeInQuad(lateT);
+    }
+
+    return +clamp(display, CRS_DISPLAY_BASE, 1).toFixed(3);
+  }
+
+  function getDisplayStateLabel(state) {
+    var cfg = STATE_CONFIG[state] || STATE_CONFIG.EMPTY;
+    return cfg.label || 'Каскад';
+  }
+
+  function getNextCrsMilestone(crs) {
+    var current = clamp(Number(crs) || 0, 0, 1);
+    var milestones = [
+      { state: STATES.RECOVERY, threshold: CRS_THRESHOLDS.RECOVERY, label: getDisplayStateLabel(STATES.RECOVERY) },
+      { state: STATES.BUILDING, threshold: CRS_THRESHOLDS.BUILDING, label: getDisplayStateLabel(STATES.BUILDING) },
+      { state: STATES.GROWING, threshold: CRS_THRESHOLDS.GROWING, label: getDisplayStateLabel(STATES.GROWING) },
+      { state: STATES.STRONG, threshold: CRS_THRESHOLDS.STRONG, label: getDisplayStateLabel(STATES.STRONG) }
+    ];
+
+    for (var i = 0; i < milestones.length; i++) {
+      if (current < milestones[i].threshold) {
+        return {
+          state: milestones[i].state,
+          label: milestones[i].label,
+          threshold: milestones[i].threshold,
+          gapPct: Math.max(0, Math.round((milestones[i].threshold - current) * 100))
+        };
+      }
+    }
+
+    return null;
+  }
+
+  function getCascadeHeaderHint(state, crs, trend, nextMilestone, nextStepHint) {
+    var progressPct = Math.round((Number(crs) || 0) * 100);
+    var trendCopy = trend === 'up' ? '↗ тренд вверх' : trend === 'down' ? '↘ лучше стабилизировать' : '→ без резких изменений';
+
+    if (nextMilestone) {
+      if (nextStepHint) {
+        return progressPct + '% · до «' + nextMilestone.label + '» осталось ' + nextMilestone.gapPct + '% · ' + nextStepHint;
+      }
+      return progressPct + '% · до «' + nextMilestone.label + '» осталось ' + nextMilestone.gapPct + '% · ' + trendCopy;
+    }
+
+    if (nextStepHint) {
+      return progressPct + '% · верхняя зона · задача сейчас — удерживать ритм · ' + nextStepHint;
+    }
+
+    return progressPct + '% · верхняя зона · задача сейчас — удерживать ритм · ' + trendCopy;
   }
 
   function median(arr) {
@@ -2729,33 +2804,46 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
     // 4. Compute individual ceiling
     var ceilingResult = computeIndividualCeiling(dcsHistory, prevDays30, rawWeights);
-    var ceiling = ceilingResult.ceiling;
+    var ceilingRaw = ceilingResult.ceiling;
 
     console.info('[HEYS.cascade.crs] 🏔️ Individual ceiling:', ceilingResult);
 
     // 5. Compute CRS via EMA (base = completed days only) + today's direct effect
-    var crsBase = computeCascadeRate(dcsHistory, ceiling, todayStr);
+    var crsBaseRaw = computeCascadeRate(dcsHistory, ceilingRaw, todayStr);
 
     // v3.7.0: today's actions give instant visible impact to CRS
     // Positive DCS gives slight boost (up to +3%).
     // Negative DCS (violations) gives heavy penalty (up to -10%).
-    var todayBoost = 0;
+    var todayBoostRaw = 0;
     if (todayDcs > 0) {
-      todayBoost = todayDcs * CRS_TODAY_BOOST;
+      todayBoostRaw = todayDcs * CRS_TODAY_BOOST;
     } else if (todayDcs < -0.1) {
       // Intraday negative DCS instantly affects CRS to show immediate consequence
       // e.g. DCS -0.7 means -0.07 (-7%) instant drop in addition to EMA.
-      todayBoost = todayDcs * CRS_TODAY_PENALTY;
+      todayBoostRaw = todayDcs * CRS_TODAY_PENALTY;
     }
 
-    var crs = +clamp(crsBase + todayBoost, 0, ceiling).toFixed(3);
+    var crsRaw = +clamp(crsBaseRaw + todayBoostRaw, 0, ceilingRaw).toFixed(3);
+    var crsBase = mapRawCrsToDisplay(crsBaseRaw);
+    var crs = mapRawCrsToDisplay(crsRaw);
+    var ceiling = mapRawCrsToDisplay(ceilingRaw);
+    var todayBoost = +(crs - crsBase).toFixed(4);
 
     console.info('[HEYS.cascade.crs] 📈 CRS (Cascade Rate Score) v3.7.0:', {
-      crsBase: +crsBase.toFixed(3),
-      todayBoost: +todayBoost.toFixed(4),
-      crs: crs,
-      formula: 'CRS_base(' + crsBase.toFixed(3) + ') + todayBoost(' + todayBoost.toFixed(3) + ') = ' + crs,
-      ceiling: ceiling,
+      raw: {
+        crsBase: +crsBaseRaw.toFixed(3),
+        todayBoost: +todayBoostRaw.toFixed(4),
+        crs: crsRaw,
+        ceiling: ceilingRaw,
+        formula: 'CRS_base_raw(' + crsBaseRaw.toFixed(3) + ') + todayBoost_raw(' + todayBoostRaw.toFixed(3) + ') = ' + crsRaw
+      },
+      display: {
+        crsBase: +crsBase.toFixed(3),
+        todayBoost: +todayBoost.toFixed(4),
+        crs: crs,
+        ceiling: ceiling,
+        formula: 'displayCurve(raw CRS) with 50% baseline and 80% softcap'
+      },
       dcsToday: +todayDcs.toFixed(3),
       dcsHistoryDays: Object.keys(dcsHistory).length,
       emaDecay: CRS_DECAY,
@@ -2818,9 +2906,10 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     console.info('[HEYS.cascade] 🏷️ State determination (v3.1.0 CRS-driven):', {
       eventsLength: events.length,
       crs: +crs.toFixed(3),
+      crsRaw: +crsRaw.toFixed(3),
       dailyScore: +score.toFixed(2),
       thresholds: CRS_THRESHOLDS,
-      model: 'CRS-driven (cumulative momentum)',
+      model: 'display CRS-driven (raw CRS → curve 50%→80%→100%)',
       crsTrend: crsTrend,
       detectedState: state
     });
@@ -2859,8 +2948,9 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     var dailyMomentum = Math.min(1, Math.max(0, score) / MOMENTUM_TARGET);
 
     console.info('[HEYS.cascade] 📊 Momentum score (v3.1.0 CRS):', {
-      formula: 'CRS (cumulative momentum)',
+      formula: 'display CRS (raw cumulative momentum → UX curve)',
       crs: +crs.toFixed(3),
+      crsRaw: +crsRaw.toFixed(3),
       dailyScore: +score.toFixed(2),
       dailyProgress: Math.round(dailyMomentum * 100) + '%',
       crsProgress: Math.round(crs * 100) + '%',
@@ -2908,8 +2998,12 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       crs: +crs.toFixed(3),
       crsBase: +crsBase.toFixed(3),
       todayBoost: +todayBoost.toFixed(4),
+      crsRaw: +crsRaw.toFixed(3),
+      crsBaseRaw: +crsBaseRaw.toFixed(3),
+      todayBoostRaw: +todayBoostRaw.toFixed(4),
       crsTrend: crsTrend,
       ceiling: ceiling,
+      ceilingRaw: ceilingRaw,
       dailyScore: +score.toFixed(2),
       dailyContribution: +todayDcs.toFixed(3),
       chainLength: chain,
@@ -2934,10 +3028,14 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     console.info('[HEYS.cascade] 🧬 v3.6.0 subsystems:', {
       crs: {
         value: +crs.toFixed(3),
+        rawValue: +crsRaw.toFixed(3),
         base: +crsBase.toFixed(3),
+        rawBase: +crsBaseRaw.toFixed(3),
         todayBoost: +todayBoost.toFixed(4),
-        formula: 'base + DCS × ' + CRS_TODAY_BOOST,
+        rawTodayBoost: +todayBoostRaw.toFixed(4),
+        formula: 'raw EMA → display curve (start 50%, fast to 80%, then harder)',
         ceiling: ceiling,
+        rawCeiling: ceilingRaw,
         dcsToday: +todayDcs.toFixed(3),
         trend: crsTrend,
         emaDecay: CRS_DECAY,
@@ -2962,7 +3060,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         totalPenalty: totalPenalty,
         warningsCount: warnings.length
       },
-      stateModel: 'CRS = base(EMA completed days) + DCS×0.03 (STRONG≥0.75, GROWING≥0.45, BUILDING≥0.20, RECOVERY>0.05, BROKEN≤0.05)',
+      stateModel: 'display CRS with 50% baseline (STRONG≥0.90, GROWING≥0.75, BUILDING≥0.60, RECOVERY>0.53, BROKEN≤0.53)',
       scoringMethod: 'continuous (sigmoid/bell-curve/log2/tanh)',
       personalBaselines: '14-day rolling median → 30-day for CRS',
       thresholds: { CRS: CRS_THRESHOLDS, daily: SCORE_THRESHOLDS, MOMENTUM_TARGET: MOMENTUM_TARGET },
@@ -3019,6 +3117,10 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       crsBase: +crsBase.toFixed(3),        // v3.6.0: EMA of completed days only
       todayBoost: +todayBoost.toFixed(4),   // v3.6.0: DCS × 0.03
       ceiling: ceiling,
+      crsRaw: +crsRaw.toFixed(3),
+      crsBaseRaw: +crsBaseRaw.toFixed(3),
+      todayBoostRaw: +todayBoostRaw.toFixed(4),
+      ceilingRaw: ceilingRaw,
       dailyContribution: +todayDcs.toFixed(3),
       dailyMomentum: +dailyMomentum.toFixed(3),
       hasCriticalViolation: dcsResult.hasCriticalViolation,
@@ -3197,6 +3299,10 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     var crsBase = props.crsBase || 0;         // v3.6.0
     var todayBoost = props.todayBoost || 0;    // v3.6.0
     var ceiling = props.ceiling || 0;
+    var crsRaw = typeof props.crsRaw === 'number' ? props.crsRaw : crs;
+    var crsBaseRaw = typeof props.crsBaseRaw === 'number' ? props.crsBaseRaw : crsBase;
+    var todayBoostRaw = typeof props.todayBoostRaw === 'number' ? props.todayBoostRaw : todayBoost;
+    var ceilingRaw = typeof props.ceilingRaw === 'number' ? props.ceilingRaw : ceiling;
     var dailyMomentum = props.dailyMomentum || 0;
     var dailyContribution = props.dailyContribution || 0;
     var daysAtPeak = props.daysAtPeak || 0;
@@ -3215,6 +3321,9 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     var ceilingPct = Math.round(ceiling * 100);
     // Russian plural for дней подряд
     var peakDaysLabel = daysAtPeak === 1 ? '1 день' : (daysAtPeak >= 2 && daysAtPeak <= 4) ? daysAtPeak + ' дня' : daysAtPeak + ' дней';
+    var currentLevelLabel = getDisplayStateLabel(state);
+    var nextMilestone = getNextCrsMilestone(crs);
+    var headerHint = getCascadeHeaderHint(state, crs, crsTrend, nextMilestone, nextStepHint);
 
     // Animate progress bar 0 → progressPct on mount via CSS transition (double-rAF pump)
     var animBarState = React.useState(0);
@@ -3263,6 +3372,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       });
 
       try {
+        var todayBoostPctLabel = (todayBoost >= 0 ? '+' : '') + (todayBoost * 100).toFixed(1) + '%';
         var lines = [
           '═══════════════════════════════════════════════',
           '📈 HEYS — История влияния на каскад (CRS)',
@@ -3271,9 +3381,12 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           '',
           'Сводка:',
           '  • Состояние: ' + state,
+          '  • Уровень display: ' + currentLevelLabel,
           '  • CRS: ' + progressPct + '% (' + (+crs.toFixed(3)) + ')',
-          '  • CRS база: ' + Math.round(crsBase * 100) + '% | бонус дня: +' + (todayBoost * 100).toFixed(1) + '%',
+          '  • CRS база: ' + Math.round(crsBase * 100) + '% | бонус дня: ' + todayBoostPctLabel,
           '  • Потолок (ceiling): ' + ceilingPct + '% (' + (+ceiling.toFixed(3)) + ')',
+          '  • CRS raw: ' + Math.round(crsRaw * 100) + '% (' + (+crsRaw.toFixed(3)) + ') | raw база: ' + Math.round(crsBaseRaw * 100) + '% | raw бонус дня: ' + ((todayBoostRaw >= 0 ? '+' : '') + (todayBoostRaw * 100).toFixed(1) + '%'),
+          '  • Потолок raw: ' + Math.round(ceilingRaw * 100) + '% (' + (+ceilingRaw.toFixed(3)) + ')',
           '  • Тренд CRS: ' + crsTrend,
           '  • Дней на пике (DCS ≥ 0.5): ' + daysAtPeak,
           '  • Текущий score дня: ' + (+((props && props.score) || 0).toFixed(2)),
@@ -3490,6 +3603,12 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           (message && message.short) || config.label
         ),
 
+        React.createElement('div', {
+          className: 'cascade-card__hint'
+        },
+          '🎯 ' + headerHint
+        ),
+
         // Хинт anti-licensing (2ч после тренировки)
         postTrainingWindow && React.createElement('div', {
           className: 'cascade-card__hint cascade-card__hint--training'
@@ -3526,6 +3645,9 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         ),
         React.createElement('div', { className: 'cascade-card__stats' },
           React.createElement('span', { className: 'cascade-card__stat' },
+            '🏷️ Уровень: ', React.createElement('strong', null, currentLevelLabel)
+          ),
+          React.createElement('span', { className: 'cascade-card__stat' },
             '📈 Импульс: ', React.createElement('strong', null, progressPct + '/' + ceilingPct + '%'),
             trendArrow ? (' ' + trendArrow) : null
           ),
@@ -3537,6 +3659,15 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           ),
           React.createElement('span', { className: 'cascade-card__stat' },
             '🔥 На пике: ', React.createElement('strong', null, peakDaysLabel)
+          ),
+          React.createElement('span', { className: 'cascade-card__stat' },
+            nextMilestone
+              ? React.createElement(React.Fragment, null,
+                '🎯 Следующая зона: ', React.createElement('strong', null, nextMilestone.label + ' +' + nextMilestone.gapPct + '%')
+              )
+              : React.createElement(React.Fragment, null,
+                '🎯 Следующая зона: ', React.createElement('strong', null, 'потолок удерживается')
+              )
           )
         ),
         React.createElement('div', { className: 'cascade-card__copy-wrap' },
@@ -3545,7 +3676,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             className: 'cascade-card__copy-btn',
             onClick: copyCascadeHistory,
             title: 'Скопировать всю историю влияния на CRS в буфер обмена'
-          }, 'copy CRS log')
+          }, 'Скопировать CRS-лог')
         )
       )
     );
@@ -4500,7 +4631,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     VERSION: '3.6.1'
   };
 
-  console.info('[HEYS.cascade] ✅ Module loaded v3.6.1 | CRS = base(EMA completed days) + DCS×0.03 | EMA α=0.95, 30-day window, individual ceiling | Scientific scoring: continuous functions, personal baselines, cross-factor synergies | Goal-aware calorie penalty (deficit/bulk) | Filter: [HEYS.cascade] | Sub-filter: [HEYS.cascade.crs] [HEYS.cascade.deficit]');
+  console.info('[HEYS.cascade] ✅ Module loaded v3.6.2 | CRS = raw EMA + todayBoost, then display curve (start 50%, fast to 80%, harder after) | EMA α=0.95, 30-day window, individual ceiling | Scientific scoring: continuous functions, personal baselines, cross-factor synergies | Goal-aware calorie penalty (deficit/bulk) | Filter: [HEYS.cascade] | Sub-filter: [HEYS.cascade.crs] [HEYS.cascade.deficit]');
 
 })(typeof window !== 'undefined' ? window : global);
 

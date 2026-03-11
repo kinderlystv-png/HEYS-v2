@@ -3559,9 +3559,13 @@
         return !!trigger && trigger !== 'unknown';
     }
 
+    function isInformationalBlocker(key) {
+        return key === 'manual_mode_no_auto_toast';
+    }
+
     function pickDominantBlocker(blockerReport) {
         const topReasons = Array.isArray(blockerReport?.topReasons) ? blockerReport.topReasons : [];
-        const nonInformational = topReasons.filter(item => item?.key && item.key !== 'manual_mode_no_auto_toast');
+        const nonInformational = topReasons.filter(item => item?.key && !isInformationalBlocker(item.key));
         if (nonInformational.length > 0) return nonInformational[0];
         return null;
     }
@@ -3571,32 +3575,50 @@
             case 'expert_conflict_resolution':
                 return {
                     label: 'несколько советов конкурировали',
-                    message: `Несколько советов конкурировали между собой, поэтому движок выбрал более сильный вариант${count ? ` (${count})` : ''}.`
+                    message: `Несколько советов конкурировали между собой, поэтому движок выбрал более сильный вариант${count ? ` (${count})` : ''}.`,
+                    shortReason: 'движок оставил более сильный вариант'
                 };
             case 'trigger_mismatch':
                 return {
                     label: 'часть советов не подошла под триггер',
-                    message: `Часть советов не подошла под текущий триггер показа${count ? ` (${count})` : ''}.`
+                    message: `Часть советов не подошла под текущий триггер показа${count ? ` (${count})` : ''}.`,
+                    shortReason: 'текущий trigger не подошёл части советов'
                 };
             case 'emotional_filter':
                 return {
                     label: 'эмоциональный фильтр смягчил выдачу',
-                    message: `Эмоциональный фильтр отсеял часть более жёстких советов${count ? ` (${count})` : ''}.`
+                    message: `Эмоциональный фильтр отсеял часть более жёстких советов${count ? ` (${count})` : ''}.`,
+                    shortReason: 'слишком жёсткие советы были смягчены'
                 };
             case 'global_cooldown':
                 return {
                     label: 'глобальный cooldown мешал показу',
-                    message: `Глобальный cooldown часто блокировал auto-toast${count ? ` (${count})` : ''}.`
+                    message: `Глобальный cooldown часто блокировал auto-toast${count ? ` (${count})` : ''}.`,
+                    shortReason: 'сработала защита от слишком частых показов'
                 };
             case 'category_limit':
                 return {
                     label: 'лимит категории срезал часть советов',
-                    message: `В одной категории оказалось слишком много советов, поэтому часть была срезана${count ? ` (${count})` : ''}.`
+                    message: `В одной категории оказалось слишком много советов, поэтому часть была срезана${count ? ` (${count})` : ''}.`,
+                    shortReason: 'в категории оказалось слишком много кандидатов'
+                };
+            case 'manual_mode_no_auto_toast':
+                return {
+                    label: 'ручной режим не запускает auto-toast',
+                    message: `При ручном раскрытии советов auto-toast специально не выбирается${count ? ` (${count})` : ''}.`,
+                    shortReason: 'manual drawer по дизайну не запускает auto-toast'
+                };
+            case 'already_shown_in_session':
+                return {
+                    label: 'совет уже показывался в этой сессии',
+                    message: `Часть советов уже показывалась в текущей сессии, поэтому повтор был заблокирован${count ? ` (${count})` : ''}.`,
+                    shortReason: 'защита от повторного показа в одной сессии'
                 };
             default:
                 return {
                     label: key,
-                    message: null
+                    message: null,
+                    shortReason: null
                 };
         }
     }
@@ -3775,6 +3797,10 @@
             findings.push(`Главный блокер дня — global cooldown (${dominantBlocker.count} срабатываний). Auto-toast часто не доходил до показа.`);
         } else if (dominantBlocker?.key === 'expert_conflict_resolution') {
             findings.push(`Несколько советов конкурировали между собой, поэтому движок чаще выбирал один более сильный вариант (${dominantBlocker.count}).`);
+        } else if (dominantBlocker?.key === 'trigger_mismatch') {
+            findings.push(`Часть советов не подходила под текущие триггеры показа, поэтому до выдачи чаще доходили только самые уместные варианты (${dominantBlocker.count}).`);
+        } else if (dominantBlocker?.key === 'emotional_filter') {
+            findings.push(`Эмоциональный фильтр смягчал выдачу и отсеивал часть более жёстких советов (${dominantBlocker.count}).`);
         }
 
         const tabOpenStats = triggerReport.find(item => item.trigger === 'tab_open');
@@ -3973,6 +3999,14 @@
         lines.push(`mode: ${mode}`);
 
         if (mode === 'clipboard') {
+            const renderableTopReasons = (() => {
+                const topReasons = Array.isArray(diagnostics.blockerReport?.topReasons)
+                    ? diagnostics.blockerReport.topReasons
+                    : [];
+                const withoutInformational = topReasons.filter(item => !isInformationalBlocker(item?.key));
+                return (withoutInformational.length > 0 ? withoutInformational : topReasons).slice(0, 6);
+            })();
+
             const formatRecentEntry = (entry, index) => {
                 if (entry?.type === 'snapshot') {
                     const summary = entry?.summary || {};
@@ -4017,9 +4051,9 @@
             });
 
             pushSection('TOP_BLOCKERS');
-            (diagnostics.blockerReport?.topReasons || []).slice(0, 6).forEach(item => {
+            renderableTopReasons.forEach(item => {
                 const meta = getBlockerHumanMeta(item.key, item.count || 0);
-                lines.push(`- ${item.key}: ${item.count}${meta?.label && meta.label !== item.key ? ` — ${meta.label}` : ''}`);
+                lines.push(`- ${item.key}: ${item.count}${meta?.label && meta.label !== item.key ? ` — ${meta.label}` : ''}${meta?.shortReason ? ` (${meta.shortReason})` : ''}`);
             });
 
             pushSection('ACTIVE_MODULES');
@@ -4027,10 +4061,11 @@
                 .filter(item => item.withOutput > 0)
                 .slice(0, 6)
                 .forEach(item => {
+                    const displayBlocker = (item.topBlockers || []).find(blocker => !isInformationalBlocker(blocker?.key)) || null;
                     lines.push(`- ${item.module}: ${item.withOutput}/${item.runs} запусков дали совет`);
-                    if (item.topBlockers?.[0]) {
-                        const meta = getBlockerHumanMeta(item.topBlockers[0].key, item.topBlockers[0].count || 0);
-                        lines.push(`  blocker: ${item.topBlockers[0].key} · ${item.topBlockers[0].count}${meta?.label && meta.label !== item.topBlockers[0].key ? ` (${meta.label})` : ''}`);
+                    if (displayBlocker) {
+                        const meta = getBlockerHumanMeta(displayBlocker.key, displayBlocker.count || 0);
+                        lines.push(`  blocker: ${displayBlocker.key} · ${displayBlocker.count}${meta?.label && meta.label !== displayBlocker.key ? ` (${meta.label})` : ''}${meta?.shortReason ? ` — ${meta.shortReason}` : ''}`);
                     }
                 });
 
@@ -6457,6 +6492,8 @@
         calculateSmartScore,
         collectSoftExpertSignals,
         explainAdviceVisibility,
+        getBlockerHumanMeta,
+        isInformationalBlocker,
         getDailyAdviceTraceLog,
         getDailyAdviceTraceDiagnostics,
         appendDailyAdviceTraceSnapshot,

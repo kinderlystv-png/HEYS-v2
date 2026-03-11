@@ -461,6 +461,8 @@ describe('HEYS advice engine', () => {
     expect(clipboardPayload).toContain('=== FINDINGS ===');
     expect(clipboardPayload).toContain('=== RECENT_ACTIVITY ===');
     expect(clipboardPayload).toContain('event:manual_open · trigger=manual · displayed=5 · raw=7 · filtered=2');
+    expect(clipboardPayload).toContain('expert_conflict_resolution: 17 — несколько советов конкурировали (движок оставил более сильный вариант)');
+    expect(clipboardPayload).not.toContain('\n- manual_mode_no_auto_toast: 7');
     expect(clipboardPayload).not.toContain('=== QUALITY ===');
     expect(clipboardPayload).not.toContain('=== ANALYTICS_EFFECTIVENESS ===');
     expect(clipboardPayload.length).toBeLessThan(compactPayload.length);
@@ -838,6 +840,127 @@ describe('HEYS advice engine', () => {
       message: 'Несколько советов конкурировали между собой, поэтому движок выбрал более сильный вариант (6).'
     });
     expect(diagnostics.quality.findings.some(item => item.includes('Несколько советов конкурировали между собой'))).toBe(true);
-    expect(clipboardPayload).toContain('expert_conflict_resolution: 6 — несколько советов конкурировали');
+    expect(clipboardPayload).toContain('expert_conflict_resolution: 6 — несколько советов конкурировали (движок оставил более сильный вариант)');
+  });
+
+  it('adds human-friendly findings for trigger mismatch and emotional filter days', () => {
+    localStorage.setItem('heys_advice_trace_day_v1', JSON.stringify({
+      version: 'advice-day-log-v2',
+      date: '2026-03-14',
+      updatedAt: 1773215100000,
+      entries: [
+        {
+          type: 'snapshot',
+          recordedAt: 1773215100000,
+          lastSeenAt: 1773215100000,
+          repeatCount: 4,
+          fingerprint: 'snapshot:trigger-mismatch-day',
+          summary: {
+            trigger: 'tab_open',
+            hour: 10,
+            mealCount: 4,
+            waterMl: 1500,
+            kcal: 1800,
+            visibleForManualCount: 7,
+            eligibleForAutoToastCount: 7,
+            primaryId: 'weight_forecast_wrong_direction',
+            topIssues: ['UNDER_TARGET_TREND'],
+            topBlockers: [{ code: 'trigger_mismatch', count: 3 }],
+            modulesWithOutput: ['nutrition', 'timing', 'other'],
+            silentModules: ['training', 'emotional']
+          },
+          trace: {
+            trigger: 'tab_open',
+            outputs: {
+              visibleForManualCount: 7,
+              eligibleForAutoToastCount: 7,
+              primaryId: 'weight_forecast_wrong_direction',
+              relevant: [{ id: 'weight_forecast_wrong_direction' }],
+              cooldownEligible: [{ id: 'weight_forecast_wrong_direction' }]
+            },
+            modules: [
+              { module: 'nutrition', outputCount: 1, status: 'ok', adviceIds: ['n1'] },
+              { module: 'timing', outputCount: 1, status: 'ok', adviceIds: ['t1'] },
+              { module: 'other', outputCount: 1, status: 'ok', adviceIds: ['weight_forecast_wrong_direction'] }
+            ],
+            stages: [
+              {
+                stage: 'trigger_filter',
+                removed: [
+                  { id: 'n2', module: 'nutrition', reason: { code: 'trigger_mismatch', message: 'no trigger' } },
+                  { id: 'n3', module: 'nutrition', reason: { code: 'trigger_mismatch', message: 'no trigger' } },
+                  { id: 't2', module: 'timing', reason: { code: 'trigger_mismatch', message: 'no trigger' } }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    }));
+
+    const triggerDiagnostics = window.HEYS.advice.getDailyAdviceTraceDiagnostics('2026-03-14');
+
+    expect(triggerDiagnostics.quality.findings.some(item => item.includes('не подходила под текущие триггеры показа'))).toBe(true);
+
+    localStorage.setItem('heys_advice_trace_day_v1', JSON.stringify({
+      version: 'advice-day-log-v2',
+      date: '2026-03-15',
+      updatedAt: 1773215200000,
+      entries: [
+        {
+          type: 'snapshot',
+          recordedAt: 1773215200000,
+          lastSeenAt: 1773215200000,
+          repeatCount: 5,
+          fingerprint: 'snapshot:emotional-filter-day',
+          summary: {
+            trigger: 'manual',
+            hour: 10,
+            mealCount: 3,
+            waterMl: 800,
+            kcal: 2200,
+            visibleForManualCount: 7,
+            eligibleForAutoToastCount: 0,
+            primaryId: null,
+            topIssues: ['UNDER_TARGET_TREND'],
+            topBlockers: [{ code: 'emotional_filter', count: 5 }],
+            modulesWithOutput: ['nutrition', 'emotional', 'other'],
+            silentModules: ['training']
+          },
+          trace: {
+            trigger: 'manual',
+            outputs: {
+              visibleForManualCount: 7,
+              eligibleForAutoToastCount: 0,
+              primaryId: null,
+              relevant: [{ id: 'crash_support' }],
+              cooldownEligible: []
+            },
+            modules: [
+              { module: 'nutrition', outputCount: 1, status: 'ok', adviceIds: ['n1'] },
+              { module: 'emotional', outputCount: 1, status: 'ok', adviceIds: ['crash_support'] },
+              { module: 'other', outputCount: 1, status: 'ok', adviceIds: ['o1'] }
+            ],
+            stages: [
+              {
+                stage: 'emotional_filter',
+                removed: Array.from({ length: 5 }, (_, index) => ({
+                  id: `e_${index}`,
+                  module: index < 3 ? 'nutrition' : 'other',
+                  reason: { code: 'emotional_filter', message: 'softened' }
+                }))
+              }
+            ]
+          }
+        }
+      ]
+    }));
+
+    const emotionalDiagnostics = window.HEYS.advice.getDailyAdviceTraceDiagnostics('2026-03-15');
+    const emotionalLog = window.HEYS.advice.getDailyAdviceTraceLog('2026-03-15');
+    const emotionalClipboard = window.HEYS.advice.formatDailyAdviceTraceForClipboard(emotionalLog, { mode: 'clipboard' });
+
+    expect(emotionalDiagnostics.quality.findings.some(item => item.includes('Эмоциональный фильтр смягчал выдачу'))).toBe(true);
+    expect(emotionalClipboard).toContain('emotional_filter: 25 — эмоциональный фильтр смягчил выдачу (слишком жёсткие советы были смягчены)');
   });
 });

@@ -13,7 +13,9 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
   // Зависимости
   const piConst = HEYS.InsightsPI?.constants || window.piConst || {};
-  const patternModules = HEYS.InsightsPI?.patternModules || {};
+  function getPatternModules() {
+    return HEYS.InsightsPI?.patternModules || {};
+  }
   let _thresholdsCtxCache = { key: null, thresholds: null };
 
   /**
@@ -122,6 +124,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
    * @param pIndex
    */
   function analyzeMealTiming(days, profile, pIndex) {
+    const patternModules = getPatternModules();
     if (typeof patternModules.analyzeMealTiming === 'function') {
       const thresholds = getThresholdsContext(days, profile, pIndex);
       return patternModules.analyzeMealTiming(days, profile, thresholds);
@@ -140,6 +143,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
    * @param profile
    */
   function analyzeWaveOverlap(days, profile) {
+    const patternModules = getPatternModules();
     if (typeof patternModules.analyzeWaveOverlap === 'function') {
       return patternModules.analyzeWaveOverlap(days, profile);
     }
@@ -158,6 +162,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
    * @param pIndex
    */
   function analyzeLateEating(days, profile, pIndex) {
+    const patternModules = getPatternModules();
     if (typeof patternModules.analyzeLateEating === 'function') {
       const thresholds = getThresholdsContext(days, profile, pIndex);
       return patternModules.analyzeLateEating(days, thresholds);
@@ -177,6 +182,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
    * @param optimum
    */
   function analyzeMealQualityTrend(days, pIndex, optimum) {
+    const patternModules = getPatternModules();
     if (typeof patternModules.analyzeMealQualityTrend === 'function') {
       return patternModules.analyzeMealQualityTrend(days, pIndex, optimum);
     }
@@ -195,6 +201,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
    * @param profile
    */
   function analyzeNutritionQuality(days, pIndex, profile) {
+    const patternModules = getPatternModules();
     if (typeof patternModules.analyzeNutritionQuality === 'function') {
       const thresholds = getThresholdsContext(days, profile, pIndex);
       return patternModules.analyzeNutritionQuality(days, pIndex, thresholds);
@@ -212,6 +219,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
    * @param days
    */
   function analyzeSleepWeight(days) {
+    const patternModules = getPatternModules();
     if (typeof patternModules.analyzeSleepWeight === 'function') {
       return patternModules.analyzeSleepWeight(days);
     }
@@ -231,6 +239,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
    * @param pIndex
    */
   function analyzeSleepHunger(days, profile, pIndex) {
+    const patternModules = getPatternModules();
     if (typeof patternModules.analyzeSleepHunger === 'function') {
       return patternModules.analyzeSleepHunger(days, profile, pIndex);
     }
@@ -249,6 +258,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
    * @param pIndex
    */
   function analyzeTrainingKcal(days, pIndex) {
+    const patternModules = getPatternModules();
     if (typeof patternModules.analyzeTrainingKcal === 'function') {
       return patternModules.analyzeTrainingKcal(days, pIndex);
     }
@@ -265,6 +275,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
    * @param days
    */
   function analyzeStepsWeight(days) {
+    const patternModules = getPatternModules();
     if (typeof patternModules.analyzeStepsWeight === 'function') {
       return patternModules.analyzeStepsWeight(days);
     }
@@ -281,6 +292,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
    * @param days
    */
   function analyzeNEATTrend(days) {
+    const patternModules = getPatternModules();
     if (typeof patternModules.analyzeNEATTrend === 'function') {
       return patternModules.analyzeNEATTrend(days);
     }
@@ -300,6 +312,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
    * @param pIndex
    */
   function analyzeProteinSatiety(days, profile, pIndex) {
+    const patternModules = getPatternModules();
     if (typeof patternModules.analyzeProteinSatiety === 'function') {
       return patternModules.analyzeProteinSatiety(days, profile, pIndex);
     }
@@ -318,6 +331,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
    * @param pIndex
    */
   function analyzeFiberRegularity(days, pIndex) {
+    const patternModules = getPatternModules();
     if (typeof patternModules.analyzeFiberRegularity === 'function') {
       return patternModules.analyzeFiberRegularity(days, pIndex);
     }
@@ -336,6 +350,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
    * @param pIndex
    */
   function analyzeStressEating(days, pIndex) {
+    const patternModules = getPatternModules();
     if (typeof patternModules.analyzeStressEating === 'function') {
       return patternModules.analyzeStressEating(days, pIndex);
     }
@@ -354,6 +369,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
    * @param optimum
    */
   function analyzeMoodFood(days, pIndex, optimum) {
+    const patternModules = getPatternModules();
     if (typeof patternModules.analyzeMoodFood === 'function') {
       return patternModules.analyzeMoodFood(days, pIndex, optimum);
     }
@@ -371,6 +387,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
    * @param pIndex
    */
   function analyzeMoodTrajectory(days, pIndex) {
+    const patternModules = getPatternModules();
     if (typeof patternModules.analyzeMoodTrajectory === 'function') {
       return patternModules.analyzeMoodTrajectory(days, pIndex);
     }
@@ -392,6 +409,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
    * @param profile
    */
   function analyzeCircadianTiming(days, pIndex, profile) {
+    const patternModules = getPatternModules();
     if (typeof patternModules.analyzeCircadianTiming === 'function') {
       const thresholds = getThresholdsContext(days, profile, pIndex);
       return patternModules.analyzeCircadianTiming(days, pIndex, thresholds);
@@ -412,6 +430,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
    * @param profile
    */
   function analyzeNutrientTiming(days, pIndex, profile) {
+    const patternModules = getPatternModules();
     if (typeof patternModules.analyzeNutrientTiming === 'function') {
       const thresholds = getThresholdsContext(days, profile, pIndex);
       return patternModules.analyzeNutrientTiming(days, pIndex, profile, thresholds);
@@ -433,6 +452,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
    * @param profile
    */
   function analyzeInsulinSensitivity(days, pIndex, profile) {
+    const patternModules = getPatternModules();
     if (typeof patternModules.analyzeInsulinSensitivity === 'function') {
       const thresholds = getThresholdsContext(days, profile, pIndex);
       return patternModules.analyzeInsulinSensitivity(days, pIndex, profile, thresholds);
@@ -452,6 +472,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
    * @param pIndex
    */
   function analyzeGutHealth(days, pIndex) {
+    const patternModules = getPatternModules();
     if (typeof patternModules.analyzeGutHealth === 'function') {
       return patternModules.analyzeGutHealth(days, pIndex);
     }
@@ -472,6 +493,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
    * @param pIndex
    */
   function analyzeSleepQuality(days, pIndex) {
+    const patternModules = getPatternModules();
     if (typeof patternModules.analyzeSleepQuality === 'function') {
       return patternModules.analyzeSleepQuality(days, pIndex);
     }
@@ -489,6 +511,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
    * @param pIndex
    */
   function analyzeWellbeing(days, pIndex) {
+    const patternModules = getPatternModules();
     if (typeof patternModules.analyzeWellbeing === 'function') {
       return patternModules.analyzeWellbeing(days, pIndex);
     }
@@ -505,6 +528,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
    * @param days
    */
   function analyzeHydration(days) {
+    const patternModules = getPatternModules();
     if (typeof patternModules.analyzeHydration === 'function') {
       return patternModules.analyzeHydration(days);
     }
@@ -522,6 +546,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
    * @param profile
    */
   function analyzeBodyComposition(days, profile) {
+    const patternModules = getPatternModules();
     if (typeof patternModules.analyzeBodyComposition === 'function') {
       return patternModules.analyzeBodyComposition(days, profile);
     }
@@ -540,6 +565,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
    * @param profile
    */
   function analyzeCyclePatterns(days, pIndex, profile) {
+    const patternModules = getPatternModules();
     if (typeof patternModules.analyzeCyclePatterns === 'function') {
       return patternModules.analyzeCyclePatterns(days, pIndex, profile);
     }
@@ -557,6 +583,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
    * @param pIndex
    */
   function analyzeWeekendEffect(days, pIndex) {
+    const patternModules = getPatternModules();
     if (typeof patternModules.analyzeWeekendEffect === 'function') {
       return patternModules.analyzeWeekendEffect(days, pIndex);
     }
@@ -576,6 +603,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
    * @returns {object} - { pattern, available, novaDistribution, ultraProcessedPct, livingFoodsBonus, score, insight, confidence }
    */
   function analyzeNOVAQuality(days, pIndex) {
+    const patternModules = getPatternModules();
     if (typeof patternModules.analyzeNOVAQuality === 'function') {
       return patternModules.analyzeNOVAQuality(days, pIndex);
     }
@@ -594,6 +622,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
    * @returns {object} - { pattern, available, highIntensityDays, avgRecovery, overtrainingRisk, score, insight, confidence }
    */
   function analyzeTrainingRecovery(days) {
+    const patternModules = getPatternModules();
     if (typeof patternModules.analyzeTrainingRecovery === 'function') {
       return patternModules.analyzeTrainingRecovery(days);
     }
@@ -613,6 +642,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
    * @returns {object} - { pattern, available, bicepsTrend, thighTrend, weightChange, compositionQuality, score, insight, confidence }
    */
   function analyzeHypertrophy(days, profile) {
+    const patternModules = getPatternModules();
     if (typeof patternModules.analyzeHypertrophy === 'function') {
       return patternModules.analyzeHypertrophy(days, profile);
     }
@@ -633,6 +663,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
    * @returns {object} - { pattern, available, deficits, avgIntake, score, insight, confidence }
    */
   function analyzeMicronutrients(days, pIndex, profile) {
+    const patternModules = getPatternModules();
     if (typeof patternModules.analyzeMicronutrients === 'function') {
       return patternModules.analyzeMicronutrients(days, pIndex, profile);
     }
@@ -652,6 +683,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
    * @returns {object} - { pattern, available, naKRatio, sodiumLoad, cholesterolAvg, score, insight, confidence }
    */
   function analyzeHeartHealth(days, pIndex) {
+    const patternModules = getPatternModules();
     if (typeof patternModules.analyzeHeartHealth === 'function') {
       return patternModules.analyzeHeartHealth(days, pIndex);
     }
@@ -671,6 +703,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
    * @returns {object} - { pattern, available, omega6to3Ratio, inflammatoryLoad, score, insight, confidence }
    */
   function analyzeOmegaBalance(days, pIndex) {
+    const patternModules = getPatternModules();
     if (typeof patternModules.analyzeOmegaBalance === 'function') {
       return patternModules.analyzeOmegaBalance(days, pIndex);
     }
@@ -690,6 +723,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
    * @param pIndex
    */
   function analyzeVitaminDefense(days, profile, pIndex) {
+    const patternModules = getPatternModules();
     if (typeof patternModules.analyzeVitaminDefense === 'function') {
       return patternModules.analyzeVitaminDefense(days, profile, pIndex);
     }
@@ -713,6 +747,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
    * @returns {object} — {pattern, available, energyBscore, bloodBscore, anemiaRisk, score, confidence, insight}
    */
   function analyzeBComplexAnemia(days, profile, pIndex) {
+    const patternModules = getPatternModules();
     if (typeof patternModules.analyzeBComplexAnemia === 'function') {
       return patternModules.analyzeBComplexAnemia(days, profile, pIndex);
     }
@@ -733,6 +768,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
    * @returns {object}
    */
   function analyzeGlycemicLoad(days, pIndex) {
+    const patternModules = getPatternModules();
     if (typeof patternModules.analyzeGlycemicLoad === 'function') {
       return patternModules.analyzeGlycemicLoad(days, pIndex);
     }
@@ -754,6 +790,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
    * @returns {object}
    */
   function analyzeProteinDistribution(days, profile, pIndex) {
+    const patternModules = getPatternModules();
     if (typeof patternModules.analyzeProteinDistribution === 'function') {
       const thresholds = getThresholdsContext(days, profile, pIndex);
       return patternModules.analyzeProteinDistribution(days, profile, pIndex, thresholds);
@@ -774,6 +811,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
    * @returns {object}
    */
   function analyzeAntioxidantDefense(days, pIndex) {
+    const patternModules = getPatternModules();
     if (typeof patternModules.analyzeAntioxidantDefense === 'function') {
       return patternModules.analyzeAntioxidantDefense(days, pIndex);
     }
@@ -793,6 +831,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
    * @returns {object}
    */
   function analyzeAddedSugarDependency(days, pIndex) {
+    const patternModules = getPatternModules();
     if (typeof patternModules.analyzeAddedSugarDependency === 'function') {
       return patternModules.analyzeAddedSugarDependency(days, pIndex);
     }
@@ -813,6 +852,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
    * @returns {object}
    */
   function analyzeBoneHealth(days, profile, pIndex) {
+    const patternModules = getPatternModules();
     if (typeof patternModules.analyzeBoneHealth === 'function') {
       return patternModules.analyzeBoneHealth(days, profile, pIndex);
     }
@@ -833,6 +873,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
    * @returns {object}
    */
   function analyzeTrainingTypeMatch(days, profile, pIndex) {
+    const patternModules = getPatternModules();
     if (typeof patternModules.analyzeTrainingTypeMatch === 'function') {
       return patternModules.analyzeTrainingTypeMatch(days, profile, pIndex);
     }
@@ -852,6 +893,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
    * @returns {object}
    */
   function analyzeElectrolyteHomeostasis(days, pIndex) {
+    const patternModules = getPatternModules();
     if (typeof patternModules.analyzeElectrolyteHomeostasis === 'function') {
       return patternModules.analyzeElectrolyteHomeostasis(days, pIndex);
     }
@@ -871,6 +913,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
    * @returns {object}
    */
   function analyzeNutrientDensity(days, pIndex) {
+    const patternModules = getPatternModules();
     if (typeof patternModules.analyzeNutrientDensity === 'function') {
       return patternModules.analyzeNutrientDensity(days, pIndex);
     }
@@ -916,18 +959,18 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     analyzeTrainingRecovery,
     analyzeHypertrophy,
     analyzeMicronutrients,
-    analyzeHeartHealth: patternModules.analyzeHeartHealth || analyzeHeartHealth, // C9: Heart Health (v6.0, modular-ready)
-    analyzeOmegaBalance: patternModules.analyzeOmegaBalance || analyzeOmegaBalance, // C8: Omega Balance (v6.0, modular-ready)
-    analyzeVitaminDefense: patternModules.analyzeVitaminDefense || analyzeVitaminDefense, // C13: Vitamin Defense Radar (v6.3, modular-ready)
-    analyzeBComplexAnemia: patternModules.analyzeBComplexAnemia || analyzeBComplexAnemia, // C22: B-Complex Energy & Anemia Risk (v6.3, modular-ready)
-    analyzeGlycemicLoad: patternModules.analyzeGlycemicLoad || analyzeGlycemicLoad, // C14: Glycemic Load Optimizer (v6.0, modular-ready)
-    analyzeProteinDistribution: patternModules.analyzeProteinDistribution || analyzeProteinDistribution, // C15: Protein Distribution (v6.0, modular-ready)
-    analyzeAntioxidantDefense: patternModules.analyzeAntioxidantDefense || analyzeAntioxidantDefense, // C16: Antioxidant Defense (v6.0, modular-ready)
-    analyzeAddedSugarDependency: patternModules.analyzeAddedSugarDependency || analyzeAddedSugarDependency, // C18: Added Sugar & Dependency (v6.3, modular-ready)
-    analyzeBoneHealth: patternModules.analyzeBoneHealth || analyzeBoneHealth, // C17: Bone Health (v6.3, modular-ready)
-    analyzeTrainingTypeMatch: patternModules.analyzeTrainingTypeMatch || analyzeTrainingTypeMatch, // C19: Training-Type Match (v6.0, modular-ready)
-    analyzeElectrolyteHomeostasis: patternModules.analyzeElectrolyteHomeostasis || analyzeElectrolyteHomeostasis, // C20: Electrolyte Homeostasis (v6.0, modular-ready)
-    analyzeNutrientDensity: patternModules.analyzeNutrientDensity || analyzeNutrientDensity // C21: Nutrient Density (v6.0, modular-ready)
+    analyzeHeartHealth,
+    analyzeOmegaBalance,
+    analyzeVitaminDefense,
+    analyzeBComplexAnemia,
+    analyzeGlycemicLoad,
+    analyzeProteinDistribution,
+    analyzeAntioxidantDefense,
+    analyzeAddedSugarDependency,
+    analyzeBoneHealth,
+    analyzeTrainingTypeMatch,
+    analyzeElectrolyteHomeostasis,
+    analyzeNutrientDensity
   };
 
   // Fallback для прямого доступа

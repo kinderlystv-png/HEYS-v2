@@ -10891,6 +10891,11 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
         return `${Math.round(value * 100)}%`;
     }
 
+    function formatDiagnosticsMetricValue(metric, value, options = {}) {
+        if (metric === 'precision' && options.hasEvidence === false) return 'нет данных';
+        return formatPercentValue(value);
+    }
+
     function getQualityGradeLabel(grade) {
         if (grade === 'strong') return 'сильный';
         if (grade === 'good') return 'хороший';
@@ -10936,13 +10941,38 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
             global_cooldown: 'глобальный cooldown',
             expert_conflict_resolution: 'конфликт сигналов',
             category_limit: 'лимит категории',
+            manual_mode_no_auto_toast: 'ручной режим не запускает auto-toast',
+            already_shown_in_session: 'уже показывали в этой сессии',
             ui_busy: 'интерфейс был занят',
             missing_trigger: 'триггер не был передан',
             session_limit: 'лимит за сессию',
         };
-        const humanizeBlocker = (key) => blockerLabels[key] || key;
-        const getKpiStatusClass = (metric, value) => {
+        const getBlockerMeta = (key, count) => {
+            return HEYS?.advice?.getBlockerHumanMeta?.(key, count) || {
+                label: blockerLabels[key] || key,
+                message: null,
+                shortReason: null
+            };
+        };
+        const isInformationalBlocker = (key) => {
+            return HEYS?.advice?.isInformationalBlocker?.(key) === true || key === 'manual_mode_no_auto_toast';
+        };
+        const humanizeBlocker = (key, count) => {
+            const meta = getBlockerMeta(key, count);
+            return meta?.label || blockerLabels[key] || key;
+        };
+        const topReasonsForDisplay = (() => {
+            const filtered = topReasons.filter(item => !isInformationalBlocker(item?.key));
+            return filtered.length > 0 ? filtered : topReasons;
+        })();
+        const getDisplayBlocker = (blockers) => {
+            const safeBlockers = Array.isArray(blockers) ? blockers : [];
+            return safeBlockers.find(item => !isInformationalBlocker(item?.key)) || null;
+        };
+        const hasPrecisionEvidence = ((effect.positiveSignals || 0) + (effect.negativeSignals || 0)) > 0;
+        const getKpiStatusClass = (metric, value, options = {}) => {
             if (typeof value !== 'number' || !Number.isFinite(value)) return 'is-neutral';
+            if (metric === 'precision' && options.hasEvidence === false) return 'is-neutral';
             if (metric === 'coverage') return value >= 0.7 ? 'is-good' : value >= 0.45 ? 'is-mixed' : 'is-weak';
             if (metric === 'precision') return value >= 0.6 ? 'is-good' : value >= 0.35 ? 'is-mixed' : 'is-weak';
             if (metric === 'ignored') return value <= 0.35 ? 'is-good' : value <= 0.6 ? 'is-mixed' : 'is-weak';
@@ -11004,9 +11034,9 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
                             React.createElement('div', { className: 'advice-diagnostics-stat-card__label' }, 'Покрытие'),
                             React.createElement('div', { className: 'advice-diagnostics-stat-card__value' }, formatPercentValue(effect.coverage))
                         ),
-                        React.createElement('div', { className: `advice-diagnostics-stat-card ${getKpiStatusClass('precision', effect.precisionProxy)}` },
+                        React.createElement('div', { className: `advice-diagnostics-stat-card ${getKpiStatusClass('precision', effect.precisionProxy, { hasEvidence: hasPrecisionEvidence })}` },
                             React.createElement('div', { className: 'advice-diagnostics-stat-card__label' }, 'Точность сигнала'),
-                            React.createElement('div', { className: 'advice-diagnostics-stat-card__value' }, formatPercentValue(effect.precisionProxy))
+                            React.createElement('div', { className: 'advice-diagnostics-stat-card__value' }, formatDiagnosticsMetricValue('precision', effect.precisionProxy, { hasEvidence: hasPrecisionEvidence }))
                         ),
                         React.createElement('div', { className: `advice-diagnostics-stat-card ${getKpiStatusClass('ignored', effect.ignoredRate)}` },
                             React.createElement('div', { className: 'advice-diagnostics-stat-card__label' }, 'Проигнорировано'),
@@ -11062,31 +11092,34 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
                         )
                     ),
 
-                    topReasons.length > 0 && React.createElement('section', { className: 'advice-diagnostics-section' },
+                    topReasonsForDisplay.length > 0 && React.createElement('section', { className: 'advice-diagnostics-section' },
                         React.createElement('div', { className: 'advice-diagnostics-section__title' }, 'Главные блокеры'),
                         React.createElement('div', { className: 'advice-diagnostics-tags' },
-                            topReasons.map(item => React.createElement('span', {
+                            topReasonsForDisplay.map(item => React.createElement('span', {
                                 key: item.key,
                                 className: 'advice-diagnostics-tag'
-                            }, `${humanizeBlocker(item.key)} · ${item.count || 0}`))
+                            }, `${humanizeBlocker(item.key, item.count || 0)} · ${item.count || 0}`))
                         )
                     ),
 
                     activeModules.length > 0 && React.createElement('section', { className: 'advice-diagnostics-section' },
                         React.createElement('div', { className: 'advice-diagnostics-section__title' }, 'Активные модули'),
                         React.createElement('div', { className: 'advice-diagnostics-module-list' },
-                            activeModules.map(item => React.createElement('div', {
-                                key: item.module,
-                                className: 'advice-diagnostics-module-row'
-                            },
-                                React.createElement('div', { className: 'advice-diagnostics-module-row__name' }, item.module),
-                                React.createElement('div', { className: 'advice-diagnostics-module-row__meta' }, `${item.withOutput}/${item.runs} запусков дали совет`),
-                                React.createElement('div', { className: 'advice-diagnostics-module-row__sub' },
-                                    item.topBlockers?.[0]
-                                        ? `главный блокер: ${humanizeBlocker(item.topBlockers[0].key)} · ${item.topBlockers[0].count || 0}`
-                                        : `средняя выдача: ${item.avgOutputCount ?? 0}`
-                                )
-                            ))
+                            activeModules.map(item => {
+                                const displayBlocker = getDisplayBlocker(item.topBlockers);
+                                return React.createElement('div', {
+                                    key: item.module,
+                                    className: 'advice-diagnostics-module-row'
+                                },
+                                    React.createElement('div', { className: 'advice-diagnostics-module-row__name' }, item.module),
+                                    React.createElement('div', { className: 'advice-diagnostics-module-row__meta' }, `${item.withOutput}/${item.runs} запусков дали совет`),
+                                    React.createElement('div', { className: 'advice-diagnostics-module-row__sub' },
+                                        displayBlocker
+                                            ? `главный блокер: ${humanizeBlocker(displayBlocker.key, displayBlocker.count || 0)} · ${displayBlocker.count || 0}`
+                                            : `средняя выдача: ${item.avgOutputCount ?? 0}`
+                                    )
+                                );
+                            })
                         )
                     ),
 

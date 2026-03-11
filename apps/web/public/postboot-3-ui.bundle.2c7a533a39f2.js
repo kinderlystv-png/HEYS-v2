@@ -11021,12 +11021,32 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
   const SCIENCE_INFO = piConst.SCIENCE_INFO || HEYS.InsightsPI?.science || window.piScience || {};
 
   // === АНАЛИЗ ПАТТЕРНОВ (из pi_patterns.js) ===
-  // Используем извлечённые функции анализа, fallback если модуль не загружен
-  const piPatterns = HEYS.InsightsPI?.patterns || window.piPatterns || {};
+  // Используем lazy getter, чтобы не захватывать пустой snapshot при ранней загрузке
+  function getPiPatterns() {
+    return HEYS.InsightsPI?.patterns || global.piPatterns || {};
+  }
+
+  function getPatternAnalyzer(name, pattern) {
+    return function invokePatternAnalyzer(...args) {
+      const analyzer = getPiPatterns()[name];
+      if (typeof analyzer === 'function') return analyzer(...args);
+      return { pattern, available: false, reason: 'module_not_loaded' };
+    };
+  }
 
   // === ПРОДВИНУТАЯ АНАЛИТИКА (из pi_advanced.js) ===
-  // Используем извлечённые функции, fallback если модуль не загружен
-  const piAdvanced = HEYS.InsightsPI?.advanced || window.piAdvanced || {};
+  // Используем lazy getter, чтобы не захватывать пустой snapshot при ранней загрузке
+  function getPiAdvanced() {
+    return HEYS.InsightsPI?.advanced || global.piAdvanced || {};
+  }
+
+  function getAdvancedFunction(name, fallback) {
+    return function invokeAdvancedFunction(...args) {
+      const fn = getPiAdvanced()[name];
+      if (typeof fn === 'function') return fn(...args);
+      return fallback(...args);
+    };
+  }
 
   // === АНАЛИТИКА API (из pi_analytics_api.js) ===
   // Используем извлечённые методы глубокого анализа, fallback если модуль не загружен
@@ -11499,72 +11519,72 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
   const MealTimingCard = piUIDashboard.MealTimingCard || function () { return h('div', {}, 'MealTimingCard not loaded'); };
 
   // === АНАЛИЗ ПАТТЕРНОВ ===
-  // Делегируем в pi_patterns.js
-  const analyzeMealTiming = piPatterns.analyzeMealTiming || function () { return { pattern: 'meal_timing', available: false }; };
-  const analyzeWaveOverlap = piPatterns.analyzeWaveOverlap || function () { return { pattern: 'wave_overlap', available: false }; };
-  const analyzeLateEating = piPatterns.analyzeLateEating || function () { return { pattern: 'late_eating', available: false }; };
-  const analyzeMealQualityTrend = piPatterns.analyzeMealQualityTrend || function () { return { pattern: 'meal_quality', available: false }; };
-  const analyzeSleepWeight = piPatterns.analyzeSleepWeight || function () { return { pattern: 'sleep_weight', available: false }; };
-  const analyzeSleepHunger = piPatterns.analyzeSleepHunger || function () { return { pattern: 'sleep_hunger', available: false }; };
-  const analyzeTrainingKcal = piPatterns.analyzeTrainingKcal || function () { return { pattern: 'training_kcal', available: false }; };
-  const analyzeStepsWeight = piPatterns.analyzeStepsWeight || function () { return { pattern: 'steps_weight', available: false }; };
-  const analyzeProteinSatiety = piPatterns.analyzeProteinSatiety || function () { return { pattern: 'protein_satiety', available: false }; };
-  const analyzeFiberRegularity = piPatterns.analyzeFiberRegularity || function () { return { pattern: 'fiber_regularity', available: false }; };
-  const analyzeNutritionQuality = piPatterns.analyzeNutritionQuality || function () { return { pattern: 'nutrition_quality', available: false }; };
-  const analyzeStressEating = piPatterns.analyzeStressEating || function () { return { pattern: 'stress_eating', available: false }; };
-  const analyzeMoodFood = piPatterns.analyzeMoodFood || function () { return { pattern: 'mood_food', available: false }; };
-  const analyzeMoodTrajectory = piPatterns.analyzeMoodTrajectory || function () { return { pattern: 'mood_trajectory', available: false }; };
-  const analyzeCircadianTiming = piPatterns.analyzeCircadianTiming || function () { return { pattern: 'circadian', available: false }; };
-  const analyzeNutrientTiming = piPatterns.analyzeNutrientTiming || function () { return { pattern: 'nutrient_timing', available: false }; };
-  const analyzeInsulinSensitivity = piPatterns.analyzeInsulinSensitivity || function () { return { pattern: 'insulin_sensitivity', available: false }; };
-  const analyzeGutHealth = piPatterns.analyzeGutHealth || function () { return { pattern: 'gut_health', available: false }; };
-  const analyzeNEATTrend = piPatterns.analyzeNEATTrend || function () { return { pattern: 'neat_activity', available: false }; };
+  // Делегируем в pi_patterns.js через lazy wrappers
+  const analyzeMealTiming = getPatternAnalyzer('analyzeMealTiming', 'meal_timing');
+  const analyzeWaveOverlap = getPatternAnalyzer('analyzeWaveOverlap', 'wave_overlap');
+  const analyzeLateEating = getPatternAnalyzer('analyzeLateEating', 'late_eating');
+  const analyzeMealQualityTrend = getPatternAnalyzer('analyzeMealQualityTrend', 'meal_quality');
+  const analyzeSleepWeight = getPatternAnalyzer('analyzeSleepWeight', 'sleep_weight');
+  const analyzeSleepHunger = getPatternAnalyzer('analyzeSleepHunger', 'sleep_hunger');
+  const analyzeTrainingKcal = getPatternAnalyzer('analyzeTrainingKcal', 'training_kcal');
+  const analyzeStepsWeight = getPatternAnalyzer('analyzeStepsWeight', 'steps_weight');
+  const analyzeProteinSatiety = getPatternAnalyzer('analyzeProteinSatiety', 'protein_satiety');
+  const analyzeFiberRegularity = getPatternAnalyzer('analyzeFiberRegularity', 'fiber_regularity');
+  const analyzeNutritionQuality = getPatternAnalyzer('analyzeNutritionQuality', 'nutrition_quality');
+  const analyzeStressEating = getPatternAnalyzer('analyzeStressEating', 'stress_eating');
+  const analyzeMoodFood = getPatternAnalyzer('analyzeMoodFood', 'mood_food');
+  const analyzeMoodTrajectory = getPatternAnalyzer('analyzeMoodTrajectory', 'mood_trajectory');
+  const analyzeCircadianTiming = getPatternAnalyzer('analyzeCircadianTiming', 'circadian');
+  const analyzeNutrientTiming = getPatternAnalyzer('analyzeNutrientTiming', 'nutrient_timing');
+  const analyzeInsulinSensitivity = getPatternAnalyzer('analyzeInsulinSensitivity', 'insulin_sensitivity');
+  const analyzeGutHealth = getPatternAnalyzer('analyzeGutHealth', 'gut_health');
+  const analyzeNEATTrend = getPatternAnalyzer('analyzeNEATTrend', 'neat_activity');
 
   // NEW v4.0 (B1-B6)
-  const analyzeSleepQuality = piPatterns.analyzeSleepQuality || function () { return { pattern: 'sleep_quality', available: false }; };
-  const analyzeWellbeing = piPatterns.analyzeWellbeing || function () { return { pattern: 'wellbeing_correlation', available: false }; };
-  const analyzeHydration = piPatterns.analyzeHydration || function () { return { pattern: 'hydration', available: false }; };
-  const analyzeBodyComposition = piPatterns.analyzeBodyComposition || function () { return { pattern: 'body_composition', available: false }; };
-  const analyzeCyclePatterns = piPatterns.analyzeCyclePatterns || function () { return { pattern: 'cycle_impact', available: false }; };
-  const analyzeWeekendEffect = piPatterns.analyzeWeekendEffect || function () { return { pattern: 'weekend_effect', available: false }; };
+  const analyzeSleepQuality = getPatternAnalyzer('analyzeSleepQuality', 'sleep_quality');
+  const analyzeWellbeing = getPatternAnalyzer('analyzeWellbeing', 'wellbeing_correlation');
+  const analyzeHydration = getPatternAnalyzer('analyzeHydration', 'hydration');
+  const analyzeBodyComposition = getPatternAnalyzer('analyzeBodyComposition', 'body_composition');
+  const analyzeCyclePatterns = getPatternAnalyzer('analyzeCyclePatterns', 'cycle_impact');
+  const analyzeWeekendEffect = getPatternAnalyzer('analyzeWeekendEffect', 'weekend_effect');
 
   // NEW v5.0 (C7-C12)
-  const analyzeNOVAQuality = piPatterns.analyzeNOVAQuality || function () { return { pattern: 'nova_quality', available: false }; };
-  const analyzeTrainingRecovery = piPatterns.analyzeTrainingRecovery || function () { return { pattern: 'training_recovery', available: false }; };
-  const analyzeHypertrophy = piPatterns.analyzeHypertrophy || function () { return { pattern: 'hypertrophy', available: false }; };
-  const analyzeMicronutrients = piPatterns.analyzeMicronutrients || function () { return { pattern: 'micronutrient_radar', available: false }; };
-  const analyzeHeartHealth = piPatterns.analyzeHeartHealth || function () { return { pattern: 'heart_health', available: false }; };
-  const analyzeOmegaBalance = piPatterns.analyzeOmegaBalance || function () { return { pattern: 'omega_balancer', available: false }; };
+  const analyzeNOVAQuality = getPatternAnalyzer('analyzeNOVAQuality', 'nova_quality');
+  const analyzeTrainingRecovery = getPatternAnalyzer('analyzeTrainingRecovery', 'training_recovery');
+  const analyzeHypertrophy = getPatternAnalyzer('analyzeHypertrophy', 'hypertrophy');
+  const analyzeMicronutrients = getPatternAnalyzer('analyzeMicronutrients', 'micronutrient_radar');
+  const analyzeHeartHealth = getPatternAnalyzer('analyzeHeartHealth', 'heart_health');
+  const analyzeOmegaBalance = getPatternAnalyzer('analyzeOmegaBalance', 'omega_balancer');
 
   // NEW v6.0 (C13-C22)
-  const analyzeVitaminDefense = piPatterns.analyzeVitaminDefense || function () { return { pattern: 'vitamin_defense', available: false }; };
-  const analyzeBComplexAnemia = piPatterns.analyzeBComplexAnemia || function () { return { pattern: 'b_complex_anemia', available: false }; };
-  const analyzeGlycemicLoad = piPatterns.analyzeGlycemicLoad || function () { return { pattern: 'glycemic_load', available: false }; };
-  const analyzeProteinDistribution = piPatterns.analyzeProteinDistribution || function () { return { pattern: 'protein_distribution', available: false }; };
-  const analyzeAntioxidantDefense = piPatterns.analyzeAntioxidantDefense || function () { return { pattern: 'antioxidant_defense', available: false }; };
-  const analyzeAddedSugarDependency = piPatterns.analyzeAddedSugarDependency || function () { return { pattern: 'added_sugar_dependency', available: false }; };
-  const analyzeBoneHealth = piPatterns.analyzeBoneHealth || function () { return { pattern: 'bone_health', available: false }; };
-  const analyzeTrainingTypeMatch = piPatterns.analyzeTrainingTypeMatch || function () { return { pattern: 'training_type_match', available: false }; };
-  const analyzeElectrolyteHomeostasis = piPatterns.analyzeElectrolyteHomeostasis || function () { return { pattern: 'electrolyte_homeostasis', available: false }; };
-  const analyzeNutrientDensity = piPatterns.analyzeNutrientDensity || function () { return { pattern: 'nutrient_density', available: false }; };
+  const analyzeVitaminDefense = getPatternAnalyzer('analyzeVitaminDefense', 'vitamin_defense');
+  const analyzeBComplexAnemia = getPatternAnalyzer('analyzeBComplexAnemia', 'b_complex_anemia');
+  const analyzeGlycemicLoad = getPatternAnalyzer('analyzeGlycemicLoad', 'glycemic_load');
+  const analyzeProteinDistribution = getPatternAnalyzer('analyzeProteinDistribution', 'protein_distribution');
+  const analyzeAntioxidantDefense = getPatternAnalyzer('analyzeAntioxidantDefense', 'antioxidant_defense');
+  const analyzeAddedSugarDependency = getPatternAnalyzer('analyzeAddedSugarDependency', 'added_sugar_dependency');
+  const analyzeBoneHealth = getPatternAnalyzer('analyzeBoneHealth', 'bone_health');
+  const analyzeTrainingTypeMatch = getPatternAnalyzer('analyzeTrainingTypeMatch', 'training_type_match');
+  const analyzeElectrolyteHomeostasis = getPatternAnalyzer('analyzeElectrolyteHomeostasis', 'electrolyte_homeostasis');
+  const analyzeNutrientDensity = getPatternAnalyzer('analyzeNutrientDensity', 'nutrient_density');
 
   // === ПРОДВИНУТАЯ АНАЛИТИКА ===
-  // Делегируем в pi_advanced.js
-  const calculateHealthScore = piAdvanced.calculateHealthScore || function (patterns, profile) {
+  // Делегируем в pi_advanced.js через lazy wrappers
+  const calculateHealthScore = getAdvancedFunction('calculateHealthScore', function (patterns, profile) {
     return { total: 0, categories: {}, available: false };
-  };
+  });
 
-  const generateWhatIfScenarios = piAdvanced.generateWhatIfScenarios || function (patterns, healthScore, days, profile) {
+  const generateWhatIfScenarios = getAdvancedFunction('generateWhatIfScenarios', function (patterns, healthScore, days, profile) {
     return [];
-  };
+  });
 
-  const predictWeight = piAdvanced.predictWeight || function (days, profile) {
+  const predictWeight = getAdvancedFunction('predictWeight', function (days, profile) {
     return { available: false };
-  };
+  });
 
-  const generateWeeklyWrap = piAdvanced.generateWeeklyWrap || function (days, patterns, healthScore, weightPrediction, profile) {
+  const generateWeeklyWrap = getAdvancedFunction('generateWeeklyWrap', function (days, patterns, healthScore, weightPrediction, profile) {
     return null;
-  };
+  });
 
   // === ГЛАВНАЯ ФУНКЦИЯ АНАЛИЗА ===
 
