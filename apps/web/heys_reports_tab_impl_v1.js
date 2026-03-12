@@ -954,6 +954,7 @@
         // Добавляем состояние для ленивой загрузки
         const [isInitialized, setIsInitialized] = useState(false);
         const [isLoading, setIsLoading] = useState(false);
+        const [monthlyReportsMode, setMonthlyReportsMode] = useState('weeks');
 
         // Используем точно такую же логику getProfile как в фиолетовой таблице
         const profileRaw = U.lsGet('heys_profile', {}) || {};
@@ -1069,10 +1070,18 @@
         }
 
         return React.createElement('div', { className: 'page page-reports' },
-            React.createElement('div', { className: 'card widget-shadow-diary-glass widget-outline-diary-glass' },
-                React.createElement('h2', { className: 'reports-title' }, 'Месячные отчёты'),
+            React.createElement('div', { className: 'card widget-shadow-diary-glass widget-outline-diary-glass reports-card reports-card--monthly' },
+                React.createElement('div', { className: 'reports-title-row reports-title-row--monthly' },
+                    React.createElement('h2', { className: 'reports-title' }, 'Месячные отчёты'),
+                    HEYS.monthlyReports?.MonthlyReportsLegend
+                        ? React.createElement(HEYS.monthlyReports.MonthlyReportsLegend, { mode: monthlyReportsMode })
+                        : null
+                ),
                 HEYS.monthlyReports?.MonthlyReportsContent
-                    ? React.createElement(HEYS.monthlyReports.MonthlyReportsContent)
+                    ? React.createElement(HEYS.monthlyReports.MonthlyReportsContent, {
+                        mode: monthlyReportsMode,
+                        setMode: setMonthlyReportsMode
+                    })
                     : React.createElement('div', { className: 'muted' }, 'Загружаем модуль месячных отчётов...')
             )
         );

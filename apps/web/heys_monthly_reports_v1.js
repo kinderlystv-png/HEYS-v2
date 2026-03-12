@@ -4,12 +4,108 @@
     const HEYS = global.HEYS = global.HEYS || {};
     const React = global.React;
 
+    const COMPLETE_RATIO_THRESHOLD = 6 / 7;
+    const PARTIAL_RATIO_THRESHOLD = 4 / 7;
+
+    function getCompletenessMeta(report) {
+        const daysWithData = Number.isFinite(report?.daysWithData) ? report.daysWithData : 0;
+        const totalDaysPossible = Number.isFinite(report?.totalDaysPossible) ? report.totalDaysPossible : 0;
+        const isMonthPeriod = report?.periodType === 'month' || totalDaysPossible > 0;
+
+        if (isMonthPeriod && totalDaysPossible > 0) {
+            const ratio = daysWithData / totalDaysPossible;
+            if (ratio >= COMPLETE_RATIO_THRESHOLD) {
+                return { toneClass: ' monthly-week-card--complete', daysWithData, totalDaysPossible, isMonthPeriod };
+            }
+            if (ratio >= PARTIAL_RATIO_THRESHOLD) {
+                return { toneClass: ' monthly-week-card--partial', daysWithData, totalDaysPossible, isMonthPeriod };
+            }
+            return { toneClass: ' monthly-week-card--incomplete', daysWithData, totalDaysPossible, isMonthPeriod };
+        }
+
+        if (daysWithData >= 6) {
+            return { toneClass: ' monthly-week-card--complete', daysWithData, totalDaysPossible: 7, isMonthPeriod: false };
+        }
+        if (daysWithData >= 4) {
+            return { toneClass: ' monthly-week-card--partial', daysWithData, totalDaysPossible: 7, isMonthPeriod: false };
+        }
+        return { toneClass: ' monthly-week-card--incomplete', daysWithData, totalDaysPossible: 7, isMonthPeriod: false };
+    }
+
+    function MonthlyReportsLegend({ mode = 'weeks' } = {}) {
+        const legendItems = mode === 'months'
+            ? [
+                {
+                    tone: 'complete',
+                    title: 'Учтено не меньше 86% дней — выводам можно доверять',
+                    aria: 'Зелёный: учтено не меньше 86 процентов дней, выводам можно доверять',
+                    badge: '≥86% дней',
+                    text: 'выводам можно доверять'
+                },
+                {
+                    tone: 'partial',
+                    title: 'Учтено от 57% до 85% дней — оценка примерная',
+                    aria: 'Жёлтый: учтено от 57 до 85 процентов дней, оценка примерная',
+                    badge: '57–85%',
+                    text: 'оценка примерная'
+                },
+                {
+                    tone: 'incomplete',
+                    title: 'Учтено меньше 57% дней — данных мало',
+                    aria: 'Красный: учтено меньше 57 процентов дней, данных мало',
+                    badge: '<57% дней',
+                    text: 'данных мало'
+                }
+            ]
+            : [
+                {
+                    tone: 'complete',
+                    title: '6–7 дней — выводам можно доверять',
+                    aria: 'Зелёный: 6–7 дней, выводам можно доверять',
+                    badge: '6–7 дней',
+                    text: 'выводам можно доверять'
+                },
+                {
+                    tone: 'partial',
+                    title: '4–5 дней — оценка примерная',
+                    aria: 'Жёлтый: 4–5 дней, оценка примерная',
+                    badge: '4–5 дней',
+                    text: 'оценка примерная'
+                },
+                {
+                    tone: 'incomplete',
+                    title: '3 дня и меньше — данных мало',
+                    aria: 'Красный: 3 дня и меньше, данных мало',
+                    badge: '≤3 дней',
+                    text: 'данных мало'
+                }
+            ];
+
+        return React.createElement('div', { className: 'monthly-reports-legend monthly-reports-legend--header', role: 'note', 'aria-label': 'Легенда полноты данных' },
+            ...legendItems.map((item) => React.createElement('span', {
+                key: item.tone,
+                className: 'monthly-reports-legend__item monthly-reports-legend__item--' + item.tone,
+                title: item.title,
+                'aria-label': item.aria
+            },
+                React.createElement('span', { className: 'monthly-reports-legend__badge', 'aria-hidden': 'true' }, item.badge),
+                React.createElement('span', { className: 'monthly-reports-legend__text' }, item.text)
+            ))
+        );
+    }
+
     function WeekCard({ week, prevWeek, weightGoal }) {
         const h = React.createElement;
         const { useMemo, useState } = React;
         const { report, rangeLabel, isCurrent } = week;
-        const daysWithData = Number.isFinite(report?.daysWithData) ? report.daysWithData : 0;
-        const daysLabel = daysWithData > 0 ? ` (учтено ${daysWithData} дней)` : '';
+        const completenessMeta = getCompletenessMeta(report);
+        const daysWithData = completenessMeta.daysWithData;
+        const daysLabel = daysWithData > 0
+            ? (completenessMeta.isMonthPeriod && completenessMeta.totalDaysPossible > 0
+                ? ` (учтено ${daysWithData} из ${completenessMeta.totalDaysPossible} дней)`
+                : ` (учтено ${daysWithData} дней)`)
+            : '';
+        const completenessToneClass = completenessMeta.toneClass;
 
         const formatMacroDiff = (value, norm) => {
             if (!Number.isFinite(value) || !Number.isFinite(norm) || norm === 0) return '—';
@@ -212,7 +308,7 @@
             });
         };
 
-        return h('div', { className: 'monthly-week-card widget-shadow-diary-glass widget-outline-diary-glass' + (isCurrent ? ' monthly-week-card--current' : '') },
+        return h('div', { className: 'monthly-week-card widget-shadow-diary-glass widget-outline-diary-glass' + completenessToneClass + (isCurrent ? ' monthly-week-card--current' : '') },
             h('div', { className: 'monthly-week-card__header' },
                 h('div', { className: 'monthly-week-card__title' }, rangeLabel + daysLabel),
                 h('div', { className: 'monthly-week-card__header-actions' },
@@ -348,7 +444,7 @@
         );
     }
 
-    function MonthlyReportsContent() {
+    function MonthlyReportsContent(props = {}) {
         const { useState } = React;
         const monthlyReportsService = HEYS.monthlyReportsService;
         const monthlyWeeks = monthlyReportsService && monthlyReportsService.buildMonthlyWeeks
@@ -361,7 +457,11 @@
             ? HEYS.store.get('heys_profile', {})
             : (HEYS.utils?.lsGet ? HEYS.utils.lsGet('heys_profile', {}) : {});
         const weightGoal = +profile.weightGoal || 0;
-        const [mode, setMode] = useState('weeks');
+        const [localMode, setLocalMode] = useState('weeks');
+        const [weekFilter, setWeekFilter] = useState('all');
+        const [monthFilter, setMonthFilter] = useState('all');
+        const mode = props.mode || localMode;
+        const setMode = props.setMode || setLocalMode;
 
         if (!monthlyReportsService || !monthlyReportsService.buildMonthlyWeeks) {
             return React.createElement('div', { className: 'muted' }, 'Загружаем сервис месячных отчётов...');
@@ -371,8 +471,30 @@
             return React.createElement('div', { className: 'muted' }, 'Добавьте минимум 2 дня с едой в неделю — и появятся отчёты');
         }
 
-        const cards = mode === 'months' ? monthlyMonths : monthlyWeeks;
-        const emptyMonths = mode === 'months' && cards.length === 0;
+        const sourceCards = mode === 'months' ? monthlyMonths : monthlyWeeks;
+        const isWeeksMode = mode === 'weeks';
+        const isMonthsMode = mode === 'months';
+        const totalWeeksCount = monthlyWeeks.length;
+        const trustedWeeksCount = monthlyWeeks.filter((week) => (week?.report?.daysWithData || 0) >= 6).length;
+        const totalMonthsCount = monthlyMonths.length;
+        const trustedMonthsCount = monthlyMonths.filter((month) => {
+            const ratio = month?.report?.completenessRatio || 0;
+            return ratio >= COMPLETE_RATIO_THRESHOLD;
+        }).length;
+        const visibleEntries = sourceCards
+            .map((week, index) => ({ week, index }))
+            .filter(({ week }) => {
+                if (isWeeksMode && weekFilter === 'trusted') {
+                    return (week?.report?.daysWithData || 0) >= 6;
+                }
+                if (isMonthsMode && monthFilter === 'trusted') {
+                    return (week?.report?.completenessRatio || 0) >= COMPLETE_RATIO_THRESHOLD;
+                }
+                return true;
+            });
+        const emptyMonths = mode === 'months' && sourceCards.length === 0;
+        const emptyTrustedWeeks = isWeeksMode && weekFilter === 'trusted' && visibleEntries.length === 0;
+        const emptyTrustedMonths = isMonthsMode && monthFilter === 'trusted' && visibleEntries.length === 0;
 
         return React.createElement(React.Fragment, null,
             React.createElement('div', { className: 'monthly-reports-tabs' },
@@ -385,20 +507,49 @@
                     onClick: () => setMode('months')
                 }, 'Месяц')
             ),
+            isWeeksMode && React.createElement('div', { className: 'monthly-reports-filter', role: 'group', 'aria-label': 'Фильтр недель' },
+                React.createElement('button', {
+                    type: 'button',
+                    className: 'monthly-reports-filter__btn' + (weekFilter === 'all' ? ' monthly-reports-filter__btn--active' : ''),
+                    onClick: () => setWeekFilter('all')
+                }, 'Все недели (' + totalWeeksCount + ')'),
+                React.createElement('button', {
+                    type: 'button',
+                    className: 'monthly-reports-filter__btn' + (weekFilter === 'trusted' ? ' monthly-reports-filter__btn--active' : ''),
+                    onClick: () => setWeekFilter('trusted')
+                }, 'Только надёжные (' + trustedWeeksCount + ')')
+            ),
+            isMonthsMode && React.createElement('div', { className: 'monthly-reports-filter', role: 'group', 'aria-label': 'Фильтр месяцев' },
+                React.createElement('button', {
+                    type: 'button',
+                    className: 'monthly-reports-filter__btn' + (monthFilter === 'all' ? ' monthly-reports-filter__btn--active' : ''),
+                    onClick: () => setMonthFilter('all')
+                }, 'Все месяцы (' + totalMonthsCount + ')'),
+                React.createElement('button', {
+                    type: 'button',
+                    className: 'monthly-reports-filter__btn' + (monthFilter === 'trusted' ? ' monthly-reports-filter__btn--active' : ''),
+                    onClick: () => setMonthFilter('trusted')
+                }, 'Только надёжные (' + trustedMonthsCount + ')')
+            ),
             emptyMonths
                 ? React.createElement('div', { className: 'muted' }, 'Для месячных отчётов нужно минимум 4 недели данных')
-                : React.createElement('div', { className: 'monthly-reports-grid' },
-                    ...cards.map((week, i) => React.createElement(WeekCard, {
-                        key: i,
-                        week,
-                        prevWeek: cards[i + 1],
-                        weightGoal
-                    }))
-                )
+                : emptyTrustedWeeks
+                    ? React.createElement('div', { className: 'muted' }, 'Пока нет недель, где выводам можно доверять')
+                    : emptyTrustedMonths
+                        ? React.createElement('div', { className: 'muted' }, 'Пока нет месяцев, где выводам можно доверять')
+                        : React.createElement('div', { className: 'monthly-reports-grid' },
+                            ...visibleEntries.map(({ week, index }) => React.createElement(WeekCard, {
+                                key: index,
+                                week,
+                                prevWeek: sourceCards[index + 1],
+                                weightGoal
+                            }))
+                        )
         );
     }
 
     HEYS.monthlyReports = {
-        MonthlyReportsContent
+        MonthlyReportsContent,
+        MonthlyReportsLegend
     };
 })(window);

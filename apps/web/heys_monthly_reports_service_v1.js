@@ -202,6 +202,16 @@
             const isCurrentMonth = bucket.key === currentMonthKey;
             if (!isCurrentMonth && bucket.weeks.length < 4) return;
 
+            const [yearStr, monthStr] = String(bucket.key || '').split('-');
+            const year = Number(yearStr);
+            const monthIndex = Number(monthStr) - 1;
+            const daysInMonth = Number.isFinite(year) && Number.isFinite(monthIndex)
+                ? new Date(year, monthIndex + 1, 0).getDate()
+                : 0;
+            const totalDaysPossible = isCurrentMonth
+                ? Math.min(daysInMonth || 0, now.getDate())
+                : daysInMonth;
+
             const total = bucket.weeks.length;
             const sum = bucket.weeks.reduce((acc, week) => {
                 const report = week.report || {};
@@ -251,7 +261,10 @@
                     avgCarbs: sum.avgCarbs / total,
                     avgNormCarbs: sum.avgNormCarbs / total,
                     avgWeight: Math.round(sum.avgWeight / total * 10) / 10,
-                    daysWithData: sum.daysWithData
+                    daysWithData: sum.daysWithData,
+                    totalDaysPossible,
+                    completenessRatio: totalDaysPossible > 0 ? sum.daysWithData / totalDaysPossible : 0,
+                    periodType: 'month'
                 },
                 isCurrent: isCurrentMonth
             });

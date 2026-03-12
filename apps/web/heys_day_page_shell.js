@@ -242,6 +242,27 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                                         strokeLinecap: 'round'
                                     })
                                 )
+                                : refreshStatus === 'timeout'
+                                    ? React.createElement('svg', {
+                                        className: 'pull-spinner-ring',
+                                        viewBox: '0 0 28 28',
+                                        style: { stroke: 'var(--warn, #f59e0b)' }
+                                    },
+                                        React.createElement('path', {
+                                            d: 'M14 7v8m0 4h.01',
+                                            strokeWidth: 3,
+                                            fill: 'none',
+                                            strokeLinecap: 'round',
+                                            strokeLinejoin: 'round'
+                                        }),
+                                        React.createElement('circle', {
+                                            cx: 14,
+                                            cy: 14,
+                                            r: 10,
+                                            strokeWidth: 2,
+                                            fill: 'none'
+                                        })
+                                    )
                                 : refreshStatus === 'syncing'
                                     ? React.createElement('svg', {
                                         className: 'pull-spinner-ring spinning',
@@ -274,6 +295,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                             + (refreshStatus === 'syncing' ? ' syncing' : '')
                     },
                         refreshStatus === 'success' ? 'Готово!'
+                            : refreshStatus === 'timeout' ? 'Синхронизация заняла слишком долго'
                             : refreshStatus === 'error' ? 'Ошибка синхронизации'
                                 : refreshStatus === 'syncing' ? 'Синхронизация...'
                                     : refreshStatus === 'ready' ? 'Отпустите для обновления'

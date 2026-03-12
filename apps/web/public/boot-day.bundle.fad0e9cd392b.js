@@ -7541,16 +7541,18 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
   MOD.usePullToRefresh = function usePullToRefresh({ React, date, lsGet, lsSet, HEYS }) {
     const { useState, useEffect, useRef } = React;
     const heys = HEYS || window.HEYS || {};
+    const SYNC_TIMEOUT = Symbol('pull-refresh-sync-timeout');
 
     // === Pull-to-refresh (Enhanced) ===
     const [pullProgress, setPullProgress] = useState(0);
     const [isRefreshing, setIsRefreshing] = useState(false);
-    const [refreshStatus, setRefreshStatus] = useState('idle'); // idle | pulling | ready | syncing | success | error
+    const [refreshStatus, setRefreshStatus] = useState('idle'); // idle | pulling | ready | syncing | success | error | timeout
     const pullStartY = useRef(0);
     const isPulling = useRef(false);
     const lastHapticRef = useRef(0);
     // 🔧 FIX: Use refs to avoid stale closures in event handlers
     const isRefreshingRef = useRef(false);
+    const refreshInFlightRef = useRef(false);
     const refreshStatusRef = useRef('idle');
     const pullProgressRef = useRef(0);
 
@@ -7567,6 +7569,17 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
 
     // === Pull-to-refresh логика (Enhanced) ===
     const PULL_THRESHOLD = 80;
+    const SYNC_TIMEOUT_MS = 8000;
+    const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+    const shouldIgnoreTarget = (target) => {
+      if (!target || typeof target.closest !== 'function') return false;
+      return !!target.closest(
+        'input, textarea, select, button, a, label, [role="button"], [contenteditable="true"], '
+        + '.swipeable-container, table, .tab-switch-group, .advice-list-overlay, .macro-toast, '
+        + '.no-swipe-zone, [type="range"], [data-no-pull-refresh]'
+      );
+    };
 
     // Haptic feedback helper
     const triggerHaptic = (intensity = 10) => {
@@ -7577,9 +7590,32 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
       }
     };
 
+    const runSyncWithTimeout = async (cloud, clientId) => {
+      const syncResult = await Promise.race([
+        cloud.syncClient(clientId, { force: true }),
+        delay(SYNC_TIMEOUT_MS).then(() => SYNC_TIMEOUT)
+      ]);
+
+      if (syncResult === SYNC_TIMEOUT) {
+        console.warn('[PullRefresh] ⏱️ Sync timed out after', SYNC_TIMEOUT_MS, 'ms');
+        return { ok: false, timedOut: true };
+      }
+
+      if (syncResult && syncResult.success === false) {
+        throw new Error(syncResult.error || 'sync_failed');
+      }
+
+      return { ok: true, timedOut: false };
+    };
+
     // ✅ Pull-to-refresh: sync из cloud (БЕЗ reload!)
     // Подтягивает изменения куратора, UI обновляется через события heys:day-updated
     const handleRefresh = async () => {
+      if (refreshInFlightRef.current) {
+        return;
+      }
+
+      refreshInFlightRef.current = true;
       setIsRefreshing(true);
       setRefreshStatus('syncing');
       triggerHaptic(15);
@@ -7608,7 +7644,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
               console.warn('[PullRefresh] ⚠️ Flush timeout, continuing...');
             }
             // Даём серверу время обработать данные
-            await new Promise(r => setTimeout(r, 300));
+            await delay(300);
           }
         }
 
@@ -7616,10 +7652,14 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
         // UI обновится автоматически через события heys:day-updated
         if (clientId && cloud && typeof cloud.syncClient === 'function') {
           console.info('[PullRefresh] 🔄 Starting sync...');
-          await Promise.race([
-            cloud.syncClient(clientId, { force: true }),
-            new Promise(r => setTimeout(r, 8000)) // max 8 сек (sync может быть долгим)
-          ]);
+          const syncState = await runSyncWithTimeout(cloud, clientId);
+
+          if (syncState.timedOut) {
+            setRefreshStatus('timeout');
+            await delay(1100);
+            return;
+          }
+
           console.info('[PullRefresh] ✅ Sync completed');
         }
 
@@ -7628,15 +7668,16 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
         triggerHaptic(20);
 
         // 5. Держим индикатор 600ms для UX, затем сбрасываем
-        await new Promise(r => setTimeout(r, 600));
+        await delay(600);
 
       } catch (err) {
         console.warn('[PullRefresh] Error:', err.message);
         setRefreshStatus('error');
-        await new Promise(r => setTimeout(r, 800));
+        await delay(800);
       } finally {
         // Сбрасываем состояние (без reload!)
         queueMicrotask(() => {
+          refreshInFlightRef.current = false;
           setIsRefreshing(false);
           setRefreshStatus('idle');
           setPullProgress(0);
@@ -7648,6 +7689,14 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
       // 🔧 FIX: Event handlers use refs to avoid stale closures
       // This allows us to use [] deps and NOT re-register listeners on every state change
       const onTouchStart = (e) => {
+        if (refreshInFlightRef.current || isRefreshingRef.current) {
+          isPulling.current = false;
+          return;
+        }
+        if (e.touches?.length !== 1 || shouldIgnoreTarget(e.target)) {
+          isPulling.current = false;
+          return;
+        }
         // Начинаем pull только если скролл вверху страницы
         if (window.scrollY <= 0) {
           pullStartY.current = e.touches[0].clientY;
@@ -7659,6 +7708,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
       const onTouchMove = (e) => {
         // Use refs for current values (avoids stale closure)
         if (!isPulling.current || isRefreshingRef.current) return;
+        if (e.touches?.length !== 1 || shouldIgnoreTarget(e.target)) return;
 
         const y = e.touches[0].clientY;
         const diff = y - pullStartY.current;
@@ -7685,6 +7735,11 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
 
       const onTouchEnd = () => {
         if (!isPulling.current) return;
+
+        if (refreshInFlightRef.current || isRefreshingRef.current) {
+          isPulling.current = false;
+          return;
+        }
 
         // Use ref for current pullProgress value
         if (pullProgressRef.current >= PULL_THRESHOLD) {
@@ -11978,6 +12033,27 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                                         strokeLinecap: 'round'
                                     })
                                 )
+                                : refreshStatus === 'timeout'
+                                    ? React.createElement('svg', {
+                                        className: 'pull-spinner-ring',
+                                        viewBox: '0 0 28 28',
+                                        style: { stroke: 'var(--warn, #f59e0b)' }
+                                    },
+                                        React.createElement('path', {
+                                            d: 'M14 7v8m0 4h.01',
+                                            strokeWidth: 3,
+                                            fill: 'none',
+                                            strokeLinecap: 'round',
+                                            strokeLinejoin: 'round'
+                                        }),
+                                        React.createElement('circle', {
+                                            cx: 14,
+                                            cy: 14,
+                                            r: 10,
+                                            strokeWidth: 2,
+                                            fill: 'none'
+                                        })
+                                    )
                                 : refreshStatus === 'syncing'
                                     ? React.createElement('svg', {
                                         className: 'pull-spinner-ring spinning',
@@ -12010,6 +12086,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                             + (refreshStatus === 'syncing' ? ' syncing' : '')
                     },
                         refreshStatus === 'success' ? 'Готово!'
+                            : refreshStatus === 'timeout' ? 'Синхронизация заняла слишком долго'
                             : refreshStatus === 'error' ? 'Ошибка синхронизации'
                                 : refreshStatus === 'syncing' ? 'Синхронизация...'
                                     : refreshStatus === 'ready' ? 'Отпустите для обновления'

@@ -4557,11 +4557,142 @@ body.tour-active .ios-pwa-banner {
   color: #6b7280;
 }
 
+.monthly-reports-filter {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: -2px 0 6px;
+}
+
+.monthly-reports-filter__btn {
+  border: 1px solid #e5e7eb;
+  background: #ffffff;
+  color: #6b7280;
+  border-radius: 999px;
+  padding: 5px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.2;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.monthly-reports-filter__btn--active {
+  color: #166534;
+  background: rgba(34, 197, 94, 0.12);
+  border-color: rgba(34, 197, 94, 0.28);
+}
+
 .monthly-reports-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 16px;
   margin-top: 16px;
+}
+
+.reports-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.reports-card--monthly {
+  position: relative;
+}
+
+.reports-title-row--monthly {
+  position: relative;
+  align-items: flex-start;
+  margin-bottom: 0;
+}
+
+.reports-title-row .reports-title {
+  margin: 0;
+  flex: 0 1 auto;
+}
+
+.monthly-reports-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.monthly-reports-legend--header {
+  position: absolute;
+  top: 0;
+  right: 0;
+  margin: 0;
+  flex-direction: column;
+  flex-wrap: nowrap;
+  justify-content: flex-start;
+  align-items: flex-end;
+  gap: 2px;
+  z-index: 1;
+}
+
+.monthly-reports-legend__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 20px;
+  padding: 1px 0;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.1;
+  white-space: nowrap;
+}
+
+.monthly-reports-legend__badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 54px;
+  min-height: 16px;
+  padding: 0 5px;
+  border-radius: 999px;
+  font-size: 9px;
+  font-weight: 800;
+  line-height: 1;
+  flex: 0 0 auto;
+  border: 1px solid transparent;
+}
+
+.monthly-reports-legend__text {
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.monthly-reports-legend__item--complete {
+  color: #166534;
+}
+
+.monthly-reports-legend__item--complete .monthly-reports-legend__badge {
+  color: #166534;
+  background: rgba(34, 197, 94, 0.16);
+  border-color: rgba(34, 197, 94, 0.24);
+}
+
+.monthly-reports-legend__item--partial {
+  color: #92400e;
+}
+
+.monthly-reports-legend__item--partial .monthly-reports-legend__badge {
+  color: #92400e;
+  background: rgba(250, 204, 21, 0.2);
+  border-color: rgba(245, 158, 11, 0.24);
+}
+
+.monthly-reports-legend__item--incomplete {
+  color: #b91c1c;
+}
+
+.monthly-reports-legend__item--incomplete .monthly-reports-legend__badge {
+  color: #b91c1c;
+  background: rgba(239, 68, 68, 0.16);
+  border-color: rgba(239, 68, 68, 0.24);
 }
 
 .reports-sleep-card {
@@ -4698,6 +4829,27 @@ body.tour-active .ios-pwa-banner {
   padding: var(--heys-diary-card-padding, 14px 16px);
   box-shadow: var(--heys-diary-glass-card-shadow, 0 10px 30px -20px rgba(15, 23, 42, 0.2));
   transition: all 0.2s ease;
+}
+
+.monthly-week-card--complete {
+  background:
+    linear-gradient(135deg, rgba(34, 197, 94, 0.16) 0%, rgba(255, 255, 255, 0) 45%),
+    var(--widget-glass-bg, var(--heys-bg-card, #ffffff));
+  border-color: rgba(34, 197, 94, 0.28);
+}
+
+.monthly-week-card--partial {
+  background:
+    linear-gradient(135deg, rgba(250, 204, 21, 0.2) 0%, rgba(255, 255, 255, 0) 45%),
+    var(--widget-glass-bg, var(--heys-bg-card, #ffffff));
+  border-color: rgba(245, 158, 11, 0.3);
+}
+
+.monthly-week-card--incomplete {
+  background:
+    linear-gradient(135deg, rgba(239, 68, 68, 0.18) 0%, rgba(255, 255, 255, 0) 45%),
+    var(--widget-glass-bg, var(--heys-bg-card, #ffffff));
+  border-color: rgba(239, 68, 68, 0.28);
 }
 
 .monthly-week-card--current {
@@ -5075,10 +5227,77 @@ body.tour-active .ios-pwa-banner {
   color: #9ca3af;
 }
 
+[data-theme="dark"] .monthly-reports-filter__btn {
+  background: #111827;
+  border-color: #1f2937;
+  color: #9ca3af;
+}
+
+[data-theme="dark"] .monthly-reports-filter__btn--active {
+  color: #bbf7d0;
+  background: rgba(34, 197, 94, 0.16);
+  border-color: rgba(74, 222, 128, 0.3);
+}
+
+[data-theme="dark"] .reports-title-row .reports-title {
+  color: #f3f4f6;
+}
+
+[data-theme="dark"] .monthly-reports-legend__item--complete {
+  color: #bbf7d0;
+}
+
+[data-theme="dark"] .monthly-reports-legend__item--complete .monthly-reports-legend__badge {
+  color: #bbf7d0;
+  background: rgba(34, 197, 94, 0.18);
+  border-color: rgba(74, 222, 128, 0.3);
+}
+
+[data-theme="dark"] .monthly-reports-legend__item--partial {
+  color: #fde68a;
+}
+
+[data-theme="dark"] .monthly-reports-legend__item--partial .monthly-reports-legend__badge {
+  color: #fde68a;
+  background: rgba(250, 204, 21, 0.16);
+  border-color: rgba(250, 204, 21, 0.28);
+}
+
+[data-theme="dark"] .monthly-reports-legend__item--incomplete {
+  color: #fecaca;
+}
+
+[data-theme="dark"] .monthly-reports-legend__item--incomplete .monthly-reports-legend__badge {
+  color: #fecaca;
+  background: rgba(248, 113, 113, 0.18);
+  border-color: rgba(248, 113, 113, 0.3);
+}
+
 [data-theme="dark"] .monthly-week-card {
   background: var(--widget-glass-bg, #111827);
   border-color: var(--heys-diary-outline-border-current, #1f2937);
   box-shadow: var(--heys-diary-glass-card-shadow, 0 10px 30px -20px rgba(0, 0, 0, 0.5));
+}
+
+[data-theme="dark"] .monthly-week-card--complete {
+  background:
+    linear-gradient(135deg, rgba(34, 197, 94, 0.2) 0%, rgba(17, 24, 39, 0) 48%),
+    var(--widget-glass-bg, #111827);
+  border-color: rgba(74, 222, 128, 0.32);
+}
+
+[data-theme="dark"] .monthly-week-card--partial {
+  background:
+    linear-gradient(135deg, rgba(250, 204, 21, 0.18) 0%, rgba(17, 24, 39, 0) 48%),
+    var(--widget-glass-bg, #111827);
+  border-color: rgba(250, 204, 21, 0.32);
+}
+
+[data-theme="dark"] .monthly-week-card--incomplete {
+  background:
+    linear-gradient(135deg, rgba(248, 113, 113, 0.2) 0%, rgba(17, 24, 39, 0) 48%),
+    var(--widget-glass-bg, #111827);
+  border-color: rgba(248, 113, 113, 0.34);
 }
 
 [data-theme="dark"] .reports-sleep-card {
