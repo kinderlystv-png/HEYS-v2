@@ -505,6 +505,12 @@
       supplementsTakenAt: d.supplementsTakenAt || undefined,
       // Per-supp metadata (форма/доза/время приёма). Храним как объект.
       supplementsTakenMeta: (d.supplementsTakenMeta && typeof d.supplementsTakenMeta === 'object') ? d.supplementsTakenMeta : undefined,
+      // Подтверждение низкокалорийного дня / неполный день
+      isFastingDay: !!d.isFastingDay,
+      isIncomplete: !!d.isIncomplete,
+      // Сохранённые витринные значения для стабильного reload/sparkline
+      savedEatenKcal: d.savedEatenKcal != null ? +d.savedEatenKcal || 0 : 0,
+      savedDisplayOptimum: d.savedDisplayOptimum != null ? +d.savedDisplayOptimum || 0 : 0,
       // Сохраняем metadata для стабильности
       updatedAt: d.updatedAt || undefined,
       schemaVersion: d.schemaVersion || undefined,

@@ -1411,6 +1411,7 @@
   align-items: center;
   gap: 4px;
   flex-shrink: 0;
+  flex-wrap: nowrap;
 }
 
 .mpr-grams-btn {
@@ -1431,6 +1432,13 @@
 
 .mpr-grams-btn:hover {
   background: var(--color-bg-secondary, #f1f5f9);
+}
+
+.mpr-grams-btn--double {
+  min-width: 34px;
+  padding: 0 6px;
+  font-size: 11px;
+  letter-spacing: 0.01em;
 }
 
 .mpr-grams-input {
@@ -1821,6 +1829,10 @@
 [data-theme="dark"] .mpr-grams-btn {
   background: var(--color-bg-secondary, #334155);
   border-color: var(--color-border, #475569);
+}
+
+[data-theme="dark"] .mpr-grams-btn--double {
+  color: var(--color-text-primary, #f1f5f9);
 }
 
 [data-theme="dark"] .mpr-create-name-input {

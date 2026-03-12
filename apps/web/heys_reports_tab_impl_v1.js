@@ -72,7 +72,11 @@
     // Делаем функцию доступной глобально для отладки
     if (window.HEYS) {
         window.HEYS.clearReportsCache = clearAllCache;
-        window.HEYS.debug = true; // включаем отладку
+        if (!window.HEYS.debug || typeof window.HEYS.debug !== 'object') {
+            window.HEYS.debug = { enabled: true };
+        } else {
+            window.HEYS.debug.enabled = true;
+        }
     }
 
     // Подписка на изменения данных дней

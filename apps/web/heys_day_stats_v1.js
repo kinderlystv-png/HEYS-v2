@@ -251,6 +251,14 @@
           targetKcal: Math.round(displayHeroOptimum || optimum || 0),
           ratio: Number(selectedDayRatio || 0)
         });
+        global.console?.warn?.('[HEYS.dayRealData] confirm click visible', {
+          date,
+          isFastingDay: !!day?.isFastingDay,
+          isIncomplete: !!day?.isIncomplete,
+          eatenKcal: Math.round(displayHeroEaten || eatenKcal || 0),
+          targetKcal: Math.round(displayHeroOptimum || optimum || 0),
+          ratio: Number(selectedDayRatio || 0)
+        });
       } catch (_) { }
 
       const eatenNow = Math.round(displayHeroEaten || eatenKcal || 0);
@@ -303,12 +311,25 @@
           isIncomplete: !!nextDay?.isIncomplete,
           updatedAt: nextDay?.updatedAt || null
         });
+        global.console?.warn?.('[HEYS.dayRealData] persisted day visible', {
+          date,
+          isFastingDay: !!nextDay?.isFastingDay,
+          isIncomplete: !!nextDay?.isIncomplete,
+          updatedAt: nextDay?.updatedAt || null
+        });
       } catch (_) { }
 
       try {
         if (typeof HEYS?.cloud?.saveClientKey === 'function') {
           HEYS.cloud.saveClientKey('heys_dayv2_' + date, nextDay);
           console.info('[HEYS.dayRealData] queued cloud save', {
+            date,
+            source: 'day-stats-real-data-cta',
+            isFastingDay: !!nextDay?.isFastingDay,
+            isIncomplete: !!nextDay?.isIncomplete,
+            updatedAt: nextDay?.updatedAt || null
+          });
+          global.console?.warn?.('[HEYS.dayRealData] queued cloud save visible', {
             date,
             source: 'day-stats-real-data-cta',
             isFastingDay: !!nextDay?.isFastingDay,

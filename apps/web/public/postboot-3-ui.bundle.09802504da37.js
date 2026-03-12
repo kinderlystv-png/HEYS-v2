@@ -6121,6 +6121,21 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       ));
     };
 
+    const multiplyItemGrams = (idx, multiplier = 2) => {
+      setPreviewItems((items) => items.map((item, i) => {
+        if (i !== idx) return item;
+        const currentGrams = Math.max(5, Number(item.grams) || 100);
+        const nextGrams = Math.max(5, Math.round(currentGrams * multiplier));
+        console.info('[HEYS.presets] ✖️ Preview item grams multiplied', {
+          itemName: item.name,
+          currentGrams,
+          nextGrams,
+          multiplier
+        });
+        return { ...item, grams: nextGrams };
+      }));
+    };
+
     const setItemGrams = (idx, val) => {
       const g = parseInt(val, 10);
       setPreviewItems(items => items.map((item, i) =>
@@ -6283,7 +6298,12 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                 React.createElement('button', {
                   className: 'mpr-grams-btn',
                   onClick: () => updateItemGrams(idx, 10)
-                }, '+')
+                }, '+'),
+                React.createElement('button', {
+                  className: 'mpr-grams-btn mpr-grams-btn--double',
+                  onClick: () => multiplyItemGrams(idx, 2),
+                  title: 'Умножить на 2'
+                }, '×2')
               ),
               React.createElement('button', {
                 className: 'mpr-preview-item-toggle',
@@ -22295,7 +22315,11 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     // Делаем функцию доступной глобально для отладки
     if (window.HEYS) {
         window.HEYS.clearReportsCache = clearAllCache;
-        window.HEYS.debug = true; // включаем отладку
+        if (!window.HEYS.debug || typeof window.HEYS.debug !== 'object') {
+            window.HEYS.debug = { enabled: true };
+        } else {
+            window.HEYS.debug.enabled = true;
+        }
     }
 
     // Подписка на изменения данных дней

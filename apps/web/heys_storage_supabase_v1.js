@@ -715,6 +715,38 @@
       merged.savedDisplayOptimum = Math.max(0, Number(remote.savedDisplayOptimum || local.savedDisplayOptimum || 0));
     }
 
+    if (
+      !!local?.isFastingDay !== !!remote?.isFastingDay
+      || !!local?.isIncomplete !== !!remote?.isIncomplete
+      || Number(local?.savedEatenKcal || 0) !== Number(remote?.savedEatenKcal || 0)
+    ) {
+      global.console?.warn?.('[HEYS.dayRealData] mergeDayData flags', {
+        date: merged?.date || local?.date || remote?.date || null,
+        preferRemote,
+        localUpdatedAt: local?.updatedAt || 0,
+        remoteUpdatedAt: remote?.updatedAt || 0,
+        chosenSource: localIsNewerForFlags ? 'local' : 'remote',
+        local: {
+          isFastingDay: !!local?.isFastingDay,
+          isIncomplete: !!local?.isIncomplete,
+          savedEatenKcal: Number(local?.savedEatenKcal || 0),
+          savedDisplayOptimum: Number(local?.savedDisplayOptimum || 0)
+        },
+        remote: {
+          isFastingDay: !!remote?.isFastingDay,
+          isIncomplete: !!remote?.isIncomplete,
+          savedEatenKcal: Number(remote?.savedEatenKcal || 0),
+          savedDisplayOptimum: Number(remote?.savedDisplayOptimum || 0)
+        },
+        merged: {
+          isFastingDay: !!merged?.isFastingDay,
+          isIncomplete: !!merged?.isIncomplete,
+          savedEatenKcal: Number(merged?.savedEatenKcal || 0),
+          savedDisplayOptimum: Number(merged?.savedDisplayOptimum || 0)
+        }
+      });
+    }
+
     // 🍽️ Meals: merge по ID с учётом УДАЛЕНИЙ
     // Если local свежее и meal отсутствует в local — значит удалён!
     // НО: при forceKeepAll — объединяем ВСЁ (для pull-to-refresh после фикса багов)
@@ -6889,7 +6921,38 @@
         (value.trainings && value.trainings.length > 0);
       if (!hasRealData) {
         log(`🚫 [SAVE BLOCKED] Empty day not saved to cloud - key: ${k}`);
+        global.console?.warn?.('[HEYS.dayRealData] saveClientKey blocked empty day', {
+          key: k,
+          clientId: client_id,
+          hasRealData,
+          updatedAt: value?.updatedAt || 0,
+          value: {
+            isFastingDay: !!value?.isFastingDay,
+            isIncomplete: !!value?.isIncomplete,
+            savedEatenKcal: Number(value?.savedEatenKcal || 0),
+            savedDisplayOptimum: Number(value?.savedDisplayOptimum || 0),
+            meals: Array.isArray(value?.meals) ? value.meals.length : 0
+          }
+        });
         return;
+      }
+
+      if (value.isFastingDay || value.isIncomplete || Number(value.savedEatenKcal || 0) > 0) {
+        global.console?.warn?.('[HEYS.dayRealData] saveClientKey accepted day', {
+          key: k,
+          normalizedKeyPreview: k,
+          clientId: client_id,
+          waitingForSync,
+          isPinAuth,
+          updatedAt: value?.updatedAt || 0,
+          value: {
+            isFastingDay: !!value?.isFastingDay,
+            isIncomplete: !!value?.isIncomplete,
+            savedEatenKcal: Number(value?.savedEatenKcal || 0),
+            savedDisplayOptimum: Number(value?.savedDisplayOptimum || 0),
+            meals: Array.isArray(value?.meals) ? value.meals.length : 0
+          }
+        });
       }
     }
 
@@ -7104,6 +7167,75 @@
       });
     }
   };
+
+  const inspectDayRealData = function (dateStr) {
+    const safeDate = String(dateStr || global.HEYS?.App?.selectedDate || global.HEYS?.selectedDate || '').slice(0, 10);
+    const currentClientId = HEYS?.utils?.getCurrentClientId?.() || HEYS?.currentClientId || '';
+    const baseKey = safeDate ? ('heys_dayv2_' + safeDate) : '';
+    const scopedKey = safeDate && currentClientId ? ('heys_' + currentClientId + '_dayv2_' + safeDate) : '';
+
+    const parseRaw = (raw) => {
+      if (!raw) return null;
+      try {
+        return JSON.parse(raw);
+      } catch (_) {
+        return { __parseError: true, raw };
+      }
+    };
+
+    const summarize = (value) => value ? {
+      date: value.date || safeDate || null,
+      isFastingDay: !!value.isFastingDay,
+      isIncomplete: !!value.isIncomplete,
+      savedEatenKcal: Number(value.savedEatenKcal || 0),
+      savedDisplayOptimum: Number(value.savedDisplayOptimum || 0),
+      updatedAt: Number(value.updatedAt || 0),
+      meals: Array.isArray(value.meals) ? value.meals.length : 0,
+      steps: Number(value.steps || 0),
+      waterMl: Number(value.waterMl || 0)
+    } : null;
+
+    const baseRaw = baseKey ? global.localStorage.getItem(baseKey) : null;
+    const scopedRaw = scopedKey ? global.localStorage.getItem(scopedKey) : null;
+    const baseParsed = parseRaw(baseRaw);
+    const scopedParsed = parseRaw(scopedRaw);
+    const viaUtils = safeDate ? HEYS?.utils?.lsGet?.(baseKey, null) : null;
+    const pendingMatches = clientUpsertQueue
+      .filter((item) => item && (item.k === baseKey || item.k === scopedKey || item.k === normalizeKeyForSupabase(baseKey, currentClientId)))
+      .map((item) => ({
+        k: item.k,
+        updated_at: item.updated_at,
+        v: summarize(item.v)
+      }));
+
+    const report = {
+      date: safeDate || null,
+      currentClientId: currentClientId || null,
+      baseKey: baseKey || null,
+      scopedKey: scopedKey || null,
+      selectedDate: HEYS?.App?.selectedDate || HEYS?.selectedDate || null,
+      viaUtils: summarize(viaUtils),
+      legacy: summarize(baseParsed),
+      scoped: summarize(scopedParsed),
+      pendingQueue: pendingMatches,
+      pendingCount: cloud.getPendingCount ? cloud.getPendingCount() : pendingMatches.length,
+      initialSyncCompleted,
+      isUploadInProgress: !!_uploadInProgress,
+      rpcOnlyMode: !!_rpcOnlyMode
+    };
+
+    global.console?.warn?.('[HEYS.dayRealData] inspectDayRealData', report);
+    return report;
+  };
+
+  HEYS.debugTools = HEYS.debugTools || {};
+  HEYS.debugTools.inspectDayRealData = inspectDayRealData;
+  HEYS.inspectDayRealData = inspectDayRealData;
+
+  if (!HEYS.debug || typeof HEYS.debug !== 'object') {
+    HEYS.debug = { enabled: !!HEYS.debug };
+  }
+  HEYS.debug.inspectDayRealData = inspectDayRealData;
 
   // Функция только проверяет существование клиента (больше НЕ создаём автоматически)
   // 🔐 Для PIN-авторизации: проверяем только по id (без curator_id)

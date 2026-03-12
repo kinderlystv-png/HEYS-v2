@@ -154,6 +154,9 @@
       const mealsCount = Array.isArray(data.meals) ? data.meals.length : 0;
       const trainingsCount = Array.isArray(data.trainings) ? data.trainings.length : 0;
       if (mealsCount > 0 || trainingsCount > 0) return true;
+      if (data.isFastingDay || data.isIncomplete) return true;
+      if ((data.savedEatenKcal || 0) > 0) return true;
+      if ((data.savedDisplayOptimum || 0) > 0) return true;
       if ((data.waterMl || 0) > 0) return true;
       if ((data.steps || 0) > 0) return true;
       if ((data.weightMorning || 0) > 0) return true;
