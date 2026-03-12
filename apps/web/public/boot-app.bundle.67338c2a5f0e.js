@@ -7825,6 +7825,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
       display: flex;
       align-items: center;
       justify-content: center;
+      overflow: hidden;
+      overscroll-behavior: contain;
       padding: 16px;
       animation: paywallFadeIn 0.2s ease-out;
     }
@@ -7844,6 +7846,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
       animation: paywallSlideUp 0.3s ease-out;
       max-height: calc(100vh - 32px);
       overflow-y: auto;
+      overscroll-behavior-y: contain;
+      -webkit-overflow-scrolling: touch;
     }
     
     @keyframes paywallSlideUp {
@@ -8121,6 +8125,33 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
   function PaywallModal({ onClose, onSelectPlan, reason }) {
     const [selectedPlan, setSelectedPlan] = React.useState('pro');
     const [showPaymentScreen, setShowPaymentScreen] = React.useState(false);
+
+    React.useEffect(() => {
+      if (typeof document === 'undefined') return undefined;
+
+      const { body, documentElement } = document;
+      if (!body || !documentElement) return undefined;
+
+      const previousBodyOverflow = body.style.overflow;
+      const previousBodyOverscrollBehavior = body.style.overscrollBehavior;
+      const previousDocumentOverflow = documentElement.style.overflow;
+      const previousDocumentOverscrollBehavior = documentElement.style.overscrollBehavior;
+
+      body.style.overflow = 'hidden';
+      body.style.overscrollBehavior = 'none';
+      documentElement.style.overflow = 'hidden';
+      documentElement.style.overscrollBehavior = 'none';
+
+      console.info('[HEYS.paywall] scroll-lock enabled');
+
+      return () => {
+        body.style.overflow = previousBodyOverflow;
+        body.style.overscrollBehavior = previousBodyOverscrollBehavior;
+        documentElement.style.overflow = previousDocumentOverflow;
+        documentElement.style.overscrollBehavior = previousDocumentOverscrollBehavior;
+        console.info('[HEYS.paywall] scroll-lock released');
+      };
+    }, []);
 
     const plans = [
       {
@@ -16332,7 +16363,13 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                                                         if (c.id !== clientIdValue) {
                                                             console.info(`[HEYS.store] 🔄 Выбор клиента: ${c.name} (${c.id.slice(0, 8)}...)`);
                                                             // ✅ FIX: Сразу переключаем UI — sync в фоне
+                                                            // ВАЖНО: сначала обновляем глобальный currentClientId/storage,
+                                                            // иначе слушатели (например gamification) получают
+                                                            // heys:client-changed и читают данные прошлого клиента.
                                                             writeGlobalValue('heys_last_client_id', c.id);
+                                                            writeGlobalValue('heys_client_current', c.id);
+                                                            window.HEYS = window.HEYS || {};
+                                                            window.HEYS.currentClientId = c.id;
                                                             setClientId(c.id);
                                                             window.dispatchEvent(new CustomEvent('heys:client-changed', { detail: { clientId: c.id } }));
 
@@ -18489,8 +18526,13 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                                                                     console.info('[HEYS.gate] 👤 Выбор клиента', { clientId: c.id, clientName: c.name });
 
                                                                     // ✅ FIX: Сразу закрываем gate — не ждём syncClient (10-15сек)
-                                                                    // Компоненты покажут скелетоны, heysSyncCompleted перерисует после sync
+                                                                    // Компоненты покажут скелетоны, heysSyncCompleted перерисует после sync.
+                                                                    // ВАЖНО: сначала обновляем глобальный currentClientId/storage,
+                                                                    // иначе ранние слушатели heys:client-changed читают старого клиента.
                                                                     writeGlobalValue('heys_last_client_id', c.id);
+                                                                    writeGlobalValue('heys_client_current', c.id);
+                                                                    window.HEYS = window.HEYS || {};
+                                                                    window.HEYS.currentClientId = c.id;
                                                                     setClientId(c.id);
                                                                     console.info('[HEYS.gate] ✅ Клиент переключён', { clientId: c.id });
                                                                     window.dispatchEvent(new CustomEvent('heys:client-changed', { detail: { clientId: c.id } }));

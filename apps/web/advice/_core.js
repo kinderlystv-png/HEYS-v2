@@ -81,9 +81,28 @@
         MEAL_ADVICE_THROTTLE_MS
     } = AdviceRules;
 
-    const OUTCOME_PROFILE_KEY = 'heys_advice_outcomes_v1';
-    const OUTCOME_PENDING_KEY = 'heys_advice_pending_outcomes_v1';
     const DAILY_TRACE_LOG_KEY = 'heys_advice_trace_day_v1';
+    const adviceOutcomeStorage = window.HEYS && window.HEYS.adviceOutcomeStorage;
+    if (!adviceOutcomeStorage) {
+        throw new Error('HEYS.adviceOutcomeStorage required');
+    }
+
+    const {
+        OUTCOME_PROFILE_VERSION,
+        OUTCOME_PENDING_VERSION,
+        MAX_OUTCOME_ADVICE_BUCKETS,
+        MAX_OUTCOME_THEME_BUCKETS,
+        MAX_OUTCOME_CONTEXT_BUCKETS,
+        MAX_PENDING_OUTCOME_ITEMS,
+        getAdviceOutcomeProfiles,
+        saveAdviceOutcomeProfiles,
+        getPendingAdviceOutcomes,
+        savePendingAdviceOutcomes,
+        ensureOutcomeBucket,
+        applyOutcomeEvent,
+        getOutcomeContextKey,
+        buildAdviceOutcomeSnapshot
+    } = adviceOutcomeStorage;
 
     // ═══════════════════════════════════════════════════════════
     // 🚀 ADVICE CACHE — Кэширование результатов generateAdvices
@@ -611,6 +630,33 @@
         if (typeof value !== 'number' || !Number.isFinite(value)) return min;
         return Math.max(min, Math.min(max, value));
     }
+
+    const ADVICE_SCORE_MODEL = Object.freeze({
+        version: '2026-03-outcome-calibrated',
+        components: Object.freeze({
+            basePriority: '100 - priority',
+            ctrBoost: 'ctr * 50 * CTR_WEIGHT',
+            ratingBoost: 'ratingScore * 30 * CTR_WEIGHT',
+            evidenceBoost: 'min(24, evidenceScore / 3.5)',
+            sourceBoost: 'min(10, sourceCount * 3)',
+            urgencyBoost: 'now=12, today=5, else=0',
+            actionabilityBoost: 'trigger-aware boost',
+            actionabilityPenalty: 'auto-context penalty for weak/low-actionability advice',
+            responseMemoryBoost: 'clamped calibrated outcome score',
+            noveltyBoost: 'recency freshness bonus',
+            contradictionPenalty: '10 * contradictionsCount',
+            trustPenalty: 'auto-context trust penalty',
+            fatiguePenalty: 'exposure + recent repeat + calibrated negative outcome history'
+        }),
+        storage: Object.freeze({
+            outcomeProfileVersion: OUTCOME_PROFILE_VERSION,
+            pendingOutcomeVersion: OUTCOME_PENDING_VERSION,
+            maxAdviceBuckets: MAX_OUTCOME_ADVICE_BUCKETS,
+            maxThemeBuckets: MAX_OUTCOME_THEME_BUCKETS,
+            maxContextBuckets: MAX_OUTCOME_CONTEXT_BUCKETS,
+            maxPendingItems: MAX_PENDING_OUTCOME_ITEMS
+        })
+    });
 
     function getAdviceActionabilityBoost(advice, ctx) {
         const urgency = advice?.expertMeta?.actionNow?.urgency;
@@ -2242,136 +2288,6 @@
         }
     }
 
-    function getAdviceOutcomeProfiles() {
-        try {
-            const HEYS = window.HEYS || {};
-            const U = HEYS.utils || {};
-            const parsed = HEYS.store?.get
-                ? (HEYS.store.get(OUTCOME_PROFILE_KEY, null) || {})
-                : (U.lsGet ? (U.lsGet(OUTCOME_PROFILE_KEY, null) || {}) : JSON.parse(localStorage.getItem(OUTCOME_PROFILE_KEY) || 'null') || {});
-
-            return {
-                advice: parsed?.advice && typeof parsed.advice === 'object' ? parsed.advice : {},
-                theme: parsed?.theme && typeof parsed.theme === 'object' ? parsed.theme : {},
-                context: parsed?.context && typeof parsed.context === 'object' ? parsed.context : {},
-                lastUpdated: parsed?.lastUpdated || 0
-            };
-        } catch (e) {
-            return { advice: {}, theme: {}, context: {}, lastUpdated: 0 };
-        }
-    }
-
-    function saveAdviceOutcomeProfiles(profiles) {
-        try {
-            const HEYS = window.HEYS || {};
-            const U = HEYS.utils || {};
-            const payload = {
-                advice: profiles?.advice || {},
-                theme: profiles?.theme || {},
-                context: profiles?.context || {},
-                lastUpdated: Date.now()
-            };
-
-            if (HEYS.store?.set) {
-                HEYS.store.set(OUTCOME_PROFILE_KEY, payload);
-            } else if (U.lsSet) {
-                U.lsSet(OUTCOME_PROFILE_KEY, payload);
-            } else {
-                localStorage.setItem(OUTCOME_PROFILE_KEY, JSON.stringify(payload));
-            }
-        } catch (e) {
-            // Ignore storage errors
-        }
-    }
-
-    function getPendingAdviceOutcomes() {
-        try {
-            const HEYS = window.HEYS || {};
-            const U = HEYS.utils || {};
-            const parsed = HEYS.store?.get
-                ? (HEYS.store.get(OUTCOME_PENDING_KEY, null) || {})
-                : (U.lsGet ? (U.lsGet(OUTCOME_PENDING_KEY, null) || {}) : JSON.parse(localStorage.getItem(OUTCOME_PENDING_KEY) || 'null') || {});
-
-            return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
-                ? parsed
-                : {};
-        } catch (e) {
-            return {};
-        }
-    }
-
-    function savePendingAdviceOutcomes(pending) {
-        try {
-            const HEYS = window.HEYS || {};
-            const U = HEYS.utils || {};
-            if (HEYS.store?.set) {
-                HEYS.store.set(OUTCOME_PENDING_KEY, pending || {});
-            } else if (U.lsSet) {
-                U.lsSet(OUTCOME_PENDING_KEY, pending || {});
-            } else {
-                localStorage.setItem(OUTCOME_PENDING_KEY, JSON.stringify(pending || {}));
-            }
-        } catch (e) {
-            // Ignore storage errors
-        }
-    }
-
-    function ensureOutcomeBucket(root, key) {
-        if (!root[key]) {
-            root[key] = {
-                shown: 0,
-                click: 0,
-                read: 0,
-                hidden: 0,
-                positive: 0,
-                negative: 0,
-                autoSuccess: 0,
-                autoFailure: 0,
-                autoNeutral: 0,
-                lastUpdated: 0
-            };
-        }
-
-        return root[key];
-    }
-
-    function applyOutcomeEvent(stats, eventType) {
-        if (!stats || !eventType) return;
-        if (typeof stats[eventType] !== 'number') stats[eventType] = 0;
-        stats[eventType] += 1;
-        stats.lastUpdated = Date.now();
-    }
-
-    function getOutcomeContextKey(advice, ctx) {
-        const theme = advice?.expertMeta?.theme || advice?.category || 'general';
-        const goalMode = ctx?.goal?.mode || 'maintenance';
-        const crashLevel = ctx?.crashRisk?.level || 'low';
-        const hour = ctx?.hour || 0;
-        const timeBucket = hour < 11 ? 'morning' : hour < 17 ? 'midday' : hour < 22 ? 'evening' : 'late';
-        const stressValue = ctx?.day?.stressAvg || 0;
-        const stressBucket = stressValue >= 6 ? 'high' : stressValue >= 4 ? 'medium' : 'low';
-        return [theme, goalMode, crashLevel, timeBucket, stressBucket].join('|');
-    }
-
-    function buildAdviceOutcomeSnapshot(advice, ctx) {
-        return {
-            theme: advice?.expertMeta?.theme || advice?.category || 'general',
-            contextKey: getOutcomeContextKey(advice, ctx),
-            date: ctx?.day?.date || new Date().toISOString().slice(0, 10),
-            shownAt: Date.now(),
-            hour: ctx?.hour || 0,
-            mealCount: ctx?.mealCount || 0,
-            lastMealHour: getLastMealHour(ctx?.day || {}),
-            proteinPct: ctx?.proteinPct || 0,
-            fiberPct: ctx?.fiberPct || 0,
-            waterPct: ctx?.waterPct || 0,
-            simplePct: ctx?.simplePct || 0,
-            kcalPct: ctx?.kcalPct || 0,
-            stressAvg: ctx?.day?.stressAvg || 0,
-            crashRiskLevel: ctx?.crashRisk?.level || 'low'
-        };
-    }
-
     function resolveAdviceResponseMemory(advice, ctx, profiles) {
         const safeProfiles = profiles || getAdviceOutcomeProfiles();
         const adviceStats = safeProfiles.advice?.[advice?.id] || null;
@@ -2539,7 +2455,7 @@
         if (!advice || !ctx) return;
 
         const pending = getPendingAdviceOutcomes();
-        const snapshot = buildAdviceOutcomeSnapshot(advice, ctx);
+        const snapshot = buildAdviceOutcomeSnapshot(advice, ctx, getLastMealHour);
         const key = `${advice.id}|${snapshot.shownAt}`;
 
         pending[key] = {
@@ -6796,6 +6712,7 @@
         getTopAdvices,
         getTrackingStats,
         getAdviceOutcomeProfiles,
+        getPendingAdviceOutcomes,
         // 👍👎 Rating system
         rateAdvice,
         getAdviceRating,
@@ -6878,6 +6795,7 @@
         buildExpertConflictReasonMap,
         explainExpertConflictOutcome,
         getAdviceFatiguePenalty,
+        ADVICE_SCORE_MODEL,
         formatAdviceTraceForClipboard,
         formatDailyAdviceTraceForClipboard,
         // 🆕 Phase 5 helpers

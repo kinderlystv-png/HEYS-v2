@@ -1767,13 +1767,23 @@
 
         const adviceListTouchStartY = useRef(null);
         const adviceListTouchLastY = useRef(null);
+        const adviceListTouchCanDismiss = useRef(false);
         const handleAdviceListTouchStart = useCallback((e) => {
             if (!e.touches?.length) return;
+            const scrollContainer = e.currentTarget?.querySelector?.('.advice-list-items');
+            const startedFromHeader = !!e.target?.closest?.('.advice-list-header');
+            const startedInsideList = !!e.target?.closest?.('.advice-list-items');
+            const isListAtTop = !scrollContainer || scrollContainer.scrollTop <= 0;
             adviceListTouchStartY.current = e.touches[0].clientY;
             adviceListTouchLastY.current = e.touches[0].clientY;
+            adviceListTouchCanDismiss.current = startedFromHeader || (startedInsideList && isListAtTop);
         }, []);
         const handleAdviceListTouchMove = useCallback((e) => {
             if (!e.touches?.length || adviceListTouchStartY.current === null) return;
+            const scrollContainer = e.currentTarget?.querySelector?.('.advice-list-items');
+            if (scrollContainer && scrollContainer.scrollTop > 0) {
+                adviceListTouchCanDismiss.current = false;
+            }
             adviceListTouchLastY.current = e.touches[0].clientY;
         }, []);
         const handleAdviceListTouchEnd = useCallback(() => {
@@ -1781,7 +1791,9 @@
             const diff = adviceListTouchLastY.current - adviceListTouchStartY.current;
             adviceListTouchStartY.current = null;
             adviceListTouchLastY.current = null;
-            if (diff > 50 && typeof dismissToastRef.current === 'function') {
+            const canDismiss = adviceListTouchCanDismiss.current;
+            adviceListTouchCanDismiss.current = false;
+            if (canDismiss && diff > 50 && typeof dismissToastRef.current === 'function') {
                 dismissToastRef.current();
             }
         }, []);
@@ -2365,6 +2377,35 @@
                 setAdviceTechnicalDetails(null);
             }
         }, [adviceTrigger]);
+
+        useEffect(() => {
+            const isManualAdviceDrawerOpen = adviceTrigger === 'manual' && toastVisible;
+            const isAdviceOverlayOpen = isManualAdviceDrawerOpen || adviceTechnicalDetailsOpen || adviceDiagnosticsOpen;
+            if (!isAdviceOverlayOpen || typeof document === 'undefined') return undefined;
+
+            const { body, documentElement } = document;
+            if (!body || !documentElement) return undefined;
+
+            const previousBodyOverflow = body.style.overflow;
+            const previousBodyOverscrollBehavior = body.style.overscrollBehavior;
+            const previousDocumentOverflow = documentElement.style.overflow;
+            const previousDocumentOverscrollBehavior = documentElement.style.overscrollBehavior;
+
+            body.style.overflow = 'hidden';
+            body.style.overscrollBehavior = 'none';
+            documentElement.style.overflow = 'hidden';
+            documentElement.style.overscrollBehavior = 'none';
+
+            console.info('[HEYS.advice] advice overlay scroll-lock enabled');
+
+            return () => {
+                body.style.overflow = previousBodyOverflow;
+                body.style.overscrollBehavior = previousBodyOverscrollBehavior;
+                documentElement.style.overflow = previousDocumentOverflow;
+                documentElement.style.overscrollBehavior = previousDocumentOverscrollBehavior;
+                console.info('[HEYS.advice] advice overlay scroll-lock released');
+            };
+        }, [adviceTrigger, toastVisible, adviceTechnicalDetailsOpen, adviceDiagnosticsOpen]);
 
         useEffect(() => {
             const timer = setTimeout(() => {

@@ -700,6 +700,21 @@
       merged.cycleDay = local.cycleDay || remote.cycleDay || null;
     }
 
+    // 🏳️ Флаги валидности дня: берём из более свежей версии, чтобы
+    // подтверждённый «реальный день» не терялся после sync/reload.
+    const localIsNewerForFlags = (local.updatedAt || 0) >= (remote.updatedAt || 0);
+    if (localIsNewerForFlags) {
+      merged.isFastingDay = !!local.isFastingDay;
+      merged.isIncomplete = !!local.isIncomplete;
+      merged.savedEatenKcal = Math.max(0, Number(local.savedEatenKcal || remote.savedEatenKcal || 0));
+      merged.savedDisplayOptimum = Math.max(0, Number(local.savedDisplayOptimum || remote.savedDisplayOptimum || 0));
+    } else {
+      merged.isFastingDay = !!remote.isFastingDay;
+      merged.isIncomplete = !!remote.isIncomplete;
+      merged.savedEatenKcal = Math.max(0, Number(remote.savedEatenKcal || local.savedEatenKcal || 0));
+      merged.savedDisplayOptimum = Math.max(0, Number(remote.savedDisplayOptimum || local.savedDisplayOptimum || 0));
+    }
+
     // 🍽️ Meals: merge по ID с учётом УДАЛЕНИЙ
     // Если local свежее и meal отсутствует в local — значит удалён!
     // НО: при forceKeepAll — объединяем ВСЁ (для pull-to-refresh после фикса багов)
@@ -4152,6 +4167,8 @@
     const mealsCount = Array.isArray(data.meals) ? data.meals.length : 0;
     const trainingsCount = Array.isArray(data.trainings) ? data.trainings.length : 0;
     if (mealsCount > 0 || trainingsCount > 0) return true;
+    if ((data.savedEatenKcal || 0) > 0) return true;
+    if (data.isFastingDay || data.isIncomplete) return true;
     if ((data.waterMl || 0) > 0) return true;
     if ((data.steps || 0) > 0) return true;
     if ((data.weightMorning || 0) > 0) return true;
@@ -6860,6 +6877,9 @@
       // Это предотвращает перезапись реальных данных пустым днём при выборе даты в календаре
       // v59 FIX: Блокируем всегда, не только до sync — иначе при выборе старой даты затираем облако
       const hasRealData = value.weightMorning ||
+        value.savedEatenKcal > 0 ||
+        value.isFastingDay ||
+        value.isIncomplete ||
         value.steps > 0 ||
         value.waterMl > 0 ||
         (value.meals && value.meals.length > 0 && value.meals.some(m => m.items?.length > 0)) ||

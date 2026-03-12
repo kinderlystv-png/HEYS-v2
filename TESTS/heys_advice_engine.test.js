@@ -87,13 +87,13 @@ const makeOtherHelpers = (overrides = {}) => ({
   isInTargetRange: overrides.isInTargetRange || (() => false),
   isCriticallyOver: overrides.isCriticallyOver || (() => false),
   isMilestoneShown: overrides.isMilestoneShown || (() => false),
-  markMilestoneShown: overrides.markMilestoneShown || (() => {}),
+  markMilestoneShown: overrides.markMilestoneShown || (() => { }),
   updatePersonalBestStreak: overrides.updatePersonalBestStreak || (() => false),
   getWeeklyComparison: overrides.getWeeklyComparison || (() => null),
   getWeeklySummary: overrides.getWeeklySummary || (() => null),
   getNextStreakMilestone: overrides.getNextStreakMilestone || (() => null),
   checkComboAchievements: overrides.checkComboAchievements || (() => null),
-  markComboShown: overrides.markComboShown || (() => {}),
+  markComboShown: overrides.markComboShown || (() => { }),
   getSmartRecommendation: overrides.getSmartRecommendation || (() => null),
   getTotalDaysTracked: overrides.getTotalDaysTracked || (() => 0)
 });
@@ -574,6 +574,85 @@ describe('HEYS advice engine', () => {
     expect(responseMemory.score).toBeGreaterThanOrEqual(4);
     expect(responseMemory.label === 'скорее полезен' || responseMemory.label === 'обычно помогает').toBe(true);
     expect(responseMemory.sampleCount).toBeGreaterThan(2);
+  });
+
+  it('sanitizes malformed outcome profile storage', () => {
+    localStorage.setItem('heys_advice_outcomes_v1', JSON.stringify({
+      advice: {
+        broken: {
+          shown: -5,
+          click: 'bad',
+          hidden: 2,
+          autoSuccess: 1,
+          lastUpdated: 'oops'
+        }
+      },
+      theme: [],
+      context: {
+        'hydration|deficit|low|midday|low': {
+          read: 2,
+          negative: 1,
+          lastUpdated: 100
+        }
+      },
+      lastUpdated: 'bad'
+    }));
+
+    const profiles = window.HEYS.advice.getAdviceOutcomeProfiles();
+
+    expect(profiles.version).toBe(2);
+    expect(profiles.advice.broken).toEqual({
+      shown: 0,
+      click: 0,
+      read: 0,
+      hidden: 2,
+      positive: 0,
+      negative: 0,
+      autoSuccess: 1,
+      autoFailure: 0,
+      autoNeutral: 0,
+      lastUpdated: 0
+    });
+    expect(profiles.theme).toEqual({});
+    expect(profiles.context['hydration|deficit|low|midday|low'].read).toBe(2);
+    expect(profiles.lastUpdated).toBe(0);
+  });
+
+  it('sanitizes and wraps pending outcome storage', () => {
+    const staleTimestamp = Date.now() - (90 * 60 * 60 * 1000);
+    const freshTimestamp = Date.now() - (2 * 60 * 60 * 1000);
+
+    localStorage.setItem('heys_advice_pending_outcomes_v1', JSON.stringify({
+      invalid_shape: ['oops'],
+      stale_key: {
+        adviceId: 'old_tip',
+        theme: 'hydration',
+        contextKey: 'hydration|deficit|low|midday|low',
+        shownAt: staleTimestamp
+      },
+      fresh_key: {
+        adviceId: 'fresh_tip',
+        theme: 'hydration',
+        contextKey: 'hydration|deficit|low|midday|low',
+        shownAt: freshTimestamp,
+        mealCount: 2,
+        proteinPct: 0.3,
+        waterPct: 0.4
+      }
+    }));
+
+    const pending = window.HEYS.advice.getPendingAdviceOutcomes();
+
+    expect(Object.keys(pending)).toEqual(['fresh_key']);
+    expect(pending.fresh_key.adviceId).toBe('fresh_tip');
+    expect(pending.fresh_key.mealCount).toBe(2);
+    expect(pending.fresh_key.waterPct).toBe(0.4);
+  });
+
+  it('exposes score model metadata for diagnostics and tuning', () => {
+    expect(window.HEYS.advice.ADVICE_SCORE_MODEL).toBeTruthy();
+    expect(window.HEYS.advice.ADVICE_SCORE_MODEL.version).toBe('2026-03-outcome-calibrated');
+    expect(window.HEYS.advice.ADVICE_SCORE_MODEL.storage.outcomeProfileVersion).toBe(2);
   });
 
   it('downgrades daily quality when cooldown suppresses almost all auto delivery', () => {

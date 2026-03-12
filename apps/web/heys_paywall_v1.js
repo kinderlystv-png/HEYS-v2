@@ -49,6 +49,8 @@
       display: flex;
       align-items: center;
       justify-content: center;
+      overflow: hidden;
+      overscroll-behavior: contain;
       padding: 16px;
       animation: paywallFadeIn 0.2s ease-out;
     }
@@ -68,6 +70,8 @@
       animation: paywallSlideUp 0.3s ease-out;
       max-height: calc(100vh - 32px);
       overflow-y: auto;
+      overscroll-behavior-y: contain;
+      -webkit-overflow-scrolling: touch;
     }
     
     @keyframes paywallSlideUp {
@@ -345,6 +349,33 @@
   function PaywallModal({ onClose, onSelectPlan, reason }) {
     const [selectedPlan, setSelectedPlan] = React.useState('pro');
     const [showPaymentScreen, setShowPaymentScreen] = React.useState(false);
+
+    React.useEffect(() => {
+      if (typeof document === 'undefined') return undefined;
+
+      const { body, documentElement } = document;
+      if (!body || !documentElement) return undefined;
+
+      const previousBodyOverflow = body.style.overflow;
+      const previousBodyOverscrollBehavior = body.style.overscrollBehavior;
+      const previousDocumentOverflow = documentElement.style.overflow;
+      const previousDocumentOverscrollBehavior = documentElement.style.overscrollBehavior;
+
+      body.style.overflow = 'hidden';
+      body.style.overscrollBehavior = 'none';
+      documentElement.style.overflow = 'hidden';
+      documentElement.style.overscrollBehavior = 'none';
+
+      console.info('[HEYS.paywall] scroll-lock enabled');
+
+      return () => {
+        body.style.overflow = previousBodyOverflow;
+        body.style.overscrollBehavior = previousBodyOverscrollBehavior;
+        documentElement.style.overflow = previousDocumentOverflow;
+        documentElement.style.overscrollBehavior = previousDocumentOverscrollBehavior;
+        console.info('[HEYS.paywall] scroll-lock released');
+      };
+    }, []);
 
     const plans = [
       {

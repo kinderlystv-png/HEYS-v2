@@ -1581,6 +1581,8 @@ body.tour-active .ios-pwa-banner {
   display: flex;
   align-items: flex-end;
   justify-content: center;
+  overflow: hidden;
+  overscroll-behavior: contain;
   padding: 20px 12px calc(24px + env(safe-area-inset-bottom, 0px));
   background: rgba(15, 23, 42, 0.52);
   backdrop-filter: blur(8px);
@@ -1659,6 +1661,8 @@ body.tour-active .ios-pwa-banner {
 
 .advice-diagnostics-modal__body {
   overflow-y: auto;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
   padding: 14px 16px 18px;
   display: flex;
   flex-direction: column;

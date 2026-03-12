@@ -129,8 +129,15 @@
 }
 
 @keyframes reminderPulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.7; }
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.7;
+  }
 }
 
 [data-theme="dark"] .water-reminder {
@@ -148,7 +155,7 @@
   background: var(--color-white);
   border-radius: 12px;
   padding: 12px 14px;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
   border: 1px solid #e5e7eb;
   z-index: 1000;
   min-width: 200px;
@@ -157,8 +164,15 @@
 }
 
 @keyframes tooltipFadeIn {
-  from { opacity: 0; transform: translateX(-50%) translateY(-90%); }
-  to { opacity: 1; transform: translateX(-50%) translateY(-100%); }
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-90%);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(-100%);
+  }
 }
 
 .water-formula-title {
@@ -202,7 +216,7 @@
 [data-theme="dark"] .water-formula-tooltip {
   background: #1e293b;
   border-color: var(--color-slate-700);
-  box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
 }
 
 [data-theme="dark"] .water-formula-title {
@@ -249,14 +263,17 @@
     opacity: 0;
     transform: translate(-50%, -50%) scale(0.5);
   }
+
   20% {
     opacity: 1;
     transform: translate(-50%, -50%) scale(1.2);
   }
+
   50% {
     opacity: 1;
     transform: translate(-50%, -70%) scale(1);
   }
+
   100% {
     opacity: 0;
     transform: translate(-50%, -100%) scale(0.9);
@@ -360,10 +377,13 @@
 }
 
 @keyframes waveEdge {
-  0%, 100% {
+
+  0%,
+  100% {
     transform: translateX(-4px) scaleX(1);
     opacity: 0.8;
   }
+
   50% {
     transform: translateX(-2px) scaleX(1.3);
     opacity: 1;
@@ -390,11 +410,35 @@
   box-shadow: 0 0 2px rgba(255, 255, 255, 0.5);
 }
 
-.water-bubble:nth-child(1) { left: 10%; animation-delay: 0s; animation-duration: 1.5s; }
-.water-bubble:nth-child(2) { left: 25%; animation-delay: 0.3s; animation-duration: 1.8s; }
-.water-bubble:nth-child(3) { left: 45%; animation-delay: 0.6s; animation-duration: 1.6s; }
-.water-bubble:nth-child(4) { left: 65%; animation-delay: 0.9s; animation-duration: 2s; }
-.water-bubble:nth-child(5) { left: 85%; animation-delay: 1.2s; animation-duration: 1.7s; }
+.water-bubble:nth-child(1) {
+  left: 10%;
+  animation-delay: 0s;
+  animation-duration: 1.5s;
+}
+
+.water-bubble:nth-child(2) {
+  left: 25%;
+  animation-delay: 0.3s;
+  animation-duration: 1.8s;
+}
+
+.water-bubble:nth-child(3) {
+  left: 45%;
+  animation-delay: 0.6s;
+  animation-duration: 1.6s;
+}
+
+.water-bubble:nth-child(4) {
+  left: 65%;
+  animation-delay: 0.9s;
+  animation-duration: 2s;
+}
+
+.water-bubble:nth-child(5) {
+  left: 85%;
+  animation-delay: 1.2s;
+  animation-duration: 1.7s;
+}
 
 @keyframes bubbleRise {
   0% {
@@ -402,14 +446,17 @@
     opacity: 0;
     transform: scale(0.3) translateX(0);
   }
+
   20% {
     opacity: 1;
     transform: scale(1) translateX(-2px);
   }
+
   60% {
     opacity: 0.8;
     transform: scale(0.8) translateX(2px);
   }
+
   100% {
     bottom: 16px;
     opacity: 0;
@@ -430,10 +477,13 @@
 }
 
 @keyframes shineMove {
-  0%, 100% {
+
+  0%,
+  100% {
     opacity: 0.5;
     transform: translateX(0);
   }
+
   50% {
     opacity: 1;
     transform: translateX(10px);
@@ -462,7 +512,7 @@
   border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
   transform: translateX(-50%);
   animation: dropFall 0.9s cubic-bezier(0.4, 0, 0.8, 1) forwards;
-  box-shadow: 
+  box-shadow:
     0 2px 8px rgba(14, 165, 233, 0.4),
     inset 2px -2px 4px rgba(255, 255, 255, 0.5),
     inset -1px 1px 2px rgba(0, 0, 0, 0.1);
@@ -485,16 +535,20 @@
     opacity: 1;
     transform: translateX(-50%) scale(1) rotate(0deg);
   }
+
   20% {
     transform: translateX(-50%) scale(1.1) rotate(-3deg);
   }
+
   40% {
     transform: translateX(-50%) scale(1) rotate(2deg);
   }
+
   70% {
     opacity: 1;
     transform: translateX(-50%) scale(0.95) rotate(0deg);
   }
+
   100% {
     top: 65px;
     opacity: 0;
@@ -536,9 +590,17 @@
 }
 
 @keyframes splashAppear {
-  0% { opacity: 0; }
-  30% { opacity: 1; }
-  100% { opacity: 0; }
+  0% {
+    opacity: 0;
+  }
+
+  30% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+  }
 }
 
 @keyframes splashLeft {
@@ -546,10 +608,12 @@
     transform: translate(0, 0) scale(1);
     opacity: 0;
   }
+
   30% {
     opacity: 1;
     transform: translate(-8px, -12px) scale(1);
   }
+
   100% {
     opacity: 0;
     transform: translate(-12px, -18px) scale(0.3);
@@ -561,10 +625,12 @@
     transform: translate(0, 0) scale(1);
     opacity: 0;
   }
+
   30% {
     opacity: 1;
     transform: translate(8px, -10px) scale(1);
   }
+
   100% {
     opacity: 0;
     transform: translate(12px, -16px) scale(0.3);
@@ -649,13 +715,15 @@ html.dark .water-tip-text {
   flex-direction: column;
   align-items: flex-end;
   gap: 10px;
-  z-index: 1001; /* Выше меню .tabs (z-index: 1000) */
+  z-index: 1001;
+  /* Выше меню .tabs (z-index: 1000) */
 }
 
 /* 💧 Анимация добавления воды около FAB */
 .water-fab-anim {
   position: absolute;
-  bottom: 52px; /* Чуть выше water-fab */
+  bottom: 52px;
+  /* Чуть выше water-fab */
   right: 0;
   background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
   color: white;
@@ -674,13 +742,16 @@ html.dark .water-tip-text {
     opacity: 0;
     transform: translateY(10px) scale(0.8);
   }
+
   20% {
     opacity: 1;
     transform: translateY(-5px) scale(1.1);
   }
+
   40% {
     transform: translateY(-12px) scale(1);
   }
+
   100% {
     opacity: 0;
     transform: translateY(-30px) scale(0.9);
@@ -707,7 +778,8 @@ html.dark .water-tip-text {
   transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.2s ease;
   box-shadow: 0 4px 12px rgba(251, 191, 36, 0.4);
   opacity: 0.6;
-  margin-right: 2px; /* Центрирование относительно water-fab (48px) */
+  margin-right: 2px;
+  /* Центрирование относительно water-fab (48px) */
 }
 
 .advice-fab.has-advice {
@@ -717,7 +789,7 @@ html.dark .water-tip-text {
 
 .advice-fab-icon {
   font-size: 20px;
-  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.2));
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.2));
 }
 
 .advice-fab-badge {
@@ -735,7 +807,7 @@ html.dark .water-tip-text {
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 .advice-fab:active {
@@ -744,8 +816,15 @@ html.dark .water-tip-text {
 }
 
 @keyframes advice-pulse {
-  0%, 100% { box-shadow: 0 4px 12px rgba(251, 191, 36, 0.4); }
-  50% { box-shadow: 0 4px 20px rgba(251, 191, 36, 0.6); }
+
+  0%,
+  100% {
+    box-shadow: 0 4px 12px rgba(251, 191, 36, 0.4);
+  }
+
+  50% {
+    box-shadow: 0 4px 20px rgba(251, 191, 36, 0.6);
+  }
 }
 
 [data-theme="dark"] .advice-fab {
@@ -764,18 +843,21 @@ html.dark .water-tip-text {
   display: flex;
   align-items: flex-end;
   justify-content: center;
+  overflow: hidden;
+  overscroll-behavior: contain;
   padding: 16px;
   padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
   animation: fadeInOverlay 0.25s ease-out;
 }
 
 @keyframes fadeInOverlay {
-  from { 
+  from {
     opacity: 0;
     backdrop-filter: blur(0px);
     -webkit-backdrop-filter: blur(0px);
   }
-  to { 
+
+  to {
     opacity: 1;
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
@@ -789,6 +871,7 @@ html.dark .water-tip-text {
   background: var(--surface, var(--color-white));
   border-radius: 20px;
   overflow: hidden;
+  overscroll-behavior: contain;
   display: flex;
   flex-direction: column;
   animation: slideUpSmooth 0.35s cubic-bezier(0.32, 0.72, 0, 1);
@@ -796,12 +879,13 @@ html.dark .water-tip-text {
 }
 
 @keyframes slideUpSmooth {
-  from { 
-    transform: translateY(30%); 
+  from {
+    transform: translateY(30%);
     opacity: 0;
   }
-  to { 
-    transform: translateY(0); 
+
+  to {
+    transform: translateY(0);
     opacity: 1;
   }
 }
@@ -811,16 +895,39 @@ html.dark .water-tip-text {
 }
 
 @keyframes shakeHorizontal {
-  0%, 100% { transform: translateX(0); }
-  20% { transform: translateX(-8px); }
-  40% { transform: translateX(8px); }
-  60% { transform: translateX(-4px); }
-  80% { transform: translateX(4px); }
+
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+
+  20% {
+    transform: translateX(-8px);
+  }
+
+  40% {
+    transform: translateX(8px);
+  }
+
+  60% {
+    transform: translateX(-4px);
+  }
+
+  80% {
+    transform: translateX(4px);
+  }
 }
 
 @keyframes slideUp {
-  from { transform: translateY(100%); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
 }
 
 .advice-list-header {
@@ -977,6 +1084,8 @@ html.dark .water-tip-text {
 .advice-list-items {
   padding: 8px;
   overflow-y: auto;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -1014,12 +1123,13 @@ html.dark .water-tip-text {
 }
 
 @keyframes adviceSlideIn {
-  from { 
-    opacity: 0; 
+  from {
+    opacity: 0;
     transform: translateY(20px) scale(0.95);
   }
-  to { 
-    opacity: 1; 
+
+  to {
+    opacity: 1;
     transform: translateY(0) scale(1);
   }
 }
@@ -1034,16 +1144,18 @@ html.dark .water-tip-text {
 }
 
 @keyframes adviceDismiss {
-  0% { 
-    opacity: 1; 
+  0% {
+    opacity: 1;
     transform: translateX(0) scale(1);
   }
-  50% { 
+
+  50% {
     opacity: 0.5;
     transform: translateX(-100px) scale(0.9);
   }
-  100% { 
-    opacity: 0; 
+
+  100% {
+    opacity: 0;
     transform: translateX(-150px) scale(0.8);
     height: 0;
     margin: 0;
@@ -1052,8 +1164,13 @@ html.dark .water-tip-text {
 
 /* Undo overlay прогресс-бар (убывает за 3 сек) */
 @keyframes undoProgress {
-  0% { width: 100%; }
-  100% { width: 0%; }
+  0% {
+    width: 100%;
+  }
+
+  100% {
+    width: 0%;
+  }
 }
 
 /* Фоны при свайпе */
@@ -1091,10 +1208,10 @@ html.dark .water-tip-text {
   border-radius: 12px;
   /* Gradient border + pastel background */
   border: 2px solid transparent;
-  background: 
+  background:
     linear-gradient(var(--advice-bg, #f9fafb), var(--advice-bg, #f9fafb)) padding-box,
     var(--advice-gradient, linear-gradient(135deg, #94a3b8 0%, #64748b 100%)) border-box;
-  touch-action: pan-x;
+  touch-action: pan-y;
   transition: transform 0.1s ease, box-shadow 0.2s ease;
 }
 
@@ -1105,59 +1222,94 @@ html.dark .water-tip-text {
 /* === Gradient Borders + Pastel Backgrounds по типам советов === */
 .advice-list-item-tip {
   --advice-gradient: linear-gradient(135deg, #93c5fd 0%, #3b82f6 100%);
-  --advice-bg: #eff6ff; /* blue-50 */
+  --advice-bg: #eff6ff;
+  /* blue-50 */
 }
 
 .advice-list-item-warning {
   --advice-gradient: linear-gradient(135deg, #fca5a5 0%, #ef4444 100%);
-  --advice-bg: #fef2f2; /* red-50 */
+  --advice-bg: #fef2f2;
+  /* red-50 */
 }
 
 .advice-list-item-achievement {
   --advice-gradient: linear-gradient(135deg, #fde047 0%, #f59e0b 100%);
-  --advice-bg: #fefce8; /* yellow-50 */
+  --advice-bg: #fefce8;
+  /* yellow-50 */
 }
 
 .advice-list-item-success {
   --advice-gradient: linear-gradient(135deg, #6ee7b7 0%, #10b981 100%);
-  --advice-bg: #ecfdf5; /* emerald-50 */
+  --advice-bg: #ecfdf5;
+  /* emerald-50 */
 }
 
 .advice-list-item-streak {
   --advice-gradient: linear-gradient(135deg, #fdba74 0%, #f97316 100%);
-  --advice-bg: #fff7ed; /* orange-50 */
+  --advice-bg: #fff7ed;
+  /* orange-50 */
 }
 
 .advice-list-item-emotional {
   --advice-gradient: linear-gradient(135deg, #93c5fd 0%, #3b82f6 100%);
-  --advice-bg: #f5f3ff; /* violet-50 */
+  --advice-bg: #f5f3ff;
+  /* violet-50 */
 }
 
 .advice-list-item-hydration {
   --advice-gradient: linear-gradient(135deg, #67e8f9 0%, #06b6d4 100%);
-  --advice-bg: #ecfeff; /* cyan-50 */
+  --advice-bg: #ecfeff;
+  /* cyan-50 */
 }
 
 .advice-list-item-insight {
   --advice-gradient: linear-gradient(135deg, #93c5fd 0%, #3b82f6 100%);
-  --advice-bg: #f5f3ff; /* violet-50 */
+  --advice-bg: #f5f3ff;
+  /* violet-50 */
 }
 
 .advice-list-item-info {
   --advice-gradient: linear-gradient(135deg, #94a3b8 0%, #64748b 100%);
-  --advice-bg: #f8fafc; /* slate-50 */
+  --advice-bg: #f8fafc;
+  /* slate-50 */
 }
 
 /* Dark mode — более тёмные пастельные оттенки */
-[data-theme="dark"] .advice-list-item-tip { --advice-bg: rgba(59, 130, 246, 0.1); }
-[data-theme="dark"] .advice-list-item-warning { --advice-bg: rgba(239, 68, 68, 0.1); }
-[data-theme="dark"] .advice-list-item-achievement { --advice-bg: rgba(245, 158, 11, 0.1); }
-[data-theme="dark"] .advice-list-item-success { --advice-bg: rgba(16, 185, 129, 0.1); }
-[data-theme="dark"] .advice-list-item-streak { --advice-bg: rgba(249, 115, 22, 0.1); }
-[data-theme="dark"] .advice-list-item-emotional { --advice-bg: rgba(139, 92, 246, 0.1); }
-[data-theme="dark"] .advice-list-item-hydration { --advice-bg: rgba(6, 182, 212, 0.1); }
-[data-theme="dark"] .advice-list-item-insight { --advice-bg: rgba(139, 92, 246, 0.1); }
-[data-theme="dark"] .advice-list-item-info { --advice-bg: rgba(100, 116, 139, 0.1); }
+[data-theme="dark"] .advice-list-item-tip {
+  --advice-bg: rgba(59, 130, 246, 0.1);
+}
+
+[data-theme="dark"] .advice-list-item-warning {
+  --advice-bg: rgba(239, 68, 68, 0.1);
+}
+
+[data-theme="dark"] .advice-list-item-achievement {
+  --advice-bg: rgba(245, 158, 11, 0.1);
+}
+
+[data-theme="dark"] .advice-list-item-success {
+  --advice-bg: rgba(16, 185, 129, 0.1);
+}
+
+[data-theme="dark"] .advice-list-item-streak {
+  --advice-bg: rgba(249, 115, 22, 0.1);
+}
+
+[data-theme="dark"] .advice-list-item-emotional {
+  --advice-bg: rgba(139, 92, 246, 0.1);
+}
+
+[data-theme="dark"] .advice-list-item-hydration {
+  --advice-bg: rgba(6, 182, 212, 0.1);
+}
+
+[data-theme="dark"] .advice-list-item-insight {
+  --advice-bg: rgba(139, 92, 246, 0.1);
+}
+
+[data-theme="dark"] .advice-list-item-info {
+  --advice-bg: rgba(100, 116, 139, 0.1);
+}
 
 .advice-list-icon {
   font-size: 22px;
@@ -1168,8 +1320,13 @@ html.dark .water-tip-text {
 }
 
 @keyframes iconGlow {
-  from { filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1)); }
-  to { filter: drop-shadow(0 2px 8px rgba(59, 130, 246, 0.3)); }
+  from {
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+  }
+
+  to {
+    filter: drop-shadow(0 2px 8px rgba(59, 130, 246, 0.3));
+  }
 }
 
 .advice-list-item-warning .advice-list-icon {
@@ -1177,8 +1334,13 @@ html.dark .water-tip-text {
 }
 
 @keyframes iconGlowWarning {
-  from { filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1)); }
-  to { filter: drop-shadow(0 2px 10px rgba(239, 68, 68, 0.4)); }
+  from {
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+  }
+
+  to {
+    filter: drop-shadow(0 2px 10px rgba(239, 68, 68, 0.4));
+  }
 }
 
 .advice-list-item-achievement .advice-list-icon {
@@ -1186,8 +1348,13 @@ html.dark .water-tip-text {
 }
 
 @keyframes iconGlowSuccess {
-  from { filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1)); }
-  to { filter: drop-shadow(0 2px 10px rgba(16, 185, 129, 0.4)); }
+  from {
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+  }
+
+  to {
+    filter: drop-shadow(0 2px 10px rgba(16, 185, 129, 0.4));
+  }
 }
 
 .advice-list-content {
@@ -1214,8 +1381,15 @@ html.dark .water-tip-text {
 }
 
 @keyframes detailsSlideIn {
-  from { opacity: 0; transform: translateY(-8px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* Подсказки снизу */
@@ -1251,7 +1425,7 @@ html.dark .water-tip-text {
 
 /* Dark mode: gradient border с тёмным фоном */
 [data-theme="dark"] .advice-list-item {
-  background: 
+  background:
     linear-gradient(var(--bg-secondary, #374151), var(--bg-secondary, #374151)) padding-box,
     var(--advice-gradient, linear-gradient(135deg, #94a3b8 0%, #64748b 100%)) border-box;
 }
@@ -1355,13 +1529,14 @@ html.dark .water-tip-text {
 }
 
 @keyframes waterFloatUp {
-  0% { 
-    opacity: 1; 
-    transform: translateX(-50%) translateY(0) scale(1); 
+  0% {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0) scale(1);
   }
-  100% { 
-    opacity: 0; 
-    transform: translateX(-50%) translateY(-30px) scale(1.2); 
+
+  100% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-30px) scale(1.2);
   }
 }
 
@@ -1529,12 +1704,12 @@ html.dark .water-tip-text {
 }
 
 /* Cell states */
-.cell-filled { 
+.cell-filled {
   color: #059669;
   font-weight: 500;
 }
 
-.cell-empty { 
+.cell-empty {
   color: var(--color-gray-400);
   background: #fef2f2;
 }
@@ -1613,8 +1788,8 @@ html.dark .water-tip-text {
   background: #4b5563;
 }
 
-[data-theme="dark"] .cell-empty { 
-  color: var(--color-gray-500); 
+[data-theme="dark"] .cell-empty {
+  color: var(--color-gray-500);
   background: #451a1a;
 }
 
@@ -1629,6 +1804,7 @@ html.dark .water-tip-text {
 [data-theme="dark"] .data-overview-empty-hint {
   color: var(--color-gray-500);
 }
+
 /* MODULE 05 — Water & Hydration
  * Scope: water cards/rings, hydration hints, data overview blocks.
  */

@@ -22,9 +22,11 @@
     return Number.isFinite(fromGoal) ? fromGoal : 0;
   };
 
-  HEYS.weeklyCalc.isIncompleteToday = HEYS.weeklyCalc.isIncompleteToday || function ({ isToday, dateStr, nowDateStr, ratio }) {
+  HEYS.weeklyCalc.isIncompleteToday = HEYS.weeklyCalc.isIncompleteToday || function ({ isToday, dateStr, nowDateStr, ratio, isFastingDay, isIncomplete }) {
     const isSameDay = isToday || (dateStr && nowDateStr && dateStr === nowDateStr);
     if (!isSameDay) return false;
+    if (isFastingDay) return false;
+    if (isIncomplete) return true;
     return ratio == null || ratio < 0.5;
   };
 
@@ -36,7 +38,9 @@
       isToday: !!day.isToday,
       dateStr,
       nowDateStr,
-      ratio: day.ratio
+      ratio: day.ratio,
+      isFastingDay: !!day.isFastingDay,
+      isIncomplete: !!day.isIncomplete
     });
     if (incomplete) return false;
     if (requireMeals && !day.hasMeals) return false;
@@ -90,10 +94,12 @@
       if (!sparklineData || sparklineData.length < 3 || !optimum || optimum <= 0) return null;
 
       try {
-        // Считаем среднее отклонение от нормы (исключая сегодня и неполные дни <50%)
+        // Считаем среднее отклонение от нормы (исключая сегодня и явно неполные дни)
         const pastDays = sparklineData.filter(d => {
           if (d.isToday) return false;
           if (d.kcal <= 0) return false;
+          if (d.isIncomplete) return false;
+          if (d.isFastingDay) return true;
           // Исключаем дни с <50% заполненности — вероятно незаполненные
           const ratio = d.target > 0 ? d.kcal / d.target : 0;
           return ratio >= 0.5;
@@ -505,14 +511,22 @@
         let status = 'empty'; // empty | low | green | yellow | red | perfect
         let isRefeedDay = false; // Загрузочный день
         let isStreakEligible = false;
+        let dayInfo = null;
 
         // Используем централизованный ratioZones
         const rz = HEYSRef.ratioZones;
 
         if (!isFuture) {
           // Для сегодняшнего дня используем свежие данные из переданного day, а не кэш
-          const dayInfo = isToday && eatenKcal > 0
-            ? { kcal: eatenKcal, target: optimum, isRefeedDay: safeDay.isRefeedDay, dayData: safeDay }
+          dayInfo = isToday && eatenKcal > 0
+            ? {
+              kcal: eatenKcal,
+              target: optimum,
+              isRefeedDay: safeDay.isRefeedDay,
+              isFastingDay: !!safeDay.isFastingDay,
+              isIncomplete: !!safeDay.isIncomplete,
+              dayData: safeDay
+            }
             : allActiveDays.get(dateStr);
           isRefeedDay = dayInfo?.isRefeedDay || false;
 
@@ -559,6 +573,8 @@
           isFuture,
           isWeekend,
           isRefeedDay, // Загрузочный день
+          isFastingDay: !!dayInfo?.isFastingDay,
+          isIncomplete: !!dayInfo?.isIncomplete,
           isStreakDay: false, // будет проставлено после расчёта streak
           isStreakEligible,
           isPerfect: ratio && rz ? rz.isPerfect(ratio) : false, // Идеальный день (0.9-1.1)
@@ -591,7 +607,14 @@
       }
 
       const isIncompleteToday = (d) => HEYSRef.weeklyCalc?.isIncompleteToday
-        ? HEYSRef.weeklyCalc.isIncompleteToday({ isToday: d.isToday, dateStr: d.date, nowDateStr, ratio: d.ratio })
+        ? HEYSRef.weeklyCalc.isIncompleteToday({
+          isToday: d.isToday,
+          dateStr: d.date,
+          nowDateStr,
+          ratio: d.ratio,
+          isFastingDay: !!d.isFastingDay,
+          isIncomplete: !!d.isIncomplete
+        })
         : (d.date === nowDateStr && (d.ratio === null || d.ratio < 0.5));
       const shouldIncludeDay = (d, opts) => HEYSRef.weeklyCalc?.shouldIncludeDay
         ? HEYSRef.weeklyCalc.shouldIncludeDay({ day: d, nowDateStr, ...opts })

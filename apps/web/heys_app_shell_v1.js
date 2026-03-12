@@ -561,7 +561,13 @@
                                                         if (c.id !== clientIdValue) {
                                                             console.info(`[HEYS.store] 🔄 Выбор клиента: ${c.name} (${c.id.slice(0, 8)}...)`);
                                                             // ✅ FIX: Сразу переключаем UI — sync в фоне
+                                                            // ВАЖНО: сначала обновляем глобальный currentClientId/storage,
+                                                            // иначе слушатели (например gamification) получают
+                                                            // heys:client-changed и читают данные прошлого клиента.
                                                             writeGlobalValue('heys_last_client_id', c.id);
+                                                            writeGlobalValue('heys_client_current', c.id);
+                                                            window.HEYS = window.HEYS || {};
+                                                            window.HEYS.currentClientId = c.id;
                                                             setClientId(c.id);
                                                             window.dispatchEvent(new CustomEvent('heys:client-changed', { detail: { clientId: c.id } }));
 

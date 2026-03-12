@@ -110,7 +110,11 @@
     // Если да, показываем сегодня как прогноз (пунктиром), а не как реальные данные
     const todayData = data.find(d => d.isToday);
     const todayRatio = todayData && todayData.target > 0 ? todayData.kcal / todayData.target : 0;
-    const isTodayIncomplete = todayData && todayRatio < 0.5;
+    const isTodayIncomplete = Boolean(
+      todayData
+      && !todayData.isFastingDay
+      && (todayData.isIncomplete || todayRatio < 0.5)
+    );
 
     // Обрабатываем данные:
     // 1. Помечаем пустые/неполные дни как "unknown" (будут показаны как "?")

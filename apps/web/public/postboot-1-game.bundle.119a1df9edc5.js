@@ -2187,15 +2187,11 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
       let cachedXP = data.totalXP || 0;
       let cachedEventCount = data._lastKnownEventCount || 0;
 
-      // 🚀 PERF v2.4: Always prefer local XP cache if it has higher XP
-      // Game state in cloud can be overwritten with stale XP (e.g. 3761) after a rebuild
-      // set correct XP (e.g. 8629). XP only increases, so higher cache = correct.
+      // XP cache используем только как вспомогательный счётчик событий/dailyRebuilt.
+      // Для totalXP источником истины должен быть audit, иначе завышенный локальный кэш
+      // может снова раздуть UI даже после reconciliation.
       const xpCache = _loadXPCache();
       if (xpCache) {
-        if (xpCache.xp > cachedXP) {
-          console.info('[🎮 GAME SYNC]', trigger, '— XP cache override: game XP=' + cachedXP + ' → cache XP=' + xpCache.xp);
-          cachedXP = xpCache.xp;
-        }
         if (xpCache.count > cachedEventCount) cachedEventCount = xpCache.count;
       }
 
@@ -2219,7 +2215,7 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
         const _xpCacheDR = _loadXPCache();
         if (!(_xpCacheDR && _xpCacheDR.dailyRebuilt) && cachedXP > 0) {
           console.info('[🎮 GAME SYNC]', trigger, '— XP consistent ✅ but dailyXP not yet rebuilt, restoring from audit...');
-          await rebuildXPFromAudit({ force: true });
+          await rebuildXPFromAudit({ force: true, trustAudit: true });
           _saveXPCache(cachedXP, auditTotal, { dailyRebuilt: true });
           endGameSyncTrace(syncTrace, 'ok', { reason: 'consistent_daily_rebuild' });
           return;
@@ -2245,7 +2241,7 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
         const _xpCacheDR2 = _loadXPCache();
         if (!(_xpCacheDR2 && _xpCacheDR2.dailyRebuilt) && cachedXP > 0) {
           console.info('[🎮 GAME SYNC]', trigger, '— dailyXP not yet rebuilt, restoring from audit...');
-          await rebuildXPFromAudit({ force: true });
+          await rebuildXPFromAudit({ force: true, trustAudit: true });
           _saveXPCache(cachedXP, auditTotal, { dailyRebuilt: true });
         }
         endGameSyncTrace(syncTrace, 'ok', { reason: 'xp_consistent_count_update', cachedXP, auditTotal });
@@ -2297,7 +2293,7 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
         }
       }
 
-      const rebuildResult = await rebuildXPFromAudit({ force: true });
+      const rebuildResult = await rebuildXPFromAudit({ force: true, trustAudit: true });
       gameSyncTraceStep(syncTrace, 'full_rebuild:done', {
         rebuilt: Boolean(rebuildResult?.rebuilt),
         reason: rebuildResult?.reason || null
@@ -5400,12 +5396,6 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
           // 🚀 PERF v7.0: Dispatch bar update IMMEDIATELY from localStorage,
           // defer heavy audit (3-6 RPC calls, ~2-4s) to avoid competing with DayTab sync
           _data = loadData();
-          const _xpCacheQuick = _loadXPCache();
-          if (_xpCacheQuick && typeof _xpCacheQuick.xp === 'number' && _xpCacheQuick.xp > (_data.totalXP || 0)) {
-            _data.totalXP = _xpCacheQuick.xp;
-            _data.level = calculateLevel(_xpCacheQuick.xp);
-            setStoredValue(STORAGE_KEY, _data);
-          }
           const immediateStats = game.getStats();
           // 🔒 v4.0: isInitialLoad — React не покажет модалки
           // RC-2 fix: reason: 'cloud_load_complete' — снимает level guard event-driven
@@ -5429,16 +5419,7 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
             } finally {
               _suppressUIUpdates = false;
             }
-            // RC fix v6.2: XP cache override after audit
             if (!_data) _data = loadData();
-            const _xpCacheFinal = _loadXPCache();
-            if (_xpCacheFinal && typeof _xpCacheFinal.xp === 'number' && _xpCacheFinal.xp > (_data.totalXP || 0)) {
-              console.info('[🎮 Gamification] RC v6.2: XP cache override post-audit:',
-                (_data.totalXP || 0), '→', _xpCacheFinal.xp);
-              _data.totalXP = _xpCacheFinal.xp;
-              _data.level = calculateLevel(_xpCacheFinal.xp);
-              setStoredValue(STORAGE_KEY, _data);
-            }
             const auditStats = game.getStats();
             if (auditStats.totalXP !== immediateStats.totalXP || auditStats.level !== immediateStats.level) {
               console.info('[🎮 Gamification] 🔄 Audit reconciliation: XP', immediateStats.totalXP, '→', auditStats.totalXP);
@@ -6567,7 +6548,7 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
         return false;
       }
       console.log('[🎮 Gamification] Rebuilding XP from audit...', force ? '(FORCED)' : '');
-      const result = await HEYS.game.rebuildXPFromAudit({ force });
+      const result = await HEYS.game.rebuildXPFromAudit({ force, trustAudit: true });
       console.log('[🎮 Gamification] Rebuild result:', result);
       return result;
     };
@@ -7366,6 +7347,268 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
 // heys_advice_bundle_v1.js — bundled advice modules (core + categories)
 // ⚠️ Auto-generated by scripts/bundle-advice.cjs. Do not edit manually.
 
+// ===== Begin advice/_outcomes.js =====
+;(function () {
+    'use strict';
+
+    const OUTCOME_PROFILE_KEY = 'heys_advice_outcomes_v1';
+    const OUTCOME_PENDING_KEY = 'heys_advice_pending_outcomes_v1';
+    const OUTCOME_PROFILE_VERSION = 2;
+    const OUTCOME_PENDING_VERSION = 1;
+    const MAX_OUTCOME_ADVICE_BUCKETS = 400;
+    const MAX_OUTCOME_THEME_BUCKETS = 80;
+    const MAX_OUTCOME_CONTEXT_BUCKETS = 320;
+    const MAX_PENDING_OUTCOME_ITEMS = 240;
+    const MAX_PENDING_OUTCOME_AGE_MS = 72 * 60 * 60 * 1000;
+
+    function normalizeNonNegativeNumber(value, fallback = 0) {
+        return typeof value === 'number' && Number.isFinite(value) && value >= 0
+            ? value
+            : fallback;
+    }
+
+    function normalizeIntegerCounter(value) {
+        return Math.max(0, Math.floor(normalizeNonNegativeNumber(value, 0)));
+    }
+
+    function sanitizeOutcomeBucket(stats) {
+        return {
+            shown: normalizeIntegerCounter(stats?.shown),
+            click: normalizeIntegerCounter(stats?.click),
+            read: normalizeIntegerCounter(stats?.read),
+            hidden: normalizeIntegerCounter(stats?.hidden),
+            positive: normalizeIntegerCounter(stats?.positive),
+            negative: normalizeIntegerCounter(stats?.negative),
+            autoSuccess: normalizeIntegerCounter(stats?.autoSuccess),
+            autoFailure: normalizeIntegerCounter(stats?.autoFailure),
+            autoNeutral: normalizeIntegerCounter(stats?.autoNeutral),
+            lastUpdated: normalizeIntegerCounter(stats?.lastUpdated)
+        };
+    }
+
+    function sanitizeOutcomeCollection(collection, maxEntries) {
+        if (!collection || typeof collection !== 'object' || Array.isArray(collection)) return {};
+
+        return Object.entries(collection)
+            .filter(([key, value]) => !!key && value && typeof value === 'object' && !Array.isArray(value))
+            .map(([key, value]) => [key, sanitizeOutcomeBucket(value)])
+            .sort((a, b) => (b[1]?.lastUpdated || 0) - (a[1]?.lastUpdated || 0))
+            .slice(0, maxEntries)
+            .reduce((acc, [key, value]) => {
+                acc[key] = value;
+                return acc;
+            }, {});
+    }
+
+    function sanitizeAdviceOutcomeProfiles(profiles) {
+        return {
+            version: OUTCOME_PROFILE_VERSION,
+            advice: sanitizeOutcomeCollection(profiles?.advice, MAX_OUTCOME_ADVICE_BUCKETS),
+            theme: sanitizeOutcomeCollection(profiles?.theme, MAX_OUTCOME_THEME_BUCKETS),
+            context: sanitizeOutcomeCollection(profiles?.context, MAX_OUTCOME_CONTEXT_BUCKETS),
+            lastUpdated: normalizeIntegerCounter(profiles?.lastUpdated)
+        };
+    }
+
+    function sanitizePendingOutcomeEntry(entry) {
+        if (!entry || typeof entry !== 'object' || Array.isArray(entry)) return null;
+
+        const shownAt = normalizeIntegerCounter(entry?.shownAt);
+        const now = Date.now();
+        if (!entry?.adviceId || shownAt <= 0 || shownAt > now + (5 * 60 * 1000)) return null;
+        if (now - shownAt > MAX_PENDING_OUTCOME_AGE_MS) return null;
+
+        return {
+            adviceId: String(entry.adviceId),
+            theme: String(entry?.theme || 'general'),
+            contextKey: String(entry?.contextKey || 'general|maintenance|low|midday|low'),
+            date: typeof entry?.date === 'string' ? entry.date : new Date(shownAt).toISOString().slice(0, 10),
+            shownAt,
+            hour: normalizeIntegerCounter(entry?.hour),
+            mealCount: normalizeIntegerCounter(entry?.mealCount),
+            lastMealHour: entry?.lastMealHour == null ? null : normalizeIntegerCounter(entry?.lastMealHour),
+            proteinPct: normalizeNonNegativeNumber(entry?.proteinPct, 0),
+            fiberPct: normalizeNonNegativeNumber(entry?.fiberPct, 0),
+            waterPct: normalizeNonNegativeNumber(entry?.waterPct, 0),
+            simplePct: normalizeNonNegativeNumber(entry?.simplePct, 0),
+            kcalPct: normalizeNonNegativeNumber(entry?.kcalPct, 0),
+            stressAvg: normalizeNonNegativeNumber(entry?.stressAvg, 0),
+            crashRiskLevel: typeof entry?.crashRiskLevel === 'string' ? entry.crashRiskLevel : 'low'
+        };
+    }
+
+    function sanitizePendingOutcomeMap(pending) {
+        if (!pending || typeof pending !== 'object' || Array.isArray(pending)) return {};
+
+        return Object.entries(pending)
+            .map(([key, value]) => [key, sanitizePendingOutcomeEntry(value)])
+            .filter(([, value]) => !!value)
+            .sort((a, b) => (b[1]?.shownAt || 0) - (a[1]?.shownAt || 0))
+            .slice(0, MAX_PENDING_OUTCOME_ITEMS)
+            .reduce((acc, [key, value]) => {
+                acc[key] = value;
+                return acc;
+            }, {});
+    }
+
+    function getAdviceOutcomeProfiles() {
+        try {
+            const HEYS = window.HEYS || {};
+            const U = HEYS.utils || {};
+            const parsed = HEYS.store?.get
+                ? (HEYS.store.get(OUTCOME_PROFILE_KEY, null) || {})
+                : (U.lsGet ? (U.lsGet(OUTCOME_PROFILE_KEY, null) || {}) : JSON.parse(localStorage.getItem(OUTCOME_PROFILE_KEY) || 'null') || {});
+
+            return sanitizeAdviceOutcomeProfiles(parsed);
+        } catch (e) {
+            return sanitizeAdviceOutcomeProfiles(null);
+        }
+    }
+
+    function saveAdviceOutcomeProfiles(profiles) {
+        try {
+            const HEYS = window.HEYS || {};
+            const U = HEYS.utils || {};
+            const payload = sanitizeAdviceOutcomeProfiles({
+                ...profiles,
+                lastUpdated: Date.now()
+            });
+
+            if (HEYS.store?.set) {
+                HEYS.store.set(OUTCOME_PROFILE_KEY, payload);
+            } else if (U.lsSet) {
+                U.lsSet(OUTCOME_PROFILE_KEY, payload);
+            } else {
+                localStorage.setItem(OUTCOME_PROFILE_KEY, JSON.stringify(payload));
+            }
+        } catch (e) {
+            // Ignore storage errors
+        }
+    }
+
+    function getPendingAdviceOutcomes() {
+        try {
+            const HEYS = window.HEYS || {};
+            const U = HEYS.utils || {};
+            const parsed = HEYS.store?.get
+                ? (HEYS.store.get(OUTCOME_PENDING_KEY, null) || {})
+                : (U.lsGet ? (U.lsGet(OUTCOME_PENDING_KEY, null) || {}) : JSON.parse(localStorage.getItem(OUTCOME_PENDING_KEY) || 'null') || {});
+
+            const pendingItems = parsed?.items && typeof parsed.items === 'object' && !Array.isArray(parsed.items)
+                ? parsed.items
+                : parsed;
+
+            return sanitizePendingOutcomeMap(pendingItems);
+        } catch (e) {
+            return {};
+        }
+    }
+
+    function savePendingAdviceOutcomes(pending) {
+        try {
+            const HEYS = window.HEYS || {};
+            const U = HEYS.utils || {};
+            const payload = {
+                version: OUTCOME_PENDING_VERSION,
+                items: sanitizePendingOutcomeMap(pending)
+            };
+            if (HEYS.store?.set) {
+                HEYS.store.set(OUTCOME_PENDING_KEY, payload);
+            } else if (U.lsSet) {
+                U.lsSet(OUTCOME_PENDING_KEY, payload);
+            } else {
+                localStorage.setItem(OUTCOME_PENDING_KEY, JSON.stringify(payload));
+            }
+        } catch (e) {
+            // Ignore storage errors
+        }
+    }
+
+    function ensureOutcomeBucket(root, key) {
+        if (!root[key]) {
+            root[key] = {
+                shown: 0,
+                click: 0,
+                read: 0,
+                hidden: 0,
+                positive: 0,
+                negative: 0,
+                autoSuccess: 0,
+                autoFailure: 0,
+                autoNeutral: 0,
+                lastUpdated: 0
+            };
+        }
+
+        return root[key];
+    }
+
+    function applyOutcomeEvent(stats, eventType) {
+        if (!stats || !eventType) return;
+        if (typeof stats[eventType] !== 'number') stats[eventType] = 0;
+        stats[eventType] += 1;
+        stats.lastUpdated = Date.now();
+    }
+
+    function getOutcomeContextKey(advice, ctx) {
+        const theme = advice?.expertMeta?.theme || advice?.category || 'general';
+        const goalMode = ctx?.goal?.mode || 'maintenance';
+        const crashLevel = ctx?.crashRisk?.level || 'low';
+        const hour = ctx?.hour || 0;
+        const timeBucket = hour < 11 ? 'morning' : hour < 17 ? 'midday' : hour < 22 ? 'evening' : 'late';
+        const stressValue = ctx?.day?.stressAvg || 0;
+        const stressBucket = stressValue >= 6 ? 'high' : stressValue >= 4 ? 'medium' : 'low';
+        return [theme, goalMode, crashLevel, timeBucket, stressBucket].join('|');
+    }
+
+    function buildAdviceOutcomeSnapshot(advice, ctx, getLastMealHourFn) {
+        const getLastMealHour = typeof getLastMealHourFn === 'function'
+            ? getLastMealHourFn
+            : () => null;
+
+        return {
+            theme: advice?.expertMeta?.theme || advice?.category || 'general',
+            contextKey: getOutcomeContextKey(advice, ctx),
+            date: ctx?.day?.date || new Date().toISOString().slice(0, 10),
+            shownAt: Date.now(),
+            hour: ctx?.hour || 0,
+            mealCount: ctx?.mealCount || 0,
+            lastMealHour: getLastMealHour(ctx?.day || {}),
+            proteinPct: ctx?.proteinPct || 0,
+            fiberPct: ctx?.fiberPct || 0,
+            waterPct: ctx?.waterPct || 0,
+            simplePct: ctx?.simplePct || 0,
+            kcalPct: ctx?.kcalPct || 0,
+            stressAvg: ctx?.day?.stressAvg || 0,
+            crashRiskLevel: ctx?.crashRisk?.level || 'low'
+        };
+    }
+
+    window.HEYS = window.HEYS || {};
+    window.HEYS.adviceOutcomeStorage = {
+        OUTCOME_PROFILE_KEY,
+        OUTCOME_PENDING_KEY,
+        OUTCOME_PROFILE_VERSION,
+        OUTCOME_PENDING_VERSION,
+        MAX_OUTCOME_ADVICE_BUCKETS,
+        MAX_OUTCOME_THEME_BUCKETS,
+        MAX_OUTCOME_CONTEXT_BUCKETS,
+        MAX_PENDING_OUTCOME_ITEMS,
+        MAX_PENDING_OUTCOME_AGE_MS,
+        sanitizeAdviceOutcomeProfiles,
+        sanitizePendingOutcomeMap,
+        getAdviceOutcomeProfiles,
+        saveAdviceOutcomeProfiles,
+        getPendingAdviceOutcomes,
+        savePendingAdviceOutcomes,
+        ensureOutcomeBucket,
+        applyOutcomeEvent,
+        getOutcomeContextKey,
+        buildAdviceOutcomeSnapshot
+    };
+})();
+// ===== End advice/_outcomes.js =====
+
 // ===== Begin advice/_core.js =====
 ;/**
  * HEYS Advice Module v1 (Core)
@@ -7450,9 +7693,28 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
         MEAL_ADVICE_THROTTLE_MS
     } = AdviceRules;
 
-    const OUTCOME_PROFILE_KEY = 'heys_advice_outcomes_v1';
-    const OUTCOME_PENDING_KEY = 'heys_advice_pending_outcomes_v1';
     const DAILY_TRACE_LOG_KEY = 'heys_advice_trace_day_v1';
+    const adviceOutcomeStorage = window.HEYS && window.HEYS.adviceOutcomeStorage;
+    if (!adviceOutcomeStorage) {
+        throw new Error('HEYS.adviceOutcomeStorage required');
+    }
+
+    const {
+        OUTCOME_PROFILE_VERSION,
+        OUTCOME_PENDING_VERSION,
+        MAX_OUTCOME_ADVICE_BUCKETS,
+        MAX_OUTCOME_THEME_BUCKETS,
+        MAX_OUTCOME_CONTEXT_BUCKETS,
+        MAX_PENDING_OUTCOME_ITEMS,
+        getAdviceOutcomeProfiles,
+        saveAdviceOutcomeProfiles,
+        getPendingAdviceOutcomes,
+        savePendingAdviceOutcomes,
+        ensureOutcomeBucket,
+        applyOutcomeEvent,
+        getOutcomeContextKey,
+        buildAdviceOutcomeSnapshot
+    } = adviceOutcomeStorage;
 
     // ═══════════════════════════════════════════════════════════
     // 🚀 ADVICE CACHE — Кэширование результатов generateAdvices
@@ -7980,6 +8242,33 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
         if (typeof value !== 'number' || !Number.isFinite(value)) return min;
         return Math.max(min, Math.min(max, value));
     }
+
+    const ADVICE_SCORE_MODEL = Object.freeze({
+        version: '2026-03-outcome-calibrated',
+        components: Object.freeze({
+            basePriority: '100 - priority',
+            ctrBoost: 'ctr * 50 * CTR_WEIGHT',
+            ratingBoost: 'ratingScore * 30 * CTR_WEIGHT',
+            evidenceBoost: 'min(24, evidenceScore / 3.5)',
+            sourceBoost: 'min(10, sourceCount * 3)',
+            urgencyBoost: 'now=12, today=5, else=0',
+            actionabilityBoost: 'trigger-aware boost',
+            actionabilityPenalty: 'auto-context penalty for weak/low-actionability advice',
+            responseMemoryBoost: 'clamped calibrated outcome score',
+            noveltyBoost: 'recency freshness bonus',
+            contradictionPenalty: '10 * contradictionsCount',
+            trustPenalty: 'auto-context trust penalty',
+            fatiguePenalty: 'exposure + recent repeat + calibrated negative outcome history'
+        }),
+        storage: Object.freeze({
+            outcomeProfileVersion: OUTCOME_PROFILE_VERSION,
+            pendingOutcomeVersion: OUTCOME_PENDING_VERSION,
+            maxAdviceBuckets: MAX_OUTCOME_ADVICE_BUCKETS,
+            maxThemeBuckets: MAX_OUTCOME_THEME_BUCKETS,
+            maxContextBuckets: MAX_OUTCOME_CONTEXT_BUCKETS,
+            maxPendingItems: MAX_PENDING_OUTCOME_ITEMS
+        })
+    });
 
     function getAdviceActionabilityBoost(advice, ctx) {
         const urgency = advice?.expertMeta?.actionNow?.urgency;
@@ -9611,136 +9900,6 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
         }
     }
 
-    function getAdviceOutcomeProfiles() {
-        try {
-            const HEYS = window.HEYS || {};
-            const U = HEYS.utils || {};
-            const parsed = HEYS.store?.get
-                ? (HEYS.store.get(OUTCOME_PROFILE_KEY, null) || {})
-                : (U.lsGet ? (U.lsGet(OUTCOME_PROFILE_KEY, null) || {}) : JSON.parse(localStorage.getItem(OUTCOME_PROFILE_KEY) || 'null') || {});
-
-            return {
-                advice: parsed?.advice && typeof parsed.advice === 'object' ? parsed.advice : {},
-                theme: parsed?.theme && typeof parsed.theme === 'object' ? parsed.theme : {},
-                context: parsed?.context && typeof parsed.context === 'object' ? parsed.context : {},
-                lastUpdated: parsed?.lastUpdated || 0
-            };
-        } catch (e) {
-            return { advice: {}, theme: {}, context: {}, lastUpdated: 0 };
-        }
-    }
-
-    function saveAdviceOutcomeProfiles(profiles) {
-        try {
-            const HEYS = window.HEYS || {};
-            const U = HEYS.utils || {};
-            const payload = {
-                advice: profiles?.advice || {},
-                theme: profiles?.theme || {},
-                context: profiles?.context || {},
-                lastUpdated: Date.now()
-            };
-
-            if (HEYS.store?.set) {
-                HEYS.store.set(OUTCOME_PROFILE_KEY, payload);
-            } else if (U.lsSet) {
-                U.lsSet(OUTCOME_PROFILE_KEY, payload);
-            } else {
-                localStorage.setItem(OUTCOME_PROFILE_KEY, JSON.stringify(payload));
-            }
-        } catch (e) {
-            // Ignore storage errors
-        }
-    }
-
-    function getPendingAdviceOutcomes() {
-        try {
-            const HEYS = window.HEYS || {};
-            const U = HEYS.utils || {};
-            const parsed = HEYS.store?.get
-                ? (HEYS.store.get(OUTCOME_PENDING_KEY, null) || {})
-                : (U.lsGet ? (U.lsGet(OUTCOME_PENDING_KEY, null) || {}) : JSON.parse(localStorage.getItem(OUTCOME_PENDING_KEY) || 'null') || {});
-
-            return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
-                ? parsed
-                : {};
-        } catch (e) {
-            return {};
-        }
-    }
-
-    function savePendingAdviceOutcomes(pending) {
-        try {
-            const HEYS = window.HEYS || {};
-            const U = HEYS.utils || {};
-            if (HEYS.store?.set) {
-                HEYS.store.set(OUTCOME_PENDING_KEY, pending || {});
-            } else if (U.lsSet) {
-                U.lsSet(OUTCOME_PENDING_KEY, pending || {});
-            } else {
-                localStorage.setItem(OUTCOME_PENDING_KEY, JSON.stringify(pending || {}));
-            }
-        } catch (e) {
-            // Ignore storage errors
-        }
-    }
-
-    function ensureOutcomeBucket(root, key) {
-        if (!root[key]) {
-            root[key] = {
-                shown: 0,
-                click: 0,
-                read: 0,
-                hidden: 0,
-                positive: 0,
-                negative: 0,
-                autoSuccess: 0,
-                autoFailure: 0,
-                autoNeutral: 0,
-                lastUpdated: 0
-            };
-        }
-
-        return root[key];
-    }
-
-    function applyOutcomeEvent(stats, eventType) {
-        if (!stats || !eventType) return;
-        if (typeof stats[eventType] !== 'number') stats[eventType] = 0;
-        stats[eventType] += 1;
-        stats.lastUpdated = Date.now();
-    }
-
-    function getOutcomeContextKey(advice, ctx) {
-        const theme = advice?.expertMeta?.theme || advice?.category || 'general';
-        const goalMode = ctx?.goal?.mode || 'maintenance';
-        const crashLevel = ctx?.crashRisk?.level || 'low';
-        const hour = ctx?.hour || 0;
-        const timeBucket = hour < 11 ? 'morning' : hour < 17 ? 'midday' : hour < 22 ? 'evening' : 'late';
-        const stressValue = ctx?.day?.stressAvg || 0;
-        const stressBucket = stressValue >= 6 ? 'high' : stressValue >= 4 ? 'medium' : 'low';
-        return [theme, goalMode, crashLevel, timeBucket, stressBucket].join('|');
-    }
-
-    function buildAdviceOutcomeSnapshot(advice, ctx) {
-        return {
-            theme: advice?.expertMeta?.theme || advice?.category || 'general',
-            contextKey: getOutcomeContextKey(advice, ctx),
-            date: ctx?.day?.date || new Date().toISOString().slice(0, 10),
-            shownAt: Date.now(),
-            hour: ctx?.hour || 0,
-            mealCount: ctx?.mealCount || 0,
-            lastMealHour: getLastMealHour(ctx?.day || {}),
-            proteinPct: ctx?.proteinPct || 0,
-            fiberPct: ctx?.fiberPct || 0,
-            waterPct: ctx?.waterPct || 0,
-            simplePct: ctx?.simplePct || 0,
-            kcalPct: ctx?.kcalPct || 0,
-            stressAvg: ctx?.day?.stressAvg || 0,
-            crashRiskLevel: ctx?.crashRisk?.level || 'low'
-        };
-    }
-
     function resolveAdviceResponseMemory(advice, ctx, profiles) {
         const safeProfiles = profiles || getAdviceOutcomeProfiles();
         const adviceStats = safeProfiles.advice?.[advice?.id] || null;
@@ -9908,7 +10067,7 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
         if (!advice || !ctx) return;
 
         const pending = getPendingAdviceOutcomes();
-        const snapshot = buildAdviceOutcomeSnapshot(advice, ctx);
+        const snapshot = buildAdviceOutcomeSnapshot(advice, ctx, getLastMealHour);
         const key = `${advice.id}|${snapshot.shownAt}`;
 
         pending[key] = {
@@ -14165,6 +14324,7 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
         getTopAdvices,
         getTrackingStats,
         getAdviceOutcomeProfiles,
+        getPendingAdviceOutcomes,
         // 👍👎 Rating system
         rateAdvice,
         getAdviceRating,
@@ -14247,6 +14407,7 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
         buildExpertConflictReasonMap,
         explainExpertConflictOutcome,
         getAdviceFatiguePenalty,
+        ADVICE_SCORE_MODEL,
         formatAdviceTraceForClipboard,
         formatDailyAdviceTraceForClipboard,
         // 🆕 Phase 5 helpers

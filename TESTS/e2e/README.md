@@ -75,6 +75,9 @@ Comprehensive End-to-End testing suite for HEYS using Playwright. This testing i
 # Run all E2E tests
 pnpm test:e2e
 
+# Run local phone+PIN smoke test using HEYS_TEST_PHONE / HEYS_TEST_PIN
+pnpm test:e2e:pin
+
 # Run tests with UI mode (interactive)
 pnpm test:e2e:ui
 
@@ -193,7 +196,52 @@ pnpm exec playwright show-trace test-results/trace.zip
 ```bash
 CI=true              # Enables CI mode
 PLAYWRIGHT_BROWSERS_PATH=0  # Use system browsers
+HEYS_TEST_PHONE=79991234567 # Local-only PIN auth smoke credentials
+HEYS_TEST_PIN=1234          # Local-only PIN auth smoke credentials
 ```
+
+### Local PIN auth smoke
+
+- Config: `playwright.heys-pin.config.ts`
+- Spec: `TESTS/e2e/pin-auth.spec.ts`
+- Helper: `TESTS/e2e/helpers/pin-auth.ts`
+- Source of credentials: root `.env.local`
+
+This smoke test uses the real HEYS runtime API (`window.HEYS.auth.loginClient`) in
+mobile mode and verifies that PIN auth session restoration works after reload.
+
+### Embedded browser auth helper
+
+For agent work in the embedded browser / DevTools without Playwright, HEYS now ships a
+local helper file served by the web app:
+
+- Helper URL: `/dev/heys-agent-auth-helper.js`
+- Source file: `apps/web/public/dev/heys-agent-auth-helper.js`
+
+Load it in the browser console on `http://localhost:3001`:
+
+```js
+await import('/dev/heys-agent-auth-helper.js');
+await HEYSAgentAuth.getStatus();
+```
+
+Common flows:
+
+```js
+await HEYSAgentAuth.logout();
+await HEYSAgentAuth.loginCurator({ email: 'dev@example.com', password: 'secret' });
+await HEYSAgentAuth.loginPin({ phone: '79991234567', pin: '1234' });
+```
+
+Notes:
+
+- The helper uses the real runtime APIs: `HEYS.cloud.signIn`, `HEYS.auth.loginClient`,
+   `HEYS.auth.logout`, `HEYS.cloud.signOut`.
+- It intentionally does **not** embed credentials. Keep secrets in local `.env.local`
+   and provide them manually when invoking the helper.
+- `logout()`, `loginCurator()`, and `loginPin()` reload the page by default so the live
+   app state fully re-hydrates. Pass `{ reload: false }` if you need to inspect state
+   before reloading.
 
 ### CI Configuration
 - Tests run in headless mode

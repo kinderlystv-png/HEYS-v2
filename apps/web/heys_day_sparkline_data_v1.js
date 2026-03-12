@@ -164,6 +164,8 @@
               spent: todaySpent, // 🆕 v5.0: Затраты дня (TDEE) для расчета дефицита/профицита
               ratio: todayRatio, // 🆕 Ratio для инсайтов
               isToday: true,
+              isFastingDay: day.isFastingDay || false,
+              isIncomplete: day.isIncomplete || false,
               hasTraining,
               trainingTypes,
               trainingMinutes,
@@ -363,6 +365,8 @@
       day?.sleepEnd,
       day?.moodAvg,
       day?.dayScore,
+      day?.isFastingDay,
+      day?.isIncomplete,
       day?.savedDisplayOptimum,
       day?.updatedAt,
       sparklineRefreshKey

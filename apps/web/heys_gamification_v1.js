@@ -1567,15 +1567,11 @@
       let cachedXP = data.totalXP || 0;
       let cachedEventCount = data._lastKnownEventCount || 0;
 
-      // 🚀 PERF v2.4: Always prefer local XP cache if it has higher XP
-      // Game state in cloud can be overwritten with stale XP (e.g. 3761) after a rebuild
-      // set correct XP (e.g. 8629). XP only increases, so higher cache = correct.
+      // XP cache используем только как вспомогательный счётчик событий/dailyRebuilt.
+      // Для totalXP источником истины должен быть audit, иначе завышенный локальный кэш
+      // может снова раздуть UI даже после reconciliation.
       const xpCache = _loadXPCache();
       if (xpCache) {
-        if (xpCache.xp > cachedXP) {
-          console.info('[🎮 GAME SYNC]', trigger, '— XP cache override: game XP=' + cachedXP + ' → cache XP=' + xpCache.xp);
-          cachedXP = xpCache.xp;
-        }
         if (xpCache.count > cachedEventCount) cachedEventCount = xpCache.count;
       }
 
@@ -1599,7 +1595,7 @@
         const _xpCacheDR = _loadXPCache();
         if (!(_xpCacheDR && _xpCacheDR.dailyRebuilt) && cachedXP > 0) {
           console.info('[🎮 GAME SYNC]', trigger, '— XP consistent ✅ but dailyXP not yet rebuilt, restoring from audit...');
-          await rebuildXPFromAudit({ force: true });
+          await rebuildXPFromAudit({ force: true, trustAudit: true });
           _saveXPCache(cachedXP, auditTotal, { dailyRebuilt: true });
           endGameSyncTrace(syncTrace, 'ok', { reason: 'consistent_daily_rebuild' });
           return;
@@ -1625,7 +1621,7 @@
         const _xpCacheDR2 = _loadXPCache();
         if (!(_xpCacheDR2 && _xpCacheDR2.dailyRebuilt) && cachedXP > 0) {
           console.info('[🎮 GAME SYNC]', trigger, '— dailyXP not yet rebuilt, restoring from audit...');
-          await rebuildXPFromAudit({ force: true });
+          await rebuildXPFromAudit({ force: true, trustAudit: true });
           _saveXPCache(cachedXP, auditTotal, { dailyRebuilt: true });
         }
         endGameSyncTrace(syncTrace, 'ok', { reason: 'xp_consistent_count_update', cachedXP, auditTotal });
@@ -1677,7 +1673,7 @@
         }
       }
 
-      const rebuildResult = await rebuildXPFromAudit({ force: true });
+      const rebuildResult = await rebuildXPFromAudit({ force: true, trustAudit: true });
       gameSyncTraceStep(syncTrace, 'full_rebuild:done', {
         rebuilt: Boolean(rebuildResult?.rebuilt),
         reason: rebuildResult?.reason || null
@@ -4780,12 +4776,6 @@
           // 🚀 PERF v7.0: Dispatch bar update IMMEDIATELY from localStorage,
           // defer heavy audit (3-6 RPC calls, ~2-4s) to avoid competing with DayTab sync
           _data = loadData();
-          const _xpCacheQuick = _loadXPCache();
-          if (_xpCacheQuick && typeof _xpCacheQuick.xp === 'number' && _xpCacheQuick.xp > (_data.totalXP || 0)) {
-            _data.totalXP = _xpCacheQuick.xp;
-            _data.level = calculateLevel(_xpCacheQuick.xp);
-            setStoredValue(STORAGE_KEY, _data);
-          }
           const immediateStats = game.getStats();
           // 🔒 v4.0: isInitialLoad — React не покажет модалки
           // RC-2 fix: reason: 'cloud_load_complete' — снимает level guard event-driven
@@ -4809,16 +4799,7 @@
             } finally {
               _suppressUIUpdates = false;
             }
-            // RC fix v6.2: XP cache override after audit
             if (!_data) _data = loadData();
-            const _xpCacheFinal = _loadXPCache();
-            if (_xpCacheFinal && typeof _xpCacheFinal.xp === 'number' && _xpCacheFinal.xp > (_data.totalXP || 0)) {
-              console.info('[🎮 Gamification] RC v6.2: XP cache override post-audit:',
-                (_data.totalXP || 0), '→', _xpCacheFinal.xp);
-              _data.totalXP = _xpCacheFinal.xp;
-              _data.level = calculateLevel(_xpCacheFinal.xp);
-              setStoredValue(STORAGE_KEY, _data);
-            }
             const auditStats = game.getStats();
             if (auditStats.totalXP !== immediateStats.totalXP || auditStats.level !== immediateStats.level) {
               console.info('[🎮 Gamification] 🔄 Audit reconciliation: XP', immediateStats.totalXP, '→', auditStats.totalXP);
@@ -5947,7 +5928,7 @@
         return false;
       }
       console.log('[🎮 Gamification] Rebuilding XP from audit...', force ? '(FORCED)' : '');
-      const result = await HEYS.game.rebuildXPFromAudit({ force });
+      const result = await HEYS.game.rebuildXPFromAudit({ force, trustAudit: true });
       console.log('[🎮 Gamification] Rebuild result:', result);
       return result;
     };

@@ -1199,7 +1199,11 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
     // Если да, показываем сегодня как прогноз (пунктиром), а не как реальные данные
     const todayData = data.find(d => d.isToday);
     const todayRatio = todayData && todayData.target > 0 ? todayData.kcal / todayData.target : 0;
-    const isTodayIncomplete = todayData && todayRatio < 0.5;
+    const isTodayIncomplete = Boolean(
+      todayData
+      && !todayData.isFastingDay
+      && (todayData.isIncomplete || todayRatio < 0.5)
+    );
 
     // Обрабатываем данные:
     // 1. Помечаем пустые/неполные дни как "unknown" (будут показаны как "?")
@@ -3571,6 +3575,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
               spent: todaySpent, // 🆕 v5.0: Затраты дня (TDEE) для расчета дефицита/профицита
               ratio: todayRatio, // 🆕 Ratio для инсайтов
               isToday: true,
+              isFastingDay: day.isFastingDay || false,
+              isIncomplete: day.isIncomplete || false,
               hasTraining,
               trainingTypes,
               trainingMinutes,
@@ -3770,6 +3776,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
       day?.sleepEnd,
       day?.moodAvg,
       day?.dayScore,
+      day?.isFastingDay,
+      day?.isIncomplete,
       day?.savedDisplayOptimum,
       day?.updatedAt,
       sparklineRefreshKey
@@ -5702,9 +5710,11 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
     return Number.isFinite(fromGoal) ? fromGoal : 0;
   };
 
-  HEYS.weeklyCalc.isIncompleteToday = HEYS.weeklyCalc.isIncompleteToday || function ({ isToday, dateStr, nowDateStr, ratio }) {
+  HEYS.weeklyCalc.isIncompleteToday = HEYS.weeklyCalc.isIncompleteToday || function ({ isToday, dateStr, nowDateStr, ratio, isFastingDay, isIncomplete }) {
     const isSameDay = isToday || (dateStr && nowDateStr && dateStr === nowDateStr);
     if (!isSameDay) return false;
+    if (isFastingDay) return false;
+    if (isIncomplete) return true;
     return ratio == null || ratio < 0.5;
   };
 
@@ -5716,7 +5726,9 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
       isToday: !!day.isToday,
       dateStr,
       nowDateStr,
-      ratio: day.ratio
+      ratio: day.ratio,
+      isFastingDay: !!day.isFastingDay,
+      isIncomplete: !!day.isIncomplete
     });
     if (incomplete) return false;
     if (requireMeals && !day.hasMeals) return false;
@@ -5770,10 +5782,12 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
       if (!sparklineData || sparklineData.length < 3 || !optimum || optimum <= 0) return null;
 
       try {
-        // Считаем среднее отклонение от нормы (исключая сегодня и неполные дни <50%)
+        // Считаем среднее отклонение от нормы (исключая сегодня и явно неполные дни)
         const pastDays = sparklineData.filter(d => {
           if (d.isToday) return false;
           if (d.kcal <= 0) return false;
+          if (d.isIncomplete) return false;
+          if (d.isFastingDay) return true;
           // Исключаем дни с <50% заполненности — вероятно незаполненные
           const ratio = d.target > 0 ? d.kcal / d.target : 0;
           return ratio >= 0.5;
@@ -6185,14 +6199,22 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
         let status = 'empty'; // empty | low | green | yellow | red | perfect
         let isRefeedDay = false; // Загрузочный день
         let isStreakEligible = false;
+        let dayInfo = null;
 
         // Используем централизованный ratioZones
         const rz = HEYSRef.ratioZones;
 
         if (!isFuture) {
           // Для сегодняшнего дня используем свежие данные из переданного day, а не кэш
-          const dayInfo = isToday && eatenKcal > 0
-            ? { kcal: eatenKcal, target: optimum, isRefeedDay: safeDay.isRefeedDay, dayData: safeDay }
+          dayInfo = isToday && eatenKcal > 0
+            ? {
+              kcal: eatenKcal,
+              target: optimum,
+              isRefeedDay: safeDay.isRefeedDay,
+              isFastingDay: !!safeDay.isFastingDay,
+              isIncomplete: !!safeDay.isIncomplete,
+              dayData: safeDay
+            }
             : allActiveDays.get(dateStr);
           isRefeedDay = dayInfo?.isRefeedDay || false;
 
@@ -6239,6 +6261,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
           isFuture,
           isWeekend,
           isRefeedDay, // Загрузочный день
+          isFastingDay: !!dayInfo?.isFastingDay,
+          isIncomplete: !!dayInfo?.isIncomplete,
           isStreakDay: false, // будет проставлено после расчёта streak
           isStreakEligible,
           isPerfect: ratio && rz ? rz.isPerfect(ratio) : false, // Идеальный день (0.9-1.1)
@@ -6271,7 +6295,14 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
       }
 
       const isIncompleteToday = (d) => HEYSRef.weeklyCalc?.isIncompleteToday
-        ? HEYSRef.weeklyCalc.isIncompleteToday({ isToday: d.isToday, dateStr: d.date, nowDateStr, ratio: d.ratio })
+        ? HEYSRef.weeklyCalc.isIncompleteToday({
+          isToday: d.isToday,
+          dateStr: d.date,
+          nowDateStr,
+          ratio: d.ratio,
+          isFastingDay: !!d.isFastingDay,
+          isIncomplete: !!d.isIncomplete
+        })
         : (d.date === nowDateStr && (d.ratio === null || d.ratio < 0.5));
       const shouldIncludeDay = (d, opts) => HEYSRef.weeklyCalc?.shouldIncludeDay
         ? HEYSRef.weeklyCalc.shouldIncludeDay({ day: d, nowDateStr, ...opts })
@@ -9925,7 +9956,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
             throw new Error('[heys_day_picker_modals] dayUtils (U) is required');
         }
 
-        const { useState, useMemo } = React;
+        const { useState, useMemo, useEffect } = React;
 
         // === iOS-style Time Picker Modal (mobile only) ===
         const [showTimePicker, setShowTimePicker] = useState(false);
@@ -9999,6 +10030,51 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
         // === Weight/Deficit Picker flags (compat for uiState) ===
         const [showWeightPicker, setShowWeightPicker] = useState(false);
         const [showDeficitPicker, setShowDeficitPicker] = useState(false);
+
+        useEffect(() => {
+            const isAnyPickerOpen = !!(
+                showTimePicker ||
+                showTrainingPicker ||
+                showZonePicker ||
+                showSleepQualityPicker ||
+                showDayScorePicker ||
+                showWeightPicker ||
+                showDeficitPicker
+            );
+
+            if (!isAnyPickerOpen || typeof document === 'undefined') return undefined;
+
+            const { body, documentElement } = document;
+            if (!body || !documentElement) return undefined;
+
+            const previousBodyOverflow = body.style.overflow;
+            const previousBodyOverscrollBehavior = body.style.overscrollBehavior;
+            const previousDocumentOverflow = documentElement.style.overflow;
+            const previousDocumentOverscrollBehavior = documentElement.style.overscrollBehavior;
+
+            body.style.overflow = 'hidden';
+            body.style.overscrollBehavior = 'none';
+            documentElement.style.overflow = 'hidden';
+            documentElement.style.overscrollBehavior = 'none';
+
+            console.info('[HEYS.day] picker modal scroll-lock enabled');
+
+            return () => {
+                body.style.overflow = previousBodyOverflow;
+                body.style.overscrollBehavior = previousBodyOverscrollBehavior;
+                documentElement.style.overflow = previousDocumentOverflow;
+                documentElement.style.overscrollBehavior = previousDocumentOverscrollBehavior;
+                console.info('[HEYS.day] picker modal scroll-lock released');
+            };
+        }, [
+            showTimePicker,
+            showTrainingPicker,
+            showZonePicker,
+            showSleepQualityPicker,
+            showDayScorePicker,
+            showWeightPicker,
+            showDeficitPicker,
+        ]);
 
         // Используем глобальный WheelColumn
         const WheelColumn = HEYS.WheelColumn;

@@ -37,7 +37,7 @@
             throw new Error('[heys_day_picker_modals] dayUtils (U) is required');
         }
 
-        const { useState, useMemo } = React;
+        const { useState, useMemo, useEffect } = React;
 
         // === iOS-style Time Picker Modal (mobile only) ===
         const [showTimePicker, setShowTimePicker] = useState(false);
@@ -111,6 +111,51 @@
         // === Weight/Deficit Picker flags (compat for uiState) ===
         const [showWeightPicker, setShowWeightPicker] = useState(false);
         const [showDeficitPicker, setShowDeficitPicker] = useState(false);
+
+        useEffect(() => {
+            const isAnyPickerOpen = !!(
+                showTimePicker ||
+                showTrainingPicker ||
+                showZonePicker ||
+                showSleepQualityPicker ||
+                showDayScorePicker ||
+                showWeightPicker ||
+                showDeficitPicker
+            );
+
+            if (!isAnyPickerOpen || typeof document === 'undefined') return undefined;
+
+            const { body, documentElement } = document;
+            if (!body || !documentElement) return undefined;
+
+            const previousBodyOverflow = body.style.overflow;
+            const previousBodyOverscrollBehavior = body.style.overscrollBehavior;
+            const previousDocumentOverflow = documentElement.style.overflow;
+            const previousDocumentOverscrollBehavior = documentElement.style.overscrollBehavior;
+
+            body.style.overflow = 'hidden';
+            body.style.overscrollBehavior = 'none';
+            documentElement.style.overflow = 'hidden';
+            documentElement.style.overscrollBehavior = 'none';
+
+            console.info('[HEYS.day] picker modal scroll-lock enabled');
+
+            return () => {
+                body.style.overflow = previousBodyOverflow;
+                body.style.overscrollBehavior = previousBodyOverscrollBehavior;
+                documentElement.style.overflow = previousDocumentOverflow;
+                documentElement.style.overscrollBehavior = previousDocumentOverscrollBehavior;
+                console.info('[HEYS.day] picker modal scroll-lock released');
+            };
+        }, [
+            showTimePicker,
+            showTrainingPicker,
+            showZonePicker,
+            showSleepQualityPicker,
+            showDayScorePicker,
+            showWeightPicker,
+            showDeficitPicker,
+        ]);
 
         // Используем глобальный WheelColumn
         const WheelColumn = HEYS.WheelColumn;

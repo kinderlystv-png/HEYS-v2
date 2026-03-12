@@ -5,6 +5,7 @@ const ROOT = process.cwd();
 const OUT_FILE = path.join(ROOT, 'heys_advice_bundle_v1.js');
 
 const modules = [
+    { file: 'advice/_outcomes.js', label: 'advice/_outcomes.js' },
     { file: 'advice/_core.js', label: 'advice/_core.js' },
     { file: 'advice/_nutrition.js', label: 'advice/_nutrition.js' },
     { file: 'advice/_timing.js', label: 'advice/_timing.js' },

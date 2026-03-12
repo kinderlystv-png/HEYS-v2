@@ -222,6 +222,120 @@
     const popupPositionStyle = vmComputed.popupPositionStyle;
 
     const weekHeatmapDates = (weekHeatmapDaysMeta || []).map((d) => d.date).filter(Boolean);
+    const selectedDayRatio = Number.isFinite(currentRatio)
+      ? currentRatio
+      : ((displayHeroOptimum || optimum || 0) > 0
+        ? ((displayHeroEaten || eatenKcal || 0) / (displayHeroOptimum || optimum || 1))
+        : 0);
+
+    const shouldOfferRealDataConfirmation = Boolean(
+      date
+      && !day?.isFuture
+      && !day?.isFastingDay
+      && !day?.isIncomplete
+      && selectedDayRatio > 0
+      && selectedDayRatio < 0.5
+      && (((displayHeroEaten || eatenKcal || 0) > 0) || ((day?.meals || []).length > 0))
+    );
+
+    const confirmCurrentDayAsRealData = (e) => {
+      e?.stopPropagation?.();
+      if (!date) return;
+
+      try {
+        console.info('[HEYS.dayRealData] confirm click', {
+          date,
+          isFastingDay: !!day?.isFastingDay,
+          isIncomplete: !!day?.isIncomplete,
+          eatenKcal: Math.round(displayHeroEaten || eatenKcal || 0),
+          targetKcal: Math.round(displayHeroOptimum || optimum || 0),
+          ratio: Number(selectedDayRatio || 0)
+        });
+      } catch (_) { }
+
+      const eatenNow = Math.round(displayHeroEaten || eatenKcal || 0);
+      const targetNow = Math.round(displayHeroOptimum || optimum || 0);
+
+      const confirmText = 'Учесть этот день как реальные данные?\n\n'
+        + 'Сейчас: ' + eatenNow + ' из ' + targetNow + ' ккал.\n'
+        + 'День останется в статистике, даже если это меньше 50% нормы.';
+      const confirmed = typeof global.confirm === 'function' ? global.confirm(confirmText) : true;
+      if (!confirmed) return;
+
+      const nextDay = {
+        ...(day || {}),
+        isFastingDay: true,
+        isIncomplete: false,
+        updatedAt: Date.now()
+      };
+
+      setDay((prevDay) => {
+        const mergedDay = {
+          ...(prevDay || {}),
+          ...nextDay,
+          isFastingDay: true,
+          isIncomplete: false,
+          updatedAt: Date.now()
+        };
+
+        try {
+          console.info('[HEYS.dayRealData] setDay merged', {
+            date,
+            prevIsFastingDay: !!prevDay?.isFastingDay,
+            prevIsIncomplete: !!prevDay?.isIncomplete,
+            nextIsFastingDay: !!mergedDay?.isFastingDay,
+            nextIsIncomplete: !!mergedDay?.isIncomplete,
+            updatedAt: mergedDay?.updatedAt || null
+          });
+        } catch (_) { }
+
+        return mergedDay;
+      });
+
+      try {
+        const persistDay = typeof HEYS?.dayStorage?.lsSet === 'function'
+          ? HEYS.dayStorage.lsSet
+          : U?.lsSet;
+        persistDay?.('heys_dayv2_' + date, nextDay);
+        console.info('[HEYS.dayRealData] persisted day', {
+          date,
+          isFastingDay: !!nextDay?.isFastingDay,
+          isIncomplete: !!nextDay?.isIncomplete,
+          updatedAt: nextDay?.updatedAt || null
+        });
+      } catch (_) { }
+
+      try {
+        if (typeof HEYS?.cloud?.saveClientKey === 'function') {
+          HEYS.cloud.saveClientKey('heys_dayv2_' + date, nextDay);
+          console.info('[HEYS.dayRealData] queued cloud save', {
+            date,
+            source: 'day-stats-real-data-cta',
+            isFastingDay: !!nextDay?.isFastingDay,
+            isIncomplete: !!nextDay?.isIncomplete,
+            updatedAt: nextDay?.updatedAt || null
+          });
+        }
+      } catch (_) { }
+
+      try {
+        global.dispatchEvent(new CustomEvent('heys:day-updated', {
+          detail: { date, source: 'day-stats-real-data-cta', data: nextDay }
+        }));
+        console.info('[HEYS.dayRealData] dispatched event', {
+          date,
+          source: 'day-stats-real-data-cta'
+        });
+      } catch (_) { }
+
+      try {
+        haptic('light');
+      } catch (_) { }
+
+      if (HEYS?.Toast?.success) {
+        HEYS.Toast.success('День учтён как реальные данные');
+      }
+    };
 
     const selectDateWithPrefetch = (nextDate, options = {}) => {
       if (!nextDate) return;
@@ -414,6 +528,29 @@
           },
             // 🔧 FIX: Используем displayOptimum (с учётом долга) для линии цели
             renderSparkline(renderData, displayOptimum)
+          ),
+          shouldOfferRealDataConfirmation && React.createElement('div', {
+            className: 'kcal-realdata-card'
+          },
+            React.createElement('div', { className: 'kcal-realdata-card__header' },
+              React.createElement('span', { className: 'kcal-realdata-card__icon' }, '⚠️'),
+              React.createElement('div', { className: 'kcal-realdata-card__copy' },
+                React.createElement('div', { className: 'kcal-realdata-card__title' }, 'Мало калорий — ещё не значит, что день пустой'),
+                React.createElement('div', { className: 'kcal-realdata-card__text' },
+                  'Сейчас ' + Math.round(displayHeroEaten || eatenKcal || 0) + ' из ' + Math.round(displayHeroOptimum || optimum || 0) + ' ккал, поэтому день временно исключён из статистики. Если это реальные данные — подтверди их.'
+                )
+              )
+            ),
+            React.createElement('div', { className: 'kcal-realdata-card__footer' },
+              React.createElement('span', { className: 'kcal-realdata-card__badge' },
+                Math.round((currentRatio || 0) * 100) + '% от нормы'
+              ),
+              React.createElement('button', {
+                type: 'button',
+                className: 'kcal-realdata-card__button',
+                onClick: confirmCurrentDayAsRealData
+              }, 'Это реальные данные')
+            )
           )
         );
       })(),

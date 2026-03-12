@@ -80,6 +80,18 @@
                 const key = 'heys_dayv2_' + date;
                 HEYS?.store?.invalidate?.(key);
                 const v = lsGet(key, null);
+                if (v && (v.isFastingDay || v.isIncomplete)) {
+                    console.info('[HEYS.dayRealData] 🔄 doLocal read day', {
+                        date,
+                        key,
+                        flags: {
+                            isFastingDay: !!v.isFastingDay,
+                            isIncomplete: !!v.isIncomplete
+                        },
+                        updatedAt: v.updatedAt || 0,
+                        mealsCount: (v.meals || []).length
+                    });
+                }
                 if (v && v.date) {
                     // ЗАЩИТА: не перезаписываем более свежие данные
                     // handleDayUpdated может уже загрузить sync данные
@@ -113,6 +125,8 @@
                                 prevDay.waterMl === newDay.waterMl &&
                                 prevDay.steps === newDay.steps &&
                                 prevDay.weightMorning === newDay.weightMorning &&
+                                !!prevDay.isFastingDay === !!newDay.isFastingDay &&
+                                !!prevDay.isIncomplete === !!newDay.isIncomplete &&
                                 prevDay.sleepStart === newDay.sleepStart &&
                                 prevDay.sleepEnd === newDay.sleepEnd;
                             if (isSameContent) {
@@ -188,6 +202,37 @@
                 const updatedDate = e.detail?.date;
                 const source = e.detail?.source || 'unknown';
                 const forceReload = e.detail?.forceReload || false;
+                const eventData = e.detail?.data || null;
+
+                if (source === 'day-stats-real-data-cta' || eventData?.isFastingDay || eventData?.isIncomplete) {
+                    try {
+                        global.__HEYS_REALDATA_DEBUG = global.__HEYS_REALDATA_DEBUG || [];
+                        global.__HEYS_REALDATA_DEBUG.push({
+                            stage: 'handleDayUpdated-received',
+                            ts: Date.now(),
+                            currentDate: date,
+                            updatedDate,
+                            source,
+                            forceReload,
+                            eventFlags: {
+                                isFastingDay: !!eventData?.isFastingDay,
+                                isIncomplete: !!eventData?.isIncomplete
+                            },
+                            eventUpdatedAt: eventData?.updatedAt || 0
+                        });
+                    } catch (_) { }
+                    console.error('[HEYS.dayRealData] handleDayUpdated received', {
+                        currentDate: date,
+                        updatedDate,
+                        source,
+                        forceReload,
+                        eventFlags: {
+                            isFastingDay: !!eventData?.isFastingDay,
+                            isIncomplete: !!eventData?.isIncomplete
+                        },
+                        eventUpdatedAt: eventData?.updatedAt || 0
+                    });
+                }
 
                 // 🔧 v3.19.1: Дедупликация событий — игнорируем одинаковые события в течение 100мс
                 const now = Date.now();
@@ -234,6 +279,32 @@
                     const key = 'heys_dayv2_' + date;
                     HEYS?.store?.invalidate?.(key);
                     const v = lsGet(key, null);
+                    if (v && (source === 'day-stats-real-data-cta' || v.isFastingDay || v.isIncomplete)) {
+                        try {
+                            global.__HEYS_REALDATA_DEBUG.push({
+                                stage: 'handleDayUpdated-storage-snapshot',
+                                ts: Date.now(),
+                                currentDate: date,
+                                source,
+                                flags: {
+                                    isFastingDay: !!v.isFastingDay,
+                                    isIncomplete: !!v.isIncomplete
+                                },
+                                updatedAt: v.updatedAt || 0,
+                                mealsCount: (v.meals || []).length
+                            });
+                        } catch (_) { }
+                        console.error('[HEYS.dayRealData] handleDayUpdated storage snapshot', {
+                            currentDate: date,
+                            source,
+                            flags: {
+                                isFastingDay: !!v.isFastingDay,
+                                isIncomplete: !!v.isIncomplete
+                            },
+                            updatedAt: v.updatedAt || 0,
+                            mealsCount: (v.meals || []).length
+                        });
+                    }
                     if (v && v.date) {
                         const storageMeaningful = isMeaningfulDayData(v);
                         // Проверяем: данные из storage новее текущих?
@@ -305,6 +376,8 @@
                                     prevDay.waterMl === newDay.waterMl &&
                                     prevDay.steps === newDay.steps &&
                                     prevDay.weightMorning === newDay.weightMorning &&
+                                    !!prevDay.isFastingDay === !!newDay.isFastingDay &&
+                                    !!prevDay.isIncomplete === !!newDay.isIncomplete &&
                                     // Утренние оценки из чек-ина
                                     prevDay.moodMorning === newDay.moodMorning &&
                                     prevDay.wellbeingMorning === newDay.wellbeingMorning &&
@@ -314,8 +387,43 @@
                                     prevSupplementsTaken === newSupplementsTaken;
 
                                 if (isSameContent) {
+                                    if (source === 'day-stats-real-data-cta' || newDay.isFastingDay || newDay.isIncomplete) {
+                                        console.error('[HEYS.dayRealData] handleDayUpdated kept existing state (same content)', {
+                                            currentDate: date,
+                                            source,
+                                            flags: {
+                                                isFastingDay: !!prevDay.isFastingDay,
+                                                isIncomplete: !!prevDay.isIncomplete
+                                            },
+                                            updatedAt: prevDay.updatedAt || 0
+                                        });
+                                    }
                                     return prevDay;
                                 }
+                            }
+                            if (source === 'day-stats-real-data-cta' || newDay.isFastingDay || newDay.isIncomplete) {
+                                try {
+                                    global.__HEYS_REALDATA_DEBUG.push({
+                                        stage: 'handleDayUpdated-applying-newDay',
+                                        ts: Date.now(),
+                                        currentDate: date,
+                                        source,
+                                        flags: {
+                                            isFastingDay: !!newDay.isFastingDay,
+                                            isIncomplete: !!newDay.isIncomplete
+                                        },
+                                        updatedAt: newDay.updatedAt || 0
+                                    });
+                                } catch (_) { }
+                                console.error('[HEYS.dayRealData] handleDayUpdated applying newDay', {
+                                    currentDate: date,
+                                    source,
+                                    flags: {
+                                        isFastingDay: !!newDay.isFastingDay,
+                                        isIncomplete: !!newDay.isIncomplete
+                                    },
+                                    updatedAt: newDay.updatedAt || 0
+                                });
                             }
                             return newDay;
                         });

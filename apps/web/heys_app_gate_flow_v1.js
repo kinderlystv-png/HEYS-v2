@@ -1263,8 +1263,13 @@
                                                                     console.info('[HEYS.gate] 👤 Выбор клиента', { clientId: c.id, clientName: c.name });
 
                                                                     // ✅ FIX: Сразу закрываем gate — не ждём syncClient (10-15сек)
-                                                                    // Компоненты покажут скелетоны, heysSyncCompleted перерисует после sync
+                                                                    // Компоненты покажут скелетоны, heysSyncCompleted перерисует после sync.
+                                                                    // ВАЖНО: сначала обновляем глобальный currentClientId/storage,
+                                                                    // иначе ранние слушатели heys:client-changed читают старого клиента.
                                                                     writeGlobalValue('heys_last_client_id', c.id);
+                                                                    writeGlobalValue('heys_client_current', c.id);
+                                                                    window.HEYS = window.HEYS || {};
+                                                                    window.HEYS.currentClientId = c.id;
                                                                     setClientId(c.id);
                                                                     console.info('[HEYS.gate] ✅ Клиент переключён', { clientId: c.id });
                                                                     window.dispatchEvent(new CustomEvent('heys:client-changed', { detail: { clientId: c.id } }));

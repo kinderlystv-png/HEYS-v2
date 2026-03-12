@@ -206,10 +206,56 @@
       const current = readExisting(key);
       const incomingUpdatedAt = payload.updatedAt != null ? payload.updatedAt : now();
 
-      if (current && current.updatedAt > incomingUpdatedAt) return;
-      if (current && current.updatedAt === incomingUpdatedAt && current._sourceId && current._sourceId > sourceIdRef.current) return;
+      if (payload.isFastingDay || payload.isIncomplete || current?.isFastingDay || current?.isIncomplete) {
+        console.info('[HEYS.dayRealData] 💾 saveToDate attempt', {
+          key,
+          date: dateStr,
+          incomingUpdatedAt,
+          payloadFlags: {
+            isFastingDay: !!payload.isFastingDay,
+            isIncomplete: !!payload.isIncomplete
+          },
+          currentFlags: {
+            isFastingDay: !!current?.isFastingDay,
+            isIncomplete: !!current?.isIncomplete
+          },
+          currentUpdatedAt: current?.updatedAt || 0
+        });
+      }
 
-      if (current && isMeaningfulDayData(current) && !isMeaningfulDayData(payload)) return;
+      if (current && current.updatedAt > incomingUpdatedAt) {
+        if (payload.isFastingDay || payload.isIncomplete || current?.isFastingDay || current?.isIncomplete) {
+          console.warn('[HEYS.dayRealData] ⏭️ saveToDate skipped: newer current data', {
+            key,
+            date: dateStr,
+            incomingUpdatedAt,
+            currentUpdatedAt: current.updatedAt
+          });
+        }
+        return;
+      }
+      if (current && current.updatedAt === incomingUpdatedAt && current._sourceId && current._sourceId > sourceIdRef.current) {
+        if (payload.isFastingDay || payload.isIncomplete || current?.isFastingDay || current?.isIncomplete) {
+          console.warn('[HEYS.dayRealData] ⏭️ saveToDate skipped: source ordering', {
+            key,
+            date: dateStr,
+            incomingUpdatedAt,
+            currentSourceId: current._sourceId,
+            sourceId: sourceIdRef.current
+          });
+        }
+        return;
+      }
+
+      if (current && isMeaningfulDayData(current) && !isMeaningfulDayData(payload)) {
+        if (payload.isFastingDay || payload.isIncomplete || current?.isFastingDay || current?.isIncomplete) {
+          console.warn('[HEYS.dayRealData] ⏭️ saveToDate skipped: non-meaningful payload would overwrite meaningful day', {
+            key,
+            date: dateStr
+          });
+        }
+        return;
+      }
 
       // 🔍 DEBUG: Проверка на продукты без нутриентов в meals
       const emptyItems = [];
@@ -238,7 +284,7 @@
             String(p.id) === String(item.product_id)
           );
           if (found) {
-            console.log('🔍 [AUTOSAVE] Found product in DB for empty item:', item.name, {
+            console.info('[HEYS.dayHooks] 🔍 [AUTOSAVE] Found product in DB for empty item:', item.name, {
               dbHasNutrients: !!(found.kcal100 || found.protein100),
               dbKcal100: found.kcal100,
               dbProtein100: found.protein100
@@ -262,6 +308,18 @@
 
       try {
         lsSetFn(key, toStore);
+        if (toStore.isFastingDay || toStore.isIncomplete || current?.isFastingDay || current?.isIncomplete) {
+          const storedAfterWrite = readExisting(key);
+          console.info('[HEYS.dayRealData] 💾 saveToDate persisted', {
+            key,
+            date: dateStr,
+            storedFlags: {
+              isFastingDay: !!storedAfterWrite?.isFastingDay,
+              isIncomplete: !!storedAfterWrite?.isIncomplete
+            },
+            storedUpdatedAt: storedAfterWrite?.updatedAt || 0
+          });
+        }
         if (channelRef.current && !isUnmountedRef.current) {
           try {
             channelRef.current.postMessage({ type: 'day:update', date: dateStr, payload: toStore });
@@ -294,6 +352,17 @@
         ...day,
         updatedAt,
       };
+      if (payload.isFastingDay || payload.isIncomplete) {
+        console.info('[HEYS.dayRealData] 💾 flush day payload', {
+          date: day.date,
+          updatedAt,
+          flags: {
+            isFastingDay: !!payload.isFastingDay,
+            isIncomplete: !!payload.isIncomplete
+          },
+          mealsCount: (payload.meals || []).length
+        });
+      }
       saveToDate(day.date, payload);
       prevStoredSnapRef.current = JSON.stringify(payload);
       prevDaySnapRef.current = daySnap;

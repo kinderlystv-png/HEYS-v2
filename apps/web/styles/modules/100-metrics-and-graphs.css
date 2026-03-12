@@ -222,6 +222,100 @@
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
+.kcal-realdata-card {
+  margin-top: 12px;
+  padding: 12px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(255, 237, 213, 0.96) 0%, rgba(254, 215, 170, 0.98) 100%);
+  border: 1px solid rgba(249, 115, 22, 0.28);
+  box-shadow: 0 8px 20px rgba(249, 115, 22, 0.12);
+}
+
+.kcal-realdata-card__header {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.kcal-realdata-card__icon {
+  flex-shrink: 0;
+  font-size: 18px;
+  line-height: 1;
+}
+
+.kcal-realdata-card__copy {
+  min-width: 0;
+  flex: 1;
+}
+
+.kcal-realdata-card__title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #9a3412;
+  line-height: 1.3;
+}
+
+.kcal-realdata-card__text {
+  margin-top: 4px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: #7c2d12;
+}
+
+.kcal-realdata-card__footer {
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.kcal-realdata-card__badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 28px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #c2410c;
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(249, 115, 22, 0.18);
+}
+
+.kcal-realdata-card__button {
+  min-width: 44px;
+  min-height: 44px;
+  border: none;
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #fff;
+  background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+  box-shadow: 0 6px 14px rgba(234, 88, 12, 0.24);
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+}
+
+.kcal-realdata-card__button:active {
+  transform: translateY(1px) scale(0.98);
+  box-shadow: 0 3px 8px rgba(234, 88, 12, 0.2);
+}
+
+@media (max-width: 480px) {
+  .kcal-realdata-card__footer {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .kcal-realdata-card__button,
+  .kcal-realdata-card__badge {
+    width: 100%;
+  }
+}
+
 /* === 03. SPARKLINE — мини-график калорий === */
 .sparkline-container {
   display: block;
