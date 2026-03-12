@@ -10667,6 +10667,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
 
     const HEYS = global.HEYS = global.HEYS || {};
     const React = global.React;
+    const ADVICE_SWIPE_HORIZONTAL_LOCK_THRESHOLD = 18;
+    const ADVICE_SWIPE_VERTICAL_LOCK_THRESHOLD = 10;
 
     function isAdviceStillRelevant(advice, advices) {
         if (!advice?.id || !Array.isArray(advices)) return false;
@@ -10819,6 +10821,26 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
         }
 
         return '';
+    }
+
+    function getAdviceScienceSummary(advice) {
+        if (!advice) return '';
+
+        const scienceRationale = advice?.expertMeta?.science?.rationale;
+        const baseText = typeof scienceRationale === 'string' && scienceRationale.trim()
+            ? scienceRationale.trim()
+            : getAdviceDescription(advice);
+
+        if (!baseText) return '';
+
+        const normalizedText = baseText.replace(/\s+/g, ' ').trim();
+        const sentences = normalizedText
+            .match(/[^.!?…]+[.!?…]?/g)
+            ?.map(part => part.trim())
+            .filter(Boolean) || [];
+
+        if (sentences.length === 0) return normalizedText;
+        return sentences.slice(0, 3).join(' ');
     }
 
     function renderAdviceEvidence(advice, options = {}) {
@@ -11299,6 +11321,83 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
         );
     }
 
+    function AdviceDetailModal({
+        React,
+        advice,
+        onClose,
+        onOpenTechnicalDetails,
+    }) {
+        if (!advice) return null;
+
+        const adviceDescription = getAdviceDescription(advice);
+        const hasEvidence = hasExpertContent(advice);
+
+        return React.createElement('div', {
+            className: 'advice-diagnostics-modal-overlay advice-diagnostics-modal-overlay--fullscreen',
+            role: 'presentation',
+            onClick: (e) => {
+                e.stopPropagation();
+                onClose && onClose();
+            }
+        },
+            React.createElement('div', {
+                className: `advice-diagnostics-modal advice-diagnostics-modal--fullscreen advice-detail-modal advice-list-item-${advice.type || 'tip'}`,
+                role: 'dialog',
+                'aria-modal': 'true',
+                'aria-label': 'Детали совета',
+                onClick: (e) => e.stopPropagation()
+            },
+                React.createElement('div', { className: 'advice-diagnostics-modal__header advice-detail-modal__header' },
+                    React.createElement('div', { className: 'advice-diagnostics-modal__title-wrap' },
+                        React.createElement('div', { className: 'advice-diagnostics-modal__eyebrow' }, 'Advice'),
+                        React.createElement('div', { className: 'advice-diagnostics-modal__title advice-detail-modal__title-row' },
+                            React.createElement('span', { className: 'advice-detail-modal__icon', 'aria-hidden': 'true' }, advice.icon || '💡'),
+                            React.createElement('span', null, advice.text || 'Совет')
+                        ),
+                        advice.category && React.createElement('div', { className: 'advice-diagnostics-modal__subtitle' }, advice.category)
+                    ),
+                    React.createElement('button', {
+                        className: 'advice-diagnostics-modal__close',
+                        onClick: onClose,
+                        type: 'button',
+                        'aria-label': 'Закрыть совет'
+                    }, '×')
+                ),
+                React.createElement('div', { className: 'advice-diagnostics-modal__body advice-detail-modal__body' },
+                    React.createElement('div', { className: 'advice-detail-modal__hero' },
+                        React.createElement('div', { className: 'advice-detail-modal__hero-label' }, 'Что важно сейчас'),
+                        React.createElement('div', { className: 'advice-detail-modal__hero-text' }, advice.text || '—')
+                    ),
+                    adviceDescription && React.createElement('section', { className: 'advice-diagnostics-section' },
+                        React.createElement('div', { className: 'advice-diagnostics-section__title' }, 'Детали'),
+                        React.createElement('div', { className: 'advice-detail-modal__description' }, adviceDescription)
+                    ),
+                    hasEvidence && React.createElement('section', { className: 'advice-diagnostics-section' },
+                        React.createElement('div', { className: 'advice-diagnostics-section__title' }, 'Научное описание'),
+                        renderAdviceEvidence(advice)
+                    )
+                ),
+                React.createElement('div', { className: 'advice-diagnostics-modal__footer advice-detail-modal__footer' },
+                    hasEvidence
+                        ? React.createElement('button', {
+                            className: 'advice-diagnostics-modal__action advice-diagnostics-modal__action--secondary',
+                            onClick: (e) => {
+                                e.stopPropagation();
+                                onOpenTechnicalDetails && onOpenTechnicalDetails(advice, e);
+                            },
+                            type: 'button'
+                        }, 'Тех. детали')
+                        : React.createElement('div', null),
+                    React.createElement('button', {
+                        className: 'advice-diagnostics-modal__action advice-diagnostics-modal__action--primary',
+                        onClick: onClose,
+                        type: 'button'
+                    }, 'Закрыть')
+                )
+            )
+        );
+    }
+
     // --- AdviceCard component ---
     const AdviceCard = React.memo(function AdviceCard({
         advice,
@@ -11321,12 +11420,14 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
         onLongPressStart,
         onLongPressEnd,
         registerCardRef,
+        onOpenDetails,
         onOpenTechnicalDetails,
     }) {
         const [scheduledConfirm, setScheduledConfirm] = React.useState(false);
         const [ratedState, setRatedState] = React.useState(null); // 'positive' | 'negative' | null
-        const adviceDescription = getAdviceDescription(advice);
-        const hasExpandedContent = !!(adviceDescription || hasExpertContent(advice));
+        const adviceDescription = getAdviceScienceSummary(advice);
+        const hasTechnicalDetails = hasExpertContent(advice);
+        const hasExpandedContent = !!(adviceDescription || hasTechnicalDetails);
 
         const swipeX = swipeState?.x || 0;
         const swipeDirection = swipeState?.direction;
@@ -11582,12 +11683,13 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
                     transform: showUndo ? 'none' : `translateX(${swipeX}px)`,
                     opacity: showUndo ? 0.1 : (1 - swipeProgress * 0.3),
                     pointerEvents: showUndo ? 'none' : 'auto',
+                    touchAction: 'pan-y',
                 },
                 onClick: (e) => {
                     if (showUndo || Math.abs(swipeX) > 10) return;
                     e.stopPropagation();
-                    if (!isExpanded && trackClick) trackClick(advice);
-                    onToggleExpand && onToggleExpand(advice.id);
+                    if (trackClick) trackClick(advice);
+                    onOpenDetails && onOpenDetails(advice, e);
                 },
                 onTouchStart: (e) => {
                     if (showUndo) return;
@@ -11608,31 +11710,40 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
                 React.createElement('span', { className: 'advice-list-icon' }, advice.icon),
                 React.createElement('div', { className: 'advice-list-content' },
                     React.createElement('span', { className: 'advice-list-text' }, advice.text),
-                    hasExpandedContent && React.createElement('span', {
-                        className: 'advice-expand-arrow',
-                        style: {
-                            marginLeft: '6px',
-                            fontSize: '10px',
-                            opacity: 0.5,
-                            transition: 'transform 0.2s',
-                            display: 'inline-block',
-                            transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
-                        },
-                    }, '▼'),
-                    isExpanded && hasExpandedContent && React.createElement('div', {
-                        className: 'advice-list-details',
-                    },
-                        adviceDescription && React.createElement('div', { className: 'advice-list-details__description' }, adviceDescription)
-                    ),
-                    hasExpertContent(advice) && isExpanded && React.createElement('div', { className: 'advice-list-details__actions advice-list-details__actions--subtle' },
+                    hasExpandedContent && React.createElement('div', { className: 'advice-list-card-actions' },
                         React.createElement('button', {
                             type: 'button',
-                            className: 'advice-technical-trigger',
+                            className: 'advice-card-footnote-link',
                             onClick: (e) => {
                                 e.stopPropagation();
-                                onOpenTechnicalDetails && onOpenTechnicalDetails(advice, e);
+                                onToggleExpand && onToggleExpand(advice.id, e);
                             }
-                        }, 'Тех. детали')
+                        }, 'Детали'),
+                        React.createElement('span', {
+                            className: 'advice-expand-arrow',
+                            'aria-hidden': 'true',
+                            style: {
+                                marginLeft: 'auto',
+                                fontSize: '10px',
+                                opacity: 0.5,
+                                transition: 'transform 0.2s',
+                                display: 'inline-block',
+                                transform: isExpanded ? 'rotate(0deg)' : 'rotate(-90deg)',
+                            },
+                        }, '›')
+                    ),
+                    isExpanded && React.createElement('div', { className: 'advice-list-details' },
+                        adviceDescription && React.createElement('div', { className: 'advice-list-details__description' }, adviceDescription),
+                        hasTechnicalDetails && React.createElement('div', { className: 'advice-list-details__actions advice-list-details__actions--subtle' },
+                            React.createElement('button', {
+                                type: 'button',
+                                className: 'advice-technical-trigger',
+                                onClick: (e) => {
+                                    e.stopPropagation();
+                                    onOpenTechnicalDetails && onOpenTechnicalDetails(advice, e);
+                                }
+                            }, 'Тех. детали')
+                        )
                     )
                 )
             )
@@ -11685,6 +11796,10 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
         adviceDiagnosticsOpen,
         openAdviceDiagnostics,
         closeAdviceDiagnostics,
+        adviceDetailModalOpen,
+        adviceDetailModalAdvice,
+        openAdviceDetailModal,
+        closeAdviceDetailModal,
         adviceTechnicalDetails,
         adviceTechnicalDetailsOpen,
         openAdviceTechnicalDetails,
@@ -11804,6 +11919,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
                                         onLongPressStart: handleAdviceLongPressStart,
                                         onLongPressEnd: handleAdviceLongPressEnd,
                                         registerCardRef: registerAdviceCardRef,
+                                        onOpenDetails: openAdviceDetailModal,
                                         onOpenTechnicalDetails: openAdviceTechnicalDetails,
                                     })
                                 )
@@ -11832,6 +11948,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
                                 onLongPressStart: handleAdviceLongPressStart,
                                 onLongPressEnd: handleAdviceLongPressEnd,
                                 registerCardRef: registerAdviceCardRef,
+                                onOpenDetails: openAdviceDetailModal,
                                 onOpenTechnicalDetails: openAdviceTechnicalDetails,
                             }))
                 ),
@@ -11840,9 +11957,15 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
                     React.createElement('span', { className: 'advice-list-hint-divider' }, '•'),
                     React.createElement('span', { className: 'advice-list-hint-item' }, 'скрыть →'),
                     React.createElement('span', { className: 'advice-list-hint-divider' }, '•'),
-                    React.createElement('span', { className: 'advice-list-hint-item' }, 'удерживать = детали')
+                    React.createElement('span', { className: 'advice-list-hint-item' }, 'тап = открыть')
                 )
             ),
+            adviceDetailModalOpen && React.createElement(AdviceDetailModal, {
+                React,
+                advice: adviceDetailModalAdvice,
+                onClose: closeAdviceDetailModal,
+                onOpenTechnicalDetails: openAdviceTechnicalDetails
+            }),
             adviceDiagnosticsOpen && React.createElement(AdviceDiagnosticsModal, {
                 React,
                 diagnostics: adviceDiagnostics,
@@ -11917,7 +12040,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
     }) {
         if (adviceTrigger === 'manual' || adviceTrigger === 'manual_empty') return null;
         if (!displayedAdvice || !toastVisible) return null;
-        const adviceDescription = getAdviceDescription(displayedAdvice);
+        const adviceDescription = getAdviceScienceSummary(displayedAdvice);
         const hasDetailsContent = !!(adviceDescription || hasExpertContent(displayedAdvice));
 
         return React.createElement('div', {
@@ -12342,6 +12465,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
         });
         const [adviceTraceCopyState, setAdviceTraceCopyState] = useState('idle');
         const [adviceDiagnosticsOpen, setAdviceDiagnosticsOpen] = useState(false);
+        const [adviceDetailModalOpen, setAdviceDetailModalOpen] = useState(false);
+        const [adviceDetailModalAdvice, setAdviceDetailModalAdvice] = useState(null);
         const [adviceTechnicalDetailsOpen, setAdviceTechnicalDetailsOpen] = useState(false);
         const [adviceTechnicalDetails, setAdviceTechnicalDetails] = useState(null);
 
@@ -12494,12 +12619,41 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
         }, [dismissedAdvices, hiddenUntilTomorrow, lastDismissedAdvice]);
 
         const handleAdviceSwipeStart = useCallback((adviceId, e) => {
-            adviceSwipeStart.current[adviceId] = e.touches[0].clientX;
+            const touch = e.touches?.[0];
+            if (!touch) return;
+            adviceSwipeStart.current[adviceId] = {
+                startX: touch.clientX,
+                startY: touch.clientY,
+                lock: null,
+                isSwiping: false,
+            };
         }, []);
         const handleAdviceSwipeMove = useCallback((adviceId, e) => {
-            const startX = adviceSwipeStart.current[adviceId];
-            if (startX === undefined) return;
-            const diff = e.touches[0].clientX - startX;
+            const touch = e.touches?.[0];
+            const gesture = adviceSwipeStart.current[adviceId];
+            if (!touch || !gesture) return;
+
+            const diffX = touch.clientX - gesture.startX;
+            const diffY = touch.clientY - gesture.startY;
+            const absX = Math.abs(diffX);
+            const absY = Math.abs(diffY);
+
+            if (!gesture.lock) {
+                if (absX < ADVICE_SWIPE_VERTICAL_LOCK_THRESHOLD && absY < ADVICE_SWIPE_VERTICAL_LOCK_THRESHOLD) return;
+                if (absY >= absX) {
+                    gesture.lock = 'vertical';
+                    setAdviceSwipeState(prev => ({ ...prev, [adviceId]: { x: 0, direction: null } }));
+                    return;
+                }
+                if (absX < ADVICE_SWIPE_HORIZONTAL_LOCK_THRESHOLD) return;
+                gesture.lock = 'horizontal';
+                gesture.isSwiping = true;
+            }
+
+            if (gesture.lock !== 'horizontal') return;
+
+            const effectiveDistance = Math.max(0, absX - ADVICE_SWIPE_HORIZONTAL_LOCK_THRESHOLD);
+            const diff = effectiveDistance === 0 ? 0 : Math.sign(diffX) * effectiveDistance;
             const direction = diff < 0 ? 'left' : 'right';
             setAdviceSwipeState(prev => ({ ...prev, [adviceId]: { x: diff, direction } }));
         }, []);
@@ -12704,6 +12858,20 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
             setAdviceDiagnosticsOpen(false);
         }, []);
 
+        const openAdviceDetailModal = useCallback((advice, e) => {
+            if (e?.stopPropagation) e.stopPropagation();
+            if (!advice) return;
+            setAdviceDetailModalAdvice(advice);
+            setAdviceDetailModalOpen(true);
+            if (typeof haptic === 'function') haptic('light');
+        }, [haptic]);
+
+        const closeAdviceDetailModal = useCallback((e) => {
+            if (e?.stopPropagation) e.stopPropagation();
+            setAdviceDetailModalOpen(false);
+            setAdviceDetailModalAdvice(null);
+        }, []);
+
         const openAdviceTechnicalDetails = useCallback((advice, e) => {
             if (e?.stopPropagation) e.stopPropagation();
             if (!advice) return;
@@ -12725,16 +12893,18 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
         }, [adviceTraceCopyState]);
 
         useEffect(() => {
-            if (!adviceDiagnosticsOpen && !adviceTechnicalDetailsOpen) return undefined;
+            if (!adviceDiagnosticsOpen && !adviceDetailModalOpen && !adviceTechnicalDetailsOpen) return undefined;
             const handleEscape = (event) => {
                 if (event?.key === 'Escape') {
                     setAdviceDiagnosticsOpen(false);
+                    setAdviceDetailModalOpen(false);
+                    setAdviceDetailModalAdvice(null);
                     setAdviceTechnicalDetailsOpen(false);
                 }
             };
             window.addEventListener('keydown', handleEscape);
             return () => window.removeEventListener('keydown', handleEscape);
-        }, [adviceDiagnosticsOpen, adviceTechnicalDetailsOpen]);
+        }, [adviceDiagnosticsOpen, adviceDetailModalOpen, adviceTechnicalDetailsOpen]);
 
         useEffect(() => {
             if (!adviceTrace) return;
@@ -13034,6 +13204,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
                 setExpandedAdviceId(null);
                 setDismissAllAnimation(false);
                 setAdviceDiagnosticsOpen(false);
+                setAdviceDetailModalOpen(false);
+                setAdviceDetailModalAdvice(null);
                 setAdviceTechnicalDetailsOpen(false);
                 setAdviceTechnicalDetails(null);
             }
@@ -13041,7 +13213,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
 
         useEffect(() => {
             const isManualAdviceDrawerOpen = adviceTrigger === 'manual' && toastVisible;
-            const isAdviceOverlayOpen = isManualAdviceDrawerOpen || adviceTechnicalDetailsOpen || adviceDiagnosticsOpen;
+            const isAdviceOverlayOpen = isManualAdviceDrawerOpen || adviceDetailModalOpen || adviceTechnicalDetailsOpen || adviceDiagnosticsOpen;
             if (!isAdviceOverlayOpen || typeof document === 'undefined') return undefined;
 
             const { body, documentElement } = document;
@@ -13066,7 +13238,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
                 documentElement.style.overscrollBehavior = previousDocumentOverscrollBehavior;
                 console.info('[HEYS.advice] advice overlay scroll-lock released');
             };
-        }, [adviceTrigger, toastVisible, adviceTechnicalDetailsOpen, adviceDiagnosticsOpen]);
+        }, [adviceTrigger, toastVisible, adviceDetailModalOpen, adviceTechnicalDetailsOpen, adviceDiagnosticsOpen]);
 
         useEffect(() => {
             const timer = setTimeout(() => {
@@ -13197,6 +13369,13 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
         }, [lastDismissedAdvice]);
 
         const handleAdviceSwipeEnd = useCallback((adviceId) => {
+            const gesture = adviceSwipeStart.current[adviceId];
+            if (gesture?.lock === 'vertical') {
+                setAdviceSwipeState(prev => ({ ...prev, [adviceId]: { x: 0, direction: null } }));
+                delete adviceSwipeStart.current[adviceId];
+                return;
+            }
+
             const state = adviceSwipeState[adviceId];
             const swipeX = state?.x || 0;
 
@@ -13278,10 +13457,15 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
         const adviceLongPressTimer = useRef(null);
         const handleAdviceLongPressStart = useCallback((adviceId) => {
             adviceLongPressTimer.current = setTimeout(() => {
-                setExpandedAdviceId(prev => prev === adviceId ? null : adviceId);
+                const longPressAdvice = safeAdviceRelevant.find(item => item?.id === adviceId) || safeBadgeAdvices.find(item => item?.id === adviceId) || null;
+                if (longPressAdvice) {
+                    setExpandedAdviceId(adviceId);
+                    setAdviceDetailModalAdvice(longPressAdvice);
+                    setAdviceDetailModalOpen(true);
+                }
                 haptic('light');
             }, 500);
-        }, [haptic]);
+        }, [haptic, safeAdviceRelevant, safeBadgeAdvices]);
         const handleAdviceLongPressEnd = useCallback(() => {
             if (adviceLongPressTimer.current) {
                 clearTimeout(adviceLongPressTimer.current);
@@ -13290,7 +13474,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
         }, []);
 
         const handleAdviceToggleExpand = useCallback((adviceId) => {
-            setExpandedAdviceId(prev => prev === adviceId ? null : adviceId);
+            setExpandedAdviceId(prev => (prev === adviceId ? null : (adviceId || null)));
             haptic('light');
         }, [haptic]);
 
@@ -13356,6 +13540,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
             setDisplayedAdvice(null);
             setDisplayedAdviceList([]);
             toastInteractionTrackedRef.current = false;
+            setAdviceDetailModalOpen(false);
+            setAdviceDetailModalAdvice(null);
             setAdviceTechnicalDetails(null);
             setAdviceTechnicalDetailsOpen(false);
             if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
@@ -13423,6 +13609,10 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
             adviceDiagnosticsOpen,
             openAdviceDiagnostics,
             closeAdviceDiagnostics,
+            adviceDetailModalOpen,
+            adviceDetailModalAdvice,
+            openAdviceDetailModal,
+            closeAdviceDetailModal,
             adviceTechnicalDetails,
             adviceTechnicalDetailsOpen,
             openAdviceTechnicalDetails,

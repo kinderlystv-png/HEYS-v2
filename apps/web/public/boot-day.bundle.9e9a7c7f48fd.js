@@ -11856,6 +11856,10 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             adviceDiagnosticsOpen,
             openAdviceDiagnostics,
             closeAdviceDiagnostics,
+            adviceDetailModalOpen,
+            adviceDetailModalAdvice,
+            openAdviceDetailModal,
+            closeAdviceDetailModal,
             adviceTechnicalDetails,
             adviceTechnicalDetailsOpen,
             openAdviceTechnicalDetails,
@@ -12054,31 +12058,31 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                                             fill: 'none'
                                         })
                                     )
-                                : refreshStatus === 'syncing'
-                                    ? React.createElement('svg', {
-                                        className: 'pull-spinner-ring spinning',
-                                        viewBox: '0 0 28 28'
-                                    },
-                                        React.createElement('circle', {
-                                            cx: 14, cy: 14, r: 10,
-                                            strokeDasharray: '45 20',
-                                            strokeDashoffset: 0
-                                        })
-                                    )
-                                    : React.createElement('svg', {
-                                        className: 'pull-spinner-ring' + (refreshStatus === 'ready' ? ' ready' : ''),
-                                        viewBox: '0 0 28 28',
-                                        style: {
-                                            transform: `rotate(${-90 + Math.min(pullProgress / pullThreshold, 1) * 180}deg)`,
-                                            transition: 'transform 0.1s ease-out'
-                                        }
-                                    },
-                                        React.createElement('circle', {
-                                            cx: 14, cy: 14, r: 10,
-                                            strokeDasharray: 63,
-                                            strokeDashoffset: 63 - (Math.min(pullProgress / pullThreshold, 1) * 63)
-                                        })
-                                    )
+                                    : refreshStatus === 'syncing'
+                                        ? React.createElement('svg', {
+                                            className: 'pull-spinner-ring spinning',
+                                            viewBox: '0 0 28 28'
+                                        },
+                                            React.createElement('circle', {
+                                                cx: 14, cy: 14, r: 10,
+                                                strokeDasharray: '45 20',
+                                                strokeDashoffset: 0
+                                            })
+                                        )
+                                        : React.createElement('svg', {
+                                            className: 'pull-spinner-ring' + (refreshStatus === 'ready' ? ' ready' : ''),
+                                            viewBox: '0 0 28 28',
+                                            style: {
+                                                transform: `rotate(${-90 + Math.min(pullProgress / pullThreshold, 1) * 180}deg)`,
+                                                transition: 'transform 0.1s ease-out'
+                                            }
+                                        },
+                                            React.createElement('circle', {
+                                                cx: 14, cy: 14, r: 10,
+                                                strokeDasharray: 63,
+                                                strokeDashoffset: 63 - (Math.min(pullProgress / pullThreshold, 1) * 63)
+                                            })
+                                        )
                     ),
                     React.createElement('span', {
                         className: 'pull-text'
@@ -12087,10 +12091,10 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                     },
                         refreshStatus === 'success' ? 'Готово!'
                             : refreshStatus === 'timeout' ? 'Синхронизация заняла слишком долго'
-                            : refreshStatus === 'error' ? 'Ошибка синхронизации'
-                                : refreshStatus === 'syncing' ? 'Синхронизация...'
-                                    : refreshStatus === 'ready' ? 'Отпустите для обновления'
-                                        : 'Потяните для обновления'
+                                : refreshStatus === 'error' ? 'Ошибка синхронизации'
+                                    : refreshStatus === 'syncing' ? 'Синхронизация...'
+                                        : refreshStatus === 'ready' ? 'Отпустите для обновления'
+                                            : 'Потяните для обновления'
                     )
                 ),
 
@@ -12176,6 +12180,10 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                     adviceDiagnosticsOpen,
                     openAdviceDiagnostics,
                     closeAdviceDiagnostics,
+                    adviceDetailModalOpen,
+                    adviceDetailModalAdvice,
+                    openAdviceDetailModal,
+                    closeAdviceDetailModal,
                     adviceTechnicalDetails,
                     adviceTechnicalDetailsOpen,
                     openAdviceTechnicalDetails,
@@ -14336,6 +14344,10 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             adviceDiagnosticsOpen: adviceState.adviceDiagnosticsOpen,
             openAdviceDiagnostics: adviceState.openAdviceDiagnostics,
             closeAdviceDiagnostics: adviceState.closeAdviceDiagnostics,
+            adviceDetailModalOpen: adviceState.adviceDetailModalOpen,
+            adviceDetailModalAdvice: adviceState.adviceDetailModalAdvice,
+            openAdviceDetailModal: adviceState.openAdviceDetailModal,
+            closeAdviceDetailModal: adviceState.closeAdviceDetailModal,
             adviceTechnicalDetails: adviceState.adviceTechnicalDetails,
             adviceTechnicalDetailsOpen: adviceState.adviceTechnicalDetailsOpen,
             openAdviceTechnicalDetails: adviceState.openAdviceTechnicalDetails,

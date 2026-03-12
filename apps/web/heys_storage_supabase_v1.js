@@ -700,53 +700,6 @@
       merged.cycleDay = local.cycleDay || remote.cycleDay || null;
     }
 
-    // 🏳️ Флаги валидности дня: берём из более свежей версии, чтобы
-    // подтверждённый «реальный день» не терялся после sync/reload.
-    const localIsNewerForFlags = (local.updatedAt || 0) >= (remote.updatedAt || 0);
-    if (localIsNewerForFlags) {
-      merged.isFastingDay = !!local.isFastingDay;
-      merged.isIncomplete = !!local.isIncomplete;
-      merged.savedEatenKcal = Math.max(0, Number(local.savedEatenKcal || remote.savedEatenKcal || 0));
-      merged.savedDisplayOptimum = Math.max(0, Number(local.savedDisplayOptimum || remote.savedDisplayOptimum || 0));
-    } else {
-      merged.isFastingDay = !!remote.isFastingDay;
-      merged.isIncomplete = !!remote.isIncomplete;
-      merged.savedEatenKcal = Math.max(0, Number(remote.savedEatenKcal || local.savedEatenKcal || 0));
-      merged.savedDisplayOptimum = Math.max(0, Number(remote.savedDisplayOptimum || local.savedDisplayOptimum || 0));
-    }
-
-    if (
-      !!local?.isFastingDay !== !!remote?.isFastingDay
-      || !!local?.isIncomplete !== !!remote?.isIncomplete
-      || Number(local?.savedEatenKcal || 0) !== Number(remote?.savedEatenKcal || 0)
-    ) {
-      global.console?.warn?.('[HEYS.dayRealData] mergeDayData flags', {
-        date: merged?.date || local?.date || remote?.date || null,
-        preferRemote,
-        localUpdatedAt: local?.updatedAt || 0,
-        remoteUpdatedAt: remote?.updatedAt || 0,
-        chosenSource: localIsNewerForFlags ? 'local' : 'remote',
-        local: {
-          isFastingDay: !!local?.isFastingDay,
-          isIncomplete: !!local?.isIncomplete,
-          savedEatenKcal: Number(local?.savedEatenKcal || 0),
-          savedDisplayOptimum: Number(local?.savedDisplayOptimum || 0)
-        },
-        remote: {
-          isFastingDay: !!remote?.isFastingDay,
-          isIncomplete: !!remote?.isIncomplete,
-          savedEatenKcal: Number(remote?.savedEatenKcal || 0),
-          savedDisplayOptimum: Number(remote?.savedDisplayOptimum || 0)
-        },
-        merged: {
-          isFastingDay: !!merged?.isFastingDay,
-          isIncomplete: !!merged?.isIncomplete,
-          savedEatenKcal: Number(merged?.savedEatenKcal || 0),
-          savedDisplayOptimum: Number(merged?.savedDisplayOptimum || 0)
-        }
-      });
-    }
-
     // 🍽️ Meals: merge по ID с учётом УДАЛЕНИЙ
     // Если local свежее и meal отсутствует в local — значит удалён!
     // НО: при forceKeepAll — объединяем ВСЁ (для pull-to-refresh после фикса багов)
@@ -2627,9 +2580,9 @@
           }
         } catch (_) { }
 
-        if (isLocalOnlyStorageKey(k)) {
-          return;
-        }
+            if (isLocalOnlyStorageKey(k)) {
+              return;
+            }
 
         // Во время signIn не зеркалим вообще ничего — это источник гонок и RTR refresh 400
         if (typeof _signInInProgress !== 'undefined' && _signInInProgress) {
@@ -4199,8 +4152,6 @@
     const mealsCount = Array.isArray(data.meals) ? data.meals.length : 0;
     const trainingsCount = Array.isArray(data.trainings) ? data.trainings.length : 0;
     if (mealsCount > 0 || trainingsCount > 0) return true;
-    if ((data.savedEatenKcal || 0) > 0) return true;
-    if (data.isFastingDay || data.isIncomplete) return true;
     if ((data.waterMl || 0) > 0) return true;
     if ((data.steps || 0) > 0) return true;
     if ((data.weightMorning || 0) > 0) return true;
@@ -4564,7 +4515,7 @@
         let allData = [];
         let pageOffset = 0;
         let fetchError = null;
-        let paginatedFetchPages = 0;
+          let paginatedFetchPages = 0;
 
         // 🚀 SPECULATIVE PREFETCH: check if HTML-time prefetch matches current request
         // If prefetch was fired at +0.0s and matches clientId+since → reuse data, save ~1s
@@ -6404,9 +6355,9 @@
   let _uploadLogTimer = null;
   let _uploadLogBufferedTotal = 0;
   let _uploadLogBufferedBatches = 0;
-  const UPLOAD_SUMMARY_LOG_MIN_ITEMS = 5;
-  const UPLOAD_SUMMARY_LOG_MIN_BATCHES = 3;
-  const UPLOAD_SUMMARY_BUFFER_MS = 2500;
+    const UPLOAD_SUMMARY_LOG_MIN_ITEMS = 5;
+    const UPLOAD_SUMMARY_LOG_MIN_BATCHES = 3;
+    const UPLOAD_SUMMARY_BUFFER_MS = 2500;
 
   function flushBufferedUploadLog() {
     if (_uploadLogTimer) {
@@ -6415,11 +6366,11 @@
     }
     if (_uploadLogBufferedTotal <= 0) return;
     const suffix = _uploadLogBufferedBatches > 1 ? ` (${_uploadLogBufferedBatches} batch)` : '';
-    if (_uploadLogBufferedTotal >= UPLOAD_SUMMARY_LOG_MIN_ITEMS || _uploadLogBufferedBatches >= UPLOAD_SUMMARY_LOG_MIN_BATCHES) {
-      logCritical(`☁️ [YANDEX] Сохранено в облако: ${_uploadLogBufferedTotal} записей${suffix}`);
-    } else {
-      log(`☁️ [YANDEX] Small upload batch hidden from normal logs: ${_uploadLogBufferedTotal} items${suffix}`);
-    }
+      if (_uploadLogBufferedTotal >= UPLOAD_SUMMARY_LOG_MIN_ITEMS || _uploadLogBufferedBatches >= UPLOAD_SUMMARY_LOG_MIN_BATCHES) {
+        logCritical(`☁️ [YANDEX] Сохранено в облако: ${_uploadLogBufferedTotal} записей${suffix}`);
+      } else {
+        log(`☁️ [YANDEX] Small upload batch hidden from normal logs: ${_uploadLogBufferedTotal} items${suffix}`);
+      }
     _uploadLogBufferedTotal = 0;
     _uploadLogBufferedBatches = 0;
   }
@@ -6429,13 +6380,13 @@
     _uploadLogBufferedTotal += savedCount;
     _uploadLogBufferedBatches += 1;
 
-    if (savedCount >= UPLOAD_SUMMARY_LOG_MIN_ITEMS || _uploadLogBufferedTotal >= 10) {
+      if (savedCount >= UPLOAD_SUMMARY_LOG_MIN_ITEMS || _uploadLogBufferedTotal >= 10) {
       flushBufferedUploadLog();
       return;
     }
 
     if (_uploadLogTimer) return;
-    _uploadLogTimer = setTimeout(() => flushBufferedUploadLog(), UPLOAD_SUMMARY_BUFFER_MS);
+      _uploadLogTimer = setTimeout(() => flushBufferedUploadLog(), UPLOAD_SUMMARY_BUFFER_MS);
   }
   let _uploadInFlightCount = 0;   // 🔄 Кол-во записей в in-flight запросе
 
@@ -6909,9 +6860,6 @@
       // Это предотвращает перезапись реальных данных пустым днём при выборе даты в календаре
       // v59 FIX: Блокируем всегда, не только до sync — иначе при выборе старой даты затираем облако
       const hasRealData = value.weightMorning ||
-        value.savedEatenKcal > 0 ||
-        value.isFastingDay ||
-        value.isIncomplete ||
         value.steps > 0 ||
         value.waterMl > 0 ||
         (value.meals && value.meals.length > 0 && value.meals.some(m => m.items?.length > 0)) ||
@@ -6921,38 +6869,7 @@
         (value.trainings && value.trainings.length > 0);
       if (!hasRealData) {
         log(`🚫 [SAVE BLOCKED] Empty day not saved to cloud - key: ${k}`);
-        global.console?.warn?.('[HEYS.dayRealData] saveClientKey blocked empty day', {
-          key: k,
-          clientId: client_id,
-          hasRealData,
-          updatedAt: value?.updatedAt || 0,
-          value: {
-            isFastingDay: !!value?.isFastingDay,
-            isIncomplete: !!value?.isIncomplete,
-            savedEatenKcal: Number(value?.savedEatenKcal || 0),
-            savedDisplayOptimum: Number(value?.savedDisplayOptimum || 0),
-            meals: Array.isArray(value?.meals) ? value.meals.length : 0
-          }
-        });
         return;
-      }
-
-      if (value.isFastingDay || value.isIncomplete || Number(value.savedEatenKcal || 0) > 0) {
-        global.console?.warn?.('[HEYS.dayRealData] saveClientKey accepted day', {
-          key: k,
-          normalizedKeyPreview: k,
-          clientId: client_id,
-          waitingForSync,
-          isPinAuth,
-          updatedAt: value?.updatedAt || 0,
-          value: {
-            isFastingDay: !!value?.isFastingDay,
-            isIncomplete: !!value?.isIncomplete,
-            savedEatenKcal: Number(value?.savedEatenKcal || 0),
-            savedDisplayOptimum: Number(value?.savedDisplayOptimum || 0),
-            meals: Array.isArray(value?.meals) ? value.meals.length : 0
-          }
-        });
       }
     }
 
@@ -7167,75 +7084,6 @@
       });
     }
   };
-
-  const inspectDayRealData = function (dateStr) {
-    const safeDate = String(dateStr || global.HEYS?.App?.selectedDate || global.HEYS?.selectedDate || '').slice(0, 10);
-    const currentClientId = HEYS?.utils?.getCurrentClientId?.() || HEYS?.currentClientId || '';
-    const baseKey = safeDate ? ('heys_dayv2_' + safeDate) : '';
-    const scopedKey = safeDate && currentClientId ? ('heys_' + currentClientId + '_dayv2_' + safeDate) : '';
-
-    const parseRaw = (raw) => {
-      if (!raw) return null;
-      try {
-        return JSON.parse(raw);
-      } catch (_) {
-        return { __parseError: true, raw };
-      }
-    };
-
-    const summarize = (value) => value ? {
-      date: value.date || safeDate || null,
-      isFastingDay: !!value.isFastingDay,
-      isIncomplete: !!value.isIncomplete,
-      savedEatenKcal: Number(value.savedEatenKcal || 0),
-      savedDisplayOptimum: Number(value.savedDisplayOptimum || 0),
-      updatedAt: Number(value.updatedAt || 0),
-      meals: Array.isArray(value.meals) ? value.meals.length : 0,
-      steps: Number(value.steps || 0),
-      waterMl: Number(value.waterMl || 0)
-    } : null;
-
-    const baseRaw = baseKey ? global.localStorage.getItem(baseKey) : null;
-    const scopedRaw = scopedKey ? global.localStorage.getItem(scopedKey) : null;
-    const baseParsed = parseRaw(baseRaw);
-    const scopedParsed = parseRaw(scopedRaw);
-    const viaUtils = safeDate ? HEYS?.utils?.lsGet?.(baseKey, null) : null;
-    const pendingMatches = clientUpsertQueue
-      .filter((item) => item && (item.k === baseKey || item.k === scopedKey || item.k === normalizeKeyForSupabase(baseKey, currentClientId)))
-      .map((item) => ({
-        k: item.k,
-        updated_at: item.updated_at,
-        v: summarize(item.v)
-      }));
-
-    const report = {
-      date: safeDate || null,
-      currentClientId: currentClientId || null,
-      baseKey: baseKey || null,
-      scopedKey: scopedKey || null,
-      selectedDate: HEYS?.App?.selectedDate || HEYS?.selectedDate || null,
-      viaUtils: summarize(viaUtils),
-      legacy: summarize(baseParsed),
-      scoped: summarize(scopedParsed),
-      pendingQueue: pendingMatches,
-      pendingCount: cloud.getPendingCount ? cloud.getPendingCount() : pendingMatches.length,
-      initialSyncCompleted,
-      isUploadInProgress: !!_uploadInProgress,
-      rpcOnlyMode: !!_rpcOnlyMode
-    };
-
-    global.console?.warn?.('[HEYS.dayRealData] inspectDayRealData', report);
-    return report;
-  };
-
-  HEYS.debugTools = HEYS.debugTools || {};
-  HEYS.debugTools.inspectDayRealData = inspectDayRealData;
-  HEYS.inspectDayRealData = inspectDayRealData;
-
-  if (!HEYS.debug || typeof HEYS.debug !== 'object') {
-    HEYS.debug = { enabled: !!HEYS.debug };
-  }
-  HEYS.debug.inspectDayRealData = inspectDayRealData;
 
   // Функция только проверяет существование клиента (больше НЕ создаём автоматически)
   // 🔐 Для PIN-авторизации: проверяем только по id (без curator_id)
