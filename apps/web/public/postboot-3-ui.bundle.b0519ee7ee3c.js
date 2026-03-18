@@ -4529,13 +4529,13 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-3-ui: execute start');
       },
         selected.length > 0
           ? `💊 Выбрано: ${selected.length}`
-          : '💊 Выберите витамины на сегодня'
+          : '💊 Выберите добавки на сегодня'
       )
     );
   }
 
   registerStep('supplements', {
-    title: 'Витамины',
+    title: 'Добавки',
     hint: 'Что планируете принять?',
     icon: '💊',
     canSkip: true,
@@ -15762,9 +15762,9 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 // heys_supplements_science_v1.js — Научное расширение модуля витаминов
 // Версия: 1.0.0 | Дата: 2025-12-14
 // Биодоступность, циркадные ритмы, 50+ взаимодействий, дефициты по симптомам
-(function(global) {
+(function (global) {
   const HEYS = global.HEYS = global.HEYS || {};
-  
+
   // Ждём загрузки основного модуля
   if (!HEYS.Supplements) {
     console.warn('[HEYS] Supplements Science: основной модуль не загружен');
@@ -15774,7 +15774,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
   // ═══════════════════════════════════════════════════════════════════════════
   // 🔬 НАУЧНАЯ БАЗА ДАННЫХ — БИОДОСТУПНОСТЬ
   // ═══════════════════════════════════════════════════════════════════════════
-  
+
   const BIOAVAILABILITY = {
     // Витамин D3
     vitD: {
@@ -15791,7 +15791,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       testMarker: '25(OH)D в крови',
       optimalLevel: '40-60 нг/мл'
     },
-    
+
     // Витамин K2 (MK-7)
     vitK2: {
       baseAbsorption: 0.3,
@@ -15805,7 +15805,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       optimalDose: '100-200 мкг MK-7',
       ratio: 'D3:K2 = 1000 IU : 100 мкг'
     },
-    
+
     // Омега-3 (EPA/DHA)
     omega3: {
       baseAbsorption: 0.25,
@@ -15821,7 +15821,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       ratio: 'EPA:DHA = 2:1 для воспаления, 1:2 для мозга',
       oxidationRisk: 'высокий — хранить в холоде'
     },
-    
+
     // Железо
     iron: {
       baseAbsorption: 0.15,           // 15% для негемового железа
@@ -15837,7 +15837,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       testMarker: 'ферритин + трансферрин',
       toxicityRisk: 'средний — не принимать без анализов'
     },
-    
+
     // Магний
     magnesium: {
       baseAbsorption: 0.35,
@@ -15858,7 +15858,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       testMarker: 'Mg в эритроцитах (не сыворотка!)',
       bestTime: 'вечер (релаксация)'
     },
-    
+
     // Цинк
     zinc: {
       baseAbsorption: 0.30,
@@ -15874,7 +15874,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       testMarker: 'цинк сыворотки',
       bestTime: 'с белковой едой, не с железом'
     },
-    
+
     // Витамин B12
     b12: {
       baseAbsorption: 0.50,
@@ -15893,7 +15893,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       riskGroups: ['веганы', '50+ лет', 'приём метформина'],
       testMarker: 'B12 + гомоцистеин + MMA'
     },
-    
+
     // Витамин C
     vitC: {
       baseAbsorption: 0.70,
@@ -15911,7 +15911,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       },
       bestTime: 'утро + день (не вечер — может бодрить)'
     },
-    
+
     // CoQ10
     coq10: {
       baseAbsorption: 0.03,           // Очень низкая!
@@ -15924,6 +15924,97 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       optimalDose: '100-300мг убихинола',
       note: 'Статины истощают CoQ10 — обязательно добавлять',
       bestTime: 'с жирной едой'
+    },
+
+    // Льняное масло
+    flaxOil: {
+      baseAbsorption: 0.95,           // ALA из масла почти полностью абсорбируется
+      conversionEPA: 0.08,            // ~5-15% ALA → EPA
+      conversionDHA: 0.02,            // <4% ALA → DHA (самый низкий шаг)
+      halfLife: '~7 дней (в мембранах)',
+      storage: 'клеточные мембраны',
+      oxidationRisk: 'очень высокий — нЕ нагревать!',
+      synergists: ['vitE', 'omega3'],
+      antagonists: ['избыток омега-6 блокирует конверсию ALA'],
+      mechanism: 'ALA (альфа-линоленовая кислота) — незаменимая омега-3: организм не вырабатывает её самостоятельно. Конверсия в EPA/DHA через десатуразы и элонгации есть, но очень неэффективна. Лигнаны льна — фитоэстрогены (слабый эстрогенный эффект), антиоксиданты. Хранить в холоде, тёмно: ALA окисляется быстрее любых других жирных кислот.',
+      optimalDose: '1-2 ст.л. в день (10-20г ALA)',
+      forms: {
+        'Масло (жидкое)': { absorption: 0.95, use: 'макс. концентрация ALA' },
+        'Семена молотые': { absorption: 0.80, use: 'клетчатка + лигнаны' },
+        'Капсулы': { absorption: 0.90, use: 'удобство + защита от окисления' }
+      },
+      oxidationNote: 'НЕ жарить. Тďпоинт окисления — уже при комнатной температуре.',
+      bestTime: 'с едой, не нагревать'
+    },
+
+    // K2 (MK-7) — ключ совпадает с каталогом
+    k2: {
+      baseAbsorption: 0.30,
+      withFat: 0.70,
+      optimalFatGrams: 10,
+      minFatGrams: 3,
+      halfLife: '3 дня (MK-7)',
+      storage: 'минимальный',
+      synergists: ['vitD', 'calcium'],
+      mechanism: 'K2 (MK-7) активирует два белка: остеокальцин (направляет Ca в кости) и MGP (убирает Ca из артерий). Жирорастворимый — без жиров абсорбция падает в 2 раза.',
+      optimalDose: '100-200 мкг MK-7/день',
+      ratio: 'D3:K2 = 1000 IU : 100 мкг',
+      bestTime: 'вечером с ужином (жиры обязательны)'
+    },
+
+    // Рыбий жир (EPA/DHA)
+    fishOil: {
+      baseAbsorption: 0.25,
+      withFat: 0.60,
+      optimalFatGrams: 10,
+      minFatGrams: 5,
+      halfLife: '2-3 дня',
+      storage: 'клеточные мембраны',
+      oxidationRisk: 'высокий — хранить в холоде',
+      synergists: ['vitE', 'vitD'],
+      mechanism: 'EPA/DHA требуют желчных кислот для эмульсификации. Приём с жирной едой стимулирует желчеотделение → абсорбция ×3. В отличие от льняного масла (ALA) — EPA/DHA уже готовы, без конверсии.',
+      optimalDose: '1-3г EPA+DHA в день',
+      ratio: 'EPA:DHA = 2:1 для воспаления, 1:2 для мозга',
+      note: 'Триглицеридная форма усваивается лучше этилового эфира (re-esterified TG)'
+    },
+
+    // Селен
+    selenium: {
+      baseAbsorption: 0.55,
+      organicForm: 0.80,
+      inorganicForm: 0.50,
+      halfLife: '~100 дней (в тканях)',
+      storage: 'печень, почки, щитовидка',
+      synergists: ['vitE', 'iodine'],
+      mechanism: 'Селен встраивается в селенопротеины: GPx (антиоксидант), TrxR (иммунитет), SelP (транспорт Se). Органический Se (селенометионин из дрожжей) усваивается на 45% лучше неорганического (натрий-селенит).',
+      optimalDose: '55-200 мкг/день',
+      forms: {
+        'Селенометионин': { absorption: 0.80, use: 'лучшее усвоение (органический)' },
+        'Натрий-селенит': { absorption: 0.50, use: 'неорганический, дешевле' },
+        'Дрожжевой Se': { absorption: 0.75, use: 'натуральная органическая форма' }
+      },
+      testMarker: 'Se плазмы или GPx-активность эритроцитов',
+      toxicityRisk: 'средний — UL = 400 мкг; >800 мкг вызывает селеноз'
+    },
+
+    // Кальций
+    calcium: {
+      baseAbsorption: 0.30,
+      withVitD: 0.50,
+      maxSingleDose: 500,
+      halfLife: 'годы (в костях)',
+      storage: 'кости 99%, кровь 1%',
+      inhibitors: ['железо', 'цинк', 'фитаты', 'оксалаты', 'кофе'],
+      synergists: ['vitD', 'k2', 'magnesium'],
+      forms: {
+        carbonate: { absorption: 0.25, use: 'только с едой — нужна желудочная кислота' },
+        citrate: { absorption: 0.35, use: 'можно натощак, лучше для пожилых' },
+        malate: { absorption: 0.40, use: 'хорошее усвоение, мягкий ЖКТ-профиль' },
+        gluconate: { absorption: 0.30, use: 'мягкая форма, низкая доза Ca' }
+      },
+      mechanism: 'D3-зависимый транспорт через кальбиндин в тонком кишечнике + пассивная диффузия. За один приём усваивается не более 500мг — выше этого абсорбция не растёт.',
+      optimalDose: '500-1000мг/день (разделить на 2 приёма)',
+      note: 'Не более 500мг за раз! Разделить приём утро/вечер'
     }
   };
 
@@ -15984,7 +16075,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
   // ═══════════════════════════════════════════════════════════════════════════
   // ⏰ ЦИРКАДНЫЕ РИТМЫ — ОПТИМАЛЬНОЕ ВРЕМЯ ПРИЁМА
   // ═══════════════════════════════════════════════════════════════════════════
-  
+
   const CIRCADIAN_OPTIMAL = {
     // Утро (6-10)
     morning: {
@@ -15992,28 +16083,28 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       reason: 'Кортизол максимален утром → лучшая абсорбция жирорастворимых. B12/C бодрят.',
       avoid: ['magnesium', 'melatonin', 'glycine']
     },
-    
+
     // День (10-14)
     midday: {
       supplements: ['omega3', 'vitE', 'zinc'],
       reason: 'Пищеварение активно, жирная еда на обед → идеально для жирорастворимых.',
       avoid: ['melatonin']
     },
-    
+
     // Вечер (18-21)
     evening: {
       supplements: ['magnesium', 'vitK2', 'calcium'],
       reason: 'Mg расслабляет, K2 работает ночью (костная ремодуляция).',
       avoid: ['vitC', 'b12', 'coq10']
     },
-    
+
     // Перед сном (21-23)
     beforeBed: {
       supplements: ['magnesium', 'glycine', 'melatonin', 'ashwagandha'],
       reason: 'Расслабление, подготовка ко сну, ночная регенерация.',
       avoid: ['vitD', 'b12', 'iron', 'vitC']
     },
-    
+
     // Хронотипы
     chronotypes: {
       lark: {  // Жаворонок
@@ -16030,7 +16121,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
   // ═══════════════════════════════════════════════════════════════════════════
   // 🔗 РАСШИРЕННЫЕ ВЗАИМОДЕЙСТВИЯ (50+)
   // ═══════════════════════════════════════════════════════════════════════════
-  
+
   const INTERACTIONS_EXTENDED = {
     // ══════ СИНЕРГИИ (усиливают друг друга) ══════
     synergies: [
@@ -16122,9 +16213,22 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         effect: 'moderate',
         mechanism: 'Оба — противовоспалительные, синергия в иммунной функции.',
         evidence: 'observational'
+      },
+      {
+        pair: ['flaxOil', 'vitE'],
+        effect: 'high',
+        mechanism: 'VitE (токоферол) защищает ALA от перекисного окисления в клеточных мембранах. Особенно важно для полиненасыщенных жирных кислот.',
+        timing: 'принимать вместе',
+        evidence: 'mechanistic'
+      },
+      {
+        pair: ['flaxOil', 'omega3'],
+        effect: 'moderate',
+        mechanism: 'ALA (льняное) + EPA/DHA (рыбий жир) — комплементарные омега-3. Рыбий жир компенсирует низкую конверсию ALA.',
+        evidence: 'observational'
       }
     ],
-    
+
     // ══════ АНТАГОНИЗМЫ (мешают друг другу) ══════
     antagonisms: [
       {
@@ -16170,7 +16274,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         evidence: 'clinical'
       }
     ],
-    
+
     // ══════ ВЗАИМОДЕЙСТВИЯ С ЕДОЙ ══════
     foodInteractions: {
       enhancers: [
@@ -16191,7 +16295,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         { food: 'грейпфрут', supplements: ['статины', 'some drugs'], effect: 'CYP3A4 ингибирование', warning: true }
       ]
     },
-    
+
     // ══════ ВЗАИМОДЕЙСТВИЯ С ЛЕКАРСТВАМИ ══════
     drugInteractions: [
       { drug: 'статины', supplements: ['coq10'], interaction: 'статины истощают CoQ10', action: 'добавить CoQ10 100-200мг' },
@@ -16206,7 +16310,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
   // ═══════════════════════════════════════════════════════════════════════════
   // 🌸 ДОБАВКИ ПО ФАЗАМ МЕНСТРУАЛЬНОГО ЦИКЛА
   // ═══════════════════════════════════════════════════════════════════════════
-  
+
   const CYCLE_SUPPLEMENTS = {
     menstrual: {  // Дни 1-5
       priority: ['iron', 'vitC', 'b12'],
@@ -16237,7 +16341,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
   // ═══════════════════════════════════════════════════════════════════════════
   // 🩺 ДЕФИЦИТЫ ПО СИМПТОМАМ
   // ═══════════════════════════════════════════════════════════════════════════
-  
+
   const DEFICIENCY_SYMPTOMS = {
     fatigue: {
       likely: ['iron', 'b12', 'vitD', 'magnesium', 'coq10'],
@@ -16316,7 +16420,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
   // ═══════════════════════════════════════════════════════════════════════════
   // 🥗 НУТРИЕНТЫ ИЗ ЕДЫ — ЧТО УЖЕ ПОЛУЧИЛ
   // ═══════════════════════════════════════════════════════════════════════════
-  
+
   const FOOD_NUTRIENT_SOURCES = {
     iron: {
       heme: ['печень', 'говядина', 'баранина', 'индейка тёмная'],
@@ -16368,7 +16472,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
   function getSupplementScience(suppId) {
     const bio = BIOAVAILABILITY[suppId];
     if (!bio) return null;
-    
+
     return {
       bioavailability: bio,
       optimalTime: getOptimalTime(suppId),
@@ -16427,21 +16531,21 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
    */
   function getFoodTips(suppId) {
     const tips = [];
-    
+
     // Усилители
     for (const e of INTERACTIONS_EXTENDED.foodInteractions.enhancers) {
       if (e.supplements.includes(suppId)) {
         tips.push({ type: 'enhancer', food: e.food, effect: e.effect });
       }
     }
-    
+
     // Ингибиторы
     for (const i of INTERACTIONS_EXTENDED.foodInteractions.inhibitors) {
       if (i.supplements.includes(suppId)) {
         tips.push({ type: 'inhibitor', food: i.food, effect: i.effect, gap: i.gap });
       }
     }
-    
+
     return tips;
   }
 
@@ -16460,7 +16564,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
    */
   function analyzeSymptoms(symptoms) {
     const results = [];
-    
+
     for (const symptom of symptoms) {
       const data = DEFICIENCY_SYMPTOMS[symptom];
       if (data) {
@@ -16472,16 +16576,16 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         });
       }
     }
-    
+
     // Найти общие дефициты
     const allLikely = results.flatMap(r => r.likelyDeficiencies);
     const counts = {};
     allLikely.forEach(d => { counts[d] = (counts[d] || 0) + 1; });
-    
+
     const prioritized = Object.entries(counts)
       .sort((a, b) => b[1] - a[1])
       .map(([supp, count]) => ({ supplement: supp, matchedSymptoms: count }));
-    
+
     return {
       bySymptom: results,
       prioritized,
@@ -16502,12 +16606,12 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       vitD: { amount: 0, sources: [] },
       b12: { amount: 0, sources: [] }
     };
-    
+
     if (!mealItems || !Array.isArray(mealItems)) return found;
-    
+
     for (const item of mealItems) {
       const name = (item.name || '').toLowerCase();
-      
+
       // Проверяем каждый нутриент
       for (const [nutrient, data] of Object.entries(FOOD_NUTRIENT_SOURCES)) {
         const allSources = [
@@ -16519,7 +16623,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           ...(data.marine || []),
           ...(data.plant || [])
         ];
-        
+
         for (const source of allSources) {
           if (name.includes(source.toLowerCase())) {
             found[nutrient].sources.push(source);
@@ -16529,7 +16633,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         }
       }
     }
-    
+
     return found;
   }
 
@@ -16540,7 +16644,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     const recs = [];
     const hour = new Date().getHours();
     const month = new Date().getMonth();
-    
+
     // 1. По профилю
     if (profile) {
       // Возраст
@@ -16558,7 +16662,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           priority: 'medium'
         });
       }
-      
+
       if (profile.age >= 40) {
         recs.push({
           id: 'vitD',
@@ -16567,7 +16671,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           priority: 'high'
         });
       }
-      
+
       // Пол
       if (profile.gender === 'Женский') {
         recs.push({
@@ -16583,17 +16687,17 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         });
       }
     }
-    
+
     // 2. По сезону
     if (month >= 10 || month <= 2) {  // Ноябрь-Март
       recs.push({
         id: 'vitD',
-        reason: `Зима (${['Янв','Фев','Мар','Апр','Май','Июн','Июл','Авг','Сен','Окт','Ноя','Дек'][month]}): УФ-индекс <3, синтез D3 невозможен`,
+        reason: `Зима (${['Янв', 'Фев', 'Мар', 'Апр', 'Май', 'Июн', 'Июл', 'Авг', 'Сен', 'Окт', 'Ноя', 'Дек'][month]}): УФ-индекс <3, синтез D3 невозможен`,
         science: BIOAVAILABILITY.vitD,
         priority: 'critical'
       });
     }
-    
+
     // 3. По данным дня
     if (dayData) {
       // Плохой сон
@@ -16606,7 +16710,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           form: 'glycinate или threonate'
         });
       }
-      
+
       // Стресс
       if (dayData.stressAvg && dayData.stressAvg >= 6) {
         recs.push({
@@ -16622,7 +16726,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           priority: 'medium'
         });
       }
-      
+
       // Тренировки
       if (dayData.trainings && dayData.trainings.length > 0) {
         recs.push({
@@ -16638,7 +16742,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           priority: 'medium'
         });
       }
-      
+
       // Фаза цикла
       if (dayData.cycleDay) {
         let phase;
@@ -16646,7 +16750,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         else if (dayData.cycleDay <= 14) phase = 'follicular';
         else if (dayData.cycleDay <= 16) phase = 'ovulation';
         else phase = 'luteal';
-        
+
         const cycleRecs = CYCLE_SUPPLEMENTS[phase];
         if (cycleRecs) {
           for (const suppId of cycleRecs.priority) {
@@ -16660,7 +16764,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         }
       }
     }
-    
+
     // 4. По текущему времени
     const timeRecs = [];
     if (hour >= 6 && hour <= 10) {
@@ -16676,7 +16780,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         reason: CIRCADIAN_OPTIMAL.beforeBed.reason
       })));
     }
-    
+
     // 5. Анализ еды
     if (meals && meals.length > 0) {
       const lastMeal = meals[meals.length - 1];
@@ -16686,7 +16790,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         for (const item of lastMeal.items) {
           mealFat += (item.fat100 || 0) * (item.grams || 100) / 100;
         }
-        
+
         if (mealFat >= 10) {
           recs.push({
             id: 'vitD',
@@ -16703,7 +16807,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         }
       }
     }
-    
+
     // Убираем дубликаты по id, сохраняя приоритетные
     const seen = new Map();
     for (const rec of recs) {
@@ -16712,7 +16816,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         seen.set(rec.id, rec);
       }
     }
-    
+
     return Array.from(seen.values());
   }
 
@@ -16724,7 +16828,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
   // ═══════════════════════════════════════════════════════════════════════════
   // 🌅 НАУЧНЫЕ ОБОСНОВАНИЯ ДЛЯ УТРЕННЕГО ПРИЁМА ВИТАМИНОВ
   // ═══════════════════════════════════════════════════════════════════════════
-  
+
   const MORNING_SUPPLEMENT_SCIENCE = {
     // === УТРЕННИЕ ВИТАМИНЫ (timing: morning, empty, withFood) ===
     vitD: {
@@ -16741,7 +16845,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         optimalFood: ['яйца', 'авокадо', 'сыр', 'орехи', 'сливочное масло']
       }
     },
-    
+
     b12: {
       timing: 'morning',
       mealTiming: 'Утром, можно натощак',
@@ -16756,7 +16860,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         optimalFood: ['можно натощак', 'с белковым завтраком лучше']
       }
     },
-    
+
     vitC: {
       timing: 'morning',
       mealTiming: 'Утром с едой или натощак',
@@ -16771,7 +16875,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         optimalFood: ['можно натощак', 'с цитрусовыми синергия']
       }
     },
-    
+
     iron: {
       timing: 'empty',
       mealTiming: 'СТРОГО натощак, с витамином C!',
@@ -16786,7 +16890,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         conflict: ['calcium', 'zinc', 'кофе', 'чай', 'молоко']
       }
     },
-    
+
     folic: {
       timing: 'morning',
       mealTiming: 'Утром с едой',
@@ -16801,7 +16905,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         synergy: ['b12']
       }
     },
-    
+
     coq10: {
       timing: 'withFat',
       mealTiming: 'С жирным завтраком',
@@ -16816,7 +16920,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         optimalFood: ['яйца', 'авокадо', 'орехи', 'сыр']
       }
     },
-    
+
     b6: {
       timing: 'morning',
       mealTiming: 'Утром с едой',
@@ -16831,7 +16935,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         synergy: ['magnesium']
       }
     },
-    
+
     zinc: {
       timing: 'withFood',
       mealTiming: 'С белковым завтраком',
@@ -16846,7 +16950,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         conflict: ['iron', 'calcium', 'кофе']
       }
     },
-    
+
     // === С ЕДОЙ (timing: withFood, withFat) ===
     omega3: {
       timing: 'withFat',
@@ -16862,7 +16966,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         synergy: ['vitE', 'vitD']
       }
     },
-    
+
     vitE: {
       timing: 'withFat',
       mealTiming: 'С жирной едой',
@@ -16877,7 +16981,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         synergy: ['omega3', 'vitC']
       }
     },
-    
+
     biotin: {
       timing: 'withFood',
       mealTiming: 'С любым приёмом пищи',
@@ -16892,7 +16996,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         note: 'Может влиять на анализы щитовидки — предупредить врача!'
       }
     },
-    
+
     collagen: {
       timing: 'empty',
       mealTiming: 'Натощак + витамин C',
@@ -16907,7 +17011,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         synergy: ['vitC']
       }
     },
-    
+
     // === УТРЕННИЕ НЕ РЕКОМЕНДУЮТСЯ (вечерние) ===
     magnesium: {
       timing: 'evening',
@@ -16923,7 +17027,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         morningNote: 'Если уже запланировал — принимай с едой, но эффект будет слабее.'
       }
     },
-    
+
     melatonin: {
       timing: 'beforeBed',
       mealTiming: '⚠️ Только перед сном!',
@@ -16938,7 +17042,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         morningNote: 'Перенеси на вечер. Утренний приём навредит!'
       }
     },
-    
+
     glycine: {
       timing: 'beforeBed',
       mealTiming: '⚠️ Перед сном',
@@ -16953,7 +17057,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         morningNote: 'Перенеси на вечер для лучшего эффекта.'
       }
     },
-    
+
     ltheanine: {
       timing: 'evening',
       mealTiming: 'Вечером или с кофе (анти-тревога)',
@@ -16967,7 +17071,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         morningNote: 'С кофе — ОК! Убирает тревожность от кофеина.'
       }
     },
-    
+
     // === СПЕЦИАЛЬНЫЕ ===
     berberine: {
       timing: 'beforeMeal',
@@ -16983,7 +17087,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         insulinBonus: -0.15
       }
     },
-    
+
     cinnamon: {
       timing: 'withFood',
       mealTiming: 'С едой, содержащей углеводы',
@@ -16997,7 +17101,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         insulinBonus: -0.10
       }
     },
-    
+
     chromium: {
       timing: 'withFood',
       mealTiming: 'С углеводной едой',
@@ -17011,7 +17115,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         note: 'Эффект заметен при дефиците. Анализы покажут нужен ли.'
       }
     },
-    
+
     vinegar: {
       timing: 'beforeMeal',
       mealTiming: 'За 15-20 мин до углеводной еды',
@@ -17026,7 +17130,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         insulinBonus: -0.20
       }
     },
-    
+
     creatine: {
       timing: 'afterTrain',
       mealTiming: 'После тренировки или с углеводами',
@@ -17040,7 +17144,53 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         morningNote: 'Утром тоже можно — эффект накопительный. Главное регулярность.'
       }
     },
-    
+
+    // === 🫙 Масла ===
+    flaxOil: {
+      timing: 'withFood',
+      mealTiming: 'С любым приёмом пищи',
+      icon: '🌱',
+      shortTip: 'С едой, не нагревать, хранить в холоде',
+      science: {
+        why: 'Льняное масло — лучший растительный источник ALA (омега-3). Снижает воспаление, поддерживает сердце.',
+        when: 'С любым приёмом пищи. Не использовать для жарки — окисляется при нагреве.',
+        mechanism: 'ALA конвертируется в EPA/DHA (~5-10%). Лигнаны — антиоксиданты. Хранить в холоде, тёмной бутылке.',
+        evidence: 'European Journal of Nutrition: льняное масло снижает CRP и улучшает соотношение омега-6/омега-3.',
+        avoid: 'НЕ нагревать — окисляется, становится вредным. Хранить в холодильнике.',
+        optimalFood: ['хлеб', 'каша', 'салат', 'творог']
+      }
+    },
+
+    oliveOil: {
+      timing: 'withFood',
+      mealTiming: 'С едой, особенно с салатами',
+      icon: '🫒',
+      shortTip: 'Extra virgin — с едой для полифенолов',
+      science: {
+        why: 'Extra virgin оливковое масло богато олеоканталом и олеуропеином — природными противовоспалительными.',
+        when: 'С едой. Холодный отжим (extra virgin) — максимум полифенолов. Умеренный нагрев допустим.',
+        mechanism: 'Олеокантал действует как ибупрофен (ингибирует ЦОЖ). Олеиновая кислота — 73% MUFA — кардиопротективна.',
+        evidence: 'PREDIMED trial: диета с оливковым маслом снижает сердечно-сосудистый риск на 30%.',
+        avoid: 'Рафинированное масло теряет полифенолы. Для жарки при высоких температурах лучше кокосовое.',
+        optimalFood: ['салаты', 'рыба', 'овощи', 'хлеб']
+      }
+    },
+
+    fishOil: {
+      timing: 'withFood',
+      mealTiming: 'С жирной едой (завтрак/обед)',
+      icon: '🐟',
+      shortTip: 'С едой — EPA/DHA готовые (лучше ALA из льна)',
+      science: {
+        why: 'Рыбий жир содержит EPA/DHA напрямую — не требует конверсии. Эффективнее льняного для мозга и сердца.',
+        when: 'С любым приёмом пищи. С жирами усвоение выше на 300%.',
+        mechanism: 'EPA/DHA встраиваются в клеточные мембраны, снижают воспаление через резольвины и протектины.',
+        evidence: 'Meta-analysis (JAMA, 2019): 1-2г EPA+DHA снижают триглицериды на 15-30%.',
+        avoid: 'Хранить в холоде — окисляются. При приёме антикоагулянтов — осторожно.',
+        synergy: ['vitD', 'vitE']
+      }
+    },
+
     bcaa: {
       timing: 'afterTrain',
       mealTiming: 'До/во время/после тренировки',
@@ -17054,7 +17204,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         morningNote: 'Если тренировка утром натощак — BCAA до трени защитят мышцы.'
       }
     },
-    
+
     protein: {
       timing: 'afterTrain',
       mealTiming: 'После тренировки, в любое время',
@@ -17067,9 +17217,104 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         evidence: 'Сывороточный — быстрый (после трени), казеин — медленный (на ночь).',
         morningNote: 'Утром можно, если не добираешь белок из еды.'
       }
+    },
+
+    // === 🛡️ Иммунитет / Дополнительные ===
+    selenium: {
+      timing: 'withFood',
+      mealTiming: 'С завтраком или обедом',
+      icon: '🔬',
+      shortTip: 'С едой — органический Se усваивается лучше',
+      science: {
+        why: 'Селен — ядро антиоксидантных ферментов (GPx, TrxR) и щитовидной железы. Дефицит ослабляет иммунитет.',
+        when: 'С любой едой. Органический Se (селенометионин) усваивается на 45% лучше неорганического.',
+        mechanism: 'Se встраивается в 25+ селенопротеинов. GPx нейтрализует перекисные радикалы; SelP транспортирует Se в ткани. Вместе с vitE — мощный антиоксидантный дуэт.',
+        evidence: 'NPC trial: Se снижает риск рака простаты и лёгких. SELECT trial — неоднозначно при избытке, важна форма.',
+        avoid: 'UL = 400 мкг/день. Передозировка вызывает селеноз: чесночный запах, выпадение волос.',
+        optimalFood: ['бразильский орех (1-2 шт = норма)', 'тунец', 'яйца', 'семена подсолнечника']
+      }
+    },
+
+    // === 🦴 Кости ===
+    calcium: {
+      timing: 'withFood',
+      mealTiming: 'С едой (не с железом!)',
+      icon: '🦴',
+      shortTip: 'С едой, не более 500мг за раз, без железа',
+      science: {
+        why: 'Кальций — основной минерал костей. Без адекватного Ca + D3 кости теряют плотность (остеопороз).',
+        when: 'С едой (нужна желудочная кислота, особенно форма карбоната). Не с железом — конкурируют за усвоение. Разбить на 2 приёма: не более 500мг за раз.',
+        mechanism: 'D3-зависимый транспорт через кальбиндин + пассивная диффузия. Выше 500мг за раз абсорбция не растёт.',
+        evidence: 'Cochrane review: Ca + D3 снижают риск переломов у пожилых. Без D3 эффект минимален.',
+        avoid: 'Не с железом и цинком — снижают их усвоение. Не более 1000-1200мг/день из добавок.',
+        optimalFood: ['молочные продукты', 'сардины', 'брокколи', 'миндаль']
+      }
+    },
+
+    k2: {
+      timing: 'withFat',
+      mealTiming: 'С жирным ужином',
+      icon: '🥬',
+      shortTip: 'С жирной едой — направляет Ca в кости, а не в сосуды',
+      science: {
+        why: 'K2 (MK-7) активирует остеокальцин → Ca идёт в кости. Активирует MGP → Ca убирается из аортальных бляшек.',
+        when: 'Вечером с жирной едой (жирорастворимый — без жиров абсорбция падает вдвое). MK-7 работает 3 дня после приёма.',
+        mechanism: 'Гамма-карбоксилирование глутамата остеокальцина и MGP. D3 увеличивает синтез этих белков, K2 их активирует. Без K2 — Ca может откладываться в сосудах.',
+        evidence: 'Rotterdam Study: высокий K2 снижает кальцификацию аорты на 52%. Dutch RCT: MK-7 улучшает плотность костей у женщин в менопаузе.',
+        avoid: 'Осторожно при приёме варфарина — K2 антагонист. Консультация врача.',
+        optimalFood: ['сыр', 'жирная рыба', 'яичный желток', 'авокадо']
+      }
+    },
+
+    // === 🧠 Мозг ===
+    lecithin: {
+      timing: 'withFood',
+      mealTiming: 'С завтраком или обедом',
+      icon: '🥚',
+      shortTip: 'С едой — холин для памяти и печени',
+      science: {
+        why: 'Лецитин — источник холина: предшественника ацетилхолина (память, внимание) и фосфатидилхолина (мємбраны, печень).',
+        when: 'С едой. Гранулы или капсулы — удобнее всего с завтраком.',
+        mechanism: 'Холин → ацетилхолин (нейромедиатор памяти). Фосфатидилхолин — основа клеточных мембран и желчи (эмульгирует жиры). Дефицит холина → жировой гепатоз.',
+        evidence: 'Framingham Heart Study: высокое потребление холина связано с лучшими когнитивными функциями.',
+        avoid: 'Высокие дозы (10+г): ТМА → ТМАО (кишечный микробиом превращает холин в метаболит, связанный с сердечным риском). Нормальные дозы (700-1200мг) безопасны.',
+        optimalFood: ['яйца (желток)', 'печень', 'соевые бобы']
+      }
+    },
+
+    // === 💧 Красота ===
+    hyaluronic: {
+      timing: 'empty',
+      mealTiming: 'Натощак или между приёмами пищи',
+      icon: '💧',
+      shortTip: 'Натощак — гиалуронат усваивается без конкуренции',
+      science: {
+        why: 'Гиалуроновая кислота удерживает воду в коже и суставах (1г ГК связывает до 6 литров воды).',
+        when: 'Натощак или за 30 мин до еды — меньше конкуренции при абсорбции. Пероральный ГК гидролизируется до олигосахаридов и всасывается.',
+        mechanism: 'Пероральный ГК → короткоцепочечные фрагменты → стимулируют синтез эндогенного ГК через CD44-рецепторы. Суставной эффект — медленный (1-2 месяца).',
+        evidence: 'JAHA (2021): 120мг/день ГК улучшает увлажнение и эластичность кожи. Для суставов — доказательства умеренные.',
+        avoid: 'Аллергия на птицу (если источник — гребешки кур). Веганские формы из ферментации безопаснее.',
+        optimalFood: ['костный бульон', 'куриный хрящ']
+      }
+    },
+
+    // === 🦴 Суставы ===
+    glucosamine: {
+      timing: 'withFood',
+      mealTiming: 'С едой 1-3 раза в день',
+      icon: '🦵',
+      shortTip: 'С едой — эффект накопительный, через 4-8 недель',
+      science: {
+        why: 'Глюкозамин — строительный блок хрящевой ткани. Снижает боль и воспаление в суставах при остеоартрите.',
+        when: 'С едой (улучшает переносимость). Разделить на 2-3 приёма или принять всю дозу утром. Минимальный курс — 8-12 недель.',
+        mechanism: 'Предшественник гликозаминогликанов хряща. Ингибирует ИЛ-1β и ЦОГ-2 (противовоспалительный эффект). Сульфат глюкозамина > гидрохлорид по доказательной базе.',
+        evidence: 'GAIT trial (NEJM): глюкозамина сульфат значим для умеренной/сильной боли. Cochrane: умеренное улучшение при остеоартрите коленей.',
+        avoid: 'Аллергия на моллюсков (источник хитина). Диабет — небольшое влияние на гликемию.',
+        optimalFood: ['куриный хрящ', 'костный бульон']
+      }
     }
   };
-  
+
   /**
    * Генерация персонализированного совета по утренним витаминам
    * Вызывается после утреннего чек-ина
@@ -17079,13 +17324,13 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
    */
   function generateMorningSupplementAdvice(plannedSupplements, context = {}) {
     if (!plannedSupplements || plannedSupplements.length === 0) return null;
-    
+
     const hour = new Date().getHours();
     // Только утром (6-12)
     if (hour < 6 || hour > 12) return null;
-    
+
     const hasEaten = context.mealCount > 0 || context.hasEaten;
-    
+
     // Фильтруем утренние витамины
     const morningSupps = plannedSupplements.filter(id => {
       const info = MORNING_SUPPLEMENT_SCIENCE[id];
@@ -17093,9 +17338,9 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       const timing = info.timing;
       return ['morning', 'empty', 'withFood', 'withFat', 'beforeMeal'].includes(timing);
     });
-    
+
     if (morningSupps.length === 0) return null;
-    
+
     // Сортируем по важности: натощак → до еды → с едой
     const priorityOrder = { empty: 1, beforeMeal: 2, morning: 3, withFood: 4, withFat: 5 };
     morningSupps.sort((a, b) => {
@@ -17103,7 +17348,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       const infoB = MORNING_SUPPLEMENT_SCIENCE[b];
       return (priorityOrder[infoA?.timing] || 99) - (priorityOrder[infoB?.timing] || 99);
     });
-    
+
     // Группируем по типу приёма
     const groups = {
       empty: [],      // Натощак
@@ -17112,13 +17357,13 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       withFat: [],    // С жирной едой
       evening: []     // Вечерние (предупреждение)
     };
-    
+
     for (const id of morningSupps) {
       const info = MORNING_SUPPLEMENT_SCIENCE[id];
       if (!info) continue;
-      
+
       const supp = HEYS.Supplements?.CATALOG?.[id] || { name: id, icon: '💊' };
-      
+
       if (info.timing === 'evening' || info.timing === 'beforeBed') {
         groups.evening.push({ id, name: supp.name, icon: info.icon || supp.icon, info });
       } else if (info.timing === 'empty') {
@@ -17131,12 +17376,12 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         groups.withFood.push({ id, name: supp.name, icon: info.icon || supp.icon, info });
       }
     }
-    
+
     // Формируем сообщение и детали
     let title = '';
     let details = [];
     let priority = 1; // Высокий приоритет — первый совет дня
-    
+
     // Если есть вечерние — предупреждаем
     if (groups.evening.length > 0) {
       const eveningNames = groups.evening.map(s => `${s.icon} ${s.name}`).join(', ');
@@ -17145,12 +17390,12 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         details.push(`   └ ${s.name}: ${s.info.science.why}`);
       }
     }
-    
+
     // Если не ел и есть натощак — рекомендуем сначала их
     if (!hasEaten && groups.empty.length > 0) {
       const emptyNames = groups.empty.map(s => `${s.icon} ${s.name}`).join(', ');
       title = `💊 Сейчас: ${emptyNames}`;
-      
+
       for (const s of groups.empty) {
         details.push(`**${s.icon} ${s.name}** — ${s.info.shortTip}`);
         details.push(`🔬 ${s.info.science.why}`);
@@ -17158,43 +17403,43 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           details.push(`⚠️ ${s.info.science.avoid}`);
         }
       }
-      
+
       // Напоминание о витаминах с едой
       const withFoodAll = [...groups.withFood, ...groups.withFat];
       if (withFoodAll.length > 0) {
         const withFoodNames = withFoodAll.map(s => s.name).join(', ');
         details.push(`\n⏰ **После завтрака:** ${withFoodNames}`);
       }
-    } 
+    }
     // Если уже ел или нет натощак витаминов
     else {
       const allMorning = [...groups.beforeMeal, ...groups.withFood, ...groups.withFat, ...groups.empty];
-      
+
       if (allMorning.length === 0) {
         return null; // Нет утренних витаминов
       }
-      
+
       // Выбираем главный витамин для заголовка
       const mainSupp = allMorning[0];
       const otherCount = allMorning.length - 1;
-      
+
       if (otherCount > 0) {
         title = `💊 Время витаминов: ${mainSupp.icon} ${mainSupp.name} и ещё ${otherCount}`;
       } else {
         title = `💊 Время: ${mainSupp.icon} ${mainSupp.name}`;
       }
-      
+
       // Детали по каждому
       for (const s of allMorning.slice(0, 4)) { // Максимум 4 в деталях
         details.push(`**${s.icon} ${s.name}** — ${s.info.shortTip}`);
         details.push(`🔬 ${s.info.science.why}`);
       }
-      
+
       if (allMorning.length > 4) {
         details.push(`\n...и ещё ${allMorning.length - 4} витаминов`);
       }
     }
-    
+
     // Добавляем синергии если есть
     const allIds = morningSupps;
     if (allIds.includes('iron') && allIds.includes('vitC')) {
@@ -17206,7 +17451,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     if (allIds.includes('vitD') && allIds.includes('omega3')) {
       details.push(`\n✨ **Синергия:** D3 + Omega-3 = противовоспалительный дуэт!`);
     }
-    
+
     // Конфликты
     if (allIds.includes('iron') && allIds.includes('calcium')) {
       details.push(`\n⚠️ **Конфликт:** Железо и Кальций — раздели на 2 часа!`);
@@ -17214,7 +17459,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     if (allIds.includes('iron') && allIds.includes('zinc')) {
       details.push(`\n⚠️ **Конфликт:** Железо и Цинк — принимай раздельно!`);
     }
-    
+
     return {
       id: 'morning_supplements_reminder',
       icon: '💊',
@@ -17232,8 +17477,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         label: '✅ Принял',
         onClick: () => {
           const dateKey = new Date().toISOString().slice(0, 10);
-          if (HEYS.Supplements?.markAllSupplementsTaken) {
-            HEYS.Supplements.markAllSupplementsTaken(dateKey);
+          if (HEYS.Supplements?.markSupplementsTaken) {
+            HEYS.Supplements.markSupplementsTaken(dateKey, morningSupps);
           }
         }
       }
@@ -17243,7 +17488,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
   // ═══════════════════════════════════════════════════════════════════════════
   // 🌙 ГЕНЕРАЦИЯ ВЕЧЕРНЕГО СОВЕТА ПО ВИТАМИНАМ
   // ═══════════════════════════════════════════════════════════════════════════
-  
+
   /**
    * Генерирует совет-напоминание о вечерних витаминах
    * Вызывается при добавлении еды вечером (18:00-23:00)
@@ -17254,11 +17499,11 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
    */
   function generateEveningSupplementAdvice(plannedSupplements, context = {}) {
     if (!plannedSupplements || plannedSupplements.length === 0) return null;
-    
+
     const hour = new Date().getHours();
     // Только вечером (18-23)
     if (hour < 18 || hour > 23) return null;
-    
+
     // Фильтруем вечерние витамины
     const eveningSupps = plannedSupplements.filter(id => {
       const info = MORNING_SUPPLEMENT_SCIENCE[id];
@@ -17266,9 +17511,9 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       const timing = info.timing;
       return ['evening', 'beforeBed'].includes(timing);
     });
-    
+
     if (eveningSupps.length === 0) return null;
-    
+
     // Сортируем: вечерние → перед сном
     const priorityOrder = { evening: 1, beforeBed: 2 };
     eveningSupps.sort((a, b) => {
@@ -17276,45 +17521,45 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       const infoB = MORNING_SUPPLEMENT_SCIENCE[b];
       return (priorityOrder[infoA?.timing] || 99) - (priorityOrder[infoB?.timing] || 99);
     });
-    
+
     // Группируем
     const groups = {
       evening: [],   // Вечерние (с ужином)
       beforeBed: []  // Перед сном
     };
-    
+
     for (const id of eveningSupps) {
       const info = MORNING_SUPPLEMENT_SCIENCE[id];
       if (!info) continue;
-      
+
       const supp = HEYS.Supplements?.CATALOG?.[id] || { name: id, icon: '💊' };
       const item = { id, name: supp.name, icon: info.icon || supp.icon, info };
-      
+
       if (info.timing === 'beforeBed') {
         groups.beforeBed.push(item);
       } else {
         groups.evening.push(item);
       }
     }
-    
+
     // Формируем сообщение
     let title = '';
     let details = [];
-    
+
     const allEvening = [...groups.evening, ...groups.beforeBed];
-    
+
     if (allEvening.length === 0) return null;
-    
+
     // Заголовок
     const mainSupp = allEvening[0];
     const otherCount = allEvening.length - 1;
-    
+
     if (otherCount > 0) {
       title = `🌙 Вечерние витамины: ${mainSupp.icon} ${mainSupp.name} и ещё ${otherCount}`;
     } else {
       title = `🌙 Время: ${mainSupp.icon} ${mainSupp.name}`;
     }
-    
+
     // Детали по каждому
     if (groups.evening.length > 0) {
       details.push('**С ужином:**');
@@ -17323,7 +17568,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         details.push(`   🔬 ${s.info.science.why}`);
       }
     }
-    
+
     if (groups.beforeBed.length > 0) {
       if (groups.evening.length > 0) details.push('');
       details.push('**Перед сном (через 1-2ч):**');
@@ -17332,7 +17577,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         details.push(`   🔬 ${s.info.science.why}`);
       }
     }
-    
+
     // Синергии вечерних
     const allIds = eveningSupps;
     if (allIds.includes('magnesium') && allIds.includes('glycine')) {
@@ -17341,7 +17586,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     if (allIds.includes('magnesium') && allIds.includes('melatonin')) {
       details.push(`\n✨ **Синергия:** Магний + Мелатонин = быстрое засыпание!`);
     }
-    
+
     return {
       id: 'evening_supplements_reminder',
       icon: '🌙',
@@ -17386,7 +17631,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       FOOD_NUTRIENT_SOURCES,
       MORNING_SUPPLEMENT_SCIENCE  // 🆕 Научные обоснования времени приёма
     },
-    
+
     // Научные функции
     getSupplementScience,
     getOptimalTime,
@@ -21522,12 +21767,12 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       }
     },
 
-    // Только витамины
+    // Только добавки
     supplements: (dateKey, onComplete) => {
       if (HEYS.StepModal) {
         HEYS.StepModal.show({
           steps: ['supplements'],
-          title: '💊 Витамины',
+          title: '💊 Добавки',
           showProgress: false,
           context: { dateKey: dateKey || new Date().toISOString().slice(0, 10) },
           onComplete

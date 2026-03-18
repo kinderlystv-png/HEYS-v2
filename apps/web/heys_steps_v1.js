@@ -3369,13 +3369,13 @@
       },
         selected.length > 0
           ? `💊 Выбрано: ${selected.length}`
-          : '💊 Выберите витамины на сегодня'
+          : '💊 Выберите добавки на сегодня'
       )
     );
   }
 
   registerStep('supplements', {
-    title: 'Витамины',
+    title: 'Добавки',
     hint: 'Что планируете принять?',
     icon: '💊',
     canSkip: true,

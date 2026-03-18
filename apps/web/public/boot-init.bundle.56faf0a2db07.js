@@ -4873,29 +4873,29 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     vitD: { name: 'D3', icon: '☀️', category: 'immune', timing: 'withFat', tip: 'Лучше с жирной едой' },
     vitC: { name: 'C', icon: '🍊', category: 'immune', timing: 'anytime', tip: 'Улучшает усвоение железа' },
     zinc: { name: 'Цинк', icon: '🛡️', category: 'immune', timing: 'withFood', tip: 'Не сочетать с кальцием' },
-    selenium: { name: 'Селен', icon: '🔬', category: 'immune', timing: 'withFood' },
+    selenium: { name: 'Селен', icon: '🔬', category: 'immune', timing: 'withFood', tip: 'С витамином E — антиоксидантный дуэт' },
 
     // === 🧠 Мозг и нервы ===
     omega3: { name: 'Омега-3', icon: '🐟', category: 'brain', timing: 'withFood', tip: 'Усиливает D3' },
     magnesium: { name: 'Магний', icon: '💤', category: 'brain', timing: 'evening', tip: 'Расслабляет мышцы' },
     b12: { name: 'B12', icon: '⚡', category: 'brain', timing: 'morning', tip: 'Даёт энергию' },
-    b6: { name: 'B6', icon: '🧬', category: 'brain', timing: 'morning' },
-    lecithin: { name: 'Лецитин', icon: '🥚', category: 'brain', timing: 'withFood' },
+    b6: { name: 'B6', icon: '🧬', category: 'brain', timing: 'morning', tip: 'С магнием — усваивается лучше' },
+    lecithin: { name: 'Лецитин', icon: '🥚', category: 'brain', timing: 'withFood', tip: 'Холин для памяти — с едой' },
 
     // === 🦴 Кости и суставы ===
     calcium: { name: 'Кальций', icon: '🦴', category: 'bones', timing: 'withFood', tip: 'Не с железом!' },
     k2: { name: 'K2', icon: '🥬', category: 'bones', timing: 'withFat', tip: 'Синергия с D3' },
     collagen: { name: 'Коллаген', icon: '✨', category: 'bones', timing: 'empty', tip: 'Натощак + витамин C' },
-    glucosamine: { name: 'Глюкозамин', icon: '🦵', category: 'bones', timing: 'withFood' },
+    glucosamine: { name: 'Глюкозамин', icon: '🦵', category: 'bones', timing: 'withFood', tip: 'Эффект накопительный, через 4-8 недель' },
 
     // === 💪 Спорт ===
     creatine: { name: 'Креатин', icon: '💪', category: 'sport', timing: 'afterTrain', tip: '5г в день' },
-    bcaa: { name: 'BCAA', icon: '🏋️', category: 'sport', timing: 'afterTrain' },
+    bcaa: { name: 'BCAA', icon: '🏋️', category: 'sport', timing: 'afterTrain', tip: 'Натощак до трени защищает мышцы' },
     protein: { name: 'Протеин', icon: '🥛', category: 'sport', timing: 'afterTrain', tip: '30мин после трени' },
 
     // === 💇 Красота ===
     biotin: { name: 'Биотин', icon: '💇', category: 'beauty', timing: 'withFood', tip: 'Волосы и ногти' },
-    vitE: { name: 'E', icon: '🌻', category: 'beauty', timing: 'withFat' },
+    vitE: { name: 'E', icon: '🌻', category: 'beauty', timing: 'withFat', tip: 'Защищает Омега-3 от окисления' },
     hyaluronic: { name: 'Гиалуроновая', icon: '💧', category: 'beauty', timing: 'empty' },
 
     // === 🌸 Женское здоровье ===
@@ -4915,6 +4915,11 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     cinnamon: { name: 'Корица', icon: '🍂', category: 'metabolism', timing: 'withFood', insulinBonus: -0.10, tip: '💡 -10% инсулиновая волна' },
     chromium: { name: 'Хром', icon: '⚙️', category: 'metabolism', timing: 'withFood', tip: 'Стабилизирует сахар' },
     vinegar: { name: 'Уксус', icon: '🍎', category: 'metabolism', timing: 'beforeMeal', insulinBonus: -0.20, tip: '💡 -20% инсулиновая волна' },
+
+    // === 🫙 Масла ===
+    flaxOil: { name: 'Льняное масло', icon: '🌱', category: 'oils', timing: 'withFood', tip: 'Не нагревать! ALA-омега-3, хранить в холоде' },
+    oliveOil: { name: 'Оливковое масло', icon: '🫒', category: 'oils', timing: 'withFood', tip: 'Нерафинированное — больше полифенолов' },
+    fishOil: { name: 'Рыбий жир (масло)', icon: '🫗', category: 'oils', timing: 'withFood', tip: 'EPA/DHA — с едой усвоение ×3' },
   };
 
   // === КАТЕГОРИИ ===
@@ -4928,6 +4933,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     sleep: { name: 'Сон', icon: '💤', order: 7 },
     energy: { name: 'Энергия', icon: '⚡', order: 8 },
     metabolism: { name: 'Метаболизм', icon: '🧪', order: 9 },
+    oils: { name: 'Масла', icon: '🫙', order: 10 },
   };
 
   // === ВЗАИМОДЕЙСТВИЯ v2.0 ===
@@ -5662,7 +5668,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     // Утро (7-10) — напоминание об утренних
     if (hour >= 7 && hour <= 10 && morningSupps.length > 0) {
       return {
-        message: '🌅 Утренние витамины ждут!',
+        message: '🌅 Утренние добавки ждут!',
         urgency: 'high',
         suppIds: morningSupps,
       };
@@ -6390,7 +6396,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
               zIndex: 1
             }
           },
-            React.createElement('span', { style: { fontWeight: '700', fontSize: '18px' } }, '💊 Мой курс витаминов'),
+            React.createElement('span', { style: { fontWeight: '700', fontSize: '18px' } }, '💊 Мой курс добавок'),
             React.createElement('button', {
               onClick: closeScreen,
               style: {
@@ -6477,7 +6483,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                   marginBottom: '12px'
                 }
               },
-                React.createElement('span', { style: { fontWeight: '600', fontSize: '15px' } }, `✅ Мои витамины (${planned.length})`),
+                React.createElement('span', { style: { fontWeight: '600', fontSize: '15px' } }, `✅ Мои добавки (${planned.length})`),
                 React.createElement('button', {
                   onClick: () => {
                     if (HEYS.showCheckin?.supplements) {
@@ -6507,7 +6513,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
               // Список витаминов с настройками
               planned.length === 0
                 ? React.createElement('div', { style: { color: '#94a3b8', fontSize: '13px', textAlign: 'center', padding: '20px' } },
-                  'Витамины не выбраны. Нажмите "+ Изменить" чтобы добавить.'
+                  'Добавки не выбраны. Нажмите "+ Изменить" чтобы добавить.'
                 )
                 : React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: '8px' } },
                   planned.map(id => {
@@ -7049,7 +7055,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
               fontSize: 'var(--heys-diary-card-title-size, 14px)',
               color: 'var(--heys-diary-card-title-color, var(--text, #1e293b))'
             }
-          }, '💊 Витамины')
+          }, '💊 Добавки')
         ),
         React.createElement('div', {
           style: {
@@ -7064,7 +7070,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           }, '💊'),
           React.createElement('div', {
             style: { fontSize: '14px', fontWeight: '500', color: '#334155', marginBottom: '4px' }
-          }, 'Витамины не настроены'),
+          }, 'Добавки не настроены'),
           React.createElement('div', {
             style: { fontSize: '12px', color: '#94a3b8', marginBottom: '12px' }
           }, 'Отслеживайте приём добавок и получайте умные рекомендации'),
@@ -7099,24 +7105,6 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
     // v3.3: Проверяем наличие научных данных
     const hasScience = HEYS.Supplements.SCIENCE?.BIOAVAILABILITY;
-
-    const cardStateKey = `heys_supplements_card_${dateKey}`;
-    const isExpanded = readSessionValue(cardStateKey, false);
-
-    const setExpanded = (next) => {
-      writeSessionValue(cardStateKey, !!next);
-      if (onForceUpdate) onForceUpdate();
-    };
-
-    const toggleExpanded = (e) => {
-      if (e?.stopPropagation) e.stopPropagation();
-      setExpanded(!isExpanded);
-    };
-
-    const handleCardClick = (e) => {
-      if (isInteractiveTarget(e?.target)) return;
-      setExpanded(!isExpanded);
-    };
 
     const toggleTaken = (id) => {
       const isTaken = taken.includes(id);
@@ -7164,24 +7152,31 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         key: groupId,
         style: { marginBottom: '12px' }
       },
-        // Заголовок группы с batch-кнопкой
-        React.createElement('div', {
+        // Заголовок группы — кнопка для batch-отметки всей группы
+        React.createElement('button', {
+          onClick: (e) => {
+            e.stopPropagation();
+            if (!allGroupTaken) markGroupTaken();
+          },
           style: {
             marginBottom: '8px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            gap: '8px'
-          }
+            gap: '8px',
+            width: '100%',
+            background: allGroupTaken ? '#f0fdf4' : theme.bg,
+            border: `1px solid ${allGroupTaken ? '#86efac' : theme.border}`,
+            borderRadius: '12px',
+            padding: '8px 12px',
+            cursor: allGroupTaken ? 'default' : 'pointer',
+            transition: 'background 0.15s'
+          },
+          title: allGroupTaken ? 'Все приняты' : `Нажми — отметить все как принятые`
         },
-          // Бейдж времени приёма (слева)
-          React.createElement('div', {
+          React.createElement('span', {
             style: {
-              background: theme.bg,
-              border: `1px solid ${theme.border}`,
-              color: theme.fg,
-              borderRadius: '999px',
-              padding: '6px 12px',
+              color: allGroupTaken ? '#16a34a' : theme.fg,
               fontSize: '13px',
               fontWeight: '800',
               lineHeight: '16px',
@@ -7191,26 +7186,16 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             }
           },
             group.label,
-            allGroupTaken && React.createElement('span', { style: { fontWeight: '900' } }, '✓')
+            allGroupTaken && React.createElement('span', null, '✓')
           ),
-
-          // Batch-кнопка (справа)
-          React.createElement('div', null,
-            suppIds.length > 1 && React.createElement('button', {
-              onClick: allGroupTaken ? null : markGroupTaken,
-              style: {
-                background: allGroupTaken ? '#f0fdf4' : '#dbeafe',
-                border: allGroupTaken ? '1px solid #86efac' : '1px solid #60a5fa',
-                borderRadius: '10px',
-                padding: '6px 10px',
-                fontSize: '12px',
-                fontWeight: '700',
-                color: allGroupTaken ? '#16a34a' : '#2563eb',
-                cursor: allGroupTaken ? 'default' : 'pointer'
-              },
-              title: allGroupTaken ? 'Все приняты' : `Отметить все: ${notTakenInGroup.length} шт`
-            }, allGroupTaken ? '✓ выпил все' : 'выпить все')
-          )
+          !allGroupTaken && React.createElement('span', {
+            style: {
+              fontSize: '11px',
+              color: theme.fg,
+              opacity: 0.7,
+              fontWeight: '600'
+            }
+          }, `${groupTakenCount}/${suppIds.length}`)
         ),
         // Чипы витаминов
         React.createElement('div', {
@@ -7327,7 +7312,6 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
     return React.createElement('div', {
       className: 'compact-card supplements-card widget widget--supplements-diary' + (allTaken ? ' widget--supplements-diary--all-taken' : ''),
-      onClick: handleCardClick,
       style: {
         display: 'block',
         marginBottom: '12px',
@@ -7352,7 +7336,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
               fontSize: 'var(--heys-diary-card-title-size, 14px)',
               color: 'var(--heys-diary-card-title-color, var(--text, #1e293b))'
             }
-          }, '💊 Витамины'),
+          }, '💊 Добавки'),
           // Прогресс-бар
           React.createElement('div', {
             style: {
@@ -7389,7 +7373,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             }, `${takenCount}/${planned.length}`)
           )
         ),
-        // Правая часть: бонус волны + кнопка курса + toggle
+        // Правая часть: бонус волны + кнопка курса
         React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '8px' } },
           insulinBonus < 0 && React.createElement('span', {
             style: {
@@ -7403,7 +7387,6 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             title: 'Бонус к инсулиновой волне от добавок'
           }, `🌊${Math.round(insulinBonus * 100)}%`),
           React.createElement('button', {
-            'data-supp-collapse-ignore': '1',
             onClick: (e) => {
               e.stopPropagation();
               openMyCourseScreen(dateKey, onForceUpdate);
@@ -7422,53 +7405,19 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
               gap: '4px'
             },
             title: 'Открыть настройки курса'
-          }, '📊'),
-          React.createElement('button', {
-            'data-supp-collapse-ignore': '1',
-            onClick: toggleExpanded,
-            style: {
-              width: '28px',
-              height: '28px',
-              borderRadius: '8px',
-              border: '1px solid #e2e8f0',
-              background: 'var(--bg-secondary, #f8fafc)',
-              color: '#64748b',
-              fontSize: '14px',
-              fontWeight: '700',
-              cursor: 'pointer'
-            },
-            title: isExpanded ? 'Свернуть' : 'Развернуть'
-          }, isExpanded ? '▴' : '▾')
+          }, '📊')
         )
       ),
-      // v4.1: Действие (2 строка)
-      React.createElement('div', {
+      // v4.1: Действие (2 строка) — только статус «все приняты»
+      allTaken && React.createElement('div', {
         style: {
           display: 'flex',
           alignItems: 'center',
           gap: '8px',
-          marginBottom: isExpanded ? '10px' : 0
+          marginBottom: '10px'
         }
       },
-        !allTaken && React.createElement('button', {
-          onClick: (e) => {
-            e.stopPropagation();
-            markAll();
-          },
-          style: {
-            flex: 1,
-            padding: '10px 12px',
-            borderRadius: '10px',
-            border: '1px solid #60a5fa',
-            background: 'var(--bg-secondary, #f8fafc)',
-            cursor: 'pointer',
-            fontSize: '13px',
-            fontWeight: '600',
-            color: '#2563eb',
-            boxShadow: '0 1px 2px rgba(59, 130, 246, 0.12)'
-          }
-        }, 'Выпить все'),
-        allTaken && React.createElement('div', {
+        React.createElement('div', {
           style: {
             flex: 1,
             textAlign: 'center',
@@ -7477,10 +7426,10 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             borderRadius: '10px'
           }
         },
-          React.createElement('span', { style: { fontSize: '12px', color: '#16a34a', fontWeight: '600' } }, '🎉 Все витамины приняты')
+          React.createElement('span', { style: { fontSize: '12px', color: '#16a34a', fontWeight: '600' } }, '🎉 Все добавки приняты')
         )
       ),
-      isExpanded && React.createElement('div', { className: 'supplements-card__expanded' },
+      React.createElement('div', { className: 'supplements-card__expanded' },
         // v3.1: Напоминание по времени
         (() => {
           const reminder = getTimeReminder(planned, taken);

@@ -483,12 +483,12 @@
       }
     },
 
-    // Только витамины
+    // Только добавки
     supplements: (dateKey, onComplete) => {
       if (HEYS.StepModal) {
         HEYS.StepModal.show({
           steps: ['supplements'],
-          title: '💊 Витамины',
+          title: '💊 Добавки',
           showProgress: false,
           context: { dateKey: dateKey || new Date().toISOString().slice(0, 10) },
           onComplete
