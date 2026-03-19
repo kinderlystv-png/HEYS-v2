@@ -15789,6 +15789,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
         }
       };
 
+      let activeMultiProductMode = multiProductMode;
+
       const openAddModal = (override = {}) => {
         const latestDay = override.day || getLatestDay();
         const latestMeal = latestDay?.meals?.[mi] || {};
@@ -15796,6 +15798,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
         const nextMultiProductMode = typeof override.multiProductMode === 'boolean'
           ? override.multiProductMode
           : multiProductMode;
+
+        activeMultiProductMode = nextMultiProductMode;
 
         if (window.HEYS?.AddProductStep?.show) {
           window.HEYS.AddProductStep.show({
@@ -15976,7 +15980,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
           }
         } catch (e) { }
 
-        if (multiProductMode && HEYS.dayAddProductSummary?.show) {
+        if (activeMultiProductMode && HEYS.dayAddProductSummary?.show) {
           requestAnimationFrame(() => {
             setTimeout(() => {
               HEYS.dayAddProductSummary.show({
@@ -20644,6 +20648,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
         }
       };
 
+      let activeMultiProductMode = multiProductMode;
+
       const openAddModal = (override = {}) => {
         const latestDay = override.day || getLatestDay();
         const latestMeal = latestDay?.meals?.[mi] || {};
@@ -20651,6 +20657,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
         const nextMultiProductMode = typeof override.multiProductMode === 'boolean'
           ? override.multiProductMode
           : multiProductMode;
+
+        activeMultiProductMode = nextMultiProductMode;
 
         if (window.HEYS?.AddProductStep?.show) {
           window.HEYS.AddProductStep.show({
@@ -20831,7 +20839,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
           }
         } catch (e) { }
 
-        if (multiProductMode && HEYS.dayAddProductSummary?.show) {
+        if (activeMultiProductMode && HEYS.dayAddProductSummary?.show) {
           requestAnimationFrame(() => {
             setTimeout(() => {
               HEYS.dayAddProductSummary.show({

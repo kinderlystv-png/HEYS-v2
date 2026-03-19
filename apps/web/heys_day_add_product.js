@@ -386,6 +386,8 @@
         }
       };
 
+      let activeMultiProductMode = multiProductMode;
+
       const openAddModal = (override = {}) => {
         const latestDay = override.day || getLatestDay();
         const latestMeal = latestDay?.meals?.[mi] || {};
@@ -393,6 +395,8 @@
         const nextMultiProductMode = typeof override.multiProductMode === 'boolean'
           ? override.multiProductMode
           : multiProductMode;
+
+        activeMultiProductMode = nextMultiProductMode;
 
         if (window.HEYS?.AddProductStep?.show) {
           window.HEYS.AddProductStep.show({
@@ -573,7 +577,7 @@
           }
         } catch (e) { }
 
-        if (multiProductMode && HEYS.dayAddProductSummary?.show) {
+        if (activeMultiProductMode && HEYS.dayAddProductSummary?.show) {
           requestAnimationFrame(() => {
             setTimeout(() => {
               HEYS.dayAddProductSummary.show({
