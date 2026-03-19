@@ -5213,6 +5213,18 @@ NOVA: 1
           mealIndex: context.mealIndex
         });
 
+        // 🔊 Harm-based feedback sound
+        if (HEYS.audio) {
+          const harm = typeof productForSubmit?.harm === 'number' ? productForSubmit.harm : 0;
+          if (harm >= 7) {
+            HEYS.audio.play('foodAddedHarmful');
+          } else if (harm >= 3) {
+            HEYS.audio.play('foodAddedModerate');
+          } else {
+            HEYS.audio.play('foodAdded');
+          }
+        }
+
         window.dispatchEvent(new CustomEvent('heysProductAdded', {
           detail: { product: productForSubmit, grams }
         }));

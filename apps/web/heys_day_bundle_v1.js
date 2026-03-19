@@ -2002,13 +2002,19 @@
         }, []);
 
         const playAdviceSound = useCallback(() => {
-            if (adviceSoundEnabled && HEYSRef?.sounds) {
+            if (!adviceSoundEnabled) return;
+            if (HEYS.audio) {
+                HEYS.audio.play('adviceAppear');
+            } else if (HEYSRef?.sounds) {
                 HEYSRef.sounds.ding();
             }
         }, [adviceSoundEnabled, HEYSRef]);
 
         const playAdviceHideSound = useCallback(() => {
-            if (adviceSoundEnabled && HEYSRef?.sounds) {
+            if (!adviceSoundEnabled) return;
+            if (HEYS.audio) {
+                HEYS.audio.play('adviceDismiss');
+            } else if (HEYSRef?.sounds) {
                 HEYSRef.sounds.whoosh();
             }
         }, [adviceSoundEnabled, HEYSRef]);
@@ -4762,7 +4768,8 @@
     getProductFromItem,
     per100,
     scale,
-    onAddMore
+    onAddMore,
+    onAddLast
   }) {
     if (!HEYS.ConfirmModal?.show) return;
 
@@ -4817,6 +4824,36 @@
 
     const isGoalReached = remainingKcal <= 0;
     const mealName = currentMeal.name || `Приём ${mealIndex + 1}`;
+    const summaryActions = [
+      {
+        key: 'finish',
+        label: 'Завершить',
+        value: 'finish',
+        style: 'primary',
+        variant: 'fill',
+        row: 0,
+        isCancel: true
+      },
+      {
+        key: 'add-last',
+        label: 'Добавить последний',
+        value: 'add-last',
+        style: 'warning',
+        variant: 'fill',
+        row: 0,
+        isDefault: true,
+        className: 'confirm-modal-btn--last-one'
+      },
+      {
+        key: 'add-more',
+        label: 'Добавить ещё несколько',
+        value: 'add-more',
+        style: 'success',
+        variant: 'fill',
+        row: 1,
+        className: 'confirm-modal-btn--multi-continue'
+      }
+    ];
 
     const mealItems = (currentMeal.items || []).map((item) => {
       const product = getProductFromItem(item, localPIndex) || { name: item.name || '?' };
@@ -4914,15 +4951,12 @@
             }, eatenKcal + ' ккал')
           )
         ),
-        confirmText: 'Добавить ещё',
-        cancelText: 'Завершить 🎊',
-        confirmStyle: 'success',
-        cancelStyle: 'primary',
-        confirmVariant: 'fill',
-        cancelVariant: 'fill'
+        actions: summaryActions,
+        defaultActionValue: 'add-last',
+        cancelActionValue: 'finish'
       });
 
-      if (!modalResult && HEYS.Confetti?.fire) {
+      if (modalResult === 'finish' && HEYS.Confetti?.fire) {
         HEYS.Confetti.fire();
       }
     } else {
@@ -4943,16 +4977,17 @@
             '⚠️ Похоже, приём уже тяжеловат.'
           )
         ),
-        confirmText: 'Добавить ещё',
-        cancelText: 'Завершить',
-        confirmStyle: 'success',
-        cancelStyle: 'primary',
-        confirmVariant: 'fill',
-        cancelVariant: 'fill'
+        actions: summaryActions,
+        defaultActionValue: 'add-last',
+        cancelActionValue: 'finish'
       });
     }
 
-    if (modalResult && onAddMore) {
+    if (modalResult === 'add-last' && onAddLast) {
+      onAddLast(currentDay);
+    }
+
+    if (modalResult === 'add-more' && onAddMore) {
       onAddMore(currentDay);
     }
   }
@@ -5101,6 +5136,9 @@
         const latestDay = override.day || getLatestDay();
         const latestMeal = latestDay?.meals?.[mi] || {};
         const latestProducts = getLatestProducts();
+        const nextMultiProductMode = typeof override.multiProductMode === 'boolean'
+          ? override.multiProductMode
+          : multiProductMode;
 
         if (window.HEYS?.AddProductStep?.show) {
           window.HEYS.AddProductStep.show({
@@ -5109,7 +5147,7 @@
             products: latestProducts,
             day: latestDay,
             dateKey: date,
-            multiProductMode,
+            multiProductMode: nextMultiProductMode,
             onAdd: handleAdd,
             onAddPhoto: handleAddPhoto,
             onNewProduct: handleNewProduct
@@ -5291,7 +5329,8 @@
                 getProductFromItem,
                 per100,
                 scale,
-                onAddMore: (updatedDay) => openAddModal({ day: updatedDay })
+                onAddMore: (updatedDay) => openAddModal({ day: updatedDay }),
+                onAddLast: (updatedDay) => openAddModal({ day: updatedDay, multiProductMode: false })
               });
             }, 100);
           });

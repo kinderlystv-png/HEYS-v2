@@ -3725,109 +3725,155 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
   // === 🔊 Настройки звуков ===
   function SoundSettingsCard() {
     const [settings, setSettings] = React.useState(() => {
-      return window.HEYS?.game?.getSoundSettings?.() || { enabled: true, volume: 0.15 };
+      return window.HEYS?.audio?.getSettings?.() || {
+        masterEnabled: true,
+        volume: 0.12,
+        hapticEnabled: true,
+        quietHoursEnabled: true
+      };
     });
 
-    const handleToggle = (e) => {
-      const newSettings = { ...settings, enabled: e.target.checked };
+    const handleMasterToggle = (e) => {
+      const newSettings = { ...settings, masterEnabled: e.target.checked };
       setSettings(newSettings);
-      if (window.HEYS?.game?.setSoundSettings) {
-        window.HEYS.game.setSoundSettings(newSettings);
-      }
+      window.HEYS?.audio?.saveSettings?.({ masterEnabled: e.target.checked });
+    };
+
+    const handleHapticToggle = (e) => {
+      const newSettings = { ...settings, hapticEnabled: e.target.checked };
+      setSettings(newSettings);
+      window.HEYS?.audio?.saveSettings?.({ hapticEnabled: e.target.checked });
+    };
+
+    const handleQuietToggle = (e) => {
+      const newSettings = { ...settings, quietHoursEnabled: e.target.checked };
+      setSettings(newSettings);
+      window.HEYS?.audio?.saveSettings?.({ quietHoursEnabled: e.target.checked });
     };
 
     const handleVolumeChange = (e) => {
       const volume = parseFloat(e.target.value);
       const newSettings = { ...settings, volume };
       setSettings(newSettings);
-      if (window.HEYS?.game?.setSoundSettings) {
-        window.HEYS.game.setSoundSettings(newSettings);
-      }
+      window.HEYS?.audio?.saveSettings?.({ volume });
     };
 
-    // Тест звука
-    const testSound = () => {
-      if (window.HEYS?.game) {
-        // Временно включаем звук для теста
-        const wasEnabled = settings.enabled;
-        if (!wasEnabled) {
-          window.HEYS.game.setSoundSettings({ ...settings, enabled: true });
-        }
-        // Проигрываем тестовый звук через внутренний API
-        if (typeof window.playXPSound === 'function') {
-          window.playXPSound(true);
-        }
-        // Возвращаем настройки
-        if (!wasEnabled) {
-          setTimeout(() => {
-            window.HEYS.game.setSoundSettings({ ...settings, enabled: false });
-          }, 500);
-        }
-      }
+    const previewReward = () => {
+      window.HEYS?.audio?.preview?.('reward');
+    };
+
+    const previewSuccess = () => {
+      window.HEYS?.audio?.preview?.('success');
+    };
+
+    const previewTriumph = () => {
+      window.HEYS?.audio?.preview?.('triumph');
     };
 
     return React.createElement('div', { className: 'profile-field-group' },
       React.createElement('div', { className: 'profile-field-group__header' },
         React.createElement('span', { className: 'profile-field-group__icon' }, '🔊'),
-        React.createElement('span', { className: 'profile-field-group__title' }, 'Звуковые эффекты')
+        React.createElement('span', { className: 'profile-field-group__title' }, 'Звук и вибрация')
       ),
-      React.createElement('div', { style: { marginTop: '8px' } },
-        // Toggle включения
-        React.createElement('div', {
-          style: {
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            marginBottom: '12px'
-          }
-        },
-          React.createElement('span', { style: { color: 'var(--gray-600)' } },
-            'Звуки XP и достижений'
-          ),
+      React.createElement('div', { className: 'sound-settings-card' },
+
+        // Master toggle
+        React.createElement('div', { className: 'sound-settings-card__row' },
+          React.createElement('span', { className: 'sound-settings-card__label sound-settings-card__label--strong' }, 'Звуки включены'),
           React.createElement('label', { className: 'toggle-switch' },
             React.createElement('input', {
               type: 'checkbox',
-              checked: settings.enabled,
-              onChange: handleToggle
+              checked: settings.masterEnabled !== false,
+              onChange: handleMasterToggle
             }),
             React.createElement('span', { className: 'toggle-slider' })
           )
         ),
-        // Громкость (показываем только если включено)
-        settings.enabled && React.createElement('div', {
-          style: {
-            display: 'flex',
-            alignItems: 'center',
-            gap: '12px',
-            marginBottom: '12px'
-          }
-        },
-          React.createElement('span', {
-            style: { color: 'var(--gray-500)', fontSize: '13px', minWidth: '70px' }
-          }, 'Громкость:'),
-          React.createElement('input', {
-            type: 'range',
-            min: '0.05',
-            max: '0.3',
-            step: '0.05',
-            value: settings.volume,
-            onChange: handleVolumeChange,
-            style: { flex: 1, accentColor: 'var(--primary-500)' }
-          }),
-          React.createElement('span', {
-            style: { color: 'var(--gray-600)', fontSize: '13px', minWidth: '40px' }
-          }, `${Math.round(settings.volume * 100)}%`)
+
+        // Expanded controls (visible when master is on)
+        settings.masterEnabled !== false && React.createElement(React.Fragment, null,
+
+          // Volume
+          React.createElement('div', { className: 'sound-settings-card__slider-row' },
+            React.createElement('span', { className: 'sound-settings-card__slider-label' }, 'Громкость'),
+            React.createElement('input', {
+              type: 'range',
+              min: '0.04',
+              max: '0.3',
+              step: '0.02',
+              value: settings.volume ?? 0.12,
+              onChange: handleVolumeChange,
+              className: 'sound-settings-card__slider-input'
+            }),
+            React.createElement('span', { className: 'sound-settings-card__slider-value' },
+              `${Math.round((settings.volume ?? 0.12) * 100)}%`
+            )
+          ),
+
+          // Haptic toggle
+          React.createElement('div', { className: 'sound-settings-card__row' },
+            React.createElement('span', { className: 'sound-settings-card__label' }, 'Вибрация'),
+            React.createElement('label', { className: 'toggle-switch' },
+              React.createElement('input', {
+                type: 'checkbox',
+                checked: settings.hapticEnabled !== false,
+                onChange: handleHapticToggle
+              }),
+              React.createElement('span', { className: 'toggle-slider' })
+            )
+          ),
+
+          // Quiet hours toggle
+          React.createElement('div', { className: 'sound-settings-card__row' },
+            React.createElement('div', { className: 'sound-settings-card__hint-group' },
+              React.createElement('div', { className: 'sound-settings-card__label' }, 'Тихие часы'),
+              React.createElement('div', { className: 'sound-settings-card__hint-subtitle' }, '23:00 – 07:00')
+            ),
+            React.createElement('label', { className: 'toggle-switch' },
+              React.createElement('input', {
+                type: 'checkbox',
+                checked: settings.quietHoursEnabled !== false,
+                onChange: handleQuietToggle
+              }),
+              React.createElement('span', { className: 'toggle-slider' })
+            )
+          ),
+
+          // Preview buttons
+          React.createElement('div', null,
+            React.createElement('div', { className: 'sound-settings-card__preview-title' }, 'Предпрослушивание'),
+            React.createElement('div', { className: 'sound-settings-card__preview-actions' },
+              React.createElement('button', {
+                className: 'btn-secondary sound-settings-card__preview-button',
+                onClick: previewReward
+              }, '✨ XP'),
+              React.createElement('button', {
+                className: 'btn-secondary sound-settings-card__preview-button',
+                onClick: previewSuccess
+              }, '✅ Цель'),
+              React.createElement('button', {
+                className: 'btn-secondary sound-settings-card__preview-button',
+                onClick: previewTriumph
+              }, '🏆 Уровень')
+            )
+          )
         ),
-        React.createElement('div', {
-          className: 'muted',
-          style: { fontSize: '13px' }
-        },
-          settings.enabled
-            ? '✓ Звуки включены (при получении XP и достижений)'
-            : 'Звуки отключены'
+
+        // Status hint
+        React.createElement('div', { className: 'muted sound-settings-card__status' },
+          settings.masterEnabled !== false
+            ? '✓ Звуки активны — XP, еда, достижения, советы'
+            : 'Звуки и вибрация отключены'
         )
       )
     );
+  }
+
+  // Шим для старых вызовов window.playXPSound (обратная совместимость)
+  if (typeof window !== 'undefined') {
+    window.playXPSound = (isLevelUp) => {
+      window.HEYS?.audio?.play?.(isLevelUp ? 'levelUp' : 'xpGained');
+    };
   }
 
   // === 🚫 Скрытые (удалённые) продукты ===

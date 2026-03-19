@@ -930,42 +930,10 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
     }
   }
 
-  // 🎵 Mission completion sound (short double ping)
+  // 🎵 Mission completion sound
   function playMissionSound(isAllComplete = false) {
-    loadSoundSettings();
-    if (!SOUND_SETTINGS.enabled) return;
-
-    try {
-      if (!audioContext) {
-        audioContext = new (window.AudioContext || window.webkitAudioContext)();
-      }
-
-      const volume = SOUND_SETTINGS.volume;
-      const notes = isAllComplete
-        ? [
-          { freq: 659.25, time: 0 },
-          { freq: 783.99, time: 0.08 },
-          { freq: 987.77, time: 0.16 }
-        ]
-        : [
-          { freq: 587.33, time: 0 },
-          { freq: 698.46, time: 0.1 }
-        ];
-
-      notes.forEach(({ freq, time }) => {
-        const osc = audioContext.createOscillator();
-        const gain = audioContext.createGain();
-        osc.connect(gain);
-        gain.connect(audioContext.destination);
-        osc.frequency.value = freq;
-        osc.type = 'sine';
-        gain.gain.setValueAtTime(volume * 0.7, audioContext.currentTime + time);
-        gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + time + 0.18);
-        osc.start(audioContext.currentTime + time);
-        osc.stop(audioContext.currentTime + time + 0.18);
-      });
-    } catch (e) {
-      // Ignore audio errors
+    if (HEYS.audio) {
+      HEYS.audio.play(isAllComplete ? 'allMissionsComplete' : 'missionComplete');
     }
   }
 
@@ -3708,116 +3676,22 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
   }
 
   function playXPSound(isLevelUp = false) {
-    // Check if sounds are enabled
-    loadSoundSettings();
-    if (!SOUND_SETTINGS.enabled) return;
-
-    try {
-      if (!audioContext) {
-        audioContext = new (window.AudioContext || window.webkitAudioContext)();
-      }
-
-      const oscillator = audioContext.createOscillator();
-      const gainNode = audioContext.createGain();
-
-      oscillator.connect(gainNode);
-      gainNode.connect(audioContext.destination);
-
-      const volume = SOUND_SETTINGS.volume;
-
-      if (isLevelUp) {
-        // Level up — мелодия из 3 нот (восходящая)
-        oscillator.frequency.setValueAtTime(523.25, audioContext.currentTime); // C5
-        oscillator.frequency.setValueAtTime(659.25, audioContext.currentTime + 0.1); // E5
-        oscillator.frequency.setValueAtTime(783.99, audioContext.currentTime + 0.2); // G5
-        gainNode.gain.setValueAtTime(volume, audioContext.currentTime);
-        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.4);
-        oscillator.start(audioContext.currentTime);
-        oscillator.stop(audioContext.currentTime + 0.4);
-      } else {
-        // Обычный XP — короткий "пинг"
-        oscillator.frequency.setValueAtTime(880, audioContext.currentTime); // A5
-        oscillator.type = 'sine';
-        gainNode.gain.setValueAtTime(volume * 0.7, audioContext.currentTime);
-        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.15);
-        oscillator.start(audioContext.currentTime);
-        oscillator.stop(audioContext.currentTime + 0.15);
-      }
-    } catch (e) {
-      // Ignore audio errors
+    if (HEYS.audio) {
+      HEYS.audio.play(isLevelUp ? 'levelUp' : 'xpGained');
     }
   }
 
   // 🎵 Achievement sound (special fanfare)
   function playAchievementSound() {
-    loadSoundSettings();
-    if (!SOUND_SETTINGS.enabled) return;
-
-    try {
-      if (!audioContext) {
-        audioContext = new (window.AudioContext || window.webkitAudioContext)();
-      }
-
-      const volume = SOUND_SETTINGS.volume;
-
-      // Achievement fanfare — ascending chord
-      const notes = [
-        { freq: 523.25, time: 0 },      // C5
-        { freq: 659.25, time: 0.08 },   // E5
-        { freq: 783.99, time: 0.16 },   // G5
-        { freq: 1046.5, time: 0.24 },   // C6
-      ];
-
-      notes.forEach(({ freq, time }) => {
-        const osc = audioContext.createOscillator();
-        const gain = audioContext.createGain();
-        osc.connect(gain);
-        gain.connect(audioContext.destination);
-        osc.frequency.value = freq;
-        osc.type = 'triangle';
-        gain.gain.setValueAtTime(volume * 0.8, audioContext.currentTime + time);
-        gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + time + 0.3);
-        osc.start(audioContext.currentTime + time);
-        osc.stop(audioContext.currentTime + time + 0.3);
-      });
-    } catch (e) {
-      // Ignore audio errors
+    if (HEYS.audio) {
+      HEYS.audio.play('achievementUnlocked');
     }
   }
 
   // 🏆 Rank ceremony sound (longer, more epic)
   function playRankCeremonySound() {
-    loadSoundSettings();
-    if (!SOUND_SETTINGS.enabled) return;
-
-    try {
-      if (!audioContext) {
-        audioContext = new (window.AudioContext || window.webkitAudioContext)();
-      }
-
-      const volume = SOUND_SETTINGS.volume;
-      const notes = [
-        { freq: 392.0, time: 0.0 },   // G4
-        { freq: 523.25, time: 0.1 },  // C5
-        { freq: 659.25, time: 0.22 }, // E5
-        { freq: 783.99, time: 0.36 }, // G5
-        { freq: 1046.5, time: 0.5 }   // C6
-      ];
-
-      notes.forEach(({ freq, time }) => {
-        const osc = audioContext.createOscillator();
-        const gain = audioContext.createGain();
-        osc.connect(gain);
-        gain.connect(audioContext.destination);
-        osc.frequency.value = freq;
-        osc.type = 'sine';
-        gain.gain.setValueAtTime(volume * 0.9, audioContext.currentTime + time);
-        gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + time + 0.45);
-        osc.start(audioContext.currentTime + time);
-        osc.stop(audioContext.currentTime + time + 0.45);
-      });
-    } catch (e) {
-      // Ignore audio errors
+    if (HEYS.audio) {
+      HEYS.audio.play('rankCeremony');
     }
   }
 
@@ -5548,9 +5422,30 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
     XP_ACTIONS,
     RANK_BADGES,
 
-    // 🔊 Sound settings API
-    getSoundSettings: loadSoundSettings,
-    setSoundSettings: saveSoundSettings,
+    // 🔊 Sound settings API — delegates to HEYS.audio
+    getSoundSettings: () => {
+      if (!HEYS.audio) return loadSoundSettings();
+      const settings = HEYS.audio.getSettings();
+      return {
+        enabled: settings.masterEnabled !== false,
+        masterEnabled: settings.masterEnabled !== false,
+        volume: settings.volume,
+        hapticEnabled: settings.hapticEnabled !== false,
+        quietHoursEnabled: settings.quietHoursEnabled !== false,
+      };
+    },
+    setSoundSettings: (settings) => {
+      if (HEYS.audio) {
+        HEYS.audio.saveSettings({
+          masterEnabled: settings?.masterEnabled ?? settings?.enabled,
+          volume: settings?.volume,
+          hapticEnabled: settings?.hapticEnabled,
+          quietHoursEnabled: settings?.quietHoursEnabled,
+        });
+      } else {
+        saveSoundSettings(settings);
+      }
+    },
 
     // 📊 Achievement progress API
     getAchievementProgress(achId) {
@@ -20238,235 +20133,49 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
 
 /* ===== heys_sounds_v1.js ===== */
 /**
- * HEYS Sounds Module v1
- * Синтезированные звуки через Web Audio API
- * 
+ * HEYS Sounds Module v1 — Bridge layer
+ * Делегирует все звуки в HEYS.audio (heys_audio_v1.js).
+ * Старый API (HEYS.sounds.play/pop/ding/success/warning/whoosh) полностью сохранён.
+ *
  * @file heys_sounds_v1.js
- * @version 1.0.0
+ * @version 2.0.0 (bridge)
  */
 (function(global) {
   'use strict';
-  
+
   const HEYS = global.HEYS = global.HEYS || {};
-  
-  // Lazy AudioContext (создаётся при первом звуке)
-  let audioCtx = null;
-  
-  // Флаг: был ли user gesture
-  let userGestureReceived = false;
-  
-  // Слушаем первый user gesture для AudioContext
-  function initOnUserGesture() {
-    if (userGestureReceived) return;
-    userGestureReceived = true;
-    // Создаём AudioContext только после user gesture
-    if (!audioCtx) {
-      const AudioContext = window.AudioContext || window.webkitAudioContext;
-      if (AudioContext) {
-        audioCtx = new AudioContext();
-      }
-    }
-    // Удаляем listeners после первого gesture
-    document.removeEventListener('click', initOnUserGesture);
-    document.removeEventListener('touchstart', initOnUserGesture);
-    document.removeEventListener('keydown', initOnUserGesture);
-  }
-  
-  // Регистрируем listeners для user gesture
-  document.addEventListener('click', initOnUserGesture, { once: true, passive: true });
-  document.addEventListener('touchstart', initOnUserGesture, { once: true, passive: true });
-  document.addEventListener('keydown', initOnUserGesture, { once: true, passive: true });
-  
-  function getAudioContext() {
-    // Если user gesture не было — не создаём AudioContext
-    if (!userGestureReceived) return null;
-    
-    if (!audioCtx) {
-      const AudioContext = window.AudioContext || window.webkitAudioContext;
-      if (!AudioContext) return null;
-      audioCtx = new AudioContext();
-    }
-    // Resume если suspended (iOS requirement)
-    if (audioCtx.state === 'suspended') {
-      audioCtx.resume().catch(() => {});
-    }
-    return audioCtx;
-  }
-  
-  // Проверка настроек
-  // 🔧 FIX: Используем U.lsGet для синхронизации с облаком
-  function isSoundEnabled() {
-    try {
-      const U = window.HEYS?.utils || {};
-      const settings = U.lsGet ? U.lsGet('heys_advice_settings', {}) : JSON.parse(localStorage.getItem('heys_advice_settings') || '{}');
-      return settings.soundEnabled !== false; // true по умолчанию
-    } catch { return true; }
-  }
-  
-  // Проверка тихих часов (23:00 - 07:00)
-  function isQuietHours() {
-    const hour = new Date().getHours();
-    return hour >= 23 || hour < 7;
-  }
-  
-  // Проверка prefers-reduced-motion
-  function prefersReducedMotion() {
-    return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  }
-  
-  /**
-   * Воспроизвести звук
-   * @param {string} type - 'pop' | 'ding' | 'success' | 'warning' | 'whoosh'
-   */
+
+  // Маппинг старых типов → новые события HEYS.audio
+  const TYPE_TO_EVENT = {
+    pop:     'adviceAppear',
+    ding:    'adviceAppear',
+    success: 'success',
+    achievement: 'achievementUnlocked',
+    warning: 'caution',
+    whoosh:  'adviceDismiss'
+  };
+
   function play(type) {
-    if (!isSoundEnabled() || isQuietHours() || prefersReducedMotion()) return;
-    
-    const ctx = getAudioContext();
-    if (!ctx) return;
-    
-    try {
-      switch (type) {
-        case 'pop':
-          playPop(ctx);
-          break;
-        case 'ding':
-          playDing(ctx);
-          break;
-        case 'success':
-        case 'achievement':
-          playSuccess(ctx);
-          break;
-        case 'warning':
-          playWarning(ctx);
-          break;
-        case 'whoosh':
-          playWhoosh(ctx);
-          break;
-        default:
-          playPop(ctx);
-      }
-    } catch (e) {
-      // Тихо игнорируем ошибки звука
-    }
+    const audio = HEYS.audio;
+    if (!audio) return;
+
+    const event = TYPE_TO_EVENT[type] || TYPE_TO_EVENT['pop'];
+    audio.play(event);
   }
-  
-  // === Звуки ===
-  
-  // Pop - мягкое появление тоста
-  function playPop(ctx) {
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    
-    osc.frequency.setValueAtTime(600, ctx.currentTime);
-    osc.frequency.exponentialRampToValueAtTime(400, ctx.currentTime + 0.1);
-    osc.type = 'sine';
-    
-    gain.gain.setValueAtTime(0.08, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.1);
-    
-    osc.start(ctx.currentTime);
-    osc.stop(ctx.currentTime + 0.1);
-  }
-  
-  // Ding - прочитано (свайп влево)
-  function playDing(ctx) {
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    
-    osc.frequency.setValueAtTime(659.25, ctx.currentTime); // E5
-    osc.frequency.setValueAtTime(783.99, ctx.currentTime + 0.08); // G5
-    osc.type = 'sine';
-    
-    gain.gain.setValueAtTime(0.06, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.15);
-    
-    osc.start(ctx.currentTime);
-    osc.stop(ctx.currentTime + 0.15);
-  }
-  
-  // Success/Achievement - мажорный аккорд C-E-G
-  function playSuccess(ctx) {
-    const notes = [523.25, 659.25, 783.99]; // C5, E5, G5 (C major)
-    const duration = 0.35;
-    
-    notes.forEach((freq, i) => {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      
-      osc.frequency.setValueAtTime(freq, ctx.currentTime);
-      osc.type = 'sine';
-      
-      const startTime = ctx.currentTime + i * 0.05;
-      gain.gain.setValueAtTime(0, startTime);
-      gain.gain.linearRampToValueAtTime(0.07, startTime + 0.02);
-      gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
-      
-      osc.start(startTime);
-      osc.stop(startTime + duration);
-    });
-  }
-  
-  // Warning - низкий тон A3 → G3
-  function playWarning(ctx) {
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    
-    osc.frequency.setValueAtTime(220, ctx.currentTime); // A3
-    osc.frequency.setValueAtTime(196, ctx.currentTime + 0.1); // G3
-    osc.type = 'triangle';
-    
-    gain.gain.setValueAtTime(0.1, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.2);
-    
-    osc.start(ctx.currentTime);
-    osc.stop(ctx.currentTime + 0.2);
-  }
-  
-  // Whoosh - свайп (скрыть)
-  function playWhoosh(ctx) {
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    const filter = ctx.createBiquadFilter();
-    
-    osc.connect(filter);
-    filter.connect(gain);
-    gain.connect(ctx.destination);
-    
-    osc.type = 'sawtooth';
-    osc.frequency.setValueAtTime(150, ctx.currentTime);
-    osc.frequency.exponentialRampToValueAtTime(50, ctx.currentTime + 0.15);
-    
-    filter.type = 'lowpass';
-    filter.frequency.setValueAtTime(2000, ctx.currentTime);
-    filter.frequency.exponentialRampToValueAtTime(200, ctx.currentTime + 0.15);
-    
-    gain.gain.setValueAtTime(0.05, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.15);
-    
-    osc.start(ctx.currentTime);
-    osc.stop(ctx.currentTime + 0.15);
-  }
-  
-  // Экспорт
+
   HEYS.sounds = {
     play,
-    isEnabled: isSoundEnabled,
-    // Алиасы для удобства
-    pop: () => play('pop'),
-    ding: () => play('ding'),
+    isEnabled: () => HEYS.audio?.isEnabled?.() ?? true,
+    // Алиасы для обратной совместимости
+    pop:     () => play('pop'),
+    ding:    () => play('ding'),
     success: () => play('success'),
     warning: () => play('warning'),
-    whoosh: () => play('whoosh')
+    whoosh:  () => play('whoosh')
   };
-  
+
+  console.info('[HEYS.sounds] ✅ Bridge to HEYS.audio loaded');
+
 })(typeof window !== 'undefined' ? window : global);
 
 

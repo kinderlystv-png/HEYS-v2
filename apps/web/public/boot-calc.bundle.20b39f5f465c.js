@@ -12659,13 +12659,19 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
         }, []);
 
         const playAdviceSound = useCallback(() => {
-            if (adviceSoundEnabled && HEYSRef?.sounds) {
+            if (!adviceSoundEnabled) return;
+            if (HEYS.audio) {
+                HEYS.audio.play('adviceAppear');
+            } else if (HEYSRef?.sounds) {
                 HEYSRef.sounds.ding();
             }
         }, [adviceSoundEnabled, HEYSRef]);
 
         const playAdviceHideSound = useCallback(() => {
-            if (adviceSoundEnabled && HEYSRef?.sounds) {
+            if (!adviceSoundEnabled) return;
+            if (HEYS.audio) {
+                HEYS.audio.play('adviceDismiss');
+            } else if (HEYSRef?.sounds) {
                 HEYSRef.sounds.whoosh();
             }
         }, [adviceSoundEnabled, HEYSRef]);
@@ -15419,7 +15425,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
     getProductFromItem,
     per100,
     scale,
-    onAddMore
+    onAddMore,
+    onAddLast
   }) {
     if (!HEYS.ConfirmModal?.show) return;
 
@@ -15474,6 +15481,36 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
 
     const isGoalReached = remainingKcal <= 0;
     const mealName = currentMeal.name || `Приём ${mealIndex + 1}`;
+    const summaryActions = [
+      {
+        key: 'finish',
+        label: 'Завершить',
+        value: 'finish',
+        style: 'primary',
+        variant: 'fill',
+        row: 0,
+        isCancel: true
+      },
+      {
+        key: 'add-last',
+        label: 'Добавить последний',
+        value: 'add-last',
+        style: 'warning',
+        variant: 'fill',
+        row: 0,
+        isDefault: true,
+        className: 'confirm-modal-btn--last-one'
+      },
+      {
+        key: 'add-more',
+        label: 'Добавить ещё несколько',
+        value: 'add-more',
+        style: 'success',
+        variant: 'fill',
+        row: 1,
+        className: 'confirm-modal-btn--multi-continue'
+      }
+    ];
 
     const mealItems = (currentMeal.items || []).map((item) => {
       const product = getProductFromItem(item, localPIndex) || { name: item.name || '?' };
@@ -15571,15 +15608,12 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
             }, eatenKcal + ' ккал')
           )
         ),
-        confirmText: 'Добавить ещё',
-        cancelText: 'Завершить 🎊',
-        confirmStyle: 'success',
-        cancelStyle: 'primary',
-        confirmVariant: 'fill',
-        cancelVariant: 'fill'
+        actions: summaryActions,
+        defaultActionValue: 'add-last',
+        cancelActionValue: 'finish'
       });
 
-      if (!modalResult && HEYS.Confetti?.fire) {
+      if (modalResult === 'finish' && HEYS.Confetti?.fire) {
         HEYS.Confetti.fire();
       }
     } else {
@@ -15600,16 +15634,17 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
             '⚠️ Похоже, приём уже тяжеловат.'
           )
         ),
-        confirmText: 'Добавить ещё',
-        cancelText: 'Завершить',
-        confirmStyle: 'success',
-        cancelStyle: 'primary',
-        confirmVariant: 'fill',
-        cancelVariant: 'fill'
+        actions: summaryActions,
+        defaultActionValue: 'add-last',
+        cancelActionValue: 'finish'
       });
     }
 
-    if (modalResult && onAddMore) {
+    if (modalResult === 'add-last' && onAddLast) {
+      onAddLast(currentDay);
+    }
+
+    if (modalResult === 'add-more' && onAddMore) {
       onAddMore(currentDay);
     }
   }
@@ -15758,6 +15793,9 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
         const latestDay = override.day || getLatestDay();
         const latestMeal = latestDay?.meals?.[mi] || {};
         const latestProducts = getLatestProducts();
+        const nextMultiProductMode = typeof override.multiProductMode === 'boolean'
+          ? override.multiProductMode
+          : multiProductMode;
 
         if (window.HEYS?.AddProductStep?.show) {
           window.HEYS.AddProductStep.show({
@@ -15766,7 +15804,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
             products: latestProducts,
             day: latestDay,
             dateKey: date,
-            multiProductMode,
+            multiProductMode: nextMultiProductMode,
             onAdd: handleAdd,
             onAddPhoto: handleAddPhoto,
             onNewProduct: handleNewProduct
@@ -15948,7 +15986,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
                 getProductFromItem,
                 per100,
                 scale,
-                onAddMore: (updatedDay) => openAddModal({ day: updatedDay })
+                onAddMore: (updatedDay) => openAddModal({ day: updatedDay }),
+                onAddLast: (updatedDay) => openAddModal({ day: updatedDay, multiProductMode: false })
               });
             }, 100);
           });
@@ -20241,7 +20280,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
     getProductFromItem,
     per100,
     scale,
-    onAddMore
+    onAddMore,
+    onAddLast
   }) {
     if (!HEYS.ConfirmModal?.show) return;
 
@@ -20296,6 +20336,36 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
 
     const isGoalReached = remainingKcal <= 0;
     const mealName = currentMeal.name || `Приём ${mealIndex + 1}`;
+    const summaryActions = [
+      {
+        key: 'finish',
+        label: 'Завершить',
+        value: 'finish',
+        style: 'primary',
+        variant: 'fill',
+        row: 0,
+        isCancel: true
+      },
+      {
+        key: 'add-last',
+        label: 'Добавить последний',
+        value: 'add-last',
+        style: 'warning',
+        variant: 'fill',
+        row: 0,
+        isDefault: true,
+        className: 'confirm-modal-btn--last-one'
+      },
+      {
+        key: 'add-more',
+        label: 'Добавить ещё несколько',
+        value: 'add-more',
+        style: 'success',
+        variant: 'fill',
+        row: 1,
+        className: 'confirm-modal-btn--multi-continue'
+      }
+    ];
 
     const mealItems = (currentMeal.items || []).map((item) => {
       const product = getProductFromItem(item, localPIndex) || { name: item.name || '?' };
@@ -20393,15 +20463,12 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
             }, eatenKcal + ' ккал')
           )
         ),
-        confirmText: 'Добавить ещё',
-        cancelText: 'Завершить 🎊',
-        confirmStyle: 'success',
-        cancelStyle: 'primary',
-        confirmVariant: 'fill',
-        cancelVariant: 'fill'
+        actions: summaryActions,
+        defaultActionValue: 'add-last',
+        cancelActionValue: 'finish'
       });
 
-      if (!modalResult && HEYS.Confetti?.fire) {
+      if (modalResult === 'finish' && HEYS.Confetti?.fire) {
         HEYS.Confetti.fire();
       }
     } else {
@@ -20422,16 +20489,17 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
             '⚠️ Похоже, приём уже тяжеловат.'
           )
         ),
-        confirmText: 'Добавить ещё',
-        cancelText: 'Завершить',
-        confirmStyle: 'success',
-        cancelStyle: 'primary',
-        confirmVariant: 'fill',
-        cancelVariant: 'fill'
+        actions: summaryActions,
+        defaultActionValue: 'add-last',
+        cancelActionValue: 'finish'
       });
     }
 
-    if (modalResult && onAddMore) {
+    if (modalResult === 'add-last' && onAddLast) {
+      onAddLast(currentDay);
+    }
+
+    if (modalResult === 'add-more' && onAddMore) {
       onAddMore(currentDay);
     }
   }
@@ -20580,6 +20648,9 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
         const latestDay = override.day || getLatestDay();
         const latestMeal = latestDay?.meals?.[mi] || {};
         const latestProducts = getLatestProducts();
+        const nextMultiProductMode = typeof override.multiProductMode === 'boolean'
+          ? override.multiProductMode
+          : multiProductMode;
 
         if (window.HEYS?.AddProductStep?.show) {
           window.HEYS.AddProductStep.show({
@@ -20588,7 +20659,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
             products: latestProducts,
             day: latestDay,
             dateKey: date,
-            multiProductMode,
+            multiProductMode: nextMultiProductMode,
             onAdd: handleAdd,
             onAddPhoto: handleAddPhoto,
             onNewProduct: handleNewProduct
@@ -20770,7 +20841,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
                 getProductFromItem,
                 per100,
                 scale,
-                onAddMore: (updatedDay) => openAddModal({ day: updatedDay })
+                onAddMore: (updatedDay) => openAddModal({ day: updatedDay }),
+                onAddLast: (updatedDay) => openAddModal({ day: updatedDay, multiProductMode: false })
               });
             }, 100);
           });
@@ -20999,64 +21071,22 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
 
 
 /* ===== heys_day_sound_v1.js ===== */
-// heys_day_sound_v1.js — DayTab sound effects (success chime)
+// heys_day_sound_v1.js — DayTab sound effects (bridge to HEYS.audio)
 (function (global) {
     'use strict';
 
     const HEYS = global.HEYS = global.HEYS || {};
 
-    function getLsGet() {
-        if (HEYS.dayStorage?.lsGet) return HEYS.dayStorage.lsGet;
-        if (HEYS.utils?.lsGet) return HEYS.utils.lsGet;
-        return (key, defaultValue) => {
-            try {
-                const raw = localStorage.getItem(key);
-                const parsed = raw == null ? null : JSON.parse(raw);
-                return parsed == null ? defaultValue : parsed;
-            } catch (e) {
-                return defaultValue;
-            }
-        };
-    }
-
     const playSuccessSound = (() => {
-        let audioCtx = null;
         let lastPlayTime = 0;
         return () => {
-            const lsGet = getLsGet();
-            const soundEnabled = lsGet('heys_sound_enabled', true);
-            if (!soundEnabled) return;
-
+            // Dedup: не чаще раза в 2 сек (сохранено из оригинала)
             const now = Date.now();
             if (now - lastPlayTime < 2000) return;
             lastPlayTime = now;
 
-            try {
-                if (!audioCtx) {
-                    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                }
-                const osc1 = audioCtx.createOscillator();
-                const osc2 = audioCtx.createOscillator();
-                const gain = audioCtx.createGain();
-
-                osc1.connect(gain);
-                osc2.connect(gain);
-                gain.connect(audioCtx.destination);
-
-                osc1.frequency.value = 880; // A5
-                osc2.frequency.value = 1174.66; // D6
-                osc1.type = 'sine';
-                osc2.type = 'sine';
-
-                gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
-
-                osc1.start(audioCtx.currentTime);
-                osc2.start(audioCtx.currentTime + 0.1);
-                osc1.stop(audioCtx.currentTime + 0.3);
-                osc2.stop(audioCtx.currentTime + 0.4);
-            } catch (e) {
-                // ignore audio errors
+            if (HEYS.audio) {
+                HEYS.audio.play('calorieGoalReached');
             }
         };
     })();
@@ -21064,6 +21094,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
     HEYS.daySound = {
         playSuccessSound
     };
+
+    console.info('[HEYS.daySound] ✅ Bridge to HEYS.audio loaded');
 })(window);
 
 

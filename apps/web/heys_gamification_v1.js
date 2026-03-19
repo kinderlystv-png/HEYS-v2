@@ -310,42 +310,10 @@
     }
   }
 
-  // 🎵 Mission completion sound (short double ping)
+  // 🎵 Mission completion sound
   function playMissionSound(isAllComplete = false) {
-    loadSoundSettings();
-    if (!SOUND_SETTINGS.enabled) return;
-
-    try {
-      if (!audioContext) {
-        audioContext = new (window.AudioContext || window.webkitAudioContext)();
-      }
-
-      const volume = SOUND_SETTINGS.volume;
-      const notes = isAllComplete
-        ? [
-          { freq: 659.25, time: 0 },
-          { freq: 783.99, time: 0.08 },
-          { freq: 987.77, time: 0.16 }
-        ]
-        : [
-          { freq: 587.33, time: 0 },
-          { freq: 698.46, time: 0.1 }
-        ];
-
-      notes.forEach(({ freq, time }) => {
-        const osc = audioContext.createOscillator();
-        const gain = audioContext.createGain();
-        osc.connect(gain);
-        gain.connect(audioContext.destination);
-        osc.frequency.value = freq;
-        osc.type = 'sine';
-        gain.gain.setValueAtTime(volume * 0.7, audioContext.currentTime + time);
-        gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + time + 0.18);
-        osc.start(audioContext.currentTime + time);
-        osc.stop(audioContext.currentTime + time + 0.18);
-      });
-    } catch (e) {
-      // Ignore audio errors
+    if (HEYS.audio) {
+      HEYS.audio.play(isAllComplete ? 'allMissionsComplete' : 'missionComplete');
     }
   }
 
@@ -3088,116 +3056,22 @@
   }
 
   function playXPSound(isLevelUp = false) {
-    // Check if sounds are enabled
-    loadSoundSettings();
-    if (!SOUND_SETTINGS.enabled) return;
-
-    try {
-      if (!audioContext) {
-        audioContext = new (window.AudioContext || window.webkitAudioContext)();
-      }
-
-      const oscillator = audioContext.createOscillator();
-      const gainNode = audioContext.createGain();
-
-      oscillator.connect(gainNode);
-      gainNode.connect(audioContext.destination);
-
-      const volume = SOUND_SETTINGS.volume;
-
-      if (isLevelUp) {
-        // Level up — мелодия из 3 нот (восходящая)
-        oscillator.frequency.setValueAtTime(523.25, audioContext.currentTime); // C5
-        oscillator.frequency.setValueAtTime(659.25, audioContext.currentTime + 0.1); // E5
-        oscillator.frequency.setValueAtTime(783.99, audioContext.currentTime + 0.2); // G5
-        gainNode.gain.setValueAtTime(volume, audioContext.currentTime);
-        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.4);
-        oscillator.start(audioContext.currentTime);
-        oscillator.stop(audioContext.currentTime + 0.4);
-      } else {
-        // Обычный XP — короткий "пинг"
-        oscillator.frequency.setValueAtTime(880, audioContext.currentTime); // A5
-        oscillator.type = 'sine';
-        gainNode.gain.setValueAtTime(volume * 0.7, audioContext.currentTime);
-        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.15);
-        oscillator.start(audioContext.currentTime);
-        oscillator.stop(audioContext.currentTime + 0.15);
-      }
-    } catch (e) {
-      // Ignore audio errors
+    if (HEYS.audio) {
+      HEYS.audio.play(isLevelUp ? 'levelUp' : 'xpGained');
     }
   }
 
   // 🎵 Achievement sound (special fanfare)
   function playAchievementSound() {
-    loadSoundSettings();
-    if (!SOUND_SETTINGS.enabled) return;
-
-    try {
-      if (!audioContext) {
-        audioContext = new (window.AudioContext || window.webkitAudioContext)();
-      }
-
-      const volume = SOUND_SETTINGS.volume;
-
-      // Achievement fanfare — ascending chord
-      const notes = [
-        { freq: 523.25, time: 0 },      // C5
-        { freq: 659.25, time: 0.08 },   // E5
-        { freq: 783.99, time: 0.16 },   // G5
-        { freq: 1046.5, time: 0.24 },   // C6
-      ];
-
-      notes.forEach(({ freq, time }) => {
-        const osc = audioContext.createOscillator();
-        const gain = audioContext.createGain();
-        osc.connect(gain);
-        gain.connect(audioContext.destination);
-        osc.frequency.value = freq;
-        osc.type = 'triangle';
-        gain.gain.setValueAtTime(volume * 0.8, audioContext.currentTime + time);
-        gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + time + 0.3);
-        osc.start(audioContext.currentTime + time);
-        osc.stop(audioContext.currentTime + time + 0.3);
-      });
-    } catch (e) {
-      // Ignore audio errors
+    if (HEYS.audio) {
+      HEYS.audio.play('achievementUnlocked');
     }
   }
 
   // 🏆 Rank ceremony sound (longer, more epic)
   function playRankCeremonySound() {
-    loadSoundSettings();
-    if (!SOUND_SETTINGS.enabled) return;
-
-    try {
-      if (!audioContext) {
-        audioContext = new (window.AudioContext || window.webkitAudioContext)();
-      }
-
-      const volume = SOUND_SETTINGS.volume;
-      const notes = [
-        { freq: 392.0, time: 0.0 },   // G4
-        { freq: 523.25, time: 0.1 },  // C5
-        { freq: 659.25, time: 0.22 }, // E5
-        { freq: 783.99, time: 0.36 }, // G5
-        { freq: 1046.5, time: 0.5 }   // C6
-      ];
-
-      notes.forEach(({ freq, time }) => {
-        const osc = audioContext.createOscillator();
-        const gain = audioContext.createGain();
-        osc.connect(gain);
-        gain.connect(audioContext.destination);
-        osc.frequency.value = freq;
-        osc.type = 'sine';
-        gain.gain.setValueAtTime(volume * 0.9, audioContext.currentTime + time);
-        gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + time + 0.45);
-        osc.start(audioContext.currentTime + time);
-        osc.stop(audioContext.currentTime + time + 0.45);
-      });
-    } catch (e) {
-      // Ignore audio errors
+    if (HEYS.audio) {
+      HEYS.audio.play('rankCeremony');
     }
   }
 
@@ -4928,9 +4802,30 @@
     XP_ACTIONS,
     RANK_BADGES,
 
-    // 🔊 Sound settings API
-    getSoundSettings: loadSoundSettings,
-    setSoundSettings: saveSoundSettings,
+    // 🔊 Sound settings API — delegates to HEYS.audio
+    getSoundSettings: () => {
+      if (!HEYS.audio) return loadSoundSettings();
+      const settings = HEYS.audio.getSettings();
+      return {
+        enabled: settings.masterEnabled !== false,
+        masterEnabled: settings.masterEnabled !== false,
+        volume: settings.volume,
+        hapticEnabled: settings.hapticEnabled !== false,
+        quietHoursEnabled: settings.quietHoursEnabled !== false,
+      };
+    },
+    setSoundSettings: (settings) => {
+      if (HEYS.audio) {
+        HEYS.audio.saveSettings({
+          masterEnabled: settings?.masterEnabled ?? settings?.enabled,
+          volume: settings?.volume,
+          hapticEnabled: settings?.hapticEnabled,
+          quietHoursEnabled: settings?.quietHoursEnabled,
+        });
+      } else {
+        saveSoundSettings(settings);
+      }
+    },
 
     // 📊 Achievement progress API
     getAchievementProgress(achId) {

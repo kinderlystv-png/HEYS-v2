@@ -7433,51 +7433,12 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
   let supplementsVictoryAudioContext = null;
 
   function triggerSupplementsVictoryHaptic() {
-    try {
-      if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
-        navigator.vibrate([18, 14, 24]);
-      }
-    } catch (e) {
-      // no-op
-    }
+    // Delegated to HEYS.audio — haptic fires as part of supplementsComplete event
   }
 
   function playSupplementsVictorySound() {
-    try {
-      const AudioCtx = typeof window !== 'undefined' ? (window.AudioContext || window.webkitAudioContext) : null;
-      if (!AudioCtx) return;
-
-      if (!supplementsVictoryAudioContext) {
-        supplementsVictoryAudioContext = new AudioCtx();
-      }
-
-      const ctx = supplementsVictoryAudioContext;
-      if (ctx.state === 'suspended' && typeof ctx.resume === 'function') {
-        ctx.resume();
-      }
-
-      const startAt = ctx.currentTime + 0.01;
-      const notes = [659.25, 880, 1174.66];
-      notes.forEach((frequency, index) => {
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        const noteStart = startAt + index * 0.07;
-        const noteEnd = noteStart + 0.26;
-
-        osc.type = index === 2 ? 'triangle' : 'sine';
-        osc.frequency.setValueAtTime(frequency, noteStart);
-
-        gain.gain.setValueAtTime(0.0001, noteStart);
-        gain.gain.exponentialRampToValueAtTime(0.09 - index * 0.015, noteStart + 0.03);
-        gain.gain.exponentialRampToValueAtTime(0.0001, noteEnd);
-
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.start(noteStart);
-        osc.stop(noteEnd + 0.02);
-      });
-    } catch (e) {
-      // no-op
+    if (HEYS.audio) {
+      HEYS.audio.play('supplementsComplete');
     }
   }
 
@@ -7791,7 +7752,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
               longPressTimer = setTimeout(() => {
                 isLongPress = true;
                 // Вибрация для тактильной обратной связи
-                if (navigator.vibrate) navigator.vibrate(50);
+                if (HEYS.audio) { HEYS.audio.haptic([50]); } else if (navigator.vibrate) { navigator.vibrate(50); }
                 openSciencePopup(id);
               }, 500); // 500ms для долгого нажатия
             };

@@ -6,6 +6,7 @@ export const LEGACY_BUNDLES = {
         'heys_module_loader_v1.js',
         'heys_bootstrap_v1.js',
         'heys_platform_apis_v1.js',
+        'heys_audio_v1.js',
         'heys_pwa_module_v1.js',
         'heys_simple_analytics.js',
         'heys_smart_search_v2.js',

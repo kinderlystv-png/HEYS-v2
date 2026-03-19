@@ -1998,13 +1998,19 @@
         }, []);
 
         const playAdviceSound = useCallback(() => {
-            if (adviceSoundEnabled && HEYSRef?.sounds) {
+            if (!adviceSoundEnabled) return;
+            if (HEYS.audio) {
+                HEYS.audio.play('adviceAppear');
+            } else if (HEYSRef?.sounds) {
                 HEYSRef.sounds.ding();
             }
         }, [adviceSoundEnabled, HEYSRef]);
 
         const playAdviceHideSound = useCallback(() => {
-            if (adviceSoundEnabled && HEYSRef?.sounds) {
+            if (!adviceSoundEnabled) return;
+            if (HEYS.audio) {
+                HEYS.audio.play('adviceDismiss');
+            } else if (HEYSRef?.sounds) {
                 HEYSRef.sounds.whoosh();
             }
         }, [adviceSoundEnabled, HEYSRef]);

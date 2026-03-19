@@ -30,6 +30,10 @@
     cancelStyle: 'neutral', // 'neutral' | 'danger' | 'primary' | 'success'
     confirmVariant: 'text', // 'text' | 'fill'
     cancelVariant: 'text', // 'text' | 'fill'
+    actions: null,
+    defaultActionValue: null,
+    cancelActionValue: null,
+    onAction: () => { },
     onConfirm: () => { },
     onCancel: () => { }
   };
@@ -59,8 +63,33 @@
       activeBackground: '#f0fdf4',
       darkColor: '#4ade80',
       darkActiveBackground: 'rgba(34, 197, 94, 0.2)'
+    },
+    warning: {
+      color: '#d97706',
+      activeBackground: '#fff7ed',
+      darkColor: '#fbbf24',
+      darkActiveBackground: 'rgba(245, 158, 11, 0.22)'
     }
   };
+
+  function findModalAction(modal, matcher) {
+    const actions = Array.isArray(modal?.actions) ? modal.actions : [];
+    return actions.find((action) => matcher(action));
+  }
+
+  function groupModalActions(modal) {
+    const actions = Array.isArray(modal?.actions) ? modal.actions : [];
+    if (!actions.length) return [];
+
+    const rows = [];
+    actions.forEach((action, index) => {
+      const rowIndex = Number.isInteger(action?.row) ? action.row : index;
+      if (!rows[rowIndex]) rows[rowIndex] = [];
+      rows[rowIndex].push(action);
+    });
+
+    return rows.filter(Boolean);
+  }
 
   // === Компонент модалки ===
   function ConfirmModalComponent() {
@@ -88,8 +117,29 @@
       return () => document.removeEventListener('keydown', handleKeyDown);
     }, [modal]);
 
+    const handleAction = React.useCallback((action) => {
+      if (!modal || !action) return;
+
+      if (HEYS.dayUtils?.haptic) {
+        HEYS.dayUtils.haptic(action.haptic || 'medium');
+      }
+
+      action.onClick?.();
+      modal.onAction?.(action.value, action);
+      setModal(null);
+    }, [modal]);
+
     const handleConfirm = React.useCallback(() => {
       if (!modal) return;
+
+      const defaultAction = findModalAction(modal, (action) =>
+        action?.value === modal.defaultActionValue || action?.isDefault
+      ) || findModalAction(modal, (action) => !action?.isCancel);
+
+      if (defaultAction) {
+        handleAction(defaultAction);
+        return;
+      }
 
       // Haptic feedback
       if (HEYS.dayUtils?.haptic) {
@@ -98,13 +148,23 @@
 
       modal.onConfirm?.();
       setModal(null);
-    }, [modal]);
+    }, [handleAction, modal]);
 
     const handleCancel = React.useCallback(() => {
       if (!modal) return;
+
+      const cancelAction = findModalAction(modal, (action) =>
+        action?.value === modal.cancelActionValue || action?.isCancel
+      );
+
+      if (cancelAction) {
+        handleAction(cancelAction);
+        return;
+      }
+
       modal.onCancel?.();
       setModal(null);
-    }, [modal]);
+    }, [handleAction, modal]);
 
     const handleBackdropClick = React.useCallback((e) => {
       if (e.target === e.currentTarget) {
@@ -119,6 +179,7 @@
     const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
     const confirmVariant = modal.confirmVariant || 'text';
     const cancelVariant = modal.cancelVariant || 'text';
+    const actionRows = groupModalActions(modal);
 
     return React.createElement('div', {
       className: 'confirm-modal-backdrop',
@@ -138,32 +199,61 @@
         modal.text && React.createElement('div', { className: 'confirm-modal-text' }, modal.text),
 
         // Кнопки
-        React.createElement('div', { className: 'confirm-modal-buttons' },
-          React.createElement('button', {
-            className: 'confirm-modal-btn cancel'
-              + (modal.cancelStyle ? ` confirm-modal-btn--${modal.cancelStyle}` : '')
-              + (cancelVariant === 'fill' ? ' confirm-modal-btn--fill' : ''),
-            style: cancelVariant === 'fill'
-              ? { fontWeight: 600 }
-              : {
-                color: isDark ? cancelStyle.darkColor : cancelStyle.color,
-                fontWeight: 600
+        actionRows.length > 0
+          ? React.createElement('div', { className: 'confirm-modal-buttons confirm-modal-buttons--custom' },
+            actionRows.map((row, rowIndex) =>
+              React.createElement('div', {
+                key: `row_${rowIndex}`,
+                className: 'confirm-modal-actions-row' + (row.length === 1 ? ' confirm-modal-actions-row--single' : '')
               },
-            onClick: handleCancel
-          }, modal.cancelText),
-          modal.confirmText && React.createElement('button', {
-            className: 'confirm-modal-btn confirm'
-              + (modal.confirmStyle ? ` confirm-modal-btn--${modal.confirmStyle}` : '')
-              + (confirmVariant === 'fill' ? ' confirm-modal-btn--fill' : ''),
-            style: confirmVariant === 'fill'
-              ? { fontWeight: 600 }
-              : {
-                color: isDark ? confirmStyle.darkColor : confirmStyle.color,
-                fontWeight: 600
-              },
-            onClick: handleConfirm
-          }, modal.confirmText)
-        )
+                row.map((action, actionIndex) => {
+                  const actionStyle = CONFIRM_STYLES[action?.style] || CONFIRM_STYLES.primary;
+                  const actionVariant = action?.variant || 'fill';
+
+                  return React.createElement('button', {
+                    key: action?.key || `${rowIndex}_${actionIndex}`,
+                    className: 'confirm-modal-btn confirm-modal-btn--custom'
+                      + (action?.className ? ` ${action.className}` : '')
+                      + (action?.style ? ` confirm-modal-btn--${action.style}` : '')
+                      + (actionVariant === 'fill' ? ' confirm-modal-btn--fill' : ''),
+                    style: actionVariant === 'fill'
+                      ? undefined
+                      : {
+                        color: isDark ? actionStyle.darkColor : actionStyle.color,
+                        fontWeight: 700
+                      },
+                    onClick: () => handleAction(action)
+                  }, action?.label || '')
+                })
+              )
+            )
+          )
+          : React.createElement('div', { className: 'confirm-modal-buttons' },
+            React.createElement('button', {
+              className: 'confirm-modal-btn cancel'
+                + (modal.cancelStyle ? ` confirm-modal-btn--${modal.cancelStyle}` : '')
+                + (cancelVariant === 'fill' ? ' confirm-modal-btn--fill' : ''),
+              style: cancelVariant === 'fill'
+                ? { fontWeight: 600 }
+                : {
+                  color: isDark ? cancelStyle.darkColor : cancelStyle.color,
+                  fontWeight: 600
+                },
+              onClick: handleCancel
+            }, modal.cancelText),
+            modal.confirmText && React.createElement('button', {
+              className: 'confirm-modal-btn confirm'
+                + (modal.confirmStyle ? ` confirm-modal-btn--${modal.confirmStyle}` : '')
+                + (confirmVariant === 'fill' ? ' confirm-modal-btn--fill' : ''),
+              style: confirmVariant === 'fill'
+                ? { fontWeight: 600 }
+                : {
+                  color: isDark ? confirmStyle.darkColor : confirmStyle.color,
+                  fontWeight: 600
+                },
+              onClick: handleConfirm
+            }, modal.confirmText)
+          )
       )
     );
   }
@@ -200,13 +290,15 @@
    * @param {string} options.text - Описание (опционально)
    * @param {string} options.confirmText - Текст кнопки подтверждения
    * @param {string} options.cancelText - Текст кнопки отмены
-  * @param {string} options.confirmStyle - Стиль: 'danger' | 'primary' | 'success'
-  * @param {string} options.cancelStyle - Стиль: 'neutral' | 'danger' | 'primary' | 'success'
+  * @param {string} options.confirmStyle - Стиль: 'danger' | 'primary' | 'success' | 'warning'
+  * @param {string} options.cancelStyle - Стиль: 'neutral' | 'danger' | 'primary' | 'success' | 'warning'
   * @param {string} options.confirmVariant - Вариант: 'text' | 'fill'
   * @param {string} options.cancelVariant - Вариант: 'text' | 'fill'
+   * @param {Array} options.actions - Кастомные кнопки: { label, value, style, variant, row, isDefault, isCancel }
    * @param {Function} options.onConfirm - Callback при подтверждении
    * @param {Function} options.onCancel - Callback при отмене
-   * @returns {Promise<boolean>} - true если подтверждено, false если отменено
+   * @param {Function} options.onAction - Callback для кастомных actions
+   * @returns {Promise<boolean|string>} - true/false для стандартного режима или action.value для кастомного
    */
   function show(options = {}) {
     ensureRoot();
@@ -222,6 +314,10 @@
       const modal = {
         ...DEFAULTS,
         ...options,
+        onAction: (value, action) => {
+          options.onAction?.(value, action);
+          resolve(value);
+        },
         onConfirm: () => {
           options.onConfirm?.();
           resolve(true);
