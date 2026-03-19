@@ -130,17 +130,20 @@
     const stressAvg = allStress.length ? r1(allStress.reduce((sum, val) => sum + val, 0) / allStress.length) : '';
 
     // Автоматический расчёт dayScore
-    // Формула: (mood + wellbeing + (10 - stress)) / 3, округлено до целого
+    // Формула: (mood + wellbeing + (10 - stress)) / 3, округлено до целого для UI/storage
     let dayScore = '';
+    let dayScoreRaw = '';  // float с точностью 1 знак — для analytics/predictive layers
     if (moodAvg !== '' || wellbeingAvg !== '' || stressAvg !== '') {
       const m = moodAvg !== '' ? +moodAvg : 5;
       const w = wellbeingAvg !== '' ? +wellbeingAvg : 5;
       const s = stressAvg !== '' ? +stressAvg : 5;
       // stress инвертируем: низкий стресс = хорошо
-      dayScore = Math.round((m + w + (10 - s)) / 3);
+      const raw = (m + w + (10 - s)) / 3;
+      dayScoreRaw = r1(raw);
+      dayScore = Math.round(raw);
     }
 
-    return { moodAvg, wellbeingAvg, stressAvg, dayScore };
+    return { moodAvg, wellbeingAvg, stressAvg, dayScore, dayScoreRaw };
   }
 
   /**
@@ -219,10 +222,84 @@
   }
 
   // Export module
+  /**
+   * Compute optional derived day score metrics (not persisted — analytics only)
+   * @param {Object} dayData - Current day data with moodMorning/wellbeingMorning/stressMorning and scored meals
+   * @param {Object|null} yesterdayData - Previous day data (optional)
+   * @returns {Object} derived metrics
+   */
+  function getDayScoreDerivedMetrics(dayData, yesterdayData) {
+    const dayScore = dayData?.dayScore;
+    const dayScoreRaw = dayData?.dayScoreRaw;
+    const hasDayScore = dayScore !== '' && dayScore != null && Number.isFinite(+dayScore);
+
+    // --- delta vs morning chek-in ---
+    let deltaVsMorning = null;
+    if (hasDayScore) {
+      const mm = dayData?.moodMorning;
+      const wm = dayData?.wellbeingMorning;
+      const sm = dayData?.stressMorning;
+      if (mm != null && wm != null && sm != null) {
+        const morningRaw = (+mm + +wm + (10 - +sm)) / 3;
+        deltaVsMorning = r1((dayScoreRaw != null ? +dayScoreRaw : +dayScore) - morningRaw);
+      }
+    }
+
+    // --- delta vs yesterday ---
+    let deltaVsYesterday = null;
+    if (hasDayScore && yesterdayData) {
+      const yd = yesterdayData?.dayScore;
+      if (yd !== '' && yd != null && Number.isFinite(+yd)) {
+        deltaVsYesterday = r1((dayScoreRaw != null ? +dayScoreRaw : +dayScore) - +yd);
+      }
+    }
+
+    // --- intraday volatility: std dev of individual scores collected during the day ---
+    let intradayVolatility = null;
+    const meals = Array.isArray(dayData?.meals) ? dayData.meals : [];
+    const trainings = Array.isArray(dayData?.trainings) ? dayData.trainings : [];
+    const mm0 = dayData?.moodMorning != null ? +dayData.moodMorning : null;
+    const wm0 = dayData?.wellbeingMorning != null ? +dayData.wellbeingMorning : null;
+    const sm0 = dayData?.stressMorning != null ? +dayData.stressMorning : null;
+    const perCheckIn = [];
+    if (mm0 != null && wm0 != null && sm0 != null) perCheckIn.push(r1((mm0 + wm0 + (10 - sm0)) / 3));
+    for (const meal of meals) {
+      if (meal?.mood != null && meal?.wellbeing != null && meal?.stress != null) {
+        perCheckIn.push(r1((+meal.mood + +meal.wellbeing + (10 - +meal.stress)) / 3));
+      }
+    }
+    for (const t of trainings) {
+      if (t?.mood != null && t?.wellbeing != null && t?.stress != null) {
+        const hasTime = t.time && t.time.trim() !== '';
+        const hasMins = t.z && Array.isArray(t.z) && t.z.some(m => m > 0);
+        if (hasTime || hasMins) perCheckIn.push(r1((+t.mood + +t.wellbeing + (10 - +t.stress)) / 3));
+      }
+    }
+    if (perCheckIn.length >= 2) {
+      const mean = perCheckIn.reduce((a, b) => a + b, 0) / perCheckIn.length;
+      const variance = perCheckIn.reduce((sum, v) => sum + (v - mean) ** 2, 0) / perCheckIn.length;
+      intradayVolatility = r1(Math.sqrt(variance));
+    }
+
+    // --- trend over day: first-half checkIns avg vs second-half ---
+    let trendOverDay = null;
+    if (perCheckIn.length >= 3) {
+      const mid = Math.floor(perCheckIn.length / 2);
+      const firstHalf = perCheckIn.slice(0, mid);
+      const secondHalf = perCheckIn.slice(mid);
+      const avgFirst = firstHalf.reduce((a, b) => a + b, 0) / firstHalf.length;
+      const avgSecond = secondHalf.reduce((a, b) => a + b, 0) / secondHalf.length;
+      trendOverDay = r1(avgSecond - avgFirst); // positive = improving, negative = worsening
+    }
+
+    return { deltaVsMorning, deltaVsYesterday, intradayVolatility, trendOverDay };
+  }
+
   HEYS.dayCalculations = {
     calculateDayTotals,
     computeDailyNorms,
     calculateDayAverages,
+    getDayScoreDerivedMetrics,
     normalizeTrainings,
     cleanEmptyTrainings,
     sortMealsByTime,

@@ -6,7 +6,7 @@
  * @version 1.0.0
  */
 
-(function() {
+(function () {
   'use strict';
 
   window.HEYS = window.HEYS || {};
@@ -212,7 +212,9 @@
     // Группа "тренировки"
     training: ['post_training_protein', 'hard_workout_recovery', 'cardio_carbs_balance', 'great_workout', 'training_recovery_window'],
     // Группа "настроение"
-    mood: ['stress_support', 'crash_support', 'mood_improving', 'sugar_mood_crash', 'wellbeing_low_food']
+    mood: ['stress_support', 'crash_support', 'mood_improving', 'sugar_mood_crash', 'wellbeing_low_food'],
+    // Группа "relapse risk" — не показывать несколько advice про риск срыва подряд
+    relapse: ['relapse_risk_high', 'relapse_risk_elevated', 'relapse_risk_restriction', 'relapse_risk_stress', 'relapse_risk_sleep_debt', 'relapse_risk_tonight']
   };
 
   // ═══════════════════════════════════════════════════════════

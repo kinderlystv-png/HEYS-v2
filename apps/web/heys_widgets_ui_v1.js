@@ -1052,6 +1052,8 @@
         return React.createElement(CycleWidgetContent, { widget, data });
       case 'crashRisk':
         return React.createElement(CrashRiskWidgetContent, { widget, data });
+      case 'relapseRisk':
+        return React.createElement(RelapseRiskWidgetContent, { widget, data });
       default:
         return React.createElement('div', { className: 'widget__placeholder' },
           widgetType?.icon || '📊',
@@ -2886,6 +2888,674 @@
     }
   }
 
+  function getRelapseRiskColor(level) {
+    if (level === 'critical') return 'var(--heys-ratio-crash)';
+    if (level === 'high') return '#f97316';
+    if (level === 'elevated') return 'var(--heys-ratio-over)';
+    if (level === 'guarded') return 'var(--heys-ratio-low)';
+    return 'var(--heys-ratio-good)';
+  }
+
+  function getRelapseGradientColors(level) {
+    if (level === 'critical') return ['#fca5a5', '#ef4444'];
+    if (level === 'high') return ['#fdba74', '#f97316'];
+    if (level === 'elevated') return ['#fcd34d', '#f59e0b'];
+    if (level === 'guarded') return ['#fde68a', '#eab308'];
+    return ['#86efac', '#22c55e'];
+  }
+
+  function getRelapseLevelLabel(level) {
+    switch (level) {
+      case 'critical': return 'критично';
+      case 'high': return 'высокий';
+      case 'elevated': return 'повышен';
+      case 'guarded': return 'настороженно';
+      default: return 'спокойно';
+    }
+  }
+
+  function getRelapseWindowMeta(key) {
+    switch (key) {
+      case 'next3h':
+        return { label: 'Ближайшие 3ч', shortLabel: '3ч', description: 'Самый ближайший риск: стресс, голод и reward-food контекст прямо сейчас.' };
+      case 'tonight':
+        return { label: 'Сегодня вечером', shortLabel: 'Вечер', description: 'Главное окно риска для вечернего срыва и loss-of-control eating.' };
+      case 'next24h':
+        return { label: 'Следующие 24ч', shortLabel: '24ч', description: 'Фон на сутки с учётом сна, повторяющегося стресса и restriction pressure.' };
+      default:
+        return { label: key || 'Окно', shortLabel: key || 'Окно', description: '' };
+    }
+  }
+
+  function getRelapseComponentMeta(key) {
+    switch (key) {
+      case 'stressLoad':
+        return { label: 'Stress load', description: 'Текущий стресс и его накопление за последние дни.' };
+      case 'sleepDebt':
+        return { label: 'Sleep debt', description: 'Недосып, низкое качество сна и recovery depletion.' };
+      case 'restrictionPressure':
+        return { label: 'Restriction pressure', description: 'Недобор калорий/белка, длинные gaps и давление дефицита.' };
+      case 'rewardExposure':
+        return { label: 'Reward exposure', description: 'Высокий harm/simple и риск продолжения hyperpalatable eating.' };
+      case 'timingContext':
+        return { label: 'Timing context', description: 'Вечер, выходные и длинные интервалы без еды усиливают риск.' };
+      case 'emotionalVulnerability':
+        return { label: 'Emotional vulnerability', description: 'Низкое subjective state усиливает риск, но не доминирует над поведением.' };
+      case 'protectiveBuffer':
+        return { label: 'Protective buffer', description: 'Защитные факторы, которые снижают итоговый риск.' };
+      default:
+        return { label: key || 'Factor', description: '' };
+    }
+  }
+
+  function getSortedRelapseWindows(windows) {
+    return Object.entries(windows || {})
+      .map(([key, value]) => ({ key, value: Math.round(Number(value) || 0), ...getRelapseWindowMeta(key) }))
+      .sort((a, b) => b.value - a.value);
+  }
+  function getRelapseCutPatternLabel(pattern) {
+    switch (pattern) {
+      case 'controlled_deficit':
+        return 'контролируемый дефицит';
+      case 'aggressive_cut':
+        return 'жёсткий дефицит';
+      default:
+        return 'нейтральный паттерн';
+    }
+  }
+  function getRelapseHistoryQualityLabel(historyQuality) {
+    const totalDays = Number(historyQuality?.totalDays) || 0;
+    const completeDays = Number(historyQuality?.completeDays) || 0;
+    if (!totalDays) return 'история почти пустая';
+    if (completeDays >= totalDays * 0.8) return `${completeDays}/${totalDays} полных дней`;
+    if (completeDays >= totalDays * 0.5) return `${completeDays}/${totalDays} дней достаточно полные`;
+    return `${completeDays}/${totalDays} дней слабо заполнены`;
+  }
+  function buildRelapseHumanSummary(payload) {
+    const snapshot = payload?.snapshot || {};
+    const result = snapshot?.raw || {};
+    const score = Math.round(Number(snapshot?.score ?? result?.score) || 0);
+    const level = String(snapshot?.level || result?.level || 'low');
+    const confidence = Math.max(0, Math.min(100, Math.round(Number(snapshot?.confidence ?? result?.confidence) || 0)));
+    const debug = result?.debug || {};
+    const restriction = debug?.restrictionPressure || {};
+    const historyQuality = debug?.historyQuality || {};
+    const coverageLagPct = Math.round((Number(restriction?.coverageLag) || 0) * 100);
+    const proteinLagPct = Math.round((Number(restriction?.proteinLag) || 0) * 100);
+    const reliefTotal = Math.round(
+      (Number(restriction?.progressAlignmentRelief) || 0) +
+      (Number(restriction?.proteinCatchupRelief) || 0) +
+      (Number(restriction?.controlledDeficitRelief) || 0)
+    );
+    const cutPattern = getRelapseCutPatternLabel(restriction?.cutPattern);
+    const historyLabel = getRelapseHistoryQualityLabel(historyQuality);
+
+    let headline = 'Риск сейчас низкий и выглядит управляемым.';
+    if (level === 'guarded') headline = 'Риск уже требует внимания, но ситуация ещё управляемая.';
+    if (level === 'elevated' || level === 'high' || level === 'critical') headline = 'Риск заметный: дефицит и восстановление уже перевешивают защитные факторы.';
+
+    const bullets = [];
+
+    bullets.push(`Сейчас это ${cutPattern}: главный вклад даёт давление дефицита, но модель не видит признаков агрессивного cut.`);
+
+    if (coverageLagPct > 0 || proteinLagPct > 0) {
+      bullets.push(`От плана сейчас отстают калории примерно на ${coverageLagPct}% и белок примерно на ${proteinLagPct}%, но это ещё похоже на догоняемый сценарий, а не на срыв режима.`);
+    }
+
+    if (reliefTotal > 0) {
+      bullets.push(`Структура дня уже снижает тревогу: регулярные приёмы пищи и нормальный trajectory сняли около ${reliefTotal} пунктов с restriction pressure.`);
+    }
+
+    bullets.push(`Доверие к оценке высокое: confidence ${confidence}% и история качества — ${historyLabel}.`);
+
+    return {
+      score,
+      level,
+      headline,
+      bullets: bullets.slice(0, 4),
+      cutPattern,
+      historyLabel,
+    };
+  }
+
+  async function copyTextWithFallback(text) {
+    if (navigator?.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+      return;
+    }
+
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.cssText = 'position:fixed;top:-9999px;left:-9999px;opacity:0';
+    document.body.appendChild(ta);
+    ta.focus();
+    ta.select();
+    const copied = document.execCommand('copy');
+    document.body.removeChild(ta);
+
+    if (!copied) {
+      throw new Error('clipboard fallback failed');
+    }
+  }
+
+  function formatRelapseRiskTraceForClipboard(payload) {
+    const snapshot = payload?.snapshot || {};
+    const result = snapshot?.raw || {};
+    const humanSummary = buildRelapseHumanSummary(payload);
+    const hasRawTrace = !!(result && typeof result === 'object' && Object.keys(result).length > 0 && result?.debug);
+    const score = Math.round(Number(snapshot?.score ?? result?.score) || 0);
+    const level = String(snapshot?.level || result?.level || 'low');
+    const confidence = Math.max(0, Math.min(100, Math.round(Number(snapshot?.confidence ?? result?.confidence) || 0)));
+    const windows = getSortedRelapseWindows(result?.windows || snapshot?.windows);
+    const drivers = Array.isArray(result?.primaryDrivers) ? result.primaryDrivers : (Array.isArray(snapshot?.primaryDrivers) ? snapshot.primaryDrivers : []);
+    const protectiveFactors = Array.isArray(result?.protectiveFactors) ? result.protectiveFactors : (Array.isArray(snapshot?.protectiveFactors) ? snapshot.protectiveFactors : []);
+    const recommendations = Array.isArray(result?.recommendations) ? result.recommendations : [];
+    const components = Object.entries(result?.debug?.components || {})
+      .map(([key, value]) => ({
+        key,
+        value: Number(value) || 0,
+        ...getRelapseComponentMeta(key)
+      }))
+      .sort((a, b) => Math.abs(b.value) - Math.abs(a.value));
+
+    const lines = [
+      '═══════════════════════════════════════════════',
+      '🧠 HEYS — Relapse Risk Score trace',
+      'Дата выгрузки: ' + new Date().toLocaleString('ru-RU'),
+      '═══════════════════════════════════════════════',
+      '',
+      'Сводка:',
+      '  • Score: ' + score + '%',
+      '  • Level: ' + level + ' (' + getRelapseLevelLabel(level) + ')',
+      '  • Confidence: ' + confidence + '%',
+      '  • Виджет: ' + (payload?.widget?.id || 'unknown') + ' / ' + (payload?.widget?.size || 'unknown'),
+      ''
+    ];
+
+    if (!hasRawTrace) {
+      lines.push('⚠️ Внимание: raw trace payload пуст.');
+      lines.push('   Это означает, что modal был открыт без полного результата расчёта,');
+      lines.push('   поэтому лог ниже не подтверждает корректный Relapse Risk calculation.');
+      lines.push('');
+    }
+
+    lines.push('Человеческое объяснение:');
+    lines.push('  • ' + humanSummary.headline);
+    (humanSummary.bullets || []).forEach((bullet) => {
+      lines.push('  • ' + bullet);
+    });
+
+    lines.push('');
+    lines.push('Окна риска:');
+    if (!windows.length) {
+      lines.push(hasRawTrace ? '  (нет данных)' : '  (payload пуст: окна риска не были переданы)');
+    } else {
+      windows.forEach((windowInfo, index) => {
+        lines.push('  ' + (index + 1) + '. ' + windowInfo.label + ' → ' + windowInfo.value + '%' + (windowInfo.description ? ' | ' + windowInfo.description : ''));
+      });
+    }
+
+    lines.push('');
+    lines.push('Primary drivers:');
+    if (!drivers.length) {
+      lines.push(hasRawTrace ? '  (нет драйверов)' : '  (payload пуст: драйверы не были переданы)');
+    } else {
+      drivers.forEach((driver, index) => {
+        const impact = Math.round(Number(driver?.impact) || 0);
+        lines.push('  ' + (index + 1) + '. ' + (driver?.label || driver?.id || 'driver') + ' | impact=+' + impact + (driver?.explanation ? ' | ' + driver.explanation : ''));
+      });
+    }
+
+    lines.push('');
+    lines.push('Protective factors:');
+    if (!protectiveFactors.length) {
+      lines.push(hasRawTrace ? '  (нет защитных факторов)' : '  (payload пуст: protective factors не были переданы)');
+    } else {
+      protectiveFactors.forEach((factor, index) => {
+        lines.push('  ' + (index + 1) + '. ' + (factor?.label || factor?.id || 'factor') + (factor?.explanation ? ' | ' + factor.explanation : ''));
+      });
+    }
+
+    lines.push('');
+    lines.push('Компоненты расчёта:');
+    if (!components.length) {
+      lines.push(hasRawTrace ? '  (нет debug.components)' : '  (payload пуст: debug.components не были переданы)');
+    } else {
+      components.forEach((component, index) => {
+        const sign = component.value >= 0 ? '+' : '';
+        lines.push('  ' + (index + 1) + '. ' + component.label + ' (' + component.key + ') = ' + sign + component.value.toFixed(2) + (component.description ? ' | ' + component.description : ''));
+      });
+    }
+
+    lines.push('');
+    lines.push('Recommendations:');
+    if (!recommendations.length) {
+      lines.push(hasRawTrace ? '  (нет рекомендаций)' : '  (payload пуст: recommendations не были переданы)');
+    } else {
+      recommendations.forEach((rec, index) => {
+        lines.push('  ' + (index + 1) + '. ' + (rec?.text || rec?.id || 'recommendation'));
+      });
+    }
+
+    lines.push('');
+    lines.push('Raw debug payload:');
+    lines.push(JSON.stringify({
+      snapshot,
+      raw: result
+    }, null, 2));
+    lines.push('');
+    lines.push('═══════════════════════════════════════════════');
+
+    return lines.join('\n');
+  }
+
+  function getRelapseMeterTone(level) {
+    switch (level) {
+      case 'critical':
+      case 'high':
+        return 'high';
+      case 'elevated':
+        return 'medium';
+      case 'guarded':
+      case 'low':
+      default:
+        return 'low';
+    }
+  }
+
+  function RelapseRiskSpeedometer({ score, level, size = 140, label = 'Риск срыва', compact = false }) {
+    const safeRisk = Math.max(0, Math.min(100, Math.round(Number(score) || 0)));
+    const tone = getRelapseMeterTone(level);
+    const strokeWidth = compact ? 14 : 12;
+    const radius = (size - strokeWidth) / 2;
+    const halfCircumference = Math.PI * radius;
+    const progress = (safeRisk / 100) * halfCircumference;
+    const offset = halfCircumference - progress;
+    const colors = {
+      low: '#22c55e',
+      medium: '#eab308',
+      high: '#ef4444'
+    };
+    const valueY = size / 2 - (compact ? 2 : 5);
+    const labelY = size / 2 + (compact ? 14 : 20);
+    const viewHeight = size / 2 + (compact ? 15 : 20);
+
+    return React.createElement('div', {
+      className: `widget-relapse-risk__speedometer ${compact ? 'widget-relapse-risk__speedometer--compact' : ''}`,
+      style: { width: size, height: size / 2 + (compact ? 25 : 30) }
+    },
+      React.createElement('svg', {
+        viewBox: `0 0 ${size} ${viewHeight}`,
+        className: 'widget-relapse-risk__speedometer-svg'
+      },
+        React.createElement('path', {
+          d: `M ${strokeWidth / 2} ${size / 2} A ${radius} ${radius} 0 0 1 ${size - strokeWidth / 2} ${size / 2}`,
+          fill: 'none',
+          stroke: 'var(--border-color, #e2e8f0)',
+          strokeWidth,
+          strokeLinecap: 'round'
+        }),
+        React.createElement('path', {
+          d: `M ${strokeWidth / 2} ${size / 2} A ${radius} ${radius} 0 0 1 ${size - strokeWidth / 2} ${size / 2}`,
+          fill: 'none',
+          stroke: colors[tone] || colors.medium,
+          strokeWidth,
+          strokeLinecap: 'round',
+          strokeDasharray: halfCircumference,
+          strokeDashoffset: offset,
+          style: { transition: 'stroke-dashoffset 0.6s ease' }
+        }),
+        React.createElement('text', {
+          x: size / 2,
+          y: valueY,
+          textAnchor: 'middle',
+          className: 'widget-relapse-risk__speedometer-value',
+          style: {
+            fontSize: compact ? 28 : 36,
+            fontWeight: 700,
+            fill: colors[tone] || 'var(--text-primary)'
+          }
+        }, `${safeRisk}%`),
+        React.createElement('text', {
+          x: size / 2,
+          y: labelY,
+          textAnchor: 'middle',
+          className: 'widget-relapse-risk__speedometer-label',
+          style: { fontSize: compact ? 10 : 12, fill: 'var(--text-secondary, #64748b)' }
+        }, label)
+      )
+    );
+  }
+
+  if (!window._relapseRingAnimated) window._relapseRingAnimated = new Set();
+  const _relapseRingAnimated = window._relapseRingAnimated;
+
+  function RelapseRiskWidgetContent({ widget, data }) {
+    const score = Math.round(Number(data?.score) || 0);
+    const target = 100;
+    const pct = Math.max(0, Math.min(100, Math.round(Number(data?.pct) || score)));
+    const level = String(data?.level || 'low');
+    const topWindowLabel = data?.topWindowLabel || 'сейчас';
+    const topWindowScore = Math.round(Number(data?.topWindowScore) || score);
+    const primaryDriver = data?.primaryDriver || null;
+    const primaryDrivers = Array.isArray(data?.primaryDrivers) ? data.primaryDrivers.slice(0, 2) : [];
+    const recommendation = data?.recommendation || null;
+
+    const d = getWidgetDims(widget);
+    const size = widget?.size || '2x2';
+    const variant = d.isMicro ? 'micro' : d.isShort ? 'short' : d.isTall ? 'tall' : 'std';
+
+    const color = getRelapseRiskColor(level);
+    const [gradStart, gradEnd] = getRelapseGradientColors(level);
+    const basePct = Math.max(0, Math.min(100, pct));
+    const _widgetKey = `relapse-ring-${widget?.id || '0'}`;
+    const _alreadyAnimated = _relapseRingAnimated.has(_widgetKey);
+    const [displayPct, setDisplayPct] = React.useState(_alreadyAnimated ? basePct : 0);
+    const _ringMounted = React.useRef(_alreadyAnimated);
+
+    React.useEffect(() => {
+      if (_alreadyAnimated) return;
+      const raf = requestAnimationFrame(() => {
+        _relapseRingAnimated.add(_widgetKey);
+        setDisplayPct(basePct);
+        _ringMounted.current = true;
+      });
+      return () => cancelAnimationFrame(raf);
+    }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+    React.useEffect(() => {
+      if (_ringMounted.current) {
+        setDisplayPct(basePct);
+      }
+    }, [score]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    if (d.isMicro) {
+      return React.createElement('div', { className: 'widget-relapse-risk widget-relapse-risk--micro' },
+        React.createElement('div', { className: 'widget-micro__label' }, 'риск'),
+        React.createElement('div', { className: 'widget-relapse-risk__value', style: { color } }, `${score}`)
+      );
+    }
+
+    if (size === '2x2') {
+      return React.createElement('div', { className: 'widget-relapse-risk widget-relapse-risk--2x2' },
+        React.createElement('div', { className: 'widget-relapse-risk__gauge-wrap' },
+          React.createElement(RelapseRiskSpeedometer, {
+            score: displayPct,
+            level,
+            size: 136,
+            label: 'Риск срыва',
+            compact: true
+          })
+        ),
+        React.createElement('div', { className: 'widget-relapse-risk__footer-badge-wrap' },
+          React.createElement('div', {
+            className: 'widget-relapse-risk__gauge-status-pill widget-relapse-risk__gauge-status-pill--footer',
+            style: { color, background: `${color}16`, borderColor: `${color}22` }
+          }, getRelapseLevelLabel(level))
+        )
+      );
+    }
+
+    const showDrivers = widget.settings?.showDrivers !== false;
+    const showRecommendation = widget.settings?.showRecommendation !== false;
+
+    return React.createElement('div', { className: `widget-relapse-risk widget-relapse-risk--${variant}` },
+      React.createElement('div', { className: 'widget-relapse-risk__top' },
+        React.createElement('div', { className: 'widget-relapse-risk__value', style: { color } }, `${score}%`),
+        React.createElement('div', { className: 'widget-relapse-risk__pct-pill', style: { color, background: `${color}20` } }, getRelapseLevelLabel(level))
+      ),
+      React.createElement('div', { className: 'widget-relapse-risk__label' }, `пик ${topWindowScore}% ${topWindowLabel}`),
+      React.createElement('div', { className: 'widget-relapse-risk__progress' },
+        React.createElement('div', {
+          className: 'widget-relapse-risk__bar',
+          style: { width: `${pct}%`, background: `linear-gradient(90deg, ${gradStart} 0%, ${gradEnd} 100%)` }
+        })
+      ),
+      showDrivers && primaryDrivers.length > 0
+        ? React.createElement('div', { className: 'widget-relapse-risk__drivers' },
+          primaryDrivers.map((driver, index) => React.createElement('span', {
+            key: `${driver?.key || driver?.label || 'driver'}-${index}`,
+            className: 'widget-relapse-risk__driver-chip'
+          }, driver?.label || driver?.key || 'driver'))
+        )
+        : null,
+      showRecommendation && recommendation
+        ? React.createElement('div', { className: 'widget-relapse-risk__recommendation' }, recommendation)
+        : primaryDriver
+          ? React.createElement('div', { className: 'widget-relapse-risk__recommendation' }, primaryDriver.label || primaryDriver.key || 'Есть фактор риска')
+          : null
+    );
+  }
+
+  function RelapseRiskDetailsModal({ payload, isOpen, onClose }) {
+    if (!isOpen || !payload) return null;
+
+    const snapshot = payload?.snapshot || {};
+    const result = snapshot?.raw || {};
+    const score = Math.round(Number(snapshot?.score ?? result?.score) || 0);
+    const level = String(snapshot?.level || result?.level || 'low');
+    const confidence = Math.max(0, Math.min(100, Math.round(Number(snapshot?.confidence ?? result?.confidence) || 0)));
+    const windows = getSortedRelapseWindows(result?.windows || snapshot?.windows);
+    const drivers = Array.isArray(result?.primaryDrivers) ? result.primaryDrivers : (Array.isArray(snapshot?.primaryDrivers) ? snapshot.primaryDrivers : []);
+    const protectiveFactors = Array.isArray(result?.protectiveFactors) ? result.protectiveFactors : (Array.isArray(snapshot?.protectiveFactors) ? snapshot.protectiveFactors : []);
+    const recommendations = Array.isArray(result?.recommendations) ? result.recommendations : [];
+    const components = Object.entries(result?.debug?.components || {})
+      .map(([key, value]) => ({
+        key,
+        value: Math.round(Number(value) || 0),
+        ...getRelapseComponentMeta(key)
+      }))
+      .filter(item => item.key !== 'protectiveBuffer')
+      .sort((a, b) => b.value - a.value);
+    const protectiveBuffer = Math.round(Number(result?.debug?.components?.protectiveBuffer) || 0);
+    const humanSummary = buildRelapseHumanSummary(payload);
+    const restrictionDebug = result?.debug?.restrictionPressure || {};
+    const historyQuality = result?.debug?.historyQuality || {};
+    const color = getRelapseRiskColor(level);
+    const [gradStart, gradEnd] = getRelapseGradientColors(level);
+    const leadWindow = windows[0] || null;
+    const leadDriver = drivers[0] || null;
+    const topRecommendation = recommendations[0] || null;
+
+    const copyRelapseLog = async () => {
+      const startedAt = Date.now();
+      try {
+        const text = formatRelapseRiskTraceForClipboard(payload);
+        await copyTextWithFallback(text);
+        console.info('[HEYS.relapseRisk.copy] ✅ trace copied', {
+          chars: text.length,
+          score,
+          level,
+          windows: windows.length,
+          drivers: drivers.length,
+          tookMs: Date.now() - startedAt
+        });
+        HEYS.Toast?.success?.('Relapse Risk лог скопирован');
+      } catch (err) {
+        console.error('[HEYS.relapseRisk.copy] ❌ copy failed', {
+          message: err?.message || String(err)
+        });
+        HEYS.Toast?.error?.('Не удалось скопировать Relapse Risk лог');
+      }
+    };
+
+    const handleBackdropClick = (e) => {
+      if (e.target === e.currentTarget) onClose?.();
+    };
+
+    return React.createElement('div', {
+      className: 'widget-relapse-risk__modal-overlay',
+      onClick: handleBackdropClick
+    },
+      React.createElement('div', {
+        className: 'widget-relapse-risk__modal',
+        onClick: (e) => e.stopPropagation()
+      },
+        React.createElement('div', { className: 'widget-relapse-risk__modal-header' },
+          React.createElement('div', { className: 'widget-relapse-risk__modal-title-wrap' },
+            React.createElement('div', { className: 'widget-relapse-risk__modal-eyebrow' }, 'Relapse Risk Score'),
+            React.createElement('h3', { className: 'widget-relapse-risk__modal-title' }, 'Почему риск такой сейчас')
+          ),
+          React.createElement('button', {
+            type: 'button',
+            className: 'widget-relapse-risk__modal-close',
+            onClick: onClose,
+            'aria-label': 'Закрыть'
+          }, '✕')
+        ),
+        React.createElement('div', { className: 'widget-relapse-risk__modal-content' },
+          React.createElement('div', { className: 'widget-relapse-risk__modal-hero' },
+            React.createElement('div', {
+              className: 'widget-relapse-risk__modal-score-shell',
+              style: { background: `linear-gradient(135deg, ${gradStart}18 0%, ${gradEnd}24 100%)`, borderColor: `${color}33` }
+            },
+              React.createElement('div', { className: 'widget-relapse-risk__modal-glow' }),
+              React.createElement(RelapseRiskSpeedometer, {
+                score,
+                level,
+                size: 176,
+                label: 'Риск срыва'
+              }),
+              React.createElement('div', {
+                className: 'widget-relapse-risk__modal-score-level',
+                style: { color, background: `${color}16`, borderColor: `${color}26` }
+              }, getRelapseLevelLabel(level))
+            ),
+            React.createElement('div', { className: 'widget-relapse-risk__modal-summary' },
+              React.createElement('div', { className: 'widget-relapse-risk__modal-summary-intro' },
+                React.createElement('div', { className: 'widget-relapse-risk__modal-summary-kicker' }, 'Текущий snapshot'),
+                React.createElement('div', { className: 'widget-relapse-risk__modal-summary-headline' }, 'Почему система считает риск именно таким'),
+                React.createElement('div', { className: 'widget-relapse-risk__modal-summary-copy' }, humanSummary.headline),
+                React.createElement('div', { className: 'widget-relapse-risk__modal-summary-copy' }, (humanSummary.bullets || []).join(' '))
+              ),
+              React.createElement('div', { className: 'widget-relapse-risk__modal-summary-grid' },
+                React.createElement('div', { className: 'widget-relapse-risk__modal-summary-row' },
+                  React.createElement('span', null, 'Confidence'),
+                  React.createElement('strong', null, `${confidence}%`)
+                ),
+                React.createElement('div', { className: 'widget-relapse-risk__modal-summary-row' },
+                  React.createElement('span', null, 'Пиковое окно'),
+                  React.createElement('strong', null, leadWindow ? `${leadWindow.label} · ${leadWindow.value}%` : '—')
+                ),
+                React.createElement('div', { className: 'widget-relapse-risk__modal-summary-row' },
+                  React.createElement('span', null, 'Главный драйвер'),
+                  React.createElement('strong', null, leadDriver?.label || 'Нет доминирующего драйвера')
+                ),
+                React.createElement('div', { className: 'widget-relapse-risk__modal-summary-row' },
+                  React.createElement('span', null, 'Первый шаг'),
+                  React.createElement('strong', null, topRecommendation?.text || 'Поддерживать стабильный режим')
+                ),
+                React.createElement('div', { className: 'widget-relapse-risk__modal-summary-row' },
+                  React.createElement('span', null, 'Тип паттерна'),
+                  React.createElement('strong', null, getRelapseCutPatternLabel(restrictionDebug?.cutPattern))
+                ),
+                React.createElement('div', { className: 'widget-relapse-risk__modal-summary-row' },
+                  React.createElement('span', null, 'История'),
+                  React.createElement('strong', null, getRelapseHistoryQualityLabel(historyQuality))
+                )
+              ),
+              React.createElement('div', { className: 'widget-relapse-risk__modal-equation' },
+                React.createElement('span', { className: 'widget-relapse-risk__modal-equation-pill' }, 'stress'),
+                React.createElement('span', { className: 'widget-relapse-risk__modal-equation-plus' }, '+'),
+                React.createElement('span', { className: 'widget-relapse-risk__modal-equation-pill' }, 'sleep debt'),
+                React.createElement('span', { className: 'widget-relapse-risk__modal-equation-plus' }, '+'),
+                React.createElement('span', { className: 'widget-relapse-risk__modal-equation-pill' }, 'restriction'),
+                React.createElement('span', { className: 'widget-relapse-risk__modal-equation-plus' }, '+'),
+                React.createElement('span', { className: 'widget-relapse-risk__modal-equation-pill' }, 'reward food'),
+                React.createElement('span', { className: 'widget-relapse-risk__modal-equation-plus' }, '−'),
+                React.createElement('span', { className: 'widget-relapse-risk__modal-equation-pill widget-relapse-risk__modal-equation-pill--good' }, 'protective buffer')
+              )
+            )
+          ),
+          windows.length > 0 && React.createElement('section', { className: 'widget-relapse-risk__modal-section' },
+            React.createElement('div', { className: 'widget-relapse-risk__modal-section-title' }, 'Окна риска'),
+            React.createElement('div', { className: 'widget-relapse-risk__modal-window-list' },
+              windows.map((windowInfo) => React.createElement('div', {
+                key: windowInfo.key,
+                className: 'widget-relapse-risk__modal-window'
+              },
+                React.createElement('div', { className: 'widget-relapse-risk__modal-window-top' },
+                  React.createElement('span', { className: 'widget-relapse-risk__modal-window-label' }, windowInfo.label),
+                  React.createElement('strong', { className: 'widget-relapse-risk__modal-window-value', style: { color } }, `${windowInfo.value}%`)
+                ),
+                React.createElement('div', { className: 'widget-relapse-risk__modal-window-text' }, windowInfo.description)
+              ))
+            )
+          ),
+          drivers.length > 0 && React.createElement('section', { className: 'widget-relapse-risk__modal-section' },
+            React.createElement('div', { className: 'widget-relapse-risk__modal-section-title' }, 'Что поднимает риск'),
+            React.createElement('div', { className: 'widget-relapse-risk__modal-driver-list' },
+              drivers.map((driver) => React.createElement('div', {
+                key: driver.id || driver.label,
+                className: 'widget-relapse-risk__modal-driver'
+              },
+                React.createElement('div', { className: 'widget-relapse-risk__modal-driver-top' },
+                  React.createElement('span', { className: 'widget-relapse-risk__modal-driver-label' }, driver.label || driver.id),
+                  React.createElement('strong', { className: 'widget-relapse-risk__modal-driver-impact', style: { color } }, `+${Math.round(Number(driver.impact) || 0)}`)
+                ),
+                React.createElement('div', { className: 'widget-relapse-risk__modal-driver-text' }, driver.explanation || 'Фактор повышает вероятность loss-of-control eating.')
+              ))
+            )
+          ),
+          components.length > 0 && React.createElement('section', { className: 'widget-relapse-risk__modal-section' },
+            React.createElement('div', { className: 'widget-relapse-risk__modal-section-title' }, 'Компоненты расчёта'),
+            React.createElement('div', { className: 'widget-relapse-risk__modal-component-list' },
+              components.map((component) => React.createElement('div', {
+                key: component.key,
+                className: 'widget-relapse-risk__modal-component'
+              },
+                React.createElement('div', { className: 'widget-relapse-risk__modal-component-top' },
+                  React.createElement('span', { className: 'widget-relapse-risk__modal-component-label' }, component.label),
+                  React.createElement('strong', { className: 'widget-relapse-risk__modal-component-value' }, `${component.value}/100`)
+                ),
+                React.createElement('div', { className: 'widget-relapse-risk__modal-component-bar' },
+                  React.createElement('div', {
+                    className: 'widget-relapse-risk__modal-component-fill',
+                    style: { width: `${Math.max(0, Math.min(100, component.value))}%`, background: `linear-gradient(90deg, ${gradStart} 0%, ${gradEnd} 100%)` }
+                  })
+                ),
+                React.createElement('div', { className: 'widget-relapse-risk__modal-component-text' }, component.description)
+              )),
+              React.createElement('div', { className: 'widget-relapse-risk__modal-protective-summary' },
+                React.createElement('span', null, 'Protective buffer'),
+                React.createElement('strong', null, `-${protectiveBuffer}`)
+              )
+            )
+          ),
+          protectiveFactors.length > 0 && React.createElement('section', { className: 'widget-relapse-risk__modal-section' },
+            React.createElement('div', { className: 'widget-relapse-risk__modal-section-title' }, 'Что сейчас защищает'),
+            React.createElement('div', { className: 'widget-relapse-risk__modal-protective-list' },
+              protectiveFactors.map((factor) => React.createElement('div', {
+                key: factor.id || factor.label,
+                className: 'widget-relapse-risk__modal-protective'
+              },
+                React.createElement('span', { className: 'widget-relapse-risk__modal-protective-label' }, factor.label || factor.id),
+                React.createElement('span', { className: 'widget-relapse-risk__modal-protective-text' }, factor.explanation || 'Этот фактор немного стабилизирует риск.')
+              ))
+            )
+          ),
+          recommendations.length > 0 && React.createElement('section', { className: 'widget-relapse-risk__modal-section' },
+            React.createElement('div', { className: 'widget-relapse-risk__modal-section-title' }, 'Что сделать сейчас'),
+            React.createElement('div', { className: 'widget-relapse-risk__modal-recommendations' },
+              recommendations.slice(0, 3).map((rec) => React.createElement('div', {
+                key: rec.id || rec.text,
+                className: 'widget-relapse-risk__modal-recommendation'
+              }, rec.text))
+            )
+          ),
+          React.createElement('section', { className: 'widget-relapse-risk__modal-tech-actions' },
+            React.createElement('button', {
+              type: 'button',
+              className: 'widget-relapse-risk__modal-copy-btn',
+              onClick: copyRelapseLog,
+              title: 'Скопировать технический лог со всеми расчётами Relapse Risk Score'
+            }, 'Скопировать техлог расчёта')
+          )
+        )
+      )
+    );
+  }
+
   // === Catalog Modal Component ===
   function CatalogModal({ isOpen, onClose, onSelect, existingTypes }) {
     const registry = HEYS.Widgets.registry;
@@ -3108,6 +3778,7 @@
     const [isEditMode, setIsEditMode] = useState(false);
     const [catalogOpen, setCatalogOpen] = useState(false);
     const [settingsWidget, setSettingsWidget] = useState(null);
+    const [relapseDetails, setRelapseDetails] = useState(null);
     const [historyInfo, setHistoryInfo] = useState({ canUndo: false, canRedo: false });
     const [waterAnim, setWaterAnim] = useState(null); // { text: '+200мл', id: 123 } или null
     const [showGridOverlay, setShowGridOverlay] = useState(false); // Grid overlay toggle
@@ -3293,6 +3964,71 @@
       HEYS.Widgets.state?.updateWidget(widgetId, { settings });
     }, []);
 
+    const openRelapseDetails = useCallback((widget) => {
+      if (!widget || widget.type !== 'relapseRisk') return;
+      try {
+        let snapshot = HEYS.Widgets.data?.getDataForWidget?.(widget) || {};
+
+        // Если провайдер вернул пустой или неполный результат (нет raw = нет engine result),
+        // вызываем движок напрямую как fallback
+        if (!snapshot?.raw && HEYS.RelapseRisk?.calculate) {
+          console.info('[HEYS.relapseRisk] provider returned no raw result, calling engine directly');
+          try {
+            const U = HEYS.utils || {};
+            const lsGet = typeof U?.lsGet === 'function' ? U.lsGet.bind(U) : ((k, fb) => fb);
+            const dayData = HEYS.DayData?.getCurrentDay?.() || {};
+            const profile = lsGet('heys_profile', {});
+            const dayTot = HEYS.DayData?.getDayTot?.(dayData) || {};
+            const normAbs = HEYS.norms?.getNormAbs?.(profile, profile?.pIndex || 0) || {};
+            const historyDays = [];
+            for (let i = 13; i >= 0; i--) {
+              const d = new Date();
+              d.setDate(d.getDate() - i);
+              const dateStr = d.toISOString().split('T')[0];
+              const day = lsGet(`heys_dayv2_${dateStr}`, null);
+              if (day && typeof day === 'object' && Object.keys(day).length > 0) {
+                historyDays.push({ date: dateStr, ...day, dayTot: HEYS.DayData?.getDayTot?.(day) || day.dayTot || {} });
+              }
+            }
+            const result = HEYS.RelapseRisk.calculate({
+              dayData, profile, dayTot, normAbs, historyDays,
+              now: new Date().toISOString()
+            });
+            snapshot = {
+              hasData: true,
+              score: Math.round(Number(result?.score) || 0),
+              level: result?.level || 'low',
+              confidence: Math.round(Number(result?.confidence) || 0),
+              primaryDrivers: Array.isArray(result?.primaryDrivers) ? result.primaryDrivers : [],
+              protectiveFactors: Array.isArray(result?.protectiveFactors) ? result.protectiveFactors : [],
+              windows: result?.windows || {},
+              recommendations: Array.isArray(result?.recommendations) ? result.recommendations : [],
+              raw: result,
+              _fallbackSource: 'modal_direct_engine'
+            };
+            console.info('[HEYS.relapseRisk] ✅ direct engine fallback succeeded', {
+              score: snapshot.score,
+              level: snapshot.level,
+              confidence: snapshot.confidence,
+              drivers: snapshot.primaryDrivers?.length,
+              historyDays: historyDays.length
+            });
+          } catch (fallbackErr) {
+            console.warn('[HEYS.relapseRisk] direct engine fallback failed:', fallbackErr?.message);
+          }
+        }
+
+        setRelapseDetails({ widget, snapshot, openedAt: Date.now() });
+        HEYS.dayUtils?.haptic?.('light');
+      } catch (e) {
+        trackWidgetIssue('widgets_relapse_modal_open_failed', {
+          widgetId: widget?.id,
+          widgetType: widget?.type,
+          message: e?.message
+        });
+      }
+    }, []);
+
     // Handle widget remove
     const handleRemove = useCallback((widgetId) => {
       HEYS.Widgets.state?.removeWidget(widgetId);
@@ -3311,6 +4047,19 @@
         document.removeEventListener('pointercancel', onUp);
       };
     }, []);
+
+    useEffect(() => {
+      const unsubWidgetClick = HEYS.Widgets.on?.('widget:click', ({ widget }) => {
+        if (isEditMode || !widget) return;
+        if (widget.type === 'relapseRisk') {
+          openRelapseDetails(widget);
+        }
+      });
+
+      return () => {
+        unsubWidgetClick?.();
+      };
+    }, [isEditMode, openRelapseDetails]);
 
     // Toggle edit mode
     const toggleEdit = useCallback(() => {
@@ -3611,6 +4360,11 @@
         isOpen: !!settingsWidget,
         onClose: () => setSettingsWidget(null),
         onSave: handleSettingsSave
+      }),
+      React.createElement(RelapseRiskDetailsModal, {
+        payload: relapseDetails,
+        isOpen: !!relapseDetails,
+        onClose: () => setRelapseDetails(null)
       }),
 
       // === Fixed bottom edit controls (для всех устройств) ===

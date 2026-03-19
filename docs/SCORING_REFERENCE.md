@@ -1,6 +1,6 @@
 # 📊 HEYS Scoring Reference
 
-> **Справочник скоринговых систем HEYS** Версия: 1.0.0 | Обновлено: 2026-02-26
+> **Справочник скоринговых систем HEYS** Версия: 1.1.0 | Обновлено: 2026-03-20
 
 **📌 Основной справочник данных**:
 [DATA_MODEL_REFERENCE.md](./DATA_MODEL_REFERENCE.md) — структуры данных, ключи,
@@ -61,15 +61,46 @@
 ### API
 
 ```javascript
-HEYS.StatusScore.calculate(dayData);
-// Результат: { score: 72, level: 'good', factors: {...}, breakdown: {...} }
-
-HEYS.StatusScore.getLevel(score);
-// Результат: { level: 'good', emoji: '😊', color: '#4ade80' }
-
-HEYS.StatusScore.getFactorBreakdown(dayData);
-// Результат: [{ name: 'kcal', score: 95, weight: 0.15, weighted: 14.25 }, ...]
+HEYS.StatusScore.calculate(opts);
+// opts: { dayData, profile, dayTot, normAbs, waterGoal, previousStatus }
+// Результат:
+{
+  score: 72,           // итоговый с учётом сглаживания
+  rawScore: 74,        // без сглаживания
+  level: { id: 'good', label: 'Хорошо', emoji: '✅', color: '#22c55e' },
+  factorScores: { kcal: 100, protein: 80, ... },  // score 0-100 по каждому фактору
+  factorDetails: {                                 // фактические значения для UI
+    kcal: { value: 1750, target: 2000, unit: 'ккал', percent: 88 },
+    protein: { value: 62, target: 80, unit: 'г', percent: 78 },
+    sleep: { value: 7.5, target: 8, unit: 'ч', percent: 94 },
+    water: { value: 1600, target: 2000, unit: 'мл', percent: 80 },
+    steps: { value: 7200, target: 10000, unit: 'шагов', percent: 72 },
+    // ...
+  },
+  breakdown: [         // полный explainability-массив, один элемент на фактор
+    {
+      factorId: 'kcal',
+      label: 'Калории', icon: '🔥',
+      weight: 15, category: 'nutrition',
+      score: 100,
+      value: 1750, target: 2000, unit: 'ккал', percent: 88,
+      issue: null, recommendation: null
+    },
+    // ...
+  ],
+  categoryScores: {          // агрегат по категориям
+    nutrition: { score: 88, label: 'Питание', icon: '🍎', color: '#f97316' },
+    activity: { score: 65, ... },
+    recovery: { score: 91, ... },
+    hydration: { score: 80, ... }
+  },
+  topIssues: [...],    // ≤2 проблемы с рекомендациями
+  topActions: [...],   // ≤2 конкретных шага
+}
 ```
+
+> `breakdown` — основной интерфейс для explainability-UI. Содержит всё: метку,
+> фактическое значение + цель + единицу, score, issue и recommendation.
 
 ---
 
@@ -101,12 +132,35 @@ dayScore = (mood + wellbeing + (10 - stress)) / 3;
 
 **Cloud merge**: При конфликте `dayScoreManual=true` выигрывает ручное значение.
 
+### dayScoreRaw (derived, in-memory)
+
+Помимо `dayScore` (целое 0-10), функция `calculateDayAverages()` возвращает
+`dayScoreRaw` — значение с точностью 1 десятичного знака (например `6.7`).
+
+- **Не хранится в облаке** — вычисляется при каждом пересчёте и живёт только в
+  памяти/реактивном состоянии дня.
+- Реактивный эффект `heys_day_rating_averages_v1.js` записывает `dayScoreRaw` в
+  состояние дня наравне с `dayScore`.
+- Используется внутри `heys_relapse_risk_v1.js` как один из входных сигналов для
+  более точного (без округления) расчёта риска срыва.
+
+```javascript
+const { dayScore, dayScoreRaw } = HEYS.dayCalculations.calculateDayAverages(
+  meals,
+  trainings,
+  dayData,
+);
+// dayScore = 7 (integer, stored)
+// dayScoreRaw = 6.7 (float, in-memory only)
+```
+
 ### Использование
 
 - Отображается в виджете дня (эмодзи)
 - Используется в Predictive Insights паттерне `MOOD_FOOD`
 - Влияет на EWS предупреждение `EMOTIONAL_EATING_RISK`
 - Используется в формуле Advice `emotional_risk_high`
+- `dayScoreRaw` — вспомогательный сигнал для Relapse Risk Score v1
 
 ---
 
@@ -180,15 +234,121 @@ HEYS.CascadeCard.getRecommendations(state, dayData);
 
 ---
 
-## Связанные файлы
+---
 
-| Файл                       | Описание                                |
-| -------------------------- | --------------------------------------- |
-| `heys_status_v1.js`        | Status Score (9 факторов, 5 уровней)    |
-| `heys_day_calculations.js` | Day Score, dayTot, computed fields      |
-| `heys_cascade_card_v1.js`  | CRS v7, состояния каскада, momentum     |
-| `heys_cloud_merge_v1.js`   | Merge logic для dayScore/dayScoreManual |
+## ⚡ Relapse Risk Score (RRS v1)
+
+**Файл**: `heys_relapse_risk_v1.js` | **Namespace**: `HEYS.RelapseRisk`
+
+Predictive-оценка риска «срыва» — вероятности эмоционального переедания или
+отказа от следования нутриционному плану в ближайшие 3–24 часа. Живёт целиком
+как runtime-вычисление: в облаке не хранится.
+
+### Диапазон и уровни
+
+| Уровень    | Диапазон | Поведение системы                          |
+| ---------- | -------- | ------------------------------------------ |
+| `low`      | 0–19     | Фонового риска нет                         |
+| `guarded`  | 20–39    | Слабые предупреждающие сигналы             |
+| `elevated` | 40–59    | Активируются targeted advice-правила       |
+| `high`     | 60–79    | Priority-совет в Advice Engine             |
+| `critical` | 80–100   | Неотложный совет, `canSkipCooldown = true` |
+
+### 6 компонент и веса
+
+| Компонент                | Вес | Сигналы                                             |
+| ------------------------ | --- | --------------------------------------------------- |
+| `stressLoad`             | 24% | stressAvg, mood, wellbeing                          |
+| `restrictionPressure`    | 22% | kcal дефицит > 30%, белок < 60% нормы               |
+| `sleepDebt`              | 18% | sleepHours vs norm (сегодня + 2 дня истории)        |
+| `rewardExposure`         | 16% | Сладкое/фастфуд в последнем приёме, время суток     |
+| `timingContext`          | 10% | Часовой пояс, пиковые окна риска (16–20 ч, полночь) |
+| `emotionalVulnerability` | 10% | Паттерн из 7 дней истории: частота `dayScore < 5`   |
+
+### Временны́е окна
+
+Каждый вызов `calculate()` возвращает объект `windows` с прогнозами:
+
+```javascript
+{
+  next3h:  60,   // вероятность 0-100: срыв в ближайшие 3 часа
+  tonight: 45,   // вероятность до конца дня (до 24:00)
+  next24h: 38    // агрегированный прогноз на 24 ч
+}
+```
+
+### API
+
+```javascript
+const result = HEYS.RelapseRisk.calculate({
+  dayData,        // текущий DayRecord
+  dayTot,         // аккумулированные за день КБЖУ
+  normAbs,        // нормы пользователя
+  profile,        // профиль (sleepHours, chronotype, ...)
+  historyDays,    // массив последних N DayRecord (обычно 7)
+});
+
+// Возвращает:
+{
+  score: 62,                          // 0-100
+  level: 'high',                      // 'low'|'guarded'|'elevated'|'high'|'critical'
+  confidence: 0.78,                   // 0-1
+  primaryDrivers: [{ id: 'stress_load', weight: 0.24, value: 0.81 }],
+  protectiveFactors: [],
+  windows: { next3h: 55, tonight: 62, next24h: 48 },
+  recommendations: ['...'],
+  debug: { components: {...} }
+}
+```
+
+### Интеграция с Advice Engine
+
+Advice Engine (`advice/_core.js`) вычисляет `relapseRisk` один раз при
+инициализации контекста и передаёт его через `ctx.relapseRisk` во все модули.
+
+Модуль `advice/_emotional.js` содержит 6 правил, активируемых на основе RRS:
+
+| ID                         | Триггер                                  | Priority |
+| -------------------------- | ---------------------------------------- | -------- |
+| `relapse_risk_high`        | level `critical`/`high`                  | 1 / 3    |
+| `relapse_risk_elevated`    | level `elevated`, hour ≥ 16              | 12       |
+| `relapse_risk_restriction` | topDriver `restriction_pressure` + ≥ 15ч | 5        |
+| `relapse_risk_stress`      | topDriver `stress_load`                  | 6        |
+| `relapse_risk_sleep_debt`  | topDriver `sleep_debt`                   | 8        |
+| `relapse_risk_tonight`     | `windows.tonight` ≥ 65, hour < 18        | 10       |
+
+Все правила объединены в дедупликационную группу `relapse`
+(`heys_advice_rules_v1.js`).
+
+### Владение секцией CRASH_RISK
+
+RRS v1 — **единственный источник** данных для секции **CRASH_RISK** (Insights
+dashboard). Ранее приоритет crashRisk менялся с учётом EWS warnings
+(`SLEEP_DEBT`, `STRESS_ACCUMULATION`, `BINGE_RISK`, `CALORIC_DEBT`), что
+создавало дублирование сигналов. Начиная с `2026-03-20`, EWS boost убран:
+
+- CRASH_RISK priority определяется **только** по `relapseRisk.score` (0–100).
+- 4 EWS warnings остаются как самостоятельные health-сигналы в ленте EWS и
+  используются `pi_causal_chains.js` и `advice/_core.js`, но **не влияют** на
+  CRASH_RISK priority.
+- SCIENCE_INFO для CRASH_RISK и CRASH_RISK_QUICK обновлены, чтобы описывать
+  именно 6-компонентную формулу RRS.
 
 ---
 
-**Версия документа**: 1.0.0 **Последнее обновление**: 2026-02-26
+## Связанные файлы
+
+| Файл                       | Описание                                  |
+| -------------------------- | ----------------------------------------- |
+| `heys_status_v1.js`        | Status Score (9 факторов, smooth scoring) |
+| `heys_day_calculations.js` | Day Score, dayScoreRaw, derived metrics   |
+| `heys_cascade_card_v1.js`  | CRS v7, состояния каскада, momentum       |
+| `heys_relapse_risk_v1.js`  | Relapse Risk Score v1 (RRS)               |
+| `heys_cloud_merge_v1.js`   | Merge logic для dayScore/dayScoreManual   |
+| `advice/_core.js`          | Advice Engine, ctx.relapseRisk            |
+| `advice/_emotional.js`     | Advice rules для relapse risk             |
+| `heys_advice_rules_v1.js`  | Deduplication group `relapse`             |
+
+---
+
+**Версия документа**: 1.1.0 **Последнее обновление**: 2026-03-19

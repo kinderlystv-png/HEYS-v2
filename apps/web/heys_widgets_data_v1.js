@@ -12,6 +12,41 @@
     const HEYS = global.HEYS = global.HEYS || {};
     HEYS.Widgets = HEYS.Widgets || {};
 
+    // --- Relapse Risk ---
+    // Data gathering and calculation delegated to HEYS.RelapseRisk.getCurrentSnapshot()
+    // (single source of truth in heys_relapse_risk_v1.js)
+
+    function getRelapseRiskData(widget, U) {
+        // Delegate to the shared RRS snapshot — single source of truth
+        if (HEYS.RelapseRisk?.getCurrentSnapshot) {
+            const snap = HEYS.RelapseRisk.getCurrentSnapshot();
+            if (!snap.hasData) {
+                return { hasData: false, message: snap.message || 'Relapse engine не загружен' };
+            }
+            return {
+                hasData: true,
+                score: snap.score,
+                target: 100,
+                pct: snap.score,
+                remaining: Math.max(0, 100 - snap.score),
+                level: snap.level,
+                confidence: snap.confidence,
+                topWindowLabel: snap.topWindowLabel,
+                topWindowScore: snap.topWindowScore,
+                primaryDriver: snap.primaryDriver,
+                primaryDrivers: snap.primaryDrivers,
+                protectiveFactors: snap.protectiveFactors,
+                recommendation: snap.recommendation,
+                windows: snap.windows,
+                raw: snap.raw,
+            };
+        }
+
+        // Fallback: engine not loaded yet
+        console.warn('[HEYS.Widgets.data] relapseRisk engine not loaded');
+        return { hasData: false, message: 'Relapse engine не загружен' };
+    }
+
     /**
      * Получить данные для конкретного виджета
      * @param {Object} widget - конфигурация виджета
@@ -38,6 +73,10 @@
 
                     const days = widget.settings?.periodDays || 7;
                     return provider.getData({ days });
+                }
+
+                case 'relapseRisk': {
+                    return getRelapseRiskData(widget, U);
                 }
 
                 case 'status': {
@@ -223,7 +262,7 @@
             }
         } catch (error) {
             console.error(`[HEYS.Widgets.data] Error loading data for ${type}:`, error);
-            return {};
+            return { hasData: false, _error: error?.message || 'unknown_error' };
         }
     }
 

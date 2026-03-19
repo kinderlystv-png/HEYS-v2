@@ -318,6 +318,23 @@
         showTrend: { type: 'boolean', default: true, label: 'Показывать тренд' },
         periodDays: { type: 'number', default: 7, label: 'Период (дней)', min: 7, max: 14 }
       }
+    },
+
+    relapseRisk: {
+      type: 'relapseRisk',
+      name: 'Relapse Risk',
+      category: 'health',
+      icon: '🛡️',
+      description: 'Текущий риск срыва на базе canonical relapse score',
+      defaultSize: '2x2',
+      availableSizes: ['1x1', '2x1', '2x2', '3x2', '4x2'],
+      dataKeys: ['dayData', 'dayTot', 'normAbs', 'historyDays', 'relapseRisk'],
+      component: 'WidgetRelapseRisk',
+      settings: {
+        showDrivers: { type: 'boolean', default: true, label: 'Показывать драйверы' },
+        showRecommendation: { type: 'boolean', default: true, label: 'Показывать действие' },
+        showConfidence: { type: 'boolean', default: true, label: 'Показывать confidence' }
+      }
     }
   };
 

@@ -6099,6 +6099,23 @@
                     }
                 }
 
+                // 🆕 Получаем relapseRisk из RelapseRisk engine
+                let relapseRisk = null;
+                if (window.HEYS?.RelapseRisk?.calculate) {
+                    try {
+                        const historyDays = getRecentDays(7);
+                        relapseRisk = window.HEYS.RelapseRisk.calculate({
+                            dayData: day || {},
+                            dayTot: dayTot || {},
+                            normAbs: normAbs || {},
+                            profile: prof || {},
+                            historyDays,
+                        });
+                    } catch (e) {
+                        // Игнорируем ошибки при получении relapseRisk
+                    }
+                }
+
                 return {
                     dayTot: dayTot || {},
                     normAbs: normAbs || {},
@@ -6118,7 +6135,8 @@
                     prof: prof || {},           // Профиль пользователя
                     waterGoal: waterGoal || 2000, // Норма воды
                     goal,                        // 🎯 Goal режим (deficit/bulk/maintenance)
-                    crashRisk                    // 🆕 Риск срыва из Metabolic Intelligence
+                    crashRisk,                   // 🆕 Риск срыва из Metabolic Intelligence
+                    relapseRisk,                 // 🆕 Predictive relapse risk score
                 };
             } catch (e) {
                 console.error('[HEYS.advice] ❌ ctx useMemo crash:', e?.message);
@@ -6128,7 +6146,7 @@
                     currentStreak: 0, hour: new Date().getHours(), mealCount: 0,
                     hasTraining: false, kcalPct: 0, tone: 'neutral', specialDay: null,
                     emotionalState: 'normal', prof: {}, waterGoal: 2000,
-                    goal: 'maintenance', crashRisk: null
+                    goal: 'maintenance', crashRisk: null, relapseRisk: null
                 };
             }
         })();

@@ -1433,6 +1433,44 @@
   letter-spacing: 0.5px;
 }
 
+.dual-risk-panel__meter-subtitle {
+  font-size: 10px;
+  color: var(--text-tertiary, #94a3b8);
+  margin-top: 2px;
+}
+
+.dual-risk-panel__meter-subtitle--forecast {
+  color: #a78bfa;
+}
+
+.dual-risk-panel__meter-card--forecast {
+  border-style: dashed;
+}
+
+.dual-risk-panel__meter-card--forecast.dual-risk-panel__meter-card--active {
+  border-color: #a78bfa;
+  background: var(--bg-forecast-light, #f5f3ff);
+}
+
+.dual-risk-panel__confidence {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 6px 12px;
+  font-size: 12px;
+  color: var(--text-secondary, #64748b);
+}
+
+.dual-risk-panel__confidence-label {
+  font-weight: 600;
+}
+
+.dual-risk-panel__confidence-value {
+  opacity: 0.8;
+}
+
 .dual-risk-panel__status {
   margin-top: 16px;
   padding: 12px;
@@ -1509,6 +1547,10 @@
 
 .dark .dual-risk-panel__meter-card--active {
   background: var(--bg-accent-dark, #1e3a5f);
+}
+
+.dark .dual-risk-panel__meter-card--forecast.dual-risk-panel__meter-card--active {
+  background: var(--bg-forecast-dark, #2e1065);
 }
 
 .dark .dual-risk-panel__status {

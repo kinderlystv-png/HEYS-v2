@@ -697,6 +697,24 @@ HEYS.DataOverview.analyze(last30Days);
 | `heys_data_overview_v1.js`          | Заполненность данных                     |
 | `heys_supplements_v1.js`            | Каталог добавок, тайминг, взаимодействия |
 | `heys_supplements_science_v1.js`    | Биодоставность, формы, маркеры           |
+| `heys_relapse_risk_v1.js`           | Relapse Risk Score v1 (RRS) — predictive |
+| `advice/_core.js`                   | Advice Engine, ctx.relapseRisk (runtime) |
+
+---
+
+## Relapse Risk Score v1 — Runtime-only
+
+`HEYS.RelapseRisk` живёт как runtime-вычисление и в облаке не хранится.
+
+- **Вход**: `dayData`, `dayTot`, `normAbs`, `profile`, `historyDays` (7 дней)
+- **Выход**:
+  `{score, level, confidence, primaryDrivers, windows, recommendations}`
+- **`dayScoreRaw`**: in-memory float (1 знак, напр. `6.7`), производное от
+  `dayScore` через `calculateDayAverages()` — в облаке не хранится
+- **ctx.relapseRisk**: вычисляется один раз при инициализации Advice Engine и
+  передаётся во все модули через `ctx`
+- Подробнее — см.
+  [`SCORING_REFERENCE.md`](./SCORING_REFERENCE.md#⚡-relapse-risk-score-rrs-v1)
 
 ---
 

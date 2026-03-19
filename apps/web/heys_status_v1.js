@@ -85,6 +85,26 @@
   // === РАСЧЁТ СТАТУСА ===
 
   /**
+   * Linear interpolation helper for smooth factor scoring.
+   * bands: [[ratioFrom, scoreTo], ...] sorted ascending by ratio.
+   * Values below first band → first score; above last → last score.
+   */
+  function scoreSmooth(value, bands) {
+    if (!bands || bands.length === 0) return 50;
+    if (value <= bands[0][0]) return bands[0][1];
+    if (value >= bands[bands.length - 1][0]) return bands[bands.length - 1][1];
+    for (let i = 1; i < bands.length; i++) {
+      const [v0, s0] = bands[i - 1];
+      const [v1, s1] = bands[i];
+      if (value <= v1) {
+        const t = (value - v0) / (v1 - v0);
+        return Math.round(s0 + (s1 - s0) * t);
+      }
+    }
+    return bands[bands.length - 1][1];
+  }
+
+  /**
    * Вычислить оценку фактора (0-100)
    */
   function scoreFactor(factorId, dayData, profile, dayTot, normAbs, waveData, waterGoal) {
@@ -93,22 +113,21 @@
         const target = normAbs?.kcal || 2000;
         const eaten = dayTot?.kcal || 0;
         const ratio = eaten / target;
-        // Идеально: 0.85-1.10
+        // Smooth symmetric scoring: ideal zone 0.85-1.10, smooth ramp-down beyond
+        // Map ratio to a folded distance from the ideal midpoint (0.975)
         if (ratio >= 0.85 && ratio <= 1.10) return 100;
-        if (ratio >= 0.75 && ratio <= 1.20) return 80;
-        if (ratio >= 0.60 && ratio <= 1.30) return 60;
-        if (ratio >= 0.50 && ratio <= 1.40) return 40;
-        return 20;
+        if (ratio < 0.85) return scoreSmooth(ratio, [[0.45, 20], [0.55, 30], [0.65, 50], [0.75, 70], [0.85, 100]]);
+        return scoreSmooth(ratio, [[1.10, 100], [1.20, 75], [1.30, 55], [1.40, 35], [1.55, 20]]);
       }
 
       case 'protein': {
         const target = normAbs?.prot || 80;
         const eaten = dayTot?.prot || 0;
         const ratio = eaten / target;
-        if (ratio >= 0.90) return 100;
-        if (ratio >= 0.75) return 80;
-        if (ratio >= 0.50) return 50;
-        return 20;
+        // Smooth: 90%+ = 100, cap excess penalty gently above 140%
+        if (ratio >= 0.90 && ratio <= 1.40) return 100;
+        if (ratio < 0.90) return scoreSmooth(ratio, [[0.20, 20], [0.40, 35], [0.60, 55], [0.75, 78], [0.90, 100]]);
+        return scoreSmooth(ratio, [[1.40, 100], [1.70, 85], [2.00, 70]]);
       }
 
       case 'timing': {
@@ -169,10 +188,10 @@
         if (hours === 0) return 50; // Нет данных — нейтрально
 
         const ratio = hours / norm;
+        // Smooth: ideal 0.95-1.15, gentle ramp-down for both sides
         if (ratio >= 0.95 && ratio <= 1.15) return 100;
-        if (ratio >= 0.85) return 80;
-        if (ratio >= 0.70) return 50;
-        return 20;
+        if (ratio < 0.95) return scoreSmooth(ratio, [[0.50, 20], [0.65, 35], [0.80, 60], [0.90, 83], [0.95, 100]]);
+        return scoreSmooth(ratio, [[1.15, 100], [1.25, 85], [1.40, 65], [1.60, 40]]);
       }
 
       case 'stress': {
@@ -188,15 +207,73 @@
         const drunk = dayData?.waterMl || 0;
         const goal = waterGoal || 2000;
         const ratio = drunk / goal;
+        // Smooth: ramp up to 100 at 95%+ goal
         if (ratio >= 0.95) return 100;
-        if (ratio >= 0.80) return 85;
-        if (ratio >= 0.60) return 60;
-        if (ratio >= 0.40) return 40;
-        return 20;
+        return scoreSmooth(ratio, [[0.10, 20], [0.30, 35], [0.50, 52], [0.70, 68], [0.82, 80], [0.95, 100]]);
       }
 
       default:
         return 50;
+    }
+  }
+
+  /**
+   * Вернуть детали фактора: фактическое значение, цель, единицу, процент.
+   * Используется для explainability breakdown в UI.
+   */
+  function getFactorDetails(factorId, dayData, profile, dayTot, normAbs, waveData, waterGoal) {
+    switch (factorId) {
+      case 'kcal': {
+        const target = normAbs?.kcal || 2000;
+        const value = Math.round(dayTot?.kcal || 0);
+        return { value, target, unit: 'ккал', percent: Math.round((value / target) * 100) };
+      }
+      case 'protein': {
+        const target = normAbs?.prot || 80;
+        const value = Math.round(dayTot?.prot || 0);
+        return { value, target, unit: 'г', percent: Math.round((value / target) * 100) };
+      }
+      case 'timing': {
+        const meals = dayData?.meals || [];
+        if (meals.length === 0) return { value: null, target: null, unit: null, label: 'нет данных' };
+        const lastMeal = meals[meals.length - 1];
+        return { value: lastMeal?.time || null, target: '20:00', unit: null, label: `последний приём ${lastMeal?.time || '—'}` };
+      }
+      case 'steps': {
+        const goal = profile?.stepsGoal || 10000;
+        const value = dayData?.steps || 0;
+        return { value, target: goal, unit: 'шагов', percent: Math.round((value / goal) * 100) };
+      }
+      case 'training': {
+        const trainings = dayData?.trainings || [];
+        const totalMinutes = trainings.reduce((sum, t) => {
+          const zones = t.z || [0, 0, 0, 0];
+          return sum + zones.reduce((a, b) => a + b, 0);
+        }, 0);
+        return { value: totalMinutes, target: 45, unit: 'мин', percent: Math.round((totalMinutes / 45) * 100) };
+      }
+      case 'household': {
+        const value = dayData?.householdMin || 0;
+        return { value, target: 60, unit: 'мин', percent: Math.round((value / 60) * 100) };
+      }
+      case 'sleep': {
+        const hours = HEYS.dayUtils?.getTotalSleepHours
+          ? HEYS.dayUtils.getTotalSleepHours(dayData)
+          : (dayData?.sleepHours || 0);
+        const target = profile?.sleepHours || 8;
+        return { value: Math.round(hours * 10) / 10, target, unit: 'ч', percent: Math.round((hours / target) * 100) };
+      }
+      case 'stress': {
+        const value = dayData?.stressAvg || 0;
+        return { value: Math.round(value * 10) / 10, target: 3, unit: '/10', label: value === 0 ? 'нет данных' : null };
+      }
+      case 'water': {
+        const goal = waterGoal || 2000;
+        const value = dayData?.waterMl || 0;
+        return { value, target: goal, unit: 'мл', percent: Math.round((value / goal) * 100) };
+      }
+      default:
+        return { value: null, target: null, unit: null };
     }
   }
 
@@ -247,11 +324,13 @@
 
     // Вычисляем оценки всех факторов
     const factorScores = {};
+    const factorDetails = {};
     const issues = [];
 
     for (const [factorId, factor] of Object.entries(FACTORS)) {
       const score = scoreFactor(factorId, dayData, profile, dayTot, normAbs, waveData, waterGoal);
       factorScores[factorId] = score;
+      factorDetails[factorId] = getFactorDetails(factorId, dayData, profile, dayTot, normAbs, waveData, waterGoal);
 
       // Собираем проблемы
       const issue = detectIssue(factorId, score, dayData, profile, dayTot, normAbs, waterGoal);
@@ -310,6 +389,24 @@
       factor: i.factor.label
     }));
 
+    // Детальный breakdown всех факторов (для explainability)
+    const breakdown = Object.entries(FACTORS).map(([factorId, factor]) => {
+      const score = factorScores[factorId];
+      const details = factorDetails[factorId];
+      const issue = issues.find(i => i.factorId === factorId);
+      return {
+        factorId,
+        label: factor.label,
+        icon: factor.icon,
+        weight: factor.weight,
+        category: factor.category,
+        score,
+        ...details,
+        issue: issue?.issue || null,
+        recommendation: issue ? issue.recommendation : null
+      };
+    });
+
     // Группируем баллы по категориям
     const categoryScores = {};
     for (const [catId, cat] of Object.entries(CATEGORIES)) {
@@ -334,7 +431,9 @@
       rawScore,
       level,
       factorScores,
+      factorDetails,
       categoryScores,
+      breakdown,
       topIssues,
       topActions,
       timestamp: Date.now()

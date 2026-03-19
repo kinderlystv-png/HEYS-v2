@@ -167,6 +167,7 @@ export const LEGACY_BUNDLES = {
         'heys_advice_rules_v1.js',
         'heys_advice_bundle_v1.js',
         'heys_meal_optimizer_v1.js',
+        'heys_relapse_risk_v1.js',
         'heys_sounds_v1.js',
         'heys_expandable_card_v1.js',
         'heys_iw_shim.js',

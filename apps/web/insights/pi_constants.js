@@ -221,52 +221,28 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-2-insights: execute sta
     },
 
     // 2. Риск срыва (Crash Risk)
-    // Инвертированная логика: чем выше Score, тем ХУЖЕ (выше риск)
+    // Единственный source of truth — RRS (Relapse Risk Score).
+    // EWS warnings больше НЕ бустят приоритет: RRS уже учитывает стресс, сон,
+    // калории и reward-food внутри своей формулы.
     CRASH_RISK: (options) => {
-      const { crashRiskScore, warnings } = options; // score 0-100%
+      const { crashRiskScore } = options; // RRS score 0-100
       if (crashRiskScore == null) return 'INFO';
 
-      // 1. Базовый уровень по % риска
-      let basePriority = 'LOW';
-      if (crashRiskScore >= 60) basePriority = 'CRITICAL';
-      else if (crashRiskScore >= 30) basePriority = 'HIGH';
-      else if (crashRiskScore >= 15) basePriority = 'MEDIUM';
-
-      // 2. Коррекция по релевантным warnings (Sleep, Stress, Binge, Caloric)
-      // #11 Acuteness decay: острые (short-window) warnings весят больше хронических
-      // decay = max(0.3, 1 - (days - 3) / 27) → days=3→1.0, days=7→0.85, days=14→0.59, days=25→0.3
-      const RELEVANT_TYPES = ['SLEEP_DEBT', 'STRESS_ACCUMULATION', 'BINGE_RISK', 'CALORIC_DEBT'];
-      const getAcutenessWeight = (w) => {
-        const d = typeof w.days === 'number' ? Math.max(3, w.days) : 7;
-        return Math.max(0.3, 1 - (d - 3) / 27);
-      };
-      let warningsBoost = 0;
-      let weightedHighSum = 0;
-      if (warnings && Array.isArray(warnings)) {
-        const relevantWarnings = warnings.filter(w => RELEVANT_TYPES.includes(w.type));
-        const highFiltered = relevantWarnings.filter(w => w.severity === 'high');
-        weightedHighSum = highFiltered.reduce((sum, w) => sum + getAcutenessWeight(w), 0);
-
-        if (weightedHighSum >= 0.7) warningsBoost = 2; // Острое high → сильный boost
-        else if (relevantWarnings.length >= 2) warningsBoost = 1; // Комбинация факторов
-      }
+      let priority = 'LOW';
+      if (crashRiskScore >= 60) priority = 'CRITICAL';
+      else if (crashRiskScore >= 30) priority = 'HIGH';
+      else if (crashRiskScore >= 15) priority = 'MEDIUM';
 
       if (typeof console !== 'undefined' && console.info) {
         console.info('priority / 🛠️ custom_rule CRASH_RISK:', {
           section: 'CRASH_RISK',
-          basePriority,
-          weightedHighSum: Math.round(weightedHighSum * 100) / 100,
-          warningsBoost,
-          rule: 'custom'
+          priority,
+          crashRiskScore,
+          rule: 'RRS-only (v2)'
         });
       }
 
-      // Применяем boost (уменьшаем index = повышаем приоритет)
-      const priorityLevels = ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW', 'INFO'];
-      let baseIndex = priorityLevels.indexOf(basePriority);
-      const finalIndex = Math.max(0, baseIndex - warningsBoost);
-
-      return priorityLevels[finalIndex];
+      return priority;
     },
 
     // 3. Приоритетные действия (Priority Actions)
@@ -600,10 +576,10 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-2-insights: execute sta
     // Crash Risk Quick — Критический, предупреждение срывов
     CRASH_RISK_QUICK: {
       name: 'Риск срыва (светофор)',
-      short: 'Быстрый индикатор риска срыва по ключевым триггерам. Красный — стоит сразу применить профилактику.',
-      details: 'Упрощённая модель риска, которая мгновенно оценивает текущую ситуацию по пяти критическим факторам без долгих расчётов. В отличие от полного Predictive Risk, эта метрика реагирует на здесь-и-сейчас, что полезно для быстрой самодиагностики. Красный цвет не означает гарантированный срыв, но указывает, что защитные механизмы ослаблены и лучше включить профилактику: структурированный приём пищи с белком/клетчаткой, минимизация триггеров, короткий перерыв при стрессе. Зелёный цвет — сигнал, что можно продолжать в текущем режиме без дополнительных мер.',
-      formula: 'Факторы риска:\n  • Недосып (<6ч): +25%\n  • Голодание (>5ч): +20%\n  • Низкий белок (<60г): +15%\n  • Стресс (>4): +15%\n  • Низкий калораж (<70% нормы): +25%',
-      source: 'Поведенческие исследования срывов (behavioral relapse prevention)',
+      short: 'Быстрый светофорный индикатор RRS: зелёный/жёлтый/красный по текущему Relapse Risk Score.',
+      details: 'Упрощённое отображение RRS как светофора для быстрой самодиагностики. Зелёный — риск низкий, профилактика не нужна. Жёлтый — умеренный, стоит следить за сном и питанием. Красный — защитные механизмы ослаблены, включи профилактику: структурированный приём пищи с белком, минимизация триггеров, перерыв при стрессе. Использует тот же RRS-score, что и полная карточка «Риск срыва», просто в компактном формате.',
+      formula: 'RRS score → светофор:\n  • 0-19: 🟢 зелёный (low)\n  • 20-39: 🟡 жёлтый (guarded)\n  • 40-59: 🟠 оранжевый (elevated)\n  • 60-79: 🔴 красный (high)\n  • 80-100: 🔴 красный мигающий (critical)',
+      source: 'Marlatt & Donovan, 2005; внутренняя модель RRS v1',
       sources: [{ pmid: '19179058', level: 'A', title: 'Marlatt & Donovan, 2005 — Relapse prevention meta-analysis' }],
       evidenceLevel: 'A',
       confidenceScore: 0.94,
@@ -1108,20 +1084,20 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-2-insights: execute sta
 
     // === RISK PANEL — Критический ===
     CRASH_RISK: {
-      name: 'Риск срыва',
-      short: 'Оценка вероятности срыва в ближайшие часы. Чем выше риск, тем важнее профилактика прямо сейчас.',
-      details: 'Риск срыва считается как суммарный вклад поведенческих и физиологических триггеров (сон, стресс, калорийный долг, белок, клетчатка, время суток, исторические паттерны). Важна не только «красная зона», но и динамика: рост риска несколько дней подряд часто опаснее единичного всплеска. Практически метрика нужна для приоритизации действий здесь и сейчас: закрыть базовые потребности (сон/еда/вода), снизить когнитивную нагрузку, убрать триггерные продукты из быстрого доступа. Это инструмент раннего вмешательства, а не оценка «силы воли».',
-      formula: 'Анализ 15+ факторов:\n  • Недосып (<6ч): +15-25 баллов\n  • Стресс (>6): +10-20 баллов\n  • Калорийный долг (>500 ккал): +15 баллов\n  • Пропуск завтрака: +10 баллов\n  • Вечернее время (>20:00): +5-15 баллов\n  • История срывов (паттерны): +10-20 баллов\n  • Низкий белок (<80%): +10 баллов\n  • Мало клетчатки (<50%): +8 баллов\n\nИтого: 0-100%',
-      source: 'Spaeth et al., 2013; Nedeltcheva et al., 2010',
+      name: 'Риск срыва (Relapse Risk Score)',
+      short: 'Предиктивная оценка вероятности срыва в ближайшие часы. Чем выше — тем важнее профилактика прямо сейчас.',
+      details: 'Relapse Risk Score (RRS) — единая формула, интегрирующая 6 компонентов риска: стресс, недосып, ограничительное давление (голод/дефицит), воздействие reward-food, контекст времени суток и эмоциональную уязвимость. В отличие от отдельных EWS warnings, RRS даёт непрерывную оценку 0-100 с тремя временными окнами: next3h, tonight, next24h. Красная зона (60+) не означает гарантированный срыв, но указывает, что защитные механизмы ослаблены. Это инструмент early intervention, а не оценка «силы воли».',
+      formula: 'RRS = Σ(component × weight) – protectiveBuffer\n\nКомпоненты:\n  • stressLoad (24%): стресс, тренд\n  • restrictionPressure (22%): дефицит ккал, белка, gaps\n  • sleepDebt (18%): дефицит сна, качество, стрик\n  • rewardExposure (16%): harm-score, simple carbs\n  • timingContext (10%): вечер, выходные\n  • emotionalVulnerability (10%): dayScore, mood, wellbeing\n\nProtective buffer: max −30 (low stress, good sleep, enough calories/protein, hydration, meal structure)',
+      source: 'Spaeth et al., 2013; Nedeltcheva et al., 2010; Marlatt & Donovan, 2005',
       sources: [{ pmid: '23479616', level: 'A', title: 'Spaeth et al., 2013 — Sleep restriction and craving meta-analysis' }],
       evidenceLevel: 'A',
       confidenceScore: 0.95,
-      interpretation: '<30% — низкий риск. 30-60% — средний (требует внимания). >60% — высокий риск срыва.',
+      interpretation: '<20 — low. 20-39 — guarded. 40-59 — elevated. 60-79 — high. 80-100 — critical.',
       priority: 'CRITICAL',
       category: 'RISK',
       actionability: 'IMMEDIATE',
       impactScore: 0.95,
-      whyImportant: '🚨 Главный индикатор! Показывает вероятность срыва в ближайшие часы.'
+      whyImportant: '🚨 Главный индикатор! Предсказывает вероятность срыва в ближайшие часы.'
     },
     // Risk Factors — Высокий
     RISK_FACTORS: {

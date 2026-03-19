@@ -302,6 +302,106 @@
             });
         }
 
+        // ─────────────────────────────────────────────────────────
+        // 🚨 RELAPSE RISK — predictive anti-binge advice
+        // ─────────────────────────────────────────────────────────
+
+        const rr = ctx?.relapseRisk;
+        const rrLevel = rr?.level;
+        const rrScore = rr?.score || 0;
+        const rrTonight = rr?.windows?.tonight || 0;
+        const rrDrivers = Array.isArray(rr?.primaryDrivers) ? rr.primaryDrivers : [];
+        const rrTopDriver = rrDrivers[0]?.id || null;
+
+        if (rrLevel === 'critical' || rrLevel === 'high') {
+            advices.push({
+                id: 'relapse_risk_high',
+                icon: '🛡️',
+                text: rrLevel === 'critical'
+                    ? 'Риск срыва прямо сейчас очень высокий — сделай safe meal'
+                    : 'Высокий риск срыва — лучше запланированный приём пищи',
+                details: rrLevel === 'critical'
+                    ? '⚠️ Комбинация факторов создаёт сильное давление прямо сейчас. Сделай запланированный приём пищи: белок + клетчатка. Reward food в таком состоянии только усилит тягу.'
+                    : '🧠 Твоё состояние сейчас делает импульсивный срыв более вероятным. Поешь нормально сейчас, не жди, пока голод усилится.',
+                type: rrLevel === 'critical' ? 'critical' : 'warning',
+                priority: rrLevel === 'critical' ? 1 : 3,
+                category: 'emotional',
+                triggers: ['tab_open', 'product_added'],
+                ttl: 9000,
+                canSkipCooldown: rrLevel === 'critical',
+            });
+        }
+
+        if (rrLevel === 'elevated' && hour >= 16) {
+            advices.push({
+                id: 'relapse_risk_elevated',
+                icon: '🌙',
+                text: 'Риск вечернего перебора немного повышен — запланируй ужин',
+                details: '💡 Сегодня вечером немного выше риск impulse eating. Спланируй последний приём заранее: белок + овощи, а не reward food.',
+                type: 'tip',
+                priority: 12,
+                category: 'emotional',
+                triggers: ['tab_open'],
+                ttl: 6000,
+            });
+        }
+
+        if (rrTopDriver === 'restriction_pressure' && rrScore >= 40 && hour >= 15) {
+            advices.push({
+                id: 'relapse_risk_restriction',
+                icon: '⚖️',
+                text: 'Не дожимай дефицит сегодня — это повышает риск срыва',
+                details: '🔬 Сильное ограничение калорий вечером создаёт компенсационный риск ночью. Лучше поесть нормально сейчас и сохранить контроль.',
+                type: 'warning',
+                priority: 5,
+                category: 'nutrition',
+                triggers: ['tab_open'],
+                ttl: 7000,
+            });
+        }
+
+        if (rrTopDriver === 'stress_load' && rrScore >= 40) {
+            advices.push({
+                id: 'relapse_risk_stress',
+                icon: '🤲',
+                text: 'Стресс усиливает тягу к reward-food — выбери безопасный вариант',
+                details: '🧠 Кортизол при стрессе повышает аппетит и тягу к сладкому. Сейчас лучше structured meal, а не импульсивный перекус.',
+                type: 'warning',
+                priority: 6,
+                category: 'emotional',
+                triggers: ['tab_open', 'product_added'],
+                ttl: 7000,
+            });
+        }
+
+        if (rrTopDriver === 'sleep_debt' && rrScore >= 40) {
+            advices.push({
+                id: 'relapse_risk_sleep_debt',
+                icon: '😴',
+                text: 'Недосып повышает аппетит — сегодня не держи жёсткий дефицит',
+                details: '🔬 Недосып снижает лептин и повышает грелин — hunger drive усиливается. Recovery day лучше, чем держать дефицит через силу.',
+                type: 'tip',
+                priority: 8,
+                category: 'emotional',
+                triggers: ['tab_open'],
+                ttl: 6000,
+            });
+        }
+
+        if (rrTonight >= 65 && hour < 18) {
+            advices.push({
+                id: 'relapse_risk_tonight',
+                icon: '🌆',
+                text: 'Этим вечером риск срыва высокий — подготовься заранее',
+                details: '📋 Запланируй последний приём пищи сейчас, пока голод не давит. Safe evening meal = белок + клетчатка, без reward food.',
+                type: 'tip',
+                priority: 10,
+                category: 'emotional',
+                triggers: ['tab_open'],
+                ttl: 6000,
+            });
+        }
+
         const mealsWithMoodData = (day?.meals || []).filter(m => m.mood > 0 && m.items?.length > 0);
         if (mealsWithMoodData.length >= 2 && !sessionStorage.getItem('heys_mood_improving')) {
             const prevMealMood = mealsWithMoodData[mealsWithMoodData.length - 2]?.mood || 0;

@@ -184,8 +184,90 @@
           return this.getCycleData();
         case 'crashRisk':
           return this.getCrashRiskData();
+        case 'relapseRisk':
+          return this.getRelapseRiskData(widget);
         default:
           return {};
+      }
+    },
+
+    /**
+     * Получить данные Relapse Risk Score
+     */
+    getRelapseRiskData(widget) {
+      if (!HEYS.RelapseRisk?.calculate) {
+        console.warn('[widget_data.getRelapseRiskData] relapseRisk engine not loaded');
+        return { hasData: false, score: 0, level: 'low', message: 'Engine не загружен' };
+      }
+
+      try {
+        const dayData = this._getDay() || {};
+        const profile = this._getProfile() || {};
+        const dayTot = this._getDayTotals() || {};
+        const normAbs = this._getNormAbs() || {};
+
+        // History: last 14 days
+        const historyDays = [];
+        for (let i = 13; i >= 0; i--) {
+          const d = new Date();
+          d.setDate(d.getDate() - i);
+          const dateStr = this._formatDate(d);
+          const day = this._getDayByDate(dateStr);
+          if (day && typeof day === 'object' && Object.keys(day).length > 0) {
+            historyDays.push({
+              date: dateStr,
+              ...day,
+              dayTot: this._calculateDayTotals(day)
+            });
+          }
+        }
+
+        const result = HEYS.RelapseRisk.calculate({
+          dayData, profile, dayTot, normAbs, historyDays,
+          now: new Date().toISOString()
+        });
+
+        const score = Math.round(Number(result?.score) || 0);
+        const confidence = Math.round(Number(result?.confidence) || 0);
+        const windows = result?.windows || {};
+
+        const windowCandidates = [
+          { key: 'tonight', label: 'сегодня вечером', score: Number(windows.tonight) || 0 },
+          { key: 'next3h', label: 'в ближ. 3ч', score: Number(windows.next3h) || 0 },
+          { key: 'next24h', label: 'в ближ. 24ч', score: Number(windows.next24h) || 0 }
+        ].sort((a, b) => b.score - a.score);
+
+        const topWindowLabel = windowCandidates[0]?.label || 'сейчас';
+        const topWindowScore = Math.round(windowCandidates[0]?.score || 0);
+        const primaryDriver = Array.isArray(result?.primaryDrivers) ? result.primaryDrivers[0] : null;
+        const recommendation = Array.isArray(result?.recommendations) && result.recommendations[0]
+          ? result.recommendations[0].text
+          : null;
+
+        console.info('[widget_data.getRelapseRiskData] ✅ Calculated', {
+          score, level: result?.level, confidence, historyDays: historyDays.length
+        });
+
+        return {
+          hasData: true,
+          score,
+          target: 100,
+          pct: score,
+          remaining: Math.max(0, 100 - score),
+          level: result?.level || 'low',
+          confidence,
+          topWindowLabel,
+          topWindowScore,
+          primaryDriver,
+          primaryDrivers: Array.isArray(result?.primaryDrivers) ? result.primaryDrivers.slice(0, 3) : [],
+          protectiveFactors: Array.isArray(result?.protectiveFactors) ? result.protectiveFactors.slice(0, 2) : [],
+          recommendation,
+          windows,
+          raw: result
+        };
+      } catch (error) {
+        console.error('[widget_data.getRelapseRiskData] ❌ Error:', error);
+        return { hasData: false, _error: error?.message, score: 0, level: 'low' };
       }
     },
 

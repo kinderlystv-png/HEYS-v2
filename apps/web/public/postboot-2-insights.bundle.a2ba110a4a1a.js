@@ -223,52 +223,28 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-2-insights: execute sta
     },
 
     // 2. Риск срыва (Crash Risk)
-    // Инвертированная логика: чем выше Score, тем ХУЖЕ (выше риск)
+    // Единственный source of truth — RRS (Relapse Risk Score).
+    // EWS warnings больше НЕ бустят приоритет: RRS уже учитывает стресс, сон,
+    // калории и reward-food внутри своей формулы.
     CRASH_RISK: (options) => {
-      const { crashRiskScore, warnings } = options; // score 0-100%
+      const { crashRiskScore } = options; // RRS score 0-100
       if (crashRiskScore == null) return 'INFO';
 
-      // 1. Базовый уровень по % риска
-      let basePriority = 'LOW';
-      if (crashRiskScore >= 60) basePriority = 'CRITICAL';
-      else if (crashRiskScore >= 30) basePriority = 'HIGH';
-      else if (crashRiskScore >= 15) basePriority = 'MEDIUM';
-
-      // 2. Коррекция по релевантным warnings (Sleep, Stress, Binge, Caloric)
-      // #11 Acuteness decay: острые (short-window) warnings весят больше хронических
-      // decay = max(0.3, 1 - (days - 3) / 27) → days=3→1.0, days=7→0.85, days=14→0.59, days=25→0.3
-      const RELEVANT_TYPES = ['SLEEP_DEBT', 'STRESS_ACCUMULATION', 'BINGE_RISK', 'CALORIC_DEBT'];
-      const getAcutenessWeight = (w) => {
-        const d = typeof w.days === 'number' ? Math.max(3, w.days) : 7;
-        return Math.max(0.3, 1 - (d - 3) / 27);
-      };
-      let warningsBoost = 0;
-      let weightedHighSum = 0;
-      if (warnings && Array.isArray(warnings)) {
-        const relevantWarnings = warnings.filter(w => RELEVANT_TYPES.includes(w.type));
-        const highFiltered = relevantWarnings.filter(w => w.severity === 'high');
-        weightedHighSum = highFiltered.reduce((sum, w) => sum + getAcutenessWeight(w), 0);
-
-        if (weightedHighSum >= 0.7) warningsBoost = 2; // Острое high → сильный boost
-        else if (relevantWarnings.length >= 2) warningsBoost = 1; // Комбинация факторов
-      }
+      let priority = 'LOW';
+      if (crashRiskScore >= 60) priority = 'CRITICAL';
+      else if (crashRiskScore >= 30) priority = 'HIGH';
+      else if (crashRiskScore >= 15) priority = 'MEDIUM';
 
       if (typeof console !== 'undefined' && console.info) {
         console.info('priority / 🛠️ custom_rule CRASH_RISK:', {
           section: 'CRASH_RISK',
-          basePriority,
-          weightedHighSum: Math.round(weightedHighSum * 100) / 100,
-          warningsBoost,
-          rule: 'custom'
+          priority,
+          crashRiskScore,
+          rule: 'RRS-only (v2)'
         });
       }
 
-      // Применяем boost (уменьшаем index = повышаем приоритет)
-      const priorityLevels = ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW', 'INFO'];
-      let baseIndex = priorityLevels.indexOf(basePriority);
-      const finalIndex = Math.max(0, baseIndex - warningsBoost);
-
-      return priorityLevels[finalIndex];
+      return priority;
     },
 
     // 3. Приоритетные действия (Priority Actions)
@@ -602,10 +578,10 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-2-insights: execute sta
     // Crash Risk Quick — Критический, предупреждение срывов
     CRASH_RISK_QUICK: {
       name: 'Риск срыва (светофор)',
-      short: 'Быстрый индикатор риска срыва по ключевым триггерам. Красный — стоит сразу применить профилактику.',
-      details: 'Упрощённая модель риска, которая мгновенно оценивает текущую ситуацию по пяти критическим факторам без долгих расчётов. В отличие от полного Predictive Risk, эта метрика реагирует на здесь-и-сейчас, что полезно для быстрой самодиагностики. Красный цвет не означает гарантированный срыв, но указывает, что защитные механизмы ослаблены и лучше включить профилактику: структурированный приём пищи с белком/клетчаткой, минимизация триггеров, короткий перерыв при стрессе. Зелёный цвет — сигнал, что можно продолжать в текущем режиме без дополнительных мер.',
-      formula: 'Факторы риска:\n  • Недосып (<6ч): +25%\n  • Голодание (>5ч): +20%\n  • Низкий белок (<60г): +15%\n  • Стресс (>4): +15%\n  • Низкий калораж (<70% нормы): +25%',
-      source: 'Поведенческие исследования срывов (behavioral relapse prevention)',
+      short: 'Быстрый светофорный индикатор RRS: зелёный/жёлтый/красный по текущему Relapse Risk Score.',
+      details: 'Упрощённое отображение RRS как светофора для быстрой самодиагностики. Зелёный — риск низкий, профилактика не нужна. Жёлтый — умеренный, стоит следить за сном и питанием. Красный — защитные механизмы ослаблены, включи профилактику: структурированный приём пищи с белком, минимизация триггеров, перерыв при стрессе. Использует тот же RRS-score, что и полная карточка «Риск срыва», просто в компактном формате.',
+      formula: 'RRS score → светофор:\n  • 0-19: 🟢 зелёный (low)\n  • 20-39: 🟡 жёлтый (guarded)\n  • 40-59: 🟠 оранжевый (elevated)\n  • 60-79: 🔴 красный (high)\n  • 80-100: 🔴 красный мигающий (critical)',
+      source: 'Marlatt & Donovan, 2005; внутренняя модель RRS v1',
       sources: [{ pmid: '19179058', level: 'A', title: 'Marlatt & Donovan, 2005 — Relapse prevention meta-analysis' }],
       evidenceLevel: 'A',
       confidenceScore: 0.94,
@@ -1110,20 +1086,20 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-2-insights: execute sta
 
     // === RISK PANEL — Критический ===
     CRASH_RISK: {
-      name: 'Риск срыва',
-      short: 'Оценка вероятности срыва в ближайшие часы. Чем выше риск, тем важнее профилактика прямо сейчас.',
-      details: 'Риск срыва считается как суммарный вклад поведенческих и физиологических триггеров (сон, стресс, калорийный долг, белок, клетчатка, время суток, исторические паттерны). Важна не только «красная зона», но и динамика: рост риска несколько дней подряд часто опаснее единичного всплеска. Практически метрика нужна для приоритизации действий здесь и сейчас: закрыть базовые потребности (сон/еда/вода), снизить когнитивную нагрузку, убрать триггерные продукты из быстрого доступа. Это инструмент раннего вмешательства, а не оценка «силы воли».',
-      formula: 'Анализ 15+ факторов:\n  • Недосып (<6ч): +15-25 баллов\n  • Стресс (>6): +10-20 баллов\n  • Калорийный долг (>500 ккал): +15 баллов\n  • Пропуск завтрака: +10 баллов\n  • Вечернее время (>20:00): +5-15 баллов\n  • История срывов (паттерны): +10-20 баллов\n  • Низкий белок (<80%): +10 баллов\n  • Мало клетчатки (<50%): +8 баллов\n\nИтого: 0-100%',
-      source: 'Spaeth et al., 2013; Nedeltcheva et al., 2010',
+      name: 'Риск срыва (Relapse Risk Score)',
+      short: 'Предиктивная оценка вероятности срыва в ближайшие часы. Чем выше — тем важнее профилактика прямо сейчас.',
+      details: 'Relapse Risk Score (RRS) — единая формула, интегрирующая 6 компонентов риска: стресс, недосып, ограничительное давление (голод/дефицит), воздействие reward-food, контекст времени суток и эмоциональную уязвимость. В отличие от отдельных EWS warnings, RRS даёт непрерывную оценку 0-100 с тремя временными окнами: next3h, tonight, next24h. Красная зона (60+) не означает гарантированный срыв, но указывает, что защитные механизмы ослаблены. Это инструмент early intervention, а не оценка «силы воли».',
+      formula: 'RRS = Σ(component × weight) – protectiveBuffer\n\nКомпоненты:\n  • stressLoad (24%): стресс, тренд\n  • restrictionPressure (22%): дефицит ккал, белка, gaps\n  • sleepDebt (18%): дефицит сна, качество, стрик\n  • rewardExposure (16%): harm-score, simple carbs\n  • timingContext (10%): вечер, выходные\n  • emotionalVulnerability (10%): dayScore, mood, wellbeing\n\nProtective buffer: max −30 (low stress, good sleep, enough calories/protein, hydration, meal structure)',
+      source: 'Spaeth et al., 2013; Nedeltcheva et al., 2010; Marlatt & Donovan, 2005',
       sources: [{ pmid: '23479616', level: 'A', title: 'Spaeth et al., 2013 — Sleep restriction and craving meta-analysis' }],
       evidenceLevel: 'A',
       confidenceScore: 0.95,
-      interpretation: '<30% — низкий риск. 30-60% — средний (требует внимания). >60% — высокий риск срыва.',
+      interpretation: '<20 — low. 20-39 — guarded. 40-59 — elevated. 60-79 — high. 80-100 — critical.',
       priority: 'CRITICAL',
       category: 'RISK',
       actionability: 'IMMEDIATE',
       impactScore: 0.95,
-      whyImportant: '🚨 Главный индикатор! Показывает вероятность срыва в ближайшие часы.'
+      whyImportant: '🚨 Главный индикатор! Предсказывает вероятность срыва в ближайшие часы.'
     },
     // Risk Factors — Высокий
     RISK_FACTORS: {
@@ -32254,6 +32230,92 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       return Number.isFinite(fallbackSleepHours) && fallbackSleepHours > 0 ? fallbackSleepHours : 0;
     }
 
+    function getHistoryDaysForDate(lsGet, endDate, daysBack = 14) {
+      const getter = lsGet || window.HEYS?.utils?.lsGet;
+      if (!getter || !endDate) return [];
+
+      const baseDate = new Date(endDate);
+      if (Number.isNaN(baseDate.getTime())) return [];
+
+      const history = [];
+      for (let i = 0; i < daysBack; i++) {
+        const d = new Date(baseDate);
+        d.setDate(d.getDate() - i);
+        const dateStr = d.toISOString().split('T')[0];
+        const day = getter(`heys_dayv2_${dateStr}`, {});
+        if (day && typeof day === 'object' && Object.keys(day).length > 0) {
+          history.push({ ...day, date: dateStr });
+        }
+      }
+
+      return history;
+    }
+
+    function buildDayTotForInsights(dayData, pIndex) {
+      if (dayData?.dayTot && typeof dayData.dayTot === 'object') return dayData.dayTot;
+
+      if (HEYS.Day?.computeDayTot && dayData?.meals?.length) {
+        try {
+          return HEYS.Day.computeDayTot(dayData, pIndex);
+        } catch (error) {
+          devWarn('[pi_ui_dashboard] buildDayTotForInsights failed:', error);
+        }
+      }
+
+      return {};
+    }
+
+    function buildNormAbsForInsights(profile) {
+      if (HEYS.Day?.calcNormAbs && profile) {
+        try {
+          return HEYS.Day.calcNormAbs(profile) || {};
+        } catch (error) {
+          devWarn('[pi_ui_dashboard] buildNormAbsForInsights failed:', error);
+        }
+      }
+
+      return {};
+    }
+
+    function calculateRelapseRiskSnapshot(options = {}) {
+      const {
+        lsGet,
+        selectedDate,
+        dayData,
+        dayTot,
+        profile,
+        pIndex,
+        normAbs,
+      } = options;
+
+      if (!HEYS.RelapseRisk?.calculate || !selectedDate || !dayData) return null;
+
+      try {
+        const safeDayData = { ...dayData, date: selectedDate };
+        const safeDayTot = dayTot && Object.keys(dayTot).length > 0
+          ? dayTot
+          : buildDayTotForInsights(safeDayData, pIndex);
+        const safeNormAbs = normAbs && Object.keys(normAbs).length > 0
+          ? normAbs
+          : buildNormAbsForInsights(profile);
+        const historyDays = getHistoryDaysForDate(lsGet, selectedDate, 14);
+        const todayIso = HEYS.dayUtils?.todayISO?.() || new Date().toISOString().split('T')[0];
+        const now = selectedDate === todayIso ? undefined : `${selectedDate}T23:59:00`;
+
+        return HEYS.RelapseRisk.calculate({
+          dayData: safeDayData,
+          dayTot: safeDayTot,
+          normAbs: safeNormAbs,
+          profile,
+          historyDays,
+          now,
+        });
+      } catch (error) {
+        console.warn('[HEYS.insights] relapse risk calculation failed:', error);
+        return null;
+      }
+    }
+
     function WeightPrediction({ prediction }) {
       if (!prediction || !prediction.available) return null;
 
@@ -33776,6 +33838,29 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         });
       }, [effectiveData, showDemoMode]);
 
+      const relapseRisk = useMemo(() => {
+        if (showDemoMode) return null;
+
+        return calculateRelapseRiskSnapshot({
+          lsGet: lsGet || window.HEYS?.utils?.lsGet,
+          selectedDate,
+          dayData: effectiveData.dayData,
+          dayTot: effectiveData.dayTot,
+          profile: effectiveData.profile,
+          pIndex: effectiveData.pIndex,
+          normAbs: effectiveData.normAbs,
+        });
+      }, [
+        lsGet,
+        selectedDate,
+        showDemoMode,
+        effectiveData.dayData,
+        effectiveData.dayTot,
+        effectiveData.profile,
+        effectiveData.pIndex,
+        effectiveData.normAbs,
+      ]);
+
       // 🆕 EWS warnings на уровне InsightsTab — для динамического priority badge
       useEffect(() => {
         let cancelled = false;
@@ -33872,20 +33957,13 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       }, [computeDynamicPriority, insights?.healthScore?.total, insights?.healthScore?.trend7d, insights?.healthScore?.trend, ewsWarnings, insights?.patterns]);
 
       // 2. Динамический приоритет для CRASH_RISK (Риск срыва)
+      // Source of truth — RRS score only, EWS warnings не участвуют
       const crashRiskPriority = useMemo(() => {
-        // Получаем сырой % риска из тех же метрик, что считает MetabolicQuickStatus
-        // (упрощенная копия логики, так как сам компонент недоступен здесь)
-        // Но лучше передать warnings релевантных типов!
-
-        // Временное решение: считаем по warnings, так как crashRiskScore ещё не прокинут в props
-        // TODO: Прокинуть crashRiskScore из родителя
-
         return computeDynamicPriority({
           sectionId: 'CRASH_RISK',
-          crashRiskScore: null, // Пока нет данных, сработает fallback на warnings
-          warnings: ewsWarnings
+          crashRiskScore: relapseRisk?.score ?? null,
         });
-      }, [computeDynamicPriority, ewsWarnings]);
+      }, [computeDynamicPriority, relapseRisk?.score]);
 
       // 3. Динамический приоритет для PRIORITY_ACTIONS (Важные шаги)
       const actionsPriority = useMemo(() => {
@@ -33907,11 +33985,12 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           STATUS_SCORE: `${statusSectionPriority}  → "${PRIORITY_CONTEXT_LABELS?.STATUS_SCORE?.[statusSectionPriority] ?? ''}"`,
           CRASH_RISK: `${crashRiskPriority}  → "${PRIORITY_CONTEXT_LABELS?.CRASH_RISK?.[crashRiskPriority] ?? ''}"`,
           PRIORITY_ACTIONS: `${actionsPriority}  → "${PRIORITY_CONTEXT_LABELS?.PRIORITY_ACTIONS?.[actionsPriority] ?? ''}"`,
+          relapseRiskScore: relapseRisk?.score ?? null,
           filter: priorityFilter || 'ALL',
           ewsWarnings: ewsWarnings?.length ?? 0,
           urgentWarnings: urgentCount,
         });
-      }, [statusSectionPriority, crashRiskPriority, actionsPriority, priorityFilter, ewsWarnings]);
+      }, [statusSectionPriority, crashRiskPriority, actionsPriority, priorityFilter, ewsWarnings, relapseRisk?.score]);
 
       // Получить все метрики для фильтров
       const allMetrics = useMemo(() => getAllMetricsByPriority(), []);
@@ -34301,7 +34380,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                 lsGet,
                 profile,
                 pIndex,
-                selectedDate
+                selectedDate,
+                relapseRisk
               })
             ),
 
@@ -34322,7 +34402,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
               h(PredictiveDashboard, {
                 lsGet,
                 profile,
-                selectedDate
+                selectedDate,
+                relapseRisk
               })
             ),
 
@@ -35060,7 +35141,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
      * MetabolicQuickStatus — компактная карточка статуса + риска
      * Показывает: Score 0-100, фазу метаболизма, риск срыва
      */
-    function MetabolicQuickStatus({ lsGet, profile, pIndex, selectedDate }) {
+    function MetabolicQuickStatus({ lsGet, profile, pIndex, selectedDate, relapseRisk: initialRelapseRisk }) {
       // Fallback: если сегодня нет данных, показываем последний день с данными
       const resolvedDate = useMemo(() => {
         return getMetabolismDate(lsGet || window.HEYS?.utils?.lsGet, selectedDate);
@@ -35077,7 +35158,26 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         });
       }, [lsGet, profile, pIndex, resolvedDate]);
 
-      // 🆕 v3.22.0: Extended Analytics (proteinDebt, emotionalRisk, trainingContext)
+      const relapseRisk = useMemo(() => {
+        if (initialRelapseRisk) return initialRelapseRisk;
+
+        const getter = lsGet || window.HEYS?.utils?.lsGet;
+        const dateStr = selectedDate || new Date().toISOString().split('T')[0];
+        const prof = profile || getter?.('heys_profile', {});
+        const day = getter ? getter('heys_dayv2_' + dateStr, {}) : {};
+
+        return calculateRelapseRiskSnapshot({
+          lsGet: getter,
+          selectedDate: dateStr,
+          dayData: day,
+          dayTot: buildDayTotForInsights(day, pIndex),
+          profile: prof,
+          pIndex,
+          normAbs: buildNormAbsForInsights(prof),
+        });
+      }, [initialRelapseRisk, lsGet, profile, pIndex, selectedDate]);
+
+      // 🆕 v3.22.0: Extended Analytics (proteinDebt, relapseRisk, trainingContext)
       const extendedAnalytics = useMemo(() => {
         const getter = lsGet || window.HEYS?.utils?.lsGet;
         if (!getter) return null;
@@ -35124,44 +35224,6 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           trackError(e, { scope: 'PI UI Dashboard', action: 'protein_debt' });
         }
 
-        // Emotional Risk: стресс + недобор + время
-        let emotionalRisk = { level: 'low', bingeRisk: 0, factors: [] };
-        try {
-          const avgStress = (day.meals || []).reduce((s, m) => s + (m.stress || 0), 0) / Math.max(1, (day.meals || []).length);
-          const currentHour = new Date().getHours();
-          const isEvening = currentHour >= 18;
-
-          if (avgStress >= 6) emotionalRisk.factors.push('Высокий стресс');
-          if (isEvening) emotionalRisk.factors.push('Вечер (пик уязвимости)');
-
-          // Проверяем недобор за вчера
-          const yesterday = new Date(dateStr);
-          yesterday.setDate(yesterday.getDate() - 1);
-          const yData = getter('heys_dayv2_' + yesterday.toISOString().split('T')[0], {});
-          if (yData.meals?.length > 0) {
-            const buildIdx = HEYS.dayUtils?.buildProductIndex || HEYS.models?.buildProductIndex;
-            const idx = pIndex || (buildIdx ? buildIdx(HEYS.products?.getAll?.() || []) : null);
-            let yKcal = 0;
-            (yData.meals || []).forEach(m => {
-              (m.items || []).forEach(item => {
-                const prod = idx?.byId?.get?.(item.product_id) || item;
-                yKcal += (prod.kcal100 || 0) * (item.grams || 0) / 100;
-              });
-            });
-            const normAbs = prof.normAbs?.kcal || 2000;
-            if (yKcal < normAbs * 0.7) emotionalRisk.factors.push('Вчерашний недобор');
-          }
-
-          emotionalRisk.bingeRisk = Math.min(100, emotionalRisk.factors.length * 25);
-          if (emotionalRisk.bingeRisk >= 75) emotionalRisk.level = 'critical';
-          else if (emotionalRisk.bingeRisk >= 50) emotionalRisk.level = 'high';
-          else if (emotionalRisk.bingeRisk >= 25) emotionalRisk.level = 'medium';
-          emotionalRisk.pmid = '11070333'; // Epel 2001
-        } catch (e) {
-          devWarn('[ExtendedAnalytics] emotionalRisk error:', e);
-          trackError(e, { scope: 'PI UI Dashboard', action: 'emotional_risk' });
-        }
-
         // Training Day Context
         let trainingContext = { isTrainingDay: false, type: null, intensity: 'none' };
         if (day.trainings?.length > 0) {
@@ -35182,10 +35244,16 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           else trainingContext.intensity = 'light';
         }
 
-        return { proteinDebt, emotionalRisk, trainingContext };
-      }, [lsGet, profile, pIndex, selectedDate]);
+        return { proteinDebt, relapseRisk, trainingContext };
+      }, [lsGet, profile, pIndex, selectedDate, relapseRisk]);
 
-      // Use riskLevel from status (same source as PredictiveDashboard)
+      function mapRelapseLevelToTraffic(level) {
+        if (level === 'critical' || level === 'high') return 'high';
+        if (level === 'elevated' || level === 'guarded') return 'medium';
+        return 'low';
+      }
+
+      // Use canonical relapse risk when available, fallback to status.riskLevel
       const risk = useMemo(() => {
         const riskData = {
           low: { level: 'low', emoji: '✅', label: 'Низкий', color: '#22c55e' },
@@ -35193,10 +35261,11 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           high: { level: 'high', emoji: '🚨', label: 'Высокий', color: '#ef4444' }
         };
 
-        // Use status.riskLevel from Metabolic module (единый источник)
-        const level = status?.riskLevel || 'low';
+        const level = relapseRisk?.level
+          ? mapRelapseLevelToTraffic(relapseRisk.level)
+          : (status?.riskLevel || 'low');
         return riskData[level] || riskData.low;
-      }, [status]);
+      }, [relapseRisk?.level, status]);
 
       // Phase data
       const phase = status?.metabolicPhase || null;
@@ -35288,12 +35357,15 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             ),
             h('div', { className: 'metabolic-quick-status__risk-level', style: { color: risk.color } },
               risk.label
+            ),
+            typeof relapseRisk?.score === 'number' && h('div', { className: 'metabolic-quick-status__time' },
+              `${Math.round(relapseRisk.score)}% по relapse score`
             )
           )
         ), // Close __cards
 
-        // 🆕 v3.22.0: Extended Analytics Row (proteinDebt, emotionalRisk, trainingContext)
-        (extendedAnalytics?.proteinDebt?.hasDebt || extendedAnalytics?.emotionalRisk?.level !== 'low' || extendedAnalytics?.trainingContext?.isTrainingDay) &&
+        // 🆕 v3.22.0: Extended Analytics Row (proteinDebt, relapseRisk, trainingContext)
+        (extendedAnalytics?.proteinDebt?.hasDebt || extendedAnalytics?.relapseRisk?.level !== 'low' || extendedAnalytics?.trainingContext?.isTrainingDay) &&
         h('div', { className: 'metabolic-quick-status__extended' },
           // Protein Debt Badge
           extendedAnalytics?.proteinDebt?.hasDebt && h('div', {
@@ -35312,21 +35384,15 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             }, '?')
           ),
 
-          // Emotional Risk Badge
-          extendedAnalytics?.emotionalRisk?.level !== 'low' && h('div', {
-            className: `metabolic-quick-status__badge metabolic-quick-status__badge--${extendedAnalytics.emotionalRisk.level}`,
-            title: `Риск срыва: ${extendedAnalytics.emotionalRisk.bingeRisk}%\nФакторы: ${extendedAnalytics.emotionalRisk.factors.join(', ')}\n🔬 PMID: ${extendedAnalytics.emotionalRisk.pmid}`
+          // Relapse Risk Badge
+          extendedAnalytics?.relapseRisk?.level !== 'low' && h('div', {
+            className: `metabolic-quick-status__badge metabolic-quick-status__badge--${mapRelapseLevelToTraffic(extendedAnalytics.relapseRisk.level)}`,
+            title: `Relapse Risk: ${Math.round(extendedAnalytics.relapseRisk.score)}%\nФакторы: ${(extendedAnalytics.relapseRisk.primaryDrivers || []).map(driver => driver.label).join(', ')}\nОкно tonight: ${Math.round(extendedAnalytics.relapseRisk.windows?.tonight || 0)}%`
           },
-            h('span', { className: 'metabolic-quick-status__badge-icon' }, '😰'),
+            h('span', { className: 'metabolic-quick-status__badge-icon' }, '🧠'),
             h('span', { className: 'metabolic-quick-status__badge-text' },
-              `${extendedAnalytics.emotionalRisk.bingeRisk}%`
-            ),
-            h('a', {
-              href: `https://pubmed.ncbi.nlm.nih.gov/${extendedAnalytics.emotionalRisk.pmid}/`,
-              target: '_blank',
-              className: 'metabolic-quick-status__pmid',
-              onClick: (e) => e.stopPropagation()
-            }, '?')
+              `Срыв ${Math.round(extendedAnalytics.relapseRisk.score)}%`
+            )
           ),
 
           // Training Context Badge
@@ -35583,7 +35649,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
      * PredictiveDashboard — предиктивная панель с табами (Risk | Forecast | Phenotype)
      * v3.0: Dual Risk Meter (сегодня + завтра), без timeline для risk и phenotype
      */
-    function PredictiveDashboard({ lsGet, profile, selectedDate, pIndex }) {
+    function PredictiveDashboard({ lsGet, profile, selectedDate, pIndex, relapseRisk }) {
       const [activeTab, setActiveTab] = useState('risk');
       const [dateOffset, setDateOffset] = useState(0); // -7..+7 дней — только для forecast
 
@@ -35610,31 +35676,47 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       const isForecastFuture = dateOffset > 0;
       const isForecastPast = dateOffset < 0;
 
-      // Риск на сегодня
+      // === RRS-unified risk data ===
+
+      // Helper: map RRS snapshot → DualRiskPanel format
+      function snapshotToPanel(snap) {
+        if (!snap || !snap.hasData) return null;
+        const drivers = snap.primaryDrivers || [];
+        const primaryTrigger = drivers[0]
+          ? { label: drivers[0].label, impact: drivers[0].impact }
+          : null;
+        const factors = drivers.map(d => ({
+          label: d.label, weight: d.impact, isProtective: false,
+        }));
+        if (Array.isArray(snap.protectiveFactors)) {
+          snap.protectiveFactors.forEach(pf => {
+            factors.push({ label: pf.label, weight: pf.impact, isProtective: true });
+          });
+        }
+        return {
+          risk: snap.score,
+          riskLevel: snap.level,
+          confidence: snap.confidence,
+          type: snap.type,
+          primaryTrigger,
+          factors,
+          preventionStrategy: (snap.recommendations || []).map(r => ({
+            action: r.text, reason: r.type || '',
+          })),
+        };
+      }
+
+      // "СЕЙЧАС" — единый snapshot из HEYS.RelapseRisk (тот же что и виджет)
       const predictionToday = useMemo(() => {
-        if (!HEYS.Metabolic?.calculateCrashRisk24h) return null;
-
-        const history = HEYS.Metabolic.getDaysHistory ? HEYS.Metabolic.getDaysHistory(30) : [];
-
-        return HEYS.Metabolic.calculateCrashRisk24h(
-          todayDate,
-          profile || window.HEYS?.utils?.lsGet?.('heys_profile', {}),
-          history
-        );
+        if (!HEYS.RelapseRisk?.getCurrentSnapshot) return null;
+        return snapshotToPanel(HEYS.RelapseRisk.getCurrentSnapshot());
       }, [lsGet, profile, todayDate]);
 
-      // Риск на завтра
+      // "ЗАВТРА" — RRS forecast snapshot
       const predictionTomorrow = useMemo(() => {
-        if (!HEYS.Metabolic?.calculateCrashRisk24h) return null;
-
-        const history = HEYS.Metabolic.getDaysHistory ? HEYS.Metabolic.getDaysHistory(30) : [];
-
-        return HEYS.Metabolic.calculateCrashRisk24h(
-          tomorrowDate,
-          profile || window.HEYS?.utils?.lsGet?.('heys_profile', {}),
-          history
-        );
-      }, [lsGet, profile, tomorrowDate]);
+        if (!HEYS.RelapseRisk?.getForecastSnapshot) return null;
+        return snapshotToPanel(HEYS.RelapseRisk.getForecastSnapshot(tomorrowDate));
+      }, [lsGet, profile, todayDate, tomorrowDate]);
 
       // Прогноз (с offset для timeline)
       const forecast = useMemo(() => {
@@ -35765,146 +35847,37 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       // Активный прогноз для деталей (показываем тот где риск выше, если оба есть)
       const [activePrediction, setActivePrediction] = useState(tomorrowRisk > todayRisk ? 'tomorrow' : 'today');
 
-      // 🆕 v3.22.0: Extended Analytics для emotional risk
-      const extendedAnalytics = useMemo(() => {
-        const U = window.HEYS?.utils;
-        const lsGet = U?.lsGet || ((k, d) => {
-          try { return JSON.parse(localStorage.getItem(k)) || d; } catch { return d; }
-        });
-        const profile = lsGet('heys_profile', {});
-        const todayDate = new Date().toISOString().split('T')[0];
-        const dayKey = `heys_dayv2_${todayDate}`;
-        const day = lsGet(dayKey, {});
+      // RRS factors already include drivers + protective — no extra enhancement needed.
+      // The old extendedAnalytics/emotionalRisk/training inline logic is now handled inside
+      // HEYS.RelapseRisk.calculate() (emotionalVulnerability component, protective buffer).
 
-        // Emotional Risk (Epel 2001, PMID: 11070333)
-        const stressAvg = day.stressAvg || 0;
-        const factors = [];
-        let bingeRisk = 0;
-
-        if (stressAvg >= 6) {
-          factors.push('Высокий стресс');
-          bingeRisk += 35;
-        } else if (stressAvg >= 4) {
-          factors.push('Умеренный стресс');
-          bingeRisk += 15;
-        }
-
-        const hour = new Date().getHours();
-        if (hour >= 20) {
-          factors.push('Вечер');
-          bingeRisk += 20;
-        } else if (hour >= 18) {
-          bingeRisk += 10;
-        }
-
-        const sleepDeficit = (profile.sleepHours || 8) - getDaySleepHours(day);
-        if (sleepDeficit > 2) {
-          factors.push('Недосып');
-          bingeRisk += 15;
-        }
-
-        // День дефицита? (недобор калорий)
-        const deficitDays = [];
-        for (let i = 1; i <= 3; i++) {
-          const d = new Date(todayDate);
-          d.setDate(d.getDate() - i);
-          const pastDay = lsGet(`heys_dayv2_${d.toISOString().split('T')[0]}`, {});
-          const optimum = 2000; // примерно
-          const eaten = pastDay.meals?.reduce((sum, m) => {
-            return sum + (m.items?.reduce((s, item) => s + (item.kcal || 0), 0) || 0);
-          }, 0) || 0;
-          if (eaten > 0 && eaten < optimum * 0.75) deficitDays.push(i);
-        }
-        if (deficitDays.length >= 2) {
-          factors.push('Калорийный долг');
-          bingeRisk += 20;
-        }
-
-        const emotionalRisk = {
-          hasRisk: bingeRisk >= 30 || factors.length >= 2,
-          level: bingeRisk >= 60 ? 'high' : bingeRisk >= 40 ? 'medium' : 'low',
-          bingeRisk: Math.min(90, bingeRisk),
-          factors,
-          stressLevel: stressAvg,
-          pmid: '11070333'
-        };
-
-        // Training Context (Aragon 2013, PMID: 23360586)
-        const trainings = day.trainings || [];
-        const isTrainingDay = trainings.length > 0;
-        let trainingType = null;
-        let trainingIntensity = 'moderate';
-
-        if (isTrainingDay) {
-          const t = trainings[0];
-          trainingType = t.type || 'cardio';
-          const totalMins = (t.z || []).reduce((a, b) => a + b, 0);
-          const highZoneMins = (t.z?.[2] || 0) + (t.z?.[3] || 0);
-          if (highZoneMins > totalMins * 0.4) trainingIntensity = 'high';
-          else if (totalMins < 30) trainingIntensity = 'light';
-        }
-
-        return { emotionalRisk, isTrainingDay, trainingType, trainingIntensity };
-      }, []);
-
-      // Расширяем factors emotionalRisk если есть риск
-      const getEnhancedFactors = (prediction) => {
-        if (!prediction?.factors) return [];
-        const factors = [...prediction.factors];
-
-        // Добавляем emotionalRisk если высокий
-        if (extendedAnalytics.emotionalRisk.hasRisk) {
-          const { bingeRisk, factors: riskFactors } = extendedAnalytics.emotionalRisk;
-          factors.push({
-            label: `🧠 Эмоц. риск: ${riskFactors.slice(0, 2).join(', ')}`,
-            weight: Math.round(bingeRisk * 0.3), // переводим в +weight
-            pmid: '11070333',
-            isEmotional: true
-          });
-        }
-
-        // Добавляем training context как защитный фактор (отрицательный вес)
-        if (extendedAnalytics.isTrainingDay) {
-          const typeLabels = { strength: '💪 Силовая', cardio: '🏃 Кардио', hobby: '⚽ Хобби' };
-          factors.push({
-            label: `${typeLabels[extendedAnalytics.trainingType] || '🏋️ Трен.'} сегодня`,
-            weight: extendedAnalytics.trainingIntensity === 'high' ? -15 : -10,
-            isProtective: true
-          });
-        }
-
-        return factors;
-      };
-
-      const basePredictionData = activePrediction === 'today' ? predictionToday : predictionTomorrow;
-      const activePredictionData = basePredictionData ? {
-        ...basePredictionData,
-        factors: getEnhancedFactors(basePredictionData)
-      } : null;
-      const activeLabel = activePrediction === 'today' ? 'Сегодня' : 'Завтра';
+      const activePredictionData = activePrediction === 'today' ? predictionToday : predictionTomorrow;
+      const activeLabel = activePrediction === 'today' ? 'Сейчас' : 'Завтра';
+      const activeType = activePredictionData?.type || 'realtime';
 
       const getRiskLevel = (risk) => risk < 30 ? 'low' : risk < 60 ? 'medium' : 'high';
 
       return h('div', { className: 'dual-risk-panel' },
         // Два полукруга рядом
         h('div', { className: 'dual-risk-panel__meters' },
-          // Сегодня
+          // Сегодня — реальный риск
           h('div', {
             className: `dual-risk-panel__meter-card ${activePrediction === 'today' ? 'dual-risk-panel__meter-card--active' : ''}`,
             onClick: () => setActivePrediction('today')
           },
-            h('div', { className: 'dual-risk-panel__meter-label' }, 'Сегодня'),
+            h('div', { className: 'dual-risk-panel__meter-label' }, 'Сейчас'),
             h(MiniRiskMeter, {
               risk: todayRisk,
               riskLevel: getRiskLevel(todayRisk),
               size: 120
             }),
+            h('div', { className: 'dual-risk-panel__meter-subtitle' }, 'по реальным данным'),
             todayRisk < 30 && h('div', { className: 'dual-risk-panel__ok-badge' }, '✅')
           ),
 
-          // Завтра
+          // Завтра — прогноз
           h('div', {
-            className: `dual-risk-panel__meter-card ${activePrediction === 'tomorrow' ? 'dual-risk-panel__meter-card--active' : ''}`,
+            className: `dual-risk-panel__meter-card dual-risk-panel__meter-card--forecast ${activePrediction === 'tomorrow' ? 'dual-risk-panel__meter-card--active' : ''}`,
             onClick: () => setActivePrediction('tomorrow')
           },
             h('div', { className: 'dual-risk-panel__meter-label' }, 'Завтра'),
@@ -35913,24 +35886,38 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
               riskLevel: getRiskLevel(tomorrowRisk),
               size: 120
             }),
+            h('div', { className: 'dual-risk-panel__meter-subtitle dual-risk-panel__meter-subtitle--forecast' }, '🔮 прогноз'),
             tomorrowRisk >= 30 && h('div', { className: 'dual-risk-panel__warning-badge' }, '⚠️')
           )
         ),
 
-        // Статус строка
+        // Статус строка с пояснением источника
         h('div', { className: 'dual-risk-panel__status' },
           maxRisk < 30
             ? h('span', { className: 'dual-risk-panel__status-ok' }, '✅ Всё под контролем')
             : tomorrowRisk > todayRisk
-              ? h('span', { className: 'dual-risk-panel__status-warn' }, '🔮 Прогноз на будущее')
-              : h('span', { className: 'dual-risk-panel__status-warn' }, '⚠️ Требует внимания')
+              ? h('span', { className: 'dual-risk-panel__status-warn' }, '🔮 Завтра риск может вырасти')
+              : h('span', { className: 'dual-risk-panel__status-warn' }, '⚠️ Требует внимания сейчас')
+        ),
+
+        // Confidence badge для активного дня
+        activePredictionData && h('div', { className: 'dual-risk-panel__confidence' },
+          h('span', { className: 'dual-risk-panel__confidence-label' },
+            activeType === 'forecast' ? '🔮 Прогноз' : '📊 Реальный риск'
+          ),
+          activePredictionData.confidence != null &&
+          h('span', { className: 'dual-risk-panel__confidence-value' },
+            `Уверенность: ${Math.round(activePredictionData.confidence)}%`
+          )
         ),
 
         // Детали активного прогноза
         activePredictionData && h('div', { className: 'dual-risk-panel__details' },
           // Hint - какой день показываем
           h('div', { className: 'dual-risk-panel__details-hint' },
-            `Детали: ${activeLabel} (нажми на полукруг для переключения)`
+            activeType === 'forecast'
+              ? 'Прогноз на завтра по паттернам последних дней'
+              : 'Расчёт по реальным данным сегодня (нажми на полукруг для переключения)'
           ),
 
           // Primary Trigger
