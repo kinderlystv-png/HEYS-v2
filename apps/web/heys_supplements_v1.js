@@ -174,8 +174,98 @@
       50% { transform: scale(0.92); }
       100% { transform: scale(1); }
     }
+
+    @keyframes supplements-victory-glow {
+      0% {
+        transform: scale(1);
+        box-shadow: 0 8px 24px rgba(34, 197, 94, 0.10);
+        filter: saturate(1);
+      }
+      30% {
+        transform: scale(1.015);
+        box-shadow: 0 14px 34px rgba(34, 197, 94, 0.20), 0 0 0 8px rgba(187, 247, 208, 0.28);
+        filter: saturate(1.08);
+      }
+      60% {
+        transform: scale(1.01);
+        box-shadow: 0 12px 28px rgba(59, 130, 246, 0.14), 0 0 0 14px rgba(191, 219, 254, 0.16);
+      }
+      100% {
+        transform: scale(1);
+        box-shadow: 0 8px 24px rgba(34, 197, 94, 0.08);
+        filter: saturate(1);
+      }
+    }
+
+    @keyframes supplements-badge-shimmer {
+      0% {
+        transform: translateX(-120%) skewX(-18deg);
+        opacity: 0;
+      }
+      25% {
+        opacity: 0.55;
+      }
+      100% {
+        transform: translateX(220%) skewX(-18deg);
+        opacity: 0;
+      }
+    }
+
+    @keyframes supplements-confetti-pop {
+      0% {
+        transform: translate3d(0, 8px, 0) scale(0.72) rotate(-10deg);
+        opacity: 0;
+      }
+      18% {
+        opacity: 1;
+      }
+      100% {
+        transform: translate3d(var(--confetti-x, 0px), var(--confetti-y, -28px), 0) scale(1.06) rotate(var(--confetti-rotate, 0deg));
+        opacity: 0;
+      }
+    }
+
     .supp-chip-animate {
       animation: chip-bounce 0.15s ease-out;
+    }
+
+    .supplements-card--celebrating {
+      animation: supplements-victory-glow 0.82s cubic-bezier(0.22, 1, 0.36, 1);
+      will-change: transform, box-shadow, filter;
+    }
+
+    .supplements-card__victory-pill {
+      position: relative;
+      overflow: hidden;
+    }
+
+    .supplements-card__victory-pill::after {
+      content: '';
+      position: absolute;
+      inset: -30% auto -30% -40%;
+      width: 42%;
+      background: linear-gradient(90deg, rgba(255,255,255,0), rgba(255,255,255,0.92), rgba(255,255,255,0));
+      transform: translateX(-120%) skewX(-18deg);
+      animation: supplements-badge-shimmer 0.78s ease-out;
+      pointer-events: none;
+    }
+
+    .supplements-card__confetti {
+      position: absolute;
+      inset: -6px 0 auto 0;
+      pointer-events: none;
+      overflow: visible;
+    }
+
+    .supplements-card__confetti-item {
+      position: absolute;
+      left: 50%;
+      top: 0;
+      font-size: 15px;
+      line-height: 1;
+      opacity: 0;
+      animation: supplements-confetti-pop 0.9s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      text-shadow: 0 4px 12px rgba(15, 23, 42, 0.12);
     }
   `;
 
@@ -2135,6 +2225,57 @@
   // v3.3: Root для научного popup (React 18 createRoot)
   let sciencePopupRoot = null;
   let sciencePopupRootInstance = null;
+  const supplementsCollapseTimers = Object.create(null);
+  let supplementsVictoryAudioContext = null;
+
+  function triggerSupplementsVictoryHaptic() {
+    try {
+      if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
+        navigator.vibrate([18, 14, 24]);
+      }
+    } catch (e) {
+      // no-op
+    }
+  }
+
+  function playSupplementsVictorySound() {
+    try {
+      const AudioCtx = typeof window !== 'undefined' ? (window.AudioContext || window.webkitAudioContext) : null;
+      if (!AudioCtx) return;
+
+      if (!supplementsVictoryAudioContext) {
+        supplementsVictoryAudioContext = new AudioCtx();
+      }
+
+      const ctx = supplementsVictoryAudioContext;
+      if (ctx.state === 'suspended' && typeof ctx.resume === 'function') {
+        ctx.resume();
+      }
+
+      const startAt = ctx.currentTime + 0.01;
+      const notes = [659.25, 880, 1174.66];
+      notes.forEach((frequency, index) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        const noteStart = startAt + index * 0.07;
+        const noteEnd = noteStart + 0.26;
+
+        osc.type = index === 2 ? 'triangle' : 'sine';
+        osc.frequency.setValueAtTime(frequency, noteStart);
+
+        gain.gain.setValueAtTime(0.0001, noteStart);
+        gain.gain.exponentialRampToValueAtTime(0.09 - index * 0.015, noteStart + 0.03);
+        gain.gain.exponentialRampToValueAtTime(0.0001, noteEnd);
+
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(noteStart);
+        osc.stop(noteEnd + 0.02);
+      });
+    } catch (e) {
+      // no-op
+    }
+  }
 
   function openSupplementsSciencePopup(suppId) {
     const hasScience = HEYS.Supplements?.SCIENCE?.BIOAVAILABILITY;
@@ -2243,6 +2384,12 @@
 
     const allTaken = planned.length > 0 && planned.every(id => taken.includes(id));
     const takenCount = planned.filter(id => taken.includes(id)).length;
+    const collapsePrefs = readSessionValue('heys_supplements_card_collapsed', {});
+    const celebrationPrefs = readSessionValue('heys_supplements_card_fx', {});
+    const celebrationState = celebrationPrefs[dateKey] || null;
+    const isCelebrating = allTaken && celebrationState?.active === true;
+    const isCollapsed = allTaken ? collapsePrefs[dateKey] !== false : false;
+    const isCompactCollapsed = allTaken && isCollapsed;
 
     // v3.0: Группируем по времени приёма
     const timeGroups = groupByTimeOfDay(planned);
@@ -2262,9 +2409,79 @@
       if (onForceUpdate) onForceUpdate();
     };
 
+    const clearCelebrateTimer = () => {
+      if (supplementsCollapseTimers[dateKey]) {
+        clearTimeout(supplementsCollapseTimers[dateKey]);
+        delete supplementsCollapseTimers[dateKey];
+      }
+    };
+
+    const clearCelebrationState = (shouldRerender = false) => {
+      clearCelebrateTimer();
+      const nextCelebrationPrefs = readSessionValue('heys_supplements_card_fx', {}) || {};
+      if (nextCelebrationPrefs[dateKey]) {
+        delete nextCelebrationPrefs[dateKey];
+        writeSessionValue('heys_supplements_card_fx', nextCelebrationPrefs);
+      }
+      if (shouldRerender && onForceUpdate) onForceUpdate();
+    };
+
     const markAll = () => {
       markAllSupplementsTaken(dateKey);
+      maybeAutoCollapse(planned);
+    };
+
+    const setCollapsed = (collapsed) => {
+      const nextPrefs = readSessionValue('heys_supplements_card_collapsed', {}) || {};
+      nextPrefs[dateKey] = !!collapsed;
+      writeSessionValue('heys_supplements_card_collapsed', nextPrefs);
       if (onForceUpdate) onForceUpdate();
+    };
+
+    const runCelebrationThenCollapse = () => {
+      clearCelebrateTimer();
+
+      console.info('[HEYS.supplements] Victory celebration started');
+      triggerSupplementsVictoryHaptic();
+      playSupplementsVictorySound();
+
+      const nextCelebrationPrefs = readSessionValue('heys_supplements_card_fx', {}) || {};
+      nextCelebrationPrefs[dateKey] = {
+        active: true,
+        startedAt: Date.now(),
+      };
+      writeSessionValue('heys_supplements_card_fx', nextCelebrationPrefs);
+
+      const nextCollapsePrefs = readSessionValue('heys_supplements_card_collapsed', {}) || {};
+      nextCollapsePrefs[dateKey] = false;
+      writeSessionValue('heys_supplements_card_collapsed', nextCollapsePrefs);
+
+      if (onForceUpdate) onForceUpdate();
+
+      supplementsCollapseTimers[dateKey] = setTimeout(() => {
+        const latestCelebrationPrefs = readSessionValue('heys_supplements_card_fx', {}) || {};
+        if (latestCelebrationPrefs[dateKey]) {
+          delete latestCelebrationPrefs[dateKey];
+          writeSessionValue('heys_supplements_card_fx', latestCelebrationPrefs);
+        }
+
+        const latestCollapsePrefs = readSessionValue('heys_supplements_card_collapsed', {}) || {};
+        latestCollapsePrefs[dateKey] = true;
+        writeSessionValue('heys_supplements_card_collapsed', latestCollapsePrefs);
+
+        console.info('[HEYS.supplements] Victory celebration completed');
+        delete supplementsCollapseTimers[dateKey];
+        if (onForceUpdate) onForceUpdate();
+      }, 900);
+    };
+
+    const maybeAutoCollapse = (nextTakenList) => {
+      const willBeAllTaken = planned.length > 0 && planned.every(id => nextTakenList.includes(id));
+      if (willBeAllTaken) {
+        runCelebrationThenCollapse();
+        return true;
+      }
+      return false;
     };
 
     // v3.3: Открыть научный popup
@@ -2293,8 +2510,9 @@
       // v3.5: Batch mark для группы
       const markGroupTaken = () => {
         if (notTakenInGroup.length > 0) {
+          const nextTakenList = Array.from(new Set([...taken, ...notTakenInGroup]));
           markSupplementsTaken(dateKey, notTakenInGroup, true);
-          if (onForceUpdate) onForceUpdate();
+          if (!maybeAutoCollapse(nextTakenList) && onForceUpdate) onForceUpdate();
         }
       };
 
@@ -2394,7 +2612,17 @@
               const btn = e.currentTarget;
               btn.style.transform = 'scale(1.15)';
               setTimeout(() => { btn.style.transform = 'scale(1)'; }, 150);
+              const isTaken = taken.includes(id);
+              const nextTakenList = isTaken
+                ? taken.filter(takenId => takenId !== id)
+                : Array.from(new Set([...taken, id]));
+              if (isTaken) {
+                clearCelebrationState();
+              }
               toggleTaken(id);
+              if (!isTaken) {
+                maybeAutoCollapse(nextTakenList);
+              }
             };
 
             return React.createElement('button', {
@@ -2461,11 +2689,11 @@
     };
 
     return React.createElement('div', {
-      className: 'compact-card supplements-card widget widget--supplements-diary' + (allTaken ? ' widget--supplements-diary--all-taken' : ''),
+      className: 'compact-card supplements-card widget widget--supplements-diary' + (allTaken ? ' widget--supplements-diary--all-taken' : '') + (isCelebrating ? ' supplements-card--celebrating' : ''),
       style: {
         display: 'block',
         marginBottom: '12px',
-        padding: 'var(--heys-diary-card-padding, 14px 16px)',
+        padding: isCompactCollapsed ? '12px 14px' : 'var(--heys-diary-card-padding, 14px 16px)',
         boxSizing: 'border-box'
       }
     },
@@ -2475,7 +2703,7 @@
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          marginBottom: '6px'
+          marginBottom: isCompactCollapsed ? '4px' : '6px'
         }
       },
         // Левая часть: название + прогресс
@@ -2536,6 +2764,30 @@
             },
             title: 'Бонус к инсулиновой волне от добавок'
           }, `🌊${Math.round(insulinBonus * 100)}%`),
+          allTaken && React.createElement('button', {
+            onClick: (e) => {
+              e.stopPropagation();
+              clearCelebrationState();
+              setCollapsed(!isCollapsed);
+            },
+            style: {
+              background: 'var(--bg-secondary, #f1f5f9)',
+              border: '1px solid #e2e8f0',
+              borderRadius: '8px',
+              width: '32px',
+              height: '32px',
+              fontSize: '15px',
+              fontWeight: '700',
+              color: '#475569',
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              lineHeight: '1'
+            },
+            title: isCollapsed ? 'Развернуть добавки' : 'Свернуть добавки',
+            'aria-label': isCollapsed ? 'Развернуть добавки' : 'Свернуть добавки'
+          }, isCollapsed ? '▾' : '▴'),
           React.createElement('button', {
             onClick: (e) => {
               e.stopPropagation();
@@ -2564,22 +2816,47 @@
           display: 'flex',
           alignItems: 'center',
           gap: '8px',
-          marginBottom: '10px'
+          marginBottom: isCompactCollapsed ? '0' : '10px'
         }
       },
         React.createElement('div', {
+          className: isCelebrating ? 'supplements-card__victory-pill' : '',
           style: {
             flex: 1,
             textAlign: 'center',
-            padding: '8px 10px',
-            background: '#f0fdf4',
-            borderRadius: '10px'
+            padding: isCompactCollapsed ? '5px 8px' : '8px 10px',
+            background: isCelebrating
+              ? 'linear-gradient(135deg, #ecfccb 0%, #dcfce7 50%, #dbeafe 100%)'
+              : '#f0fdf4',
+            borderRadius: '10px',
+            boxShadow: isCelebrating ? '0 10px 22px rgba(34, 197, 94, 0.14)' : 'none'
           }
         },
-          React.createElement('span', { style: { fontSize: '12px', color: '#16a34a', fontWeight: '600' } }, '🎉 Все добавки приняты')
+          isCelebrating && React.createElement('div', { className: 'supplements-card__confetti' },
+            React.createElement('span', {
+              className: 'supplements-card__confetti-item',
+              style: { '--confetti-x': '-40px', '--confetti-y': '-22px', '--confetti-rotate': '-24deg', marginLeft: '-44px', animationDelay: '0s' }
+            }, '✨'),
+            React.createElement('span', {
+              className: 'supplements-card__confetti-item',
+              style: { '--confetti-x': '0px', '--confetti-y': '-32px', '--confetti-rotate': '0deg', marginLeft: '-6px', animationDelay: '0.06s' }
+            }, '🎉'),
+            React.createElement('span', {
+              className: 'supplements-card__confetti-item',
+              style: { '--confetti-x': '40px', '--confetti-y': '-24px', '--confetti-rotate': '20deg', marginLeft: '28px', animationDelay: '0.12s' }
+            }, '💊')
+          ),
+          React.createElement('span', {
+            style: {
+              fontSize: isCompactCollapsed ? '11px' : '12px',
+              color: isCelebrating ? '#15803d' : '#16a34a',
+              fontWeight: '700',
+              letterSpacing: isCelebrating ? '0.01em' : 'normal'
+            }
+          }, isCelebrating ? '✨ Идеально! План по добавкам закрыт' : '🎉 Все добавки приняты')
         )
       ),
-      React.createElement('div', { className: 'supplements-card__expanded' },
+      (!allTaken || !isCollapsed) && React.createElement('div', { className: 'supplements-card__expanded' },
         // v3.1: Напоминание по времени
         (() => {
           const reminder = getTimeReminder(planned, taken);

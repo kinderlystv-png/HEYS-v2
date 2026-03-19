@@ -138,6 +138,21 @@ describe('Insulin Wave Module (Critical)', () => {
       expect(context.type).toBe('peri');
       expect(context.harmMultiplier).toBeLessThan(1.0); // Should reduce harm
     });
+
+    it('should detect HOUSEHOLD context without trainings', () => {
+      const context = IW.calculateActivityContext({
+        mealTimeMin: 8 * 60 + 30,
+        mealKcal: 51,
+        trainings: [],
+        householdMin: 30,
+        steps: 0
+      });
+
+      expect(context).toBeTruthy();
+      expect(context.type).toBe('household');
+      expect(context.badge).toContain('Умеренный быт');
+      expect(context.harmMultiplier).toBeLessThan(1.0);
+    });
   });
 
   describe('4. Kcal-based Wave Reduction (v3.5.0)', () => {

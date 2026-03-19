@@ -1,6 +1,6 @@
 # Cascade Card — «Ваш позитивный каскад»
 
-> Документация модуля `heys_cascade_card_v1.js` v3.6.0  
+> Документация модуля `heys_cascade_card_v1.js` v3.7.0  
 > Дата обновления: 2026-02-25
 
 ---
@@ -66,21 +66,19 @@ scoreFactor(raw, baseline, curveFn):
 
 **v2.0 (текущее):** фиксированные пороги 60/30/10 мин
 
-**v2.1 (апгрейд) — adaptive baseline + relative scoring:**
+**Текущее поведение — любое ненулевое значение всегда в плюс:**
 
 ```
-Personal baseline:
-  baselineNEAT = median(last14days.householdMin) || 30  // population default
-
-Relative scoring (к персональному уровню):
-  ratio = householdMin / baselineNEAT
-  weight = clamp(log2(ratio + 0.5) × 0.8, -0.5, +1.2)
-  //  ratio=0.0 → -0.5 (резко ниже своей нормы)
-  //  ratio=0.3 → -0.15
-  //  ratio=1.0 → +0.35 (на уровне)
-  //  ratio=1.5 → +0.70
-  //  ratio=2.0 → +1.0 (вдвое выше привычного)
-  //  ratio=3.0 → +1.2 (cap)
+if householdMin <= 0:
+  weight = 0
+elif householdMin <= 15:
+  weight = +0.2
+else:
+  weight = clamp(0.2 + ((householdMin - 15) / 105) × 1.0, 0.2, 1.2)
+  // 15 мин → +0.2
+  // 30 мин → +0.34
+  // 60 мин → +0.63
+  // 120+ мин → +1.2 (cap)
 
 Streak penalty (multi-day, smoothed):
   inactiveDays = countConsecutive(prevDays, d => d.householdMin < 10)
@@ -89,13 +87,12 @@ Streak penalty (multi-day, smoothed):
     // Субквадратичная кривая: плавно нарастает
 ```
 
-**Научное обоснование:**
+**Почему так:**
 
-- NEAT составляет 15–50% суточного расхода (Levine, 2004) — вариативность
-  огромна
-- Относительное скоринг важнее абсолютного: человек с NEAT 120 мин/день и 60
-  мин/день — разные базовые уровни
-- Log-кривая: diminishing returns (60→120 мин менее значимы чем 0→60)
+- Для UX каскада бытовая активность трактуется как «любое движение лучше нуля».
+- Поэтому ненулевой бытовой NEAT больше не становится отрицательным событием.
+- Негативным остаётся только серия нулевых дней, а не сам факт «сегодня было
+  мало».
 
 ---
 
@@ -634,6 +631,10 @@ EMPTY:    нет событий   — начало дня
 > дневному score. Пороги score (v2.2.0) всё ещё используются только для
 > внутридневного логирования и DCS-нормализации.
 
+> **Важно:** в UI отдельно существует `display CRS` — это сглаженная UX-кривая с
+> базой 50% и soft-cap около 80%. Она нужна для отзывчивого прогресс-бара и
+> может визуально выглядеть мягче, чем raw CRS внутри EMA.
+
 ### Прогресс-бар (v3.0.0+ CRS-driven)
 
 ```
@@ -801,19 +802,23 @@ function computeDailyContribution(dailyScore, day, normAbs, pIndex, prof) {
 }
 ```
 
-### 2. Вычисление CRS (v3.6.0 — Base + Today's Boost)
+### 2. Вычисление CRS (v3.7.0 — Base + Today's Boost / Penalty)
 
-**Формула v3.6.0:**
+**Формула v3.7.0:**
 
 ```
 CRS = CRS_base + todayBoost
 
 CRS_base   = EMA(завершённые дни, i≥1, α=0.95, 30-day window)
-todayBoost = max(0, DCS_today) × CRS_TODAY_BOOST   // CRS_TODAY_BOOST = 0.03
+todayBoost = DCS_today > 0
+           ? DCS_today × CRS_TODAY_BOOST    // +0..3%
+           : DCS_today < -0.1
+             ? DCS_today × CRS_TODAY_PENALTY // до -10%
+             : 0
 CRS        = clamp(CRS_base + todayBoost, 0, ceiling)
 ```
 
-**Почему v3.6.0 вместо partial-day weighting (v3.3.0):**
+**Почему v3.7.0 вместо partial-day weighting (v3.3.0):**
 
 - **Проблема v3.3.0:** DCS незавершённого дня (утром 0.3) включался в EMA с
   частичным весом. При DCS < CRS это _тянуло CRS вниз_ — парадокс "сделал

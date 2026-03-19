@@ -245,17 +245,40 @@
                 className: 'diary-section-separator diary-section-separator--full-width',
                 style: {
                     margin: '36px -18px 0 -18px',
-                    padding: '16px 18px 18px 18px',
-                    borderTop: '1px solid rgba(37, 99, 235, 0.24)'
+                    padding: '10px 18px 18px 18px'
                 }
             },
+                React.createElement('div', {
+                    className: 'diary-section-separator-line-wrap',
+                    style: {
+                        position: 'relative',
+                        height: '10px',
+                        margin: '0 0 12px 0',
+                        overflow: 'visible'
+                    }
+                },
+                    React.createElement('div', {
+                        className: 'diary-section-separator-line',
+                        style: {
+                            position: 'absolute',
+                            left: '50%',
+                            bottom: '1px',
+                            transform: 'translateX(-50%)',
+                            width: '84%',
+                            height: '2px',
+                            borderRadius: '999px',
+                            background: 'linear-gradient(90deg, rgba(15, 23, 42, 0) 0%, rgba(37, 99, 235, 0.08) 14%, rgba(30, 64, 175, 0.28) 32%, rgba(30, 41, 59, 0.84) 50%, rgba(30, 64, 175, 0.28) 68%, rgba(37, 99, 235, 0.08) 86%, rgba(15, 23, 42, 0) 100%)',
+                            boxShadow: '0 0 10px rgba(30, 64, 175, 0.1)'
+                        }
+                    })
+                ),
                 React.createElement('h2', {
                     id: 'diary-heading',
                     style: {
                         fontSize: '24px',
                         fontWeight: '800',
                         color: 'var(--text, #1e293b)',
-                        margin: '12px 0 20px 0',
+                        margin: '12px 0 26px 0',
                         textTransform: 'uppercase',
                         letterSpacing: '1px',
                         textAlign: 'center',
@@ -266,26 +289,40 @@
                     className: 'add-meal-btn-full',
                     onClick: addMeal,
                     style: {
-                        width: '100%',
-                        padding: '18px 24px',
-                        marginBottom: '20px',
-                        fontSize: '17px',
+                        width: '82%',
+                        maxWidth: '460px',
+                        padding: '15px 22px',
+                        margin: '18px auto 20px auto',
+                        fontSize: '16px',
                         fontWeight: '700',
                         color: '#fff',
-                        background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+                        background: 'linear-gradient(135deg, #74a6f4 0%, #5e93ef 55%, #4b7fe0 100%)',
                         border: 'none',
                         borderRadius: '16px',
                         cursor: 'pointer',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        gap: '10px',
-                        boxShadow: '0 4px 14px rgba(59, 130, 246, 0.35)',
+                        gap: '8px',
+                        boxShadow: '0 2px 8px rgba(59, 130, 246, 0.16)',
                         transition: 'all 0.2s ease',
                         WebkitTapHighlightColor: 'transparent'
                     }
                 },
-                    React.createElement('span', { style: { fontSize: '22px' } }, '➕'),
+                    React.createElement('span', {
+                        style: {
+                            fontSize: '22px',
+                            lineHeight: 1,
+                            color: 'rgba(255, 255, 255, 0.94)',
+                            fontWeight: '500',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            width: '22px',
+                            height: '22px',
+                            textShadow: '0 1px 2px rgba(30, 64, 175, 0.12)'
+                        }
+                    }, '+'),
                     'Добавить приём пищи'
                 ),
                 (!day?.meals || day.meals.length === 0) && React.createElement('div', { className: 'empty-state' },

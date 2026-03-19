@@ -53,7 +53,19 @@
         /протеин/i, /protein/i,
     ];
 
+    const BEVERAGE_LIKE_PATTERNS = [
+        /кофе/i, /coffee/i, /латте/i, /latte/i, /капучино/i, /cappuccino/i,
+        /раф/i, /americano/i, /американо/i, /чай/i, /tea/i,
+        /молоко/i, /milk/i, /кефир/i, /йогурт/i, /смузи/i, /коктейль/i, /shake/i,
+    ];
+
     const LIQUID_FOOD_PENALTY = 5;
+
+    const MAIN_MEAL_ADEQUACY = {
+        breakfast: { minKcal: 150, minProt: 12, minFiber: 2, label: 'завтрак' },
+        lunch: { minKcal: 300, minProt: 18, minFiber: 3, label: 'обед' },
+        dinner: { minKcal: 250, minProt: 18, minFiber: 3, label: 'ужин' },
+    };
 
     const GL_QUALITY_THRESHOLDS = {
         veryLow: { max: 5, bonus: 3, desc: 'Минимальный инсулиновый ответ' },
@@ -86,6 +98,183 @@
         }
 
         return false;
+    }
+
+    function isBeverageLikeItem(productName, category) {
+        if (!productName && !category) return false;
+
+        const name = String(productName || '');
+        const cat = String(category || '');
+
+        if (['Напитки', 'Соки', 'Молочные напитки'].includes(cat)) return true;
+
+        return BEVERAGE_LIKE_PATTERNS.some((pattern) => pattern.test(name));
+    }
+
+    function calcMealRoleAdequacy(mealType, totals, context = {}) {
+        const config = MAIN_MEAL_ADEQUACY[mealType];
+        if (!config) {
+            return {
+                penalty: 0,
+                ok: true,
+                label: null,
+                shortLabel: null,
+                issues: [],
+            };
+        }
+
+        const kcal = +totals?.kcal || 0;
+        const prot = +totals?.prot || 0;
+        const fiber = +totals?.fiber || 0;
+        const itemCount = +context.itemCount || 0;
+        const beverageLikeRatio = +context.beverageLikeRatio || 0;
+
+        let penalty = 0;
+        const issues = [];
+
+        if (kcal < config.minKcal) {
+            const kcalRatio = kcal / config.minKcal;
+            const kcalPenalty = kcalRatio < 0.35 ? 8 : kcalRatio < 0.6 ? 6 : 3;
+            penalty += kcalPenalty;
+            issues.push(`мало энергии для ${config.label}`);
+        }
+
+        if (prot < config.minProt) {
+            const protRatio = prot / config.minProt;
+            const protPenalty = protRatio < 0.4 ? 5 : protRatio < 0.7 ? 4 : 2;
+            penalty += protPenalty;
+            issues.push(`мало белка для ${config.label}`);
+        }
+
+        if (fiber < config.minFiber) {
+            penalty += 2;
+            issues.push('почти нет клетчатки');
+        }
+
+        if (beverageLikeRatio >= 0.7) {
+            penalty += 5;
+            issues.push('это больше напиток, чем полноценный приём');
+        }
+
+        if (itemCount <= 1 && prot < config.minProt && fiber < config.minFiber) {
+            penalty += 2;
+            issues.push('слабая сытость и насыщение');
+        }
+
+        penalty = Math.min(18, penalty);
+
+        return {
+            penalty,
+            ok: penalty === 0,
+            label: config.label,
+            shortLabel: penalty === 0 ? `${config.label} полноценный` : `${config.label} слабый`,
+            issues,
+        };
+    }
+
+    function getRoleDeficitSummary(roleAdequacy) {
+        const issues = Array.isArray(roleAdequacy?.issues) ? roleAdequacy.issues : [];
+        const deficits = [];
+
+        const pushUnique = (value) => {
+            if (value && !deficits.includes(value)) deficits.push(value);
+        };
+
+        issues.forEach((issue) => {
+            const text = String(issue || '');
+            if (text.includes('мало белка')) pushUnique('белка');
+            if (text.includes('клетчатки')) pushUnique('клетчатки');
+            if (text.includes('мало энергии') || text.includes('сытость')) pushUnique('сытости');
+            if (text.includes('больше напиток')) pushUnique('плотности');
+        });
+
+        if (deficits.length === 0) return null;
+        if (deficits.length === 1) return deficits[0];
+        if (deficits.length === 2) return deficits.join(' и ');
+
+        return `${deficits.slice(0, -1).join(', ')} и ${deficits[deficits.length - 1]}`;
+    }
+
+    function getMealRoleStatus(mealType, totals, roleAdequacy, context = {}) {
+        const kcal = +totals?.kcal || 0;
+        const beverageLikeRatio = +context.beverageLikeRatio || 0;
+        const itemCount = +context.itemCount || 0;
+        const isMainMeal = !!MAIN_MEAL_ADEQUACY[mealType];
+        const mealLabel = roleAdequacy?.label || 'основного приёма';
+        const deficitSummary = getRoleDeficitSummary(roleAdequacy);
+        const deficitHint = deficitSummary || 'белка, клетчатки или сытости';
+
+        if (beverageLikeRatio >= 0.7 && kcal <= 180) {
+            return {
+                kind: 'drink',
+                icon: '☕',
+                shortLabel: 'напиток',
+                fullLabel: 'Скорее напиток, чем еда',
+                tone: 'slate',
+                subtitle: isMainMeal
+                    ? `Нормально как напиток, но для ${mealLabel} не хватает ${deficitHint}.`
+                    : 'Нормально как напиток, но это не заменяет еду.',
+                coachLabel: 'Следующий шаг',
+                coachTitle: isMainMeal ? 'Добавь опору к приёму' : 'Это ок как напиток',
+                coachText: isMainMeal
+                    ? `Сам продукт ок. Чтобы ${mealLabel} реально держал сытость, добавь источник ${deficitHint}.`
+                    : 'Если нужен именно приём пищи, рядом нужен более плотный продукт.',
+            };
+        }
+
+        if (isMainMeal) {
+            if (roleAdequacy?.ok) {
+                return {
+                    kind: 'full',
+                    icon: '🍽️',
+                    shortLabel: 'полноценный приём',
+                    fullLabel: 'Полноценный основной приём',
+                    tone: 'green',
+                    subtitle: `Хорошая база для ${mealLabel}.`,
+                    coachLabel: 'Сильная база',
+                    coachTitle: 'Так держать',
+                    coachText: `Здесь уже есть структура полноценного ${mealLabel}: сытость, опора и нормальный состав.`,
+                };
+            }
+
+            return {
+                kind: 'snack',
+                icon: '🥪',
+                shortLabel: 'перекус',
+                fullLabel: 'Скорее перекус, чем полноценный приём',
+                tone: 'amber',
+                subtitle: `Ок как перекус, но для ${mealLabel} не хватает ${deficitHint}.`,
+                coachLabel: 'Можно усилить',
+                coachTitle: 'Сделай приём чуть плотнее',
+                coachText: `Добавь источник ${deficitHint} — и это уже будет больше похоже на ${mealLabel}, а не только на перекус.`,
+            };
+        }
+
+        if (itemCount <= 1 && kcal < 120 && beverageLikeRatio < 0.7) {
+            return {
+                kind: 'light-snack',
+                icon: '🍎',
+                shortLabel: 'лёгкий перекус',
+                fullLabel: 'Лёгкий перекус',
+                tone: 'blue',
+                subtitle: 'Лёгкий вариант между основными приёмами.',
+                coachLabel: 'Лёгкий формат',
+                coachTitle: 'Нормально между делом',
+                coachText: 'Если нужна большая сытость — просто добавь белок или клетчатку.',
+            };
+        }
+
+        return {
+            kind: 'snack',
+            icon: '🥪',
+            shortLabel: 'перекус',
+            fullLabel: 'Перекус',
+            tone: 'blue',
+            subtitle: 'Нормально как небольшой приём между основными.',
+            coachLabel: 'Гибкий вариант',
+            coachTitle: 'Рабочий перекус',
+            coachText: 'Хорошо как промежуточный приём, если не нужна долгая сытость.',
+        };
     }
 
     function calculateMealGL(avgGI, totalCarbs) {
@@ -743,6 +932,7 @@
 
         let gramSum = 0; let carbSum = 0; let giSum = 0; let harmSum = 0;
         let hasDairy = false;
+        let beverageLikeKcal = 0;
 
         (meal.items || []).forEach((it) => {
             const p = getProductFromItem(it, pIndex) || {};
@@ -767,11 +957,16 @@
 
             const gi = p.gi ?? p.gi100 ?? p.GI ?? p.giIndex ?? 50;
             const harm = p.harm ?? p.harmScore ?? p.harm100 ?? p.harmPct ?? 0;
+            const itemKcal = (+p.kcal100 || 0) * g / 100;
 
             gramSum += g;
             carbSum += itemCarbs;
             giSum += gi * itemCarbs;
             harmSum += harm * g;
+
+            if (isBeverageLikeItem(p.name, p.category)) {
+                beverageLikeKcal += itemKcal;
+            }
         });
         const avgGI = carbSum > 0 ? giSum / carbSum : 50;
         const rawAvgHarm = gramSum > 0 ? harmSum / gramSum : 0;
@@ -834,10 +1029,31 @@
         const timeParsed = parseTime(meal.time || '');
         const hour = timeParsed?.hh || 12;
 
+        let liquidKcal = 0;
+        (meal.items || []).forEach((it) => {
+            const p = getProductFromItem(it, pIndex) || {};
+            const g = +it.grams || 0;
+            if (!g) return;
+
+            if (isLiquidFood(p.name, p.category)) {
+                const itemKcal = (p.kcal100 || 0) * g / 100;
+                liquidKcal += itemKcal;
+            }
+        });
+        const liquidRatio = kcal > 0 ? liquidKcal / kcal : 0;
+        const beverageLikeRatio = kcal > 0 ? beverageLikeKcal / kcal : 0;
+        const roleAdequacy = calcMealRoleAdequacy(mealType, totals, {
+            itemCount: (meal.items || []).length,
+            beverageLikeRatio,
+        });
+
         const glBonus = getGLQualityBonus(mealGL);
         if (glBonus.bonus !== 0) {
-            bonusPoints += glBonus.bonus;
-            if (glBonus.bonus > 0) {
+            const canRewardLowGL = glBonus.bonus < 0 || roleAdequacy.ok || kcal >= 150 || carbs >= 15 || prot >= 12;
+            if (canRewardLowGL) {
+                bonusPoints += glBonus.bonus;
+            }
+            if (glBonus.bonus > 0 && canRewardLowGL) {
                 positiveBadges.push({ type: '📉', ok: true, label: 'Низкая GL' });
             }
         }
@@ -852,21 +1068,13 @@
             }
         }
 
-        let liquidKcal = 0;
-        (meal.items || []).forEach((it) => {
-            const p = getProductFromItem(it, pIndex) || {};
-            const g = +it.grams || 0;
-            if (!g) return;
-
-            if (isLiquidFood(p.name, p.category)) {
-                const itemKcal = (p.kcal100 || 0) * g / 100;
-                liquidKcal += itemKcal;
-            }
-        });
-        const liquidRatio = kcal > 0 ? liquidKcal / kcal : 0;
         if (liquidRatio > 0.5 && kcal >= 100) {
             bonusPoints -= LIQUID_FOOD_PENALTY;
             badges.push({ type: '🥤', ok: false, label: 'Жидкие калории' });
+        }
+        if (roleAdequacy.penalty > 0) {
+            bonusPoints -= roleAdequacy.penalty;
+            badges.push({ type: '🍽️', ok: false, label: roleAdequacy.shortLabel });
         }
 
         if (hour >= 18 && hour < 20 && kcal >= 200) {
@@ -945,7 +1153,7 @@
             }
         }
 
-        if (kcalScore.ok && macroScore.proteinOk && carbScore.ok && fatScore.ok && giHarmScore.ok) {
+        if (kcalScore.ok && macroScore.proteinOk && carbScore.ok && fatScore.ok && giHarmScore.ok && roleAdequacy.ok) {
             bonusPoints += 3;
             positiveBadges.push({ type: '⭐', ok: true, label: 'Баланс' });
         }
@@ -965,6 +1173,7 @@
             { label: 'Калории', value: Math.round(kcal) + ' ккал', ok: kcalScore.ok },
             { label: 'Время', value: timeValue, ok: timeOk },
             { label: 'Белок', value: Math.round(prot) + 'г', ok: macroScore.proteinOk },
+            ...(roleAdequacy.label ? [{ label: 'Роль приёма', value: roleAdequacy.shortLabel, ok: roleAdequacy.ok }] : []),
             { label: 'Углеводы', value: carbScore.simpleRatio <= 0.3 ? 'сложные ✓' : Math.round(carbScore.simpleRatio * 100) + '% простых', ok: carbScore.ok },
             { label: 'Жиры', value: fatScore.goodRatio >= 0.6 ? 'полезные ✓' : Math.round(fatScore.goodRatio * 100) + '% полезных', ok: fatScore.ok },
             { label: 'ГИ', value: Math.round(avgGI), ok: avgGI <= 70 },
@@ -974,6 +1183,10 @@
         ];
 
         const allBadges = [...badges.slice(0, 2), ...positiveBadges.slice(0, 1)];
+        const mealRoleStatus = getMealRoleStatus(mealType, totals, roleAdequacy, {
+            beverageLikeRatio,
+            itemCount,
+        });
 
         return {
             score: finalScore,
@@ -991,6 +1204,9 @@
             circadianPeriod: circadian.period,
             circadianBonus: circadian.bonus,
             liquidRatio: Math.round(liquidRatio * 100),
+            beverageLikeRatio: Math.round(beverageLikeRatio * 100),
+            roleAdequacy,
+            mealRoleStatus,
             activityContext: activityContext || undefined,
             carbScore,
         };
@@ -1210,6 +1426,8 @@
                 const glLevel = quality.glLevel || 'medium';
                 const circadianPeriod = quality.circadianPeriod || 'afternoon';
                 const liquidRatio = quality.liquidRatio || 0;
+                const beverageLikeRatio = quality.beverageLikeRatio || 0;
+                const roleAdequacy = quality.roleAdequacy || null;
 
                 const glLevelRu = {
                     'very-low': 'очень низкая',
@@ -1240,6 +1458,14 @@
                 const productsList = getProductsList();
 
                 const getTip = () => {
+                    if (roleAdequacy?.penalty > 0) {
+                        return {
+                            text: `☕ Хороший продукт, но как ${roleAdequacy.label} это слабый вариант: ${roleAdequacy.issues[0] || 'не хватает сытости и белка'}`,
+                            type: 'warning',
+                            worstId: 'adequacy',
+                        };
+                    }
+
                     if (!worstId) return { text: '✨ Отличный сбалансированный приём!', type: 'success', worstId: null };
 
                     const tips = {
@@ -1366,7 +1592,7 @@
                             max: calc.max,
                             isWorst: calc.id === worstId,
                         })),
-                        bonusPoints !== 0 && CalcRow({ id: 'bonus', icon: '⭐', label: 'Бонусы', points: bonusPoints, max: 15, isBonus: true }),
+                        bonusPoints !== 0 && CalcRow({ id: 'bonus', icon: bonusPoints >= 0 ? '⭐' : '⚖️', label: bonusPoints >= 0 ? 'Бонусы' : 'Корректировки', points: bonusPoints, max: 15, isBonus: true }),
                         React.createElement('div', {
                             style: {
                                 display: 'flex',
@@ -1412,6 +1638,16 @@
                                 },
                                 title: 'Молочные продукты вызывают повышенный инсулиновый ответ (II ×2-3)',
                             }, '🥛 ' + dairyWarning.grams + 'г молочки → II↑'),
+                            roleAdequacy?.penalty > 0 && React.createElement('span', {
+                                style: {
+                                    padding: '3px 6px',
+                                    borderRadius: '6px',
+                                    background: 'rgba(239, 68, 68, 0.1)',
+                                    color: '#ef4444',
+                                    fontWeight: 600,
+                                },
+                                title: roleAdequacy.issues.join(', '),
+                            }, '🍽️ ' + roleAdequacy.shortLabel),
                         ),
                         React.createElement('div', { style: { display: 'flex', gap: '8px', fontSize: '11px', marginBottom: '8px' } },
                             React.createElement('div', { style: { flex: 1, padding: '6px', background: 'var(--bg-tertiary, #f3f4f6)', borderRadius: '6px' } },
@@ -1419,6 +1655,7 @@
                                 React.createElement('div', null, 'GL: ' + glLevelRu),
                                 React.createElement('div', null, circadianPeriodRu),
                                 liquidRatio > 0.3 && React.createElement('div', { style: { color: '#f59e0b' } }, '💧 ' + Math.round(liquidRatio * 100) + '% жидкое'),
+                                beverageLikeRatio > 0.7 && React.createElement('div', { style: { color: '#ef4444' } }, '☕ больше напиток, чем еда'),
                             ),
                             productsList.length > 0 && React.createElement('div', { style: { flex: 1, padding: '6px', background: 'var(--bg-secondary, #f9fafb)', borderRadius: '6px' } },
                                 React.createElement('div', { style: { fontWeight: 600, marginBottom: '2px', fontSize: '10px', textTransform: 'uppercase', color: 'var(--text-muted)' } }, '📋 Состав'),

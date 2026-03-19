@@ -19314,6 +19314,83 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
     return mealNorm.includes(kwNorm);
   }
 
+  function roundTo1(v) {
+    return Math.round((+v || 0) * 10) / 10;
+  }
+
+  function getMealProteinAmount(meal, pIndex) {
+    if (!meal?.items?.length) return 0;
+
+    const models = HEYS.models || {};
+    if (models.mealTotals && pIndex) {
+      const totals = models.mealTotals(meal, pIndex) || {};
+      if (Number.isFinite(+totals.prot)) {
+        return roundTo1(totals.prot);
+      }
+    }
+
+    let totalProtein = 0;
+    for (const item of meal.items) {
+      const grams = +item?.grams || 0;
+      if (grams <= 0) continue;
+
+      const product = (models.getProductFromItem && pIndex)
+        ? models.getProductFromItem(item, pIndex)
+        : null;
+      const source = product || item || {};
+      const protein100 = +(source.protein100 ?? source.prot100 ?? item?.protein100 ?? item?.prot100) || 0;
+      totalProtein += protein100 * grams / 100;
+    }
+
+    return roundTo1(totalProtein);
+  }
+
+  function analyzeProteinDistributionForMeal(context) {
+    const meals = Array.isArray(context?.dayData?.meals)
+      ? context.dayData.meals.filter((meal) => Array.isArray(meal?.items) && meal.items.length > 0)
+      : [];
+    const currentProtein = roundTo1(context?.mealTotals?.prot || 0);
+
+    if (meals.length < 2 || currentProtein <= 40) {
+      return {
+        isUneven: false,
+        currentProtein,
+        minProtein: currentProtein,
+        maxProtein: currentProtein,
+        spread: 0,
+      };
+    }
+
+    const proteins = meals.map((meal) => {
+      if (meal === context.meal) return currentProtein;
+      return getMealProteinAmount(meal, context?.pIndex);
+    });
+
+    const otherProteins = proteins.filter((protein, index) => meals[index] !== context.meal);
+    if (otherProteins.length === 0) {
+      return {
+        isUneven: false,
+        currentProtein,
+        minProtein: currentProtein,
+        maxProtein: currentProtein,
+        spread: 0,
+      };
+    }
+
+    const minProtein = Math.min(...proteins);
+    const maxProtein = Math.max(...proteins);
+    const spread = roundTo1(maxProtein - minProtein);
+    const hasLowOtherMeal = otherProteins.some((protein) => protein < 15);
+
+    return {
+      isUneven: hasLowOtherMeal || spread >= 25,
+      currentProtein,
+      minProtein: roundTo1(minProtein),
+      maxProtein: roundTo1(maxProtein),
+      spread,
+    };
+  }
+
   function checkTrigger(trigger, context) {
     const { meal, mealTotals, dayData, profile, products, time } = context;
 
@@ -19565,6 +19642,13 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
       if (stress < 6) return false;
     }
 
+    // dayProteinUneven
+    if (trigger.dayProteinUneven) {
+      const proteinDistribution = analyzeProteinDistributionForMeal(context);
+      if (!proteinDistribution.isUneven) return false;
+      context.proteinDistribution = proteinDistribution;
+    }
+
     // hasOnlyCarbs
     if (trigger.hasOnlyCarbs) {
       const t = mealTotals || {};
@@ -19794,7 +19878,7 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
       // РАСПРЕДЕЛЕНИЕ БЕЛКА
       'protein_distribution': {
         title: `Распредели белок равномерно`,
-        reason: `${Math.round(mealTotals?.prot || 0)}г — много для одного приёма, оптимум 20-40г`
+        reason: `${Math.round(context?.proteinDistribution?.currentProtein || mealTotals?.prot || 0)}г в этом приёме, разброс по дню ${Math.round(context?.proteinDistribution?.spread || 0)}г — лучше держать 20-40г на приём`
       },
       'protein_variety': {
         title: `Разнообразь источники белка`,
@@ -33130,7 +33214,6 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
     const averagesFromHistory = {
       steps: +prev.steps > 0 ? +prev.steps : lifestyleAvg.steps,
       waterMl: +prev.waterMl > 0 ? +prev.waterMl : lifestyleAvg.waterMl,
-      householdMin: +prev.householdMin > 0 ? +prev.householdMin : lifestyleAvg.householdMin,
       weightMorning: +prev.weightMorning > 0 ? +prev.weightMorning : lifestyleAvg.weightMorning,
       sleepStart: prev.sleepStart || lifestyleAvg.sleepStart,
       sleepEnd: prev.sleepEnd || lifestyleAvg.sleepEnd,
@@ -33150,6 +33233,9 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
 
     return {
       meals: estimatedMeals,
+      trainings: [],
+      householdMin: 0,
+      householdActivities: [],
       isIncomplete: false,
       isFastingDay: false,
       ...averagesFromHistory,
@@ -33168,6 +33254,7 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
         targetSource: targetMeta.source,
         estimatedKcal: Math.round(totalNormAbs.kcal || 0),
         source: 'morning-checkin',
+        excludedAutofillFields: ['householdMin', 'householdActivities', 'trainings'],
         referenceDaysUsed: lifestyleAvg.referenceDaysUsed || 0,
         referenceDates: lifestyleAvg.referenceDates || [],
         profileId: profile?.id || null,

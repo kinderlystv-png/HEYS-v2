@@ -228,9 +228,35 @@
         ? ((displayHeroEaten || eatenKcal || 0) / (displayHeroOptimum || optimum || 1))
         : 0);
 
+    const todayDateKey = (() => {
+      try {
+        const now = new Date();
+        const yyyy = now.getFullYear();
+        const mm = String(now.getMonth() + 1).padStart(2, '0');
+        const dd = String(now.getDate()).padStart(2, '0');
+        return `${yyyy}-${mm}-${dd}`;
+      } catch (e) {
+        return '';
+      }
+    })();
+
+    const selectedDateKey = (typeof date === 'string' && date.length >= 10) ? date.slice(0, 10) : '';
+    const dayDateKey = (typeof day?.date === 'string' && day.date.length >= 10) ? day.date.slice(0, 10) : '';
+    const appCurrentDateKey = (typeof App?.currentDate === 'string' && App.currentDate.length >= 10)
+      ? App.currentDate.slice(0, 10)
+      : '';
+
+    const isSelectedDateToday = Boolean(
+      day?.isToday
+      || (todayDateKey && selectedDateKey === todayDateKey)
+      || (todayDateKey && dayDateKey === todayDateKey)
+      || (todayDateKey && appCurrentDateKey === todayDateKey)
+    );
+
     const shouldOfferRealDataConfirmation = Boolean(
       date
       && !day?.isFuture
+      && !isSelectedDateToday
       && !day?.isFastingDay
       && !day?.isIncomplete
       && selectedDayRatio > 0

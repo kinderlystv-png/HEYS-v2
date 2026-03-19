@@ -8085,15 +8085,24 @@ body:has(.offline-banner) .wrap {
   .mpc-toggle-add-row {
     display: flex;
     align-items: stretch;
-    gap: 8px;
+    gap: 10px;
     margin-bottom: 4px;
   }
 
   .mpc-toggle-add-row .mpc-products-toggle {
-    flex: 0 0 30%;
+    flex: 0 0 24%;
     min-width: 0;
     margin-bottom: 0;
+    flex-direction: column;
+    align-items: center;
     justify-content: center;
+    padding: 7px 8px;
+    gap: 6px;
+    text-align: center;
+    background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+    box-shadow: 0 3px 10px rgba(15, 23, 42, 0.06);
   }
 
   .mpc-toggle-add-row .mpc-products-toggle.expanded {
@@ -8102,18 +8111,51 @@ body:has(.offline-banner) .wrap {
 
   .mpc-toggle-add-row .aps-open-btn {
     flex: 1;
-    padding: 7px 10px;
+    min-height: 40px;
+    padding: 8px 12px;
     font-size: 12px;
-    justify-content: center;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    justify-content: flex-start;
+    align-items: center;
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+    line-height: 1.2;
     border-radius: 8px;
     width: auto;
+    text-align: left;
   }
 
   .mpc-toggle-add-row .aps-open-icon {
     font-size: 14px;
+    flex-shrink: 0;
+    margin-top: 0;
+  }
+
+  .mpc-toggle-add-row .aps-open-text {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .mpc-toggle-add-row .aps-open-btn--quick {
+    background: linear-gradient(135deg, #eff6ff 0%, #eef2ff 100%);
+    border-color: #bfdbfe;
+    color: #1d4ed8;
+  }
+
+  .mpc-toggle-add-row .aps-open-btn--multi {
+    background: linear-gradient(135deg, #f5f3ff 0%, #eef2ff 100%);
+    border-color: #c4b5fd;
+    color: #5b21b6;
+    box-shadow: 0 4px 10px rgba(99, 102, 241, 0.14);
+  }
+
+  .mpc-toggle-add-row .aps-open-btn--multi.aps-open-btn--current {
+    background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+    border-color: #15803d;
+    color: #fff;
   }
 
   /* Когда нет продуктов — кнопка добавить на всю ширину */
@@ -8128,53 +8170,71 @@ body:has(.offline-banner) .wrap {
     align-items: center;
     gap: 8px;
     padding: 8px 10px;
-    background: #f8fafc;
-    border: 1px dashed #cbd5e1;
-    border-radius: 6px;
+    background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
     font-size: 13px;
-    color: var(--color-slate-500);
+    color: #475569;
     cursor: pointer;
     transition: all 0.2s ease;
     -webkit-tap-highlight-color: transparent;
+    box-shadow: 0 3px 10px rgba(15, 23, 42, 0.06);
   }
 
   .mpc-products-toggle .mpc-toggle-text {
     display: flex;
     flex-direction: column;
     line-height: 1.2;
+    align-items: center;
+    text-align: center;
   }
 
   .mpc-products-toggle .mpc-toggle-title {
     font-weight: 600;
-    font-size: 13px;
+    font-size: 12px;
   }
 
   .mpc-products-toggle .mpc-toggle-count {
     font-weight: 700;
-    font-size: 12px;
+    font-size: 11px;
     white-space: nowrap;
   }
 
   .mpc-products-toggle:active {
-    background: var(--color-slate-100);
+    background: #f1f5f9;
+    transform: scale(0.985);
   }
 
   .mpc-products-toggle.expanded {
-    background: #e0f2fe;
+    background: linear-gradient(180deg, #f0f9ff 0%, #e0f2fe 100%);
     border-color: #7dd3fc;
     color: #0369a1;
     margin-bottom: 6px;
+    box-shadow: 0 5px 14px rgba(14, 165, 233, 0.12);
   }
 
   .mpc-products-toggle .toggle-arrow {
-    font-size: 16px;
+    font-size: 14px;
     font-weight: 300;
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 999px;
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+    color: #64748b;
     transition: transform 0.3s ease;
     transform: rotate(0deg);
+    line-height: 1;
   }
 
   .mpc-products-toggle.expanded .toggle-arrow {
+    background: #f0f9ff;
+    border-color: #7dd3fc;
+    color: #0369a1;
     transform: rotate(90deg);
   }
 

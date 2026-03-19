@@ -945,7 +945,6 @@
     const averagesFromHistory = {
       steps: +prev.steps > 0 ? +prev.steps : lifestyleAvg.steps,
       waterMl: +prev.waterMl > 0 ? +prev.waterMl : lifestyleAvg.waterMl,
-      householdMin: +prev.householdMin > 0 ? +prev.householdMin : lifestyleAvg.householdMin,
       weightMorning: +prev.weightMorning > 0 ? +prev.weightMorning : lifestyleAvg.weightMorning,
       sleepStart: prev.sleepStart || lifestyleAvg.sleepStart,
       sleepEnd: prev.sleepEnd || lifestyleAvg.sleepEnd,
@@ -965,6 +964,9 @@
 
     return {
       meals: estimatedMeals,
+      trainings: [],
+      householdMin: 0,
+      householdActivities: [],
       isIncomplete: false,
       isFastingDay: false,
       ...averagesFromHistory,
@@ -983,6 +985,7 @@
         targetSource: targetMeta.source,
         estimatedKcal: Math.round(totalNormAbs.kcal || 0),
         source: 'morning-checkin',
+        excludedAutofillFields: ['householdMin', 'householdActivities', 'trainings'],
         referenceDaysUsed: lifestyleAvg.referenceDaysUsed || 0,
         referenceDates: lifestyleAvg.referenceDates || [],
         profileId: profile?.id || null,

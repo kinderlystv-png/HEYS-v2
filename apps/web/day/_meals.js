@@ -88,6 +88,40 @@
         return { type: 'snack', label: 'Перекус', emoji: '🍎' };
     }
 
+    function getActivityContextTone(activityType) {
+        switch (activityType) {
+            case 'peri':
+                return { background: '#22c55e33', color: '#16a34a', border: '#22c55e55' };
+            case 'post':
+                return { background: '#3b82f633', color: '#2563eb', border: '#3b82f655' };
+            case 'pre':
+                return { background: '#eab30833', color: '#ca8a04', border: '#eab30855' };
+            case 'steps':
+                return { background: '#10b9812b', color: '#047857', border: '#10b9814d' };
+            case 'household':
+                return { background: '#f9a8d433', color: '#be185d', border: '#f472b655' };
+            case 'double':
+                return { background: '#c084fc33', color: '#7e22ce', border: '#a855f755' };
+            default:
+                return { background: '#dcfce733', color: '#15803d', border: '#86efac66' };
+        }
+    }
+
+    function resolveBestActivityContext(...contexts) {
+        const candidates = contexts.filter((ctx) => ctx && ctx.type && ctx.type !== 'none');
+        if (!candidates.length) return null;
+
+        return candidates.sort((a, b) => {
+            const priorityA = Number.isFinite(+a.priority) ? +a.priority : -Infinity;
+            const priorityB = Number.isFinite(+b.priority) ? +b.priority : -Infinity;
+            if (priorityA !== priorityB) return priorityB - priorityA;
+
+            const richnessA = (a.badge ? 1 : 0) + (a.desc ? 1 : 0) + (a.details ? 1 : 0);
+            const richnessB = (b.badge ? 1 : 0) + (b.desc ? 1 : 0) + (b.details ? 1 : 0);
+            return richnessB - richnessA;
+        })[0];
+    }
+
     const MealCard = React.memo(function MealCard({
         meal,
         mealIndex,
@@ -186,14 +220,18 @@
 
         const mealActivityContext = React.useMemo(() => {
             if (!HEYS.InsulinWave?.calculateActivityContext) return null;
-            if (!dayData?.trainings || dayData.trainings.length === 0) return null;
             if (!meal?.time || !meal?.items?.length) return null;
+
+            const [mealHour, mealMinute] = String(meal.time || '').split(':').map(Number);
+            if (Number.isNaN(mealHour) || Number.isNaN(mealMinute)) return null;
+
+            const mealTimeMin = mealHour * 60 + mealMinute;
 
             const mealTotals = M.mealTotals ? M.mealTotals(meal, pIndex) : { kcal: 0 };
             return HEYS.InsulinWave.calculateActivityContext({
-                mealTime: meal.time,
+                mealTimeMin,
                 mealKcal: mealTotals.kcal || 0,
-                trainings: dayData.trainings,
+                trainings: dayData?.trainings || [],
                 householdMin: dayData.householdMin || 0,
                 steps: dayData.steps || 0,
                 allMeals: allMeals,
@@ -233,6 +271,9 @@
         const currentWave = currentWaveIndex >= 0 ? waveHistorySorted[currentWaveIndex] : null;
         const prevWave = currentWaveIndex > 0 ? waveHistorySorted[currentWaveIndex - 1] : null;
         const nextWave = (currentWaveIndex >= 0 && currentWaveIndex < waveHistorySorted.length - 1) ? waveHistorySorted[currentWaveIndex + 1] : null;
+        const resolvedActivityContext = resolveBestActivityContext(currentWave?.activityContext, mealActivityContext);
+        const activityContextTone = getActivityContextTone(resolvedActivityContext?.type);
+        const mealActivityContextTone = getActivityContextTone(mealActivityContext?.type);
         const hasOverlapWithNext = currentWave && nextWave ? currentWave.endMin > nextWave.startMin : false;
         const hasOverlapWithPrev = currentWave && prevWave ? prevWave.endMin > currentWave.startMin : false;
         const hasAnyOverlap = hasOverlapWithNext || hasOverlapWithPrev;
@@ -332,8 +373,7 @@
                 className: 'meal-header-inside meal-type-' + mealTypeInfo.type,
                 style: {
                     display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
+                    flexDirection: 'column',
                     gap: '8px',
                     background: qualityLineColor !== 'transparent'
                         ? qualityLineColor + '1F'
@@ -343,61 +383,109 @@
                     padding: '12px 16px 12px 8px',
                 },
             },
-                timeDisplay && React.createElement('span', {
-                    className: 'meal-time-badge-inside',
-                    onClick: () => openTimeEditor(mealIndex),
-                    title: 'Изменить время',
-                    style: { fontSize: '15px', padding: '6px 14px', fontWeight: '700', flexShrink: 0 },
-                }, timeDisplay),
-                React.createElement('div', { className: 'meal-type-wrapper', style: { flex: 1, display: 'flex', justifyContent: 'center' } },
-                    React.createElement('span', { className: 'meal-type-label', style: { fontSize: '16px', fontWeight: '700', padding: '4px 12px' } },
-                        mealTypeInfo.icon + ' ' + mealTypeInfo.name,
-                        React.createElement('span', { className: 'meal-type-arrow' }, ' ▾'),
-                    ),
-                    React.createElement('select', {
-                        className: 'meal-type-select',
-                        value: manualType || '',
-                        onChange: (e) => {
-                            changeMealType(e.target.value || null);
-                        },
-                        title: 'Изменить тип приёма',
-                    }, [
-                        { value: '', label: '🔄 Авто' },
-                        { value: 'breakfast', label: '🍳 Завтрак' },
-                        { value: 'snack1', label: '🍎 Перекус' },
-                        { value: 'lunch', label: '🍲 Обед' },
-                        { value: 'snack2', label: '🥜 Перекус' },
-                        { value: 'dinner', label: '🍽️ Ужин' },
-                        { value: 'snack3', label: '🧀 Перекус' },
-                        { value: 'night', label: '🌙 Ночной' },
-                    ].map((opt) =>
-                        React.createElement('option', { key: opt.value, value: opt.value }, opt.label),
-                    )),
-                ),
-                React.createElement('span', { className: 'meal-kcal-badge-inside', style: { fontSize: '15px', padding: '6px 14px', flexShrink: 0 } },
-                    mealKcal > 0 ? (mealKcal + ' ккал') : '0 ккал',
-                ),
-                currentWave && currentWave.activityContext && React.createElement('span', {
-                    className: 'activity-context-badge',
-                    title: currentWave.activityContext.desc,
+                React.createElement('div', {
+                    className: 'meal-header-main-row',
                     style: {
-                        fontSize: '12px',
-                        padding: '4px 8px',
-                        borderRadius: '8px',
-                        background: currentWave.activityContext.type === 'peri' ? '#22c55e33'
-                            : currentWave.activityContext.type === 'post' ? '#3b82f633'
-                                : currentWave.activityContext.type === 'pre' ? '#eab30833'
-                                    : '#6b728033',
-                        color: currentWave.activityContext.type === 'peri' ? '#16a34a'
-                            : currentWave.activityContext.type === 'post' ? '#2563eb'
-                                : currentWave.activityContext.type === 'pre' ? '#ca8a04'
-                                    : '#374151',
-                        fontWeight: '600',
-                        flexShrink: 0,
-                        marginLeft: '4px',
-                        whiteSpace: 'nowrap',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        gap: '8px',
+                        width: '100%',
                     },
-                }, currentWave.activityContext.badge || ''),
+                },
+                    timeDisplay && React.createElement('span', {
+                        className: 'meal-time-badge-inside',
+                        onClick: () => openTimeEditor(mealIndex),
+                        title: 'Изменить время',
+                        style: { fontSize: '15px', padding: '6px 14px', fontWeight: '700', flexShrink: 0 },
+                    }, timeDisplay),
+                    React.createElement('div', { className: 'meal-type-wrapper', style: { flex: 1, display: 'flex', justifyContent: 'center' } },
+                        React.createElement('span', { className: 'meal-type-label', style: { fontSize: '16px', fontWeight: '700', padding: '4px 12px' } },
+                            mealTypeInfo.icon + ' ' + mealTypeInfo.name,
+                            React.createElement('span', { className: 'meal-type-arrow' }, ' ▾'),
+                        ),
+                        React.createElement('select', {
+                            className: 'meal-type-select',
+                            value: manualType || '',
+                            onChange: (e) => {
+                                changeMealType(e.target.value || null);
+                            },
+                            title: 'Изменить тип приёма',
+                        }, [
+                            { value: '', label: '🔄 Авто' },
+                            { value: 'breakfast', label: '🍳 Завтрак' },
+                            { value: 'snack1', label: '🍎 Перекус' },
+                            { value: 'lunch', label: '🍲 Обед' },
+                            { value: 'snack2', label: '🥜 Перекус' },
+                            { value: 'dinner', label: '🍽️ Ужин' },
+                            { value: 'snack3', label: '🧀 Перекус' },
+                            { value: 'night', label: '🌙 Ночной' },
+                        ].map((opt) =>
+                            React.createElement('option', { key: opt.value, value: opt.value }, opt.label),
+                        )),
+                    ),
+                    React.createElement('span', { className: 'meal-kcal-badge-inside', style: { fontSize: '15px', padding: '6px 14px', flexShrink: 0 } },
+                        mealKcal > 0 ? (mealKcal + ' ккал') : '0 ккал',
+                    ),
+                ),
+                (resolvedActivityContext && resolvedActivityContext.type !== 'none' || mealQuality?.mealRoleStatus) && React.createElement('div', {
+                    className: 'meal-header-badges-row',
+                    style: {
+                        display: 'flex',
+                        flexWrap: 'wrap',
+                        alignItems: 'center',
+                        gap: '8px',
+                        width: '100%',
+                    },
+                },
+                    resolvedActivityContext && resolvedActivityContext.type !== 'none' && React.createElement('span', {
+                        className: 'activity-context-badge',
+                        title: resolvedActivityContext.desc,
+                        style: {
+                            fontSize: '12px',
+                            padding: '4px 8px',
+                            borderRadius: '8px',
+                            background: activityContextTone.background,
+                            color: activityContextTone.color,
+                            border: '1px solid ' + activityContextTone.border,
+                            fontWeight: '600',
+                            flexShrink: 0,
+                            whiteSpace: 'nowrap',
+                        },
+                    }, resolvedActivityContext.badge || ''),
+                    mealQuality?.mealRoleStatus && React.createElement('span', {
+                        className: 'meal-role-status-badge-header',
+                        title: mealQuality.mealRoleStatus.fullLabel,
+                        style: {
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            fontSize: '12px',
+                            padding: '4px 10px',
+                            borderRadius: '10px',
+                            background: mealQuality.mealRoleStatus.tone === 'green'
+                                ? '#dcfce7'
+                                : mealQuality.mealRoleStatus.tone === 'amber'
+                                    ? '#fef3c7'
+                                    : mealQuality.mealRoleStatus.tone === 'slate'
+                                        ? '#e2e8f0'
+                                        : '#dbeafe',
+                            color: mealQuality.mealRoleStatus.tone === 'green'
+                                ? '#15803d'
+                                : mealQuality.mealRoleStatus.tone === 'amber'
+                                    ? '#b45309'
+                                    : mealQuality.mealRoleStatus.tone === 'slate'
+                                        ? '#475569'
+                                        : '#1d4ed8',
+                            fontWeight: '700',
+                            flexShrink: 0,
+                            whiteSpace: 'nowrap',
+                        },
+                    },
+                        React.createElement('span', { style: { fontSize: '13px' } }, mealQuality.mealRoleStatus.icon),
+                        React.createElement('span', null, mealQuality.mealRoleStatus.shortLabel),
+                    ),
+                ),
             ),
             mealActivityContext && mealActivityContext.type !== 'none' && (meal.items || []).length === 0
             && React.createElement('div', {
@@ -411,18 +499,9 @@
                     borderRadius: '8px',
                     fontSize: '13px',
                     lineHeight: '1.4',
-                    background: mealActivityContext.type === 'peri' ? 'linear-gradient(135deg, #22c55e15, #22c55e25)'
-                        : mealActivityContext.type === 'post' ? 'linear-gradient(135deg, #3b82f615, #3b82f625)'
-                            : mealActivityContext.type === 'pre' ? 'linear-gradient(135deg, #eab30815, #eab30825)'
-                                : 'linear-gradient(135deg, #6b728015, #6b728025)',
-                    border: mealActivityContext.type === 'peri' ? '1px solid #22c55e40'
-                        : mealActivityContext.type === 'post' ? '1px solid #3b82f640'
-                            : mealActivityContext.type === 'pre' ? '1px solid #eab30840'
-                                : '1px solid #6b728040',
-                    color: mealActivityContext.type === 'peri' ? '#16a34a'
-                        : mealActivityContext.type === 'post' ? '#2563eb'
-                            : mealActivityContext.type === 'pre' ? '#ca8a04'
-                                : '#374151',
+                    background: 'linear-gradient(135deg, ' + mealActivityContextTone.background.replace('33', '15') + ', ' + mealActivityContextTone.background.replace('33', '25').replace('2b', '20') + ')',
+                    border: '1px solid ' + mealActivityContextTone.border.replace('55', '40').replace('4d', '40').replace('66', '40'),
+                    color: mealActivityContextTone.color,
                 },
             },
                 React.createElement('span', { style: { fontSize: '18px' } }, mealActivityContext.badge || '🏋️'),
@@ -524,7 +603,7 @@
                     },
                         React.createElement('span', { className: 'toggle-arrow' }, '›'),
                         React.createElement('span', { className: 'mpc-toggle-text' },
-                            React.createElement('span', { className: 'mpc-toggle-title' }, isExpanded ? 'Свернуть' : 'Развернуть'),
+                            React.createElement('span', { className: 'mpc-toggle-title' }, isExpanded ? 'Скрыть' : 'Показать'),
                             React.createElement('span', { className: 'mpc-toggle-count' },
                                 (meal.items || []).length + ' продукт' + ((meal.items || []).length === 1 ? '' : (meal.items || []).length < 5 ? 'а' : 'ов'),
                             ),
@@ -1602,6 +1681,98 @@
                             flexShrink: 0,
                         },
                     }, '🗑'),
+                ),
+
+                mealQuality?.mealRoleStatus?.coachText && React.createElement('div', {
+                    className: 'meal-role-status-callout',
+                    style: {
+                        display: 'flex',
+                        alignItems: 'flex-start',
+                        gap: '10px',
+                        margin: '2px 0 10px 0',
+                        padding: '10px 12px',
+                        borderRadius: '14px',
+                        background: mealQuality.mealRoleStatus.tone === 'green'
+                            ? 'linear-gradient(135deg, #dcfce7 0%, #f0fdf4 100%)'
+                            : mealQuality.mealRoleStatus.tone === 'amber'
+                                ? 'linear-gradient(135deg, #fef3c7 0%, #fffbeb 100%)'
+                                : mealQuality.mealRoleStatus.tone === 'slate'
+                                    ? 'linear-gradient(135deg, #e2e8f0 0%, #f8fafc 100%)'
+                                    : 'linear-gradient(135deg, #dbeafe 0%, #eff6ff 100%)',
+                        border: mealQuality.mealRoleStatus.tone === 'green'
+                            ? '1px solid rgba(34, 197, 94, 0.25)'
+                            : mealQuality.mealRoleStatus.tone === 'amber'
+                                ? '1px solid rgba(245, 158, 11, 0.28)'
+                                : mealQuality.mealRoleStatus.tone === 'slate'
+                                    ? '1px solid rgba(100, 116, 139, 0.24)'
+                                    : '1px solid rgba(59, 130, 246, 0.24)',
+                        boxShadow: mealQuality.mealRoleStatus.tone === 'green'
+                            ? '0 8px 20px rgba(34, 197, 94, 0.08)'
+                            : mealQuality.mealRoleStatus.tone === 'amber'
+                                ? '0 8px 20px rgba(245, 158, 11, 0.08)'
+                                : mealQuality.mealRoleStatus.tone === 'slate'
+                                    ? '0 8px 20px rgba(71, 85, 105, 0.08)'
+                                    : '0 8px 20px rgba(59, 130, 246, 0.08)',
+                    },
+                },
+                    React.createElement('div', {
+                        style: {
+                            width: '30px',
+                            height: '30px',
+                            borderRadius: '999px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: '15px',
+                            background: mealQuality.mealRoleStatus.tone === 'green'
+                                ? 'rgba(34, 197, 94, 0.12)'
+                                : mealQuality.mealRoleStatus.tone === 'amber'
+                                    ? 'rgba(245, 158, 11, 0.14)'
+                                    : mealQuality.mealRoleStatus.tone === 'slate'
+                                        ? 'rgba(71, 85, 105, 0.12)'
+                                        : 'rgba(59, 130, 246, 0.12)',
+                            flexShrink: 0,
+                        },
+                    }, mealQuality.mealRoleStatus.icon),
+                    React.createElement('div', {
+                        style: {
+                            minWidth: 0,
+                            flex: 1,
+                        },
+                    },
+                        React.createElement('div', {
+                            style: {
+                                fontSize: '10px',
+                                fontWeight: 700,
+                                letterSpacing: '0.08em',
+                                textTransform: 'uppercase',
+                                marginBottom: '3px',
+                                color: mealQuality.mealRoleStatus.tone === 'green'
+                                    ? '#15803d'
+                                    : mealQuality.mealRoleStatus.tone === 'amber'
+                                        ? '#b45309'
+                                        : mealQuality.mealRoleStatus.tone === 'slate'
+                                            ? '#475569'
+                                            : '#1d4ed8',
+                            },
+                        }, mealQuality.mealRoleStatus.coachLabel || 'Подсказка'),
+                        React.createElement('div', {
+                            style: {
+                                fontSize: '13px',
+                                fontWeight: 700,
+                                lineHeight: 1.3,
+                                marginBottom: '3px',
+                                color: '#0f172a',
+                            },
+                        }, mealQuality.mealRoleStatus.coachTitle || mealQuality.mealRoleStatus.shortLabel),
+                        React.createElement('div', {
+                            style: {
+                                fontSize: '12px',
+                                lineHeight: 1.4,
+                                color: '#334155',
+                            },
+                        }, mealQuality.mealRoleStatus.coachText),
+                    ),
                 ),
 
                 totalsExpanded && (meal.items || []).length > 0 && React.createElement('div', {

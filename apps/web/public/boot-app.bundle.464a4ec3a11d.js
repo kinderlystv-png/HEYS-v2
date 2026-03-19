@@ -13591,6 +13591,10 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
         const [streakCelebration, setStreakCelebration] = useState(null);
         const streakMilestoneRef = useRef(0);
         const streakToastTimerRef = useRef(null);
+        const gameBarSurfaceRef = useRef(null);
+        const expandedPanelRef = useRef(null);
+        const expandedRef = useRef(false);
+        const pendingOutsideCloseRef = useRef(false);
         const [dailyMissions, setDailyMissions] = useState(() => {
             return HEYS.game?.getDailyMissions ? HEYS.game.getDailyMissions() : null;
         });
@@ -13877,10 +13881,10 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                     if (HEYS.game.getXPHistory) {
                         const newHistory = HEYS.game.getXPHistory();
                         setXpHistory(prev => {
-                            // Сравниваем по длине и последнему элементу
+                            // Сравниваем все дни — не только последний (иначе исторические дни не обновятся)
                             if (prev && newHistory &&
                                 prev.length === newHistory.length &&
-                                JSON.stringify(prev[prev.length - 1]) === JSON.stringify(newHistory[newHistory.length - 1])) {
+                                prev.every((d, i) => d.xp === newHistory[i].xp && d.date === newHistory[i].date)) {
                                 return prev;
                             }
                             return newHistory;
@@ -14071,6 +14075,78 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
             const timer = setTimeout(() => setXpHistoryAnimate(false), 900);
             return () => clearTimeout(timer);
         }, [expanded]);
+
+        useEffect(() => {
+            expandedRef.current = expanded;
+            if (!expanded) {
+                pendingOutsideCloseRef.current = false;
+            }
+        }, [expanded]);
+
+        useEffect(() => {
+            const isTargetInsideInteractiveGamification = (target) => {
+                if (!target || !(target instanceof Element)) return false;
+                if (expandedPanelRef.current?.contains(target)) return true;
+                if (gameBarSurfaceRef.current?.contains(target)) return true;
+                return false;
+            };
+
+            const suppressEvent = (event) => {
+                if (typeof event.preventDefault === 'function') {
+                    event.preventDefault();
+                }
+                if (typeof event.stopPropagation === 'function') {
+                    event.stopPropagation();
+                }
+                if (typeof event.stopImmediatePropagation === 'function') {
+                    event.stopImmediatePropagation();
+                }
+            };
+
+            const handlePointerDownCapture = (event) => {
+                if (!expandedRef.current) return;
+                if (isTargetInsideInteractiveGamification(event.target)) {
+                    pendingOutsideCloseRef.current = false;
+                    return;
+                }
+
+                pendingOutsideCloseRef.current = true;
+                suppressEvent(event);
+            };
+
+            const handlePointerUpCapture = (event) => {
+                if (!pendingOutsideCloseRef.current) return;
+                suppressEvent(event);
+            };
+
+            const handleEscape = (event) => {
+                if (!expandedRef.current) return;
+                if (event.key === 'Escape') {
+                    pendingOutsideCloseRef.current = false;
+                    setExpanded(false);
+                }
+            };
+
+            const handleClickCapture = (event) => {
+                if (!pendingOutsideCloseRef.current) return;
+                pendingOutsideCloseRef.current = false;
+                suppressEvent(event);
+                setExpanded(false);
+            };
+
+            document.addEventListener('pointerdown', handlePointerDownCapture, true);
+            document.addEventListener('pointerup', handlePointerUpCapture, true);
+            document.addEventListener('click', handleClickCapture, true);
+            document.addEventListener('keydown', handleEscape, true);
+
+            return () => {
+                pendingOutsideCloseRef.current = false;
+                document.removeEventListener('pointerdown', handlePointerDownCapture, true);
+                document.removeEventListener('pointerup', handlePointerUpCapture, true);
+                document.removeEventListener('click', handleClickCapture, true);
+                document.removeEventListener('keydown', handleEscape, true);
+            };
+        }, []);
 
         const loadAuditHistory = useCallback(async () => {
             if (!HEYS.game?.getAuditHistory) {
@@ -14546,6 +14622,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
             ),
             // Main bar — одна строка
             React.createElement('div', {
+                ref: gameBarSurfaceRef,
                 className: 'game-bar',
                 onClick: toggleExpanded
             },
@@ -14801,7 +14878,10 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                     onClick: () => setExpanded(false)
                 }),
                 // Panel content
-                React.createElement('div', { className: 'game-panel-expanded' },
+                React.createElement('div', {
+                    ref: expandedPanelRef,
+                    className: 'game-panel-expanded'
+                },
                     // Weekly Challenge Section (красивая карточка)
                     React.createElement('div', {
                         className: `game-weekly-card ${weeklyChallenge.completed ? 'completed' : ''} ${weeklyChallenge.percent >= 80 && !weeklyChallenge.completed ? 'almost-done' : ''}`

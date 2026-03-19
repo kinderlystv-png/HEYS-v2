@@ -602,8 +602,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
   const CRS_TODAY_PENALTY = 0.10;    // v3.7.0: intraday severe penalty (max -10%)
   const CRS_NEGATIVE_GRAVITY = 2.0;  // v3.7.0: bad days are weighted heavier in EMA
   const CRS_CEILING_BASE = 0.65;     // starting ceiling for all users
-  const CRS_KEY_VERSION = 'v8';      // localStorage schema version (v8: asymmetric penalty)
-  const CRS_PREV_KEY_VERSION = 'v7'; // for migration detection
+  const CRS_KEY_VERSION = 'v9';      // localStorage schema version (v9: retro calorie overshoot penalties)
+  const CRS_PREV_KEY_VERSION = 'v8'; // for migration detection
 
   const CRS_DISPLAY_BASE = 0.50;         // UX baseline: стартуем с 50% даже при сыром CRS≈0
   const CRS_DISPLAY_SOFTCAP = 0.80;      // до 80% рост ощущается заметнее
@@ -718,7 +718,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
   // Строит массив событий из любого day-объекта без сложного скоринга
   // ─────────────────────────────────────────────────────
 
-  function buildDayEventsSimple(dayObj, mealBandShift) {
+  function buildDayEventsSimple(dayObj, mealBandShift, prof) {
     var evts = [];
     if (!dayObj) return evts;
     var shift = mealBandShift || 0;
@@ -752,6 +752,20 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         time: hm && hm.time, sortKey: hmt !== null ? hmt : 500,
         label: (hm && hm.name) || 'Приём пищи',
         breakReason: isHardViolation ? '⏰' : null
+      });
+    }
+
+    var historicalCaloriePenalty = getHistoricalCaloriePenalty(dayObj, prof);
+    if (historicalCaloriePenalty) {
+      evts.push({
+        type: historicalCaloriePenalty.kind,
+        icon: historicalCaloriePenalty.kind === 'deficit_overshoot' ? '🔴' : '⚠️',
+        positive: false,
+        weight: historicalCaloriePenalty.weight,
+        time: null,
+        sortKey: 1438,
+        label: historicalCaloriePenalty.label,
+        breakReason: historicalCaloriePenalty.breakReason
       });
     }
 
@@ -942,6 +956,70 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     if (clean.length === 1) return clean[0];
     if (clean.length === 2) return clean[0] + ' и ' + clean[1];
     return clean.slice(0, clean.length - 1).join(', ') + ' и ' + clean[clean.length - 1];
+  }
+
+  function getCascadeCardTopInset(targetEl) {
+    var baseInset = 12;
+    if (typeof window === 'undefined' || !targetEl || !document || typeof document.elementsFromPoint !== 'function') {
+      return baseInset;
+    }
+
+    var rect = targetEl.getBoundingClientRect();
+    var probeX = clamp(rect.left + (rect.width / 2), 16, Math.max(16, window.innerWidth - 16));
+    var probeY = Math.min(24, Math.max(1, window.innerHeight - 1));
+    var layers = document.elementsFromPoint(probeX, probeY) || [];
+    var maxBottom = 0;
+
+    for (var i = 0; i < layers.length; i++) {
+      var el = layers[i];
+      if (!el || el === targetEl || targetEl.contains(el)) continue;
+
+      var style = null;
+      try {
+        style = window.getComputedStyle(el);
+      } catch (_err) {
+        style = null;
+      }
+      if (!style) continue;
+
+      var position = style.position;
+      if (position !== 'fixed' && position !== 'sticky') continue;
+
+      var elRect = el.getBoundingClientRect();
+      if (elRect.height <= 0) continue;
+      if (elRect.bottom <= 0 || elRect.top > 40) continue;
+
+      maxBottom = Math.max(maxBottom, elRect.bottom);
+    }
+
+    return Math.max(baseInset, Math.round(maxBottom + 8));
+  }
+
+  function scrollCascadeCardIntoView(cardEl) {
+    if (typeof window === 'undefined' || !cardEl || typeof cardEl.getBoundingClientRect !== 'function') return;
+
+    var cardRect = cardEl.getBoundingClientRect();
+    var topInset = getCascadeCardTopInset(cardEl);
+    var targetY = Math.max(0, window.scrollY + cardRect.top - topInset);
+    var delta = Math.abs(targetY - window.scrollY);
+
+    if (delta < 8) {
+      console.info('[HEYS.cascade] 🧭 Expand scroll skipped: card already aligned', {
+        currentY: Math.round(window.scrollY),
+        targetY: Math.round(targetY),
+        topInset: topInset
+      });
+      return;
+    }
+
+    console.info('[HEYS.cascade] 🧭 Expand scroll to card top:', {
+      currentY: Math.round(window.scrollY),
+      targetY: Math.round(targetY),
+      cardTop: Math.round(cardRect.top),
+      topInset: topInset
+    });
+
+    window.scrollTo({ top: targetY, behavior: 'smooth' });
   }
 
   function getCascadeContextSnapshot(events) {
@@ -1217,6 +1295,138 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     return 0.1;
   }
 
+  function calculateHouseholdScore(householdMin) {
+    if (!(householdMin > 0)) return 0;
+    if (householdMin <= 15) return 0.2;
+    return clamp(0.2 + ((householdMin - 15) / 105) * 1.0, 0.2, 1.2);
+  }
+
+  function estimateMealKcalFallback(meal) {
+    var items = (meal && meal.items) || [];
+    var total = 0;
+    for (var i = 0; i < items.length; i++) {
+      var it = items[i] || {};
+      var grams = it.grams || it.g || 100;
+      if (it.kcal != null && it.kcal > 0) {
+        total += +it.kcal || 0;
+      } else if (it.kcal100 != null && it.kcal100 > 0) {
+        total += ((+it.kcal100 || 0) * grams / 100);
+      }
+    }
+    return total;
+  }
+
+  function estimateDayTotalKcal(day) {
+    if (!day) return 0;
+    if (day.savedEatenKcal != null && day.savedEatenKcal > 0) return +day.savedEatenKcal || 0;
+    var meals = day.meals || [];
+    var total = 0;
+    for (var i = 0; i < meals.length; i++) {
+      total += estimateMealKcalFallback(meals[i]);
+    }
+    return total;
+  }
+
+  function resolveHistoricalOptimum(day, prof) {
+    if (!day) return 0;
+    if (day.savedDisplayOptimum != null && day.savedDisplayOptimum > 0) return +day.savedDisplayOptimum || 0;
+    if (day.optimum != null && day.optimum > 0) return +day.optimum || 0;
+    if (day.date && HEYS.dayUtils && typeof HEYS.dayUtils.getDayTdee === 'function') {
+      try {
+        var tdeeInfo = HEYS.dayUtils.getDayTdee(day.date, prof || {}, { dayData: day, includeNDTE: true });
+        if (tdeeInfo && tdeeInfo.optimum > 0) return +tdeeInfo.optimum || 0;
+      } catch (e) {
+        console.warn('[HEYS.cascade] ⚠️ resolveHistoricalOptimum failed:', e && e.message);
+      }
+    }
+    return 0;
+  }
+
+  function getHistoricalCaloriePenalty(day, prof) {
+    if (!day) return null;
+    var totalKcal = estimateDayTotalKcal(day);
+    var optimum = resolveHistoricalOptimum(day, prof);
+    if (!(totalKcal > 0) || !(optimum > 0)) return null;
+
+    var ratio = totalKcal / optimum;
+    var deficitPct = (day.deficitPct !== '' && day.deficitPct != null)
+      ? +day.deficitPct
+      : (prof && prof.deficitPctTarget != null ? +prof.deficitPctTarget : 0);
+    var goalMode = getGoalMode(deficitPct);
+
+    if (goalMode.mode === 'deficit') {
+      if (ratio > goalMode.criticalOver) {
+        return {
+          kind: 'deficit_overshoot',
+          label: 'Перебор при похудении — ' + Math.round(ratio * 100) + '% от нормы',
+          breakReason: 'Критический перебор: ' + Math.round(ratio * 100) + '% (' + goalMode.label + ')',
+          weight: -1.5,
+          ratio: ratio,
+          totalKcal: totalKcal,
+          optimum: optimum,
+          goalMode: goalMode
+        };
+      }
+      if (ratio > goalMode.targetRange.max) {
+        return {
+          kind: 'deficit_warning',
+          label: 'Калории выше цели (' + Math.round(ratio * 100) + '% от нормы)',
+          breakReason: 'Перебор при ' + goalMode.label + ': ' + Math.round(ratio * 100) + '%',
+          weight: -0.5,
+          ratio: ratio,
+          totalKcal: totalKcal,
+          optimum: optimum,
+          goalMode: goalMode
+        };
+      }
+      return null;
+    }
+
+    if (goalMode.mode === 'bulk') {
+      if (ratio > 1.8) {
+        return {
+          kind: 'excess_kcal',
+          label: 'Сильный перебор ккал (' + Math.round(ratio * 100) + '%)',
+          breakReason: 'Перебор ккал: ' + Math.round(ratio * 100) + '%',
+          weight: -0.6,
+          ratio: ratio,
+          totalKcal: totalKcal,
+          optimum: optimum,
+          goalMode: goalMode
+        };
+      }
+      return null;
+    }
+
+    if (ratio > 1.5) {
+      return {
+        kind: 'excess_kcal',
+        label: 'Перебор ккал (' + Math.round(ratio * 100) + '%)',
+        breakReason: 'Перебор ккал: ' + Math.round(ratio * 100) + '%',
+        weight: -0.6,
+        ratio: ratio,
+        totalKcal: totalKcal,
+        optimum: optimum,
+        goalMode: goalMode
+      };
+    }
+
+    if (ratio > 1.2) {
+      return {
+        kind: 'kcal_warning',
+        label: 'Калории выше нормы (' + Math.round(ratio * 100) + '%)',
+        breakReason: 'Перебор ккал: ' + Math.round(ratio * 100) + '%',
+        weight: -0.4,
+        ratio: ratio,
+        totalKcal: totalKcal,
+        optimum: optimum,
+        goalMode: goalMode
+      };
+    }
+
+    return null;
+  }
+
   function countConsecutive(prevDays, predicate) {
     var count = 0;
     for (var i = 0; i < prevDays.length; i++) {
@@ -1393,7 +1603,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
    * @param {Array}  prevDays — up to 14 preceding days (for chronotype baseline)
    * @returns {number|null} — estimated DCS (−0.3 … 1.0), or null if no data
    */
-  function getRetroactiveDcs(day, prevDays) {
+  function getRetroactiveDcs(day, prevDays, prof) {
     if (!day) return null;
     var estScore = 0; // estimated daily score on 0–10+ scale
 
@@ -1568,17 +1778,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     // ── 7. Household: log2-relative with adaptive baseline (v3.4.1) ──
     var retHM = day.householdMin || 0;
     if (retHM > 0) {
-      // Use prevDays baseline if available (mirrors full algo getPersonalBaseline)
-      var retHMbaseline = 30; // population default
-      var hmHistVals = [];
-      var rpdHM = prevDays || [];
-      for (var hmi = 0; hmi < rpdHM.length; hmi++) {
-        if (rpdHM[hmi] && rpdHM[hmi].householdMin > 0) hmHistVals.push(rpdHM[hmi].householdMin);
-      }
-      if (hmHistVals.length >= 3) retHMbaseline = median(hmHistVals);
-      var retHMratio = retHM / retHMbaseline;
-      var hmWeight = clamp(Math.log2(retHMratio + 0.5) * 0.8, -0.5, 1.2);
-      estScore += hmWeight;
+      estScore += calculateHouseholdScore(retHM);
     }
 
     // ── 8. Supplements: simple ratio ──
@@ -1617,6 +1817,21 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     if (retMeasKeys.length > 0) {
       var retMeasCompleteness = retMeasKeys.length / 4; // 4 measurements: waist, hips, thigh, biceps
       estScore += clamp(0.5 + retMeasCompleteness * 0.7, 0, 1.2);
+    }
+
+    // ── 10.5. Calorie overshoot: align retro days with live cascade calorie penalties ──
+    var retroCaloriePenalty = getHistoricalCaloriePenalty(day, prof);
+    if (retroCaloriePenalty) {
+      estScore += retroCaloriePenalty.weight;
+      console.info('[HEYS.cascade] 🔥 Retro calorie penalty applied:', {
+        date: day.date || null,
+        kind: retroCaloriePenalty.kind,
+        ratio: +retroCaloriePenalty.ratio.toFixed(2),
+        totalKcal: Math.round(retroCaloriePenalty.totalKcal),
+        optimum: Math.round(retroCaloriePenalty.optimum),
+        weight: retroCaloriePenalty.weight,
+        goalMode: retroCaloriePenalty.goalMode && retroCaloriePenalty.goalMode.mode
+      });
     }
 
     // ── 11. Cross-factor synergy approximation (v3.4.2) ──
@@ -1969,13 +2184,11 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
     // ── ШАГ 1: Бытовая активность (adaptive baseline + log2) ──
     var householdMin = (day && day.householdMin) || 0;
-    var baselineNEAT = getPersonalBaseline(prevDays14, function (d) { return d.householdMin; }, POPULATION_DEFAULTS.householdMin);
     var neatConfidence = getFactorConfidence(prevDays14, function (d) { return d.householdMin; });
     confidenceMap.household = neatConfidence;
 
     if (householdMin > 0) {
-      var neatRatio = householdMin / baselineNEAT;
-      var householdWeight = clamp(Math.log2(neatRatio + 0.5) * 0.8, -0.5, 1.2);
+      var householdWeight = calculateHouseholdScore(householdMin);
       var rawHousehold = householdWeight;
       householdWeight *= neatConfidence;
       rawWeights.household = rawHousehold;
@@ -1990,8 +2203,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         weight: householdWeight
       });
       console.info('[HEYS.cascade] 🏠 [EVENT] household (model v2.1.0 log2 adaptive):', {
-        householdMin: householdMin, baseline: Math.round(baselineNEAT),
-        ratio: +neatRatio.toFixed(2), formula: 'log2(' + +neatRatio.toFixed(2) + '+0.5)×0.8',
+        householdMin: householdMin,
+        formula: householdMin <= 15 ? 'min positive score (≤15 min) = 0.20' : '0.2 + ((minutes-15)/105) × 1.0',
         rawWeight: +rawHousehold.toFixed(2),
         confidence: neatConfidence, adjustedWeight: +householdWeight.toFixed(2)
       });
@@ -2321,6 +2534,11 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     // ── ШАГ 4: Засыпание (chronotype-adaptive sigmoid + consistency) ──
     var sleepStart = (day && day.sleepStart) || '';
     var sleepEndVal = (day && day.sleepEnd) || null;
+    var sleepEventRef = null;
+    var sleepOnsetWeightFinal = 0;
+    var rawSleepOnsetTotal = null;
+    var sleepDurWeight = 0;
+    var rawSleepDurFinal = null;
     // Pre-compute sleepHours для лейбла (ШАГ 5 пересчитает с full logic)
     var sleepHoursForLabel = (day && day.sleepHours) || 0;
     if (!sleepHoursForLabel && sleepStart && sleepEndVal) {
@@ -2358,8 +2576,9 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         // Hard floor: after 04:00 = circadian catastrophe (v3.2.0: сдвинут с 03:00)
         if (sleepMins > 1680) { rawSleepOnset = -2.0; consistencyBonus = 0; }
 
-        var sleepOnsetWeightFinal = (rawSleepOnset + consistencyBonus) * sleepOnsetConfidence;
-        rawWeights.sleepOnset = rawSleepOnset + consistencyBonus;
+        sleepOnsetWeightFinal = (rawSleepOnset + consistencyBonus) * sleepOnsetConfidence;
+        rawSleepOnsetTotal = rawSleepOnset + consistencyBonus;
+        rawWeights.sleepOnset = rawSleepOnsetTotal;
         score += sleepOnsetWeightFinal;
 
         // v3.3.0: labels aligned with buildDayEventsSimple + v3.2.0 chronotype clamp (01:30)
@@ -2373,17 +2592,18 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         var sleepFullLabel = sleepOnsetLabel;
         if (sleepEndVal) sleepFullLabel += ' →' + sleepEndVal;
         if (sleepHoursForLabel > 0) sleepFullLabel += ' (' + sleepHoursForLabel.toFixed(1) + 'ч)';
-        events.push({
+        sleepEventRef = {
           type: 'sleep',
           time: sleepStart,
           timeEnd: sleepEndVal,
           sleepHours: sleepHoursForLabel,
-          positive: rawSleepOnset >= 0,
+          positive: rawSleepOnsetTotal >= 0,
           icon: EVENT_ICONS.sleep,
           label: sleepFullLabel,
           sortKey: sleepSortKey,
           weight: sleepOnsetWeightFinal
-        });
+        };
+        events.push(sleepEventRef);
         console.info('[HEYS.cascade] 😴 Sleep onset (model v3.2.0 chronotype-tolerant sigmoid):', {
           sleepStart: sleepStart, sleepMins: sleepMins,
           personalOnset: Math.round(personalOnset), optimalOnset: Math.round(optimalOnset),
@@ -2434,9 +2654,46 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       else if (sleepHours > 12.0) rawSleepDur = -0.5;
 
       rawSleepDur = clamp(rawSleepDur, -2.0, 1.5);
-      var sleepDurWeight = rawSleepDur * sleepDurConfidence;
+      sleepDurWeight = rawSleepDur * sleepDurConfidence;
+      rawSleepDurFinal = rawSleepDur;
       rawWeights.sleepDur = rawSleepDur;
       score += sleepDurWeight;
+
+      if (sleepEventRef) {
+        var combinedSleepWeight = sleepOnsetWeightFinal + sleepDurWeight;
+        sleepEventRef.weight = combinedSleepWeight;
+        sleepEventRef.sleepHours = sleepHours;
+        sleepEventRef.positive = combinedSleepWeight >= 0;
+        if (combinedSleepWeight < 0) {
+          if (rawSleepDur <= -0.6 && (rawSleepOnsetTotal == null || rawSleepOnsetTotal >= 0)) {
+            sleepEventRef.breakReason = 'Недостаток сна';
+          } else if (rawSleepOnsetTotal != null && rawSleepOnsetTotal < 0) {
+            sleepEventRef.breakReason = 'Поздний сон';
+          } else {
+            sleepEventRef.breakReason = 'Сон вне оптимума';
+          }
+        } else {
+          delete sleepEventRef.breakReason;
+        }
+      } else {
+        var durationOnlyLabel = 'Сон';
+        if (sleepEndVal) durationOnlyLabel += ' →' + sleepEndVal;
+        durationOnlyLabel += ' (' + sleepHours.toFixed(1) + 'ч)';
+        sleepEventRef = {
+          type: 'sleep',
+          time: sleepStart || null,
+          timeEnd: sleepEndVal,
+          sleepHours: sleepHours,
+          positive: sleepDurWeight >= 0,
+          icon: EVENT_ICONS.sleep,
+          label: durationOnlyLabel,
+          sortKey: sleepStart ? (parseTime(sleepStart) || 1440) : 1440,
+          weight: sleepDurWeight,
+          breakReason: sleepDurWeight < 0 ? 'Сон вне оптимума' : null
+        };
+        events.push(sleepEventRef);
+      }
+
       console.info('[HEYS.cascade] 😴 Sleep duration (model v2.1.0 Gaussian bell-curve):', {
         sleepHours: +sleepHours.toFixed(1), personalOptimal: +personalSleepOpt.toFixed(1),
         deviation: +sleepDev.toFixed(1), formula: '1.5×exp(-' + sleepDev.toFixed(1) + '²/(2×0.8²))-0.5',
@@ -2446,6 +2703,16 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         rawWeight: +rawSleepDur.toFixed(2), confidence: sleepDurConfidence,
         adjustedWeight: +sleepDurWeight.toFixed(2)
       });
+      if (sleepEventRef) {
+        console.info('[HEYS.cascade] 😴 Sleep event reconciled:', {
+          onsetWeight: +sleepOnsetWeightFinal.toFixed(2),
+          durationWeight: +sleepDurWeight.toFixed(2),
+          rawDurationWeight: rawSleepDurFinal != null ? +rawSleepDurFinal.toFixed(2) : null,
+          combinedWeight: +sleepEventRef.weight.toFixed(2),
+          positive: sleepEventRef.positive,
+          breakReason: sleepEventRef.breakReason || null
+        });
+      }
     } else {
       console.info('[HEYS.cascade] 😴 No sleepHours data — ШАГ 5 skipped');
     }
@@ -2984,7 +3251,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         for (var bwi = Math.max(0, bi - 7); bwi < Math.min(prevDays30.length, bi + 8); bwi++) {
           if (bwi !== bi && prevDays30[bwi]) retroWindow.push(prevDays30[bwi]);
         }
-        var retroDcs = getRetroactiveDcs(prevDays30[bi], retroWindow);
+        var retroDcs = getRetroactiveDcs(prevDays30[bi], retroWindow, prof);
         if (retroDcs !== null) {
           dcsHistory[bDateKey] = +retroDcs.toFixed(3);
           backfillCount++;
@@ -3297,7 +3564,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     for (var hdi = 0; hdi < prevDays30.length; hdi++) {
       var hDayRef = prevDays30[hdi];
       if (!hDayRef) continue;
-      var hEvts = buildDayEventsSimple(hDayRef, mealBandShift);
+      var hEvts = buildDayEventsSimple(hDayRef, mealBandShift, prof);
       if (hEvts.length === 0) continue;
       var hDateD = new Date();
       hDateD.setDate(hDateD.getDate() - (hdi + 1));
@@ -3526,6 +3793,9 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     var dcsHistory = props.dcsHistory || {};
     var historicalDays = props.historicalDays || [];
 
+    var cardRef = React.useRef(null);
+    var expandScrollRafRef = React.useRef(null);
+
     var expandedState = React.useState(false);
     var expanded = expandedState[0];
     var setExpanded = expandedState[1];
@@ -3536,11 +3806,38 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     var progressPct = Math.round(momentumScore * 100);
     var badgeText = progressPct > 0 ? (progressPct + '%' + trendArrow) : '—';
     var ceilingPct = Math.round(ceiling * 100);
+    var rawPct = Math.round(crsRaw * 100);
+    var basePct = Math.round(crsBase * 100);
+    var rawBasePct = Math.round(crsBaseRaw * 100);
+    var rawCeilingPct = Math.round(ceilingRaw * 100);
     // Russian plural for дней подряд
     var peakDaysLabel = daysAtPeak === 1 ? '1 день' : (daysAtPeak >= 2 && daysAtPeak <= 4) ? daysAtPeak + ' дня' : daysAtPeak + ' дней';
     var currentLevelLabel = getDisplayStateLabel(state);
     var nextMilestone = getNextCrsMilestone(crs);
     var primaryCopy = getCascadePrimaryCopy(message, config.label, state);
+    var todayScore = typeof props.score === 'number' ? props.score : 0;
+    var warningCount = (warnings && warnings.length) || 0;
+    var chainPenaltyTotal = warningCount
+      ? warnings.reduce(function (sum, item) { return sum + ((item && item.penalty) || 0); }, 0)
+      : 0;
+    var todayBoostPctLabel = (todayBoost >= 0 ? '+' : '') + (todayBoost * 100).toFixed(1) + '%';
+    var dailyContributionLabel = (dailyContribution >= 0 ? '+' : '') + dailyContribution.toFixed(2);
+    var trendLabel = crsTrend === 'up'
+      ? 'Рост за 7 дней'
+      : crsTrend === 'down'
+        ? 'Снижение за 7 дней'
+        : 'Стабильно';
+    var warningLabel = warningCount > 0
+      ? (warningCount + ' откл. • −' + chainPenaltyTotal + ' к цепочке')
+      : 'Без штрафов сегодня';
+    var riskNote = warningCount > 0
+      ? ('Есть сигналы риска: ' + warningLabel)
+      : 'Сегодня день идёт ровно, без штрафов';
+    var heroMeta = [
+      'без сглаживания ' + rawPct + '%',
+      'тренд 7д: ' + trendLabel.toLowerCase(),
+      'предел роста ' + ceilingPct + '%'
+    ];
 
     // Animate progress bar 0 → progressPct on mount via CSS transition (double-rAF pump)
     var animBarState = React.useState(0);
@@ -3568,6 +3865,23 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         if (animBarRafRef.current) cancelAnimationFrame(animBarRafRef.current);
       };
     }, [progressPct]);
+
+    React.useEffect(function () {
+      if (!expanded) return undefined;
+
+      var raf1 = requestAnimationFrame(function () {
+        expandScrollRafRef.current = requestAnimationFrame(function () {
+          scrollCascadeCardIntoView(cardRef.current);
+        });
+      });
+
+      expandScrollRafRef.current = raf1;
+
+      return function () {
+        cancelAnimationFrame(raf1);
+        if (expandScrollRafRef.current) cancelAnimationFrame(expandScrollRafRef.current);
+      };
+    }, [expanded]);
 
     var copyCascadeHistory = async function (e) {
       if (e && e.stopPropagation) e.stopPropagation();
@@ -3790,6 +4104,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     });
 
     return React.createElement('div', {
+      ref: cardRef,
       className: 'cascade-card cascade-card--' + state.toLowerCase() + ' cascade-card--tone-' + cardTone,
       style: {}
     },
@@ -3854,40 +4169,79 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             '⚠️ Отклонений: ' + warnings.length + ' (−' + warnings.reduce(function (s, w) { return s + w.penalty; }, 0) + ' к цепочке)'
           )
         ),
-        React.createElement('div', { className: 'cascade-card__stats' },
-          React.createElement('span', { className: 'cascade-card__stat' },
-            '🏷️ Уровень: ', React.createElement('strong', null, currentLevelLabel)
+        React.createElement('div', { className: 'cascade-card__stats-panel' },
+          React.createElement('div', { className: 'cascade-card__stats-head' },
+            React.createElement('div', { className: 'cascade-card__stats-kicker' }, 'Сводка каскада'),
+            React.createElement('div', { className: 'cascade-card__stats-caption' }, 'Текущий статус, вклад дня и ближайший ориентир для роста')
           ),
-          React.createElement('span', { className: 'cascade-card__stat' },
-            '📈 Импульс: ', React.createElement('strong', null, progressPct + '/' + ceilingPct + '%'),
-            trendArrow ? (' ' + trendArrow) : null
-          ),
-          React.createElement('span', { className: 'cascade-card__stat' },
-            '🔗 Цепочка: ', React.createElement('strong', null, chainLength)
-          ),
-          React.createElement('span', { className: 'cascade-card__stat' },
-            '💎 Потолок: ', React.createElement('strong', null, ceilingPct + '%')
-          ),
-          React.createElement('span', { className: 'cascade-card__stat' },
-            '🔥 На пике: ', React.createElement('strong', null, peakDaysLabel)
-          ),
-          React.createElement('span', { className: 'cascade-card__stat' },
-            nextMilestone
-              ? React.createElement(React.Fragment, null,
-                '🎯 Следующая зона: ', React.createElement('strong', null, nextMilestone.label + ' +' + nextMilestone.gapPct + '%')
+          React.createElement('div', { className: 'cascade-card__stats-hero' },
+            React.createElement('div', { className: 'cascade-card__stats-hero-main' },
+              React.createElement('span', { className: 'cascade-card__stats-hero-label' }, 'Текущий статус'),
+              React.createElement('div', { className: 'cascade-card__stats-hero-value-row' },
+                React.createElement('strong', { className: 'cascade-card__stats-hero-value' }, progressPct + '%'),
+                React.createElement('span', { className: 'cascade-card__stats-hero-level' }, currentLevelLabel)
+              ),
+              React.createElement('div', { className: 'cascade-card__stats-hero-note' },
+                'Накопленная база ' + basePct + '% • сегодняшний вклад ' + todayBoostPctLabel
               )
-              : React.createElement(React.Fragment, null,
-                '🎯 Следующая зона: ', React.createElement('strong', null, 'потолок удерживается')
+            ),
+            React.createElement('div', { className: 'cascade-card__stats-hero-chips' },
+              heroMeta.map(function (item) {
+                return React.createElement('span', {
+                  key: item,
+                  className: 'cascade-card__stats-hero-chip'
+                }, item);
+              })
+            )
+          ),
+          React.createElement('div', { className: 'cascade-card__stats' },
+            React.createElement('div', { className: 'cascade-card__stat' },
+              React.createElement('span', { className: 'cascade-card__stat-label' }, '🧭 Сегодняшний вклад'),
+              React.createElement('strong', { className: 'cascade-card__stat-value' }, dailyContributionLabel + ' DCS'),
+              React.createElement('span', { className: 'cascade-card__stat-note' }, 'Score дня ' + todayScore.toFixed(2) + ' — это чистый эффект сегодняшних решений')
+            ),
+            React.createElement('div', { className: 'cascade-card__stat' },
+              React.createElement('span', { className: 'cascade-card__stat-label' }, '🪫 Накопленная база'),
+              React.createElement('strong', { className: 'cascade-card__stat-value' }, basePct + '%'),
+              React.createElement('span', { className: 'cascade-card__stat-note' }, 'Это фон каскада без сегодняшнего дня • без сглаживания ' + rawBasePct + '%')
+            ),
+            React.createElement('div', { className: 'cascade-card__stat' },
+              React.createElement('span', { className: 'cascade-card__stat-label' }, '🔗 Ритм поведения'),
+              React.createElement('strong', { className: 'cascade-card__stat-value' }, chainLength),
+              React.createElement('span', { className: 'cascade-card__stat-note' }, warningCount > 0 ? ('Позитивных звеньев подряд после штрафов −' + chainPenaltyTotal) : 'Позитивные шаги идут подряд без просадки')
+            ),
+            React.createElement('div', { className: 'cascade-card__stat' },
+              React.createElement('span', { className: 'cascade-card__stat-label' }, '⚠️ Зоны риска'),
+              React.createElement('strong', { className: 'cascade-card__stat-value' }, warningCount),
+              React.createElement('span', { className: 'cascade-card__stat-note' }, riskNote)
+            ),
+            React.createElement('div', { className: 'cascade-card__stat cascade-card__stat--wide' },
+              React.createElement('span', { className: 'cascade-card__stat-label' }, '🎯 Ближайшая цель'),
+              React.createElement('strong', { className: 'cascade-card__stat-value' },
+                nextMilestone
+                  ? (nextMilestone.label + ' +' + nextMilestone.gapPct + '%')
+                  : 'Сильная зона удерживается'
+              ),
+              React.createElement('span', { className: 'cascade-card__stat-note' },
+                nextMilestone
+                  ? ('Сейчас ' + progressPct + '%; до следующего уровня не хватает ' + nextMilestone.gapPct + '%')
+                  : ('Сейчас лучшая стратегия — удерживать темп. Предел: ' + ceilingPct + '% / raw ' + rawCeilingPct + '%')
               )
+            )
+          ),
+          React.createElement('div', { className: 'cascade-card__stats-footnote' },
+            React.createElement('span', { className: 'cascade-card__stats-footnote-chip' }, '🔥 На пике: ' + peakDaysLabel),
+            React.createElement('span', { className: 'cascade-card__stats-footnote-chip' }, '💎 Потенциал raw: ' + rawCeilingPct + '%'),
+            React.createElement('span', { className: 'cascade-card__stats-footnote-chip' }, 'ℹ️ Display сглаживает колебания, raw показывает расчётную инерцию')
+          ),
+          React.createElement('div', { className: 'cascade-card__copy-wrap' },
+            React.createElement('button', {
+              type: 'button',
+              className: 'cascade-card__copy-btn',
+              onClick: copyCascadeHistory,
+              title: 'Скопировать всю историю влияния на CRS в буфер обмена'
+            }, 'Скопировать CRS-лог')
           )
-        ),
-        React.createElement('div', { className: 'cascade-card__copy-wrap' },
-          React.createElement('button', {
-            type: 'button',
-            className: 'cascade-card__copy-btn',
-            onClick: copyCascadeHistory,
-            title: 'Скопировать всю историю влияния на CRS в буфер обмена'
-          }, 'Скопировать CRS-лог')
         )
       )
     );
@@ -5024,8 +5378,98 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       50% { transform: scale(0.92); }
       100% { transform: scale(1); }
     }
+
+    @keyframes supplements-victory-glow {
+      0% {
+        transform: scale(1);
+        box-shadow: 0 8px 24px rgba(34, 197, 94, 0.10);
+        filter: saturate(1);
+      }
+      30% {
+        transform: scale(1.015);
+        box-shadow: 0 14px 34px rgba(34, 197, 94, 0.20), 0 0 0 8px rgba(187, 247, 208, 0.28);
+        filter: saturate(1.08);
+      }
+      60% {
+        transform: scale(1.01);
+        box-shadow: 0 12px 28px rgba(59, 130, 246, 0.14), 0 0 0 14px rgba(191, 219, 254, 0.16);
+      }
+      100% {
+        transform: scale(1);
+        box-shadow: 0 8px 24px rgba(34, 197, 94, 0.08);
+        filter: saturate(1);
+      }
+    }
+
+    @keyframes supplements-badge-shimmer {
+      0% {
+        transform: translateX(-120%) skewX(-18deg);
+        opacity: 0;
+      }
+      25% {
+        opacity: 0.55;
+      }
+      100% {
+        transform: translateX(220%) skewX(-18deg);
+        opacity: 0;
+      }
+    }
+
+    @keyframes supplements-confetti-pop {
+      0% {
+        transform: translate3d(0, 8px, 0) scale(0.72) rotate(-10deg);
+        opacity: 0;
+      }
+      18% {
+        opacity: 1;
+      }
+      100% {
+        transform: translate3d(var(--confetti-x, 0px), var(--confetti-y, -28px), 0) scale(1.06) rotate(var(--confetti-rotate, 0deg));
+        opacity: 0;
+      }
+    }
+
     .supp-chip-animate {
       animation: chip-bounce 0.15s ease-out;
+    }
+
+    .supplements-card--celebrating {
+      animation: supplements-victory-glow 0.82s cubic-bezier(0.22, 1, 0.36, 1);
+      will-change: transform, box-shadow, filter;
+    }
+
+    .supplements-card__victory-pill {
+      position: relative;
+      overflow: hidden;
+    }
+
+    .supplements-card__victory-pill::after {
+      content: '';
+      position: absolute;
+      inset: -30% auto -30% -40%;
+      width: 42%;
+      background: linear-gradient(90deg, rgba(255,255,255,0), rgba(255,255,255,0.92), rgba(255,255,255,0));
+      transform: translateX(-120%) skewX(-18deg);
+      animation: supplements-badge-shimmer 0.78s ease-out;
+      pointer-events: none;
+    }
+
+    .supplements-card__confetti {
+      position: absolute;
+      inset: -6px 0 auto 0;
+      pointer-events: none;
+      overflow: visible;
+    }
+
+    .supplements-card__confetti-item {
+      position: absolute;
+      left: 50%;
+      top: 0;
+      font-size: 15px;
+      line-height: 1;
+      opacity: 0;
+      animation: supplements-confetti-pop 0.9s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      text-shadow: 0 4px 12px rgba(15, 23, 42, 0.12);
     }
   `;
 
@@ -6985,6 +7429,57 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
   // v3.3: Root для научного popup (React 18 createRoot)
   let sciencePopupRoot = null;
   let sciencePopupRootInstance = null;
+  const supplementsCollapseTimers = Object.create(null);
+  let supplementsVictoryAudioContext = null;
+
+  function triggerSupplementsVictoryHaptic() {
+    try {
+      if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
+        navigator.vibrate([18, 14, 24]);
+      }
+    } catch (e) {
+      // no-op
+    }
+  }
+
+  function playSupplementsVictorySound() {
+    try {
+      const AudioCtx = typeof window !== 'undefined' ? (window.AudioContext || window.webkitAudioContext) : null;
+      if (!AudioCtx) return;
+
+      if (!supplementsVictoryAudioContext) {
+        supplementsVictoryAudioContext = new AudioCtx();
+      }
+
+      const ctx = supplementsVictoryAudioContext;
+      if (ctx.state === 'suspended' && typeof ctx.resume === 'function') {
+        ctx.resume();
+      }
+
+      const startAt = ctx.currentTime + 0.01;
+      const notes = [659.25, 880, 1174.66];
+      notes.forEach((frequency, index) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        const noteStart = startAt + index * 0.07;
+        const noteEnd = noteStart + 0.26;
+
+        osc.type = index === 2 ? 'triangle' : 'sine';
+        osc.frequency.setValueAtTime(frequency, noteStart);
+
+        gain.gain.setValueAtTime(0.0001, noteStart);
+        gain.gain.exponentialRampToValueAtTime(0.09 - index * 0.015, noteStart + 0.03);
+        gain.gain.exponentialRampToValueAtTime(0.0001, noteEnd);
+
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(noteStart);
+        osc.stop(noteEnd + 0.02);
+      });
+    } catch (e) {
+      // no-op
+    }
+  }
 
   function openSupplementsSciencePopup(suppId) {
     const hasScience = HEYS.Supplements?.SCIENCE?.BIOAVAILABILITY;
@@ -7093,6 +7588,12 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
     const allTaken = planned.length > 0 && planned.every(id => taken.includes(id));
     const takenCount = planned.filter(id => taken.includes(id)).length;
+    const collapsePrefs = readSessionValue('heys_supplements_card_collapsed', {});
+    const celebrationPrefs = readSessionValue('heys_supplements_card_fx', {});
+    const celebrationState = celebrationPrefs[dateKey] || null;
+    const isCelebrating = allTaken && celebrationState?.active === true;
+    const isCollapsed = allTaken ? collapsePrefs[dateKey] !== false : false;
+    const isCompactCollapsed = allTaken && isCollapsed;
 
     // v3.0: Группируем по времени приёма
     const timeGroups = groupByTimeOfDay(planned);
@@ -7112,9 +7613,79 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       if (onForceUpdate) onForceUpdate();
     };
 
+    const clearCelebrateTimer = () => {
+      if (supplementsCollapseTimers[dateKey]) {
+        clearTimeout(supplementsCollapseTimers[dateKey]);
+        delete supplementsCollapseTimers[dateKey];
+      }
+    };
+
+    const clearCelebrationState = (shouldRerender = false) => {
+      clearCelebrateTimer();
+      const nextCelebrationPrefs = readSessionValue('heys_supplements_card_fx', {}) || {};
+      if (nextCelebrationPrefs[dateKey]) {
+        delete nextCelebrationPrefs[dateKey];
+        writeSessionValue('heys_supplements_card_fx', nextCelebrationPrefs);
+      }
+      if (shouldRerender && onForceUpdate) onForceUpdate();
+    };
+
     const markAll = () => {
       markAllSupplementsTaken(dateKey);
+      maybeAutoCollapse(planned);
+    };
+
+    const setCollapsed = (collapsed) => {
+      const nextPrefs = readSessionValue('heys_supplements_card_collapsed', {}) || {};
+      nextPrefs[dateKey] = !!collapsed;
+      writeSessionValue('heys_supplements_card_collapsed', nextPrefs);
       if (onForceUpdate) onForceUpdate();
+    };
+
+    const runCelebrationThenCollapse = () => {
+      clearCelebrateTimer();
+
+      console.info('[HEYS.supplements] Victory celebration started');
+      triggerSupplementsVictoryHaptic();
+      playSupplementsVictorySound();
+
+      const nextCelebrationPrefs = readSessionValue('heys_supplements_card_fx', {}) || {};
+      nextCelebrationPrefs[dateKey] = {
+        active: true,
+        startedAt: Date.now(),
+      };
+      writeSessionValue('heys_supplements_card_fx', nextCelebrationPrefs);
+
+      const nextCollapsePrefs = readSessionValue('heys_supplements_card_collapsed', {}) || {};
+      nextCollapsePrefs[dateKey] = false;
+      writeSessionValue('heys_supplements_card_collapsed', nextCollapsePrefs);
+
+      if (onForceUpdate) onForceUpdate();
+
+      supplementsCollapseTimers[dateKey] = setTimeout(() => {
+        const latestCelebrationPrefs = readSessionValue('heys_supplements_card_fx', {}) || {};
+        if (latestCelebrationPrefs[dateKey]) {
+          delete latestCelebrationPrefs[dateKey];
+          writeSessionValue('heys_supplements_card_fx', latestCelebrationPrefs);
+        }
+
+        const latestCollapsePrefs = readSessionValue('heys_supplements_card_collapsed', {}) || {};
+        latestCollapsePrefs[dateKey] = true;
+        writeSessionValue('heys_supplements_card_collapsed', latestCollapsePrefs);
+
+        console.info('[HEYS.supplements] Victory celebration completed');
+        delete supplementsCollapseTimers[dateKey];
+        if (onForceUpdate) onForceUpdate();
+      }, 900);
+    };
+
+    const maybeAutoCollapse = (nextTakenList) => {
+      const willBeAllTaken = planned.length > 0 && planned.every(id => nextTakenList.includes(id));
+      if (willBeAllTaken) {
+        runCelebrationThenCollapse();
+        return true;
+      }
+      return false;
     };
 
     // v3.3: Открыть научный popup
@@ -7143,8 +7714,9 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       // v3.5: Batch mark для группы
       const markGroupTaken = () => {
         if (notTakenInGroup.length > 0) {
+          const nextTakenList = Array.from(new Set([...taken, ...notTakenInGroup]));
           markSupplementsTaken(dateKey, notTakenInGroup, true);
-          if (onForceUpdate) onForceUpdate();
+          if (!maybeAutoCollapse(nextTakenList) && onForceUpdate) onForceUpdate();
         }
       };
 
@@ -7244,7 +7816,17 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
               const btn = e.currentTarget;
               btn.style.transform = 'scale(1.15)';
               setTimeout(() => { btn.style.transform = 'scale(1)'; }, 150);
+              const isTaken = taken.includes(id);
+              const nextTakenList = isTaken
+                ? taken.filter(takenId => takenId !== id)
+                : Array.from(new Set([...taken, id]));
+              if (isTaken) {
+                clearCelebrationState();
+              }
               toggleTaken(id);
+              if (!isTaken) {
+                maybeAutoCollapse(nextTakenList);
+              }
             };
 
             return React.createElement('button', {
@@ -7311,11 +7893,11 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     };
 
     return React.createElement('div', {
-      className: 'compact-card supplements-card widget widget--supplements-diary' + (allTaken ? ' widget--supplements-diary--all-taken' : ''),
+      className: 'compact-card supplements-card widget widget--supplements-diary' + (allTaken ? ' widget--supplements-diary--all-taken' : '') + (isCelebrating ? ' supplements-card--celebrating' : ''),
       style: {
         display: 'block',
         marginBottom: '12px',
-        padding: 'var(--heys-diary-card-padding, 14px 16px)',
+        padding: isCompactCollapsed ? '12px 14px' : 'var(--heys-diary-card-padding, 14px 16px)',
         boxSizing: 'border-box'
       }
     },
@@ -7325,7 +7907,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          marginBottom: '6px'
+          marginBottom: isCompactCollapsed ? '4px' : '6px'
         }
       },
         // Левая часть: название + прогресс
@@ -7386,6 +7968,30 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             },
             title: 'Бонус к инсулиновой волне от добавок'
           }, `🌊${Math.round(insulinBonus * 100)}%`),
+          allTaken && React.createElement('button', {
+            onClick: (e) => {
+              e.stopPropagation();
+              clearCelebrationState();
+              setCollapsed(!isCollapsed);
+            },
+            style: {
+              background: 'var(--bg-secondary, #f1f5f9)',
+              border: '1px solid #e2e8f0',
+              borderRadius: '8px',
+              width: '32px',
+              height: '32px',
+              fontSize: '15px',
+              fontWeight: '700',
+              color: '#475569',
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              lineHeight: '1'
+            },
+            title: isCollapsed ? 'Развернуть добавки' : 'Свернуть добавки',
+            'aria-label': isCollapsed ? 'Развернуть добавки' : 'Свернуть добавки'
+          }, isCollapsed ? '▾' : '▴'),
           React.createElement('button', {
             onClick: (e) => {
               e.stopPropagation();
@@ -7414,22 +8020,47 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           display: 'flex',
           alignItems: 'center',
           gap: '8px',
-          marginBottom: '10px'
+          marginBottom: isCompactCollapsed ? '0' : '10px'
         }
       },
         React.createElement('div', {
+          className: isCelebrating ? 'supplements-card__victory-pill' : '',
           style: {
             flex: 1,
             textAlign: 'center',
-            padding: '8px 10px',
-            background: '#f0fdf4',
-            borderRadius: '10px'
+            padding: isCompactCollapsed ? '5px 8px' : '8px 10px',
+            background: isCelebrating
+              ? 'linear-gradient(135deg, #ecfccb 0%, #dcfce7 50%, #dbeafe 100%)'
+              : '#f0fdf4',
+            borderRadius: '10px',
+            boxShadow: isCelebrating ? '0 10px 22px rgba(34, 197, 94, 0.14)' : 'none'
           }
         },
-          React.createElement('span', { style: { fontSize: '12px', color: '#16a34a', fontWeight: '600' } }, '🎉 Все добавки приняты')
+          isCelebrating && React.createElement('div', { className: 'supplements-card__confetti' },
+            React.createElement('span', {
+              className: 'supplements-card__confetti-item',
+              style: { '--confetti-x': '-40px', '--confetti-y': '-22px', '--confetti-rotate': '-24deg', marginLeft: '-44px', animationDelay: '0s' }
+            }, '✨'),
+            React.createElement('span', {
+              className: 'supplements-card__confetti-item',
+              style: { '--confetti-x': '0px', '--confetti-y': '-32px', '--confetti-rotate': '0deg', marginLeft: '-6px', animationDelay: '0.06s' }
+            }, '🎉'),
+            React.createElement('span', {
+              className: 'supplements-card__confetti-item',
+              style: { '--confetti-x': '40px', '--confetti-y': '-24px', '--confetti-rotate': '20deg', marginLeft: '28px', animationDelay: '0.12s' }
+            }, '💊')
+          ),
+          React.createElement('span', {
+            style: {
+              fontSize: isCompactCollapsed ? '11px' : '12px',
+              color: isCelebrating ? '#15803d' : '#16a34a',
+              fontWeight: '700',
+              letterSpacing: isCelebrating ? '0.01em' : 'normal'
+            }
+          }, isCelebrating ? '✨ Идеально! План по добавкам закрыт' : '🎉 Все добавки приняты')
         )
       ),
-      React.createElement('div', { className: 'supplements-card__expanded' },
+      (!allTaken || !isCollapsed) && React.createElement('div', { className: 'supplements-card__expanded' },
         // v3.1: Напоминание по времени
         (() => {
           const reminder = getTimeReminder(planned, taken);
