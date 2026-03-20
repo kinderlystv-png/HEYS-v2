@@ -411,23 +411,35 @@
     const proteinLag = Math.max(0, expectedProteinCoverage - ctx.protPct);
     const structuredDay = ctx.meals.length >= 3 && ctx.gapHours < 4;
 
+    // Time-normalize: compare intake to expected progress for this hour.
+    // At noon (expected ~33%), 35% eaten → pacing 1.06 → on track.
+    // At 9 PM (expected ~93%), 40% eaten → pacing 0.43 → behind.
+    // Skip normalization when expected < 20% (very early / midnight edge case).
+    const kcalPacingRatio = expectedCoverage >= 0.20
+      ? Math.min(ctx.kcalPct / expectedCoverage, 1.0) : ctx.kcalPct;
+    const effectiveKcalPct = Math.max(ctx.kcalPct, kcalPacingRatio);
+    const protPacingRatio = expectedProteinCoverage >= 0.20
+      ? Math.min(ctx.protPct / expectedProteinCoverage, 1.0) : ctx.protPct;
+    const effectiveProtPct = Math.max(ctx.protPct, protPacingRatio);
+
     const baseUndereating = noFoodData ? 0
-      : ctx.kcalPct >= 0.9 ? 0
-        : ctx.kcalPct >= 0.8 ? 10
-          : ctx.kcalPct >= 0.7 ? 25
-            : ctx.kcalPct >= 0.6 ? 45
-              : ctx.kcalPct >= 0.5 ? 65
+      : effectiveKcalPct >= 0.9 ? 0
+        : effectiveKcalPct >= 0.8 ? 10
+          : effectiveKcalPct >= 0.7 ? 25
+            : effectiveKcalPct >= 0.6 ? 45
+              : effectiveKcalPct >= 0.5 ? 65
                 : 85;
 
+    // Evening bonus uses raw kcalPct — by evening, expected ≈ raw.
     const eveningUndereatingBonus = noFoodData ? 0
       : ctx.hour >= 18 && ctx.kcalPct < 0.7 ? 18
         : ctx.hour >= 17 && ctx.kcalPct < 0.5 ? 10
           : 0;
 
     const proteinPenalty = noFoodData ? 0
-      : ctx.protPct >= 0.9 ? 0
-        : ctx.protPct >= 0.75 ? 8
-          : ctx.protPct >= 0.6 ? 18
+      : effectiveProtPct >= 0.9 ? 0
+        : effectiveProtPct >= 0.75 ? 8
+          : effectiveProtPct >= 0.6 ? 18
             : 30;
 
     const lateProteinPenalty = noFoodData ? 0
@@ -477,9 +489,9 @@
       && proteinLag <= 0.16;
     const aggressiveCut = !noFoodData
       && (
-        (ctx.kcalPct < 0.45 && proteinLag > 0.2)
+        (effectiveKcalPct < 0.45 && proteinLag > 0.2)
         || chronicLowDays >= 5
-        || (ctx.hour >= 18 && ctx.gapHours >= 5 && ctx.protPct < 0.45)
+        || (ctx.hour >= 18 && ctx.gapHours >= 5 && effectiveProtPct < 0.45)
       );
     const aggressiveCutBonus = aggressiveCut ? (ctx.hour >= 18 ? 8 : 4) : 0;
     const cutPattern = aggressiveCut

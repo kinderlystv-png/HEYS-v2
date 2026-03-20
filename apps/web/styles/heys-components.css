@@ -1993,6 +1993,206 @@ body.tour-active .ios-pwa-banner {
   color: #64748b;
 }
 
+/* === Insulin wave — activity context badge === */
+.activity-context-badge {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 10px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  border: 1px solid rgba(34, 197, 94, 0.16);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(240, 253, 244, 0.92));
+  box-shadow: 0 10px 26px -22px rgba(21, 128, 61, 0.45);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.activity-context-badge--compact {
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 14px;
+}
+
+.activity-context-badge--contrast {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0.12));
+  border-color: rgba(255, 255, 255, 0.24);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    0 18px 36px -26px rgba(6, 78, 59, 0.85);
+}
+
+.activity-context-badge__icon {
+  width: 38px;
+  height: 38px;
+  flex: 0 0 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.7);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72);
+  font-size: 20px;
+  line-height: 1;
+}
+
+.activity-context-badge--compact .activity-context-badge__icon {
+  width: 34px;
+  height: 34px;
+  flex-basis: 34px;
+  border-radius: 10px;
+  font-size: 18px;
+}
+
+.activity-context-badge--contrast .activity-context-badge__icon {
+  background: rgba(255, 255, 255, 0.16);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22);
+}
+
+.activity-context-badge__content {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.activity-context-badge__title {
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.35;
+  color: #166534;
+}
+
+.activity-context-badge--compact .activity-context-badge__title {
+  font-size: 13px;
+}
+
+.activity-context-badge--contrast .activity-context-badge__title {
+  color: rgba(255, 255, 255, 0.96);
+  text-shadow: 0 1px 10px rgba(6, 78, 59, 0.3);
+}
+
+.activity-context-badge__subtitle {
+  margin-top: 4px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: #475569;
+}
+
+.activity-context-badge--contrast .activity-context-badge__subtitle {
+  color: rgba(236, 253, 245, 0.9);
+}
+
+.activity-context-badge__metrics {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  min-width: max-content;
+}
+
+.activity-context-badge--compact .activity-context-badge__metrics {
+  gap: 5px;
+}
+
+.activity-context-badge__metric {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 1px;
+  padding: 6px 10px;
+  border-radius: 12px;
+  border: 1px solid transparent;
+  background: rgba(255, 255, 255, 0.78);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+.activity-context-badge--compact .activity-context-badge__metric {
+  padding: 5px 9px;
+  border-radius: 10px;
+}
+
+.activity-context-badge--contrast .activity-context-badge__metric {
+  background: rgba(255, 255, 255, 0.14);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+
+.activity-context-badge__metric--success {
+  border-color: rgba(34, 197, 94, 0.16);
+}
+
+.activity-context-badge__metric--info {
+  border-color: rgba(59, 130, 246, 0.16);
+}
+
+.activity-context-badge__metric-value {
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.1;
+  white-space: nowrap;
+}
+
+.activity-context-badge--compact .activity-context-badge__metric-value {
+  font-size: 12px;
+}
+
+.activity-context-badge__metric--success .activity-context-badge__metric-value {
+  color: #15803d;
+}
+
+.activity-context-badge__metric--info .activity-context-badge__metric-value {
+  color: #2563eb;
+}
+
+.activity-context-badge--contrast .activity-context-badge__metric--success .activity-context-badge__metric-value,
+.activity-context-badge--contrast .activity-context-badge__metric--info .activity-context-badge__metric-value {
+  color: rgba(255, 255, 255, 0.98);
+}
+
+.activity-context-badge__metric-label {
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: #64748b;
+}
+
+.activity-context-badge--contrast .activity-context-badge__metric-label {
+  color: rgba(220, 252, 231, 0.72);
+}
+
+.activity-context-badge--peri .activity-context-badge__icon,
+.activity-context-badge--post .activity-context-badge__icon,
+.activity-context-badge--pre .activity-context-badge__icon,
+.activity-context-badge--steps .activity-context-badge__icon,
+.activity-context-badge--morning .activity-context-badge__icon,
+.activity-context-badge--double .activity-context-badge__icon,
+.activity-context-badge--fasted .activity-context-badge__icon,
+.activity-context-badge--default .activity-context-badge__icon {
+  color: #166534;
+}
+
+.activity-context-badge--contrast.activity-context-badge--peri .activity-context-badge__icon,
+.activity-context-badge--contrast.activity-context-badge--post .activity-context-badge__icon,
+.activity-context-badge--contrast.activity-context-badge--pre .activity-context-badge__icon,
+.activity-context-badge--contrast.activity-context-badge--steps .activity-context-badge__icon,
+.activity-context-badge--contrast.activity-context-badge--morning .activity-context-badge__icon,
+.activity-context-badge--contrast.activity-context-badge--double .activity-context-badge__icon,
+.activity-context-badge--contrast.activity-context-badge--fasted .activity-context-badge__icon,
+.activity-context-badge--contrast.activity-context-badge--default .activity-context-badge__icon {
+  color: #ffffff;
+}
+
+@media (max-width: 480px) {
+  .activity-context-badge {
+    gap: 10px;
+  }
+
+  .activity-context-badge__metrics {
+    min-width: 0;
+  }
+}
+
 .advice-expert-evidence__list {
   margin: 0;
   padding-left: 18px;

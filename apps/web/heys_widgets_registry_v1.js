@@ -128,7 +128,7 @@
       icon: '🥗',
       description: 'Баланс белков, жиров, углеводов',
       defaultSize: '4x2',
-      availableSizes: ALL_SIZES_4X4,
+      availableSizes: ['4x1', '3x2', '4x2'],
       dataKeys: ['dayTot.prot', 'dayTot.fat', 'dayTot.carbs', 'normAbs'],
       component: 'WidgetMacros',
       settings: {
@@ -165,26 +165,25 @@
       name: 'Оценка дня',
       category: 'health',
       icon: '⭐',
-      description: 'Единая оценка дня 0-100: факторы + субъективная + momentum',
+      description: 'Единая оценка дня 0-100: факторы (9 параметров) + субъективная + momentum',
       defaultSize: '2x2',
-      availableSizes: ALL_SIZES_4X4,
+      availableSizes: ['2x2', '2x1'],
       dataKeys: ['dayData', 'profile', 'dayTot', 'normAbs', 'waterGoal'],
       component: 'WidgetDayScore',
       settings: {
-        showBreakdown: { type: 'boolean', default: true, label: 'Показывать разбивку' },
-        showLevel: { type: 'boolean', default: true, label: 'Показывать уровень' }
-      },
-      settingsBySize: {
-        '1x1': {}
+        showLevel: { type: 'boolean', default: true, label: 'Показывать словесную оценку' },
+        showAction: { type: 'boolean', default: true, label: 'Показывать рекомендацию' }
       }
     },
 
     status: {
       type: 'status',
-      name: 'Статус',
+      name: 'Статус (в Оценке дня)',
       category: 'health',
       icon: '🎯',
-      description: 'Общий статус 0-100 с подсказками',
+      description: 'Объединён с Оценкой дня — используйте виджет «Оценка дня»',
+      hidden: true,
+      deprecated: true,
       defaultSize: '2x2',
       availableSizes: ALL_SIZES_4X4,
       dataKeys: ['dayData', 'profile', 'dayTot', 'normAbs', 'waterGoal'],
@@ -372,7 +371,7 @@
       icon: '📅',
       description: 'Активность за неделю/месяц',
       defaultSize: '4x1',
-      availableSizes: ['4x1'],
+      availableSizes: ['2x1', '3x1', '4x1'],
       dataKeys: ['activeDays'],
       component: 'WidgetHeatmap',
       settings: {
@@ -524,6 +523,7 @@
      */
     getAvailableTypes() {
       return Object.values(WIDGET_TYPES).filter(widgetType => {
+        if (widgetType.hidden) return false;
         if (typeof widgetType.requiresCondition === 'function') {
           return widgetType.requiresCondition();
         }

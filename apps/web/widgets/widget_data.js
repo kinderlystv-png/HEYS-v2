@@ -255,9 +255,18 @@
         if (!rec) return null;
         if (typeof rec === 'string') return rec;
         if (typeof rec?.text === 'string' && rec.text.trim()) return rec.text.trim();
+        if (typeof rec?.action === 'string' && rec.action.trim()) return rec.action.trim();
         if (typeof rec?.label === 'string' && rec.label.trim()) return rec.label.trim();
         if (typeof rec?.title === 'string' && rec.title.trim()) return rec.title.trim();
         return null;
+      };
+
+      const normalizeRecommendationRecord = (rec) => {
+        const text = normalizeRelapseRecommendation(rec);
+        if (!text) return null;
+        return typeof rec === 'object' && rec !== null
+          ? { ...rec, text }
+          : { text };
       };
 
       try {
@@ -275,7 +284,62 @@
         const result = snapshot?.raw || {};
         const score = Math.round(Number(snapshot?.score ?? result?.score) || 0);
         const confidence = Math.round(Number(snapshot?.confidence ?? result?.confidence) || 0);
-        const windows = result?.windows || snapshot?.windows || {};
+        let windows = snapshot?.windows || result?.windows || {};
+        let mergedDrivers = Array.isArray(snapshot?.primaryDrivers)
+          ? snapshot.primaryDrivers.slice(0, 3)
+          : (Array.isArray(result?.primaryDrivers) ? result.primaryDrivers.slice(0, 3) : []);
+        let mergedRecommendations = (Array.isArray(snapshot?.recommendations) ? snapshot.recommendations : (Array.isArray(result?.recommendations) ? result.recommendations : []))
+          .map(normalizeRecommendationRecord)
+          .filter(Boolean);
+
+        // Risk Radar aggregation: inject max(relapse, crash) + source attribution
+        let radarSource = 'none';
+        let radarCrashScore = 0;
+        let radarDrivers = [];
+        let radarActions = [];
+        let radarScore = score;
+        let radarLevelId = '';
+        let blendWeights = null;
+        if (HEYS.RiskRadar?.calculate) {
+          try {
+            const profile = this._getProfile() || {};
+            const historyDays = HEYS.RelapseRisk?.getHistoryDays?.() || snapshot?.historyDays || [];
+            const radar = HEYS.RiskRadar.calculate({ profile, historyDays });
+            if (radar && typeof radar.score === 'number') {
+              radarScore = radar.score;
+              radarSource = radar.source || 'none';
+              radarCrashScore = Math.round(Number(radar.crash?.score) || 0);
+              radarLevelId = radar.level?.id || '';
+              blendWeights = radar.blend?.weights || null;
+              radarDrivers = (radar.drivers || []).map(d => d.label || d.factor || String(d));
+              radarActions = (radar.actions || []).map(a => a.text || a.label || String(a));
+              if (radar.windows && typeof radar.windows === 'object') {
+                windows = radar.windows;
+              }
+              if (Array.isArray(radar.drivers) && radar.drivers.length > 0) {
+                mergedDrivers = radar.drivers.slice(0, 3);
+              }
+              if (Array.isArray(radar.actions) && radar.actions.length > 0) {
+                const deduped = [];
+                const seen = new Set();
+                [
+                  ...radar.actions,
+                  ...mergedRecommendations,
+                ].forEach((item) => {
+                  const normalized = normalizeRecommendationRecord(item);
+                  const key = normalized?.text?.toLowerCase?.() || '';
+                  if (key && !seen.has(key)) {
+                    seen.add(key);
+                    deduped.push(normalized);
+                  }
+                });
+                mergedRecommendations = deduped.slice(0, 3);
+              }
+            }
+          } catch (radarErr) {
+            console.warn('[widget_data.getRelapseRiskData] RiskRadar enrichment failed:', radarErr?.message);
+          }
+        }
 
         const windowCandidates = [
           { key: 'tonight', label: 'сегодня вечером', score: Number(windows.tonight) || 0 },
@@ -285,32 +349,8 @@
 
         const topWindowLabel = windowCandidates[0]?.label || 'сейчас';
         const topWindowScore = Math.round(windowCandidates[0]?.score || 0);
-        const primaryDriver = Array.isArray(result?.primaryDrivers) ? result.primaryDrivers[0] : null;
-        const recommendation = Array.isArray(result?.recommendations) && result.recommendations[0]
-          ? normalizeRelapseRecommendation(result.recommendations[0])
-          : null;
-
-        // Risk Radar aggregation: inject max(relapse, crash) + source attribution
-        let radarSource = 'none';
-        let radarCrashScore = 0;
-        let radarDrivers = [];
-        let radarActions = [];
-        let radarScore = score;
-        if (HEYS.RiskRadar?.calculate) {
-          try {
-            const profile = this._getProfile() || {};
-            const radar = HEYS.RiskRadar.calculate({ profile });
-            if (radar && typeof radar.score === 'number') {
-              radarScore = radar.score;
-              radarSource = radar.source || 'none';
-              radarCrashScore = Math.round(Number(radar.crash?.score) || 0);
-              radarDrivers = (radar.drivers || []).map(d => d.label || d.factor || String(d));
-              radarActions = (radar.actions || []).map(a => a.text || a.label || String(a));
-            }
-          } catch (radarErr) {
-            console.warn('[widget_data.getRelapseRiskData] RiskRadar enrichment failed:', radarErr?.message);
-          }
-        }
+        const primaryDriver = mergedDrivers[0] || null;
+        const recommendation = mergedRecommendations[0]?.text || null;
 
         console.info('[widget_data.getRelapseRiskData] ✅ Calculated', {
           score, radarScore, radarSource, level: result?.level || snapshot?.level, confidence,
@@ -325,19 +365,21 @@
           relapseScore: score,
           crashScore: radarCrashScore,
           source: radarSource,
+          blendWeights,
           radarDrivers,
           radarActions,
           target: 100,
           pct: radarScore,
           remaining: Math.max(0, 100 - radarScore),
-          level: snapshot?.level || result?.level || 'low',
+          level: radarLevelId || snapshot?.level || result?.level || 'low',
           confidence,
-          topWindowLabel: typeof snapshot?.topWindowLabel === 'string' ? snapshot.topWindowLabel : topWindowLabel,
-          topWindowScore: Number.isFinite(Number(snapshot?.topWindowScore)) ? Number(snapshot.topWindowScore) : topWindowScore,
-          primaryDriver: snapshot?.primaryDriver || primaryDriver,
-          primaryDrivers: Array.isArray(snapshot?.primaryDrivers) ? snapshot.primaryDrivers : (Array.isArray(result?.primaryDrivers) ? result.primaryDrivers.slice(0, 3) : []),
+          topWindowLabel,
+          topWindowScore,
+          primaryDriver,
+          primaryDrivers: mergedDrivers,
           protectiveFactors: Array.isArray(snapshot?.protectiveFactors) ? snapshot.protectiveFactors : (Array.isArray(result?.protectiveFactors) ? result.protectiveFactors.slice(0, 2) : []),
-          recommendation: normalizeRelapseRecommendation(snapshot?.recommendation) || recommendation,
+          recommendation,
+          recommendations: mergedRecommendations,
           windows,
           compare: snapshot?.compare || null,
           raw: result

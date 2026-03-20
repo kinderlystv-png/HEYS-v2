@@ -20668,23 +20668,35 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
     const proteinLag = Math.max(0, expectedProteinCoverage - ctx.protPct);
     const structuredDay = ctx.meals.length >= 3 && ctx.gapHours < 4;
 
+    // Time-normalize: compare intake to expected progress for this hour.
+    // At noon (expected ~33%), 35% eaten → pacing 1.06 → on track.
+    // At 9 PM (expected ~93%), 40% eaten → pacing 0.43 → behind.
+    // Skip normalization when expected < 20% (very early / midnight edge case).
+    const kcalPacingRatio = expectedCoverage >= 0.20
+      ? Math.min(ctx.kcalPct / expectedCoverage, 1.0) : ctx.kcalPct;
+    const effectiveKcalPct = Math.max(ctx.kcalPct, kcalPacingRatio);
+    const protPacingRatio = expectedProteinCoverage >= 0.20
+      ? Math.min(ctx.protPct / expectedProteinCoverage, 1.0) : ctx.protPct;
+    const effectiveProtPct = Math.max(ctx.protPct, protPacingRatio);
+
     const baseUndereating = noFoodData ? 0
-      : ctx.kcalPct >= 0.9 ? 0
-        : ctx.kcalPct >= 0.8 ? 10
-          : ctx.kcalPct >= 0.7 ? 25
-            : ctx.kcalPct >= 0.6 ? 45
-              : ctx.kcalPct >= 0.5 ? 65
+      : effectiveKcalPct >= 0.9 ? 0
+        : effectiveKcalPct >= 0.8 ? 10
+          : effectiveKcalPct >= 0.7 ? 25
+            : effectiveKcalPct >= 0.6 ? 45
+              : effectiveKcalPct >= 0.5 ? 65
                 : 85;
 
+    // Evening bonus uses raw kcalPct — by evening, expected ≈ raw.
     const eveningUndereatingBonus = noFoodData ? 0
       : ctx.hour >= 18 && ctx.kcalPct < 0.7 ? 18
         : ctx.hour >= 17 && ctx.kcalPct < 0.5 ? 10
           : 0;
 
     const proteinPenalty = noFoodData ? 0
-      : ctx.protPct >= 0.9 ? 0
-        : ctx.protPct >= 0.75 ? 8
-          : ctx.protPct >= 0.6 ? 18
+      : effectiveProtPct >= 0.9 ? 0
+        : effectiveProtPct >= 0.75 ? 8
+          : effectiveProtPct >= 0.6 ? 18
             : 30;
 
     const lateProteinPenalty = noFoodData ? 0
@@ -20734,9 +20746,9 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
       && proteinLag <= 0.16;
     const aggressiveCut = !noFoodData
       && (
-        (ctx.kcalPct < 0.45 && proteinLag > 0.2)
+        (effectiveKcalPct < 0.45 && proteinLag > 0.2)
         || chronicLowDays >= 5
-        || (ctx.hour >= 18 && ctx.gapHours >= 5 && ctx.protPct < 0.45)
+        || (ctx.hour >= 18 && ctx.gapHours >= 5 && effectiveProtPct < 0.45)
       );
     const aggressiveCutBonus = aggressiveCut ? (ctx.hour >= 18 ? 8 : 4) : 0;
     const cutPattern = aggressiveCut
@@ -28683,20 +28695,20 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
   const renderActivityContextBadge = (activityContext, options = {}) => {
     if (!activityContext || activityContext.type === 'none') return null;
 
-    const { compact = false } = options;
+    const { compact = false, emphasis = 'default' } = options;
 
-    // Цвета по типу контекста (все позитивные — зелёные оттенки)
-    const colors = {
-      peri: { bg: '#22c55e22', border: '#22c55e44', text: '#16a34a', icon: '🔥' },
-      post: { bg: '#22c55e22', border: '#22c55e44', text: '#16a34a', icon: '💪' },
-      pre: { bg: '#22c55e22', border: '#22c55e44', text: '#16a34a', icon: '⚡' },
-      steps: { bg: '#22c55e22', border: '#22c55e44', text: '#16a34a', icon: '🚶' },
-      morning: { bg: '#22c55e22', border: '#22c55e44', text: '#16a34a', icon: '🌅' },
-      double: { bg: '#22c55e22', border: '#22c55e44', text: '#16a34a', icon: '🏆' },
-      fasted: { bg: '#22c55e22', border: '#22c55e44', text: '#16a34a', icon: '⚡' },
-      default: { bg: '#22c55e22', border: '#22c55e44', text: '#16a34a', icon: '🏋️' }
+    // Иконки по типу контекста
+    const icons = {
+      peri: '🔥',
+      post: '💪',
+      pre: '⚡',
+      steps: '🚶',
+      morning: '🌅',
+      double: '🏆',
+      fasted: '⚡',
+      default: '🏋️'
     };
-    const c = colors[activityContext.type] || colors.default;
+    const icon = icons[activityContext.type] || icons.default;
 
     // Человекопонятные заголовки по типу
     const titles = {
@@ -28731,80 +28743,55 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
       subtitle = `${details.gapMin} мин до тренировки`;
     }
 
+    const badgeClassName = [
+      'activity-context-badge',
+      compact ? 'activity-context-badge--compact' : '',
+      emphasis === 'contrast' ? 'activity-context-badge--contrast' : '',
+      `activity-context-badge--${activityContext.type || 'default'}`
+    ].filter(Boolean).join(' ');
+
+    const waveBonusText = waveBonusPct
+      ? waveBonusPct.replace(' быстрее', '')
+      : null;
+
     return React.createElement('div', {
-      className: 'activity-context-badge',
-      style: {
-        display: 'flex',
-        alignItems: 'flex-start',
-        gap: compact ? '8px' : '10px',
-        padding: compact ? '8px 12px' : '10px 14px',
-        marginBottom: '10px',
-        borderRadius: '12px',
-        background: c.bg,
-        border: `1px solid ${c.border}`
-      }
+      className: badgeClassName
     },
       // Иконка
       React.createElement('span', {
-        style: {
-          fontSize: compact ? '20px' : '24px',
-          lineHeight: 1,
-          marginTop: '2px'
-        }
-      }, c.icon),
+        className: 'activity-context-badge__icon'
+      }, icon),
 
       // Текст
-      React.createElement('div', { style: { flex: 1, minWidth: 0 } },
+      React.createElement('div', { className: 'activity-context-badge__content' },
         // Заголовок
         React.createElement('div', {
-          style: {
-            fontSize: compact ? '13px' : '14px',
-            fontWeight: '600',
-            color: c.text
-          }
+          className: 'activity-context-badge__title'
         }, title),
         // Подзаголовок
         subtitle && React.createElement('div', {
-          style: {
-            fontSize: '12px',
-            color: '#64748b',
-            marginTop: '2px'
-          }
+          className: 'activity-context-badge__subtitle'
         }, subtitle)
       ),
 
       // Бейджи справа (вертикально)
       React.createElement('div', {
-        style: {
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'flex-end',
-          gap: '4px',
-          flexShrink: 0
-        }
+        className: 'activity-context-badge__metrics'
       },
         // Бонус волны
-        waveBonusPct && React.createElement('div', {
-          style: {
-            fontSize: '12px',
-            fontWeight: '700',
-            color: '#22c55e',
-            background: '#22c55e22',
-            padding: '4px 8px',
-            borderRadius: '6px'
-          }
-        }, waveBonusPct),
+        waveBonusText && React.createElement('div', {
+          className: 'activity-context-badge__metric activity-context-badge__metric--success'
+        },
+          React.createElement('span', { className: 'activity-context-badge__metric-value' }, waveBonusText),
+          React.createElement('span', { className: 'activity-context-badge__metric-label' }, 'быстрее')
+        ),
         // Снижение вреда
         activityContext.harmMultiplier && activityContext.harmMultiplier < 1 && React.createElement('div', {
-          style: {
-            fontSize: '11px',
-            fontWeight: '600',
-            color: '#3b82f6',
-            background: '#3b82f622',
-            padding: '4px 8px',
-            borderRadius: '6px'
-          }
-        }, '🛡️ −' + Math.round((1 - activityContext.harmMultiplier) * 100) + '% вред')
+          className: 'activity-context-badge__metric activity-context-badge__metric--info'
+        },
+          React.createElement('span', { className: 'activity-context-badge__metric-value' }, '🛡️ −' + Math.round((1 - activityContext.harmMultiplier) * 100) + '%'),
+          React.createElement('span', { className: 'activity-context-badge__metric-label' }, 'вред')
+        )
       )
     );
   };
@@ -29614,7 +29601,7 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
         }, formatLipolysisTime(lipolysisMinutes)),
         // Плашка тренировки (если эффект от тренировки ускорил выход в липолиз)
         data.activityContext && React.createElement('div', { style: { marginTop: '12px' } },
-          renderActivityContextBadge(data.activityContext, { compact: true, showDesc: false })
+          renderActivityContextBadge(data.activityContext, { compact: true, emphasis: 'contrast' })
         )
       );
     }
@@ -37798,6 +37785,34 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
   // === РАСЧЁТ СТАТУСА ===
 
   /**
+   * Expected daily progress by hour (fraction 0.15–1.0).
+   * Cumulative factors (kcal, protein, water, steps) accumulate during 7:00–22:00.
+   * Returns 1.0 when hour is unknown (past days) or >= 22.
+   */
+  function getExpectedProgressByHour(hour) {
+    if (hour == null) return 1;
+    const h = Number(hour);
+    if (!Number.isFinite(h) || h >= 22) return 1;
+    if (h < 7) return 0.15;
+    return Math.max(0.15, (h - 7) / (22 - 7));
+  }
+
+  /**
+   * Time-adjust a cumulative ratio for scoring.
+   * Deficit: use pacing-normalized ratio (don't penalize early-day low intake).
+   * Surplus: keep raw ratio (overeating is real regardless of hour).
+   */
+  function timeAdjustRatio(rawRatio, hour, deficitThreshold) {
+    if (rawRatio >= deficitThreshold) return rawRatio;
+    const expected = getExpectedProgressByHour(hour);
+    // Only normalize when expected progress is meaningful (> 20%).
+    // Very early hours (expected < 20%) would over-inflate ratios.
+    if (expected < 0.20) return rawRatio;
+    const pacingRatio = Math.min(rawRatio / expected, 1.0);
+    return Math.max(rawRatio, pacingRatio);
+  }
+
+  /**
    * Linear interpolation helper for smooth factor scoring.
    * bands: [[ratioFrom, scoreTo], ...] sorted ascending by ratio.
    * Values below first band → first score; above last → last score.
@@ -37820,14 +37835,13 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
   /**
    * Вычислить оценку фактора (0-100)
    */
-  function scoreFactor(factorId, dayData, profile, dayTot, normAbs, waveData, waterGoal) {
+  function scoreFactor(factorId, dayData, profile, dayTot, normAbs, waveData, waterGoal, hour) {
     switch (factorId) {
       case 'kcal': {
         const target = normAbs?.kcal || 2000;
         const eaten = dayTot?.kcal || 0;
-        const ratio = eaten / target;
+        const ratio = timeAdjustRatio(eaten / target, hour, 0.85);
         // Smooth symmetric scoring: ideal zone 0.85-1.10, smooth ramp-down beyond
-        // Map ratio to a folded distance from the ideal midpoint (0.975)
         if (ratio >= 0.85 && ratio <= 1.10) return 100;
         if (ratio < 0.85) return scoreSmooth(ratio, [[0.45, 20], [0.55, 30], [0.65, 50], [0.75, 70], [0.85, 100]]);
         return scoreSmooth(ratio, [[1.10, 100], [1.20, 75], [1.30, 55], [1.40, 35], [1.55, 20]]);
@@ -37836,7 +37850,7 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
       case 'protein': {
         const target = normAbs?.prot || 80;
         const eaten = dayTot?.prot || 0;
-        const ratio = eaten / target;
+        const ratio = timeAdjustRatio(eaten / target, hour, 0.90);
         // Smooth: 90%+ = 100, cap excess penalty gently above 140%
         if (ratio >= 0.90 && ratio <= 1.40) return 100;
         if (ratio < 0.90) return scoreSmooth(ratio, [[0.20, 20], [0.40, 35], [0.60, 55], [0.75, 78], [0.90, 100]]);
@@ -37861,7 +37875,7 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
       case 'steps': {
         const steps = dayData?.steps || 0;
         const goal = profile?.stepsGoal || 10000;
-        const ratio = steps / goal;
+        const ratio = timeAdjustRatio(steps / goal, hour, 1.0);
         if (ratio >= 1.0) return 100;
         if (ratio >= 0.8) return 85;
         if (ratio >= 0.5) return 60;
@@ -37919,7 +37933,7 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
       case 'water': {
         const drunk = dayData?.waterMl || 0;
         const goal = waterGoal || 2000;
-        const ratio = drunk / goal;
+        const ratio = timeAdjustRatio(drunk / goal, hour, 0.95);
         // Smooth: ramp up to 100 at 95%+ goal
         if (ratio >= 0.95) return 100;
         return scoreSmooth(ratio, [[0.10, 20], [0.30, 35], [0.50, 52], [0.70, 68], [0.82, 80], [0.95, 100]]);
@@ -38035,13 +38049,20 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
       previousStatus = null // Для сглаживания
     } = opts;
 
+    // Determine current hour for time-of-day normalization.
+    // Only today gets time-adjusted scoring; past days use full-day expectation.
+    const now = new Date();
+    const todayIso = now.toISOString().slice(0, 10);
+    const isToday = !dayData.date || dayData.date === todayIso;
+    const hour = isToday ? now.getHours() : null;
+
     // Вычисляем оценки всех факторов
     const factorScores = {};
     const factorDetails = {};
     const issues = [];
 
     for (const [factorId, factor] of Object.entries(FACTORS)) {
-      const score = scoreFactor(factorId, dayData, profile, dayTot, normAbs, waveData, waterGoal);
+      const score = scoreFactor(factorId, dayData, profile, dayTot, normAbs, waveData, waterGoal, hour);
       factorScores[factorId] = score;
       factorDetails[factorId] = getFactorDetails(factorId, dayData, profile, dayTot, normAbs, waveData, waterGoal);
 

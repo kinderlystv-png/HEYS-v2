@@ -308,13 +308,28 @@
         const wRows = sizeInfo?.rows || w.rows || 1;
 
         let placed = false;
+
+        // 🔧 Column-preserving pack: сначала пробуем сохранить колонку пользователя,
+        // двигая виджет только вверх. Это позволяет вертикально стакать 1x1 виджеты.
+        const preferredCol = Math.min(Math.max(0, w.position?.col || 0), GRID_COLS - wCols);
         for (let row = 0; row < 200 && !placed; row++) {
-          for (let col = 0; col <= GRID_COLS - wCols; col++) {
-            if (canPlace(col, row, wCols, wRows)) {
-              positions[w.id] = { col, row };
-              occupy(w, col, row);
-              placed = true;
-              break;
+          if (canPlace(preferredCol, row, wCols, wRows)) {
+            positions[w.id] = { col: preferredCol, row };
+            occupy(w, preferredCol, row);
+            placed = true;
+          }
+        }
+
+        // Fallback: любая позиция (если preferred col занята на всех рядах)
+        if (!placed) {
+          for (let row = 0; row < 200 && !placed; row++) {
+            for (let col = 0; col <= GRID_COLS - wCols; col++) {
+              if (canPlace(col, row, wCols, wRows)) {
+                positions[w.id] = { col, row };
+                occupy(w, col, row);
+                placed = true;
+                break;
+              }
             }
           }
         }

@@ -85,6 +85,34 @@
   // === РАСЧЁТ СТАТУСА ===
 
   /**
+   * Expected daily progress by hour (fraction 0.15–1.0).
+   * Cumulative factors (kcal, protein, water, steps) accumulate during 7:00–22:00.
+   * Returns 1.0 when hour is unknown (past days) or >= 22.
+   */
+  function getExpectedProgressByHour(hour) {
+    if (hour == null) return 1;
+    const h = Number(hour);
+    if (!Number.isFinite(h) || h >= 22) return 1;
+    if (h < 7) return 0.15;
+    return Math.max(0.15, (h - 7) / (22 - 7));
+  }
+
+  /**
+   * Time-adjust a cumulative ratio for scoring.
+   * Deficit: use pacing-normalized ratio (don't penalize early-day low intake).
+   * Surplus: keep raw ratio (overeating is real regardless of hour).
+   */
+  function timeAdjustRatio(rawRatio, hour, deficitThreshold) {
+    if (rawRatio >= deficitThreshold) return rawRatio;
+    const expected = getExpectedProgressByHour(hour);
+    // Only normalize when expected progress is meaningful (> 20%).
+    // Very early hours (expected < 20%) would over-inflate ratios.
+    if (expected < 0.20) return rawRatio;
+    const pacingRatio = Math.min(rawRatio / expected, 1.0);
+    return Math.max(rawRatio, pacingRatio);
+  }
+
+  /**
    * Linear interpolation helper for smooth factor scoring.
    * bands: [[ratioFrom, scoreTo], ...] sorted ascending by ratio.
    * Values below first band → first score; above last → last score.
@@ -107,14 +135,13 @@
   /**
    * Вычислить оценку фактора (0-100)
    */
-  function scoreFactor(factorId, dayData, profile, dayTot, normAbs, waveData, waterGoal) {
+  function scoreFactor(factorId, dayData, profile, dayTot, normAbs, waveData, waterGoal, hour) {
     switch (factorId) {
       case 'kcal': {
         const target = normAbs?.kcal || 2000;
         const eaten = dayTot?.kcal || 0;
-        const ratio = eaten / target;
+        const ratio = timeAdjustRatio(eaten / target, hour, 0.85);
         // Smooth symmetric scoring: ideal zone 0.85-1.10, smooth ramp-down beyond
-        // Map ratio to a folded distance from the ideal midpoint (0.975)
         if (ratio >= 0.85 && ratio <= 1.10) return 100;
         if (ratio < 0.85) return scoreSmooth(ratio, [[0.45, 20], [0.55, 30], [0.65, 50], [0.75, 70], [0.85, 100]]);
         return scoreSmooth(ratio, [[1.10, 100], [1.20, 75], [1.30, 55], [1.40, 35], [1.55, 20]]);
@@ -123,7 +150,7 @@
       case 'protein': {
         const target = normAbs?.prot || 80;
         const eaten = dayTot?.prot || 0;
-        const ratio = eaten / target;
+        const ratio = timeAdjustRatio(eaten / target, hour, 0.90);
         // Smooth: 90%+ = 100, cap excess penalty gently above 140%
         if (ratio >= 0.90 && ratio <= 1.40) return 100;
         if (ratio < 0.90) return scoreSmooth(ratio, [[0.20, 20], [0.40, 35], [0.60, 55], [0.75, 78], [0.90, 100]]);
@@ -148,7 +175,7 @@
       case 'steps': {
         const steps = dayData?.steps || 0;
         const goal = profile?.stepsGoal || 10000;
-        const ratio = steps / goal;
+        const ratio = timeAdjustRatio(steps / goal, hour, 1.0);
         if (ratio >= 1.0) return 100;
         if (ratio >= 0.8) return 85;
         if (ratio >= 0.5) return 60;
@@ -206,7 +233,7 @@
       case 'water': {
         const drunk = dayData?.waterMl || 0;
         const goal = waterGoal || 2000;
-        const ratio = drunk / goal;
+        const ratio = timeAdjustRatio(drunk / goal, hour, 0.95);
         // Smooth: ramp up to 100 at 95%+ goal
         if (ratio >= 0.95) return 100;
         return scoreSmooth(ratio, [[0.10, 20], [0.30, 35], [0.50, 52], [0.70, 68], [0.82, 80], [0.95, 100]]);
@@ -322,13 +349,20 @@
       previousStatus = null // Для сглаживания
     } = opts;
 
+    // Determine current hour for time-of-day normalization.
+    // Only today gets time-adjusted scoring; past days use full-day expectation.
+    const now = new Date();
+    const todayIso = now.toISOString().slice(0, 10);
+    const isToday = !dayData.date || dayData.date === todayIso;
+    const hour = isToday ? now.getHours() : null;
+
     // Вычисляем оценки всех факторов
     const factorScores = {};
     const factorDetails = {};
     const issues = [];
 
     for (const [factorId, factor] of Object.entries(FACTORS)) {
-      const score = scoreFactor(factorId, dayData, profile, dayTot, normAbs, waveData, waterGoal);
+      const score = scoreFactor(factorId, dayData, profile, dayTot, normAbs, waveData, waterGoal, hour);
       factorScores[factorId] = score;
       factorDetails[factorId] = getFactorDetails(factorId, dayData, profile, dayTot, normAbs, waveData, waterGoal);
 

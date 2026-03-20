@@ -42,20 +42,20 @@
   const renderActivityContextBadge = (activityContext, options = {}) => {
     if (!activityContext || activityContext.type === 'none') return null;
 
-    const { compact = false } = options;
+    const { compact = false, emphasis = 'default' } = options;
 
-    // Цвета по типу контекста (все позитивные — зелёные оттенки)
-    const colors = {
-      peri: { bg: '#22c55e22', border: '#22c55e44', text: '#16a34a', icon: '🔥' },
-      post: { bg: '#22c55e22', border: '#22c55e44', text: '#16a34a', icon: '💪' },
-      pre: { bg: '#22c55e22', border: '#22c55e44', text: '#16a34a', icon: '⚡' },
-      steps: { bg: '#22c55e22', border: '#22c55e44', text: '#16a34a', icon: '🚶' },
-      morning: { bg: '#22c55e22', border: '#22c55e44', text: '#16a34a', icon: '🌅' },
-      double: { bg: '#22c55e22', border: '#22c55e44', text: '#16a34a', icon: '🏆' },
-      fasted: { bg: '#22c55e22', border: '#22c55e44', text: '#16a34a', icon: '⚡' },
-      default: { bg: '#22c55e22', border: '#22c55e44', text: '#16a34a', icon: '🏋️' }
+    // Иконки по типу контекста
+    const icons = {
+      peri: '🔥',
+      post: '💪',
+      pre: '⚡',
+      steps: '🚶',
+      morning: '🌅',
+      double: '🏆',
+      fasted: '⚡',
+      default: '🏋️'
     };
-    const c = colors[activityContext.type] || colors.default;
+    const icon = icons[activityContext.type] || icons.default;
 
     // Человекопонятные заголовки по типу
     const titles = {
@@ -90,80 +90,55 @@
       subtitle = `${details.gapMin} мин до тренировки`;
     }
 
+    const badgeClassName = [
+      'activity-context-badge',
+      compact ? 'activity-context-badge--compact' : '',
+      emphasis === 'contrast' ? 'activity-context-badge--contrast' : '',
+      `activity-context-badge--${activityContext.type || 'default'}`
+    ].filter(Boolean).join(' ');
+
+    const waveBonusText = waveBonusPct
+      ? waveBonusPct.replace(' быстрее', '')
+      : null;
+
     return React.createElement('div', {
-      className: 'activity-context-badge',
-      style: {
-        display: 'flex',
-        alignItems: 'flex-start',
-        gap: compact ? '8px' : '10px',
-        padding: compact ? '8px 12px' : '10px 14px',
-        marginBottom: '10px',
-        borderRadius: '12px',
-        background: c.bg,
-        border: `1px solid ${c.border}`
-      }
+      className: badgeClassName
     },
       // Иконка
       React.createElement('span', {
-        style: {
-          fontSize: compact ? '20px' : '24px',
-          lineHeight: 1,
-          marginTop: '2px'
-        }
-      }, c.icon),
+        className: 'activity-context-badge__icon'
+      }, icon),
 
       // Текст
-      React.createElement('div', { style: { flex: 1, minWidth: 0 } },
+      React.createElement('div', { className: 'activity-context-badge__content' },
         // Заголовок
         React.createElement('div', {
-          style: {
-            fontSize: compact ? '13px' : '14px',
-            fontWeight: '600',
-            color: c.text
-          }
+          className: 'activity-context-badge__title'
         }, title),
         // Подзаголовок
         subtitle && React.createElement('div', {
-          style: {
-            fontSize: '12px',
-            color: '#64748b',
-            marginTop: '2px'
-          }
+          className: 'activity-context-badge__subtitle'
         }, subtitle)
       ),
 
       // Бейджи справа (вертикально)
       React.createElement('div', {
-        style: {
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'flex-end',
-          gap: '4px',
-          flexShrink: 0
-        }
+        className: 'activity-context-badge__metrics'
       },
         // Бонус волны
-        waveBonusPct && React.createElement('div', {
-          style: {
-            fontSize: '12px',
-            fontWeight: '700',
-            color: '#22c55e',
-            background: '#22c55e22',
-            padding: '4px 8px',
-            borderRadius: '6px'
-          }
-        }, waveBonusPct),
+        waveBonusText && React.createElement('div', {
+          className: 'activity-context-badge__metric activity-context-badge__metric--success'
+        },
+          React.createElement('span', { className: 'activity-context-badge__metric-value' }, waveBonusText),
+          React.createElement('span', { className: 'activity-context-badge__metric-label' }, 'быстрее')
+        ),
         // Снижение вреда
         activityContext.harmMultiplier && activityContext.harmMultiplier < 1 && React.createElement('div', {
-          style: {
-            fontSize: '11px',
-            fontWeight: '600',
-            color: '#3b82f6',
-            background: '#3b82f622',
-            padding: '4px 8px',
-            borderRadius: '6px'
-          }
-        }, '🛡️ −' + Math.round((1 - activityContext.harmMultiplier) * 100) + '% вред')
+          className: 'activity-context-badge__metric activity-context-badge__metric--info'
+        },
+          React.createElement('span', { className: 'activity-context-badge__metric-value' }, '🛡️ −' + Math.round((1 - activityContext.harmMultiplier) * 100) + '%'),
+          React.createElement('span', { className: 'activity-context-badge__metric-label' }, 'вред')
+        )
       )
     );
   };
@@ -973,7 +948,7 @@
         }, formatLipolysisTime(lipolysisMinutes)),
         // Плашка тренировки (если эффект от тренировки ускорил выход в липолиз)
         data.activityContext && React.createElement('div', { style: { marginTop: '12px' } },
-          renderActivityContextBadge(data.activityContext, { compact: true, showDesc: false })
+          renderActivityContextBadge(data.activityContext, { compact: true, emphasis: 'contrast' })
         )
       );
     }

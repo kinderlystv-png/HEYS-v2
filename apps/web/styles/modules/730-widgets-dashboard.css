@@ -3435,10 +3435,13 @@ body:has(.page-reports) .hdr::after {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
 }
 
 .widget-heatmap--micro {
-  gap: 2px;
+  gap: 0;
   align-items: center;
   justify-content: center;
 }
@@ -3447,7 +3450,8 @@ body:has(.page-reports) .hdr::after {
   gap: 4px;
 }
 
-.widget-heatmap--micro .widget-heatmap__cell {
+.widget-heatmap--micro .widget-heatmap__cell,
+.widget-heatmap__cell--micro {
   width: 16px;
   height: 16px;
   border-radius: 4px;
@@ -3462,6 +3466,7 @@ body:has(.page-reports) .hdr::after {
 .widget-heatmap__grid {
   display: flex;
   gap: 6px;
+  align-items: center;
 }
 
 .widget-heatmap__grid--week {
@@ -3503,12 +3508,115 @@ body:has(.page-reports) .hdr::after {
   box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
 }
 
-.widget-heatmap__label {
-  font-size: 11px;
-  font-weight: 500;
-  color: var(--text-tertiary, #9ca3af);
-  text-align: center;
-  margin-top: 4px;
+.widget-heatmap--2x1,
+.widget-heatmap--3x1 {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 0;
+  height: 100%;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* 3x1: proportional gap to match 4x1 visual (cells 15px, gap = 6 × 15/20 ≈ 5px) */
+.widget-heatmap--3x1 .widget-heatmap__grid--week {
+  gap: 5px;
+  justify-content: center;
+  width: auto;
+}
+
+/* 2x1: 6px side padding reduces each inter-cell gap by 2px vs no-padding */
+.widget-heatmap--2x1 {
+  padding-inline: 6px;
+  width: 100%;
+}
+
+.widget-heatmap--2x1 .widget-heatmap__grid--week {
+  width: 100%;
+  justify-content: space-between;
+  gap: 0;
+}
+
+.widget-heatmap__compact-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  width: 100%;
+}
+
+.widget-heatmap__compact-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0;
+  width: 100%;
+}
+
+.widget-heatmap__cell--compact {
+  width: 14px;
+  height: 14px;
+  border-radius: 4px;
+  flex: 0 0 auto;
+}
+
+.widget-heatmap__cell--compact-3x1 {
+  width: 15px;
+  height: 15px;
+  border-radius: 4.5px;
+}
+
+.widget-heatmap__cell--compact-2x1 {
+  width: 15px;
+  height: 15px;
+  border-radius: 4.5px;
+}
+
+.widget-heatmap__cell--today {
+  box-shadow: 0 0 0 1.5px var(--color-blue-500, #3b82f6);
+}
+
+.widget-heatmap__compact-grid--3x1 {
+  align-items: stretch;
+}
+
+.widget-heatmap__compact-grid--3x1 .widget-heatmap__compact-row {
+  justify-content: space-between;
+  gap: 0;
+}
+
+.widget-heatmap__compact-grid--3x1 .widget-heatmap__cell--compact {
+  width: 14px;
+  height: 14px;
+}
+
+.widget-heatmap__compact-grid--2x1 {
+  align-items: stretch;
+}
+
+.widget-heatmap__compact-grid--2x1 .widget-heatmap__cell--compact {
+  width: 12px;
+  height: 12px;
+  border-radius: 3.5px;
+}
+
+.widget-heatmap__compact-grid--2x1 .widget-heatmap__compact-row {
+  justify-content: space-between;
+  gap: 0;
+}
+
+.widget-heatmap--2x1 .widget-heatmap__cell--stress::after,
+.widget-heatmap--3x1 .widget-heatmap__cell--stress::after {
+  width: 4px;
+  height: 4px;
+  top: -1px;
+  right: -1px;
+}
+
+.widget-heatmap--2x1 .widget-heatmap__cell--training,
+.widget-heatmap--3x1 .widget-heatmap__cell--training {
+  box-shadow: 0 0 0 1.5px #3b82f6 !important;
 }
 
 /* Cycle Widget — Premium Design */
@@ -4492,105 +4600,24 @@ body:has(.page-reports) .hdr::after {
 .widget-heatmap--2x2 {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 10px 12px;
-}
-
-.widget-heatmap__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.widget-heatmap__title {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text-secondary);
-}
-
-.widget-heatmap__streak {
-  font-size: 12px;
-  font-weight: 700;
-  color: #FF9500;
-  display: flex;
-  align-items: center;
-  gap: 4px;
+  gap: 6px;
+  padding: 0;
+  width: 100%;
+  justify-content: center;
 }
 
 .widget-heatmap__week-grid {
   display: flex;
-  justify-content: space-between;
-  gap: 4px;
-  flex: 1;
-  padding: 6px 0;
-}
-
-.widget-heatmap__day-col {
-  display: flex;
   flex-direction: column;
   align-items: center;
   gap: 4px;
-  flex: 1;
-}
-
-.widget-heatmap__day-date {
-  font-size: 9px;
-  font-weight: 500;
-  color: var(--text-secondary);
-  font-feature-settings: 'tnum' on;
-  line-height: 1;
-}
-
-.widget-heatmap__day-date--weekend {
-  color: #ef4444;
-}
-
-.widget-heatmap__day-col--today {
-  transform: scale(1.15);
-}
-
-/* Красивый бейдж для сегодняшней даты в виджете */
-.widget-heatmap__day-col--today .widget-heatmap__day-date {
-  color: #fff;
-  background: var(--color-blue-500, #3b82f6);
-  padding: 2px 4px;
-  border-radius: 4px;
-  box-shadow: 0 2px 6px rgba(59, 130, 246, 0.4);
-  font-weight: 700;
-  margin-top: -2px;
-  margin-bottom: -2px;
-}
-
-/* Спокойный статичный акцент для ячейки в виджете (без glow-анимации) */
-.widget-heatmap__day-col--today .widget-heatmap__cell {
-  position: relative;
-  z-index: 1;
-  box-shadow: 0 0 0 1.5px var(--color-blue-500, #3b82f6);
-}
-
-.widget-heatmap__day-label {
-  font-size: 9px;
-  font-weight: 600;
-  color: var(--text-tertiary);
-  text-transform: uppercase;
-  line-height: 1;
-}
-
-.widget-heatmap__day-label--weekend {
-  color: #ef4444;
-}
-
-.widget-heatmap__day-col--today .widget-heatmap__day-label {
-  color: var(--color-blue-500, #3b82f6);
-  font-weight: 700;
+  width: 100%;
 }
 
 .widget-heatmap__cell--2x2 {
-  width: 18px;
-  height: 18px;
+  width: 20px;
+  height: 20px;
   border-radius: 5px;
-  background: var(--widget-surface-muted);
-  transition: transform 0.15s ease;
 }
 
 .widget-heatmap__cell--2x2.widget-heatmap__cell--green {
@@ -4606,48 +4633,6 @@ body:has(.page-reports) .hdr::after {
 .widget-heatmap__cell--2x2.widget-heatmap__cell--red {
   background: linear-gradient(135deg, #ef4444, #f87171);
   box-shadow: 0 2px 6px rgba(239, 68, 68, 0.3);
-}
-
-.widget-heatmap__legend {
-  display: flex;
-  justify-content: center;
-  gap: 16px;
-  padding-top: 4px;
-  border-top: 1px solid var(--widget-surface-muted);
-}
-
-.widget-heatmap__legend-item {
-  font-size: 10px;
-  font-weight: 600;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.widget-heatmap__legend-item--green {
-  color: #22c55e;
-}
-
-.widget-heatmap__legend-item--yellow {
-  color: #eab308;
-}
-
-.widget-heatmap__legend-item--red {
-  color: #ef4444;
-}
-
-.widget-heatmap__legend-item--training {
-  color: #3b82f6;
-}
-
-.widget-heatmap__legend-item--stress {
-  color: #f87171;
-}
-
-/* Heatmap Training/Stress Indicators */
-.widget-heatmap__day-col--training .widget-heatmap__day-label {
-  color: #3b82f6;
-  font-weight: 700;
 }
 
 .widget-heatmap__cell--training {
@@ -4685,39 +4670,6 @@ body:has(.page-reports) .hdr::after {
   }
 }
 
-.widget-heatmap__cell-badges {
-  position: absolute;
-  top: -8px;
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  gap: 2px;
-  font-size: 8px;
-  line-height: 1;
-  z-index: 1;
-}
-
-.widget-heatmap__cell-badge--training {
-  filter: drop-shadow(0 1px 2px rgba(59, 130, 246, 0.5));
-}
-
-.widget-heatmap__cell-badge--stress {
-  filter: drop-shadow(0 1px 2px rgba(248, 113, 113, 0.5));
-  animation: heatmapStressBadge 2s infinite;
-}
-
-@keyframes heatmapStressBadge {
-
-  0%,
-  100% {
-    transform: scale(1);
-  }
-
-  50% {
-    transform: scale(1.1);
-  }
-}
-
 /* Dark mode heatmap training/stress */
 [data-theme="dark"] .widget-heatmap__cell--training {
   box-shadow: 0 0 0 2px #60a5fa !important;
@@ -4725,10 +4677,6 @@ body:has(.page-reports) .hdr::after {
 
 [data-theme="dark"] .widget-heatmap__cell--stress::after {
   background: #f87171;
-}
-
-[data-theme="dark"] .widget-heatmap__legend-item--training {
-  color: #60a5fa;
 }
 
 /* --- Cycle Widget 2×2 --- */

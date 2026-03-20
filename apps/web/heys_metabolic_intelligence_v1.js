@@ -356,6 +356,60 @@
    * Рассчитать риск срыва (0-100)
    * Факторы: недосып, стресс, дефицит >3 дней, триггеры
    */
+  function interpolateLinear(points, x) {
+    if (!Array.isArray(points) || points.length === 0) return 0;
+    if (x <= points[0].x) return points[0].y;
+
+    for (let i = 1; i < points.length; i++) {
+      const prev = points[i - 1];
+      const next = points[i];
+      if (x <= next.x) {
+        const ratio = (x - prev.x) / (next.x - prev.x || 1);
+        return prev.y + (next.y - prev.y) * ratio;
+      }
+    }
+
+    return points[points.length - 1].y;
+  }
+
+  function getSleepDebtFactor(sleepDebt) {
+    const debt = Math.max(0, Number(sleepDebt) || 0);
+    if (debt < 0.5) return null;
+
+    const impact = Math.round(interpolateLinear([
+      { x: 0.5, y: 5 },
+      { x: 1, y: 10 },
+      { x: 2, y: 18 },
+      { x: 3, y: 28 },
+      { x: 4, y: 36 },
+      { x: 5, y: 40 },
+    ], debt));
+
+    const roundedDebt = Math.round(debt * 10) / 10;
+    if (debt >= 3) {
+      return {
+        id: 'sleep_debt_high',
+        label: 'Сильный недосып',
+        impact,
+        details: `Недосып ${roundedDebt}ч — выраженный рост hunger drive и reward-seeking`
+      };
+    }
+    if (debt >= 1.5) {
+      return {
+        id: 'sleep_debt_moderate',
+        label: 'Недосып',
+        impact,
+        details: `Недосып ${roundedDebt}ч — умеренно повышен риск переедания`
+      };
+    }
+    return {
+      id: 'sleep_debt_mild',
+      label: 'Лёгкий недосып',
+      impact,
+      details: `Недосып ${roundedDebt}ч — лёгкий сдвиг в сторону hunger/reward`
+    };
+  }
+
   function calculateCrashRisk(dateStr, profile, history) {
     const lsGet = getScopedLsGet();
 
@@ -367,30 +421,10 @@
     const sleepHours = getDaySleepHours(day);
     const sleepNorm = profile?.sleepHours || 8;
     const sleepDebt = sleepNorm - sleepHours;
-    if (sleepDebt >= 3) {
-      riskScore += 40;
-      factors.push({
-        id: 'sleep_debt_high',
-        label: 'Сильный недосып',
-        impact: 40,
-        details: `Недосып ${sleepDebt}ч — повышен риск переедания`
-      });
-    } else if (sleepDebt >= 2) {
-      riskScore += 25;
-      factors.push({
-        id: 'sleep_debt_moderate',
-        label: 'Недосып',
-        impact: 25,
-        details: `Недосып ${sleepDebt}ч`
-      });
-    } else if (sleepDebt >= 1) {
-      riskScore += 15;
-      factors.push({
-        id: 'sleep_debt_mild',
-        label: 'Лёгкий недосып',
-        impact: 15,
-        details: `Недосып ${sleepDebt}ч`
-      });
+    const sleepFactor = getSleepDebtFactor(sleepDebt);
+    if (sleepFactor) {
+      riskScore += sleepFactor.impact;
+      factors.push(sleepFactor);
     }
 
     // 2. Стресс (+15-30)
@@ -509,8 +543,15 @@
   function countConsecutiveDeficitDays(history) {
     if (!history || history.length === 0) return 0;
 
+    // Skip today's incomplete data: before 20:00, caloric ratio is partial
+    // and shouldn't count as a deficit day.
+    const now = new Date();
+    const todayIso = now.toISOString().slice(0, 10);
+    const skipFirst = history[0]?.date === todayIso && now.getHours() < 20;
+
     let count = 0;
-    for (const day of history) {
+    for (let i = skipFirst ? 1 : 0; i < history.length; i++) {
+      const day = history[i];
       if (day.ratio && day.ratio < 0.85) {
         count++;
       } else {
@@ -1147,35 +1188,26 @@
     let triggers = [];
 
     // 1. Текущий риск (базовый) — вес из A/B теста
+    //    Base risk уже включает: sleep debt, stress, weekend, chronic deficit.
+    //    Здесь применяем только forward-looking множитель.
     const currentRisk = calculateCrashRisk(dateStr, profile, history);
-    // 🔧 FIX: было abWeights.current, должно быть abWeights.currentRisk
     risk += (currentRisk.risk || 0) * (abWeights.currentRisk || 0.6);
 
-    // 2. Недосып (прогноз на завтра) — вес из A/B теста
-    const day = lsGet(`heys_dayv2_${dateStr}`, {});
-    const sleepHours = getDaySleepHours(day);
-    if (sleepHours < 6) {
-      risk += abWeights.sleepDebt;
-      triggers.push({
-        id: 'sleep_debt_tomorrow',
-        label: 'Риск переедания после недосыпа',
-        impact: abWeights.sleepDebt,
-        confidence: 0.8
-      });
+    // 2-3. Sleep и Weekend НЕ добавляем повторно:
+    //    base calculateCrashRisk уже считает sleep (+15/+25/+40) и weekend (+15).
+    //    Добавление их здесь снова давало двойной счёт:
+    //    sleep: base(+25) × 0.6 = 15, ПЛЮС ещё +25 = 40 суммарно.
+    //    weekend: base(+15) × 0.6 = 9, ПЛЮС ещё +20 = 29 суммарно.
+    //    Промежуточные base-триггеры доступны через currentRisk.factors.
+
+    // Передаём base triggers для информативности
+    if (Array.isArray(currentRisk.factors)) {
+      for (const f of currentRisk.factors) {
+        triggers.push({ ...f, confidence: 0.8, source: 'base' });
+      }
     }
 
-    // 3. Выходные / Пятница — вес из A/B теста
-    if (dayOfWeek === 5 || dayOfWeek === 6 || dayOfWeek === 0) {
-      risk += abWeights.weekend;
-      triggers.push({
-        id: 'weekend',
-        label: 'Выходные — повышен риск',
-        impact: abWeights.weekend,
-        confidence: 0.7
-      });
-    }
-
-    // 4. Хронический дефицит (накопленный стресс) — вес из A/B теста
+    // 4. Хронический дефицит (forward-looking, не в base) — вес из A/B теста
     const consecutiveDays = countConsecutiveDeficitDays(history);
     if (consecutiveDays >= 4) {
       risk += abWeights.chronicDeficit;
@@ -1223,16 +1255,17 @@
 
     return {
       risk: finalRisk,
+      score: finalRisk, // alias for RiskRadar compatibility
       riskLevel: finalRisk < 30 ? 'low' : finalRisk < 60 ? 'medium' : 'high',
-      level: finalRisk < 30 ? 'low' : finalRisk < 60 ? 'medium' : 'high', // Алиас для совместимости
+      level: finalRisk < 30 ? 'low' : finalRisk < 60 ? 'medium' : 'high',
       primaryTrigger,
       triggers,
-      factors: currentRisk.factors || [], // Факторы из базового расчёта
-      positiveFactors: currentRisk.positiveFactors || [], // 🆕 Позитивные факторы
+      factors: triggers.length > 0 ? triggers : (currentRisk.factors || []),
+      positiveFactors: currentRisk.positiveFactors || [],
       preventionStrategy,
       timeframe: '24-48 часов',
       confidence: triggers.length > 0 ? 0.75 : 0.5,
-      abVariant: getABVariant().id // Для отладки
+      abVariant: getABVariant().id
     };
   }
 
@@ -1269,25 +1302,44 @@
    */
   function generatePreventionStrategy(triggers, risk) {
     const strategies = [];
+    const seen = new Set();
+
+    function pushStrategy(id, payload) {
+      if (!id || seen.has(id)) return;
+      seen.add(id);
+      strategies.push(payload);
+    }
 
     for (const trigger of triggers) {
-      if (trigger.id === 'sleep_debt_tomorrow') {
-        strategies.push({
+      if (/^sleep_debt_/.test(trigger.id || '')) {
+        pushStrategy('sleep_protect', {
           action: 'Высыпайся сегодня',
           reason: 'Недосып повышает голод на 15-28%',
           priority: 1
         });
-      } else if (trigger.id === 'weekend') {
-        strategies.push({
+      } else if (trigger.id === 'weekend' || trigger.id === 'weekend_trigger') {
+        pushStrategy('weekend_structure', {
           action: 'Запланируй приёмы заранее',
           reason: 'Спонтанность в выходные = риск срыва',
           priority: 2
         });
       } else if (trigger.id === 'metabolic_stress') {
-        strategies.push({
+        pushStrategy('refeed_day', {
           action: 'Рассмотри Refeed Day',
           reason: 'Перерыв от дефицита восстановит метаболизм',
           priority: 1
+        });
+      } else if (trigger.id === 'historical_pattern') {
+        pushStrategy('fallback_plan', {
+          action: 'Сделай план Б на вечер',
+          reason: 'История похожих дней подсказывает заранее снизить friction',
+          priority: 2
+        });
+      } else if (trigger.id === 'stress_high' || trigger.id === 'stress_moderate') {
+        pushStrategy('stress_buffer', {
+          action: 'Снизь friction вечером',
+          reason: 'При стрессе лучше заранее убрать импульсивные food-триггеры',
+          priority: 2
         });
       }
     }

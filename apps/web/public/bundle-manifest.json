@@ -35,11 +35,11 @@
     "builtAt": "2026-03-20T08:40:00.289Z"
   },
   "postboot-1-game": {
-    "file": "postboot-1-game.bundle.e95b0ec7c869.js",
-    "hash": "e95b0ec7c869",
+    "file": "postboot-1-game.bundle.09192210639f.js",
+    "hash": "09192210639f",
     "fileCount": 30,
-    "size": 1675660,
-    "builtAt": "2026-03-20T08:40:00.623Z"
+    "size": 1677352,
+    "builtAt": "2026-03-20T12:16:42.068Z"
   },
   "postboot-2-insights": {
     "file": "postboot-2-insights.bundle.1655bfa6815b.js",
@@ -49,10 +49,10 @@
     "builtAt": "2026-03-20T08:40:00.957Z"
   },
   "postboot-3-ui": {
-    "file": "postboot-3-ui.bundle.6b8db0537ac8.js",
-    "hash": "6b8db0537ac8",
+    "file": "postboot-3-ui.bundle.9dfca4f9e1c8.js",
+    "hash": "9dfca4f9e1c8",
     "fileCount": 27,
-    "size": 1546839,
-    "builtAt": "2026-03-20T08:40:01.302Z"
+    "size": 1558761,
+    "builtAt": "2026-03-20T12:16:42.210Z"
   }
 }
