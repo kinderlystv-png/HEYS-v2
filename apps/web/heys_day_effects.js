@@ -364,44 +364,68 @@
                             lastLoadedUpdatedAtRef.current = storageUpdatedAt;
 
                             if (prevDay && prevDay.date === newDay.date) {
-                                const prevMealsJson = JSON.stringify(prevDay.meals || []);
-                                const newMealsJson = JSON.stringify(newDay.meals || []);
-                                const prevTrainingsJson = JSON.stringify(prevDay.trainings || []);
-                                const newTrainingsJson = JSON.stringify(newDay.trainings || []);
-                                const prevSupplementsPlanned = JSON.stringify(prevDay.supplementsPlanned || []);
-                                const newSupplementsPlanned = JSON.stringify(newDay.supplementsPlanned || []);
-                                const prevSupplementsTaken = JSON.stringify(prevDay.supplementsTaken || []);
-                                const newSupplementsTaken = JSON.stringify(newDay.supplementsTaken || []);
+                                // ⚡ Fast path: updatedAt fingerprint (avoids all 8x JSON.stringify)
+                                if (prevDay.updatedAt && newDay.updatedAt && prevDay.updatedAt === newDay.updatedAt) {
+                                    return prevDay;
+                                }
 
-                                const isSameContent =
-                                    prevMealsJson === newMealsJson &&
-                                    prevTrainingsJson === newTrainingsJson &&
+                                // Medium path: primitives + array lengths (cheap, no serialization)
+                                const samePrimitives =
                                     prevDay.waterMl === newDay.waterMl &&
                                     prevDay.steps === newDay.steps &&
                                     prevDay.weightMorning === newDay.weightMorning &&
                                     !!prevDay.isFastingDay === !!newDay.isFastingDay &&
                                     !!prevDay.isIncomplete === !!newDay.isIncomplete &&
-                                    // Утренние оценки из чек-ина
                                     prevDay.moodMorning === newDay.moodMorning &&
                                     prevDay.wellbeingMorning === newDay.wellbeingMorning &&
-                                    prevDay.stressMorning === newDay.stressMorning &&
-                                    // Витамины/добавки
-                                    prevSupplementsPlanned === newSupplementsPlanned &&
-                                    prevSupplementsTaken === newSupplementsTaken;
+                                    prevDay.stressMorning === newDay.stressMorning;
 
-                                if (isSameContent) {
-                                    if (source === 'day-stats-real-data-cta' || newDay.isFastingDay || newDay.isIncomplete) {
-                                        console.error('[HEYS.dayRealData] handleDayUpdated kept existing state (same content)', {
-                                            currentDate: date,
-                                            source,
-                                            flags: {
-                                                isFastingDay: !!prevDay.isFastingDay,
-                                                isIncomplete: !!prevDay.isIncomplete
-                                            },
-                                            updatedAt: prevDay.updatedAt || 0
-                                        });
+                                if (samePrimitives) {
+                                    const pM = prevDay.meals || [], nM = newDay.meals || [];
+                                    const pT = prevDay.trainings || [], nT = newDay.trainings || [];
+                                    const pSP = prevDay.supplementsPlanned || [], nSP = newDay.supplementsPlanned || [];
+                                    const pST = prevDay.supplementsTaken || [], nST = newDay.supplementsTaken || [];
+
+                                    if (pM.length === nM.length && pT.length === nT.length &&
+                                        pSP.length === nSP.length && pST.length === nST.length) {
+                                        // Shallow meal items check (avoids full JSON.stringify on large arrays)
+                                        let mealsMatch = true;
+                                        for (let mi = 0; mi < pM.length && mealsMatch; mi++) {
+                                            const pItems = pM[mi]?.items || [], nItems = nM[mi]?.items || [];
+                                            if (pItems.length !== nItems.length || pM[mi]?.name !== nM[mi]?.name) {
+                                                mealsMatch = false;
+                                            } else {
+                                                for (let ii = 0; ii < pItems.length; ii++) {
+                                                    if (pItems[ii]?.grams !== nItems[ii]?.grams ||
+                                                        (pItems[ii]?.product_id ?? pItems[ii]?.id) !== (nItems[ii]?.product_id ?? nItems[ii]?.id)) {
+                                                        mealsMatch = false;
+                                                        break;
+                                                    }
+                                                }
+                                            }
+                                        }
+
+                                        // Only JSON.stringify small arrays (trainings + supplements, typically <10 items)
+                                        const isSameContent = mealsMatch &&
+                                            JSON.stringify(pT) === JSON.stringify(nT) &&
+                                            JSON.stringify(pSP) === JSON.stringify(nSP) &&
+                                            JSON.stringify(pST) === JSON.stringify(nST);
+
+                                        if (isSameContent) {
+                                            if (source === 'day-stats-real-data-cta' || newDay.isFastingDay || newDay.isIncomplete) {
+                                                console.error('[HEYS.dayRealData] handleDayUpdated kept existing state (same content)', {
+                                                    currentDate: date,
+                                                    source,
+                                                    flags: {
+                                                        isFastingDay: !!prevDay.isFastingDay,
+                                                        isIncomplete: !!prevDay.isIncomplete
+                                                    },
+                                                    updatedAt: prevDay.updatedAt || 0
+                                                });
+                                            }
+                                            return prevDay;
+                                        }
                                     }
-                                    return prevDay;
                                 }
                             }
                             if (source === 'day-stats-real-data-cta' || newDay.isFastingDay || newDay.isIncomplete) {

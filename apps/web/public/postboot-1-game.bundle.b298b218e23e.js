@@ -6599,13 +6599,20 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
       }
     });
 
-    // perf: defer на следующий tick — не блокируем main thread в момент day-updated события
+    // perf: defer до idle-времени браузера — не блокируем scroll и активные кадры
+    // requestIdleCallback ждёт пока браузер не освободится (в отличие от setTimeout(0),
+    // который стреляет в ближайший macrotask, блокируя scroll)
     window.addEventListener('heys:day-updated', () => {
-      setTimeout(() => {
+      const run = () => {
         if (HEYS.game?.recalculateDailyMissionsProgress) {
           HEYS.game.recalculateDailyMissionsProgress();
         }
-      }, 0);
+      };
+      if (typeof requestIdleCallback === 'function') {
+        requestIdleCallback(run, { timeout: 2000 });
+      } else {
+        setTimeout(run, 300);
+      }
     });
   }
 

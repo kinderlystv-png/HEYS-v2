@@ -190,6 +190,10 @@
           return this.getRelapseRiskData(widget);
         case 'dayScore':
           return this.getDayScoreData();
+        case 'insulinWave':
+          return this.getInsulinWaveData();
+        case 'healthTrend':
+          return this.getHealthTrendData(widget.settings);
         default:
           return {};
       }
@@ -1063,6 +1067,146 @@
       const m = String(date.getMonth() + 1).padStart(2, '0');
       const d = String(date.getDate()).padStart(2, '0');
       return `${y}-${m}-${d}`;
+    },
+
+    /**
+     * Получить данные Health Trend (Тренд здоровья из инсайтов)
+     */
+    getInsulinWaveData() {
+      if (this._isDemoMode()) {
+        return { hasData: true, status: 'decline', progress: 72, remaining: 28, endTime: '14:30', color: '#10b981', lastMealTime: '11:45', isLipolysis: false, isNightTime: false };
+      }
+      try {
+        const dayData = this._getDay() || {};
+        const meals = dayData.meals || [];
+        if (meals.length === 0) return { hasData: false, status: 'noData', progress: 0, remaining: 0, isLipolysis: false };
+        const mealsWithTime = meals.filter(m => m.time);
+        if (mealsWithTime.length === 0) return { hasData: false, status: 'noData', progress: 0, remaining: 0, isLipolysis: false };
+
+        const profile = this._getProfile() || {};
+        const baseWaveHours = profile?.insulinWaveHours || 3;
+
+        // Try full InsulinWave module
+        if (HEYS.InsulinWave?.calculate) {
+          try {
+            const pIndex = HEYS.products?.buildIndex?.() || null;
+            const getProductFromItem = (item) => {
+              if (!pIndex?.byId?.get) return item;
+              return pIndex.byId.get(item.product_id) || item;
+            };
+            const result = HEYS.InsulinWave.calculate({
+              meals,
+              pIndex,
+              getProductFromItem,
+              baseWaveHours,
+              trainings: dayData.trainings || [],
+              dayData: {
+                sleepHours: dayData.sleepHours || null,
+                sleepQuality: dayData.sleepQuality || null,
+                stressAvg: dayData.stressAvg || 0,
+                waterMl: dayData.waterMl || 0,
+                householdMin: dayData.householdMin || 0,
+                steps: dayData.steps || 0,
+                date: dayData.date,
+                lsGet: (key, fallback) => readStoredValue(key, fallback),
+                profile: { age: profile?.age || 0, weight: profile?.weight || 0, height: profile?.height || 0, gender: profile?.gender || '' }
+              }
+            });
+            if (result) {
+              const isLipolysis = result.status === 'lipolysis' || (result.remaining <= 0 && result.status !== 'rise');
+              console.info('[widget_data.getInsulinWaveData] ✅', { status: result.status, progress: result.progress, remaining: result.remaining });
+              return {
+                hasData: true,
+                status: result.status,
+                progress: result.progress || 0,
+                remaining: result.remaining || 0,
+                endTime: result.endTime || null,
+                color: result.color,
+                lastMealTime: result.lastMealTime || result.lastMealTimeDisplay || null,
+                insulinWaveHours: result.insulinWaveHours || baseWaveHours,
+                isLipolysis,
+                isNightTime: result.isNightTime || false
+              };
+            }
+          } catch (e) {
+            console.warn('[widget_data.getInsulinWaveData] calculate failed, fallback', e);
+          }
+        }
+
+        // Fallback: simple calculation
+        const sorted = [...mealsWithTime].sort((a, b) => b.time.localeCompare(a.time));
+        const lastMeal = sorted[0];
+        const [h, m] = (lastMeal.time || '0:0').split(':').map(Number);
+        const mealMinutes = h * 60 + (m || 0);
+        const now = new Date();
+        const nowMinutes = now.getHours() * 60 + now.getMinutes();
+        const waveMinutes = baseWaveHours * 60;
+        const diffMinutes = Math.max(0, nowMinutes - mealMinutes);
+        const remaining = Math.max(0, waveMinutes - diffMinutes);
+        const progress = Math.min(100, (diffMinutes / waveMinutes) * 100);
+        const endMin = mealMinutes + waveMinutes;
+        const endTime = String(Math.floor(endMin / 60) % 24).padStart(2, '0') + ':' + String(Math.round(endMin % 60)).padStart(2, '0');
+        const isLipolysis = remaining <= 0;
+        const color = isLipolysis ? '#22c55e' : progress > 65 ? '#10b981' : progress > 25 ? '#eab308' : '#f97316';
+        const status = isLipolysis ? 'lipolysis' : progress > 65 ? 'decline' : progress > 25 ? 'plateau' : 'rise';
+        return {
+          hasData: true, status, progress, remaining, endTime, color,
+          lastMealTime: lastMeal.time, insulinWaveHours: baseWaveHours,
+          isLipolysis, isNightTime: now.getHours() >= 22 || now.getHours() < 6
+        };
+      } catch (e) {
+        console.error('[widget_data.getInsulinWaveData] ❌', e);
+        return { hasData: false, status: 'error', progress: 0, remaining: 0, isLipolysis: false };
+      }
+    },
+
+    getHealthTrendData(settings = {}) {
+      try {
+        const days = settings?.periodDays || 7;
+        const analyze = HEYS.PredictiveInsights?.analyze;
+        if (!analyze) {
+          console.warn('[widget_data.getHealthTrendData] PredictiveInsights not loaded');
+          return { hasData: false, score: 0, periodDays: days };
+        }
+
+        const result = analyze({ daysBack: days });
+        if (!result?.available || !result?.healthScore) {
+          return { hasData: false, score: 0, periodDays: days };
+        }
+
+        const hs = result.healthScore;
+        const total = hs.total || 0;
+        const hasData = total > 0 || result.daysWithData >= 3;
+
+        // Категории: nutrition, timing, activity, recovery, metabolism
+        const categories = [
+          { key: 'nutrition', label: 'Питание', icon: '🥗' },
+          { key: 'timing', label: 'Тайминг', icon: '⏱' },
+          { key: 'activity', label: 'Активность', icon: '🏃' },
+          { key: 'recovery', label: 'Восстановл.', icon: '😴' },
+          { key: 'metabolism', label: 'Метаболизм', icon: '⚡' },
+        ].map(cat => ({
+          ...cat,
+          score: hs.categories?.[cat.key] ?? null,
+          breakdown: hs.breakdown?.[cat.key] || null
+        })).filter(cat => cat.score !== null);
+
+        console.info('[widget_data.getHealthTrendData] ✅', {
+          total, periodDays: days, daysWithData: result.daysWithData, categories: categories.length
+        });
+
+        return {
+          hasData,
+          score: total,
+          goalMode: hs.goalMode || 'unknown',
+          categories,
+          daysWithData: result.daysWithData,
+          periodDays: days
+        };
+      } catch (e) {
+        console.error('[widget_data.getHealthTrendData] ❌', e);
+        return { hasData: false, score: 0, periodDays: settings?.periodDays || 7 };
+      }
     },
 
     /**

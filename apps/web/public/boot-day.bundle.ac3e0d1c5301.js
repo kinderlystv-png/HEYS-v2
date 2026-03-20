@@ -7555,6 +7555,9 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
     const refreshInFlightRef = useRef(false);
     const refreshStatusRef = useRef('idle');
     const pullProgressRef = useRef(0);
+    // 🚀 PERF: Throttle React re-renders during pull — use rAF + direct DOM for smooth visual
+    const pullRafRef = useRef(null);
+    const lastProgressSyncRef = useRef(0);
 
     // Keep refs in sync with state
     useEffect(() => {
@@ -7701,6 +7704,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
         if (window.scrollY <= 0) {
           pullStartY.current = e.touches[0].clientY;
           isPulling.current = true;
+          lastProgressSyncRef.current = 0; // 🚀 PERF: reset throttle so first touchmove syncs immediately
           setRefreshStatus('pulling');
         }
       };
@@ -7717,7 +7721,34 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
           // Resistance effect с elastic curve
           const resistance = 0.45;
           const progress = Math.min(diff * resistance, PULL_THRESHOLD * 1.2);
-          setPullProgress(progress);
+          pullProgressRef.current = progress;
+
+          // 🚀 PERF: Direct DOM update for smooth 60fps visual (no React re-render)
+          if (!pullRafRef.current) {
+            pullRafRef.current = requestAnimationFrame(() => {
+              const el = document.querySelector('.pull-indicator');
+              if (el) {
+                const p = pullProgressRef.current;
+                el.style.height = Math.max(p, 0) + 'px';
+                el.style.opacity = String(Math.min(p / 35, 1));
+                const ring = el.querySelector('.pull-spinner-ring');
+                if (ring) {
+                  ring.style.transform = 'rotate(' + (-90 + Math.min(p / PULL_THRESHOLD, 1) * 180) + 'deg)';
+                  const circle = ring.querySelector('circle');
+                  if (circle) circle.setAttribute('stroke-dashoffset', String(63 - (Math.min(p / PULL_THRESHOLD, 1) * 63)));
+                }
+              }
+              pullRafRef.current = null;
+            });
+          }
+
+          // 🚀 PERF: Sync React state only every 200ms (for conditional rendering)
+          // But ALWAYS sync on first touchmove to mount the pull indicator element
+          const now = Date.now();
+          if (lastProgressSyncRef.current === 0 || now - lastProgressSyncRef.current >= 200) {
+            setPullProgress(progress);
+            lastProgressSyncRef.current = now;
+          }
 
           // Haptic при достижении threshold
           if (progress >= PULL_THRESHOLD && refreshStatusRef.current !== 'ready') {
@@ -7727,9 +7758,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
             setRefreshStatus('pulling');
           }
 
-          if (diff > 10 && e.cancelable) {
-            e.preventDefault(); // Предотвращаем обычный скролл
-          }
+          // 🚀 PERF R6: overscroll-behavior-y:none on body handles native overscroll,
+          // so we no longer need e.preventDefault() here — lets us use passive:true
         }
       };
 
@@ -7753,7 +7783,9 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
       };
 
       document.addEventListener('touchstart', onTouchStart, { passive: true });
-      document.addEventListener('touchmove', onTouchMove, { passive: false });
+      // 🚀 PERF R6: passive:true unblocks scroll compositor — overscroll-behavior-y:none on body
+      // prevents native pull-to-refresh, so e.preventDefault() is not needed
+      document.addEventListener('touchmove', onTouchMove, { passive: true });
       document.addEventListener('touchend', onTouchEnd, { passive: true });
 
       return () => {
@@ -11350,12 +11382,18 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
 
         const stepsColor = getStepsColor(stepsColorPercent);
 
+        const isDraggingRef = useRef(false);
+        const rafIdRef = useRef(0);
+        const pendingStepsRef = useRef(null);
+
         const handleStepsDrag = (e) => {
+            if (isDraggingRef.current) return;
             const slider = e.currentTarget.closest('.steps-slider');
             if (!slider) return;
+            isDraggingRef.current = true;
 
             const rect = slider.getBoundingClientRect();
-            const updateSteps = (clientX) => {
+            const computeSteps = (clientX) => {
                 const x = Math.max(0, Math.min(clientX - rect.left, rect.width));
                 const percent = (x / rect.width) * 100;
                 let newSteps;
@@ -11365,21 +11403,44 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
                     const extraPercent = (percent - 80) / 20;
                     newSteps = stepsGoal + Math.round((extraPercent * (stepsMax - stepsGoal)) / 100) * 100;
                 }
-                latestStepsRef.current = Math.min(stepsMax, Math.max(0, newSteps));
-                setDay(prev => ({ ...prev, steps: latestStepsRef.current, updatedAt: Date.now() }));
+                return Math.min(stepsMax, Math.max(0, newSteps));
+            };
+
+            const flushSteps = () => {
+                rafIdRef.current = 0;
+                const val = pendingStepsRef.current;
+                if (val == null) return;
+                pendingStepsRef.current = null;
+                latestStepsRef.current = val;
+                setDay(prev => ({ ...prev, steps: val, updatedAt: Date.now() }));
             };
 
             const onMove = (ev) => {
                 if (ev.cancelable) ev.preventDefault();
                 const clientX = ev.touches ? ev.touches[0].clientX : ev.clientX;
-                updateSteps(clientX);
+                pendingStepsRef.current = computeSteps(clientX);
+                if (!rafIdRef.current) {
+                    rafIdRef.current = requestAnimationFrame(flushSteps);
+                }
             };
 
             const onEnd = () => {
+                isDraggingRef.current = false;
                 document.removeEventListener('mousemove', onMove);
                 document.removeEventListener('mouseup', onEnd);
                 document.removeEventListener('touchmove', onMove);
                 document.removeEventListener('touchend', onEnd);
+
+                if (rafIdRef.current) {
+                    cancelAnimationFrame(rafIdRef.current);
+                    rafIdRef.current = 0;
+                }
+                // flush last pending value synchronously
+                if (pendingStepsRef.current != null) {
+                    latestStepsRef.current = pendingStepsRef.current;
+                    pendingStepsRef.current = null;
+                    setDay(prev => ({ ...prev, steps: latestStepsRef.current, updatedAt: Date.now() }));
+                }
 
                 const latestSteps = latestStepsRef.current || 0;
                 if (latestSteps !== lastDispatchedStepsRef.current) {
@@ -11396,7 +11457,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
             document.addEventListener('touchend', onEnd);
 
             const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-            updateSteps(clientX);
+            pendingStepsRef.current = computeSteps(clientX);
+            flushSteps();
         };
 
         return {
@@ -18544,7 +18606,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         if (!HEYS.dayEnergyContext?.buildEnergyContext) {
             throw new Error('[heys_day_v12] HEYS.dayEnergyContext not loaded before heys_day_v12.js');
         }
-        const energyCtx = HEYS.dayEnergyContext.buildEnergyContext({
+        // 🚀 PERF: memoize — TDEE calc + meal iteration is expensive, skip on unrelated re-renders
+        const energyCtx = useMemo(() => HEYS.dayEnergyContext.buildEnergyContext({
             day,
             prof,
             lsGet,
@@ -18552,7 +18615,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             M,
             r0,
             HEYS: window.HEYS
-        }) || {};
+        }) || {}, [day, prof, pIndex]);
         const {
             tdeeResult,
             bmr,
@@ -19344,7 +19407,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         if (!HEYS.dayNutritionState?.buildNutritionState) {
             throw new Error('[heys_day_v12] HEYS.dayNutritionState not loaded before heys_day_v12.js');
         }
-        const nutritionState = HEYS.dayNutritionState.buildNutritionState({
+        // 🚀 PERF: memoize — dayTot/normAbs calc iterates all meals + reads localStorage
+        const nutritionState = useMemo(() => HEYS.dayNutritionState.buildNutritionState({
             React,
             day,
             pIndex,
@@ -19352,7 +19416,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             getDailyNutrientColor,
             getDailyNutrientTooltip,
             HEYS: window.HEYS
-        }) || {};
+        }) || {}, [day, pIndex, optimum]);
         const {
             dayTot = { kcal: 0, carbs: 0, simple: 0, complex: 0, prot: 0, fat: 0, bad: 0, good: 0, trans: 0, fiber: 0, gi: 0, harm: 0 },
             normPerc = {},

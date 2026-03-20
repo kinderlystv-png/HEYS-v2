@@ -160,6 +160,35 @@
     },
 
     // === Категория: Здоровье ===
+    insulinWave: {
+      type: 'insulinWave',
+      name: 'Инсулиновая волна',
+      category: 'health',
+      icon: '🌊',
+      description: 'Текущая инсулиновая волна: идёт ли липолиз или инсулин ещё высокий. График волны с текущим положением.',
+      defaultSize: '2x2',
+      availableSizes: ['2x2', '2x1'],
+      dataKeys: ['meals', 'profile'],
+      component: 'WidgetInsulinWave',
+      settings: {}
+    },
+
+    healthTrend: {
+      type: 'healthTrend',
+      name: 'Тренд здоровья',
+      category: 'health',
+      icon: '🌿',
+      description: 'Health Score из инсайтов (7-30 дней): питание, активность, восстановление, тайминг, метаболизм',
+      defaultSize: '2x2',
+      availableSizes: ['2x2', '2x1'],
+      dataKeys: ['historyDays', 'profile'],
+      component: 'WidgetHealthTrend',
+      settings: {
+        periodDays: { type: 'number', default: 7, label: 'Период (дней)', min: 7, max: 30 },
+        showCategories: { type: 'boolean', default: true, label: 'Показывать категории' }
+      }
+    },
+
     dayScore: {
       type: 'dayScore',
       name: 'Оценка дня',

@@ -1,18 +1,18 @@
 // heys_day_day_handlers.js — Day-level handlers (water, weight, steps, date, training)
 // Phase 10.3 of HEYS Day v12 refactoring
 // Extracted from heys_day_v12.js
-(function(global) {
+(function (global) {
   'use strict';
-  
+
   const HEYS = global.HEYS = global.HEYS || {};
   const React = global.React;
-  
+
   // Dependencies - explicit check instead of silent fallbacks
   if (!HEYS.dayUtils) {
     throw new Error('[heys_day_day_handlers] HEYS.dayUtils is required. Ensure heys_day_utils.js is loaded first.');
   }
   const { haptic, lsGet } = HEYS.dayUtils;
-  
+
   /**
    * Create day-level handlers
    * @param {Object} deps - Dependencies
@@ -33,7 +33,7 @@
       setEditGramsValue,
       setGrams
     } = deps;
-    
+
     /**
      * Open weight picker modal
      */
@@ -48,7 +48,7 @@
         });
       }
     }
-    
+
     /**
      * Open steps goal picker
      */
@@ -57,7 +57,7 @@
         HEYS.showCheckin.steps();
       }
     }
-    
+
     /**
      * Open deficit picker
      */
@@ -74,7 +74,7 @@
         });
       }
     }
-    
+
     /**
      * Add water with animation
      * @param {number} ml - Milliliters to add
@@ -86,40 +86,42 @@
         HEYS.Paywall.showBlockedToast('Добавление воды недоступно');
         return;
       }
-      
+
       // Сначала прокручиваем к карточке воды (если вызвано из FAB)
       const waterCardEl = document.getElementById('water-card');
       if (!skipScroll && waterCardEl) {
         waterCardEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        // Задержка для завершения скролла перед анимацией
-        setTimeout(() => runWaterAnimation(ml), 400);
+        // rAF-chain вместо фиксированного setTimeout(400)
+        requestAnimationFrame(() => requestAnimationFrame(() => runWaterAnimation(ml)));
         return;
       }
       runWaterAnimation(ml);
     }
-    
+
     /**
      * Internal water animation runner
      */
     function runWaterAnimation(ml) {
       const newWater = (day.waterMl || 0) + ml;
-      setDay(prev => ({ ...prev, waterMl: (prev.waterMl || 0) + ml, lastWaterTime: Date.now(), updatedAt: Date.now() }));
-      
+      React.startTransition(() => {
+        setDay(prev => ({ ...prev, waterMl: (prev.waterMl || 0) + ml, lastWaterTime: Date.now(), updatedAt: Date.now() }));
+      });
+
       // 💧 Анимация падающей капли (длиннее для плавности)
       if (setShowWaterDrop) {
         setShowWaterDrop(true);
         setTimeout(() => setShowWaterDrop(false), 1200);
       }
-      
+
       // Анимация feedback
       if (setWaterAddedAnim) {
         setWaterAddedAnim('+' + ml);
       }
       haptic('light');
-      
+
       // 🎮 XP: Dispatch для gamification
       window.dispatchEvent(new CustomEvent('heysWaterAdded', { detail: { ml, total: newWater } }));
-      
+
       // 🎉 Celebration при достижении цели (переиспользуем confetti от калорий)
       const prevWater = day.waterMl || 0;
       if (waterGoal && newWater >= waterGoal && prevWater < waterGoal && !showConfetti && setShowConfetti) {
@@ -127,22 +129,24 @@
         haptic('success');
         setTimeout(() => setShowConfetti(false), 2000);
       }
-      
+
       // Скрыть анимацию
       if (setWaterAddedAnim) {
         setTimeout(() => setWaterAddedAnim(null), 800);
       }
     }
-    
+
     /**
      * Remove water (для исправления ошибок)
      */
     function removeWater(ml) {
       const newWater = Math.max(0, (day.waterMl || 0) - ml);
-      setDay(prev => ({ ...prev, waterMl: Math.max(0, (prev.waterMl || 0) - ml), updatedAt: Date.now() }));
+      React.startTransition(() => {
+        setDay(prev => ({ ...prev, waterMl: Math.max(0, (prev.waterMl || 0) - ml), updatedAt: Date.now() }));
+      });
       haptic('light');
     }
-    
+
     /**
      * Open household activity picker
      */
@@ -161,7 +165,7 @@
           steps = ['household_minutes'];
           title = '🏠 Добавить активность';
         }
-        
+
         HEYS.StepModal.show({
           steps,
           title,
@@ -174,8 +178,8 @@
           onComplete: (stepData) => {
             // Обновляем локальное состояние из сохранённых данных
             const savedDay = lsGet(`heys_dayv2_${dateKey}`, {});
-            setDay(prev => ({ 
-              ...prev, 
+            setDay(prev => ({
+              ...prev,
               householdActivities: savedDay.householdActivities || [],
               // Legacy fields для backward compatibility
               householdMin: savedDay.householdMin || 0,
@@ -186,7 +190,7 @@
         });
       }
     }
-    
+
     /**
      * Open edit grams modal
      */
@@ -208,7 +212,7 @@
         if (setEditGramsValue) setEditGramsValue(currentGrams || 100);
       }
     }
-    
+
     /**
      * Confirm edit grams modal
      */
@@ -219,7 +223,7 @@
       if (setEditGramsTarget) setEditGramsTarget(null);
       if (setEditGramsValue) setEditGramsValue(100);
     }
-    
+
     /**
      * Cancel edit grams modal
      */
@@ -227,7 +231,7 @@
       if (setEditGramsTarget) setEditGramsTarget(null);
       if (setEditGramsValue) setEditGramsValue(100);
     }
-    
+
     /**
      * Update training zone minutes
      */
@@ -243,7 +247,7 @@
         return { ...prevDay, trainings: arr, updatedAt: Date.now() };
       });
     }
-    
+
     /**
      * Open training picker
      */
@@ -266,35 +270,35 @@
         });
       }
     }
-    
+
     return {
       // Weight & Stats
       openWeightPicker,
       openStepsGoalPicker,
       openDeficitPicker,
-      
+
       // Water
       addWater,
       removeWater,
       runWaterAnimation,
-      
+
       // Household
       openHouseholdPicker,
-      
+
       // Grams editing
       openEditGramsModal,
       confirmEditGramsModal,
       cancelEditGramsModal,
-      
+
       // Training
       updateTraining,
       openTrainingPicker
     };
   }
-  
+
   // Export module
   HEYS.dayDayHandlers = {
     createDayHandlers
   };
-  
+
 })(window);

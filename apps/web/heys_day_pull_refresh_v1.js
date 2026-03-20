@@ -21,6 +21,9 @@
     const refreshInFlightRef = useRef(false);
     const refreshStatusRef = useRef('idle');
     const pullProgressRef = useRef(0);
+    // 🚀 PERF: Throttle React re-renders during pull — use rAF + direct DOM for smooth visual
+    const pullRafRef = useRef(null);
+    const lastProgressSyncRef = useRef(0);
 
     // Keep refs in sync with state
     useEffect(() => {
@@ -167,6 +170,7 @@
         if (window.scrollY <= 0) {
           pullStartY.current = e.touches[0].clientY;
           isPulling.current = true;
+          lastProgressSyncRef.current = 0; // 🚀 PERF: reset throttle so first touchmove syncs immediately
           setRefreshStatus('pulling');
         }
       };
@@ -183,7 +187,34 @@
           // Resistance effect с elastic curve
           const resistance = 0.45;
           const progress = Math.min(diff * resistance, PULL_THRESHOLD * 1.2);
-          setPullProgress(progress);
+          pullProgressRef.current = progress;
+
+          // 🚀 PERF: Direct DOM update for smooth 60fps visual (no React re-render)
+          if (!pullRafRef.current) {
+            pullRafRef.current = requestAnimationFrame(() => {
+              const el = document.querySelector('.pull-indicator');
+              if (el) {
+                const p = pullProgressRef.current;
+                el.style.height = Math.max(p, 0) + 'px';
+                el.style.opacity = String(Math.min(p / 35, 1));
+                const ring = el.querySelector('.pull-spinner-ring');
+                if (ring) {
+                  ring.style.transform = 'rotate(' + (-90 + Math.min(p / PULL_THRESHOLD, 1) * 180) + 'deg)';
+                  const circle = ring.querySelector('circle');
+                  if (circle) circle.setAttribute('stroke-dashoffset', String(63 - (Math.min(p / PULL_THRESHOLD, 1) * 63)));
+                }
+              }
+              pullRafRef.current = null;
+            });
+          }
+
+          // 🚀 PERF: Sync React state only every 200ms (for conditional rendering)
+          // But ALWAYS sync on first touchmove to mount the pull indicator element
+          const now = Date.now();
+          if (lastProgressSyncRef.current === 0 || now - lastProgressSyncRef.current >= 200) {
+            setPullProgress(progress);
+            lastProgressSyncRef.current = now;
+          }
 
           // Haptic при достижении threshold
           if (progress >= PULL_THRESHOLD && refreshStatusRef.current !== 'ready') {
@@ -193,9 +224,8 @@
             setRefreshStatus('pulling');
           }
 
-          if (diff > 10 && e.cancelable) {
-            e.preventDefault(); // Предотвращаем обычный скролл
-          }
+          // 🚀 PERF R6: overscroll-behavior-y:none on body handles native overscroll,
+          // so we no longer need e.preventDefault() here — lets us use passive:true
         }
       };
 
@@ -219,7 +249,9 @@
       };
 
       document.addEventListener('touchstart', onTouchStart, { passive: true });
-      document.addEventListener('touchmove', onTouchMove, { passive: false });
+      // 🚀 PERF R6: passive:true unblocks scroll compositor — overscroll-behavior-y:none on body
+      // prevents native pull-to-refresh, so e.preventDefault() is not needed
+      document.addEventListener('touchmove', onTouchMove, { passive: true });
       document.addEventListener('touchend', onTouchEnd, { passive: true });
 
       return () => {

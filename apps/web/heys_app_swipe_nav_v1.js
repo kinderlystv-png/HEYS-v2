@@ -63,15 +63,19 @@
                 const nextIndex = (currentIndex + 1) % SWIPEABLE_TABS.length;
                 const nextTab = SWIPEABLE_TABS[nextIndex];
 
-                // Фаза 1: выход старого контента
+                // Фаза 1: выход старого контента (rAF + CSS transition)
                 setSlideDirection('out-left');
                 if (navigator.vibrate) navigator.vibrate(10);
-                setTimeout(() => {
-                    // Фаза 2: смена вкладки + вход нового контента
-                    setTab(nextTab);
-                    setSlideDirection('in-left');
-                    setTimeout(() => setSlideDirection(null), 220);
-                }, 120);
+                requestAnimationFrame(() => {
+                    requestAnimationFrame(() => {
+                        // Фаза 2: смена вкладки + вход нового контента
+                        setTab(nextTab);
+                        setSlideDirection('in-left');
+                        requestAnimationFrame(() => {
+                            requestAnimationFrame(() => setSlideDirection(null));
+                        });
+                    });
+                });
             } else if (deltaX > 0) {
                 // Свайп вправо → предыдущая вкладка (по кругу)
                 const prevIndex = (currentIndex - 1 + SWIPEABLE_TABS.length) % SWIPEABLE_TABS.length;
@@ -79,11 +83,15 @@
 
                 setSlideDirection('out-right');
                 if (navigator.vibrate) navigator.vibrate(10);
-                setTimeout(() => {
-                    setTab(prevTab);
-                    setSlideDirection('in-right');
-                    setTimeout(() => setSlideDirection(null), 220);
-                }, 120);
+                requestAnimationFrame(() => {
+                    requestAnimationFrame(() => {
+                        setTab(prevTab);
+                        setSlideDirection('in-right');
+                        requestAnimationFrame(() => {
+                            requestAnimationFrame(() => setSlideDirection(null));
+                        });
+                    });
+                });
             }
         }, [tab, setTab]);
 

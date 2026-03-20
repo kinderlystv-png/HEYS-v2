@@ -14,8 +14,16 @@
         };
 
         const [defaultTab, setDefaultTabState] = React.useState('diary');
-        const [tab, setTab] = React.useState('diary');
+        const [tab, rawSetTab] = React.useState('diary');
         const [initialTabLoaded, setInitialTabLoaded] = React.useState(false);
+
+        // Wrap setTab in startTransition so heavy tab mount/unmount
+        // doesn't block the main thread (was causing 400-450ms click violations)
+        const setTab = React.useCallback((newTab) => {
+            React.startTransition(() => {
+                rawSetTab(newTab);
+            });
+        }, []);
 
         React.useEffect(() => {
             if (!window.HEYS) window.HEYS = {};
@@ -25,6 +33,9 @@
                 setTab(newTab);
             };
         }, [setTab]);
+
+        // Expose rawSetTab for initial load (should be synchronous)
+        const setTabImmediate = rawSetTab;
 
         React.useEffect(() => {
             if (initialTabLoaded) return;
@@ -36,7 +47,7 @@
                 const savedTab = getDefaultTabFromProfile();
                 devLog(`[App] 🏠 Loading default tab from profile: ${savedTab}`);
                 setDefaultTabState(savedTab);
-                setTab(savedTab);
+                setTabImmediate(savedTab);
                 setInitialTabLoaded(true);
                 return true;
             };

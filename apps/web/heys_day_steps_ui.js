@@ -71,12 +71,18 @@
 
         const stepsColor = getStepsColor(stepsColorPercent);
 
+        const isDraggingRef = useRef(false);
+        const rafIdRef = useRef(0);
+        const pendingStepsRef = useRef(null);
+
         const handleStepsDrag = (e) => {
+            if (isDraggingRef.current) return;
             const slider = e.currentTarget.closest('.steps-slider');
             if (!slider) return;
+            isDraggingRef.current = true;
 
             const rect = slider.getBoundingClientRect();
-            const updateSteps = (clientX) => {
+            const computeSteps = (clientX) => {
                 const x = Math.max(0, Math.min(clientX - rect.left, rect.width));
                 const percent = (x / rect.width) * 100;
                 let newSteps;
@@ -86,21 +92,44 @@
                     const extraPercent = (percent - 80) / 20;
                     newSteps = stepsGoal + Math.round((extraPercent * (stepsMax - stepsGoal)) / 100) * 100;
                 }
-                latestStepsRef.current = Math.min(stepsMax, Math.max(0, newSteps));
-                setDay(prev => ({ ...prev, steps: latestStepsRef.current, updatedAt: Date.now() }));
+                return Math.min(stepsMax, Math.max(0, newSteps));
+            };
+
+            const flushSteps = () => {
+                rafIdRef.current = 0;
+                const val = pendingStepsRef.current;
+                if (val == null) return;
+                pendingStepsRef.current = null;
+                latestStepsRef.current = val;
+                setDay(prev => ({ ...prev, steps: val, updatedAt: Date.now() }));
             };
 
             const onMove = (ev) => {
                 if (ev.cancelable) ev.preventDefault();
                 const clientX = ev.touches ? ev.touches[0].clientX : ev.clientX;
-                updateSteps(clientX);
+                pendingStepsRef.current = computeSteps(clientX);
+                if (!rafIdRef.current) {
+                    rafIdRef.current = requestAnimationFrame(flushSteps);
+                }
             };
 
             const onEnd = () => {
+                isDraggingRef.current = false;
                 document.removeEventListener('mousemove', onMove);
                 document.removeEventListener('mouseup', onEnd);
                 document.removeEventListener('touchmove', onMove);
                 document.removeEventListener('touchend', onEnd);
+
+                if (rafIdRef.current) {
+                    cancelAnimationFrame(rafIdRef.current);
+                    rafIdRef.current = 0;
+                }
+                // flush last pending value synchronously
+                if (pendingStepsRef.current != null) {
+                    latestStepsRef.current = pendingStepsRef.current;
+                    pendingStepsRef.current = null;
+                    setDay(prev => ({ ...prev, steps: latestStepsRef.current, updatedAt: Date.now() }));
+                }
 
                 const latestSteps = latestStepsRef.current || 0;
                 if (latestSteps !== lastDispatchedStepsRef.current) {
@@ -117,7 +146,8 @@
             document.addEventListener('touchend', onEnd);
 
             const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-            updateSteps(clientX);
+            pendingStepsRef.current = computeSteps(clientX);
+            flushSteps();
         };
 
         return {

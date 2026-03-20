@@ -7148,40 +7148,31 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     const selectProduct = useCallback((product) => {
       haptic('light');
 
-      try {
-        if (HEYS.store?.getHiddenProducts) {
-          setHiddenProducts(HEYS.store.getHiddenProducts());
-        }
-      } catch (e) {
-        // no-op
-      }
-
-      // Последние использованные граммы для этого продукта
+      // ⚡ PERF: defer non-critical store reads into startTransition
       const productId = product.id ?? product.product_id ?? product.name;
       const lastGrams = lsGet(`heys_last_grams_${productId}`, null);
-      // v25.3: Use ML grams only from _mlGrams (set once by recommendation), not stale data.grams
       const mlGrams = data._mlGrams || null;
       const defaultGrams = mlGrams || lastGrams || 100;
 
-      // 🔍 DEBUG: Подробный лог выбранного продукта
-      const hasNutrients = !!(product.kcal100 || product.protein100 || product.carbs100);
-      // console.log('[ProductSearchStep] selectProduct:', product.name, 'grams:', defaultGrams, {...});
-      if (!hasNutrients) {
-        console.error('🚨 [ProductSearchStep] CRITICAL: Product has NO nutrients!', product);
-      }
+      // ⚡ startTransition: defer heavy re-renders from product selection
+      React.startTransition(() => {
+        try {
+          if (HEYS.store?.getHiddenProducts) {
+            setHiddenProducts(HEYS.store.getHiddenProducts());
+          }
+        } catch (e) { /* no-op */ }
 
-      onChange({
-        ...data,
-        selectedProduct: product,
-        grams: defaultGrams,
-        _mlGrams: null, // v25.3: clear ML grams after first use
-        lastGrams: lastGrams
+        onChange({
+          ...data,
+          selectedProduct: product,
+          grams: defaultGrams,
+          _mlGrams: null,
+          lastGrams: lastGrams
+        });
       });
       // Автопереход на шаг граммов (index 4: search → grams)
-      // Шаги create/portions/harm — только для НОВЫХ продуктов
-      // Увеличен таймаут для гарантии обновления state
       if (goToStep) {
-        setTimeout(() => goToStep(4, 'left'), 150);
+        requestAnimationFrame(() => goToStep(4, 'left'));
       }
     }, [data, onChange, goToStep]);
 
@@ -9813,10 +9804,13 @@ NOVA: 1
       });
       // Режим редактирования — вызываем onSave
       if (context?.isEditMode && context?.onSave) {
-        context.onSave({
-          mealIndex: context.mealIndex,
-          itemId: context.itemId,
-          grams
+        // ⚡ startTransition: defer heavy meal recalculation re-renders
+        React.startTransition(() => {
+          context.onSave({
+            mealIndex: context.mealIndex,
+            itemId: context.itemId,
+            grams
+          });
         });
       }
       // Режим добавления — вызываем onAdd
@@ -9844,10 +9838,13 @@ NOVA: 1
           productId: productForSubmit?.id ?? productForSubmit?.product_id ?? null,
           productName: productForSubmit?.name || null
         });
-        context.onAdd({
-          product: productForSubmit,
-          grams,
-          mealIndex: context.mealIndex
+        // ⚡ startTransition: defer heavy meal recalculation re-renders
+        React.startTransition(() => {
+          context.onAdd({
+            product: productForSubmit,
+            grams,
+            mealIndex: context.mealIndex
+          });
         });
 
         // 🔊 Harm-based feedback sound
@@ -26135,6 +26132,35 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     },
 
     // === Категория: Здоровье ===
+    insulinWave: {
+      type: 'insulinWave',
+      name: 'Инсулиновая волна',
+      category: 'health',
+      icon: '🌊',
+      description: 'Текущая инсулиновая волна: идёт ли липолиз или инсулин ещё высокий. График волны с текущим положением.',
+      defaultSize: '2x2',
+      availableSizes: ['2x2', '2x1'],
+      dataKeys: ['meals', 'profile'],
+      component: 'WidgetInsulinWave',
+      settings: {}
+    },
+
+    healthTrend: {
+      type: 'healthTrend',
+      name: 'Тренд здоровья',
+      category: 'health',
+      icon: '🌿',
+      description: 'Health Score из инсайтов (7-30 дней): питание, активность, восстановление, тайминг, метаболизм',
+      defaultSize: '2x2',
+      availableSizes: ['2x2', '2x1'],
+      dataKeys: ['historyDays', 'profile'],
+      component: 'WidgetHealthTrend',
+      settings: {
+        periodDays: { type: 'number', default: 7, label: 'Период (дней)', min: 7, max: 30 },
+        showCategories: { type: 'boolean', default: true, label: 'Показывать категории' }
+      }
+    },
+
     dayScore: {
       type: 'dayScore',
       name: 'Оценка дня',
@@ -29481,6 +29507,10 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           return this.getRelapseRiskData(widget);
         case 'dayScore':
           return this.getDayScoreData();
+        case 'insulinWave':
+          return this.getInsulinWaveData();
+        case 'healthTrend':
+          return this.getHealthTrendData(widget.settings);
         default:
           return {};
       }
@@ -30354,6 +30384,146 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       const m = String(date.getMonth() + 1).padStart(2, '0');
       const d = String(date.getDate()).padStart(2, '0');
       return `${y}-${m}-${d}`;
+    },
+
+    /**
+     * Получить данные Health Trend (Тренд здоровья из инсайтов)
+     */
+    getInsulinWaveData() {
+      if (this._isDemoMode()) {
+        return { hasData: true, status: 'decline', progress: 72, remaining: 28, endTime: '14:30', color: '#10b981', lastMealTime: '11:45', isLipolysis: false, isNightTime: false };
+      }
+      try {
+        const dayData = this._getDay() || {};
+        const meals = dayData.meals || [];
+        if (meals.length === 0) return { hasData: false, status: 'noData', progress: 0, remaining: 0, isLipolysis: false };
+        const mealsWithTime = meals.filter(m => m.time);
+        if (mealsWithTime.length === 0) return { hasData: false, status: 'noData', progress: 0, remaining: 0, isLipolysis: false };
+
+        const profile = this._getProfile() || {};
+        const baseWaveHours = profile?.insulinWaveHours || 3;
+
+        // Try full InsulinWave module
+        if (HEYS.InsulinWave?.calculate) {
+          try {
+            const pIndex = HEYS.products?.buildIndex?.() || null;
+            const getProductFromItem = (item) => {
+              if (!pIndex?.byId?.get) return item;
+              return pIndex.byId.get(item.product_id) || item;
+            };
+            const result = HEYS.InsulinWave.calculate({
+              meals,
+              pIndex,
+              getProductFromItem,
+              baseWaveHours,
+              trainings: dayData.trainings || [],
+              dayData: {
+                sleepHours: dayData.sleepHours || null,
+                sleepQuality: dayData.sleepQuality || null,
+                stressAvg: dayData.stressAvg || 0,
+                waterMl: dayData.waterMl || 0,
+                householdMin: dayData.householdMin || 0,
+                steps: dayData.steps || 0,
+                date: dayData.date,
+                lsGet: (key, fallback) => readStoredValue(key, fallback),
+                profile: { age: profile?.age || 0, weight: profile?.weight || 0, height: profile?.height || 0, gender: profile?.gender || '' }
+              }
+            });
+            if (result) {
+              const isLipolysis = result.status === 'lipolysis' || (result.remaining <= 0 && result.status !== 'rise');
+              console.info('[widget_data.getInsulinWaveData] ✅', { status: result.status, progress: result.progress, remaining: result.remaining });
+              return {
+                hasData: true,
+                status: result.status,
+                progress: result.progress || 0,
+                remaining: result.remaining || 0,
+                endTime: result.endTime || null,
+                color: result.color,
+                lastMealTime: result.lastMealTime || result.lastMealTimeDisplay || null,
+                insulinWaveHours: result.insulinWaveHours || baseWaveHours,
+                isLipolysis,
+                isNightTime: result.isNightTime || false
+              };
+            }
+          } catch (e) {
+            console.warn('[widget_data.getInsulinWaveData] calculate failed, fallback', e);
+          }
+        }
+
+        // Fallback: simple calculation
+        const sorted = [...mealsWithTime].sort((a, b) => b.time.localeCompare(a.time));
+        const lastMeal = sorted[0];
+        const [h, m] = (lastMeal.time || '0:0').split(':').map(Number);
+        const mealMinutes = h * 60 + (m || 0);
+        const now = new Date();
+        const nowMinutes = now.getHours() * 60 + now.getMinutes();
+        const waveMinutes = baseWaveHours * 60;
+        const diffMinutes = Math.max(0, nowMinutes - mealMinutes);
+        const remaining = Math.max(0, waveMinutes - diffMinutes);
+        const progress = Math.min(100, (diffMinutes / waveMinutes) * 100);
+        const endMin = mealMinutes + waveMinutes;
+        const endTime = String(Math.floor(endMin / 60) % 24).padStart(2, '0') + ':' + String(Math.round(endMin % 60)).padStart(2, '0');
+        const isLipolysis = remaining <= 0;
+        const color = isLipolysis ? '#22c55e' : progress > 65 ? '#10b981' : progress > 25 ? '#eab308' : '#f97316';
+        const status = isLipolysis ? 'lipolysis' : progress > 65 ? 'decline' : progress > 25 ? 'plateau' : 'rise';
+        return {
+          hasData: true, status, progress, remaining, endTime, color,
+          lastMealTime: lastMeal.time, insulinWaveHours: baseWaveHours,
+          isLipolysis, isNightTime: now.getHours() >= 22 || now.getHours() < 6
+        };
+      } catch (e) {
+        console.error('[widget_data.getInsulinWaveData] ❌', e);
+        return { hasData: false, status: 'error', progress: 0, remaining: 0, isLipolysis: false };
+      }
+    },
+
+    getHealthTrendData(settings = {}) {
+      try {
+        const days = settings?.periodDays || 7;
+        const analyze = HEYS.PredictiveInsights?.analyze;
+        if (!analyze) {
+          console.warn('[widget_data.getHealthTrendData] PredictiveInsights not loaded');
+          return { hasData: false, score: 0, periodDays: days };
+        }
+
+        const result = analyze({ daysBack: days });
+        if (!result?.available || !result?.healthScore) {
+          return { hasData: false, score: 0, periodDays: days };
+        }
+
+        const hs = result.healthScore;
+        const total = hs.total || 0;
+        const hasData = total > 0 || result.daysWithData >= 3;
+
+        // Категории: nutrition, timing, activity, recovery, metabolism
+        const categories = [
+          { key: 'nutrition', label: 'Питание', icon: '🥗' },
+          { key: 'timing', label: 'Тайминг', icon: '⏱' },
+          { key: 'activity', label: 'Активность', icon: '🏃' },
+          { key: 'recovery', label: 'Восстановл.', icon: '😴' },
+          { key: 'metabolism', label: 'Метаболизм', icon: '⚡' },
+        ].map(cat => ({
+          ...cat,
+          score: hs.categories?.[cat.key] ?? null,
+          breakdown: hs.breakdown?.[cat.key] || null
+        })).filter(cat => cat.score !== null);
+
+        console.info('[widget_data.getHealthTrendData] ✅', {
+          total, periodDays: days, daysWithData: result.daysWithData, categories: categories.length
+        });
+
+        return {
+          hasData,
+          score: total,
+          goalMode: hs.goalMode || 'unknown',
+          categories,
+          daysWithData: result.daysWithData,
+          periodDays: days
+        };
+      } catch (e) {
+        console.error('[widget_data.getHealthTrendData] ❌', e);
+        return { hasData: false, score: 0, periodDays: settings?.periodDays || 7 };
+      }
     },
 
     /**
@@ -31486,6 +31656,10 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         return React.createElement(CrashRiskWidgetContent, { widget, data });
       case 'relapseRisk':
         return React.createElement(RelapseRiskWidgetContent, { widget, data });
+      case 'insulinWave':
+        return React.createElement(InsulinWaveWidgetContent, { widget, data });
+      case 'healthTrend':
+        return React.createElement(HealthTrendWidgetContent, { widget, data });
       default:
         return React.createElement('div', { className: 'widget__placeholder' },
           widgetType?.icon || '📊',
@@ -31601,6 +31775,364 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       levelBadge ? React.createElement('div', { style: { marginTop: '2px' } }, levelBadge) : null,
       // Top recommendation
       actionEl ? React.createElement('div', { style: { marginTop: '6px', maxWidth: '100%' } }, actionEl) : null
+    );
+  }
+
+  // === Insulin Wave Sparkline (SVG) ===
+  const IW_WAVE_SHAPE = [
+    { t: 0, level: 0.03 },
+    { t: 0.12, level: 0.45 },
+    { t: 0.25, level: 0.98 },
+    { t: 0.40, level: 0.85 },
+    { t: 0.60, level: 0.55 },
+    { t: 0.78, level: 0.25 },
+    { t: 0.90, level: 0.10 },
+    { t: 1.00, level: 0.03 }
+  ];
+
+  function getIWLevelAt(t) {
+    const clamped = Math.max(0, Math.min(1, t));
+    for (let i = 0; i < IW_WAVE_SHAPE.length - 1; i++) {
+      const a = IW_WAVE_SHAPE[i], b = IW_WAVE_SHAPE[i + 1];
+      if (clamped >= a.t && clamped <= b.t) {
+        const pct = (clamped - a.t) / (b.t - a.t);
+        return a.level + (b.level - a.level) * pct;
+      }
+    }
+    return 0.03;
+  }
+
+  function InsulinWaveSparkline({ progress, isLipolysis, color, width, height }) {
+    const pathRef = React.useRef(null);
+    const [pathLength, setPathLength] = React.useState(0);
+    const [revealed, setRevealed] = React.useState(false);
+
+    const svgW = typeof width === 'number' ? width : 200;
+    const svgH = height || 50;
+    const isFluid = width === '100%';
+    const padX = 4, padY = 6;
+    const chartW = svgW - padX * 2;
+    const chartH = svgH - padY * 2;
+
+    const pts = IW_WAVE_SHAPE.map(p => ({
+      x: padX + p.t * chartW,
+      y: padY + chartH - p.level * chartH
+    }));
+
+    const buildPath = () => {
+      if (pts.length < 2) return '';
+      let d = `M${pts[0].x.toFixed(1)},${pts[0].y.toFixed(1)}`;
+      for (let i = 0; i < pts.length - 1; i++) {
+        const p1 = pts[i], p2 = pts[i + 1];
+        const cpx = ((p1.x + p2.x) / 2).toFixed(1);
+        d += ` Q${cpx},${p1.y.toFixed(1)} ${p2.x.toFixed(1)},${p2.y.toFixed(1)}`;
+      }
+      return d;
+    };
+
+    const pathD = buildPath();
+
+    React.useEffect(() => {
+      const el = pathRef.current;
+      if (!el || !pathD) return;
+      const len = el.getTotalLength();
+      setPathLength(len);
+      setRevealed(false);
+      let r2 = 0;
+      const r1 = requestAnimationFrame(() => { r2 = requestAnimationFrame(() => setRevealed(true)); });
+      return () => { cancelAnimationFrame(r1); if (r2) cancelAnimationFrame(r2); };
+    }, [pathD]);
+
+    const clampedT = Math.min(1, (progress || 0) / 100);
+    const dotX = (padX + clampedT * chartW).toFixed(1);
+    const dotLevel = isLipolysis ? 0.03 : getIWLevelAt(clampedT);
+    const dotY = (padY + chartH - dotLevel * chartH).toFixed(1);
+    const lineColor = isLipolysis ? '#22c55e' : (color || '#3b82f6');
+
+    return React.createElement('svg', {
+      viewBox: `0 0 ${svgW} ${svgH}`,
+      width: isFluid ? '100%' : svgW,
+      height: svgH,
+      preserveAspectRatio: 'xMidYMid meet',
+      style: { overflow: 'visible', display: 'block' }
+    },
+      // Baseline dashed line
+      React.createElement('line', {
+        x1: padX, y1: svgH - padY, x2: svgW - padX, y2: svgH - padY,
+        stroke: 'var(--heys-border,#e2e8f0)', strokeWidth: 1, strokeDasharray: '3 3'
+      }),
+      // Wave curve
+      React.createElement('path', {
+        ref: pathRef,
+        d: pathD,
+        fill: 'none',
+        stroke: lineColor,
+        strokeWidth: 2,
+        strokeLinecap: 'round',
+        style: {
+          strokeDasharray: pathLength || 1,
+          strokeDashoffset: revealed ? 0 : (pathLength || 1),
+          transition: 'stroke-dashoffset 1.2s cubic-bezier(0.22, 0.61, 0.36, 1)'
+        }
+      }),
+      // "Now" dot
+      React.createElement('circle', { cx: dotX, cy: dotY, r: 4, fill: lineColor, stroke: '#fff', strokeWidth: 2 }),
+      // Glow ring for lipolysis
+      isLipolysis && React.createElement('circle', { cx: dotX, cy: dotY, r: 7, fill: 'none', stroke: '#22c55e', strokeWidth: 1.5, opacity: 0.4 })
+    );
+  }
+
+  // === Insulin Wave Widget Content ===
+  function InsulinWaveWidgetContent({ widget, data }) {
+    const hasData = data?.hasData ?? false;
+    const status = data?.status || 'noData';
+    const progress = data?.progress || 0;
+    const remaining = data?.remaining || 0;
+    const endTime = data?.endTime || null;
+    const color = data?.color || '#3b82f6';
+    const isLipolysis = data?.isLipolysis ?? (status === 'lipolysis');
+    const lastMealTime = data?.lastMealTime || null;
+    const isNightTime = data?.isNightTime || false;
+
+    const d = getWidgetDims(widget);
+    const isShort = d.isShort;
+
+    // Главный заголовок — что происходит с жиром сейчас
+    const mainLabel = isLipolysis
+      ? (isNightTime ? 'Жир сжигается' : 'Жир сжигается')
+      : status === 'decline' ? 'Жир начнёт сжигаться'
+        : 'Жир накапливается';
+
+    const mainLabelColor = isLipolysis
+      ? '#22c55e'
+      : status === 'decline' ? '#22c55e'
+        : '#f97316'; // ярко-оранжевый = предупреждение
+
+    const timeLabelColor = '#3b82f6'; // всегда синий
+
+    // Время до липолиза или "сейчас"
+    const timeLabel = isLipolysis
+      ? 'Сейчас'
+      : remaining > 0
+        ? (remaining >= 60
+          ? `ещё ${Math.floor(remaining / 60)}ч ${Math.round(remaining % 60)}м`
+          : `ещё ${Math.round(remaining)} мин`)
+        : '—';
+
+    // Сколько минут уже идёт липолиз (по endTime как времени старта)
+    const calcLipolysisElapsed = (et) => {
+      if (!et) return 0;
+      const [h, m] = et.split(':').map(Number);
+      if (isNaN(h)) return 0;
+      const now = new Date();
+      const nowMin = now.getHours() * 60 + now.getMinutes();
+      const startMin = h * 60 + (m || 0);
+      let diff = nowMin - startMin;
+      if (diff < 0) diff += 1440;
+      return diff > 720 ? 0 : diff; // не больше 12ч
+    };
+    const lipolysisMin = isLipolysis ? calcLipolysisElapsed(endTime) : 0;
+    // ~70 ккал/ч из жира при базовом обмене
+    const lipolysisKcal = Math.round(lipolysisMin * 1.15);
+
+    const subText = isLipolysis
+      ? (lipolysisKcal > 3
+        ? `~${lipolysisKcal} ккал жира сожжено`
+        : (isNightTime ? 'Ночной липолиз' : 'Не ешь — жир уходит'))
+      : (endTime ? `Липолиз начнётся в ${endTime}` : 'Ждём снижения инсулина');
+    const subTextColor = isLipolysis ? '#22c55e' : '#eab308';
+
+    if (!hasData) {
+      return React.createElement('div', {
+        style: { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '4px', opacity: 0.5 }
+      },
+        React.createElement('div', { style: { fontSize: '1.4rem' } }, '🌊'),
+        React.createElement('div', { style: { fontSize: '0.7rem', color: 'var(--heys-text-tertiary,#64748b)', textAlign: 'center' } }, 'Добавьте приёмы пищи')
+      );
+    }
+
+    const sparkline = React.createElement(InsulinWaveSparkline, {
+      progress, isLipolysis, color, width: '100%', height: isShort ? 34 : 50
+    });
+
+    // === 2×1 horizontal ===
+    if (isShort) {
+      return React.createElement('div', {
+        style: { display: 'flex', alignItems: 'center', height: '100%', gap: '8px', padding: '4px 10px' }
+      },
+        React.createElement('div', {
+          style: { display: 'flex', flexDirection: 'column', gap: '2px', flexShrink: 0, minWidth: '68px' }
+        },
+          React.createElement('div', {
+            style: { fontSize: '0.72rem', fontWeight: 700, color: mainLabelColor, lineHeight: 1.2 }
+          }, mainLabel),
+          React.createElement('div', {
+            style: { fontSize: '0.65rem', color: timeLabelColor, fontWeight: 700 }
+          }, timeLabel)
+        ),
+        React.createElement('div', { style: { flex: 1, minWidth: 0 } }, sparkline)
+      );
+    }
+
+    // === 2×2 vertical ===
+    return React.createElement('div', {
+      style: { display: 'flex', flexDirection: 'column', justifyContent: 'space-between', height: '100%', padding: '8px 8px 6px' }
+    },
+      // Header row
+      React.createElement('div', {
+        style: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }
+      },
+        React.createElement('div', {
+          style: { fontSize: '0.8rem', fontWeight: 700, color: mainLabelColor, lineHeight: 1.2 }
+        }, mainLabel)
+      ),
+      // Time (big)
+      React.createElement('div', {
+        style: { fontSize: '1.2rem', fontWeight: 800, color: timeLabelColor, letterSpacing: '-0.5px', lineHeight: 1, marginTop: '2px' }
+      }, timeLabel),
+      // Sparkline
+      React.createElement('div', {
+        style: { flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', marginTop: '4px', marginBottom: '4px' }
+      }, sparkline),
+      // Subtext
+      React.createElement('div', {
+        style: { fontSize: '0.6rem', fontWeight: 600, color: subTextColor, lineHeight: 1.3 }
+      }, subText)
+    );
+  }
+
+  // === Health Trend Widget Content (Тренд здоровья 0-100 из инсайтов) ===
+  function HealthTrendWidgetContent({ widget, data }) {
+    const score = data?.score ?? 0;
+    const hasData = data?.hasData ?? false;
+    const periodDays = data?.periodDays ?? 7;
+    const categories = Array.isArray(data?.categories) ? data.categories : [];
+    const daysWithData = data?.daysWithData ?? 0;
+    const showCategories = widget.settings?.showCategories !== false;
+
+    const d = getWidgetDims(widget);
+    const isShort = d.isShort; // 2x1
+
+    const getColor = (s) => {
+      if (s >= 85) return '#10b981';
+      if (s >= 70) return '#22c55e';
+      if (s >= 50) return '#eab308';
+      if (s >= 30) return '#f97316';
+      return '#ef4444';
+    };
+
+    const color = getColor(score);
+
+    const PERIODS = [7, 30];
+    const handlePeriod = (days, e) => {
+      e?.stopPropagation?.();
+      if (!widget?.id || periodDays === days) return;
+      HEYS.Widgets.state?.updateWidget(widget.id, {
+        settings: { ...(widget.settings || {}), periodDays: days }
+      }, true);
+    };
+
+    const periodRow = React.createElement('div', {
+      style: { display: 'flex', gap: '4px' }
+    }, PERIODS.map(days => {
+      const isActive = periodDays === days;
+      return React.createElement('button', {
+        key: days,
+        type: 'button',
+        onClick: (e) => handlePeriod(days, e),
+        onPointerDown: (e) => e.stopPropagation(),
+        onPointerUp: (e) => e.stopPropagation(),
+        onTouchStart: (e) => e.stopPropagation(),
+        style: {
+          border: 'none', borderRadius: '999px',
+          padding: '2px 8px', minHeight: '20px', cursor: 'pointer',
+          fontSize: '0.65rem', fontWeight: isActive ? 700 : 500, lineHeight: 1,
+          background: isActive ? color : 'var(--heys-bg-secondary,#f1f5f9)',
+          color: isActive ? '#fff' : 'var(--heys-text-secondary,#94a3b8)',
+          transition: 'all 0.15s ease'
+        }
+      }, `${days} дн.`);
+    }));
+
+    if (!hasData) {
+      return React.createElement('div', {
+        style: { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '4px', opacity: 0.5 }
+      },
+        React.createElement('div', { style: { fontSize: isShort ? '1.2rem' : '1.5rem' } }, '🌿'),
+        React.createElement('div', { style: { fontSize: '0.7rem', color: 'var(--heys-text-tertiary,#64748b)', textAlign: 'center' } },
+          daysWithData < 3 ? 'Нужно 3+ дня данных' : 'Нет данных анализа'
+        ),
+        React.createElement('div', { style: { marginTop: '4px' } }, periodRow)
+      );
+    }
+
+    // === 2×1 horizontal: score left, label + period right ===
+    if (isShort) {
+      return React.createElement('div', {
+        style: { display: 'flex', alignItems: 'center', height: '100%', gap: '10px', padding: '4px 10px' }
+      },
+        // Score
+        React.createElement('div', {
+          style: { fontSize: '2rem', fontWeight: 800, color, lineHeight: 1, letterSpacing: '-1px', flexShrink: 0 }
+        }, Math.round(score)),
+        // Right: label + period buttons
+        React.createElement('div', {
+          style: { display: 'flex', flexDirection: 'column', gap: '4px', minWidth: 0, flex: 1 }
+        },
+          React.createElement('div', {
+            style: { fontSize: '0.65rem', fontWeight: 600, color: 'var(--heys-text-secondary,#64748b)', whiteSpace: 'nowrap' }
+          }, 'Тренд здоровья'),
+          periodRow
+        )
+      );
+    }
+
+    // === 2×2 vertical: score + label + categories + period ===
+    return React.createElement('div', {
+      style: { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '4px', padding: '8px 6px' }
+    },
+      // Score
+      React.createElement('div', {
+        style: { fontSize: '2.8rem', fontWeight: 800, color, lineHeight: 1, letterSpacing: '-1px' }
+      }, Math.round(score)),
+      // Label
+      React.createElement('div', {
+        style: { fontSize: '0.65rem', fontWeight: 600, color: 'var(--heys-text-secondary,#64748b)' }
+      }, 'Тренд здоровья'),
+      // Category mini-bars
+      showCategories && categories.length > 0
+        ? React.createElement('div', {
+          style: { display: 'flex', gap: '4px', marginTop: '4px', width: '100%', justifyContent: 'center' }
+        }, categories.map(cat => {
+          const catColor = getColor(cat.score);
+          return React.createElement('div', {
+            key: cat.key,
+            title: `${cat.label}: ${cat.score}`,
+            style: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px', minWidth: 0, flex: 1 }
+          },
+            React.createElement('div', {
+              style: {
+                width: '100%', maxWidth: '22px', height: '28px',
+                borderRadius: '4px', background: 'var(--heys-bg-secondary,#f1f5f9)',
+                overflow: 'hidden', position: 'relative'
+              }
+            },
+              React.createElement('div', {
+                style: {
+                  position: 'absolute', bottom: 0, left: 0, right: 0,
+                  height: `${cat.score}%`, background: catColor, opacity: 0.8,
+                  borderRadius: '3px', transition: 'height 0.4s ease'
+                }
+              })
+            ),
+            React.createElement('div', {
+              style: { fontSize: '0.55rem', color: 'var(--heys-text-tertiary,#94a3b8)', whiteSpace: 'nowrap' }
+            }, cat.icon)
+          );
+        }))
+        : null,
+      // Period buttons
+      React.createElement('div', { style: { marginTop: '4px' } }, periodRow)
     );
   }
 

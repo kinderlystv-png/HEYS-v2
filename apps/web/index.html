@@ -648,10 +648,10 @@
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
     <link rel="dns-prefetch" href="https://cdn.jsdelivr.net" />
     <!-- Preload критических boot-бандлов (2026-02-25 bundle migration) -->
-    <link rel="preload" href="boot-core.bundle.41d7587ef47a.js" as="script" />
-    <link rel="preload" href="boot-calc.bundle.f14bc95ea2b5.js" as="script" />
-    <link rel="preload" href="boot-day.bundle.bfb1aa640109.js" as="script" />
-    <link rel="preload" href="boot-app.bundle.0eb48b3ae1ed.js" as="script" />
+    <link rel="preload" href="boot-core.bundle.9b1dd62c0baf.js" as="script" />
+    <link rel="preload" href="boot-calc.bundle.c7bb1ad973c4.js" as="script" />
+    <link rel="preload" href="boot-day.bundle.ac3e0d1c5301.js" as="script" />
+    <link rel="preload" href="boot-app.bundle.66f10b2b5822.js" as="script" />
     <link rel="preload" href="boot-init.bundle.14e083d7af95.js" as="script" />
 
     <!-- React теперь бандлится локально через Vite (миграция с CDN 2026-01-21) -->
@@ -742,6 +742,329 @@
     <!-- IW config: loaded externally from /heys-iw-config.json (async fetch + localStorage cache) -->
     <!-- 37KB inline JSON removed → improves HTML parse time by ~1-2s on slow 3G -->
     <!-- Fallback: localStorage cache (heys_iw_config_cache_v1) with 24h TTL -->
+
+    <!-- 🔬 HEYS Perf Monitor v2 — deep diagnostics (activate: HEYS.perfMon.start()) -->
+    <script>
+        (function () {
+            var STORAGE_KEY = 'heys_perf_log';
+            var MAX_ENTRIES = 600;
+            var log = [];
+            var active = false;
+            var fpsRaf = null;
+            var longTaskObs = null;
+            var eventTimingObs = null;
+            var scrollThrottle = null;
+            var origSetTimeout = window.setTimeout;
+            var origSetInterval = window.setInterval;
+            var timerPatched = false;
+
+            function ts() { return Date.now() - (window.__heysBootStart || 0); }
+
+            function push(type, data) {
+                log.push({ t: ts(), type: type, data: data });
+                if (log.length > MAX_ENTRIES) log.splice(0, log.length - MAX_ENTRIES);
+            }
+
+            /* ── FPS drops ── */
+            function startFPS() {
+                var last = performance.now();
+                var frames = 0;
+                var drops = 0;
+                function loop(now) {
+                    if (!active) return;
+                    frames++;
+                    var delta = now - last;
+                    if (delta >= 1000) {
+                        var fps = Math.round(frames * 1000 / delta);
+                        if (fps < 50) {
+                            drops++;
+                            push('fps_drop', { fps: fps, drops: drops });
+                        }
+                        frames = 0;
+                        last = now;
+                    }
+                    fpsRaf = requestAnimationFrame(loop);
+                }
+                fpsRaf = requestAnimationFrame(loop);
+            }
+
+            /* ── Long Tasks with attribution ── */
+            function startLongTasks() {
+                if (!window.PerformanceObserver) return;
+                try {
+                    longTaskObs = new PerformanceObserver(function (list) {
+                        list.getEntries().forEach(function (e) {
+                            var dur = Math.round(e.duration);
+                            var attr = e.attribution && e.attribution[0];
+                            var info = { ms: dur, name: e.name };
+                            if (attr) {
+                                info.container = attr.containerType || '';
+                                info.containerName = attr.containerName || '';
+                                info.containerSrc = attr.containerSrc || '';
+                            }
+                            push('long_task', info);
+                        });
+                    });
+                    longTaskObs.observe({ type: 'longtask', buffered: false });
+                } catch (e) { /* longtask not supported */ }
+            }
+
+            /* ── Event Timing API (click, touch, key handler durations) ── */
+            function startEventTiming() {
+                if (!window.PerformanceObserver) return;
+                try {
+                    eventTimingObs = new PerformanceObserver(function (list) {
+                        list.getEntries().forEach(function (e) {
+                            var processing = Math.round(e.processingEnd - e.processingStart);
+                            var inputDelay = Math.round(e.processingStart - e.startTime);
+                            var duration = Math.round(e.duration);
+                            // Only log slow events (processing > 50ms OR total > 100ms)
+                            if (processing > 50 || duration > 100) {
+                                var info = {
+                                    event: e.name,
+                                    processing: processing,
+                                    inputDelay: inputDelay,
+                                    duration: duration,
+                                    target: ''
+                                };
+                                try {
+                                    if (e.target) {
+                                        var el = e.target;
+                                        var tag = el.tagName ? el.tagName.toLowerCase() : '?';
+                                        var cls = el.className ? ('.' + String(el.className).split(' ').slice(0, 2).join('.')) : '';
+                                        var id = el.id ? ('#' + el.id) : '';
+                                        info.target = tag + id + cls;
+                                    }
+                                } catch (ex) { }
+                                if (e.interactionId) info.iid = e.interactionId;
+                                push('slow_event', info);
+                                console.warn('[HEYS.perf] SLOW EVENT:', e.name,
+                                    'proc=' + processing + 'ms',
+                                    'delay=' + inputDelay + 'ms',
+                                    'total=' + duration + 'ms',
+                                    info.target || '');
+                            }
+                        });
+                    });
+                    eventTimingObs.observe({ type: 'event', buffered: false, durationThreshold: 64 });
+                } catch (e) { /* event timing not supported */ }
+            }
+
+            /* ── setTimeout/setInterval patching ── */
+            function startTimerPatching() {
+                if (timerPatched) return;
+                timerPatched = true;
+                var SLOW_TIMER_MS = 50;
+
+                window.setTimeout = function (fn, delay) {
+                    if (!active || typeof fn !== 'function') {
+                        return origSetTimeout.apply(this, arguments);
+                    }
+                    var stack = '';
+                    try { stack = new Error().stack || ''; } catch (ex) { }
+                    // Keep only first 3 useful stack frames
+                    var frames = stack.split('\n').slice(1, 4).map(function (s) { return s.trim(); }).join(' < ');
+                    var args = Array.prototype.slice.call(arguments, 2);
+                    return origSetTimeout.call(this, function () {
+                        var t0 = performance.now();
+                        fn.apply(this, args);
+                        var elapsed = performance.now() - t0;
+                        if (elapsed > SLOW_TIMER_MS) {
+                            push('slow_timer', { ms: Math.round(elapsed), delay: delay || 0, stack: frames });
+                            console.warn('[HEYS.perf] SLOW setTimeout:', Math.round(elapsed) + 'ms',
+                                '(delay=' + (delay || 0) + ')', frames.slice(0, 120));
+                        }
+                    }, delay);
+                };
+
+                window.setInterval = function (fn, delay) {
+                    if (!active || typeof fn !== 'function') {
+                        return origSetInterval.apply(this, arguments);
+                    }
+                    var stack = '';
+                    try { stack = new Error().stack || ''; } catch (ex) { }
+                    var frames = stack.split('\n').slice(1, 4).map(function (s) { return s.trim(); }).join(' < ');
+                    var args = Array.prototype.slice.call(arguments, 2);
+                    return origSetInterval.call(this, function () {
+                        var t0 = performance.now();
+                        fn.apply(this, args);
+                        var elapsed = performance.now() - t0;
+                        if (elapsed > SLOW_TIMER_MS) {
+                            push('slow_timer', { ms: Math.round(elapsed), delay: delay || 0, type: 'interval', stack: frames });
+                            console.warn('[HEYS.perf] SLOW setInterval:', Math.round(elapsed) + 'ms', frames.slice(0, 120));
+                        }
+                    }, delay);
+                };
+            }
+
+            function stopTimerPatching() {
+                if (!timerPatched) return;
+                timerPatched = false;
+                window.setTimeout = origSetTimeout;
+                window.setInterval = origSetInterval;
+            }
+
+            /* ── Scroll jank ── */
+            function startScroll() {
+                var lastScrollY = window.scrollY;
+                var lastTime = performance.now();
+                var jankCount = 0;
+                window.addEventListener('scroll', function () {
+                    if (!active) return;
+                    if (scrollThrottle) return;
+                    scrollThrottle = requestAnimationFrame(function () {
+                        scrollThrottle = null;
+                        var now = performance.now();
+                        var dt = now - lastTime;
+                        var dy = Math.abs(window.scrollY - lastScrollY);
+                        lastScrollY = window.scrollY;
+                        lastTime = now;
+                        if (dt > 50 && dy > 5) {
+                            jankCount++;
+                            push('scroll_jank', { ms: Math.round(dt), dy: Math.round(dy), jankCount: jankCount });
+                        }
+                    });
+                }, { passive: true });
+            }
+
+            /* ── Forced reflow ── */
+            function startLayoutReads() {
+                var count = 0;
+                var orig = Element.prototype.getBoundingClientRect;
+                var inRAF = false;
+                requestAnimationFrame(function rafLoop() {
+                    if (!active) return;
+                    inRAF = true;
+                    requestAnimationFrame(function () { inRAF = false; rafLoop(); });
+                });
+                Element.prototype.getBoundingClientRect = function () {
+                    if (active && inRAF) {
+                        count++;
+                        if (count % 20 === 0) {
+                            push('forced_reflow', { count: count });
+                        }
+                    }
+                    return orig.apply(this, arguments);
+                };
+            }
+
+            /* ── report helpers ── */
+            function topN(arr, key, n) {
+                return arr.slice().sort(function (a, b) { return (b.data[key] || 0) - (a.data[key] || 0); }).slice(0, n);
+            }
+
+            function buildReport() {
+                var longTasks = log.filter(function (e) { return e.type === 'long_task'; });
+                var slowEvents = log.filter(function (e) { return e.type === 'slow_event'; });
+                var slowTimers = log.filter(function (e) { return e.type === 'slow_timer'; });
+                var scrollJanks = log.filter(function (e) { return e.type === 'scroll_jank'; });
+                var fpsDrops = log.filter(function (e) { return e.type === 'fps_drop'; });
+
+                // Group slow events by type
+                var eventsByType = {};
+                slowEvents.forEach(function (e) {
+                    var name = e.data.event || 'unknown';
+                    if (!eventsByType[name]) eventsByType[name] = { count: 0, totalProcessing: 0, maxProcessing: 0, maxDuration: 0 };
+                    eventsByType[name].count++;
+                    eventsByType[name].totalProcessing += e.data.processing;
+                    if (e.data.processing > eventsByType[name].maxProcessing) eventsByType[name].maxProcessing = e.data.processing;
+                    if (e.data.duration > eventsByType[name].maxDuration) eventsByType[name].maxDuration = e.data.duration;
+                });
+
+                // Long task duration stats
+                var ltDurations = longTasks.map(function (e) { return e.data.ms; });
+                var ltSum = ltDurations.reduce(function (a, b) { return a + b; }, 0);
+
+                return {
+                    sessionMs: ts(),
+                    totalEntries: log.length,
+                    summary: {
+                        longTasks: longTasks.length,
+                        longTasksTotalMs: ltSum,
+                        longTasksAvgMs: longTasks.length ? Math.round(ltSum / longTasks.length) : 0,
+                        longTasksMaxMs: ltDurations.length ? Math.max.apply(null, ltDurations) : 0,
+                        slowEvents: slowEvents.length,
+                        slowEventsByType: eventsByType,
+                        slowTimers: slowTimers.length,
+                        scrollJanks: scrollJanks.length,
+                        fpsDrops: fpsDrops.length,
+                        forcedReflows: log.filter(function (e) { return e.type === 'forced_reflow'; }).reduce(function (acc, e) { return e.data.count || acc; }, 0)
+                    },
+                    top10slowEvents: topN(slowEvents, 'processing', 10).map(function (e) { return e.data; }),
+                    top10longTasks: topN(longTasks, 'ms', 10).map(function (e) { return e.data; }),
+                    top5slowTimers: topN(slowTimers, 'ms', 5).map(function (e) { return e.data; }),
+                    log: log
+                };
+            }
+
+            var perf = {
+                start: function () {
+                    if (active) { console.info('[HEYS.perf] Already running'); return; }
+                    active = true;
+                    log = [];
+                    push('start', { ua: navigator.userAgent, viewport: window.innerWidth + 'x' + window.innerHeight });
+                    startFPS();
+                    startLongTasks();
+                    startEventTiming();
+                    startTimerPatching();
+                    startScroll();
+                    startLayoutReads();
+                    console.info('[HEYS.perf] ▶ v2 Monitoring started (event timing + timer patching + long task attribution)');
+                },
+                stop: function () {
+                    active = false;
+                    if (fpsRaf) { cancelAnimationFrame(fpsRaf); fpsRaf = null; }
+                    if (longTaskObs) { longTaskObs.disconnect(); longTaskObs = null; }
+                    if (eventTimingObs) { eventTimingObs.disconnect(); eventTimingObs = null; }
+                    stopTimerPatching();
+                    push('stop', {});
+                    console.info('[HEYS.perf] ■ Monitoring stopped');
+                },
+                report: function () {
+                    var summary = buildReport();
+                    // Print readable summary to console
+                    var s = summary.summary;
+                    console.info(
+                        '[HEYS.perf] 📋 REPORT\n' +
+                        '  Long tasks: ' + s.longTasks + ' (total ' + s.longTasksTotalMs + 'ms, avg ' + s.longTasksAvgMs + 'ms, max ' + s.longTasksMaxMs + 'ms)\n' +
+                        '  Slow events: ' + s.slowEvents + ' by type: ' + JSON.stringify(s.slowEventsByType) + '\n' +
+                        '  Slow timers: ' + s.slowTimers + '\n' +
+                        '  Scroll janks: ' + s.scrollJanks + '\n' +
+                        '  FPS drops: ' + s.fpsDrops + '\n' +
+                        '  Forced reflows: ' + s.forcedReflows
+                    );
+                    if (summary.top10slowEvents.length) {
+                        console.table(summary.top10slowEvents);
+                    }
+                    if (summary.top5slowTimers.length) {
+                        console.info('[HEYS.perf] Top slow timers:');
+                        console.table(summary.top5slowTimers);
+                    }
+                    // Save & copy
+                    var json = JSON.stringify(summary, null, 2);
+                    try { localStorage.setItem(STORAGE_KEY, json); } catch (e) { }
+                    try {
+                        if (navigator.clipboard && navigator.clipboard.writeText) {
+                            navigator.clipboard.writeText(json)
+                                .then(function () { console.info('[HEYS.perf] ✅ Copied to clipboard'); })
+                                .catch(function () {
+                                    try { copy(json); console.info('[HEYS.perf] ✅ Copied via copy()'); } catch (e2) { console.info('[HEYS.perf] ℹ️ Manual copy: localStorage.getItem("heys_perf_log")'); }
+                                });
+                        } else {
+                            try { copy(json); console.info('[HEYS.perf] ✅ Copied via copy()'); } catch (e) { console.info('[HEYS.perf] ℹ️ Manual copy: localStorage.getItem("heys_perf_log")'); }
+                        }
+                    } catch (e) { }
+                    return summary;
+                },
+                clear: function () { log = []; try { localStorage.removeItem(STORAGE_KEY); } catch (e) { } console.info('[HEYS.perf] Cleared'); }
+            };
+
+            window.HEYS = window.HEYS || {};
+            window.HEYS.perfMon = perf;
+
+            console.info('[HEYS.perf] v2 Ready. Run HEYS.perfMon.start() to begin deep diagnostics');
+        })();
+    </script>
 </head>
 
 <body class="emoji-system">
@@ -2081,10 +2404,10 @@
          Сгенерировано: node scripts/bundle-legacy.mjs  (pnpm bundle:legacy)
          Состав и хеши: bundle-manifest.json
          Хеш в имени = вечный кэш (cache-first SW). -->
-    <script defer src="boot-core.bundle.41d7587ef47a.js" fetchpriority="high"></script>
-    <script defer src="boot-calc.bundle.f14bc95ea2b5.js"></script>
-    <script defer src="boot-day.bundle.bfb1aa640109.js"></script>
-    <script defer src="boot-app.bundle.0eb48b3ae1ed.js"></script>
+    <script defer src="boot-core.bundle.9b1dd62c0baf.js" fetchpriority="high"></script>
+    <script defer src="boot-calc.bundle.c7bb1ad973c4.js"></script>
+    <script defer src="boot-day.bundle.ac3e0d1c5301.js"></script>
+    <script defer src="boot-app.bundle.66f10b2b5822.js"></script>
     <script defer src="boot-init.bundle.14e083d7af95.js"
         onerror="window.__heysShowRecoveryUI && window.__heysShowRecoveryUI('CRITICAL_SCRIPT_LOAD: boot-init.bundle')"></script>
 
@@ -2114,9 +2437,9 @@
     <script>
         (function () {
             var POST_BOOT_BUNDLES = [
-                'postboot-1-game.bundle.09192210639f.js',
+                'postboot-1-game.bundle.b298b218e23e.js',
                 'postboot-2-insights.bundle.1655bfa6815b.js',
-                'postboot-3-ui.bundle.6b314980c73e.js'
+                'postboot-3-ui.bundle.b40aff675fef.js'
             ];
             var total = POST_BOOT_BUNDLES.length;
 

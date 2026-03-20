@@ -18228,7 +18228,9 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
   }
 
   const LOCAL_ONLY_STORAGE_EXACT_KEYS = new Set([
-    'heys_advice_trace_day_v1'
+    'heys_advice_trace_day_v1',
+    'heys_perf_log',  // debug tool — not user data
+    'heys_boot_log',  // boot diagnostics — local only
   ]);
 
   const LOCAL_ONLY_STORAGE_SUFFIXES = [
@@ -19622,9 +19624,9 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
           }
         } catch (_) { }
 
-            if (isLocalOnlyStorageKey(k)) {
-              return;
-            }
+        if (isLocalOnlyStorageKey(k)) {
+          return;
+        }
 
         // Во время signIn не зеркалим вообще ничего — это источник гонок и RTR refresh 400
         if (typeof _signInInProgress !== 'undefined' && _signInInProgress) {
@@ -21557,7 +21559,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
         let allData = [];
         let pageOffset = 0;
         let fetchError = null;
-          let paginatedFetchPages = 0;
+        let paginatedFetchPages = 0;
 
         // 🚀 SPECULATIVE PREFETCH: check if HTML-time prefetch matches current request
         // If prefetch was fired at +0.0s and matches clientId+since → reuse data, save ~1s
@@ -22939,22 +22941,44 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
 
         if (batchedDayV2Writes.length > 0) {
           const updatedDates = [];
-          batchedDayV2Writes.forEach(({ key, valueToSave }) => {
-            const wroteDay = writeDayKeyWithQuotaGuard(key, valueToSave, {
-              preserveRecentDuringHydration: true,
-              nowTs: now
+          // ⚡ PERF: Chunked writes — yield to browser every CHUNK_SIZE writes
+          const CHUNK_SIZE = 15;
+          const writeChunk = (startIdx) => {
+            const end = Math.min(startIdx + CHUNK_SIZE, batchedDayV2Writes.length);
+            for (let i = startIdx; i < end; i++) {
+              const { key, valueToSave } = batchedDayV2Writes[i];
+              const wroteDay = writeDayKeyWithQuotaGuard(key, valueToSave, {
+                preserveRecentDuringHydration: true,
+                nowTs: now
+              });
+              if (!wroteDay) {
+                skippedDayMirrorKeys.push(key);
+                continue;
+              }
+              if (global.HEYS?.store?.invalidate) {
+                global.HEYS.store.invalidate(key);
+              }
+              const dateMatch = key.match(/dayv2_(\d{4}-\d{2}-\d{2})$/);
+              if (dateMatch) updatedDates.push(dateMatch[1]);
+            }
+            return end;
+          };
+          // Write first chunk synchronously (today + recent days — most critical)
+          let cursor = writeChunk(0);
+          // Remaining chunks deferred via setTimeout(0) to yield main thread
+          const writeRemaining = () => {
+            return new Promise(resolve => {
+              const step = () => {
+                if (cursor >= batchedDayV2Writes.length) { resolve(); return; }
+                cursor = writeChunk(cursor);
+                setTimeout(step, 0);
+              };
+              if (cursor >= batchedDayV2Writes.length) { resolve(); return; }
+              setTimeout(step, 0);
             });
-            if (!wroteDay) {
-              skippedDayMirrorKeys.push(key);
-              return;
-            }
-            if (global.HEYS?.store?.invalidate) {
-              global.HEYS.store.invalidate(key);
-            }
-            const dateMatch = key.match(/dayv2_(\d{4}-\d{2}-\d{2})$/);
-            if (dateMatch) updatedDates.push(dateMatch[1]);
-          });
-          window.console.info('[HEYS.sinhron] ✅ BATCH WRITE ' + batchedDayV2Writes.length + ' dayv2 records:', formatListForSyncLog(updatedDates));
+          };
+          await writeRemaining();
+          window.console.info('[HEYS.sinhron] ✅ BATCH WRITE ' + batchedDayV2Writes.length + ' dayv2 records (chunked):', formatListForSyncLog(updatedDates));
           // � FIX v65: Помечаем sync завершённым ДО heys:day-updated, чтобы cascade pre-sync guard
           // не блокировал recompute: когда renderCard вызывается из day-updated обработчика,
           // _cascadeSyncDone=true → cache MISS → computeCascadeState с реальной историей → CRS ≠ null → bar settling
@@ -23397,9 +23421,9 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
   let _uploadLogTimer = null;
   let _uploadLogBufferedTotal = 0;
   let _uploadLogBufferedBatches = 0;
-    const UPLOAD_SUMMARY_LOG_MIN_ITEMS = 5;
-    const UPLOAD_SUMMARY_LOG_MIN_BATCHES = 3;
-    const UPLOAD_SUMMARY_BUFFER_MS = 2500;
+  const UPLOAD_SUMMARY_LOG_MIN_ITEMS = 5;
+  const UPLOAD_SUMMARY_LOG_MIN_BATCHES = 3;
+  const UPLOAD_SUMMARY_BUFFER_MS = 2500;
 
   function flushBufferedUploadLog() {
     if (_uploadLogTimer) {
@@ -23408,11 +23432,11 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
     }
     if (_uploadLogBufferedTotal <= 0) return;
     const suffix = _uploadLogBufferedBatches > 1 ? ` (${_uploadLogBufferedBatches} batch)` : '';
-      if (_uploadLogBufferedTotal >= UPLOAD_SUMMARY_LOG_MIN_ITEMS || _uploadLogBufferedBatches >= UPLOAD_SUMMARY_LOG_MIN_BATCHES) {
-        logCritical(`☁️ [YANDEX] Сохранено в облако: ${_uploadLogBufferedTotal} записей${suffix}`);
-      } else {
-        log(`☁️ [YANDEX] Small upload batch hidden from normal logs: ${_uploadLogBufferedTotal} items${suffix}`);
-      }
+    if (_uploadLogBufferedTotal >= UPLOAD_SUMMARY_LOG_MIN_ITEMS || _uploadLogBufferedBatches >= UPLOAD_SUMMARY_LOG_MIN_BATCHES) {
+      logCritical(`☁️ [YANDEX] Сохранено в облако: ${_uploadLogBufferedTotal} записей${suffix}`);
+    } else {
+      log(`☁️ [YANDEX] Small upload batch hidden from normal logs: ${_uploadLogBufferedTotal} items${suffix}`);
+    }
     _uploadLogBufferedTotal = 0;
     _uploadLogBufferedBatches = 0;
   }
@@ -23422,13 +23446,13 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
     _uploadLogBufferedTotal += savedCount;
     _uploadLogBufferedBatches += 1;
 
-      if (savedCount >= UPLOAD_SUMMARY_LOG_MIN_ITEMS || _uploadLogBufferedTotal >= 10) {
+    if (savedCount >= UPLOAD_SUMMARY_LOG_MIN_ITEMS || _uploadLogBufferedTotal >= 10) {
       flushBufferedUploadLog();
       return;
     }
 
     if (_uploadLogTimer) return;
-      _uploadLogTimer = setTimeout(() => flushBufferedUploadLog(), UPLOAD_SUMMARY_BUFFER_MS);
+    _uploadLogTimer = setTimeout(() => flushBufferedUploadLog(), UPLOAD_SUMMARY_BUFFER_MS);
   }
   let _uploadInFlightCount = 0;   // 🔄 Кол-во записей в in-flight запросе
 

@@ -2511,40 +2511,31 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     const selectProduct = useCallback((product) => {
       haptic('light');
 
-      try {
-        if (HEYS.store?.getHiddenProducts) {
-          setHiddenProducts(HEYS.store.getHiddenProducts());
-        }
-      } catch (e) {
-        // no-op
-      }
-
-      // Последние использованные граммы для этого продукта
+      // ⚡ PERF: defer non-critical store reads into startTransition
       const productId = product.id ?? product.product_id ?? product.name;
       const lastGrams = lsGet(`heys_last_grams_${productId}`, null);
-      // v25.3: Use ML grams only from _mlGrams (set once by recommendation), not stale data.grams
       const mlGrams = data._mlGrams || null;
       const defaultGrams = mlGrams || lastGrams || 100;
 
-      // 🔍 DEBUG: Подробный лог выбранного продукта
-      const hasNutrients = !!(product.kcal100 || product.protein100 || product.carbs100);
-      // console.log('[ProductSearchStep] selectProduct:', product.name, 'grams:', defaultGrams, {...});
-      if (!hasNutrients) {
-        console.error('🚨 [ProductSearchStep] CRITICAL: Product has NO nutrients!', product);
-      }
+      // ⚡ startTransition: defer heavy re-renders from product selection
+      React.startTransition(() => {
+        try {
+          if (HEYS.store?.getHiddenProducts) {
+            setHiddenProducts(HEYS.store.getHiddenProducts());
+          }
+        } catch (e) { /* no-op */ }
 
-      onChange({
-        ...data,
-        selectedProduct: product,
-        grams: defaultGrams,
-        _mlGrams: null, // v25.3: clear ML grams after first use
-        lastGrams: lastGrams
+        onChange({
+          ...data,
+          selectedProduct: product,
+          grams: defaultGrams,
+          _mlGrams: null,
+          lastGrams: lastGrams
+        });
       });
       // Автопереход на шаг граммов (index 4: search → grams)
-      // Шаги create/portions/harm — только для НОВЫХ продуктов
-      // Увеличен таймаут для гарантии обновления state
       if (goToStep) {
-        setTimeout(() => goToStep(4, 'left'), 150);
+        requestAnimationFrame(() => goToStep(4, 'left'));
       }
     }, [data, onChange, goToStep]);
 
@@ -5176,10 +5167,13 @@ NOVA: 1
       });
       // Режим редактирования — вызываем onSave
       if (context?.isEditMode && context?.onSave) {
-        context.onSave({
-          mealIndex: context.mealIndex,
-          itemId: context.itemId,
-          grams
+        // ⚡ startTransition: defer heavy meal recalculation re-renders
+        React.startTransition(() => {
+          context.onSave({
+            mealIndex: context.mealIndex,
+            itemId: context.itemId,
+            grams
+          });
         });
       }
       // Режим добавления — вызываем onAdd
@@ -5207,10 +5201,13 @@ NOVA: 1
           productId: productForSubmit?.id ?? productForSubmit?.product_id ?? null,
           productName: productForSubmit?.name || null
         });
-        context.onAdd({
-          product: productForSubmit,
-          grams,
-          mealIndex: context.mealIndex
+        // ⚡ startTransition: defer heavy meal recalculation re-renders
+        React.startTransition(() => {
+          context.onAdd({
+            product: productForSubmit,
+            grams,
+            mealIndex: context.mealIndex
+          });
         });
 
         // 🔊 Harm-based feedback sound

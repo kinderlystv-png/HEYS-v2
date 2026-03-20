@@ -16266,7 +16266,9 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
             } catch (e) { }
 
             const applyDate = () => {
-                setSelectedDate(nextDate);
+                React.startTransition(() => {
+                    setSelectedDate(nextDate);
+                });
                 haptic('light');
             };
 
@@ -17100,7 +17102,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                             )))
                         : (tab === 'stats' || tab === 'diary')
                             ? React.createElement(DayTabWithCloudSync, {
-                                key: 'day_' + String(clientId || '') + '_' + selectedDate,
+                                key: 'day_' + String(clientId || ''),
                                 products,
                                 clientId,
                                 selectedDate,
@@ -20464,15 +20466,19 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                 const nextIndex = (currentIndex + 1) % SWIPEABLE_TABS.length;
                 const nextTab = SWIPEABLE_TABS[nextIndex];
 
-                // Фаза 1: выход старого контента
+                // Фаза 1: выход старого контента (rAF + CSS transition)
                 setSlideDirection('out-left');
                 if (navigator.vibrate) navigator.vibrate(10);
-                setTimeout(() => {
-                    // Фаза 2: смена вкладки + вход нового контента
-                    setTab(nextTab);
-                    setSlideDirection('in-left');
-                    setTimeout(() => setSlideDirection(null), 220);
-                }, 120);
+                requestAnimationFrame(() => {
+                    requestAnimationFrame(() => {
+                        // Фаза 2: смена вкладки + вход нового контента
+                        setTab(nextTab);
+                        setSlideDirection('in-left');
+                        requestAnimationFrame(() => {
+                            requestAnimationFrame(() => setSlideDirection(null));
+                        });
+                    });
+                });
             } else if (deltaX > 0) {
                 // Свайп вправо → предыдущая вкладка (по кругу)
                 const prevIndex = (currentIndex - 1 + SWIPEABLE_TABS.length) % SWIPEABLE_TABS.length;
@@ -20480,11 +20486,15 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
 
                 setSlideDirection('out-right');
                 if (navigator.vibrate) navigator.vibrate(10);
-                setTimeout(() => {
-                    setTab(prevTab);
-                    setSlideDirection('in-right');
-                    setTimeout(() => setSlideDirection(null), 220);
-                }, 120);
+                requestAnimationFrame(() => {
+                    requestAnimationFrame(() => {
+                        setTab(prevTab);
+                        setSlideDirection('in-right');
+                        requestAnimationFrame(() => {
+                            requestAnimationFrame(() => setSlideDirection(null));
+                        });
+                    });
+                });
             }
         }, [tab, setTab]);
 
@@ -20971,8 +20981,16 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
         };
 
         const [defaultTab, setDefaultTabState] = React.useState('diary');
-        const [tab, setTab] = React.useState('diary');
+        const [tab, rawSetTab] = React.useState('diary');
         const [initialTabLoaded, setInitialTabLoaded] = React.useState(false);
+
+        // Wrap setTab in startTransition so heavy tab mount/unmount
+        // doesn't block the main thread (was causing 400-450ms click violations)
+        const setTab = React.useCallback((newTab) => {
+            React.startTransition(() => {
+                rawSetTab(newTab);
+            });
+        }, []);
 
         React.useEffect(() => {
             if (!window.HEYS) window.HEYS = {};
@@ -20982,6 +21000,9 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                 setTab(newTab);
             };
         }, [setTab]);
+
+        // Expose rawSetTab for initial load (should be synchronous)
+        const setTabImmediate = rawSetTab;
 
         React.useEffect(() => {
             if (initialTabLoaded) return;
@@ -20993,7 +21014,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                 const savedTab = getDefaultTabFromProfile();
                 devLog(`[App] 🏠 Loading default tab from profile: ${savedTab}`);
                 setDefaultTabState(savedTab);
-                setTab(savedTab);
+                setTabImmediate(savedTab);
                 setInitialTabLoaded(true);
                 return true;
             };

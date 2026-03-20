@@ -472,7 +472,8 @@
         if (!HEYS.dayEnergyContext?.buildEnergyContext) {
             throw new Error('[heys_day_v12] HEYS.dayEnergyContext not loaded before heys_day_v12.js');
         }
-        const energyCtx = HEYS.dayEnergyContext.buildEnergyContext({
+        // 🚀 PERF: memoize — TDEE calc + meal iteration is expensive, skip on unrelated re-renders
+        const energyCtx = useMemo(() => HEYS.dayEnergyContext.buildEnergyContext({
             day,
             prof,
             lsGet,
@@ -480,7 +481,7 @@
             M,
             r0,
             HEYS: window.HEYS
-        }) || {};
+        }) || {}, [day, prof, pIndex]);
         const {
             tdeeResult,
             bmr,
@@ -1272,7 +1273,8 @@
         if (!HEYS.dayNutritionState?.buildNutritionState) {
             throw new Error('[heys_day_v12] HEYS.dayNutritionState not loaded before heys_day_v12.js');
         }
-        const nutritionState = HEYS.dayNutritionState.buildNutritionState({
+        // 🚀 PERF: memoize — dayTot/normAbs calc iterates all meals + reads localStorage
+        const nutritionState = useMemo(() => HEYS.dayNutritionState.buildNutritionState({
             React,
             day,
             pIndex,
@@ -1280,7 +1282,7 @@
             getDailyNutrientColor,
             getDailyNutrientTooltip,
             HEYS: window.HEYS
-        }) || {};
+        }) || {}, [day, pIndex, optimum]);
         const {
             dayTot = { kcal: 0, carbs: 0, simple: 0, complex: 0, prot: 0, fat: 0, bad: 0, good: 0, trans: 0, fiber: 0, gi: 0, harm: 0 },
             normPerc = {},

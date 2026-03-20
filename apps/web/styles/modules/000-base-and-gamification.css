@@ -773,7 +773,10 @@ td:first-child input {
   width: 100%;
   box-sizing: border-box;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-  transition: all 0.2s ease;
+  /* 🚀 PERF R6: narrowed transition from `all` to specific property */
+  transition: transform 0.2s ease;
+  /* 🚀 PERF R6: contain layout+paint prevents child animations from full-page repaint */
+  contain: layout paint style;
 }
 
 .compact-card:active {
@@ -1621,33 +1624,35 @@ td:first-child input {
   height: 7px;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.95);
-  box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.45);
   animation: gameSyncDotPulse 1.2s ease-in-out infinite;
+  will-change: transform, opacity;
 }
 
+/* 🚀 PERF R6: replaced filter with opacity — GPU-compositable */
 @keyframes gameSyncChipPulse {
 
   0%,
   100% {
-    filter: brightness(1);
+    opacity: 1;
   }
 
   50% {
-    filter: brightness(1.08);
+    opacity: 0.85;
   }
 }
 
+/* 🚀 PERF R6: replaced box-shadow with transform+opacity — GPU-compositable */
 @keyframes gameSyncDotPulse {
 
   0%,
   100% {
     transform: scale(1);
-    box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.45);
+    opacity: 1;
   }
 
   50% {
-    transform: scale(1.15);
-    box-shadow: 0 0 0 6px rgba(255, 255, 255, 0);
+    transform: scale(1.4);
+    opacity: 0.5;
   }
 }
 
@@ -1705,17 +1710,18 @@ td:first-child input {
   animation: progressPulse 1.5s ease-in-out infinite;
 }
 
+/* 🚀 PERF R6: replaced box-shadow+filter with transform+opacity — GPU-compositable */
 @keyframes progressPulse {
 
   0%,
   100% {
-    box-shadow: 0 0 4px rgba(255, 215, 0, 0.4);
-    filter: brightness(1);
+    opacity: 1;
+    transform: scaleY(1);
   }
 
   50% {
-    box-shadow: 0 0 16px rgba(255, 215, 0, 0.8);
-    filter: brightness(1.2);
+    opacity: 0.8;
+    transform: scaleY(1.15);
   }
 }
 
@@ -1869,19 +1875,21 @@ td:first-child input {
 .game-level-group.is-syncing .game-level-sync-dot {
   opacity: 1;
   animation: syncDotPing 1.2s ease-in-out infinite;
+  will-change: transform, opacity;
 }
 
+/* 🚀 PERF R6: replaced box-shadow with transform+opacity — GPU-compositable */
 @keyframes syncDotPing {
 
   0%,
   100% {
-    box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.5);
     transform: scale(1);
+    opacity: 1;
   }
 
   50% {
-    box-shadow: 0 0 0 5px rgba(255, 255, 255, 0);
-    transform: scale(1.1);
+    transform: scale(1.3);
+    opacity: 0.4;
   }
 }
 
@@ -2069,17 +2077,14 @@ td:first-child input {
 
 .game-streak.streak-high {
   animation: flicker 1s ease-in-out infinite;
-  filter: drop-shadow(0 0 4px rgba(251, 191, 36, 0.6));
 }
 
 .game-streak.streak-epic {
   animation: flicker 0.8s ease-in-out infinite, goldGlow 2s ease-in-out infinite;
-  filter: drop-shadow(0 0 8px rgba(255, 215, 0, 0.8));
 }
 
 .game-streak.streak-legendary {
   animation: flicker 0.6s ease-in-out infinite, rainbowGlow 3s linear infinite;
-  filter: drop-shadow(0 0 10px rgba(255, 100, 100, 0.8));
 }
 
 @keyframes flicker {
@@ -2106,37 +2111,39 @@ td:first-child input {
   }
 }
 
+/* 🚀 PERF R6: replaced filter with opacity — GPU-compositable */
 @keyframes goldGlow {
 
   0%,
   100% {
-    filter: drop-shadow(0 0 8px rgba(255, 215, 0, 0.6));
+    opacity: 1;
   }
 
   50% {
-    filter: drop-shadow(0 0 16px rgba(255, 215, 0, 1));
+    opacity: 0.75;
   }
 }
 
+/* 🚀 PERF R6: replaced filter with opacity cycle — GPU-compositable */
 @keyframes rainbowGlow {
   0% {
-    filter: drop-shadow(0 0 10px #ff6b6b);
+    opacity: 1;
   }
 
   25% {
-    filter: drop-shadow(0 0 10px #ffd93d);
+    opacity: 0.85;
   }
 
   50% {
-    filter: drop-shadow(0 0 10px #6bcb77);
+    opacity: 1;
   }
 
   75% {
-    filter: drop-shadow(0 0 10px #4d96ff);
+    opacity: 0.85;
   }
 
   100% {
-    filter: drop-shadow(0 0 10px #ff6b6b);
+    opacity: 1;
   }
 }
 
@@ -2212,15 +2219,16 @@ td:first-child input {
   align-self: flex-start;
 }
 
+/* 🚀 PERF R6: replaced filter with opacity — GPU-compositable */
 @keyframes badgeShine {
 
   0%,
   100% {
-    filter: brightness(1);
+    opacity: 1;
   }
 
   50% {
-    filter: brightness(1.2);
+    opacity: 0.8;
   }
 }
 
@@ -2690,15 +2698,16 @@ td:first-child input {
   color: #fbbf24;
 }
 
+/* 🚀 PERF R6: replaced box-shadow with opacity — GPU-compositable */
 @keyframes bonusGlow {
 
   0%,
   100% {
-    box-shadow: 0 0 6px rgba(245, 158, 11, 0.4);
+    opacity: 1;
   }
 
   50% {
-    box-shadow: 0 0 12px rgba(245, 158, 11, 0.8);
+    opacity: 0.7;
   }
 }
 
@@ -2982,15 +2991,16 @@ td:first-child input {
   }
 }
 
+/* 🚀 PERF R6: replaced box-shadow with opacity — GPU-compositable */
 @keyframes dailyMultGlow {
 
   0%,
   100% {
-    box-shadow: 0 0 6px rgba(249, 115, 22, 0.3);
+    opacity: 1;
   }
 
   50% {
-    box-shadow: 0 0 12px rgba(249, 115, 22, 0.6);
+    opacity: 0.7;
   }
 }
 
@@ -3184,15 +3194,16 @@ td:first-child input {
   animation: almostDonePulse 2s ease-in-out infinite;
 }
 
+/* 🚀 PERF R6: replaced box-shadow with opacity — GPU-compositable */
 @keyframes almostDonePulse {
 
   0%,
   100% {
-    box-shadow: 0 4px 24px rgba(234, 179, 8, 0.2);
+    opacity: 1;
   }
 
   50% {
-    box-shadow: 0 4px 32px rgba(234, 179, 8, 0.4);
+    opacity: 0.85;
   }
 }
 
@@ -3443,15 +3454,18 @@ td:first-child input {
   animation: goalPulse 1.2s ease-in-out infinite;
 }
 
+/* 🚀 PERF R6: replaced box-shadow with transform+opacity — GPU-compositable */
 @keyframes goalPulse {
 
   0%,
   100% {
-    box-shadow: 0 0 4px rgba(34, 197, 94, 0.4);
+    transform: scaleY(1);
+    opacity: 1;
   }
 
   50% {
-    box-shadow: 0 0 16px rgba(34, 197, 94, 0.8), 0 0 24px rgba(34, 197, 94, 0.4);
+    transform: scaleY(1.15);
+    opacity: 0.8;
   }
 }
 
@@ -3484,78 +3498,79 @@ td:first-child input {
 
 .achievement-badge.rarity-epic {
   animation: epicBadgeGlow 2s ease-in-out infinite;
-  box-shadow: 0 0 10px rgba(168, 85, 247, 0.4);
 }
 
 .achievement-badge.rarity-legendary {
   animation: legendaryBadgePulse 1.5s ease-in-out infinite;
-  box-shadow: 0 0 15px rgba(234, 179, 8, 0.6);
 }
 
 .achievement-badge.rarity-mythic {
   animation: mythicBadgeRainbow 3s linear infinite;
-  box-shadow: 0 0 20px rgba(239, 68, 68, 0.6);
 }
 
+/* 🚀 PERF R6: replaced filter with opacity — GPU-compositable */
 @keyframes rareBadgeShine {
 
   0%,
   100% {
-    filter: brightness(1);
+    opacity: 1;
   }
 
   50% {
-    filter: brightness(1.2);
+    opacity: 0.8;
   }
 }
 
+/* 🚀 PERF R6: replaced box-shadow with transform+opacity — GPU-compositable */
 @keyframes epicBadgeGlow {
 
   0%,
   100% {
-    box-shadow: 0 0 10px rgba(168, 85, 247, 0.4);
     transform: scale(1);
+    opacity: 1;
   }
 
   50% {
-    box-shadow: 0 0 20px rgba(168, 85, 247, 0.8);
     transform: scale(1.05);
+    opacity: 0.8;
   }
 }
 
+/* 🚀 PERF R6: replaced box-shadow+filter with transform+opacity — GPU-compositable */
 @keyframes legendaryBadgePulse {
 
   0%,
   100% {
-    box-shadow: 0 0 15px rgba(234, 179, 8, 0.4);
-    filter: brightness(1);
+    transform: scale(1);
+    opacity: 1;
   }
 
   50% {
-    box-shadow: 0 0 25px rgba(234, 179, 8, 1);
-    filter: brightness(1.3);
+    transform: scale(1.06);
+    opacity: 0.85;
   }
 }
 
+/* 🚀 PERF R6: replaced box-shadow rainbow with opacity cycle — GPU-compositable */
 @keyframes mythicBadgeRainbow {
   0% {
-    box-shadow: 0 0 20px #ff6b6b;
+    opacity: 1;
   }
 
   25% {
-    box-shadow: 0 0 20px #ffd93d;
+    opacity: 0.85;
   }
 
   50% {
-    box-shadow: 0 0 20px #6bcb77;
+    opacity: 1;
   }
 
   75% {
-    box-shadow: 0 0 20px #4d96ff;
+    opacity: 0.85;
   }
 
   100% {
-    box-shadow: 0 0 20px #ff6b6b;
+    opacity: 1;
   }
 }
 
@@ -5241,15 +5256,18 @@ body:has(.offline-banner) .wrap {
   animation: todayPulse 2s ease-in-out infinite;
 }
 
+/* 🚀 PERF R6: replaced box-shadow with transform+opacity — GPU-compositable */
 @keyframes todayPulse {
 
   0%,
   100% {
-    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.5);
+    transform: scale(1);
+    opacity: 1;
   }
 
   50% {
-    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.2);
+    transform: scale(1.08);
+    opacity: 0.85;
   }
 }
 
@@ -5715,21 +5733,26 @@ body:has(.offline-banner) .wrap {
   border-radius: 50%;
   background: #ffffff;
   transition: left 2s cubic-bezier(0.22, 1, 0.36, 1), transform 0.8s cubic-bezier(0.22, 1, 0.36, 1);
-  box-shadow: 0 0 6px #fff, 0 0 12px rgba(255, 255, 255, 0.8);
+  /* 🚀 PERF R6: removed static box-shadow; animation now uses transform+opacity */
   animation: crs-pulse 2s infinite;
+  will-change: transform, opacity;
 }
 
+/* 🚀 PERF R6: replaced box-shadow with opacity+transform — GPU-compositable */
 @keyframes crs-pulse {
   0% {
-    box-shadow: 0 0 4px #fff, 0 0 8px rgba(255, 255, 255, 0.6);
+    opacity: 0.9;
+    transform: translateY(-50%) scale(1);
   }
 
   50% {
-    box-shadow: 0 0 10px #fff, 0 0 18px rgba(255, 255, 255, 0.9), 0 0 25px rgba(255, 255, 255, 0.5);
+    opacity: 1;
+    transform: translateY(-50%) scale(1.3);
   }
 
   100% {
-    box-shadow: 0 0 4px #fff, 0 0 8px rgba(255, 255, 255, 0.6);
+    opacity: 0.9;
+    transform: translateY(-50%) scale(1);
   }
 }
 
@@ -6953,6 +6976,8 @@ body:has(.offline-banner) .wrap {
   padding-top: 6px;
   padding-bottom: 6px;
   overflow: visible;
+  content-visibility: auto;
+  contain-intrinsic-size: auto 120px;
 }
 
 /* Название продукта: фиксированная ширина с переносами */

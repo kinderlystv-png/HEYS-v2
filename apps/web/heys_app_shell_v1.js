@@ -338,7 +338,9 @@
             } catch (e) { }
 
             const applyDate = () => {
-                setSelectedDate(nextDate);
+                React.startTransition(() => {
+                    setSelectedDate(nextDate);
+                });
                 haptic('light');
             };
 
@@ -1172,7 +1174,7 @@
                             )))
                         : (tab === 'stats' || tab === 'diary')
                             ? React.createElement(DayTabWithCloudSync, {
-                                key: 'day_' + String(clientId || '') + '_' + selectedDate,
+                                key: 'day_' + String(clientId || ''),
                                 products,
                                 clientId,
                                 selectedDate,
