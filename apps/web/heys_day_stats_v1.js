@@ -645,7 +645,9 @@
           className: 'debt-card' + (balanceCardExpanded ? ' expanded' : ''),
           onClick: (e) => {
             e.stopPropagation();
-            setBalanceCardExpanded(!balanceCardExpanded);
+            // PERF R13 FIX J: defer debt-card expand to avoid sync React render
+            const next = !balanceCardExpanded;
+            setTimeout(() => { React.startTransition(() => { setBalanceCardExpanded(next); }); }, 0);
           }
         },
           // === COLLAPSED VIEW ===
@@ -912,7 +914,9 @@
           },
           onClick: (e) => {
             e.stopPropagation();
-            setBalanceCardExpanded(!balanceCardExpanded);
+            // PERF R13 FIX J: defer caloric-balance card expand to avoid sync React render
+            const next = !balanceCardExpanded;
+            setTimeout(() => { React.startTransition(() => { setBalanceCardExpanded(next); }); }, 0);
           }
         },
           // === HEADER (всегда виден) — компактная строка ===

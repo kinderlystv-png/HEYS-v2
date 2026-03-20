@@ -8790,7 +8790,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
 
 /* ===== heys_day_popups_state_v1.js ===== */
 // heys_day_popups_state_v1.js — popup state + helpers for DayTab
-;(function (global) {
+; (function (global) {
   const HEYS = global.HEYS = global.HEYS || {};
 
   const MOD = {};
@@ -8811,26 +8811,40 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
     const [debtSciencePopup, setDebtSciencePopup] = useState(null); // { title, content, links }
 
     // === Управление попапами: одновременно может быть только один ===
+    // 🚀 PERF R11: defer close too — avoids blocking DayTab re-render on click-outside
     const closeAllPopups = useCallback(() => {
-      setSparklinePopup(null);
-      setMacroBadgePopup(null);
-      setMetricPopup(null);
-      setTdeePopup(null);
-      setMealQualityPopup(null);
-      setWeekNormPopup(null);
-      setGoalPopup(null);
-      setDebtSciencePopup(null);
+      setTimeout(() => {
+        const st = React.startTransition || (fn => fn());
+        st(() => {
+          setSparklinePopup(null);
+          setMacroBadgePopup(null);
+          setMetricPopup(null);
+          setTdeePopup(null);
+          setMealQualityPopup(null);
+          setWeekNormPopup(null);
+          setGoalPopup(null);
+          setDebtSciencePopup(null);
+        });
+      }, 0);
     }, []);
 
+    // 🚀 PERF R11: defer popup state changes via setTimeout(0) + startTransition
+    // to avoid blocking the main thread with a full DayTab re-render (~375ms).
+    // Haptic feedback fires synchronously in the caller, popup appears in deferred task.
     const openExclusivePopup = useCallback((type, payload) => {
-      setSparklinePopup(type === 'sparkline' ? payload : null);
-      setMacroBadgePopup(type === 'macro' ? payload : null);
-      setMetricPopup(type === 'metric' ? payload : null);
-      setTdeePopup(type === 'tdee' ? payload : null);
-      setMealQualityPopup(type === 'mealQuality' ? payload : null);
-      setWeekNormPopup(type === 'weekNorm' ? payload : null);
-      setGoalPopup(type === 'goal' ? payload : null);
-      setDebtSciencePopup(type === 'debt-science' ? payload : null);
+      setTimeout(() => {
+        const st = React.startTransition || (fn => fn());
+        st(() => {
+          setSparklinePopup(type === 'sparkline' ? payload : null);
+          setMacroBadgePopup(type === 'macro' ? payload : null);
+          setMetricPopup(type === 'metric' ? payload : null);
+          setTdeePopup(type === 'tdee' ? payload : null);
+          setMealQualityPopup(type === 'mealQuality' ? payload : null);
+          setWeekNormPopup(type === 'weekNorm' ? payload : null);
+          setGoalPopup(type === 'goal' ? payload : null);
+          setDebtSciencePopup(type === 'debt-science' ? payload : null);
+        });
+      }, 0);
     }, []);
 
     // === Утилита для умного позиционирования попапов ===
@@ -8883,40 +8897,46 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
     }, []);
 
     // Закрытие popup при клике вне
+    // 🚀 PERF R12: handleClickOutside was calling setState directly, causing
+    // a full synchronous DayTab re-render (~375ms) on every outside click.
+    // Now uses startTransition to defer the re-render — DOM checks stay sync.
     useEffect(() => {
       if (!sparklinePopup && !macroBadgePopup && !metricPopup && !mealQualityPopup && !tdeePopup && !weekNormPopup && !tefInfoPopup && !goalPopup && !weekDeficitPopup && !balanceDayPopup && !debtSciencePopup) return;
       const handleClickOutside = (e) => {
-        if (sparklinePopup && !e.target.closest('.sparkline-popup')) {
-          setSparklinePopup(null);
-        }
-        if (macroBadgePopup && !e.target.closest('.macro-badge-popup')) {
-          setMacroBadgePopup(null);
-        }
-        if (metricPopup && !e.target.closest('.metric-popup')) {
-          setMetricPopup(null);
-        }
-        if (mealQualityPopup && !e.target.closest('.meal-quality-popup') && !e.target.closest('.meal-bar-container')) {
-          setMealQualityPopup(null);
-        }
-        if (tdeePopup && !e.target.closest('.tdee-popup')) {
-          setTdeePopup(null);
-        }
-        if (weekNormPopup && !e.target.closest('.week-norm-popup')) {
-          setWeekNormPopup(null);
-        }
-        if (weekDeficitPopup && !e.target.closest('.week-deficit-popup') && !e.target.closest('.week-heatmap-deficit')) {
-          setWeekDeficitPopup(null);
-        }
-        if (balanceDayPopup && !e.target.closest('.balance-day-popup') && !e.target.closest('.balance-viz-bar') && !e.target.closest('.balance-viz-bar-clickable')) {
-          setBalanceDayPopup(null);
-        }
-        if (tefInfoPopup && !e.target.closest('.tef-info-popup') && !e.target.closest('.tef-help-icon')) {
-          setTefInfoPopup(null);
-        }
-        if (goalPopup && !e.target.closest('.goal-popup')) {
-          setGoalPopup(null);
-        }
-        // debtSciencePopup закрывается через overlay onClick
+        const st = React.startTransition || (fn => fn());
+        st(() => {
+          if (sparklinePopup && !e.target.closest('.sparkline-popup')) {
+            setSparklinePopup(null);
+          }
+          if (macroBadgePopup && !e.target.closest('.macro-badge-popup')) {
+            setMacroBadgePopup(null);
+          }
+          if (metricPopup && !e.target.closest('.metric-popup')) {
+            setMetricPopup(null);
+          }
+          if (mealQualityPopup && !e.target.closest('.meal-quality-popup') && !e.target.closest('.meal-bar-container')) {
+            setMealQualityPopup(null);
+          }
+          if (tdeePopup && !e.target.closest('.tdee-popup')) {
+            setTdeePopup(null);
+          }
+          if (weekNormPopup && !e.target.closest('.week-norm-popup')) {
+            setWeekNormPopup(null);
+          }
+          if (weekDeficitPopup && !e.target.closest('.week-deficit-popup') && !e.target.closest('.week-heatmap-deficit')) {
+            setWeekDeficitPopup(null);
+          }
+          if (balanceDayPopup && !e.target.closest('.balance-day-popup') && !e.target.closest('.balance-viz-bar') && !e.target.closest('.balance-viz-bar-clickable')) {
+            setBalanceDayPopup(null);
+          }
+          if (tefInfoPopup && !e.target.closest('.tef-info-popup') && !e.target.closest('.tef-help-icon')) {
+            setTefInfoPopup(null);
+          }
+          if (goalPopup && !e.target.closest('.goal-popup')) {
+            setGoalPopup(null);
+          }
+          // debtSciencePopup закрывается через overlay onClick
+        });
       };
       const timerId = setTimeout(() => {
         document.addEventListener('click', handleClickOutside);
@@ -10708,22 +10728,28 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
         const [shakeOver, setShakeOver] = useState(false);     // карточка "Перебор" — shake при превышении
         const [pulseSuccess, setPulseSuccess] = useState(false); // карточка "Съедено" — pulse при успехе
 
-        // === Progress animation ===
-        const [animatedProgress, setAnimatedProgress] = useState(0);
-        const [animatedKcal, setAnimatedKcal] = useState(0);
-        const [animatedRatioPct, setAnimatedRatioPct] = useState(0); // Анимированный % для бейджа
-        const [animatedMarkerPos, setAnimatedMarkerPos] = useState(0); // Позиция бейджа (всегда до 100%)
-        const [isAnimating, setIsAnimating] = useState(false);
+        // === 🚀 PERF R7: progress animation via refs + CSS transition ===
+        // Before: 4 useState updated per rAF frame → 5-8 full DayTab re-renders (~260ms each)
+        // After: refs + 2 forced renders (reset→0 + target). CSS transition animates bar/marker.
+        // Counter text animated via direct DOM (no React re-renders during animation).
+        const animRef = useRef({ progress: 0, kcal: 0, ratioPct: 0, markerPos: 0, isAnimating: false });
+        const [, forceAnimRender] = useState(0);
 
         // Refs для определения «реального» действия (добавили еду/рефид/сменили день)
         const prevDateTabRef = useRef(null); // "date|mobileSubTab"
 
         // === Анимация прогресса калорий при загрузке и при переключении на вкладку ===
         const animationRef = useRef(null);
+        const animTimeoutRef = useRef(null);
         useEffect(() => {
             // Отменяем предыдущую анимацию
             if (animationRef.current) {
                 cancelAnimationFrame(animationRef.current);
+                animationRef.current = null;
+            }
+            if (animTimeoutRef.current) {
+                clearTimeout(animTimeoutRef.current);
+                animTimeoutRef.current = null;
             }
 
             const dateTabKey = date + '|' + mobileSubTab;
@@ -10733,79 +10759,70 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
             prevKcalRef.current = eatenKcal;
             prevDateTabRef.current = dateTabKey;
 
+            const isOver = eatenKcal > optimum;
+            const target = isOver
+                ? (optimum / eatenKcal) * 100
+                : (eatenKcal / optimum) * 100;
+            const targetRatioPct = Math.round((eatenKcal / (optimum || 1)) * 100);
+            const targetMarkerPos = isOver ? 100 : Math.min(target, 100);
+
             if (!isRealAction) {
                 // Только optimum изменился (forceReload/normAbs пересчёт) — не сбрасываем бар,
                 // просто пересчитываем финальную позицию мгновенно без transition
-                const isOver = eatenKcal > optimum;
-                const target = isOver
-                    ? (optimum / eatenKcal) * 100
-                    : (eatenKcal / optimum) * 100;
-                const targetRatioPct = Math.round((eatenKcal / (optimum || 1)) * 100);
-                const targetMarkerPos = isOver ? 100 : Math.min(target, 100);
-                setIsAnimating(true); // Отключаем transition на время телепорта
-                setAnimatedProgress(target);
-                setAnimatedKcal(eatenKcal);
-                setAnimatedRatioPct(targetRatioPct);
-                setAnimatedMarkerPos(targetMarkerPos);
-                requestAnimationFrame(() => setIsAnimating(false));
+                animRef.current = { progress: target, kcal: eatenKcal, ratioPct: targetRatioPct, markerPos: targetMarkerPos, isAnimating: true };
+                forceAnimRender(n => n + 1);
+                requestAnimationFrame(() => {
+                    animRef.current.isAnimating = false;
+                    forceAnimRender(n => n + 1);
+                });
                 return;
             }
 
-            // Шаг 1: Сбрасываем к 0 мгновенно
-            setIsAnimating(true);
-            setAnimatedProgress(0);
-            setAnimatedKcal(0);
-            setAnimatedRatioPct(0);
-            setAnimatedMarkerPos(0);
+            // Шаг 1: Сбрасываем к 0 мгновенно (no-transition через isAnimating=true)
+            animRef.current = { progress: 0, kcal: 0, ratioPct: 0, markerPos: 0, isAnimating: true };
+            forceAnimRender(n => n + 1);
 
-            // При переборе: зелёная часть = доля нормы от съеденного (optimum/eaten)
-            // При норме: зелёная часть = доля съеденного от нормы (eaten/optimum)
-            const isOver = eatenKcal > optimum;
-            const target = isOver
-                ? (optimum / eatenKcal) * 100  // При переборе: показываем долю нормы
-                : (eatenKcal / optimum) * 100; // При норме: показываем прогресс к цели
+            // Шаг 2: Ждём чтобы React применил width: 0, затем ставим целевые значения.
+            // CSS transition (1.2s) анимирует bar width и marker left.
+            // Kcal/ratio counter — анимируем через direct DOM (без React re-render).
+            animTimeoutRef.current = setTimeout(() => {
+                animRef.current = { progress: target, kcal: eatenKcal, ratioPct: targetRatioPct, markerPos: targetMarkerPos, isAnimating: false };
+                forceAnimRender(n => n + 1);
 
-            // Шаг 2: Ждём чтобы React применил width: 0, затем запускаем анимацию
-            const timeoutId = setTimeout(() => {
-                setIsAnimating(false); // Включаем transition обратно
-
-                const duration = 1400;
+                // Direct DOM animation for kcal counter text (no React state, no re-renders)
+                const duration = 1200; // Match CSS transition duration
                 const startTime = performance.now();
-                const targetKcal = eatenKcal; // Целевое значение калорий
-                const targetRatioPct = Math.round((eatenKcal / (optimum || 1)) * 100); // Целевой % для бэджа
-                // Бейдж: при переборе — едет до 100%, при норме — до конца заполненной линии
-                const targetMarkerPos = isOver ? 100 : Math.min(target, 100);
-
-                const animate = (currentTime) => {
+                const animateCounter = (currentTime) => {
                     const elapsed = currentTime - startTime;
-                    const progress = Math.min(elapsed / duration, 1);
-                    // Ease out cubic
-                    const eased = 1 - Math.pow(1 - progress, 3);
-                    const current = target * eased;
-                    const currentKcal = Math.round(targetKcal * eased);
+                    const t = Math.min(elapsed / duration, 1);
+                    // Ease out cubic — matches CSS cubic-bezier(0.16, 1, 0.3, 1) closely
+                    const eased = 1 - Math.pow(1 - t, 3);
+                    const currentKcal = Math.round(eatenKcal * eased);
                     const currentRatioPct = Math.round(targetRatioPct * eased);
-                    const currentMarkerPos = targetMarkerPos * eased; // Позиция бейджа синхронизирована с линией
-                    setAnimatedProgress(current);
-                    setAnimatedKcal(currentKcal);
-                    setAnimatedRatioPct(currentRatioPct);
-                    setAnimatedMarkerPos(currentMarkerPos);
 
-                    if (progress < 1) {
-                        animationRef.current = requestAnimationFrame(animate);
+                    // Direct DOM updates — zero React re-renders
+                    const kcalEl = document.querySelector('.goal-eaten');
+                    if (kcalEl) kcalEl.textContent = currentKcal;
+                    const pctEl = document.querySelector('.goal-current-pct');
+                    if (pctEl) pctEl.textContent = currentRatioPct + '%';
+
+                    if (t < 1) {
+                        animationRef.current = requestAnimationFrame(animateCounter);
                     } else {
-                        setAnimatedKcal(targetKcal); // Финальное точное значение
-                        setAnimatedRatioPct(targetRatioPct);
-                        setAnimatedMarkerPos(targetMarkerPos); // Бейдж остаётся на конце линии
+                        animationRef.current = null;
                     }
                 };
-
-                animationRef.current = requestAnimationFrame(animate);
+                animationRef.current = requestAnimationFrame(animateCounter);
             }, 50); // 50ms задержка для гарантированного применения width: 0
 
             return () => {
-                clearTimeout(timeoutId);
+                if (animTimeoutRef.current) {
+                    clearTimeout(animTimeoutRef.current);
+                    animTimeoutRef.current = null;
+                }
                 if (animationRef.current) {
                     cancelAnimationFrame(animationRef.current);
+                    animationRef.current = null;
                 }
             };
         }, [eatenKcal, optimum, mobileSubTab, date]); // date — сброс анимации при смене дня
@@ -10875,17 +10892,19 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
             prevKcalRef.current = eatenKcal;
         }, [eatenKcal, optimum, playSuccessSound, hapticFn]);
 
+        // 🚀 PERF R7: read animation values from ref (snapshot at render time)
+        const anim = animRef.current;
         return {
             showConfetti,
             setShowConfetti,
             shakeEaten,
             shakeOver,
             pulseSuccess,
-            animatedProgress,
-            animatedKcal,
-            animatedRatioPct,
-            animatedMarkerPos,
-            isAnimating
+            animatedProgress: anim.progress,
+            animatedKcal: anim.kcal,
+            animatedRatioPct: anim.ratioPct,
+            animatedMarkerPos: anim.markerPos,
+            isAnimating: anim.isAnimating
         };
     }
 
@@ -11386,6 +11405,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
         const rafIdRef = useRef(0);
         const pendingStepsRef = useRef(null);
 
+        // 🚀 PERF R8: during drag, update only DOM (thumb, fill, text).
+        // Single setDay() on touchend avoids 15-30 full DayTab re-renders per drag.
         const handleStepsDrag = (e) => {
             if (isDraggingRef.current) return;
             const slider = e.currentTarget.closest('.steps-slider');
@@ -11393,6 +11414,12 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
             isDraggingRef.current = true;
 
             const rect = slider.getBoundingClientRect();
+            // Cache DOM nodes for direct updates during drag
+            const thumbEl = slider.querySelector('.steps-slider-thumb');
+            const fillEl = slider.querySelector('.steps-slider-fill');
+            const containerEl = slider.closest('.compact-activity');
+            const valueEl = containerEl?.querySelector('.steps-value b');
+
             const computeSteps = (clientX) => {
                 const x = Math.max(0, Math.min(clientX - rect.left, rect.width));
                 const percent = (x / rect.width) * 100;
@@ -11406,13 +11433,22 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
                 return Math.min(stepsMax, Math.max(0, newSteps));
             };
 
-            const flushSteps = () => {
+            const computePercent = (steps) => steps <= stepsGoal
+                ? (steps / stepsGoal) * 80
+                : 80 + ((steps - stepsGoal) / (stepsMax - stepsGoal)) * 20;
+
+            // DOM-only flush — no React re-render
+            const flushStepsDOM = () => {
                 rafIdRef.current = 0;
                 const val = pendingStepsRef.current;
                 if (val == null) return;
                 pendingStepsRef.current = null;
                 latestStepsRef.current = val;
-                setDay(prev => ({ ...prev, steps: val, updatedAt: Date.now() }));
+                const pct = computePercent(val) + '%';
+                const color = getStepsColor(Math.min(100, (val / stepsGoal) * 100));
+                if (thumbEl) { thumbEl.style.left = pct; thumbEl.style.borderColor = color; }
+                if (fillEl) { fillEl.style.width = pct; fillEl.style.background = color; }
+                if (valueEl) { valueEl.textContent = val.toLocaleString(); valueEl.style.color = color; }
             };
 
             const onMove = (ev) => {
@@ -11420,7 +11456,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
                 const clientX = ev.touches ? ev.touches[0].clientX : ev.clientX;
                 pendingStepsRef.current = computeSteps(clientX);
                 if (!rafIdRef.current) {
-                    rafIdRef.current = requestAnimationFrame(flushSteps);
+                    rafIdRef.current = requestAnimationFrame(flushStepsDOM);
                 }
             };
 
@@ -11435,20 +11471,25 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
                     cancelAnimationFrame(rafIdRef.current);
                     rafIdRef.current = 0;
                 }
-                // flush last pending value synchronously
+                // Flush last pending to ref if any
                 if (pendingStepsRef.current != null) {
                     latestStepsRef.current = pendingStepsRef.current;
                     pendingStepsRef.current = null;
-                    setDay(prev => ({ ...prev, steps: latestStepsRef.current, updatedAt: Date.now() }));
                 }
 
-                const latestSteps = latestStepsRef.current || 0;
-                if (latestSteps !== lastDispatchedStepsRef.current) {
-                    lastDispatchedStepsRef.current = latestSteps;
-                    window.dispatchEvent(new CustomEvent('heysStepsUpdated', {
-                        detail: { steps: latestSteps }
-                    }));
-                }
+                // 🚀 PERF R9: defer React state sync via setTimeout(0).
+                // DOM already shows correct slider state from drag;
+                // heavy setDay() runs in a separate task after browser paints.
+                const finalSteps = latestStepsRef.current || 0;
+                setTimeout(() => {
+                    setDay(prev => ({ ...prev, steps: finalSteps, updatedAt: Date.now() }));
+                    if (finalSteps !== lastDispatchedStepsRef.current) {
+                        lastDispatchedStepsRef.current = finalSteps;
+                        window.dispatchEvent(new CustomEvent('heysStepsUpdated', {
+                            detail: { steps: finalSteps }
+                        }));
+                    }
+                }, 0);
             };
 
             document.addEventListener('mousemove', onMove);
@@ -11456,9 +11497,10 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
             document.addEventListener('touchmove', onMove, { passive: false });
             document.addEventListener('touchend', onEnd);
 
+            // Initial touch position → DOM-only update (no React render)
             const clientX = e.touches ? e.touches[0].clientX : e.clientX;
             pendingStepsRef.current = computeSteps(clientX);
-            flushSteps();
+            flushStepsDOM();
         };
 
         return {
@@ -18606,7 +18648,9 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         if (!HEYS.dayEnergyContext?.buildEnergyContext) {
             throw new Error('[heys_day_v12] HEYS.dayEnergyContext not loaded before heys_day_v12.js');
         }
-        // 🚀 PERF: memoize — TDEE calc + meal iteration is expensive, skip on unrelated re-renders
+        // 🚀 PERF R7: granular deps — skip TDEE recalc on water/sleep/mood changes
+        // buildEnergyContext reads: meals, trainings, steps, householdActivities,
+        // householdMin, savedEatenKcal, weightMorning, date — NOT waterMl/sleep/mood
         const energyCtx = useMemo(() => HEYS.dayEnergyContext.buildEnergyContext({
             day,
             prof,
@@ -18615,7 +18659,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             M,
             r0,
             HEYS: window.HEYS
-        }) || {}, [day, prof, pIndex]);
+        }) || {}, [day?.meals, day?.trainings, day?.steps, day?.householdActivities, day?.householdMin, day?.savedEatenKcal, day?.weightMorning, day?.date, prof, pIndex]);
         const {
             tdeeResult,
             bmr,
@@ -19281,7 +19325,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         }) || null;
 
         // Компактные тренировки в SaaS стиле (вынесено в модуль)
-        const trainingsBlock = HEYS.dayTrainings?.renderTrainingsBlock?.({
+        // 🚀 PERF R7: memoize — only rebuild on training data changes
+        const trainingsBlock = useMemo(() => HEYS.dayTrainings?.renderTrainingsBlock?.({
             haptic,
             setDay,
             setVisibleTrainings,
@@ -19297,10 +19342,11 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             kcalPerMin,
             weight,
             r0
-        }) || null;
+        }) || null, [visibleTrainings, householdActivities, trainingTypes, weight, kcalMin, TR]);
 
         // Компактный блок сна и оценки дня в SaaS стиле (две плашки в розовом контейнере)
-        const sideBlock = HEYS.daySideBlock?.renderSideBlock?.({
+        // 🚀 PERF R7: memoize sideBlock — skip on popup/animation/water changes
+        const sideBlock = useMemo(() => HEYS.daySideBlock?.renderSideBlock?.({
             React,
             day,
             date,
@@ -19323,7 +19369,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             measurementsMonthlyProgress,
             measurementsLastDateFormatted,
             renderMeasurementSpark
-        }) || null;
+        }) || null, [day?.sleepHours, day?.sleepQuality, day?.moodAvg, day?.wellbeingAvg, day?.stressAvg, day?.dayScore, day?.dayScoreManual, date, sleepH, measurementsNeedUpdate, measurementsLastDateFormatted]);
 
         // === Cycle state (extracted) ===
         if (!HEYS.dayCycleState?.useCycleState) {
@@ -19574,7 +19620,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         if (!HEYS.dayHeroMetrics?.computeHeroMetrics) {
             throw new Error('[heys_day_v12] HEYS.dayHeroMetrics not loaded before heys_day_v12.js');
         }
-        const heroMetrics = HEYS.dayHeroMetrics.computeHeroMetrics({
+        // 🚀 PERF R7: memoize heroMetrics — skip on popup/animation/water changes
+        const heroMetrics = useMemo(() => HEYS.dayHeroMetrics.computeHeroMetrics({
             day,
             eatenKcal,
             optimum,
@@ -19582,7 +19629,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             dayTargetDef,
             r0,
             ratioZones: HEYS.ratioZones
-        }) || {};
+        }) || {}, [eatenKcal, optimum, factDefPct, dayTargetDef, day?.isRefeedDay]);
         const {
             effectiveOptimumForCards,
             remainingKcal,
@@ -19736,7 +19783,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         } = sparklineRenderers;
 
         // === ПРОГРЕСС-БАР К ЦЕЛИ (отдельный компонент для diary) ===
-        const goalProgressBar = HEYS.dayGoalProgress?.renderGoalProgressBar?.({
+        // 🚀 PERF R7: memoize — animation state changes rarely now (2 renders vs 5-8 before)
+        const goalProgressBar = useMemo(() => HEYS.dayGoalProgress?.renderGoalProgressBar?.({
             React,
             day,
             displayOptimum,
@@ -19751,7 +19799,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             setDay,
             r0,
             HEYS: window.HEYS
-        }) || null;
+        }) || null, [displayOptimum, optimum, eatenKcal, animatedKcal, animatedProgress, animatedRatioPct, animatedMarkerPos, isAnimating, caloricDebt, day?.isRefeedDay, day?.refeedReason]);
 
         // === ALERT: Orphan-продукты (данные из штампа вместо базы) ===
         // orphanVersion используется для триггера ререндера при изменении orphan
@@ -19764,7 +19812,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         if (!HEYS.dayHeroDisplay?.buildHeroDisplay) {
             throw new Error('[heys_day_v12] HEYS.dayHeroDisplay not loaded before heys_day_v12.js');
         }
-        const heroDisplay = HEYS.dayHeroDisplay.buildHeroDisplay({
+        // 🚀 PERF R7: memoize heroDisplay — skip on popup/animation/water/mood changes
+        const heroDisplay = useMemo(() => HEYS.dayHeroDisplay.buildHeroDisplay({
             day,
             prof,
             tdee,
@@ -19772,7 +19821,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             displayRemainingKcal,
             eatenKcal,
             HEYS: window.HEYS
-        }) || {};
+        }) || {}, [tdee, displayOptimum, displayRemainingKcal, eatenKcal]);
         const {
             displayTdee,
             displayHeroOptimum,
@@ -19901,7 +19950,9 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         if (!HEYS.dayWaterCard?.buildWaterCard) {
             throw new Error('[heys_day_v12] HEYS.dayWaterCard not loaded before heys_day_v12.js');
         }
-        const waterCard = HEYS.dayWaterCard.buildWaterCard({
+        // 🚀 PERF R7: memoize waterCard — only rebuild on water-related state changes.
+        // Skips rebuild on popup/animation/mood/sleep changes.
+        const waterCard = useMemo(() => HEYS.dayWaterCard.buildWaterCard({
             React,
             day,
             prof,
@@ -19924,7 +19975,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             openExclusivePopup,
             addWater,
             removeWater
-        });
+        }), [day?.waterMl, waterGoal, waterGoalBreakdown, waterMotivation, waterLastDrink, waterAddedAnim, showWaterDrop, showWaterTooltip]);
 
         // === COMPACT ACTIVITY INPUT ===
         if (!HEYS.dayStepsUI?.useStepsState) {
@@ -19950,7 +20001,9 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         if (!HEYS.dayActivityCard?.buildActivityCard) {
             throw new Error('[heys_day_v12] HEYS.dayActivityCard not loaded before heys_day_v12.js');
         }
-        const compactActivity = HEYS.dayActivityCard.buildActivityCard({
+        // 🚀 PERF R7: memoize compactActivity — only rebuild on activity/energy changes.
+        // Skips rebuild on popup/animation/water/mood changes.
+        const compactActivity = useMemo(() => HEYS.dayActivityCard.buildActivityCard({
             React,
             day,
             prof,
@@ -19984,7 +20037,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             handleStepsDrag,
             openHouseholdPicker,
             openTrainingPicker
-        });
+        }), [stepsValue, stepsGoal, stepsPercent, stepsColor, stepsK, bmr, householdK, totalHouseholdMin, train1k, train2k, visibleTrainings, trainingsBlock, ndteBoostKcal, tefKcal, dayTargetDef, displayOptimum, tdee, caloricDebt, day?.isRefeedDay]);
 
         if (!HEYS.dayTabRender?.renderDayTabLayout) {
             throw new Error('[heys_day_v12] HEYS.dayTabRender not loaded before heys_day_v12.js');

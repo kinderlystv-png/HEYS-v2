@@ -913,7 +913,8 @@
                         if (tab !== 'stats' && tab !== 'diary') {
                             setTab('stats');
                         }
-                        window.dispatchEvent(new CustomEvent('heysShowAdvice'));
+                        // PERF R13 FIX G: defer heysShowAdvice dispatch to avoid sync React render in click handler
+                        setTimeout(() => window.dispatchEvent(new CustomEvent('heysShowAdvice')), 0);
                     },
                 },
                 React.createElement('span', { className: 'tab-icon' }, '💡'),

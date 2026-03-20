@@ -4209,37 +4209,77 @@
 
         /**
          * Internal water animation runner
+         * 🚀 PERF R10: DOM-based animations — bypass React re-render entirely.
+         * R9 showed animation setState alone costs ~426ms because ANY state change
+         * triggers full DayTab re-render (2013-line monolith, ~30 useState).
+         * waterAddedAnim + showWaterDrop are in useMemo deps for waterCard —
+         * changing them invalidates the memo and causes expensive reconciliation.
+         * Direct DOM injection = 0ms React processing, same visual effect.
+         * React reconciliation does NOT remove DOM nodes it doesn't manage.
          */
         function runWaterAnimation(ml) {
             const newWater = (day.waterMl || 0) + ml;
-            setDay(prev => ({ ...prev, waterMl: (prev.waterMl || 0) + ml, lastWaterTime: Date.now(), updatedAt: Date.now() }));
+            const prevWater = day.waterMl || 0;
+            const hitGoal = waterGoal && newWater >= waterGoal && prevWater < waterGoal;
 
-            // 💧 Анимация падающей капли (длиннее для плавности)
-            if (setShowWaterDrop) {
-                setShowWaterDrop(true);
-                setTimeout(() => setShowWaterDrop(false), 1200);
+            // DOM-based visual animations (no React state = no re-render)
+            const waterCard = document.getElementById('water-card');
+            if (waterCard) {
+                // "+250" text animation above the ring
+                const ringCont = waterCard.querySelector('.water-ring-container');
+                if (ringCont) {
+                    const animSpan = document.createElement('span');
+                    animSpan.className = 'water-card-anim water-card-anim-above';
+                    animSpan.textContent = '+' + ml;
+                    ringCont.appendChild(animSpan);
+                    setTimeout(() => { if (animSpan.parentNode) animSpan.remove(); }, 800);
+                }
+
+                // Water drop + splash in progress bar
+                const progressBar = waterCard.querySelector('.water-progress-inline');
+                if (progressBar) {
+                    const dropCont = document.createElement('div');
+                    dropCont.className = 'water-drop-container';
+                    const drop = document.createElement('div');
+                    drop.className = 'water-drop';
+                    const splash = document.createElement('div');
+                    splash.className = 'water-splash';
+                    dropCont.appendChild(drop);
+                    dropCont.appendChild(splash);
+                    progressBar.insertBefore(dropCont, progressBar.firstChild);
+                    setTimeout(() => { if (dropCont.parentNode) dropCont.remove(); }, 1200);
+                }
             }
 
-            // Анимация feedback
-            if (setWaterAddedAnim) {
-                setWaterAddedAnim('+' + ml);
-            }
+            // Defer heavy day state update via setTimeout(0) + startTransition
+            setTimeout(() => {
+                React.startTransition(() => {
+                    setDay(prev => ({ ...prev, waterMl: (prev.waterMl || 0) + ml, lastWaterTime: Date.now(), updatedAt: Date.now() }));
+                });
+            }, 0);
+
             haptic('light');
+            if (hitGoal) haptic('success');
 
             // 🎮 XP: Dispatch для gamification
             window.dispatchEvent(new CustomEvent('heysWaterAdded', { detail: { ml, total: newWater } }));
 
-            // 🎉 Celebration при достижении цели (переиспользуем confetti от калорий)
-            const prevWater = day.waterMl || 0;
-            if (waterGoal && newWater >= waterGoal && prevWater < waterGoal && !showConfetti && setShowConfetti) {
-                setShowConfetti(true);
-                haptic('success');
-                setTimeout(() => setShowConfetti(false), 2000);
-            }
-
-            // Скрыть анимацию
-            if (setWaterAddedAnim) {
-                setTimeout(() => setWaterAddedAnim(null), 800);
+            // 🎊 Confetti on goal hit — DOM-based (no React state)
+            if (hitGoal) {
+                const colors = ['#10b981', '#3b82f6', '#f59e0b', '#ec4899', '#3b82f6'];
+                const confettiEl = document.createElement('div');
+                confettiEl.className = 'confetti-container mood-confetti';
+                confettiEl.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9999';
+                for (let i = 0; i < 20; i++) {
+                    const piece = document.createElement('div');
+                    piece.className = 'confetti-piece';
+                    piece.style.left = (5 + Math.random() * 90) + '%';
+                    piece.style.animationDelay = (Math.random() * 0.5) + 's';
+                    piece.style.backgroundColor = colors[i % 5];
+                    confettiEl.appendChild(piece);
+                }
+                document.body.appendChild(confettiEl);
+                setTimeout(() => { if (confettiEl.parentNode) confettiEl.remove(); }, 2000);
             }
         }
 

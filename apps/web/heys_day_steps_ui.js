@@ -75,6 +75,8 @@
         const rafIdRef = useRef(0);
         const pendingStepsRef = useRef(null);
 
+        // 🚀 PERF R8: during drag, update only DOM (thumb, fill, text).
+        // Single setDay() on touchend avoids 15-30 full DayTab re-renders per drag.
         const handleStepsDrag = (e) => {
             if (isDraggingRef.current) return;
             const slider = e.currentTarget.closest('.steps-slider');
@@ -82,6 +84,12 @@
             isDraggingRef.current = true;
 
             const rect = slider.getBoundingClientRect();
+            // Cache DOM nodes for direct updates during drag
+            const thumbEl = slider.querySelector('.steps-slider-thumb');
+            const fillEl = slider.querySelector('.steps-slider-fill');
+            const containerEl = slider.closest('.compact-activity');
+            const valueEl = containerEl?.querySelector('.steps-value b');
+
             const computeSteps = (clientX) => {
                 const x = Math.max(0, Math.min(clientX - rect.left, rect.width));
                 const percent = (x / rect.width) * 100;
@@ -95,13 +103,22 @@
                 return Math.min(stepsMax, Math.max(0, newSteps));
             };
 
-            const flushSteps = () => {
+            const computePercent = (steps) => steps <= stepsGoal
+                ? (steps / stepsGoal) * 80
+                : 80 + ((steps - stepsGoal) / (stepsMax - stepsGoal)) * 20;
+
+            // DOM-only flush — no React re-render
+            const flushStepsDOM = () => {
                 rafIdRef.current = 0;
                 const val = pendingStepsRef.current;
                 if (val == null) return;
                 pendingStepsRef.current = null;
                 latestStepsRef.current = val;
-                setDay(prev => ({ ...prev, steps: val, updatedAt: Date.now() }));
+                const pct = computePercent(val) + '%';
+                const color = getStepsColor(Math.min(100, (val / stepsGoal) * 100));
+                if (thumbEl) { thumbEl.style.left = pct; thumbEl.style.borderColor = color; }
+                if (fillEl) { fillEl.style.width = pct; fillEl.style.background = color; }
+                if (valueEl) { valueEl.textContent = val.toLocaleString(); valueEl.style.color = color; }
             };
 
             const onMove = (ev) => {
@@ -109,7 +126,7 @@
                 const clientX = ev.touches ? ev.touches[0].clientX : ev.clientX;
                 pendingStepsRef.current = computeSteps(clientX);
                 if (!rafIdRef.current) {
-                    rafIdRef.current = requestAnimationFrame(flushSteps);
+                    rafIdRef.current = requestAnimationFrame(flushStepsDOM);
                 }
             };
 
@@ -124,20 +141,25 @@
                     cancelAnimationFrame(rafIdRef.current);
                     rafIdRef.current = 0;
                 }
-                // flush last pending value synchronously
+                // Flush last pending to ref if any
                 if (pendingStepsRef.current != null) {
                     latestStepsRef.current = pendingStepsRef.current;
                     pendingStepsRef.current = null;
-                    setDay(prev => ({ ...prev, steps: latestStepsRef.current, updatedAt: Date.now() }));
                 }
 
-                const latestSteps = latestStepsRef.current || 0;
-                if (latestSteps !== lastDispatchedStepsRef.current) {
-                    lastDispatchedStepsRef.current = latestSteps;
-                    window.dispatchEvent(new CustomEvent('heysStepsUpdated', {
-                        detail: { steps: latestSteps }
-                    }));
-                }
+                // 🚀 PERF R9: defer React state sync via setTimeout(0).
+                // DOM already shows correct slider state from drag;
+                // heavy setDay() runs in a separate task after browser paints.
+                const finalSteps = latestStepsRef.current || 0;
+                setTimeout(() => {
+                    setDay(prev => ({ ...prev, steps: finalSteps, updatedAt: Date.now() }));
+                    if (finalSteps !== lastDispatchedStepsRef.current) {
+                        lastDispatchedStepsRef.current = finalSteps;
+                        window.dispatchEvent(new CustomEvent('heysStepsUpdated', {
+                            detail: { steps: finalSteps }
+                        }));
+                    }
+                }, 0);
             };
 
             document.addEventListener('mousemove', onMove);
@@ -145,9 +167,10 @@
             document.addEventListener('touchmove', onMove, { passive: false });
             document.addEventListener('touchend', onEnd);
 
+            // Initial touch position → DOM-only update (no React render)
             const clientX = e.touches ? e.touches[0].clientX : e.clientX;
             pendingStepsRef.current = computeSteps(clientX);
-            flushSteps();
+            flushStepsDOM();
         };
 
         return {

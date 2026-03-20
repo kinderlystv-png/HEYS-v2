@@ -37,22 +37,28 @@
         const [shakeOver, setShakeOver] = useState(false);     // карточка "Перебор" — shake при превышении
         const [pulseSuccess, setPulseSuccess] = useState(false); // карточка "Съедено" — pulse при успехе
 
-        // === Progress animation ===
-        const [animatedProgress, setAnimatedProgress] = useState(0);
-        const [animatedKcal, setAnimatedKcal] = useState(0);
-        const [animatedRatioPct, setAnimatedRatioPct] = useState(0); // Анимированный % для бейджа
-        const [animatedMarkerPos, setAnimatedMarkerPos] = useState(0); // Позиция бейджа (всегда до 100%)
-        const [isAnimating, setIsAnimating] = useState(false);
+        // === 🚀 PERF R7: progress animation via refs + CSS transition ===
+        // Before: 4 useState updated per rAF frame → 5-8 full DayTab re-renders (~260ms each)
+        // After: refs + 2 forced renders (reset→0 + target). CSS transition animates bar/marker.
+        // Counter text animated via direct DOM (no React re-renders during animation).
+        const animRef = useRef({ progress: 0, kcal: 0, ratioPct: 0, markerPos: 0, isAnimating: false });
+        const [, forceAnimRender] = useState(0);
 
         // Refs для определения «реального» действия (добавили еду/рефид/сменили день)
         const prevDateTabRef = useRef(null); // "date|mobileSubTab"
 
         // === Анимация прогресса калорий при загрузке и при переключении на вкладку ===
         const animationRef = useRef(null);
+        const animTimeoutRef = useRef(null);
         useEffect(() => {
             // Отменяем предыдущую анимацию
             if (animationRef.current) {
                 cancelAnimationFrame(animationRef.current);
+                animationRef.current = null;
+            }
+            if (animTimeoutRef.current) {
+                clearTimeout(animTimeoutRef.current);
+                animTimeoutRef.current = null;
             }
 
             const dateTabKey = date + '|' + mobileSubTab;
@@ -62,79 +68,70 @@
             prevKcalRef.current = eatenKcal;
             prevDateTabRef.current = dateTabKey;
 
+            const isOver = eatenKcal > optimum;
+            const target = isOver
+                ? (optimum / eatenKcal) * 100
+                : (eatenKcal / optimum) * 100;
+            const targetRatioPct = Math.round((eatenKcal / (optimum || 1)) * 100);
+            const targetMarkerPos = isOver ? 100 : Math.min(target, 100);
+
             if (!isRealAction) {
                 // Только optimum изменился (forceReload/normAbs пересчёт) — не сбрасываем бар,
                 // просто пересчитываем финальную позицию мгновенно без transition
-                const isOver = eatenKcal > optimum;
-                const target = isOver
-                    ? (optimum / eatenKcal) * 100
-                    : (eatenKcal / optimum) * 100;
-                const targetRatioPct = Math.round((eatenKcal / (optimum || 1)) * 100);
-                const targetMarkerPos = isOver ? 100 : Math.min(target, 100);
-                setIsAnimating(true); // Отключаем transition на время телепорта
-                setAnimatedProgress(target);
-                setAnimatedKcal(eatenKcal);
-                setAnimatedRatioPct(targetRatioPct);
-                setAnimatedMarkerPos(targetMarkerPos);
-                requestAnimationFrame(() => setIsAnimating(false));
+                animRef.current = { progress: target, kcal: eatenKcal, ratioPct: targetRatioPct, markerPos: targetMarkerPos, isAnimating: true };
+                forceAnimRender(n => n + 1);
+                requestAnimationFrame(() => {
+                    animRef.current.isAnimating = false;
+                    forceAnimRender(n => n + 1);
+                });
                 return;
             }
 
-            // Шаг 1: Сбрасываем к 0 мгновенно
-            setIsAnimating(true);
-            setAnimatedProgress(0);
-            setAnimatedKcal(0);
-            setAnimatedRatioPct(0);
-            setAnimatedMarkerPos(0);
+            // Шаг 1: Сбрасываем к 0 мгновенно (no-transition через isAnimating=true)
+            animRef.current = { progress: 0, kcal: 0, ratioPct: 0, markerPos: 0, isAnimating: true };
+            forceAnimRender(n => n + 1);
 
-            // При переборе: зелёная часть = доля нормы от съеденного (optimum/eaten)
-            // При норме: зелёная часть = доля съеденного от нормы (eaten/optimum)
-            const isOver = eatenKcal > optimum;
-            const target = isOver
-                ? (optimum / eatenKcal) * 100  // При переборе: показываем долю нормы
-                : (eatenKcal / optimum) * 100; // При норме: показываем прогресс к цели
+            // Шаг 2: Ждём чтобы React применил width: 0, затем ставим целевые значения.
+            // CSS transition (1.2s) анимирует bar width и marker left.
+            // Kcal/ratio counter — анимируем через direct DOM (без React re-render).
+            animTimeoutRef.current = setTimeout(() => {
+                animRef.current = { progress: target, kcal: eatenKcal, ratioPct: targetRatioPct, markerPos: targetMarkerPos, isAnimating: false };
+                forceAnimRender(n => n + 1);
 
-            // Шаг 2: Ждём чтобы React применил width: 0, затем запускаем анимацию
-            const timeoutId = setTimeout(() => {
-                setIsAnimating(false); // Включаем transition обратно
-
-                const duration = 1400;
+                // Direct DOM animation for kcal counter text (no React state, no re-renders)
+                const duration = 1200; // Match CSS transition duration
                 const startTime = performance.now();
-                const targetKcal = eatenKcal; // Целевое значение калорий
-                const targetRatioPct = Math.round((eatenKcal / (optimum || 1)) * 100); // Целевой % для бэджа
-                // Бейдж: при переборе — едет до 100%, при норме — до конца заполненной линии
-                const targetMarkerPos = isOver ? 100 : Math.min(target, 100);
-
-                const animate = (currentTime) => {
+                const animateCounter = (currentTime) => {
                     const elapsed = currentTime - startTime;
-                    const progress = Math.min(elapsed / duration, 1);
-                    // Ease out cubic
-                    const eased = 1 - Math.pow(1 - progress, 3);
-                    const current = target * eased;
-                    const currentKcal = Math.round(targetKcal * eased);
+                    const t = Math.min(elapsed / duration, 1);
+                    // Ease out cubic — matches CSS cubic-bezier(0.16, 1, 0.3, 1) closely
+                    const eased = 1 - Math.pow(1 - t, 3);
+                    const currentKcal = Math.round(eatenKcal * eased);
                     const currentRatioPct = Math.round(targetRatioPct * eased);
-                    const currentMarkerPos = targetMarkerPos * eased; // Позиция бейджа синхронизирована с линией
-                    setAnimatedProgress(current);
-                    setAnimatedKcal(currentKcal);
-                    setAnimatedRatioPct(currentRatioPct);
-                    setAnimatedMarkerPos(currentMarkerPos);
 
-                    if (progress < 1) {
-                        animationRef.current = requestAnimationFrame(animate);
+                    // Direct DOM updates — zero React re-renders
+                    const kcalEl = document.querySelector('.goal-eaten');
+                    if (kcalEl) kcalEl.textContent = currentKcal;
+                    const pctEl = document.querySelector('.goal-current-pct');
+                    if (pctEl) pctEl.textContent = currentRatioPct + '%';
+
+                    if (t < 1) {
+                        animationRef.current = requestAnimationFrame(animateCounter);
                     } else {
-                        setAnimatedKcal(targetKcal); // Финальное точное значение
-                        setAnimatedRatioPct(targetRatioPct);
-                        setAnimatedMarkerPos(targetMarkerPos); // Бейдж остаётся на конце линии
+                        animationRef.current = null;
                     }
                 };
-
-                animationRef.current = requestAnimationFrame(animate);
+                animationRef.current = requestAnimationFrame(animateCounter);
             }, 50); // 50ms задержка для гарантированного применения width: 0
 
             return () => {
-                clearTimeout(timeoutId);
+                if (animTimeoutRef.current) {
+                    clearTimeout(animTimeoutRef.current);
+                    animTimeoutRef.current = null;
+                }
                 if (animationRef.current) {
                     cancelAnimationFrame(animationRef.current);
+                    animationRef.current = null;
                 }
             };
         }, [eatenKcal, optimum, mobileSubTab, date]); // date — сброс анимации при смене дня
@@ -204,17 +201,19 @@
             prevKcalRef.current = eatenKcal;
         }, [eatenKcal, optimum, playSuccessSound, hapticFn]);
 
+        // 🚀 PERF R7: read animation values from ref (snapshot at render time)
+        const anim = animRef.current;
         return {
             showConfetti,
             setShowConfetti,
             shakeEaten,
             shakeOver,
             pulseSuccess,
-            animatedProgress,
-            animatedKcal,
-            animatedRatioPct,
-            animatedMarkerPos,
-            isAnimating
+            animatedProgress: anim.progress,
+            animatedKcal: anim.kcal,
+            animatedRatioPct: anim.ratioPct,
+            animatedMarkerPos: anim.markerPos,
+            isAnimating: anim.isAnimating
         };
     }
 

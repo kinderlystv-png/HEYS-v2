@@ -117,6 +117,8 @@
       return () => document.removeEventListener('keydown', handleKeyDown);
     }, [modal]);
 
+    // 🚀 PERF R8: close modal first (instant visual feedback),
+    // defer heavy callback via setTimeout so browser paints before expensive work.
     const handleAction = React.useCallback((action) => {
       if (!modal || !action) return;
 
@@ -124,9 +126,14 @@
         HEYS.dayUtils.haptic(action.haptic || 'medium');
       }
 
-      action.onClick?.();
-      modal.onAction?.(action.value, action);
+      const onClickFn = action.onClick;
+      const onActionFn = modal.onAction;
+      const actionValue = action.value;
       setModal(null);
+      setTimeout(() => {
+        onClickFn?.();
+        onActionFn?.(actionValue, action);
+      }, 0);
     }, [modal]);
 
     const handleConfirm = React.useCallback(() => {
@@ -146,8 +153,10 @@
         HEYS.dayUtils.haptic('medium');
       }
 
-      modal.onConfirm?.();
+      // 🚀 PERF R8: close modal first, defer heavy callback
+      const fn = modal.onConfirm;
       setModal(null);
+      if (fn) setTimeout(fn, 0);
     }, [handleAction, modal]);
 
     const handleCancel = React.useCallback(() => {
@@ -162,8 +171,10 @@
         return;
       }
 
-      modal.onCancel?.();
+      // 🚀 PERF R8: close modal first, defer heavy callback
+      const fn = modal.onCancel;
       setModal(null);
+      if (fn) setTimeout(fn, 0);
     }, [handleAction, modal]);
 
     const handleBackdropClick = React.useCallback((e) => {

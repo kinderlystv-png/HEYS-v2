@@ -1,5 +1,5 @@
 // heys_day_popups_state_v1.js — popup state + helpers for DayTab
-;(function (global) {
+; (function (global) {
   const HEYS = global.HEYS = global.HEYS || {};
 
   const MOD = {};
@@ -20,26 +20,40 @@
     const [debtSciencePopup, setDebtSciencePopup] = useState(null); // { title, content, links }
 
     // === Управление попапами: одновременно может быть только один ===
+    // 🚀 PERF R11: defer close too — avoids blocking DayTab re-render on click-outside
     const closeAllPopups = useCallback(() => {
-      setSparklinePopup(null);
-      setMacroBadgePopup(null);
-      setMetricPopup(null);
-      setTdeePopup(null);
-      setMealQualityPopup(null);
-      setWeekNormPopup(null);
-      setGoalPopup(null);
-      setDebtSciencePopup(null);
+      setTimeout(() => {
+        const st = React.startTransition || (fn => fn());
+        st(() => {
+          setSparklinePopup(null);
+          setMacroBadgePopup(null);
+          setMetricPopup(null);
+          setTdeePopup(null);
+          setMealQualityPopup(null);
+          setWeekNormPopup(null);
+          setGoalPopup(null);
+          setDebtSciencePopup(null);
+        });
+      }, 0);
     }, []);
 
+    // 🚀 PERF R11: defer popup state changes via setTimeout(0) + startTransition
+    // to avoid blocking the main thread with a full DayTab re-render (~375ms).
+    // Haptic feedback fires synchronously in the caller, popup appears in deferred task.
     const openExclusivePopup = useCallback((type, payload) => {
-      setSparklinePopup(type === 'sparkline' ? payload : null);
-      setMacroBadgePopup(type === 'macro' ? payload : null);
-      setMetricPopup(type === 'metric' ? payload : null);
-      setTdeePopup(type === 'tdee' ? payload : null);
-      setMealQualityPopup(type === 'mealQuality' ? payload : null);
-      setWeekNormPopup(type === 'weekNorm' ? payload : null);
-      setGoalPopup(type === 'goal' ? payload : null);
-      setDebtSciencePopup(type === 'debt-science' ? payload : null);
+      setTimeout(() => {
+        const st = React.startTransition || (fn => fn());
+        st(() => {
+          setSparklinePopup(type === 'sparkline' ? payload : null);
+          setMacroBadgePopup(type === 'macro' ? payload : null);
+          setMetricPopup(type === 'metric' ? payload : null);
+          setTdeePopup(type === 'tdee' ? payload : null);
+          setMealQualityPopup(type === 'mealQuality' ? payload : null);
+          setWeekNormPopup(type === 'weekNorm' ? payload : null);
+          setGoalPopup(type === 'goal' ? payload : null);
+          setDebtSciencePopup(type === 'debt-science' ? payload : null);
+        });
+      }, 0);
     }, []);
 
     // === Утилита для умного позиционирования попапов ===
@@ -92,40 +106,46 @@
     }, []);
 
     // Закрытие popup при клике вне
+    // 🚀 PERF R12: handleClickOutside was calling setState directly, causing
+    // a full synchronous DayTab re-render (~375ms) on every outside click.
+    // Now uses startTransition to defer the re-render — DOM checks stay sync.
     useEffect(() => {
       if (!sparklinePopup && !macroBadgePopup && !metricPopup && !mealQualityPopup && !tdeePopup && !weekNormPopup && !tefInfoPopup && !goalPopup && !weekDeficitPopup && !balanceDayPopup && !debtSciencePopup) return;
       const handleClickOutside = (e) => {
-        if (sparklinePopup && !e.target.closest('.sparkline-popup')) {
-          setSparklinePopup(null);
-        }
-        if (macroBadgePopup && !e.target.closest('.macro-badge-popup')) {
-          setMacroBadgePopup(null);
-        }
-        if (metricPopup && !e.target.closest('.metric-popup')) {
-          setMetricPopup(null);
-        }
-        if (mealQualityPopup && !e.target.closest('.meal-quality-popup') && !e.target.closest('.meal-bar-container')) {
-          setMealQualityPopup(null);
-        }
-        if (tdeePopup && !e.target.closest('.tdee-popup')) {
-          setTdeePopup(null);
-        }
-        if (weekNormPopup && !e.target.closest('.week-norm-popup')) {
-          setWeekNormPopup(null);
-        }
-        if (weekDeficitPopup && !e.target.closest('.week-deficit-popup') && !e.target.closest('.week-heatmap-deficit')) {
-          setWeekDeficitPopup(null);
-        }
-        if (balanceDayPopup && !e.target.closest('.balance-day-popup') && !e.target.closest('.balance-viz-bar') && !e.target.closest('.balance-viz-bar-clickable')) {
-          setBalanceDayPopup(null);
-        }
-        if (tefInfoPopup && !e.target.closest('.tef-info-popup') && !e.target.closest('.tef-help-icon')) {
-          setTefInfoPopup(null);
-        }
-        if (goalPopup && !e.target.closest('.goal-popup')) {
-          setGoalPopup(null);
-        }
-        // debtSciencePopup закрывается через overlay onClick
+        const st = React.startTransition || (fn => fn());
+        st(() => {
+          if (sparklinePopup && !e.target.closest('.sparkline-popup')) {
+            setSparklinePopup(null);
+          }
+          if (macroBadgePopup && !e.target.closest('.macro-badge-popup')) {
+            setMacroBadgePopup(null);
+          }
+          if (metricPopup && !e.target.closest('.metric-popup')) {
+            setMetricPopup(null);
+          }
+          if (mealQualityPopup && !e.target.closest('.meal-quality-popup') && !e.target.closest('.meal-bar-container')) {
+            setMealQualityPopup(null);
+          }
+          if (tdeePopup && !e.target.closest('.tdee-popup')) {
+            setTdeePopup(null);
+          }
+          if (weekNormPopup && !e.target.closest('.week-norm-popup')) {
+            setWeekNormPopup(null);
+          }
+          if (weekDeficitPopup && !e.target.closest('.week-deficit-popup') && !e.target.closest('.week-heatmap-deficit')) {
+            setWeekDeficitPopup(null);
+          }
+          if (balanceDayPopup && !e.target.closest('.balance-day-popup') && !e.target.closest('.balance-viz-bar') && !e.target.closest('.balance-viz-bar-clickable')) {
+            setBalanceDayPopup(null);
+          }
+          if (tefInfoPopup && !e.target.closest('.tef-info-popup') && !e.target.closest('.tef-help-icon')) {
+            setTefInfoPopup(null);
+          }
+          if (goalPopup && !e.target.closest('.goal-popup')) {
+            setGoalPopup(null);
+          }
+          // debtSciencePopup закрывается через overlay onClick
+        });
       };
       const timerId = setTimeout(() => {
         document.addEventListener('click', handleClickOutside);

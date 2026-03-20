@@ -472,7 +472,9 @@
         if (!HEYS.dayEnergyContext?.buildEnergyContext) {
             throw new Error('[heys_day_v12] HEYS.dayEnergyContext not loaded before heys_day_v12.js');
         }
-        // 🚀 PERF: memoize — TDEE calc + meal iteration is expensive, skip on unrelated re-renders
+        // 🚀 PERF R7: granular deps — skip TDEE recalc on water/sleep/mood changes
+        // buildEnergyContext reads: meals, trainings, steps, householdActivities,
+        // householdMin, savedEatenKcal, weightMorning, date — NOT waterMl/sleep/mood
         const energyCtx = useMemo(() => HEYS.dayEnergyContext.buildEnergyContext({
             day,
             prof,
@@ -481,7 +483,7 @@
             M,
             r0,
             HEYS: window.HEYS
-        }) || {}, [day, prof, pIndex]);
+        }) || {}, [day?.meals, day?.trainings, day?.steps, day?.householdActivities, day?.householdMin, day?.savedEatenKcal, day?.weightMorning, day?.date, prof, pIndex]);
         const {
             tdeeResult,
             bmr,
@@ -1147,7 +1149,8 @@
         }) || null;
 
         // Компактные тренировки в SaaS стиле (вынесено в модуль)
-        const trainingsBlock = HEYS.dayTrainings?.renderTrainingsBlock?.({
+        // 🚀 PERF R7: memoize — only rebuild on training data changes
+        const trainingsBlock = useMemo(() => HEYS.dayTrainings?.renderTrainingsBlock?.({
             haptic,
             setDay,
             setVisibleTrainings,
@@ -1163,10 +1166,11 @@
             kcalPerMin,
             weight,
             r0
-        }) || null;
+        }) || null, [visibleTrainings, householdActivities, trainingTypes, weight, kcalMin, TR]);
 
         // Компактный блок сна и оценки дня в SaaS стиле (две плашки в розовом контейнере)
-        const sideBlock = HEYS.daySideBlock?.renderSideBlock?.({
+        // 🚀 PERF R7: memoize sideBlock — skip on popup/animation/water changes
+        const sideBlock = useMemo(() => HEYS.daySideBlock?.renderSideBlock?.({
             React,
             day,
             date,
@@ -1189,7 +1193,7 @@
             measurementsMonthlyProgress,
             measurementsLastDateFormatted,
             renderMeasurementSpark
-        }) || null;
+        }) || null, [day?.sleepHours, day?.sleepQuality, day?.moodAvg, day?.wellbeingAvg, day?.stressAvg, day?.dayScore, day?.dayScoreManual, date, sleepH, measurementsNeedUpdate, measurementsLastDateFormatted]);
 
         // === Cycle state (extracted) ===
         if (!HEYS.dayCycleState?.useCycleState) {
@@ -1440,7 +1444,8 @@
         if (!HEYS.dayHeroMetrics?.computeHeroMetrics) {
             throw new Error('[heys_day_v12] HEYS.dayHeroMetrics not loaded before heys_day_v12.js');
         }
-        const heroMetrics = HEYS.dayHeroMetrics.computeHeroMetrics({
+        // 🚀 PERF R7: memoize heroMetrics — skip on popup/animation/water changes
+        const heroMetrics = useMemo(() => HEYS.dayHeroMetrics.computeHeroMetrics({
             day,
             eatenKcal,
             optimum,
@@ -1448,7 +1453,7 @@
             dayTargetDef,
             r0,
             ratioZones: HEYS.ratioZones
-        }) || {};
+        }) || {}, [eatenKcal, optimum, factDefPct, dayTargetDef, day?.isRefeedDay]);
         const {
             effectiveOptimumForCards,
             remainingKcal,
@@ -1602,7 +1607,8 @@
         } = sparklineRenderers;
 
         // === ПРОГРЕСС-БАР К ЦЕЛИ (отдельный компонент для diary) ===
-        const goalProgressBar = HEYS.dayGoalProgress?.renderGoalProgressBar?.({
+        // 🚀 PERF R7: memoize — animation state changes rarely now (2 renders vs 5-8 before)
+        const goalProgressBar = useMemo(() => HEYS.dayGoalProgress?.renderGoalProgressBar?.({
             React,
             day,
             displayOptimum,
@@ -1617,7 +1623,7 @@
             setDay,
             r0,
             HEYS: window.HEYS
-        }) || null;
+        }) || null, [displayOptimum, optimum, eatenKcal, animatedKcal, animatedProgress, animatedRatioPct, animatedMarkerPos, isAnimating, caloricDebt, day?.isRefeedDay, day?.refeedReason]);
 
         // === ALERT: Orphan-продукты (данные из штампа вместо базы) ===
         // orphanVersion используется для триггера ререндера при изменении orphan
@@ -1630,7 +1636,8 @@
         if (!HEYS.dayHeroDisplay?.buildHeroDisplay) {
             throw new Error('[heys_day_v12] HEYS.dayHeroDisplay not loaded before heys_day_v12.js');
         }
-        const heroDisplay = HEYS.dayHeroDisplay.buildHeroDisplay({
+        // 🚀 PERF R7: memoize heroDisplay — skip on popup/animation/water/mood changes
+        const heroDisplay = useMemo(() => HEYS.dayHeroDisplay.buildHeroDisplay({
             day,
             prof,
             tdee,
@@ -1638,7 +1645,7 @@
             displayRemainingKcal,
             eatenKcal,
             HEYS: window.HEYS
-        }) || {};
+        }) || {}, [tdee, displayOptimum, displayRemainingKcal, eatenKcal]);
         const {
             displayTdee,
             displayHeroOptimum,
@@ -1767,7 +1774,9 @@
         if (!HEYS.dayWaterCard?.buildWaterCard) {
             throw new Error('[heys_day_v12] HEYS.dayWaterCard not loaded before heys_day_v12.js');
         }
-        const waterCard = HEYS.dayWaterCard.buildWaterCard({
+        // 🚀 PERF R7: memoize waterCard — only rebuild on water-related state changes.
+        // Skips rebuild on popup/animation/mood/sleep changes.
+        const waterCard = useMemo(() => HEYS.dayWaterCard.buildWaterCard({
             React,
             day,
             prof,
@@ -1790,7 +1799,7 @@
             openExclusivePopup,
             addWater,
             removeWater
-        });
+        }), [day?.waterMl, waterGoal, waterGoalBreakdown, waterMotivation, waterLastDrink, waterAddedAnim, showWaterDrop, showWaterTooltip]);
 
         // === COMPACT ACTIVITY INPUT ===
         if (!HEYS.dayStepsUI?.useStepsState) {
@@ -1816,7 +1825,9 @@
         if (!HEYS.dayActivityCard?.buildActivityCard) {
             throw new Error('[heys_day_v12] HEYS.dayActivityCard not loaded before heys_day_v12.js');
         }
-        const compactActivity = HEYS.dayActivityCard.buildActivityCard({
+        // 🚀 PERF R7: memoize compactActivity — only rebuild on activity/energy changes.
+        // Skips rebuild on popup/animation/water/mood changes.
+        const compactActivity = useMemo(() => HEYS.dayActivityCard.buildActivityCard({
             React,
             day,
             prof,
@@ -1850,7 +1861,7 @@
             handleStepsDrag,
             openHouseholdPicker,
             openTrainingPicker
-        });
+        }), [stepsValue, stepsGoal, stepsPercent, stepsColor, stepsK, bmr, householdK, totalHouseholdMin, train1k, train2k, visibleTrainings, trainingsBlock, ndteBoostKcal, tefKcal, dayTargetDef, displayOptimum, tdee, caloricDebt, day?.isRefeedDay]);
 
         if (!HEYS.dayTabRender?.renderDayTabLayout) {
             throw new Error('[heys_day_v12] HEYS.dayTabRender not loaded before heys_day_v12.js');

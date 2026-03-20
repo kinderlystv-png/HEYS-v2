@@ -2282,38 +2282,41 @@
 
         useEffect(() => {
             const handleShowAdvice = () => {
-                if (totalAdviceCount > 0) {
-                    const engineVisibleAdviceCount = Array.isArray(safeBadgeAdvices)
-                        ? safeBadgeAdvices.length
-                        : 0;
-                    setAdviceTrigger('manual');
-                    setAdviceExpanded(true);
-                    setToastVisible(true);
-                    setToastDismissed(false);
-                    HEYSRef?.advice?.recordDailyAdviceTraceEvent?.(date, 'manual_open', {
-                        trigger: 'manual',
-                        visibleAdviceCount: totalAdviceCount,
-                        displayedAdviceCount: totalAdviceCount,
-                        engineVisibleAdviceCount,
-                        badgeCount: Array.isArray(safeBadgeAdvices) ? safeBadgeAdvices.length : 0,
-                        filteredOutCount: Math.max(0, engineVisibleAdviceCount - totalAdviceCount)
-                    });
-                    haptic('light');
-                } else {
-                    setAdviceTrigger('manual_empty');
-                    setToastVisible(true);
-                    setToastDismissed(false);
-                    HEYSRef?.advice?.recordDailyAdviceTraceEvent?.(date, 'manual_empty', {
-                        trigger: 'manual_empty',
-                        visibleAdviceCount: 0,
-                        badgeCount: 0
-                    });
-                    if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
-                    toastTimeoutRef.current = setTimeout(() => {
-                        setToastVisible(false);
-                        setAdviceTrigger(null);
-                    }, 2000);
-                }
+                // PERF R13 FIX H: wrap setState in startTransition to defer React render
+                React.startTransition(() => {
+                    if (totalAdviceCount > 0) {
+                        const engineVisibleAdviceCount = Array.isArray(safeBadgeAdvices)
+                            ? safeBadgeAdvices.length
+                            : 0;
+                        setAdviceTrigger('manual');
+                        setAdviceExpanded(true);
+                        setToastVisible(true);
+                        setToastDismissed(false);
+                        HEYSRef?.advice?.recordDailyAdviceTraceEvent?.(date, 'manual_open', {
+                            trigger: 'manual',
+                            visibleAdviceCount: totalAdviceCount,
+                            displayedAdviceCount: totalAdviceCount,
+                            engineVisibleAdviceCount,
+                            badgeCount: Array.isArray(safeBadgeAdvices) ? safeBadgeAdvices.length : 0,
+                            filteredOutCount: Math.max(0, engineVisibleAdviceCount - totalAdviceCount)
+                        });
+                        haptic('light');
+                    } else {
+                        setAdviceTrigger('manual_empty');
+                        setToastVisible(true);
+                        setToastDismissed(false);
+                        HEYSRef?.advice?.recordDailyAdviceTraceEvent?.(date, 'manual_empty', {
+                            trigger: 'manual_empty',
+                            visibleAdviceCount: 0,
+                            badgeCount: 0
+                        });
+                        if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
+                        toastTimeoutRef.current = setTimeout(() => {
+                            setToastVisible(false);
+                            setAdviceTrigger(null);
+                        }, 2000);
+                    }
+                });
             };
             window.addEventListener('heysShowAdvice', handleShowAdvice);
             return () => window.removeEventListener('heysShowAdvice', handleShowAdvice);
@@ -2819,8 +2822,13 @@
         }, []);
 
         const handleAdviceToggleExpand = useCallback((adviceId) => {
-            setExpandedAdviceId(prev => (prev === adviceId ? null : (adviceId || null)));
+            // PERF R13 FIX I: defer advice expand/collapse to avoid sync React render in click handler
             haptic('light');
+            setTimeout(() => {
+                React.startTransition(() => {
+                    setExpandedAdviceId(prev => (prev === adviceId ? null : (adviceId || null)));
+                });
+            }, 0);
         }, [haptic]);
 
         const handleDismissAll = () => {
