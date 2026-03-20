@@ -16,10 +16,19 @@
     // Data gathering and calculation delegated to HEYS.RelapseRisk.getCurrentSnapshot()
     // (single source of truth in heys_relapse_risk_v1.js)
 
-    function getRelapseRiskData(widget, U) {
+    function normalizeRelapseRecommendation(rec) {
+        if (!rec) return null;
+        if (typeof rec === 'string') return rec;
+        if (typeof rec?.text === 'string' && rec.text.trim()) return rec.text.trim();
+        if (typeof rec?.label === 'string' && rec.label.trim()) return rec.label.trim();
+        if (typeof rec?.title === 'string' && rec.title.trim()) return rec.title.trim();
+        return null;
+    }
+
+    function getRelapseRiskData(widget, options) {
         // Delegate to the shared RRS snapshot — single source of truth
         if (HEYS.RelapseRisk?.getCurrentSnapshot) {
-            const snap = HEYS.RelapseRisk.getCurrentSnapshot();
+            const snap = HEYS.RelapseRisk.getCurrentSnapshot(options || {});
             if (!snap.hasData) {
                 return { hasData: false, message: snap.message || 'Relapse engine не загружен' };
             }
@@ -31,12 +40,12 @@
                 remaining: Math.max(0, 100 - snap.score),
                 level: snap.level,
                 confidence: snap.confidence,
-                topWindowLabel: snap.topWindowLabel,
-                topWindowScore: snap.topWindowScore,
+                topWindowLabel: typeof snap.topWindowLabel === 'string' ? snap.topWindowLabel : 'сейчас',
+                topWindowScore: Number.isFinite(Number(snap.topWindowScore)) ? Number(snap.topWindowScore) : Number(snap.score || 0),
                 primaryDriver: snap.primaryDriver,
                 primaryDrivers: snap.primaryDrivers,
                 protectiveFactors: snap.protectiveFactors,
-                recommendation: snap.recommendation,
+                recommendation: normalizeRelapseRecommendation(snap.recommendation),
                 windows: snap.windows,
                 raw: snap.raw,
             };
@@ -63,6 +72,50 @@
 
         try {
             switch (type) {
+                case 'dayScore': {
+                    const dayData = HEYS.DayData?.getCurrentDay?.() || {};
+                    const profile = U.lsGet('heys_profile', {});
+                    const dayTot = HEYS.DayData?.getDayTot?.(dayData) || {};
+                    const normAbs = HEYS.norms?.getNormAbs?.(profile, profile?.pIndex || 0) || {};
+                    const waterGoal = HEYS.utils?.calculateWaterGoal?.(profile.weight) || 2000;
+                    const pIndex = profile?.pIndex || 0;
+
+                    const result = HEYS.DayScore?.calculateDayScore?.({
+                        dayData, profile, dayTot, normAbs, waterGoal, pIndex
+                    });
+
+                    return {
+                        score: result?.score ?? 0,
+                        level: result?.level ?? 'none',
+                        factorScore: result?.factorScore ?? 0,
+                        subjectiveScore: result?.subjectiveScore ?? 0,
+                        momentumScore: result?.momentumScore ?? 0,
+                        breakdown: result?.breakdown ?? {},
+                        hasData: !!result
+                    };
+                }
+
+                case 'riskRadar': {
+                    const dayData = HEYS.DayData?.getCurrentDay?.() || {};
+                    const profile = U.lsGet('heys_profile', {});
+                    const dayTot = HEYS.DayData?.getDayTot?.(dayData) || {};
+                    const normAbs = HEYS.norms?.getNormAbs?.(profile, profile?.pIndex || 0) || {};
+                    const pIndex = profile?.pIndex || 0;
+
+                    const result = HEYS.RiskRadar?.calculate?.({
+                        dayData, profile, dayTot, normAbs, pIndex
+                    });
+
+                    return {
+                        score: result?.score ?? 0,
+                        level: result?.level ?? 'low',
+                        source: result?.source ?? 'none',
+                        drivers: result?.drivers ?? [],
+                        actions: result?.actions ?? [],
+                        hasData: !!result
+                    };
+                }
+
                 case 'crashRisk': {
                     // ✅ Используем специализированный data provider
                     const provider = HEYS.Widgets.DataProviders?.crashRisk;
@@ -222,7 +275,8 @@
                 }
 
                 case 'heatmap': {
-                    const period = widget.settings?.period || 'week';
+                    const requestedPeriod = widget.settings?.period || 'week';
+                    const period = requestedPeriod === 'month' ? 'week' : requestedPeriod;
                     const days = period === 'week' ? 7 : 30;
 
                     // Получаем историю активности
@@ -268,7 +322,8 @@
 
     // === Exports ===
     HEYS.Widgets.data = {
-        getDataForWidget
+        getDataForWidget,
+        getRelapseRiskData
     };
 
     console.info('[HEYS.Widgets.data] ✅ Data provider v1.0.0 loaded');

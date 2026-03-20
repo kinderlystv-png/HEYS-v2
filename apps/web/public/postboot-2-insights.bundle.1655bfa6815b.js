@@ -592,11 +592,11 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-2-insights: execute sta
       impactScore: 0.95,
       whyImportant: '🚨 Предупреждает о срыве ДО того как он случится. Красный = действуй сейчас!'
     },
-    // Health Score — Высокий, сводная оценка
+    // Trend Score — Высокий, сводная оценка за неделю/месяц
     HEALTH_SCORE: {
-      name: 'Health Score (общая оценка)',
-      short: 'Сводная оценка питания, режима, активности и восстановления. Удобный ориентир для прогресса.',
-      details: 'Health Score агрегирует ключевые привычки в один читаемый индикатор качества дня/недели. Его сила в том, что он показывает не «идеальность», а устойчивость системы: насколько ваш текущий режим поддерживает цели и самочувствие. По смыслу это управленческая метрика — она помогает сравнивать недели между собой и быстро видеть, где просадка, если прогресс замедлился. Оптимальная стратегия — повышать score постепенно через приоритетные действия, а не «шлифовать» второстепенные детали.',
+      name: 'Trend Score (оценка за неделю)',
+      short: 'Сводная оценка питания, режима, активности и восстановления за 7-30 дней. Удобный ориентир для прогресса.',
+      details: 'Trend Score агрегирует ключевые привычки в один читаемый индикатор качества недели/месяца. Его сила в том, что он показывает не «идеальность», а устойчивость системы: насколько ваш текущий режим поддерживает цели и самочувствие. По смыслу это управленческая метрика — она помогает сравнивать недели между собой и быстро видеть, где просадка, если прогресс замедлился. Оптимальная стратегия — повышать score постепенно через приоритетные действия, а не «шлифовать» второстепенные детали.',
       formula: 'Категории (веса зависят от цели):\n  Питание: 40% (качество еды, белок, клетчатка)\n  Тайминг: 25% (интервалы, волны, поздняя еда)\n  Активность: 20% (тренировки, шаги)\n  Восстановление: 15% (сон, стресс)',
       source: 'Композитный показатель из 12+ научных паттернов',
       interpretation: '>80 — отлично! 60-80 — хорошо. <60 — есть над чем работать.',
@@ -606,7 +606,7 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-2-insights: execute sta
       category: 'COMPOSITE',
       actionability: 'TODAY',
       impactScore: 0.85,
-      whyImportant: 'Единая оценка всех аспектов здоровья. Цель — 80+ баллов.'
+      whyImportant: 'Единая оценка трендов за неделю. Цель — 80+ баллов.'
     },
     // Correlation — Низкий, статистика
     CORRELATION: {
@@ -14731,7 +14731,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
  * - Priority Queue (severity × frequency × impact)
  * 
  * Сценарии:
- * 1. Health Score падает 3 дня подряд
+ * 1. Trend Score падает 3 дня подряд
  * 2. Критичный паттерн (C1-C22) ухудшился на 20%+ за 7 дней OR низкий score
  * 3. Status Score (0-100) падает 3 дня подряд
  * 4. Sleep debt накопился (3+ дня <7ч)
@@ -15007,9 +15007,9 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     const WARNING_HUMAN_MESSAGES = {
         HEALTH_SCORE_DECLINE: {
             title: 'Общий показатель снижается',
-            message: 'Health Score падает несколько дней подряд — это комплексный сигнал о накопленном дисбалансе.',
+            message: 'Trend Score падает несколько дней подряд — это комплексный сигнал о накопленном дисбалансе.',
             insight: 'Падение интегрирует 50+ метрик питания, сна, активности. Проверьте паттерны с низкими scores — там причина.',
-            science: 'Health Score объединяет ключевые паттерны питания (timing, quality, balance), восстановления (сон, стресс) и активности (NEAT, тренировки). Снижение показателя 3+ дня указывает на системный дисбаланс, требующий внимания к конкретным слабым зонам. Исследования показывают: раннее выявление трендов (до появления симптомов) улучшает долгосрочные результаты на 40-60%.',
+            science: 'Trend Score объединяет ключевые паттерны питания (timing, quality, balance), восстановления (сон, стресс) и активности (NEAT, тренировки). Снижение показателя 3+ дня указывает на системный дисбаланс, требующий внимания к конкретным слабым зонам. Исследования показывают: раннее выявление трендов (до появления симптомов) улучшает долгосрочные результаты на 40-60%.',
             actions: [
                 'Откройте раздел Insights → Паттерны, найдите 3 паттерна с наименьшим score — это ключевые зоны риска',
                 'Проверьте сон за 3 дня: если <7ч — приоритет на восстановление, а не новые нагрузки',
@@ -16688,10 +16688,20 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                 status = day.statusScore;
             } else if (day._statusCalculated && day._statusCalculated.score !== undefined) {
                 status = day._statusCalculated.score;
-            } else if (typeof HEYS !== 'undefined' && HEYS.Status && typeof HEYS.Status.calculate === 'function') {
-                // Try to calculate status Score on the fly
+            } else if (typeof HEYS !== 'undefined' && HEYS.DayScore && typeof HEYS.DayScore.calculateDayScore === 'function') {
+                // Prefer unified Day Score over raw Status Score
                 try {
-                    const result = HEYS.Status.calculate({ dayData: day });
+                    const result = HEYS.DayScore.calculateDayScore({ dayData: day });
+                    if (result && result.score !== undefined) {
+                        status = result.score;
+                    }
+                } catch (e) {
+                    console.warn('ews / detect ⚠️ failed to calculate DayScore for day', day.date, e.message);
+                }
+            } else if (typeof HEYS !== 'undefined' && HEYS.Status && typeof HEYS.Status.calculateStatus === 'function') {
+                // Fallback to raw Status Score
+                try {
+                    const result = HEYS.Status.calculateStatus({ dayData: day });
                     if (result && result.score !== undefined) {
                         status = result.score;
                     }
@@ -29402,7 +29412,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
   /**
    * Total Health Score — большое центральное кольцо (v2.0: с InfoButton)
    */
-  function TotalHealthRing({ score, label = 'Health Score', size = 120, strokeWidth = 20, debugData, onClick }) {
+  function TotalHealthRing({ score, label = 'Trend Score', size = 120, strokeWidth = 20, debugData, onClick }) {
     const radius = (size - strokeWidth) / 2;
     const circumference = 2 * Math.PI * radius;
     const progress = Math.min(100, Math.max(0, score || 0));
@@ -32262,6 +32272,15 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         }
       }
 
+      // Fallback: use dayCalculations if available
+      if (typeof HEYS.dayCalculations?.calculateDayTotals === 'function' && dayData?.meals?.length) {
+        try {
+          return HEYS.dayCalculations.calculateDayTotals(dayData);
+        } catch (error) {
+          devWarn('[pi_ui_dashboard] buildDayTotForInsights calculateDayTotals failed:', error);
+        }
+      }
+
       return {};
     }
 
@@ -32271,6 +32290,19 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           return HEYS.Day.calcNormAbs(profile) || {};
         } catch (error) {
           devWarn('[pi_ui_dashboard] buildNormAbsForInsights failed:', error);
+        }
+      }
+
+      // Fallback: estimate from TDEE
+      if (typeof HEYS.TDEE?.calculate === 'function' && profile) {
+        try {
+          var tdee = HEYS.TDEE.calculate(profile);
+          if (tdee && tdee.optimum > 0) {
+            var weight = +(profile.weight || profile.baseWeight || 70);
+            return { kcal: tdee.optimum, prot: Math.round(weight * 1.6) };
+          }
+        } catch (error) {
+          devWarn('[pi_ui_dashboard] buildNormAbsForInsights TDEE failed:', error);
         }
       }
 
@@ -32301,6 +32333,17 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         const historyDays = getHistoryDaysForDate(lsGet, selectedDate, 14);
         const todayIso = HEYS.dayUtils?.todayISO?.() || new Date().toISOString().split('T')[0];
         const now = selectedDate === todayIso ? undefined : `${selectedDate}T23:59:00`;
+
+        console.info('[HEYS.insights] calculateRelapseRiskSnapshot:inputs', {
+          selectedDate,
+          hasDayData: !!safeDayData && Object.keys(safeDayData).length > 0,
+          mealsCount: safeDayData?.meals?.length || 0,
+          dayTotKcal: safeDayTot?.kcal,
+          normAbsKcal: safeNormAbs?.kcal,
+          historyLen: historyDays.length,
+          usedBuildDayTot: !(dayTot && Object.keys(dayTot).length > 0),
+          usedBuildNormAbs: !(normAbs && Object.keys(normAbs).length > 0),
+        });
 
         return HEYS.RelapseRisk.calculate({
           dayData: safeDayData,
@@ -32483,7 +32526,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                 wrap.scoreChange > 0 ? `+${wrap.scoreChange}` : wrap.scoreChange
               )
             ),
-            h('div', { className: 'insights-wrap__stat-label' }, 'Health Score')
+            h('div', { className: 'insights-wrap__stat-label' }, 'Trend Score')
           )
         ),
 
@@ -33423,7 +33466,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           h('div', { className: 'score-explainer-modal__hero' },
             h('div', { className: 'score-explainer-modal__score-pill' },
               h('span', { className: 'score-explainer-modal__score-number' }, model.totalScore ?? '—'),
-              h('span', { className: 'score-explainer-modal__score-label' }, 'Health Score')
+              h('span', { className: 'score-explainer-modal__score-label' }, 'Trend Score')
             ),
             h('div', { className: 'score-explainer-modal__hero-copy' },
               h('p', { className: 'score-explainer-modal__headline' }, model.headline),
@@ -33665,6 +33708,21 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       const [showPhenotypeClassifier, setShowPhenotypeClassifier] = useState(false); // Phenotype Classifier Panel
       const [showWhatIfScenarios, setShowWhatIfScenarios] = useState(false); // What-If Scenarios Panel
       const [ewsWarnings, setEwsWarnings] = useState([]);
+      const [dataVersion, setDataVersion] = useState(0);
+
+      useEffect(() => {
+        const handleDataRefresh = () => {
+          HEYS.RelapseRisk?.invalidateSnapshot?.();
+          setDataVersion((value) => value + 1);
+        };
+
+        const events = ['heys:day-updated', 'day-updated', 'heys-sync-complete', 'day-saved'];
+        events.forEach((eventName) => window.addEventListener(eventName, handleDataRefresh));
+
+        return () => {
+          events.forEach((eventName) => window.removeEventListener(eventName, handleDataRefresh));
+        };
+      }, []);
 
       // 🎯 State для отслеживания прохождения тура (нужен для перерисовки после завершения)
       // 🔧 v1.13 FIX: Проверяем ОБА источника — scoped (HEYS.store) И unscoped (localStorage)
@@ -33774,7 +33832,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           optimum: currentOptimum,
           waterGoal: currentWaterGoal
         };
-      }, [dayData, profile, pIndex, dayTot, normAbs, optimum, waterGoal, selectedDate, lsGet]);
+      }, [dayData, profile, pIndex, dayTot, normAbs, optimum, waterGoal, selectedDate, lsGet, dataVersion]);
 
       // Анализ данных
       const realInsights = useMemo(() => {
@@ -33841,6 +33899,14 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       const relapseRisk = useMemo(() => {
         if (showDemoMode) return null;
 
+        // For today: use getCurrentSnapshot (same source as widget)
+        const todayIso = HEYS.dayUtils?.todayISO?.() || new Date().toISOString().split('T')[0];
+        if (selectedDate === todayIso && HEYS.RelapseRisk?.getCurrentSnapshot) {
+          const snap = HEYS.RelapseRisk.getCurrentSnapshot();
+          return snap.hasData ? snap.raw : null;
+        }
+
+        // Historical date: use calculateRelapseRiskSnapshot
         return calculateRelapseRiskSnapshot({
           lsGet: lsGet || window.HEYS?.utils?.lsGet,
           selectedDate,
@@ -33930,16 +33996,22 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           }
         };
 
+        // perf: тяжёлые вычисления (30 дней из localStorage + EWS detect) не должны
+        // блокировать main thread синхронно при day-updated — откладываем через setTimeout
+        const deferredCollect = () => setTimeout(collectWarnings, 0);
+
         collectWarnings();
         const interval = setInterval(collectWarnings, 5 * 60 * 1000);
-        window.addEventListener('day-updated', collectWarnings);
-        window.addEventListener('heys-sync-complete', collectWarnings);
+        window.addEventListener('heys:day-updated', deferredCollect);
+        window.addEventListener('day-updated', deferredCollect);
+        window.addEventListener('heys-sync-complete', deferredCollect);
 
         return () => {
           cancelled = true;
           clearInterval(interval);
-          window.removeEventListener('day-updated', collectWarnings);
-          window.removeEventListener('heys-sync-complete', collectWarnings);
+          window.removeEventListener('heys:day-updated', deferredCollect);
+          window.removeEventListener('day-updated', deferredCollect);
+          window.removeEventListener('heys-sync-complete', deferredCollect);
         };
       }, [lsGet, effectiveData.profile, effectiveData.pIndex, insights?.healthScore?.total]);
 
@@ -34122,7 +34194,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                     },
                     onClick: () => {
                       // 🆕 v3.5.0: Early Warning System Check при клике на Health Score
-                      console.group('🚨 [HEYS Early Warning System] HEALTH SCORE CLICK');
+                      console.group('🚨 [HEYS Early Warning System] TREND SCORE CLICK');
                       try {
                         const earlyWarning = HEYS.InsightsPI?.earlyWarning;
                         if (earlyWarning && typeof earlyWarning.detect === 'function') {
@@ -35161,8 +35233,16 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       const relapseRisk = useMemo(() => {
         if (initialRelapseRisk) return initialRelapseRisk;
 
+        // For today: use getCurrentSnapshot (same source as widget)
+        const todayIso = HEYS.dayUtils?.todayISO?.() || new Date().toISOString().split('T')[0];
+        const dateStr = selectedDate || todayIso;
+        if (dateStr === todayIso && HEYS.RelapseRisk?.getCurrentSnapshot) {
+          const snap = HEYS.RelapseRisk.getCurrentSnapshot();
+          return snap.hasData ? snap.raw : null;
+        }
+
+        // Historical date: fallback
         const getter = lsGet || window.HEYS?.utils?.lsGet;
-        const dateStr = selectedDate || new Date().toISOString().split('T')[0];
         const prof = profile || getter?.('heys_profile', {});
         const day = getter ? getter('heys_dayv2_' + dateStr, {}) : {};
 
@@ -35678,45 +35758,46 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
       // === RRS-unified risk data ===
 
-      // Helper: map RRS snapshot → DualRiskPanel format
-      function snapshotToPanel(snap) {
-        if (!snap || !snap.hasData) return null;
-        const drivers = snap.primaryDrivers || [];
+      // Helper: map raw RRS result → DualRiskPanel format
+      function rawResultToPanel(result, type) {
+        if (!result) return null;
+        const drivers = result.primaryDrivers || [];
         const primaryTrigger = drivers[0]
           ? { label: drivers[0].label, impact: drivers[0].impact }
           : null;
         const factors = drivers.map(d => ({
           label: d.label, weight: d.impact, isProtective: false,
         }));
-        if (Array.isArray(snap.protectiveFactors)) {
-          snap.protectiveFactors.forEach(pf => {
+        if (Array.isArray(result.protectiveFactors)) {
+          result.protectiveFactors.forEach(pf => {
             factors.push({ label: pf.label, weight: pf.impact, isProtective: true });
           });
         }
         return {
-          risk: snap.score,
-          riskLevel: snap.level,
-          confidence: snap.confidence,
-          type: snap.type,
+          risk: Math.round(result.score || 0),
+          riskLevel: result.level,
+          confidence: Math.round(result.confidence || 0),
+          type: type || result.type || 'realtime',
           primaryTrigger,
           factors,
-          preventionStrategy: (snap.recommendations || []).map(r => ({
+          preventionStrategy: (result.recommendations || []).map(r => ({
             action: r.text, reason: r.type || '',
           })),
         };
       }
 
-      // "СЕЙЧАС" — единый snapshot из HEYS.RelapseRisk (тот же что и виджет)
+      // "СЕЙЧАС" — берём из relapseRisk пропа (InsightsTab передаёт
+      // getCurrentSnapshot().raw с правильными React-зависимостями)
       const predictionToday = useMemo(() => {
-        if (!HEYS.RelapseRisk?.getCurrentSnapshot) return null;
-        return snapshotToPanel(HEYS.RelapseRisk.getCurrentSnapshot());
-      }, [lsGet, profile, todayDate]);
+        return rawResultToPanel(relapseRisk, 'realtime');
+      }, [relapseRisk]);
 
       // "ЗАВТРА" — RRS forecast snapshot
       const predictionTomorrow = useMemo(() => {
         if (!HEYS.RelapseRisk?.getForecastSnapshot) return null;
-        return snapshotToPanel(HEYS.RelapseRisk.getForecastSnapshot(tomorrowDate));
-      }, [lsGet, profile, todayDate, tomorrowDate]);
+        const snap = HEYS.RelapseRisk.getForecastSnapshot(tomorrowDate);
+        return snap?.hasData ? rawResultToPanel(snap.raw, 'forecast') : null;
+      }, [relapseRisk, tomorrowDate]);
 
       // Прогноз (с offset для timeline)
       const forecast = useMemo(() => {
@@ -35819,7 +35900,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
               ? h(DualRiskPanel, {
                 predictionToday,
                 predictionTomorrow,
-                riskColors
+                riskColors,
+                relapseRiskRaw: relapseRisk
               })
               : h('div', { className: 'predictive-dashboard__empty' }, 'Нет данных для анализа риска')
           ),
@@ -35838,7 +35920,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
      * v3.0: Убрана навигация по дням, сразу видно оба риска
      * v3.22.0: Интеграция emotionalRisk в факторы (Epel 2001, PMID: 11070333)
      */
-    function DualRiskPanel({ predictionToday, predictionTomorrow, riskColors }) {
+    function DualRiskPanel({ predictionToday, predictionTomorrow, riskColors, relapseRiskRaw }) {
       // Определяем какой риск выше для акцента
       const todayRisk = predictionToday?.risk || 0;
       const tomorrowRisk = predictionTomorrow?.risk || 0;
@@ -35846,6 +35928,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
       // Активный прогноз для деталей (показываем тот где риск выше, если оба есть)
       const [activePrediction, setActivePrediction] = useState(tomorrowRisk > todayRisk ? 'tomorrow' : 'today');
+      // debug modal state для диагностики расхождений между виджетом и инсайтами
+      const [rrsModalOpen, setRrsModalOpen] = useState(false);
 
       // RRS factors already include drivers + protective — no extra enhancement needed.
       // The old extendedAnalytics/emotionalRisk/training inline logic is now handled inside
@@ -35855,15 +35939,40 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       const activeLabel = activePrediction === 'today' ? 'Сейчас' : 'Завтра';
       const activeType = activePredictionData?.type || 'realtime';
 
+      // Открытие диагностической модали по клику на карточку «Сейчас»
+      const handleTodayCardClick = useCallback(() => {
+        setActivePrediction('today');
+        if (relapseRiskRaw) setRrsModalOpen(true);
+      }, [relapseRiskRaw]);
+
+      // Payload для модали: берём raw данные того же snapshot, что дал 16%
+      // (не вызываем getCurrentSnapshot() повторно, чтобы видеть ИМЕННО те данные)
+      const rrsModalPayload = rrsModalOpen && relapseRiskRaw ? {
+        snapshot: {
+          hasData: true,
+          score: relapseRiskRaw.score,
+          level: relapseRiskRaw.level,
+          confidence: relapseRiskRaw.confidence,
+          raw: relapseRiskRaw
+        },
+        widget: { id: 'insights-today', size: 'panel' }
+      } : null;
+
+      // Резолвим компонент лениво (postboot-3-ui может загрузиться позже)
+      const RelapseRiskDetailsModalComponent = rrsModalOpen
+        ? (HEYS.Widgets?.RelapseRiskDetailsModal || null)
+        : null;
+
       const getRiskLevel = (risk) => risk < 30 ? 'low' : risk < 60 ? 'medium' : 'high';
 
       return h('div', { className: 'dual-risk-panel' },
         // Два полукруга рядом
         h('div', { className: 'dual-risk-panel__meters' },
-          // Сегодня — реальный риск
+          // Сегодня — реальный риск (клик открывает диагностическую модаль)
           h('div', {
             className: `dual-risk-panel__meter-card ${activePrediction === 'today' ? 'dual-risk-panel__meter-card--active' : ''}`,
-            onClick: () => setActivePrediction('today')
+            onClick: handleTodayCardClick,
+            title: relapseRiskRaw ? 'Нажми чтобы увидеть детали расчёта' : undefined
           },
             h('div', { className: 'dual-risk-panel__meter-label' }, 'Сейчас'),
             h(MiniRiskMeter, {
@@ -35971,6 +36080,51 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
               )
             )
           )
+        ),
+
+        // Кнопка техлога — показываем когда есть raw-данные для «Сейчас»
+        activePrediction === 'today' && relapseRiskRaw &&
+        h('div', { className: 'dual-risk-panel__debug-actions' },
+          h('button', {
+            type: 'button',
+            className: 'dual-risk-panel__debug-btn',
+            onClick: (e) => { e.stopPropagation(); setRrsModalOpen(true); },
+            title: 'Открыть детальный расчёт Relapse Risk Score'
+          }, '📋 Техлог расчёта')
+        ),
+
+        // RelapseRiskDetailsModal — рендерим через Portal в body, чтобы вырваться
+        // из stacking context .insights-tab__content (z-index: 3) и оказаться
+        // выше fixed таббара (z-index: 1000)
+        rrsModalOpen && ReactDOM.createPortal(
+          HEYS.Widgets?.RelapseRiskDetailsModal
+            ? h(HEYS.Widgets.RelapseRiskDetailsModal, {
+              payload: rrsModalPayload,
+              isOpen: rrsModalOpen,
+              onClose: () => setRrsModalOpen(false)
+            })
+            : h('div', { className: 'widget-relapse-risk__modal-overlay', onClick: () => setRrsModalOpen(false) },
+              h('div', { className: 'widget-relapse-risk__modal', onClick: (e) => e.stopPropagation() },
+                h('div', { className: 'widget-relapse-risk__modal-header' },
+                  h('div', { className: 'widget-relapse-risk__modal-title-wrap' },
+                    h('div', { className: 'widget-relapse-risk__modal-eyebrow' }, 'Relapse Risk Score'),
+                    h('h3', { className: 'widget-relapse-risk__modal-title' }, 'Инсайты: расчёт сегодня')
+                  ),
+                  h('button', { type: 'button', className: 'widget-relapse-risk__modal-close', onClick: () => setRrsModalOpen(false) }, '✕')
+                ),
+                h('div', { className: 'widget-relapse-risk__modal-content' },
+                  h('div', { style: { padding: '16px', fontSize: '13px', color: 'var(--text-primary)' } },
+                    h('b', null, 'Score: ' + (relapseRiskRaw?.score || 0) + '%'),
+                    h('br', null),
+                    'Level: ' + (relapseRiskRaw?.level || '—') + ' · Confidence: ' + (relapseRiskRaw?.confidence || 0) + '%',
+                    h('pre', { style: { fontSize: '11px', marginTop: '12px', whiteSpace: 'pre-wrap', wordBreak: 'break-all', maxHeight: '60vh', overflow: 'auto' } },
+                      JSON.stringify(relapseRiskRaw, null, 2)
+                    )
+                  )
+                )
+              )
+            ),
+          document.body
         )
       );
     }

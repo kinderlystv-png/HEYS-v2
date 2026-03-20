@@ -6599,10 +6599,13 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
       }
     });
 
+    // perf: defer на следующий tick — не блокируем main thread в момент day-updated события
     window.addEventListener('heys:day-updated', () => {
-      if (HEYS.game?.recalculateDailyMissionsProgress) {
-        HEYS.game.recalculateDailyMissionsProgress();
-      }
+      setTimeout(() => {
+        if (HEYS.game?.recalculateDailyMissionsProgress) {
+          HEYS.game.recalculateDailyMissionsProgress();
+        }
+      }, 0);
     });
   }
 
@@ -20259,7 +20262,8 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
   const MODULE = '[HEYS.relapseRisk]';
 
   const CONFIG = {
-    VERSION: '1.0.0',
+    VERSION: '1.1.0',
+    DEFAULT_PROFILE_KEY: 'v1_1',
     LEVELS: {
       low: { min: 0, max: 19 },
       guarded: { min: 20, max: 39 },
@@ -20312,7 +20316,74 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
       protectiveBufferCap: 30,
       historyMinForTrend: 3,
     },
+    PROFILES: {
+      baseline: {
+        key: 'baseline',
+        label: 'Baseline v1.0',
+        description: 'Исходные веса без дополнительного тюнинга.',
+        weights: {
+          stressLoad: 0.24,
+          sleepDebt: 0.18,
+          restrictionPressure: 0.22,
+          rewardExposure: 0.16,
+          timingContext: 0.10,
+          emotionalVulnerability: 0.10,
+        },
+      },
+      v1_1: {
+        key: 'v1_1',
+        label: 'Tuned v1.1',
+        description: 'Чуть мягче к структурному дефициту и чуть чувствительнее к recovery debt.',
+        weights: {
+          stressLoad: 0.22,
+          sleepDebt: 0.20,
+          restrictionPressure: 0.21,
+          rewardExposure: 0.15,
+          timingContext: 0.09,
+          emotionalVulnerability: 0.13,
+        },
+      },
+      recovery_sensitive: {
+        key: 'recovery_sensitive',
+        label: 'Recovery-sensitive',
+        description: 'Сильнее наказывает недосып и эмоциональное истощение.',
+        weights: {
+          stressLoad: 0.21,
+          sleepDebt: 0.23,
+          restrictionPressure: 0.19,
+          rewardExposure: 0.14,
+          timingContext: 0.08,
+          emotionalVulnerability: 0.15,
+        },
+      },
+      restriction_sensitive: {
+        key: 'restriction_sensitive',
+        label: 'Restriction-sensitive',
+        description: 'Чувствительнее к дефициту, gaps и aggressive cut паттерну.',
+        weights: {
+          stressLoad: 0.20,
+          sleepDebt: 0.17,
+          restrictionPressure: 0.28,
+          rewardExposure: 0.14,
+          timingContext: 0.09,
+          emotionalVulnerability: 0.12,
+        },
+      },
+    },
   };
+
+  function getRiskProfileConfig(profileKey) {
+    const requestedKey = typeof profileKey === 'string' && profileKey.trim()
+      ? profileKey.trim()
+      : CONFIG.DEFAULT_PROFILE_KEY;
+    const profile = CONFIG.PROFILES[requestedKey] || CONFIG.PROFILES[CONFIG.DEFAULT_PROFILE_KEY] || CONFIG.PROFILES.baseline;
+    return {
+      key: profile.key,
+      label: profile.label,
+      description: profile.description,
+      weights: profile.weights || CONFIG.WEIGHTS,
+    };
+  }
 
   function clamp(value, min, max) {
     const numeric = Number(value);
@@ -20416,6 +20487,32 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
     }
 
     return Math.round(((currentMinutes - lastMealMinutes) / 60) * 10) / 10;
+  }
+
+  // ── Exercise momentum helpers ──────────────────────────────────────────
+  // Positive behavioral cascade (Bandura self-efficacy, Blundell acute
+  // appetite suppression, identity consistency) — exercise today reduces
+  // relapse risk independently of its caloric cost.
+
+  function getTrainings(dayData) {
+    const raw = Array.isArray(dayData?.trainings) ? dayData.trainings : [];
+    return raw.filter(t => t && Array.isArray(t.z) && t.z.some(m => +m > 0));
+  }
+
+  function calcTrainingKcal(trainings, weight) {
+    if (trainings.length === 0) return 0;
+    const calcFn = HEYS.IW?.utils?.calculateTrainingKcal;
+    let total = 0;
+    trainings.forEach(t => {
+      if (typeof calcFn === 'function') {
+        total += calcFn(t, weight) || 0;
+      } else {
+        // Fallback: simplified MET formula (same as heys_iw_constants)
+        const mets = [2.5, 6, 8, 10];
+        total += t.z.reduce((sum, min, i) => sum + (+min || 0) * (mets[i] * 3.5 * (weight || 70) / 200), 0);
+      }
+    });
+    return Math.round(total);
   }
 
   function getKcalTarget(normAbs, profile) {
@@ -20608,6 +20705,16 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
         : ctx.hour < 15 && ctx.meals.length >= 2 && ctx.protPct >= 0.4 ? 4
           : 0;
 
+    // Exercise-driven deficit relief: caloric deficit from intentional exercise
+    // is psychologically different from deficit via food restriction/avoidance.
+    // An exerciser who burned 700 kcal is in a different mental state than someone
+    // skipping meals. Cap at 6 to preserve physiological deficit warning.
+    const exerciseDeficitRelief = noFoodData ? 0
+      : ctx.trainingKcal >= 600 ? 6
+        : ctx.trainingKcal >= 300 ? 4
+          : ctx.trainingKcal >= 150 ? 2
+            : 0;
+
     const controlledDeficitRelief = noFoodData ? 0
       : ctx.hour < 18 && structuredDay && ctx.dayScore >= 7 && ctx.stressAvg <= 2 && coverageLag <= 0.1 ? 4
         : 0;
@@ -20648,7 +20755,8 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
       longGapPenalty -
       progressAlignmentRelief -
       proteinCatchupRelief -
-      controlledDeficitRelief
+      controlledDeficitRelief -
+      exerciseDeficitRelief
     );
 
     return {
@@ -20670,6 +20778,7 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
       progressAlignmentRelief,
       proteinCatchupRelief,
       controlledDeficitRelief,
+      exerciseDeficitRelief,
       score,
     };
   }
@@ -20756,6 +20865,17 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
       bonuses.push({ id: 'hydration', label: 'Нормальная гидратация', impact: -4, explanation: 'Гидратация помогает лучше распознавать сигналы голода и сытости.' });
     }
 
+    // Exercise momentum (positive behavioral cascade)
+    // Science: self-efficacy boost (Bandura), acute appetite suppression
+    // (ghrelin ↓ / PYY ↑), identity consistency, mood buffer.
+    if (ctx.trainingKcal >= 600) {
+      bonuses.push({ id: 'exercise_momentum', label: 'Сильная тренировка', impact: -7, explanation: 'Интенсивная тренировка повышает самоконтроль и снижает тягу к reward-food (positive behavioral cascade).' });
+    } else if (ctx.trainingKcal >= 300) {
+      bonuses.push({ id: 'exercise_momentum', label: 'Тренировка сегодня', impact: -5, explanation: 'Физическая активность повышает self-efficacy и снижает тягу к срыву.' });
+    } else if (ctx.trainingKcal >= 150) {
+      bonuses.push({ id: 'exercise_momentum', label: 'Лёгкая активность', impact: -3, explanation: 'Даже лёгкая активность поддерживает позитивный behavioral momentum.' });
+    }
+
     const total = bonuses.reduce((sum, item) => sum + Math.abs(item.impact), 0);
 
     return {
@@ -20764,14 +20884,15 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
     };
   }
 
-  function composeWeightedRisk(components, ctx) {
+  function composeWeightedRisk(components, ctx, profileConfig) {
+    const weights = profileConfig?.weights || CONFIG.WEIGHTS;
     const weightedScore = (
-      components.stressLoad * CONFIG.WEIGHTS.stressLoad +
-      components.sleepDebt * CONFIG.WEIGHTS.sleepDebt +
-      components.restrictionPressure * CONFIG.WEIGHTS.restrictionPressure +
-      components.rewardExposure * CONFIG.WEIGHTS.rewardExposure +
-      components.timingContext * CONFIG.WEIGHTS.timingContext +
-      components.emotionalVulnerability * CONFIG.WEIGHTS.emotionalVulnerability
+      components.stressLoad * weights.stressLoad +
+      components.sleepDebt * weights.sleepDebt +
+      components.restrictionPressure * weights.restrictionPressure +
+      components.rewardExposure * weights.rewardExposure +
+      components.timingContext * weights.timingContext +
+      components.emotionalVulnerability * weights.emotionalVulnerability
     );
 
     let score = clamp100(weightedScore - components.protectiveBuffer);
@@ -20780,6 +20901,20 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
     // but a very low emotional state should still surface at least a guarded baseline.
     if (components.emotionalVulnerability >= 70 && score < 22) {
       score = 22;
+    }
+
+    // Avoid a misleading absolute zero when meaningful active drivers are present,
+    // especially in compensated evening / recovery scenarios.
+    if (
+      score < 6
+      && components.sleepDebt >= 45
+      && (
+        components.timingContext >= 15
+        || components.restrictionPressure >= 25
+        || components.stressLoad >= 15
+      )
+    ) {
+      score = 6;
     }
 
     if (ctx && ctx.hour >= 18 && components.restrictionPressure >= 70 && score < 30) {
@@ -20903,55 +21038,56 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
     return 'low';
   }
 
-  function getComponentDrivers(components) {
+  function getComponentDrivers(components, profileConfig) {
+    const weights = profileConfig?.weights || CONFIG.WEIGHTS;
     return [
       {
         id: 'stress_load',
         label: 'Стрессовая нагрузка',
-        impact: Math.round(components.stressLoad * CONFIG.WEIGHTS.stressLoad),
+        impact: Math.round(components.stressLoad * weights.stressLoad),
         direction: 'up',
         explanation: 'Высокий текущий или накопленный стресс усиливает риск эмоционального eating.',
       },
       {
         id: 'sleep_debt',
         label: 'Недосып',
-        impact: Math.round(components.sleepDebt * CONFIG.WEIGHTS.sleepDebt),
+        impact: Math.round(components.sleepDebt * weights.sleepDebt),
         direction: 'up',
         explanation: 'Недосып усиливает hunger drive и reward-seeking поведение.',
       },
       {
         id: 'restriction_pressure',
         label: 'Давление дефицита',
-        impact: Math.round(components.restrictionPressure * CONFIG.WEIGHTS.restrictionPressure),
+        impact: Math.round(components.restrictionPressure * weights.restrictionPressure),
         direction: 'up',
         explanation: 'Сильный недобор калорий и длинные окна без еды повышают риск компенсационного переедания.',
       },
       {
         id: 'reward_exposure',
         label: 'Reward-food exposure',
-        impact: Math.round(components.rewardExposure * CONFIG.WEIGHTS.rewardExposure),
+        impact: Math.round(components.rewardExposure * weights.rewardExposure),
         direction: 'up',
         explanation: 'Высокий harm/simple today повышает вероятность продолжения hyperpalatable eating.',
       },
       {
         id: 'timing_context',
         label: 'Контекст времени',
-        impact: Math.round(components.timingContext * CONFIG.WEIGHTS.timingContext),
+        impact: Math.round(components.timingContext * weights.timingContext),
         direction: 'up',
         explanation: 'Вечер, выходные и длинный gap усиливают уязвимость.',
       },
       {
         id: 'emotional_vulnerability',
         label: 'Эмоциональная уязвимость',
-        impact: Math.round(components.emotionalVulnerability * CONFIG.WEIGHTS.emotionalVulnerability),
+        impact: Math.round(components.emotionalVulnerability * weights.emotionalVulnerability),
         direction: 'up',
         explanation: 'Низкое субъективное состояние усиливает риск, но не должно доминировать над поведенческими факторами.',
       },
     ];
   }
 
-  function extractPrimaryDrivers(components) {
-    return getComponentDrivers(components)
+  function extractPrimaryDrivers(components, profileConfig) {
+    return getComponentDrivers(components, profileConfig)
       .filter(item => item.impact > 0)
       .sort((a, b) => b.impact - a.impact)
       .slice(0, 3);
@@ -21004,9 +21140,11 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
         currentHour: ctx.hour,
         dayScore: ctx.dayScore,
         waterMl: ctx.waterMl,
+        trainingKcal: ctx.trainingKcal,
         historyDaysCount: ctx.historyDays.length,
       },
       components,
+      profile: extras.profile || null,
       confidenceSignals: extras.confidenceSignals || null,
       historyQuality: extras.historyQuality || null,
       restrictionPressure: extras.restrictionPressure || null,
@@ -21028,6 +21166,9 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
     const kcalEaten = getKcalEaten(dayTot, dayData);
     const protTarget = getProtTarget(normAbs, profile);
     const protEaten = getProtEaten(dayTot, dayData);
+    const trainings = getTrainings(dayData);
+    const weight = toNumber(dayData.weightMorning, toNumber(profile.weight, 70));
+    const trainingKcal = calcTrainingKcal(trainings, weight);
 
     return {
       dayData,
@@ -21037,6 +21178,9 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
       historyDays,
       now,
       meals,
+      trainings,
+      trainingKcal,
+      hasTrainingInput: trainings.length > 0,
       stressAvg: toNumber(dayData.stressAvg, 0),
       moodAvg: toNumber(dayData.moodAvg, 0),
       wellbeingAvg: toNumber(dayData.wellbeingAvg, 0),
@@ -21067,10 +21211,13 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
 
   function calculate(options = {}) {
     const ctx = normalizeInputs(options);
+    const profileConfig = getRiskProfileConfig(options.weightProfileKey || options.riskProfileKey || options.tuningProfile);
 
     console.info(MODULE + ' calculate:start', {
+      profileKey: profileConfig.key,
       historyDays: ctx.historyDays.length,
       kcalPct: Math.round(ctx.kcalPct * 100),
+      trainingKcal: ctx.trainingKcal,
       stressAvg: ctx.stressAvg,
       hour: ctx.hour,
     });
@@ -21095,14 +21242,19 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
       protectiveBuffer: protectiveBufferState.score,
     };
 
-    const score = composeWeightedRisk(components, ctx);
+    const score = composeWeightedRisk(components, ctx, profileConfig);
     const windows = calcRiskWindows(components);
     const confidence = confidenceState.score;
     const level = getLevel(score);
-    const primaryDrivers = extractPrimaryDrivers(components);
+    const primaryDrivers = extractPrimaryDrivers(components, profileConfig);
     const protectiveFactors = extractProtectiveFactors(protectiveBufferState);
 
     const result = {
+      profile: {
+        key: profileConfig.key,
+        label: profileConfig.label,
+        description: profileConfig.description,
+      },
       score,
       level,
       confidence,
@@ -21114,12 +21266,14 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
         confidenceSignals: confidenceState.signals,
         historyQuality: confidenceState.historyQuality,
         restrictionPressure: restrictionPressureState,
+        profile: profileConfig,
       }),
     };
 
     result.recommendations = buildRecommendations(result);
 
     console.info(MODULE + ' calculate:result', {
+      profileKey: profileConfig.key,
       score: result.score,
       level: result.level,
       tonight: result.windows.tonight,
@@ -21127,6 +21281,43 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
     });
 
     return result;
+  }
+
+  function compareProfiles(options = {}) {
+    const profileKeys = Array.isArray(options.profileKeys) && options.profileKeys.length
+      ? options.profileKeys
+      : Object.keys(CONFIG.PROFILES);
+    const comparisons = profileKeys
+      .map((profileKey) => {
+        const result = calculate({ ...options, weightProfileKey: profileKey });
+        return {
+          profileKey,
+          label: result?.profile?.label || profileKey,
+          score: Math.round(toNumber(result?.score)),
+          level: result?.level || 'low',
+          confidence: Math.round(toNumber(result?.confidence)),
+          topDriver: result?.primaryDrivers?.[0]?.id || null,
+          result,
+        };
+      })
+      .sort((a, b) => b.score - a.score);
+
+    const baseline = comparisons.find((item) => item.profileKey === 'baseline') || comparisons[0] || null;
+
+    return {
+      defaultProfileKey: CONFIG.DEFAULT_PROFILE_KEY,
+      selectedProfileKey: options.weightProfileKey || options.riskProfileKey || options.tuningProfile || CONFIG.DEFAULT_PROFILE_KEY,
+      comparisons: comparisons.map((item) => ({
+        profileKey: item.profileKey,
+        label: item.label,
+        score: item.score,
+        level: item.level,
+        confidence: item.confidence,
+        topDriver: item.topDriver,
+        deltaVsBaseline: baseline ? item.score - baseline.score : 0,
+      })),
+      baselineProfileKey: baseline?.profileKey || null,
+    };
   }
 
   /**
@@ -21239,10 +21430,11 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
       protectiveBuffer: protectiveBufferState.score,
     };
 
-    const score = composeWeightedRisk(components, syntheticCtx);
+    const profileConfig = getRiskProfileConfig(options.weightProfileKey || options.riskProfileKey || options.tuningProfile);
+    const score = composeWeightedRisk(components, syntheticCtx, profileConfig);
     const windows = calcRiskWindows(components);
     const level = getLevel(score);
-    const primaryDrivers = extractPrimaryDrivers(components);
+    const primaryDrivers = extractPrimaryDrivers(components, profileConfig);
     const protectiveFactors = extractProtectiveFactors(protectiveBufferState);
 
     // Confidence is inherently lower for forecasts
@@ -21253,6 +21445,11 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
       score,
       level,
       confidence,
+      profile: {
+        key: profileConfig.key,
+        label: profileConfig.label,
+        description: profileConfig.description,
+      },
       type: 'forecast',
       primaryDrivers,
       protectiveFactors,
@@ -21260,6 +21457,7 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
       recommendations: [],
       debug: {
         forecastInputs: {
+          profileKey: profileConfig.key,
           avgStress: Math.round(avgStress * 10) / 10,
           avgSleep: Math.round(avgSleep * 10) / 10,
           avgKcalRatio: Math.round(avgKcalRatio * 100),
@@ -21285,6 +21483,22 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
   }
 
   // ─── Shared data helpers (used by getCurrentSnapshot / getForecastSnapshot) ───
+
+  // TTL cache for getCurrentSnapshot — ensures all consumers within the same
+  // time window (widget tab → insights tab switch) see identical numbers.
+  const SNAPSHOT_TTL_MS = 5000; // 5 seconds
+  let _snapshotCache = null;
+  let _snapshotCacheTs = 0;
+
+  // Invalidate cache on data changes
+  if (typeof window !== 'undefined') {
+    ['heys:day-updated', 'day-updated', 'heys-sync-complete', 'day-saved'].forEach(function (evt) {
+      window.addEventListener(evt, function () {
+        _snapshotCache = null;
+        _snapshotCacheTs = 0;
+      });
+    });
+  }
 
   function resolveStorage() {
     const U = global.HEYS?.utils;
@@ -21321,22 +21535,58 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
    * и возвращает нормализованный snapshot-объект.
    * Потребители: виджет, Insights «Сейчас», модальное окно и т.д.
    */
-  function getCurrentSnapshot() {
+  function getCurrentSnapshot(options = {}) {
+    // Return cached result if fresh (< 5s) — guarantees identical numbers
+    // across widget, Insights, and any other consumer within the same window.
+    const now = Date.now();
+    if (_snapshotCache && (now - _snapshotCacheTs) < SNAPSHOT_TTL_MS) {
+      return _snapshotCache;
+    }
+
     if (!HEYS.RelapseRisk?.calculate) {
       return { hasData: false, score: 0, level: 'low', message: 'Engine not loaded' };
     }
     const lsGet = resolveStorage();
-    const dayData = HEYS.DayData?.getCurrentDay?.() || {};
+    const todayStr = HEYS.dayUtils?.todayISO?.() || new Date().toISOString().split('T')[0];
+
+    // dayData: prefer reactive source, fall back to localStorage
+    const dayData = HEYS.DayData?.getCurrentDay?.() || lsGet('heys_dayv2_' + todayStr, {});
+
     const profile = lsGet('heys_profile', {});
     const pIndex = profile?.pIndex || 0;
-    const dayTot = HEYS.DayData?.getDayTot?.(dayData) || {};
-    const normAbs = HEYS.norms?.getNormAbs?.(profile, pIndex) || {};
+
+    // dayTot: prefer reactive source, fall back to computed from dayData
+    const dayTot = HEYS.DayData?.getDayTot?.(dayData)
+      || (typeof HEYS.dayCalculations?.calculateDayTotals === 'function'
+        ? HEYS.dayCalculations.calculateDayTotals(dayData)
+        : {});
+
+    // normAbs: prefer norms module, fall back to TDEE-based estimation
+    let normAbs = HEYS.norms?.getNormAbs?.(profile, pIndex) || {};
+    if ((!normAbs.kcal || normAbs.kcal <= 0) && typeof HEYS.TDEE?.calculate === 'function') {
+      var tdee = HEYS.TDEE.calculate(profile);
+      if (tdee && tdee.optimum > 0) {
+        var weight = toNumber(profile.weight, toNumber(profile.baseWeight, 70));
+        normAbs = { kcal: tdee.optimum, prot: Math.round(weight * 1.6) };
+      }
+    }
+
     const historyDays = collectHistoryDays(lsGet, 14);
+
+    const selectedProfileKey = options.weightProfileKey || options.riskProfileKey || options.tuningProfile || null;
 
     const result = calculate({
       dayData, profile, dayTot, normAbs, historyDays,
+      weightProfileKey: selectedProfileKey,
       now: new Date().toISOString(),
     });
+    const compare = typeof HEYS.RelapseRisk?.compareProfiles === 'function'
+      ? HEYS.RelapseRisk.compareProfiles({
+        dayData, profile, dayTot, normAbs, historyDays,
+        weightProfileKey: selectedProfileKey,
+        now: new Date().toISOString(),
+      })
+      : null;
 
     const score = Math.round(toNumber(result?.score));
     const confidence = Math.round(toNumber(result?.confidence));
@@ -21345,9 +21595,11 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
     const recommendations = Array.isArray(result?.recommendations) ? result.recommendations : [];
     const windows = result?.windows || {};
 
-    return {
+    _snapshotCache = {
       hasData: true,
       type: 'realtime',
+      profile: result?.profile || null,
+      selectedProfileKey: result?.profile?.key || selectedProfileKey,
       score,
       level: result?.level || getLevel(score),
       confidence,
@@ -21361,8 +21613,11 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
       protectiveFactors: protective.slice(0, 3),
       recommendation: recommendations[0] || null,
       recommendations,
+      compare,
       raw: result,
     };
+    _snapshotCacheTs = now;
+    return _snapshotCache;
   }
 
   /**
@@ -21377,12 +21632,20 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
     const profile = lsGet('heys_profile', {});
     const historyDays = collectHistoryDays(lsGet, 14);
 
-    const tomorrow = targetDate || (function () {
+    const targetOptions = typeof targetDate === 'object' && targetDate !== null ? targetDate : {};
+    const resolvedTargetDate = typeof targetDate === 'string' ? targetDate : targetOptions.targetDate;
+
+    const tomorrow = resolvedTargetDate || (function () {
       const d = new Date(); d.setDate(d.getDate() + 1);
       return d.toISOString().split('T')[0];
     })();
 
-    const result = forecast({ profile, historyDays, targetDate: tomorrow });
+    const result = forecast({
+      profile,
+      historyDays,
+      targetDate: tomorrow,
+      weightProfileKey: targetOptions.weightProfileKey || targetOptions.riskProfileKey || targetOptions.tuningProfile,
+    });
     if (!result) {
       return { hasData: false, score: 0, level: 'low', type: 'forecast' };
     }
@@ -21394,6 +21657,7 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
     return {
       hasData: true,
       type: 'forecast',
+      profile: result?.profile || null,
       score,
       level: result.level || getLevel(score),
       confidence: Math.round(toNumber(result.confidence)),
@@ -21410,9 +21674,11 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
     CONFIG,
     calculate,
     calculateRelapseRisk: calculate,
+    compareProfiles,
     forecast,
     getCurrentSnapshot,
     getForecastSnapshot,
+    invalidateSnapshot: function () { _snapshotCache = null; _snapshotCacheTs = 0; },
     getLevel,
     getRecommendations: buildRecommendations,
     getDrivers: extractPrimaryDrivers,
@@ -21420,6 +21686,7 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
       normalizeInputs,
       getHoursSinceLastMeal,
       getHistoryKcalRatio,
+      getRiskProfileConfig,
       getRestrictionPressureBreakdown,
       getHistoryQualityBreakdown,
       getExpectedProteinCoverageByHour,
@@ -37966,14 +38233,19 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
 
   /**
    * StatusWidget — компактная версия для Widgets Dashboard
+   * @param {Object} props
+   * @param {Object} props.status - Результат calculateStatus
+   * @param {string} props.size - 'micro' | 'tiny' | 'standard' (из StatusWidgetContent)
+   * @param {boolean} props.showActions - Показывать рекомендованное действие
+   * @param {boolean} props.showIssues - Показывать проблемы
    */
-  function StatusWidget({ status, size = '2x2', onClick }) {
+  function StatusWidget({ status, size = 'standard', onClick, showActions = true, showIssues = true }) {
     if (!status) return null;
 
-    const { score, level, topActions } = status;
-    const isCompact = size === '1x1' || size === '2x1';
+    const { score, level, topActions = [], topIssues = [] } = status;
+    const isCompact = size === 'micro' || size === 'tiny' || size === '1x1' || size === '2x1';
 
-    // Компактный вид (только число)
+    // Компактный вид (только число) — 1x1, 2x1, 1x2
     if (isCompact) {
       return h('div', {
         className: 'status-widget status-widget--compact',
@@ -38000,10 +38272,16 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
       // Emoji справа сверху
       h('span', { className: 'status-widget__emoji' }, level.emoji),
 
-      // Один шаг (если есть)
-      topActions.length > 0 && h('div', { className: 'status-widget__action' },
+      // Действие (если включено)
+      showActions && topActions.length > 0 && h('div', { className: 'status-widget__action' },
         h('span', null, topActions[0].icon),
         h('span', null, topActions[0].text)
+      ),
+
+      // Проблема (если включено)
+      showIssues && topIssues.length > 0 && h('div', { className: 'status-widget__issue' },
+        h('span', null, topIssues[0].factor?.icon || '⚠️'),
+        h('span', null, topIssues[0].issue || '')
       )
     );
   }

@@ -27,7 +27,8 @@
                 setIsCurator(cloudUserLocal != null);
             };
             checkCurator();
-            const interval = setInterval(checkCurator, 1000);
+            // perf: curator state changes rarely — 5s poll вместо 1s снижает нагрузку на main thread
+            const interval = setInterval(checkCurator, 5000);
             return () => clearInterval(interval);
         }, []);
 

@@ -2234,7 +2234,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
               clearInterval(pollId);
               doReload();
             }
-          }, 200);
+          }, 500); // perf: 500ms достаточно для polling sync state, 200ms создавал лишнюю нагрузку
         } else {
           setTimeout(doReload, 500);
         }

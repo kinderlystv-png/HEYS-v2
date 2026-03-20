@@ -254,6 +254,8 @@ export const LEGACY_BUNDLES = {
         'heys_reports_v12.js',
         'heys_weekly_reports_v2.js',
         'heys_data_overview_v1.js',
+        'heys_day_score_v1.js',
+        'heys_risk_radar_v1.js',
         'heys_widgets_events_v1.js',
         'heys_widgets_registry_v1.js',
         'heys_widgets_data_crash_risk_v1.js',

@@ -1,15 +1,12 @@
 /**
  * heys_widgets_data_crash_risk_v1.js
- * Data Provider для Crash Risk виджета (детекция >5%/нед потери веса + EWS)
- * Version: 1.0.0
- * Created: 2026-02-15
- * 
- * Интеграция:
- * - Weight data: heys_day_weight_trends_v1.js
- * - EWS backend: insights/pi_early_warning.js
- * 
- * Формула риска: weeklyLossPercent = |slope × 7 / currentWeight| × 100
- * Thresholds: >5% warning (medium), >7% high severity
+ * Data Provider для виджета «Динамика веса» (Weight Progress)
+ * Version: 2.0.0
+ * Updated: 2026-03-20
+ *
+ * Считает направленный темп изменения веса через линейную регрессию.
+ * Классифицирует зону прогресса: stagnation / optimal / fast / too_fast / warning / danger / gaining / stable.
+ * Добавляет: totalDeltaKg, goal ETA, dataCompleteness, signed pctPerWeek/slopePerWeek.
  */
 (function (global) {
     'use strict';
@@ -22,89 +19,79 @@
     // CONSTANTS
     // ============================================================================
 
-    const THRESHOLDS = {
-        WARNING: 5,      // >5% loss/week → medium severity
-        HIGH: 7,         // >7% loss/week → high severity
-        MIN_DAYS: 7,     // Minimum days for reliable trend
-        MAX_DAYS: 14     // Maximum lookback period
+    const ZONE_THRESHOLDS = {
+        STAGNATION: 0.2,  // < 0.2%/нед потери = стагнация
+        OPTIMAL_MAX: 1.0,  // 0.2–1.0%/нед = оптимально (рекоменд. ВОЗ / клин. диетология)
+        FAST_MAX: 2.0,  // 1.0–2.0%/нед = быстро, но допустимо
+        TOO_FAST_MAX: 5.0,  // 2.0–5.0%/нед = слишком быстро (риск потери мышц)
+        WARNING_MAX: 7.0,  // 5.0–7.0%/нед = предупреждение
+        // > 7.0%/нед = критично
+        GAINING_FAST: 0.5,  // набор > 0.5%/нед = быстро
+        MOVEMENT_MIN: 0.15, // ниже этого — считаем stable
     };
 
-    const SEVERITY_LEVELS = {
-        NONE: 'none',
-        MEDIUM: 'medium',
-        HIGH: 'high'
+    const ZONE_META = {
+        stagnation: { label: 'Нет прогресса', color: '#f59e0b', light: '#fef3c7', emoji: '⏸' },
+        optimal: { label: 'Оптимально', color: '#10b981', light: '#d1fae5', emoji: '✅' },
+        fast: { label: 'Быстро', color: '#3b82f6', light: '#dbeafe', emoji: '⚡' },
+        too_fast: { label: 'Слишком быстро', color: '#f97316', light: '#ffedd5', emoji: '⚠️' },
+        warning: { label: 'Предупреждение', color: '#ef4444', light: '#fee2e2', emoji: '🔴' },
+        danger: { label: 'Критично', color: '#b91c1c', light: '#fee2e2', emoji: '🚨' },
+        stable: { label: 'Стабильный вес', color: '#64748b', light: '#f1f5f9', emoji: '→' },
+        gaining: { label: 'Набор веса', color: '#8b5cf6', light: '#ede9fe', emoji: '↑' },
+        gaining_fast: { label: 'Быстрый набор', color: '#f97316', light: '#ffedd5', emoji: '⚡↑' },
     };
+
+    const ZONE_HINT = {
+        stagnation: 'Вес почти не меняется. Возможно, стоит скорректировать дефицит или добавить активность.',
+        optimal: 'Идеальная скорость снижения — сохраняет мышечную массу и устойчива долгосрочно.',
+        fast: 'Снижение быстрее нормы. Допустимо, но стоит следить за уровнем энергии и мышцами.',
+        too_fast: 'Слишком высокий темп. Риск потери мышечной массы и метаболической адаптации.',
+        warning: 'Критически высокая скорость потери. Нужно срочно увеличить калораж.',
+        danger: 'Опасный темп снижения. Требует немедленного внимания куратора или врача.',
+        stable: 'Вес стабилен — ни потери, ни набора.',
+        gaining: 'Постепенный набор веса.',
+        gaining_fast: 'Быстрый набор веса. Стоит проверить калораж.',
+    };
+
+    const MIN_DAYS = 7;
+    const MAX_DAYS = 30;
 
     // ============================================================================
     // HELPERS
     // ============================================================================
 
-    /**
-     * Получить вес из day data с учетом retention days
-     * @param {Object} dayData - данные дня
-     * @returns {number|null} - вес в кг или null
-     */
     function getWeightFromDay(dayData) {
         if (!dayData) return null;
-
-        // Проверка retention day (вес может быть от предыдущего дня)
-        if (dayData.weightMorning && dayData.weightMorning > 0) {
-            return dayData.weightMorning;
-        }
-
+        if (dayData.weightMorning && dayData.weightMorning > 0) return dayData.weightMorning;
         return null;
     }
 
-    /**
-     * Загрузить weight data за N последних дней
-     * @param {number} days - количество дней
-     * @returns {Array<{date: string, weight: number}>}
-     */
     function loadWeightData(days) {
         const U = HEYS.utils || {};
         const result = [];
         const today = new Date();
-
         for (let i = 0; i < days; i++) {
             const date = new Date(today);
             date.setDate(date.getDate() - i);
             const dateStr = date.toISOString().split('T')[0];
-
             const dayData = U.lsGet(`heys_dayv2_${dateStr}`, null);
             const weight = getWeightFromDay(dayData);
-
-            if (weight !== null && weight > 0) {
-                result.push({ date: dateStr, weight });
-            }
+            if (weight !== null && weight > 0) result.push({ date: dateStr, weight });
         }
-
-        return result.reverse(); // Oldest first для регрессии
+        return result.reverse(); // oldest first для регрессии
     }
 
-    /**
-     * Linear regression для расчета slope (кг/день)
-     * @param {Array<{date: string, weight: number}>} data
-     * @returns {{slope: number, intercept: number, r2: number}|null}
-     */
     function calculateLinearRegression(data) {
         if (!data || data.length < 3) return null;
-
         const n = data.length;
         let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
-
         data.forEach((point, i) => {
-            const x = i; // Day index
-            const y = point.weight;
-            sumX += x;
-            sumY += y;
-            sumXY += x * y;
-            sumX2 += x * x;
+            sumX += i; sumY += point.weight;
+            sumXY += i * point.weight; sumX2 += i * i;
         });
-
         const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
         const intercept = (sumY - slope * sumX) / n;
-
-        // R² calculation
         const yMean = sumY / n;
         let ssTotal = 0, ssResidual = 0;
         data.forEach((point, i) => {
@@ -112,149 +99,164 @@
             ssTotal += Math.pow(point.weight - yMean, 2);
             ssResidual += Math.pow(point.weight - yPred, 2);
         });
-        const r2 = 1 - (ssResidual / ssTotal);
-
+        const r2 = ssTotal > 0 ? 1 - (ssResidual / ssTotal) : 0;
         return { slope, intercept, r2 };
     }
 
     /**
-     * Вычислить weekly loss percentage
-     * @param {number} slope - наклон кг/день (может быть отрицательным)
-     * @param {number} currentWeight - текущий вес в кг
-     * @returns {number} - процент потери веса за неделю (всегда положительный)
+     * Классифицировать зону прогресса по направленному темпу кг/нед
      */
-    function calculateWeeklyLossPercent(slope, currentWeight) {
-        if (!currentWeight || currentWeight <= 0) return 0;
+    function classifyZone(slopePerWeek, currentWeight) {
+        if (!currentWeight || currentWeight <= 0) return 'stable';
+        const pct = (slopePerWeek / currentWeight) * 100; // signed %/week
+        const abs = Math.abs(pct);
 
-        // |slope × 7 / currentWeight| × 100
-        // Если slope < 0 (потеря веса), abs делает число положительным
-        const weeklyLoss = Math.abs(slope * 7);
-        const percent = (weeklyLoss / currentWeight) * 100;
-
-        return percent;
-    }
-
-    /**
-     * Определить severity level по проценту потери
-     * @param {number} weeklyLossPercent
-     * @returns {string} - 'none'|'medium'|'high'
-     */
-    function getSeverity(weeklyLossPercent) {
-        if (weeklyLossPercent >= THRESHOLDS.HIGH) return SEVERITY_LEVELS.HIGH;
-        if (weeklyLossPercent >= THRESHOLDS.WARNING) return SEVERITY_LEVELS.MEDIUM;
-        return SEVERITY_LEVELS.NONE;
+        if (pct < -ZONE_THRESHOLDS.MOVEMENT_MIN) {
+            // Потеря веса
+            if (abs < ZONE_THRESHOLDS.STAGNATION) return 'stagnation';
+            if (abs <= ZONE_THRESHOLDS.OPTIMAL_MAX) return 'optimal';
+            if (abs <= ZONE_THRESHOLDS.FAST_MAX) return 'fast';
+            if (abs <= ZONE_THRESHOLDS.TOO_FAST_MAX) return 'too_fast';
+            if (abs <= ZONE_THRESHOLDS.WARNING_MAX) return 'warning';
+            return 'danger';
+        }
+        if (pct > ZONE_THRESHOLDS.MOVEMENT_MIN) {
+            // Набор веса
+            return abs >= ZONE_THRESHOLDS.GAINING_FAST ? 'gaining_fast' : 'gaining';
+        }
+        return 'stable';
     }
 
     // ============================================================================
     // MAIN DATA PROVIDER
     // ============================================================================
 
-    /**
-     * Получить данные для Crash Risk виджета
-     * @param {Object} options
-     * @param {number} [options.days=7] - период для анализа (7-14)
-     * @returns {Object|null}
-     */
     function getCrashRiskData(options = {}) {
-        const days = Math.max(THRESHOLDS.MIN_DAYS, Math.min(options.days || 7, THRESHOLDS.MAX_DAYS));
+        const days = Math.max(MIN_DAYS, Math.min(options.days || 7, MAX_DAYS));
         const U = HEYS.utils || {};
         const profile = U.lsGet('heys_profile', {});
         const pIndex = profile?.pIndex || 0;
 
         try {
-            // 1. Load weight data
             const weightData = loadWeightData(days);
 
             if (weightData.length < 3) {
-                console.info('[HEYS.widgets.crashRisk] ⚠️ Insufficient data:', {
-                    dataPoints: weightData.length,
-                    minRequired: 3
-                });
+                console.info('[HEYS.widgets.weightProgress] ⚠️ Insufficient data:', weightData.length);
                 return {
                     hasData: false,
                     weeklyLossPercent: 0,
+                    pctPerWeek: 0,
+                    slopePerWeek: 0,
+                    direction: 'stable',
+                    zone: 'stable',
+                    zoneMeta: ZONE_META['stable'],
+                    zoneHint: ZONE_HINT['stable'],
                     isWarning: false,
-                    severity: SEVERITY_LEVELS.NONE,
+                    severity: 'none',
                     message: 'Недостаточно данных (минимум 3 дня с весом)',
                     ewsCount: 0,
-                    ewsData: null
+                    ewsData: null,
                 };
             }
 
-            // 2. Calculate linear regression
             const regression = calculateLinearRegression(weightData);
-
-            if (!regression) {
-                console.warn('[HEYS.widgets.crashRisk] ❌ Regression calculation failed');
-                return null;
-            }
+            if (!regression) return null;
 
             const currentWeight = weightData[weightData.length - 1].weight;
-            const weeklyLossPercent = calculateWeeklyLossPercent(regression.slope, currentWeight);
-            const severity = getSeverity(weeklyLossPercent);
-            const isWarning = severity !== SEVERITY_LEVELS.NONE;
+            const firstWeight = weightData[0].weight;
+            const slopePerWeek = regression.slope * 7; // kg/week, signed
+            const pctPerWeek = (slopePerWeek / currentWeight) * 100; // signed %/week
+            const absPct = Math.abs(pctPerWeek);
 
-            // 3. Fetch EWS data (Early Warning System)
-            let ewsData = null;
-            let ewsCount = 0;
+            const zone = classifyZone(slopePerWeek, currentWeight);
+            const zoneMeta = ZONE_META[zone] || ZONE_META['stable'];
+            const zoneHint = ZONE_HINT[zone] || '';
+            const direction = slopePerWeek < -0.1 ? 'losing' : slopePerWeek > 0.1 ? 'gaining' : 'stable';
+            const isAlert = zone === 'warning' || zone === 'danger' || zone === 'too_fast';
+            const severity = zone === 'danger' ? 'high'
+                : (zone === 'warning' || zone === 'too_fast') ? 'medium'
+                    : 'none';
 
-            if (HEYS.InsightsPI && HEYS.InsightsPI.earlyWarning) {
+            // Реальная дельта (первый → последний замер)
+            const totalDeltaKg = currentWeight - firstWeight;
+            const dataCompleteness = weightData.length / days;
+
+            // Прогресс к цели
+            const goalWeight = profile?.goalWeight || null;
+            const toGoalKg = goalWeight ? currentWeight - goalWeight : null;
+            const estimatedDaysToGoal = (
+                toGoalKg !== null &&
+                toGoalKg > 0.5 &&
+                direction === 'losing' &&
+                Math.abs(slopePerWeek) > 0.05
+            ) ? Math.round((toGoalKg / Math.abs(slopePerWeek)) * 7) : null;
+
+            // EWS
+            let ewsData = null, ewsCount = 0;
+            if (HEYS.InsightsPI?.earlyWarning) {
                 try {
-                    // Используем getRecentDays, так как earlyWarning.detect ожидает массив дней, а не число
-                    const U = HEYS.utils || {};
                     let daysArray = [];
-                    if (HEYS.InsightsPI.analyticsAPI && typeof HEYS.InsightsPI.analyticsAPI.getRecentDays === 'function') {
+                    if (HEYS.InsightsPI.analyticsAPI?.getRecentDays) {
                         daysArray = HEYS.InsightsPI.analyticsAPI.getRecentDays(days);
                     }
-                    
-                    // Не спамим ошибки если дней мало для аналитики EWS
-                    if (daysArray && daysArray.length >= 6) {
-                        ewsData = HEYS.InsightsPI.earlyWarning.detect(daysArray, profile, pIndex, {
-                            includeDetails: true
-                        });
+                    if (daysArray?.length >= 6) {
+                        ewsData = HEYS.InsightsPI.earlyWarning.detect(daysArray, profile, pIndex, { includeDetails: true });
                         ewsCount = ewsData?.count || 0;
                     }
-                } catch (ewsError) {
-                    console.warn('[HEYS.widgets.crashRisk] ⚠️ EWS detection failed:', ewsError);
+                } catch (err) {
+                    console.warn('[HEYS.widgets.weightProgress] ⚠️ EWS failed:', err);
                 }
             }
 
-            // 4. Construct result
             const result = {
                 hasData: true,
-                weeklyLossPercent,
-                isWarning,
+                // Backward compat (старые поля для модалки/виджета)
+                weeklyLossPercent: absPct,
+                isWarning: isAlert,
                 severity,
+                // Новые поля
+                pctPerWeek,           // signed %/week
+                slopePerWeek,         // signed kg/week
+                direction,            // 'losing'|'gaining'|'stable'
+                zone,
+                zoneMeta,
+                zoneHint,
                 currentWeight,
+                firstWeight,
+                totalDeltaKg,
+                dataCompleteness,
+                goalWeight,
+                toGoalKg,
+                estimatedDaysToGoal,
                 weightData,
                 regression: {
                     slope: regression.slope,
                     r2: regression.r2,
-                    slopePerWeek: regression.slope * 7
+                    slopePerWeek,
                 },
                 ewsCount,
                 ewsData,
                 dataPoints: weightData.length,
-                periodDays: days
+                periodDays: days,
             };
 
-            // 5. Verification logging
-            console.info('[HEYS.widgets.crashRisk] ✅ Data computed:', {
-                weeklyLossPercent: weeklyLossPercent.toFixed(2) + '%',
-                severity,
-                isWarning,
-                currentWeight: currentWeight.toFixed(1) + 'kg',
-                dataPoints: weightData.length,
-                periodDays: days,
-                slope: (regression.slope * 7).toFixed(3) + 'kg/week',
+            console.info('[HEYS.widgets.weightProgress] ✅ Data computed:', {
+                zone,
+                pctPerWeek: pctPerWeek.toFixed(2) + '%',
+                slopePerWeek: slopePerWeek.toFixed(3) + 'кг/нед',
+                direction,
+                totalDeltaKg: totalDeltaKg.toFixed(2) + 'кг',
+                completeness: (dataCompleteness * 100).toFixed(0) + '%',
+                toGoalKg: toGoalKg?.toFixed(1) ?? 'н/д',
+                estimatedDaysToGoal,
                 r2: regression.r2.toFixed(3),
-                ewsCount
+                ewsCount,
             });
 
             return result;
 
         } catch (error) {
-            console.error('[HEYS.widgets.crashRisk] ❌ Fatal error:', error);
+            console.error('[HEYS.widgets.weightProgress] ❌ Fatal error:', error);
             return null;
         }
     }
@@ -265,10 +267,11 @@
 
     HEYS.Widgets.DataProviders.crashRisk = {
         getData: getCrashRiskData,
-        THRESHOLDS,
-        SEVERITY_LEVELS
+        ZONE_THRESHOLDS,
+        ZONE_META,
+        ZONE_HINT,
     };
 
-    console.info('[HEYS.widgets.crashRisk] ✅ Data provider v1.0.0 loaded');
+    console.info('[HEYS.widgets.weightProgress] ✅ Data provider v2.0.0 loaded');
 
 })(window);

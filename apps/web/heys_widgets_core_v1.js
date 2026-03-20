@@ -69,13 +69,14 @@
 
   const DEFAULT_LAYOUT = [
     // 4-колоночная сетка — красивый набор для новых пользователей
-    // Ряд 0: Калории + Вода (базовые)
-    { type: 'calories', size: '2x2', position: { col: 0, row: 0 } },
-    { type: 'water', size: '2x2', position: { col: 2, row: 0 } },
-    // Ряд 2: Вес (полная ширина) — BMI + график тренда
-    { type: 'weight', size: '4x2', position: { col: 0, row: 2 } },
-    // Ряд 4: Риск срыва (полная ширина) — факторы + рекомендация
-    { type: 'crashRisk', size: '4x2', position: { col: 0, row: 4 } },
+    // Ряд 0: Day Score + Risk Radar (единые оценки)
+    { type: 'dayScore', size: '2x2', position: { col: 0, row: 0 } },
+    { type: 'riskRadar', size: '2x2', position: { col: 2, row: 0 } },
+    // Ряд 2: Калории + Вода (базовые)
+    { type: 'calories', size: '2x2', position: { col: 0, row: 2 } },
+    { type: 'water', size: '2x2', position: { col: 2, row: 2 } },
+    // Ряд 4: Вес (полная ширина) — BMI + график тренда
+    { type: 'weight', size: '4x2', position: { col: 0, row: 4 } },
     // Ряд 6: Тепловая карта (полная ширина) — компактная неделя
     { type: 'heatmap', size: '4x1', position: { col: 0, row: 6 } }
   ];
@@ -132,8 +133,10 @@
           pos: w.position
         }))));
         this._widgets = saved.map(w => this._normalizeWidget(w));
+        this._autoPackWidgets();
       } else {
         this._widgets = this._createDefaultLayout();
+        this._autoPackWidgets();
         // фиксируем meta для чистого старта
         this.saveLayoutMeta({ gridVersion: GRID_VERSION, gridCols: GRID_COLS, migratedAt: Date.now() });
       }
@@ -327,6 +330,32 @@
       return positions;
     },
 
+    _autoPackWidgets() {
+      if (!Array.isArray(this._widgets) || this._widgets.length === 0) return false;
+
+      const packedPositions = this._packLayoutPositions(this._widgets);
+      let changed = false;
+
+      this._widgets = this._widgets.map((widget) => {
+        const nextPos = packedPositions[widget.id];
+        if (!nextPos) return widget;
+
+        const curCol = widget.position?.col || 0;
+        const curRow = widget.position?.row || 0;
+        if (curCol === nextPos.col && curRow === nextPos.row) {
+          return widget;
+        }
+
+        changed = true;
+        return {
+          ...widget,
+          position: { col: nextPos.col, row: nextPos.row }
+        };
+      });
+
+      return changed;
+    },
+
     /**
      * Сохранить текущее состояние в историю (для undo)
      * @private
@@ -435,17 +464,22 @@
         ? (registry.normalizeSizeId(rawSizeId) || '2x2')
         : rawSizeId;
 
-      const size = registry?.getSize(normalizedSizeId);
+      const supportedSizes = Array.isArray(type?.availableSizes) ? type.availableSizes : [];
+      const finalSizeId = (supportedSizes.length > 0 && !supportedSizes.includes(normalizedSizeId))
+        ? (type?.defaultSize || supportedSizes[0] || normalizedSizeId)
+        : normalizedSizeId;
+
+      const size = registry?.getSize(finalSizeId);
 
       // 🔍 DEBUG: если размер изменился при нормализации — логируем
-      if (rawSizeId !== normalizedSizeId || !w.size) {
-        log(`_normalizeWidget ${w.type}: raw=${w.size || 'undefined'} → normalized=${normalizedSizeId} (default=${type?.defaultSize})`);
+      if (rawSizeId !== finalSizeId || !w.size) {
+        log(`_normalizeWidget ${w.type}: raw=${w.size || 'undefined'} → normalized=${finalSizeId} (default=${type?.defaultSize})`);
       }
 
       return {
         id: w.id || `widget_${w.type}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         type: w.type,
-        size: normalizedSizeId,
+        size: finalSizeId,
         cols: size?.cols || 1,
         rows: size?.rows || 1,
         position: w.position || { col: 0, row: 0 },
@@ -517,9 +551,11 @@
       }
 
       this._widgets.push(normalized);
+      this._autoPackWidgets();
+      const addedWidget = this.getWidget(normalized.id) || normalized;
       this._debouncedSave();
 
-      HEYS.Widgets.emit('widget:added', { widget: normalized });
+      HEYS.Widgets.emit('widget:added', { widget: addedWidget });
       HEYS.Widgets.emit('layout:changed', { layout: this._widgets });
 
       // Вибрация при добавлении
@@ -544,6 +580,7 @@
       }
 
       const removed = this._widgets.splice(index, 1)[0];
+      this._autoPackWidgets();
       this._debouncedSave();
 
       HEYS.Widgets.emit('widget:removed', { widgetId: id, widget: removed });
@@ -571,6 +608,7 @@
         this._pushHistory();
       }
 
+      const widgetIdx = this._widgets.indexOf(widget);
       const oldWidget = { ...widget, position: { ...widget.position } };
 
       // 🔒 Нормализуем sizeId в одном месте, чтобы:
@@ -587,36 +625,45 @@
         }
       }
 
-      Object.assign(widget, nextUpdates);
+      // FIX: Создаём новый объект виджета вместо мутации in-place.
+      // Object.assign(widget, ...) менял свойства существующей ссылки, поэтому
+      // React.memo на WidgetCard видел ту же ссылку и пропускал ре-рендер —
+      // визуально изменения (размер, позиция) не отображались до выхода из edit mode.
+      const updatedWidget = { ...widget, ...nextUpdates };
 
       // Обновить cols/rows если изменился size
       if (nextUpdates && nextUpdates.size) {
         const size = HEYS.Widgets.registry?.getSize(nextUpdates.size);
         if (size) {
-          widget.cols = size.cols;
-          widget.rows = size.rows;
+          updatedWidget.cols = size.cols;
+          updatedWidget.rows = size.rows;
         }
       }
 
-      // Обновить позицию если указана
+      // Обновить позицию если указана (всегда новый объект)
       if (nextUpdates && nextUpdates.position) {
-        widget.position = { ...nextUpdates.position };
+        updatedWidget.position = { ...nextUpdates.position };
+      }
+
+      // Заменяем ссылку в массиве: React.memo увидит новый объект → корректный ре-рендер
+      if (widgetIdx !== -1) {
+        this._widgets[widgetIdx] = updatedWidget;
       }
 
       this._debouncedSave();
 
       if (nextUpdates && nextUpdates.position) {
-        HEYS.Widgets.emit('widget:moved', { widget, from: oldWidget.position, to: updates.position });
+        HEYS.Widgets.emit('widget:moved', { widget: updatedWidget, from: oldWidget.position, to: updatedWidget.position });
         // Вибрация при перемещении
         if (navigator.vibrate) {
           navigator.vibrate(10);
         }
       }
       if (nextUpdates && nextUpdates.size) {
-        HEYS.Widgets.emit('widget:resized', { widget, from: oldWidget.size, to: nextUpdates.size });
+        HEYS.Widgets.emit('widget:resized', { widget: updatedWidget, from: oldWidget.size, to: updatedWidget.size });
       }
       if (nextUpdates && nextUpdates.settings) {
-        HEYS.Widgets.emit('widget:settings', { widget, settings: updates.settings });
+        HEYS.Widgets.emit('widget:settings', { widget: updatedWidget, settings: updatedWidget.settings });
       }
 
       HEYS.Widgets.emit('layout:changed', { layout: this._widgets });
@@ -634,6 +681,10 @@
       if (result) {
         // 🆕 Вытесняем перекрывающиеся виджеты на свободные места
         gridEngine.displaceCollidingWidgets(id);
+        if (this._autoPackWidgets()) {
+          this._debouncedSave();
+          HEYS.Widgets.emit('layout:changed', { layout: this._widgets });
+        }
       }
       return result;
     },
@@ -665,6 +716,10 @@
       // 🆕 После swap проверяем коллизии для обоих виджетов
       gridEngine.displaceCollidingWidgets(idA);
       gridEngine.displaceCollidingWidgets(idB);
+      if (this._autoPackWidgets()) {
+        this._debouncedSave();
+        HEYS.Widgets.emit('layout:changed', { layout: this._widgets });
+      }
 
       HEYS.Widgets.emit('widget:swapped', { a: idA, b: idB, from: posA, to: posB });
       return true;
@@ -694,14 +749,15 @@
       }
 
       if (changed) {
-        this._debouncedSave();
-        HEYS.Widgets.emit('layout:changed', { layout: this._widgets });
-
         // 🆕 Финальная проверка: убедимся что нет коллизий
         // (на случай если reflow расчёт был неточным)
         for (const widgetId of Object.keys(positionsById)) {
           gridEngine.displaceCollidingWidgets(widgetId);
         }
+
+        this._autoPackWidgets();
+        this._debouncedSave();
+        HEYS.Widgets.emit('layout:changed', { layout: this._widgets });
       }
 
       return changed;
@@ -754,6 +810,10 @@
 
       // 3) 🆕 Вытесняем перекрывающиеся виджеты на свободные места
       gridEngine.displaceCollidingWidgets(id);
+      if (this._autoPackWidgets()) {
+        this._debouncedSave();
+        HEYS.Widgets.emit('layout:changed', { layout: this._widgets });
+      }
 
       // layout:changed эмитится внутри updateWidget
       return true;
@@ -1935,16 +1995,35 @@
 
       const hadDrag = this._dragging;
 
+      // Удаляем ghost и placeholder ДО восстановления оригинала
+      this._removeGhost();
+      this._removePlaceholder();
+
       // Восстанавливаем оригинальный элемент
       if (this._originalElement) {
         this._originalElement.classList.remove('widget--dragging');
+
+        // FIX: Перед тем как сделать элемент снова видимым, ставим inline grid-позицию
+        // на новое место — иначе между восстановлением opacity и React re-render
+        // виджет на 1-2 кадра виден на старой позиции (визуальный "отпрыг" назад).
+        if (hadDrag && this._dropIntent?.position) {
+          const widget = this._draggedWidget;
+          const reg = HEYS.Widgets.registry;
+          const normSize = reg?.normalizeSizeId ? (reg.normalizeSizeId(widget?.size) || widget?.size) : widget?.size;
+          const sizeInfo = reg?.getSize?.(normSize) || reg?.getSize?.(widget?.size);
+          const cols = sizeInfo?.cols || widget?.cols || 1;
+          const rows = sizeInfo?.rows || widget?.rows || 1;
+          // Для reflow берём итоговую позицию именно этого виджета из positionsById
+          const targetPos = (this._dropIntent.type === 'reflow' && this._dropIntent.positionsById?.[widget.id])
+            ? this._dropIntent.positionsById[widget.id]
+            : this._dropIntent.position;
+          this._originalElement.style.gridColumn = `${targetPos.col + 1} / span ${cols}`;
+          this._originalElement.style.gridRow = `${targetPos.row + 1} / span ${rows}`;
+        }
+
         this._originalElement.style.opacity = '';
         this._originalElement.style.transform = '';
       }
-
-      // Удаляем ghost и placeholder
-      this._removeGhost();
-      this._removePlaceholder();
 
       // Если drag был активен и есть намерение drop — применяем
       if (hadDrag && this._dropIntent && this._dropIntent.position) {
@@ -2248,6 +2327,7 @@
 
     if (widgets.length > 0) {
       state._widgets = widgets.map(w => state._normalizeWidget(w));
+      state._autoPackWidgets();
       HEYS.Widgets.emit('layout:changed', { layout: state._widgets, source: 'cloud-sync' });
     }
   });

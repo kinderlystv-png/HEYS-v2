@@ -149,6 +149,9 @@
   border-radius: 16px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
   overflow: hidden;
+  /* perf: skip layout/paint for offscreen metabolic card */
+  content-visibility: auto;
+  contain-intrinsic-size: auto 200px;
 }
 
 .dark .metabolic-status-card--v2 {
@@ -1506,6 +1509,43 @@
 
 .dual-risk-panel__details {
   margin-top: 8px;
+}
+
+.dual-risk-panel__debug-actions {
+  display: flex;
+  justify-content: center;
+  margin-top: 12px;
+}
+
+.dual-risk-panel__debug-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary, #64748b);
+  background: var(--bg-secondary, #f1f5f9);
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.dual-risk-panel__debug-btn:hover {
+  background: var(--bg-tertiary, #e2e8f0);
+  color: var(--text-primary, #1e293b);
+}
+
+.dark .dual-risk-panel__debug-btn {
+  background: var(--bg-secondary, #1e293b);
+  border-color: var(--border-color, #334155);
+  color: var(--text-secondary, #94a3b8);
+}
+
+.dark .dual-risk-panel__debug-btn:hover {
+  background: var(--bg-tertiary, #334155);
+  color: var(--text-primary, #f1f5f9);
 }
 
 /* MINI RISK METER (Compact Semi-circle) */

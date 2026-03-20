@@ -9894,10 +9894,53 @@ NOVA: 1
           HEYS.StepModal.hide({ scrollToDiary: true });
         };
 
+        const addLastProduct = () => {
+          const reopenSingleMode = () => {
+            if (!HEYS.AddProductStep?.show) {
+              finishMeal();
+              return;
+            }
+
+            const latestDay = HEYS.Day?.getDay?.() || context?.day || {};
+            const latestProducts = HEYS.products?.getAll?.()
+              || HEYS.store?.get?.('heys_products', [])
+              || HEYS.utils?.lsGet?.('heys_products', [])
+              || context?.products
+              || [];
+
+            HEYS.AddProductStep.show({
+              mealIndex: context?.mealIndex ?? 0,
+              products: latestProducts,
+              day: latestDay,
+              dateKey: context?.dateKey || new Date().toISOString().slice(0, 10),
+              multiProductMode: false,
+              onAdd: context?.onAdd,
+              onAddPhoto: context?.onAddPhoto,
+              onNewProduct: context?.onNewProduct,
+            });
+          };
+
+          if (HEYS.StepModal?.hide) {
+            HEYS.StepModal.hide({ scrollToDiary: false });
+            setTimeout(reopenSingleMode, 80);
+          } else {
+            reopenSingleMode();
+          }
+        };
+
+        // Для основного day flow внешний onAdd уже сам показывает summary-модалку
+        // и управляет reopen логикой. Если запустить локальный summary ещё и здесь,
+        // получаем двойной сценарий: первый клик по «Добавить последний» только
+        // закрывает/переоткрывает модалку, а нужный single-product flow срабатывает
+        // лишь на повторном клике.
+        if (typeof context?.onAdd === 'function') {
+          return;
+        }
+
         // 🆕 Используем общий summary-хелпер если доступен
         const summaryShow = HEYS.dayAddProductSummary?.show;
         if (typeof summaryShow === 'function') {
-          let addMoreChosen = false;
+          let flowHandled = false;
           const dayUtils = HEYS.dayUtils || {};
           const getProductFromItem = dayUtils.getProductFromItem || (() => null);
           const per100 = dayUtils.per100 || (() => ({
@@ -9917,11 +9960,15 @@ NOVA: 1
             per100,
             scale,
             onAddMore: () => {
-              addMoreChosen = true;
+              flowHandled = true;
               continueAdding();
+            },
+            onAddLast: () => {
+              flowHandled = true;
+              addLastProduct();
             }
           })).then(() => {
-            if (!addMoreChosen) finishMeal();
+            if (!flowHandled) finishMeal();
           });
           return;
         }
@@ -25138,6 +25185,410 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 })(typeof window !== 'undefined' ? window : global);
 
 
+/* ===== heys_day_score_v1.js ===== */
+/**
+ * heys_day_score_v1.js — Unified Day Score (0-100)
+ *
+ * ЕДИНСТВЕННЫЙ ответ на "как у меня сегодня?".
+ *
+ * Формула:
+ *   Day Score = Factors(70%) + Subjective(15%) + Momentum(15%)
+ *
+ *   - Factors: 9 факторов из Status Score (kcal, protein, timing, steps,
+ *     training, household, sleep, stress, water). Nutrition-факторы обогащены
+ *     средним Meal Quality если приёмы есть.
+ *   - Subjective: dayScore (mood+wellbeing+stress) 1-10 → бонус/штраф ±15
+ *   - Momentum: Cascade CRS (0-1) → бонус ±15 (инерция хороших/плохих дней)
+ *
+ * Layer 1 в Day Intelligence Stack:
+ *   Layer 0 — Foundation (TDEE, InsulinWave, MealQuality, Cascade CRS)
+ *   Layer 1 — Day Score (этот модуль)
+ *   Layer 2 — Risk Radar (Relapse + Crash → unified risk)
+ *   Layer 3 — Trend Score (бывший Health Score, 7-30 дней)
+ *   Layer 4 — Watchdog (EWS)
+ *
+ * Version: 1.0.0
+ * Created: 2026-03-20
+ */
+(function (global) {
+    'use strict';
+
+    const HEYS = global.HEYS = global.HEYS || {};
+    const MODULE = '[HEYS.DayScore]';
+
+    // === WEIGHTS ===
+    const W_FACTORS = 0.70;
+    const W_SUBJECTIVE = 0.15;
+    const W_MOMENTUM = 0.15;
+
+    // Smoothing: max ±15 change per update (same as Status Score)
+    const MAX_CHANGE = 15;
+
+    // === HELPERS ===
+
+    function clamp(v, lo, hi) {
+        const n = Number(v);
+        if (!Number.isFinite(n)) return lo;
+        return Math.max(lo, Math.min(hi, n));
+    }
+
+    function round(n) { return Math.round(n) || 0; }
+
+    /**
+     * Compute average Meal Quality Score for today's meals.
+     * Uses HEYS.mealScoring.getMealQualityScore if loaded.
+     * Returns null if no meals or module not ready.
+     */
+    function getAvgMealQuality(dayData, pIndex, optimum) {
+        const meals = dayData?.meals;
+        if (!Array.isArray(meals) || meals.length === 0) return null;
+
+        const getMQ = HEYS.mealScoring?.getMealQualityScore;
+        if (typeof getMQ !== 'function') return null;
+
+        let sum = 0;
+        let count = 0;
+
+        for (const meal of meals) {
+            if (!meal?.items || meal.items.length === 0) continue;
+            const mealType = meal.label || meal.type || 'other';
+            const q = getMQ(meal, mealType, optimum || 2000, pIndex);
+            if (q && typeof q.score === 'number' && Number.isFinite(q.score)) {
+                sum += q.score;
+                count++;
+            }
+        }
+
+        return count > 0 ? round(sum / count) : null;
+    }
+
+    /**
+     * Subjective modifier: dayScore 1-10 → bonus/penalty mapped to ±15 points.
+     * 5 = neutral (0), 10 = +15, 1 = -15.
+     */
+    function subjectiveBonus(dayScore) {
+        if (dayScore == null || dayScore === '') return 0;
+        const ds = Number(dayScore);
+        if (!Number.isFinite(ds)) return 0;
+        // Linear map: 1→-15, 5→0, 10→+15
+        return round(((clamp(ds, 1, 10) - 5) / 5) * 15);
+    }
+
+    /**
+     * Momentum modifier: Cascade CRS (0—~1) → ±15 points.
+     * 0.5 display-equivalent = neutral (0). Higher = bonus, lower = penalty.
+     * Uses raw CRS (not display-mapped).
+     */
+    function momentumBonus(cascadeState) {
+        if (!cascadeState) return 0;
+        const crs = Number(cascadeState.crs);
+        if (!Number.isFinite(crs)) return 0;
+        // CRS range roughly 0-0.65 after ceiling. Map to ±15.
+        // 0.25 ≈ neutral, 0.50+ = strong positive, 0.05- = negative
+        const normalized = clamp((crs - 0.25) / 0.40, -1, 1);
+        return round(normalized * 15);
+    }
+
+    /**
+     * Calculate unified Day Score (0-100).
+     *
+     * @param {Object} opts
+     * @param {Object} opts.dayData            — day object from localStorage
+     * @param {Object} opts.profile            — user profile
+     * @param {Object} opts.dayTot             — pre-computed day totals {kcal, prot, ...}
+     * @param {Object} opts.normAbs            — absolute norms {kcal, prot, ...}
+     * @param {number} [opts.waterGoal=2000]
+     * @param {Object} [opts.pIndex]           — product index
+     * @param {number} [opts.optimum]          — calorie target
+     * @param {Object} [opts.cascadeState]     — from HEYS.CascadeCard.computeCascadeState()
+     * @param {number} [opts.previousDayScore] — previous computed Day Score (for smoothing)
+     * @returns {Object} { score, rawScore, factorScore, subjectiveScore, momentumScore,
+     *                      statusResult, avgMealQuality, breakdown, level }
+     */
+    function calculateDayScore(opts = {}) {
+        const {
+            dayData = {},
+            profile = {},
+            dayTot = {},
+            normAbs = {},
+            waterGoal = 2000,
+            pIndex = null,
+            optimum = null,
+            cascadeState = null,
+            previousDayScore = null
+        } = opts;
+
+        // 1. Factor score via Status Score (0-100)
+        let statusResult = null;
+        let factorScore = 50; // neutral default
+
+        if (HEYS.Status?.calculateStatus) {
+            statusResult = HEYS.Status.calculateStatus({
+                dayData,
+                profile,
+                dayTot,
+                normAbs,
+                waterGoal
+            });
+            factorScore = statusResult.score;
+        }
+
+        // 2. Enrich nutrition factor with Meal Quality if available
+        const avgMQ = getAvgMealQuality(dayData, pIndex, optimum || normAbs?.kcal);
+        if (avgMQ !== null && statusResult) {
+            // Blend: original nutrition category score + meal quality average
+            // nutrition category raw score from Status
+            const nutCat = statusResult.categoryScores?.nutrition;
+            if (nutCat && typeof nutCat.score === 'number') {
+                const originalNut = nutCat.score;
+                // 60/40 blend: keep Status nutrition anchoring, add MealQuality signal
+                const blendedNut = round(originalNut * 0.6 + avgMQ * 0.4);
+                // Adjust factorScore: replace nutrition contribution proportionally
+                // nutrition weight = 35 out of 100 total weight
+                const nut_weight_frac = 0.35;
+                factorScore = round(
+                    factorScore * (1 - nut_weight_frac) + blendedNut * nut_weight_frac
+                );
+            }
+        }
+
+        // 3. Subjective bonus from dayScore (±15)
+        const sBonus = subjectiveBonus(dayData?.dayScore);
+
+        // 4. Momentum bonus from Cascade CRS (±15)
+        const mBonus = momentumBonus(cascadeState);
+
+        // 5. Composite
+        const rawScore = clamp(
+            round(factorScore * W_FACTORS + (50 + sBonus) * W_SUBJECTIVE + (50 + mBonus) * W_MOMENTUM),
+            0,
+            100
+        );
+
+        // 6. Smoothing against previous value
+        let finalScore = rawScore;
+        if (previousDayScore !== null && Number.isFinite(Number(previousDayScore))) {
+            const diff = rawScore - Number(previousDayScore);
+            if (Math.abs(diff) > MAX_CHANGE) {
+                finalScore = round(Number(previousDayScore) + Math.sign(diff) * MAX_CHANGE);
+            }
+        }
+        finalScore = clamp(finalScore, 0, 100);
+
+        // 7. Level label
+        const level = getLevel(finalScore);
+
+        console.info(`${MODULE} ✅ Day Score: ${finalScore} (raw: ${rawScore}) | factors: ${factorScore} | subjective: ${sBonus} | momentum: ${mBonus} | avgMQ: ${avgMQ ?? '—'}`);
+
+        return {
+            score: finalScore,
+            rawScore,
+            factorScore,
+            subjectiveScore: sBonus,
+            momentumScore: mBonus,
+            avgMealQuality: avgMQ,
+            statusResult,
+            breakdown: {
+                factors: { weight: W_FACTORS, score: factorScore },
+                subjective: { weight: W_SUBJECTIVE, raw: dayData?.dayScore, bonus: sBonus },
+                momentum: { weight: W_MOMENTUM, crs: cascadeState?.crs ?? null, bonus: mBonus }
+            },
+            level,
+            timestamp: Date.now()
+        };
+    }
+
+    /**
+     * Level thresholds (same scale as Status Score for consistency).
+     */
+    const LEVELS = {
+        excellent: { min: 85, label: 'Отличный день!', emoji: '🌟', color: '#10b981' },
+        good: { min: 70, label: 'Хороший день', emoji: '✅', color: '#22c55e' },
+        okay: { min: 50, label: 'Нормальный день', emoji: '👌', color: '#eab308' },
+        low: { min: 30, label: 'Слабый день', emoji: '😕', color: '#f97316' },
+        critical: { min: 0, label: 'Тяжёлый день', emoji: '⚠️', color: '#ef4444' }
+    };
+
+    function getLevel(score) {
+        for (const [id, lvl] of Object.entries(LEVELS)) {
+            if (score >= lvl.min) return { ...lvl, id };
+        }
+        return { ...LEVELS.critical, id: 'critical' };
+    }
+
+    // === EXPORT ===
+
+    HEYS.DayScore = {
+        calculateDayScore,
+        getAvgMealQuality,
+        subjectiveBonus,
+        momentumBonus,
+        getLevel,
+        LEVELS,
+        W_FACTORS,
+        W_SUBJECTIVE,
+        W_MOMENTUM,
+        VERSION: '1.0.0'
+    };
+
+    console.info(`${MODULE} ✅ Module loaded v1.0.0 | Formula: Factors(70%) + Subjective(15%) + Momentum(15%)`);
+
+})(typeof window !== 'undefined' ? window : global);
+
+
+/* ===== heys_risk_radar_v1.js ===== */
+/**
+ * heys_risk_radar_v1.js — Unified Risk Radar
+ *
+ * Layer 2 в Day Intelligence Stack.
+ * Один ответ на "есть ли угроза сегодня?" вместо двух параллельных рисков.
+ *
+ * Логика:
+ *   riskScore = max(relapseRisk, crashRisk)
+ *   source    = который из двух выше (или 'both' если разница <5)
+ *
+ * Relapse Risk — эмоциональный риск срыва (стресс, настроение, рестрикция)
+ * Crash Risk   — метаболический риск (недосып, дефицит, weekend паттерн)
+ *
+ * Version: 1.0.0
+ * Created: 2026-03-20
+ */
+(function (global) {
+    'use strict';
+
+    const HEYS = global.HEYS = global.HEYS || {};
+    const MODULE = '[HEYS.RiskRadar]';
+
+    const LEVELS = {
+        low: { min: 0, max: 19, label: 'Низкий', emoji: '🟢', color: '#22c55e' },
+        guarded: { min: 20, max: 39, label: 'Умеренный', emoji: '🟡', color: '#eab308' },
+        elevated: { min: 40, max: 59, label: 'Повышенный', emoji: '🟠', color: '#f97316' },
+        high: { min: 60, max: 79, label: 'Высокий', emoji: '🔴', color: '#ef4444' },
+        critical: { min: 80, max: 100, label: 'Критичный', emoji: '🚨', color: '#dc2626' }
+    };
+
+    function getLevel(score) {
+        for (const [id, lvl] of Object.entries(LEVELS)) {
+            if (score <= lvl.max) return { ...lvl, id };
+        }
+        return { ...LEVELS.critical, id: 'critical' };
+    }
+
+    function clamp(v, lo, hi) {
+        return Math.max(lo, Math.min(hi, Number(v) || 0));
+    }
+
+    /**
+     * Compute unified Risk Radar.
+     *
+     * @param {Object} opts
+     * @param {Object} [opts.relapseSnapshot] — from HEYS.RelapseRisk.getCurrentSnapshot()
+     * @param {Object} [opts.crashRiskResult] — from HEYS.Metabolic.calculateCrashRisk24h()
+     * @param {Object} [opts.dayData]
+     * @param {Object} [opts.dayTot]
+     * @param {Object} [opts.normAbs]
+     * @param {Object} [opts.profile]
+     * @param {Array}  [opts.historyDays]
+     * @returns {Object} { score, level, source, relapse, crash, drivers, actions }
+     */
+    function calculate(opts = {}) {
+        let relapseScore = 0;
+        let crashScore = 0;
+        let relapseData = opts.relapseSnapshot || null;
+        let crashData = opts.crashRiskResult || null;
+
+        // Try to get Relapse Risk if not provided
+        if (!relapseData && HEYS.RelapseRisk?.getCurrentSnapshot) {
+            relapseData = HEYS.RelapseRisk.getCurrentSnapshot();
+        }
+        if (relapseData && typeof relapseData.score === 'number') {
+            relapseScore = clamp(relapseData.score, 0, 100);
+        }
+
+        // Try to get Crash Risk if not provided
+        if (!crashData && HEYS.Metabolic?.calculateCrashRisk24h) {
+            crashData = HEYS.Metabolic.calculateCrashRisk24h(
+                new Date().toISOString().slice(0, 10),
+                opts.profile,
+                opts.historyDays
+            );
+        }
+        if (crashData && typeof crashData.score === 'number') {
+            crashScore = clamp(crashData.score, 0, 100);
+        }
+
+        // Unified score = max of both
+        const riskScore = Math.max(relapseScore, crashScore);
+        const diff = Math.abs(relapseScore - crashScore);
+
+        let source;
+        if (diff < 5 && relapseScore > 0 && crashScore > 0) {
+            source = 'both';
+        } else if (relapseScore >= crashScore) {
+            source = 'emotional';
+        } else {
+            source = 'metabolic';
+        }
+
+        const level = getLevel(riskScore);
+
+        // Top drivers from whichever source is higher
+        const drivers = [];
+        if (relapseData?.drivers) {
+            for (const d of relapseData.drivers.slice(0, 2)) {
+                drivers.push({ label: d.label || d.factor, value: d.value, source: 'relapse' });
+            }
+        }
+        if (crashData?.factors) {
+            for (const f of Object.entries(crashData.factors || {}).slice(0, 2)) {
+                drivers.push({ label: f[0], value: f[1], source: 'crash' });
+            }
+        }
+
+        // Top actions: merge from both (deduplicate by label)
+        const actions = [];
+        const seen = new Set();
+        const allActions = [
+            ...(relapseData?.actions || []),
+            ...(crashData?.actions || [])
+        ];
+        for (const a of allActions) {
+            const key = (a.text || a.label || '').toLowerCase();
+            if (key && !seen.has(key)) {
+                seen.add(key);
+                actions.push(a);
+            }
+            if (actions.length >= 3) break;
+        }
+
+        console.info(`${MODULE} ✅ Risk: ${riskScore} (relapse: ${relapseScore}, crash: ${crashScore}) | source: ${source} | level: ${level.label}`);
+
+        return {
+            score: riskScore,
+            level,
+            source,
+            relapse: { score: relapseScore, data: relapseData },
+            crash: { score: crashScore, data: crashData },
+            drivers,
+            actions,
+            timestamp: Date.now()
+        };
+    }
+
+    // === EXPORT ===
+
+    HEYS.RiskRadar = {
+        calculate,
+        getLevel,
+        LEVELS,
+        VERSION: '1.0.0'
+    };
+
+    console.info(`${MODULE} ✅ Module loaded v1.0.0 | Unified Risk = max(Relapse, Crash) + source indicator`);
+
+})(typeof window !== 'undefined' ? window : global);
+
+
 /* ===== heys_widgets_events_v1.js ===== */
 /**
  * heys_widgets_events_v1.js
@@ -25488,6 +25939,11 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       settings: {
         showGrams: { type: 'boolean', default: true, label: 'Показывать граммы' },
         showPercentage: { type: 'boolean', default: true, label: 'Показывать %' }
+      },
+      settingsBySize: {
+        '1x1': {
+          showPercentage: { type: 'boolean', default: true, label: 'Показывать %' }
+        }
       }
     },
 
@@ -25503,11 +25959,31 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       component: 'WidgetInsulin',
       settings: {
         showTimer: { type: 'boolean', default: true, label: 'Показывать таймер' },
-        showPhase: { type: 'boolean', default: true, label: 'Показывать фазу' }
+        showPhase: { type: 'boolean', default: true, label: 'Показывать фазу' },
+        showLastMeal: { type: 'boolean', default: true, label: 'Показывать последний приём пищи' }
       }
     },
 
     // === Категория: Здоровье ===
+    dayScore: {
+      type: 'dayScore',
+      name: 'Оценка дня',
+      category: 'health',
+      icon: '⭐',
+      description: 'Единая оценка дня 0-100: факторы + субъективная + momentum',
+      defaultSize: '2x2',
+      availableSizes: ALL_SIZES_4X4,
+      dataKeys: ['dayData', 'profile', 'dayTot', 'normAbs', 'waterGoal'],
+      component: 'WidgetDayScore',
+      settings: {
+        showBreakdown: { type: 'boolean', default: true, label: 'Показывать разбивку' },
+        showLevel: { type: 'boolean', default: true, label: 'Показывать уровень' }
+      },
+      settingsBySize: {
+        '1x1': {}
+      }
+    },
+
     status: {
       type: 'status',
       name: 'Статус',
@@ -25521,6 +25997,11 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       settings: {
         showActions: { type: 'boolean', default: true, label: 'Показывать действия' },
         showIssues: { type: 'boolean', default: true, label: 'Показывать проблемы' }
+      },
+      settingsBySize: {
+        '1x1': {},
+        '2x1': {},
+        '1x2': {}
       }
     },
 
@@ -25530,13 +26011,17 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       category: 'health',
       icon: '😴',
       description: 'Часы сна и качество',
-      defaultSize: '2x2',
-      availableSizes: ALL_SIZES_4X4,
+      defaultSize: '1x1',
+      availableSizes: ['1x1'],
       dataKeys: ['day.sleepHours', 'day.sleepQuality', 'prof.sleepHours'],
       component: 'WidgetSleep',
       settings: {
         showQuality: { type: 'boolean', default: true, label: 'Показывать качество' },
-        showTarget: { type: 'boolean', default: true, label: 'Показывать норму' }
+        showTarget: { type: 'boolean', default: true, label: 'Показывать норму' },
+        showTimes: { type: 'boolean', default: true, label: 'Показывать время сна' }
+      },
+      settingsBySize: {
+        '1x1': {}
       }
     },
 
@@ -25552,16 +26037,29 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       component: 'WidgetWater',
       settings: {
         showMilliliters: { type: 'boolean', default: true, label: 'Показывать мл' },
-        showGlasses: { type: 'boolean', default: false, label: 'Показывать стаканы' }
+        showGlasses: { type: 'boolean', default: false, label: 'Показывать стаканы' },
+        showProgress: { type: 'boolean', default: true, label: 'Показывать прогресс' },
+        showPercentage: { type: 'boolean', default: true, label: 'Показывать %' },
+        showRemaining: { type: 'boolean', default: true, label: 'Показывать остаток' }
       },
       settingsBySize: {
         '1x1': {
+          showMilliliters: { type: 'boolean', default: true, label: 'Показывать мл' },
           showGlasses: { type: 'boolean', default: false, label: 'Показывать стаканы (🥛)' }
         },
         '2x1': {
-          showGlasses: { type: 'boolean', default: false, label: 'Показывать стаканы вместо мл' }
+          showMilliliters: { type: 'boolean', default: true, label: 'Показывать мл' },
+          showGlasses: { type: 'boolean', default: false, label: 'Показывать стаканы' },
+          showProgress: { type: 'boolean', default: true, label: 'Показывать прогресс' },
+          showPercentage: { type: 'boolean', default: true, label: 'Показывать %' }
         },
-        '2x2': {}
+        '2x2': {
+          showMilliliters: { type: 'boolean', default: true, label: 'Показывать мл' },
+          showGlasses: { type: 'boolean', default: false, label: 'Показывать стаканы' },
+          showProgress: { type: 'boolean', default: true, label: 'Показывать прогресс' },
+          showPercentage: { type: 'boolean', default: true, label: 'Показывать %' },
+          showRemaining: { type: 'boolean', default: true, label: 'Показывать остаток' }
+        }
       }
     },
 
@@ -25578,7 +26076,56 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       settings: {
         showTrend: { type: 'boolean', default: true, label: 'Показывать тренд' },
         showGoal: { type: 'boolean', default: true, label: 'Показывать цель' },
+        showBmi: { type: 'boolean', default: true, label: 'Показывать BMI' },
+        showChart: { type: 'boolean', default: true, label: 'Показывать график' },
+        showAnalytics: { type: 'boolean', default: true, label: 'Показывать аналитику' },
         periodDays: { type: 'number', default: 7, label: 'Период (дней)', min: 3, max: 30 }
+      },
+      settingsBySize: {
+        '1x1': {},
+        '2x1': {
+          showTrend: { type: 'boolean', default: true, label: 'Показывать тренд' },
+          showGoal: { type: 'boolean', default: true, label: 'Показывать цель' },
+          showBmi: { type: 'boolean', default: true, label: 'Показывать BMI' }
+        },
+        '3x1': {
+          showTrend: { type: 'boolean', default: true, label: 'Показывать тренд' },
+          showGoal: { type: 'boolean', default: true, label: 'Показывать цель' },
+          showBmi: { type: 'boolean', default: true, label: 'Показывать BMI' }
+        },
+        '4x1': {
+          showTrend: { type: 'boolean', default: true, label: 'Показывать тренд' },
+          showGoal: { type: 'boolean', default: true, label: 'Показывать цель' },
+          showBmi: { type: 'boolean', default: true, label: 'Показывать BMI' }
+        },
+        '1x2': {
+          showTrend: { type: 'boolean', default: true, label: 'Показывать тренд' },
+          showGoal: { type: 'boolean', default: true, label: 'Показывать цель' },
+          showBmi: { type: 'boolean', default: true, label: 'Показывать BMI' }
+        },
+        '2x2': {
+          showTrend: { type: 'boolean', default: true, label: 'Показывать тренд' },
+          showGoal: { type: 'boolean', default: true, label: 'Показывать цель' },
+          showBmi: { type: 'boolean', default: true, label: 'Показывать BMI' },
+          showChart: { type: 'boolean', default: true, label: 'Показывать график' }
+        },
+        '2x3': {
+          showTrend: { type: 'boolean', default: true, label: 'Показывать тренд' },
+          showGoal: { type: 'boolean', default: true, label: 'Показывать цель' },
+          showBmi: { type: 'boolean', default: true, label: 'Показывать BMI' }
+        },
+        '1x3': {
+          showTrend: { type: 'boolean', default: true, label: 'Показывать тренд' },
+          showGoal: { type: 'boolean', default: true, label: 'Показывать цель' },
+          showBmi: { type: 'boolean', default: true, label: 'Показывать BMI' },
+          showAnalytics: { type: 'boolean', default: true, label: 'Показывать аналитику' }
+        },
+        '1x4': {
+          showTrend: { type: 'boolean', default: true, label: 'Показывать тренд' },
+          showGoal: { type: 'boolean', default: true, label: 'Показывать цель' },
+          showBmi: { type: 'boolean', default: true, label: 'Показывать BMI' },
+          showAnalytics: { type: 'boolean', default: true, label: 'Показывать аналитику' }
+        }
       }
     },
 
@@ -25594,7 +26141,12 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       component: 'WidgetSteps',
       settings: {
         showGoal: { type: 'boolean', default: true, label: 'Показывать цель' },
-        showKilometers: { type: 'boolean', default: false, label: 'Показывать км' }
+        showKilometers: { type: 'boolean', default: false, label: 'Показывать км' },
+        showPercentage: { type: 'boolean', default: true, label: 'Показывать %' },
+        showRemaining: { type: 'boolean', default: true, label: 'Показывать остаток' }
+      },
+      settingsBySize: {
+        '1x1': {}
       }
     },
 
@@ -25605,13 +26157,16 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       category: 'motivation',
       icon: '🔥',
       description: 'Серия дней в норме',
-      defaultSize: '2x2',
-      availableSizes: ALL_SIZES_4X4,
+      defaultSize: '1x1',
+      availableSizes: ['1x1'],
       dataKeys: ['currentStreak', 'maxStreak'],
       component: 'WidgetStreak',
       settings: {
         showMax: { type: 'boolean', default: true, label: 'Показывать рекорд' },
         showFlame: { type: 'boolean', default: true, label: 'Показывать огонь' }
+      },
+      settingsBySize: {
+        '1x1': {}
       }
     },
 
@@ -25621,17 +26176,20 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       category: 'motivation',
       icon: '📅',
       description: 'Активность за неделю/месяц',
-      defaultSize: '4x2',
-      availableSizes: ALL_SIZES_4X4,
+      defaultSize: '4x1',
+      availableSizes: ['4x1'],
       dataKeys: ['activeDays'],
       component: 'WidgetHeatmap',
       settings: {
         period: {
           type: 'select', default: 'week', label: 'Период', options: [
             { value: 'week', label: 'Неделя' },
-            { value: 'month', label: 'Месяц' }
+            { value: 'month', label: 'Месяц', disabled: true }
           ]
-        }
+        },
+        showWeekdays: { type: 'boolean', default: true, label: 'Показывать дни недели' },
+        showDates: { type: 'boolean', default: true, label: 'Показывать числа' },
+        highlightToday: { type: 'boolean', default: true, label: 'Выделять сегодня' }
       }
     },
 
@@ -25652,34 +26210,39 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       },
       settings: {
         showPhase: { type: 'boolean', default: true, label: 'Показывать фазу' },
-        showCorrections: { type: 'boolean', default: true, label: 'Показывать коррекции' }
+        showCorrections: { type: 'boolean', default: true, label: 'Показывать рекомендацию' }
+      },
+      settingsBySize: {
+        '1x1': {}
       }
     },
 
     // === Категория: Продвинутое ===
+
     crashRisk: {
       type: 'crashRisk',
-      name: 'Риск срыва',
-      category: 'health',
-      icon: '⚠️',
-      description: 'Early Warning: 5% недельная потеря веса',
-      defaultSize: '4x2',
-      availableSizes: ['2x2', '3x2', '4x2', '4x3', '4x4'],
-      dataKeys: ['day.weightMorning', 'weightTrend', 'earlyWarnings'],
+      name: 'Динамика веса',
+      category: 'analytics',
+      icon: '📊',
+      optional: true,
+      description: 'Темп потери/набора веса, зона прогресса, прогноз до цели',
+      defaultSize: '2x1',
+      availableSizes: ['2x1'],
+      dataKeys: ['day.weightMorning', 'weightTrend', 'profile.goalWeight'],
       component: 'WidgetCrashRisk',
       settings: {
-        showWarnings: { type: 'boolean', default: true, label: 'Показывать предупреждения' },
-        showTrend: { type: 'boolean', default: true, label: 'Показывать тренд' },
-        periodDays: { type: 'number', default: 7, label: 'Период (дней)', min: 7, max: 14 }
+        showWarnings: { type: 'boolean', default: true, label: 'Показывать EWS предупреждения' },
+        showGoal: { type: 'boolean', default: true, label: 'Показывать прогресс к цели' },
+        periodDays: { type: 'number', default: 7, label: 'Период (дней)', min: 7, max: 30 }
       }
     },
 
     relapseRisk: {
       type: 'relapseRisk',
-      name: 'Relapse Risk',
+      name: 'Риск-радар',
       category: 'health',
       icon: '🛡️',
-      description: 'Текущий риск срыва на базе canonical relapse score',
+      description: 'Единый риск: max(relapse, crash) + источник + спидометр',
       defaultSize: '2x2',
       availableSizes: ['1x1', '2x1', '2x2', '3x2', '4x2'],
       dataKeys: ['dayData', 'dayTot', 'normAbs', 'historyDays', 'relapseRisk'],
@@ -25687,7 +26250,14 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       settings: {
         showDrivers: { type: 'boolean', default: true, label: 'Показывать драйверы' },
         showRecommendation: { type: 'boolean', default: true, label: 'Показывать действие' },
-        showConfidence: { type: 'boolean', default: true, label: 'Показывать confidence' }
+        showConfidence: { type: 'boolean', default: true, label: 'Показывать confidence' },
+        showSource: { type: 'boolean', default: true, label: 'Показывать источник риска' }
+      },
+      settingsBySize: {
+        '1x1': {},
+        '2x2': {
+          showConfidence: { type: 'boolean', default: true, label: 'Показывать confidence' }
+        }
       }
     }
   };
@@ -25910,16 +26480,13 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 /* ===== heys_widgets_data_crash_risk_v1.js ===== */
 /**
  * heys_widgets_data_crash_risk_v1.js
- * Data Provider для Crash Risk виджета (детекция >5%/нед потери веса + EWS)
- * Version: 1.0.0
- * Created: 2026-02-15
- * 
- * Интеграция:
- * - Weight data: heys_day_weight_trends_v1.js
- * - EWS backend: insights/pi_early_warning.js
- * 
- * Формула риска: weeklyLossPercent = |slope × 7 / currentWeight| × 100
- * Thresholds: >5% warning (medium), >7% high severity
+ * Data Provider для виджета «Динамика веса» (Weight Progress)
+ * Version: 2.0.0
+ * Updated: 2026-03-20
+ *
+ * Считает направленный темп изменения веса через линейную регрессию.
+ * Классифицирует зону прогресса: stagnation / optimal / fast / too_fast / warning / danger / gaining / stable.
+ * Добавляет: totalDeltaKg, goal ETA, dataCompleteness, signed pctPerWeek/slopePerWeek.
  */
 (function (global) {
     'use strict';
@@ -25932,89 +26499,79 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     // CONSTANTS
     // ============================================================================
 
-    const THRESHOLDS = {
-        WARNING: 5,      // >5% loss/week → medium severity
-        HIGH: 7,         // >7% loss/week → high severity
-        MIN_DAYS: 7,     // Minimum days for reliable trend
-        MAX_DAYS: 14     // Maximum lookback period
+    const ZONE_THRESHOLDS = {
+        STAGNATION: 0.2,  // < 0.2%/нед потери = стагнация
+        OPTIMAL_MAX: 1.0,  // 0.2–1.0%/нед = оптимально (рекоменд. ВОЗ / клин. диетология)
+        FAST_MAX: 2.0,  // 1.0–2.0%/нед = быстро, но допустимо
+        TOO_FAST_MAX: 5.0,  // 2.0–5.0%/нед = слишком быстро (риск потери мышц)
+        WARNING_MAX: 7.0,  // 5.0–7.0%/нед = предупреждение
+        // > 7.0%/нед = критично
+        GAINING_FAST: 0.5,  // набор > 0.5%/нед = быстро
+        MOVEMENT_MIN: 0.15, // ниже этого — считаем stable
     };
 
-    const SEVERITY_LEVELS = {
-        NONE: 'none',
-        MEDIUM: 'medium',
-        HIGH: 'high'
+    const ZONE_META = {
+        stagnation: { label: 'Нет прогресса', color: '#f59e0b', light: '#fef3c7', emoji: '⏸' },
+        optimal: { label: 'Оптимально', color: '#10b981', light: '#d1fae5', emoji: '✅' },
+        fast: { label: 'Быстро', color: '#3b82f6', light: '#dbeafe', emoji: '⚡' },
+        too_fast: { label: 'Слишком быстро', color: '#f97316', light: '#ffedd5', emoji: '⚠️' },
+        warning: { label: 'Предупреждение', color: '#ef4444', light: '#fee2e2', emoji: '🔴' },
+        danger: { label: 'Критично', color: '#b91c1c', light: '#fee2e2', emoji: '🚨' },
+        stable: { label: 'Стабильный вес', color: '#64748b', light: '#f1f5f9', emoji: '→' },
+        gaining: { label: 'Набор веса', color: '#8b5cf6', light: '#ede9fe', emoji: '↑' },
+        gaining_fast: { label: 'Быстрый набор', color: '#f97316', light: '#ffedd5', emoji: '⚡↑' },
     };
+
+    const ZONE_HINT = {
+        stagnation: 'Вес почти не меняется. Возможно, стоит скорректировать дефицит или добавить активность.',
+        optimal: 'Идеальная скорость снижения — сохраняет мышечную массу и устойчива долгосрочно.',
+        fast: 'Снижение быстрее нормы. Допустимо, но стоит следить за уровнем энергии и мышцами.',
+        too_fast: 'Слишком высокий темп. Риск потери мышечной массы и метаболической адаптации.',
+        warning: 'Критически высокая скорость потери. Нужно срочно увеличить калораж.',
+        danger: 'Опасный темп снижения. Требует немедленного внимания куратора или врача.',
+        stable: 'Вес стабилен — ни потери, ни набора.',
+        gaining: 'Постепенный набор веса.',
+        gaining_fast: 'Быстрый набор веса. Стоит проверить калораж.',
+    };
+
+    const MIN_DAYS = 7;
+    const MAX_DAYS = 30;
 
     // ============================================================================
     // HELPERS
     // ============================================================================
 
-    /**
-     * Получить вес из day data с учетом retention days
-     * @param {Object} dayData - данные дня
-     * @returns {number|null} - вес в кг или null
-     */
     function getWeightFromDay(dayData) {
         if (!dayData) return null;
-
-        // Проверка retention day (вес может быть от предыдущего дня)
-        if (dayData.weightMorning && dayData.weightMorning > 0) {
-            return dayData.weightMorning;
-        }
-
+        if (dayData.weightMorning && dayData.weightMorning > 0) return dayData.weightMorning;
         return null;
     }
 
-    /**
-     * Загрузить weight data за N последних дней
-     * @param {number} days - количество дней
-     * @returns {Array<{date: string, weight: number}>}
-     */
     function loadWeightData(days) {
         const U = HEYS.utils || {};
         const result = [];
         const today = new Date();
-
         for (let i = 0; i < days; i++) {
             const date = new Date(today);
             date.setDate(date.getDate() - i);
             const dateStr = date.toISOString().split('T')[0];
-
             const dayData = U.lsGet(`heys_dayv2_${dateStr}`, null);
             const weight = getWeightFromDay(dayData);
-
-            if (weight !== null && weight > 0) {
-                result.push({ date: dateStr, weight });
-            }
+            if (weight !== null && weight > 0) result.push({ date: dateStr, weight });
         }
-
-        return result.reverse(); // Oldest first для регрессии
+        return result.reverse(); // oldest first для регрессии
     }
 
-    /**
-     * Linear regression для расчета slope (кг/день)
-     * @param {Array<{date: string, weight: number}>} data
-     * @returns {{slope: number, intercept: number, r2: number}|null}
-     */
     function calculateLinearRegression(data) {
         if (!data || data.length < 3) return null;
-
         const n = data.length;
         let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
-
         data.forEach((point, i) => {
-            const x = i; // Day index
-            const y = point.weight;
-            sumX += x;
-            sumY += y;
-            sumXY += x * y;
-            sumX2 += x * x;
+            sumX += i; sumY += point.weight;
+            sumXY += i * point.weight; sumX2 += i * i;
         });
-
         const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
         const intercept = (sumY - slope * sumX) / n;
-
-        // R² calculation
         const yMean = sumY / n;
         let ssTotal = 0, ssResidual = 0;
         data.forEach((point, i) => {
@@ -26022,149 +26579,164 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             ssTotal += Math.pow(point.weight - yMean, 2);
             ssResidual += Math.pow(point.weight - yPred, 2);
         });
-        const r2 = 1 - (ssResidual / ssTotal);
-
+        const r2 = ssTotal > 0 ? 1 - (ssResidual / ssTotal) : 0;
         return { slope, intercept, r2 };
     }
 
     /**
-     * Вычислить weekly loss percentage
-     * @param {number} slope - наклон кг/день (может быть отрицательным)
-     * @param {number} currentWeight - текущий вес в кг
-     * @returns {number} - процент потери веса за неделю (всегда положительный)
+     * Классифицировать зону прогресса по направленному темпу кг/нед
      */
-    function calculateWeeklyLossPercent(slope, currentWeight) {
-        if (!currentWeight || currentWeight <= 0) return 0;
+    function classifyZone(slopePerWeek, currentWeight) {
+        if (!currentWeight || currentWeight <= 0) return 'stable';
+        const pct = (slopePerWeek / currentWeight) * 100; // signed %/week
+        const abs = Math.abs(pct);
 
-        // |slope × 7 / currentWeight| × 100
-        // Если slope < 0 (потеря веса), abs делает число положительным
-        const weeklyLoss = Math.abs(slope * 7);
-        const percent = (weeklyLoss / currentWeight) * 100;
-
-        return percent;
-    }
-
-    /**
-     * Определить severity level по проценту потери
-     * @param {number} weeklyLossPercent
-     * @returns {string} - 'none'|'medium'|'high'
-     */
-    function getSeverity(weeklyLossPercent) {
-        if (weeklyLossPercent >= THRESHOLDS.HIGH) return SEVERITY_LEVELS.HIGH;
-        if (weeklyLossPercent >= THRESHOLDS.WARNING) return SEVERITY_LEVELS.MEDIUM;
-        return SEVERITY_LEVELS.NONE;
+        if (pct < -ZONE_THRESHOLDS.MOVEMENT_MIN) {
+            // Потеря веса
+            if (abs < ZONE_THRESHOLDS.STAGNATION) return 'stagnation';
+            if (abs <= ZONE_THRESHOLDS.OPTIMAL_MAX) return 'optimal';
+            if (abs <= ZONE_THRESHOLDS.FAST_MAX) return 'fast';
+            if (abs <= ZONE_THRESHOLDS.TOO_FAST_MAX) return 'too_fast';
+            if (abs <= ZONE_THRESHOLDS.WARNING_MAX) return 'warning';
+            return 'danger';
+        }
+        if (pct > ZONE_THRESHOLDS.MOVEMENT_MIN) {
+            // Набор веса
+            return abs >= ZONE_THRESHOLDS.GAINING_FAST ? 'gaining_fast' : 'gaining';
+        }
+        return 'stable';
     }
 
     // ============================================================================
     // MAIN DATA PROVIDER
     // ============================================================================
 
-    /**
-     * Получить данные для Crash Risk виджета
-     * @param {Object} options
-     * @param {number} [options.days=7] - период для анализа (7-14)
-     * @returns {Object|null}
-     */
     function getCrashRiskData(options = {}) {
-        const days = Math.max(THRESHOLDS.MIN_DAYS, Math.min(options.days || 7, THRESHOLDS.MAX_DAYS));
+        const days = Math.max(MIN_DAYS, Math.min(options.days || 7, MAX_DAYS));
         const U = HEYS.utils || {};
         const profile = U.lsGet('heys_profile', {});
         const pIndex = profile?.pIndex || 0;
 
         try {
-            // 1. Load weight data
             const weightData = loadWeightData(days);
 
             if (weightData.length < 3) {
-                console.info('[HEYS.widgets.crashRisk] ⚠️ Insufficient data:', {
-                    dataPoints: weightData.length,
-                    minRequired: 3
-                });
+                console.info('[HEYS.widgets.weightProgress] ⚠️ Insufficient data:', weightData.length);
                 return {
                     hasData: false,
                     weeklyLossPercent: 0,
+                    pctPerWeek: 0,
+                    slopePerWeek: 0,
+                    direction: 'stable',
+                    zone: 'stable',
+                    zoneMeta: ZONE_META['stable'],
+                    zoneHint: ZONE_HINT['stable'],
                     isWarning: false,
-                    severity: SEVERITY_LEVELS.NONE,
+                    severity: 'none',
                     message: 'Недостаточно данных (минимум 3 дня с весом)',
                     ewsCount: 0,
-                    ewsData: null
+                    ewsData: null,
                 };
             }
 
-            // 2. Calculate linear regression
             const regression = calculateLinearRegression(weightData);
-
-            if (!regression) {
-                console.warn('[HEYS.widgets.crashRisk] ❌ Regression calculation failed');
-                return null;
-            }
+            if (!regression) return null;
 
             const currentWeight = weightData[weightData.length - 1].weight;
-            const weeklyLossPercent = calculateWeeklyLossPercent(regression.slope, currentWeight);
-            const severity = getSeverity(weeklyLossPercent);
-            const isWarning = severity !== SEVERITY_LEVELS.NONE;
+            const firstWeight = weightData[0].weight;
+            const slopePerWeek = regression.slope * 7; // kg/week, signed
+            const pctPerWeek = (slopePerWeek / currentWeight) * 100; // signed %/week
+            const absPct = Math.abs(pctPerWeek);
 
-            // 3. Fetch EWS data (Early Warning System)
-            let ewsData = null;
-            let ewsCount = 0;
+            const zone = classifyZone(slopePerWeek, currentWeight);
+            const zoneMeta = ZONE_META[zone] || ZONE_META['stable'];
+            const zoneHint = ZONE_HINT[zone] || '';
+            const direction = slopePerWeek < -0.1 ? 'losing' : slopePerWeek > 0.1 ? 'gaining' : 'stable';
+            const isAlert = zone === 'warning' || zone === 'danger' || zone === 'too_fast';
+            const severity = zone === 'danger' ? 'high'
+                : (zone === 'warning' || zone === 'too_fast') ? 'medium'
+                    : 'none';
 
-            if (HEYS.InsightsPI && HEYS.InsightsPI.earlyWarning) {
+            // Реальная дельта (первый → последний замер)
+            const totalDeltaKg = currentWeight - firstWeight;
+            const dataCompleteness = weightData.length / days;
+
+            // Прогресс к цели
+            const goalWeight = profile?.goalWeight || null;
+            const toGoalKg = goalWeight ? currentWeight - goalWeight : null;
+            const estimatedDaysToGoal = (
+                toGoalKg !== null &&
+                toGoalKg > 0.5 &&
+                direction === 'losing' &&
+                Math.abs(slopePerWeek) > 0.05
+            ) ? Math.round((toGoalKg / Math.abs(slopePerWeek)) * 7) : null;
+
+            // EWS
+            let ewsData = null, ewsCount = 0;
+            if (HEYS.InsightsPI?.earlyWarning) {
                 try {
-                    // Используем getRecentDays, так как earlyWarning.detect ожидает массив дней, а не число
-                    const U = HEYS.utils || {};
                     let daysArray = [];
-                    if (HEYS.InsightsPI.analyticsAPI && typeof HEYS.InsightsPI.analyticsAPI.getRecentDays === 'function') {
+                    if (HEYS.InsightsPI.analyticsAPI?.getRecentDays) {
                         daysArray = HEYS.InsightsPI.analyticsAPI.getRecentDays(days);
                     }
-                    
-                    // Не спамим ошибки если дней мало для аналитики EWS
-                    if (daysArray && daysArray.length >= 6) {
-                        ewsData = HEYS.InsightsPI.earlyWarning.detect(daysArray, profile, pIndex, {
-                            includeDetails: true
-                        });
+                    if (daysArray?.length >= 6) {
+                        ewsData = HEYS.InsightsPI.earlyWarning.detect(daysArray, profile, pIndex, { includeDetails: true });
                         ewsCount = ewsData?.count || 0;
                     }
-                } catch (ewsError) {
-                    console.warn('[HEYS.widgets.crashRisk] ⚠️ EWS detection failed:', ewsError);
+                } catch (err) {
+                    console.warn('[HEYS.widgets.weightProgress] ⚠️ EWS failed:', err);
                 }
             }
 
-            // 4. Construct result
             const result = {
                 hasData: true,
-                weeklyLossPercent,
-                isWarning,
+                // Backward compat (старые поля для модалки/виджета)
+                weeklyLossPercent: absPct,
+                isWarning: isAlert,
                 severity,
+                // Новые поля
+                pctPerWeek,           // signed %/week
+                slopePerWeek,         // signed kg/week
+                direction,            // 'losing'|'gaining'|'stable'
+                zone,
+                zoneMeta,
+                zoneHint,
                 currentWeight,
+                firstWeight,
+                totalDeltaKg,
+                dataCompleteness,
+                goalWeight,
+                toGoalKg,
+                estimatedDaysToGoal,
                 weightData,
                 regression: {
                     slope: regression.slope,
                     r2: regression.r2,
-                    slopePerWeek: regression.slope * 7
+                    slopePerWeek,
                 },
                 ewsCount,
                 ewsData,
                 dataPoints: weightData.length,
-                periodDays: days
+                periodDays: days,
             };
 
-            // 5. Verification logging
-            console.info('[HEYS.widgets.crashRisk] ✅ Data computed:', {
-                weeklyLossPercent: weeklyLossPercent.toFixed(2) + '%',
-                severity,
-                isWarning,
-                currentWeight: currentWeight.toFixed(1) + 'kg',
-                dataPoints: weightData.length,
-                periodDays: days,
-                slope: (regression.slope * 7).toFixed(3) + 'kg/week',
+            console.info('[HEYS.widgets.weightProgress] ✅ Data computed:', {
+                zone,
+                pctPerWeek: pctPerWeek.toFixed(2) + '%',
+                slopePerWeek: slopePerWeek.toFixed(3) + 'кг/нед',
+                direction,
+                totalDeltaKg: totalDeltaKg.toFixed(2) + 'кг',
+                completeness: (dataCompleteness * 100).toFixed(0) + '%',
+                toGoalKg: toGoalKg?.toFixed(1) ?? 'н/д',
+                estimatedDaysToGoal,
                 r2: regression.r2.toFixed(3),
-                ewsCount
+                ewsCount,
             });
 
             return result;
 
         } catch (error) {
-            console.error('[HEYS.widgets.crashRisk] ❌ Fatal error:', error);
+            console.error('[HEYS.widgets.weightProgress] ❌ Fatal error:', error);
             return null;
         }
     }
@@ -26175,11 +26747,12 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
     HEYS.Widgets.DataProviders.crashRisk = {
         getData: getCrashRiskData,
-        THRESHOLDS,
-        SEVERITY_LEVELS
+        ZONE_THRESHOLDS,
+        ZONE_META,
+        ZONE_HINT,
     };
 
-    console.info('[HEYS.widgets.crashRisk] ✅ Data provider v1.0.0 loaded');
+    console.info('[HEYS.widgets.weightProgress] ✅ Data provider v2.0.0 loaded');
 
 })(window);
 
@@ -26256,13 +26829,14 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
   const DEFAULT_LAYOUT = [
     // 4-колоночная сетка — красивый набор для новых пользователей
-    // Ряд 0: Калории + Вода (базовые)
-    { type: 'calories', size: '2x2', position: { col: 0, row: 0 } },
-    { type: 'water', size: '2x2', position: { col: 2, row: 0 } },
-    // Ряд 2: Вес (полная ширина) — BMI + график тренда
-    { type: 'weight', size: '4x2', position: { col: 0, row: 2 } },
-    // Ряд 4: Риск срыва (полная ширина) — факторы + рекомендация
-    { type: 'crashRisk', size: '4x2', position: { col: 0, row: 4 } },
+    // Ряд 0: Day Score + Risk Radar (единые оценки)
+    { type: 'dayScore', size: '2x2', position: { col: 0, row: 0 } },
+    { type: 'riskRadar', size: '2x2', position: { col: 2, row: 0 } },
+    // Ряд 2: Калории + Вода (базовые)
+    { type: 'calories', size: '2x2', position: { col: 0, row: 2 } },
+    { type: 'water', size: '2x2', position: { col: 2, row: 2 } },
+    // Ряд 4: Вес (полная ширина) — BMI + график тренда
+    { type: 'weight', size: '4x2', position: { col: 0, row: 4 } },
     // Ряд 6: Тепловая карта (полная ширина) — компактная неделя
     { type: 'heatmap', size: '4x1', position: { col: 0, row: 6 } }
   ];
@@ -26319,8 +26893,10 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           pos: w.position
         }))));
         this._widgets = saved.map(w => this._normalizeWidget(w));
+        this._autoPackWidgets();
       } else {
         this._widgets = this._createDefaultLayout();
+        this._autoPackWidgets();
         // фиксируем meta для чистого старта
         this.saveLayoutMeta({ gridVersion: GRID_VERSION, gridCols: GRID_COLS, migratedAt: Date.now() });
       }
@@ -26514,6 +27090,32 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       return positions;
     },
 
+    _autoPackWidgets() {
+      if (!Array.isArray(this._widgets) || this._widgets.length === 0) return false;
+
+      const packedPositions = this._packLayoutPositions(this._widgets);
+      let changed = false;
+
+      this._widgets = this._widgets.map((widget) => {
+        const nextPos = packedPositions[widget.id];
+        if (!nextPos) return widget;
+
+        const curCol = widget.position?.col || 0;
+        const curRow = widget.position?.row || 0;
+        if (curCol === nextPos.col && curRow === nextPos.row) {
+          return widget;
+        }
+
+        changed = true;
+        return {
+          ...widget,
+          position: { col: nextPos.col, row: nextPos.row }
+        };
+      });
+
+      return changed;
+    },
+
     /**
      * Сохранить текущее состояние в историю (для undo)
      * @private
@@ -26622,17 +27224,22 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         ? (registry.normalizeSizeId(rawSizeId) || '2x2')
         : rawSizeId;
 
-      const size = registry?.getSize(normalizedSizeId);
+      const supportedSizes = Array.isArray(type?.availableSizes) ? type.availableSizes : [];
+      const finalSizeId = (supportedSizes.length > 0 && !supportedSizes.includes(normalizedSizeId))
+        ? (type?.defaultSize || supportedSizes[0] || normalizedSizeId)
+        : normalizedSizeId;
+
+      const size = registry?.getSize(finalSizeId);
 
       // 🔍 DEBUG: если размер изменился при нормализации — логируем
-      if (rawSizeId !== normalizedSizeId || !w.size) {
-        log(`_normalizeWidget ${w.type}: raw=${w.size || 'undefined'} → normalized=${normalizedSizeId} (default=${type?.defaultSize})`);
+      if (rawSizeId !== finalSizeId || !w.size) {
+        log(`_normalizeWidget ${w.type}: raw=${w.size || 'undefined'} → normalized=${finalSizeId} (default=${type?.defaultSize})`);
       }
 
       return {
         id: w.id || `widget_${w.type}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         type: w.type,
-        size: normalizedSizeId,
+        size: finalSizeId,
         cols: size?.cols || 1,
         rows: size?.rows || 1,
         position: w.position || { col: 0, row: 0 },
@@ -26704,9 +27311,11 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       }
 
       this._widgets.push(normalized);
+      this._autoPackWidgets();
+      const addedWidget = this.getWidget(normalized.id) || normalized;
       this._debouncedSave();
 
-      HEYS.Widgets.emit('widget:added', { widget: normalized });
+      HEYS.Widgets.emit('widget:added', { widget: addedWidget });
       HEYS.Widgets.emit('layout:changed', { layout: this._widgets });
 
       // Вибрация при добавлении
@@ -26731,6 +27340,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       }
 
       const removed = this._widgets.splice(index, 1)[0];
+      this._autoPackWidgets();
       this._debouncedSave();
 
       HEYS.Widgets.emit('widget:removed', { widgetId: id, widget: removed });
@@ -26758,6 +27368,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         this._pushHistory();
       }
 
+      const widgetIdx = this._widgets.indexOf(widget);
       const oldWidget = { ...widget, position: { ...widget.position } };
 
       // 🔒 Нормализуем sizeId в одном месте, чтобы:
@@ -26774,36 +27385,45 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         }
       }
 
-      Object.assign(widget, nextUpdates);
+      // FIX: Создаём новый объект виджета вместо мутации in-place.
+      // Object.assign(widget, ...) менял свойства существующей ссылки, поэтому
+      // React.memo на WidgetCard видел ту же ссылку и пропускал ре-рендер —
+      // визуально изменения (размер, позиция) не отображались до выхода из edit mode.
+      const updatedWidget = { ...widget, ...nextUpdates };
 
       // Обновить cols/rows если изменился size
       if (nextUpdates && nextUpdates.size) {
         const size = HEYS.Widgets.registry?.getSize(nextUpdates.size);
         if (size) {
-          widget.cols = size.cols;
-          widget.rows = size.rows;
+          updatedWidget.cols = size.cols;
+          updatedWidget.rows = size.rows;
         }
       }
 
-      // Обновить позицию если указана
+      // Обновить позицию если указана (всегда новый объект)
       if (nextUpdates && nextUpdates.position) {
-        widget.position = { ...nextUpdates.position };
+        updatedWidget.position = { ...nextUpdates.position };
+      }
+
+      // Заменяем ссылку в массиве: React.memo увидит новый объект → корректный ре-рендер
+      if (widgetIdx !== -1) {
+        this._widgets[widgetIdx] = updatedWidget;
       }
 
       this._debouncedSave();
 
       if (nextUpdates && nextUpdates.position) {
-        HEYS.Widgets.emit('widget:moved', { widget, from: oldWidget.position, to: updates.position });
+        HEYS.Widgets.emit('widget:moved', { widget: updatedWidget, from: oldWidget.position, to: updatedWidget.position });
         // Вибрация при перемещении
         if (navigator.vibrate) {
           navigator.vibrate(10);
         }
       }
       if (nextUpdates && nextUpdates.size) {
-        HEYS.Widgets.emit('widget:resized', { widget, from: oldWidget.size, to: nextUpdates.size });
+        HEYS.Widgets.emit('widget:resized', { widget: updatedWidget, from: oldWidget.size, to: updatedWidget.size });
       }
       if (nextUpdates && nextUpdates.settings) {
-        HEYS.Widgets.emit('widget:settings', { widget, settings: updates.settings });
+        HEYS.Widgets.emit('widget:settings', { widget: updatedWidget, settings: updatedWidget.settings });
       }
 
       HEYS.Widgets.emit('layout:changed', { layout: this._widgets });
@@ -26821,6 +27441,10 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       if (result) {
         // 🆕 Вытесняем перекрывающиеся виджеты на свободные места
         gridEngine.displaceCollidingWidgets(id);
+        if (this._autoPackWidgets()) {
+          this._debouncedSave();
+          HEYS.Widgets.emit('layout:changed', { layout: this._widgets });
+        }
       }
       return result;
     },
@@ -26852,6 +27476,10 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       // 🆕 После swap проверяем коллизии для обоих виджетов
       gridEngine.displaceCollidingWidgets(idA);
       gridEngine.displaceCollidingWidgets(idB);
+      if (this._autoPackWidgets()) {
+        this._debouncedSave();
+        HEYS.Widgets.emit('layout:changed', { layout: this._widgets });
+      }
 
       HEYS.Widgets.emit('widget:swapped', { a: idA, b: idB, from: posA, to: posB });
       return true;
@@ -26881,14 +27509,15 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       }
 
       if (changed) {
-        this._debouncedSave();
-        HEYS.Widgets.emit('layout:changed', { layout: this._widgets });
-
         // 🆕 Финальная проверка: убедимся что нет коллизий
         // (на случай если reflow расчёт был неточным)
         for (const widgetId of Object.keys(positionsById)) {
           gridEngine.displaceCollidingWidgets(widgetId);
         }
+
+        this._autoPackWidgets();
+        this._debouncedSave();
+        HEYS.Widgets.emit('layout:changed', { layout: this._widgets });
       }
 
       return changed;
@@ -26941,6 +27570,10 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
       // 3) 🆕 Вытесняем перекрывающиеся виджеты на свободные места
       gridEngine.displaceCollidingWidgets(id);
+      if (this._autoPackWidgets()) {
+        this._debouncedSave();
+        HEYS.Widgets.emit('layout:changed', { layout: this._widgets });
+      }
 
       // layout:changed эмитится внутри updateWidget
       return true;
@@ -28122,16 +28755,35 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
       const hadDrag = this._dragging;
 
+      // Удаляем ghost и placeholder ДО восстановления оригинала
+      this._removeGhost();
+      this._removePlaceholder();
+
       // Восстанавливаем оригинальный элемент
       if (this._originalElement) {
         this._originalElement.classList.remove('widget--dragging');
+
+        // FIX: Перед тем как сделать элемент снова видимым, ставим inline grid-позицию
+        // на новое место — иначе между восстановлением opacity и React re-render
+        // виджет на 1-2 кадра виден на старой позиции (визуальный "отпрыг" назад).
+        if (hadDrag && this._dropIntent?.position) {
+          const widget = this._draggedWidget;
+          const reg = HEYS.Widgets.registry;
+          const normSize = reg?.normalizeSizeId ? (reg.normalizeSizeId(widget?.size) || widget?.size) : widget?.size;
+          const sizeInfo = reg?.getSize?.(normSize) || reg?.getSize?.(widget?.size);
+          const cols = sizeInfo?.cols || widget?.cols || 1;
+          const rows = sizeInfo?.rows || widget?.rows || 1;
+          // Для reflow берём итоговую позицию именно этого виджета из positionsById
+          const targetPos = (this._dropIntent.type === 'reflow' && this._dropIntent.positionsById?.[widget.id])
+            ? this._dropIntent.positionsById[widget.id]
+            : this._dropIntent.position;
+          this._originalElement.style.gridColumn = `${targetPos.col + 1} / span ${cols}`;
+          this._originalElement.style.gridRow = `${targetPos.row + 1} / span ${rows}`;
+        }
+
         this._originalElement.style.opacity = '';
         this._originalElement.style.transform = '';
       }
-
-      // Удаляем ghost и placeholder
-      this._removeGhost();
-      this._removePlaceholder();
 
       // Если drag был активен и есть намерение drop — применяем
       if (hadDrag && this._dropIntent && this._dropIntent.position) {
@@ -28435,6 +29087,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
     if (widgets.length > 0) {
       state._widgets = widgets.map(w => state._normalizeWidget(w));
+      state._autoPackWidgets();
       HEYS.Widgets.emit('layout:changed', { layout: state._widgets, source: 'cloud-sync' });
     }
   });
@@ -28605,6 +29258,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     }
   };
 
+  const RELAPSE_PROFILE_STORAGE_KEY = 'heys_relapse_risk_dev_profile';
+
   // === Data Access Layer ===
   const data = {
     _cache: new Map(),
@@ -28645,57 +29300,101 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         case 'insulin':
           return this.getInsulinData();
         case 'heatmap':
-          return this.getHeatmapData(widget.settings?.period || 'week');
+          return this.getHeatmapData(widget.settings?.period === 'month' ? 'week' : (widget.settings?.period || 'week'));
         case 'cycle':
           return this.getCycleData();
         case 'crashRisk':
-          return this.getCrashRiskData();
+          return this.getCrashRiskData(widget.settings);
         case 'relapseRisk':
           return this.getRelapseRiskData(widget);
+        case 'dayScore':
+          return this.getDayScoreData();
         default:
           return {};
       }
     },
 
     /**
-     * Получить данные Relapse Risk Score
+     * Получить данные Day Score (единый дневной скоринг 0-100)
      */
-    getRelapseRiskData(widget) {
-      if (!HEYS.RelapseRisk?.calculate) {
-        console.warn('[widget_data.getRelapseRiskData] relapseRisk engine not loaded');
-        return { hasData: false, score: 0, level: 'low', message: 'Engine не загружен' };
+    getDayScoreData() {
+      if (!HEYS.DayScore?.calculateDayScore) {
+        console.warn('[widget_data.getDayScoreData] DayScore engine not loaded');
+        return { hasData: false, score: 0, level: 'none' };
       }
-
       try {
         const dayData = this._getDay() || {};
         const profile = this._getProfile() || {};
         const dayTot = this._getDayTotals() || {};
         const normAbs = this._getNormAbs() || {};
+        const waterGoal = this._getWaterGoal() || 2000;
 
-        // History: last 14 days
-        const historyDays = [];
-        for (let i = 13; i >= 0; i--) {
-          const d = new Date();
-          d.setDate(d.getDate() - i);
-          const dateStr = this._formatDate(d);
-          const day = this._getDayByDate(dateStr);
-          if (day && typeof day === 'object' && Object.keys(day).length > 0) {
-            historyDays.push({
-              date: dateStr,
-              ...day,
-              dayTot: this._calculateDayTotals(day)
-            });
-          }
-        }
-
-        const result = HEYS.RelapseRisk.calculate({
-          dayData, profile, dayTot, normAbs, historyDays,
-          now: new Date().toISOString()
+        const result = HEYS.DayScore.calculateDayScore({
+          dayData, profile, dayTot, normAbs, waterGoal
         });
 
-        const score = Math.round(Number(result?.score) || 0);
-        const confidence = Math.round(Number(result?.confidence) || 0);
-        const windows = result?.windows || {};
+        if (!result || typeof result.score !== 'number') {
+          return { hasData: false, score: 0, level: 'none' };
+        }
+
+        console.info('[widget_data.getDayScoreData] ✅', {
+          score: result.score, level: result.level?.id || result.level
+        });
+
+        return {
+          hasData: true,
+          score: result.score,
+          rawScore: result.rawScore,
+          factorScore: result.factorScore,
+          subjectiveScore: result.subjectiveScore,
+          momentumScore: result.momentumScore,
+          avgMealQuality: result.avgMealQuality,
+          level: result.level?.id || result.level,
+          levelLabel: result.level?.label || '',
+          breakdown: result.breakdown || {},
+          statusResult: result.statusResult || null,
+          timestamp: result.timestamp
+        };
+      } catch (error) {
+        console.error('[widget_data.getDayScoreData] ❌ Error:', error);
+        return { hasData: false, score: 0, level: 'none' };
+      }
+    },
+
+    /**
+     * Получить данные Relapse Risk Score
+     */
+    getRelapseRiskData(widget, options = {}) {
+      if (!HEYS.RelapseRisk?.getCurrentSnapshot) {
+        console.warn('[widget_data.getRelapseRiskData] relapseRisk engine not loaded');
+        return { hasData: false, score: 0, level: 'low', message: 'Engine не загружен' };
+      }
+
+      const normalizeRelapseRecommendation = (rec) => {
+        if (!rec) return null;
+        if (typeof rec === 'string') return rec;
+        if (typeof rec?.text === 'string' && rec.text.trim()) return rec.text.trim();
+        if (typeof rec?.label === 'string' && rec.label.trim()) return rec.label.trim();
+        if (typeof rec?.title === 'string' && rec.title.trim()) return rec.title.trim();
+        return null;
+      };
+
+      try {
+        const selectedProfileKey = this._getRelapseRiskProfileKey(
+          options?.weightProfileKey || options?.riskProfileKey || options?.tuningProfile
+        );
+
+        const snapshot = HEYS.RelapseRisk.getCurrentSnapshot({
+          weightProfileKey: selectedProfileKey
+        });
+        if (!snapshot?.hasData) {
+          return { hasData: false, score: 0, level: 'low', message: snapshot?.message || 'Нет данных расчёта' };
+        }
+
+        const result = snapshot?.raw || {};
+        const score = Math.round(Number(snapshot?.score ?? result?.score) || 0);
+        const confidence = Math.round(Number(snapshot?.confidence ?? result?.confidence) || 0);
+        const windows = result?.windows || snapshot?.windows || {};
 
         const windowCandidates = [
           { key: 'tonight', label: 'сегодня вечером', score: Number(windows.tonight) || 0 },
@@ -28707,28 +29406,59 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         const topWindowScore = Math.round(windowCandidates[0]?.score || 0);
         const primaryDriver = Array.isArray(result?.primaryDrivers) ? result.primaryDrivers[0] : null;
         const recommendation = Array.isArray(result?.recommendations) && result.recommendations[0]
-          ? result.recommendations[0].text
+          ? normalizeRelapseRecommendation(result.recommendations[0])
           : null;
 
+        // Risk Radar aggregation: inject max(relapse, crash) + source attribution
+        let radarSource = 'none';
+        let radarCrashScore = 0;
+        let radarDrivers = [];
+        let radarActions = [];
+        let radarScore = score;
+        if (HEYS.RiskRadar?.calculate) {
+          try {
+            const profile = this._getProfile() || {};
+            const radar = HEYS.RiskRadar.calculate({ profile });
+            if (radar && typeof radar.score === 'number') {
+              radarScore = radar.score;
+              radarSource = radar.source || 'none';
+              radarCrashScore = Math.round(Number(radar.crash?.score) || 0);
+              radarDrivers = (radar.drivers || []).map(d => d.label || d.factor || String(d));
+              radarActions = (radar.actions || []).map(a => a.text || a.label || String(a));
+            }
+          } catch (radarErr) {
+            console.warn('[widget_data.getRelapseRiskData] RiskRadar enrichment failed:', radarErr?.message);
+          }
+        }
+
         console.info('[widget_data.getRelapseRiskData] ✅ Calculated', {
-          score, level: result?.level, confidence, historyDays: historyDays.length
+          score, radarScore, radarSource, level: result?.level || snapshot?.level, confidence,
+          historyDays: result?.debug?.inputs?.historyDaysCount || 0
         });
 
         return {
           hasData: true,
-          score,
+          profile: snapshot?.profile || result?.profile || null,
+          selectedProfileKey: snapshot?.selectedProfileKey || selectedProfileKey,
+          score: radarScore,
+          relapseScore: score,
+          crashScore: radarCrashScore,
+          source: radarSource,
+          radarDrivers,
+          radarActions,
           target: 100,
-          pct: score,
-          remaining: Math.max(0, 100 - score),
-          level: result?.level || 'low',
+          pct: radarScore,
+          remaining: Math.max(0, 100 - radarScore),
+          level: snapshot?.level || result?.level || 'low',
           confidence,
-          topWindowLabel,
-          topWindowScore,
-          primaryDriver,
-          primaryDrivers: Array.isArray(result?.primaryDrivers) ? result.primaryDrivers.slice(0, 3) : [],
-          protectiveFactors: Array.isArray(result?.protectiveFactors) ? result.protectiveFactors.slice(0, 2) : [],
-          recommendation,
+          topWindowLabel: typeof snapshot?.topWindowLabel === 'string' ? snapshot.topWindowLabel : topWindowLabel,
+          topWindowScore: Number.isFinite(Number(snapshot?.topWindowScore)) ? Number(snapshot.topWindowScore) : topWindowScore,
+          primaryDriver: snapshot?.primaryDriver || primaryDriver,
+          primaryDrivers: Array.isArray(snapshot?.primaryDrivers) ? snapshot.primaryDrivers : (Array.isArray(result?.primaryDrivers) ? result.primaryDrivers.slice(0, 3) : []),
+          protectiveFactors: Array.isArray(snapshot?.protectiveFactors) ? snapshot.protectiveFactors : (Array.isArray(result?.protectiveFactors) ? result.protectiveFactors.slice(0, 2) : []),
+          recommendation: normalizeRelapseRecommendation(snapshot?.recommendation) || recommendation,
           windows,
+          compare: snapshot?.compare || null,
           raw: result
         };
       } catch (error) {
@@ -29112,6 +29842,19 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
     _getProfile() {
       return readStoredValue('heys_profile', {});
+    },
+
+    _getRelapseRiskProfileKey(overrideKey) {
+      if (typeof overrideKey === 'string' && overrideKey.trim()) {
+        return overrideKey.trim();
+      }
+
+      const storedValue = readStoredValue(RELAPSE_PROFILE_STORAGE_KEY, '');
+      if (typeof storedValue === 'string' && storedValue.trim()) {
+        return storedValue.trim();
+      }
+
+      return HEYS.RelapseRisk?.CONFIG?.DEFAULT_PROFILE_KEY || 'v1_1';
     },
 
     _getNorms() {
@@ -30431,6 +31174,21 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       // Подписка на события обновления данных
       const unsubData = HEYS.Widgets.on?.('data:updated', loadData);
 
+      // Подписка на изменение настроек виджета (напр. смена periodDays через модалку)
+      const unsubSettings = HEYS.Widgets.on?.('widget:settings', ({ widget: updatedWidget }) => {
+        if (updatedWidget?.id !== widget.id) return;
+        try {
+          const newData = HEYS.Widgets.data?.getDataForWidget?.(updatedWidget) || {};
+          setData(prev => {
+            const prevKeys = Object.keys(prev);
+            const newKeys = Object.keys(newData);
+            if (prevKeys.length === newKeys.length && prevKeys.every(k => prev[k] === newData[k])) return prev;
+            return newData;
+          });
+          setError(null);
+        } catch (e) { /* ignore */ }
+      });
+
       // Подписка на глобальные события HEYS (water:added НЕ включаем — обрабатывается оптимистично через heysWaterAdded DOM event)
       const heysEvents = ['day:updated', 'meal:added', 'profile:updated'];
       heysEvents.forEach(evt => {
@@ -30460,6 +31218,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
       return () => {
         unsubData?.();
+        unsubSettings?.();
         heysEvents.forEach(evt => {
           if (typeof HEYS.events?.off === 'function') {
             HEYS.events.off(evt, loadData);
@@ -30485,6 +31244,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
     // Render based on widget type
     switch (widget.type) {
+      case 'dayScore':
+        return React.createElement(DayScoreWidgetContent, { widget, data });
       case 'status':
         return React.createElement(StatusWidgetContent, { widget, data });
       case 'calories':
@@ -30520,6 +31281,77 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
   }
 
   // === Individual Widget Content Components ===
+
+  // === Day Score Widget Content (Оценка дня 0-100) ===
+  function DayScoreWidgetContent({ widget, data }) {
+    const d = getWidgetDims(widget);
+    const score = data?.score ?? 0;
+    const level = data?.level ?? 'none';
+    const hasData = data?.hasData ?? false;
+    const showLevel = widget.settings?.showLevel !== false;
+
+    const getColor = () => {
+      if (score >= 85) return '#10b981';
+      if (score >= 70) return '#22c55e';
+      if (score >= 50) return '#eab308';
+      if (score >= 30) return '#f97316';
+      return '#ef4444';
+    };
+
+    const getLevelLabel = () => {
+      switch (level) {
+        case 'excellent': return 'Отлично';
+        case 'good': return 'Хорошо';
+        case 'okay': return 'Нормально';
+        case 'low': return 'Слабо';
+        case 'critical': return 'Критично';
+        default: return 'Нет данных';
+      }
+    };
+
+    if (!hasData) {
+      return React.createElement('div', { className: 'widget-day-score widget-day-score--no-data' },
+        React.createElement('div', { className: 'widget-day-score__icon' }, '⭐'),
+        React.createElement('div', { className: 'widget-day-score__message' }, 'Заполните день')
+      );
+    }
+
+    // 1x1 Micro
+    if (d.isMicro) {
+      return React.createElement('div', { className: 'widget-day-score widget-day-score--micro' },
+        React.createElement('div', {
+          className: 'widget-day-score__score',
+          style: { color: getColor(), fontSize: '1.5rem', fontWeight: 700 }
+        }, Math.round(score))
+      );
+    }
+
+    // Standard 2x2+
+    return React.createElement('div', { className: 'widget-day-score widget-day-score--standard' },
+      React.createElement('div', {
+        className: 'widget-day-score__score-big',
+        style: { color: getColor(), fontSize: '2.5rem', fontWeight: 800, lineHeight: 1 }
+      }, Math.round(score)),
+      showLevel
+        ? React.createElement('div', {
+          className: 'widget-day-score__label',
+          style: { fontSize: '0.75rem', color: 'var(--heys-text-secondary, #94a3b8)', marginTop: '2px' }
+        }, getLevelLabel())
+        : null,
+      widget.settings?.showBreakdown !== false && data.factorScore != null
+        ? React.createElement('div', {
+          className: 'widget-day-score__breakdown',
+          style: { fontSize: '0.65rem', color: 'var(--heys-text-tertiary, #64748b)', marginTop: '6px', lineHeight: 1.3 }
+        },
+          React.createElement('span', null, `Факторы ${Math.round(data.factorScore)}`),
+          React.createElement('span', null, ' · '),
+          React.createElement('span', null, `Субъективная ${Math.round(data.subjectiveScore)}`),
+          React.createElement('span', null, ' · '),
+          React.createElement('span', null, `Momentum ${Math.round(data.momentumScore)}`)
+        )
+        : null
+    );
+  }
 
   // === Status Widget Content (Статус 0-100) ===
   function StatusWidgetContent({ widget, data }) {
@@ -30781,6 +31613,14 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     const d = getWidgetDims(widget);
     const size = widget?.size || '2x2';
     const variant = d.isMicro ? 'micro' : d.isShort ? 'short' : 'std';
+    const showMilliliters = widget.settings?.showMilliliters !== false;
+    const showGlasses = widget.settings?.showGlasses === true;
+    const showProgress = widget.settings?.showProgress !== false;
+    const showPercentage = widget.settings?.showPercentage !== false;
+    const showRemaining = widget.settings?.showRemaining !== false;
+    const primaryValue = showMilliliters || !showGlasses
+      ? `${drunk}${d.isMicro ? '' : ' мл'}`
+      : `${glasses}${d.isMicro ? '🥛' : ' 🥛'}`;
 
     const getWaterColor = () => {
       if (pct >= 100) return '#22c55e';
@@ -30793,9 +31633,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     if (d.isMicro) {
       return React.createElement('div', { className: 'widget-water widget-water--micro' },
         React.createElement('div', { className: 'widget-micro__label' }, '💧'),
-        React.createElement('div', { className: 'widget-water__value' },
-          widget.settings?.showGlasses ? `${glasses}🥛` : `${drunk}`
-        )
+        React.createElement('div', { className: 'widget-water__value' }, primaryValue)
       );
     }
 
@@ -30808,43 +31646,51 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           React.createElement('div', { className: 'widget-water__icon' }, '💧'),
           React.createElement('div', { className: 'widget-water__main' },
             React.createElement('div', { className: 'widget-water__value widget-water__value--lg' },
-              `${drunk}`,
-              React.createElement('span', { className: 'widget-water__unit' }, 'мл')
+              showMilliliters || !showGlasses ? `${drunk}` : `${glasses}`,
+              React.createElement('span', { className: 'widget-water__unit' }, showMilliliters || !showGlasses ? 'мл' : '🥛')
             )
           ),
-          React.createElement('div', { className: 'widget-water__pct-badge', style: { background: `${waterColor}20`, color: waterColor } },
-            `${pct}%`
-          )
+          showPercentage
+            ? React.createElement('div', { className: 'widget-water__pct-badge', style: { background: `${waterColor}20`, color: waterColor } },
+              `${pct}%`
+            )
+            : null
         ),
         // Прогресс-бар
-        React.createElement('div', { className: 'widget-water__progress' },
-          React.createElement('div', {
-            className: 'widget-water__bar',
-            style: { width: `${Math.min(100, pct)}%`, background: waterColor }
-          })
-        ),
+        showProgress
+          ? React.createElement('div', { className: 'widget-water__progress' },
+            React.createElement('div', {
+              className: 'widget-water__bar',
+              style: { width: `${Math.min(100, pct)}%`, background: waterColor }
+            })
+          )
+          : null,
         // Низ: цель + стаканы + осталось
         React.createElement('div', { className: 'widget-water__footer' },
-          React.createElement('div', { className: 'widget-water__meta' },
-            React.createElement('span', { className: 'widget-water__glasses' }, `${glasses} 🥛`)
-          ),
-          remaining > 0 && React.createElement('div', { className: 'widget-water__meta widget-water__meta--muted' },
-            `ещё ${remaining} мл`
-          )
+          showGlasses
+            ? React.createElement('div', { className: 'widget-water__meta' },
+              React.createElement('span', { className: 'widget-water__glasses' }, `${glasses} 🥛`)
+            )
+            : null,
+          showRemaining && remaining > 0
+            ? React.createElement('div', { className: 'widget-water__meta widget-water__meta--muted' },
+              `ещё ${remaining} мл`
+            )
+            : null
         )
       );
     }
 
     // Остальные размеры — стандартный layout
-    const showProgress = true;
-    const showPctPill = !d.isTiny;
+    const showPctPill = showPercentage && !d.isTiny;
 
     return React.createElement('div', { className: `widget-water widget-water--${variant}` },
       React.createElement('div', { className: 'widget-water__top' },
-        React.createElement('div', { className: 'widget-water__value' },
-          widget.settings?.showGlasses ? `${glasses} 🥛` : `${drunk} мл`
-        )
+        React.createElement('div', { className: 'widget-water__value' }, primaryValue)
       ),
+      showGlasses && showMilliliters
+        ? React.createElement('div', { className: 'widget-water__label' }, `${glasses} 🥛`)
+        : null,
       showProgress
         ? React.createElement('div', { className: 'widget-water__progress' },
           React.createElement('div', {
@@ -30867,6 +31713,9 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     const d = getWidgetDims(widget);
     const size = widget?.size || '2x2';
     const variant = d.isMicro ? 'micro' : d.isShort ? 'short' : 'std';
+    const showTarget = widget.settings?.showTarget !== false;
+    const showQuality = widget.settings?.showQuality !== false && !!quality && !d.isTiny;
+    const showTimes = widget.settings?.showTimes !== false && (!!sleepStart || !!sleepEnd);
 
     const pct = target > 0 ? Math.round((hours / target) * 100) : 0;
 
@@ -30909,28 +31758,28 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           )
         ),
         // Время: заснул → проснулся
-        (sleepStart || sleepEnd) && React.createElement('div', { className: 'widget-sleep__times' },
+        showTimes && React.createElement('div', { className: 'widget-sleep__times' },
           sleepStart && React.createElement('span', { className: 'widget-sleep__time' }, `🌙 ${sleepStart}`),
           sleepEnd && React.createElement('span', { className: 'widget-sleep__time' }, `☀️ ${sleepEnd}`)
         ),
         // Низ: качество + цель
         React.createElement('div', { className: 'widget-sleep__footer' },
-          quality && React.createElement('div', { className: 'widget-sleep__quality-badge' },
+          showQuality && React.createElement('div', { className: 'widget-sleep__quality-badge' },
             `⭐ ${quality}/10`
           ),
-          React.createElement('div', { className: 'widget-sleep__target' },
-            `Цель: ${target}ч`
-          )
+          showTarget
+            ? React.createElement('div', { className: 'widget-sleep__target' },
+              `Цель: ${target}ч`
+            )
+            : null
         )
       );
     }
 
     // Остальные размеры
-    const showTarget = widget.settings?.showTarget !== false;
-    const showQuality = widget.settings?.showQuality !== false && !!quality && !d.isTiny;
-
     return React.createElement('div', { className: `widget-sleep widget-sleep--${variant}` },
       React.createElement('div', { className: 'widget-sleep__value' }, `${hours.toFixed(1)}ч ${getEmoji()}`),
+      showTimes ? React.createElement('div', { className: 'widget-sleep__label' }, [sleepStart, sleepEnd].filter(Boolean).join(' → ')) : null,
       showTarget ? React.createElement('div', { className: 'widget-sleep__label' }, `из ${target}ч`) : null,
       showQuality ? React.createElement('div', { className: 'widget-sleep__quality' }, `Качество: ${quality}/10`) : null
     );
@@ -31025,13 +31874,16 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     const size = widget?.size || '2x2';
     const showGoal = widget.settings?.showGoal !== false;
     const showTrend = widget.settings?.showTrend !== false;
+    const showBmi = widget.settings?.showBmi !== false;
+    const showChart = widget.settings?.showChart !== false;
+    const showAnalytics = widget.settings?.showAnalytics !== false;
 
     const hasCurrent = Number.isFinite(current);
     const hasGoal = Number.isFinite(goal) && goal > 0;
-    const hasBmi = Number.isFinite(bmi);
-    const hasAnalytics = !!monthChange || !!hasCleanTrend;
+    const hasBmi = showBmi && Number.isFinite(bmi);
+    const hasAnalyticsData = showAnalytics && (!!monthChange || !!hasCleanTrend);
     const sparklinePoints = sparkline.filter(s => s.weight);
-    const hasSparkline = sparklinePoints.length >= 2;
+    const hasSparkline = showChart && sparklinePoints.length >= 2;
 
     // Размеры берём из реестра (единый источник правды). Здесь они не нужны для layout-веток,
     // но логика остаётся совместимой: неизвестный size упадёт в fallback-рендер ниже.
@@ -31140,7 +31992,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
     // Блок: BMI
     const BMIBlock = ({ compact = false }) => {
-      if (!bmi) return null;
+      if (!showBmi || !bmi) return null;
       if (compact) {
         return React.createElement('div', {
           className: 'widget-weight__bmi-badge',
@@ -31159,10 +32011,10 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     // Блок: Аналитика (прогноз на месяц, чистый тренд)
     const AnalyticsBlock = () => {
       const items = [];
-      if (monthChange) {
+      if (showAnalytics && monthChange) {
         items.push({ icon: '📊', text: `Прогноз: ${monthChange > 0 ? '+' : ''}${monthChange.toFixed(1)} кг/мес` });
       }
-      if (hasCleanTrend) {
+      if (showAnalytics && hasCleanTrend) {
         items.push({ icon: '🌸', text: 'Чистый тренд', cls: 'widget-weight__stat--pink' });
       }
       if (items.length === 0) return null;
@@ -31291,7 +32143,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             ? React.createElement('div', { className: 'widget-weight__chart' },
               React.createElement(ChartBlock, { days: 7, height: 50, showDots: true })
             )
-            : ((hasBmi || hasAnalytics) && React.createElement('div', { className: 'widget-weight__side' },
+            : ((hasBmi || hasAnalyticsData) && React.createElement('div', { className: 'widget-weight__side' },
               React.createElement(BMIBlock, { compact: true }),
               React.createElement(AnalyticsBlock, null)
             ))
@@ -31305,7 +32157,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       const wideMidFallback = (!hasSparkline) ? React.createElement('div', { className: 'widget-weight__mid' },
         React.createElement(ProgressBlock, { vertical: false }),
         React.createElement(AnalyticsBlock, null),
-        (!hasAnalytics && !(showGoal && hasGoal && progressPct !== null))
+        (!hasAnalyticsData && !(showGoal && hasGoal && progressPct !== null))
           ? React.createElement('div', { className: 'widget-weight__hint' }, 'Добавьте вес 2+ дня для графика')
           : null
       ) : null;
@@ -31583,6 +32435,10 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     const d = getWidgetDims(widget);
     const size = widget?.size || '2x2';
     const variant = d.isMicro ? 'micro' : d.isShort ? 'short' : 'std';
+    const showKm = widget.settings?.showKilometers && !d.isTiny;
+    const showGoalBar = widget.settings?.showGoal !== false;
+    const showPercentage = widget.settings?.showPercentage !== false;
+    const showRemaining = widget.settings?.showRemaining !== false;
 
     const getStepsColor = () => {
       if (pct >= 100) return '#22c55e';
@@ -31609,33 +32465,37 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           React.createElement('div', { className: 'widget-steps__value widget-steps__value--lg' },
             steps.toLocaleString('ru-RU')
           ),
-          React.createElement('div', { className: 'widget-steps__pct-badge', style: { background: `${stepsColor}20`, color: stepsColor } },
-            `${pct}%`
-          )
+          showPercentage
+            ? React.createElement('div', { className: 'widget-steps__pct-badge', style: { background: `${stepsColor}20`, color: stepsColor } },
+              `${pct}%`
+            )
+            : null
         ),
         // Прогресс-бар
-        React.createElement('div', { className: 'widget-steps__progress' },
-          React.createElement('div', {
-            className: 'widget-steps__bar',
-            style: { width: `${Math.min(100, pct)}%`, background: stepsColor }
-          })
-        ),
+        showGoalBar
+          ? React.createElement('div', { className: 'widget-steps__progress' },
+            React.createElement('div', {
+              className: 'widget-steps__bar',
+              style: { width: `${Math.min(100, pct)}%`, background: stepsColor }
+            })
+          )
+          : null,
         // Низ: километры + цель + осталось
         React.createElement('div', { className: 'widget-steps__footer' },
-          React.createElement('div', { className: 'widget-steps__km' }, `${km} км`),
-          React.createElement('div', { className: 'widget-steps__meta' },
-            remaining > 0
-              ? `ещё ${remaining.toLocaleString('ru-RU')}`
-              : '🏆 Цель!'
-          )
+          showKm ? React.createElement('div', { className: 'widget-steps__km' }, `${km} км`) : null,
+          showRemaining
+            ? React.createElement('div', { className: 'widget-steps__meta' },
+              remaining > 0
+                ? `ещё ${remaining.toLocaleString('ru-RU')}`
+                : '🏆 Цель!'
+            )
+            : null
         )
       );
     }
 
     // Остальные размеры
-    const showKm = widget.settings?.showKilometers && !d.isTiny;
-    const showGoalBar = widget.settings?.showGoal !== false;
-    const showPctInline = d.isShort;
+    const showPctInline = d.isShort && showPercentage;
 
     return React.createElement('div', { className: `widget-steps widget-steps--${variant}` },
       React.createElement('div', { className: 'widget-steps__top' },
@@ -31643,6 +32503,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         showPctInline ? React.createElement('div', { className: 'widget-steps__pct' }, `${Math.min(999, pct)}%`) : null
       ),
       showKm ? React.createElement('div', { className: 'widget-steps__km' }, `${km} км`) : null,
+      showRemaining && !d.isShort ? React.createElement('div', { className: 'widget-steps__label' }, remaining > 0 ? `ещё ${remaining.toLocaleString('ru-RU')}` : 'цель достигнута') : null,
       showGoalBar
         ? React.createElement('div', { className: 'widget-steps__progress' },
           React.createElement('div', {
@@ -31666,18 +32527,119 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     const pctF = fatTarget > 0 ? Math.round((fat || 0) / fatTarget * 100) : 0;
     const pctC = carbsTarget > 0 ? Math.round((carbs || 0) / carbsTarget * 100) : 0;
     const avgPct = Math.round((pctP + pctF + pctC) / 3);
+    const showPercentage = widget.settings?.showPercentage !== false;
+    const showGrams = widget.settings?.showGrams !== false && !d.isTiny;
+    const effectiveShowGrams = showGrams || !showPercentage;
+    const canUseMacroRings = d.cols >= 2 && d.rows >= 2 && size !== '4x1';
+    const ringsDensityClass = d.area >= 12 ? 'widget-macros--rings-lg' : d.area >= 8 ? 'widget-macros--rings-md' : 'widget-macros--rings-sm';
+
+    const macroItems = [
+      { label: 'Белки', shortLabel: 'Б', value: protein || 0, target: proteinTarget || 100, pct: pctP, toneClass: 'protein' },
+      { label: 'Жиры', shortLabel: 'Ж', value: fat || 0, target: fatTarget || 70, pct: pctF, toneClass: 'fat' },
+      { label: 'Углеводы', shortLabel: 'У', value: carbs || 0, target: carbsTarget || 250, pct: pctC, toneClass: 'carbs' }
+    ];
+
+    const buildMacroRing = ({ label, value, target, pct, toneClass }) => {
+      const ringStartOffsetPct = 9;
+      const ringCapCompPct = 5;
+      const overColor = toneClass === 'protein' ? '#22c55e' : '#ef4444';
+      const ratio = target > 0 ? value / target : 0;
+      const dotColor = ratio > 1 ? '#ef4444' : '#22c55e';
+      const basePctRaw = Math.min(100, Math.round(ratio * 100));
+      const basePct = Math.max(0, basePctRaw - ringCapCompPct);
+      const hasOver = ratio > 1;
+      const overPctRaw = hasOver ? Math.min(50, Math.round((ratio - 1) * 100)) : 0;
+      const overPct = Math.max(0, overPctRaw - ringCapCompPct);
+      const gradientId = `widget-macro-ring-${widget?.id || '0'}-${toneClass}`;
+      const gradientStops = toneClass === 'protein'
+        ? ['#fecaca', '#ef4444']
+        : (toneClass === 'fat' ? ['#fde68a', '#f59e0b'] : ['#bbf7d0', '#22c55e']);
+      const getRingDotPos = (ringPct) => {
+        if (!ringPct || ringPct <= 0) return null;
+        const dotPct = Math.max(0, ringPct - 3);
+        if (dotPct <= 0) return null;
+        const angle = ((dotPct + ringStartOffsetPct) / 100) * Math.PI * 2;
+        return {
+          x: 18 + 15.5 * Math.cos(angle),
+          y: 18 + 15.5 * Math.sin(angle)
+        };
+      };
+      const dot = getRingDotPos(basePct);
+      const centerValue = effectiveShowGrams ? Math.round(value || 0) : `${pct}%`;
+      const targetText = effectiveShowGrams ? `/ ${Math.round(target || 0)}г` : null;
+      const percentBadge = showPercentage && effectiveShowGrams ? `${pct}%` : null;
+
+      return React.createElement('div', { key: `${toneClass}-${label}`, className: 'macro-ring-item' },
+        React.createElement('div', { className: `macro-ring ${toneClass}${hasOver ? ' macro-ring--over' : ''}` },
+          React.createElement('svg', { viewBox: '0 0 36 36', className: 'macro-ring-svg' },
+            React.createElement('defs', null,
+              React.createElement('linearGradient', {
+                id: gradientId,
+                x1: '0%', y1: '0%', x2: '100%', y2: '100%'
+              },
+                React.createElement('stop', { offset: '0%', stopColor: gradientStops[0] }),
+                React.createElement('stop', { offset: '100%', stopColor: gradientStops[1] })
+              )
+            ),
+            React.createElement('circle', { className: 'macro-ring-bg', cx: 18, cy: 18, r: 15.5, pathLength: 100 }),
+            React.createElement('circle', {
+              className: 'macro-ring-fill',
+              cx: 18,
+              cy: 18,
+              r: 15.5,
+              pathLength: 100,
+              style: {
+                strokeDasharray: `${basePct} 100`,
+                '--ring-dasharray': `${basePct} 100`,
+                '--ring-start-offset': -ringStartOffsetPct,
+                stroke: `url(#${gradientId})`
+              }
+            }),
+            hasOver ? React.createElement('circle', {
+              className: 'macro-ring-fill--over',
+              cx: 18,
+              cy: 18,
+              r: 15.5,
+              pathLength: 100,
+              style: {
+                strokeDasharray: `${overPct} ${100 - overPct}`,
+                '--over-dasharray': `${overPct} ${100 - overPct}`,
+                '--over-offset': -(100 - overPct),
+                stroke: overColor
+              }
+            }) : null,
+            dot ? React.createElement('circle', {
+              className: 'macro-ring-dot',
+              cx: dot.x,
+              cy: dot.y,
+              r: 2.2,
+              style: { '--macro-ring-dot': dotColor }
+            }) : null
+          ),
+          React.createElement('span', { className: 'macro-ring-value' }, centerValue)
+        ),
+        React.createElement('span', { className: 'macro-ring-label' }, label),
+        targetText ? React.createElement('span', { className: 'macro-ring-target' }, targetText) : React.createElement('span', { className: 'macro-ring-target macro-ring-target--empty' }, ' '),
+        percentBadge ? React.createElement('span', { className: 'widget-macros__ring-pct' }, percentBadge) : null
+      );
+    };
 
     // 1x1 Micro
     if (d.isMicro) {
       return React.createElement('div', { className: 'widget-macros widget-macros--micro' },
         React.createElement('div', { className: 'widget-micro__label' }, 'БЖУ'),
-        React.createElement('div', { className: 'widget-macros__micro-value' }, `${Math.min(999, avgPct)}%`)
+        React.createElement('div', { className: 'widget-macros__micro-value' },
+          showPercentage
+            ? `${Math.min(999, avgPct)}%`
+            : `${Math.round((protein || 0) + (fat || 0) + (carbs || 0))}г`
+        )
       );
     }
 
     // 4x1 — Компактный горизонтальный layout с минимальными интервалами
     if (size === '4x1') {
       const MacroBarCompact = ({ label, value, target, pct, color }) => {
+        const compactMetric = showGrams ? `${Math.round(value)}г` : (showPercentage ? `${pct}%` : null);
         return React.createElement('div', { className: 'widget-macros__item-4x1' },
           React.createElement('div', { className: 'widget-macros__label-4x1', style: { color } }, label),
           React.createElement('div', { className: 'widget-macros__bar-4x1' },
@@ -31686,7 +32648,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
               style: { width: `${Math.min(100, pct)}%`, background: color }
             })
           ),
-          React.createElement('span', { className: 'widget-macros__value-4x1' }, `${Math.round(value)}г`)
+          compactMetric ? React.createElement('span', { className: 'widget-macros__value-4x1' }, compactMetric) : null
         );
       };
 
@@ -31697,88 +32659,17 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       );
     }
 
-    // 4x2 — Расширенный layout с дополнительной информацией
-    if (size === '4x2') {
-      const totalGrams = (protein || 0) + (fat || 0) + (carbs || 0);
-      const totalTarget = (proteinTarget || 100) + (fatTarget || 70) + (carbsTarget || 250);
-      const totalPct = totalTarget > 0 ? Math.round(totalGrams / totalTarget * 100) : 0;
-      // Расчёт калорий: белки*4 + жиры*9 + углеводы*4
-      const kcalEaten = Math.round((protein || 0) * 4 + (fat || 0) * 9 + (carbs || 0) * 4);
-      const kcalTarget = Math.round((proteinTarget || 100) * 4 + (fatTarget || 70) * 9 + (carbsTarget || 250) * 4);
-
-      const MacroRowExtended = ({ label, emoji, value, target, pct, color }) => {
-        const isGood = pct >= 80 && pct <= 120;
-        const statusEmoji = pct < 80 ? '⬇️' : pct > 120 ? '⬆️' : '✅';
-        return React.createElement('div', { className: 'widget-macros__row-4x2' },
-          React.createElement('div', { className: 'widget-macros__row-header' },
-            React.createElement('span', { className: 'widget-macros__emoji' }, emoji),
-            React.createElement('span', { className: 'widget-macros__label-text' }, label),
-            React.createElement('span', { className: 'widget-macros__grams-4x2' }, `${Math.round(value)}/${target}г`),
-            React.createElement('span', {
-              className: 'widget-macros__pct-badge',
-              style: { background: isGood ? '#22c55e20' : `${color}20`, color: isGood ? '#22c55e' : color }
-            }, `${pct}%`),
-            React.createElement('span', { className: 'widget-macros__status-emoji' }, statusEmoji)
-          ),
-          React.createElement('div', { className: 'widget-macros__bar-4x2' },
-            React.createElement('div', {
-              className: 'widget-macros__bar-fill',
-              style: { width: `${Math.min(100, pct)}%`, background: color }
-            })
+    if (canUseMacroRings) {
+      return React.createElement('div', { className: `widget-macros widget-macros--rings ${ringsDensityClass}` },
+        React.createElement('div', { className: 'widget-macros__rings-wrap' },
+          React.createElement('div', { className: 'macro-rings widget-macros__rings' },
+            macroItems.map(buildMacroRing)
           )
-        );
-      };
-
-      return React.createElement('div', { className: 'widget-macros widget-macros--4x2' },
-        // Заголовок с калориями и балансом в одну строку
-        React.createElement('div', { className: 'widget-macros__summary-4x2' },
-          React.createElement('span', { className: 'widget-macros__kcal-line' },
-            `🔥 ${kcalEaten} / ${kcalTarget} ккал`
-          ),
-          React.createElement('span', {
-            className: 'widget-macros__balance-line',
-            style: { color: avgPct >= 80 && avgPct <= 120 ? '#22c55e' : avgPct < 80 ? '#ef4444' : '#eab308' }
-          }, `📊 ${avgPct}%`)
-        ),
-        // Три бара БЖУ
-        React.createElement(MacroRowExtended, { label: 'Белки', emoji: '🍖', value: protein || 0, target: proteinTarget || 100, pct: pctP, color: '#ef4444' }),
-        React.createElement(MacroRowExtended, { label: 'Жиры', emoji: '🧈', value: fat || 0, target: fatTarget || 70, pct: pctF, color: '#eab308' }),
-        React.createElement(MacroRowExtended, { label: 'Углеводы', emoji: '🍞', value: carbs || 0, target: carbsTarget || 250, pct: pctC, color: '#3b82f6' })
-      );
-    }
-
-    // 2x2 — Оптимальный layout с барами и числами
-    if (size === '2x2') {
-      const MacroRow = ({ label, emoji, value, target, pct, color }) => {
-        const isGood = pct >= 80 && pct <= 120;
-        return React.createElement('div', { className: 'widget-macros__row-2x2' },
-          React.createElement('div', { className: 'widget-macros__row-header' },
-            React.createElement('span', { className: 'widget-macros__emoji' }, emoji),
-            React.createElement('span', { className: 'widget-macros__grams' }, `${Math.round(value)}/${target}г`),
-            React.createElement('span', {
-              className: 'widget-macros__pct-badge',
-              style: { background: isGood ? '#22c55e20' : `${color}20`, color: isGood ? '#22c55e' : color }
-            }, `${pct}%`)
-          ),
-          React.createElement('div', { className: 'widget-macros__bar-2x2' },
-            React.createElement('div', {
-              className: 'widget-macros__bar-fill',
-              style: { width: `${Math.min(100, pct)}%`, background: color }
-            })
-          )
-        );
-      };
-
-      return React.createElement('div', { className: 'widget-macros widget-macros--2x2' },
-        React.createElement(MacroRow, { label: 'Белки', emoji: '🍖', value: protein || 0, target: proteinTarget || 100, pct: pctP, color: '#ef4444' }),
-        React.createElement(MacroRow, { label: 'Жиры', emoji: '🧈', value: fat || 0, target: fatTarget || 70, pct: pctF, color: '#eab308' }),
-        React.createElement(MacroRow, { label: 'Углеводы', emoji: '🍞', value: carbs || 0, target: carbsTarget || 250, pct: pctC, color: '#3b82f6' })
+        )
       );
     }
 
     // Остальные размеры
-    const showGrams = widget.settings?.showGrams !== false && !d.isTiny;
-
     const MacroBar = ({ label, value, target, color, cls }) => {
       const pct = target > 0 ? Math.round((value / target) * 100) : 0;
       return React.createElement('div', { className: 'widget-macros__row' },
@@ -31828,7 +32719,9 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     };
 
     const info = getStatusInfo();
-    const showTimer = Number.isFinite(remaining) && remaining > 0;
+    const showTimer = widget.settings?.showTimer !== false && Number.isFinite(remaining) && remaining > 0;
+    const showPhase = widget.settings?.showPhase !== false && !!phase && !d.isTiny;
+    const showLastMeal = widget.settings?.showLastMeal !== false && !!lastMealTime;
 
     // 1x1 Micro
     if (d.isMicro) {
@@ -31860,7 +32753,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           React.createElement('div', { className: 'widget-insulin__status-2x2', style: { color: info.color } },
             info.emoji, ' ', info.short
           ),
-          lastMealTime && React.createElement('div', { className: 'widget-insulin__meal-time' },
+          showLastMeal && React.createElement('div', { className: 'widget-insulin__meal-time' },
             `🍽 ${lastMealTime}`
           )
         ),
@@ -31895,19 +32788,18 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           )
         ),
         // Низ: фаза волны
-        phase && React.createElement('div', { className: 'widget-insulin__phase-2x2' },
+        showPhase && React.createElement('div', { className: 'widget-insulin__phase-2x2' },
           phase
         )
       );
     }
 
     // Остальные размеры
-    const showPhase = widget.settings?.showPhase !== false && !!phase && !d.isTiny;
-
     return React.createElement('div', { className: `widget-insulin widget-insulin--${variant}` },
       React.createElement('div', { className: `widget-insulin__status widget-insulin__status--${status}` },
         info.emoji, ' ', info.label
       ),
+      showLastMeal ? React.createElement('div', { className: 'widget-insulin__phase' }, `🍽 ${lastMealTime}`) : null,
       showTimer ? React.createElement('div', { className: 'widget-insulin__timer' }, `${remaining} мин`) : null,
       showPhase ? React.createElement('div', { className: 'widget-insulin__phase' }, phase) : null
     );
@@ -31916,12 +32808,17 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
   function HeatmapWidgetContent({ widget, data }) {
     const days = data.days || [];
     const currentStreak = data.currentStreak || 0;
-    const configuredPeriod = widget.settings?.period || 'week';
+    const requestedPeriod = widget.settings?.period || 'week';
+    const configuredPeriod = requestedPeriod === 'month' ? 'week' : requestedPeriod;
+    const showWeekdays = widget.settings?.showWeekdays !== false;
+    const showDates = widget.settings?.showDates !== false;
+    const highlightToday = widget.settings?.highlightToday !== false;
 
     const d = getWidgetDims(widget);
     const size = widget?.size || '2x2';
     const canShowMonth = configuredPeriod === 'month' && d.area >= 9 && d.rows >= 3;
     const period = canShowMonth ? 'month' : 'week';
+    const todayIso = new Date().toISOString().slice(0, 10);
 
     let renderDays = days;
     if (d.isMicro) {
@@ -31971,7 +32868,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
               ? dateObj.getDate()
               : (typeof day?.date === 'string' ? parseInt(day.date.split('-').pop(), 10) : null);
             const isWeekend = dayIndex === 5 || dayIndex === 6;
-            const isToday = i === weekDays.length - 1;
+            const isToday = highlightToday && day?.date === todayIso;
             // 🆕 v3.22.0: training/stress indicators
             const hasTraining = day.hasTraining;
             const highStress = day.highStress;
@@ -31980,7 +32877,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
               key: i,
               className: `widget-heatmap__day-col ${isToday ? 'widget-heatmap__day-col--today' : ''} ${hasTraining ? 'widget-heatmap__day-col--training' : ''}`
             },
-              React.createElement('div', {
+              showDates && React.createElement('div', {
                 className: `widget-heatmap__day-date ${isWeekend ? 'widget-heatmap__day-date--weekend' : ''}`
               }, Number.isFinite(dayNum) ? dayNum : '—'),
               React.createElement('div', {
@@ -31993,7 +32890,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                   highStress && React.createElement('span', { className: 'widget-heatmap__cell-badge widget-heatmap__cell-badge--stress' }, '😰')
                 )
               ),
-              React.createElement('div', {
+              showWeekdays && React.createElement('div', {
                 className: `widget-heatmap__day-label ${isWeekend ? 'widget-heatmap__day-label--weekend' : ''}`
               }, dayLabels[dayIndex])
             );
@@ -32026,19 +32923,20 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
               ? dateObj.getDate()
               : (typeof day?.date === 'string' ? parseInt(day.date.split('-').pop(), 10) : null);
             const isWeekend = dayIndex === 5 || dayIndex === 6;
+            const isToday = highlightToday && day?.date === todayIso;
 
             return React.createElement('div', {
               key: i,
-              className: 'widget-heatmap__day-col'
+              className: `widget-heatmap__day-col ${isToday ? 'widget-heatmap__day-col--today' : ''}`
             },
-              React.createElement('div', {
+              showDates && React.createElement('div', {
                 className: `widget-heatmap__day-date ${isWeekend ? 'widget-heatmap__day-date--weekend' : ''}`
               }, Number.isFinite(dayNum) ? dayNum : '—'),
               React.createElement('div', {
                 className: `widget-heatmap__cell widget-heatmap__cell--${day.status || 'empty'}`,
                 title: day.date
               }),
-              React.createElement('div', {
+              showWeekdays && React.createElement('div', {
                 className: `widget-heatmap__day-label ${isWeekend ? 'widget-heatmap__day-label--weekend' : ''}`
               }, weekLabels[dayIndex])
             );
@@ -32090,7 +32988,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
       return React.createElement('div', { className: 'widget-cycle widget-cycle--2x2' },
         // Верх: фаза
-        phase && React.createElement('div', { className: 'widget-cycle__phase-header', style: { color: phaseColor } },
+        phase && widget.settings?.showPhase !== false && React.createElement('div', { className: 'widget-cycle__phase-header', style: { color: phaseColor } },
           phase.icon, ' ', phase.name
         ),
         // Центр: кольцо с днём
@@ -32123,7 +33021,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           )
         ),
         // Низ: рекомендация
-        recommendation && React.createElement('div', { className: 'widget-cycle__tip' },
+        widget.settings?.showCorrections !== false && recommendation && React.createElement('div', { className: 'widget-cycle__tip' },
           recommendation
         )
       );
@@ -32137,171 +33035,327 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       widget.settings?.showPhase && phase && !d.isTiny &&
       React.createElement('div', { className: 'widget-cycle__phase' },
         phase.icon, ' ', phase.name
-      )
+      ),
+      widget.settings?.showCorrections !== false && recommendation && !d.isTiny
+        ? React.createElement('div', { className: 'widget-cycle__tip' }, recommendation)
+        : null
     );
   }
 
   // === Crash Risk Widget Content v2.0 (EWS + Weight Loss Detection) ===
   function CrashRiskWidgetContent({ widget, data }) {
     const d = getWidgetDims(widget);
-    const size = widget?.size || '4x2';
+    const size = widget?.size || '2x1';
 
-    // Extract data from provider
     const hasData = data?.hasData || false;
-    const weeklyLossPercent = data?.weeklyLossPercent || 0;
-    const isWarning = data?.isWarning || false;
-    const severity = data?.severity || 'none';
+    const zone = data?.zone || 'stable';
+    const zoneMeta = data?.zoneMeta || { label: 'Нет данных', color: '#64748b', light: '#f1f5f9', emoji: '—' };
+    const pctPerWeek = data?.pctPerWeek || 0;
+    const slopePerWeek = data?.slopePerWeek || 0;
+    const direction = data?.direction || 'stable';
     const currentWeight = data?.currentWeight || 0;
+    const totalDeltaKg = data?.totalDeltaKg || 0;
+    const dataPoints = data?.dataPoints || 0;
+    const periodDays = data?.periodDays || 7;
+    const toGoalKg = data?.toGoalKg ?? null;
+    const estimatedDaysToGoal = data?.estimatedDaysToGoal ?? null;
     const ewsCount = data?.ewsCount || 0;
     const ewsData = data?.ewsData || null;
     const message = data?.message || '';
 
-    // Color scheme based on severity
-    const getColorBySeverity = (sev) => {
-      switch (sev) {
-        case 'high': return { bg: '#ef4444', text: '#ffffff', light: '#fee2e2' };
-        case 'medium': return { bg: '#f97316', text: '#ffffff', light: '#ffedd5' };
-        default: return { bg: '#10b981', text: '#ffffff', light: '#d1fae5' };
-      }
+    const dirArrow = direction === 'losing' ? '↓' : direction === 'gaining' ? '↑' : '→';
+    const absPct = Math.abs(pctPerWeek);
+    const deltaSign = totalDeltaKg < -0.05 ? '−' : totalDeltaKg > 0.05 ? '+' : '';
+    const deltaAbs = Math.abs(totalDeltaKg);
+    const color = zoneMeta.color;
+    const colorLight = zoneMeta.light;
+
+    const PRESETS = [7, 14, 30];
+    const handlePeriodSwitch = (days, event) => {
+      event?.stopPropagation?.();
+      if (!widget?.id || periodDays === days) return;
+      HEYS.Widgets.state?.updateWidget(widget.id, {
+        settings: { ...(widget.settings || {}), periodDays: days }
+      }, true);
+      HEYS.dayUtils?.haptic?.('light');
     };
 
-    const colors = getColorBySeverity(severity);
+    const periodPresetRow = React.createElement('div', {
+      style: {
+        display: 'flex',
+        gap: '4px',
+        flexWrap: 'nowrap',
+        justifyContent: 'center'
+      }
+    }, PRESETS.map((days) => {
+      const isActive = periodDays === days;
+      return React.createElement('button', {
+        key: days,
+        type: 'button',
+        onClick: (event) => handlePeriodSwitch(days, event),
+        onPointerDown: (event) => event.stopPropagation(),
+        onPointerUp: (event) => event.stopPropagation(),
+        onTouchStart: (event) => event.stopPropagation(),
+        style: {
+          border: 'none',
+          borderRadius: '999px',
+          padding: '2px 7px',
+          minHeight: '22px',
+          cursor: 'pointer',
+          whiteSpace: 'nowrap',
+          fontSize: '0.68rem',
+          lineHeight: 1,
+          fontWeight: isActive ? 700 : 500,
+          background: isActive ? color : 'var(--heys-bg-secondary,#f1f5f9)',
+          color: isActive ? '#fff' : 'var(--heys-text-secondary,#94a3b8)',
+          transition: 'all 0.15s ease'
+        }
+      }, `${days} дн.`);
+    }));
 
-    // Open EWS Panel on click
-    const handleOpenEWS = useCallback(() => {
-      const event = new CustomEvent('heysShowEWSPanel');
-      document.dispatchEvent(event);
-    }, []);
-
-    // === NO DATA STATE ===
+    // === NO DATA ===
     if (!hasData) {
       return React.createElement('div', { className: 'widget-crash-risk widget-crash-risk--no-data' },
-        React.createElement('div', { className: 'widget-crash-risk__icon' }, '⚠️'),
+        React.createElement('div', { className: 'widget-crash-risk__icon' }, '⚖️'),
         React.createElement('div', { className: 'widget-crash-risk__message' }, message || 'Недостаточно данных')
       );
     }
 
-    // === 2×2 COMPACT LAYOUT ===
+    // === 2×1 COMPACT ===
+    if (size === '2x1') {
+      return React.createElement('div', {
+        className: `widget-crash-risk widget-crash-risk--short widget-crash-risk--${zone}`,
+        style: {
+          display: 'flex',
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '6px',
+          alignSelf: 'stretch',
+          width: '100%'
+        }
+      },
+        React.createElement('div', {
+          style: {
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'flex-start',
+            justifyContent: 'center',
+            minWidth: 0,
+            flex: '1 1 auto'
+          }
+        },
+          React.createElement('div', {
+            style: { color, fontSize: '1.15rem', fontWeight: 800, lineHeight: 1 }
+          }, `${dirArrow} ${absPct.toFixed(1)}%`),
+          React.createElement('div', {
+            className: 'widget-crash-risk__ews-badge',
+            style: {
+              background: colorLight,
+              color,
+              fontSize: '0.62rem',
+              padding: '1px 6px',
+              lineHeight: 1.2,
+              fontWeight: 600,
+              marginTop: '4px',
+              maxWidth: '100%',
+              borderRadius: '999px',
+              display: 'inline-block'
+            }
+          }, `${zoneMeta.emoji} ${zoneMeta.label}`)
+        ),
+        React.createElement('div', {
+          style: {
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '3px',
+            alignItems: 'stretch',
+            justifyContent: 'center',
+            flex: '0 0 auto'
+          }
+        }, PRESETS.map((days) => {
+          const isActive = periodDays === days;
+          return React.createElement('button', {
+            key: `short-${days}`,
+            type: 'button',
+            onClick: (event) => handlePeriodSwitch(days, event),
+            onPointerDown: (event) => event.stopPropagation(),
+            onPointerUp: (event) => event.stopPropagation(),
+            onTouchStart: (event) => event.stopPropagation(),
+            style: {
+              border: 'none',
+              borderRadius: '999px',
+              padding: '0 6px',
+              height: '14px',
+              minWidth: '38px',
+              cursor: 'pointer',
+              whiteSpace: 'nowrap',
+              fontSize: '0.58rem',
+              lineHeight: '14px',
+              fontWeight: isActive ? 700 : 500,
+              background: isActive ? color : 'var(--heys-bg-secondary,#f1f5f9)',
+              color: isActive ? '#fff' : 'var(--heys-text-secondary,#94a3b8)',
+              transition: 'all 0.15s ease',
+              display: 'block'
+            }
+          }, `${days} дн.`);
+        }))
+      );
+    }
+
+    // === 2×2 COMPACT ===
     if (size === '2x2') {
       return React.createElement('div', {
-        className: `widget-crash-risk widget-crash-risk--compact widget-crash-risk--${severity}`,
-        onClick: handleOpenEWS
+        className: `widget-crash-risk widget-crash-risk--compact widget-crash-risk--${zone}`
       },
-        // Top: Icon + Percentage
         React.createElement('div', { className: 'widget-crash-risk__header' },
-          React.createElement('div', { className: 'widget-crash-risk__icon', style: { color: colors.bg } },
-            isWarning ? '⚠️' : '✅'
-          ),
           React.createElement('div', {
             className: 'widget-crash-risk__percent',
-            style: { color: colors.bg }
-          }, `${weeklyLossPercent.toFixed(1)}%`)
+            style: { color, fontSize: '1.4rem', fontWeight: 800 }
+          }, `${dirArrow} ${absPct.toFixed(1)}%`)
         ),
-
-        // Middle: Title
-        React.createElement('div', { className: 'widget-crash-risk__title' }, 'Потеря веса'),
-
-        // Bottom: EWS Badge
-        ewsCount > 0 && React.createElement('div', {
-          className: 'widget-crash-risk__ews-badge',
-          style: { background: colors.light, color: colors.bg }
+        React.createElement('div', { className: 'widget-crash-risk__title' }, 'в неделю'),
+        React.createElement('div', {
+          style: {
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '6px',
+            marginTop: '6px'
+          }
         },
-          `${ewsCount} предупрежд.`
+          React.createElement('div', {
+            className: 'widget-crash-risk__ews-badge',
+            style: {
+              background: colorLight,
+              color,
+              fontSize: '0.72rem',
+              padding: '2px 8px',
+              lineHeight: 1.2,
+              fontWeight: 600
+            }
+          }, `${zoneMeta.emoji} ${zoneMeta.label}`),
+          React.createElement('div', {
+            style: {
+              display: 'flex',
+              gap: '4px',
+              justifyContent: 'center',
+              width: '100%'
+            }
+          }, PRESETS.map((days) => {
+            const isActive = periodDays === days;
+            return React.createElement('button', {
+              key: `compact-${days}`,
+              type: 'button',
+              onClick: (event) => handlePeriodSwitch(days, event),
+              onPointerDown: (event) => event.stopPropagation(),
+              onPointerUp: (event) => event.stopPropagation(),
+              onTouchStart: (event) => event.stopPropagation(),
+              style: {
+                border: 'none',
+                borderRadius: '999px',
+                padding: '2px 6px',
+                minWidth: '42px',
+                minHeight: '22px',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+                fontSize: '0.63rem',
+                lineHeight: 1,
+                fontWeight: isActive ? 700 : 500,
+                background: isActive ? color : 'var(--heys-bg-secondary,#f1f5f9)',
+                color: isActive ? '#fff' : 'var(--heys-text-secondary,#94a3b8)',
+                transition: 'all 0.15s ease'
+              }
+            }, `${days} дн.`);
+          }))
         )
       );
     }
 
-    // === 4×2 STANDARD LAYOUT ===
+    // === 4×2 STANDARD ===
     if (size === '4x2') {
-      const topWarnings = ewsData?.warnings?.slice(0, 2) || [];
-
       return React.createElement('div', {
-        className: `widget-crash-risk widget-crash-risk--standard widget-crash-risk--${severity}`,
-        onClick: handleOpenEWS
+        className: `widget-crash-risk widget-crash-risk--standard widget-crash-risk--${zone}`
       },
-        // Left: KPI Block
+        // Left: rate KPI
         React.createElement('div', { className: 'widget-crash-risk__kpi' },
-          React.createElement('div', { className: 'widget-crash-risk__icon-big', style: { color: colors.bg } },
-            isWarning ? '⚠️' : '✅'
-          ),
-          React.createElement('div', { className: 'widget-crash-risk__percent-big', style: { color: colors.bg } },
-            `${weeklyLossPercent.toFixed(1)}%`
-          ),
-          React.createElement('div', { className: 'widget-crash-risk__label' }, '/неделя')
+          React.createElement('div', {
+            style: { fontSize: '1.4rem', color, fontWeight: 800, lineHeight: 1 }
+          }, `${dirArrow} ${absPct.toFixed(1)}%`),
+          React.createElement('div', { className: 'widget-crash-risk__label' }, '/неделю'),
+          React.createElement('div', {
+            style: { fontSize: '0.75rem', color: 'var(--heys-text-secondary,#94a3b8)', marginTop: '4px' }
+          }, `${slopePerWeek < -0.05 ? '−' : slopePerWeek > 0.05 ? '+' : ''}${Math.abs(slopePerWeek).toFixed(2)} кг/нед`)
         ),
-
-        // Right: Details
+        // Right: zone + stats
         React.createElement('div', { className: 'widget-crash-risk__details' },
-          React.createElement('div', { className: 'widget-crash-risk__title-big' }, 'Потеря веса'),
-          React.createElement('div', { className: 'widget-crash-risk__subtitle' },
-            `Текущий вес: ${currentWeight.toFixed(1)} кг`
+          React.createElement('div', { style: { display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '6px', marginBottom: '6px' } },
+            React.createElement('div', {
+              style: { background: colorLight, color, fontWeight: 600, fontSize: '0.76rem', padding: '2px 8px', borderRadius: '99px', display: 'inline-flex', alignItems: 'center', gap: '4px', lineHeight: 1.2 }
+            }, `${zoneMeta.emoji} ${zoneMeta.label}`),
+            periodPresetRow
           ),
-
-          // EWS Count Badge
-          ewsCount > 0 && React.createElement('div', {
-            className: 'widget-crash-risk__ews-count',
-            style: { background: colors.light, color: colors.bg }
-          },
-            `${ewsCount} предупрежд. → Подробнее`
-          ),
-
-          // Top 2 warnings preview
-          widget.settings?.showWarnings !== false && topWarnings.length > 0 &&
-          React.createElement('div', { className: 'widget-crash-risk__warnings-preview' },
-            topWarnings.map((w, i) =>
-              React.createElement('div', {
-                key: i,
-                className: `widget-crash-risk__warning widget-crash-risk__warning--${w.severity}`
-              },
-                React.createElement('span', { className: 'widget-crash-risk__warning-icon' }, getSeverityIcon(w.severity)),
-                React.createElement('span', { className: 'widget-crash-risk__warning-text' },
-                  w.message?.length > 40 ? w.message.slice(0, 37) + '...' : w.message
-                )
-              )
-            )
-          )
+          deltaAbs >= 0.1 && React.createElement('div', {
+            style: { fontSize: '0.8rem', color: 'var(--heys-text-secondary,#94a3b8)' }
+          }, `${deltaSign}${deltaAbs.toFixed(1)} кг за ${dataPoints} дн.`),
+          widget.settings?.showGoal !== false && toGoalKg !== null && toGoalKg > 0 &&
+          React.createElement('div', {
+            style: { fontSize: '0.78rem', color: 'var(--heys-text-secondary,#94a3b8)', marginTop: '3px' }
+          }, estimatedDaysToGoal
+            ? `До цели ~${estimatedDaysToGoal} дн.`
+            : `До цели: ${toGoalKg.toFixed(1)} кг`)
         )
       );
     }
 
-    // === 4×3 EXTENDED LAYOUT ===
-    if (size === '4x3' || d.cols >= 4 && d.rows >= 3) {
+    // === 4×3 EXTENDED ===
+    if (size === '4x3' || (d.cols >= 4 && d.rows >= 3)) {
       const topWarnings = ewsData?.warnings?.slice(0, 3) || [];
-
       return React.createElement('div', {
-        className: `widget-crash-risk widget-crash-risk--extended widget-crash-risk--${severity}`,
-        onClick: handleOpenEWS
+        className: `widget-crash-risk widget-crash-risk--extended widget-crash-risk--${zone}`
       },
-        // Header: Title + EWS Count
+        // Header
         React.createElement('div', { className: 'widget-crash-risk__header-extended' },
-          React.createElement('div', { className: 'widget-crash-risk__title-extended' }, 'Early Warning System'),
-          ewsCount > 0 && React.createElement('div', {
-            className: 'widget-crash-risk__ews-badge-extended',
-            style: { background: colors.light, color: colors.bg }
-          }, `${ewsCount} предупр.`)
+          React.createElement('div', { className: 'widget-crash-risk__title-extended' }, 'Динамика веса'),
+          React.createElement('div', { style: { display: 'flex', alignItems: 'flex-end', flexDirection: 'column', gap: '6px' } },
+            React.createElement('div', {
+              style: { background: colorLight, color, fontSize: '0.75rem', padding: '2px 8px', borderRadius: '99px', fontWeight: 600, lineHeight: 1.2 }
+            }, `${zoneMeta.emoji} ${zoneMeta.label}`),
+            periodPresetRow
+          )
         ),
-
         // KPI Section
         React.createElement('div', { className: 'widget-crash-risk__kpi-section' },
           React.createElement('div', { className: 'widget-crash-risk__kpi-block' },
-            React.createElement('div', { className: 'widget-crash-risk__icon-big', style: { color: colors.bg } },
-              isWarning ? '⚠️' : '✅'
+            React.createElement('div', { style: { fontSize: '1.6rem', color, fontWeight: 800, lineHeight: 1 } },
+              `${dirArrow} ${absPct.toFixed(1)}%`
             ),
-            React.createElement('div', { className: 'widget-crash-risk__percent-big', style: { color: colors.bg } },
-              `${weeklyLossPercent.toFixed(1)}%`
-            ),
-            React.createElement('div', { className: 'widget-crash-risk__label' }, 'потеря/неделя')
+            React.createElement('div', { className: 'widget-crash-risk__label' }, 'в неделю')
           ),
           React.createElement('div', { className: 'widget-crash-risk__weight-info' },
-            React.createElement('div', { className: 'widget-crash-risk__weight-label' }, 'Текущий вес'),
-            React.createElement('div', { className: 'widget-crash-risk__weight-value' }, `${currentWeight.toFixed(1)} кг`)
+            React.createElement('div', { className: 'widget-crash-risk__weight-label' }, 'Сейчас'),
+            React.createElement('div', { className: 'widget-crash-risk__weight-value' }, `${currentWeight.toFixed(1)} кг`),
+            deltaAbs >= 0.1 && React.createElement('div', {
+              style: { fontSize: '0.75rem', color: 'var(--heys-text-secondary,#94a3b8)' }
+            }, `${deltaSign}${deltaAbs.toFixed(1)} кг за ${dataPoints} дн.`)
           )
         ),
-
-        // Warnings List (Top 3)
+        // Goal row
+        widget.settings?.showGoal !== false && toGoalKg !== null && toGoalKg > 0 &&
+        React.createElement('div', { className: 'widget-crash-risk__warnings-section', style: { paddingTop: '6px' } },
+          React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: 'var(--heys-text-secondary,#94a3b8)' } },
+            React.createElement('span', null, 'До целевого веса'),
+            React.createElement('span', { style: { fontWeight: 600 } },
+              estimatedDaysToGoal
+                ? `~${estimatedDaysToGoal} дн. / −${toGoalKg.toFixed(1)} кг`
+                : `${toGoalKg.toFixed(1)} кг`
+            )
+          )
+        ),
+        // EWS warnings
         widget.settings?.showWarnings !== false && topWarnings.length > 0 &&
         React.createElement('div', { className: 'widget-crash-risk__warnings-section' },
-          React.createElement('div', { className: 'widget-crash-risk__warnings-title' }, 'Предупреждения:'),
+          React.createElement('div', { className: 'widget-crash-risk__warnings-title' }, `⚠️ EWS: ${ewsCount} предупреждений`),
           React.createElement('div', { className: 'widget-crash-risk__warnings-list' },
             topWarnings.map((w, i) =>
               React.createElement('div', {
@@ -32314,25 +33368,19 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             )
           )
         ),
-
-        // Footer: CTA
-        React.createElement('div', { className: 'widget-crash-risk__footer' },
-          React.createElement('div', { className: 'widget-crash-risk__cta' }, '→ Открыть полный отчёт')
+        // Footer: quality info
+        React.createElement('div', { style: { fontSize: '0.72rem', color: 'var(--heys-text-secondary,#94a3b8)', textAlign: 'right', paddingTop: '4px' } },
+          `${dataPoints}/${periodDays} взвешиваний · R² ${(data?.regression?.r2 || 0).toFixed(2)}`
         )
       );
     }
 
-    // === FALLBACK (other sizes) ===
+    // === FALLBACK ===
     return React.createElement('div', {
-      className: `widget-crash-risk widget-crash-risk--fallback widget-crash-risk--${severity}`
+      className: `widget-crash-risk widget-crash-risk--fallback widget-crash-risk--${zone}`
     },
-      React.createElement('div', { className: 'widget-crash-risk__icon', style: { color: colors.bg } },
-        isWarning ? '⚠️' : '✅'
-      ),
-      React.createElement('div', { className: 'widget-crash-risk__percent', style: { color: colors.bg } },
-        `${weeklyLossPercent.toFixed(1)}%`
-      ),
-      React.createElement('div', { className: 'widget-crash-risk__label' }, 'потеря/неделя')
+      React.createElement('div', { style: { color, fontWeight: 800 } }, `${dirArrow} ${absPct.toFixed(1)}%`),
+      React.createElement('div', { className: 'widget-crash-risk__label' }, 'в неделю')
     );
   }
 
@@ -32498,7 +33546,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
   function formatRelapseRiskTraceForClipboard(payload) {
     const snapshot = payload?.snapshot || {};
     const result = snapshot?.raw || {};
-    const humanSummary = buildRelapseHumanSummary(payload);
+    const humanSummary = buildRelapseHumanSummary({ ...payload, snapshot });
     const hasRawTrace = !!(result && typeof result === 'object' && Object.keys(result).length > 0 && result?.debug);
     const score = Math.round(Number(snapshot?.score ?? result?.score) || 0);
     const level = String(snapshot?.level || result?.level || 'low');
@@ -32686,17 +33734,197 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
   if (!window._relapseRingAnimated) window._relapseRingAnimated = new Set();
   const _relapseRingAnimated = window._relapseRingAnimated;
+  const RELAPSE_PROFILE_STORAGE_KEY = 'heys_relapse_risk_dev_profile';
+
+  function getRelapseProfileOptions() {
+    const profiles = HEYS.RelapseRisk?.CONFIG?.PROFILES || {};
+    return Object.values(profiles).map((profile) => ({
+      key: profile?.key,
+      label: profile?.label || profile?.key || 'profile',
+      description: profile?.description || ''
+    })).filter((profile) => !!profile.key);
+  }
+
+  function getRelapseSelectedProfileKey(snapshot) {
+    const snapshotKey = snapshot?.profile?.key || snapshot?.raw?.profile?.key || snapshot?.selectedProfileKey;
+    if (typeof snapshotKey === 'string' && snapshotKey.trim()) {
+      return snapshotKey.trim();
+    }
+
+    try {
+      const raw = localStorage.getItem(RELAPSE_PROFILE_STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (typeof parsed === 'string' && parsed.trim()) return parsed.trim();
+      }
+    } catch (e) {
+      // no-op
+    }
+
+    return HEYS.RelapseRisk?.CONFIG?.DEFAULT_PROFILE_KEY || 'v1_1';
+  }
+
+  function setRelapseSelectedProfileKey(profileKey) {
+    if (typeof profileKey !== 'string' || !profileKey.trim()) return;
+
+    try {
+      if (typeof HEYS.utils?.lsSet === 'function') {
+        HEYS.utils.lsSet(RELAPSE_PROFILE_STORAGE_KEY, profileKey.trim());
+        return;
+      }
+      localStorage.setItem(RELAPSE_PROFILE_STORAGE_KEY, JSON.stringify(profileKey.trim()));
+    } catch (e) {
+      // no-op
+    }
+  }
+
+  function shouldShowRelapseDevPanel() {
+    try {
+      const host = window?.location?.hostname || '';
+      if (host === 'localhost' || host === '127.0.0.1') return true;
+      if (localStorage.getItem('heys_debug_widgets') === '1') return true;
+      if (localStorage.getItem('heys_debug_relapse_profiles') === '1') return true;
+    } catch (e) {
+      // no-op
+    }
+    return false;
+  }
+
+  function resolveRelapseSnapshot(widget, profileKey) {
+    const targetWidget = widget && widget.type === 'relapseRisk'
+      ? widget
+      : { id: 'relapseRisk-dev', type: 'relapseRisk', size: '2x2', settings: {} };
+
+    try {
+      const providerSnapshot = HEYS.Widgets.data?.getRelapseRiskData?.(targetWidget, {
+        weightProfileKey: profileKey
+      }) || HEYS.Widgets.data?.getDataForWidget?.(targetWidget);
+      if (providerSnapshot?.raw) {
+        return providerSnapshot;
+      }
+    } catch (providerError) {
+      console.warn('[HEYS.relapseRisk] provider snapshot failed', providerError?.message);
+    }
+
+    if (!HEYS.RelapseRisk?.calculate) {
+      return { hasData: false, score: 0, level: 'low', message: 'Engine not loaded' };
+    }
+
+    try {
+      const U = HEYS.utils || {};
+      const lsGet = typeof U?.lsGet === 'function'
+        ? U.lsGet.bind(U)
+        : ((k, fb) => {
+          try { return JSON.parse(localStorage.getItem(k)) || fb; } catch { return fb; }
+        });
+      const todayStr = HEYS.dayUtils?.todayISO?.() || new Date().toISOString().split('T')[0];
+      const dayData = HEYS.DayData?.getCurrentDay?.() || lsGet('heys_dayv2_' + todayStr, {});
+      const profile = lsGet('heys_profile', {});
+      const dayTot = HEYS.DayData?.getDayTot?.(dayData)
+        || (typeof HEYS.dayCalculations?.calculateDayTotals === 'function'
+          ? HEYS.dayCalculations.calculateDayTotals(dayData)
+          : {});
+      let normAbs = HEYS.norms?.getNormAbs?.(profile, profile?.pIndex || 0) || {};
+      if ((!normAbs.kcal || normAbs.kcal <= 0) && typeof HEYS.TDEE?.calculate === 'function') {
+        const tdee = HEYS.TDEE.calculate(profile);
+        if (tdee && tdee.optimum > 0) {
+          const weight = Number(profile.weight || profile.baseWeight || 70) || 70;
+          normAbs = { kcal: tdee.optimum, prot: Math.round(weight * 1.6) };
+        }
+      }
+      const historyDays = [];
+
+      for (let i = 14; i >= 1; i--) {
+        const d = new Date();
+        d.setDate(d.getDate() - i);
+        const dateStr = d.toISOString().split('T')[0];
+        const day = lsGet(`heys_dayv2_${dateStr}`, null);
+        if (day && typeof day === 'object' && Object.keys(day).length > 0) {
+          historyDays.push({
+            date: dateStr,
+            ...day,
+            dayTot: HEYS.DayData?.getDayTot?.(day)
+              || day.dayTot
+              || (typeof HEYS.dayCalculations?.calculateDayTotals === 'function'
+                ? HEYS.dayCalculations.calculateDayTotals(day)
+                : {})
+          });
+        }
+      }
+
+      const result = HEYS.RelapseRisk.calculate({
+        dayData,
+        profile,
+        dayTot,
+        normAbs,
+        historyDays,
+        weightProfileKey: profileKey,
+        now: new Date().toISOString()
+      });
+      const compare = typeof HEYS.RelapseRisk?.compareProfiles === 'function'
+        ? HEYS.RelapseRisk.compareProfiles({
+          dayData,
+          profile,
+          dayTot,
+          normAbs,
+          historyDays,
+          weightProfileKey: profileKey,
+          now: new Date().toISOString()
+        })
+        : null;
+
+      return {
+        hasData: true,
+        profile: result?.profile || null,
+        selectedProfileKey: profileKey,
+        score: Math.round(Number(result?.score) || 0),
+        level: result?.level || 'low',
+        confidence: Math.round(Number(result?.confidence) || 0),
+        primaryDrivers: Array.isArray(result?.primaryDrivers) ? result.primaryDrivers : [],
+        protectiveFactors: Array.isArray(result?.protectiveFactors) ? result.protectiveFactors : [],
+        windows: result?.windows || {},
+        recommendations: Array.isArray(result?.recommendations) ? result.recommendations : [],
+        compare,
+        raw: result,
+        _fallbackSource: 'modal_direct_engine'
+      };
+    } catch (fallbackErr) {
+      console.warn('[HEYS.relapseRisk] direct engine fallback failed:', fallbackErr?.message);
+      return { hasData: false, score: 0, level: 'low', _error: fallbackErr?.message };
+    }
+  }
 
   function RelapseRiskWidgetContent({ widget, data }) {
     const score = Math.round(Number(data?.score) || 0);
+    const relapseScore = Math.round(Number(data?.relapseScore ?? data?.score) || 0);
+    const crashScore = Math.round(Number(data?.crashScore) || 0);
+    const source = data?.source || 'none';
     const target = 100;
     const pct = Math.max(0, Math.min(100, Math.round(Number(data?.pct) || score)));
     const level = String(data?.level || 'low');
-    const topWindowLabel = data?.topWindowLabel || 'сейчас';
-    const topWindowScore = Math.round(Number(data?.topWindowScore) || score);
+    const topWindowLabel = typeof data?.topWindowLabel === 'string' ? data.topWindowLabel : 'сейчас';
+    const topWindowScore = Math.round(Number.isFinite(Number(data?.topWindowScore)) ? Number(data.topWindowScore) : score);
     const primaryDriver = data?.primaryDriver || null;
     const primaryDrivers = Array.isArray(data?.primaryDrivers) ? data.primaryDrivers.slice(0, 2) : [];
-    const recommendation = data?.recommendation || null;
+    const confidence = Math.max(0, Math.min(100, Math.round(Number(data?.confidence) || 0)));
+    const recommendation = (() => {
+      const rec = data?.recommendation;
+      if (!rec) return null;
+      if (typeof rec === 'string') return rec;
+      if (typeof rec?.text === 'string' && rec.text.trim()) return rec.text.trim();
+      if (typeof rec?.label === 'string' && rec.label.trim()) return rec.label.trim();
+      if (typeof rec?.title === 'string' && rec.title.trim()) return rec.title.trim();
+      return null;
+    })();
+
+    const getSourceLabel = () => {
+      switch (source) {
+        case 'emotional': return 'Эмоц.';
+        case 'metabolic': return 'Метабол.';
+        case 'both': return 'Оба';
+        default: return '';
+      }
+    };
 
     const d = getWidgetDims(widget);
     const size = widget?.size || '2x2';
@@ -32734,13 +33962,16 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     }
 
     if (size === '2x2') {
+      const showConfidence = widget.settings?.showConfidence !== false;
+      const showSource = widget.settings?.showSource !== false;
+      const srcLabel = getSourceLabel();
       return React.createElement('div', { className: 'widget-relapse-risk widget-relapse-risk--2x2' },
         React.createElement('div', { className: 'widget-relapse-risk__gauge-wrap' },
           React.createElement(RelapseRiskSpeedometer, {
             score: displayPct,
             level,
             size: 136,
-            label: 'Риск срыва',
+            label: 'Риск-радар',
             compact: true
           })
         ),
@@ -32748,20 +33979,33 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           React.createElement('div', {
             className: 'widget-relapse-risk__gauge-status-pill widget-relapse-risk__gauge-status-pill--footer',
             style: { color, background: `${color}16`, borderColor: `${color}22` }
-          }, getRelapseLevelLabel(level))
-        )
+          }, getRelapseLevelLabel(level)),
+          showSource && srcLabel ? React.createElement('span', {
+            style: { fontSize: '0.6rem', color: 'var(--heys-text-tertiary, #64748b)', marginLeft: '6px' }
+          }, srcLabel) : null
+        ),
+        showConfidence ? React.createElement('div', { className: 'widget-relapse-risk__label' }, `conf ${confidence}%`) : null
       );
     }
 
     const showDrivers = widget.settings?.showDrivers !== false;
     const showRecommendation = widget.settings?.showRecommendation !== false;
+    const showConfidence = widget.settings?.showConfidence !== false;
+    const showSource = widget.settings?.showSource !== false;
+    const srcLabel = getSourceLabel();
+    const riskSummaryLabel = showConfidence
+      ? `пик ${topWindowScore}% ${topWindowLabel} · conf ${confidence}%`
+      : `пик ${topWindowScore}% ${topWindowLabel}`;
 
     return React.createElement('div', { className: `widget-relapse-risk widget-relapse-risk--${variant}` },
       React.createElement('div', { className: 'widget-relapse-risk__top' },
         React.createElement('div', { className: 'widget-relapse-risk__value', style: { color } }, `${score}%`),
-        React.createElement('div', { className: 'widget-relapse-risk__pct-pill', style: { color, background: `${color}20` } }, getRelapseLevelLabel(level))
+        React.createElement('div', { className: 'widget-relapse-risk__pct-pill', style: { color, background: `${color}20` } }, getRelapseLevelLabel(level)),
+        showSource && srcLabel ? React.createElement('span', {
+          style: { fontSize: '0.6rem', color: 'var(--heys-text-tertiary, #64748b)', marginLeft: '4px' }
+        }, srcLabel) : null
       ),
-      React.createElement('div', { className: 'widget-relapse-risk__label' }, `пик ${topWindowScore}% ${topWindowLabel}`),
+      React.createElement('div', { className: 'widget-relapse-risk__label' }, riskSummaryLabel),
       React.createElement('div', { className: 'widget-relapse-risk__progress' },
         React.createElement('div', {
           className: 'widget-relapse-risk__bar',
@@ -32784,14 +34028,670 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     );
   }
 
+  // === Status Details Modal ===
+  function StatusDetailsModal({ payload, isOpen, onClose }) {
+    if (!isOpen || !payload) return null;
+
+    const data = payload.data || {};
+    const status = data.status || {};
+    const score = Math.round(Number(status.score) || 0);
+    const level = status.level || {};
+    const levelLabel = level.label || 'Нет данных';
+    const levelEmoji = level.emoji || '';
+    const levelColor = level.color || '#94a3b8';
+    const factorScores = status.factorScores || {};
+    const factorDetails = status.factorDetails || {};
+    const categoryScores = status.categoryScores || {};
+    const breakdown = Array.isArray(status.breakdown) ? status.breakdown : [];
+    const topActions = Array.isArray(status.topActions) ? status.topActions : [];
+
+    const getColor = (s) => {
+      if (s >= 85) return '#10b981';
+      if (s >= 70) return '#22c55e';
+      if (s >= 50) return '#eab308';
+      if (s >= 30) return '#f97316';
+      return '#ef4444';
+    };
+
+    const copyStatusLog = async () => {
+      try {
+        const lines = [
+          '=== HEYS Status Score Log ===',
+          `Date: ${new Date().toISOString()}`,
+          `Score: ${score}/100 (${levelLabel})`,
+          '',
+          '--- Category Scores ---',
+          ...Object.entries(categoryScores).map(([k, v]) => `  ${v.icon || ''} ${v.label || k}: ${v.score}`),
+          '',
+          '--- Factor Scores ---',
+          ...Object.entries(factorScores).map(([k, v]) => `  ${k}: ${v}`),
+          '',
+          '--- Factor Details ---',
+          ...Object.entries(factorDetails).map(([k, v]) => `  ${k}: ${v.value}/${v.target} ${v.unit || ''} (${v.percent != null ? v.percent + '%' : v.label || ''})`),
+          '',
+          '--- Top Actions ---',
+          ...topActions.map((a, i) => `  ${i + 1}. ${a.icon || ''} ${a.text} (${a.factor || ''})`),
+          '',
+          '--- Raw Status ---',
+          JSON.stringify(status, null, 2)
+        ];
+        await copyTextWithFallback(lines.join('\n'));
+        HEYS.Toast?.success?.('Status лог скопирован');
+      } catch (err) {
+        console.error('[HEYS.status.copy] ❌', err);
+        HEYS.Toast?.error?.('Не удалось скопировать лог');
+      }
+    };
+
+    const handleBackdropClick = (e) => {
+      if (e.target === e.currentTarget) onClose?.();
+    };
+
+    return React.createElement('div', {
+      className: 'widget-relapse-risk__modal-overlay',
+      onClick: handleBackdropClick
+    },
+      React.createElement('div', {
+        className: 'widget-relapse-risk__modal',
+        onClick: (e) => e.stopPropagation()
+      },
+        // Header
+        React.createElement('div', { className: 'widget-relapse-risk__modal-header' },
+          React.createElement('div', { className: 'widget-relapse-risk__modal-title-wrap' },
+            React.createElement('div', { className: 'widget-relapse-risk__modal-eyebrow' }, 'Status Score'),
+            React.createElement('h3', { className: 'widget-relapse-risk__modal-title' }, 'Детали оценки дня')
+          ),
+          React.createElement('button', {
+            type: 'button',
+            className: 'widget-relapse-risk__modal-close',
+            onClick: onClose,
+            'aria-label': 'Закрыть'
+          }, '✕')
+        ),
+        // Content
+        React.createElement('div', { className: 'widget-relapse-risk__modal-content' },
+          // Hero
+          React.createElement('div', { className: 'widget-relapse-risk__modal-hero' },
+            React.createElement('div', {
+              className: 'widget-relapse-risk__modal-score-shell',
+              style: { background: `${levelColor}12`, borderColor: `${levelColor}33` }
+            },
+              React.createElement('div', {
+                style: { fontSize: '3.5rem', fontWeight: 800, color: levelColor, lineHeight: 1 }
+              }, score),
+              React.createElement('div', {
+                className: 'widget-relapse-risk__modal-score-level',
+                style: { color: levelColor, background: `${levelColor}16`, borderColor: `${levelColor}26` }
+              }, `${levelEmoji} ${levelLabel}`)
+            )
+          ),
+
+          // Categories
+          Object.keys(categoryScores).length > 0 && React.createElement('div', { className: 'widget-relapse-risk__modal-section' },
+            React.createElement('div', { className: 'widget-relapse-risk__modal-section-title' }, 'Категории'),
+            React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: '8px' } },
+              Object.entries(categoryScores).map(([key, cat]) =>
+                React.createElement('div', { key, style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' } },
+                  React.createElement('span', { style: { fontSize: '0.85rem', color: 'var(--heys-text-secondary, #94a3b8)' } }, `${cat.icon || ''} ${cat.label || key}`),
+                  React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '8px' } },
+                    React.createElement('div', {
+                      style: { width: '80px', height: '6px', borderRadius: '3px', background: 'var(--heys-bg-secondary, #1e293b)' }
+                    },
+                      React.createElement('div', {
+                        style: { width: `${Math.min(100, cat.score || 0)}%`, height: '100%', borderRadius: '3px', background: getColor(cat.score || 0), transition: 'width 0.3s ease' }
+                      })
+                    ),
+                    React.createElement('span', { style: { fontSize: '0.85rem', fontWeight: 600, color: getColor(cat.score || 0), minWidth: '28px', textAlign: 'right' } }, cat.score || 0)
+                  )
+                )
+              )
+            )
+          ),
+
+          // Factor breakdown
+          breakdown.length > 0 && React.createElement('div', { className: 'widget-relapse-risk__modal-section' },
+            React.createElement('div', { className: 'widget-relapse-risk__modal-section-title' }, 'Факторы'),
+            React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: '6px' } },
+              breakdown.map((f, i) =>
+                React.createElement('div', { key: i, style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' } },
+                  React.createElement('span', { style: { fontSize: '0.8rem', color: 'var(--heys-text-secondary, #94a3b8)' } },
+                    `${f.icon || ''} ${f.label || f.factorId}`
+                  ),
+                  React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '6px' } },
+                    f.percent != null
+                      ? React.createElement('span', { style: { fontSize: '0.7rem', color: 'var(--heys-text-tertiary, #64748b)' } }, `${f.value}/${f.target}${f.unit ? ' ' + f.unit : ''}`)
+                      : null,
+                    React.createElement('span', { style: { fontSize: '0.8rem', fontWeight: 600, color: getColor(f.score || 0), minWidth: '24px', textAlign: 'right' } }, f.score || 0)
+                  )
+                )
+              )
+            )
+          ),
+
+          // Top actions
+          topActions.length > 0 && React.createElement('div', { className: 'widget-relapse-risk__modal-section' },
+            React.createElement('div', { className: 'widget-relapse-risk__modal-section-title' }, 'Рекомендации'),
+            React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: '4px' } },
+              topActions.map((a, i) =>
+                React.createElement('div', { key: i, style: { fontSize: '0.85rem', color: 'var(--heys-text-secondary, #94a3b8)' } },
+                  `${a.icon || '→'} ${a.text}`)
+              )
+            )
+          ),
+
+          // Copy button
+          React.createElement('div', { style: { display: 'flex', justifyContent: 'center', paddingTop: '16px', paddingBottom: '8px' } },
+            React.createElement('button', {
+              type: 'button',
+              className: 'widget-relapse-risk__modal-copy-btn',
+              onClick: copyStatusLog
+            }, '📋 Скопировать лог')
+          )
+        )
+      )
+    );
+  }
+
+  // === Crash Risk Details Modal ===
+  function CrashRiskDetailsModal({ payload, isOpen, onClose, onPeriodChange }) {
+    // Period preset state — initialized from widget setting, defaults to 7
+    const initialPeriod = payload?.data?.periodDays || 7;
+    const [activePeriod, setActivePeriod] = useState(initialPeriod);
+    const [liveData, setLiveData] = useState(null);
+    const [loadingPeriod, setLoadingPeriod] = useState(false);
+
+    // Recalculate when period changes (using the data provider directly)
+    useEffect(() => {
+      if (!isOpen) return;
+      if (activePeriod === initialPeriod && !liveData) return; // first render uses payload.data
+      setLoadingPeriod(true);
+      try {
+        const provider = HEYS?.Widgets?.DataProviders?.crashRisk;
+        if (provider) {
+          const result = provider.getData({ days: activePeriod });
+          setLiveData(result);
+        }
+      } catch (e) {
+        console.warn('[HEYS.weightProgress.modal] period recalc failed:', e);
+      } finally {
+        setLoadingPeriod(false);
+      }
+    }, [activePeriod, isOpen]);
+
+    if (!isOpen || !payload) return null;
+
+    // Use liveData if available, else fall back to payload.data
+    const data = liveData || payload.data || {};
+    const zone = data.zone || 'stable';
+    const zoneMeta = data.zoneMeta || { label: 'Нет данных', color: '#64748b', light: '#f1f5f9', emoji: '—' };
+    const zoneHint = data.zoneHint || '';
+    const pctPerWeek = Number(data.pctPerWeek) || 0;
+    const slopePerWeek = Number(data.slopePerWeek) || 0;
+    const direction = data.direction || 'stable';
+    const currentWeight = Number(data.currentWeight) || 0;
+    const firstWeight = Number(data.firstWeight) || 0;
+    const totalDeltaKg = Number(data.totalDeltaKg) || 0;
+    const dataCompleteness = Number(data.dataCompleteness) || 0;
+    const goalWeight = data.goalWeight ?? null;
+    const toGoalKg = data.toGoalKg ?? null;
+    const estimatedDaysToGoal = data.estimatedDaysToGoal ?? null;
+    const ewsCount = data.ewsCount || 0;
+    const warnings = data.ewsData?.warnings || [];
+    const weightData = data.weightData || [];
+    const r2 = data.regression?.r2 || 0;
+    const dataPoints = data.dataPoints || 0;
+    const periodDays = data.periodDays || activePeriod;
+
+    const color = zoneMeta.color;
+    const dirArrow = direction === 'losing' ? '↓' : direction === 'gaining' ? '↑' : '→';
+    const absPct = Math.abs(pctPerWeek);
+    const deltaSign = totalDeltaKg < -0.05 ? '−' : totalDeltaKg > 0.05 ? '+' : '';
+    const deltaAbs = Math.abs(totalDeltaKg);
+
+    const PRESETS = [
+      { days: 7, label: '7 дн.' },
+      { days: 14, label: '14 дн.' },
+      { days: 30, label: '30 дн.' },
+    ];
+
+    const copyLog = async () => {
+      try {
+        const lines = [
+          '=== HEYS Weight Progress Log ===',
+          `Date: ${new Date().toISOString()}`,
+          `Period: ${activePeriod} days`,
+          `Zone: ${zone} (${zoneMeta.label})`,
+          `Direction: ${direction}`,
+          `Rate: ${pctPerWeek >= 0 ? '+' : ''}${pctPerWeek.toFixed(2)}%/week`,
+          `Slope: ${slopePerWeek >= 0 ? '+' : ''}${slopePerWeek.toFixed(3)} kg/week`,
+          `Current Weight: ${currentWeight.toFixed(1)} kg`,
+          firstWeight ? `First Weight (${dataPoints} days ago): ${firstWeight.toFixed(1)} kg` : null,
+          `Total Delta: ${deltaSign}${deltaAbs.toFixed(2)} kg`,
+          `Data: ${dataPoints}/${periodDays} days (${(dataCompleteness * 100).toFixed(0)}%)`,
+          `Trend R²: ${r2.toFixed(3)}`,
+          goalWeight ? `Goal: ${goalWeight} kg (remaining: ${(toGoalKg || 0).toFixed(1)} kg)` : null,
+          estimatedDaysToGoal ? `ETA to Goal: ~${estimatedDaysToGoal} days` : null,
+          `EWS Count: ${ewsCount}`,
+          '',
+          '--- EWS Warnings ---',
+          ...warnings.map((w, i) => `  ${i + 1}. [${w.severity}] ${w.message}`),
+          '',
+          '--- Weight History ---',
+          ...weightData.map(p => `  ${p.date}: ${p.weight.toFixed(1)} kg`),
+          '',
+          '--- Raw Data ---',
+          JSON.stringify(data, null, 2),
+        ].filter(Boolean);
+        await copyTextWithFallback(lines.join('\n'));
+        HEYS.Toast?.success?.('Weight Progress лог скопирован');
+      } catch (err) {
+        console.error('[HEYS.weightProgress.copy] ❌', err);
+        HEYS.Toast?.error?.('Не удалось скопировать лог');
+      }
+    };
+
+    const handleBackdropClick = (e) => {
+      if (e.target === e.currentTarget) onClose?.();
+    };
+
+    return React.createElement('div', {
+      className: 'widget-relapse-risk__modal-overlay',
+      onClick: handleBackdropClick
+    },
+      React.createElement('div', {
+        className: 'widget-relapse-risk__modal',
+        onClick: (e) => e.stopPropagation()
+      },
+        // Header
+        React.createElement('div', { className: 'widget-relapse-risk__modal-header' },
+          React.createElement('div', { className: 'widget-relapse-risk__modal-title-wrap' },
+            React.createElement('div', { className: 'widget-relapse-risk__modal-eyebrow' }, 'Динамика веса'),
+            React.createElement('h3', { className: 'widget-relapse-risk__modal-title' }, 'Прогресс за период')
+          ),
+          React.createElement('button', {
+            type: 'button',
+            className: 'widget-relapse-risk__modal-close',
+            onClick: onClose,
+            'aria-label': 'Закрыть'
+          }, '✕')
+        ),
+
+        React.createElement('div', { className: 'widget-relapse-risk__modal-content' },
+
+          // Period preset switcher
+          React.createElement('div', {
+            style: { display: 'flex', gap: '8px', justifyContent: 'center', marginBottom: '12px' }
+          },
+            PRESETS.map(({ days, label }) =>
+              React.createElement('button', {
+                key: days,
+                type: 'button',
+                onClick: () => { setActivePeriod(days); onPeriodChange?.(days); },
+                style: {
+                  padding: '5px 14px',
+                  borderRadius: '99px',
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontSize: '0.82rem',
+                  fontWeight: activePeriod === days ? 700 : 400,
+                  background: activePeriod === days ? color : 'var(--heys-bg-secondary, #f1f5f9)',
+                  color: activePeriod === days ? '#fff' : 'var(--heys-text-secondary,#64748b)',
+                  transition: 'all 0.15s',
+                  opacity: loadingPeriod ? 0.6 : 1,
+                }
+              }, label)
+            )
+          ),
+
+          // Hero: rate + zone badge
+          React.createElement('div', { className: 'widget-relapse-risk__modal-hero' },
+            React.createElement('div', {
+              className: 'widget-relapse-risk__modal-score-shell',
+              style: { background: `${color}12`, borderColor: `${color}33`, opacity: loadingPeriod ? 0.5 : 1 }
+            },
+              React.createElement('div', { style: { fontSize: '1.5rem' } }, zoneMeta.emoji),
+              React.createElement('div', {
+                style: { fontSize: '2.5rem', fontWeight: 800, color, lineHeight: 1 }
+              }, `${dirArrow} ${absPct.toFixed(1)}%`),
+              React.createElement('div', {
+                className: 'widget-relapse-risk__modal-score-level',
+                style: { color, background: `${color}16`, borderColor: `${color}26` }
+              }, `${zoneMeta.label} · /неделю`)
+            )
+          ),
+
+          // Zone hint
+          zoneHint && React.createElement('div', { className: 'widget-relapse-risk__modal-section' },
+            React.createElement('div', {
+              style: { fontSize: '0.82rem', color: 'var(--heys-text-secondary,#94a3b8)', lineHeight: 1.5 }
+            }, zoneHint)
+          ),
+
+          // Period summary
+          React.createElement('div', { className: 'widget-relapse-risk__modal-section' },
+            React.createElement('div', { className: 'widget-relapse-risk__modal-section-title' }, 'За период'),
+            React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: '8px' } },
+              React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' } },
+                React.createElement('span', { style: { color: 'var(--heys-text-secondary,#94a3b8)' } }, 'Сейчас'),
+                React.createElement('span', { style: { fontWeight: 600 } }, `${currentWeight.toFixed(1)} кг`)
+              ),
+              firstWeight > 0 && React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' } },
+                React.createElement('span', { style: { color: 'var(--heys-text-secondary,#94a3b8)' } }, `${dataPoints} дн. назад`),
+                React.createElement('span', { style: { fontWeight: 600 } }, `${firstWeight.toFixed(1)} кг`)
+              ),
+              deltaAbs >= 0.05 && React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' } },
+                React.createElement('span', { style: { color: 'var(--heys-text-secondary,#94a3b8)' } }, 'Итого изменение'),
+                React.createElement('span', { style: { fontWeight: 600, color } }, `${deltaSign}${deltaAbs.toFixed(2)} кг`)
+              ),
+              React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' } },
+                React.createElement('span', { style: { color: 'var(--heys-text-secondary,#94a3b8)' } }, 'Темп'),
+                React.createElement('span', { style: { fontWeight: 600 } },
+                  `${slopePerWeek >= 0 ? '+' : ''}${slopePerWeek.toFixed(2)} кг/нед`
+                )
+              ),
+              React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' } },
+                React.createElement('span', { style: { color: 'var(--heys-text-secondary,#94a3b8)' } }, 'Данных'),
+                React.createElement('span', { style: { fontWeight: 600 } },
+                  `${dataPoints}/${periodDays} дн. (${(dataCompleteness * 100).toFixed(0)}%)`
+                )
+              ),
+              React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' } },
+                React.createElement('span', { style: { color: 'var(--heys-text-secondary,#94a3b8)' } }, 'Качество тренда (R²)'),
+                React.createElement('span', { style: { fontWeight: 600 } }, r2.toFixed(3))
+              )
+            )
+          ),
+
+          // Goal section
+          toGoalKg !== null && React.createElement('div', { className: 'widget-relapse-risk__modal-section' },
+            React.createElement('div', { className: 'widget-relapse-risk__modal-section-title' }, 'Цель'),
+            React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: '8px' } },
+              React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' } },
+                React.createElement('span', { style: { color: 'var(--heys-text-secondary,#94a3b8)' } }, 'Целевой вес'),
+                React.createElement('span', { style: { fontWeight: 600 } }, `${goalWeight} кг`)
+              ),
+              React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' } },
+                React.createElement('span', { style: { color: 'var(--heys-text-secondary,#94a3b8)' } }, 'Осталось'),
+                React.createElement('span', { style: { fontWeight: 600 } }, `${(toGoalKg || 0).toFixed(1)} кг`)
+              ),
+              estimatedDaysToGoal && React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' } },
+                React.createElement('span', { style: { color: 'var(--heys-text-secondary,#94a3b8)' } }, 'Прогноз при текущем темпе'),
+                React.createElement('span', { style: { fontWeight: 600 } }, `~${estimatedDaysToGoal} дней`)
+              )
+            )
+          ),
+
+          // Weight history table (last up to activePeriod entries)
+          weightData.length > 0 && React.createElement('div', { className: 'widget-relapse-risk__modal-section' },
+            React.createElement('div', { className: 'widget-relapse-risk__modal-section-title' }, 'История взвешиваний'),
+            React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: '4px' } },
+              weightData.map((p, i) =>
+                React.createElement('div', {
+                  key: i,
+                  style: { display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: 'var(--heys-text-secondary,#94a3b8)' }
+                },
+                  React.createElement('span', null, p.date),
+                  React.createElement('span', { style: { fontWeight: 600 } }, `${p.weight.toFixed(1)} кг`)
+                )
+              )
+            )
+          ),
+
+          // EWS warnings
+          warnings.length > 0 && React.createElement('div', { className: 'widget-relapse-risk__modal-section' },
+            React.createElement('div', { className: 'widget-relapse-risk__modal-section-title' }, `Предупреждения EWS (${ewsCount})`),
+            React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: '6px' } },
+              warnings.map((w, i) =>
+                React.createElement('div', {
+                  key: i,
+                  style: { display: 'flex', alignItems: 'flex-start', gap: '8px', fontSize: '0.85rem', color: 'var(--heys-text-secondary,#94a3b8)' }
+                },
+                  React.createElement('span', null, getSeverityIcon(w.severity)),
+                  React.createElement('span', null, w.message)
+                )
+              )
+            )
+          ),
+
+          // Copy button
+          React.createElement('div', { style: { display: 'flex', justifyContent: 'center', paddingTop: '16px', paddingBottom: '8px' } },
+            React.createElement('button', {
+              type: 'button',
+              className: 'widget-relapse-risk__modal-copy-btn',
+              onClick: copyLog
+            }, '📋 Скопировать лог')
+          )
+        )
+      )
+    );
+  }
+
+  // === Day Score Details Modal ===
+  function DayScoreDetailsModal({ payload, isOpen, onClose }) {
+    if (!isOpen || !payload) return null;
+
+    const data = payload.data || {};
+    const score = Math.round(Number(data.score) || 0);
+    const level = data.level || 'none';
+    const factorScore = Math.round(Number(data.factorScore) || 0);
+    const subjectiveScore = Math.round(Number(data.subjectiveScore) || 0);
+    const momentumScore = Math.round(Number(data.momentumScore) || 0);
+    const avgMealQuality = data.avgMealQuality != null ? Math.round(Number(data.avgMealQuality)) : null;
+    const breakdown = data.breakdown || {};
+    const statusResult = data.statusResult || {};
+
+    const getColor = (s) => {
+      if (s >= 85) return '#10b981';
+      if (s >= 70) return '#22c55e';
+      if (s >= 50) return '#eab308';
+      if (s >= 30) return '#f97316';
+      return '#ef4444';
+    };
+
+    const getLevelLabel = (lvl) => {
+      switch (lvl) {
+        case 'excellent': return 'Отлично';
+        case 'good': return 'Хорошо';
+        case 'okay': return 'Нормально';
+        case 'low': return 'Слабо';
+        case 'critical': return 'Критично';
+        default: return 'Нет данных';
+      }
+    };
+
+    const color = getColor(score);
+
+    const componentRows = [];
+    if (breakdown.nutrition != null) componentRows.push({ label: '🍽 Питание', value: Math.round(breakdown.nutrition), max: 25 });
+    if (breakdown.water != null) componentRows.push({ label: '💧 Вода', value: Math.round(breakdown.water), max: 15 });
+    if (breakdown.sleep != null) componentRows.push({ label: '😴 Сон', value: Math.round(breakdown.sleep), max: 15 });
+    if (breakdown.activity != null) componentRows.push({ label: '🏃 Активность', value: Math.round(breakdown.activity), max: 10 });
+    if (breakdown.weight != null) componentRows.push({ label: '⚖️ Вес', value: Math.round(breakdown.weight), max: 5 });
+
+    const layerRows = [
+      { label: 'Факторы (70%)', value: factorScore, color: getColor(factorScore) },
+      { label: 'Субъективная (15%)', value: subjectiveScore, color: getColor(subjectiveScore) },
+      { label: 'Momentum (15%)', value: momentumScore, color: getColor(momentumScore) }
+    ];
+
+    const copyDayScoreLog = async () => {
+      try {
+        const lines = [
+          '=== HEYS Day Score Log ===',
+          `Date: ${new Date().toISOString()}`,
+          `Score: ${score}/100 (${getLevelLabel(level)})`,
+          '',
+          '--- Layers ---',
+          `Factors (70%): ${factorScore}`,
+          `Subjective (15%): ${subjectiveScore}`,
+          `Momentum (15%): ${momentumScore}`,
+          '',
+          '--- Factor Breakdown ---',
+          ...Object.entries(breakdown).map(([k, v]) => `  ${k}: ${typeof v === 'number' ? Math.round(v) : v}`),
+          '',
+          '--- Status Result ---',
+          JSON.stringify(statusResult, null, 2),
+          '',
+          `avgMealQuality: ${avgMealQuality ?? 'N/A'}`,
+          '',
+          '--- Raw Payload ---',
+          JSON.stringify(data, null, 2)
+        ];
+        await copyTextWithFallback(lines.join('\n'));
+        HEYS.Toast?.success?.('Day Score лог скопирован');
+      } catch (err) {
+        console.error('[HEYS.dayScore.copy] ❌', err);
+        HEYS.Toast?.error?.('Не удалось скопировать лог');
+      }
+    };
+
+    const handleBackdropClick = (e) => {
+      if (e.target === e.currentTarget) onClose?.();
+    };
+
+    return React.createElement('div', {
+      className: 'widget-relapse-risk__modal-overlay',
+      onClick: handleBackdropClick
+    },
+      React.createElement('div', {
+        className: 'widget-relapse-risk__modal',
+        onClick: (e) => e.stopPropagation()
+      },
+        // Header
+        React.createElement('div', { className: 'widget-relapse-risk__modal-header' },
+          React.createElement('div', { className: 'widget-relapse-risk__modal-title-wrap' },
+            React.createElement('div', { className: 'widget-relapse-risk__modal-eyebrow' }, 'Day Score'),
+            React.createElement('h3', { className: 'widget-relapse-risk__modal-title' }, 'Как сложился день')
+          ),
+          React.createElement('button', {
+            type: 'button',
+            className: 'widget-relapse-risk__modal-close',
+            onClick: onClose,
+            'aria-label': 'Закрыть'
+          }, '✕')
+        ),
+        // Content
+        React.createElement('div', { className: 'widget-relapse-risk__modal-content' },
+          // Hero — Score
+          React.createElement('div', { className: 'widget-relapse-risk__modal-hero' },
+            React.createElement('div', {
+              className: 'widget-relapse-risk__modal-score-shell',
+              style: { background: `${color}12`, borderColor: `${color}33` }
+            },
+              React.createElement('div', {
+                style: { fontSize: '3.5rem', fontWeight: 800, color, lineHeight: 1 }
+              }, score),
+              React.createElement('div', {
+                className: 'widget-relapse-risk__modal-score-level',
+                style: { color, background: `${color}16`, borderColor: `${color}26` }
+              }, `⭐ ${getLevelLabel(level)}`)
+            )
+          ),
+
+          // Layers
+          React.createElement('div', { className: 'widget-relapse-risk__modal-section' },
+            React.createElement('div', { className: 'widget-relapse-risk__modal-section-title' }, 'Слои оценки'),
+            React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: '8px' } },
+              layerRows.map((row, i) =>
+                React.createElement('div', { key: i, style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' } },
+                  React.createElement('span', { style: { fontSize: '0.85rem', color: 'var(--heys-text-secondary, #94a3b8)' } }, row.label),
+                  React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '8px' } },
+                    React.createElement('div', {
+                      style: { width: '80px', height: '6px', borderRadius: '3px', background: 'var(--heys-bg-secondary, #1e293b)' }
+                    },
+                      React.createElement('div', {
+                        style: { width: `${Math.min(100, row.value)}%`, height: '100%', borderRadius: '3px', background: row.color, transition: 'width 0.3s ease' }
+                      })
+                    ),
+                    React.createElement('span', { style: { fontSize: '0.85rem', fontWeight: 600, color: row.color, minWidth: '28px', textAlign: 'right' } }, row.value)
+                  )
+                )
+              )
+            )
+          ),
+
+          // Factor breakdown
+          componentRows.length > 0 && React.createElement('div', { className: 'widget-relapse-risk__modal-section' },
+            React.createElement('div', { className: 'widget-relapse-risk__modal-section-title' }, 'Компоненты факторов'),
+            React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: '6px' } },
+              componentRows.map((row, i) =>
+                React.createElement('div', { key: i, style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' } },
+                  React.createElement('span', { style: { fontSize: '0.8rem', color: 'var(--heys-text-secondary, #94a3b8)' } }, row.label),
+                  React.createElement('span', { style: { fontSize: '0.8rem', fontWeight: 600, color: getColor(row.value / row.max * 100) } }, `${row.value}/${row.max}`)
+                )
+              )
+            )
+          ),
+
+          // Average meal quality
+          avgMealQuality != null && React.createElement('div', { className: 'widget-relapse-risk__modal-section' },
+            React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' } },
+              React.createElement('span', { style: { fontSize: '0.85rem', color: 'var(--heys-text-secondary, #94a3b8)' } }, '🍽 Средн. качество приёмов'),
+              React.createElement('span', { style: { fontSize: '0.85rem', fontWeight: 600, color: getColor(avgMealQuality) } }, `${avgMealQuality}/100`)
+            )
+          ),
+
+          // Copy button
+          React.createElement('div', { style: { display: 'flex', justifyContent: 'center', paddingTop: '16px', paddingBottom: '8px' } },
+            React.createElement('button', {
+              type: 'button',
+              className: 'widget-relapse-risk__modal-copy-btn',
+              onClick: copyDayScoreLog
+            }, '📋 Скопировать лог')
+          )
+        )
+      )
+    );
+  }
+
   function RelapseRiskDetailsModal({ payload, isOpen, onClose }) {
     if (!isOpen || !payload) return null;
 
-    const snapshot = payload?.snapshot || {};
+    const [activeSnapshot, setActiveSnapshot] = useState(payload?.snapshot || {});
+    const [selectedProfileKey, setSelectedProfileKey] = useState(() => getRelapseSelectedProfileKey(payload?.snapshot || {}));
+
+    useEffect(() => {
+      setActiveSnapshot(payload?.snapshot || {});
+      setSelectedProfileKey(getRelapseSelectedProfileKey(payload?.snapshot || {}));
+    }, [payload]);
+
+    const snapshot = activeSnapshot || {};
     const result = snapshot?.raw || {};
     const score = Math.round(Number(snapshot?.score ?? result?.score) || 0);
     const level = String(snapshot?.level || result?.level || 'low');
     const confidence = Math.max(0, Math.min(100, Math.round(Number(snapshot?.confidence ?? result?.confidence) || 0)));
+
+    // Risk Radar aggregation: get source + crash component
+    const radarResult = React.useMemo(() => {
+      if (!HEYS.RiskRadar?.calculate) return null;
+      try {
+        const profile = HEYS.Widgets?.data?._getProfile?.() || {};
+        return HEYS.RiskRadar.calculate({ profile });
+      } catch (e) { return null; }
+    }, [payload]);
+    const radarSource = radarResult?.source || 'none';
+    const radarRelapseScore = Math.round(Number(radarResult?.relapse?.score) || score);
+    const radarCrashScore = Math.round(Number(radarResult?.crash?.score) || 0);
+    const radarScore = Math.round(Number(radarResult?.score) || score);
+    const radarDrivers = (radarResult?.drivers || []).map(d => d.label || d.factor || String(d));
+    const radarActions = (radarResult?.actions || []).map(a => a.text || a.label || String(a));
+
+    const getSourceLabel = (src) => {
+      switch (src) {
+        case 'emotional': return 'Эмоциональный (Relapse)';
+        case 'metabolic': return 'Метаболический (Crash)';
+        case 'both': return 'Оба источника';
+        default: return 'Не определён';
+      }
+    };
+
+    const getRadarColor = (s) => {
+      if (s >= 70) return '#ef4444';
+      if (s >= 40) return '#f97316';
+      if (s >= 20) return '#eab308';
+      return '#10b981';
+    };
+
     const windows = getSortedRelapseWindows(result?.windows || snapshot?.windows);
     const drivers = Array.isArray(result?.primaryDrivers) ? result.primaryDrivers : (Array.isArray(snapshot?.primaryDrivers) ? snapshot.primaryDrivers : []);
     const protectiveFactors = Array.isArray(result?.protectiveFactors) ? result.protectiveFactors : (Array.isArray(snapshot?.protectiveFactors) ? snapshot.protectiveFactors : []);
@@ -32813,11 +34713,48 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     const leadWindow = windows[0] || null;
     const leadDriver = drivers[0] || null;
     const topRecommendation = recommendations[0] || null;
+    const devPanelVisible = shouldShowRelapseDevPanel();
+    const profileOptions = getRelapseProfileOptions();
+    const compareItems = Array.isArray(snapshot?.compare?.comparisons) ? snapshot.compare.comparisons : [];
+    const compareBaselineProfileKey = snapshot?.compare?.baselineProfileKey || 'baseline';
+    const profileGuideItems = [
+      {
+        key: 'baseline',
+        title: 'Baseline',
+        text: 'Опорная старая логика. Смотри её, если хочешь понять, насколько v1.1 вообще изменил трактовку дня.'
+      },
+      {
+        key: 'v1_1',
+        title: 'v1.1',
+        text: 'Текущий рекомендуемый дефолт: мягче к контролируемому дефициту и честнее к recovery-факторам.'
+      },
+      {
+        key: 'recovery_sensitive',
+        title: 'Recovery',
+        text: 'Сильнее реагирует на недосып и истощение. Полезно, если кажется, что усталость недооценена.'
+      },
+      {
+        key: 'restriction_sensitive',
+        title: 'Restriction',
+        text: 'Сильнее реагирует на недоедание, gaps и aggressive cut. Полезно для проверки жёстких сценариев.'
+      }
+    ];
+
+    const handleSelectProfile = useCallback((nextProfileKey) => {
+      if (!nextProfileKey || nextProfileKey === selectedProfileKey) return;
+      setSelectedProfileKey(nextProfileKey);
+      setRelapseSelectedProfileKey(nextProfileKey);
+      HEYS.RelapseRisk?.invalidateSnapshot?.();
+      const nextSnapshot = resolveRelapseSnapshot(payload?.widget, nextProfileKey);
+      setActiveSnapshot(nextSnapshot);
+      HEYS.Widgets.data?.refresh?.();
+      HEYS.dayUtils?.haptic?.('light');
+    }, [payload?.widget, selectedProfileKey]);
 
     const copyRelapseLog = async () => {
       const startedAt = Date.now();
       try {
-        const text = formatRelapseRiskTraceForClipboard(payload);
+        const text = formatRelapseRiskTraceForClipboard({ ...payload, snapshot });
         await copyTextWithFallback(text);
         console.info('[HEYS.relapseRisk.copy] ✅ trace copied', {
           chars: text.length,
@@ -32848,10 +34785,11 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         className: 'widget-relapse-risk__modal',
         onClick: (e) => e.stopPropagation()
       },
+        // Header
         React.createElement('div', { className: 'widget-relapse-risk__modal-header' },
           React.createElement('div', { className: 'widget-relapse-risk__modal-title-wrap' },
-            React.createElement('div', { className: 'widget-relapse-risk__modal-eyebrow' }, 'Relapse Risk Score'),
-            React.createElement('h3', { className: 'widget-relapse-risk__modal-title' }, 'Почему риск такой сейчас')
+            React.createElement('div', { className: 'widget-relapse-risk__modal-eyebrow' }, 'Риск-радар'),
+            React.createElement('h3', { className: 'widget-relapse-risk__modal-title' }, 'Текущий риск')
           ),
           React.createElement('button', {
             type: 'button',
@@ -32861,6 +34799,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           }, '✕')
         ),
         React.createElement('div', { className: 'widget-relapse-risk__modal-content' },
+          // 1. Hero: speedometer + level
           React.createElement('div', { className: 'widget-relapse-risk__modal-hero' },
             React.createElement('div', {
               className: 'widget-relapse-risk__modal-score-shell',
@@ -32868,146 +34807,162 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             },
               React.createElement('div', { className: 'widget-relapse-risk__modal-glow' }),
               React.createElement(RelapseRiskSpeedometer, {
-                score,
+                score: radarScore,
                 level,
-                size: 176,
-                label: 'Риск срыва'
+                size: 160,
+                label: 'Риск-радар'
               }),
               React.createElement('div', {
                 className: 'widget-relapse-risk__modal-score-level',
                 style: { color, background: `${color}16`, borderColor: `${color}26` }
               }, getRelapseLevelLabel(level))
-            ),
-            React.createElement('div', { className: 'widget-relapse-risk__modal-summary' },
-              React.createElement('div', { className: 'widget-relapse-risk__modal-summary-intro' },
-                React.createElement('div', { className: 'widget-relapse-risk__modal-summary-kicker' }, 'Текущий snapshot'),
-                React.createElement('div', { className: 'widget-relapse-risk__modal-summary-headline' }, 'Почему система считает риск именно таким'),
-                React.createElement('div', { className: 'widget-relapse-risk__modal-summary-copy' }, humanSummary.headline),
-                React.createElement('div', { className: 'widget-relapse-risk__modal-summary-copy' }, (humanSummary.bullets || []).join(' '))
-              ),
-              React.createElement('div', { className: 'widget-relapse-risk__modal-summary-grid' },
-                React.createElement('div', { className: 'widget-relapse-risk__modal-summary-row' },
-                  React.createElement('span', null, 'Confidence'),
-                  React.createElement('strong', null, `${confidence}%`)
-                ),
-                React.createElement('div', { className: 'widget-relapse-risk__modal-summary-row' },
-                  React.createElement('span', null, 'Пиковое окно'),
-                  React.createElement('strong', null, leadWindow ? `${leadWindow.label} · ${leadWindow.value}%` : '—')
-                ),
-                React.createElement('div', { className: 'widget-relapse-risk__modal-summary-row' },
-                  React.createElement('span', null, 'Главный драйвер'),
-                  React.createElement('strong', null, leadDriver?.label || 'Нет доминирующего драйвера')
-                ),
-                React.createElement('div', { className: 'widget-relapse-risk__modal-summary-row' },
-                  React.createElement('span', null, 'Первый шаг'),
-                  React.createElement('strong', null, topRecommendation?.text || 'Поддерживать стабильный режим')
-                ),
-                React.createElement('div', { className: 'widget-relapse-risk__modal-summary-row' },
-                  React.createElement('span', null, 'Тип паттерна'),
-                  React.createElement('strong', null, getRelapseCutPatternLabel(restrictionDebug?.cutPattern))
-                ),
-                React.createElement('div', { className: 'widget-relapse-risk__modal-summary-row' },
-                  React.createElement('span', null, 'История'),
-                  React.createElement('strong', null, getRelapseHistoryQualityLabel(historyQuality))
-                )
-              ),
-              React.createElement('div', { className: 'widget-relapse-risk__modal-equation' },
-                React.createElement('span', { className: 'widget-relapse-risk__modal-equation-pill' }, 'stress'),
-                React.createElement('span', { className: 'widget-relapse-risk__modal-equation-plus' }, '+'),
-                React.createElement('span', { className: 'widget-relapse-risk__modal-equation-pill' }, 'sleep debt'),
-                React.createElement('span', { className: 'widget-relapse-risk__modal-equation-plus' }, '+'),
-                React.createElement('span', { className: 'widget-relapse-risk__modal-equation-pill' }, 'restriction'),
-                React.createElement('span', { className: 'widget-relapse-risk__modal-equation-plus' }, '+'),
-                React.createElement('span', { className: 'widget-relapse-risk__modal-equation-pill' }, 'reward food'),
-                React.createElement('span', { className: 'widget-relapse-risk__modal-equation-plus' }, '−'),
-                React.createElement('span', { className: 'widget-relapse-risk__modal-equation-pill widget-relapse-risk__modal-equation-pill--good' }, 'protective buffer')
-              )
             )
           ),
-          windows.length > 0 && React.createElement('section', { className: 'widget-relapse-risk__modal-section' },
-            React.createElement('div', { className: 'widget-relapse-risk__modal-section-title' }, 'Окна риска'),
-            React.createElement('div', { className: 'widget-relapse-risk__modal-window-list' },
-              windows.map((windowInfo) => React.createElement('div', {
-                key: windowInfo.key,
-                className: 'widget-relapse-risk__modal-window'
-              },
-                React.createElement('div', { className: 'widget-relapse-risk__modal-window-top' },
-                  React.createElement('span', { className: 'widget-relapse-risk__modal-window-label' }, windowInfo.label),
-                  React.createElement('strong', { className: 'widget-relapse-risk__modal-window-value', style: { color } }, `${windowInfo.value}%`)
-                ),
-                React.createElement('div', { className: 'widget-relapse-risk__modal-window-text' }, windowInfo.description)
-              ))
-            )
-          ),
-          drivers.length > 0 && React.createElement('section', { className: 'widget-relapse-risk__modal-section' },
-            React.createElement('div', { className: 'widget-relapse-risk__modal-section-title' }, 'Что поднимает риск'),
-            React.createElement('div', { className: 'widget-relapse-risk__modal-driver-list' },
-              drivers.map((driver) => React.createElement('div', {
-                key: driver.id || driver.label,
-                className: 'widget-relapse-risk__modal-driver'
-              },
-                React.createElement('div', { className: 'widget-relapse-risk__modal-driver-top' },
-                  React.createElement('span', { className: 'widget-relapse-risk__modal-driver-label' }, driver.label || driver.id),
-                  React.createElement('strong', { className: 'widget-relapse-risk__modal-driver-impact', style: { color } }, `+${Math.round(Number(driver.impact) || 0)}`)
-                ),
-                React.createElement('div', { className: 'widget-relapse-risk__modal-driver-text' }, driver.explanation || 'Фактор повышает вероятность loss-of-control eating.')
-              ))
-            )
-          ),
-          components.length > 0 && React.createElement('section', { className: 'widget-relapse-risk__modal-section' },
-            React.createElement('div', { className: 'widget-relapse-risk__modal-section-title' }, 'Компоненты расчёта'),
-            React.createElement('div', { className: 'widget-relapse-risk__modal-component-list' },
-              components.map((component) => React.createElement('div', {
-                key: component.key,
-                className: 'widget-relapse-risk__modal-component'
-              },
-                React.createElement('div', { className: 'widget-relapse-risk__modal-component-top' },
-                  React.createElement('span', { className: 'widget-relapse-risk__modal-component-label' }, component.label),
-                  React.createElement('strong', { className: 'widget-relapse-risk__modal-component-value' }, `${component.value}/100`)
-                ),
-                React.createElement('div', { className: 'widget-relapse-risk__modal-component-bar' },
+
+          // 2. Short human summary (1-2 sentences)
+          humanSummary.headline && React.createElement('div', {
+            className: 'widget-relapse-risk__modal-note'
+          }, humanSummary.headline),
+
+          // 3. Two components: Relapse vs Crash
+          React.createElement('section', { className: 'widget-relapse-risk__modal-section' },
+            React.createElement('div', { className: 'widget-relapse-risk__modal-section-title' }, 'Из чего складывается'),
+            React.createElement('div', { className: 'widget-relapse-risk__breakdown-list' },
+              // Relapse (emotional)
+              React.createElement('div', { className: 'widget-relapse-risk__breakdown-row' },
+                React.createElement('span', { className: 'widget-relapse-risk__breakdown-label' }, '😰 Эмоциональный'),
+                React.createElement('div', { className: 'widget-relapse-risk__breakdown-track' },
                   React.createElement('div', {
-                    className: 'widget-relapse-risk__modal-component-fill',
-                    style: { width: `${Math.max(0, Math.min(100, component.value))}%`, background: `linear-gradient(90deg, ${gradStart} 0%, ${gradEnd} 100%)` }
+                    style: { width: `${Math.min(100, radarRelapseScore)}%`, height: '100%', borderRadius: '4px', background: getRadarColor(radarRelapseScore), transition: 'width 0.4s ease' }
                   })
                 ),
-                React.createElement('div', { className: 'widget-relapse-risk__modal-component-text' }, component.description)
-              )),
-              React.createElement('div', { className: 'widget-relapse-risk__modal-protective-summary' },
-                React.createElement('span', null, 'Protective buffer'),
-                React.createElement('strong', null, `-${protectiveBuffer}`)
+                React.createElement('span', { className: 'widget-relapse-risk__breakdown-value', style: { color: getRadarColor(radarRelapseScore) } }, radarRelapseScore)
+              ),
+              // Crash (metabolic)
+              React.createElement('div', { className: 'widget-relapse-risk__breakdown-row' },
+                React.createElement('span', { className: 'widget-relapse-risk__breakdown-label' }, '⚡ Метаболический'),
+                React.createElement('div', { className: 'widget-relapse-risk__breakdown-track' },
+                  React.createElement('div', {
+                    style: { width: `${Math.min(100, radarCrashScore)}%`, height: '100%', borderRadius: '4px', background: getRadarColor(radarCrashScore), transition: 'width 0.4s ease' }
+                  })
+                ),
+                React.createElement('span', { className: 'widget-relapse-risk__breakdown-value', style: { color: getRadarColor(radarCrashScore) } }, radarCrashScore)
               )
-            )
+            ),
+            React.createElement('div', { className: 'widget-relapse-risk__breakdown-formula' }, `Итог = max(${radarRelapseScore}, ${radarCrashScore}) = ${radarScore} · ${getSourceLabel(radarSource).toLowerCase()}`)
           ),
-          protectiveFactors.length > 0 && React.createElement('section', { className: 'widget-relapse-risk__modal-section' },
-            React.createElement('div', { className: 'widget-relapse-risk__modal-section-title' }, 'Что сейчас защищает'),
-            React.createElement('div', { className: 'widget-relapse-risk__modal-protective-list' },
-              protectiveFactors.map((factor) => React.createElement('div', {
-                key: factor.id || factor.label,
-                className: 'widget-relapse-risk__modal-protective'
+
+          // 4. What's driving risk + protective factors (compact chips)
+          (drivers.length > 0 || protectiveFactors.length > 0) && React.createElement('section', { className: 'widget-relapse-risk__modal-section' },
+            React.createElement('div', { className: 'widget-relapse-risk__modal-section-title' }, 'Что сейчас влияет'),
+            React.createElement('div', { className: 'widget-relapse-risk__impact-chips' },
+              drivers.slice(0, 3).map((driver) => React.createElement('div', {
+                key: driver.id || driver.label,
+                className: 'widget-relapse-risk__impact-chip widget-relapse-risk__impact-chip--up',
+                style: {
+                  '--chip-accent': getRadarColor(Math.round(Number(driver.impact) || 0) > 10 ? 60 : 30),
+                  '--chip-bg': `${getRadarColor(Math.round(Number(driver.impact) || 0) > 10 ? 60 : 30)}12`,
+                  '--chip-border': `${getRadarColor(Math.round(Number(driver.impact) || 0) > 10 ? 60 : 30)}24`
+                }
               },
-                React.createElement('span', { className: 'widget-relapse-risk__modal-protective-label' }, factor.label || factor.id),
-                React.createElement('span', { className: 'widget-relapse-risk__modal-protective-text' }, factor.explanation || 'Этот фактор немного стабилизирует риск.')
+                React.createElement('span', { className: 'widget-relapse-risk__impact-chip-icon' }, '▲'),
+                React.createElement('span', null, driver.label || driver.id)
+              )),
+              protectiveFactors.slice(0, 2).map((factor) => React.createElement('div', {
+                key: factor.id || factor.label,
+                className: 'widget-relapse-risk__impact-chip widget-relapse-risk__impact-chip--down',
+                style: {
+                  '--chip-accent': '#10b981',
+                  '--chip-bg': '#10b98112',
+                  '--chip-border': '#10b98124'
+                }
+              },
+                React.createElement('span', { className: 'widget-relapse-risk__impact-chip-icon' }, '▼'),
+                React.createElement('span', null, factor.label || factor.id)
               ))
             )
           ),
-          recommendations.length > 0 && React.createElement('section', { className: 'widget-relapse-risk__modal-section' },
-            React.createElement('div', { className: 'widget-relapse-risk__modal-section-title' }, 'Что сделать сейчас'),
-            React.createElement('div', { className: 'widget-relapse-risk__modal-recommendations' },
-              recommendations.slice(0, 3).map((rec) => React.createElement('div', {
-                key: rec.id || rec.text,
-                className: 'widget-relapse-risk__modal-recommendation'
-              }, rec.text))
+
+          // 5. Risk windows (compact bars)
+          windows.length > 0 && React.createElement('section', { className: 'widget-relapse-risk__modal-section' },
+            React.createElement('div', { className: 'widget-relapse-risk__modal-section-title' }, 'Когда выше'),
+            React.createElement('div', { className: 'widget-relapse-risk__windows-list' },
+              windows.map((w) => React.createElement('div', {
+                key: w.key,
+                className: 'widget-relapse-risk__window-row'
+              },
+                React.createElement('span', { className: 'widget-relapse-risk__window-row-label' }, w.label),
+                React.createElement('div', { className: 'widget-relapse-risk__window-row-track' },
+                  React.createElement('div', {
+                    style: { width: `${Math.min(100, w.value)}%`, height: '100%', borderRadius: '3px', background: `linear-gradient(90deg, ${gradStart}, ${gradEnd})`, transition: 'width 0.3s ease' }
+                  })
+                ),
+                React.createElement('span', { className: 'widget-relapse-risk__window-row-value', style: { color } }, `${w.value}%`)
+              ))
             )
           ),
-          React.createElement('section', { className: 'widget-relapse-risk__modal-tech-actions' },
-            React.createElement('button', {
-              type: 'button',
-              className: 'widget-relapse-risk__modal-copy-btn',
-              onClick: copyRelapseLog,
-              title: 'Скопировать технический лог со всеми расчётами Relapse Risk Score'
-            }, 'Скопировать техлог расчёта')
+
+          // 6. What to do (1-2 recommendations)
+          recommendations.length > 0 && React.createElement('section', { className: 'widget-relapse-risk__modal-section' },
+            React.createElement('div', { className: 'widget-relapse-risk__modal-section-title' }, 'Что делать'),
+            React.createElement('div', { className: 'widget-relapse-risk__action-list' },
+              recommendations.slice(0, 2).map((rec) => React.createElement('div', {
+                key: rec.id || rec.text,
+                className: 'widget-relapse-risk__action-card'
+              },
+                React.createElement('span', { className: 'widget-relapse-risk__action-icon' }, '→'),
+                React.createElement('span', { className: 'widget-relapse-risk__action-text' }, rec.text)
+              ))
+            )
+          ),
+
+          // 7. Dev panel (only for power users)
+          devPanelVisible && profileOptions.length > 1 && React.createElement('section', { className: 'widget-relapse-risk__modal-section widget-relapse-risk__dev-panel' },
+            React.createElement('details', { className: 'widget-relapse-risk__dev-disclosure' },
+              React.createElement('summary', { className: 'widget-relapse-risk__dev-disclosure-summary' }, 'A/B профили · internal'),
+              React.createElement('div', { className: 'widget-relapse-risk__dev-disclosure-body' },
+                React.createElement('div', { className: 'widget-relapse-risk__dev-copy' }, 'Переключай веса модели и смотри, как меняется score.'),
+                React.createElement('div', { className: 'widget-relapse-risk__dev-toggle' },
+                  profileOptions.map((profileOption) => React.createElement('button', {
+                    key: profileOption.key,
+                    type: 'button',
+                    className: `widget-relapse-risk__dev-toggle-btn ${selectedProfileKey === profileOption.key ? 'is-active' : ''}`,
+                    onClick: () => handleSelectProfile(profileOption.key)
+                  },
+                    React.createElement('span', { className: 'widget-relapse-risk__dev-toggle-label' }, profileOption.label),
+                    React.createElement('span', { className: 'widget-relapse-risk__dev-toggle-key' }, profileOption.key)
+                  ))
+                ),
+                compareItems.length > 0 && React.createElement('div', { className: 'widget-relapse-risk__dev-compare-grid' },
+                  compareItems.map((item) => React.createElement('div', {
+                    key: item.profileKey,
+                    className: `widget-relapse-risk__dev-compare-card widget-relapse-risk__dev-compare-card--${item.level || 'low'} ${selectedProfileKey === item.profileKey ? 'is-active' : ''}`
+                  },
+                    React.createElement('div', { className: 'widget-relapse-risk__dev-compare-top' },
+                      React.createElement('span', { className: 'widget-relapse-risk__dev-compare-label' }, item.label || item.profileKey),
+                      React.createElement('span', { className: 'widget-relapse-risk__dev-compare-score' }, `${Math.round(Number(item.score) || 0)}%`)
+                    ),
+                    React.createElement('div', { className: 'widget-relapse-risk__dev-compare-meta' },
+                      React.createElement('span', { className: 'widget-relapse-risk__dev-compare-pill' }, getRelapseLevelLabel(item.level || 'low')),
+                      React.createElement('span', { className: 'widget-relapse-risk__dev-compare-delta' },
+                        item.profileKey === compareBaselineProfileKey
+                          ? 'baseline'
+                          : `${Number(item.deltaVsBaseline) > 0 ? '+' : ''}${Math.round(Number(item.deltaVsBaseline) || 0)} vs baseline`
+                      )
+                    )
+                  ))
+                )
+              )
+            )
           )
+        ),
+        React.createElement('section', { className: 'widget-relapse-risk__modal-tech-actions' },
+          React.createElement('button', {
+            type: 'button',
+            className: 'widget-relapse-risk__modal-copy-btn',
+            onClick: copyRelapseLog,
+            title: 'Скопировать полный технический лог'
+          }, '📋 Скопировать техлог')
         )
       )
     );
@@ -33107,10 +35062,20 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
     useEffect(() => {
       if (widget) {
-        setSettings({ ...widget.settings });
-        setSelectedSize(widget.size || '2x2');
+        const allowedSizes = Array.isArray(widgetType?.availableSizes) ? widgetType.availableSizes : [];
+        const normalizedSize = allowedSizes.includes(widget.size)
+          ? widget.size
+          : (widgetType?.defaultSize || allowedSizes[0] || widget.size || '2x2');
+
+        const normalizedSettings = { ...widget.settings };
+        if (widgetType?.type === 'heatmap' && normalizedSettings.period === 'month') {
+          normalizedSettings.period = 'week';
+        }
+
+        setSettings(normalizedSettings);
+        setSelectedSize(normalizedSize);
       }
-    }, [widget]);
+    }, [widget, widgetType]);
 
     const previewWidget = useMemo(() => ({ ...widget, settings, size: selectedSize }), [widget, settings, selectedSize]);
 
@@ -33179,11 +35144,12 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           ),
 
           // Custom settings — если задан settingsBySize, используем настройки для текущего размера
-          Object.entries(
-            widgetType.settingsBySize
-              ? (widgetType.settingsBySize[selectedSize] || {})
-              : (widgetType.settings || {})
-          ).map(([key, def]) =>
+          Object.entries((() => {
+            const sizeSpecificSettings = widgetType.settingsBySize?.[selectedSize];
+            return sizeSpecificSettings !== undefined
+              ? sizeSpecificSettings
+              : (widgetType.settings || {});
+          })()).map(([key, def]) =>
             React.createElement('div', { key, className: 'widgets-settings__field' },
               React.createElement('label', null, def.label),
               def.type === 'boolean' ?
@@ -33206,7 +35172,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                       onChange: e => handleChange(key, e.target.value)
                     },
                       def.options.map(opt =>
-                        React.createElement('option', { key: opt.value, value: opt.value }, opt.label)
+                        React.createElement('option', { key: opt.value, value: opt.value, disabled: !!opt.disabled }, opt.label)
                       )
                     ) :
                     null
@@ -33236,6 +35202,9 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     const [catalogOpen, setCatalogOpen] = useState(false);
     const [settingsWidget, setSettingsWidget] = useState(null);
     const [relapseDetails, setRelapseDetails] = useState(null);
+    const [dayScoreDetails, setDayScoreDetails] = useState(null);
+    const [statusDetails, setStatusDetails] = useState(null);
+    const [crashRiskDetails, setCrashRiskDetails] = useState(null);
     const [historyInfo, setHistoryInfo] = useState({ canUndo: false, canRedo: false });
     const [waterAnim, setWaterAnim] = useState(null); // { text: '+200мл', id: 123 } или null
     const [showGridOverlay, setShowGridOverlay] = useState(false); // Grid overlay toggle
@@ -33424,56 +35393,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     const openRelapseDetails = useCallback((widget) => {
       if (!widget || widget.type !== 'relapseRisk') return;
       try {
-        let snapshot = HEYS.Widgets.data?.getDataForWidget?.(widget) || {};
-
-        // Если провайдер вернул пустой или неполный результат (нет raw = нет engine result),
-        // вызываем движок напрямую как fallback
-        if (!snapshot?.raw && HEYS.RelapseRisk?.calculate) {
-          console.info('[HEYS.relapseRisk] provider returned no raw result, calling engine directly');
-          try {
-            const U = HEYS.utils || {};
-            const lsGet = typeof U?.lsGet === 'function' ? U.lsGet.bind(U) : ((k, fb) => fb);
-            const dayData = HEYS.DayData?.getCurrentDay?.() || {};
-            const profile = lsGet('heys_profile', {});
-            const dayTot = HEYS.DayData?.getDayTot?.(dayData) || {};
-            const normAbs = HEYS.norms?.getNormAbs?.(profile, profile?.pIndex || 0) || {};
-            const historyDays = [];
-            for (let i = 13; i >= 0; i--) {
-              const d = new Date();
-              d.setDate(d.getDate() - i);
-              const dateStr = d.toISOString().split('T')[0];
-              const day = lsGet(`heys_dayv2_${dateStr}`, null);
-              if (day && typeof day === 'object' && Object.keys(day).length > 0) {
-                historyDays.push({ date: dateStr, ...day, dayTot: HEYS.DayData?.getDayTot?.(day) || day.dayTot || {} });
-              }
-            }
-            const result = HEYS.RelapseRisk.calculate({
-              dayData, profile, dayTot, normAbs, historyDays,
-              now: new Date().toISOString()
-            });
-            snapshot = {
-              hasData: true,
-              score: Math.round(Number(result?.score) || 0),
-              level: result?.level || 'low',
-              confidence: Math.round(Number(result?.confidence) || 0),
-              primaryDrivers: Array.isArray(result?.primaryDrivers) ? result.primaryDrivers : [],
-              protectiveFactors: Array.isArray(result?.protectiveFactors) ? result.protectiveFactors : [],
-              windows: result?.windows || {},
-              recommendations: Array.isArray(result?.recommendations) ? result.recommendations : [],
-              raw: result,
-              _fallbackSource: 'modal_direct_engine'
-            };
-            console.info('[HEYS.relapseRisk] ✅ direct engine fallback succeeded', {
-              score: snapshot.score,
-              level: snapshot.level,
-              confidence: snapshot.confidence,
-              drivers: snapshot.primaryDrivers?.length,
-              historyDays: historyDays.length
-            });
-          } catch (fallbackErr) {
-            console.warn('[HEYS.relapseRisk] direct engine fallback failed:', fallbackErr?.message);
-          }
-        }
+        const snapshot = resolveRelapseSnapshot(widget, getRelapseSelectedProfileKey());
 
         setRelapseDetails({ widget, snapshot, openedAt: Date.now() });
         HEYS.dayUtils?.haptic?.('light');
@@ -33482,6 +35402,45 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           widgetId: widget?.id,
           widgetType: widget?.type,
           message: e?.message
+        });
+      }
+    }, []);
+
+    const openDayScoreDetails = useCallback((widget) => {
+      if (!widget || widget.type !== 'dayScore') return;
+      try {
+        const data = HEYS.Widgets.data?.getDataForWidget?.(widget) || {};
+        setDayScoreDetails({ widget, data, openedAt: Date.now() });
+        HEYS.dayUtils?.haptic?.('light');
+      } catch (e) {
+        trackWidgetIssue('widgets_dayscore_modal_open_failed', {
+          widgetId: widget?.id, message: e?.message
+        });
+      }
+    }, []);
+
+    const openStatusDetails = useCallback((widget) => {
+      if (!widget || widget.type !== 'status') return;
+      try {
+        const data = HEYS.Widgets.data?.getDataForWidget?.(widget) || {};
+        setStatusDetails({ widget, data, openedAt: Date.now() });
+        HEYS.dayUtils?.haptic?.('light');
+      } catch (e) {
+        trackWidgetIssue('widgets_status_modal_open_failed', {
+          widgetId: widget?.id, message: e?.message
+        });
+      }
+    }, []);
+
+    const openCrashRiskDetails = useCallback((widget) => {
+      if (!widget || widget.type !== 'crashRisk') return;
+      try {
+        const data = HEYS.Widgets.data?.getDataForWidget?.(widget) || {};
+        setCrashRiskDetails({ widget, data, openedAt: Date.now() });
+        HEYS.dayUtils?.haptic?.('light');
+      } catch (e) {
+        trackWidgetIssue('widgets_crashrisk_modal_open_failed', {
+          widgetId: widget?.id, message: e?.message
         });
       }
     }, []);
@@ -33510,13 +35469,19 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         if (isEditMode || !widget) return;
         if (widget.type === 'relapseRisk') {
           openRelapseDetails(widget);
+        } else if (widget.type === 'dayScore') {
+          openDayScoreDetails(widget);
+        } else if (widget.type === 'status') {
+          openStatusDetails(widget);
+        } else if (widget.type === 'crashRisk') {
+          openCrashRiskDetails(widget);
         }
       });
 
       return () => {
         unsubWidgetClick?.();
       };
-    }, [isEditMode, openRelapseDetails]);
+    }, [isEditMode, openRelapseDetails, openDayScoreDetails, openStatusDetails, openCrashRiskDetails]);
 
     // Toggle edit mode
     const toggleEdit = useCallback(() => {
@@ -33823,6 +35788,26 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         isOpen: !!relapseDetails,
         onClose: () => setRelapseDetails(null)
       }),
+      React.createElement(DayScoreDetailsModal, {
+        payload: dayScoreDetails,
+        isOpen: !!dayScoreDetails,
+        onClose: () => setDayScoreDetails(null)
+      }),
+      React.createElement(StatusDetailsModal, {
+        payload: statusDetails,
+        isOpen: !!statusDetails,
+        onClose: () => setStatusDetails(null)
+      }),
+      React.createElement(CrashRiskDetailsModal, {
+        payload: crashRiskDetails,
+        isOpen: !!crashRiskDetails,
+        onClose: () => setCrashRiskDetails(null),
+        onPeriodChange: (newPeriod) => {
+          const w = crashRiskDetails?.widget;
+          if (!w) return;
+          HEYS.Widgets.state?.updateWidget(w.id, { settings: { ...(w.settings || {}), periodDays: newPeriod } }, true);
+        }
+      }),
 
       // === Fixed bottom edit controls (для всех устройств) ===
       React.createElement('div', { className: 'widgets-edit-controls' },
@@ -33901,6 +35886,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
   HEYS.Widgets.WidgetCard = WidgetCard;
   HEYS.Widgets.CatalogModal = CatalogModal;
   HEYS.Widgets.SettingsModal = SettingsModal;
+  HEYS.Widgets.RelapseRiskDetailsModal = RelapseRiskDetailsModal;
 
   if (widgetsDebugEnabled() && widgetsOnce('widgets_ui_loaded')) {
     trackWidgetIssue('widgets_ui_loaded', { version: '1.1.0' });

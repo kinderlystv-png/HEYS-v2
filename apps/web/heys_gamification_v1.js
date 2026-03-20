@@ -5979,10 +5979,13 @@
       }
     });
 
+    // perf: defer на следующий tick — не блокируем main thread в момент day-updated события
     window.addEventListener('heys:day-updated', () => {
-      if (HEYS.game?.recalculateDailyMissionsProgress) {
-        HEYS.game.recalculateDailyMissionsProgress();
-      }
+      setTimeout(() => {
+        if (HEYS.game?.recalculateDailyMissionsProgress) {
+          HEYS.game.recalculateDailyMissionsProgress();
+        }
+      }, 0);
     });
   }
 

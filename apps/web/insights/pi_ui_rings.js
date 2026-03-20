@@ -129,7 +129,7 @@
   /**
    * Total Health Score — большое центральное кольцо (v2.0: с InfoButton)
    */
-  function TotalHealthRing({ score, label = 'Health Score', size = 120, strokeWidth = 20, debugData, onClick }) {
+  function TotalHealthRing({ score, label = 'Trend Score', size = 120, strokeWidth = 20, debugData, onClick }) {
     const radius = (size - strokeWidth) / 2;
     const circumference = 2 * Math.PI * radius;
     const progress = Math.min(100, Math.max(0, score || 0));

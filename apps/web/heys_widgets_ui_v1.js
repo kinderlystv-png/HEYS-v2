@@ -974,6 +974,21 @@
       // Подписка на события обновления данных
       const unsubData = HEYS.Widgets.on?.('data:updated', loadData);
 
+      // Подписка на изменение настроек виджета (напр. смена periodDays через модалку)
+      const unsubSettings = HEYS.Widgets.on?.('widget:settings', ({ widget: updatedWidget }) => {
+        if (updatedWidget?.id !== widget.id) return;
+        try {
+          const newData = HEYS.Widgets.data?.getDataForWidget?.(updatedWidget) || {};
+          setData(prev => {
+            const prevKeys = Object.keys(prev);
+            const newKeys = Object.keys(newData);
+            if (prevKeys.length === newKeys.length && prevKeys.every(k => prev[k] === newData[k])) return prev;
+            return newData;
+          });
+          setError(null);
+        } catch (e) { /* ignore */ }
+      });
+
       // Подписка на глобальные события HEYS (water:added НЕ включаем — обрабатывается оптимистично через heysWaterAdded DOM event)
       const heysEvents = ['day:updated', 'meal:added', 'profile:updated'];
       heysEvents.forEach(evt => {
@@ -1003,6 +1018,7 @@
 
       return () => {
         unsubData?.();
+        unsubSettings?.();
         heysEvents.forEach(evt => {
           if (typeof HEYS.events?.off === 'function') {
             HEYS.events.off(evt, loadData);
@@ -1028,6 +1044,8 @@
 
     // Render based on widget type
     switch (widget.type) {
+      case 'dayScore':
+        return React.createElement(DayScoreWidgetContent, { widget, data });
       case 'status':
         return React.createElement(StatusWidgetContent, { widget, data });
       case 'calories':
@@ -1063,6 +1081,77 @@
   }
 
   // === Individual Widget Content Components ===
+
+  // === Day Score Widget Content (Оценка дня 0-100) ===
+  function DayScoreWidgetContent({ widget, data }) {
+    const d = getWidgetDims(widget);
+    const score = data?.score ?? 0;
+    const level = data?.level ?? 'none';
+    const hasData = data?.hasData ?? false;
+    const showLevel = widget.settings?.showLevel !== false;
+
+    const getColor = () => {
+      if (score >= 85) return '#10b981';
+      if (score >= 70) return '#22c55e';
+      if (score >= 50) return '#eab308';
+      if (score >= 30) return '#f97316';
+      return '#ef4444';
+    };
+
+    const getLevelLabel = () => {
+      switch (level) {
+        case 'excellent': return 'Отлично';
+        case 'good': return 'Хорошо';
+        case 'okay': return 'Нормально';
+        case 'low': return 'Слабо';
+        case 'critical': return 'Критично';
+        default: return 'Нет данных';
+      }
+    };
+
+    if (!hasData) {
+      return React.createElement('div', { className: 'widget-day-score widget-day-score--no-data' },
+        React.createElement('div', { className: 'widget-day-score__icon' }, '⭐'),
+        React.createElement('div', { className: 'widget-day-score__message' }, 'Заполните день')
+      );
+    }
+
+    // 1x1 Micro
+    if (d.isMicro) {
+      return React.createElement('div', { className: 'widget-day-score widget-day-score--micro' },
+        React.createElement('div', {
+          className: 'widget-day-score__score',
+          style: { color: getColor(), fontSize: '1.5rem', fontWeight: 700 }
+        }, Math.round(score))
+      );
+    }
+
+    // Standard 2x2+
+    return React.createElement('div', { className: 'widget-day-score widget-day-score--standard' },
+      React.createElement('div', {
+        className: 'widget-day-score__score-big',
+        style: { color: getColor(), fontSize: '2.5rem', fontWeight: 800, lineHeight: 1 }
+      }, Math.round(score)),
+      showLevel
+        ? React.createElement('div', {
+          className: 'widget-day-score__label',
+          style: { fontSize: '0.75rem', color: 'var(--heys-text-secondary, #94a3b8)', marginTop: '2px' }
+        }, getLevelLabel())
+        : null,
+      widget.settings?.showBreakdown !== false && data.factorScore != null
+        ? React.createElement('div', {
+          className: 'widget-day-score__breakdown',
+          style: { fontSize: '0.65rem', color: 'var(--heys-text-tertiary, #64748b)', marginTop: '6px', lineHeight: 1.3 }
+        },
+          React.createElement('span', null, `Факторы ${Math.round(data.factorScore)}`),
+          React.createElement('span', null, ' · '),
+          React.createElement('span', null, `Субъективная ${Math.round(data.subjectiveScore)}`),
+          React.createElement('span', null, ' · '),
+          React.createElement('span', null, `Momentum ${Math.round(data.momentumScore)}`)
+        )
+        : null
+    );
+  }
 
   // === Status Widget Content (Статус 0-100) ===
   function StatusWidgetContent({ widget, data }) {
@@ -1324,6 +1413,14 @@
     const d = getWidgetDims(widget);
     const size = widget?.size || '2x2';
     const variant = d.isMicro ? 'micro' : d.isShort ? 'short' : 'std';
+    const showMilliliters = widget.settings?.showMilliliters !== false;
+    const showGlasses = widget.settings?.showGlasses === true;
+    const showProgress = widget.settings?.showProgress !== false;
+    const showPercentage = widget.settings?.showPercentage !== false;
+    const showRemaining = widget.settings?.showRemaining !== false;
+    const primaryValue = showMilliliters || !showGlasses
+      ? `${drunk}${d.isMicro ? '' : ' мл'}`
+      : `${glasses}${d.isMicro ? '🥛' : ' 🥛'}`;
 
     const getWaterColor = () => {
       if (pct >= 100) return '#22c55e';
@@ -1336,9 +1433,7 @@
     if (d.isMicro) {
       return React.createElement('div', { className: 'widget-water widget-water--micro' },
         React.createElement('div', { className: 'widget-micro__label' }, '💧'),
-        React.createElement('div', { className: 'widget-water__value' },
-          widget.settings?.showGlasses ? `${glasses}🥛` : `${drunk}`
-        )
+        React.createElement('div', { className: 'widget-water__value' }, primaryValue)
       );
     }
 
@@ -1351,43 +1446,51 @@
           React.createElement('div', { className: 'widget-water__icon' }, '💧'),
           React.createElement('div', { className: 'widget-water__main' },
             React.createElement('div', { className: 'widget-water__value widget-water__value--lg' },
-              `${drunk}`,
-              React.createElement('span', { className: 'widget-water__unit' }, 'мл')
+              showMilliliters || !showGlasses ? `${drunk}` : `${glasses}`,
+              React.createElement('span', { className: 'widget-water__unit' }, showMilliliters || !showGlasses ? 'мл' : '🥛')
             )
           ),
-          React.createElement('div', { className: 'widget-water__pct-badge', style: { background: `${waterColor}20`, color: waterColor } },
-            `${pct}%`
-          )
+          showPercentage
+            ? React.createElement('div', { className: 'widget-water__pct-badge', style: { background: `${waterColor}20`, color: waterColor } },
+              `${pct}%`
+            )
+            : null
         ),
         // Прогресс-бар
-        React.createElement('div', { className: 'widget-water__progress' },
-          React.createElement('div', {
-            className: 'widget-water__bar',
-            style: { width: `${Math.min(100, pct)}%`, background: waterColor }
-          })
-        ),
+        showProgress
+          ? React.createElement('div', { className: 'widget-water__progress' },
+            React.createElement('div', {
+              className: 'widget-water__bar',
+              style: { width: `${Math.min(100, pct)}%`, background: waterColor }
+            })
+          )
+          : null,
         // Низ: цель + стаканы + осталось
         React.createElement('div', { className: 'widget-water__footer' },
-          React.createElement('div', { className: 'widget-water__meta' },
-            React.createElement('span', { className: 'widget-water__glasses' }, `${glasses} 🥛`)
-          ),
-          remaining > 0 && React.createElement('div', { className: 'widget-water__meta widget-water__meta--muted' },
-            `ещё ${remaining} мл`
-          )
+          showGlasses
+            ? React.createElement('div', { className: 'widget-water__meta' },
+              React.createElement('span', { className: 'widget-water__glasses' }, `${glasses} 🥛`)
+            )
+            : null,
+          showRemaining && remaining > 0
+            ? React.createElement('div', { className: 'widget-water__meta widget-water__meta--muted' },
+              `ещё ${remaining} мл`
+            )
+            : null
         )
       );
     }
 
     // Остальные размеры — стандартный layout
-    const showProgress = true;
-    const showPctPill = !d.isTiny;
+    const showPctPill = showPercentage && !d.isTiny;
 
     return React.createElement('div', { className: `widget-water widget-water--${variant}` },
       React.createElement('div', { className: 'widget-water__top' },
-        React.createElement('div', { className: 'widget-water__value' },
-          widget.settings?.showGlasses ? `${glasses} 🥛` : `${drunk} мл`
-        )
+        React.createElement('div', { className: 'widget-water__value' }, primaryValue)
       ),
+      showGlasses && showMilliliters
+        ? React.createElement('div', { className: 'widget-water__label' }, `${glasses} 🥛`)
+        : null,
       showProgress
         ? React.createElement('div', { className: 'widget-water__progress' },
           React.createElement('div', {
@@ -1410,6 +1513,9 @@
     const d = getWidgetDims(widget);
     const size = widget?.size || '2x2';
     const variant = d.isMicro ? 'micro' : d.isShort ? 'short' : 'std';
+    const showTarget = widget.settings?.showTarget !== false;
+    const showQuality = widget.settings?.showQuality !== false && !!quality && !d.isTiny;
+    const showTimes = widget.settings?.showTimes !== false && (!!sleepStart || !!sleepEnd);
 
     const pct = target > 0 ? Math.round((hours / target) * 100) : 0;
 
@@ -1452,28 +1558,28 @@
           )
         ),
         // Время: заснул → проснулся
-        (sleepStart || sleepEnd) && React.createElement('div', { className: 'widget-sleep__times' },
+        showTimes && React.createElement('div', { className: 'widget-sleep__times' },
           sleepStart && React.createElement('span', { className: 'widget-sleep__time' }, `🌙 ${sleepStart}`),
           sleepEnd && React.createElement('span', { className: 'widget-sleep__time' }, `☀️ ${sleepEnd}`)
         ),
         // Низ: качество + цель
         React.createElement('div', { className: 'widget-sleep__footer' },
-          quality && React.createElement('div', { className: 'widget-sleep__quality-badge' },
+          showQuality && React.createElement('div', { className: 'widget-sleep__quality-badge' },
             `⭐ ${quality}/10`
           ),
-          React.createElement('div', { className: 'widget-sleep__target' },
-            `Цель: ${target}ч`
-          )
+          showTarget
+            ? React.createElement('div', { className: 'widget-sleep__target' },
+              `Цель: ${target}ч`
+            )
+            : null
         )
       );
     }
 
     // Остальные размеры
-    const showTarget = widget.settings?.showTarget !== false;
-    const showQuality = widget.settings?.showQuality !== false && !!quality && !d.isTiny;
-
     return React.createElement('div', { className: `widget-sleep widget-sleep--${variant}` },
       React.createElement('div', { className: 'widget-sleep__value' }, `${hours.toFixed(1)}ч ${getEmoji()}`),
+      showTimes ? React.createElement('div', { className: 'widget-sleep__label' }, [sleepStart, sleepEnd].filter(Boolean).join(' → ')) : null,
       showTarget ? React.createElement('div', { className: 'widget-sleep__label' }, `из ${target}ч`) : null,
       showQuality ? React.createElement('div', { className: 'widget-sleep__quality' }, `Качество: ${quality}/10`) : null
     );
@@ -1568,13 +1674,16 @@
     const size = widget?.size || '2x2';
     const showGoal = widget.settings?.showGoal !== false;
     const showTrend = widget.settings?.showTrend !== false;
+    const showBmi = widget.settings?.showBmi !== false;
+    const showChart = widget.settings?.showChart !== false;
+    const showAnalytics = widget.settings?.showAnalytics !== false;
 
     const hasCurrent = Number.isFinite(current);
     const hasGoal = Number.isFinite(goal) && goal > 0;
-    const hasBmi = Number.isFinite(bmi);
-    const hasAnalytics = !!monthChange || !!hasCleanTrend;
+    const hasBmi = showBmi && Number.isFinite(bmi);
+    const hasAnalyticsData = showAnalytics && (!!monthChange || !!hasCleanTrend);
     const sparklinePoints = sparkline.filter(s => s.weight);
-    const hasSparkline = sparklinePoints.length >= 2;
+    const hasSparkline = showChart && sparklinePoints.length >= 2;
 
     // Размеры берём из реестра (единый источник правды). Здесь они не нужны для layout-веток,
     // но логика остаётся совместимой: неизвестный size упадёт в fallback-рендер ниже.
@@ -1683,7 +1792,7 @@
 
     // Блок: BMI
     const BMIBlock = ({ compact = false }) => {
-      if (!bmi) return null;
+      if (!showBmi || !bmi) return null;
       if (compact) {
         return React.createElement('div', {
           className: 'widget-weight__bmi-badge',
@@ -1702,10 +1811,10 @@
     // Блок: Аналитика (прогноз на месяц, чистый тренд)
     const AnalyticsBlock = () => {
       const items = [];
-      if (monthChange) {
+      if (showAnalytics && monthChange) {
         items.push({ icon: '📊', text: `Прогноз: ${monthChange > 0 ? '+' : ''}${monthChange.toFixed(1)} кг/мес` });
       }
-      if (hasCleanTrend) {
+      if (showAnalytics && hasCleanTrend) {
         items.push({ icon: '🌸', text: 'Чистый тренд', cls: 'widget-weight__stat--pink' });
       }
       if (items.length === 0) return null;
@@ -1834,7 +1943,7 @@
             ? React.createElement('div', { className: 'widget-weight__chart' },
               React.createElement(ChartBlock, { days: 7, height: 50, showDots: true })
             )
-            : ((hasBmi || hasAnalytics) && React.createElement('div', { className: 'widget-weight__side' },
+            : ((hasBmi || hasAnalyticsData) && React.createElement('div', { className: 'widget-weight__side' },
               React.createElement(BMIBlock, { compact: true }),
               React.createElement(AnalyticsBlock, null)
             ))
@@ -1848,7 +1957,7 @@
       const wideMidFallback = (!hasSparkline) ? React.createElement('div', { className: 'widget-weight__mid' },
         React.createElement(ProgressBlock, { vertical: false }),
         React.createElement(AnalyticsBlock, null),
-        (!hasAnalytics && !(showGoal && hasGoal && progressPct !== null))
+        (!hasAnalyticsData && !(showGoal && hasGoal && progressPct !== null))
           ? React.createElement('div', { className: 'widget-weight__hint' }, 'Добавьте вес 2+ дня для графика')
           : null
       ) : null;
@@ -2126,6 +2235,10 @@
     const d = getWidgetDims(widget);
     const size = widget?.size || '2x2';
     const variant = d.isMicro ? 'micro' : d.isShort ? 'short' : 'std';
+    const showKm = widget.settings?.showKilometers && !d.isTiny;
+    const showGoalBar = widget.settings?.showGoal !== false;
+    const showPercentage = widget.settings?.showPercentage !== false;
+    const showRemaining = widget.settings?.showRemaining !== false;
 
     const getStepsColor = () => {
       if (pct >= 100) return '#22c55e';
@@ -2152,33 +2265,37 @@
           React.createElement('div', { className: 'widget-steps__value widget-steps__value--lg' },
             steps.toLocaleString('ru-RU')
           ),
-          React.createElement('div', { className: 'widget-steps__pct-badge', style: { background: `${stepsColor}20`, color: stepsColor } },
-            `${pct}%`
-          )
+          showPercentage
+            ? React.createElement('div', { className: 'widget-steps__pct-badge', style: { background: `${stepsColor}20`, color: stepsColor } },
+              `${pct}%`
+            )
+            : null
         ),
         // Прогресс-бар
-        React.createElement('div', { className: 'widget-steps__progress' },
-          React.createElement('div', {
-            className: 'widget-steps__bar',
-            style: { width: `${Math.min(100, pct)}%`, background: stepsColor }
-          })
-        ),
+        showGoalBar
+          ? React.createElement('div', { className: 'widget-steps__progress' },
+            React.createElement('div', {
+              className: 'widget-steps__bar',
+              style: { width: `${Math.min(100, pct)}%`, background: stepsColor }
+            })
+          )
+          : null,
         // Низ: километры + цель + осталось
         React.createElement('div', { className: 'widget-steps__footer' },
-          React.createElement('div', { className: 'widget-steps__km' }, `${km} км`),
-          React.createElement('div', { className: 'widget-steps__meta' },
-            remaining > 0
-              ? `ещё ${remaining.toLocaleString('ru-RU')}`
-              : '🏆 Цель!'
-          )
+          showKm ? React.createElement('div', { className: 'widget-steps__km' }, `${km} км`) : null,
+          showRemaining
+            ? React.createElement('div', { className: 'widget-steps__meta' },
+              remaining > 0
+                ? `ещё ${remaining.toLocaleString('ru-RU')}`
+                : '🏆 Цель!'
+            )
+            : null
         )
       );
     }
 
     // Остальные размеры
-    const showKm = widget.settings?.showKilometers && !d.isTiny;
-    const showGoalBar = widget.settings?.showGoal !== false;
-    const showPctInline = d.isShort;
+    const showPctInline = d.isShort && showPercentage;
 
     return React.createElement('div', { className: `widget-steps widget-steps--${variant}` },
       React.createElement('div', { className: 'widget-steps__top' },
@@ -2186,6 +2303,7 @@
         showPctInline ? React.createElement('div', { className: 'widget-steps__pct' }, `${Math.min(999, pct)}%`) : null
       ),
       showKm ? React.createElement('div', { className: 'widget-steps__km' }, `${km} км`) : null,
+      showRemaining && !d.isShort ? React.createElement('div', { className: 'widget-steps__label' }, remaining > 0 ? `ещё ${remaining.toLocaleString('ru-RU')}` : 'цель достигнута') : null,
       showGoalBar
         ? React.createElement('div', { className: 'widget-steps__progress' },
           React.createElement('div', {
@@ -2209,18 +2327,119 @@
     const pctF = fatTarget > 0 ? Math.round((fat || 0) / fatTarget * 100) : 0;
     const pctC = carbsTarget > 0 ? Math.round((carbs || 0) / carbsTarget * 100) : 0;
     const avgPct = Math.round((pctP + pctF + pctC) / 3);
+    const showPercentage = widget.settings?.showPercentage !== false;
+    const showGrams = widget.settings?.showGrams !== false && !d.isTiny;
+    const effectiveShowGrams = showGrams || !showPercentage;
+    const canUseMacroRings = d.cols >= 2 && d.rows >= 2 && size !== '4x1';
+    const ringsDensityClass = d.area >= 12 ? 'widget-macros--rings-lg' : d.area >= 8 ? 'widget-macros--rings-md' : 'widget-macros--rings-sm';
+
+    const macroItems = [
+      { label: 'Белки', shortLabel: 'Б', value: protein || 0, target: proteinTarget || 100, pct: pctP, toneClass: 'protein' },
+      { label: 'Жиры', shortLabel: 'Ж', value: fat || 0, target: fatTarget || 70, pct: pctF, toneClass: 'fat' },
+      { label: 'Углеводы', shortLabel: 'У', value: carbs || 0, target: carbsTarget || 250, pct: pctC, toneClass: 'carbs' }
+    ];
+
+    const buildMacroRing = ({ label, value, target, pct, toneClass }) => {
+      const ringStartOffsetPct = 9;
+      const ringCapCompPct = 5;
+      const overColor = toneClass === 'protein' ? '#22c55e' : '#ef4444';
+      const ratio = target > 0 ? value / target : 0;
+      const dotColor = ratio > 1 ? '#ef4444' : '#22c55e';
+      const basePctRaw = Math.min(100, Math.round(ratio * 100));
+      const basePct = Math.max(0, basePctRaw - ringCapCompPct);
+      const hasOver = ratio > 1;
+      const overPctRaw = hasOver ? Math.min(50, Math.round((ratio - 1) * 100)) : 0;
+      const overPct = Math.max(0, overPctRaw - ringCapCompPct);
+      const gradientId = `widget-macro-ring-${widget?.id || '0'}-${toneClass}`;
+      const gradientStops = toneClass === 'protein'
+        ? ['#fecaca', '#ef4444']
+        : (toneClass === 'fat' ? ['#fde68a', '#f59e0b'] : ['#bbf7d0', '#22c55e']);
+      const getRingDotPos = (ringPct) => {
+        if (!ringPct || ringPct <= 0) return null;
+        const dotPct = Math.max(0, ringPct - 3);
+        if (dotPct <= 0) return null;
+        const angle = ((dotPct + ringStartOffsetPct) / 100) * Math.PI * 2;
+        return {
+          x: 18 + 15.5 * Math.cos(angle),
+          y: 18 + 15.5 * Math.sin(angle)
+        };
+      };
+      const dot = getRingDotPos(basePct);
+      const centerValue = effectiveShowGrams ? Math.round(value || 0) : `${pct}%`;
+      const targetText = effectiveShowGrams ? `/ ${Math.round(target || 0)}г` : null;
+      const percentBadge = showPercentage && effectiveShowGrams ? `${pct}%` : null;
+
+      return React.createElement('div', { key: `${toneClass}-${label}`, className: 'macro-ring-item' },
+        React.createElement('div', { className: `macro-ring ${toneClass}${hasOver ? ' macro-ring--over' : ''}` },
+          React.createElement('svg', { viewBox: '0 0 36 36', className: 'macro-ring-svg' },
+            React.createElement('defs', null,
+              React.createElement('linearGradient', {
+                id: gradientId,
+                x1: '0%', y1: '0%', x2: '100%', y2: '100%'
+              },
+                React.createElement('stop', { offset: '0%', stopColor: gradientStops[0] }),
+                React.createElement('stop', { offset: '100%', stopColor: gradientStops[1] })
+              )
+            ),
+            React.createElement('circle', { className: 'macro-ring-bg', cx: 18, cy: 18, r: 15.5, pathLength: 100 }),
+            React.createElement('circle', {
+              className: 'macro-ring-fill',
+              cx: 18,
+              cy: 18,
+              r: 15.5,
+              pathLength: 100,
+              style: {
+                strokeDasharray: `${basePct} 100`,
+                '--ring-dasharray': `${basePct} 100`,
+                '--ring-start-offset': -ringStartOffsetPct,
+                stroke: `url(#${gradientId})`
+              }
+            }),
+            hasOver ? React.createElement('circle', {
+              className: 'macro-ring-fill--over',
+              cx: 18,
+              cy: 18,
+              r: 15.5,
+              pathLength: 100,
+              style: {
+                strokeDasharray: `${overPct} ${100 - overPct}`,
+                '--over-dasharray': `${overPct} ${100 - overPct}`,
+                '--over-offset': -(100 - overPct),
+                stroke: overColor
+              }
+            }) : null,
+            dot ? React.createElement('circle', {
+              className: 'macro-ring-dot',
+              cx: dot.x,
+              cy: dot.y,
+              r: 2.2,
+              style: { '--macro-ring-dot': dotColor }
+            }) : null
+          ),
+          React.createElement('span', { className: 'macro-ring-value' }, centerValue)
+        ),
+        React.createElement('span', { className: 'macro-ring-label' }, label),
+        targetText ? React.createElement('span', { className: 'macro-ring-target' }, targetText) : React.createElement('span', { className: 'macro-ring-target macro-ring-target--empty' }, ' '),
+        percentBadge ? React.createElement('span', { className: 'widget-macros__ring-pct' }, percentBadge) : null
+      );
+    };
 
     // 1x1 Micro
     if (d.isMicro) {
       return React.createElement('div', { className: 'widget-macros widget-macros--micro' },
         React.createElement('div', { className: 'widget-micro__label' }, 'БЖУ'),
-        React.createElement('div', { className: 'widget-macros__micro-value' }, `${Math.min(999, avgPct)}%`)
+        React.createElement('div', { className: 'widget-macros__micro-value' },
+          showPercentage
+            ? `${Math.min(999, avgPct)}%`
+            : `${Math.round((protein || 0) + (fat || 0) + (carbs || 0))}г`
+        )
       );
     }
 
     // 4x1 — Компактный горизонтальный layout с минимальными интервалами
     if (size === '4x1') {
       const MacroBarCompact = ({ label, value, target, pct, color }) => {
+        const compactMetric = showGrams ? `${Math.round(value)}г` : (showPercentage ? `${pct}%` : null);
         return React.createElement('div', { className: 'widget-macros__item-4x1' },
           React.createElement('div', { className: 'widget-macros__label-4x1', style: { color } }, label),
           React.createElement('div', { className: 'widget-macros__bar-4x1' },
@@ -2229,7 +2448,7 @@
               style: { width: `${Math.min(100, pct)}%`, background: color }
             })
           ),
-          React.createElement('span', { className: 'widget-macros__value-4x1' }, `${Math.round(value)}г`)
+          compactMetric ? React.createElement('span', { className: 'widget-macros__value-4x1' }, compactMetric) : null
         );
       };
 
@@ -2240,88 +2459,17 @@
       );
     }
 
-    // 4x2 — Расширенный layout с дополнительной информацией
-    if (size === '4x2') {
-      const totalGrams = (protein || 0) + (fat || 0) + (carbs || 0);
-      const totalTarget = (proteinTarget || 100) + (fatTarget || 70) + (carbsTarget || 250);
-      const totalPct = totalTarget > 0 ? Math.round(totalGrams / totalTarget * 100) : 0;
-      // Расчёт калорий: белки*4 + жиры*9 + углеводы*4
-      const kcalEaten = Math.round((protein || 0) * 4 + (fat || 0) * 9 + (carbs || 0) * 4);
-      const kcalTarget = Math.round((proteinTarget || 100) * 4 + (fatTarget || 70) * 9 + (carbsTarget || 250) * 4);
-
-      const MacroRowExtended = ({ label, emoji, value, target, pct, color }) => {
-        const isGood = pct >= 80 && pct <= 120;
-        const statusEmoji = pct < 80 ? '⬇️' : pct > 120 ? '⬆️' : '✅';
-        return React.createElement('div', { className: 'widget-macros__row-4x2' },
-          React.createElement('div', { className: 'widget-macros__row-header' },
-            React.createElement('span', { className: 'widget-macros__emoji' }, emoji),
-            React.createElement('span', { className: 'widget-macros__label-text' }, label),
-            React.createElement('span', { className: 'widget-macros__grams-4x2' }, `${Math.round(value)}/${target}г`),
-            React.createElement('span', {
-              className: 'widget-macros__pct-badge',
-              style: { background: isGood ? '#22c55e20' : `${color}20`, color: isGood ? '#22c55e' : color }
-            }, `${pct}%`),
-            React.createElement('span', { className: 'widget-macros__status-emoji' }, statusEmoji)
-          ),
-          React.createElement('div', { className: 'widget-macros__bar-4x2' },
-            React.createElement('div', {
-              className: 'widget-macros__bar-fill',
-              style: { width: `${Math.min(100, pct)}%`, background: color }
-            })
+    if (canUseMacroRings) {
+      return React.createElement('div', { className: `widget-macros widget-macros--rings ${ringsDensityClass}` },
+        React.createElement('div', { className: 'widget-macros__rings-wrap' },
+          React.createElement('div', { className: 'macro-rings widget-macros__rings' },
+            macroItems.map(buildMacroRing)
           )
-        );
-      };
-
-      return React.createElement('div', { className: 'widget-macros widget-macros--4x2' },
-        // Заголовок с калориями и балансом в одну строку
-        React.createElement('div', { className: 'widget-macros__summary-4x2' },
-          React.createElement('span', { className: 'widget-macros__kcal-line' },
-            `🔥 ${kcalEaten} / ${kcalTarget} ккал`
-          ),
-          React.createElement('span', {
-            className: 'widget-macros__balance-line',
-            style: { color: avgPct >= 80 && avgPct <= 120 ? '#22c55e' : avgPct < 80 ? '#ef4444' : '#eab308' }
-          }, `📊 ${avgPct}%`)
-        ),
-        // Три бара БЖУ
-        React.createElement(MacroRowExtended, { label: 'Белки', emoji: '🍖', value: protein || 0, target: proteinTarget || 100, pct: pctP, color: '#ef4444' }),
-        React.createElement(MacroRowExtended, { label: 'Жиры', emoji: '🧈', value: fat || 0, target: fatTarget || 70, pct: pctF, color: '#eab308' }),
-        React.createElement(MacroRowExtended, { label: 'Углеводы', emoji: '🍞', value: carbs || 0, target: carbsTarget || 250, pct: pctC, color: '#3b82f6' })
-      );
-    }
-
-    // 2x2 — Оптимальный layout с барами и числами
-    if (size === '2x2') {
-      const MacroRow = ({ label, emoji, value, target, pct, color }) => {
-        const isGood = pct >= 80 && pct <= 120;
-        return React.createElement('div', { className: 'widget-macros__row-2x2' },
-          React.createElement('div', { className: 'widget-macros__row-header' },
-            React.createElement('span', { className: 'widget-macros__emoji' }, emoji),
-            React.createElement('span', { className: 'widget-macros__grams' }, `${Math.round(value)}/${target}г`),
-            React.createElement('span', {
-              className: 'widget-macros__pct-badge',
-              style: { background: isGood ? '#22c55e20' : `${color}20`, color: isGood ? '#22c55e' : color }
-            }, `${pct}%`)
-          ),
-          React.createElement('div', { className: 'widget-macros__bar-2x2' },
-            React.createElement('div', {
-              className: 'widget-macros__bar-fill',
-              style: { width: `${Math.min(100, pct)}%`, background: color }
-            })
-          )
-        );
-      };
-
-      return React.createElement('div', { className: 'widget-macros widget-macros--2x2' },
-        React.createElement(MacroRow, { label: 'Белки', emoji: '🍖', value: protein || 0, target: proteinTarget || 100, pct: pctP, color: '#ef4444' }),
-        React.createElement(MacroRow, { label: 'Жиры', emoji: '🧈', value: fat || 0, target: fatTarget || 70, pct: pctF, color: '#eab308' }),
-        React.createElement(MacroRow, { label: 'Углеводы', emoji: '🍞', value: carbs || 0, target: carbsTarget || 250, pct: pctC, color: '#3b82f6' })
+        )
       );
     }
 
     // Остальные размеры
-    const showGrams = widget.settings?.showGrams !== false && !d.isTiny;
-
     const MacroBar = ({ label, value, target, color, cls }) => {
       const pct = target > 0 ? Math.round((value / target) * 100) : 0;
       return React.createElement('div', { className: 'widget-macros__row' },
@@ -2371,7 +2519,9 @@
     };
 
     const info = getStatusInfo();
-    const showTimer = Number.isFinite(remaining) && remaining > 0;
+    const showTimer = widget.settings?.showTimer !== false && Number.isFinite(remaining) && remaining > 0;
+    const showPhase = widget.settings?.showPhase !== false && !!phase && !d.isTiny;
+    const showLastMeal = widget.settings?.showLastMeal !== false && !!lastMealTime;
 
     // 1x1 Micro
     if (d.isMicro) {
@@ -2403,7 +2553,7 @@
           React.createElement('div', { className: 'widget-insulin__status-2x2', style: { color: info.color } },
             info.emoji, ' ', info.short
           ),
-          lastMealTime && React.createElement('div', { className: 'widget-insulin__meal-time' },
+          showLastMeal && React.createElement('div', { className: 'widget-insulin__meal-time' },
             `🍽 ${lastMealTime}`
           )
         ),
@@ -2438,19 +2588,18 @@
           )
         ),
         // Низ: фаза волны
-        phase && React.createElement('div', { className: 'widget-insulin__phase-2x2' },
+        showPhase && React.createElement('div', { className: 'widget-insulin__phase-2x2' },
           phase
         )
       );
     }
 
     // Остальные размеры
-    const showPhase = widget.settings?.showPhase !== false && !!phase && !d.isTiny;
-
     return React.createElement('div', { className: `widget-insulin widget-insulin--${variant}` },
       React.createElement('div', { className: `widget-insulin__status widget-insulin__status--${status}` },
         info.emoji, ' ', info.label
       ),
+      showLastMeal ? React.createElement('div', { className: 'widget-insulin__phase' }, `🍽 ${lastMealTime}`) : null,
       showTimer ? React.createElement('div', { className: 'widget-insulin__timer' }, `${remaining} мин`) : null,
       showPhase ? React.createElement('div', { className: 'widget-insulin__phase' }, phase) : null
     );
@@ -2459,12 +2608,17 @@
   function HeatmapWidgetContent({ widget, data }) {
     const days = data.days || [];
     const currentStreak = data.currentStreak || 0;
-    const configuredPeriod = widget.settings?.period || 'week';
+    const requestedPeriod = widget.settings?.period || 'week';
+    const configuredPeriod = requestedPeriod === 'month' ? 'week' : requestedPeriod;
+    const showWeekdays = widget.settings?.showWeekdays !== false;
+    const showDates = widget.settings?.showDates !== false;
+    const highlightToday = widget.settings?.highlightToday !== false;
 
     const d = getWidgetDims(widget);
     const size = widget?.size || '2x2';
     const canShowMonth = configuredPeriod === 'month' && d.area >= 9 && d.rows >= 3;
     const period = canShowMonth ? 'month' : 'week';
+    const todayIso = new Date().toISOString().slice(0, 10);
 
     let renderDays = days;
     if (d.isMicro) {
@@ -2514,7 +2668,7 @@
               ? dateObj.getDate()
               : (typeof day?.date === 'string' ? parseInt(day.date.split('-').pop(), 10) : null);
             const isWeekend = dayIndex === 5 || dayIndex === 6;
-            const isToday = i === weekDays.length - 1;
+            const isToday = highlightToday && day?.date === todayIso;
             // 🆕 v3.22.0: training/stress indicators
             const hasTraining = day.hasTraining;
             const highStress = day.highStress;
@@ -2523,7 +2677,7 @@
               key: i,
               className: `widget-heatmap__day-col ${isToday ? 'widget-heatmap__day-col--today' : ''} ${hasTraining ? 'widget-heatmap__day-col--training' : ''}`
             },
-              React.createElement('div', {
+              showDates && React.createElement('div', {
                 className: `widget-heatmap__day-date ${isWeekend ? 'widget-heatmap__day-date--weekend' : ''}`
               }, Number.isFinite(dayNum) ? dayNum : '—'),
               React.createElement('div', {
@@ -2536,7 +2690,7 @@
                   highStress && React.createElement('span', { className: 'widget-heatmap__cell-badge widget-heatmap__cell-badge--stress' }, '😰')
                 )
               ),
-              React.createElement('div', {
+              showWeekdays && React.createElement('div', {
                 className: `widget-heatmap__day-label ${isWeekend ? 'widget-heatmap__day-label--weekend' : ''}`
               }, dayLabels[dayIndex])
             );
@@ -2569,19 +2723,20 @@
               ? dateObj.getDate()
               : (typeof day?.date === 'string' ? parseInt(day.date.split('-').pop(), 10) : null);
             const isWeekend = dayIndex === 5 || dayIndex === 6;
+            const isToday = highlightToday && day?.date === todayIso;
 
             return React.createElement('div', {
               key: i,
-              className: 'widget-heatmap__day-col'
+              className: `widget-heatmap__day-col ${isToday ? 'widget-heatmap__day-col--today' : ''}`
             },
-              React.createElement('div', {
+              showDates && React.createElement('div', {
                 className: `widget-heatmap__day-date ${isWeekend ? 'widget-heatmap__day-date--weekend' : ''}`
               }, Number.isFinite(dayNum) ? dayNum : '—'),
               React.createElement('div', {
                 className: `widget-heatmap__cell widget-heatmap__cell--${day.status || 'empty'}`,
                 title: day.date
               }),
-              React.createElement('div', {
+              showWeekdays && React.createElement('div', {
                 className: `widget-heatmap__day-label ${isWeekend ? 'widget-heatmap__day-label--weekend' : ''}`
               }, weekLabels[dayIndex])
             );
@@ -2633,7 +2788,7 @@
 
       return React.createElement('div', { className: 'widget-cycle widget-cycle--2x2' },
         // Верх: фаза
-        phase && React.createElement('div', { className: 'widget-cycle__phase-header', style: { color: phaseColor } },
+        phase && widget.settings?.showPhase !== false && React.createElement('div', { className: 'widget-cycle__phase-header', style: { color: phaseColor } },
           phase.icon, ' ', phase.name
         ),
         // Центр: кольцо с днём
@@ -2666,7 +2821,7 @@
           )
         ),
         // Низ: рекомендация
-        recommendation && React.createElement('div', { className: 'widget-cycle__tip' },
+        widget.settings?.showCorrections !== false && recommendation && React.createElement('div', { className: 'widget-cycle__tip' },
           recommendation
         )
       );
@@ -2680,171 +2835,327 @@
       widget.settings?.showPhase && phase && !d.isTiny &&
       React.createElement('div', { className: 'widget-cycle__phase' },
         phase.icon, ' ', phase.name
-      )
+      ),
+      widget.settings?.showCorrections !== false && recommendation && !d.isTiny
+        ? React.createElement('div', { className: 'widget-cycle__tip' }, recommendation)
+        : null
     );
   }
 
   // === Crash Risk Widget Content v2.0 (EWS + Weight Loss Detection) ===
   function CrashRiskWidgetContent({ widget, data }) {
     const d = getWidgetDims(widget);
-    const size = widget?.size || '4x2';
+    const size = widget?.size || '2x1';
 
-    // Extract data from provider
     const hasData = data?.hasData || false;
-    const weeklyLossPercent = data?.weeklyLossPercent || 0;
-    const isWarning = data?.isWarning || false;
-    const severity = data?.severity || 'none';
+    const zone = data?.zone || 'stable';
+    const zoneMeta = data?.zoneMeta || { label: 'Нет данных', color: '#64748b', light: '#f1f5f9', emoji: '—' };
+    const pctPerWeek = data?.pctPerWeek || 0;
+    const slopePerWeek = data?.slopePerWeek || 0;
+    const direction = data?.direction || 'stable';
     const currentWeight = data?.currentWeight || 0;
+    const totalDeltaKg = data?.totalDeltaKg || 0;
+    const dataPoints = data?.dataPoints || 0;
+    const periodDays = data?.periodDays || 7;
+    const toGoalKg = data?.toGoalKg ?? null;
+    const estimatedDaysToGoal = data?.estimatedDaysToGoal ?? null;
     const ewsCount = data?.ewsCount || 0;
     const ewsData = data?.ewsData || null;
     const message = data?.message || '';
 
-    // Color scheme based on severity
-    const getColorBySeverity = (sev) => {
-      switch (sev) {
-        case 'high': return { bg: '#ef4444', text: '#ffffff', light: '#fee2e2' };
-        case 'medium': return { bg: '#f97316', text: '#ffffff', light: '#ffedd5' };
-        default: return { bg: '#10b981', text: '#ffffff', light: '#d1fae5' };
-      }
+    const dirArrow = direction === 'losing' ? '↓' : direction === 'gaining' ? '↑' : '→';
+    const absPct = Math.abs(pctPerWeek);
+    const deltaSign = totalDeltaKg < -0.05 ? '−' : totalDeltaKg > 0.05 ? '+' : '';
+    const deltaAbs = Math.abs(totalDeltaKg);
+    const color = zoneMeta.color;
+    const colorLight = zoneMeta.light;
+
+    const PRESETS = [7, 14, 30];
+    const handlePeriodSwitch = (days, event) => {
+      event?.stopPropagation?.();
+      if (!widget?.id || periodDays === days) return;
+      HEYS.Widgets.state?.updateWidget(widget.id, {
+        settings: { ...(widget.settings || {}), periodDays: days }
+      }, true);
+      HEYS.dayUtils?.haptic?.('light');
     };
 
-    const colors = getColorBySeverity(severity);
+    const periodPresetRow = React.createElement('div', {
+      style: {
+        display: 'flex',
+        gap: '4px',
+        flexWrap: 'nowrap',
+        justifyContent: 'center'
+      }
+    }, PRESETS.map((days) => {
+      const isActive = periodDays === days;
+      return React.createElement('button', {
+        key: days,
+        type: 'button',
+        onClick: (event) => handlePeriodSwitch(days, event),
+        onPointerDown: (event) => event.stopPropagation(),
+        onPointerUp: (event) => event.stopPropagation(),
+        onTouchStart: (event) => event.stopPropagation(),
+        style: {
+          border: 'none',
+          borderRadius: '999px',
+          padding: '2px 7px',
+          minHeight: '22px',
+          cursor: 'pointer',
+          whiteSpace: 'nowrap',
+          fontSize: '0.68rem',
+          lineHeight: 1,
+          fontWeight: isActive ? 700 : 500,
+          background: isActive ? color : 'var(--heys-bg-secondary,#f1f5f9)',
+          color: isActive ? '#fff' : 'var(--heys-text-secondary,#94a3b8)',
+          transition: 'all 0.15s ease'
+        }
+      }, `${days} дн.`);
+    }));
 
-    // Open EWS Panel on click
-    const handleOpenEWS = useCallback(() => {
-      const event = new CustomEvent('heysShowEWSPanel');
-      document.dispatchEvent(event);
-    }, []);
-
-    // === NO DATA STATE ===
+    // === NO DATA ===
     if (!hasData) {
       return React.createElement('div', { className: 'widget-crash-risk widget-crash-risk--no-data' },
-        React.createElement('div', { className: 'widget-crash-risk__icon' }, '⚠️'),
+        React.createElement('div', { className: 'widget-crash-risk__icon' }, '⚖️'),
         React.createElement('div', { className: 'widget-crash-risk__message' }, message || 'Недостаточно данных')
       );
     }
 
-    // === 2×2 COMPACT LAYOUT ===
+    // === 2×1 COMPACT ===
+    if (size === '2x1') {
+      return React.createElement('div', {
+        className: `widget-crash-risk widget-crash-risk--short widget-crash-risk--${zone}`,
+        style: {
+          display: 'flex',
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '6px',
+          alignSelf: 'stretch',
+          width: '100%'
+        }
+      },
+        React.createElement('div', {
+          style: {
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'flex-start',
+            justifyContent: 'center',
+            minWidth: 0,
+            flex: '1 1 auto'
+          }
+        },
+          React.createElement('div', {
+            style: { color, fontSize: '1.15rem', fontWeight: 800, lineHeight: 1 }
+          }, `${dirArrow} ${absPct.toFixed(1)}%`),
+          React.createElement('div', {
+            className: 'widget-crash-risk__ews-badge',
+            style: {
+              background: colorLight,
+              color,
+              fontSize: '0.62rem',
+              padding: '1px 6px',
+              lineHeight: 1.2,
+              fontWeight: 600,
+              marginTop: '4px',
+              maxWidth: '100%',
+              borderRadius: '999px',
+              display: 'inline-block'
+            }
+          }, `${zoneMeta.emoji} ${zoneMeta.label}`)
+        ),
+        React.createElement('div', {
+          style: {
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '3px',
+            alignItems: 'stretch',
+            justifyContent: 'center',
+            flex: '0 0 auto'
+          }
+        }, PRESETS.map((days) => {
+          const isActive = periodDays === days;
+          return React.createElement('button', {
+            key: `short-${days}`,
+            type: 'button',
+            onClick: (event) => handlePeriodSwitch(days, event),
+            onPointerDown: (event) => event.stopPropagation(),
+            onPointerUp: (event) => event.stopPropagation(),
+            onTouchStart: (event) => event.stopPropagation(),
+            style: {
+              border: 'none',
+              borderRadius: '999px',
+              padding: '0 6px',
+              height: '14px',
+              minWidth: '38px',
+              cursor: 'pointer',
+              whiteSpace: 'nowrap',
+              fontSize: '0.58rem',
+              lineHeight: '14px',
+              fontWeight: isActive ? 700 : 500,
+              background: isActive ? color : 'var(--heys-bg-secondary,#f1f5f9)',
+              color: isActive ? '#fff' : 'var(--heys-text-secondary,#94a3b8)',
+              transition: 'all 0.15s ease',
+              display: 'block'
+            }
+          }, `${days} дн.`);
+        }))
+      );
+    }
+
+    // === 2×2 COMPACT ===
     if (size === '2x2') {
       return React.createElement('div', {
-        className: `widget-crash-risk widget-crash-risk--compact widget-crash-risk--${severity}`,
-        onClick: handleOpenEWS
+        className: `widget-crash-risk widget-crash-risk--compact widget-crash-risk--${zone}`
       },
-        // Top: Icon + Percentage
         React.createElement('div', { className: 'widget-crash-risk__header' },
-          React.createElement('div', { className: 'widget-crash-risk__icon', style: { color: colors.bg } },
-            isWarning ? '⚠️' : '✅'
-          ),
           React.createElement('div', {
             className: 'widget-crash-risk__percent',
-            style: { color: colors.bg }
-          }, `${weeklyLossPercent.toFixed(1)}%`)
+            style: { color, fontSize: '1.4rem', fontWeight: 800 }
+          }, `${dirArrow} ${absPct.toFixed(1)}%`)
         ),
-
-        // Middle: Title
-        React.createElement('div', { className: 'widget-crash-risk__title' }, 'Потеря веса'),
-
-        // Bottom: EWS Badge
-        ewsCount > 0 && React.createElement('div', {
-          className: 'widget-crash-risk__ews-badge',
-          style: { background: colors.light, color: colors.bg }
+        React.createElement('div', { className: 'widget-crash-risk__title' }, 'в неделю'),
+        React.createElement('div', {
+          style: {
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '6px',
+            marginTop: '6px'
+          }
         },
-          `${ewsCount} предупрежд.`
+          React.createElement('div', {
+            className: 'widget-crash-risk__ews-badge',
+            style: {
+              background: colorLight,
+              color,
+              fontSize: '0.72rem',
+              padding: '2px 8px',
+              lineHeight: 1.2,
+              fontWeight: 600
+            }
+          }, `${zoneMeta.emoji} ${zoneMeta.label}`),
+          React.createElement('div', {
+            style: {
+              display: 'flex',
+              gap: '4px',
+              justifyContent: 'center',
+              width: '100%'
+            }
+          }, PRESETS.map((days) => {
+            const isActive = periodDays === days;
+            return React.createElement('button', {
+              key: `compact-${days}`,
+              type: 'button',
+              onClick: (event) => handlePeriodSwitch(days, event),
+              onPointerDown: (event) => event.stopPropagation(),
+              onPointerUp: (event) => event.stopPropagation(),
+              onTouchStart: (event) => event.stopPropagation(),
+              style: {
+                border: 'none',
+                borderRadius: '999px',
+                padding: '2px 6px',
+                minWidth: '42px',
+                minHeight: '22px',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+                fontSize: '0.63rem',
+                lineHeight: 1,
+                fontWeight: isActive ? 700 : 500,
+                background: isActive ? color : 'var(--heys-bg-secondary,#f1f5f9)',
+                color: isActive ? '#fff' : 'var(--heys-text-secondary,#94a3b8)',
+                transition: 'all 0.15s ease'
+              }
+            }, `${days} дн.`);
+          }))
         )
       );
     }
 
-    // === 4×2 STANDARD LAYOUT ===
+    // === 4×2 STANDARD ===
     if (size === '4x2') {
-      const topWarnings = ewsData?.warnings?.slice(0, 2) || [];
-
       return React.createElement('div', {
-        className: `widget-crash-risk widget-crash-risk--standard widget-crash-risk--${severity}`,
-        onClick: handleOpenEWS
+        className: `widget-crash-risk widget-crash-risk--standard widget-crash-risk--${zone}`
       },
-        // Left: KPI Block
+        // Left: rate KPI
         React.createElement('div', { className: 'widget-crash-risk__kpi' },
-          React.createElement('div', { className: 'widget-crash-risk__icon-big', style: { color: colors.bg } },
-            isWarning ? '⚠️' : '✅'
-          ),
-          React.createElement('div', { className: 'widget-crash-risk__percent-big', style: { color: colors.bg } },
-            `${weeklyLossPercent.toFixed(1)}%`
-          ),
-          React.createElement('div', { className: 'widget-crash-risk__label' }, '/неделя')
+          React.createElement('div', {
+            style: { fontSize: '1.4rem', color, fontWeight: 800, lineHeight: 1 }
+          }, `${dirArrow} ${absPct.toFixed(1)}%`),
+          React.createElement('div', { className: 'widget-crash-risk__label' }, '/неделю'),
+          React.createElement('div', {
+            style: { fontSize: '0.75rem', color: 'var(--heys-text-secondary,#94a3b8)', marginTop: '4px' }
+          }, `${slopePerWeek < -0.05 ? '−' : slopePerWeek > 0.05 ? '+' : ''}${Math.abs(slopePerWeek).toFixed(2)} кг/нед`)
         ),
-
-        // Right: Details
+        // Right: zone + stats
         React.createElement('div', { className: 'widget-crash-risk__details' },
-          React.createElement('div', { className: 'widget-crash-risk__title-big' }, 'Потеря веса'),
-          React.createElement('div', { className: 'widget-crash-risk__subtitle' },
-            `Текущий вес: ${currentWeight.toFixed(1)} кг`
+          React.createElement('div', { style: { display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '6px', marginBottom: '6px' } },
+            React.createElement('div', {
+              style: { background: colorLight, color, fontWeight: 600, fontSize: '0.76rem', padding: '2px 8px', borderRadius: '99px', display: 'inline-flex', alignItems: 'center', gap: '4px', lineHeight: 1.2 }
+            }, `${zoneMeta.emoji} ${zoneMeta.label}`),
+            periodPresetRow
           ),
-
-          // EWS Count Badge
-          ewsCount > 0 && React.createElement('div', {
-            className: 'widget-crash-risk__ews-count',
-            style: { background: colors.light, color: colors.bg }
-          },
-            `${ewsCount} предупрежд. → Подробнее`
-          ),
-
-          // Top 2 warnings preview
-          widget.settings?.showWarnings !== false && topWarnings.length > 0 &&
-          React.createElement('div', { className: 'widget-crash-risk__warnings-preview' },
-            topWarnings.map((w, i) =>
-              React.createElement('div', {
-                key: i,
-                className: `widget-crash-risk__warning widget-crash-risk__warning--${w.severity}`
-              },
-                React.createElement('span', { className: 'widget-crash-risk__warning-icon' }, getSeverityIcon(w.severity)),
-                React.createElement('span', { className: 'widget-crash-risk__warning-text' },
-                  w.message?.length > 40 ? w.message.slice(0, 37) + '...' : w.message
-                )
-              )
-            )
-          )
+          deltaAbs >= 0.1 && React.createElement('div', {
+            style: { fontSize: '0.8rem', color: 'var(--heys-text-secondary,#94a3b8)' }
+          }, `${deltaSign}${deltaAbs.toFixed(1)} кг за ${dataPoints} дн.`),
+          widget.settings?.showGoal !== false && toGoalKg !== null && toGoalKg > 0 &&
+          React.createElement('div', {
+            style: { fontSize: '0.78rem', color: 'var(--heys-text-secondary,#94a3b8)', marginTop: '3px' }
+          }, estimatedDaysToGoal
+            ? `До цели ~${estimatedDaysToGoal} дн.`
+            : `До цели: ${toGoalKg.toFixed(1)} кг`)
         )
       );
     }
 
-    // === 4×3 EXTENDED LAYOUT ===
-    if (size === '4x3' || d.cols >= 4 && d.rows >= 3) {
+    // === 4×3 EXTENDED ===
+    if (size === '4x3' || (d.cols >= 4 && d.rows >= 3)) {
       const topWarnings = ewsData?.warnings?.slice(0, 3) || [];
-
       return React.createElement('div', {
-        className: `widget-crash-risk widget-crash-risk--extended widget-crash-risk--${severity}`,
-        onClick: handleOpenEWS
+        className: `widget-crash-risk widget-crash-risk--extended widget-crash-risk--${zone}`
       },
-        // Header: Title + EWS Count
+        // Header
         React.createElement('div', { className: 'widget-crash-risk__header-extended' },
-          React.createElement('div', { className: 'widget-crash-risk__title-extended' }, 'Early Warning System'),
-          ewsCount > 0 && React.createElement('div', {
-            className: 'widget-crash-risk__ews-badge-extended',
-            style: { background: colors.light, color: colors.bg }
-          }, `${ewsCount} предупр.`)
+          React.createElement('div', { className: 'widget-crash-risk__title-extended' }, 'Динамика веса'),
+          React.createElement('div', { style: { display: 'flex', alignItems: 'flex-end', flexDirection: 'column', gap: '6px' } },
+            React.createElement('div', {
+              style: { background: colorLight, color, fontSize: '0.75rem', padding: '2px 8px', borderRadius: '99px', fontWeight: 600, lineHeight: 1.2 }
+            }, `${zoneMeta.emoji} ${zoneMeta.label}`),
+            periodPresetRow
+          )
         ),
-
         // KPI Section
         React.createElement('div', { className: 'widget-crash-risk__kpi-section' },
           React.createElement('div', { className: 'widget-crash-risk__kpi-block' },
-            React.createElement('div', { className: 'widget-crash-risk__icon-big', style: { color: colors.bg } },
-              isWarning ? '⚠️' : '✅'
+            React.createElement('div', { style: { fontSize: '1.6rem', color, fontWeight: 800, lineHeight: 1 } },
+              `${dirArrow} ${absPct.toFixed(1)}%`
             ),
-            React.createElement('div', { className: 'widget-crash-risk__percent-big', style: { color: colors.bg } },
-              `${weeklyLossPercent.toFixed(1)}%`
-            ),
-            React.createElement('div', { className: 'widget-crash-risk__label' }, 'потеря/неделя')
+            React.createElement('div', { className: 'widget-crash-risk__label' }, 'в неделю')
           ),
           React.createElement('div', { className: 'widget-crash-risk__weight-info' },
-            React.createElement('div', { className: 'widget-crash-risk__weight-label' }, 'Текущий вес'),
-            React.createElement('div', { className: 'widget-crash-risk__weight-value' }, `${currentWeight.toFixed(1)} кг`)
+            React.createElement('div', { className: 'widget-crash-risk__weight-label' }, 'Сейчас'),
+            React.createElement('div', { className: 'widget-crash-risk__weight-value' }, `${currentWeight.toFixed(1)} кг`),
+            deltaAbs >= 0.1 && React.createElement('div', {
+              style: { fontSize: '0.75rem', color: 'var(--heys-text-secondary,#94a3b8)' }
+            }, `${deltaSign}${deltaAbs.toFixed(1)} кг за ${dataPoints} дн.`)
           )
         ),
-
-        // Warnings List (Top 3)
+        // Goal row
+        widget.settings?.showGoal !== false && toGoalKg !== null && toGoalKg > 0 &&
+        React.createElement('div', { className: 'widget-crash-risk__warnings-section', style: { paddingTop: '6px' } },
+          React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: 'var(--heys-text-secondary,#94a3b8)' } },
+            React.createElement('span', null, 'До целевого веса'),
+            React.createElement('span', { style: { fontWeight: 600 } },
+              estimatedDaysToGoal
+                ? `~${estimatedDaysToGoal} дн. / −${toGoalKg.toFixed(1)} кг`
+                : `${toGoalKg.toFixed(1)} кг`
+            )
+          )
+        ),
+        // EWS warnings
         widget.settings?.showWarnings !== false && topWarnings.length > 0 &&
         React.createElement('div', { className: 'widget-crash-risk__warnings-section' },
-          React.createElement('div', { className: 'widget-crash-risk__warnings-title' }, 'Предупреждения:'),
+          React.createElement('div', { className: 'widget-crash-risk__warnings-title' }, `⚠️ EWS: ${ewsCount} предупреждений`),
           React.createElement('div', { className: 'widget-crash-risk__warnings-list' },
             topWarnings.map((w, i) =>
               React.createElement('div', {
@@ -2857,25 +3168,19 @@
             )
           )
         ),
-
-        // Footer: CTA
-        React.createElement('div', { className: 'widget-crash-risk__footer' },
-          React.createElement('div', { className: 'widget-crash-risk__cta' }, '→ Открыть полный отчёт')
+        // Footer: quality info
+        React.createElement('div', { style: { fontSize: '0.72rem', color: 'var(--heys-text-secondary,#94a3b8)', textAlign: 'right', paddingTop: '4px' } },
+          `${dataPoints}/${periodDays} взвешиваний · R² ${(data?.regression?.r2 || 0).toFixed(2)}`
         )
       );
     }
 
-    // === FALLBACK (other sizes) ===
+    // === FALLBACK ===
     return React.createElement('div', {
-      className: `widget-crash-risk widget-crash-risk--fallback widget-crash-risk--${severity}`
+      className: `widget-crash-risk widget-crash-risk--fallback widget-crash-risk--${zone}`
     },
-      React.createElement('div', { className: 'widget-crash-risk__icon', style: { color: colors.bg } },
-        isWarning ? '⚠️' : '✅'
-      ),
-      React.createElement('div', { className: 'widget-crash-risk__percent', style: { color: colors.bg } },
-        `${weeklyLossPercent.toFixed(1)}%`
-      ),
-      React.createElement('div', { className: 'widget-crash-risk__label' }, 'потеря/неделя')
+      React.createElement('div', { style: { color, fontWeight: 800 } }, `${dirArrow} ${absPct.toFixed(1)}%`),
+      React.createElement('div', { className: 'widget-crash-risk__label' }, 'в неделю')
     );
   }
 
@@ -3041,7 +3346,7 @@
   function formatRelapseRiskTraceForClipboard(payload) {
     const snapshot = payload?.snapshot || {};
     const result = snapshot?.raw || {};
-    const humanSummary = buildRelapseHumanSummary(payload);
+    const humanSummary = buildRelapseHumanSummary({ ...payload, snapshot });
     const hasRawTrace = !!(result && typeof result === 'object' && Object.keys(result).length > 0 && result?.debug);
     const score = Math.round(Number(snapshot?.score ?? result?.score) || 0);
     const level = String(snapshot?.level || result?.level || 'low');
@@ -3229,17 +3534,197 @@
 
   if (!window._relapseRingAnimated) window._relapseRingAnimated = new Set();
   const _relapseRingAnimated = window._relapseRingAnimated;
+  const RELAPSE_PROFILE_STORAGE_KEY = 'heys_relapse_risk_dev_profile';
+
+  function getRelapseProfileOptions() {
+    const profiles = HEYS.RelapseRisk?.CONFIG?.PROFILES || {};
+    return Object.values(profiles).map((profile) => ({
+      key: profile?.key,
+      label: profile?.label || profile?.key || 'profile',
+      description: profile?.description || ''
+    })).filter((profile) => !!profile.key);
+  }
+
+  function getRelapseSelectedProfileKey(snapshot) {
+    const snapshotKey = snapshot?.profile?.key || snapshot?.raw?.profile?.key || snapshot?.selectedProfileKey;
+    if (typeof snapshotKey === 'string' && snapshotKey.trim()) {
+      return snapshotKey.trim();
+    }
+
+    try {
+      const raw = localStorage.getItem(RELAPSE_PROFILE_STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (typeof parsed === 'string' && parsed.trim()) return parsed.trim();
+      }
+    } catch (e) {
+      // no-op
+    }
+
+    return HEYS.RelapseRisk?.CONFIG?.DEFAULT_PROFILE_KEY || 'v1_1';
+  }
+
+  function setRelapseSelectedProfileKey(profileKey) {
+    if (typeof profileKey !== 'string' || !profileKey.trim()) return;
+
+    try {
+      if (typeof HEYS.utils?.lsSet === 'function') {
+        HEYS.utils.lsSet(RELAPSE_PROFILE_STORAGE_KEY, profileKey.trim());
+        return;
+      }
+      localStorage.setItem(RELAPSE_PROFILE_STORAGE_KEY, JSON.stringify(profileKey.trim()));
+    } catch (e) {
+      // no-op
+    }
+  }
+
+  function shouldShowRelapseDevPanel() {
+    try {
+      const host = window?.location?.hostname || '';
+      if (host === 'localhost' || host === '127.0.0.1') return true;
+      if (localStorage.getItem('heys_debug_widgets') === '1') return true;
+      if (localStorage.getItem('heys_debug_relapse_profiles') === '1') return true;
+    } catch (e) {
+      // no-op
+    }
+    return false;
+  }
+
+  function resolveRelapseSnapshot(widget, profileKey) {
+    const targetWidget = widget && widget.type === 'relapseRisk'
+      ? widget
+      : { id: 'relapseRisk-dev', type: 'relapseRisk', size: '2x2', settings: {} };
+
+    try {
+      const providerSnapshot = HEYS.Widgets.data?.getRelapseRiskData?.(targetWidget, {
+        weightProfileKey: profileKey
+      }) || HEYS.Widgets.data?.getDataForWidget?.(targetWidget);
+      if (providerSnapshot?.raw) {
+        return providerSnapshot;
+      }
+    } catch (providerError) {
+      console.warn('[HEYS.relapseRisk] provider snapshot failed', providerError?.message);
+    }
+
+    if (!HEYS.RelapseRisk?.calculate) {
+      return { hasData: false, score: 0, level: 'low', message: 'Engine not loaded' };
+    }
+
+    try {
+      const U = HEYS.utils || {};
+      const lsGet = typeof U?.lsGet === 'function'
+        ? U.lsGet.bind(U)
+        : ((k, fb) => {
+          try { return JSON.parse(localStorage.getItem(k)) || fb; } catch { return fb; }
+        });
+      const todayStr = HEYS.dayUtils?.todayISO?.() || new Date().toISOString().split('T')[0];
+      const dayData = HEYS.DayData?.getCurrentDay?.() || lsGet('heys_dayv2_' + todayStr, {});
+      const profile = lsGet('heys_profile', {});
+      const dayTot = HEYS.DayData?.getDayTot?.(dayData)
+        || (typeof HEYS.dayCalculations?.calculateDayTotals === 'function'
+          ? HEYS.dayCalculations.calculateDayTotals(dayData)
+          : {});
+      let normAbs = HEYS.norms?.getNormAbs?.(profile, profile?.pIndex || 0) || {};
+      if ((!normAbs.kcal || normAbs.kcal <= 0) && typeof HEYS.TDEE?.calculate === 'function') {
+        const tdee = HEYS.TDEE.calculate(profile);
+        if (tdee && tdee.optimum > 0) {
+          const weight = Number(profile.weight || profile.baseWeight || 70) || 70;
+          normAbs = { kcal: tdee.optimum, prot: Math.round(weight * 1.6) };
+        }
+      }
+      const historyDays = [];
+
+      for (let i = 14; i >= 1; i--) {
+        const d = new Date();
+        d.setDate(d.getDate() - i);
+        const dateStr = d.toISOString().split('T')[0];
+        const day = lsGet(`heys_dayv2_${dateStr}`, null);
+        if (day && typeof day === 'object' && Object.keys(day).length > 0) {
+          historyDays.push({
+            date: dateStr,
+            ...day,
+            dayTot: HEYS.DayData?.getDayTot?.(day)
+              || day.dayTot
+              || (typeof HEYS.dayCalculations?.calculateDayTotals === 'function'
+                ? HEYS.dayCalculations.calculateDayTotals(day)
+                : {})
+          });
+        }
+      }
+
+      const result = HEYS.RelapseRisk.calculate({
+        dayData,
+        profile,
+        dayTot,
+        normAbs,
+        historyDays,
+        weightProfileKey: profileKey,
+        now: new Date().toISOString()
+      });
+      const compare = typeof HEYS.RelapseRisk?.compareProfiles === 'function'
+        ? HEYS.RelapseRisk.compareProfiles({
+          dayData,
+          profile,
+          dayTot,
+          normAbs,
+          historyDays,
+          weightProfileKey: profileKey,
+          now: new Date().toISOString()
+        })
+        : null;
+
+      return {
+        hasData: true,
+        profile: result?.profile || null,
+        selectedProfileKey: profileKey,
+        score: Math.round(Number(result?.score) || 0),
+        level: result?.level || 'low',
+        confidence: Math.round(Number(result?.confidence) || 0),
+        primaryDrivers: Array.isArray(result?.primaryDrivers) ? result.primaryDrivers : [],
+        protectiveFactors: Array.isArray(result?.protectiveFactors) ? result.protectiveFactors : [],
+        windows: result?.windows || {},
+        recommendations: Array.isArray(result?.recommendations) ? result.recommendations : [],
+        compare,
+        raw: result,
+        _fallbackSource: 'modal_direct_engine'
+      };
+    } catch (fallbackErr) {
+      console.warn('[HEYS.relapseRisk] direct engine fallback failed:', fallbackErr?.message);
+      return { hasData: false, score: 0, level: 'low', _error: fallbackErr?.message };
+    }
+  }
 
   function RelapseRiskWidgetContent({ widget, data }) {
     const score = Math.round(Number(data?.score) || 0);
+    const relapseScore = Math.round(Number(data?.relapseScore ?? data?.score) || 0);
+    const crashScore = Math.round(Number(data?.crashScore) || 0);
+    const source = data?.source || 'none';
     const target = 100;
     const pct = Math.max(0, Math.min(100, Math.round(Number(data?.pct) || score)));
     const level = String(data?.level || 'low');
-    const topWindowLabel = data?.topWindowLabel || 'сейчас';
-    const topWindowScore = Math.round(Number(data?.topWindowScore) || score);
+    const topWindowLabel = typeof data?.topWindowLabel === 'string' ? data.topWindowLabel : 'сейчас';
+    const topWindowScore = Math.round(Number.isFinite(Number(data?.topWindowScore)) ? Number(data.topWindowScore) : score);
     const primaryDriver = data?.primaryDriver || null;
     const primaryDrivers = Array.isArray(data?.primaryDrivers) ? data.primaryDrivers.slice(0, 2) : [];
-    const recommendation = data?.recommendation || null;
+    const confidence = Math.max(0, Math.min(100, Math.round(Number(data?.confidence) || 0)));
+    const recommendation = (() => {
+      const rec = data?.recommendation;
+      if (!rec) return null;
+      if (typeof rec === 'string') return rec;
+      if (typeof rec?.text === 'string' && rec.text.trim()) return rec.text.trim();
+      if (typeof rec?.label === 'string' && rec.label.trim()) return rec.label.trim();
+      if (typeof rec?.title === 'string' && rec.title.trim()) return rec.title.trim();
+      return null;
+    })();
+
+    const getSourceLabel = () => {
+      switch (source) {
+        case 'emotional': return 'Эмоц.';
+        case 'metabolic': return 'Метабол.';
+        case 'both': return 'Оба';
+        default: return '';
+      }
+    };
 
     const d = getWidgetDims(widget);
     const size = widget?.size || '2x2';
@@ -3277,13 +3762,16 @@
     }
 
     if (size === '2x2') {
+      const showConfidence = widget.settings?.showConfidence !== false;
+      const showSource = widget.settings?.showSource !== false;
+      const srcLabel = getSourceLabel();
       return React.createElement('div', { className: 'widget-relapse-risk widget-relapse-risk--2x2' },
         React.createElement('div', { className: 'widget-relapse-risk__gauge-wrap' },
           React.createElement(RelapseRiskSpeedometer, {
             score: displayPct,
             level,
             size: 136,
-            label: 'Риск срыва',
+            label: 'Риск-радар',
             compact: true
           })
         ),
@@ -3291,20 +3779,33 @@
           React.createElement('div', {
             className: 'widget-relapse-risk__gauge-status-pill widget-relapse-risk__gauge-status-pill--footer',
             style: { color, background: `${color}16`, borderColor: `${color}22` }
-          }, getRelapseLevelLabel(level))
-        )
+          }, getRelapseLevelLabel(level)),
+          showSource && srcLabel ? React.createElement('span', {
+            style: { fontSize: '0.6rem', color: 'var(--heys-text-tertiary, #64748b)', marginLeft: '6px' }
+          }, srcLabel) : null
+        ),
+        showConfidence ? React.createElement('div', { className: 'widget-relapse-risk__label' }, `conf ${confidence}%`) : null
       );
     }
 
     const showDrivers = widget.settings?.showDrivers !== false;
     const showRecommendation = widget.settings?.showRecommendation !== false;
+    const showConfidence = widget.settings?.showConfidence !== false;
+    const showSource = widget.settings?.showSource !== false;
+    const srcLabel = getSourceLabel();
+    const riskSummaryLabel = showConfidence
+      ? `пик ${topWindowScore}% ${topWindowLabel} · conf ${confidence}%`
+      : `пик ${topWindowScore}% ${topWindowLabel}`;
 
     return React.createElement('div', { className: `widget-relapse-risk widget-relapse-risk--${variant}` },
       React.createElement('div', { className: 'widget-relapse-risk__top' },
         React.createElement('div', { className: 'widget-relapse-risk__value', style: { color } }, `${score}%`),
-        React.createElement('div', { className: 'widget-relapse-risk__pct-pill', style: { color, background: `${color}20` } }, getRelapseLevelLabel(level))
+        React.createElement('div', { className: 'widget-relapse-risk__pct-pill', style: { color, background: `${color}20` } }, getRelapseLevelLabel(level)),
+        showSource && srcLabel ? React.createElement('span', {
+          style: { fontSize: '0.6rem', color: 'var(--heys-text-tertiary, #64748b)', marginLeft: '4px' }
+        }, srcLabel) : null
       ),
-      React.createElement('div', { className: 'widget-relapse-risk__label' }, `пик ${topWindowScore}% ${topWindowLabel}`),
+      React.createElement('div', { className: 'widget-relapse-risk__label' }, riskSummaryLabel),
       React.createElement('div', { className: 'widget-relapse-risk__progress' },
         React.createElement('div', {
           className: 'widget-relapse-risk__bar',
@@ -3327,14 +3828,670 @@
     );
   }
 
+  // === Status Details Modal ===
+  function StatusDetailsModal({ payload, isOpen, onClose }) {
+    if (!isOpen || !payload) return null;
+
+    const data = payload.data || {};
+    const status = data.status || {};
+    const score = Math.round(Number(status.score) || 0);
+    const level = status.level || {};
+    const levelLabel = level.label || 'Нет данных';
+    const levelEmoji = level.emoji || '';
+    const levelColor = level.color || '#94a3b8';
+    const factorScores = status.factorScores || {};
+    const factorDetails = status.factorDetails || {};
+    const categoryScores = status.categoryScores || {};
+    const breakdown = Array.isArray(status.breakdown) ? status.breakdown : [];
+    const topActions = Array.isArray(status.topActions) ? status.topActions : [];
+
+    const getColor = (s) => {
+      if (s >= 85) return '#10b981';
+      if (s >= 70) return '#22c55e';
+      if (s >= 50) return '#eab308';
+      if (s >= 30) return '#f97316';
+      return '#ef4444';
+    };
+
+    const copyStatusLog = async () => {
+      try {
+        const lines = [
+          '=== HEYS Status Score Log ===',
+          `Date: ${new Date().toISOString()}`,
+          `Score: ${score}/100 (${levelLabel})`,
+          '',
+          '--- Category Scores ---',
+          ...Object.entries(categoryScores).map(([k, v]) => `  ${v.icon || ''} ${v.label || k}: ${v.score}`),
+          '',
+          '--- Factor Scores ---',
+          ...Object.entries(factorScores).map(([k, v]) => `  ${k}: ${v}`),
+          '',
+          '--- Factor Details ---',
+          ...Object.entries(factorDetails).map(([k, v]) => `  ${k}: ${v.value}/${v.target} ${v.unit || ''} (${v.percent != null ? v.percent + '%' : v.label || ''})`),
+          '',
+          '--- Top Actions ---',
+          ...topActions.map((a, i) => `  ${i + 1}. ${a.icon || ''} ${a.text} (${a.factor || ''})`),
+          '',
+          '--- Raw Status ---',
+          JSON.stringify(status, null, 2)
+        ];
+        await copyTextWithFallback(lines.join('\n'));
+        HEYS.Toast?.success?.('Status лог скопирован');
+      } catch (err) {
+        console.error('[HEYS.status.copy] ❌', err);
+        HEYS.Toast?.error?.('Не удалось скопировать лог');
+      }
+    };
+
+    const handleBackdropClick = (e) => {
+      if (e.target === e.currentTarget) onClose?.();
+    };
+
+    return React.createElement('div', {
+      className: 'widget-relapse-risk__modal-overlay',
+      onClick: handleBackdropClick
+    },
+      React.createElement('div', {
+        className: 'widget-relapse-risk__modal',
+        onClick: (e) => e.stopPropagation()
+      },
+        // Header
+        React.createElement('div', { className: 'widget-relapse-risk__modal-header' },
+          React.createElement('div', { className: 'widget-relapse-risk__modal-title-wrap' },
+            React.createElement('div', { className: 'widget-relapse-risk__modal-eyebrow' }, 'Status Score'),
+            React.createElement('h3', { className: 'widget-relapse-risk__modal-title' }, 'Детали оценки дня')
+          ),
+          React.createElement('button', {
+            type: 'button',
+            className: 'widget-relapse-risk__modal-close',
+            onClick: onClose,
+            'aria-label': 'Закрыть'
+          }, '✕')
+        ),
+        // Content
+        React.createElement('div', { className: 'widget-relapse-risk__modal-content' },
+          // Hero
+          React.createElement('div', { className: 'widget-relapse-risk__modal-hero' },
+            React.createElement('div', {
+              className: 'widget-relapse-risk__modal-score-shell',
+              style: { background: `${levelColor}12`, borderColor: `${levelColor}33` }
+            },
+              React.createElement('div', {
+                style: { fontSize: '3.5rem', fontWeight: 800, color: levelColor, lineHeight: 1 }
+              }, score),
+              React.createElement('div', {
+                className: 'widget-relapse-risk__modal-score-level',
+                style: { color: levelColor, background: `${levelColor}16`, borderColor: `${levelColor}26` }
+              }, `${levelEmoji} ${levelLabel}`)
+            )
+          ),
+
+          // Categories
+          Object.keys(categoryScores).length > 0 && React.createElement('div', { className: 'widget-relapse-risk__modal-section' },
+            React.createElement('div', { className: 'widget-relapse-risk__modal-section-title' }, 'Категории'),
+            React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: '8px' } },
+              Object.entries(categoryScores).map(([key, cat]) =>
+                React.createElement('div', { key, style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' } },
+                  React.createElement('span', { style: { fontSize: '0.85rem', color: 'var(--heys-text-secondary, #94a3b8)' } }, `${cat.icon || ''} ${cat.label || key}`),
+                  React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '8px' } },
+                    React.createElement('div', {
+                      style: { width: '80px', height: '6px', borderRadius: '3px', background: 'var(--heys-bg-secondary, #1e293b)' }
+                    },
+                      React.createElement('div', {
+                        style: { width: `${Math.min(100, cat.score || 0)}%`, height: '100%', borderRadius: '3px', background: getColor(cat.score || 0), transition: 'width 0.3s ease' }
+                      })
+                    ),
+                    React.createElement('span', { style: { fontSize: '0.85rem', fontWeight: 600, color: getColor(cat.score || 0), minWidth: '28px', textAlign: 'right' } }, cat.score || 0)
+                  )
+                )
+              )
+            )
+          ),
+
+          // Factor breakdown
+          breakdown.length > 0 && React.createElement('div', { className: 'widget-relapse-risk__modal-section' },
+            React.createElement('div', { className: 'widget-relapse-risk__modal-section-title' }, 'Факторы'),
+            React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: '6px' } },
+              breakdown.map((f, i) =>
+                React.createElement('div', { key: i, style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' } },
+                  React.createElement('span', { style: { fontSize: '0.8rem', color: 'var(--heys-text-secondary, #94a3b8)' } },
+                    `${f.icon || ''} ${f.label || f.factorId}`
+                  ),
+                  React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '6px' } },
+                    f.percent != null
+                      ? React.createElement('span', { style: { fontSize: '0.7rem', color: 'var(--heys-text-tertiary, #64748b)' } }, `${f.value}/${f.target}${f.unit ? ' ' + f.unit : ''}`)
+                      : null,
+                    React.createElement('span', { style: { fontSize: '0.8rem', fontWeight: 600, color: getColor(f.score || 0), minWidth: '24px', textAlign: 'right' } }, f.score || 0)
+                  )
+                )
+              )
+            )
+          ),
+
+          // Top actions
+          topActions.length > 0 && React.createElement('div', { className: 'widget-relapse-risk__modal-section' },
+            React.createElement('div', { className: 'widget-relapse-risk__modal-section-title' }, 'Рекомендации'),
+            React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: '4px' } },
+              topActions.map((a, i) =>
+                React.createElement('div', { key: i, style: { fontSize: '0.85rem', color: 'var(--heys-text-secondary, #94a3b8)' } },
+                  `${a.icon || '→'} ${a.text}`)
+              )
+            )
+          ),
+
+          // Copy button
+          React.createElement('div', { style: { display: 'flex', justifyContent: 'center', paddingTop: '16px', paddingBottom: '8px' } },
+            React.createElement('button', {
+              type: 'button',
+              className: 'widget-relapse-risk__modal-copy-btn',
+              onClick: copyStatusLog
+            }, '📋 Скопировать лог')
+          )
+        )
+      )
+    );
+  }
+
+  // === Crash Risk Details Modal ===
+  function CrashRiskDetailsModal({ payload, isOpen, onClose, onPeriodChange }) {
+    // Period preset state — initialized from widget setting, defaults to 7
+    const initialPeriod = payload?.data?.periodDays || 7;
+    const [activePeriod, setActivePeriod] = useState(initialPeriod);
+    const [liveData, setLiveData] = useState(null);
+    const [loadingPeriod, setLoadingPeriod] = useState(false);
+
+    // Recalculate when period changes (using the data provider directly)
+    useEffect(() => {
+      if (!isOpen) return;
+      if (activePeriod === initialPeriod && !liveData) return; // first render uses payload.data
+      setLoadingPeriod(true);
+      try {
+        const provider = HEYS?.Widgets?.DataProviders?.crashRisk;
+        if (provider) {
+          const result = provider.getData({ days: activePeriod });
+          setLiveData(result);
+        }
+      } catch (e) {
+        console.warn('[HEYS.weightProgress.modal] period recalc failed:', e);
+      } finally {
+        setLoadingPeriod(false);
+      }
+    }, [activePeriod, isOpen]);
+
+    if (!isOpen || !payload) return null;
+
+    // Use liveData if available, else fall back to payload.data
+    const data = liveData || payload.data || {};
+    const zone = data.zone || 'stable';
+    const zoneMeta = data.zoneMeta || { label: 'Нет данных', color: '#64748b', light: '#f1f5f9', emoji: '—' };
+    const zoneHint = data.zoneHint || '';
+    const pctPerWeek = Number(data.pctPerWeek) || 0;
+    const slopePerWeek = Number(data.slopePerWeek) || 0;
+    const direction = data.direction || 'stable';
+    const currentWeight = Number(data.currentWeight) || 0;
+    const firstWeight = Number(data.firstWeight) || 0;
+    const totalDeltaKg = Number(data.totalDeltaKg) || 0;
+    const dataCompleteness = Number(data.dataCompleteness) || 0;
+    const goalWeight = data.goalWeight ?? null;
+    const toGoalKg = data.toGoalKg ?? null;
+    const estimatedDaysToGoal = data.estimatedDaysToGoal ?? null;
+    const ewsCount = data.ewsCount || 0;
+    const warnings = data.ewsData?.warnings || [];
+    const weightData = data.weightData || [];
+    const r2 = data.regression?.r2 || 0;
+    const dataPoints = data.dataPoints || 0;
+    const periodDays = data.periodDays || activePeriod;
+
+    const color = zoneMeta.color;
+    const dirArrow = direction === 'losing' ? '↓' : direction === 'gaining' ? '↑' : '→';
+    const absPct = Math.abs(pctPerWeek);
+    const deltaSign = totalDeltaKg < -0.05 ? '−' : totalDeltaKg > 0.05 ? '+' : '';
+    const deltaAbs = Math.abs(totalDeltaKg);
+
+    const PRESETS = [
+      { days: 7, label: '7 дн.' },
+      { days: 14, label: '14 дн.' },
+      { days: 30, label: '30 дн.' },
+    ];
+
+    const copyLog = async () => {
+      try {
+        const lines = [
+          '=== HEYS Weight Progress Log ===',
+          `Date: ${new Date().toISOString()}`,
+          `Period: ${activePeriod} days`,
+          `Zone: ${zone} (${zoneMeta.label})`,
+          `Direction: ${direction}`,
+          `Rate: ${pctPerWeek >= 0 ? '+' : ''}${pctPerWeek.toFixed(2)}%/week`,
+          `Slope: ${slopePerWeek >= 0 ? '+' : ''}${slopePerWeek.toFixed(3)} kg/week`,
+          `Current Weight: ${currentWeight.toFixed(1)} kg`,
+          firstWeight ? `First Weight (${dataPoints} days ago): ${firstWeight.toFixed(1)} kg` : null,
+          `Total Delta: ${deltaSign}${deltaAbs.toFixed(2)} kg`,
+          `Data: ${dataPoints}/${periodDays} days (${(dataCompleteness * 100).toFixed(0)}%)`,
+          `Trend R²: ${r2.toFixed(3)}`,
+          goalWeight ? `Goal: ${goalWeight} kg (remaining: ${(toGoalKg || 0).toFixed(1)} kg)` : null,
+          estimatedDaysToGoal ? `ETA to Goal: ~${estimatedDaysToGoal} days` : null,
+          `EWS Count: ${ewsCount}`,
+          '',
+          '--- EWS Warnings ---',
+          ...warnings.map((w, i) => `  ${i + 1}. [${w.severity}] ${w.message}`),
+          '',
+          '--- Weight History ---',
+          ...weightData.map(p => `  ${p.date}: ${p.weight.toFixed(1)} kg`),
+          '',
+          '--- Raw Data ---',
+          JSON.stringify(data, null, 2),
+        ].filter(Boolean);
+        await copyTextWithFallback(lines.join('\n'));
+        HEYS.Toast?.success?.('Weight Progress лог скопирован');
+      } catch (err) {
+        console.error('[HEYS.weightProgress.copy] ❌', err);
+        HEYS.Toast?.error?.('Не удалось скопировать лог');
+      }
+    };
+
+    const handleBackdropClick = (e) => {
+      if (e.target === e.currentTarget) onClose?.();
+    };
+
+    return React.createElement('div', {
+      className: 'widget-relapse-risk__modal-overlay',
+      onClick: handleBackdropClick
+    },
+      React.createElement('div', {
+        className: 'widget-relapse-risk__modal',
+        onClick: (e) => e.stopPropagation()
+      },
+        // Header
+        React.createElement('div', { className: 'widget-relapse-risk__modal-header' },
+          React.createElement('div', { className: 'widget-relapse-risk__modal-title-wrap' },
+            React.createElement('div', { className: 'widget-relapse-risk__modal-eyebrow' }, 'Динамика веса'),
+            React.createElement('h3', { className: 'widget-relapse-risk__modal-title' }, 'Прогресс за период')
+          ),
+          React.createElement('button', {
+            type: 'button',
+            className: 'widget-relapse-risk__modal-close',
+            onClick: onClose,
+            'aria-label': 'Закрыть'
+          }, '✕')
+        ),
+
+        React.createElement('div', { className: 'widget-relapse-risk__modal-content' },
+
+          // Period preset switcher
+          React.createElement('div', {
+            style: { display: 'flex', gap: '8px', justifyContent: 'center', marginBottom: '12px' }
+          },
+            PRESETS.map(({ days, label }) =>
+              React.createElement('button', {
+                key: days,
+                type: 'button',
+                onClick: () => { setActivePeriod(days); onPeriodChange?.(days); },
+                style: {
+                  padding: '5px 14px',
+                  borderRadius: '99px',
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontSize: '0.82rem',
+                  fontWeight: activePeriod === days ? 700 : 400,
+                  background: activePeriod === days ? color : 'var(--heys-bg-secondary, #f1f5f9)',
+                  color: activePeriod === days ? '#fff' : 'var(--heys-text-secondary,#64748b)',
+                  transition: 'all 0.15s',
+                  opacity: loadingPeriod ? 0.6 : 1,
+                }
+              }, label)
+            )
+          ),
+
+          // Hero: rate + zone badge
+          React.createElement('div', { className: 'widget-relapse-risk__modal-hero' },
+            React.createElement('div', {
+              className: 'widget-relapse-risk__modal-score-shell',
+              style: { background: `${color}12`, borderColor: `${color}33`, opacity: loadingPeriod ? 0.5 : 1 }
+            },
+              React.createElement('div', { style: { fontSize: '1.5rem' } }, zoneMeta.emoji),
+              React.createElement('div', {
+                style: { fontSize: '2.5rem', fontWeight: 800, color, lineHeight: 1 }
+              }, `${dirArrow} ${absPct.toFixed(1)}%`),
+              React.createElement('div', {
+                className: 'widget-relapse-risk__modal-score-level',
+                style: { color, background: `${color}16`, borderColor: `${color}26` }
+              }, `${zoneMeta.label} · /неделю`)
+            )
+          ),
+
+          // Zone hint
+          zoneHint && React.createElement('div', { className: 'widget-relapse-risk__modal-section' },
+            React.createElement('div', {
+              style: { fontSize: '0.82rem', color: 'var(--heys-text-secondary,#94a3b8)', lineHeight: 1.5 }
+            }, zoneHint)
+          ),
+
+          // Period summary
+          React.createElement('div', { className: 'widget-relapse-risk__modal-section' },
+            React.createElement('div', { className: 'widget-relapse-risk__modal-section-title' }, 'За период'),
+            React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: '8px' } },
+              React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' } },
+                React.createElement('span', { style: { color: 'var(--heys-text-secondary,#94a3b8)' } }, 'Сейчас'),
+                React.createElement('span', { style: { fontWeight: 600 } }, `${currentWeight.toFixed(1)} кг`)
+              ),
+              firstWeight > 0 && React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' } },
+                React.createElement('span', { style: { color: 'var(--heys-text-secondary,#94a3b8)' } }, `${dataPoints} дн. назад`),
+                React.createElement('span', { style: { fontWeight: 600 } }, `${firstWeight.toFixed(1)} кг`)
+              ),
+              deltaAbs >= 0.05 && React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' } },
+                React.createElement('span', { style: { color: 'var(--heys-text-secondary,#94a3b8)' } }, 'Итого изменение'),
+                React.createElement('span', { style: { fontWeight: 600, color } }, `${deltaSign}${deltaAbs.toFixed(2)} кг`)
+              ),
+              React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' } },
+                React.createElement('span', { style: { color: 'var(--heys-text-secondary,#94a3b8)' } }, 'Темп'),
+                React.createElement('span', { style: { fontWeight: 600 } },
+                  `${slopePerWeek >= 0 ? '+' : ''}${slopePerWeek.toFixed(2)} кг/нед`
+                )
+              ),
+              React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' } },
+                React.createElement('span', { style: { color: 'var(--heys-text-secondary,#94a3b8)' } }, 'Данных'),
+                React.createElement('span', { style: { fontWeight: 600 } },
+                  `${dataPoints}/${periodDays} дн. (${(dataCompleteness * 100).toFixed(0)}%)`
+                )
+              ),
+              React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' } },
+                React.createElement('span', { style: { color: 'var(--heys-text-secondary,#94a3b8)' } }, 'Качество тренда (R²)'),
+                React.createElement('span', { style: { fontWeight: 600 } }, r2.toFixed(3))
+              )
+            )
+          ),
+
+          // Goal section
+          toGoalKg !== null && React.createElement('div', { className: 'widget-relapse-risk__modal-section' },
+            React.createElement('div', { className: 'widget-relapse-risk__modal-section-title' }, 'Цель'),
+            React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: '8px' } },
+              React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' } },
+                React.createElement('span', { style: { color: 'var(--heys-text-secondary,#94a3b8)' } }, 'Целевой вес'),
+                React.createElement('span', { style: { fontWeight: 600 } }, `${goalWeight} кг`)
+              ),
+              React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' } },
+                React.createElement('span', { style: { color: 'var(--heys-text-secondary,#94a3b8)' } }, 'Осталось'),
+                React.createElement('span', { style: { fontWeight: 600 } }, `${(toGoalKg || 0).toFixed(1)} кг`)
+              ),
+              estimatedDaysToGoal && React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' } },
+                React.createElement('span', { style: { color: 'var(--heys-text-secondary,#94a3b8)' } }, 'Прогноз при текущем темпе'),
+                React.createElement('span', { style: { fontWeight: 600 } }, `~${estimatedDaysToGoal} дней`)
+              )
+            )
+          ),
+
+          // Weight history table (last up to activePeriod entries)
+          weightData.length > 0 && React.createElement('div', { className: 'widget-relapse-risk__modal-section' },
+            React.createElement('div', { className: 'widget-relapse-risk__modal-section-title' }, 'История взвешиваний'),
+            React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: '4px' } },
+              weightData.map((p, i) =>
+                React.createElement('div', {
+                  key: i,
+                  style: { display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: 'var(--heys-text-secondary,#94a3b8)' }
+                },
+                  React.createElement('span', null, p.date),
+                  React.createElement('span', { style: { fontWeight: 600 } }, `${p.weight.toFixed(1)} кг`)
+                )
+              )
+            )
+          ),
+
+          // EWS warnings
+          warnings.length > 0 && React.createElement('div', { className: 'widget-relapse-risk__modal-section' },
+            React.createElement('div', { className: 'widget-relapse-risk__modal-section-title' }, `Предупреждения EWS (${ewsCount})`),
+            React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: '6px' } },
+              warnings.map((w, i) =>
+                React.createElement('div', {
+                  key: i,
+                  style: { display: 'flex', alignItems: 'flex-start', gap: '8px', fontSize: '0.85rem', color: 'var(--heys-text-secondary,#94a3b8)' }
+                },
+                  React.createElement('span', null, getSeverityIcon(w.severity)),
+                  React.createElement('span', null, w.message)
+                )
+              )
+            )
+          ),
+
+          // Copy button
+          React.createElement('div', { style: { display: 'flex', justifyContent: 'center', paddingTop: '16px', paddingBottom: '8px' } },
+            React.createElement('button', {
+              type: 'button',
+              className: 'widget-relapse-risk__modal-copy-btn',
+              onClick: copyLog
+            }, '📋 Скопировать лог')
+          )
+        )
+      )
+    );
+  }
+
+  // === Day Score Details Modal ===
+  function DayScoreDetailsModal({ payload, isOpen, onClose }) {
+    if (!isOpen || !payload) return null;
+
+    const data = payload.data || {};
+    const score = Math.round(Number(data.score) || 0);
+    const level = data.level || 'none';
+    const factorScore = Math.round(Number(data.factorScore) || 0);
+    const subjectiveScore = Math.round(Number(data.subjectiveScore) || 0);
+    const momentumScore = Math.round(Number(data.momentumScore) || 0);
+    const avgMealQuality = data.avgMealQuality != null ? Math.round(Number(data.avgMealQuality)) : null;
+    const breakdown = data.breakdown || {};
+    const statusResult = data.statusResult || {};
+
+    const getColor = (s) => {
+      if (s >= 85) return '#10b981';
+      if (s >= 70) return '#22c55e';
+      if (s >= 50) return '#eab308';
+      if (s >= 30) return '#f97316';
+      return '#ef4444';
+    };
+
+    const getLevelLabel = (lvl) => {
+      switch (lvl) {
+        case 'excellent': return 'Отлично';
+        case 'good': return 'Хорошо';
+        case 'okay': return 'Нормально';
+        case 'low': return 'Слабо';
+        case 'critical': return 'Критично';
+        default: return 'Нет данных';
+      }
+    };
+
+    const color = getColor(score);
+
+    const componentRows = [];
+    if (breakdown.nutrition != null) componentRows.push({ label: '🍽 Питание', value: Math.round(breakdown.nutrition), max: 25 });
+    if (breakdown.water != null) componentRows.push({ label: '💧 Вода', value: Math.round(breakdown.water), max: 15 });
+    if (breakdown.sleep != null) componentRows.push({ label: '😴 Сон', value: Math.round(breakdown.sleep), max: 15 });
+    if (breakdown.activity != null) componentRows.push({ label: '🏃 Активность', value: Math.round(breakdown.activity), max: 10 });
+    if (breakdown.weight != null) componentRows.push({ label: '⚖️ Вес', value: Math.round(breakdown.weight), max: 5 });
+
+    const layerRows = [
+      { label: 'Факторы (70%)', value: factorScore, color: getColor(factorScore) },
+      { label: 'Субъективная (15%)', value: subjectiveScore, color: getColor(subjectiveScore) },
+      { label: 'Momentum (15%)', value: momentumScore, color: getColor(momentumScore) }
+    ];
+
+    const copyDayScoreLog = async () => {
+      try {
+        const lines = [
+          '=== HEYS Day Score Log ===',
+          `Date: ${new Date().toISOString()}`,
+          `Score: ${score}/100 (${getLevelLabel(level)})`,
+          '',
+          '--- Layers ---',
+          `Factors (70%): ${factorScore}`,
+          `Subjective (15%): ${subjectiveScore}`,
+          `Momentum (15%): ${momentumScore}`,
+          '',
+          '--- Factor Breakdown ---',
+          ...Object.entries(breakdown).map(([k, v]) => `  ${k}: ${typeof v === 'number' ? Math.round(v) : v}`),
+          '',
+          '--- Status Result ---',
+          JSON.stringify(statusResult, null, 2),
+          '',
+          `avgMealQuality: ${avgMealQuality ?? 'N/A'}`,
+          '',
+          '--- Raw Payload ---',
+          JSON.stringify(data, null, 2)
+        ];
+        await copyTextWithFallback(lines.join('\n'));
+        HEYS.Toast?.success?.('Day Score лог скопирован');
+      } catch (err) {
+        console.error('[HEYS.dayScore.copy] ❌', err);
+        HEYS.Toast?.error?.('Не удалось скопировать лог');
+      }
+    };
+
+    const handleBackdropClick = (e) => {
+      if (e.target === e.currentTarget) onClose?.();
+    };
+
+    return React.createElement('div', {
+      className: 'widget-relapse-risk__modal-overlay',
+      onClick: handleBackdropClick
+    },
+      React.createElement('div', {
+        className: 'widget-relapse-risk__modal',
+        onClick: (e) => e.stopPropagation()
+      },
+        // Header
+        React.createElement('div', { className: 'widget-relapse-risk__modal-header' },
+          React.createElement('div', { className: 'widget-relapse-risk__modal-title-wrap' },
+            React.createElement('div', { className: 'widget-relapse-risk__modal-eyebrow' }, 'Day Score'),
+            React.createElement('h3', { className: 'widget-relapse-risk__modal-title' }, 'Как сложился день')
+          ),
+          React.createElement('button', {
+            type: 'button',
+            className: 'widget-relapse-risk__modal-close',
+            onClick: onClose,
+            'aria-label': 'Закрыть'
+          }, '✕')
+        ),
+        // Content
+        React.createElement('div', { className: 'widget-relapse-risk__modal-content' },
+          // Hero — Score
+          React.createElement('div', { className: 'widget-relapse-risk__modal-hero' },
+            React.createElement('div', {
+              className: 'widget-relapse-risk__modal-score-shell',
+              style: { background: `${color}12`, borderColor: `${color}33` }
+            },
+              React.createElement('div', {
+                style: { fontSize: '3.5rem', fontWeight: 800, color, lineHeight: 1 }
+              }, score),
+              React.createElement('div', {
+                className: 'widget-relapse-risk__modal-score-level',
+                style: { color, background: `${color}16`, borderColor: `${color}26` }
+              }, `⭐ ${getLevelLabel(level)}`)
+            )
+          ),
+
+          // Layers
+          React.createElement('div', { className: 'widget-relapse-risk__modal-section' },
+            React.createElement('div', { className: 'widget-relapse-risk__modal-section-title' }, 'Слои оценки'),
+            React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: '8px' } },
+              layerRows.map((row, i) =>
+                React.createElement('div', { key: i, style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' } },
+                  React.createElement('span', { style: { fontSize: '0.85rem', color: 'var(--heys-text-secondary, #94a3b8)' } }, row.label),
+                  React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '8px' } },
+                    React.createElement('div', {
+                      style: { width: '80px', height: '6px', borderRadius: '3px', background: 'var(--heys-bg-secondary, #1e293b)' }
+                    },
+                      React.createElement('div', {
+                        style: { width: `${Math.min(100, row.value)}%`, height: '100%', borderRadius: '3px', background: row.color, transition: 'width 0.3s ease' }
+                      })
+                    ),
+                    React.createElement('span', { style: { fontSize: '0.85rem', fontWeight: 600, color: row.color, minWidth: '28px', textAlign: 'right' } }, row.value)
+                  )
+                )
+              )
+            )
+          ),
+
+          // Factor breakdown
+          componentRows.length > 0 && React.createElement('div', { className: 'widget-relapse-risk__modal-section' },
+            React.createElement('div', { className: 'widget-relapse-risk__modal-section-title' }, 'Компоненты факторов'),
+            React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: '6px' } },
+              componentRows.map((row, i) =>
+                React.createElement('div', { key: i, style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' } },
+                  React.createElement('span', { style: { fontSize: '0.8rem', color: 'var(--heys-text-secondary, #94a3b8)' } }, row.label),
+                  React.createElement('span', { style: { fontSize: '0.8rem', fontWeight: 600, color: getColor(row.value / row.max * 100) } }, `${row.value}/${row.max}`)
+                )
+              )
+            )
+          ),
+
+          // Average meal quality
+          avgMealQuality != null && React.createElement('div', { className: 'widget-relapse-risk__modal-section' },
+            React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' } },
+              React.createElement('span', { style: { fontSize: '0.85rem', color: 'var(--heys-text-secondary, #94a3b8)' } }, '🍽 Средн. качество приёмов'),
+              React.createElement('span', { style: { fontSize: '0.85rem', fontWeight: 600, color: getColor(avgMealQuality) } }, `${avgMealQuality}/100`)
+            )
+          ),
+
+          // Copy button
+          React.createElement('div', { style: { display: 'flex', justifyContent: 'center', paddingTop: '16px', paddingBottom: '8px' } },
+            React.createElement('button', {
+              type: 'button',
+              className: 'widget-relapse-risk__modal-copy-btn',
+              onClick: copyDayScoreLog
+            }, '📋 Скопировать лог')
+          )
+        )
+      )
+    );
+  }
+
   function RelapseRiskDetailsModal({ payload, isOpen, onClose }) {
     if (!isOpen || !payload) return null;
 
-    const snapshot = payload?.snapshot || {};
+    const [activeSnapshot, setActiveSnapshot] = useState(payload?.snapshot || {});
+    const [selectedProfileKey, setSelectedProfileKey] = useState(() => getRelapseSelectedProfileKey(payload?.snapshot || {}));
+
+    useEffect(() => {
+      setActiveSnapshot(payload?.snapshot || {});
+      setSelectedProfileKey(getRelapseSelectedProfileKey(payload?.snapshot || {}));
+    }, [payload]);
+
+    const snapshot = activeSnapshot || {};
     const result = snapshot?.raw || {};
     const score = Math.round(Number(snapshot?.score ?? result?.score) || 0);
     const level = String(snapshot?.level || result?.level || 'low');
     const confidence = Math.max(0, Math.min(100, Math.round(Number(snapshot?.confidence ?? result?.confidence) || 0)));
+
+    // Risk Radar aggregation: get source + crash component
+    const radarResult = React.useMemo(() => {
+      if (!HEYS.RiskRadar?.calculate) return null;
+      try {
+        const profile = HEYS.Widgets?.data?._getProfile?.() || {};
+        return HEYS.RiskRadar.calculate({ profile });
+      } catch (e) { return null; }
+    }, [payload]);
+    const radarSource = radarResult?.source || 'none';
+    const radarRelapseScore = Math.round(Number(radarResult?.relapse?.score) || score);
+    const radarCrashScore = Math.round(Number(radarResult?.crash?.score) || 0);
+    const radarScore = Math.round(Number(radarResult?.score) || score);
+    const radarDrivers = (radarResult?.drivers || []).map(d => d.label || d.factor || String(d));
+    const radarActions = (radarResult?.actions || []).map(a => a.text || a.label || String(a));
+
+    const getSourceLabel = (src) => {
+      switch (src) {
+        case 'emotional': return 'Эмоциональный (Relapse)';
+        case 'metabolic': return 'Метаболический (Crash)';
+        case 'both': return 'Оба источника';
+        default: return 'Не определён';
+      }
+    };
+
+    const getRadarColor = (s) => {
+      if (s >= 70) return '#ef4444';
+      if (s >= 40) return '#f97316';
+      if (s >= 20) return '#eab308';
+      return '#10b981';
+    };
+
     const windows = getSortedRelapseWindows(result?.windows || snapshot?.windows);
     const drivers = Array.isArray(result?.primaryDrivers) ? result.primaryDrivers : (Array.isArray(snapshot?.primaryDrivers) ? snapshot.primaryDrivers : []);
     const protectiveFactors = Array.isArray(result?.protectiveFactors) ? result.protectiveFactors : (Array.isArray(snapshot?.protectiveFactors) ? snapshot.protectiveFactors : []);
@@ -3356,11 +4513,48 @@
     const leadWindow = windows[0] || null;
     const leadDriver = drivers[0] || null;
     const topRecommendation = recommendations[0] || null;
+    const devPanelVisible = shouldShowRelapseDevPanel();
+    const profileOptions = getRelapseProfileOptions();
+    const compareItems = Array.isArray(snapshot?.compare?.comparisons) ? snapshot.compare.comparisons : [];
+    const compareBaselineProfileKey = snapshot?.compare?.baselineProfileKey || 'baseline';
+    const profileGuideItems = [
+      {
+        key: 'baseline',
+        title: 'Baseline',
+        text: 'Опорная старая логика. Смотри её, если хочешь понять, насколько v1.1 вообще изменил трактовку дня.'
+      },
+      {
+        key: 'v1_1',
+        title: 'v1.1',
+        text: 'Текущий рекомендуемый дефолт: мягче к контролируемому дефициту и честнее к recovery-факторам.'
+      },
+      {
+        key: 'recovery_sensitive',
+        title: 'Recovery',
+        text: 'Сильнее реагирует на недосып и истощение. Полезно, если кажется, что усталость недооценена.'
+      },
+      {
+        key: 'restriction_sensitive',
+        title: 'Restriction',
+        text: 'Сильнее реагирует на недоедание, gaps и aggressive cut. Полезно для проверки жёстких сценариев.'
+      }
+    ];
+
+    const handleSelectProfile = useCallback((nextProfileKey) => {
+      if (!nextProfileKey || nextProfileKey === selectedProfileKey) return;
+      setSelectedProfileKey(nextProfileKey);
+      setRelapseSelectedProfileKey(nextProfileKey);
+      HEYS.RelapseRisk?.invalidateSnapshot?.();
+      const nextSnapshot = resolveRelapseSnapshot(payload?.widget, nextProfileKey);
+      setActiveSnapshot(nextSnapshot);
+      HEYS.Widgets.data?.refresh?.();
+      HEYS.dayUtils?.haptic?.('light');
+    }, [payload?.widget, selectedProfileKey]);
 
     const copyRelapseLog = async () => {
       const startedAt = Date.now();
       try {
-        const text = formatRelapseRiskTraceForClipboard(payload);
+        const text = formatRelapseRiskTraceForClipboard({ ...payload, snapshot });
         await copyTextWithFallback(text);
         console.info('[HEYS.relapseRisk.copy] ✅ trace copied', {
           chars: text.length,
@@ -3391,10 +4585,11 @@
         className: 'widget-relapse-risk__modal',
         onClick: (e) => e.stopPropagation()
       },
+        // Header
         React.createElement('div', { className: 'widget-relapse-risk__modal-header' },
           React.createElement('div', { className: 'widget-relapse-risk__modal-title-wrap' },
-            React.createElement('div', { className: 'widget-relapse-risk__modal-eyebrow' }, 'Relapse Risk Score'),
-            React.createElement('h3', { className: 'widget-relapse-risk__modal-title' }, 'Почему риск такой сейчас')
+            React.createElement('div', { className: 'widget-relapse-risk__modal-eyebrow' }, 'Риск-радар'),
+            React.createElement('h3', { className: 'widget-relapse-risk__modal-title' }, 'Текущий риск')
           ),
           React.createElement('button', {
             type: 'button',
@@ -3404,6 +4599,7 @@
           }, '✕')
         ),
         React.createElement('div', { className: 'widget-relapse-risk__modal-content' },
+          // 1. Hero: speedometer + level
           React.createElement('div', { className: 'widget-relapse-risk__modal-hero' },
             React.createElement('div', {
               className: 'widget-relapse-risk__modal-score-shell',
@@ -3411,146 +4607,162 @@
             },
               React.createElement('div', { className: 'widget-relapse-risk__modal-glow' }),
               React.createElement(RelapseRiskSpeedometer, {
-                score,
+                score: radarScore,
                 level,
-                size: 176,
-                label: 'Риск срыва'
+                size: 160,
+                label: 'Риск-радар'
               }),
               React.createElement('div', {
                 className: 'widget-relapse-risk__modal-score-level',
                 style: { color, background: `${color}16`, borderColor: `${color}26` }
               }, getRelapseLevelLabel(level))
-            ),
-            React.createElement('div', { className: 'widget-relapse-risk__modal-summary' },
-              React.createElement('div', { className: 'widget-relapse-risk__modal-summary-intro' },
-                React.createElement('div', { className: 'widget-relapse-risk__modal-summary-kicker' }, 'Текущий snapshot'),
-                React.createElement('div', { className: 'widget-relapse-risk__modal-summary-headline' }, 'Почему система считает риск именно таким'),
-                React.createElement('div', { className: 'widget-relapse-risk__modal-summary-copy' }, humanSummary.headline),
-                React.createElement('div', { className: 'widget-relapse-risk__modal-summary-copy' }, (humanSummary.bullets || []).join(' '))
-              ),
-              React.createElement('div', { className: 'widget-relapse-risk__modal-summary-grid' },
-                React.createElement('div', { className: 'widget-relapse-risk__modal-summary-row' },
-                  React.createElement('span', null, 'Confidence'),
-                  React.createElement('strong', null, `${confidence}%`)
-                ),
-                React.createElement('div', { className: 'widget-relapse-risk__modal-summary-row' },
-                  React.createElement('span', null, 'Пиковое окно'),
-                  React.createElement('strong', null, leadWindow ? `${leadWindow.label} · ${leadWindow.value}%` : '—')
-                ),
-                React.createElement('div', { className: 'widget-relapse-risk__modal-summary-row' },
-                  React.createElement('span', null, 'Главный драйвер'),
-                  React.createElement('strong', null, leadDriver?.label || 'Нет доминирующего драйвера')
-                ),
-                React.createElement('div', { className: 'widget-relapse-risk__modal-summary-row' },
-                  React.createElement('span', null, 'Первый шаг'),
-                  React.createElement('strong', null, topRecommendation?.text || 'Поддерживать стабильный режим')
-                ),
-                React.createElement('div', { className: 'widget-relapse-risk__modal-summary-row' },
-                  React.createElement('span', null, 'Тип паттерна'),
-                  React.createElement('strong', null, getRelapseCutPatternLabel(restrictionDebug?.cutPattern))
-                ),
-                React.createElement('div', { className: 'widget-relapse-risk__modal-summary-row' },
-                  React.createElement('span', null, 'История'),
-                  React.createElement('strong', null, getRelapseHistoryQualityLabel(historyQuality))
-                )
-              ),
-              React.createElement('div', { className: 'widget-relapse-risk__modal-equation' },
-                React.createElement('span', { className: 'widget-relapse-risk__modal-equation-pill' }, 'stress'),
-                React.createElement('span', { className: 'widget-relapse-risk__modal-equation-plus' }, '+'),
-                React.createElement('span', { className: 'widget-relapse-risk__modal-equation-pill' }, 'sleep debt'),
-                React.createElement('span', { className: 'widget-relapse-risk__modal-equation-plus' }, '+'),
-                React.createElement('span', { className: 'widget-relapse-risk__modal-equation-pill' }, 'restriction'),
-                React.createElement('span', { className: 'widget-relapse-risk__modal-equation-plus' }, '+'),
-                React.createElement('span', { className: 'widget-relapse-risk__modal-equation-pill' }, 'reward food'),
-                React.createElement('span', { className: 'widget-relapse-risk__modal-equation-plus' }, '−'),
-                React.createElement('span', { className: 'widget-relapse-risk__modal-equation-pill widget-relapse-risk__modal-equation-pill--good' }, 'protective buffer')
-              )
             )
           ),
-          windows.length > 0 && React.createElement('section', { className: 'widget-relapse-risk__modal-section' },
-            React.createElement('div', { className: 'widget-relapse-risk__modal-section-title' }, 'Окна риска'),
-            React.createElement('div', { className: 'widget-relapse-risk__modal-window-list' },
-              windows.map((windowInfo) => React.createElement('div', {
-                key: windowInfo.key,
-                className: 'widget-relapse-risk__modal-window'
-              },
-                React.createElement('div', { className: 'widget-relapse-risk__modal-window-top' },
-                  React.createElement('span', { className: 'widget-relapse-risk__modal-window-label' }, windowInfo.label),
-                  React.createElement('strong', { className: 'widget-relapse-risk__modal-window-value', style: { color } }, `${windowInfo.value}%`)
-                ),
-                React.createElement('div', { className: 'widget-relapse-risk__modal-window-text' }, windowInfo.description)
-              ))
-            )
-          ),
-          drivers.length > 0 && React.createElement('section', { className: 'widget-relapse-risk__modal-section' },
-            React.createElement('div', { className: 'widget-relapse-risk__modal-section-title' }, 'Что поднимает риск'),
-            React.createElement('div', { className: 'widget-relapse-risk__modal-driver-list' },
-              drivers.map((driver) => React.createElement('div', {
-                key: driver.id || driver.label,
-                className: 'widget-relapse-risk__modal-driver'
-              },
-                React.createElement('div', { className: 'widget-relapse-risk__modal-driver-top' },
-                  React.createElement('span', { className: 'widget-relapse-risk__modal-driver-label' }, driver.label || driver.id),
-                  React.createElement('strong', { className: 'widget-relapse-risk__modal-driver-impact', style: { color } }, `+${Math.round(Number(driver.impact) || 0)}`)
-                ),
-                React.createElement('div', { className: 'widget-relapse-risk__modal-driver-text' }, driver.explanation || 'Фактор повышает вероятность loss-of-control eating.')
-              ))
-            )
-          ),
-          components.length > 0 && React.createElement('section', { className: 'widget-relapse-risk__modal-section' },
-            React.createElement('div', { className: 'widget-relapse-risk__modal-section-title' }, 'Компоненты расчёта'),
-            React.createElement('div', { className: 'widget-relapse-risk__modal-component-list' },
-              components.map((component) => React.createElement('div', {
-                key: component.key,
-                className: 'widget-relapse-risk__modal-component'
-              },
-                React.createElement('div', { className: 'widget-relapse-risk__modal-component-top' },
-                  React.createElement('span', { className: 'widget-relapse-risk__modal-component-label' }, component.label),
-                  React.createElement('strong', { className: 'widget-relapse-risk__modal-component-value' }, `${component.value}/100`)
-                ),
-                React.createElement('div', { className: 'widget-relapse-risk__modal-component-bar' },
+
+          // 2. Short human summary (1-2 sentences)
+          humanSummary.headline && React.createElement('div', {
+            className: 'widget-relapse-risk__modal-note'
+          }, humanSummary.headline),
+
+          // 3. Two components: Relapse vs Crash
+          React.createElement('section', { className: 'widget-relapse-risk__modal-section' },
+            React.createElement('div', { className: 'widget-relapse-risk__modal-section-title' }, 'Из чего складывается'),
+            React.createElement('div', { className: 'widget-relapse-risk__breakdown-list' },
+              // Relapse (emotional)
+              React.createElement('div', { className: 'widget-relapse-risk__breakdown-row' },
+                React.createElement('span', { className: 'widget-relapse-risk__breakdown-label' }, '😰 Эмоциональный'),
+                React.createElement('div', { className: 'widget-relapse-risk__breakdown-track' },
                   React.createElement('div', {
-                    className: 'widget-relapse-risk__modal-component-fill',
-                    style: { width: `${Math.max(0, Math.min(100, component.value))}%`, background: `linear-gradient(90deg, ${gradStart} 0%, ${gradEnd} 100%)` }
+                    style: { width: `${Math.min(100, radarRelapseScore)}%`, height: '100%', borderRadius: '4px', background: getRadarColor(radarRelapseScore), transition: 'width 0.4s ease' }
                   })
                 ),
-                React.createElement('div', { className: 'widget-relapse-risk__modal-component-text' }, component.description)
-              )),
-              React.createElement('div', { className: 'widget-relapse-risk__modal-protective-summary' },
-                React.createElement('span', null, 'Protective buffer'),
-                React.createElement('strong', null, `-${protectiveBuffer}`)
+                React.createElement('span', { className: 'widget-relapse-risk__breakdown-value', style: { color: getRadarColor(radarRelapseScore) } }, radarRelapseScore)
+              ),
+              // Crash (metabolic)
+              React.createElement('div', { className: 'widget-relapse-risk__breakdown-row' },
+                React.createElement('span', { className: 'widget-relapse-risk__breakdown-label' }, '⚡ Метаболический'),
+                React.createElement('div', { className: 'widget-relapse-risk__breakdown-track' },
+                  React.createElement('div', {
+                    style: { width: `${Math.min(100, radarCrashScore)}%`, height: '100%', borderRadius: '4px', background: getRadarColor(radarCrashScore), transition: 'width 0.4s ease' }
+                  })
+                ),
+                React.createElement('span', { className: 'widget-relapse-risk__breakdown-value', style: { color: getRadarColor(radarCrashScore) } }, radarCrashScore)
               )
-            )
+            ),
+            React.createElement('div', { className: 'widget-relapse-risk__breakdown-formula' }, `Итог = max(${radarRelapseScore}, ${radarCrashScore}) = ${radarScore} · ${getSourceLabel(radarSource).toLowerCase()}`)
           ),
-          protectiveFactors.length > 0 && React.createElement('section', { className: 'widget-relapse-risk__modal-section' },
-            React.createElement('div', { className: 'widget-relapse-risk__modal-section-title' }, 'Что сейчас защищает'),
-            React.createElement('div', { className: 'widget-relapse-risk__modal-protective-list' },
-              protectiveFactors.map((factor) => React.createElement('div', {
-                key: factor.id || factor.label,
-                className: 'widget-relapse-risk__modal-protective'
+
+          // 4. What's driving risk + protective factors (compact chips)
+          (drivers.length > 0 || protectiveFactors.length > 0) && React.createElement('section', { className: 'widget-relapse-risk__modal-section' },
+            React.createElement('div', { className: 'widget-relapse-risk__modal-section-title' }, 'Что сейчас влияет'),
+            React.createElement('div', { className: 'widget-relapse-risk__impact-chips' },
+              drivers.slice(0, 3).map((driver) => React.createElement('div', {
+                key: driver.id || driver.label,
+                className: 'widget-relapse-risk__impact-chip widget-relapse-risk__impact-chip--up',
+                style: {
+                  '--chip-accent': getRadarColor(Math.round(Number(driver.impact) || 0) > 10 ? 60 : 30),
+                  '--chip-bg': `${getRadarColor(Math.round(Number(driver.impact) || 0) > 10 ? 60 : 30)}12`,
+                  '--chip-border': `${getRadarColor(Math.round(Number(driver.impact) || 0) > 10 ? 60 : 30)}24`
+                }
               },
-                React.createElement('span', { className: 'widget-relapse-risk__modal-protective-label' }, factor.label || factor.id),
-                React.createElement('span', { className: 'widget-relapse-risk__modal-protective-text' }, factor.explanation || 'Этот фактор немного стабилизирует риск.')
+                React.createElement('span', { className: 'widget-relapse-risk__impact-chip-icon' }, '▲'),
+                React.createElement('span', null, driver.label || driver.id)
+              )),
+              protectiveFactors.slice(0, 2).map((factor) => React.createElement('div', {
+                key: factor.id || factor.label,
+                className: 'widget-relapse-risk__impact-chip widget-relapse-risk__impact-chip--down',
+                style: {
+                  '--chip-accent': '#10b981',
+                  '--chip-bg': '#10b98112',
+                  '--chip-border': '#10b98124'
+                }
+              },
+                React.createElement('span', { className: 'widget-relapse-risk__impact-chip-icon' }, '▼'),
+                React.createElement('span', null, factor.label || factor.id)
               ))
             )
           ),
-          recommendations.length > 0 && React.createElement('section', { className: 'widget-relapse-risk__modal-section' },
-            React.createElement('div', { className: 'widget-relapse-risk__modal-section-title' }, 'Что сделать сейчас'),
-            React.createElement('div', { className: 'widget-relapse-risk__modal-recommendations' },
-              recommendations.slice(0, 3).map((rec) => React.createElement('div', {
-                key: rec.id || rec.text,
-                className: 'widget-relapse-risk__modal-recommendation'
-              }, rec.text))
+
+          // 5. Risk windows (compact bars)
+          windows.length > 0 && React.createElement('section', { className: 'widget-relapse-risk__modal-section' },
+            React.createElement('div', { className: 'widget-relapse-risk__modal-section-title' }, 'Когда выше'),
+            React.createElement('div', { className: 'widget-relapse-risk__windows-list' },
+              windows.map((w) => React.createElement('div', {
+                key: w.key,
+                className: 'widget-relapse-risk__window-row'
+              },
+                React.createElement('span', { className: 'widget-relapse-risk__window-row-label' }, w.label),
+                React.createElement('div', { className: 'widget-relapse-risk__window-row-track' },
+                  React.createElement('div', {
+                    style: { width: `${Math.min(100, w.value)}%`, height: '100%', borderRadius: '3px', background: `linear-gradient(90deg, ${gradStart}, ${gradEnd})`, transition: 'width 0.3s ease' }
+                  })
+                ),
+                React.createElement('span', { className: 'widget-relapse-risk__window-row-value', style: { color } }, `${w.value}%`)
+              ))
             )
           ),
-          React.createElement('section', { className: 'widget-relapse-risk__modal-tech-actions' },
-            React.createElement('button', {
-              type: 'button',
-              className: 'widget-relapse-risk__modal-copy-btn',
-              onClick: copyRelapseLog,
-              title: 'Скопировать технический лог со всеми расчётами Relapse Risk Score'
-            }, 'Скопировать техлог расчёта')
+
+          // 6. What to do (1-2 recommendations)
+          recommendations.length > 0 && React.createElement('section', { className: 'widget-relapse-risk__modal-section' },
+            React.createElement('div', { className: 'widget-relapse-risk__modal-section-title' }, 'Что делать'),
+            React.createElement('div', { className: 'widget-relapse-risk__action-list' },
+              recommendations.slice(0, 2).map((rec) => React.createElement('div', {
+                key: rec.id || rec.text,
+                className: 'widget-relapse-risk__action-card'
+              },
+                React.createElement('span', { className: 'widget-relapse-risk__action-icon' }, '→'),
+                React.createElement('span', { className: 'widget-relapse-risk__action-text' }, rec.text)
+              ))
+            )
+          ),
+
+          // 7. Dev panel (only for power users)
+          devPanelVisible && profileOptions.length > 1 && React.createElement('section', { className: 'widget-relapse-risk__modal-section widget-relapse-risk__dev-panel' },
+            React.createElement('details', { className: 'widget-relapse-risk__dev-disclosure' },
+              React.createElement('summary', { className: 'widget-relapse-risk__dev-disclosure-summary' }, 'A/B профили · internal'),
+              React.createElement('div', { className: 'widget-relapse-risk__dev-disclosure-body' },
+                React.createElement('div', { className: 'widget-relapse-risk__dev-copy' }, 'Переключай веса модели и смотри, как меняется score.'),
+                React.createElement('div', { className: 'widget-relapse-risk__dev-toggle' },
+                  profileOptions.map((profileOption) => React.createElement('button', {
+                    key: profileOption.key,
+                    type: 'button',
+                    className: `widget-relapse-risk__dev-toggle-btn ${selectedProfileKey === profileOption.key ? 'is-active' : ''}`,
+                    onClick: () => handleSelectProfile(profileOption.key)
+                  },
+                    React.createElement('span', { className: 'widget-relapse-risk__dev-toggle-label' }, profileOption.label),
+                    React.createElement('span', { className: 'widget-relapse-risk__dev-toggle-key' }, profileOption.key)
+                  ))
+                ),
+                compareItems.length > 0 && React.createElement('div', { className: 'widget-relapse-risk__dev-compare-grid' },
+                  compareItems.map((item) => React.createElement('div', {
+                    key: item.profileKey,
+                    className: `widget-relapse-risk__dev-compare-card widget-relapse-risk__dev-compare-card--${item.level || 'low'} ${selectedProfileKey === item.profileKey ? 'is-active' : ''}`
+                  },
+                    React.createElement('div', { className: 'widget-relapse-risk__dev-compare-top' },
+                      React.createElement('span', { className: 'widget-relapse-risk__dev-compare-label' }, item.label || item.profileKey),
+                      React.createElement('span', { className: 'widget-relapse-risk__dev-compare-score' }, `${Math.round(Number(item.score) || 0)}%`)
+                    ),
+                    React.createElement('div', { className: 'widget-relapse-risk__dev-compare-meta' },
+                      React.createElement('span', { className: 'widget-relapse-risk__dev-compare-pill' }, getRelapseLevelLabel(item.level || 'low')),
+                      React.createElement('span', { className: 'widget-relapse-risk__dev-compare-delta' },
+                        item.profileKey === compareBaselineProfileKey
+                          ? 'baseline'
+                          : `${Number(item.deltaVsBaseline) > 0 ? '+' : ''}${Math.round(Number(item.deltaVsBaseline) || 0)} vs baseline`
+                      )
+                    )
+                  ))
+                )
+              )
+            )
           )
+        ),
+        React.createElement('section', { className: 'widget-relapse-risk__modal-tech-actions' },
+          React.createElement('button', {
+            type: 'button',
+            className: 'widget-relapse-risk__modal-copy-btn',
+            onClick: copyRelapseLog,
+            title: 'Скопировать полный технический лог'
+          }, '📋 Скопировать техлог')
         )
       )
     );
@@ -3650,10 +4862,20 @@
 
     useEffect(() => {
       if (widget) {
-        setSettings({ ...widget.settings });
-        setSelectedSize(widget.size || '2x2');
+        const allowedSizes = Array.isArray(widgetType?.availableSizes) ? widgetType.availableSizes : [];
+        const normalizedSize = allowedSizes.includes(widget.size)
+          ? widget.size
+          : (widgetType?.defaultSize || allowedSizes[0] || widget.size || '2x2');
+
+        const normalizedSettings = { ...widget.settings };
+        if (widgetType?.type === 'heatmap' && normalizedSettings.period === 'month') {
+          normalizedSettings.period = 'week';
+        }
+
+        setSettings(normalizedSettings);
+        setSelectedSize(normalizedSize);
       }
-    }, [widget]);
+    }, [widget, widgetType]);
 
     const previewWidget = useMemo(() => ({ ...widget, settings, size: selectedSize }), [widget, settings, selectedSize]);
 
@@ -3722,11 +4944,12 @@
           ),
 
           // Custom settings — если задан settingsBySize, используем настройки для текущего размера
-          Object.entries(
-            widgetType.settingsBySize
-              ? (widgetType.settingsBySize[selectedSize] || {})
-              : (widgetType.settings || {})
-          ).map(([key, def]) =>
+          Object.entries((() => {
+            const sizeSpecificSettings = widgetType.settingsBySize?.[selectedSize];
+            return sizeSpecificSettings !== undefined
+              ? sizeSpecificSettings
+              : (widgetType.settings || {});
+          })()).map(([key, def]) =>
             React.createElement('div', { key, className: 'widgets-settings__field' },
               React.createElement('label', null, def.label),
               def.type === 'boolean' ?
@@ -3749,7 +4972,7 @@
                       onChange: e => handleChange(key, e.target.value)
                     },
                       def.options.map(opt =>
-                        React.createElement('option', { key: opt.value, value: opt.value }, opt.label)
+                        React.createElement('option', { key: opt.value, value: opt.value, disabled: !!opt.disabled }, opt.label)
                       )
                     ) :
                     null
@@ -3779,6 +5002,9 @@
     const [catalogOpen, setCatalogOpen] = useState(false);
     const [settingsWidget, setSettingsWidget] = useState(null);
     const [relapseDetails, setRelapseDetails] = useState(null);
+    const [dayScoreDetails, setDayScoreDetails] = useState(null);
+    const [statusDetails, setStatusDetails] = useState(null);
+    const [crashRiskDetails, setCrashRiskDetails] = useState(null);
     const [historyInfo, setHistoryInfo] = useState({ canUndo: false, canRedo: false });
     const [waterAnim, setWaterAnim] = useState(null); // { text: '+200мл', id: 123 } или null
     const [showGridOverlay, setShowGridOverlay] = useState(false); // Grid overlay toggle
@@ -3967,56 +5193,7 @@
     const openRelapseDetails = useCallback((widget) => {
       if (!widget || widget.type !== 'relapseRisk') return;
       try {
-        let snapshot = HEYS.Widgets.data?.getDataForWidget?.(widget) || {};
-
-        // Если провайдер вернул пустой или неполный результат (нет raw = нет engine result),
-        // вызываем движок напрямую как fallback
-        if (!snapshot?.raw && HEYS.RelapseRisk?.calculate) {
-          console.info('[HEYS.relapseRisk] provider returned no raw result, calling engine directly');
-          try {
-            const U = HEYS.utils || {};
-            const lsGet = typeof U?.lsGet === 'function' ? U.lsGet.bind(U) : ((k, fb) => fb);
-            const dayData = HEYS.DayData?.getCurrentDay?.() || {};
-            const profile = lsGet('heys_profile', {});
-            const dayTot = HEYS.DayData?.getDayTot?.(dayData) || {};
-            const normAbs = HEYS.norms?.getNormAbs?.(profile, profile?.pIndex || 0) || {};
-            const historyDays = [];
-            for (let i = 13; i >= 0; i--) {
-              const d = new Date();
-              d.setDate(d.getDate() - i);
-              const dateStr = d.toISOString().split('T')[0];
-              const day = lsGet(`heys_dayv2_${dateStr}`, null);
-              if (day && typeof day === 'object' && Object.keys(day).length > 0) {
-                historyDays.push({ date: dateStr, ...day, dayTot: HEYS.DayData?.getDayTot?.(day) || day.dayTot || {} });
-              }
-            }
-            const result = HEYS.RelapseRisk.calculate({
-              dayData, profile, dayTot, normAbs, historyDays,
-              now: new Date().toISOString()
-            });
-            snapshot = {
-              hasData: true,
-              score: Math.round(Number(result?.score) || 0),
-              level: result?.level || 'low',
-              confidence: Math.round(Number(result?.confidence) || 0),
-              primaryDrivers: Array.isArray(result?.primaryDrivers) ? result.primaryDrivers : [],
-              protectiveFactors: Array.isArray(result?.protectiveFactors) ? result.protectiveFactors : [],
-              windows: result?.windows || {},
-              recommendations: Array.isArray(result?.recommendations) ? result.recommendations : [],
-              raw: result,
-              _fallbackSource: 'modal_direct_engine'
-            };
-            console.info('[HEYS.relapseRisk] ✅ direct engine fallback succeeded', {
-              score: snapshot.score,
-              level: snapshot.level,
-              confidence: snapshot.confidence,
-              drivers: snapshot.primaryDrivers?.length,
-              historyDays: historyDays.length
-            });
-          } catch (fallbackErr) {
-            console.warn('[HEYS.relapseRisk] direct engine fallback failed:', fallbackErr?.message);
-          }
-        }
+        const snapshot = resolveRelapseSnapshot(widget, getRelapseSelectedProfileKey());
 
         setRelapseDetails({ widget, snapshot, openedAt: Date.now() });
         HEYS.dayUtils?.haptic?.('light');
@@ -4025,6 +5202,45 @@
           widgetId: widget?.id,
           widgetType: widget?.type,
           message: e?.message
+        });
+      }
+    }, []);
+
+    const openDayScoreDetails = useCallback((widget) => {
+      if (!widget || widget.type !== 'dayScore') return;
+      try {
+        const data = HEYS.Widgets.data?.getDataForWidget?.(widget) || {};
+        setDayScoreDetails({ widget, data, openedAt: Date.now() });
+        HEYS.dayUtils?.haptic?.('light');
+      } catch (e) {
+        trackWidgetIssue('widgets_dayscore_modal_open_failed', {
+          widgetId: widget?.id, message: e?.message
+        });
+      }
+    }, []);
+
+    const openStatusDetails = useCallback((widget) => {
+      if (!widget || widget.type !== 'status') return;
+      try {
+        const data = HEYS.Widgets.data?.getDataForWidget?.(widget) || {};
+        setStatusDetails({ widget, data, openedAt: Date.now() });
+        HEYS.dayUtils?.haptic?.('light');
+      } catch (e) {
+        trackWidgetIssue('widgets_status_modal_open_failed', {
+          widgetId: widget?.id, message: e?.message
+        });
+      }
+    }, []);
+
+    const openCrashRiskDetails = useCallback((widget) => {
+      if (!widget || widget.type !== 'crashRisk') return;
+      try {
+        const data = HEYS.Widgets.data?.getDataForWidget?.(widget) || {};
+        setCrashRiskDetails({ widget, data, openedAt: Date.now() });
+        HEYS.dayUtils?.haptic?.('light');
+      } catch (e) {
+        trackWidgetIssue('widgets_crashrisk_modal_open_failed', {
+          widgetId: widget?.id, message: e?.message
         });
       }
     }, []);
@@ -4053,13 +5269,19 @@
         if (isEditMode || !widget) return;
         if (widget.type === 'relapseRisk') {
           openRelapseDetails(widget);
+        } else if (widget.type === 'dayScore') {
+          openDayScoreDetails(widget);
+        } else if (widget.type === 'status') {
+          openStatusDetails(widget);
+        } else if (widget.type === 'crashRisk') {
+          openCrashRiskDetails(widget);
         }
       });
 
       return () => {
         unsubWidgetClick?.();
       };
-    }, [isEditMode, openRelapseDetails]);
+    }, [isEditMode, openRelapseDetails, openDayScoreDetails, openStatusDetails, openCrashRiskDetails]);
 
     // Toggle edit mode
     const toggleEdit = useCallback(() => {
@@ -4366,6 +5588,26 @@
         isOpen: !!relapseDetails,
         onClose: () => setRelapseDetails(null)
       }),
+      React.createElement(DayScoreDetailsModal, {
+        payload: dayScoreDetails,
+        isOpen: !!dayScoreDetails,
+        onClose: () => setDayScoreDetails(null)
+      }),
+      React.createElement(StatusDetailsModal, {
+        payload: statusDetails,
+        isOpen: !!statusDetails,
+        onClose: () => setStatusDetails(null)
+      }),
+      React.createElement(CrashRiskDetailsModal, {
+        payload: crashRiskDetails,
+        isOpen: !!crashRiskDetails,
+        onClose: () => setCrashRiskDetails(null),
+        onPeriodChange: (newPeriod) => {
+          const w = crashRiskDetails?.widget;
+          if (!w) return;
+          HEYS.Widgets.state?.updateWidget(w.id, { settings: { ...(w.settings || {}), periodDays: newPeriod } }, true);
+        }
+      }),
 
       // === Fixed bottom edit controls (для всех устройств) ===
       React.createElement('div', { className: 'widgets-edit-controls' },
@@ -4444,6 +5686,7 @@
   HEYS.Widgets.WidgetCard = WidgetCard;
   HEYS.Widgets.CatalogModal = CatalogModal;
   HEYS.Widgets.SettingsModal = SettingsModal;
+  HEYS.Widgets.RelapseRiskDetailsModal = RelapseRiskDetailsModal;
 
   if (widgetsDebugEnabled() && widgetsOnce('widgets_ui_loaded')) {
     trackWidgetIssue('widgets_ui_loaded', { version: '1.1.0' });

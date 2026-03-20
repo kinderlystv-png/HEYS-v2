@@ -7410,12 +7410,13 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     };
 
     // Обновляем размеры при изменении viewport (клавиатура/поворот/resize)
+    // perf: passive:true — не блокирует scroll thread на Android
     try {
-      window.addEventListener('resize', requestRerender);
-      window.addEventListener('orientationchange', requestRerender);
+      window.addEventListener('resize', requestRerender, { passive: true });
+      window.addEventListener('orientationchange', requestRerender, { passive: true });
       if (window.visualViewport) {
-        window.visualViewport.addEventListener('resize', requestRerender);
-        window.visualViewport.addEventListener('scroll', requestRerender);
+        window.visualViewport.addEventListener('resize', requestRerender, { passive: true });
+        window.visualViewport.addEventListener('scroll', requestRerender, { passive: true });
       }
     } catch (e) {
       // no-op

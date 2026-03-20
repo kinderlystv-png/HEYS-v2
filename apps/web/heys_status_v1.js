@@ -520,14 +520,19 @@
 
   /**
    * StatusWidget — компактная версия для Widgets Dashboard
+   * @param {Object} props
+   * @param {Object} props.status - Результат calculateStatus
+   * @param {string} props.size - 'micro' | 'tiny' | 'standard' (из StatusWidgetContent)
+   * @param {boolean} props.showActions - Показывать рекомендованное действие
+   * @param {boolean} props.showIssues - Показывать проблемы
    */
-  function StatusWidget({ status, size = '2x2', onClick }) {
+  function StatusWidget({ status, size = 'standard', onClick, showActions = true, showIssues = true }) {
     if (!status) return null;
 
-    const { score, level, topActions } = status;
-    const isCompact = size === '1x1' || size === '2x1';
+    const { score, level, topActions = [], topIssues = [] } = status;
+    const isCompact = size === 'micro' || size === 'tiny' || size === '1x1' || size === '2x1';
 
-    // Компактный вид (только число)
+    // Компактный вид (только число) — 1x1, 2x1, 1x2
     if (isCompact) {
       return h('div', {
         className: 'status-widget status-widget--compact',
@@ -554,10 +559,16 @@
       // Emoji справа сверху
       h('span', { className: 'status-widget__emoji' }, level.emoji),
 
-      // Один шаг (если есть)
-      topActions.length > 0 && h('div', { className: 'status-widget__action' },
+      // Действие (если включено)
+      showActions && topActions.length > 0 && h('div', { className: 'status-widget__action' },
         h('span', null, topActions[0].icon),
         h('span', null, topActions[0].text)
+      ),
+
+      // Проблема (если включено)
+      showIssues && topIssues.length > 0 && h('div', { className: 'status-widget__issue' },
+        h('span', null, topIssues[0].factor?.icon || '⚠️'),
+        h('span', null, topIssues[0].issue || '')
       )
     );
   }

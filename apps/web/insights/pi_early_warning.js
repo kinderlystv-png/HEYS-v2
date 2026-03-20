@@ -10,7 +10,7 @@
  * - Priority Queue (severity × frequency × impact)
  * 
  * Сценарии:
- * 1. Health Score падает 3 дня подряд
+ * 1. Trend Score падает 3 дня подряд
  * 2. Критичный паттерн (C1-C22) ухудшился на 20%+ за 7 дней OR низкий score
  * 3. Status Score (0-100) падает 3 дня подряд
  * 4. Sleep debt накопился (3+ дня <7ч)
@@ -286,9 +286,9 @@
     const WARNING_HUMAN_MESSAGES = {
         HEALTH_SCORE_DECLINE: {
             title: 'Общий показатель снижается',
-            message: 'Health Score падает несколько дней подряд — это комплексный сигнал о накопленном дисбалансе.',
+            message: 'Trend Score падает несколько дней подряд — это комплексный сигнал о накопленном дисбалансе.',
             insight: 'Падение интегрирует 50+ метрик питания, сна, активности. Проверьте паттерны с низкими scores — там причина.',
-            science: 'Health Score объединяет ключевые паттерны питания (timing, quality, balance), восстановления (сон, стресс) и активности (NEAT, тренировки). Снижение показателя 3+ дня указывает на системный дисбаланс, требующий внимания к конкретным слабым зонам. Исследования показывают: раннее выявление трендов (до появления симптомов) улучшает долгосрочные результаты на 40-60%.',
+            science: 'Trend Score объединяет ключевые паттерны питания (timing, quality, balance), восстановления (сон, стресс) и активности (NEAT, тренировки). Снижение показателя 3+ дня указывает на системный дисбаланс, требующий внимания к конкретным слабым зонам. Исследования показывают: раннее выявление трендов (до появления симптомов) улучшает долгосрочные результаты на 40-60%.',
             actions: [
                 'Откройте раздел Insights → Паттерны, найдите 3 паттерна с наименьшим score — это ключевые зоны риска',
                 'Проверьте сон за 3 дня: если <7ч — приоритет на восстановление, а не новые нагрузки',
@@ -1967,10 +1967,20 @@
                 status = day.statusScore;
             } else if (day._statusCalculated && day._statusCalculated.score !== undefined) {
                 status = day._statusCalculated.score;
-            } else if (typeof HEYS !== 'undefined' && HEYS.Status && typeof HEYS.Status.calculate === 'function') {
-                // Try to calculate status Score on the fly
+            } else if (typeof HEYS !== 'undefined' && HEYS.DayScore && typeof HEYS.DayScore.calculateDayScore === 'function') {
+                // Prefer unified Day Score over raw Status Score
                 try {
-                    const result = HEYS.Status.calculate({ dayData: day });
+                    const result = HEYS.DayScore.calculateDayScore({ dayData: day });
+                    if (result && result.score !== undefined) {
+                        status = result.score;
+                    }
+                } catch (e) {
+                    console.warn('ews / detect ⚠️ failed to calculate DayScore for day', day.date, e.message);
+                }
+            } else if (typeof HEYS !== 'undefined' && HEYS.Status && typeof HEYS.Status.calculateStatus === 'function') {
+                // Fallback to raw Status Score
+                try {
+                    const result = HEYS.Status.calculateStatus({ dayData: day });
                     if (result && result.score !== undefined) {
                         status = result.score;
                     }

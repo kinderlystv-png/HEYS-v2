@@ -5257,10 +5257,53 @@ NOVA: 1
           HEYS.StepModal.hide({ scrollToDiary: true });
         };
 
+        const addLastProduct = () => {
+          const reopenSingleMode = () => {
+            if (!HEYS.AddProductStep?.show) {
+              finishMeal();
+              return;
+            }
+
+            const latestDay = HEYS.Day?.getDay?.() || context?.day || {};
+            const latestProducts = HEYS.products?.getAll?.()
+              || HEYS.store?.get?.('heys_products', [])
+              || HEYS.utils?.lsGet?.('heys_products', [])
+              || context?.products
+              || [];
+
+            HEYS.AddProductStep.show({
+              mealIndex: context?.mealIndex ?? 0,
+              products: latestProducts,
+              day: latestDay,
+              dateKey: context?.dateKey || new Date().toISOString().slice(0, 10),
+              multiProductMode: false,
+              onAdd: context?.onAdd,
+              onAddPhoto: context?.onAddPhoto,
+              onNewProduct: context?.onNewProduct,
+            });
+          };
+
+          if (HEYS.StepModal?.hide) {
+            HEYS.StepModal.hide({ scrollToDiary: false });
+            setTimeout(reopenSingleMode, 80);
+          } else {
+            reopenSingleMode();
+          }
+        };
+
+        // Для основного day flow внешний onAdd уже сам показывает summary-модалку
+        // и управляет reopen логикой. Если запустить локальный summary ещё и здесь,
+        // получаем двойной сценарий: первый клик по «Добавить последний» только
+        // закрывает/переоткрывает модалку, а нужный single-product flow срабатывает
+        // лишь на повторном клике.
+        if (typeof context?.onAdd === 'function') {
+          return;
+        }
+
         // 🆕 Используем общий summary-хелпер если доступен
         const summaryShow = HEYS.dayAddProductSummary?.show;
         if (typeof summaryShow === 'function') {
-          let addMoreChosen = false;
+          let flowHandled = false;
           const dayUtils = HEYS.dayUtils || {};
           const getProductFromItem = dayUtils.getProductFromItem || (() => null);
           const per100 = dayUtils.per100 || (() => ({
@@ -5280,11 +5323,15 @@ NOVA: 1
             per100,
             scale,
             onAddMore: () => {
-              addMoreChosen = true;
+              flowHandled = true;
               continueAdding();
+            },
+            onAddLast: () => {
+              flowHandled = true;
+              addLastProduct();
             }
           })).then(() => {
-            if (!addMoreChosen) finishMeal();
+            if (!flowHandled) finishMeal();
           });
           return;
         }

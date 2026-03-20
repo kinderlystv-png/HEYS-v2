@@ -308,6 +308,48 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                 ),
 
                 (!isMobile || mobileSubTab === 'stats') && orphanAlert,
+
+                // Day Score + Risk Radar compact badge row
+                (!isMobile || mobileSubTab === 'stats') && HEYS.DayScore && (function () {
+                    const U = HEYS.utils || {};
+                    const dayData = HEYS.DayData?.getCurrentDay?.() || {};
+                    const profile = U.lsGet?.('heys_profile', {}) || {};
+                    const dayTotLocal = HEYS.DayData?.getDayTot?.(dayData) || {};
+                    const normAbsLocal = HEYS.norms?.getNormAbs?.(profile, profile?.pIndex || 0) || {};
+                    const waterGoalLocal = HEYS.utils?.calculateWaterGoal?.(profile.weight) || 2000;
+                    const pIndexLocal = profile?.pIndex || 0;
+
+                    const ds = HEYS.DayScore.calculateDayScore({ dayData, profile, dayTot: dayTotLocal, normAbs: normAbsLocal, waterGoal: waterGoalLocal, pIndex: pIndexLocal });
+                    const rr = HEYS.RiskRadar?.calculate?.({ dayData, profile, dayTot: dayTotLocal, normAbs: normAbsLocal, pIndex: pIndexLocal });
+
+                    if (!ds) return null;
+
+                    var dsColor = ds.score >= 85 ? '#10b981' : ds.score >= 70 ? '#22c55e' : ds.score >= 50 ? '#eab308' : ds.score >= 30 ? '#f97316' : '#ef4444';
+                    var rrIcon = !rr ? '🟢' : rr.score >= 70 ? '🔴' : rr.score >= 40 ? '🟠' : rr.score >= 20 ? '🟡' : '🟢';
+                    var rrColor = !rr ? '#10b981' : rr.score >= 70 ? '#ef4444' : rr.score >= 40 ? '#f97316' : rr.score >= 20 ? '#eab308' : '#10b981';
+
+                    return React.createElement('div', {
+                        className: 'day-score-badge-row',
+                        style: { display: 'flex', gap: '8px', padding: '8px 16px 0', justifyContent: 'center' }
+                    },
+                        React.createElement('div', {
+                            className: 'day-score-badge',
+                            style: { display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 14px', borderRadius: '12px', background: 'var(--heys-card-bg, #1e293b)', flex: '1', justifyContent: 'center' }
+                        },
+                            React.createElement('span', { style: { fontSize: '0.75rem', color: 'var(--heys-text-secondary, #94a3b8)' } }, '⭐ Оценка дня'),
+                            React.createElement('span', { style: { fontSize: '1.1rem', fontWeight: 700, color: dsColor } }, Math.round(ds.score))
+                        ),
+                        rr && React.createElement('div', {
+                            className: 'risk-radar-badge',
+                            style: { display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 14px', borderRadius: '12px', background: 'var(--heys-card-bg, #1e293b)', flex: '1', justifyContent: 'center' }
+                        },
+                            React.createElement('span', { style: { fontSize: '0.75rem' } }, rrIcon),
+                            React.createElement('span', { style: { fontSize: '0.75rem', color: 'var(--heys-text-secondary, #94a3b8)' } }, 'Риск'),
+                            React.createElement('span', { style: { fontSize: '1.1rem', fontWeight: 700, color: rrColor } }, Math.round(rr.score))
+                        )
+                    );
+                })(),
+
                 (!isMobile || mobileSubTab === 'stats') && statsBlock,
                 (!isMobile || mobileSubTab === 'stats') && waterCard,
                 (!isMobile || mobileSubTab === 'stats') && compactActivity,

@@ -134,6 +134,11 @@
       settings: {
         showGrams: { type: 'boolean', default: true, label: 'Показывать граммы' },
         showPercentage: { type: 'boolean', default: true, label: 'Показывать %' }
+      },
+      settingsBySize: {
+        '1x1': {
+          showPercentage: { type: 'boolean', default: true, label: 'Показывать %' }
+        }
       }
     },
 
@@ -149,11 +154,31 @@
       component: 'WidgetInsulin',
       settings: {
         showTimer: { type: 'boolean', default: true, label: 'Показывать таймер' },
-        showPhase: { type: 'boolean', default: true, label: 'Показывать фазу' }
+        showPhase: { type: 'boolean', default: true, label: 'Показывать фазу' },
+        showLastMeal: { type: 'boolean', default: true, label: 'Показывать последний приём пищи' }
       }
     },
 
     // === Категория: Здоровье ===
+    dayScore: {
+      type: 'dayScore',
+      name: 'Оценка дня',
+      category: 'health',
+      icon: '⭐',
+      description: 'Единая оценка дня 0-100: факторы + субъективная + momentum',
+      defaultSize: '2x2',
+      availableSizes: ALL_SIZES_4X4,
+      dataKeys: ['dayData', 'profile', 'dayTot', 'normAbs', 'waterGoal'],
+      component: 'WidgetDayScore',
+      settings: {
+        showBreakdown: { type: 'boolean', default: true, label: 'Показывать разбивку' },
+        showLevel: { type: 'boolean', default: true, label: 'Показывать уровень' }
+      },
+      settingsBySize: {
+        '1x1': {}
+      }
+    },
+
     status: {
       type: 'status',
       name: 'Статус',
@@ -167,6 +192,11 @@
       settings: {
         showActions: { type: 'boolean', default: true, label: 'Показывать действия' },
         showIssues: { type: 'boolean', default: true, label: 'Показывать проблемы' }
+      },
+      settingsBySize: {
+        '1x1': {},
+        '2x1': {},
+        '1x2': {}
       }
     },
 
@@ -176,13 +206,17 @@
       category: 'health',
       icon: '😴',
       description: 'Часы сна и качество',
-      defaultSize: '2x2',
-      availableSizes: ALL_SIZES_4X4,
+      defaultSize: '1x1',
+      availableSizes: ['1x1'],
       dataKeys: ['day.sleepHours', 'day.sleepQuality', 'prof.sleepHours'],
       component: 'WidgetSleep',
       settings: {
         showQuality: { type: 'boolean', default: true, label: 'Показывать качество' },
-        showTarget: { type: 'boolean', default: true, label: 'Показывать норму' }
+        showTarget: { type: 'boolean', default: true, label: 'Показывать норму' },
+        showTimes: { type: 'boolean', default: true, label: 'Показывать время сна' }
+      },
+      settingsBySize: {
+        '1x1': {}
       }
     },
 
@@ -198,16 +232,29 @@
       component: 'WidgetWater',
       settings: {
         showMilliliters: { type: 'boolean', default: true, label: 'Показывать мл' },
-        showGlasses: { type: 'boolean', default: false, label: 'Показывать стаканы' }
+        showGlasses: { type: 'boolean', default: false, label: 'Показывать стаканы' },
+        showProgress: { type: 'boolean', default: true, label: 'Показывать прогресс' },
+        showPercentage: { type: 'boolean', default: true, label: 'Показывать %' },
+        showRemaining: { type: 'boolean', default: true, label: 'Показывать остаток' }
       },
       settingsBySize: {
         '1x1': {
+          showMilliliters: { type: 'boolean', default: true, label: 'Показывать мл' },
           showGlasses: { type: 'boolean', default: false, label: 'Показывать стаканы (🥛)' }
         },
         '2x1': {
-          showGlasses: { type: 'boolean', default: false, label: 'Показывать стаканы вместо мл' }
+          showMilliliters: { type: 'boolean', default: true, label: 'Показывать мл' },
+          showGlasses: { type: 'boolean', default: false, label: 'Показывать стаканы' },
+          showProgress: { type: 'boolean', default: true, label: 'Показывать прогресс' },
+          showPercentage: { type: 'boolean', default: true, label: 'Показывать %' }
         },
-        '2x2': {}
+        '2x2': {
+          showMilliliters: { type: 'boolean', default: true, label: 'Показывать мл' },
+          showGlasses: { type: 'boolean', default: false, label: 'Показывать стаканы' },
+          showProgress: { type: 'boolean', default: true, label: 'Показывать прогресс' },
+          showPercentage: { type: 'boolean', default: true, label: 'Показывать %' },
+          showRemaining: { type: 'boolean', default: true, label: 'Показывать остаток' }
+        }
       }
     },
 
@@ -224,7 +271,56 @@
       settings: {
         showTrend: { type: 'boolean', default: true, label: 'Показывать тренд' },
         showGoal: { type: 'boolean', default: true, label: 'Показывать цель' },
+        showBmi: { type: 'boolean', default: true, label: 'Показывать BMI' },
+        showChart: { type: 'boolean', default: true, label: 'Показывать график' },
+        showAnalytics: { type: 'boolean', default: true, label: 'Показывать аналитику' },
         periodDays: { type: 'number', default: 7, label: 'Период (дней)', min: 3, max: 30 }
+      },
+      settingsBySize: {
+        '1x1': {},
+        '2x1': {
+          showTrend: { type: 'boolean', default: true, label: 'Показывать тренд' },
+          showGoal: { type: 'boolean', default: true, label: 'Показывать цель' },
+          showBmi: { type: 'boolean', default: true, label: 'Показывать BMI' }
+        },
+        '3x1': {
+          showTrend: { type: 'boolean', default: true, label: 'Показывать тренд' },
+          showGoal: { type: 'boolean', default: true, label: 'Показывать цель' },
+          showBmi: { type: 'boolean', default: true, label: 'Показывать BMI' }
+        },
+        '4x1': {
+          showTrend: { type: 'boolean', default: true, label: 'Показывать тренд' },
+          showGoal: { type: 'boolean', default: true, label: 'Показывать цель' },
+          showBmi: { type: 'boolean', default: true, label: 'Показывать BMI' }
+        },
+        '1x2': {
+          showTrend: { type: 'boolean', default: true, label: 'Показывать тренд' },
+          showGoal: { type: 'boolean', default: true, label: 'Показывать цель' },
+          showBmi: { type: 'boolean', default: true, label: 'Показывать BMI' }
+        },
+        '2x2': {
+          showTrend: { type: 'boolean', default: true, label: 'Показывать тренд' },
+          showGoal: { type: 'boolean', default: true, label: 'Показывать цель' },
+          showBmi: { type: 'boolean', default: true, label: 'Показывать BMI' },
+          showChart: { type: 'boolean', default: true, label: 'Показывать график' }
+        },
+        '2x3': {
+          showTrend: { type: 'boolean', default: true, label: 'Показывать тренд' },
+          showGoal: { type: 'boolean', default: true, label: 'Показывать цель' },
+          showBmi: { type: 'boolean', default: true, label: 'Показывать BMI' }
+        },
+        '1x3': {
+          showTrend: { type: 'boolean', default: true, label: 'Показывать тренд' },
+          showGoal: { type: 'boolean', default: true, label: 'Показывать цель' },
+          showBmi: { type: 'boolean', default: true, label: 'Показывать BMI' },
+          showAnalytics: { type: 'boolean', default: true, label: 'Показывать аналитику' }
+        },
+        '1x4': {
+          showTrend: { type: 'boolean', default: true, label: 'Показывать тренд' },
+          showGoal: { type: 'boolean', default: true, label: 'Показывать цель' },
+          showBmi: { type: 'boolean', default: true, label: 'Показывать BMI' },
+          showAnalytics: { type: 'boolean', default: true, label: 'Показывать аналитику' }
+        }
       }
     },
 
@@ -240,7 +336,12 @@
       component: 'WidgetSteps',
       settings: {
         showGoal: { type: 'boolean', default: true, label: 'Показывать цель' },
-        showKilometers: { type: 'boolean', default: false, label: 'Показывать км' }
+        showKilometers: { type: 'boolean', default: false, label: 'Показывать км' },
+        showPercentage: { type: 'boolean', default: true, label: 'Показывать %' },
+        showRemaining: { type: 'boolean', default: true, label: 'Показывать остаток' }
+      },
+      settingsBySize: {
+        '1x1': {}
       }
     },
 
@@ -251,13 +352,16 @@
       category: 'motivation',
       icon: '🔥',
       description: 'Серия дней в норме',
-      defaultSize: '2x2',
-      availableSizes: ALL_SIZES_4X4,
+      defaultSize: '1x1',
+      availableSizes: ['1x1'],
       dataKeys: ['currentStreak', 'maxStreak'],
       component: 'WidgetStreak',
       settings: {
         showMax: { type: 'boolean', default: true, label: 'Показывать рекорд' },
         showFlame: { type: 'boolean', default: true, label: 'Показывать огонь' }
+      },
+      settingsBySize: {
+        '1x1': {}
       }
     },
 
@@ -267,17 +371,20 @@
       category: 'motivation',
       icon: '📅',
       description: 'Активность за неделю/месяц',
-      defaultSize: '4x2',
-      availableSizes: ALL_SIZES_4X4,
+      defaultSize: '4x1',
+      availableSizes: ['4x1'],
       dataKeys: ['activeDays'],
       component: 'WidgetHeatmap',
       settings: {
         period: {
           type: 'select', default: 'week', label: 'Период', options: [
             { value: 'week', label: 'Неделя' },
-            { value: 'month', label: 'Месяц' }
+            { value: 'month', label: 'Месяц', disabled: true }
           ]
-        }
+        },
+        showWeekdays: { type: 'boolean', default: true, label: 'Показывать дни недели' },
+        showDates: { type: 'boolean', default: true, label: 'Показывать числа' },
+        highlightToday: { type: 'boolean', default: true, label: 'Выделять сегодня' }
       }
     },
 
@@ -298,34 +405,39 @@
       },
       settings: {
         showPhase: { type: 'boolean', default: true, label: 'Показывать фазу' },
-        showCorrections: { type: 'boolean', default: true, label: 'Показывать коррекции' }
+        showCorrections: { type: 'boolean', default: true, label: 'Показывать рекомендацию' }
+      },
+      settingsBySize: {
+        '1x1': {}
       }
     },
 
     // === Категория: Продвинутое ===
+
     crashRisk: {
       type: 'crashRisk',
-      name: 'Риск срыва',
-      category: 'health',
-      icon: '⚠️',
-      description: 'Early Warning: 5% недельная потеря веса',
-      defaultSize: '4x2',
-      availableSizes: ['2x2', '3x2', '4x2', '4x3', '4x4'],
-      dataKeys: ['day.weightMorning', 'weightTrend', 'earlyWarnings'],
+      name: 'Динамика веса',
+      category: 'analytics',
+      icon: '📊',
+      optional: true,
+      description: 'Темп потери/набора веса, зона прогресса, прогноз до цели',
+      defaultSize: '2x1',
+      availableSizes: ['2x1'],
+      dataKeys: ['day.weightMorning', 'weightTrend', 'profile.goalWeight'],
       component: 'WidgetCrashRisk',
       settings: {
-        showWarnings: { type: 'boolean', default: true, label: 'Показывать предупреждения' },
-        showTrend: { type: 'boolean', default: true, label: 'Показывать тренд' },
-        periodDays: { type: 'number', default: 7, label: 'Период (дней)', min: 7, max: 14 }
+        showWarnings: { type: 'boolean', default: true, label: 'Показывать EWS предупреждения' },
+        showGoal: { type: 'boolean', default: true, label: 'Показывать прогресс к цели' },
+        periodDays: { type: 'number', default: 7, label: 'Период (дней)', min: 7, max: 30 }
       }
     },
 
     relapseRisk: {
       type: 'relapseRisk',
-      name: 'Relapse Risk',
+      name: 'Риск-радар',
       category: 'health',
       icon: '🛡️',
-      description: 'Текущий риск срыва на базе canonical relapse score',
+      description: 'Единый риск: max(relapse, crash) + источник + спидометр',
       defaultSize: '2x2',
       availableSizes: ['1x1', '2x1', '2x2', '3x2', '4x2'],
       dataKeys: ['dayData', 'dayTot', 'normAbs', 'historyDays', 'relapseRisk'],
@@ -333,7 +445,14 @@
       settings: {
         showDrivers: { type: 'boolean', default: true, label: 'Показывать драйверы' },
         showRecommendation: { type: 'boolean', default: true, label: 'Показывать действие' },
-        showConfidence: { type: 'boolean', default: true, label: 'Показывать confidence' }
+        showConfidence: { type: 'boolean', default: true, label: 'Показывать confidence' },
+        showSource: { type: 'boolean', default: true, label: 'Показывать источник риска' }
+      },
+      settingsBySize: {
+        '1x1': {},
+        '2x2': {
+          showConfidence: { type: 'boolean', default: true, label: 'Показывать confidence' }
+        }
       }
     }
   };

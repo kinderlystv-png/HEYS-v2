@@ -139,6 +139,8 @@
     }
   };
 
+  const RELAPSE_PROFILE_STORAGE_KEY = 'heys_relapse_risk_dev_profile';
+
   // === Data Access Layer ===
   const data = {
     _cache: new Map(),
@@ -179,57 +181,101 @@
         case 'insulin':
           return this.getInsulinData();
         case 'heatmap':
-          return this.getHeatmapData(widget.settings?.period || 'week');
+          return this.getHeatmapData(widget.settings?.period === 'month' ? 'week' : (widget.settings?.period || 'week'));
         case 'cycle':
           return this.getCycleData();
         case 'crashRisk':
-          return this.getCrashRiskData();
+          return this.getCrashRiskData(widget.settings);
         case 'relapseRisk':
           return this.getRelapseRiskData(widget);
+        case 'dayScore':
+          return this.getDayScoreData();
         default:
           return {};
       }
     },
 
     /**
-     * Получить данные Relapse Risk Score
+     * Получить данные Day Score (единый дневной скоринг 0-100)
      */
-    getRelapseRiskData(widget) {
-      if (!HEYS.RelapseRisk?.calculate) {
-        console.warn('[widget_data.getRelapseRiskData] relapseRisk engine not loaded');
-        return { hasData: false, score: 0, level: 'low', message: 'Engine не загружен' };
+    getDayScoreData() {
+      if (!HEYS.DayScore?.calculateDayScore) {
+        console.warn('[widget_data.getDayScoreData] DayScore engine not loaded');
+        return { hasData: false, score: 0, level: 'none' };
       }
-
       try {
         const dayData = this._getDay() || {};
         const profile = this._getProfile() || {};
         const dayTot = this._getDayTotals() || {};
         const normAbs = this._getNormAbs() || {};
+        const waterGoal = this._getWaterGoal() || 2000;
 
-        // History: last 14 days
-        const historyDays = [];
-        for (let i = 13; i >= 0; i--) {
-          const d = new Date();
-          d.setDate(d.getDate() - i);
-          const dateStr = this._formatDate(d);
-          const day = this._getDayByDate(dateStr);
-          if (day && typeof day === 'object' && Object.keys(day).length > 0) {
-            historyDays.push({
-              date: dateStr,
-              ...day,
-              dayTot: this._calculateDayTotals(day)
-            });
-          }
-        }
-
-        const result = HEYS.RelapseRisk.calculate({
-          dayData, profile, dayTot, normAbs, historyDays,
-          now: new Date().toISOString()
+        const result = HEYS.DayScore.calculateDayScore({
+          dayData, profile, dayTot, normAbs, waterGoal
         });
 
-        const score = Math.round(Number(result?.score) || 0);
-        const confidence = Math.round(Number(result?.confidence) || 0);
-        const windows = result?.windows || {};
+        if (!result || typeof result.score !== 'number') {
+          return { hasData: false, score: 0, level: 'none' };
+        }
+
+        console.info('[widget_data.getDayScoreData] ✅', {
+          score: result.score, level: result.level?.id || result.level
+        });
+
+        return {
+          hasData: true,
+          score: result.score,
+          rawScore: result.rawScore,
+          factorScore: result.factorScore,
+          subjectiveScore: result.subjectiveScore,
+          momentumScore: result.momentumScore,
+          avgMealQuality: result.avgMealQuality,
+          level: result.level?.id || result.level,
+          levelLabel: result.level?.label || '',
+          breakdown: result.breakdown || {},
+          statusResult: result.statusResult || null,
+          timestamp: result.timestamp
+        };
+      } catch (error) {
+        console.error('[widget_data.getDayScoreData] ❌ Error:', error);
+        return { hasData: false, score: 0, level: 'none' };
+      }
+    },
+
+    /**
+     * Получить данные Relapse Risk Score
+     */
+    getRelapseRiskData(widget, options = {}) {
+      if (!HEYS.RelapseRisk?.getCurrentSnapshot) {
+        console.warn('[widget_data.getRelapseRiskData] relapseRisk engine not loaded');
+        return { hasData: false, score: 0, level: 'low', message: 'Engine не загружен' };
+      }
+
+      const normalizeRelapseRecommendation = (rec) => {
+        if (!rec) return null;
+        if (typeof rec === 'string') return rec;
+        if (typeof rec?.text === 'string' && rec.text.trim()) return rec.text.trim();
+        if (typeof rec?.label === 'string' && rec.label.trim()) return rec.label.trim();
+        if (typeof rec?.title === 'string' && rec.title.trim()) return rec.title.trim();
+        return null;
+      };
+
+      try {
+        const selectedProfileKey = this._getRelapseRiskProfileKey(
+          options?.weightProfileKey || options?.riskProfileKey || options?.tuningProfile
+        );
+
+        const snapshot = HEYS.RelapseRisk.getCurrentSnapshot({
+          weightProfileKey: selectedProfileKey
+        });
+        if (!snapshot?.hasData) {
+          return { hasData: false, score: 0, level: 'low', message: snapshot?.message || 'Нет данных расчёта' };
+        }
+
+        const result = snapshot?.raw || {};
+        const score = Math.round(Number(snapshot?.score ?? result?.score) || 0);
+        const confidence = Math.round(Number(snapshot?.confidence ?? result?.confidence) || 0);
+        const windows = result?.windows || snapshot?.windows || {};
 
         const windowCandidates = [
           { key: 'tonight', label: 'сегодня вечером', score: Number(windows.tonight) || 0 },
@@ -241,28 +287,59 @@
         const topWindowScore = Math.round(windowCandidates[0]?.score || 0);
         const primaryDriver = Array.isArray(result?.primaryDrivers) ? result.primaryDrivers[0] : null;
         const recommendation = Array.isArray(result?.recommendations) && result.recommendations[0]
-          ? result.recommendations[0].text
+          ? normalizeRelapseRecommendation(result.recommendations[0])
           : null;
 
+        // Risk Radar aggregation: inject max(relapse, crash) + source attribution
+        let radarSource = 'none';
+        let radarCrashScore = 0;
+        let radarDrivers = [];
+        let radarActions = [];
+        let radarScore = score;
+        if (HEYS.RiskRadar?.calculate) {
+          try {
+            const profile = this._getProfile() || {};
+            const radar = HEYS.RiskRadar.calculate({ profile });
+            if (radar && typeof radar.score === 'number') {
+              radarScore = radar.score;
+              radarSource = radar.source || 'none';
+              radarCrashScore = Math.round(Number(radar.crash?.score) || 0);
+              radarDrivers = (radar.drivers || []).map(d => d.label || d.factor || String(d));
+              radarActions = (radar.actions || []).map(a => a.text || a.label || String(a));
+            }
+          } catch (radarErr) {
+            console.warn('[widget_data.getRelapseRiskData] RiskRadar enrichment failed:', radarErr?.message);
+          }
+        }
+
         console.info('[widget_data.getRelapseRiskData] ✅ Calculated', {
-          score, level: result?.level, confidence, historyDays: historyDays.length
+          score, radarScore, radarSource, level: result?.level || snapshot?.level, confidence,
+          historyDays: result?.debug?.inputs?.historyDaysCount || 0
         });
 
         return {
           hasData: true,
-          score,
+          profile: snapshot?.profile || result?.profile || null,
+          selectedProfileKey: snapshot?.selectedProfileKey || selectedProfileKey,
+          score: radarScore,
+          relapseScore: score,
+          crashScore: radarCrashScore,
+          source: radarSource,
+          radarDrivers,
+          radarActions,
           target: 100,
-          pct: score,
-          remaining: Math.max(0, 100 - score),
-          level: result?.level || 'low',
+          pct: radarScore,
+          remaining: Math.max(0, 100 - radarScore),
+          level: snapshot?.level || result?.level || 'low',
           confidence,
-          topWindowLabel,
-          topWindowScore,
-          primaryDriver,
-          primaryDrivers: Array.isArray(result?.primaryDrivers) ? result.primaryDrivers.slice(0, 3) : [],
-          protectiveFactors: Array.isArray(result?.protectiveFactors) ? result.protectiveFactors.slice(0, 2) : [],
-          recommendation,
+          topWindowLabel: typeof snapshot?.topWindowLabel === 'string' ? snapshot.topWindowLabel : topWindowLabel,
+          topWindowScore: Number.isFinite(Number(snapshot?.topWindowScore)) ? Number(snapshot.topWindowScore) : topWindowScore,
+          primaryDriver: snapshot?.primaryDriver || primaryDriver,
+          primaryDrivers: Array.isArray(snapshot?.primaryDrivers) ? snapshot.primaryDrivers : (Array.isArray(result?.primaryDrivers) ? result.primaryDrivers.slice(0, 3) : []),
+          protectiveFactors: Array.isArray(snapshot?.protectiveFactors) ? snapshot.protectiveFactors : (Array.isArray(result?.protectiveFactors) ? result.protectiveFactors.slice(0, 2) : []),
+          recommendation: normalizeRelapseRecommendation(snapshot?.recommendation) || recommendation,
           windows,
+          compare: snapshot?.compare || null,
           raw: result
         };
       } catch (error) {
@@ -646,6 +723,19 @@
 
     _getProfile() {
       return readStoredValue('heys_profile', {});
+    },
+
+    _getRelapseRiskProfileKey(overrideKey) {
+      if (typeof overrideKey === 'string' && overrideKey.trim()) {
+        return overrideKey.trim();
+      }
+
+      const storedValue = readStoredValue(RELAPSE_PROFILE_STORAGE_KEY, '');
+      if (typeof storedValue === 'string' && storedValue.trim()) {
+        return storedValue.trim();
+      }
+
+      return HEYS.RelapseRisk?.CONFIG?.DEFAULT_PROFILE_KEY || 'v1_1';
     },
 
     _getNorms() {

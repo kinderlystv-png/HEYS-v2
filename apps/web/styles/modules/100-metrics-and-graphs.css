@@ -49,6 +49,9 @@
   padding: 8px 4px;
   text-align: center;
   transition: transform 0.15s ease, box-shadow 0.15s ease, background-color 0.3s ease, border-color 0.3s ease;
+  /* perf: skip layout/paint for offscreen metric cards */
+  content-visibility: auto;
+  contain-intrinsic-size: auto 72px;
 }
 
 .metrics-icon {
@@ -158,6 +161,8 @@
   margin-top: 4px;
   overflow: visible;
   /* чтобы аннотации не обрезались */
+  /* NOTE: content-visibility:auto intentionally omitted — chart is visible on stats tab open,
+     deferring layout to first viewport entry causes a one-time paint stall on tab switch */
 }
 
 .kcal-sparkline-header {
@@ -354,7 +359,8 @@
   stroke-linecap: round;
   stroke-linejoin: round;
   /* Анимация рисования линии — dasharray/offset задаётся inline для точной длины */
-  animation: drawSparkline 3s linear forwards;
+  /* delay 0.1s: gives main thread time to finish tab transition before stroke-dashoffset repaints begin */
+  animation: drawSparkline 3s linear 0.1s forwards;
   transition: stroke-width 0.2s ease;
 }
 
@@ -440,7 +446,7 @@
 /* Анимация заливки — появляется вместе с линией */
 .sparkline-area-animated {
   opacity: 0;
-  animation: fadeInArea 5s ease-in-out forwards;
+  animation: fadeInArea 5s ease-in-out 0.1s forwards;
 }
 
 @keyframes fadeInArea {

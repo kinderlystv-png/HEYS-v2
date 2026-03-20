@@ -1,0 +1,384 @@
+Давай сначала глубоко разберусь, как сейчас системы реально связаны (или не связаны) друг с другом — что вызывает что, где дублирование, где мёртвый код, а где реальная ценность. 
+
+Created 5 todos
+
+Audit scoring system interactions
+
+Searched for regex `heys_day_calculations|heys_status_v1|heys_relapse_risk|heys_metabolic_intelligence|heys_predictive_insights|heys_pi_early_warning|heys_early_warning_panel` (`**/apps/web/**`), 20 results
+
+Searched for files matching `**/apps/web/insights/*.js`, 20 matches
+
+Searched for regex `HEYS\.Status\.|HEYS\.relapseRisk\.|HEYS\.Metabolic\.|HEYS\.predictive|HEYS\.EWS` (`**/apps/web/**/*.js`), 100 results
+
+Search complete: Map core scoring systems exports
+
+Searched for files matching `**/*.js`, 200 matches
+
+Searched for files matching `**/*.ts`, 200 matches
+
+Searched for regex `HEYS\.Status|HEYS\.relapseRisk|HEYS\.Metabolic|HEYS\.predictive`, 200 results
+
+Searched for regex `HEYS\.Status\s*=|HEYS\.RelapseRisk\s*=|HEYS\.Metabolic\s*=|HEYS\.PredictiveInsights\s*=`, 13 results
+
+Searched for files matching `**/heys_status_v1.js`, 1 match
+
+Searched for files matching `**/heys_relapse_risk*.js`, 2 matches
+
+Read [](file:///Users/poplavskijanton/HEYS-v2/apps/web/heys_relapse_risk_v1.js#1350-1350), lines 1350 to 1407
+
+Read [](file:///Users/poplavskijanton/HEYS-v2/apps/web/heys_status_v1.js#570-570), lines 570 to 603
+
+Read [](file:///Users/poplavskijanton/HEYS-v2/apps/web/heys_metabolic_intelligence_v1.js#2470-2470), lines 2470 to 2560
+
+Read [](file:///Users/poplavskijanton/HEYS-v2/apps/web/heys_predictive_insights_v1.js#1358-1358), lines 1358 to 1590
+
+Searched for regex `HEYS\.|dayTot|require|import` (`**/apps/web/heys_status_v1.js`), 17 results
+
+Searched for regex `HEYS\.(Status|Metabolic|PredictiveInsights|events|utils|dayCalculations)|dayTot|require|import` (`**/apps/web/heys_relapse_risk_v1.js`), 30 results
+
+Searched for regex `HEYS\.(Status|relapseRisk|PredictiveInsights|InsulinWave|ratioZones)|require|import` (`**/apps/web/heys_metabolic_intelligence_v1.js`), 15 results
+
+Searched for regex `Status|relapseRisk|Metabolic|PredictiveInsights|score|EWS` (`**/apps/web/heys_cascade_card_v1.js`), 20 results
+
+Searched for regex `Status|relapseRisk|Metabolic|PredictiveInsights requirements dependencies` (`**/apps/web/heys_early_warning_panel_v1.js`), no results
+
+Searched for regex `calculateDayTotals|function|HEYS\.|export` (`**/apps/web/heys_day_calculations.js`), 20 results
+
+Searched for regex `HEYS\.dayCalculations|calculateDayTotals\(\)|calculateHealthScore|calculateCrashRisk24h` (`**/apps/web/**/*.js`), 80 results
+
+Read [](file:///Users/poplavskijanton/HEYS-v2/apps/web/insights/pi_early_warning.js#1-1), lines 1 to 100
+
+Read [](file:///Users/poplavskijanton/HEYS-v2/apps/web/heys_metabolic_intelligence_v1.js#1135-1135), lines 1135 to 1230
+
+Read [](file:///Users/poplavskijanton/HEYS-v2/apps/web/heys_status_v1.js#310-310), lines 310 to 370
+
+Read [](file:///Users/poplavskijanton/HEYS-v2/apps/web/heys_relapse_risk_v1.js#1200-1200), lines 1200 to 1280
+
+Read [](file:///Users/poplavskijanton/HEYS-v2/apps/web/heys_day_calculations.js#22-22), lines 22 to 70
+
+Searched for regex `Status\.calculateStatus|RelapseRisk\.calculate|Metabolic|Health|Score|EWS` (`**/apps/web/heys_cascade_card_v1.js`), 20 results
+
+Searched for regex `StatusWidget|RelapseRisk\.calculate|calculateHealthScore|Status\.StatusWidget` (`**/apps/web/heys_widgets_ui_v1.js`), 6 results
+
+Searched for regex `HEYS\.Status\.calculateStatus|HEYS\.RelapseRisk|calculateHealthScore|PredictiveInsights` (`**/apps/web/insights/pi_early_warning.js`), 10 results
+
+Read [](file:///Users/poplavskijanton/HEYS-v2/apps/web/heys_predictive_insights_v1.js#1-1), lines 1 to 200
+
+Searched for regex `function calculate|HEYS\.InsulinWave|HEYS\.Status|dayScore|lsGet\('heys_day` (`**/apps/web/heys_relapse_risk_v1.js`), 18 results
+
+Searched for regex `function calculateCrashRisk\(|function calculateCrashRisk24h|function identifyPhenotype|function generateWeeklyWrap` (`**/apps/web/heys_metabolic_intelligence_v1.js`), 4 results
+
+Read [](file:///Users/poplavskijanton/HEYS-v2/apps/web/heys_relapse_risk_v1.js#830-830), lines 830 to 900
+
+Searched for regex `lsGet\('heys_dayv2|getCurrentDay\(\)|HEYS\.dayCalculations\.calculateDayTotals` (`**/apps/web/**/*.js`), 67 results
+
+Read [](file:///Users/poplavskijanton/HEYS-v2/apps/web/heys_status_v1.js#1-1), lines 1 to 380
+
+Read [](file:///Users/poplavskijanton/HEYS-v2/apps/web/heys_metabolic_intelligence_v1.js#359-359), lines 359 to 500
+
+Searched for regex `Status|RelapseRisk|getWidget|prepareWidgetData` (`**/apps/web/heys_widgets_data_v1.js`), 12 results
+
+Read [](file:///Users/poplavskijanton/HEYS-v2/apps/web/insights/pi_ui_dashboard.js#1-1), lines 1 to 200
+
+Searched for regex `HEYS\.Metabolic|HEYS\.Status|HEYS\.RelapseRisk|HEYS\.PredictiveInsights|calculateCrashRisk|calculateHealthScore` (`**/apps/web/insights/pi_ui_dashboard.js`), 53 results
+
+Searched for regex `HEYS\.PredictiveInsights\.analyze|getDaysData|eachWarning|Metabolic\.calculateCrashRisk|analyzeCircadianTiming|Relapse` (`**/apps/web/insights/pi_early_warning.js`), no results
+
+Read [](file:///Users/poplavskijanton/HEYS-v2/apps/web/insights/pi_early_warning.js#1700-1700), lines 1700 to 1800
+
+Created memory file [](file:///Users/poplavskijanton/Library/Application%20Support/Code/User/workspaceStorage/c6588d02596c4c303b64827fccd4d537/GitHub.copilot-chat/memory-tool/memories/MzgwMzliNTAtOTI0MC00MTIwLWE3YzYtOTY2MDg5YTY1NGRi/heys-systems-exploration.md)
+
+Updated memory file [](file:///Users/poplavskijanton/Library/Application%20Support/Code/User/workspaceStorage/c6588d02596c4c303b64827fccd4d537/GitHub.copilot-chat/memory-tool/memories/MzgwMzliNTAtOTI0MC00MTIwLWE3YzYtOTY2MDg5YTY1NGRi/heys-systems-exploration.md)
+
+Read [](file:///Users/poplavskijanton/Library/Application%20Support/Code/User/workspaceStorage/c6588d02596c4c303b64827fccd4d537/GitHub.copilot-chat/chat-session-resources/38039b50-9240-4120-a7c6-966089a654db/toolu_01UoF36Sw1FMuLq8xhj75etR__vscode-1773977953643/content.txt)
+
+Starting: *Map UI consumption points* (2/5)
+
+Map UI display of all scores
+
+Searched for files matching `**/apps/web/insights/pi_ui_dashboard.js`, 1 match
+
+Searched for files matching `**/apps/web/heys_widgets_*.js`, 6 matches
+
+Searched for files matching `**/apps/web/heys_day_*.js`, 20 matches
+
+Searched for files matching `**/apps/web/heys_cascade_card_*.js`, 1 match
+
+Searched for files matching `**/apps/web/advice/_core.js`, 1 match
+
+Searched codebase for "day view main screen display dayScore status score hero", 15 results
+
+Read [](file:///Users/poplavskijanton/HEYS-v2/apps/web/insights/pi_ui_dashboard.js#1-1), lines 1 to 200
+
+Read [](file:///Users/poplavskijanton/HEYS-v2/apps/web/heys_widgets_registry_v1.js#1-1), lines 1 to 150
+
+Read [](file:///Users/poplavskijanton/HEYS-v2/apps/web/heys_cascade_card_v1.js#1-1), lines 1 to 150
+
+Read [](file:///Users/poplavskijanton/HEYS-v2/apps/web/insights/pi_ui_dashboard.js#200-200), lines 200 to 500
+
+Read [](file:///Users/poplavskijanton/HEYS-v2/apps/web/heys_widgets_registry_v1.js#150-150), lines 150 to 350
+
+Read [](file:///Users/poplavskijanton/HEYS-v2/apps/web/heys_widgets_data_v1.js#200-200), lines 200 to 278
+
+Searched codebase for "dashboard card sections order priority Insights main cards compose", 19 results
+
+Read [](file:///Users/poplavskijanton/HEYS-v2/apps/web/insights/pi_ui_dashboard.js#500-500), lines 500 to 800
+
+Read [](file:///Users/poplavskijanton/HEYS-v2/apps/web/advice/_core.js#1-1), lines 1 to 100
+
+Read [](file:///Users/poplavskijanton/HEYS-v2/apps/web/heys_cascade_card_v1.js#200-200), lines 200 to 200
+
+Read [](file:///Users/poplavskijanton/HEYS-v2/apps/web/heys_widgets_ui_v1.js#1-1), lines 1 to 500
+
+Read [](file:///Users/poplavskijanton/HEYS-v2/apps/web/heys_day_hero_display_v1.js)
+
+Searched for regex `dayScore Status Score user see main screen display render` (`**/apps/web/**/*.js`), no results
+
+Read [](file:///Users/poplavskijanton/HEYS-v2/apps/web/heys_widgets_ui_v1.js#1000-1000), lines 1000 to 1000
+
+Searched codebase for "widget rendering content status calories macros insulin water each widget type display", 12 results
+
+Read [](file:///Users/poplavskijanton/HEYS-v2/apps/web/heys_widgets_ui_v1.js#1050-1050), lines 1050 to 1250
+
+Searched codebase for "overall day quality composite score user see multiple numbers confusing", 25 results
+
+Read [](file:///Users/poplavskijanton/HEYS-v2/apps/web/advice/_core.js#100-100), lines 100 to 300
+
+Read [](file:///Users/poplavskijanton/Library/Application%20Support/Code/User/workspaceStorage/c6588d02596c4c303b64827fccd4d537/GitHub.copilot-chat/chat-session-resources/38039b50-9240-4120-a7c6-966089a654db/toolu_01AbJKvbP7fq3CGZMFxj46Tc__vscode-1773977953724/content.txt)
+
+Starting: *Identify dead/redundant logic* (3/5)
+
+Find meal quality and cascade scoring
+
+Searched for files matching `**/day/_meal_quality.js`, 1 match
+
+Searched for files matching `**/heys_cascade_card_v1.js`, 1 match
+
+Searched for files matching `**/pi_advanced.js`, 1 match
+
+Searched for regex `HEYS\.ratioZones|ratioZones`, 20 results
+
+Searched for regex `HEYS\.TDEE|TDEE\.|InsulinWave`, 20 results
+
+Searched for regex `harm|harmScore`, 20 results
+
+Read [](file:///Users/poplavskijanton/HEYS-v2/apps/web/heys_cascade_card_v1.js#1-1), lines 1 to 300
+
+Searched for files matching `**/heys_ratio_zones_v1.js`, 1 match
+
+Searched for regex `HEYS\.TDEE\s*=|TDEE\s*=.*{`, 14 results
+
+Searched for regex `HEYS\.InsulinWave\s*=|InsulinWave\s*=.*{`, 20 results
+
+Read [](file:///Users/poplavskijanton/HEYS-v2/apps/web/day/_meal_quality.js#1-1), lines 1 to 300
+
+Read [](file:///Users/poplavskijanton/HEYS-v2/apps/web/insights/pi_advanced.js#1-1), lines 1 to 300
+
+Read [](file:///Users/poplavskijanton/HEYS-v2/apps/web/day/_meal_quality.js#250-250), lines 250 to 400
+
+Read [](file:///Users/poplavskijanton/HEYS-v2/apps/web/heys_ratio_zones_v1.js#1-1), lines 1 to 200
+
+Read [](file:///Users/poplavskijanton/HEYS-v2/apps/web/heys_insulin_wave_v1.js#1-1), lines 1 to 150
+
+Read [](file:///Users/poplavskijanton/HEYS-v2/apps/web/heys_tdee_v1.js#1-1), lines 1 to 180
+
+Read [](file:///Users/poplavskijanton/HEYS-v2/apps/web/heys_cascade_card_v1.js#600-600), lines 600 to 1500
+
+Read [](file:///Users/poplavskijanton/HEYS-v2/apps/web/insights/pi_advanced.js#200-200), lines 200 to 300
+
+Searched for regex `product\.harm\s*=|harm.*=.*([\d\.]|formula|calculation)`, 15 results
+
+Searched for files matching `**/heys_iw_constants.js`, 1 match
+
+Searched for regex `heys_harm|calculateHarm|harm_v1`, 10 results
+
+Read [](file:///Users/poplavskijanton/HEYS-v2/apps/web/day/_meal_quality.js#150-150), lines 150 to 400
+
+Searched for files matching `**/heys_harm_v1.js`, 1 match
+
+Read [](file:///Users/poplavskijanton/HEYS-v2/apps/web/heys_harm_v1.js#1-1), lines 1 to 150
+
+Created memory file heys-scoring-systems-comprehensive.md
+
+Starting: *Design unified architecture* (4/5)
+
+Теперь у меня полная картина. Выдаю честный аудит с оценкой и архитектурное предложение. 
+
+Starting: *Write restructure proposal* (5/5)
+
+---
+
+## Оценка текущего состояния: **~55%**
+
+Не потому что системы плохие — каждая по отдельности хорошо спроектирована, зависимостей нет, циклов нет. Но как ансамбль они работают на **55%** от потенциала. Вот почему:
+
+---
+
+### Диагноз: 7 конкретных проблем
+
+**П1. Нет единого ответа на "как у меня сегодня?"**
+Пользователь видит: Status (0-100), Health Score (0-100), dayScore (1-10), Meal Quality (0-100), Cascade (эмодзи), Pattern scores (0-100). Шесть разных чисел на разных экранах, без иерархии. Человек не понимает, что главное.
+
+**П2. Status Score не в дефолтных виджетах**
+Главный объективный балл дня требует ручного добавления. Ни один новый пользователь его не видит.
+
+**П3. dayScore спрятан в модалке сна**
+Единственный субъективный индикатор — buried. При этом он влияет на Relapse Risk (penalty ±40), но пользователь об этом не знает.
+
+**П4. Health Score vs Status Score — путаница имён**
+Оба 0-100, оба про "здоровье". На самом деле: Status = сегодня (9 факторов), Health Score = неделя+ (25 паттернов). Но названия это не объясняют.
+
+**П5. Cascade — богатая модель, бедный UI**
+CRS (Continuous Response Score) внутри имеет 10 факторов, EMA-decay, synergy-multipliers. Но снаружи: 6 эмодзи-состояний. Данные о моментуме пропадают — никто их не использует.
+
+**П6. Два параллельных риск-предиктора без арбитража**
+Relapse Risk (эмоциональный) и CrashRisk24h (метаболический) — оба 0-100, оба про "может сорваться". Пользователь видит два предупреждения без понимания, какое важнее.
+
+**П7. Системы не обмениваются данными**
+- Meal Quality не кормит Status Score (хотя обе считают "качество питания")
+- Cascade momentum не влияет ни на что кроме своей карточки
+- dayScore кормит только Relapse Risk, но не Status и не EWS напрямую
+
+---
+
+## Предложение: **Day Intelligence Stack**
+
+Принцип: **4 чётких слоя**, каждый с одной задачей, каждый кормит следующий. Пользователь видит **одно главное число** + расшифровку по запросу.
+
+```
+┌─────────────────────────────────────────────────────────┐
+│  LAYER 4: WATCHDOG (EWS)                                │
+│  "Что-то идёт не так?"                                  │
+│  Детектор аномалий по трендам Layer 2 + Layer 3          │
+└────────────────────────┬────────────────────────────────┘
+                         │ потребляет тренды
+┌────────────────────────┴────────────────────────────────┐
+│  LAYER 3: TREND SCORE (бывший Health Score) 0-100       │
+│  "Как идёт неделя/месяц?"                               │
+│  25 паттернов Insights + фенотип Metabolic               │
+│  Окно: 7-30 дней                                         │
+└────────────────────────┬────────────────────────────────┘
+                         │ потребляет историю Day Score
+┌────────────────────────┴────────────────────────────────┐
+│  LAYER 2: RISK RADAR                                    │
+│  "Есть ли угроза сегодня?"                               │
+│  Relapse Risk (эмоции) + Crash Risk (метаболизм)         │
+│  → Единый Risk Alert: max(relapse, crash) + контекст     │
+│  Окно: сегодня + прогноз 3h/tonight/24h                  │
+└────────────────────────┬────────────────────────────────┘
+                         │ потребляет Day Score + dayScore
+┌────────────────────────┴────────────────────────────────┐
+│  LAYER 1: DAY SCORE 0-100                               │
+│  "Как у меня сегодня?"  ← ЕДИНСТВЕННЫЙ ГЛАВНЫЙ ЧИСЛО    │
+│                                                          │
+│  = Factors (70%) ← 9 факторов Status, НО:                │
+│    - nutrition factors берут Meal Quality (avg по приёмам)│
+│    - а не пересчитывают kcal/protein/timing сами          │
+│                                                          │
+│  + Subjective (15%) ← dayScore (mood/wellbeing/stress)   │
+│    - бонус/штраф ±15 пунктов к Factors                   │
+│    - visible на Day hero, не в скрытой модалке           │
+│                                                          │
+│  + Momentum (15%) ← Cascade CRS                          │
+│    - вчерашний momentum влияет на "стартовую позицию"     │
+│    - хорошие дни создают инерцию                          │
+│                                                          │
+│  Показывается: Day hero (главное), Default widget,       │
+│                Insights header                            │
+└────────────────────────┬────────────────────────────────┘
+                         │ потребляет
+┌────────────────────────┴────────────────────────────────┐
+│  LAYER 0: FOUNDATION (без изменений)                     │
+│  TDEE, InsulinWave, ratioZones, Harm — утилиты           │
+│  Meal Quality (0-100 per meal) — per-meal scoring         │
+│  Cascade CRS — momentum engine (внутренний)               │
+└─────────────────────────────────────────────────────────┘
+```
+
+---
+
+### Что конкретно меняется
+
+| # | Что | Было | Станет | Зачем |
+|---|---|---|---|---|
+| 1 | **Day Score** | Status Score (отдельно, не в дефолте) | Единый Day Score = Factors(70%) + Subjective(15%) + Momentum(15%) | Один ответ на "как день" |
+| 2 | **dayScore 1-10** | Скрыт в sleep-модалке | Visible на Day hero как "самочувствие" + кормит Day Score | Субъективное не теряется |
+| 3 | **Meal Quality** | Отдельно, не кормит Status | Avg Meal Quality заменяет сырые kcal/protein/timing в nutrition-блоке | Убирает дублирование расчёта питания |
+| 4 | **Cascade CRS** | Только 6 эмодзи | Эмодзи остаются + числовой momentum кормит Day Score | Momentum перестаёт пропадать |
+| 5 | **Health Score** | Назван "Health Score" 0-100 | Переименован в **"Trend Score"** | Нет путаницы с Day Score |
+| 6 | **Risk** | Relapse + CrashRisk отдельно | Unified **Risk Radar**: `max(relapse, crash)` + указание источника | Один сигнал "опасность" |
+| 7 | **EWS** | Вызывает `Status.calculate()` (баг) | Потребляет Day Score + Trend Score тренды | Fix + единый data flow |
+| 8 | **Metabolic Intelligence** | Мета-слой с A/B и фенотипом | CrashRisk24h → часть Risk Radar; фенотип → часть Trend Score | Не отдельная система, а компонент |
+| 9 | **Default widgets** | Нет Status | Day Score — первый дефолтный виджет | Пользователь видит главное сразу |
+
+---
+
+### Как системы будут кормить друг друга (data flow)
+
+```
+localStorage
+    │
+    ├─→ TDEE.calculate() → normAbs (targets)
+    ├─→ Meal Quality per meal → avgMealQuality
+    ├─→ dayScore (mood/wb/stress) → subjective 1-10
+    └─→ Cascade CRS → momentum -0.3...+1.0
+          │
+          ▼
+    ┌─ DAY SCORE (0-100) ─────────────────────┐
+    │  factors(normAbs, dayTot, sleep,         │
+    │          steps, water, avgMealQuality)    │
+    │  + subjective_bonus(dayScore)             │
+    │  + momentum_bonus(CRS)                    │
+    └──────┬────────────────────────────────────┘
+           │
+    ┌──────┴───────────────┐
+    │                      │
+    ▼                      ▼
+RISK RADAR              TREND SCORE (7-30 дней)
+max(Relapse, Crash)     Day Score history → 25 patterns
+    │                      │
+    └──────┬───────────────┘
+           │
+           ▼
+       EWS (WATCHDOG)
+    Day Score decline?
+    Trend Score decline?
+    Risk spikes?
+           │
+           ▼
+    Advice Engine
+    (recommendations)
+```
+
+---
+
+### Что это даёт
+
+| Метрика | Было (55%) | Станет (~90%) |
+|---|---|---|
+| **Один ответ "как день"** | 6 разных чисел | 1 Day Score + детали по тапу |
+| **Субъективное учитывается** | dayScore скрыт, влияет только на Relapse | Видимый, влияет на Day Score |
+| **Cascade полезен** | 6 эмодзи | Momentum кормит Day Score |
+| **Риски понятны** | 2 параллельных числа | 1 Risk Radar + источник |
+| **Naming confusion** | Status/Health/Day — "что? где?" | Day Score (сегодня) / Trend Score (неделя) |
+| **Meal Quality connected** | Отдельно | Кормит nutrition-фактор |
+| **Default UX** | Status нет в виджетах | Day Score — первый виджет |
+| **EWS корректен** | Баг `Status.calculate()` | Потребляет единый Day Score API |
+
+---
+
+### Порядок реализации (5 фаз)
+
+1. **Fix EWS bug** — `Status.calculate()` → `Status.calculateStatus()` (5 мин, zero risk)
+2. **Rename Health Score → Trend Score** в UI labels (low risk, несколько файлов)
+3. **Expose dayScore** на Day hero + feed into Status как modifier
+4. **Feed Meal Quality avg** в nutrition-блок Status вместо сырого kcal/protein пересчёта
+5. **Cascade momentum → Day Score modifier** + Risk Radar unified widget
+
+Фазы 1-2 можно делать сразу. Фазы 3-5 — последовательно, каждая валидируется отдельно.
+
+---
+
+Хочешь начнём с фаз 1-2 прямо сейчас, или сначала обсудим детали формул для Day Score? 
+
+Completed: *Write restructure proposal* (5/5)

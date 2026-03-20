@@ -19445,6 +19445,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
                                                         per100,
                                                         scale,
                                                         onAddMore: (updatedDay) => openAddProductModal(addMealIndex, true, updatedDay),
+                                                        onAddLast: (updatedDay) => openAddProductModal(addMealIndex, false, updatedDay),
                                                     });
                                                 }, 100);
                                             });
