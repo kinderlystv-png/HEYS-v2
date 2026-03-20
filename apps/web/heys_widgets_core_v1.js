@@ -269,76 +269,63 @@
     },
 
     _packLayoutPositions(widgets) {
+      // 🔧 Gravity-only pack: каждый виджет подтягивается вверх в своей колонке
+      // без переназначения позиций. Это сохраняет пользовательский layout
+      // (вертикальные стаки 1x1, намеренные позиции), убирая только пустые строки.
       const sorted = [...(widgets || [])].sort((a, b) => {
         if ((a.position?.row || 0) !== (b.position?.row || 0)) return (a.position?.row || 0) - (b.position?.row || 0);
         return (a.position?.col || 0) - (b.position?.col || 0);
       });
 
-      const occupied = new Set();
       const positions = {};
 
-      const occupy = (w, col, row) => {
-        // 🔧 FIX: Получаем размер из registry
-        const sizeInfo = HEYS.Widgets.registry.getSize(w.size);
-        const wCols = sizeInfo?.cols || w.cols || 1;
-        const wRows = sizeInfo?.rows || w.rows || 1;
-
-        for (let c = 0; c < wCols; c++) {
-          for (let r = 0; r < wRows; r++) {
-            occupied.add(`${col + c},${row + r}`);
-          }
-        }
-      };
-
-      const canPlace = (col, row, cols, rows) => {
-        if (col < 0 || col + cols > GRID_COLS) return false;
-        if (row < 0) return false;
-        for (let c = 0; c < cols; c++) {
-          for (let r = 0; r < rows; r++) {
-            if (occupied.has(`${col + c},${row + r}`)) return false;
-          }
-        }
-        return true;
-      };
-
+      // Сначала копируем текущие позиции
       for (const w of sorted) {
-        // 🔧 FIX: Получаем размер из registry
+        positions[w.id] = { col: w.position?.col || 0, row: w.position?.row || 0 };
+      }
+
+      // Gravity: подтягиваем каждый виджет вверх, насколько возможно
+      // Обрабатываем сверху вниз, чтобы верхние виджеты уже зафиксировались
+      for (const w of sorted) {
         const sizeInfo = HEYS.Widgets.registry.getSize(w.size);
         const wCols = sizeInfo?.cols || w.cols || 1;
         const wRows = sizeInfo?.rows || w.rows || 1;
+        const col = positions[w.id].col;
 
-        let placed = false;
-
-        // 🔧 Column-preserving pack: сначала пробуем сохранить колонку пользователя,
-        // двигая виджет только вверх. Это позволяет вертикально стакать 1x1 виджеты.
-        const preferredCol = Math.min(Math.max(0, w.position?.col || 0), GRID_COLS - wCols);
-        for (let row = 0; row < 200 && !placed; row++) {
-          if (canPlace(preferredCol, row, wCols, wRows)) {
-            positions[w.id] = { col: preferredCol, row };
-            occupy(w, preferredCol, row);
-            placed = true;
-          }
-        }
-
-        // Fallback: любая позиция (если preferred col занята на всех рядах)
-        if (!placed) {
-          for (let row = 0; row < 200 && !placed; row++) {
-            for (let col = 0; col <= GRID_COLS - wCols; col++) {
-              if (canPlace(col, row, wCols, wRows)) {
-                positions[w.id] = { col, row };
-                occupy(w, col, row);
-                placed = true;
-                break;
-              }
+        // Собираем occupied cells от всех ДРУГИХ виджетов (с их packed позициями)
+        const occupied = new Set();
+        for (const other of sorted) {
+          if (other.id === w.id) continue;
+          const otherPos = positions[other.id];
+          const otherSize = HEYS.Widgets.registry.getSize(other.size);
+          const oCols = otherSize?.cols || other.cols || 1;
+          const oRows = otherSize?.rows || other.rows || 1;
+          for (let c = 0; c < oCols; c++) {
+            for (let r = 0; r < oRows; r++) {
+              occupied.add(`${otherPos.col + c},${otherPos.row + r}`);
             }
           }
         }
 
-        if (!placed) {
-          // fallback: в самый низ
-          const maxRow = Math.max(0, ...Object.values(positions).map(p => p.row));
-          positions[w.id] = { col: 0, row: maxRow + 1 };
-          occupy(w, positions[w.id].col, positions[w.id].row);
+        // Подтягиваем вверх: ищем минимальный row >= 0 где виджет помещается
+        let bestRow = 0;
+        const canPlace = (testRow) => {
+          if (col < 0 || col + wCols > GRID_COLS) return false;
+          for (let c = 0; c < wCols; c++) {
+            for (let r = 0; r < wRows; r++) {
+              if (occupied.has(`${col + c},${testRow + r}`)) return false;
+            }
+          }
+          return true;
+        };
+
+        while (!canPlace(bestRow) && bestRow < 200) {
+          bestRow++;
+        }
+
+        // Только подтягиваем вверх, не опускаем
+        if (bestRow <= positions[w.id].row) {
+          positions[w.id].row = bestRow;
         }
       }
 
