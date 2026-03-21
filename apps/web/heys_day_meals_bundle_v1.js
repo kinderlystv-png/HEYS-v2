@@ -5526,11 +5526,16 @@
             const meal = meals && meals[mealIndex];
             const isStale = meal && isMealStale(meal);
 
-            if (isStale) {
-                setManualExpandedStale((prev) => ({ ...prev, [mealIndex]: !prev[mealIndex] }));
-            } else {
-                setExpandedMeals((prev) => ({ ...prev, [mealIndex]: !prev[mealIndex] }));
-            }
+            // R17: defer heavy re-render from product list expand/collapse
+            setTimeout(() => {
+                React.startTransition(() => {
+                    if (isStale) {
+                        setManualExpandedStale((prev) => ({ ...prev, [mealIndex]: !prev[mealIndex] }));
+                    } else {
+                        setExpandedMeals((prev) => ({ ...prev, [mealIndex]: !prev[mealIndex] }));
+                    }
+                });
+            }, 0);
         }, [isMealStale]);
 
         const expandOnlyMeal = React.useCallback((mealIndex) => {
@@ -6114,6 +6119,46 @@
 ;(function (HEYS) {
     'use strict';
 
+    // PERF R16-FIX: LazyMount MUST be defined OUTSIDE renderDiarySection.
+    // Defining a React component type inside a render function creates a new type
+    // on every call — React unmounts/remounts the subtree on every parent re-render,
+    // resetting state to false and triggering infinite re-mount cycles that cause
+    // storeRecommendation → sync spam → setPendingCount → parent re-render loops.
+    // Solution: lazy-init once with the React instance captured on first call.
+    let _LazyMount = null;
+    function getLazyMount(React) {
+        if (_LazyMount) return _LazyMount;
+        _LazyMount = React.memo(function LazyMount(props) {
+            const { minHeight, rootMargin, children } = props;
+            const ref = React.useRef(null);
+            const [visible, setVisible] = React.useState(false);
+            React.useEffect(() => {
+                const el = ref.current;
+                if (!el || visible) return;
+                if (typeof IntersectionObserver === 'undefined') { setVisible(true); return; }
+                const io = new IntersectionObserver(function onEntry(entries) {
+                    if (entries[0].isIntersecting) {
+                        console.info('[HEYS.diary] 👁️ LazyMount visible — mounting below-fold cards');
+                        setVisible(true); io.disconnect();
+                    }
+                }, { rootMargin: rootMargin || '400px 0px' });
+                io.observe(el);
+                return () => io.disconnect();
+            }, [visible, rootMargin]);
+            if (!visible) {
+                return React.createElement('div', {
+                    ref,
+                    className: 'deferred-card-slot deferred-card-slot--lazy',
+                    style: { minHeight: minHeight || 0 },
+                    'aria-hidden': 'true'
+                });
+            }
+            return React.createElement(React.Fragment, null, children);
+        });
+        console.info('[HEYS.diary] ✅ LazyMount component created (stable type, R16-fix)');
+        return _LazyMount;
+    }
+
     const renderDiarySection = (params) => {
 
         const {
@@ -6238,6 +6283,10 @@
             }
         }) || null) : null;
 
+        // PERF R16: LazyMount — IntersectionObserver gate for below-fold slots.
+        // Component type is stable (defined once at module scope via getLazyMount).
+        const LazyMount = getLazyMount(React);
+
         // PERF v8.3: Deferred card slot — skeleton only after postboot completes
         // If postboot is still loading scripts, return null (invisible).
         // Skeleton only shows if postboot finished but module is STILL not ready (abnormal).
@@ -6350,10 +6399,13 @@
             goalProgressBar,
             deferredSlot(cascadeReady, cascadeCard, 'slot-cascade', 140, '🔬', 'Анализируем ваши данные, чтобы показать состояние поведенческого каскада'),
             refeedCard,
-            deferredSlot(mealRecReady, mealRecCard, 'slot-mealrec', 72, '🍽️', 'Загружаем ваши данные, чтобы умный планировщик дал точные рекомендации на остаток дня'),
-            deferredSlot(supplementsReady, supplementsCard, 'slot-supplements', 96, '💊', 'Подготавливаем план добавок на сегодня'),
-            mealsChart,
-            insulinIndicator,
+            // R16: lazy-mount below-fold cards — prevent heavy hooks until near viewport
+            React.createElement(LazyMount, { key: 'lazy-below-fold', minHeight: 260 },
+                deferredSlot(mealRecReady, mealRecCard, 'slot-mealrec', 72, '🍽️', 'Загружаем ваши данные, чтобы умный планировщик дал точные рекомендации на остаток дня'),
+                deferredSlot(supplementsReady, supplementsCard, 'slot-supplements', 96, '💊', 'Подготавливаем план добавок на сегодня'),
+                mealsChart,
+                insulinIndicator
+            ),
             React.createElement('div', {
                 className: 'diary-section-separator diary-section-separator--full-width',
                 style: {

@@ -2866,11 +2866,16 @@
             const meal = meals && meals[mealIndex];
             const isStale = meal && isMealStale(meal);
 
-            if (isStale) {
-                setManualExpandedStale((prev) => ({ ...prev, [mealIndex]: !prev[mealIndex] }));
-            } else {
-                setExpandedMeals((prev) => ({ ...prev, [mealIndex]: !prev[mealIndex] }));
-            }
+            // R17: defer heavy re-render from product list expand/collapse
+            setTimeout(() => {
+                React.startTransition(() => {
+                    if (isStale) {
+                        setManualExpandedStale((prev) => ({ ...prev, [mealIndex]: !prev[mealIndex] }));
+                    } else {
+                        setExpandedMeals((prev) => ({ ...prev, [mealIndex]: !prev[mealIndex] }));
+                    }
+                });
+            }, 0);
         }, [isMealStale]);
 
         const expandOnlyMeal = React.useCallback((mealIndex) => {

@@ -9,7 +9,7 @@
 ## Краткий статус
 
 На этой сессии шла **итеративная runtime-оптимизация HEYS PWA** по данным
-`HEYS.perfMon.start()` / `HEYS.perfMon.report()`.
+`HEYS.perfMon.start()` / `v`.
 
 Подход по раундам:
 
@@ -681,14 +681,384 @@ caloric balance card.
 
 ---
 
+## R14 — supplements-card defer + perfMon v2
+
+После R13 был снят **первый полноценный perfMon snapshot на тяжёлом клиенте**.
+
+### Snapshot R14 baseline (тяжёлый клиент)
+
+- `totalEntries`: **578**
+- `longTasks`: **198**
+- `longTasksMaxMs`: **380ms**
+- `longTasksTotalMs`: **26,349ms**
+- `scrollJanks`: **45**
+- `slowEvents`: **290**
+- `fpsDrops`: **43**
+
+### Что стало главным bottleneck
+
+Top list сместился в:
+
+- supplements chips / batch toggles — **~228–347ms**;
+- `metrics-value touchstart` — **~274ms**;
+- повторяющиеся long-task пары во время scroll.
+
+Это был первый замер, где уже явно стало видно, что **масштаб данных клиента
+сам по себе начинает доминировать**, а не только один локальный handler.
+
+### FIX K — defer supplements chip click
+
+**Файл:** `apps/web/heys_supplements_v1.js`
+
+`handleClick(...)` был переведён на паттерн:
+
+- `setTimeout(0)`
+- `React.startTransition(...)`
+
+Внутрь deferred-path были убраны:
+
+- `clearCelebrationState(...)`
+- `toggleTaken(...)`
+- `maybeAutoCollapse(...)`
+
+### FIX L — defer group batch button
+
+Там же была так же отложена групповая кнопка `markGroupTaken(...)`, чтобы batch
+toggle не тащил тяжёлый render в сам click handler.
+
+### perfMon v2 enhancement
+
+**Файл:** `apps/web/index.html`
+
+Для следующих раундов был усилен сам perf tooling:
+
+- добавлен `HEYS.perfMon.mark(label, data?)`;
+- добавлен ancestry-walk по `data-perf-id`;
+- добавлена агрегация `clicksByComponent`;
+- top timers расширены до `top10slowTimers`;
+- slow event console output теперь умеет помечать компонент.
+
+Это было нужно не ради красоты, а чтобы перестать дебажить perf «по запаху».
+Иначе top slow event часто указывал на target, а не на реального владельца
+render-cost.
+
+### R14 rebuild
+
+Selective rebuild был сделан для:
+
+- `apps/web/heys_supplements_v1.js`
+
+Обновился asset:
+
+- `boot-init.bundle.14e083d7af95.js` → `boot-init.bundle.6c87215c4381.js`
+
+---
+
+## Сравнительный perfMon на лёгком клиенте
+
+После R14 был снят ещё один perfMon — уже на другом, заметно более лёгком
+клиенте.
+
+### Snapshot (лёгкий клиент)
+
+- `totalEntries`: **147**
+- `longTasks`: **23**
+- `longTasksMaxMs`: **144ms**
+- `longTasksTotalMs`: **1,923ms**
+- `scrollJanks`: **27**
+- `slowEvents`: **87**
+- `fpsDrops`: **9**
+
+### Что это доказало
+
+Разница оказалась слишком большой, чтобы списать её только на случайный шум:
+
+- long tasks: **198 → 23** (~8.6x меньше)
+- total long task time: **26.3s → 1.9s** (~13.7x меньше)
+- max click processing: примерно **347ms → 98ms**
+
+Это подтвердило ключевую гипотезу сессии:
+
+> Основной долг уже не только в DayTab-monolith, а в том, что для части путей
+> приложение слишком охотно трогает накопленную историю клиента.
+
+Именно после этого стало ясно, что после R15/R16 нужен уже не только ещё один
+defer-pass, а **data-scaling strategy**.
+
+---
+
+## R15 — meal-rec-card expand defer
+
+**Файл:** `apps/web/insights/pi_ui_meal_rec_card.js`
+
+### FIX M — defer expand/collapse
+
+Header click был переведён с прямого:
+
+- `setExpanded(!expanded)`
+
+на:
+
+- `setTimeout(() => React.startTransition(() => setExpanded(prev => !prev)), 0)`
+
+Дополнительно на header был поставлен:
+
+- `data-perf-id="meal-rec-card"`
+
+### Зачем
+
+`MealRecCard` живёт в тяжёлом insights-path и на клиенте с большой историей
+может провоцировать заметный re-render хвоста diary/insights subtree. Тут была
+та же идея, что и в R11/R13/R14: **дать click handler завершиться быстро, а
+React-render увести в отдельный task**.
+
+### R15 rebuild
+
+Selective rebuild был сделан для:
+
+- `apps/web/insights/pi_ui_meal_rec_card.js`
+
+Обновился asset:
+
+- `postboot-2-insights.bundle.1655bfa6815b.js` →
+  `postboot-2-insights.bundle.56e70f88e15e.js`
+
+---
+
+## R16 — lazy mount below fold
+
+**Файл:** `apps/web/heys_day_diary_section.js`
+
+### FIX N — IntersectionObserver gate для below-fold subtree
+
+В `DiarySection` был добавлен `LazyMount` wrapper на базе
+`IntersectionObserver`.
+
+Идея простая:
+
+- пока блок ещё не рядом с viewport — React **не монтирует** тяжёлые карточки;
+- в DOM держится только лёгкий placeholder;
+- реальный mount случается, когда пользователь доходит до секции.
+
+Под этот gate были убраны нижние diary cards:
+
+- `slot-mealrec`
+- `slot-supplements`
+- `mealsChart`
+- `insulinIndicator`
+
+### Почему это важно
+
+`renderCard(...)` для части модулей сам по себе дешёвый, но mount компонентов с
+хуками / memo / derived calculations — нет. Поэтому даже при идеальном defer в
+click handler initial render всё равно может быть дорогим, если приложение
+слишком много монтирует сразу.
+
+R16 — это уже не micro-fix в обработчике, а **структурный шаг к windowed UI**:
+не тащить below-fold стоимость в first meaningful interaction.
+
+### R16 rebuild
+
+Selective rebuild был сделан для:
+
+- `apps/web/heys_day_diary_section.js`
+
+Скрипт корректно пересобрал intermediate generators и затронутые bundles:
+
+- `boot-calc.bundle.0c992e608f08.js` → `boot-calc.bundle.7b2904c64d8f.js`
+- `boot-day.bundle.c0254c594bbb.js` → `boot-day.bundle.97adda93ec89.js`
+
+---
+
+## Пост-R16 валидация
+
+### File validation
+
+После rebuild было подтверждено:
+
+- `bundle-manifest.json` синхронизирован с новыми hash-именами;
+- `index.html` preload/script ссылки обновлены;
+- реальные assets существуют в `apps/web/public/`.
+
+Актуальные ключевые assets после R16:
+
+- `boot-init.bundle.6c87215c4381.js`
+- `boot-calc.bundle.7b2904c64d8f.js`
+- `boot-day.bundle.97adda93ec89.js`
+- `postboot-2-insights.bundle.56e70f88e15e.js`
+
+### Browser validation
+
+Поскольку R16 — runtime-sensitive правка (mount scheduling / below-fold
+rendering), была сделана браузерная проверка hashed assets на `localhost`.
+
+После reload браузер реально грузил:
+
+- `boot-calc.bundle.7b2904c64d8f.js`
+- `boot-day.bundle.97adda93ec89.js`
+- `postboot-2-insights.bundle.56e70f88e15e.js`
+- `boot-init.bundle.6c87215c4381.js`
+
+Полный behavioural smoke-test именно DayTab в браузере в этой точке не был
+выполнен, потому что открытая страница находилась на login screen без входа в
+клиентский аккаунт. То есть stale-cache риск был проверен, а не сам UX diary
+после авторизации.
+
+---
+
+## Стратегия против деградации на клиентах с историей за год
+
+### Главный вывод
+
+Для HEYS уже недостаточно только «деферить клики». Это полезно, но не решает
+корень проблемы у тяжёлых клиентов.
+
+Нужна архитектура, при которой:
+
+- **UI interaction path не читает всю историю**;
+- **регулярные badge/insights вычисления не сканируют весь localStorage**;
+- raw `dayv2` остаётся источником истины, но UI работает через derived layers.
+
+### Что уже видно по коду
+
+Хороший паттерн в кодовой базе уже существует:
+
+- многие insights-функции берут **последние 7 / 14 / 21 / 30 дней**, а не всё;
+- есть готовый пример precomputed cache: `heys_ews_weekly_v1`.
+
+Плохой паттерн тоже уже виден:
+
+- `EarlyWarningBadge` в `pi_ui_dashboard.js` перечитывает **все** `heys_dayv2_*`
+  ключи и делает это ещё и по interval;
+- часть статистик и служебных путей всё ещё линейно сканирует весь
+  `localStorage`.
+
+### Рекомендуемая целевая модель
+
+Не «месячные summary вместо дней», а **трёхслойная схема**:
+
+1. **Raw day data** — как сейчас, `heys_dayv2_YYYY-MM-DD`
+2. **Daily digest** — компактное derived-summary на каждый день
+3. **Rolling / monthly aggregates** — недельные / месячные rollups для дешёвых
+  исторических графиков и badge-подсчётов
+
+То есть:
+
+- raw day нужен для редактирования, глубокого drill-down и пересчёта;
+- daily digest нужен для обычного UI и быстрых сравнений;
+- rollups нужны, чтобы история за 90–365 дней не стоила как 365 полных JSON
+  документов в hot path.
+
+### Что именно хранить в daily digest
+
+В отдельном compact key, например `heys_dayv2_digest_YYYY-MM-DD`, хранить только
+то, что реально нужно большинству historical reads:
+
+- date;
+- kcal / prot / fat / carbs;
+- water, steps, trainingMinutes;
+- sleepHours;
+- moodAvg / dayScore / stress proxy;
+- flags: `isIncomplete`, `isRefeedDay`, `isFastingDay`;
+- derived summary для advice / EWS / patterns:
+  - meal count;
+  - last meal time;
+  - simple sugar total;
+  - GL-ish / harm-ish summary;
+  - status / cascade / meal-quality snapshots, если они уже были посчитаны.
+
+Критично: digest должен быть **маленьким и плоским**, без `meals[].items[]`.
+
+### Что делать с месяцами
+
+Для long-range history (90–365 дней) не читать daily raw/digest по одному в
+каждом render-path. Вместо этого поддерживать monthly rollups, например:
+
+- `heys_dayv2_rollup_month_2026-03`
+
+Там хранить:
+
+- totals / averages / counts;
+- warning frequencies;
+- best/worst streaks;
+- compact histogram-like bins для графиков.
+
+Идея: если UI хочет годовой overview, он должен читать:
+
+- последние 14–30 дней из digest;
+- всё старше — из monthly rollups.
+
+### Приоритетный roadmap
+
+#### Phase 1 — low-risk, быстрая отдача
+
+1. Ввести `heys_dayv2_index_v1`:
+  - список дат;
+  - count tracked days;
+  - lastUpdated;
+  - optional last90 list.
+
+  Это сразу уберёт бессмысленные сканы `localStorage.length` ради простого
+  count / discover-days.
+
+2. Переписать EWS badge на windowed read:
+  - hot path: последние 30 дней;
+  - недельные / месячные summary брать из `heys_ews_weekly_v1` и rollup cache;
+  - invalidate по `heys:day-updated`.
+
+3. Добавить in-memory cache для last N digests:
+  - 7 / 14 / 30 / 90;
+  - сбрасывать только при изменении дня или sync.
+
+#### Phase 2 — основной structural fix
+
+4. При каждом save day автоматически обновлять:
+  - day raw;
+  - day digest;
+  - month rollup;
+  - index.
+
+5. Insights / advice / EWS перевести с raw-scan на:
+  - digest-first;
+  - raw-on-demand только для deep explainability.
+
+6. Зафиксировать жёсткое правило:
+
+> Ни один обычный UI handler / badge / tab-open path не должен парсить больше
+> 30–45 полных dayv2 объектов.
+
+#### Phase 3 — если истории станет ещё больше
+
+7. Если клиенты стабильно уйдут в 180–365+ дней и появятся новые тяжёлые
+  артефакты, рассмотреть перенос long-tail history в IndexedDB.
+
+Но это именно **второй этап миграции**, а не первый. Сейчас можно получить очень
+большой выигрыш, даже оставаясь на текущей localStorage-модели, если убрать
+полные сканы и ввести derived layers.
+
+### Практическое правило для HEYS
+
+Для клиента с историей за год нормой должно стать такое поведение:
+
+- DayTab initial open читает **только текущий день + короткие rolling caches**;
+- insights badges не сканируют весь архив;
+- scroll / expand / tab switch не провоцируют historical full reads;
+- full raw history читается только по явному deep-analysis сценарию.
+
+Если это соблюдено, год истории перестаёт быть runtime-проблемой, а становится
+просто storage-фактом.
+
+---
+
 ## Самый короткий resume для продолжения
 
 Если продолжать позже совсем быстро, стартовая мысль такая:
 
-> На этой сессии были успешно задеферены confirm / steps / water / popup
-> open-close / click-outside. Последний замер после R12 показал, что bottleneck
-> сместился в advice и caloric-balance flows. Под это реализован R13: deferred
-> advice tab dispatch, deferred handleShowAdvice, deferred advice details
-> toggle, deferred caloric-balance + debt card expand. Следующий шаг — снять
-> perfMon после R13 и решить, остаётся ли главным bottleneck advice swipe/touch
-> path или уже пора в structural split DayTab/advice subtree.
+> После R13 были сделаны R14–R16: supplements defer, meal-rec defer и
+> below-fold lazy mount. Самое важное открытие — тяжёлый клиент и лёгкий клиент
+> различаются на порядок по long-task cost, значит следующий большой шаг — не
+> очередной micro-defer, а внедрение data-scaling layer: `day index` + `daily
+> digest` + `monthly rollups`, а затем перевод EWS / insights / advice с
+> full-history scans на windowed / cached reads. Перед следующим циклом полезно
+> снять новый perfMon уже после R16 и проверить, насколько упал initial /
+> scroll-related cost на реальном клиентском DayTab.

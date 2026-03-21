@@ -5940,15 +5940,18 @@
      * @returns {number}
      */
     function getTotalDaysTracked() {
+        // R19: use dayCache index instead of scanning all localStorage keys
         try {
+            if (HEYS.dayCache && HEYS.dayCache.getDayCount) {
+                return HEYS.dayCache.getDayCount();
+            }
+            // Fallback: scan localStorage (legacy path)
             const U = HEYS.utils || {};
             const clientId = U.getCurrentClientId ? U.getCurrentClientId() : '';
             let count = 0;
             for (let i = 0; i < localStorage.length; i++) {
                 const key = localStorage.key(i);
                 if (key && key.includes('heys_dayv2_')) {
-                    // Если есть clientId, проверяем что ключ начинается с него
-                    // Формат: {clientId}_heys_dayv2_{date} или heys_dayv2_{date}
                     if (!clientId || key.startsWith(clientId + '_') || !key.includes('_heys_dayv2_')) {
                         count++;
                     }

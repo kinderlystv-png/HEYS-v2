@@ -22,6 +22,7 @@ export const LEGACY_BUNDLES = {
         'heys_storage_supabase_v1.js',
         'heys_models_v1.js',
         'heys_storage_layer_v1.js',
+        'heys_dayv2_cache_v1.js',
         'heys_wheel_picker.js',
         'heys_swipeable.js',
         'heys_pull_refresh.js',

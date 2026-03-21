@@ -637,7 +637,7 @@
           try {
             performance.mark('ews_card_detect_start');
 
-            // Load 30 days of data (namespace-aware via lsGet)
+            // Load 30 days of data — prefer in-memory dayCache (R21)
             const days = [];
             const U = window.HEYS?.utils || {};
             const fmtDate = HEYS.dayUtils?.fmtDate || U.fmtDate;
@@ -647,11 +647,12 @@
               return;
             }
 
+            const _cache = HEYS.dayCache;
             for (let i = 0; i < 30; i++) {
               const d = new Date();
               d.setDate(d.getDate() - i);
               const dateStr = fmtDate(d);
-              const dayData = lsGet(`heys_dayv2_${dateStr}`);
+              const dayData = _cache ? _cache.getDay(dateStr) : lsGet(`heys_dayv2_${dateStr}`);
               if (dayData) days.push({ ...dayData, date: dateStr });
             }
 
@@ -1841,11 +1842,12 @@
             }
 
             const days = [];
+            const _cache = HEYS.dayCache;
             for (let i = 0; i < 30; i++) {
               const d = new Date();
               d.setDate(d.getDate() - i);
               const dateStr = fmtDate(d);
-              const dayData = getter(`heys_dayv2_${dateStr}`);
+              const dayData = _cache ? _cache.getDay(dateStr) : getter(`heys_dayv2_${dateStr}`);
               if (dayData) days.push({ ...dayData, date: dateStr });
             }
 

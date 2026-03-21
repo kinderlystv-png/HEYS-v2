@@ -28667,13 +28667,13 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                     // Resolve lsGet (with fallback to direct localStorage access)
                     const safeLsGet = resolveLsGet();
 
-                    // Load last 30 days from localStorage (lsGet auto-scopes by HEYS.currentClientId)
+                    // Load last 30 days — prefer in-memory dayCache (R21)
+                    const _cache = global.HEYS?.dayCache;
                     for (let i = 0; i < 30; i++) {
                         const date = new Date(today);
                         date.setDate(date.getDate() - i);
                         const dateStr = date.toISOString().split('T')[0];
-                        const dayKey = `heys_dayv2_${dateStr}`;
-                        const dayData = safeLsGet(dayKey); // lsGet auto-scopes by currentClientId
+                        const dayData = _cache ? _cache.getDay(dateStr) : safeLsGet(`heys_dayv2_${dateStr}`);
                         if (dayData && dayData.date) {
                             historicalDays.push(dayData);
                         }
@@ -28938,7 +28938,9 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         // 🆕 v27.9: Extracted science badge to top-right corner
         const cardHeader = h('div', {
             className: 'meal-rec-card__header',
-            onClick: () => setExpanded(!expanded)
+            'data-perf-id': 'meal-rec-card',
+            // R15: defer heavy re-render out of click handler
+            onClick: () => setTimeout(() => React.startTransition(() => setExpanded(prev => !prev)), 0)
         },
             h('div', { className: 'meal-rec-card__title' },
                 h('div', { className: 'meal-rec-card__badge-wrap' },
@@ -32747,7 +32749,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           try {
             performance.mark('ews_card_detect_start');
 
-            // Load 30 days of data (namespace-aware via lsGet)
+            // Load 30 days of data — prefer in-memory dayCache (R21)
             const days = [];
             const U = window.HEYS?.utils || {};
             const fmtDate = HEYS.dayUtils?.fmtDate || U.fmtDate;
@@ -32757,11 +32759,12 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
               return;
             }
 
+            const _cache = HEYS.dayCache;
             for (let i = 0; i < 30; i++) {
               const d = new Date();
               d.setDate(d.getDate() - i);
               const dateStr = fmtDate(d);
-              const dayData = lsGet(`heys_dayv2_${dateStr}`);
+              const dayData = _cache ? _cache.getDay(dateStr) : lsGet(`heys_dayv2_${dateStr}`);
               if (dayData) days.push({ ...dayData, date: dateStr });
             }
 
@@ -33951,11 +33954,12 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             }
 
             const days = [];
+            const _cache = HEYS.dayCache;
             for (let i = 0; i < 30; i++) {
               const d = new Date();
               d.setDate(d.getDate() - i);
               const dateStr = fmtDate(d);
-              const dayData = getter(`heys_dayv2_${dateStr}`);
+              const dayData = _cache ? _cache.getDay(dateStr) : getter(`heys_dayv2_${dateStr}`);
               if (dayData) days.push({ ...dayData, date: dateStr });
             }
 

@@ -2509,13 +2509,16 @@
         const openWeeklyWrapPopup = (e) => {
           e.stopPropagation();
           haptic('light');
-          if (HEYS.weeklyReports?.openWeeklyWrap) {
-            HEYS.weeklyReports.openWeeklyWrap({
-              lsGet,
-              profile: prof,
-              pIndex
-            });
-          }
+          // ⚡ PERF R22: Defer heavy weekly report build (413ms → ~0ms click processing)
+          setTimeout(() => {
+            if (HEYS.weeklyReports?.openWeeklyWrap) {
+              HEYS.weeklyReports.openWeeklyWrap({
+                lsGet,
+                profile: prof,
+                pIndex
+              });
+            }
+          }, 0);
         };
 
         return React.createElement('div', {
@@ -2630,13 +2633,11 @@
               onClick: (e) => {
                 e.stopPropagation();
                 haptic('light');
+                // ⚡ PERF R26: Defer week-deficit popup setState (182ms → ~0ms click processing)
                 const rect = e.currentTarget.getBoundingClientRect();
                 if (deficitMeta.popupData) {
-                  setWeekDeficitPopup({
-                    x: rect.left + rect.width / 2,
-                    y: rect.top,
-                    data: deficitMeta.popupData
-                  });
+                  const pos = { x: rect.left + rect.width / 2, y: rect.top, data: deficitMeta.popupData };
+                  setTimeout(() => { React.startTransition(() => { setWeekDeficitPopup(pos); }); }, 0);
                 }
               }
             },
@@ -2971,7 +2972,7 @@
                 onClick: (e) => {
                   e.stopPropagation();
                   const rect = e.target.getBoundingClientRect();
-                  setMacroBadgePopup({
+                  const payload = {
                     macro,
                     emoji: b.emoji,
                     desc: b.desc,
@@ -2982,8 +2983,10 @@
                     allBadges: badges,
                     x: rect.left + rect.width / 2,
                     y: rect.top
-                  });
+                  };
                   haptic('light');
+                  // R25: defer badge popup setState
+                  setTimeout(() => { React.startTransition(() => setMacroBadgePopup(payload)); }, 0);
                 }
               }, b.emoji))
             );
@@ -2993,7 +2996,7 @@
           const openRingPopup = (e, macro, value, norm, ratio, color, badges) => {
             e.stopPropagation();
             const rect = e.currentTarget.getBoundingClientRect();
-            setMacroBadgePopup({
+            const payload = {
               macro,
               emoji: null,
               desc: null,
@@ -3004,8 +3007,10 @@
               allBadges: badges || [],
               x: rect.left + rect.width / 2,
               y: rect.bottom
-            });
+            };
             haptic('light');
+            // R25: defer popup setState to avoid sync DayTab re-render (168ms → ~0ms)
+            setTimeout(() => { React.startTransition(() => setMacroBadgePopup(payload)); }, 0);
           };
 
           // Получаем данные о переборе из ViewModel

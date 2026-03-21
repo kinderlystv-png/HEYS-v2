@@ -56,7 +56,7 @@
               React.createElement('strong', null, 'Общие затраты :'),
               // 🆕 v3.7.0: Интерактивный NDTE badge с expand/countdown
               window.HEYS?.InsulinWave?.renderNDTEBadge &&
-                window.HEYS.InsulinWave.renderNDTEBadge(ndteData, ndteBoostKcal, ndteExpanded, () => setNdteExpanded(prev => !prev))
+              window.HEYS.InsulinWave.renderNDTEBadge(ndteData, ndteBoostKcal, ndteExpanded, () => setNdteExpanded(prev => !prev))
             ),
             React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: tdee, disabled: true })),
             React.createElement('td', null, ''),
@@ -132,7 +132,9 @@
                 onClick: (e) => {
                   e.stopPropagation();
                   const rect = e.target.getBoundingClientRect();
-                  setTefInfoPopup && setTefInfoPopup({ x: rect.left + rect.width / 2, y: rect.bottom });
+                  const pos = { x: rect.left + rect.width / 2, y: rect.bottom };
+                  // R24: defer popup setState to avoid sync DayTab re-render (188ms → ~0ms)
+                  if (setTefInfoPopup) setTimeout(() => { React.startTransition(() => setTefInfoPopup(pos)); }, 0);
                 },
                 style: {
                   marginLeft: '6px',

@@ -684,7 +684,13 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
   }
 
   // Загружает N предыдущих дней из localStorage (для стрик-штрафов и истории измерений)
+  // R20: use HEYS.dayCache for in-memory cached reads
   function getPreviousDays(n) {
+    // Fast path: dayCache module available (boot-core loaded)
+    if (HEYS.dayCache && HEYS.dayCache.getPreviousDays) {
+      return HEYS.dayCache.getPreviousDays(n);
+    }
+    // Fallback: direct localStorage reads
     var result = [];
     var nullDates = [];
     var U = HEYS.utils;
@@ -7690,7 +7696,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         React.createElement('button', {
           onClick: (e) => {
             e.stopPropagation();
-            if (!allGroupTaken) markGroupTaken();
+            // R14: defer heavy re-render out of click handler
+            if (!allGroupTaken) setTimeout(() => React.startTransition(() => markGroupTaken()), 0);
           },
           style: {
             marginBottom: '8px',
@@ -7782,18 +7789,20 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
               const nextTakenList = isTaken
                 ? taken.filter(takenId => takenId !== id)
                 : Array.from(new Set([...taken, id]));
-              if (isTaken) {
-                clearCelebrationState();
-              }
-              toggleTaken(id);
-              if (!isTaken) {
-                maybeAutoCollapse(nextTakenList);
-              }
+              // R14: defer heavy re-render out of click handler
+              setTimeout(() => {
+                React.startTransition(() => {
+                  if (isTaken) clearCelebrationState();
+                  toggleTaken(id);
+                  if (!isTaken) maybeAutoCollapse(nextTakenList);
+                });
+              }, 0);
             };
 
             return React.createElement('button', {
               key: id,
               className: 'supp-chip',
+              'data-perf-id': 'supp-chip',
               onTouchStart: hasScienceData ? handleTouchStart : null,
               onTouchEnd: hasScienceData ? handleTouchEnd : null,
               onTouchMove: hasScienceData ? handleTouchMove : null,
@@ -7933,8 +7942,10 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           allTaken && React.createElement('button', {
             onClick: (e) => {
               e.stopPropagation();
+              // ⚡ PERF R27: Defer collapse toggle (246ms → ~0ms click processing)
               clearCelebrationState();
-              setCollapsed(!isCollapsed);
+              const next = !isCollapsed;
+              setTimeout(() => { React.startTransition(() => { setCollapsed(next); }); }, 0);
             },
             style: {
               background: 'var(--bg-secondary, #f1f5f9)',
@@ -7957,7 +7968,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           React.createElement('button', {
             onClick: (e) => {
               e.stopPropagation();
-              openMyCourseScreen(dateKey, onForceUpdate);
+              // ⚡ PERF R28: Defer course screen open (heavy DOM creation)
+              setTimeout(() => { openMyCourseScreen(dateKey, onForceUpdate); }, 0);
             },
             style: {
               background: 'var(--bg-secondary, #f1f5f9)',

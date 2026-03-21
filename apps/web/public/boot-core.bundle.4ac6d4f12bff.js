@@ -17155,15 +17155,29 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
    * @returns {string} нормализованный ключ
    */
   function normalizeKeyForSupabase(key, clientId) {
-    if (!clientId || !key.includes(clientId)) return key;
+    if (!clientId || typeof key !== 'string') return key;
 
-    // Убираем client_id из ключа: heys_{clientId}_X → heys_X
-    let normalized = key.replace(`heys_${clientId}_`, 'heys_');
+    const scopedPrefix = `heys_${clientId}_`;
+    const doubleScopedPrefix = `heys_${clientId}_${clientId}_`;
+    const feedbackKey = `heys_insights_feedback_${clientId}`;
+    let normalized = key;
 
-    // Проверяем на двойной client_id (баг): heys_{id}_{id}_X → heys_X
-    if (normalized.includes(clientId)) {
-      normalized = normalized.replace(`${clientId}_`, '');
+    // Специальный случай: feedback loop уже хранит client_id в суффиксе ключа,
+    // а в client_kv_store client_id лежит отдельной колонкой.
+    if (normalized === feedbackKey) {
+      return 'heys_insights_feedback';
+    }
+
+    // Явный баг двойного prefix: heys_{id}_{id}_X → heys_X
+    if (normalized.startsWith(doubleScopedPrefix)) {
+      normalized = `heys_${normalized.slice(doubleScopedPrefix.length)}`;
       logCritical(`🐛 [NORMALIZE] Fixed double client_id in key: ${key} → ${normalized}`);
+      return normalized;
+    }
+
+    // Обычный scoped key: heys_{id}_X → heys_X
+    if (normalized.startsWith(scopedPrefix)) {
+      return `heys_${normalized.slice(scopedPrefix.length)}`;
     }
 
     return normalized;
@@ -21968,77 +21982,65 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
         const skippedDayMirrorKeys = [];
 
         // 🔄 ФАЗ 2: ОБРАБОТКА дедуплицированных ключей
-        deduped.forEach(({ scopedKey, row }) => {
-          try {
-            let key = scopedKey;
+        // ⚡ PERF R23: Chunked processing — yield to browser every 20 keys
+        // Prevents 90+ consecutive long tasks from React scheduler during heavy sync
+        const SYNC_DEDUP_CHUNK = 20;
+        for (let _ci = 0; _ci < deduped.length; _ci += SYNC_DEDUP_CHUNK) {
+          if (_ci > 0) await new Promise(r => setTimeout(r, 0));
+          const _chunk = deduped.slice(_ci, Math.min(_ci + SYNC_DEDUP_CHUNK, deduped.length));
+          _chunk.forEach(({ scopedKey, row }) => {
+            try {
+              let key = scopedKey;
 
-            //  FIX 2025-12-26: Декомпрессируем row.v если это сжатая строка
-            // Данные в БД могут быть сохранены как сжатые строки "¤Z¤[{..." — нужно декодировать
-            const Store = global.HEYS?.store;
-            if (typeof row.v === 'string' && row.v.startsWith('¤Z¤')) {
-              try {
-                if (Store && typeof Store.decompress === 'function') {
-                  row.v = Store.decompress(row.v);
+              //  FIX 2025-12-26: Декомпрессируем row.v если это сжатая строка
+              // Данные в БД могут быть сохранены как сжатые строки "¤Z¤[{..." — нужно декодировать
+              const Store = global.HEYS?.store;
+              if (typeof row.v === 'string' && row.v.startsWith('¤Z¤')) {
+                try {
+                  if (Store && typeof Store.decompress === 'function') {
+                    row.v = Store.decompress(row.v);
+                  }
+                } catch (decompErr) {
+                  logCritical(`⚠️ [DECOMPRESS] Failed for ${key}: ${decompErr.message}`);
                 }
-              } catch (decompErr) {
-                logCritical(`⚠️ [DECOMPRESS] Failed for ${key}: ${decompErr.message}`);
-              }
-            }
-
-            // Конфликт: сравнить версии и объединить если нужно
-            let local = null;
-            try { local = JSON.parse(ls.getItem(key)); } catch (e) { }
-
-            // Для данных дня используем MERGE вместо "last write wins"
-            if (key.includes('dayv2_')) {
-              // �️ v64 FIX: НЕ записываем null/undefined из cloud
-              if (row.v == null || row.v === 'null') {
-                logCritical(`🛡️ [BOOTSTRAP PHASE2] SKIP NULL dayv2: ${key}`);
-                return; // skip — null data corrupts getDayData
               }
 
-              // �🔒 КРИТИЧНО: Перечитываем localStorage свежим для dayv2!
-              // Проблема: `local` был прочитан в начале цикла, а store.set() мог записать позже
-              try { local = JSON.parse(ls.getItem(key)); } catch (e) { local = null; }
+              // Конфликт: сравнить версии и объединить если нужно
+              let local = null;
+              try { local = JSON.parse(ls.getItem(key)); } catch (e) { }
 
-              // 🔒 КРИТИЧНО: Проверка на блокировку cloud sync во время локального редактирования
-              // Если HEYS.Day.isBlockingCloudUpdates() = true, НЕ затираем localStorage!
-              // Это предотвращает race condition когда sync читает старые данные до flush
-              // ⚠️ НО! При forceSync (pull-to-refresh) ИГНОРИРУЕМ блокировку — пользователь явно хочет обновить
-              if (!forceSync && typeof global.HEYS?.Day?.isBlockingCloudUpdates === 'function' && global.HEYS.Day.isBlockingCloudUpdates()) {
-                const remaining = (global.HEYS.Day.getBlockUntil?.() || 0) - Date.now();
-                log(`🔒 [SYNC BLOCKED] Skipping ${key} — local edit in progress (${remaining}ms remaining)`);
-                window.console.info('[HEYS.sinhron] 🔒 BLOCKED ' + key + ' — local edit, remaining ' + remaining + 'ms');
-                return; // Пропускаем этот ключ, НЕ затираем localStorage
-              }
+              // Для данных дня используем MERGE вместо "last write wins"
+              if (key.includes('dayv2_')) {
+                // �️ v64 FIX: НЕ записываем null/undefined из cloud
+                if (row.v == null || row.v === 'null') {
+                  logCritical(`🛡️ [BOOTSTRAP PHASE2] SKIP NULL dayv2: ${key}`);
+                  return; // skip — null data corrupts getDayData
+                }
 
-              const remoteUpdatedAt = row.v?.updatedAt || 0;
-              const localUpdatedAt = local?.updatedAt || 0;
+                // �🔒 КРИТИЧНО: Перечитываем localStorage свежим для dayv2!
+                // Проблема: `local` был прочитан в начале цикла, а store.set() мог записать позже
+                try { local = JSON.parse(ls.getItem(key)); } catch (e) { local = null; }
 
-              // 🛡️ ЗАЩИТА: Не перезаписываем meaningful локальные данные пустым remote
-              const localMeaningful = isMeaningfulDayData(local);
-              const remoteMeaningful = isMeaningfulDayData(row.v);
-              if (localMeaningful && !remoteMeaningful) {
-                logCritical(`🛡️ [DAYV2] KEEP LOCAL: meaningful local, empty remote for ${key}`);
-                window.console.info('[HEYS.sinhron] 🛡️ KEEP_LOCAL (empty remote) ' + key);
-                const pushObj = {
-                  client_id: client_id,
-                  k: normalizeKeyForSupabase(row.k, client_id),
-                  v: local,
-                  updated_at: new Date().toISOString()
-                };
-                clientUpsertQueue.push(pushObj);
-                scheduleClientPush();
-                return;
-              }
+                // 🔒 КРИТИЧНО: Проверка на блокировку cloud sync во время локального редактирования
+                // Если HEYS.Day.isBlockingCloudUpdates() = true, НЕ затираем localStorage!
+                // Это предотвращает race condition когда sync читает старые данные до flush
+                // ⚠️ НО! При forceSync (pull-to-refresh) ИГНОРИРУЕМ блокировку — пользователь явно хочет обновить
+                if (!forceSync && typeof global.HEYS?.Day?.isBlockingCloudUpdates === 'function' && global.HEYS.Day.isBlockingCloudUpdates()) {
+                  const remaining = (global.HEYS.Day.getBlockUntil?.() || 0) - Date.now();
+                  log(`🔒 [SYNC BLOCKED] Skipping ${key} — local edit in progress (${remaining}ms remaining)`);
+                  window.console.info('[HEYS.sinhron] 🔒 BLOCKED ' + key + ' — local edit, remaining ' + remaining + 'ms');
+                  return; // Пропускаем этот ключ, НЕ затираем localStorage
+                }
 
-              // 🛡️ ЗАЩИТА: Если local имеет БОЛЬШЕ meals — не затираем (race condition)
-              if (!forceSync) {
-                const localMealsCount = Array.isArray(local?.meals) ? local.meals.length : 0;
-                const remoteMealsCount = Array.isArray(row.v?.meals) ? row.v.meals.length : 0;
-                if (localMealsCount > remoteMealsCount) {
-                  logCritical(`🛡️ [DAYV2] KEEP LOCAL: local has MORE meals (${localMealsCount} > ${remoteMealsCount}) for ${key}`);
-                  window.console.info('[HEYS.sinhron] 🛡️ KEEP_LOCAL (more meals ' + localMealsCount + '>' + remoteMealsCount + ') ' + key);
+                const remoteUpdatedAt = row.v?.updatedAt || 0;
+                const localUpdatedAt = local?.updatedAt || 0;
+
+                // 🛡️ ЗАЩИТА: Не перезаписываем meaningful локальные данные пустым remote
+                const localMeaningful = isMeaningfulDayData(local);
+                const remoteMeaningful = isMeaningfulDayData(row.v);
+                if (localMeaningful && !remoteMeaningful) {
+                  logCritical(`🛡️ [DAYV2] KEEP LOCAL: meaningful local, empty remote for ${key}`);
+                  window.console.info('[HEYS.sinhron] 🛡️ KEEP_LOCAL (empty remote) ' + key);
                   const pushObj = {
                     client_id: client_id,
                     k: normalizeKeyForSupabase(row.k, client_id),
@@ -22049,57 +22051,46 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
                   scheduleClientPush();
                   return;
                 }
-              }
 
-              // 🔍 ДИАГНОСТИКА: логируем состояние для отладки race conditions (ОТКЛЮЧЕНО - слишком много логов)
-              // logCritical(`📅 [SYNC dayv2] key=${key} | local: ${local?.meals?.length || 0} meals, updatedAt=${localUpdatedAt} | remote: ${row.v?.meals?.length || 0} meals, updatedAt=${remoteUpdatedAt} | forceSync=${forceSync}`);
-
-              // 🔄 FORCE MODE (pull-to-refresh): ВСЕГДА применять облачные данные
-              // При force берём remote как базу, remote items ПОБЕЖДАЮТ при конфликте
-              if (forceSync && row.v) {
-                // local уже перечитан выше (свежие данные из localStorage)
-                // 🔇 PERF: Отключено — слишком много логов на 256 ключей
-                // logCritical(`🔄 [FORCE SYNC] Processing day | key: ${key}`);
-                // logCritical(`   📦 local: ${local?.meals?.length || 0} meals, updatedAt: ${local?.updatedAt}`);
-                // logCritical(`   ☁️ remote: ${row.v.meals?.length || 0} meals, updatedAt: ${row.v?.updatedAt}`);
-
-                let valueToSave;
-                // ✅ Даже в force-режиме не перезаписываем meaningful локальные данные пустым remote
-                if (localMeaningful && !remoteMeaningful) {
-                  valueToSave = local;
-                  const dateMatch = key.match(/dayv2_(\d{4}-\d{2}-\d{2})$/);
-                  if (dateMatch) {
-                    const dayKey = `heys_dayv2_${dateMatch[1]}`;
-                    local.updatedAt = Date.now();
-                    const upsertObj = {
+                // 🛡️ ЗАЩИТА: Если local имеет БОЛЬШЕ meals — не затираем (race condition)
+                if (!forceSync) {
+                  const localMealsCount = Array.isArray(local?.meals) ? local.meals.length : 0;
+                  const remoteMealsCount = Array.isArray(row.v?.meals) ? row.v.meals.length : 0;
+                  if (localMealsCount > remoteMealsCount) {
+                    logCritical(`🛡️ [DAYV2] KEEP LOCAL: local has MORE meals (${localMealsCount} > ${remoteMealsCount}) for ${key}`);
+                    window.console.info('[HEYS.sinhron] 🛡️ KEEP_LOCAL (more meals ' + localMealsCount + '>' + remoteMealsCount + ') ' + key);
+                    const pushObj = {
                       client_id: client_id,
-                      k: dayKey,
+                      k: normalizeKeyForSupabase(row.k, client_id),
                       v: local,
                       updated_at: new Date().toISOString()
                     };
-                    clientUpsertQueue.push(upsertObj);
+                    clientUpsertQueue.push(pushObj);
                     scheduleClientPush();
+                    return;
                   }
-                } else if (local && local.meals?.length > 0) {
-                  // 🔄 ЗАЩИТА: Если local БОЛЬШЕ данных чем remote — это race condition!
-                  // Remote ещё не получил последние изменения. Сохраняем local как есть.
-                  // ⚠️ Условие: local больше данных ИЛИ local новее (не И!) — защищаем от потери любых данных
-                  const localHasMore = local.meals.length > (row.v.meals?.length || 0);
-                  const localIsNewer = (local.updatedAt || 0) > (row.v.updatedAt || 0);
+                }
 
-                  // 🔇 PERF: Отключено
-                  // logCritical(`   🔍 CHECK: localHasMore=${localHasMore} (${local.meals.length} > ${row.v.meals?.length || 0}), localIsNewer=${localIsNewer} (${local.updatedAt} > ${row.v.updatedAt})`);
+                // 🔍 ДИАГНОСТИКА: логируем состояние для отладки race conditions (ОТКЛЮЧЕНО - слишком много логов)
+                // logCritical(`📅 [SYNC dayv2] key=${key} | local: ${local?.meals?.length || 0} meals, updatedAt=${localUpdatedAt} | remote: ${row.v?.meals?.length || 0} meals, updatedAt=${remoteUpdatedAt} | forceSync=${forceSync}`);
 
-                  if (localHasMore || localIsNewer) {
-                    // 🔇 PERF: Отключено
-                    // logCritical(`🛡️ [FORCE SYNC] PROTECTED! Local wins: hasMore=${localHasMore}, isNewer=${localIsNewer}. Keeping local.`);
+                // 🔄 FORCE MODE (pull-to-refresh): ВСЕГДА применять облачные данные
+                // При force берём remote как базу, remote items ПОБЕЖДАЮТ при конфликте
+                if (forceSync && row.v) {
+                  // local уже перечитан выше (свежие данные из localStorage)
+                  // 🔇 PERF: Отключено — слишком много логов на 256 ключей
+                  // logCritical(`🔄 [FORCE SYNC] Processing day | key: ${key}`);
+                  // logCritical(`   📦 local: ${local?.meals?.length || 0} meals, updatedAt: ${local?.updatedAt}`);
+                  // logCritical(`   ☁️ remote: ${row.v.meals?.length || 0} meals, updatedAt: ${row.v?.updatedAt}`);
+
+                  let valueToSave;
+                  // ✅ Даже в force-режиме не перезаписываем meaningful локальные данные пустым remote
+                  if (localMeaningful && !remoteMeaningful) {
                     valueToSave = local;
-
-                    // 🔄 Отправляем local в облако чтобы следующий sync получил актуальные данные
                     const dateMatch = key.match(/dayv2_(\d{4}-\d{2}-\d{2})$/);
                     if (dateMatch) {
                       const dayKey = `heys_dayv2_${dateMatch[1]}`;
-                      local.updatedAt = Date.now(); // Обновляем timestamp
+                      local.updatedAt = Date.now();
                       const upsertObj = {
                         client_id: client_id,
                         k: dayKey,
@@ -22108,831 +22099,861 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
                       };
                       clientUpsertQueue.push(upsertObj);
                       scheduleClientPush();
+                    }
+                  } else if (local && local.meals?.length > 0) {
+                    // 🔄 ЗАЩИТА: Если local БОЛЬШЕ данных чем remote — это race condition!
+                    // Remote ещё не получил последние изменения. Сохраняем local как есть.
+                    // ⚠️ Условие: local больше данных ИЛИ local новее (не И!) — защищаем от потери любых данных
+                    const localHasMore = local.meals.length > (row.v.meals?.length || 0);
+                    const localIsNewer = (local.updatedAt || 0) > (row.v.updatedAt || 0);
+
+                    // 🔇 PERF: Отключено
+                    // logCritical(`   🔍 CHECK: localHasMore=${localHasMore} (${local.meals.length} > ${row.v.meals?.length || 0}), localIsNewer=${localIsNewer} (${local.updatedAt} > ${row.v.updatedAt})`);
+
+                    if (localHasMore || localIsNewer) {
                       // 🔇 PERF: Отключено
-                      // logCritical(`☁️ [FORCE SYNC] Queued local data upload to cloud for ${dayKey}`);
+                      // logCritical(`🛡️ [FORCE SYNC] PROTECTED! Local wins: hasMore=${localHasMore}, isNewer=${localIsNewer}. Keeping local.`);
+                      valueToSave = local;
+
+                      // 🔄 Отправляем local в облако чтобы следующий sync получил актуальные данные
+                      const dateMatch = key.match(/dayv2_(\d{4}-\d{2}-\d{2})$/);
+                      if (dateMatch) {
+                        const dayKey = `heys_dayv2_${dateMatch[1]}`;
+                        local.updatedAt = Date.now(); // Обновляем timestamp
+                        const upsertObj = {
+                          client_id: client_id,
+                          k: dayKey,
+                          v: local,
+                          updated_at: new Date().toISOString()
+                        };
+                        clientUpsertQueue.push(upsertObj);
+                        scheduleClientPush();
+                        // 🔇 PERF: Отключено
+                        // logCritical(`☁️ [FORCE SYNC] Queued local data upload to cloud for ${dayKey}`);
+                      }
+                    } else {
+                      // Есть локальные данные — merge с preferRemote чтобы удаления из облака применились
+                      const merged = mergeDayData(local, row.v, { forceKeepAll: true, preferRemote: true });
+                      valueToSave = merged || row.v; // Если merge вернул null — берём remote
                     }
                   } else {
-                    // Есть локальные данные — merge с preferRemote чтобы удаления из облака применились
-                    const merged = mergeDayData(local, row.v, { forceKeepAll: true, preferRemote: true });
-                    valueToSave = merged || row.v; // Если merge вернул null — берём remote
+                    // Нет локальных данных — просто берём remote
+                    valueToSave = row.v;
                   }
-                } else {
-                  // Нет локальных данных — просто берём remote
-                  valueToSave = row.v;
-                }
 
-                // 🔇 PERF: Отключено
-                // logCritical(`🔄 [FORCE SYNC] Saving ${valueToSave.meals?.length || 0} meals to localStorage | key: ${key}`);
-                // 🧷 Backup перед возможной перезаписью dayv2
-                backupDayV2BeforeOverwrite(key, valueToSave, 'force-sync');
-                const wroteDay = writeDayKeyWithQuotaGuard(key, valueToSave, {
-                  preserveRecentDuringHydration: true,
-                  nowTs: now
-                });
-                if (!wroteDay) {
-                  skippedDayMirrorKeys.push(key);
-                  return;
-                }
-                const dateMatch = key.match(/dayv2_(\d{4}-\d{2}-\d{2})$/);
-                if (dateMatch) {
-                  const mealsCount = valueToSave?.meals?.length || 0;
-                  forceWrittenDayV2.push(`${dateMatch[1]}(${mealsCount}m)`);
-                  if (isSyncDetailLogsEnabled()) {
-                    window.console.info('[HEYS.sinhron] ✅ FORCE_WRITE ' + key + ' meals=' + mealsCount);
-                  }
-                  window.dispatchEvent(new CustomEvent('heys:day-updated', {
-                    detail: {
-                      date: dateMatch[1],
-                      source: 'force-sync',
-                      forceReload: true  // Обязательно! Иначе событие будет заблокировано
-                    }
-                  }));
                   // 🔇 PERF: Отключено
-                  // logCritical(`📅 [EVENT] heys:day-updated dispatched for ${dateMatch[1]} (force-sync, forceReload=true)`);
-                }
-                return; // Готово
-              }
-
-              // Если есть локальные изменения И облачные изменения — нужен merge
-              if (local && localUpdatedAt > 0 && remoteUpdatedAt > 0) {
-                // MERGE: объединяем данные вместо перезаписи
-                const merged = mergeDayData(local, row.v);
-                if (merged) {
-                  // 🔇 PERF: Отключено
-                  // logCritical(`🔀 [MERGE] Day conflict resolved | key: ${key} | local: ${new Date(localUpdatedAt).toLocaleTimeString()} | remote: ${new Date(remoteUpdatedAt).toLocaleTimeString()}`);
-                  const wroteMergedDay = writeDayKeyWithQuotaGuard(key, merged, {
+                  // logCritical(`🔄 [FORCE SYNC] Saving ${valueToSave.meals?.length || 0} meals to localStorage | key: ${key}`);
+                  // 🧷 Backup перед возможной перезаписью dayv2
+                  backupDayV2BeforeOverwrite(key, valueToSave, 'force-sync');
+                  const wroteDay = writeDayKeyWithQuotaGuard(key, valueToSave, {
                     preserveRecentDuringHydration: true,
                     nowTs: now
                   });
-                  if (!wroteMergedDay) {
+                  if (!wroteDay) {
                     skippedDayMirrorKeys.push(key);
                     return;
                   }
-                  window.console.info('[HEYS.sinhron] ✅ MERGE ' + key + ' meals=' + (merged?.meals?.length || 0));
-
-                  // Уведомляем UI об обновлении данных дня (для pull-to-refresh)
                   const dateMatch = key.match(/dayv2_(\d{4}-\d{2}-\d{2})$/);
                   if (dateMatch) {
-                    window.dispatchEvent(new CustomEvent('heys:day-updated', { detail: { date: dateMatch[1], source: 'merge' } }));
+                    const mealsCount = valueToSave?.meals?.length || 0;
+                    forceWrittenDayV2.push(`${dateMatch[1]}(${mealsCount}m)`);
+                    if (isSyncDetailLogsEnabled()) {
+                      window.console.info('[HEYS.sinhron] ✅ FORCE_WRITE ' + key + ' meals=' + mealsCount);
+                    }
+                    window.dispatchEvent(new CustomEvent('heys:day-updated', {
+                      detail: {
+                        date: dateMatch[1],
+                        source: 'force-sync',
+                        forceReload: true  // Обязательно! Иначе событие будет заблокировано
+                      }
+                    }));
                     // 🔇 PERF: Отключено
-                    // logCritical(`📅 [EVENT] heys:day-updated dispatched for ${dateMatch[1]} (merge)`);
+                    // logCritical(`📅 [EVENT] heys:day-updated dispatched for ${dateMatch[1]} (force-sync, forceReload=true)`);
                   }
-
-                  // Отправляем merged версию обратно в облако через очередь (гарантия доставки)
-                  // Используем нормализованный ключ (без embedded client_id)
-                  const mergedUpsertObj = {
-                    user_id: user.id,
-                    client_id: client_id,
-                    k: normalizeKeyForSupabase(row.k, client_id),
-                    v: merged,
-                    updated_at: (new Date()).toISOString(),
-                  };
-                  clientUpsertQueue.push(mergedUpsertObj);
-                  scheduleClientPush();
-                  return; // Уже сохранили merged
+                  return; // Готово
                 }
-              }
 
-              // Нет конфликта — просто берём более свежую версию
-              if (localUpdatedAt > remoteUpdatedAt) {
-                log('conflict: keep local (by updatedAt)', key, localUpdatedAt, '>', remoteUpdatedAt);
-                window.console.info('[HEYS.sinhron] 🛡️ KEEP_LOCAL (newer ' + localUpdatedAt + '>' + remoteUpdatedAt + ') ' + key);
-                return;
-              }
-            } else {
-              // Остальные ключи: сравниваем по revision И updatedAt
-              const remoteRev = row.v && row.v.revision ? row.v.revision : 0;
-              const localRev = local && local.revision ? local.revision : 0;
-              const remoteUpdatedAt = row.v?.updatedAt || 0;
-              const localUpdatedAt = local?.updatedAt || 0;
+                // Если есть локальные изменения И облачные изменения — нужен merge
+                if (local && localUpdatedAt > 0 && remoteUpdatedAt > 0) {
+                  // MERGE: объединяем данные вместо перезаписи
+                  const merged = mergeDayData(local, row.v);
+                  if (merged) {
+                    // 🔇 PERF: Отключено
+                    // logCritical(`🔀 [MERGE] Day conflict resolved | key: ${key} | local: ${new Date(localUpdatedAt).toLocaleTimeString()} | remote: ${new Date(remoteUpdatedAt).toLocaleTimeString()}`);
+                    const wroteMergedDay = writeDayKeyWithQuotaGuard(key, merged, {
+                      preserveRecentDuringHydration: true,
+                      nowTs: now
+                    });
+                    if (!wroteMergedDay) {
+                      skippedDayMirrorKeys.push(key);
+                      return;
+                    }
+                    window.console.info('[HEYS.sinhron] ✅ MERGE ' + key + ' meals=' + (merged?.meals?.length || 0));
 
-              // Если локальная версия новее по revision ИЛИ updatedAt — не затираем
-              if (localRev > remoteRev || localUpdatedAt > remoteUpdatedAt) {
-                log('conflict: keep local (by revision/updatedAt)', key,
-                  `localRev=${localRev} remoteRev=${remoteRev}`,
-                  `localUpdatedAt=${localUpdatedAt} remoteUpdatedAt=${remoteUpdatedAt}`);
-                return;
-              }
-
-              // 🛡️ ЗАЩИТА ПРОФИЛЯ: Не затираем заполненный профиль дефолтными значениями
-              if (key.includes('_profile')) {
-                const remoteIsDefault = row.v &&
-                  (row.v.weight === 70 && row.v.height === 175 && row.v.age === 30) &&
-                  (!row.v.updatedAt || row.v.updatedAt === 0);
-                const localHasData = local &&
-                  (local.weight !== 70 || local.height !== 175 || local.age !== 30 ||
-                    local.firstName || local.lastName || (local.updatedAt && local.updatedAt > 0));
-
-                if (remoteIsDefault && localHasData) {
-                  logCritical(`⚠️ [PROFILE] BLOCKED: Refusing to overwrite filled profile with default values`);
-                  logCritical(`  Local: weight=${local.weight}, height=${local.height}, age=${local.age}, updatedAt=${local.updatedAt}`);
-                  logCritical(`  Remote: weight=${row.v?.weight}, height=${row.v?.height}, age=${row.v?.age}, updatedAt=${row.v?.updatedAt}`);
-                  return; // Пропускаем сохранение
-                }
-              }
-
-              // 🛡️ ЗАЩИТА GAMIFICATION: XP должен только расти, не сбрасываться
-              // FIX v2.0: Ищем game данные во ВСЕХ вариантах ключа (legacy, разные clientId)
-              if (key.includes('_game') && !key.includes('_gamification')) {
-                const remoteTotalXP = row.v?.totalXP || 0;
-                let localTotalXP = local?.totalXP || 0;
-                let bestLocalGame = local;
-
-                // 🔍 Ищем game данные во всех вариантах ключа
-                if (localTotalXP === 0) {
-                  try {
-                    const clientPrefix = client_id ? `heys_${client_id}_` : null;
-
-                    // 1. Прямой ключ heys_game (legacy без clientId)
-                    // ⚠️ Используем ТОЛЬКО если client_id неизвестен — иначе риск чужих данных
-                    if (!clientPrefix) {
-                      const legacyGame = tryParse(ls.getItem('heys_game'));
-                      if (legacyGame?.totalXP > localTotalXP) {
-                        localTotalXP = legacyGame.totalXP;
-                        bestLocalGame = legacyGame;
-                        logCritical(`🎮 [GAME] Found legacy heys_game with XP: ${localTotalXP}`);
-                      }
+                    // Уведомляем UI об обновлении данных дня (для pull-to-refresh)
+                    const dateMatch = key.match(/dayv2_(\d{4}-\d{2}-\d{2})$/);
+                    if (dateMatch) {
+                      window.dispatchEvent(new CustomEvent('heys:day-updated', { detail: { date: dateMatch[1], source: 'merge' } }));
+                      // 🔇 PERF: Отключено
+                      // logCritical(`📅 [EVENT] heys:day-updated dispatched for ${dateMatch[1]} (merge)`);
                     }
 
-                    // 2. Поиск по ключам *_game только в рамках текущего клиента
-                    for (let i = 0; i < ls.length; i++) {
-                      const k = ls.key(i);
-                      if (!k) continue;
-                      if (clientPrefix && !k.startsWith(clientPrefix)) continue;
-                      if (!clientPrefix && k === 'heys_game') continue;
-                      if (k.endsWith('_game') && !k.includes('_gamification')) {
-                        const gameData = tryParse(ls.getItem(k));
-                        if (gameData?.totalXP > localTotalXP) {
-                          localTotalXP = gameData.totalXP;
-                          bestLocalGame = gameData;
-                          logCritical(`🎮 [GAME] Found better game data in ${k}: XP=${localTotalXP}`);
-                        }
-                      }
-                    }
-                  } catch (e) { }
-                }
-
-                logCritical(`🎮 [GAME SYNC] local XP=${localTotalXP}, remote XP=${remoteTotalXP}, key=${key}`);
-
-                // Если локальный XP больше — сохраняем локальные данные И отправляем в облако
-                if (localTotalXP > remoteTotalXP) {
-                  logCritical(`🎮 [GAME] BLOCKED: Keeping local XP (${localTotalXP}) > remote (${remoteTotalXP})`);
-
-                  // Отправляем локальные данные в облако чтобы синхронизировать
-                  if (bestLocalGame && user?.id) {
-                    const gameUpsertObj = {
+                    // Отправляем merged версию обратно в облако через очередь (гарантия доставки)
+                    // Используем нормализованный ключ (без embedded client_id)
+                    const mergedUpsertObj = {
                       user_id: user.id,
                       client_id: client_id,
                       k: normalizeKeyForSupabase(row.k, client_id),
-                      v: bestLocalGame,
+                      v: merged,
                       updated_at: (new Date()).toISOString(),
                     };
-                    clientUpsertQueue.push(gameUpsertObj);
+                    clientUpsertQueue.push(mergedUpsertObj);
                     scheduleClientPush();
-                    logCritical(`🎮 [GAME] Queued local game data to cloud (XP: ${localTotalXP})`);
+                    return; // Уже сохранили merged
                   }
+                }
+
+                // Нет конфликта — просто берём более свежую версию
+                if (localUpdatedAt > remoteUpdatedAt) {
+                  log('conflict: keep local (by updatedAt)', key, localUpdatedAt, '>', remoteUpdatedAt);
+                  window.console.info('[HEYS.sinhron] 🛡️ KEEP_LOCAL (newer ' + localUpdatedAt + '>' + remoteUpdatedAt + ') ' + key);
+                  return;
+                }
+              } else {
+                // Остальные ключи: сравниваем по revision И updatedAt
+                const remoteRev = row.v && row.v.revision ? row.v.revision : 0;
+                const localRev = local && local.revision ? local.revision : 0;
+                const remoteUpdatedAt = row.v?.updatedAt || 0;
+                const localUpdatedAt = local?.updatedAt || 0;
+
+                // Если локальная версия новее по revision ИЛИ updatedAt — не затираем
+                if (localRev > remoteRev || localUpdatedAt > remoteUpdatedAt) {
+                  log('conflict: keep local (by revision/updatedAt)', key,
+                    `localRev=${localRev} remoteRev=${remoteRev}`,
+                    `localUpdatedAt=${localUpdatedAt} remoteUpdatedAt=${remoteUpdatedAt}`);
                   return;
                 }
 
-                // Если remote XP больше — берём remote, но мержим achievements
-                if (remoteTotalXP > localTotalXP) {
-                  const localAchievements = bestLocalGame?.unlockedAchievements || [];
-                  const remoteAchievements = row.v?.unlockedAchievements || [];
-                  const mergedAchievements = [...new Set([...remoteAchievements, ...localAchievements])];
+                // 🛡️ ЗАЩИТА ПРОФИЛЯ: Не затираем заполненный профиль дефолтными значениями
+                if (key.includes('_profile')) {
+                  const remoteIsDefault = row.v &&
+                    (row.v.weight === 70 && row.v.height === 175 && row.v.age === 30) &&
+                    (!row.v.updatedAt || row.v.updatedAt === 0);
+                  const localHasData = local &&
+                    (local.weight !== 70 || local.height !== 175 || local.age !== 30 ||
+                      local.firstName || local.lastName || (local.updatedAt && local.updatedAt > 0));
 
-                  row.v = {
-                    ...row.v,
-                    unlockedAchievements: mergedAchievements,
-                    // Сохраняем максимальные stats
-                    stats: {
-                      ...row.v?.stats,
-                      bestStreak: Math.max(row.v?.stats?.bestStreak || 0, bestLocalGame?.stats?.bestStreak || 0),
-                      perfectDays: Math.max(row.v?.stats?.perfectDays || 0, bestLocalGame?.stats?.perfectDays || 0),
-                      totalProducts: Math.max(row.v?.stats?.totalProducts || 0, bestLocalGame?.stats?.totalProducts || 0),
-                      totalWater: Math.max(row.v?.stats?.totalWater || 0, bestLocalGame?.stats?.totalWater || 0),
-                      totalTrainings: Math.max(row.v?.stats?.totalTrainings || 0, bestLocalGame?.stats?.totalTrainings || 0)
-                    }
-                  };
-                  logCritical(`🎮 [GAME] MERGED: XP ${localTotalXP} → ${remoteTotalXP}, achievements: ${mergedAchievements.length}`);
+                  if (remoteIsDefault && localHasData) {
+                    logCritical(`⚠️ [PROFILE] BLOCKED: Refusing to overwrite filled profile with default values`);
+                    logCritical(`  Local: weight=${local.weight}, height=${local.height}, age=${local.age}, updatedAt=${local.updatedAt}`);
+                    logCritical(`  Remote: weight=${row.v?.weight}, height=${row.v?.height}, age=${row.v?.age}, updatedAt=${row.v?.updatedAt}`);
+                    return; // Пропускаем сохранение
+                  }
                 }
 
-                // Если оба равны нулю — ничего не делаем, пусть remote запишется
-                if (remoteTotalXP === 0 && localTotalXP === 0) {
-                  logCritical(`🎮 [GAME] Both XP=0, accepting remote (may be fresh start)`);
-                }
-              }
+                // 🛡️ ЗАЩИТА GAMIFICATION: XP должен только расти, не сбрасываться
+                // FIX v2.0: Ищем game данные во ВСЕХ вариантах ключа (legacy, разные clientId)
+                if (key.includes('_game') && !key.includes('_gamification')) {
+                  const remoteTotalXP = row.v?.totalXP || 0;
+                  let localTotalXP = local?.totalXP || 0;
+                  let bestLocalGame = local;
 
-              // 🛡️ ЗАЩИТА WIDGET LAYOUT: Не затираем локальный layout облачным с более старым updatedAt
-              // Widget layout — критичные данные, потеря = сброс настроек пользователя
-              // Проверяем ТОЛЬКО основной layout, НЕ meta (widget_layout_meta_v1)
-              if (key.includes('widget_layout_v1') && !key.includes('_meta_')) {
-                // Извлекаем updatedAt из обоих источников
-                // Новый формат: { widgets: [...], updatedAt: number }
-                // Старый формат: прямой массив (нет updatedAt)
-                const remoteHasUpdatedAt = row.v && typeof row.v.updatedAt === 'number';
-                const localHasUpdatedAt = local && typeof local.updatedAt === 'number';
-
-                // Количество виджетов (для логирования)
-                const remoteWidgetCount = row.v?.widgets?.length || (Array.isArray(row.v) ? row.v.length : 0);
-                const localWidgetCount = local?.widgets?.length || (Array.isArray(local) ? local.length : 0);
-
-                // Если локальный layout новее — НЕ затираем
-                if (localHasUpdatedAt && remoteHasUpdatedAt && local.updatedAt >= row.v.updatedAt) {
-                  logCritical(`🧩 [WIDGET LAYOUT] KEEP LOCAL: local.updatedAt (${local.updatedAt}) >= remote.updatedAt (${row.v.updatedAt})`);
-                  logCritical(`   Local: ${localWidgetCount} widgets, Remote: ${remoteWidgetCount} widgets`);
-                  return; // Пропускаем сохранение — локальные данные актуальнее
-                }
-
-                // Если локальный имеет updatedAt, а remote — нет (старый формат в облаке)
-                if (localHasUpdatedAt && !remoteHasUpdatedAt) {
-                  logCritical(`🧩 [WIDGET LAYOUT] KEEP LOCAL: local has updatedAt (${local.updatedAt}), remote is legacy format`);
-                  logCritical(`   Local: ${localWidgetCount} widgets, Remote: ${remoteWidgetCount} widgets`);
-                  // Отправим локальные в облако чтобы обновить формат
-                  const upsertObj = {
-                    user_id: user.id,
-                    client_id: client_id,
-                    k: normalizeKeyForSupabase(row.k, client_id),
-                    v: local, // Отправляем локальные данные в новом формате
-                    updated_at: (new Date()).toISOString(),
-                  };
-                  clientUpsertQueue.push(upsertObj);
-                  scheduleClientPush();
-                  return; // Пропускаем сохранение remote
-                }
-
-                // Если оба без updatedAt (старый формат) — не трогаем, пусть будет как есть
-                // Это позволит избежать потери данных при миграции
-                if (!localHasUpdatedAt && !remoteHasUpdatedAt && localWidgetCount > 0) {
-                  logCritical(`🧩 [WIDGET LAYOUT] KEEP LOCAL: both legacy format, preserving ${localWidgetCount} local widgets`);
-                  return;
-                }
-
-                // 🛡️ КРИТИЧНО: Если локальный layout имеет данные с updatedAt, а remote пустой или без данных — KEEP LOCAL!
-                // Это предотвращает затирание данных пустым ответом из облака
-                if (localHasUpdatedAt && localWidgetCount > 0 && remoteWidgetCount === 0) {
-                  logCritical(`🧩 [WIDGET LAYOUT] KEEP LOCAL: local has ${localWidgetCount} widgets with updatedAt, remote is EMPTY`);
-                  // Отправим локальные в облако чтобы восстановить данные
-                  const upsertObj = {
-                    user_id: user.id,
-                    client_id: client_id,
-                    k: normalizeKeyForSupabase(row.k, client_id),
-                    v: local, // Отправляем локальные данные
-                    updated_at: (new Date()).toISOString(),
-                  };
-                  clientUpsertQueue.push(upsertObj);
-                  scheduleClientPush();
-                  return; // Пропускаем сохранение пустого remote
-                }
-
-                logCritical(`🧩 [WIDGET LAYOUT] ACCEPTING REMOTE: ${remoteWidgetCount} widgets (updatedAt: ${row.v?.updatedAt || 'none'})`);
-              }
-            }
-
-            // ЗАЩИТА И MERGE: Умное объединение продуктов (не затираем локальные)
-            if (key.includes('_products') && !key.includes('_products_backup') && !key.includes('_hidden_products') && !key.includes('_favorite_products') && !key.includes('_deleted_products')) {
-              let remoteProducts;
-              // 🔇 PERF: Отключено — много логов
-              // console.log('📦 [PRODUCTS DEBUG] Processing products key:', key, 'raw row.k:', row.k, 'row.v length:', Array.isArray(row.v) ? row.v.length : 'not array');
-
-              // Читаем актуальное локальное значение по scoped ключу
-              let currentLocal = null;
-              try {
-                const rawLocal = ls.getItem(key);
-                if (rawLocal) {
-                  const parsed = tryParse(rawLocal);
-                  // Фильтруем невалидные продукты (без name)
-                  currentLocal = Array.isArray(parsed)
-                    ? parsed.filter(p => p && typeof p.name === 'string' && p.name.trim().length > 0)
-                    : null;
-                }
-              } catch (e) { }
-
-              // 🆕 v5.0: Keep snapshot of previous products for downstream cascade
-              // Only capture once per sync cycle.
-              if (!previousProducts && Array.isArray(currentLocal) && currentLocal.length > 0) {
-                previousProducts = currentLocal;
-              }
-
-              // 🛡️ КРИТИЧНО: Фильтруем невалидные продукты из облака ПЕРЕД любой обработкой
-              remoteProducts = row.v;
-              if (Array.isArray(row.v)) {
-                const before = row.v.length;
-                remoteProducts = row.v.filter(p => p && typeof p.name === 'string' && p.name.trim().length > 0);
-                if (remoteProducts.length !== before) {
-                  logCritical(`🧹 [CLOUD PRODUCTS] Pre-filtered ${before - remoteProducts.length} invalid (${before} → ${remoteProducts.length})`);
-                }
-              }
-
-              // КРИТИЧЕСКАЯ ЗАЩИТА: НЕ ЗАТИРАЕМ непустые продукты пустым массивом
-              if (Array.isArray(remoteProducts) && remoteProducts.length === 0) {
-                if (Array.isArray(currentLocal) && currentLocal.length > 0) {
-                  log(`⚠️ [PRODUCTS] BLOCKED: Refusing to overwrite ${currentLocal.length} local products with empty cloud array`);
-                  // 🔄 Отправляем локальные продукты в облако чтобы заменить мусор
-                  logCritical(`🔄 [CLOUD RECOVERY] Pushing ${currentLocal.length} local products to replace cloud garbage`);
-                  const recoveryUpsertObj = {
-                    user_id: user.id,
-                    client_id: client_id,
-                    k: normalizeKeyForSupabase(row.k, client_id),
-                    v: currentLocal,
-                    updated_at: new Date().toISOString(),
-                  };
-                  clientUpsertQueue.push(recoveryUpsertObj);
-                  scheduleClientPush();
-                  return; // Пропускаем сохранение
-                } else {
-                  // Оба пусты - пытаемся восстановить из backup
-                  const backupKey = key.replace('_products', '_products_backup');
-                  const backupRaw = ls.getItem(backupKey);
-                  if (backupRaw) {
+                  // 🔍 Ищем game данные во всех вариантах ключа
+                  if (localTotalXP === 0) {
                     try {
-                      const backupData = tryParse(backupRaw);
-                      if (Array.isArray(backupData) && backupData.length > 0) {
-                        log(`✅ [RECOVERY] Restored ${backupData.length} products from backup`);
-                        if (global.HEYS?.products?.setAll) {
-                          global.HEYS.products.setAll(backupData, { source: 'cloud-recovery', skipNotify: true, skipCloud: true });
-                          productsUpdated = true;
-                          latestProducts = backupData;
-                          // If we restored from backup, previousProducts may be empty; fallback to in-memory snapshot.
-                          if (!previousProducts) previousProducts = currentLocal || global.HEYS?.products?.getAll?.() || null;
-                        } else {
-                          ls.setItem(key, JSON.stringify(backupData));
+                      const clientPrefix = client_id ? `heys_${client_id}_` : null;
+
+                      // 1. Прямой ключ heys_game (legacy без clientId)
+                      // ⚠️ Используем ТОЛЬКО если client_id неизвестен — иначе риск чужих данных
+                      if (!clientPrefix) {
+                        const legacyGame = tryParse(ls.getItem('heys_game'));
+                        if (legacyGame?.totalXP > localTotalXP) {
+                          localTotalXP = legacyGame.totalXP;
+                          bestLocalGame = legacyGame;
+                          logCritical(`🎮 [GAME] Found legacy heys_game with XP: ${localTotalXP}`);
                         }
-                        muteMirror = false;
-                        setTimeout(() => cloud.saveClientKey(client_id, 'heys_products', backupData), 500);
-                        muteMirror = true;
-                        return;
+                      }
+
+                      // 2. Поиск по ключам *_game только в рамках текущего клиента
+                      for (let i = 0; i < ls.length; i++) {
+                        const k = ls.key(i);
+                        if (!k) continue;
+                        if (clientPrefix && !k.startsWith(clientPrefix)) continue;
+                        if (!clientPrefix && k === 'heys_game') continue;
+                        if (k.endsWith('_game') && !k.includes('_gamification')) {
+                          const gameData = tryParse(ls.getItem(k));
+                          if (gameData?.totalXP > localTotalXP) {
+                            localTotalXP = gameData.totalXP;
+                            bestLocalGame = gameData;
+                            logCritical(`🎮 [GAME] Found better game data in ${k}: XP=${localTotalXP}`);
+                          }
+                        }
                       }
                     } catch (e) { }
                   }
-                }
-              }
 
-              // 🔀 MERGE: Объединяем локальные и облачные продукты (уже отфильтрованные!)
-              // Это решает проблему: новый продукт добавлен локально, но облако ещё не обновилось
-              if (Array.isArray(currentLocal) && currentLocal.length > 0 && Array.isArray(remoteProducts) && remoteProducts.length > 0) {
-                let merged = mergeProductsData(currentLocal, remoteProducts);
+                  logCritical(`🎮 [GAME SYNC] local XP=${localTotalXP}, remote XP=${remoteTotalXP}, key=${key}`);
 
-                // 🛡️ v4.8.10: Финальная tombstone-фильтрация merged результата ПЕРЕД setAll
-                // mergeProductsData фильтрует через HEYS.deletedProducts, но эта система может потерять данные
-                // при очистке localStorage. Дублируем проверку через heys_deleted_ids (Store, выживает в облаке).
-                const _tsForMerge = (typeof global !== 'undefined' ? global : window)?.HEYS?.store?.get?.('heys_deleted_ids') || [];
-                if (Array.isArray(_tsForMerge) && _tsForMerge.length > 0) {
-                  const _tsIds = new Set(_tsForMerge.map(t => t.id).filter(Boolean));
-                  const _tsNames = new Set(_tsForMerge.map(t => (t.name || '').trim().toLowerCase()).filter(Boolean));
-                  const beforeLen = merged.length;
-                  merged = merged.filter(p => {
-                    if (!p) return false;
-                    if (p.id && _tsIds.has(p.id)) return false;
-                    if (p.name && _tsNames.has(String(p.name).trim().toLowerCase())) return false;
-                    return true;
-                  });
-                  if (merged.length < beforeLen) {
-                    logCritical(`🪦 [MERGE TOMBSTONE] Removed ${beforeLen - merged.length} tombstoned product(s) from merge result (${beforeLen}→${merged.length})`);
-                  }
-                }
+                  // Если локальный XP больше — сохраняем локальные данные И отправляем в облако
+                  if (localTotalXP > remoteTotalXP) {
+                    logCritical(`🎮 [GAME] BLOCKED: Keeping local XP (${localTotalXP}) > remote (${remoteTotalXP})`);
 
-                // 🔧 ИСПРАВЛЕНИЕ: Подсчитываем уникальные локальные продукты для корректного сравнения
-                // (т.к. mergeProductsData делает дедупликацию внутри, сравнение с raw currentLocal некорректно)
-                const localUniqueCount = new Set(currentLocal.filter(p => p && p.name).map(p => String(p.name).trim().toLowerCase())).size;
-
-                // 🛡️ ЗАЩИТА: Проверяем потерю УНИКАЛЬНЫХ продуктов (не дублей)
-                // Если уникальных локальных больше чем merged — значит sync "опоздал" и пытается удалить новые продукты
-                // 🔧 FIX v4.8.9: Если все "лишние" локальные — это tombstoned продукты, разрешаем merge.
-                // Иначе синхронизация навечно блокируется и удалённые продукты воскресают.
-                const _tombstonesSync = (typeof global !== 'undefined' ? global : window)?.HEYS?.store?.get?.('heys_deleted_ids') || [];
-                const _tombstoneIdsSync = new Set(Array.isArray(_tombstonesSync) ? _tombstonesSync.map(t => t.id).filter(Boolean) : []);
-                const _tombstoneNamesSync = new Set(Array.isArray(_tombstonesSync) ? _tombstonesSync.map(t => (t.name || '').trim().toLowerCase()).filter(Boolean) : []);
-                const _localWithoutTombstoned = currentLocal.filter(p => {
-                  if (!p) return false;
-                  if (p.id && _tombstoneIdsSync.has(p.id)) return false;
-                  if (p.name && _tombstoneNamesSync.has(String(p.name).trim().toLowerCase())) return false;
-                  return true;
-                });
-                const localEffectiveCount = new Set(_localWithoutTombstoned.filter(p => p && p.name).map(p => String(p.name).trim().toLowerCase())).size;
-
-                if (localEffectiveCount > merged.length) {
-                  logCritical(`⚠️ [PRODUCTS SYNC] BLOCKED: localEffective (${localEffectiveCount}, was ${localUniqueCount} before tombstone) > merged (${merged.length}). Keeping local.`);
-                  // Отправляем локальные в облако чтобы синхронизировать (после дедупликации)
-                  // Используем merged как источник — он содержит все уникальные продукты
-                  const localDeduped = [];
-                  const seenNames = new Set();
-                  for (const p of currentLocal) {
-                    if (!p || !p.name) continue;
-                    const key = String(p.name).trim().toLowerCase();
-                    if (!seenNames.has(key)) {
-                      seenNames.add(key);
-                      localDeduped.push(p);
+                    // Отправляем локальные данные в облако чтобы синхронизировать
+                    if (bestLocalGame && user?.id) {
+                      const gameUpsertObj = {
+                        user_id: user.id,
+                        client_id: client_id,
+                        k: normalizeKeyForSupabase(row.k, client_id),
+                        v: bestLocalGame,
+                        updated_at: (new Date()).toISOString(),
+                      };
+                      clientUpsertQueue.push(gameUpsertObj);
+                      scheduleClientPush();
+                      logCritical(`🎮 [GAME] Queued local game data to cloud (XP: ${localTotalXP})`);
                     }
-                  }
-                  const localUpsertObj = {
-                    user_id: user.id,
-                    client_id: client_id,
-                    k: normalizeKeyForSupabase(row.k, client_id),
-                    v: localDeduped, // Отправляем дедуплицированные!
-                    updated_at: (new Date()).toISOString(),
-                  };
-                  clientUpsertQueue.push(localUpsertObj);
-                  scheduleClientPush();
-                  // Сохраняем дедуплицированные локально
-                  // 🛡️ v4.8.1: Проверяем что не перезаписываем больший набор
-                  const memoryNow = global.HEYS?.products?.getAll?.()?.length || 0;
-                  if (localDeduped.length < memoryNow) {
-                    // v4.8.2: Разрешаем дедупликацию если разница <= 5%
-                    const shrinkPct = ((memoryNow - localDeduped.length) / memoryNow) * 100;
-                    if (shrinkPct > 5) {
-                      log(`⚠️ [PRODUCTS] Skip setAll: localDeduped (${localDeduped.length}) significantly < memory (${memoryNow}), ${shrinkPct.toFixed(1)}%`);
-                      return;
-                    }
-                    log(`🧹 [PRODUCTS] Allowing dedup shrink: ${memoryNow} → ${localDeduped.length} (−${shrinkPct.toFixed(1)}%)`);
-                  }
-                  if (global.HEYS?.products?.setAll) {
-                    global.HEYS.products.setAll(localDeduped, { source: 'cloud-sync', skipNotify: true, skipCloud: true, allowShrink: true });
-                    productsUpdated = true;
-                    latestProducts = localDeduped;
-                    if (!previousProducts) previousProducts = currentLocal || global.HEYS?.products?.getAll?.() || null;
-                  } else {
-                    ls.setItem(key, JSON.stringify(localDeduped));
-                  }
-                  return;
-                }
-
-                // Если дедупликация убрала дубли — это OK, сохраняем merged
-                if (currentLocal.length > merged.length && localUniqueCount === merged.length) {
-                  log(`🧹 [PRODUCTS] Deduplication cleaned ${currentLocal.length - merged.length} duplicates`);
-                }
-
-                // Если merge добавил новые продукты — сохраняем и синхронизируем обратно в облако
-                if (merged.length > remoteProducts.length) {
-                  logCritical(`📦 [PRODUCTS MERGE] ${currentLocal.length} local + ${remoteProducts.length} remote → ${merged.length} merged`);
-                  if (global.HEYS?.products?.setAll) {
-                    global.HEYS.products.setAll(merged, { source: 'cloud-sync', skipNotify: true, skipCloud: true, allowShrink: true });
-                    productsUpdated = true;
-                    latestProducts = merged;
-                    if (!previousProducts) previousProducts = currentLocal || global.HEYS?.products?.getAll?.() || null;
-                  } else {
-                    ls.setItem(key, JSON.stringify(merged));
-                  }
-
-                  // Отправляем merged версию обратно в облако
-                  const mergedUpsertObj = {
-                    user_id: user.id,
-                    client_id: client_id,
-                    k: normalizeKeyForSupabase(row.k, client_id),
-                    v: merged,
-                    updated_at: (new Date()).toISOString(),
-                  };
-                  clientUpsertQueue.push(mergedUpsertObj);
-                  scheduleClientPush();
-                  return; // Уже обработали products
-                }
-
-                // Если merged.length === remoteProducts.length (нет изменений) — сохраняем merged
-                // Это безопасно т.к. merged уже включает все локальные продукты
-                // 🛡️ v4.8.1: Дополнительная проверка на память — могли добавить продукты после чтения
-                const memoryCount = global.HEYS?.products?.getAll?.()?.length || 0;
-                if (merged.length === remoteProducts.length && merged.length === currentLocal.length && merged.length >= memoryCount) {
-                  if (global.HEYS?.products?.setAll) {
-                    global.HEYS.products.setAll(merged, { source: 'cloud-sync', skipNotify: true, skipCloud: true, allowShrink: true });
-                    productsUpdated = true;
-                    latestProducts = merged;
-                    if (!previousProducts) previousProducts = currentLocal || global.HEYS?.products?.getAll?.() || null;
-                  } else {
-                    ls.setItem(key, JSON.stringify(merged));
-                  }
-                  return; // Данные одинаковые, нет смысла обновлять облако
-                }
-
-                // Fallback: сохраняем merged и синхронизируем
-                // 🛡️ v4.8.1: Проверяем что merged не меньше текущего количества в памяти
-                // Это предотвращает race condition когда новые продукты добавлены между чтением и merge
-                const currentInMemory = global.HEYS?.products?.getAll?.()?.length || 0;
-                if (merged.length < currentInMemory) {
-                  // v4.8.2: Разрешаем уменьшение если это дедупликация (разница <= 5%)
-                  const shrinkPct = ((currentInMemory - merged.length) / currentInMemory) * 100;
-                  if (shrinkPct > 5) {
-                    log(`⚠️ [PRODUCTS] Skipping setAll: merged (${merged.length}) significantly < memory (${currentInMemory}), ${shrinkPct.toFixed(1)}%`);
                     return;
                   }
-                  log(`🧹 [PRODUCTS] Allowing merge shrink: ${currentInMemory} → ${merged.length} (−${shrinkPct.toFixed(1)}%, dedup)`);
-                }
 
-                if (global.HEYS?.products?.setAll) {
-                  global.HEYS.products.setAll(merged, { source: 'cloud-sync', skipNotify: true, skipCloud: true, allowShrink: true });
-                  productsUpdated = true;
-                  latestProducts = merged;
-                  if (!previousProducts) previousProducts = currentLocal || global.HEYS?.products?.getAll?.() || null;
-                } else {
-                  ls.setItem(key, JSON.stringify(merged));
-                }
-                return;
-              }
-            }
+                  // Если remote XP больше — берём remote, но мержим achievements
+                  if (remoteTotalXP > localTotalXP) {
+                    const localAchievements = bestLocalGame?.unlockedAchievements || [];
+                    const remoteAchievements = row.v?.unlockedAchievements || [];
+                    const mergedAchievements = [...new Set([...remoteAchievements, ...localAchievements])];
 
-            // 🔄 Миграция: конвертируем устаревшие поля тренировок (quality/feelAfter → mood/wellbeing/stress)
-            if (key.includes('dayv2_') && row.v?.trainings?.length) {
-              let migrated = false;
-              row.v.trainings = row.v.trainings.map(t => {
-                // Если есть старые поля — мигрируем их значения в новые
-                if (t.quality !== undefined || t.feelAfter !== undefined) {
-                  migrated = true;
-                  const { quality, feelAfter, ...rest } = t;
-                  return {
-                    ...rest,
-                    // Конвертируем: quality → mood, feelAfter → wellbeing
-                    // Если новые поля уже есть — приоритет им
-                    mood: rest.mood ?? quality ?? 5,
-                    wellbeing: rest.wellbeing ?? feelAfter ?? 5,
-                    stress: rest.stress ?? 5  // дефолт для stress (нейтральное значение)
-                  };
-                }
-                return t;
-              });
-              if (migrated) {
-                log(`  🔄 Migrated training fields for ${key}`);
-              }
-            }
-
-            // 🔄 Миграция: добавляем inline данные к старым MealItems (если нет kcal100)
-            // Это гарантирует что калории считаются даже если продукт удалён из базы
-            if (key.includes('dayv2_') && row.v?.meals?.length) {
-              // Получаем продукты для поиска
-              let productsForMigration = null;
-              try {
-                // Пытаемся получить из HEYS.store (актуальные данные)
-                if (global.HEYS?.store?.get) {
-                  productsForMigration = global.HEYS.store.get('heys_products', []);
-                }
-                // Fallback: читаем из localStorage по scoped key
-                if (!productsForMigration || productsForMigration.length === 0) {
-                  const scopedProductsKey = key.replace(/dayv2_.*/, 'products');
-                  const rawProducts = ls.getItem(scopedProductsKey);
-                  if (rawProducts) productsForMigration = JSON.parse(rawProducts);
-                }
-              } catch (e) { productsForMigration = []; }
-
-              if (Array.isArray(productsForMigration) && productsForMigration.length > 0) {
-                // Создаём индексы продуктов по ID и по названию
-                const productsById = new Map();
-                const productsByName = new Map();
-                productsForMigration.forEach(p => {
-                  if (p && p.id) productsById.set(String(p.id), p);
-                  if (p && p.name) {
-                    const name = String(p.name).trim();
-                    if (name) productsByName.set(name, p);
-                  }
-                });
-
-                let itemsMigrated = 0;
-                row.v.meals = row.v.meals.map(meal => {
-                  if (!meal || !Array.isArray(meal.items)) return meal;
-
-                  const migratedItems = meal.items.map(item => {
-                    // Если уже есть inline kcal100 — пропускаем
-                    if (item.kcal100 !== undefined) return item;
-
-                    // Ищем продукт сначала по названию, потом по product_id
-                    const itemName = String(item.name || '').trim();
-                    let product = itemName ? productsByName.get(itemName) : null;
-                    if (!product) {
-                      const productId = String(item.product_id || item.id || '');
-                      product = productId ? productsById.get(productId) : null;
-                    }
-
-                    if (product && product.kcal100 !== undefined) {
-                      itemsMigrated++;
-                      return {
-                        ...item,
-                        kcal100: product.kcal100,
-                        protein100: product.protein100,
-                        fat100: product.fat100,
-                        simple100: product.simple100,
-                        complex100: product.complex100,
-                        badFat100: product.badFat100,
-                        goodFat100: product.goodFat100,
-                        trans100: product.trans100,
-                        fiber100: product.fiber100,
-                        gi: product.gi ?? product.gi100,
-                        harm: product.harm ?? product.harm100
-                      };
-                    }
-                    return item;
-                  });
-
-                  return { ...meal, items: migratedItems };
-                });
-
-                if (itemsMigrated > 0) {
-                  logCritical(`  🔄 [MIGRATION] Added inline data to ${itemsMigrated} items in ${key}`);
-
-                  // 🔄 Сохраняем мигрированные данные обратно в облако
-                  const dateMatch = key.match(/dayv2_(\d{4}-\d{2}-\d{2})$/);
-                  if (dateMatch) {
-                    const dayKey = `heys_dayv2_${dateMatch[1]}`;
-                    row.v.updatedAt = Date.now();
-                    const migrationUpsertObj = {
-                      client_id: client_id,
-                      k: dayKey,
-                      v: row.v,
-                      updated_at: new Date().toISOString()
+                    row.v = {
+                      ...row.v,
+                      unlockedAchievements: mergedAchievements,
+                      // Сохраняем максимальные stats
+                      stats: {
+                        ...row.v?.stats,
+                        bestStreak: Math.max(row.v?.stats?.bestStreak || 0, bestLocalGame?.stats?.bestStreak || 0),
+                        perfectDays: Math.max(row.v?.stats?.perfectDays || 0, bestLocalGame?.stats?.perfectDays || 0),
+                        totalProducts: Math.max(row.v?.stats?.totalProducts || 0, bestLocalGame?.stats?.totalProducts || 0),
+                        totalWater: Math.max(row.v?.stats?.totalWater || 0, bestLocalGame?.stats?.totalWater || 0),
+                        totalTrainings: Math.max(row.v?.stats?.totalTrainings || 0, bestLocalGame?.stats?.totalTrainings || 0)
+                      }
                     };
-                    clientUpsertQueue.push(migrationUpsertObj);
-                    scheduleClientPush();
+                    logCritical(`🎮 [GAME] MERGED: XP ${localTotalXP} → ${remoteTotalXP}, achievements: ${mergedAchievements.length}`);
+                  }
+
+                  // Если оба равны нулю — ничего не делаем, пусть remote запишется
+                  if (remoteTotalXP === 0 && localTotalXP === 0) {
+                    logCritical(`🎮 [GAME] Both XP=0, accepting remote (may be fresh start)`);
                   }
                 }
-              }
-            }
 
-            // Для products используем отфильтрованные данные (уже обработаны выше)
-            // Если дошли сюда — значит merge не произошёл (local пуст)
-            // Используем remoteProducts которые уже отфильтрованы
-            let valueToSave = row.v;
+                // 🛡️ ЗАЩИТА WIDGET LAYOUT: Не затираем локальный layout облачным с более старым updatedAt
+                // Widget layout — критичные данные, потеря = сброс настроек пользователя
+                // Проверяем ТОЛЬКО основной layout, НЕ meta (widget_layout_meta_v1)
+                if (key.includes('widget_layout_v1') && !key.includes('_meta_')) {
+                  // Извлекаем updatedAt из обоих источников
+                  // Новый формат: { widgets: [...], updatedAt: number }
+                  // Старый формат: прямой массив (нет updatedAt)
+                  const remoteHasUpdatedAt = row.v && typeof row.v.updatedAt === 'number';
+                  const localHasUpdatedAt = local && typeof local.updatedAt === 'number';
 
-            // 🛡️ v64 FIX: НЕ записываем null/undefined dayv2 в localStorage
-            // Cloud может вернуть row.v = null → JSON.stringify(null) = "null" → getDayData ломается
-            if (key.includes('dayv2_') && (valueToSave == null || valueToSave === 'null')) {
-              logCritical(`🛡️ [BOOTSTRAP] SKIP NULL dayv2: ${key}`);
-              return; // skip — null data corrupts getDayData
-            }
+                  // Количество виджетов (для логирования)
+                  const remoteWidgetCount = row.v?.widgets?.length || (Array.isArray(row.v) ? row.v.length : 0);
+                  const localWidgetCount = local?.widgets?.length || (Array.isArray(local) ? local.length : 0);
 
-            if (key.includes('_products') && !key.includes('_products_backup') && !key.includes('_hidden_products') && !key.includes('_favorite_products') && !key.includes('_deleted_products')) {
-              // remoteProducts уже отфильтрован выше — используем его
-              // Если он пустой и мы дошли сюда — значит recovery уже запущен выше
-              // Но на всякий случай проверим ещё раз
-              if (typeof remoteProducts !== 'undefined') {
-                valueToSave = remoteProducts;
-                if (valueToSave.length === 0) {
-                  // Не сохраняем пустой массив — recovery уже запущен
-                  log(`⚠️ [PRODUCTS] Skipping save of 0 products (recovery should handle this)`);
-                  return;
+                  // Если локальный layout новее — НЕ затираем
+                  if (localHasUpdatedAt && remoteHasUpdatedAt && local.updatedAt >= row.v.updatedAt) {
+                    logCritical(`🧩 [WIDGET LAYOUT] KEEP LOCAL: local.updatedAt (${local.updatedAt}) >= remote.updatedAt (${row.v.updatedAt})`);
+                    logCritical(`   Local: ${localWidgetCount} widgets, Remote: ${remoteWidgetCount} widgets`);
+                    return; // Пропускаем сохранение — локальные данные актуальнее
+                  }
+
+                  // Если локальный имеет updatedAt, а remote — нет (старый формат в облаке)
+                  if (localHasUpdatedAt && !remoteHasUpdatedAt) {
+                    logCritical(`🧩 [WIDGET LAYOUT] KEEP LOCAL: local has updatedAt (${local.updatedAt}), remote is legacy format`);
+                    logCritical(`   Local: ${localWidgetCount} widgets, Remote: ${remoteWidgetCount} widgets`);
+                    // Отправим локальные в облако чтобы обновить формат
+                    const upsertObj = {
+                      user_id: user.id,
+                      client_id: client_id,
+                      k: normalizeKeyForSupabase(row.k, client_id),
+                      v: local, // Отправляем локальные данные в новом формате
+                      updated_at: (new Date()).toISOString(),
+                    };
+                    clientUpsertQueue.push(upsertObj);
+                    scheduleClientPush();
+                    return; // Пропускаем сохранение remote
+                  }
+
+                  // Если оба без updatedAt (старый формат) — не трогаем, пусть будет как есть
+                  // Это позволит избежать потери данных при миграции
+                  if (!localHasUpdatedAt && !remoteHasUpdatedAt && localWidgetCount > 0) {
+                    logCritical(`🧩 [WIDGET LAYOUT] KEEP LOCAL: both legacy format, preserving ${localWidgetCount} local widgets`);
+                    return;
+                  }
+
+                  // 🛡️ КРИТИЧНО: Если локальный layout имеет данные с updatedAt, а remote пустой или без данных — KEEP LOCAL!
+                  // Это предотвращает затирание данных пустым ответом из облака
+                  if (localHasUpdatedAt && localWidgetCount > 0 && remoteWidgetCount === 0) {
+                    logCritical(`🧩 [WIDGET LAYOUT] KEEP LOCAL: local has ${localWidgetCount} widgets with updatedAt, remote is EMPTY`);
+                    // Отправим локальные в облако чтобы восстановить данные
+                    const upsertObj = {
+                      user_id: user.id,
+                      client_id: client_id,
+                      k: normalizeKeyForSupabase(row.k, client_id),
+                      v: local, // Отправляем локальные данные
+                      updated_at: (new Date()).toISOString(),
+                    };
+                    clientUpsertQueue.push(upsertObj);
+                    scheduleClientPush();
+                    return; // Пропускаем сохранение пустого remote
+                  }
+
+                  logCritical(`🧩 [WIDGET LAYOUT] ACCEPTING REMOTE: ${remoteWidgetCount} widgets (updatedAt: ${row.v?.updatedAt || 'none'})`);
                 }
+              }
 
-                // 🛡️ КРИТИЧНО: Проверяем локальные продукты ПЕРЕД перезаписью
-                // Если локальных БОЛЬШЕ чем remote — это значит:
-                // 1. Пользователь восстановил продукты из штампов
-                // 2. Но они не успели отправиться в облако (network error)
-                // 3. Cloud sync пытается затереть их старыми данными из облака
-                // РЕШЕНИЕ: НЕ перезаписываем, отправляем локальные в облако
-                let currentLocalProducts = null;
+              // ЗАЩИТА И MERGE: Умное объединение продуктов (не затираем локальные)
+              if (key.includes('_products') && !key.includes('_products_backup') && !key.includes('_hidden_products') && !key.includes('_favorite_products') && !key.includes('_deleted_products')) {
+                let remoteProducts;
+                // 🔇 PERF: Отключено — много логов
+                // console.log('📦 [PRODUCTS DEBUG] Processing products key:', key, 'raw row.k:', row.k, 'row.v length:', Array.isArray(row.v) ? row.v.length : 'not array');
+
+                // Читаем актуальное локальное значение по scoped ключу
+                let currentLocal = null;
                 try {
                   const rawLocal = ls.getItem(key);
                   if (rawLocal) {
                     const parsed = tryParse(rawLocal);
-                    currentLocalProducts = Array.isArray(parsed)
+                    // Фильтруем невалидные продукты (без name)
+                    currentLocal = Array.isArray(parsed)
                       ? parsed.filter(p => p && typeof p.name === 'string' && p.name.trim().length > 0)
                       : null;
                   }
                 } catch (e) { }
 
-                if (Array.isArray(currentLocalProducts) && currentLocalProducts.length > valueToSave.length) {
-                  logCritical(`🛡️ [PRODUCTS FALLBACK] BLOCKED: local (${currentLocalProducts.length}) > remote (${valueToSave.length}). Keeping local, pushing to cloud.`);
-                  // Отправляем локальные в облако
-                  const pushObj = {
-                    client_id: client_id,
-                    k: normalizeKeyForSupabase(row.k, client_id),
-                    v: currentLocalProducts,
-                    updated_at: new Date().toISOString()
-                  };
-                  clientUpsertQueue.push(pushObj);
-                  scheduleClientPush();
-                  return; // НЕ перезаписываем localStorage
+                // 🆕 v5.0: Keep snapshot of previous products for downstream cascade
+                // Only capture once per sync cycle.
+                if (!previousProducts && Array.isArray(currentLocal) && currentLocal.length > 0) {
+                  previousProducts = currentLocal;
                 }
-              }
-            }
 
-            if (key.includes('_products') && !key.includes('_products_backup') && !key.includes('_hidden_products') && !key.includes('_favorite_products') && !key.includes('_deleted_products') && global.HEYS?.products?.setAll) {
-              // �️ КРИТИЧНО: Если products уже обновлены в этом sync цикле — ПРОПУСКАЕМ
-              // Это защита от случая когда в БД несколько записей с products (разные row.k)
-              // которые все мапятся на один scoped key
-              if (productsUpdated) {
-                return;
-              }
-
-              // 🛡️ BACKUP GUARD: если remote слишком мал, а backup больше — используем backup
-              if (Array.isArray(valueToSave) && valueToSave.length <= 1) {
-                const backupSnapshot = global.HEYS?.utils?.lsGet?.('heys_products_backup', null);
-                const backupData = Array.isArray(backupSnapshot?.data)
-                  ? backupSnapshot.data.filter(p => p && typeof p.name === 'string' && p.name.trim().length > 0)
-                  : null;
-
-                if (Array.isArray(backupData) && backupData.length > valueToSave.length) {
-                  logCritical(`🛡️ [PRODUCTS BACKUP] BLOCKED: remote (${valueToSave.length}) too small, restoring backup (${backupData.length})`);
-                  global.HEYS.products.setAll(backupData, { source: 'backup-guard', skipNotify: true, skipCloud: true });
-                  productsUpdated = true;
-                  latestProducts = backupData;
-
-                  const pushObj = {
-                    client_id: client_id,
-                    k: normalizeKeyForSupabase(row.k, client_id),
-                    v: backupData,
-                    updated_at: new Date().toISOString()
-                  };
-                  clientUpsertQueue.push(pushObj);
-                  scheduleClientPush();
-                  return;
+                // 🛡️ КРИТИЧНО: Фильтруем невалидные продукты из облака ПЕРЕД любой обработкой
+                remoteProducts = row.v;
+                if (Array.isArray(row.v)) {
+                  const before = row.v.length;
+                  remoteProducts = row.v.filter(p => p && typeof p.name === 'string' && p.name.trim().length > 0);
+                  if (remoteProducts.length !== before) {
+                    logCritical(`🧹 [CLOUD PRODUCTS] Pre-filtered ${before - remoteProducts.length} invalid (${before} → ${remoteProducts.length})`);
+                  }
                 }
-              }
 
-              // 🛡️ ДОП. ЗАЩИТА: не перезаписываем, если in-memory база больше remote
-              // v60 FIX: Проверяем ОБА источника — memory И localStorage напрямую!
-              if (Array.isArray(valueToSave)) {
-                const inMemoryProducts = global.HEYS?.products?.getAll?.() || [];
-
-                // Проверяем localStorage напрямую (может быть новее чем memory cache)
-                let localStorageProducts = [];
-                try {
-                  const rawLocal = ls.getItem(key);
-                  if (rawLocal) {
-                    const parsed = tryParse(rawLocal);
-                    if (Array.isArray(parsed)) {
-                      localStorageProducts = parsed.filter(p => p && typeof p.name === 'string' && p.name.trim().length > 0);
+                // КРИТИЧЕСКАЯ ЗАЩИТА: НЕ ЗАТИРАЕМ непустые продукты пустым массивом
+                if (Array.isArray(remoteProducts) && remoteProducts.length === 0) {
+                  if (Array.isArray(currentLocal) && currentLocal.length > 0) {
+                    log(`⚠️ [PRODUCTS] BLOCKED: Refusing to overwrite ${currentLocal.length} local products with empty cloud array`);
+                    // 🔄 Отправляем локальные продукты в облако чтобы заменить мусор
+                    logCritical(`🔄 [CLOUD RECOVERY] Pushing ${currentLocal.length} local products to replace cloud garbage`);
+                    const recoveryUpsertObj = {
+                      user_id: user.id,
+                      client_id: client_id,
+                      k: normalizeKeyForSupabase(row.k, client_id),
+                      v: currentLocal,
+                      updated_at: new Date().toISOString(),
+                    };
+                    clientUpsertQueue.push(recoveryUpsertObj);
+                    scheduleClientPush();
+                    return; // Пропускаем сохранение
+                  } else {
+                    // Оба пусты - пытаемся восстановить из backup
+                    const backupKey = key.replace('_products', '_products_backup');
+                    const backupRaw = ls.getItem(backupKey);
+                    if (backupRaw) {
+                      try {
+                        const backupData = tryParse(backupRaw);
+                        if (Array.isArray(backupData) && backupData.length > 0) {
+                          log(`✅ [RECOVERY] Restored ${backupData.length} products from backup`);
+                          if (global.HEYS?.products?.setAll) {
+                            global.HEYS.products.setAll(backupData, { source: 'cloud-recovery', skipNotify: true, skipCloud: true });
+                            productsUpdated = true;
+                            latestProducts = backupData;
+                            // If we restored from backup, previousProducts may be empty; fallback to in-memory snapshot.
+                            if (!previousProducts) previousProducts = currentLocal || global.HEYS?.products?.getAll?.() || null;
+                          } else {
+                            ls.setItem(key, JSON.stringify(backupData));
+                          }
+                          muteMirror = false;
+                          setTimeout(() => cloud.saveClientKey(client_id, 'heys_products', backupData), 500);
+                          muteMirror = true;
+                          return;
+                        }
+                      } catch (e) { }
                     }
                   }
-                } catch (e) { /* ignore */ }
+                }
 
-                // Берём МАКСИМУМ из обоих источников
-                const currentMax = Math.max(inMemoryProducts.length, localStorageProducts.length);
+                // 🔀 MERGE: Объединяем локальные и облачные продукты (уже отфильтрованные!)
+                // Это решает проблему: новый продукт добавлен локально, но облако ещё не обновилось
+                if (Array.isArray(currentLocal) && currentLocal.length > 0 && Array.isArray(remoteProducts) && remoteProducts.length > 0) {
+                  let merged = mergeProductsData(currentLocal, remoteProducts);
 
-                if (currentMax > valueToSave.length) {
-                  logCritical(`🛡️ [PRODUCTS] BLOCKED: local max (${currentMax}) > remote (${valueToSave.length}). Memory: ${inMemoryProducts.length}, localStorage: ${localStorageProducts.length}`);
-                  // Используем тот источник который больше
-                  const bestLocal = inMemoryProducts.length >= localStorageProducts.length ? inMemoryProducts : localStorageProducts;
-                  const pushObj = {
-                    client_id: client_id,
-                    k: normalizeKeyForSupabase(row.k, client_id),
-                    v: bestLocal,
-                    updated_at: new Date().toISOString()
-                  };
-                  clientUpsertQueue.push(pushObj);
-                  scheduleClientPush();
+                  // 🛡️ v4.8.10: Финальная tombstone-фильтрация merged результата ПЕРЕД setAll
+                  // mergeProductsData фильтрует через HEYS.deletedProducts, но эта система может потерять данные
+                  // при очистке localStorage. Дублируем проверку через heys_deleted_ids (Store, выживает в облаке).
+                  const _tsForMerge = (typeof global !== 'undefined' ? global : window)?.HEYS?.store?.get?.('heys_deleted_ids') || [];
+                  if (Array.isArray(_tsForMerge) && _tsForMerge.length > 0) {
+                    const _tsIds = new Set(_tsForMerge.map(t => t.id).filter(Boolean));
+                    const _tsNames = new Set(_tsForMerge.map(t => (t.name || '').trim().toLowerCase()).filter(Boolean));
+                    const beforeLen = merged.length;
+                    merged = merged.filter(p => {
+                      if (!p) return false;
+                      if (p.id && _tsIds.has(p.id)) return false;
+                      if (p.name && _tsNames.has(String(p.name).trim().toLowerCase())) return false;
+                      return true;
+                    });
+                    if (merged.length < beforeLen) {
+                      logCritical(`🪦 [MERGE TOMBSTONE] Removed ${beforeLen - merged.length} tombstoned product(s) from merge result (${beforeLen}→${merged.length})`);
+                    }
+                  }
+
+                  // 🔧 ИСПРАВЛЕНИЕ: Подсчитываем уникальные локальные продукты для корректного сравнения
+                  // (т.к. mergeProductsData делает дедупликацию внутри, сравнение с raw currentLocal некорректно)
+                  const localUniqueCount = new Set(currentLocal.filter(p => p && p.name).map(p => String(p.name).trim().toLowerCase())).size;
+
+                  // 🛡️ ЗАЩИТА: Проверяем потерю УНИКАЛЬНЫХ продуктов (не дублей)
+                  // Если уникальных локальных больше чем merged — значит sync "опоздал" и пытается удалить новые продукты
+                  // 🔧 FIX v4.8.9: Если все "лишние" локальные — это tombstoned продукты, разрешаем merge.
+                  // Иначе синхронизация навечно блокируется и удалённые продукты воскресают.
+                  const _tombstonesSync = (typeof global !== 'undefined' ? global : window)?.HEYS?.store?.get?.('heys_deleted_ids') || [];
+                  const _tombstoneIdsSync = new Set(Array.isArray(_tombstonesSync) ? _tombstonesSync.map(t => t.id).filter(Boolean) : []);
+                  const _tombstoneNamesSync = new Set(Array.isArray(_tombstonesSync) ? _tombstonesSync.map(t => (t.name || '').trim().toLowerCase()).filter(Boolean) : []);
+                  const _localWithoutTombstoned = currentLocal.filter(p => {
+                    if (!p) return false;
+                    if (p.id && _tombstoneIdsSync.has(p.id)) return false;
+                    if (p.name && _tombstoneNamesSync.has(String(p.name).trim().toLowerCase())) return false;
+                    return true;
+                  });
+                  const localEffectiveCount = new Set(_localWithoutTombstoned.filter(p => p && p.name).map(p => String(p.name).trim().toLowerCase())).size;
+
+                  if (localEffectiveCount > merged.length) {
+                    logCritical(`⚠️ [PRODUCTS SYNC] BLOCKED: localEffective (${localEffectiveCount}, was ${localUniqueCount} before tombstone) > merged (${merged.length}). Keeping local.`);
+                    // Отправляем локальные в облако чтобы синхронизировать (после дедупликации)
+                    // Используем merged как источник — он содержит все уникальные продукты
+                    const localDeduped = [];
+                    const seenNames = new Set();
+                    for (const p of currentLocal) {
+                      if (!p || !p.name) continue;
+                      const key = String(p.name).trim().toLowerCase();
+                      if (!seenNames.has(key)) {
+                        seenNames.add(key);
+                        localDeduped.push(p);
+                      }
+                    }
+                    const localUpsertObj = {
+                      user_id: user.id,
+                      client_id: client_id,
+                      k: normalizeKeyForSupabase(row.k, client_id),
+                      v: localDeduped, // Отправляем дедуплицированные!
+                      updated_at: (new Date()).toISOString(),
+                    };
+                    clientUpsertQueue.push(localUpsertObj);
+                    scheduleClientPush();
+                    // Сохраняем дедуплицированные локально
+                    // 🛡️ v4.8.1: Проверяем что не перезаписываем больший набор
+                    const memoryNow = global.HEYS?.products?.getAll?.()?.length || 0;
+                    if (localDeduped.length < memoryNow) {
+                      // v4.8.2: Разрешаем дедупликацию если разница <= 5%
+                      const shrinkPct = ((memoryNow - localDeduped.length) / memoryNow) * 100;
+                      if (shrinkPct > 5) {
+                        log(`⚠️ [PRODUCTS] Skip setAll: localDeduped (${localDeduped.length}) significantly < memory (${memoryNow}), ${shrinkPct.toFixed(1)}%`);
+                        return;
+                      }
+                      log(`🧹 [PRODUCTS] Allowing dedup shrink: ${memoryNow} → ${localDeduped.length} (−${shrinkPct.toFixed(1)}%)`);
+                    }
+                    if (global.HEYS?.products?.setAll) {
+                      global.HEYS.products.setAll(localDeduped, { source: 'cloud-sync', skipNotify: true, skipCloud: true, allowShrink: true });
+                      productsUpdated = true;
+                      latestProducts = localDeduped;
+                      if (!previousProducts) previousProducts = currentLocal || global.HEYS?.products?.getAll?.() || null;
+                    } else {
+                      ls.setItem(key, JSON.stringify(localDeduped));
+                    }
+                    return;
+                  }
+
+                  // Если дедупликация убрала дубли — это OK, сохраняем merged
+                  if (currentLocal.length > merged.length && localUniqueCount === merged.length) {
+                    log(`🧹 [PRODUCTS] Deduplication cleaned ${currentLocal.length - merged.length} duplicates`);
+                  }
+
+                  // Если merge добавил новые продукты — сохраняем и синхронизируем обратно в облако
+                  if (merged.length > remoteProducts.length) {
+                    logCritical(`📦 [PRODUCTS MERGE] ${currentLocal.length} local + ${remoteProducts.length} remote → ${merged.length} merged`);
+                    if (global.HEYS?.products?.setAll) {
+                      global.HEYS.products.setAll(merged, { source: 'cloud-sync', skipNotify: true, skipCloud: true, allowShrink: true });
+                      productsUpdated = true;
+                      latestProducts = merged;
+                      if (!previousProducts) previousProducts = currentLocal || global.HEYS?.products?.getAll?.() || null;
+                    } else {
+                      ls.setItem(key, JSON.stringify(merged));
+                    }
+
+                    // Отправляем merged версию обратно в облако
+                    const mergedUpsertObj = {
+                      user_id: user.id,
+                      client_id: client_id,
+                      k: normalizeKeyForSupabase(row.k, client_id),
+                      v: merged,
+                      updated_at: (new Date()).toISOString(),
+                    };
+                    clientUpsertQueue.push(mergedUpsertObj);
+                    scheduleClientPush();
+                    return; // Уже обработали products
+                  }
+
+                  // Если merged.length === remoteProducts.length (нет изменений) — сохраняем merged
+                  // Это безопасно т.к. merged уже включает все локальные продукты
+                  // 🛡️ v4.8.1: Дополнительная проверка на память — могли добавить продукты после чтения
+                  const memoryCount = global.HEYS?.products?.getAll?.()?.length || 0;
+                  if (merged.length === remoteProducts.length && merged.length === currentLocal.length && merged.length >= memoryCount) {
+                    if (global.HEYS?.products?.setAll) {
+                      global.HEYS.products.setAll(merged, { source: 'cloud-sync', skipNotify: true, skipCloud: true, allowShrink: true });
+                      productsUpdated = true;
+                      latestProducts = merged;
+                      if (!previousProducts) previousProducts = currentLocal || global.HEYS?.products?.getAll?.() || null;
+                    } else {
+                      ls.setItem(key, JSON.stringify(merged));
+                    }
+                    return; // Данные одинаковые, нет смысла обновлять облако
+                  }
+
+                  // Fallback: сохраняем merged и синхронизируем
+                  // 🛡️ v4.8.1: Проверяем что merged не меньше текущего количества в памяти
+                  // Это предотвращает race condition когда новые продукты добавлены между чтением и merge
+                  const currentInMemory = global.HEYS?.products?.getAll?.()?.length || 0;
+                  if (merged.length < currentInMemory) {
+                    // v4.8.2: Разрешаем уменьшение если это дедупликация (разница <= 5%)
+                    const shrinkPct = ((currentInMemory - merged.length) / currentInMemory) * 100;
+                    if (shrinkPct > 5) {
+                      log(`⚠️ [PRODUCTS] Skipping setAll: merged (${merged.length}) significantly < memory (${currentInMemory}), ${shrinkPct.toFixed(1)}%`);
+                      return;
+                    }
+                    log(`🧹 [PRODUCTS] Allowing merge shrink: ${currentInMemory} → ${merged.length} (−${shrinkPct.toFixed(1)}%, dedup)`);
+                  }
+
+                  if (global.HEYS?.products?.setAll) {
+                    global.HEYS.products.setAll(merged, { source: 'cloud-sync', skipNotify: true, skipCloud: true, allowShrink: true });
+                    productsUpdated = true;
+                    latestProducts = merged;
+                    if (!previousProducts) previousProducts = currentLocal || global.HEYS?.products?.getAll?.() || null;
+                  } else {
+                    ls.setItem(key, JSON.stringify(merged));
+                  }
                   return;
                 }
               }
 
-              // v4.8.5: DEBUG - что записываем в setAll после merge
-              const setAllIron = valueToSave.filter(p => p && p.iron && +p.iron > 0).length;
-              const setAllTs = valueToSave.filter(p => p && p.updatedAt).length;
-              logCritical(`📝 [SETALL DEBUG] About to call setAll with ${valueToSave.length} products: withIron=${setAllIron}, withTimestamp=${setAllTs}`);
+              // 🔄 Миграция: конвертируем устаревшие поля тренировок (quality/feelAfter → mood/wellbeing/stress)
+              if (key.includes('dayv2_') && row.v?.trainings?.length) {
+                let migrated = false;
+                row.v.trainings = row.v.trainings.map(t => {
+                  // Если есть старые поля — мигрируем их значения в новые
+                  if (t.quality !== undefined || t.feelAfter !== undefined) {
+                    migrated = true;
+                    const { quality, feelAfter, ...rest } = t;
+                    return {
+                      ...rest,
+                      // Конвертируем: quality → mood, feelAfter → wellbeing
+                      // Если новые поля уже есть — приоритет им
+                      mood: rest.mood ?? quality ?? 5,
+                      wellbeing: rest.wellbeing ?? feelAfter ?? 5,
+                      stress: rest.stress ?? 5  // дефолт для stress (нейтральное значение)
+                    };
+                  }
+                  return t;
+                });
+                if (migrated) {
+                  log(`  🔄 Migrated training fields for ${key}`);
+                }
+              }
 
-              global.HEYS.products.setAll(valueToSave, { source: 'cloud-sync', skipNotify: true, skipCloud: true });
-              productsUpdated = true;
-              latestProducts = valueToSave;
-            } else {
-              // 🛡️ v60 FIX: ЗАЩИТА DAYV2 — не перезаписываем локальные данные старыми из cloud
-              if (key.includes('dayv2_')) {
-                const incomingUpdatedAt = valueToSave?.updatedAt || 0;
+              // 🔄 Миграция: добавляем inline данные к старым MealItems (если нет kcal100)
+              // Это гарантирует что калории считаются даже если продукт удалён из базы
+              if (key.includes('dayv2_') && row.v?.meals?.length) {
+                // Получаем продукты для поиска
+                let productsForMigration = null;
                 try {
-                  const existingRaw = ls.getItem(key);
-                  if (existingRaw) {
-                    const existing = tryParse(existingRaw);
-                    const existingUpdatedAt = existing?.updatedAt || 0;
+                  // Пытаемся получить из HEYS.store (актуальные данные)
+                  if (global.HEYS?.store?.get) {
+                    productsForMigration = global.HEYS.store.get('heys_products', []);
+                  }
+                  // Fallback: читаем из localStorage по scoped key
+                  if (!productsForMigration || productsForMigration.length === 0) {
+                    const scopedProductsKey = key.replace(/dayv2_.*/, 'products');
+                    const rawProducts = ls.getItem(scopedProductsKey);
+                    if (rawProducts) productsForMigration = JSON.parse(rawProducts);
+                  }
+                } catch (e) { productsForMigration = []; }
 
-                    if (existingUpdatedAt > incomingUpdatedAt) {
-                      logCritical(`🛡️ [DAYV2] BLOCKED localStorage overwrite: local (${existingUpdatedAt}) > remote (${incomingUpdatedAt}) for ${key}`);
-                      // Не перезаписываем! Локальные данные новее.
-                      // Push локальные данные обратно в cloud чтобы синхронизировать
-                      const pushObj = {
+                if (Array.isArray(productsForMigration) && productsForMigration.length > 0) {
+                  // Создаём индексы продуктов по ID и по названию
+                  const productsById = new Map();
+                  const productsByName = new Map();
+                  productsForMigration.forEach(p => {
+                    if (p && p.id) productsById.set(String(p.id), p);
+                    if (p && p.name) {
+                      const name = String(p.name).trim();
+                      if (name) productsByName.set(name, p);
+                    }
+                  });
+
+                  let itemsMigrated = 0;
+                  row.v.meals = row.v.meals.map(meal => {
+                    if (!meal || !Array.isArray(meal.items)) return meal;
+
+                    const migratedItems = meal.items.map(item => {
+                      // Если уже есть inline kcal100 — пропускаем
+                      if (item.kcal100 !== undefined) return item;
+
+                      // Ищем продукт сначала по названию, потом по product_id
+                      const itemName = String(item.name || '').trim();
+                      let product = itemName ? productsByName.get(itemName) : null;
+                      if (!product) {
+                        const productId = String(item.product_id || item.id || '');
+                        product = productId ? productsById.get(productId) : null;
+                      }
+
+                      if (product && product.kcal100 !== undefined) {
+                        itemsMigrated++;
+                        return {
+                          ...item,
+                          kcal100: product.kcal100,
+                          protein100: product.protein100,
+                          fat100: product.fat100,
+                          simple100: product.simple100,
+                          complex100: product.complex100,
+                          badFat100: product.badFat100,
+                          goodFat100: product.goodFat100,
+                          trans100: product.trans100,
+                          fiber100: product.fiber100,
+                          gi: product.gi ?? product.gi100,
+                          harm: product.harm ?? product.harm100
+                        };
+                      }
+                      return item;
+                    });
+
+                    return { ...meal, items: migratedItems };
+                  });
+
+                  if (itemsMigrated > 0) {
+                    logCritical(`  🔄 [MIGRATION] Added inline data to ${itemsMigrated} items in ${key}`);
+
+                    // 🔄 Сохраняем мигрированные данные обратно в облако
+                    const dateMatch = key.match(/dayv2_(\d{4}-\d{2}-\d{2})$/);
+                    if (dateMatch) {
+                      const dayKey = `heys_dayv2_${dateMatch[1]}`;
+                      row.v.updatedAt = Date.now();
+                      const migrationUpsertObj = {
                         client_id: client_id,
-                        k: normalizeKeyForSupabase(row.k, client_id),
-                        v: existing,
+                        k: dayKey,
+                        v: row.v,
                         updated_at: new Date().toISOString()
                       };
-                      clientUpsertQueue.push(pushObj);
+                      clientUpsertQueue.push(migrationUpsertObj);
                       scheduleClientPush();
-                      return; // Пропускаем запись
                     }
                   }
-                } catch (e) { /* ignore parse errors */ }
+                }
               }
 
-              // 🧷 Backup перед возможной перезаписью dayv2
-              if (key.includes('dayv2_')) {
-                backupDayV2BeforeOverwrite(key, valueToSave, 'cloud-sync');
-                // 🚀 PERF: Defer dayv2 write to batch — prevents N individual re-renders
-                batchedDayV2Writes.push({ key, valueToSave });
+              // Для products используем отфильтрованные данные (уже обработаны выше)
+              // Если дошли сюда — значит merge не произошёл (local пуст)
+              // Используем remoteProducts которые уже отфильтрованы
+              let valueToSave = row.v;
+
+              // 🛡️ v64 FIX: НЕ записываем null/undefined dayv2 в localStorage
+              // Cloud может вернуть row.v = null → JSON.stringify(null) = "null" → getDayData ломается
+              if (key.includes('dayv2_') && (valueToSave == null || valueToSave === 'null')) {
+                logCritical(`🛡️ [BOOTSTRAP] SKIP NULL dayv2: ${key}`);
+                return; // skip — null data corrupts getDayData
+              }
+
+              if (key.includes('_products') && !key.includes('_products_backup') && !key.includes('_hidden_products') && !key.includes('_favorite_products') && !key.includes('_deleted_products')) {
+                // remoteProducts уже отфильтрован выше — используем его
+                // Если он пустой и мы дошли сюда — значит recovery уже запущен выше
+                // Но на всякий случай проверим ещё раз
+                if (typeof remoteProducts !== 'undefined') {
+                  valueToSave = remoteProducts;
+                  if (valueToSave.length === 0) {
+                    // Не сохраняем пустой массив — recovery уже запущен
+                    log(`⚠️ [PRODUCTS] Skipping save of 0 products (recovery should handle this)`);
+                    return;
+                  }
+
+                  // 🛡️ КРИТИЧНО: Проверяем локальные продукты ПЕРЕД перезаписью
+                  // Если локальных БОЛЬШЕ чем remote — это значит:
+                  // 1. Пользователь восстановил продукты из штампов
+                  // 2. Но они не успели отправиться в облако (network error)
+                  // 3. Cloud sync пытается затереть их старыми данными из облака
+                  // РЕШЕНИЕ: НЕ перезаписываем, отправляем локальные в облако
+                  let currentLocalProducts = null;
+                  try {
+                    const rawLocal = ls.getItem(key);
+                    if (rawLocal) {
+                      const parsed = tryParse(rawLocal);
+                      currentLocalProducts = Array.isArray(parsed)
+                        ? parsed.filter(p => p && typeof p.name === 'string' && p.name.trim().length > 0)
+                        : null;
+                    }
+                  } catch (e) { }
+
+                  if (Array.isArray(currentLocalProducts) && currentLocalProducts.length > valueToSave.length) {
+                    logCritical(`🛡️ [PRODUCTS FALLBACK] BLOCKED: local (${currentLocalProducts.length}) > remote (${valueToSave.length}). Keeping local, pushing to cloud.`);
+                    // Отправляем локальные в облако
+                    const pushObj = {
+                      client_id: client_id,
+                      k: normalizeKeyForSupabase(row.k, client_id),
+                      v: currentLocalProducts,
+                      updated_at: new Date().toISOString()
+                    };
+                    clientUpsertQueue.push(pushObj);
+                    scheduleClientPush();
+                    return; // НЕ перезаписываем localStorage
+                  }
+                }
+              }
+
+              if (key.includes('_products') && !key.includes('_products_backup') && !key.includes('_hidden_products') && !key.includes('_favorite_products') && !key.includes('_deleted_products') && global.HEYS?.products?.setAll) {
+                // �️ КРИТИЧНО: Если products уже обновлены в этом sync цикле — ПРОПУСКАЕМ
+                // Это защита от случая когда в БД несколько записей с products (разные row.k)
+                // которые все мапятся на один scoped key
+                if (productsUpdated) {
+                  return;
+                }
+
+                // 🛡️ BACKUP GUARD: если remote слишком мал, а backup больше — используем backup
+                if (Array.isArray(valueToSave) && valueToSave.length <= 1) {
+                  const backupSnapshot = global.HEYS?.utils?.lsGet?.('heys_products_backup', null);
+                  const backupData = Array.isArray(backupSnapshot?.data)
+                    ? backupSnapshot.data.filter(p => p && typeof p.name === 'string' && p.name.trim().length > 0)
+                    : null;
+
+                  if (Array.isArray(backupData) && backupData.length > valueToSave.length) {
+                    logCritical(`🛡️ [PRODUCTS BACKUP] BLOCKED: remote (${valueToSave.length}) too small, restoring backup (${backupData.length})`);
+                    global.HEYS.products.setAll(backupData, { source: 'backup-guard', skipNotify: true, skipCloud: true });
+                    productsUpdated = true;
+                    latestProducts = backupData;
+
+                    const pushObj = {
+                      client_id: client_id,
+                      k: normalizeKeyForSupabase(row.k, client_id),
+                      v: backupData,
+                      updated_at: new Date().toISOString()
+                    };
+                    clientUpsertQueue.push(pushObj);
+                    scheduleClientPush();
+                    return;
+                  }
+                }
+
+                // 🛡️ ДОП. ЗАЩИТА: не перезаписываем, если in-memory база больше remote
+                // v60 FIX: Проверяем ОБА источника — memory И localStorage напрямую!
+                if (Array.isArray(valueToSave)) {
+                  const inMemoryProducts = global.HEYS?.products?.getAll?.() || [];
+
+                  // Проверяем localStorage напрямую (может быть новее чем memory cache)
+                  let localStorageProducts = [];
+                  try {
+                    const rawLocal = ls.getItem(key);
+                    if (rawLocal) {
+                      const parsed = tryParse(rawLocal);
+                      if (Array.isArray(parsed)) {
+                        localStorageProducts = parsed.filter(p => p && typeof p.name === 'string' && p.name.trim().length > 0);
+                      }
+                    }
+                  } catch (e) { /* ignore */ }
+
+                  // Берём МАКСИМУМ из обоих источников
+                  const currentMax = Math.max(inMemoryProducts.length, localStorageProducts.length);
+
+                  if (currentMax > valueToSave.length) {
+                    logCritical(`🛡️ [PRODUCTS] BLOCKED: local max (${currentMax}) > remote (${valueToSave.length}). Memory: ${inMemoryProducts.length}, localStorage: ${localStorageProducts.length}`);
+                    // Используем тот источник который больше
+                    const bestLocal = inMemoryProducts.length >= localStorageProducts.length ? inMemoryProducts : localStorageProducts;
+                    const pushObj = {
+                      client_id: client_id,
+                      k: normalizeKeyForSupabase(row.k, client_id),
+                      v: bestLocal,
+                      updated_at: new Date().toISOString()
+                    };
+                    clientUpsertQueue.push(pushObj);
+                    scheduleClientPush();
+                    return;
+                  }
+                }
+
+                // v4.8.5: DEBUG - что записываем в setAll после merge
+                const setAllIron = valueToSave.filter(p => p && p.iron && +p.iron > 0).length;
+                const setAllTs = valueToSave.filter(p => p && p.updatedAt).length;
+                logCritical(`📝 [SETALL DEBUG] About to call setAll with ${valueToSave.length} products: withIron=${setAllIron}, withTimestamp=${setAllTs}`);
+
+                global.HEYS.products.setAll(valueToSave, { source: 'cloud-sync', skipNotify: true, skipCloud: true });
+                productsUpdated = true;
+                latestProducts = valueToSave;
               } else {
-                ls.setItem(key, JSON.stringify(valueToSave));
-                log(`  ✅ Saved to localStorage: ${key}`);
+                // 🛡️ v60 FIX: ЗАЩИТА DAYV2 — не перезаписываем локальные данные старыми из cloud
+                if (key.includes('dayv2_')) {
+                  const incomingUpdatedAt = valueToSave?.updatedAt || 0;
+                  try {
+                    const existingRaw = ls.getItem(key);
+                    if (existingRaw) {
+                      const existing = tryParse(existingRaw);
+                      const existingUpdatedAt = existing?.updatedAt || 0;
+
+                      if (existingUpdatedAt > incomingUpdatedAt) {
+                        logCritical(`🛡️ [DAYV2] BLOCKED localStorage overwrite: local (${existingUpdatedAt}) > remote (${incomingUpdatedAt}) for ${key}`);
+                        // Не перезаписываем! Локальные данные новее.
+                        // Push локальные данные обратно в cloud чтобы синхронизировать
+                        const pushObj = {
+                          client_id: client_id,
+                          k: normalizeKeyForSupabase(row.k, client_id),
+                          v: existing,
+                          updated_at: new Date().toISOString()
+                        };
+                        clientUpsertQueue.push(pushObj);
+                        scheduleClientPush();
+                        return; // Пропускаем запись
+                      }
+                    }
+                  } catch (e) { /* ignore parse errors */ }
+                }
+
+                // 🧷 Backup перед возможной перезаписью dayv2
+                if (key.includes('dayv2_')) {
+                  backupDayV2BeforeOverwrite(key, valueToSave, 'cloud-sync');
+                  // 🚀 PERF: Defer dayv2 write to batch — prevents N individual re-renders
+                  batchedDayV2Writes.push({ key, valueToSave });
+                } else {
+                  ls.setItem(key, JSON.stringify(valueToSave));
+                  log(`  ✅ Saved to localStorage: ${key}`);
+                }
               }
-            }
 
-            // � PERF: dayv2 event dispatch moved to batch block after forEach
+              // � PERF: dayv2 event dispatch moved to batch block after forEach
 
-            // 🧩 Dispatch event for widget_layout updates (для виджетов)
-            if (key.includes('widget_layout')) {
-              if (typeof window !== 'undefined' && window.dispatchEvent) {
-                // 🔇 PERF: Отключено
-                // logCritical(`🧩 [EVENT] heys:widget-layout-updated dispatched (cloud-sync)`);
-                window.dispatchEvent(new CustomEvent('heys:widget-layout-updated', {
-                  detail: { layout: valueToSave, source: 'cloud-sync' }
-                }));
+              // 🧩 Dispatch event for widget_layout updates (для виджетов)
+              if (key.includes('widget_layout')) {
+                if (typeof window !== 'undefined' && window.dispatchEvent) {
+                  // 🔇 PERF: Отключено
+                  // logCritical(`🧩 [EVENT] heys:widget-layout-updated dispatched (cloud-sync)`);
+                  window.dispatchEvent(new CustomEvent('heys:widget-layout-updated', {
+                    detail: { layout: valueToSave, source: 'cloud-sync' }
+                  }));
+                }
               }
-            }
 
-            // Уведомляем приложение об обновлении продуктов — после цикла (батч)
+              // Уведомляем приложение об обновлении продуктов — после цикла (батч)
 
-            // 🚀 PERF: duplicate dayv2 event dispatch removed (consolidated in batch block)
-          } catch (e) { }
-        });
+              // 🚀 PERF: duplicate dayv2 event dispatch removed (consolidated in batch block)
+            } catch (e) { }
+          });
+        } // end SYNC_DEDUP_CHUNK for-loop (R23)
 
         // 🚀 PERF: Batch process all dayv2 writes at once — prevents skeleton flicker
         if (forceWrittenDayV2.length > 0) {
@@ -23942,18 +23963,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
     // 🔄 НОРМАЛИЗАЦИЯ КЛЮЧА: Убираем client_id из ключа перед сохранением в Supabase
     // В localStorage используются scoped ключи (heys_{clientId}_dayv2_...), 
     // но в Supabase client_id хранится отдельно в колонке, поэтому ключ должен быть heys_dayv2_...
-    let normalizedKey = k;
-    if (client_id && k.includes(client_id)) {
-      // Убираем client_id из ключа: heys_{clientId}_dayv2_... → heys_dayv2_...
-      // Или heys_{clientId}_products → heys_products
-      normalizedKey = k.replace(`heys_${client_id}_`, 'heys_');
-
-      // Проверяем на двойной client_id (баг): heys_{id}_{id}_dayv2_... → heys_dayv2_...
-      if (normalizedKey.includes(client_id)) {
-        normalizedKey = normalizedKey.replace(`${client_id}_`, '');
-        logCritical(`🐛 [NORMALIZE] Fixed double client_id in key: ${k} → ${normalizedKey}`);
-      }
-    }
+    let normalizedKey = client_id ? normalizeKeyForSupabase(k, client_id) : k;
 
     const upsertObj = {
       user_id: user?.id || null, // 🔐 PIN auth: user может быть null
@@ -24318,14 +24328,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
     // 🔄 НОРМАЛИЗАЦИЯ КЛЮЧА: Убираем client_id из ключа перед сохранением в Supabase
     // В localStorage используются scoped ключи (heys_{clientId}_products), 
     // но в Supabase client_id хранится отдельно в колонке, поэтому ключ должен быть heys_products
-    let normalizedKey = k;
-    if (clientId && k.includes(clientId)) {
-      normalizedKey = k.replace(`heys_${clientId}_`, 'heys_');
-      // Проверяем на двойной client_id (баг): heys_{id}_{id}_... → heys_...
-      if (normalizedKey.includes(clientId)) {
-        normalizedKey = normalizedKey.replace(`${clientId}_`, '');
-      }
-    }
+    let normalizedKey = clientId ? normalizeKeyForSupabase(k, clientId) : k;
 
     // Если есть client_id — используем clientUpsertQueue (сохранение в client_kv_store)
     if (clientId) {
@@ -28201,6 +28204,243 @@ NOVA: 1-4
   Store.compress = compress;
 
 })(window);
+
+
+/* ===== heys_dayv2_cache_v1.js ===== */
+// heys_dayv2_cache_v1.js — Day data index & in-memory cache for heavy clients
+// Part of boot-core bundle. Provides:
+//   - HEYS.dayCache.getDay(dateStr)       → parsed dayv2 from memory cache
+//   - HEYS.dayCache.getDayCount()         → fast count without localStorage scan
+//   - HEYS.dayCache.getDayDates()         → sorted date list
+//   - HEYS.dayCache.getPreviousDays(n)    → array of parsed dayv2 objects
+//   - HEYS.dayCache.invalidate(dateStr)   → drop single date from cache
+//   - HEYS.dayCache.invalidateAll()       → rebuild index on next access
+; (function (global) {
+    'use strict';
+    var HEYS = global.HEYS = global.HEYS || {};
+    var TAG = '[HEYS.dayCache]';
+
+    // ── Config ──
+    var MAX_CACHE_SIZE = 90;     // LRU entries
+    var INDEX_KEY = 'heys_dayv2_index_v1';
+    var INDEX_TTL_MS = 5 * 60 * 1000; // rebuild interval cap
+
+    // ── State ──
+    var _parsed = new Map();       // dateStr -> parsed dayv2
+    var _accessOrder = [];         // LRU tracking (dateStr list, most-recent last)
+    var _index = null;             // { dates: string[], count: number, builtAt: number }
+    var _indexDirty = true;        // force rebuild on first access
+
+    // ── Helpers ──
+    function getStore() { return HEYS.store || null; }
+    function getLsGet() { return (HEYS.utils && HEYS.utils.lsGet) || null; }
+
+    function getClientId() {
+        var U = HEYS.utils || {};
+        return (U.getCurrentClientId && U.getCurrentClientId()) || HEYS.currentClientId || '';
+    }
+
+    function dayKeyForDate(dateStr) {
+        return 'heys_dayv2_' + dateStr;
+    }
+
+    /** Read raw day from store/localStorage (namespace-aware through Store.get) */
+    function readRawDay(dateStr) {
+        var key = dayKeyForDate(dateStr);
+        var store = getStore();
+        if (store && store.get) {
+            return store.get(key, null);
+        }
+        var lsGet = getLsGet();
+        if (lsGet) {
+            return lsGet(key, null);
+        }
+        return null;
+    }
+
+    // ── LRU helpers ──
+    function touchLru(dateStr) {
+        var idx = _accessOrder.indexOf(dateStr);
+        if (idx !== -1) _accessOrder.splice(idx, 1);
+        _accessOrder.push(dateStr);
+        // Evict oldest if over limit
+        while (_accessOrder.length > MAX_CACHE_SIZE) {
+            var evicted = _accessOrder.shift();
+            _parsed.delete(evicted);
+        }
+    }
+
+    // ── Index builder ──
+    // Scans localStorage ONCE to build index of all dayv2 date keys
+    function buildIndex() {
+        var dates = [];
+        var clientId = getClientId();
+        var prefix = clientId ? ('heys_' + clientId + '_dayv2_') : 'heys_dayv2_';
+        var prefixLen = prefix.length;
+        // Also check unscoped keys (legacy)
+        var legacyPrefix = 'heys_dayv2_';
+        var legacyPrefixLen = legacyPrefix.length;
+
+        try {
+            for (var i = 0; i < localStorage.length; i++) {
+                var k = localStorage.key(i);
+                if (!k) continue;
+                var dateStr = null;
+                if (k.indexOf(prefix) === 0 && k.length === prefixLen + 10) {
+                    dateStr = k.substring(prefixLen);
+                } else if (clientId && k.indexOf(legacyPrefix) === 0 && k.length === legacyPrefixLen + 10 && k.indexOf('_heys_') === -1) {
+                    // Legacy unscoped key like heys_dayv2_2025-12-07, only if no client prefix collision
+                    dateStr = k.substring(legacyPrefixLen);
+                }
+                if (dateStr && /^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+                    dates.push(dateStr);
+                }
+            }
+        } catch (e) {
+            console.warn(TAG, '⚠️ buildIndex error:', e && e.message);
+        }
+
+        dates.sort();
+        _index = { dates: dates, count: dates.length, builtAt: Date.now() };
+        _indexDirty = false;
+        console.info(TAG, '📊 Index built:', dates.length, 'days');
+        return _index;
+    }
+
+    function ensureIndex() {
+        if (_indexDirty || !_index) return buildIndex();
+        // Stale check
+        if (Date.now() - _index.builtAt > INDEX_TTL_MS) {
+            _indexDirty = true;
+            return buildIndex();
+        }
+        return _index;
+    }
+
+    // ── Public API ──
+
+    /** Get parsed dayv2 for a date, using in-memory cache */
+    function getDay(dateStr) {
+        if (_parsed.has(dateStr)) {
+            touchLru(dateStr);
+            return _parsed.get(dateStr);
+        }
+        var raw = readRawDay(dateStr);
+        if (raw && typeof raw === 'object') {
+            _parsed.set(dateStr, raw);
+            touchLru(dateStr);
+            return raw;
+        }
+        return null;
+    }
+
+    /** Fast day count without full localStorage scan */
+    function getDayCount() {
+        var idx = ensureIndex();
+        return idx.count;
+    }
+
+    /** Sorted date list */
+    function getDayDates() {
+        var idx = ensureIndex();
+        return idx.dates.slice(); // defensive copy
+    }
+
+    /**
+     * Get N previous days (yesterday = index 0). Uses cache.
+     * Returns array[0] = yesterday, array[n-1] = n days ago
+     */
+    function getPreviousDays(n) {
+        var result = [];
+        var today = new Date();
+        for (var i = 1; i <= n; i++) {
+            var d = new Date(today);
+            d.setDate(d.getDate() - i);
+            var ds = d.toISOString().slice(0, 10);
+            result.push(getDay(ds));
+        }
+        return result;
+    }
+
+    /** Invalidate a single date from cache (e.g. after day save) */
+    function invalidateDate(dateStr) {
+        _parsed.delete(dateStr);
+        var idx = _accessOrder.indexOf(dateStr);
+        if (idx !== -1) _accessOrder.splice(idx, 1);
+        // Also invalidate Store memory cache so next read gets fresh data
+        var store = getStore();
+        if (store && store.invalidate) {
+            store.invalidate(dayKeyForDate(dateStr));
+        }
+    }
+
+    /** Mark index as dirty — will rebuild on next getDayCount/getDayDates */
+    function invalidateAll() {
+        _indexDirty = true;
+        _parsed.clear();
+        _accessOrder.length = 0;
+    }
+
+    /**
+     * Notify that a date was added/updated.
+     * Updates index incrementally without full rebuild.
+     */
+    function notifyDateUpdated(dateStr) {
+        if (!dateStr) return;
+        invalidateDate(dateStr); // drop stale parsed cache
+        if (_index && !_indexDirty) {
+            // Incremental index update
+            if (_index.dates.indexOf(dateStr) === -1) {
+                _index.dates.push(dateStr);
+                _index.dates.sort();
+                _index.count = _index.dates.length;
+            }
+        }
+    }
+
+    // ── Event listeners for auto-invalidation ──
+    function onDayUpdated(e) {
+        var dateStr = e && e.detail && e.detail.date;
+        if (dateStr) {
+            notifyDateUpdated(dateStr);
+        } else {
+            // If no specific date, invalidate all
+            _indexDirty = true;
+        }
+    }
+
+    function onSyncComplete() {
+        // After full sync, rebuild index
+        invalidateAll();
+    }
+
+    // Subscribe to events (safe: listeners are additive)
+    if (typeof global.addEventListener === 'function') {
+        global.addEventListener('heys:day-updated', onDayUpdated);
+        global.addEventListener('day-updated', onDayUpdated);
+        global.addEventListener('heys-sync-complete', onSyncComplete);
+        global.addEventListener('day-saved', function (e) {
+            var dateStr = e && e.detail && e.detail.date;
+            if (dateStr) notifyDateUpdated(dateStr);
+        });
+    }
+
+    // ── Export ──
+    HEYS.dayCache = {
+        getDay: getDay,
+        getDayCount: getDayCount,
+        getDayDates: getDayDates,
+        getPreviousDays: getPreviousDays,
+        invalidate: invalidateDate,
+        invalidateAll: invalidateAll,
+        notifyDateUpdated: notifyDateUpdated,
+        // Diagnostic
+        _getCacheSize: function () { return _parsed.size; },
+        _getIndex: function () { return _index; }
+    };
+
+    console.info(TAG, '✅ dayv2 cache module loaded (LRU=' + MAX_CACHE_SIZE + ')');
+})(typeof globalThis !== 'undefined' ? globalThis : typeof window !== 'undefined' ? window : this);
 
 
 /* ===== heys_wheel_picker.js ===== */

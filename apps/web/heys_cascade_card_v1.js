@@ -286,7 +286,13 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
   }
 
   // Загружает N предыдущих дней из localStorage (для стрик-штрафов и истории измерений)
+  // R20: use HEYS.dayCache for in-memory cached reads
   function getPreviousDays(n) {
+    // Fast path: dayCache module available (boot-core loaded)
+    if (HEYS.dayCache && HEYS.dayCache.getPreviousDays) {
+      return HEYS.dayCache.getPreviousDays(n);
+    }
+    // Fallback: direct localStorage reads
     var result = [];
     var nullDates = [];
     var U = HEYS.utils;
