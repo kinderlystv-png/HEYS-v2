@@ -191,17 +191,25 @@
 
     // ── Event listeners for auto-invalidation ──
     function onDayUpdated(e) {
-        var dateStr = e && e.detail && e.detail.date;
+        var detail = e && e.detail;
+        // ⚡ Handle batch events (cloud-sync dispatches dates[] array)
+        if (detail && detail.batch && Array.isArray(detail.dates)) {
+            console.info(TAG, '🔄 Batch invalidation:', detail.dates.length, 'dates');
+            invalidateAll();
+            return;
+        }
+        var dateStr = detail && detail.date;
         if (dateStr) {
             notifyDateUpdated(dateStr);
         } else {
             // If no specific date, invalidate all
-            _indexDirty = true;
+            invalidateAll();
         }
     }
 
     function onSyncComplete() {
         // After full sync, rebuild index
+        console.info(TAG, '🔄 Sync complete → invalidateAll');
         invalidateAll();
     }
 
@@ -209,7 +217,7 @@
     if (typeof global.addEventListener === 'function') {
         global.addEventListener('heys:day-updated', onDayUpdated);
         global.addEventListener('day-updated', onDayUpdated);
-        global.addEventListener('heys-sync-complete', onSyncComplete);
+        global.addEventListener('heysSyncCompleted', onSyncComplete);
         global.addEventListener('day-saved', function (e) {
             var dateStr = e && e.detail && e.detail.date;
             if (dateStr) notifyDateUpdated(dateStr);

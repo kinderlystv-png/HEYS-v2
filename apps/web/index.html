@@ -648,10 +648,10 @@
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
     <link rel="dns-prefetch" href="https://cdn.jsdelivr.net" />
     <!-- Preload критических boot-бандлов (2026-02-25 bundle migration) -->
-    <link rel="preload" href="boot-core.bundle.4ac6d4f12bff.js" as="script" />
+    <link rel="preload" href="boot-core.bundle.6ba5574890e4.js" as="script" />
     <link rel="preload" href="boot-calc.bundle.af08d9dc483a.js" as="script" />
     <link rel="preload" href="boot-day.bundle.f6f6d0911f47.js" as="script" />
-    <link rel="preload" href="boot-app.bundle.996891043bb1.js" as="script" />
+    <link rel="preload" href="boot-app.bundle.5cb5aa5068f1.js" as="script" />
     <link rel="preload" href="boot-init.bundle.135979ec6df3.js" as="script" />
 
     <!-- React теперь бандлится локально через Vite (миграция с CDN 2026-01-21) -->
@@ -743,7 +743,7 @@
     <!-- 37KB inline JSON removed → improves HTML parse time by ~1-2s on slow 3G -->
     <!-- Fallback: localStorage cache (heys_iw_config_cache_v1) with 24h TTL -->
 
-    <!-- 🔬 HEYS Perf Monitor v2 — deep diagnostics (activate: HEYS.perfMon.start()) -->
+    <!-- 🔬 HEYS Perf Monitor v3 — deep diagnostics (activate: HEYS.perfMon.start()) -->
     <script>
         (function () {
             var STORAGE_KEY = 'heys_perf_log';
@@ -758,11 +758,60 @@
             var origSetInterval = window.setInterval;
             var timerPatched = false;
 
+            /* ── v3: capture-phase target snapshots ── */
+            var _capturedTargets = []; // [{ts, sel, type}]
+            var MAX_CAPTURED = 20;
+
             function ts() { return Date.now() - (window.__heysBootStart || 0); }
 
             function push(type, data) {
                 log.push({ t: ts(), type: type, data: data });
                 if (log.length > MAX_ENTRIES) log.splice(0, log.length - MAX_ENTRIES);
+            }
+
+            /* ── v3: enhanced selector with parent chain + SVG support ── */
+            function getSelector(el, depth) {
+                if (!el || !el.tagName) return '';
+                depth = depth || 0;
+                var tag = el.tagName.toLowerCase();
+                var id = el.id ? ('#' + el.id) : '';
+                var cls = '';
+                if (el.className) {
+                    // SVG className is SVGAnimatedString, not a string
+                    var cn = typeof el.className === 'string' ? el.className : (el.className.baseVal || '');
+                    if (cn) cls = '.' + cn.trim().split(/\s+/).slice(0, 3).join('.');
+                }
+                // data-perf-id override
+                var perfId = el.getAttribute && el.getAttribute('data-perf');
+                if (perfId) return '[' + perfId + ']' + (id || '') + cls;
+                var sel = tag + id + cls;
+                // Climb parent chain for unidentifiable elements (no id, no class)
+                if (!id && !cls && depth < 3 && el.parentElement) {
+                    sel += ' < ' + getSelector(el.parentElement, depth + 1);
+                }
+                return sel;
+            }
+
+            /* ── v3: capture target at event-time (before React may remove element) ── */
+            function captureTarget(e) {
+                if (!active) return;
+                var sel = '';
+                try { sel = getSelector(e.target); } catch (ex) { }
+                _capturedTargets.push({ ts: e.timeStamp, sel: sel, type: e.type });
+                if (_capturedTargets.length > MAX_CAPTURED) _capturedTargets.shift();
+            }
+            function lookupCapturedTarget(evName, startTime) {
+                // Event Timing startTime and DOM event.timeStamp use same clock
+                for (var i = _capturedTargets.length - 1; i >= 0; i--) {
+                    var c = _capturedTargets[i];
+                    if (c.type === evName && Math.abs(c.ts - startTime) < 300) return c.sel;
+                }
+                // Fallback: match any pointer/touch event within window
+                for (var j = _capturedTargets.length - 1; j >= 0; j--) {
+                    var c2 = _capturedTargets[j];
+                    if (Math.abs(c2.ts - startTime) < 100) return c2.sel;
+                }
+                return '';
             }
 
             /* ── FPS drops ── */
@@ -809,6 +858,19 @@
                 } catch (e) { /* longtask not supported */ }
             }
 
+            /* ── v3: capture-phase listeners for target snapshots ── */
+            function startCaptureListeners() {
+                document.addEventListener('pointerdown', captureTarget, true);
+                document.addEventListener('touchstart', captureTarget, true);
+                document.addEventListener('click', captureTarget, true);
+            }
+            function stopCaptureListeners() {
+                document.removeEventListener('pointerdown', captureTarget, true);
+                document.removeEventListener('touchstart', captureTarget, true);
+                document.removeEventListener('click', captureTarget, true);
+                _capturedTargets = [];
+            }
+
             /* ── Event Timing API (click, touch, key handler durations) ── */
             function startEventTiming() {
                 if (!window.PerformanceObserver) return;
@@ -827,22 +889,23 @@
                                     duration: duration,
                                     target: ''
                                 };
+                                // v3: try live target first, fallback to captured snapshot
                                 try {
                                     if (e.target) {
-                                        var el = e.target;
-                                        var tag = el.tagName ? el.tagName.toLowerCase() : '?';
-                                        var cls = el.className ? ('.' + String(el.className).split(' ').slice(0, 2).join('.')) : '';
-                                        var id = el.id ? ('#' + el.id) : '';
-                                        info.target = tag + id + cls;
+                                        info.target = getSelector(e.target);
                                     }
                                 } catch (ex) { }
+                                if (!info.target) {
+                                    var captured = lookupCapturedTarget(e.name, e.startTime);
+                                    if (captured) info.target = captured + ' ⚡';
+                                }
                                 if (e.interactionId) info.iid = e.interactionId;
                                 push('slow_event', info);
                                 console.warn('[HEYS.perf] SLOW EVENT:', e.name,
                                     'proc=' + processing + 'ms',
                                     'delay=' + inputDelay + 'ms',
                                     'total=' + duration + 'ms',
-                                    info.target || '');
+                                    info.target || '(unknown)');
                             }
                         });
                     });
@@ -1005,17 +1068,19 @@
                     push('start', { ua: navigator.userAgent, viewport: window.innerWidth + 'x' + window.innerHeight });
                     startFPS();
                     startLongTasks();
+                    startCaptureListeners();
                     startEventTiming();
                     startTimerPatching();
                     startScroll();
                     startLayoutReads();
-                    console.info('[HEYS.perf] ▶ v2 Monitoring started (event timing + timer patching + long task attribution)');
+                    console.info('[HEYS.perf] ▶ v3 Monitoring started (capture-phase targets + parent chain + event timing)');
                 },
                 stop: function () {
                     active = false;
                     if (fpsRaf) { cancelAnimationFrame(fpsRaf); fpsRaf = null; }
                     if (longTaskObs) { longTaskObs.disconnect(); longTaskObs = null; }
                     if (eventTimingObs) { eventTimingObs.disconnect(); eventTimingObs = null; }
+                    stopCaptureListeners();
                     stopTimerPatching();
                     push('stop', {});
                     console.info('[HEYS.perf] ■ Monitoring stopped');
@@ -1062,7 +1127,7 @@
             window.HEYS = window.HEYS || {};
             window.HEYS.perfMon = perf;
 
-            console.info('[HEYS.perf] v2 Ready. Run HEYS.perfMon.start() to begin deep diagnostics');
+            console.info('[HEYS.perf] v3 Ready. Run HEYS.perfMon.start() to begin deep diagnostics');
         })();
     </script>
 </head>
@@ -2404,10 +2469,10 @@
          Сгенерировано: node scripts/bundle-legacy.mjs  (pnpm bundle:legacy)
          Состав и хеши: bundle-manifest.json
          Хеш в имени = вечный кэш (cache-first SW). -->
-    <script defer src="boot-core.bundle.4ac6d4f12bff.js" fetchpriority="high"></script>
+    <script defer src="boot-core.bundle.6ba5574890e4.js" fetchpriority="high"></script>
     <script defer src="boot-calc.bundle.af08d9dc483a.js"></script>
     <script defer src="boot-day.bundle.f6f6d0911f47.js"></script>
-    <script defer src="boot-app.bundle.996891043bb1.js"></script>
+    <script defer src="boot-app.bundle.5cb5aa5068f1.js"></script>
     <script defer src="boot-init.bundle.135979ec6df3.js"
         onerror="window.__heysShowRecoveryUI && window.__heysShowRecoveryUI('CRITICAL_SCRIPT_LOAD: boot-init.bundle')"></script>
 
@@ -2437,8 +2502,8 @@
     <script>
         (function () {
             var POST_BOOT_BUNDLES = [
-                'postboot-1-game.bundle.d7e9e6caf57e.js',
-                'postboot-2-insights.bundle.fe2444a68e61.js',
+                'postboot-1-game.bundle.45dd3d560987.js',
+                'postboot-2-insights.bundle.0fc20a1571d2.js',
                 'postboot-3-ui.bundle.c073438219bc.js'
             ];
             var total = POST_BOOT_BUNDLES.length;

@@ -1247,7 +1247,7 @@
 
   // Invalidate cache on data changes
   if (typeof window !== 'undefined') {
-    ['heys:day-updated', 'day-updated', 'heys-sync-complete', 'day-saved'].forEach(function (evt) {
+    ['heys:day-updated', 'day-updated', 'heysSyncCompleted', 'day-saved'].forEach(function (evt) {
       window.addEventListener(evt, function () {
         _snapshotCache = null;
         _snapshotCacheTs = 0;

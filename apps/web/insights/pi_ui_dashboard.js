@@ -709,11 +709,11 @@
 
         checkWarnings();
         window.addEventListener('day-updated', checkWarnings);
-        window.addEventListener('heys-sync-complete', checkWarnings);
+        window.addEventListener('heysSyncCompleted', checkWarnings);
 
         return () => {
           window.removeEventListener('day-updated', checkWarnings);
-          window.removeEventListener('heys-sync-complete', checkWarnings);
+          window.removeEventListener('heysSyncCompleted', checkWarnings);
         };
       }, [lsGet, profile, pIndex]);
 
@@ -1607,7 +1607,7 @@
           setDataVersion((value) => value + 1);
         };
 
-        const events = ['heys:day-updated', 'day-updated', 'heys-sync-complete', 'day-saved'];
+        const events = ['heys:day-updated', 'day-updated', 'heysSyncCompleted', 'day-saved'];
         events.forEach((eventName) => window.addEventListener(eventName, handleDataRefresh));
 
         return () => {
@@ -1896,14 +1896,14 @@
         const interval = setInterval(collectWarnings, 5 * 60 * 1000);
         window.addEventListener('heys:day-updated', deferredCollect);
         window.addEventListener('day-updated', deferredCollect);
-        window.addEventListener('heys-sync-complete', deferredCollect);
+        window.addEventListener('heysSyncCompleted', deferredCollect);
 
         return () => {
           cancelled = true;
           clearInterval(interval);
           window.removeEventListener('heys:day-updated', deferredCollect);
           window.removeEventListener('day-updated', deferredCollect);
-          window.removeEventListener('heys-sync-complete', deferredCollect);
+          window.removeEventListener('heysSyncCompleted', deferredCollect);
         };
       }, [lsGet, effectiveData.profile, effectiveData.pIndex, insights?.healthScore?.total]);
 

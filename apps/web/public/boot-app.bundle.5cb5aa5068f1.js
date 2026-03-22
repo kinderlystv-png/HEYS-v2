@@ -16193,7 +16193,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                 ewsLoaded = false; // allow reload after sync
                 setTimeout(loadEWSData, 500); // Small delay to ensure data is written
             };
-            window.addEventListener('heys-sync-complete', handleSyncComplete);
+            window.addEventListener('heysSyncCompleted', handleSyncComplete);
 
             // Reload every 5 minutes
             const interval = setInterval(() => {
@@ -16205,7 +16205,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                 if (retryTimeoutId) clearTimeout(retryTimeoutId);
                 window.removeEventListener('heys-ews-ready', handleEWSReady);
                 window.removeEventListener('day-data-changed', handleDayDataChanged);
-                window.removeEventListener('heys-sync-complete', handleSyncComplete);
+                window.removeEventListener('heysSyncCompleted', handleSyncComplete);
                 clearInterval(interval);
             };
         }, [selectedDate, clientId]);
