@@ -1,58 +1,58 @@
 {
   "boot-core": {
-    "file": "boot-core.bundle.9b1dd62c0baf.js",
-    "hash": "9b1dd62c0baf",
-    "fileCount": 26,
-    "size": 1248939,
-    "builtAt": "2026-03-20T19:49:55.309Z"
+    "file": "boot-core.bundle.4ac6d4f12bff.js",
+    "hash": "4ac6d4f12bff",
+    "fileCount": 27,
+    "size": 1288599,
+    "builtAt": "2026-03-22T17:13:35.390Z"
   },
   "boot-calc": {
-    "file": "boot-calc.bundle.0c992e608f08.js",
-    "hash": "0c992e608f08",
+    "file": "boot-calc.bundle.af08d9dc483a.js",
+    "hash": "af08d9dc483a",
     "fileCount": 19,
-    "size": 1017535,
-    "builtAt": "2026-03-20T21:27:53.457Z"
+    "size": 1041606,
+    "builtAt": "2026-03-22T17:13:35.602Z"
   },
   "boot-day": {
-    "file": "boot-day.bundle.c0254c594bbb.js",
-    "hash": "c0254c594bbb",
+    "file": "boot-day.bundle.f6f6d0911f47.js",
+    "hash": "f6f6d0911f47",
     "fileCount": 51,
-    "size": 953186,
-    "builtAt": "2026-03-20T21:27:53.663Z"
+    "size": 976227,
+    "builtAt": "2026-03-22T17:13:35.940Z"
   },
   "boot-app": {
-    "file": "boot-app.bundle.7a9e02dc7a1d.js",
-    "hash": "7a9e02dc7a1d",
+    "file": "boot-app.bundle.996891043bb1.js",
+    "hash": "996891043bb1",
     "fileCount": 48,
-    "size": 1119946,
-    "builtAt": "2026-03-20T21:27:53.883Z"
+    "size": 1143533,
+    "builtAt": "2026-03-22T17:13:36.351Z"
   },
   "boot-init": {
-    "file": "boot-init.bundle.14e083d7af95.js",
-    "hash": "14e083d7af95",
+    "file": "boot-init.bundle.135979ec6df3.js",
+    "hash": "135979ec6df3",
     "fileCount": 8,
-    "size": 403923,
-    "builtAt": "2026-03-20T19:49:55.977Z"
+    "size": 413845,
+    "builtAt": "2026-03-22T17:13:36.507Z"
   },
   "postboot-1-game": {
-    "file": "postboot-1-game.bundle.b298b218e23e.js",
-    "hash": "b298b218e23e",
+    "file": "postboot-1-game.bundle.d7e9e6caf57e.js",
+    "hash": "d7e9e6caf57e",
     "fileCount": 30,
-    "size": 1677730,
-    "builtAt": "2026-03-20T19:49:56.204Z"
+    "size": 1716016,
+    "builtAt": "2026-03-22T17:13:36.879Z"
   },
   "postboot-2-insights": {
-    "file": "postboot-2-insights.bundle.1655bfa6815b.js",
-    "hash": "1655bfa6815b",
+    "file": "postboot-2-insights.bundle.fe2444a68e61.js",
+    "hash": "fe2444a68e61",
     "fileCount": 39,
-    "size": 1840595,
-    "builtAt": "2026-03-20T19:49:56.430Z"
+    "size": 1878791,
+    "builtAt": "2026-03-22T17:13:37.287Z"
   },
   "postboot-3-ui": {
-    "file": "postboot-3-ui.bundle.14cf14d446d8.js",
-    "hash": "14cf14d446d8",
+    "file": "postboot-3-ui.bundle.c073438219bc.js",
+    "hash": "c073438219bc",
     "fileCount": 27,
-    "size": 1581566,
-    "builtAt": "2026-03-20T21:27:54.134Z"
+    "size": 1618200,
+    "builtAt": "2026-03-22T17:13:37.608Z"
   }
 }

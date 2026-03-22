@@ -9051,7 +9051,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
               React.createElement('strong', null, 'Общие затраты :'),
               // 🆕 v3.7.0: Интерактивный NDTE badge с expand/countdown
               window.HEYS?.InsulinWave?.renderNDTEBadge &&
-                window.HEYS.InsulinWave.renderNDTEBadge(ndteData, ndteBoostKcal, ndteExpanded, () => setNdteExpanded(prev => !prev))
+              window.HEYS.InsulinWave.renderNDTEBadge(ndteData, ndteBoostKcal, ndteExpanded, () => setNdteExpanded(prev => !prev))
             ),
             React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: tdee, disabled: true })),
             React.createElement('td', null, ''),
