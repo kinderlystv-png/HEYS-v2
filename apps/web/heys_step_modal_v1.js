@@ -559,6 +559,7 @@
       }, 200);
     }, [animating, totalSteps]);
 
+    // 🚀 PERF R30: defer step transition/save — validation stays sync for immediate UX feedback
     const handleNext = useCallback(() => {
       // Валидация текущего шага
       if (currentConfig.validate && !currentConfig.validate(stepData[currentConfig.id], stepData)) {
@@ -578,40 +579,42 @@
         return;
       }
 
-      if (currentStepIndex < totalSteps - 1) {
-        goToStep(currentStepIndex + 1, 'left');
-      } else {
-        // Сохраняем все данные
-        visibleStepConfigs.forEach(config => {
-          if (config.save) {
-            // Передаём: данные этого шага, context, и все данные всех шагов
-            config.save(stepData[config.id], context, stepData);
+      setTimeout(() => {
+        if (currentStepIndex < totalSteps - 1) {
+          goToStep(currentStepIndex + 1, 'left');
+        } else {
+          // Сохраняем все данные
+          visibleStepConfigs.forEach(config => {
+            if (config.save) {
+              // Передаём: данные этого шага, context, и все данные всех шагов
+              config.save(stepData[config.id], context, stepData);
+            }
+          });
+
+          // XP за чек-ин
+          if (HEYS.gamification) {
+            try {
+              visibleStepConfigs.forEach(config => {
+                if (config.xpAction) {
+                  HEYS.gamification.addXP(config.xpAction);
+                }
+              });
+            } catch (e) {
+              console.warn('Gamification XP error:', e);
+            }
           }
-        });
 
-        // XP за чек-ин
-        if (HEYS.gamification) {
-          try {
-            visibleStepConfigs.forEach(config => {
-              if (config.xpAction) {
-                HEYS.gamification.addXP(config.xpAction);
-              }
-            });
-          } catch (e) {
-            console.warn('Gamification XP error:', e);
+          // Уведомляем об обновлении (только если это НЕ MealStep — он обрабатывает сам)
+          // MealStep сам управляет обновлением дня через onComplete
+          if (!visibleStepConfigs.some(c => c.id === 'mealName' || c.id === 'mealTime')) {
+            window.dispatchEvent(new CustomEvent('heys:day-updated', {
+              detail: { date: getTodayKey(), source: 'step-modal' }
+            }));
           }
-        }
 
-        // Уведомляем об обновлении (только если это НЕ MealStep — он обрабатывает сам)
-        // MealStep сам управляет обновлением дня через onComplete
-        if (!visibleStepConfigs.some(c => c.id === 'mealName' || c.id === 'mealTime')) {
-          window.dispatchEvent(new CustomEvent('heys:day-updated', {
-            detail: { date: getTodayKey(), source: 'step-modal' }
-          }));
+          onComplete && onComplete(stepData);
         }
-
-        onComplete && onComplete(stepData);
-      }
+      }, 0);
     }, [currentStepIndex, totalSteps, currentConfig, stepData, visibleStepConfigs, goToStep, onComplete]);
 
     const handlePrev = useCallback(() => {

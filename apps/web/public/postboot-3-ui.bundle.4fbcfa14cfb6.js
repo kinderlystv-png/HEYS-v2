@@ -731,6 +731,7 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-3-ui: execute start');
       }, 200);
     }, [animating, totalSteps]);
 
+    // 🚀 PERF R30: defer step transition/save — validation stays sync for immediate UX feedback
     const handleNext = useCallback(() => {
       // Валидация текущего шага
       if (currentConfig.validate && !currentConfig.validate(stepData[currentConfig.id], stepData)) {
@@ -750,40 +751,42 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-3-ui: execute start');
         return;
       }
 
-      if (currentStepIndex < totalSteps - 1) {
-        goToStep(currentStepIndex + 1, 'left');
-      } else {
-        // Сохраняем все данные
-        visibleStepConfigs.forEach(config => {
-          if (config.save) {
-            // Передаём: данные этого шага, context, и все данные всех шагов
-            config.save(stepData[config.id], context, stepData);
+      setTimeout(() => {
+        if (currentStepIndex < totalSteps - 1) {
+          goToStep(currentStepIndex + 1, 'left');
+        } else {
+          // Сохраняем все данные
+          visibleStepConfigs.forEach(config => {
+            if (config.save) {
+              // Передаём: данные этого шага, context, и все данные всех шагов
+              config.save(stepData[config.id], context, stepData);
+            }
+          });
+
+          // XP за чек-ин
+          if (HEYS.gamification) {
+            try {
+              visibleStepConfigs.forEach(config => {
+                if (config.xpAction) {
+                  HEYS.gamification.addXP(config.xpAction);
+                }
+              });
+            } catch (e) {
+              console.warn('Gamification XP error:', e);
+            }
           }
-        });
 
-        // XP за чек-ин
-        if (HEYS.gamification) {
-          try {
-            visibleStepConfigs.forEach(config => {
-              if (config.xpAction) {
-                HEYS.gamification.addXP(config.xpAction);
-              }
-            });
-          } catch (e) {
-            console.warn('Gamification XP error:', e);
+          // Уведомляем об обновлении (только если это НЕ MealStep — он обрабатывает сам)
+          // MealStep сам управляет обновлением дня через onComplete
+          if (!visibleStepConfigs.some(c => c.id === 'mealName' || c.id === 'mealTime')) {
+            window.dispatchEvent(new CustomEvent('heys:day-updated', {
+              detail: { date: getTodayKey(), source: 'step-modal' }
+            }));
           }
-        }
 
-        // Уведомляем об обновлении (только если это НЕ MealStep — он обрабатывает сам)
-        // MealStep сам управляет обновлением дня через onComplete
-        if (!visibleStepConfigs.some(c => c.id === 'mealName' || c.id === 'mealTime')) {
-          window.dispatchEvent(new CustomEvent('heys:day-updated', {
-            detail: { date: getTodayKey(), source: 'step-modal' }
-          }));
+          onComplete && onComplete(stepData);
         }
-
-        onComplete && onComplete(stepData);
-      }
+      }, 0);
     }, [currentStepIndex, totalSteps, currentConfig, stepData, visibleStepConfigs, goToStep, onComplete]);
 
     const handlePrev = useCallback(() => {
@@ -6084,35 +6087,38 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       console.info('[HEYS.presets] ✅ Preset saved:', { name: preset.name, itemCount: preset.items.length });
     };
 
+    // 🚀 PERF R29: defer bulk add — forEach onAdd() triggers cascading React setState (239ms → ~0ms click)
     const handleAddAll = () => {
       const itemsToAdd = previewItems.filter(item => !item._excluded);
       if (itemsToAdd.length === 0) return;
-      itemsToAdd.forEach(item => {
-        const product = {
-          id: item.product_id,
-          product_id: item.product_id,
-          name: item.name,
-          grams: item.grams,
-          kcal100: item.kcal100,
-          protein100: item.protein100,
-          fat100: item.fat100,
-          simple100: item.simple100 || 0,
-          complex100: item.complex100 || 0,
-          badFat100: item.badFat100 || 0,
-          goodFat100: item.goodFat100 || 0,
-          trans100: item.trans100 || 0,
-          fiber100: item.fiber100 || 0,
-          gi: item.gi || 0,
-          harm: item.harm || 0,
-        };
-        context?.onAdd?.({ product, grams: item.grams, mealIndex: context?.mealIndex });
-      });
-      console.info('[HEYS.presets] ✅ Applied preset:', { name: selectedPreset?.name, count: itemsToAdd.length });
-      if (HEYS.StepModal?.hide) {
-        HEYS.StepModal.hide({ scrollToDiary: true });
-      } else {
-        onClose?.();
-      }
+      setTimeout(() => {
+        itemsToAdd.forEach(item => {
+          const product = {
+            id: item.product_id,
+            product_id: item.product_id,
+            name: item.name,
+            grams: item.grams,
+            kcal100: item.kcal100,
+            protein100: item.protein100,
+            fat100: item.fat100,
+            simple100: item.simple100 || 0,
+            complex100: item.complex100 || 0,
+            badFat100: item.badFat100 || 0,
+            goodFat100: item.goodFat100 || 0,
+            trans100: item.trans100 || 0,
+            fiber100: item.fiber100 || 0,
+            gi: item.gi || 0,
+            harm: item.harm || 0,
+          };
+          context?.onAdd?.({ product, grams: item.grams, mealIndex: context?.mealIndex });
+        });
+        console.info('[HEYS.presets] ✅ Applied preset:', { name: selectedPreset?.name, count: itemsToAdd.length });
+        if (HEYS.StepModal?.hide) {
+          HEYS.StepModal.hide({ scrollToDiary: true });
+        } else {
+          onClose?.();
+        }
+      }, 0);
     };
 
     const updateItemGrams = (idx, delta) => {
@@ -10838,8 +10844,8 @@ NOVA: 1
       const onClickFn = action.onClick;
       const onActionFn = modal.onAction;
       const actionValue = action.value;
-      setModal(null);
       setTimeout(() => {
+        setModal(null);
         onClickFn?.();
         onActionFn?.(actionValue, action);
       }, 0);

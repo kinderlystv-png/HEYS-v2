@@ -195,7 +195,8 @@
               React.createElement('button', {
                 key: preset.ml,
                 className: 'water-preset-compact',
-                onClick: () => addWater(preset.ml, true) // skipScroll: уже внутри карточки
+                // 🚀 PERF R34: defer addWater — day data save + re-render (88ms → ~0ms click)
+                onClick: () => setTimeout(() => addWater(preset.ml, true), 0)
               },
                 React.createElement('span', { className: 'water-preset-icon' }, preset.icon),
                 React.createElement('span', { className: 'water-preset-ml' }, '+' + preset.ml)

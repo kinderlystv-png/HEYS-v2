@@ -1337,14 +1337,16 @@
     const todayVal = history[history.length - 1] || 0;
     const diff = yesterdayVal !== null ? todayVal - yesterdayVal : null;
 
-    const type = metricPopup.type;
+    const type = metricPopup.type || data.type || 'kcal';
     const config = {
       water: { icon: '💧', name: 'Вода', unit: 'мл', color: '#3b82f6', goal },
       steps: { icon: '👟', name: 'Шаги', unit: '', color: data.color || '#22c55e', goal },
       kcal: { icon: '🔥', name: 'Калории', unit: 'ккал', color: '#f59e0b', goal }
-    }[type];
+    }[type] || { icon: '•', name: 'Метрика', unit: '', color: '#64748b', goal };
 
-    const ratio = data.ratio || 0;
+    const ratio = typeof data.ratio === 'number'
+      ? data.ratio
+      : (type === 'kcal' && goal > 0 ? (data.eaten || 0) / goal : 0);
     const pct = Math.round(ratio * 100);
 
     const getGradient = (r) => {

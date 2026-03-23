@@ -384,7 +384,7 @@
       // Focus overlay (blur фон когда раскрыто) — ВНЕ карточки!
       insulinExpanded && React.createElement('div', {
         className: 'insulin-focus-overlay',
-        onClick: () => setInsulinExpanded(false)
+        onClick: () => setTimeout(() => setInsulinExpanded(false), 0)
       }),
       // Сама карточка с мягким shake при приближении липолиза
       React.createElement('div', {
@@ -396,7 +396,7 @@
           position: insulinExpanded ? 'relative' : undefined,
           zIndex: insulinExpanded ? 100 : undefined
         },
-        onClick: () => setInsulinExpanded(!insulinExpanded)
+        onClick: () => setTimeout(() => setInsulinExpanded(!insulinExpanded), 0)
       },
 
         // Анимированный фон волны

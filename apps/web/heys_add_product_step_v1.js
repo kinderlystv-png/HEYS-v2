@@ -1447,35 +1447,38 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       console.info('[HEYS.presets] ✅ Preset saved:', { name: preset.name, itemCount: preset.items.length });
     };
 
+    // 🚀 PERF R29: defer bulk add — forEach onAdd() triggers cascading React setState (239ms → ~0ms click)
     const handleAddAll = () => {
       const itemsToAdd = previewItems.filter(item => !item._excluded);
       if (itemsToAdd.length === 0) return;
-      itemsToAdd.forEach(item => {
-        const product = {
-          id: item.product_id,
-          product_id: item.product_id,
-          name: item.name,
-          grams: item.grams,
-          kcal100: item.kcal100,
-          protein100: item.protein100,
-          fat100: item.fat100,
-          simple100: item.simple100 || 0,
-          complex100: item.complex100 || 0,
-          badFat100: item.badFat100 || 0,
-          goodFat100: item.goodFat100 || 0,
-          trans100: item.trans100 || 0,
-          fiber100: item.fiber100 || 0,
-          gi: item.gi || 0,
-          harm: item.harm || 0,
-        };
-        context?.onAdd?.({ product, grams: item.grams, mealIndex: context?.mealIndex });
-      });
-      console.info('[HEYS.presets] ✅ Applied preset:', { name: selectedPreset?.name, count: itemsToAdd.length });
-      if (HEYS.StepModal?.hide) {
-        HEYS.StepModal.hide({ scrollToDiary: true });
-      } else {
-        onClose?.();
-      }
+      setTimeout(() => {
+        itemsToAdd.forEach(item => {
+          const product = {
+            id: item.product_id,
+            product_id: item.product_id,
+            name: item.name,
+            grams: item.grams,
+            kcal100: item.kcal100,
+            protein100: item.protein100,
+            fat100: item.fat100,
+            simple100: item.simple100 || 0,
+            complex100: item.complex100 || 0,
+            badFat100: item.badFat100 || 0,
+            goodFat100: item.goodFat100 || 0,
+            trans100: item.trans100 || 0,
+            fiber100: item.fiber100 || 0,
+            gi: item.gi || 0,
+            harm: item.harm || 0,
+          };
+          context?.onAdd?.({ product, grams: item.grams, mealIndex: context?.mealIndex });
+        });
+        console.info('[HEYS.presets] ✅ Applied preset:', { name: selectedPreset?.name, count: itemsToAdd.length });
+        if (HEYS.StepModal?.hide) {
+          HEYS.StepModal.hide({ scrollToDiary: true });
+        } else {
+          onClose?.();
+        }
+      }, 0);
     };
 
     const updateItemGrams = (idx, delta) => {

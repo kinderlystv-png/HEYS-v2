@@ -729,7 +729,7 @@
                         : React.createElement('div', null),
                     React.createElement('button', {
                         className: 'advice-diagnostics-modal__action advice-diagnostics-modal__action--primary',
-                        onClick: onClose,
+                        onClick: () => setTimeout(onClose, 0), // 🚀 PERF R39: defer modal close (169–174ms → ~0ms)
                         type: 'button'
                     }, 'Закрыть')
                 )
@@ -777,9 +777,10 @@
         const handleSchedule = React.useCallback((e) => {
             e.stopPropagation();
             if (onSchedule) {
-                onSchedule(advice, 120);
                 setScheduledConfirm(true);
                 if (navigator.vibrate) navigator.vibrate(50);
+                // 🚀 PERF R50: defer heavy schedule callback (51ms → ~0ms click)
+                setTimeout(() => { onSchedule(advice, 120); }, 0);
                 setTimeout(() => {
                     onClearLastDismissed && onClearLastDismissed();
                 }, 1500);
@@ -789,9 +790,10 @@
         const handleRate = React.useCallback((isPositive, e) => {
             e.stopPropagation();
             if (!onRate) return;
-            onRate(advice, isPositive);
             setRatedState(isPositive ? 'positive' : 'negative');
             if (navigator.vibrate) navigator.vibrate(30);
+            // 🚀 PERF R41: defer heavy rate callback (89ms → ~0ms click)
+            setTimeout(() => { onRate(advice, isPositive); }, 0);
             setTimeout(() => {
                 onClearLastDismissed && onClearLastDismissed();
             }, 900);
@@ -838,7 +840,8 @@
                         React.createElement('button', {
                             onClick: (e) => {
                                 e.stopPropagation();
-                                onClearLastDismissed && onClearLastDismissed();
+                                // 🚀 PERF R50: defer dismiss to avoid sync React render in click handler
+                                setTimeout(() => { onClearLastDismissed && onClearLastDismissed(); }, 0);
                             },
                             style: {
                                 position: 'absolute',
@@ -1027,8 +1030,11 @@
                 onClick: (e) => {
                     if (showUndo || Math.abs(swipeX) > 10) return;
                     e.stopPropagation();
-                    if (trackClick) trackClick(advice);
-                    onOpenDetails && onOpenDetails(advice, e);
+                    // 🚀 PERF R38: defer heavy details open (167–184ms → ~0ms click)
+                    setTimeout(() => {
+                        if (trackClick) trackClick(advice);
+                        onOpenDetails && onOpenDetails(advice, e);
+                    }, 0);
                 },
                 onTouchStart: (e) => {
                     if (showUndo) return;
@@ -1042,8 +1048,8 @@
                 },
                 onTouchEnd: () => {
                     if (showUndo) return;
-                    onSwipeEnd(advice.id);
-                    onLongPressEnd();
+                    // 🚀 PERF R33: defer swipe-end + longPress cleanup (124ms → ~0ms touchend)
+                    setTimeout(() => { onSwipeEnd(advice.id); onLongPressEnd(); }, 0);
                 },
             },
                 React.createElement('span', { className: 'advice-list-icon' }, advice.icon),
@@ -1154,7 +1160,8 @@
 
         return React.createElement('div', {
             className: 'advice-list-overlay',
-            onClick: dismissToast,
+            // 🚀 PERF R32: defer dismissToast — 15 setState calls cascade (115ms → ~0ms click)
+            onClick: () => setTimeout(dismissToast, 0),
         },
             React.createElement('div', {
                 className: `advice-list-container${dismissAllAnimation ? ' shake-warning' : ''}`,
@@ -1337,7 +1344,7 @@
                 React.createElement('span', { className: 'macro-toast-text' }, 'Всё отлично! Советов нет'),
                 React.createElement('button', {
                     className: 'macro-toast-close',
-                    onClick: (e) => { e.stopPropagation(); dismissToast(); },
+                    onClick: (e) => { e.stopPropagation(); setTimeout(() => dismissToast(), 0); },
                 }, '×')
             )
         );

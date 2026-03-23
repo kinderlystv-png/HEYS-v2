@@ -387,6 +387,11 @@
       };
 
       let activeMultiProductMode = multiProductMode;
+      // Tracks the day snapshot that was passed to the last openAddModal call.
+      // handleAdd uses this as the base when building updatedDayForSummary so it
+      // always includes all products added in previous iterations (the React-closure
+      // 'day' prop may be stale across multiple sequential additions).
+      let lastOpenedDay = null;
 
       const openAddModal = (override = {}) => {
         const latestDay = override.day || getLatestDay();
@@ -397,6 +402,7 @@
           : multiProductMode;
 
         activeMultiProductMode = nextMultiProductMode;
+        lastOpenedDay = latestDay;
 
         if (window.HEYS?.AddProductStep?.show) {
           window.HEYS.AddProductStep.show({
@@ -578,10 +584,38 @@
         } catch (e) { }
 
         if (activeMultiProductMode && HEYS.dayAddProductSummary?.show) {
+          // Build updated day with the just-added item for the summary modal.
+          // Multiple fallback sources: lastOpenedDay tracks what openAddModal
+          // received, HEYS.Day.getDay() reads dayRef.current, getLatestDay()
+          // reads the React prop (may be undefined if not passed).
+          const latestDayForSummary = lastOpenedDay || HEYS.Day?.getDay?.() || getLatestDay();
+          const srcMeals = latestDayForSummary.meals || [];
+          const updatedMealsForSummary = srcMeals.map((m, i) =>
+            i === mealIndex
+              ? { ...m, items: [...(m.items || []), newItem] }
+              : m
+          );
+          // Safety: if the meal at mealIndex didn't exist in the snapshot
+          // (race between React state commit and dayRef.current update),
+          // create the meal entry so the summary can display the product.
+          if (mealIndex >= srcMeals.length) {
+            while (updatedMealsForSummary.length < mealIndex) {
+              updatedMealsForSummary.push({ items: [] });
+            }
+            updatedMealsForSummary[mealIndex] = { items: [newItem] };
+          }
+          const updatedDayForSummary = { ...latestDayForSummary, meals: updatedMealsForSummary, updatedAt: newUpdatedAt };
+
+          // Close StepModal explicitly before showing ConfirmModal to avoid
+          // a visual overlap where the user sees two modals stacked.
+          if (HEYS.StepModal?.hide) {
+            HEYS.StepModal.hide({ scrollToDiary: false });
+          }
+
           requestAnimationFrame(() => {
             setTimeout(() => {
               HEYS.dayAddProductSummary.show({
-                day: HEYS.Day?.getDay?.() || day || {},
+                day: updatedDayForSummary,
                 mealIndex,
                 pIndex: HEYS.dayUtils?.buildProductIndex?.() || HEYS.products?.buildIndex?.() || {},
                 getProductFromItem,

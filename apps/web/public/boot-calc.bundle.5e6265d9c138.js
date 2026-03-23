@@ -10143,16 +10143,17 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
 // Extracted from heys_day_v12.js (Phase 2.1)
 // Contains: PopupWithBackdrop, createSwipeHandlers, PopupCloseButton
 
-;(function(global){
+; (function (global) {
   const HEYS = global.HEYS = global.HEYS || {};
   const React = global.React;
-  
+
   // Import haptic from dayUtils (with fallback)
   const U = HEYS.dayUtils || {};
-  const haptic = U.haptic || (() => {});
-  
+  const haptic = U.haptic || (() => { });
+
   // === POPUP WITH BACKDROP — переиспользуемый компонент ===
   // Универсальная обёртка для попапов с backdrop'ом для закрытия по клику вне попапа
+  // 🚀 PERF R31: defer onClose to avoid blocking main thread with popup teardown re-render
   const PopupWithBackdrop = ({ children, onClose, backdropStyle = {}, zIndex = 9998 }) => {
     return React.createElement('div', {
       className: 'popup-backdrop-invisible',
@@ -10165,12 +10166,12 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
       },
       onClick: (e) => {
         if (e.target === e.currentTarget) {
-          onClose();
+          setTimeout(() => onClose(), 0);
         }
       }
     }, children);
   };
-  
+
   // === SWIPE TO DISMISS — функция для swipe-жестов на попапах ===
   // Возвращает { onTouchStart, onTouchEnd } для передачи в props попапа
   // НЕ хук! Можно вызывать условно внутри попапов
@@ -10187,7 +10188,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
       }
     };
   };
-  
+
   // === POPUP CLOSE BUTTON — универсальная кнопка закрытия ===
   // className: опционально для кастомных стилей (sparkline-popup-close, metric-popup-close, etc.)
   const PopupCloseButton = ({ onClose, className = 'popup-close-btn', style = {} }) => {
@@ -10201,14 +10202,14 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
       style
     }, '✕');
   };
-  
+
   // Export to HEYS namespace
   HEYS.dayPopups = {
     PopupWithBackdrop,
     createSwipeHandlers,
     PopupCloseButton
   };
-  
+
 })(window);
 
 
@@ -11430,7 +11431,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
                         : React.createElement('div', null),
                     React.createElement('button', {
                         className: 'advice-diagnostics-modal__action advice-diagnostics-modal__action--primary',
-                        onClick: onClose,
+                        onClick: () => setTimeout(onClose, 0), // 🚀 PERF R39: defer modal close (169–174ms → ~0ms)
                         type: 'button'
                     }, 'Закрыть')
                 )
@@ -11478,9 +11479,10 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
         const handleSchedule = React.useCallback((e) => {
             e.stopPropagation();
             if (onSchedule) {
-                onSchedule(advice, 120);
                 setScheduledConfirm(true);
                 if (navigator.vibrate) navigator.vibrate(50);
+                // 🚀 PERF R50: defer heavy schedule callback (51ms → ~0ms click)
+                setTimeout(() => { onSchedule(advice, 120); }, 0);
                 setTimeout(() => {
                     onClearLastDismissed && onClearLastDismissed();
                 }, 1500);
@@ -11490,9 +11492,10 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
         const handleRate = React.useCallback((isPositive, e) => {
             e.stopPropagation();
             if (!onRate) return;
-            onRate(advice, isPositive);
             setRatedState(isPositive ? 'positive' : 'negative');
             if (navigator.vibrate) navigator.vibrate(30);
+            // 🚀 PERF R41: defer heavy rate callback (89ms → ~0ms click)
+            setTimeout(() => { onRate(advice, isPositive); }, 0);
             setTimeout(() => {
                 onClearLastDismissed && onClearLastDismissed();
             }, 900);
@@ -11539,7 +11542,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
                         React.createElement('button', {
                             onClick: (e) => {
                                 e.stopPropagation();
-                                onClearLastDismissed && onClearLastDismissed();
+                                // 🚀 PERF R50: defer dismiss to avoid sync React render in click handler
+                                setTimeout(() => { onClearLastDismissed && onClearLastDismissed(); }, 0);
                             },
                             style: {
                                 position: 'absolute',
@@ -11728,8 +11732,11 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
                 onClick: (e) => {
                     if (showUndo || Math.abs(swipeX) > 10) return;
                     e.stopPropagation();
-                    if (trackClick) trackClick(advice);
-                    onOpenDetails && onOpenDetails(advice, e);
+                    // 🚀 PERF R38: defer heavy details open (167–184ms → ~0ms click)
+                    setTimeout(() => {
+                        if (trackClick) trackClick(advice);
+                        onOpenDetails && onOpenDetails(advice, e);
+                    }, 0);
                 },
                 onTouchStart: (e) => {
                     if (showUndo) return;
@@ -11743,8 +11750,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
                 },
                 onTouchEnd: () => {
                     if (showUndo) return;
-                    onSwipeEnd(advice.id);
-                    onLongPressEnd();
+                    // 🚀 PERF R33: defer swipe-end + longPress cleanup (124ms → ~0ms touchend)
+                    setTimeout(() => { onSwipeEnd(advice.id); onLongPressEnd(); }, 0);
                 },
             },
                 React.createElement('span', { className: 'advice-list-icon' }, advice.icon),
@@ -11855,7 +11862,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
 
         return React.createElement('div', {
             className: 'advice-list-overlay',
-            onClick: dismissToast,
+            // 🚀 PERF R32: defer dismissToast — 15 setState calls cascade (115ms → ~0ms click)
+            onClick: () => setTimeout(dismissToast, 0),
         },
             React.createElement('div', {
                 className: `advice-list-container${dismissAllAnimation ? ' shake-warning' : ''}`,
@@ -12038,7 +12046,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
                 React.createElement('span', { className: 'macro-toast-text' }, 'Всё отлично! Советов нет'),
                 React.createElement('button', {
                     className: 'macro-toast-close',
-                    onClick: (e) => { e.stopPropagation(); dismissToast(); },
+                    onClick: (e) => { e.stopPropagation(); setTimeout(() => dismissToast(), 0); },
                 }, '×')
             )
         );
@@ -15838,6 +15846,11 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
       };
 
       let activeMultiProductMode = multiProductMode;
+      // Tracks the day snapshot that was passed to the last openAddModal call.
+      // handleAdd uses this as the base when building updatedDayForSummary so it
+      // always includes all products added in previous iterations (the React-closure
+      // 'day' prop may be stale across multiple sequential additions).
+      let lastOpenedDay = null;
 
       const openAddModal = (override = {}) => {
         const latestDay = override.day || getLatestDay();
@@ -15848,6 +15861,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
           : multiProductMode;
 
         activeMultiProductMode = nextMultiProductMode;
+        lastOpenedDay = latestDay;
 
         if (window.HEYS?.AddProductStep?.show) {
           window.HEYS.AddProductStep.show({
@@ -16029,10 +16043,38 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
         } catch (e) { }
 
         if (activeMultiProductMode && HEYS.dayAddProductSummary?.show) {
+          // Build updated day with the just-added item for the summary modal.
+          // Multiple fallback sources: lastOpenedDay tracks what openAddModal
+          // received, HEYS.Day.getDay() reads dayRef.current, getLatestDay()
+          // reads the React prop (may be undefined if not passed).
+          const latestDayForSummary = lastOpenedDay || HEYS.Day?.getDay?.() || getLatestDay();
+          const srcMeals = latestDayForSummary.meals || [];
+          const updatedMealsForSummary = srcMeals.map((m, i) =>
+            i === mealIndex
+              ? { ...m, items: [...(m.items || []), newItem] }
+              : m
+          );
+          // Safety: if the meal at mealIndex didn't exist in the snapshot
+          // (race between React state commit and dayRef.current update),
+          // create the meal entry so the summary can display the product.
+          if (mealIndex >= srcMeals.length) {
+            while (updatedMealsForSummary.length < mealIndex) {
+              updatedMealsForSummary.push({ items: [] });
+            }
+            updatedMealsForSummary[mealIndex] = { items: [newItem] };
+          }
+          const updatedDayForSummary = { ...latestDayForSummary, meals: updatedMealsForSummary, updatedAt: newUpdatedAt };
+
+          // Close StepModal explicitly before showing ConfirmModal to avoid
+          // a visual overlap where the user sees two modals stacked.
+          if (HEYS.StepModal?.hide) {
+            HEYS.StepModal.hide({ scrollToDiary: false });
+          }
+
           requestAnimationFrame(() => {
             setTimeout(() => {
               HEYS.dayAddProductSummary.show({
-                day: HEYS.Day?.getDay?.() || day || {},
+                day: updatedDayForSummary,
                 mealIndex,
                 pIndex: HEYS.dayUtils?.buildProductIndex?.() || HEYS.products?.buildIndex?.() || {},
                 getProductFromItem,
@@ -19488,10 +19530,32 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
                                             lsSet('heys_grams_history', history);
                                         } catch (e) { }
                                         if (multiProductMode && HEYS.dayAddProductSummary?.show) {
+                                            // Build updated day inline: setDay is async and
+                                            // HEYS.Day.getDay() (dayRef.current) won't reflect
+                                            // the new item yet at this point.
+                                            const baseDayForSummary = dayOverride || HEYS.Day?.getDay?.() || day || {};
+                                            const srcMeals = baseDayForSummary.meals || [];
+                                            const mealsWithNewItem = srcMeals.map((m, i) =>
+                                                i === addMealIndex
+                                                    ? { ...m, items: [...(m.items || []), newItem] }
+                                                    : m
+                                            );
+                                            if (addMealIndex >= srcMeals.length) {
+                                                while (mealsWithNewItem.length < addMealIndex) {
+                                                    mealsWithNewItem.push({ items: [] });
+                                                }
+                                                mealsWithNewItem[addMealIndex] = { items: [newItem] };
+                                            }
+                                            const updatedDayForSummary = { ...baseDayForSummary, meals: mealsWithNewItem, updatedAt: newUpdatedAt };
+
+                                            if (HEYS.StepModal?.hide) {
+                                                HEYS.StepModal.hide({ scrollToDiary: false });
+                                            }
+
                                             requestAnimationFrame(() => {
                                                 setTimeout(() => {
                                                     HEYS.dayAddProductSummary.show({
-                                                        day: HEYS.Day?.getDay?.() || day || {},
+                                                        day: updatedDayForSummary,
                                                         mealIndex: addMealIndex,
                                                         pIndex,
                                                         getProductFromItem,
@@ -20750,6 +20814,11 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
       };
 
       let activeMultiProductMode = multiProductMode;
+      // Tracks the day snapshot that was passed to the last openAddModal call.
+      // handleAdd uses this as the base when building updatedDayForSummary so it
+      // always includes all products added in previous iterations (the React-closure
+      // 'day' prop may be stale across multiple sequential additions).
+      let lastOpenedDay = null;
 
       const openAddModal = (override = {}) => {
         const latestDay = override.day || getLatestDay();
@@ -20760,6 +20829,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
           : multiProductMode;
 
         activeMultiProductMode = nextMultiProductMode;
+        lastOpenedDay = latestDay;
 
         if (window.HEYS?.AddProductStep?.show) {
           window.HEYS.AddProductStep.show({
@@ -20941,10 +21011,38 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
         } catch (e) { }
 
         if (activeMultiProductMode && HEYS.dayAddProductSummary?.show) {
+          // Build updated day with the just-added item for the summary modal.
+          // Multiple fallback sources: lastOpenedDay tracks what openAddModal
+          // received, HEYS.Day.getDay() reads dayRef.current, getLatestDay()
+          // reads the React prop (may be undefined if not passed).
+          const latestDayForSummary = lastOpenedDay || HEYS.Day?.getDay?.() || getLatestDay();
+          const srcMeals = latestDayForSummary.meals || [];
+          const updatedMealsForSummary = srcMeals.map((m, i) =>
+            i === mealIndex
+              ? { ...m, items: [...(m.items || []), newItem] }
+              : m
+          );
+          // Safety: if the meal at mealIndex didn't exist in the snapshot
+          // (race between React state commit and dayRef.current update),
+          // create the meal entry so the summary can display the product.
+          if (mealIndex >= srcMeals.length) {
+            while (updatedMealsForSummary.length < mealIndex) {
+              updatedMealsForSummary.push({ items: [] });
+            }
+            updatedMealsForSummary[mealIndex] = { items: [newItem] };
+          }
+          const updatedDayForSummary = { ...latestDayForSummary, meals: updatedMealsForSummary, updatedAt: newUpdatedAt };
+
+          // Close StepModal explicitly before showing ConfirmModal to avoid
+          // a visual overlap where the user sees two modals stacked.
+          if (HEYS.StepModal?.hide) {
+            HEYS.StepModal.hide({ scrollToDiary: false });
+          }
+
           requestAnimationFrame(() => {
             setTimeout(() => {
               HEYS.dayAddProductSummary.show({
-                day: HEYS.Day?.getDay?.() || day || {},
+                day: updatedDayForSummary,
                 mealIndex,
                 pIndex: HEYS.dayUtils?.buildProductIndex?.() || HEYS.products?.buildIndex?.() || {},
                 getProductFromItem,

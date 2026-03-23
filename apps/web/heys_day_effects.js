@@ -115,29 +115,34 @@
                     // Данные сохранятся при следующем изменении (добавление еды, воды и т.д.)
                     const newDay = ensureDay(cleanedDay, profNow);
                     // 🔒 Оптимизация: не вызываем setDay если данные идентичны (предотвращает мерцание)
-                    setDay(prevDay => {
-                        // Сравниваем по КОНТЕНТУ, а не по метаданным (updatedAt может отличаться между локальной и облачной версией)
-                        if (prevDay && prevDay.date === newDay.date) {
-                            const prevMealsJson = JSON.stringify(prevDay.meals || []);
-                            const newMealsJson = JSON.stringify(newDay.meals || []);
-                            const prevTrainingsJson = JSON.stringify(prevDay.trainings || []);
-                            const newTrainingsJson = JSON.stringify(newDay.trainings || []);
-                            const isSameContent =
-                                prevMealsJson === newMealsJson &&
-                                prevTrainingsJson === newTrainingsJson &&
-                                prevDay.waterMl === newDay.waterMl &&
-                                prevDay.steps === newDay.steps &&
-                                prevDay.weightMorning === newDay.weightMorning &&
-                                !!prevDay.isFastingDay === !!newDay.isFastingDay &&
-                                !!prevDay.isIncomplete === !!newDay.isIncomplete &&
-                                prevDay.sleepStart === newDay.sleepStart &&
-                                prevDay.sleepEnd === newDay.sleepEnd;
-                            if (isSameContent) {
-                                // Данные не изменились — оставляем предыдущий объект (без ре-рендера)
-                                return prevDay;
+                    // 🚀 PERF: startTransition defers the heavy content re-render
+                    // so the date header updates instantly on click
+                    React.startTransition(() => {
+                        setDay(prevDay => {
+                            // Сравниваем по КОНТЕНТУ, а не по метаданным (updatedAt может отличаться между локальной и облачной версией)
+                            if (prevDay && prevDay.date === newDay.date) {
+                                const prevMealsJson = JSON.stringify(prevDay.meals || []);
+                                const newMealsJson = JSON.stringify(newDay.meals || []);
+                                const prevTrainingsJson = JSON.stringify(prevDay.trainings || []);
+                                const newTrainingsJson = JSON.stringify(newDay.trainings || []);
+                                const isSameContent =
+                                    prevMealsJson === newMealsJson &&
+                                    prevTrainingsJson === newTrainingsJson &&
+                                    prevDay.waterMl === newDay.waterMl &&
+                                    prevDay.steps === newDay.steps &&
+                                    prevDay.weightMorning === newDay.weightMorning &&
+                                    !!prevDay.isFastingDay === !!newDay.isFastingDay &&
+                                    !!prevDay.isIncomplete === !!newDay.isIncomplete &&
+                                    prevDay.sleepStart === newDay.sleepStart &&
+                                    prevDay.sleepEnd === newDay.sleepEnd;
+                                if (isSameContent) {
+                                    // Данные не изменились — оставляем предыдущий объект (без ре-рендера)
+                                    return prevDay;
+                                }
                             }
-                        }
-                        return newDay;
+                            return newDay;
+                        });
+                        setIsHydrated(true);
                     });
                 } else {
                     // create a clean default day for the selected date (don't inherit previous trainings)
@@ -156,12 +161,11 @@
                         stressAvg: '',
                         dayComment: ''
                     }, profNow);
-                    setDay(defaultDay);
+                    React.startTransition(() => {
+                        setDay(defaultDay);
+                        setIsHydrated(true);
+                    });
                 }
-
-                // ВАЖНО: данные загружены, теперь можно сохранять
-                // Продукты приходят через props.products, не нужно обновлять локально
-                setIsHydrated(true);
             };
 
             if (clientId && cloud && typeof cloud.bootstrapClientSync === 'function') {

@@ -129,8 +129,8 @@
       const onClickFn = action.onClick;
       const onActionFn = modal.onAction;
       const actionValue = action.value;
-      setModal(null);
       setTimeout(() => {
+        setModal(null);
         onClickFn?.();
         onActionFn?.(actionValue, action);
       }, 0);

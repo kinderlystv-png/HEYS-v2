@@ -4,6 +4,13 @@
 
   const MOD = {};
 
+  function normalizeMetricPopupPayload(payload) {
+    if (!payload || typeof payload !== 'object') return payload;
+    if (payload.type) return payload;
+    const nestedType = payload.data && payload.data.type;
+    return nestedType ? { ...payload, type: nestedType } : payload;
+  }
+
   MOD.usePopupsState = function usePopupsState({ React }) {
     const { useState, useCallback, useEffect } = React;
 
@@ -44,9 +51,12 @@
       setTimeout(() => {
         const st = React.startTransition || (fn => fn());
         st(() => {
+          const normalizedMetricPayload = type === 'metric'
+            ? normalizeMetricPopupPayload(payload)
+            : payload;
           setSparklinePopup(type === 'sparkline' ? payload : null);
           setMacroBadgePopup(type === 'macro' ? payload : null);
-          setMetricPopup(type === 'metric' ? payload : null);
+          setMetricPopup(type === 'metric' ? normalizedMetricPayload : null);
           setTdeePopup(type === 'tdee' ? payload : null);
           setMealQualityPopup(type === 'mealQuality' ? payload : null);
           setWeekNormPopup(type === 'weekNorm' ? payload : null);

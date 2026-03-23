@@ -18652,28 +18652,30 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                                                                     animation: `fadeSlideIn 0.3s ease ${idx * 0.05}s both`
                                                                 },
                                                                 onClick: () => {
-                                                                    console.info('[HEYS.gate] 👤 Выбор клиента', { clientId: c.id, clientName: c.name });
+                                                                    setTimeout(() => {
+                                                                        console.info('[HEYS.gate] 👤 Выбор клиента', { clientId: c.id, clientName: c.name });
 
-                                                                    // ✅ FIX: Сразу закрываем gate — не ждём syncClient (10-15сек)
-                                                                    // Компоненты покажут скелетоны, heysSyncCompleted перерисует после sync.
-                                                                    // ВАЖНО: сначала обновляем глобальный currentClientId/storage,
-                                                                    // иначе ранние слушатели heys:client-changed читают старого клиента.
-                                                                    writeGlobalValue('heys_last_client_id', c.id);
-                                                                    writeGlobalValue('heys_client_current', c.id);
-                                                                    window.HEYS = window.HEYS || {};
-                                                                    window.HEYS.currentClientId = c.id;
-                                                                    setClientId(c.id);
-                                                                    console.info('[HEYS.gate] ✅ Клиент переключён', { clientId: c.id });
-                                                                    window.dispatchEvent(new CustomEvent('heys:client-changed', { detail: { clientId: c.id } }));
+                                                                        // ✅ FIX: Сразу закрываем gate — не ждём syncClient (10-15сек)
+                                                                        // Компоненты покажут скелетоны, heysSyncCompleted перерисует после sync.
+                                                                        // ВАЖНО: сначала обновляем глобальный currentClientId/storage,
+                                                                        // иначе ранние слушатели heys:client-changed читают старого клиента.
+                                                                        writeGlobalValue('heys_last_client_id', c.id);
+                                                                        writeGlobalValue('heys_client_current', c.id);
+                                                                        window.HEYS = window.HEYS || {};
+                                                                        window.HEYS.currentClientId = c.id;
+                                                                        setClientId(c.id);
+                                                                        console.info('[HEYS.gate] ✅ Клиент переключён', { clientId: c.id });
+                                                                        window.dispatchEvent(new CustomEvent('heys:client-changed', { detail: { clientId: c.id } }));
 
-                                                                    // switchClient в фоне — загружает данные и диспатчит heysSyncCompleted
-                                                                    if (HEYS.cloud && HEYS.cloud.switchClient) {
-                                                                        HEYS.cloud.switchClient(c.id).catch(err => {
-                                                                            console.error('[HEYS.gate] ❌ Ошибка синхронизации клиента:', err);
-                                                                        });
-                                                                    } else {
-                                                                        U.lsSet('heys_client_current', c.id);
-                                                                    }
+                                                                        // switchClient в фоне — загружает данные и диспатчит heysSyncCompleted
+                                                                        if (HEYS.cloud && HEYS.cloud.switchClient) {
+                                                                            HEYS.cloud.switchClient(c.id).catch(err => {
+                                                                                console.error('[HEYS.gate] ❌ Ошибка синхронизации клиента:', err);
+                                                                            });
+                                                                        } else {
+                                                                            U.lsSet('heys_client_current', c.id);
+                                                                        }
+                                                                    }, 0);
                                                                 }
                                                             },
                                                             // Аватар с цветом по букве

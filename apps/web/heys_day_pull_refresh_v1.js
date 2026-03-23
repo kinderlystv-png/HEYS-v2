@@ -46,7 +46,9 @@
       return !!target.closest(
         'input, textarea, select, button, a, label, [role="button"], [contenteditable="true"], '
         + '.swipeable-container, table, .tab-switch-group, .advice-list-overlay, .macro-toast, '
-        + '.no-swipe-zone, [type="range"], [data-no-pull-refresh]'
+        + '.no-swipe-zone, [type="range"], [data-no-pull-refresh], '
+        // 🚀 PERF R49: ignore tab bar touches — pull-refresh setState triggers re-render cascade (95ms)
+        + '.tabs'
       );
     };
 

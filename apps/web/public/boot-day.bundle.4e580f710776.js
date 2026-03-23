@@ -1967,12 +1967,12 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
         Math.abs(curr.x - x) < Math.abs(prev.x - x) ? curr : prev
       );
 
-      // Haptic при смене точки
-      if (sliderPrevPointRef && sliderPrevPointRef.current !== nearest) {
+      // 🚀 PERF R36: skip redundant setState when pointer stays on same point
+      if (sliderPrevPointRef && sliderPrevPointRef.current === nearest) return;
+      if (sliderPrevPointRef) {
         sliderPrevPointRef.current = nearest;
         safeHaptic('selection');
       }
-
       safeSetSliderPoint(nearest);
     };
 
@@ -1984,9 +1984,10 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
     };
 
     // === Brush selection handlers ===
+    // 🚀 PERF R35: brush only with Shift key — previously every touch tap
+    // triggered setBrushing + setBrushRange (3 setState per tap, 80-193ms processing)
     const handleBrushStart = (e) => {
-      // Только при долгом нажатии или с Shift
-      if (!e.shiftKey && e.pointerType !== 'touch') return;
+      if (!e.shiftKey) return;
 
       e.preventDefault();
       const svg = e.currentTarget;
@@ -2004,7 +2005,9 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
     };
 
     const handleBrushEnd = () => {
-      if (brushing && brushRange && brushRange.start !== brushRange.end) {
+      // 🚀 PERF R35: skip setState if brush wasn't active
+      if (!brushing) return;
+      if (brushRange && brushRange.start !== brushRange.end) {
         safeHaptic('medium');
         // Brush завершён — можно показать статистику по диапазону
       }
@@ -7580,7 +7583,9 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
       return !!target.closest(
         'input, textarea, select, button, a, label, [role="button"], [contenteditable="true"], '
         + '.swipeable-container, table, .tab-switch-group, .advice-list-overlay, .macro-toast, '
-        + '.no-swipe-zone, [type="range"], [data-no-pull-refresh]'
+        + '.no-swipe-zone, [type="range"], [data-no-pull-refresh], '
+        // 🚀 PERF R49: ignore tab bar touches — pull-refresh setState triggers re-render cascade (95ms)
+        + '.tabs'
       );
     };
 
@@ -8300,7 +8305,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
       // Focus overlay (blur фон когда раскрыто) — ВНЕ карточки!
       insulinExpanded && React.createElement('div', {
         className: 'insulin-focus-overlay',
-        onClick: () => setInsulinExpanded(false)
+        onClick: () => setTimeout(() => setInsulinExpanded(false), 0)
       }),
       // Сама карточка с мягким shake при приближении липолиза
       React.createElement('div', {
@@ -8312,7 +8317,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
           position: insulinExpanded ? 'relative' : undefined,
           zIndex: insulinExpanded ? 100 : undefined
         },
-        onClick: () => setInsulinExpanded(!insulinExpanded)
+        onClick: () => setTimeout(() => setInsulinExpanded(!insulinExpanded), 0)
       },
 
         // Анимированный фон волны
@@ -8795,6 +8800,13 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
 
   const MOD = {};
 
+  function normalizeMetricPopupPayload(payload) {
+    if (!payload || typeof payload !== 'object') return payload;
+    if (payload.type) return payload;
+    const nestedType = payload.data && payload.data.type;
+    return nestedType ? { ...payload, type: nestedType } : payload;
+  }
+
   MOD.usePopupsState = function usePopupsState({ React }) {
     const { useState, useCallback, useEffect } = React;
 
@@ -8835,9 +8847,12 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
       setTimeout(() => {
         const st = React.startTransition || (fn => fn());
         st(() => {
+          const normalizedMetricPayload = type === 'metric'
+            ? normalizeMetricPopupPayload(payload)
+            : payload;
           setSparklinePopup(type === 'sparkline' ? payload : null);
           setMacroBadgePopup(type === 'macro' ? payload : null);
-          setMetricPopup(type === 'metric' ? payload : null);
+          setMetricPopup(type === 'metric' ? normalizedMetricPayload : null);
           setTdeePopup(type === 'tdee' ? payload : null);
           setMealQualityPopup(type === 'mealQuality' ? payload : null);
           setWeekNormPopup(type === 'weekNorm' ? payload : null);
@@ -12792,9 +12807,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         const handleSelect = (d) => {
             const nextDate = d;
 
-            try {
-                if (HEYS?.Day?.requestFlush) HEYS.Day.requestFlush({ force: true });
-            } catch (e) { }
+            // requestFlush removed: effects.js already flushes on date change
 
             const applyDate = () => {
                 setDate(nextDate);
@@ -17881,10 +17894,32 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                                             lsSet('heys_grams_history', history);
                                         } catch (e) { }
                                         if (multiProductMode && HEYS.dayAddProductSummary?.show) {
+                                            // Build updated day inline: setDay is async and
+                                            // HEYS.Day.getDay() (dayRef.current) won't reflect
+                                            // the new item yet at this point.
+                                            const baseDayForSummary = dayOverride || HEYS.Day?.getDay?.() || day || {};
+                                            const srcMeals = baseDayForSummary.meals || [];
+                                            const mealsWithNewItem = srcMeals.map((m, i) =>
+                                                i === addMealIndex
+                                                    ? { ...m, items: [...(m.items || []), newItem] }
+                                                    : m
+                                            );
+                                            if (addMealIndex >= srcMeals.length) {
+                                                while (mealsWithNewItem.length < addMealIndex) {
+                                                    mealsWithNewItem.push({ items: [] });
+                                                }
+                                                mealsWithNewItem[addMealIndex] = { items: [newItem] };
+                                            }
+                                            const updatedDayForSummary = { ...baseDayForSummary, meals: mealsWithNewItem, updatedAt: newUpdatedAt };
+
+                                            if (HEYS.StepModal?.hide) {
+                                                HEYS.StepModal.hide({ scrollToDiary: false });
+                                            }
+
                                             requestAnimationFrame(() => {
                                                 setTimeout(() => {
                                                     HEYS.dayAddProductSummary.show({
-                                                        day: HEYS.Day?.getDay?.() || day || {},
+                                                        day: updatedDayForSummary,
                                                         mealIndex: addMealIndex,
                                                         pIndex,
                                                         getProductFromItem,

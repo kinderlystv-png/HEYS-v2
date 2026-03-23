@@ -3109,10 +3109,32 @@
                                             lsSet('heys_grams_history', history);
                                         } catch (e) { }
                                         if (multiProductMode && HEYS.dayAddProductSummary?.show) {
+                                            // Build updated day inline: setDay is async and
+                                            // HEYS.Day.getDay() (dayRef.current) won't reflect
+                                            // the new item yet at this point.
+                                            const baseDayForSummary = dayOverride || HEYS.Day?.getDay?.() || day || {};
+                                            const srcMeals = baseDayForSummary.meals || [];
+                                            const mealsWithNewItem = srcMeals.map((m, i) =>
+                                                i === addMealIndex
+                                                    ? { ...m, items: [...(m.items || []), newItem] }
+                                                    : m
+                                            );
+                                            if (addMealIndex >= srcMeals.length) {
+                                                while (mealsWithNewItem.length < addMealIndex) {
+                                                    mealsWithNewItem.push({ items: [] });
+                                                }
+                                                mealsWithNewItem[addMealIndex] = { items: [newItem] };
+                                            }
+                                            const updatedDayForSummary = { ...baseDayForSummary, meals: mealsWithNewItem, updatedAt: newUpdatedAt };
+
+                                            if (HEYS.StepModal?.hide) {
+                                                HEYS.StepModal.hide({ scrollToDiary: false });
+                                            }
+
                                             requestAnimationFrame(() => {
                                                 setTimeout(() => {
                                                     HEYS.dayAddProductSummary.show({
-                                                        day: HEYS.Day?.getDay?.() || day || {},
+                                                        day: updatedDayForSummary,
                                                         mealIndex: addMealIndex,
                                                         pIndex,
                                                         getProductFromItem,

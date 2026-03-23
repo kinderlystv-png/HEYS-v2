@@ -2,16 +2,17 @@
 // Extracted from heys_day_v12.js (Phase 2.1)
 // Contains: PopupWithBackdrop, createSwipeHandlers, PopupCloseButton
 
-;(function(global){
+; (function (global) {
   const HEYS = global.HEYS = global.HEYS || {};
   const React = global.React;
-  
+
   // Import haptic from dayUtils (with fallback)
   const U = HEYS.dayUtils || {};
-  const haptic = U.haptic || (() => {});
-  
+  const haptic = U.haptic || (() => { });
+
   // === POPUP WITH BACKDROP — переиспользуемый компонент ===
   // Универсальная обёртка для попапов с backdrop'ом для закрытия по клику вне попапа
+  // 🚀 PERF R31: defer onClose to avoid blocking main thread with popup teardown re-render
   const PopupWithBackdrop = ({ children, onClose, backdropStyle = {}, zIndex = 9998 }) => {
     return React.createElement('div', {
       className: 'popup-backdrop-invisible',
@@ -24,12 +25,12 @@
       },
       onClick: (e) => {
         if (e.target === e.currentTarget) {
-          onClose();
+          setTimeout(() => onClose(), 0);
         }
       }
     }, children);
   };
-  
+
   // === SWIPE TO DISMISS — функция для swipe-жестов на попапах ===
   // Возвращает { onTouchStart, onTouchEnd } для передачи в props попапа
   // НЕ хук! Можно вызывать условно внутри попапов
@@ -46,7 +47,7 @@
       }
     };
   };
-  
+
   // === POPUP CLOSE BUTTON — универсальная кнопка закрытия ===
   // className: опционально для кастомных стилей (sparkline-popup-close, metric-popup-close, etc.)
   const PopupCloseButton = ({ onClose, className = 'popup-close-btn', style = {} }) => {
@@ -60,12 +61,12 @@
       style
     }, '✕');
   };
-  
+
   // Export to HEYS namespace
   HEYS.dayPopups = {
     PopupWithBackdrop,
     createSwipeHandlers,
     PopupCloseButton
   };
-  
+
 })(window);

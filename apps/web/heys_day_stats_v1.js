@@ -427,28 +427,30 @@
           onClick: (e) => {
             e.stopPropagation();
             const rect = e.currentTarget.getBoundingClientRect();
-            openExclusivePopup('tdee', {
-              x: rect.left + rect.width / 2,
-              y: rect.bottom,
-              data: {
-                bmr,
-                stepsK,
-                householdK,
-                train1k,
-                train2k,
-                train3k,
-                tefKcal,
-                tdee,
-                weight,
-                steps: day.steps || 0,
-                householdMin: day.householdMin || 0,
-                trainings: day.trainings || [],
-                // 🆕 v3.20.0: Extended analytics for TDEE popup
-                ndteData: caloricDebt?.ndteData,
-                bmiContext: caloricDebt?.bmiContext
-              }
-            });
-            haptic('light');
+            setTimeout(() => {
+              openExclusivePopup('tdee', {
+                x: rect.left + rect.width / 2,
+                y: rect.bottom,
+                data: {
+                  bmr,
+                  stepsK,
+                  householdK,
+                  train1k,
+                  train2k,
+                  train3k,
+                  tefKcal,
+                  tdee,
+                  weight,
+                  steps: day.steps || 0,
+                  householdMin: day.householdMin || 0,
+                  trainings: day.trainings || [],
+                  // 🆕 v3.20.0: Extended analytics for TDEE popup
+                  ndteData: caloricDebt?.ndteData,
+                  bmiContext: caloricDebt?.bmiContext
+                }
+              });
+              haptic('light');
+            }, 0);
           }
         },
           React.createElement('div', { className: 'metrics-icon' }, '⚡'),
@@ -462,20 +464,22 @@
           onClick: (e) => {
             e.stopPropagation();
             const rect = e.currentTarget.getBoundingClientRect();
-            openExclusivePopup('goal', {
-              x: rect.left + rect.width / 2,
-              y: rect.bottom,
-              data: {
-                baseExpenditure,
-                deficitPct: dayTargetDef,
-                baseOptimum: optimum,
-                dailyBoost: caloricDebt?.dailyBoost || 0,
-                displayOptimum: displayHeroOptimum,
-                isRefeedDay: day.isRefeedDay,
-                refeedBoost: caloricDebt?.refeedBoost || 0
-              }
-            });
-            haptic('light');
+            setTimeout(() => {
+              openExclusivePopup('goal', {
+                x: rect.left + rect.width / 2,
+                y: rect.bottom,
+                data: {
+                  baseExpenditure,
+                  deficitPct: dayTargetDef,
+                  baseOptimum: optimum,
+                  dailyBoost: caloricDebt?.dailyBoost || 0,
+                  displayOptimum: displayHeroOptimum,
+                  isRefeedDay: day.isRefeedDay,
+                  refeedBoost: caloricDebt?.refeedBoost || 0
+                }
+              });
+              haptic('light');
+            }, 0);
           },
           title: 'Нажми чтобы узнать как считается цель'
         },
@@ -497,19 +501,21 @@
           onClick: (e) => {
             e.stopPropagation();
             const rect = e.currentTarget.getBoundingClientRect();
-            openExclusivePopup('metric', {
-              type: 'kcal',
-              x: rect.left + rect.width / 2,
-              y: rect.top,
-              data: {
-                eaten: displayHeroEaten,
-                goal: displayHeroOptimum,
-                remaining: displayHeroRemaining,
-                ratio: currentRatio,
-                deficitPct: dayTargetDef
-              }
-            });
-            haptic('light');
+            setTimeout(() => {
+              openExclusivePopup('metric', {
+                type: 'kcal',
+                x: rect.left + rect.width / 2,
+                y: rect.top,
+                data: {
+                  eaten: displayHeroEaten,
+                  goal: displayHeroOptimum,
+                  remaining: displayHeroRemaining,
+                  ratio: currentRatio,
+                  deficitPct: dayTargetDef
+                }
+              });
+              haptic('light');
+            }, 0);
           }
         },
           React.createElement('div', { className: 'metrics-icon' }, '🍽️'),
@@ -969,7 +975,7 @@
                 onClick: (e) => {
                   e.stopPropagation();
                   const rect = e.target.getBoundingClientRect();
-                  setBalanceDayPopup({ day: v, x: rect.left + rect.width / 2, y: rect.top });
+                  setTimeout(() => { setBalanceDayPopup({ day: v, x: rect.left + rect.width / 2, y: rect.top }); }, 0);
                 }
               }, v.bar))
             ),

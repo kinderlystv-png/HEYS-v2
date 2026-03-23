@@ -34197,15 +34197,125 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                       breakdown: insights.healthScore.breakdown
                     },
                     onClick: () => {
-                      // 🆕 v3.5.0: Early Warning System Check при клике на Health Score
-                      console.group('🚨 [HEYS Early Warning System] TREND SCORE CLICK');
-                      try {
-                        const earlyWarning = HEYS.InsightsPI?.earlyWarning;
-                        if (earlyWarning && typeof earlyWarning.detect === 'function') {
-                          const U = window.HEYS?.dayUtils || window.HEYS?.utils;
+                      // 🚀 PERF R37: defer heavy EWS/thresholds diagnostic (41ms → ~0ms click)
+                      setTimeout(() => {
+                        // 🆕 v3.5.0: Early Warning System Check при клике на Health Score
+                        console.group('🚨 [HEYS Early Warning System] TREND SCORE CLICK');
+                        try {
+                          const earlyWarning = HEYS.InsightsPI?.earlyWarning;
+                          if (earlyWarning && typeof earlyWarning.detect === 'function') {
+                            const U = window.HEYS?.dayUtils || window.HEYS?.utils;
+                            if (!U || !U.fmtDate || !U.lsGet) {
+                              console.error('❌ HEYS.dayUtils not available for Early Warning');
+                              console.groupEnd();
+                              return;
+                            }
+
+                            // Функция для получения даты со смещением
+                            const dateOffsetStr = (offset) => {
+                              const d = new Date();
+                              d.setDate(d.getDate() + offset);
+                              return U.fmtDate(d);
+                            };
+
+                            // Собираем последние 30 дней через правильный lsGet (учитывает namespace)
+                            const daysBack = 30;
+                            const days = [];
+                            for (let i = 0; i < daysBack; i++) {
+                              const date = dateOffsetStr(-i);
+                              const dayKey = `heys_dayv2_${date}`;
+                              const dayData = U.lsGet(dayKey);
+                              if (dayData) days.push({ ...dayData, date });
+                            }
+
+                            // Используем effectiveData для profile и pIndex (как в остальном коде)
+                            const profile = effectiveData.profile;
+                            const pIndex = effectiveData.pIndex;
+
+                            console.log('🔍 Running Early Warning detection:', {
+                              daysAvailable: days.length,
+                              datesRange: days.length > 0 ? `${days[days.length - 1].date} → ${days[0].date}` : 'none',
+                              hasProfile: !!profile,
+                              profileId: profile?.id,
+                              hasPIndex: !!pIndex,
+                              pIndexSize: pIndex?.byId?.size || 0
+                            });
+
+                            // Get current patterns for warning detection
+                            let currentPatterns = null;
+                            let previousPatterns = null;
+
+                            if (days.length >= 7 && HEYS.PredictiveInsights?.analyze) {
+                              try {
+                                // Get insights for last 7 days (current period)
+                                const currentInsights = HEYS.PredictiveInsights.analyze({
+                                  daysBack: 7,
+                                  profile,
+                                  pIndex,
+                                  lsGet: U.lsGet
+                                });
+                                currentPatterns = currentInsights?.patterns || null;
+
+                                // For health score decline detection, we'd need patterns from 2 different periods
+                                // For now, focus on current low pattern scores (more actionable)
+                                // TODO: Implement time-based pattern comparison when we have historical pattern data
+
+                                console.log('ews / dashboard 📊 pattern data collected:', {
+                                  currentPatternsCount: currentPatterns ? currentPatterns.length : 0,
+                                  period: '7 days',
+                                  hasHealthScore: !!currentInsights?.healthScore
+                                });
+                              } catch (e) {
+                                console.warn('ews / dashboard ⚠️ failed to get pattern data:', e.message);
+                              }
+                            }
+
+                            const result = earlyWarning.detect(days, profile, pIndex, {
+                              currentPatterns,
+                              previousPatterns
+                            });
+
+                            console.log('✅ Early Warning result:', {
+                              available: result.available,
+                              warningCount: result.warnings?.length || 0,
+                              highSeverity: result.warnings?.filter(w => w.severity === 'high').length || 0,
+                              mediumSeverity: result.warnings?.filter(w => w.severity === 'medium').length || 0,
+                              lowSeverity: result.warnings?.filter(w => w.severity === 'low').length || 0,
+                              warnings: result.warnings
+                            });
+
+                            if (result.warnings && result.warnings.length > 0) {
+                              console.log('⚠️ Detected warnings:');
+                              result.warnings.forEach((w, i) => {
+                                console.log(`  ${i + 1}. [${w.severity.toUpperCase()}] ${w.message}`);
+                                console.log(`     ${w.detail}`);
+                                if (w.action) console.log(`     → Action: ${w.action}`);
+                              });
+                            } else {
+                              console.log('✅ No warnings detected - all metrics healthy!');
+                            }
+                          } else {
+                            console.warn('⚠️ Early Warning module not loaded or not available');
+                          }
+                        } catch (err) {
+                          console.error('❌ Early Warning detection error:', err);
+                        }
+                        console.groupEnd();
+
+                        // 🔬 Автоматическая диагностика перед открытием модала
+                        console.group('🩺 [HEYS Adaptive Thresholds] AUTO DIAGNOSTIC');
+
+                        try {
+                          // Проверка доступности HEYS.dayUtils
+                          const U = HEYS.dayUtils || window.HEYS?.dayUtils;
                           if (!U || !U.fmtDate || !U.lsGet) {
-                            console.error('❌ HEYS.dayUtils not available for Early Warning');
+                            console.error('❌ HEYS.dayUtils or required methods not available:', {
+                              hasU: !!U,
+                              hasFmtDate: !!U?.fmtDate,
+                              hasLsGet: !!U?.lsGet
+                            });
                             console.groupEnd();
+                            setShowPatternDebug(true);
                             return;
                           }
 
@@ -34216,8 +34326,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                             return U.fmtDate(d);
                           };
 
-                          // Собираем последние 30 дней через правильный lsGet (учитывает namespace)
-                          const daysBack = 30;
+                          // 1. Проверка данных дней
+                          const daysBack = 7;
                           const days = [];
                           for (let i = 0; i < daysBack; i++) {
                             const date = dateOffsetStr(-i);
@@ -34225,188 +34335,81 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                             const dayData = U.lsGet(dayKey);
                             if (dayData) days.push({ ...dayData, date });
                           }
+                          console.log('📅 Days collected:', {
+                            requested: daysBack,
+                            found: days.length,
+                            dates: days.map(d => d.date),
+                            firstDay: days[0]
+                          });
 
-                          // Используем effectiveData для profile и pIndex (как в остальном коде)
+                          // 2. Проверка profile (используем effectiveData, а не HEYS.c)
                           const profile = effectiveData.profile;
+                          const clientId = HEYS.cloud?.getPinAuthClient?.();
+                          console.log('👤 Profile:', {
+                            exists: !!profile,
+                            id: profile?.id,
+                            clientId: clientId,
+                            weight: profile?.weight,
+                            goal: profile?.goal,
+                            allKeys: profile ? Object.keys(profile) : []
+                          });
+
+                          // 3. Проверка pIndex (используем effectiveData)
                           const pIndex = effectiveData.pIndex;
-
-                          console.log('🔍 Running Early Warning detection:', {
-                            daysAvailable: days.length,
-                            datesRange: days.length > 0 ? `${days[days.length - 1].date} → ${days[0].date}` : 'none',
-                            hasProfile: !!profile,
-                            profileId: profile?.id,
-                            hasPIndex: !!pIndex,
-                            pIndexSize: pIndex?.byId?.size || 0
+                          console.log('🗂️ Product Index:', {
+                            exists: !!pIndex,
+                            byIdSize: pIndex?.byId?.size || 0,
+                            byNameSize: pIndex?.byName?.size || 0,
+                            sampleIds: pIndex?.byId ? Array.from(pIndex.byId.keys()).slice(0, 3) : []
                           });
 
-                          // Get current patterns for warning detection
-                          let currentPatterns = null;
-                          let previousPatterns = null;
-
-                          if (days.length >= 7 && HEYS.PredictiveInsights?.analyze) {
-                            try {
-                              // Get insights for last 7 days (current period)
-                              const currentInsights = HEYS.PredictiveInsights.analyze({
-                                daysBack: 7,
-                                profile,
-                                pIndex,
-                                lsGet: U.lsGet
-                              });
-                              currentPatterns = currentInsights?.patterns || null;
-
-                              // For health score decline detection, we'd need patterns from 2 different periods
-                              // For now, focus on current low pattern scores (more actionable)
-                              // TODO: Implement time-based pattern comparison when we have historical pattern data
-
-                              console.log('ews / dashboard 📊 pattern data collected:', {
-                                currentPatternsCount: currentPatterns ? currentPatterns.length : 0,
-                                period: '7 days',
-                                hasHealthScore: !!currentInsights?.healthScore
-                              });
-                            } catch (e) {
-                              console.warn('ews / dashboard ⚠️ failed to get pattern data:', e.message);
-                            }
-                          }
-
-                          const result = earlyWarning.detect(days, profile, pIndex, {
-                            currentPatterns,
-                            previousPatterns
+                          // 4. Проверка модуля thresholds
+                          const hasThresholdsModule = typeof HEYS.InsightsPI?.thresholds?.get === 'function';
+                          console.log('🧩 Thresholds Module:', {
+                            loaded: hasThresholdsModule,
+                            methods: HEYS.InsightsPI?.thresholds ? Object.keys(HEYS.InsightsPI.thresholds) : []
                           });
 
-                          console.log('✅ Early Warning result:', {
-                            available: result.available,
-                            warningCount: result.warnings?.length || 0,
-                            highSeverity: result.warnings?.filter(w => w.severity === 'high').length || 0,
-                            mediumSeverity: result.warnings?.filter(w => w.severity === 'medium').length || 0,
-                            lowSeverity: result.warnings?.filter(w => w.severity === 'low').length || 0,
-                            warnings: result.warnings
-                          });
-
-                          if (result.warnings && result.warnings.length > 0) {
-                            console.log('⚠️ Detected warnings:');
-                            result.warnings.forEach((w, i) => {
-                              console.log(`  ${i + 1}. [${w.severity.toUpperCase()}] ${w.message}`);
-                              console.log(`     ${w.detail}`);
-                              if (w.action) console.log(`     → Action: ${w.action}`);
+                          // 5. Автоматический вызов get (cascade strategy)
+                          if (hasThresholdsModule) {
+                            console.log('🔬 Calling thresholds.get() with cascade strategy...');
+                            const result = HEYS.InsightsPI.thresholds.get(days, profile, pIndex);
+                            console.log('✅ Thresholds result:', {
+                              confidence: result.confidence,
+                              daysUsed: result.daysUsed,
+                              requestedDays: days.length,
+                              thresholdsCount: Object.keys(result.thresholds || {}).length,
+                              thresholds: result.thresholds,
+                              meta: result.meta,
+                              tier: result.meta?.partial ? 'PARTIAL (7-13d)' :
+                                result.meta?.default ? 'DEFAULT (<7d)' :
+                                  result.confidence >= 1.0 ? 'FULL (14+d)' : 'UNKNOWN',
+                              fromCache: result.meta?.dateRange ? '♻️ (possibly from cache)' : '✨ (freshly computed)'
                             });
                           } else {
-                            console.log('✅ No warnings detected - all metrics healthy!');
+                            console.warn('⚠️ Thresholds module not loaded');
                           }
-                        } else {
-                          console.warn('⚠️ Early Warning module not loaded or not available');
-                        }
-                      } catch (err) {
-                        console.error('❌ Early Warning detection error:', err);
-                      }
-                      console.groupEnd();
 
-                      // 🔬 Автоматическая диагностика перед открытием модала
-                      console.group('🩺 [HEYS Adaptive Thresholds] AUTO DIAGNOSTIC');
-
-                      try {
-                        // Проверка доступности HEYS.dayUtils
-                        const U = HEYS.dayUtils || window.HEYS?.dayUtils;
-                        if (!U || !U.fmtDate || !U.lsGet) {
-                          console.error('❌ HEYS.dayUtils or required methods not available:', {
-                            hasU: !!U,
-                            hasFmtDate: !!U?.fmtDate,
-                            hasLsGet: !!U?.lsGet
+                          // 6. Проверка что Pattern Debugger получит
+                          console.log('🪟 Pattern Debugger will receive:', {
+                            profile: !!profile,
+                            profileId: profile?.id,
+                            clientId: clientId,
+                            lsGet: typeof U?.lsGet,
+                            pIndex: !!pIndex,
+                            dayUtils: !!HEYS.dayUtils,
+                            fmtDate: typeof HEYS.dayUtils?.fmtDate
                           });
-                          console.groupEnd();
-                          setShowPatternDebug(true);
-                          return;
+
+                        } catch (err) {
+                          console.error('❌ Diagnostic error:', err);
                         }
 
-                        // Функция для получения даты со смещением
-                        const dateOffsetStr = (offset) => {
-                          const d = new Date();
-                          d.setDate(d.getDate() + offset);
-                          return U.fmtDate(d);
-                        };
+                        console.groupEnd();
 
-                        // 1. Проверка данных дней
-                        const daysBack = 7;
-                        const days = [];
-                        for (let i = 0; i < daysBack; i++) {
-                          const date = dateOffsetStr(-i);
-                          const dayKey = `heys_dayv2_${date}`;
-                          const dayData = U.lsGet(dayKey);
-                          if (dayData) days.push({ ...dayData, date });
-                        }
-                        console.log('📅 Days collected:', {
-                          requested: daysBack,
-                          found: days.length,
-                          dates: days.map(d => d.date),
-                          firstDay: days[0]
-                        });
-
-                        // 2. Проверка profile (используем effectiveData, а не HEYS.c)
-                        const profile = effectiveData.profile;
-                        const clientId = HEYS.cloud?.getPinAuthClient?.();
-                        console.log('👤 Profile:', {
-                          exists: !!profile,
-                          id: profile?.id,
-                          clientId: clientId,
-                          weight: profile?.weight,
-                          goal: profile?.goal,
-                          allKeys: profile ? Object.keys(profile) : []
-                        });
-
-                        // 3. Проверка pIndex (используем effectiveData)
-                        const pIndex = effectiveData.pIndex;
-                        console.log('🗂️ Product Index:', {
-                          exists: !!pIndex,
-                          byIdSize: pIndex?.byId?.size || 0,
-                          byNameSize: pIndex?.byName?.size || 0,
-                          sampleIds: pIndex?.byId ? Array.from(pIndex.byId.keys()).slice(0, 3) : []
-                        });
-
-                        // 4. Проверка модуля thresholds
-                        const hasThresholdsModule = typeof HEYS.InsightsPI?.thresholds?.get === 'function';
-                        console.log('🧩 Thresholds Module:', {
-                          loaded: hasThresholdsModule,
-                          methods: HEYS.InsightsPI?.thresholds ? Object.keys(HEYS.InsightsPI.thresholds) : []
-                        });
-
-                        // 5. Автоматический вызов get (cascade strategy)
-                        if (hasThresholdsModule) {
-                          console.log('🔬 Calling thresholds.get() with cascade strategy...');
-                          const result = HEYS.InsightsPI.thresholds.get(days, profile, pIndex);
-                          console.log('✅ Thresholds result:', {
-                            confidence: result.confidence,
-                            daysUsed: result.daysUsed,
-                            requestedDays: days.length,
-                            thresholdsCount: Object.keys(result.thresholds || {}).length,
-                            thresholds: result.thresholds,
-                            meta: result.meta,
-                            tier: result.meta?.partial ? 'PARTIAL (7-13d)' :
-                              result.meta?.default ? 'DEFAULT (<7d)' :
-                                result.confidence >= 1.0 ? 'FULL (14+d)' : 'UNKNOWN',
-                            fromCache: result.meta?.dateRange ? '♻️ (possibly from cache)' : '✨ (freshly computed)'
-                          });
-                        } else {
-                          console.warn('⚠️ Thresholds module not loaded');
-                        }
-
-                        // 6. Проверка что Pattern Debugger получит
-                        console.log('🪟 Pattern Debugger will receive:', {
-                          profile: !!profile,
-                          profileId: profile?.id,
-                          clientId: clientId,
-                          lsGet: typeof U?.lsGet,
-                          pIndex: !!pIndex,
-                          dayUtils: !!HEYS.dayUtils,
-                          fmtDate: typeof HEYS.dayUtils?.fmtDate
-                        });
-
-                      } catch (err) {
-                        console.error('❌ Diagnostic error:', err);
-                      }
-
-                      console.groupEnd();
-
-                      // Открыть модал
-                      setShowPatternDebug(true);
+                        // Открыть модал
+                        setShowPatternDebug(true);
+                      }, 0); // end R37 defer
                     } // 🔍 Открыть Pattern Transparency Modal с диагностикой
                   })
                 ),

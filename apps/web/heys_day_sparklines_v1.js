@@ -878,12 +878,12 @@
         Math.abs(curr.x - x) < Math.abs(prev.x - x) ? curr : prev
       );
 
-      // Haptic при смене точки
-      if (sliderPrevPointRef && sliderPrevPointRef.current !== nearest) {
+      // 🚀 PERF R36: skip redundant setState when pointer stays on same point
+      if (sliderPrevPointRef && sliderPrevPointRef.current === nearest) return;
+      if (sliderPrevPointRef) {
         sliderPrevPointRef.current = nearest;
         safeHaptic('selection');
       }
-
       safeSetSliderPoint(nearest);
     };
 
@@ -895,9 +895,10 @@
     };
 
     // === Brush selection handlers ===
+    // 🚀 PERF R35: brush only with Shift key — previously every touch tap
+    // triggered setBrushing + setBrushRange (3 setState per tap, 80-193ms processing)
     const handleBrushStart = (e) => {
-      // Только при долгом нажатии или с Shift
-      if (!e.shiftKey && e.pointerType !== 'touch') return;
+      if (!e.shiftKey) return;
 
       e.preventDefault();
       const svg = e.currentTarget;
@@ -915,7 +916,9 @@
     };
 
     const handleBrushEnd = () => {
-      if (brushing && brushRange && brushRange.start !== brushRange.end) {
+      // 🚀 PERF R35: skip setState if brush wasn't active
+      if (!brushing) return;
+      if (brushRange && brushRange.start !== brushRange.end) {
         safeHaptic('medium');
         // Brush завершён — можно показать статистику по диапазону
       }

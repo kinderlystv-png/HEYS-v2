@@ -29,9 +29,7 @@
         const handleSelect = (d) => {
             const nextDate = d;
 
-            try {
-                if (HEYS?.Day?.requestFlush) HEYS.Day.requestFlush({ force: true });
-            } catch (e) { }
+            // requestFlush removed: effects.js already flushes on date change
 
             const applyDate = () => {
                 setDate(nextDate);
