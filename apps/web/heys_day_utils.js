@@ -2313,6 +2313,26 @@
     });
   }
 
+  // R53: in-memory cache for getActiveDaysForMonth (60s TTL)
+  const _activeDaysCacheU = new Map();
+  const _ACTIVE_DAYS_CACHE_TTL_U = 60000;
+
+  function _invalidateActiveDaysCacheU(dateStr) {
+    if (!dateStr) { _activeDaysCacheU.clear(); return; }
+    const key = dateStr.slice(0, 7); // "YYYY-MM"
+    for (const k of _activeDaysCacheU.keys()) {
+      if (k.startsWith(key)) _activeDaysCacheU.delete(k);
+    }
+  }
+  function _clearActiveDaysCacheU() { _activeDaysCacheU.clear(); }
+
+  if (typeof globalThis !== 'undefined' && globalThis.addEventListener) {
+    globalThis.addEventListener('heys:day-updated', function (e) {
+      var d = e && e.detail; var ds = d && d.dateStr;
+      _invalidateActiveDaysCacheU(ds || null);
+    });
+  }
+
   /**
    * Вычисляет Set активных дней для месяца
    * Активный день = съедено ≥ 1/3 BMR (реальное ведение дневника)
@@ -2324,6 +2344,11 @@
    * @returns {Map<string, {kcal: number, target: number, ratio: number}>} Map дат с данными
    */
   function getActiveDaysForMonth(year, month, profile, products) {
+    // R53: check cache
+    const _ck = year + '-' + String(month + 1).padStart(2, '0');
+    const _cached = _activeDaysCacheU.get(_ck);
+    if (_cached && (Date.now() - _cached.ts < _ACTIVE_DAYS_CACHE_TTL_U)) return _cached.data;
+
     const daysData = new Map();
 
     try {
@@ -2460,6 +2485,8 @@
       } catch (_) { }
     }
 
+    // R53: cache result
+    _activeDaysCacheU.set(_ck, { data: daysData, ts: Date.now() });
     return daysData;
   }
 

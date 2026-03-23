@@ -2484,6 +2484,7 @@
       },
         // Заголовок группы — кнопка для batch-отметки всей группы
         React.createElement('button', {
+          className: 'supplements-card__group-toggle' + (allGroupTaken ? ' supplements-card__group-toggle--complete' : ''),
           onClick: (e) => {
             e.stopPropagation();
             // R14: defer heavy re-render out of click handler
@@ -2506,6 +2507,7 @@
           title: allGroupTaken ? 'Все приняты' : `Нажми — отметить все как принятые`
         },
           React.createElement('span', {
+            className: 'supplements-card__group-label',
             style: {
               color: allGroupTaken ? '#16a34a' : theme.fg,
               fontSize: '13px',
@@ -2520,6 +2522,7 @@
             allGroupTaken && React.createElement('span', null, '✓')
           ),
           !allGroupTaken && React.createElement('span', {
+            className: 'supplements-card__group-progress',
             style: {
               fontSize: '11px',
               color: theme.fg,
@@ -2591,7 +2594,7 @@
 
             return React.createElement('button', {
               key: id,
-              className: 'supp-chip',
+              className: 'supp-chip' + (isTaken ? ' supp-chip--taken' : '') + (firstBadge?.warn ? ' supp-chip--warn' : ''),
               'data-perf-id': 'supp-chip',
               onTouchStart: hasScienceData ? handleTouchStart : null,
               onTouchEnd: hasScienceData ? handleTouchEnd : null,
@@ -2619,6 +2622,7 @@
               React.createElement('span', null, supp.name),
               // v3.6: Явная кнопка "🔬" для открытия научной карточки (без конфликта с toggle)
               hasScienceData && React.createElement('span', {
+                className: 'supp-chip__science-trigger',
                 role: 'button',
                 tabIndex: 0,
                 onClick: (e) => {
@@ -2674,6 +2678,7 @@
         // Левая часть: название + прогресс
         React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '10px' } },
           React.createElement('span', {
+            className: 'supplements-card__title',
             style: {
               fontWeight: 'var(--heys-diary-card-title-weight, 600)',
               fontSize: 'var(--heys-diary-card-title-size, 14px)',
@@ -2730,6 +2735,7 @@
             title: 'Бонус к инсулиновой волне от добавок'
           }, `🌊${Math.round(insulinBonus * 100)}%`),
           allTaken && React.createElement('button', {
+            className: 'supplements-card__icon-btn supplements-card__collapse-btn',
             onClick: (e) => {
               e.stopPropagation();
               // ⚡ PERF R27: Defer collapse toggle (246ms → ~0ms click processing)
@@ -2756,6 +2762,7 @@
             'aria-label': isCollapsed ? 'Развернуть добавки' : 'Свернуть добавки'
           }, isCollapsed ? '▾' : '▴'),
           React.createElement('button', {
+            className: 'supplements-card__icon-btn supplements-card__course-btn',
             onClick: (e) => {
               e.stopPropagation();
               // ⚡ PERF R28: Defer course screen open (heavy DOM creation)
@@ -2780,6 +2787,7 @@
       ),
       // v4.1: Действие (2 строка) — только статус «все приняты»
       allTaken && React.createElement('div', {
+        className: 'supplements-card__status-row',
         style: {
           display: 'flex',
           alignItems: 'center',
@@ -2788,7 +2796,7 @@
         }
       },
         React.createElement('div', {
-          className: isCelebrating ? 'supplements-card__victory-pill' : '',
+          className: (isCelebrating ? 'supplements-card__victory-pill ' : '') + 'supplements-card__all-taken-banner',
           style: {
             flex: 1,
             textAlign: 'center',
@@ -2815,6 +2823,7 @@
             }, '💊')
           ),
           React.createElement('span', {
+            className: 'supplements-card__all-taken-text',
             style: {
               fontSize: isCompactCollapsed ? '11px' : '12px',
               color: isCelebrating ? '#15803d' : '#16a34a',
@@ -2830,6 +2839,7 @@
           const reminder = getTimeReminder(planned, taken);
           if (!reminder) return null;
           return React.createElement('div', {
+            className: 'supplements-card__reminder supplements-card__reminder--' + reminder.urgency,
             style: {
               fontSize: '12px',
               color: reminder.urgency === 'high' ? '#dc2626' : '#d97706',
@@ -2846,6 +2856,7 @@
         ['morning', 'withMeal', 'evening'].map(gid => renderGroup(gid, timeGroups[gid])),
         // v2.0: Синергии
         synergies.length > 0 && React.createElement('div', {
+          className: 'supplements-card__message supplements-card__message--success',
           style: {
             fontSize: '12px',
             color: '#16a34a',
@@ -2857,6 +2868,7 @@
         }, synergies.map((s, i) => React.createElement('div', { key: i }, s))),
         // v2.0: Конфликты
         conflicts.length > 0 && React.createElement('div', {
+          className: 'supplements-card__message supplements-card__message--warning',
           style: {
             fontSize: '12px',
             color: '#d97706',
@@ -2868,6 +2880,7 @@
         }, conflicts.map((c, i) => React.createElement('div', { key: i }, c))),
         // v4.0: Подсказка — компактная и понятная
         React.createElement('div', {
+          className: 'supplements-card__helper-hint',
           style: {
             fontSize: '11px',
             color: '#94a3b8',

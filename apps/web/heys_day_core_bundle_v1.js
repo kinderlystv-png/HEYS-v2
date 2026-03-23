@@ -2073,6 +2073,7 @@
      */
     function invalidateDayCache(dateStr) {
         DAYS_CACHE.delete(dateStr);
+        _invalidateActiveDaysCache(dateStr);
     }
 
     /**
@@ -2080,6 +2081,7 @@
      */
     function clearDaysCache() {
         DAYS_CACHE.clear();
+        _clearActiveDaysCache();
     }
 
     /**
@@ -2146,6 +2148,36 @@
         });
     }
 
+    // R53: In-memory cache for getActiveDaysForMonth to avoid repeated localStorage reads
+    const _activeDaysCache = new Map();
+    const _ACTIVE_DAYS_CACHE_TTL = 60000; // 60s TTL
+
+    function _invalidateActiveDaysCache(dateStr) {
+        // Invalidate the month containing dateStr
+        if (dateStr && dateStr.length >= 7) {
+            const key = dateStr.substring(0, 7); // 'YYYY-MM'
+            _activeDaysCache.forEach((_, k) => {
+                if (k.startsWith(key)) _activeDaysCache.delete(k);
+            });
+        }
+    }
+
+    function _clearActiveDaysCache() {
+        _activeDaysCache.clear();
+    }
+
+    // Listen for day updates to invalidate cache
+    if (global.addEventListener) {
+        global.addEventListener('heys:day-updated', (e) => {
+            const dateStr = e?.detail?.date || e?.detail?.dateStr;
+            if (dateStr) {
+                _invalidateActiveDaysCache(dateStr);
+            } else {
+                _clearActiveDaysCache();
+            }
+        });
+    }
+
     /**
      * Вычисляет Set активных дней для месяца
      * Активный день = съедено ≥ 1/3 BMR (реальное ведение дневника)
@@ -2157,6 +2189,14 @@
      * @returns {Map<string, {kcal: number, target: number, ratio: number}>} Map дат с данными
      */
     function getActiveDaysForMonth(year, month, profile, products) {
+        // R53: Check in-memory cache first
+        const clientId = (HEYS.currentClientId || '').slice(0, 16);
+        const cacheKey = year + '-' + String(month + 1).padStart(2, '0') + '_' + clientId;
+        const cached = _activeDaysCache.get(cacheKey);
+        if (cached && (Date.now() - cached.ts < _ACTIVE_DAYS_CACHE_TTL)) {
+            return cached.data;
+        }
+
         const daysData = new Map();
 
         try {
@@ -2317,6 +2357,8 @@
             } catch (_) { }
         }
 
+        // R53: Store in cache before returning
+        _activeDaysCache.set(cacheKey, { data: daysData, ts: Date.now() });
         return daysData;
     }
 

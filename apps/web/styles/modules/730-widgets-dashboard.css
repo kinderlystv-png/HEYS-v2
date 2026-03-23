@@ -6753,7 +6753,7 @@ body:has(.page-reports) .hdr::after {
   --widget-accent-strong: rgba(16, 185, 129, 0.32);
 }
 
-[data-theme="dark"] .widget--supplements-diary--all-taken {
+[data-theme="dark"] .supplements-card.widget--supplements-diary.widget--supplements-diary--all-taken {
   --widget-glass-bg: rgba(16, 185, 129, 0.12);
   --widget-accent-strong: rgba(16, 185, 129, 0.25);
   --widget-glass-border: rgba(16, 185, 129, 0.2);

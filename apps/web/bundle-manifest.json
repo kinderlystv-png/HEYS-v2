@@ -4,55 +4,55 @@
     "hash": "6ba5574890e4",
     "fileCount": 27,
     "size": 1288987,
-    "builtAt": "2026-03-23T14:18:53.635Z"
+    "builtAt": "2026-03-23T16:29:41.389Z"
   },
   "boot-calc": {
-    "file": "boot-calc.bundle.5e6265d9c138.js",
-    "hash": "5e6265d9c138",
+    "file": "boot-calc.bundle.6969f2497a7a.js",
+    "hash": "6969f2497a7a",
     "fileCount": 19,
-    "size": 1048096,
-    "builtAt": "2026-03-23T14:29:26.330Z"
+    "size": 1051851,
+    "builtAt": "2026-03-23T16:39:28.171Z"
   },
   "boot-day": {
-    "file": "boot-day.bundle.4e580f710776.js",
-    "hash": "4e580f710776",
+    "file": "boot-day.bundle.876b2bfad47e.js",
+    "hash": "876b2bfad47e",
     "fileCount": 51,
-    "size": 978693,
-    "builtAt": "2026-03-23T14:29:26.463Z"
+    "size": 979724,
+    "builtAt": "2026-03-23T16:39:28.365Z"
   },
   "boot-app": {
     "file": "boot-app.bundle.b9f4e2fdc06d.js",
     "hash": "b9f4e2fdc06d",
     "fileCount": 48,
     "size": 1143775,
-    "builtAt": "2026-03-23T14:29:26.606Z"
+    "builtAt": "2026-03-23T16:29:41.841Z"
   },
   "boot-init": {
-    "file": "boot-init.bundle.135979ec6df3.js",
-    "hash": "135979ec6df3",
+    "file": "boot-init.bundle.6bfcccbbba2f.js",
+    "hash": "6bfcccbbba2f",
     "fileCount": 8,
-    "size": 413845,
-    "builtAt": "2026-03-23T14:18:54.220Z"
+    "size": 414933,
+    "builtAt": "2026-03-23T16:39:28.548Z"
   },
   "postboot-1-game": {
     "file": "postboot-1-game.bundle.45dd3d560987.js",
     "hash": "45dd3d560987",
     "fileCount": 30,
     "size": 1716015,
-    "builtAt": "2026-03-23T14:18:54.386Z"
+    "builtAt": "2026-03-23T16:29:42.149Z"
   },
   "postboot-2-insights": {
     "file": "postboot-2-insights.bundle.25d7c3679561.js",
     "hash": "25d7c3679561",
     "fileCount": 39,
     "size": 1879350,
-    "builtAt": "2026-03-23T14:29:26.788Z"
+    "builtAt": "2026-03-23T16:29:42.322Z"
   },
   "postboot-3-ui": {
     "file": "postboot-3-ui.bundle.4fbcfa14cfb6.js",
     "hash": "4fbcfa14cfb6",
     "fileCount": 27,
     "size": 1618613,
-    "builtAt": "2026-03-23T14:29:26.961Z"
+    "builtAt": "2026-03-23T16:29:42.483Z"
   }
 }

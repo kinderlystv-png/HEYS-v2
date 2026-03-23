@@ -1430,6 +1430,7 @@
                             ),
                         ),
                         React.createElement('button', {
+                            className: 'meal-wave-calc-btn',
                             onClick: (e) => {
                                 e.stopPropagation();
                                 setShowWaveCalcPopup(true);
@@ -1869,6 +1870,7 @@
                         },
                     },
                         React.createElement('div', {
+                            className: 'wave-details-popup__header',
                             style: {
                                 display: 'flex',
                                 justifyContent: 'space-between',
@@ -1877,9 +1879,11 @@
                             },
                         },
                             React.createElement('h3', {
+                                className: 'wave-details-popup__title',
                                 style: { margin: 0, fontSize: '16px', fontWeight: 600, color: '#1f2937' },
                             }, 'Расчёт волны'),
                             React.createElement('button', {
+                                className: 'wave-details-popup__close',
                                 onClick: () => setShowWaveCalcPopup(false),
                                 style: {
                                     background: 'none', border: 'none', fontSize: '20px',
@@ -1889,6 +1893,7 @@
                         ),
 
                         React.createElement('div', {
+                            className: 'wave-details-popup__hero',
                             style: {
                                 background: 'linear-gradient(135deg, #3b82f6, #2563eb)',
                                 borderRadius: '12px',
@@ -1904,6 +1909,7 @@
                         ),
 
                         React.createElement('div', {
+                            className: 'wave-details-popup__formula',
                             style: {
                                 background: '#f8fafc',
                                 borderRadius: '10px',
@@ -1917,47 +1923,48 @@
                         }, 'База × Множитель = ' + (currentWave.baseWaveHours || 3).toFixed(1) + 'ч × '
                         + (currentWave.finalMultiplier || 1).toFixed(2) + ' = ' + (currentWave.waveHours || currentWave.duration / 60).toFixed(1) + 'ч'),
 
-                        React.createElement('div', { style: { marginBottom: '12px' } },
-                            React.createElement('div', { style: { fontSize: '12px', fontWeight: 600, color: '#1f2937', marginBottom: '8px' } }, '🍽️ Факторы еды'),
-                            React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
+                        React.createElement('div', { className: 'wave-details-popup__section', style: { marginBottom: '12px' } },
+                            React.createElement('div', { className: 'wave-details-popup__section-title', style: { fontSize: '12px', fontWeight: 600, color: '#1f2937', marginBottom: '8px' } }, '🍽️ Факторы еды'),
+                            React.createElement('div', { className: 'wave-details-popup__row', style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
                                 React.createElement('span', { style: { color: '#64748b' } }, 'ГИ'),
                                 React.createElement('span', { style: { fontWeight: 500 } }, Math.round(currentWave.gi || 0)),
                             ),
-                            React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
+                            React.createElement('div', { className: 'wave-details-popup__row', style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
                                 React.createElement('span', { style: { color: '#64748b' } }, 'GL (нагрузка)'),
                                 React.createElement('span', { style: { fontWeight: 500, color: currentWave.gl < 10 ? '#22c55e' : currentWave.gl > 20 ? '#ef4444' : '#1f2937' } }, (currentWave.gl || 0).toFixed(1)),
                             ),
-                            React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
+                            React.createElement('div', { className: 'wave-details-popup__row', style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
                                 React.createElement('span', { style: { color: '#64748b' } }, 'Белок'),
                                 React.createElement('span', { style: { fontWeight: 500 } }, Math.round(currentWave.protein || 0) + 'г'),
                             ),
-                            React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
+                            React.createElement('div', { className: 'wave-details-popup__row', style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
                                 React.createElement('span', { style: { color: '#64748b' } }, 'Клетчатка'),
                                 React.createElement('span', { style: { fontWeight: 500, color: currentWave.fiber >= 5 ? '#22c55e' : '#1f2937' } }, Math.round(currentWave.fiber || 0) + 'г'),
                             ),
-                            React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
+                            React.createElement('div', { className: 'wave-details-popup__row', style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
                                 React.createElement('span', { style: { color: '#64748b' } }, 'Жиры'),
                                 React.createElement('span', { style: { fontWeight: 500 } }, Math.round(currentWave.fat || 0) + 'г'),
                             ),
-                            React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0' } },
+                            React.createElement('div', { className: 'wave-details-popup__row wave-details-popup__row--last', style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0' } },
                                 React.createElement('span', { style: { color: '#64748b' } }, 'Углеводы'),
                                 React.createElement('span', { style: { fontWeight: 500 } }, Math.round(currentWave.carbs || 0) + 'г'),
                             ),
                         ),
 
-                        React.createElement('div', { style: { marginBottom: '12px' } },
-                            React.createElement('div', { style: { fontSize: '12px', fontWeight: 600, color: '#1f2937', marginBottom: '8px' } }, '⏰ Дневные факторы'),
-                            React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
+                        React.createElement('div', { className: 'wave-details-popup__section', style: { marginBottom: '12px' } },
+                            React.createElement('div', { className: 'wave-details-popup__section-title', style: { fontSize: '12px', fontWeight: 600, color: '#1f2937', marginBottom: '8px' } }, '⏰ Дневные факторы'),
+                            React.createElement('div', { className: 'wave-details-popup__row', style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
                                 React.createElement('span', { style: { color: '#64748b' } }, 'Время суток'),
                                 React.createElement('span', { style: { fontWeight: 500, color: currentWave.circadianMultiplier > 1.05 ? '#f97316' : '#1f2937' } }, '×' + (currentWave.circadianMultiplier || 1).toFixed(2)),
                             ),
-                            currentWave.activityBonus && currentWave.activityBonus !== 0 && React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0' } },
+                            currentWave.activityBonus && currentWave.activityBonus !== 0 && React.createElement('div', { className: 'wave-details-popup__row wave-details-popup__row--last', style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0' } },
                                 React.createElement('span', { style: { color: '#22c55e' } }, '🏃 Активность'),
                                 React.createElement('span', { style: { fontWeight: 500, color: '#22c55e' } }, (currentWave.activityBonus * 100).toFixed(0) + '%'),
                             ),
                         ),
 
                         React.createElement('button', {
+                            className: 'wave-details-popup__action',
                             onClick: () => setShowWaveCalcPopup(false),
                             style: {
                                 width: '100%',

@@ -6201,6 +6201,779 @@ body.tour-active .ios-pwa-banner {
   transition: box-shadow 0.2s ease;
 }
 
+/* ══════════════════════════════════════════════════════════════
+ * DARK THEME — P0 SHELL CONSOLIDATION (2026-03-23)
+ * Header / tabs / date picker / client dropdown / gamification shell
+ * ══════════════════════════════════════════════════════════════ */
+
+[data-theme="dark"] {
+  --heys-shell-bg: rgba(8, 12, 22, 0.96);
+  --heys-shell-elevated: rgba(12, 18, 32, 0.94);
+  --heys-shell-panel: rgba(15, 23, 42, 0.96);
+  --heys-shell-panel-soft: rgba(30, 41, 59, 0.82);
+  --heys-shell-border: rgba(148, 163, 184, 0.22);
+  --heys-shell-border-strong: rgba(96, 165, 250, 0.28);
+  --heys-shell-shadow: 0 18px 40px -30px rgba(2, 6, 23, 0.96);
+  --heys-shell-shadow-lg: 0 28px 70px -36px rgba(2, 6, 23, 0.98);
+}
+
+[data-theme="dark"] .hdr {
+  background: linear-gradient(180deg, rgba(7, 11, 21, 0.97) 0%, rgba(10, 15, 26, 0.93) 100%) !important;
+  box-shadow: 0 20px 44px -36px rgba(2, 6, 23, 0.98);
+}
+
+[data-theme="dark"] .hdr-top {
+  background: linear-gradient(135deg, rgba(29, 78, 216, 0.92) 0%, rgba(37, 99, 235, 0.88) 55%, rgba(14, 165, 233, 0.82) 100%);
+  border-color: rgba(147, 197, 253, 0.22);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+[data-theme="dark"] .hdr-bottom {
+  background: linear-gradient(180deg, rgba(14, 20, 36, 0.96) 0%, rgba(10, 15, 26, 0.94) 100%) !important;
+  border-color: rgba(96, 165, 250, 0.18);
+  border-top-color: rgba(96, 165, 250, 0.08);
+  box-shadow: var(--heys-shell-shadow);
+}
+
+[data-theme="dark"] .hdr-client-firstname,
+[data-theme="dark"] .hdr-client-name {
+  color: #f8fafc;
+}
+
+[data-theme="dark"] .hdr-client-lastname,
+[data-theme="dark"] .hdr-client-label {
+  color: #94a3b8;
+}
+
+[data-theme="dark"] .hdr-client-clickable {
+  border: 1px solid transparent;
+}
+
+[data-theme="dark"] .hdr-client-clickable:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+
+[data-theme="dark"] .cloud-sync-indicator {
+  background: rgba(30, 41, 59, 0.78);
+  border: 1px solid rgba(148, 163, 184, 0.16);
+}
+
+[data-theme="dark"] .cloud-sync-indicator--clickable:hover {
+  filter: none;
+  transform: translateY(-1px) scale(1.03);
+  box-shadow: 0 10px 24px -18px rgba(59, 130, 246, 0.55);
+}
+
+[data-theme="dark"] .client-dropdown {
+  background: linear-gradient(180deg, rgba(11, 18, 32, 0.98) 0%, rgba(15, 23, 42, 0.98) 100%) !important;
+  border: 1px solid rgba(148, 163, 184, 0.16) !important;
+  box-shadow: var(--heys-shell-shadow-lg) !important;
+  color: #e2e8f0 !important;
+}
+
+[data-theme="dark"] .client-dropdown-item:hover {
+  background: rgba(59, 130, 246, 0.14) !important;
+}
+
+[data-theme="dark"] .client-dropdown-item.active {
+  background: rgba(59, 130, 246, 0.18) !important;
+}
+
+[data-theme="dark"] .client-dropdown-sticky-actions {
+  border-top-color: rgba(148, 163, 184, 0.14);
+}
+
+[data-theme="dark"] .tabs {
+  background: linear-gradient(180deg, rgba(8, 12, 22, 0.96) 0%, rgba(11, 18, 32, 0.98) 100%);
+  border-top: 1px solid rgba(148, 163, 184, 0.16);
+  box-shadow:
+    0 -14px 36px -30px rgba(2, 6, 23, 0.98),
+    0 -4px 18px -14px rgba(2, 6, 23, 0.78);
+}
+
+[data-theme="dark"] .tabs .tab {
+  color: #94a3b8;
+}
+
+[data-theme="dark"] .tabs .tab:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: #e2e8f0;
+}
+
+[data-theme="dark"] .tabs .tab.active {
+  color: #dbeafe;
+  background: rgba(59, 130, 246, 0.14);
+  box-shadow: inset 0 0 0 1px rgba(96, 165, 250, 0.18);
+}
+
+[data-theme="dark"] .tabs .tab.active .tab-icon {
+  filter: drop-shadow(0 1px 8px rgba(96, 165, 250, 0.32));
+}
+
+[data-theme="dark"] .tab-switch-group {
+  background: rgba(148, 163, 184, 0.14);
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+
+[data-theme="dark"] .tab.tab-switch {
+  color: #94a3b8;
+}
+
+[data-theme="dark"] .tab.tab-switch.active {
+  background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
+  color: #ffffff;
+  box-shadow: 0 10px 20px -16px rgba(59, 130, 246, 0.9);
+}
+
+[data-theme="dark"] .tab-switch-labels {
+  color: #64748b;
+}
+
+[data-theme="dark"] .tab-switch-label.active {
+  color: #f8fafc;
+}
+
+[data-theme="dark"] .tab.tab-advice {
+  color: #93c5fd;
+}
+
+[data-theme="dark"] .tab.tab-advice:hover {
+  background: rgba(59, 130, 246, 0.1);
+}
+
+[data-theme="dark"] .tab-advice-badge {
+  background: #f59e0b;
+  color: #1f2937;
+  box-shadow: 0 4px 10px -8px rgba(245, 158, 11, 0.8);
+}
+
+[data-theme="dark"] .date-picker-trigger {
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.96) 0%, rgba(12, 18, 32, 0.96) 100%);
+  border-color: rgba(148, 163, 184, 0.2);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+
+[data-theme="dark"] .date-picker-trigger:hover {
+  background: linear-gradient(180deg, rgba(15, 23, 42, 1) 0%, rgba(15, 23, 42, 0.98) 100%);
+  border-color: rgba(96, 165, 250, 0.28);
+}
+
+[data-theme="dark"] .date-picker-trigger.open {
+  border-color: rgba(96, 165, 250, 0.52);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.18);
+}
+
+[data-theme="dark"] .date-picker-main {
+  color: #f8fafc;
+}
+
+[data-theme="dark"] .date-picker-sub,
+[data-theme="dark"] .date-picker-arrow {
+  color: #94a3b8;
+}
+
+[data-theme="dark"] .date-picker-dropdown {
+  background: linear-gradient(180deg, rgba(8, 12, 22, 0.99) 0%, rgba(15, 23, 42, 0.98) 100%);
+  border-color: rgba(148, 163, 184, 0.18);
+  box-shadow: var(--heys-shell-shadow-lg);
+  color: #e2e8f0;
+}
+
+[data-theme="dark"] .date-picker-backdrop {
+  background: rgba(2, 6, 23, 0.56);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+[data-theme="dark"] .date-picker-nav,
+[data-theme="dark"] .date-picker-btn.delete-btn {
+  background: rgba(30, 41, 59, 0.92);
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  color: #cbd5e1;
+}
+
+[data-theme="dark"] .date-picker-nav:hover,
+[data-theme="dark"] .date-picker-btn.delete-btn:hover {
+  background: rgba(51, 65, 85, 0.96);
+  border-color: rgba(148, 163, 184, 0.24);
+  color: #f8fafc;
+}
+
+[data-theme="dark"] .date-picker-title {
+  color: #f8fafc;
+}
+
+[data-theme="dark"] .date-picker-weekday {
+  color: #64748b;
+}
+
+[data-theme="dark"] .date-picker-day {
+  color: #cbd5e1;
+}
+
+[data-theme="dark"] .date-picker-day:hover:not(.empty):not(.selected):not(.today) {
+  background: rgba(148, 163, 184, 0.12);
+}
+
+[data-theme="dark"] .date-picker-day.selected {
+  background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
+  color: #ffffff;
+}
+
+[data-theme="dark"] .date-picker-day.today {
+  background: linear-gradient(135deg, #0f766e 0%, #10b981 100%);
+  color: #ffffff;
+}
+
+[data-theme="dark"] .date-picker-footer {
+  border-top-color: rgba(148, 163, 184, 0.14);
+}
+
+[data-theme="dark"] .date-picker-btn.today-btn {
+  background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
+}
+
+[data-theme="dark"] .date-picker-tooltip {
+  background: rgba(241, 245, 249, 0.96);
+  color: #0f172a;
+  box-shadow: 0 18px 36px -24px rgba(2, 6, 23, 0.9);
+}
+
+[data-theme="dark"] .date-picker-tooltip::after {
+  border-top-color: rgba(241, 245, 249, 0.96);
+}
+
+[data-theme="dark"] .date-picker-goto-today {
+  background: rgba(30, 64, 175, 0.18);
+  border-color: rgba(96, 165, 250, 0.45);
+  color: #bfdbfe;
+}
+
+[data-theme="dark"] .date-picker-goto-today:hover {
+  background: rgba(30, 64, 175, 0.28);
+}
+
+[data-theme="dark"] .date-picker-streak {
+  background: linear-gradient(135deg, rgba(146, 64, 14, 0.56) 0%, rgba(120, 53, 15, 0.78) 100%);
+  color: #fde68a;
+  border: 1px solid rgba(251, 191, 36, 0.24);
+}
+
+[data-theme="dark"] .date-picker-legend {
+  color: #94a3b8;
+}
+
+[data-theme="dark"] .game-expand-btn {
+  background: rgba(15, 23, 42, 0.42);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: #eff6ff;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+[data-theme="dark"] .game-expand-btn:hover {
+  background: rgba(30, 41, 59, 0.62);
+  border-color: rgba(191, 219, 254, 0.2);
+}
+
+[data-theme="dark"] .game-level-roadmap {
+  background: linear-gradient(180deg, rgba(7, 11, 21, 0.99) 0%, rgba(15, 23, 42, 0.98) 100%);
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  box-shadow: var(--heys-shell-shadow-lg);
+}
+
+[data-theme="dark"] .game-level-roadmap::before {
+  border-bottom-color: rgba(7, 11, 21, 0.99);
+}
+
+[data-theme="dark"] .roadmap-title {
+  color: #eff6ff;
+  border-bottom-color: rgba(148, 163, 184, 0.14);
+}
+
+[data-theme="dark"] .roadmap-item {
+  color: #cbd5e1;
+}
+
+[data-theme="dark"] .roadmap-item.current {
+  background: rgba(59, 130, 246, 0.18);
+  box-shadow: inset 0 0 0 1px rgba(96, 165, 250, 0.22);
+}
+
+[data-theme="dark"] .roadmap-levels {
+  color: #93c5fd;
+}
+
+[data-theme="dark"] .roadmap-check {
+  color: #4ade80;
+}
+
+/* ══════════════════════════════════════════════════════════════
+ * DARK THEME — P0 ANALYTICS SURFACES (2026-03-23)
+ * Reports / metrics / sparklines / insights priority cards
+ * ══════════════════════════════════════════════════════════════ */
+
+[data-theme="dark"] .date-picker-trigger,
+[data-theme="dark"] .date-picker-trigger * {
+  color: #f8fafc !important;
+}
+
+[data-theme="dark"] .date-picker-trigger {
+  background-color: rgba(15, 23, 42, 0.96) !important;
+  border-color: rgba(148, 163, 184, 0.2) !important;
+}
+
+[data-theme="dark"] .date-picker-sub,
+[data-theme="dark"] .date-picker-arrow {
+  color: #94a3b8 !important;
+}
+
+[data-theme="dark"] .metrics-card {
+  background: linear-gradient(180deg, rgba(30, 41, 59, 0.78) 0%, rgba(15, 23, 42, 0.9) 100%) !important;
+  border-color: rgba(148, 163, 184, 0.18) !important;
+  box-shadow: 0 16px 30px -24px rgba(2, 6, 23, 0.9);
+}
+
+[data-theme="dark"] .metrics-card:hover {
+  background: linear-gradient(180deg, rgba(37, 50, 71, 0.9) 0%, rgba(15, 23, 42, 0.96) 100%) !important;
+  border-color: rgba(96, 165, 250, 0.24) !important;
+  box-shadow: 0 18px 34px -24px rgba(2, 6, 23, 0.92);
+}
+
+[data-theme="dark"] .metrics-value {
+  color: #f8fafc;
+}
+
+[data-theme="dark"] .metrics-label,
+[data-theme="dark"] .metrics-hint,
+[data-theme="dark"] .metrics-trend {
+  color: #94a3b8;
+}
+
+[data-theme="dark"] .goal-progress-card,
+[data-theme="dark"] .goal-progress-bar {
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.94) 0%, rgba(17, 24, 39, 0.96) 100%) !important;
+  border: 1px solid rgba(96, 165, 250, 0.16);
+  box-shadow: 0 24px 44px -34px rgba(2, 6, 23, 0.96);
+}
+
+[data-theme="dark"] .goal-progress-title,
+[data-theme="dark"] .goal-progress-stats,
+[data-theme="dark"] .goal-eaten,
+[data-theme="dark"] .goal-target,
+[data-theme="dark"] .goal-progress-footer {
+  color: #e2e8f0 !important;
+}
+
+[data-theme="dark"] .goal-progress-track {
+  background: rgba(51, 65, 85, 0.7);
+  border: 1px solid rgba(148, 163, 184, 0.14);
+}
+
+[data-theme="dark"] .goal-progress-track-inner {
+  background: rgba(15, 23, 42, 0.35);
+}
+
+[data-theme="dark"] .kcal-sparkline-container,
+[data-theme="dark"] .weight-sparkline-container,
+[data-theme="dark"] .formula-card,
+[data-theme="dark"] .sleep-card,
+[data-theme="dark"] .household-activity-card {
+  background: linear-gradient(180deg, rgba(17, 24, 39, 0.94) 0%, rgba(15, 23, 42, 0.96) 100%) !important;
+  border: 1px solid rgba(96, 165, 250, 0.14) !important;
+  box-shadow: 0 24px 48px -34px rgba(2, 6, 23, 0.95);
+}
+
+[data-theme="dark"] .macro-ring {
+  background: radial-gradient(circle at 30% 30%, rgba(51, 65, 85, 0.95) 0%, rgba(15, 23, 42, 0.98) 72%) !important;
+  box-shadow:
+    0 18px 28px -24px rgba(2, 6, 23, 0.98),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    inset 0 -1px 0 rgba(15, 23, 42, 0.42) !important;
+}
+
+[data-theme="dark"] .macro-ring-svg {
+  filter: drop-shadow(0 4px 10px rgba(2, 6, 23, 0.28)) !important;
+}
+
+[data-theme="dark"] .macro-ring-bg {
+  stroke: rgba(148, 163, 184, 0.2) !important;
+}
+
+[data-theme="dark"] .macro-ring-value,
+[data-theme="dark"] .macro-ring-label {
+  color: #f8fafc !important;
+}
+
+[data-theme="dark"] .macro-ring-target {
+  color: #94a3b8 !important;
+}
+
+[data-theme="dark"] .macro-ring-dot {
+  fill: #e2e8f0 !important;
+  stroke: #e2e8f0 !important;
+}
+
+[data-theme="dark"] .macro-ring-norm-marker {
+  stroke: rgba(226, 232, 240, 0.86) !important;
+}
+
+[data-theme="dark"] .kcal-sparkline-header,
+[data-theme="dark"] .weight-sparkline-header,
+[data-theme="dark"] .sleep-card-header,
+[data-theme="dark"] .household-activity-header {
+  border-bottom-color: rgba(148, 163, 184, 0.12);
+}
+
+[data-theme="dark"] .kcal-sparkline-title,
+[data-theme="dark"] .weight-sparkline-title,
+[data-theme="dark"] .formula-card-title,
+[data-theme="dark"] .sleep-card-title,
+[data-theme="dark"] .household-activity-title,
+[data-theme="dark"] .household-value-number,
+[data-theme="dark"] .household-value-unit,
+[data-theme="dark"] .sleep-card-times {
+  color: #f8fafc !important;
+}
+
+[data-theme="dark"] .formula-label,
+[data-theme="dark"] .formula-card-icon,
+[data-theme="dark"] .formula-hint {
+  color: #94a3b8 !important;
+}
+
+[data-theme="dark"] .formula-value,
+[data-theme="dark"] .formula-row.formula-total .formula-label,
+[data-theme="dark"] .formula-row.formula-subtotal .formula-value {
+  color: #e2e8f0 !important;
+}
+
+[data-theme="dark"] .formula-row.formula-total,
+[data-theme="dark"] .formula-row.formula-subtotal {
+  border-top-color: rgba(148, 163, 184, 0.14) !important;
+}
+
+[data-theme="dark"] .formula-row.ndte-row {
+  background: linear-gradient(90deg, rgba(16, 185, 129, 0.16), rgba(15, 23, 42, 0)) !important;
+}
+
+[data-theme="dark"] .formula-row.deficit .formula-label,
+[data-theme="dark"] .formula-row.deficit .formula-value {
+  color: #fda4af !important;
+}
+
+[data-theme="dark"] .formula-row.surplus .formula-label,
+[data-theme="dark"] .formula-row.surplus .formula-value,
+[data-theme="dark"] .formula-row.formula-total .formula-value {
+  color: #86efac !important;
+}
+
+[data-theme="dark"] .household-value-kcal,
+[data-theme="dark"] .household-stats-link,
+[data-theme="dark"] .sleep-card-subtitle,
+[data-theme="dark"] .sleep-card-note,
+[data-theme="dark"] .weight-sparkline-subtitle,
+[data-theme="dark"] .kcal-sparkline-subtitle {
+  color: #94a3b8 !important;
+}
+
+[data-theme="dark"] .sleep-breakdown-item,
+[data-theme="dark"] .reports-sleep-card__stat {
+  background: rgba(30, 41, 59, 0.64) !important;
+  border-color: rgba(148, 163, 184, 0.12) !important;
+}
+
+[data-theme="dark"] .sleep-breakdown-item,
+[data-theme="dark"] .reports-sleep-card__stat,
+[data-theme="dark"] .sleep-breakdown-label,
+[data-theme="dark"] .sleep-breakdown-value {
+  color: #cbd5e1 !important;
+}
+
+[data-theme="dark"] .insights-tab__tab.active {
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.92) 0%, rgba(59, 130, 246, 0.9) 100%) !important;
+  color: #eff6ff !important;
+  box-shadow:
+    0 14px 28px -18px rgba(59, 130, 246, 0.8),
+    inset 0 1px 0 rgba(255, 255, 255, 0.16) !important;
+}
+
+[data-theme="dark"] .insights-tab__filter-btn.active {
+  background: rgba(15, 23, 42, 0.72) !important;
+  color: #f8fafc !important;
+  box-shadow: 0 0 0 1px rgba(148, 163, 184, 0.14), 0 10px 24px -22px rgba(2, 6, 23, 0.9) !important;
+}
+
+[data-theme="dark"] .insights-tab__tabs {
+  background: rgba(8, 12, 22, 0.72) !important;
+  border: 1px solid rgba(148, 163, 184, 0.14) !important;
+  box-shadow: 0 10px 26px -24px rgba(2, 6, 23, 0.96) !important;
+}
+
+[data-theme="dark"] .insights-tab__score-card,
+[data-theme="dark"] .early-warning-card,
+[data-theme="dark"] .metabolic-quick-status,
+[data-theme="dark"] .predictive-dashboard__header,
+[data-theme="dark"] .insights-card {
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.96) 0%, rgba(17, 24, 39, 0.98) 100%) !important;
+  border-color: rgba(96, 165, 250, 0.14) !important;
+  box-shadow: 0 28px 54px -38px rgba(2, 6, 23, 0.98);
+}
+
+[data-theme="dark"] .predictive-dashboard--v2 {
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.98) 0%, rgba(17, 24, 39, 0.99) 100%) !important;
+  border-color: rgba(96, 165, 250, 0.14) !important;
+  box-shadow: 0 28px 54px -38px rgba(2, 6, 23, 0.98) !important;
+}
+
+[data-theme="dark"] .early-warning-card--success {
+  background: linear-gradient(180deg, rgba(6, 95, 70, 0.34) 0%, rgba(15, 23, 42, 0.98) 100%) !important;
+  border-color: rgba(52, 211, 153, 0.24) !important;
+}
+
+[data-theme="dark"] .early-warning-card--has-warnings {
+  background: linear-gradient(180deg, rgba(127, 29, 29, 0.38) 0%, rgba(15, 23, 42, 0.98) 100%) !important;
+  border-color: rgba(248, 113, 113, 0.28) !important;
+  box-shadow: 0 28px 54px -36px rgba(127, 29, 29, 0.45);
+}
+
+[data-theme="dark"] .early-warning-card__title,
+[data-theme="dark"] .early-warning-card__text,
+[data-theme="dark"] .early-warning-card__subtitle,
+[data-theme="dark"] .metabolic-quick-status__title,
+[data-theme="dark"] .metabolic-quick-status__score,
+[data-theme="dark"] .metabolic-quick-status__phase,
+[data-theme="dark"] .predictive-dashboard__title,
+[data-theme="dark"] .predictive-dashboard__header h3,
+[data-theme="dark"] .predictive-dashboard__header h4 {
+  color: #f8fafc !important;
+}
+
+[data-theme="dark"] .early-warning-card__cta,
+[data-theme="dark"] .metabolic-quick-status__score-label,
+[data-theme="dark"] .metabolic-quick-status__risk-label,
+[data-theme="dark"] .metabolic-quick-status__time,
+[data-theme="dark"] .predictive-dashboard__subtitle,
+[data-theme="dark"] .predictive-dashboard__hint,
+[data-theme="dark"] .insights-tab__section-hint {
+  color: #94a3b8 !important;
+}
+
+[data-theme="dark"] .metabolic-quick-status__card,
+[data-theme="dark"] .dual-risk-panel__meter-card {
+  background: rgba(30, 41, 59, 0.6) !important;
+  border-color: rgba(148, 163, 184, 0.14) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+
+[data-theme="dark"] .metabolic-quick-status__title-header,
+[data-theme="dark"] .metabolic-quick-status__extended,
+[data-theme="dark"] .dual-risk-panel__status {
+  background: rgba(2, 6, 23, 0.22) !important;
+  border-color: rgba(148, 163, 184, 0.12) !important;
+}
+
+[data-theme="dark"] .metabolic-quick-status__title-header,
+[data-theme="dark"] .metabolic-quick-status__extended {
+  border-top-color: rgba(148, 163, 184, 0.1) !important;
+  border-bottom-color: rgba(148, 163, 184, 0.1) !important;
+}
+
+[data-theme="dark"] .metabolic-quick-status__title-icon,
+[data-theme="dark"] .dual-risk-panel__status-label,
+[data-theme="dark"] .dual-risk-panel__status-text,
+[data-theme="dark"] .metabolic-quick-status__empty-text {
+  color: #cbd5e1 !important;
+}
+
+[data-theme="dark"] .dual-risk-panel__status-ok {
+  color: #86efac !important;
+}
+
+[data-theme="dark"] .dual-risk-panel__status-warn {
+  color: #fcd34d !important;
+}
+
+[data-theme="dark"] .info-button {
+  background: rgba(30, 41, 59, 0.82) !important;
+  color: #cbd5e1 !important;
+  border: 1px solid rgba(148, 163, 184, 0.18) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+[data-theme="dark"] .info-button:hover,
+[data-theme="dark"] .info-button:focus {
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.94) 0%, rgba(59, 130, 246, 0.92) 100%) !important;
+  border-color: rgba(147, 197, 253, 0.34) !important;
+  color: #eff6ff !important;
+  box-shadow: 0 10px 22px -16px rgba(59, 130, 246, 0.8) !important;
+}
+
+[data-theme="dark"] .predictive-dashboard__tabs,
+[data-theme="dark"] .adv-analytics-card__tabs {
+  background: rgba(8, 12, 22, 0.62) !important;
+  border: 1px solid rgba(148, 163, 184, 0.12) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+
+[data-theme="dark"] .predictive-dashboard__tab,
+[data-theme="dark"] .adv-analytics-card__tab {
+  color: #cbd5e1 !important;
+  border: 1px solid transparent !important;
+}
+
+[data-theme="dark"] .predictive-dashboard__tab:hover,
+[data-theme="dark"] .adv-analytics-card__tab:hover {
+  background: rgba(30, 41, 59, 0.72) !important;
+  border-color: rgba(148, 163, 184, 0.14) !important;
+  color: #f8fafc !important;
+}
+
+[data-theme="dark"] .predictive-dashboard__tab--active,
+[data-theme="dark"] .adv-analytics-card__tab--active {
+  background: linear-gradient(135deg, rgba(51, 65, 85, 0.96) 0%, rgba(30, 41, 59, 0.98) 100%) !important;
+  border-color: rgba(96, 165, 250, 0.2) !important;
+  color: #f8fafc !important;
+  box-shadow:
+    0 12px 24px -20px rgba(2, 6, 23, 0.96),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05) !important;
+}
+
+[data-theme="dark"] .predictive-dashboard__tab-badge {
+  box-shadow: 0 8px 18px -12px rgba(239, 68, 68, 0.7);
+}
+
+[data-theme="dark"] .insights-metabolism-card__pmid {
+  background: rgba(30, 64, 175, 0.14) !important;
+  border: 1px solid rgba(96, 165, 250, 0.26) !important;
+  color: #93c5fd !important;
+  border-radius: 999px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+[data-theme="dark"] .insights-metabolism-card__pmid:hover {
+  background: rgba(30, 64, 175, 0.24) !important;
+  color: #dbeafe !important;
+}
+
+[data-theme="dark"] .macro-ring-badge {
+  background: rgba(30, 41, 59, 0.72) !important;
+  border: 1px solid rgba(148, 163, 184, 0.16) !important;
+  border-radius: 999px;
+  padding: 3px 6px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+
+[data-theme="dark"] .info-modal-overlay {
+  background: rgba(2, 6, 23, 0.72) !important;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+[data-theme="dark"] .info-modal {
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.98) 0%, rgba(17, 24, 39, 0.99) 100%) !important;
+  border: 1px solid rgba(148, 163, 184, 0.12) !important;
+  box-shadow:
+    0 36px 80px -44px rgba(2, 6, 23, 0.98),
+    0 12px 28px -20px rgba(15, 23, 42, 0.9) !important;
+}
+
+[data-theme="dark"] .info-modal__header {
+  background: linear-gradient(180deg, rgba(30, 41, 59, 0.62) 0%, rgba(15, 23, 42, 0.34) 100%) !important;
+  border-bottom-color: rgba(148, 163, 184, 0.12) !important;
+}
+
+[data-theme="dark"] .info-modal__close {
+  background: rgba(30, 41, 59, 0.64) !important;
+  border: 1px solid rgba(148, 163, 184, 0.14) !important;
+  color: #cbd5e1 !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+[data-theme="dark"] .info-modal__close:hover {
+  background: rgba(51, 65, 85, 0.82) !important;
+  border-color: rgba(148, 163, 184, 0.22) !important;
+  color: #f8fafc !important;
+}
+
+[data-theme="dark"] .info-modal__section {
+  border-bottom-color: rgba(148, 163, 184, 0.1) !important;
+}
+
+[data-theme="dark"] .info-modal__label,
+[data-theme="dark"] .info-modal__accordion-chevron {
+  color: #94a3b8 !important;
+}
+
+[data-theme="dark"] .info-modal__accordion-trigger {
+  background: rgba(15, 23, 42, 0.52) !important;
+  border-color: rgba(148, 163, 184, 0.12) !important;
+}
+
+[data-theme="dark"] .info-modal__accordion-trigger:hover {
+  background: rgba(30, 41, 59, 0.68) !important;
+  border-color: rgba(148, 163, 184, 0.18) !important;
+}
+
+[data-theme="dark"] .info-modal__accordion-trigger.is-open {
+  border-color: rgba(96, 165, 250, 0.28) !important;
+  box-shadow: 0 12px 24px -20px rgba(59, 130, 246, 0.45) !important;
+}
+
+[data-theme="dark"] .info-modal__accordion-title {
+  color: #e2e8f0 !important;
+}
+
+[data-theme="dark"] .info-modal__formula,
+[data-theme="dark"] .info-modal__source-card {
+  background: rgba(8, 12, 22, 0.58) !important;
+  border-color: rgba(148, 163, 184, 0.12) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+
+[data-theme="dark"] .info-modal__source-text,
+[data-theme="dark"] .info-modal__text,
+[data-theme="dark"] .info-modal__source {
+  color: #cbd5e1 !important;
+}
+
+[data-theme="dark"] .info-modal__source-pmid {
+  background: rgba(30, 41, 59, 0.72) !important;
+  border: 1px solid rgba(148, 163, 184, 0.16) !important;
+  color: #cbd5e1 !important;
+}
+
+[data-theme="dark"] .info-modal__section--debug {
+  background: linear-gradient(180deg, rgba(120, 53, 15, 0.22) 0%, rgba(15, 23, 42, 0.44) 100%) !important;
+  border-color: rgba(251, 191, 36, 0.34) !important;
+}
+
+[data-theme="dark"] .info-modal__debug {
+  background: rgba(120, 53, 15, 0.18) !important;
+  border: 1px solid rgba(251, 191, 36, 0.18) !important;
+  color: #fde68a !important;
+}
+
+[data-theme="dark"] .dual-risk-panel__meter-card--active {
+  background: linear-gradient(180deg, rgba(30, 64, 175, 0.34) 0%, rgba(15, 23, 42, 0.94) 100%) !important;
+  border-color: rgba(96, 165, 250, 0.34) !important;
+  box-shadow: 0 16px 30px -24px rgba(59, 130, 246, 0.55);
+}
+
+[data-theme="dark"] .predictive-dashboard__header {
+  border-bottom: 1px solid rgba(148, 163, 184, 0.1) !important;
+}
+
+[data-theme="dark"] .predictive-dashboard__chip,
+[data-theme="dark"] .early-warning-card__badge,
+[data-theme="dark"] .metabolic-quick-status__badge {
+  background: rgba(30, 41, 59, 0.7) !important;
+  color: #cbd5e1 !important;
+  border-color: rgba(148, 163, 184, 0.16) !important;
+}
+
 .meal-rec-card:hover {
   box-shadow: 0 2px 8px rgba(16, 185, 129, 0.1);
 }
@@ -6410,6 +7183,243 @@ body.tour-active .ios-pwa-banner {
   color: #64748b;
 }
 
+/*
+ * DARK THEME — P2 ALT STATES (2026-03-23)
+ * Supplements "all taken" state + insulin/lipolysis popup polish
+ */
+[data-theme="dark"] .widget--supplements-diary .supplements-card__title {
+  color: #f8fafc !important;
+}
+
+[data-theme="dark"] .widget--supplements-diary .supplements-card__icon-btn {
+  background: rgba(15, 23, 42, 0.88) !important;
+  border-color: rgba(71, 85, 105, 0.88) !important;
+  color: #cbd5e1 !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+
+[data-theme="dark"] .widget--supplements-diary .supplements-card__course-btn,
+[data-theme="dark"] .widget--supplements-diary .supplements-card__collapse-btn {
+  backdrop-filter: blur(10px);
+}
+
+[data-theme="dark"] .widget--supplements-diary .supplements-card__group-toggle {
+  background: rgba(15, 23, 42, 0.72) !important;
+  border-color: rgba(71, 85, 105, 0.7) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.02);
+}
+
+[data-theme="dark"] .widget--supplements-diary .supplements-card__group-label,
+[data-theme="dark"] .widget--supplements-diary .supplements-card__group-progress {
+  color: #cbd5e1 !important;
+}
+
+[data-theme="dark"] .widget--supplements-diary--all-taken .supplements-card__group-toggle--complete {
+  background: linear-gradient(135deg, rgba(20, 83, 45, 0.92) 0%, rgba(6, 78, 59, 0.9) 100%) !important;
+  border-color: rgba(74, 222, 128, 0.36) !important;
+  box-shadow: 0 12px 24px rgba(6, 95, 70, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+[data-theme="dark"] .widget--supplements-diary--all-taken .supplements-card__group-toggle--complete .supplements-card__group-label,
+[data-theme="dark"] .widget--supplements-diary--all-taken .supplements-card__group-toggle--complete .supplements-card__group-progress {
+  color: #ecfdf5 !important;
+}
+
+[data-theme="dark"] .widget--supplements-diary .supp-chip.supp-chip--taken {
+  background: linear-gradient(135deg, rgba(20, 83, 45, 0.88) 0%, rgba(6, 95, 70, 0.8) 100%) !important;
+  border: 1px solid rgba(74, 222, 128, 0.32) !important;
+  color: #dcfce7 !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+[data-theme="dark"] .widget--supplements-diary .supp-chip.supp-chip--warn {
+  background: rgba(127, 29, 29, 0.42) !important;
+  border-color: rgba(252, 165, 165, 0.35) !important;
+  color: #fecaca !important;
+}
+
+[data-theme="dark"] .widget--supplements-diary .supp-chip__science-trigger {
+  background: rgba(30, 41, 59, 0.88) !important;
+  border-color: rgba(96, 165, 250, 0.42) !important;
+  color: #bfdbfe !important;
+}
+
+[data-theme="dark"] .widget--supplements-diary--all-taken .supplements-card__all-taken-banner {
+  background: linear-gradient(135deg, rgba(20, 83, 45, 0.95) 0%, rgba(6, 78, 59, 0.92) 45%, rgba(30, 64, 175, 0.9) 100%) !important;
+  border: 1px solid rgba(74, 222, 128, 0.28);
+  box-shadow: 0 16px 32px rgba(6, 78, 59, 0.24), inset 0 1px 0 rgba(255, 255, 255, 0.06) !important;
+}
+
+[data-theme="dark"] .widget--supplements-diary--all-taken .supplements-card__all-taken-text {
+  color: #f0fdf4 !important;
+}
+
+[data-theme="dark"] .widget--supplements-diary .supplements-card__reminder,
+[data-theme="dark"] .widget--supplements-diary .supplements-card__message {
+  border: 1px solid transparent;
+}
+
+[data-theme="dark"] .widget--supplements-diary .supplements-card__reminder--high {
+  background: rgba(127, 29, 29, 0.36) !important;
+  color: #fecaca !important;
+  border-color: rgba(248, 113, 113, 0.24);
+}
+
+[data-theme="dark"] .widget--supplements-diary .supplements-card__reminder--medium,
+[data-theme="dark"] .widget--supplements-diary .supplements-card__message--warning {
+  background: rgba(120, 53, 15, 0.36) !important;
+  color: #fde68a !important;
+  border-color: rgba(251, 191, 36, 0.22);
+}
+
+[data-theme="dark"] .widget--supplements-diary .supplements-card__message--success {
+  background: rgba(20, 83, 45, 0.34) !important;
+  color: #bbf7d0 !important;
+  border-color: rgba(74, 222, 128, 0.18);
+}
+
+[data-theme="dark"] .widget--supplements-diary .supplements-card__helper-hint {
+  color: #94a3b8 !important;
+}
+
+[data-theme="dark"] .meal-wave-calc-btn {
+  background: rgba(37, 99, 235, 0.18) !important;
+  border: 1px solid rgba(96, 165, 250, 0.18) !important;
+  color: #bfdbfe !important;
+}
+
+[data-theme="dark"] .wave-details-overlay {
+  background: rgba(2, 6, 23, 0.76) !important;
+  backdrop-filter: blur(10px);
+}
+
+[data-theme="dark"] .wave-details-popup {
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.98) 0%, rgba(15, 23, 42, 0.96) 100%) !important;
+  border: 1px solid rgba(71, 85, 105, 0.72);
+  box-shadow: 0 28px 80px rgba(2, 6, 23, 0.62), inset 0 1px 0 rgba(255, 255, 255, 0.04) !important;
+}
+
+[data-theme="dark"] .wave-details-popup__title,
+[data-theme="dark"] .wave-details-popup__section-title {
+  color: #f8fafc !important;
+}
+
+[data-theme="dark"] .wave-details-popup__close {
+  color: #94a3b8 !important;
+}
+
+[data-theme="dark"] .wave-details-popup__formula {
+  background: rgba(15, 23, 42, 0.88) !important;
+  border: 1px solid rgba(71, 85, 105, 0.58);
+  color: #cbd5e1 !important;
+}
+
+[data-theme="dark"] .wave-details-popup__section {
+  background: rgba(15, 23, 42, 0.46);
+  border: 1px solid rgba(51, 65, 85, 0.76);
+  border-radius: 12px;
+  padding: 12px;
+}
+
+[data-theme="dark"] .wave-details-popup__row {
+  border-bottom-color: rgba(51, 65, 85, 0.85) !important;
+}
+
+[data-theme="dark"] .wave-details-popup__row span:first-child {
+  color: #94a3b8 !important;
+}
+
+[data-theme="dark"] .wave-details-popup__row span:last-child {
+  color: #e2e8f0;
+}
+
+[data-theme="dark"] .wave-details-popup__action {
+  box-shadow: 0 12px 24px rgba(37, 99, 235, 0.28);
+}
+
+[data-theme="dark"] .insulin-wave-indicator.insulin-lipolysis .lipolysis-stats {
+  background: linear-gradient(135deg, rgba(20, 83, 45, 0.34) 0%, rgba(6, 78, 59, 0.28) 55%, rgba(15, 23, 42, 0.72) 100%) !important;
+  border: 1px solid rgba(74, 222, 128, 0.22);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+[data-theme="dark"] .insulin-wave-indicator.insulin-lipolysis .lipolysis-stats>div:first-child {
+  color: #d1fae5 !important;
+}
+
+[data-theme="dark"] .insulin-wave-indicator.insulin-lipolysis .lipolysis-stats>div:nth-child(2) {
+  color: #86efac !important;
+}
+
+[data-theme="dark"] .insulin-wave-indicator.insulin-lipolysis .lipolysis-stats>div:nth-child(3) {
+  color: #fca5a5 !important;
+}
+
+/*
+ * DARK THEME — P2.1 (2026-03-23)
+ * Activity-context-badge, toggle-arrow, mpc-products-toggle
+ */
+[data-theme="dark"] .activity-context-badge {
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.78), rgba(15, 23, 42, 0.68));
+  border-color: rgba(71, 85, 105, 0.48);
+  box-shadow: 0 10px 26px -22px rgba(0, 0, 0, 0.55);
+}
+
+[data-theme="dark"] .activity-context-badge__icon {
+  background: rgba(255, 255, 255, 0.1);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+[data-theme="dark"] .activity-context-badge__title {
+  color: #e2e8f0;
+}
+
+[data-theme="dark"] .activity-context-badge__subtitle {
+  color: #94a3b8;
+}
+
+[data-theme="dark"] .activity-context-badge__metric {
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+[data-theme="dark"] .activity-context-badge__metric--success .activity-context-badge__metric-value {
+  color: #4ade80;
+}
+
+[data-theme="dark"] .activity-context-badge__metric--info .activity-context-badge__metric-value {
+  color: #60a5fa;
+}
+
+[data-theme="dark"] .activity-context-badge__metric-label {
+  color: #94a3b8;
+}
+
+[data-theme="dark"] .mpc-products-toggle {
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.82) 0%, rgba(30, 41, 59, 0.72) 100%) !important;
+  border-color: rgba(71, 85, 105, 0.6) !important;
+  color: #94a3b8 !important;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.18) !important;
+}
+
+[data-theme="dark"] .mpc-products-toggle .toggle-arrow {
+  background: rgba(30, 41, 59, 0.9);
+  border-color: rgba(71, 85, 105, 0.7);
+  color: #94a3b8;
+  box-shadow: none;
+}
+
+[data-theme="dark"] .mpc-products-toggle.expanded {
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.8) 0%, rgba(30, 41, 59, 0.7) 100%) !important;
+  border-color: rgba(96, 165, 250, 0.35) !important;
+  color: #93c5fd !important;
+}
+
+[data-theme="dark"] .mpc-products-toggle.expanded .toggle-arrow {
+  background: rgba(30, 58, 138, 0.5);
+  border-color: rgba(96, 165, 250, 0.4);
+  color: #93c5fd;
+}
 
 /* 🚀 PERF v6.0: Skeleton loader while async recommendation calculates */
 .meal-rec-card--skeleton {
