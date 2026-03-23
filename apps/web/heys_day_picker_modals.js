@@ -219,15 +219,43 @@
         // === Emoji анимация в рейтинг модалке ===
         const [emojiAnimating, setEmojiAnimating] = useState({ mood: '', wellbeing: '', stress: '' });
 
-        // Helper: получить градиент цвета по оценке 1-10
+        // Helper: получить градиент цвета по оценке 1-10.
+        // Паттерн намеренно повторяет meal product cards: мягкий partial tint
+        // поверх чистой базы вместо тотальной заливки, чтобы динамические цвета
+        // не ломали визуальную иерархию карточки.
         function getScoreGradient(score) {
-            if (!score || score === 0) return 'linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%)'; // серый
-            if (score <= 2) return 'linear-gradient(135deg, #fecaca 0%, #fca5a5 100%)'; // красный
-            if (score <= 4) return 'linear-gradient(135deg, #fed7aa 0%, #fdba74 100%)'; // оранжевый
-            if (score <= 5) return 'linear-gradient(135deg, #fef08a 0%, #fde047 100%)'; // жёлтый
-            if (score <= 7) return 'linear-gradient(135deg, #d9f99d 0%, #bef264 100%)'; // лайм
-            if (score <= 9) return 'linear-gradient(135deg, #bbf7d0 0%, #86efac 100%)'; // зелёный
-            return 'linear-gradient(135deg, #a7f3d0 0%, #6ee7b7 100%)'; // изумрудный (10)
+            const isDark = typeof document !== 'undefined' && document.documentElement.getAttribute('data-theme') === 'dark';
+            const transparent = isDark ? 'rgba(15, 23, 42, 0)' : 'rgba(255, 255, 255, 0)';
+            const base = isDark ? 'var(--heys-bg-card, #0f172a)' : '#ffffff';
+            const gloss = isDark ? 'rgba(255, 255, 255, 0.035)' : 'rgba(255, 255, 255, 0.72)';
+
+            let edge = isDark ? 'rgba(148, 163, 184, 0.18)' : 'rgba(203, 213, 225, 0.18)';
+            let wash = isDark ? 'rgba(148, 163, 184, 0.08)' : 'rgba(226, 232, 240, 0.22)';
+
+            if (!score || score === 0) {
+                edge = isDark ? 'rgba(148, 163, 184, 0.18)' : 'rgba(203, 213, 225, 0.20)';
+                wash = isDark ? 'rgba(148, 163, 184, 0.07)' : 'rgba(226, 232, 240, 0.20)';
+            } else if (score <= 2) {
+                edge = isDark ? 'rgba(248, 113, 113, 0.24)' : 'rgba(239, 68, 68, 0.17)';
+                wash = isDark ? 'rgba(248, 113, 113, 0.11)' : 'rgba(254, 226, 226, 0.34)';
+            } else if (score <= 4) {
+                edge = isDark ? 'rgba(251, 146, 60, 0.22)' : 'rgba(249, 115, 22, 0.15)';
+                wash = isDark ? 'rgba(251, 146, 60, 0.10)' : 'rgba(255, 237, 213, 0.34)';
+            } else if (score <= 5) {
+                edge = isDark ? 'rgba(250, 204, 21, 0.22)' : 'rgba(234, 179, 8, 0.14)';
+                wash = isDark ? 'rgba(250, 204, 21, 0.09)' : 'rgba(254, 249, 195, 0.34)';
+            } else if (score <= 7) {
+                edge = isDark ? 'rgba(163, 230, 53, 0.20)' : 'rgba(132, 204, 22, 0.14)';
+                wash = isDark ? 'rgba(163, 230, 53, 0.08)' : 'rgba(236, 252, 203, 0.34)';
+            } else if (score <= 9) {
+                edge = isDark ? 'rgba(74, 222, 128, 0.20)' : 'rgba(34, 197, 94, 0.13)';
+                wash = isDark ? 'rgba(74, 222, 128, 0.08)' : 'rgba(220, 252, 231, 0.34)';
+            } else {
+                edge = isDark ? 'rgba(52, 211, 153, 0.22)' : 'rgba(16, 185, 129, 0.14)';
+                wash = isDark ? 'rgba(52, 211, 153, 0.09)' : 'rgba(209, 250, 229, 0.35)';
+            }
+
+            return `linear-gradient(90deg, ${edge} 0%, ${wash} 18%, ${transparent} 44%), linear-gradient(180deg, ${gloss} 0%, ${transparent} 74%), ${base}`;
         }
 
         function getScoreTextColor(score) {

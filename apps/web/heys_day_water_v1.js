@@ -5,6 +5,100 @@
 ; (function (global) {
   const HEYS = global.HEYS = global.HEYS || {};
 
+  const WEEKDAY_LABELS = ['вс', 'пн', 'вт', 'ср', 'чт', 'пт', 'сб'];
+
+  function formatIsoDate(date) {
+    return date.toISOString().slice(0, 10);
+  }
+
+  function getWaterLsValue(key, fallbackValue) {
+    const lsGet = HEYS?.utils?.lsGet || HEYS?.dayUtils?.lsGet;
+    if (typeof lsGet === 'function') {
+      return lsGet(key, fallbackValue);
+    }
+    try {
+      const raw = localStorage.getItem(key);
+      return raw ? JSON.parse(raw) : fallbackValue;
+    } catch (_error) {
+      return fallbackValue;
+    }
+  }
+
+  function buildWeeklyWaterSeries(day, waterGoal) {
+    const anchorIso = (typeof day?.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(day.date))
+      ? day.date
+      : formatIsoDate(new Date());
+    const anchorDate = new Date(anchorIso + 'T12:00:00');
+    const goal = Math.max(1, Number(waterGoal) || 2000);
+    const series = [];
+
+    for (let offset = 13; offset >= 0; offset--) {
+      const date = new Date(anchorDate);
+      date.setDate(date.getDate() - offset);
+      const iso = formatIsoDate(date);
+      const isToday = iso === anchorIso;
+      const sourceDay = iso === day?.date
+        ? (day || {})
+        : (getWaterLsValue('heys_dayv2_' + iso, null) || {});
+      const waterMl = Math.max(0, Number(sourceDay?.waterMl) || 0);
+      series.push({
+        iso,
+        waterMl,
+        ratio: waterMl / goal,
+        label: WEEKDAY_LABELS[date.getDay()],
+        showLabel: offset % 2 === 1 || isToday,
+        isToday
+      });
+    }
+
+    return {
+      series,
+      avgMl: Math.round(series.reduce((sum, item) => sum + item.waterMl, 0) / Math.max(series.length, 1)),
+      goalHitDays: series.filter(item => item.waterMl >= goal).length,
+      maxRatio: Math.max(1, ...series.map(item => item.ratio), 1.05)
+    };
+  }
+
+  function buildSparklineGeometry(weeklySeries) {
+    const width = 300;
+    const height = 40;
+    const padX = 5;
+    const padY = 5;
+    const maxRatio = Math.max(1, Number(weeklySeries?.maxRatio) || 1);
+    const innerWidth = width - padX * 2;
+    const innerHeight = height - padY * 2;
+    const points = (weeklySeries?.series || []).map((item, index, arr) => {
+      const x = padX + (arr.length <= 1 ? innerWidth / 2 : (innerWidth * index) / (arr.length - 1));
+      const y = padY + innerHeight - (Math.min(item.ratio, maxRatio) / maxRatio) * innerHeight;
+      return { ...item, x: Math.round(x * 10) / 10, y: Math.round(y * 10) / 10 };
+    });
+
+    if (!points.length) {
+      return {
+        width,
+        height,
+        goalY: Math.round((padY + innerHeight) * 10) / 10,
+        linePoints: '',
+        areaPoints: ''
+      };
+    }
+
+    const linePoints = points.map(point => `${point.x},${point.y}`).join(' ');
+    const areaPoints = [
+      `${points[0].x},${height - padY}`,
+      ...points.map(point => `${point.x},${point.y}`),
+      `${points[points.length - 1].x},${height - padY}`
+    ].join(' ');
+    const goalY = Math.round((padY + innerHeight - Math.min(1, maxRatio) / maxRatio * innerHeight) * 10) / 10;
+
+    return { width, height, goalY, points, linePoints, areaPoints };
+  }
+
+  function formatWaterLiters(ml) {
+    if (!ml) return '0 л';
+    return (ml / 1000).toFixed(1).replace('.0', '') + ' л';
+  }
+
   /**
    * Render water card
    * @param {Object} params - Render parameters
@@ -31,6 +125,9 @@
       handleWaterRingDown, handleWaterRingUp, handleWaterRingLeave,
       openExclusivePopup, addWater, removeWater
     } = actions;
+
+    const weeklyWater = buildWeeklyWaterSeries(day, waterGoal);
+    const sparkline = buildSparklineGeometry(weeklyWater);
 
     return React.createElement('div', { id: 'water-card', className: 'compact-water compact-card widget-shadow-diary-glass widget-outline-diary-glass' },
       React.createElement('div', { className: 'compact-card-header' }, '💧 ВОДА'),
@@ -202,6 +299,55 @@
                 React.createElement('span', { className: 'water-preset-ml' }, '+' + preset.ml)
               )
             )
+          )
+        )
+      ),
+
+      React.createElement('div', {
+        className: 'water-weekly',
+        'aria-label': `Вода за 14 дней: в среднем ${formatWaterLiters(weeklyWater.avgMl)}, цель выполнена ${weeklyWater.goalHitDays} из 14 дней`
+      },
+        React.createElement('div', { className: 'water-weekly-chart-shell' },
+          React.createElement('span', { className: 'water-weekly-goal-meta' }, `${weeklyWater.goalHitDays}/14`),
+          React.createElement('svg', {
+            className: 'water-weekly-chart',
+            viewBox: `0 0 ${sparkline.width} ${sparkline.height}`,
+            preserveAspectRatio: 'none',
+            role: 'img',
+            'aria-hidden': 'true'
+          },
+            React.createElement('defs', null,
+              React.createElement('linearGradient', { id: 'waterWeeklyArea', x1: '0%', y1: '0%', x2: '0%', y2: '100%' },
+                React.createElement('stop', { offset: '0%', stopColor: 'rgba(14,165,233,0.34)' }),
+                React.createElement('stop', { offset: '100%', stopColor: 'rgba(14,165,233,0.02)' })
+              ),
+              React.createElement('linearGradient', { id: 'waterWeeklyStroke', x1: '0%', y1: '0%', x2: '100%', y2: '0%' },
+                React.createElement('stop', { offset: '0%', stopColor: '#38bdf8' }),
+                React.createElement('stop', { offset: '100%', stopColor: '#0284c7' })
+              )
+            ),
+            React.createElement('line', {
+              className: 'water-weekly-goal-line',
+              x1: 0,
+              y1: sparkline.goalY,
+              x2: sparkline.width,
+              y2: sparkline.goalY
+            }),
+            sparkline.linePoints && React.createElement('polyline', {
+              className: 'water-weekly-line',
+              points: sparkline.linePoints
+            }),
+            (sparkline.points || []).map(point => React.createElement('circle', {
+              key: point.iso,
+              className: point.isToday
+                ? 'water-weekly-dot water-weekly-dot--today'
+                : point.ratio >= 1
+                  ? 'water-weekly-dot water-weekly-dot--goal'
+                  : 'water-weekly-dot',
+              cx: point.x,
+              cy: point.y,
+              r: point.isToday ? 3.0 : point.ratio >= 1 ? 2.5 : 1.4
+            }))
           )
         )
       ),

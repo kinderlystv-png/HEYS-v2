@@ -5,6 +5,7 @@
 
     const HEYS = global.HEYS = global.HEYS || {};
     const React = global.React;
+    const ReactDOM = global.ReactDOM;
     const trackError = (err, context) => {
         if (HEYS.analytics?.trackError) {
             HEYS.analytics.trackError(err, context);
@@ -356,25 +357,13 @@
             'data-meal-time': meal?.time || '',
             style: mealCardStyle,
         },
-            qualityLineColor !== 'transparent' && React.createElement('div', {
-                className: 'meal-quality-line',
-                style: {
-                    position: 'absolute',
-                    left: 0,
-                    top: 0,
-                    bottom: 0,
-                    width: '5px',
-                    borderRadius: '12px 0 0 12px',
-                    background: qualityLineColor,
-                    transition: 'background 0.3s ease',
-                },
-            }),
             React.createElement('div', {
                 className: 'meal-header-inside meal-type-' + mealTypeInfo.type,
                 style: {
                     display: 'flex',
                     flexDirection: 'column',
                     gap: '8px',
+                    position: 'relative',
                     background: qualityLineColor !== 'transparent'
                         ? qualityLineColor + '1F'
                         : undefined,
@@ -666,28 +655,54 @@
 
                     const gramsClass = G > 500 ? 'grams-danger' : G > 300 ? 'grams-warn' : '';
 
-                    const getHarmBg = (h) => {
-                        if (h == null) return document.documentElement.getAttribute('data-theme') === 'dark' ? null : '#fff';
+                    const getHarmToneStyle = (h) => {
+                        if (h == null) return null;
                         const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-                        if (isDark) {
-                            if (h <= 2) return 'rgba(16, 185, 129, 0.20)';
-                            if (h <= 4) return 'rgba(16, 185, 129, 0.12)';
-                            if (h <= 6) return 'rgba(59, 130, 246, 0.15)';
-                            if (h <= 8) return 'rgba(239, 68, 68, 0.15)';
-                            return 'rgba(239, 68, 68, 0.25)';
+
+                        let accent = '#60a5fa';
+                        let edge = isDark ? 'rgba(96, 165, 250, 0.18)' : 'rgba(59, 130, 246, 0.14)';
+                        let wash = isDark ? 'rgba(96, 165, 250, 0.07)' : 'rgba(59, 130, 246, 0.06)';
+                        let border = isDark ? 'rgba(96, 165, 250, 0.22)' : 'rgba(59, 130, 246, 0.16)';
+
+                        if (h <= 2) {
+                            accent = isDark ? '#34d399' : '#10b981';
+                            edge = isDark ? 'rgba(52, 211, 153, 0.16)' : 'rgba(16, 185, 129, 0.11)';
+                            wash = isDark ? 'rgba(52, 211, 153, 0.05)' : 'rgba(16, 185, 129, 0.04)';
+                            border = isDark ? 'rgba(52, 211, 153, 0.18)' : 'rgba(16, 185, 129, 0.12)';
+                        } else if (h <= 4) {
+                            accent = isDark ? '#4ade80' : '#22c55e';
+                            edge = isDark ? 'rgba(74, 222, 128, 0.14)' : 'rgba(34, 197, 94, 0.09)';
+                            wash = isDark ? 'rgba(74, 222, 128, 0.045)' : 'rgba(34, 197, 94, 0.035)';
+                            border = isDark ? 'rgba(74, 222, 128, 0.16)' : 'rgba(34, 197, 94, 0.11)';
+                        } else if (h <= 6) {
+                            accent = isDark ? '#60a5fa' : '#3b82f6';
+                            edge = isDark ? 'rgba(96, 165, 250, 0.19)' : 'rgba(59, 130, 246, 0.13)';
+                            wash = isDark ? 'rgba(96, 165, 250, 0.07)' : 'rgba(59, 130, 246, 0.05)';
+                            border = isDark ? 'rgba(96, 165, 250, 0.22)' : 'rgba(59, 130, 246, 0.15)';
+                        } else if (h <= 8) {
+                            accent = isDark ? '#fb7185' : '#ef4444';
+                            edge = isDark ? 'rgba(251, 113, 133, 0.18)' : 'rgba(239, 68, 68, 0.12)';
+                            wash = isDark ? 'rgba(251, 113, 133, 0.07)' : 'rgba(239, 68, 68, 0.05)';
+                            border = isDark ? 'rgba(251, 113, 133, 0.22)' : 'rgba(239, 68, 68, 0.15)';
+                        } else {
+                            accent = isDark ? '#f87171' : '#ef4444';
+                            edge = isDark ? 'rgba(248, 113, 113, 0.24)' : 'rgba(239, 68, 68, 0.17)';
+                            wash = isDark ? 'rgba(248, 113, 113, 0.10)' : 'rgba(239, 68, 68, 0.07)';
+                            border = isDark ? 'rgba(248, 113, 113, 0.26)' : 'rgba(239, 68, 68, 0.18)';
                         }
-                        if (h <= 1) return '#34d399';
-                        if (h <= 2) return '#6ee7b7';
-                        if (h <= 3) return '#a7f3d0';
-                        if (h <= 4) return '#d1fae5';
-                        if (h <= 5) return '#bae6fd';
-                        if (h <= 6) return '#e0f2fe';
-                        if (h <= 7) return '#fecaca';
-                        if (h <= 8) return '#fee2e2';
-                        if (h <= 9) return '#fecdd3';
-                        return '#f87171';
+
+                        const dangerGlow = h > 6
+                            ? `, radial-gradient(circle at 100% 0%, ${isDark ? (h > 8 ? 'rgba(248, 113, 113, 0.16)' : 'rgba(251, 113, 133, 0.12)') : (h > 8 ? 'rgba(239, 68, 68, 0.10)' : 'rgba(244, 63, 94, 0.08)')} 0%, rgba(255, 255, 255, 0) 56%)`
+                            : '';
+
+                        return {
+                            backgroundColor: isDark ? 'var(--heys-bg-card)' : '#ffffff',
+                            backgroundImage: `linear-gradient(90deg, ${edge} 0%, ${wash} 18%, rgba(255, 255, 255, 0) 42%)${dangerGlow}, linear-gradient(180deg, ${isDark ? 'rgba(255, 255, 255, 0.03)' : 'rgba(255, 255, 255, 0.65)'} 0%, rgba(255, 255, 255, 0) 72%)`,
+                            borderColor: border,
+                            boxShadow: `inset 3px 0 0 ${accent}`,
+                        };
                     };
-                    const harmBg = getHarmBg(harmVal);
+                    const harmToneStyle = getHarmToneStyle(harmVal);
 
                     const getHarmBadge = (h) => {
                         if (h == null) return null;
@@ -1218,7 +1233,7 @@
                     };
                     const alternative = findAlternative(p, products);
 
-                    const cardContent = React.createElement('div', { className: 'mpc', style: { background: harmBg } },
+                    const cardContent = React.createElement('div', { className: 'mpc', style: harmToneStyle || undefined },
                         React.createElement('div', { className: 'mpc-row1' },
                             categoryIcon && React.createElement('span', { className: 'mpc-category-icon' }, categoryIcon),
                             React.createElement('span', { className: 'mpc-name' }, p.name),
@@ -1301,7 +1316,7 @@
                         }, cardContent);
                     }
 
-                    return React.createElement('div', { key: it.id, className: 'mpc', style: { marginBottom: '6px', background: harmBg } },
+                    return React.createElement('div', { key: it.id, className: 'mpc', style: harmToneStyle ? { marginBottom: '6px', ...harmToneStyle } : { marginBottom: '6px' } },
                         React.createElement('div', { className: 'mpc-row1' },
                             React.createElement('span', { className: 'mpc-name' }, p.name),
                             React.createElement('input', {
@@ -1791,145 +1806,157 @@
                     addProductToMeal,
                 })),
 
-                showWaveCalcPopup && currentWave && React.createElement('div', {
-                    className: 'wave-details-overlay',
-                    onClick: (e) => { if (e.target === e.currentTarget) setShowWaveCalcPopup(false); },
-                    style: {
-                        position: 'fixed',
-                        top: 0, left: 0, right: 0, bottom: 0,
-                        background: 'rgba(0,0,0,0.5)',
-                        zIndex: 9999,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        padding: '20px',
-                    },
-                },
-                    React.createElement('div', {
-                        className: 'wave-details-popup',
+                showWaveCalcPopup && currentWave && (() => {
+                    const overlay = React.createElement('div', {
+                        className: 'wave-details-overlay',
+                        onClick: (e) => { if (e.target === e.currentTarget) setShowWaveCalcPopup(false); },
                         style: {
-                            background: '#fff',
-                            borderRadius: '16px',
+                            position: 'fixed',
+                            inset: 0,
+                            width: '100vw',
+                            height: '100dvh',
+                            minHeight: '100dvh',
+                            background: 'rgba(0,0,0,0.5)',
+                            zIndex: 9999,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
                             padding: '20px',
-                            maxWidth: '360px',
-                            width: '100%',
-                            maxHeight: '80vh',
-                            overflowY: 'auto',
-                            boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
+                            overflow: 'hidden',
+                            boxSizing: 'border-box',
                         },
                     },
                         React.createElement('div', {
-                            className: 'wave-details-popup__header',
+                            className: 'wave-details-popup',
                             style: {
-                                display: 'flex',
-                                justifyContent: 'space-between',
-                                alignItems: 'center',
-                                marginBottom: '16px',
+                                background: '#fff',
+                                borderRadius: '16px',
+                                padding: '20px',
+                                maxWidth: 'min(360px, calc(100vw - 24px))',
+                                width: '100%',
+                                maxHeight: 'calc(100dvh - 24px)',
+                                overflowY: 'auto',
+                                boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
+                                boxSizing: 'border-box',
                             },
                         },
-                            React.createElement('h3', {
-                                className: 'wave-details-popup__title',
-                                style: { margin: 0, fontSize: '16px', fontWeight: 600, color: '#1f2937' },
-                            }, 'Расчёт волны'),
+                            React.createElement('div', {
+                                className: 'wave-details-popup__header',
+                                style: {
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    alignItems: 'center',
+                                    marginBottom: '16px',
+                                },
+                            },
+                                React.createElement('h3', {
+                                    className: 'wave-details-popup__title',
+                                    style: { margin: 0, fontSize: '16px', fontWeight: 600, color: '#1f2937' },
+                                }, 'Расчёт волны'),
+                                React.createElement('button', {
+                                    className: 'wave-details-popup__close',
+                                    onClick: () => setShowWaveCalcPopup(false),
+                                    style: {
+                                        background: 'none', border: 'none', fontSize: '20px',
+                                        cursor: 'pointer', color: '#9ca3af', padding: '4px',
+                                    },
+                                }, '×'),
+                            ),
+
+                            React.createElement('div', {
+                                className: 'wave-details-popup__hero',
+                                style: {
+                                    background: 'linear-gradient(135deg, #3b82f6, #2563eb)',
+                                    borderRadius: '12px',
+                                    padding: '16px',
+                                    marginBottom: '16px',
+                                    textAlign: 'center',
+                                    color: '#fff',
+                                },
+                            },
+                                React.createElement('div', { style: { fontSize: '12px', opacity: 0.9, marginBottom: '4px' } }, 'Длина волны'),
+                                React.createElement('div', { style: { fontSize: '28px', fontWeight: 700 } }, (currentWave.waveHours || currentWave.duration / 60).toFixed(1) + 'ч'),
+                                React.createElement('div', { style: { fontSize: '11px', opacity: 0.8, marginTop: '4px' } }, currentWave.timeDisplay + ' → ' + currentWave.endTimeDisplay),
+                            ),
+
+                            React.createElement('div', {
+                                className: 'wave-details-popup__formula',
+                                style: {
+                                    background: '#f8fafc',
+                                    borderRadius: '10px',
+                                    padding: '12px',
+                                    marginBottom: '16px',
+                                    fontSize: '11px',
+                                    fontFamily: 'monospace',
+                                    color: '#64748b',
+                                    textAlign: 'center',
+                                },
+                            }, 'База × Множитель = ' + (currentWave.baseWaveHours || 3).toFixed(1) + 'ч × '
+                            + (currentWave.finalMultiplier || 1).toFixed(2) + ' = ' + (currentWave.waveHours || currentWave.duration / 60).toFixed(1) + 'ч'),
+
+                            React.createElement('div', { className: 'wave-details-popup__section', style: { marginBottom: '12px' } },
+                                React.createElement('div', { className: 'wave-details-popup__section-title', style: { fontSize: '12px', fontWeight: 600, color: '#1f2937', marginBottom: '8px' } }, '🍽️ Факторы еды'),
+                                React.createElement('div', { className: 'wave-details-popup__row', style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
+                                    React.createElement('span', { style: { color: '#64748b' } }, 'ГИ'),
+                                    React.createElement('span', { style: { fontWeight: 500 } }, Math.round(currentWave.gi || 0)),
+                                ),
+                                React.createElement('div', { className: 'wave-details-popup__row', style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
+                                    React.createElement('span', { style: { color: '#64748b' } }, 'GL (нагрузка)'),
+                                    React.createElement('span', { style: { fontWeight: 500, color: currentWave.gl < 10 ? '#22c55e' : currentWave.gl > 20 ? '#ef4444' : '#1f2937' } }, (currentWave.gl || 0).toFixed(1)),
+                                ),
+                                React.createElement('div', { className: 'wave-details-popup__row', style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
+                                    React.createElement('span', { style: { color: '#64748b' } }, 'Белок'),
+                                    React.createElement('span', { style: { fontWeight: 500 } }, Math.round(currentWave.protein || 0) + 'г'),
+                                ),
+                                React.createElement('div', { className: 'wave-details-popup__row', style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
+                                    React.createElement('span', { style: { color: '#64748b' } }, 'Клетчатка'),
+                                    React.createElement('span', { style: { fontWeight: 500, color: currentWave.fiber >= 5 ? '#22c55e' : '#1f2937' } }, Math.round(currentWave.fiber || 0) + 'г'),
+                                ),
+                                React.createElement('div', { className: 'wave-details-popup__row', style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
+                                    React.createElement('span', { style: { color: '#64748b' } }, 'Жиры'),
+                                    React.createElement('span', { style: { fontWeight: 500 } }, Math.round(currentWave.fat || 0) + 'г'),
+                                ),
+                                React.createElement('div', { className: 'wave-details-popup__row wave-details-popup__row--last', style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0' } },
+                                    React.createElement('span', { style: { color: '#64748b' } }, 'Углеводы'),
+                                    React.createElement('span', { style: { fontWeight: 500 } }, Math.round(currentWave.carbs || 0) + 'г'),
+                                ),
+                            ),
+
+                            React.createElement('div', { className: 'wave-details-popup__section', style: { marginBottom: '12px' } },
+                                React.createElement('div', { className: 'wave-details-popup__section-title', style: { fontSize: '12px', fontWeight: 600, color: '#1f2937', marginBottom: '8px' } }, '⏰ Дневные факторы'),
+                                React.createElement('div', { className: 'wave-details-popup__row', style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
+                                    React.createElement('span', { style: { color: '#64748b' } }, 'Время суток'),
+                                    React.createElement('span', { style: { fontWeight: 500, color: currentWave.circadianMultiplier > 1.05 ? '#f97316' : '#1f2937' } }, '×' + (currentWave.circadianMultiplier || 1).toFixed(2)),
+                                ),
+                                currentWave.activityBonus && currentWave.activityBonus !== 0 && React.createElement('div', { className: 'wave-details-popup__row wave-details-popup__row--last', style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0' } },
+                                    React.createElement('span', { style: { color: '#22c55e' } }, '🏃 Активность'),
+                                    React.createElement('span', { style: { fontWeight: 500, color: '#22c55e' } }, (currentWave.activityBonus * 100).toFixed(0) + '%'),
+                                ),
+                            ),
+
                             React.createElement('button', {
-                                className: 'wave-details-popup__close',
+                                className: 'wave-details-popup__action',
                                 onClick: () => setShowWaveCalcPopup(false),
                                 style: {
-                                    background: 'none', border: 'none', fontSize: '20px',
-                                    cursor: 'pointer', color: '#9ca3af', padding: '4px',
+                                    width: '100%',
+                                    background: '#3b82f6',
+                                    color: '#fff',
+                                    border: 'none',
+                                    borderRadius: '10px',
+                                    padding: '12px',
+                                    fontSize: '14px',
+                                    fontWeight: 600,
+                                    cursor: 'pointer',
+                                    marginTop: '8px',
                                 },
-                            }, '×'),
-                        ),
+                            }, 'Закрыть'),
+                        )
+                    );
 
-                        React.createElement('div', {
-                            className: 'wave-details-popup__hero',
-                            style: {
-                                background: 'linear-gradient(135deg, #3b82f6, #2563eb)',
-                                borderRadius: '12px',
-                                padding: '16px',
-                                marginBottom: '16px',
-                                textAlign: 'center',
-                                color: '#fff',
-                            },
-                        },
-                            React.createElement('div', { style: { fontSize: '12px', opacity: 0.9, marginBottom: '4px' } }, 'Длина волны'),
-                            React.createElement('div', { style: { fontSize: '28px', fontWeight: 700 } }, (currentWave.waveHours || currentWave.duration / 60).toFixed(1) + 'ч'),
-                            React.createElement('div', { style: { fontSize: '11px', opacity: 0.8, marginTop: '4px' } }, currentWave.timeDisplay + ' → ' + currentWave.endTimeDisplay),
-                        ),
-
-                        React.createElement('div', {
-                            className: 'wave-details-popup__formula',
-                            style: {
-                                background: '#f8fafc',
-                                borderRadius: '10px',
-                                padding: '12px',
-                                marginBottom: '16px',
-                                fontSize: '11px',
-                                fontFamily: 'monospace',
-                                color: '#64748b',
-                                textAlign: 'center',
-                            },
-                        }, 'База × Множитель = ' + (currentWave.baseWaveHours || 3).toFixed(1) + 'ч × '
-                        + (currentWave.finalMultiplier || 1).toFixed(2) + ' = ' + (currentWave.waveHours || currentWave.duration / 60).toFixed(1) + 'ч'),
-
-                        React.createElement('div', { className: 'wave-details-popup__section', style: { marginBottom: '12px' } },
-                            React.createElement('div', { className: 'wave-details-popup__section-title', style: { fontSize: '12px', fontWeight: 600, color: '#1f2937', marginBottom: '8px' } }, '🍽️ Факторы еды'),
-                            React.createElement('div', { className: 'wave-details-popup__row', style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
-                                React.createElement('span', { style: { color: '#64748b' } }, 'ГИ'),
-                                React.createElement('span', { style: { fontWeight: 500 } }, Math.round(currentWave.gi || 0)),
-                            ),
-                            React.createElement('div', { className: 'wave-details-popup__row', style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
-                                React.createElement('span', { style: { color: '#64748b' } }, 'GL (нагрузка)'),
-                                React.createElement('span', { style: { fontWeight: 500, color: currentWave.gl < 10 ? '#22c55e' : currentWave.gl > 20 ? '#ef4444' : '#1f2937' } }, (currentWave.gl || 0).toFixed(1)),
-                            ),
-                            React.createElement('div', { className: 'wave-details-popup__row', style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
-                                React.createElement('span', { style: { color: '#64748b' } }, 'Белок'),
-                                React.createElement('span', { style: { fontWeight: 500 } }, Math.round(currentWave.protein || 0) + 'г'),
-                            ),
-                            React.createElement('div', { className: 'wave-details-popup__row', style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
-                                React.createElement('span', { style: { color: '#64748b' } }, 'Клетчатка'),
-                                React.createElement('span', { style: { fontWeight: 500, color: currentWave.fiber >= 5 ? '#22c55e' : '#1f2937' } }, Math.round(currentWave.fiber || 0) + 'г'),
-                            ),
-                            React.createElement('div', { className: 'wave-details-popup__row', style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
-                                React.createElement('span', { style: { color: '#64748b' } }, 'Жиры'),
-                                React.createElement('span', { style: { fontWeight: 500 } }, Math.round(currentWave.fat || 0) + 'г'),
-                            ),
-                            React.createElement('div', { className: 'wave-details-popup__row wave-details-popup__row--last', style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0' } },
-                                React.createElement('span', { style: { color: '#64748b' } }, 'Углеводы'),
-                                React.createElement('span', { style: { fontWeight: 500 } }, Math.round(currentWave.carbs || 0) + 'г'),
-                            ),
-                        ),
-
-                        React.createElement('div', { className: 'wave-details-popup__section', style: { marginBottom: '12px' } },
-                            React.createElement('div', { className: 'wave-details-popup__section-title', style: { fontSize: '12px', fontWeight: 600, color: '#1f2937', marginBottom: '8px' } }, '⏰ Дневные факторы'),
-                            React.createElement('div', { className: 'wave-details-popup__row', style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
-                                React.createElement('span', { style: { color: '#64748b' } }, 'Время суток'),
-                                React.createElement('span', { style: { fontWeight: 500, color: currentWave.circadianMultiplier > 1.05 ? '#f97316' : '#1f2937' } }, '×' + (currentWave.circadianMultiplier || 1).toFixed(2)),
-                            ),
-                            currentWave.activityBonus && currentWave.activityBonus !== 0 && React.createElement('div', { className: 'wave-details-popup__row wave-details-popup__row--last', style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0' } },
-                                React.createElement('span', { style: { color: '#22c55e' } }, '🏃 Активность'),
-                                React.createElement('span', { style: { fontWeight: 500, color: '#22c55e' } }, (currentWave.activityBonus * 100).toFixed(0) + '%'),
-                            ),
-                        ),
-
-                        React.createElement('button', {
-                            className: 'wave-details-popup__action',
-                            onClick: () => setShowWaveCalcPopup(false),
-                            style: {
-                                width: '100%',
-                                background: '#3b82f6',
-                                color: '#fff',
-                                border: 'none',
-                                borderRadius: '10px',
-                                padding: '12px',
-                                fontSize: '14px',
-                                fontWeight: 600,
-                                cursor: 'pointer',
-                                marginTop: '8px',
-                            },
-                        }, 'Закрыть'),
-                    ),
-                ),
+                    return ReactDOM?.createPortal && global.document?.body
+                        ? ReactDOM.createPortal(overlay, global.document.body)
+                        : overlay;
+                })(),
             ),
         );
     }, (prevProps, nextProps) => {

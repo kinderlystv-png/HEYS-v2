@@ -1235,8 +1235,11 @@
                 const { meal, quality, mealTypeInfo, x, y } = mealQualityPopup;
                 const popupW = 320;
                 const popupH = 480;
+                const safePopupW = typeof window !== 'undefined'
+                    ? Math.min(popupW, Math.max(220, window.innerWidth - 24))
+                    : popupW;
 
-                const pos = getSmartPopupPosition(x, y, popupW, popupH, { preferAbove: true, offset: 12, margin: 16 });
+                const pos = getSmartPopupPosition(x, y, safePopupW, popupH, { preferAbove: true, offset: 12, margin: 16 });
                 const { left, top, arrowPos, showAbove } = pos;
 
                 const getColor = (score) => {
@@ -1551,10 +1554,12 @@
                         position: 'fixed',
                         left: left + 'px',
                         top: top + 'px',
-                        width: popupW + 'px',
-                        maxHeight: 'calc(100vh - 32px)',
+                        width: safePopupW + 'px',
+                        maxWidth: 'calc(100vw - 24px)',
+                        maxHeight: 'calc(100dvh - 32px)',
                         overflowY: 'auto',
                         zIndex: 10000,
+                        boxSizing: 'border-box'
                     },
                     onClick: (e) => e.stopPropagation(),
                     ...swipeHandlers,
@@ -2699,6 +2704,7 @@
 
     const HEYS = global.HEYS = global.HEYS || {};
     const React = global.React;
+    const ReactDOM = global.ReactDOM;
     const trackError = (err, context) => {
         if (HEYS.analytics?.trackError) {
             HEYS.analytics.trackError(err, context);
@@ -3050,25 +3056,13 @@
             'data-meal-time': meal?.time || '',
             style: mealCardStyle,
         },
-            qualityLineColor !== 'transparent' && React.createElement('div', {
-                className: 'meal-quality-line',
-                style: {
-                    position: 'absolute',
-                    left: 0,
-                    top: 0,
-                    bottom: 0,
-                    width: '5px',
-                    borderRadius: '12px 0 0 12px',
-                    background: qualityLineColor,
-                    transition: 'background 0.3s ease',
-                },
-            }),
             React.createElement('div', {
                 className: 'meal-header-inside meal-type-' + mealTypeInfo.type,
                 style: {
                     display: 'flex',
                     flexDirection: 'column',
                     gap: '8px',
+                    position: 'relative',
                     background: qualityLineColor !== 'transparent'
                         ? qualityLineColor + '1F'
                         : undefined,
@@ -3360,28 +3354,54 @@
 
                     const gramsClass = G > 500 ? 'grams-danger' : G > 300 ? 'grams-warn' : '';
 
-                    const getHarmBg = (h) => {
-                        if (h == null) return document.documentElement.getAttribute('data-theme') === 'dark' ? null : '#fff';
+                    const getHarmToneStyle = (h) => {
+                        if (h == null) return null;
                         const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-                        if (isDark) {
-                            if (h <= 2) return 'rgba(16, 185, 129, 0.20)';
-                            if (h <= 4) return 'rgba(16, 185, 129, 0.12)';
-                            if (h <= 6) return 'rgba(59, 130, 246, 0.15)';
-                            if (h <= 8) return 'rgba(239, 68, 68, 0.15)';
-                            return 'rgba(239, 68, 68, 0.25)';
+
+                        let accent = '#60a5fa';
+                        let edge = isDark ? 'rgba(96, 165, 250, 0.18)' : 'rgba(59, 130, 246, 0.14)';
+                        let wash = isDark ? 'rgba(96, 165, 250, 0.07)' : 'rgba(59, 130, 246, 0.06)';
+                        let border = isDark ? 'rgba(96, 165, 250, 0.22)' : 'rgba(59, 130, 246, 0.16)';
+
+                        if (h <= 2) {
+                            accent = isDark ? '#34d399' : '#10b981';
+                            edge = isDark ? 'rgba(52, 211, 153, 0.16)' : 'rgba(16, 185, 129, 0.11)';
+                            wash = isDark ? 'rgba(52, 211, 153, 0.05)' : 'rgba(16, 185, 129, 0.04)';
+                            border = isDark ? 'rgba(52, 211, 153, 0.18)' : 'rgba(16, 185, 129, 0.12)';
+                        } else if (h <= 4) {
+                            accent = isDark ? '#4ade80' : '#22c55e';
+                            edge = isDark ? 'rgba(74, 222, 128, 0.14)' : 'rgba(34, 197, 94, 0.09)';
+                            wash = isDark ? 'rgba(74, 222, 128, 0.045)' : 'rgba(34, 197, 94, 0.035)';
+                            border = isDark ? 'rgba(74, 222, 128, 0.16)' : 'rgba(34, 197, 94, 0.11)';
+                        } else if (h <= 6) {
+                            accent = isDark ? '#60a5fa' : '#3b82f6';
+                            edge = isDark ? 'rgba(96, 165, 250, 0.19)' : 'rgba(59, 130, 246, 0.13)';
+                            wash = isDark ? 'rgba(96, 165, 250, 0.07)' : 'rgba(59, 130, 246, 0.05)';
+                            border = isDark ? 'rgba(96, 165, 250, 0.22)' : 'rgba(59, 130, 246, 0.15)';
+                        } else if (h <= 8) {
+                            accent = isDark ? '#fb7185' : '#ef4444';
+                            edge = isDark ? 'rgba(251, 113, 133, 0.18)' : 'rgba(239, 68, 68, 0.12)';
+                            wash = isDark ? 'rgba(251, 113, 133, 0.07)' : 'rgba(239, 68, 68, 0.05)';
+                            border = isDark ? 'rgba(251, 113, 133, 0.22)' : 'rgba(239, 68, 68, 0.15)';
+                        } else {
+                            accent = isDark ? '#f87171' : '#ef4444';
+                            edge = isDark ? 'rgba(248, 113, 113, 0.24)' : 'rgba(239, 68, 68, 0.17)';
+                            wash = isDark ? 'rgba(248, 113, 113, 0.10)' : 'rgba(239, 68, 68, 0.07)';
+                            border = isDark ? 'rgba(248, 113, 113, 0.26)' : 'rgba(239, 68, 68, 0.18)';
                         }
-                        if (h <= 1) return '#34d399';
-                        if (h <= 2) return '#6ee7b7';
-                        if (h <= 3) return '#a7f3d0';
-                        if (h <= 4) return '#d1fae5';
-                        if (h <= 5) return '#bae6fd';
-                        if (h <= 6) return '#e0f2fe';
-                        if (h <= 7) return '#fecaca';
-                        if (h <= 8) return '#fee2e2';
-                        if (h <= 9) return '#fecdd3';
-                        return '#f87171';
+
+                        const dangerGlow = h > 6
+                            ? `, radial-gradient(circle at 100% 0%, ${isDark ? (h > 8 ? 'rgba(248, 113, 113, 0.16)' : 'rgba(251, 113, 133, 0.12)') : (h > 8 ? 'rgba(239, 68, 68, 0.10)' : 'rgba(244, 63, 94, 0.08)')} 0%, rgba(255, 255, 255, 0) 56%)`
+                            : '';
+
+                        return {
+                            backgroundColor: isDark ? 'var(--heys-bg-card)' : '#ffffff',
+                            backgroundImage: `linear-gradient(90deg, ${edge} 0%, ${wash} 18%, rgba(255, 255, 255, 0) 42%)${dangerGlow}, linear-gradient(180deg, ${isDark ? 'rgba(255, 255, 255, 0.03)' : 'rgba(255, 255, 255, 0.65)'} 0%, rgba(255, 255, 255, 0) 72%)`,
+                            borderColor: border,
+                            boxShadow: `inset 3px 0 0 ${accent}`,
+                        };
                     };
-                    const harmBg = getHarmBg(harmVal);
+                    const harmToneStyle = getHarmToneStyle(harmVal);
 
                     const getHarmBadge = (h) => {
                         if (h == null) return null;
@@ -3912,7 +3932,7 @@
                     };
                     const alternative = findAlternative(p, products);
 
-                    const cardContent = React.createElement('div', { className: 'mpc', style: { background: harmBg } },
+                    const cardContent = React.createElement('div', { className: 'mpc', style: harmToneStyle || undefined },
                         React.createElement('div', { className: 'mpc-row1' },
                             categoryIcon && React.createElement('span', { className: 'mpc-category-icon' }, categoryIcon),
                             React.createElement('span', { className: 'mpc-name' }, p.name),
@@ -3995,7 +4015,7 @@
                         }, cardContent);
                     }
 
-                    return React.createElement('div', { key: it.id, className: 'mpc', style: { marginBottom: '6px', background: harmBg } },
+                    return React.createElement('div', { key: it.id, className: 'mpc', style: harmToneStyle ? { marginBottom: '6px', ...harmToneStyle } : { marginBottom: '6px' } },
                         React.createElement('div', { className: 'mpc-row1' },
                             React.createElement('span', { className: 'mpc-name' }, p.name),
                             React.createElement('input', {
@@ -4485,145 +4505,157 @@
                     addProductToMeal,
                 })),
 
-                showWaveCalcPopup && currentWave && React.createElement('div', {
-                    className: 'wave-details-overlay',
-                    onClick: (e) => { if (e.target === e.currentTarget) setShowWaveCalcPopup(false); },
-                    style: {
-                        position: 'fixed',
-                        top: 0, left: 0, right: 0, bottom: 0,
-                        background: 'rgba(0,0,0,0.5)',
-                        zIndex: 9999,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        padding: '20px',
-                    },
-                },
-                    React.createElement('div', {
-                        className: 'wave-details-popup',
+                showWaveCalcPopup && currentWave && (() => {
+                    const overlay = React.createElement('div', {
+                        className: 'wave-details-overlay',
+                        onClick: (e) => { if (e.target === e.currentTarget) setShowWaveCalcPopup(false); },
                         style: {
-                            background: '#fff',
-                            borderRadius: '16px',
+                            position: 'fixed',
+                            inset: 0,
+                            width: '100vw',
+                            height: '100dvh',
+                            minHeight: '100dvh',
+                            background: 'rgba(0,0,0,0.5)',
+                            zIndex: 9999,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
                             padding: '20px',
-                            maxWidth: '360px',
-                            width: '100%',
-                            maxHeight: '80vh',
-                            overflowY: 'auto',
-                            boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
+                            overflow: 'hidden',
+                            boxSizing: 'border-box',
                         },
                     },
                         React.createElement('div', {
-                            className: 'wave-details-popup__header',
+                            className: 'wave-details-popup',
                             style: {
-                                display: 'flex',
-                                justifyContent: 'space-between',
-                                alignItems: 'center',
-                                marginBottom: '16px',
+                                background: '#fff',
+                                borderRadius: '16px',
+                                padding: '20px',
+                                maxWidth: 'min(360px, calc(100vw - 24px))',
+                                width: '100%',
+                                maxHeight: 'calc(100dvh - 24px)',
+                                overflowY: 'auto',
+                                boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
+                                boxSizing: 'border-box',
                             },
                         },
-                            React.createElement('h3', {
-                                className: 'wave-details-popup__title',
-                                style: { margin: 0, fontSize: '16px', fontWeight: 600, color: '#1f2937' },
-                            }, 'Расчёт волны'),
+                            React.createElement('div', {
+                                className: 'wave-details-popup__header',
+                                style: {
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    alignItems: 'center',
+                                    marginBottom: '16px',
+                                },
+                            },
+                                React.createElement('h3', {
+                                    className: 'wave-details-popup__title',
+                                    style: { margin: 0, fontSize: '16px', fontWeight: 600, color: '#1f2937' },
+                                }, 'Расчёт волны'),
+                                React.createElement('button', {
+                                    className: 'wave-details-popup__close',
+                                    onClick: () => setShowWaveCalcPopup(false),
+                                    style: {
+                                        background: 'none', border: 'none', fontSize: '20px',
+                                        cursor: 'pointer', color: '#9ca3af', padding: '4px',
+                                    },
+                                }, '×'),
+                            ),
+
+                            React.createElement('div', {
+                                className: 'wave-details-popup__hero',
+                                style: {
+                                    background: 'linear-gradient(135deg, #3b82f6, #2563eb)',
+                                    borderRadius: '12px',
+                                    padding: '16px',
+                                    marginBottom: '16px',
+                                    textAlign: 'center',
+                                    color: '#fff',
+                                },
+                            },
+                                React.createElement('div', { style: { fontSize: '12px', opacity: 0.9, marginBottom: '4px' } }, 'Длина волны'),
+                                React.createElement('div', { style: { fontSize: '28px', fontWeight: 700 } }, (currentWave.waveHours || currentWave.duration / 60).toFixed(1) + 'ч'),
+                                React.createElement('div', { style: { fontSize: '11px', opacity: 0.8, marginTop: '4px' } }, currentWave.timeDisplay + ' → ' + currentWave.endTimeDisplay),
+                            ),
+
+                            React.createElement('div', {
+                                className: 'wave-details-popup__formula',
+                                style: {
+                                    background: '#f8fafc',
+                                    borderRadius: '10px',
+                                    padding: '12px',
+                                    marginBottom: '16px',
+                                    fontSize: '11px',
+                                    fontFamily: 'monospace',
+                                    color: '#64748b',
+                                    textAlign: 'center',
+                                },
+                            }, 'База × Множитель = ' + (currentWave.baseWaveHours || 3).toFixed(1) + 'ч × '
+                            + (currentWave.finalMultiplier || 1).toFixed(2) + ' = ' + (currentWave.waveHours || currentWave.duration / 60).toFixed(1) + 'ч'),
+
+                            React.createElement('div', { className: 'wave-details-popup__section', style: { marginBottom: '12px' } },
+                                React.createElement('div', { className: 'wave-details-popup__section-title', style: { fontSize: '12px', fontWeight: 600, color: '#1f2937', marginBottom: '8px' } }, '🍽️ Факторы еды'),
+                                React.createElement('div', { className: 'wave-details-popup__row', style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
+                                    React.createElement('span', { style: { color: '#64748b' } }, 'ГИ'),
+                                    React.createElement('span', { style: { fontWeight: 500 } }, Math.round(currentWave.gi || 0)),
+                                ),
+                                React.createElement('div', { className: 'wave-details-popup__row', style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
+                                    React.createElement('span', { style: { color: '#64748b' } }, 'GL (нагрузка)'),
+                                    React.createElement('span', { style: { fontWeight: 500, color: currentWave.gl < 10 ? '#22c55e' : currentWave.gl > 20 ? '#ef4444' : '#1f2937' } }, (currentWave.gl || 0).toFixed(1)),
+                                ),
+                                React.createElement('div', { className: 'wave-details-popup__row', style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
+                                    React.createElement('span', { style: { color: '#64748b' } }, 'Белок'),
+                                    React.createElement('span', { style: { fontWeight: 500 } }, Math.round(currentWave.protein || 0) + 'г'),
+                                ),
+                                React.createElement('div', { className: 'wave-details-popup__row', style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
+                                    React.createElement('span', { style: { color: '#64748b' } }, 'Клетчатка'),
+                                    React.createElement('span', { style: { fontWeight: 500, color: currentWave.fiber >= 5 ? '#22c55e' : '#1f2937' } }, Math.round(currentWave.fiber || 0) + 'г'),
+                                ),
+                                React.createElement('div', { className: 'wave-details-popup__row', style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
+                                    React.createElement('span', { style: { color: '#64748b' } }, 'Жиры'),
+                                    React.createElement('span', { style: { fontWeight: 500 } }, Math.round(currentWave.fat || 0) + 'г'),
+                                ),
+                                React.createElement('div', { className: 'wave-details-popup__row wave-details-popup__row--last', style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0' } },
+                                    React.createElement('span', { style: { color: '#64748b' } }, 'Углеводы'),
+                                    React.createElement('span', { style: { fontWeight: 500 } }, Math.round(currentWave.carbs || 0) + 'г'),
+                                ),
+                            ),
+
+                            React.createElement('div', { className: 'wave-details-popup__section', style: { marginBottom: '12px' } },
+                                React.createElement('div', { className: 'wave-details-popup__section-title', style: { fontSize: '12px', fontWeight: 600, color: '#1f2937', marginBottom: '8px' } }, '⏰ Дневные факторы'),
+                                React.createElement('div', { className: 'wave-details-popup__row', style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
+                                    React.createElement('span', { style: { color: '#64748b' } }, 'Время суток'),
+                                    React.createElement('span', { style: { fontWeight: 500, color: currentWave.circadianMultiplier > 1.05 ? '#f97316' : '#1f2937' } }, '×' + (currentWave.circadianMultiplier || 1).toFixed(2)),
+                                ),
+                                currentWave.activityBonus && currentWave.activityBonus !== 0 && React.createElement('div', { className: 'wave-details-popup__row wave-details-popup__row--last', style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0' } },
+                                    React.createElement('span', { style: { color: '#22c55e' } }, '🏃 Активность'),
+                                    React.createElement('span', { style: { fontWeight: 500, color: '#22c55e' } }, (currentWave.activityBonus * 100).toFixed(0) + '%'),
+                                ),
+                            ),
+
                             React.createElement('button', {
-                                className: 'wave-details-popup__close',
+                                className: 'wave-details-popup__action',
                                 onClick: () => setShowWaveCalcPopup(false),
                                 style: {
-                                    background: 'none', border: 'none', fontSize: '20px',
-                                    cursor: 'pointer', color: '#9ca3af', padding: '4px',
+                                    width: '100%',
+                                    background: '#3b82f6',
+                                    color: '#fff',
+                                    border: 'none',
+                                    borderRadius: '10px',
+                                    padding: '12px',
+                                    fontSize: '14px',
+                                    fontWeight: 600,
+                                    cursor: 'pointer',
+                                    marginTop: '8px',
                                 },
-                            }, '×'),
-                        ),
+                            }, 'Закрыть'),
+                        )
+                    );
 
-                        React.createElement('div', {
-                            className: 'wave-details-popup__hero',
-                            style: {
-                                background: 'linear-gradient(135deg, #3b82f6, #2563eb)',
-                                borderRadius: '12px',
-                                padding: '16px',
-                                marginBottom: '16px',
-                                textAlign: 'center',
-                                color: '#fff',
-                            },
-                        },
-                            React.createElement('div', { style: { fontSize: '12px', opacity: 0.9, marginBottom: '4px' } }, 'Длина волны'),
-                            React.createElement('div', { style: { fontSize: '28px', fontWeight: 700 } }, (currentWave.waveHours || currentWave.duration / 60).toFixed(1) + 'ч'),
-                            React.createElement('div', { style: { fontSize: '11px', opacity: 0.8, marginTop: '4px' } }, currentWave.timeDisplay + ' → ' + currentWave.endTimeDisplay),
-                        ),
-
-                        React.createElement('div', {
-                            className: 'wave-details-popup__formula',
-                            style: {
-                                background: '#f8fafc',
-                                borderRadius: '10px',
-                                padding: '12px',
-                                marginBottom: '16px',
-                                fontSize: '11px',
-                                fontFamily: 'monospace',
-                                color: '#64748b',
-                                textAlign: 'center',
-                            },
-                        }, 'База × Множитель = ' + (currentWave.baseWaveHours || 3).toFixed(1) + 'ч × '
-                        + (currentWave.finalMultiplier || 1).toFixed(2) + ' = ' + (currentWave.waveHours || currentWave.duration / 60).toFixed(1) + 'ч'),
-
-                        React.createElement('div', { className: 'wave-details-popup__section', style: { marginBottom: '12px' } },
-                            React.createElement('div', { className: 'wave-details-popup__section-title', style: { fontSize: '12px', fontWeight: 600, color: '#1f2937', marginBottom: '8px' } }, '🍽️ Факторы еды'),
-                            React.createElement('div', { className: 'wave-details-popup__row', style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
-                                React.createElement('span', { style: { color: '#64748b' } }, 'ГИ'),
-                                React.createElement('span', { style: { fontWeight: 500 } }, Math.round(currentWave.gi || 0)),
-                            ),
-                            React.createElement('div', { className: 'wave-details-popup__row', style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
-                                React.createElement('span', { style: { color: '#64748b' } }, 'GL (нагрузка)'),
-                                React.createElement('span', { style: { fontWeight: 500, color: currentWave.gl < 10 ? '#22c55e' : currentWave.gl > 20 ? '#ef4444' : '#1f2937' } }, (currentWave.gl || 0).toFixed(1)),
-                            ),
-                            React.createElement('div', { className: 'wave-details-popup__row', style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
-                                React.createElement('span', { style: { color: '#64748b' } }, 'Белок'),
-                                React.createElement('span', { style: { fontWeight: 500 } }, Math.round(currentWave.protein || 0) + 'г'),
-                            ),
-                            React.createElement('div', { className: 'wave-details-popup__row', style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
-                                React.createElement('span', { style: { color: '#64748b' } }, 'Клетчатка'),
-                                React.createElement('span', { style: { fontWeight: 500, color: currentWave.fiber >= 5 ? '#22c55e' : '#1f2937' } }, Math.round(currentWave.fiber || 0) + 'г'),
-                            ),
-                            React.createElement('div', { className: 'wave-details-popup__row', style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
-                                React.createElement('span', { style: { color: '#64748b' } }, 'Жиры'),
-                                React.createElement('span', { style: { fontWeight: 500 } }, Math.round(currentWave.fat || 0) + 'г'),
-                            ),
-                            React.createElement('div', { className: 'wave-details-popup__row wave-details-popup__row--last', style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0' } },
-                                React.createElement('span', { style: { color: '#64748b' } }, 'Углеводы'),
-                                React.createElement('span', { style: { fontWeight: 500 } }, Math.round(currentWave.carbs || 0) + 'г'),
-                            ),
-                        ),
-
-                        React.createElement('div', { className: 'wave-details-popup__section', style: { marginBottom: '12px' } },
-                            React.createElement('div', { className: 'wave-details-popup__section-title', style: { fontSize: '12px', fontWeight: 600, color: '#1f2937', marginBottom: '8px' } }, '⏰ Дневные факторы'),
-                            React.createElement('div', { className: 'wave-details-popup__row', style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
-                                React.createElement('span', { style: { color: '#64748b' } }, 'Время суток'),
-                                React.createElement('span', { style: { fontWeight: 500, color: currentWave.circadianMultiplier > 1.05 ? '#f97316' : '#1f2937' } }, '×' + (currentWave.circadianMultiplier || 1).toFixed(2)),
-                            ),
-                            currentWave.activityBonus && currentWave.activityBonus !== 0 && React.createElement('div', { className: 'wave-details-popup__row wave-details-popup__row--last', style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0' } },
-                                React.createElement('span', { style: { color: '#22c55e' } }, '🏃 Активность'),
-                                React.createElement('span', { style: { fontWeight: 500, color: '#22c55e' } }, (currentWave.activityBonus * 100).toFixed(0) + '%'),
-                            ),
-                        ),
-
-                        React.createElement('button', {
-                            className: 'wave-details-popup__action',
-                            onClick: () => setShowWaveCalcPopup(false),
-                            style: {
-                                width: '100%',
-                                background: '#3b82f6',
-                                color: '#fff',
-                                border: 'none',
-                                borderRadius: '10px',
-                                padding: '12px',
-                                fontSize: '14px',
-                                fontWeight: 600,
-                                cursor: 'pointer',
-                                marginTop: '8px',
-                            },
-                        }, 'Закрыть'),
-                    ),
-                ),
+                    return ReactDOM?.createPortal && global.document?.body
+                        ? ReactDOM.createPortal(overlay, global.document.body)
+                        : overlay;
+                })(),
             ),
         );
     }, (prevProps, nextProps) => {
@@ -6138,6 +6170,9 @@
     // storeRecommendation → sync spam → setPendingCount → parent re-render loops.
     // Solution: lazy-init once with the React instance captured on first call.
     let _LazyMount = null;
+    let _DiaryCompactSummary = null;
+
+    const HEALTH_TREND_PERIOD_STORAGE_KEY = 'heys_diary_health_trend_period_v1';
     function getLazyMount(React) {
         if (_LazyMount) return _LazyMount;
         _LazyMount = React.memo(function LazyMount(props) {
@@ -6169,6 +6204,246 @@
         });
         console.info('[HEYS.diary] ✅ LazyMount component created (stable type, R16-fix)');
         return _LazyMount;
+    }
+
+    function getStoredHealthTrendPeriod() {
+        try {
+            const raw = window.localStorage?.getItem?.(HEALTH_TREND_PERIOD_STORAGE_KEY);
+            return Number(raw) === 7 ? 7 : 30;
+        } catch (_) {
+            return 30;
+        }
+    }
+
+    function saveStoredHealthTrendPeriod(periodDays) {
+        try {
+            window.localStorage?.setItem?.(HEALTH_TREND_PERIOD_STORAGE_KEY, String(periodDays));
+        } catch (_) {
+            // noop
+        }
+    }
+
+    function getSafeNormAbs(app, profile, pIndex, normAbs) {
+        const current = normAbs && typeof normAbs === 'object' ? normAbs : {};
+        if (Number(current.kcal) > 0 || Number(current.prot) > 0) return current;
+
+        let resolved = app.norms?.getNormAbs?.(profile, pIndex) || {};
+        if (Number(resolved.kcal) > 0 || Number(resolved.prot) > 0) return resolved;
+
+        if (typeof app.TDEE?.calculate === 'function') {
+            const tdee = app.TDEE.calculate(profile || {});
+            if (tdee && tdee.optimum > 0) {
+                const weight = Number(profile?.weight || profile?.baseWeight || 70) || 70;
+                resolved = {
+                    kcal: tdee.optimum,
+                    prot: Math.round(weight * 1.6)
+                };
+            }
+        }
+
+        return resolved || {};
+    }
+
+    function getSafeDayScoreSummary(app, options = {}) {
+        const dayData = options.dayData || {};
+        const profile = options.profile || {};
+        const pIndex = options.pIndex || profile?.pIndex || 0;
+        const waterGoal = app.utils?.calculateWaterGoal?.(profile?.weight) || 2000;
+        const dayTot = (options.dayTot && Object.keys(options.dayTot).length)
+            ? options.dayTot
+            : (app.DayData?.getDayTot?.(dayData)
+                || (typeof app.dayCalculations?.calculateDayTotals === 'function'
+                    ? app.dayCalculations.calculateDayTotals(dayData)
+                    : {}));
+        const normAbs = getSafeNormAbs(app, profile, pIndex, options.normAbs);
+
+        const dayScore = typeof app.DayScore?.calculateDayScore === 'function'
+            ? app.DayScore.calculateDayScore({
+                dayData,
+                profile,
+                dayTot,
+                normAbs,
+                waterGoal,
+                pIndex
+            })
+            : null;
+
+        const riskRadar = typeof app.RiskRadar?.calculate === 'function'
+            ? app.RiskRadar.calculate({
+                dayData,
+                profile,
+                dayTot,
+                normAbs,
+                pIndex
+            })
+            : null;
+
+        return {
+            dayData,
+            dayTot,
+            normAbs,
+            waterGoal,
+            pIndex,
+            dayScore,
+            riskRadar
+        };
+    }
+
+    function getHealthTrendLevel(score) {
+        const numericScore = Number(score) || 0;
+        if (numericScore >= 85) return { id: 'excellent', color: '#10b981' };
+        if (numericScore >= 70) return { id: 'good', color: '#22c55e' };
+        if (numericScore >= 50) return { id: 'attention', color: '#eab308' };
+        if (numericScore >= 30) return { id: 'warning', color: '#f97316' };
+        return { id: 'critical', color: '#ef4444' };
+    }
+
+    function getSafeHealthTrendSummary(app, options = {}) {
+        const periodDays = Number(options.periodDays) === 7 ? 7 : 30;
+
+        try {
+            if (typeof app.Widgets?.data?.getHealthTrendData === 'function') {
+                const widgetData = app.Widgets.data.getHealthTrendData({ periodDays });
+                if (widgetData?.hasData) {
+                    return {
+                        ...widgetData,
+                        level: getHealthTrendLevel(widgetData.score)
+                    };
+                }
+            }
+
+            const analyze = app.PredictiveInsights?.analyze;
+            if (typeof analyze !== 'function') return null;
+
+            const result = analyze({ daysBack: periodDays });
+            if (!result?.available || !result?.healthScore) return null;
+
+            const score = Number(result.healthScore.total) || 0;
+            const hasData = score > 0 || Number(result.daysWithData) >= 3;
+            if (!hasData) return null;
+
+            return {
+                hasData,
+                score,
+                periodDays,
+                daysWithData: Number(result.daysWithData) || 0,
+                level: getHealthTrendLevel(score)
+            };
+        } catch (error) {
+            console.warn('[HEYS.diary] Health trend summary unavailable', error?.message || error);
+            return null;
+        }
+    }
+
+    function getDiaryCompactSummaryComponent(React) {
+        if (_DiaryCompactSummary) return _DiaryCompactSummary;
+
+        _DiaryCompactSummary = React.memo(function DiaryCompactSummary(props) {
+            const {
+                app,
+                date,
+                dayData,
+                profile,
+                dayTot,
+                normAbs,
+                pIndex
+            } = props || {};
+
+            const [trendPeriodDays, setTrendPeriodDays] = React.useState(getStoredHealthTrendPeriod);
+
+            const summary = React.useMemo(function computeSummary() {
+                return getSafeDayScoreSummary(app, {
+                    dayData,
+                    profile,
+                    dayTot,
+                    normAbs,
+                    pIndex
+                });
+            }, [app, dayData, profile, dayTot, normAbs, pIndex, date]);
+
+            const healthTrendResult = React.useMemo(function computeHealthTrend() {
+                return getSafeHealthTrendSummary(app, { periodDays: trendPeriodDays });
+            }, [app, trendPeriodDays, date, dayData, profile, dayTot, normAbs, pIndex]);
+
+            const dayScoreResult = summary.dayScore;
+            const riskRadarResult = summary.riskRadar;
+
+            const handleTrendPeriodChange = React.useCallback(function handleChange(nextPeriod, event) {
+                event?.stopPropagation?.();
+                const normalized = Number(nextPeriod) === 7 ? 7 : 30;
+                setTrendPeriodDays(function update(prev) {
+                    if (prev === normalized) return prev;
+                    saveStoredHealthTrendPeriod(normalized);
+                    console.info('[HEYS.diary] Health trend period changed', { periodDays: normalized });
+                    return normalized;
+                });
+            }, []);
+
+            if (!dayScoreResult && !riskRadarResult && !healthTrendResult) return null;
+
+            return React.createElement('section', {
+                className: 'diary-compact-summary',
+                'aria-label': 'Оценка дня, риск и тренд'
+            },
+                dayScoreResult && React.createElement('div', {
+                    className: 'diary-compact-summary__pill diary-compact-summary__pill--day',
+                    style: {
+                        '--summary-accent': dayScoreResult?.level?.color || '#22c55e',
+                        '--summary-accent-border': (dayScoreResult?.level?.color || '#22c55e') + '33',
+                        '--summary-accent-border-dark': (dayScoreResult?.level?.color || '#22c55e') + '44'
+                    }
+                },
+                    React.createElement('span', { className: 'diary-compact-summary__label' }, 'Оценка дня'),
+                    React.createElement('span', { className: 'diary-compact-summary__value' }, Math.round(Number(dayScoreResult?.score) || 0))
+                ),
+                riskRadarResult && React.createElement('div', {
+                    className: 'diary-compact-summary__pill diary-compact-summary__pill--risk',
+                    style: {
+                        '--summary-accent': riskRadarResult?.level?.color || '#22c55e',
+                        '--summary-accent-border': (riskRadarResult?.level?.color || '#22c55e') + '33',
+                        '--summary-accent-border-dark': (riskRadarResult?.level?.color || '#22c55e') + '44'
+                    }
+                },
+                    React.createElement('span', { className: 'diary-compact-summary__label' }, 'Риск'),
+                    React.createElement('span', { className: 'diary-compact-summary__value' }, Math.round(Number(riskRadarResult?.score) || 0))
+                ),
+                healthTrendResult && React.createElement('div', {
+                    className: 'diary-compact-summary__pill diary-compact-summary__pill--trend',
+                    style: {
+                        '--summary-accent': healthTrendResult?.level?.color || '#22c55e',
+                        '--summary-accent-border': (healthTrendResult?.level?.color || '#22c55e') + '33',
+                        '--summary-accent-border-dark': (healthTrendResult?.level?.color || '#22c55e') + '44'
+                    }
+                },
+                    React.createElement('div', {
+                        className: 'diary-compact-summary__metric diary-compact-summary__metric--trend'
+                    },
+                        React.createElement('span', { className: 'diary-compact-summary__label' }, 'Тренд'),
+                        React.createElement('span', { className: 'diary-compact-summary__value' }, Math.round(Number(healthTrendResult?.score) || 0))
+                    ),
+                    React.createElement('div', {
+                        className: 'diary-compact-summary__range',
+                        role: 'group',
+                        'aria-label': 'Период тренда'
+                    },
+                        [7, 30].map(function renderPeriodButton(days) {
+                            const isActive = trendPeriodDays === days;
+                            return React.createElement('button', {
+                                key: days,
+                                type: 'button',
+                                className: 'diary-compact-summary__range-btn' + (isActive ? ' is-active' : ''),
+                                'aria-pressed': isActive ? 'true' : 'false',
+                                onClick: function onClick(event) {
+                                    handleTrendPeriodChange(days, event);
+                                }
+                            }, days + ' дн.');
+                        })
+                    )
+                )
+            );
+        });
+
+        return _DiaryCompactSummary;
     }
 
     const renderDiarySection = (params) => {
@@ -6206,7 +6481,6 @@
 
         const app = rootHEYs || HEYS;
         const showDiary = !isMobile || mobileSubTab === 'diary';
-
         const ensureSupplementsModule = () => {
             if (app.Supplements?.renderCard) return true;
             if (typeof document === 'undefined') return false;
@@ -6298,6 +6572,7 @@
         // PERF R16: LazyMount — IntersectionObserver gate for below-fold slots.
         // Component type is stable (defined once at module scope via getLazyMount).
         const LazyMount = getLazyMount(React);
+        const DiaryCompactSummary = getDiaryCompactSummaryComponent(React);
 
         // PERF v8.3: Deferred card slot — skeleton only after postboot completes
         // If postboot is still loading scripts, return null (invisible).
@@ -6395,6 +6670,15 @@
         if (!showDiary) return insulinIndicator;
 
         return React.createElement(React.Fragment, null,
+            React.createElement(DiaryCompactSummary, {
+                app,
+                date,
+                dayData: day,
+                profile: prof,
+                dayTot,
+                normAbs,
+                pIndex
+            }),
             React.createElement('h2', {
                 id: 'day-remaining-heading',
                 style: {

@@ -2720,7 +2720,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       const carbs = Math.round((product.simple100 || 0) + (product.complex100 || 0));
       const fat = Math.round((product.badFat100 || 0) + (product.goodFat100 || 0) + (product.trans100 || 0));
       const harmVal = product.harm ?? product.harmScore ?? product.harm100;
-      const harmBg = getHarmBg(harmVal);
+      const harmToneStyle = getHarmToneStyle(harmVal, { surface: 'aps' });
 
       // Флаг: продукт из общей базы (не из личной)
       const isFromShared = product._source === 'shared' || product._fromShared;
@@ -2733,7 +2733,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       return React.createElement('div', {
         key: pid,
         className: 'aps-product-card',
-        style: harmBg ? { background: harmBg } : undefined,
+        style: harmToneStyle || undefined,
         onClick: () => selectProduct(product)
       },
         // Иконка категории
@@ -4590,21 +4590,67 @@ NOVA: 1
     );
   }
 
-  // Фон карточки по полезности: 0=зелёный(полезный), 5=голубой(средний), 10=красный(вредный)
-  function getHarmBg(h) {
+  // Тон карточки по вредности: мягкий акцент слева + fade в базовый фон.
+  function getHarmToneStyle(h, options = {}) {
     if (h == null) return null;
-    // h: 0=полезный, 5=средний, 10=вредный
-    // Светлые оттенки для хорошей читаемости текста
-    if (h <= 1) return '#d1fae5';  // 0-1: светло-мятный — полезный (emerald-100)
-    if (h <= 2) return '#d1fae5';  // 2: светло-мятный
-    if (h <= 3) return '#ecfdf5';  // 3: очень светлый мятный (emerald-50)
-    if (h <= 4) return '#f0fdf4';  // 4: почти белый с зеленцой (green-50)
-    if (h <= 5) return '#e0f2fe';  // 5: светло-голубой — средний
-    if (h <= 6) return '#f0f9ff';  // 6: очень светлый голубой
-    if (h <= 7) return '#fef2f2';  // 7: очень светло-розовый (red-50)
-    if (h <= 8) return '#fee2e2';  // 8: светло-розовый (red-100)
-    if (h <= 9) return '#fecaca';  // 9: розовый (red-200)
-    return '#fca5a5';              // 10: красноватый (red-300) — вредный
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    const strong = !!options.strong;
+    const surface = options.surface || 'default';
+    const premiumSurface = surface === 'aps' || surface === 'hero';
+
+    let accent = '#60a5fa';
+    let edge = isDark ? 'rgba(96, 165, 250, 0.18)' : 'rgba(59, 130, 246, 0.14)';
+    let wash = isDark ? 'rgba(96, 165, 250, 0.07)' : 'rgba(59, 130, 246, 0.06)';
+    let border = isDark ? 'rgba(96, 165, 250, 0.22)' : 'rgba(59, 130, 246, 0.16)';
+
+    if (h <= 2) {
+      accent = isDark ? '#34d399' : '#10b981';
+      edge = isDark ? 'rgba(52, 211, 153, 0.16)' : 'rgba(16, 185, 129, 0.11)';
+      wash = isDark ? 'rgba(52, 211, 153, 0.05)' : 'rgba(16, 185, 129, 0.04)';
+      border = isDark ? 'rgba(52, 211, 153, 0.18)' : 'rgba(16, 185, 129, 0.12)';
+    } else if (h <= 4) {
+      accent = isDark ? '#4ade80' : '#22c55e';
+      edge = isDark ? 'rgba(74, 222, 128, 0.14)' : 'rgba(34, 197, 94, 0.09)';
+      wash = isDark ? 'rgba(74, 222, 128, 0.045)' : 'rgba(34, 197, 94, 0.035)';
+      border = isDark ? 'rgba(74, 222, 128, 0.16)' : 'rgba(34, 197, 94, 0.11)';
+    } else if (h <= 6) {
+      accent = isDark ? '#60a5fa' : '#3b82f6';
+      edge = isDark ? 'rgba(96, 165, 250, 0.19)' : 'rgba(59, 130, 246, 0.13)';
+      wash = isDark ? 'rgba(96, 165, 250, 0.07)' : 'rgba(59, 130, 246, 0.05)';
+      border = isDark ? 'rgba(96, 165, 250, 0.22)' : 'rgba(59, 130, 246, 0.15)';
+    } else if (h <= 8) {
+      accent = isDark ? '#fb7185' : '#ef4444';
+      edge = isDark ? 'rgba(251, 113, 133, 0.18)' : 'rgba(239, 68, 68, 0.12)';
+      wash = isDark ? 'rgba(251, 113, 133, 0.07)' : 'rgba(239, 68, 68, 0.05)';
+      border = isDark ? 'rgba(251, 113, 133, 0.22)' : 'rgba(239, 68, 68, 0.15)';
+    } else {
+      accent = isDark ? '#f87171' : '#ef4444';
+      edge = isDark ? 'rgba(248, 113, 113, 0.24)' : 'rgba(239, 68, 68, 0.17)';
+      wash = isDark ? 'rgba(248, 113, 113, 0.10)' : 'rgba(239, 68, 68, 0.07)';
+      border = isDark ? 'rgba(248, 113, 113, 0.26)' : 'rgba(239, 68, 68, 0.18)';
+    }
+
+    const boostAlpha = (rgbaValue, extra) => rgbaValue.replace(/0\.(\d+)/, (_, d) => `0.${Math.min(99, Number(d) + extra)}`);
+    const toneEdge = strong ? boostAlpha(edge, 6) : edge;
+    const toneWash = strong ? boostAlpha(wash, 4) : wash;
+    const toneBorder = strong ? boostAlpha(border, 4) : border;
+    const premiumBorder = premiumSurface ? boostAlpha(toneBorder, 2) : toneBorder;
+    const topSheen = premiumSurface
+      ? (isDark ? 'rgba(255, 255, 255, 0.055)' : 'rgba(255, 255, 255, 0.78)')
+      : (isDark ? 'rgba(255, 255, 255, 0.03)' : 'rgba(255, 255, 255, 0.65)');
+    const dangerGlow = h > 6
+      ? `, radial-gradient(circle at 100% 0%, ${isDark ? (h > 8 ? 'rgba(248, 113, 113, 0.16)' : 'rgba(251, 113, 133, 0.12)') : (h > 8 ? 'rgba(239, 68, 68, 0.10)' : 'rgba(244, 63, 94, 0.08)')} 0%, rgba(255, 255, 255, 0) 56%)`
+      : '';
+    const outerShadow = premiumSurface
+      ? (isDark ? '0 10px 24px rgba(15, 23, 42, 0.24)' : '0 8px 18px rgba(15, 23, 42, 0.08)')
+      : 'none';
+
+    return {
+      backgroundColor: isDark ? 'var(--heys-bg-card)' : '#ffffff',
+      backgroundImage: `linear-gradient(90deg, ${toneEdge} 0%, ${toneWash} 18%, rgba(255, 255, 255, 0) 42%)${dangerGlow}, linear-gradient(180deg, ${topSheen} 0%, rgba(255, 255, 255, 0) 72%)`,
+      borderColor: premiumBorder,
+      boxShadow: `inset 3px 0 0 ${accent}${premiumSurface ? `, ${outerShadow}` : ''}`,
+    };
   }
 
   // Иконка категории (копия из heys_day_v12.js)
@@ -4832,7 +4878,7 @@ NOVA: 1
           onClick: () => selectAndContinue(manualHarm),
           style: {
             flex: 1,
-            background: selectedHarm === manualHarm ? (HEYS.Harm?.getHarmColor?.(manualHarm) || '#6b7280') + '15' : '#f9fafb',
+            background: selectedHarm === manualHarm ? (HEYS.Harm?.getHarmColor?.(manualHarm) || '#6b7280') + '15' : (document.documentElement.getAttribute('data-theme') === 'dark' ? '#1f2937' : '#f9fafb'),
             border: selectedHarm === manualHarm ? `2px solid ${HEYS.Harm?.getHarmColor?.(manualHarm) || '#6b7280'}` : '2px solid transparent',
             borderRadius: '16px',
             padding: '16px 12px',
@@ -4858,7 +4904,7 @@ NOVA: 1
           onClick: () => selectAndContinue(calculatedHarm),
           style: {
             flex: 1,
-            background: selectedHarm === calculatedHarm ? (calculatedBreakdown?.category?.color || '#6b7280') + '15' : '#f9fafb',
+            background: selectedHarm === calculatedHarm ? (calculatedBreakdown?.category?.color || '#6b7280') + '15' : (document.documentElement.getAttribute('data-theme') === 'dark' ? '#1f2937' : '#f9fafb'),
             border: selectedHarm === calculatedHarm ? `2px solid ${calculatedBreakdown?.category?.color || '#6b7280'}` : '2px solid transparent',
             borderRadius: '16px',
             padding: '16px 12px',
@@ -4883,8 +4929,12 @@ NOVA: 1
       hasManualHarm && calculatedHarm != null && Math.abs(manualHarm - calculatedHarm) >= 0.5 && e('div', {
         className: 'text-center text-xs py-2 px-3 rounded-lg mb-3',
         style: {
-          background: Math.abs(manualHarm - calculatedHarm) >= 2 ? '#fef3c7' : '#f3f4f6',
-          color: Math.abs(manualHarm - calculatedHarm) >= 2 ? '#92400e' : '#6b7280'
+          background: document.documentElement.getAttribute('data-theme') === 'dark'
+            ? (Math.abs(manualHarm - calculatedHarm) >= 2 ? 'rgba(120, 53, 15, 0.6)' : '#374151')
+            : (Math.abs(manualHarm - calculatedHarm) >= 2 ? '#fef3c7' : '#f3f4f6'),
+          color: document.documentElement.getAttribute('data-theme') === 'dark'
+            ? (Math.abs(manualHarm - calculatedHarm) >= 2 ? '#fcd34d' : '#9ca3af')
+            : (Math.abs(manualHarm - calculatedHarm) >= 2 ? '#92400e' : '#6b7280')
         }
       },
         Math.abs(manualHarm - calculatedHarm) >= 2
@@ -5393,13 +5443,13 @@ NOVA: 1
 
     // Фон хедера по вредности
     const harmVal = product.harm ?? product.harmScore ?? product.harm100;
-    const harmBg = getHarmBg(harmVal);
+    const harmToneStyle = getHarmToneStyle(harmVal, { strong: true, surface: 'hero' });
 
     return React.createElement('div', { className: 'aps-grams-step' },
       // Название продукта
       React.createElement('div', {
         className: 'aps-product-header',
-        style: harmBg ? { background: harmBg, borderColor: harmBg } : undefined
+        style: harmToneStyle || undefined
       },
         React.createElement('div', { className: 'aps-product-header__main' },
           product.category && React.createElement('span', { className: 'aps-product-icon-lg' },

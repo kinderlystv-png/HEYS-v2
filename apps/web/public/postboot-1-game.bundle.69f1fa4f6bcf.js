@@ -20272,7 +20272,7 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
   const MODULE = '[HEYS.relapseRisk]';
 
   const CONFIG = {
-    VERSION: '1.2.0',
+    VERSION: '1.3.0',
     DEFAULT_PROFILE_KEY: 'v1_2',
     LEVELS: {
       low: { min: 0, max: 19 },
@@ -20291,10 +20291,11 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
     },
     WINDOWS: {
       next3h: {
-        stressLoad: 0.35,
-        restrictionPressure: 0.25,
-        rewardExposure: 0.20,
-        timingContext: 0.20,
+        stressLoad: 0.32,
+        restrictionPressure: 0.24,
+        rewardExposure: 0.18,
+        timingContext: 0.14,
+        emotionalVulnerability: 0.12,
         protectiveBuffer: 0.40,
       },
       tonight: {
@@ -20423,6 +20424,46 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
   function toNumber(value, fallback = 0) {
     const numeric = Number(value);
     return Number.isFinite(numeric) ? numeric : fallback;
+  }
+
+  function getSubjectiveValue(dayData, avgKey, morningKey) {
+    const avgValue = toNumber(dayData?.[avgKey], 0);
+    if (avgValue > 0) return avgValue;
+    const morningValue = toNumber(dayData?.[morningKey], 0);
+    return morningValue > 0 ? morningValue : 0;
+  }
+
+  function getSubjectiveSource(dayData, avgKey, morningKey) {
+    const avgValue = toNumber(dayData?.[avgKey], 0);
+    if (avgValue > 0) return 'avg';
+    const morningValue = toNumber(dayData?.[morningKey], 0);
+    if (morningValue > 0) return 'morning';
+    return 'none';
+  }
+
+  function getFallbackDayScore(dayData) {
+    const storedDayScore = toNumber(dayData?.dayScoreRaw, toNumber(dayData?.dayScore, 0));
+    if (storedDayScore > 0) return storedDayScore;
+
+    const mood = getSubjectiveValue(dayData, 'moodAvg', 'moodMorning');
+    const wellbeing = getSubjectiveValue(dayData, 'wellbeingAvg', 'wellbeingMorning');
+    const stress = getSubjectiveValue(dayData, 'stressAvg', 'stressMorning');
+    if (mood > 0 && wellbeing > 0 && stress > 0) {
+      return Math.round(((mood + wellbeing + (10 - stress)) / 3) * 10) / 10;
+    }
+    return 0;
+  }
+
+  function getDayScoreSource(dayData) {
+    const dayScoreRaw = toNumber(dayData?.dayScoreRaw, 0);
+    if (dayScoreRaw > 0) return 'dayScoreRaw';
+    const dayScore = toNumber(dayData?.dayScore, 0);
+    if (dayScore > 0) return 'dayScore';
+
+    const mood = getSubjectiveValue(dayData, 'moodAvg', 'moodMorning');
+    const wellbeing = getSubjectiveValue(dayData, 'wellbeingAvg', 'wellbeingMorning');
+    const stress = getSubjectiveValue(dayData, 'stressAvg', 'stressMorning');
+    return mood > 0 && wellbeing > 0 && stress > 0 ? 'computed_from_subjective' : 'none';
   }
 
   function hasOwnValue(obj, key) {
@@ -20633,52 +20674,121 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
   }
 
   function mapStressBase(stressAvg) {
-    if (stressAvg <= 2) return 5;
-    if (stressAvg <= 4) return 20 + (stressAvg - 2) * 10;
-    if (stressAvg <= 6) return 40 + (stressAvg - 4) * 15;
-    if (stressAvg <= 8) return 70 + (stressAvg - 6) * 10;
+    if (stressAvg <= 2) return 0;
+    if (stressAvg <= 4) return 8 + (stressAvg - 2) * 12;
+    if (stressAvg <= 6) return 32 + (stressAvg - 4) * 14;
+    if (stressAvg <= 8) return 60 + (stressAvg - 6) * 13;
     return 95;
   }
 
-  function calcStressLoad(ctx) {
-    const stressBase = clamp100(mapStressBase(ctx.stressAvg));
+  function getStressLoadBreakdown(ctx) {
+    const acuteStress = clamp100(mapStressBase(ctx.stressAvg));
     const recentStressMean = getRecentMean(ctx.historyDays, getHistoryStress);
-    const stressTrendBonus = recentStressMean >= 6.5 ? 15 : recentStressMean >= 5 ? 8 : 0;
-    return clamp100(stressBase + stressTrendBonus);
+    const accumulatedStress = recentStressMean >= 6.5 ? 15
+      : recentStressMean >= 5.5 ? 10
+        : recentStressMean >= 4.5 ? 6
+          : recentStressMean >= 3.5 ? 2
+            : 0;
+
+    const carryoverBonus = acuteStress <= 10 && recentStressMean >= 4.5 ? 4 : 0;
+    const score = clamp100(acuteStress + accumulatedStress + carryoverBonus);
+
+    const mode = acuteStress >= 20
+      ? 'acute'
+      : accumulatedStress >= 6
+        ? 'carryover'
+        : score > 0
+          ? 'mild'
+          : 'none';
+
+    return {
+      acuteStress,
+      recentStressMean: Math.round(recentStressMean * 10) / 10,
+      accumulatedStress,
+      carryoverBonus,
+      mode,
+      score,
+    };
   }
 
-  function calcSleepDebt(ctx) {
-    // If sleep is not logged today (0), use recent history average to avoid false-positive max debt
+  function calcStressLoad(ctx) {
+    return getStressLoadBreakdown(ctx).score;
+  }
+
+  function getSleepDebtBreakdown(ctx) {
     let effectiveSleepHours = ctx.sleepHours;
+    let usedHistoryFallback = false;
+
     if (effectiveSleepHours === 0) {
       const historyAvg = getRecentMean(ctx.historyDays, getHistorySleepHours);
       if (historyAvg > 0) {
         effectiveSleepHours = historyAvg;
+        usedHistoryFallback = true;
       } else {
-        // No sleep data anywhere — can't assess, return neutral baseline
-        return 20;
+        return {
+          effectiveSleepHours: 0,
+          acuteDebtHours: 0,
+          acutePenalty: 0,
+          qualityPenalty: 0,
+          recoveryPenalty: 20,
+          recentSleepDebtDays: 0,
+          usedHistoryFallback,
+          mode: 'unknown',
+          score: 20,
+        };
       }
     }
-    const debt = Math.max(0, ctx.sleepNorm - effectiveSleepHours);
-    const debtBase = clamp100(
-      debt <= 0.5 ? 0
-        : debt <= 1.0 ? 15
-          : debt <= 2.0 ? 35 + (debt - 1) * 20
-            : debt <= 3.0 ? 60 + (debt - 2) * 20
-              : 90
+
+    const acuteDebtHours = Math.max(0, ctx.sleepNorm - effectiveSleepHours);
+    const acutePenalty = clamp100(
+      acuteDebtHours <= 0.75 ? 0
+        : acuteDebtHours <= 1.25 ? 12
+          : acuteDebtHours <= 2.0 ? 28 + (acuteDebtHours - 1.25) * 16
+            : acuteDebtHours <= 3.0 ? 48 + (acuteDebtHours - 2.0) * 22
+              : 78 + Math.min(acuteDebtHours - 3.0, 2) * 8
     );
 
     const qualityPenalty = ctx.sleepQuality > 0 && ctx.sleepQuality <= 2 ? 20
       : ctx.sleepQuality > 0 && ctx.sleepQuality <= 3 ? 10
-        : 0;
+        : ctx.sleepQuality > 0 && ctx.sleepQuality < 6 ? 4
+          : 0;
 
     const recentSleepDebtDays = ctx.historyDays.filter(day => {
       const hours = getHistorySleepHours(day);
-      return hours > 0 && hours < ctx.sleepNorm - 1;
+      return hours > 0 && hours < ctx.sleepNorm - 0.75;
     }).length;
 
-    const sleepStreakPenalty = recentSleepDebtDays >= 3 ? 15 : recentSleepDebtDays >= 2 ? 8 : 0;
-    return clamp100(debtBase + qualityPenalty + sleepStreakPenalty);
+    const recoveryPenalty = recentSleepDebtDays >= 5 ? 18
+      : recentSleepDebtDays >= 3 ? 10
+        : recentSleepDebtDays >= 2 ? 6
+          : 0;
+
+    const restorativeAdjustment = acutePenalty === 0 && ctx.sleepQuality >= 6 ? -4 : 0;
+    const score = clamp100(acutePenalty + qualityPenalty + recoveryPenalty + restorativeAdjustment);
+    const mode = acutePenalty >= 12
+      ? 'acute_debt'
+      : recoveryPenalty >= 6
+        ? 'recovery_debt'
+        : score > 0
+          ? 'mild'
+          : 'none';
+
+    return {
+      effectiveSleepHours: Math.round(effectiveSleepHours * 10) / 10,
+      acuteDebtHours: Math.round(acuteDebtHours * 10) / 10,
+      acutePenalty,
+      qualityPenalty,
+      recoveryPenalty,
+      recentSleepDebtDays,
+      usedHistoryFallback,
+      restorativeAdjustment,
+      mode,
+      score,
+    };
+  }
+
+  function calcSleepDebt(ctx) {
+    return getSleepDebtBreakdown(ctx).score;
   }
 
   function getRestrictionPressureBreakdown(ctx) {
@@ -20857,11 +20967,14 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
   }
 
   function calcEmotionalVulnerability(ctx) {
-    // dayScore: composite (mood + wellbeing + inverted stress) / 3
+    const hasDirectSubjectiveSignals = ctx.moodAvg > 0 || ctx.wellbeingAvg > 0;
+
+    // dayScore already contains inverted stress, so when direct mood/wellbeing signals are
+    // available we soften its contribution to avoid counting stress twice.
     const dayScorePenalty = ctx.dayScore <= 0 ? 0
-      : ctx.dayScore <= 3 ? 50
-        : ctx.dayScore <= 5 ? 32
-          : ctx.dayScore <= 7 ? 12
+      : ctx.dayScore <= 3 ? (hasDirectSubjectiveSignals ? 24 : 50)
+        : ctx.dayScore <= 5 ? (hasDirectSubjectiveSignals ? 14 : 32)
+          : ctx.dayScore <= 7 ? (hasDirectSubjectiveSignals ? 5 : 12)
             : 0;
 
     // mood — прямой индикатор эмоционального состояния;
@@ -20877,65 +20990,153 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
         : ctx.wellbeingAvg > 0 && ctx.wellbeingAvg < 7 ? 5
           : 0;
 
+    const hasLowEmotionSignal = hasDirectSubjectiveSignals
+      ? ((ctx.moodAvg > 0 && ctx.moodAvg <= 5) || (ctx.wellbeingAvg > 0 && ctx.wellbeingAvg <= 5))
+      : (ctx.dayScore > 0 && ctx.dayScore <= 5);
+
     // stress × deficit / low mood: mismatch amplifies risk
     const mismatchBonus = ctx.stressAvg >= 6 && ctx.kcalPct < 0.7 ? 20
       : ctx.stressAvg >= 6 && ctx.moodAvg > 0 && ctx.moodAvg <= 4 ? 15
-        : ctx.stressAvg >= 5 && ctx.dayScore > 0 && ctx.dayScore <= 5 ? 10
+        : ctx.stressAvg >= 5 && hasLowEmotionSignal ? 8
           : 0;
 
     return clamp100(dayScorePenalty + moodPenalty + wellbeingPenalty + mismatchBonus);
   }
 
-  function calcProtectiveBuffer(ctx) {
+  function calcProtectiveBuffer(ctx, components = null) {
     const bonuses = [];
+    const recentStressMean = getRecentMean(ctx.historyDays, getHistoryStress);
+    const trainingAdjustedEnergyThreshold = ctx.trainingKcal >= 600 ? 0.95
+      : ctx.trainingKcal >= 300 ? 0.9
+        : 0.85;
 
     if (ctx.stressAvg > 0 && ctx.stressAvg <= CONFIG.THRESHOLDS.lowStress) {
-      bonuses.push({ id: 'low_stress', label: 'Низкий стресс', impact: -8, explanation: 'Низкий стресс снижает риск эмоционального переедания.' });
+      bonuses.push({ id: 'low_stress', label: 'Текущий стресс низкий', impact: recentStressMean >= 4.5 ? -6 : -8, explanation: 'Сейчас stress arousal низкий, поэтому риск эмоционального импульса ниже.', domains: { stressLoad: 1, emotionalVulnerability: 0.45 } });
     }
-    if (ctx.sleepHours >= ctx.sleepNorm * 0.95) {
-      bonuses.push({ id: 'good_sleep', label: 'Нормальный сон', impact: -8, explanation: 'Сон улучшает контроль аппетита и снижает тягу к reward-food.' });
+    if (ctx.sleepHours >= Math.max(7.5, ctx.sleepNorm * 0.9) && ctx.sleepQuality >= 6) {
+      bonuses.push({ id: 'good_sleep', label: 'Сон этой ночью нормальный', impact: -7, explanation: 'Последняя ночь дала нормальное восстановление и частично защищает от reward-seeking.', domains: { sleepDebt: 1, emotionalVulnerability: 0.3, rewardExposure: 0.2 } });
     }
-    if (ctx.hour >= 18 && ctx.kcalPct >= 0.8) {
-      bonuses.push({ id: 'enough_calories', label: 'Достаточно энергии к вечеру', impact: -8, explanation: 'Когда к вечеру есть энергия, риск резкого срыва ниже.' });
+    if (ctx.hour >= 18 && ctx.kcalPct >= trainingAdjustedEnergyThreshold && ctx.protPct >= 0.72 && ctx.meals.length >= 2) {
+      bonuses.push({ id: 'enough_calories', label: 'К вечеру есть энергия', impact: ctx.protPct >= 0.9 ? -8 : -6, explanation: 'К вечеру есть энергетическое покрытие, поэтому риск резкого компенсаторного срыва ниже.', domains: { restrictionPressure: 1, rewardExposure: 0.45 } });
     }
     if (ctx.protPct >= 0.9) {
-      bonuses.push({ id: 'enough_protein', label: 'Нормальный белок', impact: -6, explanation: 'Белок поддерживает насыщение и уменьшает тягу к быстрым калориям.' });
+      bonuses.push({ id: 'enough_protein', label: 'Нормальный белок', impact: -6, explanation: 'Белок поддерживает насыщение и уменьшает тягу к быстрым калориям.', domains: { restrictionPressure: 0.55, rewardExposure: 0.35 } });
     }
-    if (ctx.meals.length >= CONFIG.THRESHOLDS.mealStructureCount) {
-      bonuses.push({ id: 'meal_structure', label: 'Структурированные приёмы пищи', impact: -5, explanation: 'Регулярные приёмы пищи снижают вероятность компенсационного переедания.' });
+    if (ctx.meals.length >= CONFIG.THRESHOLDS.mealStructureCount && ctx.gapHours < 6) {
+      bonuses.push({ id: 'meal_structure', label: 'Структурированные приёмы пищи', impact: -5, explanation: 'Регулярные приёмы пищи снижают вероятность компенсационного переедания.', domains: { restrictionPressure: 0.5, rewardExposure: 0.15 } });
     }
     if (ctx.waterMl >= CONFIG.THRESHOLDS.hydrationGoodMl) {
-      bonuses.push({ id: 'hydration', label: 'Нормальная гидратация', impact: -4, explanation: 'Гидратация помогает лучше распознавать сигналы голода и сытости.' });
+      bonuses.push({ id: 'hydration', label: 'Нормальная гидратация', impact: -4, explanation: 'Гидратация помогает лучше распознавать сигналы голода и сытости.', domains: { emotionalVulnerability: 0.2, rewardExposure: 0.1 } });
     }
 
     // Exercise momentum (positive behavioral cascade)
     // Science: self-efficacy boost (Bandura), acute appetite suppression
     // (ghrelin ↓ / PYY ↑), identity consistency, mood buffer.
     if (ctx.trainingKcal >= 600) {
-      bonuses.push({ id: 'exercise_momentum', label: 'Сильная тренировка', impact: -7, explanation: 'Интенсивная тренировка повышает самоконтроль и снижает тягу к reward-food (positive behavioral cascade).' });
+      bonuses.push({ id: 'exercise_momentum', label: 'Сильная тренировка', impact: -7, explanation: 'Интенсивная тренировка повышает самоконтроль и снижает тягу к reward-food (positive behavioral cascade).', domains: { emotionalVulnerability: 0.45, rewardExposure: 0.2, stressLoad: 0.15 } });
     } else if (ctx.trainingKcal >= 300) {
-      bonuses.push({ id: 'exercise_momentum', label: 'Тренировка сегодня', impact: -5, explanation: 'Физическая активность повышает self-efficacy и снижает тягу к срыву.' });
+      bonuses.push({ id: 'exercise_momentum', label: 'Тренировка сегодня', impact: -5, explanation: 'Физическая активность повышает self-efficacy и снижает тягу к срыву.', domains: { emotionalVulnerability: 0.35, rewardExposure: 0.15, stressLoad: 0.1 } });
     } else if (ctx.trainingKcal >= 150) {
-      bonuses.push({ id: 'exercise_momentum', label: 'Лёгкая активность', impact: -3, explanation: 'Даже лёгкая активность поддерживает позитивный behavioral momentum.' });
+      bonuses.push({ id: 'exercise_momentum', label: 'Лёгкая активность', impact: -3, explanation: 'Даже лёгкая активность поддерживает позитивный behavioral momentum.', domains: { emotionalVulnerability: 0.2, stressLoad: 0.08 } });
     }
 
-    const total = bonuses.reduce((sum, item) => sum + Math.abs(item.impact), 0);
+    const sortedImpacts = bonuses
+      .map(item => Math.abs(item.impact))
+      .sort((a, b) => b - a);
+    const multipliers = [1, 0.82, 0.67, 0.55, 0.45, 0.38, 0.32];
+    const total = sortedImpacts.reduce((sum, impact, index) => {
+      return sum + impact * (multipliers[index] || 0.28);
+    }, 0);
+
+    const domainReliefRaw = {
+      stressLoad: 0,
+      sleepDebt: 0,
+      restrictionPressure: 0,
+      rewardExposure: 0,
+      timingContext: 0,
+      emotionalVulnerability: 0,
+    };
+
+    bonuses.forEach((item, index) => {
+      const multiplier = multipliers[index] || 0.28;
+      const domains = item.domains || {};
+      Object.keys(domains).forEach((key) => {
+        domainReliefRaw[key] = (domainReliefRaw[key] || 0) + Math.abs(item.impact) * multiplier * domains[key];
+      });
+    });
+
+    const domainRelief = Object.keys(domainReliefRaw).reduce((acc, key) => {
+      const rawValue = domainReliefRaw[key] || 0;
+      const componentValue = toNumber(components?.[key], 0);
+      const cap = componentValue > 0 ? componentValue * 0.55 : 0;
+      acc[key] = Math.round(Math.min(rawValue, cap) * 10) / 10;
+      return acc;
+    }, {});
 
     return {
-      score: Math.min(CONFIG.THRESHOLDS.protectiveBufferCap, total),
+      score: Math.min(CONFIG.THRESHOLDS.protectiveBufferCap, Math.round(total * 10) / 10),
       factors: bonuses,
+      domainRelief,
     };
   }
 
-  function composeWeightedRisk(components, ctx, profileConfig) {
+  function applyDomainRelief(components, protectiveBufferState) {
+    const relief = protectiveBufferState?.domainRelief || {};
+    return {
+      stressLoad: Math.max(0, components.stressLoad - toNumber(relief.stressLoad, 0)),
+      sleepDebt: Math.max(0, components.sleepDebt - toNumber(relief.sleepDebt, 0)),
+      restrictionPressure: Math.max(0, components.restrictionPressure - toNumber(relief.restrictionPressure, 0)),
+      rewardExposure: Math.max(0, components.rewardExposure - toNumber(relief.rewardExposure, 0)),
+      timingContext: Math.max(0, components.timingContext - toNumber(relief.timingContext, 0)),
+      emotionalVulnerability: Math.max(0, components.emotionalVulnerability - toNumber(relief.emotionalVulnerability, 0)),
+      protectiveBuffer: components.protectiveBuffer,
+    };
+  }
+
+  function countMeaningfulActiveDrivers(components) {
+    return [
+      components.stressLoad >= 5,
+      components.sleepDebt >= 15,
+      components.restrictionPressure >= 10,
+      components.rewardExposure >= 10,
+      components.timingContext >= 20,
+      components.emotionalVulnerability >= 10,
+    ].filter(Boolean).length;
+  }
+
+  function hasCompensatedEveningSignal(components, ctx) {
+    if (!components || !ctx) return false;
+    const activeDriverCount = countMeaningfulActiveDrivers(components);
+    const protectiveSuppression = components.protectiveBuffer >= 18;
+    const eveningExposure = ctx.hour >= 20 && components.timingContext >= 20;
+    const otherMeaningfulDriver = (
+      components.sleepDebt >= 15
+      || components.rewardExposure >= 10
+      || components.stressLoad >= 5
+      || components.restrictionPressure >= 10
+    );
+
+    return protectiveSuppression && activeDriverCount >= 2 && eveningExposure && otherMeaningfulDriver;
+  }
+
+  function composeWeightedRisk(components, ctx, profileConfig, protectiveBufferState = null) {
     const weights = profileConfig?.weights || CONFIG.WEIGHTS;
-    const weightedScore = (
+    const effectiveComponents = protectiveBufferState ? applyDomainRelief(components, protectiveBufferState) : components;
+    const rawWeightedScore = (
       components.stressLoad * weights.stressLoad +
       components.sleepDebt * weights.sleepDebt +
       components.restrictionPressure * weights.restrictionPressure +
       components.rewardExposure * weights.rewardExposure +
       components.timingContext * weights.timingContext +
       components.emotionalVulnerability * weights.emotionalVulnerability
+    );
+    const weightedScore = (
+      effectiveComponents.stressLoad * weights.stressLoad +
+      effectiveComponents.sleepDebt * weights.sleepDebt +
+      effectiveComponents.restrictionPressure * weights.restrictionPressure +
+      effectiveComponents.rewardExposure * weights.rewardExposure +
+      effectiveComponents.timingContext * weights.timingContext +
+      effectiveComponents.emotionalVulnerability * weights.emotionalVulnerability
     );
 
     let score = clamp100(weightedScore - components.protectiveBuffer);
@@ -20947,6 +21148,10 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
       score = 40;
     } else if (components.emotionalVulnerability >= 60 && score < 25) {
       score = 25;
+    }
+
+    if (score < 6 && rawWeightedScore >= 6 && hasCompensatedEveningSignal(components, ctx)) {
+      score = 6;
     }
 
     // Avoid a misleading absolute zero when meaningful active drivers are present,
@@ -20970,34 +21175,42 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
     return score;
   }
 
-  function calcRiskWindows(components) {
-    const next3h = clamp100(
-      components.stressLoad * CONFIG.WINDOWS.next3h.stressLoad +
-      components.restrictionPressure * CONFIG.WINDOWS.next3h.restrictionPressure +
-      components.rewardExposure * CONFIG.WINDOWS.next3h.rewardExposure +
-      components.timingContext * CONFIG.WINDOWS.next3h.timingContext -
+  function calcRiskWindows(components, ctx, protectiveBufferState = null) {
+    const effectiveComponents = protectiveBufferState ? applyDomainRelief(components, protectiveBufferState) : components;
+    let next3h = clamp100(
+      effectiveComponents.stressLoad * CONFIG.WINDOWS.next3h.stressLoad +
+      effectiveComponents.restrictionPressure * CONFIG.WINDOWS.next3h.restrictionPressure +
+      effectiveComponents.rewardExposure * CONFIG.WINDOWS.next3h.rewardExposure +
+      effectiveComponents.timingContext * CONFIG.WINDOWS.next3h.timingContext +
+      effectiveComponents.emotionalVulnerability * CONFIG.WINDOWS.next3h.emotionalVulnerability -
       components.protectiveBuffer * CONFIG.WINDOWS.next3h.protectiveBuffer
     );
 
-    const tonight = clamp100(
-      components.stressLoad * CONFIG.WINDOWS.tonight.stressLoad +
-      components.sleepDebt * CONFIG.WINDOWS.tonight.sleepDebt +
-      components.restrictionPressure * CONFIG.WINDOWS.tonight.restrictionPressure +
-      components.rewardExposure * CONFIG.WINDOWS.tonight.rewardExposure +
-      components.timingContext * CONFIG.WINDOWS.tonight.timingContext +
-      components.emotionalVulnerability * CONFIG.WINDOWS.tonight.emotionalVulnerability -
+    let tonight = clamp100(
+      effectiveComponents.stressLoad * CONFIG.WINDOWS.tonight.stressLoad +
+      effectiveComponents.sleepDebt * CONFIG.WINDOWS.tonight.sleepDebt +
+      effectiveComponents.restrictionPressure * CONFIG.WINDOWS.tonight.restrictionPressure +
+      effectiveComponents.rewardExposure * CONFIG.WINDOWS.tonight.rewardExposure +
+      effectiveComponents.timingContext * CONFIG.WINDOWS.tonight.timingContext +
+      effectiveComponents.emotionalVulnerability * CONFIG.WINDOWS.tonight.emotionalVulnerability -
       components.protectiveBuffer * CONFIG.WINDOWS.tonight.protectiveBuffer
     );
 
-    const next24h = clamp100(
-      components.stressLoad * CONFIG.WINDOWS.next24h.stressLoad +
-      components.sleepDebt * CONFIG.WINDOWS.next24h.sleepDebt +
-      components.restrictionPressure * CONFIG.WINDOWS.next24h.restrictionPressure +
-      components.rewardExposure * CONFIG.WINDOWS.next24h.rewardExposure +
-      components.timingContext * CONFIG.WINDOWS.next24h.timingContext +
-      components.emotionalVulnerability * CONFIG.WINDOWS.next24h.emotionalVulnerability -
+    let next24h = clamp100(
+      effectiveComponents.stressLoad * CONFIG.WINDOWS.next24h.stressLoad +
+      effectiveComponents.sleepDebt * CONFIG.WINDOWS.next24h.sleepDebt +
+      effectiveComponents.restrictionPressure * CONFIG.WINDOWS.next24h.restrictionPressure +
+      effectiveComponents.rewardExposure * CONFIG.WINDOWS.next24h.rewardExposure +
+      effectiveComponents.timingContext * CONFIG.WINDOWS.next24h.timingContext +
+      effectiveComponents.emotionalVulnerability * CONFIG.WINDOWS.next24h.emotionalVulnerability -
       components.protectiveBuffer * CONFIG.WINDOWS.next24h.protectiveBuffer
     );
+
+    if (hasCompensatedEveningSignal(components, ctx)) {
+      next3h = Math.max(next3h, 4);
+      tonight = Math.max(tonight, 6);
+      next24h = Math.max(next24h, 5);
+    }
 
     return { next3h, tonight, next24h };
   }
@@ -21084,58 +21297,75 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
     return 'low';
   }
 
-  function getComponentDrivers(components, profileConfig) {
+  function getComponentDrivers(components, profileConfig, diagnostics = {}, rankingComponents = null) {
     const weights = profileConfig?.weights || CONFIG.WEIGHTS;
+    const stressLoadState = diagnostics.stressLoadState || {};
+    const sleepDebtState = diagnostics.sleepDebtState || {};
+    const ranked = rankingComponents || components || {};
     return [
       {
         id: 'stress_load',
-        label: 'Стрессовая нагрузка',
-        impact: Math.round(components.stressLoad * weights.stressLoad),
+        label: stressLoadState.mode === 'carryover' ? 'Накопленная стрессовая нагрузка' : 'Стрессовая нагрузка',
+        impact: Math.round(toNumber(ranked.stressLoad, 0) * weights.stressLoad),
+        weightedImpact: Math.round(toNumber(ranked.stressLoad, 0) * weights.stressLoad * 100) / 100,
         direction: 'up',
-        explanation: 'Высокий текущий или накопленный стресс усиливает риск эмоционального eating.',
+        explanation: stressLoadState.mode === 'carryover'
+          ? 'Снаружи всё может выглядеть спокойно, но накопленное напряжение последних дней всё ещё повышает риск сорваться на еде.'
+          : 'Высокий текущий или накопленный стресс повышает риск импульсивной еды.',
       },
       {
         id: 'sleep_debt',
-        label: 'Недосып',
-        impact: Math.round(components.sleepDebt * weights.sleepDebt),
+        label: sleepDebtState.mode === 'recovery_debt' ? 'Накопленный недосып' : 'Недосып',
+        impact: Math.round(toNumber(ranked.sleepDebt, 0) * weights.sleepDebt),
+        weightedImpact: Math.round(toNumber(ranked.sleepDebt, 0) * weights.sleepDebt * 100) / 100,
         direction: 'up',
-        explanation: 'Недосып усиливает hunger drive и reward-seeking поведение.',
+        explanation: sleepDebtState.mode === 'recovery_debt'
+          ? 'Последняя ночь могла быть нормальной, но организм ещё не догнал восстановление — поэтому голод и тяга к еде сильнее.'
+          : 'Недосып делает голод и тягу к еде заметно сильнее.',
       },
       {
         id: 'restriction_pressure',
         label: 'Давление дефицита',
-        impact: Math.round(components.restrictionPressure * weights.restrictionPressure),
+        impact: Math.round(toNumber(ranked.restrictionPressure, 0) * weights.restrictionPressure),
+        weightedImpact: Math.round(toNumber(ranked.restrictionPressure, 0) * weights.restrictionPressure * 100) / 100,
         direction: 'up',
-        explanation: 'Сильный недобор калорий и длинные окна без еды повышают риск компенсационного переедания.',
+        explanation: 'Сильный недобор калорий и длинные паузы без еды повышают риск вечернего переедания.',
       },
       {
         id: 'reward_exposure',
-        label: 'Reward-food exposure',
-        impact: Math.round(components.rewardExposure * weights.rewardExposure),
+        label: 'Тяга к вкусной еде',
+        impact: Math.round(toNumber(ranked.rewardExposure, 0) * weights.rewardExposure),
+        weightedImpact: Math.round(toNumber(ranked.rewardExposure, 0) * weights.rewardExposure * 100) / 100,
         direction: 'up',
-        explanation: 'Высокий harm/simple today повышает вероятность продолжения hyperpalatable eating.',
+        explanation: 'Когда сегодня уже было много сладкого или очень вкусной еды, становится сложнее остановиться на одном приёме.',
       },
       {
         id: 'timing_context',
         label: 'Контекст времени',
-        impact: Math.round(components.timingContext * weights.timingContext),
+        impact: Math.round(toNumber(ranked.timingContext, 0) * weights.timingContext),
+        weightedImpact: Math.round(toNumber(ranked.timingContext, 0) * weights.timingContext * 100) / 100,
         direction: 'up',
         explanation: 'Вечер, выходные и длинный gap усиливают уязвимость.',
       },
       {
         id: 'emotional_vulnerability',
         label: 'Эмоциональная уязвимость',
-        impact: Math.round(components.emotionalVulnerability * weights.emotionalVulnerability),
+        impact: Math.round(toNumber(ranked.emotionalVulnerability, 0) * weights.emotionalVulnerability),
+        weightedImpact: Math.round(toNumber(ranked.emotionalVulnerability, 0) * weights.emotionalVulnerability * 100) / 100,
         direction: 'up',
-        explanation: 'Низкое субъективное состояние усиливает риск, но не должно доминировать над поведенческими факторами.',
+        explanation: 'Когда сил и настроения мало, держать спокойный режим питания обычно сложнее.',
       },
     ];
   }
 
-  function extractPrimaryDrivers(components, profileConfig) {
-    return getComponentDrivers(components, profileConfig)
-      .filter(item => item.impact > 0)
-      .sort((a, b) => b.impact - a.impact)
+  function extractPrimaryDrivers(components, profileConfig, diagnostics = {}, rankingComponents = null) {
+    return getComponentDrivers(components, profileConfig, diagnostics, rankingComponents)
+      .filter(item => item.weightedImpact > 0.25)
+      .sort((a, b) => {
+        if (b.weightedImpact !== a.weightedImpact) return b.weightedImpact - a.weightedImpact;
+        return b.impact - a.impact;
+      })
+      .map(({ weightedImpact, ...item }) => item)
       .slice(0, 3);
   }
 
@@ -21146,27 +21376,63 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
   function buildRecommendations(result) {
     const topDriver = result.primaryDrivers[0]?.id;
     const recommendations = [];
+    const debug = result.debug || {};
+    const sleepDebtState = debug.sleepDebtState || {};
+    const stressLoadState = debug.stressLoadState || {};
+    const restrictionPressureState = debug.restrictionPressure || {};
+    const protectiveFactors = Array.isArray(result.protectiveFactors) ? result.protectiveFactors : [];
+    const hasEnergyProtection = protectiveFactors.some((factor) => factor.id === 'enough_calories');
+    const hasMealStructure = protectiveFactors.some((factor) => factor.id === 'meal_structure');
 
     if (topDriver === 'restriction_pressure') {
-      recommendations.push({ id: 'safe_meal', text: 'Сейчас лучше сделать safe structured meal и не дожимать дефицит.', priority: 1, type: 'nutrition' });
-      recommendations.push({ id: 'protein_first', text: 'Ставка на белок + клетчатку сначала, а не на быстрые калории.', priority: 2, type: 'nutrition' });
+      if (restrictionPressureState.cutPattern === 'aggressive_cut') {
+        recommendations.push({ id: 'aggressive_cut_recovery', text: 'Похоже, днём еды получилось слишком мало. Сейчас лучше спокойно сделать нормальный приём пищи и снять давление голода.', priority: 1, type: 'nutrition' });
+      } else if (hasEnergyProtection) {
+        recommendations.push({ id: 'hold_structure', text: 'На вечер энергии уже достаточно. Сейчас важнее сохранить спокойную структуру и не уходить в случайные перекусы.', priority: 1, type: 'maintenance' });
+      } else {
+        recommendations.push({ id: 'safe_meal', text: 'Сейчас лучше сделать обычный нормальный приём пищи и не пытаться дотерпеть на дефиците.', priority: 1, type: 'nutrition' });
+      }
+      recommendations.push({ id: 'protein_first', text: 'Начни с белка и клетчатки — так голод и тяга к сладкому обычно становятся слабее.', priority: 2, type: 'nutrition' });
     }
 
     if (topDriver === 'stress_load') {
-      recommendations.push({ id: 'stress_pause', text: 'Сделай короткую anti-stress паузу перед выбором еды.', priority: 1, type: 'regulation' });
-      recommendations.push({ id: 'reduce_friction', text: 'Заранее выбери безопасный вариант еды, чтобы убрать импульсивность.', priority: 2, type: 'planning' });
+      recommendations.push({
+        id: 'stress_pause', text: stressLoadState.mode === 'carryover'
+          ? 'Похоже, накопилось напряжение. Сначала сделай короткую паузу: вода, тишина или 5 минут прогулки, а потом решай с едой.'
+          : 'Сначала короткая пауза на 5 минут, потом решение про еду — так меньше шанс на импульсивный выбор.', priority: 1, type: 'regulation'
+      });
+      recommendations.push({ id: 'reduce_friction', text: 'Заранее выбери простой спокойный вариант еды, чтобы не решать на эмоциях.', priority: 2, type: 'planning' });
     }
 
     if (topDriver === 'reward_exposure') {
-      recommendations.push({ id: 'stop_escalation', text: 'Не продолжай цепочку reward-food: добавь нормальный приём пищи вместо сладкого доедания.', priority: 1, type: 'nutrition' });
+      recommendations.push({ id: 'stop_escalation', text: 'Лучше остановить тягу на обычной еде: нормальный приём пищи сейчас сработает лучше, чем сладкое доедание.', priority: 1, type: 'nutrition' });
     }
 
     if (topDriver === 'sleep_debt') {
-      recommendations.push({ id: 'sleep_protect', text: 'Сегодня не стоит строить жёсткий дефицит — лучше уйти в recovery mode.', priority: 1, type: 'recovery' });
+      recommendations.push({
+        id: 'sleep_protect', text: sleepDebtState.mode === 'recovery_debt'
+          ? 'Даже после нормальной ночи организм ещё догоняет восстановление. Сегодня лучше без жёсткого дефицита и с нормальным ужином.'
+          : 'Сегодня лучше не ужесточать дефицит: организму сейчас важнее восстановление, а не ещё один недобор.', priority: 1, type: 'recovery'
+      });
+      if (hasMealStructure) {
+        recommendations.push({ id: 'protect_evening', text: 'Основа дня уже собрана — сейчас задача просто не уходить в поздние сладкие перекусы.', priority: 2, type: 'maintenance' });
+      }
+    }
+
+    if (sleepDebtState.mode === 'recovery_debt' && !recommendations.some((item) => item.id === 'sleep_protect')) {
+      recommendations.push({ id: 'sleep_protect', text: 'Даже после нормальной ночи организм ещё догоняет восстановление. Сегодня лучше без жёсткого дефицита и с нормальным ужином.', priority: 2, type: 'recovery' });
+    }
+
+    if (stressLoadState.mode === 'carryover' && !recommendations.some((item) => item.id === 'stress_pause')) {
+      recommendations.push({ id: 'stress_pause', text: 'Похоже, накопилось напряжение. Сначала сделай короткую паузу: вода, тишина или 5 минут прогулки, а потом решай с едой.', priority: 2, type: 'regulation' });
     }
 
     if (recommendations.length === 0) {
-      recommendations.push({ id: 'steady', text: 'Риск невысокий: держи структуру питания и не создавай лишний дефицит к вечеру.', priority: 1, type: 'maintenance' });
+      recommendations.push({
+        id: 'steady', text: hasEnergyProtection
+          ? 'Риск невысокий: день уже выглядит устойчиво. Лучше просто сохранить спокойный режим до сна.'
+          : 'Риск невысокий: держи обычную структуру питания и не делай лишний дефицит к вечеру.', priority: 1, type: 'maintenance'
+      });
     }
 
     return recommendations.sort((a, b) => a.priority - b.priority).slice(0, 3);
@@ -21176,6 +21442,11 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
     return {
       inputs: {
         stressAvg: ctx.stressAvg,
+        stressSource: ctx.subjectiveSources?.stress || 'none',
+        moodAvg: ctx.moodAvg,
+        moodSource: ctx.subjectiveSources?.mood || 'none',
+        wellbeingAvg: ctx.wellbeingAvg,
+        wellbeingSource: ctx.subjectiveSources?.wellbeing || 'none',
         sleepHours: ctx.sleepHours,
         sleepQuality: ctx.sleepQuality,
         kcalPct: Math.round(ctx.kcalPct * 100) / 100,
@@ -21185,6 +21456,7 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
         gapHours: ctx.gapHours,
         currentHour: ctx.hour,
         dayScore: ctx.dayScore,
+        dayScoreSource: ctx.subjectiveSources?.dayScore || 'none',
         waterMl: ctx.waterMl,
         trainingKcal: ctx.trainingKcal,
         historyDaysCount: ctx.historyDays.length,
@@ -21193,7 +21465,11 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
       profile: extras.profile || null,
       confidenceSignals: extras.confidenceSignals || null,
       historyQuality: extras.historyQuality || null,
+      stressLoadState: extras.stressLoadState || null,
+      sleepDebtState: extras.sleepDebtState || null,
       restrictionPressure: extras.restrictionPressure || null,
+      protectiveBufferState: extras.protectiveBufferState || null,
+      effectiveComponents: extras.effectiveComponents || null,
       windows,
       protectiveFactors: protectiveBuffer.factors,
     };
@@ -21226,13 +21502,19 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
       meals,
       trainings,
       trainingKcal,
+      subjectiveSources: {
+        stress: getSubjectiveSource(dayData, 'stressAvg', 'stressMorning'),
+        mood: getSubjectiveSource(dayData, 'moodAvg', 'moodMorning'),
+        wellbeing: getSubjectiveSource(dayData, 'wellbeingAvg', 'wellbeingMorning'),
+        dayScore: getDayScoreSource(dayData),
+      },
       hasTrainingInput: trainings.length > 0,
-      stressAvg: toNumber(dayData.stressAvg, 0),
-      moodAvg: toNumber(dayData.moodAvg, 0),
-      wellbeingAvg: toNumber(dayData.wellbeingAvg, 0),
-      dayScore: toNumber(dayData.dayScore, 0),
-      hasStressInput: hasOwnValue(dayData, 'stressAvg'),
-      hasSubjectiveInput: hasOwnValue(dayData, 'dayScore') || hasOwnValue(dayData, 'moodAvg') || hasOwnValue(dayData, 'wellbeingAvg'),
+      stressAvg: getSubjectiveValue(dayData, 'stressAvg', 'stressMorning'),
+      moodAvg: getSubjectiveValue(dayData, 'moodAvg', 'moodMorning'),
+      wellbeingAvg: getSubjectiveValue(dayData, 'wellbeingAvg', 'wellbeingMorning'),
+      dayScore: getFallbackDayScore(dayData),
+      hasStressInput: hasOwnValue(dayData, 'stressAvg') || hasOwnValue(dayData, 'stressMorning'),
+      hasSubjectiveInput: hasOwnValue(dayData, 'dayScore') || hasOwnValue(dayData, 'dayScoreRaw') || hasOwnValue(dayData, 'moodAvg') || hasOwnValue(dayData, 'wellbeingAvg') || hasOwnValue(dayData, 'moodMorning') || hasOwnValue(dayData, 'wellbeingMorning') || hasOwnValue(dayData, 'stressMorning'),
       sleepHours: getDaySleepHours(dayData),
       sleepQuality: toNumber(dayData.sleepQuality, 0),
       hasSleepInput: getDaySleepHours(dayData) > 0 || hasOwnValue(dayData, 'sleepHours') || (typeof dayData.sleepStart === 'string' && typeof dayData.sleepEnd === 'string'),
@@ -21268,14 +21550,23 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
       hour: ctx.hour,
     });
 
-    const stressLoad = calcStressLoad(ctx);
-    const sleepDebt = calcSleepDebt(ctx);
+    const stressLoadState = getStressLoadBreakdown(ctx);
+    const stressLoad = stressLoadState.score;
+    const sleepDebtState = getSleepDebtBreakdown(ctx);
+    const sleepDebt = sleepDebtState.score;
     const restrictionPressureState = getRestrictionPressureBreakdown(ctx);
     const restrictionPressure = restrictionPressureState.score;
     const rewardExposure = calcRewardExposure(ctx);
     const timingContext = calcTimingContext(ctx);
     const emotionalVulnerability = calcEmotionalVulnerability(ctx);
-    const protectiveBufferState = calcProtectiveBuffer(ctx);
+    const protectiveBufferState = calcProtectiveBuffer(ctx, {
+      stressLoad,
+      sleepDebt,
+      restrictionPressure,
+      rewardExposure,
+      timingContext,
+      emotionalVulnerability,
+    });
     const confidenceState = getConfidenceBreakdown(ctx);
 
     const components = {
@@ -21288,11 +21579,15 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
       protectiveBuffer: protectiveBufferState.score,
     };
 
-    const score = composeWeightedRisk(components, ctx, profileConfig);
-    const windows = calcRiskWindows(components);
+    const effectiveComponents = applyDomainRelief(components, protectiveBufferState);
+    const score = composeWeightedRisk(components, ctx, profileConfig, protectiveBufferState);
+    const windows = calcRiskWindows(components, ctx, protectiveBufferState);
     const confidence = confidenceState.score;
     const level = getLevel(score);
-    const primaryDrivers = extractPrimaryDrivers(components, profileConfig);
+    const primaryDrivers = extractPrimaryDrivers(components, profileConfig, {
+      stressLoadState,
+      sleepDebtState,
+    }, effectiveComponents);
     const protectiveFactors = extractProtectiveFactors(protectiveBufferState);
 
     const result = {
@@ -21311,7 +21606,15 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
       debug: buildDebugPayload(ctx, components, windows, protectiveBufferState, {
         confidenceSignals: confidenceState.signals,
         historyQuality: confidenceState.historyQuality,
+        stressLoadState,
+        sleepDebtState,
         restrictionPressure: restrictionPressureState,
+        protectiveBufferState: {
+          score: protectiveBufferState.score,
+          rawFactorCount: protectiveBufferState.factors.length,
+          domainRelief: protectiveBufferState.domainRelief,
+        },
+        effectiveComponents,
         profile: profileConfig,
       }),
     };
@@ -21464,7 +21767,14 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
     const rewardExposure = calcRewardExposure(syntheticCtx); // usually low without today's data
     const timingContext = calcTimingContext(syntheticCtx);
     const emotionalVulnerability = calcEmotionalVulnerability(syntheticCtx);
-    const protectiveBufferState = calcProtectiveBuffer(syntheticCtx);
+    const protectiveBufferState = calcProtectiveBuffer(syntheticCtx, {
+      stressLoad,
+      sleepDebt,
+      restrictionPressure,
+      rewardExposure,
+      timingContext,
+      emotionalVulnerability,
+    });
 
     const components = {
       stressLoad,
@@ -21477,10 +21787,14 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
     };
 
     const profileConfig = getRiskProfileConfig(options.weightProfileKey || options.riskProfileKey || options.tuningProfile);
-    const score = composeWeightedRisk(components, syntheticCtx, profileConfig);
-    const windows = calcRiskWindows(components);
+    const score = composeWeightedRisk(components, syntheticCtx, profileConfig, protectiveBufferState);
+    const windows = calcRiskWindows(components, syntheticCtx, protectiveBufferState);
     const level = getLevel(score);
-    const primaryDrivers = extractPrimaryDrivers(components, profileConfig);
+    const effectiveComponents = applyDomainRelief(components, protectiveBufferState);
+    const primaryDrivers = extractPrimaryDrivers(components, profileConfig, {
+      stressLoadState: getStressLoadBreakdown(syntheticCtx),
+      sleepDebtState: getSleepDebtBreakdown(syntheticCtx),
+    }, effectiveComponents);
     const protectiveFactors = extractProtectiveFactors(protectiveBufferState);
 
     // Confidence is inherently lower for forecasts
@@ -21647,6 +21961,10 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
       profile: result?.profile || null,
       selectedProfileKey: result?.profile?.key || selectedProfileKey,
       score,
+      rawScore: score,
+      relapseScore: score,
+      crashScore: 0,
+      scoreModel: 'relapse_raw',
       level: result?.level || getLevel(score),
       confidence,
       windows,
@@ -21705,6 +22023,10 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
       type: 'forecast',
       profile: result?.profile || null,
       score,
+      rawScore: score,
+      relapseScore: score,
+      crashScore: 0,
+      scoreModel: 'relapse_forecast_raw',
       level: result.level || getLevel(score),
       confidence: Math.round(toNumber(result.confidence)),
       windows: result.windows || {},
@@ -21737,6 +22059,8 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
       getHistoryQualityBreakdown,
       getExpectedProteinCoverageByHour,
       getConfidenceBreakdown,
+      getStressLoadBreakdown,
+      getSleepDebtBreakdown,
       calcStressLoad,
       calcSleepDebt,
       calcRestrictionPressure,
@@ -21745,6 +22069,7 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
       calcTimingContext,
       calcEmotionalVulnerability,
       calcProtectiveBuffer,
+      applyDomainRelief,
       composeWeightedRisk,
       calcRiskWindows,
       calcConfidence,
@@ -28706,6 +29031,7 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
 
   const HEYS = global.HEYS = global.HEYS || {};
   const React = global.React;
+  const ReactDOM = global.ReactDOM;
 
   // === ИМПОРТ УТИЛИТ ===
   const utils = HEYS.InsulinWave?.utils;
@@ -28833,9 +29159,11 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
 
   // === Meal Wave Expand (для карточки приёма) ===
   function cardChipStyle(color) {
+    const dark = typeof document !== 'undefined' &&
+      document.documentElement.getAttribute('data-theme') === 'dark';
     return {
-      background: color + '1A',
-      color: '#0f172a',
+      background: color + (dark ? '26' : '1A'),
+      color: dark ? '#e2e8f0' : '#0f172a',
       padding: '6px 8px',
       borderRadius: '8px',
       fontWeight: 600
@@ -29264,301 +29592,313 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
       ),
 
       // 🆕 v3.7.1: Popup детализации волны
-      showWaveDetails && React.createElement('div', {
-        className: 'wave-details-overlay',
-        onClick: (e) => { if (e.target === e.currentTarget) setShowWaveDetails(false); },
-        style: {
-          position: 'fixed',
-          top: 0, left: 0, right: 0, bottom: 0,
-          background: 'rgba(0,0,0,0.5)',
-          zIndex: 9999,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: '20px'
-        }
-      },
-        React.createElement('div', {
-          className: 'wave-details-popup',
+      showWaveDetails && (() => {
+        const overlay = React.createElement('div', {
+          className: 'wave-details-overlay',
+          onClick: (e) => { if (e.target === e.currentTarget) setShowWaveDetails(false); },
           style: {
-            background: 'var(--card, #fff)',
-            borderRadius: '16px',
+            position: 'fixed',
+            inset: 0,
+            width: '100vw',
+            height: '100dvh',
+            minHeight: '100dvh',
+            background: 'rgba(0,0,0,0.5)',
+            zIndex: 9999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
             padding: '20px',
-            maxWidth: '360px',
-            width: '100%',
-            maxHeight: '80vh',
-            overflowY: 'auto',
-            boxShadow: '0 20px 60px rgba(0,0,0,0.3)'
+            overflow: 'hidden',
+            boxSizing: 'border-box'
           }
         },
-          // Заголовок
           React.createElement('div', {
+            className: 'wave-details-popup',
             style: {
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              marginBottom: '16px'
+              background: 'var(--card, #fff)',
+              borderRadius: '16px',
+              padding: '20px',
+              maxWidth: 'min(360px, calc(100vw - 24px))',
+              width: '100%',
+              maxHeight: 'calc(100dvh - 24px)',
+              overflowY: 'auto',
+              boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
+              boxSizing: 'border-box'
             }
           },
-            React.createElement('h3', {
-              style: { margin: 0, fontSize: '16px', fontWeight: 600, color: 'var(--text, #1f2937)' }
-            }, '📊 Расчёт волны'),
+            // Заголовок
+            React.createElement('div', {
+              style: {
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: '16px'
+              }
+            },
+              React.createElement('h3', {
+                style: { margin: 0, fontSize: '16px', fontWeight: 600, color: 'var(--text, #1f2937)' }
+              }, '📊 Расчёт волны'),
+              React.createElement('button', {
+                onClick: () => setShowWaveDetails(false),
+                style: {
+                  background: 'none', border: 'none', fontSize: '20px',
+                  cursor: 'pointer', color: '#9ca3af', padding: '4px'
+                }
+              }, '×')
+            ),
+
+            // Итоговая длина волны
+            React.createElement('div', {
+              style: {
+                background: 'linear-gradient(135deg, #3b82f6, #3b82f6)',
+                borderRadius: '12px',
+                padding: '16px',
+                marginBottom: '16px',
+                textAlign: 'center',
+                color: '#fff'
+              }
+            },
+              React.createElement('div', { style: { fontSize: '12px', opacity: 0.9, marginBottom: '4px' } },
+                'Длина волны'
+              ),
+              React.createElement('div', { style: { fontSize: '28px', fontWeight: 700 } },
+                (waveData.waveHours || waveData.duration / 60).toFixed(1) + 'ч'
+              ),
+              React.createElement('div', { style: { fontSize: '11px', opacity: 0.8, marginTop: '4px' } },
+                waveData.timeDisplay + ' → ' + waveData.endTimeDisplay
+              )
+            ),
+
+            // Формула
+            React.createElement('div', {
+              style: {
+                background: 'var(--bg-secondary, #f8fafc)',
+                borderRadius: '10px',
+                padding: '12px',
+                marginBottom: '16px',
+                fontSize: '11px',
+                fontFamily: 'monospace',
+                color: '#64748b',
+                textAlign: 'center'
+              }
+            }, 'База × Множитель = ' + (waveData.baseWaveHours || 3).toFixed(1) + 'ч × ' +
+            (waveData.finalMultiplier || 1).toFixed(2) + ' = ' +
+            (waveData.waveHours || waveData.duration / 60).toFixed(1) + 'ч'
+            ),
+
+            // 🆕 v4.1.0: Легенда 3-компонентной Gaussian модели
+            React.createElement('div', {
+              style: {
+                background: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)',
+                borderRadius: '10px',
+                padding: '12px',
+                marginBottom: '16px'
+              }
+            },
+              React.createElement('div', {
+                style: { fontSize: '12px', fontWeight: 600, color: '#92400e', marginBottom: '8px' }
+              }, '🧬 Научная модель волны'),
+              React.createElement('div', {
+                style: { fontSize: '11px', color: '#78350f', lineHeight: '1.5' }
+              },
+                'Форма кривой = сумма 3 компонентов инсулинового ответа:'
+              ),
+              React.createElement('div', { style: { marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '6px' } },
+                // Fast component
+                React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '8px' } },
+                  React.createElement('span', { style: { fontSize: '14px' } }, '⚡'),
+                  React.createElement('div', null,
+                    React.createElement('div', { style: { fontSize: '11px', fontWeight: 600, color: '#f97316' } },
+                      'Быстрый пик (15-25 мин)'
+                    ),
+                    React.createElement('div', { style: { fontSize: '10px', color: '#78350f' } },
+                      'Простые углеводы, ГИ>70'
+                    )
+                  )
+                ),
+                // Slow component
+                React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '8px' } },
+                  React.createElement('span', { style: { fontSize: '14px' } }, '🌿'),
+                  React.createElement('div', null,
+                    React.createElement('div', { style: { fontSize: '11px', fontWeight: 600, color: '#22c55e' } },
+                      'Основной ответ (45-60 мин)'
+                    ),
+                    React.createElement('div', { style: { fontSize: '10px', color: '#78350f' } },
+                      'Сложные углеводы, белок, жиры'
+                    )
+                  )
+                ),
+                // Hepatic component
+                React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '8px' } },
+                  React.createElement('span', { style: { fontSize: '14px' } }, '🫀'),
+                  React.createElement('div', null,
+                    React.createElement('div', { style: { fontSize: '11px', fontWeight: 600, color: '#8b5cf6' } },
+                      'Печёночный хвост (90-120 мин)'
+                    ),
+                    React.createElement('div', { style: { fontSize: '10px', color: '#78350f' } },
+                      'Клетчатка, медленное высвобождение'
+                    )
+                  )
+                )
+              ),
+              // Научная ссылка
+              React.createElement('div', {
+                style: {
+                  marginTop: '10px',
+                  paddingTop: '8px',
+                  borderTop: '1px solid rgba(146, 64, 14, 0.2)',
+                  fontSize: '10px',
+                  color: '#92400e'
+                }
+              }, '📚 Brand-Miller 2003, Holt 1997')
+            ),
+
+            // Факторы еды
+            React.createElement('div', { style: { marginBottom: '12px' } },
+              React.createElement('div', {
+                style: { fontSize: '12px', fontWeight: 600, color: 'var(--text, #1f2937)', marginBottom: '8px' }
+              }, '🍽️ Факторы еды'),
+
+              // GI
+              React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
+                React.createElement('span', { style: { color: '#64748b' } }, 'ГИ'),
+                React.createElement('span', { style: { fontWeight: 500 } }, Math.round(waveData.gi || 0))
+              ),
+              // GL
+              React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
+                React.createElement('span', { style: { color: '#64748b' } }, 'GL (нагрузка)'),
+                React.createElement('span', { style: { fontWeight: 500, color: waveData.gl < 10 ? '#22c55e' : waveData.gl > 20 ? '#ef4444' : '#1f2937' } },
+                  (waveData.gl || 0).toFixed(1) + (waveData.glCategory?.desc ? ' (' + waveData.glCategory.desc + ')' : '')
+                )
+              ),
+              // Белок
+              React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
+                React.createElement('span', { style: { color: '#64748b' } }, 'Белок'),
+                React.createElement('span', { style: { fontWeight: 500 } }, Math.round(waveData.protein || 0) + 'г')
+              ),
+              // Клетчатка
+              React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
+                React.createElement('span', { style: { color: '#64748b' } }, 'Клетчатка'),
+                React.createElement('span', { style: { fontWeight: 500, color: waveData.fiber >= 5 ? '#22c55e' : '#1f2937' } },
+                  Math.round(waveData.fiber || 0) + 'г'
+                )
+              ),
+              // Жиры
+              React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
+                React.createElement('span', { style: { color: '#64748b' } }, 'Жиры'),
+                React.createElement('span', { style: { fontWeight: 500 } }, Math.round(waveData.fat || 0) + 'г')
+              ),
+              // Углеводы
+              React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
+                React.createElement('span', { style: { color: '#64748b' } }, 'Углеводы'),
+                React.createElement('span', { style: { fontWeight: 500 } }, Math.round(waveData.carbs || 0) + 'г')
+              ),
+              // Жидкая еда
+              waveData.hasLiquid && React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
+                React.createElement('span', { style: { color: '#f97316' } }, '🥤 Жидкая еда'),
+                React.createElement('span', { style: { fontWeight: 500, color: '#f97316' } }, '×' + (waveData.liquidMultiplier || 0.75).toFixed(2))
+              ),
+              // Инсулиногенность
+              waveData.insulinogenicType && React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
+                React.createElement('span', { style: { color: '#64748b' } }, '🥛 Инсулиногенность'),
+                React.createElement('span', { style: { fontWeight: 500 } }, waveData.insulinogenicType)
+              )
+            ),
+
+            // Дневные факторы
+            React.createElement('div', { style: { marginBottom: '12px' } },
+              React.createElement('div', {
+                style: { fontSize: '12px', fontWeight: 600, color: 'var(--text, #1f2937)', marginBottom: '8px' }
+              }, '⏰ Дневные факторы'),
+
+              // Циркадный ритм
+              React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
+                React.createElement('span', { style: { color: '#64748b' } }, 'Время суток'),
+                React.createElement('span', { style: { fontWeight: 500, color: waveData.circadianMultiplier > 1.05 ? '#f97316' : '#1f2937' } },
+                  '×' + (waveData.circadianMultiplier || 1).toFixed(2)
+                )
+              ),
+              // Дневные бонусы
+              waveData.dayFactorsBonus && Math.abs(waveData.dayFactorsBonus) >= 0.005 && React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
+                React.createElement('span', { style: { color: '#64748b' } }, 'Сон/стресс/гидратация'),
+                React.createElement('span', { style: { fontWeight: 500, color: waveData.dayFactorsBonus > 0 ? '#ef4444' : '#22c55e' } },
+                  (waveData.dayFactorsBonus > 0 ? '+' : '') + (waveData.dayFactorsBonus * 100).toFixed(0) + '%'
+                )
+              ),
+              // Активность
+              waveData.activityBonus && Math.abs(waveData.activityBonus) >= 0.005 && React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
+                React.createElement('span', { style: { color: '#22c55e' } }, '🏃 Активность'),
+                React.createElement('span', { style: { fontWeight: 500, color: '#22c55e' } },
+                  (waveData.activityBonus * 100).toFixed(0) + '%'
+                )
+              ),
+              // 🆕 v3.7.1: NDTE (Next-Day Training Effect)
+              waveData.ndteData && React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
+                React.createElement('span', { style: { color: '#10b981' } }, '🔥 Вчера тренировка'),
+                React.createElement('span', { style: { fontWeight: 500, color: '#10b981' } },
+                  '-' + Math.round(waveData.ndteData.waveReduction * 100) + '%'
+                )
+              )
+            ),
+
+            // Activity Context (если есть)
+            activityContext && activityContext.type !== 'none' && React.createElement('div', {
+              style: {
+                marginBottom: '12px',
+                background: 'rgba(16, 185, 129, 0.1)',
+                borderRadius: '10px',
+                padding: '12px'
+              }
+            },
+              React.createElement('div', {
+                style: { fontSize: '12px', fontWeight: 600, color: '#10b981', marginBottom: '6px' }
+              }, activityContext.badge),
+              React.createElement('div', {
+                style: { fontSize: '11px', color: '#64748b' }
+              }, activityContext.desc),
+              activityContext.waveBonus && React.createElement('div', {
+                style: { fontSize: '11px', color: '#10b981', marginTop: '4px', fontWeight: 500 }
+              }, 'Волна: ' + (activityContext.waveBonus * 100).toFixed(0) + '%')
+            ),
+
+            // GL Scale info
+            waveData.dayFactorsScale && waveData.dayFactorsScale < 1 && React.createElement('div', {
+              style: {
+                background: '#f0fdf4',
+                borderRadius: '8px',
+                padding: '10px',
+                fontSize: '11px',
+                color: '#166534',
+                marginBottom: '12px'
+              }
+            },
+              '💡 При низкой GL (' + (waveData.gl || 0).toFixed(1) + ') дневные факторы применяются на ' +
+              Math.round((waveData.dayFactorsScale || 1) * 100) + '%'
+            ),
+
+            // Кнопка закрытия
             React.createElement('button', {
               onClick: () => setShowWaveDetails(false),
               style: {
-                background: 'none', border: 'none', fontSize: '20px',
-                cursor: 'pointer', color: '#9ca3af', padding: '4px'
+                width: '100%',
+                background: '#3b82f6',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '10px',
+                padding: '12px',
+                fontSize: '14px',
+                fontWeight: 600,
+                cursor: 'pointer',
+                marginTop: '8px'
               }
-            }, '×')
-          ),
+            }, 'Закрыть')
+          )
+        );
 
-          // Итоговая длина волны
-          React.createElement('div', {
-            style: {
-              background: 'linear-gradient(135deg, #3b82f6, #3b82f6)',
-              borderRadius: '12px',
-              padding: '16px',
-              marginBottom: '16px',
-              textAlign: 'center',
-              color: '#fff'
-            }
-          },
-            React.createElement('div', { style: { fontSize: '12px', opacity: 0.9, marginBottom: '4px' } },
-              'Длина волны'
-            ),
-            React.createElement('div', { style: { fontSize: '28px', fontWeight: 700 } },
-              (waveData.waveHours || waveData.duration / 60).toFixed(1) + 'ч'
-            ),
-            React.createElement('div', { style: { fontSize: '11px', opacity: 0.8, marginTop: '4px' } },
-              waveData.timeDisplay + ' → ' + waveData.endTimeDisplay
-            )
-          ),
-
-          // Формула
-          React.createElement('div', {
-            style: {
-              background: 'var(--bg-secondary, #f8fafc)',
-              borderRadius: '10px',
-              padding: '12px',
-              marginBottom: '16px',
-              fontSize: '11px',
-              fontFamily: 'monospace',
-              color: '#64748b',
-              textAlign: 'center'
-            }
-          }, 'База × Множитель = ' + (waveData.baseWaveHours || 3).toFixed(1) + 'ч × ' +
-          (waveData.finalMultiplier || 1).toFixed(2) + ' = ' +
-          (waveData.waveHours || waveData.duration / 60).toFixed(1) + 'ч'
-          ),
-
-          // 🆕 v4.1.0: Легенда 3-компонентной Gaussian модели
-          React.createElement('div', {
-            style: {
-              background: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)',
-              borderRadius: '10px',
-              padding: '12px',
-              marginBottom: '16px'
-            }
-          },
-            React.createElement('div', {
-              style: { fontSize: '12px', fontWeight: 600, color: '#92400e', marginBottom: '8px' }
-            }, '🧬 Научная модель волны'),
-            React.createElement('div', {
-              style: { fontSize: '11px', color: '#78350f', lineHeight: '1.5' }
-            },
-              'Форма кривой = сумма 3 компонентов инсулинового ответа:'
-            ),
-            React.createElement('div', { style: { marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '6px' } },
-              // Fast component
-              React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '8px' } },
-                React.createElement('span', { style: { fontSize: '14px' } }, '⚡'),
-                React.createElement('div', null,
-                  React.createElement('div', { style: { fontSize: '11px', fontWeight: 600, color: '#f97316' } },
-                    'Быстрый пик (15-25 мин)'
-                  ),
-                  React.createElement('div', { style: { fontSize: '10px', color: '#78350f' } },
-                    'Простые углеводы, ГИ>70'
-                  )
-                )
-              ),
-              // Slow component
-              React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '8px' } },
-                React.createElement('span', { style: { fontSize: '14px' } }, '🌿'),
-                React.createElement('div', null,
-                  React.createElement('div', { style: { fontSize: '11px', fontWeight: 600, color: '#22c55e' } },
-                    'Основной ответ (45-60 мин)'
-                  ),
-                  React.createElement('div', { style: { fontSize: '10px', color: '#78350f' } },
-                    'Сложные углеводы, белок, жиры'
-                  )
-                )
-              ),
-              // Hepatic component
-              React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '8px' } },
-                React.createElement('span', { style: { fontSize: '14px' } }, '🫀'),
-                React.createElement('div', null,
-                  React.createElement('div', { style: { fontSize: '11px', fontWeight: 600, color: '#8b5cf6' } },
-                    'Печёночный хвост (90-120 мин)'
-                  ),
-                  React.createElement('div', { style: { fontSize: '10px', color: '#78350f' } },
-                    'Клетчатка, медленное высвобождение'
-                  )
-                )
-              )
-            ),
-            // Научная ссылка
-            React.createElement('div', {
-              style: {
-                marginTop: '10px',
-                paddingTop: '8px',
-                borderTop: '1px solid rgba(146, 64, 14, 0.2)',
-                fontSize: '10px',
-                color: '#92400e'
-              }
-            }, '📚 Brand-Miller 2003, Holt 1997')
-          ),
-
-          // Факторы еды
-          React.createElement('div', { style: { marginBottom: '12px' } },
-            React.createElement('div', {
-              style: { fontSize: '12px', fontWeight: 600, color: 'var(--text, #1f2937)', marginBottom: '8px' }
-            }, '🍽️ Факторы еды'),
-
-            // GI
-            React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
-              React.createElement('span', { style: { color: '#64748b' } }, 'ГИ'),
-              React.createElement('span', { style: { fontWeight: 500 } }, Math.round(waveData.gi || 0))
-            ),
-            // GL
-            React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
-              React.createElement('span', { style: { color: '#64748b' } }, 'GL (нагрузка)'),
-              React.createElement('span', { style: { fontWeight: 500, color: waveData.gl < 10 ? '#22c55e' : waveData.gl > 20 ? '#ef4444' : '#1f2937' } },
-                (waveData.gl || 0).toFixed(1) + (waveData.glCategory?.desc ? ' (' + waveData.glCategory.desc + ')' : '')
-              )
-            ),
-            // Белок
-            React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
-              React.createElement('span', { style: { color: '#64748b' } }, 'Белок'),
-              React.createElement('span', { style: { fontWeight: 500 } }, Math.round(waveData.protein || 0) + 'г')
-            ),
-            // Клетчатка
-            React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
-              React.createElement('span', { style: { color: '#64748b' } }, 'Клетчатка'),
-              React.createElement('span', { style: { fontWeight: 500, color: waveData.fiber >= 5 ? '#22c55e' : '#1f2937' } },
-                Math.round(waveData.fiber || 0) + 'г'
-              )
-            ),
-            // Жиры
-            React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
-              React.createElement('span', { style: { color: '#64748b' } }, 'Жиры'),
-              React.createElement('span', { style: { fontWeight: 500 } }, Math.round(waveData.fat || 0) + 'г')
-            ),
-            // Углеводы
-            React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
-              React.createElement('span', { style: { color: '#64748b' } }, 'Углеводы'),
-              React.createElement('span', { style: { fontWeight: 500 } }, Math.round(waveData.carbs || 0) + 'г')
-            ),
-            // Жидкая еда
-            waveData.hasLiquid && React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
-              React.createElement('span', { style: { color: '#f97316' } }, '🥤 Жидкая еда'),
-              React.createElement('span', { style: { fontWeight: 500, color: '#f97316' } }, '×' + (waveData.liquidMultiplier || 0.75).toFixed(2))
-            ),
-            // Инсулиногенность
-            waveData.insulinogenicType && React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
-              React.createElement('span', { style: { color: '#64748b' } }, '🥛 Инсулиногенность'),
-              React.createElement('span', { style: { fontWeight: 500 } }, waveData.insulinogenicType)
-            )
-          ),
-
-          // Дневные факторы
-          React.createElement('div', { style: { marginBottom: '12px' } },
-            React.createElement('div', {
-              style: { fontSize: '12px', fontWeight: 600, color: 'var(--text, #1f2937)', marginBottom: '8px' }
-            }, '⏰ Дневные факторы'),
-
-            // Циркадный ритм
-            React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
-              React.createElement('span', { style: { color: '#64748b' } }, 'Время суток'),
-              React.createElement('span', { style: { fontWeight: 500, color: waveData.circadianMultiplier > 1.05 ? '#f97316' : '#1f2937' } },
-                '×' + (waveData.circadianMultiplier || 1).toFixed(2)
-              )
-            ),
-            // Дневные бонусы
-            waveData.dayFactorsBonus && Math.abs(waveData.dayFactorsBonus) >= 0.005 && React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
-              React.createElement('span', { style: { color: '#64748b' } }, 'Сон/стресс/гидратация'),
-              React.createElement('span', { style: { fontWeight: 500, color: waveData.dayFactorsBonus > 0 ? '#ef4444' : '#22c55e' } },
-                (waveData.dayFactorsBonus > 0 ? '+' : '') + (waveData.dayFactorsBonus * 100).toFixed(0) + '%'
-              )
-            ),
-            // Активность
-            waveData.activityBonus && Math.abs(waveData.activityBonus) >= 0.005 && React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
-              React.createElement('span', { style: { color: '#22c55e' } }, '🏃 Активность'),
-              React.createElement('span', { style: { fontWeight: 500, color: '#22c55e' } },
-                (waveData.activityBonus * 100).toFixed(0) + '%'
-              )
-            ),
-            // 🆕 v3.7.1: NDTE (Next-Day Training Effect)
-            waveData.ndteData && React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
-              React.createElement('span', { style: { color: '#10b981' } }, '🔥 Вчера тренировка'),
-              React.createElement('span', { style: { fontWeight: 500, color: '#10b981' } },
-                '-' + Math.round(waveData.ndteData.waveReduction * 100) + '%'
-              )
-            )
-          ),
-
-          // Activity Context (если есть)
-          activityContext && activityContext.type !== 'none' && React.createElement('div', {
-            style: {
-              marginBottom: '12px',
-              background: 'rgba(16, 185, 129, 0.1)',
-              borderRadius: '10px',
-              padding: '12px'
-            }
-          },
-            React.createElement('div', {
-              style: { fontSize: '12px', fontWeight: 600, color: '#10b981', marginBottom: '6px' }
-            }, activityContext.badge),
-            React.createElement('div', {
-              style: { fontSize: '11px', color: '#64748b' }
-            }, activityContext.desc),
-            activityContext.waveBonus && React.createElement('div', {
-              style: { fontSize: '11px', color: '#10b981', marginTop: '4px', fontWeight: 500 }
-            }, 'Волна: ' + (activityContext.waveBonus * 100).toFixed(0) + '%')
-          ),
-
-          // GL Scale info
-          waveData.dayFactorsScale && waveData.dayFactorsScale < 1 && React.createElement('div', {
-            style: {
-              background: '#f0fdf4',
-              borderRadius: '8px',
-              padding: '10px',
-              fontSize: '11px',
-              color: '#166534',
-              marginBottom: '12px'
-            }
-          },
-            '💡 При низкой GL (' + (waveData.gl || 0).toFixed(1) + ') дневные факторы применяются на ' +
-            Math.round((waveData.dayFactorsScale || 1) * 100) + '%'
-          ),
-
-          // Кнопка закрытия
-          React.createElement('button', {
-            onClick: () => setShowWaveDetails(false),
-            style: {
-              width: '100%',
-              background: '#3b82f6',
-              color: '#fff',
-              border: 'none',
-              borderRadius: '10px',
-              padding: '12px',
-              fontSize: '14px',
-              fontWeight: 600,
-              cursor: 'pointer',
-              marginTop: '8px'
-            }
-          }, 'Закрыть')
-        )
-      )
+        return ReactDOM?.createPortal && global.document?.body
+          ? ReactDOM.createPortal(overlay, global.document.body)
+          : overlay;
+      })(),
     );
   };
 
@@ -29845,12 +30185,15 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
     const [expandedMetric, setExpandedMetric] = React.useState('wave'); // 'wave' | 'gi' | 'gl' | null — волна раскрыта по умолчанию
     const giCat = data.giCategory;
 
+    const isDark = typeof document !== 'undefined' &&
+      document.documentElement.getAttribute('data-theme') === 'dark';
+
     // Стили для метрик-карточек
     const metricCardStyle = (isActive) => ({
       flex: '1 1 0',
       minWidth: '80px',
       padding: '12px 8px',
-      background: isActive ? 'rgba(59, 130, 246, 0.1)' : 'rgba(248, 250, 252, 0.8)',
+      background: isActive ? 'rgba(59, 130, 246, 0.1)' : (isDark ? 'rgba(51, 65, 85, 0.6)' : 'rgba(248, 250, 252, 0.8)'),
       borderRadius: '12px',
       textAlign: 'center',
       cursor: 'pointer',
@@ -30079,7 +30422,7 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
         details.formula && React.createElement('div', {
           style: {
             padding: '10px 12px',
-            background: 'rgba(0,0,0,0.03)',
+            background: isDark ? 'rgba(0,0,0,0.25)' : 'rgba(0,0,0,0.03)',
             borderRadius: '8px',
             marginBottom: '12px',
             fontFamily: 'system-ui, -apple-system, sans-serif'
@@ -30121,8 +30464,8 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
               React.createElement('span', {
                 style: {
                   fontWeight: '600',
-                  color: item.value?.startsWith?.('-') ? '#16a34a' :
-                    item.value?.startsWith?.('+') ? '#f59e0b' : '#1e293b'
+                  color: item.value?.startsWith?.('-') ? (isDark ? '#4ade80' : '#16a34a') :
+                    item.value?.startsWith?.('+') ? '#f59e0b' : (isDark ? '#e2e8f0' : '#1e293b')
                 }
               }, item.value)
             )
@@ -30139,7 +30482,7 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
       data.personalAvgGap > 0 && React.createElement('div', {
         style: {
           padding: '12px 16px',
-          background: 'rgba(248, 250, 252, 0.8)',
+          background: isDark ? 'rgba(30, 41, 59, 0.8)' : 'rgba(248, 250, 252, 0.8)',
           borderRadius: '12px',
           marginBottom: '16px'
         }
@@ -30148,7 +30491,7 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
           style: {
             fontSize: '13px',
             fontWeight: '600',
-            color: '#475569',
+            color: isDark ? '#94a3b8' : '#475569',
             marginBottom: '8px'
           }
         }, '🎯 Паттерны'),
@@ -30160,7 +30503,7 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
             fontSize: '14px'
           }
         },
-          React.createElement('span', { style: { color: '#64748b' } }, 'Средний gap'),
+          React.createElement('span', { style: { color: isDark ? '#94a3b8' : '#64748b' } }, 'Средний gap'),
           React.createElement('span', { style: { fontWeight: '600', color: 'var(--text, #1e293b)' } },
             utils.formatDuration(data.personalAvgGap)
           )
@@ -30174,12 +30517,20 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
             fontSize: '13px',
             fontWeight: '500',
             textAlign: 'center',
-            background: data.gapQuality === 'excellent' ? '#dcfce7' :
-              data.gapQuality === 'good' ? '#fef9c3' :
-                data.gapQuality === 'moderate' ? '#fed7aa' : '#fecaca',
-            color: data.gapQuality === 'excellent' ? '#166534' :
-              data.gapQuality === 'good' ? '#854d0e' :
-                data.gapQuality === 'moderate' ? '#c2410c' : '#dc2626'
+            background: isDark
+              ? (data.gapQuality === 'excellent' ? 'rgba(34, 197, 94, 0.15)' :
+                data.gapQuality === 'good' ? 'rgba(250, 204, 21, 0.15)' :
+                  data.gapQuality === 'moderate' ? 'rgba(249, 115, 22, 0.15)' : 'rgba(239, 68, 68, 0.15)')
+              : (data.gapQuality === 'excellent' ? '#dcfce7' :
+                data.gapQuality === 'good' ? '#fef9c3' :
+                  data.gapQuality === 'moderate' ? '#fed7aa' : '#fecaca'),
+            color: isDark
+              ? (data.gapQuality === 'excellent' ? '#4ade80' :
+                data.gapQuality === 'good' ? '#fde047' :
+                  data.gapQuality === 'moderate' ? '#fb923c' : '#f87171')
+              : (data.gapQuality === 'excellent' ? '#166534' :
+                data.gapQuality === 'good' ? '#854d0e' :
+                  data.gapQuality === 'moderate' ? '#c2410c' : '#dc2626')
           }
         },
           data.gapQuality === 'excellent' ? '✓ Отлично!' :
@@ -30194,7 +30545,7 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
           padding: '12px 16px',
           background: data.status === 'lipolysis'
             ? 'linear-gradient(135deg, rgba(34,197,94,0.12), rgba(16,185,129,0.12))'
-            : 'rgba(248, 250, 252, 0.8)',
+            : (isDark ? 'rgba(30, 41, 59, 0.8)' : 'rgba(248, 250, 252, 0.8)'),
           borderRadius: '12px',
           marginBottom: modifiers.length > 0 || data.hasOverlaps ? '12px' : '0'
         }
@@ -30203,14 +30554,16 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
           style: {
             fontSize: '13px',
             fontWeight: '600',
-            color: data.status === 'lipolysis' ? '#16a34a' : '#475569',
+            color: data.status === 'lipolysis'
+              ? (isDark ? '#4ade80' : '#16a34a')
+              : (isDark ? '#94a3b8' : '#475569'),
             marginBottom: '6px'
           }
         }, data.status === 'lipolysis' ? '🔥 Жиросжигание' : '💡 Сейчас'),
         React.createElement('div', {
           style: {
             fontSize: '14px',
-            color: '#334155',
+            color: isDark ? '#cbd5e1' : '#334155',
             lineHeight: 1.5
           }
         },
@@ -30223,7 +30576,7 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
           style: {
             marginTop: '8px',
             fontSize: '13px',
-            color: '#64748b',
+            color: isDark ? '#64748b' : '#64748b',
             display: 'flex',
             gap: '12px',
             flexWrap: 'wrap'
@@ -30238,17 +30591,17 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
       data.hasOverlaps && React.createElement('div', {
         style: {
           padding: '12px 16px',
-          background: 'rgba(239,68,68,0.08)',
+          background: isDark ? 'rgba(239,68,68,0.12)' : 'rgba(239,68,68,0.08)',
           borderRadius: '12px',
           marginBottom: '12px',
-          border: '1px solid rgba(239,68,68,0.2)'
+          border: `1px solid ${isDark ? 'rgba(239,68,68,0.3)' : 'rgba(239,68,68,0.2)'}`
         }
       },
         React.createElement('div', {
-          style: { fontSize: '13px', fontWeight: '600', color: '#dc2626' }
+          style: { fontSize: '13px', fontWeight: '600', color: isDark ? '#f87171' : '#dc2626' }
         }, '⚠️ Волны пересеклись'),
         React.createElement('div', {
-          style: { fontSize: '13px', color: '#64748b', marginTop: '4px' }
+          style: { fontSize: '13px', color: isDark ? '#94a3b8' : '#64748b', marginTop: '4px' }
         }, `Совет: подожди ${Math.round(data.baseWaveHours * 60)} мин между приёмами`)
       ),
 
@@ -37870,6 +38223,34 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
     return bands[bands.length - 1][1];
   }
 
+  function getSubjectiveValue(dayData, avgKey, morningKey) {
+    const avgValue = Number(dayData?.[avgKey]);
+    if (Number.isFinite(avgValue) && avgValue > 0) return avgValue;
+    const morningValue = Number(dayData?.[morningKey]);
+    return Number.isFinite(morningValue) && morningValue > 0 ? morningValue : 0;
+  }
+
+  function getSubjectiveSource(dayData, avgKey, morningKey) {
+    const avgValue = Number(dayData?.[avgKey]);
+    if (Number.isFinite(avgValue) && avgValue > 0) return 'avg';
+    const morningValue = Number(dayData?.[morningKey]);
+    if (Number.isFinite(morningValue) && morningValue > 0) return 'morning';
+    return 'none';
+  }
+
+  function hasFactorInput(factorId, dayData, dayTot) {
+    switch (factorId) {
+      case 'stress':
+        return getSubjectiveValue(dayData, 'stressAvg', 'stressMorning') > 0;
+      case 'mood':
+        return getSubjectiveValue(dayData, 'moodAvg', 'moodMorning') > 0;
+      case 'wellbeing':
+        return getSubjectiveValue(dayData, 'wellbeingAvg', 'wellbeingMorning') > 0;
+      default:
+        return true;
+    }
+  }
+
   /**
    * Вычислить оценку фактора (0-100)
    */
@@ -37960,7 +38341,7 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
       }
 
       case 'stress': {
-        const stress = dayData?.stressAvg || 0;
+        const stress = getSubjectiveValue(dayData, 'stressAvg', 'stressMorning');
         if (stress === 0) return 70; // Нет данных
         if (stress <= 3) return 100;
         if (stress <= 5) return 70;
@@ -37969,7 +38350,7 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
       }
 
       case 'mood': {
-        const mood = dayData?.moodAvg || 0;
+        const mood = getSubjectiveValue(dayData, 'moodAvg', 'moodMorning');
         if (mood === 0) return 70; // Нет данных
         if (mood >= 7) return 100;
         if (mood >= 5) return 70;
@@ -37978,7 +38359,7 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
       }
 
       case 'wellbeing': {
-        const wb = dayData?.wellbeingAvg || 0;
+        const wb = getSubjectiveValue(dayData, 'wellbeingAvg', 'wellbeingMorning');
         if (wb === 0) return 70; // Нет данных
         if (wb >= 7) return 100;
         if (wb >= 5) return 70;
@@ -38047,16 +38428,16 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
         return { value: Math.round(hours * 10) / 10, target, unit: 'ч', percent: Math.round((hours / target) * 100) };
       }
       case 'stress': {
-        const value = dayData?.stressAvg || 0;
-        return { value: Math.round(value * 10) / 10, target: 3, unit: '/10', label: value === 0 ? 'нет данных' : null };
+        const value = getSubjectiveValue(dayData, 'stressAvg', 'stressMorning');
+        return { value: Math.round(value * 10) / 10, target: 3, unit: '/10', label: value === 0 ? 'нет данных' : null, source: getSubjectiveSource(dayData, 'stressAvg', 'stressMorning') };
       }
       case 'mood': {
-        const value = dayData?.moodAvg || 0;
-        return { value: Math.round(value * 10) / 10, target: 7, unit: '/10', label: value === 0 ? 'нет данных' : null };
+        const value = getSubjectiveValue(dayData, 'moodAvg', 'moodMorning');
+        return { value: Math.round(value * 10) / 10, target: 7, unit: '/10', label: value === 0 ? 'нет данных' : null, source: getSubjectiveSource(dayData, 'moodAvg', 'moodMorning') };
       }
       case 'wellbeing': {
-        const value = dayData?.wellbeingAvg || 0;
-        return { value: Math.round(value * 10) / 10, target: 7, unit: '/10', label: value === 0 ? 'нет данных' : null };
+        const value = getSubjectiveValue(dayData, 'wellbeingAvg', 'wellbeingMorning');
+        return { value: Math.round(value * 10) / 10, target: 7, unit: '/10', label: value === 0 ? 'нет данных' : null, source: getSubjectiveSource(dayData, 'wellbeingAvg', 'wellbeingMorning') };
       }
       case 'water': {
         const goal = waterGoal || 2000;
@@ -38072,6 +38453,7 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
    * Определить проблему для фактора
    */
   function detectIssue(factorId, score, dayData, profile, dayTot, normAbs, waterGoal) {
+    if (!hasFactorInput(factorId, dayData, dayTot)) return null;
     if (score >= 70) return null; // Нет проблемы
 
     switch (factorId) {
@@ -38127,9 +38509,11 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
     // Вычисляем оценки всех факторов
     const factorScores = {};
     const factorDetails = {};
+    const factorAvailability = {};
     const issues = [];
 
     for (const [factorId, factor] of Object.entries(FACTORS)) {
+      factorAvailability[factorId] = hasFactorInput(factorId, dayData, dayTot);
       const score = scoreFactor(factorId, dayData, profile, dayTot, normAbs, waveData, waterGoal, hour);
       factorScores[factorId] = score;
       factorDetails[factorId] = getFactorDetails(factorId, dayData, profile, dayTot, normAbs, waveData, waterGoal);
@@ -38152,6 +38536,7 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
     let weightedSum = 0;
 
     for (const [factorId, factor] of Object.entries(FACTORS)) {
+      if (!factorAvailability[factorId]) continue;
       const score = factorScores[factorId];
       weightedSum += score * factor.weight;
       totalWeight += factor.weight;
@@ -38203,6 +38588,7 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
         weight: factor.weight,
         category: factor.category,
         score,
+        available: factorAvailability[factorId],
         ...details,
         issue: issue?.issue || null,
         recommendation: issue ? issue.recommendation : null
@@ -38218,12 +38604,13 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
       let catSum = 0;
       let catWeight = 0;
       for (const [factorId, factor] of catFactors) {
+        if (!factorAvailability[factorId]) continue;
         catSum += factorScores[factorId] * factor.weight;
         catWeight += factor.weight;
       }
 
       categoryScores[catId] = {
-        score: Math.round(catSum / catWeight),
+        score: catWeight > 0 ? Math.round(catSum / catWeight) : 0,
         ...cat
       };
     }
@@ -38233,6 +38620,7 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
       rawScore,
       level,
       factorScores,
+      factorAvailability,
       factorDetails,
       categoryScores,
       breakdown,

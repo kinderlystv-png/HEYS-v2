@@ -286,7 +286,7 @@
         }
 
         const result = snapshot?.raw || {};
-        const score = Math.round(Number(snapshot?.score ?? result?.score) || 0);
+        const relapseRawScore = Math.round(Number(snapshot?.relapseScore ?? snapshot?.rawScore ?? result?.score) || 0);
         const confidence = Math.round(Number(snapshot?.confidence ?? result?.confidence) || 0);
         let windows = snapshot?.windows || result?.windows || {};
         let mergedDrivers = Array.isArray(snapshot?.primaryDrivers)
@@ -301,9 +301,10 @@
         let radarCrashScore = 0;
         let radarDrivers = [];
         let radarActions = [];
-        let radarScore = score;
+        let radarScore = relapseRawScore;
         let radarLevelId = '';
         let blendWeights = null;
+        let scoreModel = 'relapse_raw';
         if (HEYS.RiskRadar?.calculate) {
           try {
             const profile = this._getProfile() || {};
@@ -315,6 +316,7 @@
               radarCrashScore = Math.round(Number(radar.crash?.score) || 0);
               radarLevelId = radar.level?.id || '';
               blendWeights = radar.blend?.weights || null;
+              scoreModel = 'risk_radar_blended';
               radarDrivers = (radar.drivers || []).map(d => d.label || d.factor || String(d));
               radarActions = (radar.actions || []).map(a => a.text || a.label || String(a));
               if (radar.windows && typeof radar.windows === 'object') {
@@ -357,7 +359,7 @@
         const recommendation = mergedRecommendations[0]?.text || null;
 
         console.info('[widget_data.getRelapseRiskData] ✅ Calculated', {
-          score, radarScore, radarSource, level: result?.level || snapshot?.level, confidence,
+          relapseRawScore, radarScore, radarSource, level: result?.level || snapshot?.level, confidence,
           historyDays: result?.debug?.inputs?.historyDaysCount || 0
         });
 
@@ -366,8 +368,17 @@
           profile: snapshot?.profile || result?.profile || null,
           selectedProfileKey: snapshot?.selectedProfileKey || selectedProfileKey,
           score: radarScore,
-          relapseScore: score,
+          rawScore: relapseRawScore,
+          relapseScore: relapseRawScore,
           crashScore: radarCrashScore,
+          scoreModel,
+          scoreBreakdown: {
+            radar: radarScore,
+            relapseRaw: relapseRawScore,
+            crashRaw: radarCrashScore,
+            source: radarSource,
+            blendWeights,
+          },
           source: radarSource,
           blendWeights,
           radarDrivers,

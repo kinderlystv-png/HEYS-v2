@@ -479,7 +479,15 @@
             
             // Фон карточки по полезности: 0=зелёный(полезный), 5=голубой(средний), 10=красный(вредный)
             const getHarmBg = (h) => {
-              if (h == null) return '#fff';
+              if (h == null) return document.documentElement.getAttribute('data-theme') === 'dark' ? 'transparent' : '#fff';
+              const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+              if (isDark) {
+                if (h <= 2) return 'rgba(16, 185, 129, 0.20)';
+                if (h <= 4) return 'rgba(16, 185, 129, 0.12)';
+                if (h <= 6) return 'rgba(59, 130, 246, 0.15)';
+                if (h <= 8) return 'rgba(239, 68, 68, 0.15)';
+                return 'rgba(239, 68, 68, 0.25)';
+              }
               // h: 0=полезный, 5=средний, 10=вредный
               if (h <= 1) return '#34d399';  // 0-1: насыщенный зелёный — полезный
               if (h <= 2) return '#6ee7b7';  // 2: зелёный

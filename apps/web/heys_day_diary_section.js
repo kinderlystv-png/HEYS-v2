@@ -8,6 +8,9 @@
     // storeRecommendation → sync spam → setPendingCount → parent re-render loops.
     // Solution: lazy-init once with the React instance captured on first call.
     let _LazyMount = null;
+    let _DiaryCompactSummary = null;
+
+    const HEALTH_TREND_PERIOD_STORAGE_KEY = 'heys_diary_health_trend_period_v1';
     function getLazyMount(React) {
         if (_LazyMount) return _LazyMount;
         _LazyMount = React.memo(function LazyMount(props) {
@@ -39,6 +42,246 @@
         });
         console.info('[HEYS.diary] ✅ LazyMount component created (stable type, R16-fix)');
         return _LazyMount;
+    }
+
+    function getStoredHealthTrendPeriod() {
+        try {
+            const raw = window.localStorage?.getItem?.(HEALTH_TREND_PERIOD_STORAGE_KEY);
+            return Number(raw) === 7 ? 7 : 30;
+        } catch (_) {
+            return 30;
+        }
+    }
+
+    function saveStoredHealthTrendPeriod(periodDays) {
+        try {
+            window.localStorage?.setItem?.(HEALTH_TREND_PERIOD_STORAGE_KEY, String(periodDays));
+        } catch (_) {
+            // noop
+        }
+    }
+
+    function getSafeNormAbs(app, profile, pIndex, normAbs) {
+        const current = normAbs && typeof normAbs === 'object' ? normAbs : {};
+        if (Number(current.kcal) > 0 || Number(current.prot) > 0) return current;
+
+        let resolved = app.norms?.getNormAbs?.(profile, pIndex) || {};
+        if (Number(resolved.kcal) > 0 || Number(resolved.prot) > 0) return resolved;
+
+        if (typeof app.TDEE?.calculate === 'function') {
+            const tdee = app.TDEE.calculate(profile || {});
+            if (tdee && tdee.optimum > 0) {
+                const weight = Number(profile?.weight || profile?.baseWeight || 70) || 70;
+                resolved = {
+                    kcal: tdee.optimum,
+                    prot: Math.round(weight * 1.6)
+                };
+            }
+        }
+
+        return resolved || {};
+    }
+
+    function getSafeDayScoreSummary(app, options = {}) {
+        const dayData = options.dayData || {};
+        const profile = options.profile || {};
+        const pIndex = options.pIndex || profile?.pIndex || 0;
+        const waterGoal = app.utils?.calculateWaterGoal?.(profile?.weight) || 2000;
+        const dayTot = (options.dayTot && Object.keys(options.dayTot).length)
+            ? options.dayTot
+            : (app.DayData?.getDayTot?.(dayData)
+                || (typeof app.dayCalculations?.calculateDayTotals === 'function'
+                    ? app.dayCalculations.calculateDayTotals(dayData)
+                    : {}));
+        const normAbs = getSafeNormAbs(app, profile, pIndex, options.normAbs);
+
+        const dayScore = typeof app.DayScore?.calculateDayScore === 'function'
+            ? app.DayScore.calculateDayScore({
+                dayData,
+                profile,
+                dayTot,
+                normAbs,
+                waterGoal,
+                pIndex
+            })
+            : null;
+
+        const riskRadar = typeof app.RiskRadar?.calculate === 'function'
+            ? app.RiskRadar.calculate({
+                dayData,
+                profile,
+                dayTot,
+                normAbs,
+                pIndex
+            })
+            : null;
+
+        return {
+            dayData,
+            dayTot,
+            normAbs,
+            waterGoal,
+            pIndex,
+            dayScore,
+            riskRadar
+        };
+    }
+
+    function getHealthTrendLevel(score) {
+        const numericScore = Number(score) || 0;
+        if (numericScore >= 85) return { id: 'excellent', color: '#10b981' };
+        if (numericScore >= 70) return { id: 'good', color: '#22c55e' };
+        if (numericScore >= 50) return { id: 'attention', color: '#eab308' };
+        if (numericScore >= 30) return { id: 'warning', color: '#f97316' };
+        return { id: 'critical', color: '#ef4444' };
+    }
+
+    function getSafeHealthTrendSummary(app, options = {}) {
+        const periodDays = Number(options.periodDays) === 7 ? 7 : 30;
+
+        try {
+            if (typeof app.Widgets?.data?.getHealthTrendData === 'function') {
+                const widgetData = app.Widgets.data.getHealthTrendData({ periodDays });
+                if (widgetData?.hasData) {
+                    return {
+                        ...widgetData,
+                        level: getHealthTrendLevel(widgetData.score)
+                    };
+                }
+            }
+
+            const analyze = app.PredictiveInsights?.analyze;
+            if (typeof analyze !== 'function') return null;
+
+            const result = analyze({ daysBack: periodDays });
+            if (!result?.available || !result?.healthScore) return null;
+
+            const score = Number(result.healthScore.total) || 0;
+            const hasData = score > 0 || Number(result.daysWithData) >= 3;
+            if (!hasData) return null;
+
+            return {
+                hasData,
+                score,
+                periodDays,
+                daysWithData: Number(result.daysWithData) || 0,
+                level: getHealthTrendLevel(score)
+            };
+        } catch (error) {
+            console.warn('[HEYS.diary] Health trend summary unavailable', error?.message || error);
+            return null;
+        }
+    }
+
+    function getDiaryCompactSummaryComponent(React) {
+        if (_DiaryCompactSummary) return _DiaryCompactSummary;
+
+        _DiaryCompactSummary = React.memo(function DiaryCompactSummary(props) {
+            const {
+                app,
+                date,
+                dayData,
+                profile,
+                dayTot,
+                normAbs,
+                pIndex
+            } = props || {};
+
+            const [trendPeriodDays, setTrendPeriodDays] = React.useState(getStoredHealthTrendPeriod);
+
+            const summary = React.useMemo(function computeSummary() {
+                return getSafeDayScoreSummary(app, {
+                    dayData,
+                    profile,
+                    dayTot,
+                    normAbs,
+                    pIndex
+                });
+            }, [app, dayData, profile, dayTot, normAbs, pIndex, date]);
+
+            const healthTrendResult = React.useMemo(function computeHealthTrend() {
+                return getSafeHealthTrendSummary(app, { periodDays: trendPeriodDays });
+            }, [app, trendPeriodDays, date, dayData, profile, dayTot, normAbs, pIndex]);
+
+            const dayScoreResult = summary.dayScore;
+            const riskRadarResult = summary.riskRadar;
+
+            const handleTrendPeriodChange = React.useCallback(function handleChange(nextPeriod, event) {
+                event?.stopPropagation?.();
+                const normalized = Number(nextPeriod) === 7 ? 7 : 30;
+                setTrendPeriodDays(function update(prev) {
+                    if (prev === normalized) return prev;
+                    saveStoredHealthTrendPeriod(normalized);
+                    console.info('[HEYS.diary] Health trend period changed', { periodDays: normalized });
+                    return normalized;
+                });
+            }, []);
+
+            if (!dayScoreResult && !riskRadarResult && !healthTrendResult) return null;
+
+            return React.createElement('section', {
+                className: 'diary-compact-summary',
+                'aria-label': 'Оценка дня, риск и тренд'
+            },
+                dayScoreResult && React.createElement('div', {
+                    className: 'diary-compact-summary__pill diary-compact-summary__pill--day',
+                    style: {
+                        '--summary-accent': dayScoreResult?.level?.color || '#22c55e',
+                        '--summary-accent-border': (dayScoreResult?.level?.color || '#22c55e') + '33',
+                        '--summary-accent-border-dark': (dayScoreResult?.level?.color || '#22c55e') + '44'
+                    }
+                },
+                    React.createElement('span', { className: 'diary-compact-summary__label' }, 'Оценка дня'),
+                    React.createElement('span', { className: 'diary-compact-summary__value' }, Math.round(Number(dayScoreResult?.score) || 0))
+                ),
+                riskRadarResult && React.createElement('div', {
+                    className: 'diary-compact-summary__pill diary-compact-summary__pill--risk',
+                    style: {
+                        '--summary-accent': riskRadarResult?.level?.color || '#22c55e',
+                        '--summary-accent-border': (riskRadarResult?.level?.color || '#22c55e') + '33',
+                        '--summary-accent-border-dark': (riskRadarResult?.level?.color || '#22c55e') + '44'
+                    }
+                },
+                    React.createElement('span', { className: 'diary-compact-summary__label' }, 'Риск'),
+                    React.createElement('span', { className: 'diary-compact-summary__value' }, Math.round(Number(riskRadarResult?.score) || 0))
+                ),
+                healthTrendResult && React.createElement('div', {
+                    className: 'diary-compact-summary__pill diary-compact-summary__pill--trend',
+                    style: {
+                        '--summary-accent': healthTrendResult?.level?.color || '#22c55e',
+                        '--summary-accent-border': (healthTrendResult?.level?.color || '#22c55e') + '33',
+                        '--summary-accent-border-dark': (healthTrendResult?.level?.color || '#22c55e') + '44'
+                    }
+                },
+                    React.createElement('div', {
+                        className: 'diary-compact-summary__metric diary-compact-summary__metric--trend'
+                    },
+                        React.createElement('span', { className: 'diary-compact-summary__label' }, 'Тренд'),
+                        React.createElement('span', { className: 'diary-compact-summary__value' }, Math.round(Number(healthTrendResult?.score) || 0))
+                    ),
+                    React.createElement('div', {
+                        className: 'diary-compact-summary__range',
+                        role: 'group',
+                        'aria-label': 'Период тренда'
+                    },
+                        [7, 30].map(function renderPeriodButton(days) {
+                            const isActive = trendPeriodDays === days;
+                            return React.createElement('button', {
+                                key: days,
+                                type: 'button',
+                                className: 'diary-compact-summary__range-btn' + (isActive ? ' is-active' : ''),
+                                'aria-pressed': isActive ? 'true' : 'false',
+                                onClick: function onClick(event) {
+                                    handleTrendPeriodChange(days, event);
+                                }
+                            }, days + ' дн.');
+                        })
+                    )
+                )
+            );
+        });
+
+        return _DiaryCompactSummary;
     }
 
     const renderDiarySection = (params) => {
@@ -76,7 +319,6 @@
 
         const app = rootHEYs || HEYS;
         const showDiary = !isMobile || mobileSubTab === 'diary';
-
         const ensureSupplementsModule = () => {
             if (app.Supplements?.renderCard) return true;
             if (typeof document === 'undefined') return false;
@@ -168,6 +410,7 @@
         // PERF R16: LazyMount — IntersectionObserver gate for below-fold slots.
         // Component type is stable (defined once at module scope via getLazyMount).
         const LazyMount = getLazyMount(React);
+        const DiaryCompactSummary = getDiaryCompactSummaryComponent(React);
 
         // PERF v8.3: Deferred card slot — skeleton only after postboot completes
         // If postboot is still loading scripts, return null (invisible).
@@ -265,6 +508,15 @@
         if (!showDiary) return insulinIndicator;
 
         return React.createElement(React.Fragment, null,
+            React.createElement(DiaryCompactSummary, {
+                app,
+                date,
+                dayData: day,
+                profile: prof,
+                dayTot,
+                normAbs,
+                pIndex
+            }),
             React.createElement('h2', {
                 id: 'day-remaining-heading',
                 style: {

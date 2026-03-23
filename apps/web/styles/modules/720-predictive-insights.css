@@ -2755,6 +2755,29 @@
   font-weight: 500;
 }
 
+[data-theme="dark"] .metabolism-section {
+  background: linear-gradient(145deg, var(--heys-bg-elevated, #1e293b) 0%, var(--heys-bg-card, #0f172a) 100%);
+  border-color: rgba(148, 163, 184, 0.16);
+  box-shadow:
+    0 10px 28px rgba(0, 0, 0, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+
+[data-theme="dark"] .metabolism-section__header {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.04) 0%, rgba(15, 23, 42, 0.18) 100%);
+  border-bottom-color: rgba(148, 163, 184, 0.14);
+}
+
+[data-theme="dark"] .metabolism-section__title {
+  color: var(--heys-text-primary, #f1f5f9);
+}
+
+[data-theme="dark"] .metabolism-section__badge {
+  background: rgba(16, 185, 129, 0.16);
+  color: #86efac;
+  border: 1px solid rgba(52, 211, 153, 0.24);
+}
+
 .insights-metabolism {
   display: flex;
   flex-direction: column;
@@ -5554,6 +5577,237 @@
 }
 
 .dark .insights-empty__feature-item {
+  color: #e5e7eb;
+}
+
+/* =============================================================================
+   DARK MODE ALIAS — Insights surfaces should respect data-theme="dark"
+   ============================================================================= */
+
+[data-theme="dark"] .data-completeness-card {
+  background: rgba(30, 41, 59, 0.8);
+  border-color: rgba(255, 255, 255, 0.05);
+}
+
+[data-theme="dark"] .data-completeness-card__progress {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+[data-theme="dark"] .data-completeness-card__feature {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+[data-theme="dark"] .data-completeness-card__feature--unlocked {
+  background: rgba(16, 185, 129, 0.15);
+}
+
+[data-theme="dark"] .data-completeness-card__next {
+  background: rgba(99, 102, 241, 0.12);
+}
+
+[data-theme="dark"] .data-completeness-card__feature--science.data-completeness-card__feature--unlocked {
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.2), rgba(139, 92, 246, 0.2));
+  border-color: rgba(99, 102, 241, 0.4);
+}
+
+[data-theme="dark"] .metabolic-quick-status {
+  background: rgba(30, 41, 59, 0.8);
+}
+
+[data-theme="dark"] .metabolic-quick-status__title-header {
+  border-bottom-color: rgba(255, 255, 255, 0.05);
+}
+
+[data-theme="dark"] .metabolic-quick-status__card {
+  background: rgba(0, 0, 0, 0.2);
+  border-color: rgba(255, 255, 255, 0.05);
+}
+
+[data-theme="dark"] .metabolic-quick-status--empty .metabolic-quick-status__card {
+  background: rgba(255, 255, 255, 0.02);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+[data-theme="dark"] .metabolic-quick-status__extended {
+  background: rgba(255, 255, 255, 0.02);
+  border-color: rgba(255, 255, 255, 0.05);
+}
+
+[data-theme="dark"] .metabolic-quick-status__badge--critical {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.3) 0%, rgba(220, 38, 38, 0.4) 100%);
+  color: #fca5a5;
+}
+
+[data-theme="dark"] .metabolic-quick-status__badge--moderate {
+  background: linear-gradient(135deg, rgba(251, 146, 60, 0.3) 0%, rgba(234, 88, 12, 0.4) 100%);
+  color: #fed7aa;
+}
+
+[data-theme="dark"] .metabolic-quick-status__badge--training {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.25) 0%, rgba(5, 150, 105, 0.35) 100%);
+  color: #6ee7b7;
+}
+
+[data-theme="dark"] .meal-timing-v2 {
+  background: linear-gradient(145deg, #1e293b 0%, #0f172a 100%);
+  border-color: rgba(255, 255, 255, 0.08);
+  box-shadow:
+    0 4px 24px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+[data-theme="dark"] .meal-timing-v2__header {
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+[data-theme="dark"] .meal-timing-v2__header-icon {
+  background: linear-gradient(135deg, #78350f 0%, #92400e 100%);
+}
+
+[data-theme="dark"] .meal-timing-v2__title {
+  color: #f1f5f9;
+}
+
+[data-theme="dark"] .meal-timing-v2__subtitle {
+  color: #94a3b8;
+}
+
+[data-theme="dark"] .meal-timing-v2__connector {
+  background: linear-gradient(180deg, #334155 0%, #475569 100%);
+}
+
+[data-theme="dark"] .meal-timing-v2__card {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+[data-theme="dark"] .meal-timing-v2__card-name {
+  color: #f1f5f9;
+}
+
+[data-theme="dark"] .meal-timing-v2__card-focus {
+  color: #cbd5e1;
+}
+
+[data-theme="dark"] .meal-timing-v2__pct-value {
+  color: #f1f5f9;
+}
+
+[data-theme="dark"] .meal-timing-v2__item--active .meal-timing-v2__card {
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.2) 0%, rgba(16, 185, 129, 0.15) 100%);
+}
+
+[data-theme="dark"] .meal-timing-v2__training {
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.2) 0%, rgba(124, 58, 237, 0.15) 100%);
+  border-color: rgba(139, 92, 246, 0.25);
+}
+
+[data-theme="dark"] .meal-timing-v2__training-title {
+  color: #c4b5fd;
+}
+
+[data-theme="dark"] .meal-timing-v2__training-time,
+[data-theme="dark"] .meal-timing-v2__training-reason {
+  color: #a78bfa;
+}
+
+[data-theme="dark"] .meal-timing-v2__sleep--positive {
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.2) 0%, rgba(16, 185, 129, 0.15) 100%);
+  border-color: rgba(34, 197, 94, 0.25);
+  color: #86efac;
+}
+
+[data-theme="dark"] .meal-timing-v2__sleep--negative {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.2) 0%, rgba(234, 179, 8, 0.15) 100%);
+  border-color: rgba(245, 158, 11, 0.25);
+  color: #fcd34d;
+}
+
+[data-theme="dark"] .meal-timing-card__window {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+[data-theme="dark"] .metabolic-ring {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.16) 0%, rgba(139, 92, 246, 0.14) 100%);
+  border-color: rgba(96, 165, 250, 0.22);
+}
+
+[data-theme="dark"] .metabolic-ring__phase-label {
+  color: #f1f5f9;
+}
+
+[data-theme="dark"] .risk-traffic-light {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.12) 0%, rgba(245, 158, 11, 0.1) 100%);
+  border-color: rgba(248, 113, 113, 0.18);
+}
+
+[data-theme="dark"] .risk-traffic-light__title,
+[data-theme="dark"] .data-completeness-card__title,
+[data-theme="dark"] .meal-timing-card__title,
+[data-theme="dark"] .meal-timing-card__window-name,
+[data-theme="dark"] .weekly-wrap-card__title,
+[data-theme="dark"] .weekly-wrap-card__highlight-day,
+[data-theme="dark"] .weekly-wrap-card__chart-title,
+[data-theme="dark"] .weekly-wrap-card__trend,
+[data-theme="dark"] .weekly-wrap-card__insight-text,
+[data-theme="dark"] .weekly-wrap-card__forecast-score,
+[data-theme="dark"] .weekly-wrap-card__bar-value,
+[data-theme="dark"] .weekly-wrap-card__achievements-title,
+[data-theme="dark"] .status-card__issue-text,
+[data-theme="dark"] .status-card__action-text {
+  color: #f8fafc;
+}
+
+[data-theme="dark"] .meal-timing-card,
+[data-theme="dark"] .weekly-wrap-card,
+[data-theme="dark"] .status-card {
+  background: rgba(30, 41, 59, 0.82);
+  border-color: rgba(148, 163, 184, 0.14);
+}
+
+[data-theme="dark"] .status-card__issues,
+[data-theme="dark"] .insights-empty__features {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+[data-theme="dark"] .status-card__max,
+[data-theme="dark"] .status-card__issues-title,
+[data-theme="dark"] .weekly-wrap-card__score-label,
+[data-theme="dark"] .weekly-wrap-card__stat-label,
+[data-theme="dark"] .weekly-wrap-card__bar-label,
+[data-theme="dark"] .weekly-wrap-card__no-insights,
+[data-theme="dark"] .weekly-wrap-card__forecast-rec,
+[data-theme="dark"] .weekly-wrap-card__legend-item,
+[data-theme="dark"] .data-completeness-card__title,
+[data-theme="dark"] .insights-empty__stat-label {
+  color: #94a3b8;
+}
+
+[data-theme="dark"] .weekly-wrap-card__chart-legend {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+[data-theme="dark"] .weekly-wrap-card__tab--active {
+  background: rgba(96, 165, 250, 0.18);
+  color: #bfdbfe;
+}
+
+[data-theme="dark"] .status-card__cat-bar,
+[data-theme="dark"] .status-widget__action {
+  background: rgba(255, 255, 255, 0.06);
+  color: #d1d5db;
+}
+
+[data-theme="dark"] .status-widget {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(59, 130, 246, 0.1) 100%);
+}
+
+[data-theme="dark"] .insights-empty {
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.15), rgba(139, 92, 246, 0.1));
+  border-color: rgba(99, 102, 241, 0.25);
+}
+
+[data-theme="dark"] .insights-empty__feature-item {
   color: #e5e7eb;
 }
 

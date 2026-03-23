@@ -1799,7 +1799,7 @@
             openExclusivePopup,
             addWater,
             removeWater
-        }), [day?.waterMl, waterGoal, waterGoalBreakdown, waterMotivation, waterLastDrink, waterAddedAnim, showWaterDrop, showWaterTooltip]);
+        }), [day?.waterMl, day?.date, waterGoal, waterGoalBreakdown, waterMotivation, waterLastDrink, waterAddedAnim, showWaterDrop, showWaterTooltip]);
 
         // === COMPACT ACTIVITY INPUT ===
         if (!HEYS.dayStepsUI?.useStepsState) {

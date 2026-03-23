@@ -1924,6 +1924,82 @@
   border-color: #3a4555;
 }
 
+/* ─── MPC product cards (dark theme) ─────────────────────────── */
+[data-theme="dark"] .mpc {
+  background: var(--heys-bg-card);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+[data-theme="dark"] .mpc-name {
+  color: var(--heys-text-primary);
+}
+
+[data-theme="dark"] .mpc-kcal {
+  color: var(--heys-text-primary);
+}
+
+[data-theme="dark"] .mpc-values {
+  color: var(--heys-text-secondary);
+}
+
+[data-theme="dark"] .mpc-header {
+  color: var(--heys-text-muted);
+}
+
+[data-theme="dark"] .mpc-dim {
+  color: var(--heys-text-muted);
+}
+
+[data-theme="dark"] .mpc-grams-btn {
+  background: var(--heys-bg-elevated);
+  border-color: rgba(255, 255, 255, 0.12);
+  color: var(--heys-text-primary);
+}
+
+[data-theme="dark"] .mpc-grams-btn:active {
+  background: #475569;
+}
+
+[data-theme="dark"] .mpc-grams-btn.grams-warn {
+  background: linear-gradient(135deg, rgba(254, 243, 199, 0.15) 0%, rgba(253, 230, 138, 0.15) 100%);
+  border-color: #d97706;
+  color: #fcd34d;
+}
+
+[data-theme="dark"] .mpc-grams-btn.grams-danger {
+  background: linear-gradient(135deg, rgba(254, 226, 226, 0.12) 0%, rgba(254, 202, 202, 0.12) 100%);
+  border-color: #ef4444;
+  color: #fca5a5;
+}
+
+[data-theme="dark"] .mpc-grams {
+  background: var(--heys-bg-elevated);
+  border-color: rgba(255, 255, 255, 0.12);
+  color: var(--heys-text-primary);
+}
+
+[data-theme="dark"] .mpc-grams:focus {
+  border-color: var(--color-blue-500);
+  background: var(--heys-bg-elevated);
+}
+
+[data-theme="dark"] .mpc-alternative {
+  background: rgba(3, 105, 161, 0.15);
+  color: #7dd3fc;
+}
+
+[data-theme="dark"] .mpc-alternative strong {
+  color: #bae6fd;
+}
+
+[data-theme="dark"] .mpc-totals-wrap {
+  background: rgba(29, 78, 216, 0.18);
+}
+
+[data-theme="dark"] .mpc-totals-wrap .mpc-header {
+  color: #93c5fd;
+}
+
 /* Серые mpc-totals внутри прошедших приёмов (dark theme) */
 [data-theme="dark"] .tone-slate .mpc-totals-wrap {
   background: #2a3040;

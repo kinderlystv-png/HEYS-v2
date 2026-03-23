@@ -5,6 +5,7 @@
 ; (function (global) {
   const HEYS = global.HEYS = global.HEYS || {};
   const React = global.React;
+  const ReactDOM = global.ReactDOM;
 
   // Import haptic from dayUtils (with fallback)
   const U = HEYS.dayUtils || {};
@@ -14,11 +15,15 @@
   // Универсальная обёртка для попапов с backdrop'ом для закрытия по клику вне попапа
   // 🚀 PERF R31: defer onClose to avoid blocking main thread with popup teardown re-render
   const PopupWithBackdrop = ({ children, onClose, backdropStyle = {}, zIndex = 9998 }) => {
-    return React.createElement('div', {
+    const overlay = React.createElement('div', {
       className: 'popup-backdrop-invisible',
       style: {
         position: 'fixed',
         inset: 0,
+        width: '100vw',
+        height: '100dvh',
+        minHeight: '100dvh',
+        overflow: 'hidden',
         zIndex: zIndex,
         pointerEvents: 'all',
         ...backdropStyle
@@ -29,6 +34,12 @@
         }
       }
     }, children);
+
+    if (ReactDOM?.createPortal && global.document?.body) {
+      return ReactDOM.createPortal(overlay, global.document.body);
+    }
+
+    return overlay;
   };
 
   // === SWIPE TO DISMISS — функция для swipe-жестов на попапах ===

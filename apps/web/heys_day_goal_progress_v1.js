@@ -92,6 +92,7 @@
 
     // Цвет заголовка — общий статус дня
     let titleColor, titleIcon, titleText;
+    let progressTone = 'target';
 
     // Адаптивный оттенок "съедено": учитывает время дня + близость к норме
     const getExpectedRatioByTime = () => {
@@ -159,32 +160,38 @@
         titleColor = refeedZone.color;
         titleIcon = refeedZone.icon;
         titleText = refeedZone.name;
+        progressTone = 'refeed';
       }
     } else if (ratio < 0.80) {
       titleColor = '#eab308';
       titleIcon = '📉';
       titleText = 'Маловато';
+      progressTone = 'under';
     } else if (ratio <= 1.0) {
       titleColor = '#22c55e';
       titleIcon = '🎯';
       titleText = 'До цели';
+      progressTone = 'target';
     } else if (ratio <= 1.05) {
       titleColor = '#22c55e';
       titleIcon = '✅';
       titleText = 'Отлично';
+      progressTone = 'target';
     } else if (ratio <= 1.10) {
       titleColor = '#eab308';
       titleIcon = '⚠️';
       titleText = 'Чуть больше';
+      progressTone = 'warn';
     } else {
       titleColor = '#ef4444';
       titleIcon = '🚨';
       titleText = 'Перебор';
+      progressTone = 'over';
     }
 
-    return React.createElement('div', { className: 'goal-progress-card' },
+    return React.createElement('div', { className: 'goal-progress-card goal-progress-card--' + progressTone },
       React.createElement('div', {
-        className: 'goal-progress-bar' + (ratio >= 0.9 && ratio <= 1.1 ? ' pulse-perfect' : ratio > 1.25 ? ' shake-excess' : '')
+        className: 'goal-progress-bar goal-progress-bar--' + progressTone + (ratio >= 0.9 && ratio <= 1.1 ? ' pulse-perfect' : ratio > 1.25 ? ' shake-excess' : '')
       },
         React.createElement('div', { className: 'goal-progress-header' },
           React.createElement('span', {

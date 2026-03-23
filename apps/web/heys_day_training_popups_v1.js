@@ -1,12 +1,31 @@
 // heys_day_training_popups_v1.js — Training/Zone/Household popups
 // Extracted from heys_day_v12.js (Phase: training popups)
 
-;(function(global) {
+; (function (global) {
   'use strict';
 
   const HEYS = global.HEYS = global.HEYS || {};
   const React = global.React;
   const ReactDOM = global.ReactDOM;
+
+  function clampFixedPopupPosition(left, top, options = {}) {
+    const {
+      width = 280,
+      height = 320,
+      margin = 12
+    } = options;
+
+    const screenW = typeof window !== 'undefined' ? window.innerWidth : 390;
+    const screenH = typeof window !== 'undefined' ? window.innerHeight : 844;
+    const safeWidth = Math.min(width, Math.max(180, screenW - margin * 2));
+    const safeHeight = Math.min(height, Math.max(180, screenH - margin * 2));
+
+    return {
+      left: Math.min(Math.max(left, margin), Math.max(margin, screenW - safeWidth - margin)),
+      top: Math.min(Math.max(top, margin), Math.max(margin, screenH - safeHeight - margin)),
+      width: safeWidth
+    };
+  }
 
   function renderTrainingPopups(params) {
     if (!React || !ReactDOM) return null;
@@ -63,6 +82,11 @@
     const portals = [];
 
     if (zoneFormulaPopup) {
+      const zoneFormulaSafePos = clampFixedPopupPosition(zoneFormulaPopup.left, zoneFormulaPopup.top, {
+        width: 280,
+        height: 320,
+        margin: 12
+      });
       portals.push(
         ReactDOM.createPortal(
           React.createElement('div', {
@@ -73,8 +97,13 @@
               className: 'zone-formula-popup' + (zoneFormulaPopup.showAbove ? ' show-above' : ''),
               style: {
                 position: 'fixed',
-                left: zoneFormulaPopup.left + 'px',
-                top: zoneFormulaPopup.top + 'px'
+                left: zoneFormulaSafePos.left + 'px',
+                top: zoneFormulaSafePos.top + 'px',
+                width: zoneFormulaSafePos.width + 'px',
+                maxWidth: 'calc(100vw - 24px)',
+                maxHeight: 'calc(100dvh - 24px)',
+                overflowY: 'auto',
+                boxSizing: 'border-box'
               },
               onClick: e => e.stopPropagation()
             },
@@ -130,6 +159,11 @@
     }
 
     if (householdFormulaPopup) {
+      const householdFormulaSafePos = clampFixedPopupPosition(householdFormulaPopup.left, householdFormulaPopup.top, {
+        width: 280,
+        height: 320,
+        margin: 12
+      });
       portals.push(
         ReactDOM.createPortal(
           React.createElement('div', {
@@ -140,8 +174,13 @@
               className: 'zone-formula-popup' + (householdFormulaPopup.showAbove ? ' show-above' : ''),
               style: {
                 position: 'fixed',
-                left: householdFormulaPopup.left + 'px',
-                top: householdFormulaPopup.top + 'px'
+                left: householdFormulaSafePos.left + 'px',
+                top: householdFormulaSafePos.top + 'px',
+                width: householdFormulaSafePos.width + 'px',
+                maxWidth: 'calc(100vw - 24px)',
+                maxHeight: 'calc(100dvh - 24px)',
+                overflowY: 'auto',
+                boxSizing: 'border-box'
               },
               onClick: e => e.stopPropagation()
             },
@@ -254,7 +293,7 @@
                 ),
                 React.createElement('span', { className: 'time-picker-title' },
                   trainingPickerStep === 1 ? '🏋️ Тренировка' :
-                  trainingPickerStep === 2 ? '⏱️ Зоны' : '⭐ Оценка'
+                    trainingPickerStep === 2 ? '⏱️ Зоны' : '⭐ Оценка'
                 ),
                 (() => {
                   const totalMinutes = trainingPickerStep === 2
@@ -458,8 +497,8 @@
                     const trainingChips = ratingState === 'negative'
                       ? ['Мало сил', 'Травма', 'Не выспался', 'Жарко', 'Нет мотивации']
                       : ratingState === 'positive'
-                      ? ['Новый рекорд', 'Много энергии', 'Хороший сон', 'Правильно ел', 'В потоке']
-                      : [];
+                        ? ['Новый рекорд', 'Много энергии', 'Хороший сон', 'Правильно ел', 'В потоке']
+                        : [];
 
                     const addTrainingChip = (chip) => {
                       if (typeof haptic === 'function') haptic('light');

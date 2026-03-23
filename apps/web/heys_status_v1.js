@@ -28,22 +28,24 @@
    * Простая Rule-based модель
    */
   const FACTORS = {
-    // Питание — 35%
-    kcal: { weight: 15, category: 'nutrition', label: 'Калории', icon: '🔥' },
+    // Питание — 33%
+    kcal: { weight: 14, category: 'nutrition', label: 'Калории', icon: '🔥' },
     protein: { weight: 10, category: 'nutrition', label: 'Белок', icon: '🥩' },
-    timing: { weight: 10, category: 'nutrition', label: 'Тайминг еды', icon: '⏰' },
+    timing: { weight: 9, category: 'nutrition', label: 'Тайминг еды', icon: '⏰' },
 
-    // Активность — 25%
-    steps: { weight: 10, category: 'activity', label: 'Шаги', icon: '👟' },
-    training: { weight: 10, category: 'activity', label: 'Тренировка', icon: '💪' },
+    // Активность — 23%
+    steps: { weight: 9, category: 'activity', label: 'Шаги', icon: '👟' },
+    training: { weight: 9, category: 'activity', label: 'Тренировка', icon: '💪' },
     household: { weight: 5, category: 'activity', label: 'Бытовая активность', icon: '🏠' },
 
-    // Восстановление — 25%
-    sleep: { weight: 15, category: 'recovery', label: 'Сон', icon: '😴' },
-    stress: { weight: 10, category: 'recovery', label: 'Стресс', icon: '😰' },
+    // Восстановление — 32%
+    sleep: { weight: 13, category: 'recovery', label: 'Сон', icon: '😴' },
+    stress: { weight: 8, category: 'recovery', label: 'Стресс', icon: '😰' },
+    mood: { weight: 6, category: 'recovery', label: 'Настроение', icon: '😄' },
+    wellbeing: { weight: 5, category: 'recovery', label: 'Бодрость', icon: '⚡' },
 
-    // Водный баланс — 15%
-    water: { weight: 15, category: 'hydration', label: 'Вода', icon: '💧' }
+    // Водный баланс — 12%
+    water: { weight: 12, category: 'hydration', label: 'Вода', icon: '💧' }
   };
 
   /**
@@ -79,6 +81,8 @@
     training_none: { text: 'Добавь активность', icon: '🏃', priority: 3 },
     sleep_low: { text: 'Ляг пораньше', icon: '🛏️', priority: 1 },
     stress_high: { text: 'Сделай паузу', icon: '🧘', priority: 1 },
+    mood_low: { text: 'Сделай что-то приятное', icon: '🌞', priority: 1 },
+    wellbeing_low: { text: 'Отдохни или прогуляйся', icon: '🌿', priority: 1 },
     water_low: { text: 'Выпей воды', icon: '💧', priority: 1 }
   };
 
@@ -130,6 +134,34 @@
       }
     }
     return bands[bands.length - 1][1];
+  }
+
+  function getSubjectiveValue(dayData, avgKey, morningKey) {
+    const avgValue = Number(dayData?.[avgKey]);
+    if (Number.isFinite(avgValue) && avgValue > 0) return avgValue;
+    const morningValue = Number(dayData?.[morningKey]);
+    return Number.isFinite(morningValue) && morningValue > 0 ? morningValue : 0;
+  }
+
+  function getSubjectiveSource(dayData, avgKey, morningKey) {
+    const avgValue = Number(dayData?.[avgKey]);
+    if (Number.isFinite(avgValue) && avgValue > 0) return 'avg';
+    const morningValue = Number(dayData?.[morningKey]);
+    if (Number.isFinite(morningValue) && morningValue > 0) return 'morning';
+    return 'none';
+  }
+
+  function hasFactorInput(factorId, dayData, dayTot) {
+    switch (factorId) {
+      case 'stress':
+        return getSubjectiveValue(dayData, 'stressAvg', 'stressMorning') > 0;
+      case 'mood':
+        return getSubjectiveValue(dayData, 'moodAvg', 'moodMorning') > 0;
+      case 'wellbeing':
+        return getSubjectiveValue(dayData, 'wellbeingAvg', 'wellbeingMorning') > 0;
+      default:
+        return true;
+    }
   }
 
   /**
@@ -222,11 +254,29 @@
       }
 
       case 'stress': {
-        const stress = dayData?.stressAvg || 0;
+        const stress = getSubjectiveValue(dayData, 'stressAvg', 'stressMorning');
         if (stress === 0) return 70; // Нет данных
         if (stress <= 3) return 100;
         if (stress <= 5) return 70;
         if (stress <= 7) return 40;
+        return 20;
+      }
+
+      case 'mood': {
+        const mood = getSubjectiveValue(dayData, 'moodAvg', 'moodMorning');
+        if (mood === 0) return 70; // Нет данных
+        if (mood >= 7) return 100;
+        if (mood >= 5) return 70;
+        if (mood >= 3) return 40;
+        return 20;
+      }
+
+      case 'wellbeing': {
+        const wb = getSubjectiveValue(dayData, 'wellbeingAvg', 'wellbeingMorning');
+        if (wb === 0) return 70; // Нет данных
+        if (wb >= 7) return 100;
+        if (wb >= 5) return 70;
+        if (wb >= 3) return 40;
         return 20;
       }
 
@@ -291,8 +341,16 @@
         return { value: Math.round(hours * 10) / 10, target, unit: 'ч', percent: Math.round((hours / target) * 100) };
       }
       case 'stress': {
-        const value = dayData?.stressAvg || 0;
-        return { value: Math.round(value * 10) / 10, target: 3, unit: '/10', label: value === 0 ? 'нет данных' : null };
+        const value = getSubjectiveValue(dayData, 'stressAvg', 'stressMorning');
+        return { value: Math.round(value * 10) / 10, target: 3, unit: '/10', label: value === 0 ? 'нет данных' : null, source: getSubjectiveSource(dayData, 'stressAvg', 'stressMorning') };
+      }
+      case 'mood': {
+        const value = getSubjectiveValue(dayData, 'moodAvg', 'moodMorning');
+        return { value: Math.round(value * 10) / 10, target: 7, unit: '/10', label: value === 0 ? 'нет данных' : null, source: getSubjectiveSource(dayData, 'moodAvg', 'moodMorning') };
+      }
+      case 'wellbeing': {
+        const value = getSubjectiveValue(dayData, 'wellbeingAvg', 'wellbeingMorning');
+        return { value: Math.round(value * 10) / 10, target: 7, unit: '/10', label: value === 0 ? 'нет данных' : null, source: getSubjectiveSource(dayData, 'wellbeingAvg', 'wellbeingMorning') };
       }
       case 'water': {
         const goal = waterGoal || 2000;
@@ -308,6 +366,7 @@
    * Определить проблему для фактора
    */
   function detectIssue(factorId, score, dayData, profile, dayTot, normAbs, waterGoal) {
+    if (!hasFactorInput(factorId, dayData, dayTot)) return null;
     if (score >= 70) return null; // Нет проблемы
 
     switch (factorId) {
@@ -328,6 +387,10 @@
         return 'sleep_low';
       case 'stress':
         return 'stress_high';
+      case 'mood':
+        return 'mood_low';
+      case 'wellbeing':
+        return 'wellbeing_low';
       case 'water':
         return 'water_low';
       default:
@@ -359,9 +422,11 @@
     // Вычисляем оценки всех факторов
     const factorScores = {};
     const factorDetails = {};
+    const factorAvailability = {};
     const issues = [];
 
     for (const [factorId, factor] of Object.entries(FACTORS)) {
+      factorAvailability[factorId] = hasFactorInput(factorId, dayData, dayTot);
       const score = scoreFactor(factorId, dayData, profile, dayTot, normAbs, waveData, waterGoal, hour);
       factorScores[factorId] = score;
       factorDetails[factorId] = getFactorDetails(factorId, dayData, profile, dayTot, normAbs, waveData, waterGoal);
@@ -384,6 +449,7 @@
     let weightedSum = 0;
 
     for (const [factorId, factor] of Object.entries(FACTORS)) {
+      if (!factorAvailability[factorId]) continue;
       const score = factorScores[factorId];
       weightedSum += score * factor.weight;
       totalWeight += factor.weight;
@@ -435,6 +501,7 @@
         weight: factor.weight,
         category: factor.category,
         score,
+        available: factorAvailability[factorId],
         ...details,
         issue: issue?.issue || null,
         recommendation: issue ? issue.recommendation : null
@@ -450,12 +517,13 @@
       let catSum = 0;
       let catWeight = 0;
       for (const [factorId, factor] of catFactors) {
+        if (!factorAvailability[factorId]) continue;
         catSum += factorScores[factorId] * factor.weight;
         catWeight += factor.weight;
       }
 
       categoryScores[catId] = {
-        score: Math.round(catSum / catWeight),
+        score: catWeight > 0 ? Math.round(catSum / catWeight) : 0,
         ...cat
       };
     }
@@ -465,6 +533,7 @@
       rawScore,
       level,
       factorScores,
+      factorAvailability,
       factorDetails,
       categoryScores,
       breakdown,

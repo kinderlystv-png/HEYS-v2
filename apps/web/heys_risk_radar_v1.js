@@ -64,6 +64,20 @@
         };
     }
 
+    function getAdaptiveBlendWeights(relapseScore, crashScore, baseWeights) {
+        const relapseSignal = clamp(relapseScore, 0, 100) / 100;
+        const crashSignal = clamp(crashScore, 0, 100) / 100;
+
+        const relapseSupport = Math.max(baseWeights.relapse * (0.35 + relapseSignal), 0.0001);
+        const crashSupport = Math.max(baseWeights.crash * (0.15 + crashSignal), 0.0001);
+        const totalSupport = relapseSupport + crashSupport || 1;
+
+        return {
+            relapse: relapseSupport / totalSupport,
+            crash: crashSupport / totalSupport,
+        };
+    }
+
     function blendRiskWindows(relapseData, relapseScore, crashScore, weights) {
         const relapseWindows = relapseData?.windows || relapseData?.raw?.windows || {};
         const fallbackWindow = clamp(relapseScore, 0, 100);
@@ -163,9 +177,10 @@
         }
 
         const blendWeights = buildBlendWeights(relapseData, crashData);
+        const adaptiveWeights = getAdaptiveBlendWeights(relapseScore, crashScore, blendWeights);
         const riskScore = Math.round(
-            relapseScore * blendWeights.relapse +
-            crashScore * blendWeights.crash
+            relapseScore * adaptiveWeights.relapse +
+            crashScore * adaptiveWeights.crash
         );
         const diff = Math.abs(relapseScore - crashScore);
 
@@ -179,7 +194,7 @@
         }
 
         const level = getLevel(riskScore);
-        const windows = blendRiskWindows(relapseData, relapseScore, crashScore, blendWeights);
+        const windows = blendRiskWindows(relapseData, relapseScore, crashScore, adaptiveWeights);
 
         // Top drivers from whichever source is higher
         const drivers = [];
@@ -229,7 +244,7 @@
             if (actions.length >= 3) break;
         }
 
-        console.info(`${MODULE} ✅ Risk: ${riskScore} (relapse: ${relapseScore}, crash: ${crashScore}) | source: ${source} | level: ${level.label} | weights r=${blendWeights.relapse.toFixed(2)} c=${blendWeights.crash.toFixed(2)}`);
+        console.info(`${MODULE} ✅ Risk: ${riskScore} (relapse: ${relapseScore}, crash: ${crashScore}) | source: ${source} | level: ${level.label} | weights r=${adaptiveWeights.relapse.toFixed(2)} c=${adaptiveWeights.crash.toFixed(2)}`);
 
         return {
             score: riskScore,
@@ -239,6 +254,10 @@
             crash: { score: crashScore, data: crashData },
             blend: {
                 weights: {
+                    relapse: Math.round(adaptiveWeights.relapse * 100) / 100,
+                    crash: Math.round(adaptiveWeights.crash * 100) / 100,
+                },
+                baseWeights: {
                     relapse: Math.round(blendWeights.relapse * 100) / 100,
                     crash: Math.round(blendWeights.crash * 100) / 100,
                 },

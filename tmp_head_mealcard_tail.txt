@@ -1,0 +1,94 @@
+                                React.createElement('span', { style: { color: '#64748b' } }, '╨С╨╡╨╗╨╛╨║'),
+                                React.createElement('span', { style: { fontWeight: 500 } }, Math.round(currentWave.protein || 0) + '╨│'),
+                            ),
+                            React.createElement('div', { className: 'wave-details-popup__row', style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
+                                React.createElement('span', { style: { color: '#64748b' } }, '╨Ъ╨╗╨╡╤В╤З╨░╤В╨║╨░'),
+                                React.createElement('span', { style: { fontWeight: 500, color: currentWave.fiber >= 5 ? '#22c55e' : '#1f2937' } }, Math.round(currentWave.fiber || 0) + '╨│'),
+                            ),
+                            React.createElement('div', { className: 'wave-details-popup__row', style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
+                                React.createElement('span', { style: { color: '#64748b' } }, '╨Ц╨╕╤А╤Л'),
+                                React.createElement('span', { style: { fontWeight: 500 } }, Math.round(currentWave.fat || 0) + '╨│'),
+                            ),
+                            React.createElement('div', { className: 'wave-details-popup__row wave-details-popup__row--last', style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0' } },
+                                React.createElement('span', { style: { color: '#64748b' } }, '╨г╨│╨╗╨╡╨▓╨╛╨┤╤Л'),
+                                React.createElement('span', { style: { fontWeight: 500 } }, Math.round(currentWave.carbs || 0) + '╨│'),
+                            ),
+                        ),
+
+                        React.createElement('div', { className: 'wave-details-popup__section', style: { marginBottom: '12px' } },
+                            React.createElement('div', { className: 'wave-details-popup__section-title', style: { fontSize: '12px', fontWeight: 600, color: '#1f2937', marginBottom: '8px' } }, 'тП░ ╨Ф╨╜╨╡╨▓╨╜╤Л╨╡ ╤Д╨░╨║╤В╨╛╤А╤Л'),
+                            React.createElement('div', { className: 'wave-details-popup__row', style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
+                                React.createElement('span', { style: { color: '#64748b' } }, '╨Т╤А╨╡╨╝╤П ╤Б╤Г╤В╨╛╨║'),
+                                React.createElement('span', { style: { fontWeight: 500, color: currentWave.circadianMultiplier > 1.05 ? '#f97316' : '#1f2937' } }, '├Ч' + (currentWave.circadianMultiplier || 1).toFixed(2)),
+                            ),
+                            currentWave.activityBonus && currentWave.activityBonus !== 0 && React.createElement('div', { className: 'wave-details-popup__row wave-details-popup__row--last', style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0' } },
+                                React.createElement('span', { style: { color: '#22c55e' } }, 'ЁЯПГ ╨Р╨║╤В╨╕╨▓╨╜╨╛╤Б╤В╤М'),
+                                React.createElement('span', { style: { fontWeight: 500, color: '#22c55e' } }, (currentWave.activityBonus * 100).toFixed(0) + '%'),
+                            ),
+                        ),
+
+                        React.createElement('button', {
+                            className: 'wave-details-popup__action',
+                            onClick: () => setShowWaveCalcPopup(false),
+                            style: {
+                                width: '100%',
+                                background: '#3b82f6',
+                                color: '#fff',
+                                border: 'none',
+                                borderRadius: '10px',
+                                padding: '12px',
+                                fontSize: '14px',
+                                fontWeight: 600,
+                                cursor: 'pointer',
+                                marginTop: '8px',
+                            },
+                        }, '╨Ч╨░╨║╤А╤Л╤В╤М'),
+                    ),
+                ),
+            ),
+        );
+    }, (prevProps, nextProps) => {
+        if (prevProps.meal !== nextProps.meal) return false;
+        if (prevProps.meal?.mealType !== nextProps.meal?.mealType) return false;
+        if (prevProps.meal?.name !== nextProps.meal?.name) return false;
+        if (prevProps.meal?.time !== nextProps.meal?.time) return false;
+        if (prevProps.meal?.items?.length !== nextProps.meal?.items?.length) return false;
+        if (prevProps.meal?.photos?.length !== nextProps.meal?.photos?.length) return false;
+        if (prevProps.mealIndex !== nextProps.mealIndex) return false;
+        if (prevProps.displayIndex !== nextProps.displayIndex) return false;
+        if (prevProps.isExpanded !== nextProps.isExpanded) return false;
+        if (prevProps.allMeals !== nextProps.allMeals) return false;
+        return true;
+    });
+
+    HEYS.dayComponents = HEYS.dayComponents || {};
+    HEYS.dayComponents.MealCard = MealCard;
+
+    // =========================
+    // Meals list
+    // =========================
+    function renderMealsList(params) {
+        const {
+            sortedMealsForDisplay,
+            day,
+            products,
+            pIndex,
+            date,
+            setDay,
+            isMobile,
+            isMealExpanded,
+            isMealStale,
+            toggleMealExpand,
+            changeMealType,
+            updateMealTime,
+            changeMealMood,
+            changeMealWellbeing,
+            changeMealStress,
+            removeMeal,
+            openEditGramsModal,
+            openTimeEditor,
+            openMoodEditor,
+            setGrams,
+            removeItem,
+            isNewItem,
+            optimum,

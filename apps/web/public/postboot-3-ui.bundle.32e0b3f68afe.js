@@ -7360,7 +7360,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       const carbs = Math.round((product.simple100 || 0) + (product.complex100 || 0));
       const fat = Math.round((product.badFat100 || 0) + (product.goodFat100 || 0) + (product.trans100 || 0));
       const harmVal = product.harm ?? product.harmScore ?? product.harm100;
-      const harmBg = getHarmBg(harmVal);
+      const harmToneStyle = getHarmToneStyle(harmVal, { surface: 'aps' });
 
       // Флаг: продукт из общей базы (не из личной)
       const isFromShared = product._source === 'shared' || product._fromShared;
@@ -7373,7 +7373,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       return React.createElement('div', {
         key: pid,
         className: 'aps-product-card',
-        style: harmBg ? { background: harmBg } : undefined,
+        style: harmToneStyle || undefined,
         onClick: () => selectProduct(product)
       },
         // Иконка категории
@@ -9230,29 +9230,67 @@ NOVA: 1
     );
   }
 
-  // Фон карточки по полезности: 0=зелёный(полезный), 5=голубой(средний), 10=красный(вредный)
-  function getHarmBg(h) {
+  // Тон карточки по вредности: мягкий акцент слева + fade в базовый фон.
+  function getHarmToneStyle(h, options = {}) {
     if (h == null) return null;
     const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-    if (isDark) {
-      // В тёмной теме — полупрозрачные оттенки, чтобы не перебивать тёмный фон карточки
-      if (h <= 2) return 'rgba(16, 185, 129, 0.18)';   // здоровый — тёмный изумрудный
-      if (h <= 4) return 'rgba(16, 185, 129, 0.10)';   // умеренно здоровый
-      if (h <= 6) return 'rgba(59, 130, 246, 0.13)';   // нейтральный — тёмный синий
-      if (h <= 8) return 'rgba(239, 68, 68, 0.14)';    // нежелательный — тёмно-красный
-      return 'rgba(239, 68, 68, 0.22)';                 // вредный
+    const strong = !!options.strong;
+    const surface = options.surface || 'default';
+    const premiumSurface = surface === 'aps' || surface === 'hero';
+
+    let accent = '#60a5fa';
+    let edge = isDark ? 'rgba(96, 165, 250, 0.18)' : 'rgba(59, 130, 246, 0.14)';
+    let wash = isDark ? 'rgba(96, 165, 250, 0.07)' : 'rgba(59, 130, 246, 0.06)';
+    let border = isDark ? 'rgba(96, 165, 250, 0.22)' : 'rgba(59, 130, 246, 0.16)';
+
+    if (h <= 2) {
+      accent = isDark ? '#34d399' : '#10b981';
+      edge = isDark ? 'rgba(52, 211, 153, 0.16)' : 'rgba(16, 185, 129, 0.11)';
+      wash = isDark ? 'rgba(52, 211, 153, 0.05)' : 'rgba(16, 185, 129, 0.04)';
+      border = isDark ? 'rgba(52, 211, 153, 0.18)' : 'rgba(16, 185, 129, 0.12)';
+    } else if (h <= 4) {
+      accent = isDark ? '#4ade80' : '#22c55e';
+      edge = isDark ? 'rgba(74, 222, 128, 0.14)' : 'rgba(34, 197, 94, 0.09)';
+      wash = isDark ? 'rgba(74, 222, 128, 0.045)' : 'rgba(34, 197, 94, 0.035)';
+      border = isDark ? 'rgba(74, 222, 128, 0.16)' : 'rgba(34, 197, 94, 0.11)';
+    } else if (h <= 6) {
+      accent = isDark ? '#60a5fa' : '#3b82f6';
+      edge = isDark ? 'rgba(96, 165, 250, 0.19)' : 'rgba(59, 130, 246, 0.13)';
+      wash = isDark ? 'rgba(96, 165, 250, 0.07)' : 'rgba(59, 130, 246, 0.05)';
+      border = isDark ? 'rgba(96, 165, 250, 0.22)' : 'rgba(59, 130, 246, 0.15)';
+    } else if (h <= 8) {
+      accent = isDark ? '#fb7185' : '#ef4444';
+      edge = isDark ? 'rgba(251, 113, 133, 0.18)' : 'rgba(239, 68, 68, 0.12)';
+      wash = isDark ? 'rgba(251, 113, 133, 0.07)' : 'rgba(239, 68, 68, 0.05)';
+      border = isDark ? 'rgba(251, 113, 133, 0.22)' : 'rgba(239, 68, 68, 0.15)';
+    } else {
+      accent = isDark ? '#f87171' : '#ef4444';
+      edge = isDark ? 'rgba(248, 113, 113, 0.24)' : 'rgba(239, 68, 68, 0.17)';
+      wash = isDark ? 'rgba(248, 113, 113, 0.10)' : 'rgba(239, 68, 68, 0.07)';
+      border = isDark ? 'rgba(248, 113, 113, 0.26)' : 'rgba(239, 68, 68, 0.18)';
     }
-    // Светлая тема — оригинальные пастельные оттенки
-    if (h <= 1) return '#d1fae5';  // 0-1: светло-мятный — полезный (emerald-100)
-    if (h <= 2) return '#d1fae5';  // 2: светло-мятный
-    if (h <= 3) return '#ecfdf5';  // 3: очень светлый мятный (emerald-50)
-    if (h <= 4) return '#f0fdf4';  // 4: почти белый с зеленцой (green-50)
-    if (h <= 5) return '#e0f2fe';  // 5: светло-голубой — средний
-    if (h <= 6) return '#f0f9ff';  // 6: очень светлый голубой
-    if (h <= 7) return '#fef2f2';  // 7: очень светло-розовый (red-50)
-    if (h <= 8) return '#fee2e2';  // 8: светло-розовый (red-100)
-    if (h <= 9) return '#fecaca';  // 9: розовый (red-200)
-    return '#fca5a5';              // 10: красноватый (red-300) — вредный
+
+    const boostAlpha = (rgbaValue, extra) => rgbaValue.replace(/0\.(\d+)/, (_, d) => `0.${Math.min(99, Number(d) + extra)}`);
+    const toneEdge = strong ? boostAlpha(edge, 6) : edge;
+    const toneWash = strong ? boostAlpha(wash, 4) : wash;
+    const toneBorder = strong ? boostAlpha(border, 4) : border;
+    const premiumBorder = premiumSurface ? boostAlpha(toneBorder, 2) : toneBorder;
+    const topSheen = premiumSurface
+      ? (isDark ? 'rgba(255, 255, 255, 0.055)' : 'rgba(255, 255, 255, 0.78)')
+      : (isDark ? 'rgba(255, 255, 255, 0.03)' : 'rgba(255, 255, 255, 0.65)');
+    const dangerGlow = h > 6
+      ? `, radial-gradient(circle at 100% 0%, ${isDark ? (h > 8 ? 'rgba(248, 113, 113, 0.16)' : 'rgba(251, 113, 133, 0.12)') : (h > 8 ? 'rgba(239, 68, 68, 0.10)' : 'rgba(244, 63, 94, 0.08)')} 0%, rgba(255, 255, 255, 0) 56%)`
+      : '';
+    const outerShadow = premiumSurface
+      ? (isDark ? '0 10px 24px rgba(15, 23, 42, 0.24)' : '0 8px 18px rgba(15, 23, 42, 0.08)')
+      : 'none';
+
+    return {
+      backgroundColor: isDark ? 'var(--heys-bg-card)' : '#ffffff',
+      backgroundImage: `linear-gradient(90deg, ${toneEdge} 0%, ${toneWash} 18%, rgba(255, 255, 255, 0) 42%)${dangerGlow}, linear-gradient(180deg, ${topSheen} 0%, rgba(255, 255, 255, 0) 72%)`,
+      borderColor: premiumBorder,
+      boxShadow: `inset 3px 0 0 ${accent}${premiumSurface ? `, ${outerShadow}` : ''}`,
+    };
   }
 
   // Иконка категории (копия из heys_day_v12.js)
@@ -10045,13 +10083,13 @@ NOVA: 1
 
     // Фон хедера по вредности
     const harmVal = product.harm ?? product.harmScore ?? product.harm100;
-    const harmBg = getHarmBg(harmVal);
+    const harmToneStyle = getHarmToneStyle(harmVal, { strong: true, surface: 'hero' });
 
     return React.createElement('div', { className: 'aps-grams-step' },
       // Название продукта
       React.createElement('div', {
         className: 'aps-product-header',
-        style: harmBg ? { background: harmBg, borderColor: harmBg } : undefined
+        style: harmToneStyle || undefined
       },
         React.createElement('div', { className: 'aps-product-header__main' },
           product.category && React.createElement('span', { className: 'aps-product-icon-lg' },
@@ -25581,6 +25619,20 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         };
     }
 
+    function getAdaptiveBlendWeights(relapseScore, crashScore, baseWeights) {
+        const relapseSignal = clamp(relapseScore, 0, 100) / 100;
+        const crashSignal = clamp(crashScore, 0, 100) / 100;
+
+        const relapseSupport = Math.max(baseWeights.relapse * (0.35 + relapseSignal), 0.0001);
+        const crashSupport = Math.max(baseWeights.crash * (0.15 + crashSignal), 0.0001);
+        const totalSupport = relapseSupport + crashSupport || 1;
+
+        return {
+            relapse: relapseSupport / totalSupport,
+            crash: crashSupport / totalSupport,
+        };
+    }
+
     function blendRiskWindows(relapseData, relapseScore, crashScore, weights) {
         const relapseWindows = relapseData?.windows || relapseData?.raw?.windows || {};
         const fallbackWindow = clamp(relapseScore, 0, 100);
@@ -25680,9 +25732,10 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         }
 
         const blendWeights = buildBlendWeights(relapseData, crashData);
+        const adaptiveWeights = getAdaptiveBlendWeights(relapseScore, crashScore, blendWeights);
         const riskScore = Math.round(
-            relapseScore * blendWeights.relapse +
-            crashScore * blendWeights.crash
+            relapseScore * adaptiveWeights.relapse +
+            crashScore * adaptiveWeights.crash
         );
         const diff = Math.abs(relapseScore - crashScore);
 
@@ -25696,7 +25749,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         }
 
         const level = getLevel(riskScore);
-        const windows = blendRiskWindows(relapseData, relapseScore, crashScore, blendWeights);
+        const windows = blendRiskWindows(relapseData, relapseScore, crashScore, adaptiveWeights);
 
         // Top drivers from whichever source is higher
         const drivers = [];
@@ -25746,7 +25799,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             if (actions.length >= 3) break;
         }
 
-        console.info(`${MODULE} ✅ Risk: ${riskScore} (relapse: ${relapseScore}, crash: ${crashScore}) | source: ${source} | level: ${level.label} | weights r=${blendWeights.relapse.toFixed(2)} c=${blendWeights.crash.toFixed(2)}`);
+        console.info(`${MODULE} ✅ Risk: ${riskScore} (relapse: ${relapseScore}, crash: ${crashScore}) | source: ${source} | level: ${level.label} | weights r=${adaptiveWeights.relapse.toFixed(2)} c=${adaptiveWeights.crash.toFixed(2)}`);
 
         return {
             score: riskScore,
@@ -25756,6 +25809,10 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             crash: { score: crashScore, data: crashData },
             blend: {
                 weights: {
+                    relapse: Math.round(adaptiveWeights.relapse * 100) / 100,
+                    crash: Math.round(adaptiveWeights.crash * 100) / 100,
+                },
+                baseWeights: {
                     relapse: Math.round(blendWeights.relapse * 100) / 100,
                     crash: Math.round(blendWeights.crash * 100) / 100,
                 },
@@ -29632,7 +29689,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         }
 
         const result = snapshot?.raw || {};
-        const score = Math.round(Number(snapshot?.score ?? result?.score) || 0);
+        const relapseRawScore = Math.round(Number(snapshot?.relapseScore ?? snapshot?.rawScore ?? result?.score) || 0);
         const confidence = Math.round(Number(snapshot?.confidence ?? result?.confidence) || 0);
         let windows = snapshot?.windows || result?.windows || {};
         let mergedDrivers = Array.isArray(snapshot?.primaryDrivers)
@@ -29647,9 +29704,10 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         let radarCrashScore = 0;
         let radarDrivers = [];
         let radarActions = [];
-        let radarScore = score;
+        let radarScore = relapseRawScore;
         let radarLevelId = '';
         let blendWeights = null;
+        let scoreModel = 'relapse_raw';
         if (HEYS.RiskRadar?.calculate) {
           try {
             const profile = this._getProfile() || {};
@@ -29661,6 +29719,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
               radarCrashScore = Math.round(Number(radar.crash?.score) || 0);
               radarLevelId = radar.level?.id || '';
               blendWeights = radar.blend?.weights || null;
+              scoreModel = 'risk_radar_blended';
               radarDrivers = (radar.drivers || []).map(d => d.label || d.factor || String(d));
               radarActions = (radar.actions || []).map(a => a.text || a.label || String(a));
               if (radar.windows && typeof radar.windows === 'object') {
@@ -29703,7 +29762,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         const recommendation = mergedRecommendations[0]?.text || null;
 
         console.info('[widget_data.getRelapseRiskData] ✅ Calculated', {
-          score, radarScore, radarSource, level: result?.level || snapshot?.level, confidence,
+          relapseRawScore, radarScore, radarSource, level: result?.level || snapshot?.level, confidence,
           historyDays: result?.debug?.inputs?.historyDaysCount || 0
         });
 
@@ -29712,8 +29771,17 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           profile: snapshot?.profile || result?.profile || null,
           selectedProfileKey: snapshot?.selectedProfileKey || selectedProfileKey,
           score: radarScore,
-          relapseScore: score,
+          rawScore: relapseRawScore,
+          relapseScore: relapseRawScore,
           crashScore: radarCrashScore,
+          scoreModel,
+          scoreBreakdown: {
+            radar: radarScore,
+            relapseRaw: relapseRawScore,
+            crashRaw: radarCrashScore,
+            source: radarSource,
+            blendWeights,
+          },
           source: radarSource,
           blendWeights,
           radarDrivers,
@@ -34219,11 +34287,11 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
   function getRelapseWindowMeta(key) {
     switch (key) {
       case 'next3h':
-        return { label: 'Ближайшие 3ч', shortLabel: '3ч', description: 'Самый ближайший риск: стресс, голод и reward-food контекст прямо сейчас.' };
+        return { label: 'Ближайшие 3ч', shortLabel: '3ч', description: 'Самый ближайший риск: стресс, голод и тяга к вкусной еде прямо сейчас.' };
       case 'tonight':
-        return { label: 'Сегодня вечером', shortLabel: 'Вечер', description: 'Главное окно риска для вечернего срыва и loss-of-control eating.' };
+        return { label: 'Сегодня вечером', shortLabel: 'Вечер', description: 'Главное окно риска для вечернего срыва и потери контроля над едой.' };
       case 'next24h':
-        return { label: 'Следующие 24ч', shortLabel: '24ч', description: 'Фон на сутки с учётом сна, повторяющегося стресса и restriction pressure.' };
+        return { label: 'Следующие 24ч', shortLabel: '24ч', description: 'Фон на сутки с учётом сна, повторяющегося стресса и давления дефицита.' };
       default:
         return { label: key || 'Окно', shortLabel: key || 'Окно', description: '' };
     }
@@ -34232,19 +34300,19 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
   function getRelapseComponentMeta(key) {
     switch (key) {
       case 'stressLoad':
-        return { label: 'Stress load', description: 'Текущий стресс и его накопление за последние дни.' };
+        return { label: 'Стрессовая нагрузка', description: 'Текущий стресс и его накопление за последние дни.' };
       case 'sleepDebt':
-        return { label: 'Sleep debt', description: 'Недосып, низкое качество сна и recovery depletion.' };
+        return { label: 'Недосып', description: 'Недосып, слабое восстановление и усталость, которая тянется дальше.' };
       case 'restrictionPressure':
-        return { label: 'Restriction pressure', description: 'Недобор калорий/белка, длинные gaps и давление дефицита.' };
+        return { label: 'Давление дефицита', description: 'Недобор калорий и белка, длинные паузы без еды и давление дефицита.' };
       case 'rewardExposure':
-        return { label: 'Reward exposure', description: 'Высокий harm/simple и риск продолжения hyperpalatable eating.' };
+        return { label: 'Тяга к вкусной еде', description: 'Когда сладкого и очень вкусной еды уже было много, остановиться сложнее.' };
       case 'timingContext':
-        return { label: 'Timing context', description: 'Вечер, выходные и длинные интервалы без еды усиливают риск.' };
+        return { label: 'Контекст времени', description: 'Вечер, выходные и длинные интервалы без еды усиливают риск.' };
       case 'emotionalVulnerability':
-        return { label: 'Emotional vulnerability', description: 'Низкое subjective state усиливает риск, но не доминирует над поведением.' };
+        return { label: 'Эмоциональная уязвимость', description: 'Когда состояние проседает, держать спокойный режим питания сложнее.' };
       case 'protectiveBuffer':
-        return { label: 'Protective buffer', description: 'Защитные факторы, которые снижают итоговый риск.' };
+        return { label: 'Защитный буфер', description: 'Факторы, которые снижают итоговый риск.' };
       default:
         return { label: key || 'Factor', description: '' };
     }
@@ -34273,19 +34341,84 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     if (completeDays >= totalDays * 0.5) return `${completeDays}/${totalDays} дней достаточно полные`;
     return `${completeDays}/${totalDays} дней слабо заполнены`;
   }
+
+  function getTopRelapseItems(items, count = 2) {
+    return (Array.isArray(items) ? items : [])
+      .filter((item) => item && Number(item.value) > 0)
+      .sort((a, b) => Number(b.value || 0) - Number(a.value || 0))
+      .slice(0, count);
+  }
+
+  function formatRelapseList(items) {
+    const labels = (Array.isArray(items) ? items : [])
+      .map((item) => item?.label || item?.title || item?.key || '')
+      .filter(Boolean);
+
+    if (labels.length === 0) return '';
+    if (labels.length === 1) return labels[0];
+    if (labels.length === 2) return labels[0] + ' и ' + labels[1];
+    return labels.slice(0, -1).join(', ') + ' и ' + labels[labels.length - 1];
+  }
+
+  function getRelapseEffectiveComponentSummary(debug) {
+    const rawComponents = debug?.components || {};
+    const effectiveComponents = debug?.effectiveComponents || rawComponents;
+    return getTopRelapseItems(Object.entries(effectiveComponents)
+      .filter(([key]) => key !== 'protectiveBuffer')
+      .map(([key, value]) => ({
+        key,
+        value: Number(value) || 0,
+        ...getRelapseComponentMeta(key)
+      }))
+      .filter((item) => item.value > 0), 3);
+  }
+
+  function getRelapsePrimaryDriverSummary(snapshot, result, debug) {
+    const primaryDrivers = Array.isArray(snapshot?.primaryDrivers)
+      ? snapshot.primaryDrivers
+      : (Array.isArray(result?.primaryDrivers) ? result.primaryDrivers : []);
+
+    if (primaryDrivers.length > 0) {
+      return primaryDrivers
+        .map((item) => ({
+          key: item?.id || item?.key || item?.label || '',
+          value: Number(item?.impact) || 0,
+          label: item?.label || item?.title || item?.key || 'Фактор'
+        }))
+        .filter((item) => item.value > 0)
+        .slice(0, 3);
+    }
+
+    return getRelapseEffectiveComponentSummary(debug);
+  }
+
+  function getRelapseProtectionSummary(debug) {
+    const domainRelief = debug?.protectiveBufferState?.domainRelief || {};
+    const reliefItems = getTopRelapseItems(Object.entries(domainRelief)
+      .map(([key, value]) => ({
+        key,
+        value: Number(value) || 0,
+        ...getRelapseComponentMeta(key)
+      })), 3);
+
+    return reliefItems;
+  }
+
   function buildRelapseHumanSummary(payload) {
     const snapshot = payload?.snapshot || {};
     const result = snapshot?.raw || {};
     const score = Math.round(Number(snapshot?.score ?? result?.score) || 0);
     const level = String(snapshot?.level || result?.level || 'low');
     const source = String(snapshot?.source || 'emotional');
-    const relapseScore = Math.round(Number(snapshot?.relapseScore ?? result?.score) || 0);
+    const relapseScore = Math.round(Number(snapshot?.relapseScore ?? snapshot?.rawScore ?? result?.score) || 0);
     const crashScore = Math.round(Number(snapshot?.crashScore) || 0);
     const crashWeight = Number(snapshot?.blendWeights?.crash);
     const confidence = Math.max(0, Math.min(100, Math.round(Number(snapshot?.confidence ?? result?.confidence) || 0)));
     const debug = result?.debug || {};
     const restriction = debug?.restrictionPressure || {};
     const historyQuality = debug?.historyQuality || {};
+    const summaryDrivers = getRelapsePrimaryDriverSummary(snapshot, result, debug);
+    const protectionRelief = getRelapseProtectionSummary(debug);
     const coverageLagPct = Math.round((Number(restriction?.coverageLag) || 0) * 100);
     const proteinLagPct = Math.round((Number(restriction?.proteinLag) || 0) * 100);
     const reliefTotal = Math.round(
@@ -34302,14 +34435,34 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
     const bullets = [];
 
-    bullets.push(`Сейчас это ${cutPattern}: главный вклад даёт давление дефицита, но модель не видит признаков агрессивного cut.`);
-
-    if (coverageLagPct > 0 || proteinLagPct > 0) {
-      bullets.push(`От плана сейчас отстают калории примерно на ${coverageLagPct}% и белок примерно на ${proteinLagPct}%, но это ещё похоже на догоняемый сценарий, а не на срыв режима.`);
+    if (score !== relapseScore || crashScore > 0) {
+      const sourceText = source === 'both'
+        ? 'итог — это общий радар из эмоционального и метаболического контуров'
+        : source === 'metabolic'
+          ? 'итог сейчас сильнее двигает метаболический контур'
+          : 'итог сейчас в основном определяет эмоциональный контур';
+      bullets.push(`Эмоциональный риск сейчас ${relapseScore}%, метаболический ${crashScore}%, а общий радар показывает ${score}%: ${sourceText}.`);
+    } else {
+      bullets.push(`Сейчас общий радар почти полностью совпадает с эмоциональным риском (${relapseScore}%): отдельный метаболический вклад не доминирует.`);
     }
 
-    if (reliefTotal > 0) {
-      bullets.push(`Структура дня уже снижает тревогу: регулярные приёмы пищи и нормальный trajectory сняли около ${reliefTotal} пунктов с restriction pressure.`);
+    if (summaryDrivers.length > 0) {
+      bullets.push(`Главные драйверы риска сейчас: ${formatRelapseList(summaryDrivers)}.`);
+    }
+
+    if (restriction?.cutPattern === 'aggressive_cut') {
+      bullets.push('Сейчас это уже жёсткий дефицит: к вечеру такой сценарий чаще делает еду более импульсивной.');
+    } else if (Number(restriction?.score) >= 8 || coverageLagPct > 0 || proteinLagPct > 0) {
+      bullets.push(`Сейчас это ${cutPattern}: ситуацию ещё можно спокойно догнать — от плана отстают калории примерно на ${coverageLagPct}% и белок примерно на ${proteinLagPct}%.`);
+    }
+
+    if (protectionRelief.length > 0) {
+      const reliefText = protectionRelief
+        .map((item) => `${item.label} −${Number(item.value || 0).toFixed(1)}`)
+        .join(', ');
+      bullets.push(`Защитные факторы адресно гасят профиль риска: сильнее всего они смягчают ${reliefText}.`);
+    } else if (reliefTotal > 0) {
+      bullets.push(`Структура дня уже помогает: регулярные приёмы пищи и более ровный ритм сняли около ${reliefTotal} пунктов с давления дефицита.`);
     }
 
     if ((source === 'both' || source === 'metabolic') && crashScore > 0) {
@@ -34317,9 +34470,9 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       const metabolicDriver = (Array.isArray(snapshot?.primaryDrivers) ? snapshot.primaryDrivers : []).find((driver) => driver?.source === 'crash');
       const metabolicLabel = String(metabolicDriver?.label || snapshot?.radarDrivers?.[0] || 'метаболический фон').toLowerCase();
       if (source === 'both') {
-        bullets.push(`Метаболический фон тоже участвует: ${metabolicLabel} добавляет около ${metabolicContribution} пунктов к blended radar и заметнее влияет на окно 24ч.`);
+        bullets.push(`Метаболический фон тоже участвует: ${metabolicLabel} добавляет около ${metabolicContribution} пунктов к общему радару и заметнее влияет на окно 24ч.`);
       } else {
-        bullets.push(`Сейчас риск сильнее двигает recovery/metabolic фон: ${metabolicLabel} формирует заметную часть итогового score.`);
+        bullets.push(`Сейчас риск сильнее двигает метаболический фон: ${metabolicLabel} формирует заметную часть итоговой оценки.`);
       }
     }
 
@@ -34333,6 +34486,39 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       cutPattern,
       historyLabel,
     };
+  }
+
+  function buildRelapseClientClipboardSummary(payload) {
+    const snapshot = payload?.snapshot || {};
+    const result = snapshot?.raw || {};
+    const summary = buildRelapseHumanSummary({ ...payload, snapshot });
+    const windows = getSortedRelapseWindows(snapshot?.windows || result?.windows);
+    const recommendations = Array.isArray(snapshot?.recommendations)
+      ? snapshot.recommendations
+      : (Array.isArray(result?.recommendations) ? result.recommendations : []);
+    const leadWindow = windows[0] || null;
+    const actionSummary = recommendations
+      .slice(0, 2)
+      .map((item) => String(item?.text || '').trim())
+      .filter(Boolean)
+      .join(' ');
+
+    const lines = [];
+    if (summary?.headline) lines.push(summary.headline);
+
+    const importantBullets = Array.isArray(summary?.bullets)
+      ? summary.bullets.filter((bullet) => typeof bullet === 'string' && bullet.trim())
+      : [];
+
+    if (importantBullets[1]) lines.push(importantBullets[1]);
+    if (leadWindow) {
+      lines.push(`Ближайшая зона внимания — ${leadWindow.label.toLowerCase()}: около ${leadWindow.value}%.`);
+    }
+    if (actionSummary) {
+      lines.push(`Что сделать сейчас: ${actionSummary}`);
+    }
+
+    return lines.slice(0, 4);
   }
 
   async function copyTextWithFallback(text) {
@@ -34359,8 +34545,11 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     const snapshot = payload?.snapshot || {};
     const result = snapshot?.raw || {};
     const humanSummary = buildRelapseHumanSummary({ ...payload, snapshot });
+    const clientSummary = buildRelapseClientClipboardSummary({ ...payload, snapshot });
     const hasRawTrace = !!(result && typeof result === 'object' && Object.keys(result).length > 0 && result?.debug);
     const score = Math.round(Number(snapshot?.score ?? result?.score) || 0);
+    const relapseScore = Math.round(Number(snapshot?.relapseScore ?? snapshot?.rawScore ?? result?.score) || 0);
+    const crashScore = Math.round(Number(snapshot?.crashScore) || 0);
     const level = String(snapshot?.level || result?.level || 'low');
     const confidence = Math.max(0, Math.min(100, Math.round(Number(snapshot?.confidence ?? result?.confidence) || 0)));
     const windows = getSortedRelapseWindows(snapshot?.windows || result?.windows);
@@ -34383,11 +34572,21 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       '',
       'Сводка:',
       '  • Score: ' + score + '%',
+      '  • Relapse raw: ' + relapseScore + '%',
+      '  • Crash raw: ' + crashScore + '%',
       '  • Level: ' + level + ' (' + getRelapseLevelLabel(level) + ')',
       '  • Confidence: ' + confidence + '%',
+      '  • Score model: ' + String(snapshot?.scoreModel || (snapshot?.blendWeights ? 'risk_radar_blended' : 'relapse_raw')),
       '  • Виджет: ' + (payload?.widget?.id || 'unknown') + ' / ' + (payload?.widget?.size || 'unknown'),
       ''
     ];
+
+    if (snapshot?.blendWeights && (Number(snapshot?.blendWeights?.relapse) > 0 || Number(snapshot?.blendWeights?.crash) > 0)) {
+      lines.push('Blend details:');
+      lines.push('  • Source: ' + String(snapshot?.source || 'none'));
+      lines.push('  • Blend weights: relapse=' + (Number(snapshot?.blendWeights?.relapse || 0).toFixed(2)) + ', crash=' + (Number(snapshot?.blendWeights?.crash || 0).toFixed(2)));
+      lines.push('');
+    }
 
     if (!hasRawTrace) {
       lines.push('⚠️ Внимание: raw trace payload пуст.');
@@ -34396,7 +34595,13 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       lines.push('');
     }
 
-    lines.push('Человеческое объяснение:');
+    lines.push('Коротко для клиента:');
+    (clientSummary || []).forEach((bullet) => {
+      lines.push('  • ' + bullet);
+    });
+
+    lines.push('');
+    lines.push('Техническая раскладка:');
     lines.push('  • ' + humanSummary.headline);
     (humanSummary.bullets || []).forEach((bullet) => {
       lines.push('  • ' + bullet);
@@ -34451,6 +34656,37 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     } else {
       recommendations.forEach((rec, index) => {
         lines.push('  ' + (index + 1) + '. ' + (rec?.text || rec?.action || rec?.id || 'recommendation'));
+      });
+    }
+
+    const protectionRelief = getRelapseProtectionSummary(result?.debug || {});
+    const effectiveComponents = Object.entries(result?.debug?.effectiveComponents || {})
+      .filter(([key]) => key !== 'protectiveBuffer')
+      .map(([key, value]) => ({
+        key,
+        value: Number(value) || 0,
+        ...getRelapseComponentMeta(key)
+      }))
+      .sort((a, b) => Math.abs(b.value) - Math.abs(a.value));
+
+    lines.push('');
+    lines.push('Protection by domains:');
+    if (!protectionRelief.length) {
+      lines.push(hasRawTrace ? '  (нет адресного domain relief)' : '  (payload пуст: protectiveBufferState.domainRelief не передан)');
+    } else {
+      protectionRelief.forEach((item, index) => {
+        lines.push('  ' + (index + 1) + '. ' + item.label + ' → −' + item.value.toFixed(2));
+      });
+    }
+
+    lines.push('');
+    lines.push('Effective components (after protection):');
+    if (!effectiveComponents.length) {
+      lines.push(hasRawTrace ? '  (нет effective components)' : '  (payload пуст: debug.effectiveComponents не были переданы)');
+    } else {
+      effectiveComponents.forEach((component, index) => {
+        const sign = component.value >= 0 ? '+' : '';
+        lines.push('  ' + (index + 1) + '. ' + component.label + ' (' + component.key + ') = ' + sign + component.value.toFixed(2) + (component.description ? ' | ' + component.description : ''));
       });
     }
 
@@ -35523,12 +35759,13 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         return HEYS.RiskRadar.calculate({ profile });
       } catch (e) { return null; }
     }, [payload]);
-    const radarSource = radarResult?.source || 'none';
-    const radarRelapseScore = Math.round(Number(radarResult?.relapse?.score) || score);
-    const radarCrashScore = Math.round(Number(radarResult?.crash?.score) || 0);
-    const radarScore = Math.round(Number(radarResult?.score) || score);
+    const radarSource = radarResult?.source || snapshot?.source || 'none';
+    const radarRelapseScore = Math.round(Number(snapshot?.relapseScore ?? snapshot?.rawScore ?? radarResult?.relapse?.score) || score);
+    const radarCrashScore = Math.round(Number(snapshot?.crashScore ?? radarResult?.crash?.score) || 0);
+    const radarScore = Math.round(Number(snapshot?.score ?? radarResult?.score) || score);
     const radarDrivers = (radarResult?.drivers || []).map(d => d.label || d.factor || String(d));
     const radarActions = (radarResult?.actions || []).map(a => a.text || a.label || String(a));
+    const scoreModelLabel = snapshot?.scoreModel === 'risk_radar_blended' ? 'Общий радар' : 'Эмоциональный риск';
 
     const getSourceLabel = (src) => {
       switch (src) {
@@ -35618,12 +35855,12 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           drivers: drivers.length,
           tookMs: Date.now() - startedAt
         });
-        HEYS.Toast?.success?.('Relapse Risk лог скопирован');
+        HEYS.Toast?.success?.('Полный разбор риска скопирован');
       } catch (err) {
         console.error('[HEYS.relapseRisk.copy] ❌ copy failed', {
           message: err?.message || String(err)
         });
-        HEYS.Toast?.error?.('Не удалось скопировать Relapse Risk лог');
+        HEYS.Toast?.error?.('Не удалось скопировать полный разбор риска');
       }
     };
 
@@ -35703,7 +35940,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                 React.createElement('span', { className: 'widget-relapse-risk__breakdown-value', style: { color: getRadarColor(radarCrashScore) } }, radarCrashScore)
               )
             ),
-            React.createElement('div', { className: 'widget-relapse-risk__breakdown-formula' }, `Итог = max(${radarRelapseScore}, ${radarCrashScore}) = ${radarScore} · ${getSourceLabel(radarSource).toLowerCase()}`)
+            React.createElement('div', { className: 'widget-relapse-risk__breakdown-formula' }, `Общий радар = ${radarScore}; эмоциональный риск = ${radarRelapseScore}; метаболический риск = ${radarCrashScore}; источник = ${getSourceLabel(radarSource).toLowerCase()}; модель = ${scoreModelLabel.toLowerCase()}`)
           ),
 
           // 4. What's driving risk + protective factors (compact chips)
@@ -35815,8 +36052,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             type: 'button',
             className: 'widget-relapse-risk__modal-copy-btn',
             onClick: copyRelapseLog,
-            title: 'Скопировать полный технический лог'
-          }, '📋 Скопировать техлог')
+            title: 'Скопировать полный разбор с деталями'
+          }, '📋 Скопировать полный разбор')
         )
       )
     );

@@ -2076,10 +2076,41 @@
   }
 
   function buildPopupPositionStyle(baseStyle, left, top, width) {
-    const style = { ...(baseStyle || {}) };
-    if (left != null) style.left = left + 'px';
-    if (top != null) style.top = top + 'px';
-    if (width != null) style.width = width + 'px';
+    const style = {
+      boxSizing: 'border-box',
+      ...(baseStyle || {})
+    };
+    const margin = 12;
+    const screenW = typeof window !== 'undefined' ? window.innerWidth : null;
+    const screenH = typeof window !== 'undefined' ? window.innerHeight : null;
+    const safeWidth = screenW && width != null
+      ? Math.min(width, Math.max(180, screenW - margin * 2))
+      : width;
+
+    if (screenW) {
+      style.maxWidth = `calc(100vw - ${margin * 2}px)`;
+    }
+    if (screenH) {
+      style.maxHeight = style.maxHeight || `calc(100dvh - ${margin * 2}px)`;
+      style.overflowY = style.overflowY || 'auto';
+      style.overscrollBehavior = style.overscrollBehavior || 'contain';
+    }
+    if (safeWidth != null) style.width = safeWidth + 'px';
+    if (left != null) {
+      if (screenW && safeWidth != null) {
+        const maxLeft = Math.max(margin, screenW - safeWidth - margin);
+        style.left = Math.min(Math.max(left, margin), maxLeft) + 'px';
+      } else {
+        style.left = left + 'px';
+      }
+    }
+    if (top != null) {
+      if (screenH) {
+        style.top = Math.max(margin, Math.min(top, screenH - margin - 80)) + 'px';
+      } else {
+        style.top = top + 'px';
+      }
+    }
     return style;
   }
 

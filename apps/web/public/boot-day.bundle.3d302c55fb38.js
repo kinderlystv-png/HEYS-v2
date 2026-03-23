@@ -9,7 +9,6 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
     const scripts = [
         'heys_day_stats_vm_v1.js',
         'heys_day_stats_v1.js',
-        'heys_day_water_v1.js',
         'heys_day_activity_v1.js',
         'heys_day_trainings_v1.js',
         'heys_day_training_popups_v1.js',
@@ -6776,6 +6775,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
 
     // Цвет заголовка — общий статус дня
     let titleColor, titleIcon, titleText;
+    let progressTone = 'target';
 
     // Адаптивный оттенок "съедено": учитывает время дня + близость к норме
     const getExpectedRatioByTime = () => {
@@ -6843,32 +6843,38 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
         titleColor = refeedZone.color;
         titleIcon = refeedZone.icon;
         titleText = refeedZone.name;
+        progressTone = 'refeed';
       }
     } else if (ratio < 0.80) {
       titleColor = '#eab308';
       titleIcon = '📉';
       titleText = 'Маловато';
+      progressTone = 'under';
     } else if (ratio <= 1.0) {
       titleColor = '#22c55e';
       titleIcon = '🎯';
       titleText = 'До цели';
+      progressTone = 'target';
     } else if (ratio <= 1.05) {
       titleColor = '#22c55e';
       titleIcon = '✅';
       titleText = 'Отлично';
+      progressTone = 'target';
     } else if (ratio <= 1.10) {
       titleColor = '#eab308';
       titleIcon = '⚠️';
       titleText = 'Чуть больше';
+      progressTone = 'warn';
     } else {
       titleColor = '#ef4444';
       titleIcon = '🚨';
       titleText = 'Перебор';
+      progressTone = 'over';
     }
 
-    return React.createElement('div', { className: 'goal-progress-card' },
+    return React.createElement('div', { className: 'goal-progress-card goal-progress-card--' + progressTone },
       React.createElement('div', {
-        className: 'goal-progress-bar' + (ratio >= 0.9 && ratio <= 1.1 ? ' pulse-perfect' : ratio > 1.25 ? ' shake-excess' : '')
+        className: 'goal-progress-bar goal-progress-bar--' + progressTone + (ratio >= 0.9 && ratio <= 1.1 ? ' pulse-perfect' : ratio > 1.25 ? ' shake-excess' : '')
       },
         React.createElement('div', { className: 'goal-progress-header' },
           React.createElement('span', {
@@ -8873,17 +8879,19 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
 
       const screenW = window.innerWidth;
       const screenH = window.innerHeight;
+      const safePopupWidth = Math.min(popupWidth, Math.max(180, screenW - margin * 2));
+      const safePopupHeight = Math.min(popupHeight, Math.max(160, screenH - margin * 2));
 
       // Горизонтальная позиция
       let left, arrowPos = 'center';
-      if (clickX < popupWidth / 2 + margin) {
+      if (clickX < safePopupWidth / 2 + margin) {
         left = margin;
         arrowPos = 'left';
-      } else if (clickX > screenW - popupWidth / 2 - margin) {
-        left = screenW - popupWidth - margin;
+      } else if (clickX > screenW - safePopupWidth / 2 - margin) {
+        left = screenW - safePopupWidth - margin;
         arrowPos = 'right';
       } else {
-        left = clickX - popupWidth / 2;
+        left = clickX - safePopupWidth / 2;
       }
 
       // Вертикальная позиция
@@ -8891,24 +8899,24 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
       const spaceBelow = screenH - clickY - offset;
       const spaceAbove = clickY - offset;
 
-      if (preferAbove && spaceAbove >= popupHeight) {
-        top = clickY - popupHeight - offset;
+      if (preferAbove && spaceAbove >= safePopupHeight) {
+        top = clickY - safePopupHeight - offset;
         showAbove = true;
-      } else if (spaceBelow >= popupHeight) {
+      } else if (spaceBelow >= safePopupHeight) {
         top = clickY + offset;
-      } else if (spaceAbove >= popupHeight) {
-        top = clickY - popupHeight - offset;
+      } else if (spaceAbove >= safePopupHeight) {
+        top = clickY - safePopupHeight - offset;
         showAbove = true;
       } else {
-        top = Math.max(margin, (screenH - popupHeight) / 2);
+        top = Math.max(margin, (screenH - safePopupHeight) / 2);
       }
 
       if (top < margin) top = margin;
-      if (top + popupHeight > screenH - margin) {
-        top = screenH - popupHeight - margin;
+      if (top + safePopupHeight > screenH - margin) {
+        top = screenH - safePopupHeight - margin;
       }
 
-      return { left, top, arrowPos, showAbove };
+      return { left, top, arrowPos, showAbove, safePopupWidth, safePopupHeight };
     }, []);
 
     // Закрытие popup при клике вне
@@ -10262,15 +10270,43 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
         // === Emoji анимация в рейтинг модалке ===
         const [emojiAnimating, setEmojiAnimating] = useState({ mood: '', wellbeing: '', stress: '' });
 
-        // Helper: получить градиент цвета по оценке 1-10
+        // Helper: получить градиент цвета по оценке 1-10.
+        // Паттерн намеренно повторяет meal product cards: мягкий partial tint
+        // поверх чистой базы вместо тотальной заливки, чтобы динамические цвета
+        // не ломали визуальную иерархию карточки.
         function getScoreGradient(score) {
-            if (!score || score === 0) return 'linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%)'; // серый
-            if (score <= 2) return 'linear-gradient(135deg, #fecaca 0%, #fca5a5 100%)'; // красный
-            if (score <= 4) return 'linear-gradient(135deg, #fed7aa 0%, #fdba74 100%)'; // оранжевый
-            if (score <= 5) return 'linear-gradient(135deg, #fef08a 0%, #fde047 100%)'; // жёлтый
-            if (score <= 7) return 'linear-gradient(135deg, #d9f99d 0%, #bef264 100%)'; // лайм
-            if (score <= 9) return 'linear-gradient(135deg, #bbf7d0 0%, #86efac 100%)'; // зелёный
-            return 'linear-gradient(135deg, #a7f3d0 0%, #6ee7b7 100%)'; // изумрудный (10)
+            const isDark = typeof document !== 'undefined' && document.documentElement.getAttribute('data-theme') === 'dark';
+            const transparent = isDark ? 'rgba(15, 23, 42, 0)' : 'rgba(255, 255, 255, 0)';
+            const base = isDark ? 'var(--heys-bg-card, #0f172a)' : '#ffffff';
+            const gloss = isDark ? 'rgba(255, 255, 255, 0.035)' : 'rgba(255, 255, 255, 0.72)';
+
+            let edge = isDark ? 'rgba(148, 163, 184, 0.18)' : 'rgba(203, 213, 225, 0.18)';
+            let wash = isDark ? 'rgba(148, 163, 184, 0.08)' : 'rgba(226, 232, 240, 0.22)';
+
+            if (!score || score === 0) {
+                edge = isDark ? 'rgba(148, 163, 184, 0.18)' : 'rgba(203, 213, 225, 0.20)';
+                wash = isDark ? 'rgba(148, 163, 184, 0.07)' : 'rgba(226, 232, 240, 0.20)';
+            } else if (score <= 2) {
+                edge = isDark ? 'rgba(248, 113, 113, 0.24)' : 'rgba(239, 68, 68, 0.17)';
+                wash = isDark ? 'rgba(248, 113, 113, 0.11)' : 'rgba(254, 226, 226, 0.34)';
+            } else if (score <= 4) {
+                edge = isDark ? 'rgba(251, 146, 60, 0.22)' : 'rgba(249, 115, 22, 0.15)';
+                wash = isDark ? 'rgba(251, 146, 60, 0.10)' : 'rgba(255, 237, 213, 0.34)';
+            } else if (score <= 5) {
+                edge = isDark ? 'rgba(250, 204, 21, 0.22)' : 'rgba(234, 179, 8, 0.14)';
+                wash = isDark ? 'rgba(250, 204, 21, 0.09)' : 'rgba(254, 249, 195, 0.34)';
+            } else if (score <= 7) {
+                edge = isDark ? 'rgba(163, 230, 53, 0.20)' : 'rgba(132, 204, 22, 0.14)';
+                wash = isDark ? 'rgba(163, 230, 53, 0.08)' : 'rgba(236, 252, 203, 0.34)';
+            } else if (score <= 9) {
+                edge = isDark ? 'rgba(74, 222, 128, 0.20)' : 'rgba(34, 197, 94, 0.13)';
+                wash = isDark ? 'rgba(74, 222, 128, 0.08)' : 'rgba(220, 252, 231, 0.34)';
+            } else {
+                edge = isDark ? 'rgba(52, 211, 153, 0.22)' : 'rgba(16, 185, 129, 0.14)';
+                wash = isDark ? 'rgba(52, 211, 153, 0.09)' : 'rgba(209, 250, 229, 0.35)';
+            }
+
+            return `linear-gradient(90deg, ${edge} 0%, ${wash} 18%, ${transparent} 44%), linear-gradient(180deg, ${gloss} 0%, ${transparent} 74%), ${base}`;
         }
 
         function getScoreTextColor(score) {
@@ -11235,6 +11271,379 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
     HEYS.dayWaterState = {
         useWaterState
     };
+})(window);
+
+
+/* ===== heys_day_water_v1.js ===== */
+// heys_day_water_v1.js — Water tracking card component
+// Extracted from heys_day_v12.js (PR-2: Step 1/2)
+// Renders water intake tracking with ring progress and presets
+
+; (function (global) {
+  const HEYS = global.HEYS = global.HEYS || {};
+
+  const WEEKDAY_LABELS = ['вс', 'пн', 'вт', 'ср', 'чт', 'пт', 'сб'];
+
+  function formatIsoDate(date) {
+    return date.toISOString().slice(0, 10);
+  }
+
+  function getWaterLsValue(key, fallbackValue) {
+    const lsGet = HEYS?.utils?.lsGet || HEYS?.dayUtils?.lsGet;
+    if (typeof lsGet === 'function') {
+      return lsGet(key, fallbackValue);
+    }
+    try {
+      const raw = localStorage.getItem(key);
+      return raw ? JSON.parse(raw) : fallbackValue;
+    } catch (_error) {
+      return fallbackValue;
+    }
+  }
+
+  function buildWeeklyWaterSeries(day, waterGoal) {
+    const anchorIso = (typeof day?.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(day.date))
+      ? day.date
+      : formatIsoDate(new Date());
+    const anchorDate = new Date(anchorIso + 'T12:00:00');
+    const goal = Math.max(1, Number(waterGoal) || 2000);
+    const series = [];
+
+    for (let offset = 13; offset >= 0; offset--) {
+      const date = new Date(anchorDate);
+      date.setDate(date.getDate() - offset);
+      const iso = formatIsoDate(date);
+      const isToday = iso === anchorIso;
+      const sourceDay = iso === day?.date
+        ? (day || {})
+        : (getWaterLsValue('heys_dayv2_' + iso, null) || {});
+      const waterMl = Math.max(0, Number(sourceDay?.waterMl) || 0);
+      series.push({
+        iso,
+        waterMl,
+        ratio: waterMl / goal,
+        label: WEEKDAY_LABELS[date.getDay()],
+        showLabel: offset % 2 === 1 || isToday,
+        isToday
+      });
+    }
+
+    return {
+      series,
+      avgMl: Math.round(series.reduce((sum, item) => sum + item.waterMl, 0) / Math.max(series.length, 1)),
+      goalHitDays: series.filter(item => item.waterMl >= goal).length,
+      maxRatio: Math.max(1, ...series.map(item => item.ratio), 1.05)
+    };
+  }
+
+  function buildSparklineGeometry(weeklySeries) {
+    const width = 300;
+    const height = 40;
+    const padX = 5;
+    const padY = 5;
+    const maxRatio = Math.max(1, Number(weeklySeries?.maxRatio) || 1);
+    const innerWidth = width - padX * 2;
+    const innerHeight = height - padY * 2;
+    const points = (weeklySeries?.series || []).map((item, index, arr) => {
+      const x = padX + (arr.length <= 1 ? innerWidth / 2 : (innerWidth * index) / (arr.length - 1));
+      const y = padY + innerHeight - (Math.min(item.ratio, maxRatio) / maxRatio) * innerHeight;
+      return { ...item, x: Math.round(x * 10) / 10, y: Math.round(y * 10) / 10 };
+    });
+
+    if (!points.length) {
+      return {
+        width,
+        height,
+        goalY: Math.round((padY + innerHeight) * 10) / 10,
+        linePoints: '',
+        areaPoints: ''
+      };
+    }
+
+    const linePoints = points.map(point => `${point.x},${point.y}`).join(' ');
+    const areaPoints = [
+      `${points[0].x},${height - padY}`,
+      ...points.map(point => `${point.x},${point.y}`),
+      `${points[points.length - 1].x},${height - padY}`
+    ].join(' ');
+    const goalY = Math.round((padY + innerHeight - Math.min(1, maxRatio) / maxRatio * innerHeight) * 10) / 10;
+
+    return { width, height, goalY, points, linePoints, areaPoints };
+  }
+
+  function formatWaterLiters(ml) {
+    if (!ml) return '0 л';
+    return (ml / 1000).toFixed(1).replace('.0', '') + ' л';
+  }
+
+  /**
+   * Render water card
+   * @param {Object} params - Render parameters
+   * @param {Object} params.React - React reference
+   * @param {Object} params.ctx - Context with day, prof, waterGoal, waterGoalBreakdown, waterPresets, 
+   *                              waterMotivation, waterLastDrink, waterAddedAnim, showWaterDrop, showWaterTooltip
+   * @param {Object} params.actions - Action handlers: setDay, haptic, setWaterAddedAnim, setShowWaterDrop,
+   *                                  setShowWaterTooltip, handleWaterRingDown/Up/Leave, openExclusivePopup, addWater, removeWater
+   * @returns {ReactElement} Water card element
+   */
+  function renderWaterCard({ React, ctx, actions }) {
+    // Destructure all context variables
+    const {
+      day, prof,
+      waterGoal, waterGoalBreakdown, waterPresets,
+      waterMotivation, waterLastDrink, waterAddedAnim,
+      showWaterDrop, showWaterTooltip
+    } = ctx;
+
+    // Destructure all actions
+    const {
+      setDay, haptic,
+      setWaterAddedAnim, setShowWaterDrop, setShowWaterTooltip,
+      handleWaterRingDown, handleWaterRingUp, handleWaterRingLeave,
+      openExclusivePopup, addWater, removeWater
+    } = actions;
+
+    const weeklyWater = buildWeeklyWaterSeries(day, waterGoal);
+    const sparkline = buildSparklineGeometry(weeklyWater);
+
+    return React.createElement('div', { id: 'water-card', className: 'compact-water compact-card widget-shadow-diary-glass widget-outline-diary-glass' },
+      React.createElement('div', { className: 'compact-card-header' }, '💧 ВОДА'),
+
+      // Основной контент: кольцо + инфо + пресеты
+      React.createElement('div', { className: 'water-card-content' },
+        // Левая часть: кольцо прогресса + breakdown
+        React.createElement('div', { className: 'water-ring-container' },
+          React.createElement('div', {
+            className: 'water-ring-large',
+            onMouseDown: handleWaterRingDown,
+            onMouseUp: handleWaterRingUp,
+            onMouseLeave: handleWaterRingLeave,
+            onTouchStart: handleWaterRingDown,
+            onTouchEnd: handleWaterRingUp
+          },
+            React.createElement('svg', { viewBox: '0 0 36 36', className: 'water-ring-svg' },
+              React.createElement('circle', { className: 'water-ring-bg', cx: 18, cy: 18, r: 15.9 }),
+              React.createElement('circle', {
+                className: 'water-ring-fill',
+                cx: 18, cy: 18, r: 15.9,
+                style: { strokeDasharray: Math.min(100, ((day.waterMl || 0) / waterGoal) * 100) + ' 100' }
+              })
+            ),
+            React.createElement('div', {
+              className: 'water-ring-center',
+              onClick: (e) => {
+                e.stopPropagation();
+                const rect = e.currentTarget.getBoundingClientRect();
+                openExclusivePopup('metric', {
+                  type: 'water',
+                  x: rect.left + rect.width / 2,
+                  y: rect.top,
+                  data: {
+                    value: day.waterMl || 0,
+                    goal: waterGoal,
+                    ratio: (day.waterMl || 0) / waterGoal,
+                    breakdown: waterGoalBreakdown,
+                    lastDrink: waterLastDrink
+                  }
+                });
+                haptic('light');
+              },
+              style: { cursor: 'pointer' }
+            },
+              React.createElement('span', { className: 'water-ring-value' },
+                (day.waterMl || 0) >= 1000
+                  ? ((day.waterMl || 0) / 1000).toFixed(1).replace('.0', '')
+                  : (day.waterMl || 0)
+              ),
+              React.createElement('span', { className: 'water-ring-unit' },
+                (day.waterMl || 0) >= 1000 ? 'л' : 'мл'
+              )
+            )
+          ),
+          // Анимация добавления (над кольцом)
+          waterAddedAnim && React.createElement('span', {
+            className: 'water-card-anim water-card-anim-above',
+            key: 'water-anim-' + Date.now()
+          }, waterAddedAnim),
+          // Краткий breakdown под кольцом
+          React.createElement('div', { className: 'water-goal-breakdown' },
+            React.createElement('span', { className: 'water-breakdown-item' },
+              '⚖️ ' + waterGoalBreakdown.base + 'мл'
+            ),
+            waterGoalBreakdown.stepsBonus > 0 && React.createElement('span', { className: 'water-breakdown-item water-breakdown-bonus' },
+              '👟 +' + waterGoalBreakdown.stepsBonus
+            ),
+            waterGoalBreakdown.trainBonus > 0 && React.createElement('span', { className: 'water-breakdown-item water-breakdown-bonus' },
+              '🏃 +' + waterGoalBreakdown.trainBonus
+            ),
+            waterGoalBreakdown.seasonBonus > 0 && React.createElement('span', { className: 'water-breakdown-item water-breakdown-bonus' },
+              '☀️ +' + waterGoalBreakdown.seasonBonus
+            ),
+            waterGoalBreakdown.cycleBonus > 0 && React.createElement('span', { className: 'water-breakdown-item water-breakdown-bonus water-breakdown-cycle' },
+              '🌸 +' + waterGoalBreakdown.cycleBonus
+            )
+          ),
+          // Напоминание "Давно не пил" (если >2ч)
+          waterLastDrink && waterLastDrink.isLong && (day.waterMl || 0) < waterGoal && React.createElement('div', {
+            className: 'water-reminder'
+          }, '⏰ ' + waterLastDrink.text)
+        ),
+
+        // Тултип с полной формулой (при долгом нажатии)
+        showWaterTooltip && React.createElement('div', {
+          className: 'water-formula-tooltip',
+          onClick: () => setShowWaterTooltip(false)
+        },
+          React.createElement('div', { className: 'water-formula-title' }, '📊 Расчёт нормы воды'),
+          React.createElement('div', { className: 'water-formula-row' },
+            'Базовая: ' + waterGoalBreakdown.weight + ' кг × ' + waterGoalBreakdown.coef + ' мл = ' + waterGoalBreakdown.baseRaw + ' мл'
+          ),
+          waterGoalBreakdown.ageNote && React.createElement('div', { className: 'water-formula-row water-formula-sub' },
+            'Возраст: ' + waterGoalBreakdown.ageNote
+          ),
+          waterGoalBreakdown.stepsBonus > 0 && React.createElement('div', { className: 'water-formula-row' },
+            'Шаги: ' + (day.steps || 0).toLocaleString() + ' (' + waterGoalBreakdown.stepsCount + '×5000) → +' + waterGoalBreakdown.stepsBonus + ' мл'
+          ),
+          waterGoalBreakdown.trainBonus > 0 && React.createElement('div', { className: 'water-formula-row' },
+            'Тренировки: ' + waterGoalBreakdown.trainCount + ' шт → +' + waterGoalBreakdown.trainBonus + ' мл'
+          ),
+          waterGoalBreakdown.seasonBonus > 0 && React.createElement('div', { className: 'water-formula-row' },
+            'Сезон: ☀️ Лето → +' + waterGoalBreakdown.seasonBonus + ' мл'
+          ),
+          waterGoalBreakdown.cycleBonus > 0 && React.createElement('div', { className: 'water-formula-row water-formula-cycle' },
+            '🌸 Особый период → +' + waterGoalBreakdown.cycleBonus + ' мл'
+          ),
+          React.createElement('div', { className: 'water-formula-total' },
+            'Итого: ' + (waterGoal / 1000).toFixed(1) + ' л'
+          ),
+          React.createElement('div', { className: 'water-formula-hint' }, 'Нажми, чтобы закрыть')
+        ),
+
+        // Правая часть: пресеты + прогресс
+        React.createElement('div', { className: 'water-card-right' },
+          // Верхняя строка: мотивация + кнопка удаления
+          React.createElement('div', { className: 'water-top-row' },
+            React.createElement('div', { className: 'water-motivation-inline' },
+              React.createElement('span', { className: 'water-motivation-emoji' }, waterMotivation.emoji),
+              React.createElement('span', { className: 'water-motivation-text' }, waterMotivation.text)
+            ),
+            // Кнопка уменьшения (справа)
+            (day.waterMl || 0) > 0 && React.createElement('button', {
+              className: 'water-minus-compact',
+              onClick: () => removeWater(100)
+            }, '−100')
+          ),
+
+          // Прогресс-бар с волной
+          React.createElement('div', { className: 'water-progress-inline' },
+            // 💧 Падающая капля
+            showWaterDrop && React.createElement('div', { className: 'water-drop-container' },
+              React.createElement('div', { className: 'water-drop' }),
+              React.createElement('div', { className: 'water-splash' })
+            ),
+            // Заливка
+            React.createElement('div', {
+              className: 'water-progress-fill',
+              style: { width: Math.min(100, ((day.waterMl || 0) / waterGoal) * 100) + '%' }
+            }),
+            // Пузырьки (на уровне контейнера, чтобы не обрезались)
+            (day.waterMl || 0) > 0 && React.createElement('div', { className: 'water-bubbles' },
+              React.createElement('div', { className: 'water-bubble' }),
+              React.createElement('div', { className: 'water-bubble' }),
+              React.createElement('div', { className: 'water-bubble' }),
+              React.createElement('div', { className: 'water-bubble' }),
+              React.createElement('div', { className: 'water-bubble' })
+            ),
+            // Блик сверху
+            React.createElement('div', { className: 'water-shine' }),
+            // Волна на краю заливки
+            (day.waterMl || 0) > 0 && ((day.waterMl || 0) / waterGoal) < 1 && React.createElement('div', {
+              className: 'water-wave-edge',
+              style: { left: Math.min(100, ((day.waterMl || 0) / waterGoal) * 100) + '%' }
+            })
+          ),
+
+          // Пресеты в ряд
+          React.createElement('div', { className: 'water-presets-row' },
+            waterPresets.map(preset =>
+              React.createElement('button', {
+                key: preset.ml,
+                className: 'water-preset-compact',
+                // 🚀 PERF R34: defer addWater — day data save + re-render (88ms → ~0ms click)
+                onClick: () => setTimeout(() => addWater(preset.ml, true), 0)
+              },
+                React.createElement('span', { className: 'water-preset-icon' }, preset.icon),
+                React.createElement('span', { className: 'water-preset-ml' }, '+' + preset.ml)
+              )
+            )
+          )
+        )
+      ),
+
+      React.createElement('div', {
+        className: 'water-weekly',
+        'aria-label': `Вода за 14 дней: в среднем ${formatWaterLiters(weeklyWater.avgMl)}, цель выполнена ${weeklyWater.goalHitDays} из 14 дней`
+      },
+        React.createElement('div', { className: 'water-weekly-chart-shell' },
+          React.createElement('span', { className: 'water-weekly-goal-meta' }, `${weeklyWater.goalHitDays}/14`),
+          React.createElement('svg', {
+            className: 'water-weekly-chart',
+            viewBox: `0 0 ${sparkline.width} ${sparkline.height}`,
+            preserveAspectRatio: 'none',
+            role: 'img',
+            'aria-hidden': 'true'
+          },
+            React.createElement('defs', null,
+              React.createElement('linearGradient', { id: 'waterWeeklyArea', x1: '0%', y1: '0%', x2: '0%', y2: '100%' },
+                React.createElement('stop', { offset: '0%', stopColor: 'rgba(14,165,233,0.34)' }),
+                React.createElement('stop', { offset: '100%', stopColor: 'rgba(14,165,233,0.02)' })
+              ),
+              React.createElement('linearGradient', { id: 'waterWeeklyStroke', x1: '0%', y1: '0%', x2: '100%', y2: '0%' },
+                React.createElement('stop', { offset: '0%', stopColor: '#38bdf8' }),
+                React.createElement('stop', { offset: '100%', stopColor: '#0284c7' })
+              )
+            ),
+            React.createElement('line', {
+              className: 'water-weekly-goal-line',
+              x1: 0,
+              y1: sparkline.goalY,
+              x2: sparkline.width,
+              y2: sparkline.goalY
+            }),
+            sparkline.linePoints && React.createElement('polyline', {
+              className: 'water-weekly-line',
+              points: sparkline.linePoints
+            }),
+            (sparkline.points || []).map(point => React.createElement('circle', {
+              key: point.iso,
+              className: point.isToday
+                ? 'water-weekly-dot water-weekly-dot--today'
+                : point.ratio >= 1
+                  ? 'water-weekly-dot water-weekly-dot--goal'
+                  : 'water-weekly-dot',
+              cx: point.x,
+              cy: point.y,
+              r: point.isToday ? 3.0 : point.ratio >= 1 ? 2.5 : 1.4
+            }))
+          )
+        )
+      ),
+
+      // Лайфхак внизу карточки — на всю ширину
+      React.createElement('div', { className: 'water-tip' },
+        React.createElement('span', { className: 'water-tip-icon' }, '💡'),
+        React.createElement('span', { className: 'water-tip-text' },
+          'Утром поставь 4-5 бутылок 0,5л на кухне — вечером точно знаешь сколько выпил'
+        )
+      )
+    );
+  }
+
+  // Export
+  HEYS.dayWater = {
+    render: renderWaterCard
+  };
+
 })(window);
 
 
@@ -12220,48 +12629,6 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                 ),
 
                 (!isMobile || mobileSubTab === 'stats') && orphanAlert,
-
-                // Day Score + Risk Radar compact badge row
-                (!isMobile || mobileSubTab === 'stats') && HEYS.DayScore && (function () {
-                    const U = HEYS.utils || {};
-                    const dayData = HEYS.DayData?.getCurrentDay?.() || {};
-                    const profile = U.lsGet?.('heys_profile', {}) || {};
-                    const dayTotLocal = HEYS.DayData?.getDayTot?.(dayData) || {};
-                    const normAbsLocal = HEYS.norms?.getNormAbs?.(profile, profile?.pIndex || 0) || {};
-                    const waterGoalLocal = HEYS.utils?.calculateWaterGoal?.(profile.weight) || 2000;
-                    const pIndexLocal = profile?.pIndex || 0;
-
-                    const ds = HEYS.DayScore.calculateDayScore({ dayData, profile, dayTot: dayTotLocal, normAbs: normAbsLocal, waterGoal: waterGoalLocal, pIndex: pIndexLocal });
-                    const rr = HEYS.RiskRadar?.calculate?.({ dayData, profile, dayTot: dayTotLocal, normAbs: normAbsLocal, pIndex: pIndexLocal });
-
-                    if (!ds) return null;
-
-                    var dsColor = ds.score >= 85 ? '#10b981' : ds.score >= 70 ? '#22c55e' : ds.score >= 50 ? '#eab308' : ds.score >= 30 ? '#f97316' : '#ef4444';
-                    var rrIcon = !rr ? '🟢' : rr.score >= 70 ? '🔴' : rr.score >= 40 ? '🟠' : rr.score >= 20 ? '🟡' : '🟢';
-                    var rrColor = !rr ? '#10b981' : rr.score >= 70 ? '#ef4444' : rr.score >= 40 ? '#f97316' : rr.score >= 20 ? '#eab308' : '#10b981';
-
-                    return React.createElement('div', {
-                        className: 'day-score-badge-row',
-                        style: { display: 'flex', gap: '8px', padding: '8px 16px 0', justifyContent: 'center' }
-                    },
-                        React.createElement('div', {
-                            className: 'day-score-badge',
-                            style: { display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 14px', borderRadius: '12px', background: 'var(--heys-card-bg, #1e293b)', flex: '1', justifyContent: 'center' }
-                        },
-                            React.createElement('span', { style: { fontSize: '0.75rem', color: 'var(--heys-text-secondary, #94a3b8)' } }, '⭐ Оценка дня'),
-                            React.createElement('span', { style: { fontSize: '1.1rem', fontWeight: 700, color: dsColor } }, Math.round(ds.score))
-                        ),
-                        rr && React.createElement('div', {
-                            className: 'risk-radar-badge',
-                            style: { display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 14px', borderRadius: '12px', background: 'var(--heys-card-bg, #1e293b)', flex: '1', justifyContent: 'center' }
-                        },
-                            React.createElement('span', { style: { fontSize: '0.75rem' } }, rrIcon),
-                            React.createElement('span', { style: { fontSize: '0.75rem', color: 'var(--heys-text-secondary, #94a3b8)' } }, 'Риск'),
-                            React.createElement('span', { style: { fontSize: '1.1rem', fontWeight: 700, color: rrColor } }, Math.round(rr.score))
-                        )
-                    );
-                })(),
-
                 (!isMobile || mobileSubTab === 'stats') && statsBlock,
                 (!isMobile || mobileSubTab === 'stats') && waterCard,
                 (!isMobile || mobileSubTab === 'stats') && compactActivity,
@@ -14048,6 +14415,9 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     // storeRecommendation → sync spam → setPendingCount → parent re-render loops.
     // Solution: lazy-init once with the React instance captured on first call.
     let _LazyMount = null;
+    let _DiaryCompactSummary = null;
+
+    const HEALTH_TREND_PERIOD_STORAGE_KEY = 'heys_diary_health_trend_period_v1';
     function getLazyMount(React) {
         if (_LazyMount) return _LazyMount;
         _LazyMount = React.memo(function LazyMount(props) {
@@ -14079,6 +14449,246 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         });
         console.info('[HEYS.diary] ✅ LazyMount component created (stable type, R16-fix)');
         return _LazyMount;
+    }
+
+    function getStoredHealthTrendPeriod() {
+        try {
+            const raw = window.localStorage?.getItem?.(HEALTH_TREND_PERIOD_STORAGE_KEY);
+            return Number(raw) === 7 ? 7 : 30;
+        } catch (_) {
+            return 30;
+        }
+    }
+
+    function saveStoredHealthTrendPeriod(periodDays) {
+        try {
+            window.localStorage?.setItem?.(HEALTH_TREND_PERIOD_STORAGE_KEY, String(periodDays));
+        } catch (_) {
+            // noop
+        }
+    }
+
+    function getSafeNormAbs(app, profile, pIndex, normAbs) {
+        const current = normAbs && typeof normAbs === 'object' ? normAbs : {};
+        if (Number(current.kcal) > 0 || Number(current.prot) > 0) return current;
+
+        let resolved = app.norms?.getNormAbs?.(profile, pIndex) || {};
+        if (Number(resolved.kcal) > 0 || Number(resolved.prot) > 0) return resolved;
+
+        if (typeof app.TDEE?.calculate === 'function') {
+            const tdee = app.TDEE.calculate(profile || {});
+            if (tdee && tdee.optimum > 0) {
+                const weight = Number(profile?.weight || profile?.baseWeight || 70) || 70;
+                resolved = {
+                    kcal: tdee.optimum,
+                    prot: Math.round(weight * 1.6)
+                };
+            }
+        }
+
+        return resolved || {};
+    }
+
+    function getSafeDayScoreSummary(app, options = {}) {
+        const dayData = options.dayData || {};
+        const profile = options.profile || {};
+        const pIndex = options.pIndex || profile?.pIndex || 0;
+        const waterGoal = app.utils?.calculateWaterGoal?.(profile?.weight) || 2000;
+        const dayTot = (options.dayTot && Object.keys(options.dayTot).length)
+            ? options.dayTot
+            : (app.DayData?.getDayTot?.(dayData)
+                || (typeof app.dayCalculations?.calculateDayTotals === 'function'
+                    ? app.dayCalculations.calculateDayTotals(dayData)
+                    : {}));
+        const normAbs = getSafeNormAbs(app, profile, pIndex, options.normAbs);
+
+        const dayScore = typeof app.DayScore?.calculateDayScore === 'function'
+            ? app.DayScore.calculateDayScore({
+                dayData,
+                profile,
+                dayTot,
+                normAbs,
+                waterGoal,
+                pIndex
+            })
+            : null;
+
+        const riskRadar = typeof app.RiskRadar?.calculate === 'function'
+            ? app.RiskRadar.calculate({
+                dayData,
+                profile,
+                dayTot,
+                normAbs,
+                pIndex
+            })
+            : null;
+
+        return {
+            dayData,
+            dayTot,
+            normAbs,
+            waterGoal,
+            pIndex,
+            dayScore,
+            riskRadar
+        };
+    }
+
+    function getHealthTrendLevel(score) {
+        const numericScore = Number(score) || 0;
+        if (numericScore >= 85) return { id: 'excellent', color: '#10b981' };
+        if (numericScore >= 70) return { id: 'good', color: '#22c55e' };
+        if (numericScore >= 50) return { id: 'attention', color: '#eab308' };
+        if (numericScore >= 30) return { id: 'warning', color: '#f97316' };
+        return { id: 'critical', color: '#ef4444' };
+    }
+
+    function getSafeHealthTrendSummary(app, options = {}) {
+        const periodDays = Number(options.periodDays) === 7 ? 7 : 30;
+
+        try {
+            if (typeof app.Widgets?.data?.getHealthTrendData === 'function') {
+                const widgetData = app.Widgets.data.getHealthTrendData({ periodDays });
+                if (widgetData?.hasData) {
+                    return {
+                        ...widgetData,
+                        level: getHealthTrendLevel(widgetData.score)
+                    };
+                }
+            }
+
+            const analyze = app.PredictiveInsights?.analyze;
+            if (typeof analyze !== 'function') return null;
+
+            const result = analyze({ daysBack: periodDays });
+            if (!result?.available || !result?.healthScore) return null;
+
+            const score = Number(result.healthScore.total) || 0;
+            const hasData = score > 0 || Number(result.daysWithData) >= 3;
+            if (!hasData) return null;
+
+            return {
+                hasData,
+                score,
+                periodDays,
+                daysWithData: Number(result.daysWithData) || 0,
+                level: getHealthTrendLevel(score)
+            };
+        } catch (error) {
+            console.warn('[HEYS.diary] Health trend summary unavailable', error?.message || error);
+            return null;
+        }
+    }
+
+    function getDiaryCompactSummaryComponent(React) {
+        if (_DiaryCompactSummary) return _DiaryCompactSummary;
+
+        _DiaryCompactSummary = React.memo(function DiaryCompactSummary(props) {
+            const {
+                app,
+                date,
+                dayData,
+                profile,
+                dayTot,
+                normAbs,
+                pIndex
+            } = props || {};
+
+            const [trendPeriodDays, setTrendPeriodDays] = React.useState(getStoredHealthTrendPeriod);
+
+            const summary = React.useMemo(function computeSummary() {
+                return getSafeDayScoreSummary(app, {
+                    dayData,
+                    profile,
+                    dayTot,
+                    normAbs,
+                    pIndex
+                });
+            }, [app, dayData, profile, dayTot, normAbs, pIndex, date]);
+
+            const healthTrendResult = React.useMemo(function computeHealthTrend() {
+                return getSafeHealthTrendSummary(app, { periodDays: trendPeriodDays });
+            }, [app, trendPeriodDays, date, dayData, profile, dayTot, normAbs, pIndex]);
+
+            const dayScoreResult = summary.dayScore;
+            const riskRadarResult = summary.riskRadar;
+
+            const handleTrendPeriodChange = React.useCallback(function handleChange(nextPeriod, event) {
+                event?.stopPropagation?.();
+                const normalized = Number(nextPeriod) === 7 ? 7 : 30;
+                setTrendPeriodDays(function update(prev) {
+                    if (prev === normalized) return prev;
+                    saveStoredHealthTrendPeriod(normalized);
+                    console.info('[HEYS.diary] Health trend period changed', { periodDays: normalized });
+                    return normalized;
+                });
+            }, []);
+
+            if (!dayScoreResult && !riskRadarResult && !healthTrendResult) return null;
+
+            return React.createElement('section', {
+                className: 'diary-compact-summary',
+                'aria-label': 'Оценка дня, риск и тренд'
+            },
+                dayScoreResult && React.createElement('div', {
+                    className: 'diary-compact-summary__pill diary-compact-summary__pill--day',
+                    style: {
+                        '--summary-accent': dayScoreResult?.level?.color || '#22c55e',
+                        '--summary-accent-border': (dayScoreResult?.level?.color || '#22c55e') + '33',
+                        '--summary-accent-border-dark': (dayScoreResult?.level?.color || '#22c55e') + '44'
+                    }
+                },
+                    React.createElement('span', { className: 'diary-compact-summary__label' }, 'Оценка дня'),
+                    React.createElement('span', { className: 'diary-compact-summary__value' }, Math.round(Number(dayScoreResult?.score) || 0))
+                ),
+                riskRadarResult && React.createElement('div', {
+                    className: 'diary-compact-summary__pill diary-compact-summary__pill--risk',
+                    style: {
+                        '--summary-accent': riskRadarResult?.level?.color || '#22c55e',
+                        '--summary-accent-border': (riskRadarResult?.level?.color || '#22c55e') + '33',
+                        '--summary-accent-border-dark': (riskRadarResult?.level?.color || '#22c55e') + '44'
+                    }
+                },
+                    React.createElement('span', { className: 'diary-compact-summary__label' }, 'Риск'),
+                    React.createElement('span', { className: 'diary-compact-summary__value' }, Math.round(Number(riskRadarResult?.score) || 0))
+                ),
+                healthTrendResult && React.createElement('div', {
+                    className: 'diary-compact-summary__pill diary-compact-summary__pill--trend',
+                    style: {
+                        '--summary-accent': healthTrendResult?.level?.color || '#22c55e',
+                        '--summary-accent-border': (healthTrendResult?.level?.color || '#22c55e') + '33',
+                        '--summary-accent-border-dark': (healthTrendResult?.level?.color || '#22c55e') + '44'
+                    }
+                },
+                    React.createElement('div', {
+                        className: 'diary-compact-summary__metric diary-compact-summary__metric--trend'
+                    },
+                        React.createElement('span', { className: 'diary-compact-summary__label' }, 'Тренд'),
+                        React.createElement('span', { className: 'diary-compact-summary__value' }, Math.round(Number(healthTrendResult?.score) || 0))
+                    ),
+                    React.createElement('div', {
+                        className: 'diary-compact-summary__range',
+                        role: 'group',
+                        'aria-label': 'Период тренда'
+                    },
+                        [7, 30].map(function renderPeriodButton(days) {
+                            const isActive = trendPeriodDays === days;
+                            return React.createElement('button', {
+                                key: days,
+                                type: 'button',
+                                className: 'diary-compact-summary__range-btn' + (isActive ? ' is-active' : ''),
+                                'aria-pressed': isActive ? 'true' : 'false',
+                                onClick: function onClick(event) {
+                                    handleTrendPeriodChange(days, event);
+                                }
+                            }, days + ' дн.');
+                        })
+                    )
+                )
+            );
+        });
+
+        return _DiaryCompactSummary;
     }
 
     const renderDiarySection = (params) => {
@@ -14116,7 +14726,6 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
         const app = rootHEYs || HEYS;
         const showDiary = !isMobile || mobileSubTab === 'diary';
-
         const ensureSupplementsModule = () => {
             if (app.Supplements?.renderCard) return true;
             if (typeof document === 'undefined') return false;
@@ -14208,6 +14817,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         // PERF R16: LazyMount — IntersectionObserver gate for below-fold slots.
         // Component type is stable (defined once at module scope via getLazyMount).
         const LazyMount = getLazyMount(React);
+        const DiaryCompactSummary = getDiaryCompactSummaryComponent(React);
 
         // PERF v8.3: Deferred card slot — skeleton only after postboot completes
         // If postboot is still loading scripts, return null (invisible).
@@ -14305,6 +14915,15 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         if (!showDiary) return insulinIndicator;
 
         return React.createElement(React.Fragment, null,
+            React.createElement(DiaryCompactSummary, {
+                app,
+                date,
+                dayData: day,
+                profile: prof,
+                dayTot,
+                normAbs,
+                pIndex
+            }),
             React.createElement('h2', {
                 id: 'day-remaining-heading',
                 style: {
@@ -14790,6 +15409,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
     const HEYS = global.HEYS = global.HEYS || {};
     const React = global.React;
+    const ReactDOM = global.ReactDOM;
     const trackError = (err, context) => {
         if (HEYS.analytics?.trackError) {
             HEYS.analytics.trackError(err, context);
@@ -15141,25 +15761,13 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             'data-meal-time': meal?.time || '',
             style: mealCardStyle,
         },
-            qualityLineColor !== 'transparent' && React.createElement('div', {
-                className: 'meal-quality-line',
-                style: {
-                    position: 'absolute',
-                    left: 0,
-                    top: 0,
-                    bottom: 0,
-                    width: '5px',
-                    borderRadius: '12px 0 0 12px',
-                    background: qualityLineColor,
-                    transition: 'background 0.3s ease',
-                },
-            }),
             React.createElement('div', {
                 className: 'meal-header-inside meal-type-' + mealTypeInfo.type,
                 style: {
                     display: 'flex',
                     flexDirection: 'column',
                     gap: '8px',
+                    position: 'relative',
                     background: qualityLineColor !== 'transparent'
                         ? qualityLineColor + '1F'
                         : undefined,
@@ -15451,28 +16059,54 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
                     const gramsClass = G > 500 ? 'grams-danger' : G > 300 ? 'grams-warn' : '';
 
-                    const getHarmBg = (h) => {
-                        if (h == null) return document.documentElement.getAttribute('data-theme') === 'dark' ? null : '#fff';
+                    const getHarmToneStyle = (h) => {
+                        if (h == null) return null;
                         const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-                        if (isDark) {
-                            if (h <= 2) return 'rgba(16, 185, 129, 0.20)';
-                            if (h <= 4) return 'rgba(16, 185, 129, 0.12)';
-                            if (h <= 6) return 'rgba(59, 130, 246, 0.15)';
-                            if (h <= 8) return 'rgba(239, 68, 68, 0.15)';
-                            return 'rgba(239, 68, 68, 0.25)';
+
+                        let accent = '#60a5fa';
+                        let edge = isDark ? 'rgba(96, 165, 250, 0.18)' : 'rgba(59, 130, 246, 0.14)';
+                        let wash = isDark ? 'rgba(96, 165, 250, 0.07)' : 'rgba(59, 130, 246, 0.06)';
+                        let border = isDark ? 'rgba(96, 165, 250, 0.22)' : 'rgba(59, 130, 246, 0.16)';
+
+                        if (h <= 2) {
+                            accent = isDark ? '#34d399' : '#10b981';
+                            edge = isDark ? 'rgba(52, 211, 153, 0.16)' : 'rgba(16, 185, 129, 0.11)';
+                            wash = isDark ? 'rgba(52, 211, 153, 0.05)' : 'rgba(16, 185, 129, 0.04)';
+                            border = isDark ? 'rgba(52, 211, 153, 0.18)' : 'rgba(16, 185, 129, 0.12)';
+                        } else if (h <= 4) {
+                            accent = isDark ? '#4ade80' : '#22c55e';
+                            edge = isDark ? 'rgba(74, 222, 128, 0.14)' : 'rgba(34, 197, 94, 0.09)';
+                            wash = isDark ? 'rgba(74, 222, 128, 0.045)' : 'rgba(34, 197, 94, 0.035)';
+                            border = isDark ? 'rgba(74, 222, 128, 0.16)' : 'rgba(34, 197, 94, 0.11)';
+                        } else if (h <= 6) {
+                            accent = isDark ? '#60a5fa' : '#3b82f6';
+                            edge = isDark ? 'rgba(96, 165, 250, 0.19)' : 'rgba(59, 130, 246, 0.13)';
+                            wash = isDark ? 'rgba(96, 165, 250, 0.07)' : 'rgba(59, 130, 246, 0.05)';
+                            border = isDark ? 'rgba(96, 165, 250, 0.22)' : 'rgba(59, 130, 246, 0.15)';
+                        } else if (h <= 8) {
+                            accent = isDark ? '#fb7185' : '#ef4444';
+                            edge = isDark ? 'rgba(251, 113, 133, 0.18)' : 'rgba(239, 68, 68, 0.12)';
+                            wash = isDark ? 'rgba(251, 113, 133, 0.07)' : 'rgba(239, 68, 68, 0.05)';
+                            border = isDark ? 'rgba(251, 113, 133, 0.22)' : 'rgba(239, 68, 68, 0.15)';
+                        } else {
+                            accent = isDark ? '#f87171' : '#ef4444';
+                            edge = isDark ? 'rgba(248, 113, 113, 0.24)' : 'rgba(239, 68, 68, 0.17)';
+                            wash = isDark ? 'rgba(248, 113, 113, 0.10)' : 'rgba(239, 68, 68, 0.07)';
+                            border = isDark ? 'rgba(248, 113, 113, 0.26)' : 'rgba(239, 68, 68, 0.18)';
                         }
-                        if (h <= 1) return '#34d399';
-                        if (h <= 2) return '#6ee7b7';
-                        if (h <= 3) return '#a7f3d0';
-                        if (h <= 4) return '#d1fae5';
-                        if (h <= 5) return '#bae6fd';
-                        if (h <= 6) return '#e0f2fe';
-                        if (h <= 7) return '#fecaca';
-                        if (h <= 8) return '#fee2e2';
-                        if (h <= 9) return '#fecdd3';
-                        return '#f87171';
+
+                        const dangerGlow = h > 6
+                            ? `, radial-gradient(circle at 100% 0%, ${isDark ? (h > 8 ? 'rgba(248, 113, 113, 0.16)' : 'rgba(251, 113, 133, 0.12)') : (h > 8 ? 'rgba(239, 68, 68, 0.10)' : 'rgba(244, 63, 94, 0.08)')} 0%, rgba(255, 255, 255, 0) 56%)`
+                            : '';
+
+                        return {
+                            backgroundColor: isDark ? 'var(--heys-bg-card)' : '#ffffff',
+                            backgroundImage: `linear-gradient(90deg, ${edge} 0%, ${wash} 18%, rgba(255, 255, 255, 0) 42%)${dangerGlow}, linear-gradient(180deg, ${isDark ? 'rgba(255, 255, 255, 0.03)' : 'rgba(255, 255, 255, 0.65)'} 0%, rgba(255, 255, 255, 0) 72%)`,
+                            borderColor: border,
+                            boxShadow: `inset 3px 0 0 ${accent}`,
+                        };
                     };
-                    const harmBg = getHarmBg(harmVal);
+                    const harmToneStyle = getHarmToneStyle(harmVal);
 
                     const getHarmBadge = (h) => {
                         if (h == null) return null;
@@ -16003,7 +16637,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                     };
                     const alternative = findAlternative(p, products);
 
-                    const cardContent = React.createElement('div', { className: 'mpc', style: { background: harmBg } },
+                    const cardContent = React.createElement('div', { className: 'mpc', style: harmToneStyle || undefined },
                         React.createElement('div', { className: 'mpc-row1' },
                             categoryIcon && React.createElement('span', { className: 'mpc-category-icon' }, categoryIcon),
                             React.createElement('span', { className: 'mpc-name' }, p.name),
@@ -16086,7 +16720,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                         }, cardContent);
                     }
 
-                    return React.createElement('div', { key: it.id, className: 'mpc', style: { marginBottom: '6px', background: harmBg } },
+                    return React.createElement('div', { key: it.id, className: 'mpc', style: harmToneStyle ? { marginBottom: '6px', ...harmToneStyle } : { marginBottom: '6px' } },
                         React.createElement('div', { className: 'mpc-row1' },
                             React.createElement('span', { className: 'mpc-name' }, p.name),
                             React.createElement('input', {
@@ -16576,145 +17210,157 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                     addProductToMeal,
                 })),
 
-                showWaveCalcPopup && currentWave && React.createElement('div', {
-                    className: 'wave-details-overlay',
-                    onClick: (e) => { if (e.target === e.currentTarget) setShowWaveCalcPopup(false); },
-                    style: {
-                        position: 'fixed',
-                        top: 0, left: 0, right: 0, bottom: 0,
-                        background: 'rgba(0,0,0,0.5)',
-                        zIndex: 9999,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        padding: '20px',
-                    },
-                },
-                    React.createElement('div', {
-                        className: 'wave-details-popup',
+                showWaveCalcPopup && currentWave && (() => {
+                    const overlay = React.createElement('div', {
+                        className: 'wave-details-overlay',
+                        onClick: (e) => { if (e.target === e.currentTarget) setShowWaveCalcPopup(false); },
                         style: {
-                            background: '#fff',
-                            borderRadius: '16px',
+                            position: 'fixed',
+                            inset: 0,
+                            width: '100vw',
+                            height: '100dvh',
+                            minHeight: '100dvh',
+                            background: 'rgba(0,0,0,0.5)',
+                            zIndex: 9999,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
                             padding: '20px',
-                            maxWidth: '360px',
-                            width: '100%',
-                            maxHeight: '80vh',
-                            overflowY: 'auto',
-                            boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
+                            overflow: 'hidden',
+                            boxSizing: 'border-box',
                         },
                     },
                         React.createElement('div', {
-                            className: 'wave-details-popup__header',
+                            className: 'wave-details-popup',
                             style: {
-                                display: 'flex',
-                                justifyContent: 'space-between',
-                                alignItems: 'center',
-                                marginBottom: '16px',
+                                background: '#fff',
+                                borderRadius: '16px',
+                                padding: '20px',
+                                maxWidth: 'min(360px, calc(100vw - 24px))',
+                                width: '100%',
+                                maxHeight: 'calc(100dvh - 24px)',
+                                overflowY: 'auto',
+                                boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
+                                boxSizing: 'border-box',
                             },
                         },
-                            React.createElement('h3', {
-                                className: 'wave-details-popup__title',
-                                style: { margin: 0, fontSize: '16px', fontWeight: 600, color: '#1f2937' },
-                            }, 'Расчёт волны'),
+                            React.createElement('div', {
+                                className: 'wave-details-popup__header',
+                                style: {
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    alignItems: 'center',
+                                    marginBottom: '16px',
+                                },
+                            },
+                                React.createElement('h3', {
+                                    className: 'wave-details-popup__title',
+                                    style: { margin: 0, fontSize: '16px', fontWeight: 600, color: '#1f2937' },
+                                }, 'Расчёт волны'),
+                                React.createElement('button', {
+                                    className: 'wave-details-popup__close',
+                                    onClick: () => setShowWaveCalcPopup(false),
+                                    style: {
+                                        background: 'none', border: 'none', fontSize: '20px',
+                                        cursor: 'pointer', color: '#9ca3af', padding: '4px',
+                                    },
+                                }, '×'),
+                            ),
+
+                            React.createElement('div', {
+                                className: 'wave-details-popup__hero',
+                                style: {
+                                    background: 'linear-gradient(135deg, #3b82f6, #2563eb)',
+                                    borderRadius: '12px',
+                                    padding: '16px',
+                                    marginBottom: '16px',
+                                    textAlign: 'center',
+                                    color: '#fff',
+                                },
+                            },
+                                React.createElement('div', { style: { fontSize: '12px', opacity: 0.9, marginBottom: '4px' } }, 'Длина волны'),
+                                React.createElement('div', { style: { fontSize: '28px', fontWeight: 700 } }, (currentWave.waveHours || currentWave.duration / 60).toFixed(1) + 'ч'),
+                                React.createElement('div', { style: { fontSize: '11px', opacity: 0.8, marginTop: '4px' } }, currentWave.timeDisplay + ' → ' + currentWave.endTimeDisplay),
+                            ),
+
+                            React.createElement('div', {
+                                className: 'wave-details-popup__formula',
+                                style: {
+                                    background: '#f8fafc',
+                                    borderRadius: '10px',
+                                    padding: '12px',
+                                    marginBottom: '16px',
+                                    fontSize: '11px',
+                                    fontFamily: 'monospace',
+                                    color: '#64748b',
+                                    textAlign: 'center',
+                                },
+                            }, 'База × Множитель = ' + (currentWave.baseWaveHours || 3).toFixed(1) + 'ч × '
+                            + (currentWave.finalMultiplier || 1).toFixed(2) + ' = ' + (currentWave.waveHours || currentWave.duration / 60).toFixed(1) + 'ч'),
+
+                            React.createElement('div', { className: 'wave-details-popup__section', style: { marginBottom: '12px' } },
+                                React.createElement('div', { className: 'wave-details-popup__section-title', style: { fontSize: '12px', fontWeight: 600, color: '#1f2937', marginBottom: '8px' } }, '🍽️ Факторы еды'),
+                                React.createElement('div', { className: 'wave-details-popup__row', style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
+                                    React.createElement('span', { style: { color: '#64748b' } }, 'ГИ'),
+                                    React.createElement('span', { style: { fontWeight: 500 } }, Math.round(currentWave.gi || 0)),
+                                ),
+                                React.createElement('div', { className: 'wave-details-popup__row', style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
+                                    React.createElement('span', { style: { color: '#64748b' } }, 'GL (нагрузка)'),
+                                    React.createElement('span', { style: { fontWeight: 500, color: currentWave.gl < 10 ? '#22c55e' : currentWave.gl > 20 ? '#ef4444' : '#1f2937' } }, (currentWave.gl || 0).toFixed(1)),
+                                ),
+                                React.createElement('div', { className: 'wave-details-popup__row', style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
+                                    React.createElement('span', { style: { color: '#64748b' } }, 'Белок'),
+                                    React.createElement('span', { style: { fontWeight: 500 } }, Math.round(currentWave.protein || 0) + 'г'),
+                                ),
+                                React.createElement('div', { className: 'wave-details-popup__row', style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
+                                    React.createElement('span', { style: { color: '#64748b' } }, 'Клетчатка'),
+                                    React.createElement('span', { style: { fontWeight: 500, color: currentWave.fiber >= 5 ? '#22c55e' : '#1f2937' } }, Math.round(currentWave.fiber || 0) + 'г'),
+                                ),
+                                React.createElement('div', { className: 'wave-details-popup__row', style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
+                                    React.createElement('span', { style: { color: '#64748b' } }, 'Жиры'),
+                                    React.createElement('span', { style: { fontWeight: 500 } }, Math.round(currentWave.fat || 0) + 'г'),
+                                ),
+                                React.createElement('div', { className: 'wave-details-popup__row wave-details-popup__row--last', style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0' } },
+                                    React.createElement('span', { style: { color: '#64748b' } }, 'Углеводы'),
+                                    React.createElement('span', { style: { fontWeight: 500 } }, Math.round(currentWave.carbs || 0) + 'г'),
+                                ),
+                            ),
+
+                            React.createElement('div', { className: 'wave-details-popup__section', style: { marginBottom: '12px' } },
+                                React.createElement('div', { className: 'wave-details-popup__section-title', style: { fontSize: '12px', fontWeight: 600, color: '#1f2937', marginBottom: '8px' } }, '⏰ Дневные факторы'),
+                                React.createElement('div', { className: 'wave-details-popup__row', style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
+                                    React.createElement('span', { style: { color: '#64748b' } }, 'Время суток'),
+                                    React.createElement('span', { style: { fontWeight: 500, color: currentWave.circadianMultiplier > 1.05 ? '#f97316' : '#1f2937' } }, '×' + (currentWave.circadianMultiplier || 1).toFixed(2)),
+                                ),
+                                currentWave.activityBonus && currentWave.activityBonus !== 0 && React.createElement('div', { className: 'wave-details-popup__row wave-details-popup__row--last', style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0' } },
+                                    React.createElement('span', { style: { color: '#22c55e' } }, '🏃 Активность'),
+                                    React.createElement('span', { style: { fontWeight: 500, color: '#22c55e' } }, (currentWave.activityBonus * 100).toFixed(0) + '%'),
+                                ),
+                            ),
+
                             React.createElement('button', {
-                                className: 'wave-details-popup__close',
+                                className: 'wave-details-popup__action',
                                 onClick: () => setShowWaveCalcPopup(false),
                                 style: {
-                                    background: 'none', border: 'none', fontSize: '20px',
-                                    cursor: 'pointer', color: '#9ca3af', padding: '4px',
+                                    width: '100%',
+                                    background: '#3b82f6',
+                                    color: '#fff',
+                                    border: 'none',
+                                    borderRadius: '10px',
+                                    padding: '12px',
+                                    fontSize: '14px',
+                                    fontWeight: 600,
+                                    cursor: 'pointer',
+                                    marginTop: '8px',
                                 },
-                            }, '×'),
-                        ),
+                            }, 'Закрыть'),
+                        )
+                    );
 
-                        React.createElement('div', {
-                            className: 'wave-details-popup__hero',
-                            style: {
-                                background: 'linear-gradient(135deg, #3b82f6, #2563eb)',
-                                borderRadius: '12px',
-                                padding: '16px',
-                                marginBottom: '16px',
-                                textAlign: 'center',
-                                color: '#fff',
-                            },
-                        },
-                            React.createElement('div', { style: { fontSize: '12px', opacity: 0.9, marginBottom: '4px' } }, 'Длина волны'),
-                            React.createElement('div', { style: { fontSize: '28px', fontWeight: 700 } }, (currentWave.waveHours || currentWave.duration / 60).toFixed(1) + 'ч'),
-                            React.createElement('div', { style: { fontSize: '11px', opacity: 0.8, marginTop: '4px' } }, currentWave.timeDisplay + ' → ' + currentWave.endTimeDisplay),
-                        ),
-
-                        React.createElement('div', {
-                            className: 'wave-details-popup__formula',
-                            style: {
-                                background: '#f8fafc',
-                                borderRadius: '10px',
-                                padding: '12px',
-                                marginBottom: '16px',
-                                fontSize: '11px',
-                                fontFamily: 'monospace',
-                                color: '#64748b',
-                                textAlign: 'center',
-                            },
-                        }, 'База × Множитель = ' + (currentWave.baseWaveHours || 3).toFixed(1) + 'ч × '
-                        + (currentWave.finalMultiplier || 1).toFixed(2) + ' = ' + (currentWave.waveHours || currentWave.duration / 60).toFixed(1) + 'ч'),
-
-                        React.createElement('div', { className: 'wave-details-popup__section', style: { marginBottom: '12px' } },
-                            React.createElement('div', { className: 'wave-details-popup__section-title', style: { fontSize: '12px', fontWeight: 600, color: '#1f2937', marginBottom: '8px' } }, '🍽️ Факторы еды'),
-                            React.createElement('div', { className: 'wave-details-popup__row', style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
-                                React.createElement('span', { style: { color: '#64748b' } }, 'ГИ'),
-                                React.createElement('span', { style: { fontWeight: 500 } }, Math.round(currentWave.gi || 0)),
-                            ),
-                            React.createElement('div', { className: 'wave-details-popup__row', style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
-                                React.createElement('span', { style: { color: '#64748b' } }, 'GL (нагрузка)'),
-                                React.createElement('span', { style: { fontWeight: 500, color: currentWave.gl < 10 ? '#22c55e' : currentWave.gl > 20 ? '#ef4444' : '#1f2937' } }, (currentWave.gl || 0).toFixed(1)),
-                            ),
-                            React.createElement('div', { className: 'wave-details-popup__row', style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
-                                React.createElement('span', { style: { color: '#64748b' } }, 'Белок'),
-                                React.createElement('span', { style: { fontWeight: 500 } }, Math.round(currentWave.protein || 0) + 'г'),
-                            ),
-                            React.createElement('div', { className: 'wave-details-popup__row', style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
-                                React.createElement('span', { style: { color: '#64748b' } }, 'Клетчатка'),
-                                React.createElement('span', { style: { fontWeight: 500, color: currentWave.fiber >= 5 ? '#22c55e' : '#1f2937' } }, Math.round(currentWave.fiber || 0) + 'г'),
-                            ),
-                            React.createElement('div', { className: 'wave-details-popup__row', style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
-                                React.createElement('span', { style: { color: '#64748b' } }, 'Жиры'),
-                                React.createElement('span', { style: { fontWeight: 500 } }, Math.round(currentWave.fat || 0) + 'г'),
-                            ),
-                            React.createElement('div', { className: 'wave-details-popup__row wave-details-popup__row--last', style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0' } },
-                                React.createElement('span', { style: { color: '#64748b' } }, 'Углеводы'),
-                                React.createElement('span', { style: { fontWeight: 500 } }, Math.round(currentWave.carbs || 0) + 'г'),
-                            ),
-                        ),
-
-                        React.createElement('div', { className: 'wave-details-popup__section', style: { marginBottom: '12px' } },
-                            React.createElement('div', { className: 'wave-details-popup__section-title', style: { fontSize: '12px', fontWeight: 600, color: '#1f2937', marginBottom: '8px' } }, '⏰ Дневные факторы'),
-                            React.createElement('div', { className: 'wave-details-popup__row', style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
-                                React.createElement('span', { style: { color: '#64748b' } }, 'Время суток'),
-                                React.createElement('span', { style: { fontWeight: 500, color: currentWave.circadianMultiplier > 1.05 ? '#f97316' : '#1f2937' } }, '×' + (currentWave.circadianMultiplier || 1).toFixed(2)),
-                            ),
-                            currentWave.activityBonus && currentWave.activityBonus !== 0 && React.createElement('div', { className: 'wave-details-popup__row wave-details-popup__row--last', style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0' } },
-                                React.createElement('span', { style: { color: '#22c55e' } }, '🏃 Активность'),
-                                React.createElement('span', { style: { fontWeight: 500, color: '#22c55e' } }, (currentWave.activityBonus * 100).toFixed(0) + '%'),
-                            ),
-                        ),
-
-                        React.createElement('button', {
-                            className: 'wave-details-popup__action',
-                            onClick: () => setShowWaveCalcPopup(false),
-                            style: {
-                                width: '100%',
-                                background: '#3b82f6',
-                                color: '#fff',
-                                border: 'none',
-                                borderRadius: '10px',
-                                padding: '12px',
-                                fontSize: '14px',
-                                fontWeight: 600,
-                                cursor: 'pointer',
-                                marginTop: '8px',
-                            },
-                        }, 'Закрыть'),
-                    ),
-                ),
+                    return ReactDOM?.createPortal && global.document?.body
+                        ? ReactDOM.createPortal(overlay, global.document.body)
+                        : overlay;
+                })(),
             ),
         );
     }, (prevProps, nextProps) => {
@@ -20020,7 +20666,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             openExclusivePopup,
             addWater,
             removeWater
-        }), [day?.waterMl, waterGoal, waterGoalBreakdown, waterMotivation, waterLastDrink, waterAddedAnim, showWaterDrop, showWaterTooltip]);
+        }), [day?.waterMl, day?.date, waterGoal, waterGoalBreakdown, waterMotivation, waterLastDrink, waterAddedAnim, showWaterDrop, showWaterTooltip]);
 
         // === COMPACT ACTIVITY INPUT ===
         if (!HEYS.dayStepsUI?.useStepsState) {

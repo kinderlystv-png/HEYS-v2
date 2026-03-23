@@ -19,6 +19,7 @@
 
   const HEYS = global.HEYS = global.HEYS || {};
   const React = global.React;
+  const ReactDOM = global.ReactDOM;
 
   // === ИМПОРТ УТИЛИТ ===
   const utils = HEYS.InsulinWave?.utils;
@@ -146,9 +147,11 @@
 
   // === Meal Wave Expand (для карточки приёма) ===
   function cardChipStyle(color) {
+    const dark = typeof document !== 'undefined' &&
+      document.documentElement.getAttribute('data-theme') === 'dark';
     return {
-      background: color + '1A',
-      color: '#0f172a',
+      background: color + (dark ? '26' : '1A'),
+      color: dark ? '#e2e8f0' : '#0f172a',
       padding: '6px 8px',
       borderRadius: '8px',
       fontWeight: 600
@@ -577,301 +580,313 @@
       ),
 
       // 🆕 v3.7.1: Popup детализации волны
-      showWaveDetails && React.createElement('div', {
-        className: 'wave-details-overlay',
-        onClick: (e) => { if (e.target === e.currentTarget) setShowWaveDetails(false); },
-        style: {
-          position: 'fixed',
-          top: 0, left: 0, right: 0, bottom: 0,
-          background: 'rgba(0,0,0,0.5)',
-          zIndex: 9999,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: '20px'
-        }
-      },
-        React.createElement('div', {
-          className: 'wave-details-popup',
+      showWaveDetails && (() => {
+        const overlay = React.createElement('div', {
+          className: 'wave-details-overlay',
+          onClick: (e) => { if (e.target === e.currentTarget) setShowWaveDetails(false); },
           style: {
-            background: 'var(--card, #fff)',
-            borderRadius: '16px',
+            position: 'fixed',
+            inset: 0,
+            width: '100vw',
+            height: '100dvh',
+            minHeight: '100dvh',
+            background: 'rgba(0,0,0,0.5)',
+            zIndex: 9999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
             padding: '20px',
-            maxWidth: '360px',
-            width: '100%',
-            maxHeight: '80vh',
-            overflowY: 'auto',
-            boxShadow: '0 20px 60px rgba(0,0,0,0.3)'
+            overflow: 'hidden',
+            boxSizing: 'border-box'
           }
         },
-          // Заголовок
           React.createElement('div', {
+            className: 'wave-details-popup',
             style: {
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              marginBottom: '16px'
+              background: 'var(--card, #fff)',
+              borderRadius: '16px',
+              padding: '20px',
+              maxWidth: 'min(360px, calc(100vw - 24px))',
+              width: '100%',
+              maxHeight: 'calc(100dvh - 24px)',
+              overflowY: 'auto',
+              boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
+              boxSizing: 'border-box'
             }
           },
-            React.createElement('h3', {
-              style: { margin: 0, fontSize: '16px', fontWeight: 600, color: 'var(--text, #1f2937)' }
-            }, '📊 Расчёт волны'),
+            // Заголовок
+            React.createElement('div', {
+              style: {
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: '16px'
+              }
+            },
+              React.createElement('h3', {
+                style: { margin: 0, fontSize: '16px', fontWeight: 600, color: 'var(--text, #1f2937)' }
+              }, '📊 Расчёт волны'),
+              React.createElement('button', {
+                onClick: () => setShowWaveDetails(false),
+                style: {
+                  background: 'none', border: 'none', fontSize: '20px',
+                  cursor: 'pointer', color: '#9ca3af', padding: '4px'
+                }
+              }, '×')
+            ),
+
+            // Итоговая длина волны
+            React.createElement('div', {
+              style: {
+                background: 'linear-gradient(135deg, #3b82f6, #3b82f6)',
+                borderRadius: '12px',
+                padding: '16px',
+                marginBottom: '16px',
+                textAlign: 'center',
+                color: '#fff'
+              }
+            },
+              React.createElement('div', { style: { fontSize: '12px', opacity: 0.9, marginBottom: '4px' } },
+                'Длина волны'
+              ),
+              React.createElement('div', { style: { fontSize: '28px', fontWeight: 700 } },
+                (waveData.waveHours || waveData.duration / 60).toFixed(1) + 'ч'
+              ),
+              React.createElement('div', { style: { fontSize: '11px', opacity: 0.8, marginTop: '4px' } },
+                waveData.timeDisplay + ' → ' + waveData.endTimeDisplay
+              )
+            ),
+
+            // Формула
+            React.createElement('div', {
+              style: {
+                background: 'var(--bg-secondary, #f8fafc)',
+                borderRadius: '10px',
+                padding: '12px',
+                marginBottom: '16px',
+                fontSize: '11px',
+                fontFamily: 'monospace',
+                color: '#64748b',
+                textAlign: 'center'
+              }
+            }, 'База × Множитель = ' + (waveData.baseWaveHours || 3).toFixed(1) + 'ч × ' +
+            (waveData.finalMultiplier || 1).toFixed(2) + ' = ' +
+            (waveData.waveHours || waveData.duration / 60).toFixed(1) + 'ч'
+            ),
+
+            // 🆕 v4.1.0: Легенда 3-компонентной Gaussian модели
+            React.createElement('div', {
+              style: {
+                background: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)',
+                borderRadius: '10px',
+                padding: '12px',
+                marginBottom: '16px'
+              }
+            },
+              React.createElement('div', {
+                style: { fontSize: '12px', fontWeight: 600, color: '#92400e', marginBottom: '8px' }
+              }, '🧬 Научная модель волны'),
+              React.createElement('div', {
+                style: { fontSize: '11px', color: '#78350f', lineHeight: '1.5' }
+              },
+                'Форма кривой = сумма 3 компонентов инсулинового ответа:'
+              ),
+              React.createElement('div', { style: { marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '6px' } },
+                // Fast component
+                React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '8px' } },
+                  React.createElement('span', { style: { fontSize: '14px' } }, '⚡'),
+                  React.createElement('div', null,
+                    React.createElement('div', { style: { fontSize: '11px', fontWeight: 600, color: '#f97316' } },
+                      'Быстрый пик (15-25 мин)'
+                    ),
+                    React.createElement('div', { style: { fontSize: '10px', color: '#78350f' } },
+                      'Простые углеводы, ГИ>70'
+                    )
+                  )
+                ),
+                // Slow component
+                React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '8px' } },
+                  React.createElement('span', { style: { fontSize: '14px' } }, '🌿'),
+                  React.createElement('div', null,
+                    React.createElement('div', { style: { fontSize: '11px', fontWeight: 600, color: '#22c55e' } },
+                      'Основной ответ (45-60 мин)'
+                    ),
+                    React.createElement('div', { style: { fontSize: '10px', color: '#78350f' } },
+                      'Сложные углеводы, белок, жиры'
+                    )
+                  )
+                ),
+                // Hepatic component
+                React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '8px' } },
+                  React.createElement('span', { style: { fontSize: '14px' } }, '🫀'),
+                  React.createElement('div', null,
+                    React.createElement('div', { style: { fontSize: '11px', fontWeight: 600, color: '#8b5cf6' } },
+                      'Печёночный хвост (90-120 мин)'
+                    ),
+                    React.createElement('div', { style: { fontSize: '10px', color: '#78350f' } },
+                      'Клетчатка, медленное высвобождение'
+                    )
+                  )
+                )
+              ),
+              // Научная ссылка
+              React.createElement('div', {
+                style: {
+                  marginTop: '10px',
+                  paddingTop: '8px',
+                  borderTop: '1px solid rgba(146, 64, 14, 0.2)',
+                  fontSize: '10px',
+                  color: '#92400e'
+                }
+              }, '📚 Brand-Miller 2003, Holt 1997')
+            ),
+
+            // Факторы еды
+            React.createElement('div', { style: { marginBottom: '12px' } },
+              React.createElement('div', {
+                style: { fontSize: '12px', fontWeight: 600, color: 'var(--text, #1f2937)', marginBottom: '8px' }
+              }, '🍽️ Факторы еды'),
+
+              // GI
+              React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
+                React.createElement('span', { style: { color: '#64748b' } }, 'ГИ'),
+                React.createElement('span', { style: { fontWeight: 500 } }, Math.round(waveData.gi || 0))
+              ),
+              // GL
+              React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
+                React.createElement('span', { style: { color: '#64748b' } }, 'GL (нагрузка)'),
+                React.createElement('span', { style: { fontWeight: 500, color: waveData.gl < 10 ? '#22c55e' : waveData.gl > 20 ? '#ef4444' : '#1f2937' } },
+                  (waveData.gl || 0).toFixed(1) + (waveData.glCategory?.desc ? ' (' + waveData.glCategory.desc + ')' : '')
+                )
+              ),
+              // Белок
+              React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
+                React.createElement('span', { style: { color: '#64748b' } }, 'Белок'),
+                React.createElement('span', { style: { fontWeight: 500 } }, Math.round(waveData.protein || 0) + 'г')
+              ),
+              // Клетчатка
+              React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
+                React.createElement('span', { style: { color: '#64748b' } }, 'Клетчатка'),
+                React.createElement('span', { style: { fontWeight: 500, color: waveData.fiber >= 5 ? '#22c55e' : '#1f2937' } },
+                  Math.round(waveData.fiber || 0) + 'г'
+                )
+              ),
+              // Жиры
+              React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
+                React.createElement('span', { style: { color: '#64748b' } }, 'Жиры'),
+                React.createElement('span', { style: { fontWeight: 500 } }, Math.round(waveData.fat || 0) + 'г')
+              ),
+              // Углеводы
+              React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
+                React.createElement('span', { style: { color: '#64748b' } }, 'Углеводы'),
+                React.createElement('span', { style: { fontWeight: 500 } }, Math.round(waveData.carbs || 0) + 'г')
+              ),
+              // Жидкая еда
+              waveData.hasLiquid && React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
+                React.createElement('span', { style: { color: '#f97316' } }, '🥤 Жидкая еда'),
+                React.createElement('span', { style: { fontWeight: 500, color: '#f97316' } }, '×' + (waveData.liquidMultiplier || 0.75).toFixed(2))
+              ),
+              // Инсулиногенность
+              waveData.insulinogenicType && React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
+                React.createElement('span', { style: { color: '#64748b' } }, '🥛 Инсулиногенность'),
+                React.createElement('span', { style: { fontWeight: 500 } }, waveData.insulinogenicType)
+              )
+            ),
+
+            // Дневные факторы
+            React.createElement('div', { style: { marginBottom: '12px' } },
+              React.createElement('div', {
+                style: { fontSize: '12px', fontWeight: 600, color: 'var(--text, #1f2937)', marginBottom: '8px' }
+              }, '⏰ Дневные факторы'),
+
+              // Циркадный ритм
+              React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
+                React.createElement('span', { style: { color: '#64748b' } }, 'Время суток'),
+                React.createElement('span', { style: { fontWeight: 500, color: waveData.circadianMultiplier > 1.05 ? '#f97316' : '#1f2937' } },
+                  '×' + (waveData.circadianMultiplier || 1).toFixed(2)
+                )
+              ),
+              // Дневные бонусы
+              waveData.dayFactorsBonus && Math.abs(waveData.dayFactorsBonus) >= 0.005 && React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
+                React.createElement('span', { style: { color: '#64748b' } }, 'Сон/стресс/гидратация'),
+                React.createElement('span', { style: { fontWeight: 500, color: waveData.dayFactorsBonus > 0 ? '#ef4444' : '#22c55e' } },
+                  (waveData.dayFactorsBonus > 0 ? '+' : '') + (waveData.dayFactorsBonus * 100).toFixed(0) + '%'
+                )
+              ),
+              // Активность
+              waveData.activityBonus && Math.abs(waveData.activityBonus) >= 0.005 && React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
+                React.createElement('span', { style: { color: '#22c55e' } }, '🏃 Активность'),
+                React.createElement('span', { style: { fontWeight: 500, color: '#22c55e' } },
+                  (waveData.activityBonus * 100).toFixed(0) + '%'
+                )
+              ),
+              // 🆕 v3.7.1: NDTE (Next-Day Training Effect)
+              waveData.ndteData && React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
+                React.createElement('span', { style: { color: '#10b981' } }, '🔥 Вчера тренировка'),
+                React.createElement('span', { style: { fontWeight: 500, color: '#10b981' } },
+                  '-' + Math.round(waveData.ndteData.waveReduction * 100) + '%'
+                )
+              )
+            ),
+
+            // Activity Context (если есть)
+            activityContext && activityContext.type !== 'none' && React.createElement('div', {
+              style: {
+                marginBottom: '12px',
+                background: 'rgba(16, 185, 129, 0.1)',
+                borderRadius: '10px',
+                padding: '12px'
+              }
+            },
+              React.createElement('div', {
+                style: { fontSize: '12px', fontWeight: 600, color: '#10b981', marginBottom: '6px' }
+              }, activityContext.badge),
+              React.createElement('div', {
+                style: { fontSize: '11px', color: '#64748b' }
+              }, activityContext.desc),
+              activityContext.waveBonus && React.createElement('div', {
+                style: { fontSize: '11px', color: '#10b981', marginTop: '4px', fontWeight: 500 }
+              }, 'Волна: ' + (activityContext.waveBonus * 100).toFixed(0) + '%')
+            ),
+
+            // GL Scale info
+            waveData.dayFactorsScale && waveData.dayFactorsScale < 1 && React.createElement('div', {
+              style: {
+                background: '#f0fdf4',
+                borderRadius: '8px',
+                padding: '10px',
+                fontSize: '11px',
+                color: '#166534',
+                marginBottom: '12px'
+              }
+            },
+              '💡 При низкой GL (' + (waveData.gl || 0).toFixed(1) + ') дневные факторы применяются на ' +
+              Math.round((waveData.dayFactorsScale || 1) * 100) + '%'
+            ),
+
+            // Кнопка закрытия
             React.createElement('button', {
               onClick: () => setShowWaveDetails(false),
               style: {
-                background: 'none', border: 'none', fontSize: '20px',
-                cursor: 'pointer', color: '#9ca3af', padding: '4px'
+                width: '100%',
+                background: '#3b82f6',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '10px',
+                padding: '12px',
+                fontSize: '14px',
+                fontWeight: 600,
+                cursor: 'pointer',
+                marginTop: '8px'
               }
-            }, '×')
-          ),
+            }, 'Закрыть')
+          )
+        );
 
-          // Итоговая длина волны
-          React.createElement('div', {
-            style: {
-              background: 'linear-gradient(135deg, #3b82f6, #3b82f6)',
-              borderRadius: '12px',
-              padding: '16px',
-              marginBottom: '16px',
-              textAlign: 'center',
-              color: '#fff'
-            }
-          },
-            React.createElement('div', { style: { fontSize: '12px', opacity: 0.9, marginBottom: '4px' } },
-              'Длина волны'
-            ),
-            React.createElement('div', { style: { fontSize: '28px', fontWeight: 700 } },
-              (waveData.waveHours || waveData.duration / 60).toFixed(1) + 'ч'
-            ),
-            React.createElement('div', { style: { fontSize: '11px', opacity: 0.8, marginTop: '4px' } },
-              waveData.timeDisplay + ' → ' + waveData.endTimeDisplay
-            )
-          ),
-
-          // Формула
-          React.createElement('div', {
-            style: {
-              background: 'var(--bg-secondary, #f8fafc)',
-              borderRadius: '10px',
-              padding: '12px',
-              marginBottom: '16px',
-              fontSize: '11px',
-              fontFamily: 'monospace',
-              color: '#64748b',
-              textAlign: 'center'
-            }
-          }, 'База × Множитель = ' + (waveData.baseWaveHours || 3).toFixed(1) + 'ч × ' +
-          (waveData.finalMultiplier || 1).toFixed(2) + ' = ' +
-          (waveData.waveHours || waveData.duration / 60).toFixed(1) + 'ч'
-          ),
-
-          // 🆕 v4.1.0: Легенда 3-компонентной Gaussian модели
-          React.createElement('div', {
-            style: {
-              background: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)',
-              borderRadius: '10px',
-              padding: '12px',
-              marginBottom: '16px'
-            }
-          },
-            React.createElement('div', {
-              style: { fontSize: '12px', fontWeight: 600, color: '#92400e', marginBottom: '8px' }
-            }, '🧬 Научная модель волны'),
-            React.createElement('div', {
-              style: { fontSize: '11px', color: '#78350f', lineHeight: '1.5' }
-            },
-              'Форма кривой = сумма 3 компонентов инсулинового ответа:'
-            ),
-            React.createElement('div', { style: { marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '6px' } },
-              // Fast component
-              React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '8px' } },
-                React.createElement('span', { style: { fontSize: '14px' } }, '⚡'),
-                React.createElement('div', null,
-                  React.createElement('div', { style: { fontSize: '11px', fontWeight: 600, color: '#f97316' } },
-                    'Быстрый пик (15-25 мин)'
-                  ),
-                  React.createElement('div', { style: { fontSize: '10px', color: '#78350f' } },
-                    'Простые углеводы, ГИ>70'
-                  )
-                )
-              ),
-              // Slow component
-              React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '8px' } },
-                React.createElement('span', { style: { fontSize: '14px' } }, '🌿'),
-                React.createElement('div', null,
-                  React.createElement('div', { style: { fontSize: '11px', fontWeight: 600, color: '#22c55e' } },
-                    'Основной ответ (45-60 мин)'
-                  ),
-                  React.createElement('div', { style: { fontSize: '10px', color: '#78350f' } },
-                    'Сложные углеводы, белок, жиры'
-                  )
-                )
-              ),
-              // Hepatic component
-              React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '8px' } },
-                React.createElement('span', { style: { fontSize: '14px' } }, '🫀'),
-                React.createElement('div', null,
-                  React.createElement('div', { style: { fontSize: '11px', fontWeight: 600, color: '#8b5cf6' } },
-                    'Печёночный хвост (90-120 мин)'
-                  ),
-                  React.createElement('div', { style: { fontSize: '10px', color: '#78350f' } },
-                    'Клетчатка, медленное высвобождение'
-                  )
-                )
-              )
-            ),
-            // Научная ссылка
-            React.createElement('div', {
-              style: {
-                marginTop: '10px',
-                paddingTop: '8px',
-                borderTop: '1px solid rgba(146, 64, 14, 0.2)',
-                fontSize: '10px',
-                color: '#92400e'
-              }
-            }, '📚 Brand-Miller 2003, Holt 1997')
-          ),
-
-          // Факторы еды
-          React.createElement('div', { style: { marginBottom: '12px' } },
-            React.createElement('div', {
-              style: { fontSize: '12px', fontWeight: 600, color: 'var(--text, #1f2937)', marginBottom: '8px' }
-            }, '🍽️ Факторы еды'),
-
-            // GI
-            React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
-              React.createElement('span', { style: { color: '#64748b' } }, 'ГИ'),
-              React.createElement('span', { style: { fontWeight: 500 } }, Math.round(waveData.gi || 0))
-            ),
-            // GL
-            React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
-              React.createElement('span', { style: { color: '#64748b' } }, 'GL (нагрузка)'),
-              React.createElement('span', { style: { fontWeight: 500, color: waveData.gl < 10 ? '#22c55e' : waveData.gl > 20 ? '#ef4444' : '#1f2937' } },
-                (waveData.gl || 0).toFixed(1) + (waveData.glCategory?.desc ? ' (' + waveData.glCategory.desc + ')' : '')
-              )
-            ),
-            // Белок
-            React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
-              React.createElement('span', { style: { color: '#64748b' } }, 'Белок'),
-              React.createElement('span', { style: { fontWeight: 500 } }, Math.round(waveData.protein || 0) + 'г')
-            ),
-            // Клетчатка
-            React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
-              React.createElement('span', { style: { color: '#64748b' } }, 'Клетчатка'),
-              React.createElement('span', { style: { fontWeight: 500, color: waveData.fiber >= 5 ? '#22c55e' : '#1f2937' } },
-                Math.round(waveData.fiber || 0) + 'г'
-              )
-            ),
-            // Жиры
-            React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
-              React.createElement('span', { style: { color: '#64748b' } }, 'Жиры'),
-              React.createElement('span', { style: { fontWeight: 500 } }, Math.round(waveData.fat || 0) + 'г')
-            ),
-            // Углеводы
-            React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
-              React.createElement('span', { style: { color: '#64748b' } }, 'Углеводы'),
-              React.createElement('span', { style: { fontWeight: 500 } }, Math.round(waveData.carbs || 0) + 'г')
-            ),
-            // Жидкая еда
-            waveData.hasLiquid && React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
-              React.createElement('span', { style: { color: '#f97316' } }, '🥤 Жидкая еда'),
-              React.createElement('span', { style: { fontWeight: 500, color: '#f97316' } }, '×' + (waveData.liquidMultiplier || 0.75).toFixed(2))
-            ),
-            // Инсулиногенность
-            waveData.insulinogenicType && React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
-              React.createElement('span', { style: { color: '#64748b' } }, '🥛 Инсулиногенность'),
-              React.createElement('span', { style: { fontWeight: 500 } }, waveData.insulinogenicType)
-            )
-          ),
-
-          // Дневные факторы
-          React.createElement('div', { style: { marginBottom: '12px' } },
-            React.createElement('div', {
-              style: { fontSize: '12px', fontWeight: 600, color: 'var(--text, #1f2937)', marginBottom: '8px' }
-            }, '⏰ Дневные факторы'),
-
-            // Циркадный ритм
-            React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
-              React.createElement('span', { style: { color: '#64748b' } }, 'Время суток'),
-              React.createElement('span', { style: { fontWeight: 500, color: waveData.circadianMultiplier > 1.05 ? '#f97316' : '#1f2937' } },
-                '×' + (waveData.circadianMultiplier || 1).toFixed(2)
-              )
-            ),
-            // Дневные бонусы
-            waveData.dayFactorsBonus && Math.abs(waveData.dayFactorsBonus) >= 0.005 && React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
-              React.createElement('span', { style: { color: '#64748b' } }, 'Сон/стресс/гидратация'),
-              React.createElement('span', { style: { fontWeight: 500, color: waveData.dayFactorsBonus > 0 ? '#ef4444' : '#22c55e' } },
-                (waveData.dayFactorsBonus > 0 ? '+' : '') + (waveData.dayFactorsBonus * 100).toFixed(0) + '%'
-              )
-            ),
-            // Активность
-            waveData.activityBonus && Math.abs(waveData.activityBonus) >= 0.005 && React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
-              React.createElement('span', { style: { color: '#22c55e' } }, '🏃 Активность'),
-              React.createElement('span', { style: { fontWeight: 500, color: '#22c55e' } },
-                (waveData.activityBonus * 100).toFixed(0) + '%'
-              )
-            ),
-            // 🆕 v3.7.1: NDTE (Next-Day Training Effect)
-            waveData.ndteData && React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
-              React.createElement('span', { style: { color: '#10b981' } }, '🔥 Вчера тренировка'),
-              React.createElement('span', { style: { fontWeight: 500, color: '#10b981' } },
-                '-' + Math.round(waveData.ndteData.waveReduction * 100) + '%'
-              )
-            )
-          ),
-
-          // Activity Context (если есть)
-          activityContext && activityContext.type !== 'none' && React.createElement('div', {
-            style: {
-              marginBottom: '12px',
-              background: 'rgba(16, 185, 129, 0.1)',
-              borderRadius: '10px',
-              padding: '12px'
-            }
-          },
-            React.createElement('div', {
-              style: { fontSize: '12px', fontWeight: 600, color: '#10b981', marginBottom: '6px' }
-            }, activityContext.badge),
-            React.createElement('div', {
-              style: { fontSize: '11px', color: '#64748b' }
-            }, activityContext.desc),
-            activityContext.waveBonus && React.createElement('div', {
-              style: { fontSize: '11px', color: '#10b981', marginTop: '4px', fontWeight: 500 }
-            }, 'Волна: ' + (activityContext.waveBonus * 100).toFixed(0) + '%')
-          ),
-
-          // GL Scale info
-          waveData.dayFactorsScale && waveData.dayFactorsScale < 1 && React.createElement('div', {
-            style: {
-              background: '#f0fdf4',
-              borderRadius: '8px',
-              padding: '10px',
-              fontSize: '11px',
-              color: '#166534',
-              marginBottom: '12px'
-            }
-          },
-            '💡 При низкой GL (' + (waveData.gl || 0).toFixed(1) + ') дневные факторы применяются на ' +
-            Math.round((waveData.dayFactorsScale || 1) * 100) + '%'
-          ),
-
-          // Кнопка закрытия
-          React.createElement('button', {
-            onClick: () => setShowWaveDetails(false),
-            style: {
-              width: '100%',
-              background: '#3b82f6',
-              color: '#fff',
-              border: 'none',
-              borderRadius: '10px',
-              padding: '12px',
-              fontSize: '14px',
-              fontWeight: 600,
-              cursor: 'pointer',
-              marginTop: '8px'
-            }
-          }, 'Закрыть')
-        )
-      )
+        return ReactDOM?.createPortal && global.document?.body
+          ? ReactDOM.createPortal(overlay, global.document.body)
+          : overlay;
+      })(),
     );
   };
 
@@ -1158,12 +1173,15 @@
     const [expandedMetric, setExpandedMetric] = React.useState('wave'); // 'wave' | 'gi' | 'gl' | null — волна раскрыта по умолчанию
     const giCat = data.giCategory;
 
+    const isDark = typeof document !== 'undefined' &&
+      document.documentElement.getAttribute('data-theme') === 'dark';
+
     // Стили для метрик-карточек
     const metricCardStyle = (isActive) => ({
       flex: '1 1 0',
       minWidth: '80px',
       padding: '12px 8px',
-      background: isActive ? 'rgba(59, 130, 246, 0.1)' : 'rgba(248, 250, 252, 0.8)',
+      background: isActive ? 'rgba(59, 130, 246, 0.1)' : (isDark ? 'rgba(51, 65, 85, 0.6)' : 'rgba(248, 250, 252, 0.8)'),
       borderRadius: '12px',
       textAlign: 'center',
       cursor: 'pointer',
@@ -1392,7 +1410,7 @@
         details.formula && React.createElement('div', {
           style: {
             padding: '10px 12px',
-            background: 'rgba(0,0,0,0.03)',
+            background: isDark ? 'rgba(0,0,0,0.25)' : 'rgba(0,0,0,0.03)',
             borderRadius: '8px',
             marginBottom: '12px',
             fontFamily: 'system-ui, -apple-system, sans-serif'
@@ -1434,8 +1452,8 @@
               React.createElement('span', {
                 style: {
                   fontWeight: '600',
-                  color: item.value?.startsWith?.('-') ? '#16a34a' :
-                    item.value?.startsWith?.('+') ? '#f59e0b' : '#1e293b'
+                  color: item.value?.startsWith?.('-') ? (isDark ? '#4ade80' : '#16a34a') :
+                    item.value?.startsWith?.('+') ? '#f59e0b' : (isDark ? '#e2e8f0' : '#1e293b')
                 }
               }, item.value)
             )
@@ -1452,7 +1470,7 @@
       data.personalAvgGap > 0 && React.createElement('div', {
         style: {
           padding: '12px 16px',
-          background: 'rgba(248, 250, 252, 0.8)',
+          background: isDark ? 'rgba(30, 41, 59, 0.8)' : 'rgba(248, 250, 252, 0.8)',
           borderRadius: '12px',
           marginBottom: '16px'
         }
@@ -1461,7 +1479,7 @@
           style: {
             fontSize: '13px',
             fontWeight: '600',
-            color: '#475569',
+            color: isDark ? '#94a3b8' : '#475569',
             marginBottom: '8px'
           }
         }, '🎯 Паттерны'),
@@ -1473,7 +1491,7 @@
             fontSize: '14px'
           }
         },
-          React.createElement('span', { style: { color: '#64748b' } }, 'Средний gap'),
+          React.createElement('span', { style: { color: isDark ? '#94a3b8' : '#64748b' } }, 'Средний gap'),
           React.createElement('span', { style: { fontWeight: '600', color: 'var(--text, #1e293b)' } },
             utils.formatDuration(data.personalAvgGap)
           )
@@ -1487,12 +1505,20 @@
             fontSize: '13px',
             fontWeight: '500',
             textAlign: 'center',
-            background: data.gapQuality === 'excellent' ? '#dcfce7' :
-              data.gapQuality === 'good' ? '#fef9c3' :
-                data.gapQuality === 'moderate' ? '#fed7aa' : '#fecaca',
-            color: data.gapQuality === 'excellent' ? '#166534' :
-              data.gapQuality === 'good' ? '#854d0e' :
-                data.gapQuality === 'moderate' ? '#c2410c' : '#dc2626'
+            background: isDark
+              ? (data.gapQuality === 'excellent' ? 'rgba(34, 197, 94, 0.15)' :
+                data.gapQuality === 'good' ? 'rgba(250, 204, 21, 0.15)' :
+                  data.gapQuality === 'moderate' ? 'rgba(249, 115, 22, 0.15)' : 'rgba(239, 68, 68, 0.15)')
+              : (data.gapQuality === 'excellent' ? '#dcfce7' :
+                data.gapQuality === 'good' ? '#fef9c3' :
+                  data.gapQuality === 'moderate' ? '#fed7aa' : '#fecaca'),
+            color: isDark
+              ? (data.gapQuality === 'excellent' ? '#4ade80' :
+                data.gapQuality === 'good' ? '#fde047' :
+                  data.gapQuality === 'moderate' ? '#fb923c' : '#f87171')
+              : (data.gapQuality === 'excellent' ? '#166534' :
+                data.gapQuality === 'good' ? '#854d0e' :
+                  data.gapQuality === 'moderate' ? '#c2410c' : '#dc2626')
           }
         },
           data.gapQuality === 'excellent' ? '✓ Отлично!' :
@@ -1507,7 +1533,7 @@
           padding: '12px 16px',
           background: data.status === 'lipolysis'
             ? 'linear-gradient(135deg, rgba(34,197,94,0.12), rgba(16,185,129,0.12))'
-            : 'rgba(248, 250, 252, 0.8)',
+            : (isDark ? 'rgba(30, 41, 59, 0.8)' : 'rgba(248, 250, 252, 0.8)'),
           borderRadius: '12px',
           marginBottom: modifiers.length > 0 || data.hasOverlaps ? '12px' : '0'
         }
@@ -1516,14 +1542,16 @@
           style: {
             fontSize: '13px',
             fontWeight: '600',
-            color: data.status === 'lipolysis' ? '#16a34a' : '#475569',
+            color: data.status === 'lipolysis'
+              ? (isDark ? '#4ade80' : '#16a34a')
+              : (isDark ? '#94a3b8' : '#475569'),
             marginBottom: '6px'
           }
         }, data.status === 'lipolysis' ? '🔥 Жиросжигание' : '💡 Сейчас'),
         React.createElement('div', {
           style: {
             fontSize: '14px',
-            color: '#334155',
+            color: isDark ? '#cbd5e1' : '#334155',
             lineHeight: 1.5
           }
         },
@@ -1536,7 +1564,7 @@
           style: {
             marginTop: '8px',
             fontSize: '13px',
-            color: '#64748b',
+            color: isDark ? '#64748b' : '#64748b',
             display: 'flex',
             gap: '12px',
             flexWrap: 'wrap'
@@ -1551,17 +1579,17 @@
       data.hasOverlaps && React.createElement('div', {
         style: {
           padding: '12px 16px',
-          background: 'rgba(239,68,68,0.08)',
+          background: isDark ? 'rgba(239,68,68,0.12)' : 'rgba(239,68,68,0.08)',
           borderRadius: '12px',
           marginBottom: '12px',
-          border: '1px solid rgba(239,68,68,0.2)'
+          border: `1px solid ${isDark ? 'rgba(239,68,68,0.3)' : 'rgba(239,68,68,0.2)'}`
         }
       },
         React.createElement('div', {
-          style: { fontSize: '13px', fontWeight: '600', color: '#dc2626' }
+          style: { fontSize: '13px', fontWeight: '600', color: isDark ? '#f87171' : '#dc2626' }
         }, '⚠️ Волны пересеклись'),
         React.createElement('div', {
-          style: { fontSize: '13px', color: '#64748b', marginTop: '4px' }
+          style: { fontSize: '13px', color: isDark ? '#94a3b8' : '#64748b', marginTop: '4px' }
         }, `Совет: подожди ${Math.round(data.baseWaveHours * 60)} мин между приёмами`)
       ),
 

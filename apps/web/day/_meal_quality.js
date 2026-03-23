@@ -1231,8 +1231,11 @@
                 const { meal, quality, mealTypeInfo, x, y } = mealQualityPopup;
                 const popupW = 320;
                 const popupH = 480;
+                const safePopupW = typeof window !== 'undefined'
+                    ? Math.min(popupW, Math.max(220, window.innerWidth - 24))
+                    : popupW;
 
-                const pos = getSmartPopupPosition(x, y, popupW, popupH, { preferAbove: true, offset: 12, margin: 16 });
+                const pos = getSmartPopupPosition(x, y, safePopupW, popupH, { preferAbove: true, offset: 12, margin: 16 });
                 const { left, top, arrowPos, showAbove } = pos;
 
                 const getColor = (score) => {
@@ -1547,10 +1550,12 @@
                         position: 'fixed',
                         left: left + 'px',
                         top: top + 'px',
-                        width: popupW + 'px',
-                        maxHeight: 'calc(100vh - 32px)',
+                        width: safePopupW + 'px',
+                        maxWidth: 'calc(100vw - 24px)',
+                        maxHeight: 'calc(100dvh - 32px)',
                         overflowY: 'auto',
                         zIndex: 10000,
+                        boxSizing: 'border-box'
                     },
                     onClick: (e) => e.stopPropagation(),
                     ...swipeHandlers,

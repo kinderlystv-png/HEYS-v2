@@ -3606,11 +3606,11 @@
   function getRelapseWindowMeta(key) {
     switch (key) {
       case 'next3h':
-        return { label: 'Ближайшие 3ч', shortLabel: '3ч', description: 'Самый ближайший риск: стресс, голод и reward-food контекст прямо сейчас.' };
+        return { label: 'Ближайшие 3ч', shortLabel: '3ч', description: 'Самый ближайший риск: стресс, голод и тяга к вкусной еде прямо сейчас.' };
       case 'tonight':
-        return { label: 'Сегодня вечером', shortLabel: 'Вечер', description: 'Главное окно риска для вечернего срыва и loss-of-control eating.' };
+        return { label: 'Сегодня вечером', shortLabel: 'Вечер', description: 'Главное окно риска для вечернего срыва и потери контроля над едой.' };
       case 'next24h':
-        return { label: 'Следующие 24ч', shortLabel: '24ч', description: 'Фон на сутки с учётом сна, повторяющегося стресса и restriction pressure.' };
+        return { label: 'Следующие 24ч', shortLabel: '24ч', description: 'Фон на сутки с учётом сна, повторяющегося стресса и давления дефицита.' };
       default:
         return { label: key || 'Окно', shortLabel: key || 'Окно', description: '' };
     }
@@ -3619,19 +3619,19 @@
   function getRelapseComponentMeta(key) {
     switch (key) {
       case 'stressLoad':
-        return { label: 'Stress load', description: 'Текущий стресс и его накопление за последние дни.' };
+        return { label: 'Стрессовая нагрузка', description: 'Текущий стресс и его накопление за последние дни.' };
       case 'sleepDebt':
-        return { label: 'Sleep debt', description: 'Недосып, низкое качество сна и recovery depletion.' };
+        return { label: 'Недосып', description: 'Недосып, слабое восстановление и усталость, которая тянется дальше.' };
       case 'restrictionPressure':
-        return { label: 'Restriction pressure', description: 'Недобор калорий/белка, длинные gaps и давление дефицита.' };
+        return { label: 'Давление дефицита', description: 'Недобор калорий и белка, длинные паузы без еды и давление дефицита.' };
       case 'rewardExposure':
-        return { label: 'Reward exposure', description: 'Высокий harm/simple и риск продолжения hyperpalatable eating.' };
+        return { label: 'Тяга к вкусной еде', description: 'Когда сладкого и очень вкусной еды уже было много, остановиться сложнее.' };
       case 'timingContext':
-        return { label: 'Timing context', description: 'Вечер, выходные и длинные интервалы без еды усиливают риск.' };
+        return { label: 'Контекст времени', description: 'Вечер, выходные и длинные интервалы без еды усиливают риск.' };
       case 'emotionalVulnerability':
-        return { label: 'Emotional vulnerability', description: 'Низкое subjective state усиливает риск, но не доминирует над поведением.' };
+        return { label: 'Эмоциональная уязвимость', description: 'Когда состояние проседает, держать спокойный режим питания сложнее.' };
       case 'protectiveBuffer':
-        return { label: 'Protective buffer', description: 'Защитные факторы, которые снижают итоговый риск.' };
+        return { label: 'Защитный буфер', description: 'Факторы, которые снижают итоговый риск.' };
       default:
         return { label: key || 'Factor', description: '' };
     }
@@ -3660,19 +3660,84 @@
     if (completeDays >= totalDays * 0.5) return `${completeDays}/${totalDays} дней достаточно полные`;
     return `${completeDays}/${totalDays} дней слабо заполнены`;
   }
+
+  function getTopRelapseItems(items, count = 2) {
+    return (Array.isArray(items) ? items : [])
+      .filter((item) => item && Number(item.value) > 0)
+      .sort((a, b) => Number(b.value || 0) - Number(a.value || 0))
+      .slice(0, count);
+  }
+
+  function formatRelapseList(items) {
+    const labels = (Array.isArray(items) ? items : [])
+      .map((item) => item?.label || item?.title || item?.key || '')
+      .filter(Boolean);
+
+    if (labels.length === 0) return '';
+    if (labels.length === 1) return labels[0];
+    if (labels.length === 2) return labels[0] + ' и ' + labels[1];
+    return labels.slice(0, -1).join(', ') + ' и ' + labels[labels.length - 1];
+  }
+
+  function getRelapseEffectiveComponentSummary(debug) {
+    const rawComponents = debug?.components || {};
+    const effectiveComponents = debug?.effectiveComponents || rawComponents;
+    return getTopRelapseItems(Object.entries(effectiveComponents)
+      .filter(([key]) => key !== 'protectiveBuffer')
+      .map(([key, value]) => ({
+        key,
+        value: Number(value) || 0,
+        ...getRelapseComponentMeta(key)
+      }))
+      .filter((item) => item.value > 0), 3);
+  }
+
+  function getRelapsePrimaryDriverSummary(snapshot, result, debug) {
+    const primaryDrivers = Array.isArray(snapshot?.primaryDrivers)
+      ? snapshot.primaryDrivers
+      : (Array.isArray(result?.primaryDrivers) ? result.primaryDrivers : []);
+
+    if (primaryDrivers.length > 0) {
+      return primaryDrivers
+        .map((item) => ({
+          key: item?.id || item?.key || item?.label || '',
+          value: Number(item?.impact) || 0,
+          label: item?.label || item?.title || item?.key || 'Фактор'
+        }))
+        .filter((item) => item.value > 0)
+        .slice(0, 3);
+    }
+
+    return getRelapseEffectiveComponentSummary(debug);
+  }
+
+  function getRelapseProtectionSummary(debug) {
+    const domainRelief = debug?.protectiveBufferState?.domainRelief || {};
+    const reliefItems = getTopRelapseItems(Object.entries(domainRelief)
+      .map(([key, value]) => ({
+        key,
+        value: Number(value) || 0,
+        ...getRelapseComponentMeta(key)
+      })), 3);
+
+    return reliefItems;
+  }
+
   function buildRelapseHumanSummary(payload) {
     const snapshot = payload?.snapshot || {};
     const result = snapshot?.raw || {};
     const score = Math.round(Number(snapshot?.score ?? result?.score) || 0);
     const level = String(snapshot?.level || result?.level || 'low');
     const source = String(snapshot?.source || 'emotional');
-    const relapseScore = Math.round(Number(snapshot?.relapseScore ?? result?.score) || 0);
+    const relapseScore = Math.round(Number(snapshot?.relapseScore ?? snapshot?.rawScore ?? result?.score) || 0);
     const crashScore = Math.round(Number(snapshot?.crashScore) || 0);
     const crashWeight = Number(snapshot?.blendWeights?.crash);
     const confidence = Math.max(0, Math.min(100, Math.round(Number(snapshot?.confidence ?? result?.confidence) || 0)));
     const debug = result?.debug || {};
     const restriction = debug?.restrictionPressure || {};
     const historyQuality = debug?.historyQuality || {};
+    const summaryDrivers = getRelapsePrimaryDriverSummary(snapshot, result, debug);
+    const protectionRelief = getRelapseProtectionSummary(debug);
     const coverageLagPct = Math.round((Number(restriction?.coverageLag) || 0) * 100);
     const proteinLagPct = Math.round((Number(restriction?.proteinLag) || 0) * 100);
     const reliefTotal = Math.round(
@@ -3689,14 +3754,34 @@
 
     const bullets = [];
 
-    bullets.push(`Сейчас это ${cutPattern}: главный вклад даёт давление дефицита, но модель не видит признаков агрессивного cut.`);
-
-    if (coverageLagPct > 0 || proteinLagPct > 0) {
-      bullets.push(`От плана сейчас отстают калории примерно на ${coverageLagPct}% и белок примерно на ${proteinLagPct}%, но это ещё похоже на догоняемый сценарий, а не на срыв режима.`);
+    if (score !== relapseScore || crashScore > 0) {
+      const sourceText = source === 'both'
+        ? 'итог — это общий радар из эмоционального и метаболического контуров'
+        : source === 'metabolic'
+          ? 'итог сейчас сильнее двигает метаболический контур'
+          : 'итог сейчас в основном определяет эмоциональный контур';
+      bullets.push(`Эмоциональный риск сейчас ${relapseScore}%, метаболический ${crashScore}%, а общий радар показывает ${score}%: ${sourceText}.`);
+    } else {
+      bullets.push(`Сейчас общий радар почти полностью совпадает с эмоциональным риском (${relapseScore}%): отдельный метаболический вклад не доминирует.`);
     }
 
-    if (reliefTotal > 0) {
-      bullets.push(`Структура дня уже снижает тревогу: регулярные приёмы пищи и нормальный trajectory сняли около ${reliefTotal} пунктов с restriction pressure.`);
+    if (summaryDrivers.length > 0) {
+      bullets.push(`Главные драйверы риска сейчас: ${formatRelapseList(summaryDrivers)}.`);
+    }
+
+    if (restriction?.cutPattern === 'aggressive_cut') {
+      bullets.push('Сейчас это уже жёсткий дефицит: к вечеру такой сценарий чаще делает еду более импульсивной.');
+    } else if (Number(restriction?.score) >= 8 || coverageLagPct > 0 || proteinLagPct > 0) {
+      bullets.push(`Сейчас это ${cutPattern}: ситуацию ещё можно спокойно догнать — от плана отстают калории примерно на ${coverageLagPct}% и белок примерно на ${proteinLagPct}%.`);
+    }
+
+    if (protectionRelief.length > 0) {
+      const reliefText = protectionRelief
+        .map((item) => `${item.label} −${Number(item.value || 0).toFixed(1)}`)
+        .join(', ');
+      bullets.push(`Защитные факторы адресно гасят профиль риска: сильнее всего они смягчают ${reliefText}.`);
+    } else if (reliefTotal > 0) {
+      bullets.push(`Структура дня уже помогает: регулярные приёмы пищи и более ровный ритм сняли около ${reliefTotal} пунктов с давления дефицита.`);
     }
 
     if ((source === 'both' || source === 'metabolic') && crashScore > 0) {
@@ -3704,9 +3789,9 @@
       const metabolicDriver = (Array.isArray(snapshot?.primaryDrivers) ? snapshot.primaryDrivers : []).find((driver) => driver?.source === 'crash');
       const metabolicLabel = String(metabolicDriver?.label || snapshot?.radarDrivers?.[0] || 'метаболический фон').toLowerCase();
       if (source === 'both') {
-        bullets.push(`Метаболический фон тоже участвует: ${metabolicLabel} добавляет около ${metabolicContribution} пунктов к blended radar и заметнее влияет на окно 24ч.`);
+        bullets.push(`Метаболический фон тоже участвует: ${metabolicLabel} добавляет около ${metabolicContribution} пунктов к общему радару и заметнее влияет на окно 24ч.`);
       } else {
-        bullets.push(`Сейчас риск сильнее двигает recovery/metabolic фон: ${metabolicLabel} формирует заметную часть итогового score.`);
+        bullets.push(`Сейчас риск сильнее двигает метаболический фон: ${metabolicLabel} формирует заметную часть итоговой оценки.`);
       }
     }
 
@@ -3720,6 +3805,39 @@
       cutPattern,
       historyLabel,
     };
+  }
+
+  function buildRelapseClientClipboardSummary(payload) {
+    const snapshot = payload?.snapshot || {};
+    const result = snapshot?.raw || {};
+    const summary = buildRelapseHumanSummary({ ...payload, snapshot });
+    const windows = getSortedRelapseWindows(snapshot?.windows || result?.windows);
+    const recommendations = Array.isArray(snapshot?.recommendations)
+      ? snapshot.recommendations
+      : (Array.isArray(result?.recommendations) ? result.recommendations : []);
+    const leadWindow = windows[0] || null;
+    const actionSummary = recommendations
+      .slice(0, 2)
+      .map((item) => String(item?.text || '').trim())
+      .filter(Boolean)
+      .join(' ');
+
+    const lines = [];
+    if (summary?.headline) lines.push(summary.headline);
+
+    const importantBullets = Array.isArray(summary?.bullets)
+      ? summary.bullets.filter((bullet) => typeof bullet === 'string' && bullet.trim())
+      : [];
+
+    if (importantBullets[1]) lines.push(importantBullets[1]);
+    if (leadWindow) {
+      lines.push(`Ближайшая зона внимания — ${leadWindow.label.toLowerCase()}: около ${leadWindow.value}%.`);
+    }
+    if (actionSummary) {
+      lines.push(`Что сделать сейчас: ${actionSummary}`);
+    }
+
+    return lines.slice(0, 4);
   }
 
   async function copyTextWithFallback(text) {
@@ -3746,8 +3864,11 @@
     const snapshot = payload?.snapshot || {};
     const result = snapshot?.raw || {};
     const humanSummary = buildRelapseHumanSummary({ ...payload, snapshot });
+    const clientSummary = buildRelapseClientClipboardSummary({ ...payload, snapshot });
     const hasRawTrace = !!(result && typeof result === 'object' && Object.keys(result).length > 0 && result?.debug);
     const score = Math.round(Number(snapshot?.score ?? result?.score) || 0);
+    const relapseScore = Math.round(Number(snapshot?.relapseScore ?? snapshot?.rawScore ?? result?.score) || 0);
+    const crashScore = Math.round(Number(snapshot?.crashScore) || 0);
     const level = String(snapshot?.level || result?.level || 'low');
     const confidence = Math.max(0, Math.min(100, Math.round(Number(snapshot?.confidence ?? result?.confidence) || 0)));
     const windows = getSortedRelapseWindows(snapshot?.windows || result?.windows);
@@ -3770,11 +3891,21 @@
       '',
       'Сводка:',
       '  • Score: ' + score + '%',
+      '  • Relapse raw: ' + relapseScore + '%',
+      '  • Crash raw: ' + crashScore + '%',
       '  • Level: ' + level + ' (' + getRelapseLevelLabel(level) + ')',
       '  • Confidence: ' + confidence + '%',
+      '  • Score model: ' + String(snapshot?.scoreModel || (snapshot?.blendWeights ? 'risk_radar_blended' : 'relapse_raw')),
       '  • Виджет: ' + (payload?.widget?.id || 'unknown') + ' / ' + (payload?.widget?.size || 'unknown'),
       ''
     ];
+
+    if (snapshot?.blendWeights && (Number(snapshot?.blendWeights?.relapse) > 0 || Number(snapshot?.blendWeights?.crash) > 0)) {
+      lines.push('Blend details:');
+      lines.push('  • Source: ' + String(snapshot?.source || 'none'));
+      lines.push('  • Blend weights: relapse=' + (Number(snapshot?.blendWeights?.relapse || 0).toFixed(2)) + ', crash=' + (Number(snapshot?.blendWeights?.crash || 0).toFixed(2)));
+      lines.push('');
+    }
 
     if (!hasRawTrace) {
       lines.push('⚠️ Внимание: raw trace payload пуст.');
@@ -3783,7 +3914,13 @@
       lines.push('');
     }
 
-    lines.push('Человеческое объяснение:');
+    lines.push('Коротко для клиента:');
+    (clientSummary || []).forEach((bullet) => {
+      lines.push('  • ' + bullet);
+    });
+
+    lines.push('');
+    lines.push('Техническая раскладка:');
     lines.push('  • ' + humanSummary.headline);
     (humanSummary.bullets || []).forEach((bullet) => {
       lines.push('  • ' + bullet);
@@ -3838,6 +3975,37 @@
     } else {
       recommendations.forEach((rec, index) => {
         lines.push('  ' + (index + 1) + '. ' + (rec?.text || rec?.action || rec?.id || 'recommendation'));
+      });
+    }
+
+    const protectionRelief = getRelapseProtectionSummary(result?.debug || {});
+    const effectiveComponents = Object.entries(result?.debug?.effectiveComponents || {})
+      .filter(([key]) => key !== 'protectiveBuffer')
+      .map(([key, value]) => ({
+        key,
+        value: Number(value) || 0,
+        ...getRelapseComponentMeta(key)
+      }))
+      .sort((a, b) => Math.abs(b.value) - Math.abs(a.value));
+
+    lines.push('');
+    lines.push('Protection by domains:');
+    if (!protectionRelief.length) {
+      lines.push(hasRawTrace ? '  (нет адресного domain relief)' : '  (payload пуст: protectiveBufferState.domainRelief не передан)');
+    } else {
+      protectionRelief.forEach((item, index) => {
+        lines.push('  ' + (index + 1) + '. ' + item.label + ' → −' + item.value.toFixed(2));
+      });
+    }
+
+    lines.push('');
+    lines.push('Effective components (after protection):');
+    if (!effectiveComponents.length) {
+      lines.push(hasRawTrace ? '  (нет effective components)' : '  (payload пуст: debug.effectiveComponents не были переданы)');
+    } else {
+      effectiveComponents.forEach((component, index) => {
+        const sign = component.value >= 0 ? '+' : '';
+        lines.push('  ' + (index + 1) + '. ' + component.label + ' (' + component.key + ') = ' + sign + component.value.toFixed(2) + (component.description ? ' | ' + component.description : ''));
       });
     }
 
@@ -4910,12 +5078,13 @@
         return HEYS.RiskRadar.calculate({ profile });
       } catch (e) { return null; }
     }, [payload]);
-    const radarSource = radarResult?.source || 'none';
-    const radarRelapseScore = Math.round(Number(radarResult?.relapse?.score) || score);
-    const radarCrashScore = Math.round(Number(radarResult?.crash?.score) || 0);
-    const radarScore = Math.round(Number(radarResult?.score) || score);
+    const radarSource = radarResult?.source || snapshot?.source || 'none';
+    const radarRelapseScore = Math.round(Number(snapshot?.relapseScore ?? snapshot?.rawScore ?? radarResult?.relapse?.score) || score);
+    const radarCrashScore = Math.round(Number(snapshot?.crashScore ?? radarResult?.crash?.score) || 0);
+    const radarScore = Math.round(Number(snapshot?.score ?? radarResult?.score) || score);
     const radarDrivers = (radarResult?.drivers || []).map(d => d.label || d.factor || String(d));
     const radarActions = (radarResult?.actions || []).map(a => a.text || a.label || String(a));
+    const scoreModelLabel = snapshot?.scoreModel === 'risk_radar_blended' ? 'Общий радар' : 'Эмоциональный риск';
 
     const getSourceLabel = (src) => {
       switch (src) {
@@ -5005,12 +5174,12 @@
           drivers: drivers.length,
           tookMs: Date.now() - startedAt
         });
-        HEYS.Toast?.success?.('Relapse Risk лог скопирован');
+        HEYS.Toast?.success?.('Полный разбор риска скопирован');
       } catch (err) {
         console.error('[HEYS.relapseRisk.copy] ❌ copy failed', {
           message: err?.message || String(err)
         });
-        HEYS.Toast?.error?.('Не удалось скопировать Relapse Risk лог');
+        HEYS.Toast?.error?.('Не удалось скопировать полный разбор риска');
       }
     };
 
@@ -5090,7 +5259,7 @@
                 React.createElement('span', { className: 'widget-relapse-risk__breakdown-value', style: { color: getRadarColor(radarCrashScore) } }, radarCrashScore)
               )
             ),
-            React.createElement('div', { className: 'widget-relapse-risk__breakdown-formula' }, `Итог = max(${radarRelapseScore}, ${radarCrashScore}) = ${radarScore} · ${getSourceLabel(radarSource).toLowerCase()}`)
+            React.createElement('div', { className: 'widget-relapse-risk__breakdown-formula' }, `Общий радар = ${radarScore}; эмоциональный риск = ${radarRelapseScore}; метаболический риск = ${radarCrashScore}; источник = ${getSourceLabel(radarSource).toLowerCase()}; модель = ${scoreModelLabel.toLowerCase()}`)
           ),
 
           // 4. What's driving risk + protective factors (compact chips)
@@ -5202,8 +5371,8 @@
             type: 'button',
             className: 'widget-relapse-risk__modal-copy-btn',
             onClick: copyRelapseLog,
-            title: 'Скопировать полный технический лог'
-          }, '📋 Скопировать техлог')
+            title: 'Скопировать полный разбор с деталями'
+          }, '📋 Скопировать полный разбор')
         )
       )
     );

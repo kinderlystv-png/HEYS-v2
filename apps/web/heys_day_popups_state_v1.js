@@ -77,17 +77,19 @@
 
       const screenW = window.innerWidth;
       const screenH = window.innerHeight;
+      const safePopupWidth = Math.min(popupWidth, Math.max(180, screenW - margin * 2));
+      const safePopupHeight = Math.min(popupHeight, Math.max(160, screenH - margin * 2));
 
       // Горизонтальная позиция
       let left, arrowPos = 'center';
-      if (clickX < popupWidth / 2 + margin) {
+      if (clickX < safePopupWidth / 2 + margin) {
         left = margin;
         arrowPos = 'left';
-      } else if (clickX > screenW - popupWidth / 2 - margin) {
-        left = screenW - popupWidth - margin;
+      } else if (clickX > screenW - safePopupWidth / 2 - margin) {
+        left = screenW - safePopupWidth - margin;
         arrowPos = 'right';
       } else {
-        left = clickX - popupWidth / 2;
+        left = clickX - safePopupWidth / 2;
       }
 
       // Вертикальная позиция
@@ -95,24 +97,24 @@
       const spaceBelow = screenH - clickY - offset;
       const spaceAbove = clickY - offset;
 
-      if (preferAbove && spaceAbove >= popupHeight) {
-        top = clickY - popupHeight - offset;
+      if (preferAbove && spaceAbove >= safePopupHeight) {
+        top = clickY - safePopupHeight - offset;
         showAbove = true;
-      } else if (spaceBelow >= popupHeight) {
+      } else if (spaceBelow >= safePopupHeight) {
         top = clickY + offset;
-      } else if (spaceAbove >= popupHeight) {
-        top = clickY - popupHeight - offset;
+      } else if (spaceAbove >= safePopupHeight) {
+        top = clickY - safePopupHeight - offset;
         showAbove = true;
       } else {
-        top = Math.max(margin, (screenH - popupHeight) / 2);
+        top = Math.max(margin, (screenH - safePopupHeight) / 2);
       }
 
       if (top < margin) top = margin;
-      if (top + popupHeight > screenH - margin) {
-        top = screenH - popupHeight - margin;
+      if (top + safePopupHeight > screenH - margin) {
+        top = screenH - safePopupHeight - margin;
       }
 
-      return { left, top, arrowPos, showAbove };
+      return { left, top, arrowPos, showAbove, safePopupWidth, safePopupHeight };
     }, []);
 
     // Закрытие popup при клике вне
