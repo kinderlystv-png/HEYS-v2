@@ -876,6 +876,79 @@
     // ===========================================================================
 
     /**
+     * Рассчитать Harm Score с учётом реального количества порции.
+     *
+     * Доза-зависимые факторы (макронутриенты: сахара, жиры, натрий, клетчатка, белок)
+     * масштабируются на grams/100 — небольшая порция даёт реально меньший вред.
+     * Внутренние свойства продукта (GI, NOVA, E-добавки, флаги качества) остаются
+     * без изменений: ультрапереработка или вредные добавки — свойство самого продукта.
+     * Гликемическая нагрузка (GL) масштабируется автоматически, т.к. carbs100 уменьшается.
+     *
+     * Примеры:
+     *  - Мёд 15г: simple100 × 0.15, GL низкий → harm ≈ 2 ("полезный")
+     *  - Мёд 100г: simple100 полный, GL очень высокий → harm ≈ 8 ("вредный")
+     *  - Чипсы 5г: NOVA4 сохраняется + макро × 0.05 → harm ≈ 2.5–3 (нейтральный), верно
+     *
+     * @param {Object} product - Продукт с полями нутриентов на 100г
+     * @param {number} grams   - Реально съеденные граммы
+     * @param {Object} [options] - Те же опции что у calculateHarmScore
+     * @returns {number} - Harm Score (0-10) для данной порции
+     */
+    function calculateDoseAdjustedHarm(product, grams, options = {}) {
+        if (!product) return 0;
+        const g = Number(grams) || 0;
+        if (g <= 0) return calculateHarmScore(product, options);
+
+        const scale = g / 100;
+
+        // Масштабируем доза-зависимые нутриенты к реальной порции.
+        // GI, novaGroup, additives, quality-флаги не тронуты — они часть природы продукта.
+        const scaledProduct = {
+            ...product,
+            trans100: (Number(product.trans100) || 0) * scale,
+            simple100: (Number(product.simple100) || 0) * scale,
+            badFat100: (Number(product.badFat100) || Number(product.badfat100) || 0) * scale,
+            sodium100: (Number(product.sodium100) || 0) * scale,
+            fiber100: (Number(product.fiber100) || 0) * scale,
+            protein100: (Number(product.protein100) || 0) * scale,
+            goodFat100: (Number(product.goodFat100) || Number(product.goodfat100) || 0) * scale,
+            complex100: (Number(product.complex100) || 0) * scale,
+            // carbs100 масштабируется → GL = GI × carbs_actual / 100 (порционная нагрузка)
+            carbs100: (
+                Number(product.carbs100) ||
+                (Number(product.simple100) || 0) + (Number(product.complex100) || 0)
+            ) * scale,
+            // Омега тоже масштабируем для корректного ratio-calculation
+            omega3_100: (Number(product.omega3_100) || 0) * scale,
+            omega6_100: (Number(product.omega6_100) || 0) * scale,
+        };
+
+        let score = calculateHarmScore(scaledProduct, options);
+
+        // Excess caloric penalty —————————————————————————————————————————
+        // Даже «суперполезный» продукт в большой дозе создаёт реальную нагрузку.
+        // Например, 100г миндаля = 563 ккал: бонусы за клетчатку/белок/хорошие жиры
+        // «перебивают» штрафы, и без этого penalty итог = 0 при любой дозе.
+        //
+        // Формула: +0.005 за каждую ккал сверх 150 (мягкий порог небольшой порции).
+        // Итого для миндаля:
+        //   30г (169 ккал) → +0.09 ≈ суперполезный ✓
+        //  100г (563 ккал) → +2.1  ≈ полезный       ✓
+        //  200г (1126 ккал) → +4.9  ≈ умеренно много ✓
+        // Не влияет на продукты с базово высоким harm (мёд, чипсы — clamp to 10).
+        const kcal100 = Number(product.kcal100) || 0;
+        if (kcal100 > 0) {
+            const servingKcal = kcal100 * g / 100;
+            const kcalThreshold = 150; // до 150 ккал порция — без штрафа
+            if (servingKcal > kcalThreshold) {
+                score = Math.min(10, score + (servingKcal - kcalThreshold) * 0.005);
+            }
+        }
+
+        return Math.round(score * 10) / 10;
+    }
+
+    /**
      * Нормализовать продукт и добавить вычисляемые поля
      * @param {Object} product - Исходный продукт
      * @returns {Object} - Продукт с harm, novaGroup и др.
@@ -978,6 +1051,8 @@
     Harm.calculateOmegaRatioPenalty = calculateOmegaRatioPenalty;
     Harm.calculateAdditivesPenalty = calculateAdditivesPenalty;
     Harm.calculateQualityBonus = calculateQualityBonus;
+    // 🆕 v3.1: dose-aware evaluation
+    Harm.calculateDoseAdjustedHarm = calculateDoseAdjustedHarm;
 
     // Для обратной совместимости — экспортируем в HEYS.products если нужно
     if (HEYS.products) {

@@ -4,55 +4,55 @@
     "hash": "6ba5574890e4",
     "fileCount": 27,
     "size": 1288987,
-    "builtAt": "2026-03-23T16:29:41.389Z"
+    "builtAt": "2026-03-23T16:41:59.934Z"
   },
   "boot-calc": {
-    "file": "boot-calc.bundle.6969f2497a7a.js",
-    "hash": "6969f2497a7a",
+    "file": "boot-calc.bundle.7d6b4c3bc6b3.js",
+    "hash": "7d6b4c3bc6b3",
     "fileCount": 19,
-    "size": 1051851,
-    "builtAt": "2026-03-23T16:39:28.171Z"
+    "size": 1054499,
+    "builtAt": "2026-03-23T17:45:18.910Z"
   },
   "boot-day": {
-    "file": "boot-day.bundle.876b2bfad47e.js",
-    "hash": "876b2bfad47e",
+    "file": "boot-day.bundle.f4ba1f735fdb.js",
+    "hash": "f4ba1f735fdb",
     "fileCount": 51,
-    "size": 979724,
-    "builtAt": "2026-03-23T16:39:28.365Z"
+    "size": 977321,
+    "builtAt": "2026-03-23T17:45:19.055Z"
   },
   "boot-app": {
     "file": "boot-app.bundle.b9f4e2fdc06d.js",
     "hash": "b9f4e2fdc06d",
     "fileCount": 48,
     "size": 1143775,
-    "builtAt": "2026-03-23T16:29:41.841Z"
+    "builtAt": "2026-03-23T16:42:00.343Z"
   },
   "boot-init": {
     "file": "boot-init.bundle.6bfcccbbba2f.js",
     "hash": "6bfcccbbba2f",
     "fileCount": 8,
     "size": 414933,
-    "builtAt": "2026-03-23T16:39:28.548Z"
+    "builtAt": "2026-03-23T16:42:00.479Z"
   },
   "postboot-1-game": {
-    "file": "postboot-1-game.bundle.45dd3d560987.js",
-    "hash": "45dd3d560987",
+    "file": "postboot-1-game.bundle.89ca6b6cb2ac.js",
+    "hash": "89ca6b6cb2ac",
     "fileCount": 30,
-    "size": 1716015,
-    "builtAt": "2026-03-23T16:29:42.149Z"
+    "size": 1718829,
+    "builtAt": "2026-03-23T17:39:03.586Z"
   },
   "postboot-2-insights": {
     "file": "postboot-2-insights.bundle.25d7c3679561.js",
     "hash": "25d7c3679561",
     "fileCount": 39,
     "size": 1879350,
-    "builtAt": "2026-03-23T16:29:42.322Z"
+    "builtAt": "2026-03-23T16:42:00.794Z"
   },
   "postboot-3-ui": {
-    "file": "postboot-3-ui.bundle.4fbcfa14cfb6.js",
-    "hash": "4fbcfa14cfb6",
+    "file": "postboot-3-ui.bundle.a1e98ab88930.js",
+    "hash": "a1e98ab88930",
     "fileCount": 27,
-    "size": 1618613,
-    "builtAt": "2026-03-23T16:29:42.483Z"
+    "size": 1619826,
+    "builtAt": "2026-03-23T17:25:38.989Z"
   }
 }

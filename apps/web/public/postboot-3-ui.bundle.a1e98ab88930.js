@@ -9233,8 +9233,16 @@ NOVA: 1
   // Фон карточки по полезности: 0=зелёный(полезный), 5=голубой(средний), 10=красный(вредный)
   function getHarmBg(h) {
     if (h == null) return null;
-    // h: 0=полезный, 5=средний, 10=вредный
-    // Светлые оттенки для хорошей читаемости текста
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    if (isDark) {
+      // В тёмной теме — полупрозрачные оттенки, чтобы не перебивать тёмный фон карточки
+      if (h <= 2) return 'rgba(16, 185, 129, 0.18)';   // здоровый — тёмный изумрудный
+      if (h <= 4) return 'rgba(16, 185, 129, 0.10)';   // умеренно здоровый
+      if (h <= 6) return 'rgba(59, 130, 246, 0.13)';   // нейтральный — тёмный синий
+      if (h <= 8) return 'rgba(239, 68, 68, 0.14)';    // нежелательный — тёмно-красный
+      return 'rgba(239, 68, 68, 0.22)';                 // вредный
+    }
+    // Светлая тема — оригинальные пастельные оттенки
     if (h <= 1) return '#d1fae5';  // 0-1: светло-мятный — полезный (emerald-100)
     if (h <= 2) return '#d1fae5';  // 2: светло-мятный
     if (h <= 3) return '#ecfdf5';  // 3: очень светлый мятный (emerald-50)
@@ -9472,7 +9480,7 @@ NOVA: 1
           onClick: () => selectAndContinue(manualHarm),
           style: {
             flex: 1,
-            background: selectedHarm === manualHarm ? (HEYS.Harm?.getHarmColor?.(manualHarm) || '#6b7280') + '15' : '#f9fafb',
+            background: selectedHarm === manualHarm ? (HEYS.Harm?.getHarmColor?.(manualHarm) || '#6b7280') + '15' : (document.documentElement.getAttribute('data-theme') === 'dark' ? '#1f2937' : '#f9fafb'),
             border: selectedHarm === manualHarm ? `2px solid ${HEYS.Harm?.getHarmColor?.(manualHarm) || '#6b7280'}` : '2px solid transparent',
             borderRadius: '16px',
             padding: '16px 12px',
@@ -9498,7 +9506,7 @@ NOVA: 1
           onClick: () => selectAndContinue(calculatedHarm),
           style: {
             flex: 1,
-            background: selectedHarm === calculatedHarm ? (calculatedBreakdown?.category?.color || '#6b7280') + '15' : '#f9fafb',
+            background: selectedHarm === calculatedHarm ? (calculatedBreakdown?.category?.color || '#6b7280') + '15' : (document.documentElement.getAttribute('data-theme') === 'dark' ? '#1f2937' : '#f9fafb'),
             border: selectedHarm === calculatedHarm ? `2px solid ${calculatedBreakdown?.category?.color || '#6b7280'}` : '2px solid transparent',
             borderRadius: '16px',
             padding: '16px 12px',
@@ -9523,8 +9531,12 @@ NOVA: 1
       hasManualHarm && calculatedHarm != null && Math.abs(manualHarm - calculatedHarm) >= 0.5 && e('div', {
         className: 'text-center text-xs py-2 px-3 rounded-lg mb-3',
         style: {
-          background: Math.abs(manualHarm - calculatedHarm) >= 2 ? '#fef3c7' : '#f3f4f6',
-          color: Math.abs(manualHarm - calculatedHarm) >= 2 ? '#92400e' : '#6b7280'
+          background: document.documentElement.getAttribute('data-theme') === 'dark'
+            ? (Math.abs(manualHarm - calculatedHarm) >= 2 ? 'rgba(120, 53, 15, 0.6)' : '#374151')
+            : (Math.abs(manualHarm - calculatedHarm) >= 2 ? '#fef3c7' : '#f3f4f6'),
+          color: document.documentElement.getAttribute('data-theme') === 'dark'
+            ? (Math.abs(manualHarm - calculatedHarm) >= 2 ? '#fcd34d' : '#9ca3af')
+            : (Math.abs(manualHarm - calculatedHarm) >= 2 ? '#92400e' : '#6b7280')
         }
       },
         Math.abs(manualHarm - calculatedHarm) >= 2

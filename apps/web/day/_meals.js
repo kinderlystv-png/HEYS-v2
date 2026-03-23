@@ -643,20 +643,39 @@
                     const per = per100(p);
                     const giVal = p.gi ?? p.gi100 ?? p.GI ?? p.giIndex ?? it.gi;
                     // Use centralized harm normalization with fallback to item
-                    const harmVal = HEYS.models?.normalizeHarm?.(p) ?? HEYS.models?.normalizeHarm?.(it);
+                    const baseHarm = HEYS.models?.normalizeHarm?.(p) ?? HEYS.models?.normalizeHarm?.(it);
 
-                    if (harmVal == null) {
+                    if (baseHarm == null) {
                         logMissingHarm(p.name, it, 'mobile-card');
                     }
 
-                    if (harmVal == null) {
+                    if (baseHarm == null) {
                         logMissingHarm(p.name, it, 'mobile-card-compact');
                     }
+
+                    // Dose-adjusted harm: при маленькой порции продукт показывается честно.
+                    // Мёд 15г ≠ мёд 100г по реальному гликемическому удару и вреду.
+                    // Используем calculateDoseAdjustedHarm если у продукта есть макро-данные.
+                    const _pHasMacros = (
+                        p.simple100 != null || p.carbs100 != null ||
+                        p.trans100 != null || p.badFat100 != null || p.badfat100 != null
+                    );
+                    const harmVal = (G > 0 && _pHasMacros && HEYS.Harm?.calculateDoseAdjustedHarm)
+                        ? HEYS.Harm.calculateDoseAdjustedHarm(p, G)
+                        : baseHarm;
 
                     const gramsClass = G > 500 ? 'grams-danger' : G > 300 ? 'grams-warn' : '';
 
                     const getHarmBg = (h) => {
-                        if (h == null) return '#fff';
+                        if (h == null) return document.documentElement.getAttribute('data-theme') === 'dark' ? null : '#fff';
+                        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+                        if (isDark) {
+                            if (h <= 2) return 'rgba(16, 185, 129, 0.20)';
+                            if (h <= 4) return 'rgba(16, 185, 129, 0.12)';
+                            if (h <= 6) return 'rgba(59, 130, 246, 0.15)';
+                            if (h <= 8) return 'rgba(239, 68, 68, 0.15)';
+                            return 'rgba(239, 68, 68, 0.25)';
+                        }
                         if (h <= 1) return '#34d399';
                         if (h <= 2) return '#6ee7b7';
                         if (h <= 3) return '#a7f3d0';
@@ -716,7 +735,7 @@
                             prot: per.prot100 || 0,
                             carbs: per.carbs100 || 0,
                             fat: per.fat100 || 0,
-                            harm: prod.harm ?? harmVal ?? 0,
+                            harm: prod.harm ?? baseHarm ?? 0,
                             gi: prod.gi ?? 50,
                             fiber: per.fiber100 || 0,
                             category: prod.category || '—',
@@ -725,7 +744,9 @@
 
                         // Actual calories consumed at the real portion the user ate (G = grams from closure)
                         // Early harm eval — needed for good-product guard (#6) and harm-only fallback (#4)
-                        const origHarm = prod.harm ?? harmVal ?? 0;
+                        // Intentionally uses baseHarm (per-100g intrinsic quality), not dose-adjusted harmVal,
+                        // so that we evaluate the product's nature, not the portion size.
+                        const origHarm = prod.harm ?? baseHarm ?? 0;
                         // #6 Guard: product already good — no value in recommending a swap
                         if (origHarm <= 1 && currentKcal <= 200) {
                             console.info(_LOG, '⛔ skip: product already good (harm≤1 + kcal≤200)', { product: prod.name, harm: origHarm, kcal: currentKcal });
@@ -1685,94 +1706,22 @@
                 ),
 
                 mealQuality?.mealRoleStatus?.coachText && React.createElement('div', {
-                    className: 'meal-role-status-callout',
-                    style: {
-                        display: 'flex',
-                        alignItems: 'flex-start',
-                        gap: '10px',
-                        margin: '2px 0 10px 0',
-                        padding: '10px 12px',
-                        borderRadius: '14px',
-                        background: mealQuality.mealRoleStatus.tone === 'green'
-                            ? 'linear-gradient(135deg, #dcfce7 0%, #f0fdf4 100%)'
-                            : mealQuality.mealRoleStatus.tone === 'amber'
-                                ? 'linear-gradient(135deg, #fef3c7 0%, #fffbeb 100%)'
-                                : mealQuality.mealRoleStatus.tone === 'slate'
-                                    ? 'linear-gradient(135deg, #e2e8f0 0%, #f8fafc 100%)'
-                                    : 'linear-gradient(135deg, #dbeafe 0%, #eff6ff 100%)',
-                        border: mealQuality.mealRoleStatus.tone === 'green'
-                            ? '1px solid rgba(34, 197, 94, 0.25)'
-                            : mealQuality.mealRoleStatus.tone === 'amber'
-                                ? '1px solid rgba(245, 158, 11, 0.28)'
-                                : mealQuality.mealRoleStatus.tone === 'slate'
-                                    ? '1px solid rgba(100, 116, 139, 0.24)'
-                                    : '1px solid rgba(59, 130, 246, 0.24)',
-                        boxShadow: mealQuality.mealRoleStatus.tone === 'green'
-                            ? '0 8px 20px rgba(34, 197, 94, 0.08)'
-                            : mealQuality.mealRoleStatus.tone === 'amber'
-                                ? '0 8px 20px rgba(245, 158, 11, 0.08)'
-                                : mealQuality.mealRoleStatus.tone === 'slate'
-                                    ? '0 8px 20px rgba(71, 85, 105, 0.08)'
-                                    : '0 8px 20px rgba(59, 130, 246, 0.08)',
-                    },
+                    className: 'meal-role-coach-card',
+                    'data-tone': mealQuality.mealRoleStatus.tone || 'slate',
                 },
-                    React.createElement('div', {
-                        style: {
-                            width: '30px',
-                            height: '30px',
-                            borderRadius: '999px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            fontSize: '15px',
-                            background: mealQuality.mealRoleStatus.tone === 'green'
-                                ? 'rgba(34, 197, 94, 0.12)'
-                                : mealQuality.mealRoleStatus.tone === 'amber'
-                                    ? 'rgba(245, 158, 11, 0.14)'
-                                    : mealQuality.mealRoleStatus.tone === 'slate'
-                                        ? 'rgba(71, 85, 105, 0.12)'
-                                        : 'rgba(59, 130, 246, 0.12)',
-                            flexShrink: 0,
-                        },
-                    }, mealQuality.mealRoleStatus.icon),
-                    React.createElement('div', {
-                        style: {
-                            minWidth: 0,
-                            flex: 1,
-                        },
-                    },
-                        React.createElement('div', {
-                            style: {
-                                fontSize: '10px',
-                                fontWeight: 700,
-                                letterSpacing: '0.08em',
-                                textTransform: 'uppercase',
-                                marginBottom: '3px',
-                                color: mealQuality.mealRoleStatus.tone === 'green'
-                                    ? '#15803d'
-                                    : mealQuality.mealRoleStatus.tone === 'amber'
-                                        ? '#b45309'
-                                        : mealQuality.mealRoleStatus.tone === 'slate'
-                                            ? '#475569'
-                                            : '#1d4ed8',
-                            },
-                        }, mealQuality.mealRoleStatus.coachLabel || 'Подсказка'),
-                        React.createElement('div', {
-                            style: {
-                                fontSize: '13px',
-                                fontWeight: 700,
-                                lineHeight: 1.3,
-                                marginBottom: '3px',
-                                color: '#0f172a',
-                            },
-                        }, mealQuality.mealRoleStatus.coachTitle || mealQuality.mealRoleStatus.shortLabel),
-                        React.createElement('div', {
-                            style: {
-                                fontSize: '12px',
-                                lineHeight: 1.4,
-                                color: '#334155',
-                            },
-                        }, mealQuality.mealRoleStatus.coachText),
+                    React.createElement('div', { className: 'meal-role-coach-card__icon' },
+                        mealQuality.mealRoleStatus.icon,
+                    ),
+                    React.createElement('div', { className: 'meal-role-coach-card__body' },
+                        React.createElement('div', { className: 'meal-role-coach-card__label' },
+                            mealQuality.mealRoleStatus.coachLabel || 'Подсказка',
+                        ),
+                        React.createElement('div', { className: 'meal-role-coach-card__title' },
+                            mealQuality.mealRoleStatus.coachTitle || mealQuality.mealRoleStatus.shortLabel,
+                        ),
+                        React.createElement('div', { className: 'meal-role-coach-card__text' },
+                            mealQuality.mealRoleStatus.coachText,
+                        ),
                     ),
                 ),
 

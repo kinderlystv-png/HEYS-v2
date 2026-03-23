@@ -20272,8 +20272,8 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
   const MODULE = '[HEYS.relapseRisk]';
 
   const CONFIG = {
-    VERSION: '1.1.0',
-    DEFAULT_PROFILE_KEY: 'v1_1',
+    VERSION: '1.2.0',
+    DEFAULT_PROFILE_KEY: 'v1_2',
     LEVELS: {
       low: { min: 0, max: 19 },
       guarded: { min: 20, max: 39 },
@@ -20377,6 +20377,19 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
           rewardExposure: 0.14,
           timingContext: 0.09,
           emotionalVulnerability: 0.12,
+        },
+      },
+      v1_2: {
+        key: 'v1_2',
+        label: 'Emotion-aware v1.2',
+        description: 'Субъективное состояние (настроение, бодрость, стресс) — прямой предиктор срыва; вес emotionalVulnerability повышен.',
+        weights: {
+          stressLoad: 0.20,
+          sleepDebt: 0.18,
+          restrictionPressure: 0.18,
+          rewardExposure: 0.14,
+          timingContext: 0.08,
+          emotionalVulnerability: 0.22,
         },
       },
     },
@@ -20844,23 +20857,31 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
   }
 
   function calcEmotionalVulnerability(ctx) {
+    // dayScore: composite (mood + wellbeing + inverted stress) / 3
     const dayScorePenalty = ctx.dayScore <= 0 ? 0
-      : ctx.dayScore <= 3 ? 40
-        : ctx.dayScore <= 5 ? 25
-          : ctx.dayScore <= 7 ? 10
+      : ctx.dayScore <= 3 ? 50
+        : ctx.dayScore <= 5 ? 32
+          : ctx.dayScore <= 7 ? 12
             : 0;
 
-    const moodPenalty = ctx.moodAvg > 0 && ctx.moodAvg < 4 ? 18
-      : ctx.moodAvg > 0 && ctx.moodAvg < 6 ? 8
-        : 0;
+    // mood — прямой индикатор эмоционального состояния;
+    // научно: негативный аффект — предиктор #1 binge-eating
+    const moodPenalty = ctx.moodAvg > 0 && ctx.moodAvg < 3 ? 30
+      : ctx.moodAvg > 0 && ctx.moodAvg < 5 ? 18
+        : ctx.moodAvg > 0 && ctx.moodAvg < 7 ? 6
+          : 0;
 
-    const wellbeingPenalty = ctx.wellbeingAvg > 0 && ctx.wellbeingAvg < 4 ? 18
-      : ctx.wellbeingAvg > 0 && ctx.wellbeingAvg < 6 ? 8
-        : 0;
+    // wellbeing (бодрость) — сниженная энергия ослабляет self-regulation
+    const wellbeingPenalty = ctx.wellbeingAvg > 0 && ctx.wellbeingAvg < 3 ? 25
+      : ctx.wellbeingAvg > 0 && ctx.wellbeingAvg < 5 ? 14
+        : ctx.wellbeingAvg > 0 && ctx.wellbeingAvg < 7 ? 5
+          : 0;
 
-    const mismatchBonus = ctx.stressAvg >= 6 && ctx.kcalPct < 0.7 ? 18
-      : ctx.stressAvg >= 5 && ctx.dayScore > 0 && ctx.dayScore <= 5 ? 10
-        : 0;
+    // stress × deficit / low mood: mismatch amplifies risk
+    const mismatchBonus = ctx.stressAvg >= 6 && ctx.kcalPct < 0.7 ? 20
+      : ctx.stressAvg >= 6 && ctx.moodAvg > 0 && ctx.moodAvg <= 4 ? 15
+        : ctx.stressAvg >= 5 && ctx.dayScore > 0 && ctx.dayScore <= 5 ? 10
+          : 0;
 
     return clamp100(dayScorePenalty + moodPenalty + wellbeingPenalty + mismatchBonus);
   }
@@ -20919,10 +20940,13 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
 
     let score = clamp100(weightedScore - components.protectiveBuffer);
 
-    // Subjective distress should not dominate the model,
-    // but a very low emotional state should still surface at least a guarded baseline.
-    if (components.emotionalVulnerability >= 70 && score < 22) {
-      score = 22;
+    // Subjective distress is a direct predictor of relapse (van Strien et al., 2016).
+    // A strong emotional signal should guarantee at least "elevated" (40+) even when
+    // metabolic factors are compensated. More moderate distress still floors at "guarded".
+    if (components.emotionalVulnerability >= 80 && score < 40) {
+      score = 40;
+    } else if (components.emotionalVulnerability >= 60 && score < 25) {
+      score = 25;
     }
 
     // Avoid a misleading absolute zero when meaningful active drivers are present,
@@ -37738,22 +37762,24 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
    * Простая Rule-based модель
    */
   const FACTORS = {
-    // Питание — 35%
-    kcal: { weight: 15, category: 'nutrition', label: 'Калории', icon: '🔥' },
+    // Питание — 33%
+    kcal: { weight: 14, category: 'nutrition', label: 'Калории', icon: '🔥' },
     protein: { weight: 10, category: 'nutrition', label: 'Белок', icon: '🥩' },
-    timing: { weight: 10, category: 'nutrition', label: 'Тайминг еды', icon: '⏰' },
+    timing: { weight: 9, category: 'nutrition', label: 'Тайминг еды', icon: '⏰' },
 
-    // Активность — 25%
-    steps: { weight: 10, category: 'activity', label: 'Шаги', icon: '👟' },
-    training: { weight: 10, category: 'activity', label: 'Тренировка', icon: '💪' },
+    // Активность — 23%
+    steps: { weight: 9, category: 'activity', label: 'Шаги', icon: '👟' },
+    training: { weight: 9, category: 'activity', label: 'Тренировка', icon: '💪' },
     household: { weight: 5, category: 'activity', label: 'Бытовая активность', icon: '🏠' },
 
-    // Восстановление — 25%
-    sleep: { weight: 15, category: 'recovery', label: 'Сон', icon: '😴' },
-    stress: { weight: 10, category: 'recovery', label: 'Стресс', icon: '😰' },
+    // Восстановление — 32%
+    sleep: { weight: 13, category: 'recovery', label: 'Сон', icon: '😴' },
+    stress: { weight: 8, category: 'recovery', label: 'Стресс', icon: '😰' },
+    mood: { weight: 6, category: 'recovery', label: 'Настроение', icon: '😄' },
+    wellbeing: { weight: 5, category: 'recovery', label: 'Бодрость', icon: '⚡' },
 
-    // Водный баланс — 15%
-    water: { weight: 15, category: 'hydration', label: 'Вода', icon: '💧' }
+    // Водный баланс — 12%
+    water: { weight: 12, category: 'hydration', label: 'Вода', icon: '💧' }
   };
 
   /**
@@ -37789,6 +37815,8 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
     training_none: { text: 'Добавь активность', icon: '🏃', priority: 3 },
     sleep_low: { text: 'Ляг пораньше', icon: '🛏️', priority: 1 },
     stress_high: { text: 'Сделай паузу', icon: '🧘', priority: 1 },
+    mood_low: { text: 'Сделай что-то приятное', icon: '🌞', priority: 1 },
+    wellbeing_low: { text: 'Отдохни или прогуляйся', icon: '🌿', priority: 1 },
     water_low: { text: 'Выпей воды', icon: '💧', priority: 1 }
   };
 
@@ -37940,6 +37968,24 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
         return 20;
       }
 
+      case 'mood': {
+        const mood = dayData?.moodAvg || 0;
+        if (mood === 0) return 70; // Нет данных
+        if (mood >= 7) return 100;
+        if (mood >= 5) return 70;
+        if (mood >= 3) return 40;
+        return 20;
+      }
+
+      case 'wellbeing': {
+        const wb = dayData?.wellbeingAvg || 0;
+        if (wb === 0) return 70; // Нет данных
+        if (wb >= 7) return 100;
+        if (wb >= 5) return 70;
+        if (wb >= 3) return 40;
+        return 20;
+      }
+
       case 'water': {
         const drunk = dayData?.waterMl || 0;
         const goal = waterGoal || 2000;
@@ -38004,6 +38050,14 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
         const value = dayData?.stressAvg || 0;
         return { value: Math.round(value * 10) / 10, target: 3, unit: '/10', label: value === 0 ? 'нет данных' : null };
       }
+      case 'mood': {
+        const value = dayData?.moodAvg || 0;
+        return { value: Math.round(value * 10) / 10, target: 7, unit: '/10', label: value === 0 ? 'нет данных' : null };
+      }
+      case 'wellbeing': {
+        const value = dayData?.wellbeingAvg || 0;
+        return { value: Math.round(value * 10) / 10, target: 7, unit: '/10', label: value === 0 ? 'нет данных' : null };
+      }
       case 'water': {
         const goal = waterGoal || 2000;
         const value = dayData?.waterMl || 0;
@@ -38038,6 +38092,10 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
         return 'sleep_low';
       case 'stress':
         return 'stress_high';
+      case 'mood':
+        return 'mood_low';
+      case 'wellbeing':
+        return 'wellbeing_low';
       case 'water':
         return 'water_low';
       default:
