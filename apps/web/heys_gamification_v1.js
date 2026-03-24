@@ -4760,11 +4760,13 @@
           _saveXPCache(merged.totalXP || 0, merged._lastKnownEventCount || 0);
           _cloudLoaded = true;
 
+          // 🚀 FIX v7.1: reason:'cloud_load_complete' — снимает level guard в GamificationBar
+          // (раньше session path не отправлял reason → guard висел 45s fallback)
           window.dispatchEvent(new CustomEvent('heysGameUpdate', {
-            detail: { ...game.getStats(), isInitialLoad: _isLoadingPhase }
+            detail: { ...game.getStats(), isInitialLoad: _isLoadingPhase, reason: 'cloud_load_complete' }
           }));
 
-          // � v3.0: Единственная точка проверки — lightweight consistency check
+          // 🔧 v3.0: Единственная точка проверки — lightweight consistency check
           // Заменяет двойной rebuild (setTimeout + ensureAuditConsistency)
           ensureAuditConsistency('cloud-merge');
 
@@ -4778,6 +4780,12 @@
 
         // FIX v2.4: Даже если cloud пуст — пробуем восстановить из аудита
         console.info('[🎮 Gamification] No cloud data, attempting audit rebuild...');
+
+        // 🚀 FIX v7.1: Снимаем level guard немедленно — даже с пустым облаком
+        window.dispatchEvent(new CustomEvent('heysGameUpdate', {
+          detail: { ...game.getStats(), isInitialLoad: _isLoadingPhase, reason: 'cloud_load_complete' }
+        }));
+
         ensureAuditConsistency('cloud-empty');
 
         endGameSyncTrace(syncTrace, 'ok', { reason: 'cloud_empty_audit_consistency' });
@@ -4789,6 +4797,12 @@
           triggerImmediateSync('pending_sync');
         }
         console.warn('[🎮 Gamification] Cloud load failed:', e.message);
+
+        // 🚀 FIX v7.1: Снимаем level guard при ошибке — не заставляем ждать 45s timeout
+        window.dispatchEvent(new CustomEvent('heysGameUpdate', {
+          detail: { ...game.getStats(), isInitialLoad: true, reason: 'cloud_load_error' }
+        }));
+
         endGameSyncTrace(syncTrace, 'error', { message: e.message });
         return false;
       }

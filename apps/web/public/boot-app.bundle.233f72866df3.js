@@ -13717,7 +13717,14 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
 
     function GamificationBar() {
         const React = window.React;
+        const ReactDOM = window.ReactDOM;
         const { useState, useEffect, useRef, useCallback, useMemo } = React;
+        const portalToBody = (node) => {
+            if (ReactDOM && typeof ReactDOM.createPortal === 'function' && globalThis.document?.body) {
+                return ReactDOM.createPortal(node, globalThis.document.body);
+            }
+            return node;
+        };
         const AUDIT_LOG_PREFIX = '[HEYS.game.audit]';
         const GAME_SYNC_LOG_PREFIX = '[GAMESYNH]';
         const logAuditInfo = (...args) => console.info(AUDIT_LOG_PREFIX, ...args);
@@ -14119,12 +14126,12 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
 
             window.addEventListener('heysSyncCompleted', handleSyncCompleted);
 
-            // RC-4 fix: Fallback поднят с 8s до 15s — на случай сетевых задержек или зависшего pipeline.
+            // FIX v7.1: Снижен fallback с 45s до 10s — event-driven guard release теперь работает для session path
             if (levelGuardTimerRef.current) clearTimeout(levelGuardTimerRef.current);
             levelGuardTimerRef.current = setTimeout(() => {
-                logSyncInfo('UI guard:OFF', { reason: 'fallback_timeout_45000ms' });
+                logSyncInfo('UI guard:OFF', { reason: 'fallback_timeout_10000ms' });
                 setLevelGuardActive(false);
-            }, 45000);
+            }, 10000);
 
             return () => {
                 window.removeEventListener('heysSyncCompleted', handleSyncCompleted);
@@ -14144,9 +14151,9 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                 // Guard включился, но pipeline стартует заново — нужен свежий safety timeout.
                 if (levelGuardTimerRef.current) clearTimeout(levelGuardTimerRef.current);
                 levelGuardTimerRef.current = setTimeout(() => {
-                    logSyncInfo('UI guard:OFF', { reason: 'client_changed_fallback_timeout_45000ms' });
+                    logSyncInfo('UI guard:OFF', { reason: 'client_changed_fallback_timeout_10000ms' });
                     setLevelGuardActive(false);
-                }, 45000);
+                }, 10000);
                 // Немедленно обнуляем все данные до дефолтов, пока грузятся новые
                 const freshStats = HEYS.game ? HEYS.game.getStats() : {
                     totalXP: 0, level: 1,
@@ -15439,165 +15446,175 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                 )
             ),
 
-            storyAchievement && React.createElement('div', {
-                className: 'achievement-story-modal',
-                onClick: () => setStoryAchId(null)
-            },
+            storyAchievement && portalToBody(
                 React.createElement('div', {
-                    className: `achievement-story-card ${storyUnlocked ? 'unlocked' : 'locked'} rarity-${storyAchievement.rarity}`,
-                    onClick: (e) => e.stopPropagation()
+                    className: 'achievement-story-modal',
+                    onClick: () => setStoryAchId(null)
                 },
-                    React.createElement('div', { className: 'achievement-story-close', onClick: () => setStoryAchId(null) }, '✕'),
-                    React.createElement('div', { className: 'achievement-story-rarity' }, storyAchievement.rarity),
-                    React.createElement('div', { className: 'achievement-story-icon' }, storyUnlocked ? storyAchievement.icon : '🔒'),
-                    React.createElement('div', { className: 'achievement-story-name' }, storyAchievement.name),
                     React.createElement('div', {
-                        className: `achievement-story-label ${storyUnlocked ? 'unlocked' : 'locked'}`
-                    }, storyUnlocked ? 'Инсайт' : 'Как получить'),
+                        className: `achievement-story-card ${storyUnlocked ? 'unlocked' : 'locked'} rarity-${storyAchievement.rarity}`,
+                        onClick: (e) => e.stopPropagation()
+                    },
+                        React.createElement('div', { className: 'achievement-story-close', onClick: () => setStoryAchId(null) }, '✕'),
+                        React.createElement('div', { className: 'achievement-story-rarity' }, storyAchievement.rarity),
+                        React.createElement('div', { className: 'achievement-story-icon' }, storyUnlocked ? storyAchievement.icon : '🔒'),
+                        React.createElement('div', { className: 'achievement-story-name' }, storyAchievement.name),
+                        React.createElement('div', {
+                            className: `achievement-story-label ${storyUnlocked ? 'unlocked' : 'locked'}`
+                        }, storyUnlocked ? 'Инсайт' : 'Как получить'),
+                        React.createElement('div', {
+                            className: 'achievement-story-text'
+                        }, storyUnlocked ? (storyAchievement.story || storyAchievement.desc) : storyAchievement.desc),
+                        React.createElement('div', { className: 'achievement-story-xp' }, `+${storyAchievement.xp} XP`),
+                        React.createElement('button', {
+                            className: 'achievement-story-btn',
+                            onClick: () => setStoryAchId(null)
+                        }, 'Понятно')
+                    )
+                )
+            ),
+
+            levelUpModal && portalToBody(
+                React.createElement('div', {
+                    className: 'level-up-modal',
+                    onClick: () => setLevelUpModal(null)
+                },
+                    React.createElement('div', { className: 'level-up-modal__backdrop' }),
                     React.createElement('div', {
-                        className: 'achievement-story-text'
-                    }, storyUnlocked ? (storyAchievement.story || storyAchievement.desc) : storyAchievement.desc),
-                    React.createElement('div', { className: 'achievement-story-xp' }, `+${storyAchievement.xp} XP`),
-                    React.createElement('button', {
-                        className: 'achievement-story-btn',
-                        onClick: () => setStoryAchId(null)
-                    }, 'Понятно')
+                        className: 'level-up-modal__card',
+                        style: { '--level-color': levelUpModal.color },
+                        onClick: (e) => e.stopPropagation()
+                    },
+                        React.createElement('div', { className: 'level-up-modal__badge' }, levelUpModal.icon),
+                        React.createElement('div', { className: 'level-up-modal__title' }, 'Новый уровень!'),
+                        React.createElement('div', { className: 'level-up-modal__level' }, `Уровень ${levelUpModal.level}`),
+                        React.createElement('div', { className: 'level-up-modal__subtitle' }, levelUpModal.title),
+                        React.createElement('button', {
+                            className: 'level-up-modal__btn',
+                            onClick: () => setLevelUpModal(null)
+                        }, 'Продолжить')
+                    )
                 )
             ),
 
-            levelUpModal && React.createElement('div', {
-                className: 'level-up-modal',
-                onClick: () => setLevelUpModal(null)
-            },
-                React.createElement('div', { className: 'level-up-modal__backdrop' }),
+            weeklyCeremony && portalToBody(
                 React.createElement('div', {
-                    className: 'level-up-modal__card',
-                    style: { '--level-color': levelUpModal.color },
-                    onClick: (e) => e.stopPropagation()
+                    className: 'weekly-ceremony-modal',
+                    onClick: () => setWeeklyCeremony(null)
                 },
-                    React.createElement('div', { className: 'level-up-modal__badge' }, levelUpModal.icon),
-                    React.createElement('div', { className: 'level-up-modal__title' }, 'Новый уровень!'),
-                    React.createElement('div', { className: 'level-up-modal__level' }, `Уровень ${levelUpModal.level}`),
-                    React.createElement('div', { className: 'level-up-modal__subtitle' }, levelUpModal.title),
-                    React.createElement('button', {
-                        className: 'level-up-modal__btn',
-                        onClick: () => setLevelUpModal(null)
-                    }, 'Продолжить')
+                    React.createElement('div', { className: 'weekly-ceremony-modal__backdrop' }),
+                    React.createElement('div', {
+                        className: 'weekly-ceremony-modal__card',
+                        onClick: (e) => e.stopPropagation()
+                    },
+                        React.createElement('div', { className: 'weekly-ceremony-modal__icon' }, weeklyCeremony.icon || '🏆'),
+                        React.createElement('div', { className: 'weekly-ceremony-modal__title' }, 'Недельный челлендж выполнен!'),
+                        React.createElement('div', { className: 'weekly-ceremony-modal__subtitle' }, weeklyCeremony.title),
+                        React.createElement('div', { className: 'weekly-ceremony-modal__reward' }, `+${weeklyCeremony.reward} XP`),
+                        React.createElement('button', {
+                            className: 'weekly-ceremony-modal__btn',
+                            onClick: () => setWeeklyCeremony(null)
+                        }, 'Отлично!')
+                    )
                 )
             ),
 
-            weeklyCeremony && React.createElement('div', {
-                className: 'weekly-ceremony-modal',
-                onClick: () => setWeeklyCeremony(null)
-            },
-                React.createElement('div', { className: 'weekly-ceremony-modal__backdrop' }),
+            streakCelebration && portalToBody(
                 React.createElement('div', {
-                    className: 'weekly-ceremony-modal__card',
-                    onClick: (e) => e.stopPropagation()
-                },
-                    React.createElement('div', { className: 'weekly-ceremony-modal__icon' }, weeklyCeremony.icon || '🏆'),
-                    React.createElement('div', { className: 'weekly-ceremony-modal__title' }, 'Недельный челлендж выполнен!'),
-                    React.createElement('div', { className: 'weekly-ceremony-modal__subtitle' }, weeklyCeremony.title),
-                    React.createElement('div', { className: 'weekly-ceremony-modal__reward' }, `+${weeklyCeremony.reward} XP`),
-                    React.createElement('button', {
-                        className: 'weekly-ceremony-modal__btn',
-                        onClick: () => setWeeklyCeremony(null)
-                    }, 'Отлично!')
-                )
+                    className: 'streak-milestone-toast'
+                }, `🔥 Streak ${streakCelebration} дней!`)
             ),
-
-            streakCelebration && React.createElement('div', {
-                className: 'streak-milestone-toast'
-            }, `🔥 Streak ${streakCelebration} дней!`),
 
             // === Onboarding Fusion Ceremony ===
-            fusionPhase && React.createElement('div', {
-                className: 'onboarding-fusion',
-                onClick: (e) => { if (fusionPhase === 'ready') handleFusionDismiss(); }
-            },
-                React.createElement('div', { className: 'onboarding-fusion__backdrop' }),
+            fusionPhase && portalToBody(
                 React.createElement('div', {
-                    className: 'onboarding-fusion__stage',
-                    onClick: (e) => e.stopPropagation()
+                    className: 'onboarding-fusion',
+                    onClick: (e) => { if (fusionPhase === 'ready') handleFusionDismiss(); }
                 },
-                    // Title
+                    React.createElement('div', { className: 'onboarding-fusion__backdrop' }),
                     React.createElement('div', {
-                        className: 'onboarding-fusion__title'
-                    }, '✨ Все первые шаги пройдены!'),
+                        className: 'onboarding-fusion__stage',
+                        onClick: (e) => e.stopPropagation()
+                    },
+                        // Title
+                        React.createElement('div', {
+                            className: 'onboarding-fusion__title'
+                        }, '✨ Все первые шаги пройдены!'),
 
-                    // Ring with achievement icons
-                    React.createElement('div', { className: 'onboarding-fusion__ring' },
-                        // Achievement icons positioned in a circle
-                        ONBOARDING_ICONS.map((icon, i) => {
-                            const isMerging = fusionPhase === 'merge' || fusionPhase === 'medal' || fusionPhase === 'ready' || fusionPhase === 'fly';
-                            return React.createElement('div', {
-                                key: i,
-                                className: 'onboarding-fusion__icon',
-                                style: {
-                                    left: isMerging ? 'calc(50% - 22px)' : `calc(${fusionIconPositions[i].left} - 22px)`,
-                                    top: isMerging ? 'calc(50% - 22px)' : `calc(${fusionIconPositions[i].top} - 22px)`,
-                                    opacity: isMerging ? 0 : 1,
-                                    transform: isMerging ? 'scale(0)' : 'scale(1)',
-                                    transition: isMerging ? `all 0.6s cubic-bezier(0.55, 0, 0.1, 1) ${i * 0.05}s` : 'none',
-                                    animation: fusionPhase === 'gather' ? `fusionIconAppear 0.4s ease-out ${0.4 + i * 0.1}s forwards` : 'none'
-                                }
-                            }, icon);
-                        }),
+                        // Ring with achievement icons
+                        React.createElement('div', { className: 'onboarding-fusion__ring' },
+                            // Achievement icons positioned in a circle
+                            ONBOARDING_ICONS.map((icon, i) => {
+                                const isMerging = fusionPhase === 'merge' || fusionPhase === 'medal' || fusionPhase === 'ready' || fusionPhase === 'fly';
+                                return React.createElement('div', {
+                                    key: i,
+                                    className: 'onboarding-fusion__icon',
+                                    style: {
+                                        left: isMerging ? 'calc(50% - 22px)' : `calc(${fusionIconPositions[i].left} - 22px)`,
+                                        top: isMerging ? 'calc(50% - 22px)' : `calc(${fusionIconPositions[i].top} - 22px)`,
+                                        opacity: isMerging ? 0 : 1,
+                                        transform: isMerging ? 'scale(0)' : 'scale(1)',
+                                        transition: isMerging ? `all 0.6s cubic-bezier(0.55, 0, 0.1, 1) ${i * 0.05}s` : 'none',
+                                        animation: fusionPhase === 'gather' ? `fusionIconAppear 0.4s ease-out ${0.4 + i * 0.1}s forwards` : 'none'
+                                    }
+                                }, icon);
+                            }),
 
-                        // Starburst rays
-                        (fusionPhase === 'medal' || fusionPhase === 'ready') && React.createElement('div', {
-                            className: 'onboarding-fusion__rays is-visible'
-                        },
-                            Array.from({ length: 12 }).map((_, i) =>
-                                React.createElement('div', { key: i, className: 'onboarding-fusion__ray' })
+                            // Starburst rays
+                            (fusionPhase === 'medal' || fusionPhase === 'ready') && React.createElement('div', {
+                                className: 'onboarding-fusion__rays is-visible'
+                            },
+                                Array.from({ length: 12 }).map((_, i) =>
+                                    React.createElement('div', { key: i, className: 'onboarding-fusion__ray' })
+                                )
+                            ),
+
+                            // Medal
+                            React.createElement('div', {
+                                ref: fusionMedalRef,
+                                className: `onboarding-fusion__medal${(fusionPhase === 'medal' || fusionPhase === 'ready') ? ' is-visible' : ''}`,
+                                style: fusionPhase === 'fly' ? {} : {}
+                            }, '🏅'),
+
+                            // Confetti particles
+                            (fusionPhase === 'medal' || fusionPhase === 'ready') && React.createElement('div', {
+                                className: 'onboarding-fusion__confetti'
+                            },
+                                fusionConfetti.map((p, i) =>
+                                    React.createElement('div', {
+                                        key: i,
+                                        className: 'onboarding-fusion__confetti-piece is-active',
+                                        style: {
+                                            '--cx': p.cx,
+                                            '--cy': p.cy,
+                                            background: p.color,
+                                            width: `${p.size}px`,
+                                            height: `${p.size}px`,
+                                            left: '50%',
+                                            top: '50%',
+                                            animationDelay: p.delay
+                                        }
+                                    })
+                                )
                             )
                         ),
 
-                        // Medal
-                        React.createElement('div', {
-                            ref: fusionMedalRef,
-                            className: `onboarding-fusion__medal${(fusionPhase === 'medal' || fusionPhase === 'ready') ? ' is-visible' : ''}`,
-                            style: fusionPhase === 'fly' ? {} : {}
-                        }, '🏅'),
+                        // Subtitle
+                        fusionPhase === 'ready' && React.createElement('div', {
+                            className: 'onboarding-fusion__subtitle is-visible'
+                        }, 'Все базовые достижения собраны и объединены'),
 
-                        // Confetti particles
-                        (fusionPhase === 'medal' || fusionPhase === 'ready') && React.createElement('div', {
-                            className: 'onboarding-fusion__confetti'
-                        },
-                            fusionConfetti.map((p, i) =>
-                                React.createElement('div', {
-                                    key: i,
-                                    className: 'onboarding-fusion__confetti-piece is-active',
-                                    style: {
-                                        '--cx': p.cx,
-                                        '--cy': p.cy,
-                                        background: p.color,
-                                        width: `${p.size}px`,
-                                        height: `${p.size}px`,
-                                        left: '50%',
-                                        top: '50%',
-                                        animationDelay: p.delay
-                                    }
-                                })
-                            )
-                        )
-                    ),
+                        // XP total
+                        fusionPhase === 'ready' && React.createElement('div', {
+                            className: 'onboarding-fusion__xp is-visible'
+                        }, `+${ONBOARDING_ACHIEVEMENTS.reduce((sum, id) => sum + (HEYS.game?.ACHIEVEMENTS?.[id]?.xp || 0), 0)} XP заработано`),
 
-                    // Subtitle
-                    fusionPhase === 'ready' && React.createElement('div', {
-                        className: 'onboarding-fusion__subtitle is-visible'
-                    }, 'Все базовые достижения собраны и объединены'),
-
-                    // XP total
-                    fusionPhase === 'ready' && React.createElement('div', {
-                        className: 'onboarding-fusion__xp is-visible'
-                    }, `+${ONBOARDING_ACHIEVEMENTS.reduce((sum, id) => sum + (HEYS.game?.ACHIEVEMENTS?.[id]?.xp || 0), 0)} XP заработано`),
-
-                    // Button
-                    fusionPhase === 'ready' && React.createElement('button', {
-                        className: 'onboarding-fusion__btn is-visible',
-                        onClick: handleFusionDismiss
-                    }, '🏅 Отлично!')
+                        // Button
+                        fusionPhase === 'ready' && React.createElement('button', {
+                            className: 'onboarding-fusion__btn is-visible',
+                            onClick: handleFusionDismiss
+                        }, '🏅 Отлично!')
+                    )
                 )
             )
         );
@@ -16473,7 +16490,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                 // Информация о клиенте + DatePicker
                 React.createElement(
                     'div',
-                    { className: 'hdr-client', style: { position: 'relative', display: 'flex', alignItems: 'center', gap: '8px' }, ref: clientDropdownAnchorRef },
+                    { className: 'hdr-client', 'data-dropdown': 'client', style: { position: 'relative', display: 'flex', alignItems: 'center', gap: '8px' }, ref: clientDropdownAnchorRef },
                     // Кликабельный блок для dropdown
                     React.createElement(
                         'div',
@@ -16784,18 +16801,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                                 )
                             ]
                     ),
-                    // Overlay для закрытия dropdown при клике вне
-                    showClientDropdown && React.createElement('div', {
-                        style: {
-                            position: 'fixed',
-                            top: 0,
-                            left: 0,
-                            right: 0,
-                            bottom: 0,
-                            zIndex: 999
-                        },
-                        onClick: () => setShowClientDropdown(false)
-                    })
+
                 ),
                 // ☁️ Cloud sync indicator (v2.0: forceSync on click, auto-fade, relative time tooltip)
                 React.createElement('div', {

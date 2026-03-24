@@ -75,17 +75,31 @@
         const [newPhone, setNewPhone] = useState('');
         const [newPin, setNewPin] = useState('');
 
-        // Закрытие dropdown по Escape
+        // Закрытие dropdown по Escape и по клику вне
         useEffect(() => {
+            if (!showClientDropdown) return;
+
             const handleEscape = (e) => {
-                if (e.key === 'Escape' && showClientDropdown) {
-                    setShowClientDropdown(false);
-                }
+                if (e.key === 'Escape') setShowClientDropdown(false);
             };
-            if (showClientDropdown) {
-                document.addEventListener('keydown', handleEscape);
-                return () => document.removeEventListener('keydown', handleEscape);
-            }
+
+            // Capture-phase: перехватываем mousedown/touchstart ДО того,
+            // как они дойдут до любого элемента под дропдауном.
+            // stopPropagation в capture не даёт сгенерироваться click.
+            const handleOutsideDown = (e) => {
+                if (e.target.closest('[data-dropdown="client"]')) return;
+                e.stopPropagation();
+                setShowClientDropdown(false);
+            };
+
+            document.addEventListener('keydown', handleEscape);
+            document.addEventListener('mousedown', handleOutsideDown, true);
+            document.addEventListener('touchstart', handleOutsideDown, true);
+            return () => {
+                document.removeEventListener('keydown', handleEscape);
+                document.removeEventListener('mousedown', handleOutsideDown, true);
+                document.removeEventListener('touchstart', handleOutsideDown, true);
+            };
         }, [showClientDropdown]);
 
         useEffect(() => {

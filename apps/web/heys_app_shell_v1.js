@@ -396,7 +396,7 @@
                 // Информация о клиенте + DatePicker
                 React.createElement(
                     'div',
-                    { className: 'hdr-client', style: { position: 'relative', display: 'flex', alignItems: 'center', gap: '8px' }, ref: clientDropdownAnchorRef },
+                    { className: 'hdr-client', 'data-dropdown': 'client', style: { position: 'relative', display: 'flex', alignItems: 'center', gap: '8px' }, ref: clientDropdownAnchorRef },
                     // Кликабельный блок для dropdown
                     React.createElement(
                         'div',
@@ -707,18 +707,7 @@
                                 )
                             ]
                     ),
-                    // Overlay для закрытия dropdown при клике вне
-                    showClientDropdown && React.createElement('div', {
-                        style: {
-                            position: 'fixed',
-                            top: 0,
-                            left: 0,
-                            right: 0,
-                            bottom: 0,
-                            zIndex: 999
-                        },
-                        onClick: () => setShowClientDropdown(false)
-                    })
+
                 ),
                 // ☁️ Cloud sync indicator (v2.0: forceSync on click, auto-fade, relative time tooltip)
                 React.createElement('div', {

@@ -37496,6 +37496,33 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             return () => { cancelled = true; };
         }, []);
 
+        useEffect(() => {
+            if (!releases || typeof document === 'undefined') return undefined;
+
+            const { body, documentElement } = document;
+            if (!body || !documentElement) return undefined;
+
+            const previousBodyOverflow = body.style.overflow;
+            const previousBodyOverscrollBehavior = body.style.overscrollBehavior;
+            const previousDocumentOverflow = documentElement.style.overflow;
+            const previousDocumentOverscrollBehavior = documentElement.style.overscrollBehavior;
+
+            body.style.overflow = 'hidden';
+            body.style.overscrollBehavior = 'none';
+            documentElement.style.overflow = 'hidden';
+            documentElement.style.overscrollBehavior = 'none';
+
+            console.info('[HEYS.WhatsNew] Background scroll lock enabled');
+
+            return () => {
+                body.style.overflow = previousBodyOverflow;
+                body.style.overscrollBehavior = previousBodyOverscrollBehavior;
+                documentElement.style.overflow = previousDocumentOverflow;
+                documentElement.style.overscrollBehavior = previousDocumentOverscrollBehavior;
+                console.info('[HEYS.WhatsNew] Background scroll lock released');
+            };
+        }, [releases]);
+
         const handleClose = useCallback(() => {
             setVisible(false);
             setTimeout(() => {
