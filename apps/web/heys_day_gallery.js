@@ -20,7 +20,7 @@
    * Lazy Photo Thumbnail с IntersectionObserver и skeleton loading
    */
   const LazyPhotoThumb = React.memo(function LazyPhotoThumb({
-    photo, photoSrc, thumbClass, timeStr, mealIndex, photoIndex, mealPhotos, handleDelete, setDay
+    photo, photoSrc, thumbClass, timeStr, mealIndex, photoIndex, mealPhotos, handleDelete, removePhoto, setDay
   }) {
     const [isLoaded, setIsLoaded] = React.useState(false);
     const [isVisible, setIsVisible] = React.useState(false);
@@ -57,20 +57,12 @@
       if (e.target.closest('.photo-processed-checkbox')) return;
       
       if (window.HEYS?.showPhotoViewer) {
-        const onDeleteInViewer = (photoId) => {
-          setDay((prevDay = {}) => {
-            const meals = (prevDay.meals || []).map((m, i) => {
-              if (i !== mealIndex || !m.photos) return m;
-              return { ...m, photos: m.photos.filter(p => p.id !== photoId) };
-            });
-            return { ...prevDay, meals, updatedAt: Date.now() };
-          });
-        };
-        window.HEYS.showPhotoViewer(mealPhotos, photoIndex, onDeleteInViewer);
+        const onDeleteInViewer = (photoId) => removePhoto?.(mealIndex, photoId, { skipConfirm: false });
+        window.HEYS.showPhotoViewer([...(mealPhotos || [])], photoIndex, onDeleteInViewer);
       } else {
         window.open(photoSrc, '_blank');
       }
-    }, [mealPhotos, photoIndex, photoSrc, mealIndex, setDay]);
+    }, [mealPhotos, photoIndex, photoSrc, mealIndex, removePhoto]);
     
     // Toggle "обработано"
     const handleToggleProcessed = React.useCallback((e) => {
@@ -207,10 +199,11 @@
         color: white; font-size: 20px; border-radius: 50%;
         cursor: pointer; display: flex; align-items: center; justify-content: center;
       `;
-      deleteBtn.onclick = () => {
+      deleteBtn.onclick = async () => {
         const photo = photos[currentIndex];
-        if (photo && confirm('Удалить это фото?')) {
-          onDelete(photo.id);
+        if (photo && onDelete) {
+          const removed = await onDelete(photo.id);
+          if (removed === false) return;
           photos.splice(currentIndex, 1);
           if (photos.length === 0) {
             close();

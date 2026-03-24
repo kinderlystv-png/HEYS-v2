@@ -36,57 +36,155 @@
 
     const trainIcons = ['🏃', '🚴', '🏊'];
 
+    function cloneTraining(training) {
+      const source = training || {};
+      return {
+        ...source,
+        z: Array.isArray(source.z) ? source.z.slice() : [0, 0, 0, 0]
+      };
+    }
+
+    function cloneHouseholdActivity(activity) {
+      return activity ? { ...activity } : activity;
+    }
+
+    function runUndoableAction(options) {
+      if (!options || typeof options.apply !== 'function') return false;
+
+      if (HEYS.Undo?.runAction && typeof options.undo === 'function') {
+        return HEYS.Undo.runAction({
+          label: options.label,
+          duration: options.duration,
+          errorMessage: options.errorMessage,
+          apply: options.apply,
+          undo: options.undo,
+          onExpire: options.onExpire,
+          onApplyError: options.onApplyError,
+        });
+      }
+
+      try {
+        return options.apply();
+      } catch (error) {
+        console.error('[HEYS.dayTrainings] undoable apply error:', error);
+        options.onApplyError?.(error);
+        if (options.errorMessage) {
+          HEYS.Toast?.error(options.errorMessage);
+        }
+        return false;
+      }
+    }
+
     const removeTraining = async (ti) => {
       const confirmed = await HEYS.ConfirmModal?.confirmDelete({
         icon: '🏋️',
         title: 'Удалить тренировку?',
-        text: 'Данные о тренировке будут удалены. Это действие нельзя отменить.'
+        text: 'Тренировка исчезнет сразу, но её можно будет быстро вернуть через кнопку «Отменить».'
       });
 
       if (!confirmed) return;
 
       if (typeof haptic === 'function') haptic('medium');
       const emptyTraining = { z: [0, 0, 0, 0], time: '', type: '' };
-      if (typeof setDay === 'function') {
-        setDay(prevDay => {
-          const oldTrainings = prevDay.trainings || [emptyTraining, emptyTraining, emptyTraining];
-          const newTrainings = [
-            ...oldTrainings.slice(0, ti),
-            ...oldTrainings.slice(ti + 1),
-            emptyTraining
-          ].slice(0, 3);
-          return { ...prevDay, trainings: newTrainings, updatedAt: Date.now() };
-        });
-      }
-      if (typeof setVisibleTrainings === 'function') {
-        setVisibleTrainings(prev => Math.max(0, prev - 1));
-      }
+      const previousTrainings = safeTrainings.map(cloneTraining);
+      const previousVisibleTrainings = safeVisibleTrainings;
+      const removedTraining = previousTrainings[ti] || emptyTraining;
+      const trainingType = safeTrainingTypes.find((item) => item.id === removedTraining.type);
+      const label = (trainingType?.label || ('Тренировка ' + (ti + 1))) + ' удалена';
+
+      runUndoableAction({
+        label,
+        duration: 5000,
+        errorMessage: 'Не удалось удалить тренировку',
+        apply: () => {
+          if (typeof setDay === 'function') {
+            setDay((prevDay) => {
+              const oldTrainings = prevDay.trainings || [emptyTraining, emptyTraining, emptyTraining];
+              const newTrainings = [
+                ...oldTrainings.slice(0, ti),
+                ...oldTrainings.slice(ti + 1),
+                emptyTraining
+              ].slice(0, 3);
+              return { ...prevDay, trainings: newTrainings, updatedAt: Date.now() };
+            });
+          }
+          if (typeof setVisibleTrainings === 'function') {
+            setVisibleTrainings((prev) => Math.max(0, prev - 1));
+          }
+
+          return {
+            trainings: previousTrainings,
+            visibleTrainings: previousVisibleTrainings,
+          };
+        },
+        undo: (context) => {
+          if (typeof setDay === 'function') {
+            setDay((prevDay) => ({
+              ...prevDay,
+              trainings: (context?.trainings || []).map(cloneTraining),
+              updatedAt: Date.now(),
+            }));
+          }
+          if (typeof setVisibleTrainings === 'function' && context) {
+            setVisibleTrainings(context.visibleTrainings);
+          }
+        },
+      });
     };
 
     const removeHousehold = async (idx) => {
       const confirmed = await HEYS.ConfirmModal?.confirmDelete({
         icon: '🏠',
         title: 'Удалить активность?',
-        text: 'Данные о бытовой активности будут удалены.'
+        text: 'Активность исчезнет сразу, но её можно будет быстро вернуть через кнопку «Отменить».'
       });
 
       if (!confirmed) return;
 
       if (typeof haptic === 'function') haptic('medium');
-      if (typeof setDay === 'function') {
-        setDay(prevDay => {
-          const oldActivities = prevDay.householdActivities || [];
-          const newActivities = oldActivities.filter((_, i) => i !== idx);
-          const totalMin = newActivities.reduce((sum, h) => sum + (+h.minutes || 0), 0);
+      const previousActivities = safeHouseholdActivities.map(cloneHouseholdActivity);
+      const removedActivity = previousActivities[idx] || null;
+
+      runUndoableAction({
+        label: 'Бытовая активность удалена',
+        duration: 5000,
+        errorMessage: 'Не удалось удалить активность',
+        apply: () => {
+          if (typeof setDay === 'function') {
+            setDay((prevDay) => {
+              const oldActivities = prevDay.householdActivities || [];
+              const newActivities = oldActivities.filter((_, i) => i !== idx);
+              const totalMin = newActivities.reduce((sum, h) => sum + (+h.minutes || 0), 0);
+              return {
+                ...prevDay,
+                householdActivities: newActivities,
+                householdMin: totalMin,
+                householdTime: newActivities[0]?.time || '',
+                updatedAt: Date.now()
+              };
+            });
+          }
+
           return {
-            ...prevDay,
-            householdActivities: newActivities,
-            householdMin: totalMin,
-            householdTime: newActivities[0]?.time || '',
-            updatedAt: Date.now()
+            activities: previousActivities,
+            removedActivity,
           };
-        });
-      }
+        },
+        undo: (context) => {
+          if (!context || typeof setDay !== 'function') return;
+          setDay((prevDay) => {
+            const restoredActivities = (context.activities || []).map(cloneHouseholdActivity);
+            const totalMin = restoredActivities.reduce((sum, activity) => sum + (+activity?.minutes || 0), 0);
+            return {
+              ...prevDay,
+              householdActivities: restoredActivities,
+              householdMin: totalMin,
+              householdTime: restoredActivities[0]?.time || '',
+              updatedAt: Date.now()
+            };
+          });
+        },
+      });
     };
 
     return React.createElement('div', { className: 'compact-trainings' },

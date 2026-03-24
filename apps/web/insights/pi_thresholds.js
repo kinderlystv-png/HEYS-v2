@@ -1032,13 +1032,20 @@
                 daysUsed: computed.daysUsed
             });
 
-            // Сохранить в localStorage
+            // Сохранить в localStorage (only if changed — avoids scroll-cascade)
             if (computed.confidence > 0) {
-                U.lsSet(STORAGE_KEY, computed);
-                console.info(
-                    `[HEYS.thresholds] ✅ Computed ${Object.keys(computed.thresholds).length} thresholds ` +
-                    `(${computed.daysUsed}d, conf=${computed.confidence.toFixed(2)}, version=2.0.0)`
-                );
+                const existingForDiff = U.lsGet(STORAGE_KEY);
+                const thresholdsChanged = !existingForDiff
+                    || existingForDiff.daysUsed !== computed.daysUsed
+                    || existingForDiff.confidence !== computed.confidence
+                    || JSON.stringify(existingForDiff.thresholds) !== JSON.stringify(computed.thresholds);
+                if (thresholdsChanged) {
+                    U.lsSet(STORAGE_KEY, computed);
+                    console.info(
+                        `[HEYS.thresholds] ✅ Computed ${Object.keys(computed.thresholds).length} thresholds ` +
+                        `(${computed.daysUsed}d, conf=${computed.confidence.toFixed(2)}, version=2.0.0)`
+                    );
+                }
             }
 
             result = computed;

@@ -8332,8 +8332,14 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
           return;
         }
       }
+      // PERF: skip write + event dispatch if value is identical to what's already stored
+      const serialized = JSON.stringify(val);
+      try {
+        const existing = localStorage.getItem(key);
+        if (existing === serialized) return;
+      } catch (_) { /* proceed to write */ }
       // Fallback на прямой localStorage для глобальных ключей
-      localStorage.setItem(key, JSON.stringify(val));
+      localStorage.setItem(key, serialized);
       // Событие для offline-индикатора с типом изменения
       const type = key.includes('dayv2') ? 'meal'
         : key.includes('product') ? 'product'

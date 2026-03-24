@@ -1247,8 +1247,12 @@
 
     // 📊 Сохраняем предсказанный риск для A/B теста (ТОЛЬКО локально, без cloud sync)
     try {
-      // Используем localStorage напрямую, чтобы избежать синхронизации с облаком
-      localStorage.setItem(`heys_predicted_risk_${tomorrowStr}`, JSON.stringify(finalRisk));
+      // PERF: skip write if value unchanged — avoids unnecessary I/O during scroll
+      const riskKey = `heys_predicted_risk_${tomorrowStr}`;
+      const riskSerialized = JSON.stringify(finalRisk);
+      if (localStorage.getItem(riskKey) !== riskSerialized) {
+        localStorage.setItem(riskKey, riskSerialized);
+      }
     } catch (e) {
       // Тихо игнорируем ошибки localStorage
     }

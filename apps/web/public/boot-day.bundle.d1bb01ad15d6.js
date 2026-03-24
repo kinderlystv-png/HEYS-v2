@@ -2997,8 +2997,9 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
     const avgSecond = secondHalf.length > 0 ? secondHalf.reduce((s, p) => s + p.weight, 0) / secondHalf.length : 0;
     const weightTrend = avgSecond - avgFirst; // положительный = вес растёт
 
-    // Цвет градиента по тренду
-    const trendColor = weightTrend <= -0.1 ? '#22c55e' : (weightTrend >= 0.1 ? '#ef4444' : '#3b82f6');
+    // Фиксированный акцент для линии тренда и градиента под ней
+    const trendColor = '#f97316';
+    const trendAreaTopColor = '#fb923c';
 
     // Цвет прогноза — серый для нейтральности (прогноз — это неизвестность)
     const forecastColor = '#9ca3af'; // gray-400
@@ -3008,15 +3009,11 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
       ? pathD + ` L${realPoints[realPoints.length - 1].x},${paddingTop + chartHeight} L${realPoints[0].x},${paddingTop + chartHeight} Z`
       : '';
 
-    // Gradient stops для линии веса — по локальному тренду каждой точки (только реальные)
-    // Зелёный = вес снижается, красный = вес растёт, фиолетовый = стабильно
-    const weightLineGradientStops = realPoints.map((p, i) => {
-      const prevWeight = i > 0 ? realPoints[i - 1].weight : p.weight;
-      const localTrend = p.weight - prevWeight;
-      const dotColor = localTrend < -0.05 ? '#22c55e' : (localTrend > 0.05 ? '#ef4444' : '#3b82f6');
-      const offset = realPoints.length > 1 ? (i / (realPoints.length - 1)) * 100 : 50;
-      return { offset, color: dotColor };
-    });
+    // Линия тренда — единый оранжевый акцент по всей длине
+    const weightLineGradientStops = [
+      { offset: 0, color: '#fb923c' },
+      { offset: 100, color: trendColor }
+    ];
 
     // Прогнозная линия (от последней реальной точки ко всем прогнозным) — пунктирная
     // Используем плавную кривую, продолжающую тренд основной линии
@@ -3060,8 +3057,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
       React.createElement('defs', null,
         // Вертикальный градиент для заливки области
         React.createElement('linearGradient', { id: 'weightAreaGrad', x1: '0', y1: '0', x2: '0', y2: '1' },
-          React.createElement('stop', { offset: '0%', stopColor: trendColor, stopOpacity: '0.25' }),
-          React.createElement('stop', { offset: '100%', stopColor: trendColor, stopOpacity: '0.05' })
+          React.createElement('stop', { offset: '0%', stopColor: trendAreaTopColor, stopOpacity: '0.24' }),
+          React.createElement('stop', { offset: '100%', stopColor: trendColor, stopOpacity: '0.02' })
         ),
         // Горизонтальный градиент для линии — цвета по локальному тренду
         React.createElement('linearGradient', { id: 'weightLineGrad', x1: '0%', y1: '0%', x2: '100%', y2: '0%' },
@@ -3335,21 +3332,25 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
         const animDelay = 3 + i * 0.15;
 
         // Стили для точки
+        const isBlueFilledDot = !p.isFuture && dotColor === '#3b82f6';
         const dotStyle = {
           cursor: 'pointer',
-          fill: dotColor,
+          fill: isBlueFilledDot ? dotColor : 'transparent',
+          stroke: dotColor,
+          strokeWidth: isBlueFilledDot ? 1.5 : 2,
           '--delay': animDelay + 's'
         };
 
         // Розовая обводка для дней с задержкой воды
         if (p.hasWaterRetention) {
           dotStyle.stroke = '#ec4899';
-          dotStyle.strokeWidth = 2;
+          dotStyle.strokeWidth = isBlueFilledDot ? 2.5 : 2;
         }
 
         // Пунктирная обводка для прогнозных дней
         if (p.isFuture) {
           dotStyle.opacity = 0.6;
+          dotStyle.fill = 'rgba(156, 163, 175, 0.12)';
           dotStyle.strokeDasharray = '2 2';
           dotStyle.stroke = forecastColor;
           dotStyle.strokeWidth = 1.5;
@@ -7582,7 +7583,39 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
     // === Pull-to-refresh логика (Enhanced) ===
     const PULL_THRESHOLD = 80;
     const SYNC_TIMEOUT_MS = 8000;
+    const READY_SETTLE_MS = 180;
+    const MIN_SYNCING_MS = 640;
+    const SUCCESS_HOLD_MS = 920;
+    const ERROR_HOLD_MS = 1080;
+    const TIMEOUT_HOLD_MS = 1240;
+    const EXIT_COLLAPSE_MS = 320;
+    const READY_LOCK_HEIGHT = 52;
+    const SYNCING_LOCK_HEIGHT = 56;
+    const EXIT_COLLAPSE_HEIGHT = 40;
     const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+    const ensureMinimumPhase = async (startedAt, minMs) => {
+      const elapsed = Date.now() - startedAt;
+      const remaining = minMs - elapsed;
+      if (remaining > 0) {
+        await delay(remaining);
+      }
+    };
+
+    const finishRefreshFlow = async (status, holdMs) => {
+      setRefreshStatus(status);
+      if (status === 'success') {
+        triggerHaptic(20);
+      }
+
+      await delay(holdMs);
+
+      setPullProgress(EXIT_COLLAPSE_HEIGHT);
+      setIsRefreshing(false);
+      await delay(16);
+      setPullProgress(0);
+      await delay(EXIT_COLLAPSE_MS);
+      setRefreshStatus('idle');
+    };
 
     const shouldIgnoreTarget = (target) => {
       if (!target || typeof target.closest !== 'function') return false;
@@ -7622,6 +7655,49 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
       return { ok: true, timedOut: false };
     };
 
+    const performRefreshSync = async (cloud) => {
+      // 1. SW update — background, non-blocking
+      if (navigator.serviceWorker?.controller) {
+        navigator.serviceWorker.ready.then(reg => reg.update?.()).catch(() => { });
+      }
+
+      // 2. Unified pull-refresh: flush + delta sync + structured result
+      if (cloud?.pullRefresh) {
+        console.info('[PullRefresh] 🔄 Starting pull refresh...');
+        const result = await Promise.race([
+          cloud.pullRefresh(),
+          delay(SYNC_TIMEOUT_MS).then(() => SYNC_TIMEOUT)
+        ]);
+
+        if (result === SYNC_TIMEOUT) {
+          console.warn('[PullRefresh] ⏱️ Timed out after', SYNC_TIMEOUT_MS, 'ms');
+          return { ok: false, timedOut: true };
+        }
+
+        if (result?.status === 'offline') {
+          console.info('[PullRefresh] 📴 Offline — local data active');
+        } else if (result?.status === 'no-changes') {
+          console.info('[PullRefresh] ✅ No changes (' + (result.totalMs || '?') + 'ms)');
+        } else {
+          console.info('[PullRefresh] ✅ Synced', result?.keys || 0, 'keys in', result?.totalMs || '?', 'ms');
+        }
+
+        return { ok: true, timedOut: false };
+      }
+
+      if (cloud?.syncClient) {
+        // Fallback: legacy path without pullRefresh
+        const U = heys && heys.utils;
+        const clientId = U && U.getCurrentClientId ? U.getCurrentClientId() : '';
+        if (clientId) {
+          console.info('[PullRefresh] 🔄 Starting sync (legacy)...');
+          return await runSyncWithTimeout(cloud, clientId);
+        }
+      }
+
+      return { ok: true, timedOut: false };
+    };
+
     // ✅ Pull-to-refresh: sync из cloud (БЕЗ reload!)
     // Подтягивает изменения куратора, UI обновляется через события heys:day-updated
     // Вся orchestration (flush + sync) делегирована cloud.pullRefresh() —
@@ -7633,71 +7709,47 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
 
       refreshInFlightRef.current = true;
       setIsRefreshing(true);
-      setRefreshStatus('syncing');
+      setPullProgress(Math.max(pullProgressRef.current, READY_LOCK_HEIGHT));
+      setRefreshStatus('ready');
       triggerHaptic(15);
 
       const cloud = heys && heys.cloud;
+      const syncTask = performRefreshSync(cloud);
+      let syncingStartedAt = 0;
 
       try {
-        // 1. SW update — background, non-blocking
-        if (navigator.serviceWorker?.controller) {
-          navigator.serviceWorker.ready.then(reg => reg.update?.()).catch(() => { });
+        // 3. Даже если sync уже завершился, пользователь должен успеть почувствовать
+        // подтверждённый release → syncing как отдельные контролируемые этапы.
+        await delay(READY_SETTLE_MS);
+        setPullProgress(SYNCING_LOCK_HEIGHT);
+        setRefreshStatus('syncing');
+        syncingStartedAt = Date.now();
+        const syncState = await syncTask;
+
+        if (syncState.timedOut) {
+          await ensureMinimumPhase(syncingStartedAt, MIN_SYNCING_MS);
+          await finishRefreshFlow('timeout', TIMEOUT_HOLD_MS);
+          return;
         }
 
-        // 2. Unified pull-refresh: flush + delta sync + structured result
-        if (cloud?.pullRefresh) {
-          console.info('[PullRefresh] 🔄 Starting pull refresh...');
-          const result = await Promise.race([
-            cloud.pullRefresh(),
-            delay(SYNC_TIMEOUT_MS).then(() => SYNC_TIMEOUT)
-          ]);
-
-          if (result === SYNC_TIMEOUT) {
-            console.warn('[PullRefresh] ⏱️ Timed out after', SYNC_TIMEOUT_MS, 'ms');
-            setRefreshStatus('timeout');
-            await delay(1100);
-            return;
-          }
-
-          if (result?.status === 'offline') {
-            console.info('[PullRefresh] 📴 Offline — local data active');
-          } else if (result?.status === 'no-changes') {
-            console.info('[PullRefresh] ✅ No changes (' + (result.totalMs || '?') + 'ms)');
-          } else {
-            console.info('[PullRefresh] ✅ Synced', result?.keys || 0, 'keys in', result?.totalMs || '?', 'ms');
-          }
-        } else if (cloud?.syncClient) {
-          // Fallback: legacy path without pullRefresh
-          const U = heys && heys.utils;
-          const clientId = U && U.getCurrentClientId ? U.getCurrentClientId() : '';
-          if (clientId) {
-            console.info('[PullRefresh] 🔄 Starting sync (legacy)...');
-            const syncState = await runSyncWithTimeout(cloud, clientId);
-            if (syncState.timedOut) {
-              setRefreshStatus('timeout');
-              await delay(1100);
-              return;
-            }
-          }
-        }
-
-        // 3. Показываем успех
-        setRefreshStatus('success');
-        triggerHaptic(20);
-
-        // 4. Держим индикатор 600ms для UX, затем сбрасываем
-        await delay(600);
+        // 4. Даже при супер-быстром no-changes показываем минимальный smooth flow
+        await ensureMinimumPhase(syncingStartedAt, MIN_SYNCING_MS);
+        await finishRefreshFlow('success', SUCCESS_HOLD_MS);
 
       } catch (err) {
         console.warn('[PullRefresh] Error:', err.message);
-        setRefreshStatus('error');
-        await delay(800);
+        if (!syncingStartedAt) {
+          await delay(Math.max(0, READY_SETTLE_MS - 16));
+          setPullProgress(SYNCING_LOCK_HEIGHT);
+          setRefreshStatus('syncing');
+          syncingStartedAt = Date.now();
+        }
+        await ensureMinimumPhase(syncingStartedAt, MIN_SYNCING_MS);
+        await finishRefreshFlow('error', ERROR_HOLD_MS);
       } finally {
         // Сбрасываем состояние (без reload!)
         queueMicrotask(() => {
           refreshInFlightRef.current = false;
-          setIsRefreshing(false);
-          setRefreshStatus('idle');
           setPullProgress(0);
         });
       }
@@ -11340,16 +11392,44 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
     };
   }
 
+  function roundPathCoord(value) {
+    return Math.round(value * 10) / 10;
+  }
+
+  function buildLinePath(points) {
+    if (!Array.isArray(points) || points.length === 0) return '';
+    if (points.length === 1) return `M ${points[0].x} ${points[0].y}`;
+
+    let path = `M ${points[0].x} ${points[0].y}`;
+
+    for (let index = 0; index < points.length - 1; index++) {
+      const p0 = points[index - 1] || points[index];
+      const p1 = points[index];
+      const p2 = points[index + 1];
+      const p3 = points[index + 2] || p2;
+
+      const cp1x = roundPathCoord(p1.x + (p2.x - p0.x) / 6);
+      const cp1y = roundPathCoord(p1.y + (p2.y - p0.y) / 6);
+      const cp2x = roundPathCoord(p2.x - (p3.x - p1.x) / 6);
+      const cp2y = roundPathCoord(p2.y - (p3.y - p1.y) / 6);
+
+      path += ` C ${cp1x} ${cp1y} ${cp2x} ${cp2y} ${p2.x} ${p2.y}`;
+    }
+
+    return path;
+  }
+
   function buildSparklineGeometry(weeklySeries) {
     const width = 300;
-    const height = 40;
-    const padX = 5;
-    const padY = 5;
+    const height = 56;
+    const padLeft = 8;
+    const padRight = 28;
+    const padY = 6;
     const maxRatio = Math.max(1, Number(weeklySeries?.maxRatio) || 1);
-    const innerWidth = width - padX * 2;
+    const innerWidth = width - padLeft - padRight;
     const innerHeight = height - padY * 2;
     const points = (weeklySeries?.series || []).map((item, index, arr) => {
-      const x = padX + (arr.length <= 1 ? innerWidth / 2 : (innerWidth * index) / (arr.length - 1));
+      const x = padLeft + (arr.length <= 1 ? innerWidth / 2 : (innerWidth * index) / (arr.length - 1));
       const y = padY + innerHeight - (Math.min(item.ratio, maxRatio) / maxRatio) * innerHeight;
       return { ...item, x: Math.round(x * 10) / 10, y: Math.round(y * 10) / 10 };
     });
@@ -11359,20 +11439,26 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
         width,
         height,
         goalY: Math.round((padY + innerHeight) * 10) / 10,
-        linePoints: '',
-        areaPoints: ''
+        baselineY: Math.round((height - padY) * 10) / 10,
+        linePath: '',
+        areaPath: '',
+        weekSeparatorX: null
       };
     }
 
-    const linePoints = points.map(point => `${point.x},${point.y}`).join(' ');
-    const areaPoints = [
-      `${points[0].x},${height - padY}`,
-      ...points.map(point => `${point.x},${point.y}`),
-      `${points[points.length - 1].x},${height - padY}`
-    ].join(' ');
+    const linePath = buildLinePath(points);
+    const baselineY = Math.round((height - padY) * 10) / 10;
+    const firstPoint = points[0];
+    const lastPoint = points[points.length - 1];
+    const areaPath = linePath
+      ? `${linePath} L ${width} ${lastPoint.y} L ${width} ${baselineY} L 0 ${baselineY} L 0 ${firstPoint.y} Z`
+      : '';
     const goalY = Math.round((padY + innerHeight - Math.min(1, maxRatio) / maxRatio * innerHeight) * 10) / 10;
+    const weekSeparatorX = points.length >= 8
+      ? Math.round((((points[6]?.x || 0) + (points[7]?.x || 0)) / 2) * 10) / 10
+      : null;
 
-    return { width, height, goalY, points, linePoints, areaPoints };
+    return { width, height, goalY, baselineY, points, linePath, areaPath, weekSeparatorX };
   }
 
   function formatWaterLiters(ml) {
@@ -11574,7 +11660,14 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
                 key: preset.ml,
                 className: 'water-preset-compact',
                 // 🚀 PERF R34: defer addWater — day data save + re-render (88ms → ~0ms click)
-                onClick: () => setTimeout(() => addWater(preset.ml, true), 0)
+                onClick: (e) => {
+                  const sourceEl = e.currentTarget;
+                  setTimeout(() => addWater(preset.ml, {
+                    skipScroll: true,
+                    source: 'water-card-preset',
+                    sourceEl
+                  }), 0);
+                }
               },
                 React.createElement('span', { className: 'water-preset-icon' }, preset.icon),
                 React.createElement('span', { className: 'water-preset-ml' }, '+' + preset.ml)
@@ -11599,14 +11692,24 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
           },
             React.createElement('defs', null,
               React.createElement('linearGradient', { id: 'waterWeeklyArea', x1: '0%', y1: '0%', x2: '0%', y2: '100%' },
-                React.createElement('stop', { offset: '0%', stopColor: 'rgba(14,165,233,0.34)' }),
-                React.createElement('stop', { offset: '100%', stopColor: 'rgba(14,165,233,0.02)' })
+                React.createElement('stop', { offset: '0%', stopColor: 'rgba(14,165,233,0.42)' }),
+                React.createElement('stop', { offset: '28%', stopColor: 'rgba(14,165,233,0.20)' }),
+                React.createElement('stop', { offset: '68%', stopColor: 'rgba(14,165,233,0.07)' }),
+                React.createElement('stop', { offset: '100%', stopColor: 'rgba(14,165,233,0.00)' })
               ),
               React.createElement('linearGradient', { id: 'waterWeeklyStroke', x1: '0%', y1: '0%', x2: '100%', y2: '0%' },
-                React.createElement('stop', { offset: '0%', stopColor: '#38bdf8' }),
+                React.createElement('stop', { offset: '0%', stopColor: '#7dd3fc' }),
+                React.createElement('stop', { offset: '45%', stopColor: '#38bdf8' }),
                 React.createElement('stop', { offset: '100%', stopColor: '#0284c7' })
               )
             ),
+            sparkline.weekSeparatorX != null && React.createElement('line', {
+              className: 'water-weekly-week-separator',
+              x1: sparkline.weekSeparatorX,
+              y1: 6,
+              x2: sparkline.weekSeparatorX,
+              y2: sparkline.baselineY
+            }),
             React.createElement('line', {
               className: 'water-weekly-goal-line',
               x1: 0,
@@ -11614,20 +11717,26 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
               x2: sparkline.width,
               y2: sparkline.goalY
             }),
-            sparkline.linePoints && React.createElement('polyline', {
+            sparkline.areaPath && React.createElement('path', {
+              className: 'water-weekly-area',
+              d: sparkline.areaPath
+            }),
+            sparkline.linePath && React.createElement('path', {
+              className: 'water-weekly-line-glow',
+              d: sparkline.linePath
+            }),
+            sparkline.linePath && React.createElement('path', {
               className: 'water-weekly-line',
-              points: sparkline.linePoints
+              d: sparkline.linePath
             }),
             (sparkline.points || []).map(point => React.createElement('circle', {
               key: point.iso,
-              className: point.isToday
-                ? 'water-weekly-dot water-weekly-dot--today'
-                : point.ratio >= 1
-                  ? 'water-weekly-dot water-weekly-dot--goal'
-                  : 'water-weekly-dot',
+              className: point.ratio >= 1
+                ? (point.isToday ? 'water-weekly-dot water-weekly-dot--goal water-weekly-dot--today-goal' : 'water-weekly-dot water-weekly-dot--goal')
+                : (point.isToday ? 'water-weekly-dot water-weekly-dot--today' : 'water-weekly-dot'),
               cx: point.x,
               cy: point.y,
-              r: point.isToday ? 3.0 : point.ratio >= 1 ? 2.5 : 1.4
+              r: point.isToday ? 3.0 : point.ratio >= 1 ? 2.4 : 1.7
             }))
           )
         )
@@ -12533,11 +12642,12 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                     onClick: () => HEYS.Paywall?.showPaywall?.('trial_expired')
                 }),
 
-                (pullProgress > 0 || isRefreshing) && React.createElement('div', {
+                (pullProgress > 0 || isRefreshing || refreshStatus !== 'idle') && React.createElement('div', {
                     className: 'pull-indicator'
                         + (isRefreshing ? ' refreshing' : '')
                         + (refreshStatus === 'ready' ? ' ready' : '')
-                        + (refreshStatus === 'success' ? ' success' : ''),
+                        + (refreshStatus === 'success' ? ' success' : '')
+                        + ' status-' + refreshStatus,
                     style: {
                         height: isRefreshing ? 56 : Math.max(pullProgress, 0),
                         opacity: isRefreshing ? 1 : Math.min(pullProgress / 35, 1)
@@ -12622,6 +12732,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                         className: 'pull-text'
                             + (refreshStatus === 'ready' ? ' ready' : '')
                             + (refreshStatus === 'syncing' ? ' syncing' : '')
+                            + ' status-' + refreshStatus
                     },
                         refreshStatus === 'success' ? 'Готово!'
                             : refreshStatus === 'timeout' ? 'Синхронизация заняла слишком долго'
@@ -12667,7 +12778,10 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                     }, '🍽️'),
                     React.createElement('button', {
                         className: 'water-fab',
-                        onClick: () => addWater(200),
+                        onClick: (e) => addWater(200, {
+                            source: 'day-fab',
+                            sourceEl: e.currentTarget
+                        }),
                         'aria-label': 'Добавить стакан воды'
                     }, '🥛')
                 ),
@@ -15553,6 +15667,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         openMoodEditor,
         setGrams,
         removeItem,
+        removePhoto,
         isMealStale,
         allMeals,
         isNewItem,
@@ -16805,24 +16920,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                             : null;
 
                         const handleDelete = async (e) => {
-                            e.stopPropagation();
-                            if (!confirm('Удалить это фото?')) return;
-
-                            if (photo.path && photo.uploaded && window.HEYS?.cloud?.deletePhoto) {
-                                try {
-                                    await window.HEYS.cloud.deletePhoto(photo.path);
-                                } catch (err) {
-                                    trackError(err, { source: 'day/_meals.js', action: 'delete_photo', mealIndex });
-                                }
-                            }
-
-                            setDay((prevDay = {}) => {
-                                const meals = (prevDay.meals || []).map((m, i) => {
-                                    if (i !== mealIndex || !m.photos) return m;
-                                    return { ...m, photos: m.photos.filter((p) => p.id !== photo.id) };
-                                });
-                                return { ...prevDay, meals, updatedAt: Date.now() };
-                            });
+                            e?.stopPropagation?.();
+                            await removePhoto?.(mealIndex, photo.id);
                         };
 
                         let thumbClass = 'meal-photo-thumb';
@@ -16839,6 +16938,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                             photoIndex,
                             mealPhotos: meal.photos,
                             handleDelete,
+                            removePhoto,
                             setDay,
                         });
                     }),
@@ -17410,6 +17510,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             openMoodEditor,
             setGrams,
             removeItem,
+            removePhoto,
             isNewItem,
             optimum,
             setMealQualityPopup,
@@ -17519,6 +17620,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                     openMoodEditor,
                     setGrams,
                     removeItem,
+                    removePhoto,
                     isMealStale,
                     allMeals: day.meals,
                     isNewItem,
@@ -17589,6 +17691,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             openMoodEditor,
             setGrams,
             removeItem,
+            removePhoto,
             isNewItem,
             optimum,
             setMealQualityPopup,
@@ -18350,6 +18453,79 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             setNewItemIds,
         } = deps;
 
+        const persistDayData = React.useCallback((nextDayData, action = 'save_day') => {
+            const key = 'heys_dayv2_' + date;
+            try {
+                lsSet(key, nextDayData);
+            } catch (e) {
+                trackError(e, { source: 'day/_meals.js', action });
+            }
+        }, [date]);
+
+        const markUndoWindow = React.useCallback((durationMs = 5000) => {
+            const updatedAt = Date.now();
+            if (lastLoadedUpdatedAtRef) lastLoadedUpdatedAtRef.current = updatedAt;
+            if (blockCloudUpdatesUntilRef) blockCloudUpdatesUntilRef.current = updatedAt + durationMs;
+            return updatedAt;
+        }, [lastLoadedUpdatedAtRef, blockCloudUpdatesUntilRef]);
+
+        const recalculateOrphanProducts = React.useCallback(() => {
+            setTimeout(() => {
+                if (window.HEYS?.orphanProducts?.recalculate) {
+                    window.HEYS.orphanProducts.recalculate();
+                }
+            }, 100);
+        }, []);
+
+        const runUndoableDayMutation = React.useCallback((opts) => {
+            if (!opts || typeof opts.applyMutation !== 'function' || typeof opts.undoMutation !== 'function') {
+                return false;
+            }
+
+            if (HEYS.Undo?.runAction) {
+                return HEYS.Undo.runAction({
+                    label: opts.label,
+                    duration: opts.duration,
+                    errorMessage: opts.errorMessage,
+                    apply: opts.applyMutation,
+                    undo: opts.undoMutation,
+                    onExpire: opts.onExpire,
+                    onApplyError: (error) => {
+                        trackError(error, {
+                            source: 'day/_meals.js',
+                            action: opts.errorAction || 'undoable_day_mutation'
+                        });
+                    },
+                });
+            }
+
+            let context;
+            try {
+                context = opts.applyMutation();
+            } catch (error) {
+                trackError(error, {
+                    source: 'day/_meals.js',
+                    action: opts.errorAction || 'undoable_day_mutation'
+                });
+                if (opts.errorMessage) HEYS.Toast?.error(opts.errorMessage);
+                return false;
+            }
+
+            if (context === false) return false;
+
+            if (HEYS.Undo) {
+                HEYS.Undo.push({
+                    label: opts.label,
+                    duration: opts.duration,
+                    context,
+                    onUndo: () => opts.undoMutation(context),
+                    onExpire: (reason) => opts.onExpire?.(reason, context),
+                });
+            }
+
+            return context;
+        }, []);
+
         const addMeal = React.useCallback(async () => {
             if (HEYS.Paywall && !HEYS.Paywall.canWriteSync()) {
                 HEYS.Paywall.showBlockedToast('Добавление приёма пищи недоступно');
@@ -18696,20 +18872,56 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         }, [setDay]);
 
         const removeMeal = React.useCallback(async (i) => {
-            const confirmed = await HEYS.ConfirmModal?.confirmDelete({
+            const mealToRemove = day.meals?.[i];
+            if (!mealToRemove) return;
+
+            const confirmed = await HEYS.ConfirmModal?.confirmDelete?.({
                 icon: '🗑️',
                 title: 'Удалить приём пищи?',
-                text: 'Все продукты в этом приёме будут удалены. Это действие нельзя отменить.',
+                text: 'Приём исчезнет сразу, но его можно будет быстро вернуть через кнопку «Отменить».',
             });
 
-            if (!confirmed) return;
+            if (confirmed === false) return;
+
+            const mealName = mealToRemove?.name || 'Приём пищи';
+            const mealId = mealToRemove.id;
 
             haptic('medium');
-            setDay((prevDay) => {
-                const meals = (prevDay.meals || []).filter((_, idx) => idx !== i);
-                return { ...prevDay, meals, updatedAt: Date.now() };
+
+            runUndoableDayMutation({
+                label: mealName + ' удалён',
+                duration: 4000,
+                errorMessage: 'Не удалось удалить приём пищи',
+                errorAction: 'remove_meal',
+                applyMutation: () => {
+                    const removedUpdatedAt = markUndoWindow(5000);
+
+                    setDay((prevDay) => {
+                        const meals = (prevDay.meals || []).filter((meal) => meal.id !== mealId);
+                        const nextDayData = { ...prevDay, meals, updatedAt: removedUpdatedAt };
+                        persistDayData(nextDayData, 'remove_meal');
+                        return nextDayData;
+                    });
+
+                    return { mealId, mealToRemove, insertIndex: i };
+                },
+                undoMutation: ({ mealId: ctxMealId, mealToRemove: ctxMeal, insertIndex }) => {
+                    const undoUpdatedAt = markUndoWindow(3000);
+                    setDay((prevDay) => {
+                        const meals = [...(prevDay.meals || [])];
+                        if (meals.some((meal) => meal.id === ctxMealId)) {
+                            return prevDay;
+                        }
+
+                        meals.splice(Math.max(0, Math.min(insertIndex, meals.length)), 0, ctxMeal);
+                        const restoredMeals = sortMealsByTime(meals);
+                        const nextDayData = { ...prevDay, meals: restoredMeals, updatedAt: undoUpdatedAt };
+                        persistDayData(nextDayData, 'undo_remove_meal');
+                        return nextDayData;
+                    });
+                },
             });
-        }, [haptic, setDay]);
+        }, [haptic, setDay, day, markUndoWindow, persistDayData, runUndoableDayMutation]);
 
         const addProductToMeal = React.useCallback((mi, p) => {
             if (HEYS.Paywall && !HEYS.Paywall.canWriteSync()) {
@@ -18800,17 +19012,138 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         }, [setDay]);
 
         const removeItem = React.useCallback((mi, itId) => {
+            const sourceMeal = day.meals?.[mi];
+            if (!sourceMeal) return;
+
+            const mealId = sourceMeal.id;
+            const originalItems = sourceMeal.items || [];
+            const itemIndex = originalItems.findIndex((it) => it.id === itId);
+            if (itemIndex < 0) return;
+
+            const removedItem = originalItems[itemIndex];
+            const removedName = removedItem?.name || 'Продукт';
+
             haptic('medium');
-            setDay((prevDay) => {
-                const meals = (prevDay.meals || []).map((m, i) => i === mi ? { ...m, items: (m.items || []).filter((it) => it.id !== itId) } : m);
-                return { ...prevDay, meals, updatedAt: Date.now() };
+
+            runUndoableDayMutation({
+                label: removedName + ' удалён',
+                duration: 4000,
+                errorMessage: 'Не удалось удалить продукт',
+                errorAction: 'remove_item',
+                applyMutation: () => {
+                    const removedUpdatedAt = markUndoWindow(5000);
+
+                    setDay((prevDay) => {
+                        const meals = (prevDay.meals || []).map((meal) => {
+                            if (meal.id !== mealId) return meal;
+                            return { ...meal, items: (meal.items || []).filter((it) => it.id !== itId) };
+                        });
+                        const nextDayData = { ...prevDay, meals, updatedAt: removedUpdatedAt };
+                        persistDayData(nextDayData, 'remove_item');
+                        return nextDayData;
+                    });
+
+                    recalculateOrphanProducts();
+                    return { mealId, removedItem, itemIndex };
+                },
+                undoMutation: ({ mealId: ctxMealId, removedItem: ctxRemovedItem, itemIndex: ctxItemIndex }) => {
+                    const undoUpdatedAt = markUndoWindow(3000);
+                    setDay((prevDay) => {
+                        const meals = (prevDay.meals || []).map((meal) => {
+                            if (meal.id !== ctxMealId) return meal;
+
+                            const items = [...(meal.items || [])];
+                            if (items.some((it) => it.id === ctxRemovedItem.id)) {
+                                return meal;
+                            }
+
+                            items.splice(Math.max(0, Math.min(ctxItemIndex, items.length)), 0, ctxRemovedItem);
+                            return { ...meal, items };
+                        });
+
+                        const nextDayData = { ...prevDay, meals, updatedAt: undoUpdatedAt };
+                        persistDayData(nextDayData, 'undo_remove_item');
+                        return nextDayData;
+                    });
+                    recalculateOrphanProducts();
+                },
             });
-            setTimeout(() => {
-                if (window.HEYS?.orphanProducts?.recalculate) {
-                    window.HEYS.orphanProducts.recalculate();
-                }
-            }, 100);
-        }, [haptic, setDay]);
+        }, [haptic, setDay, day, markUndoWindow, persistDayData, recalculateOrphanProducts, runUndoableDayMutation]);
+
+        const removePhoto = React.useCallback(async (mi, photoId, options = {}) => {
+            const sourceMeal = day.meals?.[mi];
+            if (!sourceMeal) return false;
+
+            const mealId = sourceMeal.id;
+            const originalPhotos = sourceMeal.photos || [];
+            const photoIndex = originalPhotos.findIndex((photo) => photo.id === photoId);
+            if (photoIndex < 0) return false;
+
+            const removedPhoto = originalPhotos[photoIndex];
+            const confirmed = options.skipConfirm === true
+                ? true
+                : await HEYS.ConfirmModal?.confirmDelete?.({
+                    icon: '🗑️',
+                    title: 'Удалить фото?',
+                    text: 'Фото исчезнет сразу, но его можно будет быстро вернуть через кнопку «Отменить».',
+                });
+
+            if (confirmed === false) return false;
+
+            haptic('medium');
+
+            return !!runUndoableDayMutation({
+                label: 'Фото удалено',
+                duration: 5000,
+                errorMessage: 'Не удалось удалить фото',
+                errorAction: 'remove_photo',
+                applyMutation: () => {
+                    const removedUpdatedAt = markUndoWindow(6000);
+
+                    setDay((prevDay) => {
+                        const meals = (prevDay.meals || []).map((meal) => {
+                            if (meal.id !== mealId) return meal;
+                            return { ...meal, photos: (meal.photos || []).filter((photo) => photo.id !== photoId) };
+                        });
+                        const nextDayData = { ...prevDay, meals, updatedAt: removedUpdatedAt };
+                        persistDayData(nextDayData, 'remove_photo');
+                        return nextDayData;
+                    });
+
+                    return { mealId, removedPhoto, photoIndex };
+                },
+                undoMutation: ({ mealId: ctxMealId, removedPhoto: ctxRemovedPhoto, photoIndex: ctxPhotoIndex }) => {
+                    const undoUpdatedAt = markUndoWindow(3000);
+                    setDay((prevDay) => {
+                        const meals = (prevDay.meals || []).map((meal) => {
+                            if (meal.id !== ctxMealId) return meal;
+
+                            const photos = [...(meal.photos || [])];
+                            if (photos.some((photo) => photo.id === ctxRemovedPhoto.id)) {
+                                return meal;
+                            }
+
+                            photos.splice(Math.max(0, Math.min(ctxPhotoIndex, photos.length)), 0, ctxRemovedPhoto);
+                            return { ...meal, photos };
+                        });
+
+                        const nextDayData = { ...prevDay, meals, updatedAt: undoUpdatedAt };
+                        persistDayData(nextDayData, 'undo_remove_photo');
+                        return nextDayData;
+                    });
+                },
+                onExpire: async (_reason, { removedPhoto: ctxRemovedPhoto }) => {
+                    if (ctxRemovedPhoto?.path && ctxRemovedPhoto?.uploaded && window.HEYS?.cloud?.deletePhoto) {
+                        try {
+                            await window.HEYS.cloud.deletePhoto(ctxRemovedPhoto.path);
+                        } catch (error) {
+                            trackError(error, { source: 'day/_meals.js', action: 'delete_photo_cloud_finalize' });
+                            HEYS.Toast?.error('Фото удалено локально, но не удалилось из облака');
+                        }
+                    }
+                },
+            });
+        }, [day, haptic, markUndoWindow, persistDayData, runUndoableDayMutation, setDay]);
 
         const updateMealField = React.useCallback((mealIndex, field, value) => {
             setDay((prevDay) => {
@@ -18850,6 +19183,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             addProductToMeal,
             setGrams,
             removeItem,
+            removePhoto,
             updateMealField,
             changeMealMood,
             changeMealWellbeing,
@@ -19820,6 +20154,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             addProductToMeal,
             setGrams,
             removeItem,
+            removePhoto,
             updateMealField,
             changeMealMood,
             changeMealWellbeing,
@@ -20130,6 +20465,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             changeMealWellbeing,
             changeMealStress,
             removeMeal,
+            removePhoto,
             openEditGramsModal,
             openTimeEditor,
             openMoodEditor,

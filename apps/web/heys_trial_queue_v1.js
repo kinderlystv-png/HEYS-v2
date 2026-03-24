@@ -1433,18 +1433,63 @@
     }, [queue]);
 
     // Действия
-    const handleRemove = async (clientId, clientName) => {
-      if (!confirm(`Удалить "${clientName}" из очереди?`)) return;
+    const handleRemove = (item) => {
+      const clientId = item?.client_id;
+      const clientName = item?.client_name || item?.name || 'клиент';
+      if (!clientId) return;
+      if (!confirm(`Удалить "${clientName}" из очереди?\n\nПосле удаления появится кнопка отмены.`)) return;
 
-      setActionLoading(clientId);
-      const res = await adminAPI.removeFromQueue(clientId, 'admin_removed');
-      setActionLoading(null);
+      const queueSnapshot = Array.isArray(queue) ? queue.slice() : [];
 
-      if (res.success) {
-        loadData(true);
-      } else {
-        alert('Ошибка: ' + (res.message || 'Не удалось удалить'));
+      const applyLocalRemoval = () => {
+        setQueue((prev) => prev.filter((entry) => String(entry?.client_id || '') !== String(clientId)));
+      };
+
+      const restoreLocalRemoval = () => {
+        setQueue(queueSnapshot);
+      };
+
+      const runCommit = async () => {
+        setActionLoading(clientId);
+        const res = await adminAPI.removeFromQueue(clientId, 'admin_removed');
+        setActionLoading(null);
+
+        if (res.success) {
+          loadData(true);
+          return;
+        }
+
+        throw new Error(res.message || 'Не удалось удалить');
+      };
+
+      if (!HEYS.Undo?.runAction) {
+        applyLocalRemoval();
+        runCommit().catch((error) => {
+          restoreLocalRemoval();
+          HEYS.Toast?.error?.(error.message || 'Не удалось удалить из очереди');
+        });
+        return;
       }
+
+      HEYS.Undo.runAction({
+        label: `«${clientName}» удалён из очереди`,
+        errorMessage: 'Не удалось подготовить удаление из очереди',
+        apply: () => {
+          applyLocalRemoval();
+          return { queueSnapshot, clientId, clientName };
+        },
+        undo: () => {
+          restoreLocalRemoval();
+        },
+        onExpire: async () => {
+          try {
+            await runCommit();
+          } catch (error) {
+            restoreLocalRemoval();
+            HEYS.Toast?.error?.(error.message || 'Не удалось удалить из очереди');
+          }
+        }
+      });
     };
 
     // Открыть диалог активации триала с выбором даты (v3.0)
@@ -1754,7 +1799,7 @@
       )
     );
 
-    const ClientRow = ({ item, allowActions }) => {
+    const ClientRow = ({ item, allowActions, allowRemove = false }) => {
       const statusColor = item.status === 'assigned'
         ? { bg: '#dcfce7', text: '#16a34a', label: 'Активен' }
         : item.status === 'rejected' || item.status === 'expired'
@@ -1856,7 +1901,21 @@
               fontSize: 12,
               fontWeight: 700
             }
-          }, '❌')
+          }, '❌'),
+          allowRemove && React.createElement('button', {
+            onClick: () => handleRemove(item),
+            disabled: actionLoading === item.client_id,
+            style: {
+              padding: '8px 10px',
+              borderRadius: 8,
+              border: '1px solid #fecaca',
+              background: '#fff7f7',
+              color: '#dc2626',
+              cursor: actionLoading === item.client_id ? 'not-allowed' : 'pointer',
+              fontSize: 12,
+              fontWeight: 700
+            }
+          }, '🗑️')
         )
       );
     };
@@ -1953,7 +2012,7 @@
         !loading && !error && activeTab === 'new' && (newLeads.length ? newLeads.map(item => React.createElement(LeadRow, { key: item.id, item })) : React.createElement('div', {
           style: { textAlign: 'center', padding: '40px', color: '#9ca3af', fontSize: 14 }
         }, '📭 Нет заявок с лендинга')),
-        !loading && !error && activeTab === 'pending' && (grouped.pending.length ? grouped.pending.map(item => React.createElement(ClientRow, { key: item.client_id || item.queue_id, item, allowActions: true })) : React.createElement('div', {
+        !loading && !error && activeTab === 'pending' && (grouped.pending.length ? grouped.pending.map(item => React.createElement(ClientRow, { key: item.client_id || item.queue_id, item, allowActions: true, allowRemove: true })) : React.createElement('div', {
           style: { textAlign: 'center', padding: '40px', color: '#9ca3af', fontSize: 14 }
         }, '⏸️ Нет клиентов в очереди на триал')),
         !loading && !error && activeTab === 'active' && ((grouped.assigned.length + trialClients.length) ? [

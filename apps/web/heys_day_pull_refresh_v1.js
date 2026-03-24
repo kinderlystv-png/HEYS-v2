@@ -39,7 +39,39 @@
     // === Pull-to-refresh логика (Enhanced) ===
     const PULL_THRESHOLD = 80;
     const SYNC_TIMEOUT_MS = 8000;
+    const READY_SETTLE_MS = 180;
+    const MIN_SYNCING_MS = 640;
+    const SUCCESS_HOLD_MS = 920;
+    const ERROR_HOLD_MS = 1080;
+    const TIMEOUT_HOLD_MS = 1240;
+    const EXIT_COLLAPSE_MS = 320;
+    const READY_LOCK_HEIGHT = 52;
+    const SYNCING_LOCK_HEIGHT = 56;
+    const EXIT_COLLAPSE_HEIGHT = 40;
     const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+    const ensureMinimumPhase = async (startedAt, minMs) => {
+      const elapsed = Date.now() - startedAt;
+      const remaining = minMs - elapsed;
+      if (remaining > 0) {
+        await delay(remaining);
+      }
+    };
+
+    const finishRefreshFlow = async (status, holdMs) => {
+      setRefreshStatus(status);
+      if (status === 'success') {
+        triggerHaptic(20);
+      }
+
+      await delay(holdMs);
+
+      setPullProgress(EXIT_COLLAPSE_HEIGHT);
+      setIsRefreshing(false);
+      await delay(16);
+      setPullProgress(0);
+      await delay(EXIT_COLLAPSE_MS);
+      setRefreshStatus('idle');
+    };
 
     const shouldIgnoreTarget = (target) => {
       if (!target || typeof target.closest !== 'function') return false;
@@ -79,6 +111,49 @@
       return { ok: true, timedOut: false };
     };
 
+    const performRefreshSync = async (cloud) => {
+      // 1. SW update — background, non-blocking
+      if (navigator.serviceWorker?.controller) {
+        navigator.serviceWorker.ready.then(reg => reg.update?.()).catch(() => { });
+      }
+
+      // 2. Unified pull-refresh: flush + delta sync + structured result
+      if (cloud?.pullRefresh) {
+        console.info('[PullRefresh] 🔄 Starting pull refresh...');
+        const result = await Promise.race([
+          cloud.pullRefresh(),
+          delay(SYNC_TIMEOUT_MS).then(() => SYNC_TIMEOUT)
+        ]);
+
+        if (result === SYNC_TIMEOUT) {
+          console.warn('[PullRefresh] ⏱️ Timed out after', SYNC_TIMEOUT_MS, 'ms');
+          return { ok: false, timedOut: true };
+        }
+
+        if (result?.status === 'offline') {
+          console.info('[PullRefresh] 📴 Offline — local data active');
+        } else if (result?.status === 'no-changes') {
+          console.info('[PullRefresh] ✅ No changes (' + (result.totalMs || '?') + 'ms)');
+        } else {
+          console.info('[PullRefresh] ✅ Synced', result?.keys || 0, 'keys in', result?.totalMs || '?', 'ms');
+        }
+
+        return { ok: true, timedOut: false };
+      }
+
+      if (cloud?.syncClient) {
+        // Fallback: legacy path without pullRefresh
+        const U = heys && heys.utils;
+        const clientId = U && U.getCurrentClientId ? U.getCurrentClientId() : '';
+        if (clientId) {
+          console.info('[PullRefresh] 🔄 Starting sync (legacy)...');
+          return await runSyncWithTimeout(cloud, clientId);
+        }
+      }
+
+      return { ok: true, timedOut: false };
+    };
+
     // ✅ Pull-to-refresh: sync из cloud (БЕЗ reload!)
     // Подтягивает изменения куратора, UI обновляется через события heys:day-updated
     // Вся orchestration (flush + sync) делегирована cloud.pullRefresh() —
@@ -90,71 +165,47 @@
 
       refreshInFlightRef.current = true;
       setIsRefreshing(true);
-      setRefreshStatus('syncing');
+      setPullProgress(Math.max(pullProgressRef.current, READY_LOCK_HEIGHT));
+      setRefreshStatus('ready');
       triggerHaptic(15);
 
       const cloud = heys && heys.cloud;
+      const syncTask = performRefreshSync(cloud);
+      let syncingStartedAt = 0;
 
       try {
-        // 1. SW update — background, non-blocking
-        if (navigator.serviceWorker?.controller) {
-          navigator.serviceWorker.ready.then(reg => reg.update?.()).catch(() => { });
+        // 3. Даже если sync уже завершился, пользователь должен успеть почувствовать
+        // подтверждённый release → syncing как отдельные контролируемые этапы.
+        await delay(READY_SETTLE_MS);
+        setPullProgress(SYNCING_LOCK_HEIGHT);
+        setRefreshStatus('syncing');
+        syncingStartedAt = Date.now();
+        const syncState = await syncTask;
+
+        if (syncState.timedOut) {
+          await ensureMinimumPhase(syncingStartedAt, MIN_SYNCING_MS);
+          await finishRefreshFlow('timeout', TIMEOUT_HOLD_MS);
+          return;
         }
 
-        // 2. Unified pull-refresh: flush + delta sync + structured result
-        if (cloud?.pullRefresh) {
-          console.info('[PullRefresh] 🔄 Starting pull refresh...');
-          const result = await Promise.race([
-            cloud.pullRefresh(),
-            delay(SYNC_TIMEOUT_MS).then(() => SYNC_TIMEOUT)
-          ]);
-
-          if (result === SYNC_TIMEOUT) {
-            console.warn('[PullRefresh] ⏱️ Timed out after', SYNC_TIMEOUT_MS, 'ms');
-            setRefreshStatus('timeout');
-            await delay(1100);
-            return;
-          }
-
-          if (result?.status === 'offline') {
-            console.info('[PullRefresh] 📴 Offline — local data active');
-          } else if (result?.status === 'no-changes') {
-            console.info('[PullRefresh] ✅ No changes (' + (result.totalMs || '?') + 'ms)');
-          } else {
-            console.info('[PullRefresh] ✅ Synced', result?.keys || 0, 'keys in', result?.totalMs || '?', 'ms');
-          }
-        } else if (cloud?.syncClient) {
-          // Fallback: legacy path without pullRefresh
-          const U = heys && heys.utils;
-          const clientId = U && U.getCurrentClientId ? U.getCurrentClientId() : '';
-          if (clientId) {
-            console.info('[PullRefresh] 🔄 Starting sync (legacy)...');
-            const syncState = await runSyncWithTimeout(cloud, clientId);
-            if (syncState.timedOut) {
-              setRefreshStatus('timeout');
-              await delay(1100);
-              return;
-            }
-          }
-        }
-
-        // 3. Показываем успех
-        setRefreshStatus('success');
-        triggerHaptic(20);
-
-        // 4. Держим индикатор 600ms для UX, затем сбрасываем
-        await delay(600);
+        // 4. Даже при супер-быстром no-changes показываем минимальный smooth flow
+        await ensureMinimumPhase(syncingStartedAt, MIN_SYNCING_MS);
+        await finishRefreshFlow('success', SUCCESS_HOLD_MS);
 
       } catch (err) {
         console.warn('[PullRefresh] Error:', err.message);
-        setRefreshStatus('error');
-        await delay(800);
+        if (!syncingStartedAt) {
+          await delay(Math.max(0, READY_SETTLE_MS - 16));
+          setPullProgress(SYNCING_LOCK_HEIGHT);
+          setRefreshStatus('syncing');
+          syncingStartedAt = Date.now();
+        }
+        await ensureMinimumPhase(syncingStartedAt, MIN_SYNCING_MS);
+        await finishRefreshFlow('error', ERROR_HOLD_MS);
       } finally {
         // Сбрасываем состояние (без reload!)
         queueMicrotask(() => {
           refreshInFlightRef.current = false;
-          setIsRefreshing(false);
-          setRefreshStatus('idle');
           setPullProgress(0);
         });
       }

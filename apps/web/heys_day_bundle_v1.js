@@ -5873,6 +5873,7 @@
         openMoodEditor,
         setGrams,
         removeItem,
+        removePhoto,
         isMealStale,
         allMeals,
         isNewItem,
@@ -7125,24 +7126,8 @@
                             : null;
 
                         const handleDelete = async (e) => {
-                            e.stopPropagation();
-                            if (!confirm('Удалить это фото?')) return;
-
-                            if (photo.path && photo.uploaded && window.HEYS?.cloud?.deletePhoto) {
-                                try {
-                                    await window.HEYS.cloud.deletePhoto(photo.path);
-                                } catch (err) {
-                                    trackError(err, { source: 'day/_meals.js', action: 'delete_photo', mealIndex });
-                                }
-                            }
-
-                            setDay((prevDay = {}) => {
-                                const meals = (prevDay.meals || []).map((m, i) => {
-                                    if (i !== mealIndex || !m.photos) return m;
-                                    return { ...m, photos: m.photos.filter((p) => p.id !== photo.id) };
-                                });
-                                return { ...prevDay, meals, updatedAt: Date.now() };
-                            });
+                            e?.stopPropagation?.();
+                            await removePhoto?.(mealIndex, photo.id);
                         };
 
                         let thumbClass = 'meal-photo-thumb';
@@ -7159,6 +7144,7 @@
                             photoIndex,
                             mealPhotos: meal.photos,
                             handleDelete,
+                            removePhoto,
                             setDay,
                         });
                     }),
@@ -7730,6 +7716,7 @@
             openMoodEditor,
             setGrams,
             removeItem,
+            removePhoto,
             isNewItem,
             optimum,
             setMealQualityPopup,
@@ -7839,6 +7826,7 @@
                     openMoodEditor,
                     setGrams,
                     removeItem,
+                    removePhoto,
                     isMealStale,
                     allMeals: day.meals,
                     isNewItem,
@@ -7909,6 +7897,7 @@
             openMoodEditor,
             setGrams,
             removeItem,
+            removePhoto,
             isNewItem,
             optimum,
             setMealQualityPopup,
@@ -8670,6 +8659,79 @@
             setNewItemIds,
         } = deps;
 
+        const persistDayData = React.useCallback((nextDayData, action = 'save_day') => {
+            const key = 'heys_dayv2_' + date;
+            try {
+                lsSet(key, nextDayData);
+            } catch (e) {
+                trackError(e, { source: 'day/_meals.js', action });
+            }
+        }, [date]);
+
+        const markUndoWindow = React.useCallback((durationMs = 5000) => {
+            const updatedAt = Date.now();
+            if (lastLoadedUpdatedAtRef) lastLoadedUpdatedAtRef.current = updatedAt;
+            if (blockCloudUpdatesUntilRef) blockCloudUpdatesUntilRef.current = updatedAt + durationMs;
+            return updatedAt;
+        }, [lastLoadedUpdatedAtRef, blockCloudUpdatesUntilRef]);
+
+        const recalculateOrphanProducts = React.useCallback(() => {
+            setTimeout(() => {
+                if (window.HEYS?.orphanProducts?.recalculate) {
+                    window.HEYS.orphanProducts.recalculate();
+                }
+            }, 100);
+        }, []);
+
+        const runUndoableDayMutation = React.useCallback((opts) => {
+            if (!opts || typeof opts.applyMutation !== 'function' || typeof opts.undoMutation !== 'function') {
+                return false;
+            }
+
+            if (HEYS.Undo?.runAction) {
+                return HEYS.Undo.runAction({
+                    label: opts.label,
+                    duration: opts.duration,
+                    errorMessage: opts.errorMessage,
+                    apply: opts.applyMutation,
+                    undo: opts.undoMutation,
+                    onExpire: opts.onExpire,
+                    onApplyError: (error) => {
+                        trackError(error, {
+                            source: 'day/_meals.js',
+                            action: opts.errorAction || 'undoable_day_mutation'
+                        });
+                    },
+                });
+            }
+
+            let context;
+            try {
+                context = opts.applyMutation();
+            } catch (error) {
+                trackError(error, {
+                    source: 'day/_meals.js',
+                    action: opts.errorAction || 'undoable_day_mutation'
+                });
+                if (opts.errorMessage) HEYS.Toast?.error(opts.errorMessage);
+                return false;
+            }
+
+            if (context === false) return false;
+
+            if (HEYS.Undo) {
+                HEYS.Undo.push({
+                    label: opts.label,
+                    duration: opts.duration,
+                    context,
+                    onUndo: () => opts.undoMutation(context),
+                    onExpire: (reason) => opts.onExpire?.(reason, context),
+                });
+            }
+
+            return context;
+        }, []);
+
         const addMeal = React.useCallback(async () => {
             if (HEYS.Paywall && !HEYS.Paywall.canWriteSync()) {
                 HEYS.Paywall.showBlockedToast('Добавление приёма пищи недоступно');
@@ -9016,20 +9078,56 @@
         }, [setDay]);
 
         const removeMeal = React.useCallback(async (i) => {
-            const confirmed = await HEYS.ConfirmModal?.confirmDelete({
+            const mealToRemove = day.meals?.[i];
+            if (!mealToRemove) return;
+
+            const confirmed = await HEYS.ConfirmModal?.confirmDelete?.({
                 icon: '🗑️',
                 title: 'Удалить приём пищи?',
-                text: 'Все продукты в этом приёме будут удалены. Это действие нельзя отменить.',
+                text: 'Приём исчезнет сразу, но его можно будет быстро вернуть через кнопку «Отменить».',
             });
 
-            if (!confirmed) return;
+            if (confirmed === false) return;
+
+            const mealName = mealToRemove?.name || 'Приём пищи';
+            const mealId = mealToRemove.id;
 
             haptic('medium');
-            setDay((prevDay) => {
-                const meals = (prevDay.meals || []).filter((_, idx) => idx !== i);
-                return { ...prevDay, meals, updatedAt: Date.now() };
+
+            runUndoableDayMutation({
+                label: mealName + ' удалён',
+                duration: 4000,
+                errorMessage: 'Не удалось удалить приём пищи',
+                errorAction: 'remove_meal',
+                applyMutation: () => {
+                    const removedUpdatedAt = markUndoWindow(5000);
+
+                    setDay((prevDay) => {
+                        const meals = (prevDay.meals || []).filter((meal) => meal.id !== mealId);
+                        const nextDayData = { ...prevDay, meals, updatedAt: removedUpdatedAt };
+                        persistDayData(nextDayData, 'remove_meal');
+                        return nextDayData;
+                    });
+
+                    return { mealId, mealToRemove, insertIndex: i };
+                },
+                undoMutation: ({ mealId: ctxMealId, mealToRemove: ctxMeal, insertIndex }) => {
+                    const undoUpdatedAt = markUndoWindow(3000);
+                    setDay((prevDay) => {
+                        const meals = [...(prevDay.meals || [])];
+                        if (meals.some((meal) => meal.id === ctxMealId)) {
+                            return prevDay;
+                        }
+
+                        meals.splice(Math.max(0, Math.min(insertIndex, meals.length)), 0, ctxMeal);
+                        const restoredMeals = sortMealsByTime(meals);
+                        const nextDayData = { ...prevDay, meals: restoredMeals, updatedAt: undoUpdatedAt };
+                        persistDayData(nextDayData, 'undo_remove_meal');
+                        return nextDayData;
+                    });
+                },
             });
-        }, [haptic, setDay]);
+        }, [haptic, setDay, day, markUndoWindow, persistDayData, runUndoableDayMutation]);
 
         const addProductToMeal = React.useCallback((mi, p) => {
             if (HEYS.Paywall && !HEYS.Paywall.canWriteSync()) {
@@ -9120,17 +9218,138 @@
         }, [setDay]);
 
         const removeItem = React.useCallback((mi, itId) => {
+            const sourceMeal = day.meals?.[mi];
+            if (!sourceMeal) return;
+
+            const mealId = sourceMeal.id;
+            const originalItems = sourceMeal.items || [];
+            const itemIndex = originalItems.findIndex((it) => it.id === itId);
+            if (itemIndex < 0) return;
+
+            const removedItem = originalItems[itemIndex];
+            const removedName = removedItem?.name || 'Продукт';
+
             haptic('medium');
-            setDay((prevDay) => {
-                const meals = (prevDay.meals || []).map((m, i) => i === mi ? { ...m, items: (m.items || []).filter((it) => it.id !== itId) } : m);
-                return { ...prevDay, meals, updatedAt: Date.now() };
+
+            runUndoableDayMutation({
+                label: removedName + ' удалён',
+                duration: 4000,
+                errorMessage: 'Не удалось удалить продукт',
+                errorAction: 'remove_item',
+                applyMutation: () => {
+                    const removedUpdatedAt = markUndoWindow(5000);
+
+                    setDay((prevDay) => {
+                        const meals = (prevDay.meals || []).map((meal) => {
+                            if (meal.id !== mealId) return meal;
+                            return { ...meal, items: (meal.items || []).filter((it) => it.id !== itId) };
+                        });
+                        const nextDayData = { ...prevDay, meals, updatedAt: removedUpdatedAt };
+                        persistDayData(nextDayData, 'remove_item');
+                        return nextDayData;
+                    });
+
+                    recalculateOrphanProducts();
+                    return { mealId, removedItem, itemIndex };
+                },
+                undoMutation: ({ mealId: ctxMealId, removedItem: ctxRemovedItem, itemIndex: ctxItemIndex }) => {
+                    const undoUpdatedAt = markUndoWindow(3000);
+                    setDay((prevDay) => {
+                        const meals = (prevDay.meals || []).map((meal) => {
+                            if (meal.id !== ctxMealId) return meal;
+
+                            const items = [...(meal.items || [])];
+                            if (items.some((it) => it.id === ctxRemovedItem.id)) {
+                                return meal;
+                            }
+
+                            items.splice(Math.max(0, Math.min(ctxItemIndex, items.length)), 0, ctxRemovedItem);
+                            return { ...meal, items };
+                        });
+
+                        const nextDayData = { ...prevDay, meals, updatedAt: undoUpdatedAt };
+                        persistDayData(nextDayData, 'undo_remove_item');
+                        return nextDayData;
+                    });
+                    recalculateOrphanProducts();
+                },
             });
-            setTimeout(() => {
-                if (window.HEYS?.orphanProducts?.recalculate) {
-                    window.HEYS.orphanProducts.recalculate();
-                }
-            }, 100);
-        }, [haptic, setDay]);
+        }, [haptic, setDay, day, markUndoWindow, persistDayData, recalculateOrphanProducts, runUndoableDayMutation]);
+
+        const removePhoto = React.useCallback(async (mi, photoId, options = {}) => {
+            const sourceMeal = day.meals?.[mi];
+            if (!sourceMeal) return false;
+
+            const mealId = sourceMeal.id;
+            const originalPhotos = sourceMeal.photos || [];
+            const photoIndex = originalPhotos.findIndex((photo) => photo.id === photoId);
+            if (photoIndex < 0) return false;
+
+            const removedPhoto = originalPhotos[photoIndex];
+            const confirmed = options.skipConfirm === true
+                ? true
+                : await HEYS.ConfirmModal?.confirmDelete?.({
+                    icon: '🗑️',
+                    title: 'Удалить фото?',
+                    text: 'Фото исчезнет сразу, но его можно будет быстро вернуть через кнопку «Отменить».',
+                });
+
+            if (confirmed === false) return false;
+
+            haptic('medium');
+
+            return !!runUndoableDayMutation({
+                label: 'Фото удалено',
+                duration: 5000,
+                errorMessage: 'Не удалось удалить фото',
+                errorAction: 'remove_photo',
+                applyMutation: () => {
+                    const removedUpdatedAt = markUndoWindow(6000);
+
+                    setDay((prevDay) => {
+                        const meals = (prevDay.meals || []).map((meal) => {
+                            if (meal.id !== mealId) return meal;
+                            return { ...meal, photos: (meal.photos || []).filter((photo) => photo.id !== photoId) };
+                        });
+                        const nextDayData = { ...prevDay, meals, updatedAt: removedUpdatedAt };
+                        persistDayData(nextDayData, 'remove_photo');
+                        return nextDayData;
+                    });
+
+                    return { mealId, removedPhoto, photoIndex };
+                },
+                undoMutation: ({ mealId: ctxMealId, removedPhoto: ctxRemovedPhoto, photoIndex: ctxPhotoIndex }) => {
+                    const undoUpdatedAt = markUndoWindow(3000);
+                    setDay((prevDay) => {
+                        const meals = (prevDay.meals || []).map((meal) => {
+                            if (meal.id !== ctxMealId) return meal;
+
+                            const photos = [...(meal.photos || [])];
+                            if (photos.some((photo) => photo.id === ctxRemovedPhoto.id)) {
+                                return meal;
+                            }
+
+                            photos.splice(Math.max(0, Math.min(ctxPhotoIndex, photos.length)), 0, ctxRemovedPhoto);
+                            return { ...meal, photos };
+                        });
+
+                        const nextDayData = { ...prevDay, meals, updatedAt: undoUpdatedAt };
+                        persistDayData(nextDayData, 'undo_remove_photo');
+                        return nextDayData;
+                    });
+                },
+                onExpire: async (_reason, { removedPhoto: ctxRemovedPhoto }) => {
+                    if (ctxRemovedPhoto?.path && ctxRemovedPhoto?.uploaded && window.HEYS?.cloud?.deletePhoto) {
+                        try {
+                            await window.HEYS.cloud.deletePhoto(ctxRemovedPhoto.path);
+                        } catch (error) {
+                            trackError(error, { source: 'day/_meals.js', action: 'delete_photo_cloud_finalize' });
+                            HEYS.Toast?.error('Фото удалено локально, но не удалилось из облака');
+                        }
+                    }
+                },
+            });
+        }, [day, haptic, markUndoWindow, persistDayData, runUndoableDayMutation, setDay]);
 
         const updateMealField = React.useCallback((mealIndex, field, value) => {
             setDay((prevDay) => {
@@ -9170,6 +9389,7 @@
             addProductToMeal,
             setGrams,
             removeItem,
+            removePhoto,
             updateMealField,
             changeMealMood,
             changeMealWellbeing,

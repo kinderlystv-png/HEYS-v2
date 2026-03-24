@@ -5077,6 +5077,30 @@ body.tour-active .ios-pwa-banner {
   opacity: 1;
 }
 
+.aps-delete-btn {
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: rgba(239, 68, 68, 0.12);
+  color: #dc2626;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.aps-delete-btn:hover {
+  background: rgba(239, 68, 68, 0.2);
+  transform: scale(1.05);
+}
+
+.aps-delete-btn:active {
+  transform: scale(0.92);
+}
+
 [data-theme="dark"] .aps-hide-btn {
   color: #9ca3af;
 }
@@ -5089,6 +5113,15 @@ body.tour-active .ios-pwa-banner {
 [data-theme="dark"] .aps-hide-btn--active {
   background: #064e3b;
   color: #6ee7b7;
+}
+
+[data-theme="dark"] .aps-delete-btn {
+  background: rgba(248, 113, 113, 0.18);
+  color: #fca5a5;
+}
+
+[data-theme="dark"] .aps-delete-btn:hover {
+  background: rgba(248, 113, 113, 0.28);
 }
 
 /* ══════════════════════════════════════════════════════════════
@@ -6569,7 +6602,6 @@ body.tour-active .ios-pwa-banner {
 [data-theme="dark"] .tab.tab-switch.active {
   background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
   color: #ffffff;
-  box-shadow: 0 10px 20px -16px rgba(59, 130, 246, 0.9);
 }
 
 [data-theme="dark"] .tab-switch-labels {
@@ -8669,6 +8701,407 @@ body.tour-active .ios-pwa-banner {
 .meal-rec-card__feedback-btn:disabled {
   cursor: not-allowed;
   opacity: 0.4;
+}
+
+/* === UNDO BAR — premium snackbar (v2.0) === */
+.heys-undo-bar {
+  position: fixed;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 16px);
+  left: 50%;
+  z-index: 1010;
+  width: min(560px, calc(100vw - 32px));
+  overflow: hidden;
+  border-radius: 22px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background:
+    linear-gradient(180deg, rgba(15, 23, 42, 0.9), rgba(15, 23, 42, 0.78)),
+    radial-gradient(circle at top left, rgba(96, 165, 250, 0.18), transparent 46%),
+    radial-gradient(circle at top right, rgba(168, 85, 247, 0.14), transparent 42%);
+  backdrop-filter: blur(20px) saturate(150%);
+  -webkit-backdrop-filter: blur(20px) saturate(150%);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.03),
+    0 0 34px -24px rgba(236, 72, 153, 0.22),
+    0 28px 70px -34px rgba(2, 6, 23, 0.82),
+    0 12px 36px -28px rgba(59, 130, 246, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  transform: translate(-50%, calc(100% + 36px)) scale(0.96);
+  opacity: 0;
+  will-change: transform, opacity;
+  transition:
+    transform 0.34s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.26s ease,
+    box-shadow 0.24s ease;
+  pointer-events: none;
+}
+
+.heys-undo-bar::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(135deg,
+      rgba(255, 255, 255, 0.22),
+      rgba(96, 165, 250, 0.16),
+      rgba(168, 85, 247, 0.12),
+      rgba(255, 255, 255, 0.08));
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+.heys-undo-bar--visible {
+  transform: translate(-50%, 0) scale(1);
+  opacity: 1;
+  pointer-events: auto;
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.05),
+    0 0 40px -22px rgba(217, 123, 171, 0.24),
+    0 30px 72px -34px rgba(2, 6, 23, 0.84),
+    0 14px 38px -28px rgba(59, 130, 246, 0.46),
+    inset 0 1px 0 rgba(255, 255, 255, 0.11);
+}
+
+.heys-undo-bar__shine {
+  position: absolute;
+  inset: 0 auto auto -18%;
+  width: 56%;
+  height: 68%;
+  background: linear-gradient(115deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.02) 62%, transparent 100%);
+  opacity: 0.7;
+  pointer-events: none;
+  filter: blur(2px);
+}
+
+.heys-undo-bar__content {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 14px 16px 10px;
+}
+
+.heys-undo-bar__lead {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1 1 auto;
+}
+
+.heys-undo-bar__icon-wrap {
+  width: 42px;
+  height: 42px;
+  border-radius: 14px;
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.04)),
+    radial-gradient(circle at top left, rgba(96, 165, 250, 0.22), transparent 60%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.14),
+    0 10px 22px -18px rgba(96, 165, 250, 0.45);
+}
+
+.heys-undo-bar__icon {
+  font-size: 18px;
+  line-height: 1;
+  color: rgba(248, 250, 252, 0.96);
+}
+
+.heys-undo-bar__copy {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.heys-undo-bar__label {
+  display: block;
+  min-width: 0;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: rgba(255, 255, 255, 0.97);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.heys-undo-bar__subtitle {
+  display: block;
+  min-width: 0;
+  font-size: 12px;
+  font-weight: 500;
+  color: rgba(226, 232, 240, 0.7);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.heys-undo-bar__actions {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.heys-undo-bar__meta {
+  flex-shrink: 0;
+  min-width: 28px;
+  height: 28px;
+  padding: 0 9px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.heys-undo-bar__btn {
+  flex-shrink: 0;
+  height: 34px;
+  padding: 0 14px;
+  background:
+    linear-gradient(135deg, #e789ab 0%, #d9729f 24%, #c966a4 58%, #ab67c7 100%);
+  color: #fff7fb;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 999px;
+  cursor: pointer;
+  transition:
+    transform 0.14s ease,
+    box-shadow 0.18s ease,
+    filter 0.18s ease;
+  box-shadow:
+    0 14px 30px -18px rgba(201, 102, 164, 0.42),
+    0 6px 16px -14px rgba(171, 103, 199, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.28);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.heys-undo-bar__close {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    background 0.18s ease,
+    color 0.18s ease,
+    transform 0.12s ease,
+    border-color 0.18s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.heys-undo-bar__btn:focus-visible,
+.heys-undo-bar__close:focus-visible {
+  outline: 2px solid rgba(125, 211, 252, 0.95);
+  outline-offset: 2px;
+}
+
+.heys-undo-bar__btn:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.05) saturate(1.03);
+  box-shadow:
+    0 18px 34px -20px rgba(201, 102, 164, 0.48),
+    0 8px 20px -16px rgba(171, 103, 199, 0.36),
+    0 0 0 1px rgba(255, 255, 255, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.34);
+}
+
+.heys-undo-bar__btn:active {
+  transform: scale(0.96);
+}
+
+.heys-undo-bar__close:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.14);
+  color: rgba(255, 255, 255, 0.95);
+}
+
+.heys-undo-bar__close:active {
+  transform: scale(0.94);
+}
+
+.heys-undo-bar__track {
+  position: relative;
+  height: 4px;
+  margin: 0 14px 14px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.heys-undo-bar__track::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.08), transparent 28%, rgba(255, 255, 255, 0.08));
+  pointer-events: none;
+}
+
+.heys-undo-bar__progress {
+  position: relative;
+  height: 100%;
+  background: linear-gradient(90deg, #38bdf8 0%, #60a5fa 38%, #8b5cf6 72%, #22c55e 100%);
+  border-radius: inherit;
+  transform-origin: left center;
+  will-change: transform;
+  box-shadow: 0 0 18px rgba(96, 165, 250, 0.48);
+}
+
+.heys-undo-bar__progress::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.55), transparent 60%);
+  mix-blend-mode: screen;
+}
+
+/* Light theme override */
+:root:not([data-theme="dark"]) .heys-undo-bar {
+  border-color: rgba(148, 163, 184, 0.2);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(248, 250, 252, 0.94)),
+    radial-gradient(circle at top left, rgba(59, 130, 246, 0.12), transparent 46%),
+    radial-gradient(circle at top right, rgba(168, 85, 247, 0.08), transparent 42%);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.52),
+    0 0 28px -22px rgba(217, 123, 171, 0.16),
+    0 28px 70px -40px rgba(15, 23, 42, 0.24),
+    0 10px 28px -20px rgba(59, 130, 246, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.88);
+}
+
+:root:not([data-theme="dark"]) .heys-undo-bar--visible {
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.62),
+    0 0 34px -20px rgba(217, 123, 171, 0.2),
+    0 30px 74px -40px rgba(15, 23, 42, 0.26),
+    0 12px 30px -20px rgba(59, 130, 246, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+:root:not([data-theme="dark"]) .heys-undo-bar::before {
+  background: linear-gradient(135deg,
+      rgba(255, 255, 255, 0.88),
+      rgba(96, 165, 250, 0.18),
+      rgba(168, 85, 247, 0.12),
+      rgba(255, 255, 255, 0.48));
+}
+
+:root:not([data-theme="dark"]) .heys-undo-bar__icon-wrap {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.95), rgba(241, 245, 249, 0.92)),
+    radial-gradient(circle at top left, rgba(59, 130, 246, 0.12), transparent 60%);
+  border-color: rgba(148, 163, 184, 0.18);
+}
+
+:root:not([data-theme="dark"]) .heys-undo-bar__icon {
+  color: #0f172a;
+}
+
+:root:not([data-theme="dark"]) .heys-undo-bar__label {
+  color: #0f172a;
+}
+
+:root:not([data-theme="dark"]) .heys-undo-bar__subtitle {
+  color: rgba(51, 65, 85, 0.72);
+}
+
+:root:not([data-theme="dark"]) .heys-undo-bar__meta {
+  background: rgba(15, 23, 42, 0.05);
+  border-color: rgba(148, 163, 184, 0.14);
+  color: #334155;
+}
+
+:root:not([data-theme="dark"]) .heys-undo-bar__btn {
+  background:
+    linear-gradient(135deg, #f0a1bc 0%, #e68daf 24%, #d97bab 58%, #bd79d2 100%);
+  color: #fffafc;
+  border-color: rgba(217, 123, 171, 0.24);
+  box-shadow:
+    0 14px 30px -22px rgba(217, 123, 171, 0.28),
+    0 8px 18px -16px rgba(189, 121, 210, 0.18),
+    0 0 0 1px rgba(255, 255, 255, 0.26),
+    inset 0 1px 0 rgba(255, 255, 255, 0.34);
+}
+
+:root:not([data-theme="dark"]) .heys-undo-bar__btn:hover {
+  filter: brightness(1.04) saturate(1.03);
+  box-shadow:
+    0 18px 34px -24px rgba(217, 123, 171, 0.32),
+    0 10px 20px -18px rgba(189, 121, 210, 0.22),
+    0 0 0 1px rgba(217, 123, 171, 0.14),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+
+:root:not([data-theme="dark"]) .heys-undo-bar__close {
+  background: rgba(15, 23, 42, 0.04);
+  border-color: rgba(148, 163, 184, 0.14);
+  color: #475569;
+}
+
+:root:not([data-theme="dark"]) .heys-undo-bar__close:hover {
+  background: rgba(15, 23, 42, 0.08);
+  color: #0f172a;
+}
+
+:root:not([data-theme="dark"]) .heys-undo-bar__track {
+  background: rgba(15, 23, 42, 0.06);
+}
+
+@media (max-width: 560px) {
+  .heys-undo-bar {
+    width: calc(100vw - 24px);
+    border-radius: 20px;
+  }
+
+  .heys-undo-bar__content {
+    align-items: flex-start;
+    gap: 12px;
+    padding: 14px 14px 10px;
+  }
+
+  .heys-undo-bar__lead {
+    gap: 10px;
+  }
+
+  .heys-undo-bar__actions {
+    gap: 6px;
+  }
+
+  .heys-undo-bar__btn {
+    height: 32px;
+    padding: 0 12px;
+  }
+
+  .heys-undo-bar__track {
+    margin: 0 14px 12px;
+  }
 }
 
 .meal-rec-card__feedback-btn--selected {

@@ -1909,8 +1909,9 @@
     const avgSecond = secondHalf.length > 0 ? secondHalf.reduce((s, p) => s + p.weight, 0) / secondHalf.length : 0;
     const weightTrend = avgSecond - avgFirst; // положительный = вес растёт
 
-    // Цвет градиента по тренду
-    const trendColor = weightTrend <= -0.1 ? '#22c55e' : (weightTrend >= 0.1 ? '#ef4444' : '#3b82f6');
+    // Фиксированный акцент для линии тренда и градиента под ней
+    const trendColor = '#f97316';
+    const trendAreaTopColor = '#fb923c';
 
     // Цвет прогноза — серый для нейтральности (прогноз — это неизвестность)
     const forecastColor = '#9ca3af'; // gray-400
@@ -1920,15 +1921,11 @@
       ? pathD + ` L${realPoints[realPoints.length - 1].x},${paddingTop + chartHeight} L${realPoints[0].x},${paddingTop + chartHeight} Z`
       : '';
 
-    // Gradient stops для линии веса — по локальному тренду каждой точки (только реальные)
-    // Зелёный = вес снижается, красный = вес растёт, фиолетовый = стабильно
-    const weightLineGradientStops = realPoints.map((p, i) => {
-      const prevWeight = i > 0 ? realPoints[i - 1].weight : p.weight;
-      const localTrend = p.weight - prevWeight;
-      const dotColor = localTrend < -0.05 ? '#22c55e' : (localTrend > 0.05 ? '#ef4444' : '#3b82f6');
-      const offset = realPoints.length > 1 ? (i / (realPoints.length - 1)) * 100 : 50;
-      return { offset, color: dotColor };
-    });
+    // Линия тренда — единый оранжевый акцент по всей длине
+    const weightLineGradientStops = [
+      { offset: 0, color: '#fb923c' },
+      { offset: 100, color: trendColor }
+    ];
 
     // Прогнозная линия (от последней реальной точки ко всем прогнозным) — пунктирная
     // Используем плавную кривую, продолжающую тренд основной линии
@@ -1972,8 +1969,8 @@
       React.createElement('defs', null,
         // Вертикальный градиент для заливки области
         React.createElement('linearGradient', { id: 'weightAreaGrad', x1: '0', y1: '0', x2: '0', y2: '1' },
-          React.createElement('stop', { offset: '0%', stopColor: trendColor, stopOpacity: '0.25' }),
-          React.createElement('stop', { offset: '100%', stopColor: trendColor, stopOpacity: '0.05' })
+          React.createElement('stop', { offset: '0%', stopColor: trendAreaTopColor, stopOpacity: '0.24' }),
+          React.createElement('stop', { offset: '100%', stopColor: trendColor, stopOpacity: '0.02' })
         ),
         // Горизонтальный градиент для линии — цвета по локальному тренду
         React.createElement('linearGradient', { id: 'weightLineGrad', x1: '0%', y1: '0%', x2: '100%', y2: '0%' },
@@ -2247,21 +2244,25 @@
         const animDelay = 3 + i * 0.15;
 
         // Стили для точки
+        const isBlueFilledDot = !p.isFuture && dotColor === '#3b82f6';
         const dotStyle = {
           cursor: 'pointer',
-          fill: dotColor,
+          fill: isBlueFilledDot ? dotColor : 'transparent',
+          stroke: dotColor,
+          strokeWidth: isBlueFilledDot ? 1.5 : 2,
           '--delay': animDelay + 's'
         };
 
         // Розовая обводка для дней с задержкой воды
         if (p.hasWaterRetention) {
           dotStyle.stroke = '#ec4899';
-          dotStyle.strokeWidth = 2;
+          dotStyle.strokeWidth = isBlueFilledDot ? 2.5 : 2;
         }
 
         // Пунктирная обводка для прогнозных дней
         if (p.isFuture) {
           dotStyle.opacity = 0.6;
+          dotStyle.fill = 'rgba(156, 163, 175, 0.12)';
           dotStyle.strokeDasharray = '2 2';
           dotStyle.stroke = forecastColor;
           dotStyle.strokeWidth = 1.5;

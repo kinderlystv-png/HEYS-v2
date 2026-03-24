@@ -394,6 +394,17 @@
         if (Day?.requestFlush) Day.requestFlush({ force: true });
       } catch (e) { }
 
+      try {
+        if (HEYS?.Undo?.pending) {
+          console.info('[HEYS.dayStats] 🧹 Commit pending undo before date switch', {
+            currentDate: date,
+            nextDate,
+            reason: options.reason || 'stats-date-switch'
+          });
+          HEYS.Undo.commit('stats-date-switch');
+        }
+      } catch (e) { }
+
       const applyDate = () => {
         setDate(nextDate);
         haptic('light');
@@ -2968,36 +2979,6 @@
           const fatBadges = macroRingsMeta.fatBadges || [];
           const carbsBadges = macroRingsMeta.carbsBadges || [];
 
-          // Рендер бейджей с popup по тапу
-          const renderBadges = (badges, macro, value, norm, ratio, color) => {
-            if (!badges || badges.length === 0) return null;
-            return React.createElement('div', { className: 'macro-ring-badges' },
-              badges.map((b, i) => React.createElement('span', {
-                key: i,
-                className: 'macro-ring-badge',
-                onClick: (e) => {
-                  e.stopPropagation();
-                  const rect = e.target.getBoundingClientRect();
-                  const payload = {
-                    macro,
-                    emoji: b.emoji,
-                    desc: b.desc,
-                    value: Math.round(value),
-                    norm: Math.round(norm),
-                    ratio,
-                    color,
-                    allBadges: badges,
-                    x: rect.left + rect.width / 2,
-                    y: rect.top
-                  };
-                  haptic('light');
-                  // R25: defer badge popup setState
-                  setTimeout(() => { React.startTransition(() => setMacroBadgePopup(payload)); }, 0);
-                }
-              }, b.emoji))
-            );
-          };
-
           // Функция открытия popup для круга
           const openRingPopup = (e, macro, value, norm, ratio, color, badges) => {
             e.stopPropagation();
@@ -3075,8 +3056,7 @@
                 )
               ),
               React.createElement('span', { className: 'macro-ring-label' }, 'Белки'),
-              React.createElement('span', { className: 'macro-ring-target' }, '/ ' + Math.round(normAbs.prot || 0) + 'г'),
-              renderBadges(protBadges, 'Белки', dayTot.prot, normAbs.prot, protRatio, protColor)
+              React.createElement('span', { className: 'macro-ring-target' }, '/ ' + Math.round(normAbs.prot || 0) + 'г')
             ),
             // Жиры
             React.createElement('div', { className: 'macro-ring-item' },
@@ -3128,8 +3108,7 @@
                 )
               ),
               React.createElement('span', { className: 'macro-ring-label' }, 'Жиры'),
-              React.createElement('span', { className: 'macro-ring-target' }, '/ ' + Math.round(normAbs.fat || 0) + 'г'),
-              renderBadges(fatBadges, 'Жиры', dayTot.fat, normAbs.fat, fatRatio, fatColor)
+              React.createElement('span', { className: 'macro-ring-target' }, '/ ' + Math.round(normAbs.fat || 0) + 'г')
             ),
             // Углеводы
             React.createElement('div', { className: 'macro-ring-item' },
@@ -3181,8 +3160,7 @@
                 )
               ),
               React.createElement('span', { className: 'macro-ring-label' }, 'Углеводы'),
-              React.createElement('span', { className: 'macro-ring-target' }, '/ ' + Math.round(normAbs.carbs || 0) + 'г'),
-              renderBadges(carbsBadges, 'Углеводы', dayTot.carbs, normAbs.carbs, carbsRatio, carbsColor)
+              React.createElement('span', { className: 'macro-ring-target' }, '/ ' + Math.round(normAbs.carbs || 0) + 'г')
             )
           );
         })(),

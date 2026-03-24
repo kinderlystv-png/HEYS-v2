@@ -59,16 +59,44 @@
     };
   }
 
+  function roundPathCoord(value) {
+    return Math.round(value * 10) / 10;
+  }
+
+  function buildLinePath(points) {
+    if (!Array.isArray(points) || points.length === 0) return '';
+    if (points.length === 1) return `M ${points[0].x} ${points[0].y}`;
+
+    let path = `M ${points[0].x} ${points[0].y}`;
+
+    for (let index = 0; index < points.length - 1; index++) {
+      const p0 = points[index - 1] || points[index];
+      const p1 = points[index];
+      const p2 = points[index + 1];
+      const p3 = points[index + 2] || p2;
+
+      const cp1x = roundPathCoord(p1.x + (p2.x - p0.x) / 6);
+      const cp1y = roundPathCoord(p1.y + (p2.y - p0.y) / 6);
+      const cp2x = roundPathCoord(p2.x - (p3.x - p1.x) / 6);
+      const cp2y = roundPathCoord(p2.y - (p3.y - p1.y) / 6);
+
+      path += ` C ${cp1x} ${cp1y} ${cp2x} ${cp2y} ${p2.x} ${p2.y}`;
+    }
+
+    return path;
+  }
+
   function buildSparklineGeometry(weeklySeries) {
     const width = 300;
-    const height = 40;
-    const padX = 5;
-    const padY = 5;
+    const height = 56;
+    const padLeft = 8;
+    const padRight = 28;
+    const padY = 6;
     const maxRatio = Math.max(1, Number(weeklySeries?.maxRatio) || 1);
-    const innerWidth = width - padX * 2;
+    const innerWidth = width - padLeft - padRight;
     const innerHeight = height - padY * 2;
     const points = (weeklySeries?.series || []).map((item, index, arr) => {
-      const x = padX + (arr.length <= 1 ? innerWidth / 2 : (innerWidth * index) / (arr.length - 1));
+      const x = padLeft + (arr.length <= 1 ? innerWidth / 2 : (innerWidth * index) / (arr.length - 1));
       const y = padY + innerHeight - (Math.min(item.ratio, maxRatio) / maxRatio) * innerHeight;
       return { ...item, x: Math.round(x * 10) / 10, y: Math.round(y * 10) / 10 };
     });
@@ -78,20 +106,26 @@
         width,
         height,
         goalY: Math.round((padY + innerHeight) * 10) / 10,
-        linePoints: '',
-        areaPoints: ''
+        baselineY: Math.round((height - padY) * 10) / 10,
+        linePath: '',
+        areaPath: '',
+        weekSeparatorX: null
       };
     }
 
-    const linePoints = points.map(point => `${point.x},${point.y}`).join(' ');
-    const areaPoints = [
-      `${points[0].x},${height - padY}`,
-      ...points.map(point => `${point.x},${point.y}`),
-      `${points[points.length - 1].x},${height - padY}`
-    ].join(' ');
+    const linePath = buildLinePath(points);
+    const baselineY = Math.round((height - padY) * 10) / 10;
+    const firstPoint = points[0];
+    const lastPoint = points[points.length - 1];
+    const areaPath = linePath
+      ? `${linePath} L ${width} ${lastPoint.y} L ${width} ${baselineY} L 0 ${baselineY} L 0 ${firstPoint.y} Z`
+      : '';
     const goalY = Math.round((padY + innerHeight - Math.min(1, maxRatio) / maxRatio * innerHeight) * 10) / 10;
+    const weekSeparatorX = points.length >= 8
+      ? Math.round((((points[6]?.x || 0) + (points[7]?.x || 0)) / 2) * 10) / 10
+      : null;
 
-    return { width, height, goalY, points, linePoints, areaPoints };
+    return { width, height, goalY, baselineY, points, linePath, areaPath, weekSeparatorX };
   }
 
   function formatWaterLiters(ml) {
@@ -293,7 +327,14 @@
                 key: preset.ml,
                 className: 'water-preset-compact',
                 // 🚀 PERF R34: defer addWater — day data save + re-render (88ms → ~0ms click)
-                onClick: () => setTimeout(() => addWater(preset.ml, true), 0)
+                onClick: (e) => {
+                  const sourceEl = e.currentTarget;
+                  setTimeout(() => addWater(preset.ml, {
+                    skipScroll: true,
+                    source: 'water-card-preset',
+                    sourceEl
+                  }), 0);
+                }
               },
                 React.createElement('span', { className: 'water-preset-icon' }, preset.icon),
                 React.createElement('span', { className: 'water-preset-ml' }, '+' + preset.ml)
@@ -318,14 +359,24 @@
           },
             React.createElement('defs', null,
               React.createElement('linearGradient', { id: 'waterWeeklyArea', x1: '0%', y1: '0%', x2: '0%', y2: '100%' },
-                React.createElement('stop', { offset: '0%', stopColor: 'rgba(14,165,233,0.34)' }),
-                React.createElement('stop', { offset: '100%', stopColor: 'rgba(14,165,233,0.02)' })
+                React.createElement('stop', { offset: '0%', stopColor: 'rgba(14,165,233,0.42)' }),
+                React.createElement('stop', { offset: '28%', stopColor: 'rgba(14,165,233,0.20)' }),
+                React.createElement('stop', { offset: '68%', stopColor: 'rgba(14,165,233,0.07)' }),
+                React.createElement('stop', { offset: '100%', stopColor: 'rgba(14,165,233,0.00)' })
               ),
               React.createElement('linearGradient', { id: 'waterWeeklyStroke', x1: '0%', y1: '0%', x2: '100%', y2: '0%' },
-                React.createElement('stop', { offset: '0%', stopColor: '#38bdf8' }),
+                React.createElement('stop', { offset: '0%', stopColor: '#7dd3fc' }),
+                React.createElement('stop', { offset: '45%', stopColor: '#38bdf8' }),
                 React.createElement('stop', { offset: '100%', stopColor: '#0284c7' })
               )
             ),
+            sparkline.weekSeparatorX != null && React.createElement('line', {
+              className: 'water-weekly-week-separator',
+              x1: sparkline.weekSeparatorX,
+              y1: 6,
+              x2: sparkline.weekSeparatorX,
+              y2: sparkline.baselineY
+            }),
             React.createElement('line', {
               className: 'water-weekly-goal-line',
               x1: 0,
@@ -333,20 +384,26 @@
               x2: sparkline.width,
               y2: sparkline.goalY
             }),
-            sparkline.linePoints && React.createElement('polyline', {
+            sparkline.areaPath && React.createElement('path', {
+              className: 'water-weekly-area',
+              d: sparkline.areaPath
+            }),
+            sparkline.linePath && React.createElement('path', {
+              className: 'water-weekly-line-glow',
+              d: sparkline.linePath
+            }),
+            sparkline.linePath && React.createElement('path', {
               className: 'water-weekly-line',
-              points: sparkline.linePoints
+              d: sparkline.linePath
             }),
             (sparkline.points || []).map(point => React.createElement('circle', {
               key: point.iso,
-              className: point.isToday
-                ? 'water-weekly-dot water-weekly-dot--today'
-                : point.ratio >= 1
-                  ? 'water-weekly-dot water-weekly-dot--goal'
-                  : 'water-weekly-dot',
+              className: point.ratio >= 1
+                ? (point.isToday ? 'water-weekly-dot water-weekly-dot--goal water-weekly-dot--today-goal' : 'water-weekly-dot water-weekly-dot--goal')
+                : (point.isToday ? 'water-weekly-dot water-weekly-dot--today' : 'water-weekly-dot'),
               cx: point.x,
               cy: point.y,
-              r: point.isToday ? 3.0 : point.ratio >= 1 ? 2.5 : 1.4
+              r: point.isToday ? 3.0 : point.ratio >= 1 ? 2.4 : 1.7
             }))
           )
         )

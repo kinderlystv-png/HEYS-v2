@@ -72,10 +72,9 @@
 
 /*
   Крупный ввод телефона (login)
-  Важно: в проекте есть глобальные правила для input с !important (в т.ч. font-size/padding).
-  Поэтому здесь тоже используем !important и повышенную специфичность.
+  Важно: в проекте есть глобальные правила для input с !important,
+  поэтому здесь тоже используем !important и повышенную специфичность.
 */
-/* Размер под iPhone: уменьшается на узких экранах, но остаётся большим */
 .phone-prefix-large,
 input.phone-input-large {
   font-size: clamp(16px, 5.2vw, 28px) !important;
@@ -115,7 +114,7 @@ input.phone-input-large {
   animation: heys-pin-digit-fade 1.2s ease-out forwards;
 }
 
-/* Скрываем браузерную «reveal» кнопку и текст в PIN input при показе overlay */
+/* Скрываем браузерную reveal-кнопку и текст в PIN input при показе overlay */
 input[type="password"]::-ms-reveal,
 input[type="password"]::-ms-clear,
 input[type="password"]::-webkit-contacts-auto-fill-button,
@@ -6204,6 +6203,7 @@ body:has(.offline-banner) .wrap {
 }
 
 .day-header .trainings-wrap {
+  background: transparent;
   flex: 1;
   min-width: 0;
   margin-top: 0;

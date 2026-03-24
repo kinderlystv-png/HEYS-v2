@@ -208,11 +208,12 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                     onClick: () => HEYS.Paywall?.showPaywall?.('trial_expired')
                 }),
 
-                (pullProgress > 0 || isRefreshing) && React.createElement('div', {
+                (pullProgress > 0 || isRefreshing || refreshStatus !== 'idle') && React.createElement('div', {
                     className: 'pull-indicator'
                         + (isRefreshing ? ' refreshing' : '')
                         + (refreshStatus === 'ready' ? ' ready' : '')
-                        + (refreshStatus === 'success' ? ' success' : ''),
+                        + (refreshStatus === 'success' ? ' success' : '')
+                        + ' status-' + refreshStatus,
                     style: {
                         height: isRefreshing ? 56 : Math.max(pullProgress, 0),
                         opacity: isRefreshing ? 1 : Math.min(pullProgress / 35, 1)
@@ -297,6 +298,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                         className: 'pull-text'
                             + (refreshStatus === 'ready' ? ' ready' : '')
                             + (refreshStatus === 'syncing' ? ' syncing' : '')
+                            + ' status-' + refreshStatus
                     },
                         refreshStatus === 'success' ? 'Готово!'
                             : refreshStatus === 'timeout' ? 'Синхронизация заняла слишком долго'
@@ -342,7 +344,10 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                     }, '🍽️'),
                     React.createElement('button', {
                         className: 'water-fab',
-                        onClick: () => addWater(200),
+                        onClick: (e) => addWater(200, {
+                            source: 'day-fab',
+                            sourceEl: e.currentTarget
+                        }),
                         'aria-label': 'Добавить стакан воды'
                     }, '🥛')
                 ),

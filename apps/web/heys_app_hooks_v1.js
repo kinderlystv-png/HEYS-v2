@@ -975,27 +975,117 @@
             }
         }, [clients, cloudUser, fetchClientsFromCloud, setClients, U]);
 
-        const removeClient = useCallback(async (id) => {
-            if (!cloudUser || !cloudUser.id) {
-                const updatedClients = clients.filter((c) => c.id !== id);
+        const removeClient = useCallback(async (id, options = {}) => {
+            const targetId = String(id || '');
+            if (!targetId) return false;
+
+            const targetClient = clients.find((c) => String(c?.id || '') === targetId) || null;
+            const clientName = options.name || targetClient?.name || 'клиент';
+            const shouldUseUndo = options.enableUndo === true && !!HEYS.Undo?.runAction;
+
+            const syncClientCache = (nextClients) => {
+                if (typeof window !== 'undefined') {
+                    window.HEYS = window.HEYS || {};
+                    window.HEYS.curatorClients = Array.isArray(nextClients) ? nextClients : [];
+                }
+            };
+
+            const applyLocalRemoval = (snapshotClients, previousCurrentClientId) => {
+                const updatedClients = snapshotClients.filter((c) => String(c?.id || '') !== targetId);
                 setClients(updatedClients);
+                syncClientCache(updatedClients);
                 writeGlobalValue('heys_clients', updatedClients);
-                if (clientId === id) {
+
+                if (previousCurrentClientId === targetId) {
                     setClientId('');
                     writeGlobalValue('heys_client_current', '');
+                    writeGlobalValue('heys_last_client_id', '');
                 }
-                return;
+
+                return updatedClients;
+            };
+
+            const restoreLocalRemoval = (snapshotClients, previousCurrentClientId) => {
+                setClients(snapshotClients);
+                syncClientCache(snapshotClients);
+                writeGlobalValue('heys_clients', snapshotClients);
+
+                if (previousCurrentClientId === targetId) {
+                    setClientId(previousCurrentClientId);
+                    writeGlobalValue('heys_client_current', previousCurrentClientId);
+                    writeGlobalValue('heys_last_client_id', previousCurrentClientId);
+                }
+            };
+
+            const commitRemoval = async (snapshotClients, previousCurrentClientId) => {
+                if (!cloudUser || !cloudUser.id) {
+                    return true;
+                }
+
+                const userId = cloudUser.id;
+                const deleteResult = await HEYS.YandexAPI.deleteClient(targetId);
+                if (deleteResult?.error) {
+                    throw new Error(deleteResult.error.message || 'Не удалось удалить клиента');
+                }
+
+                const result = await fetchClientsFromCloud(userId);
+                const refreshedClients = Array.isArray(result?.data)
+                    ? result.data
+                    : snapshotClients.filter((c) => String(c?.id || '') !== targetId);
+                setClients(refreshedClients);
+                syncClientCache(refreshedClients);
+
+                if (previousCurrentClientId === targetId) {
+                    setClientId('');
+                    writeGlobalValue('heys_client_current', '');
+                    writeGlobalValue('heys_last_client_id', '');
+                }
+
+                return true;
+            };
+
+            if (!shouldUseUndo) {
+                const snapshotClients = Array.isArray(clients) ? clients.slice() : [];
+                const previousCurrentClientId = clientId;
+
+                applyLocalRemoval(snapshotClients, previousCurrentClientId);
+
+                try {
+                    await commitRemoval(snapshotClients, previousCurrentClientId);
+                } catch (error) {
+                    restoreLocalRemoval(snapshotClients, previousCurrentClientId);
+                    throw error;
+                }
+
+                return true;
             }
 
-            const userId = cloudUser.id;
-            // 🔄 Используем YandexAPI вместо Supabase
-            await HEYS.YandexAPI.deleteClient(id);
-            const result = await fetchClientsFromCloud(userId);
-            setClients(result.data);
-            if (clientId === id) {
-                setClientId('');
-                writeGlobalValue('heys_client_current', '');
-            }
+            return HEYS.Undo.runAction({
+                label: `Клиент «${clientName}» удалён`,
+                errorMessage: 'Не удалось подготовить удаление клиента',
+                apply: () => {
+                    const snapshotClients = Array.isArray(clients) ? clients.slice() : [];
+                    const previousCurrentClientId = clientId;
+                    applyLocalRemoval(snapshotClients, previousCurrentClientId);
+                    return {
+                        snapshotClients,
+                        previousCurrentClientId,
+                        clientId: targetId,
+                    };
+                },
+                undo: (undoContext) => {
+                    restoreLocalRemoval(undoContext.snapshotClients, undoContext.previousCurrentClientId);
+                },
+                onExpire: async (_reason, undoContext) => {
+                    try {
+                        await commitRemoval(undoContext.snapshotClients, undoContext.previousCurrentClientId);
+                    } catch (error) {
+                        restoreLocalRemoval(undoContext.snapshotClients, undoContext.previousCurrentClientId);
+                        console.error('[HEYS.clients] ❌ removeClient commit error:', { id: targetId, error: error.message });
+                        HEYS.Toast?.error?.(error.message || 'Не удалось удалить клиента');
+                    }
+                },
+            });
         }, [clientId, clients, cloudUser, fetchClientsFromCloud, setClientId, setClients, U]);
 
         const cloudSignIn = useCallback(async (email, password, opts = {}) => {

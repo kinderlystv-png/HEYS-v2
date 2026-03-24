@@ -7371,6 +7371,52 @@ body:has(.page-reports) .hdr::after {
   animation: waterShimmer 3s linear infinite;
 }
 
+.water-screen-fill__amount {
+  position: absolute;
+  left: 50%;
+  bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%);
+  z-index: 3;
+  width: min(92vw, 420px);
+  text-align: center;
+  font-family: "SF Pro Display", Inter, "Segoe UI", system-ui, sans-serif;
+  font-size: clamp(44px, 13vw, 88px);
+  line-height: 0.92;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  color: rgba(255, 255, 255, 0.96);
+  text-shadow:
+    0 10px 35px rgba(6, 24, 80, 0.38),
+    0 3px 10px rgba(255, 255, 255, 0.18);
+  filter: drop-shadow(0 0 22px rgba(173, 232, 255, 0.22));
+  opacity: 0;
+  animation: waterAmountPop 1.05s cubic-bezier(0.2, 0.8, 0.2, 1) 0.1s forwards;
+  pointer-events: none;
+  font-variant-numeric: tabular-nums;
+}
+
+@keyframes waterAmountPop {
+  0% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(24px) scale(0.82);
+  }
+
+  20% {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0) scale(1.06);
+  }
+
+  55% {
+    opacity: 1;
+    transform: translateX(-50%) translateY(-4px) scale(1);
+  }
+
+  100% {
+    opacity: 0.9;
+    transform: translateX(-50%) translateY(-10px) scale(0.98);
+  }
+}
+
 /* Пузырьки */
 .water-screen-fill__bubble {
   position: absolute;

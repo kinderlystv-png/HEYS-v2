@@ -89,7 +89,7 @@
   }
 
   // === Widget Card Component ===
-  // Обёрнут в React.memo — изолирует от ре-рендеров родителя (setWaterAnim и т.п.),
+  // Обёрнут в React.memo — изолирует от ре-рендеров родителя,
   // чтобы CSS transition на кольце калорий не перезапускался попусту.
   const WidgetCard = React.memo(function WidgetCard({ widget, isEditMode, onRemove, onSettings, index = 0 }) {
     const registry = HEYS.Widgets.registry;
@@ -5615,7 +5615,6 @@
     const [dayScoreDetails, setDayScoreDetails] = useState(null);
     const [crashRiskDetails, setCrashRiskDetails] = useState(null);
     const [historyInfo, setHistoryInfo] = useState({ canUndo: false, canRedo: false });
-    const [waterAnim, setWaterAnim] = useState(null); // { text: '+200мл', id: 123 } или null
     const [showGridOverlay, setShowGridOverlay] = useState(false); // Grid overlay toggle
     const containerRef = useRef(null);
     const gridRef = useRef(null);
@@ -5907,8 +5906,8 @@
       }, 600);
     }, [setTab]);
 
-    // 💧 Добавить воду БЕЗ переключения вкладки — анимация прямо здесь
-    const handleAddWater = useCallback((ml = 200) => {
+    // 💧 Добавить воду БЕЗ переключения вкладки — общий feedback идёт через HEYS.Day.addWater / heysWaterAdded
+    const handleAddWater = useCallback((ml = 200, sourceEl = null) => {
       const persistWaterLocally = () => {
         try {
           const dateKey = selectedDate || new Date().toISOString().slice(0, 10);
@@ -5957,7 +5956,7 @@
           } else {
             localStorage.setItem(scopedKey, JSON.stringify(dayData));
             // Trigger cloud sync only for raw-localStorage fallback
-            window.dispatchEvent(new CustomEvent('heys:data-saved', { detail: { key: scopedKey, type: 'meal' } }));
+            window.dispatchEvent(new CustomEvent('heys:data-saved', { detail: { key: scopedKey, type: 'water' } }));
           }
 
           // Универсальное событие обновления дня (для дневника/отчётов/виджетов)
@@ -5967,7 +5966,16 @@
 
           // Dispatch event для синхронизации других компонентов
           window.dispatchEvent(new CustomEvent('heysWaterAdded', {
-            detail: { ml, total: dayData.waterMl }
+            detail: {
+              ml,
+              total: dayData.waterMl,
+              source: 'widgets-fab',
+              sourceEl,
+              showScreenFill: true,
+              pulseWaterWidget: true,
+              showSourceBadge: true,
+              showSourceDrop: true
+            }
           }));
           // Только water:added — day:updated намеренно НЕ эмитим, чтобы
           // не триггерить ре-рендер кольца калорий и других виджетов.
@@ -5980,96 +5988,17 @@
         }
       };
 
-      // Сначала показываем локальную анимацию
-      const animId = Date.now();
-      setWaterAnim({ text: '+' + ml + 'мл', id: animId });
-
-      // Вибрация
-      if (navigator.vibrate) navigator.vibrate(50);
-
-      // 💧 Анимация падающей капли через DOM
-      try {
-        const fabBtn = document.querySelector('.water-fab');
-        if (fabBtn) {
-          const rect = fabBtn.getBoundingClientRect();
-          const drop = document.createElement('div');
-          drop.className = 'water-drop-container';
-          drop.style.cssText = 'position:fixed;left:' + (rect.left + rect.width / 2) + 'px;top:' + (rect.top - 20) + 'px;z-index:9999;pointer-events:none;transform:translateX(-50%);';
-          drop.innerHTML = '<div class="water-drop"></div><div class="water-splash"></div>';
-          document.body.appendChild(drop);
-          setTimeout(() => { if (drop.parentNode) drop.parentNode.removeChild(drop); }, 1200);
-        }
-      } catch (e) { /* silent */ }
-
-      // 🌊 Полноэкранная анимация воды (только если есть активный water-виджет)
-      try {
-        const waterWidgetCard = document.querySelector('.widget[data-widget-type="water"]');
-        if (waterWidgetCard) {
-          // --- Overlay ---
-          const overlay = document.createElement('div');
-          overlay.className = 'water-screen-fill';
-
-          const body = document.createElement('div');
-          body.className = 'water-screen-fill__body';
-
-          const wave = document.createElement('div');
-          wave.className = 'water-screen-fill__wave';
-
-          const shimmer = document.createElement('div');
-          shimmer.className = 'water-screen-fill__shimmer';
-
-          body.appendChild(wave);
-          body.appendChild(shimmer);
-
-          // Пузырьки
-          for (let b = 0; b < 8; b++) {
-            const bubble = document.createElement('div');
-            bubble.className = 'water-screen-fill__bubble';
-            const size = 6 + Math.random() * 14;
-            const delay = Math.random() * 0.6;
-            const dur = 0.7 + Math.random() * 0.8;
-            bubble.style.cssText = 'width:' + size + 'px;height:' + size + 'px;left:' + (5 + Math.random() * 90) + '%;bottom:' + (10 + Math.random() * 50) + '%;animation-duration:' + dur + 's;animation-delay:' + delay + 's;';
-            body.appendChild(bubble);
-          }
-
-          overlay.appendChild(body);
-          document.body.appendChild(overlay);
-
-          // Запускаем подъём
-          requestAnimationFrame(() => {
-            body.classList.add('rising');
-          });
-
-          // Через 850ms (конец подъёма) держим 200ms, потом — отток
-          setTimeout(() => {
-            body.classList.remove('rising');
-            body.classList.add('draining');
-            setTimeout(() => {
-              if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
-            }, 950);
-          }, 1050);
-
-          // --- Пульс виджета ---
-          waterWidgetCard.classList.add('widget--water-pulse');
-          setTimeout(() => {
-            waterWidgetCard.classList.remove('widget--water-pulse');
-          }, 1800);
-
-          // --- Gradient-перелив самого виджета ---
-          waterWidgetCard.style.transition = 'background 0.4s ease';
-          waterWidgetCard.style.background = 'linear-gradient(135deg, rgba(10,132,255,0.12) 0%, rgba(100,210,255,0.18) 50%, rgba(0,238,255,0.10) 100%)';
-          setTimeout(() => {
-            waterWidgetCard.style.background = '';
-            waterWidgetCard.style.transition = '';
-          }, 1400);
-        }
-      } catch (e) { /* silent */ }
-
       // Вызываем HEYS.Day.addWater напрямую (skipScroll=true, чтобы не скроллить)
       const addWaterFn = window.HEYS?.Day?.addWater;
       if (typeof addWaterFn === 'function') {
         try {
-          addWaterFn(ml, true); // skipScroll = true
+          addWaterFn(ml, {
+            skipScroll: true,
+            source: 'widgets-fab',
+            sourceEl,
+            showScreenFill: true,
+            pulseWaterWidget: true
+          });
           // Виджет воды обновится через DOM событие heysWaterAdded (оптимистичное обновление)
         } catch (e) {
           // Fallback: HEYS.Day.addWater есть, но вызов мог упасть из-за неготового DayTab
@@ -6079,11 +6008,6 @@
         // Fallback: если Day еще не смонтирован, сохраняем напрямую в localStorage
         persistWaterLocally();
       }
-
-      // Скрыть анимацию через 800мс, только если это всё ещё текущая анимация
-      setTimeout(() => {
-        setWaterAnim(prev => (prev && prev.id === animId ? null : prev));
-      }, 800);
     }, [selectedDate]);
 
     // Undo/Redo handlers
@@ -6257,18 +6181,11 @@
             onClick: () => goToDayAndRun('diary', 'addMeal', []),
             'aria-label': 'Добавить приём пищи'
           }, '🍽️'),
-          React.createElement('div', { style: { position: 'relative' } },
-            React.createElement('button', {
-              className: 'water-fab',
-              onClick: () => handleAddWater(200),
-              'aria-label': 'Добавить стакан воды'
-            }, '🥛'),
-            // 💧 Анимация добавления воды
-            waterAnim && React.createElement('div', {
-              className: 'water-fab-anim',
-              key: waterAnim.id // Force re-render just once per addition
-            }, waterAnim.text)
-          )
+          React.createElement('button', {
+            className: 'water-fab',
+            onClick: (e) => handleAddWater(200, e.currentTarget),
+            'aria-label': 'Добавить стакан воды'
+          }, '🥛')
         )
       )
     );

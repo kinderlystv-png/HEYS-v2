@@ -2559,6 +2559,7 @@
   padding: 8px;
 }
 
+/* Quint switch теперь использует единый glider для активной индикации */
 /* Средняя кнопка (Виджеты) — светло-голубой фон по умолчанию */
 .tab-switch-group--quint .tab.tab-switch:nth-child(3) {
   background: rgba(59, 130, 246, 0.12);

@@ -7015,18 +7015,63 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
     }, [queue]);
 
     // Действия
-    const handleRemove = async (clientId, clientName) => {
-      if (!confirm(`Удалить "${clientName}" из очереди?`)) return;
+    const handleRemove = (item) => {
+      const clientId = item?.client_id;
+      const clientName = item?.client_name || item?.name || 'клиент';
+      if (!clientId) return;
+      if (!confirm(`Удалить "${clientName}" из очереди?\n\nПосле удаления появится кнопка отмены.`)) return;
 
-      setActionLoading(clientId);
-      const res = await adminAPI.removeFromQueue(clientId, 'admin_removed');
-      setActionLoading(null);
+      const queueSnapshot = Array.isArray(queue) ? queue.slice() : [];
 
-      if (res.success) {
-        loadData(true);
-      } else {
-        alert('Ошибка: ' + (res.message || 'Не удалось удалить'));
+      const applyLocalRemoval = () => {
+        setQueue((prev) => prev.filter((entry) => String(entry?.client_id || '') !== String(clientId)));
+      };
+
+      const restoreLocalRemoval = () => {
+        setQueue(queueSnapshot);
+      };
+
+      const runCommit = async () => {
+        setActionLoading(clientId);
+        const res = await adminAPI.removeFromQueue(clientId, 'admin_removed');
+        setActionLoading(null);
+
+        if (res.success) {
+          loadData(true);
+          return;
+        }
+
+        throw new Error(res.message || 'Не удалось удалить');
+      };
+
+      if (!HEYS.Undo?.runAction) {
+        applyLocalRemoval();
+        runCommit().catch((error) => {
+          restoreLocalRemoval();
+          HEYS.Toast?.error?.(error.message || 'Не удалось удалить из очереди');
+        });
+        return;
       }
+
+      HEYS.Undo.runAction({
+        label: `«${clientName}» удалён из очереди`,
+        errorMessage: 'Не удалось подготовить удаление из очереди',
+        apply: () => {
+          applyLocalRemoval();
+          return { queueSnapshot, clientId, clientName };
+        },
+        undo: () => {
+          restoreLocalRemoval();
+        },
+        onExpire: async () => {
+          try {
+            await runCommit();
+          } catch (error) {
+            restoreLocalRemoval();
+            HEYS.Toast?.error?.(error.message || 'Не удалось удалить из очереди');
+          }
+        }
+      });
     };
 
     // Открыть диалог активации триала с выбором даты (v3.0)
@@ -7336,7 +7381,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
       )
     );
 
-    const ClientRow = ({ item, allowActions }) => {
+    const ClientRow = ({ item, allowActions, allowRemove = false }) => {
       const statusColor = item.status === 'assigned'
         ? { bg: '#dcfce7', text: '#16a34a', label: 'Активен' }
         : item.status === 'rejected' || item.status === 'expired'
@@ -7438,7 +7483,21 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
               fontSize: 12,
               fontWeight: 700
             }
-          }, '❌')
+          }, '❌'),
+          allowRemove && React.createElement('button', {
+            onClick: () => handleRemove(item),
+            disabled: actionLoading === item.client_id,
+            style: {
+              padding: '8px 10px',
+              borderRadius: 8,
+              border: '1px solid #fecaca',
+              background: '#fff7f7',
+              color: '#dc2626',
+              cursor: actionLoading === item.client_id ? 'not-allowed' : 'pointer',
+              fontSize: 12,
+              fontWeight: 700
+            }
+          }, '🗑️')
         )
       );
     };
@@ -7535,7 +7594,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
         !loading && !error && activeTab === 'new' && (newLeads.length ? newLeads.map(item => React.createElement(LeadRow, { key: item.id, item })) : React.createElement('div', {
           style: { textAlign: 'center', padding: '40px', color: '#9ca3af', fontSize: 14 }
         }, '📭 Нет заявок с лендинга')),
-        !loading && !error && activeTab === 'pending' && (grouped.pending.length ? grouped.pending.map(item => React.createElement(ClientRow, { key: item.client_id || item.queue_id, item, allowActions: true })) : React.createElement('div', {
+        !loading && !error && activeTab === 'pending' && (grouped.pending.length ? grouped.pending.map(item => React.createElement(ClientRow, { key: item.client_id || item.queue_id, item, allowActions: true, allowRemove: true })) : React.createElement('div', {
           style: { textAlign: 'center', padding: '40px', color: '#9ca3af', fontSize: 14 }
         }, '⏸️ Нет клиентов в очереди на триал')),
         !loading && !error && activeTab === 'active' && ((grouped.assigned.length + trialClients.length) ? [
@@ -12122,27 +12181,117 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
             }
         }, [clients, cloudUser, fetchClientsFromCloud, setClients, U]);
 
-        const removeClient = useCallback(async (id) => {
-            if (!cloudUser || !cloudUser.id) {
-                const updatedClients = clients.filter((c) => c.id !== id);
+        const removeClient = useCallback(async (id, options = {}) => {
+            const targetId = String(id || '');
+            if (!targetId) return false;
+
+            const targetClient = clients.find((c) => String(c?.id || '') === targetId) || null;
+            const clientName = options.name || targetClient?.name || 'клиент';
+            const shouldUseUndo = options.enableUndo === true && !!HEYS.Undo?.runAction;
+
+            const syncClientCache = (nextClients) => {
+                if (typeof window !== 'undefined') {
+                    window.HEYS = window.HEYS || {};
+                    window.HEYS.curatorClients = Array.isArray(nextClients) ? nextClients : [];
+                }
+            };
+
+            const applyLocalRemoval = (snapshotClients, previousCurrentClientId) => {
+                const updatedClients = snapshotClients.filter((c) => String(c?.id || '') !== targetId);
                 setClients(updatedClients);
+                syncClientCache(updatedClients);
                 writeGlobalValue('heys_clients', updatedClients);
-                if (clientId === id) {
+
+                if (previousCurrentClientId === targetId) {
                     setClientId('');
                     writeGlobalValue('heys_client_current', '');
+                    writeGlobalValue('heys_last_client_id', '');
                 }
-                return;
+
+                return updatedClients;
+            };
+
+            const restoreLocalRemoval = (snapshotClients, previousCurrentClientId) => {
+                setClients(snapshotClients);
+                syncClientCache(snapshotClients);
+                writeGlobalValue('heys_clients', snapshotClients);
+
+                if (previousCurrentClientId === targetId) {
+                    setClientId(previousCurrentClientId);
+                    writeGlobalValue('heys_client_current', previousCurrentClientId);
+                    writeGlobalValue('heys_last_client_id', previousCurrentClientId);
+                }
+            };
+
+            const commitRemoval = async (snapshotClients, previousCurrentClientId) => {
+                if (!cloudUser || !cloudUser.id) {
+                    return true;
+                }
+
+                const userId = cloudUser.id;
+                const deleteResult = await HEYS.YandexAPI.deleteClient(targetId);
+                if (deleteResult?.error) {
+                    throw new Error(deleteResult.error.message || 'Не удалось удалить клиента');
+                }
+
+                const result = await fetchClientsFromCloud(userId);
+                const refreshedClients = Array.isArray(result?.data)
+                    ? result.data
+                    : snapshotClients.filter((c) => String(c?.id || '') !== targetId);
+                setClients(refreshedClients);
+                syncClientCache(refreshedClients);
+
+                if (previousCurrentClientId === targetId) {
+                    setClientId('');
+                    writeGlobalValue('heys_client_current', '');
+                    writeGlobalValue('heys_last_client_id', '');
+                }
+
+                return true;
+            };
+
+            if (!shouldUseUndo) {
+                const snapshotClients = Array.isArray(clients) ? clients.slice() : [];
+                const previousCurrentClientId = clientId;
+
+                applyLocalRemoval(snapshotClients, previousCurrentClientId);
+
+                try {
+                    await commitRemoval(snapshotClients, previousCurrentClientId);
+                } catch (error) {
+                    restoreLocalRemoval(snapshotClients, previousCurrentClientId);
+                    throw error;
+                }
+
+                return true;
             }
 
-            const userId = cloudUser.id;
-            // 🔄 Используем YandexAPI вместо Supabase
-            await HEYS.YandexAPI.deleteClient(id);
-            const result = await fetchClientsFromCloud(userId);
-            setClients(result.data);
-            if (clientId === id) {
-                setClientId('');
-                writeGlobalValue('heys_client_current', '');
-            }
+            return HEYS.Undo.runAction({
+                label: `Клиент «${clientName}» удалён`,
+                errorMessage: 'Не удалось подготовить удаление клиента',
+                apply: () => {
+                    const snapshotClients = Array.isArray(clients) ? clients.slice() : [];
+                    const previousCurrentClientId = clientId;
+                    applyLocalRemoval(snapshotClients, previousCurrentClientId);
+                    return {
+                        snapshotClients,
+                        previousCurrentClientId,
+                        clientId: targetId,
+                    };
+                },
+                undo: (undoContext) => {
+                    restoreLocalRemoval(undoContext.snapshotClients, undoContext.previousCurrentClientId);
+                },
+                onExpire: async (_reason, undoContext) => {
+                    try {
+                        await commitRemoval(undoContext.snapshotClients, undoContext.previousCurrentClientId);
+                    } catch (error) {
+                        restoreLocalRemoval(undoContext.snapshotClients, undoContext.previousCurrentClientId);
+                        console.error('[HEYS.clients] ❌ removeClient commit error:', { id: targetId, error: error.message });
+                        HEYS.Toast?.error?.(error.message || 'Не удалось удалить клиента');
+                    }
+                },
+            });
         }, [clientId, clients, cloudUser, fetchClientsFromCloud, setClientId, setClients, U]);
 
         const cloudSignIn = useCallback(async (email, password, opts = {}) => {
@@ -16265,6 +16414,17 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                 if (HEYS?.Day?.requestFlush) HEYS.Day.requestFlush({ force: true });
             } catch (e) { }
 
+            try {
+                if (HEYS?.Undo?.pending) {
+                    console.info('[HEYS.header] 🧹 Commit pending undo before date switch', {
+                        currentDate: selectedDate,
+                        nextDate,
+                        reason: options.reason || 'header-date-switch'
+                    });
+                    HEYS.Undo.commit('header-date-switch');
+                }
+            } catch (e) { }
+
             const applyDate = () => {
                 React.startTransition(() => {
                     setSelectedDate(nextDate);
@@ -16283,6 +16443,17 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
         };
 
         const clientListMaxHeight = Math.max(120, clientDropdownMaxHeight - 128);
+
+        const commitPendingUndoBeforeContextChange = (reason, meta) => {
+            try {
+                if (!HEYS?.Undo?.pending) return;
+                console.info('[HEYS.header] 🧹 Commit pending undo before context switch', {
+                    reason,
+                    ...(meta || {})
+                });
+                HEYS.Undo.commit(reason);
+            } catch (e) { }
+        };
 
         if (!clientId) return null;
 
@@ -16489,6 +16660,10 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                                                     },
                                                     onClick: () => {
                                                         if (c.id !== clientIdValue) {
+                                                            commitPendingUndoBeforeContextChange('client-switch', {
+                                                                fromClientId: clientIdValue,
+                                                                toClientId: c.id,
+                                                            });
                                                             console.info(`[HEYS.store] 🔄 Выбор клиента: ${c.name} (${c.id.slice(0, 8)}...)`);
                                                             // ✅ FIX: Сразу переключаем UI — sync в фоне
                                                             // ВАЖНО: сначала обновляем глобальный currentClientId/storage,
@@ -16563,6 +16738,10 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                                                 fontSize: 14
                                             },
                                             onClick: () => {
+                                                commitPendingUndoBeforeContextChange('all-clients-switch', {
+                                                    fromClientId: clientIdValue,
+                                                    toClientId: null,
+                                                });
                                                 if (window.HEYS) {
                                                     window.HEYS.currentClientId = null;
                                                     if (window.HEYS.store?.flushMemory) {
@@ -16790,6 +16969,20 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
 
         const [settingsMenuOpen, setSettingsMenuOpen] = React.useState(false);
 
+        const switchTabWithUndoCommit = (nextTab, reason) => {
+            try {
+                if (window.HEYS?.Undo?.pending) {
+                    console.info('[HEYS.tabs] 🧹 Commit pending undo before tab switch', {
+                        currentTab: tab,
+                        nextTab,
+                        reason,
+                    });
+                    window.HEYS.Undo.commit(reason || 'tab-switch');
+                }
+            } catch (e) { }
+            setTab(nextTab);
+        };
+
         React.useEffect(() => {
             if (settingsMenuOpen) setSettingsMenuOpen(false);
         }, [tab]);
@@ -16839,7 +17032,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                     className: 'tab tab-advice' + (widgetsEditMode ? ' tab--disabled-home' : ''),
                     onClick: () => {
                         if (tab !== 'stats' && tab !== 'diary') {
-                            setTab('stats');
+                            switchTabWithUndoCommit('stats', 'tab-advice-switch');
                         }
                         // PERF R13 FIX G: defer heysShowAdvice dispatch to avoid sync React render in click handler
                         setTimeout(() => window.dispatchEvent(new CustomEvent('heysShowAdvice')), 0);
@@ -16862,7 +17055,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                             id: 'tour-stats-tab',
                             onClick: () => {
                                 if (widgetsEditMode) setDefaultTab('stats');
-                                setTab('stats');
+                                switchTabWithUndoCommit('stats', 'tab-stats-switch');
                             },
                         },
                         // Индикатор домика в режиме редактирования виджетов
@@ -16877,7 +17070,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                             id: 'tour-diary-tab',
                             onClick: () => {
                                 if (widgetsEditMode) setDefaultTab('diary');
-                                setTab('diary');
+                                switchTabWithUndoCommit('diary', 'tab-diary-switch');
                             },
                         },
                         widgetsEditMode && defaultTab === 'diary' && React.createElement('span', { className: 'default-home-badge', title: 'Эта вкладка открывается по умолчанию' }, '🏠'),
@@ -16895,7 +17088,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                                 } else {
                                     window.HEYS?.debugPanel?.handleTap();
                                 }
-                                setTab('widgets');
+                                switchTabWithUndoCommit('widgets', 'tab-widgets-switch');
                             },
                         },
                         widgetsEditMode && defaultTab === 'widgets' && React.createElement('span', { className: 'default-home-badge', title: 'Эта вкладка открывается по умолчанию' }, '🏠'),
@@ -16909,7 +17102,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                             id: 'tour-insights-tab',
                             onClick: () => {
                                 if (widgetsEditMode) setDefaultTab('insights');
-                                setTab('insights');
+                                switchTabWithUndoCommit('insights', 'tab-insights-switch');
                             },
                         },
                         widgetsEditMode && defaultTab === 'insights' && React.createElement('span', { className: 'default-home-badge', title: 'Эта вкладка открывается по умолчанию' }, '🏠'),
@@ -16923,7 +17116,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                             id: 'tour-month-tab',
                             onClick: () => {
                                 if (widgetsEditMode) setDefaultTab('month');
-                                setTab('month');
+                                switchTabWithUndoCommit('month', 'tab-month-switch');
                             },
                         },
                         widgetsEditMode && defaultTab === 'month' && React.createElement('span', { className: 'default-home-badge', title: 'Эта вкладка открывается по умолчанию' }, '🏠'),
@@ -16935,11 +17128,11 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                 React.createElement(
                     'div',
                     { className: 'tab-switch-labels tab-switch-labels--quint' },
-                    React.createElement('span', { className: 'tab-switch-label' + (tab === 'stats' ? ' active' : ''), onClick: () => setTab('stats') }, 'Отчёты'),
-                    React.createElement('span', { className: 'tab-switch-label' + (tab === 'diary' ? ' active' : ''), onClick: () => setTab('diary') }, 'Дневник'),
-                    React.createElement('span', { className: 'tab-switch-label' + (tab === 'widgets' ? ' active' : ''), onClick: () => setTab('widgets') }, 'Виджеты'),
-                    React.createElement('span', { className: 'tab-switch-label' + (tab === 'insights' ? ' active' : ''), onClick: () => setTab('insights') }, 'Инсайты'),
-                    React.createElement('span', { className: 'tab-switch-label' + (tab === 'month' ? ' active' : ''), onClick: () => setTab('month') }, 'Месяц'),
+                    React.createElement('span', { className: 'tab-switch-label' + (tab === 'stats' ? ' active' : ''), onClick: () => switchTabWithUndoCommit('stats', 'tab-label-stats-switch') }, 'Отчёты'),
+                    React.createElement('span', { className: 'tab-switch-label' + (tab === 'diary' ? ' active' : ''), onClick: () => switchTabWithUndoCommit('diary', 'tab-label-diary-switch') }, 'Дневник'),
+                    React.createElement('span', { className: 'tab-switch-label' + (tab === 'widgets' ? ' active' : ''), onClick: () => switchTabWithUndoCommit('widgets', 'tab-label-widgets-switch') }, 'Виджеты'),
+                    React.createElement('span', { className: 'tab-switch-label' + (tab === 'insights' ? ' active' : ''), onClick: () => switchTabWithUndoCommit('insights', 'tab-label-insights-switch') }, 'Инсайты'),
+                    React.createElement('span', { className: 'tab-switch-label' + (tab === 'month' ? ' active' : ''), onClick: () => switchTabWithUndoCommit('month', 'tab-label-month-switch') }, 'Месяц'),
                 ),
             ),
             // Настройки — раскрывающееся меню вверх
@@ -16971,7 +17164,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                             className: 'tab-settings-item',
                             onClick: () => {
                                 setSettingsMenuOpen(false);
-                                setTab('user');
+                                switchTabWithUndoCommit('user', 'tab-settings-user-switch');
                             }
                         },
                         React.createElement('span', { className: 'tab-settings-icon' }, '⚙️'),
@@ -16983,7 +17176,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                             className: 'tab-settings-item',
                             onClick: () => {
                                 setSettingsMenuOpen(false);
-                                setTab('ration');
+                                switchTabWithUndoCommit('ration', 'tab-settings-ration-switch');
                             }
                         },
                         React.createElement('span', { className: 'tab-settings-icon' }, '📦'),
@@ -18767,7 +18960,12 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                                                                         className: 'btn-icon',
                                                                         title: 'Удалить',
                                                                         onClick: () => {
-                                                                            if (confirm(`Удалить клиента "${c.name}"?`)) removeClient(c.id);
+                                                                            const confirmed = confirm(`Удалить клиента "${c.name}"?\n\nПосле удаления появится кнопка отмены.`);
+                                                                            if (!confirmed) return;
+                                                                            removeClient(c.id, {
+                                                                                enableUndo: true,
+                                                                                name: c.name
+                                                                            });
                                                                         },
                                                                         style: { width: 30, height: 30, borderRadius: 6, border: '1px solid #fca5a5', background: '#fef2f2', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }
                                                                     }, '🗑️')

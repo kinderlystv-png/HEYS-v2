@@ -264,6 +264,7 @@ export const LEGACY_BUNDLES = {
         'heys_widgets_core_v1.js',
         'widgets/widget_data.js',
         'heys_widgets_ui_v1.js',
+        'heys_undo_v1.js',
     ],
 };
 

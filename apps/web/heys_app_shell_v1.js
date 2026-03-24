@@ -337,6 +337,17 @@
                 if (HEYS?.Day?.requestFlush) HEYS.Day.requestFlush({ force: true });
             } catch (e) { }
 
+            try {
+                if (HEYS?.Undo?.pending) {
+                    console.info('[HEYS.header] 🧹 Commit pending undo before date switch', {
+                        currentDate: selectedDate,
+                        nextDate,
+                        reason: options.reason || 'header-date-switch'
+                    });
+                    HEYS.Undo.commit('header-date-switch');
+                }
+            } catch (e) { }
+
             const applyDate = () => {
                 React.startTransition(() => {
                     setSelectedDate(nextDate);
@@ -355,6 +366,17 @@
         };
 
         const clientListMaxHeight = Math.max(120, clientDropdownMaxHeight - 128);
+
+        const commitPendingUndoBeforeContextChange = (reason, meta) => {
+            try {
+                if (!HEYS?.Undo?.pending) return;
+                console.info('[HEYS.header] 🧹 Commit pending undo before context switch', {
+                    reason,
+                    ...(meta || {})
+                });
+                HEYS.Undo.commit(reason);
+            } catch (e) { }
+        };
 
         if (!clientId) return null;
 
@@ -561,6 +583,10 @@
                                                     },
                                                     onClick: () => {
                                                         if (c.id !== clientIdValue) {
+                                                            commitPendingUndoBeforeContextChange('client-switch', {
+                                                                fromClientId: clientIdValue,
+                                                                toClientId: c.id,
+                                                            });
                                                             console.info(`[HEYS.store] 🔄 Выбор клиента: ${c.name} (${c.id.slice(0, 8)}...)`);
                                                             // ✅ FIX: Сразу переключаем UI — sync в фоне
                                                             // ВАЖНО: сначала обновляем глобальный currentClientId/storage,
@@ -635,6 +661,10 @@
                                                 fontSize: 14
                                             },
                                             onClick: () => {
+                                                commitPendingUndoBeforeContextChange('all-clients-switch', {
+                                                    fromClientId: clientIdValue,
+                                                    toClientId: null,
+                                                });
                                                 if (window.HEYS) {
                                                     window.HEYS.currentClientId = null;
                                                     if (window.HEYS.store?.flushMemory) {
@@ -862,6 +892,20 @@
 
         const [settingsMenuOpen, setSettingsMenuOpen] = React.useState(false);
 
+        const switchTabWithUndoCommit = (nextTab, reason) => {
+            try {
+                if (window.HEYS?.Undo?.pending) {
+                    console.info('[HEYS.tabs] 🧹 Commit pending undo before tab switch', {
+                        currentTab: tab,
+                        nextTab,
+                        reason,
+                    });
+                    window.HEYS.Undo.commit(reason || 'tab-switch');
+                }
+            } catch (e) { }
+            setTab(nextTab);
+        };
+
         React.useEffect(() => {
             if (settingsMenuOpen) setSettingsMenuOpen(false);
         }, [tab]);
@@ -911,7 +955,7 @@
                     className: 'tab tab-advice' + (widgetsEditMode ? ' tab--disabled-home' : ''),
                     onClick: () => {
                         if (tab !== 'stats' && tab !== 'diary') {
-                            setTab('stats');
+                            switchTabWithUndoCommit('stats', 'tab-advice-switch');
                         }
                         // PERF R13 FIX G: defer heysShowAdvice dispatch to avoid sync React render in click handler
                         setTimeout(() => window.dispatchEvent(new CustomEvent('heysShowAdvice')), 0);
@@ -934,7 +978,7 @@
                             id: 'tour-stats-tab',
                             onClick: () => {
                                 if (widgetsEditMode) setDefaultTab('stats');
-                                setTab('stats');
+                                switchTabWithUndoCommit('stats', 'tab-stats-switch');
                             },
                         },
                         // Индикатор домика в режиме редактирования виджетов
@@ -949,7 +993,7 @@
                             id: 'tour-diary-tab',
                             onClick: () => {
                                 if (widgetsEditMode) setDefaultTab('diary');
-                                setTab('diary');
+                                switchTabWithUndoCommit('diary', 'tab-diary-switch');
                             },
                         },
                         widgetsEditMode && defaultTab === 'diary' && React.createElement('span', { className: 'default-home-badge', title: 'Эта вкладка открывается по умолчанию' }, '🏠'),
@@ -967,7 +1011,7 @@
                                 } else {
                                     window.HEYS?.debugPanel?.handleTap();
                                 }
-                                setTab('widgets');
+                                switchTabWithUndoCommit('widgets', 'tab-widgets-switch');
                             },
                         },
                         widgetsEditMode && defaultTab === 'widgets' && React.createElement('span', { className: 'default-home-badge', title: 'Эта вкладка открывается по умолчанию' }, '🏠'),
@@ -981,7 +1025,7 @@
                             id: 'tour-insights-tab',
                             onClick: () => {
                                 if (widgetsEditMode) setDefaultTab('insights');
-                                setTab('insights');
+                                switchTabWithUndoCommit('insights', 'tab-insights-switch');
                             },
                         },
                         widgetsEditMode && defaultTab === 'insights' && React.createElement('span', { className: 'default-home-badge', title: 'Эта вкладка открывается по умолчанию' }, '🏠'),
@@ -995,7 +1039,7 @@
                             id: 'tour-month-tab',
                             onClick: () => {
                                 if (widgetsEditMode) setDefaultTab('month');
-                                setTab('month');
+                                switchTabWithUndoCommit('month', 'tab-month-switch');
                             },
                         },
                         widgetsEditMode && defaultTab === 'month' && React.createElement('span', { className: 'default-home-badge', title: 'Эта вкладка открывается по умолчанию' }, '🏠'),
@@ -1007,11 +1051,11 @@
                 React.createElement(
                     'div',
                     { className: 'tab-switch-labels tab-switch-labels--quint' },
-                    React.createElement('span', { className: 'tab-switch-label' + (tab === 'stats' ? ' active' : ''), onClick: () => setTab('stats') }, 'Отчёты'),
-                    React.createElement('span', { className: 'tab-switch-label' + (tab === 'diary' ? ' active' : ''), onClick: () => setTab('diary') }, 'Дневник'),
-                    React.createElement('span', { className: 'tab-switch-label' + (tab === 'widgets' ? ' active' : ''), onClick: () => setTab('widgets') }, 'Виджеты'),
-                    React.createElement('span', { className: 'tab-switch-label' + (tab === 'insights' ? ' active' : ''), onClick: () => setTab('insights') }, 'Инсайты'),
-                    React.createElement('span', { className: 'tab-switch-label' + (tab === 'month' ? ' active' : ''), onClick: () => setTab('month') }, 'Месяц'),
+                    React.createElement('span', { className: 'tab-switch-label' + (tab === 'stats' ? ' active' : ''), onClick: () => switchTabWithUndoCommit('stats', 'tab-label-stats-switch') }, 'Отчёты'),
+                    React.createElement('span', { className: 'tab-switch-label' + (tab === 'diary' ? ' active' : ''), onClick: () => switchTabWithUndoCommit('diary', 'tab-label-diary-switch') }, 'Дневник'),
+                    React.createElement('span', { className: 'tab-switch-label' + (tab === 'widgets' ? ' active' : ''), onClick: () => switchTabWithUndoCommit('widgets', 'tab-label-widgets-switch') }, 'Виджеты'),
+                    React.createElement('span', { className: 'tab-switch-label' + (tab === 'insights' ? ' active' : ''), onClick: () => switchTabWithUndoCommit('insights', 'tab-label-insights-switch') }, 'Инсайты'),
+                    React.createElement('span', { className: 'tab-switch-label' + (tab === 'month' ? ' active' : ''), onClick: () => switchTabWithUndoCommit('month', 'tab-label-month-switch') }, 'Месяц'),
                 ),
             ),
             // Настройки — раскрывающееся меню вверх
@@ -1043,7 +1087,7 @@
                             className: 'tab-settings-item',
                             onClick: () => {
                                 setSettingsMenuOpen(false);
-                                setTab('user');
+                                switchTabWithUndoCommit('user', 'tab-settings-user-switch');
                             }
                         },
                         React.createElement('span', { className: 'tab-settings-icon' }, '⚙️'),
@@ -1055,7 +1099,7 @@
                             className: 'tab-settings-item',
                             onClick: () => {
                                 setSettingsMenuOpen(false);
-                                setTab('ration');
+                                switchTabWithUndoCommit('ration', 'tab-settings-ration-switch');
                             }
                         },
                         React.createElement('span', { className: 'tab-settings-icon' }, '📦'),

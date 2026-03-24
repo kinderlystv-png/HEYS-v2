@@ -1375,7 +1375,12 @@
                                                                         className: 'btn-icon',
                                                                         title: 'Удалить',
                                                                         onClick: () => {
-                                                                            if (confirm(`Удалить клиента "${c.name}"?`)) removeClient(c.id);
+                                                                            const confirmed = confirm(`Удалить клиента "${c.name}"?\n\nПосле удаления появится кнопка отмены.`);
+                                                                            if (!confirmed) return;
+                                                                            removeClient(c.id, {
+                                                                                enableUndo: true,
+                                                                                name: c.name
+                                                                            });
                                                                         },
                                                                         style: { width: 30, height: 30, borderRadius: 6, border: '1px solid #fca5a5', background: '#fef2f2', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }
                                                                     }, '🗑️')

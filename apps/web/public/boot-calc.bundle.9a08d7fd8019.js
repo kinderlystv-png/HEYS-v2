@@ -6900,12 +6900,170 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
             }
         }
 
+        function normalizeAddWaterOptions(optionsOrSkipScroll) {
+            if (optionsOrSkipScroll && typeof optionsOrSkipScroll === 'object' && !Array.isArray(optionsOrSkipScroll)) {
+                return {
+                    skipScroll: !!optionsOrSkipScroll.skipScroll,
+                    source: optionsOrSkipScroll.source || 'water-action',
+                    sourceEl: optionsOrSkipScroll.sourceEl || null,
+                    showScreenFill: optionsOrSkipScroll.showScreenFill !== false,
+                    pulseWaterWidget: optionsOrSkipScroll.pulseWaterWidget !== false,
+                    showSourceBadge: optionsOrSkipScroll.showSourceBadge !== false,
+                    showSourceDrop: optionsOrSkipScroll.showSourceDrop !== false
+                };
+            }
+
+            return {
+                skipScroll: !!optionsOrSkipScroll,
+                source: 'water-action',
+                sourceEl: null,
+                showScreenFill: true,
+                pulseWaterWidget: true,
+                showSourceBadge: true,
+                showSourceDrop: true
+            };
+        }
+
+        function ensureSharedWaterFeedback() {
+            HEYS.waterFeedback = HEYS.waterFeedback || {};
+
+            if (typeof HEYS.waterFeedback.playAddFeedback !== 'function') {
+                HEYS.waterFeedback.playAddFeedback = function playAddFeedback(detail) {
+                    if (!detail || !detail.ml) return;
+
+                    if (detail.showSourceBadge !== false && detail.sourceEl && typeof detail.sourceEl.getBoundingClientRect === 'function') {
+                        const rect = detail.sourceEl.getBoundingClientRect();
+                        if (rect && (rect.width || rect.height)) {
+                            const badge = document.createElement('div');
+                            badge.textContent = '+' + detail.ml + 'мл';
+                            badge.style.cssText = [
+                                'position:fixed',
+                                'left:' + Math.round(rect.left + rect.width / 2) + 'px',
+                                'top:' + Math.round(rect.top - 8) + 'px',
+                                'transform:translateX(-50%)',
+                                'padding:6px 12px',
+                                'border-radius:16px',
+                                'background:linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%)',
+                                'color:#fff',
+                                'font-size:14px',
+                                'font-weight:700',
+                                'line-height:1',
+                                'white-space:nowrap',
+                                'box-shadow:0 4px 12px rgba(14, 165, 233, 0.4)',
+                                'pointer-events:none',
+                                'z-index:9999',
+                                'animation:water-fab-pop 0.8s ease-out forwards'
+                            ].join(';');
+                            document.body.appendChild(badge);
+                            setTimeout(() => { if (badge.parentNode) badge.parentNode.removeChild(badge); }, 900);
+                        }
+                    }
+
+                    if (detail.showSourceDrop !== false && detail.sourceEl && typeof detail.sourceEl.getBoundingClientRect === 'function') {
+                        const rect = detail.sourceEl.getBoundingClientRect();
+                        if (rect && (rect.width || rect.height)) {
+                            const drop = document.createElement('div');
+                            drop.className = 'water-drop-container';
+                            drop.style.cssText = [
+                                'position:fixed',
+                                'left:' + Math.round(rect.left + rect.width / 2) + 'px',
+                                'top:' + Math.round(rect.top - 20) + 'px',
+                                'z-index:9999',
+                                'pointer-events:none',
+                                'transform:translateX(-50%)'
+                            ].join(';');
+                            drop.innerHTML = '<div class="water-drop"></div><div class="water-splash"></div>';
+                            document.body.appendChild(drop);
+                            setTimeout(() => { if (drop.parentNode) drop.parentNode.removeChild(drop); }, 1200);
+                        }
+                    }
+
+                    if (detail.showScreenFill !== false) {
+                        const overlay = document.createElement('div');
+                        overlay.className = 'water-screen-fill';
+                        const body = document.createElement('div');
+                        body.className = 'water-screen-fill__body';
+                        const wave = document.createElement('div');
+                        wave.className = 'water-screen-fill__wave';
+                        const shimmer = document.createElement('div');
+                        shimmer.className = 'water-screen-fill__shimmer';
+                        body.appendChild(wave);
+                        body.appendChild(shimmer);
+
+                        for (let i = 0; i < 8; i++) {
+                            const bubble = document.createElement('div');
+                            bubble.className = 'water-screen-fill__bubble';
+                            const size = 6 + Math.random() * 14;
+                            const delay = Math.random() * 0.6;
+                            const dur = 0.7 + Math.random() * 0.8;
+                            bubble.style.cssText = [
+                                'width:' + size + 'px',
+                                'height:' + size + 'px',
+                                'left:' + (5 + Math.random() * 90) + '%',
+                                'bottom:' + (10 + Math.random() * 50) + '%',
+                                'animation-duration:' + dur + 's',
+                                'animation-delay:' + delay + 's'
+                            ].join(';');
+                            body.appendChild(bubble);
+                        }
+
+                        overlay.appendChild(body);
+                        document.body.appendChild(overlay);
+
+                        requestAnimationFrame(() => {
+                            body.classList.add('rising');
+                        });
+
+                        setTimeout(() => {
+                            body.classList.remove('rising');
+                            body.classList.add('draining');
+                            setTimeout(() => {
+                                if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+                            }, 950);
+                        }, 1050);
+                    }
+
+                    if (detail.pulseWaterWidget !== false) {
+                        const waterWidgetCard = document.querySelector('.widget[data-widget-type="water"]');
+                        if (waterWidgetCard) {
+                            waterWidgetCard.classList.add('widget--water-pulse');
+                            setTimeout(() => {
+                                waterWidgetCard.classList.remove('widget--water-pulse');
+                            }, 1800);
+
+                            waterWidgetCard.style.transition = 'background 0.4s ease';
+                            waterWidgetCard.style.background = 'linear-gradient(135deg, rgba(10,132,255,0.12) 0%, rgba(100,210,255,0.18) 50%, rgba(0,238,255,0.10) 100%)';
+                            setTimeout(() => {
+                                waterWidgetCard.style.background = '';
+                                waterWidgetCard.style.transition = '';
+                            }, 1400);
+                        }
+                    }
+                };
+            }
+
+            if (!HEYS.waterFeedback._bound) {
+                window.addEventListener('heysWaterAdded', (e) => {
+                    try {
+                        HEYS.waterFeedback.playAddFeedback(e?.detail || {});
+                    } catch (_error) {
+                        // silent
+                    }
+                });
+                HEYS.waterFeedback._bound = true;
+            }
+        }
+
+        ensureSharedWaterFeedback();
+
         /**
          * Add water with animation
          * @param {number} ml - Milliliters to add
          * @param {boolean} skipScroll - Skip scroll to water card
          */
-        function addWater(ml, skipScroll = false) {
+        function addWater(ml, optionsOrSkipScroll = false) {
+            const options = normalizeAddWaterOptions(optionsOrSkipScroll);
+
             // 🔒 Read-only gating
             if (HEYS.Paywall && !HEYS.Paywall.canWriteSync()) {
                 HEYS.Paywall.showBlockedToast('Добавление воды недоступно');
@@ -6914,13 +7072,13 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
 
             // Сначала прокручиваем к карточке воды (если вызвано из FAB)
             const waterCardEl = document.getElementById('water-card');
-            if (!skipScroll && waterCardEl) {
+            if (!options.skipScroll && waterCardEl) {
                 waterCardEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 // Задержка для завершения скролла перед анимацией
-                setTimeout(() => runWaterAnimation(ml), 400);
+                setTimeout(() => runWaterAnimation(ml, options), 400);
                 return;
             }
-            runWaterAnimation(ml);
+            runWaterAnimation(ml, options);
         }
 
         /**
@@ -6933,7 +7091,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
          * Direct DOM injection = 0ms React processing, same visual effect.
          * React reconciliation does NOT remove DOM nodes it doesn't manage.
          */
-        function runWaterAnimation(ml) {
+        function runWaterAnimation(ml, options = {}) {
             const newWater = (day.waterMl || 0) + ml;
             const prevWater = day.waterMl || 0;
             const hitGoal = waterGoal && newWater >= waterGoal && prevWater < waterGoal;
@@ -6978,7 +7136,24 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
             if (hitGoal) haptic('success');
 
             // 🎮 XP: Dispatch для gamification
-            window.dispatchEvent(new CustomEvent('heysWaterAdded', { detail: { ml, total: newWater } }));
+            const waterDetail = {
+                ml,
+                total: newWater,
+                source: options.source || 'day-water',
+                sourceEl: options.sourceEl || null,
+                showScreenFill: options.showScreenFill !== false,
+                pulseWaterWidget: options.pulseWaterWidget !== false,
+                showSourceBadge: options.showSourceBadge !== false,
+                showSourceDrop: options.showSourceDrop !== false
+            };
+            window.dispatchEvent(new CustomEvent('heysWaterAdded', { detail: waterDetail }));
+
+            // Fallback: если listener ещё не навешан, запускаем эффект напрямую
+            try {
+                HEYS.waterFeedback?.playAddFeedback?.(waterDetail);
+            } catch (_error) {
+                // silent
+            }
 
             // 🎊 Confetti on goal hit — DOM-based (no React state)
             if (hitGoal) {
@@ -10391,7 +10566,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
    * Lazy Photo Thumbnail с IntersectionObserver и skeleton loading
    */
   const LazyPhotoThumb = React.memo(function LazyPhotoThumb({
-    photo, photoSrc, thumbClass, timeStr, mealIndex, photoIndex, mealPhotos, handleDelete, setDay
+    photo, photoSrc, thumbClass, timeStr, mealIndex, photoIndex, mealPhotos, handleDelete, removePhoto, setDay
   }) {
     const [isLoaded, setIsLoaded] = React.useState(false);
     const [isVisible, setIsVisible] = React.useState(false);
@@ -10428,20 +10603,12 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
       if (e.target.closest('.photo-processed-checkbox')) return;
       
       if (window.HEYS?.showPhotoViewer) {
-        const onDeleteInViewer = (photoId) => {
-          setDay((prevDay = {}) => {
-            const meals = (prevDay.meals || []).map((m, i) => {
-              if (i !== mealIndex || !m.photos) return m;
-              return { ...m, photos: m.photos.filter(p => p.id !== photoId) };
-            });
-            return { ...prevDay, meals, updatedAt: Date.now() };
-          });
-        };
-        window.HEYS.showPhotoViewer(mealPhotos, photoIndex, onDeleteInViewer);
+        const onDeleteInViewer = (photoId) => removePhoto?.(mealIndex, photoId, { skipConfirm: false });
+        window.HEYS.showPhotoViewer([...(mealPhotos || [])], photoIndex, onDeleteInViewer);
       } else {
         window.open(photoSrc, '_blank');
       }
-    }, [mealPhotos, photoIndex, photoSrc, mealIndex, setDay]);
+    }, [mealPhotos, photoIndex, photoSrc, mealIndex, removePhoto]);
     
     // Toggle "обработано"
     const handleToggleProcessed = React.useCallback((e) => {
@@ -10578,10 +10745,11 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
         color: white; font-size: 20px; border-radius: 50%;
         cursor: pointer; display: flex; align-items: center; justify-content: center;
       `;
-      deleteBtn.onclick = () => {
+      deleteBtn.onclick = async () => {
         const photo = photos[currentIndex];
-        if (photo && confirm('Удалить это фото?')) {
-          onDelete(photo.id);
+        if (photo && onDelete) {
+          const removed = await onDelete(photo.id);
+          if (removed === false) return;
           photos.splice(currentIndex, 1);
           if (photos.length === 0) {
             close();
@@ -16726,6 +16894,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
         openMoodEditor,
         setGrams,
         removeItem,
+        removePhoto,
         isMealStale,
         allMeals,
         isNewItem,
@@ -17978,24 +18147,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
                             : null;
 
                         const handleDelete = async (e) => {
-                            e.stopPropagation();
-                            if (!confirm('Удалить это фото?')) return;
-
-                            if (photo.path && photo.uploaded && window.HEYS?.cloud?.deletePhoto) {
-                                try {
-                                    await window.HEYS.cloud.deletePhoto(photo.path);
-                                } catch (err) {
-                                    trackError(err, { source: 'day/_meals.js', action: 'delete_photo', mealIndex });
-                                }
-                            }
-
-                            setDay((prevDay = {}) => {
-                                const meals = (prevDay.meals || []).map((m, i) => {
-                                    if (i !== mealIndex || !m.photos) return m;
-                                    return { ...m, photos: m.photos.filter((p) => p.id !== photo.id) };
-                                });
-                                return { ...prevDay, meals, updatedAt: Date.now() };
-                            });
+                            e?.stopPropagation?.();
+                            await removePhoto?.(mealIndex, photo.id);
                         };
 
                         let thumbClass = 'meal-photo-thumb';
@@ -18012,6 +18165,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
                             photoIndex,
                             mealPhotos: meal.photos,
                             handleDelete,
+                            removePhoto,
                             setDay,
                         });
                     }),
@@ -18583,6 +18737,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
             openMoodEditor,
             setGrams,
             removeItem,
+            removePhoto,
             isNewItem,
             optimum,
             setMealQualityPopup,
@@ -18692,6 +18847,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
                     openMoodEditor,
                     setGrams,
                     removeItem,
+                    removePhoto,
                     isMealStale,
                     allMeals: day.meals,
                     isNewItem,
@@ -18762,6 +18918,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
             openMoodEditor,
             setGrams,
             removeItem,
+            removePhoto,
             isNewItem,
             optimum,
             setMealQualityPopup,
@@ -19523,6 +19680,79 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
             setNewItemIds,
         } = deps;
 
+        const persistDayData = React.useCallback((nextDayData, action = 'save_day') => {
+            const key = 'heys_dayv2_' + date;
+            try {
+                lsSet(key, nextDayData);
+            } catch (e) {
+                trackError(e, { source: 'day/_meals.js', action });
+            }
+        }, [date]);
+
+        const markUndoWindow = React.useCallback((durationMs = 5000) => {
+            const updatedAt = Date.now();
+            if (lastLoadedUpdatedAtRef) lastLoadedUpdatedAtRef.current = updatedAt;
+            if (blockCloudUpdatesUntilRef) blockCloudUpdatesUntilRef.current = updatedAt + durationMs;
+            return updatedAt;
+        }, [lastLoadedUpdatedAtRef, blockCloudUpdatesUntilRef]);
+
+        const recalculateOrphanProducts = React.useCallback(() => {
+            setTimeout(() => {
+                if (window.HEYS?.orphanProducts?.recalculate) {
+                    window.HEYS.orphanProducts.recalculate();
+                }
+            }, 100);
+        }, []);
+
+        const runUndoableDayMutation = React.useCallback((opts) => {
+            if (!opts || typeof opts.applyMutation !== 'function' || typeof opts.undoMutation !== 'function') {
+                return false;
+            }
+
+            if (HEYS.Undo?.runAction) {
+                return HEYS.Undo.runAction({
+                    label: opts.label,
+                    duration: opts.duration,
+                    errorMessage: opts.errorMessage,
+                    apply: opts.applyMutation,
+                    undo: opts.undoMutation,
+                    onExpire: opts.onExpire,
+                    onApplyError: (error) => {
+                        trackError(error, {
+                            source: 'day/_meals.js',
+                            action: opts.errorAction || 'undoable_day_mutation'
+                        });
+                    },
+                });
+            }
+
+            let context;
+            try {
+                context = opts.applyMutation();
+            } catch (error) {
+                trackError(error, {
+                    source: 'day/_meals.js',
+                    action: opts.errorAction || 'undoable_day_mutation'
+                });
+                if (opts.errorMessage) HEYS.Toast?.error(opts.errorMessage);
+                return false;
+            }
+
+            if (context === false) return false;
+
+            if (HEYS.Undo) {
+                HEYS.Undo.push({
+                    label: opts.label,
+                    duration: opts.duration,
+                    context,
+                    onUndo: () => opts.undoMutation(context),
+                    onExpire: (reason) => opts.onExpire?.(reason, context),
+                });
+            }
+
+            return context;
+        }, []);
+
         const addMeal = React.useCallback(async () => {
             if (HEYS.Paywall && !HEYS.Paywall.canWriteSync()) {
                 HEYS.Paywall.showBlockedToast('Добавление приёма пищи недоступно');
@@ -19869,20 +20099,56 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
         }, [setDay]);
 
         const removeMeal = React.useCallback(async (i) => {
-            const confirmed = await HEYS.ConfirmModal?.confirmDelete({
+            const mealToRemove = day.meals?.[i];
+            if (!mealToRemove) return;
+
+            const confirmed = await HEYS.ConfirmModal?.confirmDelete?.({
                 icon: '🗑️',
                 title: 'Удалить приём пищи?',
-                text: 'Все продукты в этом приёме будут удалены. Это действие нельзя отменить.',
+                text: 'Приём исчезнет сразу, но его можно будет быстро вернуть через кнопку «Отменить».',
             });
 
-            if (!confirmed) return;
+            if (confirmed === false) return;
+
+            const mealName = mealToRemove?.name || 'Приём пищи';
+            const mealId = mealToRemove.id;
 
             haptic('medium');
-            setDay((prevDay) => {
-                const meals = (prevDay.meals || []).filter((_, idx) => idx !== i);
-                return { ...prevDay, meals, updatedAt: Date.now() };
+
+            runUndoableDayMutation({
+                label: mealName + ' удалён',
+                duration: 4000,
+                errorMessage: 'Не удалось удалить приём пищи',
+                errorAction: 'remove_meal',
+                applyMutation: () => {
+                    const removedUpdatedAt = markUndoWindow(5000);
+
+                    setDay((prevDay) => {
+                        const meals = (prevDay.meals || []).filter((meal) => meal.id !== mealId);
+                        const nextDayData = { ...prevDay, meals, updatedAt: removedUpdatedAt };
+                        persistDayData(nextDayData, 'remove_meal');
+                        return nextDayData;
+                    });
+
+                    return { mealId, mealToRemove, insertIndex: i };
+                },
+                undoMutation: ({ mealId: ctxMealId, mealToRemove: ctxMeal, insertIndex }) => {
+                    const undoUpdatedAt = markUndoWindow(3000);
+                    setDay((prevDay) => {
+                        const meals = [...(prevDay.meals || [])];
+                        if (meals.some((meal) => meal.id === ctxMealId)) {
+                            return prevDay;
+                        }
+
+                        meals.splice(Math.max(0, Math.min(insertIndex, meals.length)), 0, ctxMeal);
+                        const restoredMeals = sortMealsByTime(meals);
+                        const nextDayData = { ...prevDay, meals: restoredMeals, updatedAt: undoUpdatedAt };
+                        persistDayData(nextDayData, 'undo_remove_meal');
+                        return nextDayData;
+                    });
+                },
             });
-        }, [haptic, setDay]);
+        }, [haptic, setDay, day, markUndoWindow, persistDayData, runUndoableDayMutation]);
 
         const addProductToMeal = React.useCallback((mi, p) => {
             if (HEYS.Paywall && !HEYS.Paywall.canWriteSync()) {
@@ -19973,17 +20239,138 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
         }, [setDay]);
 
         const removeItem = React.useCallback((mi, itId) => {
+            const sourceMeal = day.meals?.[mi];
+            if (!sourceMeal) return;
+
+            const mealId = sourceMeal.id;
+            const originalItems = sourceMeal.items || [];
+            const itemIndex = originalItems.findIndex((it) => it.id === itId);
+            if (itemIndex < 0) return;
+
+            const removedItem = originalItems[itemIndex];
+            const removedName = removedItem?.name || 'Продукт';
+
             haptic('medium');
-            setDay((prevDay) => {
-                const meals = (prevDay.meals || []).map((m, i) => i === mi ? { ...m, items: (m.items || []).filter((it) => it.id !== itId) } : m);
-                return { ...prevDay, meals, updatedAt: Date.now() };
+
+            runUndoableDayMutation({
+                label: removedName + ' удалён',
+                duration: 4000,
+                errorMessage: 'Не удалось удалить продукт',
+                errorAction: 'remove_item',
+                applyMutation: () => {
+                    const removedUpdatedAt = markUndoWindow(5000);
+
+                    setDay((prevDay) => {
+                        const meals = (prevDay.meals || []).map((meal) => {
+                            if (meal.id !== mealId) return meal;
+                            return { ...meal, items: (meal.items || []).filter((it) => it.id !== itId) };
+                        });
+                        const nextDayData = { ...prevDay, meals, updatedAt: removedUpdatedAt };
+                        persistDayData(nextDayData, 'remove_item');
+                        return nextDayData;
+                    });
+
+                    recalculateOrphanProducts();
+                    return { mealId, removedItem, itemIndex };
+                },
+                undoMutation: ({ mealId: ctxMealId, removedItem: ctxRemovedItem, itemIndex: ctxItemIndex }) => {
+                    const undoUpdatedAt = markUndoWindow(3000);
+                    setDay((prevDay) => {
+                        const meals = (prevDay.meals || []).map((meal) => {
+                            if (meal.id !== ctxMealId) return meal;
+
+                            const items = [...(meal.items || [])];
+                            if (items.some((it) => it.id === ctxRemovedItem.id)) {
+                                return meal;
+                            }
+
+                            items.splice(Math.max(0, Math.min(ctxItemIndex, items.length)), 0, ctxRemovedItem);
+                            return { ...meal, items };
+                        });
+
+                        const nextDayData = { ...prevDay, meals, updatedAt: undoUpdatedAt };
+                        persistDayData(nextDayData, 'undo_remove_item');
+                        return nextDayData;
+                    });
+                    recalculateOrphanProducts();
+                },
             });
-            setTimeout(() => {
-                if (window.HEYS?.orphanProducts?.recalculate) {
-                    window.HEYS.orphanProducts.recalculate();
-                }
-            }, 100);
-        }, [haptic, setDay]);
+        }, [haptic, setDay, day, markUndoWindow, persistDayData, recalculateOrphanProducts, runUndoableDayMutation]);
+
+        const removePhoto = React.useCallback(async (mi, photoId, options = {}) => {
+            const sourceMeal = day.meals?.[mi];
+            if (!sourceMeal) return false;
+
+            const mealId = sourceMeal.id;
+            const originalPhotos = sourceMeal.photos || [];
+            const photoIndex = originalPhotos.findIndex((photo) => photo.id === photoId);
+            if (photoIndex < 0) return false;
+
+            const removedPhoto = originalPhotos[photoIndex];
+            const confirmed = options.skipConfirm === true
+                ? true
+                : await HEYS.ConfirmModal?.confirmDelete?.({
+                    icon: '🗑️',
+                    title: 'Удалить фото?',
+                    text: 'Фото исчезнет сразу, но его можно будет быстро вернуть через кнопку «Отменить».',
+                });
+
+            if (confirmed === false) return false;
+
+            haptic('medium');
+
+            return !!runUndoableDayMutation({
+                label: 'Фото удалено',
+                duration: 5000,
+                errorMessage: 'Не удалось удалить фото',
+                errorAction: 'remove_photo',
+                applyMutation: () => {
+                    const removedUpdatedAt = markUndoWindow(6000);
+
+                    setDay((prevDay) => {
+                        const meals = (prevDay.meals || []).map((meal) => {
+                            if (meal.id !== mealId) return meal;
+                            return { ...meal, photos: (meal.photos || []).filter((photo) => photo.id !== photoId) };
+                        });
+                        const nextDayData = { ...prevDay, meals, updatedAt: removedUpdatedAt };
+                        persistDayData(nextDayData, 'remove_photo');
+                        return nextDayData;
+                    });
+
+                    return { mealId, removedPhoto, photoIndex };
+                },
+                undoMutation: ({ mealId: ctxMealId, removedPhoto: ctxRemovedPhoto, photoIndex: ctxPhotoIndex }) => {
+                    const undoUpdatedAt = markUndoWindow(3000);
+                    setDay((prevDay) => {
+                        const meals = (prevDay.meals || []).map((meal) => {
+                            if (meal.id !== ctxMealId) return meal;
+
+                            const photos = [...(meal.photos || [])];
+                            if (photos.some((photo) => photo.id === ctxRemovedPhoto.id)) {
+                                return meal;
+                            }
+
+                            photos.splice(Math.max(0, Math.min(ctxPhotoIndex, photos.length)), 0, ctxRemovedPhoto);
+                            return { ...meal, photos };
+                        });
+
+                        const nextDayData = { ...prevDay, meals, updatedAt: undoUpdatedAt };
+                        persistDayData(nextDayData, 'undo_remove_photo');
+                        return nextDayData;
+                    });
+                },
+                onExpire: async (_reason, { removedPhoto: ctxRemovedPhoto }) => {
+                    if (ctxRemovedPhoto?.path && ctxRemovedPhoto?.uploaded && window.HEYS?.cloud?.deletePhoto) {
+                        try {
+                            await window.HEYS.cloud.deletePhoto(ctxRemovedPhoto.path);
+                        } catch (error) {
+                            trackError(error, { source: 'day/_meals.js', action: 'delete_photo_cloud_finalize' });
+                            HEYS.Toast?.error('Фото удалено локально, но не удалилось из облака');
+                        }
+                    }
+                },
+            });
+        }, [day, haptic, markUndoWindow, persistDayData, runUndoableDayMutation, setDay]);
 
         const updateMealField = React.useCallback((mealIndex, field, value) => {
             setDay((prevDay) => {
@@ -20023,6 +20410,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
             addProductToMeal,
             setGrams,
             removeItem,
+            removePhoto,
             updateMealField,
             changeMealMood,
             changeMealWellbeing,

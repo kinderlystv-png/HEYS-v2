@@ -1831,6 +1831,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     const [suggestedPresetsCount, setSuggestedPresetsCount] = useState(
       () => (HEYS.store?.getSuggestedPresets?.() || []).length
     );
+    const [pendingDeletedProductIds, setPendingDeletedProductIds] = useState(() => new Set());
 
     const inputRef = useRef(null);
     const fileInputRef = useRef(null);
@@ -1991,13 +1992,17 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       primary.forEach(pushUnique);
       secondary.forEach(pushUnique);
 
+      const filtered = pendingDeletedProductIds.size
+        ? merged.filter((p) => !pendingDeletedProductIds.has(String(p?.id ?? p?.product_id ?? p?.name)))
+        : merged;
+
       console.log('[AddProductStep] ✅ latestProducts useMemo DONE', {
-        count: merged.length,
+        count: filtered.length,
         sampleIds: merged.slice(0, 3).map(p => p.id),
         productsVersion
       });
-      return merged;
-    }, [context, productsVersion]);
+      return filtered;
+    }, [context, pendingDeletedProductIds, productsVersion]);
 
     // 🌐 Результаты из общей базы (асинхронный поиск)
     const [sharedResults, setSharedResults] = useState([]);
@@ -2667,46 +2672,85 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       e.stopPropagation();
 
       const name = product.name || 'продукт';
-      if (!confirm(`Удалить "${name}" из базы?`)) return;
+      const pid = String(product.id ?? product.product_id ?? product.name);
+      if (!confirm(`Удалить "${name}" из базы?\n\nПосле удаления появится кнопка отмены.`)) return;
 
       haptic('medium');
 
-      const U = HEYS.utils || {};
-      const allProducts = HEYS.products?.getAll?.() || U.lsGet?.('heys_products', []) || [];
-      const pid = String(product.id ?? product.product_id ?? product.name);
-      const fingerprint = product.fingerprint || null;
+      const markPending = () => {
+        setPendingDeletedProductIds((prev) => {
+          const next = new Set(prev);
+          next.add(pid);
+          return next;
+        });
+      };
 
-      // 🆕 v4.8.0: Добавляем в игнор-лист чтобы autoRecover и cloud sync не восстанавливали
-      if (HEYS.deletedProducts?.add) {
-        HEYS.deletedProducts.add(name, pid, fingerprint);
+      const unmarkPending = () => {
+        setPendingDeletedProductIds((prev) => {
+          if (!prev.has(pid)) return prev;
+          const next = new Set(prev);
+          next.delete(pid);
+          return next;
+        });
+      };
+
+      const commitDelete = () => {
+        const U = HEYS.utils || {};
+        const allProducts = HEYS.products?.getAll?.() || U.lsGet?.('heys_products', []) || [];
+        const fingerprint = product.fingerprint || null;
+
+        if (HEYS.deletedProducts?.add) {
+          HEYS.deletedProducts.add(name, pid, fingerprint);
+        }
+
+        const filtered = allProducts.filter(p => {
+          const id = String(p.id ?? p.product_id ?? p.name);
+          return id !== pid;
+        });
+
+        if (HEYS.products?.setAll) {
+          HEYS.products.setAll(filtered);
+        } else if (HEYS.store?.set) {
+          HEYS.store.set('heys_products', filtered);
+        } else if (U.lsSet) {
+          U.lsSet('heys_products', filtered);
+          console.warn('[AddProductStep] ⚠️ Продукт удалён только локально (нет HEYS.store)');
+        }
+
+        setProductsVersion(v => v + 1);
+      };
+
+      if (!HEYS.Undo?.runAction) {
+        try {
+          commitDelete();
+        } catch (error) {
+          console.error('[AddProductStep] ❌ delete fallback error:', error);
+          HEYS.Toast?.error?.(error.message || 'Не удалось удалить продукт');
+        }
+        return;
       }
 
-      // Фильтруем — убираем этот продукт
-      const filtered = allProducts.filter(p => {
-        const id = String(p.id ?? p.product_id ?? p.name);
-        return id !== pid;
+      HEYS.Undo.runAction({
+        label: `Продукт «${name}» удалён`,
+        errorMessage: 'Не удалось подготовить удаление продукта',
+        apply: () => {
+          markPending();
+          return { pid, name };
+        },
+        undo: () => {
+          unmarkPending();
+        },
+        onExpire: () => {
+          try {
+            commitDelete();
+          } catch (error) {
+            console.error('[AddProductStep] ❌ delete commit error:', error);
+            HEYS.Toast?.error?.(error.message || 'Не удалось удалить продукт');
+          } finally {
+            unmarkPending();
+          }
+        }
       });
-
-      // Сохраняем через HEYS.products или HEYS.store.set (для синхронизации с облаком)
-      if (HEYS.products?.setAll) {
-        HEYS.products.setAll(filtered);
-      } else if (HEYS.store?.set) {
-        HEYS.store.set('heys_products', filtered);
-      } else if (U.lsSet) {
-        U.lsSet('heys_products', filtered);
-        console.warn('[AddProductStep] ⚠️ Продукт удалён только локально (нет HEYS.store)');
-      }
-
-      // Обновляем context.products
-      if (context?.onProductCreated) {
-        // Костыль: триггерим обновление
-      }
-
-      // console.log('[AddProductStep] Продукт удалён:', name);
-
-      // Перезапускаем поиск чтобы обновить список
-      setSearch(s => s + ' ');
-      setTimeout(() => setSearch(s => s.trim()), 10);
     }, [context]);
 
     // Рендер карточки продукта с подсветкой совпадений
@@ -2769,6 +2813,11 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             onClick: (e) => toggleHidden(e, pid, product.name, isHidden),
             title: isHidden ? 'Вернуть в список' : 'Скрыть из списка'
           }, '✕'),
+          !isFromShared && React.createElement('button', {
+            className: 'aps-delete-btn',
+            onClick: (e) => handleDeleteProduct(e, product),
+            title: 'Удалить из базы'
+          }, '🗑️'),
           // Кнопка избранного — только для личных
           showFavorite && !isFromShared && React.createElement('button', {
             className: 'aps-fav-btn' + (isFav ? ' active' : ''),
