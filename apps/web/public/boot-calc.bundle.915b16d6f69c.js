@@ -7008,6 +7008,11 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
                             body.appendChild(bubble);
                         }
 
+                        const amount = document.createElement('div');
+                        amount.className = 'water-screen-fill__amount';
+                        amount.textContent = '+' + detail.ml + '\u00a0мл';
+                        overlay.appendChild(amount);
+
                         overlay.appendChild(body);
                         document.body.appendChild(overlay);
 

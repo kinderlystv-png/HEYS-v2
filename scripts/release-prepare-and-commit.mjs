@@ -1,0 +1,128 @@
+#!/usr/bin/env node
+/**
+ * release-prepare-and-commit.mjs
+ *
+ * One-shot helper:
+ * 1. Runs interactive What's New preparation
+ * 2. Validates the entry
+ * 3. Stages whats-new metadata/assets
+ * 4. Creates a follow-up commit with a standard message
+ */
+
+import { execSync, spawnSync } from 'node:child_process';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const ROOT_DIR = path.join(__dirname, '..');
+const WHATS_NEW_JSON = path.join(ROOT_DIR, 'apps', 'web', 'public', 'whats-new.json');
+const WHATS_NEW_DIR = path.join(ROOT_DIR, 'apps', 'web', 'public', 'whats-new');
+
+function writeLine(text = '') {
+    process.stdout.write(`${text}\n`);
+}
+
+function writeError(text = '') {
+    process.stderr.write(`${text}\n`);
+}
+
+function run(command, options = {}) {
+    writeLine(`$ ${command}`);
+    execSync(command, {
+        cwd: ROOT_DIR,
+        stdio: 'inherit',
+        ...options,
+    });
+}
+
+function runInteractiveNodeScript(scriptPath, args = []) {
+    const result = spawnSync(process.execPath, [scriptPath, ...args], {
+        cwd: ROOT_DIR,
+        stdio: 'inherit',
+    });
+
+    if (result.status !== 0) {
+        throw new Error(`Command failed: node ${path.relative(ROOT_DIR, scriptPath)} ${args.join(' ')}`.trim());
+    }
+}
+
+function loadWhatsNew() {
+    const raw = fs.readFileSync(WHATS_NEW_JSON, 'utf8');
+    const data = JSON.parse(raw);
+    if (!data || !Array.isArray(data.releases) || data.releases.length === 0) {
+        throw new Error('whats-new.json не содержит релизов');
+    }
+    return data;
+}
+
+function getLatestRelease() {
+    return loadWhatsNew().releases[0];
+}
+
+function hasStagedWhatsNewChanges() {
+    const result = spawnSync('git', ['diff', '--cached', '--quiet', '--', 'apps/web/public/whats-new.json', 'apps/web/public/whats-new'], {
+        cwd: ROOT_DIR,
+        stdio: 'ignore',
+        shell: process.platform === 'win32',
+    });
+    return result.status === 1;
+}
+
+function sanitizeCommitTitle(value) {
+    return String(value || '')
+        .replace(/[\r\n]+/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+}
+
+function buildCommitMessage(release) {
+    const hash = sanitizeCommitTitle(release.buildHash || 'manual');
+    const title = sanitizeCommitTitle(release.title || 'update release notes');
+    return `chore: add what's-new entry for ${hash} (${title})`;
+}
+
+function ensurePathsExist() {
+    if (!fs.existsSync(WHATS_NEW_JSON)) {
+        throw new Error('Не найден apps/web/public/whats-new.json');
+    }
+    if (!fs.existsSync(WHATS_NEW_DIR)) {
+        fs.mkdirSync(WHATS_NEW_DIR, { recursive: true });
+    }
+}
+
+function main() {
+    ensurePathsExist();
+
+    writeLine('🚀 HEYS release helper: prepare + commit');
+    writeLine('');
+
+    runInteractiveNodeScript(path.join(__dirname, 'prepare-release.mjs'));
+    runInteractiveNodeScript(path.join(__dirname, 'prepare-release.mjs'), ['--check']);
+
+    run('git add -- apps/web/public/whats-new.json apps/web/public/whats-new');
+
+    if (!hasStagedWhatsNewChanges()) {
+        writeLine('ℹ️ Нет новых staged-изменений в What\'s New — отдельный commit не нужен.');
+        return;
+    }
+
+    const release = getLatestRelease();
+    const commitMessage = buildCommitMessage(release);
+
+    writeLine('');
+    writeLine(`📝 Commit message: ${commitMessage}`);
+    run(`git commit -m "${commitMessage.replace(/"/g, '\\"')}"`);
+
+    writeLine('');
+    writeLine('✅ What\'s New подготовлен и закоммичен отдельным follow-up commit.');
+    writeLine('Следующий шаг: обычный git push');
+}
+
+try {
+    main();
+} catch (error) {
+    writeError(`❌ ${error?.message || error}`);
+    process.exit(1);
+}

@@ -156,7 +156,7 @@ function hasRelevantLegacyChanges(stagedFiles) {
 }
 
 function stageGeneratedOutputs() {
-    run('git add -A apps/web/public apps/web/bundle-manifest.json apps/web/index.html apps/web/heys_advice_bundle_v1.js apps/web/heys_day_meals_bundle_v1.js apps/web/heys_day_bundle_v1.js', { shell: '/bin/bash' });
+    run('git add -A apps/web/public apps/web/bundle-manifest.json apps/web/index.html apps/web/heys_advice_bundle_v1.js apps/web/heys_day_meals_bundle_v1.js apps/web/heys_day_bundle_v1.js');
 }
 
 function main() {

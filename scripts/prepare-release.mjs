@@ -19,6 +19,10 @@ const __dirname = path.dirname(__filename);
 const WHATS_NEW_PATH = path.join(__dirname, '..', 'apps', 'web', 'public', 'whats-new.json');
 const WHATS_NEW_IMAGES_DIR = path.join(__dirname, '..', 'apps', 'web', 'public', 'whats-new');
 const MAX_RELEASES_KEPT = 10;
+const RELEASE_META_FILE_PATTERNS = [
+    /^apps\/web\/public\/whats-new\.json$/,
+    /^apps\/web\/public\/whats-new\//,
+];
 
 const TECHNICAL_FILE_PATTERNS = [
     /^docs\//,
@@ -52,6 +56,15 @@ const RELEASE_PROFILES = {
         profile: 'technical-general',
         kind: 'technical',
         label: 'Внутренние улучшения',
+        compactLabel: 'Короткий technical note',
+        compactTitle: 'Исправления и улучшения стабильности',
+        compactItems: [
+            {
+                type: 'fix',
+                title: 'Исправили внутренние ошибки',
+                description: 'В этом обновлении мы исправили внутренние ошибки и улучшили стабильность приложения.',
+            },
+        ],
         title: 'Исправления ошибок и улучшение стабильности',
         reason: 'Изменения выглядят техническими: скрипты, тесты, конфиги, backend или инфраструктура.',
         items: [
@@ -66,6 +79,15 @@ const RELEASE_PROFILES = {
         profile: 'technical-sync-storage',
         kind: 'technical',
         label: 'Sync / Storage',
+        compactLabel: 'Короткий sync/storage note',
+        compactTitle: 'Улучшения синхронизации и данных',
+        compactItems: [
+            {
+                type: 'fix',
+                title: 'Улучшили надёжность синхронизации',
+                description: 'Мы внесли внутренние исправления в синхронизацию и обработку данных для более стабильной работы приложения.',
+            },
+        ],
         title: 'Улучшение синхронизации и надёжности данных',
         reason: 'Изменения затрагивают sync/storage сценарии, локальное хранение или устойчивость данных.',
         items: [
@@ -80,6 +102,15 @@ const RELEASE_PROFILES = {
         profile: 'technical-backend-api',
         kind: 'technical',
         label: 'Backend / API',
+        compactLabel: 'Короткий backend/API note',
+        compactTitle: 'Исправления серверной логики',
+        compactItems: [
+            {
+                type: 'fix',
+                title: 'Улучшили стабильность серверных сценариев',
+                description: 'В этом обновлении мы внесли внутренние исправления в серверную логику и API-сценарии.',
+            },
+        ],
         title: 'Улучшения серверной логики и стабильности API',
         reason: 'Изменения относятся к backend/API, cloud functions или серверной инфраструктуре.',
         items: [
@@ -94,6 +125,15 @@ const RELEASE_PROFILES = {
         profile: 'technical-infra-tests',
         kind: 'technical',
         label: 'Infra / Tests',
+        compactLabel: 'Короткий infra/tests note',
+        compactTitle: 'Технические улучшения качества',
+        compactItems: [
+            {
+                type: 'improvement',
+                title: 'Улучшили внутренние процессы',
+                description: 'Мы обновили внутренние инструменты и проверки, чтобы релизы были стабильнее и предсказуемее.',
+            },
+        ],
         title: 'Технические улучшения и повышение качества релизов',
         reason: 'Изменения затрагивают тесты, tooling, build/deploy скрипты или инженерную инфраструктуру.',
         items: [
@@ -108,6 +148,15 @@ const RELEASE_PROFILES = {
         profile: 'technical-data-security',
         kind: 'technical',
         label: 'Data / Security',
+        compactLabel: 'Короткий data/security note',
+        compactTitle: 'Улучшения обработки данных и защиты',
+        compactItems: [
+            {
+                type: 'fix',
+                title: 'Усилили внутренние механизмы защиты',
+                description: 'В этом обновлении мы улучшили внутреннюю обработку данных и защитные сценарии системы.',
+            },
+        ],
         title: 'Исправления в обработке данных и защите системы',
         reason: 'Изменения связаны со схемой данных, безопасностью, SQL, RLS или валидацией.',
         items: [
@@ -211,20 +260,55 @@ function generateVersion() {
     return `${year}.${month}.${day}`;
 }
 
-function getGitHash() {
+function getShortHash(ref = 'HEAD') {
     try {
-        return execSync('git rev-parse --short HEAD', { encoding: 'utf8' }).trim();
+        return execSync(`git rev-parse --short ${ref}`, { encoding: 'utf8' }).trim();
     } catch {
         return 'manual';
     }
 }
 
+function isReleaseMetaOnlyFile(filePath) {
+    return RELEASE_META_FILE_PATTERNS.some((pattern) => pattern.test(filePath));
+}
+
+function getCommitFiles(ref = 'HEAD') {
+    const output = runGitCommand(`git diff-tree --no-commit-id --name-only -r ${ref}`);
+    if (!output) return [];
+    return output.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+}
+
+function resolveReleaseTargetRef() {
+    const historyOutput = runGitCommand('git rev-list --max-count=20 HEAD');
+    if (!historyOutput) {
+        return { targetRef: 'HEAD', currentHeadHash: getShortHash('HEAD'), targetHash: getShortHash('HEAD') };
+    }
+
+    const revisions = historyOutput.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+    for (const revision of revisions) {
+        const files = getCommitFiles(revision);
+        if (files.length === 0) continue;
+        const hasNonReleaseMetaFiles = files.some((filePath) => !isReleaseMetaOnlyFile(filePath));
+        if (hasNonReleaseMetaFiles) {
+            return {
+                targetRef: revision,
+                currentHeadHash: getShortHash('HEAD'),
+                targetHash: getShortHash(revision),
+            };
+        }
+    }
+
+    return { targetRef: 'HEAD', currentHeadHash: getShortHash('HEAD'), targetHash: getShortHash('HEAD') };
+}
+
 function getCurrentReleaseMeta() {
     const dateVersion = generateVersion();
-    const gitHash = getGitHash();
+    const { targetRef, currentHeadHash, targetHash } = resolveReleaseTargetRef();
     return {
-        gitHash,
-        releaseVersion: `${dateVersion}.${gitHash}`,
+        gitHash: targetHash,
+        currentHeadHash,
+        targetRef,
+        releaseVersion: `${dateVersion}.${targetHash}`,
     };
 }
 
@@ -238,7 +322,7 @@ function runGitCommand(command) {
 
 function getChangedFiles() {
     const commands = [
-        'git diff-tree --no-commit-id --name-only -r HEAD',
+        `git diff-tree --no-commit-id --name-only -r ${resolveReleaseTargetRef().targetRef}`,
         'git diff --cached --name-only',
         'git diff --name-only',
         'git ls-files --others --exclude-standard',
@@ -251,6 +335,19 @@ function getChangedFiles() {
         output.split(/\r?\n/).map((line) => line.trim()).filter(Boolean).forEach((file) => files.add(file));
     });
     return Array.from(files);
+}
+
+function getChangeSummary() {
+    const { targetRef } = resolveReleaseTargetRef();
+    const output = runGitCommand(`git diff-tree --no-commit-id --shortstat -r ${targetRef}`);
+    const fileMatch = output.match(/(\d+) files? changed/i);
+    const insertMatch = output.match(/(\d+) insertions?\(\+\)/i);
+    const deleteMatch = output.match(/(\d+) deletions?\(-\)/i);
+    return {
+        filesChanged: fileMatch ? parseInt(fileMatch[1], 10) : 0,
+        insertions: insertMatch ? parseInt(insertMatch[1], 10) : 0,
+        deletions: deleteMatch ? parseInt(deleteMatch[1], 10) : 0,
+    };
 }
 
 function isTechnicalFile(filePath) {
@@ -283,6 +380,7 @@ function detectReleaseProfile(relevantFiles, technicalOnly) {
 
 function classifyReleaseKind(changedFiles) {
     const relevantFiles = (changedFiles || []).filter((filePath) => filePath !== 'apps/web/public/whats-new.json');
+    const changeSummary = getChangeSummary();
     if (relevantFiles.length === 0) {
         const fallbackProfile = RELEASE_PROFILES.technicalGeneral;
         return {
@@ -290,6 +388,7 @@ function classifyReleaseKind(changedFiles) {
             profile: fallbackProfile.profile,
             changedFiles: [],
             suggestedTemplate: fallbackProfile,
+            changeSummary,
             reason: 'Не удалось определить пользовательские изменения — используем безопасный технический шаблон.',
         };
     }
@@ -302,6 +401,7 @@ function classifyReleaseKind(changedFiles) {
         profile: suggestedTemplate.profile,
         changedFiles: relevantFiles,
         suggestedTemplate,
+        changeSummary,
         reason: suggestedTemplate.reason,
     };
 }
@@ -312,6 +412,37 @@ function getSuggestedTemplate(kind) {
 
 function cloneTemplateItems(items) {
     return items.map((item) => ({ ...item }));
+}
+
+function chooseTemplateVariant(profile, releaseAnalysis) {
+    if (!profile || profile.kind !== 'technical') {
+        return {
+            title: profile?.title || '',
+            items: cloneTemplateItems(profile?.items || []),
+            variant: 'expanded',
+            label: profile?.label || 'User-facing',
+        };
+    }
+
+    const summary = releaseAnalysis?.changeSummary || { filesChanged: 0, insertions: 0, deletions: 0 };
+    const totalTouchedLines = summary.insertions + summary.deletions;
+    const smallTechnicalChange = summary.filesChanged > 0 && summary.filesChanged <= 3 && totalTouchedLines <= 80;
+
+    if (smallTechnicalChange && profile.compactTitle && profile.compactItems) {
+        return {
+            title: profile.compactTitle,
+            items: cloneTemplateItems(profile.compactItems),
+            variant: 'compact',
+            label: profile.compactLabel || profile.label,
+        };
+    }
+
+    return {
+        title: profile.title,
+        items: cloneTemplateItems(profile.items || []),
+        variant: 'expanded',
+        label: profile.label,
+    };
 }
 
 async function askForImage(rl, images, defaultImage = '') {
@@ -395,7 +526,7 @@ function ask(rl, question, defaultValue = '') {
 
 function runCheck() {
     const data = loadWhatsNew();
-    const { gitHash, releaseVersion } = getCurrentReleaseMeta();
+    const { gitHash, currentHeadHash, releaseVersion } = getCurrentReleaseMeta();
 
     if (data.releases.length === 0) {
         writeLine('⚠️  whats-new.json пуст — нет записей о релизах.');
@@ -419,6 +550,9 @@ function runCheck() {
 
     writeLine(`✅ whats-new.json актуален: v${latest.version} — "${latest.title}"`);
     writeLine(`   Build hash: ${gitHash}`);
+    if (currentHeadHash !== gitHash) {
+        writeLine(`   HEAD содержит только release/meta-изменения, поэтому target hash взят из предыдущего meaningful commit: ${gitHash}`);
+    }
     writeLine(`   Записей: ${latest.items.length}`);
 
     const missingImages = getMissingImages(latest.items || []);
@@ -447,10 +581,11 @@ async function runInteractive() {
     writeLine('');
 
     const data = loadWhatsNew();
-    const { gitHash, releaseVersion } = getCurrentReleaseMeta();
+    const { gitHash, currentHeadHash, releaseVersion } = getCurrentReleaseMeta();
     const todayDate = generateDateISO();
     const releaseAnalysis = classifyReleaseKind(getChangedFiles());
-    const suggestedTemplate = releaseAnalysis.suggestedTemplate || getSuggestedTemplate(releaseAnalysis.kind);
+    const suggestedProfile = releaseAnalysis.suggestedTemplate || getSuggestedTemplate(releaseAnalysis.kind);
+    const templateVariant = chooseTemplateVariant(suggestedProfile, releaseAnalysis);
 
     const existingIdx = data.releases.findIndex((release) => (release.buildHash && release.buildHash === gitHash) || release.version === releaseVersion);
     let release;
@@ -477,11 +612,17 @@ async function runInteractive() {
     release.version = releaseVersion;
     release.buildHash = gitHash;
     release.date = todayDate;
-    release.kind = suggestedTemplate.kind;
-    release.profile = suggestedTemplate.profile;
+    release.kind = suggestedProfile.kind;
+    release.profile = suggestedProfile.profile;
 
     writeLine(`🔎 Тип релиза: ${releaseAnalysis.kind === 'technical' ? 'technical / внутренний' : 'user-facing / пользовательский'}`);
-    writeLine(`   Профиль: ${suggestedTemplate.label}`);
+    writeLine(`   Профиль: ${suggestedProfile.label}`);
+    if (releaseAnalysis.changeSummary) {
+        writeLine(`   Масштаб: ${releaseAnalysis.changeSummary.filesChanged || 0} файлов, +${releaseAnalysis.changeSummary.insertions || 0} / -${releaseAnalysis.changeSummary.deletions || 0} строк`);
+    }
+    if (currentHeadHash !== gitHash) {
+        writeLine(`   HEAD commit выглядит как release/meta follow-up. What's New будет привязан к предыдущему meaningful commit: ${gitHash}`);
+    }
     writeLine(`   ${releaseAnalysis.reason}`);
     if (releaseAnalysis.changedFiles.length > 0) {
         writeLine('   Изменённые файлы для оценки:');
@@ -492,17 +633,17 @@ async function runInteractive() {
     }
     writeLine('');
 
-    if ((!release.title || release.items.length === 0) && suggestedTemplate) {
+    if ((!release.title || release.items.length === 0) && suggestedProfile) {
         const templateAnswer = await ask(
             rl,
             releaseAnalysis.kind === 'technical'
-                ? '💡 Похоже на технический релиз. Подставить стандартный текст в стиле крупных приложений? (Y/n)'
+                ? `💡 Похоже на технический релиз. Подставить ${templateVariant.variant === 'compact' ? 'короткий' : 'расширенный'} шаблон в стиле крупных приложений? (Y/n)`
                 : '💡 Подставить базовый шаблон релиза и потом отредактировать? (Y/n)',
             'Y',
         );
         if (!['n', 'N', 'нет', 'no'].includes(templateAnswer)) {
-            if (!release.title) release.title = suggestedTemplate.title;
-            if (!release.items.length) release.items = cloneTemplateItems(suggestedTemplate.items);
+            if (!release.title) release.title = templateVariant.title;
+            if (!release.items.length) release.items = cloneTemplateItems(templateVariant.items);
         }
     }
 

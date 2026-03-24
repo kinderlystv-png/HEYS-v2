@@ -63,6 +63,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Validate What's New before deploy
+        run: node scripts/prepare-release.mjs --check
+
       # TODO: Fix CI test environment (tests pass locally but fail in CI)
       # - name: Run critical tests
       #   run: |
