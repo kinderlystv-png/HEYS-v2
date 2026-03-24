@@ -21693,6 +21693,29 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
     const HEYS = window.HEYS = window.HEYS || {};
     HEYS.AppUpdateChecks = HEYS.AppUpdateChecks || {};
 
+    function ensureReadyModalCloseAction(hideUpdateModal) {
+        const modal = document.getElementById('heys-update-modal');
+        const card = modal?.querySelector('.heys-update-modal__card');
+        if (!card || typeof hideUpdateModal !== 'function') return;
+
+        let actions = card.querySelector('.heys-update-modal__actions');
+        if (!actions) {
+            actions = document.createElement('div');
+            actions.className = 'heys-update-modal__actions';
+            card.appendChild(actions);
+        }
+
+        let closeButton = actions.querySelector('.heys-update-modal__close-btn');
+        if (!closeButton) {
+            closeButton = document.createElement('button');
+            closeButton.type = 'button';
+            closeButton.className = 'heys-update-modal__close-btn';
+            closeButton.textContent = 'Закрыть';
+            closeButton.addEventListener('click', () => hideUpdateModal());
+            actions.appendChild(closeButton);
+        }
+    }
+
     function getPwaHelpers() {
         const pwa = HEYS.PWA || {};
         return {
@@ -21722,9 +21745,9 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                     const subtitle = document.getElementById('heys-update-subtitle');
                     const icon = document.getElementById('heys-update-icon');
                     if (title) title.textContent = 'Всё актуально!';
-                    if (subtitle) subtitle.textContent = 'У вас последняя версия';
+                    if (subtitle) subtitle.textContent = 'У вас последняя версия — закройте это окно, когда будете готовы';
                     if (icon) icon.textContent = '✅';
-                    setTimeout(helpers.hideUpdateModal, 1500);
+                    ensureReadyModalCloseAction(helpers.hideUpdateModal);
                 }
             }, 800);
         };

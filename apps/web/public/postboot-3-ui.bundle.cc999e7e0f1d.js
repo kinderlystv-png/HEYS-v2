@@ -37468,6 +37468,11 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         const [releases, setReleases] = useState(null);
         const [visible, setVisible] = useState(false);
         const backdropRef = useRef(null);
+        const onCloseRef = useRef(onClose);
+
+        useEffect(() => {
+            onCloseRef.current = onClose;
+        }, [onClose]);
 
         useEffect(() => {
             let cancelled = false;
@@ -37485,22 +37490,24 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                     console.info('[HEYS.WhatsNew] Showing', unseen.length, 'unseen release(s)');
                 } else {
                     console.info('[HEYS.WhatsNew] No unseen releases, closing');
-                    if (onClose) onClose();
+                    if (onCloseRef.current) onCloseRef.current();
                 }
             });
             return () => { cancelled = true; };
-        }, [onClose]);
+        }, []);
 
         const handleClose = useCallback(() => {
             setVisible(false);
             setTimeout(() => {
-                if (onClose) onClose();
+                if (onCloseRef.current) onCloseRef.current();
             }, 250); // match CSS transition duration
-        }, [onClose]);
+        }, []);
 
         const handleBackdropClick = useCallback((e) => {
-            if (e.target === backdropRef.current) handleClose();
-        }, [handleClose]);
+            if (e.target === backdropRef.current) {
+                console.info('[HEYS.WhatsNew] Backdrop click ignored — waiting for explicit user close');
+            }
+        }, []);
 
         // Don't render until we have data
         if (!releases) return null;

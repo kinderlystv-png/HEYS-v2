@@ -5009,6 +5009,35 @@ body.tour-active .ios-pwa-banner {
   margin: 0;
 }
 
+.heys-update-modal__actions {
+  margin-top: 20px;
+  display: flex;
+  justify-content: center;
+}
+
+.heys-update-modal__close-btn {
+  border: none;
+  padding: 12px 24px;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  min-width: 140px;
+  font-family: system-ui, -apple-system, sans-serif;
+  background: linear-gradient(135deg, #4285f4, #2563eb);
+  color: #ffffff;
+  box-shadow: 0 10px 24px -18px rgba(37, 99, 235, 0.8);
+  transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+}
+
+.heys-update-modal__close-btn:hover {
+  box-shadow: 0 14px 28px -18px rgba(37, 99, 235, 0.95);
+}
+
+.heys-update-modal__close-btn:active {
+  transform: scale(0.97);
+}
+
 @keyframes heys-update-pulse {
 
   0%,
