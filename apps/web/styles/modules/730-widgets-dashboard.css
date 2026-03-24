@@ -81,7 +81,7 @@
   /* Glassmorphism */
   --widget-glass-bg: rgba(255, 255, 255, 0.72);
   --widget-glass-border: rgba(255, 255, 255, 0.5);
-  --widget-glass-blur: 20px;
+  --widget-glass-blur: 12px;
 
   /* Neutral surfaces (for tracks/pills) */
   --widget-surface-soft: rgba(0, 0, 0, 0.04);
@@ -181,11 +181,12 @@ body:has(.page-day) {
    - background ~90% опацитет → контент не просвечивает в padding-зоне
    - Синеватый тон совпадает с gradient ::before → нет разрыва */
 body:has(.page-day) .hdr {
-  background: rgba(228, 241, 255, 0.91) !important;
-  backdrop-filter: blur(20px) saturate(1.6);
-  -webkit-backdrop-filter: blur(20px) saturate(1.6);
+  background: rgba(228, 241, 255, 0.94) !important;
+  backdrop-filter: blur(12px) saturate(1.4);
+  -webkit-backdrop-filter: blur(12px) saturate(1.4);
   /* overflow visible чтобы ::after мог выступать ниже */
   overflow: visible;
+  will-change: transform;
 }
 
 /* Плавный fade вниз — стирает жёсткую линию между шапкой и контентом */
@@ -196,7 +197,7 @@ body:has(.page-day) .hdr::after {
   left: 0;
   right: 0;
   height: 28px;
-  background: linear-gradient(to bottom, rgba(228, 241, 255, 0.91) 0%, transparent 100%);
+  background: linear-gradient(to bottom, rgba(228, 241, 255, 0.94) 0%, transparent 100%);
   pointer-events: none;
   z-index: -1;
 }
@@ -222,10 +223,11 @@ body:has(.page-day) .hdr::after {
 
 /* Тёмный frosted glass */
 [data-theme="dark"] body:has(.page-day) .hdr {
-  background: rgba(14, 20, 36, 0.88) !important;
-  backdrop-filter: blur(20px) saturate(1.6);
-  -webkit-backdrop-filter: blur(20px) saturate(1.6);
+  background: rgba(14, 20, 36, 0.92) !important;
+  backdrop-filter: blur(12px) saturate(1.4);
+  -webkit-backdrop-filter: blur(12px) saturate(1.4);
   overflow: visible;
+  will-change: transform;
 }
 
 [data-theme="dark"] body:has(.page-day) .hdr::after {
@@ -235,17 +237,18 @@ body:has(.page-day) .hdr::after {
   left: 0;
   right: 0;
   height: 28px;
-  background: linear-gradient(to bottom, rgba(14, 20, 36, 0.88) 0%, transparent 100%);
+  background: linear-gradient(to bottom, rgba(14, 20, 36, 0.92) 0%, transparent 100%);
   pointer-events: none;
   z-index: -1;
 }
 
 /* ── Виджеты: frosted glass хедер (синеватый тон как у дневника) ── */
 body:has(.widgets-tab) .hdr {
-  background: rgba(228, 241, 255, 0.91) !important;
-  backdrop-filter: blur(20px) saturate(1.6);
-  -webkit-backdrop-filter: blur(20px) saturate(1.6);
+  background: rgba(228, 241, 255, 0.94) !important;
+  backdrop-filter: blur(12px) saturate(1.4);
+  -webkit-backdrop-filter: blur(12px) saturate(1.4);
   overflow: visible;
+  will-change: transform;
 }
 
 body:has(.widgets-tab) .hdr::after {
@@ -255,16 +258,17 @@ body:has(.widgets-tab) .hdr::after {
   left: 0;
   right: 0;
   height: 28px;
-  background: linear-gradient(to bottom, rgba(228, 241, 255, 0.91) 0%, transparent 100%);
+  background: linear-gradient(to bottom, rgba(228, 241, 255, 0.94) 0%, transparent 100%);
   pointer-events: none;
   z-index: -1;
 }
 
 [data-theme="dark"] body:has(.widgets-tab) .hdr {
-  background: rgba(14, 20, 36, 0.88) !important;
-  backdrop-filter: blur(20px) saturate(1.6);
-  -webkit-backdrop-filter: blur(20px) saturate(1.6);
+  background: rgba(14, 20, 36, 0.92) !important;
+  backdrop-filter: blur(12px) saturate(1.4);
+  -webkit-backdrop-filter: blur(12px) saturate(1.4);
   overflow: visible;
+  will-change: transform;
 }
 
 [data-theme="dark"] body:has(.widgets-tab) .hdr::after {
@@ -274,17 +278,18 @@ body:has(.widgets-tab) .hdr::after {
   left: 0;
   right: 0;
   height: 28px;
-  background: linear-gradient(to bottom, rgba(14, 20, 36, 0.88) 0%, transparent 100%);
+  background: linear-gradient(to bottom, rgba(14, 20, 36, 0.92) 0%, transparent 100%);
   pointer-events: none;
   z-index: -1;
 }
 
 /* ── Отчёты: frosted glass хедер ── */
 body:has(.page-reports) .hdr {
-  background: rgba(248, 250, 255, 0.92) !important;
-  backdrop-filter: blur(20px) saturate(1.6);
-  -webkit-backdrop-filter: blur(20px) saturate(1.6);
+  background: rgba(248, 250, 255, 0.95) !important;
+  backdrop-filter: blur(12px) saturate(1.4);
+  -webkit-backdrop-filter: blur(12px) saturate(1.4);
   overflow: visible;
+  will-change: transform;
 }
 
 body:has(.page-reports) .hdr::after {
@@ -294,16 +299,17 @@ body:has(.page-reports) .hdr::after {
   left: 0;
   right: 0;
   height: 28px;
-  background: linear-gradient(to bottom, rgba(248, 250, 255, 0.92) 0%, transparent 100%);
+  background: linear-gradient(to bottom, rgba(248, 250, 255, 0.95) 0%, transparent 100%);
   pointer-events: none;
   z-index: -1;
 }
 
 [data-theme="dark"] body:has(.page-reports) .hdr {
-  background: rgba(18, 18, 28, 0.90) !important;
-  backdrop-filter: blur(20px) saturate(1.6);
-  -webkit-backdrop-filter: blur(20px) saturate(1.6);
+  background: rgba(18, 18, 28, 0.93) !important;
+  backdrop-filter: blur(12px) saturate(1.4);
+  -webkit-backdrop-filter: blur(12px) saturate(1.4);
   overflow: visible;
+  will-change: transform;
 }
 
 [data-theme="dark"] body:has(.page-reports) .hdr::after {
@@ -313,7 +319,7 @@ body:has(.page-reports) .hdr::after {
   left: 0;
   right: 0;
   height: 28px;
-  background: linear-gradient(to bottom, rgba(18, 18, 28, 0.90) 0%, transparent 100%);
+  background: linear-gradient(to bottom, rgba(18, 18, 28, 0.93) 0%, transparent 100%);
   pointer-events: none;
   z-index: -1;
 }
@@ -512,9 +518,7 @@ body:has(.page-reports) .hdr::after {
   align-items: center;
   pointer-events: auto;
   /* Включаем клики только на кнопках */
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background: rgba(255, 255, 255, 0.92);
   padding: 6px 10px;
   border-radius: 999px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);

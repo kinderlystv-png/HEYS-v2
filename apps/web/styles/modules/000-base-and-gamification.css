@@ -5677,9 +5677,9 @@ body:has(.offline-banner) .wrap {
   gap: 0;
   padding: 8px 12px;
   margin: 0;
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  background: rgba(255, 255, 255, 0.97);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   border-top: 0.5px solid rgba(0, 0, 0, 0.1);
   border-radius: 0;
   position: fixed;
@@ -5687,6 +5687,7 @@ body:has(.offline-banner) .wrap {
   left: 0;
   right: 0;
   z-index: 1000;
+  will-change: transform;
   box-shadow: 0 -1px 20px rgba(0, 0, 0, 0.06);
   padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
   min-height: 58px;
