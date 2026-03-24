@@ -5,6 +5,7 @@
  * Usage:
  *   node scripts/prepare-release.mjs
  *   node scripts/prepare-release.mjs --check
+ *   node scripts/prepare-release.mjs --preview
  */
 
 import { execSync } from 'node:child_process';
@@ -243,6 +244,91 @@ const RELEASE_PROFILE_RULES = [
     },
 ];
 
+const TRANSIENT_ITEM_FIELDS = ['imageConfirmedNoScreenshot', 'screenshotRecommended', 'suggestedFromFiles', 'suggestedCategory'];
+
+const USER_FACING_ITEM_RULES = [
+    {
+        key: 'undo',
+        matchers: [/undo/i],
+        item: {
+            type: 'feature',
+            title: 'Удобнее отменять действия',
+            description: 'Мы улучшили сценарии отмены действий, чтобы важные изменения можно было быстрее вернуть назад.',
+            screenshotRecommended: true,
+        },
+    },
+    {
+        key: 'water',
+        matchers: [/water/i, /hydration/i],
+        item: {
+            type: 'improvement',
+            title: 'Улучшили визуальную обратную связь для воды',
+            description: 'Обновили отображение добавления воды, чтобы результат действия был заметнее и понятнее сразу после нажатия.',
+            screenshotRecommended: true,
+        },
+    },
+    {
+        key: 'sync',
+        matchers: [/sync/i, /storage/i, /offline/i, /merge/i, /cloud/i],
+        item: {
+            type: 'fix',
+            title: 'Исправили синхронизацию и обновление данных',
+            description: 'Мы устранили проблемы с обновлением данных и улучшили стабильность синхронизации между сценариями приложения.',
+            screenshotRecommended: false,
+        },
+    },
+    {
+        key: 'reports',
+        matchers: [/report/i, /monthly/i, /weekly/i],
+        item: {
+            type: 'improvement',
+            title: 'Доработали отчёты и сводки',
+            description: 'Улучшили отображение отчётов и связанных с ними сценариев, чтобы ключевая информация читалась легче.',
+            screenshotRecommended: true,
+        },
+    },
+    {
+        key: 'widgets',
+        matchers: [/widget/i, /dashboard/i],
+        item: {
+            type: 'improvement',
+            title: 'Обновили виджеты и быстрые сценарии',
+            description: 'Сделали поведение виджетов и быстрых действий понятнее и удобнее в ежедневном использовании.',
+            screenshotRecommended: true,
+        },
+    },
+    {
+        key: 'trainings',
+        matchers: [/training/i, /workout/i],
+        item: {
+            type: 'improvement',
+            title: 'Улучшили сценарии тренировок',
+            description: 'Подправили связанные с тренировками сценарии, чтобы действия и состояния отображались стабильнее и нагляднее.',
+            screenshotRecommended: true,
+        },
+    },
+    {
+        key: 'day-ui',
+        matchers: [/heys_day_/i, /day\//i, /diary/i, /calendar/i, /metrics/i],
+        item: {
+            type: 'improvement',
+            title: 'Доработали поведение дневного экрана',
+            description: 'Мы улучшили ключевые сценарии на дневном экране, чтобы важные действия и состояния читались яснее.',
+            screenshotRecommended: true,
+        },
+    },
+    {
+        key: 'app-shell',
+        matchers: [/heys_app_/i, /overlay/i, /modal/i, /navigation/i, /tab/i],
+        item: {
+            type: 'improvement',
+            title: 'Улучшили навигацию и системные экраны',
+            description: 'Доработали системные экраны и навигационные сценарии, чтобы переходы и важные состояния были понятнее.',
+            screenshotRecommended: true,
+        },
+    },
+];
+
 function writeLine(text = '') {
     process.stdout.write(`${text}\n`);
 }
@@ -414,6 +500,70 @@ function cloneTemplateItems(items) {
     return items.map((item) => ({ ...item }));
 }
 
+function stripTransientItemFields(item) {
+    const nextItem = { ...item };
+    TRANSIENT_ITEM_FIELDS.forEach((field) => {
+        delete nextItem[field];
+    });
+    return nextItem;
+}
+
+function getRuleMatchScore(filePath, matchers = []) {
+    return matchers.reduce((score, matcher) => (matcher.test(filePath) ? score + 1 : score), 0);
+}
+
+function inferUserFacingItemSuggestions(changedFiles, fallbackItems = []) {
+    const relevantFiles = (changedFiles || []).filter((filePath) => !isTechnicalFile(filePath));
+    const matchedGroups = [];
+
+    USER_FACING_ITEM_RULES.forEach((rule) => {
+        const matchedFiles = relevantFiles.filter((filePath) => getRuleMatchScore(filePath, rule.matchers) > 0);
+        if (matchedFiles.length === 0) return;
+
+        matchedGroups.push({
+            key: rule.key,
+            matchedFiles,
+            score: matchedFiles.reduce((total, filePath) => total + getRuleMatchScore(filePath, rule.matchers), 0),
+            item: {
+                ...rule.item,
+                suggestedCategory: rule.key,
+                suggestedFromFiles: matchedFiles,
+            },
+        });
+    });
+
+    matchedGroups.sort((left, right) => right.score - left.score || right.matchedFiles.length - left.matchedFiles.length);
+
+    if (matchedGroups.length > 0) {
+        return matchedGroups.map((group) => ({ ...group.item }));
+    }
+
+    return cloneTemplateItems(fallbackItems).map((item) => ({
+        ...item,
+        suggestedCategory: 'fallback',
+        screenshotRecommended: item.type !== 'fix',
+    }));
+}
+
+function buildSuggestedItems(releaseAnalysis, templateVariant) {
+    if (releaseAnalysis?.kind === 'technical') {
+        return cloneTemplateItems(templateVariant?.items || []).map((item) => ({
+            ...item,
+            screenshotRecommended: false,
+            suggestedCategory: releaseAnalysis?.profile || 'technical',
+        }));
+    }
+
+    return inferUserFacingItemSuggestions(releaseAnalysis?.changedFiles || [], templateVariant?.items || []);
+}
+
+function mergeMissingSuggestedItems(existingItems, suggestedItems) {
+    const existingTitles = new Set((existingItems || []).map((item) => (item.title || '').trim().toLowerCase()).filter(Boolean));
+    return (suggestedItems || [])
+        .filter((item) => !existingTitles.has((item.title || '').trim().toLowerCase()))
+        .map((item) => ({ ...item }));
+}
+
 function chooseTemplateVariant(profile, releaseAnalysis) {
     if (!profile || profile.kind !== 'technical') {
         return {
@@ -443,6 +593,100 @@ function chooseTemplateVariant(profile, releaseAnalysis) {
         variant: 'expanded',
         label: profile.label,
     };
+}
+
+function printTemplatePreview(templateVariant) {
+    if (!templateVariant) return;
+    writeLine('💡 Предлагаемый текст для релиза:');
+    if (templateVariant.title) {
+        writeLine(`   Заголовок: ${templateVariant.title}`);
+    }
+    (templateVariant.items || []).forEach((item, index) => {
+        writeLine(`   ${index + 1}. [${item.type}] ${item.title}`);
+        if (item.description) {
+            writeLine(`      ${item.description}`);
+        }
+    });
+    writeLine('');
+}
+
+function printSuggestedItemsPreview(items = [], title = '💡 Предлагаемые пункты релиза:') {
+    if (!items.length) return;
+    writeLine(title);
+    items.forEach((item, index) => {
+        const screenshotLabel = item.screenshotRecommended === false ? 'без обязательного скрина' : 'скрин желательно';
+        writeLine(`   ${index + 1}. [${item.type}] ${item.title} — ${screenshotLabel}`);
+        if (item.description) {
+            writeLine(`      ${item.description}`);
+        }
+        if (Array.isArray(item.suggestedFromFiles) && item.suggestedFromFiles.length > 0) {
+            writeLine(`      Из файлов: ${item.suggestedFromFiles.slice(0, 3).join(', ')}${item.suggestedFromFiles.length > 3 ? '…' : ''}`);
+        }
+    });
+    writeLine('');
+}
+
+function itemNeedsScreenshotReview(item) {
+    if (!item) return false;
+    if (item.screenshotRecommended === false) return false;
+    return !item.image && item.type !== 'fix';
+}
+
+function hasConfirmedNoScreenshot(item) {
+    return item?.imageConfirmedNoScreenshot === true;
+}
+
+async function reviewScreenshots(rl, release, images) {
+    if (!Array.isArray(release.items) || release.items.length === 0) return;
+
+    writeLine('');
+    writeLine('🖼️ Проверка скриншотов для записей релиза');
+
+    for (const item of release.items) {
+        if (item.image) {
+            delete item.imageConfirmedNoScreenshot;
+            writeLine(`   ✅ "${item.title}" — скрин указан: ${item.image}`);
+            continue;
+        }
+
+        if (!itemNeedsScreenshotReview(item)) {
+            writeLine(`   ℹ️ "${item.title}" — скрин не обязателен для типа ${item.type}.`);
+            continue;
+        }
+
+        writeLine(`   📸 Для "${item.title}" скрин пока не указан.`);
+        const action = await ask(rl, '   Добавить скрин сейчас или подтвердить, что он не нужен? [a/s]', hasConfirmedNoScreenshot(item) ? 's' : 'a');
+
+        if (['a', 'A', 'add', 'д'].includes(action)) {
+            const image = await askForImage(rl, images, item.image || '');
+            if (image) {
+                item.image = image;
+                delete item.imageConfirmedNoScreenshot;
+                writeLine(`   ✅ Скрин добавлен: ${item.image}`);
+                continue;
+            }
+        }
+
+        const confirmNoScreenshot = await ask(rl, `   Подтверждаешь, что для "${item.title}" скрин не нужен? (y/N)`, hasConfirmedNoScreenshot(item) ? 'Y' : 'N');
+        if (['y', 'Y', 'yes', 'да', 'д'].includes(confirmNoScreenshot)) {
+            item.image = null;
+            item.imageConfirmedNoScreenshot = true;
+            writeLine('   ✅ Зафиксировано: скрин не нужен.');
+            continue;
+        }
+
+        writeLine('   ⚠️ Ок, вернёмся к выбору скрина ещё раз.');
+        const fallbackImage = await askForImage(rl, images, item.image || '');
+        if (fallbackImage) {
+            item.image = fallbackImage;
+            delete item.imageConfirmedNoScreenshot;
+            writeLine(`   ✅ Скрин добавлен: ${item.image}`);
+        } else {
+            item.image = null;
+            item.imageConfirmedNoScreenshot = true;
+            writeLine('   ℹ️ Скрин не указан, но подтверждение сохранено как "не нужен".');
+        }
+    }
 }
 
 async function askForImage(rl, images, defaultImage = '') {
@@ -480,7 +724,19 @@ function loadWhatsNew() {
     try {
         const raw = fs.readFileSync(WHATS_NEW_PATH, 'utf8');
         const data = JSON.parse(raw);
-        if (data && Array.isArray(data.releases)) return data;
+        if (data && Array.isArray(data.releases)) {
+            data.releases = data.releases.map((release) => ({
+                ...release,
+                items: Array.isArray(release.items)
+                    ? release.items.map((item) => {
+                        const sanitizedItem = { ...item };
+                        delete sanitizedItem.imageConfirmedNoScreenshot;
+                        return sanitizedItem;
+                    })
+                    : [],
+            }));
+            return data;
+        }
     } catch {
         // ignore malformed or missing file and start fresh
     }
@@ -488,10 +744,16 @@ function loadWhatsNew() {
 }
 
 function saveWhatsNew(data) {
-    if (data.releases.length > MAX_RELEASES_KEPT) {
-        data.releases = data.releases.slice(0, MAX_RELEASES_KEPT);
-    }
-    fs.writeFileSync(WHATS_NEW_PATH, JSON.stringify(data, null, 2) + '\n');
+    const sanitizedData = {
+        ...data,
+        releases: (data.releases || []).slice(0, MAX_RELEASES_KEPT).map((release) => ({
+            ...release,
+            items: Array.isArray(release.items)
+                ? release.items.map((item) => stripTransientItemFields(item))
+                : [],
+        })),
+    };
+    fs.writeFileSync(WHATS_NEW_PATH, JSON.stringify(sanitizedData, null, 2) + '\n');
 }
 
 function listImages() {
@@ -513,6 +775,92 @@ function getMissingImages(items) {
     return items
         .filter((item) => item.image)
         .filter((item) => !fs.existsSync(resolveImagePublicPath(item.image)));
+}
+
+function findCurrentRelease(data, gitHash, releaseVersion) {
+    return (data.releases || []).find((release) => (release.buildHash && release.buildHash === gitHash) || release.version === releaseVersion) || null;
+}
+
+function getScreenshotReviewItems(items = []) {
+    return items.filter((item) => itemNeedsScreenshotReview(item) && !hasConfirmedNoScreenshot(item));
+}
+
+function printScreenshotPreview(items = []) {
+    const needsReview = getScreenshotReviewItems(items);
+    const missingImages = getMissingImages(items);
+
+    writeLine('🖼️ Что со скринами:');
+
+    if (needsReview.length === 0 && missingImages.length === 0) {
+        writeLine('   ✅ Дополнительных действий по скринам не видно.');
+        writeLine('');
+        return;
+    }
+
+    needsReview.forEach((item) => {
+        writeLine(`   • Для "${item.title}" скрин не указан.`);
+    });
+
+    missingImages.forEach((item) => {
+        writeLine(`   • Файл скрина не найден: ${item.image} — для "${item.title}".`);
+    });
+
+    writeLine('   В интерактивном режиме будет вопрос:');
+    writeLine('   - добавить скрин сейчас;');
+    writeLine('   - или подтвердить, что скрин не нужен.');
+    writeLine('');
+}
+
+function runPreview() {
+    const data = loadWhatsNew();
+    const { gitHash, currentHeadHash, releaseVersion } = getCurrentReleaseMeta();
+    const releaseAnalysis = classifyReleaseKind(getChangedFiles());
+    const suggestedProfile = releaseAnalysis.suggestedTemplate || getSuggestedTemplate(releaseAnalysis.kind);
+    const templateVariant = chooseTemplateVariant(suggestedProfile, releaseAnalysis);
+    const suggestedItems = buildSuggestedItems(releaseAnalysis, templateVariant);
+    const currentRelease = findCurrentRelease(data, gitHash, releaseVersion);
+
+    writeLine('');
+    writeLine('👀 HEYS — Preview What\'s New перед push');
+    writeLine('======================================');
+    writeLine(`Build hash: ${gitHash}`);
+    if (currentHeadHash !== gitHash) {
+        writeLine(`HEAD сейчас на follow-up/meta commit, поэтому preview привязан к meaningful commit: ${gitHash}`);
+    }
+    writeLine(`Тип релиза: ${releaseAnalysis.kind}`);
+    writeLine(`Профиль: ${suggestedProfile.label}`);
+    if (releaseAnalysis.changeSummary) {
+        writeLine(`Масштаб: ${releaseAnalysis.changeSummary.filesChanged || 0} файлов, +${releaseAnalysis.changeSummary.insertions || 0} / -${releaseAnalysis.changeSummary.deletions || 0} строк`);
+    }
+    writeLine('');
+
+    if (currentRelease) {
+        writeLine('📝 Текущий сохранённый текст для этого релиза:');
+        writeLine(`   Заголовок: ${currentRelease.title}`);
+        (currentRelease.items || []).forEach((item, index) => {
+            writeLine(`   ${index + 1}. [${item.type}] ${item.title}`);
+            if (item.description) {
+                writeLine(`      ${item.description}`);
+            }
+        });
+        writeLine('');
+        printScreenshotPreview(currentRelease.items || []);
+    } else {
+        writeLine('📝 Сохранённого текста для текущего commit ещё нет.');
+        writeLine('');
+    }
+
+    writeLine('💡 Автопредложение, которое будет показано в интерактивной подготовке:');
+    printTemplatePreview(templateVariant);
+    printSuggestedItemsPreview(suggestedItems, '🧩 Автопредложенные пункты для этого релиза:');
+
+    if (!currentRelease) {
+        printScreenshotPreview(suggestedItems);
+    }
+
+    writeLine('Чтобы подтвердить или отредактировать это перед push, открой интерактивную подготовку.');
+    writeLine('');
+    return 0;
 }
 
 function ask(rl, question, defaultValue = '') {
@@ -586,6 +934,7 @@ async function runInteractive() {
     const releaseAnalysis = classifyReleaseKind(getChangedFiles());
     const suggestedProfile = releaseAnalysis.suggestedTemplate || getSuggestedTemplate(releaseAnalysis.kind);
     const templateVariant = chooseTemplateVariant(suggestedProfile, releaseAnalysis);
+    const suggestedItems = buildSuggestedItems(releaseAnalysis, templateVariant);
 
     const existingIdx = data.releases.findIndex((release) => (release.buildHash && release.buildHash === gitHash) || release.version === releaseVersion);
     let release;
@@ -633,17 +982,38 @@ async function runInteractive() {
     }
     writeLine('');
 
+    writeLine('🧠 Автопредложение для текста релиза:');
+    printTemplatePreview(templateVariant);
+    printSuggestedItemsPreview(suggestedItems, '🧩 Автопредложенные пункты релиза:');
+    if (release.title || release.items.length > 0) {
+        writeLine('   Сейчас у релиза уже есть текст выше по данным файла. Автопредложение показано как вариант, который можно взять за основу или проигнорировать.');
+        writeLine('');
+    }
+
     if ((!release.title || release.items.length === 0) && suggestedProfile) {
         const templateAnswer = await ask(
             rl,
             releaseAnalysis.kind === 'technical'
                 ? `💡 Похоже на технический релиз. Подставить ${templateVariant.variant === 'compact' ? 'короткий' : 'расширенный'} шаблон в стиле крупных приложений? (Y/n)`
-                : '💡 Подставить базовый шаблон релиза и потом отредактировать? (Y/n)',
+                : `💡 Подставить ${suggestedItems.length > 1 ? `${suggestedItems.length} предложенных пункта` : 'базовый шаблон релиза'} и потом отредактировать? (Y/n)`,
             'Y',
         );
         if (!['n', 'N', 'нет', 'no'].includes(templateAnswer)) {
             if (!release.title) release.title = templateVariant.title;
-            if (!release.items.length) release.items = cloneTemplateItems(templateVariant.items);
+            if (!release.items.length) release.items = cloneTemplateItems(suggestedItems.length > 0 ? suggestedItems : templateVariant.items);
+        }
+    }
+
+    if (release.items.length > 0 && suggestedItems.length > 0) {
+        const missingSuggestedItems = mergeMissingSuggestedItems(release.items, suggestedItems);
+        if (missingSuggestedItems.length > 0) {
+            printSuggestedItemsPreview(missingSuggestedItems, '➕ Дополнительно можно добавить ещё такие пункты:');
+            const addMissingSuggestions = await ask(rl, `Добавить недостающие автопредложения (${missingSuggestedItems.length}) в релиз? (y/N)`, 'N');
+            if (['y', 'Y', 'yes', 'да', 'д'].includes(addMissingSuggestions)) {
+                release.items.push(...missingSuggestedItems);
+                writeLine(`✅ Добавлено автопредложений: ${missingSuggestedItems.length}`);
+                writeLine('');
+            }
         }
     }
 
@@ -719,6 +1089,8 @@ async function runInteractive() {
         writeLine('');
     }
 
+    await reviewScreenshots(rl, release, images);
+
     if (release.items.length === 0) {
         writeLine('⚠️  Нет записей — whats-new.json не обновлён.');
         rl.close();
@@ -750,6 +1122,15 @@ async function runInteractive() {
         writeLine('   Положи их в: apps/web/public/whats-new/');
     }
 
+    const confirmedNoScreenshot = (release.items || []).filter((item) => hasConfirmedNoScreenshot(item));
+    if (confirmedNoScreenshot.length > 0) {
+        writeLine('');
+        writeLine('📝 Подтверждено, что скрин не нужен для:');
+        confirmedNoScreenshot.forEach((item) => {
+            writeLine(`   • ${item.title}`);
+        });
+    }
+
     writeLine('');
     writeLine('Следующие шаги:');
     writeLine('  1. Добавь скриншоты в apps/web/public/whats-new/ (если ещё не добавлены)');
@@ -763,6 +1144,8 @@ async function runInteractive() {
 const args = process.argv.slice(2);
 if (args.includes('--check')) {
     process.exit(runCheck());
+} else if (args.includes('--preview')) {
+    process.exit(runPreview());
 } else {
     runInteractive().catch((error) => {
         writeError(`Ошибка: ${error?.stack || error}`);

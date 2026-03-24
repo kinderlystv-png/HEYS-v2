@@ -2,11 +2,12 @@
 /**
  * release-prepare-and-commit.mjs
  *
- * One-shot helper:
- * 1. Runs interactive What's New preparation
- * 2. Validates the entry
- * 3. Stages whats-new metadata/assets
- * 4. Creates a follow-up commit with a standard message
+ * One-shot helper for the explicit "before push" flow:
+ * 1. Shows preview of current/suggested What's New text
+ * 2. Runs interactive preparation with screenshot confirmation
+ * 3. Validates the entry
+ * 4. Stages whats-new metadata/assets
+ * 5. Creates a follow-up commit with a standard message
  */
 
 import { execSync, spawnSync } from 'node:child_process';
@@ -19,6 +20,7 @@ const __dirname = path.dirname(__filename);
 const ROOT_DIR = path.join(__dirname, '..');
 const WHATS_NEW_JSON = path.join(ROOT_DIR, 'apps', 'web', 'public', 'whats-new.json');
 const WHATS_NEW_DIR = path.join(ROOT_DIR, 'apps', 'web', 'public', 'whats-new');
+const PREPARE_RELEASE_SCRIPT = path.join(__dirname, 'prepare-release.mjs');
 
 function writeLine(text = '') {
     process.stdout.write(`${text}\n`);
@@ -94,12 +96,22 @@ function ensurePathsExist() {
 
 function main() {
     ensurePathsExist();
+    const args = process.argv.slice(2);
+    const skipPreview = args.includes('--skip-preview');
 
-    writeLine('🚀 HEYS release helper: prepare + commit');
+    writeLine('🚀 HEYS push-ready helper');
     writeLine('');
 
-    runInteractiveNodeScript(path.join(__dirname, 'prepare-release.mjs'));
-    runInteractiveNodeScript(path.join(__dirname, 'prepare-release.mjs'), ['--check']);
+    if (!skipPreview) {
+        writeLine('👀 Сначала покажу текущий текст релиза, автопредложение и статус скринов.');
+        writeLine('');
+        runInteractiveNodeScript(PREPARE_RELEASE_SCRIPT, ['--preview']);
+    }
+
+    writeLine('✍️ Теперь подтвердим/отредактируем текст и проверим скрины.');
+    writeLine('');
+    runInteractiveNodeScript(PREPARE_RELEASE_SCRIPT);
+    runInteractiveNodeScript(PREPARE_RELEASE_SCRIPT, ['--check']);
 
     run('git add -- apps/web/public/whats-new.json apps/web/public/whats-new');
 
@@ -116,8 +128,8 @@ function main() {
     run(`git commit -m "${commitMessage.replace(/"/g, '\\"')}"`);
 
     writeLine('');
-    writeLine('✅ What\'s New подготовлен и закоммичен отдельным follow-up commit.');
-    writeLine('Следующий шаг: обычный git push');
+    writeLine('✅ What\'s New подтверждён и закоммичен отдельным follow-up commit.');
+    writeLine('Теперь можно делать обычный git push.');
 }
 
 try {

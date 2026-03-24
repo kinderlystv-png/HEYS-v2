@@ -6,16 +6,19 @@ echo "📝 Проверка What's New для текущего deploy/push..."
 if ! pnpm prepare-release:check; then
   echo ""
   echo "⚠️ What's New не готов: нужно подтвердить тексты нововведений и/или скриншоты."
+  node scripts/prepare-release.mjs --preview || true
   if [ -t 1 ]; then
-    printf "Открыть интерактивное заполнение сейчас? [Y/n] "
+    echo "💡 Рекомендуемый сценарий перед push: pnpm push:ready"
+    echo "   Эта команда сразу показывает тексты, спрашивает про скрины, валидирует What's New и при необходимости делает follow-up commit."
+    printf "Запустить pnpm push:ready сейчас? [Y/n] "
     read answer
     case "$answer" in
       n|N)
-        echo "❌ Push отменён. Сначала подготовь What's New."
+        echo "❌ Push отменён. Сначала запусти pnpm push:ready."
         exit 1
         ;;
       *)
-        pnpm prepare-release || exit 1
+        pnpm push:ready -- --skip-preview || exit 1
         pnpm prepare-release:check || {
           echo "❌ What's New всё ещё не готов. Push отменён."
           exit 1
@@ -23,7 +26,7 @@ if ! pnpm prepare-release:check; then
         ;;
     esac
   else
-    echo "❌ Push отменён. Запусти: pnpm prepare-release"
+    echo "❌ Push отменён. Запусти: pnpm push:ready"
     exit 1
   fi
 fi
