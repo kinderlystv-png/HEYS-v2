@@ -348,7 +348,7 @@ function generateVersion() {
 
 function getShortHash(ref = 'HEAD') {
     try {
-        return execSync(`git rev-parse --short ${ref}`, { encoding: 'utf8' }).trim();
+        return execSync(`git rev-parse --short=8 ${ref}`, { encoding: 'utf8' }).trim();
     } catch {
         return 'manual';
     }
