@@ -7624,6 +7624,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
 
     // ✅ Pull-to-refresh: sync из cloud (БЕЗ reload!)
     // Подтягивает изменения куратора, UI обновляется через события heys:day-updated
+    // Вся orchestration (flush + sync) делегирована cloud.pullRefresh() —
+    // UI-слой только запускает action и показывает статус.
     const handleRefresh = async () => {
       if (refreshInFlightRef.current) {
         return;
@@ -7635,53 +7637,55 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
       triggerHaptic(15);
 
       const cloud = heys && heys.cloud;
-      const U = heys && heys.utils;
-      const clientId = U && U.getCurrentClientId ? U.getCurrentClientId() : '';
 
       try {
-        // 1. Тихая проверка SW (без блокировки)
+        // 1. SW update — background, non-blocking
         if (navigator.serviceWorker?.controller) {
           navigator.serviceWorker.ready.then(reg => reg.update?.()).catch(() => { });
         }
 
-        // 2. КРИТИЧНО: Flush pending данных в cloud ПЕРЕД загрузкой!
-        // Используем публичное API getPendingCount() вместо приватной _clientUpsertQueue
-        if (cloud?.flushPendingQueue && cloud?.getPendingCount) {
-          const pendingCount = cloud.getPendingCount();
-          if (pendingCount > 0) {
-            console.info('[PullRefresh] ⏳ Flushing', pendingCount, 'pending items...');
-            // 🔧 FIX: Увеличиваем таймаут до 5 сек и ЖДЁМ завершения
-            const flushed = await cloud.flushPendingQueue(5000);
-            if (flushed) {
-              console.info('[PullRefresh] ✅ Flush completed');
-            } else {
-              console.warn('[PullRefresh] ⚠️ Flush timeout, continuing...');
-            }
-            // Даём серверу время обработать данные
-            await delay(300);
-          }
-        }
+        // 2. Unified pull-refresh: flush + delta sync + structured result
+        if (cloud?.pullRefresh) {
+          console.info('[PullRefresh] 🔄 Starting pull refresh...');
+          const result = await Promise.race([
+            cloud.pullRefresh(),
+            delay(SYNC_TIMEOUT_MS).then(() => SYNC_TIMEOUT)
+          ]);
 
-        // 3. Sync данных из cloud (подтягиваем изменения куратора)
-        // UI обновится автоматически через события heys:day-updated
-        if (clientId && cloud && typeof cloud.syncClient === 'function') {
-          console.info('[PullRefresh] 🔄 Starting sync...');
-          const syncState = await runSyncWithTimeout(cloud, clientId);
-
-          if (syncState.timedOut) {
+          if (result === SYNC_TIMEOUT) {
+            console.warn('[PullRefresh] ⏱️ Timed out after', SYNC_TIMEOUT_MS, 'ms');
             setRefreshStatus('timeout');
             await delay(1100);
             return;
           }
 
-          console.info('[PullRefresh] ✅ Sync completed');
+          if (result?.status === 'offline') {
+            console.info('[PullRefresh] 📴 Offline — local data active');
+          } else if (result?.status === 'no-changes') {
+            console.info('[PullRefresh] ✅ No changes (' + (result.totalMs || '?') + 'ms)');
+          } else {
+            console.info('[PullRefresh] ✅ Synced', result?.keys || 0, 'keys in', result?.totalMs || '?', 'ms');
+          }
+        } else if (cloud?.syncClient) {
+          // Fallback: legacy path without pullRefresh
+          const U = heys && heys.utils;
+          const clientId = U && U.getCurrentClientId ? U.getCurrentClientId() : '';
+          if (clientId) {
+            console.info('[PullRefresh] 🔄 Starting sync (legacy)...');
+            const syncState = await runSyncWithTimeout(cloud, clientId);
+            if (syncState.timedOut) {
+              setRefreshStatus('timeout');
+              await delay(1100);
+              return;
+            }
+          }
         }
 
-        // 4. Показываем успех
+        // 3. Показываем успех
         setRefreshStatus('success');
         triggerHaptic(20);
 
-        // 5. Держим индикатор 600ms для UX, затем сбрасываем
+        // 4. Держим индикатор 600ms для UX, затем сбрасываем
         await delay(600);
 
       } catch (err) {

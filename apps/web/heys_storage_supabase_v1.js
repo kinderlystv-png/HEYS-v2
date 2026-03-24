@@ -478,7 +478,41 @@
   cloud.isAuthSyncPending = () => _authSyncPending;
 
   // ═══════════════════════════════════════════════════════════════════
-  // 🔐 AUTH TOKEN SANITIZE (RTR-safe)
+  // � PULL-REFRESH ORCHESTRATION API
+  // Single entry point: handles flush + sync + structured result.
+  // UI layer should call this instead of manually assembling flush → delay → syncClient.
+  // ═══════════════════════════════════════════════════════════════════
+  cloud.pullRefresh = async function (clientId) {
+    if (!clientId) {
+      clientId = cloud.getCurrentClientId?.() ||
+        (global.HEYS?.utils?.getCurrentClientId?.());
+      if (!clientId) return { success: false, status: 'error', error: 'no_client_id' };
+    }
+
+    const start = performance.now();
+
+    // 1. Flush pending writes — sync engine owns consistency, no time-based guesses
+    const pendingCount = cloud.getPendingCount?.() || 0;
+    if (pendingCount > 0) {
+      console.info('[HEYS.pullRefresh] ⏳ Flushing', pendingCount, 'pending writes...');
+      await cloud.flushPendingQueue(5000);
+    }
+
+    // 2. Force delta sync (all heavy lifting delegated to syncClient)
+    const result = await cloud.syncClient(clientId, { force: true });
+
+    // 3. Enrich with total duration including flush time
+    const totalMs = Math.round(performance.now() - start);
+    return {
+      ...(result || {}),
+      success: result?.success !== false,
+      totalMs,
+      pendingFlushed: pendingCount
+    };
+  };
+
+  // ═══════════════════════════════════════════════════════════════════
+  // �🔐 AUTH TOKEN SANITIZE (RTR-safe)
   // ═══════════════════════════════════════════════════════════════════
   // ВАЖНО: делаем это СРАЗУ при загрузке скрипта, до heys_app_v12.js.
   // Иначе app может увидеть протухший токен и/или Supabase SDK может попытаться
@@ -4330,6 +4364,7 @@
     _syncInProgress = (async () => {
       try {
         const ls = global.localStorage; // 🚀 used for delta sync ts and key processing
+        cloud._syncStartPerf = performance.now(); // 🚀 PERF: timing reference for fast paths
 
         // 🔄 Уведомляем UI что sync начинается (для показа скелетона)
         if (typeof window !== 'undefined' && window.dispatchEvent) {
@@ -4358,14 +4393,21 @@
         const lastSyncKey = `heys_${client_id}_last_sync_ts`;
         const lastSyncTs = ls.getItem(lastSyncKey);
         const isDeltaFastPath = !!lastSyncTs && !forceSync;
+        // 🚀 PERF: Force sync also uses delta when we have lastSyncTs and initial sync is done
+        // This avoids re-fetching all 679 keys on pull-to-refresh — only changed keys since last sync
+        const isForceDelta = forceSync && !!lastSyncTs && initialSyncCompleted;
+        const skipHeavyPreWork = isDeltaFastPath || isForceDelta;
         const now = Date.now(); // needed for _lastClientSync and cloud cleanup
 
         if (isDeltaFastPath) {
           logCritical(`[DELTA FAST-PATH] Direct fetch, skipping all pre-work, since ${lastSyncTs}`);
         }
+        if (isForceDelta) {
+          logCritical(`🚀 [FORCE DELTA] Pull-refresh with delta since ${lastSyncTs} — skip heavy pre-work`);
+        }
 
-        // === PRE-WORK: flush + cleanup + ensureClient (skipped in delta fast-path) ===
-        if (!isDeltaFastPath) {
+        // === PRE-WORK: flush + cleanup + ensureClient (skipped in delta fast-path & force delta) ===
+        if (!skipHeavyPreWork) {
           // �🛡️ КРИТИЧНО: Перед загрузкой из облака — СНАЧАЛА отправляем pending изменения!
           // Иначе локальные изменения будут затёрты при скачивании старых данных с сервера
           // 🛡️ Перед загрузкой из облака — отправляем pending изменения
@@ -4409,9 +4451,16 @@
             log('client bootstrap skipped (no such client)', client_id);
             return;
           }
+        } else if (isForceDelta) {
+          // 🚀 Minimal flush for force delta: only if there are pending items
+          const pendingCount = cloud.getPendingCount?.() || 0;
+          if (pendingCount > 0) {
+            logCritical(`🔄 [FORCE DELTA] Flushing ${pendingCount} pending items before delta fetch...`);
+            await cloud.flushPendingQueue(5000);
+          }
         }
 
-        if (!isDeltaFastPath) {
+        if (!skipHeavyPreWork) {
           // === FULL SYNC PATH: meta check + Phase A (only when no last_sync_ts) ===
 
           // Проверяем, действительно ли нужна синхронизация
@@ -4433,7 +4482,7 @@
                 initialSyncCompleted = true;
                 logCritical('✅ [OFFLINE] Sync пропущен (сеть), локальные данные активны');
               }
-              return;
+              return { success: true, status: 'offline' };
             }
             err('client bootstrap meta check', metaError);
             throw new Error('Sync meta check failed: ' + (metaError.message || metaError));
@@ -4451,7 +4500,7 @@
           if (!forceSync && !hasUpdates && cloud._lastClientSync?.clientId === client_id) {
             log('client bootstrap skipped (no updates)', client_id);
             cloud._lastClientSync.ts = now; // Обновляем timestamp для throttling
-            return;
+            return { success: true, status: 'no-changes', keys: 0, skipped: true };
           }
 
           if (forceSync) {
@@ -4511,11 +4560,12 @@
               console.warn('[HEYS.sync] ⚠️ Фаза A не удалась, продолжаем полный sync:', phaseAErr?.message || phaseAErr);
             }
           }
-        } // end if (!isDeltaFastPath) — full sync path
+        } // end if (!skipHeavyPreWork) — full sync path
 
         // Теперь загружаем полные данные только если есть обновления
         // 🚀 Delta Sync: если есть last_sync_ts — загружаем только изменения
-        const deltaSince = (lastSyncTs && !forceSync) ? lastSyncTs : null;
+        // 🚀 PERF: Force sync also uses delta — fetches only changed keys since last sync
+        const deltaSince = lastSyncTs || null;
         const isDeltaSync = !!deltaSince;
 
         if (isDeltaSync) {
@@ -4605,10 +4655,48 @@
               initialSyncCompleted = true;
               logCritical('✅ [OFFLINE] Sync пропущен (сеть), локальные данные активны');
             }
-            return;
+            return { success: true, status: 'offline' };
           }
           err('client bootstrap select', error);
           throw new Error('Sync data fetch failed: ' + (error.message || error));
+        }
+
+        // ════════════════════════════════════════════════════════════════
+        // 🚀 FORCE DELTA ZERO-CHANGE: No keys changed since last sync
+        // Pull-to-refresh completes in ~200ms instead of ~4000ms
+        // ════════════════════════════════════════════════════════════════
+        const deltaKeyCount = data?.length || 0;
+        const _forceDeltaFetchDone = performance.now(); // timing reference for fast paths
+        if (isForceDelta && deltaKeyCount === 0) {
+          muteMirror = false;
+          cloud._lastClientSync = { clientId: client_id, ts: now };
+          cloud._syncCompletedAt = Date.now();
+
+          try { ls.setItem(lastSyncKey, new Date().toISOString()); } catch (_) { }
+
+          if (global.HEYS?.store?.flushMemory) global.HEYS.store.flushMemory();
+
+          const zeroDuration = Math.round(_forceDeltaFetchDone - (cloud._syncStartPerf || _forceDeltaFetchDone));
+          logCritical(`✅ [FORCE DELTA] No changes since last sync — done in ${zeroDuration}ms`);
+
+          if (typeof window !== 'undefined' && window.dispatchEvent) {
+            window.dispatchEvent(new CustomEvent('heysSyncCompleted', {
+              detail: { clientId: client_id, phase: 'full', forceDelta: true, keys: 0 }
+            }));
+          }
+
+          // Shared products: fire and forget
+          if (_sharedProductsPromise) {
+            _sharedProductsPromise.catch(() => { });
+            _sharedProductsPromise = null;
+          }
+
+          // Defer cleanup
+          setTimeout(() => {
+            try { cleanupDuplicateKeys(); } catch (_) { }
+          }, 3000);
+
+          return { success: true, status: 'no-changes', keys: 0, durationMs: zeroDuration, forceDelta: true };
         }
 
         // ════════════════════════════════════════════════════════════════
@@ -4616,7 +4704,6 @@
         // ВСЮ тяжёлую обработку (dedup, diagnostics, cleanup, deleted sync).
         // Сохраняет ~0.8s из post-fetch processing.
         // ════════════════════════════════════════════════════════════════
-        const deltaKeyCount = data?.length || 0;
         if (isDeltaSync && deltaKeyCount <= 10 && !forceSync) {
           const lightStart = performance.now();
           logCritical(`🚀 [DELTA LIGHT] ${deltaKeyCount} keys — fast processing, skip heavy ops`);
@@ -4720,7 +4807,7 @@
           }, 5000);
 
           _syncInProgress = null;
-          return; // 🚀 Early return — skip ALL heavy processing below
+          return { success: true, status: 'updated', keys: lightKeysWritten, durationMs: lightDuration, deltaLight: true }; // 🚀 Early return
         }
         // ════════════════════════════════════════════════════════════════
 
@@ -4937,6 +5024,7 @@
         // 🚀 PERF: Collect dayv2 writes and dispatch ONE event after loop
         const batchedDayV2Writes = [];
         const forceWrittenDayV2 = [];
+        const forceWrittenDates = []; // 🚀 PERF: Collect dates for batch event dispatch
         const skippedDayMirrorKeys = [];
 
         // 🔄 ФАЗ 2: ОБРАБОТКА дедуплицированных ключей
@@ -5101,6 +5189,22 @@
 
                   // 🔇 PERF: Отключено
                   // logCritical(`🔄 [FORCE SYNC] Saving ${valueToSave.meals?.length || 0} meals to localStorage | key: ${key}`);
+
+                  // 🚀 PERF: Skip write if local data is identical to resolved value
+                  // Common case: pull-refresh with delta returns keys that haven't actually changed for us
+                  if (local && valueToSave === local) {
+                    // valueToSave was set to local (protection path) — no write needed
+                    return;
+                  }
+                  if (local && valueToSave && local !== valueToSave) {
+                    const lmCount = local.meals?.length || 0;
+                    const smCount = valueToSave.meals?.length || 0;
+                    if (lmCount === smCount && local.updatedAt && local.updatedAt === valueToSave.updatedAt) {
+                      // Same meals count + same updatedAt = identical data, skip write
+                      return;
+                    }
+                  }
+
                   // 🧷 Backup перед возможной перезаписью dayv2
                   backupDayV2BeforeOverwrite(key, valueToSave, 'force-sync');
                   const wroteDay = writeDayKeyWithQuotaGuard(key, valueToSave, {
@@ -5115,18 +5219,12 @@
                   if (dateMatch) {
                     const mealsCount = valueToSave?.meals?.length || 0;
                     forceWrittenDayV2.push(`${dateMatch[1]}(${mealsCount}m)`);
+                    forceWrittenDates.push(dateMatch[1]);
                     if (isSyncDetailLogsEnabled()) {
                       window.console.info('[HEYS.sinhron] ✅ FORCE_WRITE ' + key + ' meals=' + mealsCount);
                     }
-                    window.dispatchEvent(new CustomEvent('heys:day-updated', {
-                      detail: {
-                        date: dateMatch[1],
-                        source: 'force-sync',
-                        forceReload: true  // Обязательно! Иначе событие будет заблокировано
-                      }
-                    }));
-                    // 🔇 PERF: Отключено
-                    // logCritical(`📅 [EVENT] heys:day-updated dispatched for ${dateMatch[1]} (force-sync, forceReload=true)`);
+                    // 🚀 PERF: Individual event dispatch removed — batch event after loop
+                    // (was: N individual heys:day-updated dispatches → cascade re-renders)
                   }
                   return; // Готово
                 }
@@ -5918,6 +6016,30 @@
           window.console.info('[HEYS.sinhron] ✅ FORCE_WRITE dayv2 (' + forceWrittenDayV2.length + '):', formatListForSyncLog(forceWrittenDayV2));
         }
 
+        // 🚀 PERF: Force-written dayv2 dates — dispatch ONE batch event instead of N individual
+        if (forceWrittenDates.length > 0) {
+          cloud._syncCompletedAt = cloud._syncCompletedAt || Date.now();
+          // 1. Batch event: triggers cache/cascade invalidation for ALL dates at once
+          window.dispatchEvent(new CustomEvent('heys:day-updated', {
+            detail: {
+              dates: forceWrittenDates,
+              date: forceWrittenDates[forceWrittenDates.length - 1],
+              source: 'force-sync',
+              forceReload: true,
+              batch: true
+            }
+          }));
+          // 2. Individual event for today: ensures the visible day page re-reads from localStorage
+          //    (day_effects checks updatedDate === date, so batch.date alone may miss the viewed day)
+          const _today = new Date().toISOString().slice(0, 10);
+          if (forceWrittenDates.includes(_today)) {
+            window.dispatchEvent(new CustomEvent('heys:day-updated', {
+              detail: { date: _today, source: 'force-sync', forceReload: true }
+            }));
+          }
+          log('📅 [EVENT] heys:day-updated BATCH dispatched for ' + forceWrittenDates.length + ' force-written dates');
+        }
+
         if (batchedDayV2Writes.length > 0) {
           const updatedDates = [];
           // ⚡ PERF: Chunked writes — yield to browser every CHUNK_SIZE writes
@@ -6097,8 +6219,8 @@
         cloud._productsFingerprint = null; // 🔄 Delta-sync: сбрасываем чтобы первый реальный изменение прошло
         cancelFailsafeTimer(); // Отменяем failsafe — sync успешен
 
-        // 🧹 Deferred cleanup: при delta fast-path cleanup был пропущен — делаем после sync
-        if (isDeltaFastPath) {
+        // 🧹 Deferred cleanup: при delta/forceDelta cleanup был пропущен — делаем после sync
+        if (isDeltaFastPath || isForceDelta) {
           setTimeout(() => {
             try { cloud.cleanupProducts(); } catch (_) { }
           }, 2000);
@@ -6180,6 +6302,8 @@
         try {
           ls.setItem(`heys_${client_id}_last_sync_ts`, new Date().toISOString());
         } catch (_) { }
+
+        return { success: true, status: 'updated', keys: data?.length || 0, durationMs: syncDuration, force: !!forceSync };
       } catch (e) {
         // Критический лог ошибки синхронизации (всегда видим)
         logCritical('❌ Ошибка синхронизации:', e.message || e);
