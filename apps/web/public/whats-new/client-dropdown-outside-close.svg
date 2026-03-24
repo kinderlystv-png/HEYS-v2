@@ -1,0 +1,74 @@
+<svg width="1200" height="900" viewBox="0 0 1200 900" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1200" y2="900" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F3F8FF"/>
+      <stop offset="1" stop-color="#EAF7F1"/>
+    </linearGradient>
+    <linearGradient id="avatar" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#C8F0F5"/>
+      <stop offset="1" stop-color="#F7D3E7"/>
+    </linearGradient>
+    <filter id="shadow" x="0" y="0" width="1200" height="900" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="16" stdDeviation="24" flood-color="#16324F" flood-opacity="0.16"/>
+    </filter>
+  </defs>
+
+  <rect width="1200" height="900" rx="40" fill="url(#bg)"/>
+
+  <g opacity="0.95">
+    <rect x="28" y="28" width="1144" height="132" rx="28" fill="#FFFFFF" stroke="#4C8DFF" stroke-width="4"/>
+    <text x="72" y="82" fill="#1B2B42" font-family="Inter, Arial, sans-serif" font-size="42" font-weight="500">Poplanton</text>
+    <text x="302" y="82" fill="#6D7485" font-family="Inter, Arial, sans-serif" font-size="30">▲</text>
+
+    <rect x="642" y="42" width="74" height="74" rx="18" fill="#EEF2F8"/>
+    <path d="M679 64C692.255 64 703 74.7452 703 88C703 101.255 692.255 112 679 112C665.745 112 655 101.255 655 88C655 74.7452 665.745 64 679 64Z" fill="#34D399"/>
+    <path d="M669 88L676 95L690 79" stroke="white" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+
+    <rect x="730" y="42" width="88" height="88" rx="20" fill="#FFFFFF" stroke="#D8DDE7" stroke-width="3"/>
+    <text x="764" y="95" fill="#2F3B52" font-family="Inter, Arial, sans-serif" font-size="42" font-weight="500">23</text>
+
+    <rect x="834" y="34" width="96" height="96" rx="22" fill="#0FBE85"/>
+    <text x="870" y="96" fill="white" font-family="Inter, Arial, sans-serif" font-size="42" font-weight="700">24</text>
+
+    <rect x="948" y="42" width="104" height="88" rx="20" fill="#FFFFFF" stroke="#D8DDE7" stroke-width="3"/>
+    <text x="972" y="73" fill="#F87171" font-family="Inter, Arial, sans-serif" font-size="24" font-weight="700">📅</text>
+    <text x="1004" y="95" fill="#2F3B52" font-family="Inter, Arial, sans-serif" font-size="34" font-weight="500">17</text>
+  </g>
+
+  <g filter="url(#shadow)">
+    <rect x="86" y="128" width="812" height="520" rx="42" fill="#FFFFFF"/>
+  </g>
+
+  <circle cx="488" cy="250" r="72" fill="url(#avatar)"/>
+  <text x="448" y="268" fill="white" font-family="Inter, Arial, sans-serif" font-size="48" font-weight="700">PO</text>
+  <text x="365" y="356" fill="#1F2937" font-family="Inter, Arial, sans-serif" font-size="60" font-weight="600">Poplanton</text>
+
+  <line x1="86" y1="406" x2="898" y2="406" stroke="#E5E7EB" stroke-width="3"/>
+  <line x1="86" y1="520" x2="898" y2="520" stroke="#E5E7EB" stroke-width="3"/>
+
+  <text x="242" y="483" fill="#4B5563" font-family="Inter, Arial, sans-serif" font-size="44">⚙️ Перейти в настройки</text>
+  <text x="272" y="598" fill="#EF4444" font-family="Inter, Arial, sans-serif" font-size="44">🚪 Выйти из аккаунта</text>
+
+  <g>
+    <circle cx="905" cy="170" r="14" fill="#F59E0B"/>
+    <circle cx="953" cy="218" r="10" fill="#60A5FA" opacity="0.7"/>
+    <circle cx="1030" cy="650" r="18" fill="#34D399" opacity="0.7"/>
+  </g>
+
+  <g>
+    <path d="M932 208C903 202 862 214 839 239" stroke="#111827" stroke-width="8" stroke-linecap="round"/>
+    <path d="M837 238L854 230L846 247" stroke="#111827" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+
+  <g>
+    <rect x="854" y="144" width="274" height="116" rx="26" fill="#111827" opacity="0.92"/>
+    <text x="884" y="188" fill="#FFFFFF" font-family="Inter, Arial, sans-serif" font-size="30" font-weight="700">Тап вне карточки</text>
+    <text x="884" y="226" fill="#D1D5DB" font-family="Inter, Arial, sans-serif" font-size="28">закрывает меню и</text>
+    <text x="884" y="262" fill="#D1D5DB" font-family="Inter, Arial, sans-serif" font-size="28">не нажимает фон</text>
+  </g>
+
+  <g>
+    <rect x="784" y="710" width="324" height="106" rx="28" fill="#0F172A" opacity="0.88"/>
+    <text x="828" y="770" fill="#FFFFFF" font-family="Inter, Arial, sans-serif" font-size="34" font-weight="700">Новый UX-флоу</text>
+  </g>
+</svg>

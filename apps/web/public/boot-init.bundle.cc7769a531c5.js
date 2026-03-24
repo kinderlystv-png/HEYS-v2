@@ -307,7 +307,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-init: execute start');
         setNotification,
         skipTabSwitchRef,
     }) {
-        const { useState, useEffect, useCallback } = React;
+        const { useState, useEffect, useCallback, useRef } = React;
         const shortcutsModule = getModule('AppShortcuts');
 
         // Login form state (нужно до gate!)
@@ -348,33 +348,56 @@ window.__heysPerfMark && window.__heysPerfMark('boot-init: execute start');
         const [showClientDropdown, setShowClientDropdown] = useState(false); // Dropdown в шапке
         const [newPhone, setNewPhone] = useState('');
         const [newPin, setNewPin] = useState('');
+        const showClientDropdownRef = useRef(false);
+        const suppressOutsideClickUntilRef = useRef(0);
 
-        // Закрытие dropdown по Escape и по клику вне
         useEffect(() => {
-            if (!showClientDropdown) return;
+            showClientDropdownRef.current = showClientDropdown;
+        }, [showClientDropdown]);
 
-            const handleEscape = (e) => {
-                if (e.key === 'Escape') setShowClientDropdown(false);
+        // Закрытие dropdown по Escape и по клику вне без проброса click вниз
+        useEffect(() => {
+            const isInsideClientDropdown = (target) => {
+                return !!(target && typeof target.closest === 'function' && target.closest('[data-dropdown="client"]'));
             };
 
-            // Capture-phase: перехватываем mousedown/touchstart ДО того,
-            // как они дойдут до любого элемента под дропдауном.
-            // stopPropagation в capture не даёт сгенерироваться click.
-            const handleOutsideDown = (e) => {
-                if (e.target.closest('[data-dropdown="client"]')) return;
+            const handleEscape = (e) => {
+                if (e.key === 'Escape' && showClientDropdownRef.current) {
+                    setShowClientDropdown(false);
+                }
+            };
+
+            const handleOutsidePointerDown = (e) => {
+                if (!showClientDropdownRef.current) return;
+                if (isInsideClientDropdown(e.target)) return;
+
+                suppressOutsideClickUntilRef.current = Date.now() + 500;
+                e.preventDefault();
                 e.stopPropagation();
+                e.stopImmediatePropagation?.();
                 setShowClientDropdown(false);
             };
 
+            const handleSuppressedClick = (e) => {
+                if (Date.now() > suppressOutsideClickUntilRef.current) return;
+                if (isInsideClientDropdown(e.target)) return;
+
+                suppressOutsideClickUntilRef.current = 0;
+                e.preventDefault();
+                e.stopPropagation();
+                e.stopImmediatePropagation?.();
+            };
+
             document.addEventListener('keydown', handleEscape);
-            document.addEventListener('mousedown', handleOutsideDown, true);
-            document.addEventListener('touchstart', handleOutsideDown, true);
+            document.addEventListener('pointerdown', handleOutsidePointerDown, true);
+            document.addEventListener('click', handleSuppressedClick, true);
+
             return () => {
                 document.removeEventListener('keydown', handleEscape);
-                document.removeEventListener('mousedown', handleOutsideDown, true);
-                document.removeEventListener('touchstart', handleOutsideDown, true);
+                document.removeEventListener('pointerdown', handleOutsidePointerDown, true);
+                document.removeEventListener('click', handleSuppressedClick, true);
             };
-        }, [showClientDropdown]);
+        }, [setShowClientDropdown]);
 
         useEffect(() => {
             if (!shortcutsModule.handleShortcuts) return;
