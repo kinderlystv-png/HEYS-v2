@@ -23,6 +23,9 @@ const MAX_RELEASES_KEPT = 10;
 const RELEASE_META_FILE_PATTERNS = [
     /^apps\/web\/public\/whats-new\.json$/,
     /^apps\/web\/public\/whats-new\//,
+    /^scripts\/prepare-release\.mjs$/,
+    /^scripts\/release-prepare-and-commit\.mjs$/,
+    /^\.github\/workflows\/whats-new-guard\.yml$/,
 ];
 
 const TECHNICAL_FILE_PATTERNS = [
