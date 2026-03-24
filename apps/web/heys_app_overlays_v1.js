@@ -32,6 +32,8 @@
             tab,
             AppShell,
             appShellProps,
+            showWhatsNew,
+            dismissWhatsNew,
         } = props;
 
         return React.createElement(
@@ -171,6 +173,10 @@
                     }, '✕')
                 )
             ),
+            // === What's New modal (after update) ===
+            !isConsentBlocking && !isMorningCheckinBlocking && showWhatsNew && HEYS.WhatsNew && React.createElement(HEYS.WhatsNew.WhatsNewModal, {
+                onClose: dismissWhatsNew,
+            }),
             // === FAB редактирования виджетов (глобальный, показывается на ВСЕХ вкладках в режиме редактирования) ===
             widgetsEditMode && tab !== 'widgets' && React.createElement(
                 'div',

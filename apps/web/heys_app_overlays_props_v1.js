@@ -30,6 +30,8 @@
         tab,
         AppShell,
         appShellProps,
+        showWhatsNew,
+        dismissWhatsNew,
     }) {
         return {
             gate,
@@ -57,6 +59,8 @@
             tab,
             AppShell,
             appShellProps,
+            showWhatsNew,
+            dismissWhatsNew,
         };
     };
 })();

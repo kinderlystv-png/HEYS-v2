@@ -1,6 +1,33 @@
 #!/usr/bin/env sh
 . "$(dirname -- "$0")/_/husky.sh"
 
+echo "📝 Проверка What's New для текущего deploy/push..."
+
+if ! pnpm prepare-release:check; then
+  echo ""
+  echo "⚠️ What's New не готов: нужно подтвердить тексты нововведений и/или скриншоты."
+  if [ -t 1 ]; then
+    printf "Открыть интерактивное заполнение сейчас? [Y/n] "
+    read answer
+    case "$answer" in
+      n|N)
+        echo "❌ Push отменён. Сначала подготовь What's New."
+        exit 1
+        ;;
+      *)
+        pnpm prepare-release || exit 1
+        pnpm prepare-release:check || {
+          echo "❌ What's New всё ещё не готов. Push отменён."
+          exit 1
+        }
+        ;;
+    esac
+  else
+    echo "❌ Push отменён. Запусти: pnpm prepare-release"
+    exit 1
+  fi
+fi
+
 echo "🧪 Запуск критических тестов sync/auth/storage/products/models..."
 
 # Запускаем тесты для синхронизации, авторизации, storage layer, защиты продуктов и моделей данных

@@ -280,8 +280,9 @@
                     return;
                 }
 
-                // Если date не указан или совпадает с текущим — перезагружаем
-                if (!updatedDate || updatedDate === date) {
+                // Если date не указан, совпадает с текущим, или текущий есть в batch.dates — перезагружаем
+                const isBatchForCurrentDate = e.detail?.batch && Array.isArray(e.detail?.dates) && e.detail.dates.includes(date);
+                if (!updatedDate || updatedDate === date || isBatchForCurrentDate) {
                     const profNow = getProfile();
                     const key = 'heys_dayv2_' + date;
                     HEYS?.store?.invalidate?.(key);

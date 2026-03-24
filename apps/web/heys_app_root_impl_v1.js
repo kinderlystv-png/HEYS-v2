@@ -329,6 +329,22 @@
                 dismissUpdateToast,
             } = bannerState;
 
+            // --- What's New modal state ---
+            const [showWhatsNew, setShowWhatsNew] = React.useState(false);
+            React.useEffect(() => {
+                // Show What's New after app is ready (not blocked by consent/checkin)
+                // Delay slightly so it appears after the UI settles
+                if (isInitializing) return;
+                const timer = setTimeout(() => {
+                    if (HEYS.WhatsNew && HEYS.WhatsNew.checkUnseen) {
+                        HEYS.WhatsNew.checkUnseen().then(hasUnseen => {
+                            if (hasUnseen) setShowWhatsNew(true);
+                        }).catch(() => {});
+                    }
+                }, 1500);
+                return () => clearTimeout(timer);
+            }, [isInitializing]);
+
             const fallbackUseDatePickerActiveDays = ({ React: HookReact }) => HookReact.useMemo(() => new Map(), []);
             const useDatePickerActiveDays = getStableHook(AppDateState.useDatePickerActiveDays, fallbackUseDatePickerActiveDays);
             const datePickerActiveDays = useDatePickerActiveDays({
@@ -777,6 +793,8 @@
                     tab: params.tab,
                     AppShell: params.AppShell,
                     appShellProps: params.appShellProps,
+                    showWhatsNew: params.showWhatsNew,
+                    dismissWhatsNew: params.dismissWhatsNew,
                 }));
             // useMemo prevents AppOverlays (React.memo) from re-rendering when unrelated state changes
             const overlaysProps = React.useMemo(() => buildOverlaysProps({
@@ -805,11 +823,13 @@
                 tab,
                 AppShell,
                 appShellProps,
+                showWhatsNew,
+                dismissWhatsNew: () => setShowWhatsNew(false),
                 // eslint-disable-next-line react-hooks/exhaustive-deps
             }), [gate, desktopGate, consentGate, isConsentBlocking, isMorningCheckinBlocking, showMorningCheckin,
                 showOfflineBanner, showOnlineBanner, offlineDuration, pendingCount,
                 showPwaBanner, showIosPwaBanner, showUpdateToast, notification,
-                widgetsEditMode, tab, appShellProps]);
+                widgetsEditMode, tab, appShellProps, showWhatsNew]);
             return React.createElement(AppOverlays, overlaysProps);
         }
 

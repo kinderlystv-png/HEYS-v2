@@ -185,7 +185,9 @@
       const handleDayUpdated = (event) => {
         const { date: eventDate, source, data, syncTimestampOnly, updatedAt } = event.detail || {};
 
-        if (eventDate !== date) return; // Not for current date
+        // Batch events carry dates[] array — check if current date is included
+        const isBatchForCurrentDate = event.detail?.batch && Array.isArray(event.detail?.dates) && event.detail.dates.includes(date);
+        if (eventDate !== date && !isBatchForCurrentDate) return; // Not for current date
 
         // v25.8.6.1: Handle timestamp-only sync (prevent fetchDays overwrite)
         if (syncTimestampOnly && updatedAt) {
