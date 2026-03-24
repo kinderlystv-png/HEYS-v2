@@ -37469,6 +37469,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         const [visible, setVisible] = useState(false);
         const backdropRef = useRef(null);
         const onCloseRef = useRef(onClose);
+        const latestVersionRef = useRef(null);
 
         useEffect(() => {
             onCloseRef.current = onClose;
@@ -37481,8 +37482,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                 const unseen = getUnseenReleases(data);
                 if (unseen.length > 0) {
                     setReleases(unseen);
-                    // Mark as seen: use the newest release version
-                    setLastSeenVersion(data.releases[0].version);
+                    // Remember latest version — will be persisted only on explicit close
+                    latestVersionRef.current = data.releases[0].version;
                     // Animate in
                     requestAnimationFrame(() => {
                         if (!cancelled) setVisible(true);
@@ -37524,6 +37525,10 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         }, [releases]);
 
         const handleClose = useCallback(() => {
+            // Mark as seen only on explicit user action (button press)
+            if (latestVersionRef.current) {
+                setLastSeenVersion(latestVersionRef.current);
+            }
             setVisible(false);
             setTimeout(() => {
                 if (onCloseRef.current) onCloseRef.current();
