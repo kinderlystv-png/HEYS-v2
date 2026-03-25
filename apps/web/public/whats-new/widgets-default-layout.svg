@@ -1,0 +1,164 @@
+<svg width="320" height="640" viewBox="0 0 320 640" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="16" y1="16" x2="304" y2="624" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F4F8FF"/>
+      <stop offset="1" stop-color="#FFF4E9"/>
+    </linearGradient>
+    <linearGradient id="topBar" x1="28" y1="20" x2="292" y2="84" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#5D93FF"/>
+      <stop offset="1" stop-color="#78A8FF"/>
+    </linearGradient>
+    <linearGradient id="goalRing" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#FFC533"/>
+      <stop offset="1" stop-color="#FF9E0C"/>
+    </linearGradient>
+    <linearGradient id="blueCard" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#EAF3FF"/>
+      <stop offset="1" stop-color="#D6E8FF"/>
+    </linearGradient>
+    <linearGradient id="mintCard" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#F3FFF8"/>
+      <stop offset="1" stop-color="#D8F8E5"/>
+    </linearGradient>
+    <linearGradient id="peachCard" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#FFF2E4"/>
+      <stop offset="1" stop-color="#FFE3D2"/>
+    </linearGradient>
+    <filter id="shadow" x="0" y="0" width="320" height="640" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#7FA4D8" flood-opacity="0.16"/>
+    </filter>
+  </defs>
+
+  <rect x="0" y="0" width="320" height="640" rx="28" fill="url(#bg)"/>
+
+  <g filter="url(#shadow)">
+    <rect x="20" y="18" width="280" height="82" rx="16" fill="url(#topBar)"/>
+    <rect x="28" y="64" width="264" height="28" rx="10" fill="#FFFFFF" fill-opacity="0.92"/>
+  </g>
+
+  <circle cx="46" cy="37" r="6" fill="#FFCC2F"/>
+  <text x="58" y="41" fill="#FFFFFF" font-family="Inter, Arial, sans-serif" font-size="12" font-weight="700">15</text>
+  <rect x="82" y="27" width="42" height="16" rx="8" fill="#DDE8FF" fill-opacity="0.35"/>
+  <text x="88" y="39" fill="#FFFFFF" font-family="Inter, Arial, sans-serif" font-size="9" font-weight="700">Platinum</text>
+  <rect x="102" y="34" width="126" height="6" rx="3" fill="#BFD2FF" fill-opacity="0.65"/>
+  <rect x="102" y="34" width="36" height="6" rx="3" fill="#FFBE2E"/>
+  <rect x="240" y="24" width="20" height="20" rx="6" fill="#FFFFFF" fill-opacity="0.3"/>
+  <rect x="268" y="24" width="20" height="20" rx="6" fill="#FFF4C1"/>
+
+  <text x="32" y="81" fill="#4D5B73" font-family="Inter, Arial, sans-serif" font-size="11" font-weight="600">Poplanton</text>
+  <rect x="83" y="70" width="18" height="18" rx="6" fill="#D9F6E8"/>
+  <text x="89" y="83" fill="#2FBF72" font-family="Inter, Arial, sans-serif" font-size="10" font-weight="700">✓</text>
+  <rect x="108" y="70" width="18" height="18" rx="4" fill="#EAFFF0" stroke="#2DBB61"/>
+  <rect x="112" y="74" width="10" height="10" rx="2" fill="#26C15E"/>
+  <rect x="132" y="68" width="24" height="22" rx="6" fill="#FFFFFF"/>
+  <text x="140" y="82" fill="#6B778C" font-family="Inter, Arial, sans-serif" font-size="11" font-weight="700">24</text>
+  <rect x="160" y="64" width="28" height="28" rx="8" fill="#29C36A"/>
+  <text x="168" y="81" fill="#FFFFFF" font-family="Inter, Arial, sans-serif" font-size="11" font-weight="800">25</text>
+  <rect x="220" y="69" width="64" height="20" rx="8" fill="#FFFFFF"/>
+  <text x="226" y="82" fill="#6D7889" font-family="Inter, Arial, sans-serif" font-size="10" font-weight="600">Сегодня</text>
+
+  <g filter="url(#shadow)">
+    <rect x="18" y="116" width="128" height="132" rx="20" fill="#FFFFFF"/>
+    <rect x="158" y="116" width="144" height="132" rx="20" fill="url(#peachCard)"/>
+    <rect x="18" y="254" width="194" height="126" rx="20" fill="#FFFFFF"/>
+    <rect x="216" y="254" width="86" height="60" rx="18" fill="#F3E8FF"/>
+    <rect x="216" y="320" width="86" height="60" rx="18" fill="#FFF5EB"/>
+    <rect x="18" y="388" width="126" height="64" rx="18" fill="url(#mintCard)"/>
+    <rect x="150" y="388" width="152" height="64" rx="18" fill="url(#blueCard)"/>
+    <rect x="18" y="458" width="128" height="142" rx="20" fill="#FFFFFF"/>
+    <rect x="150" y="458" width="152" height="142" rx="20" fill="url(#blueCard)"/>
+    <rect x="18" y="604" width="284" height="30" rx="14" fill="#FFFFFF" fill-opacity="0.92"/>
+  </g>
+
+  <circle cx="82" cy="168" r="38" stroke="#EDF0F6" stroke-width="14"/>
+  <path d="M82 130 A38 38 0 1 1 57 196" stroke="url(#goalRing)" stroke-width="14" stroke-linecap="round"/>
+  <text x="61" y="171" fill="#FFB400" font-family="Inter, Arial, sans-serif" font-size="28" font-weight="800">1461</text>
+  <text x="74" y="190" fill="#7F8AA0" font-family="Inter, Arial, sans-serif" font-size="12" font-weight="700">78%</text>
+  <text x="48" y="220" fill="#303A4E" font-family="Inter, Arial, sans-serif" font-size="14" font-weight="700">Цель</text>
+  <text x="40" y="240" fill="#303A4E" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="800">1 863</text>
+  <text x="106" y="220" fill="#303A4E" font-family="Inter, Arial, sans-serif" font-size="14" font-weight="700">Ост.</text>
+  <text x="104" y="240" fill="#303A4E" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="800">402</text>
+
+  <text x="178" y="152" fill="#EB8C34" font-family="Inter, Arial, sans-serif" font-size="17" font-weight="800">Жир накапливается</text>
+  <text x="178" y="177" fill="#2D84FF" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="800">ещё 1ч 1м</text>
+  <path d="M178 208 C190 198 201 201 212 184 C222 168 237 182 248 180 C257 179 264 190 275 192" stroke="#4F8DFF" stroke-width="2.5" stroke-linecap="round"/>
+  <circle cx="248" cy="180" r="2.5" fill="#4F8DFF"/>
+  <path d="M181 225 H280" stroke="#F6DCC5" stroke-width="1.5" stroke-dasharray="3 3"/>
+  <text x="178" y="234" fill="#F29E2E" font-family="Inter, Arial, sans-serif" font-size="10" font-weight="700">Липолиз начнётся в 18:00</text>
+
+  <circle cx="58" cy="287" r="24" fill="#F9FBFF" stroke="#EEF2F9"/>
+  <circle cx="58" cy="287" r="17" stroke="#E1F8EA" stroke-width="6"/>
+  <path d="M58 270 A17 17 0 0 1 69 290" stroke="#F36262" stroke-width="6" stroke-linecap="round"/>
+  <text x="49" y="292" fill="#303A4E" font-family="Inter, Arial, sans-serif" font-size="19" font-weight="800">82</text>
+
+  <circle cx="112" cy="287" r="24" fill="#F9FBFF" stroke="#EEF2F9"/>
+  <circle cx="112" cy="287" r="17" stroke="#FFF3CC" stroke-width="6"/>
+  <path d="M112 270 A17 17 0 0 1 124 292" stroke="#FFC72E" stroke-width="6" stroke-linecap="round"/>
+  <text x="103" y="292" fill="#303A4E" font-family="Inter, Arial, sans-serif" font-size="19" font-weight="800">78</text>
+
+  <circle cx="170" cy="287" r="24" fill="#F9FBFF" stroke="#EEF2F9"/>
+  <circle cx="170" cy="287" r="17" stroke="#E6F8EE" stroke-width="6"/>
+  <path d="M170 270 A17 17 0 1 1 156 297" stroke="#3AC975" stroke-width="6" stroke-linecap="round"/>
+  <text x="158" y="292" fill="#303A4E" font-family="Inter, Arial, sans-serif" font-size="19" font-weight="800">106</text>
+
+  <text x="39" y="336" fill="#303A4E" font-family="Inter, Arial, sans-serif" font-size="13" font-weight="700">Белки</text>
+  <text x="92" y="336" fill="#303A4E" font-family="Inter, Arial, sans-serif" font-size="13" font-weight="700">Жиры</text>
+  <text x="147" y="336" fill="#303A4E" font-family="Inter, Arial, sans-serif" font-size="13" font-weight="700">Углеводы</text>
+  <text x="42" y="350" fill="#7D899E" font-family="Inter, Arial, sans-serif" font-size="10" font-weight="700">140г</text>
+  <text x="97" y="350" fill="#7D899E" font-family="Inter, Arial, sans-serif" font-size="10" font-weight="700">72г</text>
+  <text x="153" y="350" fill="#7D899E" font-family="Inter, Arial, sans-serif" font-size="10" font-weight="700">163г</text>
+  <rect x="44" y="356" width="42" height="18" rx="9" fill="#EAF1FF"/>
+  <rect x="97" y="356" width="42" height="18" rx="9" fill="#EAF1FF"/>
+  <rect x="151" y="356" width="42" height="18" rx="9" fill="#EAF1FF"/>
+  <text x="56" y="369" fill="#3E7DFF" font-family="Inter, Arial, sans-serif" font-size="10" font-weight="800">58%</text>
+  <text x="107" y="369" fill="#3E7DFF" font-family="Inter, Arial, sans-serif" font-size="10" font-weight="800">108%</text>
+  <text x="163" y="369" fill="#3E7DFF" font-family="Inter, Arial, sans-serif" font-size="10" font-weight="800">65%</text>
+
+  <text x="246" y="289" fill="#A36AF8" font-family="Inter, Arial, sans-serif" font-size="12" font-weight="700">☺</text>
+  <text x="236" y="316" fill="#9A58F4" font-family="Inter, Arial, sans-serif" font-size="28" font-weight="800">7.3ч</text>
+  <text x="254" y="343" fill="#F08A2F" font-family="Inter, Arial, sans-serif" font-size="12" font-weight="700">🔥</text>
+  <text x="248" y="370" fill="#FF8A00" font-family="Inter, Arial, sans-serif" font-size="26" font-weight="800">0</text>
+
+  <text x="34" y="422" fill="#26C267" font-family="Inter, Arial, sans-serif" font-size="22" font-weight="800">7</text>
+  <text x="56" y="422" fill="#2AA0FF" font-family="Inter, Arial, sans-serif" font-size="22" font-weight="800">✓</text>
+  <rect x="82" y="397" width="54" height="18" rx="9" fill="#E2F8E7"/>
+  <text x="90" y="410" fill="#33B865" font-family="Inter, Arial, sans-serif" font-size="10" font-weight="800">Хорошо</text>
+  <text x="76" y="438" fill="#9BA6B8" font-family="Inter, Arial, sans-serif" font-size="10" font-weight="700">Выпей воды</text>
+
+  <text x="170" y="420" fill="#4A86FF" font-family="Inter, Arial, sans-serif" font-size="28" font-weight="800">↓ 1.6%</text>
+  <rect x="252" y="396" width="36" height="18" rx="9" fill="#4D8BFF"/>
+  <text x="262" y="409" fill="#FFFFFF" font-family="Inter, Arial, sans-serif" font-size="10" font-weight="800">7 дн.</text>
+  <text x="222" y="432" fill="#90A0B3" font-family="Inter, Arial, sans-serif" font-size="11" font-weight="700">14 дн.</text>
+  <text x="220" y="447" fill="#C0CAD7" font-family="Inter, Arial, sans-serif" font-size="11" font-weight="700">30 дн.</text>
+
+  <path d="M52 514 A44 44 0 1 1 112 559" stroke="#E9EDF4" stroke-width="10" stroke-linecap="round"/>
+  <path d="M52 514 A44 44 0 0 1 80 472" stroke="#36C85D" stroke-width="10" stroke-linecap="round"/>
+  <circle cx="52" cy="514" r="5" fill="#36C85D"/>
+  <text x="77" y="507" fill="#19C35A" font-family="Inter, Arial, sans-serif" font-size="40" font-weight="800">1%</text>
+  <text x="72" y="531" fill="#8FA0B2" font-family="Inter, Arial, sans-serif" font-size="11" font-weight="700">Риск радар</text>
+  <rect x="50" y="548" width="84" height="24" rx="12" fill="#F3FFF7" stroke="#27BF61"/>
+  <text x="66" y="565" fill="#2FBF62" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="800">спокойно</text>
+  <text x="34" y="592" fill="#8C98AA" font-family="Inter, Arial, sans-serif" font-size="11" font-weight="700">✏ 100%</text>
+
+  <text x="210" y="498" fill="#2482FF" font-family="Inter, Arial, sans-serif" font-size="38" font-weight="800">0 мл</text>
+  <rect x="194" y="520" width="70" height="10" rx="5" fill="#E7F1FF"/>
+  <rect x="194" y="548" width="14" height="14" rx="4" fill="#3BCF97"/>
+  <rect x="212" y="548" width="14" height="14" rx="4" fill="#41C8EC"/>
+  <rect x="230" y="548" width="14" height="14" rx="4" fill="#7FD25D"/>
+  <rect x="248" y="548" width="14" height="14" rx="4" fill="#E5C13B"/>
+  <rect x="266" y="548" width="14" height="14" rx="4" fill="#41A8FF"/>
+
+  <circle cx="274" cy="530" r="24" fill="#1FC85C"/>
+  <text x="262" y="538" fill="#FFFFFF" font-family="Inter, Arial, sans-serif" font-size="22" font-weight="800">🍽</text>
+  <circle cx="274" cy="581" r="20" fill="#0E9AD8"/>
+  <text x="263" y="588" fill="#FFFFFF" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="800">🥤</text>
+
+  <circle cx="41" cy="619" r="10" fill="#FFE7A1"/>
+  <text x="38" y="623" fill="#F2A000" font-family="Inter, Arial, sans-serif" font-size="9" font-weight="800">10</text>
+  <text x="76" y="623" fill="#7F8A9C" font-family="Inter, Arial, sans-serif" font-size="10" font-weight="800">ОТЧЁТ</text>
+  <text x="123" y="623" fill="#7F8A9C" font-family="Inter, Arial, sans-serif" font-size="10" font-weight="800">ДНЕВНИК</text>
+  <text x="165" y="623" fill="#7F8A9C" font-family="Inter, Arial, sans-serif" font-size="10" font-weight="800">ВИДЖЕТЫ</text>
+  <text x="221" y="623" fill="#7F8A9C" font-family="Inter, Arial, sans-serif" font-size="10" font-weight="800">INSIGHTЫ</text>
+  <text x="276" y="623" fill="#7F8A9C" font-family="Inter, Arial, sans-serif" font-size="10" font-weight="800">МЕСЯЦ</text>
+  <rect x="126" y="635" width="68" height="3" rx="1.5" fill="#22C76A"/>
+</svg>
