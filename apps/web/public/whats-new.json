@@ -1,8 +1,8 @@
 {
   "releases": [
     {
-      "version": "2026.03.25.PENDING",
-      "buildHash": "PENDING",
+      "version": "2026.03.25.e0678030",
+      "buildHash": "e0678030",
       "date": "2026-03-25",
       "title": "Умная аналитика стала компактнее и удобнее",
       "items": [
