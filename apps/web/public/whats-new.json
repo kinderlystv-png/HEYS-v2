@@ -1,8 +1,8 @@
 {
   "releases": [
     {
-      "version": "2026.03.25.8c8104ff",
-      "buildHash": "8c8104ff",
+      "version": "2026.03.25.33675fba",
+      "buildHash": "33675fba",
       "date": "2026-03-25",
       "title": "Работа без сети стала понятнее",
       "items": [
