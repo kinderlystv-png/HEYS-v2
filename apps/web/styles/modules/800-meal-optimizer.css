@@ -13,6 +13,7 @@
   border: 1px solid #e2e8f0;
   border-radius: 12px;
   overflow: hidden;
+  contain: layout style;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -110,7 +111,7 @@
    PRODUCTS — Кнопки добавления продуктов (под хедером)
    ═══════════════════════════════════════════════════════════════════════════ */
 
-.meal-optimizer > .meal-optimizer__products {
+.meal-optimizer>.meal-optimizer__products {
   padding: 8px 12px;
   background: #f8fafc;
   border-top: 1px solid #e2e8f0;
@@ -319,6 +320,7 @@
     opacity: 0;
     transform: translateY(-8px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -334,9 +336,11 @@
     opacity: 0;
     transform: scale(0.8);
   }
+
   70% {
     transform: scale(1.05);
   }
+
   100% {
     opacity: 1;
     transform: scale(1);
@@ -344,9 +348,17 @@
 }
 
 /* Stagger animation для продуктов */
-.meal-optimizer__product:nth-child(1) { animation-delay: 0ms; }
-.meal-optimizer__product:nth-child(2) { animation-delay: 50ms; }
-.meal-optimizer__product:nth-child(3) { animation-delay: 100ms; }
+.meal-optimizer__product:nth-child(1) {
+  animation-delay: 0ms;
+}
+
+.meal-optimizer__product:nth-child(2) {
+  animation-delay: 50ms;
+}
+
+.meal-optimizer__product:nth-child(3) {
+  animation-delay: 100ms;
+}
 
 /* ═══════════════════════════════════════════════════════════════════════════
    DARK MODE — Тёмная тема (через класс .dark-theme)
@@ -381,7 +393,7 @@
   color: #94a3b8;
 }
 
-.dark-theme .meal-optimizer > .meal-optimizer__products {
+.dark-theme .meal-optimizer>.meal-optimizer__products {
   background: #0f172a;
   border-color: #334155;
 }
@@ -476,34 +488,34 @@
   .meal-optimizer__header {
     padding: 10px 12px;
   }
-  
+
   .meal-optimizer__title {
     font-size: 12px;
   }
-  
+
   .meal-optimizer__item {
     padding: 10px;
   }
-  
+
   .meal-optimizer__item-title {
     font-size: 12px;
   }
-  
+
   .meal-optimizer__item-reason {
     font-size: 11px;
   }
-  
+
   .meal-optimizer__products {
     gap: 8px;
   }
-  
+
   .meal-optimizer__product {
     padding: 6px 12px;
     font-size: 12px;
     /* Touch target ≥44px */
     min-height: 36px;
   }
-  
+
   /* На мобильных dismiss всегда видна */
   .meal-optimizer__item-dismiss {
     opacity: 0.6;

@@ -242,6 +242,7 @@
   overflow: hidden;
   transition: all 0.2s ease;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  contain: layout style;
 }
 
 .dark .metabolic-status-card {
@@ -442,6 +443,7 @@
   border-left: 4px solid var(--border-color, #e2e8f0);
   border-radius: 6px;
   transition: all 0.2s ease;
+  contain: layout style;
 }
 
 .reason-card--nutrition {
@@ -533,6 +535,7 @@
   border: 1px solid var(--border-color, #e2e8f0);
   border-radius: 8px;
   transition: all 0.2s ease;
+  contain: layout style;
 }
 
 .action-card:active {
@@ -2804,6 +2807,7 @@
   margin: 16px 0;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
   border: 1px solid rgba(0, 0, 0, 0.04);
+  contain: layout style;
 }
 
 .dark .adv-analytics-card,
@@ -4382,6 +4386,7 @@
   padding: 16px;
   border: 1px solid rgba(16, 185, 129, 0.2);
   margin-bottom: 16px;
+  contain: layout style;
 }
 
 .dark .whatif-card,
@@ -5003,6 +5008,7 @@
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   border: 1px solid var(--border-color, #e2e8f0);
   transition: transform 0.2s, box-shadow 0.2s;
+  contain: layout style;
 }
 
 .phenotype-card--clickable {
@@ -5556,6 +5562,7 @@
   border: 1px solid var(--border-color, #e2e8f0);
   overflow: hidden;
   transition: box-shadow 0.2s;
+  contain: layout style;
 }
 
 .phenotype-expandable-card:hover {

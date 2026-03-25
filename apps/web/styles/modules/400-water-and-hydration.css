@@ -476,7 +476,7 @@
   height: 3px;
   background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.7), transparent);
   border-radius: 2px;
-  animation: shineMove 2s ease-in-out infinite;
+  opacity: 0.75;
 }
 
 @keyframes shineMove {

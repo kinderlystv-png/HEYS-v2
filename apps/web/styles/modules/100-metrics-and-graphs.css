@@ -163,6 +163,7 @@
   /* чтобы аннотации не обрезались */
   /* NOTE: content-visibility:auto intentionally omitted — chart is visible on stats tab open,
      deferring layout to first viewport entry causes a one-time paint stall on tab switch */
+  contain: layout style paint;
 }
 
 .kcal-sparkline-header {
@@ -1558,17 +1559,19 @@
 /* === 09. TODAY LINE — вертикальная линия на текущий день === */
 .sparkline-today-line {
   pointer-events: none;
-  animation: sparkline-today-pulse 2s ease-in-out infinite;
+  animation: none;
+  opacity: 0.22;
 }
 
 .sparkline-today-label {
   pointer-events: none;
-  animation: sparkline-today-bounce 2s ease-in-out infinite;
+  animation: none;
 }
 
 /* Анимированный треугольник для прогноза на сегодня */
 .sparkline-forecast-arrow {
-  animation: sparkline-forecast-bounce 1.5s ease-in-out infinite;
+  animation: none;
+  opacity: 0.78;
 }
 
 @keyframes sparkline-forecast-bounce {
@@ -2114,8 +2117,8 @@
   stroke-width: 1.5;
   opacity: 0;
   transform: scale(0);
-  animation: dotAppear 0.15s ease-out forwards, pulseGold 2s ease-in-out infinite;
-  animation-delay: var(--delay, 0s), calc(var(--delay, 0s) + 0.2s);
+  animation: dotAppear 0.15s ease-out forwards;
+  animation-delay: var(--delay, 0s);
   filter: drop-shadow(0 0 4px rgba(251, 191, 36, 0.6));
   transform-box: fill-box;
   transform-origin: center center;
@@ -2127,8 +2130,8 @@
   stroke-width: 2;
   opacity: 0;
   transform: scale(0);
-  animation: dotAppear 0.15s ease-out forwards, pulseGoldToday 1.5s ease-in-out infinite;
-  animation-delay: var(--delay, 0s), calc(var(--delay, 0s) + 0.2s);
+  animation: dotAppear 0.15s ease-out forwards;
+  animation-delay: var(--delay, 0s);
   filter: drop-shadow(0 0 6px rgba(251, 191, 36, 0.8));
   transform-box: fill-box;
   transform-origin: center center;
@@ -2143,8 +2146,8 @@
   stroke-width: 1.5;
   opacity: 0;
   transform: scale(0);
-  animation: dotAppear 0.15s ease-out forwards, pulseRefeed 2s ease-in-out infinite;
-  animation-delay: var(--delay, 0s), calc(var(--delay, 0s) + 0.2s);
+  animation: dotAppear 0.15s ease-out forwards;
+  animation-delay: var(--delay, 0s);
   filter: drop-shadow(0 0 4px rgba(249, 115, 22, 0.6));
   transform-box: fill-box;
   transform-origin: center center;
@@ -2156,8 +2159,8 @@
   stroke-width: 2;
   opacity: 0;
   transform: scale(0);
-  animation: dotAppear 0.15s ease-out forwards, pulseRefeedToday 1.5s ease-in-out infinite;
-  animation-delay: var(--delay, 0s), calc(var(--delay, 0s) + 0.2s);
+  animation: dotAppear 0.15s ease-out forwards;
+  animation-delay: var(--delay, 0s);
   filter: drop-shadow(0 0 6px rgba(249, 115, 22, 0.8));
   transform-box: fill-box;
   transform-origin: center center;
@@ -4155,6 +4158,7 @@
   margin-top: 4px;
   overflow: hidden;
   transition: background 0.4s ease, border-color 0.4s ease;
+  contain: layout style paint;
 }
 
 /* Цветовые зоны фона по тренду */
@@ -4555,6 +4559,8 @@
     inset 0 1px 0 rgba(255, 255, 255, 0.72),
     inset 0 -1px 0 rgba(148, 163, 184, 0.12);
   overflow: hidden;
+  contain: layout style;
+  isolation: isolate;
 }
 
 .goal-progress-bar::before {
@@ -5910,7 +5916,12 @@
 
 /* Пульсирующая анимация для критических значений */
 .macro-ring-pulse {
-  animation: macroPulse 1.5s ease-in-out infinite;
+  animation: none;
+}
+
+.macro-ring.macro-ring-pulse:hover,
+.macro-ring.macro-ring-pulse:focus-within {
+  animation: macroPulse 1.2s ease-in-out 1;
 }
 
 @keyframes macroPulse {
@@ -6281,6 +6292,7 @@
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
   display: flex;
   flex-direction: column;
+  contain: layout style paint;
 }
 
 .household-activity-card:hover {
@@ -6477,6 +6489,7 @@
   border-radius: 12px;
   padding: 12px 16px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  contain: layout style paint;
 }
 
 .formula-card-header {
@@ -8033,7 +8046,7 @@
 
 /* Анимации иконок */
 .macro-toast-achievement .macro-toast-icon {
-  animation: fire-flicker 0.5s ease-in-out infinite alternate;
+  animation: fire-flicker 0.6s ease-in-out 2 alternate;
 }
 
 @keyframes fire-flicker {
@@ -8049,7 +8062,7 @@
 }
 
 .macro-toast-warning .macro-toast-icon {
-  animation: warning-pulse 1s ease-in-out infinite;
+  animation: warning-pulse 0.9s ease-in-out 2;
 }
 
 @keyframes warning-pulse {

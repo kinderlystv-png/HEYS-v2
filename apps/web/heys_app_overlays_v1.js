@@ -60,7 +60,9 @@
                 React.createElement('span', { className: 'offline-banner-icon pulse' }, '📡'),
                 React.createElement('div', { className: 'offline-banner-content' },
                     React.createElement('span', { className: 'offline-banner-text' },
-                        'Нет сети — данные сохраняются локально'
+                        HEYS.Day?.__offlineColdStart
+                            ? '⚠️ Нет сети — данные за сегодня не загружены'
+                            : 'Нет сети — работаете с сохранёнными данными'
                     ),
                     // 🆕 Показываем время офлайн если >10 секунд
                     offlineDuration > 10 && React.createElement('span', { className: 'offline-banner-duration' },

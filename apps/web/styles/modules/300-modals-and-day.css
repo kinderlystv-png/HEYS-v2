@@ -760,7 +760,12 @@
 
 .insulin-wave-icon {
   font-size: 20px;
-  animation: floatIcon 2s ease-in-out infinite;
+  animation: none;
+}
+
+.insulin-wave-header:hover .insulin-wave-icon,
+.insulin-wave-header:focus-within .insulin-wave-icon {
+  animation: floatIcon 0.9s ease-in-out 1;
 }
 
 @keyframes floatIcon {

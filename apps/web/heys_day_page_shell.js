@@ -4,6 +4,51 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     const HEYS = global.HEYS = global.HEYS || {};
     const React = global.React;
 
+    // Offline cold-start overlay: warns user when today has no local cache and no network
+    function OfflineNoDataOverlay() {
+        const [dismissed, setDismissed] = React.useState(false);
+
+        React.useEffect(() => {
+            const onOnline = () => setDismissed(true);
+            const onSync = (e) => {
+                if (e && e.detail && e.detail.phaseA) return;
+                setDismissed(true);
+            };
+            window.addEventListener('online', onOnline);
+            window.addEventListener('heysSyncCompleted', onSync);
+            return () => {
+                window.removeEventListener('online', onOnline);
+                window.removeEventListener('heysSyncCompleted', onSync);
+            };
+        }, []);
+
+        if (dismissed) return null;
+
+        const handleRetry = () => {
+            if (navigator.onLine) {
+                const clientId = HEYS.utils?.getCurrentClientId?.() || '';
+                const cloud = HEYS.cloud;
+                if (cloud && clientId && typeof cloud.bootstrapClientSync === 'function') {
+                    cloud.bootstrapClientSync(clientId);
+                }
+            } else {
+                window.location.reload();
+            }
+        };
+
+        return React.createElement('div', { className: 'offline-nodata-overlay' },
+            React.createElement('div', { className: 'offline-nodata-icon' }, '⚠️'),
+            React.createElement('div', { className: 'offline-nodata-title' }, 'Данные за сегодня не загружены'),
+            React.createElement('div', { className: 'offline-nodata-text' },
+                'Подключитесь к интернету для синхронизации'
+            ),
+            React.createElement('button', {
+                className: 'offline-nodata-retry',
+                onClick: handleRetry
+            }, 'Обновить')
+        );
+    }
+
     function renderDayPage(params) {
         const {
             isReadOnly,
@@ -199,6 +244,22 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             M
         } = params || {};
 
+        // Detect offline cold-start: today + offline + sync not done + no local snapshot
+        const today = new Date().toISOString().slice(0, 10);
+        const isToday = date === today;
+        const offlineColdStart = isToday && !navigator.onLine && !HEYS.cloud?.isInitialSyncCompleted?.() && (() => {
+            try {
+                const raw = localStorage.getItem('heys_dayv2_' + date);
+                if (!raw) return true;
+                const v = JSON.parse(raw);
+                return !(v && v.date);
+            } catch (e) { return true; }
+        })();
+
+        // Expose flag for contextual offline banner text in AppOverlays
+        if (!HEYS.Day) HEYS.Day = {};
+        HEYS.Day.__offlineColdStart = offlineColdStart;
+
         return React.createElement(React.Fragment, null,
             React.createElement('div', {
                 className: 'page page-day'
@@ -207,6 +268,9 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                     compact: false,
                     onClick: () => HEYS.Paywall?.showPaywall?.('trial_expired')
                 }),
+
+                // Offline cold-start warning overlay (only for today without local cache)
+                offlineColdStart && React.createElement(OfflineNoDataOverlay),
 
                 (pullProgress > 0 || isRefreshing || refreshStatus !== 'idle') && React.createElement('div', {
                     className: 'pull-indicator'
@@ -316,7 +380,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                 (!isMobile || mobileSubTab === 'stats') && sideBlock,
                 (!isMobile || mobileSubTab === 'stats') && cycleCard,
 
-                isMobile && (mobileSubTab === 'stats' || mobileSubTab === 'diary') && React.createElement('div', {
+                isMobile && (mobileSubTab === 'stats' || mobileSubTab === 'diary') && !offlineColdStart && React.createElement('div', {
                     className: 'fab-group',
                     id: 'tour-fab-buttons'
                 },

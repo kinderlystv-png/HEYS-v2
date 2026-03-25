@@ -1856,6 +1856,10 @@ body.tour-active .ios-pwa-banner {
   border-radius: var(--widget-radius-lg, 20px);
   box-shadow: var(--heys-diary-glass-card-shadow, 0 10px 30px -20px rgba(15, 23, 42, 0.2));
   padding: var(--heys-diary-card-padding, 14px 16px);
+  /* perf: isolate sparkline cards to avoid cross-card reflow */
+  contain: layout style paint;
+  content-visibility: auto;
+  contain-intrinsic-size: auto 120px;
 }
 
 /* === Advice diagnostics modal === */
@@ -5758,6 +5762,10 @@ body.tour-active .ios-pwa-banner {
   padding: var(--heys-diary-card-padding, 14px 16px);
   box-shadow: var(--heys-diary-glass-card-shadow, 0 10px 30px -20px rgba(15, 23, 42, 0.2));
   transition: all 0.2s ease;
+  /* perf: skip layout/paint for off-screen week cards (up to 16 cards × ~50 DOM nodes each) */
+  content-visibility: auto;
+  contain-intrinsic-size: auto 180px;
+  contain: layout style paint;
 }
 
 .monthly-week-card--complete {
@@ -6509,6 +6517,7 @@ body.tour-active .ios-pwa-banner {
   margin-bottom: 8px;
   overflow: hidden;
   transition: box-shadow 0.2s ease;
+  contain: layout style paint;
 }
 
 /* ══════════════════════════════════════════════════════════════

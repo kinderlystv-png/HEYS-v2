@@ -2226,9 +2226,13 @@ td:first-child input {
   padding: 1px 5px;
   border-radius: 8px;
   font-weight: 600;
-  animation: badgeShine 3s ease-in-out infinite;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
   align-self: flex-start;
+}
+
+.game-level-group:hover .game-rank-badge,
+.game-level-group:focus-within .game-rank-badge {
+  animation: badgeShine 1.6s ease-in-out 1;
 }
 
 /* 🚀 PERF R6: replaced filter with opacity — GPU-compositable */
@@ -2279,13 +2283,13 @@ td:first-child input {
   font-weight: 600;
   padding: 2px 4px;
   cursor: pointer;
-  animation: bonusGlow 2s ease-in-out infinite;
   white-space: nowrap;
   flex-shrink: 0;
 }
 
 .game-daily-bonus:hover {
   transform: scale(1.05);
+  animation: bonusGlow 1.2s ease-in-out 1;
 }
 
 .game-daily-bonus.claimed {
@@ -2858,7 +2862,7 @@ td:first-child input {
   font-size: 10px;
   color: #fbbf24;
   font-weight: 600;
-  animation: youPulse 1.5s ease-in-out infinite;
+  opacity: 0.92;
 }
 
 @keyframes youPulse {
@@ -4725,6 +4729,73 @@ body:has(.offline-banner) .wrap {
   padding-top: 40px;
 }
 
+/* ═══════════════════════════════════════════════════════════════════
+   OFFLINE NO-DATA OVERLAY — Day Tab warning when no cached data
+   ═══════════════════════════════════════════════════════════════════ */
+.offline-nodata-overlay {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 24px 20px;
+  margin: 12px 16px 16px;
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  border: 1px solid #f59e0b;
+  border-radius: 16px;
+  text-align: center;
+  box-shadow: 0 2px 12px rgba(245, 158, 11, 0.15);
+  animation: fadeInScale 0.3s ease;
+}
+
+.offline-nodata-icon {
+  font-size: 32px;
+  line-height: 1;
+}
+
+.offline-nodata-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #92400e;
+}
+
+.offline-nodata-text {
+  font-size: 13px;
+  color: #a16207;
+  line-height: 1.4;
+}
+
+.offline-nodata-retry {
+  margin-top: 8px;
+  background: #f59e0b;
+  color: white;
+  border: none;
+  padding: 10px 28px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3);
+}
+
+.offline-nodata-retry:active {
+  transform: scale(0.95);
+  background: #d97706;
+}
+
+@keyframes fadeInScale {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
 .cloud-sync-indicator.error {
   background: rgba(245, 158, 11, 0.15);
   color: #f59e0b;
@@ -5749,8 +5820,8 @@ body:has(.offline-banner) .wrap {
   background: #ffffff;
   transition: left 2s cubic-bezier(0.22, 1, 0.36, 1), transform 0.8s cubic-bezier(0.22, 1, 0.36, 1);
   /* 🚀 PERF R6: removed static box-shadow; animation now uses transform+opacity */
-  animation: crs-pulse 2s infinite;
   will-change: transform, opacity;
+  opacity: 0.95;
 }
 
 /* 🚀 PERF R6: replaced box-shadow with opacity+transform — GPU-compositable */
@@ -9667,7 +9738,11 @@ body:has(.offline-banner) .wrap {
   padding: 2px 8px;
   border-radius: 10px;
   margin-left: 8px;
-  animation: pulse-soft 2s ease-in-out infinite;
+}
+
+.measurements-card--needs-update:hover .measurements-card__badge,
+.measurements-card--needs-update:focus-within .measurements-card__badge {
+  animation: pulse-soft 1.2s ease-in-out 1;
 }
 
 @keyframes pulse-soft {

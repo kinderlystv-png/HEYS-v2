@@ -11812,7 +11812,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                 if (!navigator.onLine) {
                     setCloudStatus('offline');
                     setShowOfflineBanner(true);
-                    setTimeout(() => setShowOfflineBanner(false), 3000);
+                    // Баннер остаётся видимым пока нет сети — скроется через handleOnline()
                 } else {
                     setCloudStatus('idle');
                 }
@@ -17450,7 +17450,9 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                 React.createElement('span', { className: 'offline-banner-icon pulse' }, '📡'),
                 React.createElement('div', { className: 'offline-banner-content' },
                     React.createElement('span', { className: 'offline-banner-text' },
-                        'Нет сети — данные сохраняются локально'
+                        HEYS.Day?.__offlineColdStart
+                            ? '⚠️ Нет сети — данные за сегодня не загружены'
+                            : 'Нет сети — работаете с сохранёнными данными'
                     ),
                     // 🆕 Показываем время офлайн если >10 секунд
                     offlineDuration > 10 && React.createElement('span', { className: 'offline-banner-duration' },

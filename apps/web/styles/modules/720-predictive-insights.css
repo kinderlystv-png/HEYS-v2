@@ -1409,6 +1409,7 @@
   cursor: pointer;
   position: relative;
   background: #ffffff;
+  contain: layout style;
 }
 
 .early-warning-card--success {
@@ -2292,6 +2293,7 @@
   cursor: pointer;
   transition: all 0.2s ease;
   border: 1px solid rgba(0, 0, 0, 0.04);
+  contain: layout style;
 }
 
 [data-theme="dark"] .insights-ring-card {
@@ -2792,6 +2794,7 @@
   padding: 12px 14px;
   cursor: pointer;
   transition: background-color 0.15s ease, transform 0.1s ease;
+  contain: layout style;
 }
 
 .insights-metabolism-card:active {
@@ -3537,6 +3540,7 @@
   padding: 14px 16px;
   margin: 12px 0;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  contain: layout style;
 }
 
 .dark .data-completeness-card {
@@ -4445,6 +4449,7 @@
   border-radius: 16px;
   padding: 16px;
   margin: 16px 0;
+  contain: layout style;
 }
 
 .meal-timing-card__header {
@@ -5163,6 +5168,7 @@
   border-radius: 20px;
   padding: 20px;
   margin-bottom: 16px;
+  contain: layout style;
 }
 
 .status-card__main {

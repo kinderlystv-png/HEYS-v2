@@ -2106,6 +2106,20 @@
   background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
 }
 
+/* Offline no-data overlay dark */
+[data-theme="dark"] .offline-nodata-overlay {
+  background: linear-gradient(135deg, #422006 0%, #451a03 100%);
+  border-color: #92400e;
+}
+
+[data-theme="dark"] .offline-nodata-title {
+  color: #fde68a;
+}
+
+[data-theme="dark"] .offline-nodata-text {
+  color: #fbbf24;
+}
+
 /* Sync toast dark */
 [data-theme="dark"] .sync-toast {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
@@ -2726,6 +2740,7 @@
   border-radius: 12px;
   padding: 12px 14px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  contain: layout style paint;
 }
 
 .sleep-card-header {

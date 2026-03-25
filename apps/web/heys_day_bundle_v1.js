@@ -2429,6 +2429,27 @@
 
             // Fallback: offline / error / new user with zero cloud data
             fallbackTimer = setTimeout(() => {
+                // If offline and settings never loaded — don't show advice (conservative default)
+                if (!navigator.onLine) {
+                    console.info('[HEYS.advice] 🛡️ cold-start fallback (5s): offline — skipping tab_open');
+                    const onOnlineResume = () => {
+                        window.removeEventListener('online', onOnlineResume);
+                        // Wait for Phase B after reconnect, then fire
+                        const onSyncAfterOnline = (e) => {
+                            if (e && e.detail && e.detail.phaseA) return;
+                            window.removeEventListener('heysSyncCompleted', onSyncAfterOnline);
+                            setTimeout(fireTabOpen, 100);
+                        };
+                        window.addEventListener('heysSyncCompleted', onSyncAfterOnline);
+                        // Safety fallback: fire after 8s even if sync doesn't arrive
+                        setTimeout(() => {
+                            window.removeEventListener('heysSyncCompleted', onSyncAfterOnline);
+                            fireTabOpen();
+                        }, 8000);
+                    };
+                    window.addEventListener('online', onOnlineResume);
+                    return;
+                }
                 console.info('[HEYS.advice] 🛡️ cold-start fallback (5s): firing tab_open');
                 fireTabOpen();
             }, 5000);

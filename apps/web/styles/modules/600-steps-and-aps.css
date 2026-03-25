@@ -3648,7 +3648,7 @@ button.meal-quality-badge:active {
 
 /* Лучший приём дня — золотая рамка + пульсация */
 .meal-bar-best {
-  animation: bestMealGlow 2s ease-in-out infinite alternate, bestMealPulse 1.5s ease-in-out infinite;
+  animation: none;
   position: relative;
 }
 
@@ -3659,7 +3659,17 @@ button.meal-quality-badge:active {
   top: 50%;
   transform: translateY(-50%);
   font-size: 12px;
-  animation: starBounce 1s ease-in-out infinite;
+  opacity: 0.92;
+}
+
+.meal-bar-best:hover,
+.meal-bar-best:focus-within {
+  animation: bestMealGlow 1.2s ease-in-out 1, bestMealPulse 1s ease-in-out 1;
+}
+
+.meal-bar-best:hover::before,
+.meal-bar-best:focus-within::before {
+  animation: starBounce 0.8s ease-in-out 1;
 }
 
 @keyframes starBounce {
@@ -3695,11 +3705,21 @@ button.meal-quality-badge:active {
   font-size: 11px;
   color: var(--text-tertiary, #9ca3af);
   padding: 4px 0;
-  animation: hintFade 3s ease-in-out infinite;
+  opacity: 0.82;
 }
 
 .meal-chart-hint span {
-  animation: hintBounce 1.5s ease-in-out infinite;
+  animation: none;
+}
+
+.meal-chart-hint:hover,
+.meal-chart-hint:focus-within {
+  animation: hintFade 1.2s ease-in-out 1;
+}
+
+.meal-chart-hint:hover span,
+.meal-chart-hint:focus-within span {
+  animation: hintBounce 0.8s ease-in-out 1;
 }
 
 @keyframes hintFade {

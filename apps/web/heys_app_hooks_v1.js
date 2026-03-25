@@ -606,7 +606,7 @@
                 if (!navigator.onLine) {
                     setCloudStatus('offline');
                     setShowOfflineBanner(true);
-                    setTimeout(() => setShowOfflineBanner(false), 3000);
+                    // Баннер остаётся видимым пока нет сети — скроется через handleOnline()
                 } else {
                     setCloudStatus('idle');
                 }

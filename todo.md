@@ -1,41 +1,188 @@
 # HEYS — Активные задачи
 
-> Обновлено: 2026-01-24
+> Обновлено: 2026-03-25
 
 ---
 
-## ✅ Фаза 0: PWA Recovery — ЗАВЕРШЕНО
+## 🔥 Приоритет: Runtime / Scroll Performance — next iteration
 
-> **Статус**: ✅ Все задачи выполнены (2026-01-21) **Детали**: Service Worker с
-> auto-recovery, Recovery UI, Timeout watchdog
+> **Статус**: это уже не CSS cleanup, а runtime-pass по самым тяжёлым
+> пользовательским сценариям.
+>
+> **Цель этапа:** сделать приложение заметно стабильнее при скролле,
+> переключении табов и открытии тяжёлых экранов **без визуального редизайна** и
+> без больших архитектурных переписываний.
+>
+> **Главный принцип:** сначала только **безопасные локальные изменения**,
+> которые не меняют пользовательскую логику и не трогают хрупкие init-path'ы.
+> Более рискованные техники — только если low-risk слой не даст достаточного
+> эффекта.
+
+### Что уже оптимизировано (не дублировать)
+
+- **deferredSlot** — multi-state skeleton (wait_postboot → wait_delay 260ms →
+  show_skeleton → ready) в Day diary
+- **LazyMount + IntersectionObserver** — below-fold diary карточки уже не
+  монтируются до скролла
+- **React.startTransition** — tab switch, date change, meal recalc уже обёрнуты
+- **requestIdleCallback** — фоновая загрузка исторических дней (3 места:
+  day_core, day_utils, gamification)
+- **Event deduplication** — 100ms окно для sync-событий, `isSyncingRef`
+  блокирует concurrent updates
+- **Module readiness checks** — Cascade, MealRec, EWS обёрнуты в retry-механизм
+  с skeleton
+- **Lazy Chart.js** — Chart.js в Reports загружается on-demand при открытии
+  модалки
+- **dayCache/weekCache** — 200-day / 20-week кэш в Reports с invalidation hooks
+
+### 🚫 Священные зоны — не трогать без отдельного анализа
+
+- `window.__heysGatedRender` — animation skip при fast render; изменение →
+  визуальный регресс
+- **Phase A sync gate** (`heys_app_tabs_v1.js` ~строки 48-80) — adaptive
+  progressive reveal
+- `TAB_SKELETON_DELAY_MS = 260` — выверенный anti-flicker delay
+- **Widget drag/drop pointer events** — уже оптимизированы, критичны для mobile
+- `window.__heysLoadingHeartbeat` — watchdog freeze detection
+- **deferredSlot skeleton-ноды** — живут intentionally, не удалять как «лишний
+  DOM»
+- **Bootstrap retry loop** (100ms × 50) — менять только backoff, не саму логику
+  ожидания
+
+### Как идти безопасно
+
+- [ ] Начинать с изменений, которые уменьшают лишнюю работу, но не меняют
+      поведение экранов
+- [ ] Делать короткие итерации: одна зона → одна проверка → потом следующая зона
+- [ ] Не объединять в один проход mount-оптимизации, tab-switch оптимизации и
+      крупную чистку DOM
+- [ ] После каждого шага проверять, что не сломались init, hydration, overlays,
+      charts и tab navigation
+- [ ] Перед правкой любого файла — свериться с «Уже оптимизировано» и «Священные
+      зоны»
+
+### Порядок работ по риску
+
+- [ ] **Итерация A — low risk / safe-first** (конкретные easy wins)
+  - `useMemo` для фильтрации advice list в `heys_day_diary_section.js` (нулевой
+    риск)
+  - exponential backoff в EWS badge polling: 50ms → 100 → 200 → 500
+    (`heys_app_shell_v1.js`)
+  - кэширование `prodIndex` между вызовами `getCachedDay()` в
+    `heys_reports_tab_impl_v1.js`
+  - `useMemo` для 14-day metabolism lookup в `insights/pi_ui_dashboard.js`
+  - exponential backoff в bootstrap polling после 1s (`heys_bootstrap_v1.js`)
+  - preload Chart.js при видимости Reports таба вместо по клику
+  - `slice(0, 50)` + «показать ещё» для поиска продуктов в
+    `heys_add_product_step_v1.js`
+  - локальная чистка offscreen DOM — только ноды, не связанные с deferredSlot
+    skeleton'ами
+- [ ] **Итерация B — medium risk / только если A мало помогла**
+  - отмена лишних повторных init/update при повторном входе на таб (⚠️ event
+    dedup 100ms — деликатно)
+  - точечная переработка lifecycle у Chart.js графиков (destroy/re-init path)
+  - дробление тяжёлых синхронных tab-open цепочек
+  - incremental cache invalidation в Reports вместо полного сброса
+  - lazy-compute Insights pattern analysis: первые 3 дня сразу, остальное на
+    scroll
+- [ ] **Итерация C — high risk / только если реально нужно**
+  - partial virtualization / windowing (react-window или аналог)
+  - более глубокая перестройка структуры тяжёлых экранов
+  - любые изменения, которые затрагивают порядок mount/init, Phase A gate или
+    UX-восприятие
+
+### Что именно оптимизировать (привязано к итерациям)
+
+- [ ] **A1. Мемоизация hot-path вычислений**
+  - advice list filtering, prodIndex rebuild, metabolism 14-day lookup
+  - чисто функциональные правки: `useMemo` / кэш-переменные
+- [ ] **A2. Polling/retry backoff**
+  - EWS badge: 50ms flat → exponential (50 → 100 → 200 → 500)
+  - Bootstrap: linear 100ms → exponential после 1s
+- [ ] **A3. Ленивая загрузка ресурсов**
+  - Chart.js: preload при видимости Reports, не при клике
+  - Поиск продуктов: `slice(0, 50)` + кнопка «показать ещё» — изолированный
+    компонент, zero risk
+- [ ] **B1. Tab-switch lifecycle** _(только после A)_
+  - Разобрать init/update цепочки на каждый tab open
+  - Убрать синхронные тяжёлые пачки из критического пути — осторожно с event
+    dedup
+- [ ] **B2. Chart.js / SVG lifecycle** _(только после A)_
+  - destroy/re-init path у Cascade, Insulin Wave, Reports chart modals
+  - incremental cache invalidation в Reports
+- [ ] **C1. Виртуализация** _(только если A+B мало помогли)_
+  - Только для реально длинных списков (продукты, meal items)
+  - Не трогать Day diary — deferredSlot + LazyMount уже покрывают
+- [ ] **Финальная проверка тяжёлых сценариев** _(после каждой итерации)_
+  - scroll вверх/вниз на проблемных табах
+  - быстрые переключения между табами
+  - повторные заходы на один и тот же экран
+
+### Ограничения этого этапа
+
+- [ ] Не менять визуальный дизайн и привычные UX-паттерны без прямой
+      необходимости
+- [ ] Не тащить большой рефактор «на будущее», если можно решить локально
+- [ ] Не ухудшить hydration/init/runtime-стабильность ради цифр в отрыве от
+      реального UX
+- [ ] Не трогать спорные high-risk приёмы, пока не исчерпан safe-first слой
+
+### Стоп-условия
+
+- [ ] Если изменение затрагивает boot/init path, overlay/modal flow или
+      критичные tab-open сценарии — сначала отдельно перепроверить риск, потом
+      внедрять
+- [ ] Если после оптимизации поведение стало менее предсказуемым, откатить идею
+      и выбрать более локальный вариант
+- [ ] Если улучшение видно только в synthetic-метрике, но не ощущается в
+      реальном UX — не усложнять код ради этого
+- [ ] Если для выигрыша нужен большой рефактор, вынести его в отдельную задачу,
+      а не протаскивать в этот safe pass
+- [ ] Если после правки skeleton мигает, появляется на мгновение или не
+      появляется когда должен — откат; skeleton timing (deferredSlot, 260ms) —
+      хрупкий баланс
+
+### Когда считать этап успешным
+
+- [ ] На проблемных экранах заметно меньше микрофризов при скролле
+- [ ] Переключение табов ощущается легче и без тяжёлых всплесков
+- [ ] Нет regressions по UI, init flow и интерактивности
+- [ ] Изменения локальные, понятные и проверяемые по runtime-поведению
 
 ---
 
-## ✅ Фаза 1: Database Resilience — ЗАВЕРШЕНО
+## 📊 Мониторинг и алерты — optional hardening
 
-> **Статус**: ✅ Merged в main (PR #30, 2026-01-24)
+> **Статус**: базовый контур уже достаточный для текущего масштаба — есть
+> `health-check.sh`, GitHub Actions health monitor, Telegram alerts и
+> maintenance-задачи. Ниже — не must-have, а усиление контура при росте
+> нагрузки/рисков.
 
-## 🟡 UI: Унификация таблиц продуктов — 2–4 часа
+- [ ] **2.2** Security burst alerting в maintenance _(low priority)_
+  - `checkSecurityAlerts()`: >10 событий/час → Telegram alert
+  - Имеет смысл добавлять, если реально есть риск brute-force/abuse или нужен
+    отдельный security-signal вне обычных health checks
+  - **Файл**: `yandex-cloud-functions/heys-maintenance/index.js`
+- [ ] **2.3** External uptime monitor _(low priority)_
+  - UptimeRobot / аналог как независимый внешний монитор `/health`
+  - Полезно, если нужен alerting вне GitHub/Yandex контура; не критично при
+    текущем наборе проверок
 
-> **Цель**: единый вывод личной и общей базы продуктов.
+---
 
-- [ ] **PROMPT**: `docs/tasks/2026-01-27-unify-product-tables.md`
+## 📋 Operations & DR — follow-up
 
-## 🔐 Фаза 3: Безопасность — 3 часа
+> **Статус**: DR runbook уже сделан; trial queue полностью реализована. Остаток
+> — не срочный, но один практический DR smoke-test со временем всё же стоит
+> сделать.
 
-> **Цель**: Audit logging для 152-ФЗ + шифрование health_data.
-
-- [ ] **PROMPT**: `docs/tasks/2026-01-24-security-audit-log-encryption.md`
-
-- [ ] **3.1** Создать audit_log таблицу
-  - Триггеры на `clients`, `client_kv_store`
-  - Логирование INSERT/UPDATE/DELETE с user_id, ip, timestamp
-  - **Файл**: `database/2026-01-XX_audit_log.sql`
-
-- [ ] **3.2** Шифрование health_data (Phase 2)
-  - Колонка `v_encrypted BYTEA` в `client_kv_store`
-  - Функции `encrypt_kv()` / `decrypt_kv()` с AES-256
-  - Ключ в Yandex KMS / Lockbox
+- [ ] **4.3** Recovery drill / backup restore smoke-test _(medium priority, not
+      urgent)_
+  - Полный weekly/staging-процесс сейчас выглядит избыточным: отдельного staging
+    нет
+  - Практичнее заменить на редкий drill: restore в отдельный cluster / isolated
+    env по runbook
+  - Рекомендуемый ритм: после крупных infra-изменений или раз в квартал
 
 ---
 
@@ -45,94 +192,14 @@
 
 **Статус**: ⏸️ Ожидает решения по юридической схеме
 
-**Блокеры (НЕ технические!):**
-
 - [ ] Решение по юр.схеме: ИП (ПСН+УСН) или только УСН
-- [ ] ОКВЭД: 63.11 (SaaS), 62.01, 62.09, 63.99.1 — НЕ медицина
+- [ ] ОКВЭД: 63.11 (SaaS), 62.01, 62.09, 63.99.1 — не медицина
 - [ ] Регистрация в ЮKassa (shopId + secretKey)
-- [ ] Фискализация: облачная касса + ОФД или "Чеки от ЮKassa"
-
-**Код готов!** Cloud Function `heys-api-payments` + Frontend интеграция.
-
-**После разблокировки (~2-4 часа):**
-
-- [ ] Деплой функции с секретами
-- [ ] Webhook в ЮKassa
-- [ ] Тестирование в sandbox
-- [ ] Активация подписки при `payment_succeeded`
+- [ ] Фискализация: облачная касса + ОФД или «Чеки от ЮKassa»
+- [ ] После разблокировки: деплой `heys-api-payments`, переключение API gateway
+      со stub на real function, webhook, sandbox-тест, активация подписки при
+      `payment_succeeded`
 
 ---
 
----
-
-## 📊 Фаза 2: Мониторинг и Алерты — 3 часа
-
-> **Проблема**: Система "слепа" — нет алертов о падениях и ошибках. **Цель**:
-> Глубокий health check + UptimeRobot + Telegram алерты.
-
-- [x] **2.1** Расширить health check
-  - ✅ `yandex-cloud-functions/shared/health-check.js`
-  - ✅ `yandex-cloud-functions/shared/pool-metrics.js`
-
-- [ ] **2.2** Security alerting в maintenance
-  - `checkSecurityAlerts()`: >10 событий/час → Telegram alert
-  - **Файл**: `yandex-cloud-functions/heys-maintenance/index.js`
-
-- [ ] **2.3** UptimeRobot для доступности
-  - Monitoring `/health` каждые 5 минут
-  - Alert в Telegram при downtime
-
----
-
-## 📋 Фаза 4: Operations & DR — 4 часа
-
-> **Цель**: Готовность к инцидентам и масштабированию.
-
-- [x] **4.1** Создать Disaster Recovery Runbook
-  - ✅ `DISASTER_RECOVERY_RUNBOOK.md` (493 строки)
-
-- [ ] **4.2** Feature flag для ограничения регистраций
-  - `MAX_ACTIVE_TRIALS` check в `start_trial_by_session`
-  - Если >N активных триалов → "очередь заполнена"
-
-- [ ] **4.3** Backup test procedure
-  - Документировать процесс восстановления
-  - Тестировать еженедельно на staging
-
----
-
-## 🟢 Сегодня выполнено (2026-01-24)
-
-### Storage Layer Refactoring
-
-- [x] Unified storage helpers (`readStoredValue`/`writeStoredValue`) в 27
-      модулях
-- [x] Hidden products feature в `heys_storage_layer_v1.js`
-- [x] Fallback lookup для products across clientId scopes
-
-### Gamification UI
-
-- [x] Weekly challenge card с progress indicators
-- [x] Achievement details popup со stories
-- [x] Rank ceremony modal с Lottie анимацией
-- [x] Dark mode support
-
-### Advice System
-
-- [x] Storage helpers в advice модули
-- [x] Improved advice persistence
-
-### Day Modules
-
-- [x] Recovery logging с throttling
-- [x] Storage helpers в day modules
-
-### Code Quality
-
-- [x] JSDoc improvements для storage modules
-- [x] Code formatting (IIFE spacing)
-- [x] CSS styles для steps/APS
-
----
-
-_Выполненные задачи → [done.md](./done.md)_ TODOEOF wc -l todo.md
+_Архив выполненного — в `done.md`._
