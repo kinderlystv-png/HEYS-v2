@@ -338,9 +338,57 @@
         // �🔒 Cooldown после первого sync — не показываем "syncing" сразу после загрузки
         const initialSyncCompletedAtRef = useRef(0);
         const INITIAL_SYNC_COOLDOWN_MS = 3000; // 3 секунды после первого sync не показываем syncing
+        // Refs для state-значений, читаемых из event handlers — стабилизирует deps эффекта
+        const cloudStatusRef = useRef(cloudStatus);
+        const pendingCountRef = useRef(pendingCount);
+        const syncProgressTotalRef = useRef(0);
+        cloudStatusRef.current = cloudStatus;
+        pendingCountRef.current = pendingCount;
+        syncProgressTotalRef.current = syncProgress.total;
 
         const MIN_SYNCING_DURATION = 1500;
         const SYNCING_DELAY = 400;
+
+        const getRuntimePendingCount = useCallback(() => {
+            try {
+                return window.HEYS?.cloud?.getPendingCount?.() || 0;
+            } catch (e) {
+                return 0;
+            }
+        }, []);
+
+        const isRuntimeUploadInProgress = useCallback(() => {
+            try {
+                return !!window.HEYS?.cloud?.isUploadInProgress?.();
+            } catch (e) {
+                return false;
+            }
+        }, []);
+
+        const startSyncingState = useCallback(() => {
+            if (!navigator.onLine) {
+                setCloudStatus('offline');
+                return;
+            }
+
+            if (!syncingStartRef.current) {
+                syncingStartRef.current = Date.now();
+            }
+
+            if (syncedTimeoutRef.current) {
+                clearTimeout(syncedTimeoutRef.current);
+                syncedTimeoutRef.current = null;
+            }
+
+            if (!syncingDelayTimeoutRef.current) {
+                syncingDelayTimeoutRef.current = setTimeout(() => {
+                    syncingDelayTimeoutRef.current = null;
+                    if (syncingStartRef.current && !syncedTimeoutRef.current) {
+                        setCloudStatus('syncing');
+                    }
+                }, SYNCING_DELAY);
+            }
+        }, []);
 
         const showSyncedWithMinDuration = useCallback(() => {
             if (syncedTimeoutRef.current) return;
@@ -349,7 +397,28 @@
             const remaining = Math.max(0, MIN_SYNCING_DURATION - elapsed);
 
             syncedTimeoutRef.current = setTimeout(() => {
+                const runtimePending = getRuntimePendingCount();
+                const uploadInProgress = isRuntimeUploadInProgress();
+
                 syncedTimeoutRef.current = null;
+
+                if (!navigator.onLine) {
+                    syncingStartRef.current = null;
+                    setCloudStatus('offline');
+                    return;
+                }
+
+                if (uploadInProgress) {
+                    startSyncingState();
+                    return;
+                }
+
+                if (runtimePending > 0) {
+                    syncingStartRef.current = null;
+                    setCloudStatus('queued');
+                    return;
+                }
+
                 syncingStartRef.current = null;
                 setCloudStatus('synced');
                 // Звук синхронизации убран — теперь звуки только в геймификации
@@ -359,17 +428,21 @@
                     setCloudStatus('idle');
                 }, 2000);
             }, remaining);
-        }, []);
+        }, [getRuntimePendingCount, isRuntimeUploadInProgress, startSyncingState]);
 
         useEffect(() => {
-            const handleSyncComplete = () => {
+            const handleSyncComplete = (e) => {
+                if (e?.type === 'heysSyncCompleted' && e?.detail?.phaseA) {
+                    return;
+                }
+
                 // ⚡️ Первый heysSyncCompleted после инициализации не должен триггерить UI
                 // если не было фактических локальных изменений/отложенных синков — иначе мерцание
                 const hadPendingWork =
                     syncingStartRef.current ||
                     pendingChangesRef.current ||
-                    (syncProgress.total > 0) ||
-                    (pendingCount > 0);
+                    (syncProgressTotalRef.current > 0) ||
+                    (pendingCountRef.current > 0);
                 if (!hadPendingWork) {
                     // 🔒 Запоминаем время первого sync для cooldown
                     if (!initialSyncCompletedAtRef.current) {
@@ -377,6 +450,9 @@
                     }
                     return;
                 }
+
+                const runtimePending = getRuntimePendingCount();
+                const uploadInProgress = isRuntimeUploadInProgress();
 
                 if (syncingDelayTimeoutRef.current) {
                     clearTimeout(syncingDelayTimeoutRef.current);
@@ -386,10 +462,26 @@
                     clearTimeout(cloudSyncTimeoutRef.current);
                     cloudSyncTimeoutRef.current = null;
                 }
-                pendingChangesRef.current = false;
-                if (navigator.onLine) {
-                    showSyncedWithMinDuration();
+
+                if (!navigator.onLine) {
+                    setCloudStatus('offline');
+                    return;
                 }
+
+                if (uploadInProgress) {
+                    startSyncingState();
+                    return;
+                }
+
+                if (runtimePending > 0) {
+                    pendingChangesRef.current = true;
+                    syncingStartRef.current = null;
+                    setCloudStatus('queued');
+                    return;
+                }
+
+                pendingChangesRef.current = false;
+                showSyncedWithMinDuration();
             };
 
             const handleDataSaved = () => {
@@ -419,21 +511,29 @@
                     cloudSyncTimeoutRef.current = null;
                 }
 
-                if (!syncingStartRef.current) {
-                    syncingStartRef.current = Date.now();
-
-                    if (!syncingDelayTimeoutRef.current) {
-                        syncingDelayTimeoutRef.current = setTimeout(() => {
-                            syncingDelayTimeoutRef.current = null;
-                            if (syncingStartRef.current && !syncedTimeoutRef.current) {
-                                setCloudStatus('syncing');
-                            }
-                        }, SYNCING_DELAY);
-                    }
-                }
+                startSyncingState();
 
                 if (!cloudSyncTimeoutRef.current) {
                     cloudSyncTimeoutRef.current = setTimeout(() => {
+                        const runtimePending = getRuntimePendingCount();
+                        const uploadInProgress = isRuntimeUploadInProgress();
+
+                        if (!navigator.onLine) {
+                            setCloudStatus('offline');
+                            return;
+                        }
+
+                        if (uploadInProgress) {
+                            startSyncingState();
+                            return;
+                        }
+
+                        if (runtimePending > 0) {
+                            syncingStartRef.current = null;
+                            setCloudStatus('queued');
+                            return;
+                        }
+
                         pendingChangesRef.current = false;
                         showSyncedWithMinDuration();
                     }, 5000);
@@ -443,22 +543,38 @@
             const handlePendingChange = (e) => {
                 const count = e.detail?.count || 0;
                 const details = e.detail?.details || { days: 0, products: 0, profile: 0, other: 0 };
+                const uploadInProgress = isRuntimeUploadInProgress();
                 setPendingCount(count);
                 setPendingDetails(details);
 
-                if (syncProgress.total > 0 && count < syncProgress.total) {
+                if (syncProgressTotalRef.current > 0 && count < syncProgressTotalRef.current) {
                     setSyncProgress(prev => ({ ...prev, synced: prev.total - count }));
                 }
 
                 if (count > 0 && !navigator.onLine) {
+                    pendingChangesRef.current = true;
                     setCloudStatus('offline');
+                } else if (count > 0 && navigator.onLine) {
+                    pendingChangesRef.current = true;
+                    if (uploadInProgress || syncProgressTotalRef.current > 0 || syncingStartRef.current) {
+                        startSyncingState();
+                    } else {
+                        syncingStartRef.current = null;
+                        setCloudStatus('queued');
+                    }
+                } else if (count === 0 && !uploadInProgress && !syncingStartRef.current && navigator.onLine && cloudStatusRef.current !== 'synced') {
+                    setCloudStatus('idle');
                 }
             };
 
             const handleSyncProgress = (e) => {
-                const { synced, total } = e.detail || {};
-                if (typeof synced === 'number' && typeof total === 'number') {
-                    setSyncProgress({ synced, total });
+                const { synced, done, total } = e.detail || {};
+                const completed = typeof done === 'number' ? done : synced;
+                if (typeof completed === 'number' && typeof total === 'number') {
+                    setSyncProgress({ synced: completed, total });
+                    if (navigator.onLine && total > 0) {
+                        startSyncingState();
+                    }
                 }
             };
 
@@ -506,7 +622,7 @@
                             retryIntervalRef.current = null;
                             if (navigator.onLine && window.HEYS?.cloud?.retrySync) {
                                 window.HEYS.cloud.retrySync();
-                                setCloudStatus('syncing');
+                                startSyncingState();
                             }
                             return 0;
                         }
@@ -518,11 +634,39 @@
             const handleNetworkRestored = (e) => {
                 const count = e.detail?.pendingCount || 0;
                 if (count > 0) {
-                    if (!syncingStartRef.current) {
-                        syncingStartRef.current = Date.now();
-                    }
-                    setCloudStatus('syncing');
+                    pendingChangesRef.current = true;
+                    startSyncingState();
                 }
+            };
+
+            const handleQueueDrained = () => {
+                setPendingCount(0);
+                setPendingDetails({ days: 0, products: 0, profile: 0, other: 0 });
+                pendingChangesRef.current = false;
+
+                if (!navigator.onLine) {
+                    setCloudStatus('offline');
+                    return;
+                }
+
+                showSyncedWithMinDuration();
+            };
+
+            const handleSyncRestored = () => {
+                const runtimePending = getRuntimePendingCount();
+                const uploadInProgress = isRuntimeUploadInProgress();
+
+                if (!navigator.onLine) {
+                    setCloudStatus('offline');
+                    return;
+                }
+
+                if (uploadInProgress || runtimePending > 0) {
+                    startSyncingState();
+                    return;
+                }
+
+                showSyncedWithMinDuration();
             };
 
             const handleOnline = () => {
@@ -545,16 +689,17 @@
 
                 setTimeout(() => setShowOnlineBanner(false), 2000);
 
-                if (pendingChangesRef.current || pendingCount > 0) {
-                    if (!syncingStartRef.current) {
-                        syncingStartRef.current = Date.now();
+                const runtimePending = getRuntimePendingCount();
+                const uploadInProgress = isRuntimeUploadInProgress();
+
+                if (pendingChangesRef.current || pendingCountRef.current > 0 || runtimePending > 0 || uploadInProgress) {
+                    pendingChangesRef.current = true;
+                    if (uploadInProgress || syncProgressTotalRef.current > 0) {
+                        startSyncingState();
+                    } else {
+                        syncingStartRef.current = null;
+                        setCloudStatus('queued');
                     }
-                    setCloudStatus('syncing');
-                    if (cloudSyncTimeoutRef.current) clearTimeout(cloudSyncTimeoutRef.current);
-                    cloudSyncTimeoutRef.current = setTimeout(() => {
-                        pendingChangesRef.current = false;
-                        showSyncedWithMinDuration();
-                    }, 2000);
                 } else {
                     setCloudStatus('idle');
                 }
@@ -598,6 +743,8 @@
             window.addEventListener('heys:network-restored', handleNetworkRestored);
             window.addEventListener('heys:sync-progress', handleSyncProgress);
             window.addEventListener('heys:sync-error', handleSyncError);
+            window.addEventListener('heys:queue-drained', handleQueueDrained);
+            window.addEventListener('heys:sync-restored', handleSyncRestored);
             window.addEventListener('online', handleOnline);
             window.addEventListener('offline', handleOffline);
 
@@ -627,16 +774,20 @@
                 window.removeEventListener('heys:network-restored', handleNetworkRestored);
                 window.removeEventListener('heys:sync-progress', handleSyncProgress);
                 window.removeEventListener('heys:sync-error', handleSyncError);
+                window.removeEventListener('heys:queue-drained', handleQueueDrained);
+                window.removeEventListener('heys:sync-restored', handleSyncRestored);
                 window.removeEventListener('online', handleOnline);
                 window.removeEventListener('offline', handleOffline);
                 if (cloudSyncTimeoutRef.current) clearTimeout(cloudSyncTimeoutRef.current);
+                if (syncedTimeoutRef.current) clearTimeout(syncedTimeoutRef.current);
+                if (syncingDelayTimeoutRef.current) clearTimeout(syncingDelayTimeoutRef.current);
                 if (retryIntervalRef.current) clearInterval(retryIntervalRef.current);
                 // 🆕 Очистка таймера офлайн
                 if (offlineDurationIntervalRef.current) clearInterval(offlineDurationIntervalRef.current);
                 // 🔥 Очистка таймера auth error debounce
                 if (authErrorTimeoutRef.current) clearTimeout(authErrorTimeoutRef.current);
             };
-        }, [pendingCount, showSyncedWithMinDuration, syncProgress.total]);
+        }, [getRuntimePendingCount, isRuntimeUploadInProgress, showSyncedWithMinDuration, startSyncingState]);
 
         const handleRetrySync = useCallback(() => {
             if (window.HEYS?.cloud?.retrySync) {

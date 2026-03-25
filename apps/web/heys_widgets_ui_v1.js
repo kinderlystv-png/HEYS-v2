@@ -5606,9 +5606,25 @@
 
   // === Main WidgetsTab Component ===
   function WidgetsTab({ selectedDate, clientId, setTab, setSelectedDate }) {
+    const HOME_TAB_OPTIONS = useMemo(() => ([
+      { key: 'widgets', label: 'Виджеты', icon: '🧩' },
+      { key: 'stats', label: 'Отчёты', icon: '📊' },
+      { key: 'diary', label: 'Дневник', icon: '🍽️' },
+      { key: 'insights', label: 'Советы', icon: '💡' },
+      { key: 'month', label: 'Месяц', icon: '🗓️' }
+    ]), []);
+    const VALID_HOME_TABS = useMemo(() => HOME_TAB_OPTIONS.map((option) => option.key), [HOME_TAB_OPTIONS]);
+    const getCurrentDefaultTab = useCallback(() => {
+      const defaultTabFromApp = window.HEYS?.App?.getDefaultTab?.();
+      if (VALID_HOME_TABS.includes(defaultTabFromApp)) return defaultTabFromApp;
+
+      const profile = HEYS.utils?.lsGet?.('heys_profile', {}) || {};
+      return VALID_HOME_TABS.includes(profile?.defaultTab) ? profile.defaultTab : 'diary';
+    }, [VALID_HOME_TABS]);
     const [widgets, setWidgets] = useState([]);
     const [isLayoutHydrated, setIsLayoutHydrated] = useState(false);
     const [isEditMode, setIsEditMode] = useState(false);
+    const [defaultHomeTab, setDefaultHomeTab] = useState(() => getCurrentDefaultTab());
     const [catalogOpen, setCatalogOpen] = useState(false);
     const [settingsWidget, setSettingsWidget] = useState(null);
     const [relapseDetails, setRelapseDetails] = useState(null);
@@ -5702,6 +5718,7 @@
       // Get initial widgets
       setWidgets(HEYS.Widgets.state?.getWidgets?.() || []);
       setIsEditMode(HEYS.Widgets.state?.isEditMode?.() || false);
+      setDefaultHomeTab(getCurrentDefaultTab());
       updateHistoryInfo();
       setIsLayoutHydrated(true);
 
@@ -5752,6 +5769,17 @@
       // Subscribe to history changes
       const unsubHistory = HEYS.Widgets.on('history:changed', updateHistoryInfo);
 
+      const handleDefaultTabChanged = (event) => {
+        const nextDefaultTab = event?.detail?.defaultTab;
+        if (VALID_HOME_TABS.includes(nextDefaultTab)) {
+          setDefaultHomeTab(nextDefaultTab);
+          return;
+        }
+        setDefaultHomeTab(getCurrentDefaultTab());
+      };
+
+      window.addEventListener('heys:default-tab-changed', handleDefaultTabChanged);
+
       return () => {
         clearTimeout(tourTimer);
         unsubLoaded?.();
@@ -5759,8 +5787,9 @@
         unsubEditEnter?.();
         unsubEditExit?.();
         unsubHistory?.();
+        window.removeEventListener('heys:default-tab-changed', handleDefaultTabChanged);
       };
-    }, []);
+    }, [getCurrentDefaultTab, updateHistoryInfo, VALID_HOME_TABS]);
 
     // Update history info
     const updateHistoryInfo = useCallback(() => {
@@ -6019,6 +6048,74 @@
       HEYS.Widgets.redo?.();
     }, []);
 
+    const handleLogLayout = useCallback(() => {
+      try {
+        const currentWidgets = (HEYS.Widgets.state?.getWidgets?.() || [])
+          .slice()
+          .sort((a, b) => {
+            const rowDiff = (a?.position?.row || 0) - (b?.position?.row || 0);
+            if (rowDiff !== 0) return rowDiff;
+            return (a?.position?.col || 0) - (b?.position?.col || 0);
+          })
+          .map((widget, index) => {
+            const sizeInfo = HEYS.Widgets.registry?.getSize?.(widget?.size);
+            const cols = sizeInfo?.cols || widget?.cols || 1;
+            const rows = sizeInfo?.rows || widget?.rows || 1;
+            const col = Number.isFinite(widget?.position?.col) ? widget.position.col : 0;
+            const row = Number.isFinite(widget?.position?.row) ? widget.position.row : 0;
+            const occupiedCells = [];
+
+            for (let rowOffset = 0; rowOffset < rows; rowOffset += 1) {
+              for (let colOffset = 0; colOffset < cols; colOffset += 1) {
+                occupiedCells.push(`${col + colOffset},${row + rowOffset}`);
+              }
+            }
+
+            return {
+              order: index + 1,
+              id: widget?.id || null,
+              type: widget?.type || null,
+              size: widget?.size || `${cols}x${rows}`,
+              col,
+              row,
+              cols,
+              rows,
+              occupiedCells
+            };
+          });
+
+        console.info('[HEYS.widgets] layout snapshot', currentWidgets);
+
+        const compactText = currentWidgets
+          .map((widget) => `${widget.order}. ${widget.type} size=${widget.size} pos=(${widget.col},${widget.row}) cells=[${widget.occupiedCells.join(' ')}]`)
+          .join('\n');
+
+        console.info('[HEYS.widgets] layout snapshot text\n' + compactText);
+
+        if (navigator?.clipboard?.writeText) {
+          navigator.clipboard.writeText(compactText).then(() => {
+            console.info('[HEYS.widgets] layout snapshot copied to clipboard');
+          }).catch(() => {
+            console.warn('[HEYS.widgets] layout snapshot clipboard copy failed');
+          });
+        }
+      } catch (e) {
+        console.error('[HEYS.widgets] failed to build layout snapshot', e);
+      }
+    }, []);
+
+    const handleSetDefaultHomeTab = useCallback((nextTab) => {
+      if (!VALID_HOME_TABS.includes(nextTab)) return;
+
+      try {
+        window.HEYS?.App?.setDefaultTab?.(nextTab);
+        setDefaultHomeTab(nextTab);
+        HEYS.dayUtils?.haptic?.('light');
+      } catch (e) {
+        console.warn('[HEYS.widgets] failed to update default home tab', e);
+      }
+    }, [VALID_HOME_TABS]);
+
     // Сбрасываем overlay при выходе из edit mode
     useEffect(() => {
       if (!isEditMode) setShowGridOverlay(false);
@@ -6129,29 +6226,63 @@
       // === Fixed bottom edit controls (для всех устройств) ===
       React.createElement('div', { className: 'widgets-edit-controls' },
         // Кнопки добавить/отменить/вернуть - показываем только в edit mode
-        isEditMode && React.createElement('div', { className: 'widgets-edit-controls__actions' },
-          React.createElement('button', {
-            id: 'tour-widgets-add',
-            className: 'widgets-header__btn widgets-header__btn--add',
-            onClick: () => setCatalogOpen(true)
-          }, '+ Добавить'),
-          React.createElement('button', {
-            className: `widgets-header__btn widgets-header__btn--undo ${!historyInfo.canUndo ? 'disabled' : ''}`,
-            onClick: handleUndo,
-            disabled: !historyInfo.canUndo,
-            title: 'Отменить (Ctrl+Z)'
-          }, '↩'),
-          React.createElement('button', {
-            className: `widgets-header__btn widgets-header__btn--redo ${!historyInfo.canRedo ? 'disabled' : ''}`,
-            onClick: handleRedo,
-            disabled: !historyInfo.canRedo,
-            title: 'Повторить (Ctrl+Shift+Z)'
-          }, '↪'),
-          React.createElement('button', {
-            className: `widgets-header__btn widgets-header__btn--grid ${showGridOverlay ? 'active' : ''}`,
-            onClick: () => setShowGridOverlay(prev => !prev),
-            title: 'Показать нумерацию ячеек сетки'
-          }, '⊞')
+        isEditMode && React.createElement('div', { className: 'widgets-edit-controls__stack' },
+          React.createElement('div', {
+            className: 'widgets-home-tab-picker',
+            role: 'group',
+            'aria-label': 'Выбор домашней вкладки'
+          },
+            React.createElement('div', { className: 'widgets-home-tab-picker__title' }, 'Домашняя вкладка'),
+            React.createElement('div', { className: 'widgets-home-tab-picker__hint' },
+              'С неё приложение откроется в следующий раз'
+            ),
+            React.createElement('div', { className: 'widgets-home-tab-picker__options' },
+              HOME_TAB_OPTIONS.map((option) => React.createElement('button', {
+                key: option.key,
+                type: 'button',
+                className: `widgets-home-tab-picker__option ${defaultHomeTab === option.key ? 'active' : ''}`,
+                onClick: () => handleSetDefaultHomeTab(option.key),
+                'aria-pressed': defaultHomeTab === option.key,
+                title: `Сделать домашней вкладкой: ${option.label}`
+              },
+                React.createElement('span', { className: 'widgets-home-tab-picker__option-icon' }, option.icon),
+                React.createElement('span', { className: 'widgets-home-tab-picker__option-label' }, option.label),
+                defaultHomeTab === option.key && React.createElement('span', {
+                  className: 'widgets-home-tab-picker__option-badge',
+                  'aria-hidden': 'true'
+                }, '🏠')
+              ))
+            )
+          ),
+          React.createElement('div', { className: 'widgets-edit-controls__actions' },
+            React.createElement('button', {
+              id: 'tour-widgets-add',
+              className: 'widgets-header__btn widgets-header__btn--add',
+              onClick: () => setCatalogOpen(true)
+            }, '+ Добавить'),
+            React.createElement('button', {
+              className: 'widgets-header__btn widgets-header__btn--log',
+              onClick: handleLogLayout,
+              title: 'Вывести лог раскладки виджетов'
+            }, 'Лог'),
+            React.createElement('button', {
+              className: `widgets-header__btn widgets-header__btn--undo ${!historyInfo.canUndo ? 'disabled' : ''}`,
+              onClick: handleUndo,
+              disabled: !historyInfo.canUndo,
+              title: 'Отменить (Ctrl+Z)'
+            }, '↩'),
+            React.createElement('button', {
+              className: `widgets-header__btn widgets-header__btn--redo ${!historyInfo.canRedo ? 'disabled' : ''}`,
+              onClick: handleRedo,
+              disabled: !historyInfo.canRedo,
+              title: 'Повторить (Ctrl+Shift+Z)'
+            }, '↪'),
+            React.createElement('button', {
+              className: `widgets-header__btn widgets-header__btn--grid ${showGridOverlay ? 'active' : ''}`,
+              onClick: () => setShowGridOverlay(prev => !prev),
+              title: 'Показать нумерацию ячеек сетки'
+            }, '⊞')
+          )
         ),
         // FAB кнопка редактирования - всегда видна (только на desktop)
         !isMobile && React.createElement('button', {

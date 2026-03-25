@@ -339,7 +339,7 @@
                     if (HEYS.WhatsNew && HEYS.WhatsNew.checkUnseen) {
                         HEYS.WhatsNew.checkUnseen().then(hasUnseen => {
                             if (hasUnseen) setShowWhatsNew(true);
-                        }).catch(() => {});
+                        }).catch(() => { });
                     }
                 }, 1500);
                 return () => clearTimeout(timer);
@@ -746,6 +746,8 @@
                 cloudStatus,
                 syncProgress,
                 pendingCount,
+                pendingDetails,
+                pendingText,
                 retryCountdown,
                 GamificationBar,
                 widgetsEditMode,
@@ -763,7 +765,7 @@
             }), [isConsentBlocking, isMorningCheckinBlocking, clientId, tab,
                 selectedDate, datePickerActiveDays, products, cachedProfile,
                 currentClientName, clients, showClientDropdown, isRpcMode,
-                cloudUser, cloudStatus, syncProgress, pendingCount, retryCountdown,
+                cloudUser, cloudStatus, syncProgress, pendingCount, pendingDetails, pendingText, retryCountdown,
                 widgetsEditMode, defaultTab, slideDirection, edgeBounce, syncVer]);
 
             const buildOverlaysProps = AppOverlaysProps.buildOverlaysProps

@@ -11544,9 +11544,57 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
         // �🔒 Cooldown после первого sync — не показываем "syncing" сразу после загрузки
         const initialSyncCompletedAtRef = useRef(0);
         const INITIAL_SYNC_COOLDOWN_MS = 3000; // 3 секунды после первого sync не показываем syncing
+        // Refs для state-значений, читаемых из event handlers — стабилизирует deps эффекта
+        const cloudStatusRef = useRef(cloudStatus);
+        const pendingCountRef = useRef(pendingCount);
+        const syncProgressTotalRef = useRef(0);
+        cloudStatusRef.current = cloudStatus;
+        pendingCountRef.current = pendingCount;
+        syncProgressTotalRef.current = syncProgress.total;
 
         const MIN_SYNCING_DURATION = 1500;
         const SYNCING_DELAY = 400;
+
+        const getRuntimePendingCount = useCallback(() => {
+            try {
+                return window.HEYS?.cloud?.getPendingCount?.() || 0;
+            } catch (e) {
+                return 0;
+            }
+        }, []);
+
+        const isRuntimeUploadInProgress = useCallback(() => {
+            try {
+                return !!window.HEYS?.cloud?.isUploadInProgress?.();
+            } catch (e) {
+                return false;
+            }
+        }, []);
+
+        const startSyncingState = useCallback(() => {
+            if (!navigator.onLine) {
+                setCloudStatus('offline');
+                return;
+            }
+
+            if (!syncingStartRef.current) {
+                syncingStartRef.current = Date.now();
+            }
+
+            if (syncedTimeoutRef.current) {
+                clearTimeout(syncedTimeoutRef.current);
+                syncedTimeoutRef.current = null;
+            }
+
+            if (!syncingDelayTimeoutRef.current) {
+                syncingDelayTimeoutRef.current = setTimeout(() => {
+                    syncingDelayTimeoutRef.current = null;
+                    if (syncingStartRef.current && !syncedTimeoutRef.current) {
+                        setCloudStatus('syncing');
+                    }
+                }, SYNCING_DELAY);
+            }
+        }, []);
 
         const showSyncedWithMinDuration = useCallback(() => {
             if (syncedTimeoutRef.current) return;
@@ -11555,7 +11603,28 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
             const remaining = Math.max(0, MIN_SYNCING_DURATION - elapsed);
 
             syncedTimeoutRef.current = setTimeout(() => {
+                const runtimePending = getRuntimePendingCount();
+                const uploadInProgress = isRuntimeUploadInProgress();
+
                 syncedTimeoutRef.current = null;
+
+                if (!navigator.onLine) {
+                    syncingStartRef.current = null;
+                    setCloudStatus('offline');
+                    return;
+                }
+
+                if (uploadInProgress) {
+                    startSyncingState();
+                    return;
+                }
+
+                if (runtimePending > 0) {
+                    syncingStartRef.current = null;
+                    setCloudStatus('queued');
+                    return;
+                }
+
                 syncingStartRef.current = null;
                 setCloudStatus('synced');
                 // Звук синхронизации убран — теперь звуки только в геймификации
@@ -11565,17 +11634,21 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                     setCloudStatus('idle');
                 }, 2000);
             }, remaining);
-        }, []);
+        }, [getRuntimePendingCount, isRuntimeUploadInProgress, startSyncingState]);
 
         useEffect(() => {
-            const handleSyncComplete = () => {
+            const handleSyncComplete = (e) => {
+                if (e?.type === 'heysSyncCompleted' && e?.detail?.phaseA) {
+                    return;
+                }
+
                 // ⚡️ Первый heysSyncCompleted после инициализации не должен триггерить UI
                 // если не было фактических локальных изменений/отложенных синков — иначе мерцание
                 const hadPendingWork =
                     syncingStartRef.current ||
                     pendingChangesRef.current ||
-                    (syncProgress.total > 0) ||
-                    (pendingCount > 0);
+                    (syncProgressTotalRef.current > 0) ||
+                    (pendingCountRef.current > 0);
                 if (!hadPendingWork) {
                     // 🔒 Запоминаем время первого sync для cooldown
                     if (!initialSyncCompletedAtRef.current) {
@@ -11583,6 +11656,9 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                     }
                     return;
                 }
+
+                const runtimePending = getRuntimePendingCount();
+                const uploadInProgress = isRuntimeUploadInProgress();
 
                 if (syncingDelayTimeoutRef.current) {
                     clearTimeout(syncingDelayTimeoutRef.current);
@@ -11592,10 +11668,26 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                     clearTimeout(cloudSyncTimeoutRef.current);
                     cloudSyncTimeoutRef.current = null;
                 }
-                pendingChangesRef.current = false;
-                if (navigator.onLine) {
-                    showSyncedWithMinDuration();
+
+                if (!navigator.onLine) {
+                    setCloudStatus('offline');
+                    return;
                 }
+
+                if (uploadInProgress) {
+                    startSyncingState();
+                    return;
+                }
+
+                if (runtimePending > 0) {
+                    pendingChangesRef.current = true;
+                    syncingStartRef.current = null;
+                    setCloudStatus('queued');
+                    return;
+                }
+
+                pendingChangesRef.current = false;
+                showSyncedWithMinDuration();
             };
 
             const handleDataSaved = () => {
@@ -11625,21 +11717,29 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                     cloudSyncTimeoutRef.current = null;
                 }
 
-                if (!syncingStartRef.current) {
-                    syncingStartRef.current = Date.now();
-
-                    if (!syncingDelayTimeoutRef.current) {
-                        syncingDelayTimeoutRef.current = setTimeout(() => {
-                            syncingDelayTimeoutRef.current = null;
-                            if (syncingStartRef.current && !syncedTimeoutRef.current) {
-                                setCloudStatus('syncing');
-                            }
-                        }, SYNCING_DELAY);
-                    }
-                }
+                startSyncingState();
 
                 if (!cloudSyncTimeoutRef.current) {
                     cloudSyncTimeoutRef.current = setTimeout(() => {
+                        const runtimePending = getRuntimePendingCount();
+                        const uploadInProgress = isRuntimeUploadInProgress();
+
+                        if (!navigator.onLine) {
+                            setCloudStatus('offline');
+                            return;
+                        }
+
+                        if (uploadInProgress) {
+                            startSyncingState();
+                            return;
+                        }
+
+                        if (runtimePending > 0) {
+                            syncingStartRef.current = null;
+                            setCloudStatus('queued');
+                            return;
+                        }
+
                         pendingChangesRef.current = false;
                         showSyncedWithMinDuration();
                     }, 5000);
@@ -11649,22 +11749,38 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
             const handlePendingChange = (e) => {
                 const count = e.detail?.count || 0;
                 const details = e.detail?.details || { days: 0, products: 0, profile: 0, other: 0 };
+                const uploadInProgress = isRuntimeUploadInProgress();
                 setPendingCount(count);
                 setPendingDetails(details);
 
-                if (syncProgress.total > 0 && count < syncProgress.total) {
+                if (syncProgressTotalRef.current > 0 && count < syncProgressTotalRef.current) {
                     setSyncProgress(prev => ({ ...prev, synced: prev.total - count }));
                 }
 
                 if (count > 0 && !navigator.onLine) {
+                    pendingChangesRef.current = true;
                     setCloudStatus('offline');
+                } else if (count > 0 && navigator.onLine) {
+                    pendingChangesRef.current = true;
+                    if (uploadInProgress || syncProgressTotalRef.current > 0 || syncingStartRef.current) {
+                        startSyncingState();
+                    } else {
+                        syncingStartRef.current = null;
+                        setCloudStatus('queued');
+                    }
+                } else if (count === 0 && !uploadInProgress && !syncingStartRef.current && navigator.onLine && cloudStatusRef.current !== 'synced') {
+                    setCloudStatus('idle');
                 }
             };
 
             const handleSyncProgress = (e) => {
-                const { synced, total } = e.detail || {};
-                if (typeof synced === 'number' && typeof total === 'number') {
-                    setSyncProgress({ synced, total });
+                const { synced, done, total } = e.detail || {};
+                const completed = typeof done === 'number' ? done : synced;
+                if (typeof completed === 'number' && typeof total === 'number') {
+                    setSyncProgress({ synced: completed, total });
+                    if (navigator.onLine && total > 0) {
+                        startSyncingState();
+                    }
                 }
             };
 
@@ -11712,7 +11828,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                             retryIntervalRef.current = null;
                             if (navigator.onLine && window.HEYS?.cloud?.retrySync) {
                                 window.HEYS.cloud.retrySync();
-                                setCloudStatus('syncing');
+                                startSyncingState();
                             }
                             return 0;
                         }
@@ -11724,11 +11840,39 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
             const handleNetworkRestored = (e) => {
                 const count = e.detail?.pendingCount || 0;
                 if (count > 0) {
-                    if (!syncingStartRef.current) {
-                        syncingStartRef.current = Date.now();
-                    }
-                    setCloudStatus('syncing');
+                    pendingChangesRef.current = true;
+                    startSyncingState();
                 }
+            };
+
+            const handleQueueDrained = () => {
+                setPendingCount(0);
+                setPendingDetails({ days: 0, products: 0, profile: 0, other: 0 });
+                pendingChangesRef.current = false;
+
+                if (!navigator.onLine) {
+                    setCloudStatus('offline');
+                    return;
+                }
+
+                showSyncedWithMinDuration();
+            };
+
+            const handleSyncRestored = () => {
+                const runtimePending = getRuntimePendingCount();
+                const uploadInProgress = isRuntimeUploadInProgress();
+
+                if (!navigator.onLine) {
+                    setCloudStatus('offline');
+                    return;
+                }
+
+                if (uploadInProgress || runtimePending > 0) {
+                    startSyncingState();
+                    return;
+                }
+
+                showSyncedWithMinDuration();
             };
 
             const handleOnline = () => {
@@ -11751,16 +11895,17 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
 
                 setTimeout(() => setShowOnlineBanner(false), 2000);
 
-                if (pendingChangesRef.current || pendingCount > 0) {
-                    if (!syncingStartRef.current) {
-                        syncingStartRef.current = Date.now();
+                const runtimePending = getRuntimePendingCount();
+                const uploadInProgress = isRuntimeUploadInProgress();
+
+                if (pendingChangesRef.current || pendingCountRef.current > 0 || runtimePending > 0 || uploadInProgress) {
+                    pendingChangesRef.current = true;
+                    if (uploadInProgress || syncProgressTotalRef.current > 0) {
+                        startSyncingState();
+                    } else {
+                        syncingStartRef.current = null;
+                        setCloudStatus('queued');
                     }
-                    setCloudStatus('syncing');
-                    if (cloudSyncTimeoutRef.current) clearTimeout(cloudSyncTimeoutRef.current);
-                    cloudSyncTimeoutRef.current = setTimeout(() => {
-                        pendingChangesRef.current = false;
-                        showSyncedWithMinDuration();
-                    }, 2000);
                 } else {
                     setCloudStatus('idle');
                 }
@@ -11804,6 +11949,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
             window.addEventListener('heys:network-restored', handleNetworkRestored);
             window.addEventListener('heys:sync-progress', handleSyncProgress);
             window.addEventListener('heys:sync-error', handleSyncError);
+            window.addEventListener('heys:queue-drained', handleQueueDrained);
+            window.addEventListener('heys:sync-restored', handleSyncRestored);
             window.addEventListener('online', handleOnline);
             window.addEventListener('offline', handleOffline);
 
@@ -11833,16 +11980,20 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                 window.removeEventListener('heys:network-restored', handleNetworkRestored);
                 window.removeEventListener('heys:sync-progress', handleSyncProgress);
                 window.removeEventListener('heys:sync-error', handleSyncError);
+                window.removeEventListener('heys:queue-drained', handleQueueDrained);
+                window.removeEventListener('heys:sync-restored', handleSyncRestored);
                 window.removeEventListener('online', handleOnline);
                 window.removeEventListener('offline', handleOffline);
                 if (cloudSyncTimeoutRef.current) clearTimeout(cloudSyncTimeoutRef.current);
+                if (syncedTimeoutRef.current) clearTimeout(syncedTimeoutRef.current);
+                if (syncingDelayTimeoutRef.current) clearTimeout(syncingDelayTimeoutRef.current);
                 if (retryIntervalRef.current) clearInterval(retryIntervalRef.current);
                 // 🆕 Очистка таймера офлайн
                 if (offlineDurationIntervalRef.current) clearInterval(offlineDurationIntervalRef.current);
                 // 🔥 Очистка таймера auth error debounce
                 if (authErrorTimeoutRef.current) clearTimeout(authErrorTimeoutRef.current);
             };
-        }, [pendingCount, showSyncedWithMinDuration, syncProgress.total]);
+        }, [getRuntimePendingCount, isRuntimeUploadInProgress, showSyncedWithMinDuration, startSyncingState]);
 
         const handleRetrySync = useCallback(() => {
             if (window.HEYS?.cloud?.retrySync) {
@@ -16174,6 +16325,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
             cloudStatus,
             syncProgress,
             pendingCount,
+            pendingDetails,
+            pendingText,
             retryCountdown,
             GamificationBar,
             setTab,
@@ -16408,6 +16561,16 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                 HEYS.cloud.syncClient(clientIdValue, { force: true });
             }
         };
+        const pendingBreakdownText = pendingText || (() => {
+            const details = pendingDetails || HEYS?.cloud?.getPendingDetails?.() || null;
+            if (!details) return '';
+            const parts = [];
+            if (details.days > 0) parts.push(`${details.days} дн.`);
+            if (details.products > 0) parts.push(`${details.products} прод.`);
+            if (details.profile > 0) parts.push('профиль');
+            if (details.other > 0) parts.push(`${details.other} др.`);
+            return parts.join(', ');
+        })();
         const pad2 = (n) => String(n).padStart(2, '0');
         const formatLocalISO = (d) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
         const shiftISO = (iso, delta) => {
@@ -16815,14 +16978,23 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                             baseTitle = syncProgress?.total > 1
                                 ? `Синхронизация... ${syncProgress.synced}/${syncProgress.total}`
                                 : 'Синхронизация...';
+                            if (pendingBreakdownText) baseTitle += ` · ${pendingBreakdownText}`;
+                        } else if (cloudStatus === 'queued') {
+                            baseTitle = pendingCount > 0
+                                ? `${pendingCount} локальных изменений ждут отправки`
+                                : 'Локальные изменения ждут отправки';
+                            if (pendingBreakdownText) baseTitle += ` · ${pendingBreakdownText}`;
+                            baseTitle += ' — нажмите для синхронизации';
                         } else if (cloudStatus === 'offline') {
                             baseTitle = pendingCount > 0
                                 ? `Офлайн — ${pendingCount} изменений ожидают синхронизации`
                                 : 'Офлайн — данные сохраняются локально';
+                            if (pendingBreakdownText) baseTitle += ` · ${pendingBreakdownText}`;
                         } else if (cloudStatus === 'error') {
                             baseTitle = retryCountdown > 0
                                 ? `Ошибка. Повтор через ${retryCountdown}с — нажмите для повтора`
                                 : 'Ошибка синхронизации — нажмите для повтора';
+                            if (pendingBreakdownText) baseTitle += ` · ${pendingBreakdownText}`;
                         } else if (lastSyncedAtRef.current) {
                             const age = formatSyncAge(lastSyncedAtRef.current);
                             baseTitle = `Сохранено ${age} — нажмите для синхронизации`;
@@ -16846,13 +17018,19 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                                 ),
                                 pendingCount > 0 && React.createElement('span', { key: 'pb', className: 'pending-badge' }, pendingCount)
                             ]
-                                : displayStatus === 'error' ? [
-                                    React.createElement('span', { key: 'warn', className: 'cloud-icon error' }, '⚠'),
-                                    retryCountdown > 0 && React.createElement('span', { key: 'cd', className: 'retry-countdown' }, retryCountdown)
-                                ]
-                                    : React.createElement('svg', { key: 'cloud', className: 'cloud-icon idle', viewBox: '0 0 24 24', width: 16, height: 16, fill: 'currentColor' },
+                                : displayStatus === 'queued' ? [
+                                    React.createElement('svg', { key: 'cloud', className: 'cloud-icon idle', viewBox: '0 0 24 24', width: 16, height: 16, fill: 'currentColor' },
                                         React.createElement('path', { d: 'M19.35 10.04A7.49 7.49 0 0 0 12 4C9.11 4 6.6 5.64 5.35 8.04A5.994 5.994 0 0 0 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z' })
-                                    )
+                                    ),
+                                    pendingCount > 0 && React.createElement('span', { key: 'pb', className: 'pending-badge' }, pendingCount)
+                                ]
+                                    : displayStatus === 'error' ? [
+                                        React.createElement('span', { key: 'warn', className: 'cloud-icon error' }, '⚠'),
+                                        retryCountdown > 0 && React.createElement('span', { key: 'cd', className: 'retry-countdown' }, retryCountdown)
+                                    ]
+                                        : React.createElement('svg', { key: 'cloud', className: 'cloud-icon idle', viewBox: '0 0 24 24', width: 16, height: 16, fill: 'currentColor' },
+                                            React.createElement('path', { d: 'M19.35 10.04A7.49 7.49 0 0 0 12 4C9.11 4 6.6 5.64 5.35 8.04A5.994 5.994 0 0 0 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z' })
+                                        )
                 ),
                 // 🚨 EWS Badge (v1.3 - показывает актуальные предупреждения без ручного скрытия)
                 ewsData && React.createElement('div', {
@@ -21268,6 +21446,14 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
             U?.lsSet?.('heys_profile', updatedProfile);
             setDefaultTabState(newDefaultTab);
 
+            try {
+                window.dispatchEvent(new CustomEvent('heys:default-tab-changed', {
+                    detail: { defaultTab: newDefaultTab }
+                }));
+            } catch (e) {
+                // silent
+            }
+
             devLog(`[App] 🏠 Default tab changed to: ${newDefaultTab}`);
         }, []);
 
@@ -22350,6 +22536,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
         cloudStatus,
         syncProgress,
         pendingCount,
+        pendingDetails,
+        pendingText,
         retryCountdown,
         GamificationBar,
         widgetsEditMode,
@@ -22393,6 +22581,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
             cloudStatus,
             syncProgress,
             pendingCount,
+            pendingDetails,
+            pendingText,
             retryCountdown,
             GamificationBar,
             widgetsEditMode,
@@ -23346,7 +23536,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                     if (HEYS.WhatsNew && HEYS.WhatsNew.checkUnseen) {
                         HEYS.WhatsNew.checkUnseen().then(hasUnseen => {
                             if (hasUnseen) setShowWhatsNew(true);
-                        }).catch(() => {});
+                        }).catch(() => { });
                     }
                 }, 1500);
                 return () => clearTimeout(timer);
@@ -23753,6 +23943,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                 cloudStatus,
                 syncProgress,
                 pendingCount,
+                pendingDetails,
+                pendingText,
                 retryCountdown,
                 GamificationBar,
                 widgetsEditMode,
@@ -23770,7 +23962,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
             }), [isConsentBlocking, isMorningCheckinBlocking, clientId, tab,
                 selectedDate, datePickerActiveDays, products, cachedProfile,
                 currentClientName, clients, showClientDropdown, isRpcMode,
-                cloudUser, cloudStatus, syncProgress, pendingCount, retryCountdown,
+                cloudUser, cloudStatus, syncProgress, pendingCount, pendingDetails, pendingText, retryCountdown,
                 widgetsEditMode, defaultTab, slideDirection, edgeBounce, syncVer]);
 
             const buildOverlaysProps = AppOverlaysProps.buildOverlaysProps

@@ -59,6 +59,7 @@
   const STORAGE_META_KEY = 'heys_widget_layout_meta_v1';
   const GRID_COLS = 4; // 4 колонки: 1 колонка/ряд = базовая единица
   const GRID_VERSION = 2;
+  const LAYOUT_PRESET_VERSION = 1;
   const MAX_HISTORY = 20; // Максимум шагов undo/redo
   const SAVE_DEBOUNCE_MS = 500; // Debounce для сохранения
   const LONG_PRESS_MS = 500; // Время для long press
@@ -68,17 +69,19 @@
   const CELL_GAP_PX = 12; // fallback
 
   const DEFAULT_LAYOUT = [
-    // 4-колоночная сетка — красивый набор для новых пользователей
-    // Ряд 0: Day Score + Risk Radar (единые оценки)
-    { type: 'dayScore', size: '2x2', position: { col: 0, row: 0 } },
-    { type: 'riskRadar', size: '2x2', position: { col: 2, row: 0 } },
-    // Ряд 2: Калории + Вода (базовые)
-    { type: 'calories', size: '2x2', position: { col: 0, row: 2 } },
-    { type: 'water', size: '2x2', position: { col: 2, row: 2 } },
-    // Ряд 4: Вес (полная ширина) — BMI + график тренда
-    { type: 'weight', size: '4x2', position: { col: 0, row: 4 } },
-    // Ряд 6: Тепловая карта (полная ширина) — компактная неделя
-    { type: 'heatmap', size: '4x1', position: { col: 0, row: 6 } }
+    // Канонический layout виджетов (март 2026)
+    { type: 'calories', size: '2x2', position: { col: 0, row: 0 } },
+    { type: 'insulinWave', size: '2x2', position: { col: 2, row: 0 } },
+    { type: 'macros', size: '3x2', position: { col: 0, row: 2 } },
+    { type: 'sleep', size: '1x1', position: { col: 3, row: 2 } },
+    { type: 'streak', size: '1x1', position: { col: 3, row: 3 } },
+    { type: 'dayScore', size: '2x1', position: { col: 0, row: 4 } },
+    { type: 'crashRisk', size: '2x1', position: { col: 2, row: 4 } },
+    { type: 'relapseRisk', size: '2x2', position: { col: 0, row: 5 } },
+    { type: 'water', size: '2x1', position: { col: 2, row: 5 } },
+    { type: 'heatmap', size: '2x1', position: { col: 2, row: 6 } },
+    { type: 'healthTrend', size: '2x2', position: { col: 0, row: 7 } },
+    { type: 'weight', size: '2x2', position: { col: 2, row: 7 } }
   ];
 
   // === State Manager with Undo/Redo ===
@@ -99,11 +102,33 @@
 
       const meta = this.loadLayoutMeta();
       let saved = this.loadLayout() || [];
+      const needsPresetMigration = !meta || meta.layoutPresetVersion !== LAYOUT_PRESET_VERSION;
 
       // Миграция layout 2-колоночной сетки → 4-колоночную.
       // Важно: делаем ОДИН раз и фиксируем в meta.
       const needsMigration = !meta || meta.gridVersion !== GRID_VERSION || meta.gridCols !== GRID_COLS;
-      if (needsMigration && saved && Array.isArray(saved) && saved.length > 0) {
+      if (needsPresetMigration) {
+        const presetWidgets = this._createDefaultLayout();
+        const presetLayoutData = presetWidgets.map(w => ({
+          id: w.id,
+          type: w.type,
+          size: w.size,
+          position: w.position,
+          settings: w.settings,
+          createdAt: w.createdAt
+        }));
+
+        saved = presetLayoutData;
+
+        this.saveLayoutMeta({
+          gridVersion: GRID_VERSION,
+          gridCols: GRID_COLS,
+          layoutPresetVersion: LAYOUT_PRESET_VERSION,
+          migratedAt: Date.now(),
+          presetMigratedAt: Date.now()
+        });
+        try { this.saveLayout(presetLayoutData); } catch (e) { }
+      } else if (needsMigration && saved && Array.isArray(saved) && saved.length > 0) {
         // Важно: saveLayout() раньше сохранял this._widgets (ещё пустой) → мог перезатирать storage.
         // Поэтому: нормализуем мигрированный layout и сохраняем ИМЕННО его.
         const migrated = this._migrateLayout(saved, meta);
@@ -120,7 +145,12 @@
         saved = normalizedLayoutData;
 
         // После миграции — сохраняем meta + текущий layout
-        this.saveLayoutMeta({ gridVersion: GRID_VERSION, gridCols: GRID_COLS, migratedAt: Date.now() });
+        this.saveLayoutMeta({
+          gridVersion: GRID_VERSION,
+          gridCols: GRID_COLS,
+          layoutPresetVersion: LAYOUT_PRESET_VERSION,
+          migratedAt: Date.now()
+        });
         // Сохраняем сразу (без debounce)
         try { this.saveLayout(normalizedLayoutData); } catch (e) { }
       }
@@ -138,7 +168,12 @@
         this._widgets = this._createDefaultLayout();
         this._autoPackWidgets();
         // фиксируем meta для чистого старта
-        this.saveLayoutMeta({ gridVersion: GRID_VERSION, gridCols: GRID_COLS, migratedAt: Date.now() });
+        this.saveLayoutMeta({
+          gridVersion: GRID_VERSION,
+          gridCols: GRID_COLS,
+          layoutPresetVersion: LAYOUT_PRESET_VERSION,
+          migratedAt: Date.now()
+        });
       }
 
       // Очищаем историю при загрузке

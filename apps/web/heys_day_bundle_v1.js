@@ -1158,8 +1158,8 @@
     }) {
         if (!(adviceTrigger === 'manual' && adviceRelevant?.length > 0 && toastVisible)) return null;
 
-        const { sorted, groups } = getSortedGroupedAdvices(adviceRelevant);
-        const activeCount = sorted.filter(a => !dismissedAdvices.has(a.id)).length;
+        // 🚀 PERF A1: activeCount computed inside getSortedGroupedAdvices (no extra .filter())
+        const { sorted, groups, activeCount } = getSortedGroupedAdvices(adviceRelevant);
         const groupKeys = Object.keys(groups);
 
         return React.createElement('div', {
@@ -1235,18 +1235,16 @@
                 ),
                 React.createElement('div', { className: 'advice-list-items' },
                     groupKeys.length > 1
+                        // 🚀 PERF A1: removed redundant .filter() — sorted already excludes dismissed/hidden
                         ? groupKeys.map(category => {
                             const categoryAdvices = groups[category];
-                            const activeCategoryAdvices = categoryAdvices.filter(a =>
-                                !dismissedAdvices.has(a.id) || lastDismissedAdvice?.id === a.id
-                            );
-                            if (activeCategoryAdvices.length === 0) return null;
+                            if (categoryAdvices.length === 0) return null;
 
                             return React.createElement('div', { key: category, className: 'advice-group' },
                                 React.createElement('div', { className: 'advice-group-header' },
                                     ADVICE_CATEGORY_NAMES[category] || category
                                 ),
-                                activeCategoryAdvices.map((advice) =>
+                                categoryAdvices.map((advice) =>
                                     React.createElement(AdviceCard, {
                                         key: advice.id,
                                         advice,
@@ -1275,32 +1273,32 @@
                                 )
                             );
                         })
-                        : sorted.filter(a => !dismissedAdvices.has(a.id) || lastDismissedAdvice?.id === a.id)
-                            .map((advice, index) => React.createElement(AdviceCard, {
-                                key: advice.id,
-                                advice,
-                                globalIndex: index,
-                                isDismissed: dismissedAdvices.has(advice.id),
-                                isHidden: hiddenUntilTomorrow.has(advice.id),
-                                swipeState: adviceSwipeState[advice.id] || { x: 0, direction: null },
-                                isExpanded: expandedAdviceId === advice.id,
-                                isLastDismissed: lastDismissedAdvice?.id === advice.id,
-                                lastDismissedAction: lastDismissedAdvice?.action,
-                                onUndo: undoLastDismiss,
-                                onClearLastDismissed: clearLastDismissed,
-                                onSchedule: scheduleAdvice,
-                                onToggleExpand: handleAdviceToggleExpand,
-                                trackClick,
-                                onRate: rateAdvice,
-                                onSwipeStart: handleAdviceSwipeStart,
-                                onSwipeMove: handleAdviceSwipeMove,
-                                onSwipeEnd: handleAdviceSwipeEnd,
-                                onLongPressStart: handleAdviceLongPressStart,
-                                onLongPressEnd: handleAdviceLongPressEnd,
-                                registerCardRef: registerAdviceCardRef,
-                                onOpenDetails: openAdviceDetailModal,
-                                onOpenTechnicalDetails: openAdviceTechnicalDetails,
-                            }))
+                        // 🚀 PERF A1: removed redundant .filter() — sorted already excludes dismissed/hidden
+                        : sorted.map((advice, index) => React.createElement(AdviceCard, {
+                            key: advice.id,
+                            advice,
+                            globalIndex: index,
+                            isDismissed: dismissedAdvices.has(advice.id),
+                            isHidden: hiddenUntilTomorrow.has(advice.id),
+                            swipeState: adviceSwipeState[advice.id] || { x: 0, direction: null },
+                            isExpanded: expandedAdviceId === advice.id,
+                            isLastDismissed: lastDismissedAdvice?.id === advice.id,
+                            lastDismissedAction: lastDismissedAdvice?.action,
+                            onUndo: undoLastDismiss,
+                            onClearLastDismissed: clearLastDismissed,
+                            onSchedule: scheduleAdvice,
+                            onToggleExpand: handleAdviceToggleExpand,
+                            trackClick,
+                            onRate: rateAdvice,
+                            onSwipeStart: handleAdviceSwipeStart,
+                            onSwipeMove: handleAdviceSwipeMove,
+                            onSwipeEnd: handleAdviceSwipeEnd,
+                            onLongPressStart: handleAdviceLongPressStart,
+                            onLongPressEnd: handleAdviceLongPressEnd,
+                            registerCardRef: registerAdviceCardRef,
+                            onOpenDetails: openAdviceDetailModal,
+                            onOpenTechnicalDetails: openAdviceTechnicalDetails,
+                        }))
                 ),
                 activeCount > 0 && React.createElement('div', { className: 'advice-list-hints' },
                     React.createElement('span', { className: 'advice-list-hint-item' }, '← прочитано'),
@@ -1950,8 +1948,9 @@
             activity: '🚶 Активность',
         };
 
+        // 🚀 PERF A1: compute activeCount inline to avoid extra .filter() on sorted
         const getSortedGroupedAdvices = useCallback((advices) => {
-            if (!advices?.length) return { sorted: [], groups: {} };
+            if (!advices?.length) return { sorted: [], groups: {}, activeCount: 0 };
             const filtered = advices.filter(a =>
                 (!dismissedAdvices.has(a.id) && !hiddenUntilTomorrow.has(a.id)) ||
                 (lastDismissedAdvice?.id === a.id)
@@ -1960,12 +1959,14 @@
                 (ADVICE_PRIORITY[a.type] ?? 99) - (ADVICE_PRIORITY[b.type] ?? 99)
             );
             const groups = {};
+            let activeCount = 0;
             sorted.forEach(advice => {
                 const cat = advice.category || 'other';
                 if (!groups[cat]) groups[cat] = [];
                 groups[cat].push(advice);
+                if (!dismissedAdvices.has(advice.id)) activeCount++;
             });
-            return { sorted, groups };
+            return { sorted, groups, activeCount };
         }, [dismissedAdvices, hiddenUntilTomorrow, lastDismissedAdvice]);
 
         const handleAdviceSwipeStart = useCallback((adviceId, e) => {

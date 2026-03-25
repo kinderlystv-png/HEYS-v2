@@ -27154,6 +27154,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
   const STORAGE_META_KEY = 'heys_widget_layout_meta_v1';
   const GRID_COLS = 4; // 4 колонки: 1 колонка/ряд = базовая единица
   const GRID_VERSION = 2;
+  const LAYOUT_PRESET_VERSION = 1;
   const MAX_HISTORY = 20; // Максимум шагов undo/redo
   const SAVE_DEBOUNCE_MS = 500; // Debounce для сохранения
   const LONG_PRESS_MS = 500; // Время для long press
@@ -27163,17 +27164,19 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
   const CELL_GAP_PX = 12; // fallback
 
   const DEFAULT_LAYOUT = [
-    // 4-колоночная сетка — красивый набор для новых пользователей
-    // Ряд 0: Day Score + Risk Radar (единые оценки)
-    { type: 'dayScore', size: '2x2', position: { col: 0, row: 0 } },
-    { type: 'riskRadar', size: '2x2', position: { col: 2, row: 0 } },
-    // Ряд 2: Калории + Вода (базовые)
-    { type: 'calories', size: '2x2', position: { col: 0, row: 2 } },
-    { type: 'water', size: '2x2', position: { col: 2, row: 2 } },
-    // Ряд 4: Вес (полная ширина) — BMI + график тренда
-    { type: 'weight', size: '4x2', position: { col: 0, row: 4 } },
-    // Ряд 6: Тепловая карта (полная ширина) — компактная неделя
-    { type: 'heatmap', size: '4x1', position: { col: 0, row: 6 } }
+    // Канонический layout виджетов (март 2026)
+    { type: 'calories', size: '2x2', position: { col: 0, row: 0 } },
+    { type: 'insulinWave', size: '2x2', position: { col: 2, row: 0 } },
+    { type: 'macros', size: '3x2', position: { col: 0, row: 2 } },
+    { type: 'sleep', size: '1x1', position: { col: 3, row: 2 } },
+    { type: 'streak', size: '1x1', position: { col: 3, row: 3 } },
+    { type: 'dayScore', size: '2x1', position: { col: 0, row: 4 } },
+    { type: 'crashRisk', size: '2x1', position: { col: 2, row: 4 } },
+    { type: 'relapseRisk', size: '2x2', position: { col: 0, row: 5 } },
+    { type: 'water', size: '2x1', position: { col: 2, row: 5 } },
+    { type: 'heatmap', size: '2x1', position: { col: 2, row: 6 } },
+    { type: 'healthTrend', size: '2x2', position: { col: 0, row: 7 } },
+    { type: 'weight', size: '2x2', position: { col: 2, row: 7 } }
   ];
 
   // === State Manager with Undo/Redo ===
@@ -27194,11 +27197,33 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
       const meta = this.loadLayoutMeta();
       let saved = this.loadLayout() || [];
+      const needsPresetMigration = !meta || meta.layoutPresetVersion !== LAYOUT_PRESET_VERSION;
 
       // Миграция layout 2-колоночной сетки → 4-колоночную.
       // Важно: делаем ОДИН раз и фиксируем в meta.
       const needsMigration = !meta || meta.gridVersion !== GRID_VERSION || meta.gridCols !== GRID_COLS;
-      if (needsMigration && saved && Array.isArray(saved) && saved.length > 0) {
+      if (needsPresetMigration) {
+        const presetWidgets = this._createDefaultLayout();
+        const presetLayoutData = presetWidgets.map(w => ({
+          id: w.id,
+          type: w.type,
+          size: w.size,
+          position: w.position,
+          settings: w.settings,
+          createdAt: w.createdAt
+        }));
+
+        saved = presetLayoutData;
+
+        this.saveLayoutMeta({
+          gridVersion: GRID_VERSION,
+          gridCols: GRID_COLS,
+          layoutPresetVersion: LAYOUT_PRESET_VERSION,
+          migratedAt: Date.now(),
+          presetMigratedAt: Date.now()
+        });
+        try { this.saveLayout(presetLayoutData); } catch (e) { }
+      } else if (needsMigration && saved && Array.isArray(saved) && saved.length > 0) {
         // Важно: saveLayout() раньше сохранял this._widgets (ещё пустой) → мог перезатирать storage.
         // Поэтому: нормализуем мигрированный layout и сохраняем ИМЕННО его.
         const migrated = this._migrateLayout(saved, meta);
@@ -27215,7 +27240,12 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         saved = normalizedLayoutData;
 
         // После миграции — сохраняем meta + текущий layout
-        this.saveLayoutMeta({ gridVersion: GRID_VERSION, gridCols: GRID_COLS, migratedAt: Date.now() });
+        this.saveLayoutMeta({
+          gridVersion: GRID_VERSION,
+          gridCols: GRID_COLS,
+          layoutPresetVersion: LAYOUT_PRESET_VERSION,
+          migratedAt: Date.now()
+        });
         // Сохраняем сразу (без debounce)
         try { this.saveLayout(normalizedLayoutData); } catch (e) { }
       }
@@ -27233,7 +27263,12 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         this._widgets = this._createDefaultLayout();
         this._autoPackWidgets();
         // фиксируем meta для чистого старта
-        this.saveLayoutMeta({ gridVersion: GRID_VERSION, gridCols: GRID_COLS, migratedAt: Date.now() });
+        this.saveLayoutMeta({
+          gridVersion: GRID_VERSION,
+          gridCols: GRID_COLS,
+          layoutPresetVersion: LAYOUT_PRESET_VERSION,
+          migratedAt: Date.now()
+        });
       }
 
       // Очищаем историю при загрузке
@@ -36340,9 +36375,25 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
   // === Main WidgetsTab Component ===
   function WidgetsTab({ selectedDate, clientId, setTab, setSelectedDate }) {
+    const HOME_TAB_OPTIONS = useMemo(() => ([
+      { key: 'widgets', label: 'Виджеты', icon: '🧩' },
+      { key: 'stats', label: 'Отчёты', icon: '📊' },
+      { key: 'diary', label: 'Дневник', icon: '🍽️' },
+      { key: 'insights', label: 'Советы', icon: '💡' },
+      { key: 'month', label: 'Месяц', icon: '🗓️' }
+    ]), []);
+    const VALID_HOME_TABS = useMemo(() => HOME_TAB_OPTIONS.map((option) => option.key), [HOME_TAB_OPTIONS]);
+    const getCurrentDefaultTab = useCallback(() => {
+      const defaultTabFromApp = window.HEYS?.App?.getDefaultTab?.();
+      if (VALID_HOME_TABS.includes(defaultTabFromApp)) return defaultTabFromApp;
+
+      const profile = HEYS.utils?.lsGet?.('heys_profile', {}) || {};
+      return VALID_HOME_TABS.includes(profile?.defaultTab) ? profile.defaultTab : 'diary';
+    }, [VALID_HOME_TABS]);
     const [widgets, setWidgets] = useState([]);
     const [isLayoutHydrated, setIsLayoutHydrated] = useState(false);
     const [isEditMode, setIsEditMode] = useState(false);
+    const [defaultHomeTab, setDefaultHomeTab] = useState(() => getCurrentDefaultTab());
     const [catalogOpen, setCatalogOpen] = useState(false);
     const [settingsWidget, setSettingsWidget] = useState(null);
     const [relapseDetails, setRelapseDetails] = useState(null);
@@ -36436,6 +36487,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       // Get initial widgets
       setWidgets(HEYS.Widgets.state?.getWidgets?.() || []);
       setIsEditMode(HEYS.Widgets.state?.isEditMode?.() || false);
+      setDefaultHomeTab(getCurrentDefaultTab());
       updateHistoryInfo();
       setIsLayoutHydrated(true);
 
@@ -36486,6 +36538,17 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       // Subscribe to history changes
       const unsubHistory = HEYS.Widgets.on('history:changed', updateHistoryInfo);
 
+      const handleDefaultTabChanged = (event) => {
+        const nextDefaultTab = event?.detail?.defaultTab;
+        if (VALID_HOME_TABS.includes(nextDefaultTab)) {
+          setDefaultHomeTab(nextDefaultTab);
+          return;
+        }
+        setDefaultHomeTab(getCurrentDefaultTab());
+      };
+
+      window.addEventListener('heys:default-tab-changed', handleDefaultTabChanged);
+
       return () => {
         clearTimeout(tourTimer);
         unsubLoaded?.();
@@ -36493,8 +36556,9 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         unsubEditEnter?.();
         unsubEditExit?.();
         unsubHistory?.();
+        window.removeEventListener('heys:default-tab-changed', handleDefaultTabChanged);
       };
-    }, []);
+    }, [getCurrentDefaultTab, updateHistoryInfo, VALID_HOME_TABS]);
 
     // Update history info
     const updateHistoryInfo = useCallback(() => {
@@ -36753,6 +36817,74 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       HEYS.Widgets.redo?.();
     }, []);
 
+    const handleLogLayout = useCallback(() => {
+      try {
+        const currentWidgets = (HEYS.Widgets.state?.getWidgets?.() || [])
+          .slice()
+          .sort((a, b) => {
+            const rowDiff = (a?.position?.row || 0) - (b?.position?.row || 0);
+            if (rowDiff !== 0) return rowDiff;
+            return (a?.position?.col || 0) - (b?.position?.col || 0);
+          })
+          .map((widget, index) => {
+            const sizeInfo = HEYS.Widgets.registry?.getSize?.(widget?.size);
+            const cols = sizeInfo?.cols || widget?.cols || 1;
+            const rows = sizeInfo?.rows || widget?.rows || 1;
+            const col = Number.isFinite(widget?.position?.col) ? widget.position.col : 0;
+            const row = Number.isFinite(widget?.position?.row) ? widget.position.row : 0;
+            const occupiedCells = [];
+
+            for (let rowOffset = 0; rowOffset < rows; rowOffset += 1) {
+              for (let colOffset = 0; colOffset < cols; colOffset += 1) {
+                occupiedCells.push(`${col + colOffset},${row + rowOffset}`);
+              }
+            }
+
+            return {
+              order: index + 1,
+              id: widget?.id || null,
+              type: widget?.type || null,
+              size: widget?.size || `${cols}x${rows}`,
+              col,
+              row,
+              cols,
+              rows,
+              occupiedCells
+            };
+          });
+
+        console.info('[HEYS.widgets] layout snapshot', currentWidgets);
+
+        const compactText = currentWidgets
+          .map((widget) => `${widget.order}. ${widget.type} size=${widget.size} pos=(${widget.col},${widget.row}) cells=[${widget.occupiedCells.join(' ')}]`)
+          .join('\n');
+
+        console.info('[HEYS.widgets] layout snapshot text\n' + compactText);
+
+        if (navigator?.clipboard?.writeText) {
+          navigator.clipboard.writeText(compactText).then(() => {
+            console.info('[HEYS.widgets] layout snapshot copied to clipboard');
+          }).catch(() => {
+            console.warn('[HEYS.widgets] layout snapshot clipboard copy failed');
+          });
+        }
+      } catch (e) {
+        console.error('[HEYS.widgets] failed to build layout snapshot', e);
+      }
+    }, []);
+
+    const handleSetDefaultHomeTab = useCallback((nextTab) => {
+      if (!VALID_HOME_TABS.includes(nextTab)) return;
+
+      try {
+        window.HEYS?.App?.setDefaultTab?.(nextTab);
+        setDefaultHomeTab(nextTab);
+        HEYS.dayUtils?.haptic?.('light');
+      } catch (e) {
+        console.warn('[HEYS.widgets] failed to update default home tab', e);
+      }
+    }, [VALID_HOME_TABS]);
+
     // Сбрасываем overlay при выходе из edit mode
     useEffect(() => {
       if (!isEditMode) setShowGridOverlay(false);
@@ -36863,29 +36995,63 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       // === Fixed bottom edit controls (для всех устройств) ===
       React.createElement('div', { className: 'widgets-edit-controls' },
         // Кнопки добавить/отменить/вернуть - показываем только в edit mode
-        isEditMode && React.createElement('div', { className: 'widgets-edit-controls__actions' },
-          React.createElement('button', {
-            id: 'tour-widgets-add',
-            className: 'widgets-header__btn widgets-header__btn--add',
-            onClick: () => setCatalogOpen(true)
-          }, '+ Добавить'),
-          React.createElement('button', {
-            className: `widgets-header__btn widgets-header__btn--undo ${!historyInfo.canUndo ? 'disabled' : ''}`,
-            onClick: handleUndo,
-            disabled: !historyInfo.canUndo,
-            title: 'Отменить (Ctrl+Z)'
-          }, '↩'),
-          React.createElement('button', {
-            className: `widgets-header__btn widgets-header__btn--redo ${!historyInfo.canRedo ? 'disabled' : ''}`,
-            onClick: handleRedo,
-            disabled: !historyInfo.canRedo,
-            title: 'Повторить (Ctrl+Shift+Z)'
-          }, '↪'),
-          React.createElement('button', {
-            className: `widgets-header__btn widgets-header__btn--grid ${showGridOverlay ? 'active' : ''}`,
-            onClick: () => setShowGridOverlay(prev => !prev),
-            title: 'Показать нумерацию ячеек сетки'
-          }, '⊞')
+        isEditMode && React.createElement('div', { className: 'widgets-edit-controls__stack' },
+          React.createElement('div', {
+            className: 'widgets-home-tab-picker',
+            role: 'group',
+            'aria-label': 'Выбор домашней вкладки'
+          },
+            React.createElement('div', { className: 'widgets-home-tab-picker__title' }, 'Домашняя вкладка'),
+            React.createElement('div', { className: 'widgets-home-tab-picker__hint' },
+              'С неё приложение откроется в следующий раз'
+            ),
+            React.createElement('div', { className: 'widgets-home-tab-picker__options' },
+              HOME_TAB_OPTIONS.map((option) => React.createElement('button', {
+                key: option.key,
+                type: 'button',
+                className: `widgets-home-tab-picker__option ${defaultHomeTab === option.key ? 'active' : ''}`,
+                onClick: () => handleSetDefaultHomeTab(option.key),
+                'aria-pressed': defaultHomeTab === option.key,
+                title: `Сделать домашней вкладкой: ${option.label}`
+              },
+                React.createElement('span', { className: 'widgets-home-tab-picker__option-icon' }, option.icon),
+                React.createElement('span', { className: 'widgets-home-tab-picker__option-label' }, option.label),
+                defaultHomeTab === option.key && React.createElement('span', {
+                  className: 'widgets-home-tab-picker__option-badge',
+                  'aria-hidden': 'true'
+                }, '🏠')
+              ))
+            )
+          ),
+          React.createElement('div', { className: 'widgets-edit-controls__actions' },
+            React.createElement('button', {
+              id: 'tour-widgets-add',
+              className: 'widgets-header__btn widgets-header__btn--add',
+              onClick: () => setCatalogOpen(true)
+            }, '+ Добавить'),
+            React.createElement('button', {
+              className: 'widgets-header__btn widgets-header__btn--log',
+              onClick: handleLogLayout,
+              title: 'Вывести лог раскладки виджетов'
+            }, 'Лог'),
+            React.createElement('button', {
+              className: `widgets-header__btn widgets-header__btn--undo ${!historyInfo.canUndo ? 'disabled' : ''}`,
+              onClick: handleUndo,
+              disabled: !historyInfo.canUndo,
+              title: 'Отменить (Ctrl+Z)'
+            }, '↩'),
+            React.createElement('button', {
+              className: `widgets-header__btn widgets-header__btn--redo ${!historyInfo.canRedo ? 'disabled' : ''}`,
+              onClick: handleRedo,
+              disabled: !historyInfo.canRedo,
+              title: 'Повторить (Ctrl+Shift+Z)'
+            }, '↪'),
+            React.createElement('button', {
+              className: `widgets-header__btn widgets-header__btn--grid ${showGridOverlay ? 'active' : ''}`,
+              onClick: () => setShowGridOverlay(prev => !prev),
+              title: 'Показать нумерацию ячеек сетки'
+            }, '⊞')
+          )
         ),
         // FAB кнопка редактирования - всегда видна (только на desktop)
         !isMobile && React.createElement('button', {

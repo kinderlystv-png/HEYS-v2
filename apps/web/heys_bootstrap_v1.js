@@ -54,8 +54,8 @@
   // CONSTANTS
   // ============================================================================
 
-  const INIT_RETRY_DELAY = 100; // ms between dependency checks
-  const MAX_INIT_RETRIES = 50; // max 50 retries = 5 seconds
+  const INIT_RETRY_DELAY = 100; // ms between dependency checks (first 10 retries)
+  const MAX_INIT_RETRIES = 50; // max retries = ~5 seconds total
 
   let reactCheckCount = 0;
 
@@ -190,8 +190,11 @@
       return;
     }
 
-    // Retry after delay
-    setTimeout(() => waitForDependencies(onReady), INIT_RETRY_DELAY);
+    // 🚀 PERF A2: exponential backoff after 1s (10 retries) to reduce CPU pressure on slow boots
+    const delay = reactCheckCount < 10
+      ? INIT_RETRY_DELAY
+      : Math.min(INIT_RETRY_DELAY * Math.pow(2, reactCheckCount - 10), 1000);
+    setTimeout(() => waitForDependencies(onReady), delay);
   }
 
   // ============================================================================

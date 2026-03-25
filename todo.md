@@ -34,6 +34,16 @@
 - **Lazy Chart.js** — Chart.js в Reports загружается on-demand при открытии
   модалки
 - **dayCache/weekCache** — 200-day / 20-week кэш в Reports с invalidation hooks
+- **prodIndex useMemo** — `useMemo([products])` в Reports, не пересчитывается на
+  каждый getCachedDay()
+- **Metabolism useMemo** — `useMemo([lsGet, selectedDate])` в обоих Insights
+  компонентах
+- **EWS badge backoff** — exponential 1s→8s, max 6 retries, event-first +
+  polling-fallback
+- **Product search slice** — `.slice(0, 6)` на результаты поиска, не полный
+  массив
+- **Reports charts** — Sparklines shared модуль, не прямой Chart.js; lazy
+  модальные графики
 
 ### 🚫 Священные зоны — не трогать без отдельного анализа
 
@@ -63,20 +73,22 @@
 
 ### Порядок работ по риску
 
-- [ ] **Итерация A — low risk / safe-first** (конкретные easy wins)
-  - `useMemo` для фильтрации advice list в `heys_day_diary_section.js` (нулевой
-    риск)
-  - exponential backoff в EWS badge polling: 50ms → 100 → 200 → 500
-    (`heys_app_shell_v1.js`)
-  - кэширование `prodIndex` между вызовами `getCachedDay()` в
-    `heys_reports_tab_impl_v1.js`
-  - `useMemo` для 14-day metabolism lookup в `insights/pi_ui_dashboard.js`
-  - exponential backoff в bootstrap polling после 1s (`heys_bootstrap_v1.js`)
-  - preload Chart.js при видимости Reports таба вместо по клику
-  - `slice(0, 50)` + «показать ещё» для поиска продуктов в
-    `heys_add_product_step_v1.js`
-  - локальная чистка offscreen DOM — только ноды, не связанные с deferredSlot
-    skeleton'ами
+- [x] **Итерация A — low risk / safe-first** (конкретные easy wins)
+  - ~~`useMemo` для фильтрации advice list в `heys_day_diary_section.js`~~ →
+    advice filtering в `day/_advice.js`: убраны 3 redundant `.filter()`,
+    `activeCount` вычисляется inline ✅
+  - ~~exponential backoff в EWS badge polling~~ → уже exponential 1s→8s, не
+    нужно ✅
+  - ~~кэширование `prodIndex` в Reports~~ → уже `useMemo([products])` ✅
+  - ~~`useMemo` для 14-day metabolism lookup~~ → уже `useMemo` в обоих
+    компонентах ✅
+  - ~~exponential backoff в bootstrap polling после 1s~~ →
+    `heys_bootstrap_v1.js`: linear 100ms → exponential после 10 retries ✅
+  - ~~preload Chart.js~~ → Reports использует Sparklines модуль, не Chart.js; не
+    применимо ✅
+  - ~~`slice(0, 50)` для поиска продуктов~~ → уже `.slice(0, 6)` ✅
+  - локальная чистка offscreen DOM — отложено до профилирования конкретных
+    экранов
 - [ ] **Итерация B — medium risk / только если A мало помогла**
   - отмена лишних повторных init/update при повторном входе на таб (⚠️ event
     dedup 100ms — деликатно)
@@ -93,16 +105,18 @@
 
 ### Что именно оптимизировать (привязано к итерациям)
 
-- [ ] **A1. Мемоизация hot-path вычислений**
-  - advice list filtering, prodIndex rebuild, metabolism 14-day lookup
-  - чисто функциональные правки: `useMemo` / кэш-переменные
-- [ ] **A2. Polling/retry backoff**
-  - EWS badge: 50ms flat → exponential (50 → 100 → 200 → 500)
-  - Bootstrap: linear 100ms → exponential после 1s
-- [ ] **A3. Ленивая загрузка ресурсов**
-  - Chart.js: preload при видимости Reports, не при клике
-  - Поиск продуктов: `slice(0, 50)` + кнопка «показать ещё» — изолированный
-    компонент, zero risk
+- [x] **A1. Мемоизация hot-path вычислений**
+  - ~~advice list filtering~~ → `day/_advice.js`: 3 redundant `.filter()`
+    убраны, `activeCount` inline ✅
+  - ~~prodIndex rebuild~~ → уже `useMemo([products])` ✅
+  - ~~metabolism 14-day lookup~~ → уже `useMemo([lsGet, selectedDate])` ✅
+- [x] **A2. Polling/retry backoff**
+  - ~~EWS badge~~ → уже exponential 1s→8s ✅
+  - Bootstrap: linear 100ms → exponential после 1s ✅
+- [ ] **A3. Ленивая загрузка ресурсов** → пересмотрено
+  - ~~Chart.js preload~~ → не применимо, Reports использует Sparklines
+  - ~~Поиск продуктов slice~~ → уже `.slice(0, 6)` ✅
+  - DOM cleanup: отложено до профилирования
 - [ ] **B1. Tab-switch lifecycle** _(только после A)_
   - Разобрать init/update цепочки на каждый tab open
   - Убрать синхронные тяжёлые пачки из критического пути — осторожно с event

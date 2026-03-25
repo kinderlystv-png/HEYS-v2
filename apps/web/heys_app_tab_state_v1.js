@@ -86,6 +86,14 @@
             U?.lsSet?.('heys_profile', updatedProfile);
             setDefaultTabState(newDefaultTab);
 
+            try {
+                window.dispatchEvent(new CustomEvent('heys:default-tab-changed', {
+                    detail: { defaultTab: newDefaultTab }
+                }));
+            } catch (e) {
+                // silent
+            }
+
             devLog(`[App] 🏠 Default tab changed to: ${newDefaultTab}`);
         }, []);
 

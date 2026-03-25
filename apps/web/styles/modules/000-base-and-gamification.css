@@ -4293,6 +4293,12 @@ td:first-child input {
   color: var(--color-blue-500);
 }
 
+.cloud-sync-indicator.queued {
+  background: rgba(59, 130, 246, 0.12);
+  color: var(--color-blue-500);
+  position: relative;
+}
+
 /* Крутящийся spinner для syncing */
 .sync-spinner {
   width: 14px;
@@ -4406,12 +4412,7 @@ td:first-child input {
   }
 }
 
-/* Error state */
-.cloud-sync-indicator.error {
-  background: rgba(239, 68, 68, 0.15);
-  color: var(--color-red-500);
-  position: relative;
-}
+/* Error state — основной стиль amber/warning определён ниже, ближе к idle/queued блоку */
 
 /* ═══════════════════════════════════════════════════════════════════
    EWS BADGE — Early Warning System indicator in header (v1.0)
@@ -4809,6 +4810,25 @@ body:has(.offline-banner) .wrap {
 
 .cloud-sync-indicator.idle svg.cloud-icon {
   display: block;
+}
+
+.cloud-sync-indicator.queued svg.cloud-icon {
+  display: block;
+  animation: syncQueuedPulse 1.8s ease-in-out infinite;
+}
+
+@keyframes syncQueuedPulse {
+
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.92;
+  }
+
+  50% {
+    transform: scale(1.06);
+    opacity: 1;
+  }
 }
 
 /* Clickable variant: hover + active feedback */

@@ -2062,6 +2062,11 @@
   color: #60a5fa;
 }
 
+[data-theme="dark"] .cloud-sync-indicator.queued {
+  background: rgba(96, 165, 250, 0.16);
+  color: #60a5fa;
+}
+
 [data-theme="dark"] .cloud-sync-indicator.synced {
   background: rgba(52, 211, 153, 0.2);
   color: #34d399;
