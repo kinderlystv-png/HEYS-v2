@@ -1,6 +1,22 @@
 {
   "releases": [
     {
+      "version": "2026.03.25.PENDING",
+      "buildHash": "PENDING",
+      "date": "2026-03-25",
+      "title": "Умная аналитика стала компактнее и удобнее",
+      "items": [
+        {
+          "type": "improvement",
+          "title": "Компактный дизайн «Умной аналитики»",
+          "description": "Вкладка Insights полностью переработана: убрали лишний текст, табы «7д / 30д» переехали в заголовок, а фильтры по приоритету (Всё, Важное, Полезное) теперь занимают одну строку. Карточки стали аккуратнее и читаются проще.",
+          "image": "/whats-new/insights-analytics.png"
+        }
+      ],
+      "kind": "user-facing",
+      "profile": "user-facing-general"
+    },
+    {
       "version": "2026.03.25.d1d273ce",
       "buildHash": "d1d273ce",
       "date": "2026-03-25",

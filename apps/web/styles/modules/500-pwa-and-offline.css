@@ -3083,7 +3083,6 @@
   border-radius: 12px;
   overflow: hidden;
   background: rgba(0, 0, 0, 0.04);
-  aspect-ratio: 16 / 10;
 }
 
 .wn-image-skeleton {
@@ -3106,8 +3105,9 @@
 
 .wn-image {
   width: 100%;
-  height: 100%;
-  object-fit: cover;
+  height: auto;
+  display: block;
+  object-fit: contain;
   opacity: 0;
   transition: opacity 0.3s ease;
 }

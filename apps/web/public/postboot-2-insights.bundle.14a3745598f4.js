@@ -34095,7 +34095,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           h('div', { className: 'insights-tab' },
             h('div', { className: 'insights-tab__hero' },
               h('div', { className: 'insights-tab__header' },
-                h('h2', { className: 'insights-tab__title' }, '🔮 Умная аналитика')
+                h('h2', { className: 'insights-tab__title' }, 'Умная аналитика')
               )
             ),
             h('div', { className: 'insights-tab__content' },
@@ -34116,60 +34116,54 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
       return h(InsightsErrorBoundary, null,
         h('div', { className: 'insights-tab' },
-          // === HERO HEADER ===
+          // === COMPACT PREMIUM HERO ===
           h('div', { className: 'insights-tab__hero' },
+            // Row 1: title + tabs toggle
             h('div', { className: 'insights-tab__header' },
-              h('h2', { className: 'insights-tab__title' }, '🔮 Умная аналитика'),
-              h('div', { className: 'insights-tab__subtitle' },
-                activeTab === 'today'
-                  ? `Анализ за ${insights.daysAnalyzed || 7} дней`
-                  : `Глубокий анализ за ${insights.daysAnalyzed || 30} дней`
+              h('h2', { className: 'insights-tab__title' }, 'Умная аналитика'),
+              h('div', { className: 'insights-tab__tabs' },
+                h('button', {
+                  className: 'insights-tab__tab' + (activeTab === 'today' ? ' active' : ''),
+                  onClick: () => setActiveTab('today')
+                }, '7д'),
+                h('button', {
+                  className: 'insights-tab__tab' + (activeTab === 'week' ? ' active' : ''),
+                  onClick: () => setActiveTab('week')
+                }, '30д')
               )
             ),
 
-            // Glass Tabs внутри hero
-            h('div', { className: 'insights-tab__tabs' },
+            // Row 2: compact filter pills
+            h('div', { className: 'insights-tab__filters' },
               h('button', {
-                className: 'insights-tab__tab' + (activeTab === 'today' ? ' active' : ''),
-                onClick: () => setActiveTab('today')
-              }, '📅 7 дней'),
+                className: `insights-tab__filter-btn ${!priorityFilter ? 'active' : ''}`,
+                onClick: () => setPriorityFilter(null)
+              }, 'Всё'),
               h('button', {
-                className: 'insights-tab__tab' + (activeTab === 'week' ? ' active' : ''),
-                onClick: () => setActiveTab('week')
-              }, '📊 30 дней')
+                className: `insights-tab__filter-btn ${priorityFilter === 'CRITICAL' ? 'active' : ''}`,
+                onClick: () => setPriorityFilter(priorityFilter === 'CRITICAL' ? null : 'CRITICAL'),
+                style: { '--filter-color': PRIORITY_LEVELS.CRITICAL.color }
+              }, 'Важное'),
+              h('button', {
+                className: `insights-tab__filter-btn ${priorityFilter === 'HIGH' ? 'active' : ''}`,
+                onClick: () => setPriorityFilter(priorityFilter === 'HIGH' ? null : 'HIGH'),
+                style: { '--filter-color': PRIORITY_LEVELS.HIGH.color }
+              }, 'Полезное')
             ),
 
-            // 🎯 Demo Mode Banner — показываем только в демо режиме
+            // Demo Mode Banner (compact)
             showDemoMode && h('div', {
               className: 'insights-tab__demo-banner'
             },
               h('span', { className: 'insights-tab__demo-banner-icon' }, '✨'),
               h('div', null,
                 h('div', { className: 'insights-tab__demo-banner-title' },
-                  'Демо-режим аналитики'
+                  'Демо-режим'
                 ),
                 h('div', { className: 'insights-tab__demo-banner-desc' },
-                  'Это пример данных. После 3 дней использования появится ваша реальная статистика'
+                  'Пример данных — реальная статистика появится через 3 дня'
                 )
               )
-            ),
-
-            // Priority Filter (compact)
-            h('div', { className: 'insights-tab__filters' },
-              h('button', {
-                className: `insights-tab__filter-btn ${!priorityFilter ? 'active' : ''}`,
-                onClick: () => setPriorityFilter(null)
-              }, '🎯 Всё'),
-              h('button', {
-                className: `insights-tab__filter-btn ${priorityFilter === 'CRITICAL' ? 'active' : ''}`,
-                onClick: () => setPriorityFilter(priorityFilter === 'CRITICAL' ? null : 'CRITICAL'),
-                style: { '--filter-color': PRIORITY_LEVELS.CRITICAL.color }
-              }, '🔴 Важное'),
-              h('button', {
-                className: `insights-tab__filter-btn ${priorityFilter === 'HIGH' ? 'active' : ''}`,
-                onClick: () => setPriorityFilter(priorityFilter === 'HIGH' ? null : 'HIGH'),
-                style: { '--filter-color': PRIORITY_LEVELS.HIGH.color }
-              }, '🟠 Полезное')
             )
           ),
 

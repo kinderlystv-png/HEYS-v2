@@ -960,7 +960,14 @@
             const itemCarbs = (simple100 + complex100) * g / 100;
 
             const gi = p.gi ?? p.gi100 ?? p.GI ?? p.giIndex ?? 50;
-            const harm = p.harm ?? p.harmScore ?? p.harm100 ?? p.harmPct ?? 0;
+            // Dose-adjusted harm: cascade uses dynamic scoring based on actual portion
+            const _pHasMacros = (
+                p.simple100 != null || p.carbs100 != null ||
+                p.trans100 != null || p.badFat100 != null || p.badfat100 != null
+            );
+            const harm = (g > 0 && _pHasMacros && HEYS.Harm?.calculateDoseAdjustedHarm)
+                ? HEYS.Harm.calculateDoseAdjustedHarm(p, g)
+                : (p.harm ?? p.harmScore ?? p.harm100 ?? p.harmPct ?? 0);
             const itemKcal = (+p.kcal100 || 0) * g / 100;
 
             gramSum += g;
@@ -2894,8 +2901,14 @@
                 const g = +it.grams || 0;
                 if (!g) return;
                 const gi = p.gi ?? p.gi100 ?? p.GI ?? p.giIndex;
-                // Use centralized harm normalization with fallback to item
-                const harm = HEYS.models?.normalizeHarm?.(p) ?? HEYS.models?.normalizeHarm?.(it);
+                // Dose-adjusted harm: cascade uses the same dynamic scoring as item cards
+                const _pHasMacros = (
+                    p.simple100 != null || p.carbs100 != null ||
+                    p.trans100 != null || p.badFat100 != null || p.badfat100 != null
+                );
+                const harm = (g > 0 && _pHasMacros && HEYS.Harm?.calculateDoseAdjustedHarm)
+                    ? HEYS.Harm.calculateDoseAdjustedHarm(p, g)
+                    : (HEYS.models?.normalizeHarm?.(p) ?? HEYS.models?.normalizeHarm?.(it));
                 gSum += g;
                 if (gi != null) giSum += gi * g;
                 if (harm != null) harmSum += harm * g;

@@ -726,9 +726,26 @@ body:has(.page-reports) .hdr::after {
   border-radius: 8px;
 }
 
+.widgets-header__btn--home {
+  padding: 8px 11px;
+  font-size: 18px;
+  line-height: 1;
+}
+
+.widgets-header__btn--home.active {
+  color: #2563eb;
+  background: rgba(37, 99, 235, 0.12);
+  border-radius: 8px;
+}
+
 [data-theme="dark"] .widgets-header__btn--grid.active {
   color: #818cf8;
   background: rgba(99, 102, 241, 0.18);
+}
+
+[data-theme="dark"] .widgets-header__btn--home.active {
+  color: #93c5fd;
+  background: rgba(59, 130, 246, 0.2);
 }
 
 

@@ -2090,6 +2090,9 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
 
             // 4. Перезагружаем страницу с cache-busting — пользователь увидит экран входа
             setTimeout(() => {
+              // Очищаем флаги перед reload чтобы не триггерить повторный controllerchange
+              try { sessionStorage.removeItem('heys_pending_update'); } catch (e) { }
+              clearUpdateLock();
               const url = new URL(window.location.href);
               url.searchParams.set('_v', Date.now().toString());
               window.location.href = url.toString();
@@ -2200,6 +2203,12 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
 
         // v61/v62: Defer reload until active sync completes (prevents mid-sync page interruption)
         const doReload = () => {
+          // Очищаем флаги ПЕРЕД reload — после него SW выполняет clients.claim()
+          // за счёт чего может сработать controllerchange на новой странице.
+          // Если флаги не убрать, isRealUpdate = true даже при hadControllerBefore = false,
+          // что вызывает ложный второй reload (именно это приводит к мерцанию What's New).
+          try { sessionStorage.removeItem('heys_pending_update'); } catch (e) { }
+          clearUpdateLock();
           console.info('[SW] 🔄 Reloading page with new SW... (triggered by controllerchange)');
           const url = new URL(window.location.href);
           url.searchParams.set('_v', Date.now().toString());
@@ -2295,6 +2304,9 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
       setTimeout(() => {
         if (sessionStorage.getItem('heys_pending_update') === 'true') {
           console.log('[SW] ⚡ Fallback reload after', fallbackMs, 'ms (triggered by triggerSkipWaiting fallback)');
+          // Очищаем флаги перед reload чтобы не триггерить повторный controllerchange
+          try { sessionStorage.removeItem('heys_pending_update'); } catch (e) { }
+          clearUpdateLock();
           const url = new URL(window.location.href);
           url.searchParams.set('_v', Date.now().toString());
           window.location.href = url.toString();

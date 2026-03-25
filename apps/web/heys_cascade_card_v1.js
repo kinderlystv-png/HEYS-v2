@@ -280,7 +280,17 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       var item = meal.items[i];
       var product = (HEYS.dayUtils && HEYS.dayUtils.getProductFromItem && HEYS.dayUtils.getProductFromItem(item, pIndex))
         || (HEYS.models && HEYS.models.getProductFromItem && HEYS.models.getProductFromItem(item, pIndex));
-      if (product && (product.harm || 0) >= 7) return true;
+      if (!product) continue;
+      var g = +(item.grams || item.g || 0);
+      // Dose-adjusted harm: small portion of inherently harmful product is not harmful
+      var pHasMacros = (
+        product.simple100 != null || product.carbs100 != null ||
+        product.trans100 != null || product.badFat100 != null || product.badfat100 != null
+      );
+      var harm = (g > 0 && pHasMacros && HEYS.Harm && HEYS.Harm.calculateDoseAdjustedHarm)
+        ? HEYS.Harm.calculateDoseAdjustedHarm(product, g)
+        : (product.harm || 0);
+      if (harm >= 7) return true;
     }
     return false;
   }

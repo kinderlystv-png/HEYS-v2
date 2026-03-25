@@ -36401,6 +36401,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     const [crashRiskDetails, setCrashRiskDetails] = useState(null);
     const [historyInfo, setHistoryInfo] = useState({ canUndo: false, canRedo: false });
     const [showGridOverlay, setShowGridOverlay] = useState(false); // Grid overlay toggle
+    const [showHomeTabPicker, setShowHomeTabPicker] = useState(false);
     const containerRef = useRef(null);
     const gridRef = useRef(null);
 
@@ -36817,62 +36818,6 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       HEYS.Widgets.redo?.();
     }, []);
 
-    const handleLogLayout = useCallback(() => {
-      try {
-        const currentWidgets = (HEYS.Widgets.state?.getWidgets?.() || [])
-          .slice()
-          .sort((a, b) => {
-            const rowDiff = (a?.position?.row || 0) - (b?.position?.row || 0);
-            if (rowDiff !== 0) return rowDiff;
-            return (a?.position?.col || 0) - (b?.position?.col || 0);
-          })
-          .map((widget, index) => {
-            const sizeInfo = HEYS.Widgets.registry?.getSize?.(widget?.size);
-            const cols = sizeInfo?.cols || widget?.cols || 1;
-            const rows = sizeInfo?.rows || widget?.rows || 1;
-            const col = Number.isFinite(widget?.position?.col) ? widget.position.col : 0;
-            const row = Number.isFinite(widget?.position?.row) ? widget.position.row : 0;
-            const occupiedCells = [];
-
-            for (let rowOffset = 0; rowOffset < rows; rowOffset += 1) {
-              for (let colOffset = 0; colOffset < cols; colOffset += 1) {
-                occupiedCells.push(`${col + colOffset},${row + rowOffset}`);
-              }
-            }
-
-            return {
-              order: index + 1,
-              id: widget?.id || null,
-              type: widget?.type || null,
-              size: widget?.size || `${cols}x${rows}`,
-              col,
-              row,
-              cols,
-              rows,
-              occupiedCells
-            };
-          });
-
-        console.info('[HEYS.widgets] layout snapshot', currentWidgets);
-
-        const compactText = currentWidgets
-          .map((widget) => `${widget.order}. ${widget.type} size=${widget.size} pos=(${widget.col},${widget.row}) cells=[${widget.occupiedCells.join(' ')}]`)
-          .join('\n');
-
-        console.info('[HEYS.widgets] layout snapshot text\n' + compactText);
-
-        if (navigator?.clipboard?.writeText) {
-          navigator.clipboard.writeText(compactText).then(() => {
-            console.info('[HEYS.widgets] layout snapshot copied to clipboard');
-          }).catch(() => {
-            console.warn('[HEYS.widgets] layout snapshot clipboard copy failed');
-          });
-        }
-      } catch (e) {
-        console.error('[HEYS.widgets] failed to build layout snapshot', e);
-      }
-    }, []);
-
     const handleSetDefaultHomeTab = useCallback((nextTab) => {
       if (!VALID_HOME_TABS.includes(nextTab)) return;
 
@@ -36887,7 +36832,10 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
     // Сбрасываем overlay при выходе из edit mode
     useEffect(() => {
-      if (!isEditMode) setShowGridOverlay(false);
+      if (!isEditMode) {
+        setShowGridOverlay(false);
+        setShowHomeTabPicker(false);
+      }
     }, [isEditMode]);
 
     // Количество строк для grid overlay (максимальная занятая строка + запас)
@@ -36996,7 +36944,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       React.createElement('div', { className: 'widgets-edit-controls' },
         // Кнопки добавить/отменить/вернуть - показываем только в edit mode
         isEditMode && React.createElement('div', { className: 'widgets-edit-controls__stack' },
-          React.createElement('div', {
+          showHomeTabPicker && React.createElement('div', {
             className: 'widgets-home-tab-picker',
             role: 'group',
             'aria-label': 'Выбор домашней вкладки'
@@ -37030,10 +36978,13 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
               onClick: () => setCatalogOpen(true)
             }, '+ Добавить'),
             React.createElement('button', {
-              className: 'widgets-header__btn widgets-header__btn--log',
-              onClick: handleLogLayout,
-              title: 'Вывести лог раскладки виджетов'
-            }, 'Лог'),
+              className: `widgets-header__btn widgets-header__btn--home ${showHomeTabPicker ? 'active' : ''}`,
+              onClick: () => setShowHomeTabPicker((prev) => !prev),
+              title: showHomeTabPicker ? 'Скрыть выбор домашней вкладки' : 'Выбрать домашнюю вкладку',
+              'aria-expanded': showHomeTabPicker,
+              'aria-pressed': showHomeTabPicker,
+              'aria-label': showHomeTabPicker ? 'Скрыть выбор домашней вкладки' : 'Показать выбор домашней вкладки'
+            }, '🏠'),
             React.createElement('button', {
               className: `widgets-header__btn widgets-header__btn--undo ${!historyInfo.canUndo ? 'disabled' : ''}`,
               onClick: handleUndo,
