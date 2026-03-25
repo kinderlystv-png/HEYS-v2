@@ -1366,6 +1366,9 @@ td:first-child input {
   box-sizing: border-box;
   /* Отступ сверху для fixed шапки */
   padding-top: 110px;
+  /* 🚀 PERF: isolation creates a stacking context boundary that helps
+     the compositor limit backdrop-filter sampling scope on .hdr / .tabs */
+  isolation: isolate;
 }
 
 /* === 12. MODERN HEADER === */
@@ -1386,6 +1389,10 @@ td:first-child input {
   /* Padding как у карточек */
   padding: 12px 18px 0;
   max-width: 100%;
+
+  /* 🚀 PERF: GPU layer + containment — isolate header layout/style from page reflow */
+  will-change: transform;
+  contain: layout style;
 }
 
 /* Верхняя линия: Gamification */
@@ -1547,6 +1554,8 @@ td:first-child input {
 .hdr-gamification {
   padding: 10px 16px;
   position: relative;
+  /* 🚀 PERF: contain gamification layout — prevents child animations from triggering parent reflow */
+  contain: layout style;
 }
 
 .game-bar-container {
@@ -2063,6 +2072,10 @@ td:first-child input {
   align-items: center;
   gap: 1px;
   flex-shrink: 0;
+  /* 🚀 PERF: promote to own GPU sub-layer so flicker/glow animations
+     don't invalidate parent .hdr layer and force backdrop-filter re-evaluation */
+  will-change: transform, opacity;
+  isolation: isolate;
 }
 
 /* Streak уровни анимации */
@@ -5691,6 +5704,8 @@ body:has(.offline-banner) .wrap {
   box-shadow: 0 -1px 20px rgba(0, 0, 0, 0.06);
   padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
   min-height: 58px;
+  /* 🚀 PERF: containment isolates tabs layout/style from page reflow during scroll */
+  contain: layout style;
 }
 
 /* CRS Progress Bar (v3.1.0) */

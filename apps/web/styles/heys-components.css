@@ -4145,6 +4145,9 @@ body.tour-active .ios-pwa-banner {
   font-size: 12px;
   line-height: 1;
   filter: drop-shadow(0 0 4px rgba(245, 158, 11, 0.5));
+  /* 🚀 PERF: promote flame to own GPU layer so filter doesn't invalidate parent .hdr */
+  will-change: filter;
+  isolation: isolate;
 }
 
 .game-streak__flame.flame-mild {
@@ -5523,6 +5526,9 @@ body.tour-active .ios-pwa-banner {
 
 .reports-card--monthly {
   position: relative;
+  /* 🚀 PERF: defer rendering of off-screen monthly reports (up to 440 descendants) */
+  content-visibility: auto;
+  contain-intrinsic-size: auto 400px;
 }
 
 .reports-title-row--monthly {
