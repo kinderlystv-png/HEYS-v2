@@ -1,8 +1,8 @@
 {
   "releases": [
     {
-      "version": "2026.03.25.4db070d5",
-      "buildHash": "4db070d5",
+      "version": "2026.03.25.78afcffb",
+      "buildHash": "78afcffb",
       "date": "2026-03-25",
       "title": "Виджеты обновились: стандартный набор и выбор домашней вкладки",
       "items": [

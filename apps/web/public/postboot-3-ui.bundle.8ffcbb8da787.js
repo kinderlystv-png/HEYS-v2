@@ -36558,7 +36558,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         unsubHistory?.();
         window.removeEventListener('heys:default-tab-changed', handleDefaultTabChanged);
       };
-    }, [getCurrentDefaultTab, updateHistoryInfo, VALID_HOME_TABS]);
+    }, [getCurrentDefaultTab, VALID_HOME_TABS]);
 
     // Update history info
     const updateHistoryInfo = useCallback(() => {
