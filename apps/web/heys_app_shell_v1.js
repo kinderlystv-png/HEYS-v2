@@ -970,10 +970,8 @@
                 {
                     className: 'tab tab-advice' + (widgetsEditMode ? ' tab--disabled-home' : ''),
                     onClick: () => {
-                        if (tab !== 'stats' && tab !== 'diary') {
-                            switchTabWithUndoCommit('stats', 'tab-advice-switch');
-                        }
                         // PERF R13 FIX G: defer heysShowAdvice dispatch to avoid sync React render in click handler
+                        // DayTabWithCloudSync is always mounted, no tab switch needed
                         setTimeout(() => window.dispatchEvent(new CustomEvent('heysShowAdvice')), 0);
                     },
                 },
@@ -1200,85 +1198,95 @@
             edgeBounce && React.createElement('div', {
                 className: 'edge-indicator ' + edgeBounce
             }),
-            tab === 'ration'
-                ? React.createElement(RationTabWithCloudSync, {
-                    key: 'ration' + syncVer + '_' + String(clientId || ''),
+            // DayTabWithCloudSync is always mounted so heysShowAdvice listener is always active.
+            // Advice overlay is position:fixed — it appears over any tab regardless of which is active.
+            // height:0 + overflow:hidden hides regular content; fixed children are unclipped by overflow.
+            React.createElement(
+                'div',
+                { style: (tab === 'stats' || tab === 'diary') ? undefined : { height: 0, overflow: 'hidden' } },
+                React.createElement(DayTabWithCloudSync, {
+                    key: 'day_' + String(clientId || ''),
                     products,
-                    setProducts,
                     clientId,
+                    selectedDate,
+                    setSelectedDate,
+                    subTab: (tab === 'stats' || tab === 'diary') ? tab : 'stats',
                 })
-                : tab === 'insights'
-                    ? (window.HEYS?.PredictiveInsights?.components?.InsightsTab
-                        ? React.createElement(window.HEYS.PredictiveInsights.components.InsightsTab, {
-                            key: 'insights' + syncVer + '_' + String(clientId || '') + '_' + selectedDate,
-                            lsGet: window.HEYS?.utils?.lsGet,
-                            profile: null,
-                            pIndex: null,
-                            optimum: null,
-                            selectedDate: selectedDate,
-                        })
-                        : renderTabFallback('insights', React.createElement('div', { style: { padding: 16 } },
-                            React.createElement('div', { className: 'skeleton-sparkline', style: { height: 160, marginBottom: 16 } }),
-                            React.createElement('div', { className: 'skeleton-block', style: { height: 100 } })
-                        )))
-                    : tab === 'month'
-                        ? (window.HEYS?.ReportsTab
-                            ? React.createElement(window.HEYS.ReportsTab, {
-                                key: 'month' + syncVer + '_' + String(clientId || '') + '_' + selectedDate,
-                                selectedDate,
-                                setSelectedDate,
-                                clientId,
+            ),
+            (tab !== 'stats' && tab !== 'diary') && (
+                tab === 'ration'
+                    ? React.createElement(RationTabWithCloudSync, {
+                        key: 'ration' + syncVer + '_' + String(clientId || ''),
+                        products,
+                        setProducts,
+                        clientId,
+                    })
+                    : tab === 'insights'
+                        ? (window.HEYS?.PredictiveInsights?.components?.InsightsTab
+                            ? React.createElement(window.HEYS.PredictiveInsights.components.InsightsTab, {
+                                key: 'insights' + syncVer + '_' + String(clientId || '') + '_' + selectedDate,
+                                lsGet: window.HEYS?.utils?.lsGet,
+                                profile: null,
+                                pIndex: null,
+                                optimum: null,
+                                selectedDate: selectedDate,
                             })
-                            : renderTabFallback('month', React.createElement('div', { style: { padding: 16 } },
+                            : renderTabFallback('insights', React.createElement('div', { style: { padding: 16 } },
                                 React.createElement('div', { className: 'skeleton-sparkline', style: { height: 160, marginBottom: 16 } }),
                                 React.createElement('div', { className: 'skeleton-block', style: { height: 100 } })
                             )))
-                        : (tab === 'stats' || tab === 'diary')
-                            ? React.createElement(DayTabWithCloudSync, {
-                                key: 'day_' + String(clientId || ''),
-                                products,
-                                clientId,
-                                selectedDate,
-                                setSelectedDate,
-                                subTab: tab,
-                            })
-                            : tab === 'user'
-                                ? React.createElement(UserTabWithCloudSync, {
-                                    key: 'user' + syncVer + '_' + String(clientId || ''),
+                        : tab === 'month'
+                            ? (window.HEYS?.ReportsTab
+                                ? React.createElement(window.HEYS.ReportsTab, {
+                                    key: 'month' + syncVer + '_' + String(clientId || '') + '_' + selectedDate,
+                                    selectedDate,
+                                    setSelectedDate,
                                     clientId,
                                 })
-                                : tab === 'overview'
-                                    ? (window.HEYS && window.HEYS.DataOverviewTab
-                                        ? React.createElement(window.HEYS.DataOverviewTab, {
-                                            key: 'overview' + syncVer + '_' + String(clientId || ''),
-                                            clientId,
-                                            setTab,
-                                            setSelectedDate,
-                                        })
-                                        : renderTabFallback('overview', React.createElement('div', { style: { padding: 16 } },
-                                            React.createElement('div', { className: 'skeleton-sparkline', style: { height: 80, marginBottom: 16 } }),
-                                            React.createElement('div', { className: 'skeleton-block', style: { height: 100 } })
-                                        )))
-                                    : tab === 'widgets'
-                                        ? (window.HEYS && window.HEYS.Widgets && window.HEYS.Widgets.WidgetsTab
-                                            ? React.createElement(window.HEYS.Widgets.WidgetsTab, {
-                                                // NOTE: syncVer намеренно убран из key — WidgetsTab подписан на
-                                                // data:updated/day:updated события и не нуждается в remount при синке.
-                                                // syncVer в key вызывает flash всего контента вкладки.
-                                                key: 'widgets_' + String(clientId || '') + '_' + selectedDate,
+                                : renderTabFallback('month', React.createElement('div', { style: { padding: 16 } },
+                                    React.createElement('div', { className: 'skeleton-sparkline', style: { height: 160, marginBottom: 16 } }),
+                                    React.createElement('div', { className: 'skeleton-block', style: { height: 100 } })
+                                )))
+                            : (tab === 'stats' || tab === 'diary')
+                                ? null
+                                : tab === 'user'
+                                    ? React.createElement(UserTabWithCloudSync, {
+                                        key: 'user' + syncVer + '_' + String(clientId || ''),
+                                        clientId,
+                                    })
+                                    : tab === 'overview'
+                                        ? (window.HEYS && window.HEYS.DataOverviewTab
+                                            ? React.createElement(window.HEYS.DataOverviewTab, {
+                                                key: 'overview' + syncVer + '_' + String(clientId || ''),
                                                 clientId,
-                                                selectedDate,
                                                 setTab,
                                                 setSelectedDate,
                                             })
-                                            : renderTabFallback('widgets', React.createElement('div', { style: { padding: 16 } },
+                                            : renderTabFallback('overview', React.createElement('div', { style: { padding: 16 } },
                                                 React.createElement('div', { className: 'skeleton-sparkline', style: { height: 80, marginBottom: 16 } }),
                                                 React.createElement('div', { className: 'skeleton-block', style: { height: 100 } })
                                             )))
-                                        : renderTabFallback('default_' + String(tab || 'unknown'), React.createElement('div', { style: { padding: 16 } },
-                                            React.createElement('div', { className: 'skeleton-header', style: { width: 150, marginBottom: 16 } }),
-                                            React.createElement('div', { className: 'skeleton-block', style: { height: 200 } })
-                                        ))
+                                        : tab === 'widgets'
+                                            ? (window.HEYS && window.HEYS.Widgets && window.HEYS.Widgets.WidgetsTab
+                                                ? React.createElement(window.HEYS.Widgets.WidgetsTab, {
+                                                    // NOTE: syncVer намеренно убран из key — WidgetsTab подписан на
+                                                    // data:updated/day:updated события и не нуждается в remount при синке.
+                                                    // syncVer в key вызывает flash всего контента вкладки.
+                                                    key: 'widgets_' + String(clientId || '') + '_' + selectedDate,
+                                                    clientId,
+                                                    selectedDate,
+                                                    setTab,
+                                                    setSelectedDate,
+                                                })
+                                                : renderTabFallback('widgets', React.createElement('div', { style: { padding: 16 } },
+                                                    React.createElement('div', { className: 'skeleton-sparkline', style: { height: 80, marginBottom: 16 } }),
+                                                    React.createElement('div', { className: 'skeleton-block', style: { height: 100 } })
+                                                )))
+                                            : renderTabFallback('default_' + String(tab || 'unknown'), React.createElement('div', { style: { padding: 16 } },
+                                                React.createElement('div', { className: 'skeleton-header', style: { width: 150, marginBottom: 16 } }),
+                                                React.createElement('div', { className: 'skeleton-block', style: { height: 200 } })
+                                            ))
+            )
         );
     }
 

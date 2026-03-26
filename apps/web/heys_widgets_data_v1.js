@@ -132,6 +132,39 @@
                     return getRelapseRiskData(widget, U);
                 }
 
+                case 'cascade': {
+                    const dayData = HEYS.DayData?.getCurrentDay?.() || {};
+                    const profile = U.lsGet('heys_profile', {});
+                    const pIndex = profile?.pIndex || 0;
+                    const dayTot = HEYS.DayData?.getDayTot?.(dayData) || {};
+                    const normAbs = HEYS.norms?.getNormAbs?.(profile, pIndex) || {};
+                    const cascadeApi = HEYS.CascadeCard;
+
+                    if (typeof cascadeApi?.computeCascadeState !== 'function') {
+                        return {
+                            hasData: false,
+                            pct: 0,
+                            trend: 'flat',
+                            state: 'EMPTY',
+                            events: []
+                        };
+                    }
+
+                    const result = cascadeApi.computeCascadeState(dayData, dayTot, normAbs, profile, pIndex) || {};
+                    const events = Array.isArray(result?.events) ? result.events : [];
+                    const crs = Number(result?.crs) || 0;
+
+                    return {
+                        hasData: events.length > 0,
+                        crs,
+                        pct: Math.max(0, Math.min(100, Math.round(crs * 100))),
+                        trend: result?.crsTrend || 'flat',
+                        state: result?.state || 'EMPTY',
+                        chainLength: Number(result?.chainLength) || 0,
+                        events
+                    };
+                }
+
                 case 'status': {
                     const dayData = HEYS.DayData?.getCurrentDay?.() || {};
                     const profile = U.lsGet('heys_profile', {});

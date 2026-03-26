@@ -75,6 +75,24 @@
       fatTarget: 70,
       carbsTarget: 260
     },
+    cascade: {
+      hasData: true,
+      crs: 0.88,
+      pct: 88,
+      trend: 'down',
+      state: 'GOOD',
+      chainLength: 8,
+      events: [
+        { type: 'breakfast', label: 'Завтрак', weight: 1.3, positive: true },
+        { type: 'lunch', label: 'Обед', weight: 1.0, positive: true },
+        { type: 'snack', label: 'Перекус', weight: 1.0, positive: true },
+        { type: 'steps', label: 'Шаги', weight: 1.1, positive: true },
+        { type: 'training', label: 'Тренировка', weight: 1.5, positive: true },
+        { type: 'wave_overlap', label: 'Наложение волн', weight: -0.9, positive: false },
+        { type: 'late_meal', label: 'Поздний приём', weight: 0.8, positive: true },
+        { type: 'supplements', label: 'Добавки', weight: 0.5, positive: true }
+      ]
+    },
     insulin: {
       status: 'almost',
       remaining: 25,
@@ -166,6 +184,8 @@
           return this.getStatusData();
         case 'calories':
           return this.getCaloriesData();
+        case 'cascade':
+          return this.getCascadeData();
         case 'water':
           return this.getWaterData();
         case 'sleep':
@@ -632,7 +652,10 @@
     getMacrosData() {
       // 🎭 Demo mode
       if (this._isDemoMode()) {
-        return { ...DEMO_WIDGET_DATA.macros };
+        return {
+          ...DEMO_WIDGET_DATA.macros,
+          cascade: { ...(DEMO_WIDGET_DATA.cascade || {}) }
+        };
       }
 
       const dayTot = this._getDayTotals();
@@ -644,7 +667,8 @@
         carbs: dayTot?.carbs || 0,
         proteinTarget: normAbs?.prot || 100,
         fatTarget: normAbs?.fat || 70,
-        carbsTarget: normAbs?.carbs || 250
+        carbsTarget: normAbs?.carbs || 250,
+        cascade: this.getCascadeData()
       };
     },
 
@@ -1217,6 +1241,54 @@
       } catch (e) {
         console.error('[widget_data.getHealthTrendData] ❌', e);
         return { hasData: false, score: 0, periodDays: settings?.periodDays || 7 };
+      }
+    },
+
+    getCascadeData() {
+      try {
+        const dayData = this._getDay() || {};
+        const profile = this._getProfile() || {};
+        const pIndex = profile?.pIndex || 0;
+        const dayTot = this._getDayTotals() || {};
+        const normAbs = this._getNormAbs() || {};
+        const cascadeApi = HEYS.CascadeCard;
+
+        if (typeof cascadeApi?.computeCascadeState !== 'function') {
+          return {
+            hasData: false,
+            crs: 0,
+            pct: 0,
+            trend: 'flat',
+            state: 'EMPTY',
+            chainLength: 0,
+            events: []
+          };
+        }
+
+        const result = cascadeApi.computeCascadeState(dayData, dayTot, normAbs, profile, pIndex) || {};
+        const events = Array.isArray(result?.events) ? result.events : [];
+        const crs = Number(result?.crs) || 0;
+
+        return {
+          hasData: events.length > 0,
+          crs,
+          pct: Math.max(0, Math.min(100, Math.round(crs * 100))),
+          trend: result?.crsTrend || 'flat',
+          state: result?.state || 'EMPTY',
+          chainLength: Number(result?.chainLength) || 0,
+          events
+        };
+      } catch (error) {
+        console.error('[widget_data.getCascadeData] ❌', error);
+        return {
+          hasData: false,
+          crs: 0,
+          pct: 0,
+          trend: 'flat',
+          state: 'EMPTY',
+          chainLength: 0,
+          events: []
+        };
       }
     },
 

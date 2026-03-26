@@ -102,12 +102,29 @@
 
       const meta = this.loadLayoutMeta();
       let saved = this.loadLayout() || [];
+      const hasSavedLayout = Array.isArray(saved) && saved.length > 0;
       const needsPresetMigration = !meta || meta.layoutPresetVersion !== LAYOUT_PRESET_VERSION;
 
       // Миграция layout 2-колоночной сетки → 4-колоночную.
       // Важно: делаем ОДИН раз и фиксируем в meta.
-      const needsMigration = !meta || meta.gridVersion !== GRID_VERSION || meta.gridCols !== GRID_COLS;
-      if (needsPresetMigration) {
+      const needsMigration = !!meta && (meta.gridVersion !== GRID_VERSION || meta.gridCols !== GRID_COLS);
+
+      // 🔒 КРИТИЧНО: отсутствие meta больше НЕ должно затирать уже сохранённый layout.
+      // На части устройств/cloud hydration meta может отсутствовать отдельно от layout.
+      // В этом случае просто восстанавливаем meta, но сохраняем пользовательский layout как есть.
+      if (hasSavedLayout && needsPresetMigration) {
+        this.saveLayoutMeta({
+          ...(meta || {}),
+          gridVersion: GRID_VERSION,
+          gridCols: GRID_COLS,
+          layoutPresetVersion: LAYOUT_PRESET_VERSION,
+          migratedAt: meta?.migratedAt || Date.now(),
+          presetMigratedAt: Date.now(),
+          preservedExistingLayoutAt: Date.now()
+        });
+      }
+
+      if (!hasSavedLayout && needsPresetMigration) {
         const presetWidgets = this._createDefaultLayout();
         const presetLayoutData = presetWidgets.map(w => ({
           id: w.id,
@@ -128,7 +145,7 @@
           presetMigratedAt: Date.now()
         });
         try { this.saveLayout(presetLayoutData); } catch (e) { }
-      } else if (needsMigration && saved && Array.isArray(saved) && saved.length > 0) {
+      } else if (needsMigration && hasSavedLayout) {
         // Важно: saveLayout() раньше сохранял this._widgets (ещё пустой) → мог перезатирать storage.
         // Поэтому: нормализуем мигрированный layout и сохраняем ИМЕННО его.
         const migrated = this._migrateLayout(saved, meta);
@@ -956,9 +973,19 @@
      * Сбросить к дефолтному layout
      */
     resetLayout() {
+      this._pushHistory();
       this._widgets = this._createDefaultLayout();
+      this._autoPackWidgets();
+      const meta = this.loadLayoutMeta() || {};
+      this.saveLayoutMeta({
+        ...meta,
+        gridVersion: GRID_VERSION,
+        gridCols: GRID_COLS,
+        layoutPresetVersion: LAYOUT_PRESET_VERSION,
+        resetAt: Date.now()
+      });
       this.saveLayout();
-      HEYS.Widgets.emit('layout:reset');
+      HEYS.Widgets.emit('layout:reset', { layout: this._widgets, source: 'user-reset' });
       HEYS.Widgets.emit('layout:changed', { layout: this._widgets });
     },
 
@@ -2365,6 +2392,13 @@
     if (widgets.length > 0) {
       state._widgets = widgets.map(w => state._normalizeWidget(w));
       state._autoPackWidgets();
+      state.saveLayoutMeta({
+        ...(state.loadLayoutMeta() || {}),
+        gridVersion: GRID_VERSION,
+        gridCols: GRID_COLS,
+        layoutPresetVersion: LAYOUT_PRESET_VERSION,
+        cloudHydratedAt: Date.now()
+      });
       HEYS.Widgets.emit('layout:changed', { layout: state._widgets, source: 'cloud-sync' });
     }
   });
@@ -2387,6 +2421,7 @@
   HEYS.Widgets.redo = () => state.redo();
   HEYS.Widgets.canUndo = () => state.canUndo();
   HEYS.Widgets.canRedo = () => state.canRedo();
+  HEYS.Widgets.resetLayout = () => state.resetLayout();
 
   // Verbose init log removed
 

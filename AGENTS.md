@@ -21,6 +21,8 @@
 - Для operational-решений по rebuild, browser verification, legacy bundle
   validation и уровню проверки ориентируйся прежде всего на
   `.github/copilot-instructions.md`.
+- Для HEYS во встроенном браузере по умолчанию начинать с мобильного/узкого
+  viewport. Не трактовать desktop gate как баг, пока не проверен mobile view.
 - Для low-risk задач вне legacy runtime и вне runtime-sensitive поведения
   предпочитай быстрый путь без браузера.
 - Пользователь часто сам проверяет визуальный результат, поэтому без явной

@@ -22,7 +22,7 @@
     function GamificationBar() {
         const React = window.React;
         const ReactDOM = window.ReactDOM;
-        const { useState, useEffect, useRef, useCallback, useMemo } = React;
+        const { useState, useEffect, useRef, useCallback, useMemo, useLayoutEffect } = React;
         const portalToBody = (node) => {
             if (ReactDOM && typeof ReactDOM.createPortal === 'function' && globalThis.document?.body) {
                 return ReactDOM.createPortal(node, globalThis.document.body);
@@ -109,6 +109,12 @@
         const [auditEvents, setAuditEvents] = useState([]);
         const [auditLoading, setAuditLoading] = useState(false);
         const [auditError, setAuditError] = useState(null);
+        const [expandedPanelLayout, setExpandedPanelLayout] = useState({
+            top: 120,
+            left: 12,
+            width: 360,
+            maxHeight: 520
+        });
 
         // === Onboarding Fusion Ceremony ===
         const [fusionPhase, setFusionPhase] = useState(null); // null | 'gather' | 'merge' | 'medal' | 'fly' | 'done'
@@ -587,6 +593,108 @@
             if (!expanded) {
                 pendingOutsideCloseRef.current = false;
             }
+        }, [expanded]);
+
+        const updateExpandedPanelLayout = useCallback(() => {
+            const hdrEl = document.querySelector('.hdr');
+            const hdrRect = hdrEl?.getBoundingClientRect?.();
+            const barRect = gameBarSurfaceRef.current?.getBoundingClientRect?.();
+            const viewport = window.visualViewport;
+            const viewportWidth = Math.max(320, Math.round(viewport?.width || window.innerWidth || document.documentElement.clientWidth || 390));
+            const viewportHeight = Math.max(480, Math.round(viewport?.height || window.innerHeight || document.documentElement.clientHeight || 844));
+            const viewportOffsetLeft = Math.round(viewport?.offsetLeft || 0);
+            const viewportOffsetTop = Math.round(viewport?.offsetTop || 0);
+            const sideGap = viewportWidth <= 480 ? 12 : 16;
+            const width = Math.max(280, Math.min(560, viewportWidth - sideGap * 2));
+            const left = viewportOffsetLeft + Math.max(sideGap, Math.round((viewportWidth - width) / 2));
+            const anchorTop = Math.max(
+                Math.round((hdrRect?.bottom || 0) + 8),
+                Math.round((barRect?.bottom || 0) + 12),
+                viewportOffsetTop + 72
+            );
+            const maxHeight = Math.max(220, Math.round(viewportHeight - (anchorTop - viewportOffsetTop) - 24));
+
+            setExpandedPanelLayout((prev) => {
+                if (
+                    prev.top === anchorTop
+                    && prev.left === left
+                    && prev.width === width
+                    && prev.maxHeight === maxHeight
+                ) {
+                    return prev;
+                }
+
+                return {
+                    top: anchorTop,
+                    left,
+                    width,
+                    maxHeight
+                };
+            });
+        }, []);
+
+        useLayoutEffect(() => {
+            if (!expanded) return undefined;
+
+            let rafId = 0;
+            const scheduleUpdate = () => {
+                if (rafId) cancelAnimationFrame(rafId);
+                rafId = requestAnimationFrame(() => {
+                    updateExpandedPanelLayout();
+                });
+            };
+
+            scheduleUpdate();
+
+            const visualViewport = window.visualViewport;
+            window.addEventListener('resize', scheduleUpdate);
+            window.addEventListener('orientationchange', scheduleUpdate);
+            visualViewport?.addEventListener('resize', scheduleUpdate);
+            visualViewport?.addEventListener('scroll', scheduleUpdate);
+
+            return () => {
+                if (rafId) cancelAnimationFrame(rafId);
+                window.removeEventListener('resize', scheduleUpdate);
+                window.removeEventListener('orientationchange', scheduleUpdate);
+                visualViewport?.removeEventListener('resize', scheduleUpdate);
+                visualViewport?.removeEventListener('scroll', scheduleUpdate);
+            };
+        }, [expanded, updateExpandedPanelLayout]);
+
+        useEffect(() => {
+            if (!expanded) return undefined;
+
+            const { body, documentElement } = document;
+            const previousBodyOverflow = body.style.overflow;
+            const previousBodyOverscrollBehavior = body.style.overscrollBehavior;
+            const previousDocumentOverflow = documentElement.style.overflow;
+            const previousDocumentOverscrollBehavior = documentElement.style.overscrollBehavior;
+
+            body.style.overflow = 'hidden';
+            body.style.overscrollBehavior = 'none';
+            documentElement.style.overflow = 'hidden';
+            documentElement.style.overscrollBehavior = 'none';
+
+            const preventOutsidePanelScroll = (event) => {
+                const panel = expandedPanelRef.current;
+                if (!panel) return;
+                if (panel.contains(event.target)) return;
+                if (typeof event.preventDefault === 'function' && event.cancelable) {
+                    event.preventDefault();
+                }
+            };
+
+            document.addEventListener('wheel', preventOutsidePanelScroll, { passive: false, capture: true });
+            document.addEventListener('touchmove', preventOutsidePanelScroll, { passive: false, capture: true });
+
+            return () => {
+                body.style.overflow = previousBodyOverflow;
+                body.style.overscrollBehavior = previousBodyOverscrollBehavior;
+                documentElement.style.overflow = previousDocumentOverflow;
+                documentElement.style.overscrollBehavior = previousDocumentOverscrollBehavior;
+                document.removeEventListener('wheel', preventOutsidePanelScroll, true);
+                document.removeEventListener('touchmove', preventOutsidePanelScroll, true);
+            };
         }, [expanded]);
 
         useEffect(() => {
@@ -1377,16 +1485,20 @@
             ),
 
             // Expanded panel (backdrop + content)
-            expanded && React.createElement(React.Fragment, null,
-                // Backdrop
+            expanded && portalToBody(React.createElement(React.Fragment, null,
                 React.createElement('div', {
                     className: 'game-panel-backdrop',
                     onClick: () => setExpanded(false)
                 }),
-                // Panel content
                 React.createElement('div', {
                     ref: expandedPanelRef,
-                    className: 'game-panel-expanded'
+                    className: 'game-panel-expanded',
+                    style: {
+                        top: `${expandedPanelLayout.top}px`,
+                        left: `${expandedPanelLayout.left}px`,
+                        width: `${expandedPanelLayout.width}px`,
+                        maxHeight: `${expandedPanelLayout.maxHeight}px`
+                    }
                 },
                     // Weekly Challenge Section (красивая карточка)
                     React.createElement('div', {
@@ -1748,7 +1860,7 @@
                         )
                     )
                 )
-            ),
+            )),
 
             storyAchievement && portalToBody(
                 React.createElement('div', {

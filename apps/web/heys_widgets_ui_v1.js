@@ -88,6 +88,312 @@
     return { cols, rows, area, isMicro, isTiny, isShort, isTall, isWide, sizeId };
   }
 
+  function getGridCellNumber(col, row) {
+    const safeCol = Number.isFinite(col) ? col : 0;
+    const safeRow = Number.isFinite(row) ? row : 0;
+    return safeRow * 4 + safeCol + 1;
+  }
+
+  function getWidgetOccupiedCellNumbers(widget) {
+    const { cols, rows } = getWidgetDims(widget);
+    const startCol = Number.isFinite(widget?.position?.col) ? widget.position.col : 0;
+    const startRow = Number.isFinite(widget?.position?.row) ? widget.position.row : 0;
+    const cells = [];
+
+    for (let rowOffset = 0; rowOffset < rows; rowOffset += 1) {
+      for (let colOffset = 0; colOffset < cols; colOffset += 1) {
+        cells.push(getGridCellNumber(startCol + colOffset, startRow + rowOffset));
+      }
+    }
+
+    return cells;
+  }
+
+  function formatSettingPrimitiveValue(value) {
+    if (typeof value === 'boolean') return value ? 'on' : 'off';
+    if (typeof value === 'number') return Number.isInteger(value) ? String(value) : value.toFixed(2).replace(/\.00$/, '');
+    if (typeof value === 'string') return value;
+    if (value == null) return 'null';
+
+    try {
+      return JSON.stringify(value);
+    } catch (error) {
+      return String(value);
+    }
+  }
+
+  function buildWidgetSettingsDebug(widget, widgetType) {
+    const settings = widget?.settings && typeof widget.settings === 'object' ? widget.settings : {};
+    const settingEntries = Object.entries(settings).filter(([, value]) => value !== undefined);
+    const typeSettings = {
+      ...(widgetType?.settings || {}),
+      ...(widgetType?.settingsBySize?.[widget?.size] || {})
+    };
+    const scaleLabels = Object.fromEntries(
+      (Array.isArray(widgetType?.scalableElements) ? widgetType.scalableElements : [])
+        .map((element) => [element?.key, element?.label || element?.key || 'scale'])
+    );
+
+    if (!settingEntries.length) {
+      return {
+        summary: 'default settings',
+        details: ['default settings'],
+        raw: null
+      };
+    }
+
+    const details = [];
+    const raw = {};
+
+    settingEntries.forEach(([key, value]) => {
+      if (key === 'elementScales' && value && typeof value === 'object' && !Array.isArray(value)) {
+        const scaleEntries = Object.entries(value)
+          .filter(([, scaleValue]) => typeof scaleValue === 'number' && Number.isFinite(scaleValue))
+          .sort(([a], [b]) => a.localeCompare(b, 'ru'));
+
+        if (!scaleEntries.length) {
+          details.push('scale: default');
+          raw[key] = {};
+          return;
+        }
+
+        details.push(`scale: ${scaleEntries.map(([scaleKey, scaleValue]) => {
+          const label = scaleLabels[scaleKey] || scaleKey;
+          return `${label} ${Math.round(scaleValue * 100)}%`;
+        }).join(', ')}`);
+        raw[key] = Object.fromEntries(scaleEntries);
+        return;
+      }
+
+      const label = typeSettings?.[key]?.label || key;
+      details.push(`${label}: ${formatSettingPrimitiveValue(value)}`);
+      raw[key] = value;
+    });
+
+    return {
+      summary: details.join('; '),
+      details,
+      raw
+    };
+  }
+
+  function formatWidgetsLayoutForClipboard(widgets, options = {}) {
+    const registry = HEYS.Widgets?.registry;
+    const list = Array.isArray(widgets) ? widgets.slice() : [];
+    const defaultHomeTab = typeof options.defaultHomeTab === 'string' ? options.defaultHomeTab : 'unknown';
+
+    const ordered = list.sort((a, b) => {
+      const rowA = Number.isFinite(a?.position?.row) ? a.position.row : 0;
+      const rowB = Number.isFinite(b?.position?.row) ? b.position.row : 0;
+      if (rowA !== rowB) return rowA - rowB;
+
+      const colA = Number.isFinite(a?.position?.col) ? a.position.col : 0;
+      const colB = Number.isFinite(b?.position?.col) ? b.position.col : 0;
+      return colA - colB;
+    });
+
+    const humanLines = ordered.map((widget, index) => {
+      const typeMeta = typeof registry?.getType === 'function' ? registry.getType(widget?.type) : null;
+      const title = typeMeta?.name || widget?.type || `widget-${index + 1}`;
+      const { cols, rows } = getWidgetDims(widget);
+      const startCol = Number.isFinite(widget?.position?.col) ? widget.position.col : 0;
+      const startRow = Number.isFinite(widget?.position?.row) ? widget.position.row : 0;
+      const endCol = startCol + cols;
+      const endRow = startRow + rows;
+      const cells = getWidgetOccupiedCellNumbers(widget);
+      const shortId = typeof widget?.id === 'string' ? widget.id.slice(0, 12) : 'unknown';
+      const settingsDebug = buildWidgetSettingsDebug(widget, typeMeta);
+
+      return `${index + 1}. ${title} [${widget?.type || 'unknown'}] — ${widget?.size || `${cols}x${rows}`} — col ${startCol + 1}-${endCol}, row ${startRow + 1}-${endRow} — cells: ${cells.join(', ')} — id: ${shortId} — settings: ${settingsDebug.summary}`;
+    });
+
+    const rawLayout = ordered.map((widget) => ({
+      title: (typeof registry?.getType === 'function' ? registry.getType(widget?.type)?.name : null) || widget?.type || null,
+      id: widget?.id || null,
+      type: widget?.type || null,
+      size: widget?.size || null,
+      position: {
+        col: Number.isFinite(widget?.position?.col) ? widget.position.col : 0,
+        row: Number.isFinite(widget?.position?.row) ? widget.position.row : 0,
+      },
+      dims: (() => {
+        const { cols, rows } = getWidgetDims(widget);
+        return { cols, rows };
+      })(),
+      cells: getWidgetOccupiedCellNumbers(widget),
+      settings: buildWidgetSettingsDebug(widget, typeof registry?.getType === 'function' ? registry.getType(widget?.type) : null).raw
+    }));
+
+    return [
+      '=== HEYS Widgets Layout Log ===',
+      `Date: ${new Date().toISOString()}`,
+      'Grid: 4 columns',
+      `Home tab: ${defaultHomeTab}`,
+      `Widgets: ${ordered.length}`,
+      '',
+      '--- Human layout ---',
+      ...(humanLines.length ? humanLines : ['(layout is empty)']),
+      '',
+      '--- Raw layout ---',
+      JSON.stringify(rawLayout, null, 2)
+    ].join('\n');
+  }
+
+  function getCascadeEventTone(weight) {
+    if (weight <= -0.5) return 'bad';
+    if (weight < 0) return 'warn';
+    if (weight === 0) return 'neutral';
+    if (weight <= 0.5) return 'good';
+    if (weight <= 1.5) return 'great';
+    return 'peak';
+  }
+
+  function getCascadeBadgeTone(pct) {
+    if (pct >= 85) return 'great';
+    if (pct >= 70) return 'good';
+    if (pct >= 55) return 'info';
+    if (pct >= 35) return 'warn';
+    return 'bad';
+  }
+
+  function getCascadeTrendMeta(trend) {
+    switch (trend) {
+      case 'up':
+        return { key: 'up', arrow: '↑', label: 'Рост' };
+      case 'down':
+        return { key: 'down', arrow: '↓', label: 'Снижение' };
+      default:
+        return { key: 'flat', arrow: '→', label: 'Без изменений' };
+    }
+  }
+
+  function renderCascadeStrip(data, options = {}) {
+    const size = options.size || '4x1';
+    const maxDots = Number.isFinite(options.maxDots) ? options.maxDots : (size === '3x1' ? 8 : 10);
+    const placeholderCount = Number.isFinite(options.placeholderCount) ? options.placeholderCount : (size === '3x1' ? 6 : 8);
+    const extraClassName = options.className || '';
+    const events = Array.isArray(data?.events) ? data.events.slice(-maxDots) : [];
+    const pct = Math.max(0, Math.min(100, Math.round(Number(data?.pct) || 0)));
+    const trendMeta = getCascadeTrendMeta(data?.trend);
+    const badgeTone = getCascadeBadgeTone(pct);
+    const hasData = (data?.hasData === true && events.length > 0) || pct > 0;
+    const placeholders = Array.from({ length: placeholderCount });
+    const dotsToRender = hasData ? events : placeholders;
+
+    return React.createElement('div', {
+      className: ['widget-cascade', `widget-cascade--${size}`, extraClassName, !hasData ? 'widget-cascade--empty' : '']
+        .filter(Boolean)
+        .join(' ')
+    },
+      React.createElement('div', { className: 'widget-cascade__dots' },
+        dotsToRender.map((event, index) => {
+          if (!event) {
+            return React.createElement('span', {
+              key: `cascade-placeholder-${index}`,
+              className: 'widget-cascade__dot widget-cascade__dot--placeholder',
+              'aria-hidden': 'true'
+            });
+          }
+
+          const tone = getCascadeEventTone(Number(event?.weight) || 0);
+          const weight = Number(event?.weight) || 0;
+          const weightLabel = `${weight > 0 ? '+' : ''}${weight.toFixed(1)}`;
+          const isLatestPositive = index === dotsToRender.length - 1 && event?.positive;
+
+          return React.createElement('span', {
+            key: `cascade-dot-${index}-${event?.type || 'event'}`,
+            className: `widget-cascade__dot widget-cascade__dot--${tone} ${isLatestPositive ? 'widget-cascade__dot--latest' : ''}`,
+            title: `${event?.label || 'Событие'} (${weightLabel})`
+          });
+        })
+      ),
+      React.createElement('div', {
+        className: `widget-cascade__badge widget-cascade__badge--${badgeTone}`,
+        title: trendMeta.label
+      },
+        React.createElement('span', { className: 'widget-cascade__badge-value' }, `${pct}%`),
+        React.createElement('span', {
+          className: `widget-cascade__badge-arrow widget-cascade__badge-arrow--${trendMeta.key}`,
+          'aria-label': trendMeta.label
+        }, trendMeta.arrow)
+      )
+    );
+  }
+
+  // Size-aware soft-clamp: caps effective element scales for tight widget sizes.
+  // User's stored settings stay untouched — only the rendered CSS vars are clamped.
+  function clampElementScalesForSize(elementScales, dims) {
+    if (!elementScales || !dims) return elementScales;
+    const { area, isMicro, isTiny, isShort } = dims;
+
+    // Determine max allowed scale for this widget size
+    let maxAllowed;
+    if (isMicro) maxAllowed = 1.15;  // 1×1 — almost no room
+    else if (isTiny) maxAllowed = 1.35;  // 2×1, 1×2
+    else if (isShort) maxAllowed = 1.5;  // 3×1, 4×1
+    else return elementScales;            // larger sizes — no clamp
+
+    let changed = false;
+    const clamped = {};
+    const keys = Object.keys(elementScales);
+    for (let i = 0; i < keys.length; i++) {
+      const k = keys[i];
+      const v = elementScales[k];
+      if (typeof v === 'number' && v > maxAllowed) {
+        clamped[k] = maxAllowed;
+        changed = true;
+      } else {
+        clamped[k] = v;
+      }
+    }
+    return changed ? clamped : elementScales;
+  }
+
+  function getElementScaleMetrics(elementScales) {
+    const entries = Object.entries(elementScales || {}).filter(([, val]) => typeof val === 'number' && Number.isFinite(val));
+    const activeValues = entries.map(([, val]) => val).filter((val) => val !== 1);
+    const enlargedValues = activeValues.filter((val) => val > 1);
+    const maxScale = enlargedValues.length ? Math.max(...enlargedValues) : 1;
+    const growth = Math.max(0, maxScale - 1);
+
+    return {
+      entries,
+      hasScales: activeValues.length > 0,
+      maxScale,
+      growth,
+      bleed: growth > 0 ? Math.min(40, Math.ceil(growth * 26)) : 0,
+      gapXs: growth > 0 ? Math.min(6, Number((growth * 4).toFixed(2))) : 0,
+      gapSm: growth > 0 ? Math.min(8, Number((growth * 5).toFixed(2))) : 0,
+      gapMd: growth > 0 ? Math.min(10, Number((growth * 6).toFixed(2))) : 0,
+      padX: growth > 0 ? Math.min(8, Number((growth * 4).toFixed(2))) : 0,
+      padY: growth > 0 ? Math.min(10, Number((growth * 5).toFixed(2))) : 0,
+      safeBottom: growth > 0 ? Math.min(12, Number((growth * 6).toFixed(2))) : 0,
+    };
+  }
+
+  function buildElementScaleStyle(elementScales, options = {}) {
+    const metrics = options.metrics || getElementScaleMetrics(elementScales);
+    const base = { ...(options.base || {}) };
+
+    if (metrics.hasScales) {
+      base['--widget-scale-max'] = String(metrics.maxScale);
+      base['--widget-scale-gap-xs'] = `${metrics.gapXs}px`;
+      base['--widget-scale-gap-sm'] = `${metrics.gapSm}px`;
+      base['--widget-scale-gap-md'] = `${metrics.gapMd}px`;
+      base['--widget-scale-pad-x'] = `${metrics.padX}px`;
+      base['--widget-scale-pad-y'] = `${metrics.padY}px`;
+      base['--widget-scale-safe-bottom'] = `${metrics.safeBottom}px`;
+    }
+
+    metrics.entries.forEach(([key, val]) => {
+      if (val !== 1) {
+        base[`--es-${key}`] = String(val);
+      }
+    });
+
+    return base;
+  }
+
   // === Widget Card Component ===
   // Обёрнут в React.memo — изолирует от ре-рендеров родителя,
   // чтобы CSS transition на кольце калорий не перезапускался попусту.
@@ -752,19 +1058,33 @@
     const gridRow = effectiveWidget?.position?.row;
     const hasGridPos = Number.isFinite(gridCol) && Number.isFinite(gridRow);
 
+    // Size-aware soft-clamp: cap element scales for tight widget sizes
+    const widgetDims = useMemo(() => getWidgetDims(effectiveWidget), [effectiveWidget]);
+    const effectiveElementScales = useMemo(
+      () => clampElementScalesForSize(widget?.settings?.elementScales, widgetDims),
+      [widget?.settings?.elementScales, widgetDims]
+    );
+    const scaleMetrics = useMemo(() => getElementScaleMetrics(effectiveElementScales), [effectiveElementScales]);
+    const hasScales = scaleMetrics.hasScales;
+
     return React.createElement('div', {
       ref: elementRef,
-      className: `widget ${sizeClass} ${typeClass} ${isEditMode ? 'widget--editing' : ''} ${isResizing ? 'widget--resizing' : ''} ${isResizing && isResizeSnap ? 'widget--resize-snap' : ''}`,
+      className: `widget ${sizeClass} ${typeClass} ${isEditMode ? 'widget--editing' : ''} ${isResizing ? 'widget--resizing' : ''} ${isResizing && isResizeSnap ? 'widget--resize-snap' : ''} ${hasScales ? 'widget--has-scales' : ''}`,
       'data-widget-id': widget.id,
       'data-widget-type': widget.type,
-      style: {
-        // 1-based линии в CSS Grid
-        gridColumn: hasGridPos ? `${gridCol + 1} / span ${previewCols}` : `span ${previewCols}`,
-        gridRow: hasGridPos ? `${gridRow + 1} / span ${previewRows}` : `span ${previewRows}`,
-        // В edit-mode отключаем touchAction чтобы браузер не перехватывал жест для scroll
-        touchAction: (isEditMode || isResizing) ? 'none' : 'pan-y',
-        zIndex: isResizing ? 60 : undefined
-      },
+      style: (() => {
+        const s = {
+          // 1-based линии в CSS Grid
+          gridColumn: hasGridPos ? `${gridCol + 1} / span ${previewCols}` : `span ${previewCols}`,
+          gridRow: hasGridPos ? `${gridRow + 1} / span ${previewRows}` : `span ${previewRows}`,
+          // В edit-mode отключаем touchAction чтобы браузер не перехватывал жест для scroll
+          touchAction: (isEditMode || isResizing) ? 'none' : 'pan-y',
+          zIndex: isResizing ? 60 : undefined
+        };
+        // Inject element scale CSS custom properties from settings (size-clamped)
+        Object.assign(s, buildElementScaleStyle(effectiveElementScales, { metrics: scaleMetrics }));
+        return s;
+      })(),
       onClick: handleClick,
       onPointerDown: handlePointerDown,
       onPointerMove: handlePointerMove,
@@ -808,7 +1128,7 @@
       }, '✕'),
 
       // Edit Mode: Settings button (optional)
-      isEditMode && widgetType?.settings && React.createElement('button', {
+      isEditMode && (widgetType?.settings || widgetType?.scalableElements) && React.createElement('button', {
         id: index === 0 ? 'tour-widgets-settings' : undefined,
         className: 'widget__settings-btn',
         onPointerDown: (e) => e.stopPropagation(),
@@ -1044,6 +1364,8 @@
 
     // Render based on widget type
     switch (widget.type) {
+      case 'cascade':
+        return React.createElement(CascadeWidgetContent, { widget, data });
       case 'dayScore':
         return React.createElement(DayScoreWidgetContent, { widget, data });
       case 'status':
@@ -1552,6 +1874,11 @@
     );
   }
 
+  function CascadeWidgetContent({ widget, data }) {
+    const size = widget?.size || '4x1';
+    return renderCascadeStrip(data, { size });
+  }
+
   // === Status Widget Content (deprecated → redirects to DayScore) ===
   function StatusWidgetContent({ widget, data }) {
     // Status widget is now merged into DayScore.
@@ -1816,8 +2143,19 @@
 
     // 1x1 Micro
     if (d.isMicro) {
+      const waterColor = getWaterColor();
       return React.createElement('div', { className: 'widget-water widget-water--micro' },
-        React.createElement('div', { className: 'widget-micro__label' }, '💧'),
+        showProgress
+          ? React.createElement('div', { className: 'widget-water__progress widget-water__progress--micro' },
+            React.createElement('div', {
+              className: 'widget-water__bar widget-water__bar--micro',
+              style: {
+                width: `${Math.min(100, Math.max(0, pct))}%`,
+                background: waterColor
+              }
+            })
+          )
+          : null,
         React.createElement('div', { className: 'widget-water__value' }, primaryValue)
       );
     }
@@ -2736,7 +3074,7 @@
   }
 
   function MacrosWidgetContent({ widget, data }) {
-    const { protein, fat, carbs, proteinTarget, fatTarget, carbsTarget } = data;
+    const { protein, fat, carbs, proteinTarget, fatTarget, carbsTarget, cascade } = data;
 
     const d = getWidgetDims(widget);
     const size = widget?.size || '2x2';
@@ -2750,6 +3088,7 @@
     const showPercentage = widget.settings?.showPercentage !== false;
     const showGrams = widget.settings?.showGrams !== false && !d.isTiny;
     const effectiveShowGrams = showGrams || !showPercentage;
+    const centerValueMode = size === '3x2' ? (widget.settings?.centerValueMode || 'grams') : 'default';
     const canUseMacroRings = d.cols >= 2 && d.rows >= 2 && size !== '4x1';
     const ringsDensityClass = d.area >= 12 ? 'widget-macros--rings-lg' : d.area >= 8 ? 'widget-macros--rings-md' : 'widget-macros--rings-sm';
 
@@ -2759,7 +3098,30 @@
       { label: 'Углеводы', shortLabel: 'У', value: carbs || 0, target: carbsTarget || 250, pct: pctC, toneClass: 'carbs' }
     ];
 
-    const buildMacroRing = ({ label, value, target, pct, toneClass }) => {
+    const getMacroValueTone = ({ pct, toneClass }) => {
+      if (!Number.isFinite(pct) || pct <= 0) {
+        return '#ef4444';
+      }
+
+      if (toneClass === 'protein') {
+        if (pct >= 90) return '#16a34a';
+        if (pct >= 70) return '#f59e0b';
+        return '#ef4444';
+      }
+
+      if (pct >= 70 && pct <= 110) return '#16a34a';
+      if (pct >= 50 && pct <= 125) return '#f59e0b';
+      return '#ef4444';
+    };
+
+    const buildMacroRing = ({ label, shortLabel, value, target, pct, toneClass }, options = {}) => {
+      const {
+        centerMode = 'default',
+        hideTarget = false,
+        hidePercentBadge = false,
+        valueColor = null,
+        innerShortLabel = null
+      } = options;
       const ringStartOffsetPct = 9;
       const ringCapCompPct = 5;
       const overColor = toneClass === 'protein' ? '#22c55e' : '#ef4444';
@@ -2785,9 +3147,15 @@
         };
       };
       const dot = getRingDotPos(basePct);
-      const centerValue = effectiveShowGrams ? Math.round(value || 0) : `${pct}%`;
-      const targetText = effectiveShowGrams ? `/ ${Math.round(target || 0)}г` : null;
-      const percentBadge = showPercentage && effectiveShowGrams ? `${pct}%` : null;
+      const normalizedPct = Math.max(0, Math.round(Number(pct) || 0));
+      const resolvedCenterMode = centerMode === 'default'
+        ? (effectiveShowGrams ? 'grams' : 'pct')
+        : centerMode;
+      const centerValue = resolvedCenterMode === 'pct'
+        ? `${Math.min(999, normalizedPct)}%`
+        : Math.round(value || 0);
+      const targetText = hideTarget ? null : (resolvedCenterMode === 'grams' ? `/ ${Math.round(target || 0)}г` : null);
+      const percentBadge = hidePercentBadge ? null : (showPercentage && resolvedCenterMode === 'grams' ? `${normalizedPct}%` : null);
 
       return React.createElement('div', { key: `${toneClass}-${label}`, className: 'macro-ring-item' },
         React.createElement('div', { className: `macro-ring ${toneClass}${hasOver ? ' macro-ring--over' : ''}` },
@@ -2836,7 +3204,13 @@
               style: { '--macro-ring-dot': dotColor }
             }) : null
           ),
-          React.createElement('span', { className: 'macro-ring-value' }, centerValue)
+          React.createElement('span', {
+            className: 'macro-ring-value',
+            style: valueColor ? { color: valueColor } : undefined
+          }, centerValue),
+          innerShortLabel ? React.createElement('span', {
+            className: 'macro-ring-inner-label'
+          }, innerShortLabel) : null
         ),
         React.createElement('span', { className: 'macro-ring-label' }, label),
         targetText ? React.createElement('span', { className: 'macro-ring-target' }, targetText) : React.createElement('span', { className: 'macro-ring-target macro-ring-target--empty' }, ' '),
@@ -2856,26 +3230,42 @@
       );
     }
 
-    // 4x1 — Компактный горизонтальный layout с минимальными интервалами
-    if (size === '4x1') {
-      const MacroBarCompact = ({ label, value, target, pct, color }) => {
-        const compactMetric = showGrams ? `${Math.round(value)}г` : (showPercentage ? `${pct}%` : null);
-        return React.createElement('div', { className: 'widget-macros__item-4x1' },
-          React.createElement('div', { className: 'widget-macros__label-4x1', style: { color } }, label),
-          React.createElement('div', { className: 'widget-macros__bar-4x1' },
-            React.createElement('div', {
-              className: 'widget-macros__bar-fill',
-              style: { width: `${Math.min(100, pct)}%`, background: color }
-            })
-          ),
-          compactMetric ? React.createElement('span', { className: 'widget-macros__value-4x1' }, compactMetric) : null
-        );
-      };
+    // 3x1 — Компактные кольца: процент внутри, без нормы и badge-процента
+    if (size === '3x1') {
+      return React.createElement('div', { className: 'widget-macros widget-macros--3x1 widget-macros--rings widget-macros--rings-3x1' },
+        React.createElement('div', { className: 'widget-macros__rings-wrap' },
+          React.createElement('div', { className: 'macro-rings widget-macros__rings' },
+            macroItems.map((item) => buildMacroRing(item, {
+              centerMode: 'pct',
+              hideTarget: true,
+              hidePercentBadge: true,
+              valueColor: getMacroValueTone(item),
+              innerShortLabel: item.shortLabel
+            }))
+          )
+        )
+      );
+    }
 
-      return React.createElement('div', { className: 'widget-macros widget-macros--4x1' },
-        React.createElement(MacroBarCompact, { label: 'Б', value: protein || 0, target: proteinTarget || 100, pct: pctP, color: '#ef4444' }),
-        React.createElement(MacroBarCompact, { label: 'Ж', value: fat || 0, target: fatTarget || 70, pct: pctF, color: '#eab308' }),
-        React.createElement(MacroBarCompact, { label: 'У', value: carbs || 0, target: carbsTarget || 250, pct: pctC, color: '#3b82f6' })
+    if (size === '3x2') {
+      return React.createElement('div', { className: 'widget-macros widget-macros--3x2 widget-macros--rings widget-macros--rings-md' },
+        React.createElement('div', { className: 'widget-macros__rings-wrap' },
+          React.createElement('div', { className: 'macro-rings widget-macros__rings' },
+            macroItems.map((item) => buildMacroRing(item, {
+              centerMode: centerValueMode,
+              hidePercentBadge: true,
+              valueColor: getMacroValueTone(item)
+            }))
+          )
+        ),
+        React.createElement('div', { className: 'widget-macros__cascade-row' },
+          renderCascadeStrip(cascade || {}, {
+            size: '3x1',
+            maxDots: 8,
+            placeholderCount: 6,
+            className: 'widget-cascade--embedded'
+          })
+        )
       );
     }
 
@@ -5487,12 +5877,79 @@
       }
     }, [widget, widgetType]);
 
+    useEffect(() => {
+      if (!isOpen) return undefined;
+
+      const targets = [
+        document.body,
+        document.documentElement,
+        document.querySelector('.wrap'),
+        document.querySelector('.tab-content-swipeable'),
+        document.querySelector('.widgets-tab')
+      ].filter(Boolean);
+
+      const prevStyles = targets.map((el) => ({
+        el,
+        overflow: el.style.overflow,
+        overscrollBehavior: el.style.overscrollBehavior,
+        touchAction: el.style.touchAction
+      }));
+
+      prevStyles.forEach(({ el }) => {
+        el.style.overflow = 'hidden';
+        el.style.overscrollBehavior = 'none';
+      });
+
+      console.info('[HEYS.widgets] settings modal scroll-lock enabled');
+
+      return () => {
+        prevStyles.forEach(({ el, overflow, overscrollBehavior, touchAction }) => {
+          el.style.overflow = overflow;
+          el.style.overscrollBehavior = overscrollBehavior;
+          el.style.touchAction = touchAction;
+        });
+        console.info('[HEYS.widgets] settings modal scroll-lock released');
+      };
+    }, [isOpen]);
+
     const previewWidget = useMemo(() => ({ ...widget, settings, size: selectedSize }), [widget, settings, selectedSize]);
+    const previewDims = useMemo(() => getWidgetDims(previewWidget), [previewWidget]);
+    const previewEffectiveScales = useMemo(
+      () => clampElementScalesForSize(settings?.elementScales, previewDims),
+      [settings?.elementScales, previewDims]
+    );
+    const previewScaleMetrics = useMemo(() => getElementScaleMetrics(previewEffectiveScales), [previewEffectiveScales]);
+    const previewHasScales = previewScaleMetrics.hasScales;
+    const previewScaleStyle = useMemo(() => buildElementScaleStyle(previewEffectiveScales, {
+      base: { cursor: 'default' },
+      metrics: previewScaleMetrics
+    }), [previewEffectiveScales, previewScaleMetrics]);
 
     if (!isOpen || !widget || !widgetType) return null;
 
     const handleChange = (key, value) => {
       setSettings(prev => ({ ...prev, [key]: value }));
+    };
+
+    // Element scale handlers
+    const scalableElements = widgetType.scalableElements || [];
+    const elementScales = settings.elementScales || {};
+
+    const handleScaleChange = (key, value) => {
+      setSettings(prev => {
+        const newScales = { ...(prev.elementScales || {}), [key]: value };
+        // Remove entries that are exactly 1 (default) to keep storage clean
+        if (value === 1) delete newScales[key];
+        return { ...prev, elementScales: Object.keys(newScales).length ? newScales : undefined };
+      });
+    };
+
+    const handleResetScales = () => {
+      setSettings(prev => {
+        const next = { ...prev };
+        delete next.elementScales;
+        return next;
+      });
     };
 
     const handleSave = () => {
@@ -5513,28 +5970,43 @@
           }, '✕')
         ),
 
-        React.createElement('div', { className: 'widgets-settings__content' },
-          // Widget preview
-          React.createElement('div', { className: 'widgets-settings__preview-wrap' },
-            React.createElement('div', {
+        // Widget preview — pinned above scrollable content
+        React.createElement('div', { className: 'widgets-settings__preview-wrap' },
+          (() => {
+            // Measure actual grid cell from DOM for 1:1 fidelity
+            const gridEl = document.querySelector('.widgets-grid');
+            const gridStyle = gridEl ? getComputedStyle(gridEl) : null;
+            const GAP = gridStyle ? parseFloat(gridStyle.gap) || 6 : 6;
+            const colWidths = gridStyle ? gridStyle.gridTemplateColumns.split(/\s+/) : [];
+            const rowHeights = gridStyle ? gridStyle.gridTemplateRows.split(/\s+/) : [];
+            const CELL_W = colWidths.length ? parseFloat(colWidths[0]) || 90 : 90;
+            const CELL_H = rowHeights.length ? parseFloat(rowHeights[0]) || 94 : 94;
+            const si = registry.getSize(selectedSize) || { cols: 2, rows: 2 };
+            const realW = si.cols * CELL_W + (si.cols - 1) * GAP;
+            const realH = si.rows * CELL_H + (si.rows - 1) * GAP;
+            const previewBleed = previewScaleMetrics.bleed;
+            const stageW = realW + previewBleed * 2;
+            const stageH = realH + previewBleed * 2;
+            const MAX_W = 340;
+            const MAX_H = 180;
+            const sc = Math.min(1, MAX_W / stageW, MAX_H / stageH);
+            return React.createElement('div', {
               className: 'widgets-settings__preview-stage',
-              style: (() => {
-                const CELL = 75;
-                const si = registry.getSize(selectedSize) || { cols: 2, rows: 2 };
-                return { width: (si.cols * CELL) + 'px', height: (si.rows * CELL) + 'px' };
-              })()
+              style: { width: stageW * sc + 'px', height: stageH * sc + 'px' }
             },
               React.createElement('div', {
-                className: `widget widget--${previewWidget.size || '2x2'} widget--${previewWidget.type}`,
-                style: { position: 'absolute', inset: 0, width: '100%', height: '100%', cursor: 'default' }
+                className: `widget widget--${previewWidget.size || '2x2'} widget--${previewWidget.type} ${previewHasScales ? 'widget--has-scales' : ''}`,
+                style: { ...previewScaleStyle, transform: sc < 1 ? `scale(${sc})` : undefined, transformOrigin: 'top left', width: realW + 'px', height: realH + 'px', position: 'absolute', top: previewBleed + 'px', left: previewBleed + 'px' }
               },
-
                 React.createElement('div', { className: 'widget__content' },
                   React.createElement(WidgetContent, { widget: previewWidget, widgetType })
                 )
               )
-            )
-          ),
+            );
+          })()
+        ),
+
+        React.createElement('div', { className: 'widgets-settings__content' },
           // Size selector
           React.createElement('div', { className: 'widgets-settings__field' },
             React.createElement('label', null, 'Размер'),
@@ -5586,6 +6058,42 @@
                       )
                     ) :
                     null
+            )
+          ),
+
+          // === Element Scale Sliders ===
+          scalableElements.length > 0 && React.createElement('div', {
+            className: 'widgets-settings__scale-section'
+          },
+            React.createElement('div', { className: 'widgets-settings__scale-header' },
+              React.createElement('label', null, 'Масштаб элементов'),
+              Object.keys(elementScales).length > 0 && React.createElement('button', {
+                className: 'widgets-settings__scale-reset',
+                onClick: handleResetScales,
+                title: 'Сбросить все масштабы'
+              }, 'Сброс')
+            ),
+            scalableElements.map(el =>
+              React.createElement('div', {
+                key: el.key,
+                className: 'widgets-settings__scale-row'
+              },
+                React.createElement('span', {
+                  className: 'widgets-settings__scale-label'
+                }, el.label),
+                React.createElement('input', {
+                  type: 'range',
+                  className: 'widgets-settings__scale-slider',
+                  min: 0.5,
+                  max: 2,
+                  step: 0.05,
+                  value: elementScales[el.key] ?? 1,
+                  onChange: e => handleScaleChange(el.key, parseFloat(e.target.value))
+                }),
+                React.createElement('span', {
+                  className: 'widgets-settings__scale-value'
+                }, `${Math.round((elementScales[el.key] ?? 1) * 100)}%`)
+              )
             )
           )
         ),
@@ -6049,6 +6557,37 @@
       HEYS.Widgets.redo?.();
     }, []);
 
+    const handleResetLayout = useCallback(() => {
+      const confirmed = typeof window?.confirm === 'function'
+        ? window.confirm('Сбросить виджеты к нашей дефолтной раскладке? Текущее состояние можно будет вернуть кнопкой ↩.')
+        : true;
+
+      if (!confirmed) return;
+
+      HEYS.Widgets.resetLayout?.();
+      setShowGridOverlay(false);
+      setShowHomeTabPicker(false);
+      HEYS.dayUtils?.haptic?.('medium');
+    }, []);
+
+    const handleCopyLayoutLog = useCallback(async () => {
+      try {
+        const text = formatWidgetsLayoutForClipboard(widgets, { defaultHomeTab });
+        await copyTextWithFallback(text);
+        console.info('[HEYS.widgets] layout log copied', {
+          widgets: Array.isArray(widgets) ? widgets.length : 0,
+          defaultHomeTab
+        });
+        HEYS.Toast?.success?.('Лог раскладки виджетов скопирован');
+        HEYS.dayUtils?.haptic?.('light');
+      } catch (error) {
+        console.error('[HEYS.widgets] failed to copy layout log', {
+          message: error?.message || String(error)
+        });
+        HEYS.Toast?.error?.('Не удалось скопировать раскладку виджетов');
+      }
+    }, [defaultHomeTab, widgets]);
+
     const handleSetDefaultHomeTab = useCallback((nextTab) => {
       if (!VALID_HOME_TABS.includes(nextTab)) return;
 
@@ -6208,6 +6747,18 @@
               className: 'widgets-header__btn widgets-header__btn--add',
               onClick: () => setCatalogOpen(true)
             }, '+ Добавить'),
+            React.createElement('button', {
+              className: 'widgets-header__btn widgets-header__btn--copy-layout',
+              onClick: handleCopyLayoutLog,
+              title: 'Скопировать лог раскладки виджетов по клеткам',
+              'aria-label': 'Скопировать лог раскладки виджетов по клеткам'
+            }, '📋'),
+            React.createElement('button', {
+              className: 'widgets-header__btn widgets-header__btn--reset',
+              onClick: handleResetLayout,
+              title: 'Сбросить виджеты к дефолтной раскладке',
+              'aria-label': 'Сбросить виджеты к дефолтной раскладке'
+            }, '↺'),
             React.createElement('button', {
               className: `widgets-header__btn widgets-header__btn--home ${showHomeTabPicker ? 'active' : ''}`,
               onClick: () => setShowHomeTabPicker((prev) => !prev),

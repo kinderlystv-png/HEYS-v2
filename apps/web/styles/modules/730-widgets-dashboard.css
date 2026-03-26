@@ -738,6 +738,32 @@ body:has(.page-reports) .hdr::after {
   border-radius: 8px;
 }
 
+.widgets-header__btn--copy-layout {
+  padding: 8px 11px;
+  font-size: 17px;
+  line-height: 1;
+  color: #0f766e;
+  background: rgba(20, 184, 166, 0.12);
+  border-radius: 8px;
+}
+
+.widgets-header__btn--copy-layout:hover:not(.disabled) {
+  background: rgba(20, 184, 166, 0.18);
+}
+
+.widgets-header__btn--reset {
+  padding: 8px 11px;
+  font-size: 18px;
+  line-height: 1;
+  color: #c2410c;
+  background: rgba(249, 115, 22, 0.12);
+  border-radius: 8px;
+}
+
+.widgets-header__btn--reset:hover:not(.disabled) {
+  background: rgba(249, 115, 22, 0.18);
+}
+
 [data-theme="dark"] .widgets-header__btn--grid.active {
   color: #818cf8;
   background: rgba(99, 102, 241, 0.18);
@@ -746,6 +772,16 @@ body:has(.page-reports) .hdr::after {
 [data-theme="dark"] .widgets-header__btn--home.active {
   color: #93c5fd;
   background: rgba(59, 130, 246, 0.2);
+}
+
+[data-theme="dark"] .widgets-header__btn--copy-layout {
+  color: #99f6e4;
+  background: rgba(20, 184, 166, 0.2);
+}
+
+[data-theme="dark"] .widgets-header__btn--reset {
+  color: #fdba74;
+  background: rgba(249, 115, 22, 0.18);
 }
 
 
@@ -845,6 +881,13 @@ body:has(.page-reports) .hdr::after {
   /* Accent vars (overridden per widget type) */
   --widget-accent: rgba(10, 132, 255, 0.18);
   --widget-accent-strong: rgba(10, 132, 255, 0.32);
+  --widget-scale-max: 1;
+  --widget-scale-gap-xs: 0px;
+  --widget-scale-gap-sm: 0px;
+  --widget-scale-gap-md: 0px;
+  --widget-scale-pad-x: 0px;
+  --widget-scale-pad-y: 0px;
+  --widget-scale-safe-bottom: 0px;
 
   /* Glassmorphism background */
   background: var(--widget-glass-bg);
@@ -861,7 +904,7 @@ body:has(.page-reports) .hdr::after {
   box-shadow: var(--widget-shadow-card);
 
   /* Internal spacing */
-  padding: var(--widget-spacing-md);
+  padding: calc(var(--widget-spacing-md) + var(--widget-scale-pad-y)) calc(var(--widget-spacing-md) + var(--widget-scale-pad-x));
 
   /* Smooth transitions */
   transition:
@@ -980,7 +1023,7 @@ body:has(.page-reports) .hdr::after {
   /* важно для flex: даём дочерним блокам ужиматься вместо вылезания за границы */
   overflow: hidden;
   --widget-safe-bottom: 0px;
-  padding-bottom: var(--widget-safe-bottom);
+  padding-bottom: calc(var(--widget-safe-bottom) + var(--widget-scale-safe-bottom));
 }
 
 /* ===== Safe Zones (внутренний “air gap”, чтобы ничего не прилипало к границам) =====
@@ -1378,6 +1421,167 @@ body:has(.page-reports) .hdr::after {
 .widget--macros {
   --widget-accent: rgba(255, 159, 10, 0.14);
   --widget-accent-strong: rgba(255, 159, 10, 0.28);
+}
+
+/* Каскад ⚡ — compact dots + CRS badge */
+.widget--cascade {
+  --widget-accent: rgba(16, 185, 129, 0.14);
+  --widget-accent-strong: rgba(16, 185, 129, 0.30);
+}
+
+.widget-cascade {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: 20px;
+  padding-inline: 10px;
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+}
+
+.widget-cascade__dots {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 6px;
+  width: 100%;
+  min-width: 0;
+  padding-inline-end: 2px;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.widget-cascade__dot {
+  width: 11px;
+  height: 11px;
+  flex: 0 0 auto;
+  border-radius: 999px;
+  box-shadow: 0 3px 10px rgba(15, 23, 42, 0.12);
+}
+
+.widget-cascade__dot--bad {
+  background: #dc2626;
+}
+
+.widget-cascade__dot--warn {
+  background: #f97316;
+}
+
+.widget-cascade__dot--neutral {
+  background: #facc15;
+}
+
+.widget-cascade__dot--good {
+  background: #84cc16;
+}
+
+.widget-cascade__dot--great {
+  background: #22c55e;
+}
+
+.widget-cascade__dot--peak {
+  background: #10b981;
+}
+
+.widget-cascade__dot--placeholder {
+  background: rgba(148, 163, 184, 0.26);
+  box-shadow: none;
+}
+
+.widget-cascade__dot--latest {
+  animation: widget-cascade-pulse 2s ease-in-out infinite;
+}
+
+.widget-cascade__badge {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 8px 11px;
+  border-radius: 18px;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.38);
+}
+
+.widget-cascade__badge--great {
+  background: rgba(34, 197, 94, 0.16);
+  color: #16a34a;
+}
+
+.widget-cascade__badge--good {
+  background: rgba(16, 185, 129, 0.15);
+  color: #059669;
+}
+
+.widget-cascade__badge--info {
+  background: rgba(59, 130, 246, 0.14);
+  color: #2563eb;
+}
+
+.widget-cascade__badge--warn {
+  background: rgba(245, 158, 11, 0.16);
+  color: #d97706;
+}
+
+.widget-cascade__badge--bad {
+  background: rgba(239, 68, 68, 0.14);
+  color: #dc2626;
+}
+
+.widget-cascade__badge-arrow {
+  font-size: 12px;
+  opacity: 0.9;
+}
+
+.widget-cascade--3x1 {
+  padding-inline: 11px;
+}
+
+.widget-cascade--3x1 .widget-cascade__dots {
+  gap: 5px;
+}
+
+.widget-cascade--3x1 .widget-cascade__dot {
+  width: 10px;
+  height: 10px;
+}
+
+.widget-cascade--3x1 .widget-cascade__badge {
+  padding: 7px 10px;
+  font-size: 12px;
+}
+
+.widget-cascade--4x1 .widget-cascade__dots {
+  gap: 7px;
+}
+
+.widget-cascade--4x1 {
+  padding-inline: 14px;
+}
+
+.widget-cascade--empty .widget-cascade__badge {
+  background: rgba(148, 163, 184, 0.16);
+  color: #64748b;
+}
+
+@keyframes widget-cascade-pulse {
+
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+
+  50% {
+    transform: scale(1.18);
+    opacity: 0.72;
+  }
 }
 
 .widget--macros .widget__bars {
@@ -2536,14 +2740,14 @@ body:has(.page-reports) .hdr::after {
 .widget-water {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: calc(8px + var(--widget-scale-gap-sm));
 }
 
 .widget-water__top {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 10px;
+  gap: calc(10px + var(--widget-scale-gap-sm));
 }
 
 .widget-water__pct-inline {
@@ -2556,11 +2760,27 @@ body:has(.page-reports) .hdr::after {
 }
 
 .widget-water--micro {
-  gap: 2px;
+  width: 100%;
+  gap: calc(6px + var(--widget-scale-gap-xs));
+  align-items: center;
 }
 
 .widget-water--micro .widget-water__value {
-  font-size: clamp(14px, 4.5vw, 18px);
+  font-size: clamp(16px, 5vw, 21px);
+  line-height: 1;
+}
+
+.widget-water__progress--micro {
+  width: min(100%, 44px);
+  height: 7px;
+  border-radius: 999px;
+  background: rgba(10, 132, 255, 0.12);
+  box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.4);
+}
+
+.widget-water__bar--micro {
+  border-radius: 999px;
+  box-shadow: 0 0 8px rgba(10, 132, 255, 0.18);
 }
 
 .widget-water--short .widget-water__value {
@@ -2607,11 +2827,11 @@ body:has(.page-reports) .hdr::after {
 .widget-sleep {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: calc(6px + var(--widget-scale-gap-sm));
 }
 
 .widget-sleep--micro {
-  gap: 2px;
+  gap: calc(2px + var(--widget-scale-gap-xs));
 }
 
 .widget-sleep--micro .widget-sleep__value {
@@ -2637,7 +2857,7 @@ body:has(.page-reports) .hdr::after {
 .widget-sleep__quality {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: calc(4px + var(--widget-scale-gap-xs));
   font-size: 12px;
   font-weight: 600;
   padding: 4px 10px;
@@ -2648,8 +2868,8 @@ body:has(.page-reports) .hdr::after {
 
 .widget-sleep__stars {
   display: flex;
-  gap: 2px;
-  margin-top: 4px;
+  gap: calc(2px + var(--widget-scale-gap-xs));
+  margin-top: calc(4px + var(--widget-scale-gap-xs));
 }
 
 .widget-sleep__star {
@@ -2663,11 +2883,11 @@ body:has(.page-reports) .hdr::after {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: calc(6px + var(--widget-scale-gap-sm));
 }
 
 .widget-streak--micro {
-  gap: 2px;
+  gap: calc(2px + var(--widget-scale-gap-xs));
 }
 
 .widget-streak--micro .widget-streak__value {
@@ -4001,14 +4221,14 @@ body:has(.page-reports) .hdr::after {
 .widget-water--2x2 {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: calc(8px + var(--widget-scale-gap-sm));
   padding: 12px;
 }
 
 .widget-water__header {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: calc(8px + var(--widget-scale-gap-xs));
 }
 
 .widget-water__icon {
@@ -4019,7 +4239,7 @@ body:has(.page-reports) .hdr::after {
 .widget-water__main {
   display: flex;
   align-items: baseline;
-  gap: 4px;
+  gap: calc(4px + var(--widget-scale-gap-xs));
   flex: 1;
 }
 
@@ -4072,14 +4292,14 @@ body:has(.page-reports) .hdr::after {
 .widget-sleep--2x2 {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: calc(8px + var(--widget-scale-gap-sm));
   padding: 12px;
 }
 
 .widget-sleep__header {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: calc(8px + var(--widget-scale-gap-xs));
 }
 
 .widget-sleep__icon {
@@ -4090,7 +4310,7 @@ body:has(.page-reports) .hdr::after {
 .widget-sleep__main {
   display: flex;
   align-items: baseline;
-  gap: 4px;
+  gap: calc(4px + var(--widget-scale-gap-xs));
 }
 
 .widget-sleep__value--lg {
@@ -4375,6 +4595,17 @@ body:has(.page-reports) .hdr::after {
   font-size: 15px;
 }
 
+.widget--macros .macro-ring-value {
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+}
+
 .widget-macros--rings .macro-ring-label {
   font-size: 12px;
   font-weight: 700;
@@ -4432,54 +4663,157 @@ body:has(.page-reports) .hdr::after {
   height: 78px;
 }
 
-/* --- Macros Widget 4×1 — Компактный горизонтальный --- */
-.widget-macros--4x1 {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  padding: 4px 12px;
+/* --- Macros Widget 3×1 — Компактные кольца --- */
+.widget--3x1.widget--macros {
+  padding: 5px 1px 3px;
+}
+
+.widget-macros--3x1.widget-macros--rings {
+  gap: 0;
+  padding: 0;
   justify-content: center;
-  height: 100%;
-  width: 100%;
-  box-sizing: border-box;
 }
 
-.widget-macros__item-4x1 {
-  display: flex;
+.widget-macros--rings-3x1 .widget-macros__rings-wrap {
   align-items: center;
-  gap: 8px;
   width: 100%;
 }
 
-.widget-macros__label-4x1 {
-  width: 14px;
-  font-size: 11px;
+.widget-macros--rings-3x1 .widget-macros__rings {
+  gap: 17px;
+  padding: 0;
+  height: auto;
+  width: 100%;
+  justify-content: center;
+}
+
+.widget-macros--rings-3x1 .macro-ring-item {
+  gap: 0;
+  flex: 0 1 auto;
+  min-width: 0;
+  width: auto;
+  max-width: none;
+}
+
+.widget-macros--rings-3x1 .macro-ring {
+  width: 100%;
+  max-width: 62px;
+  height: auto;
+  aspect-ratio: 1;
+}
+
+.widget-macros--rings-3x1 .macro-ring-bg,
+.widget-macros--rings-3x1 .macro-ring-fill,
+.widget-macros--rings-3x1 .macro-ring-fill--over {
+  stroke-width: 4.75;
+}
+
+.widget-macros--rings-3x1 .macro-ring-value {
+  font-size: 12px;
   font-weight: 800;
-  text-transform: uppercase;
-  flex-shrink: 0;
+  line-height: 1;
 }
 
-.widget-macros__bar-4x1 {
-  flex: 1 1 0%;
-  height: 6px;
-  background: rgba(128, 128, 128, 0.15);
-  border-radius: 3px;
-  overflow: hidden;
+.widget-macros--rings-3x1 .macro-ring-inner-label {
+  position: absolute;
+  left: 50%;
+  bottom: 12px;
+  transform: translateX(-50%);
+  font-size: 8px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: #9ca3af;
+  pointer-events: none;
 }
 
-.widget-macros__bar-4x1 .widget-macros__bar-fill {
-  height: 100%;
-  min-height: 6px;
+.widget-macros--rings-3x1 .macro-ring-label {
+  display: none;
 }
 
-.widget-macros__value-4x1 {
-  width: 36px;
+.widget-macros--rings-3x1 .macro-ring-target,
+.widget-macros--rings-3x1 .widget-macros__ring-pct {
+  display: none;
+}
+
+/* --- Macros Widget 3×2 — Кольца + Cascade row --- */
+.widget-macros--3x2.widget-macros--rings {
+  gap: calc(6px + var(--widget-scale-gap-sm));
+  padding: 8px 10px 10px;
+}
+
+.widget-macros--3x2 .widget-macros__rings-wrap {
+  align-items: flex-start;
+}
+
+.widget-macros--3x2 .widget-macros__rings {
+  gap: calc(10px + var(--widget-scale-gap-sm));
+  height: auto;
+  justify-content: flex-start;
+}
+
+.widget-macros--3x2 .macro-ring-item {
+  gap: calc(4px + var(--widget-scale-gap-xs));
+}
+
+.widget-macros--3x2 .macro-ring {
+  width: 64px;
+  height: 64px;
+}
+
+.widget-macros--3x2 .macro-ring-value {
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.widget-macros--3x2 .widget-macros__ring-pct {
+  display: none;
+}
+
+.widget-macros__cascade-row {
+  width: 100%;
+  margin-top: auto;
+  padding-top: calc(10px + var(--widget-scale-gap-xs));
+}
+
+.widget-macros__cascade-row .widget-cascade {
+  align-items: start;
+  padding-inline: 5.5px;
+  column-gap: calc(16px + var(--widget-scale-gap-md));
+  min-height: calc(28px + var(--widget-scale-gap-sm));
+}
+
+.widget-macros__cascade-row .widget-cascade__dots {
+  flex-wrap: wrap;
+  align-items: flex-start;
+  align-content: flex-start;
+  margin-block-start: 6px;
+  row-gap: calc(5px + var(--widget-scale-gap-xs));
+  padding-inline-end: 0;
+}
+
+.widget-macros__cascade-row .widget-cascade__dots::after {
+  content: 'Позитивный каскад';
+  flex: 0 0 100%;
+  display: block;
   font-size: 10px;
-  font-weight: 700;
-  text-align: right;
-  color: var(--text-secondary, #6b7280);
-  font-feature-settings: 'tnum' on;
-  flex-shrink: 0;
+  font-weight: 400;
+  line-height: 1.1;
+  letter-spacing: 0.02em;
+  color: rgba(22, 163, 74, 0.78);
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.42);
+}
+
+.widget-macros__cascade-row .widget-cascade__dot {
+  width: 10px;
+  height: 10px;
+}
+
+.widget-macros__cascade-row .widget-cascade__badge {
+  align-self: start;
+  padding: 6px 10px;
+  font-size: 12px;
+  margin-block-start: 0;
 }
 
 /* --- Macros Widget 4×2 — Расширенный с доп. информацией --- */
@@ -7123,6 +7457,7 @@ body:has(.page-reports) .hdr::after {
   background: rgba(0, 0, 0, 0.4);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
+  overscroll-behavior: none;
   z-index: 1200;
   display: flex;
   align-items: flex-end;
@@ -7136,7 +7471,6 @@ body:has(.page-reports) .hdr::after {
   width: 100%;
   max-width: 500px;
   max-height: 85vh;
-  overflow-y: auto;
   display: flex;
   flex-direction: column;
   box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.15);
@@ -7179,6 +7513,9 @@ body:has(.page-reports) .hdr::after {
 .widgets-settings__content {
   padding: 16px 20px;
   flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -7281,9 +7618,10 @@ body:has(.page-reports) .hdr::after {
 .widgets-settings__preview-wrap {
   position: relative;
   height: 220px;
+  flex-shrink: 0;
   overflow: hidden;
   background: var(--bg-secondary, #f1f5f9);
-  border-radius: 16px;
+  border-radius: 0;
 }
 
 .widgets-settings__preview-stage {
@@ -7295,7 +7633,7 @@ body:has(.page-reports) .hdr::after {
   transform: translate(-50%, -50%);
   pointer-events: none;
   border-radius: 20px;
-  overflow: hidden;
+  overflow: visible;
 }
 
 [data-theme="dark"] .widgets-settings__preview-wrap {
@@ -7324,6 +7662,118 @@ body:has(.page-reports) .hdr::after {
 [data-theme="dark"] .widgets-settings__btn--cancel {
   background: rgba(255, 255, 255, 0.08);
   color: var(--text-muted, #94a3b8);
+}
+
+/* ── Element Scale Sliders in Settings ──────────── */
+.widgets-settings__scale-section {
+  margin-top: 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border, rgba(0, 0, 0, 0.06));
+}
+
+.widgets-settings__scale-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.widgets-settings__scale-header>label {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text, #1e293b);
+}
+
+.widgets-settings__scale-reset {
+  padding: 4px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border, rgba(0, 0, 0, 0.12));
+  background: var(--bg-secondary, #f8fafc);
+  color: var(--text-muted, #64748b);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.widgets-settings__scale-reset:hover {
+  background: var(--bg-hover, #e2e8f0);
+}
+
+.widgets-settings__scale-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 42px;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+}
+
+.widgets-settings__scale-label {
+  font-size: 13px;
+  color: var(--text-secondary, #475569);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.widgets-settings__scale-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--border, rgba(0, 0, 0, 0.12));
+  outline: none;
+  cursor: pointer;
+}
+
+.widgets-settings__scale-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--accent, #3b82f6);
+  border: 2px solid #fff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+  transition: transform 0.1s;
+}
+
+.widgets-settings__scale-slider::-webkit-slider-thumb:active {
+  transform: scale(1.15);
+}
+
+.widgets-settings__scale-slider::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--accent, #3b82f6);
+  border: 2px solid #fff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+}
+
+.widgets-settings__scale-value {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted, #64748b);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+[data-theme="dark"] .widgets-settings__scale-reset {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.1);
+  color: var(--text-muted, #94a3b8);
+}
+
+[data-theme="dark"] .widgets-settings__scale-slider {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+[data-theme="dark"] .widgets-settings__scale-slider::-webkit-slider-thumb {
+  border-color: var(--bg-primary, #0f172a);
 }
 
 /* Эффект свечения на фоне всей страницы за карточкой витаминов (edge-to-edge) */
@@ -7578,4 +8028,356 @@ body:has(.page-reports) .hdr::after {
 
 .widget--water-pulse .widget-water__pct-badge {
   animation: widgetWaterGlow 1.2s ease-out;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   ELEMENT SCALE — CSS custom property → transform mapping
+   Custom properties --es-{key} are set inline on the .widget root.
+   Default value is 1 (no scale).
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── Calories ─────────────────────────────────────── */
+.widget--calories .widget-calories__ring-wrap,
+.widget--calories .widget-calories__ring-inner {
+  transform: scale(var(--es-ring, 1));
+  transform-origin: center;
+}
+
+.widget--calories .widget-calories__value,
+.widget--calories .widget-calories__value--lg,
+.widget--calories .widget-calories__pct {
+  transform: scale(var(--es-value, 1));
+  transform-origin: center;
+}
+
+.widget--calories .widget-calories__label,
+.widget--calories .widget-calories__ring-sublabel,
+.widget--calories .widget-calories__meta-label,
+.widget--calories .widget-calories__meta-val,
+.widget--calories .widget-calories__info-bar,
+.widget--calories .widget-calories__remaining {
+  transform: scale(var(--es-label, 1));
+  transform-origin: center left;
+}
+
+/* ── Macros ──────────────────────────────────────── */
+.widget--macros .macro-ring-item {
+  transform: scale(var(--es-ring, 1));
+  transform-origin: center;
+}
+
+.widget--macros .macro-ring-value,
+.widget--macros .widget-macros__micro-value {
+  transform: scale(var(--es-value, 1));
+  transform-origin: center;
+}
+
+.widget--macros .macro-ring-label,
+.widget--macros .macro-ring-target,
+.widget--macros .widget-macros__label {
+  transform: scale(var(--es-label, 1));
+  transform-origin: center;
+}
+
+.widget--macros .widget-macros__cascade-row .widget-cascade__dots {
+  transform: scale(var(--es-cascadeDots, 1));
+  transform-origin: top left;
+}
+
+.widget--macros .widget-macros__cascade-row .widget-cascade__badge {
+  transform: scale(var(--es-cascadeBadge, 1));
+  transform-origin: top right;
+}
+
+/* ── Water ───────────────────────────────────────── */
+.widget--water .widget-water__icon {
+  transform: scale(var(--es-icon, 1));
+  transform-origin: center;
+}
+
+.widget--water .widget-water__value,
+.widget--water .widget-water__value--lg {
+  transform: scale(var(--es-value, 1));
+  transform-origin: center;
+}
+
+.widget--water .widget-water__progress,
+.widget--water .widget-water__bar {
+  transform: scale(var(--es-progress, 1));
+  transform-origin: center;
+}
+
+/* ── Day Score ───────────────────────────────────── */
+.widget--dayScore .widget-day-score__score,
+.widget--dayScore .widget-day-score__score-big {
+  transform: scale(var(--es-score, 1));
+  transform-origin: center;
+}
+
+.widget--dayScore .widget-day-score__badge,
+.widget--dayScore .widget-day-score__level-badge {
+  transform: scale(var(--es-badge, 1));
+  transform-origin: center;
+}
+
+.widget--dayScore .widget-day-score__label,
+.widget--dayScore .widget-day-score__action,
+.widget--dayScore .widget-day-score__recommendation {
+  transform: scale(var(--es-label, 1));
+  transform-origin: center left;
+}
+
+/* ── Sleep ────────────────────────────────────────── */
+.widget--sleep .widget-sleep__icon,
+.widget--sleep .widget-micro__label {
+  transform: scale(var(--es-icon, 1));
+  transform-origin: center;
+}
+
+.widget--sleep .widget-sleep__value,
+.widget--sleep .widget-sleep__value--lg {
+  transform: scale(var(--es-value, 1));
+  transform-origin: center;
+}
+
+.widget--sleep .widget-sleep__pct-badge,
+.widget--sleep .widget-sleep__quality-badge {
+  transform: scale(var(--es-badge, 1));
+  transform-origin: center;
+}
+
+/* ── Streak ───────────────────────────────────────── */
+.widget--streak .widget-streak__icon {
+  transform: scale(var(--es-icon, 1));
+  transform-origin: center;
+}
+
+.widget--streak .widget-streak__value,
+.widget--streak .widget-streak__value--lg,
+.widget--streak .widget-streak__days {
+  transform: scale(var(--es-value, 1));
+  transform-origin: center;
+}
+
+.widget--streak .widget-streak__week {
+  transform: scale(var(--es-dots, 1));
+  transform-origin: center;
+}
+
+/* ── Weight ───────────────────────────────────────── */
+.widget--weight .widget-weight__val,
+.widget--weight .widget-weight__val-unit {
+  transform: scale(var(--es-value, 1));
+  transform-origin: center left;
+}
+
+.widget--weight .widget-weight__trend,
+.widget--weight .widget-weight__trend-arrow,
+.widget--weight .widget-weight__trend-label {
+  transform: scale(var(--es-trend, 1));
+  transform-origin: center;
+}
+
+.widget--weight .widget-weight__chart,
+.widget--weight .widget-weight__chart-compact,
+.widget--weight .widget-weight__sparkline {
+  transform: scale(var(--es-chart, 1));
+  transform-origin: center;
+}
+
+.widget--weight .widget-weight__bmi-badge,
+.widget--weight .widget-weight__bmi-block {
+  transform: scale(var(--es-badge, 1));
+  transform-origin: center;
+}
+
+/* ── Steps ────────────────────────────────────────── */
+.widget--steps .widget-steps__icon {
+  transform: scale(var(--es-icon, 1));
+  transform-origin: center;
+}
+
+.widget--steps .widget-steps__value,
+.widget--steps .widget-steps__value--lg {
+  transform: scale(var(--es-value, 1));
+  transform-origin: center left;
+}
+
+.widget--steps .widget-steps__progress,
+.widget--steps .widget-steps__bar {
+  transform: scale(var(--es-progress, 1));
+  transform-origin: center;
+}
+
+/* ── Insulin ──────────────────────────────────────── */
+.widget--insulin .widget-insulin__ring,
+.widget--insulin .widget-insulin__ring-container {
+  transform: scale(var(--es-ring, 1));
+  transform-origin: center;
+}
+
+.widget--insulin .widget-insulin__timer,
+.widget--insulin .widget-insulin__timer-center,
+.widget--insulin .widget-insulin__micro-time {
+  transform: scale(var(--es-value, 1));
+  transform-origin: center;
+}
+
+.widget--insulin .widget-insulin__phase,
+.widget--insulin .widget-insulin__phase-2x2,
+.widget--insulin .widget-insulin__status,
+.widget--insulin .widget-insulin__status-2x2,
+.widget--insulin .widget-insulin__meal-time {
+  transform: scale(var(--es-label, 1));
+  transform-origin: center left;
+}
+
+/* ── Insulin Wave ─────────────────────────────────── */
+.widget--insulinWave .widget__content>div>svg,
+.widget--insulinWave svg {
+  transform: scale(var(--es-chart, 1));
+  transform-origin: center;
+}
+
+.widget--insulinWave .widget__content>div>div:nth-child(2) {
+  transform: scale(var(--es-value, 1));
+  transform-origin: center left;
+}
+
+.widget--insulinWave .widget__content>div>div:first-child {
+  transform: scale(var(--es-label, 1));
+  transform-origin: center left;
+}
+
+/* ── Heatmap ──────────────────────────────────────── */
+.widget--heatmap .widget-heatmap__grid,
+.widget--heatmap .widget-heatmap__week-grid {
+  transform: scale(var(--es-grid, 1));
+  transform-origin: center;
+}
+
+.widget--heatmap .widget-heatmap__day-label,
+.widget--heatmap .widget-heatmap__date-label {
+  transform: scale(var(--es-label, 1));
+  transform-origin: center;
+}
+
+/* ── Cascade ──────────────────────────────────────── */
+.widget--cascade .widget-cascade__dots {
+  transform: scale(var(--es-dots, 1));
+  transform-origin: center left;
+}
+
+.widget--cascade .widget-cascade__badge {
+  transform: scale(var(--es-badge, 1));
+  transform-origin: center right;
+}
+
+/* ── Cycle ────────────────────────────────────────── */
+.widget--cycle .widget-cycle__ring,
+.widget--cycle .widget-cycle__ring-container {
+  transform: scale(var(--es-ring, 1));
+  transform-origin: center;
+}
+
+.widget--cycle .widget-cycle__day-num,
+.widget--cycle .widget-cycle__day-center {
+  transform: scale(var(--es-value, 1));
+  transform-origin: center;
+}
+
+.widget--cycle .widget-cycle__day-label,
+.widget--cycle .widget-cycle__tip,
+.widget--cycle .widget-cycle__phase-header {
+  transform: scale(var(--es-label, 1));
+  transform-origin: center left;
+}
+
+/* ── Crash Risk ───────────────────────────────────── */
+.widget--crashRisk .widget-crash-risk__percent {
+  transform: scale(var(--es-value, 1));
+  transform-origin: center;
+}
+
+.widget--crashRisk .widget-crash-risk__ews-badge {
+  transform: scale(var(--es-badge, 1));
+  transform-origin: center;
+}
+
+.widget--crashRisk .widget-crash-risk__message,
+.widget--crashRisk .widget-crash-risk__header,
+.widget--crashRisk .widget-crash-risk__label,
+.widget--crashRisk .widget-crash-risk__title {
+  transform: scale(var(--es-label, 1));
+  transform-origin: center left;
+}
+
+/* ── Relapse Risk ─────────────────────────────────── */
+.widget--relapseRisk .widget-relapse-risk__gauge-wrap,
+.widget--relapseRisk .widget-relapse-risk__speedometer {
+  transform: scale(var(--es-gauge, 1));
+  transform-origin: center;
+}
+
+.widget--relapseRisk .widget-relapse-risk__value {
+  transform: scale(var(--es-value, 1));
+  transform-origin: center;
+}
+
+.widget--relapseRisk .widget-relapse-risk__gauge-status-pill,
+.widget--relapseRisk .widget-relapse-risk__footer-badge-wrap,
+.widget--relapseRisk .widget-relapse-risk__pct-pill {
+  transform: scale(var(--es-badge, 1));
+  transform-origin: center;
+}
+
+/* ── Health Trend ─────────────────────────────────── */
+.widget--healthTrend .widget-health-trend__score {
+  transform: scale(var(--es-value, 1));
+  transform-origin: center;
+}
+
+.widget--healthTrend .widget-health-trend__bars,
+.widget--healthTrend .widget-health-trend__category-bar {
+  transform: scale(var(--es-bars, 1));
+  transform-origin: center bottom;
+}
+
+.widget--healthTrend .widget-health-trend__label,
+.widget--healthTrend .widget-health-trend__period {
+  transform: scale(var(--es-label, 1));
+  transform-origin: center left;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   ELEMENT SCALE — overflow unlock & layout expansion
+   When a widget has custom element scales, relax overflow:hidden
+   so that scaled-up content is not clipped by parent containers,
+   and let micro-containers stretch to fill available space.
+   The .widget--has-scales class is added by WidgetCard when
+   widget.settings.elementScales has any entries.
+   ═══════════════════════════════════════════════════════════════ */
+.widget--has-scales,
+.widget--has-scales>.widget__content {
+  overflow: visible;
+}
+
+/* All micro-containers: unlock overflow & stretch to fill parent */
+.widget--has-scales .widget-calories--micro,
+.widget--has-scales .widget-water--micro,
+.widget--has-scales .widget-sleep--micro,
+.widget--has-scales .widget-streak--micro,
+.widget--has-scales .widget-steps--micro,
+.widget--has-scales .widget-macros--micro {
+  overflow: visible;
+  align-self: stretch;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+}
+
+.widget--has-scales .widget-water__progress--micro {
+  overflow: visible;
+  flex: none;
+  align-self: center;
 }

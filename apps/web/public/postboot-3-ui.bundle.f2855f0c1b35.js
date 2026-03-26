@@ -31331,7 +31331,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
     // Determine max allowed scale for this widget size
     let maxAllowed;
-    if (isMicro)     maxAllowed = 1.15;  // 1×1 — almost no room
+    if (isMicro) maxAllowed = 1.15;  // 1×1 — almost no room
     else if (isTiny) maxAllowed = 1.35;  // 2×1, 1×2
     else if (isShort) maxAllowed = 1.5;  // 3×1, 4×1
     else return elementScales;            // larger sizes — no clamp

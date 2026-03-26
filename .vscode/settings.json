@@ -2,6 +2,8 @@
     // === Agent Mode (VS Code 1.108+) ===
     "chat.useAgentSkills": true,
     "chat.agentCustomizationSkill.enabled": true,
+    "chat.promptFiles": true,
+    "chat.subagents.allowInvocationsFromSubagents": true,
     "chat.viewSessions.orientation": "stacked",
     // === Copilot Settings ===
     "github.copilot.chat.codeGeneration.useInstructionFiles": true,
@@ -9,6 +11,9 @@
     "github.copilot.chat.temporalContext.enabled": true,
     "github.copilot.chat.scopeSelection.enabled": true,
     "github.copilot.chat.localeOverride": "ru",
+    "github.copilot.chat.customInstructions": [
+        "Сначала опирайся на .github/copilot-instructions.md, AGENTS.md и релевантные .instructions.md / .github/skills/*; дополнительные docs читай только по задаче."
+    ],
     "github.copilot.chat.editor.enableAutoApply": true,
     "github.copilot.chat.autoApproval.enabled": true,
     "github.copilot.chat.executeCommand.confirmation": "off",

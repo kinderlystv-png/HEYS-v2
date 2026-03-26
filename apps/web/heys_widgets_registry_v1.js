@@ -101,6 +101,92 @@
   // Все размеры 1x1..4x4 (в порядке объявления в SIZES)
   const ALL_SIZES_4X4 = Object.keys(SIZES);
 
+  // === Scalable element groups per widget type ===
+  // Each entry: { key, label } — key maps to CSS custom property --es-{key}
+  const SCALABLE_ELEMENTS = {
+    calories: [
+      { key: 'ring', label: 'Кольцо прогресса' },
+      { key: 'value', label: 'Значение ккал' },
+      { key: 'label', label: 'Подписи' },
+    ],
+    macros: [
+      { key: 'ring', label: 'Кольца БЖУ' },
+      { key: 'value', label: 'Значения' },
+      { key: 'label', label: 'Названия макросов' },
+      { key: 'cascadeDots', label: 'Точки каскада' },
+      { key: 'cascadeBadge', label: 'Процент каскада' },
+    ],
+    insulin: [
+      { key: 'ring', label: 'Кольцо волны' },
+      { key: 'value', label: 'Таймер' },
+      { key: 'label', label: 'Фаза/статус' },
+    ],
+    insulinWave: [
+      { key: 'chart', label: 'Волна (спарклайн)' },
+      { key: 'value', label: 'Время/статус' },
+      { key: 'label', label: 'Подписи' },
+    ],
+    healthTrend: [
+      { key: 'value', label: 'Оценка' },
+      { key: 'bars', label: 'Мини-бары категорий' },
+      { key: 'label', label: 'Подписи' },
+    ],
+    dayScore: [
+      { key: 'score', label: 'Число оценки' },
+      { key: 'badge', label: 'Бадж уровня' },
+      { key: 'label', label: 'Подписи' },
+    ],
+    sleep: [
+      { key: 'icon', label: 'Иконка' },
+      { key: 'value', label: 'Часы сна' },
+      { key: 'badge', label: 'Баджи' },
+    ],
+    water: [
+      { key: 'icon', label: 'Иконка 💧' },
+      { key: 'value', label: 'Объём воды' },
+      { key: 'progress', label: 'Прогресс-бар' },
+    ],
+    weight: [
+      { key: 'value', label: 'Значение веса' },
+      { key: 'trend', label: 'Тренд' },
+      { key: 'chart', label: 'График' },
+      { key: 'badge', label: 'BMI бадж' },
+    ],
+    steps: [
+      { key: 'icon', label: 'Иконка' },
+      { key: 'value', label: 'Количество шагов' },
+      { key: 'progress', label: 'Прогресс-бар' },
+    ],
+    streak: [
+      { key: 'icon', label: 'Огонь 🔥' },
+      { key: 'value', label: 'Число стрика' },
+      { key: 'dots', label: 'Точки недели' },
+    ],
+    heatmap: [
+      { key: 'grid', label: 'Сетка дней' },
+      { key: 'label', label: 'Подписи дней' },
+    ],
+    cascade: [
+      { key: 'dots', label: 'Точки событий' },
+      { key: 'badge', label: 'Бадж процента' },
+    ],
+    cycle: [
+      { key: 'ring', label: 'Кольцо цикла' },
+      { key: 'value', label: 'День цикла' },
+      { key: 'label', label: 'Фаза/подсказка' },
+    ],
+    crashRisk: [
+      { key: 'value', label: 'Процент' },
+      { key: 'badge', label: 'EWS зона' },
+      { key: 'label', label: 'Подписи' },
+    ],
+    relapseRisk: [
+      { key: 'gauge', label: 'Спидометр' },
+      { key: 'value', label: 'Число риска' },
+      { key: 'badge', label: 'Статус' },
+    ],
+  };
+
   // === Widget Type Definitions ===
   // 10 типов виджетов согласно ТЗ
   const WIDGET_TYPES = {
@@ -115,6 +201,7 @@
       availableSizes: ['2x2'],
       dataKeys: ['dayTot.kcal', 'optimum'],
       component: 'WidgetCalories',
+      scalableElements: SCALABLE_ELEMENTS.calories,
       settings: {
         showPercentage: { type: 'boolean', default: true, label: 'Показывать %' },
         showRemaining: { type: 'boolean', default: true, label: 'Показывать остаток' }
@@ -128,9 +215,10 @@
       icon: '🥗',
       description: 'Баланс белков, жиров, углеводов',
       defaultSize: '4x2',
-      availableSizes: ['4x1', '3x2', '4x2'],
-      dataKeys: ['dayTot.prot', 'dayTot.fat', 'dayTot.carbs', 'normAbs'],
+      availableSizes: ['3x1', '3x2', '4x2'],
+      dataKeys: ['dayTot.prot', 'dayTot.fat', 'dayTot.carbs', 'normAbs', 'cascade.events', 'cascade.crs'],
       component: 'WidgetMacros',
+      scalableElements: SCALABLE_ELEMENTS.macros,
       settings: {
         showGrams: { type: 'boolean', default: true, label: 'Показывать граммы' },
         showPercentage: { type: 'boolean', default: true, label: 'Показывать %' }
@@ -138,6 +226,17 @@
       settingsBySize: {
         '1x1': {
           showPercentage: { type: 'boolean', default: true, label: 'Показывать %' }
+        },
+        '3x2': {
+          centerValueMode: {
+            type: 'select',
+            default: 'grams',
+            label: 'Значение в центре',
+            options: [
+              { value: 'grams', label: 'Граммы' },
+              { value: 'pct', label: 'Проценты' }
+            ]
+          }
         }
       }
     },
@@ -152,6 +251,7 @@
       availableSizes: ALL_SIZES_4X4,
       dataKeys: ['waveData'],
       component: 'WidgetInsulin',
+      scalableElements: SCALABLE_ELEMENTS.insulin,
       settings: {
         showTimer: { type: 'boolean', default: true, label: 'Показывать таймер' },
         showPhase: { type: 'boolean', default: true, label: 'Показывать фазу' },
@@ -170,6 +270,7 @@
       availableSizes: ['2x2', '2x1'],
       dataKeys: ['meals', 'profile'],
       component: 'WidgetInsulinWave',
+      scalableElements: SCALABLE_ELEMENTS.insulinWave,
       settings: {}
     },
 
@@ -183,6 +284,7 @@
       availableSizes: ['2x2', '2x1'],
       dataKeys: ['historyDays', 'profile'],
       component: 'WidgetHealthTrend',
+      scalableElements: SCALABLE_ELEMENTS.healthTrend,
       settings: {
         periodDays: { type: 'number', default: 7, label: 'Период (дней)', min: 7, max: 30 },
         showCategories: { type: 'boolean', default: true, label: 'Показывать категории' }
@@ -199,6 +301,7 @@
       availableSizes: ['2x2', '2x1'],
       dataKeys: ['dayData', 'profile', 'dayTot', 'normAbs', 'waterGoal'],
       component: 'WidgetDayScore',
+      scalableElements: SCALABLE_ELEMENTS.dayScore,
       settings: {
         showLevel: { type: 'boolean', default: true, label: 'Показывать словесную оценку' },
         showAction: { type: 'boolean', default: true, label: 'Показывать рекомендацию' }
@@ -238,6 +341,7 @@
       availableSizes: ['1x1'],
       dataKeys: ['day.sleepHours', 'day.sleepQuality', 'prof.sleepHours'],
       component: 'WidgetSleep',
+      scalableElements: SCALABLE_ELEMENTS.sleep,
       settings: {
         showQuality: { type: 'boolean', default: true, label: 'Показывать качество' },
         showTarget: { type: 'boolean', default: true, label: 'Показывать норму' },
@@ -258,6 +362,7 @@
       availableSizes: ['1x1', '2x1', '2x2'],
       dataKeys: ['day.waterMl', 'waterGoal'],
       component: 'WidgetWater',
+      scalableElements: SCALABLE_ELEMENTS.water,
       settings: {
         showMilliliters: { type: 'boolean', default: true, label: 'Показывать мл' },
         showGlasses: { type: 'boolean', default: false, label: 'Показывать стаканы' },
@@ -296,6 +401,7 @@
       availableSizes: ALL_SIZES_4X4,
       dataKeys: ['day.weightMorning', 'prof.weight', 'prof.weightGoal', 'weightTrend'],
       component: 'WidgetWeight',
+      scalableElements: SCALABLE_ELEMENTS.weight,
       settings: {
         showTrend: { type: 'boolean', default: true, label: 'Показывать тренд' },
         showGoal: { type: 'boolean', default: true, label: 'Показывать цель' },
@@ -362,6 +468,7 @@
       availableSizes: ALL_SIZES_4X4,
       dataKeys: ['day.steps', 'prof.stepsGoal'],
       component: 'WidgetSteps',
+      scalableElements: SCALABLE_ELEMENTS.steps,
       settings: {
         showGoal: { type: 'boolean', default: true, label: 'Показывать цель' },
         showKilometers: { type: 'boolean', default: false, label: 'Показывать км' },
@@ -384,6 +491,7 @@
       availableSizes: ['1x1'],
       dataKeys: ['currentStreak', 'maxStreak'],
       component: 'WidgetStreak',
+      scalableElements: SCALABLE_ELEMENTS.streak,
       settings: {
         showMax: { type: 'boolean', default: true, label: 'Показывать рекорд' },
         showFlame: { type: 'boolean', default: true, label: 'Показывать огонь' }
@@ -403,6 +511,7 @@
       availableSizes: ['2x1', '3x1', '4x1'],
       dataKeys: ['activeDays'],
       component: 'WidgetHeatmap',
+      scalableElements: SCALABLE_ELEMENTS.heatmap,
       settings: {
         period: {
           type: 'select', default: 'week', label: 'Период', options: [
@@ -416,6 +525,20 @@
       }
     },
 
+    cascade: {
+      type: 'cascade',
+      name: 'Каскад',
+      category: 'motivation',
+      icon: '⚡',
+      description: 'Позитивный каскад: точки событий и badge с динамикой CRS',
+      defaultSize: '4x1',
+      availableSizes: ['3x1', '4x1'],
+      dataKeys: ['dayData', 'dayTot', 'normAbs', 'cascade.events', 'cascade.crs'],
+      component: 'WidgetCascade',
+      scalableElements: SCALABLE_ELEMENTS.cascade,
+      settings: {}
+    },
+
     // === Категория: Цикл ===
     cycle: {
       type: 'cycle',
@@ -427,6 +550,7 @@
       availableSizes: ALL_SIZES_4X4,
       dataKeys: ['day.cycleDay', 'cyclePhase'],
       component: 'WidgetCycle',
+      scalableElements: SCALABLE_ELEMENTS.cycle,
       requiresCondition: () => {
         const prof = HEYS.utils?.lsGet?.('heys_profile', {}) || {};
         return prof.gender === 'Женский' && prof.cycleTrackingEnabled === true;
@@ -453,6 +577,7 @@
       availableSizes: ['2x1'],
       dataKeys: ['day.weightMorning', 'weightTrend', 'profile.goalWeight'],
       component: 'WidgetCrashRisk',
+      scalableElements: SCALABLE_ELEMENTS.crashRisk,
       settings: {
         showWarnings: { type: 'boolean', default: true, label: 'Показывать EWS предупреждения' },
         showGoal: { type: 'boolean', default: true, label: 'Показывать прогресс к цели' },
@@ -470,6 +595,7 @@
       availableSizes: ['1x1', '2x1', '2x2', '3x2', '4x2'],
       dataKeys: ['dayData', 'dayTot', 'normAbs', 'historyDays', 'relapseRisk'],
       component: 'WidgetRelapseRisk',
+      scalableElements: SCALABLE_ELEMENTS.relapseRisk,
       settings: {
         showDrivers: { type: 'boolean', default: true, label: 'Показывать драйверы' },
         showRecommendation: { type: 'boolean', default: true, label: 'Показывать действие' },
@@ -695,6 +821,7 @@
   HEYS.Widgets.SIZES = SIZES;
   HEYS.Widgets.LEGACY_SIZE_ALIASES = LEGACY_SIZE_ALIASES;
   HEYS.Widgets.WIDGET_TYPES = WIDGET_TYPES;
+  HEYS.Widgets.SCALABLE_ELEMENTS = SCALABLE_ELEMENTS;
 
   // Verbose init log removed
 
