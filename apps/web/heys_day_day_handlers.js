@@ -13,6 +13,7 @@
         skipScroll: !!optionsOrSkipScroll.skipScroll,
         source: optionsOrSkipScroll.source || 'water-action',
         sourceEl: optionsOrSkipScroll.sourceEl || null,
+        playSound: optionsOrSkipScroll.playSound !== false,
         showScreenFill: optionsOrSkipScroll.showScreenFill !== false,
         pulseWaterWidget: optionsOrSkipScroll.pulseWaterWidget !== false,
         showSourceBadge: optionsOrSkipScroll.showSourceBadge !== false,
@@ -24,6 +25,7 @@
       skipScroll: !!optionsOrSkipScroll,
       source: 'water-action',
       sourceEl: null,
+      playSound: true,
       showScreenFill: true,
       pulseWaterWidget: true,
       showSourceBadge: true,
@@ -158,6 +160,10 @@
 
   function playWaterAddedFeedback(detail) {
     if (!detail || !detail.ml) return;
+
+    if (detail.playSound !== false && HEYS.audio?.play) {
+      HEYS.audio.play('waterAdded', { haptic: false });
+    }
 
     if (detail.showSourceBadge !== false) {
       createWaterSourceBadge(detail);
@@ -347,6 +353,7 @@
           total: newWater,
           source: options.source || 'day-water',
           sourceEl: options.sourceEl || null,
+          playSound: options.playSound !== false,
           showScreenFill: options.showScreenFill !== false,
           pulseWaterWidget: options.pulseWaterWidget !== false,
           showSourceBadge: options.showSourceBadge !== false,

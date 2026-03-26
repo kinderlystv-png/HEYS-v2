@@ -332,16 +332,30 @@
             // --- What's New modal state ---
             const [showWhatsNew, setShowWhatsNew] = React.useState(false);
             React.useEffect(() => {
-                // Show What's New after app is ready (not blocked by consent/checkin)
-                // Delay slightly so it appears after the UI settles
+                // Show What's New after app is fully ready and PWA update has settled
                 if (isInitializing) return;
                 const timer = setTimeout(() => {
+                    // Skip if a PWA update/reload is still in progress
+                    try {
+                        if (sessionStorage.getItem('heys_pending_update')) {
+                            console.info('[HEYS.WhatsNew] Skipped — PWA update pending');
+                            return;
+                        }
+                        const lock = localStorage.getItem('heys_update_in_progress');
+                        if (lock) {
+                            const lockTs = JSON.parse(lock).timestamp;
+                            if (Date.now() - lockTs < 30000) {
+                                console.info('[HEYS.WhatsNew] Skipped — update lock active');
+                                return;
+                            }
+                        }
+                    } catch { /* ignore parse errors */ }
                     if (HEYS.WhatsNew && HEYS.WhatsNew.checkUnseen) {
                         HEYS.WhatsNew.checkUnseen().then(hasUnseen => {
                             if (hasUnseen) setShowWhatsNew(true);
                         }).catch(() => { });
                     }
-                }, 1500);
+                }, 3000);
                 return () => clearTimeout(timer);
             }, [isInitializing]);
 

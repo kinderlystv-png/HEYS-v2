@@ -14110,7 +14110,9 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                     // 🔒 v4.0: isInitialLoad — полностью подавляем модалки при загрузке/синке/смене клиента
                     const isInitialLoad = !!e?.detail?.isInitialLoad;
                     // 🔒 v4.1: xp_fast_sync — reconciliation при несоответствии XP-кеша, всегда suppress
-                    const isSyncUpdate = isInitialLoad || reason === 'xp_fast_sync' || (!hasXpGained && (!hasReason || reason === 'client_changed' || reason === 'xp_rebuild'));
+                    // 🔒 v4.2: cloud_load_complete/cloud_load_error/audit_reconciliation — sync operations, never user-initiated
+                    const SYNC_REASONS = ['xp_fast_sync', 'cloud_load_complete', 'cloud_load_error', 'audit_reconciliation', 'client_changed', 'xp_rebuild'];
+                    const isSyncUpdate = isInitialLoad || SYNC_REASONS.includes(reason) || (!hasXpGained && !hasReason);
 
                     if (newStats.level > prevLevel) {
                         if (!isSyncUpdate) {
@@ -14161,6 +14163,9 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                         unlockedCount: e.detail.unlockedCount || 0,
                         totalAchievements: e.detail.totalAchievements || 25
                     };
+                    // 🔒 v4.2: Sync prevLevelRef so the first event after HEYS.game becomes
+                    // available doesn't trigger a false level-up modal
+                    prevLevelRef.current = e.detail.level;
                     logSyncInfo('UI stats:from-detail-fallback', { totalXP: detailStats.totalXP, level: detailStats.level });
                     setStats(detailStats);
                 }
@@ -23649,16 +23654,30 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
             // --- What's New modal state ---
             const [showWhatsNew, setShowWhatsNew] = React.useState(false);
             React.useEffect(() => {
-                // Show What's New after app is ready (not blocked by consent/checkin)
-                // Delay slightly so it appears after the UI settles
+                // Show What's New after app is fully ready and PWA update has settled
                 if (isInitializing) return;
                 const timer = setTimeout(() => {
+                    // Skip if a PWA update/reload is still in progress
+                    try {
+                        if (sessionStorage.getItem('heys_pending_update')) {
+                            console.info('[HEYS.WhatsNew] Skipped — PWA update pending');
+                            return;
+                        }
+                        const lock = localStorage.getItem('heys_update_in_progress');
+                        if (lock) {
+                            const lockTs = JSON.parse(lock).timestamp;
+                            if (Date.now() - lockTs < 30000) {
+                                console.info('[HEYS.WhatsNew] Skipped — update lock active');
+                                return;
+                            }
+                        }
+                    } catch { /* ignore parse errors */ }
                     if (HEYS.WhatsNew && HEYS.WhatsNew.checkUnseen) {
                         HEYS.WhatsNew.checkUnseen().then(hasUnseen => {
                             if (hasUnseen) setShowWhatsNew(true);
                         }).catch(() => { });
                     }
-                }, 1500);
+                }, 3000);
                 return () => clearTimeout(timer);
             }, [isInitializing]);
 

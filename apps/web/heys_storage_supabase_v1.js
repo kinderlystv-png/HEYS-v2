@@ -4387,7 +4387,9 @@
         // If exists - skip flush/cleanup/ensureClient/meta/PhaseA -> direct fetch
         // Saves 1.5-5 seconds (all heavy pre-work deferred after fetch)
         const lastSyncKey = `heys_${client_id}_last_sync_ts`;
-        const lastSyncTs = ls.getItem(lastSyncKey);
+        let lastSyncTs = ls.getItem(lastSyncKey);
+        // Guard: localStorage.setItem(key, null) stores literal string "null"
+        if (lastSyncTs === 'null') { lastSyncTs = null; try { ls.removeItem(lastSyncKey); } catch (_) { } }
         const isDeltaFastPath = !!lastSyncTs && !forceSync;
         // 🚀 PERF: Force sync also uses delta when we have lastSyncTs and initial sync is done
         // This avoids re-fetching all 679 keys on pull-to-refresh — only changed keys since last sync
@@ -7585,6 +7587,20 @@
     try {
       const currentRaw = global.localStorage.getItem(scopedKey);
       if (currentRaw === serialized) return false;
+
+      // 🛡️ FIX: Protect widget_layout from hot-sync race condition.
+      // Hot-sync can fetch stale cloud data before doImmediateClientUpload completes.
+      // Without this check, stale cloud data overwrites fresh local settings.
+      if (baseKey.includes('widget_layout') && !baseKey.includes('_meta_')) {
+        try {
+          const localObj = currentRaw ? JSON.parse(currentRaw) : null;
+          const localUp = localObj?.updatedAt;
+          const remoteUp = value?.updatedAt;
+          if (typeof localUp === 'number' && typeof remoteUp === 'number' && localUp >= remoteUp) {
+            return false; // local is newer — don't overwrite
+          }
+        } catch (_) { /* parse error — proceed normally */ }
+      }
 
       if (baseKey.includes('dayv2_') && !/(^|_)dayv2_date$/.test(scopedKey)) {
         const wroteDay = writeDayKeyWithQuotaGuard(scopedKey, value, {

@@ -1556,6 +1556,9 @@ td:first-child input {
   position: relative;
   /* 🚀 PERF: contain gamification layout — prevents child animations from triggering parent reflow */
   contain: layout style;
+  /* contain:layout creates a stacking context with z-index:auto (=0), which is below hdr-bottom z-index:10.
+     Set z-index > 10 so game-notification (z-index:1100 inside) renders above the nav row. */
+  z-index: 20;
 }
 
 .game-bar-container {

@@ -263,7 +263,9 @@
                     // 🔒 v4.0: isInitialLoad — полностью подавляем модалки при загрузке/синке/смене клиента
                     const isInitialLoad = !!e?.detail?.isInitialLoad;
                     // 🔒 v4.1: xp_fast_sync — reconciliation при несоответствии XP-кеша, всегда suppress
-                    const isSyncUpdate = isInitialLoad || reason === 'xp_fast_sync' || (!hasXpGained && (!hasReason || reason === 'client_changed' || reason === 'xp_rebuild'));
+                    // 🔒 v4.2: cloud_load_complete/cloud_load_error/audit_reconciliation — sync operations, never user-initiated
+                    const SYNC_REASONS = ['xp_fast_sync', 'cloud_load_complete', 'cloud_load_error', 'audit_reconciliation', 'client_changed', 'xp_rebuild'];
+                    const isSyncUpdate = isInitialLoad || SYNC_REASONS.includes(reason) || (!hasXpGained && !hasReason);
 
                     if (newStats.level > prevLevel) {
                         if (!isSyncUpdate) {
@@ -314,6 +316,9 @@
                         unlockedCount: e.detail.unlockedCount || 0,
                         totalAchievements: e.detail.totalAchievements || 25
                     };
+                    // 🔒 v4.2: Sync prevLevelRef so the first event after HEYS.game becomes
+                    // available doesn't trigger a false level-up modal
+                    prevLevelRef.current = e.detail.level;
                     logSyncInfo('UI stats:from-detail-fallback', { totalXP: detailStats.totalXP, level: detailStats.level });
                     setStats(detailStats);
                 }

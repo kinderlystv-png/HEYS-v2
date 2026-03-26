@@ -69,15 +69,15 @@
   const CELL_GAP_PX = 12; // fallback
 
   const DEFAULT_LAYOUT = [
-    // Канонический preset reset-кнопки (2026-03-26)
+    // Канонический preset reset-кнопки (2026-03-26 v2)
     {
       type: 'calories',
       size: '2x2',
       position: { col: 0, row: 0 },
       settings: {
         showRemaining: true,
-        showPercentage: true,
-        elementScales: { ring: 0.9 }
+        showPercentage: false,
+        elementScales: { ring: 0.95 }
       }
     },
     {
@@ -92,7 +92,7 @@
       settings: {
         showGrams: true,
         showPercentage: true,
-        centerValueMode: 'grams',
+        centerValueMode: 'pct',
         elementScales: { ring: 0.95 }
       }
     },
@@ -123,7 +123,7 @@
         showMilliliters: true,
         elementScales: {
           icon: 1.15,
-          progress: 1.5,
+          progress: 1.05,
           value: 1.7
         }
       }
@@ -134,16 +134,20 @@
       position: { col: 0, row: 4 },
       settings: {
         showLevel: true,
-        showAction: true
+        showAction: true,
+        elementScales: { label: 0.85 }
       }
     },
     {
-      type: 'healthTrend',
-      size: '2x2',
+      type: 'heatmap',
+      size: '2x1',
       position: { col: 2, row: 4 },
       settings: {
-        periodDays: 7,
-        showCategories: true
+        period: 'week',
+        showDates: true,
+        showWeekdays: true,
+        highlightToday: true,
+        elementScales: { grid: 0.95 }
       }
     },
     {
@@ -158,13 +162,12 @@
       }
     },
     {
-      type: 'crashRisk',
-      size: '2x1',
-      position: { col: 2, row: 6 },
+      type: 'healthTrend',
+      size: '2x2',
+      position: { col: 2, row: 5 },
       settings: {
-        showGoal: true,
         periodDays: 7,
-        showWarnings: true
+        showCategories: true
       }
     },
     {
@@ -181,15 +184,13 @@
       }
     },
     {
-      type: 'heatmap',
+      type: 'crashRisk',
       size: '2x1',
       position: { col: 2, row: 7 },
       settings: {
-        period: 'week',
-        showDates: true,
-        showWeekdays: true,
-        highlightToday: true,
-        elementScales: { grid: 0.95 }
+        showGoal: true,
+        periodDays: 7,
+        showWarnings: true
       }
     }
   ];
@@ -788,6 +789,22 @@
         if (normalized !== raw) {
           nextUpdates = { ...updates, size: normalized };
         }
+      }
+
+      if (
+        nextUpdates
+        && Object.prototype.hasOwnProperty.call(nextUpdates, 'settings')
+        && nextUpdates.settings
+        && typeof nextUpdates.settings === 'object'
+        && !Array.isArray(nextUpdates.settings)
+      ) {
+        nextUpdates = {
+          ...nextUpdates,
+          settings: {
+            ...(widget.settings || {}),
+            ...nextUpdates.settings
+          }
+        };
       }
 
       // FIX: Создаём новый объект виджета вместо мутации in-place.

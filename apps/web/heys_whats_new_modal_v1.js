@@ -144,14 +144,16 @@
                 if (cancelled) return;
                 const unseen = getUnseenReleases(data);
                 if (unseen.length > 0) {
+                    const latestVersion = data.releases[0].version;
+                    latestVersionRef.current = latestVersion;
+                    // Persist immediately so a PWA reload won't show the modal again
+                    setLastSeenVersion(latestVersion);
                     setReleases(unseen);
-                    // Remember latest version — will be persisted only on explicit close
-                    latestVersionRef.current = data.releases[0].version;
                     // Animate in
                     requestAnimationFrame(() => {
                         if (!cancelled) setVisible(true);
                     });
-                    console.info('[HEYS.WhatsNew] Showing', unseen.length, 'unseen release(s)');
+                    console.info('[HEYS.WhatsNew] Showing', unseen.length, 'unseen release(s), marked', latestVersion, 'as seen');
                 } else {
                     console.info('[HEYS.WhatsNew] No unseen releases, closing');
                     if (onCloseRef.current) onCloseRef.current();
@@ -188,7 +190,7 @@
         }, [releases]);
 
         const handleClose = useCallback(() => {
-            // Mark as seen only on explicit user action (button press)
+            // Redundant write (already persisted on show) — kept for safety
             if (latestVersionRef.current) {
                 setLastSeenVersion(latestVersionRef.current);
             }

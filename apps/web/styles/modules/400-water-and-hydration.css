@@ -859,6 +859,18 @@ html.dark .water-tip-text {
   /* Выше меню .tabs (z-index: 1000) */
 }
 
+body.widgets-edit-mode .fab-group {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateY(10px);
+}
+
+body.widgets-edit-mode .fab-group .meal-fab,
+body.widgets-edit-mode .fab-group .water-fab {
+  pointer-events: none;
+}
+
 /* 💧 Анимация добавления воды около FAB */
 .water-fab-anim {
   position: absolute;

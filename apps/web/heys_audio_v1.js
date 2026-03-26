@@ -25,13 +25,13 @@
   // ─── Kill switch ──────────────────────────────────────────────────────────
   if (localStorage.getItem('heys_audio_disabled') === 'true') {
     HEYS.audio = {
-      play: () => {},
-      haptic: () => {},
-      preview: () => {},
+      play: () => { },
+      haptic: () => { },
+      preview: () => { },
       isEnabled: () => false,
       getSettings: () => ({ masterEnabled: false }),
-      saveSettings: () => {},
-      invalidateSettings: () => {},
+      saveSettings: () => { },
+      invalidateSettings: () => { },
       EVENTS: Object.freeze({}),
       CATEGORIES: Object.freeze([])
     };
@@ -188,7 +188,7 @@
       try { _audioCtx = new AudioContext(); } catch { return null; }
     }
     if (_audioCtx.state === 'suspended') {
-      _audioCtx.resume().catch(() => {});
+      _audioCtx.resume().catch(() => { });
     }
     return _audioCtx;
   }
@@ -197,11 +197,11 @@
     document.addEventListener('visibilitychange', () => {
       if (!_audioCtx) return;
       if (document.visibilityState === 'hidden') {
-        _audioCtx.suspend?.().catch(() => {});
+        _audioCtx.suspend?.().catch(() => { });
         return;
       }
       if (document.visibilityState === 'visible' && _userGestured) {
-        _audioCtx.resume?.().catch(() => {});
+        _audioCtx.resume?.().catch(() => { });
       }
     });
   }
@@ -232,7 +232,8 @@
     alert: 2000,
     error: 1000,
     interaction: 100,
-    dismiss: 400
+    dismiss: 400,
+    water: 700
   };
 
   function isThrottled(category) {
@@ -408,6 +409,106 @@
     osc.stop(ctx.currentTime + 0.2);
   }
 
+  function synthWater(ctx, vol) {
+    // Soft premium water drip: smooth transient, rounded body, tasteful depth
+    const now = ctx.currentTime;
+
+    // ── Soft room wash: a small premium tail without audible echoes ──────────
+    const rvDelay = ctx.createDelay(0.08);
+    const rvFb = ctx.createGain();
+    const rvLp = ctx.createBiquadFilter();
+    const rvOut = ctx.createGain();
+    rvDelay.delayTime.setValueAtTime(0.030, now);
+    rvFb.gain.setValueAtTime(0.28, now);
+    rvLp.type = 'lowpass';
+    rvLp.frequency.setValueAtTime(2200, now);
+    rvOut.gain.setValueAtTime(0.18, now);
+    rvDelay.connect(rvLp);
+    rvLp.connect(rvFb);
+    rvFb.connect(rvDelay);
+    rvLp.connect(rvOut);
+    rvOut.connect(ctx.destination);
+
+    // ── Dry path ─────────────────────────────────────────────────────────────
+    const dry = ctx.createGain();
+    dry.gain.setValueAtTime(0.80, now);
+    dry.connect(ctx.destination);
+
+    const src = ctx.createGain();
+    src.connect(dry);
+    src.connect(rvDelay);
+
+    // ── Soft contact: tiny filtered noise so the drip feels real, not clicky ─
+    const clickLen = Math.floor(ctx.sampleRate * 0.002);
+    const clickBuf = ctx.createBuffer(1, clickLen, ctx.sampleRate);
+    const clickData = clickBuf.getChannelData(0);
+    for (let i = 0; i < clickLen; i++) clickData[i] = (Math.random() * 2 - 1) * (1 - i / clickLen);
+    const clickSrc = ctx.createBufferSource();
+    clickSrc.buffer = clickBuf;
+    const clickFilter = ctx.createBiquadFilter();
+    clickFilter.type = 'bandpass';
+    clickFilter.frequency.setValueAtTime(1650, now);
+    clickFilter.Q.setValueAtTime(1.0, now);
+    const clickGain = ctx.createGain();
+    clickGain.gain.setValueAtTime(vol * 0.05, now);
+    clickGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.007);
+    clickSrc.connect(clickFilter);
+    clickFilter.connect(clickGain);
+    clickGain.connect(src);
+    clickSrc.start(now);
+    clickSrc.stop(now + 0.008);
+
+    // ── Main body: rounded pitch-drop, softer and more refined ──────────────
+    const bodyFilter = ctx.createBiquadFilter();
+    bodyFilter.type = 'bandpass';
+    bodyFilter.frequency.setValueAtTime(670, now);
+    bodyFilter.Q.setValueAtTime(1.8, now);
+    const bodyGain = ctx.createGain();
+    bodyFilter.connect(bodyGain);
+    bodyGain.connect(src);
+    bodyGain.gain.setValueAtTime(0.0001, now);
+    bodyGain.gain.exponentialRampToValueAtTime(Math.max(0.0002, vol * 0.74), now + 0.005);
+    bodyGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.23);
+
+    const bodyOsc = ctx.createOscillator();
+    bodyOsc.type = 'sine';
+    bodyOsc.frequency.setValueAtTime(760, now);
+    bodyOsc.frequency.exponentialRampToValueAtTime(330, now + 0.14);
+    bodyOsc.connect(bodyFilter);
+    bodyOsc.start(now);
+    bodyOsc.stop(now + 0.24);
+
+    // ── Silky top: minimal sheen to make the drop feel premium, not musical ─
+    const silkGain = ctx.createGain();
+    silkGain.gain.setValueAtTime(0.0001, now + 0.004);
+    silkGain.gain.exponentialRampToValueAtTime(Math.max(0.0002, vol * 0.08), now + 0.012);
+    silkGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.11);
+    silkGain.connect(src);
+
+    const silkOsc = ctx.createOscillator();
+    silkOsc.type = 'sine';
+    silkOsc.frequency.setValueAtTime(1100, now + 0.004);
+    silkOsc.frequency.exponentialRampToValueAtTime(820, now + 0.10);
+    silkOsc.connect(silkGain);
+    silkOsc.start(now + 0.004);
+    silkOsc.stop(now + 0.12);
+
+    // ── Low body: tiny tactile foundation, no sub-bass boom ────────────────
+    const lowGain = ctx.createGain();
+    lowGain.gain.setValueAtTime(0.0001, now);
+    lowGain.gain.exponentialRampToValueAtTime(Math.max(0.0002, vol * 0.10), now + 0.007);
+    lowGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.16);
+    lowGain.connect(src);
+
+    const lowOsc = ctx.createOscillator();
+    lowOsc.type = 'sine';
+    lowOsc.frequency.setValueAtTime(265, now);
+    lowOsc.frequency.exponentialRampToValueAtTime(185, now + 0.12);
+    lowOsc.connect(lowGain);
+    lowOsc.start(now);
+    lowOsc.stop(now + 0.17);
+  }
+
   // ─── Category registry ────────────────────────────────────────────────────
   const SYNTH = {
     triumph: synthTriumph,
@@ -418,60 +519,62 @@
     alert: synthAlert,
     error: synthError,
     interaction: synthInteraction,
-    dismiss: synthDismiss
+    dismiss: synthDismiss,
+    water: synthWater
   };
 
   // Haptic pattern per category
   const HAPTIC_PATTERN = {
-    triumph:     [50, 50, 50, 50, 50, 50, 200],
-    success:     [50, 30, 50],
-    reward:      [20],
-    notify:      [15],
-    caution:     [40, 20, 40],
-    alert:       [200, 100, 200],
-    error:       [100, 50, 100, 50, 100],
+    triumph: [50, 50, 50, 50, 50, 50, 200],
+    success: [50, 30, 50],
+    reward: [20],
+    notify: [15],
+    caution: [40, 20, 40],
+    alert: [200, 100, 200],
+    error: [100, 50, 100, 50, 100],
     interaction: [5],
-    dismiss:     [15]
+    dismiss: [15],
+    water: [18, 80, 18]
   };
 
   // ─── Event → category map ─────────────────────────────────────────────────
   // null = haptic-only, no sound
   const EVENT_MAP = {
     // Triumph
-    rankCeremony:        'triumph',
-    levelUp:             'triumph',
+    rankCeremony: 'triumph',
+    levelUp: 'triumph',
     allMissionsComplete: 'triumph',
     achievementUnlocked: 'triumph',
 
     // Success
-    missionComplete:     'success',
-    calorieGoalReached:  'success',
+    missionComplete: 'success',
+    calorieGoalReached: 'success',
     supplementsComplete: 'success',
 
     // Reward
-    xpGained:            'reward',
-    foodAdded:           'reward',
+    xpGained: 'reward',
+    foodAdded: 'reward',
 
     // Notify
-    adviceAppear:        'notify',
+    adviceAppear: 'notify',
 
     // Caution
-    foodAddedModerate:   'caution',
+    foodAddedModerate: 'caution',
 
     // Alert
-    foodAddedHarmful:    'alert',
+    foodAddedHarmful: 'alert',
 
     // Error
-    error:               'error',
+    error: 'error',
 
     // Interaction
-    buttonTap:           'interaction',
+    buttonTap: 'interaction',
 
     // Dismiss
-    adviceDismiss:       'dismiss',
+    adviceDismiss: 'dismiss',
 
-    // Water: haptic-only (too frequent for sound)
-    waterAdded:          null
+    // Water
+    waterAdded: 'water'
   };
 
   function toPublicSettings(settings) {
@@ -601,7 +704,7 @@
     canPlay,
     stopAll: () => {
       if (_audioCtx?.close) {
-        _audioCtx.close().catch(() => {});
+        _audioCtx.close().catch(() => { });
         _audioCtx = null;
       }
       if (HEYS.vibration?.stop) {

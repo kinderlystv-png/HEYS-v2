@@ -309,8 +309,8 @@
 
     // Добавляем фильтры в формате Supabase: eq.column=value → column=eq.value
     Object.entries(filters).forEach(([key, value]) => {
-      // Пропускаем undefined значения
-      if (value === undefined || value === 'undefined') return;
+      // Пропускаем undefined/null значения (null → строка "null" → невалидный SQL)
+      if (value === undefined || value === 'undefined' || value === null || value === 'null') return;
       // Преобразуем формат: eq.id → id=eq.value, gt.updated_at → updated_at=gt.value
       const dotIdx = key.indexOf('.');
       if (dotIdx > 0) {

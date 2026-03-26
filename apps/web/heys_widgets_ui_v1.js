@@ -17,6 +17,7 @@
   HEYS.Widgets = HEYS.Widgets || {};
 
   const React = global.React;
+  const ReactDOM = global.ReactDOM;
   const { useState, useEffect, useMemo, useCallback, useRef } = React || {};
 
   // Debug/telemetry helpers (без прямого console.*)
@@ -1450,69 +1451,66 @@
 
     const d = getWidgetDims(widget);
     const isShort = d.isShort; // 2x1
+    const rootClassName = `widget-day-score ${isShort ? 'widget-day-score--short' : 'widget-day-score--regular'}`;
 
     if (!hasData) {
       return React.createElement('div', {
-        style: { display: 'flex', flexDirection: isShort ? 'row' : 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: isShort ? '8px' : '4px', opacity: 0.5 }
+        className: `${rootClassName} widget-day-score--empty`
       },
-        React.createElement('div', { style: { fontSize: isShort ? '1.2rem' : '1.5rem' } }, '⭐'),
-        React.createElement('div', { style: { fontSize: '0.75rem', color: 'var(--heys-text-tertiary, #64748b)' } }, 'Заполните день')
+        React.createElement('div', { className: 'widget-day-score__placeholder-icon' }, '⭐'),
+        React.createElement('div', { className: 'widget-day-score__placeholder-text' }, 'Заполните день')
       );
     }
 
     const color = getColor();
     const actionEl = showAction && topActions.length > 0
       ? React.createElement('div', {
-        style: {
-          fontSize: '0.7rem', color: 'var(--heys-text-secondary, #94a3b8)',
-          display: 'flex', alignItems: 'flex-start', gap: '4px',
-          maxWidth: '100%', lineHeight: 1.3
-        }
+        className: 'widget-day-score__action',
       },
-        React.createElement('span', { style: { flexShrink: 0 } }, topActions[0].icon || '→'),
-        React.createElement('span', null, topActions[0].text)
+        React.createElement('span', { className: 'widget-day-score__action-icon' }, topActions[0].icon || '→'),
+        React.createElement('span', { className: 'widget-day-score__action-text' }, topActions[0].text)
       )
       : null;
 
     const levelBadge = showLevel ? React.createElement('div', {
+      className: 'widget-day-score__badge widget-day-score__level-badge',
       style: {
         fontSize: '0.7rem', fontWeight: 600, color,
         background: `${color}14`, border: `1px solid ${color}28`,
-        borderRadius: '99px', padding: '1px 8px', alignSelf: 'flex-start', flexShrink: 0
+        borderRadius: '99px', padding: '1px 8px'
       }
     }, `${getLevelEmoji()} ${getLevelLabel()}`) : null;
 
     // 2x1 — горизонтальный: цифра слева, уровень + рекомендация справа
     if (isShort) {
       return React.createElement('div', {
-        style: { display: 'flex', alignItems: 'center', height: '100%', gap: '10px', padding: '4px 10px' }
+        className: rootClassName
       },
         // Score
         React.createElement('div', {
+          className: 'widget-day-score__score',
           style: { fontSize: '2rem', fontWeight: 800, color, lineHeight: 1, letterSpacing: '-1px', flexShrink: 0 }
         }, Math.round(score)),
-        // Right side: level + action stacked
-        React.createElement('div', {
-          style: { display: 'flex', flexDirection: 'column', gap: '3px', minWidth: 0, flex: 1, overflow: 'hidden' }
-        },
-          levelBadge,
-          actionEl
-        )
+        // Top right: level badge
+        levelBadge ? React.createElement('div', { className: 'widget-day-score__badge-row' }, levelBadge) : null,
+        // Bottom full-width recommendation
+        actionEl ? React.createElement('div', { className: 'widget-day-score__action-row' }, actionEl) : null
       );
     }
 
     // 2x2 — вертикальный: большая цифра + уровень + рекомендация
     return React.createElement('div', {
-      style: { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '2px', padding: '8px 4px' }
+      className: rootClassName
     },
       // Score number
       React.createElement('div', {
+        className: 'widget-day-score__score-big',
         style: { fontSize: '3rem', fontWeight: 800, color, lineHeight: 1, letterSpacing: '-1px' }
       }, Math.round(score)),
       // Level badge
-      levelBadge ? React.createElement('div', { style: { marginTop: '2px' } }, levelBadge) : null,
+      levelBadge ? React.createElement('div', { className: 'widget-day-score__badge-row' }, levelBadge) : null,
       // Top recommendation
-      actionEl ? React.createElement('div', { style: { marginTop: '6px', maxWidth: '100%' } }, actionEl) : null
+      actionEl ? React.createElement('div', { className: 'widget-day-score__action-row' }, actionEl) : null
     );
   }
 
@@ -6112,6 +6110,109 @@
     );
   }
 
+  function ResetLayoutConfirmModal({ isOpen, widgetCount = 0, onClose, onConfirm }) {
+    useEffect(() => {
+      if (!isOpen) return undefined;
+
+      const targets = [
+        document.body,
+        document.documentElement,
+        document.querySelector('.wrap'),
+        document.querySelector('.tab-content-swipeable'),
+        document.querySelector('.widgets-tab')
+      ].filter(Boolean);
+
+      const prevStyles = targets.map((el) => ({
+        el,
+        overflow: el.style.overflow,
+        overscrollBehavior: el.style.overscrollBehavior
+      }));
+
+      prevStyles.forEach(({ el }) => {
+        el.style.overflow = 'hidden';
+        el.style.overscrollBehavior = 'none';
+      });
+
+      const onKeyDown = (event) => {
+        if (event.key === 'Escape') {
+          event.preventDefault();
+          onClose?.();
+        }
+      };
+
+      document.addEventListener('keydown', onKeyDown);
+
+      return () => {
+        document.removeEventListener('keydown', onKeyDown);
+        prevStyles.forEach(({ el, overflow, overscrollBehavior }) => {
+          el.style.overflow = overflow;
+          el.style.overscrollBehavior = overscrollBehavior;
+        });
+      };
+    }, [isOpen, onClose]);
+
+    if (!isOpen) return null;
+
+    const modal = React.createElement('div', {
+      className: 'confirm-modal-backdrop widgets-reset-confirm-backdrop',
+      onClick: (event) => {
+        if (event.target === event.currentTarget) onClose?.();
+      }
+    },
+      React.createElement('div', {
+        className: 'confirm-modal widgets-reset-confirm',
+        role: 'dialog',
+        'aria-modal': 'true',
+        'aria-labelledby': 'widgets-reset-confirm-title',
+        'aria-describedby': 'widgets-reset-confirm-text',
+        onClick: (event) => event.stopPropagation()
+      },
+        React.createElement('div', { className: 'widgets-reset-confirm__hero' },
+          React.createElement('div', { className: 'widgets-reset-confirm__icon', 'aria-hidden': 'true' }, '↺'),
+          React.createElement('div', { className: 'widgets-reset-confirm__hero-copy' },
+            React.createElement('div', { className: 'widgets-reset-confirm__eyebrow' }, 'Раскладка виджетов'),
+            React.createElement('div', {
+              id: 'widgets-reset-confirm-title',
+              className: 'widgets-reset-confirm__title'
+            }, 'Сбросить к дефолту?')
+          )
+        ),
+        React.createElement('div', { className: 'widgets-reset-confirm__body' },
+          React.createElement('div', {
+            id: 'widgets-reset-confirm-text',
+            className: 'widgets-reset-confirm__text'
+          }, 'Вернём фирменную стартовую раскладку HEYS. Если передумаешь — текущее состояние можно будет вернуть кнопкой ↩.'),
+          React.createElement('div', { className: 'widgets-reset-confirm__meta' },
+            React.createElement('div', { className: 'widgets-reset-confirm__pill' },
+              React.createElement('div', { className: 'widgets-reset-confirm__pill-label' }, 'Виджетов'),
+              React.createElement('div', { className: 'widgets-reset-confirm__pill-value' }, String(widgetCount || 0))
+            ),
+            React.createElement('div', { className: 'widgets-reset-confirm__pill' },
+              React.createElement('div', { className: 'widgets-reset-confirm__pill-label' }, 'Безопасно'),
+              React.createElement('div', { className: 'widgets-reset-confirm__pill-value' }, '↩ Можно откатить')
+            )
+          )
+        ),
+        React.createElement('div', { className: 'confirm-modal-buttons confirm-modal-buttons--custom widgets-reset-confirm__actions' },
+          React.createElement('div', { className: 'confirm-modal-actions-row' },
+            React.createElement('button', {
+              type: 'button',
+              className: 'confirm-modal-btn cancel confirm-modal-btn--custom confirm-modal-btn--fill confirm-modal-btn--neutral',
+              onClick: onClose
+            }, 'Оставить как есть'),
+            React.createElement('button', {
+              type: 'button',
+              className: 'confirm-modal-btn confirm confirm-modal-btn--custom confirm-modal-btn--fill confirm-modal-btn--primary',
+              onClick: onConfirm
+            }, 'Сбросить')
+          )
+        )
+      )
+    );
+
+    return ReactDOM?.createPortal ? ReactDOM.createPortal(modal, document.body) : modal;
+  }
+
   // === Main WidgetsTab Component ===
   function WidgetsTab({ selectedDate, clientId, setTab, setSelectedDate }) {
     const HOME_TAB_OPTIONS = useMemo(() => ([
@@ -6141,6 +6242,7 @@
     const [historyInfo, setHistoryInfo] = useState({ canUndo: false, canRedo: false });
     const [showGridOverlay, setShowGridOverlay] = useState(false); // Grid overlay toggle
     const [showHomeTabPicker, setShowHomeTabPicker] = useState(false);
+    const [showResetConfirm, setShowResetConfirm] = useState(false);
     const containerRef = useRef(null);
     const gridRef = useRef(null);
 
@@ -6558,13 +6660,18 @@
     }, []);
 
     const handleResetLayout = useCallback(() => {
-      const confirmed = typeof window?.confirm === 'function'
-        ? window.confirm('Сбросить виджеты к нашей дефолтной раскладке? Текущее состояние можно будет вернуть кнопкой ↩.')
-        : true;
+      setShowResetConfirm(true);
+      HEYS.dayUtils?.haptic?.('light');
+    }, []);
 
-      if (!confirmed) return;
+    const handleCloseResetConfirm = useCallback(() => {
+      setShowResetConfirm(false);
+      HEYS.dayUtils?.haptic?.('light');
+    }, []);
 
+    const handleConfirmResetLayout = useCallback(() => {
       HEYS.Widgets.resetLayout?.();
+      setShowResetConfirm(false);
       setShowGridOverlay(false);
       setShowHomeTabPicker(false);
       HEYS.dayUtils?.haptic?.('medium');
@@ -6605,6 +6712,7 @@
       if (!isEditMode) {
         setShowGridOverlay(false);
         setShowHomeTabPicker(false);
+        setShowResetConfirm(false);
       }
     }, [isEditMode]);
 
@@ -6708,6 +6816,12 @@
           if (!w) return;
           HEYS.Widgets.state?.updateWidget(w.id, { settings: { ...(w.settings || {}), periodDays: newPeriod } }, true);
         }
+      }),
+      React.createElement(ResetLayoutConfirmModal, {
+        isOpen: showResetConfirm,
+        widgetCount: widgets.length,
+        onClose: handleCloseResetConfirm,
+        onConfirm: handleConfirmResetLayout
       }),
 
       // === Fixed bottom edit controls (для всех устройств) ===
