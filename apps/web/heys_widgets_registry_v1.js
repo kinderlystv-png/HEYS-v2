@@ -756,13 +756,19 @@
         return null;
       }
 
-      // Merge default settings with provided settings
+      // Merge base defaults + size-specific defaults + provided settings
       const defaultSettings = {};
-      if (widgetType.settings) {
-        Object.entries(widgetType.settings).forEach(([key, def]) => {
-          defaultSettings[key] = def.default;
+      const applySettingDefaults = (settingsDef) => {
+        if (!settingsDef) return;
+        Object.entries(settingsDef).forEach(([key, def]) => {
+          if (def && Object.prototype.hasOwnProperty.call(def, 'default')) {
+            defaultSettings[key] = def.default;
+          }
         });
-      }
+      };
+
+      applySettingDefaults(widgetType.settings);
+      applySettingDefaults(widgetType.settingsBySize?.[size]);
 
       return {
         id: options.id || `widget_${type}_${Date.now()}`,

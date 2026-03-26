@@ -59,7 +59,7 @@
   const STORAGE_META_KEY = 'heys_widget_layout_meta_v1';
   const GRID_COLS = 4; // 4 колонки: 1 колонка/ряд = базовая единица
   const GRID_VERSION = 2;
-  const LAYOUT_PRESET_VERSION = 1;
+  const LAYOUT_PRESET_VERSION = 2;
   const MAX_HISTORY = 20; // Максимум шагов undo/redo
   const SAVE_DEBOUNCE_MS = 500; // Debounce для сохранения
   const LONG_PRESS_MS = 500; // Время для long press
@@ -69,19 +69,129 @@
   const CELL_GAP_PX = 12; // fallback
 
   const DEFAULT_LAYOUT = [
-    // Канонический layout виджетов (март 2026)
-    { type: 'calories', size: '2x2', position: { col: 0, row: 0 } },
-    { type: 'insulinWave', size: '2x2', position: { col: 2, row: 0 } },
-    { type: 'macros', size: '3x2', position: { col: 0, row: 2 } },
-    { type: 'sleep', size: '1x1', position: { col: 3, row: 2 } },
-    { type: 'streak', size: '1x1', position: { col: 3, row: 3 } },
-    { type: 'dayScore', size: '2x1', position: { col: 0, row: 4 } },
-    { type: 'crashRisk', size: '2x1', position: { col: 2, row: 4 } },
-    { type: 'relapseRisk', size: '2x2', position: { col: 0, row: 5 } },
-    { type: 'water', size: '2x1', position: { col: 2, row: 5 } },
-    { type: 'heatmap', size: '2x1', position: { col: 2, row: 6 } },
-    { type: 'healthTrend', size: '2x2', position: { col: 0, row: 7 } },
-    { type: 'weight', size: '2x2', position: { col: 2, row: 7 } }
+    // Канонический preset reset-кнопки (2026-03-26)
+    {
+      type: 'calories',
+      size: '2x2',
+      position: { col: 0, row: 0 },
+      settings: {
+        showRemaining: true,
+        showPercentage: true,
+        elementScales: { ring: 0.9 }
+      }
+    },
+    {
+      type: 'insulinWave',
+      size: '2x2',
+      position: { col: 2, row: 0 }
+    },
+    {
+      type: 'macros',
+      size: '3x2',
+      position: { col: 0, row: 2 },
+      settings: {
+        showGrams: true,
+        showPercentage: true,
+        centerValueMode: 'grams',
+        elementScales: { ring: 0.95 }
+      }
+    },
+    {
+      type: 'sleep',
+      size: '1x1',
+      position: { col: 3, row: 2 },
+      settings: {
+        showTimes: true,
+        showTarget: true,
+        showQuality: true,
+        elementScales: {
+          badge: 2,
+          icon: 2,
+          value: 2
+        }
+      }
+    },
+    {
+      type: 'water',
+      size: '1x1',
+      position: { col: 3, row: 3 },
+      settings: {
+        showGlasses: false,
+        showProgress: true,
+        showRemaining: true,
+        showPercentage: true,
+        showMilliliters: true,
+        elementScales: {
+          icon: 1.15,
+          progress: 1.5,
+          value: 1.7
+        }
+      }
+    },
+    {
+      type: 'dayScore',
+      size: '2x1',
+      position: { col: 0, row: 4 },
+      settings: {
+        showLevel: true,
+        showAction: true
+      }
+    },
+    {
+      type: 'healthTrend',
+      size: '2x2',
+      position: { col: 2, row: 4 },
+      settings: {
+        periodDays: 7,
+        showCategories: true
+      }
+    },
+    {
+      type: 'relapseRisk',
+      size: '2x2',
+      position: { col: 0, row: 5 },
+      settings: {
+        showSource: true,
+        showDrivers: true,
+        showConfidence: false,
+        showRecommendation: true
+      }
+    },
+    {
+      type: 'crashRisk',
+      size: '2x1',
+      position: { col: 2, row: 6 },
+      settings: {
+        showGoal: true,
+        periodDays: 7,
+        showWarnings: true
+      }
+    },
+    {
+      type: 'weight',
+      size: '2x2',
+      position: { col: 0, row: 7 },
+      settings: {
+        showBmi: true,
+        showGoal: true,
+        showChart: true,
+        showTrend: true,
+        periodDays: 7,
+        showAnalytics: true
+      }
+    },
+    {
+      type: 'heatmap',
+      size: '2x1',
+      position: { col: 2, row: 7 },
+      settings: {
+        period: 'week',
+        showDates: true,
+        showWeekdays: true,
+        highlightToday: true,
+        elementScales: { grid: 0.95 }
+      }
+    }
   ];
 
   // === State Manager with Undo/Redo ===
@@ -550,7 +660,8 @@
       return DEFAULT_LAYOUT.map((def, idx) => {
         const widget = registry?.createWidget(def.type, {
           size: def.size,
-          position: def.position
+          position: def.position,
+          settings: def.settings
         });
         return widget || this._normalizeWidget(def);
       }).filter(Boolean);

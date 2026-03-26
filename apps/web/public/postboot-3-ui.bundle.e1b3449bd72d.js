@@ -26867,13 +26867,19 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         return null;
       }
 
-      // Merge default settings with provided settings
+      // Merge base defaults + size-specific defaults + provided settings
       const defaultSettings = {};
-      if (widgetType.settings) {
-        Object.entries(widgetType.settings).forEach(([key, def]) => {
-          defaultSettings[key] = def.default;
+      const applySettingDefaults = (settingsDef) => {
+        if (!settingsDef) return;
+        Object.entries(settingsDef).forEach(([key, def]) => {
+          if (def && Object.prototype.hasOwnProperty.call(def, 'default')) {
+            defaultSettings[key] = def.default;
+          }
         });
-      }
+      };
+
+      applySettingDefaults(widgetType.settings);
+      applySettingDefaults(widgetType.settingsBySize?.[size]);
 
       return {
         id: options.id || `widget_${type}_${Date.now()}`,
@@ -27281,7 +27287,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
   const STORAGE_META_KEY = 'heys_widget_layout_meta_v1';
   const GRID_COLS = 4; // 4 колонки: 1 колонка/ряд = базовая единица
   const GRID_VERSION = 2;
-  const LAYOUT_PRESET_VERSION = 1;
+  const LAYOUT_PRESET_VERSION = 2;
   const MAX_HISTORY = 20; // Максимум шагов undo/redo
   const SAVE_DEBOUNCE_MS = 500; // Debounce для сохранения
   const LONG_PRESS_MS = 500; // Время для long press
@@ -27291,19 +27297,129 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
   const CELL_GAP_PX = 12; // fallback
 
   const DEFAULT_LAYOUT = [
-    // Канонический layout виджетов (март 2026)
-    { type: 'calories', size: '2x2', position: { col: 0, row: 0 } },
-    { type: 'insulinWave', size: '2x2', position: { col: 2, row: 0 } },
-    { type: 'macros', size: '3x2', position: { col: 0, row: 2 } },
-    { type: 'sleep', size: '1x1', position: { col: 3, row: 2 } },
-    { type: 'streak', size: '1x1', position: { col: 3, row: 3 } },
-    { type: 'dayScore', size: '2x1', position: { col: 0, row: 4 } },
-    { type: 'crashRisk', size: '2x1', position: { col: 2, row: 4 } },
-    { type: 'relapseRisk', size: '2x2', position: { col: 0, row: 5 } },
-    { type: 'water', size: '2x1', position: { col: 2, row: 5 } },
-    { type: 'heatmap', size: '2x1', position: { col: 2, row: 6 } },
-    { type: 'healthTrend', size: '2x2', position: { col: 0, row: 7 } },
-    { type: 'weight', size: '2x2', position: { col: 2, row: 7 } }
+    // Канонический preset reset-кнопки (2026-03-26)
+    {
+      type: 'calories',
+      size: '2x2',
+      position: { col: 0, row: 0 },
+      settings: {
+        showRemaining: true,
+        showPercentage: true,
+        elementScales: { ring: 0.9 }
+      }
+    },
+    {
+      type: 'insulinWave',
+      size: '2x2',
+      position: { col: 2, row: 0 }
+    },
+    {
+      type: 'macros',
+      size: '3x2',
+      position: { col: 0, row: 2 },
+      settings: {
+        showGrams: true,
+        showPercentage: true,
+        centerValueMode: 'grams',
+        elementScales: { ring: 0.95 }
+      }
+    },
+    {
+      type: 'sleep',
+      size: '1x1',
+      position: { col: 3, row: 2 },
+      settings: {
+        showTimes: true,
+        showTarget: true,
+        showQuality: true,
+        elementScales: {
+          badge: 2,
+          icon: 2,
+          value: 2
+        }
+      }
+    },
+    {
+      type: 'water',
+      size: '1x1',
+      position: { col: 3, row: 3 },
+      settings: {
+        showGlasses: false,
+        showProgress: true,
+        showRemaining: true,
+        showPercentage: true,
+        showMilliliters: true,
+        elementScales: {
+          icon: 1.15,
+          progress: 1.5,
+          value: 1.7
+        }
+      }
+    },
+    {
+      type: 'dayScore',
+      size: '2x1',
+      position: { col: 0, row: 4 },
+      settings: {
+        showLevel: true,
+        showAction: true
+      }
+    },
+    {
+      type: 'healthTrend',
+      size: '2x2',
+      position: { col: 2, row: 4 },
+      settings: {
+        periodDays: 7,
+        showCategories: true
+      }
+    },
+    {
+      type: 'relapseRisk',
+      size: '2x2',
+      position: { col: 0, row: 5 },
+      settings: {
+        showSource: true,
+        showDrivers: true,
+        showConfidence: false,
+        showRecommendation: true
+      }
+    },
+    {
+      type: 'crashRisk',
+      size: '2x1',
+      position: { col: 2, row: 6 },
+      settings: {
+        showGoal: true,
+        periodDays: 7,
+        showWarnings: true
+      }
+    },
+    {
+      type: 'weight',
+      size: '2x2',
+      position: { col: 0, row: 7 },
+      settings: {
+        showBmi: true,
+        showGoal: true,
+        showChart: true,
+        showTrend: true,
+        periodDays: 7,
+        showAnalytics: true
+      }
+    },
+    {
+      type: 'heatmap',
+      size: '2x1',
+      position: { col: 2, row: 7 },
+      settings: {
+        period: 'week',
+        showDates: true,
+        showWeekdays: true,
+        highlightToday: true,
+        elementScales: { grid: 0.95 }
+      }
+    }
   ];
 
   // === State Manager with Undo/Redo ===
@@ -27772,7 +27888,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       return DEFAULT_LAYOUT.map((def, idx) => {
         const widget = registry?.createWidget(def.type, {
           size: def.size,
-          position: def.position
+          position: def.position,
+          settings: def.settings
         });
         return widget || this._normalizeWidget(def);
       }).filter(Boolean);
@@ -38383,14 +38500,16 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                 if (cancelled) return;
                 const unseen = getUnseenReleases(data);
                 if (unseen.length > 0) {
+                    const latestVersion = data.releases[0].version;
+                    latestVersionRef.current = latestVersion;
+                    // Persist immediately so a PWA reload won't show the modal again
+                    setLastSeenVersion(latestVersion);
                     setReleases(unseen);
-                    // Remember latest version — will be persisted only on explicit close
-                    latestVersionRef.current = data.releases[0].version;
                     // Animate in
                     requestAnimationFrame(() => {
                         if (!cancelled) setVisible(true);
                     });
-                    console.info('[HEYS.WhatsNew] Showing', unseen.length, 'unseen release(s)');
+                    console.info('[HEYS.WhatsNew] Showing', unseen.length, 'unseen release(s), marked', latestVersion, 'as seen');
                 } else {
                     console.info('[HEYS.WhatsNew] No unseen releases, closing');
                     if (onCloseRef.current) onCloseRef.current();
@@ -38427,7 +38546,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         }, [releases]);
 
         const handleClose = useCallback(() => {
-            // Mark as seen only on explicit user action (button press)
+            // Redundant write (already persisted on show) — kept for safety
             if (latestVersionRef.current) {
                 setLastSeenVersion(latestVersionRef.current);
             }

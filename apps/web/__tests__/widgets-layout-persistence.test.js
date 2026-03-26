@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 const GRID_COLS = 4;
 const GRID_VERSION = 2;
-const LAYOUT_PRESET_VERSION = 1;
+const LAYOUT_PRESET_VERSION = 2;
 
 function resolveWidgetsInit({ meta, savedLayout }) {
     let saved = Array.isArray(savedLayout) ? savedLayout : [];
