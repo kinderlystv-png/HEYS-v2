@@ -605,6 +605,7 @@
       settingsBySize: {
         '1x1': {},
         '2x2': {
+          gaugeStrokeWidth: { type: 'number', default: 30, label: 'Толщина полукруга', min: 8, max: 30 },
           showConfidence: { type: 'boolean', default: true, label: 'Показывать confidence' }
         }
       }

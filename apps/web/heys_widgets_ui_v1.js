@@ -4423,10 +4423,18 @@
     }
   }
 
-  function RelapseRiskSpeedometer({ score, level, size = 140, label = 'Риск срыва', compact = false }) {
+  function resolveRelapseGaugeStrokeWidth(value, fallback) {
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed)) {
+      return fallback;
+    }
+    return Math.max(8, Math.min(30, Math.round(parsed)));
+  }
+
+  function RelapseRiskSpeedometer({ score, level, size = 140, label = 'Риск срыва', compact = false, gaugeStrokeWidth }) {
     const safeRisk = Math.max(0, Math.min(100, Math.round(Number(score) || 0)));
     const tone = getRelapseMeterTone(level);
-    const strokeWidth = compact ? 14 : 12;
+    const strokeWidth = resolveRelapseGaugeStrokeWidth(gaugeStrokeWidth, compact ? 14 : 12);
     const radius = (size - strokeWidth) / 2;
     const halfCircumference = Math.PI * radius;
     const progress = (safeRisk / 100) * halfCircumference;
@@ -4727,7 +4735,8 @@
             level,
             size: 136,
             label: 'Риск-радар',
-            compact: true
+            compact: true,
+            gaugeStrokeWidth: widget.settings?.gaugeStrokeWidth
           })
         ),
         React.createElement('div', { className: 'widget-relapse-risk__footer-badge-wrap' },

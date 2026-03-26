@@ -44,7 +44,7 @@
     masterEnabled: true,
     volume: 0.12,
     hapticEnabled: true,
-    quietHoursEnabled: true,
+    quietHoursEnabled: false, // disabled by default; user can enable in settings
     quietStart: 23,
     quietEnd: 7
   };
@@ -84,6 +84,12 @@
       _settings = Object.assign({}, DEFAULT_SETTINGS, raw);
       if (hasOwn(_settings, 'enabled') && !hasOwn(_settings, 'masterEnabled')) {
         _settings.masterEnabled = _settings.enabled !== false;
+      }
+      // One-time migration: quiet hours were enabled by default, now disabled
+      if (!raw._qhOff) {
+        _settings.quietHoursEnabled = false;
+        _settings._qhOff = 1;
+        _lsSet(SETTINGS_KEY, Object.assign({}, _settings));
       }
       return _settings;
     }

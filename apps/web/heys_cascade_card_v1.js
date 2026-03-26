@@ -259,15 +259,15 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     return diff >= 0 && diff <= hours * 60;
   }
 
-  function getMealLabel(meal, index) {
+  function getMealLabel(meal, index, mealBandShift) {
     const time = parseTime(meal && meal.time);
     if (time !== null) {
-      if (time < 600) return 'Ранний приём';
-      if (time < 660) return 'Завтрак';
-      if (time < 720) return 'Поздний завтрак';
-      if (time < 840) return 'Обед';
-      if (time < 1020) return 'Перекус';
-      if (time < 1200) return 'Ужин';
+      var shift = mealBandShift || 0;
+      if (time < (600 + shift)) return 'Ранний приём';
+      if (time < (720 + shift)) return 'Завтрак';
+      if (time < (840 + shift)) return 'Обед';
+      if (time < (1020 + shift)) return 'Перекус';
+      if (time < (1200 + shift)) return 'Ужин';
       return 'Поздний приём';
     }
     const labels = ['Завтрак', 'Обед', 'Перекус', 'Ужин'];
@@ -1489,7 +1489,10 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     var meals = (day && day.meals) || [];
     // v3.5.1 fix: fallback 0 → kcal overrides are skipped when normAbs is unavailable
     // (avoids false deficit_overshoot penalty when normKcal falls back to 2000)
-    var normKcal = (normAbs && normAbs.kcal) || 0;
+    // v3.6.1: use savedDisplayOptimum (debt-adjusted goal) to align with stats bar
+    var normKcal = (day && day.savedDisplayOptimum > 0)
+      ? +day.savedDisplayOptimum
+      : ((normAbs && normAbs.kcal) || 0);
     var hasNightHarm = false;
     var hasExcessKcal = false;
 
@@ -1759,6 +1762,18 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       hasPIndex: !!pIndex
     });
 
+    // v3.6.1: Use savedDisplayOptimum (debt-adjusted goal shown in stats bar) for calorie checks.
+    // This prevents false "Перебор при похудении" when caloric debt boost raises the effective goal
+    // above base optimum (normAbs.kcal). Falls back to normAbs.kcal when savedDisplayOptimum unavailable.
+    var effectiveKcalTarget = (day && day.savedDisplayOptimum > 0)
+      ? +day.savedDisplayOptimum
+      : ((normAbs && normAbs.kcal) || 0);
+    console.info('[HEYS.cascade] 🎯 Effective kcal target:', {
+      savedDisplayOptimum: (day && day.savedDisplayOptimum) || null,
+      normAbsKcal: (normAbs && normAbs.kcal) || null,
+      effectiveKcalTarget: effectiveKcalTarget
+    });
+
     var events = [];
     var meals = (day && day.meals) || [];
     var trainings = (day && day.trainings) || [];
@@ -1871,7 +1886,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       }, 0);
 
       cumulativeKcal += mealKcal;
-      var normKcal = (normAbs && normAbs.kcal) || 0;
+      var normKcal = effectiveKcalTarget;
       var cumulativeRatio = normKcal ? (cumulativeKcal / normKcal) : 0;
       var overNorm = normKcal ? cumulativeRatio > 1.2 : false;
       var hasHarm = checkMealHarm(meal, pIndex);
@@ -1967,7 +1982,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         time: (meal && meal.time) || null,
         positive: positive,
         icon: EVENT_ICONS.meal,
-        label: getMealLabel(meal, i),
+        label: getMealLabel(meal, i, mealBandShift),
         sortKey: timeMins !== null ? timeMins : (500 + i * 120),
         breakReason: breakReason,
         weight: mealWeight,
@@ -1978,12 +1993,12 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
       // Явная строка — всегда читается без разворачивания объекта
       if (mealQS && mealQS.score != null) {
-        console.info('[HEYS.cascade] 🎯 Meal quality (' + getMealLabel(meal, i) + '): score=' + mealQS.score + ' grade=' + qualityGrade + ' weight=' + (+mealWeight).toFixed(2) + ' color=' + mealQS.color + ' scoringModel=v2.1.0-continuous');
+        console.info('[HEYS.cascade] 🎯 Meal quality (' + getMealLabel(meal, i, mealBandShift) + '): score=' + mealQS.score + ' grade=' + qualityGrade + ' weight=' + (+mealWeight).toFixed(2) + ' color=' + mealQS.color + ' scoringModel=v2.1.0-continuous');
       } else {
-        console.warn('[HEYS.cascade] ⚠️ getMealQualityScore недоступен (' + getMealLabel(meal, i) + ') → fallback weight=' + mealWeight + ' | HEYS.mealScoring=' + (typeof (HEYS.mealScoring && HEYS.mealScoring.getMealQualityScore)) + ' pIndex=' + (!!pIndex));
+        console.warn('[HEYS.cascade] ⚠️ getMealQualityScore недоступен (' + getMealLabel(meal, i, mealBandShift) + ') → fallback weight=' + mealWeight + ' | HEYS.mealScoring=' + (typeof (HEYS.mealScoring && HEYS.mealScoring.getMealQualityScore)) + ' pIndex=' + (!!pIndex));
       }
 
-      console.info('[HEYS.cascade] 🍽️ [MEAL ' + (i + 1) + '/' + meals.length + '] ' + getMealLabel(meal, i) + ' (model v2.1.0 continuous + circadian):', {
+      console.info('[HEYS.cascade] 🍽️ [MEAL ' + (i + 1) + '/' + meals.length + '] ' + getMealLabel(meal, i, mealBandShift) + ' (model v2.1.0 continuous + circadian):', {
         time: (meal && meal.time) || null,
         mealKcal: Math.round(mealKcal),
         cumulativeKcal: Math.round(cumulativeKcal),
@@ -2003,8 +2018,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
     // ── ШАГ 2.5: Deficit Overshoot Summary (v3.1.0) ────────────
     // После обработки всех приёмов пищи — итоговый срыв по калориям при цели похудения
-    if (mealGoalMode.mode === 'deficit' && normAbs && normAbs.kcal > 0) {
-      var finalKcalRatio = cumulativeKcal / normAbs.kcal;
+    if (mealGoalMode.mode === 'deficit' && effectiveKcalTarget > 0) {
+      var finalKcalRatio = cumulativeKcal / effectiveKcalTarget;
       if (finalKcalRatio > mealGoalMode.criticalOver) {
         // Критический перебор (>115% при активном дефиците, >120% при лёгком)
         var defCritPenalty = -1.5;
@@ -2054,7 +2069,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         hasDeficitOvershoot: hasDeficitOvershoot,
         deficitRatio: deficitOvershootRatio ? +deficitOvershootRatio.toFixed(2) : null,
         cumulativeKcal: Math.round(cumulativeKcal),
-        normKcal: (normAbs && normAbs.kcal) || 0,
+        normKcal: effectiveKcalTarget,
         goalLabel: mealGoalMode.label
       });
     }

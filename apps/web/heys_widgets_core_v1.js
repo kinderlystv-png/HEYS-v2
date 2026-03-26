@@ -59,7 +59,7 @@
   const STORAGE_META_KEY = 'heys_widget_layout_meta_v1';
   const GRID_COLS = 4; // 4 колонки: 1 колонка/ряд = базовая единица
   const GRID_VERSION = 2;
-  const LAYOUT_PRESET_VERSION = 2;
+  const LAYOUT_PRESET_VERSION = 3;
   const MAX_HISTORY = 20; // Максимум шагов undo/redo
   const SAVE_DEBOUNCE_MS = 500; // Debounce для сохранения
   const LONG_PRESS_MS = 500; // Время для long press
@@ -69,7 +69,7 @@
   const CELL_GAP_PX = 12; // fallback
 
   const DEFAULT_LAYOUT = [
-    // Канонический preset reset-кнопки (2026-03-26 v2)
+    // Канонический preset reset-кнопки (2026-03-27 v3)
     {
       type: 'calories',
       size: '2x2',
@@ -155,6 +155,7 @@
       size: '2x2',
       position: { col: 0, row: 5 },
       settings: {
+        gaugeStrokeWidth: 30,
         showSource: true,
         showDrivers: true,
         showConfidence: false,

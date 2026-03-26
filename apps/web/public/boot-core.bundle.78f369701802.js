@@ -3749,7 +3749,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
     masterEnabled: true,
     volume: 0.12,
     hapticEnabled: true,
-    quietHoursEnabled: true,
+    quietHoursEnabled: false, // disabled by default; user can enable in settings
     quietStart: 23,
     quietEnd: 7
   };
@@ -3789,6 +3789,12 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
       _settings = Object.assign({}, DEFAULT_SETTINGS, raw);
       if (hasOwn(_settings, 'enabled') && !hasOwn(_settings, 'masterEnabled')) {
         _settings.masterEnabled = _settings.enabled !== false;
+      }
+      // One-time migration: quiet hours were enabled by default, now disabled
+      if (!raw._qhOff) {
+        _settings.quietHoursEnabled = false;
+        _settings._qhOff = 1;
+        _lsSet(SETTINGS_KEY, Object.assign({}, _settings));
       }
       return _settings;
     }
@@ -4482,7 +4488,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
   // ============================================================================
 
   // === App Version & Auto-logout on Update ===
-  const APP_VERSION = '2026.03.16.1743.95b2f797'; // synced with build-meta.json on 2026-02-26
+  const APP_VERSION = '2026.03.27.0058.5d7ce0e1'; // synced with build-meta.json on 2026-02-26
 
   HEYS.version = APP_VERSION;
 

@@ -26716,6 +26716,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       settingsBySize: {
         '1x1': {},
         '2x2': {
+          gaugeStrokeWidth: { type: 'number', default: 30, label: 'Толщина полукруга', min: 8, max: 30 },
           showConfidence: { type: 'boolean', default: true, label: 'Показывать confidence' }
         }
       }
@@ -27287,7 +27288,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
   const STORAGE_META_KEY = 'heys_widget_layout_meta_v1';
   const GRID_COLS = 4; // 4 колонки: 1 колонка/ряд = базовая единица
   const GRID_VERSION = 2;
-  const LAYOUT_PRESET_VERSION = 2;
+  const LAYOUT_PRESET_VERSION = 3;
   const MAX_HISTORY = 20; // Максимум шагов undo/redo
   const SAVE_DEBOUNCE_MS = 500; // Debounce для сохранения
   const LONG_PRESS_MS = 500; // Время для long press
@@ -27297,7 +27298,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
   const CELL_GAP_PX = 12; // fallback
 
   const DEFAULT_LAYOUT = [
-    // Канонический preset reset-кнопки (2026-03-26 v2)
+    // Канонический preset reset-кнопки (2026-03-27 v3)
     {
       type: 'calories',
       size: '2x2',
@@ -27383,6 +27384,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       size: '2x2',
       position: { col: 0, row: 5 },
       settings: {
+        gaugeStrokeWidth: 30,
         showSource: true,
         showDrivers: true,
         showConfidence: false,
@@ -35560,10 +35562,18 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     }
   }
 
-  function RelapseRiskSpeedometer({ score, level, size = 140, label = 'Риск срыва', compact = false }) {
+  function resolveRelapseGaugeStrokeWidth(value, fallback) {
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed)) {
+      return fallback;
+    }
+    return Math.max(8, Math.min(30, Math.round(parsed)));
+  }
+
+  function RelapseRiskSpeedometer({ score, level, size = 140, label = 'Риск срыва', compact = false, gaugeStrokeWidth }) {
     const safeRisk = Math.max(0, Math.min(100, Math.round(Number(score) || 0)));
     const tone = getRelapseMeterTone(level);
-    const strokeWidth = compact ? 14 : 12;
+    const strokeWidth = resolveRelapseGaugeStrokeWidth(gaugeStrokeWidth, compact ? 14 : 12);
     const radius = (size - strokeWidth) / 2;
     const halfCircumference = Math.PI * radius;
     const progress = (safeRisk / 100) * halfCircumference;
@@ -35864,7 +35874,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             level,
             size: 136,
             label: 'Риск-радар',
-            compact: true
+            compact: true,
+            gaugeStrokeWidth: widget.settings?.gaugeStrokeWidth
           })
         ),
         React.createElement('div', { className: 'widget-relapse-risk__footer-badge-wrap' },
