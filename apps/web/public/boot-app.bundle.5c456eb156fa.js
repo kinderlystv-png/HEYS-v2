@@ -13869,7 +13869,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
     function GamificationBar() {
         const React = window.React;
         const ReactDOM = window.ReactDOM;
-        const { useState, useEffect, useRef, useCallback, useMemo } = React;
+        const { useState, useEffect, useRef, useCallback, useMemo, useLayoutEffect } = React;
         const portalToBody = (node) => {
             if (ReactDOM && typeof ReactDOM.createPortal === 'function' && globalThis.document?.body) {
                 return ReactDOM.createPortal(node, globalThis.document.body);
@@ -13956,6 +13956,12 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
         const [auditEvents, setAuditEvents] = useState([]);
         const [auditLoading, setAuditLoading] = useState(false);
         const [auditError, setAuditError] = useState(null);
+        const [expandedPanelLayout, setExpandedPanelLayout] = useState({
+            top: 120,
+            left: 12,
+            width: 360,
+            maxHeight: 520
+        });
 
         // === Onboarding Fusion Ceremony ===
         const [fusionPhase, setFusionPhase] = useState(null); // null | 'gather' | 'merge' | 'medal' | 'fly' | 'done'
@@ -14434,6 +14440,108 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
             if (!expanded) {
                 pendingOutsideCloseRef.current = false;
             }
+        }, [expanded]);
+
+        const updateExpandedPanelLayout = useCallback(() => {
+            const hdrEl = document.querySelector('.hdr');
+            const hdrRect = hdrEl?.getBoundingClientRect?.();
+            const barRect = gameBarSurfaceRef.current?.getBoundingClientRect?.();
+            const viewport = window.visualViewport;
+            const viewportWidth = Math.max(320, Math.round(viewport?.width || window.innerWidth || document.documentElement.clientWidth || 390));
+            const viewportHeight = Math.max(480, Math.round(viewport?.height || window.innerHeight || document.documentElement.clientHeight || 844));
+            const viewportOffsetLeft = Math.round(viewport?.offsetLeft || 0);
+            const viewportOffsetTop = Math.round(viewport?.offsetTop || 0);
+            const sideGap = viewportWidth <= 480 ? 12 : 16;
+            const width = Math.max(280, Math.min(560, viewportWidth - sideGap * 2));
+            const left = viewportOffsetLeft + Math.max(sideGap, Math.round((viewportWidth - width) / 2));
+            const anchorTop = Math.max(
+                Math.round((hdrRect?.bottom || 0) + 8),
+                Math.round((barRect?.bottom || 0) + 12),
+                viewportOffsetTop + 72
+            );
+            const maxHeight = Math.max(220, Math.round(viewportHeight - (anchorTop - viewportOffsetTop) - 24));
+
+            setExpandedPanelLayout((prev) => {
+                if (
+                    prev.top === anchorTop
+                    && prev.left === left
+                    && prev.width === width
+                    && prev.maxHeight === maxHeight
+                ) {
+                    return prev;
+                }
+
+                return {
+                    top: anchorTop,
+                    left,
+                    width,
+                    maxHeight
+                };
+            });
+        }, []);
+
+        useLayoutEffect(() => {
+            if (!expanded) return undefined;
+
+            let rafId = 0;
+            const scheduleUpdate = () => {
+                if (rafId) cancelAnimationFrame(rafId);
+                rafId = requestAnimationFrame(() => {
+                    updateExpandedPanelLayout();
+                });
+            };
+
+            scheduleUpdate();
+
+            const visualViewport = window.visualViewport;
+            window.addEventListener('resize', scheduleUpdate);
+            window.addEventListener('orientationchange', scheduleUpdate);
+            visualViewport?.addEventListener('resize', scheduleUpdate);
+            visualViewport?.addEventListener('scroll', scheduleUpdate);
+
+            return () => {
+                if (rafId) cancelAnimationFrame(rafId);
+                window.removeEventListener('resize', scheduleUpdate);
+                window.removeEventListener('orientationchange', scheduleUpdate);
+                visualViewport?.removeEventListener('resize', scheduleUpdate);
+                visualViewport?.removeEventListener('scroll', scheduleUpdate);
+            };
+        }, [expanded, updateExpandedPanelLayout]);
+
+        useEffect(() => {
+            if (!expanded) return undefined;
+
+            const { body, documentElement } = document;
+            const previousBodyOverflow = body.style.overflow;
+            const previousBodyOverscrollBehavior = body.style.overscrollBehavior;
+            const previousDocumentOverflow = documentElement.style.overflow;
+            const previousDocumentOverscrollBehavior = documentElement.style.overscrollBehavior;
+
+            body.style.overflow = 'hidden';
+            body.style.overscrollBehavior = 'none';
+            documentElement.style.overflow = 'hidden';
+            documentElement.style.overscrollBehavior = 'none';
+
+            const preventOutsidePanelScroll = (event) => {
+                const panel = expandedPanelRef.current;
+                if (!panel) return;
+                if (panel.contains(event.target)) return;
+                if (typeof event.preventDefault === 'function' && event.cancelable) {
+                    event.preventDefault();
+                }
+            };
+
+            document.addEventListener('wheel', preventOutsidePanelScroll, { passive: false, capture: true });
+            document.addEventListener('touchmove', preventOutsidePanelScroll, { passive: false, capture: true });
+
+            return () => {
+                body.style.overflow = previousBodyOverflow;
+                body.style.overscrollBehavior = previousBodyOverscrollBehavior;
+                documentElement.style.overflow = previousDocumentOverflow;
+                documentElement.style.overscrollBehavior = previousDocumentOverscrollBehavior;
+                document.removeEventListener('wheel', preventOutsidePanelScroll, true);
+                document.removeEventListener('touchmove', preventOutsidePanelScroll, true);
+            };
         }, [expanded]);
 
         useEffect(() => {
@@ -15224,16 +15332,20 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
             ),
 
             // Expanded panel (backdrop + content)
-            expanded && React.createElement(React.Fragment, null,
-                // Backdrop
+            expanded && portalToBody(React.createElement(React.Fragment, null,
                 React.createElement('div', {
                     className: 'game-panel-backdrop',
                     onClick: () => setExpanded(false)
                 }),
-                // Panel content
                 React.createElement('div', {
                     ref: expandedPanelRef,
-                    className: 'game-panel-expanded'
+                    className: 'game-panel-expanded',
+                    style: {
+                        top: `${expandedPanelLayout.top}px`,
+                        left: `${expandedPanelLayout.left}px`,
+                        width: `${expandedPanelLayout.width}px`,
+                        maxHeight: `${expandedPanelLayout.maxHeight}px`
+                    }
                 },
                     // Weekly Challenge Section (красивая карточка)
                     React.createElement('div', {
@@ -15595,7 +15707,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                         )
                     )
                 )
-            ),
+            )),
 
             storyAchievement && portalToBody(
                 React.createElement('div', {
@@ -17215,10 +17327,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                 {
                     className: 'tab tab-advice' + (widgetsEditMode ? ' tab--disabled-home' : ''),
                     onClick: () => {
-                        if (tab !== 'stats' && tab !== 'diary') {
-                            switchTabWithUndoCommit('stats', 'tab-advice-switch');
-                        }
                         // PERF R13 FIX G: defer heysShowAdvice dispatch to avoid sync React render in click handler
+                        // DayTabWithCloudSync is always mounted, no tab switch needed
                         setTimeout(() => window.dispatchEvent(new CustomEvent('heysShowAdvice')), 0);
                     },
                 },
@@ -17445,85 +17555,95 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
             edgeBounce && React.createElement('div', {
                 className: 'edge-indicator ' + edgeBounce
             }),
-            tab === 'ration'
-                ? React.createElement(RationTabWithCloudSync, {
-                    key: 'ration' + syncVer + '_' + String(clientId || ''),
+            // DayTabWithCloudSync is always mounted so heysShowAdvice listener is always active.
+            // Advice overlay is position:fixed — it appears over any tab regardless of which is active.
+            // height:0 + overflow:hidden hides regular content; fixed children are unclipped by overflow.
+            React.createElement(
+                'div',
+                { style: (tab === 'stats' || tab === 'diary') ? undefined : { height: 0, overflow: 'hidden' } },
+                React.createElement(DayTabWithCloudSync, {
+                    key: 'day_' + String(clientId || ''),
                     products,
-                    setProducts,
                     clientId,
+                    selectedDate,
+                    setSelectedDate,
+                    subTab: (tab === 'stats' || tab === 'diary') ? tab : 'stats',
                 })
-                : tab === 'insights'
-                    ? (window.HEYS?.PredictiveInsights?.components?.InsightsTab
-                        ? React.createElement(window.HEYS.PredictiveInsights.components.InsightsTab, {
-                            key: 'insights' + syncVer + '_' + String(clientId || '') + '_' + selectedDate,
-                            lsGet: window.HEYS?.utils?.lsGet,
-                            profile: null,
-                            pIndex: null,
-                            optimum: null,
-                            selectedDate: selectedDate,
-                        })
-                        : renderTabFallback('insights', React.createElement('div', { style: { padding: 16 } },
-                            React.createElement('div', { className: 'skeleton-sparkline', style: { height: 160, marginBottom: 16 } }),
-                            React.createElement('div', { className: 'skeleton-block', style: { height: 100 } })
-                        )))
-                    : tab === 'month'
-                        ? (window.HEYS?.ReportsTab
-                            ? React.createElement(window.HEYS.ReportsTab, {
-                                key: 'month' + syncVer + '_' + String(clientId || '') + '_' + selectedDate,
-                                selectedDate,
-                                setSelectedDate,
-                                clientId,
+            ),
+            (tab !== 'stats' && tab !== 'diary') && (
+                tab === 'ration'
+                    ? React.createElement(RationTabWithCloudSync, {
+                        key: 'ration' + syncVer + '_' + String(clientId || ''),
+                        products,
+                        setProducts,
+                        clientId,
+                    })
+                    : tab === 'insights'
+                        ? (window.HEYS?.PredictiveInsights?.components?.InsightsTab
+                            ? React.createElement(window.HEYS.PredictiveInsights.components.InsightsTab, {
+                                key: 'insights' + syncVer + '_' + String(clientId || '') + '_' + selectedDate,
+                                lsGet: window.HEYS?.utils?.lsGet,
+                                profile: null,
+                                pIndex: null,
+                                optimum: null,
+                                selectedDate: selectedDate,
                             })
-                            : renderTabFallback('month', React.createElement('div', { style: { padding: 16 } },
+                            : renderTabFallback('insights', React.createElement('div', { style: { padding: 16 } },
                                 React.createElement('div', { className: 'skeleton-sparkline', style: { height: 160, marginBottom: 16 } }),
                                 React.createElement('div', { className: 'skeleton-block', style: { height: 100 } })
                             )))
-                        : (tab === 'stats' || tab === 'diary')
-                            ? React.createElement(DayTabWithCloudSync, {
-                                key: 'day_' + String(clientId || ''),
-                                products,
-                                clientId,
-                                selectedDate,
-                                setSelectedDate,
-                                subTab: tab,
-                            })
-                            : tab === 'user'
-                                ? React.createElement(UserTabWithCloudSync, {
-                                    key: 'user' + syncVer + '_' + String(clientId || ''),
+                        : tab === 'month'
+                            ? (window.HEYS?.ReportsTab
+                                ? React.createElement(window.HEYS.ReportsTab, {
+                                    key: 'month' + syncVer + '_' + String(clientId || '') + '_' + selectedDate,
+                                    selectedDate,
+                                    setSelectedDate,
                                     clientId,
                                 })
-                                : tab === 'overview'
-                                    ? (window.HEYS && window.HEYS.DataOverviewTab
-                                        ? React.createElement(window.HEYS.DataOverviewTab, {
-                                            key: 'overview' + syncVer + '_' + String(clientId || ''),
-                                            clientId,
-                                            setTab,
-                                            setSelectedDate,
-                                        })
-                                        : renderTabFallback('overview', React.createElement('div', { style: { padding: 16 } },
-                                            React.createElement('div', { className: 'skeleton-sparkline', style: { height: 80, marginBottom: 16 } }),
-                                            React.createElement('div', { className: 'skeleton-block', style: { height: 100 } })
-                                        )))
-                                    : tab === 'widgets'
-                                        ? (window.HEYS && window.HEYS.Widgets && window.HEYS.Widgets.WidgetsTab
-                                            ? React.createElement(window.HEYS.Widgets.WidgetsTab, {
-                                                // NOTE: syncVer намеренно убран из key — WidgetsTab подписан на
-                                                // data:updated/day:updated события и не нуждается в remount при синке.
-                                                // syncVer в key вызывает flash всего контента вкладки.
-                                                key: 'widgets_' + String(clientId || '') + '_' + selectedDate,
+                                : renderTabFallback('month', React.createElement('div', { style: { padding: 16 } },
+                                    React.createElement('div', { className: 'skeleton-sparkline', style: { height: 160, marginBottom: 16 } }),
+                                    React.createElement('div', { className: 'skeleton-block', style: { height: 100 } })
+                                )))
+                            : (tab === 'stats' || tab === 'diary')
+                                ? null
+                                : tab === 'user'
+                                    ? React.createElement(UserTabWithCloudSync, {
+                                        key: 'user' + syncVer + '_' + String(clientId || ''),
+                                        clientId,
+                                    })
+                                    : tab === 'overview'
+                                        ? (window.HEYS && window.HEYS.DataOverviewTab
+                                            ? React.createElement(window.HEYS.DataOverviewTab, {
+                                                key: 'overview' + syncVer + '_' + String(clientId || ''),
                                                 clientId,
-                                                selectedDate,
                                                 setTab,
                                                 setSelectedDate,
                                             })
-                                            : renderTabFallback('widgets', React.createElement('div', { style: { padding: 16 } },
+                                            : renderTabFallback('overview', React.createElement('div', { style: { padding: 16 } },
                                                 React.createElement('div', { className: 'skeleton-sparkline', style: { height: 80, marginBottom: 16 } }),
                                                 React.createElement('div', { className: 'skeleton-block', style: { height: 100 } })
                                             )))
-                                        : renderTabFallback('default_' + String(tab || 'unknown'), React.createElement('div', { style: { padding: 16 } },
-                                            React.createElement('div', { className: 'skeleton-header', style: { width: 150, marginBottom: 16 } }),
-                                            React.createElement('div', { className: 'skeleton-block', style: { height: 200 } })
-                                        ))
+                                        : tab === 'widgets'
+                                            ? (window.HEYS && window.HEYS.Widgets && window.HEYS.Widgets.WidgetsTab
+                                                ? React.createElement(window.HEYS.Widgets.WidgetsTab, {
+                                                    // NOTE: syncVer намеренно убран из key — WidgetsTab подписан на
+                                                    // data:updated/day:updated события и не нуждается в remount при синке.
+                                                    // syncVer в key вызывает flash всего контента вкладки.
+                                                    key: 'widgets_' + String(clientId || '') + '_' + selectedDate,
+                                                    clientId,
+                                                    selectedDate,
+                                                    setTab,
+                                                    setSelectedDate,
+                                                })
+                                                : renderTabFallback('widgets', React.createElement('div', { style: { padding: 16 } },
+                                                    React.createElement('div', { className: 'skeleton-sparkline', style: { height: 80, marginBottom: 16 } }),
+                                                    React.createElement('div', { className: 'skeleton-block', style: { height: 100 } })
+                                                )))
+                                            : renderTabFallback('default_' + String(tab || 'unknown'), React.createElement('div', { style: { padding: 16 } },
+                                                React.createElement('div', { className: 'skeleton-header', style: { width: 150, marginBottom: 16 } }),
+                                                React.createElement('div', { className: 'skeleton-block', style: { height: 200 } })
+                                            ))
+            )
         );
     }
 

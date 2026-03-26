@@ -869,7 +869,15 @@
       }
 
       // RPC возвращает {success, found, key, value}
-      const data = result.data;
+      let data = result.data;
+      // Некоторые RPC-ответы приходят в обёртке по имени функции:
+      // { get_client_kv_by_session: { success, found, key, value } }
+      if (data && typeof data === 'object' && !Array.isArray(data)) {
+        const keys = Object.keys(data);
+        if (keys.length === 1 && data[keys[0]] && typeof data[keys[0]] === 'object') {
+          data = data[keys[0]];
+        }
+      }
       if (data?.found) {
         return { data: data.value };
       }

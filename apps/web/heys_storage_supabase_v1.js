@@ -1521,8 +1521,6 @@
         'heys_favorite_products',
         'heys_deleted_products',
         'heys_deleted_products_ignore_list',
-        'heys_widget_layout_v1',
-        'heys_widget_layout_meta_v1',
         'heys_grams_history',
         'heys_advice_trace_day_v1',
         'test_large'
@@ -1531,8 +1529,6 @@
         '_hidden_products',
         '_favorite_products',
         '_deleted_products',
-        '_widget_layout_v1',
-        '_widget_layout_meta_v1',
         '_advice_trace_day_v1'
       ];
 
@@ -3018,7 +3014,7 @@
       // Синхронизирует данные с сервера когда пользователь возвращается в приложение
       // Это критично для multi-device сценариев (телефон ↔ ноутбук)
       let lastSyncOnFocusTime = 0;
-      const SYNC_ON_FOCUS_DEBOUNCE = 30000; // Не чаще раз в 30 секунд (было 5 — слишком часто)
+      const SYNC_ON_FOCUS_DEBOUNCE = 60000; // Раз в 60с — критичные ключи уже тянутся через hot-sync каждые 2с
 
       const syncOnFocus = async () => {
         // Debounce: не синхронизировать слишком часто
@@ -7207,12 +7203,13 @@
     const _graceAge = cloud._syncCompletedAt ? (Date.now() - cloud._syncCompletedAt) : Infinity;
     const _inGracePeriod = _graceAge < 10000;
     const _isProfileCompleted = normalizedKey === 'heys_profile' && value && typeof value === 'object' && value.profileCompleted === true;
-    if (_inGracePeriod && !_isProfileCompleted) {
+    const _isWidgetLayout = normalizedKey && normalizedKey.includes('widget_layout');
+    if (_inGracePeriod && !_isProfileCompleted && !_isWidgetLayout) {
       // 🔇 Silent skip — data was just downloaded from cloud, no need to re-upload
       return;
     }
-    if (_inGracePeriod && _isProfileCompleted) {
-      console.info('[HEYS.sync] 🔓 Grace period bypassed for profileCompleted save');
+    if (_inGracePeriod && (_isProfileCompleted || _isWidgetLayout)) {
+      console.info('[HEYS.sync] 🔓 Grace period bypassed for', _isWidgetLayout ? 'widget_layout' : 'profileCompleted', 'save');
     }
 
     // Добавляем в очередь вместо немедленной отправки
@@ -7233,7 +7230,8 @@
       normalizedKey === 'heys_profile' ||
       normalizedKey === 'heys_norms' ||
       normalizedKey === 'heys_hr_zones' ||
-      normalizedKey === 'heys_products'
+      normalizedKey === 'heys_products' ||
+      normalizedKey.includes('widget_layout')
     );
     if (isCriticalKey && navigator.onLine && !waitingForSync) {
       console.info('[HEYS.sync] ⚡ Immediate upload', { key: k, client: client_id?.slice(0, 8) });
@@ -7486,11 +7484,15 @@
         detail: { pendingCount: pendingBefore }
       }));
     }
+
+    requestForegroundAutoSync('network-restored', { minGapMs: 0 }).catch(() => { });
+    startForegroundAutoSyncLoop();
   });
 
   // Когда сеть пропадает — логируем
   global.addEventListener('offline', function () {
     addSyncLogEntry('offline', { pending: cloud.getPendingCount() });
+    stopForegroundAutoSyncLoop();
   });
 
   /** Принудительный retry синхронизации */
@@ -7517,6 +7519,243 @@
   // Алиасы для внешних вызовов
   cloud.sync = cloud.retrySync;
   cloud.pushAll = cloud.retrySync;
+
+  // Near-real-time cross-device sync for active devices.
+  // While the page is visible we periodically run a lightweight forced delta sync,
+  // and we also sync immediately when the tab/window becomes active again.
+  const FOREGROUND_AUTO_SYNC_INTERVAL_MS = 2000;
+  const FOREGROUND_AUTO_SYNC_MIN_GAP_MS = 1200;
+  const FOREGROUND_AUTO_SYNC_EXTENDED_EVERY = 3;
+  let foregroundAutoSyncTimer = null;
+  let foregroundAutoSyncInFlight = false;
+  let foregroundAutoSyncLastAt = 0;
+  let foregroundAutoSyncTick = 0;
+  let foregroundAutoSyncAuthFailCount = 0;
+
+  function getForegroundAutoSyncClientId() {
+    return typeof cloud.getCurrentClientId === 'function' ? cloud.getCurrentClientId() : null;
+  }
+
+  function canRunForegroundAutoSync(clientId) {
+    if (!clientId) return false;
+    if (!navigator.onLine) return false;
+    if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return false;
+    const isPinAuth = _pinAuthClientId && _pinAuthClientId === clientId;
+    return Boolean(isPinAuth || user);
+  }
+
+  function getForegroundHotSyncKeys(reason) {
+    const today = new Date().toISOString().slice(0, 10);
+    const fastKeys = [
+      'heys_widget_layout_v1',
+      'heys_widget_layout_meta_v1'
+    ];
+    const extendedKeys = [
+      'heys_profile',
+      'heys_norms',
+      'heys_hr_zones',
+      `heys_dayv2_${today}`
+    ];
+
+    const isFastVisibleTick = reason === 'visible-interval';
+    const shouldIncludeExtended = !isFastVisibleTick || (foregroundAutoSyncTick % FOREGROUND_AUTO_SYNC_EXTENDED_EVERY === 0);
+    return shouldIncludeExtended ? [...fastKeys, ...extendedKeys] : fastKeys;
+  }
+
+  function getScopedClientStorageKey(clientId, baseKey) {
+    if (!baseKey) return baseKey;
+    if (baseKey.includes(clientId)) return baseKey;
+    if (baseKey.startsWith('heys_')) {
+      return `heys_${clientId}_${baseKey.slice('heys_'.length)}`;
+    }
+    return `heys_${clientId}_${baseKey}`;
+  }
+
+  function applyForegroundHotSyncValue(clientId, baseKey, value, source = 'foreground-hot-sync') {
+    if (!clientId || !baseKey || value == null) return false;
+
+    const scopedKey = getScopedClientStorageKey(clientId, baseKey);
+    let serialized = null;
+    try {
+      serialized = JSON.stringify(value);
+    } catch (_) {
+      return false;
+    }
+
+    try {
+      const currentRaw = global.localStorage.getItem(scopedKey);
+      if (currentRaw === serialized) return false;
+
+      if (baseKey.includes('dayv2_') && !/(^|_)dayv2_date$/.test(scopedKey)) {
+        const wroteDay = writeDayKeyWithQuotaGuard(scopedKey, value, {
+          preserveRecentDuringHydration: true,
+          nowTs: Date.now()
+        });
+        if (!wroteDay) return false;
+      } else {
+        global.localStorage.setItem(scopedKey, serialized);
+      }
+
+      if (global.HEYS?.store?.invalidate) {
+        global.HEYS.store.invalidate(scopedKey);
+      }
+
+      if (baseKey.includes('widget_layout') && typeof window !== 'undefined' && window.dispatchEvent) {
+        window.dispatchEvent(new CustomEvent('heys:widget-layout-updated', {
+          detail: { layout: value, source }
+        }));
+      }
+
+      if (baseKey.includes('dayv2_') && typeof window !== 'undefined' && window.dispatchEvent) {
+        const dateMatch = baseKey.match(/dayv2_(\d{4}-\d{2}-\d{2})$/);
+        const updatedDate = dateMatch ? dateMatch[1] : value?.date;
+        if (updatedDate) {
+          window.dispatchEvent(new CustomEvent('heys:day-updated', {
+            detail: { date: updatedDate, source, forceReload: true }
+          }));
+        }
+      }
+
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  async function runForegroundHotKeySync(clientId, reason) {
+    const YandexAPI = global.HEYS?.YandexAPI;
+    if (!YandexAPI || typeof YandexAPI.getKV !== 'function') {
+      return { success: false, updated: 0, failed: 0, reason: 'no_getkv' };
+    }
+
+    foregroundAutoSyncTick += 1;
+    const keys = getForegroundHotSyncKeys(reason);
+    const results = await Promise.allSettled(keys.map((key) => YandexAPI.getKV(clientId, key)));
+
+    let updated = 0;
+    let failed = 0;
+    let authMissing = false;
+
+    results.forEach((result, index) => {
+      const key = keys[index];
+      if (result.status !== 'fulfilled') {
+        failed += 1;
+        return;
+      }
+
+      const payload = result.value || {};
+      if (payload.error) {
+        if (payload.error === 'No session token') authMissing = true;
+        failed += 1;
+        return;
+      }
+
+      if (payload.data == null) return;
+      if (applyForegroundHotSyncValue(clientId, key, payload.data)) {
+        updated += 1;
+      }
+    });
+
+    if (updated > 0) {
+      cloud._syncCompletedAt = Date.now();
+      // НЕ обновляем last_sync_ts: hot-sync тянет только несколько ключей,
+      // а last_sync_ts используется delta-sync как точка отсчёта для ВСЕХ ключей.
+      // Перезапись приведёт к потере изменений в ключах вне hot-sync списка.
+      if (global.HEYS?.store?.flushMemory) {
+        global.HEYS.store.flushMemory();
+      }
+      console.info(`[HEYS.sync] ✅ Foreground hot-sync applied ${updated} key(s) (${reason})`);
+    }
+
+    return { success: !authMissing, updated, failed, authMissing };
+  }
+
+  async function requestForegroundAutoSync(reason, options = {}) {
+    const clientId = options.clientId || getForegroundAutoSyncClientId();
+    if (!canRunForegroundAutoSync(clientId)) return false;
+    if (foregroundAutoSyncInFlight) return false;
+
+    const now = Date.now();
+    const minGapMs = Number.isFinite(options.minGapMs) ? options.minGapMs : FOREGROUND_AUTO_SYNC_MIN_GAP_MS;
+    if ((now - foregroundAutoSyncLastAt) < minGapMs) return false;
+
+    foregroundAutoSyncInFlight = true;
+    foregroundAutoSyncLastAt = now;
+
+    try {
+      console.info('[HEYS.sync] ⚡ Foreground auto-sync:', reason, clientId.slice(0, 8));
+      const hotSync = await runForegroundHotKeySync(clientId, reason);
+      if (hotSync.authMissing) {
+        foregroundAutoSyncAuthFailCount += 1;
+        if (foregroundAutoSyncAuthFailCount >= 3) {
+          console.warn('[HEYS.sync] ⏸️ Foreground auto-sync paused: no session token');
+          stopForegroundAutoSyncLoop();
+        }
+        return false;
+      }
+      foregroundAutoSyncAuthFailCount = 0;
+      if (hotSync.success || hotSync.updated > 0) {
+        return true;
+      }
+
+      // Fallback: if lightweight key-sync is unavailable (e.g. no session token),
+      // try the existing full sync path.
+      await cloud.syncClient(clientId, { force: true, silent: true });
+      return true;
+    } catch (e) {
+      console.warn('[HEYS.sync] ⚠️ Foreground auto-sync failed:', reason, e?.message || e);
+      return false;
+    } finally {
+      foregroundAutoSyncInFlight = false;
+    }
+  }
+
+  function stopForegroundAutoSyncLoop() {
+    if (!foregroundAutoSyncTimer) return;
+    clearInterval(foregroundAutoSyncTimer);
+    foregroundAutoSyncTimer = null;
+  }
+
+  function startForegroundAutoSyncLoop() {
+    if (foregroundAutoSyncTimer) return;
+    if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
+
+    foregroundAutoSyncTimer = setInterval(() => {
+      requestForegroundAutoSync('visible-interval', {
+        minGapMs: FOREGROUND_AUTO_SYNC_INTERVAL_MS - 100
+      }).catch(() => { });
+    }, FOREGROUND_AUTO_SYNC_INTERVAL_MS);
+  }
+
+  function handleForegroundAutoSyncVisibility() {
+    if (typeof document !== 'undefined' && document.visibilityState === 'hidden') {
+      stopForegroundAutoSyncLoop();
+      return;
+    }
+    startForegroundAutoSyncLoop();
+    requestForegroundAutoSync('visibility-visible', { minGapMs: 250 }).catch(() => { });
+  }
+
+  if (typeof document !== 'undefined' && document.addEventListener) {
+    document.addEventListener('visibilitychange', handleForegroundAutoSyncVisibility);
+    if (document.visibilityState !== 'hidden') {
+      startForegroundAutoSyncLoop();
+    }
+  }
+
+  if (global.addEventListener) {
+    global.addEventListener('focus', function () {
+      requestForegroundAutoSync('window-focus', { minGapMs: 250 }).catch(() => { });
+      startForegroundAutoSyncLoop();
+    });
+    global.addEventListener('pageshow', function () {
+      requestForegroundAutoSync('pageshow', { minGapMs: 0 }).catch(() => { });
+      startForegroundAutoSyncLoop();
+    });
+    global.addEventListener('beforeunload', function () {
+      stopForegroundAutoSyncLoop();
+    });
+  }
 
   /** Очистить дублирующиеся ключи (двойной clientId, старые форматы) */
   function cleanupDuplicateKeys() {
