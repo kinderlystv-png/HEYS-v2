@@ -50,8 +50,20 @@
 - `pnpm --filter @heys/web run predev && pnpm bundle:legacy`
 - `pnpm test:run`
 - `pnpm type-check`
+- `pnpm push:safe` — безопасный non-interactive push (рекомендован для агентов)
+- `pnpm push:ready` — интерактивная подготовка What's New перед push
 - `bash scripts/deploy-frontend.sh`
 - `cd yandex-cloud-functions && ./validate-env.sh && ./health-check.sh`
+
+## Push rules
+
+**Запрещено:** `HUSKY=0 git push` — обходит все проверки и ломает CI.
+
+Агент обязан использовать `pnpm push:safe` вместо прямого `git push`.
+Скрипт автоматически проверит What's New, при необходимости авто-сгенерирует
+entry, закоммитит follow-up, прогонит тесты и выполнит push.
+
+Подробнее: `docs/RELEASE_PROCESS.md`
 
 ## Legacy bundle checklist
 

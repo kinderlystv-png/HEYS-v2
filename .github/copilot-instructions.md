@@ -135,9 +135,47 @@ applyTo: '**/*'
 - `pnpm bundle:legacy:auto --files=<workspace-relative-paths>`
 - `pnpm --filter @heys/web run predev && pnpm bundle:legacy`
 - `pnpm type-check`, `pnpm test:run`, `pnpm test:all`
+- `pnpm push:safe` — безопасный non-interactive push (рекомендован для агентов)
+- `pnpm push:ready` — интерактивная подготовка What's New перед push
 - Frontend deploy: `bash scripts/deploy-frontend.sh`
 - Cloud functions:
   `cd yandex-cloud-functions && ./validate-env.sh && ./health-check.sh`
+
+## Push and release rules
+
+**Запрещено:** `HUSKY=0 git push` — это обходит ВСЕ проверки и ломает CI.
+
+Каждый push в `main` проверяется CI на наличие актуальной записи в
+`apps/web/public/whats-new.json`. Без неё **и What's New Guard, и Deploy to
+Yandex Cloud падают**.
+
+### Рекомендуемый flow для агентов:
+
+1. Сделать все изменения, rebuild, коммиты
+2. Запустить `pnpm push:safe` — скрипт автоматически:
+   - проверит What's New
+   - если не готов → авто-сгенерирует entry из git diff
+   - закоммитит follow-up
+   - прогонит критические тесты
+   - выполнит push
+3. Для быстрого push без тестов: `pnpm push:safe -- --skip-tests`
+4. Для кастомного текста What's New:
+   ```
+   node scripts/prepare-release.mjs --auto --title="Описание"
+   git add apps/web/public/whats-new.json
+   git commit -m "chore: add what's-new entry for <hash>"
+   pnpm push:safe -- --skip-tests
+   ```
+
+### Fallback (если push:safe недоступен):
+
+1. `node scripts/prepare-release.mjs --auto`
+2. `git add apps/web/public/whats-new.json`
+3. `git commit -m "chore: add what's-new entry for <hash>"`
+4. `pnpm prepare-release:check` → убедиться что exit 0
+5. `git push origin main`
+
+Подробнее: `docs/RELEASE_PROCESS.md`
 
 ## Legacy bundle mini-playbook
 

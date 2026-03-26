@@ -1144,11 +1144,95 @@ async function runInteractive() {
     rl.close();
 }
 
+/**
+ * runAuto() — non-interactive mode for CI agents.
+ *
+ * Generates a What's New entry from git metadata + template suggestions
+ * without any stdin interaction. Accepts optional --title and --items overrides.
+ *
+ * Usage:
+ *   node scripts/prepare-release.mjs --auto
+ *   node scripts/prepare-release.mjs --auto --title="Custom title"
+ *   node scripts/prepare-release.mjs --auto --items='[{"type":"fix","title":"Fixed X","description":"Details"}]'
+ */
+function runAuto() {
+    const data = loadWhatsNew();
+    const { gitHash, currentHeadHash, releaseVersion } = getCurrentReleaseMeta();
+    const todayDate = generateDateISO();
+    const changedFiles = getChangedFiles();
+    const releaseAnalysis = classifyReleaseKind(changedFiles);
+    const suggestedProfile = releaseAnalysis.suggestedTemplate || getSuggestedTemplate(releaseAnalysis.kind);
+    const templateVariant = chooseTemplateVariant(suggestedProfile, releaseAnalysis);
+    const suggestedItems = buildSuggestedItems(releaseAnalysis, templateVariant);
+
+    // Check if entry already exists for this hash
+    const existingIdx = data.releases.findIndex(
+        (release) => (release.buildHash && release.buildHash === gitHash) || release.version === releaseVersion,
+    );
+
+    if (existingIdx >= 0) {
+        writeLine(`✅ Запись для ${gitHash} уже существует: "${data.releases[existingIdx].title}"`);
+        return 0;
+    }
+
+    // Parse optional CLI overrides
+    const cliArgs = process.argv.slice(2);
+    const titleArg = cliArgs.find((a) => a.startsWith('--title='));
+    const itemsArg = cliArgs.find((a) => a.startsWith('--items='));
+
+    let title = templateVariant.title || suggestedProfile.title || 'Исправления и улучшения';
+    let items = suggestedItems.length > 0
+        ? suggestedItems.map((item) => stripTransientItemFields(item))
+        : cloneTemplateItems(templateVariant.items || []).map((item) => stripTransientItemFields(item));
+
+    if (titleArg) {
+        title = titleArg.replace('--title=', '');
+    }
+
+    if (itemsArg) {
+        try {
+            items = JSON.parse(itemsArg.replace('--items=', ''));
+        } catch (parseError) {
+            writeError(`⚠️ Ошибка парсинга --items: ${parseError.message}`);
+            writeError('   Использую автопредложенные записи.');
+        }
+    }
+
+    const release = {
+        version: releaseVersion,
+        buildHash: gitHash,
+        date: todayDate,
+        kind: suggestedProfile.kind,
+        profile: suggestedProfile.profile,
+        title,
+        items,
+    };
+
+    data.releases.unshift(release);
+    saveWhatsNew(data);
+
+    writeLine(`✅ [auto] whats-new.json обновлён!`);
+    writeLine(`   Версия: ${release.version}`);
+    writeLine(`   Build hash: ${gitHash}`);
+    if (currentHeadHash !== gitHash) {
+        writeLine(`   HEAD → release-meta follow-up, target hash: ${gitHash}`);
+    }
+    writeLine(`   Заголовок: ${release.title}`);
+    writeLine(`   Записей: ${release.items.length}`);
+    release.items.forEach((item, index) => {
+        writeLine(`   ${index + 1}. [${item.type}] ${item.title}`);
+    });
+
+    return 0;
+}
+
 const args = process.argv.slice(2);
 if (args.includes('--check')) {
     process.exit(runCheck());
 } else if (args.includes('--preview')) {
     process.exit(runPreview());
+} else if (args.includes('--auto')) {
+    process.exit(runAuto());
 } else {
     runInteractive().catch((error) => {
         writeError(`Ошибка: ${error?.stack || error}`);
