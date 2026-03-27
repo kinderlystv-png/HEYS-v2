@@ -889,7 +889,12 @@
         refreshing = true;
         showUpdateModal('reloading');
 
-        // v61/v62: Defer reload until active sync completes (prevents mid-sync page interruption)
+        // v63: НЕ ждём завершения sync перед reload.
+        // Предыдущее поведение (v61/v62) откладывало reload до окончания sync (до 15с),
+        // из-за чего пользователь видел полную загрузку данных, потом restart, потом
+        // ещё раз полную загрузку — двойной cascade dots.
+        // Данные в localStorage сохраняются при reload. На второй загрузке sync
+        // подберёт и досинхронизирует всё, что не успело уйти на сервер.
         const doReload = () => {
           // Очищаем флаги ПЕРЕД reload — после него SW выполняет clients.claim()
           // за счёт чего может сработать controllerchange на новой странице.
@@ -902,42 +907,7 @@
           url.searchParams.set('_v', Date.now().toString());
           window.location.href = url.toString();
         };
-        const syncInFlight = typeof HEYS !== 'undefined' && HEYS.cloud && typeof HEYS.cloud.isSyncing === 'function'
-          ? HEYS.cloud.isSyncing()
-          : null;
-        // v62: Also check _authSyncPending — set SYNCHRONOUSLY in PIN auth restore BEFORE
-        // cloud.syncClient() is called (covers the race window where _syncInFlight isn't set yet).
-        const authPending = typeof HEYS !== 'undefined' && HEYS.cloud && typeof HEYS.cloud.isAuthSyncPending === 'function'
-          ? HEYS.cloud.isAuthSyncPending()
-          : false;
-        if (syncInFlight) {
-          console.info('[SW] ⏳ Sync in progress — deferring reload until sync completes (max 15s)...');
-          Promise.race([
-            syncInFlight,
-            new Promise(resolve => setTimeout(resolve, 15000))
-          ]).finally(doReload);
-        } else if (authPending) {
-          // v62: Auth sync is about to start (PIN restore fire-and-forget race).
-          // Poll until syncClient creates _syncInFlight, then defer to it.
-          console.info('[SW] ⏳ Auth sync pending — polling for sync start (max 15s)...');
-          const deadline = Date.now() + 15000;
-          const pollId = setInterval(() => {
-            const inflightNow = typeof HEYS !== 'undefined' && HEYS.cloud?.isSyncing?.();
-            if (inflightNow) {
-              clearInterval(pollId);
-              console.info('[SW] ⏳ Sync detected after auth — deferring reload...');
-              Promise.race([
-                inflightNow,
-                new Promise(resolve => setTimeout(resolve, 15000))
-              ]).finally(doReload);
-            } else if (!HEYS.cloud?.isAuthSyncPending?.() || Date.now() > deadline) {
-              clearInterval(pollId);
-              doReload();
-            }
-          }, 500); // perf: 500ms достаточно для polling sync state, 200ms создавал лишнюю нагрузку
-        } else {
-          setTimeout(doReload, 500);
-        }
+        setTimeout(doReload, 500);
       } else {
         // Первичная установка SW — НЕ делаем reload, страница уже загружена
         console.log('[SW] First-time controller activation, no reload needed');
