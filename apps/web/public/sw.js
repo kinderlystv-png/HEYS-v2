@@ -6,10 +6,11 @@
 // Boot-бандлы (*.bundle.{hash}.js) кэшируются автоматически через cache-first
 // при первом запросе — хеш в имени обеспечивает вечный кэш без ручного precache.
 
-const CACHE_VERSION = 'heys-1774607058963';
+const CACHE_VERSION = 'heys-1774614667104';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const DYNAMIC_CACHE = `${CACHE_VERSION}-dynamic`;
 const META_CACHE = 'heys-meta';
+const BUILD_VERSION_META_KEY = '/__build_version__';
 let updateRequiredNotified = false;
 
 // Ресурсы для предварительного кэширования (App Shell — минимальный набор)
@@ -448,11 +449,16 @@ async function checkForUpdates() {
     const data = await fetchBuildMeta();
     const serverVersion = data?.version;
 
-    // Сравниваем с текущей версией кэша
-    const currentVersion = CACHE_VERSION.replace('heys-', '');
-
-    if (serverVersion && serverVersion !== currentVersion) {
-      await notifyUpdateRequired(serverVersion, 'version_mismatch');
+    // ВАЖНО: CACHE_VERSION = heys-<timestamp>, а build-meta.version = semantic version.
+    // Их прямое сравнение всегда даёт mismatch и вызывает ложный UPDATE_REQUIRED
+    // сразу после активации нового SW, что приводит к повторному restart страницы.
+    // Поэтому сравниваем только последнюю известную semantic build version.
+    if (serverVersion) {
+      const storedBuildVersion = await getStoredBuildVersion();
+      if (storedBuildVersion && storedBuildVersion !== serverVersion) {
+        await notifyUpdateRequired(serverVersion, 'version_mismatch');
+      }
+      await setStoredBuildVersion(serverVersion);
     }
     await checkIndexHtmlUpdate();
   } catch (e) {
@@ -510,6 +516,21 @@ async function getStoredIndexHtmlHash() {
   const response = await cache.match('/__index_hash__');
   if (!response) return null;
   return response.text();
+}
+
+async function getStoredBuildVersion() {
+  const cache = await caches.open(META_CACHE);
+  const response = await cache.match(BUILD_VERSION_META_KEY);
+  if (!response) return null;
+  return response.text();
+}
+
+async function setStoredBuildVersion(version) {
+  const cache = await caches.open(META_CACHE);
+  await cache.put(
+    BUILD_VERSION_META_KEY,
+    new Response(version, { headers: { 'content-type': 'text/plain' } })
+  );
 }
 
 async function setStoredIndexHtmlHash(hash) {
