@@ -70,6 +70,7 @@ function nodeScript(scriptPath, scriptArgs = []) {
         encoding: 'utf8',
     });
     if (result.stdout) writeLine(result.stdout.trimEnd());
+    if (result.stderr) writeError(result.stderr.trimEnd());
     return result.status || 0;
 }
 
@@ -93,7 +94,12 @@ if (checkStatus !== 0) {
 
     const autoStatus = nodeScript(PREPARE_RELEASE, autoArgs);
     if (autoStatus !== 0) {
-        writeError('❌ Не удалось авто-сгенерировать What\'s New. Запусти вручную: pnpm push:ready');
+        writeLine('');
+        writeLine('ℹ️ Показываю preview, чтобы было видно, что именно ожидается для релиза.');
+        nodeScript(PREPARE_RELEASE, ['--preview']);
+        writeError('❌ Авто-подготовка What\'s New остановлена.');
+        writeError('   Для user-facing/UI/runtime изменений нужен ручной flow: pnpm push:ready');
+        writeError('   Так мы не теряем смысл релиза, описание и скриншоты.');
         process.exit(1);
     }
 

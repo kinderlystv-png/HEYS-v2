@@ -154,12 +154,14 @@ Yandex Cloud падают**.
 1. Сделать все изменения, rebuild, коммиты
 2. Запустить `pnpm push:safe` — скрипт автоматически:
    - проверит What's New
-   - если не готов → авто-сгенерирует entry из git diff
+  - если изменение technical и What's New не готов → авто-сгенерирует entry из git diff
+  - если изменение user-facing/UI/runtime → остановит push и отправит в `pnpm push:ready`
    - закоммитит follow-up
    - прогонит критические тесты
    - выполнит push
 3. Для быстрого push без тестов: `pnpm push:safe -- --skip-tests`
-4. Для кастомного текста What's New:
+4. Для user-facing релизов: `pnpm push:ready`, вручную подтвердить смысл релиза и скрины
+5. Для кастомного текста What's New:
    ```
    node scripts/prepare-release.mjs --auto --title="Описание"
    git add apps/web/public/whats-new.json

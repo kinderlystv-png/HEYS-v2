@@ -20,6 +20,7 @@ const __dirname = path.dirname(__filename);
 const WHATS_NEW_PATH = path.join(__dirname, '..', 'apps', 'web', 'public', 'whats-new.json');
 const WHATS_NEW_IMAGES_DIR = path.join(__dirname, '..', 'apps', 'web', 'public', 'whats-new');
 const MAX_RELEASES_KEPT = 10;
+const CLI_ARGS = process.argv.slice(2);
 const RELEASE_META_FILE_PATTERNS = [
     /^apps\/web\/public\/whats-new\.json$/,
     /^apps\/web\/public\/whats-new\//,
@@ -340,6 +341,16 @@ function writeError(text = '') {
     process.stderr.write(`${text}\n`);
 }
 
+function hasCliFlag(flag) {
+    return CLI_ARGS.includes(flag);
+}
+
+function getCliOptionValue(name) {
+    const prefix = `--${name}=`;
+    const match = CLI_ARGS.find((arg) => arg.startsWith(prefix));
+    return match ? match.slice(prefix.length) : '';
+}
+
 function generateVersion() {
     const now = new Date();
     const moscowDate = new Date(now.toLocaleString('en-US', { timeZone: 'Europe/Moscow' }));
@@ -410,6 +421,14 @@ function runGitCommand(command) {
 }
 
 function getChangedFiles() {
+    const filesOverride = getCliOptionValue('files');
+    if (filesOverride) {
+        return filesOverride
+            .split(',')
+            .map((filePath) => filePath.trim())
+            .filter(Boolean);
+    }
+
     const commands = [
         `git diff-tree --no-commit-id --name-only -r ${resolveReleaseTargetRef().targetRef}`,
         'git diff --cached --name-only',
@@ -1164,6 +1183,7 @@ function runAuto() {
     const suggestedProfile = releaseAnalysis.suggestedTemplate || getSuggestedTemplate(releaseAnalysis.kind);
     const templateVariant = chooseTemplateVariant(suggestedProfile, releaseAnalysis);
     const suggestedItems = buildSuggestedItems(releaseAnalysis, templateVariant);
+    const allowUserFacingAuto = hasCliFlag('--allow-user-facing-auto');
 
     // Check if entry already exists for this hash
     const existingIdx = data.releases.findIndex(
@@ -1175,10 +1195,17 @@ function runAuto() {
         return 0;
     }
 
+    if (releaseAnalysis.kind !== 'technical' && !allowUserFacingAuto) {
+        writeError('❌ [auto] Обнаружен user-facing релиз. Авто-режим по умолчанию остановлен.');
+        writeError('   Для пользовательских изменений нужно вручную проверить смысл релиза, тексты и скриншоты.');
+        writeError('   Запусти: pnpm push:ready');
+        writeError('   Если автогенерация всё же осознанно нужна, используй флаг: --allow-user-facing-auto');
+        return 2;
+    }
+
     // Parse optional CLI overrides
-    const cliArgs = process.argv.slice(2);
-    const titleArg = cliArgs.find((a) => a.startsWith('--title='));
-    const itemsArg = cliArgs.find((a) => a.startsWith('--items='));
+    const titleArg = getCliOptionValue('title');
+    const itemsArg = getCliOptionValue('items');
 
     let title = templateVariant.title || suggestedProfile.title || 'Исправления и улучшения';
     let items = suggestedItems.length > 0
@@ -1186,12 +1213,12 @@ function runAuto() {
         : cloneTemplateItems(templateVariant.items || []).map((item) => stripTransientItemFields(item));
 
     if (titleArg) {
-        title = titleArg.replace('--title=', '');
+        title = titleArg;
     }
 
     if (itemsArg) {
         try {
-            items = JSON.parse(itemsArg.replace('--items=', ''));
+            items = JSON.parse(itemsArg);
         } catch (parseError) {
             writeError(`⚠️ Ошибка парсинга --items: ${parseError.message}`);
             writeError('   Использую автопредложенные записи.');
@@ -1226,12 +1253,11 @@ function runAuto() {
     return 0;
 }
 
-const args = process.argv.slice(2);
-if (args.includes('--check')) {
+if (hasCliFlag('--check')) {
     process.exit(runCheck());
-} else if (args.includes('--preview')) {
+} else if (hasCliFlag('--preview')) {
     process.exit(runPreview());
-} else if (args.includes('--auto')) {
+} else if (hasCliFlag('--auto')) {
     process.exit(runAuto());
 } else {
     runInteractive().catch((error) => {
