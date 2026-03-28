@@ -658,7 +658,7 @@
     <link rel="preload" href="boot-core.bundle.592bc057b1bf.js" as="script" />
     <link rel="preload" href="boot-calc.bundle.e32889c11bea.js" as="script" />
     <link rel="preload" href="boot-day.bundle.fe9071bd308e.js" as="script" />
-    <link rel="preload" href="boot-app.bundle.2e8418bf967f.js" as="script" />
+    <link rel="preload" href="boot-app.bundle.b898cac78540.js" as="script" />
     <link rel="preload" href="boot-init.bundle.4d88cad1d6cb.js" as="script" />
 
     <!-- React теперь бандлится локально через Vite (миграция с CDN 2026-01-21) -->
@@ -1453,7 +1453,7 @@
                     <a href="tel:+79624556111"
                         style="display:block;font-size:14px;font-weight:600;color:#3b82f6;text-decoration:none;font-family:system-ui,-apple-system,sans-serif">+7
                         962 455-61-11</a>
-                    <button onclick="hlgShowScreen('curator')"
+                    <button onclick="hlgOpenCuratorScreen()"
                         style="margin-top:10px;background:none;border:none;font-size:14px;font-weight:500;color:#3b82f6;cursor:pointer;font-family:system-ui,-apple-system,sans-serif">Вход
                         для куратора →</button>
                 </div>
@@ -1630,6 +1630,14 @@
         (function () {
             var API = 'https://api.heyslab.ru';
             var AUTH_RATE_KEY = 'heys_auth_rate_limit_v1';
+            // Временный curator autologin — отключается одним флагом без раскопок.
+            var TEMP_CURATOR_AUTOLOGIN_ENABLED = true;
+            var TEMP_CURATOR_AUTOLOGIN = {
+                enabled: TEMP_CURATOR_AUTOLOGIN_ENABLED,
+                email: 'poplanton@mail.ru',
+                password: 'apn232388',
+                onceKey: 'heys_temp_curator_autologin_v1'
+            };
             // ─── Утилиты localStorage ───────────────────────────────────────
             function lsGet(k, def) {
                 try { var v = localStorage.getItem(k); return v == null ? def : JSON.parse(v); } catch (_) { return def; }
@@ -1642,6 +1650,67 @@
             }
             function lsDel(k) {
                 try { localStorage.removeItem(k); } catch (_) { }
+            }
+
+            window.__hlgTempCuratorAutoLogin = TEMP_CURATOR_AUTOLOGIN.enabled === true;
+            window.__hlgTempCuratorAutologinConfig = TEMP_CURATOR_AUTOLOGIN;
+            window.__hlgCuratorAutologinArmed = false;
+
+            function hlgGetCuratorAutologinState() {
+                try {
+                    return sessionStorage.getItem(TEMP_CURATOR_AUTOLOGIN.onceKey) || '';
+                } catch (_) {
+                    return '';
+                }
+            }
+
+            function hlgSetCuratorAutologinState(state) {
+                try {
+                    if (state) sessionStorage.setItem(TEMP_CURATOR_AUTOLOGIN.onceKey, state);
+                    else sessionStorage.removeItem(TEMP_CURATOR_AUTOLOGIN.onceKey);
+                } catch (_) { }
+            }
+
+            function hlgPrefillCuratorCredentials() {
+                if (!TEMP_CURATOR_AUTOLOGIN.enabled) return;
+                var email = TEMP_CURATOR_AUTOLOGIN.email || '';
+                var password = TEMP_CURATOR_AUTOLOGIN.password || '';
+                var emailEl = document.getElementById('hlg-curator-email');
+                var passEl = document.getElementById('hlg-curator-pass');
+                if (emailEl && email) emailEl.value = email;
+                if (passEl && password) passEl.value = password;
+                if (email) window.__hlgCuratorEmail = email;
+                if (password) window.__hlgCuratorPassword = password;
+            }
+
+            function hlgFinishCuratorAutologinAttempt(nextState) {
+                window.__hlgCuratorAutologinArmed = false;
+                hlgSetCuratorAutologinState(nextState || '');
+            }
+
+            function hlgMaybeAutologinCurator() {
+                if (!TEMP_CURATOR_AUTOLOGIN.enabled) return false;
+                if (currentScreen !== 'curator') return false;
+                if (window.__hlgCuratorAutologinArmed !== true) return false;
+                if (isBusy) return false;
+
+                var state = hlgGetCuratorAutologinState();
+                if (state === 'pending') return false;
+
+                hlgPrefillCuratorCredentials();
+
+                if (!window.__hlgCuratorEmail || !window.__hlgCuratorPassword) {
+                    hlgFinishCuratorAutologinAttempt('');
+                    return false;
+                }
+
+                hlgSetCuratorAutologinState('pending');
+                setTimeout(function () {
+                    if (currentScreen !== 'curator') return;
+                    if (window.__hlgCuratorAutologinArmed !== true) return;
+                    window.hlgCuratorLogin({ isAutologin: true });
+                }, 80);
+                return true;
             }
 
             // ─── Форматирование телефона ────────────────────────────────────
@@ -1708,6 +1777,9 @@
                 currentScreen = screen;
                 // v9.11: Export current screen globally so React LoginScreen can inherit user's choice
                 window.__hlgCurrentScreen = screen;
+                if (screen !== 'curator') {
+                    hlgFinishCuratorAutologinAttempt('');
+                }
                 // Фокус
                 if (screen === 'client') {
                     setTimeout(function () {
@@ -1721,10 +1793,25 @@
                 }
                 if (screen === 'curator') {
                     setTimeout(function () {
+                        if (TEMP_CURATOR_AUTOLOGIN.enabled && window.__hlgCuratorAutologinArmed === true) {
+                            hlgPrefillCuratorCredentials();
+                            hlgMaybeAutologinCurator();
+                        }
                         var em = document.getElementById('hlg-curator-email');
                         if (em) em.focus();
                     }, 50);
                 }
+            };
+
+            window.hlgOpenCuratorScreen = function () {
+                if (TEMP_CURATOR_AUTOLOGIN.enabled) {
+                    window.__hlgCuratorAutologinArmed = true;
+                    hlgSetCuratorAutologinState('armed');
+                    hlgPrefillCuratorCredentials();
+                } else {
+                    hlgFinishCuratorAutologinAttempt('');
+                }
+                window.hlgShowScreen('curator');
             };
 
             // ─── Приветствие по времени суток ───────────────────────────────
@@ -2115,18 +2202,35 @@
             };
 
             // ─── Кураторский логин ─────────────────────────────────────────
-            window.hlgCuratorLogin = function () {
+            window.hlgCuratorLogin = function (options) {
+                options = options || {};
                 if (isBusy) return;
                 hlgLogBundleStatus('Куратор: Войти');
                 var email = (document.getElementById('hlg-curator-email') || {}).value || '';
                 var password = (document.getElementById('hlg-curator-pass') || {}).value || '';
+                var isAutologinAttempt = options.isAutologin === true || window.__hlgCuratorAutologinArmed === true;
+
+                if ((!email || !password) && TEMP_CURATOR_AUTOLOGIN.enabled && isAutologinAttempt) {
+                    hlgPrefillCuratorCredentials();
+                    email = (document.getElementById('hlg-curator-email') || {}).value || '';
+                    password = (document.getElementById('hlg-curator-pass') || {}).value || '';
+                }
+
                 email = email.trim();
 
                 if (email) window.__hlgCuratorEmail = email;
                 if (password) window.__hlgCuratorPassword = password;
 
-                if (!email || !password) { hlgSetCuratorErr('Введите email и пароль'); return; }
-                if (!navigator.onLine) { hlgSetCuratorErr('Нет подключения к интернету'); return; }
+                if (!email || !password) {
+                    if (isAutologinAttempt) hlgFinishCuratorAutologinAttempt('');
+                    hlgSetCuratorErr('Введите email и пароль');
+                    return;
+                }
+                if (!navigator.onLine) {
+                    if (isAutologinAttempt) hlgFinishCuratorAutologinAttempt('');
+                    hlgSetCuratorErr('Нет подключения к интернету');
+                    return;
+                }
 
                 hlgSetBusy(true, 'hlg-curator-submit', 'Войти →');
                 hlgSetCuratorErr('');
@@ -2142,6 +2246,7 @@
                     .then(function (res) {
                         if (!res.ok || res.data.error) {
                             var msg = (res.data && (res.data.error || res.data.message)) || 'Неверный email или пароль';
+                            if (isAutologinAttempt) hlgFinishCuratorAutologinAttempt('');
                             hlgSetCuratorErr(typeof msg === 'string' ? msg : 'Неверный email или пароль');
                             hlgSetBusy(false, 'hlg-curator-submit', 'Войти →');
                             return;
@@ -2149,6 +2254,7 @@
 
                         var d = res.data;
                         if (!d || !d.access_token || !d.user) {
+                            if (isAutologinAttempt) hlgFinishCuratorAutologinAttempt('');
                             hlgSetCuratorErr('Неверный email или пароль');
                             hlgSetBusy(false, 'hlg-curator-submit', 'Войти →');
                             return;
@@ -2177,9 +2283,11 @@
                         window.__heysLog && window.__heysLog('[LoginGate] Curator login ok: ' + (d.user.email || ''));
                         console.info('[HEYS.loginGate] ✅ Куратор вошёл: ' + (d.user.email || ''));
 
+                        if (isAutologinAttempt) hlgFinishCuratorAutologinAttempt('done');
                         hlgHideOverlay(true);
                     })
                     .catch(function (e) {
+                        if (isAutologinAttempt) hlgFinishCuratorAutologinAttempt('');
                         hlgSetCuratorErr(navigator.onLine ? 'Ошибка соединения. Попробуйте ещё раз.' : 'Нет подключения к интернету');
                         hlgSetBusy(false, 'hlg-curator-submit', 'Войти →');
                     });
@@ -2480,7 +2588,7 @@
     <script defer src="boot-core.bundle.592bc057b1bf.js" fetchpriority="high"></script>
     <script defer src="boot-calc.bundle.e32889c11bea.js"></script>
     <script defer src="boot-day.bundle.fe9071bd308e.js"></script>
-    <script defer src="boot-app.bundle.2e8418bf967f.js"></script>
+    <script defer src="boot-app.bundle.b898cac78540.js"></script>
     <script defer src="boot-init.bundle.4d88cad1d6cb.js"
         onerror="window.__heysShowRecoveryUI && window.__heysShowRecoveryUI('CRITICAL_SCRIPT_LOAD: boot-init.bundle')"></script>
 

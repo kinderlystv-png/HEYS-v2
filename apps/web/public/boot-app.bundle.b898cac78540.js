@@ -9154,10 +9154,12 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
       initialMode = 'client',
       initialEmail = '',
       initialPassword = '',
+      autoCuratorLogin = false,
+      curatorAutologinConfig = null,
     } = props || {};
 
     const React = global.React;
-    const { useMemo, useState, useRef } = React;
+    const { useEffect, useMemo, useState, useRef } = React;
 
     const [mode, setMode] = useState(initialMode);
 
@@ -9180,8 +9182,10 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
     const [busy, setBusy] = useState(false);
     const [err, setErr] = useState('');
     const [clientDiag, setClientDiag] = useState(null);
+    const curatorAutoLoginTriedRef = useRef(false);
 
     const auth = HEYS.auth;
+    const autoCuratorLoginEnabled = autoCuratorLogin === true && curatorAutologinConfig && curatorAutologinConfig.enabled === true;
 
     // phoneMasked теперь хранит только 10 цифр (без 7)
     // Для валидации и отправки добавляем 7 в начало
@@ -9192,6 +9196,60 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
 
     const canClientLogin = clientPhoneValid && clientPinValid && !busy;
     const canCuratorLogin = Boolean(email && password) && !busy;
+
+    function getCuratorAutologinKey() {
+      return (curatorAutologinConfig && curatorAutologinConfig.onceKey) || 'heys_temp_curator_autologin_v1';
+    }
+
+    function getCuratorAutologinState() {
+      try {
+        return sessionStorage.getItem(getCuratorAutologinKey()) || '';
+      } catch (_) {
+        return '';
+      }
+    }
+
+    function setCuratorAutologinState(state) {
+      try {
+        if (state) sessionStorage.setItem(getCuratorAutologinKey(), state);
+        else sessionStorage.removeItem(getCuratorAutologinKey());
+      } catch (_) { }
+    }
+
+    function isCuratorAutologinArmed() {
+      return global.__hlgCuratorAutologinArmed === true;
+    }
+
+    function setCuratorAutologinArmed(value) {
+      global.__hlgCuratorAutologinArmed = value === true;
+      if (!value) {
+        setCuratorAutologinState('');
+      }
+    }
+
+    function getCuratorLoginPayload(overrides) {
+      const next = overrides || {};
+      const fallbackEmail = autoCuratorLoginEnabled && curatorAutologinConfig ? (curatorAutologinConfig.email || '') : '';
+      const fallbackPassword = autoCuratorLoginEnabled && curatorAutologinConfig ? (curatorAutologinConfig.password || '') : '';
+      return {
+        email: String(next.email != null ? next.email : (email || fallbackEmail || '')).trim(),
+        password: String(next.password != null ? next.password : (password || fallbackPassword || '')),
+      };
+    }
+
+    function armCuratorAutologin() {
+      if (!autoCuratorLoginEnabled || !curatorAutologinConfig) return;
+      curatorAutoLoginTriedRef.current = false;
+      setCuratorAutologinState('armed');
+      setCuratorAutologinArmed(true);
+      if (curatorAutologinConfig.email) setEmail(curatorAutologinConfig.email);
+      if (curatorAutologinConfig.password) setPassword(curatorAutologinConfig.password);
+    }
+
+    function disarmCuratorAutologin() {
+      curatorAutoLoginTriedRef.current = false;
+      setCuratorAutologinArmed(false);
+    }
 
     function showPinOverlayDigit(i, digit, totalMs = 700) {
       try {
@@ -9280,21 +9338,66 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
       }
     }
 
-    async function handleCuratorLogin() {
+    async function handleCuratorLogin(options) {
+      const loginOptions = options || {};
       if (!onCuratorLogin) return { ok: false };
+      const payload = getCuratorLoginPayload(loginOptions);
+      const isAutologinAttempt = loginOptions.isAutologin === true || isCuratorAutologinArmed();
+
+      if (!payload.email || !payload.password) {
+        if (isAutologinAttempt) disarmCuratorAutologin();
+        setErr('Введите email и пароль');
+        return { ok: false, error: 'missing_credentials' };
+      }
+
       setErr('');
       setBusy(true);
       try {
-        const res = await onCuratorLogin({ email: String(email).trim(), password });
+        if (payload.email !== email) setEmail(payload.email);
+        if (payload.password !== password) setPassword(payload.password);
+
+        const res = await onCuratorLogin(payload);
         if (res && res.error) {
+          if (isAutologinAttempt) disarmCuratorAutologin();
           setErr(typeof res.error === 'string' ? res.error : (res.error.message || 'Ошибка входа'));
           return { ok: false, error: res.error };
+        }
+        if (isAutologinAttempt) {
+          setCuratorAutologinState('done');
+          global.__hlgCuratorAutologinArmed = false;
         }
         return { ok: true };
       } finally {
         setBusy(false);
       }
     }
+
+    useEffect(() => {
+      if (!autoCuratorLoginEnabled) return;
+      if (mode !== 'curator') return;
+      if (busy) return;
+      if (!isCuratorAutologinArmed()) return;
+      if (curatorAutoLoginTriedRef.current) return;
+      if (getCuratorAutologinState() === 'pending') return;
+
+      const payload = getCuratorLoginPayload();
+      if (!payload.email || !payload.password) return;
+
+      curatorAutoLoginTriedRef.current = true;
+      setCuratorAutologinState('pending');
+      if (payload.email !== email) setEmail(payload.email);
+      if (payload.password !== password) setPassword(payload.password);
+
+      const timer = setTimeout(() => {
+        handleCuratorLogin({
+          email: payload.email,
+          password: payload.password,
+          isAutologin: true,
+        });
+      }, 80);
+
+      return () => clearTimeout(timer);
+    }, [autoCuratorLoginEnabled, busy, email, mode, password]);
 
     const greeting = (() => {
       const h = new Date().getHours();
@@ -9370,7 +9473,13 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
             'Войти по телефону →',
           ),
           SecondaryBtn(
-            { onClick: () => { setErr(''); setMode('curator'); } },
+            {
+              onClick: () => {
+                setErr('');
+                armCuratorAutologin();
+                setMode('curator');
+              }
+            },
             'Вход куратора',
           ),
         ),
@@ -9618,7 +9727,14 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
           ),
           React.createElement(
             'button',
-            { className: 'mt-3 font-medium text-blue-500 hover:text-blue-700 hover:underline', onClick: () => { setErr(''); setMode('curator'); } },
+            {
+              className: 'mt-3 font-medium text-blue-500 hover:text-blue-700 hover:underline',
+              onClick: () => {
+                setErr('');
+                armCuratorAutologin();
+                setMode('curator');
+              }
+            },
             'Вход для куратора →',
           ),
         ),
@@ -9671,7 +9787,14 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
           React.createElement('div', null, greeting),
           React.createElement(
             'button',
-            { className: 'text-blue-600 hover:underline', onClick: () => { setErr(''); setMode('start'); } },
+            {
+              className: 'text-blue-600 hover:underline',
+              onClick: () => {
+                setErr('');
+                disarmCuratorAutologin();
+                setMode('client');
+              }
+            },
             '← Назад',
           ),
         ),
@@ -20580,6 +20703,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                                 },
                                 initialEmail: window.__hlgCuratorEmail || '',
                                 initialPassword: window.__hlgCuratorPassword || '',
+                                autoCuratorLogin: window.__hlgTempCuratorAutoLogin === true,
+                                curatorAutologinConfig: window.__hlgTempCuratorAutologinConfig || null,
                                 onClientLogin: async ({ phone, pin }) => {
                                     const auth = HEYS && HEYS.auth;
                                     const fn = auth && auth.loginClient;

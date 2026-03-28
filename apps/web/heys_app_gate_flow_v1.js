@@ -948,6 +948,8 @@
                                 },
                                 initialEmail: window.__hlgCuratorEmail || '',
                                 initialPassword: window.__hlgCuratorPassword || '',
+                                autoCuratorLogin: window.__hlgTempCuratorAutoLogin === true,
+                                curatorAutologinConfig: window.__hlgTempCuratorAutologinConfig || null,
                                 onClientLogin: async ({ phone, pin }) => {
                                     const auth = HEYS && HEYS.auth;
                                     const fn = auth && auth.loginClient;
