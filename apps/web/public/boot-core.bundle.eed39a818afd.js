@@ -4458,7 +4458,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
   // ============================================================================
 
   // === App Version & Auto-logout on Update ===
-  const APP_VERSION = '2026.03.27.0058.5d7ce0e1'; // synced with build-meta.json on 2026-02-26
+  const APP_VERSION = '2026.03.28.2022.ecd5df78'; // synced with build-meta.json on 2026-02-26
 
   HEYS.version = APP_VERSION;
 
@@ -21772,11 +21772,12 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
         }
 
         // 📦 PAGINATED FETCH — YC API Gateway limit ~3.5MB per response
-        // При 530+ записях один запрос превышает лимит → 502 Bad Gateway
-        // Загружаем порциями по 400 записей (безопасный порог ~2.8MB)
+        // Для некоторых клиентов 350 записей с большими JSON уже дают 502,
+        // поэтому держим более консервативный размер страницы.
+        // Загружаем порциями по 250 записей, чтобы оставить запас по размеру ответа.
         // 🚀 Delta Sync: при наличии since — фильтруем по updated_at на сервере
         log('🔄 [CLIENT_SYNC] Loading data for client (paginated):', client_id);
-        const PAGE_SIZE = 400;
+        const PAGE_SIZE = 250;
         let allData = [];
         let pageOffset = 0;
         let fetchError = null;
