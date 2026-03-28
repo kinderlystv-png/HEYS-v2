@@ -44,6 +44,13 @@
                 // 🔇 v4.7.1: Лог клиента отключён
 
                 if (cloud && typeof cloud.syncClient === 'function') {
+                    // 🔧 v63 FIX #1+#7: Если switchClient уже управляет sync для этого клиента,
+                    // не запускаем дублирующий syncClient из useEffect — он проиграет race
+                    // и/или заблокируется cooldown'ом, создавая бесполезный overhead.
+                    if (cloud._switchClientInProgress) {
+                        console.info('[HEYS.sync] ⏭️ useEffect: switchClient in progress, skipping duplicate sync');
+                        return;
+                    }
                     const productsBeforeSync = products.length > 0 ? products : window.HEYS.utils.lsGet('heys_products', []);
 
                     cloud.syncClient(clientId)

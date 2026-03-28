@@ -21038,9 +21038,19 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                                                                         window.dispatchEvent(new CustomEvent('heys:client-changed', { detail: { clientId: c.id } }));
 
                                                                         // switchClient в фоне — загружает данные и диспатчит heysSyncCompleted
+                                                                        // 🔧 v63 FIX #6: retry при провале + диспатч ошибки для UI
                                                                         if (HEYS.cloud && HEYS.cloud.switchClient) {
                                                                             HEYS.cloud.switchClient(c.id).catch(err => {
-                                                                                console.error('[HEYS.gate] ❌ Ошибка синхронизации клиента:', err);
+                                                                                console.error('[HEYS.gate] ❌ Ошибка sync, retry через 3с:', err);
+                                                                                // Одна повторная попытка после 3 секунд (покрывает 502 cold start)
+                                                                                setTimeout(() => {
+                                                                                    HEYS.cloud.switchClient(c.id).catch(err2 => {
+                                                                                        console.error('[HEYS.gate] ❌ Retry failed:', err2);
+                                                                                        window.dispatchEvent(new CustomEvent('heys:sync-error', {
+                                                                                            detail: { clientId: c.id, error: err2?.message || String(err2) }
+                                                                                        }));
+                                                                                    });
+                                                                                }, 3000);
                                                                             });
                                                                         } else {
                                                                             U.lsSet('heys_client_current', c.id);
@@ -23099,6 +23109,13 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                 // 🔇 v4.7.1: Лог клиента отключён
 
                 if (cloud && typeof cloud.syncClient === 'function') {
+                    // 🔧 v63 FIX #1+#7: Если switchClient уже управляет sync для этого клиента,
+                    // не запускаем дублирующий syncClient из useEffect — он проиграет race
+                    // и/или заблокируется cooldown'ом, создавая бесполезный overhead.
+                    if (cloud._switchClientInProgress) {
+                        console.info('[HEYS.sync] ⏭️ useEffect: switchClient in progress, skipping duplicate sync');
+                        return;
+                    }
                     const productsBeforeSync = products.length > 0 ? products : window.HEYS.utils.lsGet('heys_products', []);
 
                     cloud.syncClient(clientId)

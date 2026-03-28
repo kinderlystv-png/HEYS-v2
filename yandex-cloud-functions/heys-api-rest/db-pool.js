@@ -94,9 +94,12 @@ function createPoolConfig() {
     }),
 
     // Connection pool settings
-    max: 3,                      // Максимум 3 соединения (лимит для serverless)
+    // 🔧 v63 FIX #8: Увеличиваем pool до 5 — 3 может исчерпаться
+    // при параллельных Phase A + Phase B запросах от curator switch.
+    // pgBouncer мультиплексирует — 5 safe для serverless.
+    max: 5,
     idleTimeoutMillis: 3000,     // 3 секунды — быстро освобождаем (pgBouncer-friendly)
-    connectionTimeoutMillis: 5000, // 5 секунд таймаут на подключение
+    connectionTimeoutMillis: 8000, // 🔧 v63: 8с вместо 5с — устойчивость к cold start
 
     // Keep-alive для предотвращения stale connections в serverless
     keepAlive: true,

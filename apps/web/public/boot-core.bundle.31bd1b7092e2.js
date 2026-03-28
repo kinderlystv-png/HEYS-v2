@@ -17629,7 +17629,15 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
         // Phase A fast-load (5 critical keys → UI unblocked), and delta sync.
         if (typeof cloud.bootstrapClientSync === 'function') {
           usedSyncStrategy = true;
-          result = await cloud.bootstrapClientSync(clientId, options);
+          // 🔧 v63 FIX #2: sync-level retry — if bootstrapClientSync throws
+          // (502 cold start, network blip), retry once after 3s delay.
+          try {
+            result = await cloud.bootstrapClientSync(clientId, options);
+          } catch (syncErr) {
+            logCritical('[SYNC] ⚠️ bootstrapClientSync failed, retrying in 3s:', syncErr?.message || syncErr);
+            await new Promise(r => setTimeout(r, 3000));
+            result = await cloud.bootstrapClientSync(clientId, options);
+          }
         } else if (isPinAuth && typeof cloud.syncClientViaRPC === 'function') {
           // Legacy fallback: syncClientViaRPC only if bootstrapClientSync unavailable
           usedSyncStrategy = true;
@@ -21810,6 +21818,29 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
               offset: pageOffset
             });
 
+            // 🔧 v63 FIX #10: per-page retry — single retry after 2s on server error.
+            // Covers 502 cold start on specific page without aborting entire sync.
+            if (pageError && !pageError.isNetworkFailure) {
+              logCritical(`⚠️ [SYNC] Page offset=${pageOffset} failed: ${pageError.message}, retrying in 2s`);
+              await new Promise(r => setTimeout(r, 2000));
+              const retry = await YandexAPI.rest('client_kv_store', {
+                select: 'k,v,updated_at',
+                filters,
+                limit: PAGE_SIZE,
+                offset: pageOffset
+              });
+              if (retry.error) {
+                fetchError = retry.error;
+                break;
+              }
+              const retryRows = retry.data || [];
+              allData = allData.concat(retryRows);
+              paginatedFetchPages += 1;
+              if (retryRows.length < PAGE_SIZE) break;
+              pageOffset += PAGE_SIZE;
+              continue;
+            }
+
             if (pageError) {
               fetchError = pageError;
               break;
@@ -25108,30 +25139,24 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
       return true;
     }
 
+    // 🔧 v63 FIX #1: Ставим флаг чтобы React useEffect не запускал параллельный syncClient
+    cloud._switchClientInProgress = true;
+
     console.info(`[HEYS.sync] 🔄 Переключение клиента: ${oldClientId?.substring(0, 8) || 'нет'} → ${newClientId.substring(0, 8)}`);
 
     // 1. Сначала синхронизируем текущие данные в облако (если есть pending)
     if (oldClientId && cloud.getPendingCount() > 0) {
       log('⏳ Ожидаем синхронизацию старого клиента...');
 
-      // Принудительно отправляем pending данные
+      // 🔧 v63 FIX #3: Используем flushPendingQueue вместо ручного polling.
+      // flushPendingQueue делает немедленный upload и ждёт queue-drained event.
       try {
-        // Ждём завершения текущих операций (макс 5 секунд)
-        await new Promise((resolve) => {
-          let attempts = 0;
-          const check = () => {
-            if (cloud.getPendingCount() === 0 || attempts >= 10) {
-              resolve();
-            } else {
-              attempts++;
-              setTimeout(check, 500);
-            }
-          };
-          // Триггерим retry если есть pending
-          if (cloud.retrySync) cloud.retrySync();
-          check();
-        });
-        log('✅ Синхронизация старого клиента завершена');
+        const flushed = await cloud.flushPendingQueue(8000); // 8 сек таймаут
+        if (flushed) {
+          log('✅ Синхронизация старого клиента завершена');
+        } else {
+          logCritical('⚠️ [SWITCH] Flush timeout — ' + cloud.getPendingCount() + ' items still pending');
+        }
       } catch (e) {
         logCritical('⚠️ Не удалось дождаться синхронизации, но продолжаем переключение');
       }
@@ -25140,6 +25165,19 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
     // 2. Сохраняем новый clientId ДО синхронизации (иначе bootstrapClientSync может пропустить)
     //    Но не очищаем старые данные, пока не убедимся что sync прошёл успешно.
     global.localStorage.setItem('heys_client_current', JSON.stringify(newClientId));
+
+    // 🔧 v63 FIX #5: Очищаем last_sync_ts нового клиента ПЕРЕД sync.
+    // Без этого delta fast-path вернёт 0 изменений, а данные в localStorage уже удалены
+    // при предыдущем switchClient → пустой экран.
+    try {
+      global.localStorage.removeItem('heys_' + newClientId + '_last_sync_ts');
+    } catch (_) { }
+
+    // 🔧 v63 FIX #4: Сбрасываем initialSyncCompleted чтобы Phase A (5 критичных ключей)
+    // выполнилась для нового клиента и дала быстрый visual feedback.
+    initialSyncCompleted = false;
+    cancelFailsafeTimer();
+    startFailsafeTimer();
 
     // 3. Синхронизируем данные нового клиента из облака
     log('📥 Загружаем данные нового клиента...');
@@ -25216,6 +25254,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
         }
         keysToRemove.forEach(k => global.localStorage.removeItem(k));
         log(`🧹 Очищено ${keysToRemove.length} ключей старого клиента`);
+        // 🔧 v63 FIX #5: Также удаляем last_sync_ts старого клиента
+        try { global.localStorage.removeItem('heys_' + oldClientId + '_last_sync_ts'); } catch (_) { }
       }
 
       // Также удаляем дубликаты и данные других клиентов
@@ -25260,6 +25300,9 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
       // Old behavior rolled back to oldClientId, breaking subsequent sync attempts.
       logCritical('⚠️ [SWITCH] Sync failed but auth valid — keeping client_current =', newClientId?.slice(0, 8));
       return false;
+    } finally {
+      // 🔧 v63 FIX #1: Снимаем флаг после завершения (успех или ошибка)
+      cloud._switchClientInProgress = false;
     }
   };
 
