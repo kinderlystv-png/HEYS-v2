@@ -13953,6 +13953,74 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
   }
 
   /**
+   * Получить ВСЕ KV данные клиента по curator JWT, игнорируя session_token.
+   * Нужен для curator-only сценариев, где глобальный heys_session_token может
+   * остаться от PIN-входа и вернуть данные не того клиента.
+   * @param {string} clientId - ID клиента
+   * @param {Object} [options] - Опции
+   * @param {string} [options.since] - ISO timestamp для delta sync
+   * @returns {Promise<{data: Array<{k: string, v: any}>, error?: string, delta?: boolean}>}
+   */
+  async function getAllKVByCurator(clientId, options = {}) {
+    if (!clientId) {
+      return { data: [], error: 'No clientId provided' };
+    }
+
+    const since = options.since || null;
+    const keys = Array.isArray(options.keys) ? options.keys.filter(Boolean) : null;
+
+    try {
+      if (keys && keys.length > 0) {
+        const subsetResult = await rest('client_kv_store', {
+          select: 'k,v,updated_at',
+          filters: {
+            'eq.client_id': clientId,
+            'in.k': `(${keys.join(',')})`
+          }
+        });
+
+        if (subsetResult.error) {
+          return { data: [], error: subsetResult.error.message || subsetResult.error };
+        }
+
+        const subsetRows = Array.isArray(subsetResult.data) ? subsetResult.data : [];
+        log(`getAllKVByCurator: Loaded ${subsetRows.length}/${keys.length} targeted keys for client ${clientId.slice(0, 8)}`);
+        return { data: subsetRows, error: null, delta: false };
+      }
+
+      const curatorToken = getCuratorToken();
+      if (!curatorToken) {
+        return { data: [], error: 'No curator token' };
+      }
+
+      let url = `${CONFIG.API_URL}/auth/clients/${encodeURIComponent(clientId)}/kv`;
+      if (since) {
+        url += `?since=${encodeURIComponent(since)}`;
+      }
+
+      const response = await fetchWithRetry(url, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${curatorToken}`
+        }
+      });
+
+      const result = await response.json();
+      if (!response.ok) {
+        return { data: [], error: result?.error || 'Curator KV fetch failed' };
+      }
+
+      const rows = Array.isArray(result?.data) ? result.data : [];
+      log(`getAllKVByCurator: Loaded ${rows.length} keys${since ? ' (delta)' : ''} for client ${clientId.slice(0, 8)}`);
+      return { data: rows, error: null, delta: !!since };
+    } catch (e) {
+      err('getAllKVByCurator failed:', e.message);
+      return { data: [], error: e.message };
+    }
+  }
+
+  /**
    * Получить ВСЕ KV данные клиента для синхронизации
    * @param {string} clientId - ID клиента
    * @param {Object} [options] - Опции
@@ -13971,33 +14039,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
 
       const sessionToken = getSessionTokenForKV();
       if (!sessionToken) {
-        // 🔐 Fallback для куратора: JWT + /auth/clients/:id/kv
-        const curatorToken = getCuratorToken();
-        if (!curatorToken) {
-          return { data: [], error: 'No session token' };
-        }
-
-        // 🚀 Delta Sync: добавляем since в query string
-        let url = `${CONFIG.API_URL}/auth/clients/${encodeURIComponent(clientId)}/kv`;
-        if (since) {
-          url += `?since=${encodeURIComponent(since)}`;
-        }
-        const response = await fetchWithRetry(url, {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${curatorToken}`
-          }
-        });
-
-        const result = await response.json();
-        if (!response.ok) {
-          return { data: [], error: result?.error || 'Curator KV fetch failed' };
-        }
-
-        const rows = Array.isArray(result?.data) ? result.data : [];
-        log(`getAllKV: Loaded ${rows.length} keys (curator${since ? ', delta' : ', full'})`);
-        return { data: rows, error: null, delta: !!since };
+        return getAllKVByCurator(clientId, options);
       }
 
       const rpcParams = {
@@ -14793,6 +14835,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
     saveKV,
     getKV,
     getAllKV,
+    getAllKVByCurator,
     batchSaveKV,
     deleteKV,
 

@@ -4408,15 +4408,19 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
                 dayData = raw;
             } else if (typeof raw === 'string') {
                 if (raw.startsWith('¤Z¤')) {
-                    let str = raw.substring(3);
-                    const patterns = {
-                        '¤n¤': '"name":"', '¤k¤': '"kcal100"', '¤p¤': '"protein100"',
-                        '¤c¤': '"carbs100"', '¤f¤': '"fat100"'
-                    };
-                    for (const [code, pattern] of Object.entries(patterns)) {
-                        str = str.split(code).join(pattern);
+                    if (global.HEYS?.store?.decompress) {
+                        dayData = global.HEYS.store.decompress(raw);
+                    } else {
+                        let str = raw.substring(3);
+                        const patterns = {
+                            '¤n¤': '"name":"', '¤k¤': '"kcal100"', '¤p¤': '"protein100"',
+                            '¤c¤': '"carbs100"', '¤f¤': '"fat100"'
+                        };
+                        for (const [code, pattern] of Object.entries(patterns)) {
+                            str = str.split(code).join(pattern);
+                        }
+                        dayData = JSON.parse(str);
                     }
-                    dayData = JSON.parse(str);
                 } else {
                     dayData = JSON.parse(raw);
                 }
@@ -9212,15 +9216,19 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
 
       let dayData = null;
       if (raw.startsWith('¤Z¤')) {
-        let str = raw.substring(3);
-        const patterns = {
-          '¤n¤': '"name":"', '¤k¤': '"kcal100"', '¤p¤': '"protein100"',
-          '¤c¤': '"carbs100"', '¤f¤': '"fat100"'
-        };
-        for (const [code, pattern] of Object.entries(patterns)) {
-          str = str.split(code).join(pattern);
+        if (HEYS.store?.decompress) {
+          dayData = HEYS.store.decompress(raw);
+        } else {
+          let str = raw.substring(3);
+          const patterns = {
+            '¤n¤': '"name":"', '¤k¤': '"kcal100"', '¤p¤': '"protein100"',
+            '¤c¤': '"carbs100"', '¤f¤': '"fat100"'
+          };
+          for (const [code, pattern] of Object.entries(patterns)) {
+            str = str.split(code).join(pattern);
+          }
+          dayData = JSON.parse(str);
         }
-        dayData = JSON.parse(str);
       } else {
         dayData = JSON.parse(raw);
       }

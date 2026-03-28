@@ -6882,6 +6882,87 @@ body.tour-active .ios-pwa-banner {
   background: linear-gradient(90deg, rgba(56, 189, 248, 0), rgba(59, 130, 246, 0.55), rgba(168, 85, 247, 0.55), rgba(56, 189, 248, 0));
 }
 
+/* ── Curator dropdown switch (clients ↔ competitions) ── */
+
+.curator-dropdown-switch {
+  display: flex;
+  gap: 0;
+  margin: 10px 12px 8px;
+  padding: 3px;
+  border-radius: 12px;
+  background: var(--bg-secondary, #f1f5f9);
+  border: 1px solid var(--border, rgba(148, 163, 184, 0.22));
+}
+
+.curator-dropdown-switch__tab {
+  flex: 1;
+  padding: 7px 6px;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--muted, #64748b);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.curator-dropdown-switch__tab.is-active {
+  background: var(--card, #fff);
+  color: var(--text, #1e293b);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+
+[data-theme="dark"] .curator-dropdown-switch {
+  background: rgba(15, 23, 42, 0.6);
+  border-color: rgba(96, 165, 250, 0.18);
+}
+
+[data-theme="dark"] .curator-dropdown-switch__tab {
+  color: #94a3b8;
+}
+
+[data-theme="dark"] .curator-dropdown-switch__tab.is-active {
+  background: rgba(30, 41, 59, 0.9);
+  color: #e2e8f0;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+}
+
+.curator-competitions-loading,
+.curator-competitions-empty {
+  margin: 6px 12px 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  line-height: 1.35;
+  text-align: center;
+}
+
+.curator-competitions-loading {
+  color: #2563eb;
+  background: rgba(59, 130, 246, 0.08);
+  border: 1px solid rgba(96, 165, 250, 0.18);
+}
+
+.curator-competitions-empty {
+  color: #64748b;
+  background: rgba(148, 163, 184, 0.08);
+  border: 1px solid rgba(148, 163, 184, 0.16);
+}
+
+[data-theme="dark"] .curator-competitions-loading {
+  color: #bfdbfe;
+  background: rgba(30, 64, 175, 0.16);
+  border-color: rgba(96, 165, 250, 0.18);
+}
+
+[data-theme="dark"] .curator-competitions-empty {
+  color: #94a3b8;
+  background: rgba(15, 23, 42, 0.56);
+  border-color: rgba(96, 165, 250, 0.12);
+}
+
 .client-dropdown-leaderboard-shell {
   padding: 0 0 10px;
 }
