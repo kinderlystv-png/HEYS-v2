@@ -928,6 +928,10 @@
                                 if (_curEmail && _curEmail.value) {
                                     window.__hlgCuratorEmail = _curEmail.value;
                                 }
+                                var _curPass = document.getElementById('hlg-curator-pass');
+                                if (_curPass && _curPass.value) {
+                                    window.__hlgCuratorPassword = _curPass.value;
+                                }
                             } catch (_e) { }
                             _htmlGate.remove();
                             console.info('[HEYS.gate] ✅ HTML login gate removed — React LoginScreen takes over');
@@ -943,6 +947,7 @@
                                     return res && res.error ? { error: res.error } : { ok: true };
                                 },
                                 initialEmail: window.__hlgCuratorEmail || '',
+                                initialPassword: window.__hlgCuratorPassword || '',
                                 onClientLogin: async ({ phone, pin }) => {
                                     const auth = HEYS && HEYS.auth;
                                     const fn = auth && auth.loginClient;

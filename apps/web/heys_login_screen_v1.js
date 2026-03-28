@@ -50,6 +50,7 @@
       onCuratorLogin,
       initialMode = 'client',
       initialEmail = '',
+      initialPassword = '',
     } = props || {};
 
     const React = global.React;
@@ -71,7 +72,7 @@
 
     // curator — inherit email from HTML gate if user was already typing
     const [email, setEmail] = useState(initialEmail || '');
-    const [password, setPassword] = useState('');
+    const [password, setPassword] = useState(initialPassword || '');
 
     const [busy, setBusy] = useState(false);
     const [err, setErr] = useState('');
@@ -177,14 +178,16 @@
     }
 
     async function handleCuratorLogin() {
-      if (!onCuratorLogin) return;
+      if (!onCuratorLogin) return { ok: false };
       setErr('');
       setBusy(true);
       try {
         const res = await onCuratorLogin({ email: String(email).trim(), password });
         if (res && res.error) {
           setErr(typeof res.error === 'string' ? res.error : (res.error.message || 'Ошибка входа'));
+          return { ok: false, error: res.error };
         }
+        return { ok: true };
       } finally {
         setBusy(false);
       }
@@ -260,11 +263,11 @@
         ),
         React.createElement('div', { className: 'mt-6 space-y-3' },
           PrimaryBtn(
-            { onClick: () => setMode('client') },
+            { onClick: () => { setErr(''); setMode('client'); } },
             'Войти по телефону →',
           ),
           SecondaryBtn(
-            { onClick: () => setMode('curator') },
+            { onClick: () => { setErr(''); setMode('curator'); } },
             'Вход куратора',
           ),
         ),

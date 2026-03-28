@@ -6685,6 +6685,10 @@ body.tour-active .ios-pwa-banner {
   max-width: calc(100vw - 20px);
 }
 
+.client-dropdown--curator {
+  padding-top: 48px;
+}
+
 .client-dropdown-backdrop {
   position: fixed;
   left: 0;
@@ -6894,6 +6898,25 @@ body.tour-active .ios-pwa-banner {
   border: 1px solid var(--border, rgba(148, 163, 184, 0.22));
 }
 
+.curator-section-header {
+  padding: 4px 16px 8px;
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.client-dropdown-account__action--all-clients {
+  background: linear-gradient(135deg, rgba(248, 250, 252, 0.98), rgba(239, 246, 255, 0.9));
+  border-color: rgba(191, 219, 254, 0.8);
+  color: #1e40af;
+}
+
+.curator-competitions-section {
+  padding: 0 0 6px;
+}
+
 .curator-dropdown-switch__tab {
   flex: 1;
   padding: 7px 6px;
@@ -6968,6 +6991,9 @@ body.tour-active .ios-pwa-banner {
 }
 
 .client-dropdown-leaderboard {
+  --leaderboard-skeleton-base: rgba(255, 255, 255, 0.58);
+  --leaderboard-skeleton-highlight: rgba(255, 255, 255, 0.96);
+  --leaderboard-skeleton-shadow: rgba(191, 219, 254, 0.22);
   margin: 0 12px;
   padding: 12px 9px 10px;
   border-radius: 20px;
@@ -7043,10 +7069,22 @@ body.tour-active .ios-pwa-banner {
   color: #64748b;
 }
 
+.client-dropdown-leaderboard__content {
+  animation: clientDropdownLeaderboardReveal 240ms ease both;
+}
+
+.client-dropdown-leaderboard__content.is-loading {
+  animation: none;
+}
+
 .client-dropdown-leaderboard__scroll {
   overflow-x: hidden;
   overflow-y: auto;
   max-height: 220px;
+}
+
+.client-dropdown-leaderboard__scroll--skeleton {
+  overflow: hidden;
 }
 
 .client-dropdown-leaderboard__header-row,
@@ -7064,6 +7102,10 @@ body.tour-active .ios-pwa-banner {
   color: #64748b;
   text-transform: uppercase;
   letter-spacing: 0.04em;
+}
+
+.client-dropdown-leaderboard__header-row--skeleton {
+  padding-top: 6px;
 }
 
 .client-dropdown-leaderboard__head-rank,
@@ -7126,6 +7168,14 @@ body.tour-active .ios-pwa-banner {
   border: 1px solid transparent;
 }
 
+.client-dropdown-leaderboard__row--skeleton,
+.client-dropdown-leaderboard__row--skeleton.is-current {
+  background: rgba(255, 255, 255, 0.46);
+  border-color: rgba(191, 219, 254, 0.24);
+  box-shadow: none;
+  pointer-events: none;
+}
+
 .client-dropdown-leaderboard__row.is-current {
   background: rgba(255, 255, 255, 0.78);
   border-color: rgba(96, 165, 250, 0.4);
@@ -7161,6 +7211,12 @@ body.tour-active .ios-pwa-banner {
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3);
 }
 
+.client-dropdown-leaderboard__rank-badge--skeleton,
+.client-dropdown-leaderboard__day-score--skeleton {
+  background: transparent;
+  box-shadow: none;
+}
+
 .client-dropdown-leaderboard__day-score.is-empty {
   background: transparent !important;
   color: #94a3b8 !important;
@@ -7184,6 +7240,98 @@ body.tour-active .ios-pwa-banner {
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.35),
     0 10px 16px -16px rgba(37, 99, 235, 0.75);
+}
+
+.client-dropdown-leaderboard__skeleton-chip {
+  display: block;
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(90deg,
+      var(--leaderboard-skeleton-base) 0%,
+      var(--leaderboard-skeleton-highlight) 48%,
+      var(--leaderboard-skeleton-base) 100%);
+  background-size: 200% 100%;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    0 1px 2px var(--leaderboard-skeleton-shadow);
+  animation: heysLeaderboardShimmer 1.25s linear infinite;
+}
+
+.client-dropdown-leaderboard__skeleton-chip--header-rank {
+  width: 12px;
+  height: 8px;
+  border-radius: 999px;
+  margin: 0 auto;
+}
+
+.client-dropdown-leaderboard__skeleton-chip--header-name {
+  width: 36px;
+  height: 8px;
+  border-radius: 999px;
+  margin-top: 2px;
+}
+
+.client-dropdown-leaderboard__skeleton-chip--header-day {
+  width: 16px;
+  height: 8px;
+  border-radius: 999px;
+  margin: 0 auto;
+}
+
+.client-dropdown-leaderboard__skeleton-chip--header-avg {
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  margin: 0 auto;
+}
+
+.client-dropdown-leaderboard__skeleton-chip--rank {
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  margin: 0 auto;
+}
+
+.client-dropdown-leaderboard__skeleton-chip--name {
+  height: 10px;
+  border-radius: 999px;
+  margin: 6px 0 6px 2px;
+}
+
+.client-dropdown-leaderboard__skeleton-chip--day {
+  width: 26px;
+  height: 22px;
+  border-radius: 7px;
+  margin: 0 auto;
+}
+
+.client-dropdown-leaderboard__skeleton-chip--avg {
+  width: 34px;
+  height: 24px;
+  border-radius: 999px;
+  margin: 0 auto;
+}
+
+@keyframes heysLeaderboardShimmer {
+  0% {
+    background-position: 200% 0;
+  }
+
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+@keyframes clientDropdownLeaderboardReveal {
+  0% {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 [data-theme="dark"] .client-dropdown-account__name {
@@ -7220,7 +7368,8 @@ body.tour-active .ios-pwa-banner {
   box-shadow: 0 20px 30px -28px rgba(2, 6, 23, 0.95);
 }
 
-[data-theme="dark"] .client-dropdown-account__action--settings {
+[data-theme="dark"] .client-dropdown-account__action--settings,
+[data-theme="dark"] .client-dropdown-account__action--all-clients {
   background: linear-gradient(135deg, rgba(30, 41, 59, 0.9), rgba(15, 23, 42, 0.94));
   border-color: rgba(96, 165, 250, 0.22);
   color: #c7d2fe;
@@ -7242,6 +7391,9 @@ body.tour-active .ios-pwa-banner {
 }
 
 [data-theme="dark"] .client-dropdown-leaderboard {
+  --leaderboard-skeleton-base: rgba(51, 65, 85, 0.82);
+  --leaderboard-skeleton-highlight: rgba(148, 163, 184, 0.32);
+  --leaderboard-skeleton-shadow: rgba(2, 6, 23, 0.34);
   background:
     radial-gradient(circle at top right, rgba(59, 130, 246, 0.22), transparent 42%),
     linear-gradient(180deg, rgba(15, 23, 42, 0.96), rgba(14, 34, 56, 0.95));
@@ -7284,6 +7436,12 @@ body.tour-active .ios-pwa-banner {
 
 [data-theme="dark"] .client-dropdown-leaderboard__row {
   background: rgba(15, 23, 42, 0.54);
+}
+
+[data-theme="dark"] .client-dropdown-leaderboard__row--skeleton,
+[data-theme="dark"] .client-dropdown-leaderboard__row--skeleton.is-current {
+  background: rgba(15, 23, 42, 0.66);
+  border-color: rgba(96, 165, 250, 0.18);
 }
 
 [data-theme="dark"] .client-dropdown-leaderboard__row.is-current {

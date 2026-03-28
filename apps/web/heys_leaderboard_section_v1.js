@@ -1,4 +1,4 @@
-// heys_leaderboard_section_v1.js — Reusable leaderboard/competitions section (v1.0.0)
+// heys_leaderboard_section_v1.js — Reusable leaderboard/competitions section (v1.1.0)
 // Extracted from heys_app_shell_v1.js for reuse in client + curator dropdowns.
 
 (function () {
@@ -92,10 +92,41 @@
         return formatISODate(base);
     }
 
+    function getCompetitionRowUpdatedAtMs(row) {
+        var raw = row && (row.updated_at || row.updatedAt);
+        if (typeof raw === 'number' && Number.isFinite(raw)) return raw;
+        if (typeof raw === 'string') {
+            var parsed = Date.parse(raw);
+            return Number.isNaN(parsed) ? 0 : parsed;
+        }
+        return 0;
+    }
+
+    function normalizeCompetitionCEBPayload(raw) {
+        var parsed = tryParseStoredValue(raw, null);
+        if (!parsed || typeof parsed !== 'object') return null;
+
+        var score = Number(parsed.s);
+        if (!Number.isFinite(score)) return null;
+
+        var confidence = Number(parsed.c);
+        return {
+            score: Math.round(score * 10) / 10,
+            confidence: Number.isFinite(confidence) ? confidence : 1,
+            raw: parsed
+        };
+    }
+
     function extractCompetitionDataFromKVRows(rows) {
         var daysByDate = {};
+        var dayUpdatedAtByDate = {};
+        var cebByDate = {};
         var profile = null;
-        var list = Array.isArray(rows) ? rows : [];
+        var list = Array.isArray(rows) ? rows.slice() : [];
+
+        list.sort(function (a, b) {
+            return getCompetitionRowUpdatedAtMs(a) - getCompetitionRowUpdatedAtMs(b);
+        });
 
         for (var i = 0; i < list.length; i++) {
             var row = list[i] || {};
@@ -107,6 +138,17 @@
                 continue;
             }
 
+            var cebMatch = key.match(/(?:^heys_[a-f0-9-]+_ceb_d_|^heys_ceb_d_)(\d{4}-\d{2}-\d{2})$/i);
+            if (cebMatch) {
+                var cebDateStr = cebMatch[1];
+                var parsedCeb = normalizeCompetitionCEBPayload(row.v);
+                if (parsedCeb) {
+                    parsedCeb.updatedAt = getCompetitionRowUpdatedAtMs(row);
+                    cebByDate[cebDateStr] = parsedCeb;
+                }
+                continue;
+            }
+
             var dayMatch = key.match(/(?:^heys_[a-f0-9-]+_dayv2_|^heys_dayv2_)(\d{4}-\d{2}-\d{2})$/i);
             if (!dayMatch) continue;
 
@@ -114,11 +156,14 @@
             var parsedDay = tryParseStoredValue(row.v, null);
             if (parsedDay) {
                 daysByDate[dateStr] = parsedDay;
+                dayUpdatedAtByDate[dateStr] = getCompetitionRowUpdatedAtMs(row);
             }
         }
 
         return {
             daysByDate: daysByDate,
+            dayUpdatedAtByDate: dayUpdatedAtByDate,
+            cebByDate: cebByDate,
             profile: profile || {}
         };
     }
@@ -141,8 +186,29 @@
     function getClientCEBFromCompetitionData(clientId, dateStr, competitionData, options) {
         var cached = competitionData || {};
         var daysByDate = cached.daysByDate || {};
+        var cachedCebByDate = cached.cebByDate || {};
+        var cachedCeb = cachedCebByDate[dateStr] || null;
         var day = daysByDate[dateStr];
-        if (!day) return null;
+        var dayHasMeals = !!(day && Array.isArray(day.meals) && day.meals.length > 0);
+        var dayUpdatedAt = Number((cached.dayUpdatedAtByDate || {})[dateStr]) || 0;
+        var cachedCebUpdatedAt = cachedCeb ? (Number(cachedCeb.updatedAt) || 0) : 0;
+
+        if (cachedCeb && (!dayHasMeals || !dayUpdatedAt || (cachedCebUpdatedAt && cachedCebUpdatedAt >= dayUpdatedAt))) {
+            return {
+                score: cachedCeb.score,
+                confidence: cachedCeb.confidence,
+                raw: cachedCeb.raw
+            };
+        }
+
+        if (!day) {
+            if (!cachedCeb) return null;
+            return {
+                score: cachedCeb.score,
+                confidence: cachedCeb.confidence,
+                raw: cachedCeb.raw
+            };
+        }
 
         var prevDays = [];
         for (var i = 1; i <= 14; i++) {
@@ -150,7 +216,7 @@
         }
 
         try {
-            return window.HEYS?.CascadeCard?.resolveCEBForDate?.(dateStr, clientId, {
+            var resolved = window.HEYS?.CascadeCard?.resolveCEBForDate?.(dateStr, clientId, {
                 day: day,
                 profile: cached.profile || {},
                 prevDays: prevDays,
@@ -159,20 +225,172 @@
                 isCurrent: !!(options && options.isCurrent),
                 silent: true
             }) || null;
+
+            if (resolved) return resolved;
         } catch (e) {
-            return null;
         }
+
+        if (cachedCeb) {
+            return {
+                score: cachedCeb.score,
+                confidence: cachedCeb.confidence,
+                raw: cachedCeb.raw
+            };
+        }
+
+        return null;
     }
 
     // ── Render ────────────────────────────────────────────
 
-    function renderLeaderboardSection(weeklyData) {
-        if (!weeklyData || !weeklyData.entries || weeklyData.entries.length === 0) return null;
-
-        var entries = weeklyData.entries;
-        var weekDates = weeklyData.weekDates || [];
+    function renderLeaderboardShell(bodyNode, weekDates, options) {
         var summaryLabel = '★';
         var metricSubtitle = weekDates.length > 1 ? 'Ежедневные оценки + сумма за неделю' : 'Оценка за выбранный день';
+
+        return React.createElement('div', {
+            key: 'leaderboard',
+            className: 'client-dropdown-leaderboard-shell',
+            'aria-busy': options && options.isLoading ? 'true' : undefined
+        },
+            React.createElement('div', {
+                className: 'client-dropdown-divider'
+            }),
+            React.createElement('div', {
+                className: 'client-dropdown-leaderboard' + ((options && options.isLoading) ? ' is-loading' : '')
+            },
+                React.createElement('div', {
+                    className: 'client-dropdown-leaderboard__section-header'
+                },
+                    React.createElement('div', {
+                        className: 'client-dropdown-leaderboard__eyebrow'
+                    }, '🏆 СОСТЯЗАНИЯ'),
+                    React.createElement('div', {
+                        className: 'client-dropdown-leaderboard__subtitle'
+                    }, 'Соревнования по разным метрикам')
+                ),
+                React.createElement('div', {
+                    className: 'client-dropdown-competition-card'
+                },
+                    React.createElement('div', {
+                        className: 'client-dropdown-competition-card__header'
+                    },
+                        React.createElement('div', {
+                            className: 'client-dropdown-competition-card__badge'
+                        }, 'Каскад дня'),
+                        React.createElement('div', {
+                            className: 'client-dropdown-competition-card__meta'
+                        }, metricSubtitle)
+                    ),
+                    React.createElement('div', {
+                        className: 'client-dropdown-leaderboard__content' + ((options && options.isLoading) ? ' is-loading' : '')
+                    }, bodyNode)
+                )
+            )
+        );
+    }
+
+    function renderSkeletonChip(className, style) {
+        return React.createElement('span', {
+            className: 'client-dropdown-leaderboard__skeleton-chip ' + className,
+            style: style || undefined,
+            'aria-hidden': 'true'
+        });
+    }
+
+    function renderLeaderboardSkeleton(weekDates) {
+        var safeWeekDates = Array.isArray(weekDates) && weekDates.length > 0
+            ? weekDates
+            : buildFullWeekDates();
+        var headerCells = [
+            React.createElement('div', { key: 'h-rank', className: 'client-dropdown-leaderboard__head-rank' },
+                renderSkeletonChip('client-dropdown-leaderboard__skeleton-chip--header-rank')),
+            React.createElement('div', { key: 'h-name', className: 'client-dropdown-leaderboard__head-name' },
+                renderSkeletonChip('client-dropdown-leaderboard__skeleton-chip--header-name'))
+        ];
+
+        for (var di = 0; di < safeWeekDates.length; di++) {
+            headerCells.push(
+                React.createElement('div', {
+                    key: 'h-d' + di,
+                    className: 'client-dropdown-leaderboard__head-day'
+                }, renderSkeletonChip('client-dropdown-leaderboard__skeleton-chip--header-day'))
+            );
+        }
+
+        headerCells.push(
+            React.createElement('div', {
+                key: 'h-avg',
+                className: 'client-dropdown-leaderboard__head-balance'
+            }, renderSkeletonChip('client-dropdown-leaderboard__skeleton-chip--header-avg'))
+        );
+
+        var nameWidths = ['72%', '58%', '66%'];
+        var rows = [];
+        for (var ri = 0; ri < 3; ri++) {
+            var rowCells = [
+                React.createElement('div', {
+                    key: 'r-rank',
+                    className: 'client-dropdown-leaderboard__rank-badge client-dropdown-leaderboard__rank-badge--skeleton'
+                }, renderSkeletonChip('client-dropdown-leaderboard__skeleton-chip--rank')),
+                React.createElement('div', {
+                    key: 'r-name',
+                    className: 'client-dropdown-leaderboard__name'
+                }, renderSkeletonChip('client-dropdown-leaderboard__skeleton-chip--name', {
+                    width: nameWidths[ri % nameWidths.length]
+                }))
+            ];
+
+            for (var wi = 0; wi < safeWeekDates.length; wi++) {
+                rowCells.push(
+                    React.createElement('div', {
+                        key: 'r-d' + wi,
+                        className: 'client-dropdown-leaderboard__day-score client-dropdown-leaderboard__day-score--skeleton'
+                    }, renderSkeletonChip('client-dropdown-leaderboard__skeleton-chip--day'))
+                );
+            }
+
+            rowCells.push(
+                React.createElement('div', {
+                    key: 'r-avg',
+                    className: 'client-dropdown-leaderboard__avg-wrap'
+                }, renderSkeletonChip('client-dropdown-leaderboard__skeleton-chip--avg'))
+            );
+
+            rows.push(
+                React.createElement('div', {
+                    key: 'lb-skeleton-' + ri,
+                    className: 'client-dropdown-leaderboard__row client-dropdown-leaderboard__row--skeleton'
+                }, rowCells)
+            );
+        }
+
+        return React.createElement('div', {
+            className: 'client-dropdown-leaderboard__scroll client-dropdown-leaderboard__scroll--skeleton',
+            'aria-hidden': 'true'
+        }, [
+            React.createElement('div', {
+                key: 'lb-skeleton-header',
+                className: 'client-dropdown-leaderboard__header-row client-dropdown-leaderboard__header-row--skeleton'
+            }, headerCells)
+        ].concat(rows));
+    }
+
+    function renderLeaderboardSection(weeklyData, options) {
+        var config = options || {};
+        var entries = weeklyData && Array.isArray(weeklyData.entries) ? weeklyData.entries : [];
+        var weekDates = weeklyData && Array.isArray(weeklyData.weekDates) && weeklyData.weekDates.length > 0
+            ? weeklyData.weekDates
+            : buildFullWeekDates(config.fallbackDateStr);
+
+        if (config.isLoading) {
+            return renderLeaderboardShell(renderLeaderboardSkeleton(weekDates), weekDates, { isLoading: true });
+        }
+
+        if (entries.length === 0) {
+            return null;
+        }
+
+        var summaryLabel = '★';
 
         // Header cells: rank, name, day columns, average
         var headerCells = [
@@ -265,44 +483,12 @@
             }, cells);
         });
 
-        return React.createElement('div', {
-            key: 'leaderboard',
-            className: 'client-dropdown-leaderboard-shell'
-        },
+        return renderLeaderboardShell(
             React.createElement('div', {
-                className: 'client-dropdown-divider'
-            }),
-            React.createElement('div', {
-                className: 'client-dropdown-leaderboard'
-            },
-                React.createElement('div', {
-                    className: 'client-dropdown-leaderboard__section-header'
-                },
-                    React.createElement('div', {
-                        className: 'client-dropdown-leaderboard__eyebrow'
-                    }, '🏆 СОСТЯЗАНИЯ'),
-                    React.createElement('div', {
-                        className: 'client-dropdown-leaderboard__subtitle'
-                    }, 'Соревнования по разным метрикам')
-                ),
-                React.createElement('div', {
-                    className: 'client-dropdown-competition-card'
-                },
-                    React.createElement('div', {
-                        className: 'client-dropdown-competition-card__header'
-                    },
-                        React.createElement('div', {
-                            className: 'client-dropdown-competition-card__badge'
-                        }, 'Каскад дня'),
-                        React.createElement('div', {
-                            className: 'client-dropdown-competition-card__meta'
-                        }, metricSubtitle)
-                    ),
-                    React.createElement('div', {
-                        className: 'client-dropdown-leaderboard__scroll'
-                    }, [headerRow].concat(rows))
-                )
-            )
+                className: 'client-dropdown-leaderboard__scroll'
+            }, [headerRow].concat(rows)),
+            weekDates,
+            { isLoading: false }
         );
     }
 
@@ -317,8 +503,8 @@
         normalizeWeekDates: normalizeWeekDates,
         getCEBToneStyle: getCEBToneStyle,
         formatCompetitionName: formatCompetitionName,
-        VERSION: '1.0.0'
+        VERSION: '1.1.0'
     };
 
-    console.info('[HEYS.LeaderboardSection] ✅ Module loaded v1.0.0');
+    console.info('[HEYS.LeaderboardSection] ✅ Module loaded v1.1.0');
 })();

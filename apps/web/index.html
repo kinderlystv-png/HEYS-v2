@@ -658,7 +658,7 @@
     <link rel="preload" href="boot-core.bundle.592bc057b1bf.js" as="script" />
     <link rel="preload" href="boot-calc.bundle.e32889c11bea.js" as="script" />
     <link rel="preload" href="boot-day.bundle.fe9071bd308e.js" as="script" />
-    <link rel="preload" href="boot-app.bundle.6b90653bef5a.js" as="script" />
+    <link rel="preload" href="boot-app.bundle.2e8418bf967f.js" as="script" />
     <link rel="preload" href="boot-init.bundle.4d88cad1d6cb.js" as="script" />
 
     <!-- React теперь бандлится локально через Vite (миграция с CDN 2026-01-21) -->
@@ -1630,7 +1630,6 @@
         (function () {
             var API = 'https://api.heyslab.ru';
             var AUTH_RATE_KEY = 'heys_auth_rate_limit_v1';
-
             // ─── Утилиты localStorage ───────────────────────────────────────
             function lsGet(k, def) {
                 try { var v = localStorage.getItem(k); return v == null ? def : JSON.parse(v); } catch (_) { return def; }
@@ -1702,7 +1701,6 @@
             var pinDigits = ['', '', '', ''];
             var currentScreen = 'start';
             var isBusy = false;
-
             // ─── Экраны ─────────────────────────────────────────────────────
             window.hlgShowScreen = function (screen) {
                 document.getElementById('hlg-screen-client').style.display = screen === 'client' ? '' : 'none';
@@ -2124,6 +2122,9 @@
                 var password = (document.getElementById('hlg-curator-pass') || {}).value || '';
                 email = email.trim();
 
+                if (email) window.__hlgCuratorEmail = email;
+                if (password) window.__hlgCuratorPassword = password;
+
                 if (!email || !password) { hlgSetCuratorErr('Введите email и пароль'); return; }
                 if (!navigator.onLine) { hlgSetCuratorErr('Нет подключения к интернету'); return; }
 
@@ -2479,7 +2480,7 @@
     <script defer src="boot-core.bundle.592bc057b1bf.js" fetchpriority="high"></script>
     <script defer src="boot-calc.bundle.e32889c11bea.js"></script>
     <script defer src="boot-day.bundle.fe9071bd308e.js"></script>
-    <script defer src="boot-app.bundle.6b90653bef5a.js"></script>
+    <script defer src="boot-app.bundle.2e8418bf967f.js"></script>
     <script defer src="boot-init.bundle.4d88cad1d6cb.js"
         onerror="window.__heysShowRecoveryUI && window.__heysShowRecoveryUI('CRITICAL_SCRIPT_LOAD: boot-init.bundle')"></script>
 

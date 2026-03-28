@@ -65,9 +65,9 @@
         return lbs && lbs.normalizeWeekDates ? lbs.normalizeWeekDates(weekDates, fallbackDateStr) : [];
     }
 
-    function renderLeaderboardSection(weeklyData) {
+    function renderLeaderboardSection(weeklyData, options) {
         var lbs = HEYS.LeaderboardSection;
-        return lbs && lbs.render ? lbs.render(weeklyData) : null;
+        return lbs && lbs.render ? lbs.render(weeklyData, options) : null;
     }
 
     function getClientCEBFromCompetitionData(clientId, dateStr, competitionData, options) {
@@ -135,10 +135,14 @@
         const [clientDropdownMaxHeight, setClientDropdownMaxHeight] = React.useState(320);
         const [clientDropdownWidth, setClientDropdownWidth] = React.useState(360);
         const [clientDropdownLeft, setClientDropdownLeft] = React.useState(-8);
-        // 🔀 Curator dropdown view: 'clients' | 'competitions'
-        const [curatorView, setCuratorView] = React.useState('clients');
         const [curatorCompetitionCache, setCuratorCompetitionCache] = React.useState({});
         const [curatorCompetitionLoading, setCuratorCompetitionLoading] = React.useState(false);
+        const [weeklyLeaderboardLoading, setWeeklyLeaderboardLoading] = React.useState(false);
+        const [leaderboardOpenSkeleton, setLeaderboardOpenSkeleton] = React.useState(false);
+        const [leaderboardRefreshTick, bumpLeaderboardRefreshTick] = React.useReducer(function (value) {
+            return value + 1;
+        }, 0);
+        const leaderboardRefreshRafRef = React.useRef(0);
         // ☁️ Cloud Sync Badge State (v2.0): auto-fade synced→idle, lastSyncedAt tracking
         const [displayStatus, setDisplayStatus] = React.useState(cloudStatus);
         const lastSyncedAtRef = React.useRef(null);
@@ -371,22 +375,67 @@
             }
 
             return { weekDates: weekDates, entries: [] };
-        }, [showClientDropdown, isRpcMode, clientIdValue, currentClientName, clients, selectedDate, resolvedTodayISO, weeklyLeaderboard, curatorCompetitionCache]);
+        }, [showClientDropdown, isRpcMode, clientIdValue, currentClientName, clients, selectedDate, resolvedTodayISO, weeklyLeaderboard, curatorCompetitionCache, leaderboardRefreshTick]);
+
+        const leaderboardHasEntries = !!(leaderboardData && Array.isArray(leaderboardData.entries) && leaderboardData.entries.length > 0);
+        const leaderboardLoading = showClientDropdown && (isRpcMode ? weeklyLeaderboardLoading : curatorCompetitionLoading);
+        const shouldShowLeaderboardSkeleton = showClientDropdown && (
+            isRpcMode
+                ? (!leaderboardHasEntries && (leaderboardOpenSkeleton || leaderboardLoading))
+                : (leaderboardOpenSkeleton || curatorCompetitionLoading)
+        );
+
+        React.useEffect(() => {
+            if (!showClientDropdown) {
+                setLeaderboardOpenSkeleton(false);
+                return;
+            }
+
+            setLeaderboardOpenSkeleton(true);
+            var hideSkeletonId = window.setTimeout(function () {
+                setLeaderboardOpenSkeleton(false);
+            }, 420);
+
+            return () => {
+                window.clearTimeout(hideSkeletonId);
+            };
+        }, [showClientDropdown, isRpcMode, clientIdValue, selectedDate, resolvedTodayISO]);
+
+        React.useEffect(() => {
+            if (!showClientDropdown || !leaderboardHasEntries) return;
+            setLeaderboardOpenSkeleton(false);
+        }, [showClientDropdown, leaderboardHasEntries]);
 
         // 🏆 Fetch weekly cloud leaderboard when dropdown opens (RPC mode only)
         React.useEffect(() => {
-            if (!showClientDropdown || !isRpcMode) return;
+            if (!showClientDropdown || !isRpcMode) {
+                setWeeklyLeaderboardLoading(false);
+                return;
+            }
             if (!HEYS?.leaderboard?.fetchWeeklyLeaderboard) return;
 
+            var cancelled = false;
+            setWeeklyLeaderboardLoading(true);
+
             HEYS.leaderboard.fetchWeeklyLeaderboard().then(function (result) {
-                if (result && result.entries) {
+                if (!cancelled && result && result.entries) {
                     setWeeklyLeaderboard(result);
                 }
-            }).catch(function () { /* graceful fail */ });
+            }).catch(function () { /* graceful fail */ }).finally(function () {
+                if (!cancelled) {
+                    setWeeklyLeaderboardLoading(false);
+                }
+            });
+
+            return () => {
+                cancelled = true;
+            };
         }, [showClientDropdown, isRpcMode]);
 
         React.useEffect(() => {
-            if (!showClientDropdown || isRpcMode || curatorView !== 'competitions') return;
+            // Combined curator dropdown always renders the competitions block,
+            // so other clients' weekly data must warm up as soon as the menu opens.
+            if (!showClientDropdown || isRpcMode) return;
             if (!Array.isArray(clients) || clients.length === 0) return;
             if (!HEYS?.YandexAPI?.getAllKVByCurator) return;
 
@@ -400,7 +449,9 @@
             var leaderboardKeys = ['heys_profile'];
             for (var dayOffset = -14; dayOffset < 7; dayOffset++) {
                 var shifted = shiftISODate(requestedWeekAnchor, dayOffset);
-                if (shifted) leaderboardKeys.push('heys_dayv2_' + shifted);
+                if (!shifted) continue;
+                leaderboardKeys.push('heys_dayv2_' + shifted);
+                leaderboardKeys.push('heys_ceb_d_' + shifted);
             }
             var staleBefore = Date.now() - CURATOR_COMPETITION_CACHE_TTL_MS;
             var clientsToFetch = clients.filter(function (client) {
@@ -458,7 +509,102 @@
             return () => {
                 cancelled = true;
             };
-        }, [showClientDropdown, isRpcMode, curatorView, clients, clientIdValue, curatorCompetitionCache, selectedDate, resolvedTodayISO, todayISO]);
+        }, [showClientDropdown, isRpcMode, clients, clientIdValue, curatorCompetitionCache, selectedDate, resolvedTodayISO, todayISO]);
+
+        React.useEffect(() => {
+            if (!showClientDropdown) return;
+
+            var cancelled = false;
+            var effectiveDateStr = selectedDate
+                || resolvedTodayISO
+                || (HEYS?.utils?.getTodayStr?.())
+                || new Date().toISOString().slice(0, 10);
+            var watchedWeekDates = normalizeWeekDates([], effectiveDateStr);
+            var watchedWeekLookup = {};
+            for (var wi = 0; wi < watchedWeekDates.length; wi++) {
+                watchedWeekLookup[watchedWeekDates[wi]] = true;
+            }
+
+            var scheduleLeaderboardRefresh = function (reason, meta) {
+                if (leaderboardRefreshRafRef.current) return;
+                leaderboardRefreshRafRef.current = window.requestAnimationFrame(function () {
+                    leaderboardRefreshRafRef.current = 0;
+                    if (cancelled) return;
+                    bumpLeaderboardRefreshTick();
+                    console.info('[HEYS.leaderboard] 🔄 Dropdown live refresh', Object.assign({
+                        reason: reason,
+                        mode: isRpcMode ? 'client' : 'curator',
+                        clientId: clientIdValue ? String(clientIdValue).slice(0, 8) : null,
+                        weekAnchor: watchedWeekDates[0] || effectiveDateStr
+                    }, meta || {}));
+                });
+            };
+
+            var handleCrsUpdated = function () {
+                scheduleLeaderboardRefresh('crs-updated');
+            };
+
+            var handleDayUpdated = function (event) {
+                var detail = event && event.detail ? event.detail : {};
+                var changedDates = [];
+                if (typeof detail.date === 'string' && detail.date) {
+                    changedDates.push(detail.date);
+                }
+                if (Array.isArray(detail.dates)) {
+                    for (var di = 0; di < detail.dates.length; di++) {
+                        if (detail.dates[di]) changedDates.push(detail.dates[di]);
+                    }
+                }
+
+                var isRelevant = !!detail.batch || !changedDates.length;
+                if (!isRelevant) {
+                    for (var ci = 0; ci < changedDates.length; ci++) {
+                        if (watchedWeekLookup[changedDates[ci]]) {
+                            isRelevant = true;
+                            break;
+                        }
+                    }
+                }
+                if (!isRelevant && (detail.source === 'force-sync' || detail.source === 'cloud-sync' || detail.source === 'cascade-guard-unlock')) {
+                    isRelevant = true;
+                }
+                if (!isRelevant) return;
+
+                scheduleLeaderboardRefresh(detail.batch ? 'day-updated-batch' : 'day-updated', {
+                    source: detail.source || null,
+                    changedDates: changedDates.slice(0, 3)
+                });
+            };
+
+            var handleSyncCompleted = function (event) {
+                var detail = event && event.detail ? event.detail : {};
+                scheduleLeaderboardRefresh('sync-completed', {
+                    phaseA: !!detail.phaseA
+                });
+            };
+
+            // Safety net for fast curator login flows: local data can arrive just after the
+            // first open without another React state change, so re-check once automatically.
+            var delayedRefreshId = window.setTimeout(function () {
+                scheduleLeaderboardRefresh('dropdown-open-recheck');
+            }, 350);
+
+            window.addEventListener('heys:crs-updated', handleCrsUpdated);
+            window.addEventListener('heys:day-updated', handleDayUpdated);
+            window.addEventListener('heysSyncCompleted', handleSyncCompleted);
+
+            return () => {
+                cancelled = true;
+                window.clearTimeout(delayedRefreshId);
+                if (leaderboardRefreshRafRef.current) {
+                    window.cancelAnimationFrame(leaderboardRefreshRafRef.current);
+                    leaderboardRefreshRafRef.current = 0;
+                }
+                window.removeEventListener('heys:crs-updated', handleCrsUpdated);
+                window.removeEventListener('heys:day-updated', handleDayUpdated);
+                window.removeEventListener('heysSyncCompleted', handleSyncCompleted);
+            };
+        }, [showClientDropdown, isRpcMode, clientIdValue, selectedDate, resolvedTodayISO]);
 
         // Load EWS data on mount and when date changes
         React.useEffect(() => {
@@ -699,7 +845,10 @@
         };
 
         const clientListMaxHeight = Math.max(120, clientDropdownMaxHeight - 128);
-        const leaderboardSectionNode = renderLeaderboardSection(leaderboardData);
+        const leaderboardSectionNode = renderLeaderboardSection(leaderboardData, {
+            isLoading: shouldShowLeaderboardSkeleton,
+            fallbackDateStr: selectedDate || resolvedTodayISO
+        });
 
         const commitPendingUndoBeforeContextChange = (reason, meta) => {
             try {
@@ -774,7 +923,7 @@
                     showClientDropdown && React.createElement(
                         'div',
                         {
-                            className: 'client-dropdown',
+                            className: 'client-dropdown' + (!isRpcMode ? ' client-dropdown--curator' : ''),
                             style: {
                                 position: 'absolute',
                                 top: '100%',
@@ -877,211 +1026,178 @@
                                 // Leaderboard
                                 leaderboardSectionNode
                             ]
-                            // === РЕЖИМ КУРАТОРА: свитч Клиенты / Состязания ===
+                            // === РЕЖИМ КУРАТОРА: клиенты + состязания на одной странице ===
                             : [
-                                // Свитч-переключатель
+                                // Заголовок секции клиентов
                                 React.createElement('div', {
-                                    key: 'curator-switch',
-                                    className: 'curator-dropdown-switch'
-                                },
-                                    React.createElement('button', {
-                                        type: 'button',
-                                        className: 'curator-dropdown-switch__tab' + (curatorView === 'clients' ? ' is-active' : ''),
-                                        onClick: () => setCuratorView('clients')
-                                    }, '👥 Клиенты'),
-                                    React.createElement('button', {
-                                        type: 'button',
-                                        className: 'curator-dropdown-switch__tab' + (curatorView === 'competitions' ? ' is-active' : ''),
-                                        onClick: () => setCuratorView('competitions')
-                                    }, '🏆 Состязания')
-                                ),
-                                // Условный контент
-                                curatorView === 'clients'
-                                    ? React.createElement(React.Fragment, { key: 'clients-view' },
-                                        // Заголовок
-                                        React.createElement('div', {
-                                            key: 'header',
-                                            style: {
-                                                padding: '12px 16px 8px',
-                                                fontSize: 12,
-                                                color: 'var(--muted)',
-                                                fontWeight: 600,
-                                                textTransform: 'uppercase',
-                                                letterSpacing: '0.5px'
-                                            }
-                                        }, `Быстрый выбор (${clients.length})`),
-                                        // Список клиентов (скролл только для списка)
-                                        React.createElement(
-                                            'div',
-                                            {
-                                                key: 'client-list-scroll',
-                                                className: 'client-dropdown-scroll-list',
-                                                style: {
-                                                    maxHeight: clientListMaxHeight,
-                                                    overflowY: 'auto',
-                                                    overflowX: 'hidden',
-                                                    overscrollBehavior: 'contain'
-                                                }
-                                            },
-                                            [...clients]
-                                                .sort((a, b) => {
-                                                    const lastA = readGlobalValue('heys_last_client_id', '') === a.id ? 1 : 0;
-                                                    const lastB = readGlobalValue('heys_last_client_id', '') === b.id ? 1 : 0;
-                                                    if (lastA !== lastB) return lastB - lastA;
-                                                    // Затем по активности (streak)
-                                                    const statsA = getClientStats(a.id);
-                                                    const statsB = getClientStats(b.id);
-                                                    return (statsB.streak || 0) - (statsA.streak || 0);
-                                                })
-                                                .map((c) =>
-                                                    React.createElement(
-                                                        'div',
-                                                        {
-                                                            key: c.id,
-                                                            className: 'client-dropdown-item' + (c.id === clientIdValue ? ' active' : ''),
-                                                            style: {
-                                                                display: 'flex',
-                                                                alignItems: 'center',
-                                                                gap: 10,
-                                                                padding: '10px 16px',
-                                                                cursor: 'pointer',
-                                                                transition: 'background 0.15s',
-                                                                background: c.id === clientIdValue ? 'rgba(102, 126, 234, 0.1)' : 'transparent'
-                                                            },
-                                                            onClick: () => {
-                                                                if (c.id !== clientIdValue) {
-                                                                    commitPendingUndoBeforeContextChange('client-switch', {
-                                                                        fromClientId: clientIdValue,
-                                                                        toClientId: c.id,
-                                                                    });
-                                                                    console.info(`[HEYS.store] 🔄 Выбор клиента: ${c.name} (${c.id.slice(0, 8)}...)`);
-                                                                    // ✅ FIX: Сразу переключаем UI — sync в фоне
-                                                                    // ВАЖНО: сначала обновляем глобальный currentClientId/storage,
-                                                                    // иначе слушатели (например gamification) получают
-                                                                    // heys:client-changed и читают данные прошлого клиента.
-                                                                    writeGlobalValue('heys_last_client_id', c.id);
-                                                                    writeGlobalValue('heys_client_current', c.id);
-                                                                    window.HEYS = window.HEYS || {};
-                                                                    window.HEYS.currentClientId = c.id;
-                                                                    setClientId(c.id);
-                                                                    window.dispatchEvent(new CustomEvent('heys:client-changed', { detail: { clientId: c.id } }));
-
-                                                                    if (HEYS.cloud && HEYS.cloud.switchClient) {
-                                                                        HEYS.cloud.switchClient(c.id).catch(err => {
-                                                                            console.error('[HEYS.store] ❌ Ошибка синхронизации клиента:', err);
-                                                                        });
-                                                                    } else {
-                                                                        U.lsSet('heys_client_current', c.id);
-                                                                    }
-                                                                }
-                                                                setShowClientDropdown(false);
-                                                            }
-                                                        },
-                                                        // Мини-аватар
-                                                        React.createElement('div', {
-                                                            style: {
-                                                                width: 32,
-                                                                height: 32,
-                                                                borderRadius: '50%',
-                                                                background: getAvatarColor(c.name),
-                                                                display: 'flex',
-                                                                alignItems: 'center',
-                                                                justifyContent: 'center',
-                                                                color: '#fff',
-                                                                fontWeight: 600,
-                                                                fontSize: 12,
-                                                                flexShrink: 0
-                                                            }
-                                                        }, getClientInitials(c.name)),
-                                                        // Имя
-                                                        React.createElement('span', {
-                                                            style: {
-                                                                flex: 1,
-                                                                fontWeight: c.id === clientIdValue ? 600 : 400,
-                                                                color: c.id === clientIdValue ? '#4285f4' : 'var(--text)'
-                                                            }
-                                                        }, c.name),
-                                                        // Галочка для выбранного
-                                                        c.id === clientIdValue && React.createElement('span', {
-                                                            style: { color: '#4285f4' }
-                                                        }, '✓')
-                                                    )
-                                                )
-                                        ),
-                                        // Нижний блок действий (визуально закреплённый)
-                                        React.createElement(
-                                            'div',
-                                            {
-                                                key: 'sticky-actions',
-                                                className: 'client-dropdown-sticky-actions'
-                                            },
-                                            // Кнопка "Все клиенты"
+                                    key: 'clients-header',
+                                    className: 'curator-section-header'
+                                }, `👥 Клиенты (${clients.length})`),
+                                // Список клиентов (скролл только для списка)
+                                React.createElement(
+                                    'div',
+                                    {
+                                        key: 'client-list-scroll',
+                                        className: 'client-dropdown-scroll-list',
+                                        style: {
+                                            maxHeight: clientListMaxHeight,
+                                            overflowY: 'auto',
+                                            overflowX: 'hidden',
+                                            overscrollBehavior: 'contain'
+                                        }
+                                    },
+                                    [...clients]
+                                        .sort((a, b) => {
+                                            const lastA = readGlobalValue('heys_last_client_id', '') === a.id ? 1 : 0;
+                                            const lastB = readGlobalValue('heys_last_client_id', '') === b.id ? 1 : 0;
+                                            if (lastA !== lastB) return lastB - lastA;
+                                            const statsA = getClientStats(a.id);
+                                            const statsB = getClientStats(b.id);
+                                            return (statsB.streak || 0) - (statsA.streak || 0);
+                                        })
+                                        .map((c) =>
                                             React.createElement(
                                                 'div',
                                                 {
-                                                    key: 'all-clients',
-                                                    className: 'client-dropdown-sticky-btn client-dropdown-sticky-btn--all',
+                                                    key: c.id,
+                                                    className: 'client-dropdown-item' + (c.id === clientIdValue ? ' active' : ''),
                                                     style: {
-                                                        padding: '10px 16px 12px',
-                                                        textAlign: 'center',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        gap: 10,
+                                                        padding: '10px 16px',
                                                         cursor: 'pointer',
-                                                        fontSize: 14
+                                                        transition: 'background 0.15s',
+                                                        background: c.id === clientIdValue ? 'rgba(102, 126, 234, 0.1)' : 'transparent'
                                                     },
                                                     onClick: () => {
-                                                        commitPendingUndoBeforeContextChange('all-clients-switch', {
-                                                            fromClientId: clientIdValue,
-                                                            toClientId: null,
-                                                        });
-                                                        if (window.HEYS) {
-                                                            window.HEYS.currentClientId = null;
-                                                            if (window.HEYS.store?.flushMemory) {
-                                                                window.HEYS.store.flushMemory();
+                                                        if (c.id !== clientIdValue) {
+                                                            commitPendingUndoBeforeContextChange('client-switch', {
+                                                                fromClientId: clientIdValue,
+                                                                toClientId: c.id,
+                                                            });
+                                                            console.info(`[HEYS.store] 🔄 Выбор клиента: ${c.name} (${c.id.slice(0, 8)}...)`);
+                                                            writeGlobalValue('heys_last_client_id', c.id);
+                                                            writeGlobalValue('heys_client_current', c.id);
+                                                            window.HEYS = window.HEYS || {};
+                                                            window.HEYS.currentClientId = c.id;
+                                                            setClientId(c.id);
+                                                            window.dispatchEvent(new CustomEvent('heys:client-changed', { detail: { clientId: c.id } }));
+
+                                                            if (HEYS.cloud && HEYS.cloud.switchClient) {
+                                                                HEYS.cloud.switchClient(c.id).catch(err => {
+                                                                    console.error('[HEYS.store] ❌ Ошибка синхронизации клиента:', err);
+                                                                });
+                                                            } else {
+                                                                U.lsSet('heys_client_current', c.id);
                                                             }
                                                         }
-                                                        removeGlobalValue('heys_client_current');
-                                                        setClientId('');
-                                                        window.dispatchEvent(new CustomEvent('heys:client-changed', { detail: { clientId: null } }));
                                                         setShowClientDropdown(false);
-                                                    }
-                                                },
-                                                '👥 Все клиенты'
-                                            ),
-                                            // Кнопка Выход с email
-                                            React.createElement(
-                                                'div',
-                                                {
-                                                    key: 'logout',
-                                                    className: 'client-dropdown-sticky-btn client-dropdown-sticky-btn--logout',
-                                                    style: {
-                                                        padding: '8px 16px 12px',
-                                                        textAlign: 'center',
-                                                        cursor: 'pointer',
-                                                        fontSize: 13
-                                                    },
-                                                    onClick: () => {
-                                                        setShowClientDropdown(false);
-                                                        handleSignOut();
                                                     }
                                                 },
                                                 React.createElement('div', {
-                                                    className: 'client-dropdown-sticky-email',
-                                                    style: { fontSize: 11, marginBottom: 4 }
-                                                }, cloudUser?.email || ''),
+                                                    style: {
+                                                        width: 32,
+                                                        height: 32,
+                                                        borderRadius: '50%',
+                                                        background: getAvatarColor(c.name),
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        color: '#fff',
+                                                        fontWeight: 600,
+                                                        fontSize: 12,
+                                                        flexShrink: 0
+                                                    }
+                                                }, getClientInitials(c.name)),
                                                 React.createElement('span', {
-                                                    className: 'client-dropdown-sticky-logout-label'
-                                                }, '🚪 Выйти')
+                                                    style: {
+                                                        flex: 1,
+                                                        fontWeight: c.id === clientIdValue ? 600 : 400,
+                                                        color: c.id === clientIdValue ? '#4285f4' : 'var(--text)'
+                                                    }
+                                                }, c.name),
+                                                c.id === clientIdValue && React.createElement('span', {
+                                                    style: { color: '#4285f4' }
+                                                }, '✓')
                                             )
                                         )
+                                ),
+                                // Кнопки действий (стиль карточек как у PIN-клиента)
+                                React.createElement('div', {
+                                    key: 'actions',
+                                    className: 'client-dropdown-account__actions'
+                                },
+                                    React.createElement('button', {
+                                        type: 'button',
+                                        key: 'all-clients',
+                                        className: 'client-dropdown-account__action client-dropdown-account__action--all-clients',
+                                        onClick: () => {
+                                            commitPendingUndoBeforeContextChange('all-clients-switch', {
+                                                fromClientId: clientIdValue,
+                                                toClientId: null,
+                                            });
+                                            if (window.HEYS) {
+                                                window.HEYS.currentClientId = null;
+                                                if (window.HEYS.store?.flushMemory) {
+                                                    window.HEYS.store.flushMemory();
+                                                }
+                                            }
+                                            removeGlobalValue('heys_client_current');
+                                            setClientId('');
+                                            window.dispatchEvent(new CustomEvent('heys:client-changed', { detail: { clientId: null } }));
+                                            setShowClientDropdown(false);
+                                        }
+                                    },
+                                        React.createElement('span', {
+                                            className: 'client-dropdown-account__action-icon'
+                                        }, '👥'),
+                                        React.createElement('span', {
+                                            className: 'client-dropdown-account__action-copy'
+                                        },
+                                            React.createElement('span', {
+                                                className: 'client-dropdown-account__action-title'
+                                            }, 'Все клиенты'),
+                                            React.createElement('span', {
+                                                className: 'client-dropdown-account__action-subtitle'
+                                            }, 'Общий вид')
+                                        )
+                                    ),
+                                    React.createElement('button', {
+                                        type: 'button',
+                                        key: 'logout',
+                                        className: 'client-dropdown-account__action client-dropdown-account__action--logout',
+                                        onClick: () => {
+                                            setShowClientDropdown(false);
+                                            handleSignOut();
+                                        }
+                                    },
+                                        React.createElement('span', {
+                                            className: 'client-dropdown-account__action-icon'
+                                        }, '🚪'),
+                                        React.createElement('span', {
+                                            className: 'client-dropdown-account__action-copy'
+                                        },
+                                            React.createElement('span', {
+                                                className: 'client-dropdown-account__action-title'
+                                            }, 'Выйти'),
+                                            React.createElement('span', {
+                                                className: 'client-dropdown-account__action-subtitle'
+                                            }, cloudUser?.email || 'Сменить аккаунт')
+                                        )
                                     )
-                                    // === Вкладка Состязания ===
-                                    : React.createElement(React.Fragment, { key: 'competitions-view' },
-                                        curatorCompetitionLoading && React.createElement('div', {
-                                            className: 'curator-competitions-loading'
-                                        }, 'Подтягиваем данные других клиентов…'),
-                                        leaderboardSectionNode || React.createElement('div', {
-                                            className: 'curator-competitions-empty'
-                                        }, curatorCompetitionLoading ? 'Загружаем состязания…' : 'Пока нет данных для состязаний')
-                                    )
+                                ),
+                                // Разделитель
+                                React.createElement('div', { key: 'divider', className: 'client-dropdown-divider' }),
+                                // Секция состязаний
+                                React.createElement('div', { key: 'competitions-section', className: 'curator-competitions-section' },
+                                    curatorCompetitionLoading && !shouldShowLeaderboardSkeleton && React.createElement('div', {
+                                        className: 'curator-competitions-loading'
+                                    }, 'Подтягиваем данные других клиентов…'),
+                                    leaderboardSectionNode || React.createElement('div', {
+                                        className: 'curator-competitions-empty'
+                                    }, curatorCompetitionLoading ? 'Загружаем состязания…' : 'Пока нет данных для состязаний')
+                                )
                             ]
                     ),
 
