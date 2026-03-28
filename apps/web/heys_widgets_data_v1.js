@@ -280,6 +280,25 @@
                     const pIndex = profile?.pIndex || 0;
                     const normAbs = HEYS.norms?.getNormAbs?.(profile, pIndex) || {};
 
+                    // Cascade data for embedded cascade strip in 3x2/4x2 macros widget
+                    let cascade = { hasData: false, pct: 0, trend: 'flat', events: [] };
+                    try {
+                        const cascadeApi = HEYS.CascadeCard;
+                        if (typeof cascadeApi?.computeExactCascadeSnapshot === 'function') {
+                            const snap = cascadeApi.computeExactCascadeSnapshot(dayData, profile, { silent: true }) || {};
+                            const result = snap?.result || {};
+                            const events = Array.isArray(result?.events) ? result.events : [];
+                            const crs = Number(result?.crs) || 0;
+                            cascade = {
+                                hasData: events.length > 0,
+                                crs,
+                                pct: Math.max(0, Math.min(100, Math.round(crs * 100))),
+                                trend: result?.crsTrend || 'flat',
+                                events
+                            };
+                        }
+                    } catch (e) { /* cascade is optional */ }
+
                     return {
                         prot: dayTot.prot || 0,
                         fat: dayTot.fat || 0,
@@ -289,7 +308,8 @@
                         targetCarbs: normAbs.carbs || 0,
                         protPct: normAbs.prot > 0 ? Math.round((dayTot.prot / normAbs.prot) * 100) : 0,
                         fatPct: normAbs.fat > 0 ? Math.round((dayTot.fat / normAbs.fat) * 100) : 0,
-                        carbsPct: normAbs.carbs > 0 ? Math.round((dayTot.carbs / normAbs.carbs) * 100) : 0
+                        carbsPct: normAbs.carbs > 0 ? Math.round((dayTot.carbs / normAbs.carbs) * 100) : 0,
+                        cascade
                     };
                 }
 

@@ -301,6 +301,8 @@
     const placeholders = Array.from({ length: placeholderCount });
     const dotsToRender = hasData ? events : placeholders;
     const showDayBalanceBadge = options.showDayBalanceBadge === true && hasData;
+    const metricInlineWithLabel = options.metricInlineWithLabel === true && showDayBalanceBadge;
+    const footerLabel = options.footerLabel || 'Позитивный каскад';
     const dayBalanceMeta = getCascadeDayBalanceMeta(allEvents);
     // Per-date CEB cache override: use accurate full-cascade CEB when available
     if (typeof data?.cebCached === 'number') {
@@ -314,11 +316,14 @@
     const dayBalanceOpacity = 0.45 + dayBalanceMeta.confidence * 0.55;
 
     return React.createElement('div', {
-      className: ['widget-cascade', `widget-cascade--${size}`, extraClassName, !hasData ? 'widget-cascade--empty' : '']
+      className: ['widget-cascade', `widget-cascade--${size}`, extraClassName, metricInlineWithLabel ? 'widget-cascade--metric-inline' : '', !hasData ? 'widget-cascade--empty' : '']
         .filter(Boolean)
         .join(' ')
     },
-      React.createElement('div', { className: 'widget-cascade__dots' },
+      React.createElement('div', {
+        className: 'widget-cascade__dots',
+        style: { '--dot-total': dotsToRender.length }
+      },
         dotsToRender.map((event, index) => {
           if (!event) {
             return React.createElement('span', {
@@ -336,31 +341,56 @@
           return React.createElement('span', {
             key: `cascade-dot-${index}-${event?.type || 'event'}`,
             className: `widget-cascade__dot widget-cascade__dot--${tone} ${isLatestPositive ? 'widget-cascade__dot--latest' : ''}`,
+            style: { '--dot-i': index },
             title: `${event?.label || 'Событие'} (${weightLabel})`
           });
         })
       ),
       showDayBalanceBadge
-        ? React.createElement('div', { className: 'widget-cascade__aside' },
-          React.createElement('div', {
-            className: `widget-cascade__day-balance widget-cascade__day-balance--${dayBalanceMeta.tone}${dayBalanceMeta.isEarly ? ' widget-cascade__day-balance--early' : ''}`,
-            style: { opacity: dayBalanceOpacity },
-            title: `Баланс дня${dayBalanceMeta.isEarly ? ' (предварительно)' : ''}`
-          },
-            React.createElement('span', { className: 'widget-cascade__day-balance-label' }, 'Баланс дня'),
-            React.createElement('span', { className: 'widget-cascade__day-balance-value' }, dayBalanceMeta.score.toFixed(1))
-          ),
-          React.createElement('div', {
-            className: `widget-cascade__metric widget-cascade__metric--${badgeTone}`,
-            title: trendMeta.label
-          },
-            React.createElement('span', { className: 'widget-cascade__metric-value' }, `${pct}%`),
-            React.createElement('span', {
-              className: `widget-cascade__metric-arrow widget-cascade__metric-arrow--${trendMeta.key}`,
-              'aria-label': trendMeta.label
-            }, trendMeta.arrow)
+        ? metricInlineWithLabel
+          ? [
+            React.createElement('div', { className: 'widget-cascade__aside', key: 'cascade-aside' },
+              React.createElement('div', {
+                className: `widget-cascade__day-balance widget-cascade__day-balance--${dayBalanceMeta.tone}${dayBalanceMeta.isEarly ? ' widget-cascade__day-balance--early' : ''}`,
+                style: { opacity: dayBalanceOpacity },
+                title: `Баланс дня${dayBalanceMeta.isEarly ? ' (предварительно)' : ''}`
+              },
+                React.createElement('span', { className: 'widget-cascade__day-balance-value' }, dayBalanceMeta.score.toFixed(1))
+              )
+            ),
+            React.createElement('div', { className: 'widget-cascade__footer', key: 'cascade-footer' },
+              React.createElement('span', { className: 'widget-cascade__footer-label' }, footerLabel),
+              React.createElement('div', {
+                className: `widget-cascade__metric widget-cascade__metric--${badgeTone}`,
+                title: trendMeta.label
+              },
+                React.createElement('span', { className: 'widget-cascade__metric-value' }, `${pct}%`),
+                React.createElement('span', {
+                  className: `widget-cascade__metric-arrow widget-cascade__metric-arrow--${trendMeta.key}`,
+                  'aria-label': trendMeta.label
+                }, trendMeta.arrow)
+              )
+            )
+          ]
+          : React.createElement('div', { className: 'widget-cascade__aside' },
+            React.createElement('div', {
+              className: `widget-cascade__day-balance widget-cascade__day-balance--${dayBalanceMeta.tone}${dayBalanceMeta.isEarly ? ' widget-cascade__day-balance--early' : ''}`,
+              style: { opacity: dayBalanceOpacity },
+              title: `Баланс дня${dayBalanceMeta.isEarly ? ' (предварительно)' : ''}`
+            },
+              React.createElement('span', { className: 'widget-cascade__day-balance-value' }, dayBalanceMeta.score.toFixed(1))
+            ),
+            React.createElement('div', {
+              className: `widget-cascade__metric widget-cascade__metric--${badgeTone}`,
+              title: trendMeta.label
+            },
+              React.createElement('span', { className: 'widget-cascade__metric-value' }, `${pct}%`),
+              React.createElement('span', {
+                className: `widget-cascade__metric-arrow widget-cascade__metric-arrow--${trendMeta.key}`,
+                'aria-label': trendMeta.label
+              }, trendMeta.arrow)
+            )
           )
-        )
         : React.createElement('div', {
           className: `widget-cascade__badge widget-cascade__badge--${badgeTone}`,
           title: trendMeta.label
@@ -1390,6 +1420,12 @@
       };
       window.addEventListener('heysWaterAdded', handleWaterAdded);
 
+      // Cascade refresh: listen for CRS recompute so macros/cascade widgets update after client switch
+      const handleCrsUpdated = (widget.type === 'macros' || widget.type === 'cascade') ? loadData : null;
+      if (handleCrsUpdated) {
+        window.addEventListener('heys:crs-updated', handleCrsUpdated);
+      }
+
       return () => {
         unsubData?.();
         unsubSettings?.();
@@ -1399,6 +1435,9 @@
           }
         });
         window.removeEventListener('heysWaterAdded', handleWaterAdded);
+        if (handleCrsUpdated) {
+          window.removeEventListener('heys:crs-updated', handleCrsUpdated);
+        }
       };
     }, [widget.id, widget.type]);
 
@@ -3473,6 +3512,8 @@
             placeholderCount: 6,
             className: 'widget-cascade--embedded',
             showDayBalanceBadge: true,
+            metricInlineWithLabel: true,
+            footerLabel: 'Позитивный каскад',
             useLiveCurrentCascade: true
           })
         )
@@ -6530,6 +6571,10 @@
     useEffect(() => {
       if (clientId) {
         console.info(`[WidgetsTab] clientId changed: "${clientId.slice(0, 8)}...", reinitializing widgets`);
+        // Сброс глобального кэша каскада, чтобы useLiveCurrentCascade не показывал данные предыдущего клиента
+        if (window.HEYS) {
+          window.HEYS._lastCrs = null;
+        }
         // Передаём clientId явно, т.к. HEYS.currentClientId может ещё не обновиться (race condition)
         HEYS.Widgets.state?.reinit?.(clientId);
         // НЕ вызываем setWidgets здесь — reinit асинхронный: getWidgets() вернёт []

@@ -1459,6 +1459,8 @@ body:has(.page-reports) .hdr::after {
   flex: 0 0 auto;
   border-radius: 999px;
   box-shadow: 0 3px 10px rgba(15, 23, 42, 0.12);
+  animation: widget-cascade-pop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  animation-delay: calc(var(--dot-i, 0) * 60ms);
 }
 
 .widget-cascade__dot--bad {
@@ -1488,6 +1490,7 @@ body:has(.page-reports) .hdr::after {
 .widget-cascade__dot--placeholder {
   background: rgba(148, 163, 184, 0.26);
   box-shadow: none;
+  animation: none;
 }
 
 .widget-cascade__dot--latest {
@@ -1629,6 +1632,27 @@ body:has(.page-reports) .hdr::after {
   opacity: 0.9;
 }
 
+.widget-cascade__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 0;
+}
+
+.widget-cascade__footer-label {
+  min-width: 0;
+  font-size: 10px;
+  font-weight: 400;
+  line-height: 1.1;
+  letter-spacing: 0.02em;
+  color: rgba(22, 163, 74, 0.78);
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.42);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .widget-cascade--3x1 {
   padding-inline: 11px;
 }
@@ -1671,6 +1695,18 @@ body:has(.page-reports) .hdr::after {
   50% {
     transform: scale(1.18);
     opacity: 0.72;
+  }
+}
+
+@keyframes widget-cascade-pop {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+
+  100% {
+    transform: scale(1);
+    opacity: 1;
   }
 }
 
@@ -4842,27 +4878,42 @@ body:has(.page-reports) .hdr::after {
 
 /* --- Macros Widget 3×2 — Кольца + Cascade row --- */
 .widget-macros--3x2.widget-macros--rings {
-  gap: calc(6px + var(--widget-scale-gap-sm));
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 0;
   padding: 8px 10px 10px;
 }
 
 .widget-macros--3x2 .widget-macros__rings-wrap {
   align-items: flex-start;
+  flex: 0 0 auto;
+  min-height: auto;
+  overflow: visible;
 }
 
 .widget-macros--3x2 .widget-macros__rings {
-  gap: calc(10px + var(--widget-scale-gap-sm));
+  gap: calc(8px + var(--widget-scale-gap-xs));
   height: auto;
-  justify-content: flex-start;
+  justify-content: center;
+  align-items: flex-start;
 }
 
 .widget-macros--3x2 .macro-ring-item {
-  gap: calc(4px + var(--widget-scale-gap-xs));
+  gap: 3px;
 }
 
 .widget-macros--3x2 .macro-ring {
-  width: 64px;
-  height: 64px;
+  width: 60px;
+  height: 60px;
+}
+
+.widget-macros--3x2 .macro-ring-label {
+  font-size: 11px;
+}
+
+.widget-macros--3x2 .macro-ring-target {
+  font-size: 10px;
 }
 
 .widget-macros--3x2 .macro-ring-value {
@@ -4876,41 +4927,55 @@ body:has(.page-reports) .hdr::after {
 
 .widget-macros__cascade-row {
   width: 100%;
-  margin-top: auto;
-  padding-top: calc(10px + var(--widget-scale-gap-xs));
+  padding-top: 15px;
+  margin-top: 0;
+  border-top: 1px solid rgba(148, 163, 184, 0.13);
 }
 
 .widget-macros__cascade-row .widget-cascade {
-  align-items: start;
+  grid-template-rows: auto auto;
+  align-items: center;
   padding-inline: 5.5px;
   column-gap: calc(16px + var(--widget-scale-gap-md));
-  min-height: calc(28px + var(--widget-scale-gap-sm));
+  row-gap: 8px;
+  min-height: calc(32px + var(--widget-scale-gap-sm));
 }
 
 .widget-macros__cascade-row .widget-cascade__dots {
-  flex-wrap: wrap;
-  align-items: flex-start;
-  align-content: flex-start;
-  margin-block-start: 6px;
-  row-gap: calc(5px + var(--widget-scale-gap-xs));
+  grid-column: 1;
+  grid-row: 1;
+  align-self: center;
+  flex-wrap: nowrap;
+  align-items: center;
+  margin-block-start: 0;
+  gap: clamp(3px, calc(6px - (var(--dot-total, 8) - 8) * 0.5px), 6px);
   padding-inline-end: 0;
 }
 
 .widget-macros__cascade-row .widget-cascade__dots::after {
+  display: none;
+}
+
+.widget-macros__cascade-row .widget-cascade:not(.widget-cascade--metric-inline)::after {
   content: 'Позитивный каскад';
-  flex: 0 0 100%;
   display: block;
+  grid-column: 1;
+  grid-row: 2;
   font-size: 10px;
   font-weight: 400;
   line-height: 1.1;
   letter-spacing: 0.02em;
   color: rgba(22, 163, 74, 0.78);
   text-shadow: 0 1px 0 rgba(255, 255, 255, 0.42);
+  margin-top: 4px;
 }
 
 .widget-macros__cascade-row .widget-cascade__dot {
-  width: 10px;
-  height: 10px;
+  width: clamp(6px, calc(10px - (var(--dot-total, 8) - 10) * 0.4px), 10px);
+  height: clamp(6px, calc(10px - (var(--dot-total, 8) - 10) * 0.4px), 10px);
+  flex-shrink: 1;
+  min-width: 6px;
+  min-height: 6px;
 }
 
 .widget-macros__cascade-row .widget-cascade__badge {
@@ -4921,10 +4986,22 @@ body:has(.page-reports) .hdr::after {
 }
 
 .widget-macros__cascade-row .widget-cascade__aside {
-  align-self: start;
+  grid-column: 2;
+  grid-row: 1;
+  align-self: center;
   justify-self: end;
   align-items: flex-end;
   margin-inline-start: auto;
+}
+
+.widget-macros__cascade-row .widget-cascade__footer {
+  grid-column: 1 / -1;
+  grid-row: 2;
+}
+
+.widget-macros__cascade-row .widget-cascade__footer .widget-cascade__metric {
+  justify-content: flex-end;
+  padding-inline-end: 0;
 }
 
 .widget-macros__cascade-row .widget-cascade__day-balance {

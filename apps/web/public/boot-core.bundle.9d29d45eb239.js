@@ -17286,6 +17286,9 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
     DAY_CLIENT: 'day_'
   };
 
+  /** Scoped key pattern: heys_{uuid}_... */
+  const CLIENT_SCOPED_KEY_RE = /^heys_([a-f0-9-]{36})_/i;
+
   /** Возможные статусы подключения */
   const CONNECTION_STATUS = {
     OFFLINE: 'offline',
@@ -17298,6 +17301,89 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
   // 🔧 УТИЛИТЫ
   // ═══════════════════════════════════════════════════════════════════
 
+  function stripClientScopePrefixes(key) {
+    if (typeof key !== 'string') {
+      return { key, strippedClientIds: [] };
+    }
+
+    let normalized = key;
+    const strippedClientIds = [];
+    let guard = 0;
+
+    while (guard < 4) {
+      const match = normalized.match(CLIENT_SCOPED_KEY_RE);
+      if (!match) break;
+      strippedClientIds.push(match[1]);
+      normalized = `heys_${normalized.slice(match[0].length)}`;
+      guard += 1;
+    }
+
+    return { key: normalized, strippedClientIds };
+  }
+
+  function getLeadingClientScopeId(key) {
+    const match = typeof key === 'string' ? key.match(CLIENT_SCOPED_KEY_RE) : null;
+    return match ? match[1] : '';
+  }
+
+  function stripCurrentClientScopePrefixes(key, clientId) {
+    if (!clientId || typeof key !== 'string') return key;
+
+    let normalized = key;
+    const ownPrefix = `heys_${clientId}_`;
+    let guard = 0;
+
+    while (guard < 4 && normalized.startsWith(ownPrefix)) {
+      normalized = `heys_${normalized.slice(ownPrefix.length)}`;
+      guard += 1;
+    }
+
+    return normalized;
+  }
+
+  function isForeignClientScopedKey(key, clientId) {
+    if (!clientId || typeof key !== 'string') return false;
+    const leadingClientId = getLeadingClientScopeId(key);
+    return !!leadingClientId && leadingClientId !== clientId;
+  }
+
+  // 🔧 Dedup set: log foreign dayv2 scope-fix only once per unique input key
+  const _scopeFixLoggedKeys = new Set();
+
+  function scopeKeyForClientStorage(key, clientId) {
+    if (!clientId || typeof key !== 'string') return key;
+
+    let normalized = stripCurrentClientScopePrefixes(key, clientId);
+
+    if (normalized.startsWith(`heys_${clientId}_`)) {
+      return normalized;
+    }
+
+    if (isForeignClientScopedKey(normalized, clientId)) {
+      if (normalized.includes('dayv2_')) {
+        const stripped = stripClientScopePrefixes(normalized);
+        normalized = stripped.key;
+        if (!_scopeFixLoggedKeys.has(key)) {
+          _scopeFixLoggedKeys.add(key);
+          logCritical(`🐛 [SCOPE] Fixed foreign-scoped day key for current client: ${key} → ${normalized}`);
+        }
+      } else {
+        return normalized;
+      }
+    }
+
+
+    if (normalized.startsWith('heys_')) {
+      return `heys_${clientId}_${normalized.slice('heys_'.length)}`;
+    }
+
+    if (normalized.startsWith('day_')) {
+      return `day_${clientId}_${normalized.slice('day_'.length)}`;
+    }
+
+    return normalized;
+  }
+
   /**
    * Нормализует ключ для Supabase: убирает embedded client_id
    * heys_{clientId}_dayv2_2025-12-11 → heys_dayv2_2025-12-11
@@ -17308,10 +17394,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
   function normalizeKeyForSupabase(key, clientId) {
     if (!clientId || typeof key !== 'string') return key;
 
-    const scopedPrefix = `heys_${clientId}_`;
-    const doubleScopedPrefix = `heys_${clientId}_${clientId}_`;
     const feedbackKey = `heys_insights_feedback_${clientId}`;
-    let normalized = key;
+    const normalized = stripCurrentClientScopePrefixes(key, clientId);
 
     // Специальный случай: feedback loop уже хранит client_id в суффиксе ключа,
     // а в client_kv_store client_id лежит отдельной колонкой.
@@ -17319,16 +17403,11 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
       return 'heys_insights_feedback';
     }
 
-    // Явный баг двойного prefix: heys_{id}_{id}_X → heys_X
-    if (normalized.startsWith(doubleScopedPrefix)) {
-      normalized = `heys_${normalized.slice(doubleScopedPrefix.length)}`;
-      logCritical(`🐛 [NORMALIZE] Fixed double client_id in key: ${key} → ${normalized}`);
-      return normalized;
-    }
-
-    // Обычный scoped key: heys_{id}_X → heys_X
-    if (normalized.startsWith(scopedPrefix)) {
-      return `heys_${normalized.slice(scopedPrefix.length)}`;
+    // 🔧 FIX: Если ключ всё ещё содержит чужой client scope — стрипаем ВСЕ
+    // scope-префиксы. Cloud хранит ключи без embedded clientId (client_id
+    // лежит в отдельной колонке), поэтому foreign prefix нужно убирать.
+    if (isForeignClientScopedKey(normalized, clientId)) {
+      return stripClientScopePrefixes(normalized).key;
     }
 
     return normalized;
@@ -17592,6 +17671,9 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
     }
 
     logCritical('[syncClient] START clientId:', clientId?.slice(0, 8), 'user:', !!user, 'isPinAuth:', _rpcOnlyMode && _pinAuthClientId === clientId);
+
+    // 🔧 Clear scope-fix dedup log set for fresh sync cycle
+    _scopeFixLoggedKeys.clear();
 
     const isPinAuth = _rpcOnlyMode && _pinAuthClientId === clientId;
 
@@ -18427,8 +18509,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
     const normalizedKey = String(item.k || '');
     if (!normalizedKey) return '';
 
-    if (item.client_id && normalizedKey.startsWith('heys_') && !normalizedKey.startsWith(`heys_${item.client_id}_`)) {
-      return `heys_${item.client_id}_${normalizedKey.slice('heys_'.length)}`;
+    if (item.client_id) {
+      return scopeKeyForClientStorage(normalizedKey, item.client_id);
     }
 
     return normalizedKey;
@@ -18544,7 +18626,6 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
   const HYDRATION_DAY_QUOTA_SKIP_AFTER_DAYS = 45; // Старые dayv2 оставляем в cloud, если localStorage уже упёрся в quota
   const QUOTA_LOG_THROTTLE_MS = 5000;
   const QUOTA_CLEANUP_COOLDOWN_MS = 3000;
-  const CLIENT_SCOPED_KEY_RE = /^heys_([a-f0-9-]{36})_/i;
   const quotaLogTimestamps = new Map();
   let _lastAggressiveCleanupAt = 0;
 
@@ -19775,7 +19856,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
 
     // Извлекаем базовый ключ из scoped (heys_{clientId}_game → heys_game)
     // Pattern: heys_{uuid}_suffix → heys_suffix
-    const baseKey = k.replace(/^heys_[a-f0-9-]{36}_/, 'heys_');
+    const baseKey = stripClientScopePrefixes(String(k || '')).key;
 
     // Проверяем общие client-specific ключи
     if (CLIENT_SPECIFIC_KEYS.includes(k) || CLIENT_SPECIFIC_KEYS.includes(baseKey)) return true;
@@ -21155,7 +21236,10 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
       (data || []).forEach(row => {
         try {
           // Ключи в client_kv_store уже нормализованы (heys_profile, heys_dayv2_2025-12-12)
-          // Нужно добавить clientId для локального хранения
+          if (isForeignClientScopedKey(key, client_id) && !key.includes('dayv2_')) {
+            logCritical(`🐛 [LOAD SKIP] Skipping foreign-scoped key for other client: ${row.k}`);
+            return;
+          }
           const localKey = `heys_${clientId}_${row.k.replace(/^heys_/, '')}`;
 
           // 🔧 FIX 2025-12-26: Декомпрессия данных из cloud
@@ -21168,9 +21252,6 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
               log(`🔧 [YANDEX SYNC] Decompressed ${row.k} from cloud`);
             }
           }
-
-          // 🛡️ v64 FIX: НЕ записываем null/undefined dayv2 в localStorage
-          // Cloud может вернуть row.v = null → JSON.stringify(null) = "null" → getDayData ломается
           const isDayKey = localKey.includes('dayv2_');
           if (isDayKey && (valueToStore == null || valueToStore === 'null')) {
             logCritical(`🛡️ [YANDEX SYNC] SKIP NULL dayv2: ${localKey}`);
@@ -21413,6 +21494,78 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
       (Array.isArray(data.supplementsTaken) && data.supplementsTaken.length > 0)) return true;
     return false;
   };
+
+  function getDayDataSyncScore(value) {
+    const meals = Array.isArray(value?.meals) ? value.meals : [];
+    const mealsWithItems = meals.filter(meal => Array.isArray(meal?.items) && meal.items.length > 0).length;
+    const totalItems = meals.reduce((sum, meal) => sum + (Array.isArray(meal?.items) ? meal.items.length : 0), 0);
+    const trainings = Array.isArray(value?.trainings) ? value.trainings.filter(Boolean).length : 0;
+    const savedEatenKcal = Number(value?.savedEatenKcal || 0);
+    const hasDayTot = !!(value?.dayTot && typeof value.dayTot === 'object' && Object.keys(value.dayTot).length > 0);
+    const meaningful = isMeaningfulDayData(value);
+
+    return {
+      meaningful,
+      mealsCount: meals.length,
+      mealsWithItems,
+      totalItems,
+      trainings,
+      savedEatenKcal,
+      hasDayTot,
+      score:
+        (meaningful ? 1000 : 0) +
+        (totalItems * 100) +
+        (mealsWithItems * 20) +
+        (meals.length * 5) +
+        (savedEatenKcal > 0 ? 25 : 0) +
+        (hasDayTot ? 15 : 0) +
+        trainings
+    };
+  }
+
+  function readDayV2Backup(key) {
+    try {
+      if (!key || !key.includes('dayv2_') || key.includes('dayv2_backup_')) return null;
+      const backupKey = key.replace('dayv2_', 'dayv2_backup_');
+      const raw = global.localStorage.getItem(backupKey);
+      if (!raw) return null;
+      const payload = tryParse(raw);
+      const data = payload?.data || null;
+      if (!data || typeof data !== 'object') return null;
+      return { backupKey, payload, data };
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function maybeRestoreDayV2FromBackup(key, incomingValue, source = 'sync') {
+    const backupEntry = readDayV2Backup(key);
+    if (!backupEntry) return { value: incomingValue, restored: false };
+
+    const incomingStats = getDayDataSyncScore(incomingValue);
+    const backupStats = getDayDataSyncScore(backupEntry.data);
+    if (!backupStats.meaningful) return { value: incomingValue, restored: false };
+
+    const incomingUpdatedAt = incomingValue?.updatedAt || 0;
+    const backupUpdatedAt = backupEntry.data?.updatedAt || backupEntry.payload?.localUpdatedAt || 0;
+
+    const shouldRestore = backupStats.score > incomingStats.score && (
+      backupUpdatedAt >= incomingUpdatedAt ||
+      backupStats.totalItems > incomingStats.totalItems ||
+      (incomingStats.savedEatenKcal === 0 && backupStats.savedEatenKcal > 0)
+    );
+
+    if (!shouldRestore) {
+      return { value: incomingValue, restored: false };
+    }
+
+    logCritical(
+      `🛡️ [DAYV2 BACKUP RESTORE] ${key}: using backup (${backupStats.totalItems} items, kcal=${backupStats.savedEatenKcal}, updAt=${backupUpdatedAt}) ` +
+      `over incoming (${incomingStats.totalItems} items, kcal=${incomingStats.savedEatenKcal}, updAt=${incomingUpdatedAt}) | source=${source}`
+    );
+
+    return { value: backupEntry.data, restored: true, backupKey: backupEntry.backupKey };
+  }
 
   /**
    * 🧷 Backup dayv2 before overwriting with remote data
@@ -21728,19 +21881,16 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
                 const lsPhaseA = global.localStorage;
                 phaseAData.forEach(row => {
                   if (row.v == null) return;
-                  let pKey = row.k;
-                  if (pKey.includes(client_id)) {
-                    pKey = pKey.replace(`heys_${client_id}_`, 'heys_');
-                  }
-                  if (pKey.startsWith('heys_') && !pKey.includes(client_id)) {
-                    pKey = 'heys_' + client_id + '_' + pKey.substring('heys_'.length);
-                  }
-                  try { lsPhaseA.setItem(pKey, JSON.stringify(row.v)); } catch (_) { }
+                  const pKey = scopeKeyForClientStorage(row.k, client_id);
+                  const pPhaseA = pKey.includes('dayv2_')
+                    ? maybeRestoreDayV2FromBackup(pKey, row.v, 'phaseA').value
+                    : row.v;
+                  try { lsPhaseA.setItem(pKey, JSON.stringify(pPhaseA)); } catch (_) { }
                   // 📊 Логируем dayv2 сегодня при Phase A
                   if (pKey.includes('dayv2_')) {
                     const _phADate = pKey.match(/dayv2_(\d{4}-\d{2}-\d{2})/);
                     if (_phADate) {
-                      const _phAVal = row.v;
+                      const _phAVal = pPhaseA;
                       const _phAMeals = Array.isArray(_phAVal?.meals) ? _phAVal.meals.length : 0;
                       const _phAKcal = _phAVal?.savedEatenKcal || 0;
                       const _phAVType = typeof _phAVal;
@@ -21948,14 +22098,10 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
           const lightSyncedKeys = [];
           (data || []).forEach(row => {
             try {
-              let key = row.k;
-              // Нормализуем ключ: убираем и добавляем clientId
-              if (key.includes(client_id)) {
-                key = key.replace(`heys_${client_id}_`, 'heys_');
-                key = key.replace(`_${client_id}_`, '_');
-              }
-              if (key.startsWith('heys_') && !key.includes(client_id)) {
-                key = 'heys_' + client_id + '_' + key.substring('heys_'.length);
+              const key = scopeKeyForClientStorage(row.k, client_id);
+              if (isForeignClientScopedKey(key, client_id) && !key.includes('dayv2_')) {
+                logCritical(`🐛 [LOAD SKIP] Skipping foreign-scoped key for other client: ${row.k}`);
+                return;
               }
 
               let valueToStore = row.v;
@@ -21968,6 +22114,9 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
               }
               // Пропускаем null dayv2
               if (key.includes('dayv2_') && (valueToStore == null || valueToStore === 'null')) return;
+              if (key.includes('dayv2_')) {
+                valueToStore = maybeRestoreDayV2FromBackup(key, valueToStore, 'delta-light').value;
+              }
 
               // 📊 Delta light: логируем dayv2 записи
               if (key.includes('dayv2_')) {
@@ -22136,16 +22285,22 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
         // 🔄 ФАЗ 1: ДЕДУПЛИКАЦИЯ — если несколько ключей в БД превращаются в один scoped key,
         // берём самый свежий по updated_at (поле БД, не JSON)
         const keyGroups = new Map(); // scopedKey → [{ row, updated_at_ts }]
-        const uuidPattern = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi;
 
         (data || []).forEach(row => {
-          let key = row.k;
+          let key = scopeKeyForClientStorage(row.k, client_id);
+
+          if (isForeignClientScopedKey(key, client_id) && !key.includes('dayv2_')) {
+            logCritical(`🐛 [LOAD SKIP] Skipping foreign-scoped key for other client: ${row.k}`);
+            return;
+          }
 
           // 🔒 ФИЛЬТРАЦИЯ: пропускаем проблемные ключи
-          // 1. Ключи с двумя или более UUID (баг двойного clientId)
-          const uuids = key.match(uuidPattern);
-          if (uuids && uuids.length >= 2) {
-            logCritical(`🐛 [LOAD SKIP] Skipping key with multiple UUIDs: ${key}`);
+          // 1. Ключи с двумя или более ВЛОЖЕННЫМИ client-scope префиксами
+          //    (баг двойного clientId: heys_uuid1_uuid2_dayv2_...) — но НЕ ключи
+          //    с UUID в суффиксе (last_grams_<productId>, insights_feedback_<clientId>, xp_cache)
+          const { strippedClientIds: _nestedScopes } = stripClientScopePrefixes(row.k);
+          if (_nestedScopes.length >= 2) {
+            logCritical(`🐛 [LOAD SKIP] Skipping double-scoped key: ${row.k} (${_nestedScopes.length} nested prefixes)`);
             return;
           }
 
@@ -22153,17 +22308,6 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
           if (key.includes('"')) {
             logCritical(`🐛 [LOAD SKIP] Skipping key with quotes: ${key}`);
             return;
-          }
-
-          // Нормализуем: убираем client_id для получения scoped key
-          if (key.includes(client_id)) {
-            key = key.replace(`heys_${client_id}_`, 'heys_');
-            key = key.replace(`_${client_id}_`, '_');
-          }
-
-          // Добавляем client_id для localStorage
-          if (key.startsWith('heys_') && !key.includes(client_id)) {
-            key = 'heys_' + client_id + '_' + key.substring('heys_'.length);
           }
 
           // Группируем по scoped key
@@ -22221,6 +22365,31 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
           return winner;
         };
 
+        const chooseBestDayRow = (group, scopedKey) => {
+          const scored = group.map(item => ({
+            ...item,
+            dayStats: getDayDataSyncScore(item?.row?.v)
+          }));
+
+          const latestByUpdatedAt = [...scored].sort((a, b) => b.updated_at_ts - a.updated_at_ts)[0];
+          scored.sort((a, b) => {
+            if (b.dayStats.score !== a.dayStats.score) return b.dayStats.score - a.dayStats.score;
+            return b.updated_at_ts - a.updated_at_ts;
+          });
+
+          const winner = scored[0];
+
+          if (winner && latestByUpdatedAt && winner.originalKey !== latestByUpdatedAt.originalKey && winner.dayStats.score > latestByUpdatedAt.dayStats.score) {
+            logCritical(
+              `🛡️ [DEDUP DAYV2] ${scopedKey}: chose richer '${winner.originalKey}' ` +
+              `(${winner.dayStats.totalItems} items, kcal=${winner.dayStats.savedEatenKcal}) over newer '${latestByUpdatedAt.originalKey}' ` +
+              `(${latestByUpdatedAt.dayStats.totalItems} items, kcal=${latestByUpdatedAt.dayStats.savedEatenKcal})`
+            );
+          }
+
+          return winner;
+        };
+
         // Для каждой группы выбираем самый свежий по updated_at
         const deduped = [];
         let dayv2DedupDropped = [];
@@ -22238,6 +22407,16 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
               const loser = group.find(item => item !== winner) || group[0];
               logCritical(`🔀 [DEDUP] Key '${scopedKey}' has ${group.length} versions in DB. Using '${winner.originalKey}' (${new Date(winner.updated_at_ts).toISOString()}) over '${loser.originalKey}' (${new Date(loser.updated_at_ts).toISOString()})`);
               deduped.push({ scopedKey, row: winner.row });
+            } else if (scopedKey.includes('dayv2_') && !isDayv2MetaKey(scopedKey)) {
+              const winner = chooseBestDayRow(group, scopedKey);
+              const losers = group
+                .filter(item => item.originalKey !== winner.originalKey)
+                .sort((a, b) => b.updated_at_ts - a.updated_at_ts);
+              const loser = losers[0] || group[0];
+              logCritical(`🔀 [DEDUP] Key '${scopedKey}' has ${group.length} versions in DB. Using '${winner.originalKey}' (${new Date(winner.updated_at_ts).toISOString()}) over '${loser.originalKey}' (${new Date(loser.updated_at_ts).toISOString()})`);
+              deduped.push({ scopedKey, row: winner.row });
+              const droppedDate = extractDayv2Date(scopedKey);
+              if (droppedDate) dayv2DedupDropped.push(droppedDate);
             } else {
               // Сортируем по updated_at DESC и берём первый (самый свежий)
               group.sort((a, b) => b.updated_at_ts - a.updated_at_ts);
@@ -22324,6 +22503,18 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
                 if (row.v == null || row.v === 'null') {
                   logCritical(`🛡️ [BOOTSTRAP PHASE2] SKIP NULL dayv2: ${key}`);
                   return; // skip — null data corrupts getDayData
+                }
+
+                const backupResolution = maybeRestoreDayV2FromBackup(key, row.v, 'bootstrap-phase2');
+                if (backupResolution.restored) {
+                  row.v = backupResolution.value;
+                  clientUpsertQueue.push({
+                    client_id: client_id,
+                    k: normalizeKeyForSupabase(row.k, client_id),
+                    v: row.v,
+                    updated_at: new Date().toISOString()
+                  });
+                  scheduleClientPush();
                 }
 
                 // �🔒 КРИТИЧНО: Перечитываем localStorage свежим для dayv2!
@@ -23386,6 +23577,10 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
           }
         }
 
+        // 🧹 Убираем legacy/nested client-scope ключи до итоговой диагностики,
+        // чтобы финальные sync-логи показывали уже нормализованное состояние.
+        cleanupDuplicateKeys();
+
         if (skippedDayMirrorKeys.length > 0) {
           window.console.warn('[HEYS.sinhron] ⚠️ dayv2 оставлены только в cloud из-за quota (' + skippedDayMirrorKeys.length + '):', skippedDayMirrorKeys.join(', '));
         }
@@ -23684,14 +23879,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
           // 🔧 FIX: Формируем ключ в формате scoped(k) — heys_{clientId}_...
           // Ключи из базы приходят как "heys_dayv2_2025-12-24" (нормализованные, без clientId)
           // Store.get использует scoped() который добавляет clientId: "heys_{clientId}_dayv2_..."
-          let targetKey = originalKey;
-          if (clientId && !originalKey.includes(clientId)) {
-            if (originalKey.startsWith('heys_')) {
-              targetKey = 'heys_' + clientId + '_' + originalKey.substring('heys_'.length);
-            } else {
-              targetKey = `heys_${clientId}_${originalKey}`;
-            }
-          }
+          const targetKey = clientId ? scopeKeyForClientStorage(originalKey, clientId) : originalKey;
 
           let localVal = null;
           try {
@@ -23751,6 +23939,20 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
             if (Store && typeof Store.decompress === 'function') {
               valueToStore = Store.decompress(row.v);
               log(`🔧 [fetchDays] Decompressed ${targetKey} from cloud`);
+            }
+          }
+
+          if (isDayKey) {
+            const restoredFromBackup = maybeRestoreDayV2FromBackup(targetKey, valueToStore, 'fetchDays');
+            valueToStore = restoredFromBackup.value;
+            if (restoredFromBackup.restored && clientId) {
+              clientUpsertQueue.push({
+                client_id: clientId,
+                k: normalizeKeyForSupabase(originalKey, clientId),
+                v: valueToStore,
+                updated_at: new Date().toISOString()
+              });
+              scheduleClientPush();
             }
           }
 
@@ -24280,6 +24482,11 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
     }
 
     if (!client_id) {
+      return;
+    }
+
+    if (isForeignClientScopedKey(k, client_id)) {
+      logCritical(`🛡️ [SAVE BLOCKED] Foreign scoped key does not match target client: key='${k}' target='${client_id}'`);
       return;
     }
 
