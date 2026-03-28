@@ -79,7 +79,7 @@ run_checks() {
     
     # DB-dependent check: RPC that requires a live DB connection (catches wrong PG_PASSWORD)
     echo -e "${BLUE}── DB-dependent checks ──${NC}"
-    check_endpoint "RPC→DB (categories)" "POST" "$API_URL/rpc?fn=get_shared_categories" '{}' "200" || FAILED=$((FAILED+1))
+    check_endpoint "RPC→DB (products)" "POST" "$API_URL/rpc?fn=get_shared_products" '{}' "200" || FAILED=$((FAILED+1))
     
     echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
     

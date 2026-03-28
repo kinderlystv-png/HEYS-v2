@@ -6534,6 +6534,208 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
   const HEYS = global.HEYS = global.HEYS || {};
   HEYS.dayInsulinWaveData = HEYS.dayInsulinWaveData || {};
 
+  // Обогащает результат расчёта данными жиросжигания для прошлого дня
+  function _enrichWithPastDayData(result, safeDay, dayDateStr, prof, baseWaveHours, lsGet, HEYSRef) {
+    try {
+      const meals = safeDay.meals || [];
+      const mealsWithTime = meals.filter(function (m) { return m.time; });
+      if (mealsWithTime.length === 0) {
+        return Object.assign({}, result, { isPastDay: true });
+      }
+
+      // Находим последний приём пищи
+      var sorted = mealsWithTime.slice().sort(function (a, b) { return b.time.localeCompare(a.time); });
+      var lastMeal = sorted[0];
+      var parts = (lastMeal.time || '0:0').split(':').map(Number);
+      var lastMealMin = parts[0] * 60 + (parts[1] || 0);
+
+      // Длина волны из result
+      var waveMinutes = Math.round((result.insulinWaveHours || baseWaveHours) * 60);
+      var waveEndMin = lastMealMin + waveMinutes;
+      var waveEndTimeH = Math.floor(waveEndMin / 60) % 24;
+      var waveEndTimeM = Math.round(waveEndMin % 60);
+      var waveEndTime = String(waveEndTimeH).padStart(2, '0') + ':' + String(waveEndTimeM).padStart(2, '0');
+
+      // Ищем первый приём пищи следующего дня
+      var nextDayFirstMealMin = -1; // -1 = не найден
+      var fatBurningStillActive = false;
+      var todayStr = new Date().toISOString().slice(0, 10);
+      try {
+        var selDate = new Date(dayDateStr);
+        selDate.setDate(selDate.getDate() + 1);
+        var nextDateStr = selDate.toISOString().slice(0, 10);
+        var safeLsGet = typeof lsGet === 'function' ? lsGet : (HEYSRef.utils?.lsGet || function () { return null; });
+        var nextDayData = safeLsGet('heys_dayv2_' + nextDateStr, null);
+        var nextMeals = (nextDayData?.meals || []).filter(function (m) { return m.time; });
+        if (nextMeals.length > 0) {
+          var nextSorted = nextMeals.slice().sort(function (a, b) { return a.time.localeCompare(b.time); });
+          var firstNextParts = (nextSorted[0].time || '8:0').split(':').map(Number);
+          nextDayFirstMealMin = firstNextParts[0] * 60 + (firstNextParts[1] || 0);
+        } else if (nextDateStr === todayStr) {
+          // Следующий день — сегодня и завтрака ещё нет → жиросжигание ещё идёт
+          fatBurningStillActive = true;
+          var now = new Date();
+          nextDayFirstMealMin = now.getHours() * 60 + now.getMinutes();
+        }
+      } catch (_) { /* fallback */ }
+      // Если следующий день — прошлый без приёмов, используем 08:00 fallback
+      if (nextDayFirstMealMin < 0) nextDayFirstMealMin = 8 * 60;
+
+      // Окно жиросжигания
+      var fatBurningWindowMin;
+      if (waveEndMin >= 1440) {
+        var overflowMin = waveEndMin - 1440;
+        fatBurningWindowMin = Math.max(0, nextDayFirstMealMin - overflowMin);
+      } else {
+        fatBurningWindowMin = (1440 - waveEndMin) + nextDayFirstMealMin;
+      }
+      fatBurningWindowMin = Math.min(fatBurningWindowMin, 16 * 60);
+      if (fatBurningWindowMin <= 0) fatBurningWindowMin = 0;
+
+      // Kcal в режиме липолиза
+      var weight = prof?.weight || 70;
+      var kcalRate = 1.15 * (weight / 70);
+      var fatBurningKcal = Math.round(fatBurningWindowMin * kcalRate);
+
+      // Рекорд и история из Lipolysis модуля
+      var lipolysisRecord = { minutes: 0, date: null };
+      try {
+        if (HEYSRef.InsulinWave?.Lipolysis?.getLipolysisRecord) {
+          lipolysisRecord = HEYSRef.InsulinWave.Lipolysis.getLipolysisRecord();
+        }
+      } catch (_) { }
+
+      var fatBurningH = Math.floor(fatBurningWindowMin / 60);
+      var fatBurningM = Math.round(fatBurningWindowMin % 60);
+
+      console.info('[HEYS.dayInsulinWaveData] 📅 past day enrichment', {
+        date: dayDateStr, lastMeal: lastMeal.time, waveEndTime,
+        fatBurningWindowMin, fatBurningKcal, record: lipolysisRecord.minutes
+      });
+
+      return Object.assign({}, result, {
+        isPastDay: true,
+        fatBurningStillActive: fatBurningStillActive,
+        status: 'lipolysis',
+        progress: 100,
+        remaining: 0,
+        isLipolysis: true,
+        isNightTime: true,
+        color: '#22c55e',
+        endTime: waveEndTime,
+        fatBurningWindowMin: fatBurningWindowMin,
+        fatBurningWindowH: fatBurningH,
+        fatBurningWindowM: fatBurningM,
+        fatBurningKcal: fatBurningKcal,
+        lipolysisRecord: lipolysisRecord,
+        isRecord: !fatBurningStillActive && fatBurningWindowMin > 0 && fatBurningWindowMin >= (lipolysisRecord.minutes || 0)
+      });
+    } catch (e) {
+      console.error('[HEYS.dayInsulinWaveData] past day enrichment ❌', e);
+      return Object.assign({}, result, { isPastDay: true });
+    }
+  }
+
+  // Ночной липолиз: сегодня нет приёмов пищи, но вчера были
+  function _computeOvernightLipolysis(todayStr, prof, baseWaveHours, lsGet, HEYSRef, pIndex, getProductFromItem) {
+    try {
+      var yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      var yesterdayStr = yesterday.toISOString().slice(0, 10);
+      var safeLsGet = typeof lsGet === 'function' ? lsGet : (HEYSRef.utils?.lsGet || function () { return null; });
+      var yData = safeLsGet('heys_dayv2_' + yesterdayStr, null);
+      var yMeals = (yData?.meals || []).filter(function (m) { return m.time; });
+      if (yMeals.length === 0) return null;
+
+      // Последний приём пищи вчера
+      var sorted = yMeals.slice().sort(function (a, b) { return b.time.localeCompare(a.time); });
+      var lastMeal = sorted[0];
+      var parts = (lastMeal.time || '0:0').split(':').map(Number);
+      var lastMealMin = parts[0] * 60 + (parts[1] || 0);
+
+      // Длина волны
+      var waveMinutes = baseWaveHours * 60;
+      if (HEYSRef.InsulinWave && HEYSRef.InsulinWave.calculate) {
+        try {
+          var fakeNow = new Date(yesterdayStr + 'T23:59:00');
+          var result = HEYSRef.InsulinWave.calculate({
+            meals: yData.meals || [], pIndex: pIndex, getProductFromItem: getProductFromItem,
+            baseWaveHours: baseWaveHours, trainings: yData.trainings || [],
+            dayData: {
+              sleepHours: yData.sleepHours || null, sleepQuality: yData.sleepQuality || null,
+              stressAvg: yData.stressAvg || 0, waterMl: yData.waterMl || 0,
+              householdMin: yData.householdMin || 0, steps: yData.steps || 0,
+              date: yData.date, lsGet: safeLsGet,
+              profile: { age: prof?.age || 0, weight: prof?.weight || 0, height: prof?.height || 0, gender: prof?.gender || '' }
+            },
+            now: fakeNow
+          });
+          if (result?.insulinWaveHours) waveMinutes = Math.round(result.insulinWaveHours * 60);
+        } catch (_) { /* fallback */ }
+      }
+
+      var waveEndMin = lastMealMin + waveMinutes;
+
+      // Минуты с момента конца волны (через полночь)
+      var now = new Date();
+      var nowMin = now.getHours() * 60 + now.getMinutes();
+      var lipolysisMinutes;
+      if (waveEndMin >= 1440) {
+        lipolysisMinutes = nowMin - (waveEndMin - 1440);
+      } else {
+        lipolysisMinutes = (1440 - waveEndMin) + nowMin;
+      }
+
+      var waveEndTimeH = Math.floor(waveEndMin / 60) % 24;
+      var waveEndTimeM = Math.round(waveEndMin % 60);
+      var endTime = String(waveEndTimeH).padStart(2, '0') + ':' + String(waveEndTimeM).padStart(2, '0');
+
+      if (lipolysisMinutes <= 0) {
+        // Волна ещё не кончилась
+        var remainingMin = Math.abs(lipolysisMinutes);
+        return {
+          isOvernightWave: true,
+          status: 'active', emoji: '📈',
+          text: Math.floor(remainingMin / 60) > 0 ? Math.floor(remainingMin / 60) + 'ч ' + Math.round(remainingMin % 60) + 'м' : Math.round(remainingMin) + ' мин',
+          color: '#3b82f6',
+          subtext: '📈 Инсулиновая волна с вечера ещё не закончилась',
+          progress: Math.min(100, ((waveMinutes - remainingMin) / waveMinutes) * 100),
+          remaining: remainingMin,
+          lastMealTime: lastMeal.time, lastMealTimeDisplay: lastMeal.time,
+          endTime: endTime, insulinWaveHours: waveMinutes / 60, baseWaveHours: baseWaveHours,
+          isNightTime: false, waveHistory: [], overlaps: [], hasOverlaps: false, gapQuality: 'unknown'
+        };
+      }
+
+      // Липолиз активен
+      var weight = prof?.weight || 70;
+      var kcalRate = 1.15 * (weight / 70);
+      var lipolysisKcal = Math.round(lipolysisMinutes * kcalRate);
+      var lipoH = Math.floor(lipolysisMinutes / 60);
+      var lipoM = Math.round(lipolysisMinutes % 60);
+
+      console.info('[HEYS.dayInsulinWaveData] 🌙 overnight lipolysis', {
+        lastMeal: lastMeal.time, waveEndMin: waveEndMin, lipolysisMinutes: lipolysisMinutes, lipolysisKcal: lipolysisKcal
+      });
+
+      return {
+        isOvernightLipolysis: true,
+        status: 'lipolysis', emoji: '🔥',
+        text: 'Липолиз!', color: '#22c55e',
+        subtext: '🌙 Жиросжигание с ночи! Не ешь подольше',
+        progress: 100, remaining: 0,
+        lastMealTime: lastMeal.time, lastMealTimeDisplay: lastMeal.time,
+        endTime: endTime, insulinWaveHours: waveMinutes / 60, baseWaveHours: baseWaveHours,
+        isNightTime: true,
+        lipolysisMinutes: lipolysisMinutes, lipolysisH: lipoH, lipolysisM: lipoM, lipolysisKcal: lipolysisKcal,
+        waveHistory: [], overlaps: [], hasOverlaps: false, gapQuality: 'unknown'
+      };
+    } catch (e) {
+      console.error('[HEYS.dayInsulinWaveData] overnight lipolysis ❌', e);
+      return null;
+    }
+  }
+
   HEYS.dayInsulinWaveData.computeInsulinWaveData = function computeInsulinWaveData(ctx) {
     const {
       React,
@@ -6574,6 +6776,22 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
       const prof = typeof getProfile === 'function' ? getProfile() : (HEYSRef.utils?.lsGet?.('heys_profile', {}) || {});
       const baseWaveHours = prof?.insulinWaveHours || 3;
 
+      // Определяем, прошлый ли это день
+      const todayStr = new Date().toISOString().slice(0, 10);
+      const dayDateStr = safeDay.date || '';
+      const isPastDay = dayDateStr && dayDateStr < todayStr;
+      const isToday = !dayDateStr || dayDateStr === todayStr;
+
+      // Для прошлых дней используем конец дня (23:59) чтобы волна корректно считалась
+      const nowForCalc = isPastDay ? new Date(dayDateStr + 'T23:59:00') : new Date();
+
+      // Сегодня без приёмов пищи → проверяем ночной липолиз от вчера
+      const meals = safeDay.meals || [];
+      const mealsWithTime = meals.filter(function (m) { return m.time; });
+      if (isToday && mealsWithTime.length === 0) {
+        return _computeOvernightLipolysis(todayStr, prof, baseWaveHours, lsGet, HEYSRef, pIndex, getProductFromItem);
+      }
+
       // Используем модуль HEYS.InsulinWave если доступен
       if (HEYSRef.InsulinWave && HEYSRef.InsulinWave.calculate) {
         const result = HEYSRef.InsulinWave.calculate({
@@ -6581,37 +6799,36 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
           pIndex,
           getProductFromItem,
           baseWaveHours,
-          trainings: safeDay.trainings || [], // 🏃 Передаём тренировки для workout acceleration
-          // 🆕 v1.4: Данные дня для stress и sleep факторов
-          // 🆕 v3.0.0: Добавлен profile для персональной базы волны
+          trainings: safeDay.trainings || [],
+          now: nowForCalc,
           dayData: {
-            sleepHours: safeDay.sleepHours || null,  // часы сна предыдущей ночи
-            sleepQuality: safeDay.sleepQuality || null, // качество сна (1-10)
-            stressAvg: safeDay.stressAvg || 0,        // средний стресс за день (1-5)
-            waterMl: safeDay.waterMl || 0,            // выпито воды (мл)
-            householdMin: safeDay.householdMin || 0,  // бытовая активность
-            steps: safeDay.steps || 0,                // шаги
-            cycleDay: safeDay.cycleDay || null,       // день цикла
-            // 🆕 v3.0.0: Профиль для персональной базы
+            sleepHours: safeDay.sleepHours || null,
+            sleepQuality: safeDay.sleepQuality || null,
+            stressAvg: safeDay.stressAvg || 0,
+            waterMl: safeDay.waterMl || 0,
+            householdMin: safeDay.householdMin || 0,
+            steps: safeDay.steps || 0,
+            cycleDay: safeDay.cycleDay || null,
             profile: {
               age: prof?.age || 0,
               weight: prof?.weight || 0,
               height: prof?.height || 0,
               gender: prof?.gender || ''
             },
-            // 🆕 v3.6.0: Для расчёта NDTE (эффект вчерашней тренировки)
             date: safeDay.date,
             lsGet
           }
         });
+
+        // Для прошлых дней: добавляем итоги жиросжигания
+        if (isPastDay && result) {
+          return _enrichWithPastDayData(result, safeDay, dayDateStr, prof, baseWaveHours, lsGet, HEYSRef);
+        }
+
         return result;
       }
 
       // Fallback если модуль не загружен
-      const meals = safeDay.meals || [];
-      if (meals.length === 0) return null;
-
-      const mealsWithTime = meals.filter(m => m.time);
       if (mealsWithTime.length === 0) return null;
 
       const sorted = [...mealsWithTime].sort((a, b) => {
@@ -6634,7 +6851,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
       }
       if (totalGrams > 0) avgGI = Math.round(weightedGI / totalGrams);
 
-      let giMultiplier = avgGI <= 35 ? 1.2 : avgGI <= 55 ? 1.0 : avgGI <= 70 ? 0.85 : 0.7;
+      var giMultiplier = avgGI <= 35 ? 1.2 : avgGI <= 55 ? 1.0 : avgGI <= 70 ? 0.85 : 0.7;
       const giCategory = avgGI <= 35 ? 'low' : avgGI <= 55 ? 'medium' : avgGI <= 70 ? 'high' : 'very-high';
 
       const waveMinutes = baseWaveHours * giMultiplier * 60;
@@ -6642,9 +6859,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
       if (isNaN(mealH)) return null;
 
       const mealMinutes = mealH * 60 + (mealM || 0);
-      const now = new Date();
-      const nowMinutes = now.getHours() * 60 + now.getMinutes();
-      let diffMinutes = Math.max(0, nowMinutes - mealMinutes);
+      const nowMinutes = isPastDay ? (23 * 60 + 59) : (new Date().getHours() * 60 + new Date().getMinutes());
+      var diffMinutes = Math.max(0, nowMinutes - mealMinutes);
 
       const remainingMinutes = Math.max(0, waveMinutes - diffMinutes);
       const progressPct = Math.min(100, (diffMinutes / waveMinutes) * 100);
@@ -6652,8 +6868,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
       const endMinutes = mealMinutes + Math.round(waveMinutes);
       const endTime = String(Math.floor(endMinutes / 60) % 24).padStart(2, '0') + ':' + String(endMinutes % 60).padStart(2, '0');
 
-      const isNightTime = now.getHours() >= 22 || now.getHours() < 6;
-      let status, emoji, text, color, subtext;
+      const isNightTime = isPastDay ? true : (new Date().getHours() >= 22 || new Date().getHours() < 6);
+      var status, emoji, text, color, subtext;
 
       if (remainingMinutes <= 0) {
         status = 'lipolysis'; emoji = '🔥'; text = 'Липолиз!'; color = '#22c55e';
@@ -6670,12 +6886,17 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
         subtext = '📈 Инсулин высокий, жир запасается';
       }
 
-      return {
+      var fallbackResult = {
         status, emoji, text, color, subtext, progress: progressPct, remaining: remainingMinutes,
         lastMealTime, lastMealTimeDisplay: lastMealTime, endTime, insulinWaveHours: baseWaveHours * giMultiplier, baseWaveHours, isNightTime,
         avgGI, giCategory: { color: giMultiplier === 1.2 ? '#22c55e' : giMultiplier === 1.0 ? '#eab308' : giMultiplier === 0.85 ? '#f97316' : '#ef4444', text: giCategory }, giMultiplier,
         waveHistory: [], overlaps: [], hasOverlaps: false, gapQuality: 'unknown'
       };
+
+      if (isPastDay) {
+        return _enrichWithPastDayData(fallbackResult, safeDay, dayDateStr, prof, baseWaveHours, lsGet, HEYSRef);
+      }
+      return fallbackResult;
     }, [safeDay.meals, safeDay.trainings, safeDay.sleepHours, safeDay.sleepQuality, safeDay.stressAvg, safeDay.waterMl, safeDay.householdMin, safeDay.steps, safeDay.cycleDay, safeDay.date, pIndex, getProductFromItem, currentMinute, iwVersion]);
   };
 })(window);
@@ -7987,6 +8208,213 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
 
   const MOD = {};
 
+  // 📅 Карточка инсулиновой волны для прошлого дня
+  function _renderPastDayIndicator({ React, insulinWaveData, insulinExpanded, setInsulinExpanded, HEYS }) {
+    const heys = HEYS || window.HEYS || {};
+    const IW = heys.InsulinWave;
+    const d = insulinWaveData;
+    const hasFatBurning = d.fatBurningWindowMin > 0;
+    const stillActive = d.fatBurningStillActive || false;
+
+    const formatDur = function (min) {
+      if (!min || min <= 0) return '0 мин';
+      var h = Math.floor(min / 60), m = Math.round(min % 60);
+      if (h > 0 && m > 0) return h + 'ч ' + m + 'м';
+      if (h > 0) return h + 'ч';
+      return m + ' мин';
+    };
+
+    // Рекорд
+    var recordMin = d.lipolysisRecord?.minutes || 0;
+    var isRecord = d.isRecord;
+
+    // Результат дня — оценка
+    var scoreBg, scoreColor, scoreEmoji, scoreLabel;
+    if (stillActive) {
+      scoreBg = 'rgba(34, 197, 94, 0.15)'; scoreColor = '#16a34a'; scoreEmoji = '🔥'; scoreLabel = 'Липолиз ещё идёт — держись!';
+    } else if (!hasFatBurning) {
+      scoreBg = 'rgba(239, 68, 68, 0.1)'; scoreColor = '#dc2626'; scoreEmoji = '😔'; scoreLabel = 'Без жиросжигания';
+    } else if (d.fatBurningWindowMin >= 8 * 60) {
+      scoreBg = 'rgba(34, 197, 94, 0.1)'; scoreColor = '#16a34a'; scoreEmoji = '🌟'; scoreLabel = 'Отличный результат!';
+    } else if (d.fatBurningWindowMin >= 5 * 60) {
+      scoreBg = 'rgba(34, 197, 94, 0.1)'; scoreColor = '#22c55e'; scoreEmoji = '👍'; scoreLabel = 'Хороший результат';
+    } else if (d.fatBurningWindowMin >= 3 * 60) {
+      scoreBg = 'rgba(234, 179, 8, 0.1)'; scoreColor = '#ca8a04'; scoreEmoji = '👌'; scoreLabel = 'Нормально';
+    } else {
+      scoreBg = 'rgba(249, 115, 22, 0.1)'; scoreColor = '#ea580c'; scoreEmoji = '💡'; scoreLabel = 'Можно лучше';
+    }
+
+    // История волн для прошлого дня (без маркера "Сейчас")
+    var renderPastWaveHistory = function () {
+      if (!IW || !IW.renderWaveHistory) {
+        var history = d.waveHistory || [];
+        if (history.length === 0) return null;
+        var firstMealMin = Math.min.apply(null, history.map(function (w) { return w.startMin; }));
+        var lastMealEnd = Math.max.apply(null, history.map(function (w) { return w.endMin; }));
+        var rangeStart = firstMealMin - 15;
+        var rangeEnd = lastMealEnd + 30;
+        var totalRange = rangeEnd - rangeStart;
+        var w = 320, h = 55, padding = 4, barY = 18, barH = 18;
+        var minToX = function (min) { return padding + ((min - rangeStart) / totalRange) * (w - 2 * padding); };
+        var formatTime = function (min) { return String(Math.floor(min / 60) % 24).padStart(2, '0') + ':' + String(min % 60).padStart(2, '0'); };
+
+        return React.createElement('div', { style: { marginTop: '10px', margin: '10px -8px 0 -8px' } },
+          React.createElement('div', { style: { fontSize: '11px', color: '#64748b', marginBottom: '6px', fontWeight: '600', paddingLeft: '8px' } }, '📊 Волны за день'),
+          React.createElement('svg', { width: '100%', height: h, viewBox: '0 0 ' + w + ' ' + h, style: { display: 'block' } },
+            React.createElement('line', { x1: padding, y1: barY + barH / 2, x2: w - padding, y2: barY + barH / 2, stroke: '#e5e7eb', strokeWidth: 2, strokeLinecap: 'round' }),
+            history.map(function (wave, i) {
+              var x1 = minToX(wave.startMin), x2 = minToX(wave.endMin), barW = Math.max(8, x2 - x1);
+              var giColor = wave.gi <= 35 ? '#22c55e' : wave.gi <= 55 ? '#eab308' : wave.gi <= 70 ? '#f97316' : '#ef4444';
+              return React.createElement('rect', { key: 'w-' + i, x: x1, y: barY, width: barW, height: barH, fill: giColor, opacity: 0.7, rx: 4 });
+            }),
+            history.map(function (wave, i) {
+              var x = minToX(wave.startMin);
+              return React.createElement('g', { key: 'm-' + i },
+                React.createElement('circle', { cx: x, cy: barY + barH / 2, r: 5, fill: '#fff', stroke: '#3b82f6', strokeWidth: 1.5 }),
+                React.createElement('text', { x: x, y: barY + barH / 2 + 1, fontSize: 7, textAnchor: 'middle', dominantBaseline: 'middle' }, '🍽'),
+                React.createElement('text', { x: x, y: h - 2, fontSize: 7, fill: '#64748b', textAnchor: 'middle', fontWeight: '500' }, formatTime(wave.startMin))
+              );
+            })
+          )
+        );
+      }
+      // У модуля InsulinWave может не быть past-specific хелпера — используем штатный
+      return null;
+    };
+
+    return React.createElement('div', {
+      className: 'insulin-wave-indicator widget-shadow-diary-glass widget-outline-diary-glass insulin-lipolysis' + (insulinExpanded ? ' expanded' : ''),
+      id: 'tour-insulin-wave',
+      style: {
+        margin: '8px 0',
+        cursor: 'pointer',
+        position: insulinExpanded ? 'relative' : undefined,
+        zIndex: insulinExpanded ? 100 : undefined
+      },
+      onClick: function () { setTimeout(function () { setInsulinExpanded(!insulinExpanded); }, 0); }
+    },
+      React.createElement('div', { className: 'insulin-wave-bg' }),
+      React.createElement('div', { className: 'insulin-wave-content' },
+
+        // Header
+        React.createElement('div', { className: 'insulin-wave-header' },
+          React.createElement('div', { className: 'insulin-wave-left' },
+            React.createElement('span', { className: 'insulin-wave-icon' }, hasFatBurning ? '🔥' : '📊'),
+            React.createElement('span', { className: 'insulin-wave-label' },
+              stillActive ? 'Жир сжигается!' : hasFatBurning ? 'Жир сжигался' : 'Инсулиновая волна'
+            ),
+            React.createElement('span', { style: { fontSize: '10px', color: '#94a3b8', marginLeft: '4px' } },
+              insulinExpanded ? '▲' : '▼'
+            )
+          )
+        ),
+
+        // Зелёная полоска 100% — день закончен
+        React.createElement('div', { className: 'insulin-wave-progress' },
+          React.createElement('div', {
+            className: 'insulin-wave-bar',
+            style: {
+              width: '100%',
+              background: hasFatBurning
+                ? 'linear-gradient(90deg, #22c55e, #10b981, #059669)'
+                : 'linear-gradient(90deg, #94a3b8, #cbd5e1)',
+              height: '28px',
+              borderRadius: '8px'
+            }
+          }),
+          React.createElement('div', {
+            style: {
+              position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)',
+              display: 'flex', alignItems: 'center', gap: '6px',
+              fontSize: '14px', fontWeight: '800', color: '#fff',
+              textShadow: '0 1px 3px rgba(0,0,0,0.3)', whiteSpace: 'nowrap', zIndex: 2
+            }
+          },
+            hasFatBurning
+              ? React.createElement(React.Fragment, null,
+                React.createElement('span', null, formatDur(d.fatBurningWindowMin)),
+                React.createElement('span', { style: { fontSize: '11px', opacity: 0.9, fontWeight: '600' } },
+                  stillActive ? 'и продолжается!' : 'жиросжигание'
+                )
+              )
+              : React.createElement('span', { style: { fontSize: '12px', fontWeight: '600' } }, 'Весь день под инсулином')
+          )
+        ),
+
+        // Оценка дня
+        React.createElement('div', {
+          style: {
+            display: 'flex', alignItems: 'center', gap: '8px',
+            marginTop: '8px', padding: '8px 12px',
+            background: scoreBg, borderRadius: '8px', fontSize: '13px'
+          }
+        },
+          React.createElement('span', { style: { fontSize: '16px' } }, scoreEmoji),
+          React.createElement('span', { style: { color: scoreColor, fontWeight: '600' } }, scoreLabel)
+        ),
+
+        // Статистика: окно, kcal, рекорд
+        hasFatBurning && React.createElement('div', {
+          className: 'lipolysis-stats',
+          style: {
+            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+            marginTop: '8px', padding: '8px 12px',
+            background: 'rgba(255,255,255,0.5)', borderRadius: '8px',
+            fontSize: '12px', gap: '8px'
+          }
+        },
+          // Время окна
+          React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '4px', color: '#22c55e' } },
+            React.createElement('span', null, '🌙'),
+            React.createElement('span', { style: { fontWeight: '600' } },
+              stillActive
+                ? (d.endTime || '') + ' → сейчас'
+                : (d.endTime || '') + ' → утро'
+            )
+          ),
+          // Kcal
+          d.fatBurningKcal > 0 && React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '4px', color: '#ef4444' } },
+            React.createElement('span', null, '💪'),
+            React.createElement('span', { style: { fontWeight: '600' } },
+              '~' + d.fatBurningKcal + ' ккал'
+            )
+          ),
+          // Рекорд
+          React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '4px', color: isRecord ? '#f59e0b' : '#64748b' } },
+            React.createElement('span', null, isRecord ? '🏆' : '🎯'),
+            React.createElement('span', { style: { fontWeight: isRecord ? '700' : '500' } },
+              isRecord ? 'Рекорд!' : 'Рек: ' + formatDur(recordMin)
+            )
+          )
+        ),
+
+        // Expanded: ГИ, волны, детали
+        insulinExpanded && React.createElement('div', {
+          className: 'insulin-wave-expanded',
+          onClick: function (e) { e.stopPropagation(); }
+        },
+          // Детали волны
+          d.insulinWaveHours && React.createElement('div', { className: 'insulin-gi-info' },
+            d.giCategory && React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '8px' } },
+              React.createElement('span', { style: { width: '10px', height: '10px', borderRadius: '50%', background: d.giCategory.color } }),
+              React.createElement('span', { style: { fontWeight: '600' } }, d.giCategory.text || ''),
+              d.giCategory.desc && React.createElement('span', { style: { color: '#64748b', fontSize: '12px' } }, '— ' + d.giCategory.desc)
+            ),
+            React.createElement('div', { style: { fontSize: '11px', color: '#64748b', marginTop: '4px' } },
+              'Последний приём: ' + (d.lastMealTime || '—') + ' → волна заканчивается в ' + (d.endTime || '—')
+            ),
+            React.createElement('div', { style: { fontSize: '11px', color: '#64748b', marginTop: '2px' } },
+              'Длительность волны: ' + (Math.round(d.insulinWaveHours * 10) / 10) + 'ч'
+            )
+          ),
+
+          // История волн (без "Сейчас")
+          renderPastWaveHistory()
+        )
+      )
+    );
+  }
+
   MOD.renderInsulinWaveIndicator = function renderInsulinWaveIndicator({
     React,
     insulinWaveData,
@@ -7999,6 +8427,11 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
   }) {
     if (!insulinWaveData) return null;
     if (isMobile && mobileSubTab !== 'diary') return null;
+
+    // 📅 Прошлый день — показываем итоги жиросжигания
+    if (insulinWaveData.isPastDay) {
+      return _renderPastDayIndicator({ React, insulinWaveData, insulinExpanded, setInsulinExpanded, HEYS });
+    }
 
     const heys = HEYS || window.HEYS || {};
     const IW = heys.InsulinWave;
@@ -13951,6 +14384,22 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             }
         };
 
+        const normalizeThemePreference = (value) => {
+            let rawValue = value;
+            if (typeof rawValue === 'string' && rawValue.startsWith('"')) {
+                try { rawValue = JSON.parse(rawValue); } catch { }
+            }
+            if (rawValue === 'light' || rawValue === 'dark') return rawValue;
+            if (rawValue === 'auto') {
+                try {
+                    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+                } catch {
+                    return 'light';
+                }
+            }
+            return 'light';
+        };
+
         if (!dayEffects?.useDayCurrentMinuteEffect) {
             throw new Error('[heys_day_runtime_ui_state] HEYS.dayEffects.useDayCurrentMinuteEffect not loaded');
         }
@@ -13969,27 +14418,20 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             HEYS: ctx
         }) || { isOnline: navigator.onLine, pendingChanges: false, syncMessage: '', pendingQueue: [] };
 
-        // === Dark Theme (3 modes: light / dark / auto) ===
+        // === Dark Theme (2 modes: light / dark) ===
         const [theme, setTheme] = React.useState(() => {
             const saved = readStoredValue('heys_theme', 'light');
-            // Валидация: только light/dark/auto, иначе light
-            return ['light', 'dark', 'auto'].includes(saved) ? saved : 'light';
+            return normalizeThemePreference(saved);
         });
 
-        // Вычисляем реальную тему (для auto режима)
-        const resolvedTheme = React.useMemo(() => {
-            if (theme === 'auto') {
-                return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-            }
-            return theme;
-        }, [theme]);
+        const resolvedTheme = React.useMemo(() => theme, [theme]);
 
-        // Применяем тему + слушаем системные изменения
+        // Применяем тему
         dayEffects.useDayThemeEffect({ theme, resolvedTheme });
 
-        // Cycle: light → dark → auto → light
+        // Cycle: light ↔ dark
         const cycleTheme = React.useCallback(() => {
-            setTheme(prev => prev === 'light' ? 'dark' : prev === 'dark' ? 'auto' : 'light');
+            setTheme(prev => prev === 'dark' ? 'light' : 'dark');
         }, []);
 
         // === Подсказка "нажми для деталей" ===

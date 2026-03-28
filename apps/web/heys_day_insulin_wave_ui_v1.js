@@ -4,6 +4,213 @@
 
   const MOD = {};
 
+  // 📅 Карточка инсулиновой волны для прошлого дня
+  function _renderPastDayIndicator({ React, insulinWaveData, insulinExpanded, setInsulinExpanded, HEYS }) {
+    const heys = HEYS || window.HEYS || {};
+    const IW = heys.InsulinWave;
+    const d = insulinWaveData;
+    const hasFatBurning = d.fatBurningWindowMin > 0;
+    const stillActive = d.fatBurningStillActive || false;
+
+    const formatDur = function (min) {
+      if (!min || min <= 0) return '0 мин';
+      var h = Math.floor(min / 60), m = Math.round(min % 60);
+      if (h > 0 && m > 0) return h + 'ч ' + m + 'м';
+      if (h > 0) return h + 'ч';
+      return m + ' мин';
+    };
+
+    // Рекорд
+    var recordMin = d.lipolysisRecord?.minutes || 0;
+    var isRecord = d.isRecord;
+
+    // Результат дня — оценка
+    var scoreBg, scoreColor, scoreEmoji, scoreLabel;
+    if (stillActive) {
+      scoreBg = 'rgba(34, 197, 94, 0.15)'; scoreColor = '#16a34a'; scoreEmoji = '🔥'; scoreLabel = 'Липолиз ещё идёт — держись!';
+    } else if (!hasFatBurning) {
+      scoreBg = 'rgba(239, 68, 68, 0.1)'; scoreColor = '#dc2626'; scoreEmoji = '😔'; scoreLabel = 'Без жиросжигания';
+    } else if (d.fatBurningWindowMin >= 8 * 60) {
+      scoreBg = 'rgba(34, 197, 94, 0.1)'; scoreColor = '#16a34a'; scoreEmoji = '🌟'; scoreLabel = 'Отличный результат!';
+    } else if (d.fatBurningWindowMin >= 5 * 60) {
+      scoreBg = 'rgba(34, 197, 94, 0.1)'; scoreColor = '#22c55e'; scoreEmoji = '👍'; scoreLabel = 'Хороший результат';
+    } else if (d.fatBurningWindowMin >= 3 * 60) {
+      scoreBg = 'rgba(234, 179, 8, 0.1)'; scoreColor = '#ca8a04'; scoreEmoji = '👌'; scoreLabel = 'Нормально';
+    } else {
+      scoreBg = 'rgba(249, 115, 22, 0.1)'; scoreColor = '#ea580c'; scoreEmoji = '💡'; scoreLabel = 'Можно лучше';
+    }
+
+    // История волн для прошлого дня (без маркера "Сейчас")
+    var renderPastWaveHistory = function () {
+      if (!IW || !IW.renderWaveHistory) {
+        var history = d.waveHistory || [];
+        if (history.length === 0) return null;
+        var firstMealMin = Math.min.apply(null, history.map(function (w) { return w.startMin; }));
+        var lastMealEnd = Math.max.apply(null, history.map(function (w) { return w.endMin; }));
+        var rangeStart = firstMealMin - 15;
+        var rangeEnd = lastMealEnd + 30;
+        var totalRange = rangeEnd - rangeStart;
+        var w = 320, h = 55, padding = 4, barY = 18, barH = 18;
+        var minToX = function (min) { return padding + ((min - rangeStart) / totalRange) * (w - 2 * padding); };
+        var formatTime = function (min) { return String(Math.floor(min / 60) % 24).padStart(2, '0') + ':' + String(min % 60).padStart(2, '0'); };
+
+        return React.createElement('div', { style: { marginTop: '10px', margin: '10px -8px 0 -8px' } },
+          React.createElement('div', { style: { fontSize: '11px', color: '#64748b', marginBottom: '6px', fontWeight: '600', paddingLeft: '8px' } }, '📊 Волны за день'),
+          React.createElement('svg', { width: '100%', height: h, viewBox: '0 0 ' + w + ' ' + h, style: { display: 'block' } },
+            React.createElement('line', { x1: padding, y1: barY + barH / 2, x2: w - padding, y2: barY + barH / 2, stroke: '#e5e7eb', strokeWidth: 2, strokeLinecap: 'round' }),
+            history.map(function (wave, i) {
+              var x1 = minToX(wave.startMin), x2 = minToX(wave.endMin), barW = Math.max(8, x2 - x1);
+              var giColor = wave.gi <= 35 ? '#22c55e' : wave.gi <= 55 ? '#eab308' : wave.gi <= 70 ? '#f97316' : '#ef4444';
+              return React.createElement('rect', { key: 'w-' + i, x: x1, y: barY, width: barW, height: barH, fill: giColor, opacity: 0.7, rx: 4 });
+            }),
+            history.map(function (wave, i) {
+              var x = minToX(wave.startMin);
+              return React.createElement('g', { key: 'm-' + i },
+                React.createElement('circle', { cx: x, cy: barY + barH / 2, r: 5, fill: '#fff', stroke: '#3b82f6', strokeWidth: 1.5 }),
+                React.createElement('text', { x: x, y: barY + barH / 2 + 1, fontSize: 7, textAnchor: 'middle', dominantBaseline: 'middle' }, '🍽'),
+                React.createElement('text', { x: x, y: h - 2, fontSize: 7, fill: '#64748b', textAnchor: 'middle', fontWeight: '500' }, formatTime(wave.startMin))
+              );
+            })
+          )
+        );
+      }
+      // У модуля InsulinWave может не быть past-specific хелпера — используем штатный
+      return null;
+    };
+
+    return React.createElement('div', {
+      className: 'insulin-wave-indicator widget-shadow-diary-glass widget-outline-diary-glass insulin-lipolysis' + (insulinExpanded ? ' expanded' : ''),
+      id: 'tour-insulin-wave',
+      style: {
+        margin: '8px 0',
+        cursor: 'pointer',
+        position: insulinExpanded ? 'relative' : undefined,
+        zIndex: insulinExpanded ? 100 : undefined
+      },
+      onClick: function () { setTimeout(function () { setInsulinExpanded(!insulinExpanded); }, 0); }
+    },
+      React.createElement('div', { className: 'insulin-wave-bg' }),
+      React.createElement('div', { className: 'insulin-wave-content' },
+
+        // Header
+        React.createElement('div', { className: 'insulin-wave-header' },
+          React.createElement('div', { className: 'insulin-wave-left' },
+            React.createElement('span', { className: 'insulin-wave-icon' }, hasFatBurning ? '🔥' : '📊'),
+            React.createElement('span', { className: 'insulin-wave-label' },
+              stillActive ? 'Жир сжигается!' : hasFatBurning ? 'Жир сжигался' : 'Инсулиновая волна'
+            ),
+            React.createElement('span', { style: { fontSize: '10px', color: '#94a3b8', marginLeft: '4px' } },
+              insulinExpanded ? '▲' : '▼'
+            )
+          )
+        ),
+
+        // Зелёная полоска 100% — день закончен
+        React.createElement('div', { className: 'insulin-wave-progress' },
+          React.createElement('div', {
+            className: 'insulin-wave-bar',
+            style: {
+              width: '100%',
+              background: hasFatBurning
+                ? 'linear-gradient(90deg, #22c55e, #10b981, #059669)'
+                : 'linear-gradient(90deg, #94a3b8, #cbd5e1)',
+              height: '28px',
+              borderRadius: '8px'
+            }
+          }),
+          React.createElement('div', {
+            style: {
+              position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)',
+              display: 'flex', alignItems: 'center', gap: '6px',
+              fontSize: '14px', fontWeight: '800', color: '#fff',
+              textShadow: '0 1px 3px rgba(0,0,0,0.3)', whiteSpace: 'nowrap', zIndex: 2
+            }
+          },
+            hasFatBurning
+              ? React.createElement(React.Fragment, null,
+                React.createElement('span', null, formatDur(d.fatBurningWindowMin)),
+                React.createElement('span', { style: { fontSize: '11px', opacity: 0.9, fontWeight: '600' } },
+                  stillActive ? 'и продолжается!' : 'жиросжигание'
+                )
+              )
+              : React.createElement('span', { style: { fontSize: '12px', fontWeight: '600' } }, 'Весь день под инсулином')
+          )
+        ),
+
+        // Оценка дня
+        React.createElement('div', {
+          style: {
+            display: 'flex', alignItems: 'center', gap: '8px',
+            marginTop: '8px', padding: '8px 12px',
+            background: scoreBg, borderRadius: '8px', fontSize: '13px'
+          }
+        },
+          React.createElement('span', { style: { fontSize: '16px' } }, scoreEmoji),
+          React.createElement('span', { style: { color: scoreColor, fontWeight: '600' } }, scoreLabel)
+        ),
+
+        // Статистика: окно, kcal, рекорд
+        hasFatBurning && React.createElement('div', {
+          className: 'lipolysis-stats',
+          style: {
+            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+            marginTop: '8px', padding: '8px 12px',
+            background: 'rgba(255,255,255,0.5)', borderRadius: '8px',
+            fontSize: '12px', gap: '8px'
+          }
+        },
+          // Время окна
+          React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '4px', color: '#22c55e' } },
+            React.createElement('span', null, '🌙'),
+            React.createElement('span', { style: { fontWeight: '600' } },
+              stillActive
+                ? (d.endTime || '') + ' → сейчас'
+                : (d.endTime || '') + ' → утро'
+            )
+          ),
+          // Kcal
+          d.fatBurningKcal > 0 && React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '4px', color: '#ef4444' } },
+            React.createElement('span', null, '💪'),
+            React.createElement('span', { style: { fontWeight: '600' } },
+              '~' + d.fatBurningKcal + ' ккал'
+            )
+          ),
+          // Рекорд
+          React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '4px', color: isRecord ? '#f59e0b' : '#64748b' } },
+            React.createElement('span', null, isRecord ? '🏆' : '🎯'),
+            React.createElement('span', { style: { fontWeight: isRecord ? '700' : '500' } },
+              isRecord ? 'Рекорд!' : 'Рек: ' + formatDur(recordMin)
+            )
+          )
+        ),
+
+        // Expanded: ГИ, волны, детали
+        insulinExpanded && React.createElement('div', {
+          className: 'insulin-wave-expanded',
+          onClick: function (e) { e.stopPropagation(); }
+        },
+          // Детали волны
+          d.insulinWaveHours && React.createElement('div', { className: 'insulin-gi-info' },
+            d.giCategory && React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '8px' } },
+              React.createElement('span', { style: { width: '10px', height: '10px', borderRadius: '50%', background: d.giCategory.color } }),
+              React.createElement('span', { style: { fontWeight: '600' } }, d.giCategory.text || ''),
+              d.giCategory.desc && React.createElement('span', { style: { color: '#64748b', fontSize: '12px' } }, '— ' + d.giCategory.desc)
+            ),
+            React.createElement('div', { style: { fontSize: '11px', color: '#64748b', marginTop: '4px' } },
+              'Последний приём: ' + (d.lastMealTime || '—') + ' → волна заканчивается в ' + (d.endTime || '—')
+            ),
+            React.createElement('div', { style: { fontSize: '11px', color: '#64748b', marginTop: '2px' } },
+              'Длительность волны: ' + (Math.round(d.insulinWaveHours * 10) / 10) + 'ч'
+            )
+          ),
+
+          // История волн (без "Сейчас")
+          renderPastWaveHistory()
+        )
+      )
+    );
+  }
+
   MOD.renderInsulinWaveIndicator = function renderInsulinWaveIndicator({
     React,
     insulinWaveData,
@@ -16,6 +223,11 @@
   }) {
     if (!insulinWaveData) return null;
     if (isMobile && mobileSubTab !== 'diary') return null;
+
+    // 📅 Прошлый день — показываем итоги жиросжигания
+    if (insulinWaveData.isPastDay) {
+      return _renderPastDayIndicator({ React, insulinWaveData, insulinExpanded, setInsulinExpanded, HEYS });
+    }
 
     const heys = HEYS || window.HEYS || {};
     const IW = heys.InsulinWave;

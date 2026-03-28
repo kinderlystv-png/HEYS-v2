@@ -268,18 +268,50 @@
     }
   }
 
+  function getCascadeDayBalanceMeta(events) {
+    const sharedMeta = HEYS.CascadeCard?.computeCEBMetaFromEvents?.(events);
+    const score = typeof sharedMeta?.scoreRaw === 'number' ? sharedMeta.scoreRaw : (sharedMeta?.score || 0);
+    const confidence = typeof sharedMeta?.confidenceRaw === 'number' ? sharedMeta.confidenceRaw : (sharedMeta?.confidence || 0);
+    const tone = score >= 8 ? 'good' : (score >= 6 ? 'warn' : 'bad');
+
+    return {
+      score,
+      confidence,
+      tone,
+      isEarly: confidence < 1
+    };
+  }
+
   function renderCascadeStrip(data, options = {}) {
     const size = options.size || '4x1';
     const maxDots = Number.isFinite(options.maxDots) ? options.maxDots : (size === '3x1' ? 8 : 10);
     const placeholderCount = Number.isFinite(options.placeholderCount) ? options.placeholderCount : (size === '3x1' ? 6 : 8);
     const extraClassName = options.className || '';
-    const events = Array.isArray(data?.events) ? data.events.slice(-maxDots) : [];
+    const liveEvents = options.useLiveCurrentCascade === true && Array.isArray(window.HEYS?._lastCrs?.events)
+      ? window.HEYS._lastCrs.events
+      : null;
+    const allEvents = Array.isArray(liveEvents) && liveEvents.length > 0
+      ? liveEvents
+      : (Array.isArray(data?.events) ? data.events : []);
+    const events = allEvents.slice(-maxDots);
     const pct = Math.max(0, Math.min(100, Math.round(Number(data?.pct) || 0)));
     const trendMeta = getCascadeTrendMeta(data?.trend);
     const badgeTone = getCascadeBadgeTone(pct);
     const hasData = (data?.hasData === true && events.length > 0) || pct > 0;
     const placeholders = Array.from({ length: placeholderCount });
     const dotsToRender = hasData ? events : placeholders;
+    const showDayBalanceBadge = options.showDayBalanceBadge === true && hasData;
+    const dayBalanceMeta = getCascadeDayBalanceMeta(allEvents);
+    // Per-date CEB cache override: use accurate full-cascade CEB when available
+    if (typeof data?.cebCached === 'number') {
+      dayBalanceMeta.score = data.cebCached;
+      dayBalanceMeta.tone = data.cebCached >= 8 ? 'good' : (data.cebCached >= 6 ? 'warn' : 'bad');
+      if (typeof data?.cebCachedConf === 'number') {
+        dayBalanceMeta.confidence = data.cebCachedConf;
+        dayBalanceMeta.isEarly = data.cebCachedConf < 1;
+      }
+    }
+    const dayBalanceOpacity = 0.45 + dayBalanceMeta.confidence * 0.55;
 
     return React.createElement('div', {
       className: ['widget-cascade', `widget-cascade--${size}`, extraClassName, !hasData ? 'widget-cascade--empty' : '']
@@ -308,16 +340,37 @@
           });
         })
       ),
-      React.createElement('div', {
-        className: `widget-cascade__badge widget-cascade__badge--${badgeTone}`,
-        title: trendMeta.label
-      },
-        React.createElement('span', { className: 'widget-cascade__badge-value' }, `${pct}%`),
-        React.createElement('span', {
-          className: `widget-cascade__badge-arrow widget-cascade__badge-arrow--${trendMeta.key}`,
-          'aria-label': trendMeta.label
-        }, trendMeta.arrow)
-      )
+      showDayBalanceBadge
+        ? React.createElement('div', { className: 'widget-cascade__aside' },
+          React.createElement('div', {
+            className: `widget-cascade__day-balance widget-cascade__day-balance--${dayBalanceMeta.tone}${dayBalanceMeta.isEarly ? ' widget-cascade__day-balance--early' : ''}`,
+            style: { opacity: dayBalanceOpacity },
+            title: `Баланс дня${dayBalanceMeta.isEarly ? ' (предварительно)' : ''}`
+          },
+            React.createElement('span', { className: 'widget-cascade__day-balance-label' }, 'Баланс дня'),
+            React.createElement('span', { className: 'widget-cascade__day-balance-value' }, dayBalanceMeta.score.toFixed(1))
+          ),
+          React.createElement('div', {
+            className: `widget-cascade__metric widget-cascade__metric--${badgeTone}`,
+            title: trendMeta.label
+          },
+            React.createElement('span', { className: 'widget-cascade__metric-value' }, `${pct}%`),
+            React.createElement('span', {
+              className: `widget-cascade__metric-arrow widget-cascade__metric-arrow--${trendMeta.key}`,
+              'aria-label': trendMeta.label
+            }, trendMeta.arrow)
+          )
+        )
+        : React.createElement('div', {
+          className: `widget-cascade__badge widget-cascade__badge--${badgeTone}`,
+          title: trendMeta.label
+        },
+          React.createElement('span', { className: 'widget-cascade__badge-value' }, `${pct}%`),
+          React.createElement('span', {
+            className: `widget-cascade__badge-arrow widget-cascade__badge-arrow--${trendMeta.key}`,
+            'aria-label': trendMeta.label
+          }, trendMeta.arrow)
+        )
     );
   }
 
@@ -1629,9 +1682,30 @@
     const isLipolysis = data?.isLipolysis ?? (status === 'lipolysis');
     const lastMealTime = data?.lastMealTime || null;
     const isNightTime = data?.isNightTime || false;
+    const isPastDay = data?.isPastDay || false;
+    const isOvernightLipolysis = data?.isOvernightLipolysis || false;
 
     const d = getWidgetDims(widget);
     const isShort = d.isShort;
+
+    if (!hasData) {
+      return React.createElement('div', {
+        style: { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '4px', opacity: 0.5 }
+      },
+        React.createElement('div', { style: { fontSize: '1.4rem' } }, '🌊'),
+        React.createElement('div', { style: { fontSize: '0.7rem', color: 'var(--heys-text-tertiary,#64748b)', textAlign: 'center' } }, 'Добавьте приёмы пищи')
+      );
+    }
+
+    // === Past-day: специальная версия ===
+    if (isPastDay) {
+      return React.createElement(InsulinWavePastDayContent, { widget, data, d, isShort });
+    }
+
+    // === Сегодня без завтрака: ночной липолиз с рекордом ===
+    if (isOvernightLipolysis) {
+      return React.createElement(InsulinWaveOvernightContent, { widget, data, d, isShort });
+    }
 
     // Главный заголовок — что происходит с жиром сейчас
     const mainLabel = isLipolysis
@@ -1677,15 +1751,6 @@
         : (isNightTime ? 'Ночной липолиз' : 'Не ешь — жир уходит'))
       : (endTime ? `Липолиз начнётся в ${endTime}` : 'Ждём снижения инсулина');
     const subTextColor = isLipolysis ? '#22c55e' : '#eab308';
-
-    if (!hasData) {
-      return React.createElement('div', {
-        style: { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '4px', opacity: 0.5 }
-      },
-        React.createElement('div', { style: { fontSize: '1.4rem' } }, '🌊'),
-        React.createElement('div', { style: { fontSize: '0.7rem', color: 'var(--heys-text-tertiary,#64748b)', textAlign: 'center' } }, 'Добавьте приёмы пищи')
-      );
-    }
 
     const sparkline = React.createElement(InsulinWaveSparkline, {
       progress, isLipolysis, color, width: '100%', height: isShort ? 34 : 50
@@ -1736,6 +1801,151 @@
       }, subText)
     );
   }
+
+  function InsulinWaveOvernightContent({ data, d, isShort }) {
+    const lipolysisMin = data?.lipolysisMinutes || 0;
+    const lipolysisKcal = data?.lipolysisKcal || 0;
+    const record = data?.lipolysisRecord || {};
+    const recordMin = record.minutes || 0;
+    const isRecord = data?.isRecord || false;
+
+    const formatMin = (minutes) => {
+      if (!minutes || minutes <= 0) return '0м';
+      const h = Math.floor(minutes / 60);
+      const m = Math.round(minutes % 60);
+      if (h > 0 && m > 0) return `${h}ч ${m}м`;
+      if (h > 0) return `${h}ч`;
+      return `${m}м`;
+    };
+
+    const durationLabel = formatMin(lipolysisMin);
+    const recordLabel = recordMin > 0 ? formatMin(recordMin) : null;
+    const sparkline = React.createElement(InsulinWaveSparkline, {
+      progress: 100, isLipolysis: true, color: '#22c55e', width: '100%', height: isShort ? 34 : 50
+    });
+
+    if (isShort) {
+      return React.createElement('div', {
+        style: { display: 'flex', alignItems: 'center', height: '100%', gap: '8px', padding: '4px 10px' }
+      },
+        React.createElement('div', {
+          style: { display: 'flex', flexDirection: 'column', gap: '2px', flexShrink: 0, minWidth: '78px' }
+        },
+          React.createElement('div', {
+            style: { fontSize: '0.72rem', fontWeight: 700, color: '#22c55e', lineHeight: 1.2 }
+          }, 'Жир сжигается'),
+          React.createElement('div', {
+            style: { fontSize: '0.65rem', color: '#3b82f6', fontWeight: 700 }
+          }, durationLabel)
+        ),
+        React.createElement('div', { style: { flex: 1, minWidth: 0 } }, sparkline)
+      );
+    }
+
+    return React.createElement('div', {
+      style: { display: 'flex', flexDirection: 'column', justifyContent: 'space-between', height: '100%', padding: '8px 8px 6px' }
+    },
+      React.createElement('div', {
+        style: { fontSize: '0.8rem', fontWeight: 700, color: '#22c55e', lineHeight: 1.2 }
+      }, 'Жир сжигается'),
+      React.createElement('div', {
+        style: { fontSize: '1.2rem', fontWeight: 800, color: '#3b82f6', letterSpacing: '-0.5px', lineHeight: 1, marginTop: '2px' }
+      }, durationLabel),
+      React.createElement('div', {
+        style: { flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', marginTop: '4px', marginBottom: '4px' }
+      }, sparkline),
+      React.createElement('div', {
+        style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '4px' }
+      },
+        React.createElement('div', {
+          style: { fontSize: '0.6rem', fontWeight: 600, color: '#22c55e', lineHeight: 1.3 }
+        }, lipolysisKcal > 0 ? `~${lipolysisKcal} ккал сейчас` : 'Липолиз идёт'),
+        recordLabel ? React.createElement('div', {
+          style: { fontSize: '0.55rem', fontWeight: 600, color: isRecord ? '#f59e0b' : 'var(--heys-text-tertiary,#94a3b8)', lineHeight: 1.2, whiteSpace: 'nowrap' }
+        }, isRecord ? '🏆 Рекорд!' : `🏆 ${recordLabel}`) : null
+      )
+    );
+  }
+
+  // === Past-day insulin wave: итоги жиросжигания ===
+  function InsulinWavePastDayContent({ widget, data, d, isShort }) {
+    const windowH = data.fatBurningWindowH || 0;
+    const windowM = data.fatBurningWindowM || 0;
+    const kcal = data.fatBurningKcal || 0;
+    const record = data.lipolysisRecord || {};
+    const isRecord = data.isRecord || false;
+    const windowMin = data.fatBurningWindowMin || 0;
+    const stillActive = data.fatBurningStillActive || false;
+
+    const durationLabel = windowH > 0
+      ? (windowM > 0 ? `${windowH}ч ${windowM}м` : `${windowH}ч`)
+      : `${windowM}м`;
+
+    const headerText = stillActive
+      ? 'Жир сжигается'
+      : windowMin > 0 ? 'Жир сжигался' : 'Нет окна';
+
+    // Рекорд
+    const recordMin = record.minutes || 0;
+    const recordH = Math.floor(recordMin / 60);
+    const recordM = Math.round(recordMin % 60);
+    const recordLabel = recordMin > 0
+      ? (recordH > 0 ? (recordM > 0 ? `${recordH}ч ${recordM}м` : `${recordH}ч`) : `${recordM}м`)
+      : null;
+
+    const sparkline = React.createElement(InsulinWaveSparkline, {
+      progress: 100, isLipolysis: true, color: '#22c55e', width: '100%', height: isShort ? 34 : 50
+    });
+
+    // === 2×1 horizontal ===
+    if (isShort) {
+      return React.createElement('div', {
+        style: { display: 'flex', alignItems: 'center', height: '100%', gap: '8px', padding: '4px 10px' }
+      },
+        React.createElement('div', {
+          style: { display: 'flex', flexDirection: 'column', gap: '2px', flexShrink: 0, minWidth: '68px' }
+        },
+          React.createElement('div', {
+            style: { fontSize: '0.72rem', fontWeight: 700, color: '#22c55e', lineHeight: 1.2 }
+          }, headerText),
+          React.createElement('div', {
+            style: { fontSize: '0.65rem', color: '#3b82f6', fontWeight: 700 }
+          }, durationLabel)
+        ),
+        React.createElement('div', { style: { flex: 1, minWidth: 0 } }, sparkline)
+      );
+    }
+
+    // === 2×2 vertical: past-day version ===
+    return React.createElement('div', {
+      style: { display: 'flex', flexDirection: 'column', justifyContent: 'space-between', height: '100%', padding: '8px 8px 6px' }
+    },
+      // Header
+      React.createElement('div', {
+        style: { fontSize: '0.8rem', fontWeight: 700, color: '#22c55e', lineHeight: 1.2 }
+      }, headerText),
+      // Duration (big)
+      React.createElement('div', {
+        style: { fontSize: '1.2rem', fontWeight: 800, color: '#3b82f6', letterSpacing: '-0.5px', lineHeight: 1, marginTop: '2px' }
+      }, windowMin > 0 ? durationLabel : '—'),
+      // Sparkline
+      React.createElement('div', {
+        style: { flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', marginTop: '4px', marginBottom: '4px' }
+      }, sparkline),
+      // Bottom: kcal + record
+      React.createElement('div', {
+        style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '4px' }
+      },
+        React.createElement('div', {
+          style: { fontSize: '0.6rem', fontWeight: 600, color: '#22c55e', lineHeight: 1.3 }
+        }, stillActive ? `~${kcal} ккал и растёт` : kcal > 0 ? `~${kcal} ккал сожжено` : 'Без жиросжигания'),
+        !stillActive && recordLabel ? React.createElement('div', {
+          style: { fontSize: '0.55rem', fontWeight: 600, color: isRecord ? '#f59e0b' : 'var(--heys-text-tertiary,#94a3b8)', lineHeight: 1.2, whiteSpace: 'nowrap' }
+        }, isRecord ? '🏆 Рекорд!' : `🏆 ${recordLabel}`) : null
+      )
+    );
+  }
+
 
   // === Health Trend Widget Content (Тренд здоровья 0-100 из инсайтов) ===
   function HealthTrendWidgetContent({ widget, data }) {
@@ -3259,9 +3469,11 @@
         React.createElement('div', { className: 'widget-macros__cascade-row' },
           renderCascadeStrip(cascade || {}, {
             size: '3x1',
-            maxDots: 8,
+            maxDots: Array.isArray(cascade?.events) && cascade.events.length > 0 ? cascade.events.length : 8,
             placeholderCount: 6,
-            className: 'widget-cascade--embedded'
+            className: 'widget-cascade--embedded',
+            showDayBalanceBadge: true,
+            useLiveCurrentCascade: true
           })
         )
       );

@@ -1646,6 +1646,249 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
   }
 
   /**
+   * Compute historical CEB (Cascade Energy Balance) using continuous scoring.
+   * Unlike buildDayEventsSimple (fixed weights), this uses the same sigmoid/bell-curve/tanh
+   * formulas as getRetroactiveDcs — but tracks positive/negative weights separately
+   * so that CEB = positiveWeight / totalWeight × 10 matches the live cascade card.
+   *
+   * @param {Object} day — day data from localStorage (dayv2_*)
+   * @param {number} mealBandShift — chronotype shift (usually from prevDays median)
+   * @param {Object} prof — user profile (for calorie penalty)
+   * @param {Array}  prevDays — up to 14 preceding days (for baselines)
+   * @returns {{score: number, confidence: number}|null}
+   */
+  function computeHistoricalCEB(day, mealBandShift, prof, prevDays) {
+    if (!day) return null;
+
+    var positiveW = 0;
+    var negativeW = 0;
+    var factorCount = 0;
+
+    function addWeight(w) {
+      if (w >= 0) { positiveW += w; }
+      else { negativeW += Math.abs(w); }
+    }
+
+    // ── 0. Chronotype baseline (same as getRetroactiveDcs) ──
+    var shift = mealBandShift || 0;
+    if (!shift && prevDays) {
+      var retroOnsetValues = [];
+      var rpd = prevDays || [];
+      for (var roi = 0; roi < rpd.length; roi++) {
+        if (!rpd[roi] || !rpd[roi].sleepStart) continue;
+        var roVal = parseTime(rpd[roi].sleepStart);
+        if (roVal !== null) {
+          if (roVal < 360) roVal += 1440;
+          retroOnsetValues.push(roVal);
+        }
+      }
+      if (day.sleepStart) {
+        var slMins0 = parseTime(day.sleepStart);
+        if (slMins0 !== null) {
+          if (slMins0 < 360) slMins0 += 1440;
+          retroOnsetValues.push(slMins0);
+        }
+      }
+      var retroPersonalOnset = retroOnsetValues.length >= 3
+        ? median(retroOnsetValues)
+        : POPULATION_DEFAULTS.sleepOnsetMins;
+      var retroOptimalOnset = Math.max(1290, Math.min(retroPersonalOnset, 1530));
+      shift = Math.max(-30, retroOptimalOnset - 1380);
+    }
+
+    // ── 1. Meals: continuous time-band scoring ──
+    var meals = day.meals || [];
+    var mealPositiveCount = 0;
+    for (var lmi = 0; lmi < meals.length; lmi++) {
+      var lmt = parseTime(meals[lmi] && meals[lmi].time);
+      var mw;
+      if (lmt !== null) {
+        var normalizedLmt = lmt;
+        if (normalizedLmt < 360) normalizedLmt += 1440;
+        if (normalizedLmt >= 1380 + shift) {
+          mw = -1.0; // hard violation
+        } else if (normalizedLmt >= 1260 + shift) {
+          mw = 0.70; mealPositiveCount++;
+        } else if (normalizedLmt < 600 + shift) {
+          mw = 1.25; mealPositiveCount++; // breakfast
+        } else {
+          mw = 1.10; mealPositiveCount++; // daytime
+        }
+      } else {
+        mw = 0.90; mealPositiveCount++;
+      }
+      addWeight(mw);
+      factorCount++;
+    }
+
+    // ── 2. Training: sqrt-curve ──
+    var trains = day.trainings || [];
+    var hasTraining = trains.length > 0;
+    if (trains.length > 0) {
+      var firstLoad = getTrainingLoad(trains[0]);
+      addWeight(clamp(Math.sqrt(Math.max(firstLoad, 30) / 30) * 1.2, 0.5, 2.5));
+      if (trains.length > 1) {
+        var secondLoad = getTrainingLoad(trains[1]);
+        addWeight(clamp(Math.sqrt(Math.max(secondLoad, 20) / 30) * 0.6, 0.2, 1.0));
+      }
+      for (var rti = 2; rti < trains.length; rti++) {
+        var addLoad = getTrainingLoad(trains[rti]);
+        addWeight(clamp(Math.sqrt(Math.max(addLoad, 20) / 30) * 0.3, 0.1, 0.5));
+      }
+      factorCount++;
+    }
+
+    // ── 3. Sleep onset: sigmoid ──
+    var retroOptOnset = 1380 + shift; // re-derive optimal from shift
+    if (day.sleepStart) {
+      var slMins = parseTime(day.sleepStart);
+      if (slMins !== null) {
+        if (slMins < 360) slMins += 1440;
+        var retroOnsetDev = slMins - retroOptOnset;
+        var onsetW = -Math.tanh(retroOnsetDev / 60) * 1.5 + 0.5;
+        onsetW = clamp(onsetW, -2.0, 1.2);
+        if (slMins > 1680) onsetW = -2.0;
+        addWeight(onsetW);
+        factorCount++;
+      }
+    } else {
+      addWeight(0.3); // neutral default for missing data
+    }
+
+    // ── 4. Sleep duration: bell-curve ──
+    var slH = day.sleepHours || 0;
+    if (!slH && day.sleepStart && day.sleepEnd) {
+      var sFm = parseTime(day.sleepStart);
+      var eFm = parseTime(day.sleepEnd);
+      if (sFm !== null && eFm !== null) {
+        if (eFm < sFm) eFm += 1440;
+        slH = (eFm - sFm) / 60;
+      }
+    }
+    if (slH > 0) {
+      var retroSleepVals = [];
+      var rpds = prevDays || [];
+      for (var rsi = 0; rsi < rpds.length; rsi++) {
+        if (rpds[rsi] && rpds[rsi].sleepHours > 0) retroSleepVals.push(rpds[rsi].sleepHours);
+      }
+      var retroSleepOpt = retroSleepVals.length >= 3
+        ? clamp(median(retroSleepVals), 6.0, 9.0)
+        : POPULATION_DEFAULTS.sleepHours;
+      var slDev = Math.abs(slH - retroSleepOpt);
+      var slWeight = 1.5 * Math.exp(-(slDev * slDev) / (2 * 0.8 * 0.8)) - 0.5;
+      if (slH < retroSleepOpt) slWeight *= 1.3;
+      slWeight = clamp(slWeight, -2.0, 1.5);
+      if (slH < 4.0) slWeight = -2.0;
+      else if (slH > 12.0) slWeight = -0.5;
+      addWeight(slWeight);
+      factorCount++;
+    }
+
+    // ── 5. Steps: tanh ──
+    var retSteps = day.steps || 0;
+    if (retSteps > 0) {
+      var retStepsGoal = 8000;
+      var retStepVals = [];
+      var rpst = prevDays || [];
+      for (var sti = 0; sti < rpst.length; sti++) {
+        if (rpst[sti] && rpst[sti].steps > 0) retStepVals.push(rpst[sti].steps);
+      }
+      if (retStepVals.length >= 5) {
+        var retStepAvg = retStepVals.reduce(function (a, b) { return a + b; }, 0) / retStepVals.length;
+        retStepsGoal = Math.max(5000, retStepAvg * 1.05);
+      }
+      var stRatio = retSteps / retStepsGoal;
+      addWeight(clamp(Math.tanh((stRatio - 0.6) * 2.5) * 1.0 + 0.15, -0.5, 1.3));
+      factorCount++;
+    }
+
+    // ── 6. Checkin: streak-aware ──
+    if (day.weightMorning > 0) {
+      var retroCheckinStreak = 0;
+      var rpdCk = prevDays || [];
+      for (var cki = 0; cki < rpdCk.length; cki++) {
+        if (rpdCk[cki] && rpdCk[cki].weightMorning > 0) retroCheckinStreak++;
+        else break;
+      }
+      var retroStreakBonus = Math.min(0.5, retroCheckinStreak * 0.05);
+      addWeight(Math.min(0.8, 0.3 + retroStreakBonus));
+      factorCount++;
+    }
+
+    // ── 7. Household: log2-relative ──
+    var retHM = day.householdMin || 0;
+    if (retHM > 0) {
+      addWeight(calculateHouseholdScore(retHM));
+      factorCount++;
+    }
+
+    // ── 8. Supplements ──
+    var retSuppTaken = day.supplementsTaken || 0;
+    var retSuppPlanned = day.supplementsPlanned || 0;
+    if (retSuppPlanned > 0) {
+      var suppRatio = (typeof retSuppTaken === 'number' ? retSuppTaken : (Array.isArray(retSuppTaken) ? retSuppTaken.length : 0))
+        / (typeof retSuppPlanned === 'number' ? retSuppPlanned : (Array.isArray(retSuppPlanned) ? retSuppPlanned.length : 0));
+      addWeight(clamp(suppRatio * 0.7 - 0.1, -0.3, 0.5));
+    }
+
+    // ── 9. Insulin wave approximation (meal gap proxy) ──
+    if (meals.length >= 2) {
+      var mealTimes = [];
+      for (var mti = 0; mti < meals.length; mti++) {
+        var mtVal = parseTime(meals[mti] && meals[mti].time);
+        if (mtVal !== null) mealTimes.push(mtVal);
+      }
+      mealTimes.sort(function (a, b) { return a - b; });
+      if (mealTimes.length >= 2) {
+        var avgGap = 0;
+        for (var gi = 1; gi < mealTimes.length; gi++) {
+          avgGap += mealTimes[gi] - mealTimes[gi - 1];
+        }
+        avgGap /= (mealTimes.length - 1);
+        addWeight(clamp((avgGap - 120) / 180 * 0.5, -0.3, 0.5));
+      }
+    }
+
+    // ── 10. Measurements ──
+    var retMeas = (day && day.measurements) || null;
+    var retMeasKeys = retMeas ? Object.keys(retMeas).filter(function (k) { return retMeas[k] > 0; }) : [];
+    if (retMeasKeys.length > 0) {
+      var retMeasCompleteness = retMeasKeys.length / 4;
+      addWeight(clamp(0.5 + retMeasCompleteness * 0.7, 0, 1.2));
+    }
+
+    // ── 10.5. Calorie penalty ──
+    var retroCaloriePenalty = getHistoricalCaloriePenalty(day, prof);
+    if (retroCaloriePenalty) {
+      addWeight(retroCaloriePenalty.weight);
+    }
+
+    // ── 11. Cross-factor synergy ──
+    var retroPositiveFactors = 0;
+    if (mealPositiveCount >= 3) retroPositiveFactors++;
+    if (hasTraining) retroPositiveFactors++;
+    if (slH >= 6.5) retroPositiveFactors++;
+    if (retSteps > 0) retroPositiveFactors++;
+    if (day.weightMorning > 0) retroPositiveFactors++;
+    if (retHM > 0) retroPositiveFactors++;
+    var retroSynergyBonus = 0;
+    if (retroPositiveFactors >= 6) retroSynergyBonus = 0.80;
+    else if (retroPositiveFactors >= 5) retroSynergyBonus = 0.65;
+    else if (retroPositiveFactors >= 4) retroSynergyBonus = 0.45;
+    else if (retroPositiveFactors >= 3) retroSynergyBonus = 0.25;
+    if (retroSynergyBonus > 0) addWeight(retroSynergyBonus);
+
+    // ── CEB = positiveWeight / totalWeight × 10 ──
+    var totalWeight = positiveW + negativeW;
+    if (totalWeight < 0.001) return null;
+
+    var score = Math.round((positiveW / totalWeight) * 100) / 10;
+    var confidence = Math.round(Math.min(factorCount / 4, 1) * 100) / 100;
+
+    return { score: score, confidence: confidence };
+  }
+
+  /**
    * Retroactive DCS estimation for days without full scoring.
    * v3.4.2: meal weights calibrated to match full algo output —
    *   daytime 1.10 (was 0.95), breakfast 1.25 (was 1.15), evening 0.70 (was 0.50).
@@ -2173,8 +2416,10 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
   // ДВИЖОК: computeCascadeState
   // ─────────────────────────────────────────────────────
 
-  function computeCascadeState(day, dayTot, normAbs, prof, pIndex) {
+  function computeCascadeState(day, dayTot, normAbs, prof, pIndex, opts) {
     var t0 = (typeof performance !== 'undefined') ? performance.now() : Date.now();
+    var computeOpts = opts || {};
+    var silent = !!computeOpts.silent;
 
     console.info('[HEYS.cascade] ─── computeCascadeState v3.6.0 START ────────');
     console.info('[HEYS.cascade] 🧬 v3.6.0 features: CRS = base(EMA completed days) + DCS×0.03 | soft chain degradation | continuous scoring | personal baselines | circadian awareness | confidence layer | day-type detection | cross-factor synergies | goal-aware calorie penalty | chronotype-tolerant sleep scoring');
@@ -3628,6 +3873,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     console.info('[HEYS.cascade] ─────────────────────────────────────────────');
 
     // ── ИСТОРИЧЕСКИЕ СОБЫТИЯ для multi-day timeline ──────
+    // v3.7.0: Override historical CEB from per-date cache (full cascade score)
+    var _histCid = (HEYS.utils && HEYS.utils.getCurrentClientId) ? HEYS.utils.getCurrentClientId() : '';
     var historicalDays = [];
     for (var hdi = 0; hdi < prevDays30.length; hdi++) {
       var hDayRef = prevDays30[hdi];
@@ -3636,10 +3883,22 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       if (hEvts.length === 0) continue;
       var hDateD = new Date();
       hDateD.setDate(hDateD.getDate() - (hdi + 1));
+      var hDateStr = hDateD.toISOString().slice(0, 10);
+      // Check per-date cache for accurate CEB from full cascade
+      var hCebOverride = null;
+      try {
+        var hCebKey = _histCid ? 'heys_' + _histCid + '_ceb_d_' + hDateStr : 'heys_ceb_d_' + hDateStr;
+        var hCebRaw = (HEYS.store && HEYS.store.get) ? HEYS.store.get(hCebKey, null) : localStorage.getItem(hCebKey);
+        if (hCebRaw) {
+          var hCebParsed = typeof hCebRaw === 'string' ? JSON.parse(hCebRaw) : hCebRaw;
+          if (hCebParsed && typeof hCebParsed.s === 'number') hCebOverride = hCebParsed;
+        }
+      } catch (_) { }
       historicalDays.push({
-        dateStr: hDateD.toISOString().slice(0, 10),
+        dateStr: hDateStr,
         label: getDateLabel(hdi + 1),
-        events: hEvts
+        events: hEvts,
+        cebOverride: hCebOverride ? hCebOverride.s : null
       });
     }
     // 🚀 PERF: Reduced cascade history logging — summary only instead of 30+ individual logs
@@ -3686,13 +3945,57 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       goalMode: mealGoalMode ? mealGoalMode.mode : null
     };
 
-    // Сохраняем глобально для CrsProgressBar и диспатчим событие
-    window.HEYS = window.HEYS || {};
-    window.HEYS._lastCrs = result;
+    try {
+      var cacheMeta = computeCEBMetaFromEvents(events);
+      if (!silent && cacheMeta) {
+        var cacheCid = (HEYS.utils && HEYS.utils.getCurrentClientId) ? HEYS.utils.getCurrentClientId() : '';
+        var cacheCebScore = cacheMeta.score;
+        var cacheCebConf = cacheMeta.confidence;
+        var cacheKey = cacheCid ? 'heys_' + cacheCid + '_ceb_v1' : 'heys_ceb_v1';
+        var cachePayload = JSON.stringify({
+          s: cacheCebScore,
+          c: cacheCebConf,
+          d: todayStr
+        });
+        if (HEYS.store && HEYS.store.set) {
+          HEYS.store.set(cacheKey, cachePayload);
+        } else {
+          localStorage.setItem(cacheKey, cachePayload);
+        }
 
-    console.info('[HEYS.cascade] ⚙️ computeCascadeState finished. New CRS:', result.crs, 'Events:', events.map(function (e) { return e.type + '(' + e.weight.toFixed(2) + ')'; }).join(', '));
+        // v3.7.0: Per-date CEB cache — source of truth for leaderboard & widgets
+        // Cache only when real product index is available; in this codebase pIndex is an object, not a number.
+        var dayDateStr = (day && day.date) || todayStr;
+        if (pIndex) {
+          var perDateKey = cacheCid ? 'heys_' + cacheCid + '_ceb_d_' + dayDateStr : 'heys_ceb_d_' + dayDateStr;
+          var perDatePayload = JSON.stringify({ s: cacheCebScore, c: cacheCebConf });
+          localStorage.setItem(perDateKey, perDatePayload);
+          console.info('[HEYS.cascade] 📌 CEB cached per-date:', dayDateStr, '→', cacheCebScore);
+        }
+      }
+    } catch (cacheErr) {
+      console.warn('[HEYS.cascade] ⚠️ Failed to cache CEB for leaderboard:', cacheErr && cacheErr.message);
+    }
 
-    window.dispatchEvent(new CustomEvent('heys:crs-updated', { detail: result }));
+    if (!silent) {
+      // Сохраняем глобально для CrsProgressBar и диспатчим событие
+      window.HEYS = window.HEYS || {};
+      window.HEYS._lastCrs = result;
+
+      console.info('[HEYS.cascade] ⚙️ computeCascadeState finished. New CRS:', result.crs, 'Events:', events.map(function (e) { return e.type + '(' + e.weight.toFixed(2) + ')'; }).join(', '));
+
+      window.dispatchEvent(new CustomEvent('heys:crs-updated', { detail: result }));
+
+      // 🏆 Auto-publish leaderboard snapshot (debounced, only for today and only if sharing enabled)
+      try {
+        var publishDateStr = (day && day.date) || todayStr;
+        if (publishDateStr === todayStr && window.HEYS && window.HEYS.leaderboard && window.HEYS.leaderboard.publishSnapshot) {
+          window.HEYS.leaderboard.publishSnapshot();
+        }
+      } catch (lbErr) {
+        console.warn('[HEYS.cascade] ⚠️ Leaderboard publish failed:', lbErr && lbErr.message);
+      }
+    }
 
     return result;
   }
@@ -3753,6 +4056,27 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         style: { background: getEventColor(w) },
         title: (ev.time ? formatTimeShort(ev.time) + ' · ' : '') + ev.label + ' (' + wStr + ')'
       }));
+    }
+
+    // CEB badge — «Баланс дня X.X» после последней точки
+    if (typeof props.ceb === 'number' && events.length > 0) {
+      var cebVal = props.ceb;
+      var conf = typeof props.cebConfidence === 'number' ? props.cebConfidence : 1;
+      var cebColor = cebVal >= 8.0 ? '#22c55e' : (cebVal >= 6.0 ? '#f59e0b' : '#ef4444');
+      var isEarly = conf < 1;
+      // Opacity: от 0.45 (самый ранний) до 1.0 (полная уверенность)
+      var badgeOpacity = 0.45 + conf * 0.55;
+      var badgeClass = 'cascade-ceb-badge' + (isEarly ? ' cascade-ceb-badge--early' : '');
+
+      children.push(React.createElement('div', {
+        key: 'ceb',
+        className: badgeClass,
+        style: { background: cebColor, color: '#fff', opacity: badgeOpacity },
+        title: 'Баланс дня' + (isEarly ? ' (предварительно)' : '')
+      },
+        React.createElement('span', { className: 'cascade-ceb-label' }, 'Баланс дня'),
+        React.createElement('span', { className: 'cascade-ceb-value' }, cebVal.toFixed(1))
+      ));
     }
 
     return React.createElement('div', {
@@ -4135,14 +4459,24 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     // Пороги: < 0.22 → green, 0.22–0.48 → amber, > 0.48 → red
     // Бонус: при высоком импульсе (progressPct ≥ 55) порог amber поднимается до 0.32
     // Ранний день (< 3 событий): порог amber поднимается до 0.40 — не пугаем раньше времени
-    var totalPositiveWeight = events.reduce(function (s, e) {
-      return e.positive ? s + (typeof e.weight === 'number' ? Math.abs(e.weight) : 0) : s;
-    }, 0);
+    var cebMeta = computeCEBMetaFromEvents(events);
+    var totalPositiveWeight = cebMeta ? cebMeta.totalPositiveWeight : 0;
     var totalNegativeWeight = events.reduce(function (s, e) {
       return !e.positive ? s + (typeof e.weight === 'number' ? Math.abs(e.weight) : 0) : s;
     }, 0);
     var totalWeight = totalPositiveWeight + totalNegativeWeight;
     var negativeRatio = totalWeight > 0.001 ? totalNegativeWeight / totalWeight : 0;
+
+    // CEB — Cascade Effort Balance (0.0–10.0)
+    var ceb = cebMeta ? cebMeta.scoreRaw : 0;
+    // Confidence: clamp(totalWeight / 4, 0, 1) — полная уверенность при суммарном весе ≥ 4
+    // (~3–4 реальных события с типичными весами)
+    var cebConfidence = cebMeta ? cebMeta.confidenceRaw : 0;
+    console.info('[HEYS.cascade] ⚖️ CEB:', ceb.toFixed(1) + '/10', 'confidence:', +cebConfidence.toFixed(2), {
+      totalPositiveWeight: +totalPositiveWeight.toFixed(2),
+      totalNegativeWeight: +totalNegativeWeight.toFixed(2),
+      totalWeight: +totalWeight.toFixed(2)
+    });
 
     // Адаптивный порог перехода в amber:
     //   — ранний день (< 3 события) → 0.40 (не реагируем на единичный минус)
@@ -4209,7 +4543,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         }, '⏰ Окно после тренировки — выбери качество, а не количество'),
 
         // Цепочка точек (всегда показываем в шапке)
-        React.createElement(ChainDots, { events: events }),
+        React.createElement(ChainDots, { events: events, ceb: ceb, cebConfidence: cebConfidence }),
 
         // Прогресс-бар (анимируется от 0 → progressPct за 1.4с)
         React.createElement('div', { className: 'cascade-card__progress-track animate-always' },
@@ -5253,18 +5587,237 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     );
   }
 
+  function computeCEBMetaFromEvents(events) {
+    if (!Array.isArray(events) || events.length === 0) return null;
+
+    var totalPositiveWeight = 0;
+    var totalWeight = 0;
+    for (var i = 0; i < events.length; i++) {
+      var evt = events[i] || {};
+      var weight = Math.abs(Number(evt.weight) || 0);
+      if (evt.positive) totalPositiveWeight += weight;
+      totalWeight += weight;
+    }
+
+    if (totalWeight < 0.001) return null;
+
+    var scoreRaw = (totalPositiveWeight / totalWeight) * 10;
+    var confidenceRaw = Math.min(totalWeight / 4, 1);
+    var pctRaw = (totalPositiveWeight / totalWeight) * 100;
+    return {
+      scoreRaw: scoreRaw,
+      score: Math.round(scoreRaw * 10) / 10,
+      confidenceRaw: confidenceRaw,
+      confidence: Math.round(confidenceRaw * 100) / 100,
+      pctRaw: pctRaw,
+      pct: Math.round(pctRaw * 100) / 100,
+      totalPositiveWeight: totalPositiveWeight,
+      totalWeight: totalWeight
+    };
+  }
+
+  function tryParseStoredValue(raw, fallback) {
+    if (raw === null || raw === undefined) return fallback;
+    if (typeof raw === 'string') {
+      var str = raw;
+      if (str.indexOf('¤Z¤') === 0 && HEYS.store && HEYS.store.decompress) {
+        try { str = HEYS.store.decompress(str); } catch (_) { }
+      }
+      try { return JSON.parse(str); } catch (_) { return str; }
+    }
+    return raw;
+  }
+
+  function readStoredValue(key, fallback) {
+    try {
+      if (HEYS.store && HEYS.store.get) {
+        var stored = HEYS.store.get(key, null);
+        if (stored !== null && stored !== undefined) {
+          return tryParseStoredValue(stored, fallback);
+        }
+      }
+      var raw = localStorage.getItem(key);
+      if (raw !== null && raw !== undefined) return tryParseStoredValue(raw, fallback);
+      if (HEYS.utils && HEYS.utils.lsGet) return HEYS.utils.lsGet(key, fallback);
+    } catch (_) { }
+    return fallback;
+  }
+
+  function getPerDateCEB(dateStr, clientId) {
+    if (!dateStr) return null;
+
+    try {
+      var resolvedClientId = typeof clientId === 'string'
+        ? clientId
+        : ((HEYS.utils && HEYS.utils.getCurrentClientId) ? HEYS.utils.getCurrentClientId() : '');
+      var key = resolvedClientId ? 'heys_' + resolvedClientId + '_ceb_d_' + dateStr : 'heys_ceb_d_' + dateStr;
+      var raw = (HEYS.store && HEYS.store.get) ? HEYS.store.get(key, null) : localStorage.getItem(key);
+      if (!raw) return null;
+
+      var parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+      if (typeof parsed === 'string') parsed = JSON.parse(parsed);
+      if (!parsed || typeof parsed.s !== 'number') return null;
+
+      return {
+        score: Math.round(parsed.s * 10) / 10,
+        confidence: typeof parsed.c === 'number' ? parsed.c : 1,
+        raw: parsed
+      };
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function computeExactCascadeSnapshot(day, prof, opts) {
+    try {
+      if (!day || !day.meals || !day.meals.length) return null;
+
+      var options = opts || {};
+      var profile = prof || {};
+      var ensureDay = HEYS.models && HEYS.models.ensureDay;
+      var calcTotals = HEYS.dayCalculations && HEYS.dayCalculations.calculateDayTotals;
+      var calcNorms = HEYS.dayCalculations && HEYS.dayCalculations.computeDailyNorms;
+      var buildPIndex = HEYS.dayUtils && HEYS.dayUtils.buildProductIndex;
+      var getOptimumForDay = HEYS.dayUtils && HEYS.dayUtils.getOptimumForDay;
+
+      if (!calcTotals || !calcNorms || !buildPIndex || !getOptimumForDay) return null;
+
+      var normalizedDay = ensureDay ? ensureDay(day, profile) : day;
+      var products = (HEYS.products && HEYS.products.getAll) ? HEYS.products.getAll() : [];
+      var pIndex = buildPIndex(products);
+      var dayTot = calcTotals(normalizedDay, pIndex);
+
+      var normPerc = {};
+      try {
+        normPerc = (HEYS.store && HEYS.store.get) ? (HEYS.store.get('heys_norms', {}) || {}) : {};
+      } catch (_) { }
+      if (!normPerc || typeof normPerc !== 'object') normPerc = {};
+      try {
+        if ((!normPerc || Object.keys(normPerc).length === 0) && HEYS.utils && HEYS.utils.lsGet) {
+          normPerc = HEYS.utils.lsGet('heys_norms', {}) || {};
+        }
+      } catch (_) { }
+
+      var optimumInfo = getOptimumForDay(normalizedDay, profile) || {};
+      var normAbs = calcNorms(optimumInfo.optimum || 0, normPerc || {});
+      var cascadeResult = computeCascadeState(normalizedDay, dayTot, normAbs, profile, pIndex, {
+        silent: options.silent !== false
+      });
+      if (!cascadeResult) return null;
+
+      return {
+        day: normalizedDay,
+        dayTot: dayTot,
+        normAbs: normAbs,
+        pIndex: pIndex,
+        result: cascadeResult,
+        ceb: computeCEBMetaFromEvents(cascadeResult.events)
+      };
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function resolveCEBForDate(dateStr, clientId, opts) {
+    try {
+      if (!dateStr) return null;
+
+      var options = opts || {};
+      var resolvedClientId = typeof clientId === 'string'
+        ? clientId
+        : ((HEYS.utils && HEYS.utils.getCurrentClientId) ? HEYS.utils.getCurrentClientId() : '');
+
+      if (options.includeLiveCurrent !== false && options.isCurrent && HEYS._lastCrs && HEYS._lastCrs.events && HEYS._lastCrs.events.length) {
+        var liveMeta = computeCEBMetaFromEvents(HEYS._lastCrs.events);
+        if (liveMeta) return liveMeta;
+      }
+
+      var day = options.day;
+      if (typeof day === 'string') day = tryParseStoredValue(day, null);
+      if (!day) {
+        var scopedDayKey = resolvedClientId ? 'heys_' + resolvedClientId + '_dayv2_' + dateStr : 'heys_dayv2_' + dateStr;
+        var baseDayKey = 'heys_dayv2_' + dateStr;
+        var legacyDayKey = resolvedClientId ? (resolvedClientId + '_' + baseDayKey) : baseDayKey;
+        var dayRaw = readStoredValue(scopedDayKey, null);
+        if (dayRaw == null && options.isCurrent) dayRaw = readStoredValue(baseDayKey, null);
+        if (dayRaw == null && resolvedClientId) dayRaw = readStoredValue(legacyDayKey, null);
+        if (!dayRaw) return null;
+        day = typeof dayRaw === 'string' ? tryParseStoredValue(dayRaw, null) : dayRaw;
+      }
+      if (!day || !day.meals || !day.meals.length) return null;
+
+      var profile = options.profile;
+      if (typeof profile === 'string') profile = tryParseStoredValue(profile, null);
+      if (profile == null) {
+        var scopedProfileKey = resolvedClientId ? 'heys_' + resolvedClientId + '_profile' : 'heys_profile';
+        var profRaw = readStoredValue(scopedProfileKey, null);
+        if (profRaw == null && options.isCurrent) profRaw = readStoredValue('heys_profile', {});
+        profile = typeof profRaw === 'string' ? tryParseStoredValue(profRaw, {}) : (profRaw || {});
+      }
+
+      var perDateMeta = getPerDateCEB(dateStr, resolvedClientId);
+      if (perDateMeta) {
+        return {
+          score: perDateMeta.score,
+          confidence: perDateMeta.confidence,
+          raw: perDateMeta.raw
+        };
+      }
+
+      var exactSnapshot = computeExactCascadeSnapshot(day, profile, {
+        silent: options.silent !== false
+      });
+      if (exactSnapshot && exactSnapshot.ceb) return exactSnapshot.ceb;
+
+      if (options.allowSingleValueCache !== false) {
+        var cacheKey = resolvedClientId ? 'heys_' + resolvedClientId + '_ceb_v1' : 'heys_ceb_v1';
+        var cached = readStoredValue(cacheKey, null);
+        if (cached && cached.d === dateStr && typeof cached.s === 'number') {
+          return {
+            score: cached.s,
+            confidence: typeof cached.c === 'number' ? cached.c : 1
+          };
+        }
+      }
+
+      if (options.allowHistoricalFallback !== false) {
+        var mealBandShift = options.mealBandShift != null
+          ? options.mealBandShift
+          : ((HEYS._lastCrs && HEYS._lastCrs.mealBandShift != null) ? HEYS._lastCrs.mealBandShift : 0);
+        var prevDays = Array.isArray(options.prevDays) ? options.prevDays : null;
+        var cebResult = computeHistoricalCEB(day, mealBandShift, profile || {}, prevDays);
+        if (cebResult) return cebResult;
+      }
+
+      if (options.allowSimpleFallback !== false) {
+        var events = buildDayEventsSimple(day, 0, profile || {});
+        return computeCEBMetaFromEvents(events);
+      }
+
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
+
   HEYS.CascadeCard = {
     computeCascadeState: computeCascadeState,
+    computeCEBMetaFromEvents: computeCEBMetaFromEvents,
+    computeExactCascadeSnapshot: computeExactCascadeSnapshot,
+    getPerDateCEB: getPerDateCEB,
+    resolveCEBForDate: resolveCEBForDate,
+    buildDayEventsSimple: buildDayEventsSimple,
+    computeHistoricalCEB: computeHistoricalCEB,
     renderCard: renderCard,
     CrsProgressBar: CrsProgressBar,
     STATES: STATES,
     STATE_CONFIG: STATE_CONFIG,
     MESSAGES: MESSAGES,
     CRS_THRESHOLDS: CRS_THRESHOLDS,
-    VERSION: '3.6.1'
+    VERSION: '3.7.1'
   };
 
-  console.info('[HEYS.cascade] ✅ Module loaded v3.6.2 | CRS = raw EMA + todayBoost, then display curve (start 50%, fast to 80%, harder after) | EMA α=0.95, 30-day window, individual ceiling | Scientific scoring: continuous functions, personal baselines, cross-factor synergies | Goal-aware calorie penalty (deficit/bulk) | Filter: [HEYS.cascade] | Sub-filter: [HEYS.cascade.crs] [HEYS.cascade.deficit]');
+  console.info('[HEYS.cascade] ✅ Module loaded v3.7.1 | CRS = raw EMA + todayBoost, then display curve (start 50%, fast to 80%, harder after) | EMA α=0.95, 30-day window, individual ceiling | Scientific scoring: continuous functions, personal baselines, cross-factor synergies | Goal-aware calorie penalty (deficit/bulk) | resolveCEBForDate + computeHistoricalCEB: shared CEB pipeline for diary/widgets/leaderboard | Filter: [HEYS.cascade] | Sub-filter: [HEYS.cascade.crs] [HEYS.cascade.deficit]');
 
 })(typeof window !== 'undefined' ? window : global);
 

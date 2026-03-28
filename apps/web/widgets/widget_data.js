@@ -779,24 +779,33 @@
     _getDayByDate(dateStr) {
       // Ключ дня: heys_dayv2_YYYY-MM-DD (namespace добавляется автоматически через store.get)
       const key = `heys_dayv2_${dateStr}`;
+      const normalizeDay = (value) => {
+        if (!value) return null;
+        if (HEYS.models?.ensureDay) {
+          try {
+            return HEYS.models.ensureDay(value, this._getProfile());
+          } catch (_) { }
+        }
+        return value;
+      };
       try {
         const clientId = HEYS.currentClientId;
 
         // 1. Store-first (scoped через HEYS.store / HEYS.utils)
         const stored = readStoredValue(key, null);
-        if (stored) return stored;
+        if (stored) return normalizeDay(stored);
 
         // 2. Fallback: scoped key напрямую в localStorage
         if (clientId) {
           const scopedKey = `heys_${clientId}_dayv2_${dateStr}`;
           const scopedRaw = localStorage.getItem(scopedKey);
           const scopedParsed = parseStoredValue(scopedRaw, null);
-          if (scopedParsed) return scopedParsed;
+          if (scopedParsed) return normalizeDay(scopedParsed);
         }
 
         // 3. Последний fallback: unscoped key
         const raw = localStorage.getItem(key);
-        return parseStoredValue(raw, null);
+        return normalizeDay(parseStoredValue(raw, null));
       } catch (e) {
         return null;
       }
@@ -824,10 +833,17 @@
     },
 
     _getDayTotals() {
-      // Вычисляем из данных дня
       const day = this._getDay();
-      const totals = this._calculateDayTotals(day);
-      return totals;
+      const products = HEYS.products?.getAll?.() || [];
+      const pIndex = HEYS.dayUtils?.buildProductIndex
+        ? HEYS.dayUtils.buildProductIndex(products)
+        : null;
+      if (HEYS.dayCalculations?.calculateDayTotals && day) {
+        try {
+          return HEYS.dayCalculations.calculateDayTotals(day, pIndex);
+        } catch (_) { }
+      }
+      return this._calculateDayTotals(day);
     },
 
     _calculateDayTotals(day) {
@@ -899,6 +915,12 @@
     _getNormAbs() {
       const optimum = this._getOptimum();
       const norms = this._getNorms();
+
+      if (HEYS.dayCalculations?.computeDailyNorms) {
+        try {
+          return HEYS.dayCalculations.computeDailyNorms(optimum, norms);
+        } catch (_) { }
+      }
 
       const carbsPct = norms.carbsPct || 50;
       const proteinPct = norms.proteinPct || 25;
@@ -1112,14 +1134,27 @@
         return { hasData: true, status: 'decline', progress: 72, remaining: 28, endTime: '14:30', color: '#10b981', lastMealTime: '11:45', isLipolysis: false, isNightTime: false };
       }
       try {
+        const todayStr = this._formatDate(new Date());
+        const selectedDate = this._selectedDate || todayStr;
+        const isPastDay = selectedDate < todayStr;
+
         const dayData = this._getDay() || {};
         const meals = dayData.meals || [];
-        if (meals.length === 0) return { hasData: false, status: 'noData', progress: 0, remaining: 0, isLipolysis: false };
         const mealsWithTime = meals.filter(m => m.time);
+
+        // Если сегодня нет приёмов пищи — проверяем ночной липолиз от вчера
+        if (!isPastDay && mealsWithTime.length === 0) {
+          return this._getOvernightLipolysisData(todayStr);
+        }
         if (mealsWithTime.length === 0) return { hasData: false, status: 'noData', progress: 0, remaining: 0, isLipolysis: false };
 
         const profile = this._getProfile() || {};
         const baseWaveHours = profile?.insulinWaveHours || 3;
+
+        // === Past day: специальная версия с итогами жиросжигания ===
+        if (isPastDay) {
+          return this._getInsulinWavePastDayData(mealsWithTime, dayData, profile, baseWaveHours, selectedDate);
+        }
 
         // Try full InsulinWave module
         if (HEYS.InsulinWave?.calculate) {
@@ -1195,6 +1230,256 @@
       }
     },
 
+    /**
+     * Past-day insulin wave: итоги жиросжигания за прошлый день
+     * Считает окно от конца последней волны до завтрака следующего дня
+     */
+    _getInsulinWavePastDayData(mealsWithTime, dayData, profile, baseWaveHours, selectedDate) {
+      try {
+        const sorted = [...mealsWithTime].sort((a, b) => b.time.localeCompare(a.time));
+        const lastMeal = sorted[0];
+        const [lh, lm] = (lastMeal.time || '0:0').split(':').map(Number);
+        const lastMealMin = lh * 60 + (lm || 0);
+
+        // Рассчитываем длину волны через полный модуль или fallback
+        let waveMinutes = baseWaveHours * 60;
+        if (HEYS.InsulinWave?.calculate) {
+          try {
+            const pIndex = HEYS.products?.buildIndex?.() || null;
+            const getProductFromItem = (item) => {
+              if (!pIndex?.byId?.get) return item;
+              return pIndex.byId.get(item.product_id) || item;
+            };
+            // Используем now = 23:59 выбранного дня чтобы получить корректную длину волны
+            const fakeNow = new Date(selectedDate + 'T23:59:00');
+            const result = HEYS.InsulinWave.calculate({
+              meals: dayData.meals || [],
+              pIndex,
+              getProductFromItem,
+              baseWaveHours,
+              trainings: dayData.trainings || [],
+              dayData: {
+                sleepHours: dayData.sleepHours || null,
+                sleepQuality: dayData.sleepQuality || null,
+                stressAvg: dayData.stressAvg || 0,
+                waterMl: dayData.waterMl || 0,
+                householdMin: dayData.householdMin || 0,
+                steps: dayData.steps || 0,
+                date: dayData.date,
+                lsGet: (key, fallback) => readStoredValue(key, fallback),
+                profile: { age: profile?.age || 0, weight: profile?.weight || 0, height: profile?.height || 0, gender: profile?.gender || '' }
+              },
+              now: fakeNow
+            });
+            if (result?.insulinWaveHours) {
+              waveMinutes = Math.round(result.insulinWaveHours * 60);
+            }
+          } catch (_) { /* fallback to baseWaveHours */ }
+        }
+
+        // Время конца волны (начало жиросжигания)
+        const waveEndMin = lastMealMin + waveMinutes;
+        const waveEndTimeH = Math.floor(waveEndMin / 60) % 24;
+        const waveEndTimeM = Math.round(waveEndMin % 60);
+        const waveEndTime = String(waveEndTimeH).padStart(2, '0') + ':' + String(waveEndTimeM).padStart(2, '0');
+
+        // Ищем первый приём пищи следующего дня (завтрак)
+        let nextDayFirstMealMin = -1;
+        let fatBurningStillActive = false;
+        const _todayStr = this._formatDate(new Date());
+        try {
+          const selDate = new Date(selectedDate);
+          selDate.setDate(selDate.getDate() + 1);
+          const nextDateStr = this._formatDate(selDate);
+          const nextDayData = this._getDayByDate(nextDateStr);
+          const nextMeals = (nextDayData?.meals || []).filter(m => m.time);
+          if (nextMeals.length > 0) {
+            const nextSorted = [...nextMeals].sort((a, b) => a.time.localeCompare(b.time));
+            const firstNextMeal = nextSorted[0];
+            const [nh, nm] = (firstNextMeal.time || '8:0').split(':').map(Number);
+            nextDayFirstMealMin = nh * 60 + (nm || 0);
+          } else if (nextDateStr === _todayStr) {
+            // Следующий день — сегодня и завтрака нет → жиросжигание ещё идёт
+            fatBurningStillActive = true;
+            const _now = new Date();
+            nextDayFirstMealMin = _now.getHours() * 60 + _now.getMinutes();
+          }
+        } catch (_) { /* fallback */ }
+        if (nextDayFirstMealMin < 0) nextDayFirstMealMin = 8 * 60;
+
+        // Окно жиросжигания: от конца волны до завтрака следующего дня
+        // Если волна кончилась, например, в 23:00, а завтрак в 08:00 → 9 часов
+        let fatBurningWindowMin;
+        if (waveEndMin >= 1440) {
+          // Волна кончилась уже на следующий день
+          const overflowMin = waveEndMin - 1440;
+          fatBurningWindowMin = Math.max(0, nextDayFirstMealMin - overflowMin);
+        } else {
+          // Волна кончилась в тот же день: от конца волны до полуночи + до завтрака
+          fatBurningWindowMin = (1440 - waveEndMin) + nextDayFirstMealMin;
+        }
+
+        // Не более 16ч (защита от ошибочных данных)
+        fatBurningWindowMin = Math.min(fatBurningWindowMin, 16 * 60);
+        // Если волна ещё не кончилась к завтраку следующего дня — окна нет
+        if (fatBurningWindowMin <= 0) fatBurningWindowMin = 0;
+
+        // Kcal: ~1.15 kcal/мин при базовом обмене в липолизе
+        const weight = profile?.weight || 70;
+        const kcalRate = 1.15 * (weight / 70);
+        const fatBurningKcal = Math.round(fatBurningWindowMin * kcalRate);
+
+        // Рекорд и история из Lipolysis модуля
+        let lipolysisRecord = { minutes: 0, date: null };
+        try {
+          if (HEYS.InsulinWave?.Lipolysis?.getLipolysisRecord) {
+            lipolysisRecord = HEYS.InsulinWave.Lipolysis.getLipolysisRecord();
+          }
+        } catch (_) { }
+
+        const fatBurningH = Math.floor(fatBurningWindowMin / 60);
+        const fatBurningM = Math.round(fatBurningWindowMin % 60);
+
+        console.info('[widget_data.getInsulinWaveData] 📅 past day', {
+          selectedDate, lastMeal: lastMeal.time, waveEndTime,
+          fatBurningWindowMin, fatBurningKcal, record: lipolysisRecord.minutes
+        });
+
+        return {
+          hasData: true,
+          isPastDay: true,
+          status: 'lipolysis',
+          progress: 100,
+          remaining: 0,
+          isLipolysis: true,
+          isNightTime: true,
+          color: '#22c55e',
+          lastMealTime: lastMeal.time,
+          endTime: waveEndTime,
+          insulinWaveHours: waveMinutes / 60,
+          // Past-day specific data
+          fatBurningWindowMin,
+          fatBurningWindowH: fatBurningH,
+          fatBurningWindowM: fatBurningM,
+          fatBurningKcal,
+          fatBurningStillActive,
+          lipolysisRecord,
+          isRecord: !fatBurningStillActive && fatBurningWindowMin > 0 && fatBurningWindowMin >= (lipolysisRecord.minutes || 0)
+        };
+      } catch (e) {
+        console.error('[widget_data.getInsulinWaveData] past day ❌', e);
+        return { hasData: false, status: 'error', progress: 0, remaining: 0, isLipolysis: false };
+      }
+    },
+
+    /**
+     * Ночной липолиз: сегодня нет приёмов пищи, но вчера были → жиросжигание с ночи
+     */
+    _getOvernightLipolysisData(todayStr) {
+      try {
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+        const yesterdayStr = this._formatDate(yesterday);
+        const yData = this._getDayByDate(yesterdayStr);
+        const yMeals = (yData?.meals || []).filter(m => m.time);
+        if (yMeals.length === 0) {
+          return { hasData: false, status: 'noData', progress: 0, remaining: 0, isLipolysis: false };
+        }
+
+        const profile = this._getProfile() || {};
+        const baseWaveHours = profile?.insulinWaveHours || 3;
+
+        // Последний приём пищи вчера
+        const sorted = [...yMeals].sort((a, b) => b.time.localeCompare(a.time));
+        const lastMeal = sorted[0];
+        const [lh, lm] = (lastMeal.time || '0:0').split(':').map(Number);
+        const lastMealMin = lh * 60 + (lm || 0);
+
+        // Длина волны
+        let waveMinutes = baseWaveHours * 60;
+        if (HEYS.InsulinWave?.calculate) {
+          try {
+            const pIndex = HEYS.products?.buildIndex?.() || null;
+            const getProductFromItem = (item) => !pIndex?.byId?.get ? item : (pIndex.byId.get(item.product_id) || item);
+            const fakeNow = new Date(yesterdayStr + 'T23:59:00');
+            const result = HEYS.InsulinWave.calculate({
+              meals: yData.meals || [], pIndex, getProductFromItem, baseWaveHours,
+              trainings: yData.trainings || [],
+              dayData: {
+                sleepHours: yData.sleepHours || null, sleepQuality: yData.sleepQuality || null,
+                stressAvg: yData.stressAvg || 0, waterMl: yData.waterMl || 0,
+                householdMin: yData.householdMin || 0, steps: yData.steps || 0,
+                date: yData.date, lsGet: (key, fallback) => readStoredValue(key, fallback),
+                profile: { age: profile?.age || 0, weight: profile?.weight || 0, height: profile?.height || 0, gender: profile?.gender || '' }
+              },
+              now: fakeNow
+            });
+            if (result?.insulinWaveHours) waveMinutes = Math.round(result.insulinWaveHours * 60);
+          } catch (_) { /* fallback */ }
+        }
+
+        const waveEndMin = lastMealMin + waveMinutes;
+
+        // Текущие минуты с момента конца волны (через полночь)
+        const now = new Date();
+        const nowMin = now.getHours() * 60 + now.getMinutes();
+        let lipolysisMinutes;
+        if (waveEndMin >= 1440) {
+          // Волна кончилась уже сегодня
+          const overflowMin = waveEndMin - 1440;
+          lipolysisMinutes = nowMin - overflowMin;
+        } else {
+          lipolysisMinutes = (1440 - waveEndMin) + nowMin;
+        }
+
+        if (lipolysisMinutes <= 0) {
+          // Волна ещё не кончилась — инсулин высокий
+          const remainingMin = Math.abs(lipolysisMinutes);
+          return {
+            hasData: true, isOvernightWave: true,
+            status: 'active', progress: Math.min(100, ((waveMinutes - remainingMin) / waveMinutes) * 100),
+            remaining: remainingMin, isLipolysis: false, isNightTime: false,
+            color: '#3b82f6', lastMealTime: lastMeal.time,
+            endTime: String(Math.floor(waveEndMin / 60) % 24).padStart(2, '0') + ':' + String(waveEndMin % 60).padStart(2, '0'),
+            insulinWaveHours: waveMinutes / 60
+          };
+        }
+
+        // Липолиз идёт!
+        const weight = profile?.weight || 70;
+        const kcalRate = 1.15 * (weight / 70);
+        const lipolysisKcal = Math.round(lipolysisMinutes * kcalRate);
+        const lipoH = Math.floor(lipolysisMinutes / 60);
+        const lipoM = Math.round(lipolysisMinutes % 60);
+
+        let lipolysisRecord = { minutes: 0, date: null };
+        try {
+          if (HEYS.InsulinWave?.Lipolysis?.getLipolysisRecord) {
+            lipolysisRecord = HEYS.InsulinWave.Lipolysis.getLipolysisRecord();
+          }
+        } catch (_) { }
+
+        console.info('[widget_data] 🌙 overnight lipolysis', {
+          lastMeal: lastMeal.time, waveEndMin, lipolysisMinutes, lipolysisKcal, record: lipolysisRecord.minutes
+        });
+
+        return {
+          hasData: true, isOvernightLipolysis: true,
+          status: 'lipolysis', progress: 100, remaining: 0,
+          isLipolysis: true, isNightTime: true, color: '#22c55e',
+          lastMealTime: lastMeal.time,
+          endTime: String(Math.floor(waveEndMin / 60) % 24).padStart(2, '0') + ':' + String(waveEndMin % 60).padStart(2, '0'),
+          insulinWaveHours: waveMinutes / 60,
+          lipolysisMinutes, lipolysisH: lipoH, lipolysisM: lipoM, lipolysisKcal,
+          lipolysisRecord,
+          isRecord: lipolysisMinutes > 0 && lipolysisMinutes >= (lipolysisRecord.minutes || 0)
+        };
+      } catch (e) {
+        console.error('[widget_data] overnight lipolysis ❌', e);
+        return { hasData: false, status: 'noData', progress: 0, remaining: 0, isLipolysis: false };
+      }
+    },
+
     getHealthTrendData(settings = {}) {
       try {
         const days = settings?.periodDays || 7;
@@ -1246,14 +1531,42 @@
 
     getCascadeData() {
       try {
+        const todayStr = this._formatDate(new Date());
+        const selectedDate = this._selectedDate || todayStr;
+        const liveCascade = selectedDate === todayStr ? HEYS._lastCrs : null;
+        const cascadeApi = HEYS.CascadeCard || {};
+
+        // Helper: read per-date CEB cache (from full cascade) for accurate override
+        const _readPerDateCeb = (dateStr) => {
+          const cid = (HEYS.utils && HEYS.utils.getCurrentClientId) ? HEYS.utils.getCurrentClientId() : '';
+          if (!cid || !dateStr) return null;
+          return cascadeApi.getPerDateCEB?.(dateStr, cid) || null;
+        };
+
+        if (liveCascade && Array.isArray(liveCascade.events)) {
+          const events = liveCascade.events;
+          const crs = Number(liveCascade.crs) || 0;
+          const cascadeResult = {
+            hasData: events.length > 0,
+            crs,
+            pct: Math.max(0, Math.min(100, Math.round(crs * 100))),
+            trend: liveCascade.crsTrend || 'flat',
+            state: liveCascade.state || 'EMPTY',
+            chainLength: Number(liveCascade.chainLength) || 0,
+            events
+          };
+          const pdToday = _readPerDateCeb(selectedDate);
+          if (pdToday) {
+            cascadeResult.cebCached = pdToday.score;
+            cascadeResult.cebCachedConf = pdToday.confidence;
+          }
+          return cascadeResult;
+        }
+
         const dayData = this._getDay() || {};
         const profile = this._getProfile() || {};
-        const pIndex = profile?.pIndex || 0;
-        const dayTot = this._getDayTotals() || {};
-        const normAbs = this._getNormAbs() || {};
-        const cascadeApi = HEYS.CascadeCard;
 
-        if (typeof cascadeApi?.computeCascadeState !== 'function') {
+        if (typeof cascadeApi?.computeExactCascadeSnapshot !== 'function') {
           return {
             hasData: false,
             crs: 0,
@@ -1265,11 +1578,11 @@
           };
         }
 
-        const result = cascadeApi.computeCascadeState(dayData, dayTot, normAbs, profile, pIndex) || {};
+        const snapshot = cascadeApi.computeExactCascadeSnapshot(dayData, profile, { silent: true }) || {};
+        const result = snapshot?.result || {};
         const events = Array.isArray(result?.events) ? result.events : [];
         const crs = Number(result?.crs) || 0;
-
-        return {
+        const cascadeResult = {
           hasData: events.length > 0,
           crs,
           pct: Math.max(0, Math.min(100, Math.round(crs * 100))),
@@ -1278,6 +1591,12 @@
           chainLength: Number(result?.chainLength) || 0,
           events
         };
+        const pdHist = _readPerDateCeb(selectedDate);
+        if (pdHist) {
+          cascadeResult.cebCached = pdHist.score;
+          cascadeResult.cebCachedConf = pdHist.confidence;
+        }
+        return cascadeResult;
       } catch (error) {
         console.error('[widget_data.getCascadeData] ❌', error);
         return {

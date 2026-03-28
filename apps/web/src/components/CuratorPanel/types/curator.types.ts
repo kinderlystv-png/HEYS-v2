@@ -73,7 +73,7 @@ export interface CuratorSettings {
     userUpdates: boolean;
   };
   display: {
-    theme: 'light' | 'dark' | 'auto';
+    theme: 'light' | 'dark';
     language: string;
     timezone: string;
     itemsPerPage: number;

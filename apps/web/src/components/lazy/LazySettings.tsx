@@ -83,6 +83,16 @@ interface SettingsComponentProps {
   onError?: (error: Error) => void;
 }
 
+type SupportedTheme = 'light' | 'dark';
+
+const THEME_OPTIONS: Array<{ value: SupportedTheme; label: string }> = [
+  { value: 'light', label: 'Светлая' },
+  { value: 'dark', label: 'Тёмная' },
+];
+
+const normalizeThemeSetting = (value: string | undefined): SupportedTheme =>
+  value === 'dark' ? 'dark' : 'light';
+
 /**
  * Lazy loaded Settings Panel с категоризированными настройками
  */
@@ -107,12 +117,12 @@ export const LazySettings: React.FC<LazySettingsProps> = ({
     icon: string;
     priority: 'high' | 'medium' | 'low';
   }> = [
-    { key: 'general', label: '⚙️ Общие', icon: '🔧', priority: 'high' },
-    { key: 'performance', label: '⚡ Производительность', icon: '🚀', priority: 'high' },
-    { key: 'security', label: '🔐 Безопасность', icon: '🛡️', priority: 'medium' },
-    { key: 'notifications', label: '🔔 Уведомления', icon: '📢', priority: 'low' },
-    { key: 'advanced', label: '🛠️ Расширенные', icon: '⚙️', priority: 'low' },
-  ];
+      { key: 'general', label: '⚙️ Общие', icon: '🔧', priority: 'high' },
+      { key: 'performance', label: '⚡ Производительность', icon: '🚀', priority: 'high' },
+      { key: 'security', label: '🔐 Безопасность', icon: '🛡️', priority: 'medium' },
+      { key: 'notifications', label: '🔔 Уведомления', icon: '📢', priority: 'low' },
+      { key: 'advanced', label: '🛠️ Расширенные', icon: '⚙️', priority: 'low' },
+    ];
 
   // Error handling
   const handleComponentError = React.useCallback(
@@ -374,13 +384,13 @@ const GeneralSettingsComponent: React.FC<SettingsComponentProps> = ({
 }) => {
   const baseSettings = (settings ?? {}) as Partial<{
     language: string;
-    theme: 'light' | 'dark' | 'auto';
+    theme: SupportedTheme | 'auto';
     timezone: string;
     dateFormat: string;
   }>;
   const [localSettings, setLocalSettings] = React.useState({
     language: baseSettings.language ?? 'ru',
-    theme: baseSettings.theme ?? 'light',
+    theme: normalizeThemeSetting(baseSettings.theme),
     timezone: baseSettings.timezone ?? 'Europe/Moscow',
     dateFormat: baseSettings.dateFormat ?? 'DD.MM.YYYY',
   });
@@ -421,16 +431,16 @@ const GeneralSettingsComponent: React.FC<SettingsComponentProps> = ({
             Тема оформления:
           </label>
           <div style={{ display: 'flex', gap: '12px' }}>
-            {(['light', 'dark', 'auto'] as Array<'light' | 'dark' | 'auto'>).map((theme) => (
-              <label key={theme} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            {THEME_OPTIONS.map(({ value, label }) => (
+              <label key={value} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <input
                   type="radio"
-                  value={theme}
-                  checked={localSettings.theme === theme}
-                  onChange={(e) => handleChange('theme', e.target.value)}
+                  value={value}
+                  checked={localSettings.theme === value}
+                  onChange={() => handleChange('theme', value)}
                   disabled={readonly}
                 />
-                <span style={{ textTransform: 'capitalize' }}>{theme}</span>
+                <span>{label}</span>
               </label>
             ))}
           </div>
@@ -653,5 +663,6 @@ export {
   GeneralSettingsComponent,
   NotificationSettingsComponent,
   PerformanceSettingsComponent,
-  SecuritySettingsComponent,
+  SecuritySettingsComponent
 };
+

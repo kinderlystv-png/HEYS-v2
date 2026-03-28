@@ -31,7 +31,7 @@ export interface UserProfile {
   // Настройки профиля
   language: string;
   timezone: string;
-  theme: 'light' | 'dark' | 'auto';
+  theme: 'light' | 'dark';
 
   // Роли и разрешения
   role: 'user' | 'curator' | 'admin' | 'super_admin';

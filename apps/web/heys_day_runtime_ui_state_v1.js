@@ -41,6 +41,22 @@
             }
         };
 
+        const normalizeThemePreference = (value) => {
+            let rawValue = value;
+            if (typeof rawValue === 'string' && rawValue.startsWith('"')) {
+                try { rawValue = JSON.parse(rawValue); } catch { }
+            }
+            if (rawValue === 'light' || rawValue === 'dark') return rawValue;
+            if (rawValue === 'auto') {
+                try {
+                    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+                } catch {
+                    return 'light';
+                }
+            }
+            return 'light';
+        };
+
         if (!dayEffects?.useDayCurrentMinuteEffect) {
             throw new Error('[heys_day_runtime_ui_state] HEYS.dayEffects.useDayCurrentMinuteEffect not loaded');
         }
@@ -59,27 +75,20 @@
             HEYS: ctx
         }) || { isOnline: navigator.onLine, pendingChanges: false, syncMessage: '', pendingQueue: [] };
 
-        // === Dark Theme (3 modes: light / dark / auto) ===
+        // === Dark Theme (2 modes: light / dark) ===
         const [theme, setTheme] = React.useState(() => {
             const saved = readStoredValue('heys_theme', 'light');
-            // Валидация: только light/dark/auto, иначе light
-            return ['light', 'dark', 'auto'].includes(saved) ? saved : 'light';
+            return normalizeThemePreference(saved);
         });
 
-        // Вычисляем реальную тему (для auto режима)
-        const resolvedTheme = React.useMemo(() => {
-            if (theme === 'auto') {
-                return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-            }
-            return theme;
-        }, [theme]);
+        const resolvedTheme = React.useMemo(() => theme, [theme]);
 
-        // Применяем тему + слушаем системные изменения
+        // Применяем тему
         dayEffects.useDayThemeEffect({ theme, resolvedTheme });
 
-        // Cycle: light → dark → auto → light
+        // Cycle: light ↔ dark
         const cycleTheme = React.useCallback(() => {
-            setTheme(prev => prev === 'light' ? 'dark' : prev === 'dark' ? 'auto' : 'light');
+            setTheme(prev => prev === 'dark' ? 'light' : 'dark');
         }, []);
 
         // === Подсказка "нажми для деталей" ===

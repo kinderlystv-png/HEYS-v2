@@ -110,43 +110,43 @@
         return result;
     };
 
+    const getSystemTheme = () => {
+        try {
+            return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        } catch {
+            return 'light';
+        }
+    };
+
+    const normalizeThemePreference = (value) => {
+        if (value === 'light' || value === 'dark') return value;
+        if (value === 'auto') return getSystemTheme();
+        return 'light';
+    };
+
     function useThemePreference() {
         const React = window.React;
         const { useState, useEffect, useMemo, useCallback } = React;
         const [theme, setTheme] = useState(() => {
             try {
                 const saved = readGlobalValue('heys_theme', 'light');
-                return ['light', 'dark', 'auto'].includes(saved) ? saved : 'light';
+                return normalizeThemePreference(saved);
             } catch {
                 return 'light';
             }
         });
 
-        const resolvedTheme = useMemo(() => {
-            if (theme === 'auto') {
-                return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-            }
-            return theme;
-        }, [theme]);
+        const resolvedTheme = useMemo(() => theme, [theme]);
 
         useEffect(() => {
             document.documentElement.setAttribute('data-theme', resolvedTheme);
             try {
-                writeGlobalValue('heys_theme', theme);
+                writeGlobalValue('heys_theme', resolvedTheme);
             } catch { }
-
-            if (theme !== 'auto') return;
-
-            const mq = window.matchMedia('(prefers-color-scheme: dark)');
-            const handler = () => {
-                document.documentElement.setAttribute('data-theme', mq.matches ? 'dark' : 'light');
-            };
-            mq.addEventListener('change', handler);
-            return () => mq.removeEventListener('change', handler);
-        }, [theme, resolvedTheme]);
+        }, [resolvedTheme]);
 
         const cycleTheme = useCallback(() => {
-            setTheme(prev => prev === 'light' ? 'dark' : prev === 'dark' ? 'auto' : 'light');
+            setTheme(prev => prev === 'dark' ? 'light' : 'dark');
         }, []);
 
         return { theme, resolvedTheme, cycleTheme };

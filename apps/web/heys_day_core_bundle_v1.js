@@ -3701,28 +3701,25 @@
         const React = getReact();
         const { theme, resolvedTheme } = deps || {};
         React.useEffect(() => {
-            document.documentElement.setAttribute('data-theme', resolvedTheme);
+            const nextTheme = theme === 'dark' || theme === 'light'
+                ? theme
+                : resolvedTheme === 'dark'
+                    ? 'dark'
+                    : 'light';
+
+            document.documentElement.setAttribute('data-theme', nextTheme);
             try {
                 const U = global.HEYS?.utils || {};
                 if (global.HEYS?.store?.set) {
-                    global.HEYS.store.set('heys_theme', theme);
+                    global.HEYS.store.set('heys_theme', nextTheme);
                 } else if (U.lsSet) {
-                    U.lsSet('heys_theme', theme);
+                    U.lsSet('heys_theme', nextTheme);
                 } else {
-                    localStorage.setItem('heys_theme', theme);
+                    localStorage.setItem('heys_theme', nextTheme);
                 }
             } catch (e) {
                 // QuotaExceeded — игнорируем, тема применится через data-theme
             }
-
-            if (theme !== 'auto') return;
-
-            const mq = window.matchMedia('(prefers-color-scheme: dark)');
-            const handler = () => {
-                document.documentElement.setAttribute('data-theme', mq.matches ? 'dark' : 'light');
-            };
-            mq.addEventListener('change', handler);
-            return () => mq.removeEventListener('change', handler);
         }, [theme, resolvedTheme]);
     }
 

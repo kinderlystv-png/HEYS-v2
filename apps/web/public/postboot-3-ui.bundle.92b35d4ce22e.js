@@ -30568,24 +30568,33 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     _getDayByDate(dateStr) {
       // Ключ дня: heys_dayv2_YYYY-MM-DD (namespace добавляется автоматически через store.get)
       const key = `heys_dayv2_${dateStr}`;
+      const normalizeDay = (value) => {
+        if (!value) return null;
+        if (HEYS.models?.ensureDay) {
+          try {
+            return HEYS.models.ensureDay(value, this._getProfile());
+          } catch (_) { }
+        }
+        return value;
+      };
       try {
         const clientId = HEYS.currentClientId;
 
         // 1. Store-first (scoped через HEYS.store / HEYS.utils)
         const stored = readStoredValue(key, null);
-        if (stored) return stored;
+        if (stored) return normalizeDay(stored);
 
         // 2. Fallback: scoped key напрямую в localStorage
         if (clientId) {
           const scopedKey = `heys_${clientId}_dayv2_${dateStr}`;
           const scopedRaw = localStorage.getItem(scopedKey);
           const scopedParsed = parseStoredValue(scopedRaw, null);
-          if (scopedParsed) return scopedParsed;
+          if (scopedParsed) return normalizeDay(scopedParsed);
         }
 
         // 3. Последний fallback: unscoped key
         const raw = localStorage.getItem(key);
-        return parseStoredValue(raw, null);
+        return normalizeDay(parseStoredValue(raw, null));
       } catch (e) {
         return null;
       }
@@ -30613,10 +30622,17 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     },
 
     _getDayTotals() {
-      // Вычисляем из данных дня
       const day = this._getDay();
-      const totals = this._calculateDayTotals(day);
-      return totals;
+      const products = HEYS.products?.getAll?.() || [];
+      const pIndex = HEYS.dayUtils?.buildProductIndex
+        ? HEYS.dayUtils.buildProductIndex(products)
+        : null;
+      if (HEYS.dayCalculations?.calculateDayTotals && day) {
+        try {
+          return HEYS.dayCalculations.calculateDayTotals(day, pIndex);
+        } catch (_) { }
+      }
+      return this._calculateDayTotals(day);
     },
 
     _calculateDayTotals(day) {
@@ -30688,6 +30704,12 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     _getNormAbs() {
       const optimum = this._getOptimum();
       const norms = this._getNorms();
+
+      if (HEYS.dayCalculations?.computeDailyNorms) {
+        try {
+          return HEYS.dayCalculations.computeDailyNorms(optimum, norms);
+        } catch (_) { }
+      }
 
       const carbsPct = norms.carbsPct || 50;
       const proteinPct = norms.proteinPct || 25;
@@ -30901,14 +30923,27 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         return { hasData: true, status: 'decline', progress: 72, remaining: 28, endTime: '14:30', color: '#10b981', lastMealTime: '11:45', isLipolysis: false, isNightTime: false };
       }
       try {
+        const todayStr = this._formatDate(new Date());
+        const selectedDate = this._selectedDate || todayStr;
+        const isPastDay = selectedDate < todayStr;
+
         const dayData = this._getDay() || {};
         const meals = dayData.meals || [];
-        if (meals.length === 0) return { hasData: false, status: 'noData', progress: 0, remaining: 0, isLipolysis: false };
         const mealsWithTime = meals.filter(m => m.time);
+
+        // Если сегодня нет приёмов пищи — проверяем ночной липолиз от вчера
+        if (!isPastDay && mealsWithTime.length === 0) {
+          return this._getOvernightLipolysisData(todayStr);
+        }
         if (mealsWithTime.length === 0) return { hasData: false, status: 'noData', progress: 0, remaining: 0, isLipolysis: false };
 
         const profile = this._getProfile() || {};
         const baseWaveHours = profile?.insulinWaveHours || 3;
+
+        // === Past day: специальная версия с итогами жиросжигания ===
+        if (isPastDay) {
+          return this._getInsulinWavePastDayData(mealsWithTime, dayData, profile, baseWaveHours, selectedDate);
+        }
 
         // Try full InsulinWave module
         if (HEYS.InsulinWave?.calculate) {
@@ -30984,6 +31019,256 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       }
     },
 
+    /**
+     * Past-day insulin wave: итоги жиросжигания за прошлый день
+     * Считает окно от конца последней волны до завтрака следующего дня
+     */
+    _getInsulinWavePastDayData(mealsWithTime, dayData, profile, baseWaveHours, selectedDate) {
+      try {
+        const sorted = [...mealsWithTime].sort((a, b) => b.time.localeCompare(a.time));
+        const lastMeal = sorted[0];
+        const [lh, lm] = (lastMeal.time || '0:0').split(':').map(Number);
+        const lastMealMin = lh * 60 + (lm || 0);
+
+        // Рассчитываем длину волны через полный модуль или fallback
+        let waveMinutes = baseWaveHours * 60;
+        if (HEYS.InsulinWave?.calculate) {
+          try {
+            const pIndex = HEYS.products?.buildIndex?.() || null;
+            const getProductFromItem = (item) => {
+              if (!pIndex?.byId?.get) return item;
+              return pIndex.byId.get(item.product_id) || item;
+            };
+            // Используем now = 23:59 выбранного дня чтобы получить корректную длину волны
+            const fakeNow = new Date(selectedDate + 'T23:59:00');
+            const result = HEYS.InsulinWave.calculate({
+              meals: dayData.meals || [],
+              pIndex,
+              getProductFromItem,
+              baseWaveHours,
+              trainings: dayData.trainings || [],
+              dayData: {
+                sleepHours: dayData.sleepHours || null,
+                sleepQuality: dayData.sleepQuality || null,
+                stressAvg: dayData.stressAvg || 0,
+                waterMl: dayData.waterMl || 0,
+                householdMin: dayData.householdMin || 0,
+                steps: dayData.steps || 0,
+                date: dayData.date,
+                lsGet: (key, fallback) => readStoredValue(key, fallback),
+                profile: { age: profile?.age || 0, weight: profile?.weight || 0, height: profile?.height || 0, gender: profile?.gender || '' }
+              },
+              now: fakeNow
+            });
+            if (result?.insulinWaveHours) {
+              waveMinutes = Math.round(result.insulinWaveHours * 60);
+            }
+          } catch (_) { /* fallback to baseWaveHours */ }
+        }
+
+        // Время конца волны (начало жиросжигания)
+        const waveEndMin = lastMealMin + waveMinutes;
+        const waveEndTimeH = Math.floor(waveEndMin / 60) % 24;
+        const waveEndTimeM = Math.round(waveEndMin % 60);
+        const waveEndTime = String(waveEndTimeH).padStart(2, '0') + ':' + String(waveEndTimeM).padStart(2, '0');
+
+        // Ищем первый приём пищи следующего дня (завтрак)
+        let nextDayFirstMealMin = -1;
+        let fatBurningStillActive = false;
+        const _todayStr = this._formatDate(new Date());
+        try {
+          const selDate = new Date(selectedDate);
+          selDate.setDate(selDate.getDate() + 1);
+          const nextDateStr = this._formatDate(selDate);
+          const nextDayData = this._getDayByDate(nextDateStr);
+          const nextMeals = (nextDayData?.meals || []).filter(m => m.time);
+          if (nextMeals.length > 0) {
+            const nextSorted = [...nextMeals].sort((a, b) => a.time.localeCompare(b.time));
+            const firstNextMeal = nextSorted[0];
+            const [nh, nm] = (firstNextMeal.time || '8:0').split(':').map(Number);
+            nextDayFirstMealMin = nh * 60 + (nm || 0);
+          } else if (nextDateStr === _todayStr) {
+            // Следующий день — сегодня и завтрака нет → жиросжигание ещё идёт
+            fatBurningStillActive = true;
+            const _now = new Date();
+            nextDayFirstMealMin = _now.getHours() * 60 + _now.getMinutes();
+          }
+        } catch (_) { /* fallback */ }
+        if (nextDayFirstMealMin < 0) nextDayFirstMealMin = 8 * 60;
+
+        // Окно жиросжигания: от конца волны до завтрака следующего дня
+        // Если волна кончилась, например, в 23:00, а завтрак в 08:00 → 9 часов
+        let fatBurningWindowMin;
+        if (waveEndMin >= 1440) {
+          // Волна кончилась уже на следующий день
+          const overflowMin = waveEndMin - 1440;
+          fatBurningWindowMin = Math.max(0, nextDayFirstMealMin - overflowMin);
+        } else {
+          // Волна кончилась в тот же день: от конца волны до полуночи + до завтрака
+          fatBurningWindowMin = (1440 - waveEndMin) + nextDayFirstMealMin;
+        }
+
+        // Не более 16ч (защита от ошибочных данных)
+        fatBurningWindowMin = Math.min(fatBurningWindowMin, 16 * 60);
+        // Если волна ещё не кончилась к завтраку следующего дня — окна нет
+        if (fatBurningWindowMin <= 0) fatBurningWindowMin = 0;
+
+        // Kcal: ~1.15 kcal/мин при базовом обмене в липолизе
+        const weight = profile?.weight || 70;
+        const kcalRate = 1.15 * (weight / 70);
+        const fatBurningKcal = Math.round(fatBurningWindowMin * kcalRate);
+
+        // Рекорд и история из Lipolysis модуля
+        let lipolysisRecord = { minutes: 0, date: null };
+        try {
+          if (HEYS.InsulinWave?.Lipolysis?.getLipolysisRecord) {
+            lipolysisRecord = HEYS.InsulinWave.Lipolysis.getLipolysisRecord();
+          }
+        } catch (_) { }
+
+        const fatBurningH = Math.floor(fatBurningWindowMin / 60);
+        const fatBurningM = Math.round(fatBurningWindowMin % 60);
+
+        console.info('[widget_data.getInsulinWaveData] 📅 past day', {
+          selectedDate, lastMeal: lastMeal.time, waveEndTime,
+          fatBurningWindowMin, fatBurningKcal, record: lipolysisRecord.minutes
+        });
+
+        return {
+          hasData: true,
+          isPastDay: true,
+          status: 'lipolysis',
+          progress: 100,
+          remaining: 0,
+          isLipolysis: true,
+          isNightTime: true,
+          color: '#22c55e',
+          lastMealTime: lastMeal.time,
+          endTime: waveEndTime,
+          insulinWaveHours: waveMinutes / 60,
+          // Past-day specific data
+          fatBurningWindowMin,
+          fatBurningWindowH: fatBurningH,
+          fatBurningWindowM: fatBurningM,
+          fatBurningKcal,
+          fatBurningStillActive,
+          lipolysisRecord,
+          isRecord: !fatBurningStillActive && fatBurningWindowMin > 0 && fatBurningWindowMin >= (lipolysisRecord.minutes || 0)
+        };
+      } catch (e) {
+        console.error('[widget_data.getInsulinWaveData] past day ❌', e);
+        return { hasData: false, status: 'error', progress: 0, remaining: 0, isLipolysis: false };
+      }
+    },
+
+    /**
+     * Ночной липолиз: сегодня нет приёмов пищи, но вчера были → жиросжигание с ночи
+     */
+    _getOvernightLipolysisData(todayStr) {
+      try {
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+        const yesterdayStr = this._formatDate(yesterday);
+        const yData = this._getDayByDate(yesterdayStr);
+        const yMeals = (yData?.meals || []).filter(m => m.time);
+        if (yMeals.length === 0) {
+          return { hasData: false, status: 'noData', progress: 0, remaining: 0, isLipolysis: false };
+        }
+
+        const profile = this._getProfile() || {};
+        const baseWaveHours = profile?.insulinWaveHours || 3;
+
+        // Последний приём пищи вчера
+        const sorted = [...yMeals].sort((a, b) => b.time.localeCompare(a.time));
+        const lastMeal = sorted[0];
+        const [lh, lm] = (lastMeal.time || '0:0').split(':').map(Number);
+        const lastMealMin = lh * 60 + (lm || 0);
+
+        // Длина волны
+        let waveMinutes = baseWaveHours * 60;
+        if (HEYS.InsulinWave?.calculate) {
+          try {
+            const pIndex = HEYS.products?.buildIndex?.() || null;
+            const getProductFromItem = (item) => !pIndex?.byId?.get ? item : (pIndex.byId.get(item.product_id) || item);
+            const fakeNow = new Date(yesterdayStr + 'T23:59:00');
+            const result = HEYS.InsulinWave.calculate({
+              meals: yData.meals || [], pIndex, getProductFromItem, baseWaveHours,
+              trainings: yData.trainings || [],
+              dayData: {
+                sleepHours: yData.sleepHours || null, sleepQuality: yData.sleepQuality || null,
+                stressAvg: yData.stressAvg || 0, waterMl: yData.waterMl || 0,
+                householdMin: yData.householdMin || 0, steps: yData.steps || 0,
+                date: yData.date, lsGet: (key, fallback) => readStoredValue(key, fallback),
+                profile: { age: profile?.age || 0, weight: profile?.weight || 0, height: profile?.height || 0, gender: profile?.gender || '' }
+              },
+              now: fakeNow
+            });
+            if (result?.insulinWaveHours) waveMinutes = Math.round(result.insulinWaveHours * 60);
+          } catch (_) { /* fallback */ }
+        }
+
+        const waveEndMin = lastMealMin + waveMinutes;
+
+        // Текущие минуты с момента конца волны (через полночь)
+        const now = new Date();
+        const nowMin = now.getHours() * 60 + now.getMinutes();
+        let lipolysisMinutes;
+        if (waveEndMin >= 1440) {
+          // Волна кончилась уже сегодня
+          const overflowMin = waveEndMin - 1440;
+          lipolysisMinutes = nowMin - overflowMin;
+        } else {
+          lipolysisMinutes = (1440 - waveEndMin) + nowMin;
+        }
+
+        if (lipolysisMinutes <= 0) {
+          // Волна ещё не кончилась — инсулин высокий
+          const remainingMin = Math.abs(lipolysisMinutes);
+          return {
+            hasData: true, isOvernightWave: true,
+            status: 'active', progress: Math.min(100, ((waveMinutes - remainingMin) / waveMinutes) * 100),
+            remaining: remainingMin, isLipolysis: false, isNightTime: false,
+            color: '#3b82f6', lastMealTime: lastMeal.time,
+            endTime: String(Math.floor(waveEndMin / 60) % 24).padStart(2, '0') + ':' + String(waveEndMin % 60).padStart(2, '0'),
+            insulinWaveHours: waveMinutes / 60
+          };
+        }
+
+        // Липолиз идёт!
+        const weight = profile?.weight || 70;
+        const kcalRate = 1.15 * (weight / 70);
+        const lipolysisKcal = Math.round(lipolysisMinutes * kcalRate);
+        const lipoH = Math.floor(lipolysisMinutes / 60);
+        const lipoM = Math.round(lipolysisMinutes % 60);
+
+        let lipolysisRecord = { minutes: 0, date: null };
+        try {
+          if (HEYS.InsulinWave?.Lipolysis?.getLipolysisRecord) {
+            lipolysisRecord = HEYS.InsulinWave.Lipolysis.getLipolysisRecord();
+          }
+        } catch (_) { }
+
+        console.info('[widget_data] 🌙 overnight lipolysis', {
+          lastMeal: lastMeal.time, waveEndMin, lipolysisMinutes, lipolysisKcal, record: lipolysisRecord.minutes
+        });
+
+        return {
+          hasData: true, isOvernightLipolysis: true,
+          status: 'lipolysis', progress: 100, remaining: 0,
+          isLipolysis: true, isNightTime: true, color: '#22c55e',
+          lastMealTime: lastMeal.time,
+          endTime: String(Math.floor(waveEndMin / 60) % 24).padStart(2, '0') + ':' + String(waveEndMin % 60).padStart(2, '0'),
+          insulinWaveHours: waveMinutes / 60,
+          lipolysisMinutes, lipolysisH: lipoH, lipolysisM: lipoM, lipolysisKcal,
+          lipolysisRecord,
+          isRecord: lipolysisMinutes > 0 && lipolysisMinutes >= (lipolysisRecord.minutes || 0)
+        };
+      } catch (e) {
+        console.error('[widget_data] overnight lipolysis ❌', e);
+        return { hasData: false, status: 'noData', progress: 0, remaining: 0, isLipolysis: false };
+      }
+    },
+
     getHealthTrendData(settings = {}) {
       try {
         const days = settings?.periodDays || 7;
@@ -31035,14 +31320,42 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
     getCascadeData() {
       try {
+        const todayStr = this._formatDate(new Date());
+        const selectedDate = this._selectedDate || todayStr;
+        const liveCascade = selectedDate === todayStr ? HEYS._lastCrs : null;
+        const cascadeApi = HEYS.CascadeCard || {};
+
+        // Helper: read per-date CEB cache (from full cascade) for accurate override
+        const _readPerDateCeb = (dateStr) => {
+          const cid = (HEYS.utils && HEYS.utils.getCurrentClientId) ? HEYS.utils.getCurrentClientId() : '';
+          if (!cid || !dateStr) return null;
+          return cascadeApi.getPerDateCEB?.(dateStr, cid) || null;
+        };
+
+        if (liveCascade && Array.isArray(liveCascade.events)) {
+          const events = liveCascade.events;
+          const crs = Number(liveCascade.crs) || 0;
+          const cascadeResult = {
+            hasData: events.length > 0,
+            crs,
+            pct: Math.max(0, Math.min(100, Math.round(crs * 100))),
+            trend: liveCascade.crsTrend || 'flat',
+            state: liveCascade.state || 'EMPTY',
+            chainLength: Number(liveCascade.chainLength) || 0,
+            events
+          };
+          const pdToday = _readPerDateCeb(selectedDate);
+          if (pdToday) {
+            cascadeResult.cebCached = pdToday.score;
+            cascadeResult.cebCachedConf = pdToday.confidence;
+          }
+          return cascadeResult;
+        }
+
         const dayData = this._getDay() || {};
         const profile = this._getProfile() || {};
-        const pIndex = profile?.pIndex || 0;
-        const dayTot = this._getDayTotals() || {};
-        const normAbs = this._getNormAbs() || {};
-        const cascadeApi = HEYS.CascadeCard;
 
-        if (typeof cascadeApi?.computeCascadeState !== 'function') {
+        if (typeof cascadeApi?.computeExactCascadeSnapshot !== 'function') {
           return {
             hasData: false,
             crs: 0,
@@ -31054,11 +31367,11 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           };
         }
 
-        const result = cascadeApi.computeCascadeState(dayData, dayTot, normAbs, profile, pIndex) || {};
+        const snapshot = cascadeApi.computeExactCascadeSnapshot(dayData, profile, { silent: true }) || {};
+        const result = snapshot?.result || {};
         const events = Array.isArray(result?.events) ? result.events : [];
         const crs = Number(result?.crs) || 0;
-
-        return {
+        const cascadeResult = {
           hasData: events.length > 0,
           crs,
           pct: Math.max(0, Math.min(100, Math.round(crs * 100))),
@@ -31067,6 +31380,12 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           chainLength: Number(result?.chainLength) || 0,
           events
         };
+        const pdHist = _readPerDateCeb(selectedDate);
+        if (pdHist) {
+          cascadeResult.cebCached = pdHist.score;
+          cascadeResult.cebCachedConf = pdHist.confidence;
+        }
+        return cascadeResult;
       } catch (error) {
         console.error('[widget_data.getCascadeData] ❌', error);
         return {
@@ -31407,18 +31726,50 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     }
   }
 
+  function getCascadeDayBalanceMeta(events) {
+    const sharedMeta = HEYS.CascadeCard?.computeCEBMetaFromEvents?.(events);
+    const score = typeof sharedMeta?.scoreRaw === 'number' ? sharedMeta.scoreRaw : (sharedMeta?.score || 0);
+    const confidence = typeof sharedMeta?.confidenceRaw === 'number' ? sharedMeta.confidenceRaw : (sharedMeta?.confidence || 0);
+    const tone = score >= 8 ? 'good' : (score >= 6 ? 'warn' : 'bad');
+
+    return {
+      score,
+      confidence,
+      tone,
+      isEarly: confidence < 1
+    };
+  }
+
   function renderCascadeStrip(data, options = {}) {
     const size = options.size || '4x1';
     const maxDots = Number.isFinite(options.maxDots) ? options.maxDots : (size === '3x1' ? 8 : 10);
     const placeholderCount = Number.isFinite(options.placeholderCount) ? options.placeholderCount : (size === '3x1' ? 6 : 8);
     const extraClassName = options.className || '';
-    const events = Array.isArray(data?.events) ? data.events.slice(-maxDots) : [];
+    const liveEvents = options.useLiveCurrentCascade === true && Array.isArray(window.HEYS?._lastCrs?.events)
+      ? window.HEYS._lastCrs.events
+      : null;
+    const allEvents = Array.isArray(liveEvents) && liveEvents.length > 0
+      ? liveEvents
+      : (Array.isArray(data?.events) ? data.events : []);
+    const events = allEvents.slice(-maxDots);
     const pct = Math.max(0, Math.min(100, Math.round(Number(data?.pct) || 0)));
     const trendMeta = getCascadeTrendMeta(data?.trend);
     const badgeTone = getCascadeBadgeTone(pct);
     const hasData = (data?.hasData === true && events.length > 0) || pct > 0;
     const placeholders = Array.from({ length: placeholderCount });
     const dotsToRender = hasData ? events : placeholders;
+    const showDayBalanceBadge = options.showDayBalanceBadge === true && hasData;
+    const dayBalanceMeta = getCascadeDayBalanceMeta(allEvents);
+    // Per-date CEB cache override: use accurate full-cascade CEB when available
+    if (typeof data?.cebCached === 'number') {
+      dayBalanceMeta.score = data.cebCached;
+      dayBalanceMeta.tone = data.cebCached >= 8 ? 'good' : (data.cebCached >= 6 ? 'warn' : 'bad');
+      if (typeof data?.cebCachedConf === 'number') {
+        dayBalanceMeta.confidence = data.cebCachedConf;
+        dayBalanceMeta.isEarly = data.cebCachedConf < 1;
+      }
+    }
+    const dayBalanceOpacity = 0.45 + dayBalanceMeta.confidence * 0.55;
 
     return React.createElement('div', {
       className: ['widget-cascade', `widget-cascade--${size}`, extraClassName, !hasData ? 'widget-cascade--empty' : '']
@@ -31447,16 +31798,37 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           });
         })
       ),
-      React.createElement('div', {
-        className: `widget-cascade__badge widget-cascade__badge--${badgeTone}`,
-        title: trendMeta.label
-      },
-        React.createElement('span', { className: 'widget-cascade__badge-value' }, `${pct}%`),
-        React.createElement('span', {
-          className: `widget-cascade__badge-arrow widget-cascade__badge-arrow--${trendMeta.key}`,
-          'aria-label': trendMeta.label
-        }, trendMeta.arrow)
-      )
+      showDayBalanceBadge
+        ? React.createElement('div', { className: 'widget-cascade__aside' },
+          React.createElement('div', {
+            className: `widget-cascade__day-balance widget-cascade__day-balance--${dayBalanceMeta.tone}${dayBalanceMeta.isEarly ? ' widget-cascade__day-balance--early' : ''}`,
+            style: { opacity: dayBalanceOpacity },
+            title: `Баланс дня${dayBalanceMeta.isEarly ? ' (предварительно)' : ''}`
+          },
+            React.createElement('span', { className: 'widget-cascade__day-balance-label' }, 'Баланс дня'),
+            React.createElement('span', { className: 'widget-cascade__day-balance-value' }, dayBalanceMeta.score.toFixed(1))
+          ),
+          React.createElement('div', {
+            className: `widget-cascade__metric widget-cascade__metric--${badgeTone}`,
+            title: trendMeta.label
+          },
+            React.createElement('span', { className: 'widget-cascade__metric-value' }, `${pct}%`),
+            React.createElement('span', {
+              className: `widget-cascade__metric-arrow widget-cascade__metric-arrow--${trendMeta.key}`,
+              'aria-label': trendMeta.label
+            }, trendMeta.arrow)
+          )
+        )
+        : React.createElement('div', {
+          className: `widget-cascade__badge widget-cascade__badge--${badgeTone}`,
+          title: trendMeta.label
+        },
+          React.createElement('span', { className: 'widget-cascade__badge-value' }, `${pct}%`),
+          React.createElement('span', {
+            className: `widget-cascade__badge-arrow widget-cascade__badge-arrow--${trendMeta.key}`,
+            'aria-label': trendMeta.label
+          }, trendMeta.arrow)
+        )
     );
   }
 
@@ -32768,9 +33140,30 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     const isLipolysis = data?.isLipolysis ?? (status === 'lipolysis');
     const lastMealTime = data?.lastMealTime || null;
     const isNightTime = data?.isNightTime || false;
+    const isPastDay = data?.isPastDay || false;
+    const isOvernightLipolysis = data?.isOvernightLipolysis || false;
 
     const d = getWidgetDims(widget);
     const isShort = d.isShort;
+
+    if (!hasData) {
+      return React.createElement('div', {
+        style: { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '4px', opacity: 0.5 }
+      },
+        React.createElement('div', { style: { fontSize: '1.4rem' } }, '🌊'),
+        React.createElement('div', { style: { fontSize: '0.7rem', color: 'var(--heys-text-tertiary,#64748b)', textAlign: 'center' } }, 'Добавьте приёмы пищи')
+      );
+    }
+
+    // === Past-day: специальная версия ===
+    if (isPastDay) {
+      return React.createElement(InsulinWavePastDayContent, { widget, data, d, isShort });
+    }
+
+    // === Сегодня без завтрака: ночной липолиз с рекордом ===
+    if (isOvernightLipolysis) {
+      return React.createElement(InsulinWaveOvernightContent, { widget, data, d, isShort });
+    }
 
     // Главный заголовок — что происходит с жиром сейчас
     const mainLabel = isLipolysis
@@ -32816,15 +33209,6 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         : (isNightTime ? 'Ночной липолиз' : 'Не ешь — жир уходит'))
       : (endTime ? `Липолиз начнётся в ${endTime}` : 'Ждём снижения инсулина');
     const subTextColor = isLipolysis ? '#22c55e' : '#eab308';
-
-    if (!hasData) {
-      return React.createElement('div', {
-        style: { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '4px', opacity: 0.5 }
-      },
-        React.createElement('div', { style: { fontSize: '1.4rem' } }, '🌊'),
-        React.createElement('div', { style: { fontSize: '0.7rem', color: 'var(--heys-text-tertiary,#64748b)', textAlign: 'center' } }, 'Добавьте приёмы пищи')
-      );
-    }
 
     const sparkline = React.createElement(InsulinWaveSparkline, {
       progress, isLipolysis, color, width: '100%', height: isShort ? 34 : 50
@@ -32875,6 +33259,151 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       }, subText)
     );
   }
+
+  function InsulinWaveOvernightContent({ data, d, isShort }) {
+    const lipolysisMin = data?.lipolysisMinutes || 0;
+    const lipolysisKcal = data?.lipolysisKcal || 0;
+    const record = data?.lipolysisRecord || {};
+    const recordMin = record.minutes || 0;
+    const isRecord = data?.isRecord || false;
+
+    const formatMin = (minutes) => {
+      if (!minutes || minutes <= 0) return '0м';
+      const h = Math.floor(minutes / 60);
+      const m = Math.round(minutes % 60);
+      if (h > 0 && m > 0) return `${h}ч ${m}м`;
+      if (h > 0) return `${h}ч`;
+      return `${m}м`;
+    };
+
+    const durationLabel = formatMin(lipolysisMin);
+    const recordLabel = recordMin > 0 ? formatMin(recordMin) : null;
+    const sparkline = React.createElement(InsulinWaveSparkline, {
+      progress: 100, isLipolysis: true, color: '#22c55e', width: '100%', height: isShort ? 34 : 50
+    });
+
+    if (isShort) {
+      return React.createElement('div', {
+        style: { display: 'flex', alignItems: 'center', height: '100%', gap: '8px', padding: '4px 10px' }
+      },
+        React.createElement('div', {
+          style: { display: 'flex', flexDirection: 'column', gap: '2px', flexShrink: 0, minWidth: '78px' }
+        },
+          React.createElement('div', {
+            style: { fontSize: '0.72rem', fontWeight: 700, color: '#22c55e', lineHeight: 1.2 }
+          }, 'Жир сжигается'),
+          React.createElement('div', {
+            style: { fontSize: '0.65rem', color: '#3b82f6', fontWeight: 700 }
+          }, durationLabel)
+        ),
+        React.createElement('div', { style: { flex: 1, minWidth: 0 } }, sparkline)
+      );
+    }
+
+    return React.createElement('div', {
+      style: { display: 'flex', flexDirection: 'column', justifyContent: 'space-between', height: '100%', padding: '8px 8px 6px' }
+    },
+      React.createElement('div', {
+        style: { fontSize: '0.8rem', fontWeight: 700, color: '#22c55e', lineHeight: 1.2 }
+      }, 'Жир сжигается'),
+      React.createElement('div', {
+        style: { fontSize: '1.2rem', fontWeight: 800, color: '#3b82f6', letterSpacing: '-0.5px', lineHeight: 1, marginTop: '2px' }
+      }, durationLabel),
+      React.createElement('div', {
+        style: { flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', marginTop: '4px', marginBottom: '4px' }
+      }, sparkline),
+      React.createElement('div', {
+        style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '4px' }
+      },
+        React.createElement('div', {
+          style: { fontSize: '0.6rem', fontWeight: 600, color: '#22c55e', lineHeight: 1.3 }
+        }, lipolysisKcal > 0 ? `~${lipolysisKcal} ккал сейчас` : 'Липолиз идёт'),
+        recordLabel ? React.createElement('div', {
+          style: { fontSize: '0.55rem', fontWeight: 600, color: isRecord ? '#f59e0b' : 'var(--heys-text-tertiary,#94a3b8)', lineHeight: 1.2, whiteSpace: 'nowrap' }
+        }, isRecord ? '🏆 Рекорд!' : `🏆 ${recordLabel}`) : null
+      )
+    );
+  }
+
+  // === Past-day insulin wave: итоги жиросжигания ===
+  function InsulinWavePastDayContent({ widget, data, d, isShort }) {
+    const windowH = data.fatBurningWindowH || 0;
+    const windowM = data.fatBurningWindowM || 0;
+    const kcal = data.fatBurningKcal || 0;
+    const record = data.lipolysisRecord || {};
+    const isRecord = data.isRecord || false;
+    const windowMin = data.fatBurningWindowMin || 0;
+    const stillActive = data.fatBurningStillActive || false;
+
+    const durationLabel = windowH > 0
+      ? (windowM > 0 ? `${windowH}ч ${windowM}м` : `${windowH}ч`)
+      : `${windowM}м`;
+
+    const headerText = stillActive
+      ? 'Жир сжигается'
+      : windowMin > 0 ? 'Жир сжигался' : 'Нет окна';
+
+    // Рекорд
+    const recordMin = record.minutes || 0;
+    const recordH = Math.floor(recordMin / 60);
+    const recordM = Math.round(recordMin % 60);
+    const recordLabel = recordMin > 0
+      ? (recordH > 0 ? (recordM > 0 ? `${recordH}ч ${recordM}м` : `${recordH}ч`) : `${recordM}м`)
+      : null;
+
+    const sparkline = React.createElement(InsulinWaveSparkline, {
+      progress: 100, isLipolysis: true, color: '#22c55e', width: '100%', height: isShort ? 34 : 50
+    });
+
+    // === 2×1 horizontal ===
+    if (isShort) {
+      return React.createElement('div', {
+        style: { display: 'flex', alignItems: 'center', height: '100%', gap: '8px', padding: '4px 10px' }
+      },
+        React.createElement('div', {
+          style: { display: 'flex', flexDirection: 'column', gap: '2px', flexShrink: 0, minWidth: '68px' }
+        },
+          React.createElement('div', {
+            style: { fontSize: '0.72rem', fontWeight: 700, color: '#22c55e', lineHeight: 1.2 }
+          }, headerText),
+          React.createElement('div', {
+            style: { fontSize: '0.65rem', color: '#3b82f6', fontWeight: 700 }
+          }, durationLabel)
+        ),
+        React.createElement('div', { style: { flex: 1, minWidth: 0 } }, sparkline)
+      );
+    }
+
+    // === 2×2 vertical: past-day version ===
+    return React.createElement('div', {
+      style: { display: 'flex', flexDirection: 'column', justifyContent: 'space-between', height: '100%', padding: '8px 8px 6px' }
+    },
+      // Header
+      React.createElement('div', {
+        style: { fontSize: '0.8rem', fontWeight: 700, color: '#22c55e', lineHeight: 1.2 }
+      }, headerText),
+      // Duration (big)
+      React.createElement('div', {
+        style: { fontSize: '1.2rem', fontWeight: 800, color: '#3b82f6', letterSpacing: '-0.5px', lineHeight: 1, marginTop: '2px' }
+      }, windowMin > 0 ? durationLabel : '—'),
+      // Sparkline
+      React.createElement('div', {
+        style: { flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', marginTop: '4px', marginBottom: '4px' }
+      }, sparkline),
+      // Bottom: kcal + record
+      React.createElement('div', {
+        style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '4px' }
+      },
+        React.createElement('div', {
+          style: { fontSize: '0.6rem', fontWeight: 600, color: '#22c55e', lineHeight: 1.3 }
+        }, stillActive ? `~${kcal} ккал и растёт` : kcal > 0 ? `~${kcal} ккал сожжено` : 'Без жиросжигания'),
+        !stillActive && recordLabel ? React.createElement('div', {
+          style: { fontSize: '0.55rem', fontWeight: 600, color: isRecord ? '#f59e0b' : 'var(--heys-text-tertiary,#94a3b8)', lineHeight: 1.2, whiteSpace: 'nowrap' }
+        }, isRecord ? '🏆 Рекорд!' : `🏆 ${recordLabel}`) : null
+      )
+    );
+  }
+
 
   // === Health Trend Widget Content (Тренд здоровья 0-100 из инсайтов) ===
   function HealthTrendWidgetContent({ widget, data }) {
@@ -34398,9 +34927,11 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         React.createElement('div', { className: 'widget-macros__cascade-row' },
           renderCascadeStrip(cascade || {}, {
             size: '3x1',
-            maxDots: 8,
+            maxDots: Array.isArray(cascade?.events) && cascade.events.length > 0 ? cascade.events.length : 8,
             placeholderCount: 6,
-            className: 'widget-cascade--embedded'
+            className: 'widget-cascade--embedded',
+            showDayBalanceBadge: true,
+            useLiveCurrentCascade: true
           })
         )
       );

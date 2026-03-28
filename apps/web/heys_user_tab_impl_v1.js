@@ -1470,6 +1470,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                                     : 'Приложение работает только на телефоне'
                             )
                         ),
+                        React.createElement(LeaderboardSharingCard, null),
                         // Перезапуск обучения (Onboarding Tour)
                         React.createElement('div', { className: 'profile-field-group' },
                             React.createElement('div', { className: 'profile-field-group__header' },
@@ -1514,6 +1515,51 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                 ) // end ProfileSection system
 
             ) // end profile-accordion
+        );
+    }
+
+    function LeaderboardSharingCard() {
+        const lb = window.HEYS?.leaderboard;
+        const [enabled, setEnabled] = React.useState(() => lb?.isSharingEnabled?.() || false);
+        const [busy, setBusy] = React.useState(false);
+
+        const handleToggle = (e) => {
+            const next = e.target.checked;
+            setEnabled(next);
+            if (!lb?.toggleSharing) {
+                console.warn('[HEYS.leaderboard] ⚠️ Module not loaded');
+                return;
+            }
+            setBusy(true);
+            lb.toggleSharing(next)
+                .then(() => setBusy(false))
+                .catch(() => setBusy(false));
+        };
+
+        return React.createElement('div', { className: 'profile-field-group' },
+            React.createElement('div', { className: 'profile-field-group__header' },
+                React.createElement('span', { className: 'profile-field-group__icon' }, '🏆'),
+                React.createElement('span', { className: 'profile-field-group__title' }, 'Рейтинг баланса дня')
+            ),
+            React.createElement('div', { style: { marginTop: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' } },
+                React.createElement('span', { style: { color: 'var(--gray-600)' } },
+                    'Участвовать в рейтинге'
+                ),
+                React.createElement('label', { className: 'toggle-switch' },
+                    React.createElement('input', {
+                        type: 'checkbox',
+                        checked: enabled,
+                        disabled: busy,
+                        onChange: handleToggle
+                    }),
+                    React.createElement('span', { className: 'toggle-slider' })
+                )
+            ),
+            React.createElement('div', { className: 'muted', style: { marginTop: '6px', fontSize: '13px' } },
+                enabled
+                    ? '✓ Ваш баланс дня виден другим участникам'
+                    : 'Другие участники не видят ваш результат'
+            )
         );
     }
 

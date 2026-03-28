@@ -123,7 +123,7 @@ export interface EncryptableUserProfile {
   bio?: string;
   language: string;
   timezone: string;
-  theme: 'light' | 'dark' | 'auto';
+  theme: 'light' | 'dark';
   role: string;
   permissions: string[];
 

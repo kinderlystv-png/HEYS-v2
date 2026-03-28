@@ -1539,6 +1539,96 @@ body:has(.page-reports) .hdr::after {
   opacity: 0.9;
 }
 
+.widget-cascade__aside {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 5px;
+  min-width: max-content;
+}
+
+.widget-cascade__day-balance {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  padding: 7px 10px;
+  border-radius: 14px;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  color: #fff;
+  white-space: nowrap;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.34);
+}
+
+.widget-cascade__day-balance--good {
+  background: #22c55e;
+}
+
+.widget-cascade__day-balance--warn {
+  background: #f59e0b;
+}
+
+.widget-cascade__day-balance--bad {
+  background: #ef4444;
+}
+
+.widget-cascade__day-balance--early {
+  outline: 1px dashed rgba(255, 255, 255, 0.52);
+}
+
+.widget-cascade__day-balance-label {
+  font-size: 10px;
+  font-weight: 500;
+  opacity: 0.86;
+}
+
+.widget-cascade__day-balance-value {
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.widget-cascade__metric {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  min-height: 14px;
+  padding-inline-end: 2px;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.widget-cascade__metric--great {
+  color: #16a34a;
+}
+
+.widget-cascade__metric--good {
+  color: #059669;
+}
+
+.widget-cascade__metric--info {
+  color: #2563eb;
+}
+
+.widget-cascade__metric--warn {
+  color: #d97706;
+}
+
+.widget-cascade__metric--bad {
+  color: #dc2626;
+}
+
+.widget-cascade__metric-arrow {
+  font-size: 11px;
+  opacity: 0.9;
+}
+
 .widget-cascade--3x1 {
   padding-inline: 11px;
 }
@@ -4828,6 +4918,26 @@ body:has(.page-reports) .hdr::after {
   padding: 6px 10px;
   font-size: 12px;
   margin-block-start: 0;
+}
+
+.widget-macros__cascade-row .widget-cascade__aside {
+  align-self: start;
+  justify-self: end;
+  align-items: flex-end;
+  margin-inline-start: auto;
+}
+
+.widget-macros__cascade-row .widget-cascade__day-balance {
+  padding: 6px 10px;
+}
+
+.widget-macros__cascade-row .widget-cascade__day-balance-label {
+  font-size: 9px;
+}
+
+.widget-macros__cascade-row .widget-cascade__day-balance-value,
+.widget-macros__cascade-row .widget-cascade__metric {
+  font-size: 11px;
 }
 
 /* --- Macros Widget 4×2 — Расширенный с доп. информацией --- */

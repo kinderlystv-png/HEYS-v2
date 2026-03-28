@@ -134,13 +134,10 @@
 
                 case 'cascade': {
                     const dayData = HEYS.DayData?.getCurrentDay?.() || {};
-                    const profile = U.lsGet('heys_profile', {});
-                    const pIndex = profile?.pIndex || 0;
-                    const dayTot = HEYS.DayData?.getDayTot?.(dayData) || {};
-                    const normAbs = HEYS.norms?.getNormAbs?.(profile, pIndex) || {};
+                    const profile = HEYS.store?.get?.('heys_profile', null) || U.lsGet('heys_profile', {});
                     const cascadeApi = HEYS.CascadeCard;
 
-                    if (typeof cascadeApi?.computeCascadeState !== 'function') {
+                    if (typeof cascadeApi?.computeExactCascadeSnapshot !== 'function') {
                         return {
                             hasData: false,
                             pct: 0,
@@ -150,11 +147,11 @@
                         };
                     }
 
-                    const result = cascadeApi.computeCascadeState(dayData, dayTot, normAbs, profile, pIndex) || {};
+                    const snapshot = cascadeApi.computeExactCascadeSnapshot(dayData, profile, { silent: true }) || {};
+                    const result = snapshot?.result || {};
                     const events = Array.isArray(result?.events) ? result.events : [];
                     const crs = Number(result?.crs) || 0;
-
-                    return {
+                    const cascadeResult = {
                         hasData: events.length > 0,
                         crs,
                         pct: Math.max(0, Math.min(100, Math.round(crs * 100))),
@@ -163,6 +160,19 @@
                         chainLength: Number(result?.chainLength) || 0,
                         events
                     };
+                    // Per-date CEB cache: override with accurate full-cascade CEB
+                    try {
+                        const cid = (HEYS.utils && HEYS.utils.getCurrentClientId) ? HEYS.utils.getCurrentClientId() : '';
+                        const dateStr = new Date().toISOString().slice(0, 10);
+                        if (cid && dateStr) {
+                            const perDateMeta = cascadeApi.getPerDateCEB?.(dateStr, cid);
+                            if (perDateMeta) {
+                                cascadeResult.cebCached = perDateMeta.score;
+                                cascadeResult.cebCachedConf = perDateMeta.confidence;
+                            }
+                        }
+                    } catch (e) { }
+                    return cascadeResult;
                 }
 
                 case 'status': {
