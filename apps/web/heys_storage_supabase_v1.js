@@ -4543,6 +4543,17 @@
                     pKey = 'heys_' + client_id + '_' + pKey.substring('heys_'.length);
                   }
                   try { lsPhaseA.setItem(pKey, JSON.stringify(row.v)); } catch (_) { }
+                  // 📊 Логируем dayv2 сегодня при Phase A
+                  if (pKey.includes('dayv2_')) {
+                    const _phADate = pKey.match(/dayv2_(\d{4}-\d{2}-\d{2})/);
+                    if (_phADate) {
+                      const _phAVal = row.v;
+                      const _phAMeals = Array.isArray(_phAVal?.meals) ? _phAVal.meals.length : 0;
+                      const _phAKcal = _phAVal?.savedEatenKcal || 0;
+                      const _phAVType = typeof _phAVal;
+                      window.console.info('[HEYS.sinhron] 📥 PhaseA dayv2 ' + _phADate[1] + ': meals=' + _phAMeals + ' kcal=' + _phAKcal + ' vType=' + _phAVType);
+                    }
+                  }
                 });
                 muteMirror = false;
 
@@ -4765,6 +4776,17 @@
               // Пропускаем null dayv2
               if (key.includes('dayv2_') && (valueToStore == null || valueToStore === 'null')) return;
 
+              // 📊 Delta light: логируем dayv2 записи
+              if (key.includes('dayv2_')) {
+                const _dlDate = key.match(/dayv2_(\d{4}-\d{2}-\d{2})/);
+                if (_dlDate) {
+                  const _dlVal = typeof valueToStore === 'string' ? (() => { try { return JSON.parse(valueToStore); } catch (_) { return null; } })() : valueToStore;
+                  const _dlMeals = Array.isArray(_dlVal?.meals) ? _dlVal.meals.length : 0;
+                  const _dlKcal = _dlVal?.savedEatenKcal || 0;
+                  window.console.info('[HEYS.sinhron] ⚡ DELTA_LIGHT write dayv2 ' + _dlDate[1] + ': meals=' + _dlMeals + ' kcal=' + _dlKcal);
+                }
+              }
+
               ls.setItem(key, JSON.stringify(valueToStore));
               lightSyncedKeys.push(row.k);
               lightKeysWritten++;
@@ -4876,6 +4898,24 @@
         };
 
         // ── [HEYS.sinhron] ДИАГНОСТИКА dayv2 ─────────────────
+        // 📊 Диагностика: логируем сырые облачные dayv2 для сегодня (тип v, meals, kcal)
+        const _diagToday = new Date().toISOString().slice(0, 10);
+        (data || []).forEach(row => {
+          if (!row.k || !row.k.includes('dayv2_') || isDayv2MetaKey(row.k)) return;
+          const _dDate = extractDayv2Date(row.k);
+          if (!_dDate) return;
+          const _dv = row.v;
+          const _dvType = typeof _dv;
+          const _dvMeals = Array.isArray(_dv?.meals) ? _dv.meals.length : (typeof _dv === 'string' ? 'str(' + _dv.length + ')' : 0);
+          const _dvKcal = _dv?.savedEatenKcal || 0;
+          // Для сегодня — всегда логируем; для остальных — только при аномалиях
+          if (_dDate === _diagToday) {
+            window.console.info('[HEYS.sinhron] ☁️📊 cloud dayv2 ' + _dDate + ': vType=' + _dvType + ' meals=' + _dvMeals + ' kcal=' + _dvKcal + ' key=' + row.k);
+          } else if (_dvType !== 'object' || _dv === null) {
+            window.console.warn('[HEYS.sinhron] ⚠️ cloud dayv2 ' + _dDate + ': АНОМАЛИЯ vType=' + _dvType + ' (ожидался object) key=' + row.k);
+          }
+        });
+
         const cloudDayKeys = uniqSorted((data || [])
           .filter(r => r.k && r.k.includes('dayv2_') && !isDayv2MetaKey(r.k))
           .map(r => extractDayv2Date(r.k)));
@@ -5111,12 +5151,24 @@
                 const remoteUpdatedAt = row.v?.updatedAt || 0;
                 const localUpdatedAt = local?.updatedAt || 0;
 
-                // 🛡️ ЗАЩИТА: Не перезаписываем meaningful локальные данные пустым remote
+                // � Диагностика: логируем решения по dayv2 для сегодня
+                const _syncDayDate = key.match(/dayv2_(\d{4}-\d{2}-\d{2})$/);
+                const _isTodaySync = _syncDayDate && _syncDayDate[1] === new Date().toISOString().slice(0, 10);
+                if (_isTodaySync) {
+                  const _rMeals = Array.isArray(row.v?.meals) ? row.v.meals.length : 0;
+                  const _lMeals = Array.isArray(local?.meals) ? local.meals.length : 0;
+                  const _rKcal = row.v?.savedEatenKcal || 0;
+                  const _lKcal = local?.savedEatenKcal || 0;
+                  window.console.info('[HEYS.sinhron] 📊 dayv2 СЕГОДНЯ: remote=' + _rMeals + 'm/' + _rKcal + 'kcal (updAt=' + remoteUpdatedAt + ') local=' + _lMeals + 'm/' + _lKcal + 'kcal (updAt=' + localUpdatedAt + ') force=' + forceSync);
+                }
+
+                // �🛡️ ЗАЩИТА: Не перезаписываем meaningful локальные данные пустым remote
                 const localMeaningful = isMeaningfulDayData(local);
                 const remoteMeaningful = isMeaningfulDayData(row.v);
                 if (localMeaningful && !remoteMeaningful) {
                   logCritical(`🛡️ [DAYV2] KEEP LOCAL: meaningful local, empty remote for ${key}`);
                   window.console.info('[HEYS.sinhron] 🛡️ KEEP_LOCAL (empty remote) ' + key);
+                  if (_isTodaySync) window.console.info('[HEYS.sinhron] 📊 dayv2 СЕГОДНЯ → KEEP_LOCAL (remote пустой)');
                   const pushObj = {
                     client_id: client_id,
                     k: normalizeKeyForSupabase(row.k, client_id),
@@ -5135,6 +5187,7 @@
                   if (localMealsCount > remoteMealsCount) {
                     logCritical(`🛡️ [DAYV2] KEEP LOCAL: local has MORE meals (${localMealsCount} > ${remoteMealsCount}) for ${key}`);
                     window.console.info('[HEYS.sinhron] 🛡️ KEEP_LOCAL (more meals ' + localMealsCount + '>' + remoteMealsCount + ') ' + key);
+                    if (_isTodaySync) window.console.info('[HEYS.sinhron] 📊 dayv2 СЕГОДНЯ → KEEP_LOCAL (local больше meals ' + localMealsCount + '>' + remoteMealsCount + ')');
                     const pushObj = {
                       client_id: client_id,
                       k: normalizeKeyForSupabase(row.k, client_id),
@@ -5163,6 +5216,7 @@
                   // ✅ Даже в force-режиме не перезаписываем meaningful локальные данные пустым remote
                   if (localMeaningful && !remoteMeaningful) {
                     valueToSave = local;
+                    if (_isTodaySync) window.console.info('[HEYS.sinhron] 📊 dayv2 СЕГОДНЯ FORCE → KEEP_LOCAL (remote пустой, local meaningful)');
                     const dateMatch = key.match(/dayv2_(\d{4}-\d{2}-\d{2})$/);
                     if (dateMatch) {
                       const dayKey = `heys_dayv2_${dateMatch[1]}`;
@@ -5190,6 +5244,7 @@
                       // 🔇 PERF: Отключено
                       // logCritical(`🛡️ [FORCE SYNC] PROTECTED! Local wins: hasMore=${localHasMore}, isNewer=${localIsNewer}. Keeping local.`);
                       valueToSave = local;
+                      if (_isTodaySync) window.console.info('[HEYS.sinhron] 📊 dayv2 СЕГОДНЯ FORCE → KEEP_LOCAL (hasMore=' + localHasMore + ', isNewer=' + localIsNewer + ')');
 
                       // 🔄 Отправляем local в облако чтобы следующий sync получил актуальные данные
                       const dateMatch = key.match(/dayv2_(\d{4}-\d{2}-\d{2})$/);
@@ -5211,10 +5266,12 @@
                       // Есть локальные данные — merge с preferRemote чтобы удаления из облака применились
                       const merged = mergeDayData(local, row.v, { forceKeepAll: true, preferRemote: true });
                       valueToSave = merged || row.v; // Если merge вернул null — берём remote
+                      if (_isTodaySync) window.console.info('[HEYS.sinhron] 📊 dayv2 СЕГОДНЯ FORCE → MERGE (meals=' + (valueToSave?.meals?.length || 0) + ')');
                     }
                   } else {
                     // Нет локальных данных — просто берём remote
                     valueToSave = row.v;
+                    if (_isTodaySync) window.console.info('[HEYS.sinhron] 📊 dayv2 СЕГОДНЯ FORCE → ACCEPT_REMOTE (нет local, meals=' + (valueToSave?.meals?.length || 0) + ')');
                   }
 
                   // 🔇 PERF: Отключено
@@ -5275,6 +5332,7 @@
                       return;
                     }
                     window.console.info('[HEYS.sinhron] ✅ MERGE ' + key + ' meals=' + (merged?.meals?.length || 0));
+                    if (_isTodaySync) window.console.info('[HEYS.sinhron] 📊 dayv2 СЕГОДНЯ → MERGE (meals=' + (merged?.meals?.length || 0) + ' kcal=' + (merged?.savedEatenKcal || 0) + ')');
 
                     // Уведомляем UI об обновлении данных дня (для pull-to-refresh)
                     const dateMatch = key.match(/dayv2_(\d{4}-\d{2}-\d{2})$/);
@@ -5303,8 +5361,10 @@
                 if (localUpdatedAt > remoteUpdatedAt) {
                   log('conflict: keep local (by updatedAt)', key, localUpdatedAt, '>', remoteUpdatedAt);
                   window.console.info('[HEYS.sinhron] 🛡️ KEEP_LOCAL (newer ' + localUpdatedAt + '>' + remoteUpdatedAt + ') ' + key);
+                  if (_isTodaySync) window.console.info('[HEYS.sinhron] 📊 dayv2 СЕГОДНЯ → KEEP_LOCAL (newer)');
                   return;
                 }
+                if (_isTodaySync) window.console.info('[HEYS.sinhron] 📊 dayv2 СЕГОДНЯ → ACCEPT_REMOTE (cloud→localStorage)');
               } else {
                 // Остальные ключи: сравниваем по revision И updatedAt
                 const remoteRev = row.v && row.v.revision ? row.v.revision : 0;
@@ -6071,6 +6131,16 @@
         }
 
         if (batchedDayV2Writes.length > 0) {
+          // 📊 Логируем сегодняшний dayv2 перед batch write
+          const _bwToday = new Date().toISOString().slice(0, 10);
+          batchedDayV2Writes.forEach(({ key: bwKey, valueToSave: bwVal }) => {
+            if (bwKey.includes('dayv2_' + _bwToday)) {
+              const _bwMeals = Array.isArray(bwVal?.meals) ? bwVal.meals.length : 0;
+              const _bwKcal = bwVal?.savedEatenKcal || 0;
+              const _bwMealNames = Array.isArray(bwVal?.meals) ? bwVal.meals.map(m => m.name + '(' + (m.items?.length || 0) + ')').join(', ') : 'none';
+              window.console.info('[HEYS.sinhron] 📝 BATCH_WRITE dayv2 СЕГОДНЯ: meals=' + _bwMeals + ' kcal=' + _bwKcal + ' [' + _bwMealNames + ']');
+            }
+          });
           const updatedDates = [];
           // ⚡ PERF: Chunked writes — yield to browser every CHUNK_SIZE writes
           const CHUNK_SIZE = 15;
@@ -6170,6 +6240,26 @@
           }
           postSyncDayKeys.sort();
           window.console.info('[HEYS.sinhron] 🏁 ИТОГ: dayv2 в localStorage ПОСЛЕ синхронизации (' + postSyncDayKeys.length + '):', formatListForSyncLog(postSyncDayKeys));
+          // 📊 Детальный лог для сегодня: meals, kcal, dayTot
+          const _postToday = new Date().toISOString().slice(0, 10);
+          const _postTodayKey = 'heys_' + client_id + '_dayv2_' + _postToday;
+          try {
+            const _ptRaw = ls.getItem(_postTodayKey);
+            if (_ptRaw) {
+              const _ptVal = JSON.parse(_ptRaw);
+              const _ptMeals = Array.isArray(_ptVal?.meals) ? _ptVal.meals.length : 0;
+              const _ptKcal = _ptVal?.savedEatenKcal || 0;
+              const _ptDayTot = _ptVal?.dayTot;
+              const _ptHasDayTot = _ptDayTot && Object.keys(_ptDayTot).length > 0;
+              const _ptMealNames = Array.isArray(_ptVal?.meals) ? _ptVal.meals.map(m => m.name + '(' + (m.items?.length || 0) + ')').join(', ') : '-';
+              window.console.info('[HEYS.sinhron] 📊 СЕГОДНЯ (' + _postToday + ') ИТОГ: meals=' + _ptMeals + ' kcal=' + _ptKcal + ' hasDayTot=' + _ptHasDayTot + ' [' + _ptMealNames + ']');
+              if (!_ptHasDayTot && _ptMeals > 0) {
+                window.console.warn('[HEYS.sinhron] ⚠️ СЕГОДНЯ: есть meals=' + _ptMeals + ' но dayTot ПУСТОЙ — UI может показать неверные данные до пересчёта');
+              }
+            } else {
+              window.console.warn('[HEYS.sinhron] ⚠️ СЕГОДНЯ (' + _postToday + '): ключ dayv2 НЕ НАЙДЕН в localStorage');
+            }
+          } catch (_) { }
           if (postSyncDuplicateDetails.length > 0) {
             window.console.warn('[HEYS.sinhron] 🐛 ДУБЛИКАТЫ dayv2 в localStorage (' + postSyncDuplicateDetails.length + '):', postSyncDuplicateDetails.join(' | '));
             // Также логируем ВСЕ ключи с дублирующимися датами
