@@ -203,3 +203,14 @@ heys_shared_products_export_backup.json
 tmpclaude-*-cwd
 docs/archive/tmpclaude-*
 docs/tmpclaude-*
+
+# Local debug/investigation artifacts
+tmp_diff_*.txt
+alex-dashboard*.png
+apps/web/__tests__/heys-backup-*.json
+
+# Cloud function local build artifacts
+yandex-cloud-functions/*.zip
+yandex-cloud-functions/backup-*.json
+yandex-cloud-functions/*.json.gz
+yandex-cloud-functions/*/certs/
