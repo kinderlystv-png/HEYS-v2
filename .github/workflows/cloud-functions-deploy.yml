@@ -34,7 +34,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup Yandex Cloud CLI
         run: |
@@ -89,52 +89,67 @@ jobs:
 
           if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.function_name }}" != "all" ]; then
             echo "🎯 Deploying single function: ${{ inputs.function_name }}"
-            ./deploy-all.sh ${{ inputs.function_name }}
+            ./deploy-all.sh ${{ inputs.function_name }} --skip-health
           else
             echo "🚀 Deploying all functions"
-            ./deploy-all.sh
+            ./deploy-all.sh --skip-health
           fi
 
       - name: Verify deployment
         run: |
-          echo "⏳ Waiting 10s for functions to warm up..."
-          sleep 10
+          retry_http_check() {
+            local name="$1"
+            local expected="$2"
+            local check_fn="$3"
+            local attempts="${4:-4}"
+            local delay_seconds="${5:-10}"
+            local status=""
 
-          echo "🧪 Testing deployed functions..."
+            for attempt in $(seq 1 "$attempts"); do
+              status="$($check_fn)"
 
-          # Test Health
-          HEALTH_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
-            --max-time 10 "https://api.heyslab.ru/health")
+              if [ "$status" = "$expected" ]; then
+                echo "✅ $name: OK (HTTP $status, attempt $attempt/$attempts)"
+                return 0
+              fi
 
-          if [ "$HEALTH_STATUS" != "200" ]; then
-            echo "::error::Health check failed (HTTP $HEALTH_STATUS)"
-            exit 1
-          fi
-          echo "✅ Health: OK"
+              echo "⚠️ $name attempt $attempt/$attempts returned HTTP $status"
+              if [ "$attempt" -lt "$attempts" ]; then
+                echo "⏳ Waiting ${delay_seconds}s before retry..."
+                sleep "$delay_seconds"
+              fi
+            done
 
-          # Test RPC
-          RPC_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
-            --max-time 15 -X POST "https://api.heyslab.ru/rpc?fn=get_shared_products" \
-            -H "Content-Type: application/json" \
-            -H "Origin: https://app.heyslab.ru" \
-            -d '{}')
+            echo "::error::$name failed after $attempts attempts (last HTTP $status, expected $expected)"
+            return 1
+          }
 
-          if [ "$RPC_STATUS" != "200" ]; then
-            echo "::error::RPC endpoint failed (HTTP $RPC_STATUS)"
-            exit 1
-          fi
-          echo "✅ RPC: OK"
+          check_health() {
+            curl -s -o /dev/null -w "%{http_code}" \
+              --max-time 10 "https://api.heyslab.ru/health"
+          }
 
-          # Test REST (критичный endpoint, который падал)
-          REST_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
-            --max-time 15 "https://api.heyslab.ru/rest/shared_products?limit=1" \
-            -H "Origin: https://app.heyslab.ru")
+          check_rpc() {
+            curl -s -o /dev/null -w "%{http_code}" \
+              --max-time 15 -X POST "https://api.heyslab.ru/rpc?fn=get_shared_products" \
+              -H "Content-Type: application/json" \
+              -H "Origin: https://app.heyslab.ru" \
+              -d '{}'
+          }
 
-          if [ "$REST_STATUS" != "200" ]; then
-            echo "::error::REST endpoint failed (HTTP $REST_STATUS) — THIS WAS THE ISSUE!"
-            exit 1
-          fi
-          echo "✅ REST: OK"
+          check_rest() {
+            curl -s -o /dev/null -w "%{http_code}" \
+              --max-time 15 "https://api.heyslab.ru/rest/shared_products?limit=1" \
+              -H "Origin: https://app.heyslab.ru"
+          }
+
+          echo "⏳ Waiting 15s for functions to warm up..."
+          sleep 15
+
+          echo "🧪 Testing deployed functions with retries..."
+          retry_http_check "Health check" "200" check_health
+          retry_http_check "RPC endpoint" "200" check_rpc
+          retry_http_check "REST endpoint" "200" check_rest
 
           echo "✅ Deployment verified successfully"
 
