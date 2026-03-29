@@ -3732,7 +3732,12 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
 
     // Базовая загрузка приёмов из storage (store-first) (без ночной логики)
     function loadMealsRaw(ds) {
-        const keys = ['heys_dayv2_' + ds, 'heys_day_' + ds, 'day_' + ds + '_meals', 'meals_' + ds, 'food_' + ds];
+        // v69 FIX: Try scoped key first to prevent cross-client contamination
+        const cid = HEYS.currentClientId || HEYS.utils?.getCurrentClientId?.() || '';
+        const scopedDayKey = cid ? 'heys_' + cid + '_dayv2_' + ds : null;
+        const keys = scopedDayKey
+            ? [scopedDayKey, 'heys_dayv2_' + ds, 'heys_day_' + ds, 'day_' + ds + '_meals', 'meals_' + ds, 'food_' + ds]
+            : ['heys_dayv2_' + ds, 'heys_day_' + ds, 'day_' + ds + '_meals', 'meals_' + ds, 'food_' + ds];
         const debugEnabled = !!(global.HEYS?.DEBUG_MODE || global.HEYS?.debug?.dayLoad);
         const debugLog = debugEnabled ? (...args) => console.log(...args) : null;
         const summarizeObjectArrays = (obj) => {
@@ -4705,8 +4710,9 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
                 }
             }
 
-            // Загружаем день
-            const dayData = lsGet('heys_dayv2_' + dateStr, null);
+            // Загружаем день (v69: scoped key first)
+            const _cid1 = HEYS.currentClientId || HEYS.utils?.getCurrentClientId?.() || '';
+            const dayData = (_cid1 ? lsGet('heys_' + _cid1 + '_dayv2_' + dateStr, null) : null) || lsGet('heys_dayv2_' + dateStr, null);
             if (dayData && typeof dayData === 'object') {
                 result.set(dateStr, dayData);
                 DAYS_CACHE.set(dateStr, { data: dayData, timestamp: now });
@@ -4735,8 +4741,9 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
             }
         }
 
-        // Загружаем день
-        const dayData = lsGet('heys_dayv2_' + dateStr, null);
+        // Загружаем день (v69: scoped key first)
+        const _cid2 = HEYS.currentClientId || HEYS.utils?.getCurrentClientId?.() || '';
+        const dayData = (_cid2 ? lsGet('heys_' + _cid2 + '_dayv2_' + dateStr, null) : null) || lsGet('heys_dayv2_' + dateStr, null);
         if (dayData && typeof dayData === 'object') {
             DAYS_CACHE.set(dateStr, { data: dayData, timestamp: now });
             return dayData;
@@ -5811,6 +5818,21 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
 
     const HEYS = global.HEYS = global.HEYS || {};
 
+    // v69 FIX: Read from scoped dayv2 key first, fallback to unscoped for legacy
+    function readDayV2(dateStr, lsGet) {
+        const cid = HEYS.currentClientId || HEYS.utils?.getCurrentClientId?.() || '';
+        if (cid) {
+            const scopedKey = 'heys_' + cid + '_dayv2_' + dateStr;
+            HEYS?.store?.invalidate?.(scopedKey);
+            const v = lsGet(scopedKey, null);
+            if (v) return { key: scopedKey, value: v };
+        }
+        const unscopedKey = 'heys_dayv2_' + dateStr;
+        HEYS?.store?.invalidate?.(unscopedKey);
+        const v = lsGet(unscopedKey, null);
+        return v ? { key: unscopedKey, value: v } : { key: unscopedKey, value: null };
+    }
+
     function getReact() {
         const React = global.React;
         if (!React) {
@@ -5886,9 +5908,9 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
             const doLocal = () => {
                 if (cancelled) return;
                 const profNow = getProfile();
-                const key = 'heys_dayv2_' + date;
-                HEYS?.store?.invalidate?.(key);
-                const v = lsGet(key, null);
+                const dayRead = readDayV2(date, lsGet);
+                const key = dayRead.key;
+                const v = dayRead.value;
                 const hasStoredData = !!(v && typeof v === 'object' && (
                     v.date ||
                     (Array.isArray(v.meals) && v.meals.length > 0) ||
@@ -6144,9 +6166,9 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
                 const isBatchForCurrentDate = e.detail?.batch && Array.isArray(e.detail?.dates) && e.detail.dates.includes(date);
                 if (!updatedDate || updatedDate === date || isBatchForCurrentDate) {
                     const profNow = getProfile();
-                    const key = 'heys_dayv2_' + date;
-                    HEYS?.store?.invalidate?.(key);
-                    const v = lsGet(key, null);
+                    const dayRead = readDayV2(date, lsGet);
+                    const key = dayRead.key;
+                    const v = dayRead.value;
                     const hasStoredData = !!(v && typeof v === 'object' && (
                         v.date ||
                         (Array.isArray(v.meals) && v.meals.length > 0) ||
@@ -6328,7 +6350,11 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
                 setDay(prevDay => {
                     const newMeals = [...(prevDay.meals || []), newMeal];
                     const newDayData = { ...prevDay, meals: newMeals, updatedAt: newUpdatedAt };
-                    const key = 'heys_dayv2_' + (prevDay.date || date);
+                    // v69 FIX: Use scoped key to prevent cross-client contamination
+                    const _addCid = HEYS.currentClientId || HEYS.utils?.getCurrentClientId?.() || '';
+                    const key = _addCid
+                        ? 'heys_' + _addCid + '_dayv2_' + (prevDay.date || date)
+                        : 'heys_dayv2_' + (prevDay.date || date);
                     try {
                         lsSet(key, newDayData);
                     } catch (e) {
@@ -16801,6 +16827,12 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
         }
     };
 
+    // v69 FIX: Resolve scoped dayv2 key to prevent cross-client contamination
+    function _scopedDayKey(dateStr) {
+        const cid = HEYS.currentClientId || HEYS.utils?.getCurrentClientId?.() || '';
+        return cid ? 'heys_' + cid + '_dayv2_' + dateStr : 'heys_dayv2_' + dateStr;
+    }
+
     // =========================
     // MealCard
     // =========================
@@ -19727,7 +19759,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
         } = deps;
 
         const persistDayData = React.useCallback((nextDayData, action = 'save_day') => {
-            const key = 'heys_dayv2_' + date;
+            const key = _scopedDayKey(date);
             try {
                 lsSet(key, nextDayData);
             } catch (e) {
@@ -19825,7 +19857,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
                             const newMeals = sortMealsByTime([...(prevDay.meals || []), newMeal]);
                             const newDayData = { ...prevDay, meals: newMeals, updatedAt: newUpdatedAt };
 
-                            const key = 'heys_dayv2_' + date;
+                            const key = _scopedDayKey(date);
                             try {
                                 lsSet(key, newDayData);
                             } catch (e) {
@@ -19928,7 +19960,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
                                             );
                                             const newDayData = { ...prevDay, meals: updatedMeals, updatedAt: newUpdatedAt };
 
-                                            const key = 'heys_dayv2_' + date;
+                                            const key = _scopedDayKey(date);
                                             try {
                                                 lsSet(key, newDayData);
                                             } catch (e) {
@@ -20117,7 +20149,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
                     const newMeals = [...baseMeals, newMeal];
                     newMealIndex = newMeals.length - 1;
                     const newDayData = { ...prevDay, meals: newMeals, updatedAt: newUpdatedAt };
-                    const key = 'heys_dayv2_' + date;
+                    const key = _scopedDayKey(date);
                     try {
                         lsSet(key, newDayData);
                     } catch (e) {
@@ -20253,7 +20285,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
                 }
                 const meals = mealsList.map((m, i) => i === mi ? { ...m, items: [...(m.items || []), item] } : m);
                 const newDayData = { ...prevDay, meals, updatedAt: newUpdatedAt };
-                const key = 'heys_dayv2_' + date;
+                const key = _scopedDayKey(date);
                 try {
                     lsSet(key, newDayData);
                 } catch (e) {
@@ -22244,8 +22276,11 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
         const safeNormalize = typeof normalizeTrainings === 'function' ? normalizeTrainings : (t = []) => t;
         const safeClean = typeof cleanEmptyTrainings === 'function' ? cleanEmptyTrainings : (t = []) => t;
 
-        const key = 'heys_dayv2_' + date;
-        const v = lsGet(key, null);
+        // v69 FIX: Try scoped key first to prevent cross-client contamination
+        const cid = HEYS.currentClientId || HEYS.utils?.getCurrentClientId?.() || '';
+        const scopedKey = cid ? 'heys_' + cid + '_dayv2_' + date : '';
+        const unscopedKey = 'heys_dayv2_' + date;
+        const v = (scopedKey ? lsGet(scopedKey, null) : null) || lsGet(unscopedKey, null);
 
         if (v && v.date) {
             const normalizedTrainings = safeNormalize(v.trainings);

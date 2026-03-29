@@ -8,18 +8,19 @@
 
 ## 🚨 Emergency Contacts
 
-| Role | Contact | Availability |
-|------|---------|--------------|
-| Database Admin | [TBD] | 24/7 |
-| DevOps Lead | [TBD] | 24/7 |
-| Yandex Cloud Support | +7 (495) 739-70-00 | 24/7 |
-| On-Call Engineer | [TBD] | Rotation |
+| Role                 | Contact            | Availability |
+| -------------------- | ------------------ | ------------ |
+| Database Admin       | [TBD]              | 24/7         |
+| DevOps Lead          | [TBD]              | 24/7         |
+| Yandex Cloud Support | +7 (495) 739-70-00 | 24/7         |
+| On-Call Engineer     | [TBD]              | Rotation     |
 
 ---
 
 ## Scenario 1: Connection Pool Exhaustion (P1)
 
 ### Symptoms
+
 - ❌ Errors: "timeout acquiring client from pool"
 - ❌ High response latency (>5s)
 - ❌ Pool utilization >95%
@@ -28,21 +29,24 @@
 ### Immediate Actions (5 minutes)
 
 1. **Check pool metrics**
+
    ```bash
    yc serverless function logs heys-api-rpc --filter "[Pool-Metrics]" --since 10m
    ```
 
 2. **Identify blocked connections**
+
    ```sql
    -- Connect to PostgreSQL
-   SELECT pid, state, wait_event, query_start, query 
-   FROM pg_stat_activity 
-   WHERE datname = 'heys_production' 
-     AND state = 'active' 
+   SELECT pid, state, wait_event, query_start, query
+   FROM pg_stat_activity
+   WHERE datname = 'heys_production'
+     AND state = 'active'
    ORDER BY query_start;
    ```
 
 3. **Emergency pool size increase**
+
    ```bash
    # Quick fix: increase pool size
    yc serverless function version create \
@@ -76,6 +80,7 @@
 ## Scenario 2: Database Connection Failure (P0)
 
 ### Symptoms
+
 - ❌ All functions returning 500 errors
 - ❌ Logs: "ECONNREFUSED" or "connection timeout"
 - ❌ Health checks failing
@@ -83,15 +88,17 @@
 ### Immediate Actions (2 minutes)
 
 1. **Check database status**
+
    ```bash
    # Via Yandex Cloud Console
    # Managed PostgreSQL → Clusters → heys_production → Status
-   
+
    # Or via CLI
    yc managed-postgresql cluster get heys_production --format json | jq '.status'
    ```
 
 2. **Verify network connectivity**
+
    ```bash
    # From any Cloud Function
    yc serverless function invoke heys-api-rpc --data '{"test": "connection"}'
@@ -105,6 +112,7 @@
 ### Recovery Steps
 
 **If database is down:**
+
 ```bash
 # 1. Contact Yandex Cloud Support IMMEDIATELY
 # 2. Check for automatic failover
@@ -117,6 +125,7 @@ yc managed-postgresql cluster start-failover \
 ```
 
 **If network issue:**
+
 ```bash
 # 1. Check security groups
 yc vpc security-group list
@@ -126,6 +135,7 @@ yc vpc security-group list
 ```
 
 **If credentials issue:**
+
 ```bash
 # 1. Verify password in function environment
 yc serverless function version list --function-name heys-api-rpc
@@ -144,6 +154,7 @@ yc managed-postgresql user update heys_admin \
 ## Scenario 3: Backup Failure (P2)
 
 ### Symptoms
+
 - ⚠️ Telegram alert: "Backup failed"
 - ⚠️ No recent backups in S3 bucket
 - ⚠️ Managed PostgreSQL backup failed
@@ -151,25 +162,29 @@ yc managed-postgresql user update heys_admin \
 ### Immediate Actions (10 minutes)
 
 1. **Check backup function logs**
+
    ```bash
    yc serverless function logs heys-backup --since 24h
    ```
 
 2. **Verify S3 bucket access**
+
    ```bash
    aws s3 ls s3://heys-backups/ --endpoint-url https://storage.yandexcloud.net
    ```
 
 3. **Check disk space on database**
+
    ```sql
    SELECT pg_database_size('heys_production') / 1024 / 1024 / 1024 as size_gb;
    ```
 
 4. **Manual backup if needed**
+
    ```bash
    # Run backup function manually
    yc serverless function invoke heys-backup
-   
+
    # Or manual pg_dump
    pg_dump -h <host> -p 6432 -U heys_admin -F c -b heys_production > manual_backup_$(date +%Y%m%d_%H%M%S).dump
    ```
@@ -177,6 +192,7 @@ yc managed-postgresql user update heys_admin \
 ### Root Cause Investigation
 
 **Check common issues:**
+
 ```bash
 # 1. S3 credentials expired?
 aws s3 ls s3://heys-backups/ --endpoint-url https://storage.yandexcloud.net
@@ -205,6 +221,7 @@ SELECT * FROM pg_locks WHERE NOT granted;
 **⚠️ CRITICAL: Follow this procedure exactly**
 
 ### Prerequisites
+
 - [ ] Confirm data loss (not just application issue)
 - [ ] Identify last known good backup
 - [ ] Get approval from management
@@ -260,11 +277,11 @@ pg_restore \
 
 # 4. Verify restoration
 psql -h <host> -p 6432 -U heys_admin -d heys_production -c "
-  SELECT 
+  SELECT
     schemaname,
     tablename,
     pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename)) as size
-  FROM pg_tables 
+  FROM pg_tables
   WHERE schemaname NOT IN ('pg_catalog', 'information_schema')
   ORDER BY pg_total_relation_size(schemaname||'.'||tablename) DESC
   LIMIT 10;
@@ -287,6 +304,7 @@ psql -h <host> -p 6432 -U heys_admin -d heys_production -c "
 ## Scenario 5: Slow Query Performance (P2)
 
 ### Symptoms
+
 - 🐌 API response time >2s
 - 🐌 Pool utilization high but queries slow
 - 🐌 Database CPU >80%
@@ -294,9 +312,10 @@ psql -h <host> -p 6432 -U heys_admin -d heys_production -c "
 ### Immediate Actions
 
 1. **Identify slow queries**
+
    ```sql
    -- Top 10 slowest queries
-   SELECT 
+   SELECT
      query,
      calls,
      mean_exec_time,
@@ -308,9 +327,10 @@ psql -h <host> -p 6432 -U heys_admin -d heys_production -c "
    ```
 
 2. **Check for missing indexes**
+
    ```sql
    -- Tables with high seq scans
-   SELECT 
+   SELECT
      schemaname,
      tablename,
      seq_scan,
@@ -324,9 +344,10 @@ psql -h <host> -p 6432 -U heys_admin -d heys_production -c "
    ```
 
 3. **Kill long-running queries** (if blocking others)
+
    ```sql
    -- Find blockers
-   SELECT 
+   SELECT
      pid,
      now() - query_start as duration,
      state,
@@ -335,7 +356,7 @@ psql -h <host> -p 6432 -U heys_admin -d heys_production -c "
    WHERE state = 'active'
      AND now() - query_start > interval '30 seconds'
    ORDER BY duration DESC;
-   
+
    -- Kill specific query
    SELECT pg_terminate_backend(pid);
    ```
@@ -352,6 +373,7 @@ psql -h <host> -p 6432 -U heys_admin -d heys_production -c "
 ## Scenario 6: Cloud Function Timeout (P2)
 
 ### Symptoms
+
 - ⏱️ Functions timing out after 600s
 - ⏱️ Logs show incomplete operations
 - ⏱️ Users reporting "Request timeout"
@@ -359,6 +381,7 @@ psql -h <host> -p 6432 -U heys_admin -d heys_production -c "
 ### Immediate Actions
 
 1. **Increase timeout temporarily**
+
    ```bash
    yc serverless function version create \
      --function-name=<function-name> \
@@ -378,6 +401,103 @@ psql -h <host> -p 6432 -U heys_admin -d heys_production -c "
 - Split into smaller async jobs
 - Use Cloud Tasks for long operations
 - Implement pagination for large datasets
+
+---
+
+## Scenario 7: Client Data Corruption/Loss (P1)
+
+### Symptoms
+
+- 🔴 Client reports missing or incorrect meals/day data
+- 🔴 Dashboard shows another client's data (cross-contamination)
+- 🔴 Day entries disappeared after app update or sync failure
+
+### Prerequisites
+
+Per-client daily backups run at 04:00 MSK via `heys-client-daily-backup`
+function. Snapshots stored in S3:
+`s3://heys-backups/client-daily/YYYY-MM-DD/<clientId>.json.gz` Retention: 365
+days.
+
+### Immediate Actions
+
+1. **Identify affected client and date range**
+
+   ```sql
+   -- Check current state in client_kv_store
+   SELECT k, updated_at
+   FROM client_kv_store
+   WHERE client_id = '<CLIENT_ID>'
+     AND k LIKE 'heys_%_dayv2_%'
+   ORDER BY updated_at DESC
+   LIMIT 20;
+   ```
+
+2. **Verify backup availability**
+
+   ```bash
+   # List available backups for a client
+   aws s3 ls s3://heys-backups/client-daily/ \
+     --endpoint-url https://storage.yandexcloud.net \
+     --recursive | grep "<CLIENT_ID>"
+   ```
+
+3. **Dry-run restore to assess impact**
+   ```bash
+   cd yandex-cloud-functions/heys-client-daily-backup
+   node restore-client-backup.js \
+     --client-id=<CLIENT_ID> \
+     --date=<YYYY-MM-DD> \
+     --dry-run
+   ```
+   Review the diff output: `insert`, `update`, `unchanged`, `skipped` counts.
+
+### Recovery Steps
+
+4. **Execute restore (with optional key filter)**
+
+   ```bash
+   # Restore all keys
+   node restore-client-backup.js \
+     --client-id=<CLIENT_ID> \
+     --date=<YYYY-MM-DD>
+
+   # Or restore only specific key prefixes
+   node restore-client-backup.js \
+     --client-id=<CLIENT_ID> \
+     --date=<YYYY-MM-DD> \
+     --keys=heys_dayv2,heys_profile
+   ```
+
+5. **Verify restored data**
+
+   ```sql
+   SELECT k, updated_at
+   FROM client_kv_store
+   WHERE client_id = '<CLIENT_ID>'
+     AND k LIKE 'heys_%_dayv2_%'
+   ORDER BY updated_at DESC
+   LIMIT 20;
+   ```
+
+6. **Force client resync** — ask client to pull-to-refresh in the app, or
+   curator to re-open the client card.
+
+### Post-Recovery
+
+- [ ] Confirm client sees correct data in the app
+- [ ] Check if other clients are affected (cross-contamination scenario)
+- [ ] Investigate root cause (unscoped keys, sync race, code bug)
+- [ ] If cross-contamination: check for unscoped `heys_dayv2_*` keys without
+      `clientId` prefix and migrate them
+
+### Notes
+
+- The restore script uses a single transaction — either all keys restore or
+  none.
+- `--dry-run` never writes to DB; always run it first.
+- Backup includes `v_encrypted` (base64) and `key_version` fields.
+- SHA-256 checksum in S3 metadata is verified before restore.
 
 ---
 
@@ -406,6 +526,7 @@ curl -X POST https://api.heyslab.ru/rpc?fn=get_public_trial_capacity
 ```
 
 **Rollback all functions at once:**
+
 ```bash
 #!/bin/bash
 FUNCTIONS=(heys-api-rpc heys-api-rest heys-api-auth heys-api-leads heys-api-payments)

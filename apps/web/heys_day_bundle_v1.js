@@ -5769,6 +5769,12 @@
         }
     };
 
+    // v69 FIX: Resolve scoped dayv2 key to prevent cross-client contamination
+    function _scopedDayKey(dateStr) {
+        const cid = HEYS.currentClientId || HEYS.utils?.getCurrentClientId?.() || '';
+        return cid ? 'heys_' + cid + '_dayv2_' + dateStr : 'heys_dayv2_' + dateStr;
+    }
+
     // =========================
     // MealCard
     // =========================
@@ -8695,7 +8701,7 @@
         } = deps;
 
         const persistDayData = React.useCallback((nextDayData, action = 'save_day') => {
-            const key = 'heys_dayv2_' + date;
+            const key = _scopedDayKey(date);
             try {
                 lsSet(key, nextDayData);
             } catch (e) {
@@ -8793,7 +8799,7 @@
                             const newMeals = sortMealsByTime([...(prevDay.meals || []), newMeal]);
                             const newDayData = { ...prevDay, meals: newMeals, updatedAt: newUpdatedAt };
 
-                            const key = 'heys_dayv2_' + date;
+                            const key = _scopedDayKey(date);
                             try {
                                 lsSet(key, newDayData);
                             } catch (e) {
@@ -8896,7 +8902,7 @@
                                             );
                                             const newDayData = { ...prevDay, meals: updatedMeals, updatedAt: newUpdatedAt };
 
-                                            const key = 'heys_dayv2_' + date;
+                                            const key = _scopedDayKey(date);
                                             try {
                                                 lsSet(key, newDayData);
                                             } catch (e) {
@@ -9085,7 +9091,7 @@
                     const newMeals = [...baseMeals, newMeal];
                     newMealIndex = newMeals.length - 1;
                     const newDayData = { ...prevDay, meals: newMeals, updatedAt: newUpdatedAt };
-                    const key = 'heys_dayv2_' + date;
+                    const key = _scopedDayKey(date);
                     try {
                         lsSet(key, newDayData);
                     } catch (e) {
@@ -9221,7 +9227,7 @@
                 }
                 const meals = mealsList.map((m, i) => i === mi ? { ...m, items: [...(m.items || []), item] } : m);
                 const newDayData = { ...prevDay, meals, updatedAt: newUpdatedAt };
-                const key = 'heys_dayv2_' + date;
+                const key = _scopedDayKey(date);
                 try {
                     lsSet(key, newDayData);
                 } catch (e) {

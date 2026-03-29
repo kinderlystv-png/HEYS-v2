@@ -2834,7 +2834,8 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-3-ui: execute start');
   function shouldShowCycleStep() {
     try {
       const profile = lsGet('heys_profile', {});
-      return profile.cycleTrackingEnabled === true;
+      // 🛡️ v65 FIX: check gender — cycle step is only for female users
+      return profile.cycleTrackingEnabled === true && profile.gender === 'Женский';
     } catch {
       return false;
     }

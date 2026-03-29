@@ -330,7 +330,9 @@
         const persistDay = typeof HEYS?.dayStorage?.lsSet === 'function'
           ? HEYS.dayStorage.lsSet
           : U?.lsSet;
-        persistDay?.('heys_dayv2_' + date, nextDay);
+        const _statsCid = HEYS.currentClientId || HEYS.utils?.getCurrentClientId?.() || '';
+        const _statsDayKey = _statsCid ? 'heys_' + _statsCid + '_dayv2_' + date : 'heys_dayv2_' + date;
+        persistDay?.(_statsDayKey, nextDay);
         console.info('[HEYS.dayRealData] persisted day', {
           date,
           isFastingDay: !!nextDay?.isFastingDay,
@@ -347,7 +349,7 @@
 
       try {
         if (typeof HEYS?.cloud?.saveClientKey === 'function') {
-          HEYS.cloud.saveClientKey('heys_dayv2_' + date, nextDay);
+          HEYS.cloud.saveClientKey(_statsDayKey, nextDay);
           console.info('[HEYS.dayRealData] queued cloud save', {
             date,
             source: 'day-stats-real-data-cta',

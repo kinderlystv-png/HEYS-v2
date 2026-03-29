@@ -47,7 +47,9 @@
         };
 
         const handleRemove = () => {
-            localStorage.removeItem('heys_dayv2_' + date);
+            const _calCid = HEYS.currentClientId || HEYS.utils?.getCurrentClientId?.() || '';
+            const _calKey = _calCid ? 'heys_' + _calCid + '_dayv2_' + date : 'heys_dayv2_' + date;
+            localStorage.removeItem(_calKey);
             const profNow = getProfile();
             setDay(ensureDay({
                 date: date,

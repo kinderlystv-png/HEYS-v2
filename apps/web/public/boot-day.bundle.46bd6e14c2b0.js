@@ -13807,7 +13807,9 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         };
 
         const handleRemove = () => {
-            localStorage.removeItem('heys_dayv2_' + date);
+            const _calCid = HEYS.currentClientId || HEYS.utils?.getCurrentClientId?.() || '';
+            const _calKey = _calCid ? 'heys_' + _calCid + '_dayv2_' + date : 'heys_dayv2_' + date;
+            localStorage.removeItem(_calKey);
             const profNow = getProfile();
             setDay(ensureDay({
                 date: date,
@@ -16039,6 +16041,12 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             HEYS.analytics.trackError(err, context);
         }
     };
+
+    // v69 FIX: Resolve scoped dayv2 key to prevent cross-client contamination
+    function _scopedDayKey(dateStr) {
+        const cid = HEYS.currentClientId || HEYS.utils?.getCurrentClientId?.() || '';
+        return cid ? 'heys_' + cid + '_dayv2_' + dateStr : 'heys_dayv2_' + dateStr;
+    }
 
     // =========================
     // MealCard
@@ -18966,7 +18974,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         } = deps;
 
         const persistDayData = React.useCallback((nextDayData, action = 'save_day') => {
-            const key = 'heys_dayv2_' + date;
+            const key = _scopedDayKey(date);
             try {
                 lsSet(key, nextDayData);
             } catch (e) {
@@ -19064,7 +19072,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                             const newMeals = sortMealsByTime([...(prevDay.meals || []), newMeal]);
                             const newDayData = { ...prevDay, meals: newMeals, updatedAt: newUpdatedAt };
 
-                            const key = 'heys_dayv2_' + date;
+                            const key = _scopedDayKey(date);
                             try {
                                 lsSet(key, newDayData);
                             } catch (e) {
@@ -19167,7 +19175,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                                             );
                                             const newDayData = { ...prevDay, meals: updatedMeals, updatedAt: newUpdatedAt };
 
-                                            const key = 'heys_dayv2_' + date;
+                                            const key = _scopedDayKey(date);
                                             try {
                                                 lsSet(key, newDayData);
                                             } catch (e) {
@@ -19356,7 +19364,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                     const newMeals = [...baseMeals, newMeal];
                     newMealIndex = newMeals.length - 1;
                     const newDayData = { ...prevDay, meals: newMeals, updatedAt: newUpdatedAt };
-                    const key = 'heys_dayv2_' + date;
+                    const key = _scopedDayKey(date);
                     try {
                         lsSet(key, newDayData);
                     } catch (e) {
@@ -19492,7 +19500,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                 }
                 const meals = mealsList.map((m, i) => i === mi ? { ...m, items: [...(m.items || []), item] } : m);
                 const newDayData = { ...prevDay, meals, updatedAt: newUpdatedAt };
-                const key = 'heys_dayv2_' + date;
+                const key = _scopedDayKey(date);
                 try {
                     lsSet(key, newDayData);
                 } catch (e) {
@@ -20136,7 +20144,10 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         // cleanEmptyTrainings определена выше (для совместимости с прежним кодом вызовы остаются)
 
         // ЗАЩИТА: не сохранять до завершения гидратации (чтобы не затереть данные из Supabase)
-        const { flush } = useDayAutosave({ day, date, lsSet, lsGetFn: lsGet, disabled: !isHydrated });
+        // v69 FIX: Use scoped keyPrefix to prevent cross-client contamination via proxy mirror
+        const _cid = window.HEYS?.currentClientId || U?.getCurrentClientId?.() || '';
+        const _dayKeyPrefix = _cid ? 'heys_' + _cid + '_dayv2_' : 'heys_dayv2_';
+        const { flush } = useDayAutosave({ day, date, lsSet, lsGetFn: lsGet, keyPrefix: _dayKeyPrefix, disabled: !isHydrated });
 
         // Smart Prefetch: предзагрузка ±7 дней при наличии интернета
         useSmartPrefetch && useSmartPrefetch({ currentDate: date, daysRange: 7, enabled: isHydrated });

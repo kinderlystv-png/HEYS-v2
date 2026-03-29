@@ -1671,7 +1671,8 @@
   function shouldShowCycleStep() {
     try {
       const profile = lsGet('heys_profile', {});
-      return profile.cycleTrackingEnabled === true;
+      // 🛡️ v65 FIX: check gender — cycle step is only for female users
+      return profile.cycleTrackingEnabled === true && profile.gender === 'Женский';
     } catch {
       return false;
     }

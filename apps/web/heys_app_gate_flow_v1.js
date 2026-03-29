@@ -1270,6 +1270,9 @@
                                                                     setTimeout(() => {
                                                                         console.info('[HEYS.gate] 👤 Выбор клиента', { clientId: c.id, clientName: c.name });
 
+                                                                        // 🔧 v65 FIX: Запоминаем старый clientId ДО обновления, чтобы switchClient
+                                                                        // мог детектировать контаминацию при смене пользователя.
+                                                                        const _prevClientId_gate = (window.HEYS?.currentClientId) || '';
                                                                         // ✅ FIX: Сразу закрываем gate — не ждём syncClient (10-15сек)
                                                                         // Компоненты покажут скелетоны, heysSyncCompleted перерисует после sync.
                                                                         // ВАЖНО: сначала обновляем глобальный currentClientId/storage,
@@ -1285,11 +1288,11 @@
                                                                         // switchClient в фоне — загружает данные и диспатчит heysSyncCompleted
                                                                         // 🔧 v63 FIX #6: retry при провале + диспатч ошибки для UI
                                                                         if (HEYS.cloud && HEYS.cloud.switchClient) {
-                                                                            HEYS.cloud.switchClient(c.id).catch(err => {
+                                                                            HEYS.cloud.switchClient(c.id, _prevClientId_gate).catch(err => {
                                                                                 console.error('[HEYS.gate] ❌ Ошибка sync, retry через 3с:', err);
                                                                                 // Одна повторная попытка после 3 секунд (покрывает 502 cold start)
                                                                                 setTimeout(() => {
-                                                                                    HEYS.cloud.switchClient(c.id).catch(err2 => {
+                                                                                    HEYS.cloud.switchClient(c.id, _prevClientId_gate).catch(err2 => {
                                                                                         console.error('[HEYS.gate] ❌ Retry failed:', err2);
                                                                                         window.dispatchEvent(new CustomEvent('heys:sync-error', {
                                                                                             detail: { clientId: c.id, error: err2?.message || String(err2) }

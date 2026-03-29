@@ -1085,7 +1085,7 @@
                                                             window.dispatchEvent(new CustomEvent('heys:client-changed', { detail: { clientId: c.id } }));
 
                                                             if (HEYS.cloud && HEYS.cloud.switchClient) {
-                                                                HEYS.cloud.switchClient(c.id).catch(err => {
+                                                                HEYS.cloud.switchClient(c.id, clientIdValue).catch(err => {
                                                                     console.error('[HEYS.store] ❌ Ошибка синхронизации клиента:', err);
                                                                 });
                                                             } else {

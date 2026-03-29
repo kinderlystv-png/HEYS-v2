@@ -419,7 +419,10 @@
         // cleanEmptyTrainings определена выше (для совместимости с прежним кодом вызовы остаются)
 
         // ЗАЩИТА: не сохранять до завершения гидратации (чтобы не затереть данные из Supabase)
-        const { flush } = useDayAutosave({ day, date, lsSet, lsGetFn: lsGet, disabled: !isHydrated });
+        // v69 FIX: Use scoped keyPrefix to prevent cross-client contamination via proxy mirror
+        const _cid = window.HEYS?.currentClientId || U?.getCurrentClientId?.() || '';
+        const _dayKeyPrefix = _cid ? 'heys_' + _cid + '_dayv2_' : 'heys_dayv2_';
+        const { flush } = useDayAutosave({ day, date, lsSet, lsGetFn: lsGet, keyPrefix: _dayKeyPrefix, disabled: !isHydrated });
 
         // Smart Prefetch: предзагрузка ±7 дней при наличии интернета
         useSmartPrefetch && useSmartPrefetch({ currentDate: date, daysRange: 7, enabled: isHydrated });

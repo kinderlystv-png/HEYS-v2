@@ -5,6 +5,27 @@
 
     const HEYS = global.HEYS = global.HEYS || {};
 
+    // v69 FIX: Resolve scoped dayv2 key to prevent cross-client contamination
+    function getScopedDayV2Key(dateStr) {
+        const cid = HEYS.currentClientId || HEYS.utils?.getCurrentClientId?.() || '';
+        return cid ? 'heys_' + cid + '_dayv2_' + dateStr : 'heys_dayv2_' + dateStr;
+    }
+
+    // v69 FIX: Read from scoped key first, fallback to unscoped for legacy
+    function readDayV2(dateStr, lsGet) {
+        const cid = HEYS.currentClientId || HEYS.utils?.getCurrentClientId?.() || '';
+        if (cid) {
+            const scopedKey = 'heys_' + cid + '_dayv2_' + dateStr;
+            HEYS?.store?.invalidate?.(scopedKey);
+            const v = lsGet(scopedKey, null);
+            if (v) return { key: scopedKey, value: v };
+        }
+        const unscopedKey = 'heys_dayv2_' + dateStr;
+        HEYS?.store?.invalidate?.(unscopedKey);
+        const v = lsGet(unscopedKey, null);
+        return v ? { key: unscopedKey, value: v } : { key: unscopedKey, value: null };
+    }
+
     function getReact() {
         const React = global.React;
         if (!React) {
@@ -80,9 +101,9 @@
             const doLocal = () => {
                 if (cancelled) return;
                 const profNow = getProfile();
-                const key = 'heys_dayv2_' + date;
-                HEYS?.store?.invalidate?.(key);
-                const v = lsGet(key, null);
+                const dayRead = readDayV2(date, lsGet);
+                const key = dayRead.key;
+                const v = dayRead.value;
                 if (v && (v.isFastingDay || v.isIncomplete)) {
                     console.info('[HEYS.dayRealData] 🔄 doLocal read day', {
                         date,
@@ -284,9 +305,9 @@
                 const isBatchForCurrentDate = e.detail?.batch && Array.isArray(e.detail?.dates) && e.detail.dates.includes(date);
                 if (!updatedDate || updatedDate === date || isBatchForCurrentDate) {
                     const profNow = getProfile();
-                    const key = 'heys_dayv2_' + date;
-                    HEYS?.store?.invalidate?.(key);
-                    const v = lsGet(key, null);
+                    const dayRead = readDayV2(date, lsGet);
+                    const key = dayRead.key;
+                    const v = dayRead.value;
                     if (v && (source === 'day-stats-real-data-cta' || v.isFastingDay || v.isIncomplete)) {
                         try {
                             global.__HEYS_REALDATA_DEBUG.push({
@@ -481,9 +502,9 @@
 
                 // Reload current day data from localStorage
                 const profNow = getProfile();
-                const key = 'heys_dayv2_' + date;
-                HEYS?.store?.invalidate?.(key);
-                const v = lsGet(key, null);
+                const dayRead = readDayV2(date, lsGet);
+                const key = dayRead.key;
+                const v = dayRead.value;
                 if (v && v.date) {
                     const newDay = ensureDay(v, profNow);
                     setDay(newDay);

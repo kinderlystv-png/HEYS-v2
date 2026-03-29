@@ -17347,8 +17347,117 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
     return !!leadingClientId && leadingClientId !== clientId;
   }
 
-  // 🔧 Dedup set: log foreign dayv2 scope-fix only once per unique input key
+  // 🔧 Dedup set: log foreign scope anomaly summary only once per sync cycle.
   const _scopeFixLoggedKeys = new Set();
+  let _scopeFixSummaryLogged = false;
+  const _cloudGarbageCleanupInFlight = new Map();
+  const _cloudGarbageCleanupLastRun = new Map();
+
+  function createCloudGarbageCollector() {
+    return {
+      foreign: new Set(),
+      doubleScoped: new Set(),
+      quoted: new Set()
+    };
+  }
+
+  function recordCloudGarbageCandidate(collector, kind, key) {
+    if (!collector || !kind || !key || !collector[kind]) return;
+    collector[kind].add(key);
+  }
+
+  function getCloudGarbageKeys(collector) {
+    if (!collector) return [];
+    return Array.from(new Set([
+      ...Array.from(collector.foreign || []),
+      ...Array.from(collector.doubleScoped || []),
+      ...Array.from(collector.quoted || [])
+    ].filter(Boolean)));
+  }
+
+  function logCloudGarbageSummary(clientId, collector, source) {
+    if (!clientId || !collector) return 0;
+    const foreignCount = collector.foreign?.size || 0;
+    const doubleScopedCount = collector.doubleScoped?.size || 0;
+    const quotedCount = collector.quoted?.size || 0;
+    const total = foreignCount + doubleScopedCount + quotedCount;
+    if (!total) return 0;
+
+    const sample = getCloudGarbageKeys(collector).slice(0, 4).join(', ');
+    logCritical(
+      `🧹 [CLOUD GARBAGE] ${source}: client=${clientId.slice(0, 8)} ` +
+      `foreign=${foreignCount} double=${doubleScopedCount} quoted=${quotedCount}` +
+      (sample ? ` | sample=${sample}` : '')
+    );
+    return total;
+  }
+
+  cloud.cleanupCloudGarbageKeys = async function (clientId, keys, source = 'sync') {
+    const uniqueKeys = Array.from(new Set(Array.isArray(keys) ? keys.filter(Boolean) : []));
+    if (!clientId || uniqueKeys.length === 0) {
+      return { deleted: 0, failed: 0, skipped: true };
+    }
+
+    const existing = _cloudGarbageCleanupInFlight.get(clientId);
+    if (existing) return existing;
+
+    const cleanupPromise = (async () => {
+      try {
+        const YandexAPI = global.HEYS?.YandexAPI || global.YandexAPI;
+        const isPinAuth = _pinAuthClientId && _pinAuthClientId === clientId;
+        if (!YandexAPI?.rest) {
+          return { deleted: 0, failed: uniqueKeys.length, error: 'YandexAPI unavailable' };
+        }
+        if (!user && !isPinAuth) {
+          return { deleted: 0, failed: uniqueKeys.length, error: 'Not authenticated' };
+        }
+
+        let deleted = 0;
+        let failed = 0;
+        for (const key of uniqueKeys) {
+          try {
+            const { error } = await YandexAPI.rest('client_kv_store', {
+              method: 'DELETE',
+              filters: {
+                'eq.client_id': clientId,
+                'eq.k': key
+              }
+            });
+            if (error) failed += 1;
+            else deleted += 1;
+          } catch (_) {
+            failed += 1;
+          }
+        }
+
+        _cloudGarbageCleanupLastRun.set(clientId, Date.now());
+        if (deleted > 0 || failed > 0) {
+          logCritical(`☁️ [CLOUD CLEANUP] ${source}: client=${clientId.slice(0, 8)} deleted=${deleted} failed=${failed}`);
+        }
+        return { deleted, failed };
+      } finally {
+        _cloudGarbageCleanupInFlight.delete(clientId);
+      }
+    })();
+
+    _cloudGarbageCleanupInFlight.set(clientId, cleanupPromise);
+    return cleanupPromise;
+  };
+
+  function scheduleCloudGarbageCleanup(clientId, collector, source) {
+    const keys = getCloudGarbageKeys(collector);
+    if (!clientId || keys.length === 0) return;
+
+    logCloudGarbageSummary(clientId, collector, source);
+
+    const lastRun = _cloudGarbageCleanupLastRun.get(clientId) || 0;
+    if ((Date.now() - lastRun) < 15000) return;
+
+    setTimeout(() => {
+      cloud.cleanupCloudGarbageKeys(clientId, keys, source)
+        .catch((e) => console.warn('[CLOUD GARBAGE CLEANUP] Error:', e?.message || e));
+    }, 0);
+  }
 
   function scopeKeyForClientStorage(key, clientId) {
     if (!clientId || typeof key !== 'string') return key;
@@ -17360,16 +17469,18 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
     }
 
     if (isForeignClientScopedKey(normalized, clientId)) {
-      if (normalized.includes('dayv2_')) {
-        const stripped = stripClientScopePrefixes(normalized);
-        normalized = stripped.key;
-        if (!_scopeFixLoggedKeys.has(key)) {
-          _scopeFixLoggedKeys.add(key);
-          logCritical(`🐛 [SCOPE] Fixed foreign-scoped day key for current client: ${key} → ${normalized}`);
-        }
-      } else {
-        return normalized;
+      // 🛡️ v65 FIX: foreign-scoped keys (including dayv2) are NOT adopted.
+      // Previously dayv2 keys from other clients were re-scoped to the current
+      // client, causing data contamination (wrong kcal, meals, etc.).
+      // Caller must LOAD SKIP all foreign-scoped keys uniformly.
+      if (!_scopeFixLoggedKeys.has(key)) {
+        _scopeFixLoggedKeys.add(key);
       }
+      if (!_scopeFixSummaryLogged) {
+        _scopeFixSummaryLogged = true;
+        logCritical('🐛 [SCOPE] Foreign-scoped cloud keys detected — adoption disabled; invalid rows will be skipped and scheduled for cleanup');
+      }
+      return normalized;
     }
 
 
@@ -17674,6 +17785,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
 
     // 🔧 Clear scope-fix dedup log set for fresh sync cycle
     _scopeFixLoggedKeys.clear();
+    _scopeFixSummaryLogged = false;
 
     const isPinAuth = _rpcOnlyMode && _pinAuthClientId === clientId;
 
@@ -19016,8 +19128,57 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
     }
   }
 
+  let _cachedDayHydrationProductsRef = null;
+  let _cachedDayHydrationProductIndex = null;
+
+  function getDayHydrationProductIndex() {
+    const products = global.HEYS?.products?.getAll?.();
+    if (!Array.isArray(products) || products.length === 0) return null;
+    if (_cachedDayHydrationProductsRef === products && _cachedDayHydrationProductIndex) {
+      return _cachedDayHydrationProductIndex;
+    }
+
+    const buildProductIndex = global.HEYS?.models?.buildProductIndex;
+    if (typeof buildProductIndex !== 'function') return null;
+
+    _cachedDayHydrationProductsRef = products;
+    _cachedDayHydrationProductIndex = buildProductIndex(products);
+    return _cachedDayHydrationProductIndex;
+  }
+
+  function ensureDayV2ComputedTotals(valueToSave) {
+    if (!valueToSave || typeof valueToSave !== 'object') return valueToSave;
+
+    const mealsCount = Array.isArray(valueToSave.meals) ? valueToSave.meals.length : 0;
+    const hasDayTot = !!(valueToSave.dayTot && Object.keys(valueToSave.dayTot).length > 0);
+    if (mealsCount === 0 || hasDayTot) return valueToSave;
+
+    const calculateDayTotals = global.HEYS?.dayCalculations?.calculateDayTotals;
+    if (typeof calculateDayTotals !== 'function') return valueToSave;
+
+    try {
+      const pIndex = getDayHydrationProductIndex();
+      if (!pIndex) return valueToSave;
+
+      const computedDayTot = calculateDayTotals(valueToSave, pIndex);
+      if (!computedDayTot || Object.keys(computedDayTot).length === 0) return valueToSave;
+
+      const nextDay = {
+        ...valueToSave,
+        dayTot: computedDayTot
+      };
+      if (!(Number(nextDay.savedEatenKcal) > 0) && Number(computedDayTot.kcal) > 0) {
+        nextDay.savedEatenKcal = Math.round(Number(computedDayTot.kcal) || 0);
+      }
+      return nextDay;
+    } catch (_) {
+      return valueToSave;
+    }
+  }
+
   function writeDayKeyWithQuotaGuard(key, valueToSave, options = {}) {
-    const rawValue = JSON.stringify(valueToSave);
+    const hydratedValue = ensureDayV2ComputedTotals(valueToSave);
+    const rawValue = JSON.stringify(hydratedValue);
     const written = safeSetItem(key, rawValue, {
       preserveRecentDuringHydration: !!options.preserveRecentDuringHydration,
       nowTs: options.nowTs || Date.now()
@@ -21233,11 +21394,12 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
 
       // Записываем новые данные и собираем ключи для инвалидации кэша
       const syncedKeys = [];
+      const _cloudGarbage = createCloudGarbageCollector();
       (data || []).forEach(row => {
         try {
           // Ключи в client_kv_store уже нормализованы (heys_profile, heys_dayv2_2025-12-12)
-          if (isForeignClientScopedKey(key, client_id) && !key.includes('dayv2_')) {
-            logCritical(`🐛 [LOAD SKIP] Skipping foreign-scoped key for other client: ${row.k}`);
+          if (isForeignClientScopedKey(row?.k, clientId)) {
+            recordCloudGarbageCandidate(_cloudGarbage, 'foreign', row.k);
             return;
           }
           const localKey = `heys_${clientId}_${row.k.replace(/^heys_/, '')}`;
@@ -21304,6 +21466,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
       });
 
       muteMirror = false;
+      scheduleCloudGarbageCleanup(clientId, _cloudGarbage, 'yandex-sync');
 
       // 🧹 Если профиль уже заполнен — очищаем флаг регистрации
       try {
@@ -21747,7 +21910,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
         const isDeltaFastPath = !!lastSyncTs && !forceSync;
         // 🚀 PERF: Force sync also uses delta when we have lastSyncTs and initial sync is done
         // This avoids re-fetching all 679 keys on pull-to-refresh — only changed keys since last sync
-        const isForceDelta = forceSync && !!lastSyncTs && initialSyncCompleted;
+        const isForceDelta = forceSync && !!lastSyncTs && initialSyncCompleted && !options?._retryFullSync;
         const skipHeavyPreWork = isDeltaFastPath || isForceDelta;
         const now = Date.now(); // needed for _lastClientSync and cloud cleanup
 
@@ -21882,21 +22045,9 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
                 phaseAData.forEach(row => {
                   if (row.v == null) return;
                   const pKey = scopeKeyForClientStorage(row.k, client_id);
-                  const pPhaseA = pKey.includes('dayv2_')
-                    ? maybeRestoreDayV2FromBackup(pKey, row.v, 'phaseA').value
-                    : row.v;
-                  try { lsPhaseA.setItem(pKey, JSON.stringify(pPhaseA)); } catch (_) { }
-                  // 📊 Логируем dayv2 сегодня при Phase A
-                  if (pKey.includes('dayv2_')) {
-                    const _phADate = pKey.match(/dayv2_(\d{4}-\d{2}-\d{2})/);
-                    if (_phADate) {
-                      const _phAVal = pPhaseA;
-                      const _phAMeals = Array.isArray(_phAVal?.meals) ? _phAVal.meals.length : 0;
-                      const _phAKcal = _phAVal?.savedEatenKcal || 0;
-                      const _phAVType = typeof _phAVal;
-                      window.console.info('[HEYS.sinhron] 📥 PhaseA dayv2 ' + _phADate[1] + ': meals=' + _phAMeals + ' kcal=' + _phAKcal + ' vType=' + _phAVType);
-                    }
-                  }
+                  // 🛡️ v65 FIX: skip foreign-scoped keys in Phase A too
+                  if (isForeignClientScopedKey(pKey, client_id)) return;
+                  try { lsPhaseA.setItem(pKey, JSON.stringify(row.v)); } catch (_) { }
                 });
                 muteMirror = false;
 
@@ -22052,6 +22203,25 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
         const deltaKeyCount = data?.length || 0;
         const _forceDeltaFetchDone = performance.now(); // timing reference for fast paths
         if (isForceDelta && deltaKeyCount === 0) {
+          // 🔧 v68 FIX: Если delta вернул 0 записей, проверяем есть ли
+          // данные клиента в localStorage. Если нет (например, после switchClient
+          // который очистил ключи старого клиента) — fallback на полный sync.
+          const clientPrefix = 'heys_' + client_id + '_';
+          let hasClientData = false;
+          for (let _ci = 0; _ci < ls.length; _ci++) {
+            const _ck = ls.key(_ci);
+            if (_ck && _ck.startsWith(clientPrefix) && _ck.includes('dayv2_')) {
+              hasClientData = true;
+              break;
+            }
+          }
+          if (!hasClientData) {
+            logCritical('⚠️ [FORCE DELTA] 0 changes but no client data in localStorage — clearing lastSyncTs for full re-sync');
+            try { ls.removeItem(lastSyncKey); } catch (_) { }
+            // Recursive call with fresh state — will take full sync path
+            return cloud.bootstrapClientSync(client_id, { ...options, _retryFullSync: true });
+          }
+
           muteMirror = false;
           cloud._lastClientSync = { clientId: client_id, ts: now };
           cloud._syncCompletedAt = Date.now();
@@ -22075,11 +22245,6 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
             _sharedProductsPromise = null;
           }
 
-          // Defer cleanup
-          setTimeout(() => {
-            try { cleanupDuplicateKeys(); } catch (_) { }
-          }, 3000);
-
           return { success: true, status: 'no-changes', keys: 0, durationMs: zeroDuration, forceDelta: true };
         }
 
@@ -22094,13 +22259,14 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
 
           // Простая запись в LS без dedup/merge (delta не даёт дубликатов)
           muteMirror = true;
+          const lightCloudGarbage = createCloudGarbageCollector();
           let lightKeysWritten = 0;
           const lightSyncedKeys = [];
           (data || []).forEach(row => {
             try {
               const key = scopeKeyForClientStorage(row.k, client_id);
-              if (isForeignClientScopedKey(key, client_id) && !key.includes('dayv2_')) {
-                logCritical(`🐛 [LOAD SKIP] Skipping foreign-scoped key for other client: ${row.k}`);
+              if (isForeignClientScopedKey(key, client_id)) {
+                recordCloudGarbageCandidate(lightCloudGarbage, 'foreign', row.k);
                 return;
               }
 
@@ -22114,20 +22280,6 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
               }
               // Пропускаем null dayv2
               if (key.includes('dayv2_') && (valueToStore == null || valueToStore === 'null')) return;
-              if (key.includes('dayv2_')) {
-                valueToStore = maybeRestoreDayV2FromBackup(key, valueToStore, 'delta-light').value;
-              }
-
-              // 📊 Delta light: логируем dayv2 записи
-              if (key.includes('dayv2_')) {
-                const _dlDate = key.match(/dayv2_(\d{4}-\d{2}-\d{2})/);
-                if (_dlDate) {
-                  const _dlVal = typeof valueToStore === 'string' ? (() => { try { return JSON.parse(valueToStore); } catch (_) { return null; } })() : valueToStore;
-                  const _dlMeals = Array.isArray(_dlVal?.meals) ? _dlVal.meals.length : 0;
-                  const _dlKcal = _dlVal?.savedEatenKcal || 0;
-                  window.console.info('[HEYS.sinhron] ⚡ DELTA_LIGHT write dayv2 ' + _dlDate[1] + ': meals=' + _dlMeals + ' kcal=' + _dlKcal);
-                }
-              }
 
               ls.setItem(key, JSON.stringify(valueToStore));
               lightSyncedKeys.push(row.k);
@@ -22135,6 +22287,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
             } catch (_) { }
           });
           muteMirror = false;
+          scheduleCloudGarbageCleanup(client_id, lightCloudGarbage, 'delta-light');
 
           // Инвалидируем кэш
           if (global.HEYS?.store?.invalidate && lightSyncedKeys.length > 0) {
@@ -22239,44 +22392,6 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
           return `${items.slice(0, headCount).join(', ')}, …, ${items.slice(-tailCount).join(', ')}`;
         };
 
-        // ── [HEYS.sinhron] ДИАГНОСТИКА dayv2 ─────────────────
-        // 📊 Диагностика: логируем сырые облачные dayv2 для сегодня (тип v, meals, kcal)
-        const _diagToday = new Date().toISOString().slice(0, 10);
-        (data || []).forEach(row => {
-          if (!row.k || !row.k.includes('dayv2_') || isDayv2MetaKey(row.k)) return;
-          const _dDate = extractDayv2Date(row.k);
-          if (!_dDate) return;
-          const _dv = row.v;
-          const _dvType = typeof _dv;
-          const _dvMeals = Array.isArray(_dv?.meals) ? _dv.meals.length : (typeof _dv === 'string' ? 'str(' + _dv.length + ')' : 0);
-          const _dvKcal = _dv?.savedEatenKcal || 0;
-          // Для сегодня — всегда логируем; для остальных — только при аномалиях
-          if (_dDate === _diagToday) {
-            window.console.info('[HEYS.sinhron] ☁️📊 cloud dayv2 ' + _dDate + ': vType=' + _dvType + ' meals=' + _dvMeals + ' kcal=' + _dvKcal + ' key=' + row.k);
-          } else if (_dvType !== 'object' || _dv === null) {
-            window.console.warn('[HEYS.sinhron] ⚠️ cloud dayv2 ' + _dDate + ': АНОМАЛИЯ vType=' + _dvType + ' (ожидался object) key=' + row.k);
-          }
-        });
-
-        const cloudDayKeys = uniqSorted((data || [])
-          .filter(r => r.k && r.k.includes('dayv2_') && !isDayv2MetaKey(r.k))
-          .map(r => extractDayv2Date(r.k)));
-        const localDayKeys = [];
-        for (let lsi = 0; lsi < ls.length; lsi++) {
-          const lsk = ls.key(lsi);
-          if (lsk && lsk.includes('dayv2_') && !lsk.includes('dayv2_backup_') && (lsk.includes(client_id) || !client_id)) {
-            const localDate = extractDayv2Date(lsk);
-            if (localDate) localDayKeys.push(localDate);
-          }
-        }
-        const uniqueLocalDayKeys = uniqSorted(localDayKeys);
-        window.console.info('[HEYS.sinhron] ☁️ dayv2 из облака (' + cloudDayKeys.length + '):', formatListForSyncLog(cloudDayKeys));
-        window.console.info('[HEYS.sinhron] 💾 dayv2 в localStorage (' + uniqueLocalDayKeys.length + '):', formatListForSyncLog(uniqueLocalDayKeys));
-        const onlyCloud = cloudDayKeys.filter(d => !uniqueLocalDayKeys.includes(d));
-        const onlyLocal = uniqueLocalDayKeys.filter(d => !cloudDayKeys.includes(d));
-        if (onlyCloud.length) window.console.warn('[HEYS.sinhron] ⚠️ Только в облаке (нет локально):', formatListForSyncLog(onlyCloud));
-        if (onlyLocal.length) window.console.warn('[HEYS.sinhron] ⚠️ Только локально (нет в облаке):', formatListForSyncLog(onlyLocal));
-        // ─────────────────────────────────────────────────────
         muteMirror = true;
         // ❌ КРИТИЧНО: НЕ ОЧИЩАЕМ ВСЁ ПРОСТРАНСТВО КЛИЕНТА
         // clearNamespace стирал все локальные данные, включая продукты!
@@ -22285,12 +22400,13 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
         // 🔄 ФАЗ 1: ДЕДУПЛИКАЦИЯ — если несколько ключей в БД превращаются в один scoped key,
         // берём самый свежий по updated_at (поле БД, не JSON)
         const keyGroups = new Map(); // scopedKey → [{ row, updated_at_ts }]
+        const fullSyncCloudGarbage = createCloudGarbageCollector();
 
         (data || []).forEach(row => {
           let key = scopeKeyForClientStorage(row.k, client_id);
 
-          if (isForeignClientScopedKey(key, client_id) && !key.includes('dayv2_')) {
-            logCritical(`🐛 [LOAD SKIP] Skipping foreign-scoped key for other client: ${row.k}`);
+          if (isForeignClientScopedKey(key, client_id)) {
+            recordCloudGarbageCandidate(fullSyncCloudGarbage, 'foreign', row.k);
             return;
           }
 
@@ -22300,13 +22416,13 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
           //    с UUID в суффиксе (last_grams_<productId>, insights_feedback_<clientId>, xp_cache)
           const { strippedClientIds: _nestedScopes } = stripClientScopePrefixes(row.k);
           if (_nestedScopes.length >= 2) {
-            logCritical(`🐛 [LOAD SKIP] Skipping double-scoped key: ${row.k} (${_nestedScopes.length} nested prefixes)`);
+            recordCloudGarbageCandidate(fullSyncCloudGarbage, 'doubleScoped', row.k);
             return;
           }
 
           // 2. Ключи с кавычками в имени (баг сериализации)
           if (key.includes('"')) {
-            logCritical(`🐛 [LOAD SKIP] Skipping key with quotes: ${key}`);
+            recordCloudGarbageCandidate(fullSyncCloudGarbage, 'quoted', row.k);
             return;
           }
 
@@ -22318,6 +22434,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
           const ts = row.updated_at ? new Date(row.updated_at).getTime() : 0;
           keyGroups.get(key).push({ row, updated_at_ts: ts, originalKey: row.k });
         });
+
+        scheduleCloudGarbageCleanup(client_id, fullSyncCloudGarbage, 'full-sync');
 
         // Для каждой группы выбираем самый свежий по updated_at
         /**
@@ -23577,9 +23695,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
           }
         }
 
-        // 🧹 Убираем legacy/nested client-scope ключи до итоговой диагностики,
-        // чтобы финальные sync-логи показывали уже нормализованное состояние.
-        cleanupDuplicateKeys();
+        // 🧹 Legacy/nested client-scope ключи убираются в switchClient, не в sync.
 
         if (skippedDayMirrorKeys.length > 0) {
           window.console.warn('[HEYS.sinhron] ⚠️ dayv2 оставлены только в cloud из-за quota (' + skippedDayMirrorKeys.length + '):', skippedDayMirrorKeys.join(', '));
@@ -23613,7 +23729,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
               if (psdm) {
                 const dateStr = psdm[1];
                 try {
-                  const dayVal = JSON.parse(ls.getItem(lsk));
+                  const _rawItog = ls.getItem(lsk);
+                  const dayVal = tryParse(_rawItog);
                   const meals = dayVal?.meals?.length || 0;
                   postSyncDayKeys.push(dateStr + '(' + meals + 'm)');
                   postSyncDateCount[dateStr] = (postSyncDateCount[dateStr] || 0) + 1;
@@ -23634,7 +23751,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
           try {
             const _ptRaw = ls.getItem(_postTodayKey);
             if (_ptRaw) {
-              const _ptVal = JSON.parse(_ptRaw);
+              const _ptVal = tryParse(_ptRaw);
               const _ptMeals = Array.isArray(_ptVal?.meals) ? _ptVal.meals.length : 0;
               const _ptKcal = _ptVal?.savedEatenKcal || 0;
               const _ptDayTot = _ptVal?.dayTot;
@@ -23710,9 +23827,6 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
             window.console.info('[HEYS.sinhron] 🧹 Удалено ' + nullKeysToRemove.length + ' dayv2 ключей с null/undefined/empty значением:', nullKeysToRemove.join(', '));
           }
         } catch (_) { }
-
-        // 🧹 Очистка дублирующихся ключей после синхронизации
-        cleanupDuplicateKeys();
 
         // 🚨 Критический лог: первая синхронизация завершена
         if (!initialSyncCompleted) {
@@ -23939,20 +24053,6 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
             if (Store && typeof Store.decompress === 'function') {
               valueToStore = Store.decompress(row.v);
               log(`🔧 [fetchDays] Decompressed ${targetKey} from cloud`);
-            }
-          }
-
-          if (isDayKey) {
-            const restoredFromBackup = maybeRestoreDayV2FromBackup(targetKey, valueToStore, 'fetchDays');
-            valueToStore = restoredFromBackup.value;
-            if (restoredFromBackup.restored && clientId) {
-              clientUpsertQueue.push({
-                client_id: clientId,
-                k: normalizeKeyForSupabase(originalKey, clientId),
-                v: valueToStore,
-                updated_at: new Date().toISOString()
-              });
-              scheduleClientPush();
             }
           }
 
@@ -24453,15 +24553,14 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
       k = args[0];
       value = args[1];
 
-      // Если ключ содержит client_id в формате heys_clientId_dayv2_... - извлекаем его
-      if (k && k.startsWith('heys_') && k.includes('_dayv2_')) {
-        const parts = k.split('_');
-        if (parts.length >= 3) {
-          const extractedId = parts[1]; // берем client_id из ключа
-          // Проверяем что это UUID, а не просто "dayv2"
-          if (extractedId && extractedId !== 'dayv2' && extractedId.length > 8) {
-            client_id = extractedId;
-          }
+      // 🔧 v68 FIX: Извлекаем client_id из ЛЮБОГО scoped ключа (heys_{uuid}_...),
+      // не только из dayv2. Старый код проверял только _dayv2_, что позволяло
+      // profile/norms/hr_zones использовать currentClientId, рискуя контаминацией
+      // при race conditions во время client switch.
+      if (k && k.startsWith('heys_')) {
+        const scopeId = getLeadingClientScopeId(k);
+        if (scopeId) {
+          client_id = scopeId;
         }
       }
 
@@ -25423,13 +25522,18 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
    * 3. Очищает данные старого клиента из localStorage
    * 4. Загружает данные нового клиента
    */
-  cloud.switchClient = async function (newClientId) {
+  cloud.switchClient = async function (newClientId, _oldClientIdHint) {
     if (!newClientId) {
       console.error('[HEYS.sync] ❌ Не указан ID нового клиента');
       return false;
     }
 
-    const oldClientId = cloud.getCurrentClientId ? cloud.getCurrentClientId() : null;
+    // 🔧 v65 FIX: Shell/GateFlow пишут heys_client_current ДО вызова switchClient,
+    // поэтому getCurrentClientId() уже возвращает newClientId.
+    // Принимаем _oldClientIdHint чтобы знать реальный предыдущий client.
+    const oldClientId = (_oldClientIdHint && _oldClientIdHint !== newClientId)
+      ? _oldClientIdHint
+      : (cloud.getCurrentClientId ? cloud.getCurrentClientId() : null);
 
     // Если тот же клиент — ничего не делаем
     if (oldClientId === newClientId) {
@@ -25464,18 +25568,39 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
     //    Но не очищаем старые данные, пока не убедимся что sync прошёл успешно.
     global.localStorage.setItem('heys_client_current', JSON.stringify(newClientId));
 
-    // 🔧 v63 FIX #5: Очищаем last_sync_ts нового клиента ПЕРЕД sync.
-    // Без этого delta fast-path вернёт 0 изменений, а данные в localStorage уже удалены
-    // при предыдущем switchClient → пустой экран.
-    try {
-      global.localStorage.removeItem('heys_' + newClientId + '_last_sync_ts');
-    } catch (_) { }
+    // NB: HEYS.currentClientId уже установлен вызывающим кодом (shell/gateFlow)
+    // ДО switchClient. Store.flushMemory() делаем только ПОСЛЕ sync + cleanup,
+    // иначе React-компоненты (уже перерисовавшиеся) читают пустой кэш.
 
-    // 🔧 v63 FIX #4: Сбрасываем initialSyncCompleted чтобы Phase A (5 критичных ключей)
-    // выполнилась для нового клиента и дала быстрый visual feedback.
-    initialSyncCompleted = false;
-    cancelFailsafeTimer();
-    startFailsafeTimer();
+    // 🔧 v68 FIX: НЕ удаляем last_sync_ts — delta fast-path позволяет быстро
+    // подгрузить только изменённые записи вместо полного sync 250+ ключей.
+    // forceSync: true уже обеспечивает перезапись local данных из cloud.
+    // initialSyncCompleted НЕ сбрасываем — избегаем cascade dots на каждом switch.
+
+    // 🔧 v67 FIX: Lightweight profile basics capture for post-sync contamination check.
+    // If after sync the new client's profile matches the old client's biometrics,
+    // it's contaminated cloud data from the old adoption bug.
+    let _oldProfileBasics = null;
+    if (oldClientId && oldClientId !== newClientId) {
+      try {
+        // Try scoped key first, then unscoped fallback (profile may be stored either way)
+        const _opRaw = global.localStorage.getItem('heys_' + oldClientId + '_profile')
+          || global.localStorage.getItem('heys_profile');
+        if (_opRaw) {
+          let _op = tryParse(_opRaw);
+          // Guard: if tryParse returned a string (double-stringified), parse once more
+          if (typeof _op === 'string') { try { _op = JSON.parse(_op); } catch (_) { _op = null; } }
+          if (_op && _op.weight && _op.height && _op.gender) {
+            _oldProfileBasics = { w: Number(_op.weight), h: Number(_op.height), g: String(_op.gender) };
+            logCritical('🔍 [SWITCH] Captured old profile: ' + _oldProfileBasics.g + ' ' + _oldProfileBasics.w + 'кг ' + _oldProfileBasics.h + 'см');
+          } else {
+            logCritical('🔍 [SWITCH] Old profile found but missing w/h/g: ' + (typeof _op) + ' keys=' + (_op ? Object.keys(_op).join(',') : 'null'));
+          }
+        } else {
+          logCritical('🔍 [SWITCH] Old profile NOT found in localStorage (scoped=' + ('heys_' + oldClientId + '_profile') + ')');
+        }
+      } catch (_) { logCritical('🔍 [SWITCH] Old profile capture error: ' + _); }
+    }
 
     // 3. Синхронизируем данные нового клиента из облака
     log('📥 Загружаем данные нового клиента...');
@@ -25539,6 +25664,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
         }
       }
       // ✅ Sync завершён — теперь безопасно чистить старые данные
+
       if (oldClientId && oldClientId !== newClientId) {
         const keysToRemove = [];
         for (let i = 0; i < global.localStorage.length; i++) {
@@ -25552,8 +25678,6 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
         }
         keysToRemove.forEach(k => global.localStorage.removeItem(k));
         log(`🧹 Очищено ${keysToRemove.length} ключей старого клиента`);
-        // 🔧 v63 FIX #5: Также удаляем last_sync_ts старого клиента
-        try { global.localStorage.removeItem('heys_' + oldClientId + '_last_sync_ts'); } catch (_) { }
       }
 
       // Также удаляем дубликаты и данные других клиентов
@@ -25573,6 +25697,66 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
       }
 
       log('✅ Переключение завершено успешно');
+
+      // 🔧 v67 FIX: Финальный flush memory cache после всех cleanup,
+      // чтобы React-компоненты перечитали данные из чистого localStorage.
+      if (global.HEYS?.store?.flushMemory) {
+        global.HEYS.store.flushMemory();
+      }
+
+      // 📊 Диагностика: что осталось в localStorage после switch + cleanup
+      {
+        let _dNewCount = 0, _dOldCount = 0, _dOtherCount = 0;
+        const _newPfx = 'heys_' + newClientId + '_dayv2_';
+        const _oldPfx = oldClientId ? 'heys_' + oldClientId + '_dayv2_' : null;
+        for (let i = 0; i < global.localStorage.length; i++) {
+          const _k = global.localStorage.key(i);
+          if (!_k || !_k.includes('dayv2_')) continue;
+          if (_k.startsWith(_newPfx)) _dNewCount++;
+          else if (_oldPfx && _k.startsWith(_oldPfx)) _dOldCount++;
+          else if (_k.includes('dayv2_')) _dOtherCount++;
+        }
+        const _profKey = 'heys_' + newClientId + '_profile';
+        const _profRaw = global.localStorage.getItem(_profKey);
+        let _profInfo = 'отсутствует';
+        if (_profRaw) {
+          try {
+            const _p = tryParse(_profRaw);
+            _profInfo = _p ? (_p.name || '?') + ' ' + (_p.gender || '?') + ' ' + (_p.weight || '?') + 'кг ' + (_p.height || '?') + 'см' : 'parse error';
+          } catch (_) { _profInfo = 'error'; }
+        }
+        logCritical(`📊 [SWITCH ИТОГ] dayv2: new=${_dNewCount} old=${_dOldCount} other=${_dOtherCount} | profile: ${_profInfo} | currentClientId=${(global.HEYS?.currentClientId || '').substring(0, 8)}`);
+
+        // 🔧 v67 FIX: Profile contamination check — if new client's profile
+        // has the exact same weight+height+gender as the old client, the cloud
+        // data was contaminated by the old adoption bug. Remove it so UI shows
+        // empty profile instead of wrong biometrics → wrong norms → wrong cascade.
+        if (_oldProfileBasics && _profRaw) {
+          try {
+            let _np = tryParse(_profRaw);
+            if (typeof _np === 'string') { try { _np = JSON.parse(_np); } catch (_) { _np = null; } }
+            const _nw = Number(_np?.weight), _nh = Number(_np?.height), _ng = String(_np?.gender || '');
+            logCritical('🔍 [CONTAM CHECK] old={' + _oldProfileBasics.w + ',' + _oldProfileBasics.h + ',' + _oldProfileBasics.g + '} new={' + _nw + ',' + _nh + ',' + _ng + '} match=' + (_nw === _oldProfileBasics.w && _nh === _oldProfileBasics.h && _ng === _oldProfileBasics.g));
+            if (_np &&
+              _nw === _oldProfileBasics.w &&
+              _nh === _oldProfileBasics.h &&
+              _ng === _oldProfileBasics.g) {
+              logCritical('🐛 [CONTAMINATION] Профиль нового клиента совпадает со старым (' + _oldProfileBasics.g + ' ' + _oldProfileBasics.w + 'кг ' + _oldProfileBasics.h + 'см). Удаляю контаминированный профиль + нормы.');
+              global.localStorage.removeItem(_profKey);
+              // Also remove unscoped profile key if it exists
+              try { global.localStorage.removeItem('heys_profile'); } catch (_) { }
+              ['_norms', '_checkin_history'].forEach(s => {
+                try { global.localStorage.removeItem('heys_' + newClientId + s); } catch (_) { }
+              });
+              _profInfo += ' → УДАЛЁН (контаминация)';
+              // Flush memory so React reads empty profile
+              if (global.HEYS?.store?.flushMemory) global.HEYS.store.flushMemory();
+            }
+          } catch (_e) { logCritical('🔍 [CONTAM CHECK] error: ' + _e); }
+        } else {
+          logCritical('🔍 [CONTAM CHECK] skipped: oldBasics=' + !!_oldProfileBasics + ' profRaw=' + !!_profRaw);
+        }
+      }
 
       // 🚀 FIX: Регистрируем cooldown чтобы sync effects useEffect не запускал дублирующий sync
       // v58+: switchClient использует cloud.syncClient() — _syncLastCompleted выставляется автоматически.
