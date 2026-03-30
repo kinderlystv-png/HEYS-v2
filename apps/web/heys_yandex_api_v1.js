@@ -976,6 +976,66 @@
   }
 
   /**
+   * Phase 1b curator fallback: Получить change markers через REST (curator JWT).
+   * Используется когда session_token недоступен (куратор не имеет PIN-сессии).
+   * @param {string} clientId - ID клиента
+   * @param {string|null} [since] - ISO timestamp
+   * @returns {Promise<{data: Object|null, error?: string}>}
+   */
+  async function getChangeMarkersByCurator(clientId, since) {
+    if (!clientId) return { data: null, error: 'No clientId' };
+    try {
+      const filters = { 'eq.client_id': clientId };
+      if (since) filters['gt.changed_at'] = since;
+      const result = await rest('client_change_markers', {
+        select: 'scope,changed_at',
+        filters
+      });
+      if (result.error) {
+        return { data: null, error: result.error.message || result.error };
+      }
+      const rows = Array.isArray(result.data) ? result.data : [];
+      const markers = {};
+      for (const row of rows) {
+        if (row.scope) markers[row.scope] = row.changed_at;
+      }
+      return { data: markers, error: null };
+    } catch (e) {
+      err('getChangeMarkersByCurator failed:', e.message);
+      return { data: null, error: e.message };
+    }
+  }
+
+  /**
+   * Phase 1a curator fallback: Batch-read KV через REST (curator JWT).
+   * Используется когда session_token недоступен.
+   * @param {string} clientId - ID клиента
+   * @param {string[]} keys - Ключи для чтения
+   * @returns {Promise<{data: Array<{k: string, v: any}> | null, error?: string}>}
+   */
+  async function getKVBatchByCurator(clientId, keys) {
+    if (!clientId) return { data: null, error: 'No clientId' };
+    if (!Array.isArray(keys) || keys.length === 0) return { data: [], error: null };
+    try {
+      const result = await rest('client_kv_store', {
+        select: 'k,v',
+        filters: {
+          'eq.client_id': clientId,
+          'in.k': `(${keys.join(',')})`
+        }
+      });
+      if (result.error) {
+        return { data: null, error: result.error.message || result.error };
+      }
+      const rows = Array.isArray(result.data) ? result.data : [];
+      return { data: rows.map(r => ({ k: r.k, v: r.v })), error: null };
+    } catch (e) {
+      err('getKVBatchByCurator failed:', e.message);
+      return { data: null, error: e.message };
+    }
+  }
+
+  /**
    * Получить ВСЕ KV данные клиента по curator JWT, игнорируя session_token.
    * Нужен для curator-only сценариев, где глобальный heys_session_token может
    * остаться от PIN-входа и вернуть данные не того клиента.
@@ -1859,6 +1919,8 @@
     getKV,
     getKVBatch,
     getChangeMarkers,
+    getChangeMarkersByCurator,
+    getKVBatchByCurator,
     getAllKV,
     getAllKVByCurator,
     batchSaveKV,

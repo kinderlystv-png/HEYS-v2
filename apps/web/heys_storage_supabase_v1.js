@@ -8264,13 +8264,27 @@
     foregroundAutoSyncTick += 1;
     const allKeys = getForegroundHotSyncKeys(reason);
 
+    // Detect auth mode: session_token (PIN client) vs curator JWT
+    const hasSessionToken = !!(
+      (typeof HEYS !== 'undefined' && HEYS.auth?.getSessionToken?.()) ||
+      global.localStorage.getItem('heys_session_token')
+    );
+    const isCuratorMode = !hasSessionToken && !!user;
+
     // Phase 1b: check change markers before pulling data
     // Can be disabled: localStorage.setItem('heys_disable_markers', '1')
     let keysToFetch = allKeys;
-    if (!isMarkersDisabled() && typeof YandexAPI.getChangeMarkers === 'function') {
+    if (!isMarkersDisabled()) {
       try {
-        const markerResult = await YandexAPI.getChangeMarkers(_lastMarkerCheckTs);
-        if (!markerResult.error && markerResult.data) {
+        let markerResult = null;
+
+        if (hasSessionToken && typeof YandexAPI.getChangeMarkers === 'function') {
+          markerResult = await YandexAPI.getChangeMarkers(_lastMarkerCheckTs);
+        } else if (isCuratorMode && typeof YandexAPI.getChangeMarkersByCurator === 'function') {
+          markerResult = await YandexAPI.getChangeMarkersByCurator(clientId, _lastMarkerCheckTs);
+        }
+
+        if (markerResult && !markerResult.error && markerResult.data) {
           const changedKeys = _getKeysForChangedScopes(markerResult.data, allKeys);
           if (changedKeys !== null) {
             _lastMarkerCheckTs = new Date().toISOString();
@@ -8280,7 +8294,8 @@
             }
             keysToFetch = changedKeys;
           }
-        } else if (markerResult.error === 'No session token') {
+        } else if (markerResult?.error === 'No session token') {
+          // Neither session nor curator auth available
           return { success: false, updated: 0, failed: 0, authMissing: true };
         }
         // If markers returned error → fallback to full key set (keysToFetch unchanged)
@@ -8289,17 +8304,23 @@
       }
     }
 
-    // Phase 1a: single batch RPC instead of N individual getKV calls
+    // Phase 1a: single batch read instead of N individual getKV calls
     // Can be disabled: localStorage.setItem('heys_disable_batch', '1')
-    if (!isBatchDisabled() && typeof YandexAPI.getKVBatch === 'function') {
+    if (!isBatchDisabled()) {
       try {
-        const batchResult = await YandexAPI.getKVBatch(clientId, keysToFetch);
+        let batchResult = null;
 
-        if (batchResult.error === 'No session token') {
+        if (hasSessionToken && typeof YandexAPI.getKVBatch === 'function') {
+          batchResult = await YandexAPI.getKVBatch(clientId, keysToFetch);
+        } else if (isCuratorMode && typeof YandexAPI.getKVBatchByCurator === 'function') {
+          batchResult = await YandexAPI.getKVBatchByCurator(clientId, keysToFetch);
+        }
+
+        if (batchResult?.error === 'No session token') {
           return { success: false, updated: 0, failed: 0, authMissing: true };
         }
 
-        if (!batchResult.error && Array.isArray(batchResult.data)) {
+        if (batchResult && !batchResult.error && Array.isArray(batchResult.data)) {
           let updated = 0;
           for (const item of batchResult.data) {
             if (item.v != null && applyForegroundHotSyncValue(clientId, item.k, item.v)) {
@@ -8312,20 +8333,26 @@
             if (global.HEYS?.store?.flushMemory) {
               global.HEYS.store.flushMemory();
             }
-            console.info(`[HEYS.sync] ✅ Foreground hot-sync applied ${updated} key(s) via batch (${reason})`);
+            console.info(`[HEYS.sync] ✅ Foreground hot-sync applied ${updated} key(s) via ${isCuratorMode ? 'curator REST' : 'batch RPC'} (${reason})`);
           }
 
           return { success: true, updated, failed: 0, authMissing: false };
         }
 
         // Batch returned error (e.g. function not deployed yet) — fallback
-        console.info('[HEYS.sync] ⚠️ Batch hot-sync unavailable, fallback to legacy');
+        if (batchResult) {
+          console.info('[HEYS.sync] ⚠️ Batch hot-sync unavailable, fallback to legacy');
+        }
       } catch (e) {
         console.info('[HEYS.sync] ⚠️ Batch hot-sync failed, fallback to legacy:', e?.message);
       }
     }
 
-    // Legacy fallback: N individual getKV calls
+    // Legacy fallback: N individual getKV calls (works only with session_token)
+    // For curator without session — use getAllKVByCurator as final fallback
+    if (isCuratorMode && typeof YandexAPI.getAllKVByCurator === 'function') {
+      return _runForegroundHotKeySyncCurator(clientId, keysToFetch, reason);
+    }
     return _runForegroundHotKeySyncLegacy(clientId, keysToFetch);
   }
 
@@ -8373,6 +8400,45 @@
     }
 
     return { success: !authMissing, updated, failed, authMissing };
+  }
+
+  /**
+   * Curator fallback for legacy hot-sync: uses getAllKVByCurator with targeted keys.
+   * Called when curator has no session_token and batch/markers also failed.
+   */
+  async function _runForegroundHotKeySyncCurator(clientId, keys, reason) {
+    const YandexAPI = global.HEYS?.YandexAPI;
+    if (!YandexAPI || typeof YandexAPI.getAllKVByCurator !== 'function') {
+      return { success: false, updated: 0, failed: 0, reason: 'no_curator_api' };
+    }
+
+    try {
+      const result = await YandexAPI.getAllKVByCurator(clientId, { keys });
+      if (result.error) {
+        return { success: false, updated: 0, failed: 0, authMissing: false };
+      }
+
+      let updated = 0;
+      const rows = Array.isArray(result.data) ? result.data : [];
+      for (const row of rows) {
+        if (row.v != null && row.k && applyForegroundHotSyncValue(clientId, row.k, row.v)) {
+          updated += 1;
+        }
+      }
+
+      if (updated > 0) {
+        cloud._syncCompletedAt = Date.now();
+        if (global.HEYS?.store?.flushMemory) {
+          global.HEYS.store.flushMemory();
+        }
+        console.info(`[HEYS.sync] ✅ Foreground hot-sync applied ${updated} key(s) via curator REST fallback (${reason})`);
+      }
+
+      return { success: true, updated, failed: 0, authMissing: false };
+    } catch (e) {
+      console.warn('[HEYS.sync] ⚠️ Curator hot-sync fallback failed:', e?.message);
+      return { success: false, updated: 0, failed: 0, authMissing: false };
+    }
   }
 
   async function requestForegroundAutoSync(reason, options = {}) {

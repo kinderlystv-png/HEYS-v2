@@ -4518,7 +4518,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
   // ============================================================================
 
   // === App Version & Auto-logout on Update ===
-  const APP_VERSION = '2026.03.28.2041.88c783c5'; // synced with build-meta.json on 2026-02-26
+  const APP_VERSION = '2026.03.31.0003.f233e280'; // synced with build-meta.json on 2026-02-26
 
   HEYS.version = APP_VERSION;
 
@@ -14100,6 +14100,66 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
   }
 
   /**
+   * Phase 1b curator fallback: Получить change markers через REST (curator JWT).
+   * Используется когда session_token недоступен (куратор не имеет PIN-сессии).
+   * @param {string} clientId - ID клиента
+   * @param {string|null} [since] - ISO timestamp
+   * @returns {Promise<{data: Object|null, error?: string}>}
+   */
+  async function getChangeMarkersByCurator(clientId, since) {
+    if (!clientId) return { data: null, error: 'No clientId' };
+    try {
+      const filters = { 'eq.client_id': clientId };
+      if (since) filters['gt.changed_at'] = since;
+      const result = await rest('client_change_markers', {
+        select: 'scope,changed_at',
+        filters
+      });
+      if (result.error) {
+        return { data: null, error: result.error.message || result.error };
+      }
+      const rows = Array.isArray(result.data) ? result.data : [];
+      const markers = {};
+      for (const row of rows) {
+        if (row.scope) markers[row.scope] = row.changed_at;
+      }
+      return { data: markers, error: null };
+    } catch (e) {
+      err('getChangeMarkersByCurator failed:', e.message);
+      return { data: null, error: e.message };
+    }
+  }
+
+  /**
+   * Phase 1a curator fallback: Batch-read KV через REST (curator JWT).
+   * Используется когда session_token недоступен.
+   * @param {string} clientId - ID клиента
+   * @param {string[]} keys - Ключи для чтения
+   * @returns {Promise<{data: Array<{k: string, v: any}> | null, error?: string}>}
+   */
+  async function getKVBatchByCurator(clientId, keys) {
+    if (!clientId) return { data: null, error: 'No clientId' };
+    if (!Array.isArray(keys) || keys.length === 0) return { data: [], error: null };
+    try {
+      const result = await rest('client_kv_store', {
+        select: 'k,v',
+        filters: {
+          'eq.client_id': clientId,
+          'in.k': `(${keys.join(',')})`
+        }
+      });
+      if (result.error) {
+        return { data: null, error: result.error.message || result.error };
+      }
+      const rows = Array.isArray(result.data) ? result.data : [];
+      return { data: rows.map(r => ({ k: r.k, v: r.v })), error: null };
+    } catch (e) {
+      err('getKVBatchByCurator failed:', e.message);
+      return { data: null, error: e.message };
+    }
+  }
+
+  /**
    * Получить ВСЕ KV данные клиента по curator JWT, игнорируя session_token.
    * Нужен для curator-only сценариев, где глобальный heys_session_token может
    * остаться от PIN-входа и вернуть данные не того клиента.
@@ -14983,6 +15043,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
     getKV,
     getKVBatch,
     getChangeMarkers,
+    getChangeMarkersByCurator,
+    getKVBatchByCurator,
     getAllKV,
     getAllKVByCurator,
     batchSaveKV,
@@ -25606,13 +25668,27 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
     foregroundAutoSyncTick += 1;
     const allKeys = getForegroundHotSyncKeys(reason);
 
+    // Detect auth mode: session_token (PIN client) vs curator JWT
+    const hasSessionToken = !!(
+      (typeof HEYS !== 'undefined' && HEYS.auth?.getSessionToken?.()) ||
+      global.localStorage.getItem('heys_session_token')
+    );
+    const isCuratorMode = !hasSessionToken && !!user;
+
     // Phase 1b: check change markers before pulling data
     // Can be disabled: localStorage.setItem('heys_disable_markers', '1')
     let keysToFetch = allKeys;
-    if (!isMarkersDisabled() && typeof YandexAPI.getChangeMarkers === 'function') {
+    if (!isMarkersDisabled()) {
       try {
-        const markerResult = await YandexAPI.getChangeMarkers(_lastMarkerCheckTs);
-        if (!markerResult.error && markerResult.data) {
+        let markerResult = null;
+
+        if (hasSessionToken && typeof YandexAPI.getChangeMarkers === 'function') {
+          markerResult = await YandexAPI.getChangeMarkers(_lastMarkerCheckTs);
+        } else if (isCuratorMode && typeof YandexAPI.getChangeMarkersByCurator === 'function') {
+          markerResult = await YandexAPI.getChangeMarkersByCurator(clientId, _lastMarkerCheckTs);
+        }
+
+        if (markerResult && !markerResult.error && markerResult.data) {
           const changedKeys = _getKeysForChangedScopes(markerResult.data, allKeys);
           if (changedKeys !== null) {
             _lastMarkerCheckTs = new Date().toISOString();
@@ -25622,7 +25698,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
             }
             keysToFetch = changedKeys;
           }
-        } else if (markerResult.error === 'No session token') {
+        } else if (markerResult?.error === 'No session token') {
+          // Neither session nor curator auth available
           return { success: false, updated: 0, failed: 0, authMissing: true };
         }
         // If markers returned error → fallback to full key set (keysToFetch unchanged)
@@ -25631,17 +25708,23 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
       }
     }
 
-    // Phase 1a: single batch RPC instead of N individual getKV calls
+    // Phase 1a: single batch read instead of N individual getKV calls
     // Can be disabled: localStorage.setItem('heys_disable_batch', '1')
-    if (!isBatchDisabled() && typeof YandexAPI.getKVBatch === 'function') {
+    if (!isBatchDisabled()) {
       try {
-        const batchResult = await YandexAPI.getKVBatch(clientId, keysToFetch);
+        let batchResult = null;
 
-        if (batchResult.error === 'No session token') {
+        if (hasSessionToken && typeof YandexAPI.getKVBatch === 'function') {
+          batchResult = await YandexAPI.getKVBatch(clientId, keysToFetch);
+        } else if (isCuratorMode && typeof YandexAPI.getKVBatchByCurator === 'function') {
+          batchResult = await YandexAPI.getKVBatchByCurator(clientId, keysToFetch);
+        }
+
+        if (batchResult?.error === 'No session token') {
           return { success: false, updated: 0, failed: 0, authMissing: true };
         }
 
-        if (!batchResult.error && Array.isArray(batchResult.data)) {
+        if (batchResult && !batchResult.error && Array.isArray(batchResult.data)) {
           let updated = 0;
           for (const item of batchResult.data) {
             if (item.v != null && applyForegroundHotSyncValue(clientId, item.k, item.v)) {
@@ -25654,20 +25737,26 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
             if (global.HEYS?.store?.flushMemory) {
               global.HEYS.store.flushMemory();
             }
-            console.info(`[HEYS.sync] ✅ Foreground hot-sync applied ${updated} key(s) via batch (${reason})`);
+            console.info(`[HEYS.sync] ✅ Foreground hot-sync applied ${updated} key(s) via ${isCuratorMode ? 'curator REST' : 'batch RPC'} (${reason})`);
           }
 
           return { success: true, updated, failed: 0, authMissing: false };
         }
 
         // Batch returned error (e.g. function not deployed yet) — fallback
-        console.info('[HEYS.sync] ⚠️ Batch hot-sync unavailable, fallback to legacy');
+        if (batchResult) {
+          console.info('[HEYS.sync] ⚠️ Batch hot-sync unavailable, fallback to legacy');
+        }
       } catch (e) {
         console.info('[HEYS.sync] ⚠️ Batch hot-sync failed, fallback to legacy:', e?.message);
       }
     }
 
-    // Legacy fallback: N individual getKV calls
+    // Legacy fallback: N individual getKV calls (works only with session_token)
+    // For curator without session — use getAllKVByCurator as final fallback
+    if (isCuratorMode && typeof YandexAPI.getAllKVByCurator === 'function') {
+      return _runForegroundHotKeySyncCurator(clientId, keysToFetch, reason);
+    }
     return _runForegroundHotKeySyncLegacy(clientId, keysToFetch);
   }
 
@@ -25715,6 +25804,45 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
     }
 
     return { success: !authMissing, updated, failed, authMissing };
+  }
+
+  /**
+   * Curator fallback for legacy hot-sync: uses getAllKVByCurator with targeted keys.
+   * Called when curator has no session_token and batch/markers also failed.
+   */
+  async function _runForegroundHotKeySyncCurator(clientId, keys, reason) {
+    const YandexAPI = global.HEYS?.YandexAPI;
+    if (!YandexAPI || typeof YandexAPI.getAllKVByCurator !== 'function') {
+      return { success: false, updated: 0, failed: 0, reason: 'no_curator_api' };
+    }
+
+    try {
+      const result = await YandexAPI.getAllKVByCurator(clientId, { keys });
+      if (result.error) {
+        return { success: false, updated: 0, failed: 0, authMissing: false };
+      }
+
+      let updated = 0;
+      const rows = Array.isArray(result.data) ? result.data : [];
+      for (const row of rows) {
+        if (row.v != null && row.k && applyForegroundHotSyncValue(clientId, row.k, row.v)) {
+          updated += 1;
+        }
+      }
+
+      if (updated > 0) {
+        cloud._syncCompletedAt = Date.now();
+        if (global.HEYS?.store?.flushMemory) {
+          global.HEYS.store.flushMemory();
+        }
+        console.info(`[HEYS.sync] ✅ Foreground hot-sync applied ${updated} key(s) via curator REST fallback (${reason})`);
+      }
+
+      return { success: true, updated, failed: 0, authMissing: false };
+    } catch (e) {
+      console.warn('[HEYS.sync] ⚠️ Curator hot-sync fallback failed:', e?.message);
+      return { success: false, updated: 0, failed: 0, authMissing: false };
+    }
   }
 
   async function requestForegroundAutoSync(reason, options = {}) {
