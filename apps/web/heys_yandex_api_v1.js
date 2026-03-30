@@ -889,6 +889,93 @@
   }
 
   /**
+   * Batch-чтение KV (RPC) — 🔐 session-safe!
+   * Phase 1a hot-sync: один запрос вместо N getKV().
+   * @param {string} clientId - ID клиента (IGNORED для безопасности!)
+   * @param {string[]} keys - Массив ключей для чтения
+   * @returns {Promise<{data: Array<{k: string, v: any}> | null, error?: string}>}
+   */
+  async function getKVBatch(clientId, keys) {
+    try {
+      const sessionToken = getSessionTokenForKV();
+      if (!sessionToken) {
+        return { data: null, error: 'No session token' };
+      }
+
+      if (!Array.isArray(keys) || keys.length === 0) {
+        return { data: [], error: null };
+      }
+
+      const result = await rpc('batch_get_client_kv_by_session', {
+        p_session_token: sessionToken,
+        p_keys: keys
+      });
+
+      if (result.error) {
+        return { data: null, error: result.error.message || result.error };
+      }
+
+      let data = result.data;
+      // Unwrap function name wrapper if present
+      if (data && typeof data === 'object' && !Array.isArray(data)) {
+        const dataKeys = Object.keys(data);
+        if (dataKeys.length === 1 && data[dataKeys[0]] && typeof data[dataKeys[0]] === 'object') {
+          data = data[dataKeys[0]];
+        }
+      }
+
+      if (data?.error) {
+        return { data: null, error: data.error };
+      }
+
+      return { data: Array.isArray(data?.items) ? data.items : [], error: null };
+    } catch (e) {
+      err('getKVBatch failed:', e.message);
+      return { data: null, error: e.message };
+    }
+  }
+
+  /**
+   * Phase 1b: Получить scoped change markers для клиента (session-safe).
+   * @param {string|null} [since] - ISO timestamp, если null вернёт все маркеры
+   * @returns {Promise<{data: Object|null, error?: string}>}
+   */
+  async function getChangeMarkers(since) {
+    try {
+      const sessionToken = getSessionTokenForKV();
+      if (!sessionToken) {
+        return { data: null, error: 'No session token' };
+      }
+
+      const params = { p_session_token: sessionToken };
+      if (since) params.p_since = since;
+
+      const result = await rpc('get_change_markers_by_session', params);
+
+      if (result.error) {
+        return { data: null, error: result.error.message || result.error };
+      }
+
+      let data = result.data;
+      if (data && typeof data === 'object' && !Array.isArray(data)) {
+        const dataKeys = Object.keys(data);
+        if (dataKeys.length === 1 && data[dataKeys[0]] && typeof data[dataKeys[0]] === 'object') {
+          data = data[dataKeys[0]];
+        }
+      }
+
+      if (data?.error) {
+        return { data: null, error: data.error };
+      }
+
+      return { data: data?.markers || {}, error: null };
+    } catch (e) {
+      err('getChangeMarkers failed:', e.message);
+      return { data: null, error: e.message };
+    }
+  }
+
+  /**
    * Получить ВСЕ KV данные клиента по curator JWT, игнорируя session_token.
    * Нужен для curator-only сценариев, где глобальный heys_session_token может
    * остаться от PIN-входа и вернуть данные не того клиента.
@@ -1770,6 +1857,8 @@
     // KV Store (REST-based для надёжности)
     saveKV,
     getKV,
+    getKVBatch,
+    getChangeMarkers,
     getAllKV,
     getAllKVByCurator,
     batchSaveKV,

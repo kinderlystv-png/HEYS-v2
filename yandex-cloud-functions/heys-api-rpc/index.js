@@ -248,6 +248,8 @@ const ALLOWED_FUNCTIONS = [
   'get_client_kv_by_session',             // 🔐 P1: чтение KV (session-safe)
   'upsert_client_kv_by_session',          // 🔐 P1: запись KV (session-safe)
   'batch_upsert_client_kv_by_session',    // 🔐 P1: пакетная запись (session-safe)
+  'batch_get_client_kv_by_session',       // 🔐 Phase 1a: пакетное чтение (hot-sync optimization)
+  'get_change_markers_by_session',        // 🔐 Phase 1b: scoped change markers (conditional sync)
   'delete_client_kv_by_session',          // 🔐 P1: удаление KV (session-safe)
 
   // === EWS WEEKLY SNAPSHOTS (🔐 Wave 3.1: облачная синхронизация) ===
@@ -647,6 +649,14 @@ module.exports.handler = async function (event, context) {
       'batch_upsert_client_kv_by_session': {
         'p_session_token': '::text',
         'p_items': '::jsonb'
+      },
+      'batch_get_client_kv_by_session': {
+        'p_session_token': '::text',
+        'p_keys': '::text[]'
+      },
+      'get_change_markers_by_session': {
+        'p_session_token': '::text',
+        'p_since': '::timestamptz'
       },
       'upsert_client_kv_by_session': {
         'p_session_token': '::text',

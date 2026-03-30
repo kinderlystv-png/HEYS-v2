@@ -8047,21 +8047,68 @@
 
   // Near-real-time cross-device sync for active devices.
   // While the page is visible we periodically run a lightweight forced delta sync,
+  // ═══════════════════════════════════════════════════════════════════
+  // 🔄 Foreground hot-sync v1.1 with granular feature flags & auto-safety.
+  //
+  // KILL SWITCH (all hot-sync):
+  //   localStorage.setItem('heys_disable_hot_sync', '1')
+  //   Re-enable: localStorage.removeItem('heys_disable_hot_sync')
+  //
+  // GRANULAR FLAGS (each new optimisation can be turned off independently):
+  //   localStorage.setItem('heys_disable_markers', '1')   — skip change markers, always pull
+  //   localStorage.setItem('heys_disable_batch', '1')      — skip batch RPC, use legacy N×getKV
+  //   localStorage.setItem('heys_disable_screen_aware', '1')— only sync today, ignore active day
+  //
+  // SAFE MODE (force legacy-only path, same as disabling markers+batch):
+  //   HEYS.cloud.hotSync.safeMode()
+  //   HEYS.cloud.hotSync.normalMode()
+  //
+  // AUTO-SAFETY: if >5 consecutive hot-sync errors → auto-enters safe mode
+  //              until the next successful sync or manual normalMode().
+  //
+  // Console API: HEYS.cloud.hotSync.disable() / .enable() / .status() / .safeMode() / .normalMode()
+  // ═══════════════════════════════════════════════════════════════════
   // and we also sync immediately when the tab/window becomes active again.
   const FOREGROUND_AUTO_SYNC_INTERVAL_MS = 2000;
   const FOREGROUND_AUTO_SYNC_MIN_GAP_MS = 1200;
   const FOREGROUND_AUTO_SYNC_EXTENDED_EVERY = 3;
+  const HOT_SYNC_AUTO_SAFE_THRESHOLD = 5; // consecutive errors to trigger auto-safe mode
   let foregroundAutoSyncTimer = null;
   let foregroundAutoSyncInFlight = false;
   let foregroundAutoSyncLastAt = 0;
   let foregroundAutoSyncTick = 0;
   let foregroundAutoSyncAuthFailCount = 0;
+  let _hotSyncConsecutiveErrors = 0;
+  let _hotSyncAutoSafeMode = false; // true if auto-degraded due to errors
+
+  function isHotSyncDisabled() {
+    try {
+      return global.localStorage.getItem('heys_disable_hot_sync') === '1';
+    } catch (_) { return false; }
+  }
+
+  function _isFeatureDisabled(flag) {
+    try { return global.localStorage.getItem(flag) === '1'; } catch (_) { return false; }
+  }
+
+  function isMarkersDisabled() {
+    return _hotSyncAutoSafeMode || _isFeatureDisabled('heys_disable_markers');
+  }
+
+  function isBatchDisabled() {
+    return _hotSyncAutoSafeMode || _isFeatureDisabled('heys_disable_batch');
+  }
+
+  function isScreenAwareDisabled() {
+    return _isFeatureDisabled('heys_disable_screen_aware');
+  }
 
   function getForegroundAutoSyncClientId() {
     return typeof cloud.getCurrentClientId === 'function' ? cloud.getCurrentClientId() : null;
   }
 
   function canRunForegroundAutoSync(clientId) {
+    if (isHotSyncDisabled()) return false;
     if (!clientId) return false;
     if (!navigator.onLine) return false;
     if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return false;
@@ -8075,11 +8122,25 @@
       'heys_widget_layout_v1',
       'heys_widget_layout_meta_v1'
     ];
+
+    // Screen-awareness: include actively viewed day if different from today
+    // Can be disabled: localStorage.setItem('heys_disable_screen_aware', '1')
+    const activeDayKeys = [`heys_dayv2_${today}`];
+    if (isScreenAwareDisabled()) {
+      // screen-awareness off → only today
+    } else try {
+      const activeDate = global.HEYS?.DayUI?.getActiveDate?.() ||
+        global.HEYS?.store?.get?.('heys_active_day_date');
+      if (activeDate && typeof activeDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(activeDate) && activeDate !== today) {
+        activeDayKeys.push(`heys_dayv2_${activeDate}`);
+      }
+    } catch (_) { /* no active date available — use today only */ }
+
     const extendedKeys = [
       'heys_profile',
       'heys_norms',
       'heys_hr_zones',
-      `heys_dayv2_${today}`
+      ...activeDayKeys
     ];
 
     const isFastVisibleTick = reason === 'visible-interval';
@@ -8161,14 +8222,119 @@
     }
   }
 
+  // Phase 1b: change markers state
+  let _lastMarkerCheckTs = null; // ISO string of last successful marker check
+
+  /**
+   * Phase 1b: derive which keys need pulling based on changed scopes.
+   * Returns null if markers are unavailable (fallback to full key set).
+   */
+  function _getKeysForChangedScopes(markers, allKeys) {
+    if (!markers || typeof markers !== 'object') return null;
+    const changedScopes = Object.keys(markers);
+    if (changedScopes.length === 0) return []; // nothing changed → skip pull
+
+    const needed = [];
+    for (const key of allKeys) {
+      // Map key → scope and check if that scope changed
+      if (key.includes('widget_layout') && changedScopes.includes('widgets')) {
+        needed.push(key);
+      } else if (key === 'heys_profile' && changedScopes.includes('profile')) {
+        needed.push(key);
+      } else if (key === 'heys_norms' && changedScopes.includes('norms')) {
+        needed.push(key);
+      } else if (key === 'heys_hr_zones' && changedScopes.includes('hr_zones')) {
+        needed.push(key);
+      } else if (key.includes('dayv2_')) {
+        const dateMatch = key.match(/dayv2_(\d{4}-\d{2}-\d{2})$/);
+        if (dateMatch && changedScopes.includes('day:' + dateMatch[1])) {
+          needed.push(key);
+        }
+      }
+    }
+    return needed;
+  }
+
   async function runForegroundHotKeySync(clientId, reason) {
+    const YandexAPI = global.HEYS?.YandexAPI;
+    if (!YandexAPI) {
+      return { success: false, updated: 0, failed: 0, reason: 'no_api' };
+    }
+
+    foregroundAutoSyncTick += 1;
+    const allKeys = getForegroundHotSyncKeys(reason);
+
+    // Phase 1b: check change markers before pulling data
+    // Can be disabled: localStorage.setItem('heys_disable_markers', '1')
+    let keysToFetch = allKeys;
+    if (!isMarkersDisabled() && typeof YandexAPI.getChangeMarkers === 'function') {
+      try {
+        const markerResult = await YandexAPI.getChangeMarkers(_lastMarkerCheckTs);
+        if (!markerResult.error && markerResult.data) {
+          const changedKeys = _getKeysForChangedScopes(markerResult.data, allKeys);
+          if (changedKeys !== null) {
+            _lastMarkerCheckTs = new Date().toISOString();
+            if (changedKeys.length === 0) {
+              // Nothing changed — skip pull entirely
+              return { success: true, updated: 0, failed: 0, authMissing: false };
+            }
+            keysToFetch = changedKeys;
+          }
+        } else if (markerResult.error === 'No session token') {
+          return { success: false, updated: 0, failed: 0, authMissing: true };
+        }
+        // If markers returned error → fallback to full key set (keysToFetch unchanged)
+      } catch (_) {
+        // Markers unavailable → fallback to full pull
+      }
+    }
+
+    // Phase 1a: single batch RPC instead of N individual getKV calls
+    // Can be disabled: localStorage.setItem('heys_disable_batch', '1')
+    if (!isBatchDisabled() && typeof YandexAPI.getKVBatch === 'function') {
+      try {
+        const batchResult = await YandexAPI.getKVBatch(clientId, keysToFetch);
+
+        if (batchResult.error === 'No session token') {
+          return { success: false, updated: 0, failed: 0, authMissing: true };
+        }
+
+        if (!batchResult.error && Array.isArray(batchResult.data)) {
+          let updated = 0;
+          for (const item of batchResult.data) {
+            if (item.v != null && applyForegroundHotSyncValue(clientId, item.k, item.v)) {
+              updated += 1;
+            }
+          }
+
+          if (updated > 0) {
+            cloud._syncCompletedAt = Date.now();
+            if (global.HEYS?.store?.flushMemory) {
+              global.HEYS.store.flushMemory();
+            }
+            console.info(`[HEYS.sync] ✅ Foreground hot-sync applied ${updated} key(s) via batch (${reason})`);
+          }
+
+          return { success: true, updated, failed: 0, authMissing: false };
+        }
+
+        // Batch returned error (e.g. function not deployed yet) — fallback
+        console.info('[HEYS.sync] ⚠️ Batch hot-sync unavailable, fallback to legacy');
+      } catch (e) {
+        console.info('[HEYS.sync] ⚠️ Batch hot-sync failed, fallback to legacy:', e?.message);
+      }
+    }
+
+    // Legacy fallback: N individual getKV calls
+    return _runForegroundHotKeySyncLegacy(clientId, keysToFetch);
+  }
+
+  async function _runForegroundHotKeySyncLegacy(clientId, keys) {
     const YandexAPI = global.HEYS?.YandexAPI;
     if (!YandexAPI || typeof YandexAPI.getKV !== 'function') {
       return { success: false, updated: 0, failed: 0, reason: 'no_getkv' };
     }
 
-    foregroundAutoSyncTick += 1;
-    const keys = getForegroundHotSyncKeys(reason);
     const results = await Promise.allSettled(keys.map((key) => YandexAPI.getKV(clientId, key)));
 
     let updated = 0;
@@ -8233,6 +8399,24 @@
         return false;
       }
       foregroundAutoSyncAuthFailCount = 0;
+
+      // Auto-safety: track consecutive errors
+      if (hotSync.success) {
+        if (_hotSyncConsecutiveErrors > 0) {
+          _hotSyncConsecutiveErrors = 0;
+          if (_hotSyncAutoSafeMode) {
+            _hotSyncAutoSafeMode = false;
+            console.info('[HEYS.sync] ✅ Auto-safe mode cleared — sync healthy again');
+          }
+        }
+      } else {
+        _hotSyncConsecutiveErrors += 1;
+        if (_hotSyncConsecutiveErrors >= HOT_SYNC_AUTO_SAFE_THRESHOLD && !_hotSyncAutoSafeMode) {
+          _hotSyncAutoSafeMode = true;
+          console.warn(`[HEYS.sync] 🛡️ Auto-safe mode ON: ${_hotSyncConsecutiveErrors} consecutive failures — degrading to legacy sync`);
+        }
+      }
+
       if (hotSync.success || hotSync.updated > 0) {
         return true;
       }
@@ -8243,6 +8427,12 @@
       return true;
     } catch (e) {
       console.warn('[HEYS.sync] ⚠️ Foreground auto-sync failed:', reason, e?.message || e);
+      // Auto-safety: count exception as consecutive error
+      _hotSyncConsecutiveErrors += 1;
+      if (_hotSyncConsecutiveErrors >= HOT_SYNC_AUTO_SAFE_THRESHOLD && !_hotSyncAutoSafeMode) {
+        _hotSyncAutoSafeMode = true;
+        console.warn(`[HEYS.sync] 🛡️ Auto-safe mode ON: ${_hotSyncConsecutiveErrors} consecutive failures — degrading to legacy sync`);
+      }
       return false;
     } finally {
       foregroundAutoSyncInFlight = false;
@@ -8257,6 +8447,7 @@
 
   function startForegroundAutoSyncLoop() {
     if (foregroundAutoSyncTimer) return;
+    if (isHotSyncDisabled()) return;
     if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
 
     foregroundAutoSyncTimer = setInterval(() => {
@@ -8295,6 +8486,56 @@
       stopForegroundAutoSyncLoop();
     });
   }
+
+  // Console API for hot-sync management
+  cloud.hotSync = {
+    disable: function () {
+      global.localStorage.setItem('heys_disable_hot_sync', '1');
+      stopForegroundAutoSyncLoop();
+      console.info('[HEYS.sync] 🛑 Hot-sync disabled. Re-enable: HEYS.cloud.hotSync.enable()');
+    },
+    enable: function () {
+      global.localStorage.removeItem('heys_disable_hot_sync');
+      _hotSyncAutoSafeMode = false;
+      _hotSyncConsecutiveErrors = 0;
+      startForegroundAutoSyncLoop();
+      console.info('[HEYS.sync] ✅ Hot-sync re-enabled');
+    },
+    safeMode: function () {
+      global.localStorage.setItem('heys_disable_markers', '1');
+      global.localStorage.setItem('heys_disable_batch', '1');
+      _hotSyncAutoSafeMode = false; // manual safe mode overrides auto
+      console.info('[HEYS.sync] 🛡️ Safe mode ON — markers & batch disabled, using legacy N×getKV. Undo: HEYS.cloud.hotSync.normalMode()');
+    },
+    normalMode: function () {
+      global.localStorage.removeItem('heys_disable_markers');
+      global.localStorage.removeItem('heys_disable_batch');
+      global.localStorage.removeItem('heys_disable_screen_aware');
+      _hotSyncAutoSafeMode = false;
+      _hotSyncConsecutiveErrors = 0;
+      console.info('[HEYS.sync] ✅ Normal mode — all optimizations re-enabled');
+    },
+    status: function () {
+      const disabled = isHotSyncDisabled();
+      const running = !!foregroundAutoSyncTimer;
+      const info = {
+        disabled,
+        running,
+        tick: foregroundAutoSyncTick,
+        lastAt: foregroundAutoSyncLastAt,
+        authFails: foregroundAutoSyncAuthFailCount,
+        features: {
+          markers: !isMarkersDisabled(),
+          batch: !isBatchDisabled(),
+          screenAware: !isScreenAwareDisabled()
+        },
+        autoSafeMode: _hotSyncAutoSafeMode,
+        consecutiveErrors: _hotSyncConsecutiveErrors
+      };
+      console.info('[HEYS.sync] Hot-sync status:', info);
+      return info;
+    }
+  };
 
   /** Очистить дублирующиеся ключи (двойной clientId, старые форматы) */
   function cleanupDuplicateKeys() {
