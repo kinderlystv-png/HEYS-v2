@@ -86,6 +86,56 @@
   let _updateAvailable = false;
   let _updateVersion = null;
 
+  // ═══════════════════════════════════════════════════════════════════
+  // 🔄 SW UPDATE STATE MACHINE (P3 hardening)
+  // Lightweight diagnostic layer — tracks phases and detects illegal transitions.
+  // States: idle → detected → downloading → ready → activating → reloading
+  // ═══════════════════════════════════════════════════════════════════
+  const SW_UPDATE_STATES = {
+    IDLE: 'idle',
+    DETECTED: 'detected',       // UPDATE_REQUIRED / updatefound received
+    DOWNLOADING: 'downloading', // new SW installing
+    READY: 'ready',             // newWorker.state === 'installed'
+    ACTIVATING: 'activating',   // skipWaiting sent
+    RELOADING: 'reloading',     // location.href about to change
+  };
+  const _SW_VALID_TRANSITIONS = {
+    idle: ['detected'],
+    detected: ['downloading', 'activating', 'idle'],   // activating = fast-path when already installed
+    downloading: ['ready', 'idle'],                       // idle = timeout/error fallback
+    ready: ['activating', 'idle'],
+    activating: ['reloading', 'idle'],                   // idle = fallback if controller didn't change
+    reloading: ['idle'],                                // idle = if reload aborted somehow
+  };
+  let _swUpdateState = SW_UPDATE_STATES.IDLE;
+  let _swUpdateStateLog = [];
+  const _SW_STATE_LOG_MAX = 20;
+
+  function transitionSwUpdateState(to, source) {
+    const from = _swUpdateState;
+    const valid = _SW_VALID_TRANSITIONS[from];
+    if (!valid || !valid.includes(to)) {
+      console.error(
+        `[SW-SM] 🚨 ILLEGAL transition: ${from} → ${to} (source: ${source}). ` +
+        `Valid: [${(valid || []).join(', ')}]`
+      );
+      // Still apply to avoid stuck state, but flag it
+      if (typeof window !== 'undefined' && window.dispatchEvent) {
+        window.dispatchEvent(new CustomEvent('heys:sw-illegal-transition', {
+          detail: { from, to, source, ts: Date.now() }
+        }));
+      }
+    }
+    _swUpdateState = to;
+    const entry = { from, to, source, ts: Date.now() };
+    _swUpdateStateLog.push(entry);
+    if (_swUpdateStateLog.length > _SW_STATE_LOG_MAX) _swUpdateStateLog.shift();
+    console.info(`[SW-SM] ${from} → ${to} (${source})`);
+  }
+
+  function getSwUpdateState() { return _swUpdateState; }
+  function getSwUpdateStateLog() { return _swUpdateStateLog.slice(); }
+
   function getAppVersion() {
     return HEYS.version || window.APP_VERSION || 'unknown';
   }
@@ -706,6 +756,7 @@
           }
           if (event.data?.type === 'UPDATE_REQUIRED') {
             console.log('[SW] 🧭 Version mismatch — forcing update:', event.data.version);
+            transitionSwUpdateState(SW_UPDATE_STATES.DETECTED, 'update-required-msg');
             if (typeof HEYS.forceCheckAndUpdate === 'function') {
               HEYS.forceCheckAndUpdate();
             } else {
@@ -781,6 +832,7 @@
               // Очищаем флаги перед reload чтобы не триггерить повторный controllerchange
               try { sessionStorage.removeItem('heys_pending_update'); } catch (e) { }
               clearUpdateLock();
+              transitionSwUpdateState(SW_UPDATE_STATES.RELOADING, 'caches-cleared');
               const url = new URL(window.location.href);
               url.searchParams.set('_v', Date.now().toString());
               window.location.href = url.toString();
@@ -797,6 +849,7 @@
         registration.addEventListener('updatefound', () => {
           const newWorker = registration.installing;
           console.log('[SW] 🔄 New version downloading...');
+          transitionSwUpdateState(SW_UPDATE_STATES.DETECTED, 'updatefound');
 
           // 🔒 Показываем модалку ТОЛЬКО если это реальное обновление (есть предыдущий SW)
           // Используем registration.active — он показывает есть ли АКТИВНЫЙ SW до этого
@@ -821,6 +874,7 @@
 
           // Показываем UI обновления
           showUpdateModal('downloading');
+          transitionSwUpdateState(SW_UPDATE_STATES.DOWNLOADING, 'updatefound-modal');
 
           // 🔒 Fallback: если через 10 секунд модалка ещё на экране — убираем
           const swUpdateTimeout = setTimeout(() => {
@@ -835,6 +889,7 @@
           newWorker?.addEventListener('statechange', () => {
             if (newWorker.state === 'installed') {
               console.log('[SW] 🎉 New version ready!');
+              transitionSwUpdateState(SW_UPDATE_STATES.READY, 'sw-installed');
               clearTimeout(swUpdateTimeout); // Отменяем fallback
               // Упрощённая анимация: ready → reloading → reload
               updateModalStage('ready');
@@ -902,6 +957,7 @@
           // что вызывает ложный второй reload (именно это приводит к мерцанию What's New).
           try { sessionStorage.removeItem('heys_pending_update'); } catch (e) { }
           clearUpdateLock();
+          transitionSwUpdateState(SW_UPDATE_STATES.RELOADING, 'controllerchange');
           console.info('[SW] 🔄 Reloading page with new SW... (triggered by controllerchange)');
           const url = new URL(window.location.href);
           url.searchParams.set('_v', Date.now().toString());
@@ -930,6 +986,7 @@
 
     _skipWaitingInProgress = true;
     console.log('[SW] 🔄 triggerSkipWaiting called from:', source);
+    transitionSwUpdateState(SW_UPDATE_STATES.ACTIVATING, 'skipWaiting-' + source);
 
     try {
       // 1. Проверяем наличие SW controller
@@ -965,6 +1022,7 @@
           // Очищаем флаги перед reload чтобы не триггерить повторный controllerchange
           try { sessionStorage.removeItem('heys_pending_update'); } catch (e) { }
           clearUpdateLock();
+          transitionSwUpdateState(SW_UPDATE_STATES.RELOADING, 'skipWaiting-fallback');
           const url = new URL(window.location.href);
           url.searchParams.set('_v', Date.now().toString());
           window.location.href = url.toString();
@@ -2313,6 +2371,8 @@
     isUpdateLocked: isUpdateLocked,
     setUpdateLock: setUpdateLock,
     clearUpdateLock: clearUpdateLock,
+    getSwUpdateState: getSwUpdateState,
+    getSwUpdateStateLog: getSwUpdateStateLog,
     showUpdateBadge: showUpdateBadge,
     hideUpdateBadge: hideUpdateBadge,
     showUpdateModal: showUpdateModal,

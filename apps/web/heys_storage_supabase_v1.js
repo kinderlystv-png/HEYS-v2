@@ -154,6 +154,94 @@
     return !!leadingClientId && leadingClientId !== clientId;
   }
 
+  // ═══════════════════════════════════════════════════════════════════
+  // 🛡️ WRITE-TIME CLIENT ISOLATION GUARD (P2 hardening)
+  // Last-resort assertion: reject localStorage writes for foreign clients.
+  // This is a SECOND defence line after isForeignClientScopedKey filters.
+  // ═══════════════════════════════════════════════════════════════════
+  let _syncWriteIsolationViolations = 0;
+
+  function assertSyncWriteOwnership(key, clientId, source) {
+    if (!clientId || typeof key !== 'string') return true;
+    if (isForeignClientScopedKey(key, clientId)) {
+      _syncWriteIsolationViolations++;
+      console.error(
+        `[HEYS.sync] 🚨 WRITE BLOCKED — foreign key at write-time! ` +
+        `key="${key}" client="${clientId.slice(0, 8)}" source="${source}" ` +
+        `violations=${_syncWriteIsolationViolations}`
+      );
+      // Emit telemetry event for monitoring
+      if (typeof window !== 'undefined' && window.dispatchEvent) {
+        window.dispatchEvent(new CustomEvent('heys:sync-isolation-violation', {
+          detail: { key, clientId: clientId.slice(0, 8), source, count: _syncWriteIsolationViolations }
+        }));
+      }
+      return false; // caller MUST skip this write
+    }
+    return true; // safe to proceed
+  }
+
+  // ═══════════════════════════════════════════════════════════════════
+  // 🔔 POST-SWITCH ANOMALY TELEMETRY (P4 hardening)
+  // Lightweight check after switchClient to detect residual cross-client data.
+  // ═══════════════════════════════════════════════════════════════════
+  function detectPostSwitchAnomalies(newClientId, oldClientId) {
+    if (!newClientId) return null;
+    const anomalies = [];
+    const ls = global.localStorage;
+    const newPrefix = 'heys_' + newClientId + '_';
+    const oldPrefix = oldClientId ? 'heys_' + oldClientId + '_' : null;
+
+    let foreignDayKeys = 0;
+    let foreignOtherKeys = 0;
+    let newClientDays = 0;
+
+    for (let i = 0; i < ls.length; i++) {
+      const k = ls.key(i);
+      if (!k || !k.startsWith('heys_')) continue;
+
+      // Skip global keys
+      if (k === 'heys_client_current' || k.startsWith('heys_supabase_') ||
+        k.startsWith('heys_pin_') || k === 'heys_session_token') continue;
+
+      if (k.startsWith(newPrefix)) {
+        if (k.includes('dayv2_')) newClientDays++;
+        continue;
+      }
+
+      // Any remaining client-scoped key that's NOT for the new client
+      const leadId = getLeadingClientScopeId(k);
+      if (leadId && leadId !== newClientId) {
+        if (k.includes('dayv2_')) foreignDayKeys++;
+        else foreignOtherKeys++;
+      }
+    }
+
+    if (foreignDayKeys > 0) {
+      anomalies.push({ type: 'foreign_day_keys', count: foreignDayKeys, oldClient: oldClientId?.slice(0, 8) });
+    }
+    if (foreignOtherKeys > 0) {
+      anomalies.push({ type: 'foreign_other_keys', count: foreignOtherKeys, oldClient: oldClientId?.slice(0, 8) });
+    }
+
+    if (anomalies.length > 0) {
+      console.error(
+        `[HEYS.sync] 🚨 POST-SWITCH ANOMALY: ${anomalies.length} issue(s) detected ` +
+        `after switch to ${newClientId.slice(0, 8)}:`,
+        anomalies.map(a => `${a.type}=${a.count}`).join(', ')
+      );
+      if (typeof window !== 'undefined' && window.dispatchEvent) {
+        window.dispatchEvent(new CustomEvent('heys:switch-anomaly', {
+          detail: { newClient: newClientId.slice(0, 8), oldClient: oldClientId?.slice(0, 8), anomalies, newClientDays }
+        }));
+      }
+    } else {
+      console.info(`[HEYS.sync] ✅ Post-switch clean: ${newClientDays} day keys, 0 foreign keys`);
+    }
+
+    return anomalies.length > 0 ? anomalies : null;
+  }
+
   // 🔧 Dedup set: log foreign scope anomaly summary only once per sync cycle.
   const _scopeFixLoggedKeys = new Set();
   let _scopeFixSummaryLogged = false;
@@ -4854,6 +4942,8 @@
                   const pKey = scopeKeyForClientStorage(row.k, client_id);
                   // 🛡️ v65 FIX: skip foreign-scoped keys in Phase A too
                   if (isForeignClientScopedKey(pKey, client_id)) return;
+                  // 🛡️ P2: write-time isolation guard
+                  if (!assertSyncWriteOwnership(pKey, client_id, 'phase-a')) return;
                   try { lsPhaseA.setItem(pKey, JSON.stringify(row.v)); } catch (_) { }
                 });
                 muteMirror = false;
@@ -5076,6 +5166,8 @@
                 recordCloudGarbageCandidate(lightCloudGarbage, 'foreign', row.k);
                 return;
               }
+              // 🛡️ P2: write-time isolation guard
+              if (!assertSyncWriteOwnership(key, client_id, 'delta-light')) return;
 
               let valueToStore = row.v;
               // Декомпрессия если нужно
@@ -5404,6 +5496,9 @@
           _chunk.forEach(({ scopedKey, row }) => {
             try {
               let key = scopedKey;
+
+              // 🛡️ P2: write-time isolation guard — covers ALL full-sync write branches
+              if (!assertSyncWriteOwnership(key, client_id, 'full-sync')) return;
 
               //  FIX 2025-12-26: Декомпрессируем row.v если это сжатая строка
               // Данные в БД могут быть сохранены как сжатые строки "¤Z¤[{..." — нужно декодировать
@@ -8565,7 +8660,10 @@
         }
       }
 
-      // 🚀 FIX: Регистрируем cooldown чтобы sync effects useEffect не запускал дублирующий sync
+      // �️ P4: Post-switch anomaly detection — surface residual cross-client data
+      detectPostSwitchAnomalies(newClientId, oldClientId);
+
+      // �🚀 FIX: Регистрируем cooldown чтобы sync effects useEffect не запускал дублирующий sync
       // v58+: switchClient использует cloud.syncClient() — _syncLastCompleted выставляется автоматически.
       // Cooldown ниже — дополнительная страховка от race с React useEffect после client switch.
       _syncLastCompleted[newClientId] = Date.now();
