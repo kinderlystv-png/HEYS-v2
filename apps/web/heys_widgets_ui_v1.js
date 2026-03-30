@@ -6475,6 +6475,76 @@
     return ReactDOM?.createPortal ? ReactDOM.createPortal(modal, document.body) : modal;
   }
 
+  // === Sync Loading Skeleton for WidgetsTab ===
+  function WidgetsSyncSkeleton() {
+    return React.createElement('div', {
+      className: 'widgets-sync-skeleton',
+      style: { padding: '0 8px', marginTop: 8 }
+    },
+      React.createElement('div', {
+        style: {
+          display: 'grid',
+          gridTemplateColumns: 'repeat(4, 1fr)',
+          gap: 8,
+          gridAutoRows: 80
+        }
+      },
+        // Row 1: two 2×2 cards (calories + insulin wave)
+        React.createElement('div', {
+          className: 'skeleton-card',
+          style: { gridColumn: 'span 2', gridRow: 'span 2', borderRadius: 16 }
+        }),
+        React.createElement('div', {
+          className: 'skeleton-card',
+          style: { gridColumn: 'span 2', gridRow: 'span 2', borderRadius: 16 }
+        }),
+        // Row 3: macros 2×1 + sleep 1×1 + empty 1×1
+        React.createElement('div', {
+          className: 'skeleton-card',
+          style: { gridColumn: 'span 2', borderRadius: 16 }
+        }),
+        React.createElement('div', {
+          className: 'skeleton-card',
+          style: { borderRadius: 16 }
+        }),
+        React.createElement('div', {
+          className: 'skeleton-card',
+          style: { borderRadius: 16 }
+        }),
+        // Row 4: cascade 2×1 + streak 1×1 + score 1×1
+        React.createElement('div', {
+          className: 'skeleton-card',
+          style: { gridColumn: 'span 2', borderRadius: 16 }
+        }),
+        React.createElement('div', {
+          className: 'skeleton-card',
+          style: { borderRadius: 16 }
+        }),
+        React.createElement('div', {
+          className: 'skeleton-card',
+          style: { borderRadius: 16 }
+        }),
+        // Row 5: four 1×1 cards
+        React.createElement('div', {
+          className: 'skeleton-card',
+          style: { borderRadius: 16 }
+        }),
+        React.createElement('div', {
+          className: 'skeleton-card',
+          style: { borderRadius: 16 }
+        }),
+        React.createElement('div', {
+          className: 'skeleton-card',
+          style: { borderRadius: 16 }
+        }),
+        React.createElement('div', {
+          className: 'skeleton-card',
+          style: { borderRadius: 16 }
+        })
+      )
+    );
+  }
+
   // === Main WidgetsTab Component ===
   function WidgetsTab({ selectedDate, clientId, setTab, setSelectedDate }) {
     const HOME_TAB_OPTIONS = useMemo(() => ([
@@ -6507,6 +6577,9 @@
     const [showResetConfirm, setShowResetConfirm] = useState(false);
     const containerRef = useRef(null);
     const gridRef = useRef(null);
+    const [isSyncLoading, setIsSyncLoading] = useState(false);
+    const syncLoadingTimerRef = useRef(null);
+    const prevClientIdRef = useRef(clientId);
 
     // Mobile detection (используем существующий хук Day)
     const isMobile = (HEYS.dayHooks && typeof HEYS.dayHooks.useMobileDetection === 'function')
@@ -6570,7 +6643,10 @@
     // Критично: каждый клиент имеет свой layout виджетов!
     useEffect(() => {
       if (clientId) {
-        console.info(`[WidgetsTab] clientId changed: "${clientId.slice(0, 8)}...", reinitializing widgets`);
+        const isRealSwitch = prevClientIdRef.current && prevClientIdRef.current !== clientId;
+        prevClientIdRef.current = clientId;
+
+        console.info(`[WidgetsTab] clientId changed: "${clientId.slice(0, 8)}...", reinitializing widgets`, { isRealSwitch });
         // Сброс глобального кэша каскада, чтобы useLiveCurrentCascade не показывал данные предыдущего клиента
         if (window.HEYS) {
           window.HEYS._lastCrs = null;
@@ -6580,8 +6656,86 @@
         // НЕ вызываем setWidgets здесь — reinit асинхронный: getWidgets() вернёт []
         // и вызовет вспышку empty-state. Подписка на layout:loaded обновит widgets когда данные готовы.
         updateHistoryInfo();
+
+        // Sync gate: show skeleton only on real client switch (not first mount)
+        // On first mount, data from previous sync is already in localStorage.
+        if (isRealSwitch) {
+          const cloud = window.HEYS?.cloud;
+          const needsSync = cloud?.shouldSyncClient?.(clientId, 4000) !== false;
+          if (needsSync) {
+            setIsSyncLoading(true);
+            // Fallback: don't block forever — reveal widgets after 6s even if sync is slow
+            if (syncLoadingTimerRef.current) clearTimeout(syncLoadingTimerRef.current);
+            syncLoadingTimerRef.current = setTimeout(() => {
+              console.info('[WidgetsTab] sync loading fallback timeout, revealing widgets');
+              HEYS.Widgets.data?.refresh?.();
+              setIsSyncLoading(false);
+            }, 6000);
+          } else {
+            // No sync needed — data is fresh, immediately refresh widget cache
+            HEYS.Widgets.data?.refresh?.();
+            setIsSyncLoading(false);
+          }
+        }
       }
+      return () => {
+        if (syncLoadingTimerRef.current) {
+          clearTimeout(syncLoadingTimerRef.current);
+          syncLoadingTimerRef.current = null;
+        }
+      };
     }, [clientId]);
+
+    // 🔗 Sync event bridge: DOM events from sync layer → widget data refresh
+    // Sync layer dispatches heysSyncCompleted and heys:day-updated as DOM CustomEvents,
+    // but widgets listen to HEYS.events / HEYS.Widgets internal event bus.
+    // This effect bridges the gap so widgets update after client switch / cloud sync.
+    // Also clears isSyncLoading to reveal widgets with all animations at once.
+    useEffect(() => {
+      const onSyncCompleted = (event) => {
+        const evClientId = event?.detail?.clientId;
+        if (!evClientId || !clientId) return;
+        if (evClientId !== clientId && !clientId.startsWith(evClientId)) return;
+        const phase = event?.detail?.phase || (event?.detail?.phaseA ? 'A' : 'unknown');
+        console.info(`[WidgetsTab] heysSyncCompleted phase=${phase}, refreshing widget data`);
+        HEYS.Widgets.data?.refresh?.();
+        // Reveal widgets after data refresh — Phase A is enough for today's widgets
+        if (syncLoadingTimerRef.current) {
+          clearTimeout(syncLoadingTimerRef.current);
+          syncLoadingTimerRef.current = null;
+        }
+        setIsSyncLoading(false);
+      };
+
+      const onDayUpdated = (event) => {
+        const evClientId = event?.detail?.clientId;
+        // heys:day-updated may not always carry clientId — refresh unconditionally if missing
+        if (evClientId && clientId && evClientId !== clientId && !clientId.startsWith(evClientId)) return;
+        HEYS.Widgets.data?.refresh?.();
+      };
+
+      window.addEventListener('heysSyncCompleted', onSyncCompleted);
+      window.addEventListener('heys:day-updated', onDayUpdated);
+
+      return () => {
+        window.removeEventListener('heysSyncCompleted', onSyncCompleted);
+        window.removeEventListener('heys:day-updated', onDayUpdated);
+      };
+    }, [clientId]);
+
+    // === Pull-to-refresh ===
+    const {
+      pullProgress,
+      isRefreshing,
+      refreshStatus,
+      pullThreshold
+    } = HEYS.dayPullRefresh?.usePullToRefresh?.({
+      React,
+      date: selectedDate,
+      lsGet: HEYS.utils?.lsGet,
+      lsSet: HEYS.utils?.lsSet,
+      HEYS: window.HEYS
+    }) || { pullProgress: 0, isRefreshing: false, refreshStatus: 'idle', pullThreshold: 80 };
 
     // Initialize and subscribe to state changes
     useEffect(() => {
@@ -6991,9 +7145,113 @@
       return Math.max(8, maxRow + 2);
     }, [widgets]);
 
+    // === Pull indicator helper ===
+    const pullIndicatorEl = (pullProgress > 0 || isRefreshing || refreshStatus !== 'idle')
+      ? React.createElement('div', {
+        className: 'pull-indicator'
+          + (isRefreshing ? ' refreshing' : '')
+          + (refreshStatus === 'ready' ? ' ready' : '')
+          + (refreshStatus === 'success' ? ' success' : '')
+          + ' status-' + refreshStatus,
+        style: {
+          height: isRefreshing ? 56 : Math.max(pullProgress, 0),
+          opacity: isRefreshing ? 1 : Math.min(pullProgress / 35, 1)
+        }
+      },
+        React.createElement('div', { className: 'pull-spinner' },
+          refreshStatus === 'success'
+            ? React.createElement('svg', {
+              className: 'pull-spinner-ring ready',
+              viewBox: '0 0 28 28',
+              style: { stroke: 'var(--success)' }
+            },
+              React.createElement('path', {
+                d: 'M7 14l5 5 9-9',
+                strokeWidth: 3,
+                fill: 'none',
+                strokeLinecap: 'round',
+                strokeLinejoin: 'round'
+              })
+            )
+            : refreshStatus === 'error'
+              ? React.createElement('svg', {
+                className: 'pull-spinner-ring',
+                viewBox: '0 0 28 28',
+                style: { stroke: 'var(--err, #ef4444)' }
+              },
+                React.createElement('path', {
+                  d: 'M8 8l12 12M20 8l-12 12',
+                  strokeWidth: 3,
+                  fill: 'none',
+                  strokeLinecap: 'round'
+                })
+              )
+              : refreshStatus === 'timeout'
+                ? React.createElement('svg', {
+                  className: 'pull-spinner-ring',
+                  viewBox: '0 0 28 28',
+                  style: { stroke: 'var(--warn, #f59e0b)' }
+                },
+                  React.createElement('path', {
+                    d: 'M14 7v8m0 4h.01',
+                    strokeWidth: 3,
+                    fill: 'none',
+                    strokeLinecap: 'round',
+                    strokeLinejoin: 'round'
+                  }),
+                  React.createElement('circle', {
+                    cx: 14, cy: 14, r: 10,
+                    strokeWidth: 2,
+                    fill: 'none'
+                  })
+                )
+                : refreshStatus === 'syncing'
+                  ? React.createElement('svg', {
+                    className: 'pull-spinner-ring spinning',
+                    viewBox: '0 0 28 28'
+                  },
+                    React.createElement('circle', {
+                      cx: 14, cy: 14, r: 10,
+                      strokeDasharray: '45 20',
+                      strokeDashoffset: 0
+                    })
+                  )
+                  : React.createElement('svg', {
+                    className: 'pull-spinner-ring' + (refreshStatus === 'ready' ? ' ready' : ''),
+                    viewBox: '0 0 28 28',
+                    style: {
+                      transform: `rotate(${-90 + Math.min(pullProgress / pullThreshold, 1) * 180}deg)`,
+                      transition: 'transform 0.1s ease-out'
+                    }
+                  },
+                    React.createElement('circle', {
+                      cx: 14, cy: 14, r: 10,
+                      strokeDasharray: 63,
+                      strokeDashoffset: 63 - (Math.min(pullProgress / pullThreshold, 1) * 63)
+                    })
+                  )
+        ),
+        React.createElement('span', {
+          className: 'pull-text'
+            + (refreshStatus === 'ready' ? ' ready' : '')
+            + (refreshStatus === 'syncing' ? ' syncing' : '')
+            + ' status-' + refreshStatus
+        },
+          refreshStatus === 'success' ? 'Готово!'
+            : refreshStatus === 'timeout' ? 'Синхронизация заняла слишком долго'
+              : refreshStatus === 'error' ? 'Ошибка синхронизации'
+                : refreshStatus === 'syncing' ? 'Синхронизация...'
+                  : refreshStatus === 'ready' ? 'Отпустите для обновления'
+                    : 'Потяните для обновления'
+        )
+      )
+      : null;
+
     // Render empty state (только после первичной гидратации layout)
-    if (isLayoutHydrated && widgets.length === 0 && !isEditMode) {
+    // Don't show empty state during sync loading — layout for new client may not have arrived yet
+    if (isLayoutHydrated && widgets.length === 0 && !isEditMode && !isSyncLoading) {
       return React.createElement('div', { className: 'widgets-tab' },
+        pullIndicatorEl,
         React.createElement('div', { className: 'widgets-empty' },
           React.createElement('div', { className: 'widgets-empty__icon' }, '📊'),
           React.createElement('div', { className: 'widgets-empty__title' }, 'Нет виджетов'),
@@ -7017,11 +7275,17 @@
       className: `widgets-tab ${isEditMode ? 'widgets-tab--editing' : ''}`,
       ref: containerRef
     },
-      // Header (пустой - кнопки перенесены в fixed блок снизу)
-      React.createElement('div', { className: 'widgets-header' }),
+      // Pull-to-refresh indicator
+      pullIndicatorEl,
 
-      // Widgets Grid
-      React.createElement('div', { className: 'widgets-grid-container' },
+      // Sync loading skeleton — shown during client switch while cloud data syncs
+      isSyncLoading && !isEditMode && React.createElement(WidgetsSyncSkeleton),
+
+      // Header (пустой - кнопки перенесены в fixed блок снизу)
+      !isSyncLoading && React.createElement('div', { className: 'widgets-header' }),
+
+      // Widgets Grid (hidden during sync loading)
+      !isSyncLoading && React.createElement('div', { className: 'widgets-grid-container' },
         React.createElement('div', {
           className: `widgets-grid ${isEditMode ? 'widgets-grid--editing' : ''}`,
           ref: gridRef

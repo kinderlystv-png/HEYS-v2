@@ -117,6 +117,7 @@
         return {
             tab,
             setTab,
+            setTabImmediate,
             defaultTab,
             setDefaultTab,
         };

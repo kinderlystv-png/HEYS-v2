@@ -73,12 +73,13 @@
             const fallbackUseTabState = ({ React: HookReact }) => ({
                 tab: HookReact.useState('diary')[0],
                 setTab: () => { },
+                setTabImmediate: () => { },
                 defaultTab: 'diary',
                 setDefaultTab: () => { },
             });
             const useTabState = getStableHook(AppTabState.useTabState, fallbackUseTabState);
             const tabState = useTabState({ React });
-            const { tab, setTab, defaultTab, setDefaultTab } = tabState;
+            const { tab, setTab, setTabImmediate, defaultTab, setDefaultTab } = tabState;
 
             const { theme, resolvedTheme, cycleTheme } = useThemePreference();
             React.useEffect(() => {
@@ -414,6 +415,7 @@
                 React,
                 clientId,
                 setTab,
+                setTabImmediate,
                 defaultTab,
                 setProducts,
                 setSyncVer,

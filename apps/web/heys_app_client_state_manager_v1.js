@@ -8,6 +8,7 @@
         React,
         clientId,
         setTab,
+        setTabImmediate,
         defaultTab,
         setProducts,
         setSyncVer,
@@ -17,12 +18,17 @@
 
         // Автопереключение на домашнюю вкладку при выборе клиента
         // (пропускаем если это PWA shortcut action)
+        // ⚡ FIX: используем setTabImmediate (rawSetTab) вместо setTab (startTransition).
+        // setTab оборачивает rawSetTab в React.startTransition, что делает обновление
+        // низкоприоритетным. При client switch десятки urgent обновлений (setProducts,
+        // setSyncVer, sync events) прерывают transition, откладывая переключение
+        // вкладки на секунды. setTabImmediate обходит startTransition → мгновенный switch.
+        const immediateSetTab = setTabImmediate || setTab;
         useEffect(() => {
             if (clientId && !skipTabSwitchRef.current) {
-                // Используем сохранённую домашнюю вкладку вместо захардкоженной 'stats'
-                setTab(defaultTab);
+                immediateSetTab(defaultTab);
             }
-        }, [clientId, defaultTab, setTab]);
+        }, [clientId, defaultTab, immediateSetTab]);
 
         // Обновление products при смене clientId (без bootstrap — его делают wrapper'ы)
         useEffect(() => {
