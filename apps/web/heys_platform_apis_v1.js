@@ -1254,7 +1254,9 @@
           // Если был неактивен больше 5 минут — синхронизируем данные
           if (idleMinutes >= 5 && window.HEYS?.cloud?.sync) {
             console.log('[Idle] Syncing after idle period...');
-            window.HEYS.cloud.sync().catch(() => { });
+            window.HEYS.cloud.sync().catch((error) => {
+              console.warn('[HEYS.platform] Idle sync after return failed', error);
+            });
           }
 
           // Если был неактивен больше 30 минут — проверяем обновления

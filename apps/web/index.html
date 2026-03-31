@@ -433,9 +433,41 @@
             var MAX_ERRORS = 3;
             var recoveryShown = false;
             window.__heysRecoveryBusy = false;
-            function notifySwBootFailure() {
+            var BOOT_CRASH_COUNT_KEY = 'heys_boot_crash_count';
+            var MAX_SILENT_RESTARTS = 2;
+
+            function getBootCrashCount() {
+                try {
+                    var raw = sessionStorage.getItem(BOOT_CRASH_COUNT_KEY);
+                    var value = Number(raw || '0');
+                    return Number.isFinite(value) && value > 0 ? value : 0;
+                } catch (_) {
+                    return 0;
+                }
+            }
+
+            function setBootCrashCount(value) {
+                try {
+                    if (!value || value <= 0) {
+                        sessionStorage.removeItem(BOOT_CRASH_COUNT_KEY);
+                        return;
+                    }
+                    sessionStorage.setItem(BOOT_CRASH_COUNT_KEY, String(value));
+                } catch (_) { }
+            }
+
+            function clearBootCrashCount() {
+                try {
+                    sessionStorage.removeItem(BOOT_CRASH_COUNT_KEY);
+                } catch (_) { }
+            }
+
+            function notifySwBootFailure(reason) {
                 if (navigator.serviceWorker && navigator.serviceWorker.controller) {
-                    navigator.serviceWorker.controller.postMessage({ type: 'BOOT_FAILURE' });
+                    navigator.serviceWorker.controller.postMessage({
+                        type: 'BOOT_FAILURE',
+                        reason: reason || 'Unknown boot failure'
+                    });
                 }
             }
 
@@ -451,10 +483,12 @@
                 if (clearBtn) clearBtn.disabled = !!disabled;
             }
 
-            function showRecoveryUI(errorMsg) {
+            function showRecoveryUI(errorMsg, options) {
                 if (recoveryShown) return;
                 recoveryShown = true;
-                notifySwBootFailure();
+                if (!(options && options.skipBootFailureNotify)) {
+                    notifySwBootFailure(errorMsg);
+                }
                 window.__heysLog && window.__heysLog('[CRITICAL] Recovery UI: ' + errorMsg);
 
                 document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:system-ui;padding:20px;background:#f3f4f6">' +
@@ -471,9 +505,32 @@
 
             window.__heysShowRecoveryUI = showRecoveryUI;
 
+            window.__heysSilentRestart = function (reason) {
+                if (window.__heysRecoveryBusy) return;
+
+                var nextCrashCount = getBootCrashCount() + 1;
+                setBootCrashCount(nextCrashCount);
+                notifySwBootFailure(reason);
+                window.__heysLog && window.__heysLog('[RECOVERY] silent restart #' + nextCrashCount + ': ' + reason);
+
+                if (nextCrashCount > MAX_SILENT_RESTARTS) {
+                    showRecoveryUI(reason || 'Приложение не смогло тихо перезапуститься', {
+                        skipBootFailureNotify: true
+                    });
+                    return;
+                }
+
+                window.__heysRecoveryBusy = true;
+                document.getElementById('heys-init-loader')?.remove();
+                setTimeout(function () {
+                    location.reload();
+                }, nextCrashCount === 1 ? 150 : 250);
+            };
+
             window.__heysReloadApp = function () {
                 if (window.__heysRecoveryBusy) return;
                 window.__heysRecoveryBusy = true;
+                clearBootCrashCount();
                 setRecoveryStatus('Перезагрузка приложения…');
                 setRecoveryButtonsDisabled(true);
                 setTimeout(function () {
@@ -487,6 +544,7 @@
                 setRecoveryStatus('Очистка кэша и перезапуск…');
                 setRecoveryButtonsDisabled(true);
                 try {
+                    clearBootCrashCount();
                     if ('caches' in window) {
                         var names = await caches.keys();
                         await Promise.all(names.map(function (n) { return caches.delete(n); }));
@@ -654,7 +712,7 @@
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
     <link rel="dns-prefetch" href="https://cdn.jsdelivr.net" />
     <!-- Preload критических boot-бандлов (2026-02-25 bundle migration) -->
-    <link rel="preload" href="boot-core.bundle.3db7964ce7a0.js" as="script" />
+    <link rel="preload" href="boot-core.bundle.070e908be27f.js" as="script" />
     <link rel="preload" href="boot-calc.bundle.0d65b6f48b8a.js" as="script" />
     <link rel="preload" href="boot-day.bundle.b5119e93429f.js" as="script" />
     <link rel="preload" href="boot-app.bundle.e99d70623449.js" as="script" />
@@ -2584,7 +2642,7 @@
          Сгенерировано: node scripts/bundle-legacy.mjs  (pnpm bundle:legacy)
          Состав и хеши: bundle-manifest.json
          Хеш в имени = вечный кэш (cache-first SW). -->
-    <script defer src="boot-core.bundle.3db7964ce7a0.js" fetchpriority="high"></script>
+    <script defer src="boot-core.bundle.070e908be27f.js" fetchpriority="high"></script>
     <script defer src="boot-calc.bundle.0d65b6f48b8a.js"></script>
     <script defer src="boot-day.bundle.b5119e93429f.js"></script>
     <script defer src="boot-app.bundle.e99d70623449.js"></script>

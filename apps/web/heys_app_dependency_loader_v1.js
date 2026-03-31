@@ -42,48 +42,17 @@ window.__heysPerfMark && window.__heysPerfMark('boot-init: execute start');
         };
 
         // 🆕 Recovery UI с кнопками
+        // Recovery делегирована в index.html через __heysSilentRestart
         const showRecoveryUI = (reason) => {
-            bootLog('showing recovery UI: ' + reason);
-
-            // Уведомляем SW о boot failure
-            if (navigator.serviceWorker?.controller) {
-                navigator.serviceWorker.controller.postMessage({ type: 'BOOT_FAILURE' });
-            }
-
+            bootLog('delegating recovery: ' + reason);
             document.getElementById('heys-init-loader')?.remove();
-            document.body.innerHTML = `
-                <div style="display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:system-ui;padding:20px;background:#f3f4f6">
-                    <div style="background:white;padding:32px;border-radius:16px;box-shadow:0 4px 12px rgba(0,0,0,0.1);max-width:400px;text-align:center">
-                        <div style="font-size:48px;margin-bottom:16px">⚠️</div>
-                        <h2 style="margin:0 0 8px;font-size:20px">Ошибка загрузки</h2>
-                        <p style="margin:0 0 24px;color:#6b7280;font-size:14px">${reason}</p>
-                        <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
-                            <button onclick="location.reload()" style="padding:12px 24px;border-radius:8px;border:none;background:#10b981;color:white;font-weight:500;cursor:pointer">🔄 Обновить</button>
-                            <button id="clear-cache-btn" style="padding:12px 24px;border-radius:8px;border:1px solid #d1d5db;background:white;color:#374151;font-weight:500;cursor:pointer">🗑️ Сбросить кэш</button>
-                        </div>
-                    </div>
-                </div>
-            `;
-
-            document.getElementById('clear-cache-btn')?.addEventListener('click', async () => {
-                const btn = document.getElementById('clear-cache-btn');
-                if (btn) {
-                    btn.textContent = '⏳ Очистка...';
-                    btn.disabled = true;
-                }
-                try {
-                    if ('caches' in window) {
-                        const names = await caches.keys();
-                        await Promise.all(names.map(n => caches.delete(n)));
-                    }
-                    if ('serviceWorker' in navigator) {
-                        const regs = await navigator.serviceWorker.getRegistrations();
-                        await Promise.all(regs.map(r => r.unregister()));
-                    }
-                    sessionStorage.clear();
-                } catch (e) { console.error(e); }
+            if (window.__heysSilentRestart) {
+                window.__heysSilentRestart('DependencyLoader: ' + reason);
+            } else {
+                // Fallback если index.html recovery ещё не загрузился
+                console.error('[HEYS.recovery] DependencyLoader fallback reload:', reason);
                 location.reload();
-            });
+            }
         };
 
         const waitForDependencies = (onReady) => {

@@ -169,6 +169,8 @@
 
                 // Флаг для watchdog
                 window.__heysAppReady = true;
+                // Сброс crash-loop counter — загрузка успешна
+                try { sessionStorage.removeItem('heys_boot_crash_count'); } catch (e) { /* private browsing */ }
             };
 
             // CSS gate: wait for main.css before destroying skeleton
