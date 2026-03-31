@@ -4712,7 +4712,7 @@
         React.createElement('path', {
           d: `M ${strokeWidth / 2} ${size / 2} A ${radius} ${radius} 0 0 1 ${size - strokeWidth / 2} ${size / 2}`,
           fill: 'none',
-          stroke: 'var(--border-color, #e2e8f0)',
+          stroke: 'var(--widget-surface-muted, rgba(255, 255, 255, 0.10))',
           strokeWidth,
           strokeLinecap: 'round'
         }),

@@ -22,16 +22,14 @@
         } catch (_) { return null; }
     }
 
-    const STAGES = [
-        { key: 'saving', label: 'Сохраняю данные…' },
-        { key: 'loading', label: 'Загружаю данные…' },
-        { key: 'done', label: 'Готово' },
-    ];
+    const STAGES = {
+        preparing: { key: 'preparing', label: 'Переключаю клиента…', step: 0 },
+        saving: { key: 'saving', label: 'Сохраняю изменения…', step: 0 },
+        loading: { key: 'loading', label: 'Загружаю данные…', step: 1 },
+        done: { key: 'done', label: 'Готово', step: 2 },
+        error: { key: 'error', label: 'Не удалось переключить', step: 2 },
+    };
 
-    // Auto-advance delay from saving → loading (ms).
-    // Real switchClient flushes pending (0-8s) then syncs new (1-5s).
-    // We advance after 2s which roughly matches end-of-flush for typical cases.
-    const SAVING_DURATION = 2000;
     // How long to keep "Готово" visible before fade-out
     const DONE_DISPLAY = 500;
     // Fade-out animation duration (matches CSS)
@@ -40,11 +38,11 @@
     function ClientSwitchOverlay() {
         const [visible, setVisible] = useState(false);
         const [fadingOut, setFadingOut] = useState(false);
-        const [stageIdx, setStageIdx] = useState(0);
+        const [stageKey, setStageKey] = useState('preparing');
         const [targetClient, setTargetClient] = useState(null); // { id, name }
         const timerRef = useRef(null);
-        const switchDoneRef = useRef(false);
         const activeSwitchRef = useRef(false);
+        const activeClientIdRef = useRef(null);
 
         const cleanup = useCallback(() => {
             if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null; }
@@ -58,9 +56,9 @@
             timerRef.current = setTimeout(() => {
                 setVisible(false);
                 setFadingOut(false);
-                setStageIdx(0);
+                setStageKey('preparing');
                 setTargetClient(null);
-                switchDoneRef.current = false;
+                activeClientIdRef.current = null;
             }, FADE_OUT);
         }, [cleanup]);
 
@@ -77,43 +75,56 @@
 
                 cleanup();
                 activeSwitchRef.current = true;
-                switchDoneRef.current = false;
+                activeClientIdRef.current = clientId;
                 setTargetClient({ id: clientId, name: name || '…' });
-                setStageIdx(0);
+                setStageKey('preparing');
                 setFadingOut(false);
                 setVisible(true);
-
-                // Auto-advance saving → loading after SAVING_DURATION
-                timerRef.current = setTimeout(() => {
-                    setStageIdx(1);
-                }, SAVING_DURATION);
             };
 
-            const onChanged = () => {
+            const onStage = (e) => {
                 if (!activeSwitchRef.current) return;
+                const clientId = e.detail?.clientId;
+                const stage = e.detail?.stage;
+                if (!stage || !STAGES[stage]) return;
+                if (clientId && activeClientIdRef.current && clientId !== activeClientIdRef.current) return;
+                setStageKey(stage);
+            };
+
+            const onChanged = (e) => {
+                if (!activeSwitchRef.current) return;
+                const clientId = e.detail?.clientId;
+                if (clientId && activeClientIdRef.current && clientId !== activeClientIdRef.current) return;
 
                 activeSwitchRef.current = false;
-                switchDoneRef.current = true;
 
                 cleanup();
-                setStageIdx(2); // done
+                setStageKey('done');
 
                 timerRef.current = setTimeout(() => {
                     fadeOut();
                 }, DONE_DISPLAY);
             };
 
-            const onSyncError = () => {
+            const onSyncError = (e) => {
                 if (!activeSwitchRef.current) return;
-                fadeOut();
+                const clientId = e.detail?.clientId;
+                if (clientId && activeClientIdRef.current && clientId !== activeClientIdRef.current) return;
+                cleanup();
+                setStageKey('error');
+                timerRef.current = setTimeout(() => {
+                    fadeOut();
+                }, DONE_DISPLAY + 300);
             };
 
             window.addEventListener('heys:client-switching', onSwitching);
+            window.addEventListener('heys:client-switch-stage', onStage);
             window.addEventListener('heys:client-changed', onChanged);
             window.addEventListener('heys:sync-error', onSyncError);
 
             return () => {
                 window.removeEventListener('heys:client-switching', onSwitching);
+                window.removeEventListener('heys:client-switch-stage', onStage);
                 window.removeEventListener('heys:client-changed', onChanged);
                 window.removeEventListener('heys:sync-error', onSyncError);
                 cleanup();
@@ -126,7 +137,7 @@
         const getInitials = helpers.getClientInitials || ((n) => n ? n.slice(0, 2).toUpperCase() : '?');
         const getColor = helpers.getAvatarColor || (() => 'linear-gradient(135deg, #4285f4 0%, #2563eb 100%)');
 
-        const stage = STAGES[stageIdx] || STAGES[0];
+        const stage = STAGES[stageKey] || STAGES.preparing;
         const clientName = targetClient?.name || '…';
 
         return React.createElement(
@@ -148,17 +159,18 @@
 
                 // Stage indicator
                 React.createElement('div', { className: 'cso-stage', key: stage.key },
-                    stageIdx < 2
+                    stage.key !== 'done'
+                        && stage.key !== 'error'
                         ? React.createElement('span', { className: 'cso-spinner' })
-                        : React.createElement('span', { className: 'cso-check' }, '✓'),
+                        : React.createElement('span', { className: 'cso-check' }, stage.key === 'error' ? '!' : '✓'),
                     React.createElement('span', { className: 'cso-stage-text' }, stage.label)
                 ),
 
                 // Progress dots
                 React.createElement('div', { className: 'cso-dots' },
-                    STAGES.map((s, i) => React.createElement('span', {
-                        key: s.key,
-                        className: 'cso-dot' + (i <= stageIdx ? ' cso-dot-active' : ''),
+                    ['saving', 'loading', 'done'].map((stepKey, i) => React.createElement('span', {
+                        key: stepKey,
+                        className: 'cso-dot' + (i <= stage.step ? ' cso-dot-active' : ''),
                     }))
                 )
             )

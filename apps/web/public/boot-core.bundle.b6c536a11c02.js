@@ -26227,6 +26227,19 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
       ? _oldClientIdHint
       : (cloud.getCurrentClientId ? cloud.getCurrentClientId() : null);
 
+    const emitSwitchStage = function (stage, extra) {
+      try {
+        global.dispatchEvent(new CustomEvent('heys:client-switch-stage', {
+          detail: {
+            stage,
+            clientId: newClientId,
+            oldClientId,
+            ...(extra || {})
+          }
+        }));
+      } catch (_) { }
+    };
+
     // Если тот же клиент — ничего не делаем
     if (oldClientId === newClientId) {
       log('Клиент уже выбран:', newClientId);
@@ -26239,7 +26252,9 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
     console.info(`[HEYS.sync] 🔄 Переключение клиента: ${oldClientId?.substring(0, 8) || 'нет'} → ${newClientId.substring(0, 8)}`);
 
     // 1. Сначала синхронизируем текущие данные в облако (если есть pending)
-    if (oldClientId && cloud.getPendingCount() > 0) {
+    const _pendingBeforeSwitch = oldClientId ? cloud.getPendingCount() : 0;
+    if (_pendingBeforeSwitch > 0) {
+      emitSwitchStage('saving', { pendingCount: _pendingBeforeSwitch });
       log('⏳ Ожидаем синхронизацию старого клиента...');
 
       // 🔧 v63 FIX #3: Используем flushPendingQueue вместо ручного polling.
@@ -26297,6 +26312,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
     // initialSyncCompleted НЕ сбрасываем — избегаем cascade dots на каждом switch.
 
     // 3. Синхронизируем данные нового клиента из облака
+    emitSwitchStage('loading', { pendingCount: _pendingBeforeSwitch });
     log('📥 Загружаем данные нового клиента...');
     try {
       // Проверяем есть ли сессия куратора (токен в localStorage)
@@ -26479,9 +26495,12 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
       // 🔔 Уведомляем компоненты о смене клиента (для RationTab и др.)
       window.dispatchEvent(new Event('heys:auth-changed'));
 
+      emitSwitchStage('done');
+
       return true;
     } catch (e) {
       logCritical('❌ Ошибка загрузки данных нового клиента:', e);
+      emitSwitchStage('error', { error: e?.message || String(e) });
       // 🔁 v59 FIX J: Do NOT rollback client_current on sync failure.
       // PIN auth already succeeded — client is valid. Rolling back creates
       // inconsistency: client_current → old, but _pinAuthClientId → new.
