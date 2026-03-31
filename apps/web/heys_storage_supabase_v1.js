@@ -8908,6 +8908,12 @@
     // initialSyncCompleted НЕ сбрасываем — избегаем cascade dots на каждом switch.
 
     // 3. Синхронизируем данные нового клиента из облака
+    // 🔧 v70 FIX: Очищаем кэш дней ПЕРЕД загрузкой нового клиента,
+    // чтобы виджеты/getDayData не вернули данные предыдущего клиента из DAYS_CACHE.
+    if (global.HEYS?.dayUtils?.clearDaysCache) {
+      global.HEYS.dayUtils.clearDaysCache();
+      log('🧹 [SWITCH] DAYS_CACHE cleared before loading new client');
+    }
     emitSwitchStage('loading', { pendingCount: _pendingBeforeSwitch });
     log('📥 Загружаем данные нового клиента...');
     try {
