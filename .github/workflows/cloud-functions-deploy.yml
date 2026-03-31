@@ -35,6 +35,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
 
       - name: Setup Yandex Cloud CLI
         run: |
@@ -67,32 +69,86 @@ jobs:
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           SMS_API_KEY: ${{ secrets.SMS_API_KEY }}
         run: |
-          cat > .env << EOF
-          PG_HOST=$PG_HOST
-          PG_PORT=$PG_PORT
-          PG_DATABASE=$PG_DATABASE
-          PG_USER=$PG_USER
-          PG_PASSWORD=$PG_PASSWORD
-          PG_SSL=$PG_SSL
-          JWT_SECRET=$JWT_SECRET
-          SESSION_SECRET=$SESSION_SECRET
-          TELEGRAM_BOT_TOKEN=$TELEGRAM_BOT_TOKEN
-          TELEGRAM_CHAT_ID=$TELEGRAM_CHAT_ID
-          SMS_API_KEY=$SMS_API_KEY
-          YC_FOLDER_ID=${{ secrets.YC_FOLDER_ID }}
-          EOF
+          write_env_var() {
+            local key="$1"
+            local value="$2"
+            value=${value//\'/\'"\'"\'}
+            printf "%s='%s'\n" "$key" "$value" >> .env
+          }
+
+          : > .env
+          write_env_var PG_HOST "$PG_HOST"
+          write_env_var PG_PORT "$PG_PORT"
+          write_env_var PG_DATABASE "$PG_DATABASE"
+          write_env_var PG_USER "$PG_USER"
+          write_env_var PG_PASSWORD "$PG_PASSWORD"
+          write_env_var PG_SSL "$PG_SSL"
+          write_env_var JWT_SECRET "$JWT_SECRET"
+          write_env_var SESSION_SECRET "$SESSION_SECRET"
+          write_env_var TELEGRAM_BOT_TOKEN "$TELEGRAM_BOT_TOKEN"
+          write_env_var TELEGRAM_CHAT_ID "$TELEGRAM_CHAT_ID"
+          write_env_var SMS_API_KEY "$SMS_API_KEY"
+          write_env_var YC_FOLDER_ID "${{ secrets.YC_FOLDER_ID }}"
+
+      - name: Determine deployment target
+        id: deployment-target
+        if: github.event_name == 'push'
+        shell: bash
+        run: |
+          BEFORE="${{ github.event.before }}"
+          AFTER="${{ github.sha }}"
+
+          if [ -z "$BEFORE" ] || [ "$BEFORE" = "0000000000000000000000000000000000000000" ]; then
+            BEFORE=$(git rev-parse HEAD^ 2>/dev/null || true)
+          fi
+
+          if [ -z "$BEFORE" ]; then
+            echo "mode=all" >> "$GITHUB_OUTPUT"
+            echo "reason=no-previous-commit" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          CHANGED_FILES=$(git diff --name-only "$BEFORE" "$AFTER")
+          echo "Changed files:"
+          echo "$CHANGED_FILES"
+
+          if echo "$CHANGED_FILES" | grep -Eq '^yandex-cloud-functions/(shared/|deploy-all\.sh$)'; then
+            echo "mode=all" >> "$GITHUB_OUTPUT"
+            echo "reason=shared-or-deploy-script-changed" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          mapfile -t FUNCTIONS < <(echo "$CHANGED_FILES" | sed -n 's#^yandex-cloud-functions/\(heys-api-[^/]*\)/.*#\1#p' | sort -u)
+
+          if [ "${#FUNCTIONS[@]}" -eq 0 ]; then
+            echo "mode=all" >> "$GITHUB_OUTPUT"
+            echo "reason=no-specific-function-detected" >> "$GITHUB_OUTPUT"
+          else
+            SELECTED_FUNCTIONS=$(IFS=,; echo "${FUNCTIONS[*]}")
+            echo "mode=selective" >> "$GITHUB_OUTPUT"
+            echo "functions=$SELECTED_FUNCTIONS" >> "$GITHUB_OUTPUT"
+            echo "reason=changed-function-directories" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Deploy functions
+        shell: bash
         working-directory: yandex-cloud-functions
         run: |
           chmod +x deploy-all.sh
+          MANUAL_FUNCTION="${{ inputs.function_name }}"
 
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.function_name }}" != "all" ]; then
-            echo "🎯 Deploying single function: ${{ inputs.function_name }}"
-            ./deploy-all.sh ${{ inputs.function_name }} --skip-health
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -n "$MANUAL_FUNCTION" ] && [ "$MANUAL_FUNCTION" != "all" ]; then
+            echo "🎯 Deploying single function: $MANUAL_FUNCTION"
+            ./deploy-all.sh "$MANUAL_FUNCTION" --ci --skip-health
+          elif [ "${{ steps.deployment-target.outputs.mode }}" = "selective" ]; then
+            IFS=',' read -r -a FUNCTIONS <<< "${{ steps.deployment-target.outputs.functions }}"
+            echo "🎯 Selective deploy: ${FUNCTIONS[*]}"
+            for func_name in "${FUNCTIONS[@]}"; do
+              ./deploy-all.sh "$func_name" --ci --skip-health
+            done
           else
-            echo "🚀 Deploying all functions"
-            ./deploy-all.sh --skip-health
+            echo "🚀 Deploying all functions (${{ steps.deployment-target.outputs.reason }})"
+            ./deploy-all.sh --ci --skip-health
           fi
 
       - name: Verify deployment

@@ -1,7 +1,7 @@
 #!/bin/bash
 # Validate .env file before deployment
-# Usage: ./validate-env.sh [--skip-db] (automatically called by deploy-all.sh)
-# v2.0 — adds DB connectivity test, .env fingerprint check, known-good secrets validation
+# Usage: ./validate-env.sh [--skip-db] [--skip-api] [--ci] (automatically called by deploy-all.sh)
+# v2.1 — adds CI mode, faster DB timeout, and optional API check skip
 
 set -e
 
@@ -10,9 +10,29 @@ ENV_FILE="$SCRIPT_DIR/.env"
 CHECKSUM_FILE="$SCRIPT_DIR/.env.checksum"
 
 SKIP_DB=false
-if [[ "$1" == "--skip-db" ]]; then
-    SKIP_DB=true
-fi
+SKIP_API=false
+CI_MODE=false
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --skip-db)
+            SKIP_DB=true
+            ;;
+        --skip-api)
+            SKIP_API=true
+            ;;
+        --ci)
+            CI_MODE=true
+            SKIP_DB=true
+            SKIP_API=true
+            ;;
+        *)
+            echo "❌ ERROR: Unknown flag: $1"
+            exit 1
+            ;;
+    esac
+    shift
+done
 
 # Colors
 RED='\033[0;31m'
@@ -21,7 +41,10 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m'
 
-echo -e "${YELLOW}🔍 Validating .env configuration (v2.0)...${NC}"
+echo -e "${YELLOW}🔍 Validating .env configuration (v2.1)...${NC}"
+if [ "$CI_MODE" = true ]; then
+    echo -e "${BLUE}🤖 CI mode enabled — skipping live DB/API checks${NC}"
+fi
 
 # Check if .env exists
 if [ ! -f "$ENV_FILE" ]; then
@@ -123,7 +146,7 @@ elif ! command -v psql &> /dev/null; then
 else
     # Test actual connection to the database
     echo -e "${BLUE}   Connecting to $PG_HOST:$PG_PORT/$PG_DATABASE...${NC}"
-    DB_RESULT=$(PGPASSWORD="$PG_PASSWORD" psql \
+    DB_RESULT=$(PGPASSWORD="$PG_PASSWORD" PGCONNECT_TIMEOUT=5 PGSSLMODE="${PG_SSL:-prefer}" psql \
         -h "$PG_HOST" \
         -p "$PG_PORT" \
         -U "$PG_USER" \
@@ -145,7 +168,9 @@ fi
 
 # ─── Step 5: Live API smoke test (JWT_SECRET match) ─────────────────
 echo -e "${BLUE}📋 Step 5: Production API smoke test${NC}"
-if command -v curl &> /dev/null; then
+if [ "$SKIP_API" = true ]; then
+    echo -e "${YELLOW}⏭️  API check skipped${NC}"
+elif command -v curl &> /dev/null; then
     # Test that /health is reachable
     HEALTH_CODE=$(curl -s -o /dev/null -w "%{http_code}" "https://api.heyslab.ru/health" --connect-timeout 5 2>/dev/null || echo "000")
     if [ "$HEALTH_CODE" == "200" ]; then

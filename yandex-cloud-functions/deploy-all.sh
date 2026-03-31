@@ -1,8 +1,8 @@
 #!/bin/bash
 # 🚀 Centralized Deployment Script for Yandex Cloud Functions
 # Reads secrets from .env file and deploys all functions with consistent configuration
-# Usage: ./deploy-all.sh [function-name] [--skip-checks] [--skip-health]
-# v2.0 — auto health-check after deploy, .env checksum on success
+# Usage: ./deploy-all.sh [function-name] [--skip-checks] [--skip-health] [--ci]
+# v2.1 — adds CI mode for safe predeploy validation in GitHub Actions
 
 set -e  # Exit on error
 
@@ -23,11 +23,13 @@ CHECKSUM_FILE="$SCRIPT_DIR/.env.checksum"
 TARGET_FUNC=""
 SKIP_CHECKS=false
 SKIP_HEALTH=false
+CI_MODE=false
 
 for arg in "$@"; do
     case "$arg" in
         --skip-checks) SKIP_CHECKS=true ;;
         --skip-health) SKIP_HEALTH=true ;;
+        --ci) CI_MODE=true ;;
         -*) echo -e "${RED}Unknown flag: $arg${NC}"; exit 1 ;;
         *) TARGET_FUNC="$arg" ;;
     esac
@@ -46,7 +48,12 @@ if [ "$SKIP_CHECKS" = true ]; then
     echo -e "${YELLOW}⏭️  Skipping .env validation (--skip-checks)${NC}"
 elif [ -f "$VALIDATE_SCRIPT" ]; then
     echo -e "${BLUE}🔍 Running .env validation...${NC}"
-    if ! "$VALIDATE_SCRIPT"; then
+    VALIDATE_ARGS=()
+    if [ "$CI_MODE" = true ]; then
+        VALIDATE_ARGS+=(--ci)
+    fi
+
+    if ! "$VALIDATE_SCRIPT" "${VALIDATE_ARGS[@]}"; then
         echo -e "${RED}❌ .env validation failed! Fix errors before deploying.${NC}"
         echo -e "${YELLOW}💡 Use --skip-checks to bypass (NOT recommended)${NC}"
         exit 1
@@ -69,6 +76,10 @@ done
 
 echo -e "${GREEN}✅ All required variables loaded${NC}"
 echo -e "${BLUE}🔐 PG_PASSWORD: ${PG_PASSWORD:0:4}...${PG_PASSWORD: -4}${NC}"
+
+payments_env_ready() {
+    [ -n "$YUKASSA_SHOP_ID" ] && [ -n "$YUKASSA_SECRET_KEY" ]
+}
 
 # Validate per-function secrets
 validate_function_env() {
@@ -209,6 +220,17 @@ deploy_function() {
 
     # Validate required secrets for this function
     validate_function_env "$func_name"
+
+    if [[ "$func_name" == "heys-api-payments" ]] && ! payments_env_ready; then
+        if [ "$CI_MODE" = true ] && [ -z "$TARGET_FUNC" ]; then
+            echo -e "${YELLOW}⏭️  Skipping $func_name in CI — YUKASSA secrets are not configured${NC}"
+            cd "$SCRIPT_DIR"
+            return 0
+        fi
+
+        echo -e "${RED}❌ ERROR: YUKASSA_SHOP_ID and YUKASSA_SECRET_KEY are required for $func_name${NC}"
+        exit 1
+    fi
     
     # Build environment flags
     env_flags=$(build_env_flags "$func_name")
