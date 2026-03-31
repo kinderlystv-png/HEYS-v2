@@ -273,6 +273,16 @@
     };
   })(Store.get);
   Store.set = function (k, v) {
+    // 🔧 v69 FIX: Блокируем все записи во время switchClient.
+    // Gate flow теперь НЕ меняет currentClientId до завершения switch,
+    // но на случай если другой путь всё же вызовет Store.set — блокируем.
+    if (global.HEYS?.cloud?._switchClientInProgress) {
+      // Разрешаем только служебные ключи
+      if (!/^heys_(clients|client_current|last_client_id)$/i.test(k)) {
+        console.warn('[Store.set] 🛡️ BLOCKED during switchClient:', k);
+        return;
+      }
+    }
     const sk = scoped(k);
     memory.set(sk, v);
     rawSet(sk, v);

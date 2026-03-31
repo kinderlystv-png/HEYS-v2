@@ -18800,25 +18800,47 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                                                     },
                                                     onClick: () => {
                                                         if (c.id !== clientIdValue) {
-                                                            commitPendingUndoBeforeContextChange('client-switch', {
-                                                                fromClientId: clientIdValue,
-                                                                toClientId: c.id,
-                                                            });
-                                                            console.info(`[HEYS.store] 🔄 Выбор клиента: ${c.name} (${c.id.slice(0, 8)}...)`);
-                                                            writeGlobalValue('heys_last_client_id', c.id);
-                                                            writeGlobalValue('heys_client_current', c.id);
-                                                            window.HEYS = window.HEYS || {};
-                                                            window.HEYS.currentClientId = c.id;
-                                                            setClientId(c.id);
-                                                            window.dispatchEvent(new CustomEvent('heys:client-changed', { detail: { clientId: c.id } }));
-
-                                                            if (HEYS.cloud && HEYS.cloud.switchClient) {
-                                                                HEYS.cloud.switchClient(c.id, clientIdValue).catch(err => {
-                                                                    console.error('[HEYS.store] ❌ Ошибка синхронизации клиента:', err);
+                                                            // 🔧 v69 FIX: async switch — НЕ меняем currentClientId до завершения switchClient
+                                                            setTimeout(async () => {
+                                                                commitPendingUndoBeforeContextChange('client-switch', {
+                                                                    fromClientId: clientIdValue,
+                                                                    toClientId: c.id,
                                                                 });
-                                                            } else {
-                                                                U.lsSet('heys_client_current', c.id);
-                                                            }
+
+                                                                const _prevClientId_shell = clientIdValue;
+                                                                console.info(`[HEYS.shell] 🔄 Выбор клиента: ${c.name} (${c.id.slice(0, 8)}...)`);
+
+                                                                // Блокируем запись пока switch не завершится
+                                                                if (HEYS.cloud) {
+                                                                    HEYS.cloud._switchClientInProgress = true;
+                                                                }
+
+                                                                // Уведомляем UI о начале переключения (без смены currentClientId)
+                                                                window.dispatchEvent(new CustomEvent('heys:client-switching', { detail: { clientId: c.id } }));
+
+                                                                if (HEYS.cloud && HEYS.cloud.switchClient) {
+                                                                    try {
+                                                                        await HEYS.cloud.switchClient(c.id, _prevClientId_shell);
+                                                                    } catch (err) {
+                                                                        console.error('[HEYS.shell] ❌ Ошибка sync, retry через 3с:', err);
+                                                                        try {
+                                                                            await new Promise(r => setTimeout(r, 3000));
+                                                                            await HEYS.cloud.switchClient(c.id, _prevClientId_shell);
+                                                                        } catch (err2) {
+                                                                            console.error('[HEYS.shell] ❌ Retry failed:', err2);
+                                                                        }
+                                                                    }
+                                                                }
+
+                                                                // v69: switchClient завершился — безопасно обновляем ID
+                                                                writeGlobalValue('heys_last_client_id', c.id);
+                                                                writeGlobalValue('heys_client_current', c.id);
+                                                                window.HEYS = window.HEYS || {};
+                                                                window.HEYS.currentClientId = c.id;
+                                                                setClientId(c.id);
+                                                                console.info('[HEYS.shell] ✅ Клиент переключён (после sync)', { clientId: c.id });
+                                                                window.dispatchEvent(new CustomEvent('heys:client-changed', { detail: { clientId: c.id } }));
+                                                            }, 0);
                                                         }
                                                         setShowClientDropdown(false);
                                                     }
@@ -19543,6 +19565,181 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
 })();
 
 
+/* ===== heys_client_switch_overlay_v1.js ===== */
+// heys_client_switch_overlay_v1.js — Full-screen overlay during curator client switch
+// Shows progress stages while switchClient() runs under the overlay,
+// so that when overlay fades out, all widgets/tabs already display new client data.
+
+(function () {
+    'use strict';
+    const HEYS = window.HEYS = window.HEYS || {};
+    const React = window.React;
+    if (!React) return;
+
+    const { useState, useEffect, useCallback, useRef } = React;
+
+    // Resolve target client name from localStorage cache
+    function resolveClientName(clientId) {
+        try {
+            const raw = localStorage.getItem('heys_clients');
+            if (!raw) return null;
+            const clients = JSON.parse(raw);
+            if (!Array.isArray(clients)) return null;
+            const c = clients.find(x => x.id === clientId);
+            return c?.name || null;
+        } catch (_) { return null; }
+    }
+
+    const STAGES = [
+        { key: 'saving', label: 'Сохраняю данные…' },
+        { key: 'loading', label: 'Загружаю данные…' },
+        { key: 'done', label: 'Готово' },
+    ];
+
+    // Auto-advance delay from saving → loading (ms).
+    // Real switchClient flushes pending (0-8s) then syncs new (1-5s).
+    // We advance after 2s which roughly matches end-of-flush for typical cases.
+    const SAVING_DURATION = 2000;
+    // How long to keep "Готово" visible before fade-out
+    const DONE_DISPLAY = 500;
+    // Fade-out animation duration (matches CSS)
+    const FADE_OUT = 300;
+
+    function ClientSwitchOverlay() {
+        const [visible, setVisible] = useState(false);
+        const [fadingOut, setFadingOut] = useState(false);
+        const [stageIdx, setStageIdx] = useState(0);
+        const [targetClient, setTargetClient] = useState(null); // { id, name }
+        const timerRef = useRef(null);
+        const switchDoneRef = useRef(false);
+        const activeSwitchRef = useRef(false);
+
+        const cleanup = useCallback(() => {
+            if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null; }
+        }, []);
+
+        // Fade out and hide
+        const fadeOut = useCallback(() => {
+            cleanup();
+            activeSwitchRef.current = false;
+            setFadingOut(true);
+            timerRef.current = setTimeout(() => {
+                setVisible(false);
+                setFadingOut(false);
+                setStageIdx(0);
+                setTargetClient(null);
+                switchDoneRef.current = false;
+            }, FADE_OUT);
+        }, [cleanup]);
+
+        useEffect(() => {
+            // Skip for PIN clients (single-client, no switch possible)
+            const isPinClient = () => HEYS.cloud?.isPinAuthClient?.() === true;
+
+            const onSwitching = (e) => {
+                if (isPinClient()) return;
+                const clientId = e.detail?.clientId;
+                if (!clientId) return;
+
+                const name = resolveClientName(clientId);
+
+                cleanup();
+                activeSwitchRef.current = true;
+                switchDoneRef.current = false;
+                setTargetClient({ id: clientId, name: name || '…' });
+                setStageIdx(0);
+                setFadingOut(false);
+                setVisible(true);
+
+                // Auto-advance saving → loading after SAVING_DURATION
+                timerRef.current = setTimeout(() => {
+                    setStageIdx(1);
+                }, SAVING_DURATION);
+            };
+
+            const onChanged = () => {
+                if (!activeSwitchRef.current) return;
+
+                activeSwitchRef.current = false;
+                switchDoneRef.current = true;
+
+                cleanup();
+                setStageIdx(2); // done
+
+                timerRef.current = setTimeout(() => {
+                    fadeOut();
+                }, DONE_DISPLAY);
+            };
+
+            const onSyncError = () => {
+                if (!activeSwitchRef.current) return;
+                fadeOut();
+            };
+
+            window.addEventListener('heys:client-switching', onSwitching);
+            window.addEventListener('heys:client-changed', onChanged);
+            window.addEventListener('heys:sync-error', onSyncError);
+
+            return () => {
+                window.removeEventListener('heys:client-switching', onSwitching);
+                window.removeEventListener('heys:client-changed', onChanged);
+                window.removeEventListener('heys:sync-error', onSyncError);
+                cleanup();
+            };
+        }, [cleanup, fadeOut]);
+
+        if (!visible) return null;
+
+        const helpers = HEYS.AppClientHelpers || {};
+        const getInitials = helpers.getClientInitials || ((n) => n ? n.slice(0, 2).toUpperCase() : '?');
+        const getColor = helpers.getAvatarColor || (() => 'linear-gradient(135deg, #4285f4 0%, #2563eb 100%)');
+
+        const stage = STAGES[stageIdx] || STAGES[0];
+        const clientName = targetClient?.name || '…';
+
+        return React.createElement(
+            'div',
+            {
+                className: 'cso-backdrop' + (fadingOut ? ' cso-fade-out' : ''),
+                'aria-live': 'polite',
+                role: 'status',
+            },
+            React.createElement('div', { className: 'cso-card' },
+                // Avatar
+                React.createElement('div', {
+                    className: 'cso-avatar',
+                    style: { background: getColor(clientName) },
+                }, getInitials(clientName)),
+
+                // Client name
+                React.createElement('div', { className: 'cso-name' }, clientName),
+
+                // Stage indicator
+                React.createElement('div', { className: 'cso-stage', key: stage.key },
+                    stageIdx < 2
+                        ? React.createElement('span', { className: 'cso-spinner' })
+                        : React.createElement('span', { className: 'cso-check' }, '✓'),
+                    React.createElement('span', { className: 'cso-stage-text' }, stage.label)
+                ),
+
+                // Progress dots
+                React.createElement('div', { className: 'cso-dots' },
+                    STAGES.map((s, i) => React.createElement('span', {
+                        key: s.key,
+                        className: 'cso-dot' + (i <= stageIdx ? ' cso-dot-active' : ''),
+                    }))
+                )
+            )
+        );
+    }
+
+    const MemoOverlay = React.memo(ClientSwitchOverlay);
+    MemoOverlay.displayName = 'ClientSwitchOverlay';
+
+    HEYS.ClientSwitchOverlay = MemoOverlay;
+})();
+
+
 /* ===== heys_app_overlays_v1.js ===== */
 // heys_app_overlays_v1.js — Overlays and banners wrapper
 
@@ -19725,6 +19922,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
             !isConsentBlocking && !isMorningCheckinBlocking && showWhatsNew && HEYS.WhatsNew && React.createElement(HEYS.WhatsNew.WhatsNewModal, {
                 onClose: dismissWhatsNew,
             }),
+            // === Client Switch Overlay (curator only, self-managed via events) ===
+            HEYS.ClientSwitchOverlay && React.createElement(HEYS.ClientSwitchOverlay),
             // === FAB редактирования виджетов (глобальный, показывается на ВСЕХ вкладках в режиме редактирования) ===
             widgetsEditMode && tab !== 'widgets' && React.createElement(
                 'div',
@@ -21022,42 +21221,49 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                                                                     animation: `fadeSlideIn 0.3s ease ${idx * 0.05}s both`
                                                                 },
                                                                 onClick: () => {
-                                                                    setTimeout(() => {
+                                                                    setTimeout(async () => {
                                                                         console.info('[HEYS.gate] 👤 Выбор клиента', { clientId: c.id, clientName: c.name });
 
-                                                                        // 🔧 v65 FIX: Запоминаем старый clientId ДО обновления, чтобы switchClient
-                                                                        // мог детектировать контаминацию при смене пользователя.
+                                                                        // 🔧 v69 FIX: Запоминаем старый clientId ДО обновления
                                                                         const _prevClientId_gate = (window.HEYS?.currentClientId) || '';
-                                                                        // ✅ FIX: Сразу закрываем gate — не ждём syncClient (10-15сек)
-                                                                        // Компоненты покажут скелетоны, heysSyncCompleted перерисует после sync.
-                                                                        // ВАЖНО: сначала обновляем глобальный currentClientId/storage,
-                                                                        // иначе ранние слушатели heys:client-changed читают старого клиента.
+
+                                                                        // 🔧 v69 CRITICAL: НЕ меняем currentClientId до завершения switchClient!
+                                                                        // Иначе React видит нового клиента, а данные в state ещё от старого →
+                                                                        // debounced flush сохраняет старые данные под нового клиента = контаминация.
+                                                                        // Вместо этого: ставим флаг switching, ждём switchClient, потом обновляем ID.
+                                                                        if (HEYS.cloud) {
+                                                                            HEYS.cloud._switchClientInProgress = true;
+                                                                        }
+
+                                                                        // Уведомляем UI, показываем skeleton (без смены currentClientId)
+                                                                        window.dispatchEvent(new CustomEvent('heys:client-switching', { detail: { clientId: c.id } }));
+
+                                                                        if (HEYS.cloud && HEYS.cloud.switchClient) {
+                                                                            try {
+                                                                                await HEYS.cloud.switchClient(c.id, _prevClientId_gate);
+                                                                            } catch (err) {
+                                                                                console.error('[HEYS.gate] ❌ Ошибка sync, retry через 3с:', err);
+                                                                                try {
+                                                                                    await new Promise(r => setTimeout(r, 3000));
+                                                                                    await HEYS.cloud.switchClient(c.id, _prevClientId_gate);
+                                                                                } catch (err2) {
+                                                                                    console.error('[HEYS.gate] ❌ Retry failed:', err2);
+                                                                                    window.dispatchEvent(new CustomEvent('heys:sync-error', {
+                                                                                        detail: { clientId: c.id, error: err2?.message || String(err2) }
+                                                                                    }));
+                                                                                }
+                                                                            }
+                                                                        }
+
+                                                                        // 🔧 v69: Теперь switchClient завершился, данные нового клиента загружены.
+                                                                        // Безопасно обновляем currentClientId и уведомляем React.
                                                                         writeGlobalValue('heys_last_client_id', c.id);
                                                                         writeGlobalValue('heys_client_current', c.id);
                                                                         window.HEYS = window.HEYS || {};
                                                                         window.HEYS.currentClientId = c.id;
                                                                         setClientId(c.id);
-                                                                        console.info('[HEYS.gate] ✅ Клиент переключён', { clientId: c.id });
+                                                                        console.info('[HEYS.gate] ✅ Клиент переключён (после sync)', { clientId: c.id });
                                                                         window.dispatchEvent(new CustomEvent('heys:client-changed', { detail: { clientId: c.id } }));
-
-                                                                        // switchClient в фоне — загружает данные и диспатчит heysSyncCompleted
-                                                                        // 🔧 v63 FIX #6: retry при провале + диспатч ошибки для UI
-                                                                        if (HEYS.cloud && HEYS.cloud.switchClient) {
-                                                                            HEYS.cloud.switchClient(c.id, _prevClientId_gate).catch(err => {
-                                                                                console.error('[HEYS.gate] ❌ Ошибка sync, retry через 3с:', err);
-                                                                                // Одна повторная попытка после 3 секунд (покрывает 502 cold start)
-                                                                                setTimeout(() => {
-                                                                                    HEYS.cloud.switchClient(c.id, _prevClientId_gate).catch(err2 => {
-                                                                                        console.error('[HEYS.gate] ❌ Retry failed:', err2);
-                                                                                        window.dispatchEvent(new CustomEvent('heys:sync-error', {
-                                                                                            detail: { clientId: c.id, error: err2?.message || String(err2) }
-                                                                                        }));
-                                                                                    });
-                                                                                }, 3000);
-                                                                            });
-                                                                        } else {
-                                                                            U.lsSet('heys_client_current', c.id);
-                                                                        }
                                                                     }, 0);
                                                                 }
                                                             },
@@ -24565,6 +24771,10 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
         UserTabWithCloudSync,
     }) {
         return {
+            // 🔧 v69: Force remount of AppShell on client switch.
+            // Иначе внутренние useState/useMemo в DayTab/AppHeader могут на один кадр
+            // показать данные предыдущего клиента до того, как hydration дочитает новый localStorage.
+            key: 'app-shell-' + (clientId || 'none'),
             hideContent: (isConsentBlocking || isMorningCheckinBlocking || !clientId),
             clientId,
             clientIdValue: clientId,

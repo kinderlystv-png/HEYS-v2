@@ -154,6 +154,48 @@
     return !!leadingClientId && leadingClientId !== clientId;
   }
 
+  function isSensitiveSessionStorageKey(key) {
+    if (typeof key !== 'string' || !key) return false;
+    if (key.indexOf('sb-') === 0) return true;
+
+    const normalizedKey = stripClientScopePrefixes(key).key;
+    return normalizedKey === 'heys_supabase_auth_token'
+      || normalizedKey === 'heys_pin_auth_client'
+      || normalizedKey === 'heys_curator_session'
+      || normalizedKey === 'heys_session_token';
+  }
+
+  function extractProfileBasics(value) {
+    if (value == null) return null;
+
+    let candidate = value;
+    if (typeof candidate === 'string') {
+      try {
+        candidate = tryParse(candidate);
+      } catch (_) { }
+    }
+    if (typeof candidate === 'string') {
+      try {
+        candidate = JSON.parse(candidate);
+      } catch (_) {
+        return null;
+      }
+    }
+
+    if (!candidate || typeof candidate !== 'object' || Array.isArray(candidate)) {
+      return null;
+    }
+
+    const weight = Number(candidate.weight);
+    const height = Number(candidate.height);
+    const gender = typeof candidate.gender === 'string' ? candidate.gender : '';
+    if (!Number.isFinite(weight) || !Number.isFinite(height) || !gender) {
+      return null;
+    }
+
+    return { w: weight, h: height, g: gender };
+  }
+
   // ═══════════════════════════════════════════════════════════════════
   // 🛡️ WRITE-TIME CLIENT ISOLATION GUARD (P2 hardening)
   // Last-resort assertion: reject localStorage writes for foreign clients.
@@ -201,8 +243,7 @@
       if (!k || !k.startsWith('heys_')) continue;
 
       // Skip global keys
-      if (k === 'heys_client_current' || k.startsWith('heys_supabase_') ||
-        k.startsWith('heys_pin_') || k === 'heys_session_token') continue;
+      if (k === 'heys_client_current' || isSensitiveSessionStorageKey(k)) continue;
 
       if (k.startsWith(newPrefix)) {
         if (k.includes('dayv2_')) newClientDays++;
@@ -252,7 +293,8 @@
     return {
       foreign: new Set(),
       doubleScoped: new Set(),
-      quoted: new Set()
+      quoted: new Set(),
+      sensitive: new Set()
     };
   }
 
@@ -266,7 +308,8 @@
     return Array.from(new Set([
       ...Array.from(collector.foreign || []),
       ...Array.from(collector.doubleScoped || []),
-      ...Array.from(collector.quoted || [])
+      ...Array.from(collector.quoted || []),
+      ...Array.from(collector.sensitive || [])
     ].filter(Boolean)));
   }
 
@@ -275,13 +318,14 @@
     const foreignCount = collector.foreign?.size || 0;
     const doubleScopedCount = collector.doubleScoped?.size || 0;
     const quotedCount = collector.quoted?.size || 0;
-    const total = foreignCount + doubleScopedCount + quotedCount;
+    const sensitiveCount = collector.sensitive?.size || 0;
+    const total = foreignCount + doubleScopedCount + quotedCount + sensitiveCount;
     if (!total) return 0;
 
     const sample = getCloudGarbageKeys(collector).slice(0, 4).join(', ');
     logCritical(
       `🧹 [CLOUD GARBAGE] ${source}: client=${clientId.slice(0, 8)} ` +
-      `foreign=${foreignCount} double=${doubleScopedCount} quoted=${quotedCount}` +
+      `foreign=${foreignCount} double=${doubleScopedCount} quoted=${quotedCount} sensitive=${sensitiveCount}` +
       (sample ? ` | sample=${sample}` : '')
     );
     return total;
@@ -2841,8 +2885,7 @@
 
     // 🔒 Никогда не трогаем auth-сессию Supabase
     // Иначе bootstrapSync/clearNamespace удалит токен и пользователь «вылетит» сразу после входа.
-    if (k === 'heys_supabase_auth_token') return false;
-    if (k.indexOf('sb-') === 0) return false;
+    if (isSensitiveSessionStorageKey(k)) return false;
 
     // 🧪 A/B тестирование и локальная аналитика — НЕ синхронизировать в облако
     if (k.indexOf('heys_ab_') === 0) return false;
@@ -2937,6 +2980,9 @@
   // Причина: при записи Supabase session эти ключи могут вызвать _useSession/__loadSession
   // и привести к refresh_token 400 (RTR), а также это чувствительные данные.
   const AUTH_STORAGE_KEYS_TO_SKIP = new Set([
+    'heys_curator_session',
+    'heys_pin_auth_client',
+    'heys_session_token',
     'heys_supabase_auth_token',
     'sb-ukqolcziqcuplqfgrmsh-auth-token'
   ]);
@@ -2958,8 +3004,7 @@
         // 🔒 Никогда не зеркалим ключи авторизации (и любые sb-* ключи)
         try {
           const keyStr = String(k || '');
-          const lower = keyStr.toLowerCase();
-          if (AUTH_STORAGE_KEYS_TO_SKIP.has(keyStr) || lower.startsWith('sb-')) {
+          if (AUTH_STORAGE_KEYS_TO_SKIP.has(keyStr) || isSensitiveSessionStorageKey(keyStr)) {
             return;
           }
         } catch (_) { }
@@ -4297,6 +4342,10 @@
             recordCloudGarbageCandidate(_cloudGarbage, 'foreign', row.k);
             return;
           }
+          if (isSensitiveSessionStorageKey(row?.k)) {
+            recordCloudGarbageCandidate(_cloudGarbage, 'sensitive', row.k);
+            return;
+          }
           const localKey = `heys_${clientId}_${row.k.replace(/^heys_/, '')}`;
 
           // 🔧 FIX 2025-12-26: Декомпрессия данных из cloud
@@ -5161,6 +5210,10 @@
           const lightSyncedKeys = [];
           (data || []).forEach(row => {
             try {
+              if (isSensitiveSessionStorageKey(row?.k)) {
+                recordCloudGarbageCandidate(lightCloudGarbage, 'sensitive', row.k);
+                return;
+              }
               const key = scopeKeyForClientStorage(row.k, client_id);
               if (isForeignClientScopedKey(key, client_id)) {
                 recordCloudGarbageCandidate(lightCloudGarbage, 'foreign', row.k);
@@ -5302,6 +5355,10 @@
         const fullSyncCloudGarbage = createCloudGarbageCollector();
 
         (data || []).forEach(row => {
+          if (isSensitiveSessionStorageKey(row?.k)) {
+            recordCloudGarbageCandidate(fullSyncCloudGarbage, 'sensitive', row.k);
+            return;
+          }
           let key = scopeKeyForClientStorage(row.k, client_id);
 
           if (isForeignClientScopedKey(key, client_id)) {
@@ -6619,6 +6676,8 @@
 
         const syncDuration = Math.round(performance.now() - syncStartTime);
 
+        try { cleanupDuplicateKeys(); } catch (_) { }
+
         // ── [HEYS.sinhron] ИТОГ: состояние dayv2 в localStorage ПОСЛЕ синхронизации ──
         {
           const postSyncDayKeys = [];
@@ -7486,12 +7545,25 @@
       return;
     }
 
+    if (cloud._switchClientInProgress) {
+      // 🔧 v69 FIX: Полная блокировка ВСЕХ cloud-записей во время switch.
+      // Gate flow теперь ждёт завершения switchClient перед обновлением currentClientId,
+      // поэтому любая запись во время switch — это либо stale debounce от старого клиента,
+      // либо race condition. Безопаснее заблокировать всё.
+      logCritical(`🛡️ [SAVE BLOCKED] switchClient in progress — blocking ALL saves. key='${k}' target='${(client_id || '').slice(0, 8)}'`);
+      return;
+    }
+
     if (isForeignClientScopedKey(k, client_id)) {
       logCritical(`🛡️ [SAVE BLOCKED] Foreign scoped key does not match target client: key='${k}' target='${client_id}'`);
       return;
     }
 
     if (isLocalOnlyStorageKey(k)) {
+      return;
+    }
+
+    if (isSensitiveSessionStorageKey(k)) {
       return;
     }
 
@@ -7922,6 +7994,7 @@
     if (!user || !k) return;
 
     if (isLocalOnlyStorageKey(k)) return;
+    if (isSensitiveSessionStorageKey(k)) return;
 
     // 🛡️ GRACE PERIOD v3: Skip re-upload of data just downloaded from cloud
     const _skGrace = cloud._syncCompletedAt ? (Date.now() - cloud._syncCompletedAt) : Infinity;
@@ -8108,8 +8181,9 @@
   }
 
   function canRunForegroundAutoSync(clientId) {
-    if (isHotSyncDisabled()) return false;
-    if (!clientId) return false;
+    if (isHotSyncDisabled()) { console.info('[HEYS.sync] 🔇 hot-sync disabled via flag'); return false; }
+    if (!clientId) { console.info('[HEYS.sync] 🔇 hot-sync skip: no clientId'); return false; }
+    if (cloud._switchClientInProgress) { console.info('[HEYS.sync] 🔇 hot-sync skip: switchClient in progress'); return false; }
     if (!navigator.onLine) return false;
     if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return false;
     const isPinAuth = _pinAuthClientId && _pinAuthClientId === clientId;
@@ -8150,17 +8224,17 @@
 
   function getScopedClientStorageKey(clientId, baseKey) {
     if (!baseKey) return baseKey;
-    if (baseKey.includes(clientId)) return baseKey;
-    if (baseKey.startsWith('heys_')) {
-      return `heys_${clientId}_${baseKey.slice('heys_'.length)}`;
-    }
-    return `heys_${clientId}_${baseKey}`;
+    const normalized = scopeKeyForClientStorage(baseKey, clientId);
+    if (isForeignClientScopedKey(normalized, clientId)) return null;
+    return normalized;
   }
 
   function applyForegroundHotSyncValue(clientId, baseKey, value, source = 'foreground-hot-sync') {
     if (!clientId || !baseKey || value == null) return false;
+    if (isSensitiveSessionStorageKey(baseKey)) return false;
 
     const scopedKey = getScopedClientStorageKey(clientId, baseKey);
+    if (!scopedKey) return false;
     let serialized = null;
     try {
       serialized = JSON.stringify(value);
@@ -8169,6 +8243,7 @@
     }
 
     try {
+      if (!assertSyncWriteOwnership(scopedKey, clientId, source)) return false;
       const currentRaw = global.localStorage.getItem(scopedKey);
       if (currentRaw === serialized) return false;
 
@@ -8444,7 +8519,10 @@
   async function requestForegroundAutoSync(reason, options = {}) {
     const clientId = options.clientId || getForegroundAutoSyncClientId();
     if (!canRunForegroundAutoSync(clientId)) return false;
-    if (foregroundAutoSyncInFlight) return false;
+    if (foregroundAutoSyncInFlight) {
+      console.info('[HEYS.sync] 🔇 hot-sync skip: in-flight');
+      return false;
+    }
 
     const now = Date.now();
     const minGapMs = Number.isFinite(options.minGapMs) ? options.minGapMs : FOREGROUND_AUTO_SYNC_MIN_GAP_MS;
@@ -8515,6 +8593,7 @@
     if (foregroundAutoSyncTimer) return;
     if (isHotSyncDisabled()) return;
     if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
+    console.info('[HEYS.sync] 🔄 Hot-sync loop started (interval', FOREGROUND_AUTO_SYNC_INTERVAL_MS, 'ms)');
 
     foregroundAutoSyncTimer = setInterval(() => {
       requestForegroundAutoSync('visible-interval', {
@@ -8773,43 +8852,45 @@
       }
     }
 
-    // 2. Сохраняем новый clientId ДО синхронизации (иначе bootstrapClientSync может пропустить)
-    //    Но не очищаем старые данные, пока не убедимся что sync прошёл успешно.
-    global.localStorage.setItem('heys_client_current', JSON.stringify(newClientId));
-
-    // NB: HEYS.currentClientId уже установлен вызывающим кодом (shell/gateFlow)
-    // ДО switchClient. Store.flushMemory() делаем только ПОСЛЕ sync + cleanup,
-    // иначе React-компоненты (уже перерисовавшиеся) читают пустой кэш.
-
-    // 🔧 v68 FIX: НЕ удаляем last_sync_ts — delta fast-path позволяет быстро
-    // подгрузить только изменённые записи вместо полного sync 250+ ключей.
-    // forceSync: true уже обеспечивает перезапись local данных из cloud.
-    // initialSyncCompleted НЕ сбрасываем — избегаем cascade dots на каждом switch.
-
     // 🔧 v67 FIX: Lightweight profile basics capture for post-sync contamination check.
-    // If after sync the new client's profile matches the old client's biometrics,
-    // it's contaminated cloud data from the old adoption bug.
+    // Берём только scoped профиль старого клиента, иначе при ранней смене
+    // heys_client_current можно случайно прочитать глобальный payload уже нового клиента.
     let _oldProfileBasics = null;
     if (oldClientId && oldClientId !== newClientId) {
       try {
-        // Try scoped key first, then unscoped fallback (profile may be stored either way)
-        const _opRaw = global.localStorage.getItem('heys_' + oldClientId + '_profile')
-          || global.localStorage.getItem('heys_profile');
+        const _opRaw = global.localStorage.getItem('heys_' + oldClientId + '_profile');
         if (_opRaw) {
-          let _op = tryParse(_opRaw);
-          // Guard: if tryParse returned a string (double-stringified), parse once more
-          if (typeof _op === 'string') { try { _op = JSON.parse(_op); } catch (_) { _op = null; } }
-          if (_op && _op.weight && _op.height && _op.gender) {
-            _oldProfileBasics = { w: Number(_op.weight), h: Number(_op.height), g: String(_op.gender) };
+          const _parsedBasics = extractProfileBasics(_opRaw);
+          if (_parsedBasics) {
+            _oldProfileBasics = _parsedBasics;
             logCritical('🔍 [SWITCH] Captured old profile: ' + _oldProfileBasics.g + ' ' + _oldProfileBasics.w + 'кг ' + _oldProfileBasics.h + 'см');
           } else {
-            logCritical('🔍 [SWITCH] Old profile found but missing w/h/g: ' + (typeof _op) + ' keys=' + (_op ? Object.keys(_op).join(',') : 'null'));
+            let _op = tryParse(_opRaw);
+            if (typeof _op === 'string') { try { _op = JSON.parse(_op); } catch (_) { _op = null; } }
+            logCritical('🔍 [SWITCH] Old profile found but missing w/h/g: ' + (typeof _op) + ' keys=' + (_op && typeof _op === 'object' ? Object.keys(_op).join(',') : 'null'));
           }
         } else {
           logCritical('🔍 [SWITCH] Old profile NOT found in localStorage (scoped=' + ('heys_' + oldClientId + '_profile') + ')');
         }
       } catch (_) { logCritical('🔍 [SWITCH] Old profile capture error: ' + _); }
     }
+
+    // 2. Сохраняем новый clientId ДО синхронизации (иначе bootstrapClientSync может пропустить)
+    //    Но не очищаем старые данные, пока не убедимся что sync прошёл успешно.
+    global.localStorage.setItem('heys_client_current', JSON.stringify(newClientId));
+
+    // 🔧 v69 FIX: Устанавливаем currentClientId внутри switchClient.
+    // Gate flow теперь НЕ меняет его до завершения switchClient, чтобы не было race condition.
+    // Но scoped storage (Store.get/set, nsKey) нуждается в актуальном currentClientId
+    // для корректной записи данных нового клиента.
+    if (global.HEYS) {
+      global.HEYS.currentClientId = newClientId;
+    }
+
+    // 🔧 v68 FIX: НЕ удаляем last_sync_ts — delta fast-path позволяет быстро
+    // подгрузить только изменённые записи вместо полного sync 250+ ключей.
+    // forceSync: true уже обеспечивает перезапись local данных из cloud.
+    // initialSyncCompleted НЕ сбрасываем — избегаем cascade dots на каждом switch.
 
     // 3. Синхронизируем данные нового клиента из облака
     log('📥 Загружаем данные нового клиента...');
@@ -8878,7 +8959,7 @@
         const keysToRemove = [];
         for (let i = 0; i < global.localStorage.length; i++) {
           const key = global.localStorage.key(i);
-          if (key && key.includes(oldClientId) && !key.includes('_auth')) {
+          if (key && key.includes(oldClientId)) {
             // Не удаляем глобальные ключи
             if (!key.includes('heys_client_current') && !key.includes('heys_user')) {
               keysToRemove.push(key);
@@ -8891,6 +8972,23 @@
 
       // Также удаляем дубликаты и данные других клиентов
       cleanupDuplicateKeys();
+
+      // 🔧 v69 FIX: Purge pending upsert queue от записей чужих клиентов.
+      // Если flush timeout не успел вытолкнуть данные старого клиента,
+      // они остаются в очереди и уйдут под контекстом нового клиента.
+      if (clientUpsertQueue && clientUpsertQueue.length > 0) {
+        const beforeLen = clientUpsertQueue.length;
+        for (let qi = clientUpsertQueue.length - 1; qi >= 0; qi--) {
+          const item = clientUpsertQueue[qi];
+          if (item && item.client_id && item.client_id !== newClientId) {
+            clientUpsertQueue.splice(qi, 1);
+          }
+        }
+        const purged = beforeLen - clientUpsertQueue.length;
+        if (purged > 0) {
+          logCritical(`🧹 [SWITCH] Purged ${purged} stale items from pending queue (old client)`);
+        }
+      }
 
       // Удаляем продукты ВСЕХ других клиентов (не только старого)
       const otherProductKeys = [];
@@ -8936,10 +9034,11 @@
         }
         logCritical(`📊 [SWITCH ИТОГ] dayv2: new=${_dNewCount} old=${_dOldCount} other=${_dOtherCount} | profile: ${_profInfo} | currentClientId=${(global.HEYS?.currentClientId || '').substring(0, 8)}`);
 
-        // 🔧 v67 FIX: Profile contamination check — if new client's profile
-        // has the exact same weight+height+gender as the old client, the cloud
-        // data was contaminated by the old adoption bug. Remove it so UI shows
-        // empty profile instead of wrong biometrics → wrong norms → wrong cascade.
+        // 🔧 v67 FIX: Profile contamination diagnostics.
+        // NOTE: automatic deletion turned out to be too risky: two clients can
+        // temporarily have the same profile payload (historical contamination or
+        // genuinely similar data), and local code cannot reliably determine which
+        // profile is canonical. Keep the profile intact and only log suspicion.
         if (_oldProfileBasics && _profRaw) {
           try {
             let _np = tryParse(_profRaw);
@@ -8950,16 +9049,8 @@
               _nw === _oldProfileBasics.w &&
               _nh === _oldProfileBasics.h &&
               _ng === _oldProfileBasics.g) {
-              logCritical('🐛 [CONTAMINATION] Профиль нового клиента совпадает со старым (' + _oldProfileBasics.g + ' ' + _oldProfileBasics.w + 'кг ' + _oldProfileBasics.h + 'см). Удаляю контаминированный профиль + нормы.');
-              global.localStorage.removeItem(_profKey);
-              // Also remove unscoped profile key if it exists
-              try { global.localStorage.removeItem('heys_profile'); } catch (_) { }
-              ['_norms', '_checkin_history'].forEach(s => {
-                try { global.localStorage.removeItem('heys_' + newClientId + s); } catch (_) { }
-              });
-              _profInfo += ' → УДАЛЁН (контаминация)';
-              // Flush memory so React reads empty profile
-              if (global.HEYS?.store?.flushMemory) global.HEYS.store.flushMemory();
+              logCritical('⚠️ [CONTAMINATION] Профиль нового клиента совпадает со старым (' + _oldProfileBasics.g + ' ' + _oldProfileBasics.w + 'кг ' + _oldProfileBasics.h + 'см). Авто-удаление отключено: сохраняем профиль и только логируем подозрительное совпадение, чтобы избежать ложных срабатываний.');
+              _profInfo += ' → ПОДОЗРИТЕЛЬНОЕ СОВПАДЕНИЕ (без авто-удаления)';
             }
           } catch (_e) { logCritical('🔍 [CONTAM CHECK] error: ' + _e); }
         } else {

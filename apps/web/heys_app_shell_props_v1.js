@@ -50,6 +50,10 @@
         UserTabWithCloudSync,
     }) {
         return {
+            // 🔧 v69: Force remount of AppShell on client switch.
+            // Иначе внутренние useState/useMemo в DayTab/AppHeader могут на один кадр
+            // показать данные предыдущего клиента до того, как hydration дочитает новый localStorage.
+            key: 'app-shell-' + (clientId || 'none'),
             hideContent: (isConsentBlocking || isMorningCheckinBlocking || !clientId),
             clientId,
             clientIdValue: clientId,

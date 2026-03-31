@@ -1072,25 +1072,47 @@
                                                     },
                                                     onClick: () => {
                                                         if (c.id !== clientIdValue) {
-                                                            commitPendingUndoBeforeContextChange('client-switch', {
-                                                                fromClientId: clientIdValue,
-                                                                toClientId: c.id,
-                                                            });
-                                                            console.info(`[HEYS.store] 🔄 Выбор клиента: ${c.name} (${c.id.slice(0, 8)}...)`);
-                                                            writeGlobalValue('heys_last_client_id', c.id);
-                                                            writeGlobalValue('heys_client_current', c.id);
-                                                            window.HEYS = window.HEYS || {};
-                                                            window.HEYS.currentClientId = c.id;
-                                                            setClientId(c.id);
-                                                            window.dispatchEvent(new CustomEvent('heys:client-changed', { detail: { clientId: c.id } }));
-
-                                                            if (HEYS.cloud && HEYS.cloud.switchClient) {
-                                                                HEYS.cloud.switchClient(c.id, clientIdValue).catch(err => {
-                                                                    console.error('[HEYS.store] ❌ Ошибка синхронизации клиента:', err);
+                                                            // 🔧 v69 FIX: async switch — НЕ меняем currentClientId до завершения switchClient
+                                                            setTimeout(async () => {
+                                                                commitPendingUndoBeforeContextChange('client-switch', {
+                                                                    fromClientId: clientIdValue,
+                                                                    toClientId: c.id,
                                                                 });
-                                                            } else {
-                                                                U.lsSet('heys_client_current', c.id);
-                                                            }
+
+                                                                const _prevClientId_shell = clientIdValue;
+                                                                console.info(`[HEYS.shell] 🔄 Выбор клиента: ${c.name} (${c.id.slice(0, 8)}...)`);
+
+                                                                // Блокируем запись пока switch не завершится
+                                                                if (HEYS.cloud) {
+                                                                    HEYS.cloud._switchClientInProgress = true;
+                                                                }
+
+                                                                // Уведомляем UI о начале переключения (без смены currentClientId)
+                                                                window.dispatchEvent(new CustomEvent('heys:client-switching', { detail: { clientId: c.id } }));
+
+                                                                if (HEYS.cloud && HEYS.cloud.switchClient) {
+                                                                    try {
+                                                                        await HEYS.cloud.switchClient(c.id, _prevClientId_shell);
+                                                                    } catch (err) {
+                                                                        console.error('[HEYS.shell] ❌ Ошибка sync, retry через 3с:', err);
+                                                                        try {
+                                                                            await new Promise(r => setTimeout(r, 3000));
+                                                                            await HEYS.cloud.switchClient(c.id, _prevClientId_shell);
+                                                                        } catch (err2) {
+                                                                            console.error('[HEYS.shell] ❌ Retry failed:', err2);
+                                                                        }
+                                                                    }
+                                                                }
+
+                                                                // v69: switchClient завершился — безопасно обновляем ID
+                                                                writeGlobalValue('heys_last_client_id', c.id);
+                                                                writeGlobalValue('heys_client_current', c.id);
+                                                                window.HEYS = window.HEYS || {};
+                                                                window.HEYS.currentClientId = c.id;
+                                                                setClientId(c.id);
+                                                                console.info('[HEYS.shell] ✅ Клиент переключён (после sync)', { clientId: c.id });
+                                                                window.dispatchEvent(new CustomEvent('heys:client-changed', { detail: { clientId: c.id } }));
+                                                            }, 0);
                                                         }
                                                         setShowClientDropdown(false);
                                                     }

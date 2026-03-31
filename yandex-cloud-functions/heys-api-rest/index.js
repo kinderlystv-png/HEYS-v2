@@ -63,6 +63,7 @@ const ALLOWED_TABLES = [
   'shared_products_blocklist', // Blocklist куратора (read-only)
   'shared_products_pending',   // Pending products для модерации куратором (PATCH/DELETE)
   'client_kv_store',           // KV store для данных клиентов (куратор sync)
+  'client_change_markers',     // Change markers для hot-sync (куратор read-only)
   // ❌ shared_products_public — REMOVED: VIEW uses auth.uid() which doesn't exist in YC
   // ❌ clients — removed (PII: phone_normalized, managed via /auth/clients)
   // ❌ kv_store — removed (writes via RPC only)
@@ -100,6 +101,8 @@ const ALLOWED_COLUMNS = {
   ],
   // client_kv_store (table) — KV storage для данных клиентов (куратор sync)
   client_kv_store: ['user_id', 'client_id', 'k', 'v', 'updated_at'],
+  // client_change_markers — hot-sync change detection (read-only)
+  client_change_markers: ['client_id', 'scope', 'changed_at'],
   // ❌ shared_products_public — REMOVED: VIEW uses auth.uid() which doesn't exist in YC
   // ❌ clients, kv_store, shared_products_pending, consents — removed
 };

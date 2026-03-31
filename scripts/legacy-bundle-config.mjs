@@ -120,6 +120,7 @@ export const LEGACY_BUNDLES = {
         'heys_leaderboard_v1.js',
         'heys_leaderboard_section_v1.js',
         'heys_app_shell_v1.js',
+        'heys_client_switch_overlay_v1.js',
         'heys_app_overlays_v1.js',
         'heys_app_gate_flow_v1.js',
         'heys_app_backup_v1.js',

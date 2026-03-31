@@ -179,6 +179,8 @@
             !isConsentBlocking && !isMorningCheckinBlocking && showWhatsNew && HEYS.WhatsNew && React.createElement(HEYS.WhatsNew.WhatsNewModal, {
                 onClose: dismissWhatsNew,
             }),
+            // === Client Switch Overlay (curator only, self-managed via events) ===
+            HEYS.ClientSwitchOverlay && React.createElement(HEYS.ClientSwitchOverlay),
             // === FAB редактирования виджетов (глобальный, показывается на ВСЕХ вкладках в режиме редактирования) ===
             widgetsEditMode && tab !== 'widgets' && React.createElement(
                 'div',

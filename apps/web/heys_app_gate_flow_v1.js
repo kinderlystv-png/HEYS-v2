@@ -1267,42 +1267,49 @@
                                                                     animation: `fadeSlideIn 0.3s ease ${idx * 0.05}s both`
                                                                 },
                                                                 onClick: () => {
-                                                                    setTimeout(() => {
+                                                                    setTimeout(async () => {
                                                                         console.info('[HEYS.gate] 👤 Выбор клиента', { clientId: c.id, clientName: c.name });
 
-                                                                        // 🔧 v65 FIX: Запоминаем старый clientId ДО обновления, чтобы switchClient
-                                                                        // мог детектировать контаминацию при смене пользователя.
+                                                                        // 🔧 v69 FIX: Запоминаем старый clientId ДО обновления
                                                                         const _prevClientId_gate = (window.HEYS?.currentClientId) || '';
-                                                                        // ✅ FIX: Сразу закрываем gate — не ждём syncClient (10-15сек)
-                                                                        // Компоненты покажут скелетоны, heysSyncCompleted перерисует после sync.
-                                                                        // ВАЖНО: сначала обновляем глобальный currentClientId/storage,
-                                                                        // иначе ранние слушатели heys:client-changed читают старого клиента.
+
+                                                                        // 🔧 v69 CRITICAL: НЕ меняем currentClientId до завершения switchClient!
+                                                                        // Иначе React видит нового клиента, а данные в state ещё от старого →
+                                                                        // debounced flush сохраняет старые данные под нового клиента = контаминация.
+                                                                        // Вместо этого: ставим флаг switching, ждём switchClient, потом обновляем ID.
+                                                                        if (HEYS.cloud) {
+                                                                            HEYS.cloud._switchClientInProgress = true;
+                                                                        }
+
+                                                                        // Уведомляем UI, показываем skeleton (без смены currentClientId)
+                                                                        window.dispatchEvent(new CustomEvent('heys:client-switching', { detail: { clientId: c.id } }));
+
+                                                                        if (HEYS.cloud && HEYS.cloud.switchClient) {
+                                                                            try {
+                                                                                await HEYS.cloud.switchClient(c.id, _prevClientId_gate);
+                                                                            } catch (err) {
+                                                                                console.error('[HEYS.gate] ❌ Ошибка sync, retry через 3с:', err);
+                                                                                try {
+                                                                                    await new Promise(r => setTimeout(r, 3000));
+                                                                                    await HEYS.cloud.switchClient(c.id, _prevClientId_gate);
+                                                                                } catch (err2) {
+                                                                                    console.error('[HEYS.gate] ❌ Retry failed:', err2);
+                                                                                    window.dispatchEvent(new CustomEvent('heys:sync-error', {
+                                                                                        detail: { clientId: c.id, error: err2?.message || String(err2) }
+                                                                                    }));
+                                                                                }
+                                                                            }
+                                                                        }
+
+                                                                        // 🔧 v69: Теперь switchClient завершился, данные нового клиента загружены.
+                                                                        // Безопасно обновляем currentClientId и уведомляем React.
                                                                         writeGlobalValue('heys_last_client_id', c.id);
                                                                         writeGlobalValue('heys_client_current', c.id);
                                                                         window.HEYS = window.HEYS || {};
                                                                         window.HEYS.currentClientId = c.id;
                                                                         setClientId(c.id);
-                                                                        console.info('[HEYS.gate] ✅ Клиент переключён', { clientId: c.id });
+                                                                        console.info('[HEYS.gate] ✅ Клиент переключён (после sync)', { clientId: c.id });
                                                                         window.dispatchEvent(new CustomEvent('heys:client-changed', { detail: { clientId: c.id } }));
-
-                                                                        // switchClient в фоне — загружает данные и диспатчит heysSyncCompleted
-                                                                        // 🔧 v63 FIX #6: retry при провале + диспатч ошибки для UI
-                                                                        if (HEYS.cloud && HEYS.cloud.switchClient) {
-                                                                            HEYS.cloud.switchClient(c.id, _prevClientId_gate).catch(err => {
-                                                                                console.error('[HEYS.gate] ❌ Ошибка sync, retry через 3с:', err);
-                                                                                // Одна повторная попытка после 3 секунд (покрывает 502 cold start)
-                                                                                setTimeout(() => {
-                                                                                    HEYS.cloud.switchClient(c.id, _prevClientId_gate).catch(err2 => {
-                                                                                        console.error('[HEYS.gate] ❌ Retry failed:', err2);
-                                                                                        window.dispatchEvent(new CustomEvent('heys:sync-error', {
-                                                                                            detail: { clientId: c.id, error: err2?.message || String(err2) }
-                                                                                        }));
-                                                                                    });
-                                                                                }, 3000);
-                                                                            });
-                                                                        } else {
-                                                                            U.lsSet('heys_client_current', c.id);
-                                                                        }
                                                                     }, 0);
                                                                 }
                                                             },
