@@ -6,11 +6,19 @@
 // Boot-бандлы (*.bundle.{hash}.js) кэшируются автоматически через cache-first
 // при первом запросе — хеш в имени обеспечивает вечный кэш без ручного precache.
 
-const CACHE_VERSION = 'heys-1774955586656';
+const CACHE_VERSION = 'heys-1774986561765';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const DYNAMIC_CACHE = `${CACHE_VERSION}-dynamic`;
 const META_CACHE = 'heys-meta';
 const BUILD_VERSION_META_KEY = '/__build_version__';
+const BOOT_FAILURE_COUNT_META_KEY = '/__boot_failure_count__';
+const BOOT_FAILURE_TS_META_KEY = '/__boot_failure_ts__';
+const BOOT_FAILURE_REASON_META_KEY = '/__boot_failure_reason__';
+const BOOT_FAILURE_RESET_WINDOW_MS = 10 * 60 * 1000;
+// App делает 2 тихих reload перед recovery UI.
+// Чистим кэши уже на 2-м подряд BOOT_FAILURE, чтобы второй auto-reload
+// получил свежие ассеты и по возможности не дошёл до fullscreen recovery.
+const BOOT_FAILURE_PURGE_THRESHOLD = 2;
 let updateRequiredNotified = false;
 
 // Ресурсы для предварительного кэширования (App Shell — минимальный набор)
@@ -586,6 +594,131 @@ async function processSyncQueue() {
   }
 }
 
+async function getMetaText(key) {
+  const cache = await caches.open(META_CACHE);
+  const response = await cache.match(key);
+  if (!response) return null;
+  return response.text();
+}
+
+async function setMetaText(key, value) {
+  const cache = await caches.open(META_CACHE);
+  await cache.put(
+    key,
+    new Response(String(value), { headers: { 'content-type': 'text/plain' } })
+  );
+}
+
+async function deleteMetaKeys(keys) {
+  const cache = await caches.open(META_CACHE);
+  await Promise.all(keys.map(key => cache.delete(key)));
+}
+
+async function getBootFailureState() {
+  const count = parseInt(await getMetaText(BOOT_FAILURE_COUNT_META_KEY) || '0', 10) || 0;
+  const lastTs = parseInt(await getMetaText(BOOT_FAILURE_TS_META_KEY) || '0', 10) || 0;
+  const lastReason = await getMetaText(BOOT_FAILURE_REASON_META_KEY) || '';
+  return { count, lastTs, lastReason };
+}
+
+async function resetBootFailureState() {
+  await deleteMetaKeys([
+    BOOT_FAILURE_COUNT_META_KEY,
+    BOOT_FAILURE_TS_META_KEY,
+    BOOT_FAILURE_REASON_META_KEY,
+  ]);
+}
+
+function getBootFailureReason(data) {
+  if (!data || typeof data !== 'object') return 'unknown';
+  if (typeof data.reason === 'string' && data.reason) return data.reason.slice(0, 300);
+  if (data.error && typeof data.error.message === 'string' && data.error.message) {
+    return data.error.message.slice(0, 300);
+  }
+  return 'unknown';
+}
+
+async function rePrecacheCssFiles(logPrefix) {
+  const cssUrls = PRECACHE_URLS.filter(url => url.endsWith('.css'));
+  const cache = await caches.open(STATIC_CACHE);
+  await Promise.allSettled(
+    cssUrls.map(url =>
+      Promise.race([
+        cache.add(url),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Timeout')), 5000)
+        )
+      ]).catch(err => {
+        console.warn(logPrefix + ' CSS cache skip:', url, err.message);
+      })
+    )
+  );
+  console.log(logPrefix + ' CSS re-precached (' + cssUrls.length + ' files)');
+}
+
+async function purgeHeysCaches(options = {}) {
+  const keepMetaCache = options.keepMetaCache !== false;
+  const cacheNames = await caches.keys();
+  const targets = cacheNames.filter(name => name.startsWith('heys-') && (!keepMetaCache || name !== META_CACHE));
+  await Promise.all(targets.map(cacheName => {
+    console.warn('[SW] 🧹 Deleting cache after BOOT_FAILURE:', cacheName);
+    return caches.delete(cacheName).catch(() => false);
+  }));
+}
+
+async function notifyClients(message) {
+  const clients = await self.clients.matchAll();
+  clients.forEach(client => client.postMessage(message));
+}
+
+async function handleBootFailure(data) {
+  const now = Date.now();
+  const reason = getBootFailureReason(data);
+  const state = await getBootFailureState();
+  let nextCount = state.count;
+
+  if (!state.lastTs || now - state.lastTs > BOOT_FAILURE_RESET_WINDOW_MS) {
+    nextCount = 0;
+  }
+
+  nextCount += 1;
+  await Promise.all([
+    setMetaText(BOOT_FAILURE_COUNT_META_KEY, nextCount),
+    setMetaText(BOOT_FAILURE_TS_META_KEY, now),
+    setMetaText(BOOT_FAILURE_REASON_META_KEY, reason),
+  ]);
+
+  console.warn('[SW] ⚠️ BOOT_FAILURE #' + nextCount + ':', reason);
+
+  if (nextCount < BOOT_FAILURE_PURGE_THRESHOLD) {
+    return;
+  }
+
+  console.warn('[SW] 🩹 Repeated BOOT_FAILURE — purging app caches before next reload');
+  await purgeHeysCaches({ keepMetaCache: true });
+  await rePrecacheCssFiles('[SW] 🩹');
+
+  try {
+    await self.registration.update();
+  } catch (e) {
+    console.warn('[SW] registration.update failed after BOOT_FAILURE:', e);
+  }
+
+  await notifyClients({
+    type: 'BOOT_RECOVERY_PREPARED',
+    count: nextCount,
+    reason,
+  });
+}
+
+async function handleBootSuccess() {
+  const state = await getBootFailureState();
+  if (state.count > 0) {
+    console.log('[SW] ✅ BOOT_SUCCESS — reset boot failure counter (' + state.count + ')');
+  }
+  await resetBootFailureState();
+}
+
 // === Сообщения от клиента (ЕДИНЫЙ HANDLER) ===
 self.addEventListener('message', (event) => {
   // 🔄 skipWaiting — поддерживаем оба формата
@@ -600,6 +733,16 @@ self.addEventListener('message', (event) => {
 
   if (event.data === 'getVersion') {
     event.ports[0]?.postMessage({ version: CACHE_VERSION });
+    return;
+  }
+
+  if (event.data && event.data.type === 'BOOT_FAILURE') {
+    event.waitUntil(handleBootFailure(event.data));
+    return;
+  }
+
+  if (event.data && event.data.type === 'BOOT_SUCCESS') {
+    event.waitUntil(handleBootSuccess());
     return;
   }
 

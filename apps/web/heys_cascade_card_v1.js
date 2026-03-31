@@ -3471,8 +3471,13 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       console.info('[HEYS.cascade] 📅 historicalDays built: ' + historicalDays.length + ' days, events: ' + historicalDays.reduce(function (s, d) { return s + d.events.length; }, 0));
     }
 
+    var renderDayDate = (day && day.date) || todayStr;
+    var eventsSignature = buildEventAnimationSignature(events, renderDayDate);
+
     var result = {
       events: events,
+      dayDate: renderDayDate,
+      eventsSignature: eventsSignature,
       chainLength: chain,
       maxChainToday: maxChain,
       score: +score.toFixed(2),
@@ -3569,56 +3574,69 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
   // SUB-КОМПОНЕНТ: ChainDots
   // ─────────────────────────────────────────────────────
 
-  function getEventColor(w) {
-    if (w <= -0.5) return '#dc2626'; // Red (хуже)
-    if (w < 0) return '#f97316'; // Orange (негативное)
-    if (w === 0) return '#facc15'; // Yellow (нейтральное)
-    if (w <= 0.5) return '#84cc16'; // Light Green (хорошее)
-    if (w <= 1.5) return '#22c55e'; // Green (очень хорошее)
-    return '#10b981'; // Emerald (отличное)
+  function getEventTone(w) {
+    if (w <= -0.5) return 'bad';
+    if (w < 0) return 'warn';
+    if (w === 0) return 'neutral';
+    if (w <= 0.5) return 'good';
+    if (w <= 1.5) return 'great';
+    return 'peak';
+  }
+
+  function buildEventAnimationSignature(events, dayDate) {
+    var datePart = dayDate || 'no-date';
+    if (!Array.isArray(events) || events.length === 0) return datePart + '|empty';
+
+    return datePart + '|' + events.map(function (ev, index) {
+      if (!ev) return index + '~empty';
+      var weight = typeof ev.weight === 'number' ? ev.weight.toFixed(2) : '0.00';
+      return [
+        index,
+        ev.type || 'event',
+        ev.time || '',
+        ev.label || '',
+        weight,
+        ev.positive ? '1' : '0',
+        ev.breakReason || ''
+      ].join('~');
+    }).join('||');
   }
 
   function ChainDots(props) {
     var events = props.events;
-    var [isRevealed, setIsRevealed] = React.useState(false);
-
-    React.useEffect(function () {
-      // Reset to hidden first, then double-rAF to reveal (so animation replays on data change)
-      setIsRevealed(false);
-
-      var raf = requestAnimationFrame(function () {
-        requestAnimationFrame(function () {
-          setIsRevealed(true);
-        });
-      });
-      return function () { cancelAnimationFrame(raf); };
-    }, [events ? events.length : 0]);
 
     if (!events || events.length === 0) return null;
 
-    var children = [];
+    var isDense = events.length > 8;
+    var animationSignature = props.eventsSignature || buildEventAnimationSignature(events, props.dayDate);
+    var dotChildren = [];
+    var badgeNode = null;
     for (var i = 0; i < events.length; i++) {
       var ev = events[i];
       var isLast = i === events.length - 1;
+      var w = ev.weight || 0;
+      var tone = getEventTone(w);
       var dotClass = [
         'cascade-dot',
+        'cascade-dot--' + tone,
         (isLast && ev.positive) ? 'cascade-dot--latest' : null
       ].filter(Boolean).join(' ');
 
-      if (i > 0) {
-        children.push(React.createElement('div', {
-          key: 'conn-' + i,
-          className: 'cascade-dot-connector' + (!ev.positive ? ' cascade-dot-connector--warning' : '')
-        }));
-      }
-
-      var w = ev.weight || 0;
       var wStr = (w > 0 ? '+' : '') + w.toFixed(1);
+      var dotKey = [
+        i,
+        ev.type || 'event',
+        ev.time || '',
+        ev.label || '',
+        typeof ev.weight === 'number' ? ev.weight.toFixed(2) : '0.00',
+        ev.positive ? '1' : '0',
+        ev.breakReason || ''
+      ].join('~');
 
-      children.push(React.createElement('div', {
-        key: 'dot-' + i,
+      dotChildren.push(React.createElement('span', {
+        key: 'dot-' + dotKey,
         className: dotClass,
-        style: { background: getEventColor(w) },
+        style: { '--dot-i': i },
         title: (ev.time ? formatTimeShort(ev.time) + ' · ' : '') + ev.label + ' (' + wStr + ')'
       }));
     }
@@ -3633,7 +3651,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       var badgeOpacity = 0.45 + conf * 0.55;
       var badgeClass = 'cascade-ceb-badge' + (isEarly ? ' cascade-ceb-badge--early' : '');
 
-      children.push(React.createElement('div', {
+      badgeNode = React.createElement('div', {
         key: 'ceb',
         className: badgeClass,
         style: { background: cebColor, color: '#fff', opacity: badgeOpacity },
@@ -3641,12 +3659,21 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       },
         React.createElement('span', { className: 'cascade-ceb-label' }, 'Баланс дня'),
         React.createElement('span', { className: 'cascade-ceb-value' }, cebVal.toFixed(1))
-      ));
+      );
     }
 
     return React.createElement('div', {
-      className: 'cascade-chain-dots animate-always' + (isRevealed ? ' is-revealed' : '')
-    }, children);
+      className: 'cascade-chain-dots animate-always' + (isDense ? ' cascade-chain-dots--dense' : ''),
+      style: { '--dot-total': events.length }
+    },
+      React.createElement('div', {
+        key: 'track-' + animationSignature,
+        className: 'cascade-chain-dots__track'
+      }, dotChildren),
+      badgeNode ? React.createElement('div', {
+        className: 'cascade-chain-dots__aside'
+      }, badgeNode) : null
+    );
   }
 
   // ─────────────────────────────────────────────────────
@@ -4108,7 +4135,13 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         }, '⏰ Окно после тренировки — выбери качество, а не количество'),
 
         // Цепочка точек (всегда показываем в шапке)
-        React.createElement(ChainDots, { events: events, ceb: ceb, cebConfidence: cebConfidence }),
+        React.createElement(ChainDots, {
+          events: events,
+          dayDate: props.dayDate,
+          eventsSignature: props.eventsSignature,
+          ceb: ceb,
+          cebConfidence: cebConfidence
+        }),
 
         // Прогресс-бар (анимируется от 0 → progressPct за 1.4с)
         React.createElement('div', { className: 'cascade-card__progress-track animate-always' },
@@ -4220,7 +4253,9 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
   // P2-cascade fix: React.memo to skip re-render when cascade data hasn't changed
   var MemoizedCascadeCard = React.memo(CascadeCard, function (prev, next) {
-    return prev.state === next.state &&
+    return prev.dayDate === next.dayDate &&
+      prev.eventsSignature === next.eventsSignature &&
+      prev.state === next.state &&
       prev.score === next.score &&
       prev.chainLength === next.chainLength &&
       prev.maxChainToday === next.maxChainToday &&
@@ -4251,6 +4286,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
   function renderCard(params) {
     var day = params && params.day;
+    var selectedDate = params && (params.selectedDate || params.date);
     var dayTot = params && params.dayTot;
     var normAbs = params && params.normAbs;
     var prof = params && params.prof;
@@ -4274,6 +4310,29 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     if (!day) {
       console.warn('[HEYS.cascade] ⚠️ No day data — skipping render');
       return null;
+    }
+
+    var selectedDateKey = (typeof selectedDate === 'string' && selectedDate.length >= 10)
+      ? selectedDate.slice(0, 10)
+      : '';
+    var dayDateKey = (typeof day.date === 'string' && day.date.length >= 10)
+      ? day.date.slice(0, 10)
+      : '';
+
+    if (selectedDateKey && dayDateKey && selectedDateKey !== dayDateKey) {
+      var staleDateSwitchKey = selectedDateKey + '|' + dayDateKey;
+      if (window.__heysCascadeLastStaleDateSwitchKey !== staleDateSwitchKey) {
+        window.__heysCascadeLastStaleDateSwitchKey = staleDateSwitchKey;
+        console.info('[HEYS.cascade] ⏳ Hide stale cascade during date switch:', {
+          selectedDate: selectedDateKey,
+          dayDate: dayDateKey
+        });
+      }
+      return null;
+    }
+
+    if (window.__heysCascadeLastStaleDateSwitchKey && selectedDateKey && dayDateKey && selectedDateKey === dayDateKey) {
+      window.__heysCascadeLastStaleDateSwitchKey = null;
     }
 
     var hasMeals = day.meals && day.meals.length > 0;
@@ -4367,7 +4426,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       return null;
     }
 
-    var renderKey = [cascadeState.state, cascadeState.chainLength, cascadeState.maxChainToday, cascadeState.momentumScore].join('|');
+    var renderKey = [cascadeState.dayDate, cascadeState.state, cascadeState.chainLength, cascadeState.maxChainToday, cascadeState.momentumScore].join('|');
     if (window.__heysCascadeLastRenderKey !== renderKey) {
       window.__heysCascadeLastRenderKey = renderKey;
       console.info('[HEYS.cascade] 🚀 Rendering CascadeCard, state:', cascadeState.state);

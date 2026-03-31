@@ -1160,7 +1160,13 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
    */
   function showInitError() {
     hideInitLoader();
-    document.body.innerHTML = '<div style="padding:40px;text-align:center;font-family:system-ui"><h1>⚠️ Ошибка загрузки</h1><p>Не удалось загрузить приложение. Обновите страницу.</p><button onclick="location.reload()" style="margin-top:20px;padding:12px 24px;background:#10b981;color:white;border:none;border-radius:8px;font-size:16px;cursor:pointer">Обновить</button></div>';
+    if (window.__heysSilentRestart) {
+      window.__heysSilentRestart('Bootstrap timeout');
+      return;
+    }
+    // Fallback если index.html recovery ещё не загрузился
+    console.error('[HEYS.recovery] Bootstrap fallback reload');
+    location.reload();
   }
 
   // ============================================================================
@@ -2566,7 +2572,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
           // Если был неактивен больше 5 минут — синхронизируем данные
           if (idleMinutes >= 5 && window.HEYS?.cloud?.sync) {
             console.log('[Idle] Syncing after idle period...');
-            window.HEYS.cloud.sync().catch(() => { });
+            window.HEYS.cloud.sync();
           }
 
           // Если был неактивен больше 30 минут — проверяем обновления

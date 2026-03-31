@@ -20874,7 +20874,13 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
         // PERF v8.0: Separate module readiness from content — enables skeleton UX
         const cascadeReady = !!app.CascadeCard?.renderCard;
         const cascadeCard = cascadeReady ? (app.CascadeCard.renderCard({
-            React, day, prof, pIndex, dayTot, normAbs
+            React,
+            day,
+            selectedDate: date,
+            prof,
+            pIndex,
+            dayTot,
+            normAbs
         }) || null) : null;
 
         const mealRecReady = !!app.MealRecCard?.renderCard && !!app.InsightsPI?.mealRecommender?.recommend;
