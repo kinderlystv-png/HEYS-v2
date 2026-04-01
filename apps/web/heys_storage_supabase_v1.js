@@ -7621,14 +7621,7 @@
       // 🚨 КРИТИЧЕСКАЯ ЗАЩИТА: НЕ сохраняем ПУСТОЙ день в облако НИКОГДА
       // Это предотвращает перезапись реальных данных пустым днём при выборе даты в календаре
       // v59 FIX: Блокируем всегда, не только до sync — иначе при выборе старой даты затираем облако
-      const hasRealData = value.weightMorning ||
-        value.steps > 0 ||
-        value.waterMl > 0 ||
-        (value.meals && value.meals.length > 0 && value.meals.some(m => m.items?.length > 0)) ||
-        value.sleepStart ||
-        value.sleepEnd ||
-        value.dayScore ||
-        (value.trainings && value.trainings.length > 0);
+      const hasRealData = isMeaningfulDayData(value);
       if (!hasRealData) {
         log(`🚫 [SAVE BLOCKED] Empty day not saved to cloud - key: ${k}`);
         return;
@@ -8180,6 +8173,68 @@
     return typeof cloud.getCurrentClientId === 'function' ? cloud.getCurrentClientId() : null;
   }
 
+  const HOT_SYNC_HISTORY_LIMIT = 25;
+  const HOT_SYNC_HEARTBEAT_EVERY = 10;
+  const HOT_SYNC_SUPPLEMENT_PROFILE_FIELDS = new Set([
+    'plannedSupplements',
+    'supplementSettings',
+    'supplementHistory',
+    'customSupplements',
+    'supplementUserFlags'
+  ]);
+  let foregroundAutoSyncIdleStreak = 0;
+  const foregroundHotSyncHistory = [];
+
+  function getChangedTopLevelKeys(previousValue, nextValue) {
+    const prev = previousValue && typeof previousValue === 'object' && !Array.isArray(previousValue)
+      ? previousValue
+      : {};
+    const next = nextValue && typeof nextValue === 'object' && !Array.isArray(nextValue)
+      ? nextValue
+      : {};
+
+    const keys = new Set([...Object.keys(prev), ...Object.keys(next)]);
+    const changed = [];
+    keys.forEach((key) => {
+      try {
+        if (JSON.stringify(prev[key]) !== JSON.stringify(next[key])) {
+          changed.push(key);
+        }
+      } catch (_) {
+        changed.push(key);
+      }
+    });
+    return changed;
+  }
+
+  function dispatchForegroundHotSyncProfileEvents(clientId, baseKey, previousValue, nextValue, source) {
+    if (baseKey !== 'heys_profile' || typeof window === 'undefined' || !window.dispatchEvent) {
+      return;
+    }
+
+    const changedFields = getChangedTopLevelKeys(previousValue, nextValue);
+    const detail = {
+      clientId,
+      field: changedFields.length === 1 ? changedFields[0] : null,
+      fields: changedFields,
+      source,
+    };
+
+    window.dispatchEvent(new CustomEvent('heys:profile-updated', { detail }));
+
+    if (!changedFields.length || changedFields.some((field) => HOT_SYNC_SUPPLEMENT_PROFILE_FIELDS.has(field))) {
+      window.dispatchEvent(new CustomEvent('heys:supplements-updated', { detail }));
+    }
+  }
+
+  function rememberForegroundHotSyncRun(entry) {
+    foregroundHotSyncHistory.unshift(entry);
+    if (foregroundHotSyncHistory.length > HOT_SYNC_HISTORY_LIMIT) {
+      foregroundHotSyncHistory.length = HOT_SYNC_HISTORY_LIMIT;
+    }
+    cloud._lastForegroundHotSync = entry;
+  }
+
   function canRunForegroundAutoSync(clientId) {
     if (isHotSyncDisabled()) { console.info('[HEYS.sync] 🔇 hot-sync disabled via flag'); return false; }
     if (!clientId) { console.info('[HEYS.sync] 🔇 hot-sync skip: no clientId'); return false; }
@@ -8194,7 +8249,8 @@
     const today = new Date().toISOString().slice(0, 10);
     const fastKeys = [
       'heys_widget_layout_v1',
-      'heys_widget_layout_meta_v1'
+      'heys_widget_layout_meta_v1',
+      'heys_profile'
     ];
 
     // Screen-awareness: include actively viewed day if different from today
@@ -8219,7 +8275,7 @@
 
     const isFastVisibleTick = reason === 'visible-interval';
     const shouldIncludeExtended = !isFastVisibleTick || (foregroundAutoSyncTick % FOREGROUND_AUTO_SYNC_EXTENDED_EVERY === 0);
-    return shouldIncludeExtended ? [...fastKeys, ...extendedKeys] : fastKeys;
+    return shouldIncludeExtended ? Array.from(new Set([...fastKeys, ...extendedKeys])) : fastKeys;
   }
 
   function getScopedClientStorageKey(clientId, baseKey) {
@@ -8245,6 +8301,7 @@
     try {
       if (!assertSyncWriteOwnership(scopedKey, clientId, source)) return false;
       const currentRaw = global.localStorage.getItem(scopedKey);
+      const previousValue = currentRaw ? tryParse(currentRaw) : null;
       if (currentRaw === serialized) return false;
 
       // 🛡️ FIX: Protect widget_layout from hot-sync race condition.
@@ -8274,6 +8331,8 @@
       if (global.HEYS?.store?.invalidate) {
         global.HEYS.store.invalidate(scopedKey);
       }
+
+      dispatchForegroundHotSyncProfileEvents(clientId, baseKey, previousValue, value, source);
 
       if (baseKey.includes('widget_layout') && typeof window !== 'undefined' && window.dispatchEvent) {
         window.dispatchEvent(new CustomEvent('heys:widget-layout-updated', {
@@ -8333,11 +8392,13 @@
   async function runForegroundHotKeySync(clientId, reason) {
     const YandexAPI = global.HEYS?.YandexAPI;
     if (!YandexAPI) {
-      return { success: false, updated: 0, failed: 0, reason: 'no_api' };
+      return { success: false, updated: 0, failed: 0, reason: 'no_api', mode: 'no-api', fetchedKeys: [], fetchedKeyCount: 0, markerScopes: [] };
     }
 
     foregroundAutoSyncTick += 1;
     const allKeys = getForegroundHotSyncKeys(reason);
+    const markerAwareKeys = Array.from(new Set([...allKeys, ...getForegroundHotSyncKeys('marker-scope')]));
+    let markerScopes = [];
 
     // Detect auth mode: session_token (PIN client) vs curator JWT
     const hasSessionToken = !!(
@@ -8360,18 +8421,23 @@
         }
 
         if (markerResult && !markerResult.error && markerResult.data) {
-          const changedKeys = _getKeysForChangedScopes(markerResult.data, allKeys);
+          markerScopes = Object.keys(markerResult.data || {});
+          // Важно: marker-check не должен терять day/profile updates только потому,
+          // что текущий visible tick использует сокращённый набор fast keys.
+          // Иначе change marker может быть "съеден" как markers-skip до следующего
+          // extended tick и UI так и не увидит актуальный day/profile update.
+          const changedKeys = _getKeysForChangedScopes(markerResult.data, markerAwareKeys);
           if (changedKeys !== null) {
             _lastMarkerCheckTs = new Date().toISOString();
             if (changedKeys.length === 0) {
               // Nothing changed — skip pull entirely
-              return { success: true, updated: 0, failed: 0, authMissing: false };
+              return { success: true, updated: 0, failed: 0, authMissing: false, mode: 'markers-skip', fetchedKeys: [], fetchedKeyCount: 0, markerScopes };
             }
             keysToFetch = changedKeys;
           }
         } else if (markerResult?.error === 'No session token') {
           // Neither session nor curator auth available
-          return { success: false, updated: 0, failed: 0, authMissing: true };
+          return { success: false, updated: 0, failed: 0, authMissing: true, mode: 'no-auth', fetchedKeys: [], fetchedKeyCount: 0, markerScopes };
         }
         // If markers returned error → fallback to full key set (keysToFetch unchanged)
       } catch (_) {
@@ -8392,7 +8458,7 @@
         }
 
         if (batchResult?.error === 'No session token') {
-          return { success: false, updated: 0, failed: 0, authMissing: true };
+          return { success: false, updated: 0, failed: 0, authMissing: true, mode: 'no-auth', fetchedKeys: keysToFetch, fetchedKeyCount: keysToFetch.length, markerScopes };
         }
 
         if (batchResult && !batchResult.error && Array.isArray(batchResult.data)) {
@@ -8411,7 +8477,16 @@
             console.info(`[HEYS.sync] ✅ Foreground hot-sync applied ${updated} key(s) via ${isCuratorMode ? 'curator REST' : 'batch RPC'} (${reason})`);
           }
 
-          return { success: true, updated, failed: 0, authMissing: false };
+          return {
+            success: true,
+            updated,
+            failed: 0,
+            authMissing: false,
+            mode: isCuratorMode ? 'curator-batch' : 'session-batch',
+            fetchedKeys: keysToFetch,
+            fetchedKeyCount: keysToFetch.length,
+            markerScopes,
+          };
         }
 
         // Batch returned error (e.g. function not deployed yet) — fallback
@@ -8426,15 +8501,15 @@
     // Legacy fallback: N individual getKV calls (works only with session_token)
     // For curator without session — use getAllKVByCurator as final fallback
     if (isCuratorMode && typeof YandexAPI.getAllKVByCurator === 'function') {
-      return _runForegroundHotKeySyncCurator(clientId, keysToFetch, reason);
+      return _runForegroundHotKeySyncCurator(clientId, keysToFetch, reason, markerScopes);
     }
-    return _runForegroundHotKeySyncLegacy(clientId, keysToFetch);
+    return _runForegroundHotKeySyncLegacy(clientId, keysToFetch, markerScopes);
   }
 
-  async function _runForegroundHotKeySyncLegacy(clientId, keys) {
+  async function _runForegroundHotKeySyncLegacy(clientId, keys, markerScopes = []) {
     const YandexAPI = global.HEYS?.YandexAPI;
     if (!YandexAPI || typeof YandexAPI.getKV !== 'function') {
-      return { success: false, updated: 0, failed: 0, reason: 'no_getkv' };
+      return { success: false, updated: 0, failed: 0, reason: 'no_getkv', mode: 'no-getkv', fetchedKeys: keys, fetchedKeyCount: keys.length, markerScopes };
     }
 
     const results = await Promise.allSettled(keys.map((key) => YandexAPI.getKV(clientId, key)));
@@ -8474,23 +8549,32 @@
       console.info(`[HEYS.sync] ✅ Foreground hot-sync applied ${updated} key(s) (${reason})`);
     }
 
-    return { success: !authMissing, updated, failed, authMissing };
+    return {
+      success: !authMissing,
+      updated,
+      failed,
+      authMissing,
+      mode: 'legacy-getkv',
+      fetchedKeys: keys,
+      fetchedKeyCount: keys.length,
+      markerScopes,
+    };
   }
 
   /**
    * Curator fallback for legacy hot-sync: uses getAllKVByCurator with targeted keys.
    * Called when curator has no session_token and batch/markers also failed.
    */
-  async function _runForegroundHotKeySyncCurator(clientId, keys, reason) {
+  async function _runForegroundHotKeySyncCurator(clientId, keys, reason, markerScopes = []) {
     const YandexAPI = global.HEYS?.YandexAPI;
     if (!YandexAPI || typeof YandexAPI.getAllKVByCurator !== 'function') {
-      return { success: false, updated: 0, failed: 0, reason: 'no_curator_api' };
+      return { success: false, updated: 0, failed: 0, reason: 'no_curator_api', mode: 'no-curator-api', fetchedKeys: keys, fetchedKeyCount: keys.length, markerScopes };
     }
 
     try {
       const result = await YandexAPI.getAllKVByCurator(clientId, { keys });
       if (result.error) {
-        return { success: false, updated: 0, failed: 0, authMissing: false };
+        return { success: false, updated: 0, failed: 0, authMissing: false, mode: 'curator-rest-error', fetchedKeys: keys, fetchedKeyCount: keys.length, markerScopes };
       }
 
       let updated = 0;
@@ -8509,10 +8593,19 @@
         console.info(`[HEYS.sync] ✅ Foreground hot-sync applied ${updated} key(s) via curator REST fallback (${reason})`);
       }
 
-      return { success: true, updated, failed: 0, authMissing: false };
+      return {
+        success: true,
+        updated,
+        failed: 0,
+        authMissing: false,
+        mode: 'curator-rest-fallback',
+        fetchedKeys: keys,
+        fetchedKeyCount: keys.length,
+        markerScopes,
+      };
     } catch (e) {
       console.warn('[HEYS.sync] ⚠️ Curator hot-sync fallback failed:', e?.message);
-      return { success: false, updated: 0, failed: 0, authMissing: false };
+      return { success: false, updated: 0, failed: 0, authMissing: false, mode: 'curator-rest-exception', fetchedKeys: keys, fetchedKeyCount: keys.length, markerScopes };
     }
   }
 
@@ -8534,8 +8627,43 @@
     try {
       console.info('[HEYS.sync] ⚡ Foreground auto-sync:', reason, clientId.slice(0, 8));
       const hotSync = await runForegroundHotKeySync(clientId, reason);
+      const hotSyncTrace = {
+        ts: now,
+        clientId: clientId.slice(0, 8),
+        reason,
+        mode: hotSync.mode || 'unknown',
+        success: !!hotSync.success,
+        updated: hotSync.updated || 0,
+        failed: hotSync.failed || 0,
+        authMissing: !!hotSync.authMissing,
+        fetchedKeyCount: hotSync.fetchedKeyCount || 0,
+        fetchedKeys: Array.isArray(hotSync.fetchedKeys) ? hotSync.fetchedKeys.slice(0, 8) : [],
+        markerScopes: Array.isArray(hotSync.markerScopes) ? hotSync.markerScopes.slice(0, 8) : [],
+      };
+      rememberForegroundHotSyncRun(hotSyncTrace);
+
+      if (hotSync.updated > 0) {
+        foregroundAutoSyncIdleStreak = 0;
+        logCritical(
+          `⚡ [HOT] ${reason}: mode=${hotSyncTrace.mode} updated=${hotSyncTrace.updated}/${hotSyncTrace.fetchedKeyCount}` +
+          (hotSyncTrace.fetchedKeys.length ? ` keys=${hotSyncTrace.fetchedKeys.join(', ')}` : '') +
+          (hotSyncTrace.markerScopes.length ? ` scopes=${hotSyncTrace.markerScopes.join(', ')}` : '')
+        );
+      } else if (hotSync.success) {
+        foregroundAutoSyncIdleStreak += 1;
+        if ((foregroundAutoSyncIdleStreak % HOT_SYNC_HEARTBEAT_EVERY) === 0) {
+          console.info(
+            `[HEYS.sync] 💓 Hot-sync alive: idle=${foregroundAutoSyncIdleStreak} ` +
+            `mode=${hotSyncTrace.mode} keys=${hotSyncTrace.fetchedKeyCount} client=${hotSyncTrace.clientId}`
+          );
+        }
+      } else {
+        foregroundAutoSyncIdleStreak = 0;
+      }
+
       if (hotSync.authMissing) {
         foregroundAutoSyncAuthFailCount += 1;
+        logCritical(`⏸️ [HOT] ${reason}: auth missing, mode=${hotSyncTrace.mode}`);
         if (foregroundAutoSyncAuthFailCount >= 3) {
           console.warn('[HEYS.sync] ⏸️ Foreground auto-sync paused: no session token');
           stopForegroundAutoSyncLoop();
@@ -8668,6 +8796,7 @@
         running,
         tick: foregroundAutoSyncTick,
         lastAt: foregroundAutoSyncLastAt,
+        idleStreak: foregroundAutoSyncIdleStreak,
         authFails: foregroundAutoSyncAuthFailCount,
         features: {
           markers: !isMarkersDisabled(),
@@ -8675,10 +8804,17 @@
           screenAware: !isScreenAwareDisabled()
         },
         autoSafeMode: _hotSyncAutoSafeMode,
-        consecutiveErrors: _hotSyncConsecutiveErrors
+        consecutiveErrors: _hotSyncConsecutiveErrors,
+        lastRun: foregroundHotSyncHistory[0] || null
       };
       console.info('[HEYS.sync] Hot-sync status:', info);
       return info;
+    },
+    history: function (limit = 10) {
+      const normalizedLimit = Math.max(1, Math.min(HOT_SYNC_HISTORY_LIMIT, Number(limit) || 10));
+      const history = foregroundHotSyncHistory.slice(0, normalizedLimit);
+      console.info('[HEYS.sync] Hot-sync history:', history);
+      return history;
     }
   };
 

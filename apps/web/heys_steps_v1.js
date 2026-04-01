@@ -3389,28 +3389,29 @@
     save: (data, context) => {
       // Используем dateKey из контекста (для редактирования прошлых дней) или сегодня
       const dateKey = context?.dateKey || getTodayKey();
+      const selected = Array.isArray(data?.selected) ? data.selected : [];
 
-      console.log('[Supplements SAVE] 🔵 START | dateKey:', dateKey, '| selected:', data.selected, '| context:', context);
-
-      // 1. Сохраняем в профиль (для следующего дня)
       if (HEYS.Supplements && HEYS.Supplements.savePlanned) {
-        HEYS.Supplements.savePlanned(data.selected);
-        console.log('[Supplements SAVE] ✅ Saved to profile');
+        HEYS.Supplements.savePlanned(selected, {
+          dateKey,
+          source: 'supplements-step-save'
+        });
+        return;
       }
 
-      // 2. Сохраняем в день как planned
       const dayData = lsGet(`heys_dayv2_${dateKey}`, { date: dateKey });
-      const oldPlanned = dayData.supplementsPlanned;
-      dayData.supplementsPlanned = data.selected;
+      dayData.supplementsPlanned = selected;
       dayData.updatedAt = Date.now();
       lsSet(`heys_dayv2_${dateKey}`, dayData);
-      console.log('[Supplements SAVE] ✅ Saved to day | old:', oldPlanned, '| new:', data.selected, '| updatedAt:', dayData.updatedAt);
 
-      // Диспатчим событие для обновления UI дня (с forceReload!)
       if (typeof window !== 'undefined') {
-        console.log('[Supplements SAVE] 📤 Dispatching heys:day-updated with forceReload:true');
         window.dispatchEvent(new CustomEvent('heys:day-updated', {
-          detail: { date: dateKey, field: 'supplementsPlanned', forceReload: true }
+          detail: {
+            date: dateKey,
+            field: 'supplementsPlanned',
+            forceReload: true,
+            source: 'supplements-step-save-fallback'
+          }
         }));
       }
     },

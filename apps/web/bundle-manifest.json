@@ -1,10 +1,10 @@
 {
   "boot-core": {
-    "file": "boot-core.bundle.070e908be27f.js",
-    "hash": "070e908be27f",
+    "file": "boot-core.bundle.78b3cdf13c91.js",
+    "hash": "78b3cdf13c91",
     "fileCount": 27,
-    "size": 1341118,
-    "builtAt": "2026-03-31T20:14:41.471Z"
+    "size": 1346988,
+    "builtAt": "2026-04-01T13:50:59.879Z"
   },
   "boot-calc": {
     "file": "boot-calc.bundle.0d65b6f48b8a.js",
@@ -28,11 +28,11 @@
     "builtAt": "2026-03-31T11:03:48.401Z"
   },
   "boot-init": {
-    "file": "boot-init.bundle.2b8549cc0443.js",
-    "hash": "2b8549cc0443",
+    "file": "boot-init.bundle.42cb51998b22.js",
+    "hash": "42cb51998b22",
     "fileCount": 8,
-    "size": 431827,
-    "builtAt": "2026-03-31T20:14:41.619Z"
+    "size": 436256,
+    "builtAt": "2026-04-01T13:51:00.063Z"
   },
   "postboot-1-game": {
     "file": "postboot-1-game.bundle.10925a18e99c.js",
@@ -49,10 +49,10 @@
     "builtAt": "2026-03-31T11:03:48.896Z"
   },
   "postboot-3-ui": {
-    "file": "postboot-3-ui.bundle.4a9d97c18db2.js",
-    "hash": "4a9d97c18db2",
+    "file": "postboot-3-ui.bundle.5595401901b2.js",
+    "hash": "5595401901b2",
     "fileCount": 29,
-    "size": 1736763,
-    "builtAt": "2026-03-31T11:03:49.076Z"
+    "size": 1696783,
+    "builtAt": "2026-04-01T13:51:00.334Z"
   }
 }

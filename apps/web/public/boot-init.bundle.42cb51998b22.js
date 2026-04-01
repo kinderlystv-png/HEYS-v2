@@ -6289,6 +6289,30 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     return readStoredValue('heys_profile', {});
   }
 
+  function getSupplementsCurrentClientId() {
+    return HEYS.currentClientId
+      || HEYS.utils?.getCurrentClientId?.()
+      || HEYS.cloud?.getCurrentClientId?.()
+      || '';
+  }
+
+  function emitSupplementsDataSaved(detail) {
+    if (typeof window === 'undefined' || !window.dispatchEvent) return;
+    window.dispatchEvent(new CustomEvent('heys:data-saved', { detail }));
+  }
+
+  function queueSupplementsCloudSave(baseKey, value) {
+    if (!baseKey || value == null || typeof HEYS?.cloud?.saveClientKey !== 'function') return;
+
+    const clientId = getSupplementsCurrentClientId();
+    if (clientId) {
+      HEYS.cloud.saveClientKey(clientId, baseKey, value);
+      return;
+    }
+
+    HEYS.cloud.saveClientKey(baseKey, value);
+  }
+
   /**
    * Безопасное сохранение профиля с optional полем для dispatch event
    */
@@ -6299,21 +6323,34 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     } else if (U.lsSet) {
       U.lsSet('heys_profile', profile);
     }
+    queueSupplementsCloudSave('heys_profile', profile);
+    emitSupplementsDataSaved({ key: 'heys_profile', type: 'profile', field, source: 'supplements-profile-save' });
     if (field) {
       window.dispatchEvent(new CustomEvent('heys:supplements-updated', { detail: { field } }));
     }
   }
 
-  function saveDaySafe(dateKey, dayData) {
+  function saveDaySafe(dateKey, dayData, options = {}) {
     const U = HEYS.utils || {};
     const key = `heys_dayv2_${dateKey}`;
     if (HEYS.store && typeof HEYS.store.set === 'function') {
       HEYS.store.set(key, dayData);
-      return;
-    }
-    if (U.lsSet) {
+    } else if (U.lsSet) {
       U.lsSet(key, dayData);
     }
+
+    queueSupplementsCloudSave(key, dayData);
+
+    const clientId = getSupplementsCurrentClientId();
+    const scopedKey = clientId ? `heys_${clientId}_dayv2_${dateKey}` : key;
+    emitSupplementsDataSaved({
+      key: scopedKey,
+      baseKey: key,
+      date: dateKey,
+      type: options.type || 'supplements',
+      field: options.field || null,
+      source: options.source || 'supplements-day-save'
+    });
   }
 
   /**
@@ -6723,7 +6760,11 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     }
 
     dayData.updatedAt = Date.now(); // fix: ensure stale-guard passes in heys_day_effects
-    saveDaySafe(dateKey, dayData);
+    saveDaySafe(dateKey, dayData, {
+      type: 'supplements',
+      field: 'supplementsTaken',
+      source: taken ? 'supplements-batch-mark' : 'supplements-batch-unmark'
+    });
     window.dispatchEvent(new CustomEvent('heys:day-updated', {
       detail: { date: dateKey, dateKey, field: 'supplements', forceReload: true }
     }));
@@ -7017,13 +7058,13 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
   /**
    * Применить курс — добавить его добавки в planned
    */
-  function applyCourse(courseId) {
+  function applyCourse(courseId, options = {}) {
     const course = COURSES[courseId];
     if (!course) return false;
 
     const current = getPlannedSupplements();
     const newSupps = [...new Set([...current, ...course.supplements])];
-    savePlannedSupplements(newSupps);
+    savePlannedSupplements(newSupps, options);
 
     return true;
   }
@@ -7036,18 +7077,88 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     return profile.plannedSupplements || [];
   }
 
+  function normalizePlannedSupplementsList(supplements) {
+    if (!Array.isArray(supplements)) return [];
+    return supplements.filter(Boolean);
+  }
+
+  function arePlannedSupplementsEqual(nextSupplements, prevSupplements) {
+    const nextList = normalizePlannedSupplementsList(nextSupplements);
+    const prevList = normalizePlannedSupplementsList(prevSupplements);
+    if (nextList.length !== prevList.length) return false;
+    for (let i = 0; i < nextList.length; i += 1) {
+      if (nextList[i] !== prevList[i]) return false;
+    }
+    return true;
+  }
+
+  function syncPlannedSupplementsToDay(dateKey, supplements, source = 'supplements-profile-sync') {
+    if (!dateKey || typeof dateKey !== 'string') return false;
+
+    const normalizedSupplements = normalizePlannedSupplementsList(supplements);
+    const dayData = readStoredValue(`heys_dayv2_${dateKey}`, { date: dateKey }) || { date: dateKey };
+    const prevPlanned = normalizePlannedSupplementsList(dayData.supplementsPlanned);
+
+    if (arePlannedSupplementsEqual(normalizedSupplements, prevPlanned)) {
+      return false;
+    }
+
+    dayData.date = dayData.date || dateKey;
+    dayData.supplementsPlanned = normalizedSupplements;
+    dayData.updatedAt = Date.now();
+
+    saveDaySafe(dateKey, dayData, {
+      type: 'supplements',
+      field: 'supplementsPlanned',
+      source,
+    });
+
+    if (typeof window !== 'undefined' && window.dispatchEvent) {
+      window.dispatchEvent(new CustomEvent('heys:day-updated', {
+        detail: {
+          date: dateKey,
+          dateKey,
+          field: 'supplementsPlanned',
+          forceReload: true,
+          source,
+        }
+      }));
+    }
+
+    return true;
+  }
+
   /**
    * Сохранить запланированные (в профиль — запоминается на след. день)
    */
-  function savePlannedSupplements(supplements) {
+  function savePlannedSupplements(supplements, options = {}) {
+    const normalizedSupplements = normalizePlannedSupplementsList(supplements);
     const profile = getProfileSafe();
-    profile.plannedSupplements = supplements;
-    saveProfileSafe(profile, 'plannedSupplements');
+    const shouldSyncDay = options.syncDay !== false;
+    const targetDateKey = options.dateKey || new Date().toISOString().slice(0, 10);
+
+    if (!arePlannedSupplementsEqual(normalizedSupplements, profile.plannedSupplements)) {
+      profile.plannedSupplements = normalizedSupplements;
+      saveProfileSafe(profile, 'plannedSupplements');
+    }
 
     // Событие для синхронизации
     window.dispatchEvent(new CustomEvent('heys:profile-updated', {
-      detail: { field: 'plannedSupplements' }
+      detail: {
+        field: 'plannedSupplements',
+        dateKey: shouldSyncDay ? targetDateKey : null,
+        source: options.source || 'supplements-profile',
+      }
     }));
+
+    if (shouldSyncDay) {
+      syncPlannedSupplementsToDay(targetDateKey, normalizedSupplements, options.source || 'supplements-profile-sync');
+    }
+
+    return {
+      plannedSupplements: normalizedSupplements,
+      dateKey: shouldSyncDay ? targetDateKey : null,
+    };
   }
 
   /**
@@ -7075,7 +7186,11 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     dayData.supplementsTakenAt = new Date().toISOString();
     dayData.updatedAt = Date.now();
 
-    saveDaySafe(dateKey, dayData);
+    saveDaySafe(dateKey, dayData, {
+      type: 'supplements',
+      field: 'supplementsTaken',
+      source: taken ? 'supplement-mark-taken' : 'supplement-unmark-taken'
+    });
 
     // Событие для обновления UI
     window.dispatchEvent(new CustomEvent('heys:day-updated', {
@@ -7094,7 +7209,11 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     dayData.supplementsTakenAt = new Date().toISOString();
     dayData.updatedAt = Date.now();
 
-    saveDaySafe(dateKey, dayData);
+    saveDaySafe(dateKey, dayData, {
+      type: 'supplements',
+      field: 'supplementsTaken',
+      source: 'supplements-mark-all-taken'
+    });
 
     window.dispatchEvent(new CustomEvent('heys:day-updated', {
       detail: { date: dateKey, field: 'supplementsTaken' }
@@ -7947,7 +8066,10 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                         onClick: () => {
                           const current = getPlannedSupplements();
                           if (!current.includes(sug.suppId)) {
-                            savePlannedSupplements([...current, sug.suppId]);
+                            savePlannedSupplements([...current, sug.suppId], {
+                              dateKey,
+                              source: 'supplements-diet-suggestion'
+                            });
                             renderScreenRoot();
                           }
                         },
@@ -8022,7 +8144,10 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                     key: cid,
                     onClick: () => {
                       if (!isActive) {
-                        applyCourse(cid);
+                        applyCourse(cid, {
+                          dateKey,
+                          source: 'supplements-course-preset'
+                        });
                         renderScreenRoot();
                       }
                     },
