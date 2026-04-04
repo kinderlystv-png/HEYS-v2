@@ -10596,16 +10596,25 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
         const [pendingTrainingFeelAfter, setPendingTrainingFeelAfter] = useState(0); // 0-10
         const [pendingTrainingComment, setPendingTrainingComment] = useState('');
 
-        // === Тренировки: количество видимых блоков ===
-        const [visibleTrainings, setVisibleTrainings] = useState(() => {
-            // Автоопределяем сколько тренировок показывать на основе данных
-            const tr = day.trainings || [];
+        const getVisibleTrainingsCount = (trainings) => {
+            const tr = trainings || [];
             const hasData = (t) => t && t.z && t.z.some(v => +v > 0);
             if (tr[2] && hasData(tr[2])) return 3;
             if (tr[1] && hasData(tr[1])) return 2;
             if (tr[0] && hasData(tr[0])) return 1;
-            return 0; // Если нет тренировок — не показываем пустые блоки
+            return 0;
+        };
+
+        // === Тренировки: количество видимых блоков ===
+        const [visibleTrainings, setVisibleTrainings] = useState(() => {
+            // Автоопределяем сколько тренировок показывать на основе данных
+            return getVisibleTrainingsCount(day.trainings);
         });
+
+        useEffect(() => {
+            const nextVisibleTrainings = getVisibleTrainingsCount(day.trainings);
+            setVisibleTrainings(prev => prev === nextVisibleTrainings ? prev : nextVisibleTrainings);
+        }, [day.trainings]);
 
         // === Период графиков (7, 14, 30 дней) ===
         const [chartPeriod, setChartPeriod] = useState(7);

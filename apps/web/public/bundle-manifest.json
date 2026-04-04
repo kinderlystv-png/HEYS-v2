@@ -14,11 +14,11 @@
     "builtAt": "2026-03-31T19:49:21.446Z"
   },
   "boot-day": {
-    "file": "boot-day.bundle.b5119e93429f.js",
-    "hash": "b5119e93429f",
+    "file": "boot-day.bundle.f258c9524b7f.js",
+    "hash": "f258c9524b7f",
     "fileCount": 52,
-    "size": 1028057,
-    "builtAt": "2026-03-31T19:49:21.628Z"
+    "size": 1028329,
+    "builtAt": "2026-04-04T10:50:17.944Z"
   },
   "boot-app": {
     "file": "boot-app.bundle.e99d70623449.js",
