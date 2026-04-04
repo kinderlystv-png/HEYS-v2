@@ -24,6 +24,8 @@
             pendingDetails: { days: 0, products: 0, profile: 0, other: 0 },
             showOfflineBanner: false,
             showOnlineBanner: false,
+            showSyncLockOverlay: false,
+            showSlowInternetHint: false,
             syncProgress: null,
             retryCountdown: 0,
             handleRetrySync: () => { },

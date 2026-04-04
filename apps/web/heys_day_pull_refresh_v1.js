@@ -24,6 +24,7 @@
     // 🚀 PERF: Throttle React re-renders during pull — use rAF + direct DOM for smooth visual
     const pullRafRef = useRef(null);
     const lastProgressSyncRef = useRef(0);
+    const blockedNoticeAtRef = useRef(0);
 
     // Keep refs in sync with state
     useEffect(() => {
@@ -91,6 +92,28 @@
         navigator.vibrate(intensity);
         lastHapticRef.current = now;
       }
+    };
+
+    const getRuntimePendingCount = () => {
+      try {
+        return heys?.cloud?.getPendingCount?.() || 0;
+      } catch (e) {
+        return 0;
+      }
+    };
+
+    const notifyPullRefreshBlocked = (pendingCount) => {
+      const now = Date.now();
+      if (now - blockedNoticeAtRef.current < 1500) return;
+
+      blockedNoticeAtRef.current = now;
+      triggerHaptic(20);
+      console.info('[HEYS.pullRefresh] 🚫 Pull-to-refresh blocked while sync is pending', {
+        pendingCount,
+      });
+      try {
+        window.HEYS?.Toast?.info?.('Сначала дождитесь завершения синхронизации');
+      } catch (e) { }
     };
 
     const runSyncWithTimeout = async (cloud, clientId) => {
@@ -163,6 +186,14 @@
         return;
       }
 
+      const pendingCount = getRuntimePendingCount();
+      if (pendingCount > 0) {
+        notifyPullRefreshBlocked(pendingCount);
+        setPullProgress(0);
+        setRefreshStatus('idle');
+        return;
+      }
+
       refreshInFlightRef.current = true;
       setIsRefreshing(true);
       setPullProgress(Math.max(pullProgressRef.current, READY_LOCK_HEIGHT));
@@ -225,6 +256,13 @@
         }
         // Начинаем pull только если скролл вверху страницы
         if (window.scrollY <= 0) {
+          const pendingCount = getRuntimePendingCount();
+          if (pendingCount > 0) {
+            isPulling.current = false;
+            notifyPullRefreshBlocked(pendingCount);
+            return;
+          }
+
           pullStartY.current = e.touches[0].clientY;
           isPulling.current = true;
           lastProgressSyncRef.current = 0; // 🚀 PERF: reset throttle so first touchmove syncs immediately
@@ -290,6 +328,15 @@
         if (!isPulling.current) return;
 
         if (refreshInFlightRef.current || isRefreshingRef.current) {
+          isPulling.current = false;
+          return;
+        }
+
+        const pendingCount = getRuntimePendingCount();
+        if (pendingCount > 0) {
+          notifyPullRefreshBlocked(pendingCount);
+          setPullProgress(0);
+          setRefreshStatus('idle');
           isPulling.current = false;
           return;
         }

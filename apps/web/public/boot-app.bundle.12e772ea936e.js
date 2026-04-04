@@ -11880,12 +11880,16 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
         const [pendingDetails, setPendingDetails] = useState({ days: 0, products: 0, profile: 0, other: 0 });
         const [showOfflineBanner, setShowOfflineBanner] = useState(false);
         const [showOnlineBanner, setShowOnlineBanner] = useState(false);
+        const [showSyncLockOverlay, setShowSyncLockOverlay] = useState(false);
+        const [showSlowInternetHint, setShowSlowInternetHint] = useState(false);
         const [syncProgress, setSyncProgress] = useState({ synced: 0, total: 0 });
         const [retryCountdown, setRetryCountdown] = useState(0);
         // 🆕 Время офлайн для улучшенного UX
         const [offlineDuration, setOfflineDuration] = useState(0);
         const offlineStartRef = useRef(null);
         const offlineDurationIntervalRef = useRef(null);
+        const syncLockTimeoutRef = useRef(null);
+        const slowInternetHintTimeoutRef = useRef(null);
 
         const cloudSyncTimeoutRef = useRef(null);
         const pendingChangesRef = useRef(false);
@@ -11910,12 +11914,30 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
 
         const MIN_SYNCING_DURATION = 1500;
         const SYNCING_DELAY = 400;
+        const LONG_SYNC_LOCK_DELAY = 2000;
+        const SLOW_INTERNET_HINT_DELAY = 5000;
 
         const getRuntimePendingCount = useCallback(() => {
             try {
                 return window.HEYS?.cloud?.getPendingCount?.() || 0;
             } catch (e) {
                 return 0;
+            }
+        }, []);
+
+        const getRuntimePendingDetails = useCallback(() => {
+            try {
+                return window.HEYS?.cloud?.getPendingDetails?.() || { days: 0, products: 0, profile: 0, other: 0 };
+            } catch (e) {
+                return { days: 0, products: 0, profile: 0, other: 0 };
+            }
+        }, []);
+
+        const getRuntimeSyncStatus = useCallback(() => {
+            try {
+                return window.HEYS?.cloud?.getSyncStatus?.() || null;
+            } catch (e) {
+                return null;
             }
         }, []);
 
@@ -11927,6 +11949,63 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
             }
         }, []);
 
+        const clearSyncLockOverlay = useCallback(() => {
+            if (syncLockTimeoutRef.current) {
+                clearTimeout(syncLockTimeoutRef.current);
+                syncLockTimeoutRef.current = null;
+            }
+            setShowSyncLockOverlay(false);
+        }, []);
+
+        const clearSlowInternetHint = useCallback(() => {
+            if (slowInternetHintTimeoutRef.current) {
+                clearTimeout(slowInternetHintTimeoutRef.current);
+                slowInternetHintTimeoutRef.current = null;
+            }
+            setShowSlowInternetHint(false);
+        }, []);
+
+        const armSyncLockOverlay = useCallback(() => {
+            if (syncLockTimeoutRef.current || showSyncLockOverlay) return;
+
+            syncLockTimeoutRef.current = setTimeout(() => {
+                syncLockTimeoutRef.current = null;
+
+                if (!navigator.onLine) return;
+
+                const uploadInProgress = isRuntimeUploadInProgress();
+                const syncActive = cloudStatusRef.current === 'syncing'
+                    || uploadInProgress
+                    || syncProgressTotalRef.current > 0;
+
+                if (syncingStartRef.current && syncActive) {
+                    setShowSyncLockOverlay(true);
+                }
+            }, LONG_SYNC_LOCK_DELAY);
+        }, [isRuntimeUploadInProgress, showSyncLockOverlay]);
+
+        const armSlowInternetHint = useCallback(() => {
+            if (slowInternetHintTimeoutRef.current || showSlowInternetHint) return;
+
+            const elapsed = syncingStartRef.current ? Date.now() - syncingStartRef.current : 0;
+            const remaining = Math.max(0, SLOW_INTERNET_HINT_DELAY - elapsed);
+
+            slowInternetHintTimeoutRef.current = setTimeout(() => {
+                slowInternetHintTimeoutRef.current = null;
+
+                if (!navigator.onLine) return;
+
+                const uploadInProgress = isRuntimeUploadInProgress();
+                const syncActive = cloudStatusRef.current === 'syncing'
+                    || uploadInProgress
+                    || syncProgressTotalRef.current > 0;
+
+                if (syncingStartRef.current && syncActive) {
+                    setShowSlowInternetHint(true);
+                }
+            }, remaining);
+        }, [isRuntimeUploadInProgress, showSlowInternetHint]);
+
         const startSyncingState = useCallback(() => {
             if (!navigator.onLine) {
                 setCloudStatus('offline');
@@ -11935,6 +12014,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
 
             if (!syncingStartRef.current) {
                 syncingStartRef.current = Date.now();
+                armSyncLockOverlay();
+                armSlowInternetHint();
             }
 
             if (syncedTimeoutRef.current) {
@@ -11950,10 +12031,13 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                     }
                 }, SYNCING_DELAY);
             }
-        }, []);
+        }, [armSlowInternetHint, armSyncLockOverlay]);
 
         const showSyncedWithMinDuration = useCallback(() => {
             if (syncedTimeoutRef.current) return;
+
+            clearSyncLockOverlay();
+            clearSlowInternetHint();
 
             const elapsed = syncingStartRef.current ? Date.now() - syncingStartRef.current : 0;
             const remaining = Math.max(0, MIN_SYNCING_DURATION - elapsed);
@@ -11990,7 +12074,18 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                     setCloudStatus('idle');
                 }, 2000);
             }, remaining);
-        }, [getRuntimePendingCount, isRuntimeUploadInProgress, startSyncingState]);
+        }, [clearSlowInternetHint, clearSyncLockOverlay, getRuntimePendingCount, isRuntimeUploadInProgress, startSyncingState]);
+
+        useEffect(() => {
+            if (cloudStatus === 'syncing') {
+                armSyncLockOverlay();
+                armSlowInternetHint();
+                return;
+            }
+
+            clearSyncLockOverlay();
+            clearSlowInternetHint();
+        }, [armSlowInternetHint, armSyncLockOverlay, clearSlowInternetHint, clearSyncLockOverlay, cloudStatus]);
 
         useEffect(() => {
             const handleSyncComplete = (e) => {
@@ -12103,8 +12198,12 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
             };
 
             const handlePendingChange = (e) => {
-                const count = e.detail?.count || 0;
-                const details = e.detail?.details || { days: 0, products: 0, profile: 0, other: 0 };
+                const eventCount = e.detail?.count || 0;
+                const runtimeCount = getRuntimePendingCount();
+                const count = typeof runtimeCount === 'number' ? runtimeCount : eventCount;
+                const details = count > 0
+                    ? getRuntimePendingDetails()
+                    : { days: 0, products: 0, profile: 0, other: 0 };
                 const uploadInProgress = isRuntimeUploadInProgress();
                 setPendingCount(count);
                 setPendingDetails(details);
@@ -12343,21 +12442,69 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                 if (cloudSyncTimeoutRef.current) clearTimeout(cloudSyncTimeoutRef.current);
                 if (syncedTimeoutRef.current) clearTimeout(syncedTimeoutRef.current);
                 if (syncingDelayTimeoutRef.current) clearTimeout(syncingDelayTimeoutRef.current);
+                if (syncLockTimeoutRef.current) clearTimeout(syncLockTimeoutRef.current);
+                if (slowInternetHintTimeoutRef.current) clearTimeout(slowInternetHintTimeoutRef.current);
                 if (retryIntervalRef.current) clearInterval(retryIntervalRef.current);
                 // 🆕 Очистка таймера офлайн
                 if (offlineDurationIntervalRef.current) clearInterval(offlineDurationIntervalRef.current);
                 // 🔥 Очистка таймера auth error debounce
                 if (authErrorTimeoutRef.current) clearTimeout(authErrorTimeoutRef.current);
             };
-        }, [getRuntimePendingCount, isRuntimeUploadInProgress, showSyncedWithMinDuration, startSyncingState]);
+        }, [getRuntimePendingCount, getRuntimePendingDetails, isRuntimeUploadInProgress, showSyncedWithMinDuration, startSyncingState]);
+
+        useEffect(() => {
+            if (cloudStatus !== 'syncing' && !showSyncLockOverlay) return;
+
+            const intervalId = setInterval(() => {
+                const runtimePending = getRuntimePendingCount();
+                const runtimeDetails = runtimePending > 0
+                    ? getRuntimePendingDetails()
+                    : { days: 0, products: 0, profile: 0, other: 0 };
+                const uploadInProgress = isRuntimeUploadInProgress();
+                const runtimeSyncStatus = getRuntimeSyncStatus();
+
+                if (!navigator.onLine) {
+                    clearSyncLockOverlay();
+                    clearSlowInternetHint();
+                    setPendingCount(runtimePending);
+                    setPendingDetails(runtimeDetails);
+                    setCloudStatus('offline');
+                    return;
+                }
+
+                if (runtimePending !== pendingCountRef.current) {
+                    setPendingCount(runtimePending);
+                    setPendingDetails(runtimeDetails);
+                }
+
+                if (runtimePending === 0 && !uploadInProgress && runtimeSyncStatus === 'synced') {
+                    pendingChangesRef.current = false;
+                    showSyncedWithMinDuration();
+                }
+            }, 800);
+
+            return () => clearInterval(intervalId);
+        }, [
+            clearSlowInternetHint,
+            clearSyncLockOverlay,
+            cloudStatus,
+            getRuntimePendingCount,
+            getRuntimePendingDetails,
+            getRuntimeSyncStatus,
+            isRuntimeUploadInProgress,
+            showSyncLockOverlay,
+            showSyncedWithMinDuration,
+        ]);
 
         const handleRetrySync = useCallback(() => {
             if (window.HEYS?.cloud?.retrySync) {
                 window.HEYS.cloud.retrySync();
                 syncingStartRef.current = Date.now();
                 setCloudStatus('syncing');
+                armSyncLockOverlay();
+                armSlowInternetHint();
             }
-        }, []);
+        }, [armSlowInternetHint, armSyncLockOverlay]);
 
         return {
             cloudStatus,
@@ -12365,6 +12512,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
             pendingDetails,
             showOfflineBanner,
             showOnlineBanner,
+            showSyncLockOverlay,
+            showSlowInternetHint,
             syncProgress,
             retryCountdown,
             handleRetrySync,
@@ -19773,6 +19922,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
             showOnlineBanner,
             offlineDuration,
             pendingCount,
+            showSyncLockOverlay,
+            showSlowInternetHint,
             showPwaBanner,
             showIosPwaBanner,
             handlePwaInstall,
@@ -19790,6 +19941,23 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
             showWhatsNew,
             dismissWhatsNew,
         } = props;
+
+        const [showSlowInternetHintLocal, setShowSlowInternetHintLocal] = React.useState(false);
+
+        React.useEffect(() => {
+            if (!showSyncLockOverlay) {
+                setShowSlowInternetHintLocal(false);
+                return;
+            }
+
+            const timeoutId = setTimeout(() => {
+                setShowSlowInternetHintLocal(true);
+            }, 3000);
+
+            return () => clearTimeout(timeoutId);
+        }, [showSyncLockOverlay]);
+
+        const shouldShowSlowInternetHint = showSlowInternetHint || showSlowInternetHintLocal;
 
         return React.createElement(
             React.Fragment,
@@ -19837,6 +20005,31 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
             // Toast убран — отвлекает
             // Основной контент — скрыт во время Morning Check-in, Consent Screen или когда показывается gate (login/client select)
             React.createElement(AppShell, appShellProps),
+            !isConsentBlocking && !isMorningCheckinBlocking && showSyncLockOverlay && React.createElement(
+                'div',
+                {
+                    className: 'sync-lock-overlay',
+                    role: 'status',
+                    'aria-live': 'polite',
+                    'aria-busy': 'true',
+                },
+                React.createElement('div', { className: 'sync-lock-overlay__card' },
+                    React.createElement('div', { className: 'sync-lock-overlay__spinner', 'aria-hidden': 'true' },
+                        React.createElement('span', { className: 'sync-lock-overlay__cloud' }, '☁')
+                    ),
+                    React.createElement('div', { className: 'sync-lock-overlay__title' }, 'Синхронизирую данные'),
+                    React.createElement('div', { className: 'sync-lock-overlay__subtitle' },
+                        pendingCount > 0
+                            ? 'Сохраняю последние изменения в облако'
+                            : 'Пожалуйста, подождите пару секунд'
+                    ),
+                    shouldShowSlowInternetHint && React.createElement(
+                        'div',
+                        { className: 'sync-lock-overlay__hint' },
+                        'Похоже, интернет нестабильный — приложению просто нужно чуть больше времени на синхронизацию.'
+                    )
+                )
+            ),
             // === PWA Install Banner for Android/Desktop (только после Morning Check-in) ===
             !isMorningCheckinBlocking && showPwaBanner && React.createElement(
                 'div',
@@ -24852,6 +25045,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
         setShowMorningCheckin,
         showOfflineBanner,
         showOnlineBanner,
+        showSyncLockOverlay,
+        showSlowInternetHint,
         offlineDuration,
         pendingCount,
         showPwaBanner,
@@ -24881,6 +25076,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
             setShowMorningCheckin,
             showOfflineBanner,
             showOnlineBanner,
+            showSyncLockOverlay,
+            showSlowInternetHint,
             offlineDuration,
             pendingCount,
             showPwaBanner,
@@ -25167,6 +25364,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
             pendingDetails: { days: 0, products: 0, profile: 0, other: 0 },
             showOfflineBanner: false,
             showOnlineBanner: false,
+            showSyncLockOverlay: false,
+            showSlowInternetHint: false,
             syncProgress: null,
             retryCountdown: 0,
             handleRetrySync: () => { },
@@ -25718,6 +25917,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                     pendingDetails: { days: 0, products: 0, profile: 0, other: 0 },
                     showOfflineBanner: false,
                     showOnlineBanner: false,
+                    showSyncLockOverlay: false,
+                    showSlowInternetHint: false,
                     syncProgress: null,
                     retryCountdown: 0,
                     handleRetrySync: () => { },
@@ -25750,6 +25951,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                 pendingDetails,
                 showOfflineBanner,
                 showOnlineBanner,
+                showSyncLockOverlay,
+                showSlowInternetHint,
                 syncProgress,
                 retryCountdown,
                 handleRetrySync,
@@ -26226,6 +26429,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                     setShowMorningCheckin: params.setShowMorningCheckin,
                     showOfflineBanner: params.showOfflineBanner,
                     showOnlineBanner: params.showOnlineBanner,
+                    showSyncLockOverlay: params.showSyncLockOverlay,
+                    showSlowInternetHint: params.showSlowInternetHint,
                     offlineDuration: params.offlineDuration,
                     pendingCount: params.pendingCount,
                     showPwaBanner: params.showPwaBanner,
@@ -26256,6 +26461,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                 setShowMorningCheckin,
                 showOfflineBanner,
                 showOnlineBanner,
+                showSyncLockOverlay,
+                showSlowInternetHint,
                 offlineDuration,
                 pendingCount,
                 showPwaBanner,
@@ -26276,7 +26483,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                 dismissWhatsNew: () => setShowWhatsNew(false),
                 // eslint-disable-next-line react-hooks/exhaustive-deps
             }), [gate, desktopGate, consentGate, isConsentBlocking, isMorningCheckinBlocking, showMorningCheckin,
-                showOfflineBanner, showOnlineBanner, offlineDuration, pendingCount,
+                showOfflineBanner, showOnlineBanner, showSyncLockOverlay, showSlowInternetHint, offlineDuration, pendingCount,
                 showPwaBanner, showIosPwaBanner, showUpdateToast, notification,
                 widgetsEditMode, tab, appShellProps, showWhatsNew]);
             return React.createElement(AppOverlays, overlaysProps);

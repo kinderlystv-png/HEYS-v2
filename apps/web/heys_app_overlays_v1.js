@@ -18,6 +18,8 @@
             showOnlineBanner,
             offlineDuration,
             pendingCount,
+            showSyncLockOverlay,
+            showSlowInternetHint,
             showPwaBanner,
             showIosPwaBanner,
             handlePwaInstall,
@@ -35,6 +37,23 @@
             showWhatsNew,
             dismissWhatsNew,
         } = props;
+
+        const [showSlowInternetHintLocal, setShowSlowInternetHintLocal] = React.useState(false);
+
+        React.useEffect(() => {
+            if (!showSyncLockOverlay) {
+                setShowSlowInternetHintLocal(false);
+                return;
+            }
+
+            const timeoutId = setTimeout(() => {
+                setShowSlowInternetHintLocal(true);
+            }, 3000);
+
+            return () => clearTimeout(timeoutId);
+        }, [showSyncLockOverlay]);
+
+        const shouldShowSlowInternetHint = showSlowInternetHint || showSlowInternetHintLocal;
 
         return React.createElement(
             React.Fragment,
@@ -82,6 +101,31 @@
             // Toast убран — отвлекает
             // Основной контент — скрыт во время Morning Check-in, Consent Screen или когда показывается gate (login/client select)
             React.createElement(AppShell, appShellProps),
+            !isConsentBlocking && !isMorningCheckinBlocking && showSyncLockOverlay && React.createElement(
+                'div',
+                {
+                    className: 'sync-lock-overlay',
+                    role: 'status',
+                    'aria-live': 'polite',
+                    'aria-busy': 'true',
+                },
+                React.createElement('div', { className: 'sync-lock-overlay__card' },
+                    React.createElement('div', { className: 'sync-lock-overlay__spinner', 'aria-hidden': 'true' },
+                        React.createElement('span', { className: 'sync-lock-overlay__cloud' }, '☁')
+                    ),
+                    React.createElement('div', { className: 'sync-lock-overlay__title' }, 'Синхронизирую данные'),
+                    React.createElement('div', { className: 'sync-lock-overlay__subtitle' },
+                        pendingCount > 0
+                            ? 'Сохраняю последние изменения в облако'
+                            : 'Пожалуйста, подождите пару секунд'
+                    ),
+                    shouldShowSlowInternetHint && React.createElement(
+                        'div',
+                        { className: 'sync-lock-overlay__hint' },
+                        'Похоже, интернет нестабильный — приложению просто нужно чуть больше времени на синхронизацию.'
+                    )
+                )
+            ),
             // === PWA Install Banner for Android/Desktop (только после Morning Check-in) ===
             !isMorningCheckinBlocking && showPwaBanner && React.createElement(
                 'div',

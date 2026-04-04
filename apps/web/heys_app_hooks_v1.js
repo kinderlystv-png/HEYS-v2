@@ -318,12 +318,16 @@
         const [pendingDetails, setPendingDetails] = useState({ days: 0, products: 0, profile: 0, other: 0 });
         const [showOfflineBanner, setShowOfflineBanner] = useState(false);
         const [showOnlineBanner, setShowOnlineBanner] = useState(false);
+        const [showSyncLockOverlay, setShowSyncLockOverlay] = useState(false);
+        const [showSlowInternetHint, setShowSlowInternetHint] = useState(false);
         const [syncProgress, setSyncProgress] = useState({ synced: 0, total: 0 });
         const [retryCountdown, setRetryCountdown] = useState(0);
         // 🆕 Время офлайн для улучшенного UX
         const [offlineDuration, setOfflineDuration] = useState(0);
         const offlineStartRef = useRef(null);
         const offlineDurationIntervalRef = useRef(null);
+        const syncLockTimeoutRef = useRef(null);
+        const slowInternetHintTimeoutRef = useRef(null);
 
         const cloudSyncTimeoutRef = useRef(null);
         const pendingChangesRef = useRef(false);
@@ -348,12 +352,30 @@
 
         const MIN_SYNCING_DURATION = 1500;
         const SYNCING_DELAY = 400;
+        const LONG_SYNC_LOCK_DELAY = 2000;
+        const SLOW_INTERNET_HINT_DELAY = 5000;
 
         const getRuntimePendingCount = useCallback(() => {
             try {
                 return window.HEYS?.cloud?.getPendingCount?.() || 0;
             } catch (e) {
                 return 0;
+            }
+        }, []);
+
+        const getRuntimePendingDetails = useCallback(() => {
+            try {
+                return window.HEYS?.cloud?.getPendingDetails?.() || { days: 0, products: 0, profile: 0, other: 0 };
+            } catch (e) {
+                return { days: 0, products: 0, profile: 0, other: 0 };
+            }
+        }, []);
+
+        const getRuntimeSyncStatus = useCallback(() => {
+            try {
+                return window.HEYS?.cloud?.getSyncStatus?.() || null;
+            } catch (e) {
+                return null;
             }
         }, []);
 
@@ -365,6 +387,63 @@
             }
         }, []);
 
+        const clearSyncLockOverlay = useCallback(() => {
+            if (syncLockTimeoutRef.current) {
+                clearTimeout(syncLockTimeoutRef.current);
+                syncLockTimeoutRef.current = null;
+            }
+            setShowSyncLockOverlay(false);
+        }, []);
+
+        const clearSlowInternetHint = useCallback(() => {
+            if (slowInternetHintTimeoutRef.current) {
+                clearTimeout(slowInternetHintTimeoutRef.current);
+                slowInternetHintTimeoutRef.current = null;
+            }
+            setShowSlowInternetHint(false);
+        }, []);
+
+        const armSyncLockOverlay = useCallback(() => {
+            if (syncLockTimeoutRef.current || showSyncLockOverlay) return;
+
+            syncLockTimeoutRef.current = setTimeout(() => {
+                syncLockTimeoutRef.current = null;
+
+                if (!navigator.onLine) return;
+
+                const uploadInProgress = isRuntimeUploadInProgress();
+                const syncActive = cloudStatusRef.current === 'syncing'
+                    || uploadInProgress
+                    || syncProgressTotalRef.current > 0;
+
+                if (syncingStartRef.current && syncActive) {
+                    setShowSyncLockOverlay(true);
+                }
+            }, LONG_SYNC_LOCK_DELAY);
+        }, [isRuntimeUploadInProgress, showSyncLockOverlay]);
+
+        const armSlowInternetHint = useCallback(() => {
+            if (slowInternetHintTimeoutRef.current || showSlowInternetHint) return;
+
+            const elapsed = syncingStartRef.current ? Date.now() - syncingStartRef.current : 0;
+            const remaining = Math.max(0, SLOW_INTERNET_HINT_DELAY - elapsed);
+
+            slowInternetHintTimeoutRef.current = setTimeout(() => {
+                slowInternetHintTimeoutRef.current = null;
+
+                if (!navigator.onLine) return;
+
+                const uploadInProgress = isRuntimeUploadInProgress();
+                const syncActive = cloudStatusRef.current === 'syncing'
+                    || uploadInProgress
+                    || syncProgressTotalRef.current > 0;
+
+                if (syncingStartRef.current && syncActive) {
+                    setShowSlowInternetHint(true);
+                }
+            }, remaining);
+        }, [isRuntimeUploadInProgress, showSlowInternetHint]);
+
         const startSyncingState = useCallback(() => {
             if (!navigator.onLine) {
                 setCloudStatus('offline');
@@ -373,6 +452,8 @@
 
             if (!syncingStartRef.current) {
                 syncingStartRef.current = Date.now();
+                armSyncLockOverlay();
+                armSlowInternetHint();
             }
 
             if (syncedTimeoutRef.current) {
@@ -388,10 +469,13 @@
                     }
                 }, SYNCING_DELAY);
             }
-        }, []);
+        }, [armSlowInternetHint, armSyncLockOverlay]);
 
         const showSyncedWithMinDuration = useCallback(() => {
             if (syncedTimeoutRef.current) return;
+
+            clearSyncLockOverlay();
+            clearSlowInternetHint();
 
             const elapsed = syncingStartRef.current ? Date.now() - syncingStartRef.current : 0;
             const remaining = Math.max(0, MIN_SYNCING_DURATION - elapsed);
@@ -428,7 +512,18 @@
                     setCloudStatus('idle');
                 }, 2000);
             }, remaining);
-        }, [getRuntimePendingCount, isRuntimeUploadInProgress, startSyncingState]);
+        }, [clearSlowInternetHint, clearSyncLockOverlay, getRuntimePendingCount, isRuntimeUploadInProgress, startSyncingState]);
+
+        useEffect(() => {
+            if (cloudStatus === 'syncing') {
+                armSyncLockOverlay();
+                armSlowInternetHint();
+                return;
+            }
+
+            clearSyncLockOverlay();
+            clearSlowInternetHint();
+        }, [armSlowInternetHint, armSyncLockOverlay, clearSlowInternetHint, clearSyncLockOverlay, cloudStatus]);
 
         useEffect(() => {
             const handleSyncComplete = (e) => {
@@ -541,8 +636,12 @@
             };
 
             const handlePendingChange = (e) => {
-                const count = e.detail?.count || 0;
-                const details = e.detail?.details || { days: 0, products: 0, profile: 0, other: 0 };
+                const eventCount = e.detail?.count || 0;
+                const runtimeCount = getRuntimePendingCount();
+                const count = typeof runtimeCount === 'number' ? runtimeCount : eventCount;
+                const details = count > 0
+                    ? getRuntimePendingDetails()
+                    : { days: 0, products: 0, profile: 0, other: 0 };
                 const uploadInProgress = isRuntimeUploadInProgress();
                 setPendingCount(count);
                 setPendingDetails(details);
@@ -781,21 +880,69 @@
                 if (cloudSyncTimeoutRef.current) clearTimeout(cloudSyncTimeoutRef.current);
                 if (syncedTimeoutRef.current) clearTimeout(syncedTimeoutRef.current);
                 if (syncingDelayTimeoutRef.current) clearTimeout(syncingDelayTimeoutRef.current);
+                if (syncLockTimeoutRef.current) clearTimeout(syncLockTimeoutRef.current);
+                if (slowInternetHintTimeoutRef.current) clearTimeout(slowInternetHintTimeoutRef.current);
                 if (retryIntervalRef.current) clearInterval(retryIntervalRef.current);
                 // 🆕 Очистка таймера офлайн
                 if (offlineDurationIntervalRef.current) clearInterval(offlineDurationIntervalRef.current);
                 // 🔥 Очистка таймера auth error debounce
                 if (authErrorTimeoutRef.current) clearTimeout(authErrorTimeoutRef.current);
             };
-        }, [getRuntimePendingCount, isRuntimeUploadInProgress, showSyncedWithMinDuration, startSyncingState]);
+        }, [getRuntimePendingCount, getRuntimePendingDetails, isRuntimeUploadInProgress, showSyncedWithMinDuration, startSyncingState]);
+
+        useEffect(() => {
+            if (cloudStatus !== 'syncing' && !showSyncLockOverlay) return;
+
+            const intervalId = setInterval(() => {
+                const runtimePending = getRuntimePendingCount();
+                const runtimeDetails = runtimePending > 0
+                    ? getRuntimePendingDetails()
+                    : { days: 0, products: 0, profile: 0, other: 0 };
+                const uploadInProgress = isRuntimeUploadInProgress();
+                const runtimeSyncStatus = getRuntimeSyncStatus();
+
+                if (!navigator.onLine) {
+                    clearSyncLockOverlay();
+                    clearSlowInternetHint();
+                    setPendingCount(runtimePending);
+                    setPendingDetails(runtimeDetails);
+                    setCloudStatus('offline');
+                    return;
+                }
+
+                if (runtimePending !== pendingCountRef.current) {
+                    setPendingCount(runtimePending);
+                    setPendingDetails(runtimeDetails);
+                }
+
+                if (runtimePending === 0 && !uploadInProgress && runtimeSyncStatus === 'synced') {
+                    pendingChangesRef.current = false;
+                    showSyncedWithMinDuration();
+                }
+            }, 800);
+
+            return () => clearInterval(intervalId);
+        }, [
+            clearSlowInternetHint,
+            clearSyncLockOverlay,
+            cloudStatus,
+            getRuntimePendingCount,
+            getRuntimePendingDetails,
+            getRuntimeSyncStatus,
+            isRuntimeUploadInProgress,
+            showSyncLockOverlay,
+            showSyncedWithMinDuration,
+        ]);
 
         const handleRetrySync = useCallback(() => {
             if (window.HEYS?.cloud?.retrySync) {
                 window.HEYS.cloud.retrySync();
                 syncingStartRef.current = Date.now();
                 setCloudStatus('syncing');
+                armSyncLockOverlay();
+                armSlowInternetHint();
             }
-        }, []);
+        }, [armSlowInternetHint, armSyncLockOverlay]);
 
         return {
             cloudStatus,
@@ -803,6 +950,8 @@
             pendingDetails,
             showOfflineBanner,
             showOnlineBanner,
+            showSyncLockOverlay,
+            showSlowInternetHint,
             syncProgress,
             retryCountdown,
             handleRetrySync,
