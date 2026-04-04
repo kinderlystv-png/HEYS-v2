@@ -123,6 +123,8 @@
             pendingCount,
             pendingDetails,
             pendingText,
+            pendingActionItems,
+            showPendingSyncBanner,
             retryCountdown,
             GamificationBar,
             setTab,
@@ -765,6 +767,8 @@
             return () => clearTimeout(syncFadeTimerRef.current);
         }, [cloudStatus]);
 
+        const isBackgroundQueuedState = showPendingSyncBanner && displayStatus === 'syncing';
+        const effectiveDisplayStatus = isBackgroundQueuedState ? 'queued' : displayStatus;
         const haptic = HEYS?.haptic || (() => { });
         const formatSyncAge = (ts) => {
             if (!ts) return '';
@@ -776,7 +780,7 @@
             return `${Math.floor(m / 60)} ч назад`;
         };
         const handleSyncBadgeClick = () => {
-            if (displayStatus === 'syncing' || displayStatus === 'offline') return;
+            if (effectiveDisplayStatus === 'syncing' || effectiveDisplayStatus === 'offline') return;
             haptic('light');
             if (HEYS?.cloud?.syncClient && clientIdValue) {
                 console.info('[HEYS.sync] 🔄 Manual force-sync triggered from badge');
@@ -793,6 +797,24 @@
             if (details.other > 0) parts.push(`${details.other} др.`);
             return parts.join(', ');
         })();
+        const visiblePendingActionItems = Array.isArray(pendingActionItems)
+            ? pendingActionItems.slice(0, 4)
+            : [];
+        const shouldShowPendingSyncBanner = pendingCount > 0 && showPendingSyncBanner;
+        const isBackgroundPendingSync = !!showPendingSyncBanner;
+        const pendingSyncBannerEyebrow = isBackgroundPendingSync ? 'Сохранил локально' : 'Ждут отправки';
+        const pendingSyncBannerTitle = isBackgroundPendingSync
+            ? 'Можно продолжать — отправляю изменения в фоне'
+            : pendingCount > 1
+                ? `${pendingCount} изменений ждут синхронизации`
+                : '1 изменение ждёт синхронизации';
+        const pendingSyncBannerSummary = pendingBreakdownText
+            ? (isBackgroundPendingSync
+                ? `${pendingBreakdownText} · ничего не потеряется`
+                : `${pendingBreakdownText} · можно нажать на облако`)
+            : (isBackgroundPendingSync
+                ? 'Если интернет тормозит — ничего не потеряется.'
+                : 'Нажми на облако, чтобы подтолкнуть отправку.');
         const pad2 = (n) => String(n).padStart(2, '0');
         const formatLocalISO = (d) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
         const shiftISO = (iso, delta) => {
@@ -1227,28 +1249,34 @@
                 // ☁️ Cloud sync indicator (v2.0: forceSync on click, auto-fade, relative time tooltip)
                 React.createElement('div', {
                     key: 'cloudsync',
-                    className: 'cloud-sync-indicator ' + displayStatus + (displayStatus !== 'syncing' && displayStatus !== 'offline' ? ' cloud-sync-indicator--clickable' : ''),
+                    className: 'cloud-sync-indicator ' + effectiveDisplayStatus + (effectiveDisplayStatus !== 'syncing' && effectiveDisplayStatus !== 'offline' ? ' cloud-sync-indicator--clickable' : ''),
                     title: (() => {
                         const routingMode = HEYS?.cloud?.getRoutingStatus?.()?.mode || 'unknown';
                         const modeLabel = routingMode === 'direct' ? '🔗 Direct' : routingMode === 'proxy' ? '🔀 Proxy' : '';
                         let baseTitle;
-                        if (cloudStatus === 'syncing') {
+                        if (effectiveDisplayStatus === 'syncing') {
                             baseTitle = syncProgress?.total > 1
                                 ? `Синхронизация... ${syncProgress.synced}/${syncProgress.total}`
                                 : 'Синхронизация...';
                             if (pendingBreakdownText) baseTitle += ` · ${pendingBreakdownText}`;
-                        } else if (cloudStatus === 'queued') {
-                            baseTitle = pendingCount > 0
-                                ? `${pendingCount} локальных изменений ждут отправки`
-                                : 'Локальные изменения ждут отправки';
+                        } else if (effectiveDisplayStatus === 'queued') {
+                            baseTitle = isBackgroundQueuedState
+                                ? (pendingCount > 0
+                                    ? `${pendingCount} изменений отправляются в фоне`
+                                    : 'Изменения отправляются в фоне')
+                                : (pendingCount > 0
+                                    ? `${pendingCount} локальных изменений ждут отправки`
+                                    : 'Локальные изменения ждут отправки');
                             if (pendingBreakdownText) baseTitle += ` · ${pendingBreakdownText}`;
-                            baseTitle += ' — нажмите для синхронизации';
-                        } else if (cloudStatus === 'offline') {
+                            baseTitle += isBackgroundQueuedState
+                                ? ' — можно продолжать работу'
+                                : ' — нажмите для синхронизации';
+                        } else if (effectiveDisplayStatus === 'offline') {
                             baseTitle = pendingCount > 0
                                 ? `Офлайн — ${pendingCount} изменений ожидают синхронизации`
                                 : 'Офлайн — данные сохраняются локально';
                             if (pendingBreakdownText) baseTitle += ` · ${pendingBreakdownText}`;
-                        } else if (cloudStatus === 'error') {
+                        } else if (effectiveDisplayStatus === 'error') {
                             baseTitle = retryCountdown > 0
                                 ? `Ошибка. Повтор через ${retryCountdown}с — нажмите для повтора`
                                 : 'Ошибка синхронизации — нажмите для повтора';
@@ -1263,26 +1291,26 @@
                     })(),
                     onClick: handleSyncBadgeClick,
                 },
-                    displayStatus === 'syncing' ? [
+                    effectiveDisplayStatus === 'syncing' ? [
                         React.createElement('div', { key: 'spin', className: 'sync-spinner' }),
                         syncProgress?.total > 1 && React.createElement('span', { key: 'prog', className: 'sync-progress' }, `${syncProgress.synced}/${syncProgress.total}`)
                     ]
-                        : displayStatus === 'synced'
+                        : effectiveDisplayStatus === 'synced'
                             ? React.createElement('span', { key: 'ok', className: 'cloud-icon synced' }, '✓')
-                            : displayStatus === 'offline' ? [
+                            : effectiveDisplayStatus === 'offline' ? [
                                 React.createElement('svg', { key: 'ic', className: 'cloud-icon offline', viewBox: '0 0 24 24', width: 16, height: 16, fill: 'currentColor' },
                                     React.createElement('path', { d: 'M19.35 10.04A7.49 7.49 0 0 0 12 4C9.11 4 6.6 5.64 5.35 8.04A5.994 5.994 0 0 0 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z' }),
                                     React.createElement('line', { x1: '1', y1: '1', x2: '23', y2: '23', stroke: 'currentColor', strokeWidth: '2' })
                                 ),
                                 pendingCount > 0 && React.createElement('span', { key: 'pb', className: 'pending-badge' }, pendingCount)
                             ]
-                                : displayStatus === 'queued' ? [
+                                : effectiveDisplayStatus === 'queued' ? [
                                     React.createElement('svg', { key: 'cloud', className: 'cloud-icon idle', viewBox: '0 0 24 24', width: 16, height: 16, fill: 'currentColor' },
                                         React.createElement('path', { d: 'M19.35 10.04A7.49 7.49 0 0 0 12 4C9.11 4 6.6 5.64 5.35 8.04A5.994 5.994 0 0 0 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z' })
                                     ),
                                     pendingCount > 0 && React.createElement('span', { key: 'pb', className: 'pending-badge' }, pendingCount)
                                 ]
-                                    : displayStatus === 'error' ? [
+                                    : effectiveDisplayStatus === 'error' ? [
                                         React.createElement('span', { key: 'warn', className: 'cloud-icon error' }, '⚠'),
                                         retryCountdown > 0 && React.createElement('span', { key: 'cd', className: 'retry-countdown' }, retryCountdown)
                                     ]
@@ -1394,6 +1422,37 @@
                         }),
                     )
                     : null
+            ),
+            shouldShowPendingSyncBanner && React.createElement(
+                'div',
+                {
+                    className: 'sync-pending-banner' + (isBackgroundPendingSync ? ' sync-pending-banner--background' : ' sync-pending-banner--queued'),
+                    role: 'status',
+                    'aria-live': 'polite'
+                },
+                React.createElement(
+                    'div',
+                    { className: 'sync-pending-banner__header' },
+                    React.createElement(
+                        'div',
+                        { className: 'sync-pending-banner__copy' },
+                        React.createElement('div', { className: 'sync-pending-banner__eyebrow' }, pendingSyncBannerEyebrow),
+                        React.createElement('div', { className: 'sync-pending-banner__title' }, pendingSyncBannerTitle),
+                        React.createElement('div', { className: 'sync-pending-banner__summary' }, pendingSyncBannerSummary)
+                    ),
+                    React.createElement('div', { className: 'sync-pending-banner__count', 'aria-hidden': 'true' }, pendingCount)
+                ),
+                visiblePendingActionItems.length > 0 && React.createElement(
+                    'div',
+                    { className: 'sync-pending-banner__items' },
+                    visiblePendingActionItems.map((item) => React.createElement(
+                        'div',
+                        { key: item.id, className: 'sync-pending-banner__item' },
+                        React.createElement('span', { className: 'sync-pending-banner__item-icon', 'aria-hidden': 'true' }, item.icon || '💾'),
+                        React.createElement('span', { className: 'sync-pending-banner__item-label' }, item.title || 'Изменения'),
+                        item.scopeLabel && React.createElement('span', { className: 'sync-pending-banner__item-scope' }, item.scopeLabel)
+                    ))
+                )
             )
         );
     }

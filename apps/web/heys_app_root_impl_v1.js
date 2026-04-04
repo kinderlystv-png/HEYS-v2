@@ -285,10 +285,12 @@
                     cloudStatus: 'offline',
                     pendingCount: 0,
                     pendingDetails: { days: 0, products: 0, profile: 0, other: 0 },
+                    pendingActionItems: [],
                     showOfflineBanner: false,
                     showOnlineBanner: false,
                     showSyncLockOverlay: false,
                     showSlowInternetHint: false,
+                    showPendingSyncBanner: false,
                     syncProgress: null,
                     retryCountdown: 0,
                     handleRetrySync: () => { },
@@ -319,10 +321,12 @@
                 cloudStatus,
                 pendingCount,
                 pendingDetails,
+                pendingActionItems,
                 showOfflineBanner,
                 showOnlineBanner,
                 showSyncLockOverlay,
                 showSlowInternetHint,
+                showPendingSyncBanner,
                 syncProgress,
                 retryCountdown,
                 handleRetrySync,
@@ -336,33 +340,8 @@
 
             // --- What's New modal state ---
             const [showWhatsNew, setShowWhatsNew] = React.useState(false);
-            React.useEffect(() => {
-                // Show What's New after app is fully ready and PWA update has settled
-                if (isInitializing) return;
-                const timer = setTimeout(() => {
-                    // Skip if a PWA update/reload is still in progress
-                    try {
-                        if (sessionStorage.getItem('heys_pending_update')) {
-                            console.info('[HEYS.WhatsNew] Skipped — PWA update pending');
-                            return;
-                        }
-                        const lock = localStorage.getItem('heys_update_in_progress');
-                        if (lock) {
-                            const lockTs = JSON.parse(lock).timestamp;
-                            if (Date.now() - lockTs < 30000) {
-                                console.info('[HEYS.WhatsNew] Skipped — update lock active');
-                                return;
-                            }
-                        }
-                    } catch { /* ignore parse errors */ }
-                    if (HEYS.WhatsNew && HEYS.WhatsNew.checkUnseen) {
-                        HEYS.WhatsNew.checkUnseen().then(hasUnseen => {
-                            if (hasUnseen) setShowWhatsNew(true);
-                        }).catch(() => { });
-                    }
-                }, 3000);
-                return () => clearTimeout(timer);
-            }, [isInitializing]);
+            const whatsNewRetryTimeoutRef = React.useRef(null);
+            const whatsNewInitialDelayRef = React.useRef(true);
 
             const fallbackUseDatePickerActiveDays = ({ React: HookReact }) => HookReact.useMemo(() => new Map(), []);
             const useDatePickerActiveDays = getStableHook(AppDateState.useDatePickerActiveDays, fallbackUseDatePickerActiveDays);
@@ -692,6 +671,112 @@
             } = derivedState;
             const getPendingText = () => pendingText;
 
+            React.useEffect(() => {
+                let cancelled = false;
+
+                const clearRetry = () => {
+                    if (whatsNewRetryTimeoutRef.current) {
+                        clearTimeout(whatsNewRetryTimeoutRef.current);
+                        whatsNewRetryTimeoutRef.current = null;
+                    }
+                };
+
+                const scheduleRetry = (delayMs) => {
+                    clearRetry();
+                    if (cancelled) return;
+                    whatsNewRetryTimeoutRef.current = setTimeout(() => {
+                        runCheck();
+                    }, delayMs);
+                };
+
+                const getBlockReason = () => {
+                    if (isInitializing) return 'app-initializing';
+                    if (isConsentBlocking) return 'consent-blocking';
+                    if (isMorningCheckinBlocking) return 'morning-checkin-blocking';
+                    if (showSyncLockOverlay) return 'sync-lock-overlay';
+
+                    try {
+                        if (sessionStorage.getItem('heys_pending_update')) {
+                            return 'pending-update';
+                        }
+                    } catch (error) {
+                        console.warn('[HEYS.WhatsNew] Failed to read pending update flag', error);
+                    }
+
+                    try {
+                        const lockRaw = localStorage.getItem('heys_update_in_progress');
+                        if (lockRaw) {
+                            const lockData = JSON.parse(lockRaw);
+                            const lockTs = Number(lockData?.timestamp || 0);
+                            if (lockTs > 0 && (Date.now() - lockTs) < 30000) {
+                                return 'update-lock';
+                            }
+                        }
+                    } catch (error) {
+                        console.warn('[HEYS.WhatsNew] Failed to read update lock', error);
+                    }
+
+                    if (!HEYS.WhatsNew?.inspectUnseen) {
+                        return 'module-not-ready';
+                    }
+
+                    return '';
+                };
+
+                const runCheck = async () => {
+                    if (cancelled || showWhatsNew) {
+                        clearRetry();
+                        return;
+                    }
+
+                    const blockReason = getBlockReason();
+                    if (blockReason) {
+                        console.info('[HEYS.WhatsNew] Deferred —', blockReason);
+                        const retryDelay = blockReason === 'pending-update' || blockReason === 'update-lock' || blockReason === 'sync-lock-overlay'
+                            ? 2000
+                            : 1200;
+                        scheduleRetry(retryDelay);
+                        return;
+                    }
+
+                    try {
+                        const inspection = await HEYS.WhatsNew.inspectUnseen();
+                        if (cancelled || showWhatsNew) {
+                            clearRetry();
+                            return;
+                        }
+
+                        if (!inspection?.ok) {
+                            console.warn('[HEYS.WhatsNew] Inspect failed — retrying later');
+                            scheduleRetry(5000);
+                            return;
+                        }
+
+                        if (inspection.hasUnseen) {
+                            console.info('[HEYS.WhatsNew] Ready to show release', inspection.latestVersion);
+                            clearRetry();
+                            setShowWhatsNew(true);
+                            return;
+                        }
+
+                        clearRetry();
+                        console.info('[HEYS.WhatsNew] Nothing new to show');
+                    } catch (error) {
+                        console.warn('[HEYS.WhatsNew] Unexpected inspect error — retrying later', error);
+                        scheduleRetry(5000);
+                    }
+                };
+
+                const initialDelay = whatsNewInitialDelayRef.current ? 3000 : 0;
+                whatsNewInitialDelayRef.current = false;
+                scheduleRetry(initialDelay);
+
+                return () => {
+                    cancelled = true;
+                    clearRetry();
+                };
+            }, [isInitializing, isConsentBlocking, isMorningCheckinBlocking, showSyncLockOverlay, showWhatsNew]);
+
             const buildAppShellProps = AppShellProps.buildAppShellProps
                 || ((params) => ({
                     hideContent: (params.isConsentBlocking || params.isMorningCheckinBlocking || !params.clientId),
@@ -722,6 +807,10 @@
                     cloudStatus: params.cloudStatus,
                     syncProgress: params.syncProgress,
                     pendingCount: params.pendingCount,
+                    pendingDetails: params.pendingDetails,
+                    pendingText: params.pendingText,
+                    pendingActionItems: params.pendingActionItems,
+                    showPendingSyncBanner: params.showPendingSyncBanner,
                     retryCountdown: params.retryCountdown,
                     GamificationBar: params.GamificationBar,
                     widgetsEditMode: params.widgetsEditMode,
@@ -768,6 +857,8 @@
                 pendingCount,
                 pendingDetails,
                 pendingText,
+                pendingActionItems,
+                showPendingSyncBanner,
                 retryCountdown,
                 GamificationBar,
                 widgetsEditMode,
@@ -785,7 +876,7 @@
             }), [isConsentBlocking, isMorningCheckinBlocking, clientId, tab,
                 selectedDate, datePickerActiveDays, products, cachedProfile,
                 currentClientName, clients, showClientDropdown, isRpcMode,
-                cloudUser, cloudStatus, syncProgress, pendingCount, pendingDetails, pendingText, retryCountdown,
+                cloudUser, cloudStatus, syncProgress, pendingCount, pendingDetails, pendingText, pendingActionItems, showPendingSyncBanner, retryCountdown,
                 widgetsEditMode, defaultTab, slideDirection, edgeBounce, syncVer]);
 
             const buildOverlaysProps = AppOverlaysProps.buildOverlaysProps

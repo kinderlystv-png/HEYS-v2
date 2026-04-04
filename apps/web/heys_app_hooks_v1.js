@@ -310,16 +310,309 @@
         };
     }
 
+    const PENDING_SYNC_UI_QUEUE_KEY = 'heys_pending_sync_ui_queue';
+    const MAX_PENDING_SYNC_UI_ITEMS = 5;
+    const PENDING_SYNC_UI_TTL_MS = 3 * 24 * 60 * 60 * 1000;
+    const PENDING_SYNC_UI_SKIPPED_SOURCES = new Set(['merge', 'cloud-sync', 'force-sync', 'cascade-guard-unlock']);
+
+    const createEmptyPendingDetails = () => ({ days: 0, products: 0, profile: 0, other: 0 });
+
+    const parsePendingActionDate = (dateStr) => {
+        if (!dateStr || typeof dateStr !== 'string') return null;
+        const parsed = new Date(`${dateStr}T12:00:00`);
+        return Number.isNaN(parsed.getTime()) ? null : parsed;
+    };
+
+    const extractPendingActionDate = (key) => {
+        const safeKey = String(key || '');
+        if (!safeKey) return '';
+        if (safeKey.startsWith('day:')) return safeKey.slice(4);
+        const match = safeKey.match(/dayv2_(\d{4}-\d{2}-\d{2})/);
+        return match ? match[1] : '';
+    };
+
+    const formatPendingActionScope = (dateStr) => {
+        const parsed = parsePendingActionDate(dateStr);
+        if (!parsed) return '';
+
+        const now = new Date();
+        const todayKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+        const yesterday = new Date(now);
+        yesterday.setDate(yesterday.getDate() - 1);
+        const yesterdayKey = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, '0')}-${String(yesterday.getDate()).padStart(2, '0')}`;
+
+        if (dateStr === todayKey) return 'Сегодня';
+        if (dateStr === yesterdayKey) return 'Вчера';
+
+        try {
+            return new Intl.DateTimeFormat('ru-RU', {
+                day: 'numeric',
+                month: 'short',
+            }).format(parsed).replace('.', '');
+        } catch {
+            return dateStr;
+        }
+    };
+
+    const getPendingActionMeta = ({ key, type, field }) => {
+        const normalizedKey = String(key || '').toLowerCase();
+        const normalizedType = String(type || '').toLowerCase();
+        const normalizedField = String(field || '').toLowerCase();
+        const isDayKey = normalizedKey.includes('dayv2_') || normalizedKey.startsWith('day:');
+
+        if (normalizedType === 'water' || normalizedField === 'waterml') {
+            return { title: 'Вода', icon: '💧', id: 'water', kind: isDayKey ? 'day-specific' : 'generic' };
+        }
+        if (normalizedType === 'steps' || normalizedField === 'steps') {
+            return { title: 'Шаги', icon: '👣', id: 'steps', kind: isDayKey ? 'day-specific' : 'generic' };
+        }
+        if (normalizedField === 'weightmorning') {
+            return { title: 'Вес', icon: '⚖️', id: 'weightMorning', kind: 'day-specific' };
+        }
+        if (
+            normalizedField === 'sleep'
+            || normalizedField === 'sleepstart'
+            || normalizedField === 'sleepend'
+            || normalizedField === 'sleepquality'
+            || normalizedField === 'daysleepminutes'
+            || normalizedField === 'sleepnote'
+        ) {
+            return { title: 'Сон', icon: '😴', id: 'sleep', kind: 'day-specific' };
+        }
+        if (normalizedType === 'cycle' || normalizedField === 'cycleday') {
+            return { title: 'Цикл', icon: '🌸', id: 'cycle', kind: 'day-specific' };
+        }
+        if (normalizedType === 'measurements' || normalizedField === 'measurements') {
+            return { title: 'Замеры', icon: '📏', id: 'measurements', kind: 'day-specific' };
+        }
+        if (normalizedType === 'coldexposure' || normalizedField === 'coldexposure') {
+            return { title: 'Холод', icon: '🧊', id: 'coldExposure', kind: 'day-specific' };
+        }
+        if (
+            normalizedType === 'morningmood'
+            || normalizedField === 'morningmood'
+            || normalizedField === 'moodmorning'
+            || normalizedField === 'wellbeingmorning'
+            || normalizedField === 'stressmorning'
+        ) {
+            return { title: 'Утреннее состояние', icon: '🌅', id: 'morningMood', kind: 'day-specific' };
+        }
+        if (normalizedType === 'supplements' || normalizedField === 'supplementstaken' || normalizedField === 'supplements') {
+            return { title: 'Добавки', icon: '💊', id: 'supplements', kind: isDayKey ? 'day-specific' : 'generic' };
+        }
+        if (normalizedField === 'supplementsplanned' || normalizedField === 'plannedsupplements') {
+            return { title: 'План добавок', icon: '🗓️', id: 'supplementsPlanned', kind: isDayKey ? 'day-specific' : 'generic' };
+        }
+        if (normalizedField === 'supplementsettings') {
+            return { title: 'Схема добавок', icon: '💊', id: 'supplementSettings', kind: 'generic' };
+        }
+        if (normalizedField === 'supplementhistory') {
+            return { title: 'История добавок', icon: '📚', id: 'supplementHistory', kind: 'generic' };
+        }
+        if (normalizedType === 'training' || normalizedField === 'training' || normalizedField === 'trainings') {
+            return { title: 'Тренировка', icon: '🏋️', id: 'training', kind: 'day-specific' };
+        }
+        if (normalizedField === 'deficitpct') {
+            return { title: 'Дефицит', icon: '🎯', id: 'deficitPct', kind: 'day-specific' };
+        }
+        if (
+            normalizedField === 'householdmin'
+            || normalizedField === 'householdtime'
+            || normalizedField === 'householdactivities'
+        ) {
+            return { title: 'Бытовая активность', icon: '🧹', id: 'household', kind: 'day-specific' };
+        }
+        if (normalizedType === 'meal') {
+            return { title: 'Еда', icon: '🍽️', id: 'meal', kind: isDayKey ? 'day-specific' : 'generic' };
+        }
+        if (normalizedType === 'product' || normalizedKey.includes('products')) {
+            return { title: 'Продукты', icon: '📦', id: 'products', kind: 'generic' };
+        }
+        if (normalizedType === 'profile' || normalizedKey.includes('profile')) {
+            return { title: 'Профиль', icon: '👤', id: normalizedField || 'profile', kind: 'generic' };
+        }
+        if (normalizedKey.includes('norms')) {
+            return { title: 'Нормы', icon: '📐', id: 'norms', kind: 'generic' };
+        }
+        if (normalizedKey.includes('hr_zones')) {
+            return { title: 'Пульсовые зоны', icon: '❤️', id: 'hrZones', kind: 'generic' };
+        }
+        if (normalizedKey.includes('widget_layout')) {
+            return { title: 'Виджеты', icon: '🧩', id: 'widgets', kind: 'generic' };
+        }
+        if (isDayKey) {
+            return { title: 'Дневник дня', icon: '📅', id: 'dayJournal', kind: 'day-generic' };
+        }
+
+        return { title: 'Изменения', icon: '💾', id: 'changes', kind: 'generic' };
+    };
+
+    const trimPendingActionQueue = (items) => {
+        const now = Date.now();
+        const uniqueItems = [];
+        const seen = new Set();
+
+        (Array.isArray(items) ? items : []).forEach((item) => {
+            if (!item || typeof item !== 'object' || !item.id) return;
+            if (item.updatedAt && (now - item.updatedAt) > PENDING_SYNC_UI_TTL_MS) return;
+            if (seen.has(item.id)) return;
+            seen.add(item.id);
+            uniqueItems.push(item);
+        });
+
+        return uniqueItems.slice(0, MAX_PENDING_SYNC_UI_ITEMS);
+    };
+
+    const readPendingActionQueue = () => {
+        try {
+            const raw = localStorage.getItem(PENDING_SYNC_UI_QUEUE_KEY);
+            if (!raw) return [];
+            return trimPendingActionQueue(JSON.parse(raw));
+        } catch {
+            return [];
+        }
+    };
+
+    const persistPendingActionQueue = (items) => {
+        try {
+            const safeItems = trimPendingActionQueue(items);
+            if (!safeItems.length) {
+                localStorage.removeItem(PENDING_SYNC_UI_QUEUE_KEY);
+                return;
+            }
+            localStorage.setItem(PENDING_SYNC_UI_QUEUE_KEY, JSON.stringify(safeItems));
+        } catch { }
+    };
+
+    const buildFallbackPendingActionQueue = (details) => {
+        const safeDetails = details || createEmptyPendingDetails();
+        const timestamp = Date.now();
+        const items = [];
+
+        if (safeDetails.days > 0) {
+            items.push({
+                id: 'fallback:days',
+                title: safeDetails.days > 1 ? `Дневник дня ×${safeDetails.days}` : 'Дневник дня',
+                icon: '📅',
+                scopeLabel: '',
+                updatedAt: timestamp,
+                kind: 'fallback',
+            });
+        }
+        if (safeDetails.products > 0) {
+            items.push({
+                id: 'fallback:products',
+                title: safeDetails.products > 1 ? `Продукты ×${safeDetails.products}` : 'Продукты',
+                icon: '📦',
+                scopeLabel: '',
+                updatedAt: timestamp,
+                kind: 'fallback',
+            });
+        }
+        if (safeDetails.profile > 0) {
+            items.push({
+                id: 'fallback:profile',
+                title: safeDetails.profile > 1 ? `Профиль ×${safeDetails.profile}` : 'Профиль',
+                icon: '👤',
+                scopeLabel: '',
+                updatedAt: timestamp,
+                kind: 'fallback',
+            });
+        }
+        if (safeDetails.other > 0) {
+            items.push({
+                id: 'fallback:other',
+                title: safeDetails.other > 1 ? `Прочее ×${safeDetails.other}` : 'Прочее',
+                icon: '💾',
+                scopeLabel: '',
+                updatedAt: timestamp,
+                kind: 'fallback',
+            });
+        }
+
+        return items.slice(0, MAX_PENDING_SYNC_UI_ITEMS);
+    };
+
+    const normalizePendingActionDescriptor = (detail) => {
+        const safeDetail = detail && typeof detail === 'object' ? detail : null;
+        if (!safeDetail) return null;
+
+        const source = String(safeDetail.source || '').trim();
+        if (safeDetail.batch || PENDING_SYNC_UI_SKIPPED_SOURCES.has(source) || source.startsWith('cloud')) {
+            return null;
+        }
+
+        const key = String(safeDetail.baseKey || safeDetail.key || '');
+        const date = String(safeDetail.date || safeDetail.dateKey || extractPendingActionDate(key) || '');
+        const meta = getPendingActionMeta({
+            key,
+            type: safeDetail.type,
+            field: safeDetail.field,
+        });
+
+        const itemId = date ? `${date}:${meta.id}` : meta.id;
+        return {
+            id: itemId,
+            title: meta.title,
+            icon: meta.icon,
+            scopeLabel: date ? formatPendingActionScope(date) : '',
+            updatedAt: Date.now(),
+            key,
+            type: String(safeDetail.type || ''),
+            field: String(safeDetail.field || ''),
+            source,
+            date,
+            kind: meta.kind,
+        };
+    };
+
+    const mergePendingActionQueue = (currentItems, detail) => {
+        const nextItem = normalizePendingActionDescriptor(detail);
+        if (!nextItem) return trimPendingActionQueue(currentItems);
+
+        const safeItems = trimPendingActionQueue(currentItems);
+        if (nextItem.kind === 'day-generic' && nextItem.date) {
+            const hasSpecificActionForDay = safeItems.some((item) => item.date === nextItem.date && item.kind === 'day-specific');
+            if (hasSpecificActionForDay) return safeItems;
+        }
+
+        const nextQueue = safeItems.filter((item) => {
+            if (!item || item.id === nextItem.id) return false;
+            if (nextItem.kind === 'day-specific' && nextItem.date && item.date === nextItem.date && item.kind === 'day-generic') {
+                return false;
+            }
+            return true;
+        });
+
+        nextQueue.unshift(nextItem);
+        return trimPendingActionQueue(nextQueue);
+    };
+
     function useCloudSyncStatus() {
         const React = window.React;
         const { useState, useRef, useCallback, useEffect } = React;
         const [cloudStatus, setCloudStatus] = useState(() => navigator.onLine ? 'idle' : 'offline');
         const [pendingCount, setPendingCount] = useState(0);
-        const [pendingDetails, setPendingDetails] = useState({ days: 0, products: 0, profile: 0, other: 0 });
+        const [pendingDetails, setPendingDetails] = useState(createEmptyPendingDetails);
+        const [pendingActionItems, setPendingActionItems] = useState(() => {
+            const persistedItems = readPendingActionQueue();
+            if (persistedItems.length > 0) return persistedItems;
+
+            try {
+                const runtimePendingCount = window.HEYS?.cloud?.getPendingCount?.() || 0;
+                const runtimePendingDetails = window.HEYS?.cloud?.getPendingDetails?.() || createEmptyPendingDetails();
+                if (runtimePendingCount > 0) {
+                    return buildFallbackPendingActionQueue(runtimePendingDetails);
+                }
+            } catch { }
+
+            return [];
+        });
         const [showOfflineBanner, setShowOfflineBanner] = useState(false);
         const [showOnlineBanner, setShowOnlineBanner] = useState(false);
         const [showSyncLockOverlay, setShowSyncLockOverlay] = useState(false);
         const [showSlowInternetHint, setShowSlowInternetHint] = useState(false);
+        const [showPendingSyncBanner, setShowPendingSyncBanner] = useState(false);
         const [syncProgress, setSyncProgress] = useState({ synced: 0, total: 0 });
         const [retryCountdown, setRetryCountdown] = useState(0);
         // 🆕 Время офлайн для улучшенного UX
@@ -328,6 +621,10 @@
         const offlineDurationIntervalRef = useRef(null);
         const syncLockTimeoutRef = useRef(null);
         const slowInternetHintTimeoutRef = useRef(null);
+        const longSyncFallbackTimeoutRef = useRef(null);
+        const longSyncFallbackActiveRef = useRef(false);
+        const syncLockShownForCurrentSyncRef = useRef(false);
+        const slowInternetShownForCurrentSyncRef = useRef(false);
 
         const cloudSyncTimeoutRef = useRef(null);
         const pendingChangesRef = useRef(false);
@@ -345,15 +642,18 @@
         // Refs для state-значений, читаемых из event handlers — стабилизирует deps эффекта
         const cloudStatusRef = useRef(cloudStatus);
         const pendingCountRef = useRef(pendingCount);
+        const pendingActionItemsRef = useRef(pendingActionItems);
         const syncProgressTotalRef = useRef(0);
         cloudStatusRef.current = cloudStatus;
         pendingCountRef.current = pendingCount;
+        pendingActionItemsRef.current = pendingActionItems;
         syncProgressTotalRef.current = syncProgress.total;
 
         const MIN_SYNCING_DURATION = 1500;
         const SYNCING_DELAY = 400;
         const LONG_SYNC_LOCK_DELAY = 2000;
         const SLOW_INTERNET_HINT_DELAY = 5000;
+        const NON_BLOCKING_SYNC_DELAY = 15000;
 
         const getRuntimePendingCount = useCallback(() => {
             try {
@@ -387,6 +687,28 @@
             }
         }, []);
 
+        const commitPendingActionItems = useCallback((items) => {
+            const safeItems = trimPendingActionQueue(items);
+            pendingActionItemsRef.current = safeItems;
+            persistPendingActionQueue(safeItems);
+            setPendingActionItems(safeItems);
+        }, []);
+
+        const pushPendingActionItem = useCallback((detail) => {
+            commitPendingActionItems(mergePendingActionQueue(pendingActionItemsRef.current, detail));
+        }, [commitPendingActionItems]);
+
+        const clearPendingActionItems = useCallback(() => {
+            commitPendingActionItems([]);
+        }, [commitPendingActionItems]);
+
+        const ensureFallbackPendingActionItems = useCallback((details) => {
+            if (pendingActionItemsRef.current.length > 0) return;
+            const fallbackItems = buildFallbackPendingActionQueue(details);
+            if (!fallbackItems.length) return;
+            commitPendingActionItems(fallbackItems);
+        }, [commitPendingActionItems]);
+
         const clearSyncLockOverlay = useCallback(() => {
             if (syncLockTimeoutRef.current) {
                 clearTimeout(syncLockTimeoutRef.current);
@@ -403,6 +725,36 @@
             setShowSlowInternetHint(false);
         }, []);
 
+        const ensureSyncingStart = useCallback(() => {
+            if (!syncingStartRef.current) {
+                syncingStartRef.current = Date.now();
+            }
+            return syncingStartRef.current;
+        }, []);
+
+        const resetLongSyncFallback = useCallback(() => {
+            if (longSyncFallbackTimeoutRef.current) {
+                clearTimeout(longSyncFallbackTimeoutRef.current);
+                longSyncFallbackTimeoutRef.current = null;
+            }
+            longSyncFallbackActiveRef.current = false;
+            setShowPendingSyncBanner(false);
+        }, []);
+
+        const enterBackgroundPendingSync = useCallback(() => {
+            if (!syncLockShownForCurrentSyncRef.current || !slowInternetShownForCurrentSyncRef.current) {
+                return;
+            }
+
+            longSyncFallbackActiveRef.current = true;
+            clearSyncLockOverlay();
+            clearSlowInternetHint();
+            setShowPendingSyncBanner(true);
+            if (navigator.onLine) {
+                setCloudStatus('queued');
+            }
+        }, [clearSlowInternetHint, clearSyncLockOverlay]);
+
         const armSyncLockOverlay = useCallback(() => {
             if (syncLockTimeoutRef.current || showSyncLockOverlay) return;
 
@@ -417,6 +769,7 @@
                     || syncProgressTotalRef.current > 0;
 
                 if (syncingStartRef.current && syncActive) {
+                    syncLockShownForCurrentSyncRef.current = true;
                     setShowSyncLockOverlay(true);
                 }
             }, LONG_SYNC_LOCK_DELAY);
@@ -439,10 +792,35 @@
                     || syncProgressTotalRef.current > 0;
 
                 if (syncingStartRef.current && syncActive) {
+                    slowInternetShownForCurrentSyncRef.current = true;
                     setShowSlowInternetHint(true);
                 }
             }, remaining);
         }, [isRuntimeUploadInProgress, showSlowInternetHint]);
+
+        const armLongSyncFallback = useCallback(() => {
+            if (longSyncFallbackTimeoutRef.current || longSyncFallbackActiveRef.current) return;
+
+            const elapsed = syncingStartRef.current ? Date.now() - syncingStartRef.current : 0;
+            const remaining = Math.max(0, NON_BLOCKING_SYNC_DELAY - elapsed);
+
+            longSyncFallbackTimeoutRef.current = setTimeout(() => {
+                longSyncFallbackTimeoutRef.current = null;
+
+                if (!navigator.onLine) return;
+
+                const runtimePending = getRuntimePendingCount();
+                const uploadInProgress = isRuntimeUploadInProgress();
+                const syncActive = cloudStatusRef.current === 'syncing'
+                    || uploadInProgress
+                    || syncProgressTotalRef.current > 0
+                    || runtimePending > 0;
+
+                if (syncingStartRef.current && syncActive) {
+                    enterBackgroundPendingSync();
+                }
+            }, remaining);
+        }, [enterBackgroundPendingSync, getRuntimePendingCount, isRuntimeUploadInProgress]);
 
         const startSyncingState = useCallback(() => {
             if (!navigator.onLine) {
@@ -450,10 +828,19 @@
                 return;
             }
 
+            if (longSyncFallbackActiveRef.current) {
+                setShowPendingSyncBanner(true);
+                setCloudStatus('queued');
+                return;
+            }
+
             if (!syncingStartRef.current) {
-                syncingStartRef.current = Date.now();
+                syncLockShownForCurrentSyncRef.current = false;
+                slowInternetShownForCurrentSyncRef.current = false;
+                ensureSyncingStart();
                 armSyncLockOverlay();
                 armSlowInternetHint();
+                armLongSyncFallback();
             }
 
             if (syncedTimeoutRef.current) {
@@ -469,7 +856,7 @@
                     }
                 }, SYNCING_DELAY);
             }
-        }, [armSlowInternetHint, armSyncLockOverlay]);
+        }, [armLongSyncFallback, armSlowInternetHint, armSyncLockOverlay, ensureSyncingStart]);
 
         const showSyncedWithMinDuration = useCallback(() => {
             if (syncedTimeoutRef.current) return;
@@ -503,6 +890,8 @@
                     return;
                 }
 
+                resetLongSyncFallback();
+                clearPendingActionItems();
                 syncingStartRef.current = null;
                 setCloudStatus('synced');
                 // Звук синхронизации убран — теперь звуки только в геймификации
@@ -512,18 +901,27 @@
                     setCloudStatus('idle');
                 }, 2000);
             }, remaining);
-        }, [clearSlowInternetHint, clearSyncLockOverlay, getRuntimePendingCount, isRuntimeUploadInProgress, startSyncingState]);
+        }, [clearPendingActionItems, clearSlowInternetHint, clearSyncLockOverlay, getRuntimePendingCount, isRuntimeUploadInProgress, resetLongSyncFallback, startSyncingState]);
 
         useEffect(() => {
-            if (cloudStatus === 'syncing') {
+            const runtimeSyncActive = !!syncingStartRef.current && (
+                cloudStatus === 'syncing'
+                || isRuntimeUploadInProgress()
+                || getRuntimeSyncStatus() === 'syncing'
+                || syncProgressTotalRef.current > 0
+            );
+
+            if (runtimeSyncActive) {
+                ensureSyncingStart();
                 armSyncLockOverlay();
                 armSlowInternetHint();
+                armLongSyncFallback();
                 return;
             }
 
             clearSyncLockOverlay();
             clearSlowInternetHint();
-        }, [armSlowInternetHint, armSyncLockOverlay, clearSlowInternetHint, clearSyncLockOverlay, cloudStatus]);
+        }, [armLongSyncFallback, armSlowInternetHint, armSyncLockOverlay, clearSlowInternetHint, clearSyncLockOverlay, cloudStatus, ensureSyncingStart, getRuntimeSyncStatus, isRuntimeUploadInProgress]);
 
         useEffect(() => {
             const handleSyncComplete = (e) => {
@@ -579,7 +977,10 @@
                 showSyncedWithMinDuration();
             };
 
-            const handleDataSaved = () => {
+            const handleDataSaved = (e) => {
+                if (e?.detail) {
+                    pushPendingActionItem(e.detail);
+                }
                 pendingChangesRef.current = true;
 
                 if (!navigator.onLine) {
@@ -635,16 +1036,39 @@
                 }
             };
 
+            const handleDayUpdated = (e) => {
+                const detail = e?.detail || {};
+                if (detail.batch) return;
+                const source = String(detail.source || '');
+                if (PENDING_SYNC_UI_SKIPPED_SOURCES.has(source) || source.startsWith('cloud')) return;
+
+                pushPendingActionItem({
+                    ...detail,
+                    type: detail.type || 'day',
+                    key: detail.key || (detail.date ? `day:${detail.date}` : 'day'),
+                });
+            };
+
             const handlePendingChange = (e) => {
                 const eventCount = e.detail?.count || 0;
                 const runtimeCount = getRuntimePendingCount();
                 const count = typeof runtimeCount === 'number' ? runtimeCount : eventCount;
                 const details = count > 0
                     ? getRuntimePendingDetails()
-                    : { days: 0, products: 0, profile: 0, other: 0 };
+                    : createEmptyPendingDetails();
                 const uploadInProgress = isRuntimeUploadInProgress();
                 setPendingCount(count);
                 setPendingDetails(details);
+
+                if (count > 0) {
+                    ensureFallbackPendingActionItems(details);
+                    if (longSyncFallbackActiveRef.current) {
+                        setShowPendingSyncBanner(true);
+                    }
+                } else {
+                    clearPendingActionItems();
+                    resetLongSyncFallback();
+                }
 
                 if (syncProgressTotalRef.current > 0 && count < syncProgressTotalRef.current) {
                     setSyncProgress(prev => ({ ...prev, synced: prev.total - count }));
@@ -740,8 +1164,10 @@
 
             const handleQueueDrained = () => {
                 setPendingCount(0);
-                setPendingDetails({ days: 0, products: 0, profile: 0, other: 0 });
+                setPendingDetails(createEmptyPendingDetails());
                 pendingChangesRef.current = false;
+                clearPendingActionItems();
+                resetLongSyncFallback();
 
                 if (!navigator.onLine) {
                     setCloudStatus('offline');
@@ -800,6 +1226,8 @@
                         setCloudStatus('queued');
                     }
                 } else {
+                    clearPendingActionItems();
+                    resetLongSyncFallback();
                     setCloudStatus('idle');
                 }
 
@@ -833,11 +1261,13 @@
                 }
 
                 // Не скрываем баннер автоматически — он исчезнет когда связь вернётся
+                resetLongSyncFallback();
             };
 
             window.addEventListener('heysSyncCompleted', handleSyncComplete);
             window.addEventListener('heys:data-uploaded', handleSyncComplete);
             window.addEventListener('heys:data-saved', handleDataSaved);
+            window.addEventListener('heys:day-updated', handleDayUpdated);
             window.addEventListener('heys:pending-change', handlePendingChange);
             window.addEventListener('heys:network-restored', handleNetworkRestored);
             window.addEventListener('heys:sync-progress', handleSyncProgress);
@@ -854,21 +1284,41 @@
                     setShowOfflineBanner(true);
                     // Баннер остаётся видимым пока нет сети — скроется через handleOnline()
                 } else {
-                    setCloudStatus('idle');
+                    const initialPending = getRuntimePendingCount();
+                    const uploadInProgress = isRuntimeUploadInProgress();
+
+                    if (uploadInProgress) {
+                        pendingChangesRef.current = initialPending > 0;
+                        startSyncingState();
+                    } else if (initialPending > 0) {
+                        pendingChangesRef.current = true;
+                        setCloudStatus('queued');
+                    } else {
+                        setCloudStatus('idle');
+                    }
                 }
             }
 
             if (window.HEYS?.cloud?.getPendingCount) {
-                setPendingCount(window.HEYS.cloud.getPendingCount());
+                const initialPending = window.HEYS.cloud.getPendingCount();
+                setPendingCount(initialPending);
+                if (initialPending === 0) {
+                    clearPendingActionItems();
+                }
             }
             if (window.HEYS?.cloud?.getPendingDetails) {
-                setPendingDetails(window.HEYS.cloud.getPendingDetails());
+                const initialDetails = window.HEYS.cloud.getPendingDetails();
+                setPendingDetails(initialDetails);
+                if ((window.HEYS?.cloud?.getPendingCount?.() || 0) > 0) {
+                    ensureFallbackPendingActionItems(initialDetails);
+                }
             }
 
             return () => {
                 window.removeEventListener('heysSyncCompleted', handleSyncComplete);
                 window.removeEventListener('heys:data-uploaded', handleSyncComplete);
                 window.removeEventListener('heys:data-saved', handleDataSaved);
+                window.removeEventListener('heys:day-updated', handleDayUpdated);
                 window.removeEventListener('heys:pending-change', handlePendingChange);
                 window.removeEventListener('heys:network-restored', handleNetworkRestored);
                 window.removeEventListener('heys:sync-progress', handleSyncProgress);
@@ -882,16 +1332,17 @@
                 if (syncingDelayTimeoutRef.current) clearTimeout(syncingDelayTimeoutRef.current);
                 if (syncLockTimeoutRef.current) clearTimeout(syncLockTimeoutRef.current);
                 if (slowInternetHintTimeoutRef.current) clearTimeout(slowInternetHintTimeoutRef.current);
+                if (longSyncFallbackTimeoutRef.current) clearTimeout(longSyncFallbackTimeoutRef.current);
                 if (retryIntervalRef.current) clearInterval(retryIntervalRef.current);
                 // 🆕 Очистка таймера офлайн
                 if (offlineDurationIntervalRef.current) clearInterval(offlineDurationIntervalRef.current);
                 // 🔥 Очистка таймера auth error debounce
                 if (authErrorTimeoutRef.current) clearTimeout(authErrorTimeoutRef.current);
             };
-        }, [getRuntimePendingCount, getRuntimePendingDetails, isRuntimeUploadInProgress, showSyncedWithMinDuration, startSyncingState]);
+        }, [clearPendingActionItems, ensureFallbackPendingActionItems, getRuntimePendingCount, getRuntimePendingDetails, isRuntimeUploadInProgress, pushPendingActionItem, resetLongSyncFallback, showSyncedWithMinDuration, startSyncingState]);
 
         useEffect(() => {
-            if (cloudStatus !== 'syncing' && !showSyncLockOverlay) return;
+            if (cloudStatus !== 'syncing' && !showSyncLockOverlay && !showPendingSyncBanner && !syncingStartRef.current) return;
 
             const intervalId = setInterval(() => {
                 const runtimePending = getRuntimePendingCount();
@@ -915,6 +1366,45 @@
                     setPendingDetails(runtimeDetails);
                 }
 
+                if (runtimePending > 0 && !uploadInProgress && runtimeSyncStatus === 'synced') {
+                    syncingStartRef.current = null;
+                    clearSyncLockOverlay();
+                    clearSlowInternetHint();
+                    setCloudStatus('queued');
+                    return;
+                }
+
+                const syncElapsedMs = syncingStartRef.current
+                    ? Date.now() - syncingStartRef.current
+                    : 0;
+                const syncVisualActive = !!syncingStartRef.current && (
+                    cloudStatusRef.current === 'syncing'
+                    || uploadInProgress
+                    || runtimeSyncStatus === 'syncing'
+                    || syncProgressTotalRef.current > 0
+                );
+
+                if (syncVisualActive && !longSyncFallbackActiveRef.current) {
+                    if (cloudStatusRef.current !== 'syncing') {
+                        setCloudStatus('syncing');
+                    }
+
+                    if (syncElapsedMs >= LONG_SYNC_LOCK_DELAY && !syncLockShownForCurrentSyncRef.current) {
+                        syncLockShownForCurrentSyncRef.current = true;
+                        setShowSyncLockOverlay(true);
+                    }
+
+                    if (syncElapsedMs >= SLOW_INTERNET_HINT_DELAY && !slowInternetShownForCurrentSyncRef.current) {
+                        slowInternetShownForCurrentSyncRef.current = true;
+                        setShowSlowInternetHint(true);
+                    }
+
+                    if (syncElapsedMs >= NON_BLOCKING_SYNC_DELAY && !showPendingSyncBanner) {
+                        enterBackgroundPendingSync();
+                        return;
+                    }
+                }
+
                 if (runtimePending === 0 && !uploadInProgress && runtimeSyncStatus === 'synced') {
                     pendingChangesRef.current = false;
                     showSyncedWithMinDuration();
@@ -926,10 +1416,13 @@
             clearSlowInternetHint,
             clearSyncLockOverlay,
             cloudStatus,
+            enterBackgroundPendingSync,
             getRuntimePendingCount,
             getRuntimePendingDetails,
             getRuntimeSyncStatus,
             isRuntimeUploadInProgress,
+            showPendingSyncBanner,
+            showSlowInternetHint,
             showSyncLockOverlay,
             showSyncedWithMinDuration,
         ]);
@@ -937,21 +1430,20 @@
         const handleRetrySync = useCallback(() => {
             if (window.HEYS?.cloud?.retrySync) {
                 window.HEYS.cloud.retrySync();
-                syncingStartRef.current = Date.now();
-                setCloudStatus('syncing');
-                armSyncLockOverlay();
-                armSlowInternetHint();
+                startSyncingState();
             }
-        }, [armSlowInternetHint, armSyncLockOverlay]);
+        }, [startSyncingState]);
 
         return {
             cloudStatus,
             pendingCount,
             pendingDetails,
+            pendingActionItems,
             showOfflineBanner,
             showOnlineBanner,
             showSyncLockOverlay,
             showSlowInternetHint,
+            showPendingSyncBanner,
             syncProgress,
             retryCountdown,
             handleRetrySync,

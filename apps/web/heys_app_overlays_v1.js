@@ -101,7 +101,7 @@
             // Toast убран — отвлекает
             // Основной контент — скрыт во время Morning Check-in, Consent Screen или когда показывается gate (login/client select)
             React.createElement(AppShell, appShellProps),
-            !isConsentBlocking && !isMorningCheckinBlocking && showSyncLockOverlay && React.createElement(
+            !isConsentBlocking && !isMorningCheckinBlocking && !showWhatsNew && showSyncLockOverlay && React.createElement(
                 'div',
                 {
                     className: 'sync-lock-overlay',

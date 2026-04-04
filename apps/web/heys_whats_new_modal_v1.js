@@ -8,7 +8,8 @@
 
     const { useState, useEffect, useCallback, useRef } = React;
 
-    const LS_KEY = 'heys_whats_new_last_seen';
+    const LEGACY_SEEN_KEY = 'heys_whats_new_last_seen';
+    const ACK_KEY = 'heys_whats_new_last_acknowledged';
     const FETCH_TIMEOUT = 5000;
 
     // --- Type badges ---
@@ -41,18 +42,52 @@
         }
     }
 
-    function getLastSeenVersion() {
-        try { return localStorage.getItem(LS_KEY) || ''; } catch { return ''; }
+    function getStorageValue(key) {
+        try { return localStorage.getItem(key) || ''; } catch { return ''; }
     }
 
-    function setLastSeenVersion(version) {
-        try { localStorage.setItem(LS_KEY, version); } catch { /* noop */ }
+    function setStorageValue(key, value) {
+        try { localStorage.setItem(key, value); } catch { /* noop */ }
+    }
+
+    function removeStorageValue(key) {
+        try { localStorage.removeItem(key); } catch { /* noop */ }
+    }
+
+    function getLegacySeenVersion() {
+        return getStorageValue(LEGACY_SEEN_KEY);
+    }
+
+    function getAcknowledgedVersion() {
+        return getStorageValue(ACK_KEY);
+    }
+
+    function persistAcknowledgedVersion(version) {
+        if (!version) return;
+        setStorageValue(ACK_KEY, version);
+        setStorageValue(LEGACY_SEEN_KEY, version);
+    }
+
+    function resolveSeenVersion(data) {
+        const acknowledgedVersion = getAcknowledgedVersion();
+        if (acknowledgedVersion) return acknowledgedVersion;
+
+        const legacySeenVersion = getLegacySeenVersion();
+        if (!legacySeenVersion) return '';
+
+        const latestVersion = data?.releases?.[0]?.version || '';
+        if (latestVersion && legacySeenVersion === latestVersion) {
+            console.info('[HEYS.WhatsNew] Latest release exists only in legacy seen state — requiring explicit acknowledgement');
+            return '';
+        }
+
+        return legacySeenVersion;
     }
 
     // --- Check if we should show What's New ---
     function getUnseenReleases(data) {
         if (!data || !data.releases || !data.releases.length) return [];
-        const lastSeen = getLastSeenVersion();
+        const lastSeen = resolveSeenVersion(data);
         if (!lastSeen) {
             // First time ever — show only the latest release
             return [data.releases[0]];
@@ -62,6 +97,53 @@
         if (seenIndex > 0) return data.releases.slice(0, seenIndex);
         // If localStorage contains an old/unknown version, show only the latest release.
         return [data.releases[0]];
+    }
+
+    function inspectUnseenData(data) {
+        if (!data || !Array.isArray(data.releases) || data.releases.length === 0) {
+            return {
+                ok: false,
+                hasUnseen: false,
+                reason: 'invalid_data',
+                latestVersion: '',
+                legacySeenVersion: getLegacySeenVersion(),
+                acknowledgedVersion: getAcknowledgedVersion(),
+                resolvedSeenVersion: '',
+                unseenReleases: [],
+            };
+        }
+
+        const resolvedSeenVersion = resolveSeenVersion(data);
+        const unseenReleases = getUnseenReleases(data);
+
+        return {
+            ok: true,
+            hasUnseen: unseenReleases.length > 0,
+            reason: unseenReleases.length > 0 ? 'has_unseen' : 'up_to_date',
+            latestVersion: data.releases[0]?.version || '',
+            legacySeenVersion: getLegacySeenVersion(),
+            acknowledgedVersion: getAcknowledgedVersion(),
+            resolvedSeenVersion,
+            unseenReleases,
+        };
+    }
+
+    async function inspectUnseen() {
+        const data = await fetchWhatsNew();
+        if (!data) {
+            return {
+                ok: false,
+                hasUnseen: false,
+                reason: 'fetch_failed',
+                latestVersion: '',
+                legacySeenVersion: getLegacySeenVersion(),
+                acknowledgedVersion: getAcknowledgedVersion(),
+                resolvedSeenVersion: '',
+                unseenReleases: [],
+            };
+        }
+
+        return inspectUnseenData(data);
     }
 
     // --- Image component with loading state ---
@@ -142,18 +224,16 @@
             let cancelled = false;
             fetchWhatsNew().then(data => {
                 if (cancelled) return;
-                const unseen = getUnseenReleases(data);
+                const inspection = inspectUnseenData(data);
+                const unseen = inspection.unseenReleases;
                 if (unseen.length > 0) {
-                    const latestVersion = data.releases[0].version;
-                    latestVersionRef.current = latestVersion;
-                    // Persist immediately so a PWA reload won't show the modal again
-                    setLastSeenVersion(latestVersion);
+                    latestVersionRef.current = inspection.latestVersion;
                     setReleases(unseen);
                     // Animate in
                     requestAnimationFrame(() => {
                         if (!cancelled) setVisible(true);
                     });
-                    console.info('[HEYS.WhatsNew] Showing', unseen.length, 'unseen release(s), marked', latestVersion, 'as seen');
+                    console.info('[HEYS.WhatsNew] Showing', unseen.length, 'unseen release(s), waiting for explicit acknowledgement of', inspection.latestVersion);
                 } else {
                     console.info('[HEYS.WhatsNew] No unseen releases, closing');
                     if (onCloseRef.current) onCloseRef.current();
@@ -190,9 +270,9 @@
         }, [releases]);
 
         const handleClose = useCallback(() => {
-            // Redundant write (already persisted on show) — kept for safety
             if (latestVersionRef.current) {
-                setLastSeenVersion(latestVersionRef.current);
+                persistAcknowledgedVersion(latestVersionRef.current);
+                console.info('[HEYS.WhatsNew] Acknowledged release', latestVersionRef.current);
             }
             setVisible(false);
             setTimeout(() => {
@@ -247,12 +327,14 @@
         WhatsNewModal,
         // Utility: check if there are unseen releases without showing modal
         checkUnseen: async function () {
-            const data = await fetchWhatsNew();
-            return getUnseenReleases(data).length > 0;
+            const inspection = await inspectUnseen();
+            return inspection.ok && inspection.hasUnseen;
         },
+        inspectUnseen,
         // Utility: reset seen state (for testing)
         resetSeen: function () {
-            try { localStorage.removeItem(LS_KEY); } catch { /* noop */ }
+            removeStorageValue(LEGACY_SEEN_KEY);
+            removeStorageValue(ACK_KEY);
         },
     };
 
