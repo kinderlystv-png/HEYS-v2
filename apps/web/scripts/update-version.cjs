@@ -16,26 +16,109 @@ const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
 
+const RELEASE_META_FILE_PATTERNS = [
+  /^apps\/web\/public\/whats-new\.json$/,
+  /^apps\/web\/public\/whats-new\//,
+  /^scripts\/prepare-release\.mjs$/,
+  /^scripts\/release-prepare-and-commit\.mjs$/,
+  /^\.github\/workflows\/whats-new-guard\.yml$/,
+];
+
+let cachedReleaseTarget = null;
+
 const APP_FILE = path.join(__dirname, '..', 'heys_app_v12.js');
 const PWA_MODULE_FILE = path.join(__dirname, '..', 'heys_pwa_module_v1.js');
 const SW_FILE = path.join(__dirname, '..', 'public', 'sw.js');
 const VERSION_JSON = path.join(__dirname, '..', 'public', 'version.json');
 const BUILD_META_JSON = path.join(__dirname, '..', 'public', 'build-meta.json');
 
-// Получаем git short hash если доступен
-function getGitHash() {
+function runGit(command) {
   try {
-    return execSync('git rev-parse --short HEAD', { encoding: 'utf8' }).trim();
+    return execSync(command, { encoding: 'utf8' }).trim();
   } catch (e) {
-    return null;
+    return '';
   }
 }
 
+function getGitHash(ref = 'HEAD') {
+  return runGit(`git rev-parse --short ${ref}`) || null;
+}
+
+function getGitCommitTimestamp(ref = 'HEAD') {
+  const raw = runGit(`git show -s --format=%ct ${ref}`);
+  const timestampSeconds = Number(raw);
+  if (!Number.isFinite(timestampSeconds) || timestampSeconds <= 0) {
+    return null;
+  }
+  return timestampSeconds * 1000;
+}
+
+function isReleaseMetaOnlyFile(filePath) {
+  return RELEASE_META_FILE_PATTERNS.some((pattern) => pattern.test(filePath));
+}
+
+function getCommitFiles(ref = 'HEAD') {
+  const output = runGit(`git diff-tree --no-commit-id --name-only -r ${ref}`);
+  if (!output) return [];
+  return output
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+}
+
+function resolveReleaseTargetRef() {
+  if (cachedReleaseTarget) return cachedReleaseTarget;
+
+  const currentHeadHash = getGitHash('HEAD');
+  const historyOutput = runGit('git rev-list --max-count=20 HEAD');
+
+  if (!historyOutput) {
+    cachedReleaseTarget = {
+      targetRef: 'HEAD',
+      targetHash: currentHeadHash,
+      currentHeadHash,
+    };
+    return cachedReleaseTarget;
+  }
+
+  const revisions = historyOutput
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  for (const revision of revisions) {
+    const files = getCommitFiles(revision);
+    if (files.length === 0) continue;
+
+    const hasNonReleaseMetaFiles = files.some((filePath) => !isReleaseMetaOnlyFile(filePath));
+    if (hasNonReleaseMetaFiles) {
+      cachedReleaseTarget = {
+        targetRef: revision,
+        targetHash: getGitHash(revision),
+        targetCommitTimestamp: getGitCommitTimestamp(revision),
+        currentHeadHash,
+      };
+      return cachedReleaseTarget;
+    }
+  }
+
+  cachedReleaseTarget = {
+    targetRef: 'HEAD',
+    targetHash: currentHeadHash,
+    targetCommitTimestamp: getGitCommitTimestamp('HEAD'),
+    currentHeadHash,
+  };
+  return cachedReleaseTarget;
+}
+
 // Генерируем версию (всегда по Москве UTC+3)
-function generateVersion() {
-  // Получаем время в Москве
-  const now = new Date();
-  const moscowDate = new Date(now.toLocaleString('en-US', { timeZone: 'Europe/Moscow' }));
+function generateVersion(releaseTarget) {
+  // Используем timestamp meaningful commit, чтобы локальный rebuild и CI
+  // давали одинаковую runtime-версию и одинаковые hashed bundles.
+  const sourceDate = releaseTarget?.targetCommitTimestamp
+    ? new Date(releaseTarget.targetCommitTimestamp)
+    : new Date();
+  const moscowDate = new Date(sourceDate.toLocaleString('en-US', { timeZone: 'Europe/Moscow' }));
 
   const year = moscowDate.getFullYear();
   const month = String(moscowDate.getMonth() + 1).padStart(2, '0');
@@ -45,7 +128,7 @@ function generateVersion() {
 
   const date = `${year}.${month}.${day}`;
   const time = `${hour}${minute}`;
-  const hash = getGitHash();
+  const hash = releaseTarget?.targetHash;
 
   // Формат: 2025.12.12.1423.abc1234 (всегда дата + время + hash если есть)
   return hash ? `${date}.${time}.${hash}` : `${date}.${time}`;
@@ -53,7 +136,18 @@ function generateVersion() {
 
 // Обновляем версию в файле
 function updateVersion() {
-  const newVersion = generateVersion();
+  const releaseTarget = resolveReleaseTargetRef();
+  const newVersion = generateVersion(releaseTarget);
+
+  if (
+    releaseTarget.targetHash &&
+    releaseTarget.currentHeadHash &&
+    releaseTarget.targetHash !== releaseTarget.currentHeadHash
+  ) {
+    console.log(
+      `ℹ️ Using meaningful release commit ${releaseTarget.targetHash} instead of meta-only HEAD ${releaseTarget.currentHeadHash}`,
+    );
+  }
 
   // 1. Обновляем APP_VERSION в heys_app_v12.js
   let content = fs.readFileSync(APP_FILE, 'utf8');
@@ -64,7 +158,7 @@ function updateVersion() {
     fs.writeFileSync(APP_FILE, content);
     console.log(`✅ APP_VERSION updated to: ${newVersion}`);
   } else {
-    console.log('⚠️ APP_VERSION not found in file');
+    console.log('ℹ️ APP_VERSION not found in heys_app_v12.js — legacy standalone entry skipped');
   }
 
   // 1b. Обновляем APP_VERSION в heys_pwa_module_v1.js (источник HEYS.version у рантайма)
@@ -84,7 +178,7 @@ function updateVersion() {
   const metaData = {
     version: newVersion,
     buildTime: new Date().toISOString(),
-    hash: getGitHash() || 'unknown'
+    hash: releaseTarget.targetHash || 'unknown'
   };
 
   fs.writeFileSync(BUILD_META_JSON, JSON.stringify(metaData, null, 2));
@@ -120,7 +214,7 @@ function updateVersion() {
     fs.writeFileSync(INDEX_HTML, htmlContent);
     console.log(`✅ index.html script src updated: heys_app_v12.js?v=${newVersion}`);
   } else {
-    console.log('⚠️ heys_app_v12.js not found in index.html (looking for src="heys_app_v12.js?v=...")');
+    console.log('ℹ️ heys_app_v12.js not referenced in index.html — legacy cache-busting skipped');
   }
 
   return newVersion;

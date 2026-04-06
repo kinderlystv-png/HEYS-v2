@@ -170,6 +170,37 @@ jobs:
             echo "{\"version\":\"$VERSION\",\"buildTime\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\",\"commit\":\"${{ github.sha }}\"}" > apps/web/dist/version.json
           fi
 
+      - name: Validate runtime version sync
+        run: |
+          echo "🔍 Validating runtime version sync..."
+
+          VERSION=$(jq -r '.version' apps/web/dist/build-meta.json)
+          MANIFEST_PATH="apps/web/dist/bundle-manifest.json"
+
+          if [ ! -f "$MANIFEST_PATH" ]; then
+            echo "::error::bundle-manifest.json not found in dist"
+            exit 1
+          fi
+
+          BOOT_CORE=$(jq -r '."boot-core".file' "$MANIFEST_PATH")
+
+          if [ -z "$BOOT_CORE" ] || [ "$BOOT_CORE" = "null" ]; then
+            echo "::error::Missing boot-core entry in manifest"
+            exit 1
+          fi
+
+          if [ ! -f "apps/web/dist/$BOOT_CORE" ]; then
+            echo "::error::Runtime bundle missing from dist: $BOOT_CORE"
+            exit 1
+          fi
+
+          if ! grep -F "$VERSION" "apps/web/dist/$BOOT_CORE" >/dev/null; then
+            echo "::error::Runtime version $VERSION not found inside $BOOT_CORE"
+            exit 1
+          fi
+
+          echo "✅ boot-core is aligned with build-meta version $VERSION"
+
       - name: Read SW cache version
         run: |
           if [ -f apps/web/dist/sw.js ]; then
