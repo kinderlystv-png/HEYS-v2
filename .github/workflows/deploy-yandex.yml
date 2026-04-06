@@ -205,6 +205,8 @@ jobs:
             --exclude "index.html" \
             --exclude "sw.js" \
             --exclude "version.json" \
+            --exclude "build-meta.json" \
+            --exclude "whats-new.json" \
             --exclude "manifest.json" \
             --exclude "manifest.webmanifest" \
             --exclude "heys_*.js" \
@@ -337,6 +339,16 @@ jobs:
             --endpoint-url=${{ env.YC_ENDPOINT }} \
             --cache-control "no-cache, no-store, must-revalidate" \
             --content-type "application/manifest+json" &
+
+          aws s3 cp apps/web/dist/build-meta.json s3://${{ env.YC_BUCKET_PWA }}/build-meta.json \
+            --endpoint-url=${{ env.YC_ENDPOINT }} \
+            --cache-control "no-cache, no-store, must-revalidate" \
+            --content-type "application/json" &
+
+          aws s3 cp apps/web/dist/whats-new.json s3://${{ env.YC_BUCKET_PWA }}/whats-new.json \
+            --endpoint-url=${{ env.YC_ENDPOINT }} \
+            --cache-control "no-cache, no-store, must-revalidate" \
+            --content-type "application/json" &
 
           wait
 
