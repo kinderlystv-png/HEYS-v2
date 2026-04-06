@@ -27093,13 +27093,64 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                     return '';
                 };
 
+                const maybeClearResolvedPendingUpdate = async () => {
+                    try {
+                        if (!sessionStorage.getItem('heys_pending_update')) {
+                            return false;
+                        }
+                    } catch (error) {
+                        console.warn('[HEYS.WhatsNew] Failed to read pending update flag for self-heal', error);
+                        return false;
+                    }
+
+                    if (!HEYS.WhatsNew?.inspectUnseen) {
+                        return false;
+                    }
+
+                    try {
+                        const inspection = await HEYS.WhatsNew.inspectUnseen();
+                        if (!inspection?.ok) {
+                            return false;
+                        }
+
+                        try {
+                            sessionStorage.removeItem('heys_pending_update');
+                        } catch (error) {
+                            console.warn('[HEYS.WhatsNew] Failed to clear stale pending update flag', error);
+                            return false;
+                        }
+
+                        console.info('[HEYS.WhatsNew] Cleared stale pending update flag after runtime caught up', {
+                            latestVersion: inspection.latestVersion,
+                            reason: inspection.reason,
+                        });
+
+                        return true;
+                    } catch (error) {
+                        console.warn('[HEYS.WhatsNew] Pending update self-heal failed', error);
+                        return false;
+                    }
+                };
+
                 const runCheck = async () => {
                     if (cancelled || showWhatsNew) {
                         clearRetry();
                         return;
                     }
 
-                    const blockReason = getBlockReason();
+                    let blockReason = getBlockReason();
+                    if (blockReason === 'pending-update') {
+                        const clearedPendingUpdate = await maybeClearResolvedPendingUpdate();
+                        if (cancelled || showWhatsNew) {
+                            clearRetry();
+                            return;
+                        }
+
+                        if (clearedPendingUpdate) {
+                            blockReason = getBlockReason();
+                        }
+                    }
+
                     if (blockReason) {
                         console.info('[HEYS.WhatsNew] Deferred —', blockReason, {
                             hasClientId: Boolean(clientId),

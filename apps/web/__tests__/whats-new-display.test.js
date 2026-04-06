@@ -99,6 +99,15 @@ function getWhatsNewBlockReason({
     return '';
 }
 
+function shouldClearPendingUpdateFlag({
+    pendingUpdate = false,
+    inspection = null,
+} = {}) {
+    if (!pendingUpdate) return false;
+    if (!inspection?.ok) return false;
+    return true;
+}
+
 describe('What\'s New display guarantees', () => {
     beforeEach(() => {
         mockLocalStorage = {};
@@ -198,5 +207,26 @@ describe('What\'s New display guarantees', () => {
 
         expect(inspection.ok).toBe(false);
         expect(inspection.reason).toBe('code_update_pending');
+    });
+
+    it('clears a stale pending-update flag after the runtime has already caught up', () => {
+        const inspection = inspectWhatsNewState({
+            data: releases,
+            runningVersion: '2026.04.04.1200.9c35ee01',
+            buildMetaVersion: '2026.04.04.1200.9c35ee01',
+        });
+
+        expect(shouldClearPendingUpdateFlag({ pendingUpdate: true, inspection })).toBe(true);
+    });
+
+    it('keeps the pending-update flag while code update is still actually pending', () => {
+        const inspection = inspectWhatsNewState({
+            data: releases,
+            runningVersion: '2026.04.04.1200.9f37f3bc',
+            buildMetaVersion: '2026.04.04.1200.9f37f3bc',
+        });
+
+        expect(inspection.reason).toBe('code_update_pending');
+        expect(shouldClearPendingUpdateFlag({ pendingUpdate: true, inspection })).toBe(false);
     });
 });
