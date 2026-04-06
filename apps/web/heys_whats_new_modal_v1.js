@@ -7,7 +7,7 @@
     const React = window.React;
     if (!React) return;
 
-    const MODULE_VERIFICATION_MARK = '2026-04-06-whats-new-retry-4';
+    const MODULE_VERIFICATION_MARK = '2026-04-07-whats-new-followup-1';
 
     const { useState, useEffect, useCallback, useRef } = React;
 
