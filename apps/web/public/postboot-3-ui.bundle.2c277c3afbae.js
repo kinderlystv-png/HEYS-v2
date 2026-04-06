@@ -39382,6 +39382,23 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         }
     }
 
+    async function fetchBuildMeta() {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT);
+        try {
+            const resp = await fetch(`/build-meta.json?_cb=${Date.now()}`, {
+                cache: 'no-store',
+                signal: controller.signal,
+            });
+            clearTimeout(timer);
+            if (!resp.ok) return null;
+            return await resp.json();
+        } catch {
+            clearTimeout(timer);
+            return null;
+        }
+    }
+
     function getStorageValue(key) {
         try { return localStorage.getItem(key) || ''; } catch { return ''; }
     }
@@ -39469,13 +39486,37 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     }
 
     async function inspectUnseen() {
-        const data = await fetchWhatsNew();
+        const [data, buildMeta] = await Promise.all([
+            fetchWhatsNew(),
+            fetchBuildMeta(),
+        ]);
         if (!data) {
             return {
                 ok: false,
                 hasUnseen: false,
                 reason: 'fetch_failed',
                 latestVersion: '',
+                legacySeenVersion: getLegacySeenVersion(),
+                acknowledgedVersion: getAcknowledgedVersion(),
+                resolvedSeenVersion: '',
+                unseenReleases: [],
+            };
+        }
+
+        // Gate: if server has a newer code version than what's running,
+        // defer What's New until PWA update reloads the page with new code.
+        const runningVersion = HEYS.version || '';
+        const serverVersion = buildMeta?.version || '';
+        if (serverVersion && runningVersion && serverVersion !== runningVersion) {
+            console.info(
+                '[HEYS.WhatsNew] Code update pending — deferring What\'s New.',
+                'Running:', runningVersion, '→ Server:', serverVersion
+            );
+            return {
+                ok: false,
+                hasUnseen: false,
+                reason: 'code_update_pending',
+                latestVersion: data.releases[0]?.version || '',
                 legacySeenVersion: getLegacySeenVersion(),
                 acknowledgedVersion: getAcknowledgedVersion(),
                 resolvedSeenVersion: '',

@@ -747,7 +747,8 @@
                         }
 
                         if (!inspection?.ok) {
-                            console.warn('[HEYS.WhatsNew] Inspect failed — retrying later');
+                            const reason = inspection?.reason || 'unknown';
+                            console.info('[HEYS.WhatsNew] Inspect deferred —', reason, '— retrying in 5s');
                             scheduleRetry(5000);
                             return;
                         }
