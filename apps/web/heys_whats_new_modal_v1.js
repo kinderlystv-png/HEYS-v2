@@ -7,6 +7,8 @@
     const React = window.React;
     if (!React) return;
 
+    const MODULE_VERIFICATION_MARK = '2026-04-06-whats-new-retry';
+
     const { useState, useEffect, useCallback, useRef } = React;
 
     const LEGACY_SEEN_KEY = 'heys_whats_new_last_seen';
@@ -380,5 +382,5 @@
         },
     };
 
-    console.info('[HEYS.WhatsNew] Module loaded');
+    console.info('[HEYS.WhatsNew] Module loaded', MODULE_VERIFICATION_MARK);
 })();
