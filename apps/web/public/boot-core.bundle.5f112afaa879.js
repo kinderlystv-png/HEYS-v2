@@ -4526,7 +4526,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
   // ============================================================================
 
   // === App Version & Auto-logout on Update ===
-  const APP_VERSION = '2026.03.31.1210.d1e18904'; // synced with build-meta.json on 2026-02-26
+  const APP_VERSION = '2026.04.06.2006.95657984'; // synced with build-meta.json on 2026-02-26
 
   HEYS.version = APP_VERSION;
 

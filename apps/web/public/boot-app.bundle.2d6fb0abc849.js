@@ -26939,6 +26939,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                 isInitializing,
             });
             const { gate, desktopGate, consentGate } = gateState;
+            const hasBlockingGate = Boolean(gate || desktopGate || consentGate);
 
             const fallbackUseClientInitState = ({ React: HookReact }) => HookReact.useEffect(() => { }, []);
             const useClientInitState = getStableHook(AppClientInit.useClientInitState, fallbackUseClientInitState);
@@ -27058,6 +27059,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
 
                 const getBlockReason = () => {
                     if (isInitializing) return 'app-initializing';
+                    if (hasBlockingGate) return 'gate-active';
+                    if (!clientId) return 'client-not-ready';
                     if (isConsentBlocking) return 'consent-blocking';
                     if (isMorningCheckinBlocking) return 'morning-checkin-blocking';
                     if (showSyncLockOverlay) return 'sync-lock-overlay';
@@ -27098,7 +27101,10 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
 
                     const blockReason = getBlockReason();
                     if (blockReason) {
-                        console.info('[HEYS.WhatsNew] Deferred —', blockReason);
+                        console.info('[HEYS.WhatsNew] Deferred —', blockReason, {
+                            hasClientId: Boolean(clientId),
+                            hasBlockingGate,
+                        });
                         const retryDelay = blockReason === 'pending-update' || blockReason === 'update-lock' || blockReason === 'sync-lock-overlay'
                             ? 2000
                             : 1200;
@@ -27143,7 +27149,15 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                     cancelled = true;
                     clearRetry();
                 };
-            }, [isInitializing, isConsentBlocking, isMorningCheckinBlocking, showSyncLockOverlay, showWhatsNew]);
+            }, [
+                clientId,
+                hasBlockingGate,
+                isInitializing,
+                isConsentBlocking,
+                isMorningCheckinBlocking,
+                showSyncLockOverlay,
+                showWhatsNew,
+            ]);
 
             const buildAppShellProps = AppShellProps.buildAppShellProps
                 || ((params) => ({
