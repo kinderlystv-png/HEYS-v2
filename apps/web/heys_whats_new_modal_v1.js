@@ -1,5 +1,6 @@
 // heys_whats_new_modal_v1.js — "What's New" modal after PWA update
 // Shows changelog with screenshots after app update
+// Verification marker: dedicated release to test the PWA update → What's New flow.
 
 (function () {
     const HEYS = window.HEYS = window.HEYS || {};
