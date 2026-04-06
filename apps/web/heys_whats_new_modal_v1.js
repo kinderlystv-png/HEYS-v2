@@ -82,6 +82,32 @@
         return getStorageValue(ACK_KEY);
     }
 
+    function extractBuildHash(version) {
+        if (!version || typeof version !== 'string') return '';
+        const parts = version.split('.').filter(Boolean);
+        return parts.length > 0 ? parts[parts.length - 1] : '';
+    }
+
+    function getLatestReleaseBuildHash(data) {
+        return typeof data?.releases?.[0]?.buildHash === 'string'
+            ? data.releases[0].buildHash.trim()
+            : '';
+    }
+
+    function createDeferredInspectionResult(data, reason, extra = {}) {
+        return {
+            ok: false,
+            hasUnseen: false,
+            reason,
+            latestVersion: data?.releases?.[0]?.version || '',
+            legacySeenVersion: getLegacySeenVersion(),
+            acknowledgedVersion: getAcknowledgedVersion(),
+            resolvedSeenVersion: '',
+            unseenReleases: [],
+            ...extra,
+        };
+    }
+
     function persistAcknowledgedVersion(version) {
         if (!version) return;
         setStorageValue(ACK_KEY, version);
@@ -154,37 +180,41 @@
             fetchBuildMeta(),
         ]);
         if (!data) {
-            return {
-                ok: false,
-                hasUnseen: false,
-                reason: 'fetch_failed',
+            return createDeferredInspectionResult(null, 'fetch_failed', {
                 latestVersion: '',
-                legacySeenVersion: getLegacySeenVersion(),
-                acknowledgedVersion: getAcknowledgedVersion(),
-                resolvedSeenVersion: '',
-                unseenReleases: [],
-            };
+            });
+        }
+
+        const runningVersion = HEYS.version || '';
+        const runningBuildHash = extractBuildHash(runningVersion);
+        const latestReleaseBuildHash = getLatestReleaseBuildHash(data);
+
+        if (latestReleaseBuildHash && runningBuildHash && latestReleaseBuildHash !== runningBuildHash) {
+            console.info(
+                '[HEYS.WhatsNew] Release build is newer than running code — deferring What\'s New.',
+                'Running hash:', runningBuildHash, '→ Release hash:', latestReleaseBuildHash
+            );
+            return createDeferredInspectionResult(data, 'code_update_pending', {
+                runningVersion,
+                runningBuildHash,
+                latestReleaseBuildHash,
+            });
         }
 
         // Gate: if server has a newer code version than what's running,
         // defer What's New until PWA update reloads the page with new code.
-        const runningVersion = HEYS.version || '';
         const serverVersion = buildMeta?.version || '';
         if (serverVersion && runningVersion && serverVersion !== runningVersion) {
             console.info(
                 '[HEYS.WhatsNew] Code update pending — deferring What\'s New.',
                 'Running:', runningVersion, '→ Server:', serverVersion
             );
-            return {
-                ok: false,
-                hasUnseen: false,
-                reason: 'code_update_pending',
-                latestVersion: data.releases[0]?.version || '',
-                legacySeenVersion: getLegacySeenVersion(),
-                acknowledgedVersion: getAcknowledgedVersion(),
-                resolvedSeenVersion: '',
-                unseenReleases: [],
-            };
+            return createDeferredInspectionResult(data, 'code_update_pending', {
+                runningVersion,
+                runningBuildHash,
+                latestReleaseBuildHash,
+                serverVersion,
+            });
         }
 
         return inspectUnseenData(data);
@@ -266,11 +296,10 @@
 
         useEffect(() => {
             let cancelled = false;
-            fetchWhatsNew().then(data => {
+            inspectUnseen().then(inspection => {
                 if (cancelled) return;
-                const inspection = inspectUnseenData(data);
                 const unseen = inspection.unseenReleases;
-                if (unseen.length > 0) {
+                if (inspection.ok && unseen.length > 0) {
                     latestVersionRef.current = inspection.latestVersion;
                     setReleases(unseen);
                     // Animate in
@@ -279,7 +308,7 @@
                     });
                     console.info('[HEYS.WhatsNew] Showing', unseen.length, 'unseen release(s), waiting for explicit acknowledgement of', inspection.latestVersion);
                 } else {
-                    console.info('[HEYS.WhatsNew] No unseen releases, closing');
+                    console.info('[HEYS.WhatsNew] Modal mount deferred —', inspection.reason || 'no_unseen');
                     if (onCloseRef.current) onCloseRef.current();
                 }
             });

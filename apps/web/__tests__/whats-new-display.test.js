@@ -41,6 +41,39 @@ function getUnseenReleases(data) {
     return [data.releases[0]];
 }
 
+function extractBuildHash(version) {
+    if (!version || typeof version !== 'string') return '';
+    const parts = version.split('.').filter(Boolean);
+    return parts.length > 0 ? parts[parts.length - 1] : '';
+}
+
+function inspectWhatsNewState({
+    data,
+    runningVersion = '',
+    buildMetaVersion = '',
+} = {}) {
+    if (!data || !Array.isArray(data.releases) || data.releases.length === 0) {
+        return { ok: false, hasUnseen: false, reason: 'invalid_data' };
+    }
+
+    const latestReleaseBuildHash = data.releases[0]?.buildHash || '';
+    const runningBuildHash = extractBuildHash(runningVersion);
+    if (latestReleaseBuildHash && runningBuildHash && latestReleaseBuildHash !== runningBuildHash) {
+        return { ok: false, hasUnseen: false, reason: 'code_update_pending' };
+    }
+
+    if (buildMetaVersion && runningVersion && buildMetaVersion !== runningVersion) {
+        return { ok: false, hasUnseen: false, reason: 'code_update_pending' };
+    }
+
+    const unseenReleases = getUnseenReleases(data);
+    return {
+        ok: true,
+        hasUnseen: unseenReleases.length > 0,
+        reason: unseenReleases.length > 0 ? 'has_unseen' : 'up_to_date',
+    };
+}
+
 function getWhatsNewBlockReason({
     isInitializing = false,
     isConsentBlocking = false,
@@ -75,9 +108,9 @@ describe('What\'s New display guarantees', () => {
 
     const releases = {
         releases: [
-            { version: '2026.04.04.9c35ee01' },
-            { version: '2026.04.04.9f37f3bc' },
-            { version: '2026.04.01.81bb72a9' },
+            { version: '2026.04.04.9c35ee01', buildHash: '9c35ee01' },
+            { version: '2026.04.04.9f37f3bc', buildHash: '9f37f3bc' },
+            { version: '2026.04.01.81bb72a9', buildHash: '81bb72a9' },
         ],
     };
 
@@ -131,5 +164,39 @@ describe('What\'s New display guarantees', () => {
 
         mockLocalStorage.heys_update_in_progress = JSON.stringify({ timestamp: mockNow - UPDATE_LOCK_TIMEOUT_MS - 1 });
         expect(getWhatsNewBlockReason()).toBe('');
+    });
+
+    it('does not show What\'s New on old runtime code even if the release feed is newer', () => {
+        const inspection = inspectWhatsNewState({
+            data: releases,
+            runningVersion: '2026.04.04.1200.9f37f3bc',
+            buildMetaVersion: '2026.04.04.1200.9f37f3bc',
+        });
+
+        expect(inspection.ok).toBe(false);
+        expect(inspection.reason).toBe('code_update_pending');
+    });
+
+    it('shows What\'s New only after the runtime hash matches the latest release hash', () => {
+        const inspection = inspectWhatsNewState({
+            data: releases,
+            runningVersion: '2026.04.04.1200.9c35ee01',
+            buildMetaVersion: '2026.04.04.1200.9c35ee01',
+        });
+
+        expect(inspection.ok).toBe(true);
+        expect(inspection.reason).toBe('has_unseen');
+        expect(inspection.hasUnseen).toBe(true);
+    });
+
+    it('still defers if build-meta is ahead of the currently running runtime version', () => {
+        const inspection = inspectWhatsNewState({
+            data: releases,
+            runningVersion: '2026.04.04.1200.9c35ee01',
+            buildMetaVersion: '2026.04.04.1300.abcd1234',
+        });
+
+        expect(inspection.ok).toBe(false);
+        expect(inspection.reason).toBe('code_update_pending');
     });
 });
