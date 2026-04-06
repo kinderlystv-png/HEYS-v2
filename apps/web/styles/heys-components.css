@@ -843,7 +843,7 @@ body.tour-active .ios-pwa-banner {
   position: fixed;
   right: var(--heys-keyboard-dismiss-right, 12px);
   bottom: var(--heys-keyboard-dismiss-bottom, 84px);
-  z-index: 9805;
+  z-index: 10010;
   pointer-events: none;
   display: flex;
   justify-content: flex-end;
