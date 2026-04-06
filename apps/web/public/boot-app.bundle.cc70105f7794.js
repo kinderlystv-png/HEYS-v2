@@ -20460,6 +20460,86 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
     const React = window.React;
     if (!React) return;
 
+    const KEYBOARD_DISMISS_BOTTOM_VAR = '--heys-keyboard-dismiss-bottom';
+    const KEYBOARD_DISMISS_RIGHT_VAR = '--heys-keyboard-dismiss-right';
+    const KEYBOARD_DISMISS_SELECTOR = 'input, textarea, [contenteditable=""], [contenteditable="true"], [contenteditable="plaintext-only"]';
+    const KEYBOARD_DISMISS_BLOCKED_INPUT_TYPES = new Set(['button', 'checkbox', 'color', 'file', 'hidden', 'image', 'radio', 'range', 'reset', 'submit']);
+
+    function getEditableElement(target) {
+        if (!target || typeof target !== 'object') return null;
+
+        const candidate = typeof target.closest === 'function'
+            ? target.closest(KEYBOARD_DISMISS_SELECTOR)
+            : target;
+
+        if (!candidate || candidate.nodeType !== 1) return null;
+
+        if (candidate.matches?.('textarea')) {
+            return candidate.disabled || candidate.readOnly ? null : candidate;
+        }
+
+        if (candidate.matches?.('input')) {
+            const inputType = String(candidate.type || 'text').toLowerCase();
+            if (candidate.disabled || candidate.readOnly || KEYBOARD_DISMISS_BLOCKED_INPUT_TYPES.has(inputType)) {
+                return null;
+            }
+            return candidate;
+        }
+
+        return candidate.isContentEditable ? candidate : null;
+    }
+
+    function isMobileKeyboardContext() {
+        if (typeof window === 'undefined') return false;
+
+        const viewportWidth = Math.round(
+            window.visualViewport?.width
+            || window.innerWidth
+            || document.documentElement?.clientWidth
+            || 0,
+        );
+        const hasCoarsePointer = typeof window.matchMedia === 'function'
+            ? window.matchMedia('(pointer: coarse)').matches
+            : false;
+        const hasTouchPoints = Number(window.navigator?.maxTouchPoints || 0) > 0;
+
+        return viewportWidth <= 900 && (hasCoarsePointer || hasTouchPoints);
+    }
+
+    function getBottomTabsOccupiedPx() {
+        if (typeof document === 'undefined') return 0;
+
+        const tabs = document.querySelector('.tabs');
+        if (!tabs) return 0;
+
+        const rect = tabs.getBoundingClientRect();
+        if (!rect || rect.height <= 0) return 0;
+
+        return Math.max(0, Math.round(window.innerHeight - rect.top));
+    }
+
+    function getKeyboardDismissOffsets() {
+        if (typeof window === 'undefined') {
+            return { bottom: 84, right: 12 };
+        }
+
+        const visualViewport = window.visualViewport;
+        const layoutHeight = Math.max(
+            0,
+            Math.round(window.innerHeight || document.documentElement?.clientHeight || 0),
+        );
+        const viewportHeight = Math.max(0, Math.round(visualViewport?.height || layoutHeight));
+        const viewportOffsetTop = Math.max(0, Math.round(visualViewport?.offsetTop || 0));
+        const viewportOffsetLeft = Math.max(0, Math.round(visualViewport?.offsetLeft || 0));
+        const keyboardInset = Math.max(0, layoutHeight - viewportHeight - viewportOffsetTop);
+        const bottomTabsPx = getBottomTabsOccupiedPx();
+
+        return {
+            bottom: Math.max(12, Math.max(keyboardInset, bottomTabsPx) + 12),
+            right: Math.max(12, viewportOffsetLeft + 12),
+        };
+    }
+
     function AppOverlays(props) {
         const {
             gate,
@@ -20493,7 +20573,96 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
             dismissWhatsNew,
         } = props;
 
+        const activeEditableRef = React.useRef(null);
+        const [showKeyboardDismiss, setShowKeyboardDismiss] = React.useState(false);
         const [showSlowInternetHintLocal, setShowSlowInternetHintLocal] = React.useState(false);
+
+        const syncKeyboardDismiss = React.useCallback(() => {
+            if (typeof window === 'undefined' || typeof document === 'undefined') return;
+
+            const root = document.documentElement;
+            const activeEditable = getEditableElement(document.activeElement);
+            const offsets = getKeyboardDismissOffsets();
+
+            activeEditableRef.current = activeEditable;
+            root.style.setProperty(KEYBOARD_DISMISS_BOTTOM_VAR, `${offsets.bottom}px`);
+            root.style.setProperty(KEYBOARD_DISMISS_RIGHT_VAR, `${offsets.right}px`);
+
+            const shouldShow = Boolean(activeEditable) && isMobileKeyboardContext();
+            setShowKeyboardDismiss((prev) => (prev === shouldShow ? prev : shouldShow));
+        }, []);
+
+        const handleDismissKeyboard = React.useCallback(() => {
+            if (typeof document === 'undefined') return;
+
+            const activeEditable = activeEditableRef.current || getEditableElement(document.activeElement);
+            console.info('[HEYS.keyboard] Dismiss requested');
+
+            if (activeEditable && typeof activeEditable.blur === 'function') {
+                activeEditable.blur();
+            }
+
+            const fallbackActive = document.activeElement;
+            if (fallbackActive && fallbackActive !== document.body && typeof fallbackActive.blur === 'function') {
+                fallbackActive.blur();
+            }
+
+            try {
+                window.getSelection?.()?.removeAllRanges?.();
+            } catch (_) {
+                // noop
+            }
+
+            activeEditableRef.current = null;
+            setShowKeyboardDismiss(false);
+        }, []);
+
+        React.useEffect(() => {
+            if (typeof window === 'undefined' || typeof document === 'undefined') return undefined;
+
+            console.info('[HEYS.keyboard] Dismiss toolbar ready');
+
+            let rafId = 0;
+            const scheduleSync = () => {
+                if (rafId) cancelAnimationFrame(rafId);
+                rafId = requestAnimationFrame(() => {
+                    rafId = 0;
+                    syncKeyboardDismiss();
+                });
+            };
+
+            const handleFocusIn = (event) => {
+                if (!getEditableElement(event.target)) return;
+                scheduleSync();
+            };
+
+            const handleFocusOut = () => {
+                setTimeout(syncKeyboardDismiss, 0);
+            };
+
+            syncKeyboardDismiss();
+
+            document.addEventListener('focusin', handleFocusIn);
+            document.addEventListener('focusout', handleFocusOut);
+            window.addEventListener('resize', scheduleSync, { passive: true });
+            window.addEventListener('orientationchange', scheduleSync, { passive: true });
+
+            const visualViewport = window.visualViewport;
+            visualViewport?.addEventListener('resize', scheduleSync);
+            visualViewport?.addEventListener('scroll', scheduleSync);
+
+            return () => {
+                if (rafId) cancelAnimationFrame(rafId);
+                document.removeEventListener('focusin', handleFocusIn);
+                document.removeEventListener('focusout', handleFocusOut);
+                window.removeEventListener('resize', scheduleSync);
+                window.removeEventListener('orientationchange', scheduleSync);
+                visualViewport?.removeEventListener('resize', scheduleSync);
+                visualViewport?.removeEventListener('scroll', scheduleSync);
+                document.documentElement.style.removeProperty(KEYBOARD_DISMISS_BOTTOM_VAR);
+                document.documentElement.style.removeProperty(KEYBOARD_DISMISS_RIGHT_VAR);
+            };
+        }, [syncKeyboardDismiss]);
 
         React.useEffect(() => {
             if (!showSyncLockOverlay) {
@@ -20680,6 +20849,19 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
             }),
             // === Client Switch Overlay (curator only, self-managed via events) ===
             HEYS.ClientSwitchOverlay && React.createElement(HEYS.ClientSwitchOverlay),
+            showKeyboardDismiss && React.createElement(
+                'div',
+                { className: 'heys-keyboard-dismiss', role: 'presentation' },
+                React.createElement('button', {
+                    type: 'button',
+                    className: 'heys-keyboard-dismiss__button',
+                    onClick: handleDismissKeyboard,
+                    'aria-label': 'Скрыть клавиатуру',
+                },
+                    React.createElement('span', { className: 'heys-keyboard-dismiss__icon', 'aria-hidden': 'true' }, '⌄'),
+                    React.createElement('span', { className: 'heys-keyboard-dismiss__label' }, 'Скрыть')
+                )
+            ),
             // === FAB редактирования виджетов (глобальный, показывается на ВСЕХ вкладках в режиме редактирования) ===
             widgetsEditMode && tab !== 'widgets' && React.createElement(
                 'div',

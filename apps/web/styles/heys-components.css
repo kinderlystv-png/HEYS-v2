@@ -833,6 +833,71 @@ body.tour-active .ios-pwa-banner {
   display: none !important;
 }
 
+/* === MOBILE KEYBOARD DISMISS TOOLBAR === */
+:root {
+  --heys-keyboard-dismiss-bottom: 84px;
+  --heys-keyboard-dismiss-right: 12px;
+}
+
+.heys-keyboard-dismiss {
+  position: fixed;
+  right: var(--heys-keyboard-dismiss-right, 12px);
+  bottom: var(--heys-keyboard-dismiss-bottom, 84px);
+  z-index: 9805;
+  pointer-events: none;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.heys-keyboard-dismiss__button {
+  pointer-events: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid rgba(191, 219, 254, 0.95);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.96);
+  color: #0f172a;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
+  box-shadow:
+    0 16px 30px -22px rgba(15, 23, 42, 0.72),
+    inset 0 1px 0 rgba(255, 255, 255, 0.82);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+}
+
+.heys-keyboard-dismiss__button:active {
+  transform: translateY(1px) scale(0.98);
+}
+
+.heys-keyboard-dismiss__icon {
+  font-size: 16px;
+  line-height: 1;
+}
+
+.heys-keyboard-dismiss__label {
+  white-space: nowrap;
+}
+
+[data-theme="dark"] .heys-keyboard-dismiss__button {
+  border-color: rgba(71, 85, 105, 0.82);
+  background: rgba(15, 23, 42, 0.94);
+  color: #e2e8f0;
+  box-shadow:
+    0 18px 32px -24px rgba(2, 6, 23, 0.9),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+@media (min-width: 901px) {
+  .heys-keyboard-dismiss {
+    display: none !important;
+  }
+}
+
 @keyframes tour-slide-up {
   from {
     opacity: 0;
