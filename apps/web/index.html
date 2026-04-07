@@ -676,13 +676,25 @@
     <!-- Prevent FOUC: Apply theme before CSS loads -->
     <script>
         (function () {
-            var t = localStorage.getItem('heys_theme');
-            if (t && t.charAt(0) === '"') {
-                try { t = JSON.parse(t); } catch (_) { }
+            var pref = localStorage.getItem('heys_theme_pref');
+            var explicit = localStorage.getItem('heys_theme_explicit');
+            var legacy = localStorage.getItem('heys_theme');
+            if (pref && pref.charAt(0) === '"') {
+                try { pref = JSON.parse(pref); } catch (_) { }
             }
-            var nextTheme = t === 'dark'
+            if (legacy && legacy.charAt(0) === '"') {
+                try { legacy = JSON.parse(legacy); } catch (_) { }
+            }
+            if (explicit && explicit.charAt(0) === '"') {
+                try { explicit = JSON.parse(explicit); } catch (_) { }
+            }
+            var hasExplicitPreference = explicit === '1' || explicit === 1 || explicit === true || explicit === 'true';
+            var rawThemePreference = pref === 'dark' || pref === 'light' || pref === 'auto'
+                ? pref
+                : (hasExplicitPreference ? legacy : 'auto');
+            var nextTheme = rawThemePreference === 'dark'
                 ? 'dark'
-                : t === 'light'
+                : rawThemePreference === 'light'
                     ? 'light'
                     : (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
             document.documentElement.setAttribute('data-theme', nextTheme);
@@ -712,10 +724,17 @@
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
     <link rel="dns-prefetch" href="https://cdn.jsdelivr.net" />
     <!-- Preload критических boot-бандлов (2026-02-25 bundle migration) -->
+<<<<<<< ours
     <link rel="preload" href="boot-core.bundle.40b604fa84d5.js" as="script" />
     <link rel="preload" href="boot-calc.bundle.0d65b6f48b8a.js" as="script" />
-    <link rel="preload" href="boot-day.bundle.4eaed5e30e97.js" as="script" />
-    <link rel="preload" href="boot-app.bundle.0fbe21d53930.js" as="script" />
+    <link rel="preload" href="boot-day.bundle.1e49c84b9c1c.js" as="script" />
+    <link rel="preload" href="boot-app.bundle.f9cac3e57b0e.js" as="script" />
+=======
+    <link rel="preload" href="boot-core.bundle.19fc9ac327ca.js" as="script" />
+    <link rel="preload" href="boot-calc.bundle.0d65b6f48b8a.js" as="script" />
+    <link rel="preload" href="boot-day.bundle.1e49c84b9c1c.js" as="script" />
+    <link rel="preload" href="boot-app.bundle.f9cac3e57b0e.js" as="script" />
+>>>>>>> theirs
     <link rel="preload" href="boot-init.bundle.42cb51998b22.js" as="script" />
 
     <!-- React теперь бандлится локально через Vite (миграция с CDN 2026-01-21) -->
@@ -1430,87 +1449,90 @@
     </script>
 
     <!-- Шаг 2: Статичный HTML логин-оверлей -->
-    <div id="heys-login-gate"
+    <div id="heys-login-gate" class="heys-auth-shell"
         style="position:fixed;inset:0;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(135deg,#3b82f6,#1d4ed8);padding:20px 20px 40px;overflow-y:auto">
 
         <!-- Экран: client (телефон + PIN) — показывается сразу -->
         <div id="hlg-screen-client">
-            <div
+            <div class="heys-auth-card"
                 style="width:100%;max-width:360px;border-radius:16px;background:rgba(255,255,255,0.95);padding:28px;box-shadow:0 25px 50px -12px rgba(0,0,0,0.25);margin:0 auto">
                 <div style="text-align:center;margin-bottom:28px">
-                    <div
+                    <div class="heys-auth-title"
                         style="font-size:28px;font-weight:800;letter-spacing:-0.5px;color:#0f172a;font-family:system-ui,-apple-system,sans-serif">
                         👋 Привет!</div>
-                    <div
+                    <div class="heys-auth-subtitle"
                         style="margin-top:4px;font-size:15px;color:#64748b;font-family:system-ui,-apple-system,sans-serif">
                         Вход для клиентов</div>
                 </div>
-                <!-- Телефон -->
-                <div style="margin-bottom:20px">
-                    <div
-                        style="text-align:center;font-size:15px;font-weight:600;color:#334155;margin-bottom:10px;font-family:system-ui,-apple-system,sans-serif">
-                        Телефон</div>
-                    <div id="hlg-phone-wrap"
-                        style="display:flex;align-items:center;justify-content:center;gap:8px;border-radius:1rem;border:2px solid #e2e8f0;padding:12px 16px;background:white;transition:border-color 0.2s">
-                        <span class="phone-prefix-large"
-                            style="font-weight:700;color:#334155;flex-shrink:0;font-family:system-ui,-apple-system,sans-serif;user-select:none">+7</span>
-                        <input id="hlg-phone" type="tel" inputmode="numeric" autocomplete="tel"
-                            placeholder="(999) 123-45-67" maxlength="15" class="phone-input-large"
-                            style="width:195px;font-weight:700;color:#334155;font-family:system-ui,-apple-system,sans-serif" />
-                    </div>
-                </div>
-                <!-- PIN -->
-                <div style="margin-bottom:20px">
-                    <div
-                        style="text-align:center;font-size:15px;font-weight:600;color:#334155;margin-bottom:10px;font-family:system-ui,-apple-system,sans-serif">
-                        PIN-код</div>
-                    <div style="display:flex;justify-content:center;gap:12px">
-                        <div style="position:relative;width:56px;height:72px">
-                            <input id="hlg-pin-0" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1"
-                                autocomplete="one-time-code"
-                                style="width:100%;height:100%;border-radius:16px;border:2px solid #e2e8f0;background:white;text-align:center;font-size:32px;line-height:1;font-weight:700;color:#1e293b;outline:none;font-family:system-ui,-apple-system,sans-serif;caret-color:transparent" />
-                            <span id="hlg-pin-ov-0"
-                                style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;font-size:32px;font-weight:700;color:#1e293b;font-family:system-ui,-apple-system,sans-serif;pointer-events:none"></span>
-                        </div>
-                        <div style="position:relative;width:56px;height:72px">
-                            <input id="hlg-pin-1" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1"
-                                autocomplete="off"
-                                style="width:100%;height:100%;border-radius:16px;border:2px solid #e2e8f0;background:white;text-align:center;font-size:32px;line-height:1;font-weight:700;color:#1e293b;outline:none;font-family:system-ui,-apple-system,sans-serif;caret-color:transparent" />
-                            <span id="hlg-pin-ov-1"
-                                style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;font-size:32px;font-weight:700;color:#1e293b;font-family:system-ui,-apple-system,sans-serif;pointer-events:none"></span>
-                        </div>
-                        <div style="position:relative;width:56px;height:72px">
-                            <input id="hlg-pin-2" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1"
-                                autocomplete="off"
-                                style="width:100%;height:100%;border-radius:16px;border:2px solid #e2e8f0;background:white;text-align:center;font-size:32px;line-height:1;font-weight:700;color:#1e293b;outline:none;font-family:system-ui,-apple-system,sans-serif;caret-color:transparent" />
-                            <span id="hlg-pin-ov-2"
-                                style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;font-size:32px;font-weight:700;color:#1e293b;font-family:system-ui,-apple-system,sans-serif;pointer-events:none"></span>
-                        </div>
-                        <div style="position:relative;width:56px;height:72px">
-                            <input id="hlg-pin-3" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1"
-                                autocomplete="off"
-                                style="width:100%;height:100%;border-radius:16px;border:2px solid #e2e8f0;background:white;text-align:center;font-size:32px;line-height:1;font-weight:700;color:#1e293b;outline:none;font-family:system-ui,-apple-system,sans-serif;caret-color:transparent" />
-                            <span id="hlg-pin-ov-3"
-                                style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;font-size:32px;font-weight:700;color:#1e293b;font-family:system-ui,-apple-system,sans-serif;pointer-events:none"></span>
+                <form id="hlg-client-form" onsubmit="event.preventDefault(); hlgClientLogin();">
+                    <!-- Телефон -->
+                    <div style="margin-bottom:20px">
+                        <div class="heys-auth-label"
+                            style="text-align:center;font-size:15px;font-weight:600;color:#334155;margin-bottom:10px;font-family:system-ui,-apple-system,sans-serif">
+                            Телефон</div>
+                        <div id="hlg-phone-wrap" class="heys-auth-field"
+                            style="display:flex;align-items:center;justify-content:center;gap:8px;border-radius:1rem;border:2px solid #e2e8f0;padding:12px 16px;background:white;transition:border-color 0.2s">
+                            <span class="phone-prefix-large heys-auth-prefix"
+                                style="font-weight:700;color:#334155;flex-shrink:0;font-family:system-ui,-apple-system,sans-serif;user-select:none">+7</span>
+                            <input id="hlg-phone" type="tel" inputmode="numeric" autocomplete="tel"
+                                placeholder="(999) 123-45-67" maxlength="15"
+                                class="phone-input-large heys-auth-phone-input"
+                                style="width:195px;font-weight:700;color:#334155;font-family:system-ui,-apple-system,sans-serif" />
                         </div>
                     </div>
-                </div>
-                <!-- Ошибка -->
-                <div id="hlg-client-err"
-                    style="display:none;border-radius:12px;background:#fef2f2;border:1px solid #fee2e2;padding:12px 16px;text-align:center;font-size:14px;color:#dc2626;margin-bottom:16px;font-family:system-ui,-apple-system,sans-serif">
-                </div>
-                <!-- Кнопка -->
-                <button id="hlg-client-submit" onclick="hlgClientLogin()" disabled
-                    style="width:100%;border-radius:12px;background:linear-gradient(135deg,#3b82f6,#2563eb);border:none;padding:14px 16px;font-size:16px;font-weight:600;color:white;cursor:pointer;box-shadow:0 4px 14px rgba(59,130,246,0.4);opacity:0.5;font-family:system-ui,-apple-system,sans-serif;transition:opacity 0.2s">Войти
-                    →</button>
+                    <!-- PIN -->
+                    <div style="margin-bottom:20px">
+                        <div class="heys-auth-label"
+                            style="text-align:center;font-size:15px;font-weight:600;color:#334155;margin-bottom:10px;font-family:system-ui,-apple-system,sans-serif">
+                            PIN-код</div>
+                        <div class="heys-auth-pin-grid" style="display:flex;justify-content:center;gap:12px">
+                            <div class="heys-auth-pin-box" style="position:relative;width:56px;height:72px">
+                                <input id="hlg-pin-0" class="heys-auth-pin-input" type="text" inputmode="numeric"
+                                    pattern="[0-9]*" maxlength="1" autocomplete="one-time-code"
+                                    style="width:100%;height:100%;border-radius:16px;border:2px solid #e2e8f0;background:white;text-align:center;font-size:32px;line-height:1;font-weight:700;color:#1e293b;outline:none;font-family:system-ui,-apple-system,sans-serif;caret-color:transparent" />
+                                <span id="hlg-pin-ov-0" class="heys-auth-pin-overlay"
+                                    style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;font-size:32px;font-weight:700;color:#1e293b;font-family:system-ui,-apple-system,sans-serif;pointer-events:none"></span>
+                            </div>
+                            <div class="heys-auth-pin-box" style="position:relative;width:56px;height:72px">
+                                <input id="hlg-pin-1" class="heys-auth-pin-input" type="text" inputmode="numeric"
+                                    pattern="[0-9]*" maxlength="1" autocomplete="off"
+                                    style="width:100%;height:100%;border-radius:16px;border:2px solid #e2e8f0;background:white;text-align:center;font-size:32px;line-height:1;font-weight:700;color:#1e293b;outline:none;font-family:system-ui,-apple-system,sans-serif;caret-color:transparent" />
+                                <span id="hlg-pin-ov-1" class="heys-auth-pin-overlay"
+                                    style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;font-size:32px;font-weight:700;color:#1e293b;font-family:system-ui,-apple-system,sans-serif;pointer-events:none"></span>
+                            </div>
+                            <div class="heys-auth-pin-box" style="position:relative;width:56px;height:72px">
+                                <input id="hlg-pin-2" class="heys-auth-pin-input" type="text" inputmode="numeric"
+                                    pattern="[0-9]*" maxlength="1" autocomplete="off"
+                                    style="width:100%;height:100%;border-radius:16px;border:2px solid #e2e8f0;background:white;text-align:center;font-size:32px;line-height:1;font-weight:700;color:#1e293b;outline:none;font-family:system-ui,-apple-system,sans-serif;caret-color:transparent" />
+                                <span id="hlg-pin-ov-2" class="heys-auth-pin-overlay"
+                                    style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;font-size:32px;font-weight:700;color:#1e293b;font-family:system-ui,-apple-system,sans-serif;pointer-events:none"></span>
+                            </div>
+                            <div class="heys-auth-pin-box" style="position:relative;width:56px;height:72px">
+                                <input id="hlg-pin-3" class="heys-auth-pin-input" type="text" inputmode="numeric"
+                                    pattern="[0-9]*" maxlength="1" autocomplete="off"
+                                    style="width:100%;height:100%;border-radius:16px;border:2px solid #e2e8f0;background:white;text-align:center;font-size:32px;line-height:1;font-weight:700;color:#1e293b;outline:none;font-family:system-ui,-apple-system,sans-serif;caret-color:transparent" />
+                                <span id="hlg-pin-ov-3" class="heys-auth-pin-overlay"
+                                    style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;font-size:32px;font-weight:700;color:#1e293b;font-family:system-ui,-apple-system,sans-serif;pointer-events:none"></span>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Ошибка -->
+                    <div id="hlg-client-err" class="heys-auth-error"
+                        style="display:none;border-radius:12px;background:#fef2f2;border:1px solid #fee2e2;padding:12px 16px;text-align:center;font-size:14px;color:#dc2626;margin-bottom:16px;font-family:system-ui,-apple-system,sans-serif">
+                    </div>
+                    <!-- Кнопка -->
+                    <button id="hlg-client-submit" class="heys-auth-btn heys-auth-btn--primary" type="submit" disabled
+                        style="width:100%;border-radius:12px;background:linear-gradient(135deg,#3b82f6,#2563eb);border:none;padding:14px 16px;font-size:16px;font-weight:600;color:white;cursor:pointer;box-shadow:0 4px 14px rgba(59,130,246,0.4);opacity:0.5;font-family:system-ui,-apple-system,sans-serif;transition:opacity 0.2s">Войти
+                        →</button>
+                </form>
                 <div style="margin-top:20px;text-align:center">
-                    <div
+                    <div class="heys-auth-meta"
                         style="font-size:13px;color:#94a3b8;margin-bottom:6px;font-family:system-ui,-apple-system,sans-serif">
                         Нет доступа? Обратитесь:</div>
-                    <a href="tel:+79624556111"
+                    <a href="tel:+79624556111" class="heys-auth-link"
                         style="display:block;font-size:14px;font-weight:600;color:#3b82f6;text-decoration:none;font-family:system-ui,-apple-system,sans-serif">+7
                         962 455-61-11</a>
-                    <button onclick="hlgOpenCuratorScreen()"
+                    <button onclick="hlgOpenCuratorScreen()" class="heys-auth-link-btn" type="button"
                         style="margin-top:10px;background:none;border:none;font-size:14px;font-weight:500;color:#3b82f6;cursor:pointer;font-family:system-ui,-apple-system,sans-serif">Вход
                         для куратора →</button>
                 </div>
@@ -1519,38 +1541,39 @@
 
         <!-- Экран: curator (email + пароль) -->
         <div id="hlg-screen-curator" style="display:none">
-            <div
+            <div class="heys-auth-card"
                 style="width:100%;max-width:360px;border-radius:16px;background:rgba(255,255,255,0.95);padding:28px;box-shadow:0 25px 50px -12px rgba(0,0,0,0.25);margin:0 auto">
                 <div style="text-align:center;margin-bottom:24px">
                     <div style="font-size:36px;margin-bottom:6px">🍎</div>
-                    <div
+                    <div class="heys-auth-brand"
                         style="font-size:24px;font-weight:800;letter-spacing:-0.5px;color:#0f172a;font-family:system-ui,-apple-system,sans-serif">
                         HEYS</div>
-                    <div
+                    <div class="heys-auth-subtitle"
                         style="margin-top:4px;font-size:14px;color:#64748b;font-family:system-ui,-apple-system,sans-serif">
                         Вход куратора</div>
                 </div>
                 <form id="hlg-curator-form" onsubmit="event.preventDefault(); hlgCuratorLogin();">
                     <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:12px">
-                        <input id="hlg-curator-email" name="email" type="email" autocomplete="email" placeholder="Email"
+                        <input id="hlg-curator-email" class="heys-auth-input" name="email" type="email"
+                            autocomplete="email" placeholder="Email"
                             style="width:100%;box-sizing:border-box;border-radius:12px;border:2px solid #e2e8f0;background:white;padding:12px 16px;font-size:16px;color:#1e293b;outline:none;font-family:system-ui,-apple-system,sans-serif" />
-                        <input id="hlg-curator-pass" name="password" type="password" autocomplete="current-password"
-                            placeholder="Пароль"
+                        <input id="hlg-curator-pass" class="heys-auth-input" name="password" type="password"
+                            autocomplete="current-password" placeholder="Пароль"
                             style="width:100%;box-sizing:border-box;border-radius:12px;border:2px solid #e2e8f0;background:white;padding:12px 16px;font-size:16px;color:#1e293b;outline:none;font-family:system-ui,-apple-system,sans-serif" />
                     </div>
                     <!-- Ошибка -->
-                    <div id="hlg-curator-err"
+                    <div id="hlg-curator-err" class="heys-auth-error"
                         style="display:none;border-radius:12px;background:#fef2f2;border:1px solid #fee2e2;padding:12px 16px;text-align:center;font-size:14px;color:#dc2626;margin-bottom:12px;font-family:system-ui,-apple-system,sans-serif">
                     </div>
-                    <button id="hlg-curator-submit" type="submit"
+                    <button id="hlg-curator-submit" class="heys-auth-btn heys-auth-btn--primary" type="submit"
                         style="width:100%;border-radius:12px;background:linear-gradient(135deg,#3b82f6,#2563eb);border:none;padding:14px 16px;font-size:16px;font-weight:600;color:white;cursor:pointer;box-shadow:0 4px 14px rgba(59,130,246,0.4);font-family:system-ui,-apple-system,sans-serif">Войти
                         →</button>
                 </form>
                 <div style="margin-top:20px;text-align:center">
-                    <div id="hlg-greeting-curator"
+                    <div id="hlg-greeting-curator" class="heys-auth-meta"
                         style="font-size:14px;color:#94a3b8;margin-bottom:8px;font-family:system-ui,-apple-system,sans-serif">
                     </div>
-                    <button onclick="hlgShowScreen('client')"
+                    <button onclick="hlgShowScreen('client')" class="heys-auth-link-btn" type="button"
                         style="background:none;border:none;font-size:14px;color:#3b82f6;cursor:pointer;font-family:system-ui,-apple-system,sans-serif">←
                         Назад</button>
                 </div>
@@ -1558,7 +1581,7 @@
         </div>
 
         <!-- Версия внизу -->
-        <div id="hlg-version"
+        <div id="hlg-version" class="heys-auth-version"
             style="margin-top:20px;font-size:11px;color:rgba(255,255,255,0.3);font-family:monospace;letter-spacing:0.05em">
         </div>
     </div>
@@ -1649,6 +1672,114 @@
             line-height: clamp(22px, 6.2vw, 34px) !important;
         }
 
+        .heys-auth-card {
+            border: 1px solid rgba(255, 255, 255, 0.72);
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
+        }
+
+        .heys-auth-btn,
+        .heys-auth-link,
+        .heys-auth-link-btn,
+        .heys-auth-field,
+        .heys-auth-input,
+        .heys-auth-pin-input {
+            transition:
+                background 0.2s ease,
+                border-color 0.2s ease,
+                color 0.2s ease,
+                box-shadow 0.2s ease,
+                transform 0.12s ease,
+                opacity 0.2s ease;
+        }
+
+        .heys-auth-btn:not(:disabled):active {
+            transform: scale(0.99);
+        }
+
+        .heys-auth-btn:disabled {
+            opacity: 0.55 !important;
+            cursor: not-allowed !important;
+            box-shadow: none !important;
+        }
+
+        .heys-auth-field.is-complete,
+        .heys-auth-pin-input.is-complete {
+            border-color: #22c55e !important;
+            background: #f0fdf4 !important;
+        }
+
+        .heys-auth-pin-input.is-filled {
+            border-color: #cbd5e1 !important;
+        }
+
+        .heys-auth-phone-input::placeholder,
+        .heys-auth-input::placeholder {
+            color: #94a3b8 !important;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            html:not([data-theme]) .heys-auth-shell {
+                background: linear-gradient(135deg, #0f172a 0%, #172554 55%, #1e1b4b 100%) !important;
+            }
+
+            html:not([data-theme]) .heys-auth-card {
+                background: linear-gradient(180deg, rgba(15, 23, 42, 0.94), rgba(2, 6, 23, 0.92)) !important;
+                border: 1px solid rgba(148, 163, 184, 0.18) !important;
+                box-shadow: 0 32px 80px -36px rgba(2, 6, 23, 0.95) !important;
+            }
+
+            html:not([data-theme]) .heys-auth-brand,
+            html:not([data-theme]) .heys-auth-title,
+            html:not([data-theme]) .heys-auth-label,
+            html:not([data-theme]) .heys-auth-prefix {
+                color: #f8fafc !important;
+            }
+
+            html:not([data-theme]) .heys-auth-subtitle,
+            html:not([data-theme]) .heys-auth-meta,
+            html:not([data-theme]) .heys-auth-version {
+                color: #94a3b8 !important;
+            }
+
+            html:not([data-theme]) .heys-auth-field,
+            html:not([data-theme]) .heys-auth-input,
+            html:not([data-theme]) .heys-auth-pin-input {
+                background: rgba(15, 23, 42, 0.78) !important;
+                border-color: rgba(148, 163, 184, 0.16) !important;
+                color: #f8fafc !important;
+                box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+            }
+
+            html:not([data-theme]) .heys-auth-field:focus-within,
+            html:not([data-theme]) .heys-auth-input:focus,
+            html:not([data-theme]) .heys-auth-pin-input:focus {
+                border-color: rgba(96, 165, 250, 0.75) !important;
+                box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.18) !important;
+            }
+
+            html:not([data-theme]) .heys-auth-field.is-complete,
+            html:not([data-theme]) .heys-auth-pin-input.is-complete {
+                background: rgba(16, 185, 129, 0.14) !important;
+                border-color: rgba(52, 211, 153, 0.55) !important;
+            }
+
+            html:not([data-theme]) .heys-auth-pin-input.is-filled {
+                border-color: rgba(148, 163, 184, 0.34) !important;
+            }
+
+            html:not([data-theme]) .heys-auth-error {
+                background: rgba(127, 29, 29, 0.24) !important;
+                border-color: rgba(248, 113, 113, 0.24) !important;
+                color: #fecaca !important;
+            }
+
+            html:not([data-theme]) .heys-auth-link,
+            html:not([data-theme]) .heys-auth-link-btn {
+                color: #93c5fd !important;
+            }
+        }
+
         /* Disabled submit spin */
         #hlg-client-submit:not([disabled]) {
             opacity: 1 !important;
@@ -1667,8 +1798,64 @@
             }
         }
 
-        [data-theme="dark"] #heys-login-gate {
-            background: linear-gradient(135deg, #1e3a8a, #1e1b4b) !important;
+        [data-theme="dark"] .heys-auth-shell {
+            background: linear-gradient(135deg, #0f172a 0%, #172554 55%, #1e1b4b 100%) !important;
+        }
+
+        [data-theme="dark"] .heys-auth-card {
+            background: linear-gradient(180deg, rgba(15, 23, 42, 0.94), rgba(2, 6, 23, 0.92)) !important;
+            border: 1px solid rgba(148, 163, 184, 0.18) !important;
+            box-shadow: 0 32px 80px -36px rgba(2, 6, 23, 0.95) !important;
+        }
+
+        [data-theme="dark"] .heys-auth-brand,
+        [data-theme="dark"] .heys-auth-title,
+        [data-theme="dark"] .heys-auth-label,
+        [data-theme="dark"] .heys-auth-prefix {
+            color: #f8fafc !important;
+        }
+
+        [data-theme="dark"] .heys-auth-subtitle,
+        [data-theme="dark"] .heys-auth-meta,
+        [data-theme="dark"] .heys-auth-version {
+            color: #94a3b8 !important;
+        }
+
+        [data-theme="dark"] .heys-auth-field,
+        [data-theme="dark"] .heys-auth-input,
+        [data-theme="dark"] .heys-auth-pin-input {
+            background: rgba(15, 23, 42, 0.78) !important;
+            border-color: rgba(148, 163, 184, 0.16) !important;
+            color: #f8fafc !important;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+        }
+
+        [data-theme="dark"] .heys-auth-field:focus-within,
+        [data-theme="dark"] .heys-auth-input:focus,
+        [data-theme="dark"] .heys-auth-pin-input:focus {
+            border-color: rgba(96, 165, 250, 0.75) !important;
+            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.18) !important;
+        }
+
+        [data-theme="dark"] .heys-auth-field.is-complete,
+        [data-theme="dark"] .heys-auth-pin-input.is-complete {
+            background: rgba(16, 185, 129, 0.14) !important;
+            border-color: rgba(52, 211, 153, 0.55) !important;
+        }
+
+        [data-theme="dark"] .heys-auth-pin-input.is-filled {
+            border-color: rgba(148, 163, 184, 0.34) !important;
+        }
+
+        [data-theme="dark"] .heys-auth-error {
+            background: rgba(127, 29, 29, 0.24) !important;
+            border-color: rgba(248, 113, 113, 0.24) !important;
+            color: #fecaca !important;
+        }
+
+        [data-theme="dark"] .heys-auth-link,
+        [data-theme="dark"] .heys-auth-link-btn {
+            color: #93c5fd !important;
         }
     </style>
 
@@ -1786,6 +1973,21 @@
                 return r;
             }
 
+            function hlgIsDarkTheme() {
+                try {
+                    var explicitTheme = document.documentElement.getAttribute('data-theme');
+                    if (explicitTheme === 'dark') return true;
+                    if (explicitTheme === 'light') return false;
+                    return !!(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+                } catch (_) {
+                    return false;
+                }
+            }
+
+            function hlgGetInputTextColor() {
+                return hlgIsDarkTheme() ? '#f8fafc' : '#1e293b';
+            }
+
             // ─── Rate limiting (порт из heys_auth_v1.js) ───────────────────
             function canAttempt(kind, phone) {
                 try {
@@ -1898,6 +2100,7 @@
                 if (!ov || !inp) return;
                 // Скрываем текст input пока показывается overlay
                 inp.style.color = 'transparent';
+                ov.style.color = hlgGetInputTextColor();
                 ov.textContent = digit;
                 ov.classList.remove('hlg-pin-ov-active');
                 // Перезапуск анимации через reflow
@@ -1908,7 +2111,7 @@
                 pinOverlayTimers[idx] = setTimeout(function () {
                     ov.classList.remove('hlg-pin-ov-active');
                     ov.style.display = 'none';
-                    inp.style.color = '#1e293b';
+                    inp.style.color = hlgGetInputTextColor();
                 }, 1350);
             }
             function clearPinOverlay(idx) {
@@ -1916,7 +2119,7 @@
                 var ov = document.getElementById('hlg-pin-ov-' + idx);
                 var inp = document.getElementById('hlg-pin-' + idx);
                 if (ov) { ov.classList.remove('hlg-pin-ov-active'); ov.style.display = 'none'; }
-                if (inp) inp.style.color = '#1e293b';
+                if (inp) inp.style.color = hlgGetInputTextColor();
             }
 
             // ─── Обновление стилей PIN полей ────────────────────────────────
@@ -1925,11 +2128,8 @@
                 for (var i = 0; i < 4; i++) {
                     var el = document.getElementById('hlg-pin-' + i);
                     if (!el) continue;
-                    if (allFilled) el.style.borderColor = '#22c55e';
-                    else if (pinDigits[i]) el.style.borderColor = '#cbd5e1';
-                    else el.style.borderColor = '#e2e8f0';
-                    if (allFilled) el.style.background = '#f0fdf4';
-                    else el.style.background = 'white';
+                    el.classList.toggle('is-complete', allFilled);
+                    el.classList.toggle('is-filled', Boolean(pinDigits[i]) && !allFilled);
                 }
             }
 
@@ -1943,14 +2143,7 @@
                     var raw = inp.value.replace(/\D/g, '').slice(0, 10);
                     phoneDigits = raw;
                     inp.value = formatPhoneBody(raw);
-                    // Стиль обёртки
-                    if (raw.length === 10) {
-                        wrap.style.borderColor = '#22c55e';
-                        wrap.style.background = '#f0fdf4';
-                    } else {
-                        wrap.style.borderColor = '#e2e8f0';
-                        wrap.style.background = 'white';
-                    }
+                    wrap.classList.toggle('is-complete', raw.length === 10);
                     // Сбрасываем ошибку
                     hlgSetClientErr('');
                     updateClientSubmit();
@@ -1969,7 +2162,7 @@
                         phoneDigits = phoneDigits.slice(0, -1);
                         inp.value = formatPhoneBody(phoneDigits);
                         var wrap2 = document.getElementById('hlg-phone-wrap');
-                        if (wrap2) { wrap2.style.borderColor = '#e2e8f0'; wrap2.style.background = 'white'; }
+                        if (wrap2) wrap2.classList.toggle('is-complete', phoneDigits.length === 10);
                         updateClientSubmit();
                     }
                 });
@@ -2644,8 +2837,8 @@
          Хеш в имени = вечный кэш (cache-first SW). -->
     <script defer src="boot-core.bundle.40b604fa84d5.js" fetchpriority="high"></script>
     <script defer src="boot-calc.bundle.0d65b6f48b8a.js"></script>
-    <script defer src="boot-day.bundle.4eaed5e30e97.js"></script>
-    <script defer src="boot-app.bundle.0fbe21d53930.js"></script>
+    <script defer src="boot-day.bundle.1e49c84b9c1c.js"></script>
+    <script defer src="boot-app.bundle.f9cac3e57b0e.js"></script>
     <script defer src="boot-init.bundle.42cb51998b22.js"
         onerror="window.__heysShowRecoveryUI && window.__heysShowRecoveryUI('CRITICAL_SCRIPT_LOAD: boot-init.bundle')"></script>
 
@@ -2676,13 +2869,68 @@
         (function () {
             var POST_BOOT_BUNDLES = [
                 'postboot-1-game.bundle.10925a18e99c.js',
-                'postboot-2-insights.bundle.14a3745598f4.js',
-                'postboot-3-ui.bundle.838f76672e84.js'
+                'postboot-2-insights.bundle.280c534fdaa8.js',
+                'postboot-3-ui.bundle.7d6a956106b3.js'
             ];
+            var LOCALHOST_TASKS_SOURCE_OVERRIDE = 'heys_planning_tasks_v1.js';
             var total = POST_BOOT_BUNDLES.length;
 
             var pbStartTime = 0;
             var pbBundleTimes = {};
+
+            function isLocalRuntimeHost() {
+                var host = (window.location && window.location.hostname) || '';
+                return host === 'localhost' || host === '127.0.0.1' || /\.local$/i.test(host);
+            }
+
+            function shouldUseTasksSourceOverride() {
+                if (!isLocalRuntimeHost()) return false;
+                try {
+                    var params = new URLSearchParams(window.location.search || '');
+                    var queryValue = params.get('planningTasksSource') || params.get('planningSource');
+                    if (queryValue === '0' || queryValue === 'false' || queryValue === 'bundle') return false;
+                    if (queryValue === '1' || queryValue === 'true' || queryValue === 'source') return true;
+
+                    var storedValue = localStorage.getItem('heys_dev_tasks_source_override');
+                    if (storedValue === '0' || storedValue === 'false') return false;
+                    if (storedValue === '1' || storedValue === 'true') return true;
+                } catch (error) {
+                    console.warn('[HEYS.postboot] ⚠️ Failed to resolve tasks source override flag:', error && error.message ? error.message : error);
+                }
+                return true;
+            }
+
+            function loadTasksSourceOverride() {
+                if (!shouldUseTasksSourceOverride()) return Promise.resolve(false);
+
+                var cacheBust = Date.now().toString(36);
+                var overrideSrc = LOCALHOST_TASKS_SOURCE_OVERRIDE + '?dev_override=' + cacheBust;
+
+                return new Promise(function (resolve) {
+                    var script = document.createElement('script');
+                    script.src = overrideSrc;
+                    script.async = false;
+                    script.onload = function () {
+                        window.__heysPlanningTasksSourceOverride = overrideSrc;
+                        console.info('[HEYS.postboot] 🧪 Local tasks source override loaded:', overrideSrc);
+                        window.__heysPerfMark && window.__heysPerfMark('PostBoot: tasks source override loaded');
+                        try {
+                            window.dispatchEvent(new CustomEvent('heys:planning-updated', {
+                                detail: {
+                                    kind: 'runtime:tasks-source-override',
+                                    payload: { src: overrideSrc }
+                                }
+                            }));
+                        } catch (_) { }
+                        resolve(true);
+                    };
+                    script.onerror = function () {
+                        console.error('[HEYS.postboot] ❌ Failed to load tasks source override:', overrideSrc);
+                        resolve(false);
+                    };
+                    document.head.appendChild(script);
+                });
+            }
 
             function loadAllParallel() {
                 var loaded = 0;
@@ -2724,6 +2972,8 @@
 
                 // 📊 Resource Timing API: real network metrics (gzip sizes, TTFB, etc.)
                 logResourceTimings();
+
+                loadTasksSourceOverride();
             }
 
             // 📊 Log boot bundle Resource Timing at appReady (before postboot starts)

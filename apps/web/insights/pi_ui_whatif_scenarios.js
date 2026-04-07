@@ -122,7 +122,7 @@
             label: 'Увеличить шаги',
             description: 'Больше ходьбы',
             params: [
-                { key: 'targetSteps', label: 'Целевые шаги', type: 'number', min: 5000, max: 20000, default: 10000, step: 1000 }
+                { key: 'targetSteps', label: 'Целевые шаги', type: 'number', min: 5000, max: 30000, default: 10000, step: 1000 }
             ]
         }
     };

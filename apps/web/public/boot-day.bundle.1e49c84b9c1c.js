@@ -12402,13 +12402,16 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
             };
         }, [getProfile]);
 
-        const stepsGoal = Math.max(1, savedStepsGoal || 7000);
-        const stepsMax = 20000;
+        const stepsMax = 30000;
+        const stepsGoal = Math.min(stepsMax, Math.max(1, savedStepsGoal || 7000));
         const stepsValue = safeDay.steps || 0;
+        const hasOverflowZone = stepsGoal < stepsMax;
 
-        const stepsPercent = stepsValue <= stepsGoal
-            ? (stepsValue / stepsGoal) * 80
-            : 80 + ((stepsValue - stepsGoal) / (stepsMax - stepsGoal)) * 20;
+        const stepsPercent = Math.min(100, hasOverflowZone
+            ? (stepsValue <= stepsGoal
+                ? (stepsValue / stepsGoal) * 80
+                : 80 + ((stepsValue - stepsGoal) / (stepsMax - stepsGoal)) * 20)
+            : (stepsValue / stepsGoal) * 100);
 
         const stepsColorPercent = Math.min(100, (stepsValue / stepsGoal) * 100);
 
@@ -12452,7 +12455,9 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
                 const x = Math.max(0, Math.min(clientX - rect.left, rect.width));
                 const percent = (x / rect.width) * 100;
                 let newSteps;
-                if (percent <= 80) {
+                if (!hasOverflowZone) {
+                    newSteps = Math.round(((percent / 100) * stepsGoal) / 10) * 10;
+                } else if (percent <= 80) {
                     newSteps = Math.round(((percent / 80) * stepsGoal) / 10) * 10;
                 } else {
                     const extraPercent = (percent - 80) / 20;
@@ -12461,9 +12466,11 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
                 return Math.min(stepsMax, Math.max(0, newSteps));
             };
 
-            const computePercent = (steps) => steps <= stepsGoal
-                ? (steps / stepsGoal) * 80
-                : 80 + ((steps - stepsGoal) / (stepsMax - stepsGoal)) * 20;
+            const computePercent = (steps) => Math.min(100, hasOverflowZone
+                ? (steps <= stepsGoal
+                    ? (steps / stepsGoal) * 80
+                    : 80 + ((steps - stepsGoal) / (stepsMax - stepsGoal)) * 20)
+                : (steps / stepsGoal) * 100);
 
             // DOM-only flush — no React re-render
             const flushStepsDOM = () => {

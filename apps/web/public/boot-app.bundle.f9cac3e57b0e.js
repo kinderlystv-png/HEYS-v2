@@ -9410,16 +9410,14 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
     const Card = (...children) =>
       React.createElement(
         'div',
-        { className: 'w-full max-w-[360px] rounded-2xl bg-white/95 p-7 shadow-2xl ring-1 ring-black/5' },
+        { className: 'heys-auth-card' },
         ...children,
       );
 
     const Input = (p) =>
       React.createElement('input', {
         ...p,
-        className:
-          'w-full rounded-xl border-2 border-slate-200 bg-white px-4 py-3 text-[16px] outline-none transition focus:border-blue-400 focus:ring-4 focus:ring-blue-200/60 ' +
-          (p.className || ''),
+        className: 'heys-auth-input ' + (p.className || ''),
       });
 
     const PrimaryBtn = (p, children) =>
@@ -9427,9 +9425,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
         'button',
         {
           ...p,
-          className:
-            'w-full rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 px-4 py-3 text-[16px] font-semibold text-white shadow-lg shadow-blue-500/30 transition active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60 ' +
-            (p.className || ''),
+          type: p.type || 'button',
+          className: 'heys-auth-btn heys-auth-btn--primary ' + (p.className || ''),
         },
         children,
       );
@@ -9439,9 +9436,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
         'button',
         {
           ...p,
-          className:
-            'w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-[15px] font-semibold text-slate-800 shadow-sm transition hover:bg-slate-100 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60 ' +
-            (p.className || ''),
+          type: p.type || 'button',
+          className: 'heys-auth-btn heys-auth-btn--secondary ' + (p.className || ''),
         },
         children,
       );
@@ -9451,9 +9447,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
         'button',
         {
           ...p,
-          className:
-            'w-full rounded-xl border border-white/30 bg-white/10 px-4 py-3 text-[15px] font-semibold text-white/95 backdrop-blur transition hover:bg-white/15 active:scale-[0.99] ' +
-            (p.className || ''),
+          type: p.type || 'button',
+          className: 'heys-auth-btn heys-auth-btn--ghost ' + (p.className || ''),
         },
         children,
       );
@@ -9464,8 +9459,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
           'div',
           { className: 'text-center' },
           React.createElement('div', { className: 'mb-2 text-5xl drop-shadow' }, '🍎'),
-          React.createElement('div', { className: 'text-3xl font-extrabold tracking-tight text-slate-900' }, 'HEYS'),
-          React.createElement('div', { className: 'mt-1 text-sm text-slate-500' }, 'Умный дневник питания'),
+          React.createElement('div', { className: 'heys-auth-brand' }, 'HEYS'),
+          React.createElement('div', { className: 'heys-auth-subtitle text-sm' }, 'Умный дневник питания'),
         ),
         React.createElement('div', { className: 'mt-6 space-y-3' },
           PrimaryBtn(
@@ -9485,7 +9480,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
         ),
         React.createElement(
           'div',
-          { className: 'mt-5 text-center text-sm text-slate-500' },
+          { className: 'heys-auth-meta mt-5 text-center text-sm' },
           greeting,
         ),
       );
@@ -9526,22 +9521,27 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
         React.createElement(
           'div',
           { className: 'text-center mb-8' },
-          React.createElement('div', { className: 'text-3xl font-extrabold text-slate-900 tracking-tight' }, '👋 Привет!'),
-          React.createElement('div', { className: 'mt-1 text-base text-slate-500' }, 'Вход для клиентов'),
+          React.createElement('div', { className: 'heys-auth-title' }, '👋 Привет!'),
+          React.createElement('div', { className: 'heys-auth-subtitle text-base' }, 'Вход для клиентов'),
         ),
 
         // Форма
-        React.createElement('div', { className: 'space-y-6' },
+        React.createElement('form', {
+          className: 'space-y-6',
+          onSubmit: (e) => {
+            e.preventDefault();
+            if (canClientLogin) handleClientLogin();
+          },
+        },
           // Современный ввод телефона с фиксированным +7
           React.createElement('div', { className: 'space-y-3' },
-            React.createElement('div', { className: 'text-center text-base font-semibold text-slate-700' }, 'Телефон'),
+            React.createElement('div', { className: 'heys-auth-label text-base' }, 'Телефон'),
             React.createElement('div', {
-              className: 'flex items-center justify-center gap-2 rounded-2xl border-2 px-4 py-3 transition-all sm:px-5 sm:py-4 ' +
-                (isPhoneComplete ? 'border-green-500 bg-green-50/50' : 'border-slate-200 bg-white focus-within:border-blue-500')
+              className: 'heys-auth-field ' + (isPhoneComplete ? 'is-complete' : '')
             },
               // Фиксированный префикс +7 (размер и baseline синхронизированы с input)
               React.createElement('span', {
-                className: 'phone-prefix-large flex-shrink-0 font-bold text-slate-700 select-none'
+                className: 'phone-prefix-large heys-auth-prefix'
               }, '+7'),
               // Поле ввода — ширина по содержимому
               React.createElement('input', {
@@ -9552,7 +9552,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                 value: formatPhoneBody(phoneDigits),
                 onChange: handlePhoneInput,
                 onKeyDown: handlePhoneKeyDown,
-                className: 'phone-input-large font-bold text-slate-700 placeholder:text-slate-400 placeholder:font-bold',
+                className: 'phone-input-large heys-auth-phone-input',
                 style: { width: '195px' }
               }),
             ),
@@ -9560,9 +9560,9 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
 
           // PIN ввод — 4 отдельных поля (как в модных приложениях)
           React.createElement('div', { className: 'space-y-3' },
-            React.createElement('div', { className: 'text-center text-base font-semibold text-slate-700' }, 'PIN-код'),
+            React.createElement('div', { className: 'heys-auth-label text-base' }, 'PIN-код'),
             React.createElement('div', {
-              className: 'flex items-center justify-between gap-3'
+              className: 'heys-auth-pin-grid'
             },
               [0, 1, 2, 3].map((i) => {
                 const digit = (pinDigits && pinDigits[i]) || '';
@@ -9570,7 +9570,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                 const overlay = (pinOverlay && pinOverlay[i]) || { d: '', k: 0 };
                 return React.createElement('div', {
                   key: 'pin_wrap_' + i,
-                  className: 'relative w-14 h-[72px] sm:w-16 sm:h-20 flex-shrink-0',
+                  className: 'heys-auth-pin-box',
                 },
                   React.createElement('input', {
                     key: 'pin_' + i,
@@ -9658,21 +9658,14 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                         }
                       } catch (_) { }
                     },
-                    className:
-                      'w-full h-full rounded-2xl border-2 bg-white text-center text-[32px] sm:text-[36px] leading-none font-bold outline-none transition ' +
-                      (isPinComplete
-                        ? 'border-green-400 bg-green-50/50'
-                        : isFilled
-                          ? 'border-slate-300'
-                          : 'border-slate-200 focus:border-blue-400 focus:ring-4 focus:ring-blue-200/60'),
+                    className: 'heys-auth-pin-input ' + (isPinComplete ? 'is-complete' : isFilled ? 'is-filled' : ''),
                   }),
                   (overlay && overlay.d)
                     ? React.createElement(
                       'span',
                       {
                         key: 'pin_overlay_' + i + '_' + overlay.k,
-                        className:
-                          'pin-digit-overlay absolute inset-0 flex items-center justify-center text-slate-800 text-[32px] sm:text-[36px] font-bold leading-none pointer-events-none',
+                        className: 'pin-digit-overlay absolute inset-0 flex items-center justify-center heys-auth-pin-overlay pointer-events-none',
                         onAnimationEnd: () => {
                           // Сбрасываем только если это тот же overlay
                           setPinOverlay((prev) => {
@@ -9691,14 +9684,14 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
             ),
           ),
 
-          err && React.createElement('div', { className: 'rounded-xl bg-red-50 px-4 py-3 text-center text-sm text-red-600' }, err),
+          err && React.createElement('div', { className: 'heys-auth-error' }, err),
           clientDiag && React.createElement(
             'div',
-            { className: 'rounded-xl bg-black/5 px-3 py-2 text-left text-[12px] text-slate-700' },
-            React.createElement('div', { className: 'font-semibold text-slate-800' }, 'Диагностика (localhost)'),
+            { className: 'heys-auth-diagnostics' },
+            React.createElement('div', { className: 'font-semibold' }, 'Диагностика (localhost)'),
             React.createElement(
               'pre',
-              { className: 'mt-1 whitespace-pre-wrap break-words font-mono text-[11px] leading-snug text-slate-700' },
+              { className: 'mt-1 whitespace-pre-wrap break-words font-mono text-[11px] leading-snug' },
               (() => {
                 try {
                   return JSON.stringify(clientDiag, null, 2);
@@ -9709,26 +9702,27 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
             ),
           ),
           PrimaryBtn(
-            { onClick: handleClientLogin, disabled: !canClientLogin },
+            { type: 'submit', disabled: !canClientLogin },
             busy ? '⏳ Вход...' : 'Войти →',
           ),
         ),
         React.createElement(
           'div',
-          { className: 'mt-6 space-y-3 text-center text-sm text-slate-500' },
+          { className: 'heys-auth-meta mt-6 space-y-3 text-center text-sm' },
           React.createElement('div', null, 'Нет доступа? Обратитесь в поддержку:'),
           React.createElement(
             'a',
             {
               href: 'tel:+79624556111',
-              className: 'block font-semibold text-blue-600 hover:underline',
+              className: 'heys-auth-link block',
             },
             '+7 962 455-61-11',
           ),
           React.createElement(
             'button',
             {
-              className: 'mt-3 font-medium text-blue-500 hover:text-blue-700 hover:underline',
+              type: 'button',
+              className: 'heys-auth-link-btn mt-3',
               onClick: () => {
                 setErr('');
                 armCuratorAutologin();
@@ -9747,8 +9741,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
           'div',
           { className: 'text-center' },
           React.createElement('div', { className: 'mb-2 text-4xl drop-shadow' }, '🍎'),
-          React.createElement('div', { className: 'text-2xl font-extrabold tracking-tight text-slate-900' }, 'HEYS'),
-          React.createElement('div', { className: 'mt-1 text-sm text-slate-500' }, 'Вход куратора'),
+          React.createElement('div', { className: 'heys-auth-brand' }, 'HEYS'),
+          React.createElement('div', { className: 'heys-auth-subtitle text-sm' }, 'Вход куратора'),
         ),
         React.createElement(
           'form',
@@ -9775,7 +9769,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
             value: password,
             onChange: (e) => { setErr(''); setPassword(e.target.value); },
           }),
-          err && React.createElement('div', { className: 'rounded-xl bg-red-50 px-3 py-2 text-center text-sm text-red-600' }, err),
+          err && React.createElement('div', { className: 'heys-auth-error' }, err),
           PrimaryBtn(
             { type: 'submit', disabled: !canCuratorLogin },
             busy ? '⏳ Вход...' : 'Войти →',
@@ -9783,12 +9777,13 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
         ),
         React.createElement(
           'div',
-          { className: 'mt-5 space-y-2 text-center text-sm text-slate-500' },
+          { className: 'heys-auth-meta mt-5 space-y-2 text-center text-sm' },
           React.createElement('div', null, greeting),
           React.createElement(
             'button',
             {
-              className: 'text-blue-600 hover:underline',
+              type: 'button',
+              className: 'heys-auth-link-btn',
               onClick: () => {
                 setErr('');
                 disarmCuratorAutologin();
@@ -9804,8 +9799,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
     return React.createElement(
       'div',
       {
-        className:
-          'fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-gradient-to-br from-blue-500 to-blue-700 px-5 py-10',
+        className: 'heys-auth-shell fixed inset-0 z-[9999] flex flex-col items-center justify-center px-5 py-10',
       },
       mode === 'start'
         ? renderStart()
@@ -9814,7 +9808,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
           : renderCuratorLogin(),
       React.createElement(
         'div',
-        { className: 'mt-6 text-xs font-medium text-white/40 tracking-wider font-mono' },
+        { className: 'heys-auth-version mt-6 text-xs font-medium tracking-wider font-mono' },
         'v' + (HEYS.version || 'dev'),
       ),
     );

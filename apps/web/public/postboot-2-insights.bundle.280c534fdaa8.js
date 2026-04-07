@@ -19485,8 +19485,10 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             ],
             coeff: (params) => {
                 const target = params.targetSteps || 10000;
-                // 8000=0.8x, 10000=1x, 15000=1.5x, 20000=1.8x
-                return Math.min(target / 10000, 1.8);
+                // 8000=0.8x, 10000=1x, 15000=1.5x, 20000=1.8x, 30000=2.2x
+                if (target <= 15000) return Math.min(target / 10000, 1.5);
+                if (target <= 20000) return 1.5 + ((target - 15000) / 5000) * 0.3;
+                return Math.min(1.8 + ((target - 20000) / 10000) * 0.4, 2.2);
             }
         }
     };
@@ -20372,7 +20374,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             label: 'Увеличить шаги',
             description: 'Больше ходьбы',
             params: [
-                { key: 'targetSteps', label: 'Целевые шаги', type: 'number', min: 5000, max: 20000, default: 10000, step: 1000 }
+                { key: 'targetSteps', label: 'Целевые шаги', type: 'number', min: 5000, max: 30000, default: 10000, step: 1000 }
             ]
         }
     };

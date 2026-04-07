@@ -2057,7 +2057,9 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-3-ui: execute start');
       return profile.stepsGoal || 10000;
     }, [stepsStats, profile.stepsGoal]);
 
-    const stepsGoal = data.stepsGoal ?? defaultStepsGoal;
+    const sliderMin = 3000;
+    const sliderMax = 30000;
+    const stepsGoal = Math.max(sliderMin, Math.min(sliderMax, data.stepsGoal ?? defaultStepsGoal));
     const hasStepsHistory = stepsStats.daysWithData >= 3;
 
     // Расчёт бонуса ккал
@@ -2067,12 +2069,10 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-3-ui: execute start');
     const bonusKm = bonusSteps * 0.7 / 1000;
     const bonusKcal = Math.round(coef * weight * bonusKm);
 
-    const sliderMin = 3000;
-    const sliderMax = 20000;
     const sliderPercent = Math.min(100, Math.max(0, ((stepsGoal - sliderMin) / (sliderMax - sliderMin)) * 100));
     const sliderColor = stepsGoal < 7000 ? '#eab308' : stepsGoal >= 10000 ? '#22c55e' : '#3b82f6';
 
-    const stepsValues = useMemo(() => [5000, 6000, 7000, 8000, 9000, 10000, 12000, 15000], []);
+    const stepsValues = useMemo(() => [5000, 6000, 7000, 8000, 9000, 10000, 12000, 15000, 20000, 30000], []);
 
     // Определяем тип дня по цели
     const getDayTypeLabel = () => {
@@ -2116,7 +2116,8 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-3-ui: execute start');
           React.createElement('span', { className: 'mc-steps-slider-label-health' }, '7к ❤️'),
           React.createElement('span', null, '10к'),
           React.createElement('span', null, '15к'),
-          React.createElement('span', null, '20к')
+          React.createElement('span', null, '20к'),
+          React.createElement('span', null, '30к')
         )
       ),
       hasStepsHistory && React.createElement('div', { className: 'mc-steps-stats' },
