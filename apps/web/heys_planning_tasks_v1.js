@@ -2491,6 +2491,7 @@
     }
 
     HEYS.PlanningTasks = {
+        DurationPresetModal,
         TaskDetailModal,
         TasksScreen,
     };

@@ -9,6 +9,7 @@
     const { useState, useMemo, useRef, useEffect } = React;
     const {
         PRIORITY_CONFIG,
+        STATUS_CONFIG,
         CALENDAR_START_HOUR,
         CALENDAR_END_HOUR,
         CALENDAR_HOUR_HEIGHT,
@@ -64,6 +65,12 @@
         return WEEKDAY_LABELS[index] || '';
     }
 
+    function isWeekendDay(isoDate) {
+        const d = new Date(String(isoDate || '') + 'T12:00:00');
+        const dow = d.getDay();
+        return dow === 0 || dow === 6;
+    }
+
     function formatCalendarHourLabel(hourValue) {
         const normalizedHour = ((Number(hourValue) || 0) % 24 + 24) % 24;
         return pad2(normalizedHour) + ':00';
@@ -79,6 +86,50 @@
         const hours = Math.floor(normalized / 60);
         const minutes = normalized % 60;
         return pad2(hours) + ':' + pad2(minutes);
+    }
+
+    function normalizeDurationMinutes(value) {
+        const minutes = Number(value);
+        if (!Number.isFinite(minutes) || minutes <= 0) return null;
+        return Math.round(minutes);
+    }
+
+    function pluralizeDays(count) {
+        const mod10 = count % 10;
+        const mod100 = count % 100;
+        if (mod10 === 1 && mod100 !== 11) return 'день';
+        if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return 'дня';
+        return 'дней';
+    }
+
+    function formatDurationLabel(value) {
+        const minutes = normalizeDurationMinutes(value);
+        if (!minutes) return '';
+
+        if (minutes < 60) return minutes + ' мин';
+
+        if (minutes % (8 * 60) === 0) {
+            const days = minutes / (8 * 60);
+            return days + ' ' + pluralizeDays(days);
+        }
+
+        if (minutes % 60 === 0) {
+            const hours = minutes / 60;
+            return hours === 1 ? '1 час' : hours + ' ч';
+        }
+
+        const hours = Math.floor(minutes / 60);
+        const restMinutes = minutes % 60;
+        if (hours > 0 && restMinutes > 0) return hours + 'ч ' + restMinutes + 'м';
+        return minutes + ' мин';
+    }
+
+    function pluralizeSlots(count) {
+        const mod10 = count % 10;
+        const mod100 = count % 100;
+        if (mod10 === 1 && mod100 !== 11) return 'слот';
+        if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return 'слота';
+        return 'слотов';
     }
 
     function getCalendarNowTop() {
@@ -110,40 +161,102 @@
         return document.scrollingElement || document.documentElement || null;
     }
 
-    function centerCalendarNowLine(lineElement, headerElement) {
+    function canScrollVertically(node) {
+        if (!node) return false;
+
+        if (
+            node === window
+            || node === document.body
+            || node === document.documentElement
+            || node === document.scrollingElement
+        ) {
+            const scrollRoot = document.scrollingElement || document.documentElement;
+            return !!scrollRoot && scrollRoot.scrollHeight > (scrollRoot.clientHeight + 1);
+        }
+
+        return node.scrollHeight > (node.clientHeight + 1);
+    }
+
+    function centerCalendarNowLine(lineElement, headerElement, preferredScrollContainer) {
         if (!lineElement) return;
-        const scrollContainer = findVerticalScrollContainer(lineElement);
-        const containerRect = typeof scrollContainer?.getBoundingClientRect === 'function'
+        const scrollContainer = canScrollVertically(preferredScrollContainer)
+            ? preferredScrollContainer
+            : findVerticalScrollContainer(lineElement);
+        const lineRect = lineElement.getBoundingClientRect();
+        const headerBottom = Math.max(headerElement?.getBoundingClientRect?.().bottom || 0, 0);
+        const scrollRoot = document.scrollingElement || document.documentElement;
+        const isRootScroll = !scrollContainer
+            || scrollContainer === document.body
+            || scrollContainer === document.documentElement
+            || scrollContainer === document.scrollingElement;
+
+        if (isRootScroll) {
+            const viewportHeight = window.innerHeight || document.documentElement?.clientHeight || 0;
+            const visibleTop = headerBottom;
+            const visibleHeight = Math.max(viewportHeight - visibleTop, 0);
+            const lineCenterAbsolute = (scrollRoot?.scrollTop || window.scrollY || 0) + lineRect.top + (lineRect.height / 2);
+            const targetScrollTop = lineCenterAbsolute - (visibleTop + (visibleHeight / 2));
+            const currentScrollTop = scrollRoot?.scrollTop || 0;
+
+            if (Math.abs(targetScrollTop - currentScrollTop) < 1) return;
+
+            if (scrollRoot) {
+                scrollRoot.scrollTop = targetScrollTop;
+                return;
+            }
+
+            window.scrollTo({ top: targetScrollTop, behavior: 'auto' });
+            return;
+        }
+
+        const containerRect = typeof scrollContainer.getBoundingClientRect === 'function'
             ? scrollContainer.getBoundingClientRect()
             : {
                 top: 0,
                 bottom: window.innerHeight || document.documentElement?.clientHeight || 0,
             };
-        const headerBottom = Math.max(headerElement?.getBoundingClientRect?.().bottom || containerRect.top || 0, containerRect.top || 0);
+        const visibleTop = Math.max(headerBottom, containerRect.top || 0);
+        const visibleHeight = Math.max((containerRect.bottom || 0) - visibleTop, 0);
+        const lineCenterWithinContent = scrollContainer.scrollTop + (lineRect.top - containerRect.top) + (lineRect.height / 2);
+        const visibleCenterWithinContent = scrollContainer.scrollTop + (visibleTop - containerRect.top) + (visibleHeight / 2);
+        const targetScrollTop = lineCenterWithinContent - ((visibleTop - containerRect.top) + (visibleHeight / 2));
+
+        if (Math.abs(targetScrollTop - scrollContainer.scrollTop) < 1) return;
+
+        scrollContainer.scrollTop = targetScrollTop;
+    }
+
+    function getCalendarCenterDelta(lineElement, headerElement, preferredScrollContainer) {
+        if (!lineElement) return Number.POSITIVE_INFINITY;
+
+        const scrollContainer = canScrollVertically(preferredScrollContainer)
+            ? preferredScrollContainer
+            : findVerticalScrollContainer(lineElement);
         const lineRect = lineElement.getBoundingClientRect();
-        const currentCenter = lineRect.top + (lineRect.height / 2);
-        const targetCenter = headerBottom + Math.max(((containerRect.bottom || 0) - headerBottom) / 2, 0);
-        const delta = currentCenter - targetCenter;
+        const headerBottom = Math.max(headerElement?.getBoundingClientRect?.().bottom || 0, 0);
+        const isRootScroll = !scrollContainer
+            || scrollContainer === document.body
+            || scrollContainer === document.documentElement
+            || scrollContainer === document.scrollingElement;
 
-        if (Math.abs(delta) < 1) return;
-
-        if (
-            scrollContainer
-            && scrollContainer !== document.body
-            && scrollContainer !== document.documentElement
-            && scrollContainer !== document.scrollingElement
-        ) {
-            scrollContainer.scrollTop += delta;
-            return;
+        if (isRootScroll) {
+            const viewportHeight = window.innerHeight || document.documentElement?.clientHeight || 0;
+            const visibleTop = headerBottom;
+            const visibleCenter = visibleTop + Math.max((viewportHeight - visibleTop) / 2, 0);
+            const lineCenter = lineRect.top + (lineRect.height / 2);
+            return lineCenter - visibleCenter;
         }
 
-        const scrollRoot = document.scrollingElement || document.documentElement;
-        if (scrollRoot) {
-            scrollRoot.scrollTop += delta;
-            return;
-        }
-
-        window.scrollBy({ top: delta, behavior: 'auto' });
+        const containerRect = typeof scrollContainer.getBoundingClientRect === 'function'
+            ? scrollContainer.getBoundingClientRect()
+            : {
+                top: 0,
+                bottom: window.innerHeight || document.documentElement?.clientHeight || 0,
+            };
+        const visibleTop = Math.max(headerBottom, containerRect.top || 0);
+        const visibleCenter = visibleTop + Math.max(((containerRect.bottom || 0) - visibleTop) / 2, 0);
+        const lineCenter = lineRect.top + (lineRect.height / 2);
+        return lineCenter - visibleCenter;
     }
 
     function resolveCalendarCellStart(date, displayHour) {
@@ -223,6 +336,94 @@
             date: dateStr(source?.date),
             startTime: source?.startTime || '09:00',
             endTime: source?.endTime || '10:00',
+        };
+    }
+
+    function getSlotDurationMinutes(slotLike) {
+        if (!slotLike?.startTime || !slotLike?.endTime) return 60;
+        return Math.max(30, getCalendarDisplayEndMinutes(slotLike) - getCalendarDisplayMinutes(slotLike.startTime));
+    }
+
+    function buildTaskLookup(tasks) {
+        return new Map((Array.isArray(tasks) ? tasks : [])
+            .filter(Boolean)
+            .map((task) => [task.id, task]));
+    }
+
+    function resolveTaskProjectScope(taskId, taskLookup, validProjectIds, cache, trail) {
+        if (!taskId || !taskLookup.has(taskId)) return undefined;
+        if (cache.has(taskId)) return cache.get(taskId);
+        if (trail.has(taskId)) return undefined;
+
+        trail.add(taskId);
+        const task = taskLookup.get(taskId);
+        let resolvedProjectId;
+
+        if (task?.parentTaskId && taskLookup.has(task.parentTaskId)) {
+            resolvedProjectId = resolveTaskProjectScope(task.parentTaskId, taskLookup, validProjectIds, cache, trail);
+        } else {
+            const rawProjectId = task?.projectId || undefined;
+            resolvedProjectId = rawProjectId && validProjectIds.has(rawProjectId)
+                ? rawProjectId
+                : undefined;
+        }
+
+        trail.delete(taskId);
+        cache.set(taskId, resolvedProjectId);
+        return resolvedProjectId;
+    }
+
+    function buildResolvedTaskProjectMap(tasks, projects) {
+        const taskLookup = buildTaskLookup(tasks);
+        const validProjectIds = new Set((Array.isArray(projects) ? projects : [])
+            .map((project) => project?.id)
+            .filter(Boolean));
+        const cache = new Map();
+
+        taskLookup.forEach((task, taskId) => {
+            resolveTaskProjectScope(taskId, taskLookup, validProjectIds, cache, new Set());
+        });
+
+        return cache;
+    }
+
+    function getResolvedTaskProjectId(taskId, resolvedTaskProjectIds) {
+        if (!taskId || !resolvedTaskProjectIds?.has(taskId)) return undefined;
+        return resolvedTaskProjectIds.get(taskId) || undefined;
+    }
+
+    function collectDescendantIds(tasks, rootId) {
+        const result = new Set();
+        const queue = [rootId];
+        while (queue.length > 0) {
+            const currentId = queue.shift();
+            tasks.forEach((task) => {
+                if (task.parentTaskId === currentId && !result.has(task.id)) {
+                    result.add(task.id);
+                    queue.push(task.id);
+                }
+            });
+        }
+        return result;
+    }
+
+    function buildUnifiedSlotDraft(source, tasks, resolvedTaskProjectIds) {
+        const slotDraft = buildSlotDraft(source);
+        const linkedTask = (Array.isArray(tasks) ? tasks : []).find((task) => task.id === slotDraft.taskId);
+        return {
+            ...slotDraft,
+            taskTitle: linkedTask?.title || '',
+            taskStatus: linkedTask?.status || 'in_progress',
+            taskPriority: linkedTask?.priority || 'p2',
+            taskProjectId: linkedTask ? (getResolvedTaskProjectId(linkedTask.id, resolvedTaskProjectIds) || '') : '',
+            taskParentTaskId: linkedTask?.parentTaskId || '',
+            taskStartDate: linkedTask?.startDate || '',
+            taskDueDate: linkedTask?.dueDate || '',
+            taskPlannedMinutes: linkedTask?.plannedMinutes ? String(linkedTask.plannedMinutes) : '',
+            taskBaselineStartDate: linkedTask?.baselineStartDate || '',
+            taskBaselineDueDate: linkedTask?.baselineDueDate || '',
+            taskBaselinePlannedMinutes: linkedTask?.baselinePlannedMinutes ? String(linkedTask.baselinePlannedMinutes) : '',
+            taskBlockedByTaskIds: Array.isArray(linkedTask?.blockedByTaskIds) ? linkedTask.blockedByTaskIds.slice() : [],
         };
     }
 
@@ -311,6 +512,70 @@
         return titles.join(' → ');
     }
 
+    function findPlanningProjectName(projectId, projects) {
+        if (!projectId) return '';
+        const project = (Array.isArray(projects) ? projects : []).find((entry) => entry?.id === projectId);
+        return String(project?.name || '').trim();
+    }
+
+    function buildTaskLineage(taskId, taskLookup) {
+        if (!taskId || !taskLookup?.has(taskId)) return [];
+
+        const lineage = [];
+        const seen = new Set();
+        let currentId = taskId;
+        let guard = 0;
+
+        while (currentId && taskLookup.has(currentId) && guard < 120 && !seen.has(currentId)) {
+            const currentTask = taskLookup.get(currentId);
+            lineage.unshift(currentTask);
+            seen.add(currentId);
+            currentId = currentTask?.parentTaskId || '';
+            guard += 1;
+        }
+
+        return lineage;
+    }
+
+    function buildTaskHierarchyInfo(task, taskLookup, projects, resolvedTaskProjectIds) {
+        if (!task?.id) {
+            return {
+                projectName: '',
+                parentTitles: [],
+                leafTitle: String(task?.title || '').trim(),
+                fullPath: [],
+                ladderSteps: [],
+                selectLabel: String(task?.title || '').trim(),
+            };
+        }
+
+        const lineage = buildTaskLineage(task.id, taskLookup);
+        const titles = lineage
+            .map((entry) => String(entry?.title || '').trim())
+            .filter(Boolean);
+        const leafTitle = titles[titles.length - 1] || String(task.title || '').trim();
+        const parentTitles = titles.slice(0, -1);
+        const projectName = findPlanningProjectName(
+            getResolvedTaskProjectId(task.id, resolvedTaskProjectIds),
+            projects,
+        );
+        const fullPath = [projectName, ...titles].filter(Boolean);
+        const ladderSteps = [
+            projectName ? 'Проект: ' + projectName : '',
+            ...parentTitles.map((title, index) => ('↳ '.repeat(index + 1) + title)),
+            leafTitle ? ('↳ '.repeat(parentTitles.length + 1) + leafTitle) : '',
+        ].filter(Boolean);
+
+        return {
+            projectName,
+            parentTitles,
+            leafTitle,
+            fullPath,
+            ladderSteps,
+            selectLabel: fullPath.join(' → ') || leafTitle || 'Задача',
+        };
+    }
+
     function buildTaskHeaderDayPatch(task, targetDate, todayIso) {
         const anchorDate = dateStr(task?.startDate || task?.dueDate || todayIso);
         if (!targetDate || targetDate === anchorDate) return null;
@@ -334,86 +599,399 @@
         return payload?.type === 'task' || payload?.type === 'slot';
     }
 
-    function SlotEditorModal({ draft, tasks, onClose, onDelete, onSave, onOpenTask }) {
-        const [form, setForm] = useState(() => buildSlotDraft(draft));
+    function SlotEditorModal({ draft, state, resolvedTaskProjectIds, onClose, onDelete }) {
+        const tasks = Array.isArray(state?.tasks) ? state.tasks : [];
+        const projects = Array.isArray(state?.projects) ? state.projects : [];
+        const slots = Array.isArray(state?.slots) ? state.slots : [];
+        const taskLookup = useMemo(() => buildTaskLookup(tasks), [tasks]);
+        const titleInputRef = useRef(null);
+        const [showTaskDurationPicker, setShowTaskDurationPicker] = useState(false);
+        const [showSlotDurationPicker, setShowSlotDurationPicker] = useState(false);
+        const [isTitleEditing, setIsTitleEditing] = useState(false);
+        const [form, setForm] = useState(() => buildUnifiedSlotDraft(draft, tasks, resolvedTaskProjectIds));
 
         useEffect(() => {
-            setForm(buildSlotDraft(draft));
-        }, [draft?.id, draft?.date, draft?.startTime, draft?.endTime, draft?.taskId, draft?.title]);
+            setForm(buildUnifiedSlotDraft(draft, tasks, resolvedTaskProjectIds));
+            setIsTitleEditing(false);
+        }, [draft, tasks, resolvedTaskProjectIds]);
 
-        const linkedTask = tasks.find((task) => task.id === form.taskId);
+        useEffect(() => {
+            if (!isTitleEditing || !titleInputRef.current) return;
+            titleInputRef.current.focus();
+            if (typeof titleInputRef.current.select === 'function') titleInputRef.current.select();
+        }, [isTitleEditing]);
+
+        const linkedTask = tasks.find((task) => task.id === form.taskId) || null;
+        const descendants = useMemo(
+            () => (linkedTask ? collectDescendantIds(tasks, linkedTask.id) : new Set()),
+            [tasks, linkedTask],
+        );
+        const parentOptions = useMemo(() => (
+            linkedTask
+                ? tasks.filter((entry) => entry.id !== linkedTask.id && !descendants.has(entry.id))
+                : []
+        ), [descendants, linkedTask, tasks]);
+        const dependencyOptions = useMemo(() => (
+            linkedTask
+                ? tasks.filter((entry) => entry.id !== linkedTask.id && !descendants.has(entry.id))
+                : []
+        ), [descendants, linkedTask, tasks]);
+        const linkedSlots = useMemo(() => (
+            linkedTask
+                ? slots.filter((slot) => slot.taskId === linkedTask.id && slot.id !== form.id)
+                : []
+        ), [form.id, linkedTask, slots]);
+        const slotDurationMinutes = getSlotDurationMinutes(form);
+        const slotDurationLabel = formatDurationLabel(slotDurationMinutes) || 'Без длительности';
+        const taskDurationLabel = formatDurationLabel(form.taskPlannedMinutes) || 'Без оценки';
+        const priorityLabel = PRIORITY_CONFIG[form.taskPriority]?.label || 'P2';
+        const statusLabel = STATUS_CONFIG[form.taskStatus]?.label || 'В работе';
+        const DurationPresetModal = HEYS.PlanningTasks && HEYS.PlanningTasks.DurationPresetModal;
+        const headerTitle = linkedTask
+            ? (form.taskTitle || linkedTask.title || 'Задача')
+            : (String(form.title || '').trim() || 'Отдельное событие');
+        const headerMeta = [
+            form.date,
+            form.startTime + '–' + form.endTime,
+            slotDurationLabel,
+            linkedTask ? priorityLabel : '',
+            linkedTask ? statusLabel : '',
+        ].filter(Boolean).join(' · ');
+        const titleFieldLabel = linkedTask ? 'Название задачи' : 'Название события';
+        const titleFieldValue = linkedTask ? form.taskTitle : form.title;
+        const titleFieldPlaceholder = linkedTask ? 'Название задачи' : 'Название события';
+
+        const handleField = (field, value) => setForm((current) => ({ ...current, [field]: value }));
+
+        const handleTaskDependencies = (event) => {
+            const values = Array.from(event.target.selectedOptions || []).map((option) => option.value);
+            handleField('taskBlockedByTaskIds', values);
+        };
+
+        const handleLinkedTaskChange = (taskId) => {
+            const nextTask = tasks.find((task) => task.id === taskId);
+            setIsTitleEditing(false);
+            setForm((current) => ({
+                ...current,
+                taskId,
+                title: '',
+                taskTitle: nextTask?.title || '',
+                taskStatus: nextTask?.status || 'in_progress',
+                taskPriority: nextTask?.priority || 'p2',
+                taskProjectId: nextTask ? (getResolvedTaskProjectId(nextTask.id, resolvedTaskProjectIds) || '') : '',
+                taskParentTaskId: nextTask?.parentTaskId || '',
+                taskStartDate: nextTask?.startDate || '',
+                taskDueDate: nextTask?.dueDate || '',
+                taskPlannedMinutes: nextTask?.plannedMinutes ? String(nextTask.plannedMinutes) : '',
+                taskBaselineStartDate: nextTask?.baselineStartDate || '',
+                taskBaselineDueDate: nextTask?.baselineDueDate || '',
+                taskBaselinePlannedMinutes: nextTask?.baselinePlannedMinutes ? String(nextTask.baselinePlannedMinutes) : '',
+                taskBlockedByTaskIds: Array.isArray(nextTask?.blockedByTaskIds) ? nextTask.blockedByTaskIds.slice() : [],
+            }));
+        };
+
         const save = () => {
             if (!form.date || !form.startTime || !form.endTime) return;
-            onSave({
-                ...form,
-                title: String(form.title || '').trim(),
-            });
+
+            if (form.taskId && linkedTask) {
+                const nextParentTaskId = form.taskParentTaskId || undefined;
+                const nextProjectId = nextParentTaskId
+                    ? getResolvedTaskProjectId(nextParentTaskId, resolvedTaskProjectIds)
+                    : (form.taskProjectId || undefined);
+
+                state.updateTask(form.taskId, {
+                    title: String(form.taskTitle || linkedTask.title || '').trim() || linkedTask.title,
+                    status: form.taskStatus,
+                    priority: form.taskPriority,
+                    projectId: nextProjectId,
+                    parentTaskId: nextParentTaskId,
+                    startDate: form.taskStartDate || undefined,
+                    dueDate: form.taskDueDate || undefined,
+                    plannedMinutes: form.taskPlannedMinutes ? Number(form.taskPlannedMinutes) : undefined,
+                    baselineStartDate: form.taskBaselineStartDate || undefined,
+                    baselineDueDate: form.taskBaselineDueDate || undefined,
+                    baselinePlannedMinutes: form.taskBaselinePlannedMinutes ? Number(form.taskBaselinePlannedMinutes) : undefined,
+                    blockedByTaskIds: form.taskBlockedByTaskIds,
+                });
+            }
+
+            const slotPayload = {
+                taskId: form.taskId || undefined,
+                title: linkedTask ? '' : String(form.title || '').trim(),
+                date: form.date,
+                startTime: form.startTime,
+                endTime: form.endTime,
+            };
+
+            if (form.id) {
+                state.updateSlot(form.id, slotPayload);
+            } else {
+                state.addSlot(slotPayload);
+            }
+
+            onClose();
         };
 
         return h('div', { className: 'planning-modal-overlay', onClick: onClose },
-            h('div', { className: 'planning-modal', onClick: (event) => event.stopPropagation() },
+            h('div', { className: 'planning-modal planning-modal--wide planning-modal--slot-unified', onClick: (event) => event.stopPropagation() },
                 h('div', { className: 'planning-modal__header' },
-                    h('span', null, form.id ? 'Слот' : 'Новый слот'),
+                    h('div', { className: 'planning-modal__header-copy' },
+                        h('span', { className: 'planning-modal__header-title' }, headerTitle),
+                        h('span', { className: 'planning-modal__eyebrow' }, headerMeta),
+                    ),
                     h('button', { type: 'button', className: 'planning-modal__close', onClick: onClose }, '×'),
                 ),
+                h('div', { className: 'planning-modal__meta planning-modal__meta--summary' },
+                    h('span', { className: 'planning-modal__meta-pill' }, 'Слот: ' + slotDurationLabel),
+                    linkedTask && h('span', { className: 'planning-modal__meta-pill' }, priorityLabel),
+                    linkedTask && h('span', { className: 'planning-modal__meta-pill' }, statusLabel),
+                    linkedTask && h('span', { className: 'planning-modal__meta-pill' }, 'Задача: ' + taskDurationLabel),
+                ),
                 h('div', { className: 'planning-modal__body' },
-                    h('div', { className: 'planning-modal__row' },
-                        h('label', null, 'Связанная задача'),
-                        h('select', {
-                            value: form.taskId,
-                            onChange: (event) => setForm((current) => ({ ...current, taskId: event.target.value })),
-                        },
-                            h('option', { value: '' }, '— обычное событие —'),
-                            tasks.map((task) => h('option', { key: task.id, value: task.id }, task.title)),
+                    h('section', { className: 'planning-modal__card planning-modal__card--full' },
+                        h('div', { className: 'planning-modal__card-header' },
+                            h('div', { className: 'planning-modal__card-kicker' }, 'Основное'),
+                            h('div', { className: 'planning-modal__card-title' }, linkedTask ? 'Слот и быстрые параметры' : 'Параметры события'),
+                            h('div', { className: 'planning-modal__card-hint' }, linkedTask ? 'Одна задача, один заголовок — ниже только быстрые параметры и планирование' : 'Календарный блок без связанной задачи'),
+                        ),
+                        h('div', { className: 'planning-modal__stack' },
+                            h('div', { className: 'planning-modal__row' },
+                                h('div', { className: 'planning-modal__row-label' },
+                                    h('label', null, 'Задача'),
+                                    linkedTask && h('button', {
+                                        type: 'button',
+                                        className: 'planning-modal__icon-btn planning-modal__icon-btn--inline',
+                                        title: isTitleEditing ? 'Скрыть поле названия' : 'Изменить название задачи',
+                                        'aria-label': 'Изменить название задачи',
+                                        onClick: () => setIsTitleEditing((current) => !current),
+                                    }, '✎'),
+                                ),
+                                h('select', {
+                                    value: form.taskId,
+                                    onChange: (event) => handleLinkedTaskChange(event.target.value),
+                                },
+                                    h('option', { value: '' }, '— обычное событие —'),
+                                    tasks.map((task) => h('option', {
+                                        key: task.id,
+                                        value: task.id,
+                                    }, buildTaskHierarchyInfo(task, taskLookup, projects, resolvedTaskProjectIds).selectLabel)),
+                                ),
+                            ),
+                            !linkedTask && h('div', { className: 'planning-modal__title-inline' },
+                                h('div', { className: 'planning-modal__title-inline-copy' },
+                                    h('span', { className: 'planning-modal__title-inline-label' }, titleFieldLabel),
+                                    h('span', {
+                                        className: 'planning-modal__title-inline-value' + (!String(titleFieldValue || '').trim() ? ' is-empty' : ''),
+                                    }, String(titleFieldValue || '').trim() || 'Без названия'),
+                                ),
+                                h('button', {
+                                    type: 'button',
+                                    className: 'planning-modal__icon-btn',
+                                    title: isTitleEditing ? 'Скрыть поле названия' : 'Изменить название',
+                                    'aria-label': 'Изменить название',
+                                    onClick: () => setIsTitleEditing((current) => !current),
+                                }, '✎'),
+                            ),
+                            isTitleEditing && h('div', { className: 'planning-modal__row' },
+                                h('label', null, titleFieldLabel),
+                                h('input', {
+                                    ref: titleInputRef,
+                                    className: 'planning-modal__input',
+                                    placeholder: titleFieldPlaceholder,
+                                    value: titleFieldValue,
+                                    onChange: (event) => handleField(linkedTask ? 'taskTitle' : 'title', event.target.value),
+                                }),
+                            ),
+                            h('div', { className: 'planning-modal__time-row' },
+                                h('div', { className: 'planning-modal__row' },
+                                    h('label', null, 'Дата'),
+                                    h('input', {
+                                        type: 'date',
+                                        value: form.date,
+                                        onChange: (event) => handleField('date', event.target.value),
+                                    }),
+                                ),
+                                h('div', { className: 'planning-modal__row' },
+                                    h('label', null, 'Длительность'),
+                                    h('button', {
+                                        type: 'button',
+                                        className: 'planning-duration-trigger planning-duration-trigger--compact',
+                                        onClick: () => setShowSlotDurationPicker(true),
+                                    },
+                                        h('span', { className: 'planning-duration-trigger__value' }, slotDurationLabel),
+                                        h('span', { className: 'planning-duration-trigger__icon', 'aria-hidden': 'true' }, '⏱'),
+                                    ),
+                                ),
+                                h('div', { className: 'planning-modal__row' },
+                                    h('label', null, 'Старт'),
+                                    h('input', {
+                                        type: 'time',
+                                        value: form.startTime,
+                                        onChange: (event) => handleField('startTime', event.target.value),
+                                    }),
+                                ),
+                                h('div', { className: 'planning-modal__row' },
+                                    h('label', null, 'Окончание'),
+                                    h('input', {
+                                        type: 'time',
+                                        value: form.endTime,
+                                        onChange: (event) => handleField('endTime', event.target.value),
+                                    }),
+                                ),
+                            ),
+                            linkedTask && h('div', { className: 'planning-modal__compact-grid planning-modal__compact-grid--pair' },
+                                h('div', { className: 'planning-modal__row' },
+                                    h('label', null, 'Статус'),
+                                    h('select', { value: form.taskStatus, onChange: (event) => handleField('taskStatus', event.target.value) },
+                                        Object.keys(STATUS_CONFIG).map((key) => h('option', { key, value: key }, STATUS_CONFIG[key].label)),
+                                    ),
+                                ),
+                                h('div', { className: 'planning-modal__row' },
+                                    h('label', null, 'Приоритет'),
+                                    h('select', { value: form.taskPriority, onChange: (event) => handleField('taskPriority', event.target.value) },
+                                        Object.keys(PRIORITY_CONFIG).map((key) => h('option', { key, value: key }, PRIORITY_CONFIG[key].label)),
+                                    ),
+                                ),
+                            ),
+                            !linkedTask && h('div', { className: 'planning-linked-banner planning-linked-banner--empty' },
+                                h('span', null, 'Это отдельное событие без task-полей. Если нужно — сначала выбери связанную задачу выше.'),
+                            ),
                         ),
                     ),
-                    h('input', {
-                        className: 'planning-modal__input',
-                        placeholder: linkedTask ? 'Оставь пустым, чтобы использовать название задачи' : 'Название слота',
-                        value: form.title,
-                        onChange: (event) => setForm((current) => ({ ...current, title: event.target.value })),
-                    }),
-                    h('div', { className: 'planning-modal__grid' },
-                        h('div', { className: 'planning-modal__row' },
-                            h('label', null, 'Дата'),
-                            h('input', {
-                                type: 'date',
-                                value: form.date,
-                                onChange: (event) => setForm((current) => ({ ...current, date: event.target.value })),
-                            }),
+                    linkedTask && h('section', { className: 'planning-modal__card planning-modal__card--full' },
+                        h('div', { className: 'planning-modal__card-header' },
+                            h('div', { className: 'planning-modal__card-kicker' }, 'План задачи'),
+                            h('div', { className: 'planning-modal__card-title' }, 'Сроки, структура и оценка'),
+                            h('div', { className: 'planning-modal__card-hint' }, 'Без лишнего — только то, что влияет на планирование'),
                         ),
-                        h('div', { className: 'planning-modal__row' },
-                            h('label', null, 'Старт'),
-                            h('input', {
-                                type: 'time',
-                                value: form.startTime,
-                                onChange: (event) => setForm((current) => ({ ...current, startTime: event.target.value })),
-                            }),
+                        h('div', { className: 'planning-modal__stack' },
+                            h('div', { className: 'planning-modal__compact-grid planning-modal__compact-grid--pair' },
+                                h('div', { className: 'planning-modal__row' },
+                                    h('label', null, 'Проект'),
+                                    h('select', { value: form.taskProjectId, onChange: (event) => handleField('taskProjectId', event.target.value) },
+                                        h('option', { value: '' }, '— без проекта —'),
+                                        projects.map((project) => h('option', { key: project.id, value: project.id }, project.name)),
+                                    ),
+                                ),
+                                h('div', { className: 'planning-modal__row' },
+                                    h('label', null, 'Подпроект / родитель'),
+                                    h('select', { value: form.taskParentTaskId, onChange: (event) => handleField('taskParentTaskId', event.target.value) },
+                                        h('option', { value: '' }, '— верхний уровень —'),
+                                        parentOptions.map((entry) => h('option', {
+                                            key: entry.id,
+                                            value: entry.id,
+                                        }, buildTaskHierarchyInfo(entry, taskLookup, projects, resolvedTaskProjectIds).selectLabel)),
+                                    ),
+                                ),
+                            ),
+                            h('div', { className: 'planning-modal__compact-grid planning-modal__compact-grid--triple' },
+                                h('div', { className: 'planning-modal__row' },
+                                    h('label', null, 'Старт задачи'),
+                                    h('input', { type: 'date', value: form.taskStartDate, onChange: (event) => handleField('taskStartDate', event.target.value) }),
+                                ),
+                                h('div', { className: 'planning-modal__row' },
+                                    h('label', null, 'Дедлайн'),
+                                    h('input', { type: 'date', value: form.taskDueDate, onChange: (event) => handleField('taskDueDate', event.target.value) }),
+                                ),
+                                h('div', { className: 'planning-modal__row' },
+                                    h('label', null, 'Длительность задачи'),
+                                    h('button', {
+                                        type: 'button',
+                                        className: 'planning-duration-trigger planning-duration-trigger--compact' + (!taskDurationLabel ? ' is-empty' : ''),
+                                        onClick: () => setShowTaskDurationPicker(true),
+                                    },
+                                        h('span', { className: 'planning-duration-trigger__value' }, taskDurationLabel || 'Выбрать пресет'),
+                                        h('span', { className: 'planning-duration-trigger__icon', 'aria-hidden': 'true' }, '⏱'),
+                                    ),
+                                ),
+                            ),
                         ),
                     ),
-                    h('div', { className: 'planning-modal__row' },
-                        h('label', null, 'Окончание'),
-                        h('input', {
-                            type: 'time',
-                            value: form.endTime,
-                            onChange: (event) => setForm((current) => ({ ...current, endTime: event.target.value })),
-                        }),
-                    ),
-                    linkedTask && h('div', { className: 'planning-linked-banner' },
-                        h('span', null, 'Связано с задачей: ' + linkedTask.title),
-                        h('button', { type: 'button', className: 'planning-btn planning-btn--sm', onClick: () => onOpenTask(linkedTask.id) }, 'Открыть задачу'),
+                    linkedTask && h('section', { className: 'planning-modal__card planning-modal__card--full' },
+                        h('div', { className: 'planning-modal__card-header' },
+                            h('div', { className: 'planning-modal__card-kicker' }, 'Дополнительно'),
+                            h('div', { className: 'planning-modal__card-title' }, 'Связи и baseline'),
+                            h('div', { className: 'planning-modal__card-hint' }, 'Редкие поля, но всё ещё на этой же странице'),
+                        ),
+                        h('div', { className: 'planning-modal__stack' },
+                            h('div', { className: 'planning-modal__row' },
+                                h('label', null, 'Зависимости'),
+                                h('select', {
+                                    multiple: true,
+                                    size: Math.min(4, Math.max(2, dependencyOptions.length || 2)),
+                                    value: form.taskBlockedByTaskIds,
+                                    onChange: handleTaskDependencies,
+                                },
+                                    dependencyOptions.map((entry) => h('option', {
+                                        key: entry.id,
+                                        value: entry.id,
+                                    }, buildTaskHierarchyInfo(entry, taskLookup, projects, resolvedTaskProjectIds).selectLabel)),
+                                ),
+                            ),
+                            linkedSlots.length > 0 && h('div', { className: 'planning-modal__subcard' },
+                                h('div', { className: 'planning-modal__subcard-title' }, 'Другие слоты этой задачи'),
+                                h('div', { className: 'planning-linked-list' },
+                                    linkedSlots.map((slot) => h('div', { key: slot.id, className: 'planning-linked-list__item' },
+                                        h('span', null, slot.date + ' · ' + slot.startTime + '–' + slot.endTime),
+                                    )),
+                                ),
+                            ),
+                            h('details', { className: 'planning-modal__details' },
+                                h('summary', { className: 'planning-modal__details-summary' },
+                                    h('span', { className: 'planning-modal__details-title' }, 'Baseline'),
+                                    h('span', { className: 'planning-modal__details-hint' }, 'Редко меняется'),
+                                ),
+                                h('div', { className: 'planning-modal__details-body' },
+                                    h('div', { className: 'planning-modal__compact-grid planning-modal__compact-grid--pair' },
+                                        h('div', { className: 'planning-modal__row' },
+                                            h('label', null, 'Baseline start'),
+                                            h('input', { type: 'date', value: form.taskBaselineStartDate, onChange: (event) => handleField('taskBaselineStartDate', event.target.value) }),
+                                        ),
+                                        h('div', { className: 'planning-modal__row' },
+                                            h('label', null, 'Baseline due'),
+                                            h('input', { type: 'date', value: form.taskBaselineDueDate, onChange: (event) => handleField('taskBaselineDueDate', event.target.value) }),
+                                        ),
+                                        h('div', { className: 'planning-modal__row planning-modal__row--full' },
+                                            h('label', null, 'Baseline minutes'),
+                                            h('input', { type: 'number', min: 0, value: form.taskBaselinePlannedMinutes, onChange: (event) => handleField('taskBaselinePlannedMinutes', event.target.value) }),
+                                        ),
+                                    ),
+                                ),
+                            ),
+                        ),
                     ),
                 ),
                 h('div', { className: 'planning-modal__footer planning-modal__footer--spread' },
                     form.id
-                        ? h('button', { type: 'button', className: 'planning-btn', onClick: () => onDelete(form.id) }, 'Удалить')
+                        ? h('button', { type: 'button', className: 'planning-btn', onClick: () => onDelete(form.id) }, 'Удалить слот')
                         : h('span'),
                     h('div', { className: 'planning-modal__footer-actions' },
                         h('button', { type: 'button', className: 'planning-btn', onClick: onClose }, 'Отмена'),
-                        h('button', { type: 'button', className: 'planning-btn planning-btn--primary', onClick: save }, 'Сохранить'),
+                        h('button', { type: 'button', className: 'planning-btn planning-btn--primary', onClick: save }, linkedTask ? 'Сохранить всё' : 'Сохранить'),
                     ),
                 ),
             ),
+            showSlotDurationPicker && DurationPresetModal && h(DurationPresetModal, {
+                title: 'Длительность слота',
+                subtitle: 'Меняем длительность блока, сохраняя текущее время начала.',
+                value: slotDurationMinutes,
+                onSelect: (minutes) => {
+                    const normalized = normalizeDurationMinutes(minutes);
+                    if (!normalized) return;
+                    setForm((current) => ({
+                        ...current,
+                        endTime: formatClockTime(timeToMinutes(current.startTime) + normalized),
+                    }));
+                },
+                onClose: () => setShowSlotDurationPicker(false),
+            }),
+            showTaskDurationPicker && DurationPresetModal && h(DurationPresetModal, {
+                title: 'Длительность задачи',
+                subtitle: 'Это оценка задачи, она используется и при планировании новых слотов.',
+                value: form.taskPlannedMinutes,
+                onSelect: (minutes) => handleField('taskPlannedMinutes', minutes ? String(minutes) : ''),
+                onClose: () => setShowTaskDurationPicker(false),
+            }),
         );
     }
 
@@ -592,7 +1170,9 @@
         const [slotDraft, setSlotDraft] = useState(null);
         const [selectedTaskId, setSelectedTaskId] = useState(null);
         const [resizePreview, setResizePreview] = useState(null);
+        const [calendarDayWindow, setCalendarDayWindow] = useState(3);
         const [calendarViewportWidth, setCalendarViewportWidth] = useState(0);
+        const [calendarViewportHeight, setCalendarViewportHeight] = useState(0);
         const [nowLineTop, setNowLineTop] = useState(() => getCalendarNowTop());
         const [shouldCenterNow, setShouldCenterNow] = useState(true);
         const [headerDropState, setHeaderDropState] = useState({ day: '', mode: '' });
@@ -609,6 +1189,7 @@
         const gridScrollRef = useRef(null);
         const bodyScrollRef = useRef(null);
         const headerScrollRef = useRef(null);
+        const headerTrackRef = useRef(null);
         const previousDayWidthRef = useRef(0);
         const touchDragStateRef = useRef(null);
         const touchDragAutoScrollFrameRef = useRef(0);
@@ -625,11 +1206,17 @@
             [calendarStartIso],
         );
         const calendarEndIso = calendarDays[calendarDays.length - 1] || todayIso;
-        const visibleDayCount = isCalendarDragZoomActive ? 7 : 3;
+        const visibleDayCount = Math.max(calendarDayWindow, isCalendarDragZoomActive ? 7 : 0);
+        const isCompactCalendarView = visibleDayCount >= 7;
         const dayColumnWidth = Math.max(Math.round((calendarViewportWidth || (isDesktop ? 720 : 330)) / visibleDayCount), 1);
+        const desiredCalendarHalfViewport = Math.max(Math.round(calendarViewportHeight / 2), 0);
+        const clampedNowLineTop = Math.max(0, Math.min(CALENDAR_TOTAL_HEIGHT, Number(nowLineTop) || 0));
+        const calendarVerticalTopPadding = Math.max(desiredCalendarHalfViewport - clampedNowLineTop, 0);
+        const calendarVerticalBottomPadding = Math.max(desiredCalendarHalfViewport - (CALENDAR_TOTAL_HEIGHT - clampedNowLineTop), 0);
         const usesTouchLikeInput = hasTouchLikeInput();
         const allowNativeCalendarDrag = false;
         const taskMap = useMemo(() => new Map(state.tasks.map((task) => [task.id, task])), [state.tasks]);
+        const resolvedTaskProjectIds = useMemo(() => buildResolvedTaskProjectMap(state.tasks, state.projects), [state.tasks, state.projects]);
         const parentTaskIdsWithChildren = useMemo(() => buildParentTaskIdsWithChildren(state.tasks), [state.tasks]);
 
         const setCalendarDragZoom = (value) => {
@@ -793,6 +1380,7 @@
         const resolveCalendarDropTargetFromPoint = (clientX, clientY) => {
             const currentDayWidth = Math.max(dayColumnWidthRef.current || dayColumnWidth || 1, 1);
             const currentCalendarDays = calendarDaysRef.current || calendarDays;
+            const horizontalScrollLeft = bodyScrollRef.current?.scrollLeft || 0;
 
             const headerNode = headerScrollRef.current;
             if (headerNode) {
@@ -801,7 +1389,7 @@
                 const withinHeaderY = clientY >= headerRect.top && clientY <= headerRect.bottom;
 
                 if (withinHeaderX && withinHeaderY) {
-                    const relativeX = clientX - headerRect.left + headerNode.scrollLeft;
+                    const relativeX = clientX - headerRect.left + horizontalScrollLeft;
                     const dayIndex = Math.floor(relativeX / currentDayWidth);
                     const day = currentCalendarDays[dayIndex];
                     if (day) return { type: 'header', day };
@@ -813,8 +1401,9 @@
             if (!bodyNode || !gridNode) return null;
 
             const bodyRect = bodyNode.getBoundingClientRect();
+            const gridRect = gridNode.getBoundingClientRect();
             const withinBodyX = clientX >= bodyRect.left && clientX <= bodyRect.right;
-            const withinBodyY = clientY >= bodyRect.top && clientY <= bodyRect.bottom;
+            const withinBodyY = clientY >= gridRect.top && clientY <= gridRect.bottom;
             if (!withinBodyX || !withinBodyY) return null;
 
             const relativeX = clientX - bodyRect.left + bodyNode.scrollLeft;
@@ -822,7 +1411,7 @@
             const day = currentCalendarDays[dayIndex];
             if (!day) return null;
 
-            const relativeY = clientY - bodyRect.top + gridNode.scrollTop;
+            const relativeY = clientY - bodyRect.top;
             const hourIndex = Math.max(0, Math.min(HOURS.length - 1, Math.floor(relativeY / CALENDAR_HOUR_HEIGHT)));
             return {
                 type: 'cell',
@@ -1365,12 +1954,27 @@
         useEffect(() => {
             const measure = () => {
                 const width = bodyScrollRef.current?.clientWidth || 0;
+                const height = gridScrollRef.current?.clientHeight || 0;
                 if (width) setCalendarViewportWidth(width);
+                if (height) setCalendarViewportHeight(height);
             };
 
             measure();
             window.addEventListener('resize', measure);
             return () => window.removeEventListener('resize', measure);
+        }, []);
+
+        useEffect(() => {
+            const gridNode = gridScrollRef.current;
+            if (!gridNode || typeof ResizeObserver !== 'function') return undefined;
+
+            const resizeObserver = new ResizeObserver(() => {
+                const nextHeight = gridNode.clientHeight || 0;
+                setCalendarViewportHeight((current) => (current === nextHeight ? current : nextHeight));
+            });
+
+            resizeObserver.observe(gridNode);
+            return () => resizeObserver.disconnect();
         }, []);
 
         useEffect(() => {
@@ -1388,7 +1992,7 @@
             const bodyNode = bodyScrollRef.current;
             const nextScrollLeft = (bodyNode.scrollLeft / previousDayWidth) * dayColumnWidth;
             bodyNode.scrollLeft = nextScrollLeft;
-            if (headerScrollRef.current) headerScrollRef.current.scrollLeft = nextScrollLeft;
+            if (headerTrackRef.current) headerTrackRef.current.style.transform = 'translateX(' + (-nextScrollLeft) + 'px)';
             previousDayWidthRef.current = dayColumnWidth;
         }, [dayColumnWidth]);
 
@@ -1470,31 +2074,63 @@
         }, []);
 
         useEffect(() => {
-            if (!shouldCenterNow || !calendarViewportWidth || !headerFrame.ready) return undefined;
+            if (!shouldCenterNow || !calendarViewportWidth || !calendarViewportHeight || !headerFrame.ready) return undefined;
 
             let frameId = 0;
-            let nestedFrameId = 0;
+            let retryFrameId = 0;
+            let attempts = 0;
+            let disposed = false;
+
+            const tryCenterNowLine = () => {
+                if (disposed) return;
+
+                const lineElement = nowLineRef.current;
+                const headerElement = headerRef.current;
+                const scrollContainer = gridScrollRef.current;
+
+                if (!lineElement) {
+                    if (attempts >= 6) {
+                        setShouldCenterNow(false);
+                        return;
+                    }
+                    attempts += 1;
+                    retryFrameId = window.requestAnimationFrame(tryCenterNowLine);
+                    return;
+                }
+
+                centerCalendarNowLine(lineElement, headerElement, scrollContainer);
+                const delta = getCalendarCenterDelta(lineElement, headerElement, scrollContainer);
+
+                if (Math.abs(delta) <= 8) {
+                    console.info('[HEYS.planning] Centered calendar on current time', { delta });
+                    setShouldCenterNow(false);
+                    return;
+                }
+
+                if (attempts >= 6) {
+                    console.info('[HEYS.planning] Calendar now-line centering stopped with residual delta', { delta });
+                    setShouldCenterNow(false);
+                    return;
+                }
+
+                attempts += 1;
+                retryFrameId = window.requestAnimationFrame(tryCenterNowLine);
+            };
 
             frameId = window.requestAnimationFrame(() => {
-                nestedFrameId = window.requestAnimationFrame(() => {
-                    const lineElement = nowLineRef.current;
-                    const headerElement = headerRef.current;
-                    if (!lineElement) return;
-                    centerCalendarNowLine(lineElement, headerElement);
-                    console.info('[HEYS.planning] Centered calendar on current time');
-                    setShouldCenterNow(false);
-                });
+                retryFrameId = window.requestAnimationFrame(tryCenterNowLine);
             });
 
             return () => {
+                disposed = true;
                 window.cancelAnimationFrame(frameId);
-                window.cancelAnimationFrame(nestedFrameId);
+                window.cancelAnimationFrame(retryFrameId);
             };
-        }, [calendarViewportWidth, shouldCenterNow, headerFrame.ready, headerFrame.height]);
+        }, [calendarViewportWidth, calendarViewportHeight, shouldCenterNow, headerFrame.ready, headerFrame.height]);
 
         const syncHeaderScroll = () => {
-            if (!headerScrollRef.current || !bodyScrollRef.current) return;
-            headerScrollRef.current.scrollLeft = bodyScrollRef.current.scrollLeft;
+            if (!headerTrackRef.current || !bodyScrollRef.current) return;
+            headerTrackRef.current.style.transform = 'translateX(' + (-bodyScrollRef.current.scrollLeft) + 'px)';
         };
 
         const scrollCalendarHorizontallyBy = (delta) => {
@@ -1541,9 +2177,38 @@
         };
 
         useEffect(() => {
+            const finishResizeInteraction = () => {
+                const active = resizeStateRef.current;
+                if (!active) return;
+
+                if (
+                    active.pointerId != null
+                    && active.targetNode
+                    && typeof active.targetNode.releasePointerCapture === 'function'
+                ) {
+                    try {
+                        active.targetNode.releasePointerCapture(active.pointerId);
+                    } catch (error) {
+                        // ignore
+                    }
+                }
+
+                if (resizePreview?.slotId === active.slotId) {
+                    const patch = {};
+                    if (resizePreview.date && resizePreview.date !== active.originalDate) patch.date = resizePreview.date;
+                    if (resizePreview.startTime && resizePreview.startTime !== active.originalStartTime) patch.startTime = resizePreview.startTime;
+                    if (resizePreview.endTime && resizePreview.endTime !== active.originalEndTime) patch.endTime = resizePreview.endTime;
+                    if (Object.keys(patch).length) state.updateSlot(active.slotId, patch);
+                }
+
+                resizeStateRef.current = null;
+                setResizePreview(null);
+            };
+
             const handlePointerMove = (event) => {
                 const active = resizeStateRef.current;
                 if (!active) return;
+                if (active.pointerId != null && event.pointerId != null && active.pointerId !== event.pointerId) return;
                 const halfHourHeight = CALENDAR_HOUR_HEIGHT / 2;
                 const deltaSteps = Math.round((event.clientY - active.startY) / halfHourHeight);
                 const nextDeltaMinutes = deltaSteps * 30;
@@ -1572,25 +2237,27 @@
                 });
             };
 
-            const handlePointerUp = () => {
+            const handlePointerUp = (event) => {
                 const active = resizeStateRef.current;
                 if (!active) return;
-                if (resizePreview?.slotId === active.slotId) {
-                    const patch = {};
-                    if (resizePreview.date && resizePreview.date !== active.originalDate) patch.date = resizePreview.date;
-                    if (resizePreview.startTime && resizePreview.startTime !== active.originalStartTime) patch.startTime = resizePreview.startTime;
-                    if (resizePreview.endTime && resizePreview.endTime !== active.originalEndTime) patch.endTime = resizePreview.endTime;
-                    if (Object.keys(patch).length) state.updateSlot(active.slotId, patch);
-                }
-                resizeStateRef.current = null;
-                setResizePreview(null);
+                if (active.pointerId != null && event.pointerId != null && active.pointerId !== event.pointerId) return;
+                finishResizeInteraction();
+            };
+
+            const handlePointerCancel = (event) => {
+                const active = resizeStateRef.current;
+                if (!active) return;
+                if (active.pointerId != null && event.pointerId != null && active.pointerId !== event.pointerId) return;
+                finishResizeInteraction();
             };
 
             window.addEventListener('pointermove', handlePointerMove);
             window.addEventListener('pointerup', handlePointerUp);
+            window.addEventListener('pointercancel', handlePointerCancel);
             return () => {
                 window.removeEventListener('pointermove', handlePointerMove);
                 window.removeEventListener('pointerup', handlePointerUp);
+                window.removeEventListener('pointercancel', handlePointerCancel);
             };
         }, [resizePreview, state]);
 
@@ -1624,6 +2291,26 @@
             return map;
         }, [calendarDays, unscheduledTasks, todayIso, calendarStartIso, calendarEndIso]);
 
+        const dayOccupancyByDay = useMemo(() => {
+            const map = {};
+            calendarDays.forEach((day) => {
+                const daySlots = slotsByDay[day] || [];
+                const totalMinutes = daySlots.reduce((sum, slot) => {
+                    return sum + Math.max(30, getCalendarDisplayEndMinutes(slot) - getCalendarDisplayMinutes(slot.startTime));
+                }, 0);
+                const level = Math.max(0, Math.min(4, Math.ceil(totalMinutes / 180)));
+                map[day] = {
+                    count: daySlots.length,
+                    totalMinutes,
+                    level,
+                    label: daySlots.length
+                        ? (daySlots.length + ' ' + pluralizeSlots(daySlots.length) + ' · ' + formatDurationLabel(totalMinutes))
+                        : 'Свободно',
+                };
+            });
+            return map;
+        }, [calendarDays, slotsByDay]);
+
         const openNewSlot = (date, hour) => {
             if (shouldSuppressCalendarClick()) return;
             const start = resolveCalendarCellStart(date, hour);
@@ -1645,29 +2332,30 @@
             flashCalendarDropCommitAccent(date, hour);
         };
 
-        const handleSaveSlot = (draft) => {
-            const payload = {
-                taskId: draft.taskId || undefined,
-                title: draft.title || '',
-                date: draft.date,
-                startTime: draft.startTime,
-                endTime: draft.endTime,
-            };
-            if (draft.id) {
-                state.updateSlot(draft.id, payload);
-            } else {
-                state.addSlot(payload);
-            }
-            setSlotDraft(null);
-        };
-
         const beginResize = (slot, edge, event) => {
             event.preventDefault();
             event.stopPropagation();
+            const targetNode = event.currentTarget || null;
+            const pointerId = event.pointerId ?? null;
+
+            if (
+                pointerId != null
+                && targetNode
+                && typeof targetNode.setPointerCapture === 'function'
+            ) {
+                try {
+                    targetNode.setPointerCapture(pointerId);
+                } catch (error) {
+                    // ignore
+                }
+            }
+
             const displayDate = getCalendarDisplayDate(slot) || dateStr(slot.date);
             resizeStateRef.current = {
                 slotId: slot.id,
                 edge: edge === 'start' ? 'start' : 'end',
+                pointerId,
+                targetNode,
                 displayDate,
                 startY: event.clientY,
                 startMinutes: getCalendarDisplayMinutes(slot.startTime),
@@ -1685,12 +2373,22 @@
         };
 
         return h('div', {
-            className: 'planning-calendar-screen' + (isCalendarDragZoomActive ? ' planning-calendar-screen--drag-zoom' : ''),
+            className: 'planning-calendar-screen' + (isCompactCalendarView ? ' planning-calendar-screen--drag-zoom' : ''),
         },
             h('div', { className: 'planning-calendar-nav' },
-                h('button', { type: 'button', className: 'planning-btn planning-btn--sm', onClick: () => scrollCalendarByDays(-3) }, '‹'),
+                h('button', { type: 'button', className: 'planning-btn planning-btn--sm', onClick: () => scrollCalendarByDays(-visibleDayCount) }, '‹'),
                 h('button', { type: 'button', className: 'planning-btn planning-btn--sm', onClick: scrollCalendarToTodayWindow }, 'Сегодня'),
-                h('button', { type: 'button', className: 'planning-btn planning-btn--sm', onClick: () => scrollCalendarByDays(3) }, '›'),
+                h('div', { className: 'planning-calendar-nav__window-toggle', role: 'group', 'aria-label': 'Показывать 3 или 7 дней' },
+                    [3, 7].map((days) => h('button', {
+                        key: 'days-window-' + days,
+                        type: 'button',
+                        className: 'planning-btn planning-btn--sm' + (calendarDayWindow === days ? ' planning-btn--active' : ''),
+                        'aria-pressed': calendarDayWindow === days ? 'true' : 'false',
+                        title: 'Показывать ' + days + ' ' + (days === 3 ? 'дня' : 'дней'),
+                        onClick: () => setCalendarDayWindow(days),
+                    }, days + 'д')),
+                ),
+                h('button', { type: 'button', className: 'planning-btn planning-btn--sm', onClick: () => scrollCalendarByDays(visibleDayCount) }, '›'),
             ),
             h('div', {
                 ref: headerShellRef,
@@ -1715,6 +2413,7 @@
                         onWheel: handleHeaderWheel,
                     },
                         h('div', {
+                            ref: headerTrackRef,
                             className: 'planning-calendar-days-track planning-calendar-days-track--header',
                             style: { '--planning-calendar-day-width': dayColumnWidth + 'px' },
                         },
@@ -1722,10 +2421,12 @@
                                 key: day,
                                 className: 'planning-calendar-day-header'
                                     + (day === todayIso ? ' planning-calendar-day-header--today' : '')
+                                    + (isWeekendDay(day) ? ' planning-calendar-day-header--weekend' : '')
                                     + (headerDropState.day === day ? ' planning-calendar-day-header--drop-target' : '')
                                     + (headerDropState.day === day && headerDropState.mode === 'unschedule'
                                         ? ' planning-calendar-day-header--drop-unschedule'
                                         : ''),
+                                title: dayOccupancyByDay[day]?.label || '',
                                 onDragOver: (event) => {
                                     const payload = parsePlanningDragPayload(event);
                                     if (!canApplyDragPayloadToHeaderDay(payload)) {
@@ -1747,6 +2448,18 @@
                                 h('div', { className: 'planning-calendar-day-header__title' },
                                     h('span', { className: 'planning-calendar-day-label' }, getWeekdayLabel(day)),
                                     h('span', { className: 'planning-calendar-day-date' }, day.slice(8)),
+                                ),
+                                dayOccupancyByDay[day]?.count > 0 && h('div', {
+                                    className: 'planning-calendar-day-occupancy',
+                                    'aria-label': dayOccupancyByDay[day].label,
+                                },
+                                    Array.from({ length: 4 }, (_, index) => h('span', {
+                                        key: day + '-occupancy-' + index,
+                                        className: 'planning-calendar-day-occupancy__dot'
+                                            + (index < (dayOccupancyByDay[day]?.level || 0)
+                                                ? ' planning-calendar-day-occupancy__dot--active'
+                                                : ''),
+                                    })),
                                 ),
                                 headerDropState.day === day && headerDropState.mode === 'unschedule' && h('span', {
                                     className: 'planning-calendar-day-drop-hint',
@@ -1772,7 +2485,14 @@
                     ),
                 ),
             ),
-            h('div', { ref: gridScrollRef, className: 'planning-calendar-grid' },
+            h('div', {
+                ref: gridScrollRef,
+                className: 'planning-calendar-grid',
+                style: {
+                    paddingTop: calendarVerticalTopPadding + 'px',
+                    paddingBottom: calendarVerticalBottomPadding + 'px',
+                },
+            },
                 h('div', { className: 'planning-calendar-time-gutter planning-calendar-time-gutter--grid' },
                     calendarCellDropPreview && h('div', {
                         className: 'planning-calendar-time-drop-range',
@@ -1807,7 +2527,9 @@
                     },
                         calendarDays.map((day) => h('div', {
                             key: day,
-                            className: 'planning-calendar-day-col' + (day === todayIso ? ' planning-calendar-day-col--today' : ''),
+                            className: 'planning-calendar-day-col'
+                                + (day === todayIso ? ' planning-calendar-day-col--today' : '')
+                                + (isWeekendDay(day) ? ' planning-calendar-day-col--weekend' : ''),
                         },
                             HOURS.map((hour) => h('div', {
                                 key: hour,
@@ -1936,24 +2658,20 @@
             ),
             slotDraft && h(SlotEditorModal, {
                 draft: slotDraft,
-                tasks: state.tasks,
+                state,
+                resolvedTaskProjectIds,
                 onClose: () => setSlotDraft(null),
                 onDelete: (slotId) => {
                     state.deleteSlot(slotId);
                     setSlotDraft(null);
                 },
-                onSave: handleSaveSlot,
-                onOpenTask: (taskId) => {
-                    setSlotDraft(null);
-                    setSelectedTaskId(taskId);
-                },
             }),
             selectedTaskId && PlanningTasks.TaskDetailModal && h(PlanningTasks.TaskDetailModal, {
                 taskId: selectedTaskId,
                 state,
+                resolvedTaskProjectIds,
                 onClose: () => setSelectedTaskId(null),
             }),
-            !isDesktop && h('div', { className: 'planning-mobile-hint' }, 'Подсказка: обычный свайп скроллит, зажим на задаче включает перенос.'),
         );
     }
 
@@ -2068,6 +2786,7 @@
         const [zoom, setZoom] = useState(isDesktop ? 'normal' : 'compact');
         const [collapsed, setCollapsed] = useState({});
         const [selectedTaskId, setSelectedTaskId] = useState(null);
+        const resolvedTaskProjectIds = useMemo(() => buildResolvedTaskProjectMap(state.tasks, state.projects), [state.tasks, state.projects]);
 
         useEffect(() => {
             if (!isDesktop) setZoom('compact');
@@ -2182,7 +2901,9 @@
                     h('div', { className: 'planning-gantt-timeline-header' },
                         timelineDays.map((day) => h('div', {
                             key: day,
-                            className: 'planning-gantt-day-header' + (day === todayIso ? ' planning-gantt-day-header--today' : ''),
+                            className: 'planning-gantt-day-header'
+                                + (day === todayIso ? ' planning-gantt-day-header--today' : '')
+                                + (isWeekendDay(day) ? ' planning-gantt-day-header--weekend' : ''),
                             style: { width: dayWidth + 'px' },
                         },
                             h('span', { className: 'planning-gantt-day-name' }, WEEKDAY_LABELS[(new Date(day + 'T12:00:00').getDay() + 6) % 7]),
@@ -2264,6 +2985,7 @@
             selectedTaskId && PlanningTasks.TaskDetailModal && h(PlanningTasks.TaskDetailModal, {
                 taskId: selectedTaskId,
                 state,
+                resolvedTaskProjectIds,
                 onClose: () => setSelectedTaskId(null),
             }),
         );
