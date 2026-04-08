@@ -1371,6 +1371,10 @@ td:first-child input {
   isolation: isolate;
 }
 
+.wrap.wrap--no-header {
+  padding-top: 0;
+}
+
 /* === 12. MODERN HEADER === */
 .hdr {
   display: flex;

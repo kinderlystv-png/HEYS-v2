@@ -21112,8 +21112,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
 
 /* ===== heys_training_step_v1.js ===== */
-// heys_training_step_v1.js — Модалка добавления/редактирования тренировки (2 шага)
-// Шаг 1: Тип, время, оценки, заметка | Шаг 2: Зоны пульса
+// heys_training_step_v1.js — Модалка добавления/редактирования тренировки (3 шага)
+// Шаг 1: Тип, активность и время | Шаг 2: Оценки и заметка | Шаг 3: Зоны пульса
 (function (global) {
   const HEYS = global.HEYS = global.HEYS || {};
   const { useState, useMemo, useCallback, useEffect, useRef } = React;
@@ -21156,6 +21156,178 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     { id: 'strength', icon: '🏋️', label: 'Силовая' },
     { id: 'hobby', icon: '⚽', label: 'Хобби' }
   ];
+
+  const TRAINING_TYPE_META = {
+    cardio: { icon: '🏃', label: 'Кардио' },
+    strength: { icon: '🏋️', label: 'Силовая' },
+    hobby: { icon: '⚽', label: 'Активное хобби' }
+  };
+
+  const TRAINING_ACTIVITY_STORAGE_KEY = 'heys_training_activity_options_v1';
+
+  const TRAINING_ACTIVITY_PRESETS = [
+    { type: 'cardio', icon: '🏃', label: 'Бег' },
+    { type: 'cardio', icon: '🚴', label: 'Велосипед' },
+    { type: 'cardio', icon: '🏊', label: 'Плавание' },
+    { type: 'cardio', icon: '🥊', label: 'Интервалы' },
+    { type: 'strength', icon: '🏋️', label: 'Зал' },
+    { type: 'strength', icon: '💪', label: 'Функциональная' },
+    { type: 'strength', icon: '🤸', label: 'Калистеника' },
+    { type: 'strength', icon: '🪢', label: 'TRX / резинки' },
+    { type: 'hobby', icon: '🧘', label: 'Йога' },
+    { type: 'hobby', icon: '🤸', label: 'Пилатес' },
+    { type: 'hobby', icon: '🎾', label: 'Теннис' },
+    { type: 'hobby', icon: '💃', label: 'Танцы' }
+  ];
+
+  function normalizeActivityLabel(value) {
+    if (typeof value !== 'string') return '';
+    return value.replace(/\s+/g, ' ').trim();
+  }
+
+  function getTrainingTypeMeta(type) {
+    return TRAINING_TYPE_META[type] || TRAINING_TYPE_META.cardio;
+  }
+
+  function getDefaultActivityLabel(type) {
+    return getTrainingTypeMeta(type).label;
+  }
+
+  function readTrainingActivityOptions() {
+    const raw = lsGet(TRAINING_ACTIVITY_STORAGE_KEY, []);
+    if (!Array.isArray(raw)) return [];
+
+    return raw
+      .map((item) => {
+        const label = normalizeActivityLabel(item?.label);
+        const type = typeof item?.type === 'string' ? item.type : 'cardio';
+        if (!label) return null;
+
+        return {
+          label,
+          type,
+          icon: typeof item?.icon === 'string' && item.icon ? item.icon : getTrainingTypeMeta(type).icon,
+          usedAt: Number(item?.usedAt) || 0
+        };
+      })
+      .filter(Boolean)
+      .slice(0, 24);
+  }
+
+  function persistTrainingActivityOption(type, label) {
+    const normalizedLabel = normalizeActivityLabel(label);
+    if (!normalizedLabel) return readTrainingActivityOptions();
+
+    const nextType = typeof type === 'string' && type ? type : 'cardio';
+    const usedAt = Date.now();
+    const existing = readTrainingActivityOptions().filter((item) => {
+      return !(item.type === nextType && item.label.toLowerCase() === normalizedLabel.toLowerCase());
+    });
+
+    const next = [
+      {
+        label: normalizedLabel,
+        type: nextType,
+        icon: getTrainingTypeMeta(nextType).icon,
+        usedAt
+      },
+      ...existing
+    ].slice(0, 24);
+
+    lsSet(TRAINING_ACTIVITY_STORAGE_KEY, next);
+    return next;
+  }
+
+  function buildTrainingActivityOptions(type, savedOptions, currentLabel) {
+    const nextType = typeof type === 'string' && type ? type : 'cardio';
+    const normalizedCurrent = normalizeActivityLabel(currentLabel);
+    const deduped = [];
+    const seen = new Set();
+
+    const pushOption = (option) => {
+      if (!option || !option.label) return;
+      const normalizedLabel = normalizeActivityLabel(option.label);
+      if (!normalizedLabel) return;
+
+      const key = normalizedLabel.toLowerCase();
+      if (seen.has(key)) return;
+      seen.add(key);
+      deduped.push({
+        label: normalizedLabel,
+        icon: option.icon || getTrainingTypeMeta(nextType).icon,
+        type: nextType,
+        source: option.source || 'preset'
+      });
+    };
+
+    pushOption({
+      label: getDefaultActivityLabel(nextType),
+      icon: getTrainingTypeMeta(nextType).icon,
+      source: 'default'
+    });
+
+    TRAINING_ACTIVITY_PRESETS
+      .filter((item) => item.type === nextType)
+      .forEach((item) => pushOption({ ...item, source: 'preset' }));
+
+    (Array.isArray(savedOptions) ? savedOptions : [])
+      .filter((item) => item.type === nextType)
+      .sort((left, right) => (right.usedAt || 0) - (left.usedAt || 0))
+      .forEach((item) => pushOption({ ...item, source: 'custom' }));
+
+    if (normalizedCurrent) {
+      pushOption({
+        label: normalizedCurrent,
+        icon: getTrainingTypeMeta(nextType).icon,
+        source: 'current'
+      });
+    }
+
+    return deduped;
+  }
+
+  function getRoundedCurrentTime() {
+    const now = new Date();
+    return pad2(now.getHours()) + ':' + pad2(Math.floor(now.getMinutes() / 5) * 5);
+  }
+
+  function normalizeTrainingRating(value) {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) && parsed >= 1 && parsed <= 10 ? parsed : 5;
+  }
+
+  function normalizeTrainingZones(value) {
+    const source = Array.isArray(value) ? value : [0, 0, 0, 0];
+    return [0, 1, 2, 3].map((index) => {
+      const parsed = Number(source[index]);
+      return Number.isFinite(parsed) && parsed >= 0 ? parsed : 0;
+    });
+  }
+
+  function buildTrainingFormData(training) {
+    const source = training || {};
+    const type = source.type || 'cardio';
+
+    return {
+      type,
+      activityLabel: normalizeActivityLabel(source.activityLabel) || getDefaultActivityLabel(type),
+      time: source.time || getRoundedCurrentTime(),
+      zones: normalizeTrainingZones(source.zones || source.z),
+      mood: normalizeTrainingRating(source.mood),
+      wellbeing: normalizeTrainingRating(source.wellbeing),
+      stress: normalizeTrainingRating(source.stress),
+      comment: typeof source.comment === 'string' ? source.comment : ''
+    };
+  }
+
+  function readTrainingFormData(ctx) {
+    const dateKey = ctx?.dateKey || new Date().toISOString().slice(0, 10);
+    const trainingIndex = ctx?.trainingIndex ?? 0;
+    const day = lsGet(`heys_dayv2_${dateKey}`, {});
+    const trainings = day.trainings || [];
+
+    return buildTrainingFormData(trainings[trainingIndex] || {});
+  }
 
   const HR_ZONES = [
     { id: 0, name: 'Разминка', color: '#3b82f6', range: '50-60%' },
@@ -21210,15 +21382,19 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
   const TimePicker = HEYS.StepModal.TimePicker;
 
   // ========================================
-  // ШАГ 1: Время начала, тип, оценки, заметка
+  // ШАГ 1: Тип, активность и время
   // ========================================
   function TrainingInfoStep({ data, onChange, context }) {
     const type = data.type || 'cardio';
-    const time = data.time || '';
-    const mood = data.mood || 5;
-    const wellbeing = data.wellbeing || 5;
-    const stress = data.stress || 5;
-    const comment = data.comment || '';
+    const time = data.time || getRoundedCurrentTime();
+    const activityLabel = normalizeActivityLabel(data.activityLabel) || getDefaultActivityLabel(type);
+    const [savedActivities, setSavedActivities] = useState(() => readTrainingActivityOptions());
+    const [showCustomActivityInput, setShowCustomActivityInput] = useState(false);
+    const [customActivityDraft, setCustomActivityDraft] = useState('');
+    const activityOptions = useMemo(
+      () => buildTrainingActivityOptions(type, savedActivities, activityLabel),
+      [type, savedActivities, activityLabel]
+    );
 
     // Парсим время или берём текущее
     const [hours, minutes] = useMemo(() => {
@@ -21244,9 +21420,56 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       onChange({ ...data, time: pad2(h) + ':' + pad2(m) });
     };
 
+    const updateData = (patch) => {
+      onChange({ ...data, ...patch });
+    };
+
     const updateField = (field, value) => {
       haptic('light');
-      onChange({ ...data, [field]: value });
+      updateData({ [field]: value });
+    };
+
+    const handleTypeChange = (nextType) => {
+      const nextOptions = buildTrainingActivityOptions(nextType, savedActivities, '');
+      const canKeepCurrentActivity = nextOptions.some(
+        (option) => option.label.toLowerCase() === activityLabel.toLowerCase()
+      );
+
+      haptic('light');
+      setShowCustomActivityInput(false);
+      setCustomActivityDraft('');
+      updateData({
+        type: nextType,
+        activityLabel: canKeepCurrentActivity ? activityLabel : getDefaultActivityLabel(nextType)
+      });
+    };
+
+    const handleActivitySelect = (value) => {
+      if (value === '__custom__') {
+        haptic('light');
+        setShowCustomActivityInput(true);
+        setCustomActivityDraft('');
+        return;
+      }
+
+      haptic('light');
+      setShowCustomActivityInput(false);
+      updateData({ activityLabel: value });
+    };
+
+    const handleSaveCustomActivity = () => {
+      const normalizedLabel = normalizeActivityLabel(customActivityDraft);
+      if (!normalizedLabel) {
+        haptic('error');
+        return;
+      }
+
+      const nextSavedActivities = persistTrainingActivityOption(type, normalizedLabel);
+      setSavedActivities(nextSavedActivities);
+      setShowCustomActivityInput(false);
+      setCustomActivityDraft('');
+      haptic('success');
+      updateData({ activityLabel: normalizedLabel });
     };
 
     return React.createElement('div', { className: 'training-step' },
@@ -21258,12 +21481,57 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             React.createElement('button', {
               key: t.id,
               className: 'ts-type-btn' + (type === t.id ? ' active' : ''),
-              onClick: () => updateField('type', t.id)
+              onClick: () => handleTypeChange(t.id)
             },
               React.createElement('span', { className: 'ts-type-icon' }, t.icon),
               React.createElement('span', { className: 'ts-type-label' }, t.label)
             )
           )
+        )
+      ),
+
+      React.createElement('div', { className: 'ts-section training-activity-section' },
+        React.createElement('div', { className: 'training-activity-header' },
+          React.createElement('div', { className: 'training-activity-label' }, '✨ Что именно делал?'),
+          React.createElement('div', { className: 'training-activity-helper' },
+            'Это название увидит куратор; базовый тип выше нужен для аналитики.'
+          )
+        ),
+        React.createElement('div', { className: 'training-activity-select-wrap' },
+          React.createElement('select', {
+            className: 'training-activity-select',
+            value: activityLabel,
+            onChange: (e) => handleActivitySelect(e.target.value)
+          },
+            activityOptions.map((option) =>
+              React.createElement('option', { key: option.type + ':' + option.label, value: option.label },
+                option.icon + ' ' + option.label
+              )
+            ),
+            React.createElement('option', { value: '__custom__' }, '＋ Своя активность…')
+          )
+        ),
+        showCustomActivityInput && React.createElement('div', { className: 'training-activity-custom' },
+          React.createElement('input', {
+            type: 'text',
+            className: 'training-activity-custom-input',
+            placeholder: 'Например: Теннис, Йога, Бокс',
+            value: customActivityDraft,
+            onChange: (e) => setCustomActivityDraft(e.target.value),
+            onKeyDown: (e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                handleSaveCustomActivity();
+              }
+            },
+            maxLength: 40
+          }),
+          React.createElement('button', {
+            type: 'button',
+            className: 'training-activity-custom-btn',
+            disabled: !normalizeActivityLabel(customActivityDraft),
+            onClick: handleSaveCustomActivity
+          }, 'Добавить')
         )
       ),
 
@@ -21282,13 +21550,32 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           linkedScroll: true,
           className: 'ts-time-wheels'
         })
-      ),
+      )
+    );
+  }
 
-      // === Оценки после тренировки ===
+  // ========================================
+  // ШАГ 2: Оценки и заметка
+  // ========================================
+  function TrainingFeedbackStep({ data, onChange, context }) {
+    const mood = data.mood || 5;
+    const wellbeing = data.wellbeing || 5;
+    const stress = data.stress || 5;
+    const comment = data.comment || '';
+
+    const updateData = (patch) => {
+      onChange({ ...data, ...patch });
+    };
+
+    const updateField = (field, value) => {
+      haptic('light');
+      updateData({ [field]: value });
+    };
+
+    return React.createElement('div', { className: 'training-step' },
       React.createElement('div', { className: 'ts-section ts-ratings-section' },
         React.createElement('div', { className: 'ts-ratings-title' }, '📊 Какие ощущения после тренировки?'),
 
-        // Настроение
         React.createElement('div', { className: 'ts-rating-row' },
           React.createElement('div', { className: 'ts-rating-header' },
             React.createElement('span', { className: 'ts-rating-emoji' }, getMoodEmoji(mood)),
@@ -21311,7 +21598,6 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           })
         ),
 
-        // Самочувствие
         React.createElement('div', { className: 'ts-rating-row' },
           React.createElement('div', { className: 'ts-rating-header' },
             React.createElement('span', { className: 'ts-rating-emoji' }, getWellbeingEmoji(wellbeing)),
@@ -21334,7 +21620,6 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           })
         ),
 
-        // Стресс
         React.createElement('div', { className: 'ts-rating-row' },
           React.createElement('div', { className: 'ts-rating-header' },
             React.createElement('span', { className: 'ts-rating-emoji' }, getStressEmoji(stress)),
@@ -21358,7 +21643,6 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         )
       ),
 
-      // === Комментарий ===
       React.createElement('div', { className: 'ts-section ts-comment-section' },
         React.createElement('input', {
           type: 'text',
@@ -21463,57 +21747,44 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
   // Регистрация шагов
   // ========================================
 
-  // Шаг 1: Инфо (тип, время, оценки, заметка)
+  // Шаг 1: База (тип, активность, время)
   registerStep('training-info', {
     title: 'Тренировка',
-    hint: 'Тип и ощущения',
+    hint: 'Тип и время',
     icon: '🏋️',
     component: TrainingInfoStep,
     getInitialData: (ctx) => {
-      const dateKey = ctx?.dateKey || new Date().toISOString().slice(0, 10);
-      const trainingIndex = ctx?.trainingIndex ?? 0;
-      const day = lsGet(`heys_dayv2_${dateKey}`, {});
-      const trainings = day.trainings || [];
-      const T = trainings[trainingIndex] || {};
-
-      return {
-        type: T.type || 'cardio',
-        time: T.time || '',
-        zones: T.z || [0, 0, 0, 0],
-        mood: T.mood || 5,
-        wellbeing: T.wellbeing || 5,
-        stress: T.stress || 5,
-        comment: T.comment || ''
-      };
+      return readTrainingFormData(ctx);
     },
     validate: () => true // Шаг 1 всегда валиден
   });
 
-  // Шаг 2: Зоны пульса
+  // Шаг 2: Оценки и заметка
+  registerStep('training-feedback', {
+    title: 'Ощущения',
+    hint: 'Оценки и заметка',
+    icon: '📊',
+    component: TrainingFeedbackStep,
+    getInitialData: (ctx, allData) => {
+      return {
+        ...readTrainingFormData(ctx),
+        ...(allData?.['training-info'] || {})
+      };
+    },
+    validate: () => true
+  });
+
+  // Шаг 3: Зоны пульса
   registerStep('training-zones', {
     title: 'Зоны пульса',
     hint: 'Минуты в каждой зоне',
     icon: '❤️',
     component: TrainingZonesStep,
     getInitialData: (ctx, allData) => {
-      // Берём данные из шага 1 или из storage
-      if (allData?.['training-info']) {
-        return allData['training-info'];
-      }
-      const dateKey = ctx?.dateKey || new Date().toISOString().slice(0, 10);
-      const trainingIndex = ctx?.trainingIndex ?? 0;
-      const day = lsGet(`heys_dayv2_${dateKey}`, {});
-      const trainings = day.trainings || [];
-      const T = trainings[trainingIndex] || {};
-
       return {
-        type: T.type || 'cardio',
-        time: T.time || '',
-        zones: T.z || [0, 0, 0, 0],
-        mood: T.mood || 5,
-        wellbeing: T.wellbeing || 5,
-        stress: T.stress || 5,
-        comment: T.comment || ''
+        ...readTrainingFormData(ctx),
+        ...(allData?.['training-info'] || {}),
+        ...(allData?.['training-feedback'] || {})
       };
     },
     validate: (data) => {
@@ -21535,18 +21806,25 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         trainings.push({ z: [0, 0, 0, 0] });
       }
 
-      // Объединяем данные из шага 1 (info) и шага 2 (zones)
+      // Объединяем данные всех шагов в один training payload
       const infoData = allStepData?.['training-info'] || {};
+      const feedbackData = allStepData?.['training-feedback'] || {};
       const zonesData = data || {};
+      const finalData = buildTrainingFormData({
+        ...infoData,
+        ...feedbackData,
+        ...zonesData
+      });
 
       const finalTraining = {
-        z: zonesData.zones || [0, 0, 0, 0],
-        time: infoData.time || zonesData.time || '',
-        type: infoData.type || zonesData.type || 'cardio',
-        mood: infoData.mood ?? zonesData.mood ?? 5,
-        wellbeing: infoData.wellbeing ?? zonesData.wellbeing ?? 5,
-        stress: infoData.stress ?? zonesData.stress ?? 5,
-        comment: infoData.comment || zonesData.comment || ''
+        z: finalData.zones,
+        time: finalData.time,
+        type: finalData.type,
+        activityLabel: finalData.activityLabel,
+        mood: finalData.mood,
+        wellbeing: finalData.wellbeing,
+        stress: finalData.stress,
+        comment: finalData.comment
       };
 
       trainings[trainingIndex] = finalTraining;
@@ -21578,7 +21856,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     }
 
     HEYS.StepModal.show({
-      steps: ['training-info', 'training-zones'],
+      steps: ['training-info', 'training-feedback', 'training-zones'],
       title: trainingIndex > 0 ? `Тренировка ${trainingIndex + 1}` : 'Тренировка',
       showProgress: true,
       showStreak: false,
@@ -21588,7 +21866,11 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       finishLabel: 'Добавить', // Кнопка на последнем шаге
       context: { dateKey, trainingIndex },
       onComplete: (stepData) => {
-        const data = stepData['training-zones'] || stepData['training-info'] || {};
+        const data = {
+          ...(stepData['training-info'] || {}),
+          ...(stepData['training-feedback'] || {}),
+          ...(stepData['training-zones'] || {})
+        };
         onComplete?.(data);
       }
     });
@@ -21598,6 +21880,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
   HEYS.TrainingStep = {
     show: showTrainingModal,
     InfoComponent: TrainingInfoStep,
+    FeedbackComponent: TrainingFeedbackStep,
     ZonesComponent: TrainingZonesStep,
     TRAINING_TYPES,
     HR_ZONES
@@ -38007,14 +38290,21 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
   }
 
   // === Main WidgetsTab Component ===
-  function WidgetsTab({ selectedDate, clientId, setTab, setSelectedDate }) {
-    const HOME_TAB_OPTIONS = useMemo(() => ([
-      { key: 'widgets', label: 'Виджеты', icon: '🧩' },
-      { key: 'stats', label: 'Отчёты', icon: '📊' },
-      { key: 'diary', label: 'Дневник', icon: '🍽️' },
-      { key: 'insights', label: 'Советы', icon: '💡' },
-      { key: 'month', label: 'Месяц', icon: '🗓️' }
-    ]), []);
+  function WidgetsTab({ selectedDate, clientId, cloudUser, setTab, setSelectedDate }) {
+    const canUseTasksAsHome = !cloudUser && !!clientId;
+    const HOME_TAB_OPTIONS = useMemo(() => {
+      const options = [
+        { key: 'widgets', label: 'Виджеты', icon: '🧩' },
+        { key: 'stats', label: 'Отчёты', icon: '📊' },
+        { key: 'diary', label: 'Дневник', icon: '🍽️' },
+        { key: 'insights', label: 'Советы', icon: '💡' },
+        { key: 'month', label: 'Месяц', icon: '🗓️' }
+      ];
+      if (canUseTasksAsHome) {
+        options.push({ key: 'tasks', label: 'Задачи', icon: '☑️' });
+      }
+      return options;
+    }, [canUseTasksAsHome]);
     const VALID_HOME_TABS = useMemo(() => HOME_TAB_OPTIONS.map((option) => option.key), [HOME_TAB_OPTIONS]);
     const getCurrentDefaultTab = useCallback(() => {
       const defaultTabFromApp = window.HEYS?.App?.getDefaultTab?.();
@@ -39753,4 +40043,5505 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     };
 
     console.info('[HEYS.WhatsNew] Module loaded', MODULE_VERIFICATION_MARK);
+})();
+
+
+/* ===== heys_planning_store_v1.js ===== */
+// heys_planning_store_v1.js — shared store, helpers and hooks for HEYS planning
+(function () {
+    'use strict';
+
+    const HEYS = window.HEYS = window.HEYS || {};
+    const React = window.React;
+    if (!React) return;
+
+    const { useState, useEffect, useCallback, useMemo } = React;
+    const U = HEYS.utils || {};
+    const Planning = HEYS.Planning = HEYS.Planning || {};
+
+    const KEYS = {
+        PROJECTS: 'heys_planning_projects',
+        TASKS: 'heys_planning_tasks',
+        SLOTS: 'heys_planning_slots',
+    };
+
+    const PROJECT_COLORS = [
+        '#3b82f6', '#2563eb', '#0ea5e9', '#06b6d4', '#14b8a6', '#10b981',
+        '#22c55e', '#84cc16', '#a3e635', '#eab308', '#f59e0b', '#f97316',
+        '#fb7185', '#f43f5e', '#ef4444', '#ec4899', '#d946ef', '#a855f7',
+        '#8b5cf6', '#6366f1', '#38bdf8', '#2dd4bf', '#34d399', '#fda4af',
+    ];
+
+    const PRIORITY_CONFIG = {
+        p1: { label: 'P1', color: '#ef4444', bg: 'rgba(239,68,68,0.12)' },
+        p2: { label: 'P2', color: '#f59e0b', bg: 'rgba(245,158,11,0.12)' },
+        p3: { label: 'P3', color: '#64748b', bg: 'rgba(100,116,139,0.14)' },
+    };
+
+    const STATUS_CONFIG = {
+        todo: { label: 'Ожидает начала', icon: '○' },
+        in_progress: { label: 'В работе', icon: '◐' },
+        done: { label: 'Готово', icon: '●' },
+        cancelled: { label: 'Отменено', icon: '✕' },
+    };
+
+    const DUE_BUCKETS = {
+        all: 'Все даты',
+        overdue: 'Просрочено',
+        today: 'Сегодня',
+        week: '7 дней',
+        scheduled: 'Запланировано',
+        unscheduled: 'Без слота',
+    };
+
+    const CALENDAR_START_HOUR = 3;
+    const CALENDAR_END_HOUR = 26;
+    const CALENDAR_HOUR_HEIGHT = 60;
+    const GANTT_ZOOM_WIDTHS = { compact: 28, normal: 40, wide: 56 };
+
+    function uid() {
+        return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+    }
+
+    function normalizeHexColor(value) {
+        const input = String(value || '').trim().toLowerCase();
+        if (!input) return null;
+        if (/^#[0-9a-f]{6}$/.test(input)) return input;
+        if (/^#[0-9a-f]{3}$/.test(input)) {
+            return '#' + input.slice(1).split('').map((char) => char + char).join('');
+        }
+        return null;
+    }
+
+    function randomItem(items, fallback) {
+        if (!Array.isArray(items) || items.length === 0) return fallback;
+        return items[Math.floor(Math.random() * items.length)] || fallback;
+    }
+
+    function pickDistinctProjectColor(projects, options) {
+        const list = Array.isArray(projects) ? projects : [];
+        const excludeId = options?.excludeId || null;
+        const excludeColor = normalizeHexColor(options?.excludeColor);
+        const usedColors = new Set(
+            list
+                .filter((project) => project && project.id !== excludeId)
+                .map((project) => normalizeHexColor(project.color))
+                .filter(Boolean),
+        );
+
+        const available = PROJECT_COLORS.filter((color) => {
+            const normalized = normalizeHexColor(color);
+            if (!normalized) return false;
+            if (excludeColor && normalized === excludeColor) return false;
+            return !usedColors.has(normalized);
+        });
+
+        if (available.length > 0) return randomItem(available, PROJECT_COLORS[0]);
+
+        const fallbackPool = PROJECT_COLORS.filter((color) => normalizeHexColor(color) !== excludeColor);
+        return randomItem(fallbackPool, PROJECT_COLORS[0]);
+    }
+
+    function pad2(value) {
+        return String(value).padStart(2, '0');
+    }
+
+    function localDateISO(date) {
+        const value = date instanceof Date ? date : new Date(date);
+        return [value.getFullYear(), pad2(value.getMonth() + 1), pad2(value.getDate())].join('-');
+    }
+
+    function normalizeDate(value) {
+        if (!value) return null;
+        if (typeof value === 'string') {
+            return new Date(value.length > 10 ? value : value + 'T12:00:00');
+        }
+        if (value instanceof Date) return new Date(value.getTime());
+        return new Date(value);
+    }
+
+    function dateStr(value) {
+        if (!value) return localDateISO(new Date());
+        if (typeof value === 'string') return value.slice(0, 10);
+        return localDateISO(normalizeDate(value));
+    }
+
+    function nowISO() {
+        return new Date().toISOString();
+    }
+
+    function addDays(value, deltaDays) {
+        const base = normalizeDate(value || new Date());
+        base.setDate(base.getDate() + Number(deltaDays || 0));
+        return dateStr(base);
+    }
+
+    function diffDays(fromValue, toValue) {
+        if (!fromValue || !toValue) return 0;
+        const from = normalizeDate(dateStr(fromValue));
+        const to = normalizeDate(dateStr(toValue));
+        const ms = to.getTime() - from.getTime();
+        return Math.round(ms / 86400000);
+    }
+
+    function startOfWeek(baseDate) {
+        const date = normalizeDate(baseDate || new Date());
+        const day = date.getDay();
+        const mondayOffset = (day + 6) % 7;
+        date.setDate(date.getDate() - mondayOffset);
+        return date;
+    }
+
+    function getWeekDays(baseDate) {
+        const monday = startOfWeek(baseDate || new Date());
+        const result = [];
+        for (let index = 0; index < 7; index += 1) {
+            const current = new Date(monday.getTime());
+            current.setDate(monday.getDate() + index);
+            result.push(dateStr(current));
+        }
+        return result;
+    }
+
+    function clamp(value, min, max) {
+        return Math.max(min, Math.min(max, value));
+    }
+
+    function timeToMinutes(timeValue) {
+        if (!timeValue || typeof timeValue !== 'string') return 0;
+        const [hours, minutes] = timeValue.split(':').map(Number);
+        return (Number(hours) || 0) * 60 + (Number(minutes) || 0);
+    }
+
+    function minutesToTime(totalMinutes) {
+        const safe = clamp(Math.round(Number(totalMinutes) || 0), 0, (23 * 60) + 59);
+        const hours = Math.floor(safe / 60);
+        const minutes = safe % 60;
+        return pad2(hours) + ':' + pad2(minutes);
+    }
+
+    function sortByOrder(items) {
+        return items.slice().sort((left, right) => {
+            const leftOrder = Number(left?.order ?? 0);
+            const rightOrder = Number(right?.order ?? 0);
+            if (leftOrder !== rightOrder) return leftOrder - rightOrder;
+            return String(left?.createdAt || '').localeCompare(String(right?.createdAt || ''));
+        });
+    }
+
+    function getTaskDurationMinutes(task) {
+        const planned = Number(task?.plannedMinutes);
+        return planned > 0 ? planned : 60;
+    }
+
+    function isTaskTerminal(task) {
+        return task?.status === 'done' || task?.status === 'cancelled';
+    }
+
+    function isTaskOverdue(task, todayIso) {
+        return !!(task?.dueDate && !isTaskTerminal(task) && task.dueDate < todayIso);
+    }
+
+    function getDueBucket(task, todayIso, slots) {
+        if (!task?.dueDate) {
+            const hasSlot = Array.isArray(slots) && slots.some((slot) => slot.taskId === task.id);
+            return hasSlot ? 'scheduled' : 'unscheduled';
+        }
+        if (task.dueDate < todayIso) return 'overdue';
+        if (task.dueDate === todayIso) return 'today';
+        if (diffDays(todayIso, task.dueDate) <= 7) return 'week';
+        return 'all';
+    }
+
+    function getTaskProjectColor(task, projects) {
+        const project = Array.isArray(projects)
+            ? projects.find((entry) => entry.id === task?.projectId)
+            : null;
+        return project?.color || '#64748b';
+    }
+
+    function safeParse(raw, fallback) {
+        if (raw === null || raw === undefined) return fallback;
+        try {
+            return JSON.parse(raw);
+        } catch (error) {
+            console.warn('[HEYS.planning] Failed to parse planning storage:', error?.message || error);
+            return fallback;
+        }
+    }
+
+    function lsGet(key, fallback) {
+        if (typeof U.lsGet === 'function') return U.lsGet(key, fallback);
+        try {
+            return safeParse(localStorage.getItem(key), fallback);
+        } catch (error) {
+            console.warn('[HEYS.planning] Failed to read planning storage:', key, error?.message || error);
+            return fallback;
+        }
+    }
+
+    function emitPlanningUpdated(kind, payload) {
+        try {
+            window.dispatchEvent(new CustomEvent('heys:planning-updated', { detail: { kind, payload } }));
+        } catch (error) {
+            console.warn('[HEYS.planning] Failed to emit planning event:', error?.message || error);
+        }
+    }
+
+    function lsSet(key, value) {
+        if (typeof U.lsSet === 'function') {
+            U.lsSet(key, value);
+            emitPlanningUpdated('storage:set', { key });
+            return;
+        }
+        try {
+            localStorage.setItem(key, JSON.stringify(value));
+            emitPlanningUpdated('storage:set', { key });
+        } catch (error) {
+            console.warn('[HEYS.planning] Failed to write planning storage:', key, error?.message || error);
+        }
+    }
+
+    function getProjects() {
+        return sortByOrder(lsGet(KEYS.PROJECTS, []));
+    }
+
+    function saveProjects(projects) {
+        lsSet(KEYS.PROJECTS, sortByOrder(projects || []));
+    }
+
+    function getTasks() {
+        return sortByOrder(lsGet(KEYS.TASKS, []));
+    }
+
+    function saveTasks(tasks) {
+        lsSet(KEYS.TASKS, sortByOrder(tasks || []));
+    }
+
+    function getSlots() {
+        return sortByOrder(lsGet(KEYS.SLOTS, []));
+    }
+
+    function saveSlots(slots) {
+        lsSet(KEYS.SLOTS, sortByOrder(slots || []));
+    }
+
+    function getNextOrder(items, predicate) {
+        return items.filter(predicate).length;
+    }
+
+    function addProject(name) {
+        const projects = getProjects();
+        const project = {
+            id: uid(),
+            name: String(name || '').trim(),
+            color: pickDistinctProjectColor(projects),
+            status: 'active',
+            order: projects.length,
+            createdAt: nowISO(),
+            updatedAt: nowISO(),
+        };
+        saveProjects(projects.concat(project));
+        return project;
+    }
+
+    function updateProject(id, patch) {
+        const projects = getProjects();
+        const index = projects.findIndex((project) => project.id === id);
+        if (index === -1) return null;
+        const updated = { ...projects[index], ...patch, updatedAt: nowISO() };
+        projects[index] = updated;
+        saveProjects(projects);
+        return updated;
+    }
+
+    function deleteProject(id) {
+        const projects = getProjects().filter((project) => project.id !== id);
+        saveProjects(projects);
+        const tasks = getTasks().map((task) => task.projectId === id
+            ? { ...task, projectId: undefined, updatedAt: nowISO() }
+            : task);
+        saveTasks(tasks);
+    }
+
+    function addTask(title, opts) {
+        const tasks = getTasks();
+        const projectId = opts?.projectId || undefined;
+        const parentTaskId = opts?.parentTaskId || undefined;
+        const task = {
+            id: uid(),
+            title: String(title || '').trim(),
+            projectId,
+            parentTaskId,
+            blockedByTaskIds: Array.isArray(opts?.blockedByTaskIds) ? opts.blockedByTaskIds.slice() : [],
+            priority: opts?.priority || 'p2',
+            status: opts?.status || 'in_progress',
+            startDate: opts?.startDate || undefined,
+            dueDate: opts?.dueDate || undefined,
+            plannedMinutes: Number(opts?.plannedMinutes) > 0 ? Number(opts.plannedMinutes) : undefined,
+            baselineStartDate: opts?.baselineStartDate || undefined,
+            baselineDueDate: opts?.baselineDueDate || undefined,
+            baselinePlannedMinutes: Number(opts?.baselinePlannedMinutes) > 0 ? Number(opts.baselinePlannedMinutes) : undefined,
+            order: getNextOrder(tasks, (item) => (item.projectId || '') === (projectId || '') && (item.parentTaskId || '') === (parentTaskId || '')),
+            createdAt: nowISO(),
+            updatedAt: nowISO(),
+            completedAt: opts?.status === 'done' ? nowISO() : undefined,
+        };
+        saveTasks(tasks.concat(task));
+        return task;
+    }
+
+    function updateTask(id, patch) {
+        const tasks = getTasks();
+        const index = tasks.findIndex((task) => task.id === id);
+        if (index === -1) return null;
+        const current = tasks[index];
+        const next = {
+            ...current,
+            ...patch,
+            blockedByTaskIds: Array.isArray(patch?.blockedByTaskIds)
+                ? patch.blockedByTaskIds.filter((entry) => entry && entry !== id)
+                : current.blockedByTaskIds,
+            updatedAt: nowISO(),
+        };
+
+        if (patch?.status === 'done' && !current.completedAt) {
+            next.completedAt = nowISO();
+        } else if (patch?.status && patch.status !== 'done') {
+            next.completedAt = undefined;
+        }
+
+        tasks[index] = next;
+        saveTasks(tasks);
+        return next;
+    }
+
+    function deleteTask(id) {
+        let tasks = getTasks().filter((task) => task.id !== id);
+        tasks = tasks.map((task) => ({
+            ...task,
+            blockedByTaskIds: Array.isArray(task.blockedByTaskIds)
+                ? task.blockedByTaskIds.filter((entry) => entry !== id)
+                : [],
+            parentTaskId: task.parentTaskId === id ? undefined : task.parentTaskId,
+            updatedAt: nowISO(),
+        }));
+        saveTasks(tasks);
+        const slots = getSlots().filter((slot) => slot.taskId !== id);
+        saveSlots(slots);
+    }
+
+    function reorderTasks(sourceId, targetId) {
+        if (!sourceId || !targetId || sourceId === targetId) return getTasks();
+        const tasks = getTasks();
+        const source = tasks.find((task) => task.id === sourceId);
+        const target = tasks.find((task) => task.id === targetId);
+        if (!source || !target) return tasks;
+        if ((source.projectId || '') !== (target.projectId || '')) return tasks;
+        if ((source.parentTaskId || '') !== (target.parentTaskId || '')) return tasks;
+
+        const siblings = sortByOrder(tasks.filter((task) =>
+            (task.projectId || '') === (source.projectId || '') &&
+            (task.parentTaskId || '') === (source.parentTaskId || '')
+        ));
+
+        const sourceIndex = siblings.findIndex((task) => task.id === sourceId);
+        const targetIndex = siblings.findIndex((task) => task.id === targetId);
+        if (sourceIndex === -1 || targetIndex === -1) return tasks;
+
+        const reordered = siblings.slice();
+        const [moved] = reordered.splice(sourceIndex, 1);
+        reordered.splice(targetIndex, 0, moved);
+
+        const nextOrder = new Map(reordered.map((task, order) => [task.id, order]));
+        const nextTasks = tasks.map((task) => nextOrder.has(task.id)
+            ? { ...task, order: nextOrder.get(task.id), updatedAt: nowISO() }
+            : task);
+        saveTasks(nextTasks);
+        return nextTasks;
+    }
+
+    function addSlot(opts) {
+        const slots = getSlots();
+        const slot = {
+            id: uid(),
+            taskId: opts?.taskId || undefined,
+            title: String(opts?.title || '').trim(),
+            date: dateStr(opts?.date),
+            startTime: opts?.startTime || '09:00',
+            endTime: opts?.endTime || '10:00',
+            source: opts?.source || 'user',
+            createdAt: nowISO(),
+            updatedAt: nowISO(),
+        };
+        saveSlots(slots.concat(slot));
+        return slot;
+    }
+
+    function updateSlot(id, patch) {
+        const slots = getSlots();
+        const index = slots.findIndex((slot) => slot.id === id);
+        if (index === -1) return null;
+        const updated = {
+            ...slots[index],
+            ...patch,
+            date: patch?.date ? dateStr(patch.date) : slots[index].date,
+            updatedAt: nowISO(),
+        };
+        slots[index] = updated;
+        saveSlots(slots);
+        return updated;
+    }
+
+    function deleteSlot(id) {
+        const slots = getSlots().filter((slot) => slot.id !== id);
+        saveSlots(slots);
+    }
+
+    function usePlanningState() {
+        const [projects, setProjects] = useState(getProjects);
+        const [tasks, setTasks] = useState(getTasks);
+        const [slots, setSlots] = useState(getSlots);
+
+        const refresh = useCallback(() => {
+            setProjects(getProjects());
+            setTasks(getTasks());
+            setSlots(getSlots());
+        }, []);
+
+        useEffect(() => {
+            const handleRefresh = () => refresh();
+            window.addEventListener('storage', handleRefresh);
+            window.addEventListener('data:updated', handleRefresh);
+            window.addEventListener('heys:planning-updated', handleRefresh);
+            return () => {
+                window.removeEventListener('storage', handleRefresh);
+                window.removeEventListener('data:updated', handleRefresh);
+                window.removeEventListener('heys:planning-updated', handleRefresh);
+            };
+        }, [refresh]);
+
+        const api = useMemo(() => ({
+            addProject: (name) => { const project = addProject(name); refresh(); return project; },
+            updateProject: (id, patch) => { const project = updateProject(id, patch); refresh(); return project; },
+            deleteProject: (id) => { deleteProject(id); refresh(); },
+            addTask: (title, opts) => { const task = addTask(title, opts); refresh(); return task; },
+            updateTask: (id, patch) => { const task = updateTask(id, patch); refresh(); return task; },
+            deleteTask: (id) => { deleteTask(id); refresh(); },
+            reorderTasks: (sourceId, targetId) => { const nextTasks = reorderTasks(sourceId, targetId); refresh(); return nextTasks; },
+            addSlot: (opts) => { const slot = addSlot(opts); refresh(); return slot; },
+            updateSlot: (id, patch) => { const slot = updateSlot(id, patch); refresh(); return slot; },
+            deleteSlot: (id) => { deleteSlot(id); refresh(); },
+            refresh,
+        }), [refresh]);
+
+        return { projects, tasks, slots, ...api };
+    }
+
+    function usePlanningViewport() {
+        const [isDesktop, setIsDesktop] = useState(() => (window.innerWidth || 0) > 768);
+
+        useEffect(() => {
+            const handleResize = () => setIsDesktop((window.innerWidth || 0) > 768);
+            window.addEventListener('resize', handleResize);
+            return () => window.removeEventListener('resize', handleResize);
+        }, []);
+
+        return { isDesktop };
+    }
+
+    Planning.Constants = {
+        KEYS,
+        PROJECT_COLORS,
+        PRIORITY_CONFIG,
+        STATUS_CONFIG,
+        DUE_BUCKETS,
+        CALENDAR_START_HOUR,
+        CALENDAR_END_HOUR,
+        CALENDAR_HOUR_HEIGHT,
+        GANTT_ZOOM_WIDTHS,
+    };
+
+    Planning.Utils = {
+        uid,
+        dateStr,
+        nowISO,
+        addDays,
+        diffDays,
+        getWeekDays,
+        clamp,
+        timeToMinutes,
+        minutesToTime,
+        localDateISO,
+        getTaskDurationMinutes,
+        isTaskTerminal,
+        isTaskOverdue,
+        getDueBucket,
+        getTaskProjectColor,
+        pickDistinctProjectColor,
+        sortByOrder,
+    };
+
+    Planning.Store = {
+        getProjects,
+        saveProjects,
+        addProject,
+        updateProject,
+        deleteProject,
+        getTasks,
+        saveTasks,
+        addTask,
+        updateTask,
+        deleteTask,
+        reorderTasks,
+        getSlots,
+        saveSlots,
+        addSlot,
+        updateSlot,
+        deleteSlot,
+    };
+
+    Planning.Hooks = {
+        usePlanningState,
+        usePlanningViewport,
+    };
+})();
+
+
+/* ===== heys_planning_tasks_v1.js ===== */
+// heys_planning_tasks_v1.js — Tasks screen and task editor for HEYS planning
+(function () {
+    'use strict';
+
+    const HEYS = window.HEYS = window.HEYS || {};
+    const React = window.React;
+    const ReactDOM = window.ReactDOM;
+    const Planning = HEYS.Planning || {};
+    if (!React || !Planning.Constants || !Planning.Store || !Planning.Utils) return;
+
+    const h = React.createElement;
+    const { useState, useMemo, useRef } = React;
+    const { PRIORITY_CONFIG, STATUS_CONFIG, DUE_BUCKETS, PROJECT_COLORS } = Planning.Constants;
+    const { clamp, dateStr, sortByOrder, timeToMinutes, minutesToTime, getDueBucket, getTaskDurationMinutes } = Planning.Utils;
+
+    const DURATION_PRESETS = [
+        { label: '15 мин', shortLabel: '15м', minutes: 15 },
+        { label: '30 мин', shortLabel: '30м', minutes: 30 },
+        { label: '1 час', shortLabel: '1ч', minutes: 60 },
+        { label: '3 часа', shortLabel: '3ч', minutes: 180 },
+        { label: '1 день', shortLabel: '1д', minutes: 480 },
+        { label: '2 дня', shortLabel: '2д', minutes: 960 },
+        { label: '3 дня', shortLabel: '3д', minutes: 1440 },
+        { label: '5 дней', shortLabel: '5д', minutes: 2400 },
+        { label: 'Неделя', shortLabel: '1н', minutes: 3360 },
+        { label: '2 недели', shortLabel: '2н', minutes: 6720 },
+        { label: 'Месяц', shortLabel: '1мес', minutes: 14400 },
+    ];
+    const DURATION_PRESET_BY_MINUTES = new Map(DURATION_PRESETS.map((preset) => [preset.minutes, preset]));
+
+    function pluralizeDays(count) {
+        const mod10 = count % 10;
+        const mod100 = count % 100;
+        if (mod10 === 1 && mod100 !== 11) return 'день';
+        if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return 'дня';
+        return 'дней';
+    }
+
+    function normalizeDurationMinutes(value) {
+        const minutes = Number(value);
+        if (!Number.isFinite(minutes) || minutes <= 0) return null;
+        return Math.round(minutes);
+    }
+
+    function formatDurationLabel(value) {
+        const minutes = normalizeDurationMinutes(value);
+        if (!minutes) return '';
+
+        const preset = DURATION_PRESET_BY_MINUTES.get(minutes);
+        if (preset) return preset.label;
+
+        if (minutes < 60) return minutes + ' мин';
+
+        if (minutes % (8 * 60) === 0) {
+            const days = minutes / (8 * 60);
+            return days + ' ' + pluralizeDays(days);
+        }
+
+        if (minutes % 60 === 0) {
+            const hours = minutes / 60;
+            return hours === 1 ? '1 час' : hours + ' ч';
+        }
+
+        const roundedHours = Math.max(Math.round(minutes / 60), 1);
+        return roundedHours === 1 ? '1 час' : roundedHours + ' ч';
+    }
+
+    function formatDurationCompactLabel(value) {
+        const minutes = normalizeDurationMinutes(value);
+        if (!minutes) return '';
+
+        const preset = DURATION_PRESET_BY_MINUTES.get(minutes);
+        if (preset) {
+            if (minutes < 60) return minutes + ' мин';
+            if (minutes % (8 * 60) === 0) {
+                const days = minutes / (8 * 60);
+                return days + ' дн';
+            }
+            return preset.shortLabel;
+        }
+
+        if (minutes < 60) return minutes + ' мин';
+
+        if (minutes % (8 * 60) === 0) {
+            const days = minutes / (8 * 60);
+            return days + ' дн';
+        }
+
+        if (minutes % 60 === 0) {
+            const hours = minutes / 60;
+            return hours + ' ч';
+        }
+
+        return minutes + ' мин';
+    }
+
+    function addDaysToIsoDate(isoDate, days) {
+        const parts = String(isoDate || '').split('-').map((value) => Number(value));
+        if (parts.length !== 3 || parts.some((value) => !Number.isFinite(value))) return '';
+        const nextDate = new Date(parts[0], parts[1] - 1, parts[2] + Number(days || 0));
+        const year = String(nextDate.getFullYear());
+        const month = String(nextDate.getMonth() + 1).padStart(2, '0');
+        const day = String(nextDate.getDate()).padStart(2, '0');
+        return year + '-' + month + '-' + day;
+    }
+
+    function parseIsoDate(isoDate) {
+        const parts = String(isoDate || '').slice(0, 10).split('-').map((value) => Number(value));
+        if (parts.length !== 3 || parts.some((value) => !Number.isFinite(value) || value <= 0)) return null;
+        const parsed = new Date(parts[0], parts[1] - 1, parts[2], 12, 0, 0, 0);
+        return Number.isNaN(parsed.getTime()) ? null : parsed;
+    }
+
+    function buildCompletionSlotFromNow(plannedMinutes) {
+        const now = new Date();
+        const endMinutes = (now.getHours() * 60) + now.getMinutes();
+        const normalizedDuration = normalizeDurationMinutes(plannedMinutes);
+        const duration = normalizedDuration || 15;
+        const startMinutes = Math.max(0, endMinutes - duration);
+        const safeEndMinutes = clamp(Math.max(startMinutes + 1, endMinutes), 1, (23 * 60) + 59);
+
+        return {
+            date: dateStr(now),
+            startTime: minutesToTime(startMinutes),
+            endTime: minutesToTime(safeEndMinutes),
+        };
+    }
+
+    function pluralizeTasks(count) {
+        const mod10 = count % 10;
+        const mod100 = count % 100;
+        if (mod10 === 1 && mod100 !== 11) return 'задача';
+        if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return 'задачи';
+        return 'задач';
+    }
+
+    function formatMinutesSummary(value) {
+        const minutes = normalizeDurationMinutes(value);
+        if (!minutes) return '0 мин';
+
+        if (minutes % (8 * 60) === 0 && minutes >= (8 * 60)) {
+            const days = minutes / (8 * 60);
+            return days + ' дн';
+        }
+
+        const hours = Math.floor(minutes / 60);
+        const restMinutes = minutes % 60;
+        if (hours > 0 && restMinutes > 0) return hours + 'ч ' + restMinutes + 'м';
+        if (hours > 0) return hours + ' ч';
+        return minutes + ' мин';
+    }
+
+    function formatIsoDateShort(isoDate, todayIso, tomorrowIso) {
+        if (!isoDate) return '';
+        if (isoDate === todayIso) return 'сегодня';
+        if (isoDate === tomorrowIso) return 'завтра';
+        const parsed = parseIsoDate(isoDate);
+        if (!parsed) return isoDate;
+        return parsed.toLocaleDateString('ru-RU', {
+            day: 'numeric',
+            month: 'short',
+        });
+    }
+
+    function hexToRgb(hexColor) {
+        const normalized = String(hexColor || '').trim().toLowerCase();
+        const match = /^#?([0-9a-f]{6})$/i.exec(normalized);
+        if (!match) return { r: 148, g: 163, b: 184 };
+        const hex = match[1];
+        return {
+            r: parseInt(hex.slice(0, 2), 16),
+            g: parseInt(hex.slice(2, 4), 16),
+            b: parseInt(hex.slice(4, 6), 16),
+        };
+    }
+
+    function mixHexColors(leftHex, rightHex, factor) {
+        const from = hexToRgb(leftHex);
+        const to = hexToRgb(rightHex);
+        const safeFactor = clamp(Number(factor) || 0, 0, 1);
+        return {
+            r: Math.round(from.r + ((to.r - from.r) * safeFactor)),
+            g: Math.round(from.g + ((to.g - from.g) * safeFactor)),
+            b: Math.round(from.b + ((to.b - from.b) * safeFactor)),
+        };
+    }
+
+    function toRgbaString(rgb, alpha) {
+        return 'rgba(' + rgb.r + ', ' + rgb.g + ', ' + rgb.b + ', ' + alpha + ')';
+    }
+
+    function getPlanningLoadTone(loadRatio) {
+        const safeRatio = clamp(Number(loadRatio) || 0, 0, 1);
+        if (safeRatio >= 0.72) return 'busy';
+        if (safeRatio >= 0.36) return 'balanced';
+        return 'free';
+    }
+
+    function getPlanningLoadBackground(loadRatio) {
+        const safeRatio = clamp(Number(loadRatio) || 0, 0, 1);
+        const mix = safeRatio <= 0.5
+            ? mixHexColors('#22c55e', '#eab308', safeRatio / 0.5)
+            : mixHexColors('#eab308', '#ef4444', (safeRatio - 0.5) / 0.5);
+        const start = toRgbaString(mix, (0.08 + (safeRatio * 0.06)).toFixed(3));
+        const end = toRgbaString(mix, (0.14 + (safeRatio * 0.18)).toFixed(3));
+        return 'linear-gradient(135deg, ' + start + ' 0%, ' + end + ' 100%)';
+    }
+
+    function getPlanningLoadBorderColor(loadRatio) {
+        const safeRatio = clamp(Number(loadRatio) || 0, 0, 1);
+        const mix = safeRatio <= 0.5
+            ? mixHexColors('#22c55e', '#eab308', safeRatio / 0.5)
+            : mixHexColors('#eab308', '#ef4444', (safeRatio - 0.5) / 0.5);
+        return toRgbaString(mix, (0.14 + (safeRatio * 0.2)).toFixed(3));
+    }
+
+    function describePlanningLoad(entry) {
+        if (!entry) return 'Свободнее · без задач и занятых слотов';
+
+        const toneLabel = entry.loadTone === 'busy'
+            ? 'День загружен'
+            : (entry.loadTone === 'balanced' ? 'Средняя нагрузка' : 'Свободнее');
+        const parts = [];
+
+        if (entry.itemCount > 0) parts.push(entry.itemCount + ' ' + pluralizeTasks(entry.itemCount));
+        if (entry.scheduledMinutes > 0) parts.push(formatMinutesSummary(entry.scheduledMinutes) + ' в слотах');
+        if (entry.dueCount > 0) parts.push(entry.dueCount + ' дедл.');
+        if (entry.startCount > 0) parts.push(entry.startCount + ' старт.');
+
+        if (parts.length === 0) return toneLabel + ' · без задач и занятых слотов';
+        return toneLabel + ' · ' + parts.join(' · ');
+    }
+
+    function createPlanningLoadEntry(isoDate) {
+        return {
+            isoDate,
+            scheduledMinutes: 0,
+            loadMinutes: 0,
+            slotCount: 0,
+            dueCount: 0,
+            startCount: 0,
+            taskIds: new Set(),
+            standaloneSlotCount: 0,
+            itemCount: 0,
+            loadRatio: 0,
+            loadTone: 'free',
+            summary: 'Свободнее · без задач и занятых слотов',
+        };
+    }
+
+    function buildPlanningLoadMap(tasks, slots, year, month) {
+        const result = new Map();
+        const scheduledTaskIdsByDate = new Map();
+
+        const ensureEntry = (isoDate) => {
+            if (!result.has(isoDate)) {
+                result.set(isoDate, createPlanningLoadEntry(isoDate));
+            }
+            return result.get(isoDate);
+        };
+
+        const ensureScheduledTaskSet = (isoDate) => {
+            if (!scheduledTaskIdsByDate.has(isoDate)) {
+                scheduledTaskIdsByDate.set(isoDate, new Set());
+            }
+            return scheduledTaskIdsByDate.get(isoDate);
+        };
+
+        (Array.isArray(slots) ? slots : []).forEach((slot) => {
+            const isoDate = String(slot?.date || '').slice(0, 10);
+            const parsed = parseIsoDate(isoDate);
+            if (!parsed || parsed.getFullYear() !== year || parsed.getMonth() !== month) return;
+
+            const startMinutes = timeToMinutes(slot?.startTime);
+            const endMinutes = timeToMinutes(slot?.endTime);
+            const duration = endMinutes > startMinutes ? (endMinutes - startMinutes) : 30;
+            const safeDuration = clamp(duration, 15, 12 * 60);
+            const entry = ensureEntry(isoDate);
+
+            entry.slotCount += 1;
+            entry.scheduledMinutes += safeDuration;
+            entry.loadMinutes += safeDuration;
+
+            if (slot?.taskId) {
+                entry.taskIds.add(slot.taskId);
+                ensureScheduledTaskSet(isoDate).add(slot.taskId);
+            } else {
+                entry.standaloneSlotCount += 1;
+            }
+        });
+
+        (Array.isArray(tasks) ? tasks : []).forEach((task) => {
+            if (!task || task.status === 'done' || task.status === 'cancelled') return;
+
+            const baseMinutes = clamp(Math.max(getTaskDurationMinutes(task), 45), 45, 8 * 60);
+
+            if (task.dueDate) {
+                const dueIso = String(task.dueDate).slice(0, 10);
+                const dueDate = parseIsoDate(dueIso);
+                if (dueDate && dueDate.getFullYear() === year && dueDate.getMonth() === month) {
+                    const entry = ensureEntry(dueIso);
+                    const hasSameDaySlot = ensureScheduledTaskSet(dueIso).has(task.id);
+                    const pressure = Math.round(Math.max(baseMinutes * (hasSameDaySlot ? 0.42 : 0.9), hasSameDaySlot ? 30 : 60));
+                    entry.taskIds.add(task.id);
+                    entry.dueCount += 1;
+                    entry.loadMinutes += pressure;
+                }
+            }
+
+            if (task.startDate && task.startDate !== task.dueDate) {
+                const startIso = String(task.startDate).slice(0, 10);
+                const startDate = parseIsoDate(startIso);
+                if (startDate && startDate.getFullYear() === year && startDate.getMonth() === month) {
+                    const entry = ensureEntry(startIso);
+                    const hasSameDaySlot = ensureScheduledTaskSet(startIso).has(task.id);
+                    const pressure = Math.round(Math.max(baseMinutes * (hasSameDaySlot ? 0.22 : 0.42), hasSameDaySlot ? 20 : 30));
+                    entry.taskIds.add(task.id);
+                    entry.startCount += 1;
+                    entry.loadMinutes += pressure;
+                }
+            }
+        });
+
+        result.forEach((entry) => {
+            entry.itemCount = entry.taskIds.size + entry.standaloneSlotCount;
+            const coordinationPressure = Math.max(0, entry.itemCount - 1) * 24;
+            const urgencyPressure = entry.dueCount * 18;
+            entry.loadRatio = clamp((entry.loadMinutes + coordinationPressure + urgencyPressure) / (8 * 60), 0, 1);
+            entry.loadTone = getPlanningLoadTone(entry.loadRatio);
+            entry.summary = describePlanningLoad(entry);
+        });
+
+        return result;
+    }
+
+    function PlanningLoadDatePopover({ valueISO, tasks, slots, anchorRef, onSelect, onClear, onClose }) {
+        if (!ReactDOM) return null;
+
+        const todayIso = dateStr();
+        const [cur, setCur] = useState(() => parseIsoDate(valueISO || todayIso) || parseIsoDate(todayIso) || new Date());
+        const [dropdownPos, setDropdownPos] = useState({ top: 88, right: 16 });
+        const [tooltip, setTooltip] = useState(null);
+        const parsedToday = parseIsoDate(todayIso) || new Date();
+
+        React.useEffect(() => {
+            const nextDate = parseIsoDate(valueISO || todayIso);
+            if (nextDate) setCur(nextDate);
+        }, [valueISO, todayIso]);
+
+        React.useEffect(() => {
+            const updatePosition = () => {
+                const anchorNode = anchorRef?.current;
+                if (!anchorNode || typeof window === 'undefined') {
+                    setDropdownPos({ top: 88, right: 16 });
+                    return;
+                }
+                const rect = anchorNode.getBoundingClientRect();
+                setDropdownPos({
+                    top: Math.round(rect.bottom + 8),
+                    right: Math.max(Math.round(window.innerWidth - rect.right), 16),
+                });
+            };
+
+            updatePosition();
+            window.addEventListener('resize', updatePosition);
+            window.addEventListener('scroll', updatePosition, true);
+            return () => {
+                window.removeEventListener('resize', updatePosition);
+                window.removeEventListener('scroll', updatePosition, true);
+            };
+        }, [anchorRef]);
+
+        React.useEffect(() => {
+            const handleKeyDown = (event) => {
+                if (event.key !== 'Escape') return;
+                event.preventDefault();
+                onClose();
+            };
+            window.addEventListener('keydown', handleKeyDown);
+            return () => window.removeEventListener('keydown', handleKeyDown);
+        }, [onClose]);
+
+        const year = cur.getFullYear();
+        const month = cur.getMonth();
+        const firstDay = new Date(year, month, 1);
+        const startOffset = (firstDay.getDay() + 6) % 7;
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+        const cells = [];
+        for (let index = 0; index < startOffset; index += 1) cells.push(null);
+        for (let day = 1; day <= daysInMonth; day += 1) cells.push(new Date(year, month, day, 12, 0, 0, 0));
+
+        const daysDataMap = useMemo(
+            () => buildPlanningLoadMap(tasks, slots, year, month),
+            [tasks, slots, year, month],
+        );
+
+        const selectedDate = parseIsoDate(valueISO || todayIso);
+        const isCurrentMonth = year === parsedToday.getFullYear() && month === parsedToday.getMonth();
+
+        function sameDay(left, right) {
+            return !!(left && right
+                && left.getFullYear() === right.getFullYear()
+                && left.getMonth() === right.getMonth()
+                && left.getDate() === right.getDate());
+        }
+
+        function handleDayHover(event, summary) {
+            const rect = event.currentTarget.getBoundingClientRect();
+            setTooltip({
+                x: rect.left + (rect.width / 2),
+                y: rect.top - 8,
+                text: summary,
+            });
+        }
+
+        return ReactDOM.createPortal(
+            h(React.Fragment, null,
+                h('div', {
+                    className: 'date-picker-backdrop',
+                    onClick: () => {
+                        setTooltip(null);
+                        onClose();
+                    },
+                }),
+                tooltip && h('div', {
+                    className: 'date-picker-tooltip',
+                    style: { left: tooltip.x + 'px', top: tooltip.y + 'px' },
+                }, tooltip.text),
+                h('div', {
+                    className: 'date-picker-dropdown planning-load-date-picker__dropdown',
+                    role: 'dialog',
+                    'aria-modal': 'true',
+                    'aria-label': 'Выбор даты по нагрузке',
+                    style: { top: dropdownPos.top + 'px', right: dropdownPos.right + 'px' },
+                },
+                    h('div', { className: 'date-picker-header' },
+                        h('button', {
+                            type: 'button',
+                            className: 'date-picker-nav',
+                            onClick: () => setCur(new Date(year, month - 1, 1, 12, 0, 0, 0)),
+                        }, '‹'),
+                        h('span', { className: 'date-picker-title' },
+                            cur.toLocaleString('ru-RU', { month: 'long', year: 'numeric' }),
+                        ),
+                        h('button', {
+                            type: 'button',
+                            className: 'date-picker-nav',
+                            onClick: () => setCur(new Date(year, month + 1, 1, 12, 0, 0, 0)),
+                        }, '›'),
+                    ),
+                    !isCurrentMonth && h('button', {
+                        type: 'button',
+                        className: 'date-picker-goto-today',
+                        onClick: () => setCur(parsedToday),
+                    }, '↩ К текущему месяцу'),
+                    h('div', { className: 'date-picker-weekdays' },
+                        ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'].map((label) => h('div', {
+                            key: label,
+                            className: 'date-picker-weekday',
+                        }, label)),
+                    ),
+                    h('div', { className: 'date-picker-days' },
+                        cells.map((cellDate, index) => {
+                            if (cellDate == null) {
+                                return h('div', { key: 'planning-empty-' + index, className: 'date-picker-day empty' });
+                            }
+
+                            const isoDate = dateStr(cellDate);
+                            const dayData = daysDataMap.get(isoDate);
+                            const loadRatio = dayData ? dayData.loadRatio : 0;
+                            const tone = dayData ? dayData.loadTone : 'free';
+                            const isSelected = sameDay(cellDate, selectedDate);
+                            const isToday = sameDay(cellDate, parsedToday);
+                            const summary = dayData ? dayData.summary : 'Свободнее · без задач и занятых слотов';
+                            const cellStyle = (!isSelected && !isToday)
+                                ? {
+                                    background: getPlanningLoadBackground(loadRatio),
+                                    boxShadow: 'inset 0 0 0 1px ' + getPlanningLoadBorderColor(loadRatio),
+                                }
+                                : undefined;
+
+                            return h('div', {
+                                key: isoDate,
+                                className: [
+                                    'date-picker-day',
+                                    'planning-load-date-picker__day',
+                                    'planning-load-date-picker__day--' + tone,
+                                    isSelected ? 'selected' : '',
+                                    isToday ? 'today' : '',
+                                ].join(' ').trim(),
+                                style: cellStyle,
+                                title: summary,
+                                onClick: () => {
+                                    setTooltip(null);
+                                    onSelect(isoDate);
+                                },
+                                onMouseEnter: (event) => handleDayHover(event, summary),
+                                onMouseLeave: () => setTooltip(null),
+                            },
+                                h('span', { className: 'day-number' }, cellDate.getDate()),
+                            );
+                        }),
+                    ),
+                    h('div', { className: 'date-picker-legend planning-load-date-picker__legend' },
+                        h('span', { className: 'legend-item good' }, '● свободно'),
+                        h('span', { className: 'legend-item warn' }, '● средне'),
+                        h('span', { className: 'legend-item bad' }, '● загружено'),
+                    ),
+                    h('div', { className: 'planning-load-date-picker__legend-hint' }, 'Учитываем задачи, дедлайны и занятые слоты.'),
+                    h('div', { className: 'date-picker-footer' },
+                        h('button', {
+                            type: 'button',
+                            className: 'date-picker-btn today-btn',
+                            onClick: () => {
+                                setTooltip(null);
+                                onSelect(todayIso);
+                            },
+                        }, '📍 Сегодня'),
+                        h('button', {
+                            type: 'button',
+                            className: 'date-picker-btn delete-btn',
+                            onClick: () => {
+                                setTooltip(null);
+                                onClear();
+                            },
+                        }, '🗑️ Без даты'),
+                    ),
+                ),
+            ),
+            document.body,
+        );
+    }
+
+    function FilterIcon() {
+        return h('svg', {
+            className: 'planning-filter-toggle__icon',
+            viewBox: '0 0 20 20',
+            fill: 'none',
+            stroke: 'currentColor',
+            strokeWidth: '1.8',
+            'aria-hidden': 'true',
+        },
+            h('path', {
+                d: 'M3 5h14l-5.5 6.5v4L8.5 17v-5.5L3 5Z',
+                strokeLinecap: 'round',
+                strokeLinejoin: 'round',
+            }));
+    }
+
+    function ColorShuffleIcon() {
+        return h('svg', {
+            className: 'planning-project-group__color-icon',
+            viewBox: '0 0 20 20',
+            fill: 'none',
+            stroke: 'currentColor',
+            strokeWidth: '1.7',
+            'aria-hidden': 'true',
+        },
+            h('path', {
+                d: 'M5.2 12.7 9.6 7.1a1.8 1.8 0 0 1 2.9.1l2 2.8a1.8 1.8 0 0 1-1.5 2.8H7a1.8 1.8 0 0 1-1.8-1.8Z',
+                strokeLinecap: 'round',
+                strokeLinejoin: 'round',
+            }),
+            h('circle', { cx: '7', cy: '7', r: '1.6' }),
+            h('circle', { cx: '14.4', cy: '5.6', r: '1.4' }),
+            h('path', {
+                d: 'M13.4 14.9h.01',
+                strokeLinecap: 'round',
+                strokeLinejoin: 'round',
+            }),
+        );
+    }
+
+    function resolvePaletteFloatingBounds(anchorNode) {
+        const viewportPadding = 12;
+        const fallbackBounds = {
+            top: viewportPadding,
+            bottom: Math.max(viewportPadding, (typeof window !== 'undefined' ? window.innerHeight : 0) - viewportPadding),
+        };
+
+        if (!anchorNode || typeof window === 'undefined' || typeof document === 'undefined') {
+            return fallbackBounds;
+        }
+
+        let bounds = { ...fallbackBounds };
+        const bottomTabsNode = document.querySelector('.tabs');
+        const bottomTabsRect = bottomTabsNode?.getBoundingClientRect?.();
+        if (bottomTabsRect && Number.isFinite(bottomTabsRect.top) && bottomTabsRect.top < bounds.bottom) {
+            bounds.bottom = Math.max(bounds.top, Math.round(bottomTabsRect.top - viewportPadding));
+        }
+
+        const ownerGroup = anchorNode.closest('.planning-project-group');
+        const parentProjectGroup = ownerGroup?.classList?.contains('planning-project-group--subgroup')
+            ? ownerGroup.parentElement?.closest('.planning-project-group')
+            : null;
+
+        if (parentProjectGroup) {
+            const parentRect = parentProjectGroup.getBoundingClientRect();
+            bounds.top = Math.max(bounds.top, Math.round(parentRect.top + viewportPadding));
+            bounds.bottom = Math.min(bounds.bottom, Math.round(parentRect.bottom - viewportPadding));
+        }
+
+        if (bounds.bottom < bounds.top) {
+            return fallbackBounds;
+        }
+
+        return bounds;
+    }
+
+    function resolvePaletteFloatingPosition(anchorRect, panelRect, bounds) {
+        const viewportPadding = 12;
+        const offset = 8;
+        const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 0;
+        const panelWidth = Math.max(0, Math.round(panelRect?.width || 0));
+        const panelHeight = Math.max(0, Math.round(panelRect?.height || 0));
+        const boundaryTop = Math.max(viewportPadding, Math.round(bounds?.top || viewportPadding));
+        const boundaryBottom = Math.max(boundaryTop, Math.round(bounds?.bottom || 0));
+        const minLeft = viewportPadding;
+        const maxLeft = Math.max(viewportPadding, viewportWidth - viewportPadding - panelWidth);
+        const preferredLeft = Math.round((anchorRect?.right || 0) - panelWidth);
+        const spaceBelow = Math.max(0, boundaryBottom - (anchorRect?.bottom || 0) - offset);
+        const spaceAbove = Math.max(0, (anchorRect?.top || 0) - boundaryTop - offset);
+        const shouldOpenUpward = panelHeight > spaceBelow && spaceAbove > spaceBelow;
+        const preferredTop = shouldOpenUpward
+            ? Math.round((anchorRect?.top || 0) - panelHeight - offset)
+            : Math.round((anchorRect?.bottom || 0) + offset);
+        const minTop = boundaryTop;
+        const maxTop = Math.max(boundaryTop, boundaryBottom - panelHeight);
+
+        return {
+            left: clamp(preferredLeft, minLeft, maxLeft),
+            top: clamp(preferredTop, minTop, maxTop),
+            placement: shouldOpenUpward ? 'top' : 'bottom',
+        };
+    }
+
+    function isPaletteInteractionTarget(root, target) {
+        if (!root || !target) return false;
+        if (root.contains(target)) return true;
+
+        const ownerId = root.getAttribute('data-planning-palette-owner');
+        if (!ownerId) return false;
+
+        const elementTarget = target.nodeType === 1 ? target : target.parentElement;
+        if (!elementTarget || typeof elementTarget.closest !== 'function') return false;
+
+        const ownerNode = elementTarget.closest('[data-planning-palette-owner]');
+        return !!(ownerNode && ownerNode.getAttribute('data-planning-palette-owner') === ownerId);
+    }
+
+    function ColorPalettePicker({
+        pickerRef,
+        isOpen,
+        currentColor,
+        occupiedColors,
+        hasAvailableColors,
+        title,
+        onToggle,
+        onPick,
+    }) {
+        const normalizedCurrent = normalizePaletteHex(currentColor);
+        const paletteOwnerRef = useRef('planning-palette-' + Math.random().toString(36).slice(2));
+        const palettePanelRef = useRef(null);
+        const [floatingPaletteState, setFloatingPaletteState] = useState({
+            left: 12,
+            top: 12,
+            placement: 'bottom',
+            ready: false,
+        });
+
+        React.useLayoutEffect(() => {
+            if (!isOpen || !ReactDOM) {
+                setFloatingPaletteState((current) => (
+                    current.ready
+                        ? { ...current, ready: false }
+                        : current
+                ));
+                return undefined;
+            }
+
+            const updatePosition = () => {
+                const root = pickerRef?.current;
+                const panel = palettePanelRef.current;
+                if (!root || !panel || typeof window === 'undefined') return;
+
+                const anchor = root.querySelector('.planning-project-group__color-btn') || root;
+                const bounds = resolvePaletteFloatingBounds(anchor);
+                const nextPosition = resolvePaletteFloatingPosition(
+                    anchor.getBoundingClientRect(),
+                    panel.getBoundingClientRect(),
+                    bounds,
+                );
+
+                setFloatingPaletteState((current) => {
+                    if (
+                        current.left === nextPosition.left
+                        && current.top === nextPosition.top
+                        && current.placement === nextPosition.placement
+                        && current.ready
+                    ) {
+                        return current;
+                    }
+                    return { ...nextPosition, ready: true };
+                });
+            };
+
+            updatePosition();
+            window.addEventListener('resize', updatePosition);
+            window.addEventListener('scroll', updatePosition, true);
+            return () => {
+                window.removeEventListener('resize', updatePosition);
+                window.removeEventListener('scroll', updatePosition, true);
+            };
+        }, [isOpen, pickerRef]);
+
+        const paletteNode = h('div', {
+            className: 'planning-project-group__palette' + (ReactDOM ? ' planning-project-group__palette--floating' : ''),
+            ref: palettePanelRef,
+            'data-planning-palette-owner': paletteOwnerRef.current,
+            'data-planning-palette-placement': floatingPaletteState.placement,
+            style: ReactDOM
+                ? {
+                    left: floatingPaletteState.left + 'px',
+                    top: floatingPaletteState.top + 'px',
+                    visibility: floatingPaletteState.ready ? 'visible' : 'hidden',
+                }
+                : undefined,
+            onClick: (event) => event.stopPropagation(),
+        },
+            h('div', { className: 'planning-project-group__palette-title' }, title || 'Цвет группы'),
+            h('div', { className: 'planning-project-group__palette-grid' },
+                PROJECT_COLORS.map((color) => {
+                    const normalized = normalizePaletteHex(color);
+                    const disabled = !!(hasAvailableColors && occupiedColors.has(normalized));
+                    const active = normalized === normalizedCurrent;
+
+                    return h('button', {
+                        key: color,
+                        type: 'button',
+                        className: 'planning-project-group__swatch' + (active ? ' active' : '') + (disabled ? ' disabled' : ''),
+                        style: { '--planning-swatch-color': color },
+                        title: disabled ? 'Уже используется другой группой' : ('Выбрать ' + color),
+                        'aria-label': disabled ? ('Цвет ' + color + ' уже используется') : ('Выбрать цвет ' + color),
+                        disabled,
+                        onClick: (event) => {
+                            event.stopPropagation();
+                            if (disabled) return;
+                            onPick(color);
+                        },
+                    },
+                        active && h('span', { className: 'planning-project-group__swatch-check' }, '✓'),
+                    );
+                }),
+            ),
+        );
+
+        return h('div', {
+            className: 'planning-project-group__color-picker',
+            ref: pickerRef,
+            'data-planning-palette-owner': paletteOwnerRef.current,
+            onClick: (event) => event.stopPropagation(),
+        },
+            h('button', {
+                type: 'button',
+                className: 'planning-project-group__color-btn' + (isOpen ? ' active' : ''),
+                title: title || 'Выбрать цвет группы',
+                'aria-label': title || 'Выбрать цвет группы',
+                'aria-expanded': isOpen ? 'true' : 'false',
+                onClick: (event) => {
+                    event.stopPropagation();
+                    onToggle();
+                },
+            },
+                h(ColorShuffleIcon),
+            ),
+            isOpen && (ReactDOM ? ReactDOM.createPortal(paletteNode, document.body) : paletteNode),
+        );
+    }
+
+    function DurationFieldButton({ value, placeholder, kicker, compact, minimal, onClick }) {
+        const formattedValue = formatDurationLabel(value);
+        const compactValue = formatDurationCompactLabel(value);
+        const label = minimal
+            ? (compactValue || placeholder || 'мин/дн')
+            : (formattedValue || placeholder || 'Выбрать');
+        const isEmpty = minimal ? !compactValue : !formattedValue;
+        const secondaryText = kicker || '';
+        const ariaLabel = formattedValue
+            ? ('Длительность: ' + formattedValue)
+            : 'Выбрать длительность';
+
+        return h('button', {
+            type: 'button',
+            className: 'planning-duration-trigger'
+                + (compact ? ' planning-duration-trigger--compact' : '')
+                + (minimal ? ' planning-duration-trigger--minimal' : '')
+                + (kicker ? ' planning-duration-trigger--kicker' : '')
+                + (isEmpty ? ' is-empty' : ''),
+            'aria-label': ariaLabel,
+            onClick,
+        },
+            minimal
+                ? h(React.Fragment, null,
+                    h('span', { className: 'planning-duration-trigger__icon', 'aria-hidden': 'true' }, '⏱'),
+                    h('span', { className: 'planning-duration-trigger__value' }, label),
+                )
+                : h(React.Fragment, null,
+                    h('span', { className: 'planning-duration-trigger__value' }, label),
+                    secondaryText && h('span', { className: 'planning-duration-trigger__kicker' }, secondaryText),
+                    h('span', { className: 'planning-duration-trigger__icon', 'aria-hidden': 'true' }, '⏱'),
+                ),
+        );
+    }
+
+    function DurationPresetModal({ title, subtitle, value, onSelect, onClose }) {
+        const normalizedValue = normalizeDurationMinutes(value);
+        const [customMinutes, setCustomMinutes] = useState(() => (
+            normalizedValue && !DURATION_PRESET_BY_MINUTES.has(normalizedValue)
+                ? String(normalizedValue)
+                : ''
+        ));
+
+        React.useEffect(() => {
+            const nextValue = normalizeDurationMinutes(value);
+            if (nextValue && !DURATION_PRESET_BY_MINUTES.has(nextValue)) {
+                setCustomMinutes(String(nextValue));
+                return;
+            }
+            setCustomMinutes('');
+        }, [value]);
+
+        React.useEffect(() => {
+            const handleKeyDown = (event) => {
+                if (event.key !== 'Escape') return;
+                event.preventDefault();
+                onClose();
+            };
+            window.addEventListener('keydown', handleKeyDown);
+            return () => window.removeEventListener('keydown', handleKeyDown);
+        }, [onClose]);
+
+        const handlePresetSelect = (minutes) => {
+            onSelect(minutes);
+            onClose();
+        };
+
+        const handleCustomApply = () => {
+            const minutes = normalizeDurationMinutes(customMinutes);
+            if (!minutes) return;
+            onSelect(minutes);
+            onClose();
+        };
+
+        return h('div', {
+            className: 'planning-modal-overlay planning-modal-overlay--nested',
+            onClick: (event) => {
+                event.stopPropagation();
+                onClose();
+            },
+        },
+            h('div', {
+                className: 'planning-modal planning-modal--picker',
+                onClick: (event) => event.stopPropagation(),
+            },
+                h('div', { className: 'planning-modal__header' },
+                    h('span', null, title || 'Длительность'),
+                    h('button', { type: 'button', className: 'planning-modal__close', onClick: onClose }, '×'),
+                ),
+                h('div', { className: 'planning-modal__body' },
+                    subtitle && h('div', { className: 'planning-duration-modal__hint' }, subtitle),
+                    h('div', { className: 'planning-duration-modal__grid' },
+                        DURATION_PRESETS.map((preset) => {
+                            const active = normalizedValue === preset.minutes;
+                            return h('button', {
+                                key: preset.minutes,
+                                type: 'button',
+                                className: 'planning-duration-modal__option' + (active ? ' active' : ''),
+                                'aria-pressed': active ? 'true' : 'false',
+                                onClick: () => handlePresetSelect(preset.minutes),
+                            },
+                                h('span', { className: 'planning-duration-modal__option-label' }, preset.label),
+                                h('span', { className: 'planning-duration-modal__option-meta' }, preset.shortLabel),
+                            );
+                        }),
+                    ),
+                    h('div', { className: 'planning-modal__section planning-duration-modal__custom-section' },
+                        h('div', { className: 'planning-modal__section-title' }, 'Свой вариант'),
+                        h('div', { className: 'planning-duration-modal__custom' },
+                            h('input', {
+                                className: 'planning-modal__input',
+                                type: 'number',
+                                min: 1,
+                                placeholder: 'Минуты',
+                                value: customMinutes,
+                                onChange: (event) => setCustomMinutes(event.target.value),
+                                onKeyDown: (event) => {
+                                    if (event.key === 'Enter') handleCustomApply();
+                                },
+                            }),
+                            h('button', {
+                                type: 'button',
+                                className: 'planning-btn planning-btn--primary',
+                                disabled: !normalizeDurationMinutes(customMinutes),
+                                onClick: handleCustomApply,
+                            }, 'Применить'),
+                        ),
+                        h('div', { className: 'planning-duration-modal__custom-hint' }, 'Если пресеты не подходят, можно указать точное число минут.'),
+                    ),
+                ),
+                h('div', { className: 'planning-modal__footer planning-modal__footer--spread' },
+                    h('button', {
+                        type: 'button',
+                        className: 'planning-btn',
+                        onClick: () => {
+                            onSelect(null);
+                            onClose();
+                        },
+                    }, 'Без оценки'),
+                    h('button', { type: 'button', className: 'planning-btn', onClick: onClose }, 'Закрыть'),
+                ),
+            ),
+        );
+    }
+
+    function TaskStatusToggle({ task, onUpdate }) {
+        const isDone = task.status === 'done';
+        const isCancelled = task.status === 'cancelled';
+        const isTerminal = isDone || isCancelled;
+        const icon = isCancelled
+            ? (STATUS_CONFIG.cancelled?.icon || '✕')
+            : (isDone ? (STATUS_CONFIG.done?.icon || '●') : (STATUS_CONFIG.todo?.icon || '○'));
+        const label = isCancelled
+            ? 'Задача отменена'
+            : (isDone ? 'Задача завершена' : 'Завершить задачу');
+
+        return h('button', {
+            className: 'planning-status-toggle' + (isTerminal ? ' is-terminal' : ''),
+            type: 'button',
+            'aria-label': label,
+            title: label,
+            disabled: isTerminal,
+            onClick: (event) => {
+                event.stopPropagation();
+                if (isTerminal) return;
+                onUpdate(task.id, { status: 'done' });
+            },
+        }, icon);
+    }
+
+    function collectDescendantIds(tasks, rootId) {
+        const result = new Set();
+        const queue = [rootId];
+        while (queue.length > 0) {
+            const currentId = queue.shift();
+            tasks.forEach((task) => {
+                if (task.parentTaskId === currentId && !result.has(task.id)) {
+                    result.add(task.id);
+                    queue.push(task.id);
+                }
+            });
+        }
+        return result;
+    }
+
+    function normalizePaletteHex(value) {
+        const input = String(value || '').trim().toLowerCase();
+        if (!input) return null;
+        if (/^#[0-9a-f]{6}$/.test(input)) return input;
+        if (/^#[0-9a-f]{3}$/.test(input)) {
+            return '#' + input.slice(1).split('').map((char) => char + char).join('');
+        }
+        return null;
+    }
+
+    function isTaskTerminal(task) {
+        return task?.status === 'done' || task?.status === 'cancelled';
+    }
+
+    function buildTaskChildrenMap(tasks) {
+        const map = new Map();
+
+        (Array.isArray(tasks) ? tasks : []).forEach((task) => {
+            const key = task?.parentTaskId || '';
+            const bucket = map.get(key) || [];
+            bucket.push(task);
+            map.set(key, bucket);
+        });
+
+        map.forEach((items, key) => {
+            map.set(key, sortByOrder(items));
+        });
+
+        return map;
+    }
+
+    function buildTaskLookup(tasks) {
+        return new Map((Array.isArray(tasks) ? tasks : [])
+            .filter(Boolean)
+            .map((task) => [task.id, task]));
+    }
+
+    function resolveTaskProjectScope(taskId, taskLookup, validProjectIds, cache, trail) {
+        if (!taskId || !taskLookup.has(taskId)) return undefined;
+        if (cache.has(taskId)) return cache.get(taskId);
+        if (trail.has(taskId)) return undefined;
+
+        trail.add(taskId);
+        const task = taskLookup.get(taskId);
+        let resolvedProjectId;
+
+        if (task?.parentTaskId && taskLookup.has(task.parentTaskId)) {
+            resolvedProjectId = resolveTaskProjectScope(task.parentTaskId, taskLookup, validProjectIds, cache, trail);
+        } else {
+            const rawProjectId = task?.projectId || undefined;
+            resolvedProjectId = rawProjectId && validProjectIds.has(rawProjectId)
+                ? rawProjectId
+                : undefined;
+        }
+
+        trail.delete(taskId);
+        cache.set(taskId, resolvedProjectId);
+        return resolvedProjectId;
+    }
+
+    function buildResolvedTaskProjectMap(tasks, projects) {
+        const taskLookup = buildTaskLookup(tasks);
+        const validProjectIds = new Set((Array.isArray(projects) ? projects : [])
+            .map((project) => project?.id)
+            .filter(Boolean));
+        const cache = new Map();
+
+        taskLookup.forEach((task, taskId) => {
+            resolveTaskProjectScope(taskId, taskLookup, validProjectIds, cache, new Set());
+        });
+
+        return cache;
+    }
+
+    function getResolvedTaskProjectId(taskId, resolvedTaskProjectIds) {
+        if (!taskId || !resolvedTaskProjectIds?.has(taskId)) return undefined;
+        return resolvedTaskProjectIds.get(taskId) || undefined;
+    }
+
+    function countCompletedBranchTasks(taskId, childrenMap) {
+        const queue = (childrenMap.get(taskId) || []).slice();
+        let completedCount = 0;
+
+        while (queue.length > 0) {
+            const current = queue.shift();
+            if (!current) continue;
+            if (isTaskTerminal(current)) completedCount += 1;
+            const nestedChildren = childrenMap.get(current.id) || [];
+            nestedChildren.forEach((child) => queue.push(child));
+        }
+
+        return completedCount;
+    }
+
+    function buildScopedToneVars(color) {
+        const normalized = normalizePaletteHex(color) || '#94a3b8';
+        return {
+            '--planning-project-color': normalized,
+            '--planning-project-color-soft': normalized + '16',
+            '--planning-project-color-border': normalized + '2e',
+        };
+    }
+
+    function pickDistinctTaskGroupColor(tasks, projects, options) {
+        const excludeTaskId = options?.excludeTaskId || null;
+        const excludeColor = normalizePaletteHex(options?.excludeColor);
+        const usedColors = new Set();
+
+        (Array.isArray(projects) ? projects : []).forEach((project) => {
+            const normalized = normalizePaletteHex(project?.color);
+            if (normalized) usedColors.add(normalized);
+        });
+
+        (Array.isArray(tasks) ? tasks : []).forEach((task) => {
+            if (!task || task.id === excludeTaskId) return;
+            const normalized = normalizePaletteHex(task.subprojectColor);
+            if (normalized) usedColors.add(normalized);
+        });
+
+        const available = PROJECT_COLORS
+            .map((color) => normalizePaletteHex(color))
+            .filter((color) => color && color !== excludeColor && !usedColors.has(color));
+
+        if (available.length > 0) return available[0];
+
+        const fallback = PROJECT_COLORS
+            .map((color) => normalizePaletteHex(color))
+            .filter((color) => color && color !== excludeColor);
+
+        return fallback[0] || '#94a3b8';
+    }
+
+    function createQuickTargetValue(kind, id) {
+        if (kind === 'project' && id) return 'project:' + id;
+        if (kind === 'task' && id) return 'task:' + id;
+        return '';
+    }
+
+    function parseQuickTargetValue(value) {
+        const rawValue = String(value || '');
+        if (!rawValue) return { kind: 'root' };
+        if (rawValue.indexOf('project:') === 0) return { kind: 'project', id: rawValue.slice(8) };
+        if (rawValue.indexOf('task:') === 0) return { kind: 'task', id: rawValue.slice(5) };
+        return { kind: 'root' };
+    }
+
+    function buildQuickTargetTaskLabel(title, depth) {
+        const safeTitle = String(title || '').trim() || 'Без названия';
+        const indent = '\u00A0\u00A0\u00A0\u00A0'.repeat(Math.max(depth + 1, 1));
+        return indent + '↳ ' + safeTitle;
+    }
+
+    function appendQuickTargetTaskOptions(options, tasks, resolvedTaskProjectIds, projectId, parentTaskId, depth) {
+        const siblings = sortByOrder((tasks || []).filter((task) => (
+            (task.parentTaskId || '') === (parentTaskId || '')
+            && (
+                parentTaskId
+                    ? true
+                    : (getResolvedTaskProjectId(task.id, resolvedTaskProjectIds) || '') === (projectId || '')
+            )
+        )));
+
+        siblings.forEach((task) => {
+            options.push({
+                value: createQuickTargetValue('task', task.id),
+                label: buildQuickTargetTaskLabel(task.title, depth),
+            });
+            appendQuickTargetTaskOptions(options, tasks, resolvedTaskProjectIds, projectId, task.id, depth + 1);
+        });
+    }
+
+    function buildQuickTargetOptions(projects, tasks, resolvedTaskProjectIds) {
+        const options = [{ value: '', label: '📁 Без проекта' }];
+        appendQuickTargetTaskOptions(options, tasks, resolvedTaskProjectIds, '', undefined, 0);
+
+        (projects || []).forEach((project) => {
+            options.push({
+                value: createQuickTargetValue('project', project.id),
+                label: '📁 ' + project.name,
+            });
+            appendQuickTargetTaskOptions(options, tasks, resolvedTaskProjectIds, project.id, undefined, 0);
+        });
+
+        return options;
+    }
+
+    function resolveQuickTargetValue(targetValue, tasks, resolvedTaskProjectIds) {
+        const parsed = parseQuickTargetValue(targetValue);
+        if (parsed.kind === 'project') {
+            return { projectId: parsed.id || undefined, parentTaskId: undefined };
+        }
+        if (parsed.kind === 'task') {
+            const parentTask = (tasks || []).find((task) => task.id === parsed.id);
+            if (!parentTask) return { projectId: undefined, parentTaskId: undefined };
+            return {
+                projectId: getResolvedTaskProjectId(parentTask.id, resolvedTaskProjectIds),
+                parentTaskId: parentTask.id,
+            };
+        }
+        return { projectId: undefined, parentTaskId: undefined };
+    }
+
+    function findProjectName(projectId, projects) {
+        if (!projectId) return 'Без проекта';
+        const project = (projects || []).find((entry) => entry.id === projectId);
+        return project?.name || 'Без проекта';
+    }
+
+    function buildTaskLineage(taskId, tasks) {
+        const taskMap = new Map((tasks || []).map((task) => [task.id, task]));
+        const lineage = [];
+        let currentTask = taskMap.get(taskId);
+        let guard = 0;
+
+        while (currentTask && guard < 120) {
+            lineage.unshift(currentTask);
+            currentTask = currentTask.parentTaskId ? taskMap.get(currentTask.parentTaskId) : null;
+            guard += 1;
+        }
+
+        return lineage;
+    }
+
+    function buildParentGroupLabel(task, taskLookup) {
+        if (!task?.parentTaskId || !taskLookup?.has(task.parentTaskId)) return '';
+
+        const titles = [];
+        const seen = new Set([task.id]);
+        let currentId = task.parentTaskId;
+        let guard = 0;
+
+        while (currentId && taskLookup.has(currentId) && guard < 120 && !seen.has(currentId)) {
+            const currentTask = taskLookup.get(currentId);
+            const currentTitle = String(currentTask?.title || '').trim();
+
+            if (currentTitle) titles.unshift(currentTitle);
+
+            seen.add(currentId);
+            currentId = currentTask?.parentTaskId || '';
+            guard += 1;
+        }
+
+        return titles.join(' → ');
+    }
+
+    function buildQuickTargetPreview(targetValue, projects, tasks, resolvedTaskProjectIds) {
+        const parsed = parseQuickTargetValue(targetValue);
+        if (parsed.kind !== 'task' || !parsed.id) return null;
+
+        const lineage = buildTaskLineage(parsed.id, tasks);
+        if (lineage.length === 0) return null;
+
+        const leafTask = lineage[lineage.length - 1];
+        const parentPath = lineage.slice(0, -1).map((task) => String(task.title || '').trim()).filter(Boolean);
+        const projectName = findProjectName(getResolvedTaskProjectId(leafTask.id, resolvedTaskProjectIds), projects);
+        const contextParts = [projectName].concat(parentPath).filter(Boolean);
+
+        return {
+            context: contextParts.join(' / '),
+            primary: String(leafTask.title || '').trim() || 'Подзадача',
+        };
+    }
+
+    function buildTaskMetaBadges(task) {
+        const todayIso = dateStr();
+        const tomorrowIso = addDaysToIsoDate(todayIso, 1);
+        const badges = [];
+        const isTerminal = task?.status === 'done' || task?.status === 'cancelled';
+
+        if (task?.startDate && task.startDate !== todayIso) {
+            badges.push({
+                key: 'start',
+                tone: 'start',
+                label: 'Старт ' + formatIsoDateShort(task.startDate, todayIso, tomorrowIso),
+            });
+        }
+
+        if (task?.dueDate) {
+            let tone = 'due';
+            if (!isTerminal && task.dueDate < todayIso) tone = 'due-overdue';
+            else if (!isTerminal && task.dueDate === todayIso) tone = 'due-today';
+
+            badges.push({
+                key: 'due',
+                tone,
+                label: 'Дедлайн ' + formatIsoDateShort(task.dueDate, todayIso, tomorrowIso),
+            });
+        }
+
+        if (task?.plannedMinutes) {
+            badges.push({
+                key: 'duration',
+                tone: 'duration',
+                label: formatDurationLabel(task.plannedMinutes),
+            });
+        }
+
+        return badges;
+    }
+
+    function TaskRow(props) {
+        const {
+            task,
+            taskLookup,
+            depth,
+            isMobile,
+            onUpdate,
+            onDelete,
+            onSelect,
+            onStartQuickAddSubtask,
+            onDropTask,
+            extraActions,
+            actionsClassName,
+        } = props;
+
+        const [editing, setEditing] = useState(false);
+        const [draftTitle, setDraftTitle] = useState(task.title);
+        const priority = PRIORITY_CONFIG[task.priority] || PRIORITY_CONFIG.p2;
+        const isDone = task.status === 'done' || task.status === 'cancelled';
+        const metaBadges = buildTaskMetaBadges(task);
+        const trailingActions = React.Children.toArray(extraActions);
+
+        const commitTitle = () => {
+            const nextTitle = String(draftTitle || '').trim();
+            if (nextTitle && nextTitle !== task.title) {
+                onUpdate(task.id, { title: nextTitle });
+            }
+            setEditing(false);
+            setDraftTitle(nextTitle || task.title);
+        };
+
+        const rowContent = h('div', {
+            className: 'planning-task-row' + (isDone ? ' planning-task-row--done' : ''),
+            draggable: !isMobile,
+            onDragStart: (event) => {
+                event.dataTransfer.effectAllowed = 'move';
+                event.dataTransfer.setData('text/heys-planning-task', JSON.stringify({ taskId: task.id }));
+            },
+            onDragOver: (event) => {
+                event.preventDefault();
+                event.dataTransfer.dropEffect = 'move';
+            },
+            onDrop: (event) => {
+                event.preventDefault();
+                try {
+                    const payload = JSON.parse(event.dataTransfer.getData('text/heys-planning-task'));
+                    if (payload?.taskId) onDropTask(payload.taskId, task.id);
+                } catch (error) {
+                    console.warn('[HEYS.planning] Invalid task reorder payload:', error?.message || error);
+                }
+            },
+        },
+            h('div', {
+                className: 'planning-task-row__indent',
+                style: { width: (depth * 18) + 'px' },
+            }),
+            h(TaskStatusToggle, { task, onUpdate }),
+            h('div', {
+                className: 'planning-task-row__body',
+                onClick: () => {
+                    if (!editing) onSelect(task.id);
+                },
+            },
+                editing
+                    ? h('input', {
+                        className: 'planning-inline-input',
+                        value: draftTitle,
+                        autoFocus: true,
+                        onChange: (event) => setDraftTitle(event.target.value),
+                        onBlur: commitTitle,
+                        onKeyDown: (event) => {
+                            if (event.key === 'Enter') commitTitle();
+                            if (event.key === 'Escape') {
+                                setDraftTitle(task.title);
+                                setEditing(false);
+                            }
+                        },
+                        onClick: (event) => event.stopPropagation(),
+                    })
+                    : h('button', {
+                        type: 'button',
+                        className: 'planning-task-row__title-trigger',
+                        title: 'Изменить название',
+                        onClick: (event) => {
+                            event.stopPropagation();
+                            setEditing(true);
+                        },
+                    },
+                        h('span', { className: 'planning-task-row__title' }, task.title),
+                    ),
+                metaBadges.length > 0 && h('div', { className: 'planning-task-row__meta-list' },
+                    metaBadges.map((badge) => h('span', {
+                        key: badge.key,
+                        className: 'planning-task-row__meta-chip planning-task-row__meta-chip--' + badge.tone,
+                    }, badge.label)),
+                ),
+            ),
+            h('span', {
+                className: 'planning-task-row__priority',
+                style: { color: priority.color },
+            }, priority.label),
+            h('div', { className: 'planning-task-row__actions' + (actionsClassName ? (' ' + actionsClassName) : '') },
+                trailingActions,
+                h('button', {
+                    type: 'button',
+                    className: 'planning-icon-btn',
+                    title: 'Добавить подзадачу',
+                    onClick: (event) => {
+                        event.stopPropagation();
+                        onStartQuickAddSubtask(task);
+                    },
+                }, '↳'),
+            ),
+        );
+
+        return h('div', {
+            className: 'planning-task-node' + (isDone ? ' planning-task-node--done' : ''),
+            style: { '--planning-depth': depth },
+        },
+            (isMobile && HEYS.SwipeableRow)
+                ? h(HEYS.SwipeableRow, {
+                    onDelete: () => onDelete(task.id),
+                    className: 'planning-task-swipe',
+                }, rowContent)
+                : rowContent,
+        );
+    }
+
+    function TaskBranch(props) {
+        const { task, depth, childrenMap } = props;
+        const children = childrenMap.get(task.id) || [];
+
+        if (children.length === 0) {
+            return h(TaskRow, {
+                task,
+                taskLookup: props.taskLookup,
+                depth,
+                isMobile: props.isMobile,
+                onUpdate: props.onUpdateTask,
+                onDelete: props.onDeleteTask,
+                onSelect: props.onSelectTask,
+                onStartQuickAddSubtask: props.onStartQuickAddSubtask,
+                onDropTask: props.onReorderTasks,
+            });
+        }
+
+        return h(TaskSubgroupGroup, props);
+    }
+
+    function TaskSubgroupGroup(props) {
+        const {
+            task,
+            depth,
+            taskLookup,
+            tasks,
+            projects,
+            childrenMap,
+            isMobile,
+            onUpdateTask,
+            onDeleteTask,
+            onSelectTask,
+            onStartQuickAddSubtask,
+            onReorderTasks,
+            forceShowCompleted,
+        } = props;
+
+        const [showColorPalette, setShowColorPalette] = useState(false);
+        const [showCompleted, setShowCompleted] = useState(false);
+        const colorPickerRef = useRef(null);
+        const subgroupColor = normalizePaletteHex(task.subprojectColor) || '#94a3b8';
+        const toneVars = useMemo(() => buildScopedToneVars(subgroupColor), [subgroupColor]);
+        const directChildren = childrenMap.get(task.id) || [];
+        const activeChildren = directChildren.filter((entry) => !isTaskTerminal(entry));
+        const completedChildren = directChildren.filter((entry) => isTaskTerminal(entry));
+        const completedCount = useMemo(() => countCompletedBranchTasks(task.id, childrenMap), [task.id, childrenMap]);
+        const revealCompleted = !!(forceShowCompleted || showCompleted);
+        const occupiedColors = useMemo(() => new Set(
+            (projects || [])
+                .map((entry) => normalizePaletteHex(entry?.color))
+                .concat((tasks || [])
+                    .filter((entry) => entry && entry.id !== task.id)
+                    .map((entry) => normalizePaletteHex(entry.subprojectColor)))
+                .filter(Boolean),
+        ), [projects, task.id, tasks]);
+        const hasAvailableColors = useMemo(
+            () => PROJECT_COLORS.some((color) => {
+                const normalized = normalizePaletteHex(color);
+                return normalized && !occupiedColors.has(normalized);
+            }),
+            [occupiedColors],
+        );
+
+        React.useEffect(() => {
+            if (!showColorPalette) return undefined;
+            const handlePointerDown = (event) => {
+                const root = colorPickerRef.current;
+                if (!root || isPaletteInteractionTarget(root, event.target)) return;
+                setShowColorPalette(false);
+            };
+            window.addEventListener('pointerdown', handlePointerDown);
+            return () => window.removeEventListener('pointerdown', handlePointerDown);
+        }, [showColorPalette]);
+
+        const subgroupActions = [];
+
+        if (completedCount > 0 && !forceShowCompleted) {
+            subgroupActions.push(h('button', {
+                key: 'completed-toggle',
+                type: 'button',
+                className: 'planning-completed-toggle' + (showCompleted ? ' active' : ''),
+                title: showCompleted ? 'Скрыть завершённые задачи подпроекта' : 'Показать завершённые задачи подпроекта',
+                onClick: (event) => {
+                    event.stopPropagation();
+                    setShowCompleted((value) => !value);
+                },
+            }, showCompleted ? 'Скрыть завершённые' : ('Показать завершённые · ' + completedCount)));
+        }
+
+        subgroupActions.push(h(ColorPalettePicker, {
+            key: 'color-picker',
+            pickerRef: colorPickerRef,
+            isOpen: showColorPalette,
+            currentColor: subgroupColor,
+            occupiedColors,
+            hasAvailableColors,
+            title: 'Цвет подпроекта',
+            onToggle: () => setShowColorPalette((value) => !value),
+            onPick: (color) => {
+                onUpdateTask(task.id, { subprojectColor: color });
+                setShowColorPalette(false);
+            },
+        }));
+
+        return h('section', {
+            className: 'planning-project-group planning-project-group--subgroup'
+                + (showColorPalette ? ' planning-project-group--palette-open' : ''),
+            style: toneVars,
+        },
+            h('div', { className: 'planning-task-group__header' },
+                h(TaskRow, {
+                    task,
+                    taskLookup,
+                    depth,
+                    isMobile,
+                    onUpdate: onUpdateTask,
+                    onDelete: onDeleteTask,
+                    onSelect: onSelectTask,
+                    onStartQuickAddSubtask,
+                    onDropTask: onReorderTasks,
+                    extraActions: subgroupActions,
+                    actionsClassName: 'planning-task-row__actions--group',
+                }),
+            ),
+            h('div', { className: 'planning-project-group__tasks planning-task-group__tasks' },
+                activeChildren.map((child) => h(TaskBranch, {
+                    key: child.id,
+                    task: child,
+                    taskLookup,
+                    depth: depth + 1,
+                    tasks,
+                    projects,
+                    childrenMap,
+                    isMobile,
+                    onUpdateTask,
+                    onDeleteTask,
+                    onSelectTask,
+                    onStartQuickAddSubtask,
+                    onReorderTasks,
+                    forceShowCompleted: revealCompleted,
+                })),
+                revealCompleted && completedChildren.map((child) => h(TaskBranch, {
+                    key: child.id,
+                    task: child,
+                    taskLookup,
+                    depth: depth + 1,
+                    tasks,
+                    projects,
+                    childrenMap,
+                    isMobile,
+                    onUpdateTask,
+                    onDeleteTask,
+                    onSelectTask,
+                    onStartQuickAddSubtask,
+                    onReorderTasks,
+                    forceShowCompleted: revealCompleted,
+                })),
+                activeChildren.length === 0 && completedCount > 0 && !revealCompleted
+                    ? h('div', { className: 'planning-empty planning-empty--inline planning-empty--completed-hint' }, 'Завершённые внутри подпроекта скрыты.')
+                    : null,
+            ),
+        );
+    }
+
+    function ProjectGroup(props) {
+        const {
+            project,
+            projects,
+            tasks,
+            taskLookup,
+            isMobile,
+            onUpdateTask,
+            onDeleteTask,
+            onSelectTask,
+            onStartQuickAddProject,
+            onStartQuickAddSubtask,
+            onUpdateProject,
+            onReorderTasks,
+            forceShowCompleted,
+        } = props;
+
+        const [collapsed, setCollapsed] = useState(false);
+        const [showColorPalette, setShowColorPalette] = useState(false);
+        const [showCompleted, setShowCompleted] = useState(false);
+        const colorPickerRef = useRef(null);
+        const projectTone = normalizePaletteHex(project.color) || '#94a3b8';
+        const toneVars = useMemo(() => buildScopedToneVars(projectTone), [projectTone]);
+        const occupiedColors = useMemo(() => new Set(
+            (projects || [])
+                .filter((entry) => entry && entry.id !== project.id)
+                .map((entry) => normalizePaletteHex(entry.color))
+                .filter(Boolean),
+        ), [project.id, projects]);
+        const hasAvailableColors = useMemo(() => PROJECT_COLORS.some((color) => {
+            const normalized = normalizePaletteHex(color);
+            return normalized && !occupiedColors.has(normalized);
+        }), [occupiedColors]);
+        const childrenMap = useMemo(() => buildTaskChildrenMap(tasks), [tasks]);
+        const topLevelTasks = childrenMap.get('') || [];
+        const activeTopLevelTasks = topLevelTasks.filter((task) => !isTaskTerminal(task));
+        const completedTopLevelTasks = topLevelTasks.filter((task) => isTaskTerminal(task));
+        const activeTaskCount = useMemo(() => tasks.filter((task) => !isTaskTerminal(task)).length, [tasks]);
+        const completedTaskCount = useMemo(() => tasks.filter((task) => isTaskTerminal(task)).length, [tasks]);
+        const revealCompleted = !!(forceShowCompleted || showCompleted);
+
+        React.useEffect(() => {
+            if (!showColorPalette) return undefined;
+            const handlePointerDown = (event) => {
+                const root = colorPickerRef.current;
+                if (!root || isPaletteInteractionTarget(root, event.target)) return;
+                setShowColorPalette(false);
+            };
+            window.addEventListener('pointerdown', handlePointerDown);
+            return () => window.removeEventListener('pointerdown', handlePointerDown);
+        }, [showColorPalette]);
+
+        const handleQuickAddClick = (event) => {
+            event.stopPropagation();
+            onStartQuickAddProject(project.id === '__none__' ? '' : project.id);
+        };
+
+        return h('section', {
+            className: 'planning-project-group' + (showColorPalette ? ' planning-project-group--palette-open' : ''),
+            style: toneVars,
+        },
+            h('div', {
+                className: 'planning-project-group__header',
+                onClick: () => setCollapsed((value) => !value),
+            },
+                h('span', {
+                    className: 'planning-project-group__dot',
+                    style: { background: projectTone },
+                }),
+                h('span', { className: 'planning-project-group__name' }, project.name),
+                h('span', { className: 'planning-project-group__count' }, '(' + activeTaskCount + ')'),
+                h('div', {
+                    className: 'planning-project-group__header-actions',
+                    onClick: (event) => event.stopPropagation(),
+                },
+                    completedTaskCount > 0 && !forceShowCompleted && h('button', {
+                        type: 'button',
+                        className: 'planning-completed-toggle' + (showCompleted ? ' active' : ''),
+                        title: showCompleted ? 'Скрыть завершённые задачи проекта' : 'Показать завершённые задачи проекта',
+                        onClick: (event) => {
+                            event.stopPropagation();
+                            setShowCompleted((value) => !value);
+                        },
+                    }, showCompleted ? 'Скрыть завершённые' : ('Показать завершённые · ' + completedTaskCount)),
+                    project.id !== '__none__' && h(ColorPalettePicker, {
+                        pickerRef: colorPickerRef,
+                        isOpen: showColorPalette,
+                        currentColor: projectTone,
+                        occupiedColors,
+                        hasAvailableColors,
+                        title: 'Цвет категории',
+                        onToggle: () => setShowColorPalette((value) => !value),
+                        onPick: (color) => {
+                            onUpdateProject(project.id, { color });
+                            setShowColorPalette(false);
+                        },
+                    }),
+                    h('button', {
+                        type: 'button',
+                        className: 'planning-project-group__quick-add-btn',
+                        title: project.id === '__none__' ? 'Добавить задачу без проекта' : ('Добавить задачу в «' + project.name + '»'),
+                        onClick: handleQuickAddClick,
+                    }, '+ Задача'),
+                ),
+                h('span', { className: 'planning-project-group__chevron' + (collapsed ? ' collapsed' : '') }, '▾'),
+            ),
+            !collapsed && h('div', { className: 'planning-project-group__tasks' },
+                activeTopLevelTasks.map((task) => h(TaskBranch, {
+                    key: task.id,
+                    task,
+                    taskLookup,
+                    depth: 0,
+                    tasks,
+                    projects,
+                    childrenMap,
+                    isMobile,
+                    onUpdateTask,
+                    onDeleteTask,
+                    onSelectTask,
+                    onStartQuickAddSubtask,
+                    onReorderTasks,
+                    forceShowCompleted: revealCompleted,
+                })),
+                revealCompleted && completedTopLevelTasks.map((task) => h(TaskBranch, {
+                    key: task.id,
+                    task,
+                    taskLookup,
+                    depth: 0,
+                    tasks,
+                    projects,
+                    childrenMap,
+                    isMobile,
+                    onUpdateTask,
+                    onDeleteTask,
+                    onSelectTask,
+                    onStartQuickAddSubtask,
+                    onReorderTasks,
+                    forceShowCompleted: revealCompleted,
+                })),
+                activeTopLevelTasks.length === 0 && completedTaskCount > 0 && !revealCompleted
+                    ? h('div', { className: 'planning-empty planning-empty--inline planning-empty--completed-hint' }, 'Завершённые задачи скрыты до раскрытия.')
+                    : null,
+                activeTopLevelTasks.length === 0 && completedTaskCount === 0
+                    ? h('div', { className: 'planning-empty planning-empty--inline' }, 'Пока нет задач в этой группе.')
+                    : null,
+            ),
+        );
+    }
+
+    function TaskDetailModal({ taskId, state, resolvedTaskProjectIds, onDeleteTask, onClose }) {
+        const { tasks, projects, slots } = state;
+        const task = tasks.find((entry) => entry.id === taskId);
+        const [savedMarker, setSavedMarker] = useState(0);
+        const [showDurationPicker, setShowDurationPicker] = useState(false);
+        if (!task) return null;
+
+        const effectiveProjectId = getResolvedTaskProjectId(task.id, resolvedTaskProjectIds) || '';
+
+        const descendants = useMemo(() => collectDescendantIds(tasks, task.id), [tasks, task.id]);
+        const linkedSlots = useMemo(
+            () => slots.filter((slot) => slot.taskId === task.id),
+            [slots, task.id],
+        );
+
+        const [form, setForm] = useState(() => ({
+            title: task.title,
+            status: task.status,
+            priority: task.priority,
+            projectId: effectiveProjectId,
+            parentTaskId: task.parentTaskId || '',
+            startDate: task.startDate || '',
+            dueDate: task.dueDate || '',
+            plannedMinutes: task.plannedMinutes || '',
+            baselineStartDate: task.baselineStartDate || '',
+            baselineDueDate: task.baselineDueDate || '',
+            baselinePlannedMinutes: task.baselinePlannedMinutes || '',
+            blockedByTaskIds: Array.isArray(task.blockedByTaskIds) ? task.blockedByTaskIds.slice() : [],
+        }));
+
+        React.useEffect(() => {
+            setForm({
+                title: task.title,
+                status: task.status,
+                priority: task.priority,
+                projectId: effectiveProjectId,
+                parentTaskId: task.parentTaskId || '',
+                startDate: task.startDate || '',
+                dueDate: task.dueDate || '',
+                plannedMinutes: task.plannedMinutes || '',
+                baselineStartDate: task.baselineStartDate || '',
+                baselineDueDate: task.baselineDueDate || '',
+                baselinePlannedMinutes: task.baselinePlannedMinutes || '',
+                blockedByTaskIds: Array.isArray(task.blockedByTaskIds) ? task.blockedByTaskIds.slice() : [],
+            });
+        }, [effectiveProjectId, savedMarker, task]);
+
+        const handleField = (field, value) => setForm((current) => ({ ...current, [field]: value }));
+
+        const handleDependencies = (event) => {
+            const values = Array.from(event.target.selectedOptions || []).map((option) => option.value);
+            handleField('blockedByTaskIds', values);
+        };
+
+        const handleSave = () => {
+            const nextTitle = String(form.title || '').trim();
+            if (!nextTitle) return;
+            const nextParentTaskId = form.parentTaskId || undefined;
+            const nextProjectId = nextParentTaskId
+                ? getResolvedTaskProjectId(nextParentTaskId, resolvedTaskProjectIds)
+                : (form.projectId || undefined);
+            state.updateTask(task.id, {
+                title: nextTitle,
+                status: form.status,
+                priority: form.priority,
+                projectId: nextProjectId,
+                parentTaskId: nextParentTaskId,
+                startDate: form.startDate || undefined,
+                dueDate: form.dueDate || undefined,
+                plannedMinutes: form.plannedMinutes ? Number(form.plannedMinutes) : undefined,
+                baselineStartDate: form.baselineStartDate || undefined,
+                baselineDueDate: form.baselineDueDate || undefined,
+                baselinePlannedMinutes: form.baselinePlannedMinutes ? Number(form.baselinePlannedMinutes) : undefined,
+                blockedByTaskIds: form.blockedByTaskIds,
+            });
+            setSavedMarker((value) => value + 1);
+            onClose();
+        };
+
+        const handleQuickSchedule = () => {
+            const slotDate = form.startDate || form.dueDate || dateStr();
+            const plannedMinutes = Number(form.plannedMinutes) > 0 ? Number(form.plannedMinutes) : getTaskDurationMinutes(task);
+            const startMinutes = 9 * 60;
+            state.addSlot({
+                taskId: task.id,
+                date: slotDate,
+                startTime: '09:00',
+                endTime: Planning.Utils.minutesToTime(startMinutes + plannedMinutes),
+                title: '',
+            });
+            onClose();
+        };
+
+        const parentOptions = tasks.filter((entry) => entry.id !== task.id && !descendants.has(entry.id));
+        const dependencyOptions = tasks.filter((entry) => entry.id !== task.id && !descendants.has(entry.id));
+
+        return h('div', { className: 'planning-modal-overlay', onClick: onClose },
+            h('div', { className: 'planning-modal', onClick: (event) => event.stopPropagation() },
+                h('div', { className: 'planning-modal__header' },
+                    h('span', null, 'Задача'),
+                    h('button', { type: 'button', className: 'planning-modal__close', onClick: onClose }, '×'),
+                ),
+                h('div', { className: 'planning-modal__body' },
+                    h('input', {
+                        className: 'planning-modal__input',
+                        value: form.title,
+                        placeholder: 'Название задачи',
+                        onChange: (event) => handleField('title', event.target.value),
+                    }),
+                    h('div', { className: 'planning-modal__grid' },
+                        h('div', { className: 'planning-modal__row' },
+                            h('label', null, 'Статус'),
+                            h('select', { value: form.status, onChange: (event) => handleField('status', event.target.value) },
+                                Object.keys(STATUS_CONFIG).map((key) => h('option', { key, value: key }, STATUS_CONFIG[key].label)),
+                            ),
+                        ),
+                        h('div', { className: 'planning-modal__row' },
+                            h('label', null, 'Приоритет'),
+                            h('select', { value: form.priority, onChange: (event) => handleField('priority', event.target.value) },
+                                Object.keys(PRIORITY_CONFIG).map((key) => h('option', { key, value: key }, PRIORITY_CONFIG[key].label)),
+                            ),
+                        ),
+                    ),
+                    h('div', { className: 'planning-modal__grid' },
+                        h('div', { className: 'planning-modal__row' },
+                            h('label', null, 'Проект'),
+                            h('select', { value: form.projectId, onChange: (event) => handleField('projectId', event.target.value) },
+                                h('option', { value: '' }, '— без проекта —'),
+                                projects.map((project) => h('option', { key: project.id, value: project.id }, project.name)),
+                            ),
+                        ),
+                        h('div', { className: 'planning-modal__row' },
+                            h('label', null, 'Родитель'),
+                            h('select', { value: form.parentTaskId, onChange: (event) => handleField('parentTaskId', event.target.value) },
+                                h('option', { value: '' }, '— верхний уровень —'),
+                                parentOptions.map((entry) => h('option', { key: entry.id, value: entry.id }, entry.title)),
+                            ),
+                        ),
+                    ),
+                    h('div', { className: 'planning-modal__grid' },
+                        h('div', { className: 'planning-modal__row' },
+                            h('label', null, 'Старт'),
+                            h('input', { type: 'date', value: form.startDate, onChange: (event) => handleField('startDate', event.target.value) }),
+                        ),
+                        h('div', { className: 'planning-modal__row' },
+                            h('label', null, 'Дедлайн'),
+                            h('input', { type: 'date', value: form.dueDate, onChange: (event) => handleField('dueDate', event.target.value) }),
+                        ),
+                    ),
+                    h('div', { className: 'planning-modal__grid' },
+                        h('div', { className: 'planning-modal__row' },
+                            h('label', null, 'Длительность'),
+                            h(DurationFieldButton, {
+                                value: form.plannedMinutes,
+                                placeholder: 'Выбрать пресет',
+                                compact: true,
+                                onClick: () => setShowDurationPicker(true),
+                            }),
+                        ),
+                        h('div', { className: 'planning-modal__row' },
+                            h('label', null, 'Зависимости'),
+                            h('select', {
+                                multiple: true,
+                                size: Math.min(4, Math.max(2, dependencyOptions.length || 2)),
+                                value: form.blockedByTaskIds,
+                                onChange: handleDependencies,
+                            },
+                                dependencyOptions.map((entry) => h('option', { key: entry.id, value: entry.id }, entry.title)),
+                            ),
+                        ),
+                    ),
+                    h('div', { className: 'planning-modal__section' },
+                        h('div', { className: 'planning-modal__section-title' }, 'Baseline'),
+                        h('div', { className: 'planning-modal__grid' },
+                            h('div', { className: 'planning-modal__row' },
+                                h('label', null, 'Baseline start'),
+                                h('input', { type: 'date', value: form.baselineStartDate, onChange: (event) => handleField('baselineStartDate', event.target.value) }),
+                            ),
+                            h('div', { className: 'planning-modal__row' },
+                                h('label', null, 'Baseline due'),
+                                h('input', { type: 'date', value: form.baselineDueDate, onChange: (event) => handleField('baselineDueDate', event.target.value) }),
+                            ),
+                        ),
+                        h('div', { className: 'planning-modal__row' },
+                            h('label', null, 'Baseline minutes'),
+                            h('input', { type: 'number', min: 0, value: form.baselinePlannedMinutes, onChange: (event) => handleField('baselinePlannedMinutes', event.target.value) }),
+                        ),
+                    ),
+                    linkedSlots.length > 0 && h('div', { className: 'planning-modal__section' },
+                        h('div', { className: 'planning-modal__section-title' }, 'Привязанные слоты'),
+                        h('div', { className: 'planning-linked-list' },
+                            linkedSlots.map((slot) => h('div', { key: slot.id, className: 'planning-linked-list__item' },
+                                h('span', null, slot.date + ' · ' + slot.startTime + '–' + slot.endTime),
+                            )),
+                        ),
+                    ),
+                ),
+                h('div', { className: 'planning-modal__footer planning-modal__footer--spread' },
+                    h('button', {
+                        type: 'button',
+                        className: 'planning-btn',
+                        onClick: () => {
+                            if (typeof onDeleteTask === 'function') {
+                                onDeleteTask(task.id);
+                            } else {
+                                state.deleteTask(task.id);
+                            }
+                            onClose();
+                        },
+                    }, 'Удалить'),
+                    h('div', { className: 'planning-modal__footer-actions' },
+                        h('button', { type: 'button', className: 'planning-btn', onClick: handleQuickSchedule }, linkedSlots.length > 0 ? 'Добавить слот' : 'Запланировать'),
+                        h('button', { type: 'button', className: 'planning-btn planning-btn--primary', onClick: handleSave }, 'Сохранить'),
+                    ),
+                ),
+            ),
+            showDurationPicker && h(DurationPresetModal, {
+                title: 'Длительность задачи',
+                subtitle: 'Выбери готовый пресет или задай точное число минут.',
+                value: form.plannedMinutes,
+                onSelect: (minutes) => handleField('plannedMinutes', minutes ? String(minutes) : ''),
+                onClose: () => setShowDurationPicker(false),
+            }),
+        );
+    }
+
+    function TasksScreen({ state }) {
+        const quickAddCardRef = useRef(null);
+        const quickAddInputRef = useRef(null);
+        const quickCalendarButtonRef = useRef(null);
+        const quickDateInputRef = useRef(null);
+        const [newTaskTitle, setNewTaskTitle] = useState('');
+        const [newTaskProjectId, setNewTaskProjectId] = useState('');
+        const [newProjectName, setNewProjectName] = useState('');
+        const [pendingDeletedTaskIds, setPendingDeletedTaskIds] = useState(() => new Set());
+        const [selectedPriority, setSelectedPriority] = useState('p2');
+        const [quickDueDate, setQuickDueDate] = useState('');
+        const [quickMinutes, setQuickMinutes] = useState('');
+        const [showFilters, setShowFilters] = useState(false);
+        const [filterStatus, setFilterStatus] = useState('all');
+        const [filterPriority, setFilterPriority] = useState('all');
+        const [filterProject, setFilterProject] = useState('all');
+        const [filterDueBucket, setFilterDueBucket] = useState('all');
+        const [showQuickCalendar, setShowQuickCalendar] = useState(false);
+        const [showQuickDurationPicker, setShowQuickDurationPicker] = useState(false);
+        const [selectedTaskId, setSelectedTaskId] = useState(null);
+        const viewport = Planning.Hooks && Planning.Hooks.usePlanningViewport
+            ? Planning.Hooks.usePlanningViewport()
+            : { isDesktop: false };
+        const isMobile = !viewport.isDesktop;
+        const todayIso = dateStr();
+        const tomorrowIso = addDaysToIsoDate(todayIso, 1);
+        const quickDueDateLabel = formatIsoDateShort(quickDueDate, todayIso, tomorrowIso);
+        const quickDuePreset = quickDueDate === todayIso
+            ? 'today'
+            : (quickDueDate === tomorrowIso ? 'tomorrow' : (quickDueDate ? 'custom' : ''));
+        const activeProjects = state.projects.filter((project) => project.status !== 'archived');
+        const activeFilterCount = useMemo(() => (
+            [filterStatus, filterPriority, filterProject, filterDueBucket].filter((value) => value !== 'all').length
+        ), [filterStatus, filterPriority, filterProject, filterDueBucket]);
+        const forceShowCompleted = filterStatus === 'done';
+        const visibleTasks = useMemo(() => state.tasks.filter((task) => !pendingDeletedTaskIds.has(task.id)), [state.tasks, pendingDeletedTaskIds]);
+        const taskLookup = useMemo(() => new Map(state.tasks.map((task) => [task.id, task])), [state.tasks]);
+        const visibleTaskChildrenMap = useMemo(() => buildTaskChildrenMap(visibleTasks), [visibleTasks]);
+        const resolvedTaskProjectIds = useMemo(() => buildResolvedTaskProjectMap(state.tasks, activeProjects), [activeProjects, state.tasks]);
+        const taskNeedingProjectRepair = useMemo(() => state.tasks.find((task) => {
+            const currentProjectId = task.projectId || undefined;
+            const resolvedProjectId = getResolvedTaskProjectId(task.id, resolvedTaskProjectIds);
+            if (currentProjectId === resolvedProjectId) return false;
+            return !!(task.parentTaskId || currentProjectId);
+        }), [resolvedTaskProjectIds, state.tasks]);
+
+        React.useEffect(() => {
+            if (!taskNeedingProjectRepair) return;
+            state.updateTask(taskNeedingProjectRepair.id, {
+                projectId: getResolvedTaskProjectId(taskNeedingProjectRepair.id, resolvedTaskProjectIds),
+            });
+        }, [resolvedTaskProjectIds, state.updateTask, taskNeedingProjectRepair]);
+
+        const filteredTasks = useMemo(() => visibleTasks.filter((task) => {
+            if (filterStatus !== 'all' && task.status !== filterStatus) return false;
+            if (filterPriority !== 'all' && task.priority !== filterPriority) return false;
+            if (filterProject !== 'all') {
+                const effectiveProjectId = getResolvedTaskProjectId(task.id, resolvedTaskProjectIds) || '__none__';
+                if (effectiveProjectId !== filterProject) return false;
+            }
+            if (filterDueBucket !== 'all') {
+                const bucket = getDueBucket(task, todayIso, state.slots);
+                if (bucket !== filterDueBucket) return false;
+            }
+            return true;
+        }), [filterDueBucket, filterPriority, filterProject, filterStatus, resolvedTaskProjectIds, state.slots, todayIso, visibleTasks]);
+
+        const tasksByProject = useMemo(() => {
+            const map = {};
+            activeProjects.forEach((project) => { map[project.id] = []; });
+            map.__none__ = [];
+            filteredTasks.forEach((task) => {
+                const resolvedProjectId = getResolvedTaskProjectId(task.id, resolvedTaskProjectIds);
+                const key = resolvedProjectId && map[resolvedProjectId] ? resolvedProjectId : '__none__';
+                map[key].push(task);
+            });
+            return map;
+        }, [activeProjects, filteredTasks, resolvedTaskProjectIds]);
+        const quickTargetOptions = useMemo(
+            () => buildQuickTargetOptions(activeProjects, visibleTasks, resolvedTaskProjectIds),
+            [activeProjects, resolvedTaskProjectIds, visibleTasks],
+        );
+        const quickTargetPreview = useMemo(
+            () => buildQuickTargetPreview(newTaskProjectId, activeProjects, visibleTasks, resolvedTaskProjectIds),
+            [newTaskProjectId, activeProjects, resolvedTaskProjectIds, visibleTasks],
+        );
+        const resolvedQuickTarget = useMemo(
+            () => resolveQuickTargetValue(newTaskProjectId, visibleTasks, resolvedTaskProjectIds),
+            [newTaskProjectId, resolvedTaskProjectIds, visibleTasks],
+        );
+
+        React.useEffect(() => {
+            if (!selectedTaskId || !pendingDeletedTaskIds.has(selectedTaskId)) return;
+            setSelectedTaskId(null);
+        }, [selectedTaskId, pendingDeletedTaskIds]);
+
+        React.useEffect(() => {
+            const parsed = parseQuickTargetValue(newTaskProjectId);
+            if (parsed.kind !== 'task' || !parsed.id) return;
+            const exists = quickTargetOptions.some((option) => option.value === newTaskProjectId);
+            if (exists) return;
+
+            const originalTask = state.tasks.find((task) => task.id === parsed.id);
+            const originalProjectId = originalTask
+                ? getResolvedTaskProjectId(originalTask.id, resolvedTaskProjectIds)
+                : undefined;
+            if (originalProjectId) {
+                setNewTaskProjectId(createQuickTargetValue('project', originalProjectId));
+                return;
+            }
+            setNewTaskProjectId('');
+        }, [newTaskProjectId, quickTargetOptions, resolvedTaskProjectIds, state.tasks]);
+
+        React.useEffect(() => {
+            const subgroupParentsWithoutColor = visibleTasks.filter((task) => {
+                const hasChildren = (visibleTaskChildrenMap.get(task.id) || []).length > 0;
+                return hasChildren && !normalizePaletteHex(task.subprojectColor);
+            });
+
+            if (subgroupParentsWithoutColor.length === 0) return;
+
+            let nextTaskSnapshot = visibleTasks.slice();
+            subgroupParentsWithoutColor.forEach((task) => {
+                const nextColor = pickDistinctTaskGroupColor(nextTaskSnapshot, activeProjects, { excludeTaskId: task.id });
+                nextTaskSnapshot = nextTaskSnapshot.map((entry) => (
+                    entry.id === task.id ? { ...entry, subprojectColor: nextColor } : entry
+                ));
+                state.updateTask(task.id, { subprojectColor: nextColor });
+            });
+        }, [activeProjects, state.updateTask, visibleTaskChildrenMap, visibleTasks]);
+
+        const focusQuickAdd = () => {
+            const quickAddCardNode = quickAddCardRef.current;
+            const quickAddInputNode = quickAddInputRef.current;
+
+            if (quickAddCardNode && typeof quickAddCardNode.scrollIntoView === 'function') {
+                quickAddCardNode.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+
+            const applyFocus = () => {
+                if (!quickAddInputNode) return;
+                quickAddInputNode.focus();
+                if (typeof quickAddInputNode.select === 'function') {
+                    quickAddInputNode.select();
+                }
+            };
+
+            if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
+                window.requestAnimationFrame(applyFocus);
+                return;
+            }
+
+            setTimeout(applyFocus, 0);
+        };
+
+        const handleStartQuickAddForProject = (projectId) => {
+            setNewTaskProjectId(projectId ? createQuickTargetValue('project', projectId) : '');
+            focusQuickAdd();
+        };
+
+        const handleStartQuickAddForSubtask = (task) => {
+            if (!task?.id) return;
+            setNewTaskProjectId(createQuickTargetValue('task', task.id));
+            focusQuickAdd();
+        };
+
+        const handleQuickDueDateChange = (nextValue) => {
+            setQuickDueDate(nextValue || '');
+            setShowQuickCalendar(false);
+        };
+
+        const markPendingDeletedTasks = (taskIds) => {
+            const nextIds = Array.from(new Set((taskIds || []).filter(Boolean)));
+            if (nextIds.length === 0) return nextIds;
+
+            setPendingDeletedTaskIds((current) => {
+                const next = new Set(current);
+                nextIds.forEach((taskId) => next.add(taskId));
+                return next;
+            });
+            setSelectedTaskId((current) => (nextIds.includes(current) ? null : current));
+            return nextIds;
+        };
+
+        const unmarkPendingDeletedTasks = (taskIds) => {
+            const nextIds = Array.from(new Set((taskIds || []).filter(Boolean)));
+            if (nextIds.length === 0) return;
+
+            setPendingDeletedTaskIds((current) => {
+                const next = new Set(current);
+                nextIds.forEach((taskId) => next.delete(taskId));
+                return next;
+            });
+        };
+
+        const handleDeleteTask = (taskId) => {
+            const task = state.tasks.find((entry) => entry.id === taskId);
+            if (!task) return;
+
+            const hiddenTaskIds = [taskId].concat(Array.from(collectDescendantIds(state.tasks, taskId)));
+
+            if (!HEYS.Undo?.push) {
+                state.deleteTask(taskId);
+                return;
+            }
+
+            const context = {
+                taskId,
+                taskTitle: String(task.title || '').trim() || 'Задача',
+                hiddenTaskIds: markPendingDeletedTasks(hiddenTaskIds),
+            };
+
+            HEYS.Undo.push({
+                label: 'Задача «' + context.taskTitle + '» удалена',
+                subtitle: 'Можно вернуть одним тапом, пока карточка скрыта.',
+                icon: '🗑',
+                duration: 4600,
+                context,
+                onUndo: (undoContext) => {
+                    unmarkPendingDeletedTasks(undoContext?.hiddenTaskIds);
+                },
+                onExpire: () => {
+                    try {
+                        state.deleteTask(taskId);
+                    } finally {
+                        unmarkPendingDeletedTasks(hiddenTaskIds);
+                    }
+                },
+            });
+        };
+
+        const openQuickDatePicker = () => {
+            if (ReactDOM) {
+                setShowQuickCalendar((value) => !value);
+                return;
+            }
+            const inputNode = quickDateInputRef.current;
+            if (!inputNode) return;
+            if (typeof inputNode.showPicker === 'function') {
+                inputNode.showPicker();
+                return;
+            }
+            inputNode.focus();
+            inputNode.click();
+        };
+
+        const resetQuickAddFields = () => {
+            setNewTaskTitle('');
+            setQuickDueDate('');
+            setQuickMinutes('');
+            setShowQuickCalendar(false);
+            setShowQuickDurationPicker(false);
+        };
+
+        const handleQuickCreateTask = (mode) => {
+            const title = String(newTaskTitle || '').trim();
+            if (!title) return;
+            const status = mode === 'done'
+                ? 'done'
+                : (mode === 'draft' ? 'todo' : 'in_progress');
+            const task = state.addTask(title, {
+                projectId: resolvedQuickTarget.projectId,
+                parentTaskId: resolvedQuickTarget.parentTaskId,
+                priority: selectedPriority,
+                status,
+                dueDate: quickDueDate || undefined,
+                plannedMinutes: quickMinutes ? Number(quickMinutes) : undefined,
+            });
+
+            if (mode === 'done' && task?.id) {
+                const completionSlot = buildCompletionSlotFromNow(task.plannedMinutes);
+                state.addSlot({
+                    taskId: task.id,
+                    date: completionSlot.date,
+                    startTime: completionSlot.startTime,
+                    endTime: completionSlot.endTime,
+                    title: '',
+                    source: 'completion',
+                });
+            }
+
+            resetQuickAddFields();
+        };
+
+        const handleAddTask = () => handleQuickCreateTask('active');
+        const handleAddCompletedTask = () => handleQuickCreateTask('done');
+        const handleAddDraftTask = () => handleQuickCreateTask('draft');
+
+        const handleAddProject = () => {
+            const name = String(newProjectName || '').trim();
+            if (!name) return;
+            state.addProject(name);
+            setNewProjectName('');
+        };
+
+        const handleResetFilters = () => {
+            setFilterStatus('all');
+            setFilterPriority('all');
+            setFilterProject('all');
+            setFilterDueBucket('all');
+        };
+
+        return h('div', { className: 'planning-tasks-screen' },
+            h('div', { className: 'planning-tasks-header' },
+                h('section', { className: 'planning-quick-add-card', ref: quickAddCardRef },
+                    h('div', { className: 'planning-quick-add-card__header' },
+                        h('div', { className: 'planning-quick-add-card__copy' },
+                            h('span', { className: 'planning-quick-add-card__title' }, 'Новая задача'),
+                            h('span', { className: 'planning-quick-add-card__hint' }, 'По умолчанию задача создаётся в работе. Можно сразу отправить её в готово или в драфт.'),
+                        ),
+                        h('div', { className: 'planning-tasks-toolbar' },
+                            h('button', {
+                                type: 'button',
+                                className: 'planning-filter-toggle' + (showFilters ? ' active' : '') + (activeFilterCount > 0 ? ' has-active' : ''),
+                                'aria-label': activeFilterCount > 0
+                                    ? ('Фильтры, активно ' + activeFilterCount)
+                                    : 'Фильтры',
+                                'aria-expanded': showFilters ? 'true' : 'false',
+                                title: activeFilterCount > 0
+                                    ? ('Фильтры · активно ' + activeFilterCount)
+                                    : 'Фильтры',
+                                onClick: () => setShowFilters((value) => !value),
+                            },
+                                h(FilterIcon),
+                                activeFilterCount > 0 && h('span', { className: 'planning-filter-toggle__badge' }, String(activeFilterCount)),
+                            ),
+                        ),
+                    ),
+                    h('div', { className: 'planning-quick-add' },
+                        h('div', { className: 'planning-quick-add__title-row' },
+                            h('input', {
+                                ref: quickAddInputRef,
+                                className: 'planning-quick-input planning-quick-input--main',
+                                placeholder: 'Новая задача...',
+                                value: newTaskTitle,
+                                onChange: (event) => setNewTaskTitle(event.target.value),
+                                onKeyDown: (event) => event.key === 'Enter' && handleAddTask(),
+                            }),
+                            h('div', { className: 'planning-quick-add__create-actions' },
+                                h('button', {
+                                    type: 'button',
+                                    className: 'planning-add-btn planning-add-btn--quick planning-add-btn--active-task',
+                                    title: 'Создать задачу сразу в работе',
+                                    'aria-label': 'Создать задачу сразу в работе',
+                                    onClick: handleAddTask,
+                                },
+                                    h('span', { className: 'planning-add-btn__icon', 'aria-hidden': 'true' }, '+'),
+                                    h('span', { className: 'planning-add-btn__label' }, 'В работу'),
+                                ),
+                                h('button', {
+                                    type: 'button',
+                                    className: 'planning-add-btn planning-add-btn--quick planning-add-btn--icon-only planning-add-btn--done-task',
+                                    title: 'Добавить уже завершённую задачу и поставить её в календарь текущим временем',
+                                    'aria-label': 'Добавить уже завершённую задачу',
+                                    onClick: handleAddCompletedTask,
+                                },
+                                    h('span', { className: 'planning-add-btn__icon', 'aria-hidden': 'true' }, '⚡'),
+                                ),
+                                h('button', {
+                                    type: 'button',
+                                    className: 'planning-add-btn planning-add-btn--quick planning-add-btn--icon-only planning-add-btn--draft-task',
+                                    title: 'Добавить задачу как драфт — в статусе «Ожидает начала»',
+                                    'aria-label': 'Добавить задачу как драфт',
+                                    onClick: handleAddDraftTask,
+                                },
+                                    h('span', { className: 'planning-add-btn__icon', 'aria-hidden': 'true' }, '⏸'),
+                                ),
+                            ),
+                        ),
+                        h('div', { className: 'planning-quick-add__primary-row' },
+                            h('div', { className: 'planning-quick-target-field' + (quickTargetPreview ? ' has-preview' : '') },
+                                h('select', {
+                                    className: 'planning-quick-select planning-quick-select--target',
+                                    value: newTaskProjectId,
+                                    onChange: (event) => setNewTaskProjectId(event.target.value),
+                                },
+                                    quickTargetOptions.map((option) => h('option', { key: option.value || '__root__', value: option.value }, option.label)),
+                                ),
+                                quickTargetPreview && h('div', { className: 'planning-quick-target-preview' },
+                                    quickTargetPreview.context && h('span', { className: 'planning-quick-target-preview__context' }, quickTargetPreview.context),
+                                    h('span', { className: 'planning-quick-target-preview__primary' }, quickTargetPreview.primary),
+                                ),
+                            ),
+                            h('div', { className: 'planning-quick-add__actions planning-quick-add__actions--priority-row' },
+                                Object.keys(PRIORITY_CONFIG).map((key) => {
+                                    const config = PRIORITY_CONFIG[key];
+                                    return h('button', {
+                                        key,
+                                        type: 'button',
+                                        className: 'planning-priority-btn' + (selectedPriority === key ? ' active' : ''),
+                                        style: selectedPriority === key ? { color: config.color, background: config.bg } : undefined,
+                                        onClick: () => setSelectedPriority(key),
+                                    }, config.label);
+                                }),
+                            ),
+                        ),
+                        h('div', { className: 'planning-quick-add__secondary-row' },
+                            h('div', {
+                                className: 'planning-date-picker',
+                                role: 'group',
+                                'aria-label': 'Дедлайн задачи',
+                            },
+                                h('input', {
+                                    ref: quickDateInputRef,
+                                    className: 'planning-date-picker__native-input',
+                                    type: 'date',
+                                    value: quickDueDate,
+                                    tabIndex: -1,
+                                    'aria-hidden': 'true',
+                                    onChange: (event) => setQuickDueDate(event.target.value),
+                                }),
+                                h('button', {
+                                    type: 'button',
+                                    className: 'planning-date-picker__btn' + (quickDuePreset === 'today' ? ' active' : ''),
+                                    'aria-pressed': quickDuePreset === 'today' ? 'true' : 'false',
+                                    onClick: () => handleQuickDueDateChange(quickDueDate === todayIso ? '' : todayIso),
+                                }, 'Сегодня'),
+                                h('button', {
+                                    type: 'button',
+                                    className: 'planning-date-picker__btn' + (quickDuePreset === 'tomorrow' ? ' active' : ''),
+                                    'aria-pressed': quickDuePreset === 'tomorrow' ? 'true' : 'false',
+                                    onClick: () => handleQuickDueDateChange(quickDueDate === tomorrowIso ? '' : tomorrowIso),
+                                }, 'Завтра'),
+                                h('button', {
+                                    ref: quickCalendarButtonRef,
+                                    type: 'button',
+                                    className: 'planning-date-picker__btn planning-date-picker__btn--calendar'
+                                        + (quickDuePreset === 'custom' ? ' active' : '')
+                                        + (showQuickCalendar ? ' is-open' : ''),
+                                    title: quickDueDateLabel ? ('Открыть календарь, выбран дедлайн ' + quickDueDateLabel) : 'Открыть календарь',
+                                    'aria-label': quickDueDateLabel ? ('Открыть календарь, выбран дедлайн ' + quickDueDateLabel) : 'Открыть календарь',
+                                    'aria-pressed': (quickDuePreset === 'custom' || showQuickCalendar) ? 'true' : 'false',
+                                    onClick: openQuickDatePicker,
+                                }, '📅'),
+                            ),
+                            h(DurationFieldButton, {
+                                value: quickMinutes,
+                                placeholder: 'мин/дн',
+                                minimal: true,
+                                onClick: () => setShowQuickDurationPicker(true),
+                            }),
+                        ),
+                    ),
+                    showFilters && h('div', { className: 'planning-filters-panel' },
+                        h('div', { className: 'planning-filters-panel__header' },
+                            h('span', { className: 'planning-filters-panel__title' }, 'Фильтры'),
+                            activeFilterCount > 0 && h('button', {
+                                type: 'button',
+                                className: 'planning-btn planning-btn--sm',
+                                onClick: handleResetFilters,
+                            }, 'Сбросить'),
+                        ),
+                        h('div', { className: 'planning-filters planning-filters--grid' },
+                            h('select', {
+                                className: 'planning-filter-select',
+                                value: filterStatus,
+                                onChange: (event) => setFilterStatus(event.target.value),
+                            },
+                                h('option', { value: 'all' }, 'Все статусы'),
+                                Object.keys(STATUS_CONFIG).map((key) => h('option', { key, value: key }, STATUS_CONFIG[key].label)),
+                            ),
+                            h('select', {
+                                className: 'planning-filter-select',
+                                value: filterPriority,
+                                onChange: (event) => setFilterPriority(event.target.value),
+                            },
+                                h('option', { value: 'all' }, 'Все приоритеты'),
+                                Object.keys(PRIORITY_CONFIG).map((key) => h('option', { key, value: key }, PRIORITY_CONFIG[key].label)),
+                            ),
+                            h('select', {
+                                className: 'planning-filter-select',
+                                value: filterProject,
+                                onChange: (event) => setFilterProject(event.target.value),
+                            },
+                                h('option', { value: 'all' }, 'Все проекты'),
+                                h('option', { value: '__none__' }, 'Без проекта'),
+                                activeProjects.map((project) => h('option', { key: project.id, value: project.id }, project.name)),
+                            ),
+                            h('select', {
+                                className: 'planning-filter-select',
+                                value: filterDueBucket,
+                                onChange: (event) => setFilterDueBucket(event.target.value),
+                            },
+                                Object.keys(DUE_BUCKETS).map((key) => h('option', { key, value: key }, DUE_BUCKETS[key])),
+                            ),
+                        ),
+                    ),
+                ),
+            ),
+            h('div', { className: 'planning-tasks-list' },
+                activeProjects.map((project) => h(ProjectGroup, {
+                    key: project.id,
+                    project,
+                    projects: activeProjects,
+                    tasks: tasksByProject[project.id] || [],
+                    taskLookup,
+                    isMobile,
+                    onUpdateTask: state.updateTask,
+                    onDeleteTask: handleDeleteTask,
+                    onSelectTask: setSelectedTaskId,
+                    onStartQuickAddProject: handleStartQuickAddForProject,
+                    onStartQuickAddSubtask: handleStartQuickAddForSubtask,
+                    onUpdateProject: state.updateProject,
+                    onReorderTasks: state.reorderTasks,
+                    forceShowCompleted,
+                })),
+                (tasksByProject.__none__ || []).length > 0 && h(ProjectGroup, {
+                    key: '__none__',
+                    project: { id: '__none__', name: 'Без проекта', color: '#94a3b8' },
+                    projects: activeProjects,
+                    tasks: tasksByProject.__none__,
+                    taskLookup,
+                    isMobile,
+                    onUpdateTask: state.updateTask,
+                    onDeleteTask: handleDeleteTask,
+                    onSelectTask: setSelectedTaskId,
+                    onStartQuickAddProject: handleStartQuickAddForProject,
+                    onStartQuickAddSubtask: handleStartQuickAddForSubtask,
+                    onUpdateProject: state.updateProject,
+                    onReorderTasks: state.reorderTasks,
+                    forceShowCompleted,
+                }),
+                activeProjects.length === 0 && filteredTasks.length === 0 && h('div', { className: 'planning-empty' }, 'Начни с проекта или добавь первую задачу.'),
+            ),
+            h('div', { className: 'planning-add-project' },
+                h('input', {
+                    className: 'planning-quick-input planning-quick-input--sm',
+                    placeholder: 'Новый проект...',
+                    value: newProjectName,
+                    onChange: (event) => setNewProjectName(event.target.value),
+                    onKeyDown: (event) => event.key === 'Enter' && handleAddProject(),
+                }),
+                h('button', { type: 'button', className: 'planning-add-btn planning-add-btn--project', onClick: handleAddProject }, '+ Проект'),
+            ),
+            selectedTaskId && h(TaskDetailModal, {
+                taskId: selectedTaskId,
+                state,
+                resolvedTaskProjectIds,
+                onDeleteTask: handleDeleteTask,
+                onClose: () => setSelectedTaskId(null),
+            }),
+            showQuickDurationPicker && h(DurationPresetModal, {
+                title: 'Длительность новой задачи',
+                subtitle: 'Выбери пресет — или укажи своё число минут, если задача нестандартная.',
+                value: quickMinutes,
+                onSelect: (minutes) => setQuickMinutes(minutes ? String(minutes) : ''),
+                onClose: () => setShowQuickDurationPicker(false),
+            }),
+            showQuickCalendar && h(PlanningLoadDatePopover, {
+                valueISO: quickDueDate,
+                tasks: state.tasks,
+                slots: state.slots,
+                anchorRef: quickCalendarButtonRef,
+                onSelect: handleQuickDueDateChange,
+                onClear: () => handleQuickDueDateChange(''),
+                onClose: () => setShowQuickCalendar(false),
+            }),
+        );
+    }
+
+    HEYS.PlanningTasks = {
+        TaskDetailModal,
+        TasksScreen,
+    };
+})();
+
+
+/* ===== heys_planning_schedule_v1.js ===== */
+// heys_planning_schedule_v1.js — Calendar and Gantt screens for HEYS planning
+(function () {
+    'use strict';
+    const React = window.React;
+    const Planning = HEYS.Planning || {};
+    const PlanningTasks = HEYS.PlanningTasks || {};
+    if (!React || !Planning.Constants || !Planning.Utils || !Planning.Hooks) return;
+    const h = React.createElement;
+    const { useState, useMemo, useRef, useEffect } = React;
+    const {
+        PRIORITY_CONFIG,
+        CALENDAR_START_HOUR,
+        CALENDAR_END_HOUR,
+        CALENDAR_HOUR_HEIGHT,
+        GANTT_ZOOM_WIDTHS,
+    } = Planning.Constants;
+    const {
+        dateStr,
+        timeToMinutes,
+        getTaskDurationMinutes,
+        addDays,
+        diffDays,
+        getTaskProjectColor,
+    } = Planning.Utils;
+    const { usePlanningViewport } = Planning.Hooks;
+
+    const HOURS = Array.from({ length: (CALENDAR_END_HOUR - CALENDAR_START_HOUR) + 1 }, (_, index) => CALENDAR_START_HOUR + index);
+    const WEEKDAY_LABELS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
+    const MINUTES_IN_DAY = 24 * 60;
+    const CALENDAR_LOOKBACK_DAYS = 1;
+    const CALENDAR_FORWARD_DAYS = 92;
+    const CALENDAR_TOTAL_HEIGHT = HOURS.length * CALENDAR_HOUR_HEIGHT;
+    const CALENDAR_DRAG_EDGE_THRESHOLD = 48;
+    const CALENDAR_TOUCH_DRAG_HOLD_MS = 180;
+    const CALENDAR_TOUCH_DRAG_MOVE_CANCEL_THRESHOLD = 12;
+    const CALENDAR_POINTER_DRAG_MOVE_THRESHOLD = 6;
+    const CALENDAR_TOUCH_DRAG_AUTO_SCROLL_EDGE = 56;
+    const CALENDAR_TOUCH_DRAG_AUTO_SCROLL_STEP = 18;
+
+    function pad2(value) {
+        return String(value).padStart(2, '0');
+    }
+
+    function getPlanningTodayIso() {
+        const dayUtils = HEYS.dayUtils || {};
+        if (typeof dayUtils.todayISO === 'function') return dayUtils.todayISO();
+
+        const models = HEYS.models || {};
+        if (typeof models.todayISO === 'function') return models.todayISO();
+
+        const now = new Date();
+        if (now.getHours() < CALENDAR_START_HOUR) now.setDate(now.getDate() - 1);
+        return dateStr(now);
+    }
+
+    function buildCalendarDays(startIso, length) {
+        return Array.from({ length }, (_, index) => addDays(startIso, index));
+    }
+
+    function getWeekdayLabel(isoDate) {
+        const parsed = new Date(String(isoDate || '') + 'T12:00:00');
+        if (Number.isNaN(parsed.getTime())) return '';
+        const index = (parsed.getDay() + 6) % 7;
+        return WEEKDAY_LABELS[index] || '';
+    }
+
+    function formatCalendarHourLabel(hourValue) {
+        const normalizedHour = ((Number(hourValue) || 0) % 24 + 24) % 24;
+        return pad2(normalizedHour) + ':00';
+    }
+
+    function getCalendarDisplayMinutes(timeValue) {
+        const minutes = timeToMinutes(timeValue);
+        return minutes < (CALENDAR_START_HOUR * 60) ? minutes + MINUTES_IN_DAY : minutes;
+    }
+
+    function formatClockTime(totalMinutes) {
+        const normalized = ((Math.round(Number(totalMinutes) || 0) % MINUTES_IN_DAY) + MINUTES_IN_DAY) % MINUTES_IN_DAY;
+        const hours = Math.floor(normalized / 60);
+        const minutes = normalized % 60;
+        return pad2(hours) + ':' + pad2(minutes);
+    }
+
+    function getCalendarNowTop() {
+        const now = new Date();
+        const minutes = (now.getHours() * 60) + now.getMinutes();
+        const displayMinutes = minutes < (CALENDAR_START_HOUR * 60) ? minutes + MINUTES_IN_DAY : minutes;
+        return ((displayMinutes - (CALENDAR_START_HOUR * 60)) / 60) * CALENDAR_HOUR_HEIGHT;
+    }
+
+    function isCalendarNowTopVisible(top) {
+        return Number.isFinite(top) && top >= 0 && top <= CALENDAR_TOTAL_HEIGHT;
+    }
+
+    function findVerticalScrollContainer(node) {
+        let current = node?.parentElement || null;
+
+        while (current && current !== document.body) {
+            const styles = window.getComputedStyle(current);
+            const overflowY = String(styles?.overflowY || '').toLowerCase();
+            const canScroll = overflowY === 'auto' || overflowY === 'scroll' || overflowY === 'overlay';
+
+            if (canScroll && current.scrollHeight > (current.clientHeight + 1)) {
+                return current;
+            }
+
+            current = current.parentElement;
+        }
+
+        return document.scrollingElement || document.documentElement || null;
+    }
+
+    function centerCalendarNowLine(lineElement, headerElement) {
+        if (!lineElement) return;
+        const scrollContainer = findVerticalScrollContainer(lineElement);
+        const containerRect = typeof scrollContainer?.getBoundingClientRect === 'function'
+            ? scrollContainer.getBoundingClientRect()
+            : {
+                top: 0,
+                bottom: window.innerHeight || document.documentElement?.clientHeight || 0,
+            };
+        const headerBottom = Math.max(headerElement?.getBoundingClientRect?.().bottom || containerRect.top || 0, containerRect.top || 0);
+        const lineRect = lineElement.getBoundingClientRect();
+        const currentCenter = lineRect.top + (lineRect.height / 2);
+        const targetCenter = headerBottom + Math.max(((containerRect.bottom || 0) - headerBottom) / 2, 0);
+        const delta = currentCenter - targetCenter;
+
+        if (Math.abs(delta) < 1) return;
+
+        if (
+            scrollContainer
+            && scrollContainer !== document.body
+            && scrollContainer !== document.documentElement
+            && scrollContainer !== document.scrollingElement
+        ) {
+            scrollContainer.scrollTop += delta;
+            return;
+        }
+
+        const scrollRoot = document.scrollingElement || document.documentElement;
+        if (scrollRoot) {
+            scrollRoot.scrollTop += delta;
+            return;
+        }
+
+        window.scrollBy({ top: delta, behavior: 'auto' });
+    }
+
+    function resolveCalendarCellStart(date, displayHour) {
+        const normalizedHour = Number(displayHour) || CALENDAR_START_HOUR;
+        const actualDate = normalizedHour >= 24 ? addDays(date, 1) : date;
+        return {
+            date: actualDate,
+            time: formatCalendarHourLabel(normalizedHour),
+        };
+    }
+
+    function getCalendarDisplayDate(slot) {
+        const slotDate = dateStr(slot?.date);
+        if (!slotDate) return '';
+        const startMinutes = timeToMinutes(slot?.startTime);
+        return startMinutes < (CALENDAR_START_HOUR * 60)
+            ? addDays(slotDate, -1)
+            : slotDate;
+    }
+
+    function getCalendarDisplayEndMinutes(slot) {
+        const startMinutes = getCalendarDisplayMinutes(slot?.startTime);
+        let endMinutes = getCalendarDisplayMinutes(slot?.endTime);
+        if (endMinutes <= startMinutes) endMinutes += MINUTES_IN_DAY;
+        return endMinutes;
+    }
+
+    function parsePlanningDragPayload(event) {
+        const raw = event?.dataTransfer?.getData('text/heys-planning-slot') || event?.dataTransfer?.getData('text/heys-planning-task');
+        if (!raw) return null;
+        try {
+            return JSON.parse(raw);
+        } catch (error) {
+            console.warn('[HEYS.planning] Invalid drag payload:', error?.message || error);
+            return null;
+        }
+    }
+
+    function hasTouchLikeInput() {
+        try {
+            if (typeof window !== 'undefined' && typeof window.matchMedia === 'function' && window.matchMedia('(pointer: coarse)').matches) {
+                return true;
+            }
+        } catch (error) {
+            // ignore
+        }
+
+        return Number(typeof navigator !== 'undefined' ? navigator.maxTouchPoints : 0) > 0;
+    }
+
+    function findTouchByIdentifier(touchList, identifier) {
+        if (!touchList || identifier == null) return null;
+        for (let index = 0; index < touchList.length; index += 1) {
+            if (touchList[index]?.identifier === identifier) return touchList[index];
+        }
+        return null;
+    }
+
+    function getTouchEventPoint(event, identifier) {
+        return findTouchByIdentifier(event?.touches, identifier)
+            || findTouchByIdentifier(event?.changedTouches, identifier)
+            || null;
+    }
+
+    function resolveAutoScrollDelta(distanceToEdge, edgeThreshold) {
+        const safeThreshold = Math.max(Number(edgeThreshold) || 0, 1);
+        const safeDistance = Math.max(0, Math.min(safeThreshold, Number(distanceToEdge) || 0));
+        const intensity = 1 - (safeDistance / safeThreshold);
+        return Math.max(0, intensity) * CALENDAR_TOUCH_DRAG_AUTO_SCROLL_STEP;
+    }
+
+    function buildSlotDraft(source) {
+        return {
+            id: source?.id || '',
+            taskId: source?.taskId || '',
+            title: source?.title || '',
+            date: dateStr(source?.date),
+            startTime: source?.startTime || '09:00',
+            endTime: source?.endTime || '10:00',
+        };
+    }
+
+    function buildSlotMetrics(slot) {
+        const startMinutes = getCalendarDisplayMinutes(slot.startTime);
+        const endMinutes = Math.min(getCalendarDisplayEndMinutes(slot), (CALENDAR_END_HOUR + 1) * 60);
+        const offsetMinutes = startMinutes - (CALENDAR_START_HOUR * 60);
+        const durationMinutes = Math.max(30, endMinutes - startMinutes);
+        return {
+            top: (offsetMinutes / 60) * CALENDAR_HOUR_HEIGHT,
+            height: (durationMinutes / 60) * CALENDAR_HOUR_HEIGHT,
+            durationMinutes,
+        };
+    }
+
+    function resolveCalendarDisplayDateTime(displayDate, displayMinutes) {
+        const normalizedMinutes = Math.max(CALENDAR_START_HOUR * 60, Math.round(Number(displayMinutes) || 0));
+        const actualDate = normalizedMinutes >= MINUTES_IN_DAY ? addDays(displayDate, 1) : displayDate;
+        return {
+            date: actualDate,
+            time: formatClockTime(normalizedMinutes),
+        };
+    }
+
+    function resolveCalendarSlotAppearance(slotDay, yesterdayIso, linkedTask, projects) {
+        if (slotDay !== yesterdayIso) {
+            return {
+                className: '',
+                color: getTaskProjectColor(linkedTask, projects),
+            };
+        }
+
+        const status = linkedTask?.status || '';
+        const isResolved = !linkedTask || status === 'done' || status === 'cancelled';
+
+        if (isResolved) {
+            return {
+                className: ' planning-calendar-slot--muted',
+                color: 'linear-gradient(180deg, rgba(148, 163, 184, 0.34) 0%, rgba(148, 163, 184, 0.24) 100%)',
+            };
+        }
+
+        return {
+            className: ' planning-calendar-slot--attention',
+            color: 'linear-gradient(180deg, rgba(239, 68, 68, 0.94) 0%, rgba(220, 38, 38, 0.88) 100%)',
+        };
+    }
+
+    function getTaskCalendarAnchorDate(task, todayIso, rangeStartIso, rangeEndIso) {
+        const preferredDate = dateStr(task?.startDate || task?.dueDate || todayIso);
+        if (preferredDate < rangeStartIso) return rangeStartIso;
+        if (preferredDate > rangeEndIso) return rangeEndIso;
+        return preferredDate;
+    }
+
+    function buildParentTaskIdsWithChildren(tasks) {
+        const parents = new Set();
+
+        (Array.isArray(tasks) ? tasks : []).forEach((task) => {
+            const parentTaskId = task?.parentTaskId || '';
+            if (parentTaskId) parents.add(parentTaskId);
+        });
+
+        return parents;
+    }
+
+    function buildTaskParentGroupLabel(task, taskLookup) {
+        if (!task?.parentTaskId || !taskLookup?.has(task.parentTaskId)) return '';
+
+        const titles = [];
+        const seen = new Set([task.id]);
+        let currentId = task.parentTaskId;
+        let guard = 0;
+
+        while (currentId && taskLookup.has(currentId) && guard < 120 && !seen.has(currentId)) {
+            const currentTask = taskLookup.get(currentId);
+            const currentTitle = String(currentTask?.title || '').trim();
+
+            if (currentTitle) titles.unshift(currentTitle);
+
+            seen.add(currentId);
+            currentId = currentTask?.parentTaskId || '';
+            guard += 1;
+        }
+
+        return titles.join(' → ');
+    }
+
+    function buildTaskHeaderDayPatch(task, targetDate, todayIso) {
+        const anchorDate = dateStr(task?.startDate || task?.dueDate || todayIso);
+        if (!targetDate || targetDate === anchorDate) return null;
+
+        if (task?.startDate && task?.dueDate) {
+            const deltaDays = diffDays(anchorDate, targetDate);
+            return {
+                startDate: addDays(task.startDate, deltaDays),
+                dueDate: addDays(task.dueDate, deltaDays),
+            };
+        }
+
+        if (task?.startDate) {
+            return { startDate: targetDate };
+        }
+
+        return { dueDate: targetDate };
+    }
+
+    function isPlanningCalendarDragPayload(payload) {
+        return payload?.type === 'task' || payload?.type === 'slot';
+    }
+
+    function SlotEditorModal({ draft, tasks, onClose, onDelete, onSave, onOpenTask }) {
+        const [form, setForm] = useState(() => buildSlotDraft(draft));
+
+        useEffect(() => {
+            setForm(buildSlotDraft(draft));
+        }, [draft?.id, draft?.date, draft?.startTime, draft?.endTime, draft?.taskId, draft?.title]);
+
+        const linkedTask = tasks.find((task) => task.id === form.taskId);
+        const save = () => {
+            if (!form.date || !form.startTime || !form.endTime) return;
+            onSave({
+                ...form,
+                title: String(form.title || '').trim(),
+            });
+        };
+
+        return h('div', { className: 'planning-modal-overlay', onClick: onClose },
+            h('div', { className: 'planning-modal', onClick: (event) => event.stopPropagation() },
+                h('div', { className: 'planning-modal__header' },
+                    h('span', null, form.id ? 'Слот' : 'Новый слот'),
+                    h('button', { type: 'button', className: 'planning-modal__close', onClick: onClose }, '×'),
+                ),
+                h('div', { className: 'planning-modal__body' },
+                    h('div', { className: 'planning-modal__row' },
+                        h('label', null, 'Связанная задача'),
+                        h('select', {
+                            value: form.taskId,
+                            onChange: (event) => setForm((current) => ({ ...current, taskId: event.target.value })),
+                        },
+                            h('option', { value: '' }, '— обычное событие —'),
+                            tasks.map((task) => h('option', { key: task.id, value: task.id }, task.title)),
+                        ),
+                    ),
+                    h('input', {
+                        className: 'planning-modal__input',
+                        placeholder: linkedTask ? 'Оставь пустым, чтобы использовать название задачи' : 'Название слота',
+                        value: form.title,
+                        onChange: (event) => setForm((current) => ({ ...current, title: event.target.value })),
+                    }),
+                    h('div', { className: 'planning-modal__grid' },
+                        h('div', { className: 'planning-modal__row' },
+                            h('label', null, 'Дата'),
+                            h('input', {
+                                type: 'date',
+                                value: form.date,
+                                onChange: (event) => setForm((current) => ({ ...current, date: event.target.value })),
+                            }),
+                        ),
+                        h('div', { className: 'planning-modal__row' },
+                            h('label', null, 'Старт'),
+                            h('input', {
+                                type: 'time',
+                                value: form.startTime,
+                                onChange: (event) => setForm((current) => ({ ...current, startTime: event.target.value })),
+                            }),
+                        ),
+                    ),
+                    h('div', { className: 'planning-modal__row' },
+                        h('label', null, 'Окончание'),
+                        h('input', {
+                            type: 'time',
+                            value: form.endTime,
+                            onChange: (event) => setForm((current) => ({ ...current, endTime: event.target.value })),
+                        }),
+                    ),
+                    linkedTask && h('div', { className: 'planning-linked-banner' },
+                        h('span', null, 'Связано с задачей: ' + linkedTask.title),
+                        h('button', { type: 'button', className: 'planning-btn planning-btn--sm', onClick: () => onOpenTask(linkedTask.id) }, 'Открыть задачу'),
+                    ),
+                ),
+                h('div', { className: 'planning-modal__footer planning-modal__footer--spread' },
+                    form.id
+                        ? h('button', { type: 'button', className: 'planning-btn', onClick: () => onDelete(form.id) }, 'Удалить')
+                        : h('span'),
+                    h('div', { className: 'planning-modal__footer-actions' },
+                        h('button', { type: 'button', className: 'planning-btn', onClick: onClose }, 'Отмена'),
+                        h('button', { type: 'button', className: 'planning-btn planning-btn--primary', onClick: save }, 'Сохранить'),
+                    ),
+                ),
+            ),
+        );
+    }
+
+    function CalendarSlotCard({
+        slot,
+        color,
+        className,
+        style,
+        title,
+        subtitle,
+        parentGroupLabel,
+        showSubtitle,
+        onOpen,
+        onResizeStart,
+        onDragStateChange,
+        onTouchDragStart,
+        onPointerDragStart,
+        shouldSuppressClick,
+        isTouchDragSource,
+        allowNativeDrag,
+        showResizeHandle,
+    }) {
+        const slotTitle = parentGroupLabel ? (parentGroupLabel + ' · ' + title) : title;
+
+        return h('div', {
+            className: 'planning-calendar-slot'
+                + (className || '')
+                + (isTouchDragSource ? ' planning-calendar-slot--touch-dragging' : ''),
+            draggable: allowNativeDrag !== false,
+            style: { ...style, background: color },
+            title: slotTitle,
+            onPointerDown: (event) => {
+                if (typeof onPointerDragStart === 'function') {
+                    onPointerDragStart({
+                        event,
+                        payload: { type: 'slot', slotId: slot.id },
+                        sourceKey: 'slot:' + slot.id,
+                        title,
+                        badgeText: subtitle,
+                        parentGroupLabel,
+                        background: color,
+                    });
+                }
+            },
+            onTouchStart: (event) => {
+                if (typeof onTouchDragStart === 'function') {
+                    onTouchDragStart({
+                        event,
+                        payload: { type: 'slot', slotId: slot.id },
+                        sourceKey: 'slot:' + slot.id,
+                        title,
+                        badgeText: subtitle,
+                        parentGroupLabel,
+                        background: color,
+                    });
+                }
+            },
+            onClick: (event) => {
+                event.stopPropagation();
+                if (typeof shouldSuppressClick === 'function' && shouldSuppressClick()) return;
+                onOpen();
+            },
+            onDragStart: (event) => {
+                event.dataTransfer.effectAllowed = 'move';
+                event.dataTransfer.setData('text/heys-planning-slot', JSON.stringify({ type: 'slot', slotId: slot.id }));
+            },
+            onDragEnd: () => {
+                if (typeof onDragStateChange === 'function') onDragStateChange(false);
+            },
+        },
+            parentGroupLabel && h('span', {
+                className: 'planning-calendar-slot__parent',
+                title: parentGroupLabel,
+            }, parentGroupLabel),
+            h('span', {
+                className: 'planning-calendar-slot__title' + (parentGroupLabel ? ' planning-calendar-slot__title--with-parent' : ''),
+            }, title),
+            showSubtitle && h('span', { className: 'planning-calendar-slot__time' }, subtitle),
+            showResizeHandle && h('button', {
+                type: 'button',
+                className: 'planning-calendar-slot__resize planning-calendar-slot__resize--start',
+                onPointerDown: (event) => onResizeStart(slot, 'start', event),
+                onTouchStart: (event) => event.stopPropagation(),
+                onClick: (event) => event.stopPropagation(),
+                title: 'Изменить время начала',
+                'aria-label': 'Изменить время начала',
+            }),
+            showResizeHandle && h('button', {
+                type: 'button',
+                className: 'planning-calendar-slot__resize planning-calendar-slot__resize--end',
+                onPointerDown: (event) => onResizeStart(slot, 'end', event),
+                onTouchStart: (event) => event.stopPropagation(),
+                onClick: (event) => event.stopPropagation(),
+                title: 'Изменить время окончания',
+                'aria-label': 'Изменить время окончания',
+            }),
+        );
+    }
+
+    function CalendarUnscheduledTaskPill({
+        task,
+        projects,
+        taskLookup,
+        onOpen,
+        onDragStateChange,
+        onTouchDragStart,
+        onPointerDragStart,
+        shouldSuppressClick,
+        isTouchDragSource,
+        allowNativeDrag,
+    }) {
+        const parentGroupLabel = buildTaskParentGroupLabel(task, taskLookup);
+        const priorityLabel = PRIORITY_CONFIG[task.priority]?.label || 'P2';
+        const projectColor = getTaskProjectColor(task, projects);
+
+        return h('div', {
+            className: 'planning-calendar-unscheduled-pill'
+                + (isTouchDragSource ? ' planning-calendar-unscheduled-pill--touch-dragging' : ''),
+            draggable: allowNativeDrag !== false,
+            style: { '--planning-unscheduled-project-color': projectColor },
+            title: parentGroupLabel ? (parentGroupLabel + ' · ' + task.title) : task.title,
+            onPointerDown: (event) => {
+                if (typeof onPointerDragStart === 'function') {
+                    onPointerDragStart({
+                        event,
+                        payload: { type: 'task', taskId: task.id },
+                        sourceKey: 'task:' + task.id,
+                        title: task.title,
+                        badgeText: priorityLabel,
+                        parentGroupLabel,
+                        accentColor: projectColor,
+                    });
+                }
+            },
+            onTouchStart: (event) => {
+                if (typeof onTouchDragStart === 'function') {
+                    onTouchDragStart({
+                        event,
+                        payload: { type: 'task', taskId: task.id },
+                        sourceKey: 'task:' + task.id,
+                        title: task.title,
+                        badgeText: priorityLabel,
+                        parentGroupLabel,
+                        accentColor: projectColor,
+                    });
+                }
+            },
+            onDragStart: (event) => {
+                event.dataTransfer.effectAllowed = 'copyMove';
+                event.dataTransfer.setData('text/heys-planning-task', JSON.stringify({ type: 'task', taskId: task.id }));
+            },
+            onDragEnd: () => {
+                if (typeof onDragStateChange === 'function') onDragStateChange(false);
+            },
+            onClick: () => {
+                if (typeof shouldSuppressClick === 'function' && shouldSuppressClick()) return;
+                onOpen(task.id);
+            },
+        },
+            h('div', { className: 'planning-calendar-unscheduled-pill__body' },
+                parentGroupLabel && h('span', {
+                    className: 'planning-calendar-unscheduled-pill__parent',
+                    title: parentGroupLabel,
+                }, parentGroupLabel),
+                h('span', { className: 'planning-calendar-unscheduled-pill__title' }, task.title),
+            ),
+            h('span', {
+                className: 'planning-calendar-unscheduled-pill__priority',
+                style: { color: PRIORITY_CONFIG[task.priority]?.color, background: PRIORITY_CONFIG[task.priority]?.bg },
+            }, priorityLabel),
+        );
+    }
+
+    function CalendarScreen({ state }) {
+        const { isDesktop } = usePlanningViewport();
+        const [slotDraft, setSlotDraft] = useState(null);
+        const [selectedTaskId, setSelectedTaskId] = useState(null);
+        const [resizePreview, setResizePreview] = useState(null);
+        const [calendarViewportWidth, setCalendarViewportWidth] = useState(0);
+        const [nowLineTop, setNowLineTop] = useState(() => getCalendarNowTop());
+        const [shouldCenterNow, setShouldCenterNow] = useState(true);
+        const [headerDropState, setHeaderDropState] = useState({ day: '', mode: '' });
+        const [calendarCellDropPreview, setCalendarCellDropPreview] = useState(null);
+        const [calendarDropCommitAccent, setCalendarDropCommitAccent] = useState(null);
+        const [headerFrame, setHeaderFrame] = useState({ ready: false, top: 0, left: 0, width: 0, height: 0 });
+        const [isCalendarDragZoomActive, setIsCalendarDragZoomActive] = useState(false);
+        const [touchDragPreview, setTouchDragPreview] = useState(null);
+        const [touchDragSourceKey, setTouchDragSourceKey] = useState('');
+        const resizeStateRef = useRef(null);
+        const headerShellRef = useRef(null);
+        const headerRef = useRef(null);
+        const nowLineRef = useRef(null);
+        const gridScrollRef = useRef(null);
+        const bodyScrollRef = useRef(null);
+        const headerScrollRef = useRef(null);
+        const previousDayWidthRef = useRef(0);
+        const touchDragStateRef = useRef(null);
+        const touchDragAutoScrollFrameRef = useRef(0);
+        const dropCommitAccentTimerRef = useRef(0);
+        const suppressCalendarClickUntilRef = useRef(0);
+        const dayColumnWidthRef = useRef(0);
+        const calendarDaysRef = useRef([]);
+        const isCalendarDragZoomActiveRef = useRef(false);
+        const todayIso = getPlanningTodayIso();
+        const yesterdayIso = useMemo(() => addDays(todayIso, -1), [todayIso]);
+        const calendarStartIso = useMemo(() => addDays(todayIso, -CALENDAR_LOOKBACK_DAYS), [todayIso]);
+        const calendarDays = useMemo(
+            () => buildCalendarDays(calendarStartIso, CALENDAR_LOOKBACK_DAYS + CALENDAR_FORWARD_DAYS + 1),
+            [calendarStartIso],
+        );
+        const calendarEndIso = calendarDays[calendarDays.length - 1] || todayIso;
+        const visibleDayCount = isCalendarDragZoomActive ? 7 : 3;
+        const dayColumnWidth = Math.max(Math.round((calendarViewportWidth || (isDesktop ? 720 : 330)) / visibleDayCount), 1);
+        const usesTouchLikeInput = hasTouchLikeInput();
+        const allowNativeCalendarDrag = false;
+        const taskMap = useMemo(() => new Map(state.tasks.map((task) => [task.id, task])), [state.tasks]);
+        const parentTaskIdsWithChildren = useMemo(() => buildParentTaskIdsWithChildren(state.tasks), [state.tasks]);
+
+        const setCalendarDragZoom = (value) => {
+            setIsCalendarDragZoomActive((current) => (current === value ? current : value));
+        };
+
+        const shouldSuppressCalendarClick = () => suppressCalendarClickUntilRef.current > Date.now();
+
+        const suppressCalendarClick = () => {
+            suppressCalendarClickUntilRef.current = Date.now() + 420;
+        };
+
+        const resolveHeaderDropMode = (payload) => (payload?.type === 'slot' ? 'unschedule' : 'task');
+
+        const applyHeaderDropState = (day, payload) => {
+            const nextMode = resolveHeaderDropMode(payload);
+            setHeaderDropState((current) => {
+                if (current.day === day && current.mode === nextMode) return current;
+                return { day, mode: nextMode };
+            });
+        };
+
+        const clearHeaderDropState = () => {
+            setHeaderDropState((current) => {
+                if (!current.day && !current.mode) return current;
+                return { day: '', mode: '' };
+            });
+        };
+
+        const buildCalendarCellDropPreview = (day, hour, payload) => {
+            if (!day || hour == null || !isPlanningCalendarDragPayload(payload)) return null;
+
+            const start = resolveCalendarCellStart(day, hour);
+
+            if (payload.type === 'slot' && payload.slotId) {
+                const slot = state.slots.find((entry) => entry.id === payload.slotId);
+                if (!slot) return null;
+
+                const linkedTask = slot.taskId ? taskMap.get(slot.taskId) : null;
+                const durationMinutes = Math.max(30, getCalendarDisplayEndMinutes(slot) - getCalendarDisplayMinutes(slot.startTime));
+                const endTime = formatClockTime(timeToMinutes(start.time) + durationMinutes);
+                const metrics = buildSlotMetrics({
+                    startTime: start.time,
+                    endTime,
+                });
+                const appearance = resolveCalendarSlotAppearance(day, yesterdayIso, linkedTask, state.projects);
+
+                return {
+                    day,
+                    hour,
+                    kind: 'slot',
+                    top: metrics.top,
+                    height: metrics.height,
+                    startTimeLabel: start.time,
+                    title: linkedTask?.title || slot.title || 'Событие',
+                    parentGroupLabel: linkedTask ? buildTaskParentGroupLabel(linkedTask, taskMap) : '',
+                    timeLabel: start.time + '–' + endTime,
+                    accentColor: getTaskProjectColor(linkedTask || {}, state.projects),
+                    background: appearance.color,
+                };
+            }
+
+            if (payload.type === 'task' && payload.taskId) {
+                const task = state.tasks.find((entry) => entry.id === payload.taskId);
+                if (!task) return null;
+
+                const durationMinutes = getTaskDurationMinutes(task);
+                const endTime = formatClockTime(timeToMinutes(start.time) + durationMinutes);
+                const metrics = buildSlotMetrics({
+                    startTime: start.time,
+                    endTime,
+                });
+
+                return {
+                    day,
+                    hour,
+                    kind: 'task',
+                    top: metrics.top,
+                    height: metrics.height,
+                    startTimeLabel: start.time,
+                    title: task.title,
+                    parentGroupLabel: buildTaskParentGroupLabel(task, taskMap),
+                    timeLabel: start.time + '–' + endTime,
+                    accentColor: getTaskProjectColor(task, state.projects),
+                    background: '',
+                };
+            }
+
+            return null;
+        };
+
+        const applyCalendarCellDropPreview = (day, hour, payload) => {
+            const nextPreview = buildCalendarCellDropPreview(day, hour, payload);
+            setCalendarCellDropPreview((current) => {
+                if (!nextPreview) return current ? null : current;
+                if (
+                    current
+                    && current.day === nextPreview.day
+                    && current.hour === nextPreview.hour
+                    && current.kind === nextPreview.kind
+                    && current.top === nextPreview.top
+                    && current.height === nextPreview.height
+                    && current.startTimeLabel === nextPreview.startTimeLabel
+                    && current.title === nextPreview.title
+                    && current.parentGroupLabel === nextPreview.parentGroupLabel
+                    && current.timeLabel === nextPreview.timeLabel
+                    && current.accentColor === nextPreview.accentColor
+                    && current.background === nextPreview.background
+                ) {
+                    return current;
+                }
+                return nextPreview;
+            });
+        };
+
+        const clearCalendarCellDropPreview = () => {
+            setCalendarCellDropPreview((current) => (current ? null : current));
+        };
+
+        const clearCalendarDropCommitAccent = () => {
+            if (dropCommitAccentTimerRef.current) {
+                window.clearTimeout(dropCommitAccentTimerRef.current);
+                dropCommitAccentTimerRef.current = 0;
+            }
+            setCalendarDropCommitAccent((current) => (current ? null : current));
+        };
+
+        const flashCalendarDropCommitAccent = (day, hour) => {
+            if (!day || hour == null) return;
+
+            const start = resolveCalendarCellStart(day, hour);
+            const markerMetrics = buildSlotMetrics({
+                startTime: start.time,
+                endTime: formatClockTime(timeToMinutes(start.time) + 30),
+            });
+
+            if (dropCommitAccentTimerRef.current) {
+                window.clearTimeout(dropCommitAccentTimerRef.current);
+                dropCommitAccentTimerRef.current = 0;
+            }
+
+            setCalendarDropCommitAccent({
+                day,
+                hour,
+                top: markerMetrics.top,
+                timeLabel: start.time,
+            });
+
+            dropCommitAccentTimerRef.current = window.setTimeout(() => {
+                dropCommitAccentTimerRef.current = 0;
+                setCalendarDropCommitAccent(null);
+            }, 1280);
+        };
+
+        const stopCalendarTouchAutoScroll = () => {
+            if (!touchDragAutoScrollFrameRef.current) return;
+            window.cancelAnimationFrame(touchDragAutoScrollFrameRef.current);
+            touchDragAutoScrollFrameRef.current = 0;
+        };
+
+        const resolveCalendarDropTargetFromPoint = (clientX, clientY) => {
+            const currentDayWidth = Math.max(dayColumnWidthRef.current || dayColumnWidth || 1, 1);
+            const currentCalendarDays = calendarDaysRef.current || calendarDays;
+
+            const headerNode = headerScrollRef.current;
+            if (headerNode) {
+                const headerRect = headerNode.getBoundingClientRect();
+                const withinHeaderX = clientX >= headerRect.left && clientX <= headerRect.right;
+                const withinHeaderY = clientY >= headerRect.top && clientY <= headerRect.bottom;
+
+                if (withinHeaderX && withinHeaderY) {
+                    const relativeX = clientX - headerRect.left + headerNode.scrollLeft;
+                    const dayIndex = Math.floor(relativeX / currentDayWidth);
+                    const day = currentCalendarDays[dayIndex];
+                    if (day) return { type: 'header', day };
+                }
+            }
+
+            const bodyNode = bodyScrollRef.current;
+            const gridNode = gridScrollRef.current;
+            if (!bodyNode || !gridNode) return null;
+
+            const bodyRect = bodyNode.getBoundingClientRect();
+            const withinBodyX = clientX >= bodyRect.left && clientX <= bodyRect.right;
+            const withinBodyY = clientY >= bodyRect.top && clientY <= bodyRect.bottom;
+            if (!withinBodyX || !withinBodyY) return null;
+
+            const relativeX = clientX - bodyRect.left + bodyNode.scrollLeft;
+            const dayIndex = Math.floor(relativeX / currentDayWidth);
+            const day = currentCalendarDays[dayIndex];
+            if (!day) return null;
+
+            const relativeY = clientY - bodyRect.top + gridNode.scrollTop;
+            const hourIndex = Math.max(0, Math.min(HOURS.length - 1, Math.floor(relativeY / CALENDAR_HOUR_HEIGHT)));
+            return {
+                type: 'cell',
+                day,
+                hour: HOURS[hourIndex],
+            };
+        };
+
+        const resolveHeaderDropContext = (payload) => {
+            if (payload?.type === 'task' && payload.taskId) {
+                const task = state.tasks.find((entry) => entry.id === payload.taskId);
+                return task ? { task, slot: null } : null;
+            }
+
+            if (payload?.type === 'slot' && payload.slotId) {
+                const slot = state.slots.find((entry) => entry.id === payload.slotId);
+                if (!slot?.taskId) return null;
+
+                const task = state.tasks.find((entry) => entry.id === slot.taskId);
+                return task ? { task, slot } : null;
+            }
+
+            return null;
+        };
+
+        const canApplyDragPayloadToHeaderDay = (payload) => !!resolveHeaderDropContext(payload);
+
+        const syncTouchDragDropState = (active, clientX, clientY) => {
+            const dropTarget = resolveCalendarDropTargetFromPoint(clientX, clientY);
+
+            if (canApplyDragPayloadToHeaderDay(active?.payload) && dropTarget?.type === 'header') {
+                applyHeaderDropState(dropTarget.day, active?.payload);
+                clearCalendarCellDropPreview();
+            } else {
+                clearHeaderDropState();
+            }
+
+            if (isPlanningCalendarDragPayload(active?.payload) && dropTarget?.type === 'cell') {
+                applyCalendarCellDropPreview(dropTarget.day, dropTarget.hour, active?.payload);
+            } else {
+                clearCalendarCellDropPreview();
+            }
+
+            return dropTarget;
+        };
+
+        const applyDragPayloadToHeaderDay = (day, payload) => {
+            const context = resolveHeaderDropContext(payload);
+            if (!context?.task) return;
+
+            const patch = buildTaskHeaderDayPatch(context.task, day, todayIso);
+            if (patch) state.updateTask(context.task.id, patch);
+            if (context.slot?.id) state.deleteSlot(context.slot.id);
+        };
+
+        const applyDragPayloadToCell = (date, hour, payload) => {
+            if (!payload) return;
+            const start = resolveCalendarCellStart(date, hour);
+            const startTime = start.time;
+
+            if (payload.type === 'slot' && payload.slotId) {
+                const slot = state.slots.find((entry) => entry.id === payload.slotId);
+                if (!slot) return;
+                const duration = Math.max(30, getCalendarDisplayEndMinutes(slot) - getCalendarDisplayMinutes(slot.startTime));
+                state.updateSlot(slot.id, {
+                    date: start.date,
+                    startTime,
+                    endTime: formatClockTime(timeToMinutes(startTime) + duration),
+                });
+                return;
+            }
+
+            const task = state.tasks.find((entry) => entry.id === payload.taskId);
+            if (!task) return;
+            const duration = getTaskDurationMinutes(task);
+            state.addSlot({
+                taskId: task.id,
+                date: start.date,
+                startTime,
+                endTime: formatClockTime(timeToMinutes(startTime) + duration),
+                title: '',
+            });
+        };
+
+        const maybeActivateCalendarDragZoomFromPoint = (clientX, payload) => {
+            if (isCalendarDragZoomActiveRef.current) return;
+            if (!isPlanningCalendarDragPayload(payload)) return;
+
+            const scrollContainer = bodyScrollRef.current || headerScrollRef.current;
+            const containerRect = scrollContainer?.getBoundingClientRect?.();
+            if (!containerRect) return;
+
+            const edgeThreshold = Math.min(CALENDAR_DRAG_EDGE_THRESHOLD, Math.max(containerRect.width * 0.12, 24));
+            const nearLeftEdge = clientX <= (containerRect.left + edgeThreshold);
+            const nearRightEdge = clientX >= (containerRect.right - edgeThreshold);
+
+            if (nearLeftEdge || nearRightEdge) {
+                setCalendarDragZoom(true);
+            }
+        };
+
+        const startCalendarTouchAutoScroll = () => {
+            if (touchDragAutoScrollFrameRef.current) return;
+
+            const step = () => {
+                const active = touchDragStateRef.current;
+                if (!active || !active.activated) {
+                    touchDragAutoScrollFrameRef.current = 0;
+                    return;
+                }
+
+                const bodyNode = bodyScrollRef.current;
+                const gridNode = gridScrollRef.current;
+
+                if (bodyNode) {
+                    const rect = bodyNode.getBoundingClientRect();
+                    const edge = Math.min(CALENDAR_TOUCH_DRAG_AUTO_SCROLL_EDGE, Math.max(rect.width * 0.16, 28));
+                    let deltaX = 0;
+
+                    if (active.lastX <= rect.left + edge) {
+                        deltaX = -resolveAutoScrollDelta(active.lastX - rect.left, edge);
+                    } else if (active.lastX >= rect.right - edge) {
+                        deltaX = resolveAutoScrollDelta(rect.right - active.lastX, edge);
+                    }
+
+                    if (Math.abs(deltaX) > 0.1) {
+                        bodyNode.scrollLeft += deltaX;
+                        syncHeaderScroll();
+                        maybeActivateCalendarDragZoomFromPoint(active.lastX, active.payload);
+                    }
+                }
+
+                if (gridNode) {
+                    const rect = gridNode.getBoundingClientRect();
+                    const edge = Math.min(CALENDAR_TOUCH_DRAG_AUTO_SCROLL_EDGE, Math.max(rect.height * 0.12, 24));
+                    let deltaY = 0;
+
+                    if (active.lastY <= rect.top + edge) {
+                        deltaY = -resolveAutoScrollDelta(active.lastY - rect.top, edge);
+                    } else if (active.lastY >= rect.bottom - edge) {
+                        deltaY = resolveAutoScrollDelta(rect.bottom - active.lastY, edge);
+                    }
+
+                    if (Math.abs(deltaY) > 0.1) {
+                        gridNode.scrollTop += deltaY;
+                    }
+                }
+
+                syncTouchDragDropState(active, active.lastX, active.lastY);
+                touchDragAutoScrollFrameRef.current = window.requestAnimationFrame(step);
+            };
+
+            touchDragAutoScrollFrameRef.current = window.requestAnimationFrame(step);
+        };
+
+        const activateCalendarCustomDrag = (current) => {
+            if (!current || current.activated) return;
+
+            current.activated = true;
+            setTouchDragSourceKey(current.sourceKey || '');
+            setTouchDragPreview({
+                kind: current.payload?.type === 'slot' ? 'slot' : 'task',
+                title: current.title || '',
+                badgeText: current.badgeText || '',
+                parentGroupLabel: current.parentGroupLabel || '',
+                accentColor: current.accentColor || '',
+                background: current.background || '',
+                x: current.lastX,
+                y: current.lastY,
+            });
+
+            syncTouchDragDropState(current, current.lastX, current.lastY);
+            startCalendarTouchAutoScroll();
+        };
+
+        const finishCalendarTouchDrag = ({ applyDrop, suppressClickAfterDrop, interactionEvent } = {}) => {
+            const active = touchDragStateRef.current;
+            if (!active) return;
+
+            if (active.holdTimer) {
+                window.clearTimeout(active.holdTimer);
+                active.holdTimer = 0;
+            }
+
+            if (typeof active.handleTouchMove === 'function') {
+                document.removeEventListener('touchmove', active.handleTouchMove, true);
+            }
+            if (typeof active.handleTouchMovePassive === 'function') {
+                document.removeEventListener('touchmove', active.handleTouchMovePassive, true);
+            }
+            if (typeof active.handleTouchMoveActive === 'function') {
+                document.removeEventListener('touchmove', active.handleTouchMoveActive, true);
+            }
+            if (typeof active.handleTouchEnd === 'function') {
+                document.removeEventListener('touchend', active.handleTouchEnd, true);
+            }
+            if (typeof active.handleTouchCancel === 'function') {
+                document.removeEventListener('touchcancel', active.handleTouchCancel, true);
+            }
+            if (typeof active.handlePointerMove === 'function') {
+                window.removeEventListener('pointermove', active.handlePointerMove);
+            }
+            if (typeof active.handlePointerUp === 'function') {
+                window.removeEventListener('pointerup', active.handlePointerUp);
+            }
+            if (typeof active.handlePointerCancel === 'function') {
+                window.removeEventListener('pointercancel', active.handlePointerCancel);
+            }
+
+            if (
+                active.pointerId != null
+                && active.targetNode
+                && typeof active.targetNode.releasePointerCapture === 'function'
+            ) {
+                try {
+                    active.targetNode.releasePointerCapture(active.pointerId);
+                } catch (error) {
+                    // ignore
+                }
+            }
+
+            stopCalendarTouchAutoScroll();
+
+            if (interactionEvent) {
+                if (typeof interactionEvent.clientX === 'number' || typeof interactionEvent.clientY === 'number') {
+                    active.lastX = Number(interactionEvent.clientX) || active.lastX;
+                    active.lastY = Number(interactionEvent.clientY) || active.lastY;
+                } else {
+                    const point = getTouchEventPoint(interactionEvent, active.touchId);
+                    if (point) {
+                        active.lastX = Number(point.clientX) || active.lastX;
+                        active.lastY = Number(point.clientY) || active.lastY;
+                    }
+                }
+            }
+
+            const dropTarget = active.activated
+                ? resolveCalendarDropTargetFromPoint(active.lastX, active.lastY)
+                : null;
+
+            touchDragStateRef.current = null;
+            setTouchDragPreview(null);
+            setTouchDragSourceKey('');
+            clearHeaderDropState();
+            clearCalendarCellDropPreview();
+            setCalendarDragZoom(false);
+
+            if (active.activated && typeof active.onDragStateChange === 'function') {
+                active.onDragStateChange(false);
+            }
+
+            if (active.activated && suppressClickAfterDrop) {
+                suppressCalendarClick();
+            }
+
+            if (!applyDrop || !active.activated || !dropTarget) return;
+            if (dropTarget.type === 'header') {
+                clearCalendarDropCommitAccent();
+                applyDragPayloadToHeaderDay(dropTarget.day, active.payload);
+                return;
+            }
+            if (dropTarget.type === 'cell') {
+                applyDragPayloadToCell(dropTarget.day, dropTarget.hour, active.payload);
+                flashCalendarDropCommitAccent(dropTarget.day, dropTarget.hour);
+            }
+        };
+
+        const handleCalendarTouchStart = ({
+            event,
+            payload,
+            sourceKey,
+            title,
+            badgeText,
+            parentGroupLabel,
+            accentColor,
+            background,
+            onDragStateChange,
+        }) => {
+            const touchPoint = event?.touches?.[0];
+            if (!touchPoint || (event?.touches?.length || 0) !== 1) return;
+
+            finishCalendarTouchDrag();
+
+            const targetNode = event.currentTarget;
+            const clientX = Number(touchPoint.clientX) || 0;
+            const clientY = Number(touchPoint.clientY) || 0;
+            const active = {
+                payload,
+                sourceKey,
+                title,
+                badgeText,
+                parentGroupLabel,
+                accentColor,
+                background,
+                onDragStateChange,
+                touchId: touchPoint.identifier,
+                targetNode,
+                startX: clientX,
+                startY: clientY,
+                lastX: clientX,
+                lastY: clientY,
+                activated: false,
+                holdTimer: 0,
+                handleTouchMove: null,
+                handleTouchMovePassive: null,
+                handleTouchMoveActive: null,
+                handleTouchEnd: null,
+                handleTouchCancel: null,
+                handlePointerMove: null,
+                handlePointerUp: null,
+                handlePointerCancel: null,
+            };
+
+            const activateTouchDrag = () => {
+                const current = touchDragStateRef.current;
+                if (!current || current !== active || current.activated) return;
+
+                if (typeof current.handleTouchMovePassive === 'function') {
+                    document.removeEventListener('touchmove', current.handleTouchMovePassive, true);
+                }
+                if (typeof current.handleTouchMoveActive === 'function') {
+                    document.addEventListener('touchmove', current.handleTouchMoveActive, { passive: false, capture: true });
+                }
+
+                activateCalendarCustomDrag(current);
+            };
+
+            active.handleTouchMovePassive = (moveEvent) => {
+                const current = touchDragStateRef.current;
+                if (!current || current !== active) return;
+
+                const point = getTouchEventPoint(moveEvent, current.touchId);
+                if (!point) return;
+
+                const nextX = Number(point.clientX) || 0;
+                const nextY = Number(point.clientY) || 0;
+                current.lastX = nextX;
+                current.lastY = nextY;
+
+                if (!current.activated) {
+                    const distance = Math.hypot(nextX - current.startX, nextY - current.startY);
+                    if (distance > CALENDAR_TOUCH_DRAG_MOVE_CANCEL_THRESHOLD) {
+                        finishCalendarTouchDrag({ applyDrop: false, suppressClickAfterDrop: false });
+                    }
+                }
+
+                if (current.activated) return;
+            };
+
+            active.handleTouchMoveActive = (moveEvent) => {
+                const current = touchDragStateRef.current;
+                if (!current || current !== active || !current.activated) return;
+
+                const point = getTouchEventPoint(moveEvent, current.touchId);
+                if (!point) return;
+
+                const nextX = Number(point.clientX) || 0;
+                const nextY = Number(point.clientY) || 0;
+                current.lastX = nextX;
+                current.lastY = nextY;
+
+                if (moveEvent.cancelable) moveEvent.preventDefault();
+                maybeActivateCalendarDragZoomFromPoint(nextX, current.payload);
+                syncTouchDragDropState(current, nextX, nextY);
+
+                setTouchDragPreview((preview) => {
+                    if (!preview) return preview;
+                    if (preview.x === nextX && preview.y === nextY) return preview;
+                    return {
+                        ...preview,
+                        x: nextX,
+                        y: nextY,
+                    };
+                });
+            };
+
+            active.handleTouchMove = active.handleTouchMoveActive;
+
+            active.handleTouchEnd = (touchEndEvent) => {
+                const current = touchDragStateRef.current;
+                if (!current || current !== active) return;
+                const point = getTouchEventPoint(touchEndEvent, current.touchId);
+                if (!point && current.activated) return;
+
+                finishCalendarTouchDrag({
+                    applyDrop: true,
+                    suppressClickAfterDrop: current.activated,
+                    interactionEvent: touchEndEvent,
+                });
+            };
+
+            active.handleTouchCancel = (touchCancelEvent) => {
+                const current = touchDragStateRef.current;
+                if (!current || current !== active) return;
+                const point = getTouchEventPoint(touchCancelEvent, current.touchId);
+                if (!point && current.activated) return;
+
+                finishCalendarTouchDrag({
+                    applyDrop: false,
+                    suppressClickAfterDrop: false,
+                    interactionEvent: touchCancelEvent,
+                });
+            };
+
+            active.holdTimer = window.setTimeout(activateTouchDrag, CALENDAR_TOUCH_DRAG_HOLD_MS);
+            touchDragStateRef.current = active;
+
+            document.addEventListener('touchmove', active.handleTouchMovePassive, { passive: true, capture: true });
+            document.addEventListener('touchend', active.handleTouchEnd, { passive: true, capture: true });
+            document.addEventListener('touchcancel', active.handleTouchCancel, { passive: true, capture: true });
+        };
+
+        const handleCalendarPointerDragStart = ({
+            event,
+            payload,
+            sourceKey,
+            title,
+            badgeText,
+            parentGroupLabel,
+            accentColor,
+            background,
+            onDragStateChange,
+        }) => {
+            const pointerType = String(event?.pointerType || '').toLowerCase();
+            if (pointerType === 'touch' || pointerType === 'pen') return;
+            if (event.button != null && event.button !== 0) return;
+
+            if (event.cancelable) event.preventDefault();
+
+            finishCalendarTouchDrag();
+
+            const targetNode = event.currentTarget;
+            const clientX = Number(event.clientX) || 0;
+            const clientY = Number(event.clientY) || 0;
+            const active = {
+                payload,
+                sourceKey,
+                title,
+                badgeText,
+                parentGroupLabel,
+                accentColor,
+                background,
+                onDragStateChange,
+                pointerId: event.pointerId,
+                targetNode,
+                startX: clientX,
+                startY: clientY,
+                lastX: clientX,
+                lastY: clientY,
+                activated: false,
+                holdTimer: 0,
+                handleTouchMove: null,
+                handleTouchMovePassive: null,
+                handleTouchMoveActive: null,
+                handleTouchEnd: null,
+                handleTouchCancel: null,
+                handlePointerMove: null,
+                handlePointerUp: null,
+                handlePointerCancel: null,
+            };
+
+            if (active.pointerId != null && targetNode && typeof targetNode.setPointerCapture === 'function') {
+                try {
+                    targetNode.setPointerCapture(active.pointerId);
+                } catch (error) {
+                    // ignore
+                }
+            }
+
+            active.handlePointerMove = (moveEvent) => {
+                const current = touchDragStateRef.current;
+                if (!current || current !== active) return;
+                if (current.pointerId != null && moveEvent.pointerId != null && current.pointerId !== moveEvent.pointerId) return;
+
+                const nextX = Number(moveEvent.clientX) || 0;
+                const nextY = Number(moveEvent.clientY) || 0;
+                current.lastX = nextX;
+                current.lastY = nextY;
+
+                if (!current.activated) {
+                    const distance = Math.hypot(nextX - current.startX, nextY - current.startY);
+                    if (distance < CALENDAR_POINTER_DRAG_MOVE_THRESHOLD) return;
+                    activateCalendarCustomDrag(current);
+                }
+
+                if (moveEvent.cancelable) moveEvent.preventDefault();
+                maybeActivateCalendarDragZoomFromPoint(nextX, current.payload);
+                syncTouchDragDropState(current, nextX, nextY);
+
+                setTouchDragPreview((preview) => {
+                    if (!preview) return preview;
+                    if (preview.x === nextX && preview.y === nextY) return preview;
+                    return {
+                        ...preview,
+                        x: nextX,
+                        y: nextY,
+                    };
+                });
+            };
+
+            active.handlePointerUp = (pointerUpEvent) => {
+                const current = touchDragStateRef.current;
+                if (!current || current !== active) return;
+                if (current.pointerId != null && pointerUpEvent.pointerId != null && current.pointerId !== pointerUpEvent.pointerId) return;
+
+                finishCalendarTouchDrag({
+                    applyDrop: current.activated,
+                    suppressClickAfterDrop: current.activated,
+                    interactionEvent: pointerUpEvent,
+                });
+            };
+
+            active.handlePointerCancel = (pointerCancelEvent) => {
+                const current = touchDragStateRef.current;
+                if (!current || current !== active) return;
+                if (current.pointerId != null && pointerCancelEvent.pointerId != null && current.pointerId !== pointerCancelEvent.pointerId) return;
+
+                finishCalendarTouchDrag({
+                    applyDrop: false,
+                    suppressClickAfterDrop: false,
+                    interactionEvent: pointerCancelEvent,
+                });
+            };
+
+            touchDragStateRef.current = active;
+            window.addEventListener('pointermove', active.handlePointerMove, { passive: false });
+            window.addEventListener('pointerup', active.handlePointerUp);
+            window.addEventListener('pointercancel', active.handlePointerCancel);
+        };
+
+        const maybeActivateCalendarDragZoom = (event) => {
+            const payload = parsePlanningDragPayload(event);
+            maybeActivateCalendarDragZoomFromPoint(event.clientX, payload);
+        };
+
+        dayColumnWidthRef.current = dayColumnWidth;
+        calendarDaysRef.current = calendarDays;
+        isCalendarDragZoomActiveRef.current = isCalendarDragZoomActive;
+
+        useEffect(() => {
+            const measure = () => {
+                const width = bodyScrollRef.current?.clientWidth || 0;
+                if (width) setCalendarViewportWidth(width);
+            };
+
+            measure();
+            window.addEventListener('resize', measure);
+            return () => window.removeEventListener('resize', measure);
+        }, []);
+
+        useEffect(() => {
+            if (!bodyScrollRef.current) {
+                previousDayWidthRef.current = dayColumnWidth;
+                return;
+            }
+
+            const previousDayWidth = previousDayWidthRef.current;
+            if (!previousDayWidth || previousDayWidth === dayColumnWidth) {
+                previousDayWidthRef.current = dayColumnWidth;
+                return;
+            }
+
+            const bodyNode = bodyScrollRef.current;
+            const nextScrollLeft = (bodyNode.scrollLeft / previousDayWidth) * dayColumnWidth;
+            bodyNode.scrollLeft = nextScrollLeft;
+            if (headerScrollRef.current) headerScrollRef.current.scrollLeft = nextScrollLeft;
+            previousDayWidthRef.current = dayColumnWidth;
+        }, [dayColumnWidth]);
+
+        useEffect(() => {
+            const deactivateDragZoom = () => {
+                setCalendarDragZoom(false);
+                clearHeaderDropState();
+                clearCalendarCellDropPreview();
+            };
+
+            window.addEventListener('dragend', deactivateDragZoom);
+            window.addEventListener('drop', deactivateDragZoom, true);
+
+            return () => {
+                window.removeEventListener('dragend', deactivateDragZoom);
+                window.removeEventListener('drop', deactivateDragZoom, true);
+            };
+        }, []);
+
+        useEffect(() => () => {
+            clearCalendarDropCommitAccent();
+            finishCalendarTouchDrag({ applyDrop: false, suppressClickAfterDrop: false });
+            stopCalendarTouchAutoScroll();
+        }, []);
+
+        useEffect(() => {
+            const shell = headerShellRef.current;
+            const header = headerRef.current;
+            if (!shell || !header) return undefined;
+
+            const measureHeaderFrame = () => {
+                const shellRect = shell.getBoundingClientRect();
+                const nextFrame = {
+                    ready: true,
+                    top: Math.max(shellRect.top || 0, 0),
+                    left: shellRect.left,
+                    width: shellRect.width,
+                    height: header.offsetHeight || shellRect.height || 0,
+                };
+
+                setHeaderFrame((current) => {
+                    if (
+                        current.ready === nextFrame.ready &&
+                        Math.abs((current.top || 0) - nextFrame.top) < 1 &&
+                        Math.abs((current.left || 0) - nextFrame.left) < 1 &&
+                        Math.abs((current.width || 0) - nextFrame.width) < 1 &&
+                        Math.abs((current.height || 0) - nextFrame.height) < 1
+                    ) {
+                        return current;
+                    }
+                    return nextFrame;
+                });
+            };
+
+            measureHeaderFrame();
+
+            const resizeObserver = typeof ResizeObserver === 'function'
+                ? new ResizeObserver(() => measureHeaderFrame())
+                : null;
+
+            if (resizeObserver) {
+                resizeObserver.observe(shell);
+                resizeObserver.observe(header);
+            }
+
+            window.addEventListener('resize', measureHeaderFrame);
+            return () => {
+                window.removeEventListener('resize', measureHeaderFrame);
+                if (resizeObserver) resizeObserver.disconnect();
+            };
+        }, [calendarViewportWidth, isDesktop, calendarDays.length, state.tasks.length, state.slots.length]);
+
+        useEffect(() => {
+            const updateNowLine = () => setNowLineTop(getCalendarNowTop());
+
+            updateNowLine();
+            const intervalId = window.setInterval(updateNowLine, 60_000);
+            return () => window.clearInterval(intervalId);
+        }, []);
+
+        useEffect(() => {
+            if (!shouldCenterNow || !calendarViewportWidth || !headerFrame.ready) return undefined;
+
+            let frameId = 0;
+            let nestedFrameId = 0;
+
+            frameId = window.requestAnimationFrame(() => {
+                nestedFrameId = window.requestAnimationFrame(() => {
+                    const lineElement = nowLineRef.current;
+                    const headerElement = headerRef.current;
+                    if (!lineElement) return;
+                    centerCalendarNowLine(lineElement, headerElement);
+                    console.info('[HEYS.planning] Centered calendar on current time');
+                    setShouldCenterNow(false);
+                });
+            });
+
+            return () => {
+                window.cancelAnimationFrame(frameId);
+                window.cancelAnimationFrame(nestedFrameId);
+            };
+        }, [calendarViewportWidth, shouldCenterNow, headerFrame.ready, headerFrame.height]);
+
+        const syncHeaderScroll = () => {
+            if (!headerScrollRef.current || !bodyScrollRef.current) return;
+            headerScrollRef.current.scrollLeft = bodyScrollRef.current.scrollLeft;
+        };
+
+        const scrollCalendarHorizontallyBy = (delta) => {
+            const bodyNode = bodyScrollRef.current;
+            if (!bodyNode || !Number.isFinite(delta) || Math.abs(delta) < 0.5) return;
+
+            bodyNode.scrollLeft += delta;
+            syncHeaderScroll();
+        };
+
+        const handleHeaderWheel = (event) => {
+            const deltaX = Number(event.deltaX) || 0;
+            const deltaY = Number(event.deltaY) || 0;
+            const hasHorizontalIntent = Math.abs(deltaX) > Math.abs(deltaY) || (event.shiftKey && Math.abs(deltaY) > 0.5);
+            if (!hasHorizontalIntent) return;
+
+            const horizontalDelta = Math.abs(deltaX) > 0.5 ? deltaX : deltaY;
+            if (Math.abs(horizontalDelta) < 0.5) return;
+
+            if (event.cancelable) event.preventDefault();
+            scrollCalendarHorizontallyBy(horizontalDelta);
+        };
+
+        const scrollCalendarByDays = (days) => {
+            if (!bodyScrollRef.current) return;
+            bodyScrollRef.current.scrollBy({ left: dayColumnWidth * days, behavior: 'smooth' });
+        };
+
+        const scrollCalendarToTodayWindow = () => {
+            if (!bodyScrollRef.current) return;
+            bodyScrollRef.current.scrollTo({ left: 0, behavior: 'smooth' });
+            syncHeaderScroll();
+            setShouldCenterNow(true);
+        };
+
+        const handleDropToHeaderDay = (day, event) => {
+            event.preventDefault();
+            setCalendarDragZoom(false);
+            clearHeaderDropState();
+            clearCalendarCellDropPreview();
+            clearCalendarDropCommitAccent();
+            const payload = parsePlanningDragPayload(event);
+            applyDragPayloadToHeaderDay(day, payload);
+        };
+
+        useEffect(() => {
+            const handlePointerMove = (event) => {
+                const active = resizeStateRef.current;
+                if (!active) return;
+                const halfHourHeight = CALENDAR_HOUR_HEIGHT / 2;
+                const deltaSteps = Math.round((event.clientY - active.startY) / halfHourHeight);
+                const nextDeltaMinutes = deltaSteps * 30;
+
+                if (active.edge === 'start') {
+                    const nextStartMinutes = Math.max(
+                        CALENDAR_START_HOUR * 60,
+                        Math.min(active.endMinutes - 30, active.startMinutes + nextDeltaMinutes),
+                    );
+                    const nextStart = resolveCalendarDisplayDateTime(active.displayDate, nextStartMinutes);
+                    setResizePreview({
+                        slotId: active.slotId,
+                        date: nextStart.date,
+                        startTime: nextStart.time,
+                        endTime: active.originalEndTime,
+                    });
+                    return;
+                }
+
+                const nextEndMinutes = Math.max(active.startMinutes + 30, active.endMinutes + nextDeltaMinutes);
+                setResizePreview({
+                    slotId: active.slotId,
+                    date: active.originalDate,
+                    startTime: active.originalStartTime,
+                    endTime: formatClockTime(nextEndMinutes),
+                });
+            };
+
+            const handlePointerUp = () => {
+                const active = resizeStateRef.current;
+                if (!active) return;
+                if (resizePreview?.slotId === active.slotId) {
+                    const patch = {};
+                    if (resizePreview.date && resizePreview.date !== active.originalDate) patch.date = resizePreview.date;
+                    if (resizePreview.startTime && resizePreview.startTime !== active.originalStartTime) patch.startTime = resizePreview.startTime;
+                    if (resizePreview.endTime && resizePreview.endTime !== active.originalEndTime) patch.endTime = resizePreview.endTime;
+                    if (Object.keys(patch).length) state.updateSlot(active.slotId, patch);
+                }
+                resizeStateRef.current = null;
+                setResizePreview(null);
+            };
+
+            window.addEventListener('pointermove', handlePointerMove);
+            window.addEventListener('pointerup', handlePointerUp);
+            return () => {
+                window.removeEventListener('pointermove', handlePointerMove);
+                window.removeEventListener('pointerup', handlePointerUp);
+            };
+        }, [resizePreview, state]);
+
+        const slotsByDay = useMemo(() => {
+            const map = {};
+            calendarDays.forEach((day) => { map[day] = []; });
+            state.slots.forEach((slot) => {
+                const displayDate = getCalendarDisplayDate(slot);
+                if (map[displayDate]) map[displayDate].push(slot);
+            });
+            Object.keys(map).forEach((key) => {
+                map[key] = map[key].slice().sort((left, right) => getCalendarDisplayMinutes(left.startTime) - getCalendarDisplayMinutes(right.startTime));
+            });
+            return map;
+        }, [calendarDays, state.slots]);
+
+        const unscheduledTasks = useMemo(() => state.tasks.filter((task) => {
+            if (task.status === 'done' || task.status === 'cancelled') return false;
+            if (parentTaskIdsWithChildren.has(task.id)) return false;
+            return !state.slots.some((slot) => slot.taskId === task.id);
+        }), [parentTaskIdsWithChildren, state.tasks, state.slots]);
+
+        const unscheduledTasksByDay = useMemo(() => {
+            const map = {};
+            calendarDays.forEach((day) => { map[day] = []; });
+            unscheduledTasks.forEach((task) => {
+                const day = getTaskCalendarAnchorDate(task, todayIso, calendarStartIso, calendarEndIso);
+                if (!map[day]) map[day] = [];
+                map[day].push(task);
+            });
+            return map;
+        }, [calendarDays, unscheduledTasks, todayIso, calendarStartIso, calendarEndIso]);
+
+        const openNewSlot = (date, hour) => {
+            if (shouldSuppressCalendarClick()) return;
+            const start = resolveCalendarCellStart(date, hour);
+            const end = resolveCalendarCellStart(date, hour + 1);
+            setSlotDraft(buildSlotDraft({
+                date: start.date,
+                startTime: start.time,
+                endTime: end.time,
+            }));
+        };
+
+        const handleDropToCell = (date, hour, event) => {
+            event.preventDefault();
+            setCalendarDragZoom(false);
+            clearHeaderDropState();
+            clearCalendarCellDropPreview();
+            const payload = parsePlanningDragPayload(event);
+            applyDragPayloadToCell(date, hour, payload);
+            flashCalendarDropCommitAccent(date, hour);
+        };
+
+        const handleSaveSlot = (draft) => {
+            const payload = {
+                taskId: draft.taskId || undefined,
+                title: draft.title || '',
+                date: draft.date,
+                startTime: draft.startTime,
+                endTime: draft.endTime,
+            };
+            if (draft.id) {
+                state.updateSlot(draft.id, payload);
+            } else {
+                state.addSlot(payload);
+            }
+            setSlotDraft(null);
+        };
+
+        const beginResize = (slot, edge, event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            const displayDate = getCalendarDisplayDate(slot) || dateStr(slot.date);
+            resizeStateRef.current = {
+                slotId: slot.id,
+                edge: edge === 'start' ? 'start' : 'end',
+                displayDate,
+                startY: event.clientY,
+                startMinutes: getCalendarDisplayMinutes(slot.startTime),
+                endMinutes: getCalendarDisplayEndMinutes(slot),
+                originalDate: dateStr(slot.date),
+                originalStartTime: slot.startTime,
+                originalEndTime: slot.endTime,
+            };
+            setResizePreview({
+                slotId: slot.id,
+                date: dateStr(slot.date),
+                startTime: slot.startTime,
+                endTime: slot.endTime,
+            });
+        };
+
+        return h('div', {
+            className: 'planning-calendar-screen' + (isCalendarDragZoomActive ? ' planning-calendar-screen--drag-zoom' : ''),
+        },
+            h('div', { className: 'planning-calendar-nav' },
+                h('button', { type: 'button', className: 'planning-btn planning-btn--sm', onClick: () => scrollCalendarByDays(-3) }, '‹'),
+                h('button', { type: 'button', className: 'planning-btn planning-btn--sm', onClick: scrollCalendarToTodayWindow }, 'Сегодня'),
+                h('button', { type: 'button', className: 'planning-btn planning-btn--sm', onClick: () => scrollCalendarByDays(3) }, '›'),
+            ),
+            h('div', {
+                ref: headerShellRef,
+                className: 'planning-calendar-header-shell',
+                style: headerFrame.ready ? { height: headerFrame.height + 'px' } : undefined,
+            },
+                h('div', {
+                    ref: headerRef,
+                    className: 'planning-calendar-header' + (headerFrame.ready ? ' planning-calendar-header--pinned' : ''),
+                    style: headerFrame.ready
+                        ? {
+                            top: headerFrame.top + 'px',
+                            left: headerFrame.left + 'px',
+                            width: headerFrame.width + 'px',
+                        }
+                        : undefined,
+                },
+                    h('div', { className: 'planning-calendar-time-gutter' }),
+                    h('div', {
+                        ref: headerScrollRef,
+                        className: 'planning-calendar-days-scroll planning-calendar-days-scroll--header',
+                        onWheel: handleHeaderWheel,
+                    },
+                        h('div', {
+                            className: 'planning-calendar-days-track planning-calendar-days-track--header',
+                            style: { '--planning-calendar-day-width': dayColumnWidth + 'px' },
+                        },
+                            calendarDays.map((day) => h('div', {
+                                key: day,
+                                className: 'planning-calendar-day-header'
+                                    + (day === todayIso ? ' planning-calendar-day-header--today' : '')
+                                    + (headerDropState.day === day ? ' planning-calendar-day-header--drop-target' : '')
+                                    + (headerDropState.day === day && headerDropState.mode === 'unschedule'
+                                        ? ' planning-calendar-day-header--drop-unschedule'
+                                        : ''),
+                                onDragOver: (event) => {
+                                    const payload = parsePlanningDragPayload(event);
+                                    if (!canApplyDragPayloadToHeaderDay(payload)) {
+                                        if (headerDropState.day === day) clearHeaderDropState();
+                                        return;
+                                    }
+
+                                    event.preventDefault();
+                                    maybeActivateCalendarDragZoom(event);
+                                    event.dataTransfer.dropEffect = 'move';
+                                    clearCalendarCellDropPreview();
+                                    applyHeaderDropState(day, payload);
+                                },
+                                onDragLeave: () => {
+                                    if (headerDropState.day === day) clearHeaderDropState();
+                                },
+                                onDrop: (event) => handleDropToHeaderDay(day, event),
+                            },
+                                h('div', { className: 'planning-calendar-day-header__title' },
+                                    h('span', { className: 'planning-calendar-day-label' }, getWeekdayLabel(day)),
+                                    h('span', { className: 'planning-calendar-day-date' }, day.slice(8)),
+                                ),
+                                headerDropState.day === day && headerDropState.mode === 'unschedule' && h('span', {
+                                    className: 'planning-calendar-day-drop-hint',
+                                    'aria-hidden': 'true',
+                                }, '↺ без времени'),
+                                (unscheduledTasksByDay[day] || []).length > 0 && h('div', { className: 'planning-calendar-day-unscheduled' },
+                                    (unscheduledTasksByDay[day] || []).map((task) => h(CalendarUnscheduledTaskPill, {
+                                        key: task.id,
+                                        task,
+                                        projects: state.projects,
+                                        taskLookup: taskMap,
+                                        onDragStateChange: setCalendarDragZoom,
+                                        onTouchDragStart: handleCalendarTouchStart,
+                                        onPointerDragStart: handleCalendarPointerDragStart,
+                                        shouldSuppressClick: shouldSuppressCalendarClick,
+                                        isTouchDragSource: touchDragSourceKey === ('task:' + task.id),
+                                        allowNativeDrag: allowNativeCalendarDrag,
+                                        onOpen: setSelectedTaskId,
+                                    })),
+                                ),
+                            )),
+                        ),
+                    ),
+                ),
+            ),
+            h('div', { ref: gridScrollRef, className: 'planning-calendar-grid' },
+                h('div', { className: 'planning-calendar-time-gutter planning-calendar-time-gutter--grid' },
+                    calendarCellDropPreview && h('div', {
+                        className: 'planning-calendar-time-drop-range',
+                        style: {
+                            top: calendarCellDropPreview.top + 'px',
+                            height: calendarCellDropPreview.height + 'px',
+                        },
+                        'aria-hidden': 'true',
+                    }),
+                    HOURS.map((hour) => h('div', {
+                        key: hour,
+                        className: 'planning-calendar-hour-label'
+                            + (calendarDropCommitAccent?.hour === hour ? ' planning-calendar-hour-label--drop-accent' : ''),
+                    }, formatCalendarHourLabel(hour))),
+                    calendarCellDropPreview && h('div', {
+                        className: 'planning-calendar-time-drop-preview',
+                        style: { top: calendarCellDropPreview.top + 'px' },
+                        'aria-hidden': 'true',
+                    },
+                        h('span', { className: 'planning-calendar-time-drop-preview__label' }, calendarCellDropPreview.startTimeLabel),
+                        h('span', { className: 'planning-calendar-time-drop-preview__arrow' }, '→'),
+                    ),
+                ),
+                h('div', {
+                    ref: bodyScrollRef,
+                    className: 'planning-calendar-days-scroll planning-calendar-days-scroll--body',
+                    onScroll: syncHeaderScroll,
+                },
+                    h('div', {
+                        className: 'planning-calendar-days-track planning-calendar-days-track--grid',
+                        style: { '--planning-calendar-day-width': dayColumnWidth + 'px' },
+                    },
+                        calendarDays.map((day) => h('div', {
+                            key: day,
+                            className: 'planning-calendar-day-col' + (day === todayIso ? ' planning-calendar-day-col--today' : ''),
+                        },
+                            HOURS.map((hour) => h('div', {
+                                key: hour,
+                                className: 'planning-calendar-cell'
+                                    + (calendarCellDropPreview?.day === day && calendarCellDropPreview?.hour === hour
+                                        ? ' planning-calendar-cell--drop-target'
+                                        : ''),
+                                onClick: () => openNewSlot(day, hour),
+                                onDragOver: (event) => {
+                                    const payload = parsePlanningDragPayload(event);
+                                    if (!isPlanningCalendarDragPayload(payload)) return;
+
+                                    event.preventDefault();
+                                    maybeActivateCalendarDragZoom(event);
+                                    event.dataTransfer.dropEffect = 'move';
+                                    clearHeaderDropState();
+                                    applyCalendarCellDropPreview(day, hour, payload);
+                                },
+                                onDrop: (event) => handleDropToCell(day, hour, event),
+                            })),
+                            calendarCellDropPreview?.day === day && h('div', {
+                                className: 'planning-calendar-drop-preview'
+                                    + (calendarCellDropPreview.kind === 'slot'
+                                        ? ' planning-calendar-drop-preview--slot'
+                                        : ' planning-calendar-drop-preview--task'),
+                                style: {
+                                    top: calendarCellDropPreview.top + 'px',
+                                    height: calendarCellDropPreview.height + 'px',
+                                    '--planning-calendar-drop-preview-color': calendarCellDropPreview.accentColor || '#64748b',
+                                    ...(calendarCellDropPreview.kind === 'slot' && calendarCellDropPreview.background
+                                        ? { background: calendarCellDropPreview.background }
+                                        : {}),
+                                },
+                                'aria-hidden': 'true',
+                            },
+                                h('div', { className: 'planning-calendar-drop-preview__body' },
+                                    calendarCellDropPreview.parentGroupLabel && h('span', {
+                                        className: 'planning-calendar-drop-preview__parent',
+                                    }, calendarCellDropPreview.parentGroupLabel),
+                                    h('span', {
+                                        className: 'planning-calendar-drop-preview__title',
+                                    }, calendarCellDropPreview.title),
+                                    h('span', {
+                                        className: 'planning-calendar-drop-preview__time',
+                                    }, calendarCellDropPreview.timeLabel),
+                                ),
+                            ),
+                            calendarDropCommitAccent?.day === day && h('div', {
+                                className: 'planning-calendar-drop-commit-marker',
+                                style: { top: calendarDropCommitAccent.top + 'px' },
+                                'aria-hidden': 'true',
+                            },
+                                h('span', { className: 'planning-calendar-drop-commit-marker__dot' }),
+                                h('span', { className: 'planning-calendar-drop-commit-marker__line' }),
+                            ),
+                            (slotsByDay[day] || []).map((slot) => {
+                                const linkedTask = slot.taskId ? taskMap.get(slot.taskId) : null;
+                                const slotPreview = resizePreview?.slotId === slot.id
+                                    ? {
+                                        ...slot,
+                                        date: resizePreview.date || slot.date,
+                                        startTime: resizePreview.startTime || slot.startTime,
+                                        endTime: resizePreview.endTime || slot.endTime,
+                                    }
+                                    : slot;
+                                const metrics = buildSlotMetrics(slotPreview);
+                                const appearance = resolveCalendarSlotAppearance(day, yesterdayIso, linkedTask, state.projects);
+                                const parentGroupLabel = linkedTask ? buildTaskParentGroupLabel(linkedTask, taskMap) : '';
+                                return h(CalendarSlotCard, {
+                                    key: slot.id,
+                                    slot,
+                                    color: appearance.color,
+                                    className: appearance.className,
+                                    style: { top: metrics.top + 'px', height: metrics.height + 'px' },
+                                    title: linkedTask?.title || slot.title || 'Событие',
+                                    subtitle: slotPreview.startTime + '–' + slotPreview.endTime,
+                                    parentGroupLabel,
+                                    showSubtitle: !parentGroupLabel || metrics.height >= 44,
+                                    onDragStateChange: setCalendarDragZoom,
+                                    onTouchDragStart: handleCalendarTouchStart,
+                                    onPointerDragStart: handleCalendarPointerDragStart,
+                                    shouldSuppressClick: shouldSuppressCalendarClick,
+                                    isTouchDragSource: touchDragSourceKey === ('slot:' + slot.id),
+                                    allowNativeDrag: allowNativeCalendarDrag,
+                                    showResizeHandle: true,
+                                    onOpen: () => setSlotDraft(buildSlotDraft(slot)),
+                                    onResizeStart: beginResize,
+                                });
+                            }),
+                            day === todayIso && isCalendarNowTopVisible(nowLineTop) && h('div', {
+                                ref: nowLineRef,
+                                className: 'planning-calendar-now-line',
+                                style: { top: nowLineTop + 'px' },
+                                'aria-hidden': 'true',
+                            },
+                                h('span', { className: 'planning-calendar-now-line__dot' }),
+                                h('span', { className: 'planning-calendar-now-line__bar' }),
+                            ),
+                        )),
+                    ),
+                ),
+            ),
+            touchDragPreview && touchDragPreview.kind !== 'slot' && h('div', {
+                className: 'planning-calendar-touch-preview'
+                    + (touchDragPreview.kind === 'slot'
+                        ? ' planning-calendar-touch-preview--slot'
+                        : ' planning-calendar-touch-preview--task'),
+                style: {
+                    left: touchDragPreview.x + 'px',
+                    top: touchDragPreview.y + 'px',
+                    '--planning-calendar-touch-preview-color': touchDragPreview.accentColor || '#64748b',
+                    ...(touchDragPreview.kind === 'slot' && touchDragPreview.background
+                        ? { background: touchDragPreview.background }
+                        : {}),
+                },
+            },
+                h('div', { className: 'planning-calendar-touch-preview__body' },
+                    touchDragPreview.parentGroupLabel && h('span', {
+                        className: 'planning-calendar-touch-preview__parent',
+                    }, touchDragPreview.parentGroupLabel),
+                    h('span', { className: 'planning-calendar-touch-preview__title' }, touchDragPreview.title),
+                ),
+                touchDragPreview.badgeText && h('span', {
+                    className: 'planning-calendar-touch-preview__badge',
+                }, touchDragPreview.badgeText),
+            ),
+            slotDraft && h(SlotEditorModal, {
+                draft: slotDraft,
+                tasks: state.tasks,
+                onClose: () => setSlotDraft(null),
+                onDelete: (slotId) => {
+                    state.deleteSlot(slotId);
+                    setSlotDraft(null);
+                },
+                onSave: handleSaveSlot,
+                onOpenTask: (taskId) => {
+                    setSlotDraft(null);
+                    setSelectedTaskId(taskId);
+                },
+            }),
+            selectedTaskId && PlanningTasks.TaskDetailModal && h(PlanningTasks.TaskDetailModal, {
+                taskId: selectedTaskId,
+                state,
+                onClose: () => setSelectedTaskId(null),
+            }),
+            !isDesktop && h('div', { className: 'planning-mobile-hint' }, 'Подсказка: обычный свайп скроллит, зажим на задаче включает перенос.'),
+        );
+    }
+
+    function GanttBar({ task, dayWidth, timelineStart, color, isDesktop, onUpdateTask, onOpenTask }) {
+        const interactionRef = useRef(null);
+        const [preview, setPreview] = useState(null);
+
+        useEffect(() => {
+            const handleMove = (event) => {
+                const active = interactionRef.current;
+                if (!active) return;
+                const deltaDays = Math.round((event.clientX - active.startX) / dayWidth);
+                if (!deltaDays) {
+                    setPreview(null);
+                    return;
+                }
+                const current = { ...active.original };
+                if (active.mode === 'move') {
+                    current.startDate = active.original.startDate ? addDays(active.original.startDate, deltaDays) : active.original.startDate;
+                    current.dueDate = active.original.dueDate ? addDays(active.original.dueDate, deltaDays) : active.original.dueDate;
+                }
+                if (active.mode === 'start' && active.original.startDate) {
+                    const candidate = addDays(active.original.startDate, deltaDays);
+                    if (!active.original.dueDate || candidate <= active.original.dueDate) current.startDate = candidate;
+                }
+                if (active.mode === 'end' && active.original.dueDate) {
+                    const candidate = addDays(active.original.dueDate, deltaDays);
+                    if (!active.original.startDate || candidate >= active.original.startDate) current.dueDate = candidate;
+                }
+                setPreview(current);
+            };
+
+            const handleUp = () => {
+                const active = interactionRef.current;
+                if (!active) return;
+                if (preview) {
+                    onUpdateTask(task.id, {
+                        startDate: preview.startDate,
+                        dueDate: preview.dueDate,
+                    });
+                }
+                interactionRef.current = null;
+                setPreview(null);
+            };
+
+            window.addEventListener('pointermove', handleMove);
+            window.addEventListener('pointerup', handleUp);
+            return () => {
+                window.removeEventListener('pointermove', handleMove);
+                window.removeEventListener('pointerup', handleUp);
+            };
+        }, [dayWidth, onUpdateTask, preview, task.id]);
+
+        const effectiveTask = preview || task;
+        const startDate = effectiveTask.startDate || effectiveTask.dueDate;
+        const dueDate = effectiveTask.dueDate || effectiveTask.startDate;
+        const startOffset = diffDays(timelineStart, startDate);
+        const endOffset = diffDays(timelineStart, dueDate);
+        const width = Math.max(dayWidth, ((endOffset - startOffset) + 1) * dayWidth);
+        const left = startOffset * dayWidth;
+
+        const baselineStart = task.baselineStartDate || task.baselineDueDate;
+        const baselineEnd = task.baselineDueDate || task.baselineStartDate;
+        const showBaseline = isDesktop && baselineStart && baselineEnd;
+        const baselineLeft = showBaseline ? diffDays(timelineStart, baselineStart) * dayWidth : 0;
+        const baselineWidth = showBaseline
+            ? Math.max(dayWidth, ((diffDays(timelineStart, baselineEnd) - diffDays(timelineStart, baselineStart)) + 1) * dayWidth)
+            : 0;
+
+        const beginInteraction = (mode, event) => {
+            if (!isDesktop) return;
+            event.preventDefault();
+            event.stopPropagation();
+            interactionRef.current = {
+                mode,
+                startX: event.clientX,
+                original: {
+                    startDate: task.startDate || undefined,
+                    dueDate: task.dueDate || undefined,
+                },
+            };
+            setPreview(null);
+        };
+
+        return h('div', { className: 'planning-gantt-bar-wrap' },
+            showBaseline && h('div', {
+                className: 'planning-gantt-baseline',
+                style: { left: baselineLeft + 'px', width: baselineWidth + 'px' },
+            }),
+            h('div', {
+                className: 'planning-gantt-bar',
+                style: { left: left + 'px', width: width + 'px', background: color },
+                onClick: () => onOpenTask(task.id),
+                onPointerDown: (event) => beginInteraction('move', event),
+                title: task.title + ' · ' + (startDate || '?') + ' → ' + (dueDate || '?'),
+            },
+                isDesktop && h('span', {
+                    className: 'planning-gantt-handle planning-gantt-handle--start',
+                    onPointerDown: (event) => beginInteraction('start', event),
+                }),
+                h('span', { className: 'planning-gantt-bar__label' }, task.title),
+                isDesktop && h('span', {
+                    className: 'planning-gantt-handle planning-gantt-handle--end',
+                    onPointerDown: (event) => beginInteraction('end', event),
+                }),
+            ),
+        );
+    }
+
+    function GanttScreen({ state }) {
+        const { isDesktop } = usePlanningViewport();
+        const [zoom, setZoom] = useState(isDesktop ? 'normal' : 'compact');
+        const [collapsed, setCollapsed] = useState({});
+        const [selectedTaskId, setSelectedTaskId] = useState(null);
+
+        useEffect(() => {
+            if (!isDesktop) setZoom('compact');
+        }, [isDesktop]);
+
+        const relevantTasks = useMemo(() => state.tasks.filter((task) => {
+            if (task.status === 'cancelled') return false;
+            return !!(task.startDate || task.dueDate || task.baselineStartDate || task.baselineDueDate);
+        }), [state.tasks]);
+
+        const timelineBounds = useMemo(() => {
+            const dates = [];
+            relevantTasks.forEach((task) => {
+                [task.startDate, task.dueDate, task.baselineStartDate, task.baselineDueDate].forEach((value) => {
+                    if (value) dates.push(value);
+                });
+            });
+            if (dates.length === 0) {
+                const today = dateStr();
+                return { start: addDays(today, -3), end: addDays(today, 17) };
+            }
+            const sorted = dates.slice().sort();
+            return { start: addDays(sorted[0], -2), end: addDays(sorted[sorted.length - 1], 4) };
+        }, [relevantTasks]);
+
+        const timelineDays = useMemo(() => {
+            const length = Math.max(1, diffDays(timelineBounds.start, timelineBounds.end) + 1);
+            return Array.from({ length }, (_, index) => addDays(timelineBounds.start, index));
+        }, [timelineBounds]);
+
+        const dayWidth = GANTT_ZOOM_WIDTHS[zoom] || GANTT_ZOOM_WIDTHS.normal;
+        const todayIso = dateStr();
+        const projects = state.projects.filter((project) => project.status !== 'archived');
+
+        const grouped = useMemo(() => {
+            const buckets = new Map();
+            projects.forEach((project) => buckets.set(project.id, { project, tasks: [] }));
+            buckets.set('__none__', { project: { id: '__none__', name: 'Без проекта', color: '#94a3b8' }, tasks: [] });
+            relevantTasks.forEach((task) => {
+                const key = task.projectId && buckets.has(task.projectId) ? task.projectId : '__none__';
+                buckets.get(key).tasks.push(task);
+            });
+            return Array.from(buckets.values())
+                .map((entry) => ({ ...entry, tasks: entry.tasks.slice().sort((left, right) => (left.order || 0) - (right.order || 0)) }))
+                .filter((entry) => entry.tasks.length > 0);
+        }, [projects, relevantTasks]);
+
+        const layout = useMemo(() => {
+            const taskTopById = {};
+            const taskMetrics = {};
+            const rows = [];
+            let cursorTop = 0;
+            grouped.forEach((group) => {
+                rows.push({ type: 'group', id: group.project.id, top: cursorTop, height: 34, group });
+                cursorTop += 34;
+                if (collapsed[group.project.id]) return;
+                group.tasks.forEach((task) => {
+                    const row = { type: 'task', id: task.id, top: cursorTop, height: 42, task, group };
+                    rows.push(row);
+                    taskTopById[task.id] = cursorTop;
+                    const startDate = task.startDate || task.dueDate;
+                    const dueDate = task.dueDate || task.startDate;
+                    const left = diffDays(timelineBounds.start, startDate) * dayWidth;
+                    const width = Math.max(dayWidth, ((diffDays(timelineBounds.start, dueDate) - diffDays(timelineBounds.start, startDate)) + 1) * dayWidth);
+                    taskMetrics[task.id] = { left, right: left + width, centerY: cursorTop + 21 };
+                    cursorTop += 42;
+                });
+            });
+            return { rows, taskTopById, taskMetrics, height: cursorTop };
+        }, [collapsed, grouped, timelineBounds.start, dayWidth]);
+
+        const dependencyPaths = useMemo(() => {
+            if (!isDesktop) return [];
+            const paths = [];
+            relevantTasks.forEach((task) => {
+                (task.blockedByTaskIds || []).forEach((blockedId) => {
+                    const from = layout.taskMetrics[blockedId];
+                    const to = layout.taskMetrics[task.id];
+                    if (!from || !to) return;
+                    const midX = Math.max(from.right + 12, to.left - 12);
+                    paths.push('M ' + from.right + ' ' + from.centerY + ' H ' + midX + ' V ' + to.centerY + ' H ' + to.left);
+                });
+            });
+            return paths;
+        }, [isDesktop, layout.taskMetrics, relevantTasks]);
+
+        return h('div', { className: 'planning-gantt-screen' },
+            h('div', { className: 'planning-gantt-toolbar' },
+                h('div', { className: 'planning-gantt-toolbar__group' },
+                    h('button', {
+                        type: 'button',
+                        className: 'planning-btn planning-btn--sm' + (zoom === 'compact' ? ' planning-btn--active' : ''),
+                        onClick: () => setZoom('compact'),
+                    }, 'S'),
+                    h('button', {
+                        type: 'button',
+                        className: 'planning-btn planning-btn--sm' + (zoom === 'normal' ? ' planning-btn--active' : ''),
+                        onClick: () => setZoom('normal'),
+                    }, 'M'),
+                    h('button', {
+                        type: 'button',
+                        className: 'planning-btn planning-btn--sm' + (zoom === 'wide' ? ' planning-btn--active' : ''),
+                        onClick: () => setZoom('wide'),
+                        disabled: !isDesktop,
+                    }, 'L'),
+                ),
+                h('span', { className: 'planning-gantt-toolbar__hint' }, isDesktop ? 'Drag/resize включён' : 'На мобилке — компактный режим'),
+            ),
+            h('div', { className: 'planning-gantt-container' },
+                h('div', { className: 'planning-gantt-header' },
+                    h('div', { className: 'planning-gantt-labels' }, 'Задачи'),
+                    h('div', { className: 'planning-gantt-timeline-header' },
+                        timelineDays.map((day) => h('div', {
+                            key: day,
+                            className: 'planning-gantt-day-header' + (day === todayIso ? ' planning-gantt-day-header--today' : ''),
+                            style: { width: dayWidth + 'px' },
+                        },
+                            h('span', { className: 'planning-gantt-day-name' }, WEEKDAY_LABELS[(new Date(day + 'T12:00:00').getDay() + 6) % 7]),
+                            h('span', { className: 'planning-gantt-day-num' }, day.slice(8)),
+                        )),
+                    ),
+                ),
+                relevantTasks.length === 0
+                    ? h('div', { className: 'planning-empty' }, 'Нет задач с датами. Добавь даты или baseline на экране задач.')
+                    : h('div', {
+                        className: 'planning-gantt-body',
+                        style: {
+                            minWidth: (timelineDays.length * dayWidth) + 180 + 'px',
+                            height: layout.height + 'px',
+                        },
+                    },
+                        h('div', { className: 'planning-gantt-overlay', style: { height: layout.height + 'px', left: '140px', width: (timelineDays.length * dayWidth) + 'px' } },
+                            isDesktop && dependencyPaths.length > 0 && h('svg', { className: 'planning-gantt-deps', width: timelineDays.length * dayWidth, height: layout.height },
+                                h('defs', null,
+                                    h('marker', { id: 'planning-arrow', markerWidth: '8', markerHeight: '8', refX: '6', refY: '4', orient: 'auto', markerUnits: 'strokeWidth' },
+                                        h('path', { d: 'M 0 0 L 8 4 L 0 8 z', fill: 'rgba(37,99,235,0.66)' }),
+                                    ),
+                                ),
+                                dependencyPaths.map((path, index) => h('path', {
+                                    key: index,
+                                    d: path,
+                                    fill: 'none',
+                                    stroke: 'rgba(37,99,235,0.66)',
+                                    strokeWidth: '1.5',
+                                    markerEnd: 'url(#planning-arrow)',
+                                })),
+                            ),
+                            timelineDays.indexOf(todayIso) >= 0 && h('div', {
+                                className: 'planning-gantt-today-line',
+                                style: { left: (timelineDays.indexOf(todayIso) * dayWidth) + (dayWidth / 2) + 'px', height: layout.height + 'px' },
+                            }),
+                        ),
+                        layout.rows.map((row) => row.type === 'group'
+                            ? h('div', {
+                                key: 'group-' + row.id,
+                                className: 'planning-gantt-group-row',
+                                style: { top: row.top + 'px', height: row.height + 'px' },
+                            },
+                                h('button', {
+                                    type: 'button',
+                                    className: 'planning-gantt-group-toggle',
+                                    onClick: () => setCollapsed((current) => ({ ...current, [row.group.project.id]: !current[row.group.project.id] })),
+                                }, collapsed[row.group.project.id] ? '▸' : '▾'),
+                                h('span', {
+                                    className: 'planning-gantt-group-dot',
+                                    style: { background: row.group.project.color },
+                                }),
+                                h('span', { className: 'planning-gantt-group-name' }, row.group.project.name),
+                                h('span', { className: 'planning-gantt-group-count' }, row.group.tasks.length),
+                            )
+                            : h('div', {
+                                key: row.id,
+                                className: 'planning-gantt-row',
+                                style: { top: row.top + 'px', height: row.height + 'px' },
+                            },
+                                h('div', { className: 'planning-gantt-labels' },
+                                    h('div', { className: 'planning-gantt-task-title' }, row.task.title),
+                                    h('div', { className: 'planning-gantt-task-meta' }, [row.task.startDate, row.task.dueDate].filter(Boolean).join(' → ') || 'Без дат'),
+                                ),
+                                h('div', { className: 'planning-gantt-timeline' },
+                                    h(GanttBar, {
+                                        task: row.task,
+                                        dayWidth,
+                                        timelineStart: timelineBounds.start,
+                                        color: getTaskProjectColor(row.task, state.projects),
+                                        isDesktop,
+                                        onUpdateTask: state.updateTask,
+                                        onOpenTask: setSelectedTaskId,
+                                    }),
+                                ),
+                            )),
+                    ),
+            ),
+            selectedTaskId && PlanningTasks.TaskDetailModal && h(PlanningTasks.TaskDetailModal, {
+                taskId: selectedTaskId,
+                state,
+                onClose: () => setSelectedTaskId(null),
+            }),
+        );
+    }
+
+    HEYS.PlanningSchedule = {
+        CalendarScreen,
+        GanttScreen,
+    };
+})();
+
+
+/* ===== heys_planning_v1.js ===== */
+// heys_planning_v1.js — coordinator for HEYS planning runtime
+// PIN-only access: renders only when !cloudUser && clientId
+
+(function () {
+    'use strict';
+
+    const HEYS = window.HEYS = window.HEYS || {};
+    const React = window.React;
+    if (!React) return;
+
+    const h = React.createElement;
+    const { useMemo, useState, useEffect, useRef } = React;
+    const Planning = HEYS.Planning = HEYS.Planning || {};
+
+    const SUBNAV_ITEMS = [
+        { id: 'tasks', label: 'Список', shortLabel: 'Список', icon: '☑️' },
+        { id: 'calendar', label: 'Календарь', shortLabel: 'Кален.', icon: '📅' },
+        { id: 'gantt', label: 'Гант', shortLabel: 'Гант', icon: '📊' },
+    ];
+
+    function PlanningFallback() {
+        return h('div', { className: 'planning-tab' },
+            h('div', { className: 'planning-content' },
+                h('div', { className: 'planning-empty' },
+                    'Planning modules ещё загружаются. Обнови экран, если состояние зависло.',
+                ),
+            ),
+        );
+    }
+
+    function resolvePlanningRuntime() {
+        const TasksScreen = HEYS.PlanningTasks && HEYS.PlanningTasks.TasksScreen;
+        const CalendarScreen = HEYS.PlanningSchedule && HEYS.PlanningSchedule.CalendarScreen;
+        const GanttScreen = HEYS.PlanningSchedule && HEYS.PlanningSchedule.GanttScreen;
+        const usePlanningState = Planning.Hooks && Planning.Hooks.usePlanningState;
+
+        return {
+            TasksScreen,
+            CalendarScreen,
+            GanttScreen,
+            usePlanningState,
+            store: Planning.Store || {},
+        };
+    }
+
+    function PlanningTab() {
+        const [activeScreen, setActiveScreen] = useState('calendar');
+        const [layoutMetrics, setLayoutMetrics] = useState({ mainTabsHeight: 0, subnavHeight: 0 });
+        const runtime = resolvePlanningRuntime();
+        const planState = runtime.usePlanningState ? runtime.usePlanningState() : null;
+        const subnavRef = useRef(null);
+
+        useEffect(() => {
+            if (typeof document === 'undefined' || !document.body) return undefined;
+            document.body.classList.add('planning-tab-active');
+            return () => {
+                document.body.classList.remove('planning-tab-active');
+            };
+        }, []);
+
+        useEffect(() => {
+            if (typeof window === 'undefined' || typeof document === 'undefined') return undefined;
+
+            let frameId = 0;
+            const measureLayout = () => {
+                const nextMainTabsHeight = Math.round(document.querySelector('.tabs')?.getBoundingClientRect?.().height || 0);
+                const nextSubnavHeight = Math.round(subnavRef.current?.getBoundingClientRect?.().height || 0);
+
+                setLayoutMetrics((current) => {
+                    if (current.mainTabsHeight === nextMainTabsHeight && current.subnavHeight === nextSubnavHeight) {
+                        return current;
+                    }
+
+                    return {
+                        mainTabsHeight: nextMainTabsHeight,
+                        subnavHeight: nextSubnavHeight,
+                    };
+                });
+            };
+
+            frameId = window.requestAnimationFrame(measureLayout);
+
+            const resizeObserver = typeof ResizeObserver === 'function'
+                ? new ResizeObserver(() => measureLayout())
+                : null;
+            const tabsElement = document.querySelector('.tabs');
+
+            if (resizeObserver) {
+                if (tabsElement) resizeObserver.observe(tabsElement);
+                if (subnavRef.current) resizeObserver.observe(subnavRef.current);
+            }
+
+            window.addEventListener('resize', measureLayout);
+            return () => {
+                window.cancelAnimationFrame(frameId);
+                window.removeEventListener('resize', measureLayout);
+                if (resizeObserver) resizeObserver.disconnect();
+            };
+        }, []);
+
+        const planningLayoutStyle = useMemo(() => {
+            const style = {};
+
+            if (layoutMetrics.mainTabsHeight > 0) {
+                style['--planning-main-tabs-height'] = layoutMetrics.mainTabsHeight + 'px';
+            }
+
+            if (layoutMetrics.subnavHeight > 0) {
+                style['--planning-subnav-height'] = layoutMetrics.subnavHeight + 'px';
+            }
+
+            return style;
+        }, [layoutMetrics.mainTabsHeight, layoutMetrics.subnavHeight]);
+
+        const CurrentScreen = useMemo(() => {
+            if (activeScreen === 'calendar') return runtime.CalendarScreen;
+            if (activeScreen === 'gantt') return runtime.GanttScreen;
+            return runtime.TasksScreen;
+        }, [activeScreen, runtime.CalendarScreen, runtime.GanttScreen, runtime.TasksScreen]);
+
+        if (!planState || !runtime.TasksScreen || !runtime.CalendarScreen || !runtime.GanttScreen) {
+            console.warn('[HEYS.planning] Planning split modules are not ready yet');
+            return h(PlanningFallback);
+        }
+
+        return h('div', { className: 'planning-tab', style: planningLayoutStyle },
+            h('div', { className: 'planning-content' },
+                CurrentScreen ? h(CurrentScreen, { state: planState }) : h(PlanningFallback),
+            ),
+            h('div', { className: 'planning-subnav-shell', 'aria-hidden': 'true' }),
+            h('div', { className: 'planning-subnav planning-subnav--docked', ref: subnavRef },
+                h('div', { className: 'planning-subnav__inner' },
+                    SUBNAV_ITEMS.map((item) => h('button', {
+                        key: item.id,
+                        type: 'button',
+                        title: item.label,
+                        'aria-label': item.label,
+                        'data-screen': item.id,
+                        className: 'planning-subnav__item' + (activeScreen === item.id ? ' active' : ''),
+                        onClick: () => setActiveScreen(item.id),
+                    },
+                        h('span', { className: 'planning-subnav__icon', 'aria-hidden': 'true' }, item.icon),
+                        h('span', {
+                            className: 'planning-subnav__label',
+                            'data-short-label': item.shortLabel || item.label,
+                            'aria-hidden': 'true',
+                        }, item.label),
+                    )),
+                ),
+            ),
+        );
+    }
+
+    HEYS.PlanningTab = PlanningTab;
+    HEYS.PlanningData = Planning.Store || {};
+    console.info('[HEYS.planning] ✅ PlanningTab coordinator registered');
 })();

@@ -1,0 +1,3123 @@
+/* =============================================================================
+   900 — PLANNING MODULE (Tasks + Calendar + Gantt)
+   ============================================================================= */
+
+/* --- Tab container --- */
+.planning-tab {
+    --planning-surface: var(--card, var(--surface, #fff));
+    --planning-surface-elevated: var(--surface, var(--bg-secondary, #f8fafc));
+    --planning-border: var(--border, rgba(15, 23, 42, 0.08));
+    --planning-border-soft: rgba(15, 23, 42, 0.05);
+    --planning-accent: var(--acc, var(--accent, #2563eb));
+    --planning-accent-soft: rgba(37, 99, 235, 0.08);
+    --planning-text: var(--text, var(--text-primary, #0f172a));
+    --planning-muted: var(--muted, var(--text-secondary, #64748b));
+    --planning-muted-soft: var(--text-tertiary, #94a3b8);
+    --planning-fab-size: 36px;
+    --planning-main-tabs-height: calc(76px + env(safe-area-inset-bottom, 0px));
+    --planning-subnav-height: 44px;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
+    background: var(--surface, var(--bg-primary, #fff));
+    color: var(--planning-text);
+}
+
+/* --- Bottom planning subnav --- */
+.planning-subnav-shell {
+    flex: 0 0 var(--planning-subnav-height, 68px);
+    min-height: var(--planning-subnav-height, 68px);
+}
+
+.planning-subnav {
+    position: fixed;
+    left: calc(16px + env(safe-area-inset-left, 0px));
+    right: auto;
+    bottom: calc(var(--planning-main-tabs-height, calc(76px + env(safe-area-inset-bottom, 0px))) + 8px);
+    z-index: 940;
+    display: flex;
+    gap: 8px;
+    padding: 0;
+    background: transparent;
+    border: none;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+}
+
+.planning-subnav__inner {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: auto;
+    max-width: none;
+    margin: 0;
+}
+
+.planning-subnav__item {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    width: var(--planning-fab-size);
+    min-width: var(--planning-fab-size);
+    height: var(--planning-fab-size);
+    min-height: var(--planning-fab-size);
+    gap: 0;
+    padding: 0;
+    border-radius: 999px;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    background: rgba(255, 255, 255, 0.85);
+    color: #6b7280;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+    touch-action: manipulation;
+    transition: all 0.2s ease;
+}
+
+.planning-subnav__item:hover {
+    background: rgba(255, 255, 255, 0.95);
+    color: var(--planning-accent);
+    transform: translateY(-1px);
+}
+
+.planning-subnav__item.active {
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    color: #fff;
+    font-weight: 700;
+    border-color: rgba(255, 255, 255, 0.85);
+    box-shadow:
+        0 10px 24px rgba(37, 99, 235, 0.32),
+        0 0 0 3px rgba(255, 255, 255, 0.8);
+    transform: none;
+}
+
+.planning-subnav__icon {
+    font-size: 16px;
+    line-height: 1;
+    opacity: 1;
+}
+
+.planning-subnav__item.active .planning-subnav__icon {
+    opacity: 1;
+}
+
+.planning-subnav__label {
+    display: none;
+}
+
+.planning-subnav__label::before {
+    content: none;
+}
+
+.planning-subnav__item:active {
+    transform: scale(0.95);
+    box-shadow: 0 2px 8px rgba(37, 99, 235, 0.18);
+}
+
+[data-theme="dark"] .planning-subnav__item {
+    border-color: rgba(226, 232, 240, 0.14);
+    background: rgba(30, 41, 59, 0.72);
+    color: rgba(226, 232, 240, 0.9);
+    box-shadow: 0 4px 12px rgba(2, 6, 23, 0.3);
+}
+
+[data-theme="dark"] .planning-subnav__item:hover {
+    background: rgba(30, 41, 59, 0.9);
+    color: #93c5fd;
+}
+
+[data-theme="dark"] .planning-subnav__item.active {
+    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+    color: #eff6ff;
+    border-color: rgba(191, 219, 254, 0.5);
+    box-shadow:
+        0 10px 24px rgba(29, 78, 216, 0.38),
+        0 0 0 3px rgba(15, 23, 42, 0.72);
+}
+
+/* --- Content area --- */
+.planning-content {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    background: transparent;
+}
+
+@media (max-width: 520px) {
+    .planning-subnav__inner {
+        gap: 6px;
+    }
+
+    .planning-subnav__item {
+        width: 34px;
+        min-width: 34px;
+        height: 34px;
+        min-height: 34px;
+    }
+
+    .planning-subnav__icon {
+        font-size: 15px;
+    }
+}
+
+/* =============================================================================
+   TASKS SCREEN
+   ============================================================================= */
+.planning-tasks-screen {
+    padding: 8px 12px 12px;
+}
+
+.planning-tasks-header {
+    margin-bottom: 12px;
+}
+
+.planning-quick-add-card {
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+    padding: 12px;
+    border-radius: 20px;
+    border: 1px solid rgba(148, 163, 184, 0.26);
+    background: linear-gradient(180deg, rgba(241, 245, 249, 0.98) 0%, rgba(226, 232, 240, 0.92) 100%);
+    box-shadow:
+        0 18px 42px rgba(15, 23, 42, 0.1),
+        0 6px 18px rgba(59, 130, 246, 0.06),
+        inset 0 1px 0 rgba(255, 255, 255, 0.78),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.35);
+    -webkit-backdrop-filter: blur(18px) saturate(1.08);
+    backdrop-filter: blur(18px) saturate(1.08);
+}
+
+.planning-quick-add-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background:
+        radial-gradient(circle at top right, rgba(96, 165, 250, 0.12), transparent 34%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.24) 0%, rgba(255, 255, 255, 0) 40%);
+    pointer-events: none;
+}
+
+.planning-quick-add-card__header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.planning-quick-add-card__copy {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.planning-quick-add-card__title {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--planning-text);
+}
+
+.planning-quick-add-card__hint {
+    font-size: 11px;
+    color: var(--planning-muted);
+    line-height: 1.35;
+}
+
+/* --- Quick add --- */
+.planning-quick-add {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.planning-quick-input {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--planning-border);
+    border-radius: 10px;
+    font-size: 14px;
+    background: var(--planning-surface);
+    color: var(--planning-text);
+    outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+}
+
+.planning-quick-input:focus {
+    border-color: var(--planning-accent);
+    box-shadow: 0 0 0 3px var(--planning-accent-soft);
+}
+
+.planning-quick-input--main {
+    font-size: 14px;
+    padding: 10px 12px;
+}
+
+.planning-quick-add__title-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 6px;
+    align-items: stretch;
+}
+
+.planning-quick-add__actions {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.planning-quick-add__primary-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 6px;
+    align-items: start;
+}
+
+.planning-quick-add__secondary-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(82px, 0.34fr);
+    gap: 6px;
+    align-items: stretch;
+}
+
+.planning-quick-add__actions--priority-row {
+    justify-content: flex-end;
+    flex-wrap: nowrap;
+    align-self: start;
+    min-width: 0;
+}
+
+.planning-quick-add__create-actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 40px 40px;
+    gap: 4px;
+    min-width: 0;
+}
+
+.planning-tasks-toolbar {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 0;
+    flex-shrink: 0;
+}
+
+.planning-filter-toggle {
+    position: relative;
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    border: 1px solid var(--planning-border);
+    background: rgba(255, 255, 255, 0.68);
+    color: var(--planning-muted);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 6px 18px rgba(15, 23, 42, 0.06);
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+    transition: background 0.15s, color 0.15s, border-color 0.15s, box-shadow 0.15s;
+}
+
+.planning-filter-toggle:hover {
+    color: var(--planning-text);
+    border-color: var(--planning-border-soft);
+    box-shadow: 0 10px 22px rgba(15, 23, 42, 0.08);
+}
+
+.planning-filter-toggle.active,
+.planning-filter-toggle.has-active {
+    color: var(--planning-accent);
+    background: var(--planning-accent-soft);
+    border-color: rgba(37, 99, 235, 0.18);
+}
+
+.planning-filter-toggle__icon {
+    width: 18px;
+    height: 18px;
+}
+
+.planning-filter-toggle__badge {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: 999px;
+    background: var(--planning-accent);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 6px 12px rgba(37, 99, 235, 0.24);
+}
+
+.planning-filters-panel {
+    margin-top: 8px;
+    padding: 10px;
+    border-radius: 14px;
+    border: 1px solid var(--planning-border-soft);
+    background: rgba(255, 255, 255, 0.54);
+    box-shadow: 0 12px 28px rgba(15, 23, 42, 0.05);
+    -webkit-backdrop-filter: blur(14px);
+    backdrop-filter: blur(14px);
+}
+
+.planning-filters-panel__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.planning-filters-panel__title {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--planning-muted);
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+}
+
+.planning-quick-select,
+.planning-filter-select {
+    width: 100%;
+    min-width: 0;
+    padding: 10px 12px;
+    border: 1px solid var(--planning-border);
+    border-radius: 10px;
+    font-size: 13px;
+    background: var(--planning-surface);
+    color: var(--planning-text);
+    outline: none;
+}
+
+.planning-quick-select:focus,
+.planning-filter-select:focus {
+    border-color: var(--planning-accent);
+    box-shadow: 0 0 0 3px var(--planning-accent-soft);
+}
+
+.planning-quick-input--sm {
+    padding: 8px 10px;
+    font-size: 12px;
+    border-radius: 8px;
+}
+
+.planning-quick-target-field {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.planning-quick-select--target {
+    min-height: 42px;
+}
+
+.planning-quick-target-preview {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+    padding: 2px 2px 0;
+}
+
+.planning-quick-target-preview__context {
+    display: block;
+    min-width: 0;
+    font-size: 10px;
+    line-height: 1.25;
+    color: var(--planning-muted-soft);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.planning-quick-target-preview__primary {
+    display: block;
+    min-width: 0;
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1.3;
+    color: var(--planning-text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.planning-date-picker {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 44px;
+    width: 100%;
+    min-width: 0;
+    border: 1px solid var(--planning-border);
+    border-radius: 12px;
+    overflow: hidden;
+    background: var(--planning-surface);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18);
+    transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+}
+
+.planning-date-picker:focus-within {
+    border-color: var(--planning-accent);
+    box-shadow: 0 0 0 3px var(--planning-accent-soft);
+}
+
+.planning-date-picker__btn {
+    min-width: 0;
+    min-height: 40px;
+    padding: 0 8px;
+    border: none;
+    border-right: 1px solid var(--planning-border-soft);
+    background: transparent;
+    color: var(--planning-muted);
+    font-size: 11px;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s, box-shadow 0.15s;
+}
+
+.planning-date-picker__btn:last-of-type {
+    border-right: none;
+}
+
+.planning-date-picker__btn:hover {
+    background: rgba(148, 163, 184, 0.08);
+    color: var(--planning-text);
+}
+
+.planning-date-picker__btn.active {
+    background: var(--planning-accent-soft);
+    color: var(--planning-accent);
+    box-shadow: inset 0 0 0 1px rgba(37, 99, 235, 0.08);
+}
+
+.planning-date-picker__btn--calendar {
+    padding: 0;
+    font-size: 16px;
+}
+
+.planning-date-picker__btn--calendar.is-open {
+    background: var(--planning-accent-soft);
+    color: var(--planning-accent);
+}
+
+.planning-date-picker__native-input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    border: 0;
+    opacity: 0;
+    pointer-events: none;
+    clip: rect(0, 0, 0, 0);
+    clip-path: inset(50%);
+    overflow: hidden;
+}
+
+.planning-load-date-picker__legend {
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 0;
+}
+
+.planning-load-date-picker__legend-hint {
+    margin-top: 2px;
+    margin-bottom: 4px;
+    text-align: center;
+    font-size: 10px;
+    line-height: 1.4;
+    color: var(--planning-muted);
+}
+
+.planning-duration-trigger {
+    width: 100%;
+    min-width: 0;
+    padding: 8px 10px;
+    border: 1px solid var(--planning-border);
+    border-radius: 10px;
+    background: var(--planning-surface);
+    color: var(--planning-text);
+    outline: none;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    text-align: left;
+    cursor: pointer;
+    transition: border-color 0.15s, box-shadow 0.15s, background 0.15s, transform 0.15s;
+}
+
+.planning-duration-trigger:hover {
+    transform: translateY(-1px);
+}
+
+.planning-duration-trigger:focus-visible {
+    border-color: var(--planning-accent);
+    box-shadow: 0 0 0 3px var(--planning-accent-soft);
+}
+
+.planning-duration-trigger--compact {
+    min-height: 38px;
+    padding: 8px 10px;
+    border-radius: 8px;
+}
+
+.planning-duration-trigger--minimal {
+    justify-content: flex-start;
+    gap: 9px;
+    min-height: 40px;
+}
+
+.planning-duration-trigger--minimal .planning-duration-trigger__value {
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.planning-duration-trigger--minimal .planning-duration-trigger__icon {
+    align-self: center;
+    font-size: 18px;
+    color: var(--planning-text);
+}
+
+.planning-duration-trigger--kicker {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+        'value icon'
+        'kicker icon';
+    align-items: start;
+}
+
+.planning-duration-trigger__kicker {
+    grid-area: kicker;
+    display: block;
+    min-width: 0;
+    margin-top: 1px;
+    font-size: 11px;
+    font-weight: 500;
+    line-height: 1.2;
+    color: var(--planning-muted);
+}
+
+.planning-duration-trigger__value {
+    grid-area: value;
+    display: block;
+    min-width: 0;
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1.2;
+    color: var(--planning-text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.planning-duration-trigger--compact .planning-duration-trigger__value {
+    font-size: 13px;
+}
+
+.planning-duration-trigger.is-empty .planning-duration-trigger__value {
+    color: var(--planning-text);
+    font-weight: 700;
+}
+
+.planning-duration-trigger--minimal.is-empty .planning-duration-trigger__value {
+    color: var(--planning-muted);
+    font-weight: 600;
+}
+
+.planning-duration-trigger__icon {
+    grid-area: icon;
+    flex-shrink: 0;
+    align-self: center;
+    font-size: 13px;
+    color: var(--planning-muted-soft);
+}
+
+/* --- Priority buttons --- */
+.planning-priority-btn {
+    min-height: 40px;
+    padding: 0 12px;
+    border-radius: 10px;
+    border: 1px solid var(--planning-border);
+    background: var(--planning-surface);
+    font-size: 11px;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s, border-color 0.15s, box-shadow 0.15s;
+    color: var(--planning-muted);
+}
+
+.planning-priority-btn.active {
+    background: var(--planning-accent-soft);
+    color: var(--planning-accent);
+    border-color: rgba(37, 99, 235, 0.16);
+}
+
+/* --- Add button --- */
+.planning-add-btn {
+    min-height: 40px;
+    padding: 0 16px;
+    border-radius: 10px;
+    border: none;
+    background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+    color: #fff;
+    font-size: 13px;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow:
+        0 4px 14px rgba(34, 197, 94, 0.45),
+        inset 0 1px 0 rgba(255, 255, 255, 0.16);
+    transition: transform 0.15s, box-shadow 0.15s, filter 0.15s;
+}
+
+.planning-add-btn--quick {
+    min-width: 0;
+    padding: 0 10px;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.planning-add-btn--icon-only {
+    width: 40px;
+    min-width: 40px;
+    padding: 0;
+    gap: 0;
+}
+
+.planning-add-btn__icon {
+    flex-shrink: 0;
+    font-size: 13px;
+    line-height: 1;
+}
+
+.planning-add-btn--icon-only .planning-add-btn__icon {
+    font-size: 15px;
+}
+
+.planning-add-btn__label {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.planning-add-btn--done-task {
+    background: linear-gradient(135deg, #f59e0b 0%, #f97316 100%);
+    box-shadow:
+        0 4px 14px rgba(249, 115, 22, 0.34),
+        inset 0 1px 0 rgba(255, 255, 255, 0.14);
+}
+
+.planning-add-btn--draft-task {
+    border: 1px solid var(--planning-border);
+    background: rgba(255, 255, 255, 0.78);
+    color: var(--planning-text);
+    box-shadow:
+        0 6px 14px rgba(15, 23, 42, 0.08),
+        inset 0 1px 0 rgba(255, 255, 255, 0.32);
+}
+
+.planning-add-btn:hover {
+    transform: translateY(-1px);
+    filter: saturate(1.03);
+    box-shadow:
+        0 6px 16px rgba(34, 197, 94, 0.38),
+        inset 0 1px 0 rgba(255, 255, 255, 0.18);
+}
+
+.planning-add-btn--project {
+    background: transparent;
+    color: var(--planning-muted);
+    border: 1px dashed var(--planning-border);
+    font-size: 12px;
+    box-shadow: none;
+}
+
+/* --- Filters --- */
+.planning-filters {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 12px;
+}
+
+.planning-filters--grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.planning-filter-btn {
+    padding: 5px 12px;
+    border-radius: 16px;
+    border: 1px solid var(--planning-border);
+    background: var(--planning-surface);
+    font-size: 12px;
+    color: var(--planning-muted);
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.planning-filter-btn.active {
+    background: var(--planning-accent-soft);
+    color: var(--planning-accent);
+    border-color: rgba(37, 99, 235, 0.16);
+}
+
+/* --- Tasks list --- */
+.planning-tasks-list {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+/* --- Project group --- */
+.planning-project-group {
+    position: relative;
+    --planning-project-task-bg: linear-gradient(180deg,
+            color-mix(in srgb, var(--planning-project-color, #94a3b8) 4%, var(--planning-surface) 96%) 0%,
+            color-mix(in srgb, var(--planning-project-color, #94a3b8) 2%, var(--planning-surface) 98%) 100%);
+    border-radius: 12px;
+    background: linear-gradient(180deg,
+            color-mix(in srgb, var(--planning-project-color, #94a3b8) 10%, var(--planning-surface) 90%) 0%,
+            color-mix(in srgb, var(--planning-project-color, #94a3b8) 6%, var(--planning-surface) 94%) 100%);
+    border: 1px solid var(--planning-project-color-border, var(--planning-border));
+    box-shadow: 0 8px 24px color-mix(in srgb, var(--planning-project-color, #94a3b8) 10%, rgba(15, 23, 42, 0.04));
+    overflow: hidden;
+}
+
+.planning-project-group--palette-open {
+    z-index: 4;
+}
+
+.planning-project-group:has(.planning-project-group--palette-open) {
+    z-index: 3;
+}
+
+.planning-project-group__header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    cursor: pointer;
+    user-select: none;
+    background: linear-gradient(180deg, var(--planning-project-color-soft, rgba(148, 163, 184, 0.08)) 0%, rgba(255, 255, 255, 0) 100%);
+}
+
+.planning-project-group__dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.planning-project-group__name {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--planning-text);
+}
+
+.planning-project-group__count {
+    font-size: 12px;
+    color: var(--planning-muted-soft);
+}
+
+.planning-project-group__header-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: auto;
+    flex-shrink: 0;
+}
+
+.planning-project-group__color-picker {
+    position: relative;
+    flex-shrink: 0;
+}
+
+.planning-project-group__color-btn {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    border: 1px solid var(--planning-project-color-border, var(--planning-border));
+    background: var(--planning-project-color-soft, rgba(148, 163, 184, 0.12));
+    color: var(--planning-project-color, var(--planning-muted));
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    padding: 0;
+    transition: transform 0.15s, box-shadow 0.15s, filter 0.15s;
+}
+
+.planning-project-group__color-btn.active {
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--planning-project-color, #94a3b8) 16%, transparent);
+}
+
+.planning-project-group__color-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 14px rgba(15, 23, 42, 0.1);
+    filter: saturate(1.08);
+}
+
+.planning-project-group__color-icon {
+    width: 15px;
+    height: 15px;
+}
+
+.planning-project-group__quick-add-btn {
+    height: 30px;
+    padding: 0 12px;
+    border-radius: 999px;
+    border: 1px solid var(--planning-project-color-border, var(--planning-border));
+    background: var(--planning-project-color-soft, rgba(148, 163, 184, 0.12));
+    color: var(--planning-project-color, var(--planning-text));
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    white-space: nowrap;
+    font-size: 10px;
+    letter-spacing: 0.01em;
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.15s, filter 0.15s;
+}
+
+.planning-project-group__quick-add-btn:hover {
+    transform: translateY(-1px);
+    filter: saturate(1.05);
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.12);
+}
+
+.planning-project-group__quick-add-btn:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--planning-project-color, #94a3b8) 16%, transparent);
+}
+
+.planning-completed-toggle {
+    min-height: 30px;
+    padding: 0 12px;
+    border-radius: 999px;
+    border: 1px solid var(--planning-project-color-border, var(--planning-border));
+    background: color-mix(in srgb, var(--planning-project-color, #94a3b8) 8%, var(--planning-surface) 92%);
+    color: color-mix(in srgb, var(--planning-project-color, #94a3b8) 62%, var(--planning-text) 38%);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    white-space: nowrap;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.15s, filter 0.15s, background 0.15s;
+}
+
+.planning-completed-toggle:hover {
+    transform: translateY(-1px);
+    filter: saturate(1.04);
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
+}
+
+.planning-completed-toggle.active {
+    background: color-mix(in srgb, var(--planning-project-color, #94a3b8) 16%, var(--planning-surface) 84%);
+    color: var(--planning-project-color, var(--planning-text));
+}
+
+.planning-project-group__palette {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    width: 168px;
+    padding: 10px;
+    border-radius: 14px;
+    border: 1px solid var(--planning-border);
+    background: rgba(255, 255, 255, 0.94);
+    box-shadow: 0 18px 36px rgba(15, 23, 42, 0.14);
+    -webkit-backdrop-filter: blur(16px);
+    backdrop-filter: blur(16px);
+    z-index: 6;
+}
+
+.planning-project-group__palette--floating {
+    position: fixed;
+    top: 12px;
+    right: auto;
+    left: 12px;
+    max-width: calc(100vw - 24px);
+    max-height: calc(100vh - 24px);
+    overflow-y: auto;
+    z-index: 160;
+}
+
+.planning-project-group__palette-title {
+    margin-bottom: 8px;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--planning-muted);
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+}
+
+.planning-project-group__palette-grid {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.planning-project-group__swatch {
+    width: 100%;
+    aspect-ratio: 1;
+    border-radius: 999px;
+    border: 2px solid rgba(255, 255, 255, 0.9);
+    background: var(--planning-swatch-color, #94a3b8);
+    box-shadow:
+        0 4px 10px rgba(15, 23, 42, 0.12),
+        inset 0 0 0 1px rgba(15, 23, 42, 0.08);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    color: #fff;
+    transition: transform 0.15s, box-shadow 0.15s, opacity 0.15s;
+}
+
+.planning-project-group__swatch:hover:not(:disabled) {
+    transform: scale(1.08);
+    box-shadow:
+        0 8px 16px rgba(15, 23, 42, 0.18),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.18);
+}
+
+.planning-project-group__swatch.active {
+    box-shadow:
+        0 0 0 2px rgba(255, 255, 255, 0.92),
+        0 0 0 4px color-mix(in srgb, var(--planning-swatch-color, #94a3b8) 32%, transparent),
+        0 8px 16px rgba(15, 23, 42, 0.16);
+}
+
+.planning-project-group__swatch.disabled {
+    cursor: not-allowed;
+    opacity: 0.32;
+    filter: grayscale(0.18);
+}
+
+.planning-project-group__swatch-check {
+    font-size: 11px;
+    font-weight: 800;
+    line-height: 1;
+    text-shadow: 0 1px 2px rgba(15, 23, 42, 0.28);
+}
+
+.planning-project-group__chevron {
+    font-size: 12px;
+    color: var(--planning-muted-soft);
+    transition: transform 0.2s;
+}
+
+.planning-project-group__chevron.collapsed {
+    transform: rotate(-90deg);
+}
+
+.planning-project-group__tasks {
+    padding: 0 12px 8px;
+    background: linear-gradient(180deg,
+            color-mix(in srgb, var(--planning-project-color, #94a3b8) 3%, transparent) 0%,
+            transparent 100%);
+}
+
+.planning-project-group--subgroup {
+    margin: 8px 0 10px;
+    border-radius: 14px;
+    box-shadow: 0 6px 18px color-mix(in srgb, var(--planning-project-color, #94a3b8) 12%, rgba(15, 23, 42, 0.05));
+}
+
+.planning-task-group__header {
+    padding: 0 10px;
+    background: linear-gradient(180deg,
+            color-mix(in srgb, var(--planning-project-color, #94a3b8) 12%, transparent) 0%,
+            transparent 100%);
+}
+
+.planning-task-group__header .planning-task-node {
+    margin: 0;
+}
+
+.planning-task-group__header .planning-task-row {
+    border-bottom: none;
+    padding-bottom: 6px;
+}
+
+.planning-task-group__tasks {
+    padding-top: 0;
+    --planning-project-task-bg: linear-gradient(180deg,
+            color-mix(in srgb, var(--planning-project-color, #94a3b8) 2.3%, var(--planning-surface) 97.7%) 0%,
+            color-mix(in srgb, var(--planning-project-color, #94a3b8) 1.2%, var(--planning-surface) 98.8%) 100%);
+}
+
+/* --- Task row --- */
+.planning-task-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--planning-border-soft);
+}
+
+.planning-task-row:last-child {
+    border-bottom: none;
+}
+
+.planning-task-row--done {
+    opacity: 0.5;
+}
+
+.planning-status-toggle {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    border: 1.5px solid var(--planning-border);
+    background: var(--planning-surface-elevated);
+    cursor: pointer;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    color: var(--planning-muted);
+    padding: 0;
+    transition: border-color 0.15s, background 0.15s;
+}
+
+.planning-status-toggle:disabled {
+    cursor: default;
+}
+
+.planning-task-row--done .planning-status-toggle {
+    background: var(--planning-accent);
+    border-color: var(--planning-accent);
+    color: #fff;
+}
+
+.planning-task-row__body {
+    flex: 1;
+    min-width: 0;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.planning-task-row__parent {
+    display: block;
+    min-width: 0;
+    font-size: 11px;
+    line-height: 1.2;
+    color: var(--planning-muted-soft);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.planning-task-node {
+    --planning-depth-offset: calc(var(--planning-depth, 0) * 18px);
+}
+
+.planning-task-node--done {
+    opacity: 0.78;
+}
+
+.planning-task-row {
+    background: var(--planning-project-task-bg, var(--planning-surface));
+    border-radius: 10px;
+}
+
+.planning-task-row__indent {
+    flex: 0 0 auto;
+}
+
+.planning-task-row__title {
+    display: block;
+    min-width: 0;
+    font-size: 14px;
+    color: var(--planning-text);
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.planning-task-row__title-trigger {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    padding: 0;
+    border: none;
+    background: transparent;
+    text-align: left;
+    cursor: text;
+    font: inherit;
+    color: inherit;
+}
+
+.planning-task-row__title-trigger:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--planning-accent-soft);
+    border-radius: 6px;
+}
+
+.planning-task-row--done .planning-task-row__title {
+    text-decoration: line-through;
+    color: var(--planning-muted-soft);
+}
+
+.planning-task-row__due {
+    display: block;
+    font-size: 11px;
+    color: var(--planning-muted-soft);
+    margin-top: 2px;
+}
+
+.planning-task-row__meta-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+.planning-task-row__meta-chip {
+    display: inline-flex;
+    align-items: center;
+    max-width: 100%;
+    min-height: 0;
+    padding: 0;
+    border-radius: 0;
+    background: transparent;
+    color: var(--planning-muted);
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 1;
+    white-space: nowrap;
+}
+
+.planning-task-row__meta-chip--start {
+    color: #1d4ed8;
+}
+
+.planning-task-row__meta-chip--due {
+    color: #b45309;
+}
+
+.planning-task-row__meta-chip--due-today {
+    background: rgba(245, 158, 11, 0.18);
+    color: #92400e;
+    min-height: 20px;
+    padding: 0 7px;
+    border-radius: 999px;
+}
+
+.planning-task-row__meta-chip--due-overdue {
+    color: #dc2626;
+}
+
+.planning-task-row__meta-chip--duration {
+    background: rgba(99, 102, 241, 0.12);
+    color: #4338ca;
+    min-height: 20px;
+    padding: 0 7px;
+    border-radius: 999px;
+}
+
+.planning-task-row__priority {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 0;
+    border-radius: 0;
+    background: transparent;
+    flex-shrink: 0;
+}
+
+.planning-task-row__delete {
+    width: 24px;
+    height: 24px;
+    border-radius: 6px;
+    border: none;
+    background: transparent;
+    color: var(--planning-muted-soft);
+    font-size: 14px;
+    cursor: pointer;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+}
+
+.planning-task-row__delete:hover {
+    background: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+}
+
+.planning-task-row__actions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+    margin-left: 2px;
+}
+
+.planning-task-row__actions--group {
+    gap: 6px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+.planning-inline-input {
+    width: 100%;
+    min-width: 0;
+    padding: 6px 8px;
+    border: 1px solid var(--planning-border);
+    border-radius: 8px;
+    background: var(--planning-surface-elevated);
+    color: var(--planning-text);
+    font-size: 13px;
+}
+
+.planning-inline-input:focus {
+    outline: none;
+    border-color: var(--planning-accent);
+    box-shadow: 0 0 0 3px var(--planning-accent-soft);
+}
+
+.planning-icon-btn {
+    width: 24px;
+    height: 24px;
+    border-radius: 6px;
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--planning-muted-soft);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    padding: 0;
+}
+
+.planning-icon-btn:hover {
+    background: var(--planning-surface-elevated);
+    color: var(--planning-text);
+    border-color: var(--planning-border-soft);
+}
+
+.planning-icon-btn--danger:hover {
+    background: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+    border-color: rgba(239, 68, 68, 0.16);
+}
+
+.planning-task-swipe.swipeable-container {
+    margin-bottom: 0;
+    border-radius: 10px;
+}
+
+.planning-task-swipe .swipeable-background {
+    border-radius: 10px;
+}
+
+.planning-task-swipe .swipeable-content {
+    background: var(--planning-project-task-bg, var(--planning-surface));
+    border-radius: 10px;
+}
+
+.planning-task-swipe .swipeable-delete-btn {
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.planning-subtask-editor {
+    display: flex;
+    gap: 6px;
+    padding: 0 0 8px calc(30px + var(--planning-depth-offset));
+}
+
+.planning-subtask-indent {
+    padding-left: 28px;
+}
+
+/* --- Add project area --- */
+.planning-add-project {
+    display: flex;
+    gap: 6px;
+    padding: 12px 0 0;
+    margin-top: 4px;
+    border-top: 1px dashed var(--planning-border-soft);
+}
+
+.planning-add-project .planning-quick-input {
+    flex: 1;
+}
+
+/* --- Empty state --- */
+.planning-empty {
+    text-align: center;
+    padding: 32px 16px;
+    color: var(--planning-muted-soft);
+    font-size: 13px;
+}
+
+.planning-empty--inline {
+    padding: 14px 8px;
+    text-align: left;
+}
+
+.planning-empty--completed-hint {
+    padding-top: 10px;
+    padding-bottom: 10px;
+    color: var(--planning-muted);
+}
+
+/* =============================================================================
+   MODAL
+   ============================================================================= */
+.planning-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.3);
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    z-index: 1000;
+    backdrop-filter: blur(8px);
+}
+
+.planning-modal {
+    background: var(--planning-surface);
+    border-radius: 16px 16px 0 0;
+    width: 100%;
+    max-width: 480px;
+    max-height: 80vh;
+    overflow-y: auto;
+    padding: 16px;
+    border: 1px solid var(--planning-border);
+}
+
+.planning-modal--picker {
+    max-width: 420px;
+}
+
+.planning-modal__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--planning-text);
+}
+
+.planning-modal__close {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: none;
+    background: var(--planning-surface-elevated);
+    font-size: 16px;
+    color: var(--planning-muted);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+}
+
+.planning-modal__body {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.planning-modal__grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.planning-modal__input {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--planning-border);
+    border-radius: 10px;
+    font-size: 14px;
+    background: var(--planning-surface-elevated);
+    color: var(--planning-text);
+    outline: none;
+}
+
+.planning-modal__input:focus {
+    border-color: var(--planning-accent);
+    box-shadow: 0 0 0 3px var(--planning-accent-soft);
+}
+
+.planning-modal__row {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.planning-modal__row label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--planning-muted);
+}
+
+.planning-modal__row select,
+.planning-modal__row input[type="date"],
+.planning-modal__row input[type="time"],
+.planning-modal__row input[type="number"],
+.planning-modal__row textarea {
+    padding: 8px 10px;
+    border: 1px solid var(--planning-border);
+    border-radius: 8px;
+    font-size: 13px;
+    background: var(--planning-surface-elevated);
+    color: var(--planning-text);
+    outline: none;
+}
+
+.planning-modal__row textarea {
+    resize: vertical;
+    min-height: 60px;
+}
+
+.planning-modal__row select[multiple] {
+    min-height: 88px;
+}
+
+.planning-modal__section {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 10px;
+    border: 1px solid var(--planning-border-soft);
+    border-radius: 12px;
+    background: rgba(148, 163, 184, 0.06);
+}
+
+.planning-modal__section-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--planning-muted);
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+}
+
+.planning-modal__footer {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+    justify-content: flex-end;
+}
+
+.planning-modal__footer--spread {
+    justify-content: space-between;
+    align-items: center;
+}
+
+.planning-modal__footer-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+.planning-duration-modal__hint {
+    font-size: 12px;
+    line-height: 1.45;
+    color: var(--planning-muted);
+}
+
+.planning-duration-modal__grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.planning-duration-modal__option {
+    padding: 10px 12px;
+    border-radius: 12px;
+    border: 1px solid var(--planning-border);
+    background: var(--planning-surface-elevated);
+    color: var(--planning-text);
+    text-align: left;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    cursor: pointer;
+    transition: transform 0.15s, border-color 0.15s, box-shadow 0.15s, background 0.15s;
+}
+
+.planning-duration-modal__option:hover {
+    transform: translateY(-1px);
+    border-color: rgba(37, 99, 235, 0.2);
+    box-shadow: 0 12px 22px rgba(15, 23, 42, 0.08);
+}
+
+.planning-duration-modal__option.active {
+    border-color: rgba(37, 99, 235, 0.24);
+    background: var(--planning-accent-soft);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--planning-accent) 10%, transparent);
+}
+
+.planning-duration-modal__option-label {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--planning-text);
+}
+
+.planning-duration-modal__option-meta {
+    font-size: 11px;
+    color: var(--planning-muted);
+}
+
+.planning-duration-modal__custom {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px;
+    align-items: center;
+}
+
+.planning-duration-modal__custom-hint {
+    font-size: 11px;
+    line-height: 1.45;
+    color: var(--planning-muted-soft);
+}
+
+.planning-linked-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.planning-linked-list__item {
+    padding: 8px 10px;
+    border-radius: 10px;
+    background: var(--planning-surface-elevated);
+    color: var(--planning-text);
+    font-size: 12px;
+}
+
+.planning-linked-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: 12px;
+    border: 1px solid rgba(37, 99, 235, 0.16);
+    background: var(--planning-accent-soft);
+    color: var(--planning-text);
+    font-size: 12px;
+}
+
+/* --- Buttons --- */
+.planning-btn {
+    padding: 8px 16px;
+    border-radius: 8px;
+    border: 1px solid var(--planning-border);
+    background: var(--planning-surface-elevated);
+    color: var(--planning-text);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.planning-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.planning-btn--primary {
+    background: var(--planning-accent);
+    color: #fff;
+    border-color: var(--planning-accent);
+}
+
+.planning-btn--sm {
+    padding: 4px 10px;
+    font-size: 12px;
+    border-radius: 6px;
+}
+
+.planning-btn--active {
+    background: var(--planning-accent-soft);
+    border-color: rgba(37, 99, 235, 0.18);
+    color: var(--planning-accent);
+}
+
+/* =============================================================================
+   CALENDAR SCREEN
+   ============================================================================= */
+.planning-calendar-screen {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.planning-calendar-nav {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 8px 12px;
+}
+
+.planning-calendar-header-shell {
+    position: relative;
+    z-index: 8;
+}
+
+.planning-calendar-header {
+    display: flex;
+    border-bottom: 1px solid var(--planning-border-soft);
+}
+
+.planning-calendar-header--pinned {
+    position: fixed;
+    z-index: 8;
+    background: var(--planning-surface, rgba(255, 255, 255, 0.96));
+    background: color-mix(in srgb, var(--planning-surface, #ffffff) 96%, transparent);
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.05);
+}
+
+.planning-calendar-days-scroll {
+    flex: 1;
+    min-width: 0;
+}
+
+.planning-calendar-days-scroll--header {
+    overflow: hidden;
+}
+
+.planning-calendar-days-scroll--body {
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+}
+
+.planning-calendar-days-track {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: var(--planning-calendar-day-width, 120px);
+    min-width: max-content;
+}
+
+.planning-calendar-time-gutter {
+    width: 40px;
+    flex-shrink: 0;
+}
+
+.planning-calendar-time-gutter--grid {
+    position: relative;
+    overflow: visible;
+}
+
+.planning-calendar-day-header {
+    position: relative;
+    width: var(--planning-calendar-day-width, 120px);
+    min-width: var(--planning-calendar-day-width, 120px);
+    text-align: center;
+    padding: 6px 4px 8px;
+    font-size: 11px;
+    color: var(--planning-muted);
+    border-left: 1px solid var(--planning-border-soft);
+    overflow: hidden;
+    transition: width 0.18s ease, min-width 0.18s ease, padding 0.18s ease, background 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+}
+
+.planning-calendar-day-header__title {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1px;
+}
+
+.planning-calendar-day-header--today {
+    color: var(--planning-accent);
+    font-weight: 700;
+    box-shadow:
+        inset 1px 0 0 rgba(37, 99, 235, 0.34),
+        inset -1px 0 0 rgba(37, 99, 235, 0.34);
+}
+
+.planning-calendar-day-header--drop-target {
+    background: linear-gradient(180deg, rgba(37, 99, 235, 0.12) 0%, rgba(37, 99, 235, 0.05) 100%);
+    box-shadow:
+        inset 0 0 0 1px rgba(37, 99, 235, 0.18),
+        inset 1px 0 0 rgba(37, 99, 235, 0.28),
+        inset -1px 0 0 rgba(37, 99, 235, 0.28);
+}
+
+.planning-calendar-day-header--drop-unschedule {
+    transform: translateY(-1px);
+    background: linear-gradient(180deg, rgba(59, 130, 246, 0.18) 0%, rgba(37, 99, 235, 0.08) 100%);
+    box-shadow:
+        inset 0 0 0 1px rgba(37, 99, 235, 0.24),
+        inset 1px 0 0 rgba(37, 99, 235, 0.3),
+        inset -1px 0 0 rgba(37, 99, 235, 0.3),
+        0 8px 18px rgba(37, 99, 235, 0.12);
+}
+
+.planning-calendar-day-drop-hint {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 4px;
+    padding: 2px 6px;
+    border-radius: 999px;
+    border: 1px dashed rgba(37, 99, 235, 0.28);
+    background: rgba(255, 255, 255, 0.86);
+    color: #1d4ed8;
+    font-size: 9px;
+    font-weight: 700;
+    line-height: 1.1;
+    letter-spacing: 0.01em;
+    box-shadow: 0 4px 10px rgba(37, 99, 235, 0.08);
+}
+
+.planning-calendar-day-label {
+    display: block;
+    font-size: 10px;
+    text-transform: uppercase;
+}
+
+.planning-calendar-day-date {
+    display: block;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.planning-calendar-day-unscheduled {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-top: 6px;
+    text-align: left;
+}
+
+.planning-calendar-unscheduled-pill {
+    --planning-unscheduled-project-color: #64748b;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    padding: 5px 6px;
+    border-radius: 10px;
+    border: 1px solid color-mix(in srgb, var(--planning-unscheduled-project-color) 18%, rgba(15, 23, 42, 0.08));
+    background: color-mix(in srgb, var(--planning-unscheduled-project-color) 8%, rgba(255, 255, 255, 0.96));
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);
+    cursor: grab;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+}
+
+.planning-calendar-unscheduled-pill:active {
+    cursor: grabbing;
+}
+
+.planning-calendar-unscheduled-pill--touch-dragging {
+    opacity: 0.34;
+    transform: scale(0.98);
+}
+
+.planning-calendar-unscheduled-pill__body {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}
+
+.planning-calendar-unscheduled-pill__parent {
+    display: block;
+    min-width: 0;
+    font-size: 9px;
+    font-weight: 600;
+    line-height: 1.1;
+    color: var(--planning-muted-soft);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.planning-calendar-unscheduled-pill__title {
+    flex: 1;
+    min-width: 0;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.2;
+    color: var(--planning-text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.planning-calendar-unscheduled-pill__priority {
+    flex-shrink: 0;
+    min-height: 18px;
+    padding: 0 6px;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 9px;
+    font-weight: 700;
+}
+
+.planning-calendar-grid {
+    flex: 1;
+    display: flex;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    min-height: 0;
+}
+
+.planning-calendar-hour-label {
+    height: 60px;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    font-size: 10px;
+    color: var(--planning-muted-soft);
+    padding-top: 2px;
+}
+
+.planning-calendar-hour-label--drop-accent {
+    color: #1d4ed8;
+    font-weight: 700;
+    background:
+        linear-gradient(90deg, rgba(37, 99, 235, 0.12) 0%, rgba(37, 99, 235, 0.02) 100%);
+    box-shadow:
+        inset 2px 0 0 rgba(37, 99, 235, 0.38),
+        inset 0 0 0 1px rgba(37, 99, 235, 0.08);
+    animation: planning-calendar-drop-accent-pulse 1.28s ease-out;
+}
+
+.planning-calendar-time-drop-preview {
+    position: absolute;
+    left: 2px;
+    right: -6px;
+    z-index: 4;
+    display: inline-flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 4px;
+    min-height: 24px;
+    padding: 3px 5px 3px 6px;
+    border-radius: 999px;
+    transform: translateY(-50%);
+    pointer-events: none;
+    color: #1d4ed8;
+    background: rgba(255, 255, 255, 0.96);
+    border: 1px solid rgba(37, 99, 235, 0.22);
+    box-shadow: 0 8px 18px rgba(37, 99, 235, 0.14);
+}
+
+.planning-calendar-time-drop-range {
+    position: absolute;
+    left: 6px;
+    right: 8px;
+    z-index: 1;
+    border-radius: 10px;
+    background: linear-gradient(180deg, rgba(96, 165, 250, 0.28) 0%, rgba(59, 130, 246, 0.18) 100%);
+    box-shadow:
+        inset 0 0 0 1px rgba(37, 99, 235, 0.12),
+        0 6px 14px rgba(37, 99, 235, 0.08);
+    pointer-events: none;
+}
+
+.planning-calendar-time-drop-preview__label {
+    font-size: 10px;
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: 0.01em;
+}
+
+.planning-calendar-time-drop-preview__arrow {
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 1;
+    opacity: 0.72;
+}
+
+.planning-calendar-day-col {
+    width: var(--planning-calendar-day-width, 120px);
+    min-width: var(--planning-calendar-day-width, 120px);
+    position: relative;
+    border-left: 1px solid var(--planning-border-soft);
+    transition: width 0.18s ease, min-width 0.18s ease;
+}
+
+.planning-calendar-day-col--today {
+    box-shadow:
+        inset 1px 0 0 rgba(37, 99, 235, 0.28),
+        inset -1px 0 0 rgba(37, 99, 235, 0.28);
+}
+
+.planning-calendar-cell {
+    height: 60px;
+    border-bottom: 1px solid var(--planning-border-soft);
+}
+
+.planning-calendar-cell--drop-target {
+    background: linear-gradient(180deg, rgba(37, 99, 235, 0.08) 0%, rgba(37, 99, 235, 0.03) 100%);
+    box-shadow: inset 0 0 0 1px rgba(37, 99, 235, 0.12);
+}
+
+.planning-calendar-drop-preview {
+    position: absolute;
+    left: 4px;
+    right: 4px;
+    z-index: 2;
+    display: flex;
+    min-height: 30px;
+    border-radius: 10px;
+    overflow: hidden;
+    pointer-events: none;
+    box-shadow: 0 10px 24px rgba(37, 99, 235, 0.12);
+}
+
+.planning-calendar-drop-preview--task {
+    border: 1px dashed color-mix(in srgb, var(--planning-calendar-drop-preview-color, #64748b) 32%, rgba(37, 99, 235, 0.12));
+    background: color-mix(in srgb, var(--planning-calendar-drop-preview-color, #64748b) 14%, rgba(255, 255, 255, 0.94));
+    color: var(--planning-text);
+}
+
+.planning-calendar-drop-preview--slot {
+    border: 1px solid rgba(255, 255, 255, 0.26);
+    color: #fff;
+}
+
+.planning-calendar-drop-preview__body {
+    display: flex;
+    flex: 1;
+    min-width: 0;
+    flex-direction: column;
+    justify-content: center;
+    gap: 2px;
+    padding: 6px 8px;
+}
+
+.planning-calendar-drop-preview__parent,
+.planning-calendar-drop-preview__title,
+.planning-calendar-drop-preview__time {
+    display: block;
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.planning-calendar-drop-preview__parent {
+    font-size: 9px;
+    font-weight: 600;
+    line-height: 1.1;
+    opacity: 0.72;
+}
+
+.planning-calendar-drop-preview__title {
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1.15;
+}
+
+.planning-calendar-drop-preview__time {
+    font-size: 9px;
+    line-height: 1.1;
+    opacity: 0.78;
+}
+
+.planning-calendar-drop-commit-marker {
+    position: absolute;
+    left: 4px;
+    right: 4px;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    pointer-events: none;
+    transform: translateY(-50%);
+    animation: planning-calendar-drop-accent-pulse 1.28s ease-out;
+}
+
+.planning-calendar-drop-commit-marker__dot {
+    width: 10px;
+    height: 10px;
+    flex-shrink: 0;
+    border-radius: 999px;
+    background: #2563eb;
+    box-shadow:
+        0 0 0 3px rgba(37, 99, 235, 0.16),
+        0 4px 10px rgba(37, 99, 235, 0.18);
+}
+
+.planning-calendar-drop-commit-marker__line {
+    flex: 1;
+    height: 3px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, rgba(37, 99, 235, 0.82) 0%, rgba(96, 165, 250, 0.18) 100%);
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.28);
+}
+
+@keyframes planning-calendar-drop-accent-pulse {
+
+    0% {
+        opacity: 0;
+        transform: translateY(-50%) scale(0.985);
+    }
+
+    18% {
+        opacity: 1;
+        transform: translateY(-50%) scale(1);
+    }
+
+    72% {
+        opacity: 1;
+        transform: translateY(-50%) scale(1);
+    }
+
+    100% {
+        opacity: 0;
+        transform: translateY(-50%) scale(0.992);
+    }
+}
+
+.planning-calendar-now-line {
+    position: absolute;
+    left: 0;
+    right: 0;
+    z-index: 3;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    pointer-events: none;
+    transform: translateY(-50%);
+}
+
+.planning-calendar-now-line__dot {
+    width: 8px;
+    height: 8px;
+    margin-left: 4px;
+    border-radius: 999px;
+    flex-shrink: 0;
+    background: #ef4444;
+    box-shadow:
+        0 0 0 2px rgba(255, 255, 255, 0.94),
+        0 0 0 5px rgba(239, 68, 68, 0.12);
+}
+
+.planning-calendar-now-line__bar {
+    flex: 1;
+    height: 2px;
+    border-radius: 999px;
+    background: rgba(239, 68, 68, 0.78);
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.22);
+}
+
+/* --- Calendar slot --- */
+.planning-calendar-slot {
+    position: absolute;
+    left: 2px;
+    right: 2px;
+    border-radius: 6px;
+    padding: 3px 6px;
+    overflow: hidden;
+    z-index: 1;
+    cursor: pointer;
+    color: #fff;
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.14), inset 0 0 0 1px rgba(255, 255, 255, 0.18);
+    filter: saturate(0.82);
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    transition: left 0.18s ease, right 0.18s ease, padding 0.18s ease, border-radius 0.18s ease, opacity 0.14s ease, transform 0.14s ease;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+}
+
+@media (pointer: coarse) {
+
+    .planning-calendar-unscheduled-pill,
+    .planning-calendar-slot {
+        touch-action: manipulation;
+        -webkit-user-drag: none;
+    }
+}
+
+.planning-calendar-slot--touch-dragging {
+    opacity: 0.32;
+    transform: scale(0.985);
+}
+
+.planning-calendar-slot--muted {
+    color: rgba(255, 255, 255, 0.9);
+    box-shadow:
+        0 6px 14px rgba(15, 23, 42, 0.08),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.22);
+    filter: saturate(0.18) grayscale(0.18);
+}
+
+.planning-calendar-slot--attention {
+    box-shadow:
+        0 10px 24px rgba(220, 38, 38, 0.22),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.16);
+    filter: saturate(0.98);
+}
+
+.planning-calendar-slot__title {
+    display: block;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.15;
+    color: inherit;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.planning-calendar-slot__title--with-parent {
+    font-size: 10px;
+}
+
+.planning-calendar-slot__parent {
+    display: block;
+    font-size: 9px;
+    font-weight: 600;
+    line-height: 1.1;
+    color: rgba(255, 255, 255, 0.76);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.planning-calendar-slot__time {
+    display: block;
+    font-size: 9px;
+    opacity: 1;
+    color: rgba(255, 255, 255, 0.82);
+}
+
+.planning-calendar-slot--muted .planning-calendar-slot__time {
+    color: rgba(255, 255, 255, 0.72);
+}
+
+.planning-calendar-slot--muted .planning-calendar-slot__parent {
+    color: rgba(255, 255, 255, 0.68);
+}
+
+.planning-calendar-slot__resize {
+    position: absolute;
+    left: 2px;
+    right: 2px;
+    height: 10px;
+    border-radius: 999px;
+    border: none;
+    background: transparent;
+    color: transparent;
+    padding: 0;
+    cursor: ns-resize;
+    z-index: 2;
+}
+
+.planning-calendar-slot__resize::before {
+    content: '';
+    position: absolute;
+    left: 10px;
+    right: 10px;
+    height: 3px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.72);
+    box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.08);
+    opacity: 0;
+    transition: opacity 0.14s ease, background 0.14s ease, transform 0.14s ease;
+}
+
+.planning-calendar-slot__resize--start {
+    top: -4px;
+}
+
+.planning-calendar-slot__resize--start::before {
+    top: 4px;
+}
+
+.planning-calendar-slot__resize--end {
+    bottom: -4px;
+}
+
+.planning-calendar-slot__resize--end::before {
+    bottom: 4px;
+}
+
+.planning-calendar-slot__resize:hover::before,
+.planning-calendar-slot__resize:active::before,
+.planning-calendar-slot__resize:focus-visible::before,
+.planning-calendar-slot:focus-within .planning-calendar-slot__resize::before {
+    opacity: 1;
+    background: rgba(255, 255, 255, 0.9);
+}
+
+.planning-calendar-slot__resize:hover::before,
+.planning-calendar-slot__resize:active::before {
+    transform: scaleX(1.02);
+}
+
+.planning-calendar-slot--touch-dragging .planning-calendar-slot__resize {
+    opacity: 0;
+}
+
+.planning-calendar-touch-preview {
+    position: fixed;
+    z-index: 24;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 120px;
+    max-width: min(240px, calc(100vw - 24px));
+    padding: 6px 8px;
+    border-radius: 12px;
+    pointer-events: none;
+    transform: translate(12px, -50%);
+    box-shadow: 0 18px 34px rgba(15, 23, 42, 0.2);
+}
+
+.planning-calendar-touch-preview--task {
+    border: 1px solid color-mix(in srgb, var(--planning-calendar-touch-preview-color, #64748b) 22%, rgba(15, 23, 42, 0.1));
+    background: color-mix(in srgb, var(--planning-calendar-touch-preview-color, #64748b) 12%, rgba(255, 255, 255, 0.98));
+    color: var(--planning-text);
+}
+
+.planning-calendar-touch-preview--slot {
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    color: #fff;
+}
+
+.planning-calendar-touch-preview__body {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}
+
+.planning-calendar-touch-preview__parent {
+    display: block;
+    min-width: 0;
+    font-size: 9px;
+    font-weight: 600;
+    line-height: 1.1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: inherit;
+    opacity: 0.74;
+}
+
+.planning-calendar-touch-preview__title {
+    display: block;
+    min-width: 0;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: inherit;
+}
+
+.planning-calendar-touch-preview__badge {
+    flex-shrink: 0;
+    min-height: 18px;
+    padding: 0 6px;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 9px;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.planning-calendar-touch-preview--task .planning-calendar-touch-preview__badge {
+    background: rgba(255, 255, 255, 0.78);
+    color: var(--planning-text);
+}
+
+.planning-calendar-touch-preview--slot .planning-calendar-touch-preview__badge {
+    background: rgba(15, 23, 42, 0.18);
+    color: rgba(255, 255, 255, 0.92);
+}
+
+.planning-calendar-screen--drag-zoom .planning-calendar-day-header {
+    padding: 5px 3px 6px;
+}
+
+.planning-calendar-screen--drag-zoom .planning-calendar-day-label {
+    font-size: 9px;
+}
+
+.planning-calendar-screen--drag-zoom .planning-calendar-day-date {
+    font-size: 12px;
+}
+
+.planning-calendar-screen--drag-zoom .planning-calendar-day-drop-hint {
+    margin-top: 3px;
+    padding: 1px 5px;
+    font-size: 8px;
+}
+
+.planning-calendar-screen--drag-zoom .planning-calendar-drop-preview {
+    left: 3px;
+    right: 3px;
+    border-radius: 8px;
+}
+
+.planning-calendar-screen--drag-zoom .planning-calendar-time-drop-preview {
+    left: 1px;
+    right: -5px;
+    min-height: 20px;
+    padding: 2px 4px 2px 5px;
+}
+
+.planning-calendar-screen--drag-zoom .planning-calendar-time-drop-range {
+    left: 4px;
+    right: 6px;
+    border-radius: 8px;
+}
+
+.planning-calendar-screen--drag-zoom .planning-calendar-time-drop-preview__label,
+.planning-calendar-screen--drag-zoom .planning-calendar-time-drop-preview__arrow {
+    font-size: 9px;
+}
+
+.planning-calendar-screen--drag-zoom .planning-calendar-drop-commit-marker {
+    left: 3px;
+    right: 3px;
+    gap: 4px;
+}
+
+.planning-calendar-screen--drag-zoom .planning-calendar-drop-commit-marker__dot {
+    width: 8px;
+    height: 8px;
+}
+
+.planning-calendar-screen--drag-zoom .planning-calendar-drop-commit-marker__line {
+    height: 2px;
+}
+
+.planning-calendar-screen--drag-zoom .planning-calendar-drop-preview__body {
+    padding: 5px 6px;
+    gap: 1px;
+}
+
+.planning-calendar-screen--drag-zoom .planning-calendar-drop-preview__parent,
+.planning-calendar-screen--drag-zoom .planning-calendar-drop-preview__time {
+    font-size: 8px;
+}
+
+.planning-calendar-screen--drag-zoom .planning-calendar-drop-preview__title {
+    font-size: 10px;
+}
+
+.planning-calendar-screen--drag-zoom .planning-calendar-unscheduled-pill {
+    gap: 4px;
+    padding: 4px 5px;
+}
+
+.planning-calendar-screen--drag-zoom .planning-calendar-unscheduled-pill__parent {
+    font-size: 8px;
+}
+
+.planning-calendar-screen--drag-zoom .planning-calendar-unscheduled-pill__title {
+    font-size: 10px;
+}
+
+.planning-calendar-screen--drag-zoom .planning-calendar-slot {
+    padding: 2px 5px;
+    padding-right: 20px;
+    border-radius: 5px;
+}
+
+.planning-calendar-screen--drag-zoom .planning-calendar-slot__parent {
+    font-size: 8px;
+}
+
+.planning-calendar-screen--drag-zoom .planning-calendar-slot__title {
+    font-size: 10px;
+}
+
+.planning-calendar-screen--drag-zoom .planning-calendar-slot__title--with-parent {
+    font-size: 9px;
+}
+
+.planning-calendar-screen--drag-zoom .planning-calendar-slot__time {
+    font-size: 8px;
+}
+
+.planning-calendar-slot--muted .planning-calendar-slot__resize {
+    background: rgba(15, 23, 42, 0.1);
+    color: rgba(255, 255, 255, 0.74);
+}
+
+.planning-calendar-slot--attention .planning-calendar-slot__resize {
+    background: rgba(127, 29, 29, 0.24);
+}
+
+/* --- Unscheduled --- */
+.planning-mobile-hint {
+    padding: 10px 12px 14px;
+    font-size: 12px;
+    color: var(--planning-muted);
+    border-top: 1px dashed var(--planning-border-soft);
+    background: rgba(148, 163, 184, 0.05);
+}
+
+/* =============================================================================
+   GANTT SCREEN
+   ============================================================================= */
+.planning-gantt-screen {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
+}
+
+.planning-gantt-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--planning-border-soft);
+}
+
+.planning-gantt-toolbar__group {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.planning-gantt-toolbar__hint {
+    font-size: 12px;
+    color: var(--planning-muted);
+}
+
+.planning-gantt-container {
+    flex: 1;
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.planning-gantt-header {
+    display: flex;
+    position: sticky;
+    top: 0;
+    background: rgba(255, 255, 255, 0.96);
+    z-index: 5;
+    border-bottom: 1px solid var(--planning-border-soft);
+    backdrop-filter: blur(10px);
+}
+
+.planning-gantt-labels {
+    width: 140px;
+    flex-shrink: 0;
+    padding: 6px 8px;
+}
+
+.planning-gantt-timeline-header {
+    display: flex;
+    flex: 1;
+}
+
+.planning-gantt-day-header {
+    flex-shrink: 0;
+    text-align: center;
+    padding: 4px 0;
+    font-size: 10px;
+    color: var(--planning-muted);
+}
+
+.planning-gantt-day-header--today {
+    color: var(--planning-accent);
+    font-weight: 700;
+}
+
+.planning-gantt-day-name {
+    display: block;
+    font-size: 9px;
+    text-transform: uppercase;
+}
+
+.planning-gantt-day-num {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.planning-gantt-body {
+    position: relative;
+}
+
+.planning-gantt-row {
+    display: flex;
+    min-height: 36px;
+    align-items: center;
+    border-bottom: 1px solid var(--planning-border-soft);
+    position: absolute;
+    left: 0;
+    right: 0;
+    background: rgba(255, 255, 255, 0.88);
+}
+
+.planning-gantt-group-row {
+    position: absolute;
+    left: 0;
+    right: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 10px;
+    border-bottom: 1px solid var(--planning-border-soft);
+    background: rgba(148, 163, 184, 0.08);
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--planning-text);
+}
+
+.planning-gantt-group-toggle {
+    width: 22px;
+    height: 22px;
+    border-radius: 6px;
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--planning-muted);
+    cursor: pointer;
+    padding: 0;
+}
+
+.planning-gantt-group-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.planning-gantt-group-name {
+    flex: 1;
+    min-width: 0;
+}
+
+.planning-gantt-group-count {
+    font-size: 11px;
+    color: var(--planning-muted);
+}
+
+.planning-gantt-task-title {
+    font-size: 12px;
+    color: var(--planning-text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.planning-gantt-timeline {
+    flex: 1;
+    position: relative;
+    height: 100%;
+    border-left: 1px solid var(--planning-border-soft);
+}
+
+.planning-gantt-overlay {
+    position: absolute;
+    top: 0;
+    pointer-events: none;
+}
+
+.planning-gantt-deps {
+    position: absolute;
+    inset: 0;
+    overflow: visible;
+}
+
+.planning-gantt-today-line {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: var(--planning-accent);
+    opacity: 0.4;
+    z-index: 2;
+}
+
+.planning-gantt-task-meta {
+    font-size: 10px;
+    color: var(--planning-muted-soft);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.planning-gantt-bar-wrap {
+    position: relative;
+    height: 100%;
+}
+
+.planning-gantt-bar {
+    position: absolute;
+    top: 6px;
+    height: 24px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    padding: 0 6px;
+    cursor: pointer;
+    z-index: 1;
+    transition: opacity 0.15s;
+    color: #fff;
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.14), inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+    filter: saturate(0.84);
+}
+
+.planning-gantt-baseline {
+    position: absolute;
+    top: 11px;
+    height: 12px;
+    border-radius: 999px;
+    border: 1px dashed rgba(100, 116, 139, 0.55);
+    background: rgba(148, 163, 184, 0.18);
+}
+
+.planning-gantt-handle {
+    width: 10px;
+    align-self: stretch;
+    cursor: ew-resize;
+    position: relative;
+}
+
+.planning-gantt-handle::before {
+    content: '';
+    position: absolute;
+    top: 5px;
+    bottom: 5px;
+    left: 50%;
+    width: 2px;
+    transform: translateX(-50%);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.65);
+}
+
+.planning-gantt-bar__label {
+    font-size: 10px;
+    font-weight: 600;
+    color: inherit;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* =============================================================================
+   DARK THEME OVERRIDES
+   ============================================================================= */
+[data-theme="dark"] .planning-tab {
+    --planning-surface: var(--card, #111827);
+    --planning-surface-elevated: var(--surface, #1f2937);
+    --planning-border: rgba(255, 255, 255, 0.08);
+    --planning-border-soft: rgba(255, 255, 255, 0.06);
+    --planning-accent-soft: rgba(96, 165, 250, 0.14);
+    --planning-text: var(--text, var(--text-primary, #f8fafc));
+    --planning-muted: var(--muted, var(--text-secondary, #cbd5e1));
+    --planning-muted-soft: var(--text-tertiary, #94a3b8);
+    background: var(--bg-primary, #1a1a1a);
+}
+
+[data-theme="dark"] .planning-subnav {
+    background: linear-gradient(180deg, rgba(17, 24, 39, 0.96) 0%, rgba(17, 24, 39, 0.88) 100%);
+    border-top-color: var(--planning-border-soft);
+}
+
+[data-theme="dark"] .planning-subnav__item:hover {
+    background: rgba(148, 163, 184, 0.12);
+}
+
+[data-theme="dark"] .planning-subnav__item.active {
+    color: #93c5fd;
+    border-color: rgba(96, 165, 250, 0.22);
+    box-shadow:
+        0 10px 22px rgba(59, 130, 246, 0.16),
+        inset 0 0 0 1px rgba(96, 165, 250, 0.14);
+}
+
+[data-theme="dark"] .planning-project-group {
+    --planning-project-task-bg: linear-gradient(180deg,
+            color-mix(in srgb, var(--planning-project-color, #94a3b8) 8%, var(--planning-surface) 92%) 0%,
+            color-mix(in srgb, var(--planning-project-color, #94a3b8) 5%, var(--planning-surface) 95%) 100%);
+    background: linear-gradient(180deg,
+            color-mix(in srgb, var(--planning-project-color, #94a3b8) 16%, var(--planning-surface) 84%) 0%,
+            color-mix(in srgb, var(--planning-project-color, #94a3b8) 9%, var(--planning-surface) 91%) 100%);
+}
+
+[data-theme="dark"] .planning-task-group__tasks {
+    --planning-project-task-bg: linear-gradient(180deg,
+            color-mix(in srgb, var(--planning-project-color, #94a3b8) 5.5%, var(--planning-surface) 94.5%) 0%,
+            color-mix(in srgb, var(--planning-project-color, #94a3b8) 3.5%, var(--planning-surface) 96.5%) 100%);
+}
+
+[data-theme="dark"] .planning-completed-toggle {
+    background: color-mix(in srgb, var(--planning-project-color, #94a3b8) 12%, var(--planning-surface) 88%);
+    color: color-mix(in srgb, var(--planning-project-color, #94a3b8) 70%, var(--planning-text) 30%);
+}
+
+[data-theme="dark"] .planning-completed-toggle.active {
+    background: color-mix(in srgb, var(--planning-project-color, #94a3b8) 18%, var(--planning-surface) 82%);
+    color: #f8fafc;
+}
+
+[data-theme="dark"] .planning-quick-add-card {
+    background: linear-gradient(180deg, rgba(15, 23, 42, 0.96) 0%, rgba(30, 41, 59, 0.9) 100%);
+    border-color: rgba(148, 163, 184, 0.24);
+    box-shadow:
+        0 22px 48px rgba(2, 6, 23, 0.38),
+        0 8px 20px rgba(59, 130, 246, 0.08),
+        inset 0 1px 0 rgba(255, 255, 255, 0.08),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+}
+
+[data-theme="dark"] .planning-quick-add-card::before {
+    background:
+        radial-gradient(circle at top right, rgba(96, 165, 250, 0.18), transparent 38%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0) 42%);
+}
+
+[data-theme="dark"] .planning-filter-toggle {
+    background: rgba(15, 23, 42, 0.62);
+}
+
+[data-theme="dark"] .planning-filters-panel {
+    background: rgba(15, 23, 42, 0.62);
+}
+
+[data-theme="dark"] .planning-filter-select,
+[data-theme="dark"] .planning-quick-select,
+[data-theme="dark"] .planning-inline-input,
+[data-theme="dark"] .planning-duration-trigger {
+    background: var(--planning-surface-elevated);
+    border-color: var(--planning-border);
+    color: var(--planning-text);
+}
+
+[data-theme="dark"] .planning-project-group__palette {
+    background: rgba(15, 23, 42, 0.94);
+    border-color: rgba(255, 255, 255, 0.08);
+    box-shadow: 0 20px 40px rgba(2, 6, 23, 0.42);
+}
+
+[data-theme="dark"] .planning-project-group__swatch {
+    border-color: rgba(255, 255, 255, 0.14);
+    box-shadow:
+        0 6px 14px rgba(2, 6, 23, 0.32),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+}
+
+[data-theme="dark"] .planning-modal {
+    background: var(--planning-surface);
+}
+
+[data-theme="dark"] .planning-add-btn {
+    background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
+    box-shadow:
+        0 4px 12px rgba(34, 197, 94, 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+
+[data-theme="dark"] .planning-add-btn--done-task {
+    background: linear-gradient(135deg, #f59e0b 0%, #ea580c 100%);
+    box-shadow:
+        0 4px 12px rgba(249, 115, 22, 0.28),
+        inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+[data-theme="dark"] .planning-add-btn--draft-task {
+    background: rgba(15, 23, 42, 0.72);
+    color: var(--planning-text);
+    border-color: var(--planning-border);
+    box-shadow:
+        0 8px 18px rgba(2, 6, 23, 0.26),
+        inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+[data-theme="dark"] .planning-modal__section,
+[data-theme="dark"] .planning-linked-list__item,
+[data-theme="dark"] .planning-linked-banner,
+[data-theme="dark"] .planning-mobile-hint,
+[data-theme="dark"] .planning-gantt-group-row,
+[data-theme="dark"] .planning-gantt-row {
+    background: rgba(17, 24, 39, 0.7);
+}
+
+[data-theme="dark"] .planning-calendar-header--pinned {
+    background: var(--planning-surface, #111827);
+    background: color-mix(in srgb, var(--planning-surface, #111827) 94%, transparent);
+    box-shadow: 0 12px 28px rgba(2, 6, 23, 0.34);
+}
+
+[data-theme="dark"] .planning-calendar-day-header--drop-target {
+    background: linear-gradient(180deg, rgba(59, 130, 246, 0.18) 0%, rgba(37, 99, 235, 0.08) 100%);
+    box-shadow:
+        inset 0 0 0 1px rgba(96, 165, 250, 0.24),
+        inset 1px 0 0 rgba(96, 165, 250, 0.28),
+        inset -1px 0 0 rgba(96, 165, 250, 0.28);
+}
+
+[data-theme="dark"] .planning-calendar-day-header--drop-unschedule {
+    background: linear-gradient(180deg, rgba(96, 165, 250, 0.24) 0%, rgba(37, 99, 235, 0.12) 100%);
+    box-shadow:
+        inset 0 0 0 1px rgba(147, 197, 253, 0.28),
+        inset 1px 0 0 rgba(147, 197, 253, 0.3),
+        inset -1px 0 0 rgba(147, 197, 253, 0.3),
+        0 10px 20px rgba(2, 6, 23, 0.28);
+}
+
+[data-theme="dark"] .planning-calendar-day-drop-hint {
+    background: rgba(15, 23, 42, 0.82);
+    color: #bfdbfe;
+    border-color: rgba(96, 165, 250, 0.34);
+    box-shadow: 0 8px 16px rgba(2, 6, 23, 0.24);
+}
+
+[data-theme="dark"] .planning-calendar-cell--drop-target {
+    background: linear-gradient(180deg, rgba(59, 130, 246, 0.14) 0%, rgba(30, 64, 175, 0.06) 100%);
+    box-shadow: inset 0 0 0 1px rgba(96, 165, 250, 0.18);
+}
+
+[data-theme="dark"] .planning-calendar-hour-label--drop-accent {
+    color: #bfdbfe;
+    background: linear-gradient(90deg, rgba(37, 99, 235, 0.16) 0%, rgba(30, 64, 175, 0.04) 100%);
+    box-shadow:
+        inset 2px 0 0 rgba(96, 165, 250, 0.44),
+        inset 0 0 0 1px rgba(96, 165, 250, 0.12);
+}
+
+[data-theme="dark"] .planning-calendar-time-drop-range {
+    background: linear-gradient(180deg, rgba(59, 130, 246, 0.24) 0%, rgba(37, 99, 235, 0.16) 100%);
+    box-shadow:
+        inset 0 0 0 1px rgba(96, 165, 250, 0.16),
+        0 8px 16px rgba(2, 6, 23, 0.16);
+}
+
+[data-theme="dark"] .planning-calendar-time-drop-preview {
+    color: #bfdbfe;
+    background: rgba(15, 23, 42, 0.92);
+    border-color: rgba(96, 165, 250, 0.32);
+    box-shadow: 0 10px 20px rgba(2, 6, 23, 0.32);
+}
+
+[data-theme="dark"] .planning-calendar-drop-preview {
+    box-shadow: 0 14px 28px rgba(2, 6, 23, 0.32);
+}
+
+[data-theme="dark"] .planning-calendar-drop-preview--task {
+    border-color: color-mix(in srgb, var(--planning-calendar-drop-preview-color, #94a3b8) 30%, rgba(255, 255, 255, 0.16));
+    background: color-mix(in srgb, var(--planning-calendar-drop-preview-color, #94a3b8) 16%, var(--planning-surface, #111827) 84%);
+    color: var(--planning-text);
+}
+
+[data-theme="dark"] .planning-calendar-drop-preview--slot {
+    border-color: rgba(255, 255, 255, 0.18);
+}
+
+[data-theme="dark"] .planning-calendar-drop-commit-marker__dot {
+    background: #60a5fa;
+    box-shadow:
+        0 0 0 3px rgba(96, 165, 250, 0.16),
+        0 6px 12px rgba(2, 6, 23, 0.28);
+}
+
+[data-theme="dark"] .planning-calendar-drop-commit-marker__line {
+    background: linear-gradient(90deg, rgba(96, 165, 250, 0.86) 0%, rgba(147, 197, 253, 0.18) 100%);
+    box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.24);
+}
+
+[data-theme="dark"] .planning-calendar-touch-preview--task {
+    border-color: color-mix(in srgb, var(--planning-calendar-touch-preview-color, #94a3b8) 22%, rgba(255, 255, 255, 0.12));
+    background: color-mix(in srgb, var(--planning-calendar-touch-preview-color, #94a3b8) 12%, var(--planning-surface, #111827) 88%);
+    color: var(--planning-text);
+    box-shadow: 0 18px 34px rgba(2, 6, 23, 0.38);
+}
+
+[data-theme="dark"] .planning-calendar-touch-preview--task .planning-calendar-touch-preview__badge {
+    background: rgba(15, 23, 42, 0.7);
+    color: var(--planning-text);
+}
+
+[data-theme="dark"] .planning-modal-overlay {
+    background: rgba(2, 6, 23, 0.68);
+}
+
+[data-theme="dark"] .planning-duration-modal__option.active {
+    box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.12);
+}
+
+[data-theme="dark"] .planning-task-row__meta-chip {
+    background: transparent;
+    color: #cbd5e1;
+}
+
+[data-theme="dark"] .planning-task-row__meta-chip--start {
+    color: #bfdbfe;
+}
+
+[data-theme="dark"] .planning-task-row__meta-chip--due {
+    background: transparent;
+    color: #fde68a;
+}
+
+[data-theme="dark"] .planning-task-row__meta-chip--due-today {
+    background: rgba(245, 158, 11, 0.2);
+    color: #fde68a;
+}
+
+[data-theme="dark"] .planning-task-row__meta-chip--due-overdue {
+    background: transparent;
+    color: #fecaca;
+}
+
+[data-theme="dark"] .planning-task-row__meta-chip--duration {
+    background: rgba(99, 102, 241, 0.2);
+    color: #c7d2fe;
+}
+
+[data-theme="dark"] .planning-load-date-picker__legend-hint {
+    color: var(--planning-muted-soft);
+}
+
+[data-theme="dark"] .planning-gantt-header {
+    background: rgba(17, 24, 39, 0.94);
+}
+
+[data-theme="dark"] .planning-gantt-baseline {
+    background: rgba(148, 163, 184, 0.12);
+    border-color: rgba(148, 163, 184, 0.48);
+}
+
+.planning-modal-overlay--nested {
+    z-index: 1100;
+}
+
+@media (max-width: 420px) {
+    .planning-quick-add__title-row {
+        gap: 5px;
+    }
+
+    .planning-quick-add__primary-row {
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 5px;
+    }
+
+    .planning-quick-add__actions--priority-row {
+        flex-wrap: nowrap;
+        justify-content: flex-end;
+        gap: 4px;
+    }
+
+    .planning-quick-add__actions--priority-row .planning-priority-btn {
+        flex: 0 0 auto;
+        min-height: 38px;
+        padding: 0 10px;
+        font-size: 10px;
+    }
+
+    .planning-quick-add__create-actions .planning-add-btn {
+        min-height: 38px;
+        padding: 0 8px;
+        font-size: 11px;
+    }
+
+    .planning-quick-add__create-actions {
+        grid-template-columns: minmax(0, 1fr) 38px 38px;
+        gap: 3px;
+    }
+
+    .planning-quick-add__create-actions .planning-add-btn--icon-only {
+        width: 38px;
+        min-width: 38px;
+        padding: 0;
+    }
+
+    .planning-quick-add__secondary-row {
+        grid-template-columns: minmax(0, 1fr) 78px;
+        gap: 5px;
+    }
+
+    .planning-date-picker__btn {
+        min-height: 38px;
+        padding: 0 6px;
+        font-size: 10px;
+    }
+
+    .planning-date-picker {
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 40px;
+    }
+
+    .planning-duration-trigger--minimal {
+        gap: 6px;
+        min-height: 38px;
+        padding: 8px 8px;
+    }
+
+    .planning-duration-trigger--minimal .planning-duration-trigger__value {
+        font-size: 11px;
+    }
+
+    .planning-add-btn--active-task {
+        padding: 0 8px;
+    }
+
+    .planning-duration-modal__grid {
+        grid-template-columns: 1fr;
+    }
+
+    .planning-duration-modal__custom {
+        grid-template-columns: 1fr;
+    }
+}

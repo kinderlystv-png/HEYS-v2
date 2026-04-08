@@ -1409,7 +1409,18 @@
                         const next = current === 'dark' ? 'light' : 'dark';
                         html.setAttribute('data-theme', next);
                         const U = window.HEYS?.utils || {};
-                        U.lsSet ? U.lsSet('heys_theme', next) : localStorage.setItem('heys_theme', next);
+                        localStorage.setItem('heys_theme_pref', next);
+                        localStorage.setItem('heys_theme_explicit', '1');
+                        localStorage.setItem('heys_theme', next);
+                        if (U.lsSet) {
+                            U.lsSet('heys_theme_pref', next);
+                            U.lsSet('heys_theme_explicit', '1');
+                            U.lsSet('heys_theme', next);
+                        } else {
+                            localStorage.setItem('heys_theme_pref', next);
+                            localStorage.setItem('heys_theme_explicit', '1');
+                            localStorage.setItem('heys_theme', next);
+                        }
                     },
                     title: 'Сменить тему'
                 }, document.documentElement.getAttribute('data-theme') === 'dark' ? '☀️' : '🌙')

@@ -78,7 +78,12 @@
     // Gamification
     'heys_game',              // XP, уровни, достижения
     'heys_best_streak',       // Лучший streak
-    'heys_weekly_wrap_view_count' // Счетчик просмотров итогов недели
+    'heys_weekly_wrap_view_count', // Счетчик просмотров итогов недели
+
+    // Planning module (PIN-only)
+    'heys_planning_projects',
+    'heys_planning_tasks',
+    'heys_planning_slots',
   ];
 
   /** Префиксы ключей, требующих client-specific storage */

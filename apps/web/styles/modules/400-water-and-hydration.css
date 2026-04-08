@@ -871,6 +871,16 @@ body.widgets-edit-mode .fab-group .water-fab {
   pointer-events: none;
 }
 
+body.planning-tab-active .fab-group .meal-fab,
+body.planning-tab-active .fab-group .water-fab,
+body.planning-tab-active .water-fab,
+body.planning-tab-active .meal-fab {
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  transform: translateY(10px) scale(0.98) !important;
+}
+
 /* 💧 Анимация добавления воды около FAB */
 .water-fab-anim {
   position: absolute;

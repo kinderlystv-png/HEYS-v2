@@ -3,13 +3,13 @@
     const HEYS = window.HEYS = window.HEYS || {};
     const DEV = window.DEV || {};
     const devLog = typeof DEV.log === 'function' ? DEV.log.bind(DEV) : function () { };
+    const HOME_TABS = ['widgets', 'stats', 'diary', 'insights', 'month', 'tasks'];
 
     const useTabState = ({ React }) => {
         const getDefaultTabFromProfile = () => {
             const U = window.HEYS?.utils;
             const profile = U?.lsGet?.('heys_profile', {}) || {};
-            const validTabs = ['widgets', 'stats', 'diary', 'insights', 'month'];
-            const savedTab = validTabs.includes(profile.defaultTab) ? profile.defaultTab : 'diary';
+            const savedTab = HOME_TABS.includes(profile.defaultTab) ? profile.defaultTab : 'diary';
             return savedTab;
         };
 
@@ -77,8 +77,7 @@
         }, [initialTabLoaded]);
 
         const setDefaultTab = React.useCallback((newDefaultTab) => {
-            const validTabs = ['widgets', 'stats', 'diary', 'insights', 'month'];
-            if (!validTabs.includes(newDefaultTab)) return;
+            if (!HOME_TABS.includes(newDefaultTab)) return;
 
             const U = window.HEYS?.utils;
             const profile = U?.lsGet?.('heys_profile', {}) || {};

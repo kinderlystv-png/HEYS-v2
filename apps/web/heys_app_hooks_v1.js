@@ -118,10 +118,43 @@
         }
     };
 
+    const THEME_PREF_KEY = 'heys_theme_pref';
+    const THEME_EXPLICIT_KEY = 'heys_theme_explicit';
+    const LEGACY_THEME_KEY = 'heys_theme';
+
+    const isThemePreference = (value) => value === 'light' || value === 'dark' || value === 'auto';
+
+    const isExplicitThemeFlag = (value) => (
+        value === '1' || value === 1 || value === true || value === 'true'
+    );
+
+    const getStoredThemePreference = () => {
+        let pref = null;
+        let explicit = null;
+        let legacyTheme = null;
+
+        try {
+            pref = tryParseStoredValue(localStorage.getItem(THEME_PREF_KEY), null);
+            explicit = tryParseStoredValue(localStorage.getItem(THEME_EXPLICIT_KEY), null);
+            legacyTheme = tryParseStoredValue(localStorage.getItem(LEGACY_THEME_KEY), null);
+        } catch { }
+
+        if (pref === null || pref === undefined) pref = readGlobalValue(THEME_PREF_KEY, null);
+        if (isThemePreference(pref)) return pref;
+
+        if (explicit === null || explicit === undefined) explicit = readGlobalValue(THEME_EXPLICIT_KEY, null);
+        if (isExplicitThemeFlag(explicit)) {
+            if (legacyTheme === null || legacyTheme === undefined) legacyTheme = readGlobalValue(LEGACY_THEME_KEY, null);
+            if (legacyTheme === 'light' || legacyTheme === 'dark') return legacyTheme;
+        }
+
+        return 'auto';
+    };
+
     const normalizeThemePreference = (value) => {
         if (value === 'light' || value === 'dark') return value;
         if (value === 'auto') return getSystemTheme();
-        return 'light';
+        return getSystemTheme();
     };
 
     function useThemePreference() {
@@ -129,25 +162,65 @@
         const { useState, useEffect, useMemo, useCallback } = React;
         const [theme, setTheme] = useState(() => {
             try {
-                const saved = readGlobalValue('heys_theme', 'light');
-                return normalizeThemePreference(saved);
+                return getStoredThemePreference();
             } catch {
-                return 'light';
+                return 'auto';
             }
         });
 
-        const resolvedTheme = useMemo(() => theme, [theme]);
+        const [systemTheme, setSystemTheme] = useState(getSystemTheme);
+
+        useEffect(() => {
+            let media;
+            try {
+                media = window.matchMedia('(prefers-color-scheme: dark)');
+            } catch {
+                return undefined;
+            }
+
+            const updateSystemTheme = (event) => {
+                const nextMatches = typeof event?.matches === 'boolean' ? event.matches : media.matches;
+                setSystemTheme(nextMatches ? 'dark' : 'light');
+            };
+
+            updateSystemTheme();
+
+            if (typeof media.addEventListener === 'function') {
+                media.addEventListener('change', updateSystemTheme);
+                return () => media.removeEventListener('change', updateSystemTheme);
+            }
+
+            if (typeof media.addListener === 'function') {
+                media.addListener(updateSystemTheme);
+                return () => media.removeListener(updateSystemTheme);
+            }
+
+            return undefined;
+        }, []);
+
+        const resolvedTheme = useMemo(
+            () => (theme === 'auto' ? systemTheme : normalizeThemePreference(theme)),
+            [systemTheme, theme],
+        );
 
         useEffect(() => {
             document.documentElement.setAttribute('data-theme', resolvedTheme);
             try {
-                writeGlobalValue('heys_theme', resolvedTheme);
+                localStorage.setItem(THEME_PREF_KEY, theme);
+                localStorage.setItem(THEME_EXPLICIT_KEY, theme === 'auto' ? '0' : '1');
+                localStorage.setItem(LEGACY_THEME_KEY, resolvedTheme);
+                writeGlobalValue(THEME_PREF_KEY, theme);
+                writeGlobalValue(THEME_EXPLICIT_KEY, theme === 'auto' ? '0' : '1');
+                writeGlobalValue(LEGACY_THEME_KEY, resolvedTheme);
             } catch { }
-        }, [resolvedTheme]);
+        }, [resolvedTheme, theme]);
 
         const cycleTheme = useCallback(() => {
-            setTheme(prev => prev === 'dark' ? 'light' : 'dark');
-        }, []);
+            setTheme((prev) => {
+                const currentResolvedTheme = prev === 'auto' ? systemTheme : normalizeThemePreference(prev);
+                return currentResolvedTheme === 'dark' ? 'light' : 'dark';
+            });
+        }, [systemTheme]);
 
         return { theme, resolvedTheme, cycleTheme };
     }

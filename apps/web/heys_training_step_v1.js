@@ -1,5 +1,5 @@
-// heys_training_step_v1.js — Модалка добавления/редактирования тренировки (2 шага)
-// Шаг 1: Тип, время, оценки, заметка | Шаг 2: Зоны пульса
+// heys_training_step_v1.js — Модалка добавления/редактирования тренировки (3 шага)
+// Шаг 1: Тип, активность и время | Шаг 2: Оценки и заметка | Шаг 3: Зоны пульса
 (function (global) {
   const HEYS = global.HEYS = global.HEYS || {};
   const { useState, useMemo, useCallback, useEffect, useRef } = React;
@@ -42,6 +42,178 @@
     { id: 'strength', icon: '🏋️', label: 'Силовая' },
     { id: 'hobby', icon: '⚽', label: 'Хобби' }
   ];
+
+  const TRAINING_TYPE_META = {
+    cardio: { icon: '🏃', label: 'Кардио' },
+    strength: { icon: '🏋️', label: 'Силовая' },
+    hobby: { icon: '⚽', label: 'Активное хобби' }
+  };
+
+  const TRAINING_ACTIVITY_STORAGE_KEY = 'heys_training_activity_options_v1';
+
+  const TRAINING_ACTIVITY_PRESETS = [
+    { type: 'cardio', icon: '🏃', label: 'Бег' },
+    { type: 'cardio', icon: '🚴', label: 'Велосипед' },
+    { type: 'cardio', icon: '🏊', label: 'Плавание' },
+    { type: 'cardio', icon: '🥊', label: 'Интервалы' },
+    { type: 'strength', icon: '🏋️', label: 'Зал' },
+    { type: 'strength', icon: '💪', label: 'Функциональная' },
+    { type: 'strength', icon: '🤸', label: 'Калистеника' },
+    { type: 'strength', icon: '🪢', label: 'TRX / резинки' },
+    { type: 'hobby', icon: '🧘', label: 'Йога' },
+    { type: 'hobby', icon: '🤸', label: 'Пилатес' },
+    { type: 'hobby', icon: '🎾', label: 'Теннис' },
+    { type: 'hobby', icon: '💃', label: 'Танцы' }
+  ];
+
+  function normalizeActivityLabel(value) {
+    if (typeof value !== 'string') return '';
+    return value.replace(/\s+/g, ' ').trim();
+  }
+
+  function getTrainingTypeMeta(type) {
+    return TRAINING_TYPE_META[type] || TRAINING_TYPE_META.cardio;
+  }
+
+  function getDefaultActivityLabel(type) {
+    return getTrainingTypeMeta(type).label;
+  }
+
+  function readTrainingActivityOptions() {
+    const raw = lsGet(TRAINING_ACTIVITY_STORAGE_KEY, []);
+    if (!Array.isArray(raw)) return [];
+
+    return raw
+      .map((item) => {
+        const label = normalizeActivityLabel(item?.label);
+        const type = typeof item?.type === 'string' ? item.type : 'cardio';
+        if (!label) return null;
+
+        return {
+          label,
+          type,
+          icon: typeof item?.icon === 'string' && item.icon ? item.icon : getTrainingTypeMeta(type).icon,
+          usedAt: Number(item?.usedAt) || 0
+        };
+      })
+      .filter(Boolean)
+      .slice(0, 24);
+  }
+
+  function persistTrainingActivityOption(type, label) {
+    const normalizedLabel = normalizeActivityLabel(label);
+    if (!normalizedLabel) return readTrainingActivityOptions();
+
+    const nextType = typeof type === 'string' && type ? type : 'cardio';
+    const usedAt = Date.now();
+    const existing = readTrainingActivityOptions().filter((item) => {
+      return !(item.type === nextType && item.label.toLowerCase() === normalizedLabel.toLowerCase());
+    });
+
+    const next = [
+      {
+        label: normalizedLabel,
+        type: nextType,
+        icon: getTrainingTypeMeta(nextType).icon,
+        usedAt
+      },
+      ...existing
+    ].slice(0, 24);
+
+    lsSet(TRAINING_ACTIVITY_STORAGE_KEY, next);
+    return next;
+  }
+
+  function buildTrainingActivityOptions(type, savedOptions, currentLabel) {
+    const nextType = typeof type === 'string' && type ? type : 'cardio';
+    const normalizedCurrent = normalizeActivityLabel(currentLabel);
+    const deduped = [];
+    const seen = new Set();
+
+    const pushOption = (option) => {
+      if (!option || !option.label) return;
+      const normalizedLabel = normalizeActivityLabel(option.label);
+      if (!normalizedLabel) return;
+
+      const key = normalizedLabel.toLowerCase();
+      if (seen.has(key)) return;
+      seen.add(key);
+      deduped.push({
+        label: normalizedLabel,
+        icon: option.icon || getTrainingTypeMeta(nextType).icon,
+        type: nextType,
+        source: option.source || 'preset'
+      });
+    };
+
+    pushOption({
+      label: getDefaultActivityLabel(nextType),
+      icon: getTrainingTypeMeta(nextType).icon,
+      source: 'default'
+    });
+
+    TRAINING_ACTIVITY_PRESETS
+      .filter((item) => item.type === nextType)
+      .forEach((item) => pushOption({ ...item, source: 'preset' }));
+
+    (Array.isArray(savedOptions) ? savedOptions : [])
+      .filter((item) => item.type === nextType)
+      .sort((left, right) => (right.usedAt || 0) - (left.usedAt || 0))
+      .forEach((item) => pushOption({ ...item, source: 'custom' }));
+
+    if (normalizedCurrent) {
+      pushOption({
+        label: normalizedCurrent,
+        icon: getTrainingTypeMeta(nextType).icon,
+        source: 'current'
+      });
+    }
+
+    return deduped;
+  }
+
+  function getRoundedCurrentTime() {
+    const now = new Date();
+    return pad2(now.getHours()) + ':' + pad2(Math.floor(now.getMinutes() / 5) * 5);
+  }
+
+  function normalizeTrainingRating(value) {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) && parsed >= 1 && parsed <= 10 ? parsed : 5;
+  }
+
+  function normalizeTrainingZones(value) {
+    const source = Array.isArray(value) ? value : [0, 0, 0, 0];
+    return [0, 1, 2, 3].map((index) => {
+      const parsed = Number(source[index]);
+      return Number.isFinite(parsed) && parsed >= 0 ? parsed : 0;
+    });
+  }
+
+  function buildTrainingFormData(training) {
+    const source = training || {};
+    const type = source.type || 'cardio';
+
+    return {
+      type,
+      activityLabel: normalizeActivityLabel(source.activityLabel) || getDefaultActivityLabel(type),
+      time: source.time || getRoundedCurrentTime(),
+      zones: normalizeTrainingZones(source.zones || source.z),
+      mood: normalizeTrainingRating(source.mood),
+      wellbeing: normalizeTrainingRating(source.wellbeing),
+      stress: normalizeTrainingRating(source.stress),
+      comment: typeof source.comment === 'string' ? source.comment : ''
+    };
+  }
+
+  function readTrainingFormData(ctx) {
+    const dateKey = ctx?.dateKey || new Date().toISOString().slice(0, 10);
+    const trainingIndex = ctx?.trainingIndex ?? 0;
+    const day = lsGet(`heys_dayv2_${dateKey}`, {});
+    const trainings = day.trainings || [];
+
+    return buildTrainingFormData(trainings[trainingIndex] || {});
+  }
 
   const HR_ZONES = [
     { id: 0, name: 'Разминка', color: '#3b82f6', range: '50-60%' },
@@ -96,15 +268,19 @@
   const TimePicker = HEYS.StepModal.TimePicker;
 
   // ========================================
-  // ШАГ 1: Время начала, тип, оценки, заметка
+  // ШАГ 1: Тип, активность и время
   // ========================================
   function TrainingInfoStep({ data, onChange, context }) {
     const type = data.type || 'cardio';
-    const time = data.time || '';
-    const mood = data.mood || 5;
-    const wellbeing = data.wellbeing || 5;
-    const stress = data.stress || 5;
-    const comment = data.comment || '';
+    const time = data.time || getRoundedCurrentTime();
+    const activityLabel = normalizeActivityLabel(data.activityLabel) || getDefaultActivityLabel(type);
+    const [savedActivities, setSavedActivities] = useState(() => readTrainingActivityOptions());
+    const [showCustomActivityInput, setShowCustomActivityInput] = useState(false);
+    const [customActivityDraft, setCustomActivityDraft] = useState('');
+    const activityOptions = useMemo(
+      () => buildTrainingActivityOptions(type, savedActivities, activityLabel),
+      [type, savedActivities, activityLabel]
+    );
 
     // Парсим время или берём текущее
     const [hours, minutes] = useMemo(() => {
@@ -130,9 +306,56 @@
       onChange({ ...data, time: pad2(h) + ':' + pad2(m) });
     };
 
+    const updateData = (patch) => {
+      onChange({ ...data, ...patch });
+    };
+
     const updateField = (field, value) => {
       haptic('light');
-      onChange({ ...data, [field]: value });
+      updateData({ [field]: value });
+    };
+
+    const handleTypeChange = (nextType) => {
+      const nextOptions = buildTrainingActivityOptions(nextType, savedActivities, '');
+      const canKeepCurrentActivity = nextOptions.some(
+        (option) => option.label.toLowerCase() === activityLabel.toLowerCase()
+      );
+
+      haptic('light');
+      setShowCustomActivityInput(false);
+      setCustomActivityDraft('');
+      updateData({
+        type: nextType,
+        activityLabel: canKeepCurrentActivity ? activityLabel : getDefaultActivityLabel(nextType)
+      });
+    };
+
+    const handleActivitySelect = (value) => {
+      if (value === '__custom__') {
+        haptic('light');
+        setShowCustomActivityInput(true);
+        setCustomActivityDraft('');
+        return;
+      }
+
+      haptic('light');
+      setShowCustomActivityInput(false);
+      updateData({ activityLabel: value });
+    };
+
+    const handleSaveCustomActivity = () => {
+      const normalizedLabel = normalizeActivityLabel(customActivityDraft);
+      if (!normalizedLabel) {
+        haptic('error');
+        return;
+      }
+
+      const nextSavedActivities = persistTrainingActivityOption(type, normalizedLabel);
+      setSavedActivities(nextSavedActivities);
+      setShowCustomActivityInput(false);
+      setCustomActivityDraft('');
+      haptic('success');
+      updateData({ activityLabel: normalizedLabel });
     };
 
     return React.createElement('div', { className: 'training-step' },
@@ -144,12 +367,57 @@
             React.createElement('button', {
               key: t.id,
               className: 'ts-type-btn' + (type === t.id ? ' active' : ''),
-              onClick: () => updateField('type', t.id)
+              onClick: () => handleTypeChange(t.id)
             },
               React.createElement('span', { className: 'ts-type-icon' }, t.icon),
               React.createElement('span', { className: 'ts-type-label' }, t.label)
             )
           )
+        )
+      ),
+
+      React.createElement('div', { className: 'ts-section training-activity-section' },
+        React.createElement('div', { className: 'training-activity-header' },
+          React.createElement('div', { className: 'training-activity-label' }, '✨ Что именно делал?'),
+          React.createElement('div', { className: 'training-activity-helper' },
+            'Это название увидит куратор; базовый тип выше нужен для аналитики.'
+          )
+        ),
+        React.createElement('div', { className: 'training-activity-select-wrap' },
+          React.createElement('select', {
+            className: 'training-activity-select',
+            value: activityLabel,
+            onChange: (e) => handleActivitySelect(e.target.value)
+          },
+            activityOptions.map((option) =>
+              React.createElement('option', { key: option.type + ':' + option.label, value: option.label },
+                option.icon + ' ' + option.label
+              )
+            ),
+            React.createElement('option', { value: '__custom__' }, '＋ Своя активность…')
+          )
+        ),
+        showCustomActivityInput && React.createElement('div', { className: 'training-activity-custom' },
+          React.createElement('input', {
+            type: 'text',
+            className: 'training-activity-custom-input',
+            placeholder: 'Например: Теннис, Йога, Бокс',
+            value: customActivityDraft,
+            onChange: (e) => setCustomActivityDraft(e.target.value),
+            onKeyDown: (e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                handleSaveCustomActivity();
+              }
+            },
+            maxLength: 40
+          }),
+          React.createElement('button', {
+            type: 'button',
+            className: 'training-activity-custom-btn',
+            disabled: !normalizeActivityLabel(customActivityDraft),
+            onClick: handleSaveCustomActivity
+          }, 'Добавить')
         )
       ),
 
@@ -168,13 +436,32 @@
           linkedScroll: true,
           className: 'ts-time-wheels'
         })
-      ),
+      )
+    );
+  }
 
-      // === Оценки после тренировки ===
+  // ========================================
+  // ШАГ 2: Оценки и заметка
+  // ========================================
+  function TrainingFeedbackStep({ data, onChange, context }) {
+    const mood = data.mood || 5;
+    const wellbeing = data.wellbeing || 5;
+    const stress = data.stress || 5;
+    const comment = data.comment || '';
+
+    const updateData = (patch) => {
+      onChange({ ...data, ...patch });
+    };
+
+    const updateField = (field, value) => {
+      haptic('light');
+      updateData({ [field]: value });
+    };
+
+    return React.createElement('div', { className: 'training-step' },
       React.createElement('div', { className: 'ts-section ts-ratings-section' },
         React.createElement('div', { className: 'ts-ratings-title' }, '📊 Какие ощущения после тренировки?'),
 
-        // Настроение
         React.createElement('div', { className: 'ts-rating-row' },
           React.createElement('div', { className: 'ts-rating-header' },
             React.createElement('span', { className: 'ts-rating-emoji' }, getMoodEmoji(mood)),
@@ -197,7 +484,6 @@
           })
         ),
 
-        // Самочувствие
         React.createElement('div', { className: 'ts-rating-row' },
           React.createElement('div', { className: 'ts-rating-header' },
             React.createElement('span', { className: 'ts-rating-emoji' }, getWellbeingEmoji(wellbeing)),
@@ -220,7 +506,6 @@
           })
         ),
 
-        // Стресс
         React.createElement('div', { className: 'ts-rating-row' },
           React.createElement('div', { className: 'ts-rating-header' },
             React.createElement('span', { className: 'ts-rating-emoji' }, getStressEmoji(stress)),
@@ -244,7 +529,6 @@
         )
       ),
 
-      // === Комментарий ===
       React.createElement('div', { className: 'ts-section ts-comment-section' },
         React.createElement('input', {
           type: 'text',
@@ -349,57 +633,44 @@
   // Регистрация шагов
   // ========================================
 
-  // Шаг 1: Инфо (тип, время, оценки, заметка)
+  // Шаг 1: База (тип, активность, время)
   registerStep('training-info', {
     title: 'Тренировка',
-    hint: 'Тип и ощущения',
+    hint: 'Тип и время',
     icon: '🏋️',
     component: TrainingInfoStep,
     getInitialData: (ctx) => {
-      const dateKey = ctx?.dateKey || new Date().toISOString().slice(0, 10);
-      const trainingIndex = ctx?.trainingIndex ?? 0;
-      const day = lsGet(`heys_dayv2_${dateKey}`, {});
-      const trainings = day.trainings || [];
-      const T = trainings[trainingIndex] || {};
-
-      return {
-        type: T.type || 'cardio',
-        time: T.time || '',
-        zones: T.z || [0, 0, 0, 0],
-        mood: T.mood || 5,
-        wellbeing: T.wellbeing || 5,
-        stress: T.stress || 5,
-        comment: T.comment || ''
-      };
+      return readTrainingFormData(ctx);
     },
     validate: () => true // Шаг 1 всегда валиден
   });
 
-  // Шаг 2: Зоны пульса
+  // Шаг 2: Оценки и заметка
+  registerStep('training-feedback', {
+    title: 'Ощущения',
+    hint: 'Оценки и заметка',
+    icon: '📊',
+    component: TrainingFeedbackStep,
+    getInitialData: (ctx, allData) => {
+      return {
+        ...readTrainingFormData(ctx),
+        ...(allData?.['training-info'] || {})
+      };
+    },
+    validate: () => true
+  });
+
+  // Шаг 3: Зоны пульса
   registerStep('training-zones', {
     title: 'Зоны пульса',
     hint: 'Минуты в каждой зоне',
     icon: '❤️',
     component: TrainingZonesStep,
     getInitialData: (ctx, allData) => {
-      // Берём данные из шага 1 или из storage
-      if (allData?.['training-info']) {
-        return allData['training-info'];
-      }
-      const dateKey = ctx?.dateKey || new Date().toISOString().slice(0, 10);
-      const trainingIndex = ctx?.trainingIndex ?? 0;
-      const day = lsGet(`heys_dayv2_${dateKey}`, {});
-      const trainings = day.trainings || [];
-      const T = trainings[trainingIndex] || {};
-
       return {
-        type: T.type || 'cardio',
-        time: T.time || '',
-        zones: T.z || [0, 0, 0, 0],
-        mood: T.mood || 5,
-        wellbeing: T.wellbeing || 5,
-        stress: T.stress || 5,
-        comment: T.comment || ''
+        ...readTrainingFormData(ctx),
+        ...(allData?.['training-info'] || {}),
+        ...(allData?.['training-feedback'] || {})
       };
     },
     validate: (data) => {
@@ -421,18 +692,25 @@
         trainings.push({ z: [0, 0, 0, 0] });
       }
 
-      // Объединяем данные из шага 1 (info) и шага 2 (zones)
+      // Объединяем данные всех шагов в один training payload
       const infoData = allStepData?.['training-info'] || {};
+      const feedbackData = allStepData?.['training-feedback'] || {};
       const zonesData = data || {};
+      const finalData = buildTrainingFormData({
+        ...infoData,
+        ...feedbackData,
+        ...zonesData
+      });
 
       const finalTraining = {
-        z: zonesData.zones || [0, 0, 0, 0],
-        time: infoData.time || zonesData.time || '',
-        type: infoData.type || zonesData.type || 'cardio',
-        mood: infoData.mood ?? zonesData.mood ?? 5,
-        wellbeing: infoData.wellbeing ?? zonesData.wellbeing ?? 5,
-        stress: infoData.stress ?? zonesData.stress ?? 5,
-        comment: infoData.comment || zonesData.comment || ''
+        z: finalData.zones,
+        time: finalData.time,
+        type: finalData.type,
+        activityLabel: finalData.activityLabel,
+        mood: finalData.mood,
+        wellbeing: finalData.wellbeing,
+        stress: finalData.stress,
+        comment: finalData.comment
       };
 
       trainings[trainingIndex] = finalTraining;
@@ -464,7 +742,7 @@
     }
 
     HEYS.StepModal.show({
-      steps: ['training-info', 'training-zones'],
+      steps: ['training-info', 'training-feedback', 'training-zones'],
       title: trainingIndex > 0 ? `Тренировка ${trainingIndex + 1}` : 'Тренировка',
       showProgress: true,
       showStreak: false,
@@ -474,7 +752,11 @@
       finishLabel: 'Добавить', // Кнопка на последнем шаге
       context: { dateKey, trainingIndex },
       onComplete: (stepData) => {
-        const data = stepData['training-zones'] || stepData['training-info'] || {};
+        const data = {
+          ...(stepData['training-info'] || {}),
+          ...(stepData['training-feedback'] || {}),
+          ...(stepData['training-zones'] || {})
+        };
         onComplete?.(data);
       }
     });
@@ -484,6 +766,7 @@
   HEYS.TrainingStep = {
     show: showTrainingModal,
     InfoComponent: TrainingInfoStep,
+    FeedbackComponent: TrainingFeedbackStep,
     ZonesComponent: TrainingZonesStep,
     TRAINING_TYPES,
     HR_ZONES

@@ -403,7 +403,7 @@
                     onClick: handleDismissKeyboard,
                     'aria-label': 'Скрыть клавиатуру',
                 },
-                    React.createElement('span', { className: 'heys-keyboard-dismiss__icon', 'aria-hidden': 'true' }, '▾'),
+                    React.createElement('span', { className: 'heys-keyboard-dismiss__icon', 'aria-hidden': 'true' }, '⌄'),
                     React.createElement('span', { className: 'heys-keyboard-dismiss__label' }, 'Скрыть')
                 )
             ),

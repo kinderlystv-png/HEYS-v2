@@ -40,6 +40,7 @@
         setNeedsConsent,
         setShowMorningCheckin,
         isInitializing,
+        tab,
     }) {
         const gate = AppGateFlow.buildGate ? AppGateFlow.buildGate({
             clientId,
@@ -83,6 +84,7 @@
         const desktopAllowed = profile?.desktopAllowed === true;
 
         // Desktop Gate: если клиент на десктопе и десктоп НЕ разрешён
+        // tab передаётся для bypass: tasks таб работает на десктопе
         const desktopGate = AppGateFlow.buildDesktopGate ? AppGateFlow.buildDesktopGate({
             gate,
             isDesktop,
@@ -90,6 +92,7 @@
             desktopAllowed,
             DesktopGateScreen,
             setClientId,
+            tab: typeof tab !== 'undefined' ? tab : undefined,
         }) : null;
 
         // 📜 Consent Gate: если клиенту нужно подписать согласия

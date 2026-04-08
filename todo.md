@@ -200,6 +200,109 @@
 
 ---
 
+## 🏗️ Архитектурный аудит — tech debt backlog
+
+> **Дата аудита**: 2026-04-05
+>
+> **Контекст**: code-grounded аудит репозитория — 10 пунктов, привязанных к
+> реальным файлам и паттернам, а не абстрактные рекомендации.
+>
+> **Рекомендуемый порядок**: сначала #6 (e2e тесты как safety net), потом quick
+> wins (#5, #7, #9), затем #1 (storage), и только потом тяжёлые #2/#3.
+
+| #   | Пункт                                | Impact  | Effort  | Risk    |
+| --- | ------------------------------------ | ------- | ------- | ------- |
+| 1   | Унифицировать storage API            | 🔴 High | 🟡 Med  | 🟡 Med  |
+| 2   | Декомпозировать legacy модули        | 🔴 High | 🔴 High | 🔴 High |
+| 3   | Упростить sync event orchestration   | 🟡 Med  | 🔴 High | 🔴 High |
+| 4   | Сократить fallback цепочки           | 🟡 Med  | 🟡 Med  | 🟡 Med  |
+| 5   | Синхронизировать docs с архитектурой | 🟢 Low  | 🟢 Low  | 🟢 Low  |
+| 6   | Покрыть critical legacy e2e          | 🔴 High | 🟡 Med  | 🟢 Low  |
+| 7   | Улучшить lazy loading fallbacks      | 🟢 Low  | 🟢 Low  | 🟢 Low  |
+| 8   | Ввести UI performance budget         | 🟡 Med  | 🟢 Low  | 🟢 Low  |
+| 9   | Почистить auth legacy хвосты         | 🟢 Low  | 🟢 Low  | 🟡 Med  |
+| 10  | Провести mobile UX pass              | 🟡 Med  | 🟡 Med  | 🟢 Low  |
+
+### 1. Унифицировать storage API
+
+- [ ] Инвентаризация: собрать все прямые `localStorage.getItem/setItem` в
+      `apps/web/` (200+ мест)
+- [ ] Составить маппинг: какие ключи → какой API (`U.lsGet`, `HEYS.store`,
+      прямой доступ)
+- [ ] Поэтапная миграция на единый `HEYS.store` / `U.lsGet` / `U.lsSet`
+- [ ] **Зависимость**: делать после #6 (e2e coverage как safety net)
+- **Файлы**: `apps/web/heys_*.js`, `apps/web/src/**`
+- **Контекст**: баг v4.8.8 — React читал unscoped ключи, Storage Layer писал
+  scoped → продукты показывали 42 вместо 290
+
+### 2. Декомпозировать legacy модули
+
+- [ ] `heys_day_bundle_v1.js` (10 233 LOC) — разбить на ≤2000 LOC модули
+- [ ] `heys_widgets_ui_v1.js` (7 482 LOC)
+- [ ] `heys_add_product_step_v1.js` (6 171 LOC)
+- [ ] Проверить, что bundling config корректно собирает после split
+- **Ограничение**: не трогать `heys_day_bundle` без e2e coverage
+
+### 3. Упростить sync event orchestration
+
+- [ ] Каталогизировать все sync-события: `forceReload`, `syncVer`,
+      `warnMissing`, `heys:day-updated`, `setSyncVer` (200+ мест)
+- [ ] Выделить единый sync manager вместо россыпи guardrails
+- [ ] Документировать event flow diagram
+- **Риск**: любая ошибка → потеря данных пользователя
+
+### 4. Сократить fallback цепочки
+
+- [ ] Аудит fallback-паттернов: find все `|| fallback`, `?? default`, try/catch
+      с silent recovery
+- [ ] Заменить «молчаливые» fallbacks на explicit error + telemetry
+- [ ] Оставить только те, что реально спасают edge cases
+- **Файлы**: `heys_day_utils.js` (storage/sync/recovery), `heys_user_v12.js`
+
+### 5. Синхронизировать docs с архитектурой
+
+- [ ] `NEXT_STEPS.md` — убрать «Complete Supabase integration» (Supabase удалён
+      2025-12-24)
+- [ ] Проверить остальные docs на stale references
+- **Effort**: ~1 час текстовой работы
+
+### 6. Покрыть critical legacy e2e ⭐ _начать с этого_
+
+- [ ] Training UI flow (zero coverage)
+- [ ] Day flow с `heys:day-updated` / `forceReload` lifecycle
+- [ ] Client switch + scoped storage isolation
+- [ ] Modal / overlay interactions
+- [ ] Bundle-sensitive scenarios (boot/postboot)
+- **Почему первым**: даёт safety net для пунктов 1–4
+
+### 7. Улучшить lazy loading fallbacks
+
+- [ ] `LazyRoutes.tsx` — заменить `<div>Loading...</div>` на skeleton/spinner
+- [ ] Добавить error boundary для chunk load failures
+- **Effort**: ~2 часа
+
+### 8. Ввести UI performance budget
+
+- [ ] Lighthouse CI в GitHub Actions на каждый PR
+- [ ] Bundle size guard (fail PR если bundle растёт >5%)
+- [ ] Документировать baseline метрики
+- **Effort**: ~4 часа настройки CI
+
+### 9. Почистить auth legacy хвосты
+
+- [ ] Убрать `heys_supabase_auth_token` из `index.html` и `heys_app_entry_v1.js`
+- [ ] Проверить, что нет скрытых runtime-зависимостей на эти ключи
+- **Риск**: ключи могут читаться из legacy code — нужен grep перед удалением
+
+### 10. Провести mobile UX pass
+
+- [ ] Touch targets < 44px (Lighthouse audit)
+- [ ] scroll-snap поведение на ключевых экранах
+- [ ] safe-area-inset для нотча/островка
+- [ ] Проверить на реальных устройствах (iPhone SE, Android mid-range)
+
+---
+
 ## 🔴 Блокеры (ждут бизнес-решений)
 
 ### 💳 ЮKassa + Налоги

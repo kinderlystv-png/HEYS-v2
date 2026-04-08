@@ -1466,9 +1466,37 @@
             setDefaultTab,
             clientId,
             selectedDate,
+            cloudUser,
         } = props;
 
         const [settingsMenuOpen, setSettingsMenuOpen] = React.useState(false);
+
+        const primaryTabs = React.useMemo(() => {
+            const items = [
+                { key: 'stats', label: 'Отчёты', buttonLabel: 'Итоги', icon: '📊', id: 'tour-stats-tab' },
+                { key: 'diary', label: 'Дневник', buttonLabel: 'Еда', icon: '🍴', id: 'tour-diary-tab' },
+                { key: 'widgets', label: 'Виджеты', buttonLabel: 'Виджеты', icon: '🎛️', id: 'tour-widgets-tab' },
+                { key: 'insights', label: 'Инсайты', buttonLabel: 'Инсайты', icon: '🔮', id: 'tour-insights-tab' },
+                { key: 'month', label: 'Месяц', buttonLabel: 'Месяц', icon: '📅', id: 'tour-month-tab' },
+            ];
+
+            if (!cloudUser && clientId) {
+                items.push({
+                    key: 'tasks',
+                    label: 'Задачи',
+                    buttonLabel: 'Задачи',
+                    icon: '✓',
+                    iconClassName: 'tab-icon tab-icon--tasks',
+                    id: 'tour-tasks-tab',
+                });
+            }
+
+            return items;
+        }, [cloudUser, clientId]);
+
+        const primaryTabsVariant = primaryTabs.length >= 6
+            ? 'sext'
+            : (primaryTabs.length === 5 ? 'quint' : (primaryTabs.length === 4 ? 'quad' : 'triple'));
 
         const switchTabWithUndoCommit = (nextTab, reason) => {
             try {
@@ -1482,6 +1510,15 @@
                 }
             } catch (e) { }
             setTab(nextTab);
+        };
+
+        const handlePrimaryTabClick = (nextTab) => {
+            if (widgetsEditMode) {
+                setDefaultTab(nextTab);
+            } else if (nextTab === 'widgets') {
+                window.HEYS?.debugPanel?.handleTap();
+            }
+            switchTabWithUndoCommit(nextTab, `tab-${nextTab}-switch`);
         };
 
         React.useEffect(() => {
@@ -1521,7 +1558,12 @@
 
         return React.createElement(
             'div',
-            { className: 'tabs' + (widgetsEditMode ? ' tabs--edit-mode' : '') + (settingsMenuOpen ? ' tabs--settings-open' : '') },
+            {
+                className: 'tabs'
+                    + (widgetsEditMode ? ' tabs--edit-mode' : '')
+                    + (settingsMenuOpen ? ' tabs--settings-open' : '')
+                    + (primaryTabsVariant === 'sext' ? ' tabs--dense-switch' : '')
+            },
             // Подсказка в режиме редактирования (внутри tabs для абсолютного позиционирования)
             widgetsEditMode && React.createElement(
                 'div',
@@ -1543,98 +1585,37 @@
                 React.createElement('span', { className: 'tab-icon' }, '💡'),
                 React.createElement('span', { className: 'tab-advice-badge', id: 'nav-advice-badge' }),
             ),
-            // iOS Switch группа для stats/diary/widgets/insights/month — ПО ЦЕНТРУ + подписи
+            // iOS Switch группа для stats/diary/widgets/insights/month/tasks — ПО ЦЕНТРУ + подписи
             React.createElement(
                 'div',
-                { className: 'tab-switch-wrapper tab-switch-wrapper--quint' },
+                { className: 'tab-switch-wrapper tab-switch-wrapper--' + primaryTabsVariant },
                 React.createElement(
                     'div',
-                    { className: 'tab-switch-group tab-switch-group--quint' },
-                    React.createElement(
+                    { className: 'tab-switch-group tab-switch-group--' + primaryTabsVariant },
+                    primaryTabs.map((item) => React.createElement(
                         'div',
                         {
-                            className: 'tab tab-switch ' + (tab === 'stats' ? 'active' : '') + (widgetsEditMode && defaultTab === 'stats' ? ' default-tab-indicator' : '') + (widgetsEditMode ? ' tab--home-candidate' : ''),
-                            id: 'tour-stats-tab',
-                            onClick: () => {
-                                if (widgetsEditMode) setDefaultTab('stats');
-                                switchTabWithUndoCommit('stats', 'tab-stats-switch');
-                            },
+                            key: item.key,
+                            className: 'tab tab-switch ' + (tab === item.key ? 'active' : '') + (widgetsEditMode && defaultTab === item.key ? ' default-tab-indicator' : '') + (widgetsEditMode ? ' tab--home-candidate' : ''),
+                            id: item.id,
+                            title: item.label,
+                            onClick: () => handlePrimaryTabClick(item.key),
                         },
-                        // Индикатор домика в режиме редактирования виджетов
-                        widgetsEditMode && defaultTab === 'stats' && React.createElement('span', { className: 'default-home-badge', title: 'Эта вкладка открывается по умолчанию' }, '🏠'),
-                        React.createElement('span', { className: 'tab-icon' }, '📊'),
-                        React.createElement('span', { className: 'tab-text' }, 'Итоги'),
-                    ),
-                    React.createElement(
-                        'div',
-                        {
-                            className: 'tab tab-switch ' + (tab === 'diary' ? 'active' : '') + (widgetsEditMode && defaultTab === 'diary' ? ' default-tab-indicator' : '') + (widgetsEditMode ? ' tab--home-candidate' : ''),
-                            id: 'tour-diary-tab',
-                            onClick: () => {
-                                if (widgetsEditMode) setDefaultTab('diary');
-                                switchTabWithUndoCommit('diary', 'tab-diary-switch');
-                            },
-                        },
-                        widgetsEditMode && defaultTab === 'diary' && React.createElement('span', { className: 'default-home-badge', title: 'Эта вкладка открывается по умолчанию' }, '🏠'),
-                        React.createElement('span', { className: 'tab-icon' }, '🍴'),
-                        React.createElement('span', { className: 'tab-text' }, 'Еда'),
-                    ),
-                    React.createElement(
-                        'div',
-                        {
-                            className: 'tab tab-switch ' + (tab === 'widgets' ? 'active' : '') + (widgetsEditMode && defaultTab === 'widgets' ? ' default-tab-indicator' : '') + (widgetsEditMode ? ' tab--home-candidate' : ''),
-                            id: 'tour-widgets-tab',
-                            onClick: () => {
-                                if (widgetsEditMode) {
-                                    setDefaultTab('widgets');
-                                } else {
-                                    window.HEYS?.debugPanel?.handleTap();
-                                }
-                                switchTabWithUndoCommit('widgets', 'tab-widgets-switch');
-                            },
-                        },
-                        widgetsEditMode && defaultTab === 'widgets' && React.createElement('span', { className: 'default-home-badge', title: 'Эта вкладка открывается по умолчанию' }, '🏠'),
-                        React.createElement('span', { className: 'tab-icon' }, '🎛️'),
-                        React.createElement('span', { className: 'tab-text' }, 'Виджеты'),
-                    ),
-                    React.createElement(
-                        'div',
-                        {
-                            className: 'tab tab-switch ' + (tab === 'insights' ? 'active' : '') + (widgetsEditMode && defaultTab === 'insights' ? ' default-tab-indicator' : '') + (widgetsEditMode ? ' tab--home-candidate' : ''),
-                            id: 'tour-insights-tab',
-                            onClick: () => {
-                                if (widgetsEditMode) setDefaultTab('insights');
-                                switchTabWithUndoCommit('insights', 'tab-insights-switch');
-                            },
-                        },
-                        widgetsEditMode && defaultTab === 'insights' && React.createElement('span', { className: 'default-home-badge', title: 'Эта вкладка открывается по умолчанию' }, '🏠'),
-                        React.createElement('span', { className: 'tab-icon' }, '🔮'),
-                        React.createElement('span', { className: 'tab-text' }, 'Инсайты'),
-                    ),
-                    React.createElement(
-                        'div',
-                        {
-                            className: 'tab tab-switch ' + (tab === 'month' ? 'active' : '') + (widgetsEditMode && defaultTab === 'month' ? ' default-tab-indicator' : '') + (widgetsEditMode ? ' tab--home-candidate' : ''),
-                            id: 'tour-month-tab',
-                            onClick: () => {
-                                if (widgetsEditMode) setDefaultTab('month');
-                                switchTabWithUndoCommit('month', 'tab-month-switch');
-                            },
-                        },
-                        widgetsEditMode && defaultTab === 'month' && React.createElement('span', { className: 'default-home-badge', title: 'Эта вкладка открывается по умолчанию' }, '🏠'),
-                        React.createElement('span', { className: 'tab-icon' }, '📅'),
-                        React.createElement('span', { className: 'tab-text' }, 'Месяц'),
-                    ),
+                        widgetsEditMode && defaultTab === item.key && React.createElement('span', { className: 'default-home-badge', title: 'Эта вкладка открывается по умолчанию' }, '🏠'),
+                        React.createElement('span', { className: item.iconClassName || 'tab-icon' }, item.icon),
+                        React.createElement('span', { className: 'tab-text' }, item.buttonLabel),
+                    )),
                 ),
                 // Подписи под переключателем
                 React.createElement(
                     'div',
-                    { className: 'tab-switch-labels tab-switch-labels--quint' },
-                    React.createElement('span', { className: 'tab-switch-label' + (tab === 'stats' ? ' active' : ''), onClick: () => switchTabWithUndoCommit('stats', 'tab-label-stats-switch') }, 'Отчёты'),
-                    React.createElement('span', { className: 'tab-switch-label' + (tab === 'diary' ? ' active' : ''), onClick: () => switchTabWithUndoCommit('diary', 'tab-label-diary-switch') }, 'Дневник'),
-                    React.createElement('span', { className: 'tab-switch-label' + (tab === 'widgets' ? ' active' : ''), onClick: () => switchTabWithUndoCommit('widgets', 'tab-label-widgets-switch') }, 'Виджеты'),
-                    React.createElement('span', { className: 'tab-switch-label' + (tab === 'insights' ? ' active' : ''), onClick: () => switchTabWithUndoCommit('insights', 'tab-label-insights-switch') }, 'Инсайты'),
-                    React.createElement('span', { className: 'tab-switch-label' + (tab === 'month' ? ' active' : ''), onClick: () => switchTabWithUndoCommit('month', 'tab-label-month-switch') }, 'Месяц'),
+                    { className: 'tab-switch-labels tab-switch-labels--' + primaryTabsVariant },
+                    primaryTabs.map((item) => React.createElement('span', {
+                        key: item.key,
+                        className: 'tab-switch-label' + (tab === item.key ? ' active' : ''),
+                        title: item.label,
+                        onClick: () => switchTabWithUndoCommit(item.key, `tab-label-${item.key}-switch`)
+                    }, item.label)),
                 ),
             ),
             // Настройки — раскрывающееся меню вверх
@@ -1705,6 +1686,7 @@
             setProducts,
             selectedDate,
             setSelectedDate,
+            cloudUser,
             DayTabWithCloudSync,
             RationTabWithCloudSync,
             UserTabWithCloudSync,
@@ -1842,6 +1824,7 @@
                                                     // syncVer в key вызывает flash всего контента вкладки.
                                                     key: 'widgets_' + String(clientId || '') + '_' + selectedDate,
                                                     clientId,
+                                                    cloudUser,
                                                     selectedDate,
                                                     setTab,
                                                     setSelectedDate,
@@ -1850,10 +1833,22 @@
                                                     React.createElement('div', { className: 'skeleton-sparkline', style: { height: 80, marginBottom: 16 } }),
                                                     React.createElement('div', { className: 'skeleton-block', style: { height: 100 } })
                                                 )))
-                                            : renderTabFallback('default_' + String(tab || 'unknown'), React.createElement('div', { style: { padding: 16 } },
-                                                React.createElement('div', { className: 'skeleton-header', style: { width: 150, marginBottom: 16 } }),
-                                                React.createElement('div', { className: 'skeleton-block', style: { height: 200 } })
-                                            ))
+                                            : tab === 'tasks'
+                                                ? ((!cloudUser && clientId) && window.HEYS?.PlanningTab
+                                                    ? React.createElement(window.HEYS.PlanningTab, {
+                                                        key: 'tasks_' + String(clientId || ''),
+                                                        clientId,
+                                                    })
+                                                    : ((!cloudUser && clientId)
+                                                        ? renderTabFallback('tasks', React.createElement('div', { style: { padding: 16 } },
+                                                            React.createElement('div', { className: 'skeleton-header', style: { width: 150, marginBottom: 16 } }),
+                                                            React.createElement('div', { className: 'skeleton-block', style: { height: 200 } })
+                                                        ))
+                                                        : null))
+                                                : renderTabFallback('default_' + String(tab || 'unknown'), React.createElement('div', { style: { padding: 16 } },
+                                                    React.createElement('div', { className: 'skeleton-header', style: { width: 150, marginBottom: 16 } }),
+                                                    React.createElement('div', { className: 'skeleton-block', style: { height: 200 } })
+                                                ))
             )
         );
     }
@@ -1869,16 +1864,16 @@
     MemoAppTabContent.displayName = 'AppTabContent';
 
     function AppShell(props) {
-        const { hideContent, clientId } = props;
+        const { hideContent, clientId, tab } = props;
         const shouldRenderContent = !!clientId;
 
         return React.createElement(
             'div',
             {
-                className: 'wrap',
+                className: 'wrap' + (tab === 'tasks' ? ' wrap--no-header' : ''),
                 style: hideContent ? { display: 'none' } : undefined
             },
-            shouldRenderContent && React.createElement(MemoAppHeader, props),
+            shouldRenderContent && tab !== 'tasks' && React.createElement(MemoAppHeader, props),
             shouldRenderContent && React.createElement(MemoAppTabsNav, props),
             shouldRenderContent && React.createElement(MemoAppTabContent, props)
         );

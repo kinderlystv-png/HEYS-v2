@@ -34,6 +34,19 @@
     const safeTrainingTypes = Array.isArray(trainingTypes) ? trainingTypes : [];
     const safeTrainings = Array.isArray(TR) ? TR : [];
 
+    function getTrainingDisplayLabel(training, trainingType, index) {
+      const customLabel = typeof training?.activityLabel === 'string'
+        ? training.activityLabel.trim()
+        : '';
+      return customLabel || trainingType?.label || ('Тренировка ' + (index + 1));
+    }
+
+    function getTrainingDisplayMeta(displayLabel, trainingType) {
+      const baseLabel = trainingType?.label || '';
+      if (!displayLabel || !baseLabel) return '';
+      return displayLabel.toLowerCase() === baseLabel.toLowerCase() ? '' : baseLabel;
+    }
+
     const trainIcons = ['🏃', '🚴', '🏊'];
 
     function cloneTraining(training) {
@@ -90,7 +103,7 @@
       const previousVisibleTrainings = safeVisibleTrainings;
       const removedTraining = previousTrainings[ti] || emptyTraining;
       const trainingType = safeTrainingTypes.find((item) => item.id === removedTraining.type);
-      const label = (trainingType?.label || ('Тренировка ' + (ti + 1))) + ' удалена';
+      const label = getTrainingDisplayLabel(removedTraining, trainingType, ti) + ' удалена';
 
       runUndoableAction({
         label,
@@ -198,6 +211,7 @@
           z: rawT.z || [0, 0, 0, 0],
           time: rawT.time || '',
           type: rawT.type || '',
+          activityLabel: rawT.activityLabel || '',
           mood: rawT.mood ?? 0,
           wellbeing: rawT.wellbeing ?? 0,
           stress: rawT.stress ?? 0,
@@ -207,6 +221,8 @@
         const kcalZ = (i) => safeR0((+T.z[i] || 0) * (kcalMin?.[i] || 0));
         const total = safeR0(kcalZ(0) + kcalZ(1) + kcalZ(2) + kcalZ(3));
         const trainingType = safeTrainingTypes.find(t => t.id === T.type);
+        const displayLabel = getTrainingDisplayLabel(T, trainingType, ti);
+        const displayMeta = getTrainingDisplayMeta(displayLabel, trainingType);
 
         const getMoodEmoji = (v) =>
           v <= 0 ? null : v <= 2 ? '😢' : v <= 4 ? '😕' : v <= 6 ? '😐' : v <= 8 ? '😊' : '😄';
@@ -232,7 +248,10 @@
             onClick: () => openTrainingPicker && openTrainingPicker(ti)
           },
             React.createElement('span', { className: 'compact-train-icon' }, trainingType ? trainingType.icon : (trainIcons[ti] || '💪')),
-            React.createElement('span', { className: 'compact-train-title' }, trainingType ? trainingType.label : ('Тренировка ' + (ti + 1))),
+            React.createElement('div', { className: 'compact-train-title-box' },
+              React.createElement('span', { className: 'compact-train-title' }, displayLabel),
+              displayMeta && React.createElement('span', { className: 'compact-train-subtitle' }, displayMeta)
+            ),
             T.time && React.createElement('span', { className: 'compact-train-time' }, T.time),
             React.createElement('div', { className: 'compact-right-group' },
               React.createElement('span', { className: 'compact-badge train' }, total + ' ккал'),

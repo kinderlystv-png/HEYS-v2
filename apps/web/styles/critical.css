@@ -125,6 +125,10 @@ body {
   isolation: isolate;
 }
 
+.wrap.wrap--no-header {
+  padding-top: 0;
+}
+
 /* Fixed header */
 .hdr {
   display: flex;

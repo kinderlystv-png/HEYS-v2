@@ -6546,14 +6546,21 @@
   }
 
   // === Main WidgetsTab Component ===
-  function WidgetsTab({ selectedDate, clientId, setTab, setSelectedDate }) {
-    const HOME_TAB_OPTIONS = useMemo(() => ([
-      { key: 'widgets', label: 'Виджеты', icon: '🧩' },
-      { key: 'stats', label: 'Отчёты', icon: '📊' },
-      { key: 'diary', label: 'Дневник', icon: '🍽️' },
-      { key: 'insights', label: 'Советы', icon: '💡' },
-      { key: 'month', label: 'Месяц', icon: '🗓️' }
-    ]), []);
+  function WidgetsTab({ selectedDate, clientId, cloudUser, setTab, setSelectedDate }) {
+    const canUseTasksAsHome = !cloudUser && !!clientId;
+    const HOME_TAB_OPTIONS = useMemo(() => {
+      const options = [
+        { key: 'widgets', label: 'Виджеты', icon: '🧩' },
+        { key: 'stats', label: 'Отчёты', icon: '📊' },
+        { key: 'diary', label: 'Дневник', icon: '🍽️' },
+        { key: 'insights', label: 'Советы', icon: '💡' },
+        { key: 'month', label: 'Месяц', icon: '🗓️' }
+      ];
+      if (canUseTasksAsHome) {
+        options.push({ key: 'tasks', label: 'Задачи', icon: '☑️' });
+      }
+      return options;
+    }, [canUseTasksAsHome]);
     const VALID_HOME_TABS = useMemo(() => HOME_TAB_OPTIONS.map((option) => option.key), [HOME_TAB_OPTIONS]);
     const getCurrentDefaultTab = useCallback(() => {
       const defaultTabFromApp = window.HEYS?.App?.getDefaultTab?.();

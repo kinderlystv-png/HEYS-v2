@@ -547,6 +547,9 @@
         const React = getReact();
         const { theme, resolvedTheme } = deps || {};
         React.useEffect(() => {
+            const themePreference = theme === 'dark' || theme === 'light' || theme === 'auto'
+                ? theme
+                : 'auto';
             const nextTheme = theme === 'dark' || theme === 'light'
                 ? theme
                 : resolvedTheme === 'dark'
@@ -556,7 +559,18 @@
             document.documentElement.setAttribute('data-theme', nextTheme);
             try {
                 const U = global.HEYS?.utils || {};
-                U.lsSet ? U.lsSet('heys_theme', nextTheme) : localStorage.setItem('heys_theme', nextTheme);
+                localStorage.setItem('heys_theme_pref', themePreference);
+                localStorage.setItem('heys_theme_explicit', themePreference === 'auto' ? '0' : '1');
+                localStorage.setItem('heys_theme', nextTheme);
+                if (U.lsSet) {
+                    U.lsSet('heys_theme_pref', themePreference);
+                    U.lsSet('heys_theme_explicit', themePreference === 'auto' ? '0' : '1');
+                    U.lsSet('heys_theme', nextTheme);
+                } else {
+                    localStorage.setItem('heys_theme_pref', themePreference);
+                    localStorage.setItem('heys_theme_explicit', themePreference === 'auto' ? '0' : '1');
+                    localStorage.setItem('heys_theme', nextTheme);
+                }
             } catch (e) {
                 // QuotaExceeded — игнорируем, тема применится через data-theme
             }

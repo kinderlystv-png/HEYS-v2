@@ -1473,7 +1473,11 @@
             desktopAllowed,
             DesktopGateScreen,
             setClientId,
+            tab,
         } = props;
+
+        // Planning tab bypasses desktop gate
+        if (tab === 'tasks') return null;
 
         return !gate && isDesktop && !isCurator && !desktopAllowed
             ? React.createElement(DesktopGateScreen, {

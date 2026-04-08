@@ -2632,7 +2632,8 @@ body:has(.insights-tab) .hdr::after {
    QUINT TAB SWITCH — 5 вкладок
    ============================================================================= */
 
-.tab-switch-wrapper--quint {
+.tab-switch-wrapper--quint,
+.tab-switch-wrapper--sext {
   flex: 1 1 auto;
   min-width: 0;
   display: flex;
@@ -2641,7 +2642,8 @@ body:has(.insights-tab) .hdr::after {
   margin: 0 10px;
 }
 
-.tab-switch-group--quint {
+.tab-switch-group--quint,
+.tab-switch-group--sext {
   display: flex;
   width: 100%;
   justify-content: space-between;
@@ -2652,6 +2654,30 @@ body:has(.insights-tab) .hdr::after {
   padding: 8px;
 }
 
+.tab-switch-group--sext .tab.tab-switch {
+  min-width: 44px;
+  padding: 6px 4px;
+}
+
+.tab-icon--tasks {
+  color: #16a34a;
+  font-size: 22px !important;
+  font-weight: 800;
+  line-height: 1;
+  filter: none !important;
+  text-shadow: 0 1px 6px rgba(34, 197, 94, 0.2);
+}
+
+.tab.tab-switch.active .tab-icon--tasks {
+  color: #22c55e;
+  filter: none !important;
+  text-shadow: 0 2px 10px rgba(34, 197, 94, 0.32);
+}
+
+[data-theme="dark"] .tab-icon--tasks {
+  color: #4ade80;
+}
+
 /* Quint switch теперь использует единый glider для активной индикации */
 /* Средняя кнопка (Виджеты) — светло-голубой фон по умолчанию */
 .tab-switch-group--quint .tab.tab-switch:nth-child(3) {
@@ -2659,7 +2685,13 @@ body:has(.insights-tab) .hdr::after {
   color: #1d4ed8;
 }
 
-.tab-switch-labels--quint {
+.tab-switch-group--sext .tab.tab-switch:nth-child(3) {
+  background: rgba(59, 130, 246, 0.12);
+  color: #1d4ed8;
+}
+
+.tab-switch-labels--quint,
+.tab-switch-labels--sext {
   display: flex;
   justify-content: space-between;
   width: 100%;
@@ -2669,12 +2701,70 @@ body:has(.insights-tab) .hdr::after {
   margin-top: 4px;
 }
 
-.tab-switch-labels--quint .tab-switch-label {
+.tab-switch-labels--sext {
+  max-width: 360px;
+}
+
+.tab-switch-labels--quint .tab-switch-label,
+.tab-switch-labels--sext .tab-switch-label {
   text-align: center;
   font-size: 9px;
   cursor: pointer;
   white-space: nowrap;
   width: 52px;
+}
+
+.tab-switch-labels--sext .tab-switch-label {
+  width: 44px;
+  font-size: 8px;
+}
+
+.tabs.tabs--dense-switch {
+  padding-left: 8px;
+  padding-right: 8px;
+}
+
+.tabs.tabs--dense-switch .tab.tab-advice,
+.tabs.tabs--dense-switch .tab-settings-wrap>.tab {
+  min-width: 40px;
+  max-width: 40px;
+  padding-left: 2px;
+  padding-right: 2px;
+}
+
+.tabs.tabs--dense-switch .tab.tab-advice .tab-icon,
+.tabs.tabs--dense-switch .tab-settings-wrap>.tab .tab-icon {
+  font-size: 24px;
+}
+
+.tabs.tabs--dense-switch .tab-switch-wrapper--sext {
+  margin-left: 4px;
+  margin-right: 4px;
+}
+
+.tabs.tabs--dense-switch .tab-switch-group--sext {
+  gap: 2px;
+}
+
+.tabs.tabs--dense-switch .tab-switch-group--sext .tab.tab-switch {
+  min-width: 0;
+  padding-left: 2px;
+  padding-right: 2px;
+}
+
+.tabs.tabs--dense-switch .tab-switch-labels--sext {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  width: 100%;
+  max-width: none;
+  gap: 2px;
+}
+
+.tabs.tabs--dense-switch .tab-switch-labels--sext .tab-switch-label {
+  width: auto;
+  min-width: 0;
+  font-size: 7.5px;
+  letter-spacing: -0.02em;
 }
 
 /* =============================================================================

@@ -570,6 +570,7 @@
                 setNeedsConsent,
                 setShowMorningCheckin,
                 isInitializing,
+                tab,
             });
             const { gate, desktopGate, consentGate } = gateState;
             const hasBlockingGate = Boolean(gate || desktopGate || consentGate);
@@ -671,6 +672,21 @@
                 isConsentBlocking,
             } = derivedState;
             const getPendingText = () => pendingText;
+
+            React.useEffect(() => {
+                if (tab !== 'tasks') return;
+                if (!cloudUser && clientId) return;
+                if (!cloudUser && !clientId && isInitializing) return;
+
+                const fallbackTab = defaultTab && defaultTab !== 'tasks' ? defaultTab : 'diary';
+                console.info('[HEYS.tabs] 🔒 Tasks tab is unavailable in current context, redirecting', {
+                    fallbackTab,
+                    hasClientId: !!clientId,
+                    hasCloudUser: !!cloudUser,
+                    isInitializing,
+                });
+                setTabImmediate(fallbackTab);
+            }, [tab, cloudUser, clientId, isInitializing, defaultTab, setTabImmediate]);
 
             React.useEffect(() => {
                 let cancelled = false;
