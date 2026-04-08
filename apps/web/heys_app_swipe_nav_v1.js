@@ -2,18 +2,25 @@
 (function () {
     const HEYS = window.HEYS = window.HEYS || {};
 
+    const SLIDE_OUT_MS = 120; // Duration of CSS out-transition before switching tab
+    const SLIDE_IN_MS = 150; // Duration of CSS in-transition before clearing direction
+
     const useSwipeNavigation = ({ React, tab, setTab }) => {
         // === SWIPE NAVIGATION ===
         // Свайп работает только между 4 вкладками переключателя (по кругу)
         // widgets исключаются из свайпа когда editMode активен (drag & drop)
         const SWIPEABLE_TABS = ['widgets', 'stats', 'diary', 'insights', 'month'];
         const touchRef = React.useRef({ startX: 0, startY: 0, startTime: 0 });
+        const slideTimerRef = React.useRef(0);
         const MIN_SWIPE_DISTANCE = 60;
         const MAX_SWIPE_TIME = 500; // ms — увеличено для более плавного свайпа
 
         // Slide animation state
         const [slideDirection, setSlideDirection] = React.useState(null); // 'left' | 'right' | null
         const [edgeBounce, setEdgeBounce] = React.useState(null); // 'left' | 'right' | null
+
+        // Cleanup timers on unmount
+        React.useEffect(() => () => clearTimeout(slideTimerRef.current), []);
 
         const onTouchStart = React.useCallback((e) => {
             // Игнорируем свайпы на интерактивных элементах, модалках, слайдерах и тостах
@@ -63,19 +70,16 @@
                 const nextIndex = (currentIndex + 1) % SWIPEABLE_TABS.length;
                 const nextTab = SWIPEABLE_TABS[nextIndex];
 
-                // Фаза 1: выход старого контента (rAF + CSS transition)
+                // Фаза 1: выход старого контента (CSS transition)
                 setSlideDirection('out-left');
                 if (navigator.vibrate) navigator.vibrate(10);
-                requestAnimationFrame(() => {
-                    requestAnimationFrame(() => {
-                        // Фаза 2: смена вкладки + вход нового контента
-                        setTab(nextTab);
-                        setSlideDirection('in-left');
-                        requestAnimationFrame(() => {
-                            requestAnimationFrame(() => setSlideDirection(null));
-                        });
-                    });
-                });
+                clearTimeout(slideTimerRef.current);
+                slideTimerRef.current = setTimeout(() => {
+                    // Фаза 2: смена вкладки + вход нового контента
+                    setTab(nextTab);
+                    setSlideDirection('in-left');
+                    slideTimerRef.current = setTimeout(() => setSlideDirection(null), SLIDE_IN_MS);
+                }, SLIDE_OUT_MS);
             } else if (deltaX > 0) {
                 // Свайп вправо → предыдущая вкладка (по кругу)
                 const prevIndex = (currentIndex - 1 + SWIPEABLE_TABS.length) % SWIPEABLE_TABS.length;
@@ -83,15 +87,12 @@
 
                 setSlideDirection('out-right');
                 if (navigator.vibrate) navigator.vibrate(10);
-                requestAnimationFrame(() => {
-                    requestAnimationFrame(() => {
-                        setTab(prevTab);
-                        setSlideDirection('in-right');
-                        requestAnimationFrame(() => {
-                            requestAnimationFrame(() => setSlideDirection(null));
-                        });
-                    });
-                });
+                clearTimeout(slideTimerRef.current);
+                slideTimerRef.current = setTimeout(() => {
+                    setTab(prevTab);
+                    setSlideDirection('in-right');
+                    slideTimerRef.current = setTimeout(() => setSlideDirection(null), SLIDE_IN_MS);
+                }, SLIDE_OUT_MS);
             }
         }, [tab, setTab]);
 

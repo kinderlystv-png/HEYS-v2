@@ -5085,16 +5085,13 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       var ow = (100 - p) * k;
 
       if (greenRef.current) {
-        greenRef.current.style.setProperty('right', (100 - p) + '%', 'important');
-        greenRef.current.style.setProperty('width', gw + '%', 'important');
+        greenRef.current.style.cssText = 'right:' + (100 - p) + '% !important;width:' + gw + '% !important';
       }
       if (orangeRef.current) {
-        orangeRef.current.style.setProperty('left', p + '%', 'important');
-        orangeRef.current.style.setProperty('width', ow + '%', 'important');
+        orangeRef.current.style.cssText = 'left:' + p + '% !important;width:' + ow + '% !important';
       }
       if (dividerRef.current) {
-        dividerRef.current.style.setProperty('left', p + '%', 'important');
-        dividerRef.current.style.setProperty('transform', 'translate(-50%, -50%) scale(' + k + ')', 'important');
+        dividerRef.current.style.cssText = 'left:' + p + '% !important;transform:translate(-50%,-50%) scale(' + k + ') !important';
       }
     }
 
@@ -5417,12 +5414,14 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       // Периодическая проверка на случай, если данные пришли без движения маятника.
       settleCheckTimer = setInterval(function () {
         trySettleToActual();
-      }, 120);
+      }, 200);
 
       if (debugEnabledRef.current) {
+        var rIC = typeof requestIdleCallback === 'function' ? requestIdleCallback : function (cb) { setTimeout(cb, 50); };
         domDebugTimer = setInterval(function () {
-          var snap = getDomSnapshot();
-          if (!snap.ready) return;
+          rIC(function () {
+            var snap = getDomSnapshot();
+            if (!snap.ready) return;
 
           var stateP = currentPercentRef.current;
           var domP = typeof snap.actualPercentFromDom === 'number' ? snap.actualPercentFromDom : null;
@@ -5464,6 +5463,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
               targetPercent: +targetP.toFixed(2)
             }, true);
           }
+          }); // rIC
         }, 900);
       }
 

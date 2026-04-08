@@ -14835,7 +14835,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     // Cloud sync configuration (Wave 3.1 cloud sync)
     const CLOUD_SYNC_CONFIG = {
         ENABLED: true,           // Enable cloud sync
-        LOAD_TIMEOUT_MS: 3000,   // Max wait time for cloud load
+        LOAD_TIMEOUT_MS: 6000,   // Max wait time for cloud load (6s — covers slow 3G)
         SAVE_TIMEOUT_MS: 5000,   // Max wait time for cloud save
         FALLBACK_TO_LOCAL: true  // Use localStorage if cloud fails
     };
@@ -15678,17 +15678,23 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
                 console.info('ews / weekly ☁️ load.cloud.empty: no data in cloud');
             } catch (error) {
-                console.error('ews / weekly ☁️ load.cloud.error:', {
-                    message: error.message,
-                    code: error.code,
-                    details: error.details,
-                    raw: error.raw,
-                    stack: error.stack?.split('\n')[0]
-                });
+                const isTimeout = error.message === 'Cloud load timeout';
+                if (isTimeout) {
+                    console.warn('ews / weekly ☁️ cloud timeout → using local cache (' + CLOUD_SYNC_CONFIG.LOAD_TIMEOUT_MS + 'ms)');
+                } else {
+                    console.warn('ews / weekly ☁️ load.cloud.error:', {
+                        message: error.message,
+                        code: error.code,
+                        details: error.details,
+                        stack: error.stack?.split('\n')[0]
+                    });
+                }
                 if (!CLOUD_SYNC_CONFIG.FALLBACK_TO_LOCAL) {
                     throw error;
                 }
-                console.info('ews / weekly 💾 falling back to localStorage');
+                if (!isTimeout) {
+                    console.info('ews / weekly 💾 falling back to localStorage');
+                }
             }
         }
 
