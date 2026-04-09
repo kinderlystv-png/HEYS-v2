@@ -5019,46 +5019,46 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             var snap = getDomSnapshot();
             if (!snap.ready) return;
 
-          var stateP = currentPercentRef.current;
-          var domP = typeof snap.actualPercentFromDom === 'number' ? snap.actualPercentFromDom : null;
-          var targetP = crsTargetRef.current === null ? null : (crsTargetRef.current * 100);
+            var stateP = currentPercentRef.current;
+            var domP = typeof snap.actualPercentFromDom === 'number' ? snap.actualPercentFromDom : null;
+            var targetP = crsTargetRef.current === null ? null : (crsTargetRef.current * 100);
 
-          logCascadeBar('dom-brief', {
-            statePercent: +stateP.toFixed(2),
-            domPercent: domP === null ? null : +domP.toFixed(2),
-            targetPercent: targetP === null ? null : +targetP.toFixed(2),
-            intro: +introProgressRef.current.toFixed(3),
-            settled: isSettledRef.current,
-            settling: isSettlingRef.current,
-            barsInDocument: snap.barsInDocument,
-            barsInParent: snap.barsInParent
-          }, false, 900);
-
-          // Если DOM визуально уехал от расчётного state — принудительно синхронизируем.
-          if (domP !== null && Math.abs(domP - stateP) > 2.5) {
-            applyCascadeVisual(stateP, 1);
-            logCascadeBar('dom-desync-corrected', {
+            logCascadeBar('dom-brief', {
               statePercent: +stateP.toFixed(2),
-              domPercentBefore: +domP.toFixed(2),
-              delta: +(stateP - domP).toFixed(2)
-            }, true);
-          }
+              domPercent: domP === null ? null : +domP.toFixed(2),
+              targetPercent: targetP === null ? null : +targetP.toFixed(2),
+              intro: +introProgressRef.current.toFixed(3),
+              settled: isSettledRef.current,
+              settling: isSettlingRef.current,
+              barsInDocument: snap.barsInDocument,
+              barsInParent: snap.barsInParent
+            }, false, 900);
 
-          // Если после settle DOM застрял возле центра, но target далеко — жёстко дотягиваем к target.
-          if (
-            isSettledRef.current &&
-            !isSettlingRef.current &&
-            targetP !== null &&
-            domP !== null &&
-            Math.abs(domP - 50) <= 2 &&
-            Math.abs(targetP - 50) >= 6
-          ) {
-            animateToPercent(targetP, 1400);
-            logCascadeBar('center-stuck-force-target', {
-              domPercentBefore: +domP.toFixed(2),
-              targetPercent: +targetP.toFixed(2)
-            }, true);
-          }
+            // Если DOM визуально уехал от расчётного state — принудительно синхронизируем.
+            if (domP !== null && Math.abs(domP - stateP) > 2.5) {
+              applyCascadeVisual(stateP, 1);
+              logCascadeBar('dom-desync-corrected', {
+                statePercent: +stateP.toFixed(2),
+                domPercentBefore: +domP.toFixed(2),
+                delta: +(stateP - domP).toFixed(2)
+              }, true);
+            }
+
+            // Если после settle DOM застрял возле центра, но target далеко — жёстко дотягиваем к target.
+            if (
+              isSettledRef.current &&
+              !isSettlingRef.current &&
+              targetP !== null &&
+              domP !== null &&
+              Math.abs(domP - 50) <= 2 &&
+              Math.abs(targetP - 50) >= 6
+            ) {
+              animateToPercent(targetP, 1400);
+              logCascadeBar('center-stuck-force-target', {
+                domPercentBefore: +domP.toFixed(2),
+                targetPercent: +targetP.toFixed(2)
+              }, true);
+            }
           }); // rIC
         }, 900);
       }
