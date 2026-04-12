@@ -4913,17 +4913,34 @@
         const sortedMealsForDisplay = React.useMemo(() => {
             const meals = day?.meals || [];
             if (meals.length <= 1) return meals;
-
-            return [...meals].sort((a, b) => {
-                const timeA = U?.timeToMinutes ? U.timeToMinutes(a.time) : null;
-                const timeB = U?.timeToMinutes ? U.timeToMinutes(b.time) : null;
-
+            const toMinutes = U?.timeToMinutes;
+            const timeCache = new WeakMap();
+            const getTime = (meal) => {
+                if (!meal || !toMinutes) return null;
+                if (timeCache.has(meal)) return timeCache.get(meal);
+                const value = toMinutes(meal.time);
+                timeCache.set(meal, value);
+                return value;
+            };
+            const compareByTimeDesc = (a, b) => {
+                const timeA = getTime(a);
+                const timeB = getTime(b);
                 if (timeA === null && timeB === null) return 0;
                 if (timeA === null) return 1;
                 if (timeB === null) return -1;
-
                 return timeB - timeA;
-            });
+            };
+
+            let alreadySorted = true;
+            for (let idx = 1; idx < meals.length; idx += 1) {
+                if (compareByTimeDesc(meals[idx - 1], meals[idx]) > 0) {
+                    alreadySorted = false;
+                    break;
+                }
+            }
+            if (alreadySorted) return meals;
+
+            return [...meals].sort(compareByTimeDesc);
         }, [safeMeals]);
 
         const totalMeals = sortedMealsForDisplay.length;
