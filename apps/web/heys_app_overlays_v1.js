@@ -194,7 +194,6 @@
 
             const visualViewport = window.visualViewport;
             visualViewport?.addEventListener('resize', scheduleSync);
-            visualViewport?.addEventListener('scroll', scheduleSync);
 
             return () => {
                 if (rafId) cancelAnimationFrame(rafId);
@@ -203,7 +202,6 @@
                 window.removeEventListener('resize', scheduleSync);
                 window.removeEventListener('orientationchange', scheduleSync);
                 visualViewport?.removeEventListener('resize', scheduleSync);
-                visualViewport?.removeEventListener('scroll', scheduleSync);
                 document.documentElement.style.removeProperty(KEYBOARD_DISMISS_BOTTOM_VAR);
                 document.documentElement.style.removeProperty(KEYBOARD_DISMISS_RIGHT_VAR);
             };

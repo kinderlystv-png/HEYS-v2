@@ -7959,6 +7959,32 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
   // Отслеживание продуктов, для которых данные берутся из штампа вместо базы
   const orphanProductsMap = new Map(); // name => { name, usedInDays: Set, firstSeen }
   const orphanLoggedRecently = new Map(); // name => timestamp (throttle логов)
+  const normalizeProductName = HEYS.models?.normalizeProductName
+    || ((name) => String(name || '').toLowerCase().trim().replace(/\s+/g, ' ').replace(/ё/g, 'е'));
+
+  function resolveProductByItem(item, productsList) {
+    if (!item) return null;
+    const list = Array.isArray(productsList) ? productsList : [];
+    if (!list.length) return null;
+
+    const productId = item.product_id ?? item.productId;
+    const itemFingerprint = item.fingerprint || null;
+    const itemName = String(item.name || '').trim();
+    const itemNameNorm = normalizeProductName(itemName);
+    const itemNameLower = itemName.toLowerCase();
+
+    return list.find((product) => {
+      if (!product || typeof product !== 'object') return false;
+      const productIdMatch = productId != null
+        && String(product.id ?? product.product_id ?? '') === String(productId);
+      if (productIdMatch) return true;
+      if (itemFingerprint && product.fingerprint && product.fingerprint === itemFingerprint) return true;
+      const productName = String(product.name || '').trim();
+      if (!productName) return false;
+      const productNameLower = productName.toLowerCase();
+      return productNameLower === itemNameLower || normalizeProductName(productName) === itemNameNorm;
+    }) || null;
+  }
 
   function isSyntheticEstimatedItem(item) {
     if (!item || typeof item !== 'object') return false;
@@ -7982,10 +8008,16 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
     if (isSyntheticEstimatedItem(item)) return;
     const name = String(item.name).trim();
     if (!name) return;
+    const normalizedName = normalizeProductName(name);
+    const productId = item.product_id ?? item.productId ?? null;
+    const fingerprint = item.fingerprint || null;
 
     if (!orphanProductsMap.has(name)) {
       orphanProductsMap.set(name, {
         name: name,
+        normalizedName,
+        product_id: productId,
+        fingerprint,
         usedInDays: new Set([dateStr]),
         firstSeen: Date.now(),
         hasInlineData: item.kcal100 != null
@@ -7993,7 +8025,11 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
       // Первое обнаружение — логируем с датой
       console.warn(`[HEYS] Orphan product: "${name}" — используются данные из штампа (день: ${dateStr || 'unknown'})`);
     } else {
-      orphanProductsMap.get(name).usedInDays.add(dateStr);
+      const orphanData = orphanProductsMap.get(name);
+      orphanData.usedInDays.add(dateStr);
+      if (!orphanData.product_id && productId != null) orphanData.product_id = productId;
+      if (!orphanData.fingerprint && fingerprint) orphanData.fingerprint = fingerprint;
+      if (!orphanData.normalizedName && normalizedName) orphanData.normalizedName = normalizedName;
     }
   }
 
@@ -8039,15 +8075,31 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
       if (!global.HEYS?.products?.getAll) return;
 
       const products = global.HEYS.products.getAll();
-      const productNames = new Set(
-        products.map(p => String(p.name || '').trim().toLowerCase()).filter(Boolean)
-      );
+      const productNamesLower = new Set();
+      const productNamesNormalized = new Set();
+      const productIds = new Set();
+      const productFingerprints = new Set();
+      products.forEach((product) => {
+        if (!product || typeof product !== 'object') return;
+        const productName = String(product.name || '').trim();
+        if (productName) {
+          productNamesLower.add(productName.toLowerCase());
+          productNamesNormalized.add(normalizeProductName(productName));
+        }
+        const pid = product.id ?? product.product_id;
+        if (pid != null) productIds.add(String(pid));
+        if (product.fingerprint) productFingerprints.add(product.fingerprint);
+      });
 
       const beforeCount = orphanProductsMap.size;
 
       // Удаляем из orphan те, что теперь есть в базе
-      for (const [name] of orphanProductsMap) {
-        if (productNames.has(name.toLowerCase())) {
+      for (const [name, orphanData] of orphanProductsMap) {
+        const hasName = productNamesLower.has(String(name || '').toLowerCase());
+        const hasNormalizedName = orphanData?.normalizedName && productNamesNormalized.has(orphanData.normalizedName);
+        const hasId = orphanData?.product_id != null && productIds.has(String(orphanData.product_id));
+        const hasFingerprint = orphanData?.fingerprint && productFingerprints.has(orphanData.fingerprint);
+        if (hasName || hasNormalizedName || hasId || hasFingerprint) {
           orphanProductsMap.delete(name);
         }
       }
@@ -9268,25 +9320,34 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
           const grams = +item.grams || 0;
           if (grams <= 0) return;
 
-          // Ищем в productsMap по названию (lowercase), потом fallback на inline данные item
+          // Ищем в productsMap по id/fingerprint/названию, затем fallback на inline данные item
           const itemName = String(item.name || '').trim();
           const itemNameLower = itemName.toLowerCase();
-          let product = itemName ? productsMap.get(itemNameLower) : null;
+          const itemNameNorm = normalizeProductName(itemName);
+          let product = null;
+          if (item.product_id != null && global.HEYS?.products?.getById) {
+            product = global.HEYS.products.getById(item.product_id);
+          }
+          if (!product && itemName) {
+            product = productsMap.get(itemNameLower) || productsMap.get(itemNameNorm) || null;
+          }
 
           // 🔄 Fallback: если не найден в переданном productsMap, проверяем актуальную базу
           // Это решает проблему когда продукт только что добавлен но props ещё не обновились
           if (!product && itemName && global.HEYS?.products?.getAll) {
             const freshProducts = global.HEYS.products.getAll();
-            const freshProduct = freshProducts.find(p =>
-              String(p.name || '').trim().toLowerCase() === itemNameLower
-            );
+            const freshProduct = resolveProductByItem(item, freshProducts);
             if (freshProduct) {
               product = freshProduct;
-              // Добавляем в productsMap для следующих итераций (ключ lowercase)
+              // Добавляем в productsMap для следующих итераций
               productsMap.set(itemNameLower, freshProduct);
+              if (itemNameNorm) productsMap.set(itemNameNorm, freshProduct);
               // Убираем из orphan если был там
               if (orphanProductsMap.has(itemName)) {
                 orphanProductsMap.delete(itemName);
+              }
+              if (orphanProductsMap.has(itemNameNorm)) {
+                orphanProductsMap.delete(itemNameNorm);
               }
               if (orphanProductsMap.has(itemNameLower)) {
                 orphanProductsMap.delete(itemNameLower);
@@ -9353,14 +9414,10 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
             const hasProductsLoaded = productsMap.size > 0 || freshProducts.length > 0 || sharedProducts.length > 0;
 
             // Дополнительная проверка: ищем продукт напрямую в свежей базе
-            const foundInFresh = freshProducts.find(p =>
-              String(p.name || '').trim().toLowerCase() === itemNameLower
-            );
+            const foundInFresh = resolveProductByItem(item, freshProducts);
 
             // 🔧 v3.19.0: Также ищем в shared products
-            const foundInShared = sharedProducts.find(p =>
-              String(p.name || '').trim().toLowerCase() === itemNameLower
-            );
+            const foundInShared = resolveProductByItem(item, sharedProducts);
 
             // Трекаем только если база загружена И продукт реально не найден в обеих базах
             if (hasProductsLoaded && !foundInFresh && !foundInShared) {

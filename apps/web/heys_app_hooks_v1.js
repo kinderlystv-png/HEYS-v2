@@ -139,22 +139,25 @@
             legacyTheme = tryParseStoredValue(localStorage.getItem(LEGACY_THEME_KEY), null);
         } catch { }
 
-        if (pref === null || pref === undefined) pref = readGlobalValue(THEME_PREF_KEY, null);
-        if (isThemePreference(pref)) return pref;
-
         if (explicit === null || explicit === undefined) explicit = readGlobalValue(THEME_EXPLICIT_KEY, null);
-        if (isExplicitThemeFlag(explicit)) {
-            if (legacyTheme === null || legacyTheme === undefined) legacyTheme = readGlobalValue(LEGACY_THEME_KEY, null);
-            if (legacyTheme === 'light' || legacyTheme === 'dark') return legacyTheme;
+        if (!isExplicitThemeFlag(explicit)) return 'light';
+
+        if (pref === null || pref === undefined) pref = readGlobalValue(THEME_PREF_KEY, null);
+        if (pref === 'dark' || pref === 'light') return pref;
+        if (pref === 'auto') return 'light';
+
+        if (legacyTheme === null || legacyTheme === undefined) legacyTheme = readGlobalValue(LEGACY_THEME_KEY, null);
+        if (legacyTheme === 'light' || legacyTheme === 'dark') {
+            return legacyTheme;
         }
 
-        return 'auto';
+        return 'light';
     };
 
     const normalizeThemePreference = (value) => {
         if (value === 'light' || value === 'dark') return value;
-        if (value === 'auto') return getSystemTheme();
-        return getSystemTheme();
+        if (value === 'auto') return 'light';
+        return 'light';
     };
 
     function useThemePreference() {
@@ -164,7 +167,7 @@
             try {
                 return getStoredThemePreference();
             } catch {
-                return 'auto';
+                return 'light';
             }
         });
 
@@ -727,6 +730,10 @@
         const LONG_SYNC_LOCK_DELAY = 2000;
         const SLOW_INTERNET_HINT_DELAY = 5000;
         const NON_BLOCKING_SYNC_DELAY = 15000;
+        const SYNC_STATUS_POLL_ACTIVE_MS = 1200;
+        const SYNC_STATUS_POLL_IDLE_MS = 2200;
+        const SYNC_STATUS_POLL_HIDDEN_MS = 4000;
+        const SYNC_STATUS_DETAILS_REFRESH_EVERY = 3;
 
         const getRuntimePendingCount = useCallback(() => {
             try {
@@ -1417,26 +1424,59 @@
         useEffect(() => {
             if (cloudStatus !== 'syncing' && !showSyncLockOverlay && !showPendingSyncBanner && !syncingStartRef.current) return;
 
-            const intervalId = setInterval(() => {
+            let timerId = null;
+            let detailsTick = 0;
+            let cancelled = false;
+
+            const getPollIntervalMs = (isActive) => {
+                if (typeof document !== 'undefined' && document.visibilityState === 'hidden') {
+                    return SYNC_STATUS_POLL_HIDDEN_MS;
+                }
+                return isActive ? SYNC_STATUS_POLL_ACTIVE_MS : SYNC_STATUS_POLL_IDLE_MS;
+            };
+
+            const clearTimer = () => {
+                if (timerId) {
+                    clearTimeout(timerId);
+                    timerId = null;
+                }
+            };
+
+            const schedule = (isActive) => {
+                if (cancelled) return;
+                const delay = getPollIntervalMs(isActive);
+                timerId = setTimeout(tick, delay);
+            };
+
+            const tick = () => {
+                if (cancelled) return;
+
                 const runtimePending = getRuntimePendingCount();
-                const runtimeDetails = runtimePending > 0
-                    ? getRuntimePendingDetails()
-                    : { days: 0, products: 0, profile: 0, other: 0 };
                 const uploadInProgress = isRuntimeUploadInProgress();
                 const runtimeSyncStatus = getRuntimeSyncStatus();
+                const hasPendingDelta = runtimePending !== pendingCountRef.current;
+                const shouldRefreshDetails = runtimePending > 0
+                    && (hasPendingDelta || detailsTick % SYNC_STATUS_DETAILS_REFRESH_EVERY === 0);
+
+                detailsTick += 1;
+                if (shouldRefreshDetails || (runtimePending === 0 && pendingCountRef.current > 0)) {
+                    const nextDetails = runtimePending > 0
+                        ? getRuntimePendingDetails()
+                        : createEmptyPendingDetails();
+                    setPendingDetails(nextDetails);
+                }
 
                 if (!navigator.onLine) {
                     clearSyncLockOverlay();
                     clearSlowInternetHint();
-                    setPendingCount(runtimePending);
-                    setPendingDetails(runtimeDetails);
+                    if (hasPendingDelta) setPendingCount(runtimePending);
                     setCloudStatus('offline');
+                    schedule(false);
                     return;
                 }
 
-                if (runtimePending !== pendingCountRef.current) {
+                if (hasPendingDelta) {
                     setPendingCount(runtimePending);
-                    setPendingDetails(runtimeDetails);
                 }
 
                 if (runtimePending > 0 && !uploadInProgress && runtimeSyncStatus === 'synced') {
@@ -1444,6 +1484,7 @@
                     clearSyncLockOverlay();
                     clearSlowInternetHint();
                     setCloudStatus('queued');
+                    schedule(true);
                     return;
                 }
 
@@ -1474,6 +1515,7 @@
 
                     if (syncElapsedMs >= NON_BLOCKING_SYNC_DELAY && !showPendingSyncBanner) {
                         enterBackgroundPendingSync();
+                        schedule(true);
                         return;
                     }
                 }
@@ -1482,9 +1524,16 @@
                     pendingChangesRef.current = false;
                     showSyncedWithMinDuration();
                 }
-            }, 800);
 
-            return () => clearInterval(intervalId);
+                schedule(syncVisualActive || runtimePending > 0 || uploadInProgress);
+            };
+
+            schedule(true);
+
+            return () => {
+                cancelled = true;
+                clearTimer();
+            };
         }, [
             clearSlowInternetHint,
             clearSyncLockOverlay,

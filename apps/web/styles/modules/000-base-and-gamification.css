@@ -79,6 +79,7 @@
 input.phone-input-large {
   font-size: clamp(16px, 5.2vw, 28px) !important;
   line-height: clamp(22px, 6.2vw, 34px) !important;
+  font-weight: 700 !important;
   letter-spacing: -0.01em;
 }
 
@@ -4739,9 +4740,9 @@ td:first-child input {
   animation: syncSpin 1s linear infinite;
 }
 
-/* Сдвиг контента при показе offline banner */
+/* Keep banners overlay-only to avoid layout shifts (CLS). */
 body:has(.offline-banner) .wrap {
-  padding-top: 40px;
+  padding-top: 0;
 }
 
 /* ═══════════════════════════════════════════════════════════════════

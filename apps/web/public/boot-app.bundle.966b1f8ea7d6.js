@@ -12289,6 +12289,10 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
         const LONG_SYNC_LOCK_DELAY = 2000;
         const SLOW_INTERNET_HINT_DELAY = 5000;
         const NON_BLOCKING_SYNC_DELAY = 15000;
+        const SYNC_STATUS_POLL_ACTIVE_MS = 1200;
+        const SYNC_STATUS_POLL_IDLE_MS = 2200;
+        const SYNC_STATUS_POLL_HIDDEN_MS = 4000;
+        const SYNC_STATUS_DETAILS_REFRESH_EVERY = 3;
 
         const getRuntimePendingCount = useCallback(() => {
             try {
@@ -12979,26 +12983,59 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
         useEffect(() => {
             if (cloudStatus !== 'syncing' && !showSyncLockOverlay && !showPendingSyncBanner && !syncingStartRef.current) return;
 
-            const intervalId = setInterval(() => {
+            let timerId = null;
+            let detailsTick = 0;
+            let cancelled = false;
+
+            const getPollIntervalMs = (isActive) => {
+                if (typeof document !== 'undefined' && document.visibilityState === 'hidden') {
+                    return SYNC_STATUS_POLL_HIDDEN_MS;
+                }
+                return isActive ? SYNC_STATUS_POLL_ACTIVE_MS : SYNC_STATUS_POLL_IDLE_MS;
+            };
+
+            const clearTimer = () => {
+                if (timerId) {
+                    clearTimeout(timerId);
+                    timerId = null;
+                }
+            };
+
+            const schedule = (isActive) => {
+                if (cancelled) return;
+                const delay = getPollIntervalMs(isActive);
+                timerId = setTimeout(tick, delay);
+            };
+
+            const tick = () => {
+                if (cancelled) return;
+
                 const runtimePending = getRuntimePendingCount();
-                const runtimeDetails = runtimePending > 0
-                    ? getRuntimePendingDetails()
-                    : { days: 0, products: 0, profile: 0, other: 0 };
                 const uploadInProgress = isRuntimeUploadInProgress();
                 const runtimeSyncStatus = getRuntimeSyncStatus();
+                const hasPendingDelta = runtimePending !== pendingCountRef.current;
+                const shouldRefreshDetails = runtimePending > 0
+                    && (hasPendingDelta || detailsTick % SYNC_STATUS_DETAILS_REFRESH_EVERY === 0);
+
+                detailsTick += 1;
+                if (shouldRefreshDetails || (runtimePending === 0 && pendingCountRef.current > 0)) {
+                    const nextDetails = runtimePending > 0
+                        ? getRuntimePendingDetails()
+                        : createEmptyPendingDetails();
+                    setPendingDetails(nextDetails);
+                }
 
                 if (!navigator.onLine) {
                     clearSyncLockOverlay();
                     clearSlowInternetHint();
-                    setPendingCount(runtimePending);
-                    setPendingDetails(runtimeDetails);
+                    if (hasPendingDelta) setPendingCount(runtimePending);
                     setCloudStatus('offline');
+                    schedule(false);
                     return;
                 }
 
-                if (runtimePending !== pendingCountRef.current) {
+                if (hasPendingDelta) {
                     setPendingCount(runtimePending);
-                    setPendingDetails(runtimeDetails);
                 }
 
                 if (runtimePending > 0 && !uploadInProgress && runtimeSyncStatus === 'synced') {
@@ -13006,6 +13043,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                     clearSyncLockOverlay();
                     clearSlowInternetHint();
                     setCloudStatus('queued');
+                    schedule(true);
                     return;
                 }
 
@@ -13036,6 +13074,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
 
                     if (syncElapsedMs >= NON_BLOCKING_SYNC_DELAY && !showPendingSyncBanner) {
                         enterBackgroundPendingSync();
+                        schedule(true);
                         return;
                     }
                 }
@@ -13044,9 +13083,16 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                     pendingChangesRef.current = false;
                     showSyncedWithMinDuration();
                 }
-            }, 800);
 
-            return () => clearInterval(intervalId);
+                schedule(syncVisualActive || runtimePending > 0 || uploadInProgress);
+            };
+
+            schedule(true);
+
+            return () => {
+                cancelled = true;
+                clearTimer();
+            };
         }, [
             clearSlowInternetHint,
             clearSyncLockOverlay,
@@ -20728,7 +20774,6 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
 
             const visualViewport = window.visualViewport;
             visualViewport?.addEventListener('resize', scheduleSync);
-            visualViewport?.addEventListener('scroll', scheduleSync);
 
             return () => {
                 if (rafId) cancelAnimationFrame(rafId);
@@ -20737,7 +20782,6 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                 window.removeEventListener('resize', scheduleSync);
                 window.removeEventListener('orientationchange', scheduleSync);
                 visualViewport?.removeEventListener('resize', scheduleSync);
-                visualViewport?.removeEventListener('scroll', scheduleSync);
                 document.documentElement.style.removeProperty(KEYBOARD_DISMISS_BOTTOM_VAR);
                 document.documentElement.style.removeProperty(KEYBOARD_DISMISS_RIGHT_VAR);
             };
