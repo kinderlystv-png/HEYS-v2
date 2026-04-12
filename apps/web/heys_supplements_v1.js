@@ -1686,7 +1686,6 @@
         window.removeEventListener('orientationchange', requestRerender);
         if (window.visualViewport) {
           window.visualViewport.removeEventListener('resize', requestRerender);
-          window.visualViewport.removeEventListener('scroll', requestRerender);
         }
       } catch (e) {
         // no-op
@@ -2337,7 +2336,6 @@
       window.addEventListener('orientationchange', requestRerender, { passive: true });
       if (window.visualViewport) {
         window.visualViewport.addEventListener('resize', requestRerender, { passive: true });
-        window.visualViewport.addEventListener('scroll', requestRerender, { passive: true });
       }
     } catch (e) {
       // no-op

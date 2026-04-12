@@ -8916,6 +8916,7 @@ body.tour-active .ios-pwa-banner {
 /* Slot wrapper — always present, stable position via React key */
 .deferred-card-slot {
   position: relative;
+  contain: layout style;
 }
 
 /* Pending state: stable zero-height placeholder to avoid mount-time micro-shift */
@@ -12613,6 +12614,10 @@ body.tour-active .ios-pwa-banner {
   border-color: rgba(148, 163, 184, 0.16);
   color: #f8fafc;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+
+[data-theme="dark"] .heys-auth-phone-input {
+  color: #f8fafc;
 }
 
 [data-theme="dark"] .heys-auth-field:focus-within,

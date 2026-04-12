@@ -38,6 +38,7 @@ const ALLOWED_ORIGINS = [
   'https://app.heyslab.ru',
   'https://heys-static.website.yandexcloud.net',
   'http://localhost:3003',
+  'http://127.0.0.1:3003',
 ];
 
 /**

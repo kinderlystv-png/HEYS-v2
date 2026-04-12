@@ -66,12 +66,10 @@ export const ValidationSchemas = {
  * Advanced input sanitization
  */
 export class InputSanitizer {
-  private readonly dompurify: typeof DOMPurify;
-  private readonly sanitizeFn?: (input: string, config?: DOMPurifyConfig) => unknown;
+  private readonly sanitizeFn: ((input: string, config?: DOMPurifyConfig) => unknown) | undefined;
   private readonly config: DOMPurifyConfig;
 
   constructor(purifier: typeof DOMPurify = DOMPurify) {
-    this.dompurify = purifier;
     this.sanitizeFn = this.resolveSanitizeFn(purifier);
     this.config = {
       ALLOWED_TAGS: ['b', 'i', 'em', 'strong', 'a', 'p', 'br'],

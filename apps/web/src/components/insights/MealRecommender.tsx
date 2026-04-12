@@ -9,7 +9,6 @@
  * - Current patterns
  */
 
-import { Calendar, Clock, Target, TrendingUp } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 
 interface MealRecommendation {
@@ -44,7 +43,7 @@ interface MealRecommenderProps {
     clientId: string;
 }
 
-export const MealRecommender: React.FC<MealRecommenderProps> = ({ clientId }) => {
+export const MealRecommender: React.FC<MealRecommenderProps> = ({ clientId: _clientId }) => {
     const [recommendation, setRecommendation] = useState<MealRecommendation | null>(null);
     const [context, setContext] = useState({
         currentTime: new Date().toTimeString().slice(0, 5),
@@ -119,7 +118,7 @@ export const MealRecommender: React.FC<MealRecommenderProps> = ({ clientId }) =>
             {/* Context Inputs */}
             <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200 space-y-4">
                 <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                    <Calendar className="w-5 h-5" />
+                    <span role="img" aria-label="calendar">📅</span>
                     Current Context
                 </h3>
 
@@ -212,7 +211,7 @@ export const MealRecommender: React.FC<MealRecommenderProps> = ({ clientId }) =>
                     {/* Timing */}
                     <div className="bg-white p-6 rounded-lg shadow-sm border-2 border-blue-200">
                         <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                            <Clock className="w-5 h-5 text-blue-600" />
+                            <span role="img" aria-label="clock">🕒</span>
                             Optimal Timing
                         </h3>
                         <div className="flex items-center justify-center gap-4 mb-4">
@@ -240,7 +239,7 @@ export const MealRecommender: React.FC<MealRecommenderProps> = ({ clientId }) =>
                     {/* Macros */}
                     <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
                         <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                            <Target className="w-5 h-5 text-green-600" />
+                            <span role="img" aria-label="target">🎯</span>
                             Target Macros
                         </h3>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -283,7 +282,7 @@ export const MealRecommender: React.FC<MealRecommenderProps> = ({ clientId }) =>
                     {recommendation.products.length > 0 && (
                         <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
                             <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                                <TrendingUp className="w-5 h-5 text-purple-600" />
+                                <span role="img" aria-label="trend up">📈</span>
                                 Suggested Products
                             </h3>
                             <div className="space-y-3">

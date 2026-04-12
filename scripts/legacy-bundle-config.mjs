@@ -19,6 +19,8 @@ export const LEGACY_BUNDLES = {
         'heys_cloud_shared_v1.js',
         'heys_cloud_queue_v1.js',
         'heys_storage_photos_v1.js',
+        'heys_pending_queue_pure_v1.js',
+        'heys_sync_queue_runtime_pure_v1.js',
         'heys_storage_supabase_v1.js',
         'heys_models_v1.js',
         'heys_storage_layer_v1.js',
@@ -51,6 +53,7 @@ export const LEGACY_BUNDLES = {
     ],
     'boot-day': [
         'heys_day_stats_bundle_loader_v1.js',
+        'heys_day_realdata_actions_v1.js',
         'heys_day_edit_grams_modal_v1.js',
         'heys_day_time_mood_picker_v1.js',
         'heys_day_sparklines_v1.js',
@@ -192,6 +195,7 @@ export const LEGACY_BUNDLES = {
         'heys_iw_version_info.js',
         'heys_cycle_v1.js',
         'heys_refeed_v1.js',
+        'heys_day_realdata_actions_v1.js',
         'heys_yesterday_verify_v1.js',
         'heys_sms_v1.js',
         'heys_consents_v1.js',
@@ -272,6 +276,7 @@ export const LEGACY_BUNDLES = {
         'heys_planning_store_v1.js',
         'heys_planning_tasks_v1.js',
         'heys_planning_schedule_v1.js',
+        'heys_planning_context_v1.js',
         'heys_planning_v1.js',
     ],
 };

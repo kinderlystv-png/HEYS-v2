@@ -5611,6 +5611,7 @@ body:has(.offline-banner) .wrap {
   padding-bottom: 100px;
   /* Отступ под fixed tabs */
   position: relative;
+  contain: layout style;
   overflow: hidden;
   /* Убрали transform: translateZ(0) — ломает position: fixed для FAB */
   /* GPU acceleration включается только при анимации через will-change */

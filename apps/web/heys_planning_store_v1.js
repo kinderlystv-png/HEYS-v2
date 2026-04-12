@@ -14,6 +14,8 @@
         PROJECTS: 'heys_planning_projects',
         TASKS: 'heys_planning_tasks',
         SLOTS: 'heys_planning_slots',
+        CONTEXT_INBOX: 'heys_planning_inbox_v1',
+        LINKS: 'heys_planning_links_v1',
     };
 
     const PROJECT_COLORS = [
@@ -180,6 +182,15 @@
         });
     }
 
+    function sortContextInboxItems(items) {
+        return (Array.isArray(items) ? items : []).slice().sort((left, right) => {
+            const leftUpdated = String(left?.updatedAt || left?.createdAt || '');
+            const rightUpdated = String(right?.updatedAt || right?.createdAt || '');
+            if (leftUpdated !== rightUpdated) return rightUpdated.localeCompare(leftUpdated);
+            return String(right?.id || '').localeCompare(String(left?.id || ''));
+        });
+    }
+
     function getTaskDurationMinutes(task) {
         const planned = Number(task?.plannedMinutes);
         return planned > 0 ? planned : 60;
@@ -275,6 +286,14 @@
 
     function saveSlots(slots) {
         lsSet(KEYS.SLOTS, sortByOrder(slots || []));
+    }
+
+    function getContextInboxItems() {
+        return sortContextInboxItems(lsGet(KEYS.CONTEXT_INBOX, []));
+    }
+
+    function saveContextInboxItems(items) {
+        lsSet(KEYS.CONTEXT_INBOX, sortContextInboxItems(items || []));
     }
 
     function getNextOrder(items, predicate) {
@@ -449,15 +468,125 @@
         saveSlots(slots);
     }
 
+    function buildContextInboxPreview(text) {
+        const normalized = String(text || '').replace(/\s+/g, ' ').trim();
+        if (!normalized) return { title: '', preview: '' };
+        const titleBase = normalized.slice(0, 72).trim();
+        return {
+            title: normalized.length > 72 ? titleBase + '…' : titleBase,
+            preview: normalized.length > 180 ? normalized.slice(0, 180).trim() + '…' : normalized,
+        };
+    }
+
+    function addContextInboxItem(text, opts) {
+        const body = String(text || '').trim();
+        if (!body) return null;
+
+        const items = getContextInboxItems();
+        const now = nowISO();
+        const presentation = buildContextInboxPreview(body);
+        const item = {
+            id: uid(),
+            type: opts?.type || 'capture',
+            status: opts?.status || 'new',
+            source: opts?.source || 'user',
+            privacy: opts?.privacy || 'standard',
+            title: presentation.title || 'Новая запись',
+            preview: presentation.preview,
+            body,
+            linkedTaskIds: Array.isArray(opts?.linkedTaskIds) ? opts.linkedTaskIds.slice() : [],
+            createdAt: now,
+            updatedAt: now,
+        };
+
+        saveContextInboxItems([item].concat(items));
+        return item;
+    }
+
+    function updateContextInboxItem(id, patch) {
+        const items = getContextInboxItems();
+        const index = items.findIndex((item) => item.id === id);
+        if (index === -1) return null;
+
+        const current = items[index];
+        const nextBody = patch?.body != null ? String(patch.body || '').trim() : current.body;
+        const presentation = nextBody ? buildContextInboxPreview(nextBody) : null;
+        const next = {
+            ...current,
+            ...patch,
+            body: nextBody,
+            title: presentation ? (patch?.title || presentation.title || current.title) : (patch?.title || current.title),
+            preview: presentation ? presentation.preview : current.preview,
+            linkedTaskIds: Array.isArray(patch?.linkedTaskIds)
+                ? patch.linkedTaskIds.filter(Boolean)
+                : current.linkedTaskIds,
+            updatedAt: nowISO(),
+        };
+
+        items[index] = next;
+        saveContextInboxItems(items);
+        return next;
+    }
+
+    function deleteContextInboxItem(id) {
+        const items = getContextInboxItems().filter((item) => item.id !== id);
+        saveContextInboxItems(items);
+    }
+
+    // ── Links (graph edges) ──────────────────────────────────────────
+
+    function getLinks() {
+        return lsGet(KEYS.LINKS, []);
+    }
+
+    function saveLinks(links) {
+        lsSet(KEYS.LINKS, Array.isArray(links) ? links : []);
+    }
+
+    function addLink(fromId, toId, opts) {
+        if (!fromId || !toId || fromId === toId) return null;
+        const links = getLinks();
+        const existing = links.find(function (link) {
+            return link.fromId === fromId && link.toId === toId && link.relation === (opts?.relation || 'related');
+        });
+        if (existing) return existing;
+        var link = {
+            id: uid(),
+            fromId: fromId,
+            toId: toId,
+            fromType: opts?.fromType || 'unknown',
+            toType: opts?.toType || 'unknown',
+            relation: opts?.relation || 'related',
+            label: opts?.label || '',
+            createdAt: nowISO(),
+        };
+        saveLinks(links.concat(link));
+        return link;
+    }
+
+    function deleteLink(id) {
+        saveLinks(getLinks().filter(function (link) { return link.id !== id; }));
+    }
+
+    function getLinksFor(entityId) {
+        return getLinks().filter(function (link) {
+            return link.fromId === entityId || link.toId === entityId;
+        });
+    }
+
     function usePlanningState() {
         const [projects, setProjects] = useState(getProjects);
         const [tasks, setTasks] = useState(getTasks);
         const [slots, setSlots] = useState(getSlots);
+        const [contextInboxItems, setContextInboxItems] = useState(getContextInboxItems);
+        const [links, setLinks] = useState(getLinks);
 
         const refresh = useCallback(() => {
             setProjects(getProjects());
             setTasks(getTasks());
             setSlots(getSlots());
+            setContextInboxItems(getContextInboxItems());
+            setLinks(getLinks());
         }, []);
 
         useEffect(() => {
@@ -483,10 +612,16 @@
             addSlot: (opts) => { const slot = addSlot(opts); refresh(); return slot; },
             updateSlot: (id, patch) => { const slot = updateSlot(id, patch); refresh(); return slot; },
             deleteSlot: (id) => { deleteSlot(id); refresh(); },
+            addContextInboxItem: (text, opts) => { const item = addContextInboxItem(text, opts); refresh(); return item; },
+            updateContextInboxItem: (id, patch) => { const item = updateContextInboxItem(id, patch); refresh(); return item; },
+            deleteContextInboxItem: (id) => { deleteContextInboxItem(id); refresh(); },
+            addLink: (fromId, toId, opts) => { const link = addLink(fromId, toId, opts); refresh(); return link; },
+            deleteLink: (id) => { deleteLink(id); refresh(); },
+            getLinksFor,
             refresh,
         }), [refresh]);
 
-        return { projects, tasks, slots, ...api };
+        return { projects, tasks, slots, contextInboxItems, links, ...api };
     }
 
     function usePlanningViewport() {
@@ -550,6 +685,16 @@
         addSlot,
         updateSlot,
         deleteSlot,
+        getContextInboxItems,
+        saveContextInboxItems,
+        addContextInboxItem,
+        updateContextInboxItem,
+        deleteContextInboxItem,
+        getLinks,
+        saveLinks,
+        addLink,
+        deleteLink,
+        getLinksFor,
     };
 
     Planning.Hooks = {

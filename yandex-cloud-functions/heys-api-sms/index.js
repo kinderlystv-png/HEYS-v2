@@ -12,7 +12,9 @@ const ALLOWED_ORIGINS = [
   'https://heys-static.website.yandexcloud.net',
   'https://heys-v2-web.vercel.app',
   'http://localhost:3001',
+  'http://127.0.0.1:3001',
   'http://localhost:5173',
+  'http://127.0.0.1:5173',
 ];
 
 function getCorsHeaders(origin) {

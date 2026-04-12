@@ -6,6 +6,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
 
     const scripts = [
         'heys_day_stats_vm_v1.js',
+        'heys_day_realdata_actions_v1.js',
         'heys_day_stats_v1.js',
         'heys_day_activity_v1.js',
         'heys_day_trainings_v1.js',

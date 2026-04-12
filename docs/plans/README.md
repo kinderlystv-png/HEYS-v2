@@ -6,11 +6,12 @@
 
 ## 🔥 ACTIVE PLANS
 
-| Plan                                                                     | Priority   | Status         | Target Date |
-| ------------------------------------------------------------------------ | ---------- | -------------- | ----------- |
-| **[NEXT_STEPS.md](NEXT_STEPS.md)**                                       | ⭐⭐⭐⭐⭐ | 🔄 Active      | Ongoing     |
-| **[DOCS_ACTUALIZATION_SYSTEM.md](DOCS_ACTUALIZATION_SYSTEM.md)**         | ⭐⭐⭐⭐   | 🔄 In Progress | 2025-09-15  |
-| **[ENHANCED_ERROR_LOGGING_SYSTEM.md](ENHANCED_ERROR_LOGGING_SYSTEM.md)** | ⭐⭐⭐⭐   | 📋 Planning    | 2025-09-30  |
+| Plan                                                                           | Priority   | Status         | Target Date |
+| ------------------------------------------------------------------------------ | ---------- | -------------- | ----------- |
+| **[NEXT_STEPS.md](NEXT_STEPS.md)**                                             | ⭐⭐⭐⭐⭐ | 🔄 Active      | Ongoing     |
+| **[HEYS_TASKS_CONTEXT_MEMORY_SYSTEM.md](HEYS_TASKS_CONTEXT_MEMORY_SYSTEM.md)** | ⭐⭐⭐⭐⭐ | 📋 Planning    | 2026-04-30  |
+| **[DOCS_ACTUALIZATION_SYSTEM.md](DOCS_ACTUALIZATION_SYSTEM.md)**               | ⭐⭐⭐⭐   | 🔄 In Progress | 2025-09-15  |
+| **[ENHANCED_ERROR_LOGGING_SYSTEM.md](ENHANCED_ERROR_LOGGING_SYSTEM.md)**       | ⭐⭐⭐⭐   | 📋 Planning    | 2025-09-30  |
 
 ## 📋 ALL ROADMAPS
 
@@ -32,6 +33,8 @@
 
 ### Feature Development
 
+- **[HEYS_TASKS_CONTEXT_MEMORY_SYSTEM.md](HEYS_TASKS_CONTEXT_MEMORY_SYSTEM.md)**
+  ⭐⭐⭐⭐⭐ - Tasks + Context + Memory + Graph roadmap
 - **[DOCS_ACTUALIZATION_ROADMAP.md](DOCS_ACTUALIZATION_ROADMAP.md)** ⭐⭐⭐ -
   Documentation roadmap
 - **[FUTURE_NAVIGATION_MAPS_IMPLEMENTATION.md](FUTURE_NAVIGATION_MAPS_IMPLEMENTATION.md)**

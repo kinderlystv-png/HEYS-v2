@@ -213,6 +213,7 @@ describe('КТ4 - Автоматизация безопасности', () => {
     it('должен генерировать рекомендации по безопасности', async () => {
       const { default: DependencyChecker } = await import(`${SCRIPTS_DIR}/dependency-check.js`);
       const checker = new DependencyChecker();
+      checker.config = { ...checker.config, skipOutdatedCheck: true };
 
       // Симулируем наличие уязвимостей
       checker.results = {

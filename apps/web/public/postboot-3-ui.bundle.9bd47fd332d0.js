@@ -41104,6 +41104,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         }, [valueISO, todayIso]);
 
         React.useEffect(() => {
+            let rafId = 0;
             const updatePosition = () => {
                 const anchorNode = anchorRef?.current;
                 if (!anchorNode || typeof window === 'undefined') {
@@ -41116,13 +41117,18 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                     right: Math.max(Math.round(window.innerWidth - rect.right), 16),
                 });
             };
+            const scheduleUpdate = () => {
+                if (rafId) return;
+                rafId = requestAnimationFrame(() => { rafId = 0; updatePosition(); });
+            };
 
             updatePosition();
-            window.addEventListener('resize', updatePosition);
-            window.addEventListener('scroll', updatePosition, true);
+            window.addEventListener('resize', scheduleUpdate);
+            window.addEventListener('scroll', scheduleUpdate, true);
             return () => {
-                window.removeEventListener('resize', updatePosition);
-                window.removeEventListener('scroll', updatePosition, true);
+                if (rafId) cancelAnimationFrame(rafId);
+                window.removeEventListener('resize', scheduleUpdate);
+                window.removeEventListener('scroll', scheduleUpdate, true);
             };
         }, [anchorRef]);
 
@@ -41460,12 +41466,18 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                 });
             };
 
+            let rafId = 0;
+            const scheduleUpdate = () => {
+                if (rafId) return;
+                rafId = requestAnimationFrame(() => { rafId = 0; updatePosition(); });
+            };
             updatePosition();
-            window.addEventListener('resize', updatePosition);
-            window.addEventListener('scroll', updatePosition, true);
+            window.addEventListener('resize', scheduleUpdate);
+            window.addEventListener('scroll', scheduleUpdate, true);
             return () => {
-                window.removeEventListener('resize', updatePosition);
-                window.removeEventListener('scroll', updatePosition, true);
+                if (rafId) cancelAnimationFrame(rafId);
+                window.removeEventListener('resize', scheduleUpdate);
+                window.removeEventListener('scroll', scheduleUpdate, true);
             };
         }, [isOpen, pickerRef]);
 

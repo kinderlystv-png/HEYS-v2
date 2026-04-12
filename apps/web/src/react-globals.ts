@@ -26,11 +26,10 @@ window.React = React;
 
 // ReactDOM с createRoot из react-dom/client (React 18+)
 // Мержим ReactDOM + ReactDOMClient для совместимости
-window.ReactDOM = {
-    ...ReactDOM,
+(window as any).ReactDOM = Object.assign({}, ReactDOM, {
     createRoot: ReactDOMClient.createRoot,
     hydrateRoot: ReactDOMClient.hydrateRoot,
-};
+});
 
 // Debug log (удаляется в production через terser drop_console)
 console.log('[HEYS] React globals loaded (local bundle)', React.version);

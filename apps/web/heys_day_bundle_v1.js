@@ -10146,7 +10146,13 @@
                     logDeferredSlot('[HEYS.sceleton] ℹ️ ready_empty', { slotKey: debugKey });
                     deferredSkeletonState[debugKey] = 'ready_empty';
                 }
-                return React.createElement('div', { key: slotKey, className: 'deferred-card-slot deferred-card-slot--empty' });
+                return React.createElement('div', {
+                    key: slotKey,
+                    className: 'deferred-card-slot deferred-card-slot--empty',
+                    style: skeletonH
+                        ? { minHeight: Math.max(0, Number(skeletonH) || 0) + 'px' }
+                        : undefined
+                });
             }
             if (deferredSkeletonState[debugKey] !== 'ready_content') {
                 logDeferredSlot('[HEYS.sceleton] ✅ ready_content', { slotKey: debugKey });
@@ -10195,9 +10201,9 @@
             deferredSlot(cascadeReady, cascadeCard, 'slot-cascade', 140, '🔬', 'Анализируем ваши данные, чтобы показать состояние поведенческого каскада'),
             refeedCard,
             // R16: lazy-mount below-fold cards — prevent heavy hooks until near viewport
-            React.createElement(LazyMount, { key: 'lazy-below-fold', minHeight: 260 },
-                deferredSlot(mealRecReady, mealRecCard, 'slot-mealrec', 72, '🍽️', 'Загружаем ваши данные, чтобы умный планировщик дал точные рекомендации на остаток дня'),
-                deferredSlot(supplementsReady, supplementsCard, 'slot-supplements', 96, '💊', 'Подготавливаем план добавок на сегодня'),
+            React.createElement(LazyMount, { key: 'lazy-below-fold', minHeight: 460 },
+                deferredSlot(mealRecReady, mealRecCard, 'slot-mealrec', 180, '🍽️', 'Загружаем ваши данные, чтобы умный планировщик дал точные рекомендации на остаток дня'),
+                deferredSlot(supplementsReady, supplementsCard, 'slot-supplements', 140, '💊', 'Подготавливаем план добавок на сегодня'),
                 mealsChart,
                 insulinIndicator
             ),

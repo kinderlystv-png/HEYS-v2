@@ -81,7 +81,11 @@
     "test:ui": "vitest --ui",
     "test:unit": "vitest run",
     "test:watch": "pnpm -r run test:watch",
+    "test:web:critical": "vitest run apps/web/__tests__/yandex-api-session-guards.test.js apps/web/__tests__/heys-auth-login-client.test.js apps/web/__tests__/heys-auth-session.test.js apps/web/__tests__/heys-auth-create-reset-pin.test.js apps/web/__tests__/pending-queue-pure.test.js",
+    "test:web:sync-critical": "vitest run apps/web/__tests__/yandex-api-session-guards.test.js apps/web/__tests__/heys-auth-login-client.test.js apps/web/__tests__/heys-auth-session.test.js apps/web/__tests__/pending-queue-pure.test.js apps/web/__tests__/sync-queue-runtime-pure.test.js apps/web/__tests__/pwa-update-logic.test.js",
     "type-check": "turbo run type-check",
+    "validate:ci": "ruby -ryaml -e \"Dir['.github/workflows/*.{yml,yaml}'].each { |f| YAML.load_file(f) }; puts 'CI YAML OK'\"",
+    "verify:legacy-bundles": "node scripts/verify-legacy-bundles.mjs",
     "workspace:graph": "pnpm list --depth=0 --json"
   },
   "lint-staged": {

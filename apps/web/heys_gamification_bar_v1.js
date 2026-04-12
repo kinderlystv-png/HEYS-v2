@@ -655,14 +655,12 @@
             window.addEventListener('resize', scheduleUpdate);
             window.addEventListener('orientationchange', scheduleUpdate);
             visualViewport?.addEventListener('resize', scheduleUpdate);
-            visualViewport?.addEventListener('scroll', scheduleUpdate);
 
             return () => {
                 if (rafId) cancelAnimationFrame(rafId);
                 window.removeEventListener('resize', scheduleUpdate);
                 window.removeEventListener('orientationchange', scheduleUpdate);
                 visualViewport?.removeEventListener('resize', scheduleUpdate);
-                visualViewport?.removeEventListener('scroll', scheduleUpdate);
             };
         }, [expanded, updateExpandedPanelLayout]);
 

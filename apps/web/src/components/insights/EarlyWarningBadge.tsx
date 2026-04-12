@@ -72,7 +72,7 @@ export const EarlyWarningBadge: React.FC<EarlyWarningBadgeProps> = ({ clientId, 
         return null; // No warnings - don't show badge
     }
 
-    const { count, highSeverityCount, mediumSeverityCount } = warnings;
+    const { count, highSeverityCount } = warnings;
     const hasHighSeverity = highSeverityCount > 0;
 
     return (

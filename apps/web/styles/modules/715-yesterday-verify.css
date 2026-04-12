@@ -372,6 +372,20 @@
   color: #6b7280;
 }
 
+.yv-option-recommended {
+  margin-top: 4px;
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #166534;
+  background: #dcfce7;
+  border: 1px solid #86efac;
+}
+
 .yv-option-check {
   font-size: 18px;
   font-weight: 700;
@@ -491,6 +505,12 @@
 
 [data-theme="dark"] .yv-option-desc {
   color: var(--heys-text-secondary);
+}
+
+[data-theme="dark"] .yv-option-recommended {
+  color: #bbf7d0;
+  background: rgba(16, 185, 129, 0.2);
+  border-color: rgba(52, 211, 153, 0.45);
 }
 
 [data-theme="dark"] .yv-back {

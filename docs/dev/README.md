@@ -4,17 +4,18 @@
 
 ## 📚 Reference Files
 
-| Файл                                                 | Содержание                                               |
-| ---------------------------------------------------- | -------------------------------------------------------- |
-| [ONBOARDING.md](./ONBOARDING.md)                     | Быстрый старт для dev (macOS/Linux/Windows)              |
-| [CODE_STYLE.md](./CODE_STYLE.md)                     | Запрещено/Правильно, commit style                        |
-| [ARCHITECTURE.md](./ARCHITECTURE.md)                 | Структура проекта, Yandex Cloud                          |
-| [LOGGING_DEBUG_GROUPS.md](./LOGGING_DEBUG_GROUPS.md) | Runtime-группы логов, debug-рецепты, reuse vs new preset |
-| [CSS_GUIDE.md](./CSS_GUIDE.md)                       | Tailwind, BEM, NO-TOUCH zones                            |
-| [STORAGE_PATTERNS.md](./STORAGE_PATTERNS.md)         | localStorage, cloud sync, PIN auth                       |
-| [COMMON_ERRORS.md](./COMMON_ERRORS.md)               | E001-E007, RTR, debugging                                |
-| [API_REFERENCE.md](./API_REFERENCE.md)               | RPC allowlist, YandexAPI, security                       |
-| [PROMPTS_AND_AUDIT.md](./PROMPTS_AND_AUDIT.md)       | Промпты, аудит, тесты                                    |
+| Файл                                                           | Содержание                                               |
+| -------------------------------------------------------------- | -------------------------------------------------------- |
+| [ONBOARDING.md](./ONBOARDING.md)                               | Быстрый старт для dev (macOS/Linux/Windows)              |
+| [CODE_STYLE.md](./CODE_STYLE.md)                               | Запрещено/Правильно, commit style                        |
+| [ARCHITECTURE.md](./ARCHITECTURE.md)                           | Структура проекта, Yandex Cloud                          |
+| [LOGGING_DEBUG_GROUPS.md](./LOGGING_DEBUG_GROUPS.md)           | Runtime-группы логов, debug-рецепты, reuse vs new preset |
+| [CSS_GUIDE.md](./CSS_GUIDE.md)                                 | Tailwind, BEM, NO-TOUCH zones                            |
+| [STORAGE_PATTERNS.md](./STORAGE_PATTERNS.md)                   | localStorage, cloud sync, PIN auth                       |
+| [COMMON_ERRORS.md](./COMMON_ERRORS.md)                         | E001-E007, RTR, debugging                                |
+| [API_REFERENCE.md](./API_REFERENCE.md)                         | RPC allowlist, YandexAPI, security                       |
+| [PROMPTS_AND_AUDIT.md](./PROMPTS_AND_AUDIT.md)                 | Промпты, аудит, тесты                                    |
+| [CRITICAL_PATHS_TEST_AUDIT.md](./CRITICAL_PATHS_TEST_AUDIT.md) | Аудит покрытия критичных auth/sync/runtime путей         |
 
 ## 📊 Data & Business
 

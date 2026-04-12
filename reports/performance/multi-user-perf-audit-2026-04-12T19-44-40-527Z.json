@@ -1,0 +1,427 @@
+{
+  "runAt": "2026-04-12T19:43:11.409Z",
+  "finishedAt": "2026-04-12T19:44:40.527Z",
+  "baseUrl": "http://127.0.0.1:3001/?perf-audit=multi-user",
+  "users": [
+    {
+      "id": "user_a",
+      "label": "User A",
+      "phoneMasked": "+7***6111",
+      "status": "ok",
+      "failure": null,
+      "login": {
+        "loginDurationMs": 18303
+      },
+      "scenario": {
+        "scenarioDurationMs": 25755,
+        "interactions": [
+          {
+            "type": "click",
+            "target": "7д",
+            "ok": false
+          },
+          {
+            "type": "click",
+            "target": "30д",
+            "ok": false
+          },
+          {
+            "type": "click",
+            "target": "Неделя",
+            "ok": false
+          },
+          {
+            "type": "click",
+            "target": "Месяц",
+            "ok": false
+          },
+          {
+            "type": "click",
+            "target": "Показать дни недели",
+            "ok": false
+          },
+          {
+            "type": "click",
+            "target": "Показать дни недели",
+            "ok": false
+          },
+          {
+            "type": "click",
+            "target": "Это реальные данные",
+            "ok": false
+          },
+          {
+            "type": "click",
+            "target": "Добавить стакан воды",
+            "ok": false
+          },
+          {
+            "type": "click",
+            "target": "Добавить приём пищи",
+            "ok": true
+          },
+          {
+            "type": "bottom-tab",
+            "target": "Отчёты",
+            "ok": false
+          },
+          {
+            "type": "bottom-tab",
+            "target": "Дневник",
+            "ok": false
+          },
+          {
+            "type": "bottom-tab",
+            "target": "Инсайты",
+            "ok": false
+          },
+          {
+            "type": "bottom-tab",
+            "target": "Месяц",
+            "ok": false
+          },
+          {
+            "type": "bottom-tab",
+            "target": "Задачи",
+            "ok": false
+          }
+        ]
+      },
+      "collected": {
+        "stats": {
+          "session": {
+            "duration": "43s",
+            "start": "2026-04-12T19:43:14.802Z"
+          },
+          "searches": {
+            "total": 0,
+            "slow": 0,
+            "slowRate": "0%"
+          },
+          "apiCalls": {
+            "total": 0,
+            "slow": 0,
+            "failed": 0,
+            "slowRate": "0%",
+            "failRate": "0%"
+          },
+          "cache": {
+            "hits": 0,
+            "misses": 0,
+            "hitRate": "0%"
+          },
+          "events": {
+            "total": 9,
+            "tabSwitches": 0,
+            "slowInteractions": 41
+          },
+          "errors": {
+            "total": 0
+          },
+          "performance": {
+            "enabled": true,
+            "sampleRate": 1,
+            "webVitals": {
+              "lcp": 19672,
+              "cls": 0.366,
+              "inp": 456,
+              "inpEvent": "pointerover"
+            },
+            "clicks": {
+              "count": 1,
+              "p50ClickToFrame": 68.3,
+              "p95ClickToFrame": 68.3,
+              "maxClickToFrame": 68.3
+            },
+            "interactions": {
+              "p95EventDuration": 456,
+              "slowInteractions": 41
+            },
+            "longTasks": {
+              "count": 35,
+              "avgDuration": 223.2,
+              "maxDuration": 945
+            },
+            "scroll": {
+              "sessions": 1,
+              "jankySessions": 1,
+              "jankRate": 100,
+              "totalDroppedFrames": 24,
+              "maxDroppedFramesInSession": 24,
+              "worstFrameDelta": 316.6
+            },
+            "dataProfile": {
+              "daysCount": 0,
+              "daysBucket": "0",
+              "avgItemsPerDay": 0,
+              "itemsBucket": "0",
+              "storageMB": 3.1
+            },
+            "customMeasures": [
+              {
+                "name": "multi_user_perf_scenario",
+                "duration": 25621,
+                "ts": 1776023037211,
+                "meta": {
+                  "at": 1776023037211
+                }
+              },
+              {
+                "name": "multi_user_perf_scenario",
+                "duration": 25621,
+                "ts": 1776023037211,
+                "meta": {
+                  "source": "playwright"
+                }
+              }
+            ]
+          }
+        },
+        "storage": {
+          "totalKeys": 741,
+          "dayLikeKeys": 125,
+          "uniqueDayDates": 124,
+          "minDate": "2025-12-07",
+          "maxDate": "2026-04-12"
+        },
+        "sync": {
+          "pendingCount": 1,
+          "pendingDetails": {
+            "days": 0,
+            "products": 0,
+            "profile": 0,
+            "other": 1
+          },
+          "syncStatus": "synced"
+        }
+      },
+      "consoleSummary": {
+        "log": 2,
+        "info": 38,
+        "warning": 1,
+        "error": 0
+      },
+      "pageErrors": [],
+      "requestFailedCount": 0,
+      "requestFailsTop": [],
+      "consoleTop": [
+        {
+          "at": "2026-04-12T19:43:25.019Z",
+          "type": "warning",
+          "text": "[HEYS.sinhron] 🔀 dayv2 дедупликация: 1 дублей отброшено: 2025-12-08"
+        }
+      ]
+    },
+    {
+      "id": "user_b",
+      "label": "User B",
+      "phoneMasked": "+7***7111",
+      "status": "ok",
+      "failure": null,
+      "login": {
+        "loginDurationMs": 14707
+      },
+      "scenario": {
+        "scenarioDurationMs": 27638,
+        "interactions": [
+          {
+            "type": "click",
+            "target": "7д",
+            "ok": false
+          },
+          {
+            "type": "click",
+            "target": "30д",
+            "ok": false
+          },
+          {
+            "type": "click",
+            "target": "Неделя",
+            "ok": false
+          },
+          {
+            "type": "click",
+            "target": "Месяц",
+            "ok": false
+          },
+          {
+            "type": "click",
+            "target": "Показать дни недели",
+            "ok": false
+          },
+          {
+            "type": "click",
+            "target": "Показать дни недели",
+            "ok": false
+          },
+          {
+            "type": "click",
+            "target": "Это реальные данные",
+            "ok": false
+          },
+          {
+            "type": "click",
+            "target": "Добавить стакан воды",
+            "ok": false
+          },
+          {
+            "type": "click",
+            "target": "Добавить приём пищи",
+            "ok": false
+          },
+          {
+            "type": "bottom-tab",
+            "target": "Отчёты",
+            "ok": true
+          },
+          {
+            "type": "bottom-tab",
+            "target": "Дневник",
+            "ok": false
+          },
+          {
+            "type": "bottom-tab",
+            "target": "Инсайты",
+            "ok": false
+          },
+          {
+            "type": "bottom-tab",
+            "target": "Месяц",
+            "ok": false
+          },
+          {
+            "type": "bottom-tab",
+            "target": "Задачи",
+            "ok": false
+          }
+        ]
+      },
+      "collected": {
+        "stats": {
+          "session": {
+            "duration": "7s",
+            "start": "2026-04-12T19:44:32.881Z"
+          },
+          "searches": {
+            "total": 0,
+            "slow": 0,
+            "slowRate": "0%"
+          },
+          "apiCalls": {
+            "total": 0,
+            "slow": 0,
+            "failed": 0,
+            "slowRate": "0%",
+            "failRate": "0%"
+          },
+          "cache": {
+            "hits": 0,
+            "misses": 0,
+            "hitRate": "0%"
+          },
+          "events": {
+            "total": 8,
+            "tabSwitches": 0,
+            "slowInteractions": 0
+          },
+          "errors": {
+            "total": 0
+          },
+          "performance": {
+            "enabled": true,
+            "sampleRate": 1,
+            "webVitals": {
+              "lcp": 1964,
+              "cls": 0.0002,
+              "inp": null,
+              "inpEvent": null
+            },
+            "clicks": {
+              "count": 1,
+              "p50ClickToFrame": 4.9,
+              "p95ClickToFrame": 4.9,
+              "maxClickToFrame": 4.9
+            },
+            "interactions": {
+              "p95EventDuration": 0,
+              "slowInteractions": 0
+            },
+            "longTasks": {
+              "count": 15,
+              "avgDuration": 133.2,
+              "maxDuration": 580
+            },
+            "scroll": {
+              "sessions": 1,
+              "jankySessions": 1,
+              "jankRate": 100,
+              "totalDroppedFrames": 28,
+              "maxDroppedFramesInSession": 28,
+              "worstFrameDelta": 133.2
+            },
+            "dataProfile": {
+              "daysCount": 0,
+              "daysBucket": "0",
+              "avgItemsPerDay": 0,
+              "itemsBucket": "0",
+              "storageMB": 1.91
+            },
+            "customMeasures": []
+          }
+        },
+        "storage": {
+          "totalKeys": 373,
+          "dayLikeKeys": 76,
+          "uniqueDayDates": 75,
+          "minDate": "2025-12-15",
+          "maxDate": "2026-04-12"
+        },
+        "sync": {
+          "pendingCount": 0,
+          "pendingDetails": {
+            "days": 0,
+            "products": 0,
+            "profile": 0,
+            "other": 0
+          },
+          "syncStatus": "synced"
+        }
+      },
+      "consoleSummary": {
+        "log": 2,
+        "info": 75,
+        "warning": 0,
+        "error": 2
+      },
+      "pageErrors": [],
+      "requestFailedCount": 2,
+      "requestFailsTop": [
+        {
+          "at": "2026-04-12T19:44:16.808Z",
+          "url": "https://api.heyslab.ru/rpc?fn=get_gamification_events_by_session",
+          "method": "POST",
+          "reason": "net::ERR_ABORTED"
+        },
+        {
+          "at": "2026-04-12T19:44:31.289Z",
+          "url": "https://api.heyslab.ru/rpc?fn=batch_upsert_client_kv_by_session",
+          "method": "POST",
+          "reason": "net::ERR_ABORTED"
+        }
+      ],
+      "consoleTop": [
+        {
+          "at": "2026-04-12T19:44:16.808Z",
+          "type": "error",
+          "text": "[HEYS.api] ❌ Attempt 1/3 failed (timeout=15000ms): Failed to fetch"
+        },
+        {
+          "at": "2026-04-12T19:44:31.289Z",
+          "type": "error",
+          "text": "[HEYS.api] ❌ Attempt 1/3 failed (timeout=15000ms): Failed to fetch"
+        }
+      ]
+    }
+  ],
+  "rawJsonPath": "reports/performance/multi-user-perf-audit-2026-04-12T19-44-40-527Z.json"
+}

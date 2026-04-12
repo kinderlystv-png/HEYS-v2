@@ -271,9 +271,16 @@
 .kcal-realdata-card__footer {
   margin-top: 10px;
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  flex-direction: column;
+  align-items: stretch;
   gap: 10px;
+}
+
+.kcal-realdata-card__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
 }
 
 .kcal-realdata-card__badge {
@@ -291,6 +298,7 @@
 }
 
 .kcal-realdata-card__button {
+  flex: 1;
   min-width: 44px;
   min-height: 44px;
   border: none;
@@ -305,6 +313,27 @@
   transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
 }
 
+.kcal-realdata-card__button--secondary {
+  color: #9a3412;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(249, 115, 22, 0.32);
+  box-shadow: none;
+}
+
+.kcal-realdata-card__recommendation {
+  font-size: 12px;
+  line-height: 1.35;
+  color: #9a3412;
+  font-weight: 600;
+}
+
+.kcal-realdata-card__impact {
+  font-size: 11px;
+  line-height: 1.35;
+  color: #7c2d12;
+  opacity: 0.9;
+}
+
 .kcal-realdata-card__button:active {
   transform: translateY(1px) scale(0.98);
   box-shadow: 0 3px 8px rgba(234, 88, 12, 0.2);
@@ -317,8 +346,14 @@
   }
 
   .kcal-realdata-card__button,
-  .kcal-realdata-card__badge {
+  .kcal-realdata-card__badge,
+  .kcal-realdata-card__actions {
     width: 100%;
+  }
+
+  .kcal-realdata-card__actions {
+    display: flex;
+    flex-direction: column;
   }
 }
 

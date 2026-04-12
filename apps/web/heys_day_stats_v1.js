@@ -253,16 +253,132 @@
       || (todayDateKey && appCurrentDateKey === todayDateKey)
     );
 
-    const shouldOfferRealDataConfirmation = Boolean(
-      date
-      && !day?.isFuture
-      && !isSelectedDateToday
-      && !day?.isFastingDay
-      && !day?.isIncomplete
-      && selectedDayRatio > 0
-      && selectedDayRatio < 0.5
-      && (((displayHeroEaten || eatenKcal || 0) > 0) || ((day?.meals || []).length > 0))
-    );
+    const DayRealDataActions = HEYS.DayRealDataActions || {};
+    const mealCountNow = Array.isArray(day?.meals) ? day.meals.length : 0;
+    const eatenNow = Math.round(displayHeroEaten || eatenKcal || 0);
+    const targetNow = Math.round(displayHeroOptimum || optimum || 0);
+
+    const clearEstimatedDayFields = typeof DayRealDataActions.clearEstimatedDayFields === 'function'
+      ? DayRealDataActions.clearEstimatedDayFields
+      : (targetDay) => {
+        if (!targetDay || typeof targetDay !== 'object') return;
+        delete targetDay.savedEatenKcal;
+        delete targetDay.savedDisplayOptimum;
+        delete targetDay.savedEatenProt;
+        delete targetDay.savedEatenCarbs;
+        delete targetDay.savedEatenFat;
+        delete targetDay.savedEatenFiber;
+        delete targetDay.estimatedDayFill;
+      };
+
+    const applyDayStatusAction = typeof DayRealDataActions.applyDayStatusAction === 'function'
+      ? DayRealDataActions.applyDayStatusAction
+      : (targetDay, actionId, options = {}) => {
+        const nextDay = { ...(targetDay || {}) };
+        const nowTs = options.nowTs || Date.now();
+        if (actionId === 'confirm_real_data') {
+          nextDay.isFastingDay = true;
+          nextDay.isIncomplete = false;
+          clearEstimatedDayFields(nextDay);
+        } else if (actionId === 'clear_day') {
+          nextDay.meals = [];
+          nextDay.isFastingDay = false;
+          nextDay.isIncomplete = false;
+          clearEstimatedDayFields(nextDay);
+        }
+        nextDay.updatedAt = nowTs;
+        return nextDay;
+      };
+
+    const shouldOfferRealDataConfirmation = typeof DayRealDataActions.shouldOfferConfirmation === 'function'
+      ? DayRealDataActions.shouldOfferConfirmation({
+        dateKey: date,
+        isFuture: !!day?.isFuture,
+        isToday: isSelectedDateToday,
+        isFastingDay: !!day?.isFastingDay,
+        isIncomplete: !!day?.isIncomplete,
+        hasEstimatedFill: !!day?.estimatedDayFill,
+        ratio: selectedDayRatio,
+        eatenKcal: eatenNow,
+        mealCount: mealCountNow,
+      })
+      : Boolean(
+        date
+        && !day?.isFuture
+        && !isSelectedDateToday
+        && !day?.isFastingDay
+        && !day?.isIncomplete
+        && !day?.estimatedDayFill
+        && selectedDayRatio > 0
+        && selectedDayRatio < 0.5
+        && (eatenNow > 0 || mealCountNow > 0)
+      );
+
+    const preferredActionId = typeof DayRealDataActions.getPreferredAction === 'function'
+      ? DayRealDataActions.getPreferredAction({ ratio: selectedDayRatio, mealCount: mealCountNow })
+      : 'confirm_real_data';
+    const isClearPrimary = preferredActionId === 'clear_day';
+    const recommendationText = isClearPrimary
+      ? 'Рекомендуем очистить: день выглядит пустым (0 приёмов и <30% нормы).'
+      : 'Рекомендуем подтвердить: в дне есть приёмы пищи, их лучше учесть в статистике.';
+    const impactHintText = typeof DayRealDataActions.getImpactHint === 'function'
+      ? DayRealDataActions.getImpactHint()
+      : 'Влияет на средний дефицит, тренд и рекомендации.';
+
+    const getStatsDayStorageKey = () => {
+      const currentClientId = HEYS.currentClientId || HEYS.utils?.getCurrentClientId?.() || '';
+      return currentClientId ? ('heys_' + currentClientId + '_dayv2_' + date) : ('heys_dayv2_' + date);
+    };
+
+    const cloneDaySnapshot = (value) => {
+      try {
+        return JSON.parse(JSON.stringify(value || {}));
+      } catch (e) {
+        return { ...(value || {}) };
+      }
+    };
+
+    const trackRealDataAction = (actionName, meta = {}) => {
+      try {
+        if (HEYS.analytics?.trackDataOperation) {
+          HEYS.analytics.trackDataOperation(actionName, 1, {
+            date,
+            ratio: Number(selectedDayRatio || 0),
+            mealCount: mealCountNow,
+            eatenKcal: eatenNow,
+            targetKcal: targetNow,
+            ...meta
+          });
+        }
+      } catch (_) { }
+    };
+
+    const persistDayChange = (nextDay, source, extraDetail = {}) => {
+      if (!date) return;
+      const statsDayKey = getStatsDayStorageKey();
+      const nextSnapshot = cloneDaySnapshot(nextDay);
+
+      setDay(() => nextSnapshot);
+
+      try {
+        const persistDay = typeof HEYS?.dayStorage?.lsSet === 'function'
+          ? HEYS.dayStorage.lsSet
+          : U?.lsSet;
+        persistDay?.(statsDayKey, nextSnapshot);
+      } catch (_) { }
+
+      try {
+        if (typeof HEYS?.cloud?.saveClientKey === 'function') {
+          HEYS.cloud.saveClientKey(statsDayKey, nextSnapshot);
+        }
+      } catch (_) { }
+
+      try {
+        global.dispatchEvent(new CustomEvent('heys:day-updated', {
+          detail: { date, source, data: nextSnapshot, ...extraDetail }
+        }));
+      } catch (_) { }
+    };
 
     const confirmCurrentDayAsRealData = (e) => {
       e?.stopPropagation?.();
@@ -287,95 +403,17 @@
         });
       } catch (_) { }
 
-      const eatenNow = Math.round(displayHeroEaten || eatenKcal || 0);
-      const targetNow = Math.round(displayHeroOptimum || optimum || 0);
-
-      const confirmText = 'Учесть этот день как реальные данные?\n\n'
+      const confirmText = typeof DayRealDataActions.getConfirmDialogText === 'function'
+        ? DayRealDataActions.getConfirmDialogText('confirm_real_data', { eatenKcal: eatenNow, targetKcal: targetNow })
+        : 'Учесть этот день как реальные данные?\n\n'
         + 'Сейчас: ' + eatenNow + ' из ' + targetNow + ' ккал.\n'
         + 'День останется в статистике, даже если это меньше 50% нормы.';
       const confirmed = typeof global.confirm === 'function' ? global.confirm(confirmText) : true;
       if (!confirmed) return;
 
-      const nextDay = {
-        ...(day || {}),
-        isFastingDay: true,
-        isIncomplete: false,
-        updatedAt: Date.now()
-      };
-
-      setDay((prevDay) => {
-        const mergedDay = {
-          ...(prevDay || {}),
-          ...nextDay,
-          isFastingDay: true,
-          isIncomplete: false,
-          updatedAt: Date.now()
-        };
-
-        try {
-          console.info('[HEYS.dayRealData] setDay merged', {
-            date,
-            prevIsFastingDay: !!prevDay?.isFastingDay,
-            prevIsIncomplete: !!prevDay?.isIncomplete,
-            nextIsFastingDay: !!mergedDay?.isFastingDay,
-            nextIsIncomplete: !!mergedDay?.isIncomplete,
-            updatedAt: mergedDay?.updatedAt || null
-          });
-        } catch (_) { }
-
-        return mergedDay;
-      });
-
-      try {
-        const persistDay = typeof HEYS?.dayStorage?.lsSet === 'function'
-          ? HEYS.dayStorage.lsSet
-          : U?.lsSet;
-        const _statsCid = HEYS.currentClientId || HEYS.utils?.getCurrentClientId?.() || '';
-        const _statsDayKey = _statsCid ? 'heys_' + _statsCid + '_dayv2_' + date : 'heys_dayv2_' + date;
-        persistDay?.(_statsDayKey, nextDay);
-        console.info('[HEYS.dayRealData] persisted day', {
-          date,
-          isFastingDay: !!nextDay?.isFastingDay,
-          isIncomplete: !!nextDay?.isIncomplete,
-          updatedAt: nextDay?.updatedAt || null
-        });
-        global.console?.warn?.('[HEYS.dayRealData] persisted day visible', {
-          date,
-          isFastingDay: !!nextDay?.isFastingDay,
-          isIncomplete: !!nextDay?.isIncomplete,
-          updatedAt: nextDay?.updatedAt || null
-        });
-      } catch (_) { }
-
-      try {
-        if (typeof HEYS?.cloud?.saveClientKey === 'function') {
-          HEYS.cloud.saveClientKey(_statsDayKey, nextDay);
-          console.info('[HEYS.dayRealData] queued cloud save', {
-            date,
-            source: 'day-stats-real-data-cta',
-            isFastingDay: !!nextDay?.isFastingDay,
-            isIncomplete: !!nextDay?.isIncomplete,
-            updatedAt: nextDay?.updatedAt || null
-          });
-          global.console?.warn?.('[HEYS.dayRealData] queued cloud save visible', {
-            date,
-            source: 'day-stats-real-data-cta',
-            isFastingDay: !!nextDay?.isFastingDay,
-            isIncomplete: !!nextDay?.isIncomplete,
-            updatedAt: nextDay?.updatedAt || null
-          });
-        }
-      } catch (_) { }
-
-      try {
-        global.dispatchEvent(new CustomEvent('heys:day-updated', {
-          detail: { date, source: 'day-stats-real-data-cta', data: nextDay }
-        }));
-        console.info('[HEYS.dayRealData] dispatched event', {
-          date,
-          source: 'day-stats-real-data-cta'
-        });
-      } catch (_) { }
+      const nextDay = applyDayStatusAction(day || {}, 'confirm_real_data', { nowTs: Date.now() });
+      persistDayChange(nextDay, 'day-stats-real-data-cta');
+      trackRealDataAction('day_realdata_confirmed', { source: 'day-stats-real-data-cta' });
 
       try {
         haptic('light');
@@ -383,6 +421,53 @@
 
       if (HEYS?.Toast?.success) {
         HEYS.Toast.success('День учтён как реальные данные');
+      }
+    };
+
+    const clearCurrentDayFromStats = (e) => {
+      e?.stopPropagation?.();
+      if (!date) return;
+      const confirmText = typeof DayRealDataActions.getConfirmDialogText === 'function'
+        ? DayRealDataActions.getConfirmDialogText('clear_day', { eatenKcal: eatenNow, targetKcal: targetNow })
+        : 'Очистить данные за этот день?\n\n'
+        + 'Сейчас: ' + eatenNow + ' из ' + targetNow + ' ккал.\n'
+        + 'Мы удалим приёмы пищи и исключим день из статистики.';
+      const confirmed = typeof global.confirm === 'function' ? global.confirm(confirmText) : true;
+      if (!confirmed) return;
+      trackRealDataAction('day_realdata_clear_clicked', { source: 'day-stats-clear-day-cta' });
+
+      const prevDaySnapshot = cloneDaySnapshot(day || {});
+      const applyClear = () => {
+        const clearedDay = applyDayStatusAction(prevDaySnapshot, 'clear_day', { nowTs: Date.now() });
+        clearEstimatedDayFields(clearedDay);
+        persistDayChange(clearedDay, 'day-stats-clear-day-cta', { field: 'meals', value: [] });
+        return { prevDaySnapshot, clearedDay };
+      };
+
+      if (HEYS.Undo?.runAction) {
+        HEYS.Undo.runAction({
+          label: 'День очищен из статистики',
+          duration: 7000,
+          apply: applyClear,
+          undo: (context) => {
+            persistDayChange(context?.prevDaySnapshot || prevDaySnapshot, 'day-stats-clear-day-undo');
+            trackRealDataAction('day_realdata_clear_undo', { source: 'day-stats-clear-day-undo' });
+          },
+          onExpire: () => {
+            trackRealDataAction('day_realdata_clear_commit', { source: 'day-stats-clear-day-cta' });
+          },
+          errorMessage: 'Не удалось очистить данные дня'
+        });
+      } else {
+        applyClear();
+      }
+
+      try {
+        haptic('light');
+      } catch (_) { }
+
+      if (HEYS?.Toast?.info) {
+        HEYS.Toast.info('День очищён. Можно отменить действие.');
       }
     };
 
@@ -611,11 +696,22 @@
               React.createElement('span', { className: 'kcal-realdata-card__badge' },
                 Math.round((currentRatio || 0) * 100) + '% от нормы'
               ),
-              React.createElement('button', {
-                type: 'button',
-                className: 'kcal-realdata-card__button',
-                onClick: confirmCurrentDayAsRealData
-              }, 'Это реальные данные')
+              React.createElement('div', { className: 'kcal-realdata-card__actions' },
+                React.createElement('button', {
+                  type: 'button',
+                  className: 'kcal-realdata-card__button' + (isClearPrimary ? '' : ' kcal-realdata-card__button--secondary'),
+                  onClick: clearCurrentDayFromStats,
+                  'aria-label': 'Очистить данные дня и исключить из статистики'
+                }, 'Очистить данные'),
+                React.createElement('button', {
+                  type: 'button',
+                  className: 'kcal-realdata-card__button' + (isClearPrimary ? ' kcal-realdata-card__button--secondary' : ''),
+                  onClick: confirmCurrentDayAsRealData,
+                  'aria-label': 'Подтвердить день как реальные данные'
+                }, 'Это реальные данные')
+              ),
+              React.createElement('div', { className: 'kcal-realdata-card__recommendation' }, recommendationText),
+              React.createElement('div', { className: 'kcal-realdata-card__impact' }, impactHintText)
             )
           )
         );

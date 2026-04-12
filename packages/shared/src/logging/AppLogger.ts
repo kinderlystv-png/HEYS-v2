@@ -58,7 +58,8 @@ export function normalizeLogArgs(
 ): { msg: string; meta?: LogMeta } {
   if (typeof a === 'string') {
     // message-first: (msg, meta?)
-    return { msg: a, meta: b as LogMeta | undefined };
+    const meta = b as LogMeta | undefined;
+    return meta === undefined ? { msg: a } : { msg: a, meta };
   }
   // object-first: (meta, msg)
   return { msg: (b as string) ?? '', meta: a };

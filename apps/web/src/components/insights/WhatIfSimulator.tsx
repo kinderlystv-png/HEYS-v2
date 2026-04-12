@@ -59,7 +59,7 @@ const PATTERN_LABELS: Record<string, string> = {
     meal_quality_trend: 'Meal Quality'
 };
 
-export const WhatIfSimulator: React.FC<WhatIfSimulatorProps> = ({ clientId }) => {
+export const WhatIfSimulator: React.FC<WhatIfSimulatorProps> = ({ clientId: _clientId }) => {
     const [selectedAction, setSelectedAction] = useState<string>('add_protein');
     const [params, setParams] = useState<Record<string, any>>({
         proteinGrams: 30,

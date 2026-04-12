@@ -450,7 +450,10 @@
                 onChange: handlePhoneInput,
                 onKeyDown: handlePhoneKeyDown,
                 className: 'phone-input-large heys-auth-phone-input',
-                style: { width: '195px' }
+                style: {
+                  width: '195px',
+                  fontWeight: 700,
+                }
               }),
             ),
           ),

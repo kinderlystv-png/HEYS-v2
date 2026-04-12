@@ -52,6 +52,7 @@
             blockCloudUpdatesUntilRef,
             isSyncingRef
         } = deps || {};
+        const clientScopeId = String(HEYS.currentClientId || HEYS.utils?.getCurrentClientId?.() || '');
 
         const isMeaningfulDayData = (data) => {
             if (!data || typeof data !== 'object') return false;
@@ -218,7 +219,7 @@
                 cancelled = true;
                 isSyncingRef.current = false; // Сброс при смене даты или размонтировании
             };
-        }, [date]);
+        }, [date, clientScopeId]);
 
         // Слушаем событие обновления данных дня (от Morning Check-in или внешних изменений)
         // НЕ слушаем heysSyncCompleted — это вызывает бесконечный цикл при каждом сохранении
@@ -514,7 +515,7 @@
 
             global.addEventListener('heys:meals-updated', handleMealsUpdated);
             return () => global.removeEventListener('heys:meals-updated', handleMealsUpdated);
-        }, [date]);
+        }, [date, clientScopeId]);
     }
 
     function useDayBootEffects() {

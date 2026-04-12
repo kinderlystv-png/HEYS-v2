@@ -1,4 +1,12 @@
-import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const originalLocalStorage = globalThis.localStorage;
+const originalSessionStorage = globalThis.sessionStorage;
 
 const ensureWindow = () => {
   if (!globalThis.window) {
@@ -7,6 +15,32 @@ const ensureWindow = () => {
   if (!window.HEYS) {
     window.HEYS = {};
   }
+};
+
+const createStorageMock = () => {
+  const store = {};
+  return {
+    get length() {
+      return Object.keys(store).length;
+    },
+    key: (index) => Object.keys(store)[index] ?? null,
+    getItem: (key) => (Object.prototype.hasOwnProperty.call(store, key) ? store[key] : null),
+    setItem: (key, value) => {
+      store[key] = String(value);
+    },
+    removeItem: (key) => {
+      delete store[key];
+    },
+    clear: () => {
+      Object.keys(store).forEach((key) => delete store[key]);
+    }
+  };
+};
+
+const evalScript = (relativePath) => {
+  const filePath = path.resolve(__dirname, relativePath);
+  const source = fs.readFileSync(filePath, 'utf8');
+  eval(source);
 };
 
 const baseTotals = {
@@ -102,15 +136,37 @@ const buildOtherAdvices = (ctxOverrides = {}, helperOverrides = {}) => (
   window.HEYS.adviceModules.other(makeCtx(ctxOverrides), makeOtherHelpers(helperOverrides))
 );
 
-beforeAll(async () => {
-  ensureWindow();
-  await import('../apps/web/heys_advice_rules_v1.js');
-  await import('../apps/web/heys_advice_bundle_v1.js');
-});
-
 beforeEach(() => {
+  Object.defineProperty(globalThis, 'localStorage', {
+    value: createStorageMock(),
+    writable: true,
+    configurable: true
+  });
+  Object.defineProperty(globalThis, 'sessionStorage', {
+    value: createStorageMock(),
+    writable: true,
+    configurable: true
+  });
+  ensureWindow();
+  window.HEYS = {};
+  evalScript('../apps/web/heys_advice_rules_v1.js');
+  evalScript('../apps/web/heys_advice_bundle_v1.js');
   localStorage.clear();
   sessionStorage.clear();
+  vi.useRealTimers();
+});
+
+afterEach(() => {
+  Object.defineProperty(globalThis, 'localStorage', {
+    value: originalLocalStorage,
+    writable: true,
+    configurable: true
+  });
+  Object.defineProperty(globalThis, 'sessionStorage', {
+    value: originalSessionStorage,
+    writable: true,
+    configurable: true
+  });
   vi.useRealTimers();
 });
 

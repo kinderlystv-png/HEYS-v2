@@ -21,14 +21,13 @@ import { createRoot, hydrateRoot } from 'react-dom/client';
 window.React = React;
 
 // ReactDOM с createRoot/hydrateRoot из react-dom/client (React 18+)
-window.ReactDOM = {
-    ...ReactDOM,
+(window as any).ReactDOM = Object.assign({}, ReactDOM, {
     createRoot,
     hydrateRoot,
-};
+});
 
 // Устанавливаем флаг готовности
-window.__heysReactReady = true;
+(window as any).__heysReactReady = true;
 
 // Dispatch event для модулей которые ждут React
 if (typeof window.dispatchEvent === 'function') {

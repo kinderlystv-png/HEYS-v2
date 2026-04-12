@@ -8,6 +8,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
 
     const scripts = [
         'heys_day_stats_vm_v1.js',
+        'heys_day_realdata_actions_v1.js',
         'heys_day_stats_v1.js',
         'heys_day_activity_v1.js',
         'heys_day_trainings_v1.js',
@@ -47,6 +48,116 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
         reportError(e, 'init');
     }
 })(window);
+
+
+/* ===== heys_day_realdata_actions_v1.js ===== */
+// heys_day_realdata_actions_v1.js — Shared actions for low-calorie day handling
+;(function (global) {
+  'use strict';
+
+  const HEYS = global.HEYS = global.HEYS || {};
+
+  function toNumber(value, fallback = 0) {
+    const num = Number(value);
+    return Number.isFinite(num) ? num : fallback;
+  }
+
+  function toInt(value, fallback = 0) {
+    return Math.round(toNumber(value, fallback));
+  }
+
+  function clearEstimatedDayFields(dayData) {
+    if (!dayData || typeof dayData !== 'object') return dayData;
+    delete dayData.savedEatenKcal;
+    delete dayData.savedDisplayOptimum;
+    delete dayData.savedEatenProt;
+    delete dayData.savedEatenCarbs;
+    delete dayData.savedEatenFat;
+    delete dayData.savedEatenFiber;
+    delete dayData.estimatedDayFill;
+    return dayData;
+  }
+
+  function applyDayStatusAction(dayData, actionId, options = {}) {
+    const nowTs = options.nowTs || Date.now();
+    const nextDay = (dayData && typeof dayData === 'object')
+      ? { ...dayData }
+      : {};
+
+    if (actionId === 'confirm_real_data') {
+      nextDay.isFastingDay = true;
+      nextDay.isIncomplete = false;
+      clearEstimatedDayFields(nextDay);
+    } else if (actionId === 'clear_day') {
+      nextDay.meals = [];
+      nextDay.isFastingDay = false;
+      nextDay.isIncomplete = false;
+      clearEstimatedDayFields(nextDay);
+    } else if (actionId === 'fill_later') {
+      nextDay.isIncomplete = true;
+    }
+
+    nextDay.updatedAt = nowTs;
+    return nextDay;
+  }
+
+  function getPreferredAction(params = {}) {
+    const ratio = toNumber(params.ratio, 0);
+    const mealCount = Math.max(0, toInt(params.mealCount, 0));
+
+    if (ratio > 0 && ratio < 0.3 && mealCount === 0) {
+      return 'clear_day';
+    }
+    return 'confirm_real_data';
+  }
+
+  function shouldOfferConfirmation(params = {}) {
+    const ratio = toNumber(params.ratio, 0);
+    const eatenKcal = toNumber(params.eatenKcal, 0);
+    const mealCount = Math.max(0, toInt(params.mealCount, 0));
+
+    return Boolean(
+      params.dateKey
+      && !params.isFuture
+      && !params.isToday
+      && !params.isFastingDay
+      && !params.isIncomplete
+      && !params.hasEstimatedFill
+      && ratio > 0
+      && ratio < 0.5
+      && (eatenKcal > 0 || mealCount > 0)
+    );
+  }
+
+  function getConfirmDialogText(actionId, params = {}) {
+    const eatenKcal = toInt(params.eatenKcal, 0);
+    const targetKcal = toInt(params.targetKcal, 0);
+
+    if (actionId === 'clear_day') {
+      return 'Очистить данные за этот день?\n\n'
+        + 'Сейчас: ' + eatenKcal + ' из ' + targetKcal + ' ккал.\n'
+        + 'Мы удалим приёмы пищи за день, статистика пересчитается.\n'
+        + 'После очистки действие можно быстро отменить через «Отменить».';
+    }
+
+    return 'Учесть этот день как реальные данные?\n\n'
+      + 'Сейчас: ' + eatenKcal + ' из ' + targetKcal + ' ккал.\n'
+      + 'День останется в статистике, даже если это меньше 50% нормы.';
+  }
+
+  function getImpactHint() {
+    return 'Влияет на средний дефицит, тренд и рекомендации.';
+  }
+
+  HEYS.DayRealDataActions = {
+    clearEstimatedDayFields,
+    applyDayStatusAction,
+    getPreferredAction,
+    shouldOfferConfirmation,
+    getConfirmDialogText,
+    getImpactHint,
+  };
+})(typeof window !== 'undefined' ? window : globalThis);
 
 
 /* ===== heys_day_edit_grams_modal_v1.js ===== */
@@ -15676,7 +15787,13 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                     logDeferredSlot('[HEYS.sceleton] ℹ️ ready_empty', { slotKey: debugKey });
                     deferredSkeletonState[debugKey] = 'ready_empty';
                 }
-                return React.createElement('div', { key: slotKey, className: 'deferred-card-slot deferred-card-slot--empty' });
+                return React.createElement('div', {
+                    key: slotKey,
+                    className: 'deferred-card-slot deferred-card-slot--empty',
+                    style: skeletonH
+                        ? { minHeight: Math.max(0, Number(skeletonH) || 0) + 'px' }
+                        : undefined
+                });
             }
             if (deferredSkeletonState[debugKey] !== 'ready_content') {
                 logDeferredSlot('[HEYS.sceleton] ✅ ready_content', { slotKey: debugKey });
@@ -15725,9 +15842,9 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             deferredSlot(cascadeReady, cascadeCard, 'slot-cascade', 140, '🔬', 'Анализируем ваши данные, чтобы показать состояние поведенческого каскада'),
             refeedCard,
             // R16: lazy-mount below-fold cards — prevent heavy hooks until near viewport
-            React.createElement(LazyMount, { key: 'lazy-below-fold', minHeight: 260 },
-                deferredSlot(mealRecReady, mealRecCard, 'slot-mealrec', 72, '🍽️', 'Загружаем ваши данные, чтобы умный планировщик дал точные рекомендации на остаток дня'),
-                deferredSlot(supplementsReady, supplementsCard, 'slot-supplements', 96, '💊', 'Подготавливаем план добавок на сегодня'),
+            React.createElement(LazyMount, { key: 'lazy-below-fold', minHeight: 460 },
+                deferredSlot(mealRecReady, mealRecCard, 'slot-mealrec', 180, '🍽️', 'Загружаем ваши данные, чтобы умный планировщик дал точные рекомендации на остаток дня'),
+                deferredSlot(supplementsReady, supplementsCard, 'slot-supplements', 140, '💊', 'Подготавливаем план добавок на сегодня'),
                 mealsChart,
                 insulinIndicator
             ),

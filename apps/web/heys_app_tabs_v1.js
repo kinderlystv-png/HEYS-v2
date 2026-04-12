@@ -209,7 +209,14 @@
         if (loading || !window.HEYS || !window.HEYS.DayTab) {
             return showSkeleton ? React.createElement(DayTabSkeleton) : null;
         }
-        return React.createElement(window.HEYS.DayTab, { products, selectedDate, setSelectedDate, subTab });
+        return React.createElement(window.HEYS.DayTab, {
+            key: `daytab-${clientId || 'none'}`,
+            clientId,
+            products,
+            selectedDate,
+            setSelectedDate,
+            subTab
+        });
     }
 
     // Skeleton для Ration/Products

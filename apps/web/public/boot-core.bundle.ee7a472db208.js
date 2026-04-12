@@ -4944,22 +4944,17 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
   function initScrollTracking() {
     let sessionActive = false;
     let rafId = null;
-    let lastFrameTs = 0;
+    let lastSampleTs = 0;
     let lastScrollTs = 0;
     let droppedFrames = 0;
     let worstDelta = 0;
+    let skipCount = 0;
 
-    const SCROLL_IDLE_MS = 180;
+    const SCROLL_IDLE_MS = 200;
+    const SAMPLE_EVERY_N = 3;
+
     const monitor = (ts) => {
       if (!sessionActive) return;
-      if (lastFrameTs > 0) {
-        const delta = ts - lastFrameTs;
-        worstDelta = Math.max(worstDelta, delta);
-        if (delta > PERF_THRESHOLDS.JANKY_SCROLL_FRAME) {
-          droppedFrames += Math.max(1, Math.round(delta / 16.7) - 1);
-        }
-      }
-      lastFrameTs = ts;
 
       if ((ts - lastScrollTs) > SCROLL_IDLE_MS) {
         perfState.scroll.sessions += 1;
@@ -4974,6 +4969,20 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
         return;
       }
 
+      skipCount++;
+      if (skipCount >= SAMPLE_EVERY_N) {
+        skipCount = 0;
+        if (lastSampleTs > 0) {
+          const delta = ts - lastSampleTs;
+          const avgFrame = delta / SAMPLE_EVERY_N;
+          worstDelta = Math.max(worstDelta, avgFrame);
+          if (avgFrame > PERF_THRESHOLDS.JANKY_SCROLL_FRAME) {
+            droppedFrames += Math.max(1, Math.round(delta / 16.7) - SAMPLE_EVERY_N);
+          }
+        }
+        lastSampleTs = ts;
+      }
+
       rafId = requestAnimationFrame(monitor);
     };
 
@@ -4983,7 +4992,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
         sessionActive = true;
         droppedFrames = 0;
         worstDelta = 0;
-        lastFrameTs = 0;
+        lastSampleTs = 0;
+        skipCount = 0;
         rafId = requestAnimationFrame(monitor);
       }
     };

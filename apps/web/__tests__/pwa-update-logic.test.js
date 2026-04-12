@@ -89,6 +89,17 @@ function clearAttemptsOnSuccess(currentVersion, _targetVersion) {
   return false;
 }
 
+function detectBundleStaleState({ manifestBootHash, loadedBootHash, swCacheVersion, expectedCacheVersion }) {
+  const hashMismatch = !!manifestBootHash && !!loadedBootHash && manifestBootHash !== loadedBootHash;
+  const cacheMismatch = !!swCacheVersion && !!expectedCacheVersion && swCacheVersion !== expectedCacheVersion;
+
+  if (hashMismatch || cacheMismatch) {
+    return { stale: true, reason: hashMismatch ? 'boot_hash_mismatch' : 'sw_cache_mismatch', action: 'hard_reload' };
+  }
+
+  return { stale: false, reason: 'in_sync', action: 'none' };
+}
+
 describe('PWA update protection', () => {
   beforeEach(() => {
     mockStorage = {};
@@ -229,6 +240,34 @@ describe('PWA update protection', () => {
 
       expect(cleared).toBe(false);
       expect(mockStorage[UPDATE_ATTEMPT_KEY]).toBeDefined();
+    });
+  });
+
+  describe('bundle manifest/cache stale detection', () => {
+    it('signals hard reload when loaded boot hash differs from manifest', () => {
+      const result = detectBundleStaleState({
+        manifestBootHash: 'boot-core.bundle.a4b467f83411.js',
+        loadedBootHash: 'boot-core.bundle.1319e4759e2b.js',
+        swCacheVersion: 'heys-1776009258765',
+        expectedCacheVersion: 'heys-1776009258765',
+      });
+
+      expect(result.stale).toBe(true);
+      expect(result.reason).toBe('boot_hash_mismatch');
+      expect(result.action).toBe('hard_reload');
+    });
+
+    it('reports in-sync when manifest hash and SW cache version match', () => {
+      const result = detectBundleStaleState({
+        manifestBootHash: 'boot-core.bundle.a4b467f83411.js',
+        loadedBootHash: 'boot-core.bundle.a4b467f83411.js',
+        swCacheVersion: 'heys-1776009258765',
+        expectedCacheVersion: 'heys-1776009258765',
+      });
+
+      expect(result.stale).toBe(false);
+      expect(result.reason).toBe('in_sync');
+      expect(result.action).toBe('none');
     });
   });
 });

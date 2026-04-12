@@ -33952,6 +33952,116 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
 })(typeof window !== 'undefined' ? window : global);
 
 
+/* ===== heys_day_realdata_actions_v1.js ===== */
+// heys_day_realdata_actions_v1.js — Shared actions for low-calorie day handling
+;(function (global) {
+  'use strict';
+
+  const HEYS = global.HEYS = global.HEYS || {};
+
+  function toNumber(value, fallback = 0) {
+    const num = Number(value);
+    return Number.isFinite(num) ? num : fallback;
+  }
+
+  function toInt(value, fallback = 0) {
+    return Math.round(toNumber(value, fallback));
+  }
+
+  function clearEstimatedDayFields(dayData) {
+    if (!dayData || typeof dayData !== 'object') return dayData;
+    delete dayData.savedEatenKcal;
+    delete dayData.savedDisplayOptimum;
+    delete dayData.savedEatenProt;
+    delete dayData.savedEatenCarbs;
+    delete dayData.savedEatenFat;
+    delete dayData.savedEatenFiber;
+    delete dayData.estimatedDayFill;
+    return dayData;
+  }
+
+  function applyDayStatusAction(dayData, actionId, options = {}) {
+    const nowTs = options.nowTs || Date.now();
+    const nextDay = (dayData && typeof dayData === 'object')
+      ? { ...dayData }
+      : {};
+
+    if (actionId === 'confirm_real_data') {
+      nextDay.isFastingDay = true;
+      nextDay.isIncomplete = false;
+      clearEstimatedDayFields(nextDay);
+    } else if (actionId === 'clear_day') {
+      nextDay.meals = [];
+      nextDay.isFastingDay = false;
+      nextDay.isIncomplete = false;
+      clearEstimatedDayFields(nextDay);
+    } else if (actionId === 'fill_later') {
+      nextDay.isIncomplete = true;
+    }
+
+    nextDay.updatedAt = nowTs;
+    return nextDay;
+  }
+
+  function getPreferredAction(params = {}) {
+    const ratio = toNumber(params.ratio, 0);
+    const mealCount = Math.max(0, toInt(params.mealCount, 0));
+
+    if (ratio > 0 && ratio < 0.3 && mealCount === 0) {
+      return 'clear_day';
+    }
+    return 'confirm_real_data';
+  }
+
+  function shouldOfferConfirmation(params = {}) {
+    const ratio = toNumber(params.ratio, 0);
+    const eatenKcal = toNumber(params.eatenKcal, 0);
+    const mealCount = Math.max(0, toInt(params.mealCount, 0));
+
+    return Boolean(
+      params.dateKey
+      && !params.isFuture
+      && !params.isToday
+      && !params.isFastingDay
+      && !params.isIncomplete
+      && !params.hasEstimatedFill
+      && ratio > 0
+      && ratio < 0.5
+      && (eatenKcal > 0 || mealCount > 0)
+    );
+  }
+
+  function getConfirmDialogText(actionId, params = {}) {
+    const eatenKcal = toInt(params.eatenKcal, 0);
+    const targetKcal = toInt(params.targetKcal, 0);
+
+    if (actionId === 'clear_day') {
+      return 'Очистить данные за этот день?\n\n'
+        + 'Сейчас: ' + eatenKcal + ' из ' + targetKcal + ' ккал.\n'
+        + 'Мы удалим приёмы пищи за день, статистика пересчитается.\n'
+        + 'После очистки действие можно быстро отменить через «Отменить».';
+    }
+
+    return 'Учесть этот день как реальные данные?\n\n'
+      + 'Сейчас: ' + eatenKcal + ' из ' + targetKcal + ' ккал.\n'
+      + 'День останется в статистике, даже если это меньше 50% нормы.';
+  }
+
+  function getImpactHint() {
+    return 'Влияет на средний дефицит, тренд и рекомендации.';
+  }
+
+  HEYS.DayRealDataActions = {
+    clearEstimatedDayFields,
+    applyDayStatusAction,
+    getPreferredAction,
+    shouldOfferConfirmation,
+    getConfirmDialogText,
+    getImpactHint,
+  };
+})(typeof window !== 'undefined' ? window : globalThis);
+
+
 /* ===== heys_yesterday_verify_v1.js ===== */
 // heys_yesterday_verify_v1.js — Верификация пропущенных прошлых дней
 // Показывается в утреннем чек-ине если после последнего заполненного дня есть пропуски
@@ -33995,6 +34105,7 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
   const lsGet = (k, d) => storeGet(k, d);
   const lsSet = (k, v) => storeSet(k, v);
   const YESTERDAY_VERIFY_MARKER_VERSION = 1;
+  const DayRealDataActions = HEYS.DayRealDataActions || {};
 
   /**
    * Получить ключ вчерашнего дня
@@ -34997,16 +35108,18 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
     };
   }
 
-  function clearEstimatedDayFields(dayData) {
-    if (!dayData || typeof dayData !== 'object') return;
-    delete dayData.savedEatenKcal;
-    delete dayData.savedDisplayOptimum;
-    delete dayData.savedEatenProt;
-    delete dayData.savedEatenCarbs;
-    delete dayData.savedEatenFat;
-    delete dayData.savedEatenFiber;
-    delete dayData.estimatedDayFill;
-  }
+  const clearEstimatedDayFields = typeof DayRealDataActions.clearEstimatedDayFields === 'function'
+    ? DayRealDataActions.clearEstimatedDayFields
+    : function fallbackClearEstimatedDayFields(dayData) {
+      if (!dayData || typeof dayData !== 'object') return;
+      delete dayData.savedEatenKcal;
+      delete dayData.savedDisplayOptimum;
+      delete dayData.savedEatenProt;
+      delete dayData.savedEatenCarbs;
+      delete dayData.savedEatenFat;
+      delete dayData.savedEatenFiber;
+      delete dayData.estimatedDayFill;
+    };
 
   // === Действия для неполных данных ===
   const INCOMPLETE_ACTIONS = [
@@ -35086,6 +35199,37 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
 
     const selectedAction = data.incompleteAction || null;
     const quickFillByDate = data.quickFillByDate || {};
+    const missingDays = pendingInfo?.missingDays || [];
+    const unresolvedDays = missingDays.filter((day) => !quickFillByDate[day.date]);
+    const unresolvedDaysCount = unresolvedDays.length;
+    const recommendedAction = unresolvedDaysCount > 0
+      ? (() => {
+        const getPreferredAction = DayRealDataActions.getPreferredAction;
+        if (typeof getPreferredAction !== 'function') return 'confirm_real_data';
+        const allSuggestClear = unresolvedDays.every((day) => (
+          getPreferredAction({ ratio: day.ratio, mealCount: day.mealCount }) === 'clear_day'
+        ));
+        return allSuggestClear ? 'clear_day' : 'confirm_real_data';
+      })()
+      : null;
+
+    React.useEffect(() => {
+      if (!pendingInfo) return;
+      if (selectedAction || unresolvedDaysCount === 0 || !recommendedAction) return;
+      onChange({
+        ...data,
+        incompleteAction: recommendedAction,
+        pendingDateKeys: missingDays.map((day) => day.date) || []
+      });
+    }, [
+      pendingInfo,
+      selectedAction,
+      unresolvedDaysCount,
+      recommendedAction,
+      data,
+      onChange,
+      missingDays
+    ]);
 
     // Обработчик выбора действия для неполных данных
     const handleActionSelect = (actionId) => {
@@ -35129,13 +35273,9 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
       });
     };
 
-    const unresolvedDaysCount = (pendingInfo?.missingDays || []).filter((day) => !quickFillByDate[day.date]).length;
-
     if (!pendingInfo) {
       return React.createElement('div', { className: 'yv-loading' }, 'Загрузка...');
     }
-
-    const missingDays = pendingInfo.missingDays || [];
 
     return React.createElement('div', { className: 'yv-step' },
       React.createElement('div', { className: 'yv-info' },
@@ -35264,7 +35404,8 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
               React.createElement('span', { className: 'yv-option-icon' }, act.icon),
               React.createElement('div', { className: 'yv-option-content' },
                 React.createElement('div', { className: 'yv-option-title' }, act.title),
-                React.createElement('div', { className: 'yv-option-desc' }, act.desc)
+                React.createElement('div', { className: 'yv-option-desc' }, act.desc),
+                recommendedAction === act.id && React.createElement('div', { className: 'yv-option-recommended' }, 'Рекомендуем')
               ),
               selectedAction === act.id && React.createElement('span', {
                 className: 'yv-option-check'
@@ -35330,6 +35471,9 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
     const pendingDays = getPendingPastDays().missingDays || [];
     const nowTs = Date.now();
     const quickFillByDate = data.quickFillByDate || {};
+    const applyDayStatusAction = typeof DayRealDataActions.applyDayStatusAction === 'function'
+      ? DayRealDataActions.applyDayStatusAction
+      : null;
 
     pendingDays.forEach((dayInfo) => {
       const dateKey = dayInfo.date;
@@ -35347,34 +35491,65 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
         window.dispatchEvent(new CustomEvent('heys:day-updated', {
           detail: { date: dateKey, source: 'yesterday-verify-estimated', data: dayData }
         }));
+        try {
+          HEYS.analytics?.trackDataOperation?.('yesterday_verify_estimated_fill', 1, {
+            date: dateKey,
+            ratio: Number(dayInfo?.ratio || 0),
+            mealCount: Number(dayInfo?.mealCount || 0)
+          });
+        } catch (_) { }
         return;
       }
 
       if (data.incompleteAction === 'confirm_real_data') {
-        dayData.isFastingDay = true;
-        dayData.isIncomplete = false;
-        clearEstimatedDayFields(dayData);
-        markYesterdayVerified(dayData, 'confirm_real_data', nowTs);
-        dayData.updatedAt = nowTs;
-        lsSet(`heys_dayv2_${dateKey}`, dayData);
+        const nextDayData = applyDayStatusAction
+          ? applyDayStatusAction(dayData, 'confirm_real_data', { nowTs })
+          : (() => {
+            dayData.isFastingDay = true;
+            dayData.isIncomplete = false;
+            clearEstimatedDayFields(dayData);
+            dayData.updatedAt = nowTs;
+            return dayData;
+          })();
+        markYesterdayVerified(nextDayData, 'confirm_real_data', nowTs);
+        lsSet(`heys_dayv2_${dateKey}`, nextDayData);
 
         window.dispatchEvent(new CustomEvent('heys:day-updated', {
-          detail: { date: dateKey, source: 'yesterday-verify-real-data', data: dayData }
+          detail: { date: dateKey, source: 'yesterday-verify-real-data', data: nextDayData }
         }));
+        try {
+          HEYS.analytics?.trackDataOperation?.('yesterday_verify_confirm_real_data', 1, {
+            date: dateKey,
+            ratio: Number(dayInfo?.ratio || 0),
+            mealCount: Number(dayInfo?.mealCount || 0)
+          });
+        } catch (_) { }
         return;
       }
 
       if (data.incompleteAction === 'clear_day') {
-        dayData.meals = [];
-        dayData.isIncomplete = false;
-        clearEstimatedDayFields(dayData);
-        markYesterdayVerified(dayData, 'clear_day', nowTs);
-        dayData.updatedAt = nowTs;
-        lsSet(`heys_dayv2_${dateKey}`, dayData);
+        const nextDayData = applyDayStatusAction
+          ? applyDayStatusAction(dayData, 'clear_day', { nowTs })
+          : (() => {
+            dayData.meals = [];
+            dayData.isIncomplete = false;
+            clearEstimatedDayFields(dayData);
+            dayData.updatedAt = nowTs;
+            return dayData;
+          })();
+        markYesterdayVerified(nextDayData, 'clear_day', nowTs);
+        lsSet(`heys_dayv2_${dateKey}`, nextDayData);
 
         window.dispatchEvent(new CustomEvent('heys:day-updated', {
-          detail: { date: dateKey, field: 'meals', value: [], source: 'yesterday-verify-clear' }
+          detail: { date: dateKey, field: 'meals', value: [], source: 'yesterday-verify-clear', data: nextDayData }
         }));
+        try {
+          HEYS.analytics?.trackDataOperation?.('yesterday_verify_clear_day', 1, {
+            date: dateKey,
+            ratio: Number(dayInfo?.ratio || 0),
+            mealCount: Number(dayInfo?.mealCount || 0)
+          });
+        } catch (_) { }
       }
 
       if (data.incompleteAction === 'fill_later') {
@@ -35382,6 +35557,13 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
         markYesterdayVerified(dayData, 'fill_later', nowTs);
         dayData.updatedAt = nowTs;
         lsSet(`heys_dayv2_${dateKey}`, dayData);
+        try {
+          HEYS.analytics?.trackDataOperation?.('yesterday_verify_fill_later', 1, {
+            date: dateKey,
+            ratio: Number(dayInfo?.ratio || 0),
+            mealCount: Number(dayInfo?.mealCount || 0)
+          });
+        } catch (_) { }
       }
 
       window.dispatchEvent(new CustomEvent('heys:day-updated', {

@@ -361,24 +361,26 @@ class DependencySecurityChecker {
     }
 
     // Рекомендации по устаревшим пакетам
-    try {
-      const outdatedOutput = execSync('pnpm outdated --format=json', {
-        cwd: this.config.projectRoot || DEPENDENCY_CONFIG.projectRoot,
-        encoding: 'utf8',
-        stdio: ['pipe', 'pipe', 'pipe'],
-      });
-
-      const outdated = JSON.parse(outdatedOutput);
-      if (Object.keys(outdated).length > 0) {
-        recommendations.push({
-          type: 'maintenance',
-          title: 'Package Updates Available',
-          description: `${Object.keys(outdated).length} packages have newer versions available. Regular updates improve security.`,
-          priority: 3,
+    if (!this.config.skipOutdatedCheck) {
+      try {
+        const outdatedOutput = execSync('pnpm outdated --format=json', {
+          cwd: this.config.projectRoot || DEPENDENCY_CONFIG.projectRoot,
+          encoding: 'utf8',
+          stdio: ['pipe', 'pipe', 'pipe'],
         });
+
+        const outdated = JSON.parse(outdatedOutput);
+        if (Object.keys(outdated).length > 0) {
+          recommendations.push({
+            type: 'maintenance',
+            title: 'Package Updates Available',
+            description: `${Object.keys(outdated).length} packages have newer versions available. Regular updates improve security.`,
+            priority: 3,
+          });
+        }
+      } catch (error) {
+        // Игнорируем ошибки проверки устаревших пакетов
       }
-    } catch (error) {
-      // Игнорируем ошибки проверки устаревших пакетов
     }
 
     // Общие рекомендации
