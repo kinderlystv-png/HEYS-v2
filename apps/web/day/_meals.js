@@ -2242,6 +2242,7 @@
             if (totalMeals <= INITIAL_VISIBLE_MEALS) return totalMeals;
             return INITIAL_VISIBLE_MEALS;
         });
+        const loadMoreAnchorRef = React.useRef(null);
 
         React.useEffect(() => {
             setVisibleMealsLimit((prev) => {
@@ -2251,31 +2252,30 @@
             });
         }, [totalMeals]);
 
+        const hasMoreMeals = visibleMealsLimit < totalMeals;
+        const loadMoreMeals = React.useCallback(() => {
+            setVisibleMealsLimit((prev) => Math.min(totalMeals, prev + MEALS_RENDER_CHUNK_SIZE));
+        }, [totalMeals]);
+
         React.useEffect(() => {
-            if (visibleMealsLimit >= totalMeals) return undefined;
-            let cancelled = false;
-            let idleId = null;
-            let timeoutId = null;
+            if (!hasMoreMeals) return undefined;
+            const anchor = loadMoreAnchorRef.current;
+            if (!anchor || typeof IntersectionObserver === 'undefined') return undefined;
 
-            const flushNextChunk = () => {
-                if (cancelled) return;
-                setVisibleMealsLimit((prev) => Math.min(totalMeals, prev + MEALS_RENDER_CHUNK_SIZE));
-            };
-
-            if (typeof window !== 'undefined' && typeof window.requestIdleCallback === 'function') {
-                idleId = window.requestIdleCallback(flushNextChunk, { timeout: 120 });
-            } else {
-                timeoutId = setTimeout(flushNextChunk, 16);
-            }
-
-            return () => {
-                cancelled = true;
-                if (idleId != null && typeof window !== 'undefined' && typeof window.cancelIdleCallback === 'function') {
-                    window.cancelIdleCallback(idleId);
+            const observer = new IntersectionObserver((entries) => {
+                if (!entries || entries.length === 0) return;
+                if (entries[0].isIntersecting) {
+                    loadMoreMeals();
                 }
-                if (timeoutId != null) clearTimeout(timeoutId);
-            };
-        }, [totalMeals, visibleMealsLimit]);
+            }, {
+                root: null,
+                rootMargin: '0px 0px 480px 0px',
+                threshold: 0.01,
+            });
+
+            observer.observe(anchor);
+            return () => observer.disconnect();
+        }, [hasMoreMeals, loadMoreMeals]);
 
         const visibleSortedMeals = React.useMemo(() => {
             if (visibleMealsLimit >= totalMeals) return sortedMealsForDisplay;
@@ -2283,7 +2283,7 @@
         }, [sortedMealsForDisplay, totalMeals, visibleMealsLimit]);
 
         const mealsUI = React.useMemo(() => {
-            return HEYS.dayMealsList?.renderMealsList?.({
+            const baseMealsUI = HEYS.dayMealsList?.renderMealsList?.({
                 sortedMealsForDisplay: visibleSortedMeals,
                 day,
                 products,
@@ -2312,6 +2312,32 @@
                 prof,
                 insulinWaveData,
             }) || [];
+            if (!hasMoreMeals) return baseMealsUI;
+
+            return [
+                ...baseMealsUI,
+                React.createElement('div', {
+                    key: 'meals-load-more-anchor',
+                    ref: loadMoreAnchorRef,
+                    className: 'meals-load-more-anchor',
+                    style: {
+                        display: 'flex',
+                        justifyContent: 'center',
+                        padding: '10px 0 4px',
+                    },
+                },
+                React.createElement('button', {
+                    type: 'button',
+                    className: 'btn',
+                    onClick: loadMoreMeals,
+                    style: {
+                        minWidth: '160px',
+                        borderRadius: '12px',
+                        padding: '10px 14px',
+                        fontWeight: '600',
+                    },
+                }, `Показать ещё (${Math.max(0, totalMeals - visibleMealsLimit)})`))
+            ];
         }, [
             addProductToMeal,
             changeMealMood,
@@ -2332,12 +2358,16 @@
             pIndex,
             products,
             prof,
+            hasMoreMeals,
             removeItem,
             removeMeal,
+            loadMoreMeals,
             setDay,
             setGrams,
             setMealQualityPopup,
+            totalMeals,
             visibleSortedMeals,
+            visibleMealsLimit,
             toggleMealExpand,
             updateMealTime,
         ]);
