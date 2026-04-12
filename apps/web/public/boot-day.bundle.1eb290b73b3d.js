@@ -18215,6 +18215,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             const mealId = sourceMeals[idx]?.id;
             if (mealId) mealIndexById.set(mealId, idx);
         }
+        const nowDate = new Date();
+        const nowMinutes = (nowDate.getHours() * 60) + nowDate.getMinutes();
 
         return sortedMealsForDisplay.map((sortedMeal, displayIndex) => {
             const mi = mealIndexById.has(sortedMeal.id) ? mealIndexById.get(sortedMeal.id) : -1;
@@ -18231,7 +18233,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             const isExpanded = isMealExpanded(mi, sourceMeals.length, sourceMeals, displayIndex);
             const mealNumber = sortedMealsForDisplay.length - displayIndex;
             const isFirst = displayIndex === 0;
-            const isCurrentMeal = isFirst && !isMealStale(meal);
+            const isCurrentMeal = isFirst && !isMealStale(meal, nowMinutes);
 
             return React.createElement('div', {
                 key: meal.id + '_' + (meal.mealType || 'auto'),
@@ -19108,14 +19110,19 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             } catch (e) { }
         }, [expandedMeals, expandedMealsKey]);
 
-        const isMealStale = React.useCallback((meal) => {
+        const isMealStale = React.useCallback((meal, nowMinutesOverride) => {
             if (!meal || !meal.time) return false;
             const [hours, minutes] = meal.time.split(':').map(Number);
             if (isNaN(hours) || isNaN(minutes)) return false;
-            const now = new Date();
-            const mealDate = new Date();
-            mealDate.setHours(hours, minutes, 0, 0);
-            const diffMinutes = (now - mealDate) / (1000 * 60);
+
+            let nowMinutes = Number(nowMinutesOverride);
+            if (!Number.isFinite(nowMinutes)) {
+                const nowDate = new Date();
+                nowMinutes = (nowDate.getHours() * 60) + nowDate.getMinutes();
+            }
+
+            const mealMinutes = (hours * 60) + minutes;
+            const diffMinutes = nowMinutes - mealMinutes;
             return diffMinutes > 30;
         }, []);
 
