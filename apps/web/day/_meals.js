@@ -2199,6 +2199,9 @@
 
         if (!React) return { sortedMealsForDisplay: [], mealsUI: [] };
 
+        const INITIAL_VISIBLE_MEALS = 8;
+        const MEALS_RENDER_CHUNK_SIZE = 6;
+
         const sortedMealsForDisplay = React.useMemo(() => {
             const meals = day?.meals || [];
             if (meals.length <= 1) return meals;
@@ -2215,9 +2218,54 @@
             });
         }, [safeMeals]);
 
+        const totalMeals = sortedMealsForDisplay.length;
+        const [visibleMealsLimit, setVisibleMealsLimit] = React.useState(() => {
+            if (totalMeals <= INITIAL_VISIBLE_MEALS) return totalMeals;
+            return INITIAL_VISIBLE_MEALS;
+        });
+
+        React.useEffect(() => {
+            setVisibleMealsLimit((prev) => {
+                if (totalMeals <= INITIAL_VISIBLE_MEALS) return totalMeals;
+                if (prev >= totalMeals) return prev;
+                return INITIAL_VISIBLE_MEALS;
+            });
+        }, [totalMeals]);
+
+        React.useEffect(() => {
+            if (visibleMealsLimit >= totalMeals) return undefined;
+            let cancelled = false;
+            let idleId = null;
+            let timeoutId = null;
+
+            const flushNextChunk = () => {
+                if (cancelled) return;
+                setVisibleMealsLimit((prev) => Math.min(totalMeals, prev + MEALS_RENDER_CHUNK_SIZE));
+            };
+
+            if (typeof window !== 'undefined' && typeof window.requestIdleCallback === 'function') {
+                idleId = window.requestIdleCallback(flushNextChunk, { timeout: 120 });
+            } else {
+                timeoutId = setTimeout(flushNextChunk, 16);
+            }
+
+            return () => {
+                cancelled = true;
+                if (idleId != null && typeof window !== 'undefined' && typeof window.cancelIdleCallback === 'function') {
+                    window.cancelIdleCallback(idleId);
+                }
+                if (timeoutId != null) clearTimeout(timeoutId);
+            };
+        }, [totalMeals, visibleMealsLimit]);
+
+        const visibleSortedMeals = React.useMemo(() => {
+            if (visibleMealsLimit >= totalMeals) return sortedMealsForDisplay;
+            return sortedMealsForDisplay.slice(0, visibleMealsLimit);
+        }, [sortedMealsForDisplay, totalMeals, visibleMealsLimit]);
+
         const mealsUI = React.useMemo(() => {
             return HEYS.dayMealsList?.renderMealsList?.({
-                sortedMealsForDisplay,
+                sortedMealsForDisplay: visibleSortedMeals,
                 day,
                 products,
                 pIndex,
@@ -2270,7 +2318,7 @@
             setDay,
             setGrams,
             setMealQualityPopup,
-            sortedMealsForDisplay,
+            visibleSortedMeals,
             toggleMealExpand,
             updateMealTime,
         ]);
