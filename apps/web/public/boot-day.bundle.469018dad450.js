@@ -14480,16 +14480,19 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                 legacyTheme = rawLegacyTheme == null ? null : (rawLegacyTheme.startsWith('"') ? JSON.parse(rawLegacyTheme) : rawLegacyTheme);
             } catch { }
 
-            if (pref === null || pref === undefined) pref = readStoredValue(THEME_PREF_KEY, null);
-            if (isThemePreference(pref)) return pref;
-
             if (explicit === null || explicit === undefined) explicit = readStoredValue(THEME_EXPLICIT_KEY, null);
-            if (isExplicitThemeFlag(explicit)) {
-                if (legacyTheme === null || legacyTheme === undefined) legacyTheme = readStoredValue(LEGACY_THEME_KEY, null);
-                if (legacyTheme === 'light' || legacyTheme === 'dark') return legacyTheme;
+            if (!isExplicitThemeFlag(explicit)) return 'light';
+
+            if (pref === null || pref === undefined) pref = readStoredValue(THEME_PREF_KEY, null);
+            if (pref === 'dark' || pref === 'light') return pref;
+            if (pref === 'auto') return 'light';
+
+            if (legacyTheme === null || legacyTheme === undefined) legacyTheme = readStoredValue(LEGACY_THEME_KEY, null);
+            if (legacyTheme === 'light' || legacyTheme === 'dark') {
+                return legacyTheme;
             }
 
-            return 'auto';
+            return 'light';
         };
 
         const normalizeThemePreference = (value) => {
@@ -14498,10 +14501,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                 try { rawValue = JSON.parse(rawValue); } catch { }
             }
             if (rawValue === 'light' || rawValue === 'dark') return rawValue;
-            if (rawValue === 'auto') {
-                return getSystemTheme();
-            }
-            return getSystemTheme();
+            if (rawValue === 'auto') return 'light';
+            return 'light';
         };
 
         if (!dayEffects?.useDayCurrentMinuteEffect) {

@@ -1,0 +1,426 @@
+{
+  "runAt": "2026-04-12T17:24:55.387Z",
+  "finishedAt": "2026-04-12T17:26:10.515Z",
+  "baseUrl": "http://127.0.0.1:3001/?perf-audit=multi-user",
+  "users": [
+    {
+      "id": "user_a",
+      "label": "User A",
+      "phoneMasked": "+7***6111",
+      "status": "ok",
+      "failure": null,
+      "login": {
+        "loginDurationMs": 13126
+      },
+      "scenario": {
+        "scenarioDurationMs": 24400,
+        "interactions": [
+          {
+            "type": "click",
+            "target": "7д",
+            "ok": false
+          },
+          {
+            "type": "click",
+            "target": "30д",
+            "ok": false
+          },
+          {
+            "type": "click",
+            "target": "Неделя",
+            "ok": false
+          },
+          {
+            "type": "click",
+            "target": "Месяц",
+            "ok": false
+          },
+          {
+            "type": "click",
+            "target": "Показать дни недели",
+            "ok": false
+          },
+          {
+            "type": "click",
+            "target": "Показать дни недели",
+            "ok": false
+          },
+          {
+            "type": "click",
+            "target": "Это реальные данные",
+            "ok": false
+          },
+          {
+            "type": "click",
+            "target": "Добавить стакан воды",
+            "ok": false
+          },
+          {
+            "type": "click",
+            "target": "Добавить приём пищи",
+            "ok": true
+          },
+          {
+            "type": "bottom-tab",
+            "target": "Отчёты",
+            "ok": false
+          },
+          {
+            "type": "bottom-tab",
+            "target": "Дневник",
+            "ok": false
+          },
+          {
+            "type": "bottom-tab",
+            "target": "Инсайты",
+            "ok": false
+          },
+          {
+            "type": "bottom-tab",
+            "target": "Месяц",
+            "ok": false
+          },
+          {
+            "type": "bottom-tab",
+            "target": "Задачи",
+            "ok": false
+          }
+        ]
+      },
+      "collected": {
+        "stats": {
+          "session": {
+            "duration": "37s",
+            "start": "2026-04-12T17:24:57.242Z"
+          },
+          "searches": {
+            "total": 0,
+            "slow": 0,
+            "slowRate": "0%"
+          },
+          "apiCalls": {
+            "total": 0,
+            "slow": 0,
+            "failed": 0,
+            "slowRate": "0%",
+            "failRate": "0%"
+          },
+          "cache": {
+            "hits": 0,
+            "misses": 0,
+            "hitRate": "0%"
+          },
+          "events": {
+            "total": 9,
+            "tabSwitches": 0,
+            "slowInteractions": 19
+          },
+          "errors": {
+            "total": 0
+          },
+          "performance": {
+            "enabled": true,
+            "sampleRate": 1,
+            "webVitals": {
+              "lcp": 12492,
+              "cls": 0.3666,
+              "inp": 128,
+              "inpEvent": "pointerover"
+            },
+            "clicks": {
+              "count": 1,
+              "p50ClickToFrame": 22.5,
+              "p95ClickToFrame": 22.5,
+              "maxClickToFrame": 22.5
+            },
+            "interactions": {
+              "p95EventDuration": 128,
+              "slowInteractions": 19
+            },
+            "longTasks": {
+              "count": 29,
+              "avgDuration": 133.8,
+              "maxDuration": 567
+            },
+            "scroll": {
+              "sessions": 1,
+              "jankySessions": 1,
+              "jankRate": 100,
+              "totalDroppedFrames": 4,
+              "maxDroppedFramesInSession": 4,
+              "worstFrameDelta": 83.3
+            },
+            "dataProfile": {
+              "daysCount": 0,
+              "daysBucket": "0",
+              "avgItemsPerDay": 0,
+              "itemsBucket": "0",
+              "storageMB": 3.09
+            },
+            "customMeasures": [
+              {
+                "name": "multi_user_perf_scenario",
+                "duration": 24360.6,
+                "ts": 1776014733947,
+                "meta": {
+                  "at": 1776014733947
+                }
+              },
+              {
+                "name": "multi_user_perf_scenario",
+                "duration": 24360.6,
+                "ts": 1776014733947,
+                "meta": {
+                  "source": "playwright"
+                }
+              }
+            ]
+          }
+        },
+        "storage": {
+          "totalKeys": 741,
+          "dayLikeKeys": 125,
+          "uniqueDayDates": 124,
+          "minDate": "2025-12-07",
+          "maxDate": "2026-04-12"
+        },
+        "sync": {
+          "pendingCount": 1,
+          "pendingDetails": {
+            "days": 0,
+            "products": 0,
+            "profile": 0,
+            "other": 1
+          },
+          "syncStatus": "synced"
+        }
+      },
+      "consoleSummary": {
+        "log": 2,
+        "info": 40,
+        "warning": 1,
+        "error": 0
+      },
+      "pageErrors": [],
+      "requestFailedCount": 0,
+      "requestFailsTop": [],
+      "consoleTop": [
+        {
+          "at": "2026-04-12T17:25:05.792Z",
+          "type": "warning",
+          "text": "[HEYS.sinhron] 🔀 dayv2 дедупликация: 1 дублей отброшено: 2025-12-08"
+        }
+      ]
+    },
+    {
+      "id": "user_b",
+      "label": "User B",
+      "phoneMasked": "+7***7111",
+      "status": "ok",
+      "failure": null,
+      "login": {
+        "loginDurationMs": 10771
+      },
+      "scenario": {
+        "scenarioDurationMs": 25247,
+        "interactions": [
+          {
+            "type": "click",
+            "target": "7д",
+            "ok": false
+          },
+          {
+            "type": "click",
+            "target": "30д",
+            "ok": false
+          },
+          {
+            "type": "click",
+            "target": "Неделя",
+            "ok": false
+          },
+          {
+            "type": "click",
+            "target": "Месяц",
+            "ok": false
+          },
+          {
+            "type": "click",
+            "target": "Показать дни недели",
+            "ok": false
+          },
+          {
+            "type": "click",
+            "target": "Показать дни недели",
+            "ok": false
+          },
+          {
+            "type": "click",
+            "target": "Это реальные данные",
+            "ok": false
+          },
+          {
+            "type": "click",
+            "target": "Добавить стакан воды",
+            "ok": false
+          },
+          {
+            "type": "click",
+            "target": "Добавить приём пищи",
+            "ok": true
+          },
+          {
+            "type": "bottom-tab",
+            "target": "Отчёты",
+            "ok": false
+          },
+          {
+            "type": "bottom-tab",
+            "target": "Дневник",
+            "ok": false
+          },
+          {
+            "type": "bottom-tab",
+            "target": "Инсайты",
+            "ok": false
+          },
+          {
+            "type": "bottom-tab",
+            "target": "Месяц",
+            "ok": false
+          },
+          {
+            "type": "bottom-tab",
+            "target": "Задачи",
+            "ok": false
+          }
+        ]
+      },
+      "collected": {
+        "stats": {
+          "session": {
+            "duration": "36s",
+            "start": "2026-04-12T17:25:34.888Z"
+          },
+          "searches": {
+            "total": 0,
+            "slow": 0,
+            "slowRate": "0%"
+          },
+          "apiCalls": {
+            "total": 0,
+            "slow": 0,
+            "failed": 0,
+            "slowRate": "0%",
+            "failRate": "0%"
+          },
+          "cache": {
+            "hits": 0,
+            "misses": 0,
+            "hitRate": "0%"
+          },
+          "events": {
+            "total": 9,
+            "tabSwitches": 0,
+            "slowInteractions": 39
+          },
+          "errors": {
+            "total": 0
+          },
+          "performance": {
+            "enabled": true,
+            "sampleRate": 1,
+            "webVitals": {
+              "lcp": 10424,
+              "cls": 0.7337,
+              "inp": 152,
+              "inpEvent": "pointerover"
+            },
+            "clicks": {
+              "count": 1,
+              "p50ClickToFrame": 30.2,
+              "p95ClickToFrame": 30.2,
+              "maxClickToFrame": 30.2
+            },
+            "interactions": {
+              "p95EventDuration": 152,
+              "slowInteractions": 39
+            },
+            "longTasks": {
+              "count": 30,
+              "avgDuration": 107.5,
+              "maxDuration": 411
+            },
+            "scroll": {
+              "sessions": 1,
+              "jankySessions": 1,
+              "jankRate": 100,
+              "totalDroppedFrames": 7,
+              "maxDroppedFramesInSession": 7,
+              "worstFrameDelta": 66.6
+            },
+            "dataProfile": {
+              "daysCount": 0,
+              "daysBucket": "0",
+              "avgItemsPerDay": 0,
+              "itemsBucket": "0",
+              "storageMB": 0.99
+            },
+            "customMeasures": [
+              {
+                "name": "multi_user_perf_scenario",
+                "duration": 25104.1,
+                "ts": 1776014770294,
+                "meta": {
+                  "at": 1776014770294
+                }
+              },
+              {
+                "name": "multi_user_perf_scenario",
+                "duration": 25104.1,
+                "ts": 1776014770295,
+                "meta": {
+                  "source": "playwright"
+                }
+              }
+            ]
+          }
+        },
+        "storage": {
+          "totalKeys": 373,
+          "dayLikeKeys": 76,
+          "uniqueDayDates": 75,
+          "minDate": "2025-12-15",
+          "maxDate": "2026-04-12"
+        },
+        "sync": {
+          "pendingCount": 1,
+          "pendingDetails": {
+            "days": 0,
+            "products": 0,
+            "profile": 0,
+            "other": 1
+          },
+          "syncStatus": "synced"
+        }
+      },
+      "consoleSummary": {
+        "log": 2,
+        "info": 40,
+        "warning": 1,
+        "error": 0
+      },
+      "pageErrors": [],
+      "requestFailedCount": 0,
+      "requestFailsTop": [],
+      "consoleTop": [
+        {
+          "at": "2026-04-12T17:25:43.086Z",
+          "type": "warning",
+          "text": "[HEYS.sinhron] ⚠️ СЕГОДНЯ: есть meals=2 но dayTot ПУСТОЙ — UI может показать неверные данные до пересчёта"
+        }
+      ]
+    }
+  ],
+  "rawJsonPath": "reports/performance/multi-user-perf-audit-2026-04-12T17-26-10-515Z.json"
+}

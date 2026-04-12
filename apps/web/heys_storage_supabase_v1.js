@@ -84,6 +84,8 @@
     'heys_planning_projects',
     'heys_planning_tasks',
     'heys_planning_slots',
+    'heys_planning_inbox_v1',
+    'heys_planning_links_v1',
   ];
 
   /** Префиксы ключей, требующих client-specific storage */
@@ -1522,42 +1524,28 @@
   }
 
   const PENDING_QUEUE_KEY = 'heys_pending_sync_queue';
-  const PENDING_CLIENT_QUEUE_KEY = 'heys_pending_client_sync_queue';
   const PENDING_QUEUE_COMPRESS_MIN_BYTES = 16 * 1024;
   const PENDING_QUEUE_INLINE_VALUE_MAX_BYTES = 32 * 1024;
 
-  function getPendingQueueIdentity(item, storageKey, fallbackIndex) {
-    if (!item || typeof item !== 'object') return `__pending_invalid_${fallbackIndex}`;
-    const normalizedKey = String(item.k || '');
-    if (!normalizedKey) return `__pending_missing_key_${fallbackIndex}`;
-    if (storageKey === PENDING_CLIENT_QUEUE_KEY || item.client_id) {
-      return `${item.client_id || ''}:${normalizedKey}`;
-    }
-    return `${item.user_id || ''}:${normalizedKey}`;
+  const _pendingQueuePure = HEYS.pendingQueuePure;
+  if (!_pendingQueuePure || typeof _pendingQueuePure.getPendingQueueIdentity !== 'function' || typeof _pendingQueuePure.compactPendingQueue !== 'function') {
+    throw new Error('[HEYS.storage] Load heys_pending_queue_pure_v1.js before heys_storage_supabase_v1.js (boot-core order)');
   }
-
-  function compactPendingQueue(queue, storageKey, options = {}) {
-    if (!Array.isArray(queue) || queue.length <= 1) return Array.isArray(queue) ? queue : [];
-
-    const dedupedReverse = [];
-    const seen = new Set();
-
-    for (let i = queue.length - 1; i >= 0; i--) {
-      const item = queue[i];
-      const identity = getPendingQueueIdentity(item, storageKey, i);
-      if (seen.has(identity)) continue;
-      seen.add(identity);
-      dedupedReverse.push(item);
-    }
-
-    const compacted = dedupedReverse.reverse();
-    if (options.mutate && Array.isArray(queue)) {
-      queue.splice(0, queue.length, ...compacted);
-      return queue;
-    }
-
-    return compacted;
+  const _syncQueueRuntimePure = HEYS.syncQueueRuntimePure;
+  if (
+    !_syncQueueRuntimePure ||
+    typeof _syncQueueRuntimePure.enqueueClientSave !== 'function' ||
+    typeof _syncQueueRuntimePure.flushPendingQueueCore !== 'function' ||
+    typeof _syncQueueRuntimePure.shouldScheduleRetryAfterRpcError !== 'function'
+  ) {
+    throw new Error('[HEYS.storage] Load heys_sync_queue_runtime_pure_v1.js before heys_storage_supabase_v1.js (boot-core order)');
   }
+  const PENDING_CLIENT_QUEUE_KEY = _pendingQueuePure.PENDING_CLIENT_QUEUE_KEY;
+  const getPendingQueueIdentity = _pendingQueuePure.getPendingQueueIdentity.bind(_pendingQueuePure);
+  const compactPendingQueue = _pendingQueuePure.compactPendingQueue.bind(_pendingQueuePure);
+  const enqueueClientSave = _syncQueueRuntimePure.enqueueClientSave.bind(_syncQueueRuntimePure);
+  const flushPendingQueueCore = _syncQueueRuntimePure.flushPendingQueueCore.bind(_syncQueueRuntimePure);
+  const shouldScheduleRetryAfterRpcError = _syncQueueRuntimePure.shouldScheduleRetryAfterRpcError.bind(_syncQueueRuntimePure);
 
   function getPendingQueueLocalStorageKey(item) {
     if (!item || typeof item !== 'object') return '';
@@ -1682,19 +1670,29 @@
   const HYDRATION_DAY_QUOTA_SKIP_AFTER_DAYS = 45; // Старые dayv2 оставляем в cloud, если localStorage уже упёрся в quota
   const QUOTA_LOG_THROTTLE_MS = 5000;
   const QUOTA_CLEANUP_COOLDOWN_MS = 3000;
+  const STORAGE_SIZE_CACHE_TTL_MS = 10000;
   const quotaLogTimestamps = new Map();
   let _lastAggressiveCleanupAt = 0;
+  let _storageSizeCache = { mb: 0, ts: 0 };
 
   /** Получить размер localStorage в MB */
-  function getStorageSize() {
+  function getStorageSize(options = {}) {
     try {
-      let total = 0;
-      for (let key in global.localStorage) {
-        if (global.localStorage.hasOwnProperty(key)) {
-          total += (global.localStorage.getItem(key) || '').length * 2; // UTF-16
-        }
+      const forceRecalc = options && options.forceRecalc === true;
+      const now = Date.now();
+      if (!forceRecalc && (now - _storageSizeCache.ts) < STORAGE_SIZE_CACHE_TTL_MS) {
+        return _storageSizeCache.mb;
       }
-      return total / 1024 / 1024;
+
+      let total = 0;
+      for (let i = 0; i < global.localStorage.length; i++) {
+        const key = global.localStorage.key(i);
+        if (!key) continue;
+        total += (global.localStorage.getItem(key) || '').length * 2; // UTF-16
+      }
+      const sizeMB = total / 1024 / 1024;
+      _storageSizeCache = { mb: sizeMB, ts: now };
+      return sizeMB;
     } catch (e) {
       return 0;
     }
@@ -1979,7 +1977,7 @@
     cleanupOldData(30);
 
     // 4. Показываем размер после очистки
-    let sizeMB = getStorageSize();
+    let sizeMB = getStorageSize({ forceRecalc: true });
     logCritical(`📊 Размер после очистки: ${sizeMB.toFixed(2)} MB`);
 
     // 5. Если всё ещё > 4MB — ужимаем dayv2 агрессивнее и ещё раз чистим recoverable
@@ -1987,7 +1985,7 @@
       cleanupRecoverableStorage();
       cleanupOldData(14);
 
-      sizeMB = getStorageSize();
+      sizeMB = getStorageSize({ forceRecalc: true });
       if (sizeMB > 4) {
         cleanupOptionalPreferenceStorage();
         cleanupOldData(7);
@@ -2003,7 +2001,7 @@
         aggressiveKeys.forEach(k => global.localStorage.removeItem(k));
       }
 
-      sizeMB = getStorageSize();
+      sizeMB = getStorageSize({ forceRecalc: true });
       logCritical(`📊 После ultra-aggressive очистки: ${sizeMB.toFixed(2)} MB`);
       if (sizeMB > 4) {
         logLargestStorageKeys();
@@ -2015,25 +2013,30 @@
   function safeSetItem(key, value, options = {}) {
     // Используем оригинальный setItem если доступен (избегаем рекурсии через перехват)
     const setFn = originalSetItem || global.localStorage.setItem.bind(global.localStorage);
-    const writeMeta = getStorageWriteMeta(key, value);
+    let writeMeta = null;
+    const getWriteMeta = () => {
+      if (!writeMeta) writeMeta = getStorageWriteMeta(key, value);
+      return writeMeta;
+    };
 
     try {
       setFn(key, value);
       return true;
     } catch (e) {
       if (e.name === 'QuotaExceededError' || e.code === 22) {
+        const quotaMeta = getWriteMeta();
         if (shouldSkipHydrationDayOnQuota(key, options)) {
-          logQuotaThrottled('quota-hydration-skip', `⚠️ [SYNC] Quota: старый dayv2 оставлен только в cloud: ${writeMeta.summary}`);
+          logQuotaThrottled('quota-hydration-skip', `⚠️ [SYNC] Quota: старый dayv2 оставлен только в cloud: ${quotaMeta.summary}`);
           return false;
         }
 
-        if (writeMeta.kind === 'recoverable_cache') {
+        if (quotaMeta.kind === 'recoverable_cache') {
           try { global.localStorage.removeItem(key); } catch (_) { }
-          logQuotaThrottled('quota-recoverable-skip', `⚠️ [STORAGE] Quota: пропускаем recoverable cache write: ${writeMeta.summary}`);
+          logQuotaThrottled('quota-recoverable-skip', `⚠️ [STORAGE] Quota: пропускаем recoverable cache write: ${quotaMeta.summary}`);
           return false;
         }
         // Сначала очищаем безопасно-восстановимые ключи и старые данные
-        logQuotaThrottled('quota-warning', `⚠️ localStorage переполнен, очищаем старые данные... ${writeMeta.summary}`);
+        logQuotaThrottled('quota-warning', `⚠️ localStorage переполнен, очищаем старые данные... ${quotaMeta.summary}`);
         cleanupRecoverableStorage();
         cleanupOldData();
 
@@ -2061,7 +2064,7 @@
               setFn(key, value);
               return true;
             } catch (e4) {
-              logQuotaThrottled('quota-critical', `❌ Не удалось сохранить данные: storage критически переполнен (${writeMeta.summary})`);
+              logQuotaThrottled('quota-critical', `❌ Не удалось сохранить данные: storage критически переполнен (${quotaMeta.summary})`);
               logLargestStorageKeysThrottled();
               return false;
             }
@@ -2231,90 +2234,82 @@
    * @returns {Promise<boolean>} - true если очередь очищена, false если timeout
    */
   cloud.flushPendingQueue = async function (timeoutMs = 5000) {
-    // 🔄 v=51: В PIN-auth режиме игнорируем upsertQueue — она для curator mode
-    // upsertQueue работает только с Supabase user, в PIN mode нет user
-    const isClientOnlyMode = _rpcOnlyMode && _pinAuthClientId;
-    const clientQueueLen = clientUpsertQueue.length;
-    const userQueueLen = isClientOnlyMode ? 0 : upsertQueue.length; // Игнорируем в PIN mode
-    const queueLen = clientQueueLen + userQueueLen;
-    const inFlight = _uploadInProgress ? _uploadInFlightCount : 0;
-    const total = queueLen + inFlight;
     const flushStartTs = Date.now();
-    const logFlushSummary = (label, afterCount) => {
-      logCritical(`🧾 [FLUSH] ${label} before=${total} after=${afterCount} ms=${Date.now() - flushStartTs}`);
+    const snapshotBefore = () => {
+      // 🔄 v=51: В PIN-auth режиме игнорируем upsertQueue — она для curator mode
+      const isClientOnlyMode = _rpcOnlyMode && _pinAuthClientId;
+      const clientQueueLen = clientUpsertQueue.length;
+      const userQueueLen = isClientOnlyMode ? 0 : upsertQueue.length;
+      const queueLen = clientQueueLen + userQueueLen;
+      const inFlight = _uploadInProgress ? _uploadInFlightCount : 0;
+      return { isClientOnlyMode, clientQueueLen, userQueueLen, queueLen, inFlight, uploadInProgress: _uploadInProgress };
     };
 
-    // 🔄 v=34: ВСЕГДА логируем flush — это критическая операция!
-    logCritical(`🔄 [FLUSH] Check: clientQueue=${clientQueueLen}, userQueue=${upsertQueue.length}${isClientOnlyMode ? ' (ignored in PIN mode)' : ''}, inFlight=${inFlight}`);
+    const before = snapshotBefore();
+    const totalBefore = before.queueLen + before.inFlight;
+    const logFlushSummary = (label, afterCount) => {
+      logCritical(`🧾 [FLUSH] ${label} before=${totalBefore} after=${afterCount} ms=${Date.now() - flushStartTs}`);
+    };
 
-    // Если очередь пуста И ничего не в полёте — готово
-    if (queueLen === 0 && !_uploadInProgress) {
-      logCritical('✅ [FLUSH] Queue already empty and no uploads in progress');
-      logFlushSummary('noop', 0);
-      return true;
-    }
-
-    logCritical(`🔄 [FLUSH] Need to upload ${total} pending items IMMEDIATELY...`);
-
-    // 🔄 v=34 FIX: Немедленный upload вместо debounce!
-    // Это критическое изменение — раньше scheduleClientPush создавал 500ms задержку
-    // и sync успевал скачать старые данные с сервера ДО upload
-    if (queueLen > 0) {
-      logCritical('🔄 [FLUSH] Starting IMMEDIATE upload (no debounce)...');
-      try {
-        await doImmediateClientUpload();
-        logCritical('✅ [FLUSH] Immediate upload completed');
-      } catch (e) {
-        err('❌ [FLUSH] Immediate upload failed:', e);
-      }
-    }
-
-    // Проверяем снова после immediate upload
-    const stillClientQueue = clientUpsertQueue.length;
-    const stillUserQueue = isClientOnlyMode ? 0 : upsertQueue.length;
-    const stillInQueue = stillClientQueue + stillUserQueue;
-    if (stillInQueue === 0 && !_uploadInProgress) {
-      logCritical('✅ [FLUSH] All uploaded after immediate push');
-      logFlushSummary('done', 0);
-      return true;
-    }
-
-    // Если всё ещё что-то осталось — ждём событие queue-drained с таймаутом
-    logCritical(`🔄 [FLUSH] ${stillInQueue} items still pending (client=${stillClientQueue}, user=${stillUserQueue}), waiting for queue-drained event...`);
-
-    return new Promise((resolve) => {
-      const startTime = Date.now();
-
-      // Таймаут
-      const timeoutId = setTimeout(() => {
-        const stillPending = cloud.getPendingCount();
-        logCritical(`⚠️ [FLUSH] Timeout after ${timeoutMs}ms, ${stillPending} items still pending, inFlight=${_uploadInProgress}`);
-        logFlushSummary('timeout', stillPending);
-        window.removeEventListener('heys:queue-drained', handler);
-        resolve(false);
-      }, timeoutMs);
-
-      // Слушаем событие queue-drained
-      const handler = () => {
-        // Дополнительная проверка что действительно всё отправлено
-        if (_uploadInProgress) {
-          logCritical('🔄 [FLUSH] queue-drained fired but upload still in progress, waiting...');
-          return; // Не снимаем listener, ждём ещё
+    const result = await flushPendingQueueCore({
+      timeoutMs,
+      getSnapshot: () => {
+        const s = snapshotBefore();
+        return { queueLen: s.queueLen, inFlight: s.inFlight, uploadInProgress: s.uploadInProgress };
+      },
+      doImmediateClientUpload,
+      getPendingCount: () => cloud.getPendingCount(),
+      addQueueDrainedListener: (handler) => window.addEventListener('heys:queue-drained', handler),
+      removeQueueDrainedListener: (handler) => window.removeEventListener('heys:queue-drained', handler),
+      setTimer: (fn, ms) => setTimeout(fn, ms),
+      clearTimer: (id) => clearTimeout(id),
+      now: () => Date.now(),
+      onLog: (phase, payload) => {
+        if (phase === 'check') {
+          logCritical(
+            `🔄 [FLUSH] Check: clientQueue=${before.clientQueueLen}, userQueue=${upsertQueue.length}${before.isClientOnlyMode ? ' (ignored in PIN mode)' : ''}, inFlight=${before.inFlight}`
+          );
+          if (before.queueLen === 0 && !before.uploadInProgress) {
+            logCritical('✅ [FLUSH] Queue already empty and no uploads in progress');
+          } else {
+            logCritical(`🔄 [FLUSH] Need to upload ${totalBefore} pending items IMMEDIATELY...`);
+            if (before.queueLen > 0) {
+              logCritical('🔄 [FLUSH] Starting IMMEDIATE upload (no debounce)...');
+            }
+          }
+          return;
         }
-        clearTimeout(timeoutId);
-        const elapsed = Date.now() - startTime;
-        logCritical(`✅ [FLUSH] Queue drained in ${elapsed}ms`);
-        logFlushSummary('done', 0);
-        window.removeEventListener('heys:queue-drained', handler);
-        resolve(true);
-      };
-      window.addEventListener('heys:queue-drained', handler);
-
-      // Если всё уже в полёте — просто ждём queue-drained
-      if (stillInQueue === 0 && _uploadInProgress) {
-        logCritical('🔄 [FLUSH] Queue empty but upload in progress, waiting for completion...');
-      }
+        if (phase === 'immediate-upload-done') {
+          logCritical('✅ [FLUSH] Immediate upload completed');
+          return;
+        }
+        if (phase === 'immediate-upload-failed') {
+          err('❌ [FLUSH] Immediate upload failed:', payload?.error || payload);
+          return;
+        }
+        if (phase === 'queue-drained-but-uploading') {
+          logCritical('🔄 [FLUSH] queue-drained fired but upload still in progress, waiting...');
+          return;
+        }
+        if (phase === 'timeout') {
+          const stillPending = payload?.stillPending ?? cloud.getPendingCount();
+          logCritical(`⚠️ [FLUSH] Timeout after ${timeoutMs}ms, ${stillPending} items still pending, inFlight=${_uploadInProgress}`);
+          logFlushSummary('timeout', stillPending);
+          return;
+        }
+        if (phase === 'noop') {
+          logFlushSummary('noop', 0);
+          return;
+        }
+        if (phase === 'done') {
+          const elapsed = payload?.elapsedMs ?? Date.now() - flushStartTs;
+          logCritical(`✅ [FLUSH] Queue drained in ${elapsed}ms`);
+          logFlushSummary('done', 0);
+        }
+      },
     });
+
+    return result;
   };
 
   /** Получить информацию о storage */
@@ -5275,7 +5270,7 @@
           // Shared products: НЕ ждём — fire and forget
           // Cleanup, diagnostics, deleted sync — defer на 3s
           setTimeout(() => {
-            try { cleanupDuplicateKeys(); } catch (_) { }
+            try { maybeCleanupDuplicateKeys(); } catch (_) { }
             if (isDeltaFastPath) {
               try { cloud.cleanupProducts(); } catch (_) { }
             }
@@ -6681,10 +6676,10 @@
 
         const syncDuration = Math.round(performance.now() - syncStartTime);
 
-        try { cleanupDuplicateKeys(); } catch (_) { }
+        try { maybeCleanupDuplicateKeys(); } catch (_) { }
 
         // ── [HEYS.sinhron] ИТОГ: состояние dayv2 в localStorage ПОСЛЕ синхронизации ──
-        {
+        if (shouldRunDeepSyncDiagnostics()) {
           const postSyncDayKeys = [];
           const postSyncDateCount = {};
           const postSyncDuplicateDetails = [];
@@ -7289,7 +7284,11 @@
           // Данные останутся в очереди и отправятся когда появится токен (после логина)
           if (isAuthError) {
             console.warn('⚠️ [UPLOAD] Auth error, NOT retrying — waiting for login');
-          } else if (retryAttempt < MAX_RETRY_ATTEMPTS) {
+          } else if (shouldScheduleRetryAfterRpcError({
+            isAuthError,
+            retryAttempt,
+            maxRetryAttempts: MAX_RETRY_ATTEMPTS,
+          })) {
             scheduleClientPush();
           } else {
             console.warn('⚠️ [UPLOAD] Max retries reached, data saved locally');
@@ -7807,32 +7806,25 @@
       console.info('[HEYS.sync] 🔓 Grace period bypassed for', _isWidgetLayout ? 'widget_layout' : 'profileCompleted', 'save');
     }
 
-    // Добавляем в очередь вместо немедленной отправки
-    clientUpsertQueue.push(upsertObj);
-
-    // 🔥 INSTANT FEEDBACK: Мгновенно уведомляем UI о том, что есть несохраненные данные
-    // Не ждем таймера scheduleClientPush, пользователь должен видеть "Syncing..." сразу
-    savePendingQueue(PENDING_CLIENT_QUEUE_KEY, clientUpsertQueue);
-    notifyPendingChange();
-
-    scheduleClientPush();
-
-    // ⚡ IMMEDIATE: для критичных ключей отправляем в облако сразу
-    // Требование: любые изменения дня/профиля/норм/продуктов должны попасть в облако без задержки
-    // v4: Используем normalizedKey вместо k — scoped ключ heys_{clientId}_profile не совпадал с 'heys_profile'
-    const isCriticalKey = normalizedKey && (
-      normalizedKey.includes('dayv2_') ||
-      normalizedKey === 'heys_profile' ||
-      normalizedKey === 'heys_norms' ||
-      normalizedKey === 'heys_hr_zones' ||
-      normalizedKey === 'heys_products' ||
-      normalizedKey.includes('widget_layout')
-    );
-    if (isCriticalKey && navigator.onLine && !waitingForSync) {
-      console.info('[HEYS.sync] ⚡ Immediate upload', { key: k, client: client_id?.slice(0, 8) });
-      doImmediateClientUpload().catch((e) => {
+    const enqueueResult = enqueueClientSave({
+      queue: clientUpsertQueue,
+      item: upsertObj,
+      normalizedKey,
+      waitingForSync,
+      isOnline: navigator.onLine,
+      persistQueue: (queue) => savePendingQueue(PENDING_CLIENT_QUEUE_KEY, queue),
+      notifyPendingChange,
+      scheduleClientPush,
+      doImmediateClientUpload: () => {
+        console.info('[HEYS.sync] ⚡ Immediate upload', { key: k, client: client_id?.slice(0, 8) });
+        return doImmediateClientUpload();
+      },
+      onImmediateUploadError: (e) => {
         console.warn('[HEYS.sync] ⚠️ Immediate upload failed', e?.message || e);
-      });
+      },
+    });
+    if (enqueueResult.shouldImmediate) {
+      log(`[HEYS.sync] Immediate upload path selected for '${normalizedKey}'`);
     }
   };
 
@@ -8140,8 +8132,10 @@
   // Console API: HEYS.cloud.hotSync.disable() / .enable() / .status() / .safeMode() / .normalMode()
   // ═══════════════════════════════════════════════════════════════════
   // and we also sync immediately when the tab/window becomes active again.
-  const FOREGROUND_AUTO_SYNC_INTERVAL_MS = 2000;
-  const FOREGROUND_AUTO_SYNC_MIN_GAP_MS = 1200;
+  const FOREGROUND_AUTO_SYNC_INTERVAL_ACTIVE_MS = 3500;
+  const FOREGROUND_AUTO_SYNC_INTERVAL_IDLE_MS = 7000;
+  const FOREGROUND_AUTO_SYNC_INTERVAL_LOW_END_MS = 9000;
+  const FOREGROUND_AUTO_SYNC_MIN_GAP_MS = 2000;
   const FOREGROUND_AUTO_SYNC_EXTENDED_EVERY = 3;
   const HOT_SYNC_AUTO_SAFE_THRESHOLD = 5; // consecutive errors to trigger auto-safe mode
   let foregroundAutoSyncTimer = null;
@@ -8189,6 +8183,25 @@
   ]);
   let foregroundAutoSyncIdleStreak = 0;
   const foregroundHotSyncHistory = [];
+
+  function getForegroundAutoSyncIntervalMs() {
+    let interval = foregroundAutoSyncIdleStreak >= 5
+      ? FOREGROUND_AUTO_SYNC_INTERVAL_IDLE_MS
+      : FOREGROUND_AUTO_SYNC_INTERVAL_ACTIVE_MS;
+    try {
+      const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+      if (connection?.saveData) interval = Math.max(interval, FOREGROUND_AUTO_SYNC_INTERVAL_LOW_END_MS);
+      const effectiveType = String(connection?.effectiveType || '');
+      if (effectiveType === '2g' || effectiveType === '3g' || effectiveType === 'slow-2g') {
+        interval = Math.max(interval, FOREGROUND_AUTO_SYNC_INTERVAL_LOW_END_MS);
+      }
+      const deviceMemory = Number(navigator.deviceMemory || 0);
+      if (Number.isFinite(deviceMemory) && deviceMemory > 0 && deviceMemory <= 4) {
+        interval = Math.max(interval, FOREGROUND_AUTO_SYNC_INTERVAL_LOW_END_MS);
+      }
+    } catch (_) { }
+    return interval;
+  }
 
   function getChangedTopLevelKeys(previousValue, nextValue) {
     const prev = previousValue && typeof previousValue === 'object' && !Array.isArray(previousValue)
@@ -8718,7 +8731,7 @@
 
   function stopForegroundAutoSyncLoop() {
     if (!foregroundAutoSyncTimer) return;
-    clearInterval(foregroundAutoSyncTimer);
+    clearTimeout(foregroundAutoSyncTimer);
     foregroundAutoSyncTimer = null;
   }
 
@@ -8726,13 +8739,19 @@
     if (foregroundAutoSyncTimer) return;
     if (isHotSyncDisabled()) return;
     if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
-    console.info('[HEYS.sync] 🔄 Hot-sync loop started (interval', FOREGROUND_AUTO_SYNC_INTERVAL_MS, 'ms)');
-
-    foregroundAutoSyncTimer = setInterval(() => {
-      requestForegroundAutoSync('visible-interval', {
-        minGapMs: FOREGROUND_AUTO_SYNC_INTERVAL_MS - 100
-      }).catch(() => { });
-    }, FOREGROUND_AUTO_SYNC_INTERVAL_MS);
+    const scheduleNext = () => {
+      if (foregroundAutoSyncTimer) clearTimeout(foregroundAutoSyncTimer);
+      const intervalMs = getForegroundAutoSyncIntervalMs();
+      foregroundAutoSyncTimer = setTimeout(() => {
+        requestForegroundAutoSync('visible-interval', {
+          minGapMs: Math.max(FOREGROUND_AUTO_SYNC_MIN_GAP_MS, intervalMs - 250)
+        }).catch(() => { }).finally(() => {
+          if (foregroundAutoSyncTimer) scheduleNext();
+        });
+      }, intervalMs);
+    };
+    console.info('[HEYS.sync] 🔄 Hot-sync loop started (adaptive interval)');
+    scheduleNext();
   }
 
   function handleForegroundAutoSyncVisibility() {
@@ -8822,6 +8841,27 @@
       return history;
     }
   };
+
+  const DUPLICATE_CLEANUP_MIN_GAP_MS = 5 * 60 * 1000;
+  let _lastDuplicateCleanupAt = 0;
+
+  function shouldRunDeepSyncDiagnostics() {
+    try {
+      if (global.DEV?.isDev?.()) return true;
+      return global.localStorage.getItem('heys_sync_deep_diagnostics') === '1';
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function maybeCleanupDuplicateKeys(force = false) {
+    const now = Date.now();
+    if (!force && (now - _lastDuplicateCleanupAt) < DUPLICATE_CLEANUP_MIN_GAP_MS) {
+      return 0;
+    }
+    _lastDuplicateCleanupAt = now;
+    return cleanupDuplicateKeys();
+  }
 
   /** Очистить дублирующиеся ключи (двойной clientId, старые форматы) */
   function cleanupDuplicateKeys() {
@@ -8919,7 +8959,7 @@
 
   /** Очистить дублирующиеся ключи вручную */
   cloud.cleanupDuplicates = function () {
-    return cleanupDuplicateKeys();
+    return maybeCleanupDuplicateKeys(true);
   };
 
   /** Удалить продукты других клиентов (освобождает много места) */
@@ -9134,7 +9174,7 @@
       }
 
       // Также удаляем дубликаты и данные других клиентов
-      cleanupDuplicateKeys();
+      maybeCleanupDuplicateKeys(true);
 
       // 🔧 v69 FIX: Purge pending upsert queue от записей чужих клиентов.
       // Если flush timeout не успел вытолкнуть данные старого клиента,

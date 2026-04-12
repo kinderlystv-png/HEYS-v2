@@ -33994,6 +33994,7 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
 
   const lsGet = (k, d) => storeGet(k, d);
   const lsSet = (k, v) => storeSet(k, v);
+  const YESTERDAY_VERIFY_MARKER_VERSION = 1;
 
   /**
    * Получить ключ вчерашнего дня
@@ -34066,7 +34067,18 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
 
   function isExplicitlyVerified(dayData) {
     if (!dayData || typeof dayData !== 'object') return false;
-    return dayData.isFastingDay !== undefined || dayData.isIncomplete !== undefined;
+    if (dayData.yesterdayVerifyAt || dayData.yesterdayVerifyAction) return true;
+    if (dayData.isFastingDay === true) return true;
+    if (dayData.isIncomplete === true) return true;
+    if (dayData.estimatedDayFill?.source === 'morning-checkin') return true;
+    return false;
+  }
+
+  function markYesterdayVerified(dayData, action, nowTs) {
+    if (!dayData || typeof dayData !== 'object') return;
+    dayData.yesterdayVerifyAction = action;
+    dayData.yesterdayVerifyAt = nowTs;
+    dayData.yesterdayVerifyVersion = YESTERDAY_VERIFY_MARKER_VERSION;
   }
 
   function isMeaningfullyFilledDay(dayInfo) {
@@ -34084,6 +34096,8 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
     if (dayInfo.kcal <= 0) return true;
     return dayInfo.ratio < 0.5;
   }
+
+  const RECENT_PENDING_FALLBACK_DAYS = 2;
 
   /**
    * Получить данные дня для проверки
@@ -34457,7 +34471,41 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
       }
     }
 
-    if (!lastFilledDate || lastFilledDate >= yesterdayKey) {
+    if (!lastFilledDate) {
+      if (!trackedDays.length) {
+        return {
+          lastFilledDate,
+          missingDays: [],
+          totalPendingDays: 0
+        };
+      }
+
+      const missingDays = [];
+      let cursor = addDays(yesterdayKey, -(RECENT_PENDING_FALLBACK_DAYS - 1));
+      while (cursor && cursor <= yesterdayKey) {
+        const info = getInfo(cursor);
+        if (isPendingPastDay(info)) {
+          missingDays.push(info);
+        }
+        cursor = addDays(cursor, 1);
+      }
+
+      console.info('[HEYS.yesterdayVerify] ✅ Pending days collected without filled anchor:', {
+        fallbackDays: RECENT_PENDING_FALLBACK_DAYS,
+        trackedDaysCount: trackedDays.length,
+        yesterdayKey,
+        totalPendingDays: missingDays.length,
+        dates: missingDays.map((day) => day.date)
+      });
+
+      return {
+        lastFilledDate,
+        missingDays,
+        totalPendingDays: missingDays.length
+      };
+    }
+
+    if (lastFilledDate >= yesterdayKey) {
       return {
         lastFilledDate,
         missingDays: [],
@@ -35293,6 +35341,7 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
         const estimatedPatch = buildEstimatedDayPatch(dateKey, dayInfo, quickFill, dayData);
         clearEstimatedDayFields(dayData);
         Object.assign(dayData, estimatedPatch);
+        markYesterdayVerified(dayData, 'estimated_fill', nowTs);
         dayData.updatedAt = nowTs;
         lsSet(`heys_dayv2_${dateKey}`, dayData);
         window.dispatchEvent(new CustomEvent('heys:day-updated', {
@@ -35305,6 +35354,7 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
         dayData.isFastingDay = true;
         dayData.isIncomplete = false;
         clearEstimatedDayFields(dayData);
+        markYesterdayVerified(dayData, 'confirm_real_data', nowTs);
         dayData.updatedAt = nowTs;
         lsSet(`heys_dayv2_${dateKey}`, dayData);
 
@@ -35318,6 +35368,7 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
         dayData.meals = [];
         dayData.isIncomplete = false;
         clearEstimatedDayFields(dayData);
+        markYesterdayVerified(dayData, 'clear_day', nowTs);
         dayData.updatedAt = nowTs;
         lsSet(`heys_dayv2_${dateKey}`, dayData);
 
@@ -35328,6 +35379,7 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
 
       if (data.incompleteAction === 'fill_later') {
         dayData.isIncomplete = true;
+        markYesterdayVerified(dayData, 'fill_later', nowTs);
         dayData.updatedAt = nowTs;
         lsSet(`heys_dayv2_${dateKey}`, dayData);
       }

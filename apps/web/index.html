@@ -689,14 +689,10 @@
                 try { explicit = JSON.parse(explicit); } catch (_) { }
             }
             var hasExplicitPreference = explicit === '1' || explicit === 1 || explicit === true || explicit === 'true';
-            var rawThemePreference = pref === 'dark' || pref === 'light' || pref === 'auto'
+            var rawThemePreference = pref === 'dark' || pref === 'light'
                 ? pref
-                : (hasExplicitPreference ? legacy : 'auto');
-            var nextTheme = rawThemePreference === 'dark'
-                ? 'dark'
-                : rawThemePreference === 'light'
-                    ? 'light'
-                    : (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+                : (hasExplicitPreference ? legacy : null);
+            var nextTheme = rawThemePreference === 'dark' ? 'dark' : 'light';
             document.documentElement.setAttribute('data-theme', nextTheme);
             window.__heysLog && window.__heysLog('Theme applied: ' + nextTheme);
         })();
@@ -724,11 +720,11 @@
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
     <link rel="dns-prefetch" href="https://cdn.jsdelivr.net" />
     <!-- Preload критических boot-бандлов (2026-02-25 bundle migration) -->
-    <link rel="preload" href="boot-core.bundle.90dfadc37014.js" as="script" />
-    <link rel="preload" href="boot-calc.bundle.f0d8ebb980e9.js" as="script" />
-    <link rel="preload" href="boot-day.bundle.9caaf0b08a51.js" as="script" />
-    <link rel="preload" href="boot-app.bundle.ad74cac63ef4.js" as="script" />
-    <link rel="preload" href="boot-init.bundle.77babf69be28.js" as="script" />
+    <link rel="preload" href="boot-core.bundle.6b886ef2b502.js" as="script" />
+    <link rel="preload" href="boot-calc.bundle.0d65b6f48b8a.js" as="script" />
+    <link rel="preload" href="boot-day.bundle.469018dad450.js" as="script" />
+    <link rel="preload" href="boot-app.bundle.3f1797772412.js" as="script" />
+    <link rel="preload" href="boot-init.bundle.ac829fb97bac.js" as="script" />
 
     <!-- React теперь бандлится локально через Vite (миграция с CDN 2026-01-21) -->
 
@@ -1736,6 +1732,7 @@
             }
 
             html:not([data-theme]) .heys-auth-field,
+            html:not([data-theme]) .heys-auth-phone-input,
             html:not([data-theme]) .heys-auth-input,
             html:not([data-theme]) .heys-auth-pin-input {
                 background: rgba(15, 23, 42, 0.78) !important;
@@ -2828,11 +2825,11 @@
          Сгенерировано: node scripts/bundle-legacy.mjs  (pnpm bundle:legacy)
          Состав и хеши: bundle-manifest.json
          Хеш в имени = вечный кэш (cache-first SW). -->
-    <script defer src="boot-core.bundle.90dfadc37014.js" fetchpriority="high"></script>
-    <script defer src="boot-calc.bundle.f0d8ebb980e9.js"></script>
-    <script defer src="boot-day.bundle.9caaf0b08a51.js"></script>
-    <script defer src="boot-app.bundle.ad74cac63ef4.js"></script>
-    <script defer src="boot-init.bundle.77babf69be28.js"
+    <script defer src="boot-core.bundle.6b886ef2b502.js" fetchpriority="high"></script>
+    <script defer src="boot-calc.bundle.0d65b6f48b8a.js"></script>
+    <script defer src="boot-day.bundle.469018dad450.js"></script>
+    <script defer src="boot-app.bundle.3f1797772412.js"></script>
+    <script defer src="boot-init.bundle.ac829fb97bac.js"
         onerror="window.__heysShowRecoveryUI && window.__heysShowRecoveryUI('CRITICAL_SCRIPT_LOAD: boot-init.bundle')"></script>
 
     <!-- PERF: Detect returning user (localStorage has profile) → skip card unfold animations -->
@@ -2861,9 +2858,9 @@
     <script>
         (function () {
             var POST_BOOT_BUNDLES = [
-                'postboot-1-game.bundle.10925a18e99c.js',
-                'postboot-2-insights.bundle.f6409fcfb666.js',
-                'postboot-3-ui.bundle.38ab62cac47d.js'
+                'postboot-1-game.bundle.dfa10815e9d6.js',
+                'postboot-2-insights.bundle.ecdcc4a9d589.js',
+                'postboot-3-ui.bundle.e0c5daf3c9d6.js'
             ];
             var LOCALHOST_TASKS_SOURCE_OVERRIDE = 'heys_planning_tasks_v1.js';
             var total = POST_BOOT_BUNDLES.length;

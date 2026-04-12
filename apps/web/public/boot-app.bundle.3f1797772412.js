@@ -9553,7 +9553,10 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                 onChange: handlePhoneInput,
                 onKeyDown: handlePhoneKeyDown,
                 className: 'phone-input-large heys-auth-phone-input',
-                style: { width: '195px' }
+                style: {
+                  width: '195px',
+                  fontWeight: 700,
+                }
               }),
             ),
           ),
@@ -11695,22 +11698,25 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
             legacyTheme = tryParseStoredValue(localStorage.getItem(LEGACY_THEME_KEY), null);
         } catch { }
 
-        if (pref === null || pref === undefined) pref = readGlobalValue(THEME_PREF_KEY, null);
-        if (isThemePreference(pref)) return pref;
-
         if (explicit === null || explicit === undefined) explicit = readGlobalValue(THEME_EXPLICIT_KEY, null);
-        if (isExplicitThemeFlag(explicit)) {
-            if (legacyTheme === null || legacyTheme === undefined) legacyTheme = readGlobalValue(LEGACY_THEME_KEY, null);
-            if (legacyTheme === 'light' || legacyTheme === 'dark') return legacyTheme;
+        if (!isExplicitThemeFlag(explicit)) return 'light';
+
+        if (pref === null || pref === undefined) pref = readGlobalValue(THEME_PREF_KEY, null);
+        if (pref === 'dark' || pref === 'light') return pref;
+        if (pref === 'auto') return 'light';
+
+        if (legacyTheme === null || legacyTheme === undefined) legacyTheme = readGlobalValue(LEGACY_THEME_KEY, null);
+        if (legacyTheme === 'light' || legacyTheme === 'dark') {
+            return legacyTheme;
         }
 
-        return 'auto';
+        return 'light';
     };
 
     const normalizeThemePreference = (value) => {
         if (value === 'light' || value === 'dark') return value;
-        if (value === 'auto') return getSystemTheme();
-        return getSystemTheme();
+        if (value === 'auto') return 'light';
+        return 'light';
     };
 
     function useThemePreference() {
@@ -11720,7 +11726,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
             try {
                 return getStoredThemePreference();
             } catch {
-                return 'auto';
+                return 'light';
             }
         });
 

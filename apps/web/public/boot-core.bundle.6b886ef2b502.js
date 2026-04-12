@@ -4624,22 +4624,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
 
 /* ===== heys_simple_analytics.js ===== */
 /**
- * HEYS Simple Analytics v1.0
- * Минималистичная система мониторинга для приложения учета питания
- * 
- * Заменяет 11,500+ строк избыточного кода на ~100 строк функционального трекинга
- * 
- * Что отслеживается:
- * - Медленные поисковые запросы (>1s)
- * - Медленные API вызовы (>2s)
- * - Операции с данными (кеш, синхронизация)
- * - JavaScript ошибки
- * 
- * Что НЕ отслеживается (избыточно для nutrition app):
- * - FPS и рендеринг
- * - Детальная память
- * - Клики и скроллы
- * - Browser fingerprinting
+ * HEYS Simple Analytics v2.0
+ * Session analytics with lightweight runtime performance audit.
  */
 
 (function (global) {
@@ -4661,10 +4647,23 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
     MS_TO_SECONDS: 1000     // миллисекунды → секунды
   };
 
+  const PERF_THRESHOLDS = {
+    SLOW_CLICK_TO_FRAME: 120,
+    JANKY_SCROLL_FRAME: 24,
+    SLOW_EVENT: 120,
+    LONG_TASK: 50
+  };
+
+  const PERF_SAMPLING = {
+    PROD_SAMPLE_RATE: 0.15,
+    STORAGE_FLAG_KEY: 'heys_perf_audit'
+  };
+
   // Счетчики для статистики
   const stats = {
     searches: { total: 0, slow: 0 },
     apiCalls: { total: 0, slow: 0, failed: 0 },
+    events: { total: 0, tabSwitches: 0, slowInteractions: 0 },
     errors: { total: 0 },
     cacheHits: 0,
     cacheMisses: 0,
@@ -4674,6 +4673,43 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
   const DEBUG_EVENTS_KEY = 'heys_debug_events';
   const DEBUG_EVENTS_LIMIT = 50;
   const debugEvents = [];
+  const perfMeasureStarts = new Map();
+
+  const perfState = {
+    initialized: false,
+    enabled: false,
+    sampleRate: 0,
+    observers: [],
+    cleanupFns: [],
+    eventSamples: [],
+    clickSamples: [],
+    customMeasures: [],
+    webVitals: {
+      lcp: null,
+      cls: 0,
+      inp: null,
+      inpEvent: null
+    },
+    longTasks: {
+      count: 0,
+      totalDuration: 0,
+      maxDuration: 0
+    },
+    scroll: {
+      sessions: 0,
+      jankySessions: 0,
+      totalDroppedFrames: 0,
+      worstFrameDelta: 0,
+      maxDroppedFramesInSession: 0
+    },
+    dataProfile: {
+      daysCount: 0,
+      daysBucket: 'unknown',
+      avgItemsPerDay: 0,
+      itemsBucket: 'unknown',
+      storageMB: 0
+    }
+  };
 
   const readStoredValue = (key, fallback = null) => {
     let value;
@@ -4732,6 +4768,310 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
         writeStoredValue(DEBUG_EVENTS_KEY, debugEvents);
       } catch (e) { }
     } catch (e) { }
+  }
+
+  function toNumber(value, fallback = 0) {
+    const n = Number(value);
+    return Number.isFinite(n) ? n : fallback;
+  }
+
+  function percentile(values, q) {
+    if (!Array.isArray(values) || values.length === 0) return 0;
+    const sorted = values.slice().sort((a, b) => a - b);
+    const idx = Math.min(sorted.length - 1, Math.max(0, Math.ceil((q / 100) * sorted.length) - 1));
+    return sorted[idx];
+  }
+
+  function bucketDays(daysCount) {
+    if (daysCount >= 180) return '180+';
+    if (daysCount >= 90) return '90-179';
+    if (daysCount >= 30) return '30-89';
+    if (daysCount >= 1) return '1-29';
+    return '0';
+  }
+
+  function bucketItems(avgItemsPerDay) {
+    if (avgItemsPerDay >= 80) return '80+';
+    if (avgItemsPerDay >= 40) return '40-79';
+    if (avgItemsPerDay >= 20) return '20-39';
+    if (avgItemsPerDay >= 1) return '1-19';
+    return '0';
+  }
+
+  function shouldEnablePerfAudit() {
+    const devEnabled = !!global.DEV?.isDev?.();
+    let forceEnabled = false;
+    try {
+      const persistedFlag = readStoredValue(PERF_SAMPLING.STORAGE_FLAG_KEY, null);
+      forceEnabled = persistedFlag === '1' || persistedFlag === 1 || persistedFlag === true || global.__HEYS_FORCE_PERF_AUDIT === true;
+    } catch (e) {
+      forceEnabled = global.__HEYS_FORCE_PERF_AUDIT === true;
+    }
+
+    const sampleRate = forceEnabled || devEnabled ? 1 : PERF_SAMPLING.PROD_SAMPLE_RATE;
+    perfState.sampleRate = sampleRate;
+    perfState.enabled = Math.random() <= sampleRate;
+  }
+
+  function computeDataProfile() {
+    try {
+      let dayKeys = [];
+      let bytes = 0;
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (!key) continue;
+        let value = '';
+        try {
+          value = localStorage.getItem(key) || '';
+        } catch (e) {
+          value = '';
+        }
+        bytes += key.length + value.length;
+        if (key.startsWith('heys_dayv2_')) dayKeys.push(key);
+      }
+
+      dayKeys = dayKeys.sort();
+      const sampleKeys = dayKeys.slice(-10);
+      let sampledItems = 0;
+      let sampledDays = 0;
+      sampleKeys.forEach((key) => {
+        try {
+          const raw = localStorage.getItem(key);
+          if (!raw) return;
+          const parsed = JSON.parse(raw);
+          const meals = Array.isArray(parsed?.meals) ? parsed.meals : [];
+          const items = meals.reduce((sum, meal) => sum + (Array.isArray(meal?.items) ? meal.items.length : 0), 0);
+          sampledItems += items;
+          sampledDays += 1;
+        } catch (e) { }
+      });
+
+      const avgItemsPerDay = sampledDays > 0 ? +(sampledItems / sampledDays).toFixed(1) : 0;
+      const storageMB = +(bytes / (1024 * 1024)).toFixed(2);
+
+      perfState.dataProfile = {
+        daysCount: dayKeys.length,
+        daysBucket: bucketDays(dayKeys.length),
+        avgItemsPerDay,
+        itemsBucket: bucketItems(avgItemsPerDay),
+        storageMB
+      };
+    } catch (e) {
+      perfState.dataProfile = {
+        daysCount: 0,
+        daysBucket: 'unknown',
+        avgItemsPerDay: 0,
+        itemsBucket: 'unknown',
+        storageMB: 0
+      };
+    }
+  }
+
+  function createObserver(type, callback) {
+    if (!global.PerformanceObserver) return null;
+    if (typeof PerformanceObserver.supportedEntryTypes !== 'undefined') {
+      const supported = PerformanceObserver.supportedEntryTypes || [];
+      if (!supported.includes(type)) return null;
+    }
+
+    try {
+      const observer = new PerformanceObserver((list) => callback(list.getEntries() || []));
+      observer.observe({ type, buffered: true });
+      perfState.observers.push(observer);
+      return observer;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function initPerfObservers() {
+    createObserver('largest-contentful-paint', (entries) => {
+      const latest = entries[entries.length - 1];
+      if (!latest) return;
+      perfState.webVitals.lcp = +toNumber(latest.startTime, 0).toFixed(1);
+    });
+
+    createObserver('layout-shift', (entries) => {
+      entries.forEach((entry) => {
+        if (entry.hadRecentInput) return;
+        perfState.webVitals.cls = +(perfState.webVitals.cls + toNumber(entry.value, 0)).toFixed(4);
+      });
+    });
+
+    createObserver('event', (entries) => {
+      entries.forEach((entry) => {
+        const duration = toNumber(entry.duration, 0);
+        if (duration <= 0) return;
+        perfState.eventSamples.push(duration);
+        if (perfState.eventSamples.length > 200) perfState.eventSamples.shift();
+        if (duration >= PERF_THRESHOLDS.SLOW_EVENT) {
+          stats.events.slowInteractions += 1;
+        }
+        if (duration > toNumber(perfState.webVitals.inp, 0)) {
+          perfState.webVitals.inp = +duration.toFixed(1);
+          perfState.webVitals.inpEvent = entry.name || entry.interactionId || 'event';
+        }
+      });
+    });
+
+    createObserver('longtask', (entries) => {
+      entries.forEach((entry) => {
+        const duration = toNumber(entry.duration, 0);
+        perfState.longTasks.count += 1;
+        perfState.longTasks.totalDuration += duration;
+        perfState.longTasks.maxDuration = Math.max(perfState.longTasks.maxDuration, duration);
+      });
+    });
+  }
+
+  function initClickTracking() {
+    const clickHandler = () => {
+      const start = performance.now();
+      requestAnimationFrame(() => {
+        const delta = performance.now() - start;
+        perfState.clickSamples.push(delta);
+        if (perfState.clickSamples.length > 200) perfState.clickSamples.shift();
+        if (delta >= PERF_THRESHOLDS.SLOW_CLICK_TO_FRAME) {
+          stats.events.slowInteractions += 1;
+        }
+      });
+    };
+
+    global.addEventListener('click', clickHandler, { capture: true, passive: true });
+    perfState.cleanupFns.push(() => global.removeEventListener('click', clickHandler, { capture: true }));
+  }
+
+  function initScrollTracking() {
+    let sessionActive = false;
+    let rafId = null;
+    let lastFrameTs = 0;
+    let lastScrollTs = 0;
+    let droppedFrames = 0;
+    let worstDelta = 0;
+
+    const SCROLL_IDLE_MS = 180;
+    const monitor = (ts) => {
+      if (!sessionActive) return;
+      if (lastFrameTs > 0) {
+        const delta = ts - lastFrameTs;
+        worstDelta = Math.max(worstDelta, delta);
+        if (delta > PERF_THRESHOLDS.JANKY_SCROLL_FRAME) {
+          droppedFrames += Math.max(1, Math.round(delta / 16.7) - 1);
+        }
+      }
+      lastFrameTs = ts;
+
+      if ((ts - lastScrollTs) > SCROLL_IDLE_MS) {
+        perfState.scroll.sessions += 1;
+        perfState.scroll.totalDroppedFrames += droppedFrames;
+        perfState.scroll.worstFrameDelta = Math.max(perfState.scroll.worstFrameDelta, worstDelta);
+        perfState.scroll.maxDroppedFramesInSession = Math.max(perfState.scroll.maxDroppedFramesInSession, droppedFrames);
+        if (droppedFrames > 0 || worstDelta > PERF_THRESHOLDS.JANKY_SCROLL_FRAME) {
+          perfState.scroll.jankySessions += 1;
+        }
+        sessionActive = false;
+        rafId = null;
+        return;
+      }
+
+      rafId = requestAnimationFrame(monitor);
+    };
+
+    const onScroll = () => {
+      lastScrollTs = performance.now();
+      if (!sessionActive) {
+        sessionActive = true;
+        droppedFrames = 0;
+        worstDelta = 0;
+        lastFrameTs = 0;
+        rafId = requestAnimationFrame(monitor);
+      }
+    };
+
+    global.addEventListener('scroll', onScroll, { passive: true });
+    perfState.cleanupFns.push(() => {
+      global.removeEventListener('scroll', onScroll);
+      if (rafId != null) cancelAnimationFrame(rafId);
+    });
+  }
+
+  function startPerformanceAudit() {
+    if (perfState.initialized) return;
+    perfState.initialized = true;
+    shouldEnablePerfAudit();
+    if (!perfState.enabled) return;
+
+    initPerfObservers();
+    initClickTracking();
+    initScrollTracking();
+
+    if (typeof requestIdleCallback === 'function') {
+      requestIdleCallback(() => computeDataProfile(), { timeout: 1000 });
+    } else {
+      setTimeout(() => computeDataProfile(), 250);
+    }
+  }
+
+  function stopPerformanceAudit() {
+    perfState.observers.forEach((observer) => {
+      try { observer.disconnect(); } catch (e) { }
+    });
+    perfState.observers = [];
+    perfState.cleanupFns.forEach((cleanup) => {
+      try { cleanup(); } catch (e) { }
+    });
+    perfState.cleanupFns = [];
+    perfState.initialized = false;
+  }
+
+  function getPerformanceStats() {
+    const clickP95 = +percentile(perfState.clickSamples, 95).toFixed(1);
+    const clickP50 = +percentile(perfState.clickSamples, 50).toFixed(1);
+    const eventP95 = +percentile(perfState.eventSamples, 95).toFixed(1);
+
+    const avgLongTask = perfState.longTasks.count > 0
+      ? +(perfState.longTasks.totalDuration / perfState.longTasks.count).toFixed(1)
+      : 0;
+
+    const scrollJankRate = perfState.scroll.sessions > 0
+      ? +((perfState.scroll.jankySessions / perfState.scroll.sessions) * 100).toFixed(1)
+      : 0;
+
+    return {
+      enabled: perfState.enabled,
+      sampleRate: perfState.sampleRate,
+      webVitals: {
+        lcp: perfState.webVitals.lcp,
+        cls: +toNumber(perfState.webVitals.cls, 0).toFixed(4),
+        inp: perfState.webVitals.inp,
+        inpEvent: perfState.webVitals.inpEvent
+      },
+      clicks: {
+        count: perfState.clickSamples.length,
+        p50ClickToFrame: clickP50,
+        p95ClickToFrame: clickP95,
+        maxClickToFrame: perfState.clickSamples.length ? +Math.max(...perfState.clickSamples).toFixed(1) : 0
+      },
+      interactions: {
+        p95EventDuration: eventP95,
+        slowInteractions: stats.events.slowInteractions
+      },
+      longTasks: {
+        count: perfState.longTasks.count,
+        avgDuration: avgLongTask,
+        maxDuration: +toNumber(perfState.longTasks.maxDuration, 0).toFixed(1)
+      },
+      scroll: {
+        sessions: perfState.scroll.sessions,
+        jankySessions: perfState.scroll.jankySessions,
+        jankRate: scrollJankRate,
+        totalDroppedFrames: perfState.scroll.totalDroppedFrames,
+        maxDroppedFramesInSession: perfState.scroll.maxDroppedFramesInSession,
+        worstFrameDelta: +toNumber(perfState.scroll.worstFrameDelta, 0).toFixed(1)
+      },
+      dataProfile: { ...perfState.dataProfile },
+      customMeasures: perfState.customMeasures.slice(-25)
+    };
   }
 
   // ==================== CORE ФУНКЦИИ ====================
@@ -4834,6 +5174,58 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
     }
   }
 
+  function trackEvent(eventName, payload = null) {
+    stats.events.total += 1;
+    const normalized = String(eventName || '').toLowerCase();
+    if (normalized.includes('tab')) {
+      stats.events.tabSwitches += 1;
+    }
+    recordDebugEvent(`event:${normalized || 'unknown'}`, payload);
+  }
+
+  function startMeasure(name) {
+    if (!name) return;
+    perfMeasureStarts.set(name, performance.now());
+  }
+
+  function endMeasure(name, meta) {
+    if (!name || !perfMeasureStarts.has(name)) return 0;
+    const startedAt = perfMeasureStarts.get(name);
+    perfMeasureStarts.delete(name);
+    const duration = +(performance.now() - startedAt).toFixed(1);
+    perfState.customMeasures.push({
+      name,
+      duration,
+      ts: Date.now(),
+      meta: meta || null
+    });
+    if (perfState.customMeasures.length > 120) {
+      perfState.customMeasures.splice(0, perfState.customMeasures.length - 120);
+    }
+    if (duration >= PERF_THRESHOLDS.SLOW_EVENT) {
+      stats.events.slowInteractions += 1;
+    }
+    return duration;
+  }
+
+  function trackInteraction(name, duration, meta) {
+    const safeName = String(name || 'interaction');
+    const safeDuration = +toNumber(duration, 0).toFixed(1);
+    if (safeDuration <= 0) return;
+    perfState.customMeasures.push({
+      name: safeName,
+      duration: safeDuration,
+      ts: Date.now(),
+      meta: meta || null
+    });
+    if (perfState.customMeasures.length > 120) {
+      perfState.customMeasures.splice(0, perfState.customMeasures.length - 120);
+    }
+    if (safeDuration >= PERF_THRESHOLDS.SLOW_EVENT) {
+      stats.events.slowInteractions += 1;
+    }
+  }
+
   /**
    * Базовый error tracking
    * Перехватывает необработанные JavaScript ошибки
@@ -4897,7 +5289,11 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
         misses: stats.cacheMisses,
         hitRate: `${cacheHitRate}%`
       },
-      errors: stats.errors
+      events: {
+        ...stats.events
+      },
+      errors: stats.errors,
+      performance: getPerformanceStats()
     };
   }
 
@@ -4932,26 +5328,42 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
     trackSearch,
     trackApiCall,
     trackDataOperation,
+    trackEvent,
     trackError,
+    trackInteraction,
+    startMeasure,
+    endMeasure,
+    startPerformanceAudit,
+    stopPerformanceAudit,
     getStats,
     exportMetrics,
 
     // Aliases для совместимости с legacy кодом
     trackModuleLoad: () => { }, // no-op
     trackComponentRender: () => { }, // no-op
-    trackUserInteraction: () => { }, // no-op
-    startTracking: () => { },
-    stopTracking: () => { },
+    trackUserInteraction: trackInteraction,
+    startTracking: startPerformanceAudit,
+    stopTracking: stopPerformanceAudit,
     reset: () => {
       stats.searches = { total: 0, slow: 0 };
       stats.apiCalls = { total: 0, slow: 0, failed: 0 };
+      stats.events = { total: 0, tabSwitches: 0, slowInteractions: 0 };
       stats.errors = { total: 0 };
       stats.cacheHits = 0;
       stats.cacheMisses = 0;
       stats.sessionStart = Date.now();
+      perfMeasureStarts.clear();
+      perfState.eventSamples = [];
+      perfState.clickSamples = [];
+      perfState.customMeasures = [];
+      perfState.webVitals = { lcp: null, cls: 0, inp: null, inpEvent: null };
+      perfState.longTasks = { count: 0, totalDuration: 0, maxDuration: 0 };
+      perfState.scroll = { sessions: 0, jankySessions: 0, totalDroppedFrames: 0, worstFrameDelta: 0, maxDroppedFramesInSession: 0 };
+      perfState.dataProfile = { daysCount: 0, daysBucket: 'unknown', avgItemsPerDay: 0, itemsBucket: 'unknown', storageMB: 0 };
+      computeDataProfile();
     },
     getMetrics: getStats,
-    trackEvent: () => { } // no-op alias
+    flushPerformanceProfile: computeDataProfile
   };
 
   // Alias для совместимости с heys_reports_v12.js
@@ -4976,6 +5388,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
 
   // Debug: экспорт статистики в глобальный scope для отладки
   global.heysStats = getStats;
+  startPerformanceAudit();
 
 })(window);
 
@@ -17409,6 +17822,216 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
 })(typeof window !== 'undefined' ? window : global);
 
 
+/* ===== heys_pending_queue_pure_v1.js ===== */
+// heys_pending_queue_pure_v1.js — dedup identity + compact for pending sync queues (single source of truth)
+// Load before heys_storage_supabase_v1.js (boot-core bundle).
+(function (global) {
+    'use strict';
+
+    const HEYS = (global.HEYS = global.HEYS || {});
+
+    const PENDING_CLIENT_QUEUE_KEY = 'heys_pending_client_sync_queue';
+
+    function getPendingQueueIdentity(item, storageKey, fallbackIndex) {
+        if (!item || typeof item !== 'object') return `__pending_invalid_${fallbackIndex}`;
+        const normalizedKey = String(item.k || '');
+        if (!normalizedKey) return `__pending_missing_key_${fallbackIndex}`;
+        if (storageKey === PENDING_CLIENT_QUEUE_KEY || item.client_id) {
+            return `${item.client_id || ''}:${normalizedKey}`;
+        }
+        return `${item.user_id || ''}:${normalizedKey}`;
+    }
+
+    function compactPendingQueue(queue, storageKey, options = {}) {
+        if (!Array.isArray(queue) || queue.length <= 1) return Array.isArray(queue) ? queue : [];
+
+        const dedupedReverse = [];
+        const seen = new Set();
+
+        for (let i = queue.length - 1; i >= 0; i--) {
+            const item = queue[i];
+            const identity = getPendingQueueIdentity(item, storageKey, i);
+            if (seen.has(identity)) continue;
+            seen.add(identity);
+            dedupedReverse.push(item);
+        }
+
+        const compacted = dedupedReverse.reverse();
+        if (options.mutate && Array.isArray(queue)) {
+            queue.splice(0, queue.length, ...compacted);
+            return queue;
+        }
+
+        return compacted;
+    }
+
+    HEYS.pendingQueuePure = {
+        PENDING_CLIENT_QUEUE_KEY,
+        getPendingQueueIdentity,
+        compactPendingQueue,
+    };
+})(typeof window !== 'undefined' ? window : globalThis);
+
+
+/* ===== heys_sync_queue_runtime_pure_v1.js ===== */
+// heys_sync_queue_runtime_pure_v1.js
+// Pure runtime helpers for client sync queue: enqueue, flush orchestration, retry decisions.
+// Load before heys_storage_supabase_v1.js (boot-core bundle).
+(function (global) {
+    'use strict';
+
+    const HEYS = (global.HEYS = global.HEYS || {});
+
+    function isCriticalSyncKey(normalizedKey) {
+        if (!normalizedKey) return false;
+        return (
+            normalizedKey.includes('dayv2_') ||
+            normalizedKey === 'heys_profile' ||
+            normalizedKey === 'heys_norms' ||
+            normalizedKey === 'heys_hr_zones' ||
+            normalizedKey === 'heys_products' ||
+            normalizedKey.includes('widget_layout')
+        );
+    }
+
+    function shouldScheduleRetryAfterRpcError(params) {
+        const isAuthError = !!params?.isAuthError;
+        const retryAttempt = Number(params?.retryAttempt || 0);
+        const maxRetryAttempts = Number(params?.maxRetryAttempts || 0);
+        if (isAuthError) return false;
+        return retryAttempt < maxRetryAttempts;
+    }
+
+    function enqueueClientSave(params) {
+        const queue = params?.queue;
+        if (!Array.isArray(queue) || !params?.item) {
+            return { queueLength: Array.isArray(queue) ? queue.length : 0, shouldImmediate: false };
+        }
+
+        queue.push(params.item);
+
+        if (typeof params.persistQueue === 'function') params.persistQueue(queue);
+        if (typeof params.notifyPendingChange === 'function') params.notifyPendingChange();
+        if (typeof params.scheduleClientPush === 'function') params.scheduleClientPush();
+
+        const shouldImmediate =
+            isCriticalSyncKey(params.normalizedKey) &&
+            !!params.isOnline &&
+            !params.waitingForSync;
+
+        if (shouldImmediate && typeof params.doImmediateClientUpload === 'function') {
+            try {
+                const maybePromise = params.doImmediateClientUpload();
+                if (maybePromise && typeof maybePromise.catch === 'function') {
+                    maybePromise.catch((e) => {
+                        if (typeof params.onImmediateUploadError === 'function') {
+                            params.onImmediateUploadError(e);
+                        }
+                    });
+                }
+            } catch (e) {
+                if (typeof params.onImmediateUploadError === 'function') {
+                    params.onImmediateUploadError(e);
+                }
+            }
+        }
+
+        return { queueLength: queue.length, shouldImmediate };
+    }
+
+    async function flushPendingQueueCore(params) {
+        const timeoutMs = Number(params?.timeoutMs || 5000);
+        const getSnapshot = params?.getSnapshot;
+        if (typeof getSnapshot !== 'function') return false;
+
+        const snapshotBefore = getSnapshot();
+        const totalBefore = snapshotBefore.queueLen + snapshotBefore.inFlight;
+        if (typeof params?.onLog === 'function') {
+            params.onLog('check', { ...snapshotBefore, totalBefore });
+        }
+
+        if (snapshotBefore.queueLen === 0 && !snapshotBefore.uploadInProgress) {
+            if (typeof params?.onLog === 'function') {
+                params.onLog('noop', { after: 0, elapsedMs: 0 });
+            }
+            return true;
+        }
+
+        if (snapshotBefore.queueLen > 0 && typeof params?.doImmediateClientUpload === 'function') {
+            try {
+                await params.doImmediateClientUpload();
+                if (typeof params?.onLog === 'function') params.onLog('immediate-upload-done', null);
+            } catch (e) {
+                if (typeof params?.onLog === 'function') params.onLog('immediate-upload-failed', { error: String(e?.message || e) });
+            }
+        }
+
+        const snapshotAfterImmediate = getSnapshot();
+        if (snapshotAfterImmediate.queueLen === 0 && !snapshotAfterImmediate.uploadInProgress) {
+            if (typeof params?.onLog === 'function') {
+                params.onLog('done', { after: 0, elapsedMs: 0 });
+            }
+            return true;
+        }
+
+        const addQueueDrainedListener = params?.addQueueDrainedListener;
+        const removeQueueDrainedListener = params?.removeQueueDrainedListener;
+        const getPendingCount = params?.getPendingCount;
+        const setTimer = params?.setTimer || ((fn, ms) => setTimeout(fn, ms));
+        const clearTimer = params?.clearTimer || ((id) => clearTimeout(id));
+        const now = params?.now || (() => Date.now());
+
+        return new Promise((resolve) => {
+            const start = now();
+            let timeoutId = null;
+
+            const cleanup = () => {
+                if (timeoutId) clearTimer(timeoutId);
+                if (typeof removeQueueDrainedListener === 'function') {
+                    removeQueueDrainedListener(handler);
+                }
+            };
+
+            const handler = () => {
+                const snapshot = getSnapshot();
+                if (snapshot.uploadInProgress) {
+                    if (typeof params?.onLog === 'function') params.onLog('queue-drained-but-uploading', snapshot);
+                    return;
+                }
+                cleanup();
+                if (typeof params?.onLog === 'function') {
+                    params.onLog('done', { after: 0, elapsedMs: now() - start });
+                }
+                resolve(true);
+            };
+
+            timeoutId = setTimer(() => {
+                cleanup();
+                const stillPending =
+                    typeof getPendingCount === 'function'
+                        ? getPendingCount()
+                        : getSnapshot().queueLen + getSnapshot().inFlight;
+                if (typeof params?.onLog === 'function') {
+                    params.onLog('timeout', { stillPending, elapsedMs: now() - start });
+                }
+                resolve(false);
+            }, timeoutMs);
+
+            if (typeof addQueueDrainedListener === 'function') {
+                addQueueDrainedListener(handler);
+            }
+        });
+    }
+
+    HEYS.syncQueueRuntimePure = {
+        isCriticalSyncKey,
+        shouldScheduleRetryAfterRpcError,
+        enqueueClientSave,
+        flushPendingQueueCore,
+    };
+})(typeof window !== 'undefined' ? window : globalThis);
+
+
 /* ===== heys_storage_supabase_v1.js ===== */
 // heys_storage_supabase_v1.js — Supabase bridge, auth, cloud sync, localStorage mirroring
 // v59: Fix cache invalidation on cloud sync — UI now shows synced data when changing dates
@@ -17496,6 +18119,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
     'heys_planning_projects',
     'heys_planning_tasks',
     'heys_planning_slots',
+    'heys_planning_inbox_v1',
+    'heys_planning_links_v1',
   ];
 
   /** Префиксы ключей, требующих client-specific storage */
@@ -18934,42 +19559,28 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
   }
 
   const PENDING_QUEUE_KEY = 'heys_pending_sync_queue';
-  const PENDING_CLIENT_QUEUE_KEY = 'heys_pending_client_sync_queue';
   const PENDING_QUEUE_COMPRESS_MIN_BYTES = 16 * 1024;
   const PENDING_QUEUE_INLINE_VALUE_MAX_BYTES = 32 * 1024;
 
-  function getPendingQueueIdentity(item, storageKey, fallbackIndex) {
-    if (!item || typeof item !== 'object') return `__pending_invalid_${fallbackIndex}`;
-    const normalizedKey = String(item.k || '');
-    if (!normalizedKey) return `__pending_missing_key_${fallbackIndex}`;
-    if (storageKey === PENDING_CLIENT_QUEUE_KEY || item.client_id) {
-      return `${item.client_id || ''}:${normalizedKey}`;
-    }
-    return `${item.user_id || ''}:${normalizedKey}`;
+  const _pendingQueuePure = HEYS.pendingQueuePure;
+  if (!_pendingQueuePure || typeof _pendingQueuePure.getPendingQueueIdentity !== 'function' || typeof _pendingQueuePure.compactPendingQueue !== 'function') {
+    throw new Error('[HEYS.storage] Load heys_pending_queue_pure_v1.js before heys_storage_supabase_v1.js (boot-core order)');
   }
-
-  function compactPendingQueue(queue, storageKey, options = {}) {
-    if (!Array.isArray(queue) || queue.length <= 1) return Array.isArray(queue) ? queue : [];
-
-    const dedupedReverse = [];
-    const seen = new Set();
-
-    for (let i = queue.length - 1; i >= 0; i--) {
-      const item = queue[i];
-      const identity = getPendingQueueIdentity(item, storageKey, i);
-      if (seen.has(identity)) continue;
-      seen.add(identity);
-      dedupedReverse.push(item);
-    }
-
-    const compacted = dedupedReverse.reverse();
-    if (options.mutate && Array.isArray(queue)) {
-      queue.splice(0, queue.length, ...compacted);
-      return queue;
-    }
-
-    return compacted;
+  const _syncQueueRuntimePure = HEYS.syncQueueRuntimePure;
+  if (
+    !_syncQueueRuntimePure ||
+    typeof _syncQueueRuntimePure.enqueueClientSave !== 'function' ||
+    typeof _syncQueueRuntimePure.flushPendingQueueCore !== 'function' ||
+    typeof _syncQueueRuntimePure.shouldScheduleRetryAfterRpcError !== 'function'
+  ) {
+    throw new Error('[HEYS.storage] Load heys_sync_queue_runtime_pure_v1.js before heys_storage_supabase_v1.js (boot-core order)');
   }
+  const PENDING_CLIENT_QUEUE_KEY = _pendingQueuePure.PENDING_CLIENT_QUEUE_KEY;
+  const getPendingQueueIdentity = _pendingQueuePure.getPendingQueueIdentity.bind(_pendingQueuePure);
+  const compactPendingQueue = _pendingQueuePure.compactPendingQueue.bind(_pendingQueuePure);
+  const enqueueClientSave = _syncQueueRuntimePure.enqueueClientSave.bind(_syncQueueRuntimePure);
+  const flushPendingQueueCore = _syncQueueRuntimePure.flushPendingQueueCore.bind(_syncQueueRuntimePure);
+  const shouldScheduleRetryAfterRpcError = _syncQueueRuntimePure.shouldScheduleRetryAfterRpcError.bind(_syncQueueRuntimePure);
 
   function getPendingQueueLocalStorageKey(item) {
     if (!item || typeof item !== 'object') return '';
@@ -19094,19 +19705,29 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
   const HYDRATION_DAY_QUOTA_SKIP_AFTER_DAYS = 45; // Старые dayv2 оставляем в cloud, если localStorage уже упёрся в quota
   const QUOTA_LOG_THROTTLE_MS = 5000;
   const QUOTA_CLEANUP_COOLDOWN_MS = 3000;
+  const STORAGE_SIZE_CACHE_TTL_MS = 10000;
   const quotaLogTimestamps = new Map();
   let _lastAggressiveCleanupAt = 0;
+  let _storageSizeCache = { mb: 0, ts: 0 };
 
   /** Получить размер localStorage в MB */
-  function getStorageSize() {
+  function getStorageSize(options = {}) {
     try {
-      let total = 0;
-      for (let key in global.localStorage) {
-        if (global.localStorage.hasOwnProperty(key)) {
-          total += (global.localStorage.getItem(key) || '').length * 2; // UTF-16
-        }
+      const forceRecalc = options && options.forceRecalc === true;
+      const now = Date.now();
+      if (!forceRecalc && (now - _storageSizeCache.ts) < STORAGE_SIZE_CACHE_TTL_MS) {
+        return _storageSizeCache.mb;
       }
-      return total / 1024 / 1024;
+
+      let total = 0;
+      for (let i = 0; i < global.localStorage.length; i++) {
+        const key = global.localStorage.key(i);
+        if (!key) continue;
+        total += (global.localStorage.getItem(key) || '').length * 2; // UTF-16
+      }
+      const sizeMB = total / 1024 / 1024;
+      _storageSizeCache = { mb: sizeMB, ts: now };
+      return sizeMB;
     } catch (e) {
       return 0;
     }
@@ -19391,7 +20012,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
     cleanupOldData(30);
 
     // 4. Показываем размер после очистки
-    let sizeMB = getStorageSize();
+    let sizeMB = getStorageSize({ forceRecalc: true });
     logCritical(`📊 Размер после очистки: ${sizeMB.toFixed(2)} MB`);
 
     // 5. Если всё ещё > 4MB — ужимаем dayv2 агрессивнее и ещё раз чистим recoverable
@@ -19399,7 +20020,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
       cleanupRecoverableStorage();
       cleanupOldData(14);
 
-      sizeMB = getStorageSize();
+      sizeMB = getStorageSize({ forceRecalc: true });
       if (sizeMB > 4) {
         cleanupOptionalPreferenceStorage();
         cleanupOldData(7);
@@ -19415,7 +20036,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
         aggressiveKeys.forEach(k => global.localStorage.removeItem(k));
       }
 
-      sizeMB = getStorageSize();
+      sizeMB = getStorageSize({ forceRecalc: true });
       logCritical(`📊 После ultra-aggressive очистки: ${sizeMB.toFixed(2)} MB`);
       if (sizeMB > 4) {
         logLargestStorageKeys();
@@ -19427,25 +20048,30 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
   function safeSetItem(key, value, options = {}) {
     // Используем оригинальный setItem если доступен (избегаем рекурсии через перехват)
     const setFn = originalSetItem || global.localStorage.setItem.bind(global.localStorage);
-    const writeMeta = getStorageWriteMeta(key, value);
+    let writeMeta = null;
+    const getWriteMeta = () => {
+      if (!writeMeta) writeMeta = getStorageWriteMeta(key, value);
+      return writeMeta;
+    };
 
     try {
       setFn(key, value);
       return true;
     } catch (e) {
       if (e.name === 'QuotaExceededError' || e.code === 22) {
+        const quotaMeta = getWriteMeta();
         if (shouldSkipHydrationDayOnQuota(key, options)) {
-          logQuotaThrottled('quota-hydration-skip', `⚠️ [SYNC] Quota: старый dayv2 оставлен только в cloud: ${writeMeta.summary}`);
+          logQuotaThrottled('quota-hydration-skip', `⚠️ [SYNC] Quota: старый dayv2 оставлен только в cloud: ${quotaMeta.summary}`);
           return false;
         }
 
-        if (writeMeta.kind === 'recoverable_cache') {
+        if (quotaMeta.kind === 'recoverable_cache') {
           try { global.localStorage.removeItem(key); } catch (_) { }
-          logQuotaThrottled('quota-recoverable-skip', `⚠️ [STORAGE] Quota: пропускаем recoverable cache write: ${writeMeta.summary}`);
+          logQuotaThrottled('quota-recoverable-skip', `⚠️ [STORAGE] Quota: пропускаем recoverable cache write: ${quotaMeta.summary}`);
           return false;
         }
         // Сначала очищаем безопасно-восстановимые ключи и старые данные
-        logQuotaThrottled('quota-warning', `⚠️ localStorage переполнен, очищаем старые данные... ${writeMeta.summary}`);
+        logQuotaThrottled('quota-warning', `⚠️ localStorage переполнен, очищаем старые данные... ${quotaMeta.summary}`);
         cleanupRecoverableStorage();
         cleanupOldData();
 
@@ -19473,7 +20099,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
               setFn(key, value);
               return true;
             } catch (e4) {
-              logQuotaThrottled('quota-critical', `❌ Не удалось сохранить данные: storage критически переполнен (${writeMeta.summary})`);
+              logQuotaThrottled('quota-critical', `❌ Не удалось сохранить данные: storage критически переполнен (${quotaMeta.summary})`);
               logLargestStorageKeysThrottled();
               return false;
             }
@@ -19643,90 +20269,82 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
    * @returns {Promise<boolean>} - true если очередь очищена, false если timeout
    */
   cloud.flushPendingQueue = async function (timeoutMs = 5000) {
-    // 🔄 v=51: В PIN-auth режиме игнорируем upsertQueue — она для curator mode
-    // upsertQueue работает только с Supabase user, в PIN mode нет user
-    const isClientOnlyMode = _rpcOnlyMode && _pinAuthClientId;
-    const clientQueueLen = clientUpsertQueue.length;
-    const userQueueLen = isClientOnlyMode ? 0 : upsertQueue.length; // Игнорируем в PIN mode
-    const queueLen = clientQueueLen + userQueueLen;
-    const inFlight = _uploadInProgress ? _uploadInFlightCount : 0;
-    const total = queueLen + inFlight;
     const flushStartTs = Date.now();
-    const logFlushSummary = (label, afterCount) => {
-      logCritical(`🧾 [FLUSH] ${label} before=${total} after=${afterCount} ms=${Date.now() - flushStartTs}`);
+    const snapshotBefore = () => {
+      // 🔄 v=51: В PIN-auth режиме игнорируем upsertQueue — она для curator mode
+      const isClientOnlyMode = _rpcOnlyMode && _pinAuthClientId;
+      const clientQueueLen = clientUpsertQueue.length;
+      const userQueueLen = isClientOnlyMode ? 0 : upsertQueue.length;
+      const queueLen = clientQueueLen + userQueueLen;
+      const inFlight = _uploadInProgress ? _uploadInFlightCount : 0;
+      return { isClientOnlyMode, clientQueueLen, userQueueLen, queueLen, inFlight, uploadInProgress: _uploadInProgress };
     };
 
-    // 🔄 v=34: ВСЕГДА логируем flush — это критическая операция!
-    logCritical(`🔄 [FLUSH] Check: clientQueue=${clientQueueLen}, userQueue=${upsertQueue.length}${isClientOnlyMode ? ' (ignored in PIN mode)' : ''}, inFlight=${inFlight}`);
+    const before = snapshotBefore();
+    const totalBefore = before.queueLen + before.inFlight;
+    const logFlushSummary = (label, afterCount) => {
+      logCritical(`🧾 [FLUSH] ${label} before=${totalBefore} after=${afterCount} ms=${Date.now() - flushStartTs}`);
+    };
 
-    // Если очередь пуста И ничего не в полёте — готово
-    if (queueLen === 0 && !_uploadInProgress) {
-      logCritical('✅ [FLUSH] Queue already empty and no uploads in progress');
-      logFlushSummary('noop', 0);
-      return true;
-    }
-
-    logCritical(`🔄 [FLUSH] Need to upload ${total} pending items IMMEDIATELY...`);
-
-    // 🔄 v=34 FIX: Немедленный upload вместо debounce!
-    // Это критическое изменение — раньше scheduleClientPush создавал 500ms задержку
-    // и sync успевал скачать старые данные с сервера ДО upload
-    if (queueLen > 0) {
-      logCritical('🔄 [FLUSH] Starting IMMEDIATE upload (no debounce)...');
-      try {
-        await doImmediateClientUpload();
-        logCritical('✅ [FLUSH] Immediate upload completed');
-      } catch (e) {
-        err('❌ [FLUSH] Immediate upload failed:', e);
-      }
-    }
-
-    // Проверяем снова после immediate upload
-    const stillClientQueue = clientUpsertQueue.length;
-    const stillUserQueue = isClientOnlyMode ? 0 : upsertQueue.length;
-    const stillInQueue = stillClientQueue + stillUserQueue;
-    if (stillInQueue === 0 && !_uploadInProgress) {
-      logCritical('✅ [FLUSH] All uploaded after immediate push');
-      logFlushSummary('done', 0);
-      return true;
-    }
-
-    // Если всё ещё что-то осталось — ждём событие queue-drained с таймаутом
-    logCritical(`🔄 [FLUSH] ${stillInQueue} items still pending (client=${stillClientQueue}, user=${stillUserQueue}), waiting for queue-drained event...`);
-
-    return new Promise((resolve) => {
-      const startTime = Date.now();
-
-      // Таймаут
-      const timeoutId = setTimeout(() => {
-        const stillPending = cloud.getPendingCount();
-        logCritical(`⚠️ [FLUSH] Timeout after ${timeoutMs}ms, ${stillPending} items still pending, inFlight=${_uploadInProgress}`);
-        logFlushSummary('timeout', stillPending);
-        window.removeEventListener('heys:queue-drained', handler);
-        resolve(false);
-      }, timeoutMs);
-
-      // Слушаем событие queue-drained
-      const handler = () => {
-        // Дополнительная проверка что действительно всё отправлено
-        if (_uploadInProgress) {
-          logCritical('🔄 [FLUSH] queue-drained fired but upload still in progress, waiting...');
-          return; // Не снимаем listener, ждём ещё
+    const result = await flushPendingQueueCore({
+      timeoutMs,
+      getSnapshot: () => {
+        const s = snapshotBefore();
+        return { queueLen: s.queueLen, inFlight: s.inFlight, uploadInProgress: s.uploadInProgress };
+      },
+      doImmediateClientUpload,
+      getPendingCount: () => cloud.getPendingCount(),
+      addQueueDrainedListener: (handler) => window.addEventListener('heys:queue-drained', handler),
+      removeQueueDrainedListener: (handler) => window.removeEventListener('heys:queue-drained', handler),
+      setTimer: (fn, ms) => setTimeout(fn, ms),
+      clearTimer: (id) => clearTimeout(id),
+      now: () => Date.now(),
+      onLog: (phase, payload) => {
+        if (phase === 'check') {
+          logCritical(
+            `🔄 [FLUSH] Check: clientQueue=${before.clientQueueLen}, userQueue=${upsertQueue.length}${before.isClientOnlyMode ? ' (ignored in PIN mode)' : ''}, inFlight=${before.inFlight}`
+          );
+          if (before.queueLen === 0 && !before.uploadInProgress) {
+            logCritical('✅ [FLUSH] Queue already empty and no uploads in progress');
+          } else {
+            logCritical(`🔄 [FLUSH] Need to upload ${totalBefore} pending items IMMEDIATELY...`);
+            if (before.queueLen > 0) {
+              logCritical('🔄 [FLUSH] Starting IMMEDIATE upload (no debounce)...');
+            }
+          }
+          return;
         }
-        clearTimeout(timeoutId);
-        const elapsed = Date.now() - startTime;
-        logCritical(`✅ [FLUSH] Queue drained in ${elapsed}ms`);
-        logFlushSummary('done', 0);
-        window.removeEventListener('heys:queue-drained', handler);
-        resolve(true);
-      };
-      window.addEventListener('heys:queue-drained', handler);
-
-      // Если всё уже в полёте — просто ждём queue-drained
-      if (stillInQueue === 0 && _uploadInProgress) {
-        logCritical('🔄 [FLUSH] Queue empty but upload in progress, waiting for completion...');
-      }
+        if (phase === 'immediate-upload-done') {
+          logCritical('✅ [FLUSH] Immediate upload completed');
+          return;
+        }
+        if (phase === 'immediate-upload-failed') {
+          err('❌ [FLUSH] Immediate upload failed:', payload?.error || payload);
+          return;
+        }
+        if (phase === 'queue-drained-but-uploading') {
+          logCritical('🔄 [FLUSH] queue-drained fired but upload still in progress, waiting...');
+          return;
+        }
+        if (phase === 'timeout') {
+          const stillPending = payload?.stillPending ?? cloud.getPendingCount();
+          logCritical(`⚠️ [FLUSH] Timeout after ${timeoutMs}ms, ${stillPending} items still pending, inFlight=${_uploadInProgress}`);
+          logFlushSummary('timeout', stillPending);
+          return;
+        }
+        if (phase === 'noop') {
+          logFlushSummary('noop', 0);
+          return;
+        }
+        if (phase === 'done') {
+          const elapsed = payload?.elapsedMs ?? Date.now() - flushStartTs;
+          logCritical(`✅ [FLUSH] Queue drained in ${elapsed}ms`);
+          logFlushSummary('done', 0);
+        }
+      },
     });
+
+    return result;
   };
 
   /** Получить информацию о storage */
@@ -22687,7 +23305,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
           // Shared products: НЕ ждём — fire and forget
           // Cleanup, diagnostics, deleted sync — defer на 3s
           setTimeout(() => {
-            try { cleanupDuplicateKeys(); } catch (_) { }
+            try { maybeCleanupDuplicateKeys(); } catch (_) { }
             if (isDeltaFastPath) {
               try { cloud.cleanupProducts(); } catch (_) { }
             }
@@ -24093,10 +24711,10 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
 
         const syncDuration = Math.round(performance.now() - syncStartTime);
 
-        try { cleanupDuplicateKeys(); } catch (_) { }
+        try { maybeCleanupDuplicateKeys(); } catch (_) { }
 
         // ── [HEYS.sinhron] ИТОГ: состояние dayv2 в localStorage ПОСЛЕ синхронизации ──
-        {
+        if (shouldRunDeepSyncDiagnostics()) {
           const postSyncDayKeys = [];
           const postSyncDateCount = {};
           const postSyncDuplicateDetails = [];
@@ -24701,7 +25319,11 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
           // Данные останутся в очереди и отправятся когда появится токен (после логина)
           if (isAuthError) {
             console.warn('⚠️ [UPLOAD] Auth error, NOT retrying — waiting for login');
-          } else if (retryAttempt < MAX_RETRY_ATTEMPTS) {
+          } else if (shouldScheduleRetryAfterRpcError({
+            isAuthError,
+            retryAttempt,
+            maxRetryAttempts: MAX_RETRY_ATTEMPTS,
+          })) {
             scheduleClientPush();
           } else {
             console.warn('⚠️ [UPLOAD] Max retries reached, data saved locally');
@@ -25219,32 +25841,25 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
       console.info('[HEYS.sync] 🔓 Grace period bypassed for', _isWidgetLayout ? 'widget_layout' : 'profileCompleted', 'save');
     }
 
-    // Добавляем в очередь вместо немедленной отправки
-    clientUpsertQueue.push(upsertObj);
-
-    // 🔥 INSTANT FEEDBACK: Мгновенно уведомляем UI о том, что есть несохраненные данные
-    // Не ждем таймера scheduleClientPush, пользователь должен видеть "Syncing..." сразу
-    savePendingQueue(PENDING_CLIENT_QUEUE_KEY, clientUpsertQueue);
-    notifyPendingChange();
-
-    scheduleClientPush();
-
-    // ⚡ IMMEDIATE: для критичных ключей отправляем в облако сразу
-    // Требование: любые изменения дня/профиля/норм/продуктов должны попасть в облако без задержки
-    // v4: Используем normalizedKey вместо k — scoped ключ heys_{clientId}_profile не совпадал с 'heys_profile'
-    const isCriticalKey = normalizedKey && (
-      normalizedKey.includes('dayv2_') ||
-      normalizedKey === 'heys_profile' ||
-      normalizedKey === 'heys_norms' ||
-      normalizedKey === 'heys_hr_zones' ||
-      normalizedKey === 'heys_products' ||
-      normalizedKey.includes('widget_layout')
-    );
-    if (isCriticalKey && navigator.onLine && !waitingForSync) {
-      console.info('[HEYS.sync] ⚡ Immediate upload', { key: k, client: client_id?.slice(0, 8) });
-      doImmediateClientUpload().catch((e) => {
+    const enqueueResult = enqueueClientSave({
+      queue: clientUpsertQueue,
+      item: upsertObj,
+      normalizedKey,
+      waitingForSync,
+      isOnline: navigator.onLine,
+      persistQueue: (queue) => savePendingQueue(PENDING_CLIENT_QUEUE_KEY, queue),
+      notifyPendingChange,
+      scheduleClientPush,
+      doImmediateClientUpload: () => {
+        console.info('[HEYS.sync] ⚡ Immediate upload', { key: k, client: client_id?.slice(0, 8) });
+        return doImmediateClientUpload();
+      },
+      onImmediateUploadError: (e) => {
         console.warn('[HEYS.sync] ⚠️ Immediate upload failed', e?.message || e);
-      });
+      },
+    });
+    if (enqueueResult.shouldImmediate) {
+      log(`[HEYS.sync] Immediate upload path selected for '${normalizedKey}'`);
     }
   };
 
@@ -25552,8 +26167,10 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
   // Console API: HEYS.cloud.hotSync.disable() / .enable() / .status() / .safeMode() / .normalMode()
   // ═══════════════════════════════════════════════════════════════════
   // and we also sync immediately when the tab/window becomes active again.
-  const FOREGROUND_AUTO_SYNC_INTERVAL_MS = 2000;
-  const FOREGROUND_AUTO_SYNC_MIN_GAP_MS = 1200;
+  const FOREGROUND_AUTO_SYNC_INTERVAL_ACTIVE_MS = 3500;
+  const FOREGROUND_AUTO_SYNC_INTERVAL_IDLE_MS = 7000;
+  const FOREGROUND_AUTO_SYNC_INTERVAL_LOW_END_MS = 9000;
+  const FOREGROUND_AUTO_SYNC_MIN_GAP_MS = 2000;
   const FOREGROUND_AUTO_SYNC_EXTENDED_EVERY = 3;
   const HOT_SYNC_AUTO_SAFE_THRESHOLD = 5; // consecutive errors to trigger auto-safe mode
   let foregroundAutoSyncTimer = null;
@@ -25601,6 +26218,25 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
   ]);
   let foregroundAutoSyncIdleStreak = 0;
   const foregroundHotSyncHistory = [];
+
+  function getForegroundAutoSyncIntervalMs() {
+    let interval = foregroundAutoSyncIdleStreak >= 5
+      ? FOREGROUND_AUTO_SYNC_INTERVAL_IDLE_MS
+      : FOREGROUND_AUTO_SYNC_INTERVAL_ACTIVE_MS;
+    try {
+      const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+      if (connection?.saveData) interval = Math.max(interval, FOREGROUND_AUTO_SYNC_INTERVAL_LOW_END_MS);
+      const effectiveType = String(connection?.effectiveType || '');
+      if (effectiveType === '2g' || effectiveType === '3g' || effectiveType === 'slow-2g') {
+        interval = Math.max(interval, FOREGROUND_AUTO_SYNC_INTERVAL_LOW_END_MS);
+      }
+      const deviceMemory = Number(navigator.deviceMemory || 0);
+      if (Number.isFinite(deviceMemory) && deviceMemory > 0 && deviceMemory <= 4) {
+        interval = Math.max(interval, FOREGROUND_AUTO_SYNC_INTERVAL_LOW_END_MS);
+      }
+    } catch (_) { }
+    return interval;
+  }
 
   function getChangedTopLevelKeys(previousValue, nextValue) {
     const prev = previousValue && typeof previousValue === 'object' && !Array.isArray(previousValue)
@@ -26130,7 +26766,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
 
   function stopForegroundAutoSyncLoop() {
     if (!foregroundAutoSyncTimer) return;
-    clearInterval(foregroundAutoSyncTimer);
+    clearTimeout(foregroundAutoSyncTimer);
     foregroundAutoSyncTimer = null;
   }
 
@@ -26138,13 +26774,19 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
     if (foregroundAutoSyncTimer) return;
     if (isHotSyncDisabled()) return;
     if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
-    console.info('[HEYS.sync] 🔄 Hot-sync loop started (interval', FOREGROUND_AUTO_SYNC_INTERVAL_MS, 'ms)');
-
-    foregroundAutoSyncTimer = setInterval(() => {
-      requestForegroundAutoSync('visible-interval', {
-        minGapMs: FOREGROUND_AUTO_SYNC_INTERVAL_MS - 100
-      }).catch(() => { });
-    }, FOREGROUND_AUTO_SYNC_INTERVAL_MS);
+    const scheduleNext = () => {
+      if (foregroundAutoSyncTimer) clearTimeout(foregroundAutoSyncTimer);
+      const intervalMs = getForegroundAutoSyncIntervalMs();
+      foregroundAutoSyncTimer = setTimeout(() => {
+        requestForegroundAutoSync('visible-interval', {
+          minGapMs: Math.max(FOREGROUND_AUTO_SYNC_MIN_GAP_MS, intervalMs - 250)
+        }).catch(() => { }).finally(() => {
+          if (foregroundAutoSyncTimer) scheduleNext();
+        });
+      }, intervalMs);
+    };
+    console.info('[HEYS.sync] 🔄 Hot-sync loop started (adaptive interval)');
+    scheduleNext();
   }
 
   function handleForegroundAutoSyncVisibility() {
@@ -26234,6 +26876,27 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
       return history;
     }
   };
+
+  const DUPLICATE_CLEANUP_MIN_GAP_MS = 5 * 60 * 1000;
+  let _lastDuplicateCleanupAt = 0;
+
+  function shouldRunDeepSyncDiagnostics() {
+    try {
+      if (global.DEV?.isDev?.()) return true;
+      return global.localStorage.getItem('heys_sync_deep_diagnostics') === '1';
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function maybeCleanupDuplicateKeys(force = false) {
+    const now = Date.now();
+    if (!force && (now - _lastDuplicateCleanupAt) < DUPLICATE_CLEANUP_MIN_GAP_MS) {
+      return 0;
+    }
+    _lastDuplicateCleanupAt = now;
+    return cleanupDuplicateKeys();
+  }
 
   /** Очистить дублирующиеся ключи (двойной clientId, старые форматы) */
   function cleanupDuplicateKeys() {
@@ -26331,7 +26994,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
 
   /** Очистить дублирующиеся ключи вручную */
   cloud.cleanupDuplicates = function () {
-    return cleanupDuplicateKeys();
+    return maybeCleanupDuplicateKeys(true);
   };
 
   /** Удалить продукты других клиентов (освобождает много места) */
@@ -26546,7 +27209,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
       }
 
       // Также удаляем дубликаты и данные других клиентов
-      cleanupDuplicateKeys();
+      maybeCleanupDuplicateKeys(true);
 
       // 🔧 v69 FIX: Purge pending upsert queue от записей чужих клиентов.
       // Если flush timeout не успел вытолкнуть данные старого клиента,
