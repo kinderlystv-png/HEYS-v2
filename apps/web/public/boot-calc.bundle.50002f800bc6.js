@@ -18852,6 +18852,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
     function renderMealsList(params) {
         const {
             sortedMealsForDisplay,
+            baseDisplayIndex = 0,
+            totalMealsCount = 0,
             day,
             products,
             pIndex,
@@ -18903,6 +18905,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
         const nowMinutes = (nowDate.getHours() * 60) + nowDate.getMinutes();
 
         return sortedMealsForDisplay.map((sortedMeal, displayIndex) => {
+            const absoluteDisplayIndex = baseDisplayIndex + displayIndex;
             const mi = mealIndexById.has(sortedMeal.id) ? mealIndexById.get(sortedMeal.id) : -1;
             if (mi === -1) {
                 trackError(new Error('[HEYS Day Meals] meal not found in day.meals'), {
@@ -18914,9 +18917,10 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
             }
 
             const meal = sourceMeals[mi];
-            const isExpanded = isMealExpanded(mi, sourceMeals.length, sourceMeals, displayIndex);
-            const mealNumber = sortedMealsForDisplay.length - displayIndex;
-            const isFirst = displayIndex === 0;
+            const isExpanded = isMealExpanded(mi, sourceMeals.length, sourceMeals, absoluteDisplayIndex);
+            const sortedTotal = totalMealsCount > 0 ? totalMealsCount : sortedMealsForDisplay.length;
+            const mealNumber = sortedTotal - absoluteDisplayIndex;
+            const isFirst = absoluteDisplayIndex === 0;
             const isCurrentMeal = isFirst && !isMealStale(meal, nowMinutes);
 
             return React.createElement('div', {
@@ -18972,7 +18976,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
                 React.createElement(MealCard, {
                     meal,
                     mealIndex: mi,
-                    displayIndex,
+                    displayIndex: absoluteDisplayIndex,
                     products,
                     pIndex,
                     date,
@@ -19075,6 +19079,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
 
         const INITIAL_VISIBLE_MEALS = 8;
         const MEALS_RENDER_CHUNK_SIZE = 6;
+        const MAX_RENDERED_MEALS_WINDOW = 24;
 
         const sortedMealsForDisplay = React.useMemo(() => {
             const meals = day?.meals || [];
@@ -19114,6 +19119,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
             if (totalMeals <= INITIAL_VISIBLE_MEALS) return totalMeals;
             return INITIAL_VISIBLE_MEALS;
         });
+        const [showAllLoadedMeals, setShowAllLoadedMeals] = React.useState(false);
         const loadMoreAnchorRef = React.useRef(null);
 
         React.useEffect(() => {
@@ -19154,9 +19160,22 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
             return sortedMealsForDisplay.slice(0, visibleMealsLimit);
         }, [sortedMealsForDisplay, totalMeals, visibleMealsLimit]);
 
+        const windowStartIndex = React.useMemo(() => {
+            if (showAllLoadedMeals) return 0;
+            return Math.max(0, visibleMealsLimit - MAX_RENDERED_MEALS_WINDOW);
+        }, [showAllLoadedMeals, visibleMealsLimit]);
+
+        const hiddenTopMealsCount = windowStartIndex;
+        const windowedVisibleMeals = React.useMemo(() => {
+            if (windowStartIndex <= 0) return visibleSortedMeals;
+            return visibleSortedMeals.slice(windowStartIndex);
+        }, [visibleSortedMeals, windowStartIndex]);
+
         const mealsUI = React.useMemo(() => {
             const baseMealsUI = HEYS.dayMealsList?.renderMealsList?.({
-                sortedMealsForDisplay: visibleSortedMeals,
+                sortedMealsForDisplay: windowedVisibleMeals,
+                baseDisplayIndex: windowStartIndex,
+                totalMealsCount: totalMeals,
                 day,
                 products,
                 pIndex,
@@ -19184,10 +19203,38 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
                 prof,
                 insulinWaveData,
             }) || [];
-            if (!hasMoreMeals) return baseMealsUI;
+            const nextUi = [];
+
+            if (hiddenTopMealsCount > 0) {
+                nextUi.push(
+                    React.createElement('div', {
+                        key: 'meals-window-restore-top',
+                        className: 'meals-window-restore-top',
+                        style: {
+                            display: 'flex',
+                            justifyContent: 'center',
+                            padding: '4px 0 10px',
+                        },
+                    },
+                    React.createElement('button', {
+                        type: 'button',
+                        className: 'btn',
+                        onClick: () => setShowAllLoadedMeals(true),
+                        style: {
+                            borderRadius: '12px',
+                            padding: '8px 12px',
+                            fontWeight: '600',
+                        },
+                    }, `Показать верхние ${hiddenTopMealsCount}`))
+                );
+            }
+
+            nextUi.push(...baseMealsUI);
+
+            if (!hasMoreMeals) return nextUi;
 
             return [
-                ...baseMealsUI,
+                ...nextUi,
                 React.createElement('div', {
                     key: 'meals-load-more-anchor',
                     ref: loadMoreAnchorRef,
@@ -19230,15 +19277,18 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
             pIndex,
             products,
             prof,
+            windowStartIndex,
+            windowedVisibleMeals,
+            hiddenTopMealsCount,
             hasMoreMeals,
             removeItem,
             removeMeal,
             loadMoreMeals,
+            setShowAllLoadedMeals,
             setDay,
             setGrams,
             setMealQualityPopup,
             totalMeals,
-            visibleSortedMeals,
             visibleMealsLimit,
             toggleMealExpand,
             updateMealTime,
