@@ -4727,8 +4727,15 @@
             return [];
         }
 
+        const sourceMeals = Array.isArray(day?.meals) ? day.meals : [];
+        const mealIndexById = new Map();
+        for (let idx = 0; idx < sourceMeals.length; idx += 1) {
+            const mealId = sourceMeals[idx]?.id;
+            if (mealId) mealIndexById.set(mealId, idx);
+        }
+
         return sortedMealsForDisplay.map((sortedMeal, displayIndex) => {
-            const mi = (day.meals || []).findIndex((m) => m.id === sortedMeal.id);
+            const mi = mealIndexById.has(sortedMeal.id) ? mealIndexById.get(sortedMeal.id) : -1;
             if (mi === -1) {
                 trackError(new Error('[HEYS Day Meals] meal not found in day.meals'), {
                     source: 'day/_meals.js',
@@ -4738,8 +4745,8 @@
                 return null;
             }
 
-            const meal = day.meals[mi];
-            const isExpanded = isMealExpanded(mi, (day.meals || []).length, day.meals, displayIndex);
+            const meal = sourceMeals[mi];
+            const isExpanded = isMealExpanded(mi, sourceMeals.length, sourceMeals, displayIndex);
             const mealNumber = sortedMealsForDisplay.length - displayIndex;
             const isFirst = displayIndex === 0;
             const isCurrentMeal = isFirst && !isMealStale(meal);
@@ -4818,7 +4825,7 @@
                     removeItem,
                     removePhoto,
                     isMealStale,
-                    allMeals: day.meals,
+                    allMeals: sourceMeals,
                     isNewItem,
                     optimum,
                     setMealQualityPopup,
@@ -4914,35 +4921,65 @@
             });
         }, [safeMeals]);
 
-        const mealsUI = HEYS.dayMealsList?.renderMealsList?.({
-            sortedMealsForDisplay,
-            day,
-            products,
-            pIndex,
+        const mealsUI = React.useMemo(() => {
+            return HEYS.dayMealsList?.renderMealsList?.({
+                sortedMealsForDisplay,
+                day,
+                products,
+                pIndex,
+                date,
+                setDay,
+                isMobile,
+                isMealExpanded,
+                isMealStale,
+                toggleMealExpand,
+                changeMealType,
+                updateMealTime,
+                changeMealMood,
+                changeMealWellbeing,
+                changeMealStress,
+                removeMeal,
+                openEditGramsModal,
+                openTimeEditor,
+                openMoodEditor,
+                setGrams,
+                removeItem,
+                isNewItem,
+                optimum,
+                setMealQualityPopup,
+                addProductToMeal,
+                prof,
+                insulinWaveData,
+            }) || [];
+        }, [
+            addProductToMeal,
+            changeMealMood,
+            changeMealStress,
+            changeMealType,
+            changeMealWellbeing,
             date,
-            setDay,
-            isMobile,
+            day,
+            insulinWaveData,
             isMealExpanded,
             isMealStale,
-            toggleMealExpand,
-            changeMealType,
-            updateMealTime,
-            changeMealMood,
-            changeMealWellbeing,
-            changeMealStress,
-            removeMeal,
-            openEditGramsModal,
-            openTimeEditor,
-            openMoodEditor,
-            setGrams,
-            removeItem,
+            isMobile,
             isNewItem,
+            openEditGramsModal,
+            openMoodEditor,
+            openTimeEditor,
             optimum,
-            setMealQualityPopup,
-            addProductToMeal,
+            pIndex,
+            products,
             prof,
-            insulinWaveData,
-        }) || [];
+            removeItem,
+            removeMeal,
+            setDay,
+            setGrams,
+            setMealQualityPopup,
+            sortedMealsForDisplay,
+            toggleMealExpand,
+            updateMealTime,
+        ]);
 
         return { sortedMealsForDisplay, mealsUI };
     }
