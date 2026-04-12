@@ -2068,6 +2068,7 @@
         useEffect(() => {
             if (adviceModuleReady) return;
             const checkInterval = setInterval(() => {
+                if (typeof document !== 'undefined' && document.hidden) return;
                 if (HEYSRef?.advice?.useAdviceEngine) {
                     setAdviceModuleReady(true);
                     clearInterval(checkInterval);
@@ -2353,8 +2354,19 @@
                     }
                 } catch (e) { }
             };
-            const intervalId = setInterval(checkScheduled, 30000);
-            return () => clearInterval(intervalId);
+            const tick = () => {
+                if (typeof document !== 'undefined' && document.hidden) return;
+                checkScheduled();
+            };
+            const intervalId = setInterval(tick, 30000);
+            const onVis = () => {
+                if (typeof document !== 'undefined' && !document.hidden) checkScheduled();
+            };
+            document.addEventListener('visibilitychange', onVis);
+            return () => {
+                clearInterval(intervalId);
+                document.removeEventListener('visibilitychange', onVis);
+            };
         }, [readStoredValue]);
 
         useEffect(() => {

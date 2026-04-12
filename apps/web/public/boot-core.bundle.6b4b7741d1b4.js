@@ -2158,10 +2158,16 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
           }
         });
 
-        // Проверяем обновления каждые 60 секунд
+        // Проверяем обновления каждые 60 секунд (не будим SW-проверки в фоновой вкладке)
         setInterval(() => {
+          if (typeof document !== 'undefined' && document.hidden) return;
           registration.update().catch(() => { });
         }, 60000);
+        document.addEventListener('visibilitychange', () => {
+          if (typeof document !== 'undefined' && !document.hidden) {
+            registration.update().catch(() => { });
+          }
+        });
 
         // Слушаем обновления
         registration.addEventListener('updatefound', () => {
@@ -13581,18 +13587,18 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
       AUTH_VERIFY: '/auth/verify'
     },
 
-    // Таймауты (нарастающие: 1я попытка 15с, 2я 20с, 3я 30с)
-    TIMEOUT_MS: 15000,
-    TIMEOUT_ESCALATION_MS: [15000, 20000, 30000],
+    // Таймауты (нарастающие; верхняя попытка capped — меньше «зависло на 30с» при плохой сети)
+    TIMEOUT_MS: 12000,
+    TIMEOUT_ESCALATION_MS: [12000, 18000, 22000],
 
-    // Retry логика (exponential backoff: 2с → 5с → 10с)
+    // Retry логика (exponential backoff; последний шаг чуть короче для UX)
     // v59 FIX I: Increased delays for cold-start resilience.
     // 502 returns instantly (not timeout), so retry window = sum of delays.
     // Old [1000,3000,7000] gave only 4s — less than CF cold start (>4s).
     // New [2000,5000,10000] gives 7s — enough for CF warm-up.
     MAX_RETRIES: 2,
     RETRY_DELAY_MS: 2000,
-    RETRY_DELAY_ESCALATION_MS: [2000, 5000, 10000]
+    RETRY_DELAY_ESCALATION_MS: [2000, 4500, 7000]
   };
 
   // ═══════════════════════════════════════════════════════════════════
@@ -13653,7 +13659,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
     let lastError;
 
     for (let i = 0; i <= retries; i++) {
-      // ⏱️ Нарастающий таймаут: 15с → 20с → 30с
+      // ⏱️ Нарастающий таймаут (см. CONFIG.TIMEOUT_ESCALATION_MS)
       const timeoutMs = CONFIG.TIMEOUT_ESCALATION_MS[i] || CONFIG.TIMEOUT_MS;
       try {
         const response = await fetchWithTimeout(url, options, timeoutMs);
@@ -13674,7 +13680,6 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
         err(`Attempt ${i + 1}/${retries + 1} failed (timeout=${timeoutMs}ms):`, e.message);
 
         if (i < retries) {
-          // ⏱️ Exponential backoff: 1с → 3с → 7с
           const delay = CONFIG.RETRY_DELAY_ESCALATION_MS[i] || CONFIG.RETRY_DELAY_MS;
           console.info(`[HEYS.api] ↩️ Retry ${i + 1}/${retries} in ${delay}ms...`);
           await new Promise(r => setTimeout(r, delay));
@@ -19019,6 +19024,24 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
   }
 
   /**
+   * Remove stale saved display nutrients when the diary has no food lines (same invariant as dayMealsIntegrity).
+   */
+  function stripStaleSavedDisplayNutrientsIfEmptyDiary(dayObj) {
+    if (!dayObj || typeof dayObj !== 'object') return dayObj;
+    const meals = Array.isArray(dayObj.meals) ? dayObj.meals : [];
+    const hasItems = meals.some((m) => Array.isArray(m?.items) && m.items.length > 0);
+    if (hasItems) return dayObj;
+    const next = { ...dayObj };
+    delete next.savedEatenKcal;
+    delete next.savedDisplayOptimum;
+    delete next.savedEatenProt;
+    delete next.savedEatenCarbs;
+    delete next.savedEatenFat;
+    delete next.savedEatenFiber;
+    return next;
+  }
+
+  /**
    * Умный merge данных дня при конфликте local vs remote
    * Стратегия: объединить meals по ID, взять максимальные значения для числовых полей
    * @param {Object} local - локальные данные дня
@@ -19264,7 +19287,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
       trainings: merged.trainings.filter(t => t.z?.some(z => z > 0)).length
     });
 
-    return merged;
+    return stripStaleSavedDisplayNutrientsIfEmptyDiary(merged);
   }
 
   /**
@@ -20140,6 +20163,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
 
   function ensureDayV2ComputedTotals(valueToSave) {
     if (!valueToSave || typeof valueToSave !== 'object') return valueToSave;
+
+    valueToSave = stripStaleSavedDisplayNutrientsIfEmptyDiary({ ...valueToSave });
 
     const mealsCount = Array.isArray(valueToSave.meals) ? valueToSave.meals.length : 0;
     const hasDayTot = !!(valueToSave.dayTot && Object.keys(valueToSave.dayTot).length > 0);
@@ -22669,7 +22694,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
         (totalItems * 100) +
         (mealsWithItems * 20) +
         (meals.length * 5) +
-        (savedEatenKcal > 0 ? 25 : 0) +
+        (savedEatenKcal > 0 && mealsWithItems > 0 ? 25 : 0) +
         (hasDayTot ? 15 : 0) +
         trainings
     };
@@ -28072,6 +28097,14 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
   const HEYS = global.HEYS = global.HEYS || {};
   const M = HEYS.models = HEYS.models || {};
 
+  /** True if at least one meal has food lines — savedEaten* is only meaningful then. */
+  HEYS.dayMealsIntegrity = HEYS.dayMealsIntegrity || {
+    hasAnyMealLines(day) {
+      const meals = (day && Array.isArray(day.meals)) ? day.meals : [];
+      return meals.some((m) => Array.isArray(m?.items) && m.items.length > 0);
+    }
+  };
+
   /** @typedef {Object} Product
    * @property {string|number} id
    * @property {string} name
@@ -29837,6 +29870,11 @@ NOVA: 1-4
         }
         return value;
       });
+
+      // perf: tiny payloads rarely benefit from pattern pass; skip main-thread work
+      if (json.length <= 384) {
+        return json;
+      }
 
       // 1. Сжатие числовых значений (убираем лишние нули)
       // 10.00 → 10, 5.50 → 5.5

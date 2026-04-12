@@ -738,8 +738,9 @@
             };
             window.addEventListener('heysSyncCompleted', handleSyncComplete);
 
-            // Reload every 5 minutes
+            // Reload every 5 minutes (skip work while tab is in background)
             const interval = setInterval(() => {
+                if (typeof document !== 'undefined' && document.hidden) return;
                 ewsLoaded = false;
                 loadEWSData();
             }, 5 * 60 * 1000);

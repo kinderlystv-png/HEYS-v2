@@ -41,6 +41,7 @@ beforeAll(async () => {
         return { score: 75 };
     };
 
+    await import('../heys_models_v1.js');
     await import('../insights/pi_early_warning.js');
 });
 

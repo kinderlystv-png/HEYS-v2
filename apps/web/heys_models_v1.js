@@ -3,6 +3,14 @@
   const HEYS = global.HEYS = global.HEYS || {};
   const M = HEYS.models = HEYS.models || {};
 
+  /** True if at least one meal has food lines — savedEaten* is only meaningful then. */
+  HEYS.dayMealsIntegrity = HEYS.dayMealsIntegrity || {
+    hasAnyMealLines(day) {
+      const meals = (day && Array.isArray(day.meals)) ? day.meals : [];
+      return meals.some((m) => Array.isArray(m?.items) && m.items.length > 0);
+    }
+  };
+
   /** @typedef {Object} Product
    * @property {string|number} id
    * @property {string} name

@@ -3280,6 +3280,12 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-2-insights: execute sta
     const MAX_CACHE_TTL_MS = 72 * 60 * 60 * 1000;  // 72 hours max
     const POPULATION_SAMPLE_SIZE = 1000; // Minimum users for population priors
 
+    function trustedDayKcal(d) {
+        const has = global.HEYS?.dayMealsIntegrity?.hasAnyMealLines?.(d);
+        if (!has) return Number(d?.dayTot?.kcal) || 0;
+        return Number(d?.savedEatenKcal) || Number(d?.dayTot?.kcal) || 0;
+    }
+
     // Population priors (научные рекомендации + observed means)
     const POPULATION_PRIORS = {
         lateEatingHour: { mean: 21.2, std: 1.8, source: 'meta-analysis' },
@@ -3473,8 +3479,8 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-2-insights: execute sta
         const stats = global.HEYS.InsightsPI.stats;
 
         // Метрики для оценки стабильности
-        // ✅ FIX: dayTot не хранится в localStorage — используем savedEatenKcal
-        const kcals = days.map(d => d.savedEatenKcal || d.dayTot?.kcal || 0).filter(k => k > 0);
+        // ✅ FIX: dayTot не хранится в localStorage — используем savedEatenKcal только при непустом дневнике
+        const kcals = days.map((d) => trustedDayKcal(d)).filter((k) => k > 0);
         const mealCounts = days.map(d => d.meals?.length || 0).filter(c => c > 0);
         const lastMealHours = days.map(getLastMealHour).filter(Boolean);
 
@@ -3565,11 +3571,11 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-2-insights: execute sta
         // 3. Diet pattern break (3+ consecutive anomalous days)
         if (recentDays && recentDays.length >= 3) {
             // ✅ FIX: используем savedEatenKcal (dayTot нет в raw localStorage data)
-            const daysWithKcal = recentDays.filter(d => (d.savedEatenKcal || d.dayTot?.kcal || 0) > 0);
+            const daysWithKcal = recentDays.filter((d) => trustedDayKcal(d) > 0);
             // ✅ FIX v2: snapshot.avgKcal >= 200 — защита от stale cache с нулевыми/мизерными значениями
             // (старый баг записывал avgKcal≈0 из-за dayTot?.kcal)
             if (daysWithKcal.length >= 3 && snapshot.avgKcal >= 200) {
-                const avgKcal = daysWithKcal.reduce((sum, d) => sum + (d.savedEatenKcal || d.dayTot?.kcal || 0), 0) / daysWithKcal.length;
+                const avgKcal = daysWithKcal.reduce((sum, d) => sum + trustedDayKcal(d), 0) / daysWithKcal.length;
                 const snapshotKcal = snapshot.avgKcal;
 
                 const kcalDeviation = Math.abs((avgKcal - snapshotKcal) / snapshotKcal);
@@ -3803,9 +3809,9 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-2-insights: execute sta
         } : null;
 
         // Profile snapshot для event detection (используем savedEatenKcal)
-        const daysWithMeals = days.filter(d => (d.savedEatenKcal || d.dayTot?.kcal || 0) > 0);
+        const daysWithMeals = days.filter((d) => trustedDayKcal(d) > 0);
         const avgKcal = daysWithMeals.length > 0
-            ? daysWithMeals.reduce((sum, d) => sum + (d.savedEatenKcal || d.dayTot?.kcal || 0), 0) / daysWithMeals.length
+            ? daysWithMeals.reduce((sum, d) => sum + trustedDayKcal(d), 0) / daysWithMeals.length
             : 0;
 
         return {
@@ -4098,9 +4104,9 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-2-insights: execute sta
 
         // 🆕 v2.0: Profile snapshot для event detection
         // ✅ FIX: используем savedEatenKcal (dayTot не хранится в localStorage raw data)
-        const daysWithMeals = days.filter(d => (d.savedEatenKcal || d.dayTot?.kcal || 0) > 0);
+        const daysWithMeals = days.filter((d) => trustedDayKcal(d) > 0);
         const avgKcal = daysWithMeals.length > 0
-            ? daysWithMeals.reduce((sum, d) => sum + (d.savedEatenKcal || d.dayTot?.kcal || 0), 0) / daysWithMeals.length
+            ? daysWithMeals.reduce((sum, d) => sum + trustedDayKcal(d), 0) / daysWithMeals.length
             : 0;
         const profileSnapshot = {
             goal: profile?.goal,
@@ -5500,20 +5506,24 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-2-insights: execute sta
     };
 
     const calculateDayKcal = piCalculations.calculateDayKcal || function (day, pIndex) {
-        const savedKcal = Number(day?.savedEatenKcal);
-        if (Number.isFinite(savedKcal) && savedKcal > 0) return savedKcal;
-        if (!day?.meals?.length) return 0;
+        const hasLines = global.HEYS?.dayMealsIntegrity?.hasAnyMealLines?.(day);
         let total = 0;
-        for (const meal of day.meals) {
-            for (const item of (meal.items || [])) {
-                const prod = pIndex?.byId?.get?.(String(item.product_id || item.productId || item.id)?.toLowerCase());
-                if (!prod || !item.grams) continue;
-                const p = prod.protein100 || 0;
-                const c = (prod.simple100 || 0) + (prod.complex100 || 0);
-                const f = (prod.badFat100 || 0) + (prod.goodFat100 || 0) + (prod.trans100 || 0);
-                total += (p * 3 + c * 4 + f * 9) * item.grams / 100;
+        if (day?.meals?.length) {
+            for (const meal of day.meals) {
+                for (const item of (meal.items || [])) {
+                    const prod = pIndex?.byId?.get?.(String(item.product_id || item.productId || item.id)?.toLowerCase());
+                    if (!prod || !item.grams) continue;
+                    const p = prod.protein100 || 0;
+                    const c = (prod.simple100 || 0) + (prod.complex100 || 0);
+                    const f = (prod.badFat100 || 0) + (prod.goodFat100 || 0) + (prod.trans100 || 0);
+                    total += (p * 3 + c * 4 + f * 9) * item.grams / 100;
+                }
             }
         }
+        if (!hasLines) return total;
+        const savedKcal = Number(day?.savedEatenKcal);
+        if (total > 0) return total;
+        if (Number.isFinite(savedKcal) && savedKcal > 0) return savedKcal;
         return total;
     };
 
@@ -6096,15 +6106,19 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-2-insights: execute sta
     };
 
     const calculateDayKcal = piCalculations.calculateDayKcal || function (day, pIndex) {
-        const savedKcal = Number(day?.savedEatenKcal);
-        if (Number.isFinite(savedKcal) && savedKcal > 0) return savedKcal;
-        if (!day?.meals?.length) return 0;
+        const hasLines = global.HEYS?.dayMealsIntegrity?.hasAnyMealLines?.(day);
         let total = 0;
-        for (const meal of day.meals) {
-            for (const item of (meal.items || [])) {
-                total += calculateItemKcal(item, pIndex);
+        if (day?.meals?.length) {
+            for (const meal of day.meals) {
+                for (const item of (meal.items || [])) {
+                    total += calculateItemKcal(item, pIndex);
+                }
             }
         }
+        if (!hasLines) return total;
+        const savedKcal = Number(day?.savedEatenKcal);
+        if (total > 0) return total;
+        if (Number.isFinite(savedKcal) && savedKcal > 0) return savedKcal;
         return total;
     };
 
@@ -6605,15 +6619,19 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-2-insights: execute sta
     };
 
     const calculateDayKcal = piCalculations.calculateDayKcal || function (day, pIndex) {
-        const savedKcal = Number(day?.savedEatenKcal);
-        if (Number.isFinite(savedKcal) && savedKcal > 0) return savedKcal;
-        if (!day?.meals?.length) return 0;
+        const hasLines = global.HEYS?.dayMealsIntegrity?.hasAnyMealLines?.(day);
         let total = 0;
-        for (const meal of day.meals) {
-            for (const item of (meal.items || [])) {
-                total += calculateItemKcal(item, pIndex);
+        if (day?.meals?.length) {
+            for (const meal of day.meals) {
+                for (const item of (meal.items || [])) {
+                    total += calculateItemKcal(item, pIndex);
+                }
             }
         }
+        if (!hasLines) return total;
+        const savedKcal = Number(day?.savedEatenKcal);
+        if (total > 0) return total;
+        if (Number.isFinite(savedKcal) && savedKcal > 0) return savedKcal;
         return total;
     };
 
@@ -14759,6 +14777,20 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
     console.info('[pi_early_warning.js] 🔧 Initializing module...');
 
+    /** kcal for insights: no savedEatenKcal if diary has no food lines */
+    function trustedEatenKcalForDay(day, pIndex, calculateItemKcal) {
+        const hasLines = HEYS.dayMealsIntegrity?.hasAnyMealLines?.(day);
+        let fromMeals = 0;
+        if (day?.meals) {
+            fromMeals = day.meals.reduce((sum, meal) => {
+                if (!meal?.items) return sum;
+                return sum + meal.items.reduce((mealSum, item) => mealSum + calculateItemKcal(item, pIndex), 0);
+            }, 0);
+        }
+        if (!hasLines) return 0;
+        return fromMeals > 0 ? fromMeals : (Number(day.savedEatenKcal) || 0);
+    }
+
     // Thresholds for warnings
     const THRESHOLDS = {
         HEALTH_SCORE_DECLINE_DAYS: 3,
@@ -16873,16 +16905,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         const optimum = profile?.optimum || profile?.norm?.kcal || 2000;
 
         const caloricData = recentDays.map(day => {
-            let eaten = day.savedEatenKcal || 0;
-
-            if (!eaten && day.meals) {
-                eaten = day.meals.reduce((sum, meal) => {
-                    if (!meal.items) return sum;
-                    return sum + meal.items.reduce((mealSum, item) => {
-                        return mealSum + calculateItemKcal(item, pIndex);
-                    }, 0);
-                }, 0);
-            }
+            const eaten = trustedEatenKcalForDay(day, pIndex, calculateItemKcal);
 
             const debt = Math.max(0, optimum - eaten);
             return { date: day.date, eaten, optimum, debt };
@@ -17102,7 +17125,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         const loggingData = recentDays.map(day => {
             const hasMeals = day.meals && day.meals.length > 0;
             const hasItems = hasMeals && day.meals.some(meal => meal.items && meal.items.length > 0);
-            const logged = hasItems || (day.savedEatenKcal && day.savedEatenKcal > 0);
+            const logged = hasItems;
             return {
                 date: day.date,
                 logged
@@ -17188,7 +17211,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
         const recentDays = days.slice(-7);
         const proteinData = recentDays.map(day => {
-            const protein = day.savedEatenProt || 0;
+            const hasLines = HEYS.dayMealsIntegrity?.hasAnyMealLines?.(day);
+            const protein = hasLines ? (Number(day.savedEatenProt) || 0) : 0;
             return {
                 date: day.date,
                 protein,
@@ -17495,10 +17519,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                 }
             });
 
-            const totalKcal = day.savedEatenKcal || meals.reduce((sum, meal) => {
-                if (!meal.items) return sum;
-                return sum + meal.items.reduce((mealSum, item) => mealSum + calculateItemKcal(item, pIndex), 0);
-            }, 0);
+            const totalKcal = trustedEatenKcalForDay(day, pIndex, calculateItemKcal);
 
             // Binge indicators:
             // - 2+ large meals in one day
@@ -17755,13 +17776,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             const dayOfWeek = new Date(day.date).getDay(); // 0=Sun, 6=Sat
             const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
 
-            let totalKcal = day.savedEatenKcal || 0;
-            if (!totalKcal && day.meals) {
-                totalKcal = day.meals.reduce((sum, meal) => {
-                    if (!meal.items) return sum;
-                    return sum + meal.items.reduce((mealSum, item) => mealSum + calculateItemKcal(item, pIndex), 0);
-                }, 0);
-            }
+            const totalKcal = trustedEatenKcalForDay(day, pIndex, calculateItemKcal);
 
             const excessKcal = totalKcal > optimum ? totalKcal - optimum : 0;
 

@@ -74,20 +74,24 @@
     };
 
     const calculateDayKcal = piCalculations.calculateDayKcal || function (day, pIndex) {
-        const savedKcal = Number(day?.savedEatenKcal);
-        if (Number.isFinite(savedKcal) && savedKcal > 0) return savedKcal;
-        if (!day?.meals?.length) return 0;
+        const hasLines = global.HEYS?.dayMealsIntegrity?.hasAnyMealLines?.(day);
         let total = 0;
-        for (const meal of day.meals) {
-            for (const item of (meal.items || [])) {
-                const prod = pIndex?.byId?.get?.(String(item.product_id || item.productId || item.id)?.toLowerCase());
-                if (!prod || !item.grams) continue;
-                const p = prod.protein100 || 0;
-                const c = (prod.simple100 || 0) + (prod.complex100 || 0);
-                const f = (prod.badFat100 || 0) + (prod.goodFat100 || 0) + (prod.trans100 || 0);
-                total += (p * 3 + c * 4 + f * 9) * item.grams / 100;
+        if (day?.meals?.length) {
+            for (const meal of day.meals) {
+                for (const item of (meal.items || [])) {
+                    const prod = pIndex?.byId?.get?.(String(item.product_id || item.productId || item.id)?.toLowerCase());
+                    if (!prod || !item.grams) continue;
+                    const p = prod.protein100 || 0;
+                    const c = (prod.simple100 || 0) + (prod.complex100 || 0);
+                    const f = (prod.badFat100 || 0) + (prod.goodFat100 || 0) + (prod.trans100 || 0);
+                    total += (p * 3 + c * 4 + f * 9) * item.grams / 100;
+                }
             }
         }
+        if (!hasLines) return total;
+        const savedKcal = Number(day?.savedEatenKcal);
+        if (total > 0) return total;
+        if (Number.isFinite(savedKcal) && savedKcal > 0) return savedKcal;
         return total;
     };
 

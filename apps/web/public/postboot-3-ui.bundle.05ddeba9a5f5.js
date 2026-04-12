@@ -6942,7 +6942,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
               enablePhonetic: true,
               enableSynonyms: true,
               enableTranslit: true, // 🆕 рафа → rafa → Raffaello
-              maxSuggestions: 30,
+              // UI показывает ≤25 совпадений — не собираем/не сортируем лишние кандидаты из движка
+              maxResults: 25,
               usageStats: effectiveUsageStats,   // 🆕 v2.8.2: персональный boost по истории
               usageWindowDays: usageWindowDays,  // 🆕 v2.8.2: окно релевантности
               favorites: favorites               // 🆕 v2.8.2: boost избранных в топ
@@ -24289,7 +24290,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             };
             window.addEventListener('storage', handleStorage);
 
-            const interval = setInterval(() => {
+            const pollDayHash = () => {
                 const now = new Date();
                 const today = fmtDate(now);
                 const yesterday = fmtDate(new Date(now.getTime() - 24 * 60 * 60 * 1000));
@@ -24312,13 +24313,23 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                 if (changed) {
                     markUpdated();
                 }
+            };
+
+            const interval = setInterval(() => {
+                if (typeof document !== 'undefined' && document.hidden) return;
+                pollDayHash();
             }, 10000);
+            const onRepVis = () => {
+                if (typeof document !== 'undefined' && !document.hidden) pollDayHash();
+            };
+            document.addEventListener('visibilitychange', onRepVis);
 
             return () => {
                 if (channel) {
                     channel.close();
                 }
                 window.removeEventListener('storage', handleStorage);
+                document.removeEventListener('visibilitychange', onRepVis);
                 clearInterval(interval);
             };
         }, [isInitialized]);
@@ -44462,6 +44473,9 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         const previousDayWidthRef = useRef(0);
         const touchDragStateRef = useRef(null);
         const touchDragAutoScrollFrameRef = useRef(0);
+        const touchDragBodyRectRef = useRef(null);
+        const touchDragGridRectRef = useRef(null);
+        const touchDragLayoutGenRef = useRef(0);
         const dropCommitAccentTimerRef = useRef(0);
         const suppressCalendarClickUntilRef = useRef(0);
         const dayColumnWidthRef = useRef(0);
@@ -44784,19 +44798,31 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
         const startCalendarTouchAutoScroll = () => {
             if (touchDragAutoScrollFrameRef.current) return;
+            touchDragLayoutGenRef.current = 0;
+            touchDragBodyRectRef.current = null;
+            touchDragGridRectRef.current = null;
 
             const step = () => {
                 const active = touchDragStateRef.current;
                 if (!active || !active.activated) {
                     touchDragAutoScrollFrameRef.current = 0;
+                    touchDragBodyRectRef.current = null;
+                    touchDragGridRectRef.current = null;
                     return;
                 }
 
                 const bodyNode = bodyScrollRef.current;
                 const gridNode = gridScrollRef.current;
+                const gen = (touchDragLayoutGenRef.current += 1);
+                const measureBody = gen === 1 || (gen % 2 === 1);
+                const measureGrid = gen === 1 || (gen % 2 === 1);
 
                 if (bodyNode) {
-                    const rect = bodyNode.getBoundingClientRect();
+                    let rect = touchDragBodyRectRef.current;
+                    if (measureBody || !rect) {
+                        rect = bodyNode.getBoundingClientRect();
+                        touchDragBodyRectRef.current = rect;
+                    }
                     const edge = Math.min(CALENDAR_TOUCH_DRAG_AUTO_SCROLL_EDGE, Math.max(rect.width * 0.16, 28));
                     let deltaX = 0;
 
@@ -44809,12 +44835,17 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                     if (Math.abs(deltaX) > 0.1) {
                         bodyNode.scrollLeft += deltaX;
                         syncHeaderScroll();
+                        touchDragBodyRectRef.current = null;
                         maybeActivateCalendarDragZoomFromPoint(active.lastX, active.payload);
                     }
                 }
 
                 if (gridNode) {
-                    const rect = gridNode.getBoundingClientRect();
+                    let rect = touchDragGridRectRef.current;
+                    if (measureGrid || !rect) {
+                        rect = gridNode.getBoundingClientRect();
+                        touchDragGridRectRef.current = rect;
+                    }
                     const edge = Math.min(CALENDAR_TOUCH_DRAG_AUTO_SCROLL_EDGE, Math.max(rect.height * 0.12, 24));
                     let deltaY = 0;
 
@@ -44826,6 +44857,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
                     if (Math.abs(deltaY) > 0.1) {
                         gridNode.scrollTop += deltaY;
+                        touchDragGridRectRef.current = null;
                     }
                 }
 
@@ -45338,8 +45370,18 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             const updateNowLine = () => setNowLineTop(getCalendarNowTop());
 
             updateNowLine();
-            const intervalId = window.setInterval(updateNowLine, 60_000);
-            return () => window.clearInterval(intervalId);
+            const intervalId = window.setInterval(() => {
+                if (typeof document !== 'undefined' && document.hidden) return;
+                updateNowLine();
+            }, 60_000);
+            const onVis = () => {
+                if (typeof document !== 'undefined' && !document.hidden) updateNowLine();
+            };
+            document.addEventListener('visibilitychange', onVis);
+            return () => {
+                window.clearInterval(intervalId);
+                document.removeEventListener('visibilitychange', onVis);
+            };
         }, []);
 
         useEffect(() => {

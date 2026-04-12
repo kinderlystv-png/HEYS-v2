@@ -101,15 +101,19 @@
     };
 
     const calculateDayKcal = piCalculations.calculateDayKcal || function (day, pIndex) {
-        const savedKcal = Number(day?.savedEatenKcal);
-        if (Number.isFinite(savedKcal) && savedKcal > 0) return savedKcal;
-        if (!day?.meals?.length) return 0;
+        const hasLines = global.HEYS?.dayMealsIntegrity?.hasAnyMealLines?.(day);
         let total = 0;
-        for (const meal of day.meals) {
-            for (const item of (meal.items || [])) {
-                total += calculateItemKcal(item, pIndex);
+        if (day?.meals?.length) {
+            for (const meal of day.meals) {
+                for (const item of (meal.items || [])) {
+                    total += calculateItemKcal(item, pIndex);
+                }
             }
         }
+        if (!hasLines) return total;
+        const savedKcal = Number(day?.savedEatenKcal);
+        if (total > 0) return total;
+        if (Number.isFinite(savedKcal) && savedKcal > 0) return savedKcal;
         return total;
     };
 

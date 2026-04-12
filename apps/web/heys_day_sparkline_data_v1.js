@@ -261,8 +261,11 @@
             const fallbackTotalKcal = Math.round(totalKcal);
             // 🔧 FIX: Используем сохранённую норму дня если есть, иначе текущий optimum
             const fallbackTarget = +dayData.savedDisplayOptimum > 0 ? +dayData.savedDisplayOptimum : optimum;
-            // 🔧 FIX: Используем сохранённые калории если есть, иначе пересчитанные
-            const fallbackKcal = +dayData.savedEatenKcal > 0 ? +dayData.savedEatenKcal : fallbackTotalKcal;
+            // 🔧 FIX: savedEatenKcal only when there are meal lines (avoid stale kcal after clearing diary)
+            const hasAnyMealItems = (dayData.meals || []).some((m) => Array.isArray(m?.items) && m.items.length > 0);
+            const fallbackKcal = hasAnyMealItems && +dayData.savedEatenKcal > 0
+                ? +dayData.savedEatenKcal
+                : fallbackTotalKcal;
             return {
               date: dateStr,
               kcal: fallbackKcal,

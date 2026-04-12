@@ -1193,6 +1193,9 @@
         const previousDayWidthRef = useRef(0);
         const touchDragStateRef = useRef(null);
         const touchDragAutoScrollFrameRef = useRef(0);
+        const touchDragBodyRectRef = useRef(null);
+        const touchDragGridRectRef = useRef(null);
+        const touchDragLayoutGenRef = useRef(0);
         const dropCommitAccentTimerRef = useRef(0);
         const suppressCalendarClickUntilRef = useRef(0);
         const dayColumnWidthRef = useRef(0);
@@ -1515,19 +1518,31 @@
 
         const startCalendarTouchAutoScroll = () => {
             if (touchDragAutoScrollFrameRef.current) return;
+            touchDragLayoutGenRef.current = 0;
+            touchDragBodyRectRef.current = null;
+            touchDragGridRectRef.current = null;
 
             const step = () => {
                 const active = touchDragStateRef.current;
                 if (!active || !active.activated) {
                     touchDragAutoScrollFrameRef.current = 0;
+                    touchDragBodyRectRef.current = null;
+                    touchDragGridRectRef.current = null;
                     return;
                 }
 
                 const bodyNode = bodyScrollRef.current;
                 const gridNode = gridScrollRef.current;
+                const gen = (touchDragLayoutGenRef.current += 1);
+                const measureBody = gen === 1 || (gen % 2 === 1);
+                const measureGrid = gen === 1 || (gen % 2 === 1);
 
                 if (bodyNode) {
-                    const rect = bodyNode.getBoundingClientRect();
+                    let rect = touchDragBodyRectRef.current;
+                    if (measureBody || !rect) {
+                        rect = bodyNode.getBoundingClientRect();
+                        touchDragBodyRectRef.current = rect;
+                    }
                     const edge = Math.min(CALENDAR_TOUCH_DRAG_AUTO_SCROLL_EDGE, Math.max(rect.width * 0.16, 28));
                     let deltaX = 0;
 
@@ -1540,12 +1555,17 @@
                     if (Math.abs(deltaX) > 0.1) {
                         bodyNode.scrollLeft += deltaX;
                         syncHeaderScroll();
+                        touchDragBodyRectRef.current = null;
                         maybeActivateCalendarDragZoomFromPoint(active.lastX, active.payload);
                     }
                 }
 
                 if (gridNode) {
-                    const rect = gridNode.getBoundingClientRect();
+                    let rect = touchDragGridRectRef.current;
+                    if (measureGrid || !rect) {
+                        rect = gridNode.getBoundingClientRect();
+                        touchDragGridRectRef.current = rect;
+                    }
                     const edge = Math.min(CALENDAR_TOUCH_DRAG_AUTO_SCROLL_EDGE, Math.max(rect.height * 0.12, 24));
                     let deltaY = 0;
 
@@ -1557,6 +1577,7 @@
 
                     if (Math.abs(deltaY) > 0.1) {
                         gridNode.scrollTop += deltaY;
+                        touchDragGridRectRef.current = null;
                     }
                 }
 
@@ -2069,8 +2090,18 @@
             const updateNowLine = () => setNowLineTop(getCalendarNowTop());
 
             updateNowLine();
-            const intervalId = window.setInterval(updateNowLine, 60_000);
-            return () => window.clearInterval(intervalId);
+            const intervalId = window.setInterval(() => {
+                if (typeof document !== 'undefined' && document.hidden) return;
+                updateNowLine();
+            }, 60_000);
+            const onVis = () => {
+                if (typeof document !== 'undefined' && !document.hidden) updateNowLine();
+            };
+            document.addEventListener('visibilitychange', onVis);
+            return () => {
+                window.clearInterval(intervalId);
+                document.removeEventListener('visibilitychange', onVis);
+            };
         }, []);
 
         useEffect(() => {

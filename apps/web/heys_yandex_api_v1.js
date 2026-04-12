@@ -26,18 +26,18 @@
       AUTH_VERIFY: '/auth/verify'
     },
 
-    // Таймауты (нарастающие: 1я попытка 15с, 2я 20с, 3я 30с)
-    TIMEOUT_MS: 15000,
-    TIMEOUT_ESCALATION_MS: [15000, 20000, 30000],
+    // Таймауты (нарастающие; верхняя попытка capped — меньше «зависло на 30с» при плохой сети)
+    TIMEOUT_MS: 12000,
+    TIMEOUT_ESCALATION_MS: [12000, 18000, 22000],
 
-    // Retry логика (exponential backoff: 2с → 5с → 10с)
+    // Retry логика (exponential backoff; последний шаг чуть короче для UX)
     // v59 FIX I: Increased delays for cold-start resilience.
     // 502 returns instantly (not timeout), so retry window = sum of delays.
     // Old [1000,3000,7000] gave only 4s — less than CF cold start (>4s).
     // New [2000,5000,10000] gives 7s — enough for CF warm-up.
     MAX_RETRIES: 2,
     RETRY_DELAY_MS: 2000,
-    RETRY_DELAY_ESCALATION_MS: [2000, 5000, 10000]
+    RETRY_DELAY_ESCALATION_MS: [2000, 4500, 7000]
   };
 
   // ═══════════════════════════════════════════════════════════════════
@@ -98,7 +98,7 @@
     let lastError;
 
     for (let i = 0; i <= retries; i++) {
-      // ⏱️ Нарастающий таймаут: 15с → 20с → 30с
+      // ⏱️ Нарастающий таймаут (см. CONFIG.TIMEOUT_ESCALATION_MS)
       const timeoutMs = CONFIG.TIMEOUT_ESCALATION_MS[i] || CONFIG.TIMEOUT_MS;
       try {
         const response = await fetchWithTimeout(url, options, timeoutMs);
@@ -119,7 +119,6 @@
         err(`Attempt ${i + 1}/${retries + 1} failed (timeout=${timeoutMs}ms):`, e.message);
 
         if (i < retries) {
-          // ⏱️ Exponential backoff: 1с → 3с → 7с
           const delay = CONFIG.RETRY_DELAY_ESCALATION_MS[i] || CONFIG.RETRY_DELAY_MS;
           console.info(`[HEYS.api] ↩️ Retry ${i + 1}/${retries} in ${delay}ms...`);
           await new Promise(r => setTimeout(r, delay));

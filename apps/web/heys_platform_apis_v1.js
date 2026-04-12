@@ -840,10 +840,16 @@
           }
         });
 
-        // Проверяем обновления каждые 60 секунд
+        // Проверяем обновления каждые 60 секунд (не будим SW-проверки в фоновой вкладке)
         setInterval(() => {
+          if (typeof document !== 'undefined' && document.hidden) return;
           registration.update().catch(() => { });
         }, 60000);
+        document.addEventListener('visibilitychange', () => {
+          if (typeof document !== 'undefined' && !document.hidden) {
+            registration.update().catch(() => { });
+          }
+        });
 
         // Слушаем обновления
         registration.addEventListener('updatefound', () => {

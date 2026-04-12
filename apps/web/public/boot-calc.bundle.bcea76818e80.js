@@ -4979,7 +4979,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
 
                 // 🔧 FIX: Используем сохранённые калории если есть, иначе пересчитанные
                 // savedEatenKcal гарантирует точное значение, которое показывалось пользователю в тот день
-                const kcal = dayInfo.savedEatenKcal > 0 ? dayInfo.savedEatenKcal : dayInfo.kcal;
+                const hasAnyMealItems = (dayInfo.meals || []).some((m) => Array.isArray(m?.items) && m.items.length > 0);
+                const kcal = hasAnyMealItems && dayInfo.savedEatenKcal > 0 ? dayInfo.savedEatenKcal : dayInfo.kcal;
 
                 // ratio: 1.0 = идеально в цель, <1 недоел, >1 переел
                 const ratio = target > 0 ? kcal / target : 0;
@@ -5236,6 +5237,11 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
             const mealsCount = Array.isArray(data.meals) ? data.meals.length : 0;
             const trainingsCount = Array.isArray(data.trainings) ? data.trainings.length : 0;
             if (mealsCount > 0 || trainingsCount > 0) return true;
+            if (data.isFastingDay || data.isIncomplete) return true;
+            const hasMealLines = typeof HEYS.dayMealsIntegrity?.hasAnyMealLines === 'function'
+                && HEYS.dayMealsIntegrity.hasAnyMealLines(data);
+            if ((data.savedEatenKcal || 0) > 0 && hasMealLines) return true;
+            if ((data.savedDisplayOptimum || 0) > 0 && hasMealLines) return true;
             if ((data.waterMl || 0) > 0) return true;
             if ((data.steps || 0) > 0) return true;
             if ((data.weightMorning || 0) > 0) return true;
@@ -5865,6 +5871,11 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
             const mealsCount = Array.isArray(data.meals) ? data.meals.length : 0;
             const trainingsCount = Array.isArray(data.trainings) ? data.trainings.length : 0;
             if (mealsCount > 0 || trainingsCount > 0) return true;
+            if (data.isFastingDay || data.isIncomplete) return true;
+            const hasMealLines = typeof HEYS.dayMealsIntegrity?.hasAnyMealLines === 'function'
+                && HEYS.dayMealsIntegrity.hasAnyMealLines(data);
+            if ((data.savedEatenKcal || 0) > 0 && hasMealLines) return true;
+            if ((data.savedDisplayOptimum || 0) > 0 && hasMealLines) return true;
             if ((data.waterMl || 0) > 0) return true;
             if ((data.steps || 0) > 0) return true;
             if ((data.weightMorning || 0) > 0) return true;
@@ -6394,10 +6405,20 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
         const React = getReact();
         const { setCurrentMinute } = deps || {};
         React.useEffect(() => {
+            if (typeof setCurrentMinute !== 'function') return undefined;
+            const tick = () => setCurrentMinute(Math.floor(Date.now() / 60000));
             const intervalId = setInterval(() => {
-                setCurrentMinute(Math.floor(Date.now() / 60000));
-            }, 60000); // Обновляем каждую минуту
-            return () => clearInterval(intervalId);
+                if (typeof document !== 'undefined' && document.hidden) return;
+                tick();
+            }, 60000);
+            const onVis = () => {
+                if (typeof document !== 'undefined' && !document.hidden) tick();
+            };
+            document.addEventListener('visibilitychange', onVis);
+            return () => {
+                clearInterval(intervalId);
+                document.removeEventListener('visibilitychange', onVis);
+            };
         }, []);
     }
 
@@ -9272,6 +9293,16 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
 
   // === Calendar Day Indicators ===
 
+  // perf: reuse parsed day blob when localStorage raw unchanged (getActiveDaysForMonth → many days)
+  const _dayV2RawParseCache = new Map();
+  const _DAY_V2_PARSE_CACHE_MAX = 128;
+  function _trimDayV2ParseCache() {
+    while (_dayV2RawParseCache.size > _DAY_V2_PARSE_CACHE_MAX) {
+      const k = _dayV2RawParseCache.keys().next().value;
+      _dayV2RawParseCache.delete(k);
+    }
+  }
+
   /**
    * Получает данные дня: калории и активность для расчёта реального target
    * @param {string} dateStr - Дата в формате YYYY-MM-DD
@@ -9293,22 +9324,31 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
       if (!raw) return null;
 
       let dayData = null;
-      if (raw.startsWith('¤Z¤')) {
-        if (HEYS.store?.decompress) {
-          dayData = HEYS.store.decompress(raw);
-        } else {
-          let str = raw.substring(3);
-          const patterns = {
-            '¤n¤': '"name":"', '¤k¤': '"kcal100"', '¤p¤': '"protein100"',
-            '¤c¤': '"carbs100"', '¤f¤': '"fat100"'
-          };
-          for (const [code, pattern] of Object.entries(patterns)) {
-            str = str.split(code).join(pattern);
-          }
-          dayData = JSON.parse(str);
-        }
+      const parseHit = _dayV2RawParseCache.get(scopedKey);
+      if (parseHit && parseHit.raw === raw) {
+        dayData = parseHit.dayData;
       } else {
-        dayData = JSON.parse(raw);
+        if (raw.startsWith('¤Z¤')) {
+          if (HEYS.store?.decompress) {
+            dayData = HEYS.store.decompress(raw);
+          } else {
+            let str = raw.substring(3);
+            const patterns = {
+              '¤n¤': '"name":"', '¤k¤': '"kcal100"', '¤p¤': '"protein100"',
+              '¤c¤': '"carbs100"', '¤f¤': '"fat100"'
+            };
+            for (const [code, pattern] of Object.entries(patterns)) {
+              str = str.split(code).join(pattern);
+            }
+            dayData = JSON.parse(str);
+          }
+        } else {
+          dayData = JSON.parse(raw);
+        }
+        if (dayData && typeof dayData === 'object') {
+          _dayV2RawParseCache.set(scopedKey, { raw, dayData });
+          _trimDayV2ParseCache();
+        }
       }
 
       if (!dayData) return null;
@@ -9902,6 +9942,14 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
   if (typeof globalThis !== 'undefined' && globalThis.addEventListener) {
     globalThis.addEventListener('heys:day-updated', function (e) {
       var d = e && e.detail; var ds = d && d.dateStr;
+      if (!ds) {
+        _dayV2RawParseCache.clear();
+      } else {
+        const U2 = window.HEYS && window.HEYS.utils;
+        const cid2 = U2 && U2.getCurrentClientId ? U2.getCurrentClientId() : '';
+        const sk2 = cid2 ? 'heys_' + cid2 + '_dayv2_' + ds : 'heys_dayv2_' + ds;
+        _dayV2RawParseCache.delete(sk2);
+      }
       _invalidateActiveDaysCacheU(ds || null);
     });
   }
@@ -10006,7 +10054,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
 
         // 🔧 FIX: Используем сохранённые калории если есть, иначе пересчитанные
         // savedEatenKcal гарантирует точное значение, которое показывалось пользователю в тот день
-        const kcal = dayInfo.savedEatenKcal > 0 ? dayInfo.savedEatenKcal : dayInfo.kcal;
+        const hasAnyMealItems = (dayInfo.meals || []).some((m) => Array.isArray(m?.items) && m.items.length > 0);
+        const kcal = hasAnyMealItems && dayInfo.savedEatenKcal > 0 ? dayInfo.savedEatenKcal : dayInfo.kcal;
 
         // ratio: 1.0 = идеально в цель, <1 недоел, >1 переел
         const ratio = target > 0 ? kcal / target : 0;
@@ -13187,6 +13236,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
         useEffect(() => {
             if (adviceModuleReady) return;
             const checkInterval = setInterval(() => {
+                if (typeof document !== 'undefined' && document.hidden) return;
                 if (HEYSRef?.advice?.useAdviceEngine) {
                     setAdviceModuleReady(true);
                     clearInterval(checkInterval);
@@ -13472,8 +13522,19 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
                     }
                 } catch (e) { }
             };
-            const intervalId = setInterval(checkScheduled, 30000);
-            return () => clearInterval(intervalId);
+            const tick = () => {
+                if (typeof document !== 'undefined' && document.hidden) return;
+                checkScheduled();
+            };
+            const intervalId = setInterval(tick, 30000);
+            const onVis = () => {
+                if (typeof document !== 'undefined' && !document.hidden) checkScheduled();
+            };
+            document.addEventListener('visibilitychange', onVis);
+            return () => {
+                clearInterval(intervalId);
+                document.removeEventListener('visibilitychange', onVis);
+            };
         }, [readStoredValue]);
 
         useEffect(() => {
@@ -21275,12 +21336,12 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
             }
             const slotTypeClass = slotKey ? ('deferred-card-slot--' + String(slotKey).replace(/^slot-/, '')) : '';
             // PERF: skip unfold animation if user has cached local data (returning user)
-            // Meal rec card always uses smooth unfold (loads late, needs visual transition)
             // v6.0: Adaptive Render Gate — when __heysGatedRender is true (full sync arrived
             // before DayTab unlock), ALL cards render instantly in one frame, no animation
-            const animClass = window.__heysGatedRender
+            // CLS: returning users — no-animate for all deferred slots including mealrec/supplements
+            const animClass = (window.__heysGatedRender || window.__heysHasLocalData)
                 ? 'no-animate'
-                : ((window.__heysHasLocalData && slotKey !== 'slot-mealrec') ? 'no-animate' : 'animate-always');
+                : 'animate-always';
             return React.createElement('div', {
                 key: slotKey,
                 className: ('deferred-card-slot deferred-card-slot--loaded ' + animClass + ' ' + slotTypeClass).trim()

@@ -561,13 +561,22 @@
             };
         }, []);
 
-        // Периодическое обновление streak (каждые 30 сек)
+        // Периодическое обновление streak (каждые 30 сек; не будим main thread во вкладке в фоне)
         useEffect(() => {
-            const interval = setInterval(() => {
+            const tick = () => {
+                if (typeof document !== 'undefined' && document.hidden) return;
                 const newStreak = safeGetStreak();
-                setStreak(prev => prev === newStreak ? prev : newStreak);
-            }, 30000);
-            return () => clearInterval(interval);
+                setStreak(prev => (prev === newStreak ? prev : newStreak));
+            };
+            const interval = setInterval(tick, 30000);
+            const onVis = () => {
+                if (typeof document !== 'undefined' && !document.hidden) tick();
+            };
+            document.addEventListener('visibilitychange', onVis);
+            return () => {
+                clearInterval(interval);
+                document.removeEventListener('visibilitychange', onVis);
+            };
         }, []);
 
         useEffect(() => {

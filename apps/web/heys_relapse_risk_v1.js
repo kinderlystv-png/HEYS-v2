@@ -4,6 +4,10 @@
   const HEYS = global.HEYS = global.HEYS || {};
   const MODULE = '[HEYS.relapseRisk]';
 
+  function dayHasMealLinesForRisk(dayData) {
+    return HEYS.dayMealsIntegrity?.hasAnyMealLines?.(dayData) === true;
+  }
+
   const CONFIG = {
     VERSION: '1.3.0',
     DEFAULT_PROFILE_KEY: 'v1_2',
@@ -321,10 +325,16 @@
   }
 
   function getKcalEaten(dayTot, dayData) {
+    if (!dayHasMealLinesForRisk(dayData)) {
+      return Math.max(0, toNumber(dayTot?.kcal, toNumber(dayData?.totKcal, 0)));
+    }
     return Math.max(0, toNumber(dayTot?.kcal, toNumber(dayData?.savedEatenKcal, toNumber(dayData?.totKcal, 0))));
   }
 
   function getProtEaten(dayTot, dayData) {
+    if (!dayHasMealLinesForRisk(dayData)) {
+      return Math.max(0, toNumber(dayTot?.prot, 0));
+    }
     return Math.max(0, toNumber(dayTot?.prot, toNumber(dayData?.savedEatenProt, 0)));
   }
 
@@ -332,10 +342,15 @@
     if (!day || typeof day !== 'object') return 0;
     if (Number.isFinite(day.ratio) && day.ratio > 0) return day.ratio;
 
-    const kcal = toNumber(
-      day?.dayTot?.kcal,
-      toNumber(day?.kcal, toNumber(day?.savedEatenKcal, toNumber(day?.totKcal, 0)))
-    );
+    const kcal = dayHasMealLinesForRisk(day)
+      ? toNumber(
+        day?.dayTot?.kcal,
+        toNumber(day?.kcal, toNumber(day?.savedEatenKcal, toNumber(day?.totKcal, 0)))
+      )
+      : toNumber(
+        day?.dayTot?.kcal,
+        toNumber(day?.kcal, toNumber(day?.totKcal, 0))
+      );
     const target = toNumber(
       day?.target,
       toNumber(day?.targetKcal, toNumber(day?.optimum, toNumber(day?.normAbs?.kcal, fallbackTarget)))
@@ -379,9 +394,10 @@
       const hasEnergy = getHistoryKcalRatio(day, ctx.kcalTarget) > 0
         || hasOwnValue(day?.dayTot, 'kcal')
         || hasOwnValue(day, 'kcal')
-        || hasOwnValue(day, 'savedEatenKcal')
+        || (dayHasMealLinesForRisk(day) && hasOwnValue(day, 'savedEatenKcal'))
         || hasOwnValue(day, 'totKcal');
-      const hasProtein = hasOwnValue(day?.dayTot, 'prot') || hasOwnValue(day, 'savedEatenProt');
+      const hasProtein = hasOwnValue(day?.dayTot, 'prot')
+        || (dayHasMealLinesForRisk(day) && hasOwnValue(day, 'savedEatenProt'));
       const hasSleep = getHistorySleepHours(day) > 0 || hasOwnValue(day, 'sleepHours');
       const hasStress = hasOwnValue(day, 'stressAvg');
       const signals = [hasEnergy, hasProtein, hasSleep, hasStress].filter(Boolean).length;
@@ -1254,15 +1270,15 @@
       sleepNorm: Math.max(1, toNumber(profile.sleepHours, 8)),
       kcalTarget,
       kcalEaten,
-      hasKcalInput: meals.length > 0 || hasOwnValue(dayTot, 'kcal') || hasOwnValue(dayData, 'savedEatenKcal') || hasOwnValue(dayData, 'totKcal'),
+      hasKcalInput: dayHasMealLinesForRisk(dayData) || hasOwnValue(dayTot, 'kcal') || hasOwnValue(dayData, 'totKcal'),
       kcalPct: kcalTarget > 0 ? kcalEaten / kcalTarget : 0,
       protTarget,
       protEaten,
-      hasProteinInput: meals.length > 0 || hasOwnValue(dayTot, 'prot') || hasOwnValue(dayData, 'savedEatenProt'),
+      hasProteinInput: dayHasMealLinesForRisk(dayData) || hasOwnValue(dayTot, 'prot'),
       protPct: protTarget > 0 ? protEaten / protTarget : 0,
       harm: Math.max(0, toNumber(dayTot.harm, 0)),
       simple: Math.max(0, toNumber(dayTot.simple, 0)),
-      hasRewardInput: meals.length > 0 || hasOwnValue(dayTot, 'harm') || hasOwnValue(dayTot, 'simple'),
+      hasRewardInput: dayHasMealLinesForRisk(dayData) || hasOwnValue(dayTot, 'harm') || hasOwnValue(dayTot, 'simple'),
       waterMl: Math.max(0, toNumber(dayData.waterMl, 0)),
       gapHours: getHoursSinceLastMeal(dayData, now),
       hour: getCurrentHour(now),

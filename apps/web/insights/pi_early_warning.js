@@ -31,6 +31,20 @@
 
     console.info('[pi_early_warning.js] 🔧 Initializing module...');
 
+    /** kcal for insights: no savedEatenKcal if diary has no food lines */
+    function trustedEatenKcalForDay(day, pIndex, calculateItemKcal) {
+        const hasLines = HEYS.dayMealsIntegrity?.hasAnyMealLines?.(day);
+        let fromMeals = 0;
+        if (day?.meals) {
+            fromMeals = day.meals.reduce((sum, meal) => {
+                if (!meal?.items) return sum;
+                return sum + meal.items.reduce((mealSum, item) => mealSum + calculateItemKcal(item, pIndex), 0);
+            }, 0);
+        }
+        if (!hasLines) return 0;
+        return fromMeals > 0 ? fromMeals : (Number(day.savedEatenKcal) || 0);
+    }
+
     // Thresholds for warnings
     const THRESHOLDS = {
         HEALTH_SCORE_DECLINE_DAYS: 3,
@@ -2145,16 +2159,7 @@
         const optimum = profile?.optimum || profile?.norm?.kcal || 2000;
 
         const caloricData = recentDays.map(day => {
-            let eaten = day.savedEatenKcal || 0;
-
-            if (!eaten && day.meals) {
-                eaten = day.meals.reduce((sum, meal) => {
-                    if (!meal.items) return sum;
-                    return sum + meal.items.reduce((mealSum, item) => {
-                        return mealSum + calculateItemKcal(item, pIndex);
-                    }, 0);
-                }, 0);
-            }
+            const eaten = trustedEatenKcalForDay(day, pIndex, calculateItemKcal);
 
             const debt = Math.max(0, optimum - eaten);
             return { date: day.date, eaten, optimum, debt };
@@ -2374,7 +2379,7 @@
         const loggingData = recentDays.map(day => {
             const hasMeals = day.meals && day.meals.length > 0;
             const hasItems = hasMeals && day.meals.some(meal => meal.items && meal.items.length > 0);
-            const logged = hasItems || (day.savedEatenKcal && day.savedEatenKcal > 0);
+            const logged = hasItems;
             return {
                 date: day.date,
                 logged
@@ -2460,7 +2465,8 @@
 
         const recentDays = days.slice(-7);
         const proteinData = recentDays.map(day => {
-            const protein = day.savedEatenProt || 0;
+            const hasLines = HEYS.dayMealsIntegrity?.hasAnyMealLines?.(day);
+            const protein = hasLines ? (Number(day.savedEatenProt) || 0) : 0;
             return {
                 date: day.date,
                 protein,
@@ -2767,10 +2773,7 @@
                 }
             });
 
-            const totalKcal = day.savedEatenKcal || meals.reduce((sum, meal) => {
-                if (!meal.items) return sum;
-                return sum + meal.items.reduce((mealSum, item) => mealSum + calculateItemKcal(item, pIndex), 0);
-            }, 0);
+            const totalKcal = trustedEatenKcalForDay(day, pIndex, calculateItemKcal);
 
             // Binge indicators:
             // - 2+ large meals in one day
@@ -3027,13 +3030,7 @@
             const dayOfWeek = new Date(day.date).getDay(); // 0=Sun, 6=Sat
             const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
 
-            let totalKcal = day.savedEatenKcal || 0;
-            if (!totalKcal && day.meals) {
-                totalKcal = day.meals.reduce((sum, meal) => {
-                    if (!meal.items) return sum;
-                    return sum + meal.items.reduce((mealSum, item) => mealSum + calculateItemKcal(item, pIndex), 0);
-                }, 0);
-            }
+            const totalKcal = trustedEatenKcalForDay(day, pIndex, calculateItemKcal);
 
             const excessKcal = totalKcal > optimum ? totalKcal - optimum : 0;
 

@@ -1027,7 +1027,7 @@
             };
             window.addEventListener('storage', handleStorage);
 
-            const interval = setInterval(() => {
+            const pollDayHash = () => {
                 const now = new Date();
                 const today = fmtDate(now);
                 const yesterday = fmtDate(new Date(now.getTime() - 24 * 60 * 60 * 1000));
@@ -1050,13 +1050,23 @@
                 if (changed) {
                     markUpdated();
                 }
+            };
+
+            const interval = setInterval(() => {
+                if (typeof document !== 'undefined' && document.hidden) return;
+                pollDayHash();
             }, 10000);
+            const onRepVis = () => {
+                if (typeof document !== 'undefined' && !document.hidden) pollDayHash();
+            };
+            document.addEventListener('visibilitychange', onRepVis);
 
             return () => {
                 if (channel) {
                     channel.close();
                 }
                 window.removeEventListener('storage', handleStorage);
+                document.removeEventListener('visibilitychange', onRepVis);
                 clearInterval(interval);
             };
         }, [isInitialized]);

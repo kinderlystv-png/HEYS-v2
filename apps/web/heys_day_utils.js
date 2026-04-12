@@ -1760,6 +1760,16 @@
 
   // === Calendar Day Indicators ===
 
+  // perf: reuse parsed day blob when localStorage raw unchanged (getActiveDaysForMonth → many days)
+  const _dayV2RawParseCache = new Map();
+  const _DAY_V2_PARSE_CACHE_MAX = 128;
+  function _trimDayV2ParseCache() {
+    while (_dayV2RawParseCache.size > _DAY_V2_PARSE_CACHE_MAX) {
+      const k = _dayV2RawParseCache.keys().next().value;
+      _dayV2RawParseCache.delete(k);
+    }
+  }
+
   /**
    * Получает данные дня: калории и активность для расчёта реального target
    * @param {string} dateStr - Дата в формате YYYY-MM-DD
@@ -1781,22 +1791,31 @@
       if (!raw) return null;
 
       let dayData = null;
-      if (raw.startsWith('¤Z¤')) {
-        if (HEYS.store?.decompress) {
-          dayData = HEYS.store.decompress(raw);
-        } else {
-          let str = raw.substring(3);
-          const patterns = {
-            '¤n¤': '"name":"', '¤k¤': '"kcal100"', '¤p¤': '"protein100"',
-            '¤c¤': '"carbs100"', '¤f¤': '"fat100"'
-          };
-          for (const [code, pattern] of Object.entries(patterns)) {
-            str = str.split(code).join(pattern);
-          }
-          dayData = JSON.parse(str);
-        }
+      const parseHit = _dayV2RawParseCache.get(scopedKey);
+      if (parseHit && parseHit.raw === raw) {
+        dayData = parseHit.dayData;
       } else {
-        dayData = JSON.parse(raw);
+        if (raw.startsWith('¤Z¤')) {
+          if (HEYS.store?.decompress) {
+            dayData = HEYS.store.decompress(raw);
+          } else {
+            let str = raw.substring(3);
+            const patterns = {
+              '¤n¤': '"name":"', '¤k¤': '"kcal100"', '¤p¤': '"protein100"',
+              '¤c¤': '"carbs100"', '¤f¤': '"fat100"'
+            };
+            for (const [code, pattern] of Object.entries(patterns)) {
+              str = str.split(code).join(pattern);
+            }
+            dayData = JSON.parse(str);
+          }
+        } else {
+          dayData = JSON.parse(raw);
+        }
+        if (dayData && typeof dayData === 'object') {
+          _dayV2RawParseCache.set(scopedKey, { raw, dayData });
+          _trimDayV2ParseCache();
+        }
       }
 
       if (!dayData) return null;
@@ -2390,6 +2409,14 @@
   if (typeof globalThis !== 'undefined' && globalThis.addEventListener) {
     globalThis.addEventListener('heys:day-updated', function (e) {
       var d = e && e.detail; var ds = d && d.dateStr;
+      if (!ds) {
+        _dayV2RawParseCache.clear();
+      } else {
+        const U2 = window.HEYS && window.HEYS.utils;
+        const cid2 = U2 && U2.getCurrentClientId ? U2.getCurrentClientId() : '';
+        const sk2 = cid2 ? 'heys_' + cid2 + '_dayv2_' + ds : 'heys_dayv2_' + ds;
+        _dayV2RawParseCache.delete(sk2);
+      }
       _invalidateActiveDaysCacheU(ds || null);
     });
   }
@@ -2494,7 +2521,8 @@
 
         // 🔧 FIX: Используем сохранённые калории если есть, иначе пересчитанные
         // savedEatenKcal гарантирует точное значение, которое показывалось пользователю в тот день
-        const kcal = dayInfo.savedEatenKcal > 0 ? dayInfo.savedEatenKcal : dayInfo.kcal;
+        const hasAnyMealItems = (dayInfo.meals || []).some((m) => Array.isArray(m?.items) && m.items.length > 0);
+        const kcal = hasAnyMealItems && dayInfo.savedEatenKcal > 0 ? dayInfo.savedEatenKcal : dayInfo.kcal;
 
         // ratio: 1.0 = идеально в цель, <1 недоел, >1 переел
         const ratio = target > 0 ? kcal / target : 0;

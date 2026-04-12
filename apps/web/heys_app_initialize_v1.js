@@ -74,9 +74,10 @@
         if (AppCloudInit.initCloud) {
             AppCloudInit.initCloud();
         } else if (window.HEYS.cloud && typeof HEYS.cloud.init === 'function') {
-            // 🔥 Warm-up ping — прогреваем Yandex Cloud Functions
-            fetch('https://api.heyslab.ru/health', { method: 'GET' })
-                .catch(() => { }); // Warm-up ping
+            if (!HEYS._heysApiHealthPingSent) {
+                HEYS._heysApiHealthPingSent = true;
+                fetch('https://api.heyslab.ru/health', { method: 'GET' }).catch(() => { });
+            }
 
             // 🆕 v2025-12-22: На production используем ТОЛЬКО Yandex Cloud API
             // Supabase SDK инициализируется для совместимости cloud.signIn/signOut,

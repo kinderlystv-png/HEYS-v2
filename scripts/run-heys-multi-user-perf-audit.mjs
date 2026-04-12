@@ -198,6 +198,8 @@ function formatError(err) {
 async function runForUser(browser, user) {
   const context = await browser.newContext({
     viewport: { width: 500, height: 1024 },
+    // Avoid stale SW serving old postboot hashes between bundle rebuilds (404 noise in metrics)
+    serviceWorkers: 'block',
   });
   const page = await context.newPage();
 

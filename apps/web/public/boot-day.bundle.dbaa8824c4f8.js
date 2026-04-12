@@ -3786,8 +3786,11 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
             const fallbackTotalKcal = Math.round(totalKcal);
             // 🔧 FIX: Используем сохранённую норму дня если есть, иначе текущий optimum
             const fallbackTarget = +dayData.savedDisplayOptimum > 0 ? +dayData.savedDisplayOptimum : optimum;
-            // 🔧 FIX: Используем сохранённые калории если есть, иначе пересчитанные
-            const fallbackKcal = +dayData.savedEatenKcal > 0 ? +dayData.savedEatenKcal : fallbackTotalKcal;
+            // 🔧 FIX: savedEatenKcal only when there are meal lines (avoid stale kcal after clearing diary)
+            const hasAnyMealItems = (dayData.meals || []).some((m) => Array.isArray(m?.items) && m.items.length > 0);
+            const fallbackKcal = hasAnyMealItems && +dayData.savedEatenKcal > 0
+                ? +dayData.savedEatenKcal
+                : fallbackTotalKcal;
             return {
               date: dateStr,
               kcal: fallbackKcal,
@@ -14447,9 +14450,17 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 ; (function (global) {
     const HEYS = global.HEYS = global.HEYS || {};
 
+    function dayHasAnyMealLines(day) {
+        const meals = (day && Array.isArray(day.meals)) ? day.meals : [];
+        return meals.some((m) => Array.isArray(m?.items) && m.items.length > 0);
+    }
+
     function withSavedTotalsFallback(dayTot, day) {
         const result = { ...(dayTot || {}) };
         const saved = day || {};
+        if (!dayHasAnyMealLines(saved)) {
+            return result;
+        }
 
         if ((+result.kcal || 0) <= 0 && (+saved.savedEatenKcal || 0) > 0) {
             result.kcal = +saved.savedEatenKcal || 0;
@@ -14913,12 +14924,17 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         const trainK = (t) => (t.z || [0, 0, 0, 0]).reduce((s, min, i) => s + r0((+min || 0) * (kcalMin[i] || 0)), 0);
         const profileTargetDef = +(lsGet?.('heys_profile', {})?.deficitPctTarget) || 0;
 
-        const recalculatedEatenKcal = (day?.meals || []).reduce((a, m) => {
+        const mealsArr = (day?.meals && Array.isArray(day.meals)) ? day.meals : [];
+        const hasAnyMealItems = mealsArr.some((m) => Array.isArray(m?.items) && m.items.length > 0);
+        const recalculatedEatenKcal = mealsArr.reduce((a, m) => {
             const t = (M?.mealTotals ? M.mealTotals(m, pIndex) : { kcal: 0 });
             return a + (t.kcal || 0);
         }, 0);
         const savedEatenKcal = Math.max(0, Number(day?.savedEatenKcal || 0));
-        const eatenKcal = recalculatedEatenKcal > 0 ? recalculatedEatenKcal : savedEatenKcal;
+        // Without any meal lines, do not reuse stale savedEatenKcal (e.g. after deleting last meal).
+        const eatenKcal = hasAnyMealItems
+            ? (recalculatedEatenKcal > 0 ? recalculatedEatenKcal : savedEatenKcal)
+            : 0;
         const factDefPct = tdee ? r0(((eatenKcal - tdee) / tdee) * 100) : 0; // <0 значит дефицит
 
         if (window._HEYS_DEBUG_TDEE) {
@@ -15801,12 +15817,12 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             }
             const slotTypeClass = slotKey ? ('deferred-card-slot--' + String(slotKey).replace(/^slot-/, '')) : '';
             // PERF: skip unfold animation if user has cached local data (returning user)
-            // Meal rec card always uses smooth unfold (loads late, needs visual transition)
             // v6.0: Adaptive Render Gate — when __heysGatedRender is true (full sync arrived
             // before DayTab unlock), ALL cards render instantly in one frame, no animation
-            const animClass = window.__heysGatedRender
+            // CLS: returning users — no-animate for all deferred slots including mealrec/supplements
+            const animClass = (window.__heysGatedRender || window.__heysHasLocalData)
                 ? 'no-animate'
-                : ((window.__heysHasLocalData && slotKey !== 'slot-mealrec') ? 'no-animate' : 'animate-always');
+                : 'animate-always';
             return React.createElement('div', {
                 key: slotKey,
                 className: ('deferred-card-slot deferred-card-slot--loaded ' + animClass + ' ' + slotTypeClass).trim()

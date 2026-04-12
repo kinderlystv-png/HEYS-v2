@@ -29,6 +29,12 @@
     const MAX_CACHE_TTL_MS = 72 * 60 * 60 * 1000;  // 72 hours max
     const POPULATION_SAMPLE_SIZE = 1000; // Minimum users for population priors
 
+    function trustedDayKcal(d) {
+        const has = global.HEYS?.dayMealsIntegrity?.hasAnyMealLines?.(d);
+        if (!has) return Number(d?.dayTot?.kcal) || 0;
+        return Number(d?.savedEatenKcal) || Number(d?.dayTot?.kcal) || 0;
+    }
+
     // Population priors (научные рекомендации + observed means)
     const POPULATION_PRIORS = {
         lateEatingHour: { mean: 21.2, std: 1.8, source: 'meta-analysis' },
@@ -222,8 +228,8 @@
         const stats = global.HEYS.InsightsPI.stats;
 
         // Метрики для оценки стабильности
-        // ✅ FIX: dayTot не хранится в localStorage — используем savedEatenKcal
-        const kcals = days.map(d => d.savedEatenKcal || d.dayTot?.kcal || 0).filter(k => k > 0);
+        // ✅ FIX: dayTot не хранится в localStorage — используем savedEatenKcal только при непустом дневнике
+        const kcals = days.map((d) => trustedDayKcal(d)).filter((k) => k > 0);
         const mealCounts = days.map(d => d.meals?.length || 0).filter(c => c > 0);
         const lastMealHours = days.map(getLastMealHour).filter(Boolean);
 
@@ -314,11 +320,11 @@
         // 3. Diet pattern break (3+ consecutive anomalous days)
         if (recentDays && recentDays.length >= 3) {
             // ✅ FIX: используем savedEatenKcal (dayTot нет в raw localStorage data)
-            const daysWithKcal = recentDays.filter(d => (d.savedEatenKcal || d.dayTot?.kcal || 0) > 0);
+            const daysWithKcal = recentDays.filter((d) => trustedDayKcal(d) > 0);
             // ✅ FIX v2: snapshot.avgKcal >= 200 — защита от stale cache с нулевыми/мизерными значениями
             // (старый баг записывал avgKcal≈0 из-за dayTot?.kcal)
             if (daysWithKcal.length >= 3 && snapshot.avgKcal >= 200) {
-                const avgKcal = daysWithKcal.reduce((sum, d) => sum + (d.savedEatenKcal || d.dayTot?.kcal || 0), 0) / daysWithKcal.length;
+                const avgKcal = daysWithKcal.reduce((sum, d) => sum + trustedDayKcal(d), 0) / daysWithKcal.length;
                 const snapshotKcal = snapshot.avgKcal;
 
                 const kcalDeviation = Math.abs((avgKcal - snapshotKcal) / snapshotKcal);
@@ -552,9 +558,9 @@
         } : null;
 
         // Profile snapshot для event detection (используем savedEatenKcal)
-        const daysWithMeals = days.filter(d => (d.savedEatenKcal || d.dayTot?.kcal || 0) > 0);
+        const daysWithMeals = days.filter((d) => trustedDayKcal(d) > 0);
         const avgKcal = daysWithMeals.length > 0
-            ? daysWithMeals.reduce((sum, d) => sum + (d.savedEatenKcal || d.dayTot?.kcal || 0), 0) / daysWithMeals.length
+            ? daysWithMeals.reduce((sum, d) => sum + trustedDayKcal(d), 0) / daysWithMeals.length
             : 0;
 
         return {
@@ -847,9 +853,9 @@
 
         // 🆕 v2.0: Profile snapshot для event detection
         // ✅ FIX: используем savedEatenKcal (dayTot не хранится в localStorage raw data)
-        const daysWithMeals = days.filter(d => (d.savedEatenKcal || d.dayTot?.kcal || 0) > 0);
+        const daysWithMeals = days.filter((d) => trustedDayKcal(d) > 0);
         const avgKcal = daysWithMeals.length > 0
-            ? daysWithMeals.reduce((sum, d) => sum + (d.savedEatenKcal || d.dayTot?.kcal || 0), 0) / daysWithMeals.length
+            ? daysWithMeals.reduce((sum, d) => sum + trustedDayKcal(d), 0) / daysWithMeals.length
             : 0;
         const profileSnapshot = {
             goal: profile?.goal,

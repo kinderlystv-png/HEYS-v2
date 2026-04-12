@@ -575,8 +575,19 @@
 
     React.useEffect(() => {
       refresh();
-      const interval = setInterval(refresh, 30000);
-      return () => clearInterval(interval);
+      const tick = () => {
+        if (typeof document !== 'undefined' && document.hidden) return;
+        refresh();
+      };
+      const interval = setInterval(tick, 30000);
+      const onVis = () => {
+        if (typeof document !== 'undefined' && !document.hidden) refresh();
+      };
+      document.addEventListener('visibilitychange', onVis);
+      return () => {
+        clearInterval(interval);
+        document.removeEventListener('visibilitychange', onVis);
+      };
     }, [refresh]);
 
     const handleRequestTrial = async () => {

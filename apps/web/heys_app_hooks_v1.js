@@ -1327,6 +1327,7 @@
                     clearInterval(offlineDurationIntervalRef.current);
                 }
                 offlineDurationIntervalRef.current = setInterval(() => {
+                    if (typeof document !== 'undefined' && document.hidden) return;
                     if (offlineStartRef.current) {
                         setOfflineDuration(Math.floor((Date.now() - offlineStartRef.current) / 1000));
                     }
@@ -1356,6 +1357,14 @@
             window.addEventListener('heys:sync-restored', handleSyncRestored);
             window.addEventListener('online', handleOnline);
             window.addEventListener('offline', handleOffline);
+
+            const syncOfflineDurationOnVisible = () => {
+                if (typeof document !== 'undefined' && document.hidden) return;
+                if (offlineStartRef.current) {
+                    setOfflineDuration(Math.floor((Date.now() - offlineStartRef.current) / 1000));
+                }
+            };
+            document.addEventListener('visibilitychange', syncOfflineDurationOnVisible);
 
             if (!initialCheckDoneRef.current) {
                 initialCheckDoneRef.current = true;
@@ -1407,6 +1416,7 @@
                 window.removeEventListener('heys:sync-restored', handleSyncRestored);
                 window.removeEventListener('online', handleOnline);
                 window.removeEventListener('offline', handleOffline);
+                document.removeEventListener('visibilitychange', syncOfflineDurationOnVisible);
                 if (cloudSyncTimeoutRef.current) clearTimeout(cloudSyncTimeoutRef.current);
                 if (syncedTimeoutRef.current) clearTimeout(syncedTimeoutRef.current);
                 if (syncingDelayTimeoutRef.current) clearTimeout(syncingDelayTimeoutRef.current);

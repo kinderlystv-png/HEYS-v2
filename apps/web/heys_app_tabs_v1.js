@@ -548,8 +548,19 @@
         React.useEffect(() => {
             loadStats();
             if (autoRefresh) {
-                const interval = setInterval(loadStats, 5000); // Обновление каждые 5 сек
-                return () => clearInterval(interval);
+                const tick = () => {
+                    if (typeof document !== 'undefined' && document.hidden) return;
+                    loadStats();
+                };
+                const interval = setInterval(tick, 5000);
+                const onVis = () => {
+                    if (typeof document !== 'undefined' && !document.hidden) loadStats();
+                };
+                document.addEventListener('visibilitychange', onVis);
+                return () => {
+                    clearInterval(interval);
+                    document.removeEventListener('visibilitychange', onVis);
+                };
             }
         }, [autoRefresh]);
 

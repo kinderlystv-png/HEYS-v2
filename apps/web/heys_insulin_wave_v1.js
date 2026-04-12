@@ -1269,13 +1269,24 @@
       return now.getHours() * 60 + now.getMinutes();
     });
 
-    // Обновление каждую минуту
+    // Обновление каждую минуту (не в фоновой вкладке)
     React.useEffect(() => {
-      const interval = setInterval(() => {
+      const tick = () => {
         const now = new Date();
         setCurrentMinute(now.getHours() * 60 + now.getMinutes());
+      };
+      const interval = setInterval(() => {
+        if (typeof document !== 'undefined' && document.hidden) return;
+        tick();
       }, 60000);
-      return () => clearInterval(interval);
+      const onVis = () => {
+        if (typeof document !== 'undefined' && !document.hidden) tick();
+      };
+      document.addEventListener('visibilitychange', onVis);
+      return () => {
+        clearInterval(interval);
+        document.removeEventListener('visibilitychange', onVis);
+      };
     }, []);
 
     // Расчёт данных

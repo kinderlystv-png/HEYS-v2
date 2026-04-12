@@ -974,6 +974,24 @@
   }
 
   /**
+   * Remove stale saved display nutrients when the diary has no food lines (same invariant as dayMealsIntegrity).
+   */
+  function stripStaleSavedDisplayNutrientsIfEmptyDiary(dayObj) {
+    if (!dayObj || typeof dayObj !== 'object') return dayObj;
+    const meals = Array.isArray(dayObj.meals) ? dayObj.meals : [];
+    const hasItems = meals.some((m) => Array.isArray(m?.items) && m.items.length > 0);
+    if (hasItems) return dayObj;
+    const next = { ...dayObj };
+    delete next.savedEatenKcal;
+    delete next.savedDisplayOptimum;
+    delete next.savedEatenProt;
+    delete next.savedEatenCarbs;
+    delete next.savedEatenFat;
+    delete next.savedEatenFiber;
+    return next;
+  }
+
+  /**
    * Умный merge данных дня при конфликте local vs remote
    * Стратегия: объединить meals по ID, взять максимальные значения для числовых полей
    * @param {Object} local - локальные данные дня
@@ -1219,7 +1237,7 @@
       trainings: merged.trainings.filter(t => t.z?.some(z => z > 0)).length
     });
 
-    return merged;
+    return stripStaleSavedDisplayNutrientsIfEmptyDiary(merged);
   }
 
   /**
@@ -2095,6 +2113,8 @@
 
   function ensureDayV2ComputedTotals(valueToSave) {
     if (!valueToSave || typeof valueToSave !== 'object') return valueToSave;
+
+    valueToSave = stripStaleSavedDisplayNutrientsIfEmptyDiary({ ...valueToSave });
 
     const mealsCount = Array.isArray(valueToSave.meals) ? valueToSave.meals.length : 0;
     const hasDayTot = !!(valueToSave.dayTot && Object.keys(valueToSave.dayTot).length > 0);
@@ -4624,7 +4644,7 @@
         (totalItems * 100) +
         (mealsWithItems * 20) +
         (meals.length * 5) +
-        (savedEatenKcal > 0 ? 25 : 0) +
+        (savedEatenKcal > 0 && mealsWithItems > 0 ? 25 : 0) +
         (hasDayTot ? 15 : 0) +
         trainings
     };

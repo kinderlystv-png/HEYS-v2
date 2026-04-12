@@ -905,16 +905,27 @@
       return 60 - now.getSeconds();
     });
 
-    // Обновление секунд каждую секунду
+    // Обновление секунд каждую секунду (в фоне не тикаем)
     React.useEffect(() => {
       if (isLipolysis) return; // При липолизе не нужен countdown
 
-      const interval = setInterval(() => {
+      const tick = () => {
         const now = new Date();
         setSeconds(60 - now.getSeconds());
+      };
+      const interval = setInterval(() => {
+        if (typeof document !== 'undefined' && document.hidden) return;
+        tick();
       }, 1000);
+      const onVis = () => {
+        if (typeof document !== 'undefined' && !document.hidden) tick();
+      };
+      document.addEventListener('visibilitychange', onVis);
 
-      return () => clearInterval(interval);
+      return () => {
+        clearInterval(interval);
+        document.removeEventListener('visibilitychange', onVis);
+      };
     }, [isLipolysis]);
 
     // При липолизе — зелёный градиент

@@ -2299,7 +2299,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
               enablePhonetic: true,
               enableSynonyms: true,
               enableTranslit: true, // 🆕 рафа → rafa → Raffaello
-              maxSuggestions: 30,
+              // UI показывает ≤25 совпадений — не собираем/не сортируем лишние кандидаты из движка
+              maxResults: 25,
               usageStats: effectiveUsageStats,   // 🆕 v2.8.2: персональный boost по истории
               usageWindowDays: usageWindowDays,  // 🆕 v2.8.2: окно релевантности
               favorites: favorites               // 🆕 v2.8.2: boost избранных в топ

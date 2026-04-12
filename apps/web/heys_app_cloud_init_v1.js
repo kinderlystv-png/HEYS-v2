@@ -11,8 +11,11 @@
 
         const doFetch = fetcher || fetch;
 
-        // 🔥 Warm-up ping — прогреваем Yandex Cloud Functions
-        doFetch('https://api.heyslab.ru/health', { method: 'GET' }).catch(() => { });
+        // 🔥 Warm-up ping — один раз за жизнь страницы (initCloud + initialize fallback делят флаг)
+        if (!HEYS._heysApiHealthPingSent) {
+            HEYS._heysApiHealthPingSent = true;
+            doFetch('https://api.heyslab.ru/health', { method: 'GET' }).catch(() => { });
+        }
 
         // 🆕 v2025-12-22: На production используем ТОЛЬКО Yandex Cloud API
         // Supabase SDK инициализируется для совместимости cloud.signIn/signOut,

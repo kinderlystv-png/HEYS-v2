@@ -21,6 +21,7 @@ beforeAll(async () => {
     return Math.round((diff / 60) * 10) / 10;
   };
 
+  await import('../heys_models_v1.js');
   await import('../heys_relapse_risk_v1.js');
   await import('../heys_risk_radar_v1.js');
 });
@@ -189,6 +190,7 @@ describe('HEYS.RelapseRisk', () => {
     const ratio = global.HEYS.RelapseRisk.__private.getHistoryKcalRatio({
       savedEatenKcal: 1000,
       optimum: 2000,
+      meals: [{ items: [{ id: 'x' }] }],
     }, 2200);
 
     expect(ratio).toBeCloseTo(0.5, 3);

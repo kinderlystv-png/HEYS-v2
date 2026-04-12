@@ -3,9 +3,17 @@
 ; (function (global) {
     const HEYS = global.HEYS = global.HEYS || {};
 
+    function dayHasAnyMealLines(day) {
+        const meals = (day && Array.isArray(day.meals)) ? day.meals : [];
+        return meals.some((m) => Array.isArray(m?.items) && m.items.length > 0);
+    }
+
     function withSavedTotalsFallback(dayTot, day) {
         const result = { ...(dayTot || {}) };
         const saved = day || {};
+        if (!dayHasAnyMealLines(saved)) {
+            return result;
+        }
 
         if ((+result.kcal || 0) <= 0 && (+saved.savedEatenKcal || 0) > 0) {
             result.kcal = +saved.savedEatenKcal || 0;

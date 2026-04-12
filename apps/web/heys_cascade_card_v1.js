@@ -936,8 +936,16 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
   function estimateDayTotalKcal(day) {
     if (!day) return 0;
-    if (day.savedEatenKcal != null && day.savedEatenKcal > 0) return +day.savedEatenKcal || 0;
     var meals = day.meals || [];
+    var hasItems = false;
+    for (var h = 0; h < meals.length; h++) {
+      if (((meals[h] && meals[h].items) || []).length > 0) {
+        hasItems = true;
+        break;
+      }
+    }
+    if (!hasItems) return 0;
+    if (day.savedEatenKcal != null && day.savedEatenKcal > 0) return +day.savedEatenKcal || 0;
     var total = 0;
     for (var i = 0; i < meals.length; i++) {
       total += estimateMealKcalFallback(meals[i]);
@@ -5009,12 +5017,14 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
       // Периодическая проверка на случай, если данные пришли без движения маятника.
       settleCheckTimer = setInterval(function () {
+        if (typeof document !== 'undefined' && document.hidden) return;
         trySettleToActual();
       }, 200);
 
       if (debugEnabledRef.current) {
         var rIC = typeof requestIdleCallback === 'function' ? requestIdleCallback : function (cb) { setTimeout(cb, 50); };
         domDebugTimer = setInterval(function () {
+          if (typeof document !== 'undefined' && document.hidden) return;
           rIC(function () {
             var snap = getDomSnapshot();
             if (!snap.ready) return;

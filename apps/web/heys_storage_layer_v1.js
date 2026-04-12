@@ -71,6 +71,11 @@
         return value;
       });
 
+      // perf: tiny payloads rarely benefit from pattern pass; skip main-thread work
+      if (json.length <= 384) {
+        return json;
+      }
+
       // 1. Сжатие числовых значений (убираем лишние нули)
       // 10.00 → 10, 5.50 → 5.5
       json = json.replace(/:(-?\d+)\.0+(?=[,}\]])/g, ':$1');

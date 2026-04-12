@@ -1340,8 +1340,16 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
   function estimateDayTotalKcal(day) {
     if (!day) return 0;
-    if (day.savedEatenKcal != null && day.savedEatenKcal > 0) return +day.savedEatenKcal || 0;
     var meals = day.meals || [];
+    var hasItems = false;
+    for (var h = 0; h < meals.length; h++) {
+      if (((meals[h] && meals[h].items) || []).length > 0) {
+        hasItems = true;
+        break;
+      }
+    }
+    if (!hasItems) return 0;
+    if (day.savedEatenKcal != null && day.savedEatenKcal > 0) return +day.savedEatenKcal || 0;
     var total = 0;
     for (var i = 0; i < meals.length; i++) {
       total += estimateMealKcalFallback(meals[i]);
@@ -5413,12 +5421,14 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
       // Периодическая проверка на случай, если данные пришли без движения маятника.
       settleCheckTimer = setInterval(function () {
+        if (typeof document !== 'undefined' && document.hidden) return;
         trySettleToActual();
       }, 200);
 
       if (debugEnabledRef.current) {
         var rIC = typeof requestIdleCallback === 'function' ? requestIdleCallback : function (cb) { setTimeout(cb, 50); };
         domDebugTimer = setInterval(function () {
+          if (typeof document !== 'undefined' && document.hidden) return;
           rIC(function () {
             var snap = getDomSnapshot();
             if (!snap.ready) return;
@@ -9612,9 +9622,10 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         if (AppCloudInit.initCloud) {
             AppCloudInit.initCloud();
         } else if (window.HEYS.cloud && typeof HEYS.cloud.init === 'function') {
-            // 🔥 Warm-up ping — прогреваем Yandex Cloud Functions
-            fetch('https://api.heyslab.ru/health', { method: 'GET' })
-                .catch(() => { }); // Warm-up ping
+            if (!HEYS._heysApiHealthPingSent) {
+                HEYS._heysApiHealthPingSent = true;
+                fetch('https://api.heyslab.ru/health', { method: 'GET' }).catch(() => { });
+            }
 
             // 🆕 v2025-12-22: На production используем ТОЛЬКО Yandex Cloud API
             // Supabase SDK инициализируется для совместимости cloud.signIn/signOut,

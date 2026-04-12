@@ -27,9 +27,19 @@
                 setIsCurator(cloudUserLocal != null);
             };
             checkCurator();
-            // perf: curator state changes rarely — 5s poll вместо 1s снижает нагрузку на main thread
-            const interval = setInterval(checkCurator, 5000);
-            return () => clearInterval(interval);
+            const tick = () => {
+                if (typeof document !== 'undefined' && document.hidden) return;
+                checkCurator();
+            };
+            const interval = setInterval(tick, 5000);
+            const onVis = () => {
+                if (typeof document !== 'undefined' && !document.hidden) checkCurator();
+            };
+            document.addEventListener('visibilitychange', onVis);
+            return () => {
+                clearInterval(interval);
+                document.removeEventListener('visibilitychange', onVis);
+            };
         }, []);
 
         return { isDesktop, isCurator };

@@ -6344,9 +6344,19 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
 
     useEffect(() => {
       refresh();
-      // Обновляем каждые 30 секунд
-      const interval = setInterval(refresh, 30000);
-      return () => clearInterval(interval);
+      const tick = () => {
+        if (typeof document !== 'undefined' && document.hidden) return;
+        refresh();
+      };
+      const interval = setInterval(tick, 30000);
+      const onVis = () => {
+        if (typeof document !== 'undefined' && !document.hidden) refresh();
+      };
+      document.addEventListener('visibilitychange', onVis);
+      return () => {
+        clearInterval(interval);
+        document.removeEventListener('visibilitychange', onVis);
+      };
     }, [refresh]);
 
     if (!capacity && isLoading) {
@@ -6494,9 +6504,19 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
 
     useEffect(() => {
       refresh();
-      // Обновляем каждую минуту
-      const interval = setInterval(refresh, 60000);
-      return () => clearInterval(interval);
+      const tick = () => {
+        if (typeof document !== 'undefined' && document.hidden) return;
+        refresh();
+      };
+      const interval = setInterval(tick, 60000);
+      const onVis = () => {
+        if (typeof document !== 'undefined' && !document.hidden) refresh();
+      };
+      document.addEventListener('visibilitychange', onVis);
+      return () => {
+        clearInterval(interval);
+        document.removeEventListener('visibilitychange', onVis);
+      };
     }, [refresh]);
 
     const handleClaim = async () => {
@@ -8706,8 +8726,19 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
 
     React.useEffect(() => {
       refresh();
-      const interval = setInterval(refresh, 30000);
-      return () => clearInterval(interval);
+      const tick = () => {
+        if (typeof document !== 'undefined' && document.hidden) return;
+        refresh();
+      };
+      const interval = setInterval(tick, 30000);
+      const onVis = () => {
+        if (typeof document !== 'undefined' && !document.hidden) refresh();
+      };
+      document.addEventListener('visibilitychange', onVis);
+      return () => {
+        clearInterval(interval);
+        document.removeEventListener('visibilitychange', onVis);
+      };
     }, [refresh]);
 
     const handleRequestTrial = async () => {
@@ -12906,6 +12937,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                     clearInterval(offlineDurationIntervalRef.current);
                 }
                 offlineDurationIntervalRef.current = setInterval(() => {
+                    if (typeof document !== 'undefined' && document.hidden) return;
                     if (offlineStartRef.current) {
                         setOfflineDuration(Math.floor((Date.now() - offlineStartRef.current) / 1000));
                     }
@@ -12935,6 +12967,14 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
             window.addEventListener('heys:sync-restored', handleSyncRestored);
             window.addEventListener('online', handleOnline);
             window.addEventListener('offline', handleOffline);
+
+            const syncOfflineDurationOnVisible = () => {
+                if (typeof document !== 'undefined' && document.hidden) return;
+                if (offlineStartRef.current) {
+                    setOfflineDuration(Math.floor((Date.now() - offlineStartRef.current) / 1000));
+                }
+            };
+            document.addEventListener('visibilitychange', syncOfflineDurationOnVisible);
 
             if (!initialCheckDoneRef.current) {
                 initialCheckDoneRef.current = true;
@@ -12986,6 +13026,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                 window.removeEventListener('heys:sync-restored', handleSyncRestored);
                 window.removeEventListener('online', handleOnline);
                 window.removeEventListener('offline', handleOffline);
+                document.removeEventListener('visibilitychange', syncOfflineDurationOnVisible);
                 if (cloudSyncTimeoutRef.current) clearTimeout(cloudSyncTimeoutRef.current);
                 if (syncedTimeoutRef.current) clearTimeout(syncedTimeoutRef.current);
                 if (syncingDelayTimeoutRef.current) clearTimeout(syncingDelayTimeoutRef.current);
@@ -14262,8 +14303,19 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
         React.useEffect(() => {
             loadStats();
             if (autoRefresh) {
-                const interval = setInterval(loadStats, 5000); // Обновление каждые 5 сек
-                return () => clearInterval(interval);
+                const tick = () => {
+                    if (typeof document !== 'undefined' && document.hidden) return;
+                    loadStats();
+                };
+                const interval = setInterval(tick, 5000);
+                const onVis = () => {
+                    if (typeof document !== 'undefined' && !document.hidden) loadStats();
+                };
+                document.addEventListener('visibilitychange', onVis);
+                return () => {
+                    clearInterval(interval);
+                    document.removeEventListener('visibilitychange', onVis);
+                };
             }
         }, [autoRefresh]);
 
@@ -15551,13 +15603,22 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
             };
         }, []);
 
-        // Периодическое обновление streak (каждые 30 сек)
+        // Периодическое обновление streak (каждые 30 сек; не будим main thread во вкладке в фоне)
         useEffect(() => {
-            const interval = setInterval(() => {
+            const tick = () => {
+                if (typeof document !== 'undefined' && document.hidden) return;
                 const newStreak = safeGetStreak();
-                setStreak(prev => prev === newStreak ? prev : newStreak);
-            }, 30000);
-            return () => clearInterval(interval);
+                setStreak(prev => (prev === newStreak ? prev : newStreak));
+            };
+            const interval = setInterval(tick, 30000);
+            const onVis = () => {
+                if (typeof document !== 'undefined' && !document.hidden) tick();
+            };
+            document.addEventListener('visibilitychange', onVis);
+            return () => {
+                clearInterval(interval);
+                document.removeEventListener('visibilitychange', onVis);
+            };
         }, []);
 
         useEffect(() => {
@@ -19262,8 +19323,9 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
             };
             window.addEventListener('heysSyncCompleted', handleSyncComplete);
 
-            // Reload every 5 minutes
+            // Reload every 5 minutes (skip work while tab is in background)
             const interval = setInterval(() => {
+                if (typeof document !== 'undefined' && document.hidden) return;
                 ewsLoaded = false;
                 loadEWSData();
             }, 5 * 60 * 1000);
@@ -23946,9 +24008,19 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                 setIsCurator(cloudUserLocal != null);
             };
             checkCurator();
-            // perf: curator state changes rarely — 5s poll вместо 1s снижает нагрузку на main thread
-            const interval = setInterval(checkCurator, 5000);
-            return () => clearInterval(interval);
+            const tick = () => {
+                if (typeof document !== 'undefined' && document.hidden) return;
+                checkCurator();
+            };
+            const interval = setInterval(tick, 5000);
+            const onVis = () => {
+                if (typeof document !== 'undefined' && !document.hidden) checkCurator();
+            };
+            document.addEventListener('visibilitychange', onVis);
+            return () => {
+                clearInterval(interval);
+                document.removeEventListener('visibilitychange', onVis);
+            };
         }, []);
 
         return { isDesktop, isCurator };
@@ -25440,8 +25512,11 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
 
         const doFetch = fetcher || fetch;
 
-        // 🔥 Warm-up ping — прогреваем Yandex Cloud Functions
-        doFetch('https://api.heyslab.ru/health', { method: 'GET' }).catch(() => { });
+        // 🔥 Warm-up ping — один раз за жизнь страницы (initCloud + initialize fallback делят флаг)
+        if (!HEYS._heysApiHealthPingSent) {
+            HEYS._heysApiHealthPingSent = true;
+            doFetch('https://api.heyslab.ru/health', { method: 'GET' }).catch(() => { });
+        }
 
         // 🆕 v2025-12-22: На production используем ТОЛЬКО Yandex Cloud API
         // Supabase SDK инициализируется для совместимости cloud.signIn/signOut,
