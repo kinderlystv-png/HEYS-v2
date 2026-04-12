@@ -9911,12 +9911,26 @@
         // If postboot is still loading scripts, return null (invisible).
         // Skeleton only shows if postboot finished but module is STILL not ready (abnormal).
         const DEFERRED_SKELETON_DELAY_MS = 260;
+        const DEFERRED_SLOT_DEBUG = (() => {
+            try {
+                return window.localStorage?.getItem('heys_deferred_slot_debug') === '1';
+            } catch (_) {
+                return false;
+            }
+        })();
+        const logDeferredSlot = (...args) => {
+            if (!DEFERRED_SLOT_DEBUG) return;
+            console.info(...args);
+        };
         const deferredSlotLoadSince = window.__heysDeferredSlotLoadSince = window.__heysDeferredSlotLoadSince || Object.create(null);
         const deferredSkeletonState = window.__heysDeferredSkeletonState = window.__heysDeferredSkeletonState || Object.create(null);
-        const deferredPendingSlot = (slotKey) => React.createElement('div', {
+        const deferredPendingSlot = (slotKey, minHeightPx) => React.createElement('div', {
             key: slotKey,
             className: 'deferred-card-slot deferred-card-slot--pending',
-            'aria-hidden': 'true'
+            'aria-hidden': 'true',
+            style: minHeightPx
+                ? { minHeight: Math.max(0, Number(minHeightPx) || 0) + 'px' }
+                : undefined,
         });
         const deferredSlot = (ready, content, slotKey, skeletonH, skeletonIcon, skeletonLabel) => {
             const debugKey = slotKey || 'unknown-slot';
@@ -9924,10 +9938,10 @@
                 // Don't show skeleton while postboot is still loading scripts
                 if (!window.__heysPostbootDone) {
                     if (deferredSkeletonState[debugKey] !== 'wait_postboot') {
-                        console.info('[HEYS.sceleton] ⏳ wait_postboot', { slotKey: debugKey });
+                        logDeferredSlot('[HEYS.sceleton] ⏳ wait_postboot', { slotKey: debugKey });
                         deferredSkeletonState[debugKey] = 'wait_postboot';
                     }
-                    return deferredPendingSlot(slotKey); // Keep stable DOM slot, zero-height
+                    return deferredPendingSlot(slotKey, skeletonH);
                 }
 
                 // Anti-flicker: render skeleton only if module is still not ready after a small delay
@@ -9938,18 +9952,18 @@
                 const waitStart = slotKey ? deferredSlotLoadSince[slotKey] : now;
                 if ((now - waitStart) < DEFERRED_SKELETON_DELAY_MS) {
                     if (deferredSkeletonState[debugKey] !== 'wait_delay') {
-                        console.info('[HEYS.sceleton] ⏱️ wait_delay', {
+                        logDeferredSlot('[HEYS.sceleton] ⏱️ wait_delay', {
                             slotKey: debugKey,
                             elapsedMs: now - waitStart,
                             delayMs: DEFERRED_SKELETON_DELAY_MS
                         });
                         deferredSkeletonState[debugKey] = 'wait_delay';
                     }
-                    return deferredPendingSlot(slotKey);
+                    return deferredPendingSlot(slotKey, skeletonH);
                 }
 
                 if (deferredSkeletonState[debugKey] !== 'show_skeleton') {
-                    console.info('[HEYS.sceleton] 🦴 show_skeleton', {
+                    logDeferredSlot('[HEYS.sceleton] 🦴 show_skeleton', {
                         slotKey: debugKey,
                         elapsedMs: now - waitStart,
                         delayMs: DEFERRED_SKELETON_DELAY_MS
@@ -9977,13 +9991,13 @@
 
             if (!content) {
                 if (deferredSkeletonState[debugKey] !== 'ready_empty') {
-                    console.info('[HEYS.sceleton] ℹ️ ready_empty', { slotKey: debugKey });
+                    logDeferredSlot('[HEYS.sceleton] ℹ️ ready_empty', { slotKey: debugKey });
                     deferredSkeletonState[debugKey] = 'ready_empty';
                 }
                 return React.createElement('div', { key: slotKey, className: 'deferred-card-slot deferred-card-slot--empty' });
             }
             if (deferredSkeletonState[debugKey] !== 'ready_content') {
-                console.info('[HEYS.sceleton] ✅ ready_content', { slotKey: debugKey });
+                logDeferredSlot('[HEYS.sceleton] ✅ ready_content', { slotKey: debugKey });
                 deferredSkeletonState[debugKey] = 'ready_content';
             }
             const slotTypeClass = slotKey ? ('deferred-card-slot--' + String(slotKey).replace(/^slot-/, '')) : '';

@@ -7,18 +7,18 @@
     "builtAt": "2026-04-12T17:56:11.679Z"
   },
   "boot-calc": {
-    "file": "boot-calc.bundle.c9c8f69b4d92.js",
-    "hash": "c9c8f69b4d92",
+    "file": "boot-calc.bundle.41e88c8c8874.js",
+    "hash": "41e88c8c8874",
     "fileCount": 19,
-    "size": 1075748,
-    "builtAt": "2026-04-12T18:03:33.423Z"
+    "size": 1076275,
+    "builtAt": "2026-04-12T18:09:02.128Z"
   },
   "boot-day": {
-    "file": "boot-day.bundle.39483e35d9ef.js",
-    "hash": "39483e35d9ef",
+    "file": "boot-day.bundle.f7e13e0a1257.js",
+    "hash": "f7e13e0a1257",
     "fileCount": 52,
-    "size": 1034490,
-    "builtAt": "2026-04-12T18:03:33.619Z"
+    "size": 1035017,
+    "builtAt": "2026-04-12T18:09:02.318Z"
   },
   "boot-app": {
     "file": "boot-app.bundle.966b1f8ea7d6.js",
