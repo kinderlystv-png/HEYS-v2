@@ -6246,6 +6246,36 @@
             }
         }, [date, expandOnlyMeal, isMobile, openTimePickerForNewMeal, products, setDay, day, prof, pIndex, getProductFromItem, scrollToDiaryHeading, lastLoadedUpdatedAtRef, blockCloudUpdatesUntilRef]);
 
+        const replanEmitTimersRef = React.useRef({});
+
+        const emitPlannerReplanRequest = React.useCallback((reason, meta = {}) => {
+            window.dispatchEvent(new CustomEvent('heys:planner-replan-request', {
+                detail: {
+                    reason,
+                    source: 'day/_meals',
+                    at: Date.now(),
+                    ...meta,
+                },
+            }));
+        }, []);
+
+        const emitPlannerReplanRequestDebounced = React.useCallback((reason, meta = {}, waitMs = 260) => {
+            const key = `${reason}:${meta?.mealIndex ?? 'na'}:${meta?.itemId ?? 'na'}`;
+            const timers = replanEmitTimersRef.current || {};
+            if (timers[key]) clearTimeout(timers[key]);
+            timers[key] = setTimeout(() => {
+                emitPlannerReplanRequest(reason, meta);
+                delete timers[key];
+            }, waitMs);
+            replanEmitTimersRef.current = timers;
+        }, [emitPlannerReplanRequest]);
+
+        React.useEffect(() => () => {
+            const timers = replanEmitTimersRef.current || {};
+            Object.keys(timers).forEach((key) => clearTimeout(timers[key]));
+            replanEmitTimersRef.current = {};
+        }, []);
+
         const updateMealTime = React.useCallback((mealIndex, newTime) => {
             setDay((prevDay) => {
                 const updatedMeals = (prevDay.meals || []).map((m, i) =>
@@ -6254,7 +6284,8 @@
                 const sortedMeals = sortMealsByTime(updatedMeals);
                 return { ...prevDay, meals: sortedMeals, updatedAt: Date.now() };
             });
-        }, [setDay]);
+            emitPlannerReplanRequest('MEAL_TIME_UPDATED', { mealIndex, newTime });
+        }, [setDay, emitPlannerReplanRequest]);
 
         const removeMeal = React.useCallback(async (i) => {
             const mealToRemove = day.meals?.[i];
@@ -6386,7 +6417,8 @@
             }
 
             window.dispatchEvent(new CustomEvent('heysProductAdded'));
-        }, [haptic, setDay, setNewItemIds, date]);
+            emitPlannerReplanRequest('PRODUCT_ADDED', { mealIndex: mi, productId: item.product_id });
+        }, [haptic, setDay, setNewItemIds, date, emitPlannerReplanRequest]);
 
         const setGrams = React.useCallback((mi, itId, g) => {
             const grams = +g || 0;
@@ -6394,7 +6426,8 @@
                 const meals = (prevDay.meals || []).map((m, i) => i === mi ? { ...m, items: (m.items || []).map((it) => it.id === itId ? { ...it, grams } : it) } : m);
                 return { ...prevDay, meals, updatedAt: Date.now() };
             });
-        }, [setDay]);
+            emitPlannerReplanRequestDebounced('GRAMS_UPDATED', { mealIndex: mi, itemId: itId, grams }, 300);
+        }, [setDay, emitPlannerReplanRequestDebounced]);
 
         const removeItem = React.useCallback((mi, itId) => {
             const sourceMeal = day.meals?.[mi];
@@ -6429,6 +6462,7 @@
                     });
 
                     recalculateOrphanProducts();
+                    emitPlannerReplanRequest('PRODUCT_REMOVED', { mealId, itemId: itId });
                     return { mealId, removedItem, itemIndex };
                 },
                 undoMutation: ({ mealId: ctxMealId, removedItem: ctxRemovedItem, itemIndex: ctxItemIndex }) => {
@@ -6453,7 +6487,7 @@
                     recalculateOrphanProducts();
                 },
             });
-        }, [haptic, setDay, day, markUndoWindow, persistDayData, recalculateOrphanProducts, runUndoableDayMutation]);
+        }, [haptic, setDay, day, markUndoWindow, persistDayData, recalculateOrphanProducts, runUndoableDayMutation, emitPlannerReplanRequest]);
 
         const removePhoto = React.useCallback(async (mi, photoId, options = {}) => {
             const sourceMeal = day.meals?.[mi];
@@ -6535,7 +6569,8 @@
                 const meals = (prevDay.meals || []).map((m, i) => i === mealIndex ? { ...m, [field]: value } : m);
                 return { ...prevDay, meals, updatedAt: Date.now() };
             });
-        }, [setDay]);
+            emitPlannerReplanRequest('MEAL_FIELD_UPDATED', { mealIndex, field });
+        }, [setDay, emitPlannerReplanRequest]);
 
         const changeMealMood = React.useCallback((mealIndex, value) => updateMealField(mealIndex, 'mood', value), [updateMealField]);
         const changeMealWellbeing = React.useCallback((mealIndex, value) => updateMealField(mealIndex, 'wellbeing', value), [updateMealField]);

@@ -8,7 +8,7 @@
     if (!React || !Planning.Store || !Planning.Utils) return;
 
     const h = React.createElement;
-    const { useMemo, useState } = React;
+    const { useEffect, useMemo, useRef, useState } = React;
     const { dateStr, getTaskDurationMinutes } = Planning.Utils;
 
     function readDayRecord(isoDate) {
@@ -24,6 +24,76 @@
             console.warn('[HEYS.planning.context] day record read failed', error);
         }
         return null;
+    }
+
+    function getSessionTokenForPlanningRpc() {
+        try {
+            if (HEYS.auth && typeof HEYS.auth.getSessionToken === 'function') {
+                var t = HEYS.auth.getSessionToken();
+                if (t) return typeof t === 'string' ? t : String(t);
+            }
+        } catch (e) { /* noop */ }
+        try {
+            if (typeof localStorage !== 'undefined') {
+                return localStorage.getItem('heys_session_token') || '';
+            }
+        } catch (e2) { /* noop */ }
+        return '';
+    }
+
+    function getTargetClientIdForPrompt() {
+        var id = '';
+        try {
+            if (HEYS.cloud && typeof HEYS.cloud.getClientId === 'function') {
+                id = String(HEYS.cloud.getClientId() || '');
+            }
+        } catch (e) { /* noop */ }
+        if (!id && typeof localStorage !== 'undefined') {
+            id = localStorage.getItem('heys_pin_auth_client') || localStorage.getItem('heys_client_current') || '';
+        }
+        return id;
+    }
+
+    function refreshPlanningFromCloud() {
+        var YandexAPI = HEYS.YandexAPI;
+        var Store = HEYS.Planning && HEYS.Planning.Store;
+        if (!YandexAPI || !Store || typeof YandexAPI.getKVBatch !== 'function') {
+            return Promise.resolve({ ok: false, reason: 'no_api' });
+        }
+        var clientId = getTargetClientIdForPrompt();
+        var keys = [
+            'heys_planning_projects',
+            'heys_planning_tasks',
+            'heys_planning_slots',
+            'heys_planning_inbox_v1',
+            'heys_planning_links_v1',
+        ];
+        return YandexAPI.getKVBatch(clientId, keys).then(function (res) {
+            if (res.error || !Array.isArray(res.data)) {
+                return { ok: false, reason: res.error || 'batch_failed' };
+            }
+            res.data.forEach(function (item) {
+                if (!item || item.k == null || item.v == null) return;
+                if (item.k === 'heys_planning_projects' && typeof Store.saveProjects === 'function') {
+                    Store.saveProjects(item.v);
+                } else if (item.k === 'heys_planning_tasks' && typeof Store.saveTasks === 'function') {
+                    Store.saveTasks(item.v);
+                } else if (item.k === 'heys_planning_slots' && typeof Store.saveSlots === 'function') {
+                    Store.saveSlots(item.v);
+                } else if (item.k === 'heys_planning_inbox_v1' && typeof Store.saveContextInboxItems === 'function') {
+                    Store.saveContextInboxItems(item.v);
+                } else if (item.k === 'heys_planning_links_v1' && typeof Store.saveLinks === 'function') {
+                    Store.saveLinks(item.v);
+                }
+            });
+            // Same-tab localStorage writes do not emit "storage"; Planning usePlanningState listens for this.
+            try {
+                if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
+                    window.dispatchEvent(new CustomEvent('heys:planning-updated'));
+                }
+            } catch (e) { /* noop */ }
+            return { ok: true };
+        });
     }
 
     function formatTimestamp(isoString) {
@@ -205,9 +275,56 @@
     }
 
     function QuickCaptureSection(props) {
+        var CAPTURE_DRAFT_KEY = 'heys_planning_context_capture_draft_v1';
         const [draft, setDraft] = useState('');
         const [selectedType, setSelectedType] = useState('capture');
         const [error, setError] = useState('');
+
+        useEffect(function () {
+            try {
+                var raw = null;
+                if (window.U && typeof window.U.lsGet === 'function') {
+                    raw = window.U.lsGet(CAPTURE_DRAFT_KEY, null);
+                } else if (HEYS.store && typeof HEYS.store.get === 'function') {
+                    raw = HEYS.store.get(CAPTURE_DRAFT_KEY, null);
+                } else if (typeof window !== 'undefined' && window.localStorage) {
+                    raw = window.localStorage.getItem(CAPTURE_DRAFT_KEY);
+                    if (raw) raw = JSON.parse(raw);
+                }
+                if (!raw || typeof raw !== 'object') return;
+                var savedText = String(raw.text || '');
+                var savedType = String(raw.type || 'capture');
+                if (savedText) setDraft(savedText);
+                if (CONTEXT_TYPES.some(function (ct) { return ct.id === savedType; })) setSelectedType(savedType);
+            } catch (error) {
+                console.warn('[HEYS.planning.context] capture draft restore failed', error);
+            }
+        }, []);
+
+        useEffect(function () {
+            try {
+                var payload = { text: String(draft || ''), type: String(selectedType || 'capture') };
+                if (!payload.text.trim()) {
+                    if (window.U && typeof window.U.lsDel === 'function') {
+                        window.U.lsDel(CAPTURE_DRAFT_KEY);
+                    } else if (HEYS.store && typeof HEYS.store.del === 'function') {
+                        HEYS.store.del(CAPTURE_DRAFT_KEY);
+                    } else if (typeof window !== 'undefined' && window.localStorage) {
+                        window.localStorage.removeItem(CAPTURE_DRAFT_KEY);
+                    }
+                    return;
+                }
+                if (window.U && typeof window.U.lsSet === 'function') {
+                    window.U.lsSet(CAPTURE_DRAFT_KEY, payload);
+                } else if (HEYS.store && typeof HEYS.store.set === 'function') {
+                    HEYS.store.set(CAPTURE_DRAFT_KEY, payload);
+                } else if (typeof window !== 'undefined' && window.localStorage) {
+                    window.localStorage.setItem(CAPTURE_DRAFT_KEY, JSON.stringify(payload));
+                }
+            } catch (error) {
+                console.warn('[HEYS.planning.context] capture draft save failed', error);
+            }
+        }, [draft, selectedType]);
 
         function handleSave() {
             const text = String(draft || '').trim();
@@ -224,12 +341,23 @@
             }
             setDraft('');
             setError('');
+            try {
+                if (window.U && typeof window.U.lsDel === 'function') {
+                    window.U.lsDel(CAPTURE_DRAFT_KEY);
+                } else if (HEYS.store && typeof HEYS.store.del === 'function') {
+                    HEYS.store.del(CAPTURE_DRAFT_KEY);
+                } else if (typeof window !== 'undefined' && window.localStorage) {
+                    window.localStorage.removeItem(CAPTURE_DRAFT_KEY);
+                }
+            } catch (error) {
+                console.warn('[HEYS.planning.context] capture draft clear failed', error);
+            }
         }
 
         return h('section', { className: 'planning-card planning-context-capture' }, [
             h('div', { key: 'header', className: 'planning-context-section-head' }, [
                 h('h3', { key: 'title', className: 'planning-section__title' }, 'Быстрый capture'),
-                h('p', { key: 'desc', className: 'planning-section__desc' }, 'Мысль, задача, тема, решение, вопрос, ограничение или ценность — выбери тип и запиши.'),
+                h('p', { key: 'desc', className: 'planning-section__desc' }, 'Сохрани мысль в inbox: это быстрый сбор контекста. Разбор по категориям и приоритетам делает агент на шаге «🧠 Всё».'),
             ]),
             h('div', { key: 'types', className: 'planning-context-type-chips' },
                 CONTEXT_TYPES.map(function (ct) {
@@ -254,14 +382,26 @@
             }),
             h('div', { key: 'footer', className: 'planning-context-capture__footer' }, [
                 h('div', { key: 'meta', className: 'planning-context-capture__meta' },
-                    selectedType === 'task' ? 'Сразу создастся задача в списке.' : 'Сохраняется в inbox и синхронизируется между устройствами.'
+                    selectedType === 'task'
+                        ? 'Сразу создастся задача в списке.'
+                        : 'Сохраняется в inbox и синхронизируется между устройствами. Авто-разбор включается через «🧠 Всё».'
                 ),
-                h('button', {
-                    key: 'save',
-                    type: 'button',
-                    className: 'planning-btn planning-btn--primary',
-                    onClick: handleSave,
-                }, selectedType === 'task' ? 'Создать задачу' : 'Сохранить'),
+                h('div', { key: 'actions', className: 'planning-context-capture__actions' }, [
+                    h('button', {
+                        key: 'agent',
+                        type: 'button',
+                        className: 'planning-btn planning-btn--secondary',
+                        onClick: function () {
+                            if (typeof props.onOpenAgentHandoff === 'function') props.onOpenAgentHandoff();
+                        },
+                    }, 'Разобрать через агента'),
+                    h('button', {
+                        key: 'save',
+                        type: 'button',
+                        className: 'planning-btn planning-btn--primary',
+                        onClick: handleSave,
+                    }, selectedType === 'task' ? 'Создать задачу' : 'Сохранить'),
+                ]),
             ]),
             error ? h('div', { key: 'error', className: 'planning-context-inline-error' }, error) : null,
         ]);
@@ -271,7 +411,20 @@
         const item = props.item;
         const linkedCount = Array.isArray(item?.linkedTaskIds) ? item.linkedTaskIds.length : 0;
         const typeMeta = getTypeMeta(item?.type);
+        const manualMode = !!props.manualMode;
+        const resolutionMeta = (function () {
+            if (item?.type === 'decision' || item?.status === 'archived') {
+                return { label: 'Решено', className: 'planning-context-resolution-badge--done' };
+            }
+            if (item?.type === 'question') {
+                return { label: 'Ждёт решения', className: 'planning-context-resolution-badge--waiting' };
+            }
+            return { label: 'В контексте', className: 'planning-context-resolution-badge--context' };
+        })();
         const [showTypeMenu, setShowTypeMenu] = useState(false);
+        const [showActions, setShowActions] = useState(false);
+        const bodyText = String(item?.body || item?.preview || '');
+        const compactBody = bodyText.length > 190 ? bodyText.slice(0, 190) + '…' : bodyText;
 
         return h('article', { className: 'planning-context-entry planning-context-entry--type-' + (item?.type || 'capture') }, [
             h('div', { key: 'head', className: 'planning-context-entry__head' }, [
@@ -287,62 +440,94 @@
                     h('span', { key: 'time', className: 'planning-context-entry__time' }, formatTimestamp(item?.updatedAt || item?.createdAt)),
                 ]),
             ]),
-            h('div', { key: 'body', className: 'planning-context-entry__body' }, item?.body || item?.preview || ''),
-            linkedCount > 0
-                ? h('div', { key: 'linked', className: 'planning-context-entry__linked' }, '🔗 ' + linkedCount + ' ' + pluralize(linkedCount, 'задача', 'задачи', 'задач'))
-                : null,
-            h('div', { key: 'footer', className: 'planning-context-entry__footer' }, [
+            h('div', { key: 'body', className: 'planning-context-entry__body' }, manualMode ? bodyText : compactBody),
+            h(
+                'div',
+                { key: 'linked', className: 'planning-context-entry__linked' },
+                [
+                    h('span', {
+                        key: 'resolution',
+                        className: 'planning-context-resolution-badge ' + resolutionMeta.className,
+                    }, resolutionMeta.label),
+                    h('span', { key: 'links' },
+                        linkedCount > 0
+                            ? '🔗 Связи: ' + linkedCount + ' ' + pluralize(linkedCount, 'связь', 'связи', 'связей')
+                            : '🔗 Связи: пока без связей'
+                    ),
+                ]
+            ),
+            manualMode ? h('div', { key: 'footer', className: 'planning-context-entry__footer' }, [
                 h('div', { key: 'actions', className: 'planning-context-entry__actions' }, [
                     h('button', {
-                        key: 'promote',
+                        key: 'toggle-actions',
                         type: 'button',
                         className: 'planning-btn planning-btn--ghost planning-btn--sm',
-                        onClick: function () { props.onPromote(item); },
-                    }, linkedCount > 0 ? '+ задача' : '→ В задачу'),
-                    h('div', { key: 'retype-wrap', className: 'planning-context-retype-wrap' }, [
+                        onClick: function () { setShowActions(!showActions); },
+                    }, showActions ? 'Скрыть действия' : '⋯ Действия'),
+                    showActions ? h('div', { key: 'actions-expanded', className: 'planning-context-entry__actions-expanded' }, [
                         h('button', {
-                            key: 'retype',
+                            key: 'promote',
                             type: 'button',
                             className: 'planning-btn planning-btn--ghost planning-btn--sm',
-                            onClick: function () { setShowTypeMenu(!showTypeMenu); },
-                        }, '🏷 Тип'),
-                        showTypeMenu ? h('div', { key: 'menu', className: 'planning-context-retype-menu' },
-                            CONTEXT_TYPES.filter(function (ct) { return ct.id !== 'task' && ct.id !== item?.type; }).map(function (ct) {
-                                return h('button', {
-                                    key: ct.id,
-                                    type: 'button',
-                                    className: 'planning-context-retype-menu__item',
-                                    onClick: function () {
-                                        props.onRetype(item.id, ct.id);
-                                        setShowTypeMenu(false);
-                                    },
-                                }, ct.icon + ' ' + ct.label);
-                            })
-                        ) : null,
-                    ]),
-                    h('button', {
-                        key: 'delete',
-                        type: 'button',
-                        className: 'planning-btn planning-btn--ghost planning-btn--sm planning-btn--danger',
-                        onClick: function () { props.onDelete(item.id); },
-                    }, '✕'),
+                            onClick: function () { props.onPromote(item); },
+                        }, linkedCount > 0 ? '+ задача' : '→ В задачу'),
+                        h('div', { key: 'retype-wrap', className: 'planning-context-retype-wrap' }, [
+                            h('button', {
+                                key: 'retype',
+                                type: 'button',
+                                className: 'planning-btn planning-btn--ghost planning-btn--sm',
+                                onClick: function () { setShowTypeMenu(!showTypeMenu); },
+                            }, '🏷 Тип'),
+                            showTypeMenu ? h('div', { key: 'menu', className: 'planning-context-retype-menu' },
+                                CONTEXT_TYPES.filter(function (ct) { return ct.id !== 'task' && ct.id !== item?.type; }).map(function (ct) {
+                                    return h('button', {
+                                        key: ct.id,
+                                        type: 'button',
+                                        className: 'planning-context-retype-menu__item',
+                                        onClick: function () {
+                                            props.onRetype(item.id, ct.id);
+                                            setShowTypeMenu(false);
+                                        },
+                                    }, ct.icon + ' ' + ct.label);
+                                })
+                            ) : null,
+                        ]),
+                        h('button', {
+                            key: 'delete',
+                            type: 'button',
+                            className: 'planning-btn planning-btn--ghost planning-btn--sm planning-btn--danger',
+                            onClick: function () { props.onDelete(item.id); },
+                        }, '✕'),
+                    ]) : null,
                 ]),
-            ]),
+            ]) : null,
         ]);
     }
 
     function ContextInboxSection(props) {
         const items = Array.isArray(props.items) ? props.items : [];
+        const [manualMode, setManualMode] = useState(false);
         return h('section', { className: 'planning-card planning-context-inbox' }, [
             h('div', { key: 'header', className: 'planning-context-section-head' }, [
-                h('h3', { key: 'title', className: 'planning-section__title' }, 'Inbox контекста'),
-                h('p', { key: 'desc', className: 'planning-section__desc' }, 'Сырые заметки и сигналы. Превращай нужное в задачи или меняй тип.'),
+                h('div', { key: 'head-row', className: 'planning-context-inbox__header-row' }, [
+                    h('h3', { key: 'title', className: 'planning-section__title' }, 'Inbox контекста'),
+                    h('button', {
+                        key: 'manual-mode',
+                        type: 'button',
+                        className: 'planning-btn planning-btn--ghost planning-btn--sm',
+                        onClick: function () { setManualMode(!manualMode); },
+                    }, manualMode ? 'Авто-режим' : 'Ручное редактирование'),
+                ]),
+                h('p', { key: 'desc', className: 'planning-section__desc' }, manualMode
+                    ? 'Ручной режим: можно промоутить в задачи, менять тип и удалять записи.'
+                    : 'Журнал контекста. Основной поток: «🧠 Всё» → агент сам применяет изменения.'),
             ]),
             items.length
                 ? h('div', { key: 'list', className: 'planning-context-entry-list' }, items.map(function (item) {
                     return h(InboxEntry, {
                         key: item.id,
                         item: item,
+                        manualMode: manualMode,
                         onDelete: props.onDelete,
                         onPromote: props.onPromote,
                         onRetype: props.onRetype,
@@ -357,6 +542,9 @@
 
     function AgentHandoffSection(props) {
         const [copied, setCopied] = useState('');
+        const [applyBusy, setApplyBusy] = useState(false);
+        const [applyNotice, setApplyNotice] = useState('');
+        const [agentPromptExtra, setAgentPromptExtra] = useState('');
 
         function buildInboxText() {
             var items = Array.isArray(props.items) ? props.items : [];
@@ -385,84 +573,194 @@
             return lines.join('\n');
         }
 
+        function getRecentDayEntries(limit) {
+            var entries = [];
+            var safeLimit = Math.max(1, Number(limit) || 5);
+            try {
+                if (typeof window === 'undefined' || !window.localStorage) return entries;
+                var storage = window.localStorage;
+                for (var i = 0; i < storage.length; i += 1) {
+                    var key = String(storage.key(i) || '');
+                    if (key.indexOf('heys_dayv2_') !== 0) continue;
+                    var iso = key.slice('heys_dayv2_'.length);
+                    if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) continue;
+                    entries.push({ iso: iso, record: readDayRecord(iso) || {} });
+                }
+            } catch (error) {
+                console.warn('[HEYS.planning.context] recent day records read failed', error);
+            }
+
+            entries.sort(function (a, b) {
+                return a.iso < b.iso ? 1 : -1;
+            });
+            return entries.slice(0, safeLimit);
+        }
+
+        function normalizeInlineText(value) {
+            return String(value || '').replace(/\s+/g, ' ').trim();
+        }
+
+        function buildRecentDaysContext() {
+            var entries = getRecentDayEntries(5);
+            if (!entries.length) return 'Нет данных за последние дни.';
+
+            return entries.map(function (entry) {
+                var record = entry.record || {};
+                var sleepHours = Number(
+                    record?.sleepHours
+                    || record?.sleep_hours
+                    || record?.sleep?.hours
+                    || record?.sleep?.totalHours
+                    || 0
+                );
+                var stressScore = Number(
+                    record?.stress
+                    || record?.stressLevel
+                    || record?.mood?.stress
+                    || record?.body?.stress
+                    || 0
+                );
+                var protein = Number(
+                    record?.dayTot?.prot
+                    || record?.dayTot?.protein
+                    || record?.nutrition?.prot
+                    || 0
+                );
+                var note = normalizeInlineText(
+                    record?.note
+                    || record?.notes
+                    || record?.comment
+                    || record?.dayComment
+                    || record?.summary
+                    || ''
+                );
+
+                var parts = [
+                    '- ' + entry.iso,
+                    'sleep=' + formatHours(sleepHours),
+                    'stress=' + (stressScore > 0 ? String(stressScore).replace('.', ',') + '/10' : 'нет данных'),
+                    'protein=' + (protein > 0 ? Math.round(protein) + ' г' : 'нет данных'),
+                ];
+                if (note) parts.push('note=' + note.slice(0, 220));
+                return parts.join(' | ');
+            }).join('\n');
+        }
+
+        function buildSnapshotTextForIngest() {
+            return '== HEYS Context Snapshot ==\n\n--- Контекст дня ---\n' + buildDayContext() + '\n\n--- Inbox ---\n' + buildInboxText();
+        }
+
         function buildFullContext() {
-            var snapshot = '== HEYS Context Snapshot ==\n\n--- Контекст дня ---\n' + buildDayContext() + '\n\n--- Inbox ---\n' + buildInboxText();
+            var snapshot = buildSnapshotTextForIngest();
+            var targetClientId = getTargetClientIdForPrompt();
             return [
-                'Ты — мой context copilot для HEYS-v2.',
-                'Это жизненный контекст. Не переспрашивай. Сразу разбирай.',
+                'Ты — context copilot HEYS-v2. Не переспрашивай, кроме unresolved.',
+                'Сразу делай anti-duplicate-first и APPLY_NOW=true.',
                 '',
-                '═══ HEYS В ДВУХ СЛОВАХ ═══',
+                'APPLY:',
+                '- api_first: POST /planning/context-ingest (fn=planning_context_ingest)',
+                '- fallback: browser_if_api_unavailable',
+                '- idempotency_key: <stable-key-per-message>',
+                '- dedupe_order: exact_match > semantic_match > safe_skip > created_new',
+                '- apply_required: true (разбор без попытки apply считается неполным ответом)',
+                '- если apply не выполнен: явно укажи причину и статус apply_failed/analyzed_only',
+                '- если нужен follow-up по unresolved: после ответа пользователя сразу повтори ingest с parentIngestId',
                 '',
-                'HEYS — мобильное PWA (питание + жизненное планирование).',
-                'Раздел Planning → 4 экрана: Список, Календарь, Гант, Контекст (🧠).',
-                'PIN-only доступ. AI внутри нет — ты единственный мозг.',
+                '[APPLY_IDENTITY]',
+                '- actorId: текущий PIN-клиент HEYS',
+                '- targetClientId: ' + (targetClientId || '<войди по PIN — id подставится из сессии>'),
+                '- targetScope: planning_only',
+                '- if targetClientId missing/invalid => apply_failed (do not write)',
                 '',
-                '═══ СУЩНОСТИ ═══',
+                'Если есть unresolved (Ждёт решения / question):',
+                '1) задай короткие вопросы',
+                '2) после моих ответов сразу follow-up ingest (parentIngestId)',
                 '',
-                'InboxItem.type — 7 типов:',
-                '  💭 capture     — сырая мысль, наблюдение',
-                '  ☑️ task        — конкретное действие',
-                '  🧵 thread      — длинная тема (клиент, проект, здоровье)',
-                '  ✅ decision    — что решено или договорено',
-                '  ❓ question    — что неясно, требует ответа',
-                '  🚧 constraint  — ограничение, правило',
-                '  💎 value       — ценность, приоритет, смысл',
-                '',
-                'Task: { priority: p1|p2|p3, status: todo|in_progress|done, projectId, dueDate }',
-                'Link.relation: promoted_to | causes | blocks | related | supports | contradicts',
-                '',
-                '═══ РЕЖИМ ДНЯ ═══',
-                '',
-                '🟡 careful  — сон < 6.5ч ИЛИ стресс ≥ 7',
-                '🔴 focus    — overdue ≥ 3, ИЛИ todayDue ≥ 3, ИЛИ scheduled ≥ 4ч, ИЛИ inbox ≥ 6',
-                '🟢 steady   — всё остальное',
-                '',
-                '═══ ЧТО ДЕЛАТЬ ═══',
-                '',
-                '1. Пойми суть — 3–5 ключевых смыслов.',
-                '2. Определи режим — careful / steady / focus + почему.',
-                '3. Не дублируй — если это update existing → обнови.',
-                '4. Раздроби на полный спектр типов.',
-                '5. Построй связи — [node A] —relation→ [node B].',
-                '6. Приоритизируй — now / next / later с учётом жизненного ресурса.',
-                '7. Если есть браузер VS Code + localhost:3001 — запиши через:',
-                '   const S = HEYS.Planning.Store;',
-                '   S.addTask(title, { priority, projectId, dueDate })',
-                '   S.addContextInboxItem(text, { type })',
-                '   S.addLink(fromId, toId, { relation, label })',
-                '   S.updateContextInboxItem(id, { type, status })',
-                '',
-                '═══ ПРАВИЛА ═══',
-                '',
-                '- Часть контекста ДОЛЖНА остаться контекстом, а не задачей.',
-                '- Values и Constraints — полноценные узлы, не комментарии.',
-                '- Не давай общие советы вроде "будь внимательнее".',
-                '- Отвечай по-русски. Ключи полей — на английском.',
-                '',
-                '═══ ФОРМАТ ОТВЕТА ═══',
-                '',
-                '## 1. Суть контекста',
-                '## 2. Режим дня — mode / why / давление / чего не делать',
-                '## 3. Декомпозиция',
-                '| # | type | icon | Что | projectId | priority | связь с |',
-                '## 4. Нейро-карта — Nodes + Links',
-                '## 5. Приоритет — now / next / later',
-                '## 6. API-команды (если есть браузер)',
+                'Ответ строго:',
+                '- Факт → Что сделал → Почему',
+                '- PLAN: now / next / later',
+                '- AUDIT: ingestId, parentIngestId, idempotencyKey, applyStatus, fallbackUsed',
                 '',
                 '═══ КОНТЕКСТ ═══',
                 '',
                 '[SNAPSHOT]',
                 snapshot,
                 '',
-                '[ДОПОЛНИТЕЛЬНЫЙ КОНТЕКСТ]',
-                '<допиши что есть в голове>',
+                '[HEYS_DAYS_LAST_5]',
+                buildRecentDaysContext(),
                 '',
-                '[ЧТО УЖЕ ЕСТЬ В HEYS]',
-                '<если помнишь проекты/задачи — перечисли; если нет — "агент, проверь">',
-                '',
-                '[НЕ ДУБЛИРОВАТЬ]',
-                '<что точно не надо создавать повторно>',
+                '[ДОП.КОНТЕКСТ]',
+                '<опционально>',
             ].join('\n');
+        }
+
+        function handleApplyInHeys() {
+            var token = getSessionTokenForPlanningRpc();
+            if (!token) {
+                setApplyNotice('Нужна PIN-сессия: не найден session token.');
+                return;
+            }
+            if (!HEYS.YandexAPI || typeof HEYS.YandexAPI.rpc !== 'function') {
+                setApplyNotice('API клиента недоступен.');
+                return;
+            }
+            setApplyBusy(true);
+            setApplyNotice('');
+            var idem = 'ctx-ingest-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 10);
+            var extra = String(agentPromptExtra || '').trim();
+            var rawPromptText = '';
+            if (extra) {
+                if (extra.indexOf('--- Inbox ---') >= 0) {
+                    rawPromptText = '[ДОПОЛНИТЕЛЬНЫЙ КОНТЕКСТ]\n' + extra;
+                } else {
+                    var lines = extra.split('\n').map(function (l) { return l.trim(); }).filter(Boolean);
+                    var titleLine = lines[0] || extra;
+                    var bodyOneLine = lines.slice(1).join(' ').trim() || titleLine;
+                    rawPromptText = '[ДОПОЛНИТЕЛЬНЫЙ КОНТЕКСТ]\n--- Inbox ---\n1. ☑️ [Задача] ' + titleLine + '\n   ' + bodyOneLine;
+                }
+            }
+            var payload = {
+                source: 'heys_context_apply_button',
+                applyNow: true,
+                dryRun: false,
+                idempotencyKey: idem,
+                policy: { antiDuplicateFirst: true, maxNowTasks: 3 },
+                input: {
+                    sessionToken: token,
+                    snapshotText: buildSnapshotTextForIngest(),
+                    daysLast5Text: buildRecentDaysContext(),
+                    rawPromptText: rawPromptText,
+                    clientTs: new Date().toISOString(),
+                    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
+                },
+            };
+            HEYS.YandexAPI.rpc('planning_context_ingest', payload).then(function (res) {
+                if (res.error) {
+                    setApplyNotice(String(res.error.message || 'Ошибка RPC'));
+                    setApplyBusy(false);
+                    return;
+                }
+                var data = res.data;
+                if (!data || data.ok === false) {
+                    var em = data && data.error && data.error.message ? data.error.message : 'ingest отклонён';
+                    setApplyNotice(em);
+                    setApplyBusy(false);
+                    return;
+                }
+                return refreshPlanningFromCloud().then(function (pull) {
+                    if (!pull.ok) {
+                        setApplyNotice('Сервер применил изменения, но локальное обновление с облака не удалось — перезайди в «Задачи».');
+                    } else {
+                        var m = data.metrics || {};
+                        var s = data.summary || {};
+                        setApplyNotice('Готово: новых сущностей ' + (s.created || 0) + ', слотов ' + (m.ingestSlotsAdded || 0) + ', полей сроков ' + (m.scheduleFieldsApplied || 0) + '.');
+                    }
+                    setApplyBusy(false);
+                });
+            }).catch(function (err) {
+                setApplyNotice(err && err.message ? err.message : 'Сеть');
+                setApplyBusy(false);
+            });
         }
 
         function copyToClipboard(text, label) {
@@ -477,11 +775,21 @@
             }
         }
 
-        return h('section', { className: 'planning-card planning-context-handoff' }, [
+        return h('section', { id: 'planning-agent-handoff', className: 'planning-card planning-context-handoff' }, [
             h('div', { key: 'header', className: 'planning-context-section-head' }, [
                 h('h3', { key: 'title', className: 'planning-section__title' }, '🤖 Передать агенту'),
-                h('p', { key: 'desc', className: 'planning-section__desc' }, 'Скопируй контекст и вставь в чат с агентом (Copilot, Claude, ChatGPT). Агент разложит мысли в задачи, треды и решения.'),
+                h('p', { key: 'desc', className: 'planning-section__desc' }, 'Скопируй в чат или примени сразу в HEYS: задачи, inbox, связи, сроки и слоты календаря (из текста строк вида «до 2026-04-20», «2ч», «10:00»).'),
             ]),
+            h('label', { key: 'extraLabel', className: 'planning-context-handoff__extra-label', htmlFor: 'planning-context-agent-extra' }, 'Доп. текст к применению (планы, сроки — попадёт в ingest как rawPrompt):'),
+            h('textarea', {
+                key: 'extra',
+                id: 'planning-context-agent-extra',
+                className: 'planning-context-handoff__extra',
+                placeholder: 'Например: сегодня вайбкодить приложения 3ч с 14:00, дедлайн по прототипу 2026-04-18',
+                value: agentPromptExtra,
+                onChange: function (e) { setAgentPromptExtra(e.target.value); },
+                rows: 3,
+            }),
             h('div', { key: 'buttons', className: 'planning-context-handoff__buttons' }, [
                 h('button', {
                     key: 'inbox',
@@ -510,7 +818,20 @@
                     h('span', { key: 'icon', className: 'planning-context-handoff__icon' }, '🧠'),
                     h('span', { key: 'label' }, copied === 'full' ? 'Скопировано!' : 'Всё'),
                 ]),
+                h('button', {
+                    key: 'apply',
+                    type: 'button',
+                    className: 'planning-btn planning-btn--secondary planning-context-handoff__btn',
+                    disabled: applyBusy,
+                    onClick: handleApplyInHeys,
+                }, [
+                    h('span', { key: 'icon', className: 'planning-context-handoff__icon' }, '⚡'),
+                    h('span', { key: 'label' }, applyBusy ? 'Применяю…' : 'Применить в HEYS'),
+                ]),
             ]),
+            applyNotice
+                ? h('div', { key: 'applyNote', className: 'planning-context-handoff__notice', role: 'status' }, applyNotice)
+                : null,
             copied === 'error' ? h('div', { key: 'err', className: 'planning-context-inline-error' }, 'Не удалось скопировать.') : null,
         ]);
     }
@@ -521,11 +842,347 @@
         var items = Array.isArray(props.items) ? props.items : [];
         var links = Array.isArray(props.links) ? props.links : [];
         var totalNodes = tasks.length + projects.length + items.length;
+        var canvasRef = useRef(null);
+        var dragStateRef = useRef({ active: false, lastX: 0, lastY: 0, vx: 0.004, vy: 0.002 });
+        var animationRef = useRef(null);
+        var projectedRef = useRef([]);
+        var selectedIndexRef = useRef(-1);
+        var pointerTravelRef = useRef(0);
+        var zoomRef = useRef(1);
+        var pointersRef = useRef({});
+        var pinchRef = useRef({ active: false, startDistance: 0, startZoom: 1 });
+        var [selectedLabel, setSelectedLabel] = useState('');
+        var [zoomUi, setZoomUi] = useState(1);
+
+        var graphData = useMemo(function () {
+            var nodes = [];
+            var indexById = Object.create(null);
+
+            function pushNode(entity, type) {
+                if (!entity || !entity.id || indexById[entity.id] != null) return;
+                indexById[entity.id] = nodes.length;
+                nodes.push({
+                    id: entity.id,
+                    type: type,
+                    label: entity.title || entity.name || entity.preview || 'Узел',
+                });
+            }
+
+            tasks.forEach(function (task) { pushNode(task, 'task'); });
+            projects.forEach(function (project) { pushNode(project, 'project'); });
+            items.forEach(function (item) { pushNode(item, item?.type || 'capture'); });
+
+            var graphLinks = links
+                .filter(function (link) { return link && indexById[link.fromId] != null && indexById[link.toId] != null; })
+                .map(function (link) {
+                    return {
+                        source: indexById[link.fromId],
+                        target: indexById[link.toId],
+                        relation: link.relation || 'related',
+                    };
+                });
+
+            return { nodes: nodes, links: graphLinks };
+        }, [tasks, projects, items, links]);
+
+        useEffect(function () {
+            var canvas = canvasRef.current;
+            if (!canvas) return;
+            var ctx = canvas.getContext('2d');
+            if (!ctx) return;
+
+            var dpr = Math.max(1, window.devicePixelRatio || 1);
+            var cssWidth = canvas.clientWidth || 320;
+            var cssHeight = canvas.clientHeight || 220;
+            canvas.width = Math.round(cssWidth * dpr);
+            canvas.height = Math.round(cssHeight * dpr);
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+            var nodes = graphData.nodes;
+            var graphLinks = graphData.links;
+            if (!nodes.length) {
+                ctx.clearRect(0, 0, cssWidth, cssHeight);
+                return;
+            }
+
+            var centerX = cssWidth / 2;
+            var centerY = cssHeight / 2;
+            var radius = Math.min(cssWidth, cssHeight) * 0.32;
+            var perspective = radius * 2.4;
+            var state = dragStateRef.current;
+
+            var points = nodes.map(function (_, idx) {
+                var t = nodes.length <= 1 ? 0.5 : idx / (nodes.length - 1);
+                var phi = Math.acos(1 - 2 * t);
+                var theta = Math.PI * (1 + Math.sqrt(5)) * idx;
+                return {
+                    x: radius * Math.sin(phi) * Math.cos(theta),
+                    y: radius * Math.cos(phi),
+                    z: radius * Math.sin(phi) * Math.sin(theta),
+                };
+            });
+
+            function rotateY(point, angle) {
+                var cosA = Math.cos(angle);
+                var sinA = Math.sin(angle);
+                var x = point.x * cosA + point.z * sinA;
+                var z = -point.x * sinA + point.z * cosA;
+                point.x = x;
+                point.z = z;
+            }
+
+            function rotateX(point, angle) {
+                var cosA = Math.cos(angle);
+                var sinA = Math.sin(angle);
+                var y = point.y * cosA - point.z * sinA;
+                var z = point.y * sinA + point.z * cosA;
+                point.y = y;
+                point.z = z;
+            }
+
+            function project(point) {
+                var zoom = Math.max(0.65, Math.min(2.4, zoomRef.current || 1));
+                var scale = (perspective / (perspective + point.z + radius)) * zoom;
+                return {
+                    x: centerX + point.x * scale,
+                    y: centerY + point.y * scale,
+                    z: point.z,
+                    scale: scale,
+                };
+            }
+
+            function draw() {
+                ctx.clearRect(0, 0, cssWidth, cssHeight);
+
+                points.forEach(function (point) {
+                    rotateY(point, state.vx);
+                    rotateX(point, state.vy);
+                });
+                if (!state.active) {
+                    state.vx *= 0.988;
+                    state.vy *= 0.988;
+                    if (Math.abs(state.vx) < 0.00015) state.vx = 0;
+                    if (Math.abs(state.vy) < 0.00015) state.vy = 0;
+                }
+
+                var projected = points.map(project);
+                projectedRef.current = projected;
+                var selectedIndex = selectedIndexRef.current;
+
+                graphLinks.forEach(function (link) {
+                    var a = projected[link.source];
+                    var b = projected[link.target];
+                    if (!a || !b) return;
+                    var isSelected = selectedIndex >= 0 && (link.source === selectedIndex || link.target === selectedIndex);
+                    ctx.strokeStyle = isSelected ? 'rgba(37, 99, 235, 0.72)' : 'rgba(59, 130, 246, 0.22)';
+                    ctx.lineWidth = isSelected ? 1.8 : 1;
+                    ctx.beginPath();
+                    ctx.moveTo(a.x, a.y);
+                    ctx.lineTo(b.x, b.y);
+                    ctx.stroke();
+                });
+
+                var drawOrder = projected
+                    .map(function (p, idx) { return { idx: idx, p: p }; })
+                    .sort(function (a, b) { return a.p.z - b.p.z; });
+
+                drawOrder.forEach(function (entry) {
+                    var p = entry.p;
+                    var node = nodes[entry.idx];
+                    var isSelected = entry.idx === selectedIndex;
+                    var zoom = Math.max(0.65, Math.min(2.4, zoomRef.current || 1));
+                    var size = Math.max(2.8, 4.2 * p.scale + 1.8);
+                    var color = node.type === 'task'
+                        ? '#16a34a'
+                        : node.type === 'project'
+                            ? '#7c3aed'
+                            : '#2563eb';
+                    if (isSelected) {
+                        ctx.beginPath();
+                        ctx.fillStyle = 'rgba(37, 99, 235, 0.22)';
+                        ctx.arc(p.x, p.y, size * 2.4, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                    ctx.beginPath();
+                    ctx.fillStyle = color;
+                    ctx.arc(p.x, p.y, size, 0, Math.PI * 2);
+                    ctx.fill();
+
+                });
+
+                if (Math.max(0.65, Math.min(2.4, zoomRef.current || 1)) >= 1.35 || selectedIndex >= 0) {
+                    var occupied = [];
+                    var labelCandidates = drawOrder.slice().reverse();
+                    labelCandidates.forEach(function (entry) {
+                        var p = entry.p;
+                        var node = nodes[entry.idx];
+                        var zoom = Math.max(0.65, Math.min(2.4, zoomRef.current || 1));
+                        var isSelected = entry.idx === selectedIndex;
+                        if (!isSelected && zoom < 1.35) return;
+
+                        var shortLabel = String(node.label || 'Узел').slice(0, 24);
+                        if (shortLabel.length < String(node.label || '').length) shortLabel += '…';
+                        var fontSize = isSelected ? 11 : 10;
+                        ctx.font = fontSize + 'px system-ui, -apple-system, Segoe UI, sans-serif';
+                        var textWidth = ctx.measureText(shortLabel).width;
+                        var x = p.x + 8;
+                        var y = p.y - 8;
+                        var box = {
+                            x1: x - 2,
+                            y1: y - fontSize - 1,
+                            x2: x + textWidth + 2,
+                            y2: y + 3,
+                        };
+
+                        var overlaps = occupied.some(function (o) {
+                            return !(box.x2 < o.x1 || box.x1 > o.x2 || box.y2 < o.y1 || box.y1 > o.y2);
+                        });
+                        if (overlaps && !isSelected) return;
+
+                        var alpha = isSelected ? 0.95 : Math.max(0.45, Math.min(0.9, 0.35 + p.scale));
+                        ctx.fillStyle = 'rgba(15, 23, 42, ' + alpha.toFixed(2) + ')';
+                        ctx.fillText(shortLabel, x, y);
+                        occupied.push(box);
+                    });
+                }
+
+                animationRef.current = window.requestAnimationFrame(draw);
+            }
+
+            animationRef.current = window.requestAnimationFrame(draw);
+            return function () {
+                if (animationRef.current) window.cancelAnimationFrame(animationRef.current);
+            };
+        }, [graphData]);
+
+        function handlePointerDown(event) {
+            var state = dragStateRef.current;
+            state.active = true;
+            state.lastX = event.clientX || 0;
+            state.lastY = event.clientY || 0;
+            pointerTravelRef.current = 0;
+            pointersRef.current[event.pointerId] = { x: event.clientX || 0, y: event.clientY || 0 };
+            var pointerIds = Object.keys(pointersRef.current);
+            if (pointerIds.length === 2) {
+                var p1 = pointersRef.current[pointerIds[0]];
+                var p2 = pointersRef.current[pointerIds[1]];
+                var dist = Math.hypot((p2.x - p1.x), (p2.y - p1.y));
+                pinchRef.current = { active: true, startDistance: dist || 1, startZoom: zoomRef.current || 1 };
+            }
+        }
+
+        function handlePointerMove(event) {
+            var state = dragStateRef.current;
+            if (pointersRef.current[event.pointerId]) {
+                pointersRef.current[event.pointerId].x = event.clientX || 0;
+                pointersRef.current[event.pointerId].y = event.clientY || 0;
+            }
+            var pointerIds = Object.keys(pointersRef.current);
+            if (pointerIds.length === 2 && pinchRef.current.active) {
+                var p1 = pointersRef.current[pointerIds[0]];
+                var p2 = pointersRef.current[pointerIds[1]];
+                var dist = Math.hypot((p2.x - p1.x), (p2.y - p1.y));
+                var nextZoom = pinchRef.current.startZoom * (dist / (pinchRef.current.startDistance || 1));
+                zoomRef.current = Math.max(0.65, Math.min(2.4, nextZoom));
+                setZoomUi(zoomRef.current);
+                return;
+            }
+            if (!state.active) return;
+            var x = event.clientX || 0;
+            var y = event.clientY || 0;
+            var dx = x - state.lastX;
+            var dy = y - state.lastY;
+            state.lastX = x;
+            state.lastY = y;
+            pointerTravelRef.current += Math.abs(dx) + Math.abs(dy);
+            state.vx = dx * 0.0009;
+            state.vy = dy * 0.0009;
+        }
+
+        function handlePointerUp(event) {
+            var state = dragStateRef.current;
+            state.active = false;
+            delete pointersRef.current[event.pointerId];
+            if (Object.keys(pointersRef.current).length < 2) {
+                pinchRef.current.active = false;
+            }
+            if (pointerTravelRef.current < 10 && graphData.nodes.length) {
+                var canvas = canvasRef.current;
+                var projected = projectedRef.current || [];
+                if (canvas && event) {
+                    var rect = canvas.getBoundingClientRect();
+                    var localX = (event.clientX || 0) - rect.left;
+                    var localY = (event.clientY || 0) - rect.top;
+                    var nearestIndex = -1;
+                    var nearestDist = Infinity;
+                    projected.forEach(function (p, idx) {
+                        var dx = p.x - localX;
+                        var dy = p.y - localY;
+                        var dist = Math.sqrt(dx * dx + dy * dy);
+                        if (dist < nearestDist) {
+                            nearestDist = dist;
+                            nearestIndex = idx;
+                        }
+                    });
+                    if (nearestIndex >= 0 && nearestDist <= 22) {
+                        selectedIndexRef.current = nearestIndex;
+                        setSelectedLabel(graphData.nodes[nearestIndex].label || 'Узел');
+                    } else {
+                        selectedIndexRef.current = -1;
+                        setSelectedLabel('');
+                    }
+                }
+            }
+        }
+
+        function handleWheel(event) {
+            if (!event) return;
+            event.preventDefault();
+            var delta = event.deltaY > 0 ? -0.08 : 0.08;
+            zoomRef.current = Math.max(0.65, Math.min(2.4, (zoomRef.current || 1) + delta));
+            setZoomUi(zoomRef.current);
+        }
+
+        function handleResetView() {
+            zoomRef.current = 1;
+            setZoomUi(1);
+            selectedIndexRef.current = -1;
+            setSelectedLabel('');
+            dragStateRef.current.vx = 0.004;
+            dragStateRef.current.vy = 0.002;
+        }
 
         return h('section', { className: 'planning-card planning-context-graph' }, [
             h('div', { key: 'header', className: 'planning-context-section-head' }, [
                 h('h3', { key: 'title', className: 'planning-section__title' }, 'Карта связей'),
                 h('p', { key: 'desc', className: 'planning-section__desc' }, 'Узлы — это задачи, проекты и inbox-записи. Связи создаются автоматически при промоуте, а также вручную агентом.'),
+            ]),
+            h('div', { key: 'canvasWrap', className: 'planning-context-graph-canvas-wrap' }, [
+                h('canvas', {
+                    key: 'canvas',
+                    ref: canvasRef,
+                    className: 'planning-context-graph-canvas',
+                    onWheel: handleWheel,
+                    onPointerDown: handlePointerDown,
+                    onPointerMove: handlePointerMove,
+                    onPointerUp: handlePointerUp,
+                    onPointerCancel: handlePointerUp,
+                    onPointerLeave: handlePointerUp,
+                }),
+                h('div', { key: 'hint', className: 'planning-context-graph-canvas-hint' }, 'Крути пальцем: 3D-карта узлов и связей'),
+                h('button', {
+                    key: 'reset',
+                    type: 'button',
+                    className: 'planning-btn planning-btn--ghost planning-btn--sm planning-context-graph-reset',
+                    onClick: handleResetView,
+                }, 'Reset view'),
+            ]),
+            h('div', { key: 'legend', className: 'planning-context-graph-legend' }, [
+                h('span', { key: 'l-task', className: 'planning-context-graph-legend__item planning-context-graph-legend__item--task' }, 'task'),
+                h('span', { key: 'l-project', className: 'planning-context-graph-legend__item planning-context-graph-legend__item--project' }, 'project'),
+                h('span', { key: 'l-context', className: 'planning-context-graph-legend__item planning-context-graph-legend__item--context' }, 'context'),
+                h('span', { key: 'l-zoom', className: 'planning-context-graph-legend__item' }, 'zoom x' + Number(zoomUi || 1).toFixed(2)),
+                selectedLabel ? h('span', { key: 'l-selected', className: 'planning-context-graph-legend__selected' }, 'Выбрано: ' + selectedLabel) : null,
             ]),
             h('div', { key: 'stats', className: 'planning-context-graph__stats' }, [
                 h('div', { key: 'nodes', className: 'planning-context-graph__stat' }, [
@@ -572,6 +1229,13 @@
             return state.addTask(text, { priority: 'p2', status: 'todo' });
         }
 
+        function handleOpenAgentHandoff() {
+            if (typeof document === 'undefined') return;
+            var handoffSection = document.getElementById('planning-agent-handoff');
+            if (!handoffSection || typeof handoffSection.scrollIntoView !== 'function') return;
+            handoffSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
         function handleDelete(itemId) {
             if (!state || typeof state.deleteContextInboxItem !== 'function') return;
             state.deleteContextInboxItem(itemId);
@@ -607,7 +1271,12 @@
 
         return h('div', { className: 'planning-context-screen' }, [
             h(ContextCapsuleSection, { key: 'capsule', capsule: capsule }),
-            h(QuickCaptureSection, { key: 'capture', onCapture: handleCapture, onCaptureAsTask: handleCaptureAsTask }),
+            h(QuickCaptureSection, {
+                key: 'capture',
+                onCapture: handleCapture,
+                onCaptureAsTask: handleCaptureAsTask,
+                onOpenAgentHandoff: handleOpenAgentHandoff,
+            }),
             h(ContextInboxSection, {
                 key: 'inbox',
                 items: inboxItems,
@@ -625,6 +1294,8 @@
             }),
         ]);
     }
+
+    Planning.refreshPlanningFromCloud = refreshPlanningFromCloud;
 
     HEYS.PlanningContext = {
         ContextScreen,

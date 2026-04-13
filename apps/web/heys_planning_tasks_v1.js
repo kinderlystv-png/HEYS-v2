@@ -6,10 +6,18 @@
     const React = window.React;
     const ReactDOM = window.ReactDOM;
     const Planning = HEYS.Planning || {};
-    if (!React || !Planning.Constants || !Planning.Store || !Planning.Utils) return;
+    const PlanningQuickTarget = HEYS.PlanningQuickTarget;
+    if (!React || !Planning.Constants || !Planning.Store || !Planning.Utils || !PlanningQuickTarget) return;
 
     const h = React.createElement;
     const { useState, useMemo, useRef } = React;
+    const {
+        buildResolvedTaskProjectMap,
+        getResolvedTaskProjectId,
+        createQuickTargetValue,
+        resolveQuickTargetValue,
+        PlanningQuickTargetField,
+    } = PlanningQuickTarget;
     const { PRIORITY_CONFIG, STATUS_CONFIG, DUE_BUCKETS, PROJECT_COLORS } = Planning.Constants;
     const { clamp, dateStr, sortByOrder, timeToMinutes, minutesToTime, getDueBucket, getTaskDurationMinutes } = Planning.Utils;
 
@@ -1005,54 +1013,6 @@
         return map;
     }
 
-    function buildTaskLookup(tasks) {
-        return new Map((Array.isArray(tasks) ? tasks : [])
-            .filter(Boolean)
-            .map((task) => [task.id, task]));
-    }
-
-    function resolveTaskProjectScope(taskId, taskLookup, validProjectIds, cache, trail) {
-        if (!taskId || !taskLookup.has(taskId)) return undefined;
-        if (cache.has(taskId)) return cache.get(taskId);
-        if (trail.has(taskId)) return undefined;
-
-        trail.add(taskId);
-        const task = taskLookup.get(taskId);
-        let resolvedProjectId;
-
-        if (task?.parentTaskId && taskLookup.has(task.parentTaskId)) {
-            resolvedProjectId = resolveTaskProjectScope(task.parentTaskId, taskLookup, validProjectIds, cache, trail);
-        } else {
-            const rawProjectId = task?.projectId || undefined;
-            resolvedProjectId = rawProjectId && validProjectIds.has(rawProjectId)
-                ? rawProjectId
-                : undefined;
-        }
-
-        trail.delete(taskId);
-        cache.set(taskId, resolvedProjectId);
-        return resolvedProjectId;
-    }
-
-    function buildResolvedTaskProjectMap(tasks, projects) {
-        const taskLookup = buildTaskLookup(tasks);
-        const validProjectIds = new Set((Array.isArray(projects) ? projects : [])
-            .map((project) => project?.id)
-            .filter(Boolean));
-        const cache = new Map();
-
-        taskLookup.forEach((task, taskId) => {
-            resolveTaskProjectScope(taskId, taskLookup, validProjectIds, cache, new Set());
-        });
-
-        return cache;
-    }
-
-    function getResolvedTaskProjectId(taskId, resolvedTaskProjectIds) {
-        if (!taskId || !resolvedTaskProjectIds?.has(taskId)) return undefined;
-        return resolvedTaskProjectIds.get(taskId) || undefined;
-    }
-
     function countCompletedBranchTasks(taskId, childrenMap) {
         const queue = (childrenMap.get(taskId) || []).slice();
         let completedCount = 0;
@@ -1106,97 +1066,6 @@
         return fallback[0] || '#94a3b8';
     }
 
-    function createQuickTargetValue(kind, id) {
-        if (kind === 'project' && id) return 'project:' + id;
-        if (kind === 'task' && id) return 'task:' + id;
-        return '';
-    }
-
-    function parseQuickTargetValue(value) {
-        const rawValue = String(value || '');
-        if (!rawValue) return { kind: 'root' };
-        if (rawValue.indexOf('project:') === 0) return { kind: 'project', id: rawValue.slice(8) };
-        if (rawValue.indexOf('task:') === 0) return { kind: 'task', id: rawValue.slice(5) };
-        return { kind: 'root' };
-    }
-
-    function buildQuickTargetTaskLabel(title, depth) {
-        const safeTitle = String(title || '').trim() || 'Без названия';
-        const indent = '\u00A0\u00A0\u00A0\u00A0'.repeat(Math.max(depth + 1, 1));
-        return indent + '↳ ' + safeTitle;
-    }
-
-    function appendQuickTargetTaskOptions(options, tasks, resolvedTaskProjectIds, projectId, parentTaskId, depth) {
-        const siblings = sortByOrder((tasks || []).filter((task) => (
-            (task.parentTaskId || '') === (parentTaskId || '')
-            && (
-                parentTaskId
-                    ? true
-                    : (getResolvedTaskProjectId(task.id, resolvedTaskProjectIds) || '') === (projectId || '')
-            )
-        )));
-
-        siblings.forEach((task) => {
-            options.push({
-                value: createQuickTargetValue('task', task.id),
-                label: buildQuickTargetTaskLabel(task.title, depth),
-            });
-            appendQuickTargetTaskOptions(options, tasks, resolvedTaskProjectIds, projectId, task.id, depth + 1);
-        });
-    }
-
-    function buildQuickTargetOptions(projects, tasks, resolvedTaskProjectIds) {
-        const options = [{ value: '', label: '📁 Без проекта' }];
-        appendQuickTargetTaskOptions(options, tasks, resolvedTaskProjectIds, '', undefined, 0);
-
-        (projects || []).forEach((project) => {
-            options.push({
-                value: createQuickTargetValue('project', project.id),
-                label: '📁 ' + project.name,
-            });
-            appendQuickTargetTaskOptions(options, tasks, resolvedTaskProjectIds, project.id, undefined, 0);
-        });
-
-        return options;
-    }
-
-    function resolveQuickTargetValue(targetValue, tasks, resolvedTaskProjectIds) {
-        const parsed = parseQuickTargetValue(targetValue);
-        if (parsed.kind === 'project') {
-            return { projectId: parsed.id || undefined, parentTaskId: undefined };
-        }
-        if (parsed.kind === 'task') {
-            const parentTask = (tasks || []).find((task) => task.id === parsed.id);
-            if (!parentTask) return { projectId: undefined, parentTaskId: undefined };
-            return {
-                projectId: getResolvedTaskProjectId(parentTask.id, resolvedTaskProjectIds),
-                parentTaskId: parentTask.id,
-            };
-        }
-        return { projectId: undefined, parentTaskId: undefined };
-    }
-
-    function findProjectName(projectId, projects) {
-        if (!projectId) return 'Без проекта';
-        const project = (projects || []).find((entry) => entry.id === projectId);
-        return project?.name || 'Без проекта';
-    }
-
-    function buildTaskLineage(taskId, tasks) {
-        const taskMap = new Map((tasks || []).map((task) => [task.id, task]));
-        const lineage = [];
-        let currentTask = taskMap.get(taskId);
-        let guard = 0;
-
-        while (currentTask && guard < 120) {
-            lineage.unshift(currentTask);
-            currentTask = currentTask.parentTaskId ? taskMap.get(currentTask.parentTaskId) : null;
-            guard += 1;
-        }
-
-        return lineage;
-    }
-
     function buildParentGroupLabel(task, taskLookup) {
         if (!task?.parentTaskId || !taskLookup?.has(task.parentTaskId)) return '';
 
@@ -1217,24 +1086,6 @@
         }
 
         return titles.join(' → ');
-    }
-
-    function buildQuickTargetPreview(targetValue, projects, tasks, resolvedTaskProjectIds) {
-        const parsed = parseQuickTargetValue(targetValue);
-        if (parsed.kind !== 'task' || !parsed.id) return null;
-
-        const lineage = buildTaskLineage(parsed.id, tasks);
-        if (lineage.length === 0) return null;
-
-        const leafTask = lineage[lineage.length - 1];
-        const parentPath = lineage.slice(0, -1).map((task) => String(task.title || '').trim()).filter(Boolean);
-        const projectName = findProjectName(getResolvedTaskProjectId(leafTask.id, resolvedTaskProjectIds), projects);
-        const contextParts = [projectName].concat(parentPath).filter(Boolean);
-
-        return {
-            context: contextParts.join(' / '),
-            primary: String(leafTask.title || '').trim() || 'Подзадача',
-        };
     }
 
     function buildTaskMetaBadges(task) {
@@ -2020,14 +1871,6 @@
             });
             return map;
         }, [activeProjects, filteredTasks, resolvedTaskProjectIds]);
-        const quickTargetOptions = useMemo(
-            () => buildQuickTargetOptions(activeProjects, visibleTasks, resolvedTaskProjectIds),
-            [activeProjects, resolvedTaskProjectIds, visibleTasks],
-        );
-        const quickTargetPreview = useMemo(
-            () => buildQuickTargetPreview(newTaskProjectId, activeProjects, visibleTasks, resolvedTaskProjectIds),
-            [newTaskProjectId, activeProjects, resolvedTaskProjectIds, visibleTasks],
-        );
         const resolvedQuickTarget = useMemo(
             () => resolveQuickTargetValue(newTaskProjectId, visibleTasks, resolvedTaskProjectIds),
             [newTaskProjectId, resolvedTaskProjectIds, visibleTasks],
@@ -2037,23 +1880,6 @@
             if (!selectedTaskId || !pendingDeletedTaskIds.has(selectedTaskId)) return;
             setSelectedTaskId(null);
         }, [selectedTaskId, pendingDeletedTaskIds]);
-
-        React.useEffect(() => {
-            const parsed = parseQuickTargetValue(newTaskProjectId);
-            if (parsed.kind !== 'task' || !parsed.id) return;
-            const exists = quickTargetOptions.some((option) => option.value === newTaskProjectId);
-            if (exists) return;
-
-            const originalTask = state.tasks.find((task) => task.id === parsed.id);
-            const originalProjectId = originalTask
-                ? getResolvedTaskProjectId(originalTask.id, resolvedTaskProjectIds)
-                : undefined;
-            if (originalProjectId) {
-                setNewTaskProjectId(createQuickTargetValue('project', originalProjectId));
-                return;
-            }
-            setNewTaskProjectId('');
-        }, [newTaskProjectId, quickTargetOptions, resolvedTaskProjectIds, state.tasks]);
 
         React.useEffect(() => {
             const subgroupParentsWithoutColor = visibleTasks.filter((task) => {
@@ -2312,19 +2138,14 @@
                             ),
                         ),
                         h('div', { className: 'planning-quick-add__primary-row' },
-                            h('div', { className: 'planning-quick-target-field' + (quickTargetPreview ? ' has-preview' : '') },
-                                h('select', {
-                                    className: 'planning-quick-select planning-quick-select--target',
-                                    value: newTaskProjectId,
-                                    onChange: (event) => setNewTaskProjectId(event.target.value),
-                                },
-                                    quickTargetOptions.map((option) => h('option', { key: option.value || '__root__', value: option.value }, option.label)),
-                                ),
-                                quickTargetPreview && h('div', { className: 'planning-quick-target-preview' },
-                                    quickTargetPreview.context && h('span', { className: 'planning-quick-target-preview__context' }, quickTargetPreview.context),
-                                    h('span', { className: 'planning-quick-target-preview__primary' }, quickTargetPreview.primary),
-                                ),
-                            ),
+                            h(PlanningQuickTargetField, {
+                                value: newTaskProjectId,
+                                onChange: setNewTaskProjectId,
+                                projects: activeProjects,
+                                tasks: visibleTasks,
+                                resolvedTaskProjectIds,
+                                tabsSelector: '.tabs',
+                            }),
                             h('div', { className: 'planning-quick-add__actions planning-quick-add__actions--priority-row' },
                                 Object.keys(PRIORITY_CONFIG).map((key) => {
                                     const config = PRIORITY_CONFIG[key];

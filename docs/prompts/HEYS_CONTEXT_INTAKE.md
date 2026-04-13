@@ -58,7 +58,35 @@ scheduledMinutes, inboxFreshCount определяется режим дня:
   🔴 focus    — overdue ≥ 3, ИЛИ todayDue ≥ 3, ИЛИ scheduled ≥ 4ч, ИЛИ inbox ≥ 6
   🟢 steady   — всё остальное
 
-═══ API (если есть доступ к браузеру HEYS localhost:3001) ═══
+═══ APPLY FLOW (api-first) ═══
+
+**В приложении HEYS (есть session / PIN):**
+
+1) По умолчанию сразу вызывай backend ingest:
+   HEYS.YandexAPI.rpc('planning_context_ingest', { ...payload })
+2) Browser runtime (localhost:3001) используй только как fallback,
+   если ingest API недоступен по сети/ошибке.
+
+**В Cursor / агент без session (контекст в чате, без PIN):**
+
+1) Используй серверный вызов `planning_context_agent_ingest`:
+   `POST https://api.heyslab.ru/rpc?fn=planning_context_agent_ingest`
+   + заголовок `Authorization: Bearer <PLANNING_AGENT_SECRET>`
+   + JSON: `targetClientId`, `idempotencyKey`, `snapshotText`, опционально
+   `daysLast5Text`, `rawPromptText`, `parentIngestId`, `applyNow` / `dryRun`, `policy`.
+2) Локально из корня монорепо: `node scripts/heys-apply-context.mjs [опции] <файл>`
+   (env: `HEYS_PLANNING_AGENT_SECRET`, `HEYS_TARGET_CLIENT_ID`).
+   Подробно: `docs/dev/PLANNING_AGENT_INGEST.md`.
+3) Ингест обновляет KV: **проекты (passthrough)**, задачи, inbox, связи, слоты
+   (календарь/Гант из явных временных подсказок в тексте). Массив
+   `heys_planning_projects` при apply перезаписывается **тем же содержимым**, что
+   было загружено до разбора (логика ingest проекты не меняет).
+
+**Общее для любого пути:**
+
+- Итог применения всегда возвращай построчно: "Факт → Что сделал → Почему".
+
+═══ BROWSER FALLBACK API (только при недоступном ingest API) ═══
 
 const S = HEYS.Planning.Store;
 
@@ -107,9 +135,10 @@ UI обновляется автоматически через event heys:plann
 7. ПРИОРИТИЗИРУЙ — now / next / later.
    Учитывай жизненный ресурс, а не только продуктивность.
 
-8. ЕСЛИ ЕСТЬ БРАУЗЕР — после подтверждения ЗАПИШИ через API.
-   Не просто покажи таблицу, а реально положи данные в HEYS.
-   После записи InboxItem+Task — создай Link между ними.
+8. ПРИМЕНЯЙ API-FIRST:
+   - сначала planning_context_ingest (backend),
+   - browser запись через HEYS.Planning.Store только fallback при недоступном API,
+   - после применения дай прозрачный отчёт по каждой строке.
 
 ═══ ПРАВИЛА ═══
 
@@ -145,7 +174,10 @@ mode / why / давление / чего сейчас не делать
 ## 5. Приоритет
 now / next / later
 
-## 6. API-команды (если есть браузер)
+## 6. Результат применения
+Факт → Что сделал → Почему
+
+## 7. API-команды (если был browser fallback)
 ```js
 // готовые к выполнению вызовы
 S.addTask(...)
@@ -162,7 +194,8 @@ S.addLink(...)
 [ЧТО УЖЕ ЕСТЬ В HEYS] <если помнишь проекты/задачи — перечисли; если нет —
 "агент, проверь">
 
-[НЕ ДУБЛИРОВАТЬ] <что точно не надо создавать повторно>
+[НЕ ДУБЛИРОВАТЬ] <опционально: что точно не надо создавать повторно; если пусто
+— агент сам включает anti-duplicate first и сначала ищет update existing>
 
 ````
 
@@ -180,7 +213,7 @@ HEYS context intake → Задачи → Контекст (🧠).
 4) таблица с type, priority, projectId, связи
 5) нейро-карта: Nodes + Links (relation: promoted_to|causes|blocks|related|supports|contradicts)
 6) now / next / later
-7) если есть браузер — записать через HEYS.Planning.Store API + addLink()
+7) сначала planning_context_ingest, browser fallback только при недоступности API
 
 API: addTask, addContextInboxItem(text, {type}), updateContextInboxItem(id, {type, status}),
      addLink(fromId, toId, {relation, label}), addProject, addSlot

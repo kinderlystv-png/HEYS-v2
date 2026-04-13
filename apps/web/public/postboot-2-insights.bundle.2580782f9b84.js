@@ -23916,7 +23916,138 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
         return {
             available: true,
-            meals: plannedMeals,
+            meals: annotateStableIds(plannedMeals),
+            summary
+        };
+    }
+
+    function recalculateSummaryFromMeals(meals, summary, fallbackSleepTarget, fallbackDeadline) {
+        const safeMeals = Array.isArray(meals) ? meals : [];
+        if (!safeMeals.length) {
+            return {
+                totalMeals: 0,
+                timelineStart: null,
+                timelineEnd: null,
+                totalMacros: { prot: 0, carbs: 0, kcal: 0 },
+                sleepTarget: fallbackSleepTarget || summary?.sleepTarget,
+                lastMealDeadline: fallbackDeadline || summary?.lastMealDeadline
+            };
+        }
+
+        return {
+            totalMeals: safeMeals.length,
+            timelineStart: safeMeals[0]?.timeStart || null,
+            timelineEnd: safeMeals[safeMeals.length - 1]?.timeEnd || null,
+            totalMacros: {
+                prot: safeMeals.reduce((sum, meal) => sum + (meal?.macros?.prot || 0), 0),
+                carbs: safeMeals.reduce((sum, meal) => sum + (meal?.macros?.carbs || 0), 0),
+                kcal: safeMeals.reduce((sum, meal) => sum + (meal?.macros?.kcal || 0), 0)
+            },
+            sleepTarget: summary?.sleepTarget || fallbackSleepTarget,
+            lastMealDeadline: summary?.lastMealDeadline || fallbackDeadline
+        };
+    }
+
+    function buildMealStableId(meal, index) {
+        const start = meal?.timeStart || 'na';
+        const end = meal?.timeEnd || 'na';
+        const scenario = meal?.scenario || 'BALANCED';
+        return `${start}|${end}|${scenario}|${index}`;
+    }
+
+    function annotateStableIds(meals) {
+        return (meals || []).map((meal, index) => ({
+            ...meal,
+            stableId: meal?.stableId || buildMealStableId(meal, index)
+        }));
+    }
+
+    function validateReplanResult(planResult, fallbackBudget = 0) {
+        if (!planResult || planResult.available !== true) {
+            return { valid: false, reason: 'Plan unavailable' };
+        }
+        const meals = planResult.meals || [];
+        const summary = planResult.summary || {};
+        const totalKcal = Number(summary?.totalMacros?.kcal || 0);
+        const timelineBroken = meals.some((meal) => !meal?.timeStart || !meal?.timeEnd);
+        const macrosBroken = meals.some((meal) => {
+            const kcal = Number(meal?.macros?.kcal);
+            const prot = Number(meal?.macros?.prot);
+            const carbs = Number(meal?.macros?.carbs);
+            const fat = Number(meal?.macros?.fat || 0);
+            return !Number.isFinite(kcal) || !Number.isFinite(prot) || !Number.isFinite(carbs) || !Number.isFinite(fat) || kcal < 0 || prot < 0 || carbs < 0 || fat < 0;
+        });
+
+        if (timelineBroken) return { valid: false, reason: 'Invalid timeline fields' };
+        if (macrosBroken) return { valid: false, reason: 'Invalid macro fields' };
+        if (fallbackBudget > 120 && meals.length === 0) return { valid: false, reason: 'Empty meals with positive budget' };
+        if (!Number.isFinite(totalKcal) || totalKcal < 0) return { valid: false, reason: 'Invalid summary kcal' };
+        return { valid: true };
+    }
+
+    function replanRemainingMeals(params) {
+        const {
+            lockedMeals = [],
+            previousPlanState = null,
+            replanReason = 'EXTERNAL_REPLAN_REQUEST'
+        } = params || {};
+
+        const basePlan = planRemainingMeals(params);
+        if (!basePlan?.available) return basePlan;
+
+        const lockByIndex = new Map();
+        const lockByStableId = new Map();
+        lockedMeals.forEach((lock) => {
+            if (typeof lock?.index === 'number') lockByIndex.set(lock.index, lock);
+            if (typeof lock?.stableId === 'string' && lock.stableId) lockByStableId.set(lock.stableId, lock);
+        });
+
+        const annotatedMeals = annotateStableIds(basePlan.meals || []);
+        const meals = annotatedMeals.map((meal, index) => {
+            const locked = lockByStableId.get(meal.stableId) || lockByIndex.get(index);
+            if (!locked) return meal;
+            return {
+                ...meal,
+                timeStart: locked.timeStart || meal.timeStart,
+                timeEnd: locked.timeEnd || meal.timeEnd,
+                macros: locked.macros || meal.macros,
+                scenario: locked.scenario || meal.scenario,
+                stableId: locked.stableId || meal.stableId,
+                locked: true
+            };
+        });
+
+        const summary = recalculateSummaryFromMeals(
+            meals,
+            basePlan.summary,
+            basePlan.summary?.sleepTarget,
+            basePlan.summary?.lastMealDeadline
+        );
+
+        const remainingBudgetKcal = Math.max(0, (params?.dayTarget?.kcal || 0) - (params?.dayEaten?.kcal || 0));
+        const validation = validateReplanResult({ available: true, meals, summary }, remainingBudgetKcal);
+        summary.replanMeta = {
+            incremental: true,
+            reason: replanReason,
+            lockedMealsCount: lockByStableId.size || lockByIndex.size,
+            previousPlanVersion: previousPlanState?.planVersion || null,
+            valid: validation.valid,
+            validationReason: validation.reason || null,
+            generatedAt: Date.now()
+        };
+
+        if (!validation.valid) {
+            return {
+                available: false,
+                error: validation.reason || 'Invalid incremental plan',
+                meals: [],
+                summary
+            };
+        }
+
+        return {
+            ...basePlan,
+            meals,
             summary
         };
     }
@@ -23924,11 +24055,13 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     // === Export ===
     HEYS.InsightsPI.mealPlanner = {
         planRemainingMeals,
+        replanRemainingMeals,
         estimateSleepTarget,
         estimateWaveDuration,
         distributeBudget,
         estimatePersonalWaveHours, // S6
         getChronoRatio,            // S1
+        validateReplanResult,
         // Utilities
         parseTime,
         formatTime,
@@ -24061,6 +24194,126 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         [SCENARIOS.STRESS_EATING]: '🧘',
         [SCENARIOS.BALANCED]: '🍽️'
     };
+
+    function snapshotStablePlan(mealsPlan) {
+        if (!mealsPlan?.available) return null;
+        return {
+            meals: (mealsPlan.meals || []).map((meal) => ({
+                stableId: meal?.stableId || null,
+                index: meal?.index,
+                timeStart: meal?.timeStart,
+                timeEnd: meal?.timeEnd,
+                macros: meal?.macros,
+                scenario: meal?.scenario,
+                locked: !!meal?.locked
+            })),
+            summary: mealsPlan.summary || null
+        };
+    }
+
+    function restoreStablePlanSnapshot(snapshot, reason = 'RESTORED_LAST_STABLE_PLAN') {
+        if (!snapshot || !Array.isArray(snapshot.meals)) return null;
+        return {
+            available: true,
+            meals: snapshot.meals.map((meal, index) => ({
+                ...meal,
+                index: typeof meal?.index === 'number' ? meal.index : index
+            })),
+            summary: {
+                ...(snapshot.summary || {}),
+                replanMeta: {
+                    incremental: false,
+                    restoredFromSnapshot: true,
+                    reason,
+                    generatedAt: Date.now()
+                }
+            }
+        };
+    }
+
+    function buildAdaptivePlanState(mealsPlan, previousPlanState, replanReason, plannerMeta = {}) {
+        if (!mealsPlan?.available && !previousPlanState) return null;
+        const prevVersion = previousPlanState?.planVersion || 0;
+        const meals = mealsPlan?.meals || [];
+        const lockedMeals = meals
+            .filter((meal) => meal?.locked)
+            .map((meal) => ({
+                stableId: meal.stableId || null,
+                index: meal.index,
+                timeStart: meal.timeStart,
+                timeEnd: meal.timeEnd,
+                macros: meal.macros,
+                scenario: meal.scenario
+            }));
+
+        return {
+            planVersion: prevVersion + 1,
+            generatedAt: Date.now(),
+            replanReason: replanReason || 'INITIAL_LOAD',
+            lockedMeals,
+            remainingBudget: mealsPlan?.summary?.totalMacros || previousPlanState?.remainingBudget || null,
+            fallbackUsed: !!plannerMeta.fallbackUsed,
+            plannerMode: plannerMeta.mode || null,
+            lastStablePlan: mealsPlan?.available ? snapshotStablePlan(mealsPlan) : (previousPlanState?.lastStablePlan || null)
+        };
+    }
+
+    function buildReplanExplain(replanReason, previousPlanState, mealsPlan, plannerMeta = {}) {
+        if (!replanReason || replanReason === 'INITIAL_LOAD') return null;
+        const changedMeals = mealsPlan?.meals?.length || 0;
+        return {
+            whyChanged: `План обновлён: ${replanReason.toLowerCase().replace(/_/g, ' ')}`,
+            whatChanged: `Пересчитано приёмов: ${changedMeals}`,
+            whatStayedLocked: `Зафиксировано: ${previousPlanState?.lockedMeals?.length || 0}`,
+            fallbackUsed: plannerMeta.fallbackUsed ? 'Да, применён fallback-путь' : 'Нет'
+        };
+    }
+
+    function isPlanValid(mealsPlan, dayTarget, dayEaten) {
+        if (!mealsPlan?.available) return false;
+        if (!Array.isArray(mealsPlan.meals)) return false;
+        if (!mealsPlan.summary?.totalMacros) return false;
+        const remainingBudget = Math.max(0, (dayTarget?.kcal || 0) - (dayEaten?.kcal || 0));
+        if (remainingBudget > 120 && mealsPlan.meals.length === 0) return false;
+        return true;
+    }
+
+    function hashStringToPercent(value) {
+        const str = String(value || '');
+        let hash = 0;
+        for (let i = 0; i < str.length; i++) {
+            hash = (hash << 5) - hash + str.charCodeAt(i);
+            hash |= 0;
+        }
+        return Math.abs(hash) % 100;
+    }
+
+    function getAdaptiveReplanControls(profile) {
+        const ff = HEYS.featureFlags || HEYS.flags;
+        const isFlagEnabled = (flagName) => {
+            try {
+                return typeof ff?.isEnabled === 'function' ? !!ff.isEnabled(flagName) : false;
+            } catch (_) {
+                return false;
+            }
+        };
+
+        const clientId = profile?.id || profile?.clientId || HEYS.currentClientId || 'anonymous';
+        const rolloutPctRaw = Number(global.localStorage?.getItem?.('heys_adaptive_replan_rollout_pct') || '0');
+        const rolloutPct = Math.max(0, Math.min(100, Number.isFinite(rolloutPctRaw) ? rolloutPctRaw : 0));
+        const bucket = hashStringToPercent(clientId);
+        const bucketAllowed = rolloutPct >= 100 ? true : bucket < rolloutPct;
+
+        return {
+            adaptiveReplanEnabled: isFlagEnabled('adaptiveReplanEnabled'),
+            incrementalReplanEnabled: isFlagEnabled('incrementalReplanEnabled'),
+            shadowCompareEnabled: isFlagEnabled('shadowCompareEnabled'),
+            killSwitchEnabled: isFlagEnabled('adaptiveReplanKillSwitch'),
+            rolloutPct,
+            bucket,
+            bucketAllowed
+        };
+    }
 
     /**
      * Analyze current context to determine meal scenario
@@ -24430,22 +24683,85 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         // When no meals eaten today, planner can still plan 3-4 meals from now to sleep
         const hasEnoughHistory = days.length >= 3;
         const hasPlanner = !!HEYS.InsightsPI?.mealPlanner?.planRemainingMeals;
+        const hasIncrementalPlanner = !!HEYS.InsightsPI?.mealPlanner?.replanRemainingMeals;
         const hasLastMealTime = !!lastMeal?.time;
+        const replanReason = context?.replanReason || null;
+        const previousPlanState = context?.planState || null;
+        const replanControls = getAdaptiveReplanControls(profile);
+        const incrementalAllowed = replanControls.adaptiveReplanEnabled
+            && replanControls.incrementalReplanEnabled
+            && !replanControls.killSwitchEnabled
+            && replanControls.bucketAllowed;
+        const isIncrementalReplan = !!(replanReason && hasIncrementalPlanner && incrementalAllowed);
+        let plannerMeta = {
+            mode: isIncrementalReplan ? 'incremental' : 'full',
+            fallbackUsed: false,
+            fallbackType: null,
+            rollout: {
+                adaptiveReplanEnabled: replanControls.adaptiveReplanEnabled,
+                incrementalReplanEnabled: replanControls.incrementalReplanEnabled,
+                killSwitchEnabled: replanControls.killSwitchEnabled,
+                rolloutPct: replanControls.rolloutPct,
+                bucket: replanControls.bucket,
+                bucketAllowed: replanControls.bucketAllowed
+            }
+        };
 
         if (hasPlanner && hasEnoughHistory) {
             console.info(`${LOG_PREFIX} [MEALREC.planner] ✅ Calling planRemainingMeals...`, {
                 mode: hasLastMealTime ? 'wave-aware' : 'first-meal-of-day'
             });
             try {
-                mealsPlan = HEYS.InsightsPI.mealPlanner.planRemainingMeals({
+                const plannerInput = {
                     currentTime: context.currentTime || getCurrentTime(),
                     lastMeal: lastMeal,
                     dayTarget: dayTarget,
                     dayEaten: dayEaten,
                     profile: profile,
                     days: days,
-                    pIndex: pIndex
-                });
+                    pIndex: pIndex,
+                    replanReason,
+                    previousPlanState,
+                    lockedMeals: previousPlanState?.lockedMeals || []
+                };
+
+                if (isIncrementalReplan) {
+                    mealsPlan = HEYS.InsightsPI.mealPlanner.replanRemainingMeals(plannerInput);
+                    if (!isPlanValid(mealsPlan, dayTarget, dayEaten)) {
+                        plannerMeta = { ...plannerMeta, fallbackUsed: true, fallbackType: 'incremental_to_full', mode: 'full' };
+                        mealsPlan = HEYS.InsightsPI.mealPlanner.planRemainingMeals(plannerInput);
+                    }
+                } else {
+                    mealsPlan = HEYS.InsightsPI.mealPlanner.planRemainingMeals(plannerInput);
+                }
+
+                if (!isPlanValid(mealsPlan, dayTarget, dayEaten) && previousPlanState?.lastStablePlan) {
+                    const restored = restoreStablePlanSnapshot(previousPlanState.lastStablePlan, 'FULL_PLAN_INVALID_RESTORED');
+                    if (restored) {
+                        plannerMeta = { ...plannerMeta, fallbackUsed: true, fallbackType: 'restore_last_stable' };
+                        mealsPlan = restored;
+                    }
+                }
+
+                if (isIncrementalReplan && replanControls.shadowCompareEnabled) {
+                    try {
+                        const shadowFullPlan = HEYS.InsightsPI.mealPlanner.planRemainingMeals(plannerInput);
+                        if (isPlanValid(shadowFullPlan, dayTarget, dayEaten) && isPlanValid(mealsPlan, dayTarget, dayEaten)) {
+                            const inc = mealsPlan.summary?.totalMacros || {};
+                            const full = shadowFullPlan.summary?.totalMacros || {};
+                            const drift = {
+                                mealsCountDiff: (mealsPlan.meals?.length || 0) - (shadowFullPlan.meals?.length || 0),
+                                kcalDiff: Math.round((inc.kcal || 0) - (full.kcal || 0)),
+                                protDiff: Math.round((inc.prot || 0) - (full.prot || 0)),
+                                carbsDiff: Math.round((inc.carbs || 0) - (full.carbs || 0))
+                            };
+                            plannerMeta.shadowDrift = drift;
+                            console.info(`${LOG_PREFIX} [MEALREC.shadow] 🪞 incremental/full drift:`, drift);
+                        }
+                    } catch (shadowErr) {
+                        console.warn(`${LOG_PREFIX} [MEALREC.shadow] ⚠️ shadow compare failed:`, shadowErr?.message);
+                    }
+                }
 
                 if (mealsPlan?.available && mealsPlan.meals?.length > 0) {
                     console.info(`${LOG_PREFIX} [MEALREC.planner] 🍽️ Multi-meal plan generated:`, {
@@ -24556,7 +24872,13 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                 }
             } catch (err) {
                 console.warn(`${LOG_PREFIX} [MEALREC.planner] ⚠️ Failed to generate meal plan:`, err.message);
-                mealsPlan = null;
+                const restored = restoreStablePlanSnapshot(previousPlanState?.lastStablePlan, 'PLANNER_EXCEPTION_RESTORED');
+                if (restored) {
+                    plannerMeta = { ...plannerMeta, fallbackUsed: true, fallbackType: 'planner_exception_restore' };
+                    mealsPlan = restored;
+                } else {
+                    mealsPlan = null;
+                }
             }
         } else {
             console.info(`${LOG_PREFIX} [MEALREC.planner] ❌ Conditions NOT met for multi-meal planning`);
@@ -24603,6 +24925,10 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             // 🆕 Multi-meal plan
             mealsPlan: mealsPlan?.available ? mealsPlan : null
         };
+
+        result.planState = buildAdaptivePlanState(mealsPlan, previousPlanState, replanReason, plannerMeta);
+        result.explain = buildReplanExplain(replanReason, previousPlanState, mealsPlan, plannerMeta);
+        result.replanMeta = plannerMeta;
 
         // MEALREC / impact: show what pattern modifiers were actually applied in this recommendation
         if (patternImpact.length > 0) {
@@ -27662,6 +27988,56 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     const { useState, useMemo, useRef, useEffect } = React;
     const LOG_FILTER = 'MEALREC';
     const LOG_PREFIX = `[${LOG_FILTER}][HEYS.mealRec.card]`;
+    const DEFAULT_REPLAN_REASON = 'INITIAL_LOAD';
+    const REPLAN_DEBOUNCE_MS = 220;
+
+    function buildReplanSignal(day, dayTot, normAbs, optimum, prof, pIndex, thresholdsUpdateTick) {
+        const meals = day?.meals || [];
+        const lastMeal = meals[meals.length - 1] || null;
+        const training = day?.trainings?.[0] || null;
+        const stressVector = meals.map((meal) => `${meal?.id || ''}:${meal?.stress || ''}:${meal?.mood || ''}`).join('|');
+
+        return {
+            date: day?.date || '',
+            mealsCount: meals.length,
+            lastMealTime: lastMeal?.time || '',
+            lastMealItemsCount: lastMeal?.items?.length || 0,
+            eatenKcal: Math.round(dayTot?.kcal || 0),
+            eatenProt: Math.round(dayTot?.prot || 0),
+            eatenCarbs: Math.round(dayTot?.carb || 0),
+            eatenFat: Math.round(dayTot?.fat || 0),
+            targetKcal: Math.round(optimum || normAbs?.kcal || 0),
+            targetProt: Math.round(normAbs?.prot || 0),
+            targetCarbs: Math.round(normAbs?.carb || 0),
+            targetFat: Math.round(normAbs?.fat || 0),
+            sleepTarget: prof?.sleepTarget || '23:00',
+            trainingTime: training?.time || '',
+            trainingType: training?.type || '',
+            pIndexSize: pIndex?.length || 0,
+            thresholdsUpdateTick: thresholdsUpdateTick || 0,
+            stressVector
+        };
+    }
+
+    function determineReplanReason(prev, next, externalReason) {
+        if (externalReason) return externalReason;
+        if (!prev) return DEFAULT_REPLAN_REASON;
+        if (prev.thresholdsUpdateTick !== next.thresholdsUpdateTick) return 'THRESHOLDS_UPDATED';
+        if (prev.date !== next.date) return 'DAY_CHANGED';
+        if (prev.mealsCount !== next.mealsCount) return next.mealsCount > prev.mealsCount ? 'MEAL_ADDED' : 'MEAL_REMOVED';
+        if (prev.lastMealTime !== next.lastMealTime) return 'MEAL_TIME_UPDATED';
+        if (prev.lastMealItemsCount !== next.lastMealItemsCount) return 'MEAL_ITEMS_UPDATED';
+        if (prev.eatenKcal !== next.eatenKcal || prev.eatenProt !== next.eatenProt || prev.eatenCarbs !== next.eatenCarbs || prev.eatenFat !== next.eatenFat) {
+            return 'DAY_TOTALS_UPDATED';
+        }
+        if (prev.targetKcal !== next.targetKcal || prev.targetProt !== next.targetProt || prev.targetCarbs !== next.targetCarbs || prev.targetFat !== next.targetFat) {
+            return 'DAY_TARGETS_UPDATED';
+        }
+        if (prev.sleepTarget !== next.sleepTarget) return 'SLEEP_TARGET_UPDATED';
+        if (prev.trainingTime !== next.trainingTime || prev.trainingType !== next.trainingType) return 'TRAINING_UPDATED';
+        if (prev.stressVector !== next.stressVector) return 'MEAL_CONTEXT_UPDATED';
+        return 'STATE_REFRESHED';
+    }
 
     /**
      * Fallback lsGet — прямое чтение из localStorage (если global.U недоступен)
@@ -27847,6 +28223,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         const [thresholdsUpdateTick, setThresholdsUpdateTick] = useState(0); // v28: SWR trigger
         const [recommendation, setRecommendation] = useState(null); // 🚀 PERF v6.0: Асинхронный расчет
         const [isCalculating, setIsCalculating] = useState(true); // 🚀 PERF v6.0: Состояние загрузки
+        const [externalReplanReason, setExternalReplanReason] = useState(null);
 
         useEffect(() => {
             if (!showProductsModal) return;
@@ -27867,11 +28244,57 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             return () => window.removeEventListener('heysThresholdsUpdated', handleThresholdsUpdate);
         }, []);
 
+        useEffect(() => {
+            const handlePlannerReplanRequest = (event) => {
+                const reason = event?.detail?.reason || 'EXTERNAL_REPLAN_REQUEST';
+                if (lastAppliedExternalReasonRef.current === reason) return;
+                if (replanEventDebounceRef.current) clearTimeout(replanEventDebounceRef.current);
+                replanEventDebounceRef.current = setTimeout(() => {
+                    lastAppliedExternalReasonRef.current = reason;
+                    console.info(`${LOG_PREFIX} 🔁 External replan request:`, reason);
+                    setExternalReplanReason(reason);
+                }, REPLAN_DEBOUNCE_MS);
+            };
+            window.addEventListener('heys:planner-replan-request', handlePlannerReplanRequest);
+            return () => {
+                if (replanEventDebounceRef.current) clearTimeout(replanEventDebounceRef.current);
+                window.removeEventListener('heys:planner-replan-request', handlePlannerReplanRequest);
+            };
+        }, []);
+
+        useEffect(() => {
+            const handleReplanMetrics = (event) => {
+                const detail = event?.detail || {};
+                const analytics = global.HEYS?.analytics;
+                if (!analytics) return;
+                if (typeof analytics.trackDataOperation === 'function') {
+                    analytics.trackDataOperation('meal-replan-computed');
+                }
+                if (typeof analytics.trackRecommendation === 'function') {
+                    analytics.trackRecommendation({
+                        type: 'meal_replan',
+                        reason: detail.reason || 'unknown',
+                        success: !!detail.success,
+                        incremental: !!detail.incremental,
+                        fallbackUsed: !!detail.fallbackUsed,
+                        latencyMs: Number(detail.latencyMs || 0)
+                    });
+                }
+            };
+            window.addEventListener('heysMealReplanComputed', handleReplanMetrics);
+            return () => window.removeEventListener('heysMealReplanComputed', handleReplanMetrics);
+        }, []);
+
         // v25.8.2: Use U.getProductFromItem if not passed in props
         const getProductFromItem = global.U?.getProductFromItem || global.HEYS?.getProductFromItem || (() => null);
 
         // R2.7: Store recommendation ID for ML feedback loop
         const recIdRef = useRef(null);
+        const planStateRef = useRef(null);
+        const previousSignalRef = useRef(null);
+        const replanEventDebounceRef = useRef(null);
+        const lastAppliedExternalReasonRef = useRef(null);
+        const lastRecomputeKeyRef = useRef(null);
 
         // v3.6: F4 — heys_profile has no .id; always inject currentClientId for feedbackLoop calls
         const getProfileWithId = () => prof
@@ -27880,13 +28303,16 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         const followedRef = useRef(false);
         const prevRecommendationRef = useRef(null);
 
-        // Stable primitive deps to prevent excessive re-renders (30+ → ~3)
-        const mealsCount = day?.meals?.length || 0;
-        const lastMealTime = day?.meals?.[mealsCount - 1]?.time || '';
-        const eatenKcal = Math.round(dayTot?.kcal || 0);
-        const eatenProt = Math.round(dayTot?.prot || 0);
-        const targetKcal = Math.round(optimum || normAbs?.kcal || 0);
-        const targetProt = Math.round(normAbs?.prot || 0);
+        const replanSignal = useMemo(
+            () => buildReplanSignal(day, dayTot, normAbs, optimum, prof, pIndex, thresholdsUpdateTick),
+            [day, dayTot, normAbs, optimum, prof, pIndex, thresholdsUpdateTick]
+        );
+
+        // Stable primitive deps for feedback and telemetry
+        const mealsCount = replanSignal.mealsCount;
+        const eatenKcal = replanSignal.eatenKcal;
+        const eatenProt = replanSignal.eatenProt;
+        const targetKcal = replanSignal.targetKcal;
 
         // Handler для feedback кнопок (R2.7)
         const handleFeedback = (rating) => {
@@ -28665,10 +29091,19 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         // Собираем рекомендацию (🚀 PERF v6.0: Асинхронно через useEffect)
         useEffect(() => {
             setIsCalculating(true);
+            const startedAt = Date.now();
 
-            // Используем setTimeout чтобы дать React отрендерить Skeleton и не блокировать UI
             const timerId = setTimeout(() => {
-                console.info(`${LOG_PREFIX} 🎬 useEffect triggered (async)`);
+                const replanReason = determineReplanReason(previousSignalRef.current, replanSignal, externalReplanReason);
+                previousSignalRef.current = replanSignal;
+                if (externalReplanReason) setExternalReplanReason(null);
+                const recomputeKey = `${JSON.stringify(replanSignal)}|${replanReason}`;
+                if (lastRecomputeKeyRef.current === recomputeKey) {
+                    setIsCalculating(false);
+                    return;
+                }
+                lastRecomputeKeyRef.current = recomputeKey;
+                console.info(`${LOG_PREFIX} 🎬 useEffect triggered (async):`, { replanReason });
 
                 if (!global.HEYS?.InsightsPI?.mealRecommender?.recommend) {
                     console.warn(`${LOG_PREFIX} ❌ Backend not loaded`);
@@ -28687,8 +29122,15 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                     return;
                 }
 
-                console.info(`${LOG_PREFIX} 🚀 Calling recommend()...`);
+                context.replanReason = replanReason;
+                context.planState = planStateRef.current;
+                console.info(`${LOG_PREFIX} 🚀 Calling recommend()...`, {
+                    replanReason,
+                    hasPlanState: !!context.planState
+                });
 
+                let computeResult = null;
+                let computeSuccess = false;
                 try {
                     // R2.6: Load historical days for Deep Insights enhancement
                     const historicalDays = [];
@@ -28722,6 +29164,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                         pIndex,         // product index (for smart suggestions)
                         historicalDays  // days for R2.6 Deep Insights enhancement
                     );
+                    computeResult = result;
 
                     if (!result || !result.available) {
                         console.info(`${LOG_PREFIX} ⚠️ Hidden:`, {
@@ -28729,12 +29172,15 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                         });
                         setRecommendation(null);
                     } else {
+                        planStateRef.current = result.planState || null;
+                        computeSuccess = true;
                         console.info(`${LOG_PREFIX} ✅ Rendered:`, {
                             idealTime: result.timing?.ideal || '—',
                             protein: result.macros?.protein || 0,
                             carbs: result.macros?.carbs || 0,
                             kcal: result.macros?.kcal || 0,
-                            confidence: result.confidence || 0
+                            confidence: result.confidence || 0,
+                            replanReason
                         });
                         setRecommendation(result);
                     }
@@ -28742,12 +29188,27 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                     console.error(`${LOG_PREFIX} ❌ Error:`, err);
                     setRecommendation(null);
                 } finally {
+                    const latencyMs = Date.now() - startedAt;
+                    window.dispatchEvent(new CustomEvent('heysMealReplanComputed', {
+                        detail: {
+                            reason: replanReason,
+                            latencyMs,
+                            at: Date.now(),
+                            success: computeSuccess,
+                            incremental: !!computeResult?.replanMeta?.mode && computeResult.replanMeta.mode === 'incremental',
+                            fallbackUsed: !!computeResult?.replanMeta?.fallbackUsed,
+                            planVersion: computeResult?.planState?.planVersion || null,
+                            mealsPlanned: computeResult?.mealsPlan?.meals?.length || 0,
+                            scenario: computeResult?.scenario || null,
+                            shadowDrift: computeResult?.replanMeta?.shadowDrift || null
+                        }
+                    }));
                     setIsCalculating(false);
                 }
-            }, 0);
+            }, REPLAN_DEBOUNCE_MS);
 
             return () => clearTimeout(timerId);
-        }, [mealsCount, lastMealTime, eatenKcal, eatenProt, targetKcal, targetProt, pIndex?.length || 0]);
+        }, [replanSignal, day, dayTot, normAbs, prof, optimum, pIndex, externalReplanReason]);
 
         // R2.7 Step 2: Store recommendation in feedbackLoop when it's generated (new or changed)
         useEffect(() => {
@@ -29078,6 +29539,10 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                     h('div', { className: 'meal-rec-card__logic-row' },
                         h('span', { className: 'meal-rec-card__logic-label' }, 'Акцент:'),
                         h('span', { className: 'meal-rec-card__logic-text' }, logicFocus)
+                    ),
+                    recommendation?.explain?.whyChanged && h('div', { className: 'meal-rec-card__logic-row' },
+                        h('span', { className: 'meal-rec-card__logic-label' }, 'Перестроен:'),
+                        h('span', { className: 'meal-rec-card__logic-text' }, recommendation.explain.whyChanged)
                     )
                 ),
 

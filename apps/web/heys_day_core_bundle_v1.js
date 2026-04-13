@@ -4481,6 +4481,11 @@
             const newWater = (day.waterMl || 0) + ml;
             const prevWater = day.waterMl || 0;
             const hitGoal = waterGoal && newWater >= waterGoal && prevWater < waterGoal;
+            const newUpdatedAt = Date.now();
+            const blockUntil = newUpdatedAt + 3000;
+            if (typeof HEYS?.Day?.setBlockCloudUpdates === 'function') {
+                HEYS.Day.setBlockCloudUpdates(blockUntil);
+            }
 
             // DOM-based visual animations (no React state = no re-render)
             const waterCard = document.getElementById('water-card');
@@ -4514,7 +4519,10 @@
             // Defer heavy day state update via setTimeout(0) + startTransition
             setTimeout(() => {
                 React.startTransition(() => {
-                    setDay(prev => ({ ...prev, waterMl: (prev.waterMl || 0) + ml, lastWaterTime: Date.now(), updatedAt: Date.now() }));
+                    setDay(prev => {
+                        const nextWaterMl = (prev.waterMl || 0) + ml;
+                        return { ...prev, waterMl: nextWaterMl, lastWaterTime: Date.now(), updatedAt: newUpdatedAt };
+                    });
                 });
             }, 0);
 

@@ -329,11 +329,13 @@
                 // 🚀 PERF R34: defer addWater — day data save + re-render (88ms → ~0ms click)
                 onClick: (e) => {
                   const sourceEl = e.currentTarget;
-                  setTimeout(() => addWater(preset.ml, {
-                    skipScroll: true,
-                    source: 'water-card-preset',
-                    sourceEl
-                  }), 0);
+                  setTimeout(() => {
+                    addWater(preset.ml, {
+                      skipScroll: true,
+                      source: 'water-card-preset',
+                      sourceEl
+                    });
+                  }, 0);
                 }
               },
                 React.createElement('span', { className: 'water-preset-icon' }, preset.icon),

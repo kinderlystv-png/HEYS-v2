@@ -40501,11 +40501,32 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             startTime: opts?.startTime || '09:00',
             endTime: opts?.endTime || '10:00',
             source: opts?.source || 'user',
+            recurrenceGroupId: opts?.recurrenceGroupId ? String(opts.recurrenceGroupId) : undefined,
             createdAt: nowISO(),
             updatedAt: nowISO(),
         };
         saveSlots(slots.concat(slot));
         return slot;
+    }
+
+    function addSlotBatch(optsList) {
+        const slots = getSlots();
+        const now = nowISO();
+        const created = (Array.isArray(optsList) ? optsList : []).map((opts) => ({
+            id: uid(),
+            taskId: opts?.taskId || undefined,
+            title: String(opts?.title || '').trim(),
+            date: dateStr(opts?.date),
+            startTime: opts?.startTime || '09:00',
+            endTime: opts?.endTime || '10:00',
+            source: opts?.source || 'user',
+            recurrenceGroupId: opts?.recurrenceGroupId ? String(opts.recurrenceGroupId) : undefined,
+            createdAt: now,
+            updatedAt: now,
+        }));
+        if (!created.length) return [];
+        saveSlots(slots.concat(created));
+        return created;
     }
 
     function updateSlot(id, patch) {
@@ -40670,6 +40691,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             deleteTask: (id) => { deleteTask(id); refresh(); },
             reorderTasks: (sourceId, targetId) => { const nextTasks = reorderTasks(sourceId, targetId); refresh(); return nextTasks; },
             addSlot: (opts) => { const slot = addSlot(opts); refresh(); return slot; },
+            addSlotBatch: (optsList) => { const list = addSlotBatch(optsList); refresh(); return list; },
             updateSlot: (id, patch) => { const slot = updateSlot(id, patch); refresh(); return slot; },
             deleteSlot: (id) => { deleteSlot(id); refresh(); },
             addContextInboxItem: (text, opts) => { const item = addContextInboxItem(text, opts); refresh(); return item; },
@@ -40743,6 +40765,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         getSlots,
         saveSlots,
         addSlot,
+        addSlotBatch,
         updateSlot,
         deleteSlot,
         getContextInboxItems,
@@ -40764,6 +40787,372 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 })();
 
 
+/* ===== heys_planning_quick_target_v1.js ===== */
+// heys_planning_quick_target_v1.js — shared «Проект / подпроект» dropdown (quick-add target)
+(function () {
+    'use strict';
+
+    const HEYS = window.HEYS = window.HEYS || {};
+    const React = window.React;
+    const Planning = HEYS.Planning || {};
+    if (!React || !Planning.Utils) return;
+
+    const h = React.createElement;
+    const { useState, useMemo, useRef, useEffect } = React;
+    const { sortByOrder } = Planning.Utils;
+
+    function normalizePaletteHex(value) {
+        const input = String(value || '').trim().toLowerCase();
+        if (!input) return null;
+        if (/^#[0-9a-f]{6}$/.test(input)) return input;
+        if (/^#[0-9a-f]{3}$/.test(input)) {
+            return '#' + input.slice(1).split('').map((char) => char + char).join('');
+        }
+        return null;
+    }
+
+    function buildTaskLookup(tasks) {
+        return new Map((Array.isArray(tasks) ? tasks : [])
+            .filter(Boolean)
+            .map((task) => [task.id, task]));
+    }
+
+    function resolveTaskProjectScope(taskId, taskLookup, validProjectIds, cache, trail) {
+        if (!taskId || !taskLookup.has(taskId)) return undefined;
+        if (cache.has(taskId)) return cache.get(taskId);
+        if (trail.has(taskId)) return undefined;
+
+        trail.add(taskId);
+        const task = taskLookup.get(taskId);
+        let resolvedProjectId;
+
+        if (task?.parentTaskId && taskLookup.has(task.parentTaskId)) {
+            resolvedProjectId = resolveTaskProjectScope(task.parentTaskId, taskLookup, validProjectIds, cache, trail);
+        } else {
+            const rawProjectId = task?.projectId || undefined;
+            resolvedProjectId = rawProjectId && validProjectIds.has(rawProjectId)
+                ? rawProjectId
+                : undefined;
+        }
+
+        trail.delete(taskId);
+        cache.set(taskId, resolvedProjectId);
+        return resolvedProjectId;
+    }
+
+    function buildResolvedTaskProjectMap(tasks, projects) {
+        const taskLookup = buildTaskLookup(tasks);
+        const validProjectIds = new Set((Array.isArray(projects) ? projects : [])
+            .map((project) => project?.id)
+            .filter(Boolean));
+        const cache = new Map();
+
+        taskLookup.forEach((task, taskId) => {
+            resolveTaskProjectScope(taskId, taskLookup, validProjectIds, cache, new Set());
+        });
+
+        return cache;
+    }
+
+    function getResolvedTaskProjectId(taskId, resolvedTaskProjectIds) {
+        if (!taskId || !resolvedTaskProjectIds?.has(taskId)) return undefined;
+        return resolvedTaskProjectIds.get(taskId) || undefined;
+    }
+
+    function createQuickTargetValue(kind, id) {
+        if (kind === 'project' && id) return 'project:' + id;
+        if (kind === 'task' && id) return 'task:' + id;
+        return '';
+    }
+
+    function parseQuickTargetValue(value) {
+        const rawValue = String(value || '');
+        if (!rawValue) return { kind: 'root' };
+        if (rawValue.indexOf('project:') === 0) return { kind: 'project', id: rawValue.slice(8) };
+        if (rawValue.indexOf('task:') === 0) return { kind: 'task', id: rawValue.slice(5) };
+        return { kind: 'root' };
+    }
+
+    function buildQuickTargetTaskLabel(title, depth) {
+        const safeTitle = String(title || '').trim() || 'Без названия';
+        const indent = '\u00A0\u00A0\u00A0\u00A0'.repeat(Math.max(depth + 1, 1));
+        return indent + '↳ ' + safeTitle;
+    }
+
+    function appendQuickTargetTaskOptions(options, tasks, resolvedTaskProjectIds, projectId, parentTaskId, depth) {
+        const siblings = sortByOrder((tasks || []).filter((task) => (
+            (task.parentTaskId || '') === (parentTaskId || '')
+            && (
+                parentTaskId
+                    ? true
+                    : (getResolvedTaskProjectId(task.id, resolvedTaskProjectIds) || '') === (projectId || '')
+            )
+        )));
+
+        siblings.forEach((task) => {
+            const hasChildren = (tasks || []).some((entry) => (entry.parentTaskId || '') === task.id);
+            const safeTitle = String(task.title || '').trim() || 'Без названия';
+            options.push({
+                value: createQuickTargetValue('task', task.id),
+                label: buildQuickTargetTaskLabel(safeTitle, depth),
+                shortLabel: '↳ ' + safeTitle,
+                kind: hasChildren ? 'subproject' : 'task',
+                depth,
+            });
+            appendQuickTargetTaskOptions(options, tasks, resolvedTaskProjectIds, projectId, task.id, depth + 1);
+        });
+    }
+
+    function buildQuickTargetOptions(projects, tasks, resolvedTaskProjectIds) {
+        const options = [{
+            value: '',
+            label: '📁 Без проекта',
+            shortLabel: '📁 Без проекта',
+            kind: 'project',
+            depth: 0,
+            projectColor: '#94a3b8',
+            isRoot: true,
+        }];
+        appendQuickTargetTaskOptions(options, tasks, resolvedTaskProjectIds, '', undefined, 0);
+
+        (projects || []).forEach((project) => {
+            const safeProjectName = String(project.name || '').trim() || 'Без названия';
+            options.push({
+                value: createQuickTargetValue('project', project.id),
+                label: '📁 ' + safeProjectName,
+                shortLabel: '📁 ' + safeProjectName,
+                kind: 'project',
+                depth: 0,
+                projectColor: normalizePaletteHex(project.color) || '#94a3b8',
+            });
+            appendQuickTargetTaskOptions(options, tasks, resolvedTaskProjectIds, project.id, undefined, 0);
+        });
+
+        return options;
+    }
+
+    function resolveQuickTargetValue(targetValue, tasks, resolvedTaskProjectIds) {
+        const parsed = parseQuickTargetValue(targetValue);
+        if (parsed.kind === 'project') {
+            return { projectId: parsed.id || undefined, parentTaskId: undefined };
+        }
+        if (parsed.kind === 'task') {
+            const parentTask = (tasks || []).find((task) => task.id === parsed.id);
+            if (!parentTask) return { projectId: undefined, parentTaskId: undefined };
+            return {
+                projectId: getResolvedTaskProjectId(parentTask.id, resolvedTaskProjectIds),
+                parentTaskId: parentTask.id,
+            };
+        }
+        return { projectId: undefined, parentTaskId: undefined };
+    }
+
+    function findProjectName(projectId, projects) {
+        if (!projectId) return 'Без проекта';
+        const project = (projects || []).find((entry) => entry.id === projectId);
+        return project?.name || 'Без проекта';
+    }
+
+    function buildTaskLineage(taskId, tasks) {
+        const taskMap = new Map((tasks || []).map((task) => [task.id, task]));
+        const lineage = [];
+        let currentTask = taskMap.get(taskId);
+        let guard = 0;
+
+        while (currentTask && guard < 120) {
+            lineage.unshift(currentTask);
+            currentTask = currentTask.parentTaskId ? taskMap.get(currentTask.parentTaskId) : null;
+            guard += 1;
+        }
+
+        return lineage;
+    }
+
+    function buildQuickTargetPreview(targetValue, projects, tasks, resolvedTaskProjectIds) {
+        const parsed = parseQuickTargetValue(targetValue);
+        if (parsed.kind !== 'task' || !parsed.id) return null;
+
+        const lineage = buildTaskLineage(parsed.id, tasks);
+        if (lineage.length === 0) return null;
+
+        const leafTask = lineage[lineage.length - 1];
+        const parentPath = lineage.slice(0, -1).map((task) => String(task.title || '').trim()).filter(Boolean);
+        const projectName = findProjectName(getResolvedTaskProjectId(leafTask.id, resolvedTaskProjectIds), projects);
+        const contextParts = [projectName].concat(parentPath).filter(Boolean);
+
+        return {
+            context: contextParts.join(' / '),
+            primary: String(leafTask.title || '').trim() || 'Подзадача',
+        };
+    }
+
+    function encodePlanningFieldsToQuickValue(projectId, parentTaskId) {
+        if (parentTaskId) return createQuickTargetValue('task', parentTaskId);
+        if (projectId) return createQuickTargetValue('project', projectId);
+        return '';
+    }
+
+    function resolveQuickTargetToFormFields(quickValue, tasks, resolvedTaskProjectIds) {
+        const r = resolveQuickTargetValue(quickValue, tasks, resolvedTaskProjectIds);
+        return {
+            taskProjectId: r.projectId || '',
+            taskParentTaskId: r.parentTaskId || '',
+        };
+    }
+
+    /**
+     * Тот же UI, что у quick-add на экране задач: trigger + listbox + preview.
+     */
+    function PlanningQuickTargetField({
+        value,
+        onChange,
+        projects,
+        tasks,
+        resolvedTaskProjectIds,
+        tabsSelector = '.tabs',
+        fieldClassName,
+    }) {
+        const fieldRef = useRef(null);
+        const [menuOpen, setMenuOpen] = useState(false);
+        const [menuMaxHeight, setMenuMaxHeight] = useState(null);
+
+        const options = useMemo(
+            () => buildQuickTargetOptions(projects, tasks, resolvedTaskProjectIds),
+            [projects, resolvedTaskProjectIds, tasks],
+        );
+
+        const preview = useMemo(
+            () => buildQuickTargetPreview(value, projects, tasks, resolvedTaskProjectIds),
+            [value, projects, resolvedTaskProjectIds, tasks],
+        );
+
+        const selectedOption = useMemo(() => {
+            const selected = options.find((option) => option.value === value);
+            if (selected) return selected;
+            return options[0] || null;
+        }, [options, value]);
+
+        useEffect(() => {
+            const parsed = parseQuickTargetValue(value);
+            if (parsed.kind !== 'task' || !parsed.id) return;
+            const exists = options.some((option) => option.value === value);
+            if (exists) return;
+
+            const originalTask = (tasks || []).find((task) => task.id === parsed.id);
+            const originalProjectId = originalTask
+                ? getResolvedTaskProjectId(originalTask.id, resolvedTaskProjectIds)
+                : undefined;
+            if (originalProjectId) {
+                onChange(createQuickTargetValue('project', originalProjectId));
+                return;
+            }
+            onChange('');
+        }, [onChange, options, resolvedTaskProjectIds, tasks, value]);
+
+        useEffect(() => {
+            if (!menuOpen) return undefined;
+            const handlePointerDown = (event) => {
+                const rootNode = fieldRef.current;
+                if (!rootNode || rootNode.contains(event.target)) return;
+                setMenuOpen(false);
+            };
+            window.addEventListener('pointerdown', handlePointerDown);
+            return () => window.removeEventListener('pointerdown', handlePointerDown);
+        }, [menuOpen]);
+
+        useEffect(() => {
+            if (!menuOpen) return undefined;
+
+            const recalculateMenuMaxHeight = () => {
+                if (typeof window === 'undefined') return;
+                const rootNode = fieldRef.current;
+                if (!rootNode) return;
+
+                const triggerRect = rootNode.getBoundingClientRect();
+                const tabsEl = tabsSelector ? document.querySelector(tabsSelector) : null;
+                const tabsHeight = Math.round(tabsEl?.getBoundingClientRect?.().height || 76);
+                const spaceBelowTrigger = window.innerHeight - tabsHeight - triggerRect.bottom - 8;
+                const nextMaxHeight = Math.max(140, Math.round(spaceBelowTrigger));
+                setMenuMaxHeight(nextMaxHeight);
+            };
+
+            recalculateMenuMaxHeight();
+            window.addEventListener('resize', recalculateMenuMaxHeight);
+            window.addEventListener('scroll', recalculateMenuMaxHeight, true);
+            return () => {
+                window.removeEventListener('resize', recalculateMenuMaxHeight);
+                window.removeEventListener('scroll', recalculateMenuMaxHeight, true);
+            };
+        }, [menuOpen, tabsSelector]);
+
+        return h('div', { className: 'planning-quick-target-field' + (preview ? ' has-preview' : '') + (fieldClassName ? (' ' + fieldClassName) : '') },
+            h('div', {
+                className: 'planning-quick-target-select' + (menuOpen ? ' is-open' : ''),
+                ref: fieldRef,
+            },
+                h('button', {
+                    type: 'button',
+                    className: 'planning-quick-target-trigger',
+                    'aria-expanded': menuOpen ? 'true' : 'false',
+                    'aria-haspopup': 'listbox',
+                    onClick: () => setMenuOpen((open) => !open),
+                },
+                    h('span', {
+                        className: 'planning-quick-target-trigger__label'
+                            + (selectedOption?.kind === 'project' ? ' is-project' : ''),
+                        style: selectedOption?.kind === 'project' && selectedOption?.projectColor
+                            ? { '--planning-quick-target-color': selectedOption.projectColor }
+                            : undefined,
+                    }, selectedOption?.shortLabel || '📁 Без проекта'),
+                    h('span', { className: 'planning-quick-target-trigger__chevron', 'aria-hidden': 'true' }, '▾'),
+                ),
+                menuOpen && h('div', {
+                    className: 'planning-quick-target-menu',
+                    role: 'listbox',
+                    style: menuMaxHeight ? { maxHeight: menuMaxHeight + 'px' } : undefined,
+                },
+                    options.map((option) => h('button', {
+                        key: option.value || '__root__',
+                        type: 'button',
+                        className: 'planning-quick-target-option'
+                            + (option.kind ? (' planning-quick-target-option--' + option.kind) : '')
+                            + (option.value === value ? ' active' : ''),
+                        style: option.kind === 'project' && option.projectColor
+                            ? { '--planning-quick-target-color': option.projectColor }
+                            : (option.depth > 0 ? { '--planning-quick-target-depth': String(option.depth) } : undefined),
+                        role: 'option',
+                        'aria-selected': option.value === value ? 'true' : 'false',
+                        onClick: () => {
+                            onChange(option.value);
+                            setMenuOpen(false);
+                        },
+                    }, option.label)),
+                ),
+            ),
+            preview && h('div', { className: 'planning-quick-target-preview' },
+                preview.context && h('span', { className: 'planning-quick-target-preview__context' }, preview.context),
+                h('span', { className: 'planning-quick-target-preview__primary' }, preview.primary),
+            ),
+        );
+    }
+
+    HEYS.PlanningQuickTarget = {
+        buildTaskLookup,
+        createQuickTargetValue,
+        parseQuickTargetValue,
+        resolveQuickTargetValue,
+        buildQuickTargetOptions,
+        buildQuickTargetPreview,
+        buildResolvedTaskProjectMap,
+        getResolvedTaskProjectId,
+        encodePlanningFieldsToQuickValue,
+        resolveQuickTargetToFormFields,
+        PlanningQuickTargetField,
+    };
+}());
+
+
+
 /* ===== heys_planning_tasks_v1.js ===== */
 // heys_planning_tasks_v1.js — Tasks screen and task editor for HEYS planning
 (function () {
@@ -40773,10 +41162,18 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     const React = window.React;
     const ReactDOM = window.ReactDOM;
     const Planning = HEYS.Planning || {};
-    if (!React || !Planning.Constants || !Planning.Store || !Planning.Utils) return;
+    const PlanningQuickTarget = HEYS.PlanningQuickTarget;
+    if (!React || !Planning.Constants || !Planning.Store || !Planning.Utils || !PlanningQuickTarget) return;
 
     const h = React.createElement;
     const { useState, useMemo, useRef } = React;
+    const {
+        buildResolvedTaskProjectMap,
+        getResolvedTaskProjectId,
+        createQuickTargetValue,
+        resolveQuickTargetValue,
+        PlanningQuickTargetField,
+    } = PlanningQuickTarget;
     const { PRIORITY_CONFIG, STATUS_CONFIG, DUE_BUCKETS, PROJECT_COLORS } = Planning.Constants;
     const { clamp, dateStr, sortByOrder, timeToMinutes, minutesToTime, getDueBucket, getTaskDurationMinutes } = Planning.Utils;
 
@@ -41772,54 +42169,6 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         return map;
     }
 
-    function buildTaskLookup(tasks) {
-        return new Map((Array.isArray(tasks) ? tasks : [])
-            .filter(Boolean)
-            .map((task) => [task.id, task]));
-    }
-
-    function resolveTaskProjectScope(taskId, taskLookup, validProjectIds, cache, trail) {
-        if (!taskId || !taskLookup.has(taskId)) return undefined;
-        if (cache.has(taskId)) return cache.get(taskId);
-        if (trail.has(taskId)) return undefined;
-
-        trail.add(taskId);
-        const task = taskLookup.get(taskId);
-        let resolvedProjectId;
-
-        if (task?.parentTaskId && taskLookup.has(task.parentTaskId)) {
-            resolvedProjectId = resolveTaskProjectScope(task.parentTaskId, taskLookup, validProjectIds, cache, trail);
-        } else {
-            const rawProjectId = task?.projectId || undefined;
-            resolvedProjectId = rawProjectId && validProjectIds.has(rawProjectId)
-                ? rawProjectId
-                : undefined;
-        }
-
-        trail.delete(taskId);
-        cache.set(taskId, resolvedProjectId);
-        return resolvedProjectId;
-    }
-
-    function buildResolvedTaskProjectMap(tasks, projects) {
-        const taskLookup = buildTaskLookup(tasks);
-        const validProjectIds = new Set((Array.isArray(projects) ? projects : [])
-            .map((project) => project?.id)
-            .filter(Boolean));
-        const cache = new Map();
-
-        taskLookup.forEach((task, taskId) => {
-            resolveTaskProjectScope(taskId, taskLookup, validProjectIds, cache, new Set());
-        });
-
-        return cache;
-    }
-
-    function getResolvedTaskProjectId(taskId, resolvedTaskProjectIds) {
-        if (!taskId || !resolvedTaskProjectIds?.has(taskId)) return undefined;
-        return resolvedTaskProjectIds.get(taskId) || undefined;
-    }
-
     function countCompletedBranchTasks(taskId, childrenMap) {
         const queue = (childrenMap.get(taskId) || []).slice();
         let completedCount = 0;
@@ -41873,97 +42222,6 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         return fallback[0] || '#94a3b8';
     }
 
-    function createQuickTargetValue(kind, id) {
-        if (kind === 'project' && id) return 'project:' + id;
-        if (kind === 'task' && id) return 'task:' + id;
-        return '';
-    }
-
-    function parseQuickTargetValue(value) {
-        const rawValue = String(value || '');
-        if (!rawValue) return { kind: 'root' };
-        if (rawValue.indexOf('project:') === 0) return { kind: 'project', id: rawValue.slice(8) };
-        if (rawValue.indexOf('task:') === 0) return { kind: 'task', id: rawValue.slice(5) };
-        return { kind: 'root' };
-    }
-
-    function buildQuickTargetTaskLabel(title, depth) {
-        const safeTitle = String(title || '').trim() || 'Без названия';
-        const indent = '\u00A0\u00A0\u00A0\u00A0'.repeat(Math.max(depth + 1, 1));
-        return indent + '↳ ' + safeTitle;
-    }
-
-    function appendQuickTargetTaskOptions(options, tasks, resolvedTaskProjectIds, projectId, parentTaskId, depth) {
-        const siblings = sortByOrder((tasks || []).filter((task) => (
-            (task.parentTaskId || '') === (parentTaskId || '')
-            && (
-                parentTaskId
-                    ? true
-                    : (getResolvedTaskProjectId(task.id, resolvedTaskProjectIds) || '') === (projectId || '')
-            )
-        )));
-
-        siblings.forEach((task) => {
-            options.push({
-                value: createQuickTargetValue('task', task.id),
-                label: buildQuickTargetTaskLabel(task.title, depth),
-            });
-            appendQuickTargetTaskOptions(options, tasks, resolvedTaskProjectIds, projectId, task.id, depth + 1);
-        });
-    }
-
-    function buildQuickTargetOptions(projects, tasks, resolvedTaskProjectIds) {
-        const options = [{ value: '', label: '📁 Без проекта' }];
-        appendQuickTargetTaskOptions(options, tasks, resolvedTaskProjectIds, '', undefined, 0);
-
-        (projects || []).forEach((project) => {
-            options.push({
-                value: createQuickTargetValue('project', project.id),
-                label: '📁 ' + project.name,
-            });
-            appendQuickTargetTaskOptions(options, tasks, resolvedTaskProjectIds, project.id, undefined, 0);
-        });
-
-        return options;
-    }
-
-    function resolveQuickTargetValue(targetValue, tasks, resolvedTaskProjectIds) {
-        const parsed = parseQuickTargetValue(targetValue);
-        if (parsed.kind === 'project') {
-            return { projectId: parsed.id || undefined, parentTaskId: undefined };
-        }
-        if (parsed.kind === 'task') {
-            const parentTask = (tasks || []).find((task) => task.id === parsed.id);
-            if (!parentTask) return { projectId: undefined, parentTaskId: undefined };
-            return {
-                projectId: getResolvedTaskProjectId(parentTask.id, resolvedTaskProjectIds),
-                parentTaskId: parentTask.id,
-            };
-        }
-        return { projectId: undefined, parentTaskId: undefined };
-    }
-
-    function findProjectName(projectId, projects) {
-        if (!projectId) return 'Без проекта';
-        const project = (projects || []).find((entry) => entry.id === projectId);
-        return project?.name || 'Без проекта';
-    }
-
-    function buildTaskLineage(taskId, tasks) {
-        const taskMap = new Map((tasks || []).map((task) => [task.id, task]));
-        const lineage = [];
-        let currentTask = taskMap.get(taskId);
-        let guard = 0;
-
-        while (currentTask && guard < 120) {
-            lineage.unshift(currentTask);
-            currentTask = currentTask.parentTaskId ? taskMap.get(currentTask.parentTaskId) : null;
-            guard += 1;
-        }
-
-        return lineage;
-    }
-
     function buildParentGroupLabel(task, taskLookup) {
         if (!task?.parentTaskId || !taskLookup?.has(task.parentTaskId)) return '';
 
@@ -41984,24 +42242,6 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         }
 
         return titles.join(' → ');
-    }
-
-    function buildQuickTargetPreview(targetValue, projects, tasks, resolvedTaskProjectIds) {
-        const parsed = parseQuickTargetValue(targetValue);
-        if (parsed.kind !== 'task' || !parsed.id) return null;
-
-        const lineage = buildTaskLineage(parsed.id, tasks);
-        if (lineage.length === 0) return null;
-
-        const leafTask = lineage[lineage.length - 1];
-        const parentPath = lineage.slice(0, -1).map((task) => String(task.title || '').trim()).filter(Boolean);
-        const projectName = findProjectName(getResolvedTaskProjectId(leafTask.id, resolvedTaskProjectIds), projects);
-        const contextParts = [projectName].concat(parentPath).filter(Boolean);
-
-        return {
-            context: contextParts.join(' / '),
-            primary: String(leafTask.title || '').trim() || 'Подзадача',
-        };
     }
 
     function buildTaskMetaBadges(task) {
@@ -42787,14 +43027,6 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             });
             return map;
         }, [activeProjects, filteredTasks, resolvedTaskProjectIds]);
-        const quickTargetOptions = useMemo(
-            () => buildQuickTargetOptions(activeProjects, visibleTasks, resolvedTaskProjectIds),
-            [activeProjects, resolvedTaskProjectIds, visibleTasks],
-        );
-        const quickTargetPreview = useMemo(
-            () => buildQuickTargetPreview(newTaskProjectId, activeProjects, visibleTasks, resolvedTaskProjectIds),
-            [newTaskProjectId, activeProjects, resolvedTaskProjectIds, visibleTasks],
-        );
         const resolvedQuickTarget = useMemo(
             () => resolveQuickTargetValue(newTaskProjectId, visibleTasks, resolvedTaskProjectIds),
             [newTaskProjectId, resolvedTaskProjectIds, visibleTasks],
@@ -42804,23 +43036,6 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             if (!selectedTaskId || !pendingDeletedTaskIds.has(selectedTaskId)) return;
             setSelectedTaskId(null);
         }, [selectedTaskId, pendingDeletedTaskIds]);
-
-        React.useEffect(() => {
-            const parsed = parseQuickTargetValue(newTaskProjectId);
-            if (parsed.kind !== 'task' || !parsed.id) return;
-            const exists = quickTargetOptions.some((option) => option.value === newTaskProjectId);
-            if (exists) return;
-
-            const originalTask = state.tasks.find((task) => task.id === parsed.id);
-            const originalProjectId = originalTask
-                ? getResolvedTaskProjectId(originalTask.id, resolvedTaskProjectIds)
-                : undefined;
-            if (originalProjectId) {
-                setNewTaskProjectId(createQuickTargetValue('project', originalProjectId));
-                return;
-            }
-            setNewTaskProjectId('');
-        }, [newTaskProjectId, quickTargetOptions, resolvedTaskProjectIds, state.tasks]);
 
         React.useEffect(() => {
             const subgroupParentsWithoutColor = visibleTasks.filter((task) => {
@@ -43079,19 +43294,14 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                             ),
                         ),
                         h('div', { className: 'planning-quick-add__primary-row' },
-                            h('div', { className: 'planning-quick-target-field' + (quickTargetPreview ? ' has-preview' : '') },
-                                h('select', {
-                                    className: 'planning-quick-select planning-quick-select--target',
-                                    value: newTaskProjectId,
-                                    onChange: (event) => setNewTaskProjectId(event.target.value),
-                                },
-                                    quickTargetOptions.map((option) => h('option', { key: option.value || '__root__', value: option.value }, option.label)),
-                                ),
-                                quickTargetPreview && h('div', { className: 'planning-quick-target-preview' },
-                                    quickTargetPreview.context && h('span', { className: 'planning-quick-target-preview__context' }, quickTargetPreview.context),
-                                    h('span', { className: 'planning-quick-target-preview__primary' }, quickTargetPreview.primary),
-                                ),
-                            ),
+                            h(PlanningQuickTargetField, {
+                                value: newTaskProjectId,
+                                onChange: setNewTaskProjectId,
+                                projects: activeProjects,
+                                tasks: visibleTasks,
+                                resolvedTaskProjectIds,
+                                tabsSelector: '.tabs',
+                            }),
                             h('div', { className: 'planning-quick-add__actions planning-quick-add__actions--priority-row' },
                                 Object.keys(PRIORITY_CONFIG).map((key) => {
                                     const config = PRIORITY_CONFIG[key];
@@ -43284,7 +43494,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     const React = window.React;
     const Planning = HEYS.Planning || {};
     const PlanningTasks = HEYS.PlanningTasks || {};
-    if (!React || !Planning.Constants || !Planning.Utils || !Planning.Hooks) return;
+    const PlanningQuickTarget = HEYS.PlanningQuickTarget;
+    if (!React || !Planning.Constants || !Planning.Utils || !Planning.Hooks || !PlanningQuickTarget) return;
     const h = React.createElement;
     const { useState, useMemo, useRef, useEffect } = React;
     const {
@@ -43302,10 +43513,28 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         addDays,
         diffDays,
         getTaskProjectColor,
+        uid,
     } = Planning.Utils;
     const { usePlanningViewport } = Planning.Hooks;
 
+    const {
+        buildTaskLookup,
+        buildResolvedTaskProjectMap,
+        getResolvedTaskProjectId,
+        PlanningQuickTargetField,
+        encodePlanningFieldsToQuickValue,
+        resolveQuickTargetToFormFields,
+        resolveQuickTargetValue: resolveQuickTargetPickerValue,
+    } = PlanningQuickTarget;
+
     const HOURS = Array.from({ length: (CALENDAR_END_HOUR - CALENDAR_START_HOUR) + 1 }, (_, index) => CALENDAR_START_HOUR + index);
+    const RANGE_DRAG_THRESHOLD_PX = 10;
+    const CALENDAR_SNAP_MINUTES = 15;
+    const QUICK_REPEAT_HORIZON_DAYS = 55;
+    const QUICK_WEEKDAY_CHIPS = [
+        { dow: 1, label: 'Пн' }, { dow: 2, label: 'Вт' }, { dow: 3, label: 'Ср' }, { dow: 4, label: 'Чт' },
+        { dow: 5, label: 'Пт' }, { dow: 6, label: 'Сб' }, { dow: 0, label: 'Вс' },
+    ];
     const WEEKDAY_LABELS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
     const MINUTES_IN_DAY = 24 * 60;
     const CALENDAR_LOOKBACK_DAYS = 1;
@@ -43317,6 +43546,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     const CALENDAR_POINTER_DRAG_MOVE_THRESHOLD = 6;
     const CALENDAR_TOUCH_DRAG_AUTO_SCROLL_EDGE = 56;
     const CALENDAR_TOUCH_DRAG_AUTO_SCROLL_STEP = 18;
+    const CALENDAR_SLOT_DONE_BACKGROUND = 'linear-gradient(180deg, rgba(34, 197, 94, 0.94) 0%, rgba(21, 128, 61, 0.9) 100%)';
 
     function pad2(value) {
         return String(value).padStart(2, '0');
@@ -43616,60 +43846,61 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             date: dateStr(source?.date),
             startTime: source?.startTime || '09:00',
             endTime: source?.endTime || '10:00',
+            quickCreate: !!source?.quickCreate,
         };
+    }
+
+    function snapCalendarGridMinutes(minutes) {
+        return Math.round(minutes / CALENDAR_SNAP_MINUTES) * CALENDAR_SNAP_MINUTES;
+    }
+
+    function columnYToGridWallMinutes(y, totalHeight, hoursCount, startHour) {
+        const clampedY = Math.max(0, Math.min(totalHeight, y));
+        const ratio = totalHeight > 0 ? clampedY / totalHeight : 0;
+        const spanMinutes = hoursCount * 60;
+        const minM = startHour * 60;
+        const maxM = minM + spanMinutes;
+        const raw = minM + ratio * spanMinutes;
+        return snapCalendarGridMinutes(Math.max(minM, Math.min(maxM, raw)));
+    }
+
+    function formatWallClockHm(totalMinutes) {
+        const rounded = Math.round(Number(totalMinutes) || 0);
+        const h = Math.floor(rounded / 60);
+        const m = ((rounded % 60) + 60) % 60;
+        return pad2(h) + ':' + pad2(m);
+    }
+
+    function rangeColumnYToSlotTimes(y0, y1, totalHeight, hoursCount, startHour) {
+        const topY = Math.min(y0, y1);
+        const botY = Math.max(y0, y1);
+        let startM = columnYToGridWallMinutes(topY, totalHeight, hoursCount, startHour);
+        let endM = columnYToGridWallMinutes(botY, totalHeight, hoursCount, startHour);
+        if (endM <= startM) endM = startM + CALENDAR_SNAP_MINUTES;
+        return {
+            startTime: formatWallClockHm(startM),
+            endTime: formatWallClockHm(endM),
+        };
+    }
+
+    /** HTML input[type=time] accepts only 00:00–23:59; normalize wall times (e.g. 25:00 → 01:00). */
+    function normalizeQuickModalTimeForInput(timeStr) {
+        if (!timeStr || typeof timeStr !== 'string') return '09:00';
+        const trimmed = String(timeStr).trim();
+        const match = trimmed.match(/^(\d{1,2}):(\d{2})$/);
+        if (!match) return '09:00';
+        let h = parseInt(match[1], 10);
+        let m = parseInt(match[2], 10);
+        if (!Number.isFinite(m)) m = 0;
+        m = Math.max(0, Math.min(59, m));
+        if (!Number.isFinite(h)) h = 9;
+        h = ((h % 24) + 24) % 24;
+        return pad2(h) + ':' + pad2(m);
     }
 
     function getSlotDurationMinutes(slotLike) {
         if (!slotLike?.startTime || !slotLike?.endTime) return 60;
         return Math.max(30, getCalendarDisplayEndMinutes(slotLike) - getCalendarDisplayMinutes(slotLike.startTime));
-    }
-
-    function buildTaskLookup(tasks) {
-        return new Map((Array.isArray(tasks) ? tasks : [])
-            .filter(Boolean)
-            .map((task) => [task.id, task]));
-    }
-
-    function resolveTaskProjectScope(taskId, taskLookup, validProjectIds, cache, trail) {
-        if (!taskId || !taskLookup.has(taskId)) return undefined;
-        if (cache.has(taskId)) return cache.get(taskId);
-        if (trail.has(taskId)) return undefined;
-
-        trail.add(taskId);
-        const task = taskLookup.get(taskId);
-        let resolvedProjectId;
-
-        if (task?.parentTaskId && taskLookup.has(task.parentTaskId)) {
-            resolvedProjectId = resolveTaskProjectScope(task.parentTaskId, taskLookup, validProjectIds, cache, trail);
-        } else {
-            const rawProjectId = task?.projectId || undefined;
-            resolvedProjectId = rawProjectId && validProjectIds.has(rawProjectId)
-                ? rawProjectId
-                : undefined;
-        }
-
-        trail.delete(taskId);
-        cache.set(taskId, resolvedProjectId);
-        return resolvedProjectId;
-    }
-
-    function buildResolvedTaskProjectMap(tasks, projects) {
-        const taskLookup = buildTaskLookup(tasks);
-        const validProjectIds = new Set((Array.isArray(projects) ? projects : [])
-            .map((project) => project?.id)
-            .filter(Boolean));
-        const cache = new Map();
-
-        taskLookup.forEach((task, taskId) => {
-            resolveTaskProjectScope(taskId, taskLookup, validProjectIds, cache, new Set());
-        });
-
-        return cache;
-    }
-
-    function getResolvedTaskProjectId(taskId, resolvedTaskProjectIds) {
-        if (!taskId || !resolvedTaskProjectIds?.has(taskId)) return undefined;
-        return resolvedTaskProjectIds.get(taskId) || undefined;
     }
 
     function collectDescendantIds(tasks, rootId) {
@@ -43729,6 +43960,13 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     }
 
     function resolveCalendarSlotAppearance(slotDay, yesterdayIso, linkedTask, projects) {
+        if (linkedTask?.status === 'done') {
+            return {
+                className: ' planning-calendar-slot--done',
+                color: CALENDAR_SLOT_DONE_BACKGROUND,
+            };
+        }
+
         if (slotDay !== yesterdayIso) {
             return {
                 className: '',
@@ -43737,9 +43975,9 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         }
 
         const status = linkedTask?.status || '';
-        const isResolved = !linkedTask || status === 'done' || status === 'cancelled';
+        const isMuted = !linkedTask || status === 'cancelled';
 
-        if (isResolved) {
+        if (isMuted) {
             return {
                 className: ' planning-calendar-slot--muted',
                 color: 'linear-gradient(180deg, rgba(148, 163, 184, 0.34) 0%, rgba(148, 163, 184, 0.24) 100%)',
@@ -43879,15 +44117,364 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         return payload?.type === 'task' || payload?.type === 'slot';
     }
 
+    function SlotDeleteActionSheet({ slot, columnDay, hasLinkedTask, onClose, onSlotOnly, onSlotAndTask }) {
+        return h('div', {
+            className: 'planning-slot-delete-overlay',
+            onClick: onClose,
+            role: 'presentation',
+        },
+            h('div', {
+                className: 'planning-slot-delete-sheet',
+                onClick: (event) => event.stopPropagation(),
+                role: 'dialog',
+                'aria-modal': 'true',
+                'aria-labelledby': 'planning-slot-delete-title',
+            },
+                h('div', { id: 'planning-slot-delete-title', className: 'planning-slot-delete-sheet__title' }, 'Удаление'),
+                h('p', { className: 'planning-slot-delete-sheet__hint' },
+                    hasLinkedTask
+                        ? 'Убрать только время из календаря или удалить и задачу целиком.'
+                        : 'Удалить это событие с календаря?',
+                ),
+                hasLinkedTask && h('button', {
+                    type: 'button',
+                    className: 'planning-slot-delete-sheet__btn planning-slot-delete-sheet__btn--soft',
+                    onClick: () => {
+                        onSlotOnly();
+                        onClose();
+                    },
+                }, 'Только слот — задача в шапке дня'),
+                hasLinkedTask && h('button', {
+                    type: 'button',
+                    className: 'planning-slot-delete-sheet__btn planning-slot-delete-sheet__btn--danger',
+                    onClick: () => {
+                        onSlotAndTask();
+                        onClose();
+                    },
+                }, 'Слот и задачу'),
+                !hasLinkedTask && h('button', {
+                    type: 'button',
+                    className: 'planning-slot-delete-sheet__btn planning-slot-delete-sheet__btn--danger',
+                    onClick: () => {
+                        onSlotAndTask();
+                        onClose();
+                    },
+                }, 'Удалить событие'),
+                h('button', {
+                    type: 'button',
+                    className: 'planning-slot-delete-sheet__btn planning-slot-delete-sheet__btn--ghost',
+                    onClick: onClose,
+                }, 'Отмена'),
+            ),
+        );
+    }
+
+    function QuickSlotModal({ draft, state, onClose }) {
+        const tasks = Array.isArray(state?.tasks) ? state.tasks : [];
+        const projects = Array.isArray(state?.projects) ? state.projects : [];
+        const activeProjectsQuick = useMemo(
+            () => projects.filter((project) => project.status !== 'archived'),
+            [projects],
+        );
+        const resolvedTaskProjectIdsQuick = useMemo(
+            () => buildResolvedTaskProjectMap(tasks, activeProjectsQuick),
+            [activeProjectsQuick, tasks],
+        );
+        const anchorDate = dateStr(draft?.date);
+        const anchorDow = useMemo(() => new Date(String(anchorDate || '') + 'T12:00:00').getDay(), [anchorDate]);
+        const draftSyncKey = [
+            draft?.date,
+            draft?.startTime,
+            draft?.endTime,
+            draft?.quickCreate,
+        ].join('|');
+
+        const [title, setTitle] = useState(() => String(draft?.title || '').trim());
+        const [date, setDate] = useState(anchorDate);
+        const [startTime, setStartTime] = useState(() => normalizeQuickModalTimeForInput(draft?.startTime || '09:00'));
+        const [endTime, setEndTime] = useState(() => normalizeQuickModalTimeForInput(draft?.endTime || '10:00'));
+        const [repeatWeekly, setRepeatWeekly] = useState(false);
+        const [weekdaySet, setWeekdaySet] = useState(() => new Set([anchorDow]));
+        const [taskProjectId, setTaskProjectId] = useState('');
+        const [taskParentTaskId, setTaskParentTaskId] = useState('');
+        const [newProjectName, setNewProjectName] = useState('');
+
+        useEffect(() => {
+            document.body.classList.add('planning-quick-event-modal-open');
+            return () => {
+                document.body.classList.remove('planning-quick-event-modal-open');
+            };
+        }, []);
+
+        useEffect(() => {
+            const nextAnchor = dateStr(draft?.date);
+            const dow = new Date(String(nextAnchor || '') + 'T12:00:00').getDay();
+            setTitle(String(draft?.title || '').trim());
+            setDate(nextAnchor);
+            setStartTime(normalizeQuickModalTimeForInput(draft?.startTime || '09:00'));
+            setEndTime(normalizeQuickModalTimeForInput(draft?.endTime || '10:00'));
+            setRepeatWeekly(false);
+            setWeekdaySet(new Set([dow]));
+            setQuickTargetValue('');
+            setNewProjectName('');
+        }, [draftSyncKey]);
+
+        const toggleDow = (dow) => {
+            setWeekdaySet((prev) => {
+                const next = new Set(prev);
+                if (next.has(dow)) {
+                    if (next.size <= 1) return next;
+                    next.delete(dow);
+                } else {
+                    next.add(dow);
+                }
+                return next;
+            });
+        };
+
+        const handleRepeatToggle = (enabled) => {
+            setRepeatWeekly(enabled);
+            if (enabled) {
+                setWeekdaySet(new Set([new Date(String(date || '') + 'T12:00:00').getDay()]));
+            }
+        };
+
+        const save = () => {
+            const cleanTitle = String(title || '').trim();
+            if (!date || !startTime || !endTime) return;
+            let sm = timeToMinutes(startTime);
+            let em = timeToMinutes(endTime);
+            if (em <= sm) {
+                const tmp = sm;
+                sm = em;
+                em = tmp + CALENDAR_SNAP_MINUTES;
+            }
+            const st = formatWallClockHm(sm);
+            const et = formatWallClockHm(em);
+            const durationMin = Math.max(30, em - sm);
+            const taskTitle = cleanTitle || 'Событие';
+            const targetResolved = resolveQuickTargetPickerValue(quickTargetValue, tasks, resolvedTaskProjectIdsQuick);
+            const nextParentTaskId = targetResolved.parentTaskId;
+            const nextProjectId = targetResolved.projectId;
+
+            if (!repeatWeekly) {
+                const task = state.addTask(taskTitle, {
+                    projectId: nextProjectId,
+                    parentTaskId: nextParentTaskId,
+                    startDate: date,
+                    dueDate: date,
+                    plannedMinutes: durationMin,
+                    status: 'todo',
+                });
+                state.addSlot({
+                    taskId: task.id,
+                    title: '',
+                    date,
+                    startTime: st,
+                    endTime: et,
+                    source: 'user',
+                });
+            } else {
+                const groupId = uid();
+                const slotOpts = [];
+                let lastSlotDate = date;
+                for (let i = 0; i <= QUICK_REPEAT_HORIZON_DAYS; i += 1) {
+                    const d = addDays(date, i);
+                    if (d < date) continue;
+                    const dow = new Date(String(d) + 'T12:00:00').getDay();
+                    if (!weekdaySet.has(dow)) continue;
+                    slotOpts.push({
+                        date: d,
+                        startTime: st,
+                        endTime: et,
+                        source: 'user',
+                        recurrenceGroupId: groupId,
+                    });
+                    if (d > lastSlotDate) lastSlotDate = d;
+                }
+                if (!slotOpts.length) {
+                    onClose();
+                    return;
+                }
+                const task = state.addTask(taskTitle, {
+                    projectId: nextProjectId,
+                    parentTaskId: nextParentTaskId,
+                    startDate: date,
+                    dueDate: lastSlotDate,
+                    plannedMinutes: durationMin,
+                    status: 'todo',
+                });
+                state.addSlotBatch(slotOpts.map((o) => ({
+                    ...o,
+                    taskId: task.id,
+                    title: '',
+                })));
+            }
+            onClose();
+        };
+
+        return h('div', { className: 'planning-modal-overlay planning-modal-overlay--quick-event', onClick: onClose },
+            h('div', { className: 'planning-modal planning-modal--quick-event', onClick: (event) => event.stopPropagation() },
+                h('div', { className: 'planning-modal__header planning-modal__header--quick-event' },
+                    h('div', { className: 'planning-modal__header-copy' },
+                        h('span', { className: 'planning-modal__header-title planning-modal__header-title--quick-event' }, 'Новое событие'),
+                    ),
+                    h('button', {
+                        type: 'button',
+                        className: 'planning-modal__close planning-modal__close--quick-event',
+                        onClick: onClose,
+                        'aria-label': 'Закрыть',
+                    }, '×'),
+                ),
+                h('div', { className: 'planning-modal__body planning-modal__body--quick-event' },
+                    h('div', { className: 'planning-quick-title-field' },
+                        h('input', {
+                            id: 'planning-quick-event-title',
+                            className: 'planning-quick-title-field__input',
+                            placeholder: 'Название события',
+                            value: title,
+                            onChange: (event) => setTitle(event.target.value),
+                            autoFocus: true,
+                            autoComplete: 'off',
+                        }),
+                    ),
+                    h('div', { className: 'planning-quick-date-action-row' },
+                        h('div', { className: 'planning-quick-date-action-row__date' },
+                            h('label', { className: 'planning-quick-date-action-row__label', htmlFor: 'planning-quick-event-date' }, 'Дата'),
+                            h('input', {
+                                id: 'planning-quick-event-date',
+                                className: 'planning-quick-date-action-row__date-input',
+                                type: 'date',
+                                value: date,
+                                onChange: (event) => setDate(event.target.value),
+                            }),
+                        ),
+                        h('button', {
+                            type: 'button',
+                            className: 'planning-quick-btn-done',
+                            onClick: save,
+                        },
+                            h('span', { className: 'planning-quick-btn-done__icon', 'aria-hidden': 'true' }, '✓'),
+                            h('span', { className: 'planning-quick-btn-done__text' }, 'Готово'),
+                        ),
+                    ),
+                    h('div', { className: 'planning-quick-time-pair' },
+                        h('div', { className: 'planning-quick-time-pair__field' },
+                            h('label', { htmlFor: 'planning-quick-event-start' }, 'Начало'),
+                            h('input', {
+                                id: 'planning-quick-event-start',
+                                className: 'planning-quick-time-pair__input',
+                                type: 'time',
+                                step: 300,
+                                value: startTime,
+                                onChange: (event) => setStartTime(normalizeQuickModalTimeForInput(event.target.value || '09:00')),
+                            }),
+                        ),
+                        h('div', { className: 'planning-quick-time-pair__sep', 'aria-hidden': 'true' }, '—'),
+                        h('div', { className: 'planning-quick-time-pair__field' },
+                            h('label', { htmlFor: 'planning-quick-event-end' }, 'Конец'),
+                            h('input', {
+                                id: 'planning-quick-event-end',
+                                className: 'planning-quick-time-pair__input',
+                                type: 'time',
+                                step: 300,
+                                value: endTime,
+                                onChange: (event) => setEndTime(normalizeQuickModalTimeForInput(event.target.value || '10:00')),
+                            }),
+                        ),
+                    ),
+                    h('div', { className: 'planning-quick-slot-target-wrap' },
+                        h('div', { className: 'planning-quick-slot-target-wrap__label' }, 'Проект и подпроект'),
+                        h(PlanningQuickTargetField, {
+                            value: quickTargetValue,
+                            onChange: setQuickTargetValue,
+                            projects: activeProjectsQuick,
+                            tasks,
+                            resolvedTaskProjectIds: resolvedTaskProjectIdsQuick,
+                            tabsSelector: '.tabs',
+                        }),
+                    ),
+                    h('div', { className: 'planning-add-project' },
+                        h('input', {
+                            className: 'planning-quick-input planning-quick-input--sm',
+                            placeholder: 'Новый проект...',
+                            value: newProjectName,
+                            onChange: (event) => setNewProjectName(event.target.value),
+                            onKeyDown: (event) => {
+                                if (event.key !== 'Enter') return;
+                                const name = String(newProjectName || '').trim();
+                                if (!name) return;
+                                state.addProject(name);
+                                setNewProjectName('');
+                            },
+                        }),
+                        h('button', {
+                            type: 'button',
+                            className: 'planning-add-btn planning-add-btn--project',
+                            onClick: () => {
+                                const name = String(newProjectName || '').trim();
+                                if (!name) return;
+                                state.addProject(name);
+                                setNewProjectName('');
+                            },
+                        }, '+ Проект'),
+                    ),
+                    h('div', { className: 'planning-quick-repeat' },
+                        h('label', { className: 'planning-quick-repeat__toggle' },
+                            h('input', {
+                                type: 'checkbox',
+                                checked: repeatWeekly,
+                                onChange: (event) => handleRepeatToggle(event.target.checked),
+                            }),
+                            h('span', null, 'Повторять по дням недели'),
+                        ),
+                        repeatWeekly && h('div', {
+                            className: 'planning-quick-repeat__days',
+                            role: 'group',
+                            'aria-label': 'Дни повтора',
+                        },
+                            QUICK_WEEKDAY_CHIPS.map(({ dow, label }) => h('button', {
+                                key: dow,
+                                type: 'button',
+                                className: 'planning-weekday-chip' + (weekdaySet.has(dow) ? ' planning-weekday-chip--active' : ''),
+                                'aria-pressed': weekdaySet.has(dow) ? 'true' : 'false',
+                                onClick: () => toggleDow(dow),
+                            }, label)),
+                        ),
+                        repeatWeekly && h('p', { className: 'planning-quick-repeat__hint' },
+                            'До 8 недель от выбранной даты, те же часы.',
+                        ),
+                    ),
+                ),
+                h('div', { className: 'planning-modal__footer planning-modal__footer--quick-event' },
+                    h('button', {
+                        type: 'button',
+                        className: 'planning-quick-link-cancel',
+                        onClick: onClose,
+                    }, 'Отмена'),
+                ),
+            ),
+        );
+    }
+
     function SlotEditorModal({ draft, state, resolvedTaskProjectIds, onClose, onDelete }) {
         const tasks = Array.isArray(state?.tasks) ? state.tasks : [];
         const projects = Array.isArray(state?.projects) ? state.projects : [];
+        const activeProjects = useMemo(
+            () => projects.filter((project) => project.status !== 'archived'),
+            [projects],
+        );
+        const resolvedForQuickTarget = useMemo(
+            () => buildResolvedTaskProjectMap(tasks, activeProjects),
+            [activeProjects, tasks],
+        );
         const slots = Array.isArray(state?.slots) ? state.slots : [];
         const taskLookup = useMemo(() => buildTaskLookup(tasks), [tasks]);
         const titleInputRef = useRef(null);
         const [showTaskDurationPicker, setShowTaskDurationPicker] = useState(false);
         const [showSlotDurationPicker, setShowSlotDurationPicker] = useState(false);
         const [isTitleEditing, setIsTitleEditing] = useState(false);
+        const [newSlotProjectName, setNewSlotProjectName] = useState('');
         const [form, setForm] = useState(() => buildUnifiedSlotDraft(draft, tasks, resolvedTaskProjectIds));
 
         useEffect(() => {
@@ -43906,11 +44493,6 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             () => (linkedTask ? collectDescendantIds(tasks, linkedTask.id) : new Set()),
             [tasks, linkedTask],
         );
-        const parentOptions = useMemo(() => (
-            linkedTask
-                ? tasks.filter((entry) => entry.id !== linkedTask.id && !descendants.has(entry.id))
-                : []
-        ), [descendants, linkedTask, tasks]);
         const dependencyOptions = useMemo(() => (
             linkedTask
                 ? tasks.filter((entry) => entry.id !== linkedTask.id && !descendants.has(entry.id))
@@ -43973,6 +44555,12 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         const save = () => {
             if (!form.date || !form.startTime || !form.endTime) return;
 
+            const eventTitle = String(form.title || '').trim();
+            const slotDurationMin = getSlotDurationMinutes(form);
+            const wantsImplicitTask = !form.taskId && !!(form.taskProjectId || form.taskParentTaskId);
+
+            if (!form.taskId && !wantsImplicitTask && !eventTitle && !form.id) return;
+
             if (form.taskId && linkedTask) {
                 const nextParentTaskId = form.taskParentTaskId || undefined;
                 const nextProjectId = nextParentTaskId
@@ -43993,22 +44581,56 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                     baselinePlannedMinutes: form.taskBaselinePlannedMinutes ? Number(form.taskBaselinePlannedMinutes) : undefined,
                     blockedByTaskIds: form.taskBlockedByTaskIds,
                 });
+
+                const slotPayloadLinked = {
+                    taskId: form.taskId,
+                    title: '',
+                    date: form.date,
+                    startTime: form.startTime,
+                    endTime: form.endTime,
+                };
+                if (form.id) state.updateSlot(form.id, slotPayloadLinked);
+                else state.addSlot(slotPayloadLinked);
+                onClose();
+                return;
+            }
+
+            if (wantsImplicitTask) {
+                const nextParentTaskId = form.taskParentTaskId || undefined;
+                const nextProjectId = nextParentTaskId
+                    ? getResolvedTaskProjectId(nextParentTaskId, resolvedTaskProjectIds)
+                    : (form.taskProjectId || undefined);
+                const taskTitle = eventTitle || 'Событие';
+                const newTask = state.addTask(taskTitle, {
+                    projectId: nextProjectId,
+                    parentTaskId: nextParentTaskId,
+                    startDate: form.date,
+                    dueDate: form.date,
+                    plannedMinutes: slotDurationMin,
+                    status: 'todo',
+                });
+                const slotPayloadNew = {
+                    taskId: newTask.id,
+                    title: '',
+                    date: form.date,
+                    startTime: form.startTime,
+                    endTime: form.endTime,
+                };
+                if (form.id) state.updateSlot(form.id, slotPayloadNew);
+                else state.addSlot(slotPayloadNew);
+                onClose();
+                return;
             }
 
             const slotPayload = {
-                taskId: form.taskId || undefined,
-                title: linkedTask ? '' : String(form.title || '').trim(),
+                taskId: undefined,
+                title: eventTitle,
                 date: form.date,
                 startTime: form.startTime,
                 endTime: form.endTime,
             };
-
-            if (form.id) {
-                state.updateSlot(form.id, slotPayload);
-            } else {
-                state.addSlot(slotPayload);
-            }
-
+            if (form.id) state.updateSlot(form.id, slotPayload);
+            else state.addSlot(slotPayload);
             onClose();
         };
 
@@ -44133,8 +44755,54 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                                     ),
                                 ),
                             ),
-                            !linkedTask && h('div', { className: 'planning-linked-banner planning-linked-banner--empty' },
-                                h('span', null, 'Это отдельное событие без task-полей. Если нужно — сначала выбери связанную задачу выше.'),
+                            !linkedTask && h('div', { className: 'planning-modal__stack planning-modal__stack--slot-standalone-meta' },
+                                h('div', { className: 'planning-modal__row planning-modal__row--full' },
+                                    h('label', null, 'Проект и подпроект'),
+                                    h(PlanningQuickTargetField, {
+                                        value: encodePlanningFieldsToQuickValue(form.taskProjectId, form.taskParentTaskId),
+                                        onChange: (next) => {
+                                            const fields = resolveQuickTargetToFormFields(next, tasks, resolvedForQuickTarget);
+                                            setForm((current) => ({
+                                                ...current,
+                                                taskProjectId: fields.taskProjectId,
+                                                taskParentTaskId: fields.taskParentTaskId,
+                                            }));
+                                        },
+                                        projects: activeProjects,
+                                        tasks,
+                                        resolvedTaskProjectIds: resolvedForQuickTarget,
+                                        tabsSelector: '.tabs',
+                                    }),
+                                ),
+                                h('div', { className: 'planning-add-project' },
+                                    h('input', {
+                                        className: 'planning-quick-input planning-quick-input--sm',
+                                        placeholder: 'Новый проект...',
+                                        value: newSlotProjectName,
+                                        onChange: (event) => setNewSlotProjectName(event.target.value),
+                                        onKeyDown: (event) => {
+                                            if (event.key === 'Enter') {
+                                                const name = String(newSlotProjectName || '').trim();
+                                                if (!name) return;
+                                                state.addProject(name);
+                                                setNewSlotProjectName('');
+                                            }
+                                        },
+                                    }),
+                                    h('button', {
+                                        type: 'button',
+                                        className: 'planning-add-btn planning-add-btn--project',
+                                        onClick: () => {
+                                            const name = String(newSlotProjectName || '').trim();
+                                            if (!name) return;
+                                            state.addProject(name);
+                                            setNewSlotProjectName('');
+                                        },
+                                    }, '+ Проект'),
+                                ),
+                                h('p', { className: 'planning-quick-repeat__hint' },
+                                    'Если выбран проект или родитель, при сохранении создаётся задача и слот к ней привязывается. Или укажи связь через список «Задача» выше.',
+                                ),
                             ),
                         ),
                     ),
@@ -44145,24 +44813,23 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                             h('div', { className: 'planning-modal__card-hint' }, 'Без лишнего — только то, что влияет на планирование'),
                         ),
                         h('div', { className: 'planning-modal__stack' },
-                            h('div', { className: 'planning-modal__compact-grid planning-modal__compact-grid--pair' },
-                                h('div', { className: 'planning-modal__row' },
-                                    h('label', null, 'Проект'),
-                                    h('select', { value: form.taskProjectId, onChange: (event) => handleField('taskProjectId', event.target.value) },
-                                        h('option', { value: '' }, '— без проекта —'),
-                                        projects.map((project) => h('option', { key: project.id, value: project.id }, project.name)),
-                                    ),
-                                ),
-                                h('div', { className: 'planning-modal__row' },
-                                    h('label', null, 'Подпроект / родитель'),
-                                    h('select', { value: form.taskParentTaskId, onChange: (event) => handleField('taskParentTaskId', event.target.value) },
-                                        h('option', { value: '' }, '— верхний уровень —'),
-                                        parentOptions.map((entry) => h('option', {
-                                            key: entry.id,
-                                            value: entry.id,
-                                        }, buildTaskHierarchyInfo(entry, taskLookup, projects, resolvedTaskProjectIds).selectLabel)),
-                                    ),
-                                ),
+                            h('div', { className: 'planning-modal__row planning-modal__row--full' },
+                                h('label', null, 'Проект и подпроект'),
+                                h(PlanningQuickTargetField, {
+                                    value: encodePlanningFieldsToQuickValue(form.taskProjectId, form.taskParentTaskId),
+                                    onChange: (next) => {
+                                        const fields = resolveQuickTargetToFormFields(next, tasks, resolvedForQuickTarget);
+                                        setForm((current) => ({
+                                            ...current,
+                                            taskProjectId: fields.taskProjectId,
+                                            taskParentTaskId: fields.taskParentTaskId,
+                                        }));
+                                    },
+                                    projects: activeProjects,
+                                    tasks,
+                                    resolvedTaskProjectIds: resolvedForQuickTarget,
+                                    tabsSelector: '.tabs',
+                                }),
                             ),
                             h('div', { className: 'planning-modal__compact-grid planning-modal__compact-grid--triple' },
                                 h('div', { className: 'planning-modal__row' },
@@ -44284,6 +44951,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         subtitle,
         parentGroupLabel,
         showSubtitle,
+        onTaskStatusToggle,
+        taskStatusToggleDone,
         onOpen,
         onResizeStart,
         onDragStateChange,
@@ -44293,15 +44962,27 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         isTouchDragSource,
         allowNativeDrag,
         showResizeHandle,
+        onDeleteClick,
     }) {
         const slotTitle = parentGroupLabel ? (parentGroupLabel + ' · ' + title) : title;
+        const toggleIcon = taskStatusToggleDone
+            ? (STATUS_CONFIG.done?.icon || '●')
+            : (STATUS_CONFIG.todo?.icon || '○');
+        const toggleLabel = taskStatusToggleDone ? 'Вернуть в работу' : 'Завершить задачу';
+        const showFooter = Boolean(
+            showSubtitle
+            || typeof onTaskStatusToggle === 'function'
+            || typeof onDeleteClick === 'function',
+        );
 
         return h('div', {
             className: 'planning-calendar-slot'
                 + (className || '')
                 + (isTouchDragSource ? ' planning-calendar-slot--touch-dragging' : ''),
             draggable: allowNativeDrag !== false,
-            style: { ...style, background: color },
+            style: isTouchDragSource
+                ? { ...style, background: 'transparent' }
+                : { ...style, background: color },
             title: slotTitle,
             onPointerDown: (event) => {
                 if (typeof onPointerDragStart === 'function') {
@@ -44312,7 +44993,9 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                         title,
                         badgeText: subtitle,
                         parentGroupLabel,
+                        accentColor: color,
                         background: color,
+                        onDragStateChange,
                     });
                 }
             },
@@ -44325,7 +45008,9 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                         title,
                         badgeText: subtitle,
                         parentGroupLabel,
+                        accentColor: color,
                         background: color,
+                        onDragStateChange,
                     });
                 }
             },
@@ -44349,24 +45034,72 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             h('span', {
                 className: 'planning-calendar-slot__title' + (parentGroupLabel ? ' planning-calendar-slot__title--with-parent' : ''),
             }, title),
-            showSubtitle && h('span', { className: 'planning-calendar-slot__time' }, subtitle),
+            showFooter && h('div', { className: 'planning-calendar-slot__footer' },
+                showSubtitle && h('span', { className: 'planning-calendar-slot__time' }, subtitle),
+                h('div', { className: 'planning-calendar-slot__actions' },
+                    typeof onTaskStatusToggle === 'function' && h('button', {
+                        type: 'button',
+                        className: 'planning-calendar-slot__complete'
+                            + (taskStatusToggleDone ? ' planning-calendar-slot__complete--done' : ''),
+                        title: toggleLabel,
+                        'aria-label': toggleLabel,
+                        'aria-pressed': taskStatusToggleDone ? 'true' : 'false',
+                        onPointerDown: (event) => event.stopPropagation(),
+                        onTouchStart: (event) => event.stopPropagation(),
+                        onClick: (event) => {
+                            event.stopPropagation();
+                            onTaskStatusToggle();
+                        },
+                    }, toggleIcon),
+                    typeof onDeleteClick === 'function' && h('button', {
+                        type: 'button',
+                        className: 'planning-calendar-slot__delete',
+                        title: 'Удалить слот',
+                        'aria-label': 'Удалить слот',
+                        onPointerDown: (event) => event.stopPropagation(),
+                        onTouchStart: (event) => event.stopPropagation(),
+                        onClick: (event) => {
+                            event.stopPropagation();
+                            onDeleteClick(event);
+                        },
+                    }, h('span', { className: 'planning-calendar-slot__delete-icon', 'aria-hidden': 'true' }, '×')),
+                ),
+            ),
             showResizeHandle && h('button', {
                 type: 'button',
-                className: 'planning-calendar-slot__resize planning-calendar-slot__resize--start',
+                className: 'planning-calendar-slot__resize planning-calendar-slot__resize--start planning-calendar-slot__resize--corner-l',
                 onPointerDown: (event) => onResizeStart(slot, 'start', event),
                 onTouchStart: (event) => event.stopPropagation(),
                 onClick: (event) => event.stopPropagation(),
-                title: 'Изменить время начала',
-                'aria-label': 'Изменить время начала',
+                title: 'Изменить время начала (угол)',
+                'aria-label': 'Изменить время начала, левый угол',
             }),
             showResizeHandle && h('button', {
                 type: 'button',
-                className: 'planning-calendar-slot__resize planning-calendar-slot__resize--end',
+                className: 'planning-calendar-slot__resize planning-calendar-slot__resize--start planning-calendar-slot__resize--corner-r',
+                onPointerDown: (event) => onResizeStart(slot, 'start', event),
+                onTouchStart: (event) => event.stopPropagation(),
+                onClick: (event) => event.stopPropagation(),
+                title: 'Изменить время начала (угол)',
+                'aria-label': 'Изменить время начала, правый угол',
+            }),
+            showResizeHandle && h('button', {
+                type: 'button',
+                className: 'planning-calendar-slot__resize planning-calendar-slot__resize--end planning-calendar-slot__resize--corner-l',
                 onPointerDown: (event) => onResizeStart(slot, 'end', event),
                 onTouchStart: (event) => event.stopPropagation(),
                 onClick: (event) => event.stopPropagation(),
-                title: 'Изменить время окончания',
-                'aria-label': 'Изменить время окончания',
+                title: 'Изменить время окончания (угол)',
+                'aria-label': 'Изменить время окончания, левый угол',
+            }),
+            showResizeHandle && h('button', {
+                type: 'button',
+                className: 'planning-calendar-slot__resize planning-calendar-slot__resize--end planning-calendar-slot__resize--corner-r',
+                onPointerDown: (event) => onResizeStart(slot, 'end', event),
+                onTouchStart: (event) => event.stopPropagation(),
+                onClick: (event) => event.stopPropagation(),
+                title: 'Изменить время окончания (угол)',
+                'aria-label': 'Изменить время окончания, правый угол',
             }),
         );
     }
@@ -44407,6 +45140,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                 }
             },
             onTouchStart: (event) => {
+                if (typeof window.PointerEvent === 'function') return;
                 if (typeof onTouchDragStart === 'function') {
                     onTouchDragStart({
                         event,
@@ -44462,6 +45196,9 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         const [isCalendarDragZoomActive, setIsCalendarDragZoomActive] = useState(false);
         const [touchDragPreview, setTouchDragPreview] = useState(null);
         const [touchDragSourceKey, setTouchDragSourceKey] = useState('');
+        const [rangeSelectPreview, setRangeSelectPreview] = useState(null);
+        const [slotDeleteTarget, setSlotDeleteTarget] = useState(null);
+        const rangePointerSessionRef = useRef(null);
         const resizeStateRef = useRef(null);
         const headerShellRef = useRef(null);
         const headerRef = useRef(null);
@@ -44994,6 +45731,9 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             const touchPoint = event?.touches?.[0];
             if (!touchPoint || (event?.touches?.length || 0) !== 1) return;
 
+            /* Pointer Events handle touch on modern browsers; legacy path = long-press only */
+            if (typeof window.PointerEvent === 'function') return;
+
             finishCalendarTouchDrag();
 
             const targetNode = event.currentTarget;
@@ -45137,10 +45877,10 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             onDragStateChange,
         }) => {
             const pointerType = String(event?.pointerType || '').toLowerCase();
-            if (pointerType === 'touch' || pointerType === 'pen') return;
             if (event.button != null && event.button !== 0) return;
 
-            if (event.cancelable) event.preventDefault();
+            /* Touch/pen: defer preventDefault until drag activates so scroll still works from a slot */
+            if (pointerType === 'mouse' && event.cancelable) event.preventDefault();
 
             finishCalendarTouchDrag();
 
@@ -45633,6 +46373,82 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             }));
         };
 
+        const beginCalendarCellPointer = (day, event) => {
+            if (event.pointerType === 'mouse' && event.button !== 0) return;
+            if (rangePointerSessionRef.current) return;
+            const col = typeof event.currentTarget.closest === 'function'
+                ? event.currentTarget.closest('.planning-calendar-day-col')
+                : null;
+            if (!col) return;
+
+            const rect = col.getBoundingClientRect();
+            const y = event.clientY - rect.top;
+            const session = {
+                day,
+                col,
+                pointerId: event.pointerId,
+                y0: y,
+                y1: y,
+                moved: false,
+            };
+            rangePointerSessionRef.current = session;
+
+            const onMove = (ev) => {
+                const active = rangePointerSessionRef.current;
+                if (!active || ev.pointerId !== active.pointerId) return;
+                const r = active.col.getBoundingClientRect();
+                active.y1 = ev.clientY - r.top;
+                if (Math.abs(active.y1 - active.y0) >= RANGE_DRAG_THRESHOLD_PX) {
+                    active.moved = true;
+                    if (ev.cancelable) ev.preventDefault();
+                }
+                if (!active.moved) return;
+                const topY = Math.min(active.y0, active.y1);
+                const heightPx = Math.max(RANGE_DRAG_THRESHOLD_PX, Math.abs(active.y1 - active.y0));
+                setRangeSelectPreview({ day: active.day, top: topY, height: heightPx });
+            };
+
+            const finish = (ev) => {
+                const active = rangePointerSessionRef.current;
+                if (!active || ev.pointerId !== active.pointerId) return;
+                window.removeEventListener('pointermove', onMove);
+                window.removeEventListener('pointerup', finish);
+                window.removeEventListener('pointercancel', finish);
+                rangePointerSessionRef.current = null;
+                setRangeSelectPreview(null);
+
+                const r = active.col.getBoundingClientRect();
+                active.y1 = ev.clientY - r.top;
+
+                if (!active.moved) {
+                    if (!shouldSuppressCalendarClick()) {
+                        const hourIndex = Math.max(0, Math.min(HOURS.length - 1, Math.floor(active.y0 / CALENDAR_HOUR_HEIGHT)));
+                        openNewSlot(active.day, HOURS[hourIndex]);
+                    }
+                    return;
+                }
+
+                const times = rangeColumnYToSlotTimes(
+                    active.y0,
+                    active.y1,
+                    CALENDAR_TOTAL_HEIGHT,
+                    HOURS.length,
+                    CALENDAR_START_HOUR,
+                );
+                suppressCalendarClick();
+                setSlotDraft(buildSlotDraft({
+                    date: active.day,
+                    startTime: times.startTime,
+                    endTime: times.endTime,
+                    quickCreate: true,
+                }));
+            };
+
+            window.addEventListener('pointermove', onMove, { passive: false });
+            window.addEventListener('pointerup', finish);
+            window.addEventListener('pointercancel', finish);
+        };
+
         const handleDropToCell = (date, hour, event) => {
             event.preventDefault();
             setCalendarDragZoom(false);
@@ -45641,6 +46457,26 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             const payload = parsePlanningDragPayload(event);
             applyDragPayloadToCell(date, hour, payload);
             flashCalendarDropCommitAccent(date, hour);
+        };
+
+        const removeCalendarSlotKeepTask = (slot, columnDay) => {
+            const taskId = slot?.taskId;
+            const remaining = state.slots.filter((s) => s.taskId === taskId && s.id !== slot.id);
+            state.deleteSlot(slot.id);
+            if (taskId && remaining.length === 0) {
+                state.updateTask(taskId, {
+                    startDate: columnDay,
+                    dueDate: columnDay,
+                });
+            }
+        };
+
+        const removeCalendarSlotAndTask = (slot) => {
+            if (slot.taskId) {
+                state.deleteTask(slot.taskId);
+            } else {
+                state.deleteSlot(slot.id);
+            }
         };
 
         const beginResize = (slot, edge, event) => {
@@ -45848,7 +46684,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                                     + (calendarCellDropPreview?.day === day && calendarCellDropPreview?.hour === hour
                                         ? ' planning-calendar-cell--drop-target'
                                         : ''),
-                                onClick: () => openNewSlot(day, hour),
+                                onPointerDown: (event) => beginCalendarCellPointer(day, event),
                                 onDragOver: (event) => {
                                     const payload = parsePlanningDragPayload(event);
                                     if (!isPlanningCalendarDragPayload(payload)) return;
@@ -45861,6 +46697,14 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                                 },
                                 onDrop: (event) => handleDropToCell(day, hour, event),
                             })),
+                            rangeSelectPreview && rangeSelectPreview.day === day && h('div', {
+                                className: 'planning-calendar-range-selection',
+                                style: {
+                                    top: rangeSelectPreview.top + 'px',
+                                    height: rangeSelectPreview.height + 'px',
+                                },
+                                'aria-hidden': 'true',
+                            }),
                             calendarCellDropPreview?.day === day && h('div', {
                                 className: 'planning-calendar-drop-preview'
                                     + (calendarCellDropPreview.kind === 'slot'
@@ -45909,6 +46753,10 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                                 const metrics = buildSlotMetrics(slotPreview);
                                 const appearance = resolveCalendarSlotAppearance(day, yesterdayIso, linkedTask, state.projects);
                                 const parentGroupLabel = linkedTask ? buildTaskParentGroupLabel(linkedTask, taskMap) : '';
+                                const showTaskStatusToggle = Boolean(
+                                    linkedTask && linkedTask.status !== 'cancelled',
+                                );
+                                const isTaskDone = linkedTask?.status === 'done';
                                 return h(CalendarSlotCard, {
                                     key: slot.id,
                                     slot,
@@ -45919,6 +46767,12 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                                     subtitle: slotPreview.startTime + '–' + slotPreview.endTime,
                                     parentGroupLabel,
                                     showSubtitle: !parentGroupLabel || metrics.height >= 44,
+                                    taskStatusToggleDone: isTaskDone,
+                                    onTaskStatusToggle: showTaskStatusToggle
+                                        ? () => state.updateTask(linkedTask.id, {
+                                            status: isTaskDone ? 'in_progress' : 'done',
+                                        })
+                                        : undefined,
                                     onDragStateChange: setCalendarDragZoom,
                                     onTouchDragStart: handleCalendarTouchStart,
                                     onPointerDragStart: handleCalendarPointerDragStart,
@@ -45928,6 +46782,10 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                                     showResizeHandle: true,
                                     onOpen: () => setSlotDraft(buildSlotDraft(slot)),
                                     onResizeStart: beginResize,
+                                    onDeleteClick: () => {
+                                        suppressCalendarClick();
+                                        setSlotDeleteTarget({ slot, day });
+                                    },
                                 });
                             }),
                             day === todayIso && isCalendarNowTopVisible(nowLineTop) && h('div', {
@@ -45943,7 +46801,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                     ),
                 ),
             ),
-            touchDragPreview && touchDragPreview.kind !== 'slot' && h('div', {
+            touchDragPreview && h('div', {
                 className: 'planning-calendar-touch-preview'
                     + (touchDragPreview.kind === 'slot'
                         ? ' planning-calendar-touch-preview--slot'
@@ -45967,7 +46825,20 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                     className: 'planning-calendar-touch-preview__badge',
                 }, touchDragPreview.badgeText),
             ),
-            slotDraft && h(SlotEditorModal, {
+            slotDeleteTarget && h(SlotDeleteActionSheet, {
+                slot: slotDeleteTarget.slot,
+                columnDay: slotDeleteTarget.day,
+                hasLinkedTask: !!slotDeleteTarget.slot.taskId,
+                onClose: () => setSlotDeleteTarget(null),
+                onSlotOnly: () => removeCalendarSlotKeepTask(slotDeleteTarget.slot, slotDeleteTarget.day),
+                onSlotAndTask: () => removeCalendarSlotAndTask(slotDeleteTarget.slot),
+            }),
+            slotDraft && slotDraft.quickCreate && h(QuickSlotModal, {
+                draft: slotDraft,
+                state,
+                onClose: () => setSlotDraft(null),
+            }),
+            slotDraft && !slotDraft.quickCreate && h(SlotEditorModal, {
                 draft: slotDraft,
                 state,
                 resolvedTaskProjectIds,
@@ -46320,7 +47191,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     if (!React || !Planning.Store || !Planning.Utils) return;
 
     const h = React.createElement;
-    const { useMemo, useState } = React;
+    const { useEffect, useMemo, useRef, useState } = React;
     const { dateStr, getTaskDurationMinutes } = Planning.Utils;
 
     function readDayRecord(isoDate) {
@@ -46336,6 +47207,76 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             console.warn('[HEYS.planning.context] day record read failed', error);
         }
         return null;
+    }
+
+    function getSessionTokenForPlanningRpc() {
+        try {
+            if (HEYS.auth && typeof HEYS.auth.getSessionToken === 'function') {
+                var t = HEYS.auth.getSessionToken();
+                if (t) return typeof t === 'string' ? t : String(t);
+            }
+        } catch (e) { /* noop */ }
+        try {
+            if (typeof localStorage !== 'undefined') {
+                return localStorage.getItem('heys_session_token') || '';
+            }
+        } catch (e2) { /* noop */ }
+        return '';
+    }
+
+    function getTargetClientIdForPrompt() {
+        var id = '';
+        try {
+            if (HEYS.cloud && typeof HEYS.cloud.getClientId === 'function') {
+                id = String(HEYS.cloud.getClientId() || '');
+            }
+        } catch (e) { /* noop */ }
+        if (!id && typeof localStorage !== 'undefined') {
+            id = localStorage.getItem('heys_pin_auth_client') || localStorage.getItem('heys_client_current') || '';
+        }
+        return id;
+    }
+
+    function refreshPlanningFromCloud() {
+        var YandexAPI = HEYS.YandexAPI;
+        var Store = HEYS.Planning && HEYS.Planning.Store;
+        if (!YandexAPI || !Store || typeof YandexAPI.getKVBatch !== 'function') {
+            return Promise.resolve({ ok: false, reason: 'no_api' });
+        }
+        var clientId = getTargetClientIdForPrompt();
+        var keys = [
+            'heys_planning_projects',
+            'heys_planning_tasks',
+            'heys_planning_slots',
+            'heys_planning_inbox_v1',
+            'heys_planning_links_v1',
+        ];
+        return YandexAPI.getKVBatch(clientId, keys).then(function (res) {
+            if (res.error || !Array.isArray(res.data)) {
+                return { ok: false, reason: res.error || 'batch_failed' };
+            }
+            res.data.forEach(function (item) {
+                if (!item || item.k == null || item.v == null) return;
+                if (item.k === 'heys_planning_projects' && typeof Store.saveProjects === 'function') {
+                    Store.saveProjects(item.v);
+                } else if (item.k === 'heys_planning_tasks' && typeof Store.saveTasks === 'function') {
+                    Store.saveTasks(item.v);
+                } else if (item.k === 'heys_planning_slots' && typeof Store.saveSlots === 'function') {
+                    Store.saveSlots(item.v);
+                } else if (item.k === 'heys_planning_inbox_v1' && typeof Store.saveContextInboxItems === 'function') {
+                    Store.saveContextInboxItems(item.v);
+                } else if (item.k === 'heys_planning_links_v1' && typeof Store.saveLinks === 'function') {
+                    Store.saveLinks(item.v);
+                }
+            });
+            // Same-tab localStorage writes do not emit "storage"; Planning usePlanningState listens for this.
+            try {
+                if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
+                    window.dispatchEvent(new CustomEvent('heys:planning-updated'));
+                }
+            } catch (e) { /* noop */ }
+            return { ok: true };
+        });
     }
 
     function formatTimestamp(isoString) {
@@ -46517,9 +47458,56 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     }
 
     function QuickCaptureSection(props) {
+        var CAPTURE_DRAFT_KEY = 'heys_planning_context_capture_draft_v1';
         const [draft, setDraft] = useState('');
         const [selectedType, setSelectedType] = useState('capture');
         const [error, setError] = useState('');
+
+        useEffect(function () {
+            try {
+                var raw = null;
+                if (window.U && typeof window.U.lsGet === 'function') {
+                    raw = window.U.lsGet(CAPTURE_DRAFT_KEY, null);
+                } else if (HEYS.store && typeof HEYS.store.get === 'function') {
+                    raw = HEYS.store.get(CAPTURE_DRAFT_KEY, null);
+                } else if (typeof window !== 'undefined' && window.localStorage) {
+                    raw = window.localStorage.getItem(CAPTURE_DRAFT_KEY);
+                    if (raw) raw = JSON.parse(raw);
+                }
+                if (!raw || typeof raw !== 'object') return;
+                var savedText = String(raw.text || '');
+                var savedType = String(raw.type || 'capture');
+                if (savedText) setDraft(savedText);
+                if (CONTEXT_TYPES.some(function (ct) { return ct.id === savedType; })) setSelectedType(savedType);
+            } catch (error) {
+                console.warn('[HEYS.planning.context] capture draft restore failed', error);
+            }
+        }, []);
+
+        useEffect(function () {
+            try {
+                var payload = { text: String(draft || ''), type: String(selectedType || 'capture') };
+                if (!payload.text.trim()) {
+                    if (window.U && typeof window.U.lsDel === 'function') {
+                        window.U.lsDel(CAPTURE_DRAFT_KEY);
+                    } else if (HEYS.store && typeof HEYS.store.del === 'function') {
+                        HEYS.store.del(CAPTURE_DRAFT_KEY);
+                    } else if (typeof window !== 'undefined' && window.localStorage) {
+                        window.localStorage.removeItem(CAPTURE_DRAFT_KEY);
+                    }
+                    return;
+                }
+                if (window.U && typeof window.U.lsSet === 'function') {
+                    window.U.lsSet(CAPTURE_DRAFT_KEY, payload);
+                } else if (HEYS.store && typeof HEYS.store.set === 'function') {
+                    HEYS.store.set(CAPTURE_DRAFT_KEY, payload);
+                } else if (typeof window !== 'undefined' && window.localStorage) {
+                    window.localStorage.setItem(CAPTURE_DRAFT_KEY, JSON.stringify(payload));
+                }
+            } catch (error) {
+                console.warn('[HEYS.planning.context] capture draft save failed', error);
+            }
+        }, [draft, selectedType]);
 
         function handleSave() {
             const text = String(draft || '').trim();
@@ -46536,12 +47524,23 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             }
             setDraft('');
             setError('');
+            try {
+                if (window.U && typeof window.U.lsDel === 'function') {
+                    window.U.lsDel(CAPTURE_DRAFT_KEY);
+                } else if (HEYS.store && typeof HEYS.store.del === 'function') {
+                    HEYS.store.del(CAPTURE_DRAFT_KEY);
+                } else if (typeof window !== 'undefined' && window.localStorage) {
+                    window.localStorage.removeItem(CAPTURE_DRAFT_KEY);
+                }
+            } catch (error) {
+                console.warn('[HEYS.planning.context] capture draft clear failed', error);
+            }
         }
 
         return h('section', { className: 'planning-card planning-context-capture' }, [
             h('div', { key: 'header', className: 'planning-context-section-head' }, [
                 h('h3', { key: 'title', className: 'planning-section__title' }, 'Быстрый capture'),
-                h('p', { key: 'desc', className: 'planning-section__desc' }, 'Мысль, задача, тема, решение, вопрос, ограничение или ценность — выбери тип и запиши.'),
+                h('p', { key: 'desc', className: 'planning-section__desc' }, 'Сохрани мысль в inbox: это быстрый сбор контекста. Разбор по категориям и приоритетам делает агент на шаге «🧠 Всё».'),
             ]),
             h('div', { key: 'types', className: 'planning-context-type-chips' },
                 CONTEXT_TYPES.map(function (ct) {
@@ -46566,14 +47565,26 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             }),
             h('div', { key: 'footer', className: 'planning-context-capture__footer' }, [
                 h('div', { key: 'meta', className: 'planning-context-capture__meta' },
-                    selectedType === 'task' ? 'Сразу создастся задача в списке.' : 'Сохраняется в inbox и синхронизируется между устройствами.'
+                    selectedType === 'task'
+                        ? 'Сразу создастся задача в списке.'
+                        : 'Сохраняется в inbox и синхронизируется между устройствами. Авто-разбор включается через «🧠 Всё».'
                 ),
-                h('button', {
-                    key: 'save',
-                    type: 'button',
-                    className: 'planning-btn planning-btn--primary',
-                    onClick: handleSave,
-                }, selectedType === 'task' ? 'Создать задачу' : 'Сохранить'),
+                h('div', { key: 'actions', className: 'planning-context-capture__actions' }, [
+                    h('button', {
+                        key: 'agent',
+                        type: 'button',
+                        className: 'planning-btn planning-btn--secondary',
+                        onClick: function () {
+                            if (typeof props.onOpenAgentHandoff === 'function') props.onOpenAgentHandoff();
+                        },
+                    }, 'Разобрать через агента'),
+                    h('button', {
+                        key: 'save',
+                        type: 'button',
+                        className: 'planning-btn planning-btn--primary',
+                        onClick: handleSave,
+                    }, selectedType === 'task' ? 'Создать задачу' : 'Сохранить'),
+                ]),
             ]),
             error ? h('div', { key: 'error', className: 'planning-context-inline-error' }, error) : null,
         ]);
@@ -46583,7 +47594,20 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         const item = props.item;
         const linkedCount = Array.isArray(item?.linkedTaskIds) ? item.linkedTaskIds.length : 0;
         const typeMeta = getTypeMeta(item?.type);
+        const manualMode = !!props.manualMode;
+        const resolutionMeta = (function () {
+            if (item?.type === 'decision' || item?.status === 'archived') {
+                return { label: 'Решено', className: 'planning-context-resolution-badge--done' };
+            }
+            if (item?.type === 'question') {
+                return { label: 'Ждёт решения', className: 'planning-context-resolution-badge--waiting' };
+            }
+            return { label: 'В контексте', className: 'planning-context-resolution-badge--context' };
+        })();
         const [showTypeMenu, setShowTypeMenu] = useState(false);
+        const [showActions, setShowActions] = useState(false);
+        const bodyText = String(item?.body || item?.preview || '');
+        const compactBody = bodyText.length > 190 ? bodyText.slice(0, 190) + '…' : bodyText;
 
         return h('article', { className: 'planning-context-entry planning-context-entry--type-' + (item?.type || 'capture') }, [
             h('div', { key: 'head', className: 'planning-context-entry__head' }, [
@@ -46599,62 +47623,94 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                     h('span', { key: 'time', className: 'planning-context-entry__time' }, formatTimestamp(item?.updatedAt || item?.createdAt)),
                 ]),
             ]),
-            h('div', { key: 'body', className: 'planning-context-entry__body' }, item?.body || item?.preview || ''),
-            linkedCount > 0
-                ? h('div', { key: 'linked', className: 'planning-context-entry__linked' }, '🔗 ' + linkedCount + ' ' + pluralize(linkedCount, 'задача', 'задачи', 'задач'))
-                : null,
-            h('div', { key: 'footer', className: 'planning-context-entry__footer' }, [
+            h('div', { key: 'body', className: 'planning-context-entry__body' }, manualMode ? bodyText : compactBody),
+            h(
+                'div',
+                { key: 'linked', className: 'planning-context-entry__linked' },
+                [
+                    h('span', {
+                        key: 'resolution',
+                        className: 'planning-context-resolution-badge ' + resolutionMeta.className,
+                    }, resolutionMeta.label),
+                    h('span', { key: 'links' },
+                        linkedCount > 0
+                            ? '🔗 Связи: ' + linkedCount + ' ' + pluralize(linkedCount, 'связь', 'связи', 'связей')
+                            : '🔗 Связи: пока без связей'
+                    ),
+                ]
+            ),
+            manualMode ? h('div', { key: 'footer', className: 'planning-context-entry__footer' }, [
                 h('div', { key: 'actions', className: 'planning-context-entry__actions' }, [
                     h('button', {
-                        key: 'promote',
+                        key: 'toggle-actions',
                         type: 'button',
                         className: 'planning-btn planning-btn--ghost planning-btn--sm',
-                        onClick: function () { props.onPromote(item); },
-                    }, linkedCount > 0 ? '+ задача' : '→ В задачу'),
-                    h('div', { key: 'retype-wrap', className: 'planning-context-retype-wrap' }, [
+                        onClick: function () { setShowActions(!showActions); },
+                    }, showActions ? 'Скрыть действия' : '⋯ Действия'),
+                    showActions ? h('div', { key: 'actions-expanded', className: 'planning-context-entry__actions-expanded' }, [
                         h('button', {
-                            key: 'retype',
+                            key: 'promote',
                             type: 'button',
                             className: 'planning-btn planning-btn--ghost planning-btn--sm',
-                            onClick: function () { setShowTypeMenu(!showTypeMenu); },
-                        }, '🏷 Тип'),
-                        showTypeMenu ? h('div', { key: 'menu', className: 'planning-context-retype-menu' },
-                            CONTEXT_TYPES.filter(function (ct) { return ct.id !== 'task' && ct.id !== item?.type; }).map(function (ct) {
-                                return h('button', {
-                                    key: ct.id,
-                                    type: 'button',
-                                    className: 'planning-context-retype-menu__item',
-                                    onClick: function () {
-                                        props.onRetype(item.id, ct.id);
-                                        setShowTypeMenu(false);
-                                    },
-                                }, ct.icon + ' ' + ct.label);
-                            })
-                        ) : null,
-                    ]),
-                    h('button', {
-                        key: 'delete',
-                        type: 'button',
-                        className: 'planning-btn planning-btn--ghost planning-btn--sm planning-btn--danger',
-                        onClick: function () { props.onDelete(item.id); },
-                    }, '✕'),
+                            onClick: function () { props.onPromote(item); },
+                        }, linkedCount > 0 ? '+ задача' : '→ В задачу'),
+                        h('div', { key: 'retype-wrap', className: 'planning-context-retype-wrap' }, [
+                            h('button', {
+                                key: 'retype',
+                                type: 'button',
+                                className: 'planning-btn planning-btn--ghost planning-btn--sm',
+                                onClick: function () { setShowTypeMenu(!showTypeMenu); },
+                            }, '🏷 Тип'),
+                            showTypeMenu ? h('div', { key: 'menu', className: 'planning-context-retype-menu' },
+                                CONTEXT_TYPES.filter(function (ct) { return ct.id !== 'task' && ct.id !== item?.type; }).map(function (ct) {
+                                    return h('button', {
+                                        key: ct.id,
+                                        type: 'button',
+                                        className: 'planning-context-retype-menu__item',
+                                        onClick: function () {
+                                            props.onRetype(item.id, ct.id);
+                                            setShowTypeMenu(false);
+                                        },
+                                    }, ct.icon + ' ' + ct.label);
+                                })
+                            ) : null,
+                        ]),
+                        h('button', {
+                            key: 'delete',
+                            type: 'button',
+                            className: 'planning-btn planning-btn--ghost planning-btn--sm planning-btn--danger',
+                            onClick: function () { props.onDelete(item.id); },
+                        }, '✕'),
+                    ]) : null,
                 ]),
-            ]),
+            ]) : null,
         ]);
     }
 
     function ContextInboxSection(props) {
         const items = Array.isArray(props.items) ? props.items : [];
+        const [manualMode, setManualMode] = useState(false);
         return h('section', { className: 'planning-card planning-context-inbox' }, [
             h('div', { key: 'header', className: 'planning-context-section-head' }, [
-                h('h3', { key: 'title', className: 'planning-section__title' }, 'Inbox контекста'),
-                h('p', { key: 'desc', className: 'planning-section__desc' }, 'Сырые заметки и сигналы. Превращай нужное в задачи или меняй тип.'),
+                h('div', { key: 'head-row', className: 'planning-context-inbox__header-row' }, [
+                    h('h3', { key: 'title', className: 'planning-section__title' }, 'Inbox контекста'),
+                    h('button', {
+                        key: 'manual-mode',
+                        type: 'button',
+                        className: 'planning-btn planning-btn--ghost planning-btn--sm',
+                        onClick: function () { setManualMode(!manualMode); },
+                    }, manualMode ? 'Авто-режим' : 'Ручное редактирование'),
+                ]),
+                h('p', { key: 'desc', className: 'planning-section__desc' }, manualMode
+                    ? 'Ручной режим: можно промоутить в задачи, менять тип и удалять записи.'
+                    : 'Журнал контекста. Основной поток: «🧠 Всё» → агент сам применяет изменения.'),
             ]),
             items.length
                 ? h('div', { key: 'list', className: 'planning-context-entry-list' }, items.map(function (item) {
                     return h(InboxEntry, {
                         key: item.id,
                         item: item,
+                        manualMode: manualMode,
                         onDelete: props.onDelete,
                         onPromote: props.onPromote,
                         onRetype: props.onRetype,
@@ -46669,6 +47725,9 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
     function AgentHandoffSection(props) {
         const [copied, setCopied] = useState('');
+        const [applyBusy, setApplyBusy] = useState(false);
+        const [applyNotice, setApplyNotice] = useState('');
+        const [agentPromptExtra, setAgentPromptExtra] = useState('');
 
         function buildInboxText() {
             var items = Array.isArray(props.items) ? props.items : [];
@@ -46697,84 +47756,194 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             return lines.join('\n');
         }
 
+        function getRecentDayEntries(limit) {
+            var entries = [];
+            var safeLimit = Math.max(1, Number(limit) || 5);
+            try {
+                if (typeof window === 'undefined' || !window.localStorage) return entries;
+                var storage = window.localStorage;
+                for (var i = 0; i < storage.length; i += 1) {
+                    var key = String(storage.key(i) || '');
+                    if (key.indexOf('heys_dayv2_') !== 0) continue;
+                    var iso = key.slice('heys_dayv2_'.length);
+                    if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) continue;
+                    entries.push({ iso: iso, record: readDayRecord(iso) || {} });
+                }
+            } catch (error) {
+                console.warn('[HEYS.planning.context] recent day records read failed', error);
+            }
+
+            entries.sort(function (a, b) {
+                return a.iso < b.iso ? 1 : -1;
+            });
+            return entries.slice(0, safeLimit);
+        }
+
+        function normalizeInlineText(value) {
+            return String(value || '').replace(/\s+/g, ' ').trim();
+        }
+
+        function buildRecentDaysContext() {
+            var entries = getRecentDayEntries(5);
+            if (!entries.length) return 'Нет данных за последние дни.';
+
+            return entries.map(function (entry) {
+                var record = entry.record || {};
+                var sleepHours = Number(
+                    record?.sleepHours
+                    || record?.sleep_hours
+                    || record?.sleep?.hours
+                    || record?.sleep?.totalHours
+                    || 0
+                );
+                var stressScore = Number(
+                    record?.stress
+                    || record?.stressLevel
+                    || record?.mood?.stress
+                    || record?.body?.stress
+                    || 0
+                );
+                var protein = Number(
+                    record?.dayTot?.prot
+                    || record?.dayTot?.protein
+                    || record?.nutrition?.prot
+                    || 0
+                );
+                var note = normalizeInlineText(
+                    record?.note
+                    || record?.notes
+                    || record?.comment
+                    || record?.dayComment
+                    || record?.summary
+                    || ''
+                );
+
+                var parts = [
+                    '- ' + entry.iso,
+                    'sleep=' + formatHours(sleepHours),
+                    'stress=' + (stressScore > 0 ? String(stressScore).replace('.', ',') + '/10' : 'нет данных'),
+                    'protein=' + (protein > 0 ? Math.round(protein) + ' г' : 'нет данных'),
+                ];
+                if (note) parts.push('note=' + note.slice(0, 220));
+                return parts.join(' | ');
+            }).join('\n');
+        }
+
+        function buildSnapshotTextForIngest() {
+            return '== HEYS Context Snapshot ==\n\n--- Контекст дня ---\n' + buildDayContext() + '\n\n--- Inbox ---\n' + buildInboxText();
+        }
+
         function buildFullContext() {
-            var snapshot = '== HEYS Context Snapshot ==\n\n--- Контекст дня ---\n' + buildDayContext() + '\n\n--- Inbox ---\n' + buildInboxText();
+            var snapshot = buildSnapshotTextForIngest();
+            var targetClientId = getTargetClientIdForPrompt();
             return [
-                'Ты — мой context copilot для HEYS-v2.',
-                'Это жизненный контекст. Не переспрашивай. Сразу разбирай.',
+                'Ты — context copilot HEYS-v2. Не переспрашивай, кроме unresolved.',
+                'Сразу делай anti-duplicate-first и APPLY_NOW=true.',
                 '',
-                '═══ HEYS В ДВУХ СЛОВАХ ═══',
+                'APPLY:',
+                '- api_first: POST /planning/context-ingest (fn=planning_context_ingest)',
+                '- fallback: browser_if_api_unavailable',
+                '- idempotency_key: <stable-key-per-message>',
+                '- dedupe_order: exact_match > semantic_match > safe_skip > created_new',
+                '- apply_required: true (разбор без попытки apply считается неполным ответом)',
+                '- если apply не выполнен: явно укажи причину и статус apply_failed/analyzed_only',
+                '- если нужен follow-up по unresolved: после ответа пользователя сразу повтори ingest с parentIngestId',
                 '',
-                'HEYS — мобильное PWA (питание + жизненное планирование).',
-                'Раздел Planning → 4 экрана: Список, Календарь, Гант, Контекст (🧠).',
-                'PIN-only доступ. AI внутри нет — ты единственный мозг.',
+                '[APPLY_IDENTITY]',
+                '- actorId: текущий PIN-клиент HEYS',
+                '- targetClientId: ' + (targetClientId || '<войди по PIN — id подставится из сессии>'),
+                '- targetScope: planning_only',
+                '- if targetClientId missing/invalid => apply_failed (do not write)',
                 '',
-                '═══ СУЩНОСТИ ═══',
+                'Если есть unresolved (Ждёт решения / question):',
+                '1) задай короткие вопросы',
+                '2) после моих ответов сразу follow-up ingest (parentIngestId)',
                 '',
-                'InboxItem.type — 7 типов:',
-                '  💭 capture     — сырая мысль, наблюдение',
-                '  ☑️ task        — конкретное действие',
-                '  🧵 thread      — длинная тема (клиент, проект, здоровье)',
-                '  ✅ decision    — что решено или договорено',
-                '  ❓ question    — что неясно, требует ответа',
-                '  🚧 constraint  — ограничение, правило',
-                '  💎 value       — ценность, приоритет, смысл',
-                '',
-                'Task: { priority: p1|p2|p3, status: todo|in_progress|done, projectId, dueDate }',
-                'Link.relation: promoted_to | causes | blocks | related | supports | contradicts',
-                '',
-                '═══ РЕЖИМ ДНЯ ═══',
-                '',
-                '🟡 careful  — сон < 6.5ч ИЛИ стресс ≥ 7',
-                '🔴 focus    — overdue ≥ 3, ИЛИ todayDue ≥ 3, ИЛИ scheduled ≥ 4ч, ИЛИ inbox ≥ 6',
-                '🟢 steady   — всё остальное',
-                '',
-                '═══ ЧТО ДЕЛАТЬ ═══',
-                '',
-                '1. Пойми суть — 3–5 ключевых смыслов.',
-                '2. Определи режим — careful / steady / focus + почему.',
-                '3. Не дублируй — если это update existing → обнови.',
-                '4. Раздроби на полный спектр типов.',
-                '5. Построй связи — [node A] —relation→ [node B].',
-                '6. Приоритизируй — now / next / later с учётом жизненного ресурса.',
-                '7. Если есть браузер VS Code + localhost:3001 — запиши через:',
-                '   const S = HEYS.Planning.Store;',
-                '   S.addTask(title, { priority, projectId, dueDate })',
-                '   S.addContextInboxItem(text, { type })',
-                '   S.addLink(fromId, toId, { relation, label })',
-                '   S.updateContextInboxItem(id, { type, status })',
-                '',
-                '═══ ПРАВИЛА ═══',
-                '',
-                '- Часть контекста ДОЛЖНА остаться контекстом, а не задачей.',
-                '- Values и Constraints — полноценные узлы, не комментарии.',
-                '- Не давай общие советы вроде "будь внимательнее".',
-                '- Отвечай по-русски. Ключи полей — на английском.',
-                '',
-                '═══ ФОРМАТ ОТВЕТА ═══',
-                '',
-                '## 1. Суть контекста',
-                '## 2. Режим дня — mode / why / давление / чего не делать',
-                '## 3. Декомпозиция',
-                '| # | type | icon | Что | projectId | priority | связь с |',
-                '## 4. Нейро-карта — Nodes + Links',
-                '## 5. Приоритет — now / next / later',
-                '## 6. API-команды (если есть браузер)',
+                'Ответ строго:',
+                '- Факт → Что сделал → Почему',
+                '- PLAN: now / next / later',
+                '- AUDIT: ingestId, parentIngestId, idempotencyKey, applyStatus, fallbackUsed',
                 '',
                 '═══ КОНТЕКСТ ═══',
                 '',
                 '[SNAPSHOT]',
                 snapshot,
                 '',
-                '[ДОПОЛНИТЕЛЬНЫЙ КОНТЕКСТ]',
-                '<допиши что есть в голове>',
+                '[HEYS_DAYS_LAST_5]',
+                buildRecentDaysContext(),
                 '',
-                '[ЧТО УЖЕ ЕСТЬ В HEYS]',
-                '<если помнишь проекты/задачи — перечисли; если нет — "агент, проверь">',
-                '',
-                '[НЕ ДУБЛИРОВАТЬ]',
-                '<что точно не надо создавать повторно>',
+                '[ДОП.КОНТЕКСТ]',
+                '<опционально>',
             ].join('\n');
+        }
+
+        function handleApplyInHeys() {
+            var token = getSessionTokenForPlanningRpc();
+            if (!token) {
+                setApplyNotice('Нужна PIN-сессия: не найден session token.');
+                return;
+            }
+            if (!HEYS.YandexAPI || typeof HEYS.YandexAPI.rpc !== 'function') {
+                setApplyNotice('API клиента недоступен.');
+                return;
+            }
+            setApplyBusy(true);
+            setApplyNotice('');
+            var idem = 'ctx-ingest-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 10);
+            var extra = String(agentPromptExtra || '').trim();
+            var rawPromptText = '';
+            if (extra) {
+                if (extra.indexOf('--- Inbox ---') >= 0) {
+                    rawPromptText = '[ДОПОЛНИТЕЛЬНЫЙ КОНТЕКСТ]\n' + extra;
+                } else {
+                    var lines = extra.split('\n').map(function (l) { return l.trim(); }).filter(Boolean);
+                    var titleLine = lines[0] || extra;
+                    var bodyOneLine = lines.slice(1).join(' ').trim() || titleLine;
+                    rawPromptText = '[ДОПОЛНИТЕЛЬНЫЙ КОНТЕКСТ]\n--- Inbox ---\n1. ☑️ [Задача] ' + titleLine + '\n   ' + bodyOneLine;
+                }
+            }
+            var payload = {
+                source: 'heys_context_apply_button',
+                applyNow: true,
+                dryRun: false,
+                idempotencyKey: idem,
+                policy: { antiDuplicateFirst: true, maxNowTasks: 3 },
+                input: {
+                    sessionToken: token,
+                    snapshotText: buildSnapshotTextForIngest(),
+                    daysLast5Text: buildRecentDaysContext(),
+                    rawPromptText: rawPromptText,
+                    clientTs: new Date().toISOString(),
+                    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
+                },
+            };
+            HEYS.YandexAPI.rpc('planning_context_ingest', payload).then(function (res) {
+                if (res.error) {
+                    setApplyNotice(String(res.error.message || 'Ошибка RPC'));
+                    setApplyBusy(false);
+                    return;
+                }
+                var data = res.data;
+                if (!data || data.ok === false) {
+                    var em = data && data.error && data.error.message ? data.error.message : 'ingest отклонён';
+                    setApplyNotice(em);
+                    setApplyBusy(false);
+                    return;
+                }
+                return refreshPlanningFromCloud().then(function (pull) {
+                    if (!pull.ok) {
+                        setApplyNotice('Сервер применил изменения, но локальное обновление с облака не удалось — перезайди в «Задачи».');
+                    } else {
+                        var m = data.metrics || {};
+                        var s = data.summary || {};
+                        setApplyNotice('Готово: новых сущностей ' + (s.created || 0) + ', слотов ' + (m.ingestSlotsAdded || 0) + ', полей сроков ' + (m.scheduleFieldsApplied || 0) + '.');
+                    }
+                    setApplyBusy(false);
+                });
+            }).catch(function (err) {
+                setApplyNotice(err && err.message ? err.message : 'Сеть');
+                setApplyBusy(false);
+            });
         }
 
         function copyToClipboard(text, label) {
@@ -46789,11 +47958,21 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             }
         }
 
-        return h('section', { className: 'planning-card planning-context-handoff' }, [
+        return h('section', { id: 'planning-agent-handoff', className: 'planning-card planning-context-handoff' }, [
             h('div', { key: 'header', className: 'planning-context-section-head' }, [
                 h('h3', { key: 'title', className: 'planning-section__title' }, '🤖 Передать агенту'),
-                h('p', { key: 'desc', className: 'planning-section__desc' }, 'Скопируй контекст и вставь в чат с агентом (Copilot, Claude, ChatGPT). Агент разложит мысли в задачи, треды и решения.'),
+                h('p', { key: 'desc', className: 'planning-section__desc' }, 'Скопируй в чат или примени сразу в HEYS: задачи, inbox, связи, сроки и слоты календаря (из текста строк вида «до 2026-04-20», «2ч», «10:00»).'),
             ]),
+            h('label', { key: 'extraLabel', className: 'planning-context-handoff__extra-label', htmlFor: 'planning-context-agent-extra' }, 'Доп. текст к применению (планы, сроки — попадёт в ingest как rawPrompt):'),
+            h('textarea', {
+                key: 'extra',
+                id: 'planning-context-agent-extra',
+                className: 'planning-context-handoff__extra',
+                placeholder: 'Например: сегодня вайбкодить приложения 3ч с 14:00, дедлайн по прототипу 2026-04-18',
+                value: agentPromptExtra,
+                onChange: function (e) { setAgentPromptExtra(e.target.value); },
+                rows: 3,
+            }),
             h('div', { key: 'buttons', className: 'planning-context-handoff__buttons' }, [
                 h('button', {
                     key: 'inbox',
@@ -46822,7 +48001,20 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                     h('span', { key: 'icon', className: 'planning-context-handoff__icon' }, '🧠'),
                     h('span', { key: 'label' }, copied === 'full' ? 'Скопировано!' : 'Всё'),
                 ]),
+                h('button', {
+                    key: 'apply',
+                    type: 'button',
+                    className: 'planning-btn planning-btn--secondary planning-context-handoff__btn',
+                    disabled: applyBusy,
+                    onClick: handleApplyInHeys,
+                }, [
+                    h('span', { key: 'icon', className: 'planning-context-handoff__icon' }, '⚡'),
+                    h('span', { key: 'label' }, applyBusy ? 'Применяю…' : 'Применить в HEYS'),
+                ]),
             ]),
+            applyNotice
+                ? h('div', { key: 'applyNote', className: 'planning-context-handoff__notice', role: 'status' }, applyNotice)
+                : null,
             copied === 'error' ? h('div', { key: 'err', className: 'planning-context-inline-error' }, 'Не удалось скопировать.') : null,
         ]);
     }
@@ -46833,11 +48025,347 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         var items = Array.isArray(props.items) ? props.items : [];
         var links = Array.isArray(props.links) ? props.links : [];
         var totalNodes = tasks.length + projects.length + items.length;
+        var canvasRef = useRef(null);
+        var dragStateRef = useRef({ active: false, lastX: 0, lastY: 0, vx: 0.004, vy: 0.002 });
+        var animationRef = useRef(null);
+        var projectedRef = useRef([]);
+        var selectedIndexRef = useRef(-1);
+        var pointerTravelRef = useRef(0);
+        var zoomRef = useRef(1);
+        var pointersRef = useRef({});
+        var pinchRef = useRef({ active: false, startDistance: 0, startZoom: 1 });
+        var [selectedLabel, setSelectedLabel] = useState('');
+        var [zoomUi, setZoomUi] = useState(1);
+
+        var graphData = useMemo(function () {
+            var nodes = [];
+            var indexById = Object.create(null);
+
+            function pushNode(entity, type) {
+                if (!entity || !entity.id || indexById[entity.id] != null) return;
+                indexById[entity.id] = nodes.length;
+                nodes.push({
+                    id: entity.id,
+                    type: type,
+                    label: entity.title || entity.name || entity.preview || 'Узел',
+                });
+            }
+
+            tasks.forEach(function (task) { pushNode(task, 'task'); });
+            projects.forEach(function (project) { pushNode(project, 'project'); });
+            items.forEach(function (item) { pushNode(item, item?.type || 'capture'); });
+
+            var graphLinks = links
+                .filter(function (link) { return link && indexById[link.fromId] != null && indexById[link.toId] != null; })
+                .map(function (link) {
+                    return {
+                        source: indexById[link.fromId],
+                        target: indexById[link.toId],
+                        relation: link.relation || 'related',
+                    };
+                });
+
+            return { nodes: nodes, links: graphLinks };
+        }, [tasks, projects, items, links]);
+
+        useEffect(function () {
+            var canvas = canvasRef.current;
+            if (!canvas) return;
+            var ctx = canvas.getContext('2d');
+            if (!ctx) return;
+
+            var dpr = Math.max(1, window.devicePixelRatio || 1);
+            var cssWidth = canvas.clientWidth || 320;
+            var cssHeight = canvas.clientHeight || 220;
+            canvas.width = Math.round(cssWidth * dpr);
+            canvas.height = Math.round(cssHeight * dpr);
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+            var nodes = graphData.nodes;
+            var graphLinks = graphData.links;
+            if (!nodes.length) {
+                ctx.clearRect(0, 0, cssWidth, cssHeight);
+                return;
+            }
+
+            var centerX = cssWidth / 2;
+            var centerY = cssHeight / 2;
+            var radius = Math.min(cssWidth, cssHeight) * 0.32;
+            var perspective = radius * 2.4;
+            var state = dragStateRef.current;
+
+            var points = nodes.map(function (_, idx) {
+                var t = nodes.length <= 1 ? 0.5 : idx / (nodes.length - 1);
+                var phi = Math.acos(1 - 2 * t);
+                var theta = Math.PI * (1 + Math.sqrt(5)) * idx;
+                return {
+                    x: radius * Math.sin(phi) * Math.cos(theta),
+                    y: radius * Math.cos(phi),
+                    z: radius * Math.sin(phi) * Math.sin(theta),
+                };
+            });
+
+            function rotateY(point, angle) {
+                var cosA = Math.cos(angle);
+                var sinA = Math.sin(angle);
+                var x = point.x * cosA + point.z * sinA;
+                var z = -point.x * sinA + point.z * cosA;
+                point.x = x;
+                point.z = z;
+            }
+
+            function rotateX(point, angle) {
+                var cosA = Math.cos(angle);
+                var sinA = Math.sin(angle);
+                var y = point.y * cosA - point.z * sinA;
+                var z = point.y * sinA + point.z * cosA;
+                point.y = y;
+                point.z = z;
+            }
+
+            function project(point) {
+                var zoom = Math.max(0.65, Math.min(2.4, zoomRef.current || 1));
+                var scale = (perspective / (perspective + point.z + radius)) * zoom;
+                return {
+                    x: centerX + point.x * scale,
+                    y: centerY + point.y * scale,
+                    z: point.z,
+                    scale: scale,
+                };
+            }
+
+            function draw() {
+                ctx.clearRect(0, 0, cssWidth, cssHeight);
+
+                points.forEach(function (point) {
+                    rotateY(point, state.vx);
+                    rotateX(point, state.vy);
+                });
+                if (!state.active) {
+                    state.vx *= 0.988;
+                    state.vy *= 0.988;
+                    if (Math.abs(state.vx) < 0.00015) state.vx = 0;
+                    if (Math.abs(state.vy) < 0.00015) state.vy = 0;
+                }
+
+                var projected = points.map(project);
+                projectedRef.current = projected;
+                var selectedIndex = selectedIndexRef.current;
+
+                graphLinks.forEach(function (link) {
+                    var a = projected[link.source];
+                    var b = projected[link.target];
+                    if (!a || !b) return;
+                    var isSelected = selectedIndex >= 0 && (link.source === selectedIndex || link.target === selectedIndex);
+                    ctx.strokeStyle = isSelected ? 'rgba(37, 99, 235, 0.72)' : 'rgba(59, 130, 246, 0.22)';
+                    ctx.lineWidth = isSelected ? 1.8 : 1;
+                    ctx.beginPath();
+                    ctx.moveTo(a.x, a.y);
+                    ctx.lineTo(b.x, b.y);
+                    ctx.stroke();
+                });
+
+                var drawOrder = projected
+                    .map(function (p, idx) { return { idx: idx, p: p }; })
+                    .sort(function (a, b) { return a.p.z - b.p.z; });
+
+                drawOrder.forEach(function (entry) {
+                    var p = entry.p;
+                    var node = nodes[entry.idx];
+                    var isSelected = entry.idx === selectedIndex;
+                    var zoom = Math.max(0.65, Math.min(2.4, zoomRef.current || 1));
+                    var size = Math.max(2.8, 4.2 * p.scale + 1.8);
+                    var color = node.type === 'task'
+                        ? '#16a34a'
+                        : node.type === 'project'
+                            ? '#7c3aed'
+                            : '#2563eb';
+                    if (isSelected) {
+                        ctx.beginPath();
+                        ctx.fillStyle = 'rgba(37, 99, 235, 0.22)';
+                        ctx.arc(p.x, p.y, size * 2.4, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                    ctx.beginPath();
+                    ctx.fillStyle = color;
+                    ctx.arc(p.x, p.y, size, 0, Math.PI * 2);
+                    ctx.fill();
+
+                });
+
+                if (Math.max(0.65, Math.min(2.4, zoomRef.current || 1)) >= 1.35 || selectedIndex >= 0) {
+                    var occupied = [];
+                    var labelCandidates = drawOrder.slice().reverse();
+                    labelCandidates.forEach(function (entry) {
+                        var p = entry.p;
+                        var node = nodes[entry.idx];
+                        var zoom = Math.max(0.65, Math.min(2.4, zoomRef.current || 1));
+                        var isSelected = entry.idx === selectedIndex;
+                        if (!isSelected && zoom < 1.35) return;
+
+                        var shortLabel = String(node.label || 'Узел').slice(0, 24);
+                        if (shortLabel.length < String(node.label || '').length) shortLabel += '…';
+                        var fontSize = isSelected ? 11 : 10;
+                        ctx.font = fontSize + 'px system-ui, -apple-system, Segoe UI, sans-serif';
+                        var textWidth = ctx.measureText(shortLabel).width;
+                        var x = p.x + 8;
+                        var y = p.y - 8;
+                        var box = {
+                            x1: x - 2,
+                            y1: y - fontSize - 1,
+                            x2: x + textWidth + 2,
+                            y2: y + 3,
+                        };
+
+                        var overlaps = occupied.some(function (o) {
+                            return !(box.x2 < o.x1 || box.x1 > o.x2 || box.y2 < o.y1 || box.y1 > o.y2);
+                        });
+                        if (overlaps && !isSelected) return;
+
+                        var alpha = isSelected ? 0.95 : Math.max(0.45, Math.min(0.9, 0.35 + p.scale));
+                        ctx.fillStyle = 'rgba(15, 23, 42, ' + alpha.toFixed(2) + ')';
+                        ctx.fillText(shortLabel, x, y);
+                        occupied.push(box);
+                    });
+                }
+
+                animationRef.current = window.requestAnimationFrame(draw);
+            }
+
+            animationRef.current = window.requestAnimationFrame(draw);
+            return function () {
+                if (animationRef.current) window.cancelAnimationFrame(animationRef.current);
+            };
+        }, [graphData]);
+
+        function handlePointerDown(event) {
+            var state = dragStateRef.current;
+            state.active = true;
+            state.lastX = event.clientX || 0;
+            state.lastY = event.clientY || 0;
+            pointerTravelRef.current = 0;
+            pointersRef.current[event.pointerId] = { x: event.clientX || 0, y: event.clientY || 0 };
+            var pointerIds = Object.keys(pointersRef.current);
+            if (pointerIds.length === 2) {
+                var p1 = pointersRef.current[pointerIds[0]];
+                var p2 = pointersRef.current[pointerIds[1]];
+                var dist = Math.hypot((p2.x - p1.x), (p2.y - p1.y));
+                pinchRef.current = { active: true, startDistance: dist || 1, startZoom: zoomRef.current || 1 };
+            }
+        }
+
+        function handlePointerMove(event) {
+            var state = dragStateRef.current;
+            if (pointersRef.current[event.pointerId]) {
+                pointersRef.current[event.pointerId].x = event.clientX || 0;
+                pointersRef.current[event.pointerId].y = event.clientY || 0;
+            }
+            var pointerIds = Object.keys(pointersRef.current);
+            if (pointerIds.length === 2 && pinchRef.current.active) {
+                var p1 = pointersRef.current[pointerIds[0]];
+                var p2 = pointersRef.current[pointerIds[1]];
+                var dist = Math.hypot((p2.x - p1.x), (p2.y - p1.y));
+                var nextZoom = pinchRef.current.startZoom * (dist / (pinchRef.current.startDistance || 1));
+                zoomRef.current = Math.max(0.65, Math.min(2.4, nextZoom));
+                setZoomUi(zoomRef.current);
+                return;
+            }
+            if (!state.active) return;
+            var x = event.clientX || 0;
+            var y = event.clientY || 0;
+            var dx = x - state.lastX;
+            var dy = y - state.lastY;
+            state.lastX = x;
+            state.lastY = y;
+            pointerTravelRef.current += Math.abs(dx) + Math.abs(dy);
+            state.vx = dx * 0.0009;
+            state.vy = dy * 0.0009;
+        }
+
+        function handlePointerUp(event) {
+            var state = dragStateRef.current;
+            state.active = false;
+            delete pointersRef.current[event.pointerId];
+            if (Object.keys(pointersRef.current).length < 2) {
+                pinchRef.current.active = false;
+            }
+            if (pointerTravelRef.current < 10 && graphData.nodes.length) {
+                var canvas = canvasRef.current;
+                var projected = projectedRef.current || [];
+                if (canvas && event) {
+                    var rect = canvas.getBoundingClientRect();
+                    var localX = (event.clientX || 0) - rect.left;
+                    var localY = (event.clientY || 0) - rect.top;
+                    var nearestIndex = -1;
+                    var nearestDist = Infinity;
+                    projected.forEach(function (p, idx) {
+                        var dx = p.x - localX;
+                        var dy = p.y - localY;
+                        var dist = Math.sqrt(dx * dx + dy * dy);
+                        if (dist < nearestDist) {
+                            nearestDist = dist;
+                            nearestIndex = idx;
+                        }
+                    });
+                    if (nearestIndex >= 0 && nearestDist <= 22) {
+                        selectedIndexRef.current = nearestIndex;
+                        setSelectedLabel(graphData.nodes[nearestIndex].label || 'Узел');
+                    } else {
+                        selectedIndexRef.current = -1;
+                        setSelectedLabel('');
+                    }
+                }
+            }
+        }
+
+        function handleWheel(event) {
+            if (!event) return;
+            event.preventDefault();
+            var delta = event.deltaY > 0 ? -0.08 : 0.08;
+            zoomRef.current = Math.max(0.65, Math.min(2.4, (zoomRef.current || 1) + delta));
+            setZoomUi(zoomRef.current);
+        }
+
+        function handleResetView() {
+            zoomRef.current = 1;
+            setZoomUi(1);
+            selectedIndexRef.current = -1;
+            setSelectedLabel('');
+            dragStateRef.current.vx = 0.004;
+            dragStateRef.current.vy = 0.002;
+        }
 
         return h('section', { className: 'planning-card planning-context-graph' }, [
             h('div', { key: 'header', className: 'planning-context-section-head' }, [
                 h('h3', { key: 'title', className: 'planning-section__title' }, 'Карта связей'),
                 h('p', { key: 'desc', className: 'planning-section__desc' }, 'Узлы — это задачи, проекты и inbox-записи. Связи создаются автоматически при промоуте, а также вручную агентом.'),
+            ]),
+            h('div', { key: 'canvasWrap', className: 'planning-context-graph-canvas-wrap' }, [
+                h('canvas', {
+                    key: 'canvas',
+                    ref: canvasRef,
+                    className: 'planning-context-graph-canvas',
+                    onWheel: handleWheel,
+                    onPointerDown: handlePointerDown,
+                    onPointerMove: handlePointerMove,
+                    onPointerUp: handlePointerUp,
+                    onPointerCancel: handlePointerUp,
+                    onPointerLeave: handlePointerUp,
+                }),
+                h('div', { key: 'hint', className: 'planning-context-graph-canvas-hint' }, 'Крути пальцем: 3D-карта узлов и связей'),
+                h('button', {
+                    key: 'reset',
+                    type: 'button',
+                    className: 'planning-btn planning-btn--ghost planning-btn--sm planning-context-graph-reset',
+                    onClick: handleResetView,
+                }, 'Reset view'),
+            ]),
+            h('div', { key: 'legend', className: 'planning-context-graph-legend' }, [
+                h('span', { key: 'l-task', className: 'planning-context-graph-legend__item planning-context-graph-legend__item--task' }, 'task'),
+                h('span', { key: 'l-project', className: 'planning-context-graph-legend__item planning-context-graph-legend__item--project' }, 'project'),
+                h('span', { key: 'l-context', className: 'planning-context-graph-legend__item planning-context-graph-legend__item--context' }, 'context'),
+                h('span', { key: 'l-zoom', className: 'planning-context-graph-legend__item' }, 'zoom x' + Number(zoomUi || 1).toFixed(2)),
+                selectedLabel ? h('span', { key: 'l-selected', className: 'planning-context-graph-legend__selected' }, 'Выбрано: ' + selectedLabel) : null,
             ]),
             h('div', { key: 'stats', className: 'planning-context-graph__stats' }, [
                 h('div', { key: 'nodes', className: 'planning-context-graph__stat' }, [
@@ -46884,6 +48412,13 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             return state.addTask(text, { priority: 'p2', status: 'todo' });
         }
 
+        function handleOpenAgentHandoff() {
+            if (typeof document === 'undefined') return;
+            var handoffSection = document.getElementById('planning-agent-handoff');
+            if (!handoffSection || typeof handoffSection.scrollIntoView !== 'function') return;
+            handoffSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
         function handleDelete(itemId) {
             if (!state || typeof state.deleteContextInboxItem !== 'function') return;
             state.deleteContextInboxItem(itemId);
@@ -46919,7 +48454,12 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
         return h('div', { className: 'planning-context-screen' }, [
             h(ContextCapsuleSection, { key: 'capsule', capsule: capsule }),
-            h(QuickCaptureSection, { key: 'capture', onCapture: handleCapture, onCaptureAsTask: handleCaptureAsTask }),
+            h(QuickCaptureSection, {
+                key: 'capture',
+                onCapture: handleCapture,
+                onCaptureAsTask: handleCaptureAsTask,
+                onOpenAgentHandoff: handleOpenAgentHandoff,
+            }),
             h(ContextInboxSection, {
                 key: 'inbox',
                 items: inboxItems,
@@ -46938,6 +48478,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         ]);
     }
 
+    Planning.refreshPlanningFromCloud = refreshPlanningFromCloud;
+
     HEYS.PlanningContext = {
         ContextScreen,
     };
@@ -46953,6 +48495,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
     const HEYS = window.HEYS = window.HEYS || {};
     const React = window.React;
+    const ReactDOM = window.ReactDOM;
     if (!React) return;
 
     const h = React.createElement;
@@ -47006,6 +48549,15 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             return () => {
                 document.body.classList.remove('planning-tab-active');
             };
+        }, []);
+
+        useEffect(() => {
+            const pull = HEYS.Planning && typeof HEYS.Planning.refreshPlanningFromCloud === 'function'
+                ? HEYS.Planning.refreshPlanningFromCloud
+                : null;
+            if (!pull) return undefined;
+            pull().catch(function () { /* offline / RPC optional */ });
+            return undefined;
         }, []);
 
         useEffect(() => {
@@ -47074,31 +48626,35 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             return h(PlanningFallback);
         }
 
+        const subnavNode = h('div', { className: 'planning-subnav planning-subnav--docked', ref: subnavRef },
+            h('div', { className: 'planning-subnav__inner' },
+                SUBNAV_ITEMS.map((item) => h('button', {
+                    key: item.id,
+                    type: 'button',
+                    title: item.label,
+                    'aria-label': item.label,
+                    'data-screen': item.id,
+                    className: 'planning-subnav__item' + (activeScreen === item.id ? ' active' : ''),
+                    onClick: () => setActiveScreen(item.id),
+                },
+                    h('span', { className: 'planning-subnav__icon', 'aria-hidden': 'true' }, item.icon),
+                    h('span', {
+                        className: 'planning-subnav__label',
+                        'data-short-label': item.shortLabel || item.label,
+                        'aria-hidden': 'true',
+                    }, item.label),
+                )),
+            ),
+        );
+
         return h('div', { className: 'planning-tab', style: planningLayoutStyle },
             h('div', { className: 'planning-content' },
                 CurrentScreen ? h(CurrentScreen, { state: planState }) : h(PlanningFallback),
             ),
             h('div', { className: 'planning-subnav-shell', 'aria-hidden': 'true' }),
-            h('div', { className: 'planning-subnav planning-subnav--docked', ref: subnavRef },
-                h('div', { className: 'planning-subnav__inner' },
-                    SUBNAV_ITEMS.map((item) => h('button', {
-                        key: item.id,
-                        type: 'button',
-                        title: item.label,
-                        'aria-label': item.label,
-                        'data-screen': item.id,
-                        className: 'planning-subnav__item' + (activeScreen === item.id ? ' active' : ''),
-                        onClick: () => setActiveScreen(item.id),
-                    },
-                        h('span', { className: 'planning-subnav__icon', 'aria-hidden': 'true' }, item.icon),
-                        h('span', {
-                            className: 'planning-subnav__label',
-                            'data-short-label': item.shortLabel || item.label,
-                            'aria-hidden': 'true',
-                        }, item.label),
-                    )),
-                ),
-            ),
+            ReactDOM && typeof ReactDOM.createPortal === 'function' && typeof document !== 'undefined'
+                ? ReactDOM.createPortal(subnavNode, document.body)
+                : subnavNode,
         );
     }
 

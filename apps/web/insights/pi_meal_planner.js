@@ -931,7 +931,138 @@
 
         return {
             available: true,
-            meals: plannedMeals,
+            meals: annotateStableIds(plannedMeals),
+            summary
+        };
+    }
+
+    function recalculateSummaryFromMeals(meals, summary, fallbackSleepTarget, fallbackDeadline) {
+        const safeMeals = Array.isArray(meals) ? meals : [];
+        if (!safeMeals.length) {
+            return {
+                totalMeals: 0,
+                timelineStart: null,
+                timelineEnd: null,
+                totalMacros: { prot: 0, carbs: 0, kcal: 0 },
+                sleepTarget: fallbackSleepTarget || summary?.sleepTarget,
+                lastMealDeadline: fallbackDeadline || summary?.lastMealDeadline
+            };
+        }
+
+        return {
+            totalMeals: safeMeals.length,
+            timelineStart: safeMeals[0]?.timeStart || null,
+            timelineEnd: safeMeals[safeMeals.length - 1]?.timeEnd || null,
+            totalMacros: {
+                prot: safeMeals.reduce((sum, meal) => sum + (meal?.macros?.prot || 0), 0),
+                carbs: safeMeals.reduce((sum, meal) => sum + (meal?.macros?.carbs || 0), 0),
+                kcal: safeMeals.reduce((sum, meal) => sum + (meal?.macros?.kcal || 0), 0)
+            },
+            sleepTarget: summary?.sleepTarget || fallbackSleepTarget,
+            lastMealDeadline: summary?.lastMealDeadline || fallbackDeadline
+        };
+    }
+
+    function buildMealStableId(meal, index) {
+        const start = meal?.timeStart || 'na';
+        const end = meal?.timeEnd || 'na';
+        const scenario = meal?.scenario || 'BALANCED';
+        return `${start}|${end}|${scenario}|${index}`;
+    }
+
+    function annotateStableIds(meals) {
+        return (meals || []).map((meal, index) => ({
+            ...meal,
+            stableId: meal?.stableId || buildMealStableId(meal, index)
+        }));
+    }
+
+    function validateReplanResult(planResult, fallbackBudget = 0) {
+        if (!planResult || planResult.available !== true) {
+            return { valid: false, reason: 'Plan unavailable' };
+        }
+        const meals = planResult.meals || [];
+        const summary = planResult.summary || {};
+        const totalKcal = Number(summary?.totalMacros?.kcal || 0);
+        const timelineBroken = meals.some((meal) => !meal?.timeStart || !meal?.timeEnd);
+        const macrosBroken = meals.some((meal) => {
+            const kcal = Number(meal?.macros?.kcal);
+            const prot = Number(meal?.macros?.prot);
+            const carbs = Number(meal?.macros?.carbs);
+            const fat = Number(meal?.macros?.fat || 0);
+            return !Number.isFinite(kcal) || !Number.isFinite(prot) || !Number.isFinite(carbs) || !Number.isFinite(fat) || kcal < 0 || prot < 0 || carbs < 0 || fat < 0;
+        });
+
+        if (timelineBroken) return { valid: false, reason: 'Invalid timeline fields' };
+        if (macrosBroken) return { valid: false, reason: 'Invalid macro fields' };
+        if (fallbackBudget > 120 && meals.length === 0) return { valid: false, reason: 'Empty meals with positive budget' };
+        if (!Number.isFinite(totalKcal) || totalKcal < 0) return { valid: false, reason: 'Invalid summary kcal' };
+        return { valid: true };
+    }
+
+    function replanRemainingMeals(params) {
+        const {
+            lockedMeals = [],
+            previousPlanState = null,
+            replanReason = 'EXTERNAL_REPLAN_REQUEST'
+        } = params || {};
+
+        const basePlan = planRemainingMeals(params);
+        if (!basePlan?.available) return basePlan;
+
+        const lockByIndex = new Map();
+        const lockByStableId = new Map();
+        lockedMeals.forEach((lock) => {
+            if (typeof lock?.index === 'number') lockByIndex.set(lock.index, lock);
+            if (typeof lock?.stableId === 'string' && lock.stableId) lockByStableId.set(lock.stableId, lock);
+        });
+
+        const annotatedMeals = annotateStableIds(basePlan.meals || []);
+        const meals = annotatedMeals.map((meal, index) => {
+            const locked = lockByStableId.get(meal.stableId) || lockByIndex.get(index);
+            if (!locked) return meal;
+            return {
+                ...meal,
+                timeStart: locked.timeStart || meal.timeStart,
+                timeEnd: locked.timeEnd || meal.timeEnd,
+                macros: locked.macros || meal.macros,
+                scenario: locked.scenario || meal.scenario,
+                stableId: locked.stableId || meal.stableId,
+                locked: true
+            };
+        });
+
+        const summary = recalculateSummaryFromMeals(
+            meals,
+            basePlan.summary,
+            basePlan.summary?.sleepTarget,
+            basePlan.summary?.lastMealDeadline
+        );
+
+        const remainingBudgetKcal = Math.max(0, (params?.dayTarget?.kcal || 0) - (params?.dayEaten?.kcal || 0));
+        const validation = validateReplanResult({ available: true, meals, summary }, remainingBudgetKcal);
+        summary.replanMeta = {
+            incremental: true,
+            reason: replanReason,
+            lockedMealsCount: lockByStableId.size || lockByIndex.size,
+            previousPlanVersion: previousPlanState?.planVersion || null,
+            valid: validation.valid,
+            validationReason: validation.reason || null,
+            generatedAt: Date.now()
+        };
+
+        if (!validation.valid) {
+            return {
+                available: false,
+                error: validation.reason || 'Invalid incremental plan',
+                meals: [],
+                summary
+            };
+        }
+
+        return {
+            ...basePlan,
+            meals,
             summary
         };
     }
@@ -939,11 +1070,13 @@
     // === Export ===
     HEYS.InsightsPI.mealPlanner = {
         planRemainingMeals,
+        replanRemainingMeals,
         estimateSleepTarget,
         estimateWaveDuration,
         distributeBudget,
         estimatePersonalWaveHours, // S6
         getChronoRatio,            // S1
+        validateReplanResult,
         // Utilities
         parseTime,
         formatTime,

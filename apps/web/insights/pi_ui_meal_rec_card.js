@@ -156,6 +156,56 @@
     const { useState, useMemo, useRef, useEffect } = React;
     const LOG_FILTER = 'MEALREC';
     const LOG_PREFIX = `[${LOG_FILTER}][HEYS.mealRec.card]`;
+    const DEFAULT_REPLAN_REASON = 'INITIAL_LOAD';
+    const REPLAN_DEBOUNCE_MS = 220;
+
+    function buildReplanSignal(day, dayTot, normAbs, optimum, prof, pIndex, thresholdsUpdateTick) {
+        const meals = day?.meals || [];
+        const lastMeal = meals[meals.length - 1] || null;
+        const training = day?.trainings?.[0] || null;
+        const stressVector = meals.map((meal) => `${meal?.id || ''}:${meal?.stress || ''}:${meal?.mood || ''}`).join('|');
+
+        return {
+            date: day?.date || '',
+            mealsCount: meals.length,
+            lastMealTime: lastMeal?.time || '',
+            lastMealItemsCount: lastMeal?.items?.length || 0,
+            eatenKcal: Math.round(dayTot?.kcal || 0),
+            eatenProt: Math.round(dayTot?.prot || 0),
+            eatenCarbs: Math.round(dayTot?.carb || 0),
+            eatenFat: Math.round(dayTot?.fat || 0),
+            targetKcal: Math.round(optimum || normAbs?.kcal || 0),
+            targetProt: Math.round(normAbs?.prot || 0),
+            targetCarbs: Math.round(normAbs?.carb || 0),
+            targetFat: Math.round(normAbs?.fat || 0),
+            sleepTarget: prof?.sleepTarget || '23:00',
+            trainingTime: training?.time || '',
+            trainingType: training?.type || '',
+            pIndexSize: pIndex?.length || 0,
+            thresholdsUpdateTick: thresholdsUpdateTick || 0,
+            stressVector
+        };
+    }
+
+    function determineReplanReason(prev, next, externalReason) {
+        if (externalReason) return externalReason;
+        if (!prev) return DEFAULT_REPLAN_REASON;
+        if (prev.thresholdsUpdateTick !== next.thresholdsUpdateTick) return 'THRESHOLDS_UPDATED';
+        if (prev.date !== next.date) return 'DAY_CHANGED';
+        if (prev.mealsCount !== next.mealsCount) return next.mealsCount > prev.mealsCount ? 'MEAL_ADDED' : 'MEAL_REMOVED';
+        if (prev.lastMealTime !== next.lastMealTime) return 'MEAL_TIME_UPDATED';
+        if (prev.lastMealItemsCount !== next.lastMealItemsCount) return 'MEAL_ITEMS_UPDATED';
+        if (prev.eatenKcal !== next.eatenKcal || prev.eatenProt !== next.eatenProt || prev.eatenCarbs !== next.eatenCarbs || prev.eatenFat !== next.eatenFat) {
+            return 'DAY_TOTALS_UPDATED';
+        }
+        if (prev.targetKcal !== next.targetKcal || prev.targetProt !== next.targetProt || prev.targetCarbs !== next.targetCarbs || prev.targetFat !== next.targetFat) {
+            return 'DAY_TARGETS_UPDATED';
+        }
+        if (prev.sleepTarget !== next.sleepTarget) return 'SLEEP_TARGET_UPDATED';
+        if (prev.trainingTime !== next.trainingTime || prev.trainingType !== next.trainingType) return 'TRAINING_UPDATED';
+        if (prev.stressVector !== next.stressVector) return 'MEAL_CONTEXT_UPDATED';
+        return 'STATE_REFRESHED';
+    }
 
     /**
      * Fallback lsGet — прямое чтение из localStorage (если global.U недоступен)
@@ -341,6 +391,7 @@
         const [thresholdsUpdateTick, setThresholdsUpdateTick] = useState(0); // v28: SWR trigger
         const [recommendation, setRecommendation] = useState(null); // 🚀 PERF v6.0: Асинхронный расчет
         const [isCalculating, setIsCalculating] = useState(true); // 🚀 PERF v6.0: Состояние загрузки
+        const [externalReplanReason, setExternalReplanReason] = useState(null);
 
         useEffect(() => {
             if (!showProductsModal) return;
@@ -361,11 +412,57 @@
             return () => window.removeEventListener('heysThresholdsUpdated', handleThresholdsUpdate);
         }, []);
 
+        useEffect(() => {
+            const handlePlannerReplanRequest = (event) => {
+                const reason = event?.detail?.reason || 'EXTERNAL_REPLAN_REQUEST';
+                if (lastAppliedExternalReasonRef.current === reason) return;
+                if (replanEventDebounceRef.current) clearTimeout(replanEventDebounceRef.current);
+                replanEventDebounceRef.current = setTimeout(() => {
+                    lastAppliedExternalReasonRef.current = reason;
+                    console.info(`${LOG_PREFIX} 🔁 External replan request:`, reason);
+                    setExternalReplanReason(reason);
+                }, REPLAN_DEBOUNCE_MS);
+            };
+            window.addEventListener('heys:planner-replan-request', handlePlannerReplanRequest);
+            return () => {
+                if (replanEventDebounceRef.current) clearTimeout(replanEventDebounceRef.current);
+                window.removeEventListener('heys:planner-replan-request', handlePlannerReplanRequest);
+            };
+        }, []);
+
+        useEffect(() => {
+            const handleReplanMetrics = (event) => {
+                const detail = event?.detail || {};
+                const analytics = global.HEYS?.analytics;
+                if (!analytics) return;
+                if (typeof analytics.trackDataOperation === 'function') {
+                    analytics.trackDataOperation('meal-replan-computed');
+                }
+                if (typeof analytics.trackRecommendation === 'function') {
+                    analytics.trackRecommendation({
+                        type: 'meal_replan',
+                        reason: detail.reason || 'unknown',
+                        success: !!detail.success,
+                        incremental: !!detail.incremental,
+                        fallbackUsed: !!detail.fallbackUsed,
+                        latencyMs: Number(detail.latencyMs || 0)
+                    });
+                }
+            };
+            window.addEventListener('heysMealReplanComputed', handleReplanMetrics);
+            return () => window.removeEventListener('heysMealReplanComputed', handleReplanMetrics);
+        }, []);
+
         // v25.8.2: Use U.getProductFromItem if not passed in props
         const getProductFromItem = global.U?.getProductFromItem || global.HEYS?.getProductFromItem || (() => null);
 
         // R2.7: Store recommendation ID for ML feedback loop
         const recIdRef = useRef(null);
+        const planStateRef = useRef(null);
+        const previousSignalRef = useRef(null);
+        const replanEventDebounceRef = useRef(null);
+        const lastAppliedExternalReasonRef = useRef(null);
+        const lastRecomputeKeyRef = useRef(null);
 
         // v3.6: F4 — heys_profile has no .id; always inject currentClientId for feedbackLoop calls
         const getProfileWithId = () => prof
@@ -374,13 +471,16 @@
         const followedRef = useRef(false);
         const prevRecommendationRef = useRef(null);
 
-        // Stable primitive deps to prevent excessive re-renders (30+ → ~3)
-        const mealsCount = day?.meals?.length || 0;
-        const lastMealTime = day?.meals?.[mealsCount - 1]?.time || '';
-        const eatenKcal = Math.round(dayTot?.kcal || 0);
-        const eatenProt = Math.round(dayTot?.prot || 0);
-        const targetKcal = Math.round(optimum || normAbs?.kcal || 0);
-        const targetProt = Math.round(normAbs?.prot || 0);
+        const replanSignal = useMemo(
+            () => buildReplanSignal(day, dayTot, normAbs, optimum, prof, pIndex, thresholdsUpdateTick),
+            [day, dayTot, normAbs, optimum, prof, pIndex, thresholdsUpdateTick]
+        );
+
+        // Stable primitive deps for feedback and telemetry
+        const mealsCount = replanSignal.mealsCount;
+        const eatenKcal = replanSignal.eatenKcal;
+        const eatenProt = replanSignal.eatenProt;
+        const targetKcal = replanSignal.targetKcal;
 
         // Handler для feedback кнопок (R2.7)
         const handleFeedback = (rating) => {
@@ -1159,10 +1259,19 @@
         // Собираем рекомендацию (🚀 PERF v6.0: Асинхронно через useEffect)
         useEffect(() => {
             setIsCalculating(true);
+            const startedAt = Date.now();
 
-            // Используем setTimeout чтобы дать React отрендерить Skeleton и не блокировать UI
             const timerId = setTimeout(() => {
-                console.info(`${LOG_PREFIX} 🎬 useEffect triggered (async)`);
+                const replanReason = determineReplanReason(previousSignalRef.current, replanSignal, externalReplanReason);
+                previousSignalRef.current = replanSignal;
+                if (externalReplanReason) setExternalReplanReason(null);
+                const recomputeKey = `${JSON.stringify(replanSignal)}|${replanReason}`;
+                if (lastRecomputeKeyRef.current === recomputeKey) {
+                    setIsCalculating(false);
+                    return;
+                }
+                lastRecomputeKeyRef.current = recomputeKey;
+                console.info(`${LOG_PREFIX} 🎬 useEffect triggered (async):`, { replanReason });
 
                 if (!global.HEYS?.InsightsPI?.mealRecommender?.recommend) {
                     console.warn(`${LOG_PREFIX} ❌ Backend not loaded`);
@@ -1181,8 +1290,15 @@
                     return;
                 }
 
-                console.info(`${LOG_PREFIX} 🚀 Calling recommend()...`);
+                context.replanReason = replanReason;
+                context.planState = planStateRef.current;
+                console.info(`${LOG_PREFIX} 🚀 Calling recommend()...`, {
+                    replanReason,
+                    hasPlanState: !!context.planState
+                });
 
+                let computeResult = null;
+                let computeSuccess = false;
                 try {
                     // R2.6: Load historical days for Deep Insights enhancement
                     const historicalDays = [];
@@ -1216,6 +1332,7 @@
                         pIndex,         // product index (for smart suggestions)
                         historicalDays  // days for R2.6 Deep Insights enhancement
                     );
+                    computeResult = result;
 
                     if (!result || !result.available) {
                         console.info(`${LOG_PREFIX} ⚠️ Hidden:`, {
@@ -1223,12 +1340,15 @@
                         });
                         setRecommendation(null);
                     } else {
+                        planStateRef.current = result.planState || null;
+                        computeSuccess = true;
                         console.info(`${LOG_PREFIX} ✅ Rendered:`, {
                             idealTime: result.timing?.ideal || '—',
                             protein: result.macros?.protein || 0,
                             carbs: result.macros?.carbs || 0,
                             kcal: result.macros?.kcal || 0,
-                            confidence: result.confidence || 0
+                            confidence: result.confidence || 0,
+                            replanReason
                         });
                         setRecommendation(result);
                     }
@@ -1236,12 +1356,27 @@
                     console.error(`${LOG_PREFIX} ❌ Error:`, err);
                     setRecommendation(null);
                 } finally {
+                    const latencyMs = Date.now() - startedAt;
+                    window.dispatchEvent(new CustomEvent('heysMealReplanComputed', {
+                        detail: {
+                            reason: replanReason,
+                            latencyMs,
+                            at: Date.now(),
+                            success: computeSuccess,
+                            incremental: !!computeResult?.replanMeta?.mode && computeResult.replanMeta.mode === 'incremental',
+                            fallbackUsed: !!computeResult?.replanMeta?.fallbackUsed,
+                            planVersion: computeResult?.planState?.planVersion || null,
+                            mealsPlanned: computeResult?.mealsPlan?.meals?.length || 0,
+                            scenario: computeResult?.scenario || null,
+                            shadowDrift: computeResult?.replanMeta?.shadowDrift || null
+                        }
+                    }));
                     setIsCalculating(false);
                 }
-            }, 0);
+            }, REPLAN_DEBOUNCE_MS);
 
             return () => clearTimeout(timerId);
-        }, [mealsCount, lastMealTime, eatenKcal, eatenProt, targetKcal, targetProt, pIndex?.length || 0]);
+        }, [replanSignal, day, dayTot, normAbs, prof, optimum, pIndex, externalReplanReason]);
 
         // R2.7 Step 2: Store recommendation in feedbackLoop when it's generated (new or changed)
         useEffect(() => {
@@ -1572,6 +1707,10 @@
                     h('div', { className: 'meal-rec-card__logic-row' },
                         h('span', { className: 'meal-rec-card__logic-label' }, 'Акцент:'),
                         h('span', { className: 'meal-rec-card__logic-text' }, logicFocus)
+                    ),
+                    recommendation?.explain?.whyChanged && h('div', { className: 'meal-rec-card__logic-row' },
+                        h('span', { className: 'meal-rec-card__logic-label' }, 'Перестроен:'),
+                        h('span', { className: 'meal-rec-card__logic-text' }, recommendation.explain.whyChanged)
                     )
                 ),
 

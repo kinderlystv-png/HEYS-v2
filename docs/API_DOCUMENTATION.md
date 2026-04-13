@@ -134,6 +134,18 @@ await HEYS.YandexAPI.rpc('client_kv_get_by_session', {
 });
 ```
 
+### 4. Planning context ingest (приложение + агент)
+
+- Клиентское применение контекста: RPC `planning_context_ingest` (session token,
+  как в приложении).
+- Доверенный путь для Cursor/скриптов:
+  `POST /rpc?fn=planning_context_agent_ingest` с
+  `Authorization: Bearer <PLANNING_AGENT_SECRET>` и `targetClientId` в JSON-теле
+  — без передачи PIN/session в текст чата.
+
+Подробный контракт, переменные окружения на CF, allowlist и риски:
+[`docs/dev/PLANNING_AGENT_INGEST.md`](dev/PLANNING_AGENT_INGEST.md).
+
 ---
 
 ### 🛡️ Store API Best Practices (v4.8.8)

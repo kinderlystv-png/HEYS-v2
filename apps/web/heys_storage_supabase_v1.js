@@ -9196,6 +9196,34 @@
       // Также удаляем дубликаты и данные других клиентов
       maybeCleanupDuplicateKeys(true);
 
+      // 🔧 v71 FIX: purge any residual foreign client-scoped keys.
+      // Previous cleanup removed oldClientId + products, but third-party
+      // scoped keys (or stale leftovers) could remain and trigger post-switch
+      // anomaly telemetry.
+      const foreignScopedKeys = [];
+      let foreignDayKeysPurged = 0;
+      let foreignOtherKeysPurged = 0;
+      for (let i = 0; i < global.localStorage.length; i++) {
+        const key = global.localStorage.key(i);
+        if (!key || !key.startsWith('heys_')) continue;
+        if (key === 'heys_client_current' || isSensitiveSessionStorageKey(key)) continue;
+        const leadId = getLeadingClientScopeId(key);
+        if (leadId && leadId !== newClientId) {
+          foreignScopedKeys.push(key);
+          if (key.includes('dayv2_')) foreignDayKeysPurged++;
+          else foreignOtherKeysPurged++;
+        }
+      }
+      if (foreignScopedKeys.length > 0) {
+        const foreignSample = foreignScopedKeys.slice(0, 5).join(', ');
+        foreignScopedKeys.forEach(k => global.localStorage.removeItem(k));
+        logCritical(
+          `🧹 [SWITCH] Purged residual foreign keys: total=${foreignScopedKeys.length} ` +
+          `(day=${foreignDayKeysPurged}, other=${foreignOtherKeysPurged})` +
+          (foreignSample ? ` | sample=${foreignSample}` : '')
+        );
+      }
+
       // 🔧 v69 FIX: Purge pending upsert queue от записей чужих клиентов.
       // Если flush timeout не успел вытолкнуть данные старого клиента,
       // они остаются в очереди и уйдут под контекстом нового клиента.

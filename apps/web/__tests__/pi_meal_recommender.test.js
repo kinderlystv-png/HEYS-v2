@@ -33,7 +33,64 @@ describe('Meal Recommender v2.6', () => {
     beforeEach(() => {
         // Setup global HEYS object with thresholds mock
         global.HEYS = {
+            featureFlags: {
+                isEnabled: (flagName) => {
+                    const enabled = {
+                        adaptiveReplanEnabled: true,
+                        incrementalReplanEnabled: true,
+                        shadowCompareEnabled: true,
+                        adaptiveReplanKillSwitch: false
+                    };
+                    return enabled[flagName] === true;
+                }
+            },
             InsightsPI: {
+                mealPlanner: {
+                    planRemainingMeals: () => ({
+                        available: true,
+                        meals: [
+                            {
+                                index: 0,
+                                timeStart: '15:00',
+                                timeEnd: '16:00',
+                                macros: { prot: 30, carbs: 40, fat: 10, kcal: 370 },
+                                scenario: 'BALANCED',
+                                isActionable: true
+                            }
+                        ],
+                        summary: {
+                            totalMeals: 1,
+                            timelineStart: '15:00',
+                            timelineEnd: '16:00',
+                            totalMacros: { prot: 30, carbs: 40, kcal: 370 },
+                            sleepTarget: '23:00',
+                            lastMealDeadline: '20:00'
+                        }
+                    }),
+                    replanRemainingMeals: (params) => ({
+                        available: true,
+                        meals: [
+                            {
+                                index: 0,
+                                timeStart: '15:00',
+                                timeEnd: '16:00',
+                                macros: { prot: 32, carbs: 38, fat: 10, kcal: 365 },
+                                scenario: 'BALANCED',
+                                isActionable: true,
+                                locked: !!params?.lockedMeals?.length
+                            }
+                        ],
+                        summary: {
+                            totalMeals: 1,
+                            timelineStart: '15:00',
+                            timelineEnd: '16:00',
+                            totalMacros: { prot: 32, carbs: 38, kcal: 365 },
+                            sleepTarget: '23:00',
+                            lastMealDeadline: '20:00',
+                            replanMeta: { incremental: true }
+                        }
+                    })
+                },
                 thresholds: {
                     // Mock adaptive thresholds
                     getAdaptiveThresholds: (days, profile, pIndex) => ({
@@ -142,6 +199,102 @@ describe('Meal Recommender v2.6', () => {
 
             expect(result.available).toBe(false);
             expect(result.error).toContain('Missing context');
+        });
+
+        it('attaches planState and explain for incremental replan', () => {
+            const context = {
+                currentTime: '14:30',
+                replanReason: 'PRODUCT_ADDED',
+                planState: {
+                    planVersion: 3,
+                    lockedMeals: [{ index: 0, timeStart: '15:00', timeEnd: '16:00', macros: { prot: 30, carbs: 40, fat: 10, kcal: 370 } }]
+                },
+                lastMeal: { time: '09:15', protein: 22, carbs: 45 },
+                dayTarget: { kcal: 1800, protein: 120, carbs: 200 },
+                dayEaten: { kcal: 890, protein: 42, carbs: 95 },
+                sleepTarget: '23:00'
+            };
+
+            const profile = {
+                norm: { prot: 120, carb: 200, kcal: 1800 },
+                optimum: 1800
+            };
+
+            const days = Array.from({ length: 5 }, (_, i) => ({ date: `2024-01-${i + 1}` }));
+            const result = HEYS.InsightsPI.mealRecommender.recommend(context, profile, {}, days);
+
+            expect(result.available).toBe(true);
+            expect(result.planState).toBeDefined();
+            expect(result.planState.planVersion).toBe(4);
+            expect(result.explain).toBeDefined();
+            expect(result.explain.whyChanged).toContain('product added');
+        });
+
+        it('falls back to full plan when incremental is invalid', () => {
+            const previousLocalStorage = global.localStorage;
+            global.localStorage = {
+                ...(previousLocalStorage || {}),
+                getItem: (key) => (key === 'heys_adaptive_replan_rollout_pct' ? '100' : null)
+            };
+            const originalReplan = HEYS.InsightsPI.mealPlanner.replanRemainingMeals;
+            HEYS.InsightsPI.mealPlanner.replanRemainingMeals = () => ({
+                available: false,
+                meals: [],
+                summary: { totalMacros: { prot: 0, carbs: 0, kcal: 0 } }
+            });
+
+            const context = {
+                currentTime: '14:30',
+                replanReason: 'PRODUCT_REMOVED',
+                planState: { planVersion: 1, lockedMeals: [] },
+                lastMeal: { time: '09:15', protein: 22, carbs: 45 },
+                dayTarget: { kcal: 1800, protein: 120, carbs: 200 },
+                dayEaten: { kcal: 890, protein: 42, carbs: 95 },
+                sleepTarget: '23:00'
+            };
+            const profile = { norm: { prot: 120, carb: 200, kcal: 1800 }, optimum: 1800 };
+            const result = HEYS.InsightsPI.mealRecommender.recommend(context, profile, {}, [{ date: '2024-01-01' }, { date: '2024-01-02' }, { date: '2024-01-03' }]);
+
+            expect(result.available).toBe(true);
+            expect(result.replanMeta.fallbackUsed).toBe(true);
+            expect(result.replanMeta.mode).toBe('full');
+            HEYS.InsightsPI.mealPlanner.replanRemainingMeals = originalReplan;
+            global.localStorage = previousLocalStorage;
+        });
+
+        it('restores last stable plan when planner throws', () => {
+            const originalPlan = HEYS.InsightsPI.mealPlanner.planRemainingMeals;
+            const originalReplan = HEYS.InsightsPI.mealPlanner.replanRemainingMeals;
+            HEYS.InsightsPI.mealPlanner.planRemainingMeals = () => {
+                throw new Error('planner failed');
+            };
+            HEYS.InsightsPI.mealPlanner.replanRemainingMeals = () => {
+                throw new Error('incremental failed');
+            };
+
+            const context = {
+                currentTime: '14:30',
+                replanReason: 'MEAL_TIME_UPDATED',
+                planState: {
+                    planVersion: 2,
+                    lockedMeals: [],
+                    lastStablePlan: {
+                        meals: [{ index: 0, timeStart: '16:00', timeEnd: '17:00', macros: { prot: 20, carbs: 30, fat: 8, kcal: 280 }, scenario: 'BALANCED' }],
+                        summary: { totalMeals: 1, totalMacros: { prot: 20, carbs: 30, kcal: 280 } }
+                    }
+                },
+                lastMeal: { time: '10:00' },
+                dayTarget: { kcal: 1700, protein: 110, carbs: 180 },
+                dayEaten: { kcal: 900, protein: 60, carbs: 100 },
+                sleepTarget: '23:00'
+            };
+            const profile = { norm: { prot: 110, carb: 180, kcal: 1700 }, optimum: 1700 };
+            const result = HEYS.InsightsPI.mealRecommender.recommend(context, profile, {}, [{ date: '2024-01-01' }, { date: '2024-01-02' }, { date: '2024-01-03' }]);
+
+            expect(result.available).toBe(true);
+            expect(result.mealsPlan?.summary?.replanMeta?.restoredFromSnapshot).toBe(true);
+            HEYS.InsightsPI.mealPlanner.planRemainingMeals = originalPlan;
+            HEYS.InsightsPI.mealPlanner.replanRemainingMeals = originalReplan;
         });
     });
 

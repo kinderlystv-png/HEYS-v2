@@ -43,6 +43,15 @@ fi
 SECRET_ID="e6qcc920n15ja2tj2s2d"
 # VERSION_ID removed to always use latest
 
+# Yandex CF rejects empty env values — omit optional agent vars until set.
+ENVIRONMENT_VARS="PG_HOST=rc1b-obkgs83tnrd6a2m3.mdb.yandexcloud.net,PG_PORT=6432,PG_DATABASE=heys_production,PG_USER=heys_rpc,HEYS_ENCRYPTION_KEY=${HEYS_ENCRYPTION_KEY},JWT_SECRET=${JWT_SECRET}"
+if [[ -n "${PLANNING_AGENT_SECRET:-}" ]]; then
+  ENVIRONMENT_VARS="${ENVIRONMENT_VARS},PLANNING_AGENT_SECRET=${PLANNING_AGENT_SECRET}"
+fi
+if [[ -n "${PLANNING_AGENT_ALLOWED_CLIENT_IDS:-}" ]]; then
+  ENVIRONMENT_VARS="${ENVIRONMENT_VARS},PLANNING_AGENT_ALLOWED_CLIENT_IDS=${PLANNING_AGENT_ALLOWED_CLIENT_IDS}"
+fi
+
 yc serverless function version create \
   --function-name heys-api-rpc \
   --runtime nodejs18 \
@@ -51,7 +60,7 @@ yc serverless function version create \
   --execution-timeout 30s \
   --source-path . \
   --service-account-id "$SA_ID" \
-  --environment "PG_HOST=rc1b-obkgs83tnrd6a2m3.mdb.yandexcloud.net,PG_PORT=6432,PG_DATABASE=heys_production,PG_USER=heys_admin,HEYS_ENCRYPTION_KEY=${HEYS_ENCRYPTION_KEY},JWT_SECRET=${JWT_SECRET}" \
+  --environment "$ENVIRONMENT_VARS" \
   --secret "environment-variable=PG_PASSWORD,id=${SECRET_ID},key=postgresql_password"
 
 echo "✅ Deployed! Running post-deploy health check..."

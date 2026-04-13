@@ -657,5 +657,74 @@ describe('Meal Planner v1.0', () => {
                 expect(meal).toHaveProperty('hoursToSleep');
             }
         });
+
+        it('supports incremental replan meta', () => {
+            const planner = HEYS.InsightsPI.mealPlanner;
+            const params = {
+                currentTime: '14:00',
+                lastMeal: { time: '10:00', totals: { prot: 30, carbs: 40, fat: 10, kcal: 370 } },
+                dayTarget: { prot: 120, carbs: 150, fat: 40, kcal: 1800 },
+                dayEaten: { prot: 40, carbs: 60, fat: 12, kcal: 540 },
+                profile: {},
+                days: [
+                    { date: '2026-02-14', meals: [{ time: '20:00' }] },
+                    { date: '2026-02-13', meals: [{ time: '19:30' }] },
+                    { date: '2026-02-12', meals: [{ time: '20:30' }] }
+                ],
+                pIndex: {},
+                replanReason: 'PRODUCT_ADDED',
+                previousPlanState: { planVersion: 2, lockedMeals: [] },
+                lockedMeals: []
+            };
+
+            const result = planner.replanRemainingMeals(params);
+            expect(result.available).toBe(true);
+            expect(result.summary.replanMeta.incremental).toBe(true);
+            expect(result.summary.replanMeta.reason).toBe('PRODUCT_ADDED');
+            expect(result.summary.replanMeta.previousPlanVersion).toBe(2);
+        });
+
+        it('applies lock override by stable id', () => {
+            const planner = HEYS.InsightsPI.mealPlanner;
+            const baseParams = {
+                currentTime: '14:00',
+                lastMeal: { time: '10:00', totals: { prot: 30, carbs: 40, fat: 10, kcal: 370 } },
+                dayTarget: { prot: 120, carbs: 150, fat: 40, kcal: 1800 },
+                dayEaten: { prot: 40, carbs: 60, fat: 12, kcal: 540 },
+                profile: {},
+                days: [
+                    { date: '2026-02-14', meals: [{ time: '20:00' }] },
+                    { date: '2026-02-13', meals: [{ time: '19:30' }] },
+                    { date: '2026-02-12', meals: [{ time: '20:30' }] }
+                ],
+                pIndex: {}
+            };
+            const base = planner.planRemainingMeals(baseParams);
+            if (!base.meals.length) return;
+            const firstMeal = base.meals[0];
+            const lockedMacros = { prot: 55, carbs: 22, fat: 8, kcal: 365 };
+            const replanned = planner.replanRemainingMeals({
+                ...baseParams,
+                replanReason: 'MEAL_LOCKED',
+                previousPlanState: { planVersion: 4 },
+                lockedMeals: [{ stableId: firstMeal.stableId, index: firstMeal.index, macros: lockedMacros, scenario: 'PROTEIN_DEFICIT' }]
+            });
+
+            expect(replanned.available).toBe(true);
+            expect(replanned.meals[0].locked).toBe(true);
+            expect(replanned.meals[0].macros).toEqual(lockedMacros);
+            expect(replanned.meals[0].scenario).toBe('PROTEIN_DEFICIT');
+        });
+
+        it('returns invalid result when positive budget but no meals', () => {
+            const planner = HEYS.InsightsPI.mealPlanner;
+            const validation = planner.validateReplanResult({
+                available: true,
+                meals: [],
+                summary: { totalMacros: { prot: 0, carbs: 0, kcal: 0 } }
+            }, 500);
+            expect(validation.valid).toBe(false);
+            expect(validation.reason).toContain('Empty meals');
+        });
     });
 });

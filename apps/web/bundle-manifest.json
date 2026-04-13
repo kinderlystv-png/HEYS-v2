@@ -1,58 +1,58 @@
 {
   "boot-core": {
-    "file": "boot-core.bundle.6b4b7741d1b4.js",
-    "hash": "6b4b7741d1b4",
+    "file": "boot-core.bundle.8698fd748b71.js",
+    "hash": "8698fd748b71",
     "fileCount": 29,
-    "size": 1372125,
-    "builtAt": "2026-04-12T23:00:21.378Z"
+    "size": 1373464,
+    "builtAt": "2026-04-13T21:06:28.909Z"
   },
   "boot-calc": {
-    "file": "boot-calc.bundle.bcea76818e80.js",
-    "hash": "bcea76818e80",
+    "file": "boot-calc.bundle.1d69dda553fb.js",
+    "hash": "1d69dda553fb",
     "fileCount": 19,
-    "size": 1085881,
-    "builtAt": "2026-04-12T23:00:21.581Z"
+    "size": 1088083,
+    "builtAt": "2026-04-13T21:06:29.111Z"
   },
   "boot-day": {
-    "file": "boot-day.bundle.dbaa8824c4f8.js",
-    "hash": "dbaa8824c4f8",
+    "file": "boot-day.bundle.cbe633c5ec93.js",
+    "hash": "cbe633c5ec93",
     "fileCount": 53,
-    "size": 1045855,
-    "builtAt": "2026-04-12T23:00:21.844Z"
+    "size": 1047752,
+    "builtAt": "2026-04-13T21:06:29.317Z"
   },
   "boot-app": {
     "file": "boot-app.bundle.ea233aeb40bb.js",
     "hash": "ea233aeb40bb",
     "fileCount": 51,
     "size": 1301365,
-    "builtAt": "2026-04-12T23:00:22.103Z"
+    "builtAt": "2026-04-13T21:06:29.656Z"
   },
   "boot-init": {
     "file": "boot-init.bundle.0f099a1c6567.js",
     "hash": "0f099a1c6567",
     "fileCount": 8,
     "size": 436538,
-    "builtAt": "2026-04-12T23:00:22.284Z"
+    "builtAt": "2026-04-13T21:06:29.906Z"
   },
   "postboot-1-game": {
     "file": "postboot-1-game.bundle.3cfc7b29db8e.js",
     "hash": "3cfc7b29db8e",
     "fileCount": 31,
     "size": 1712767,
-    "builtAt": "2026-04-12T23:00:22.570Z"
+    "builtAt": "2026-04-13T21:06:30.211Z"
   },
   "postboot-2-insights": {
-    "file": "postboot-2-insights.bundle.4ce35a8c199f.js",
-    "hash": "4ce35a8c199f",
+    "file": "postboot-2-insights.bundle.2580782f9b84.js",
+    "hash": "2580782f9b84",
     "fileCount": 39,
-    "size": 1842666,
-    "builtAt": "2026-04-12T23:00:22.883Z"
+    "size": 1865242,
+    "builtAt": "2026-04-13T21:06:30.478Z"
   },
   "postboot-3-ui": {
-    "file": "postboot-3-ui.bundle.05ddeba9a5f5.js",
-    "hash": "05ddeba9a5f5",
-    "fileCount": 34,
-    "size": 2047588,
-    "builtAt": "2026-04-12T23:00:23.165Z"
+    "file": "postboot-3-ui.bundle.5ea890aa6634.js",
+    "hash": "5ea890aa6634",
+    "fileCount": 35,
+    "size": 2121988,
+    "builtAt": "2026-04-13T21:06:30.771Z"
   }
 }

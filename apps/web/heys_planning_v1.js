@@ -6,6 +6,7 @@
 
     const HEYS = window.HEYS = window.HEYS || {};
     const React = window.React;
+    const ReactDOM = window.ReactDOM;
     if (!React) return;
 
     const h = React.createElement;
@@ -59,6 +60,15 @@
             return () => {
                 document.body.classList.remove('planning-tab-active');
             };
+        }, []);
+
+        useEffect(() => {
+            const pull = HEYS.Planning && typeof HEYS.Planning.refreshPlanningFromCloud === 'function'
+                ? HEYS.Planning.refreshPlanningFromCloud
+                : null;
+            if (!pull) return undefined;
+            pull().catch(function () { /* offline / RPC optional */ });
+            return undefined;
         }, []);
 
         useEffect(() => {
@@ -127,31 +137,35 @@
             return h(PlanningFallback);
         }
 
+        const subnavNode = h('div', { className: 'planning-subnav planning-subnav--docked', ref: subnavRef },
+            h('div', { className: 'planning-subnav__inner' },
+                SUBNAV_ITEMS.map((item) => h('button', {
+                    key: item.id,
+                    type: 'button',
+                    title: item.label,
+                    'aria-label': item.label,
+                    'data-screen': item.id,
+                    className: 'planning-subnav__item' + (activeScreen === item.id ? ' active' : ''),
+                    onClick: () => setActiveScreen(item.id),
+                },
+                    h('span', { className: 'planning-subnav__icon', 'aria-hidden': 'true' }, item.icon),
+                    h('span', {
+                        className: 'planning-subnav__label',
+                        'data-short-label': item.shortLabel || item.label,
+                        'aria-hidden': 'true',
+                    }, item.label),
+                )),
+            ),
+        );
+
         return h('div', { className: 'planning-tab', style: planningLayoutStyle },
             h('div', { className: 'planning-content' },
                 CurrentScreen ? h(CurrentScreen, { state: planState }) : h(PlanningFallback),
             ),
             h('div', { className: 'planning-subnav-shell', 'aria-hidden': 'true' }),
-            h('div', { className: 'planning-subnav planning-subnav--docked', ref: subnavRef },
-                h('div', { className: 'planning-subnav__inner' },
-                    SUBNAV_ITEMS.map((item) => h('button', {
-                        key: item.id,
-                        type: 'button',
-                        title: item.label,
-                        'aria-label': item.label,
-                        'data-screen': item.id,
-                        className: 'planning-subnav__item' + (activeScreen === item.id ? ' active' : ''),
-                        onClick: () => setActiveScreen(item.id),
-                    },
-                        h('span', { className: 'planning-subnav__icon', 'aria-hidden': 'true' }, item.icon),
-                        h('span', {
-                            className: 'planning-subnav__label',
-                            'data-short-label': item.shortLabel || item.label,
-                            'aria-hidden': 'true',
-                        }, item.label),
-                    )),
-                ),
-            ),
+            ReactDOM && typeof ReactDOM.createPortal === 'function' && typeof document !== 'undefined'
+                ? ReactDOM.createPortal(subnavNode, document.body)
+                : subnavNode,
         );
     }
 

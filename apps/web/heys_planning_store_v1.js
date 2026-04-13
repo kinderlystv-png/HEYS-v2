@@ -441,11 +441,32 @@
             startTime: opts?.startTime || '09:00',
             endTime: opts?.endTime || '10:00',
             source: opts?.source || 'user',
+            recurrenceGroupId: opts?.recurrenceGroupId ? String(opts.recurrenceGroupId) : undefined,
             createdAt: nowISO(),
             updatedAt: nowISO(),
         };
         saveSlots(slots.concat(slot));
         return slot;
+    }
+
+    function addSlotBatch(optsList) {
+        const slots = getSlots();
+        const now = nowISO();
+        const created = (Array.isArray(optsList) ? optsList : []).map((opts) => ({
+            id: uid(),
+            taskId: opts?.taskId || undefined,
+            title: String(opts?.title || '').trim(),
+            date: dateStr(opts?.date),
+            startTime: opts?.startTime || '09:00',
+            endTime: opts?.endTime || '10:00',
+            source: opts?.source || 'user',
+            recurrenceGroupId: opts?.recurrenceGroupId ? String(opts.recurrenceGroupId) : undefined,
+            createdAt: now,
+            updatedAt: now,
+        }));
+        if (!created.length) return [];
+        saveSlots(slots.concat(created));
+        return created;
     }
 
     function updateSlot(id, patch) {
@@ -610,6 +631,7 @@
             deleteTask: (id) => { deleteTask(id); refresh(); },
             reorderTasks: (sourceId, targetId) => { const nextTasks = reorderTasks(sourceId, targetId); refresh(); return nextTasks; },
             addSlot: (opts) => { const slot = addSlot(opts); refresh(); return slot; },
+            addSlotBatch: (optsList) => { const list = addSlotBatch(optsList); refresh(); return list; },
             updateSlot: (id, patch) => { const slot = updateSlot(id, patch); refresh(); return slot; },
             deleteSlot: (id) => { deleteSlot(id); refresh(); },
             addContextInboxItem: (text, opts) => { const item = addContextInboxItem(text, opts); refresh(); return item; },
@@ -683,6 +705,7 @@
         getSlots,
         saveSlots,
         addSlot,
+        addSlotBatch,
         updateSlot,
         deleteSlot,
         getContextInboxItems,
