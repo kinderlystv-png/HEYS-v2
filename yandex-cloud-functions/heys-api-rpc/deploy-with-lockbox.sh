@@ -3,7 +3,7 @@
 
 set -e
 
-echo "🚀 Deploying heys-api-rpc with heys_rpc user..."
+echo "🚀 Deploying heys-api-rpc with Lockbox PG_PASSWORD..."
 
 # === Pre-deploy checks ===
 if [[ ! -f "index.js" ]]; then
@@ -43,8 +43,14 @@ fi
 SECRET_ID="e6qcc920n15ja2tj2s2d"
 # VERSION_ID removed to always use latest
 
+# DB user MUST match whichever password is stored in Lockbox under postgresql_password.
+# CI / deploy-all.sh use GitHub secrets PG_USER (typically heys_admin). Using heys_rpc here with an
+# admin-only Lockbox password breaks every RPC with "Database connection failed" (auth error).
+RPC_PG_USER="${PG_USER:-heys_admin}"
+echo "   PG_USER=${RPC_PG_USER} (set PG_USER=heys_rpc only if Lockbox postgresql_password is that role’s password)"
+
 # Yandex CF rejects empty env values — omit optional agent vars until set.
-ENVIRONMENT_VARS="PG_HOST=rc1b-obkgs83tnrd6a2m3.mdb.yandexcloud.net,PG_PORT=6432,PG_DATABASE=heys_production,PG_USER=heys_rpc,HEYS_ENCRYPTION_KEY=${HEYS_ENCRYPTION_KEY},JWT_SECRET=${JWT_SECRET}"
+ENVIRONMENT_VARS="PG_HOST=rc1b-obkgs83tnrd6a2m3.mdb.yandexcloud.net,PG_PORT=6432,PG_DATABASE=heys_production,PG_USER=${RPC_PG_USER},HEYS_ENCRYPTION_KEY=${HEYS_ENCRYPTION_KEY},JWT_SECRET=${JWT_SECRET}"
 if [[ -n "${PLANNING_AGENT_SECRET:-}" ]]; then
   ENVIRONMENT_VARS="${ENVIRONMENT_VARS},PLANNING_AGENT_SECRET=${PLANNING_AGENT_SECRET}"
 fi
@@ -56,7 +62,7 @@ yc serverless function version create \
   --function-name heys-api-rpc \
   --runtime nodejs18 \
   --entrypoint index.handler \
-  --memory 256m \
+  --memory 512m \
   --execution-timeout 30s \
   --source-path . \
   --service-account-id "$SA_ID" \

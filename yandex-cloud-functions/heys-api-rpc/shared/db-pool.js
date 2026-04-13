@@ -92,10 +92,10 @@ function createPoolConfig() {
       rejectUnauthorized: true  // Production: fail if no cert (secure by default)
     }),
 
-    // Connection pool settings
-    max: 3,                      // Максимум 3 соединения (лимит для serverless)
-    idleTimeoutMillis: 3000,     // 3 секунды — закрываем ДО того как PgBouncer убьёт
-    connectionTimeoutMillis: 5000, // 5 секунд таймаут на подключение
+    // Connection pool settings — keep aligned with heys-api-rest/db-pool.js (proven in prod)
+    max: 5,
+    idleTimeoutMillis: 3000,
+    connectionTimeoutMillis: 8000,
 
     // TCP keepalive — обнаружение мёртвых PgBouncer-соединений
     keepAlive: true,

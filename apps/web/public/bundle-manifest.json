@@ -49,10 +49,10 @@
     "builtAt": "2026-04-13T21:06:30.478Z"
   },
   "postboot-3-ui": {
-    "file": "postboot-3-ui.bundle.5ea890aa6634.js",
-    "hash": "5ea890aa6634",
+    "file": "postboot-3-ui.bundle.e24086743d8c.js",
+    "hash": "e24086743d8c",
     "fileCount": 35,
-    "size": 2121988,
-    "builtAt": "2026-04-13T21:06:30.771Z"
+    "size": 2121924,
+    "builtAt": "2026-04-13T21:35:21.166Z"
   }
 }

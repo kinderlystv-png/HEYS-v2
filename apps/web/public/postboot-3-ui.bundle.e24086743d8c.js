@@ -44195,8 +44195,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         const [endTime, setEndTime] = useState(() => normalizeQuickModalTimeForInput(draft?.endTime || '10:00'));
         const [repeatWeekly, setRepeatWeekly] = useState(false);
         const [weekdaySet, setWeekdaySet] = useState(() => new Set([anchorDow]));
-        const [taskProjectId, setTaskProjectId] = useState('');
-        const [taskParentTaskId, setTaskParentTaskId] = useState('');
+        const [quickTargetValue, setQuickTargetValue] = useState('');
         const [newProjectName, setNewProjectName] = useState('');
 
         useEffect(() => {
