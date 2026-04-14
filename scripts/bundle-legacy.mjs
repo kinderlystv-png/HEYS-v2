@@ -57,6 +57,19 @@ function contentHash(str) {
     return createHash('sha256').update(str).digest('hex').slice(0, 12);
 }
 
+function sourceFingerprint(files) {
+    const hash = createHash('sha256');
+    for (const relPath of files) {
+        const cleanPath = relPath.split('?')[0];
+        const src = readWebFile(relPath);
+        hash.update(cleanPath);
+        hash.update('\0');
+        hash.update(src);
+        hash.update('\0');
+    }
+    return hash.digest('hex').slice(0, 12);
+}
+
 function fmtSize(bytes) {
     if (bytes < 1024) return `${bytes}B`;
     if (bytes < 1_048_576) return `${(bytes / 1024).toFixed(1)}KB`;
@@ -84,6 +97,7 @@ function readExistingManifest() {
 function buildBundle(name, files) {
     const parts = [];
     const missing = [];
+    let srcFingerprint = null;
 
     for (const f of files) {
         try {
@@ -101,6 +115,7 @@ function buildBundle(name, files) {
 
     const content = parts.join('\n');
     const hash = contentHash(content);
+    srcFingerprint = sourceFingerprint(files);
     const outName = `${name}.bundle.${hash}.js`;
     const outPath = resolve(PUB_DIR, outName);
     const size = Buffer.byteLength(content, 'utf8');
@@ -138,7 +153,7 @@ function buildBundle(name, files) {
         }
     }
 
-    return { name, file: outName, hash, fileCount: files.length, size };
+    return { name, file: outName, hash, sourceFingerprint: srcFingerprint, fileCount: files.length, size };
 }
 
 // ─── Clean stale bundles ───────────────────────────────────────────────────
@@ -232,6 +247,7 @@ async function main() {
         const entry = {
             file: r.file,
             hash: r.hash,
+            sourceFingerprint: r.sourceFingerprint,
             fileCount: r.fileCount,
             size: r.size,
             builtAt: new Date().toISOString(),

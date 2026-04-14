@@ -216,3 +216,6 @@ yandex-cloud-functions/*.zip
 yandex-cloud-functions/backup-*.json
 yandex-cloud-functions/*.json.gz
 yandex-cloud-functions/*/certs/
+
+# Local multi-root workspace files (machine-specific paths)
+*.code-workspace

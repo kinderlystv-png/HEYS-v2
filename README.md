@@ -220,6 +220,21 @@ The project has been migrated from legacy v12 structure to modern monorepo:
 > 📖 **[Посмотреть полную документацию](docs/README.md)** - мастер-индекс со
 > всеми руководствами, отчетами и anchor системой
 
+## 🧹 Repository Hygiene (Root Folders)
+
+Чтобы root оставался предсказуемым для поиска и агентной навигации, используем
+простую классификацию top-level каталогов:
+
+- **Active product code:** `apps/`, `packages/`, `yandex-cloud-functions/`,
+  `scripts/`, `docs/`, `database/`.
+- **Operational artifacts:** `reports/`, `security-reports/`, `TESTS/`.
+- **Legacy/experimental snapshots** (не source-of-truth без явной задачи):
+  `emt-v3-stable-clean/`, `testing-integration-package/`, `mini_app_logic`,
+  `TOOLS/`.
+
+Если добавляется новый top-level каталог, в PR фиксировать его статус (`active`,
+`artifact`, `snapshot`) и владельца.
+
 ### 📌 Бриф продукта (актуально)
 
 - **[HEYS Brief (Product v1)](docs/HEYS_BRIEF.md)** — Light-only, Widgets

@@ -5973,8 +5973,21 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
                                 prevDay.waterMl === newDay.waterMl &&
                                 prevDay.steps === newDay.steps &&
                                 prevDay.weightMorning === newDay.weightMorning &&
+                                // Утренние оценки и агрегаты дня
+                                prevDay.moodMorning === newDay.moodMorning &&
+                                prevDay.wellbeingMorning === newDay.wellbeingMorning &&
+                                prevDay.stressMorning === newDay.stressMorning &&
+                                prevDay.moodAvg === newDay.moodAvg &&
+                                prevDay.wellbeingAvg === newDay.wellbeingAvg &&
+                                prevDay.stressAvg === newDay.stressAvg &&
+                                prevDay.dayScore === newDay.dayScore &&
+                                prevDay.dayScoreRaw === newDay.dayScoreRaw &&
+                                prevDay.dayScoreManual === newDay.dayScoreManual &&
+                                // Данные сна
                                 prevDay.sleepStart === newDay.sleepStart &&
-                                prevDay.sleepEnd === newDay.sleepEnd;
+                                prevDay.sleepEnd === newDay.sleepEnd &&
+                                prevDay.sleepHours === newDay.sleepHours &&
+                                prevDay.sleepQuality === newDay.sleepQuality;
                             if (isSameContent) {
                                 // Данные не изменились — оставляем предыдущий объект (без ре-рендера)
                                 return prevDay;

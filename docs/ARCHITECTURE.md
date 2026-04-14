@@ -16,6 +16,40 @@ workspaces + Turborepo). Two code worlds coexist:
 **152-FZ compliance**: all data exclusively in Yandex Cloud (Russia,
 ru-central1). Supabase SDK removed 2025-12-24.
 
+## Legacy -> Modern Migration Map
+
+This section tracks where to implement changes first and when code can move out
+of legacy roots.
+
+### Ownership and intent
+
+- `apps/web/heys_*.js`, `apps/web/day/**/*.js`, `apps/web/insights/**/*.js`:
+  production legacy runtime; edits are allowed, but every runtime-affecting
+  change requires legacy bundle rebuild/validation.
+- `apps/web/src/**` and `packages/*`: preferred home for all new features and
+  shared logic.
+- `apps/tg-mini/**`, `apps/landing/**`, `packages/core/**`: modern-only surfaces
+  unless integration with legacy runtime is explicitly required.
+
+### Migration-ready criteria
+
+Move logic from legacy to modern when all criteria are true:
+
+1. Public API boundary is explicit (`HEYS.YandexAPI.rpc()` / `.rest()`, storage
+   helpers, typed params).
+2. Behavior is covered by focused tests in modern code (unit or integration).
+3. Runtime does not depend on direct mutation of legacy globals outside a small
+   adapter layer.
+4. Feature can be consumed from at least one modern entry point without loading
+   the full legacy module graph.
+
+### Current practical split
+
+- Keep in legacy short-term: boot/postboot orchestration, service-worker-coupled
+  startup path, and high-churn day/app runtime modules.
+- Prefer modern immediately: reusable domain logic, API wrappers, analytics
+  utilities, and UI components used by non-legacy surfaces.
+
 ---
 
 ## High-Level Architecture Diagram

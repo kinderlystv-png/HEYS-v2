@@ -89,12 +89,28 @@ function clearAttemptsOnSuccess(currentVersion, _targetVersion) {
   return false;
 }
 
-function detectBundleStaleState({ manifestBootHash, loadedBootHash, swCacheVersion, expectedCacheVersion }) {
+function detectBundleStaleState({
+  manifestBootHash,
+  loadedBootHash,
+  swCacheVersion,
+  expectedCacheVersion,
+  manifestSourceFingerprint,
+  currentSourceFingerprint,
+}) {
+  const sourceFingerprintMismatch =
+    !!manifestSourceFingerprint &&
+    !!currentSourceFingerprint &&
+    manifestSourceFingerprint !== currentSourceFingerprint;
   const hashMismatch = !!manifestBootHash && !!loadedBootHash && manifestBootHash !== loadedBootHash;
   const cacheMismatch = !!swCacheVersion && !!expectedCacheVersion && swCacheVersion !== expectedCacheVersion;
 
-  if (hashMismatch || cacheMismatch) {
-    return { stale: true, reason: hashMismatch ? 'boot_hash_mismatch' : 'sw_cache_mismatch', action: 'hard_reload' };
+  if (sourceFingerprintMismatch || hashMismatch || cacheMismatch) {
+    const reason = sourceFingerprintMismatch
+      ? 'source_fingerprint_mismatch'
+      : hashMismatch
+        ? 'boot_hash_mismatch'
+        : 'sw_cache_mismatch';
+    return { stale: true, reason, action: 'hard_reload' };
   }
 
   return { stale: false, reason: 'in_sync', action: 'none' };
@@ -244,6 +260,21 @@ describe('PWA update protection', () => {
   });
 
   describe('bundle manifest/cache stale detection', () => {
+    it('signals hard reload when source fingerprint differs from current sources', () => {
+      const result = detectBundleStaleState({
+        manifestBootHash: 'boot-core.bundle.a4b467f83411.js',
+        loadedBootHash: 'boot-core.bundle.a4b467f83411.js',
+        swCacheVersion: 'heys-1776009258765',
+        expectedCacheVersion: 'heys-1776009258765',
+        manifestSourceFingerprint: '111111111111',
+        currentSourceFingerprint: '222222222222',
+      });
+
+      expect(result.stale).toBe(true);
+      expect(result.reason).toBe('source_fingerprint_mismatch');
+      expect(result.action).toBe('hard_reload');
+    });
+
     it('signals hard reload when loaded boot hash differs from manifest', () => {
       const result = detectBundleStaleState({
         manifestBootHash: 'boot-core.bundle.a4b467f83411.js',

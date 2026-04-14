@@ -10,6 +10,8 @@ this modern productivity platform.
 - **Node.js 18+** with pnpm
 - **Git** configured with your credentials
 - **VS Code** (recommended) with our workspace settings
+- **Windows users**: run repo scripts from **Git Bash** or **WSL** (many project
+  scripts use `bash` directly)
 
 ### Development Setup
 
