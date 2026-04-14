@@ -84,6 +84,61 @@
     return new Date().toISOString().slice(0, 10);
   }
 
+  function getCurrentClientId() {
+    const cidFromRuntime = HEYS.currentClientId || HEYS.utils?.getCurrentClientId?.() || '';
+    if (cidFromRuntime) return String(cidFromRuntime);
+
+    const cidFromStore = lsGet('heys_client_current', '');
+    if (cidFromStore && typeof cidFromStore === 'string') return String(cidFromStore);
+
+    const pinSession = lsGet('heys_pin_session', null);
+    if (pinSession?.clientId) return String(pinSession.clientId);
+
+    const curatorSession = lsGet('heys_curator_session', null);
+    if (curatorSession?.currentClientId) return String(curatorSession.currentClientId);
+
+    const profile = lsGet('heys_profile', null);
+    if (profile?.id) return String(profile.id);
+
+    const cid = '';
+    return String(cid || '');
+  }
+
+  function getScopedDayKey(dateKey) {
+    const cid = getCurrentClientId();
+    return cid ? `heys_${cid}_dayv2_${dateKey}` : null;
+  }
+
+  function getUnscopedDayKey(dateKey) {
+    return `heys_dayv2_${dateKey}`;
+  }
+
+  function readDayData(dateKey, fallback = {}) {
+    const scopedKey = getScopedDayKey(dateKey);
+    if (scopedKey) {
+      const scopedData = lsGet(scopedKey, null);
+      if (scopedData && typeof scopedData === 'object') return scopedData;
+    }
+    return lsGet(getUnscopedDayKey(dateKey), fallback) || fallback;
+  }
+
+  function saveDayData(dateKey, dayData) {
+    const scopedKey = getScopedDayKey(dateKey);
+    if (scopedKey) {
+      if (HEYS.store?.set) {
+        HEYS.store.set(scopedKey, dayData);
+      } else {
+        lsSet(scopedKey, dayData);
+      }
+    }
+    // Backward compatibility: часть legacy-модулей всё ещё читает unscoped day key.
+    if (HEYS.store?.set) {
+      HEYS.store.set(getUnscopedDayKey(dateKey), dayData);
+    } else {
+      lsSet(getUnscopedDayKey(dateKey), dayData);
+    }
+  }
+
   // ============================================================
   // WEIGHT STEP
   // ============================================================
@@ -94,7 +149,7 @@
 
     // Сначала проверяем сегодняшний вес (для редактирования из карточки)
     const todayKey = today.toISOString().slice(0, 10);
-    const todayData = lsGet(`heys_dayv2_${todayKey}`, {}) || {};
+    const todayData = readDayData(todayKey, {});
     if (todayData.weightMorning) {
       return { weight: todayData.weightMorning, daysAgo: 0, date: todayKey };
     }
@@ -104,7 +159,7 @@
       const d = new Date(today);
       d.setDate(d.getDate() - i);
       const key = d.toISOString().slice(0, 10);
-      const dayData = lsGet(`heys_dayv2_${key}`, {}) || {};
+      const dayData = readDayData(key, {});
       if (dayData.weightMorning) {
         return { weight: dayData.weightMorning, daysAgo: i, date: key };
       }
@@ -119,7 +174,7 @@
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
     const key = yesterday.toISOString().slice(0, 10);
-    const dayData = lsGet(`heys_dayv2_${key}`, {}) || {};
+    const dayData = readDayData(key, {});
     return dayData.weightMorning || null;
   }
 
@@ -130,7 +185,7 @@
       const d = new Date(today);
       d.setDate(d.getDate() - i);
       const key = d.toISOString().slice(0, 10);
-      const dayData = lsGet(`heys_dayv2_${key}`, {}) || {};
+      const dayData = readDayData(key, {});
       if (dayData.weightMorning) {
         weights.push({ day: -i, weight: dayData.weightMorning });
       }
@@ -242,7 +297,7 @@
     getInitialData: (context) => {
       // Если есть dateKey в context — берём вес из того дня (для редактирования)
       if (context && context.dateKey) {
-        const dayData = lsGet(`heys_dayv2_${context.dateKey}`, {}) || {};
+        const dayData = readDayData(context.dateKey, {});
         if (dayData.weightMorning) {
           return {
             weightKg: Math.floor(dayData.weightMorning),
@@ -260,12 +315,12 @@
     save: (data, context) => {
       // Используем dateKey из context, или сегодняшний день как fallback
       const dateKey = (context && context.dateKey) || getTodayKey();
-      const dayData = lsGet(`heys_dayv2_${dateKey}`, {}) || {};
+      const dayData = readDayData(dateKey, {});
       const weight = (data.weightKg || 70) + (data.weightG || 0) / 10;
       dayData.date = dateKey;
       dayData.weightMorning = weight;
       dayData.updatedAt = Date.now();
-      lsSet(`heys_dayv2_${dateKey}`, dayData);
+      saveDayData(dateKey, dayData);
 
       // Также обновляем текущий вес в профиле (для расчёта TDEE, BMR и т.д.)
       const profile = lsGet('heys_profile', {});
@@ -302,7 +357,7 @@
       const d = new Date(today);
       d.setDate(d.getDate() - i);
       const key = d.toISOString().slice(0, 10);
-      const dayData = lsGet(`heys_dayv2_${key}`, {}) || {};
+      const dayData = readDayData(key, {});
       if (dayData.sleepStart && dayData.sleepEnd) {
         return {
           sleepStart: dayData.sleepStart,
@@ -487,7 +542,7 @@
       const dateKey = resolveDateKey(context?.dateKey);
       // Если есть dateKey в context — берём данные из того дня
       if (dateKey) {
-        const dayData = lsGet(`heys_dayv2_${dateKey}`, {}) || {};
+        const dayData = readDayData(dateKey, {});
         if (dayData.sleepStart && dayData.sleepEnd) {
           const sleepStartH = parseInt(dayData.sleepStart.split(':')[0], 10);
           const sleepStartM = parseInt(dayData.sleepStart.split(':')[1], 10);
@@ -525,7 +580,7 @@
     },
     save: (data, context) => {
       const dateKey = resolveDateKey(context?.dateKey);
-      const dayData = lsGet(`heys_dayv2_${dateKey}`, {}) || {};
+      const dayData = readDayData(dateKey, {});
       const sleepStart = `${String(data.sleepStartH).padStart(2, '0')}:${String(data.sleepStartM).padStart(2, '0')}`;
       const sleepEnd = `${String(data.sleepEndH).padStart(2, '0')}:${String(data.sleepEndM).padStart(2, '0')}`;
       const daySleepMinutes = normalizeDaySleepMinutes(dayData.daySleepMinutes ?? data.daySleepMinutes);
@@ -537,7 +592,7 @@
       dayData.daySleepMinutes = daySleepMinutes;
       dayData.sleepHours = Math.round((sleepHours + daySleepMinutes / 60) * 10) / 10;
       dayData.updatedAt = Date.now();
-      lsSet(`heys_dayv2_${dateKey}`, dayData);
+      saveDayData(dateKey, dayData);
       console.info('[HEYS.sleepTime] ✅ Saved:', { dateKey, sleepStart, sleepEnd, daySleepMinutes, sleepHours: dayData.sleepHours });
       window.dispatchEvent(new CustomEvent('heys:day-updated', {
         detail: { date: dateKey, field: 'sleep', source: 'sleep-step', forceReload: true }
@@ -602,7 +657,7 @@
     component: DaySleepStepComponent,
     getInitialData: (context) => {
       const dateKey = resolveDateKey(context?.dateKey);
-      const dayData = lsGet(`heys_dayv2_${dateKey}`, {}) || {};
+      const dayData = readDayData(dateKey, {});
       const nightSleepHours = HEYS.dayUtils?.getNightSleepHours
         ? HEYS.dayUtils.getNightSleepHours(dayData)
         : ((dayData.sleepStart && dayData.sleepEnd)
@@ -624,7 +679,7 @@
     },
     save: (data, context) => {
       const dateKey = resolveDateKey(context?.dateKey);
-      const dayData = lsGet(`heys_dayv2_${dateKey}`, {}) || {};
+      const dayData = readDayData(dateKey, {});
       const daySleepMinutes = normalizeDaySleepMinutes(data.daySleepMinutes);
       const nightSleepHours = HEYS.dayUtils?.getNightSleepHours
         ? HEYS.dayUtils.getNightSleepHours(dayData)
@@ -641,7 +696,7 @@
       dayData.daySleepMinutes = daySleepMinutes;
       dayData.sleepHours = Math.round((nightSleepHours + daySleepMinutes / 60) * 10) / 10;
       dayData.updatedAt = Date.now();
-      lsSet(`heys_dayv2_${dateKey}`, dayData);
+      saveDayData(dateKey, dayData);
       console.info('[HEYS.daySleep] ✅ Saved:', { dateKey, daySleepMinutes, sleepHours: dayData.sleepHours });
       window.dispatchEvent(new CustomEvent('heys:day-updated', {
         detail: { date: dateKey, field: 'daySleepMinutes', source: 'day-sleep-step', forceReload: true }
@@ -808,7 +863,7 @@
       const dateKey = resolveDateKey(context?.dateKey);
       // Если есть dateKey в context — берём данные из того дня
       if (dateKey) {
-        const dayData = lsGet(`heys_dayv2_${dateKey}`, {}) || {};
+        const dayData = readDayData(dateKey, {});
         if (dayData.sleepQuality !== undefined) {
           return {
             sleepQuality: dayData.sleepQuality,
@@ -825,7 +880,7 @@
     },
     save: (data, context, allStepData) => {
       const dateKey = resolveDateKey(context?.dateKey);
-      const dayData = lsGet(`heys_dayv2_${dateKey}`, {}) || {};
+      const dayData = readDayData(dateKey, {});
       dayData.sleepQuality = data.sleepQuality;
 
       // Убеждаемся, что не затираем данные времени сна из sleepTime-шага
@@ -848,7 +903,7 @@
       }
 
       dayData.updatedAt = Date.now();
-      lsSet(`heys_dayv2_${dateKey}`, dayData);
+      saveDayData(dateKey, dayData);
       console.info('[HEYS.sleepQuality] ✅ Saved:', { dateKey, sleepQuality: dayData.sleepQuality, sleepStart: dayData.sleepStart, sleepEnd: dayData.sleepEnd });
       window.dispatchEvent(new CustomEvent('heys:day-updated', {
         detail: { date: dateKey, field: 'sleep', source: 'sleep-quality-step', forceReload: true }
@@ -867,7 +922,7 @@
       const d = new Date(today);
       d.setDate(d.getDate() - i);
       const key = d.toISOString().slice(0, 10);
-      const dayData = lsGet(`heys_dayv2_${key}`, {}) || {};
+      const dayData = readDayData(key, {});
       if (dayData.steps && dayData.steps > 0) {
         stepsData.push(dayData.steps);
       }
@@ -2446,7 +2501,7 @@
     component: ColdExposureStepComponent,
     getInitialData: () => {
       const dateKey = getTodayKey();
-      const dayData = lsGet(`heys_dayv2_${dateKey}`, {}) || {};
+      const dayData = readDayData(dateKey, {});
       const cold = dayData.coldExposure ?? {};  // null-safe: ?? вместо ||
       return {
         coldType: cold.type || 'none',
@@ -2815,7 +2870,7 @@
     getInitialData: () => {
       const dateKey = getTodayKey();
       // 🔧 FIX: Добавляем || {} на случай если lsGet вернёт null (новый клиент)
-      const dayData = lsGet(`heys_dayv2_${dateKey}`, {}) || {};
+      const dayData = readDayData(dateKey, {});
 
       // Если уже есть данные за сегодня — берём их
       if (dayData.moodMorning !== undefined) {
@@ -2838,14 +2893,14 @@
     },
     save: (data) => {
       const dateKey = data._dateKey || getTodayKey();
-      const dayData = lsGet(`heys_dayv2_${dateKey}`, { date: dateKey });
+      const dayData = readDayData(dateKey, { date: dateKey });
 
       dayData.moodMorning = data.mood ?? 5;
       dayData.wellbeingMorning = data.wellbeing ?? 5;
       dayData.stressMorning = data.stress ?? 5;
 
       dayData.updatedAt = Date.now();
-      lsSet(`heys_dayv2_${dateKey}`, dayData);
+      saveDayData(dateKey, dayData);
 
       window.dispatchEvent(new CustomEvent('heys:data-saved', {
         detail: { key: `day:${dateKey}`, type: 'morningMood' }
@@ -2869,7 +2924,7 @@
     // Получаем утреннее настроение из данных дня
     const dateKey = getTodayKey();
     // 🔧 FIX: Добавляем || {} на случай если lsGet вернёт null
-    const dayData = lsGet(`heys_dayv2_${dateKey}`, {}) || {};
+    const dayData = readDayData(dateKey, {});
     const morningMood = dayData.moodMorning ?? 5;
     const morningWellbeing = dayData.wellbeingMorning ?? 5;
     const morningStress = dayData.stressMorning ?? 5;

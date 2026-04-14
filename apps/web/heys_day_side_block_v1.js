@@ -211,6 +211,17 @@
             const scoreCompare = getCompareArrow(day.dayScore, yData?.dayScore);
             const scoreEmoji = getScoreEmoji(day.dayScore);
             const isPulse = (day.dayScore || 0) >= 9;
+            const moodDisplay = day.moodAvg || day.moodMorning || '';
+            const wellbeingDisplay = day.wellbeingAvg || day.wellbeingMorning || '';
+            const stressDisplay = day.stressAvg || day.stressMorning || '';
+            const dayScoreFallback = (() => {
+              if (!moodDisplay && !wellbeingDisplay && !stressDisplay) return '';
+              const m = moodDisplay !== '' ? +moodDisplay : 5;
+              const w = wellbeingDisplay !== '' ? +wellbeingDisplay : 5;
+              const s = stressDisplay !== '' ? +stressDisplay : 5;
+              return Math.round((m + w + (10 - s)) / 3);
+            })();
+            const dayScoreDisplay = day.dayScore || dayScoreFallback;
 
             // Время последнего приёма
             const meals = day.meals || [];
@@ -242,7 +253,7 @@
               // dayScore: авто из mood/wellbeing/stress, но можно поправить вручную
               React.createElement('div', {
                 className: 'day-score-display' + (day.dayScore ? ' clickable' : '') + (isPulse ? ' score-pulse' : ''),
-                style: { background: getScoreGradient(day.dayScore) },
+                style: { background: getScoreGradient(dayScoreDisplay) },
                 onClick: openMorningMoodCheckin
               },
                 // Emoji + Value
@@ -250,8 +261,8 @@
                   scoreEmoji && React.createElement('span', { className: 'score-emoji' }, scoreEmoji),
                   React.createElement('span', {
                     className: 'day-score-value-big',
-                    style: { color: getScoreTextColor(day.dayScore) }
-                  }, day.dayScore || '—'),
+                    style: { color: getScoreTextColor(dayScoreDisplay) }
+                  }, dayScoreDisplay || '—'),
                   React.createElement('span', { className: 'day-score-max' }, '/ 10')
                 ),
                 // Compare with yesterday
@@ -272,7 +283,7 @@
                       });
                     }
                   }, '✏️ сбросить')
-                  : (day.moodAvg || day.wellbeingAvg || day.stressAvg) &&
+                  : (moodDisplay || wellbeingDisplay || stressDisplay) &&
                   React.createElement('span', { className: 'day-score-auto-hint' }, '✨ авто')
               ),
               React.createElement('div', {
@@ -282,17 +293,17 @@
                 React.createElement('div', { className: 'mood-card' },
                   React.createElement('span', { className: 'mood-card-icon' }, '😊'),
                   React.createElement('span', { className: 'mood-card-label' }, 'Настроение'),
-                  React.createElement('span', { className: 'mood-card-value' }, day.moodAvg || '—')
+                  React.createElement('span', { className: 'mood-card-value' }, moodDisplay || '—')
                 ),
                 React.createElement('div', { className: 'mood-card' },
                   React.createElement('span', { className: 'mood-card-icon' }, '💪'),
                   React.createElement('span', { className: 'mood-card-label' }, 'Самочувствие'),
-                  React.createElement('span', { className: 'mood-card-value' }, day.wellbeingAvg || '—')
+                  React.createElement('span', { className: 'mood-card-value' }, wellbeingDisplay || '—')
                 ),
                 React.createElement('div', { className: 'mood-card' },
                   React.createElement('span', { className: 'mood-card-icon' }, '😰'),
                   React.createElement('span', { className: 'mood-card-label' }, 'Стресс'),
-                  React.createElement('span', { className: 'mood-card-value' }, day.stressAvg || '—')
+                  React.createElement('span', { className: 'mood-card-value' }, stressDisplay || '—')
                 )
               ),
               // Время последнего приёма и корреляция

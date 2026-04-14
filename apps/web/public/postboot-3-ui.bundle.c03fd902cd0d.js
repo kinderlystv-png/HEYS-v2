@@ -1247,6 +1247,61 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-3-ui: execute start');
     return new Date().toISOString().slice(0, 10);
   }
 
+  function getCurrentClientId() {
+    const cidFromRuntime = HEYS.currentClientId || HEYS.utils?.getCurrentClientId?.() || '';
+    if (cidFromRuntime) return String(cidFromRuntime);
+
+    const cidFromStore = lsGet('heys_client_current', '');
+    if (cidFromStore && typeof cidFromStore === 'string') return String(cidFromStore);
+
+    const pinSession = lsGet('heys_pin_session', null);
+    if (pinSession?.clientId) return String(pinSession.clientId);
+
+    const curatorSession = lsGet('heys_curator_session', null);
+    if (curatorSession?.currentClientId) return String(curatorSession.currentClientId);
+
+    const profile = lsGet('heys_profile', null);
+    if (profile?.id) return String(profile.id);
+
+    const cid = '';
+    return String(cid || '');
+  }
+
+  function getScopedDayKey(dateKey) {
+    const cid = getCurrentClientId();
+    return cid ? `heys_${cid}_dayv2_${dateKey}` : null;
+  }
+
+  function getUnscopedDayKey(dateKey) {
+    return `heys_dayv2_${dateKey}`;
+  }
+
+  function readDayData(dateKey, fallback = {}) {
+    const scopedKey = getScopedDayKey(dateKey);
+    if (scopedKey) {
+      const scopedData = lsGet(scopedKey, null);
+      if (scopedData && typeof scopedData === 'object') return scopedData;
+    }
+    return lsGet(getUnscopedDayKey(dateKey), fallback) || fallback;
+  }
+
+  function saveDayData(dateKey, dayData) {
+    const scopedKey = getScopedDayKey(dateKey);
+    if (scopedKey) {
+      if (HEYS.store?.set) {
+        HEYS.store.set(scopedKey, dayData);
+      } else {
+        lsSet(scopedKey, dayData);
+      }
+    }
+    // Backward compatibility: часть legacy-модулей всё ещё читает unscoped day key.
+    if (HEYS.store?.set) {
+      HEYS.store.set(getUnscopedDayKey(dateKey), dayData);
+    } else {
+      lsSet(getUnscopedDayKey(dateKey), dayData);
+    }
+  }
+
   // ============================================================
   // WEIGHT STEP
   // ============================================================
@@ -1257,7 +1312,7 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-3-ui: execute start');
 
     // Сначала проверяем сегодняшний вес (для редактирования из карточки)
     const todayKey = today.toISOString().slice(0, 10);
-    const todayData = lsGet(`heys_dayv2_${todayKey}`, {}) || {};
+    const todayData = readDayData(todayKey, {});
     if (todayData.weightMorning) {
       return { weight: todayData.weightMorning, daysAgo: 0, date: todayKey };
     }
@@ -1267,7 +1322,7 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-3-ui: execute start');
       const d = new Date(today);
       d.setDate(d.getDate() - i);
       const key = d.toISOString().slice(0, 10);
-      const dayData = lsGet(`heys_dayv2_${key}`, {}) || {};
+      const dayData = readDayData(key, {});
       if (dayData.weightMorning) {
         return { weight: dayData.weightMorning, daysAgo: i, date: key };
       }
@@ -1282,7 +1337,7 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-3-ui: execute start');
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
     const key = yesterday.toISOString().slice(0, 10);
-    const dayData = lsGet(`heys_dayv2_${key}`, {}) || {};
+    const dayData = readDayData(key, {});
     return dayData.weightMorning || null;
   }
 
@@ -1293,7 +1348,7 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-3-ui: execute start');
       const d = new Date(today);
       d.setDate(d.getDate() - i);
       const key = d.toISOString().slice(0, 10);
-      const dayData = lsGet(`heys_dayv2_${key}`, {}) || {};
+      const dayData = readDayData(key, {});
       if (dayData.weightMorning) {
         weights.push({ day: -i, weight: dayData.weightMorning });
       }
@@ -1405,7 +1460,7 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-3-ui: execute start');
     getInitialData: (context) => {
       // Если есть dateKey в context — берём вес из того дня (для редактирования)
       if (context && context.dateKey) {
-        const dayData = lsGet(`heys_dayv2_${context.dateKey}`, {}) || {};
+        const dayData = readDayData(context.dateKey, {});
         if (dayData.weightMorning) {
           return {
             weightKg: Math.floor(dayData.weightMorning),
@@ -1423,12 +1478,12 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-3-ui: execute start');
     save: (data, context) => {
       // Используем dateKey из context, или сегодняшний день как fallback
       const dateKey = (context && context.dateKey) || getTodayKey();
-      const dayData = lsGet(`heys_dayv2_${dateKey}`, {}) || {};
+      const dayData = readDayData(dateKey, {});
       const weight = (data.weightKg || 70) + (data.weightG || 0) / 10;
       dayData.date = dateKey;
       dayData.weightMorning = weight;
       dayData.updatedAt = Date.now();
-      lsSet(`heys_dayv2_${dateKey}`, dayData);
+      saveDayData(dateKey, dayData);
 
       // Также обновляем текущий вес в профиле (для расчёта TDEE, BMR и т.д.)
       const profile = lsGet('heys_profile', {});
@@ -1465,7 +1520,7 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-3-ui: execute start');
       const d = new Date(today);
       d.setDate(d.getDate() - i);
       const key = d.toISOString().slice(0, 10);
-      const dayData = lsGet(`heys_dayv2_${key}`, {}) || {};
+      const dayData = readDayData(key, {});
       if (dayData.sleepStart && dayData.sleepEnd) {
         return {
           sleepStart: dayData.sleepStart,
@@ -1650,7 +1705,7 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-3-ui: execute start');
       const dateKey = resolveDateKey(context?.dateKey);
       // Если есть dateKey в context — берём данные из того дня
       if (dateKey) {
-        const dayData = lsGet(`heys_dayv2_${dateKey}`, {}) || {};
+        const dayData = readDayData(dateKey, {});
         if (dayData.sleepStart && dayData.sleepEnd) {
           const sleepStartH = parseInt(dayData.sleepStart.split(':')[0], 10);
           const sleepStartM = parseInt(dayData.sleepStart.split(':')[1], 10);
@@ -1688,7 +1743,7 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-3-ui: execute start');
     },
     save: (data, context) => {
       const dateKey = resolveDateKey(context?.dateKey);
-      const dayData = lsGet(`heys_dayv2_${dateKey}`, {}) || {};
+      const dayData = readDayData(dateKey, {});
       const sleepStart = `${String(data.sleepStartH).padStart(2, '0')}:${String(data.sleepStartM).padStart(2, '0')}`;
       const sleepEnd = `${String(data.sleepEndH).padStart(2, '0')}:${String(data.sleepEndM).padStart(2, '0')}`;
       const daySleepMinutes = normalizeDaySleepMinutes(dayData.daySleepMinutes ?? data.daySleepMinutes);
@@ -1700,7 +1755,7 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-3-ui: execute start');
       dayData.daySleepMinutes = daySleepMinutes;
       dayData.sleepHours = Math.round((sleepHours + daySleepMinutes / 60) * 10) / 10;
       dayData.updatedAt = Date.now();
-      lsSet(`heys_dayv2_${dateKey}`, dayData);
+      saveDayData(dateKey, dayData);
       console.info('[HEYS.sleepTime] ✅ Saved:', { dateKey, sleepStart, sleepEnd, daySleepMinutes, sleepHours: dayData.sleepHours });
       window.dispatchEvent(new CustomEvent('heys:day-updated', {
         detail: { date: dateKey, field: 'sleep', source: 'sleep-step', forceReload: true }
@@ -1765,7 +1820,7 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-3-ui: execute start');
     component: DaySleepStepComponent,
     getInitialData: (context) => {
       const dateKey = resolveDateKey(context?.dateKey);
-      const dayData = lsGet(`heys_dayv2_${dateKey}`, {}) || {};
+      const dayData = readDayData(dateKey, {});
       const nightSleepHours = HEYS.dayUtils?.getNightSleepHours
         ? HEYS.dayUtils.getNightSleepHours(dayData)
         : ((dayData.sleepStart && dayData.sleepEnd)
@@ -1787,7 +1842,7 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-3-ui: execute start');
     },
     save: (data, context) => {
       const dateKey = resolveDateKey(context?.dateKey);
-      const dayData = lsGet(`heys_dayv2_${dateKey}`, {}) || {};
+      const dayData = readDayData(dateKey, {});
       const daySleepMinutes = normalizeDaySleepMinutes(data.daySleepMinutes);
       const nightSleepHours = HEYS.dayUtils?.getNightSleepHours
         ? HEYS.dayUtils.getNightSleepHours(dayData)
@@ -1804,7 +1859,7 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-3-ui: execute start');
       dayData.daySleepMinutes = daySleepMinutes;
       dayData.sleepHours = Math.round((nightSleepHours + daySleepMinutes / 60) * 10) / 10;
       dayData.updatedAt = Date.now();
-      lsSet(`heys_dayv2_${dateKey}`, dayData);
+      saveDayData(dateKey, dayData);
       console.info('[HEYS.daySleep] ✅ Saved:', { dateKey, daySleepMinutes, sleepHours: dayData.sleepHours });
       window.dispatchEvent(new CustomEvent('heys:day-updated', {
         detail: { date: dateKey, field: 'daySleepMinutes', source: 'day-sleep-step', forceReload: true }
@@ -1971,7 +2026,7 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-3-ui: execute start');
       const dateKey = resolveDateKey(context?.dateKey);
       // Если есть dateKey в context — берём данные из того дня
       if (dateKey) {
-        const dayData = lsGet(`heys_dayv2_${dateKey}`, {}) || {};
+        const dayData = readDayData(dateKey, {});
         if (dayData.sleepQuality !== undefined) {
           return {
             sleepQuality: dayData.sleepQuality,
@@ -1988,7 +2043,7 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-3-ui: execute start');
     },
     save: (data, context, allStepData) => {
       const dateKey = resolveDateKey(context?.dateKey);
-      const dayData = lsGet(`heys_dayv2_${dateKey}`, {}) || {};
+      const dayData = readDayData(dateKey, {});
       dayData.sleepQuality = data.sleepQuality;
 
       // Убеждаемся, что не затираем данные времени сна из sleepTime-шага
@@ -2011,7 +2066,7 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-3-ui: execute start');
       }
 
       dayData.updatedAt = Date.now();
-      lsSet(`heys_dayv2_${dateKey}`, dayData);
+      saveDayData(dateKey, dayData);
       console.info('[HEYS.sleepQuality] ✅ Saved:', { dateKey, sleepQuality: dayData.sleepQuality, sleepStart: dayData.sleepStart, sleepEnd: dayData.sleepEnd });
       window.dispatchEvent(new CustomEvent('heys:day-updated', {
         detail: { date: dateKey, field: 'sleep', source: 'sleep-quality-step', forceReload: true }
@@ -2030,7 +2085,7 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-3-ui: execute start');
       const d = new Date(today);
       d.setDate(d.getDate() - i);
       const key = d.toISOString().slice(0, 10);
-      const dayData = lsGet(`heys_dayv2_${key}`, {}) || {};
+      const dayData = readDayData(key, {});
       if (dayData.steps && dayData.steps > 0) {
         stepsData.push(dayData.steps);
       }
@@ -3609,7 +3664,7 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-3-ui: execute start');
     component: ColdExposureStepComponent,
     getInitialData: () => {
       const dateKey = getTodayKey();
-      const dayData = lsGet(`heys_dayv2_${dateKey}`, {}) || {};
+      const dayData = readDayData(dateKey, {});
       const cold = dayData.coldExposure ?? {};  // null-safe: ?? вместо ||
       return {
         coldType: cold.type || 'none',
@@ -3978,7 +4033,7 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-3-ui: execute start');
     getInitialData: () => {
       const dateKey = getTodayKey();
       // 🔧 FIX: Добавляем || {} на случай если lsGet вернёт null (новый клиент)
-      const dayData = lsGet(`heys_dayv2_${dateKey}`, {}) || {};
+      const dayData = readDayData(dateKey, {});
 
       // Если уже есть данные за сегодня — берём их
       if (dayData.moodMorning !== undefined) {
@@ -4001,14 +4056,14 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-3-ui: execute start');
     },
     save: (data) => {
       const dateKey = data._dateKey || getTodayKey();
-      const dayData = lsGet(`heys_dayv2_${dateKey}`, { date: dateKey });
+      const dayData = readDayData(dateKey, { date: dateKey });
 
       dayData.moodMorning = data.mood ?? 5;
       dayData.wellbeingMorning = data.wellbeing ?? 5;
       dayData.stressMorning = data.stress ?? 5;
 
       dayData.updatedAt = Date.now();
-      lsSet(`heys_dayv2_${dateKey}`, dayData);
+      saveDayData(dateKey, dayData);
 
       window.dispatchEvent(new CustomEvent('heys:data-saved', {
         detail: { key: `day:${dateKey}`, type: 'morningMood' }
@@ -4032,7 +4087,7 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-3-ui: execute start');
     // Получаем утреннее настроение из данных дня
     const dateKey = getTodayKey();
     // 🔧 FIX: Добавляем || {} на случай если lsGet вернёт null
-    const dayData = lsGet(`heys_dayv2_${dateKey}`, {}) || {};
+    const dayData = readDayData(dateKey, {});
     const morningMood = dayData.moodMorning ?? 5;
     const morningWellbeing = dayData.wellbeingMorning ?? 5;
     const morningStress = dayData.stressMorning ?? 5;
@@ -43544,6 +43599,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     const CALENDAR_TOUCH_DRAG_HOLD_MS = 180;
     const CALENDAR_TOUCH_DRAG_MOVE_CANCEL_THRESHOLD = 12;
     const CALENDAR_POINTER_DRAG_MOVE_THRESHOLD = 6;
+    const CALENDAR_CELL_LONG_PRESS_MS = 280;
+    const CALENDAR_CELL_LONG_PRESS_MOVE_CANCEL_THRESHOLD = 10;
     const CALENDAR_TOUCH_DRAG_AUTO_SCROLL_EDGE = 56;
     const CALENDAR_TOUCH_DRAG_AUTO_SCROLL_STEP = 18;
     const CALENDAR_SLOT_DONE_BACKGROUND = 'linear-gradient(180deg, rgba(34, 197, 94, 0.94) 0%, rgba(21, 128, 61, 0.9) 100%)';
@@ -46380,6 +46437,12 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                 : null;
             if (!col) return;
 
+            const pointerType = String(event.pointerType || '').toLowerCase();
+            const isLikelyTouchDevice = !!usesTouchLikeInput;
+            const isTouchPointer = pointerType === 'touch'
+                || pointerType === 'pen'
+                || (!pointerType && isLikelyTouchDevice)
+                || (pointerType === 'mouse' && isLikelyTouchDevice);
             const rect = col.getBoundingClientRect();
             const y = event.clientY - rect.top;
             const session = {
@@ -46388,18 +46451,37 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                 pointerId: event.pointerId,
                 y0: y,
                 y1: y,
+                isTouchPointer,
+                activated: !isTouchPointer,
                 moved: false,
+                holdTimer: 0,
             };
             rangePointerSessionRef.current = session;
+
+            const clearHoldTimer = (active) => {
+                if (!active?.holdTimer) return;
+                window.clearTimeout(active.holdTimer);
+                active.holdTimer = 0;
+            };
 
             const onMove = (ev) => {
                 const active = rangePointerSessionRef.current;
                 if (!active || ev.pointerId !== active.pointerId) return;
                 const r = active.col.getBoundingClientRect();
                 active.y1 = ev.clientY - r.top;
+
+                const distance = Math.abs(active.y1 - active.y0);
+                if (!active.activated) {
+                    if (active.isTouchPointer && distance >= CALENDAR_CELL_LONG_PRESS_MOVE_CANCEL_THRESHOLD) {
+                        clearHoldTimer(active);
+                        return;
+                    }
+                    return;
+                }
+
+                if (ev.cancelable) ev.preventDefault();
                 if (Math.abs(active.y1 - active.y0) >= RANGE_DRAG_THRESHOLD_PX) {
                     active.moved = true;
-                    if (ev.cancelable) ev.preventDefault();
                 }
                 if (!active.moved) return;
                 const topY = Math.min(active.y0, active.y1);
@@ -46407,19 +46489,48 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                 setRangeSelectPreview({ day: active.day, top: topY, height: heightPx });
             };
 
+            const cleanupPointerSession = () => {
+                const active = rangePointerSessionRef.current;
+                if (!active) return null;
+                window.removeEventListener('pointermove', onMove);
+                window.removeEventListener('pointerup', finish);
+                window.removeEventListener('pointercancel', cancel);
+                rangePointerSessionRef.current = null;
+                setRangeSelectPreview(null);
+                clearHoldTimer(active);
+                return active;
+            };
+
             const finish = (ev) => {
                 const active = rangePointerSessionRef.current;
                 if (!active || ev.pointerId !== active.pointerId) return;
-                window.removeEventListener('pointermove', onMove);
-                window.removeEventListener('pointerup', finish);
-                window.removeEventListener('pointercancel', finish);
-                rangePointerSessionRef.current = null;
-                setRangeSelectPreview(null);
+                cleanupPointerSession();
 
                 const r = active.col.getBoundingClientRect();
                 active.y1 = ev.clientY - r.top;
 
+                if (!active.activated) {
+                    return;
+                }
+
                 if (!active.moved) {
+                    if (active.isTouchPointer) {
+                        const startMinutes = columnYToGridWallMinutes(
+                            active.y0,
+                            CALENDAR_TOTAL_HEIGHT,
+                            HOURS.length,
+                            CALENDAR_START_HOUR,
+                        );
+                        const endMinutes = startMinutes + 30;
+                        suppressCalendarClick();
+                        setSlotDraft(buildSlotDraft({
+                            date: active.day,
+                            startTime: formatWallClockHm(startMinutes),
+                            endTime: formatWallClockHm(endMinutes),
+                            quickCreate: true,
+                        }));
+                        return;
+                    }
                     if (!shouldSuppressCalendarClick()) {
                         const hourIndex = Math.max(0, Math.min(HOURS.length - 1, Math.floor(active.y0 / CALENDAR_HOUR_HEIGHT)));
                         openNewSlot(active.day, HOURS[hourIndex]);
@@ -46443,9 +46554,29 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                 }));
             };
 
+            const cancel = (ev) => {
+                const active = rangePointerSessionRef.current;
+                if (!active || ev.pointerId !== active.pointerId) return;
+                cleanupPointerSession();
+            };
+
+            if (session.isTouchPointer) {
+                session.holdTimer = window.setTimeout(() => {
+                    const active = rangePointerSessionRef.current;
+                    if (!active || active !== session) return;
+                    active.activated = true;
+                    active.moved = true;
+                    setRangeSelectPreview({
+                        day: active.day,
+                        top: active.y0,
+                        height: RANGE_DRAG_THRESHOLD_PX,
+                    });
+                }, CALENDAR_CELL_LONG_PRESS_MS);
+            }
+
             window.addEventListener('pointermove', onMove, { passive: false });
             window.addEventListener('pointerup', finish);
-            window.addEventListener('pointercancel', finish);
+            window.addEventListener('pointercancel', cancel);
         };
 
         const handleDropToCell = (date, hour, event) => {

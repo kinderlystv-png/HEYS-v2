@@ -157,8 +157,19 @@
                                     prevDay.weightMorning === newDay.weightMorning &&
                                     !!prevDay.isFastingDay === !!newDay.isFastingDay &&
                                     !!prevDay.isIncomplete === !!newDay.isIncomplete &&
+                                    prevDay.moodMorning === newDay.moodMorning &&
+                                    prevDay.wellbeingMorning === newDay.wellbeingMorning &&
+                                    prevDay.stressMorning === newDay.stressMorning &&
+                                    prevDay.moodAvg === newDay.moodAvg &&
+                                    prevDay.wellbeingAvg === newDay.wellbeingAvg &&
+                                    prevDay.stressAvg === newDay.stressAvg &&
+                                    prevDay.dayScore === newDay.dayScore &&
+                                    prevDay.dayScoreRaw === newDay.dayScoreRaw &&
+                                    prevDay.dayScoreManual === newDay.dayScoreManual &&
                                     prevDay.sleepStart === newDay.sleepStart &&
-                                    prevDay.sleepEnd === newDay.sleepEnd;
+                                    prevDay.sleepEnd === newDay.sleepEnd &&
+                                    prevDay.sleepHours === newDay.sleepHours &&
+                                    prevDay.sleepQuality === newDay.sleepQuality;
                                 if (isSameContent) {
                                     // Данные не изменились — оставляем предыдущий объект (без ре-рендера)
                                     return prevDay;
