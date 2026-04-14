@@ -7904,6 +7904,10 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
     const pullRafRef = useRef(null);
     const lastProgressSyncRef = useRef(0);
     const blockedNoticeAtRef = useRef(0);
+    /** Ephemeral sync-style overlay (same visual language as sync-lock-overlay) when pull is blocked by pending queue */
+    const pullHoldOverlayRootRef = useRef(null);
+    const pullHoldAutoDismissRef = useRef(null);
+    const pullHoldFadeTimeoutRef = useRef(null);
 
     // Keep refs in sync with state
     useEffect(() => {
@@ -7959,9 +7963,30 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
         'input, textarea, select, button, a, label, [role="button"], [contenteditable="true"], '
         + '.swipeable-container, table, .tab-switch-group, .advice-list-overlay, .macro-toast, '
         + '.no-swipe-zone, [type="range"], [data-no-pull-refresh], '
+        + '.planning-tab, .planning-content, .planning-subnav, .planning-subnav-shell, '
+        + '.date-picker-backdrop, .time-picker-backdrop, .zone-formula-backdrop, '
         // 🚀 PERF R49: ignore tab bar touches — pull-refresh setState triggers re-render cascade (95ms)
         + '.tabs'
       );
+    };
+
+    /** Pull разрешён только на дневных вкладках (body.heys-pull-refresh-day-active) и вне planning. */
+    const isPullRefreshEnvironmentActive = () => {
+      try {
+        if (typeof document === 'undefined' || !document.body) return false;
+        if (document.body.classList.contains('planning-tab-active')) return false;
+        return document.body.classList.contains('heys-pull-refresh-day-active');
+      } catch (e) {
+        return false;
+      }
+    };
+
+    const isMainSyncLockVisible = () => {
+      try {
+        return !!document.querySelector('.sync-lock-overlay:not(.sync-lock-overlay--ephemeral)');
+      } catch (e) {
+        return false;
+      }
     };
 
     // Haptic feedback helper
@@ -7981,6 +8006,87 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
       }
     };
 
+    const PULL_HOLD_OVERLAY_MS = 2200;
+    const PULL_HOLD_OVERLAY_ID = 'heys-pull-hold-overlay';
+
+    const clearPullHoldBlockOverlay = () => {
+      if (pullHoldAutoDismissRef.current) {
+        clearTimeout(pullHoldAutoDismissRef.current);
+        pullHoldAutoDismissRef.current = null;
+      }
+      if (pullHoldFadeTimeoutRef.current) {
+        clearTimeout(pullHoldFadeTimeoutRef.current);
+        pullHoldFadeTimeoutRef.current = null;
+      }
+      const root = pullHoldOverlayRootRef.current;
+      if (root && root.parentNode) {
+        try {
+          root.parentNode.removeChild(root);
+        } catch (e) { }
+      }
+      pullHoldOverlayRootRef.current = null;
+    };
+
+    const dismissPullHoldBlockOverlayWithFade = () => {
+      const root = pullHoldOverlayRootRef.current;
+      if (!root) return;
+      if (root.classList.contains('sync-lock-overlay--ephemeral-out')) return;
+      root.classList.add('sync-lock-overlay--ephemeral-out');
+      const finish = () => {
+        clearPullHoldBlockOverlay();
+      };
+      root.addEventListener('animationend', finish, { once: true });
+      if (pullHoldFadeTimeoutRef.current) clearTimeout(pullHoldFadeTimeoutRef.current);
+      pullHoldFadeTimeoutRef.current = setTimeout(finish, 380);
+    };
+
+    const showPullRefreshHoldOverlay = () => {
+      if (isMainSyncLockVisible()) {
+        return;
+      }
+      clearPullHoldBlockOverlay();
+
+      const root = document.createElement('div');
+      root.id = PULL_HOLD_OVERLAY_ID;
+      root.className = 'sync-lock-overlay sync-lock-overlay--ephemeral';
+      root.setAttribute('role', 'status');
+      root.setAttribute('aria-live', 'polite');
+      root.setAttribute('aria-busy', 'true');
+
+      const card = document.createElement('div');
+      card.className = 'sync-lock-overlay__card';
+
+      const spin = document.createElement('div');
+      spin.className = 'sync-lock-overlay__spinner sync-lock-overlay__spinner--hold';
+      spin.setAttribute('aria-hidden', 'true');
+      const cloud = document.createElement('span');
+      cloud.className = 'sync-lock-overlay__cloud';
+      cloud.textContent = '☁';
+      spin.appendChild(cloud);
+
+      const title = document.createElement('div');
+      title.className = 'sync-lock-overlay__title';
+      title.id = 'heys-pull-hold-overlay-title';
+      title.textContent = 'Подождите';
+
+      const subtitle = document.createElement('div');
+      subtitle.className = 'sync-lock-overlay__subtitle';
+      subtitle.textContent = 'Сначала дождитесь завершения синхронизации';
+
+      card.appendChild(spin);
+      card.appendChild(title);
+      card.appendChild(subtitle);
+      root.appendChild(card);
+
+      root.addEventListener('click', () => {
+        dismissPullHoldBlockOverlayWithFade();
+      });
+
+      document.body.appendChild(root);
+      pullHoldOverlayRootRef.current = root;
+      pullHoldAutoDismissRef.current = setTimeout(dismissPullHoldBlockOverlayWithFade, PULL_HOLD_OVERLAY_MS);
+    };
+
     const notifyPullRefreshBlocked = (pendingCount) => {
       const now = Date.now();
       if (now - blockedNoticeAtRef.current < 1500) return;
@@ -7991,7 +8097,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
         pendingCount,
       });
       try {
-        window.HEYS?.Toast?.info?.('Сначала дождитесь завершения синхронизации');
+        showPullRefreshHoldOverlay();
       } catch (e) { }
     };
 
@@ -8061,6 +8167,9 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
     // Вся orchestration (flush + sync) делегирована cloud.pullRefresh() —
     // UI-слой только запускает action и показывает статус.
     const handleRefresh = async () => {
+      if (!isPullRefreshEnvironmentActive()) {
+        return;
+      }
       if (refreshInFlightRef.current) {
         return;
       }
@@ -8125,6 +8234,10 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
       // 🔧 FIX: Event handlers use refs to avoid stale closures
       // This allows us to use [] deps and NOT re-register listeners on every state change
       const onTouchStart = (e) => {
+        if (!isPullRefreshEnvironmentActive()) {
+          isPulling.current = false;
+          return;
+        }
         if (refreshInFlightRef.current || isRefreshingRef.current) {
           isPulling.current = false;
           return;
@@ -8150,6 +8263,10 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
       };
 
       const onTouchMove = (e) => {
+        if (!isPullRefreshEnvironmentActive()) {
+          isPulling.current = false;
+          return;
+        }
         // Use refs for current values (avoids stale closure)
         if (!isPulling.current || isRefreshingRef.current) return;
         if (e.touches?.length !== 1 || shouldIgnoreTarget(e.target)) return;
@@ -8165,7 +8282,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
 
           // 🚀 PERF: Direct DOM update for smooth 60fps visual (no React re-render)
           if (!pullRafRef.current) {
-            pullRafRef.current = requestAnimationFrame(() => {
+            const rafId = requestAnimationFrame(() => {
+              pullRafRef.current = null;
               const el = document.querySelector('.pull-indicator');
               if (el) {
                 const p = pullProgressRef.current;
@@ -8178,8 +8296,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
                   if (circle) circle.setAttribute('stroke-dashoffset', String(63 - (Math.min(p / PULL_THRESHOLD, 1) * 63)));
                 }
               }
-              pullRafRef.current = null;
             });
+            pullRafRef.current = rafId;
           }
 
           // 🚀 PERF: Sync React state only every 200ms (for conditional rendering)
@@ -8204,6 +8322,10 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
       };
 
       const onTouchEnd = () => {
+        if (!isPullRefreshEnvironmentActive()) {
+          isPulling.current = false;
+          return;
+        }
         if (!isPulling.current) return;
 
         if (refreshInFlightRef.current || isRefreshingRef.current) {
@@ -8238,6 +8360,11 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
       document.addEventListener('touchend', onTouchEnd, { passive: true });
 
       return () => {
+        if (pullRafRef.current != null) {
+          cancelAnimationFrame(pullRafRef.current);
+          pullRafRef.current = null;
+        }
+        clearPullHoldBlockOverlay();
         document.removeEventListener('touchstart', onTouchStart);
         document.removeEventListener('touchmove', onTouchMove);
         document.removeEventListener('touchend', onTouchEnd);

@@ -17416,6 +17416,10 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
       });
     };
 
+    /**
+     * Статус синка для конкретного ключа в client upsert queue.
+     * Не вызывать без key как «глобальный» статус — для UI используйте getPendingCount / isUploadInProgress.
+     */
     cloud.getSyncStatus = function (key) {
       if (clientUpsertQueue.some(item => item.k === key)) {
         return 'pending';

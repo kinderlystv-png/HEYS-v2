@@ -61,6 +61,18 @@
       return activity ? { ...activity } : activity;
     }
 
+    function getHouseholdDisplayTitle(activity) {
+      const rawLabel = typeof activity?.label === 'string' ? activity.label.trim() : '';
+      if (rawLabel) return rawLabel;
+      if (activity?.source === 'morning_activation') return 'Зарядка';
+      return 'Бытовая активность';
+    }
+
+    function getHouseholdDisplayIcon(activity) {
+      if (activity?.source === 'morning_activation') return '🧘';
+      return '🏠';
+    }
+
     function runUndoableAction(options) {
       if (!options || typeof options.apply !== 'function') return false;
 
@@ -292,6 +304,8 @@
       }),
       safeHouseholdActivities.map((h, hi) => {
         const hKcal = safeR0((+h.minutes || 0) * (typeof kcalPerMin === 'function' ? kcalPerMin(2.5, weight) : 0));
+        const householdTitle = getHouseholdDisplayTitle(h);
+        const isCustomTitle = householdTitle !== 'Бытовая активность';
         return React.createElement('div', {
           key: 'household-' + hi,
           className: 'compact-card compact-household widget-shadow-diary-glass widget-outline-diary-glass'
@@ -300,8 +314,11 @@
             className: 'compact-train-header',
             onClick: () => openHouseholdPicker && openHouseholdPicker('edit', hi)
           },
-            React.createElement('span', { className: 'compact-train-icon' }, '🏠'),
-            React.createElement('span', { className: 'compact-train-title' }, 'Бытовая активность'),
+            React.createElement('span', { className: 'compact-train-icon' }, getHouseholdDisplayIcon(h)),
+            React.createElement('div', { className: 'compact-train-title-box' },
+              React.createElement('span', { className: 'compact-train-title' }, householdTitle),
+              isCustomTitle && React.createElement('span', { className: 'compact-train-subtitle' }, 'Бытовая активность')
+            ),
             h.time && React.createElement('span', { className: 'compact-train-time' }, h.time),
             React.createElement('div', { className: 'compact-right-group' },
               React.createElement('span', {

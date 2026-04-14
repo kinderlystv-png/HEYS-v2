@@ -19,7 +19,9 @@
     if (typeof raw === 'string') {
       let str = raw;
       if (str.startsWith('¤Z¤') && HEYS.store?.decompress) {
-        try { str = HEYS.store.decompress(str); } catch (_) { }
+        try { str = HEYS.store.decompress(str); } catch (_) {
+          // Keep raw value when compressed payload is invalid
+        }
       }
       try { return JSON.parse(str); } catch (_) { return str; }
     }
@@ -54,7 +56,9 @@
         return;
       }
       localStorage.setItem(key, JSON.stringify(value));
-    } catch { }
+    } catch {
+      // Storage can be unavailable in private mode
+    }
   };
 
   function resolveDateKey(rawDateKey) {
@@ -137,6 +141,453 @@
     } else {
       lsSet(getUnscopedDayKey(dateKey), dayData);
     }
+  }
+
+  const MORNING_ACTIVATION_COPY_HISTORY_KEY = 'heys_morning_activation_copy_history_v1';
+  const MORNING_ACTIVATION_INTENSITY_PRESETS = {
+    super_light: {
+      label: 'Суперлегкая',
+      shortLabel: 'лёгк.',
+      duration: 8
+    },
+    medium: {
+      label: 'Средне',
+      shortLabel: 'сред.',
+      duration: 14
+    },
+    high: {
+      label: 'Высокоинтенсивная',
+      shortLabel: 'выс.',
+      duration: 22
+    }
+  };
+
+  const MORNING_ACTIVATION_COPY_VARIANTS = [
+    {
+      id: 'ma-1',
+      opener: 'Небольшой импульс утром даёт телу «старт без рывка».',
+      science: '2-8 минут мягкой мышечной активации улучшают нейромышечный тонус и снижают ощущение скованности к первому приёму пищи.',
+      protocol: {
+        low: '2 круга: тяга резинки к корпусу 6× + мягкая мобилизация плеч/шеи 60 секунд.',
+        mid: '3 круга: тяга резинки 10× + присед с резинкой 8× + растяжка грудного отдела 40 секунд.',
+        high: '4 круга: тяга 12× + присед 10× + выпады 8×/сторона + растяжка 45 секунд.'
+      }
+    },
+    {
+      id: 'ma-2',
+      opener: 'Сегодня цель — не «героизм», а стабильный тонус.',
+      science: 'Короткая зарядка утром повышает чувствительность к нагрузке днём и уменьшает накопление вялости в первой половине дня.',
+      protocol: {
+        low: '3 минуты: лопаточная тяга резинки + плавные наклоны и раскрытие грудной клетки.',
+        mid: '6-8 минут: 3 блока по 2 минуты — резинка, корпус, растяжка.',
+        high: '10-12 минут интервально: 40 секунд работа / 20 секунд отдых, 4-5 раундов.'
+      }
+    },
+    {
+      id: 'ma-3',
+      opener: 'Сделай «микро-победу» до того, как день ускорится.',
+      science: 'Ранняя активация крупных мышц повышает субъективную энергию и улучшает исполнительный контроль в утренние часы.',
+      protocol: {
+        low: 'Минимум: тяга резинки стоя 2×8 + растяжка икр и спины 90 секунд.',
+        mid: 'База: 3×(тяга 10 + отведение рук 10 + растяжка 30 секунд).',
+        high: 'Интенсив: 4×(тяга 12 + присед 12 + планка 30 секунд + растяжка 20 секунд).'
+      }
+    },
+    {
+      id: 'ma-4',
+      opener: 'Мягкий старт сегодня важнее идеального плана.',
+      science: 'Даже короткая рутина «резинка + растяжка» снижает утреннюю ригидность и помогает быстрее включиться в рабочий ритм.',
+      protocol: {
+        low: '4 минуты: резинка на верх спины + мобилизация шеи/плеч.',
+        mid: '7 минут: резинка на спину + ягодичный мост + растяжка сгибателей бедра.',
+        high: '12 минут: 3 круга силовой активации + динамическая растяжка.'
+      }
+    },
+    {
+      id: 'ma-5',
+      opener: 'Сейчас достаточно одного точного шага — зарядки на 5-10 минут.',
+      science: 'Короткая утренняя активность улучшает кровоток и субъективное ощущение «проснулся телом», что повышает шанс удержать режим в течение дня.',
+      protocol: {
+        low: '2-3 упражнения по 1 подходу: без отказа, только «разбудить» мышцы.',
+        mid: '3 упражнения по 2 подхода: резинка, ноги, корпус + короткая растяжка.',
+        high: '4 упражнения по 2-3 подхода: умеренно интенсивно, но без избыточного пульса.'
+      }
+    },
+    {
+      id: 'ma-6',
+      opener: 'Пусть зарядка будет «тихим якорем» утра.',
+      science: 'Повторяемый утренний ритуал формирует устойчивую привычку за счёт низкого порога входа и предсказуемого вознаграждения.',
+      protocol: {
+        low: 'Якорь-минимум: 1 круг резинки + 2 минуты растяжки.',
+        mid: 'Стандарт: 2 круга резинки + 3 минуты суставной мобильности.',
+        high: 'Продвинутый: 3-4 круга с контролем техники и дыхания.'
+      }
+    },
+    {
+      id: 'ma-7',
+      opener: 'Лучше коротко и стабильно, чем редко и «идеально».',
+      science: 'Регулярные короткие сессии активности дают более устойчивый поведенческий эффект, чем редкие перегруженные тренировки.',
+      protocol: {
+        low: '3-4 минуты: без таймера, плавный темп, акцент на амплитуду.',
+        mid: '6-9 минут: таймер 45/15, 3-4 упражнения.',
+        high: '10-14 минут: таймер 50/20, 4 упражнения + финальная растяжка.'
+      }
+    },
+    {
+      id: 'ma-8',
+      opener: 'Проверь состояние и подбери режим, а не наоборот.',
+      science: 'Автоподстройка по самочувствию снижает риск срыва: телу легче поддерживать рутину, когда нагрузка соответствует ресурсу дня.',
+      protocol: {
+        low: 'Режим восстановления: мобилизация + резинка в лёгкой амплитуде.',
+        mid: 'Режим поддержки: умеренный объём без закисления.',
+        high: 'Режим драйва: плотный блок с контролем дыхания и техники.'
+      }
+    },
+    {
+      id: 'ma-9',
+      opener: 'Сделай зарядку как «переключатель внимания» на день.',
+      science: 'Короткое движение утром активирует префронтальные сети и помогает быстрее перейти в режим выполнения задач.',
+      protocol: {
+        low: 'Фокус-блок 4 минуты: резинка + растяжка шеи/груди.',
+        mid: 'Фокус-блок 7 минут: 2 круга с равномерным дыханием.',
+        high: 'Фокус-блок 12 минут: 3-4 круга + короткая заминка.'
+      }
+    },
+    {
+      id: 'ma-10',
+      opener: 'Ты уже в процессе: закрепи его короткой утренней зарядкой.',
+      science: 'Утренняя активация уменьшает «входной барьер» для остальной активности дня и повышает вероятность завершить план по движению.',
+      protocol: {
+        low: 'Мини-протокол: 5 минут без пропусков, комфортный темп.',
+        mid: 'Базовый протокол: 8-10 минут, умеренная плотность.',
+        high: 'Интенсивный протокол: 12-15 минут, но без отказа.'
+      }
+    }
+  ];
+
+  function parseTimeToMinutes(time) {
+    if (typeof time !== 'string') return null;
+    const match = /^(\d{1,2}):(\d{2})$/.exec(time.trim());
+    if (!match) return null;
+    const hours = Number(match[1]);
+    const minutes = Number(match[2]);
+    if (Number.isNaN(hours) || Number.isNaN(minutes)) return null;
+    if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59) return null;
+    return hours * 60 + minutes;
+  }
+
+  function getFirstMealTimeFromDay(dayData) {
+    const meals = Array.isArray(dayData?.meals) ? dayData.meals : [];
+    const times = meals
+      .filter((meal) => Array.isArray(meal?.items) && meal.items.length > 0)
+      .map((meal) => meal?.time)
+      .map(parseTimeToMinutes)
+      .filter((value) => Number.isFinite(value));
+
+    if (!times.length) return null;
+    const first = Math.min(...times);
+    const hh = String(Math.floor(first / 60)).padStart(2, '0');
+    const mm = String(first % 60).padStart(2, '0');
+    return `${hh}:${mm}`;
+  }
+
+  function getEnergyBucket(mood, wellbeing, stress) {
+    const normalizedStress = Math.max(0, Math.min(10, Number(stress) || 0));
+    const normalizedMood = Math.max(0, Math.min(10, Number(mood) || 0));
+    const normalizedWellbeing = Math.max(0, Math.min(10, Number(wellbeing) || 0));
+    const score = (normalizedMood + normalizedWellbeing + (10 - normalizedStress)) / 3;
+    if (score >= 7.2) return 'high';
+    if (score >= 5.2) return 'mid';
+    return 'low';
+  }
+
+  /**
+   * Персональная рекомендация интенсивности утренней зарядки по mood/wellbeing/stress утра.
+   * @returns {{ intensity: 'super_light'|'medium'|'high', bucket: string, hint: string }}
+   */
+  function getMorningActivationIntensityRecommendation(dayData) {
+    const mood = dayData?.moodMorning;
+    const wellbeing = dayData?.wellbeingMorning;
+    const stress = dayData?.stressMorning;
+    const hasMorning = [mood, wellbeing, stress].some((v) => Number.isFinite(Number(v)));
+    const bucket = hasMorning ? getEnergyBucket(mood, wellbeing, stress) : 'mid';
+    if (bucket === 'low') {
+      return {
+        intensity: 'super_light',
+        bucket,
+        hint: 'По утру ресурс ниже — начни с самого мягкого варианта.'
+      };
+    }
+    if (bucket === 'high') {
+      return {
+        intensity: 'high',
+        bucket,
+        hint: 'Утро в хорошем тонусе — можешь выбрать более плотный блок, если телу комфортно.'
+      };
+    }
+    return {
+      intensity: 'medium',
+      bucket,
+      hint: 'Баланс утра — средняя интенсивность чаще всего попадает в ресурс.'
+    };
+  }
+
+  function getMorningActivationBadgeMeta(state) {
+    const intensityMeta = state?.intensity ? MORNING_ACTIVATION_INTENSITY_PRESETS[state.intensity] : null;
+    if (state?.status === 'done') {
+      const suffix = intensityMeta ? ` · ${intensityMeta.shortLabel}` : '';
+      return {
+        label: `done${suffix}`,
+        title: intensityMeta ? `Зарядка отмечена, интенсивность: ${intensityMeta.label}` : 'Зарядка отмечена',
+        style: {
+          border: '1px solid rgba(16, 185, 129, 0.35)',
+          background: 'rgba(16, 185, 129, 0.12)',
+          color: '#047857'
+        }
+      };
+    }
+    if (state?.status === 'missed') {
+      return {
+        label: 'missed',
+        title: 'После первого приёма пищи: зарядка не сделана',
+        style: {
+          border: '1px solid rgba(244, 63, 94, 0.35)',
+          background: 'rgba(244, 63, 94, 0.12)',
+          color: '#be123c'
+        }
+      };
+    }
+    if (state?.status === 'pending') {
+      return {
+        label: 'pending',
+        title: 'Первый приём пищи уже есть — подтверди статус зарядки',
+        style: {
+          border: '1px solid rgba(245, 158, 11, 0.35)',
+          background: 'rgba(245, 158, 11, 0.12)',
+          color: '#b45309'
+        }
+      };
+    }
+    return {
+      label: 'до 1-го приёма',
+      title: 'Метрика фиксируется после первого приёма пищи',
+      style: {
+        border: '1px solid rgba(100, 116, 139, 0.35)',
+        background: 'rgba(148, 163, 184, 0.08)',
+        color: '#475569'
+      }
+    };
+  }
+
+  function clampMoodValue(value, fallback = 5) {
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric)) return fallback;
+    return Math.max(1, Math.min(10, Math.round(numeric)));
+  }
+
+  function normalizePostState(postState, fallback = null) {
+    if (!postState || typeof postState !== 'object') return fallback;
+    return {
+      mood: clampMoodValue(postState.mood, 5),
+      wellbeing: clampMoodValue(postState.wellbeing, 5),
+      stress: clampMoodValue(postState.stress, 5)
+    };
+  }
+
+  function buildPostStateEffect(dayData, postState) {
+    if (!postState) return null;
+    const baseMood = Number(dayData?.moodMorning);
+    const baseWellbeing = Number(dayData?.wellbeingMorning);
+    const baseStress = Number(dayData?.stressMorning);
+    const effect = {};
+    if (Number.isFinite(baseMood)) effect.moodDelta = postState.mood - baseMood;
+    if (Number.isFinite(baseWellbeing)) effect.wellbeingDelta = postState.wellbeing - baseWellbeing;
+    if (Number.isFinite(baseStress)) effect.stressDelta = postState.stress - baseStress;
+    return Object.keys(effect).length ? effect : null;
+  }
+
+  function normalizeMorningActivationState(dateKey, dayDataInput = null) {
+    const dayData = dayDataInput && typeof dayDataInput === 'object' ? dayDataInput : readDayData(dateKey, {});
+    const stored = dayData?.morningActivation && typeof dayData.morningActivation === 'object'
+      ? dayData.morningActivation
+      : {};
+    const firstMealTime = stored.firstMealTime || getFirstMealTimeFromDay(dayData);
+    let status = stored.status;
+    if (status !== 'done' && status !== 'missed') {
+      status = firstMealTime ? 'pending' : 'pre_meal';
+    }
+    return {
+      status,
+      firstMealTime: firstMealTime || null,
+      intensity: stored.intensity || null,
+      postState: normalizePostState(stored.postState, null),
+      postEffect: stored.postEffect && typeof stored.postEffect === 'object' ? stored.postEffect : null,
+      copyId: stored.copyId || null,
+      decidedAt: stored.decidedAt || null
+    };
+  }
+
+  function persistMorningActivationState(dateKey, nextState, source = 'morning-activation') {
+    const dayData = readDayData(dateKey, {});
+    dayData.morningActivation = {
+      ...(dayData.morningActivation || {}),
+      ...nextState
+    };
+    dayData.updatedAt = Date.now();
+    saveDayData(dateKey, dayData);
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('heys:day-updated', {
+        detail: {
+          date: dateKey,
+          field: 'morningActivation',
+          source,
+          forceReload: true
+        }
+      }));
+    }
+    return dayData;
+  }
+
+  function removeMorningActivationArtifacts(dayData) {
+    let changed = false;
+    const trainings = Array.isArray(dayData.trainings) ? dayData.trainings : [];
+    const filteredTrainings = trainings.filter((training) => training?.source !== 'morning_activation');
+    if (filteredTrainings.length !== trainings.length) {
+      dayData.trainings = filteredTrainings;
+      changed = true;
+    }
+
+    const householdActivities = Array.isArray(dayData.householdActivities) ? dayData.householdActivities : [];
+    const filteredHousehold = householdActivities.filter((activity) => activity?.source !== 'morning_activation');
+    if (filteredHousehold.length !== householdActivities.length) {
+      dayData.householdActivities = filteredHousehold;
+      changed = true;
+    }
+
+    const totalHousehold = (dayData.householdActivities || []).reduce((sum, activity) => sum + (Number(activity?.minutes) || 0), 0);
+    if ((dayData.householdMin || 0) !== totalHousehold) {
+      dayData.householdMin = totalHousehold;
+      changed = true;
+    }
+
+    const householdTime = dayData.householdActivities?.[0]?.time || '';
+    if ((dayData.householdTime || '') !== householdTime) {
+      dayData.householdTime = householdTime;
+      changed = true;
+    }
+
+    return changed;
+  }
+
+  function syncMorningActivationActivity(dateKey, stateInput) {
+    const dayData = readDayData(dateKey, {});
+    const state = stateInput || normalizeMorningActivationState(dateKey, dayData);
+    let changed = removeMorningActivationArtifacts(dayData);
+
+    if (state.status === 'done' && state.intensity && MORNING_ACTIVATION_INTENSITY_PRESETS[state.intensity]) {
+      const intensityPreset = MORNING_ACTIVATION_INTENSITY_PRESETS[state.intensity];
+
+      if (state.intensity === 'super_light') {
+        const activities = Array.isArray(dayData.householdActivities) ? dayData.householdActivities.slice() : [];
+        activities.push({
+          minutes: intensityPreset.duration,
+          time: state.firstMealTime || '',
+          label: 'Зарядка',
+          source: 'morning_activation',
+          intensity: state.intensity,
+          mood: state.postState?.mood ?? null,
+          wellbeing: state.postState?.wellbeing ?? null,
+          stress: state.postState?.stress ?? null
+        });
+        dayData.householdActivities = activities;
+        dayData.householdMin = activities.reduce((sum, item) => sum + (Number(item?.minutes) || 0), 0);
+        dayData.householdTime = activities[0]?.time || '';
+        changed = true;
+      } else {
+        const minutesByZone = state.intensity === 'high'
+          ? [4, 8, 8, 2]
+          : [8, 6, 0, 0];
+        const trainings = Array.isArray(dayData.trainings) ? dayData.trainings.slice() : [];
+        const trainingEntry = {
+          z: minutesByZone,
+          time: state.firstMealTime || '',
+          type: 'strength',
+          activityLabel: 'Зарядка',
+          source: 'morning_activation',
+          intensity: state.intensity,
+          mood: state.postState?.mood ?? 0,
+          wellbeing: state.postState?.wellbeing ?? 0,
+          stress: state.postState?.stress ?? 0,
+          comment: state.postState
+            ? `Post state: mood ${state.postState.mood}/10, wellbeing ${state.postState.wellbeing}/10, stress ${state.postState.stress}/10`
+            : ''
+        };
+        const emptyIndex = trainings.findIndex((training) => {
+          const totalMinutes = Array.isArray(training?.z)
+            ? training.z.reduce((sum, item) => sum + (Number(item) || 0), 0)
+            : 0;
+          return totalMinutes === 0 && !training?.type && !training?.activityLabel;
+        });
+        if (emptyIndex >= 0) {
+          trainings[emptyIndex] = trainingEntry;
+        } else if (trainings.length < 3) {
+          trainings.push(trainingEntry);
+        } else {
+          trainings[trainings.length - 1] = trainingEntry;
+        }
+        dayData.trainings = trainings;
+        changed = true;
+      }
+    }
+
+    if (!changed) return;
+
+    dayData.updatedAt = Date.now();
+    saveDayData(dateKey, dayData);
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('heys:day-updated', {
+        detail: {
+          date: dateKey,
+          field: 'morningActivation',
+          source: 'morning-activation-sync',
+          forceReload: true
+        }
+      }));
+    }
+  }
+
+  function getMorningActivationCopyVariant(id) {
+    return MORNING_ACTIVATION_COPY_VARIANTS.find((item) => item.id === id) || null;
+  }
+
+  function upsertMorningActivationCopyHistory(dateKey, variantId) {
+    const historyRaw = lsGet(MORNING_ACTIVATION_COPY_HISTORY_KEY, []);
+    const history = Array.isArray(historyRaw) ? historyRaw.filter((item) => item && item.date && item.id) : [];
+    const withoutToday = history.filter((item) => item.date !== dateKey);
+    const next = [...withoutToday, { date: dateKey, id: variantId }]
+      .sort((a, b) => String(a.date).localeCompare(String(b.date)))
+      .slice(-21);
+    lsSet(MORNING_ACTIVATION_COPY_HISTORY_KEY, next);
+  }
+
+  function pickMorningActivationCopy(dateKey, existingCopyId = null) {
+    if (existingCopyId) {
+      const existing = getMorningActivationCopyVariant(existingCopyId);
+      if (existing) return existing;
+    }
+
+    const historyRaw = lsGet(MORNING_ACTIVATION_COPY_HISTORY_KEY, []);
+    const history = Array.isArray(historyRaw) ? historyRaw.filter((item) => item && item.date && item.id) : [];
+    const recentIds = history.slice(-5).map((item) => item.id);
+    const freshPool = MORNING_ACTIVATION_COPY_VARIANTS.filter((variant) => !recentIds.includes(variant.id));
+    const pool = freshPool.length ? freshPool : MORNING_ACTIVATION_COPY_VARIANTS;
+
+    const numericSeed = String(dateKey || getTodayKey())
+      .split('')
+      .reduce((sum, ch) => sum + ch.charCodeAt(0), 0);
+    const selected = pool[numericSeed % pool.length] || MORNING_ACTIVATION_COPY_VARIANTS[0];
+    upsertMorningActivationCopyHistory(dateKey, selected.id);
+    return selected;
   }
 
   // ============================================================
@@ -1999,7 +2450,9 @@
     try { return lsGet(MEASUREMENT_SIDE_KEY, 'right'); } catch { return 'right'; }
   }
   function setMeasurementSide(side) {
-    try { lsSet(MEASUREMENT_SIDE_KEY, side); } catch { }
+    try { lsSet(MEASUREMENT_SIDE_KEY, side); } catch {
+      // Ignore storage write errors for optional preference
+    }
   }
 
   /**
@@ -2587,7 +3040,9 @@
 
   // Haptic feedback
   const hapticLight = () => {
-    try { navigator.vibrate?.(5); } catch { }
+    try { navigator.vibrate?.(5); } catch {
+      // Haptic feedback is optional
+    }
   };
 
   // Пресеты быстрого выбора (5 вариантов)
@@ -2632,6 +3087,14 @@
         if (meal.wellbeing) wellbeingValues.push(meal.wellbeing);
         if (meal.stress) stressValues.push(meal.stress);
       });
+    }
+
+    // Пост-оценка после утренней зарядки (если есть)
+    const postState = normalizePostState(dayData?.morningActivation?.postState, null);
+    if (postState) {
+      moodValues.push(postState.mood);
+      wellbeingValues.push(postState.wellbeing);
+      stressValues.push(postState.stress);
     }
 
     const avg = arr => arr.length > 0 ? Math.round(arr.reduce((a, b) => a + b, 0) / arr.length) : 5;
@@ -2918,398 +3381,493 @@
   // ============================================================
 
   function MorningRoutineStepComponent({ data, onChange, context }) {
-    const [checkedItems, setCheckedItems] = useState(data.checkedItems || []);
-    const [showConfetti, setShowConfetti] = useState(false);
-
-    // Получаем утреннее настроение из данных дня
-    const dateKey = getTodayKey();
-    // 🔧 FIX: Добавляем || {} на случай если lsGet вернёт null
+    const dateKey = context?.dateKey || getTodayKey();
     const dayData = readDayData(dateKey, {});
     const morningMood = dayData.moodMorning ?? 5;
     const morningWellbeing = dayData.wellbeingMorning ?? 5;
     const morningStress = dayData.stressMorning ?? 5;
+    const energyBucket = getEnergyBucket(morningMood, morningWellbeing, morningStress);
+    const morningState = normalizeMorningActivationState(dateKey, dayData);
+    const badgeMeta = getMorningActivationBadgeMeta(morningState);
 
-    // Персонализированное приветствие на основе настроения
-    const getPersonalizedGreeting = () => {
-      const avgMood = (morningMood + morningWellbeing + (10 - morningStress)) / 3;
-      const hour = new Date().getHours();
-      const timeOfDay = hour < 12 ? 'утро' : hour < 17 ? 'день' : 'вечер';
+    const copyVariant = useMemo(
+      () => pickMorningActivationCopy(dateKey, morningState.copyId),
+      [dateKey, morningState.copyId]
+    );
 
-      if (avgMood >= 7) {
-        const phrases = [
-          { emoji: '🚀', text: 'Отличный старт!' },
-          { emoji: '🔥', text: 'Ты в огне!' },
-          { emoji: '⚡', text: 'Заряжен на 100%!' },
-          { emoji: '🌟', text: `Сияющее ${timeOfDay}!` },
-          { emoji: '💫', text: 'Великолепно!' }
-        ];
-        return phrases[Math.floor(Math.random() * phrases.length)];
-      } else if (avgMood >= 5) {
-        const phrases = [
-          { emoji: '☀️', text: `Хорошее ${timeOfDay}!` },
-          { emoji: '✨', text: 'Всё будет супер!' },
-          { emoji: '💪', text: 'День будет продуктивным!' },
-          { emoji: '🎯', text: 'Вперёд к целям!' }
-        ];
-        return phrases[Math.floor(Math.random() * phrases.length)];
-      } else {
-        const phrases = [
-          { emoji: '💪', text: 'Держись! День может стать лучше' },
-          { emoji: '🌈', text: 'После тучи всегда солнце!' },
-          { emoji: '☕', text: 'Начни с чашки чего-то тёплого' },
-          { emoji: '🤗', text: 'Ты справишься!' },
-          { emoji: '🌱', text: 'Каждый день — новый шанс' }
-        ];
-        return phrases[Math.floor(Math.random() * phrases.length)];
-      }
-    };
+    useEffect(() => {
+      if (morningState.copyId === copyVariant.id) return;
+      persistMorningActivationState(dateKey, {
+        copyId: copyVariant.id
+      }, 'morning-activation-copy');
+    }, [copyVariant.id, dateKey, morningState.copyId]);
 
-    const personalGreeting = useMemo(getPersonalizedGreeting, [morningMood, morningWellbeing, morningStress]);
+    const protocolText = energyBucket === 'high'
+      ? copyVariant.protocol.high
+      : energyBucket === 'mid'
+        ? copyVariant.protocol.mid
+        : copyVariant.protocol.low;
 
-    // Рандомные мотивирующие фразы для кнопки (адаптированы под настроение)
-    const getButtonPhrase = () => {
-      const avgMood = (morningMood + morningWellbeing + (10 - morningStress)) / 3;
-      if (avgMood >= 7) {
-        const phrases = ['🚀 ВПЕРЁД!', '🔥 ПОЕХАЛИ!', '⚡ НАЧИНАЕМ!', '💪 СТАРТУЕМ!'];
-        return phrases[Math.floor(Math.random() * phrases.length)];
-      } else if (avgMood >= 5) {
-        const phrases = ['☀️ НАЧАТЬ ДЕНЬ!', '✨ ОТЛИЧНОГО ДНЯ!', '🎯 ВПЕРЁД К ЦЕЛИ!'];
-        return phrases[Math.floor(Math.random() * phrases.length)];
-      } else {
-        const phrases = ['💪 СПРАВИМСЯ!', '🌈 ВПЕРЁД!', '☕ НАЧНЁМ ПОТИХОНЬКУ'];
-        return phrases[Math.floor(Math.random() * phrases.length)];
-      }
-    };
+    const energyLabel = energyBucket === 'high'
+      ? 'Высокий ресурс'
+      : energyBucket === 'mid'
+        ? 'Средний ресурс'
+        : 'Бережный режим';
 
-    const randomPhrase = useMemo(getButtonPhrase, [morningMood, morningWellbeing, morningStress]);
-
-    const routineItems = [
-      {
-        id: 'water',
-        emoji: '💧',
-        title: 'Выпей тёплой воды',
-        desc: 'Стакан тёплой воды натощак запускает метаболизм',
-        color: '#3b82f6'
-      },
-      {
-        id: 'tracker',
-        emoji: '⌚',
-        title: 'Надень трекер',
-        desc: 'Часы или браслет — следи за шагами и пульсом',
-        color: '#3b82f6'
-      },
-      {
-        id: 'shower',
-        emoji: '🚿',
-        title: 'Контрастный душ',
-        desc: 'Бодрит и укрепляет иммунитет',
-        color: '#06b6d4'
-      }
-    ];
-
-    const toggleItem = (id) => {
-      setCheckedItems(prev => {
-        const newItems = prev.includes(id)
-          ? prev.filter(i => i !== id)
-          : [...prev, id];
-        onChange({ ...data, checkedItems: newItems });
-
-        // Конфетти при выполнении всех 3
-        if (newItems.length === 3 && !showConfetti) {
-          setShowConfetti(true);
-          setTimeout(() => setShowConfetti(false), 2000);
-        }
-
-        return newItems;
+    const proceedNext = () => {
+      onChange({
+        ...data,
+        selectedCopyId: copyVariant.id,
+        status: morningState.status
       });
+      context?.onNext?.();
     };
-
-    // Функция завершения (вызывает onNext из контекста)
-    const handleFinish = () => {
-      if (context && context.onNext) {
-        context.onNext();
-      }
-    };
-
-    const allChecked = checkedItems.length === 3;
 
     return React.createElement('div', {
       style: {
         display: 'flex',
         flexDirection: 'column',
-        gap: '16px',
-        padding: '8px 0'
+        gap: '14px',
+        padding: '6px 0'
       }
     },
-      // Заголовок с персонализированным приветствием
       React.createElement('div', {
         style: {
-          textAlign: 'center',
-          marginBottom: '8px'
-        }
-      },
-        React.createElement('div', {
-          style: {
-            fontSize: '48px',
-            marginBottom: '8px',
-            animation: 'bounce 1s ease infinite'
-          }
-        }, personalGreeting.emoji),
-        React.createElement('div', {
-          style: {
-            fontSize: '20px',
-            fontWeight: '700',
-            color: 'var(--text, #1e293b)',
-            marginBottom: '4px'
-          }
-        }, personalGreeting.text),
-        React.createElement('div', {
-          style: {
-            fontSize: '14px',
-            color: '#64748b'
-          }
-        }, '3 шага правильной рутины:')
-      ),
-
-      // 🆕 NDTE Insight — показываем если вчера была тренировка
-      (() => {
-        const todayKey = getTodayKey();
-        const prevTrainings = HEYS.InsulinWave && HEYS.InsulinWave.getPreviousDayTrainings
-          ? HEYS.InsulinWave.getPreviousDayTrainings(todayKey, lsGet)
-          : null;
-
-        if (!prevTrainings || prevTrainings.totalKcal < 200) return null;
-
-        const prof = lsGet('heys_profile', { weight: 70, height: 170 });
-        const bmi = HEYS.InsulinWave.calculateBMI(prof.weight, prof.height);
-        const ndteData = HEYS.InsulinWave.calculateNDTE({
-          trainingKcal: prevTrainings.totalKcal,
-          hoursSince: prevTrainings.hoursSince,
-          bmi: bmi,
-          trainingType: prevTrainings.dominantType,
-          trainingsCount: prevTrainings.trainings.length
-        });
-
-        if (!ndteData.active) return null;
-
-        const boostPct = Math.round(ndteData.tdeeBoost * 100);
-        const wavePct = Math.round(ndteData.waveReduction * 100);
-
-        return React.createElement('div', {
-          style: {
-            background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-            borderRadius: '16px',
-            padding: '16px',
-            marginBottom: '16px',
-            color: '#fff',
-            boxShadow: '0 4px 14px rgba(16, 185, 129, 0.3)'
-          }
-        },
-          // Header with animated icon
-          React.createElement('div', {
-            style: {
-              display: 'flex',
-              alignItems: 'center',
-              gap: '10px',
-              marginBottom: '10px'
-            }
-          },
-            React.createElement('span', {
-              style: {
-                fontSize: '24px',
-                animation: 'ndteFireFlicker 1.5s ease-in-out infinite'
-              }
-            }, '🔥'),
-            React.createElement('span', {
-              style: {
-                fontSize: '16px',
-                fontWeight: '700'
-              }
-            }, 'Эффект вчерашней тренировки!')
-          ),
-          // Stats row
-          React.createElement('div', {
-            style: {
-              display: 'flex',
-              gap: '20px',
-              fontSize: '13px',
-              opacity: '0.95'
-            }
-          },
-            React.createElement('div', null,
-              React.createElement('div', { style: { fontWeight: '600', fontSize: '18px' } }, `+${boostPct}%`),
-              React.createElement('div', { style: { opacity: '0.8', fontSize: '11px' } }, 'к метаболизму')
-            ),
-            React.createElement('div', null,
-              React.createElement('div', { style: { fontWeight: '600', fontSize: '18px' } }, `-${wavePct}%`),
-              React.createElement('div', { style: { opacity: '0.8', fontSize: '11px' } }, 'к инс. волне')
-            ),
-            React.createElement('div', null,
-              React.createElement('div', { style: { fontWeight: '600', fontSize: '18px' } }, `${prevTrainings.totalKcal}`),
-              React.createElement('div', { style: { opacity: '0.8', fontSize: '11px' } }, 'ккал вчера')
-            )
-          ),
-          // Motivation text
-          React.createElement('div', {
-            style: {
-              marginTop: '10px',
-              fontSize: '12px',
-              opacity: '0.85',
-              fontStyle: 'italic'
-            }
-          }, ndteData.tdeeBoost >= 0.07
-            ? '💪 Отличная тренировка! Твой метаболизм работает на полную мощность.'
-            : '⚡ Хорошая активность! Метаболизм слегка ускорен.'
-          )
-        );
-      })(),
-
-      // Список рутин
-      React.createElement('div', {
-        style: {
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '12px'
-        }
-      },
-        routineItems.map((item, index) =>
-          React.createElement('div', {
-            key: item.id,
-            onClick: () => toggleItem(item.id),
-            style: {
-              display: 'flex',
-              alignItems: 'center',
-              gap: '14px',
-              padding: '14px 16px',
-              background: checkedItems.includes(item.id)
-                ? `linear-gradient(135deg, ${item.color}15, ${item.color}08)`
-                : '#f8fafc',
-              borderRadius: '14px',
-              cursor: 'pointer',
-              transition: 'all 0.2s ease',
-              border: checkedItems.includes(item.id)
-                ? `2px solid ${item.color}40`
-                : '2px solid transparent',
-              transform: checkedItems.includes(item.id) ? 'scale(1.02)' : 'scale(1)'
-            }
-          },
-            // Номер / галочка
-            React.createElement('div', {
-              style: {
-                width: '36px',
-                height: '36px',
-                borderRadius: '50%',
-                background: checkedItems.includes(item.id)
-                  ? `linear-gradient(135deg, ${item.color}, ${item.color}cc)`
-                  : '#e2e8f0',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: checkedItems.includes(item.id) ? '18px' : '14px',
-                fontWeight: '700',
-                color: checkedItems.includes(item.id) ? '#fff' : '#64748b',
-                transition: 'all 0.2s ease',
-                flexShrink: 0
-              }
-            }, checkedItems.includes(item.id) ? '✓' : (index + 1)),
-
-            // Эмодзи
-            React.createElement('div', {
-              style: {
-                fontSize: '28px',
-                flexShrink: 0
-              }
-            }, item.emoji),
-
-            // Текст
-            React.createElement('div', {
-              style: {
-                flex: 1,
-                minWidth: 0
-              }
-            },
-              React.createElement('div', {
-                style: {
-                  fontSize: '15px',
-                  fontWeight: '600',
-                  color: 'var(--text, #1e293b)',
-                  marginBottom: '2px'
-                }
-              }, item.title),
-              React.createElement('div', {
-                style: {
-                  fontSize: '12px',
-                  color: '#64748b',
-                  lineHeight: '1.3'
-                }
-              }, item.desc)
-            )
-          )
-        )
-      ),
-
-      // Мотивационная кнопка-плашка внизу (вместо кнопки в хедере)
-      React.createElement('button', {
-        onClick: handleFinish,
-        style: {
-          width: '100%',
-          textAlign: 'center',
-          padding: '18px 24px',
-          background: allChecked
-            ? 'linear-gradient(135deg, #fef3c7, #fde68a)'
-            : 'linear-gradient(135deg, #10b981, #059669)',
           borderRadius: '16px',
-          marginTop: '16px',
-          border: 'none',
-          cursor: 'pointer',
-          transition: 'all 0.2s ease',
-          transform: 'scale(1)',
-          boxShadow: allChecked
-            ? '0 4px 14px rgba(251, 191, 36, 0.4)'
-            : '0 4px 14px rgba(16, 185, 129, 0.4)'
-        },
-        onMouseDown: (e) => e.currentTarget.style.transform = 'scale(0.98)',
-        onMouseUp: (e) => e.currentTarget.style.transform = 'scale(1)',
-        onMouseLeave: (e) => e.currentTarget.style.transform = 'scale(1)'
+          padding: '14px 14px 12px',
+          background: 'linear-gradient(135deg, rgba(16,185,129,0.10), rgba(20,184,166,0.08))',
+          border: '1px solid rgba(16,185,129,0.2)'
+        }
       },
-        allChecked && React.createElement('div', {
-          style: { fontSize: '28px', marginBottom: '6px' }
-        }, '🏆'),
         React.createElement('div', {
           style: {
-            fontSize: allChecked ? '14px' : '13px',
-            fontWeight: '600',
-            color: allChecked ? '#92400e' : '#fff',
-            marginBottom: allChecked ? '8px' : '0'
+            fontSize: '13px',
+            fontWeight: '700',
+            color: '#047857',
+            marginBottom: '8px',
+            letterSpacing: '0.02em'
           }
-        }, allChecked ? 'Ты уже на пути к успеху!' : 'Можно пропустить'),
+        }, 'Финальный шаг: резинки + мини-растяжка'),
         React.createElement('div', {
           style: {
             fontSize: '18px',
-            fontWeight: '800',
-            color: allChecked ? '#b45309' : '#fff',
-            letterSpacing: '0.5px'
+            fontWeight: '700',
+            color: 'var(--text, #0f172a)',
+            marginBottom: '6px',
+            lineHeight: '1.3'
           }
-        }, randomPhrase)
+        }, copyVariant.opener),
+        React.createElement('div', {
+          style: {
+            fontSize: '13px',
+            lineHeight: '1.45',
+            color: '#334155'
+          }
+        }, copyVariant.science)
       ),
-
-      // Подсказка если не все отмечены
-      !allChecked && React.createElement('div', {
+      React.createElement('div', {
+        style: {
+          borderRadius: '14px',
+          border: '1px solid rgba(148, 163, 184, 0.28)',
+          background: '#f8fafc',
+          padding: '12px'
+        }
+      },
+        React.createElement('div', {
+          style: {
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '8px',
+            marginBottom: '8px'
+          }
+        },
+          React.createElement('div', {
+            style: {
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              minWidth: 0
+            }
+          },
+            React.createElement('span', { style: { fontSize: '22px' } }, '💪'),
+            React.createElement('div', { style: { minWidth: 0 } },
+              React.createElement('div', {
+                style: {
+                  fontSize: '14px',
+                  fontWeight: '700',
+                  color: '#0f172a'
+                }
+              }, 'Резинки + мини-растяжка утром'),
+              React.createElement('div', {
+                style: {
+                  fontSize: '11px',
+                  color: '#64748b',
+                  marginTop: '2px'
+                }
+              }, 'Метрика фиксируется после первого приёма пищи')
+            )
+          ),
+          React.createElement('span', {
+            title: badgeMeta.title,
+            style: {
+              ...badgeMeta.style,
+              fontSize: '10px',
+              fontWeight: '700',
+              borderRadius: '999px',
+              padding: '4px 8px',
+              textTransform: 'uppercase',
+              letterSpacing: '0.05em',
+              whiteSpace: 'nowrap'
+            }
+          }, badgeMeta.label)
+        ),
+        React.createElement('div', {
+          style: {
+            fontSize: '12px',
+            color: '#334155',
+            lineHeight: '1.45'
+          }
+        },
+          `Режим на сегодня: ${energyLabel}. `,
+          protocolText
+        ),
+        morningState.firstMealTime && React.createElement('div', {
+          style: {
+            marginTop: '8px',
+            fontSize: '11px',
+            color: '#64748b'
+          }
+        }, `Первый приём пищи: ${morningState.firstMealTime}`)
+      ),
+      React.createElement('button', {
+        onClick: proceedNext,
+        style: {
+          width: '100%',
+          textAlign: 'center',
+          padding: '16px 18px',
+          background: 'linear-gradient(135deg, #10b981, #059669)',
+          borderRadius: '14px',
+          border: 'none',
+          cursor: 'pointer',
+          fontSize: '16px',
+          fontWeight: '800',
+          color: '#fff',
+          letterSpacing: '0.02em'
+        }
+      }, 'Продолжить'),
+      React.createElement('div', {
         style: {
           textAlign: 'center',
-          fontSize: '12px',
-          color: '#94a3b8',
-          marginTop: '8px'
+          fontSize: '11px',
+          color: '#64748b'
         }
-      }, '↑ Отметь выполненные пункты или продолжай'),
+      }, 'После первого приёма пищи откроется подтверждение: done / missed + интенсивность.')
+    );
+  }
 
-      // CSS анимация
-      React.createElement('style', null, `
-        @keyframes bounce {
-          0%, 100% { transform: translateY(0); }
-          50% { transform: translateY(-8px); }
+  function MorningActivationFollowupStepComponent({ context }) {
+    const dateKey = context?.dateKey || getTodayKey();
+    const dayData = readDayData(dateKey, {});
+    const initialState = normalizeMorningActivationState(dateKey, dayData);
+    const [phase, setPhase] = useState('confirm');
+    const [selectedIntensity, setSelectedIntensity] = useState(initialState.intensity || null);
+    const [intensityRec, setIntensityRec] = useState(null);
+    const [postState, setPostState] = useState(() => {
+      const defaults = {
+        mood: clampMoodValue(dayData.moodMorning, 6),
+        wellbeing: clampMoodValue(dayData.wellbeingMorning, 6),
+        stress: clampMoodValue(dayData.stressMorning, 4)
+      };
+      return normalizePostState(initialState.postState, defaults) || defaults;
+    });
+    const firstMealTime = initialState.firstMealTime || getFirstMealTimeFromDay(dayData) || '—';
+
+    const setPostField = (field, value) => {
+      setPostState((prev) => ({
+        ...prev,
+        [field]: clampMoodValue(value, prev[field] || 5)
+      }));
+    };
+
+    const saveMissed = () => {
+      const nextState = normalizeMorningActivationState(dateKey, readDayData(dateKey, {}));
+      persistMorningActivationState(dateKey, {
+        status: 'missed',
+        intensity: null,
+        postState: null,
+        postEffect: null,
+        firstMealTime: nextState.firstMealTime || firstMealTime || null,
+        decidedAt: Date.now(),
+        followupSnoozeUntilMealCount: null
+      }, 'morning-activation-followup');
+      syncMorningActivationActivity(dateKey, {
+        ...nextState,
+        status: 'missed',
+        intensity: null
+      });
+      context?.onNext?.();
+    };
+
+    const saveDone = () => {
+      if (!selectedIntensity) return;
+      const nextState = normalizeMorningActivationState(dateKey, readDayData(dateKey, {}));
+      const normalizedPostState = normalizePostState(postState, {
+        mood: 6,
+        wellbeing: 6,
+        stress: 4
+      });
+      const postEffect = buildPostStateEffect(dayData, normalizedPostState);
+      const preparedState = {
+        ...nextState,
+        status: 'done',
+        intensity: selectedIntensity,
+        postState: normalizedPostState,
+        postEffect,
+        firstMealTime: nextState.firstMealTime || firstMealTime || null,
+        decidedAt: Date.now(),
+        followupSnoozeUntilMealCount: null
+      };
+      persistMorningActivationState(dateKey, preparedState, 'morning-activation-followup');
+      syncMorningActivationActivity(dateKey, preparedState);
+      try {
+        if (HEYS.game?.recordMorningActivationDone) {
+          HEYS.game.recordMorningActivationDone(dateKey);
         }
-      `)
+      } catch (e) {
+        console.warn('[HEYS.steps] recordMorningActivationDone failed:', e);
+      }
+      context?.onNext?.();
+    };
+
+    const actionBtnStyle = {
+      borderRadius: '12px',
+      border: '1px solid rgba(100,116,139,0.35)',
+      background: '#fff',
+      color: '#0f172a',
+      fontSize: '13px',
+      fontWeight: '600',
+      padding: '11px 12px',
+      cursor: 'pointer'
+    };
+
+    return React.createElement('div', {
+      style: {
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '12px',
+        padding: '8px 0'
+      }
+    },
+      React.createElement('div', {
+        style: {
+          borderRadius: '14px',
+          border: '1px solid rgba(16,185,129,0.2)',
+          background: 'rgba(16,185,129,0.08)',
+          padding: '12px'
+        }
+      },
+        React.createElement('div', {
+          style: { fontSize: '14px', fontWeight: '700', color: '#065f46', marginBottom: '4px' }
+        }, 'Подтверждение утренней зарядки'),
+        React.createElement('div', {
+          style: { fontSize: '12px', color: '#334155', lineHeight: '1.45' }
+        }, `После первого приёма пищи (${firstMealTime}) зафиксируй статус привычки.`)
+      ),
+      phase === 'confirm'
+        ? React.createElement('div', {
+          style: { display: 'flex', flexDirection: 'column', gap: '8px' }
+        },
+          React.createElement('button', {
+            style: {
+              ...actionBtnStyle,
+              border: '1px solid rgba(16,185,129,0.35)',
+              background: 'rgba(16,185,129,0.12)',
+              color: '#047857'
+            },
+            onClick: () => {
+              const fresh = readDayData(dateKey, {});
+              setIntensityRec(getMorningActivationIntensityRecommendation(fresh));
+              setPhase('intensity');
+            }
+          }, 'Сделал зарядку'),
+          React.createElement('button', {
+            style: {
+              ...actionBtnStyle,
+              border: '1px solid rgba(244,63,94,0.35)',
+              background: 'rgba(244,63,94,0.10)',
+              color: '#be123c'
+            },
+            onClick: saveMissed
+          }, 'Не сделал'),
+          React.createElement('button', {
+            style: actionBtnStyle,
+            onClick: () => context?.onClose?.()
+          }, 'Позже')
+        )
+        : React.createElement('div', {
+          style: { display: 'flex', flexDirection: 'column', gap: '8px' }
+        },
+          phase === 'intensity'
+            ? React.createElement(React.Fragment, null,
+              React.createElement('div', {
+                style: { fontSize: '12px', color: '#475569', marginBottom: '2px' }
+              }, 'Выбери интенсивность (событие запишется как «Зарядка»):'),
+              intensityRec && React.createElement('div', {
+                style: {
+                  fontSize: '11px',
+                  color: '#334155',
+                  lineHeight: '1.45',
+                  marginBottom: '6px',
+                  padding: '8px 10px',
+                  borderRadius: '10px',
+                  border: '1px solid rgba(99,102,241,0.25)',
+                  background: 'rgba(99,102,241,0.06)'
+                }
+              }, `🧠 ${intensityRec.hint}`),
+              React.createElement('button', {
+                style: {
+                  ...actionBtnStyle,
+                  border: selectedIntensity === 'super_light' ? '1px solid rgba(59,130,246,0.45)' : actionBtnStyle.border,
+                  background: selectedIntensity === 'super_light' ? 'rgba(59,130,246,0.08)' : actionBtnStyle.background,
+                  boxShadow: intensityRec?.intensity === 'super_light' ? '0 0 0 2px rgba(234,179,8,0.45)' : 'none'
+                },
+                onClick: () => {
+                  setSelectedIntensity('super_light');
+                  setPhase('post_state');
+                }
+              }, React.createElement(React.Fragment, null,
+                'Суперлегкая',
+                intensityRec?.intensity === 'super_light' && React.createElement('span', {
+                  style: { display: 'block', fontSize: '10px', fontWeight: '600', color: '#b45309', marginTop: '2px' }
+                }, 'рекомендуем по утру')
+              )),
+              React.createElement('button', {
+                style: {
+                  ...actionBtnStyle,
+                  border: selectedIntensity === 'medium' ? '1px solid rgba(245,158,11,0.45)' : actionBtnStyle.border,
+                  background: selectedIntensity === 'medium' ? 'rgba(245,158,11,0.08)' : actionBtnStyle.background,
+                  boxShadow: intensityRec?.intensity === 'medium' ? '0 0 0 2px rgba(234,179,8,0.45)' : 'none'
+                },
+                onClick: () => {
+                  setSelectedIntensity('medium');
+                  setPhase('post_state');
+                }
+              }, React.createElement(React.Fragment, null,
+                'Средне',
+                intensityRec?.intensity === 'medium' && React.createElement('span', {
+                  style: { display: 'block', fontSize: '10px', fontWeight: '600', color: '#b45309', marginTop: '2px' }
+                }, 'рекомендуем по утру')
+              )),
+              React.createElement('button', {
+                style: {
+                  ...actionBtnStyle,
+                  border: selectedIntensity === 'high' ? '1px solid rgba(244,63,94,0.45)' : actionBtnStyle.border,
+                  background: selectedIntensity === 'high' ? 'rgba(244,63,94,0.08)' : actionBtnStyle.background,
+                  boxShadow: intensityRec?.intensity === 'high' ? '0 0 0 2px rgba(234,179,8,0.45)' : 'none'
+                },
+                onClick: () => {
+                  setSelectedIntensity('high');
+                  setPhase('post_state');
+                }
+              }, React.createElement(React.Fragment, null,
+                'Высокоинтенсивная',
+                intensityRec?.intensity === 'high' && React.createElement('span', {
+                  style: { display: 'block', fontSize: '10px', fontWeight: '600', color: '#b45309', marginTop: '2px' }
+                }, 'рекомендуем по утру')
+              )),
+              React.createElement('button', {
+                style: {
+                  ...actionBtnStyle,
+                  background: '#f8fafc'
+                },
+                onClick: () => {
+                  setIntensityRec(null);
+                  setPhase('confirm');
+                }
+              }, 'Назад')
+            )
+            : React.createElement(React.Fragment, null,
+              React.createElement('div', {
+                style: { fontSize: '12px', color: '#475569', marginBottom: '2px' }
+              }, 'Как изменилось состояние после зарядки?'),
+              React.createElement('div', {
+                style: {
+                  display: 'grid',
+                  gridTemplateColumns: '1fr',
+                  gap: '8px'
+                }
+              },
+                React.createElement('div', {
+                  style: {
+                    borderRadius: '10px',
+                    border: '1px solid rgba(148,163,184,0.25)',
+                    padding: '8px'
+                  }
+                },
+                  React.createElement('div', { style: { fontSize: '12px', fontWeight: '600', marginBottom: '6px', color: '#334155' } }, `🙂 Настроение: ${postState.mood}/10`),
+                  React.createElement('input', {
+                    type: 'range',
+                    min: 1,
+                    max: 10,
+                    value: postState.mood,
+                    onChange: (event) => setPostField('mood', Number(event.target.value)),
+                    className: 'mc-quality-slider'
+                  })
+                ),
+                React.createElement('div', {
+                  style: {
+                    borderRadius: '10px',
+                    border: '1px solid rgba(148,163,184,0.25)',
+                    padding: '8px'
+                  }
+                },
+                  React.createElement('div', { style: { fontSize: '12px', fontWeight: '600', marginBottom: '6px', color: '#334155' } }, `⚡ Бодрость: ${postState.wellbeing}/10`),
+                  React.createElement('input', {
+                    type: 'range',
+                    min: 1,
+                    max: 10,
+                    value: postState.wellbeing,
+                    onChange: (event) => setPostField('wellbeing', Number(event.target.value)),
+                    className: 'mc-quality-slider'
+                  })
+                ),
+                React.createElement('div', {
+                  style: {
+                    borderRadius: '10px',
+                    border: '1px solid rgba(148,163,184,0.25)',
+                    padding: '8px'
+                  }
+                },
+                  React.createElement('div', { style: { fontSize: '12px', fontWeight: '600', marginBottom: '6px', color: '#334155' } }, `🧠 Стресс: ${postState.stress}/10`),
+                  React.createElement('input', {
+                    type: 'range',
+                    min: 1,
+                    max: 10,
+                    value: postState.stress,
+                    onChange: (event) => setPostField('stress', Number(event.target.value)),
+                    className: 'mc-quality-slider'
+                  })
+                )
+              ),
+              React.createElement('button', {
+                style: {
+                  ...actionBtnStyle,
+                  border: '1px solid rgba(16,185,129,0.45)',
+                  background: 'rgba(16,185,129,0.12)',
+                  color: '#047857'
+                },
+                onClick: saveDone
+              }, 'Сохранить зарядку'),
+              React.createElement('button', {
+                style: {
+                  ...actionBtnStyle,
+                  background: '#f8fafc'
+                },
+                onClick: () => setPhase('intensity')
+              }, 'Назад к интенсивности')
+            )
+        )
     );
   }
 
@@ -3475,22 +4033,36 @@
   });
 
   registerStep('morningRoutine', {
-    title: 'Утренняя рутина',
-    hint: 'Начни день правильно!',
-    icon: '🌟',
+    title: 'Утренний фокус',
+    hint: 'Резинки + мини-растяжка',
+    icon: '💪',
     canSkip: true,
-    hideHeaderNext: true,  // Скрываем кнопку в хедере — используем плашку внизу
+    hideHeaderNext: true,
     component: MorningRoutineStepComponent,
     getInitialData: () => ({
-      checkedItems: []
+      selectedCopyId: null
     }),
-    save: (data) => {
-      // Опционально: можно сохранять что пользователь отметил
-      // Пока просто логируем для аналитики
-      if (data.checkedItems && data.checkedItems.length > 0) {
-        console.log('[MorningRoutine] Completed items:', data.checkedItems);
+    save: (data, context) => {
+      const dateKey = context?.dateKey || getTodayKey();
+      if (data?.selectedCopyId) {
+        persistMorningActivationState(dateKey, { copyId: data.selectedCopyId }, 'morning-routine-save');
       }
     },
+    xpAction: 'morning_routine_completed'
+  });
+
+  registerStep('morning_activation_followup', {
+    title: 'Зарядка после 1-го приёма',
+    hint: 'Статус привычки',
+    icon: '✅',
+    canSkip: true,
+    hideHeaderNext: true,
+    component: MorningActivationFollowupStepComponent,
+    getInitialData: (context) => {
+      const dateKey = context?.dateKey || getTodayKey();
+      return normalizeMorningActivationState(dateKey, readDayData(dateKey, {}));
+    },
+    save: () => { },
     xpAction: 'morning_routine_completed'
   });
 

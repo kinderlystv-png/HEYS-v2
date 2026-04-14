@@ -724,7 +724,11 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
     weight_logged: { xp: 5, maxPerDay: 1, label: 'Вес записан' },
     day_completed: { xp: 50, maxPerDay: 1, label: 'День выполнен' },
     perfect_day: { xp: 25, maxPerDay: 1, label: 'Идеальный день' },
-    advice_read: { xp: 2, maxPerDay: 10, label: 'Совет прочитан' }
+    advice_read: { xp: 2, maxPerDay: 10, label: 'Совет прочитан' },
+    morning_activation_done: { xp: 8, maxPerDay: 1, label: 'Утренняя зарядка' },
+    morning_activation_streak_3: { xp: 35, maxPerDay: 1, label: 'Серия зарядки 3 дня' },
+    morning_activation_streak_7: { xp: 70, maxPerDay: 1, label: 'Серия зарядки 7 дней' },
+    morning_activation_streak_14: { xp: 140, maxPerDay: 1, label: 'Серия зарядки 14 дней' }
   };
 
   /**
@@ -941,6 +945,36 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
     return new Date().toISOString().slice(0, 10);
   }
 
+  /** Сдвиг календарной даты YYYY-MM-DD на deltaDays (локальная полуночь). */
+  function addDaysToDateKey(dateStr, deltaDays) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(dateStr || '').trim());
+    if (!m) return null;
+    const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+    d.setDate(d.getDate() + deltaDays);
+    return d.toISOString().slice(0, 10);
+  }
+
+  function normalizeMorningActivationStreak(raw) {
+    const base = { current: 0, lastDoneDate: null };
+    if (!raw || typeof raw !== 'object') return { ...base };
+    return {
+      current: Math.max(0, Math.min(366, Number(raw.current) || 0)),
+      lastDoneDate: typeof raw.lastDoneDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(raw.lastDoneDate)
+        ? raw.lastDoneDate
+        : null
+    };
+  }
+
+  function mergeMorningActivationStreak(localRaw, cloudRaw) {
+    const x = normalizeMorningActivationStreak(localRaw);
+    const y = normalizeMorningActivationStreak(cloudRaw);
+    if (x.current !== y.current) {
+      return x.current > y.current ? { ...x } : { ...y };
+    }
+    if ((x.lastDoneDate || '') === (y.lastDoneDate || '')) return { ...x };
+    return (String(x.lastDoneDate || '') >= String(y.lastDoneDate || '')) ? { ...x } : { ...y };
+  }
+
   // ========== GAMESYNH TRACE LOGGING ==========
   const GAME_SYNC_LOG_PREFIX = '[GAMESYNH]';
   let _gameSyncTraceSeq = 0;
@@ -1095,6 +1129,8 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
 
     // Cleanup старых dailyXP (>30 дней)
     migrated.dailyXP = cleanupOldDailyXP(migrated.dailyXP);
+
+    migrated.morningActivationStreak = normalizeMorningActivationStreak(data.morningActivationStreak);
 
     // Логируем миграцию если версия изменилась
     if (data.version !== DATA_VERSION) {
@@ -1301,6 +1337,10 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
     merged.weeklyChallenge = mergeWeeklyChallenge(local.weeklyChallenge, cloud.weeklyChallenge);
     merged.dailyMissions = mergeDailyMissions(local.dailyMissions, cloud.dailyMissions);
     merged.weeklyTrainings = local.weeklyTrainings || cloud.weeklyTrainings || null;
+    merged.morningActivationStreak = mergeMorningActivationStreak(
+      local.morningActivationStreak,
+      cloud.morningActivationStreak
+    );
     merged.earlyBirdDays = mergeUniqueArray(local.earlyBirdDays, cloud.earlyBirdDays);
     merged.streakShieldUsed = mergeDateStrings(local.streakShieldUsed, cloud.streakShieldUsed);
     merged.stats = mergeStats(local.stats, cloud.stats);
@@ -2437,6 +2477,11 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
         totalAdvicesRead: 0,
         perfectDays: 0,
         bestStreak: 0
+      },
+      /** Серия дней с отмеченной утренней зарядкой (после 1-го приёма), не путать с общим streak дня. */
+      morningActivationStreak: {
+        current: 0,
+        lastDoneDate: null
       },
       _lastKnownEventCount: 0, // 🔄 Для lightweight consistency check
       createdAt: Date.now(),
@@ -4579,11 +4624,18 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
      * @param {HTMLElement} sourceEl - элемент-источник для flying animation
      */
     addXP(amount, reason, sourceEl, extraData) {
+      let xpAmount = amount;
+      let xpReason = reason;
+      // Legacy: StepModal вызывает addXP(config.xpAction) одним строковым аргументом
+      if (typeof amount === 'string' && reason === undefined) {
+        xpReason = amount;
+        xpAmount = 0;
+      }
       // Debounce
       if (_debounceTimer) clearTimeout(_debounceTimer);
 
       _debounceTimer = setTimeout(() => {
-        _addXPInternal(amount, reason, sourceEl, extraData);
+        _addXPInternal(xpAmount, xpReason, sourceEl, extraData);
       }, DEBOUNCE_MS);
     },
 
@@ -4776,6 +4828,67 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
       const count = (readStoredValue('heys_weekly_wrap_view_count', 0) || 0) + 1;
       setStoredValue('heys_weekly_wrap_view_count', count);
       return count;
+    },
+
+    /**
+     * Утренняя зарядка: учёт серии календарных дней (done) + XP за день и вехи 3 / 7 / 14.
+     * @param {string} dateKey - YYYY-MM-DD
+     */
+    recordMorningActivationDone(dateKey) {
+      if (_isLoadingPhase) return { current: 0, skipped: true };
+      const today = typeof dateKey === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateKey)
+        ? dateKey
+        : getToday();
+      const data = loadData();
+      const streak = normalizeMorningActivationStreak(data.morningActivationStreak);
+      data.morningActivationStreak = streak;
+
+      if (streak.lastDoneDate === today) {
+        saveData();
+        return { current: streak.current, alreadyToday: true };
+      }
+
+      const yesterday = addDaysToDateKey(today, -1);
+      let nextCurrent = streak.current || 0;
+      if (!streak.lastDoneDate) {
+        nextCurrent = 1;
+      } else if (yesterday && streak.lastDoneDate === yesterday) {
+        nextCurrent = (streak.current || 0) + 1;
+      } else {
+        nextCurrent = 1;
+      }
+
+      streak.current = nextCurrent;
+      streak.lastDoneDate = today;
+      saveData();
+
+      this.addXP(0, 'morning_activation_done', null, { dedupId: today });
+
+      const tierToast = (days, bonusXp) => {
+        try {
+          if (HEYS.Toast?.success) {
+            HEYS.Toast.success(`Серия зарядки: ${days} дней подряд — бонус +${bonusXp} XP`);
+          }
+        } catch (_) {
+          // Toast optional
+        }
+      };
+
+      if (nextCurrent === 3) {
+        this.addXP(0, 'morning_activation_streak_3', null, { dedupId: `${today}-ma3` });
+        tierToast(3, 35);
+        celebrate({ kind: 'morning_activation_streak', days: 3 });
+      } else if (nextCurrent === 7) {
+        this.addXP(0, 'morning_activation_streak_7', null, { dedupId: `${today}-ma7` });
+        tierToast(7, 70);
+        celebrate({ kind: 'morning_activation_streak', days: 7 });
+      } else if (nextCurrent === 14) {
+        this.addXP(0, 'morning_activation_streak_14', null, { dedupId: `${today}-ma14` });
+        tierToast(14, 140);
+        celebrate({ kind: 'morning_activation_streak', days: 14 });
+      }
+
+      return { current: nextCurrent };
     },
 
     // Сброс данных (для тестирования)
@@ -6335,6 +6448,7 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
   // ========== ЭКСПОРТ ==========
 
   HEYS.game = game;
+  HEYS.gamification = game;
 
   // RC fix v6.5: Гарантируем запуск pipeline даже если heysSyncCompleted сработал ДО того,
   // как gamification_v1.js зарегистрировал свой listener (большой файл, 6000+ строк).

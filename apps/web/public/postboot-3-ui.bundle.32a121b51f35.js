@@ -1182,7 +1182,9 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-3-ui: execute start');
     if (typeof raw === 'string') {
       let str = raw;
       if (str.startsWith('¤Z¤') && HEYS.store?.decompress) {
-        try { str = HEYS.store.decompress(str); } catch (_) { }
+        try { str = HEYS.store.decompress(str); } catch (_) {
+          // Keep raw value when compressed payload is invalid
+        }
       }
       try { return JSON.parse(str); } catch (_) { return str; }
     }
@@ -1217,7 +1219,9 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-3-ui: execute start');
         return;
       }
       localStorage.setItem(key, JSON.stringify(value));
-    } catch { }
+    } catch {
+      // Storage can be unavailable in private mode
+    }
   };
 
   function resolveDateKey(rawDateKey) {
@@ -1300,6 +1304,453 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-3-ui: execute start');
     } else {
       lsSet(getUnscopedDayKey(dateKey), dayData);
     }
+  }
+
+  const MORNING_ACTIVATION_COPY_HISTORY_KEY = 'heys_morning_activation_copy_history_v1';
+  const MORNING_ACTIVATION_INTENSITY_PRESETS = {
+    super_light: {
+      label: 'Суперлегкая',
+      shortLabel: 'лёгк.',
+      duration: 8
+    },
+    medium: {
+      label: 'Средне',
+      shortLabel: 'сред.',
+      duration: 14
+    },
+    high: {
+      label: 'Высокоинтенсивная',
+      shortLabel: 'выс.',
+      duration: 22
+    }
+  };
+
+  const MORNING_ACTIVATION_COPY_VARIANTS = [
+    {
+      id: 'ma-1',
+      opener: 'Небольшой импульс утром даёт телу «старт без рывка».',
+      science: '2-8 минут мягкой мышечной активации улучшают нейромышечный тонус и снижают ощущение скованности к первому приёму пищи.',
+      protocol: {
+        low: '2 круга: тяга резинки к корпусу 6× + мягкая мобилизация плеч/шеи 60 секунд.',
+        mid: '3 круга: тяга резинки 10× + присед с резинкой 8× + растяжка грудного отдела 40 секунд.',
+        high: '4 круга: тяга 12× + присед 10× + выпады 8×/сторона + растяжка 45 секунд.'
+      }
+    },
+    {
+      id: 'ma-2',
+      opener: 'Сегодня цель — не «героизм», а стабильный тонус.',
+      science: 'Короткая зарядка утром повышает чувствительность к нагрузке днём и уменьшает накопление вялости в первой половине дня.',
+      protocol: {
+        low: '3 минуты: лопаточная тяга резинки + плавные наклоны и раскрытие грудной клетки.',
+        mid: '6-8 минут: 3 блока по 2 минуты — резинка, корпус, растяжка.',
+        high: '10-12 минут интервально: 40 секунд работа / 20 секунд отдых, 4-5 раундов.'
+      }
+    },
+    {
+      id: 'ma-3',
+      opener: 'Сделай «микро-победу» до того, как день ускорится.',
+      science: 'Ранняя активация крупных мышц повышает субъективную энергию и улучшает исполнительный контроль в утренние часы.',
+      protocol: {
+        low: 'Минимум: тяга резинки стоя 2×8 + растяжка икр и спины 90 секунд.',
+        mid: 'База: 3×(тяга 10 + отведение рук 10 + растяжка 30 секунд).',
+        high: 'Интенсив: 4×(тяга 12 + присед 12 + планка 30 секунд + растяжка 20 секунд).'
+      }
+    },
+    {
+      id: 'ma-4',
+      opener: 'Мягкий старт сегодня важнее идеального плана.',
+      science: 'Даже короткая рутина «резинка + растяжка» снижает утреннюю ригидность и помогает быстрее включиться в рабочий ритм.',
+      protocol: {
+        low: '4 минуты: резинка на верх спины + мобилизация шеи/плеч.',
+        mid: '7 минут: резинка на спину + ягодичный мост + растяжка сгибателей бедра.',
+        high: '12 минут: 3 круга силовой активации + динамическая растяжка.'
+      }
+    },
+    {
+      id: 'ma-5',
+      opener: 'Сейчас достаточно одного точного шага — зарядки на 5-10 минут.',
+      science: 'Короткая утренняя активность улучшает кровоток и субъективное ощущение «проснулся телом», что повышает шанс удержать режим в течение дня.',
+      protocol: {
+        low: '2-3 упражнения по 1 подходу: без отказа, только «разбудить» мышцы.',
+        mid: '3 упражнения по 2 подхода: резинка, ноги, корпус + короткая растяжка.',
+        high: '4 упражнения по 2-3 подхода: умеренно интенсивно, но без избыточного пульса.'
+      }
+    },
+    {
+      id: 'ma-6',
+      opener: 'Пусть зарядка будет «тихим якорем» утра.',
+      science: 'Повторяемый утренний ритуал формирует устойчивую привычку за счёт низкого порога входа и предсказуемого вознаграждения.',
+      protocol: {
+        low: 'Якорь-минимум: 1 круг резинки + 2 минуты растяжки.',
+        mid: 'Стандарт: 2 круга резинки + 3 минуты суставной мобильности.',
+        high: 'Продвинутый: 3-4 круга с контролем техники и дыхания.'
+      }
+    },
+    {
+      id: 'ma-7',
+      opener: 'Лучше коротко и стабильно, чем редко и «идеально».',
+      science: 'Регулярные короткие сессии активности дают более устойчивый поведенческий эффект, чем редкие перегруженные тренировки.',
+      protocol: {
+        low: '3-4 минуты: без таймера, плавный темп, акцент на амплитуду.',
+        mid: '6-9 минут: таймер 45/15, 3-4 упражнения.',
+        high: '10-14 минут: таймер 50/20, 4 упражнения + финальная растяжка.'
+      }
+    },
+    {
+      id: 'ma-8',
+      opener: 'Проверь состояние и подбери режим, а не наоборот.',
+      science: 'Автоподстройка по самочувствию снижает риск срыва: телу легче поддерживать рутину, когда нагрузка соответствует ресурсу дня.',
+      protocol: {
+        low: 'Режим восстановления: мобилизация + резинка в лёгкой амплитуде.',
+        mid: 'Режим поддержки: умеренный объём без закисления.',
+        high: 'Режим драйва: плотный блок с контролем дыхания и техники.'
+      }
+    },
+    {
+      id: 'ma-9',
+      opener: 'Сделай зарядку как «переключатель внимания» на день.',
+      science: 'Короткое движение утром активирует префронтальные сети и помогает быстрее перейти в режим выполнения задач.',
+      protocol: {
+        low: 'Фокус-блок 4 минуты: резинка + растяжка шеи/груди.',
+        mid: 'Фокус-блок 7 минут: 2 круга с равномерным дыханием.',
+        high: 'Фокус-блок 12 минут: 3-4 круга + короткая заминка.'
+      }
+    },
+    {
+      id: 'ma-10',
+      opener: 'Ты уже в процессе: закрепи его короткой утренней зарядкой.',
+      science: 'Утренняя активация уменьшает «входной барьер» для остальной активности дня и повышает вероятность завершить план по движению.',
+      protocol: {
+        low: 'Мини-протокол: 5 минут без пропусков, комфортный темп.',
+        mid: 'Базовый протокол: 8-10 минут, умеренная плотность.',
+        high: 'Интенсивный протокол: 12-15 минут, но без отказа.'
+      }
+    }
+  ];
+
+  function parseTimeToMinutes(time) {
+    if (typeof time !== 'string') return null;
+    const match = /^(\d{1,2}):(\d{2})$/.exec(time.trim());
+    if (!match) return null;
+    const hours = Number(match[1]);
+    const minutes = Number(match[2]);
+    if (Number.isNaN(hours) || Number.isNaN(minutes)) return null;
+    if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59) return null;
+    return hours * 60 + minutes;
+  }
+
+  function getFirstMealTimeFromDay(dayData) {
+    const meals = Array.isArray(dayData?.meals) ? dayData.meals : [];
+    const times = meals
+      .filter((meal) => Array.isArray(meal?.items) && meal.items.length > 0)
+      .map((meal) => meal?.time)
+      .map(parseTimeToMinutes)
+      .filter((value) => Number.isFinite(value));
+
+    if (!times.length) return null;
+    const first = Math.min(...times);
+    const hh = String(Math.floor(first / 60)).padStart(2, '0');
+    const mm = String(first % 60).padStart(2, '0');
+    return `${hh}:${mm}`;
+  }
+
+  function getEnergyBucket(mood, wellbeing, stress) {
+    const normalizedStress = Math.max(0, Math.min(10, Number(stress) || 0));
+    const normalizedMood = Math.max(0, Math.min(10, Number(mood) || 0));
+    const normalizedWellbeing = Math.max(0, Math.min(10, Number(wellbeing) || 0));
+    const score = (normalizedMood + normalizedWellbeing + (10 - normalizedStress)) / 3;
+    if (score >= 7.2) return 'high';
+    if (score >= 5.2) return 'mid';
+    return 'low';
+  }
+
+  /**
+   * Персональная рекомендация интенсивности утренней зарядки по mood/wellbeing/stress утра.
+   * @returns {{ intensity: 'super_light'|'medium'|'high', bucket: string, hint: string }}
+   */
+  function getMorningActivationIntensityRecommendation(dayData) {
+    const mood = dayData?.moodMorning;
+    const wellbeing = dayData?.wellbeingMorning;
+    const stress = dayData?.stressMorning;
+    const hasMorning = [mood, wellbeing, stress].some((v) => Number.isFinite(Number(v)));
+    const bucket = hasMorning ? getEnergyBucket(mood, wellbeing, stress) : 'mid';
+    if (bucket === 'low') {
+      return {
+        intensity: 'super_light',
+        bucket,
+        hint: 'По утру ресурс ниже — начни с самого мягкого варианта.'
+      };
+    }
+    if (bucket === 'high') {
+      return {
+        intensity: 'high',
+        bucket,
+        hint: 'Утро в хорошем тонусе — можешь выбрать более плотный блок, если телу комфортно.'
+      };
+    }
+    return {
+      intensity: 'medium',
+      bucket,
+      hint: 'Баланс утра — средняя интенсивность чаще всего попадает в ресурс.'
+    };
+  }
+
+  function getMorningActivationBadgeMeta(state) {
+    const intensityMeta = state?.intensity ? MORNING_ACTIVATION_INTENSITY_PRESETS[state.intensity] : null;
+    if (state?.status === 'done') {
+      const suffix = intensityMeta ? ` · ${intensityMeta.shortLabel}` : '';
+      return {
+        label: `done${suffix}`,
+        title: intensityMeta ? `Зарядка отмечена, интенсивность: ${intensityMeta.label}` : 'Зарядка отмечена',
+        style: {
+          border: '1px solid rgba(16, 185, 129, 0.35)',
+          background: 'rgba(16, 185, 129, 0.12)',
+          color: '#047857'
+        }
+      };
+    }
+    if (state?.status === 'missed') {
+      return {
+        label: 'missed',
+        title: 'После первого приёма пищи: зарядка не сделана',
+        style: {
+          border: '1px solid rgba(244, 63, 94, 0.35)',
+          background: 'rgba(244, 63, 94, 0.12)',
+          color: '#be123c'
+        }
+      };
+    }
+    if (state?.status === 'pending') {
+      return {
+        label: 'pending',
+        title: 'Первый приём пищи уже есть — подтверди статус зарядки',
+        style: {
+          border: '1px solid rgba(245, 158, 11, 0.35)',
+          background: 'rgba(245, 158, 11, 0.12)',
+          color: '#b45309'
+        }
+      };
+    }
+    return {
+      label: 'до 1-го приёма',
+      title: 'Метрика фиксируется после первого приёма пищи',
+      style: {
+        border: '1px solid rgba(100, 116, 139, 0.35)',
+        background: 'rgba(148, 163, 184, 0.08)',
+        color: '#475569'
+      }
+    };
+  }
+
+  function clampMoodValue(value, fallback = 5) {
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric)) return fallback;
+    return Math.max(1, Math.min(10, Math.round(numeric)));
+  }
+
+  function normalizePostState(postState, fallback = null) {
+    if (!postState || typeof postState !== 'object') return fallback;
+    return {
+      mood: clampMoodValue(postState.mood, 5),
+      wellbeing: clampMoodValue(postState.wellbeing, 5),
+      stress: clampMoodValue(postState.stress, 5)
+    };
+  }
+
+  function buildPostStateEffect(dayData, postState) {
+    if (!postState) return null;
+    const baseMood = Number(dayData?.moodMorning);
+    const baseWellbeing = Number(dayData?.wellbeingMorning);
+    const baseStress = Number(dayData?.stressMorning);
+    const effect = {};
+    if (Number.isFinite(baseMood)) effect.moodDelta = postState.mood - baseMood;
+    if (Number.isFinite(baseWellbeing)) effect.wellbeingDelta = postState.wellbeing - baseWellbeing;
+    if (Number.isFinite(baseStress)) effect.stressDelta = postState.stress - baseStress;
+    return Object.keys(effect).length ? effect : null;
+  }
+
+  function normalizeMorningActivationState(dateKey, dayDataInput = null) {
+    const dayData = dayDataInput && typeof dayDataInput === 'object' ? dayDataInput : readDayData(dateKey, {});
+    const stored = dayData?.morningActivation && typeof dayData.morningActivation === 'object'
+      ? dayData.morningActivation
+      : {};
+    const firstMealTime = stored.firstMealTime || getFirstMealTimeFromDay(dayData);
+    let status = stored.status;
+    if (status !== 'done' && status !== 'missed') {
+      status = firstMealTime ? 'pending' : 'pre_meal';
+    }
+    return {
+      status,
+      firstMealTime: firstMealTime || null,
+      intensity: stored.intensity || null,
+      postState: normalizePostState(stored.postState, null),
+      postEffect: stored.postEffect && typeof stored.postEffect === 'object' ? stored.postEffect : null,
+      copyId: stored.copyId || null,
+      decidedAt: stored.decidedAt || null
+    };
+  }
+
+  function persistMorningActivationState(dateKey, nextState, source = 'morning-activation') {
+    const dayData = readDayData(dateKey, {});
+    dayData.morningActivation = {
+      ...(dayData.morningActivation || {}),
+      ...nextState
+    };
+    dayData.updatedAt = Date.now();
+    saveDayData(dateKey, dayData);
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('heys:day-updated', {
+        detail: {
+          date: dateKey,
+          field: 'morningActivation',
+          source,
+          forceReload: true
+        }
+      }));
+    }
+    return dayData;
+  }
+
+  function removeMorningActivationArtifacts(dayData) {
+    let changed = false;
+    const trainings = Array.isArray(dayData.trainings) ? dayData.trainings : [];
+    const filteredTrainings = trainings.filter((training) => training?.source !== 'morning_activation');
+    if (filteredTrainings.length !== trainings.length) {
+      dayData.trainings = filteredTrainings;
+      changed = true;
+    }
+
+    const householdActivities = Array.isArray(dayData.householdActivities) ? dayData.householdActivities : [];
+    const filteredHousehold = householdActivities.filter((activity) => activity?.source !== 'morning_activation');
+    if (filteredHousehold.length !== householdActivities.length) {
+      dayData.householdActivities = filteredHousehold;
+      changed = true;
+    }
+
+    const totalHousehold = (dayData.householdActivities || []).reduce((sum, activity) => sum + (Number(activity?.minutes) || 0), 0);
+    if ((dayData.householdMin || 0) !== totalHousehold) {
+      dayData.householdMin = totalHousehold;
+      changed = true;
+    }
+
+    const householdTime = dayData.householdActivities?.[0]?.time || '';
+    if ((dayData.householdTime || '') !== householdTime) {
+      dayData.householdTime = householdTime;
+      changed = true;
+    }
+
+    return changed;
+  }
+
+  function syncMorningActivationActivity(dateKey, stateInput) {
+    const dayData = readDayData(dateKey, {});
+    const state = stateInput || normalizeMorningActivationState(dateKey, dayData);
+    let changed = removeMorningActivationArtifacts(dayData);
+
+    if (state.status === 'done' && state.intensity && MORNING_ACTIVATION_INTENSITY_PRESETS[state.intensity]) {
+      const intensityPreset = MORNING_ACTIVATION_INTENSITY_PRESETS[state.intensity];
+
+      if (state.intensity === 'super_light') {
+        const activities = Array.isArray(dayData.householdActivities) ? dayData.householdActivities.slice() : [];
+        activities.push({
+          minutes: intensityPreset.duration,
+          time: state.firstMealTime || '',
+          label: 'Зарядка',
+          source: 'morning_activation',
+          intensity: state.intensity,
+          mood: state.postState?.mood ?? null,
+          wellbeing: state.postState?.wellbeing ?? null,
+          stress: state.postState?.stress ?? null
+        });
+        dayData.householdActivities = activities;
+        dayData.householdMin = activities.reduce((sum, item) => sum + (Number(item?.minutes) || 0), 0);
+        dayData.householdTime = activities[0]?.time || '';
+        changed = true;
+      } else {
+        const minutesByZone = state.intensity === 'high'
+          ? [4, 8, 8, 2]
+          : [8, 6, 0, 0];
+        const trainings = Array.isArray(dayData.trainings) ? dayData.trainings.slice() : [];
+        const trainingEntry = {
+          z: minutesByZone,
+          time: state.firstMealTime || '',
+          type: 'strength',
+          activityLabel: 'Зарядка',
+          source: 'morning_activation',
+          intensity: state.intensity,
+          mood: state.postState?.mood ?? 0,
+          wellbeing: state.postState?.wellbeing ?? 0,
+          stress: state.postState?.stress ?? 0,
+          comment: state.postState
+            ? `Post state: mood ${state.postState.mood}/10, wellbeing ${state.postState.wellbeing}/10, stress ${state.postState.stress}/10`
+            : ''
+        };
+        const emptyIndex = trainings.findIndex((training) => {
+          const totalMinutes = Array.isArray(training?.z)
+            ? training.z.reduce((sum, item) => sum + (Number(item) || 0), 0)
+            : 0;
+          return totalMinutes === 0 && !training?.type && !training?.activityLabel;
+        });
+        if (emptyIndex >= 0) {
+          trainings[emptyIndex] = trainingEntry;
+        } else if (trainings.length < 3) {
+          trainings.push(trainingEntry);
+        } else {
+          trainings[trainings.length - 1] = trainingEntry;
+        }
+        dayData.trainings = trainings;
+        changed = true;
+      }
+    }
+
+    if (!changed) return;
+
+    dayData.updatedAt = Date.now();
+    saveDayData(dateKey, dayData);
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('heys:day-updated', {
+        detail: {
+          date: dateKey,
+          field: 'morningActivation',
+          source: 'morning-activation-sync',
+          forceReload: true
+        }
+      }));
+    }
+  }
+
+  function getMorningActivationCopyVariant(id) {
+    return MORNING_ACTIVATION_COPY_VARIANTS.find((item) => item.id === id) || null;
+  }
+
+  function upsertMorningActivationCopyHistory(dateKey, variantId) {
+    const historyRaw = lsGet(MORNING_ACTIVATION_COPY_HISTORY_KEY, []);
+    const history = Array.isArray(historyRaw) ? historyRaw.filter((item) => item && item.date && item.id) : [];
+    const withoutToday = history.filter((item) => item.date !== dateKey);
+    const next = [...withoutToday, { date: dateKey, id: variantId }]
+      .sort((a, b) => String(a.date).localeCompare(String(b.date)))
+      .slice(-21);
+    lsSet(MORNING_ACTIVATION_COPY_HISTORY_KEY, next);
+  }
+
+  function pickMorningActivationCopy(dateKey, existingCopyId = null) {
+    if (existingCopyId) {
+      const existing = getMorningActivationCopyVariant(existingCopyId);
+      if (existing) return existing;
+    }
+
+    const historyRaw = lsGet(MORNING_ACTIVATION_COPY_HISTORY_KEY, []);
+    const history = Array.isArray(historyRaw) ? historyRaw.filter((item) => item && item.date && item.id) : [];
+    const recentIds = history.slice(-5).map((item) => item.id);
+    const freshPool = MORNING_ACTIVATION_COPY_VARIANTS.filter((variant) => !recentIds.includes(variant.id));
+    const pool = freshPool.length ? freshPool : MORNING_ACTIVATION_COPY_VARIANTS;
+
+    const numericSeed = String(dateKey || getTodayKey())
+      .split('')
+      .reduce((sum, ch) => sum + ch.charCodeAt(0), 0);
+    const selected = pool[numericSeed % pool.length] || MORNING_ACTIVATION_COPY_VARIANTS[0];
+    upsertMorningActivationCopyHistory(dateKey, selected.id);
+    return selected;
   }
 
   // ============================================================
@@ -3162,7 +3613,9 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-3-ui: execute start');
     try { return lsGet(MEASUREMENT_SIDE_KEY, 'right'); } catch { return 'right'; }
   }
   function setMeasurementSide(side) {
-    try { lsSet(MEASUREMENT_SIDE_KEY, side); } catch { }
+    try { lsSet(MEASUREMENT_SIDE_KEY, side); } catch {
+      // Ignore storage write errors for optional preference
+    }
   }
 
   /**
@@ -3750,7 +4203,9 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-3-ui: execute start');
 
   // Haptic feedback
   const hapticLight = () => {
-    try { navigator.vibrate?.(5); } catch { }
+    try { navigator.vibrate?.(5); } catch {
+      // Haptic feedback is optional
+    }
   };
 
   // Пресеты быстрого выбора (5 вариантов)
@@ -3795,6 +4250,14 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-3-ui: execute start');
         if (meal.wellbeing) wellbeingValues.push(meal.wellbeing);
         if (meal.stress) stressValues.push(meal.stress);
       });
+    }
+
+    // Пост-оценка после утренней зарядки (если есть)
+    const postState = normalizePostState(dayData?.morningActivation?.postState, null);
+    if (postState) {
+      moodValues.push(postState.mood);
+      wellbeingValues.push(postState.wellbeing);
+      stressValues.push(postState.stress);
     }
 
     const avg = arr => arr.length > 0 ? Math.round(arr.reduce((a, b) => a + b, 0) / arr.length) : 5;
@@ -4081,398 +4544,493 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-3-ui: execute start');
   // ============================================================
 
   function MorningRoutineStepComponent({ data, onChange, context }) {
-    const [checkedItems, setCheckedItems] = useState(data.checkedItems || []);
-    const [showConfetti, setShowConfetti] = useState(false);
-
-    // Получаем утреннее настроение из данных дня
-    const dateKey = getTodayKey();
-    // 🔧 FIX: Добавляем || {} на случай если lsGet вернёт null
+    const dateKey = context?.dateKey || getTodayKey();
     const dayData = readDayData(dateKey, {});
     const morningMood = dayData.moodMorning ?? 5;
     const morningWellbeing = dayData.wellbeingMorning ?? 5;
     const morningStress = dayData.stressMorning ?? 5;
+    const energyBucket = getEnergyBucket(morningMood, morningWellbeing, morningStress);
+    const morningState = normalizeMorningActivationState(dateKey, dayData);
+    const badgeMeta = getMorningActivationBadgeMeta(morningState);
 
-    // Персонализированное приветствие на основе настроения
-    const getPersonalizedGreeting = () => {
-      const avgMood = (morningMood + morningWellbeing + (10 - morningStress)) / 3;
-      const hour = new Date().getHours();
-      const timeOfDay = hour < 12 ? 'утро' : hour < 17 ? 'день' : 'вечер';
+    const copyVariant = useMemo(
+      () => pickMorningActivationCopy(dateKey, morningState.copyId),
+      [dateKey, morningState.copyId]
+    );
 
-      if (avgMood >= 7) {
-        const phrases = [
-          { emoji: '🚀', text: 'Отличный старт!' },
-          { emoji: '🔥', text: 'Ты в огне!' },
-          { emoji: '⚡', text: 'Заряжен на 100%!' },
-          { emoji: '🌟', text: `Сияющее ${timeOfDay}!` },
-          { emoji: '💫', text: 'Великолепно!' }
-        ];
-        return phrases[Math.floor(Math.random() * phrases.length)];
-      } else if (avgMood >= 5) {
-        const phrases = [
-          { emoji: '☀️', text: `Хорошее ${timeOfDay}!` },
-          { emoji: '✨', text: 'Всё будет супер!' },
-          { emoji: '💪', text: 'День будет продуктивным!' },
-          { emoji: '🎯', text: 'Вперёд к целям!' }
-        ];
-        return phrases[Math.floor(Math.random() * phrases.length)];
-      } else {
-        const phrases = [
-          { emoji: '💪', text: 'Держись! День может стать лучше' },
-          { emoji: '🌈', text: 'После тучи всегда солнце!' },
-          { emoji: '☕', text: 'Начни с чашки чего-то тёплого' },
-          { emoji: '🤗', text: 'Ты справишься!' },
-          { emoji: '🌱', text: 'Каждый день — новый шанс' }
-        ];
-        return phrases[Math.floor(Math.random() * phrases.length)];
-      }
-    };
+    useEffect(() => {
+      if (morningState.copyId === copyVariant.id) return;
+      persistMorningActivationState(dateKey, {
+        copyId: copyVariant.id
+      }, 'morning-activation-copy');
+    }, [copyVariant.id, dateKey, morningState.copyId]);
 
-    const personalGreeting = useMemo(getPersonalizedGreeting, [morningMood, morningWellbeing, morningStress]);
+    const protocolText = energyBucket === 'high'
+      ? copyVariant.protocol.high
+      : energyBucket === 'mid'
+        ? copyVariant.protocol.mid
+        : copyVariant.protocol.low;
 
-    // Рандомные мотивирующие фразы для кнопки (адаптированы под настроение)
-    const getButtonPhrase = () => {
-      const avgMood = (morningMood + morningWellbeing + (10 - morningStress)) / 3;
-      if (avgMood >= 7) {
-        const phrases = ['🚀 ВПЕРЁД!', '🔥 ПОЕХАЛИ!', '⚡ НАЧИНАЕМ!', '💪 СТАРТУЕМ!'];
-        return phrases[Math.floor(Math.random() * phrases.length)];
-      } else if (avgMood >= 5) {
-        const phrases = ['☀️ НАЧАТЬ ДЕНЬ!', '✨ ОТЛИЧНОГО ДНЯ!', '🎯 ВПЕРЁД К ЦЕЛИ!'];
-        return phrases[Math.floor(Math.random() * phrases.length)];
-      } else {
-        const phrases = ['💪 СПРАВИМСЯ!', '🌈 ВПЕРЁД!', '☕ НАЧНЁМ ПОТИХОНЬКУ'];
-        return phrases[Math.floor(Math.random() * phrases.length)];
-      }
-    };
+    const energyLabel = energyBucket === 'high'
+      ? 'Высокий ресурс'
+      : energyBucket === 'mid'
+        ? 'Средний ресурс'
+        : 'Бережный режим';
 
-    const randomPhrase = useMemo(getButtonPhrase, [morningMood, morningWellbeing, morningStress]);
-
-    const routineItems = [
-      {
-        id: 'water',
-        emoji: '💧',
-        title: 'Выпей тёплой воды',
-        desc: 'Стакан тёплой воды натощак запускает метаболизм',
-        color: '#3b82f6'
-      },
-      {
-        id: 'tracker',
-        emoji: '⌚',
-        title: 'Надень трекер',
-        desc: 'Часы или браслет — следи за шагами и пульсом',
-        color: '#3b82f6'
-      },
-      {
-        id: 'shower',
-        emoji: '🚿',
-        title: 'Контрастный душ',
-        desc: 'Бодрит и укрепляет иммунитет',
-        color: '#06b6d4'
-      }
-    ];
-
-    const toggleItem = (id) => {
-      setCheckedItems(prev => {
-        const newItems = prev.includes(id)
-          ? prev.filter(i => i !== id)
-          : [...prev, id];
-        onChange({ ...data, checkedItems: newItems });
-
-        // Конфетти при выполнении всех 3
-        if (newItems.length === 3 && !showConfetti) {
-          setShowConfetti(true);
-          setTimeout(() => setShowConfetti(false), 2000);
-        }
-
-        return newItems;
+    const proceedNext = () => {
+      onChange({
+        ...data,
+        selectedCopyId: copyVariant.id,
+        status: morningState.status
       });
+      context?.onNext?.();
     };
-
-    // Функция завершения (вызывает onNext из контекста)
-    const handleFinish = () => {
-      if (context && context.onNext) {
-        context.onNext();
-      }
-    };
-
-    const allChecked = checkedItems.length === 3;
 
     return React.createElement('div', {
       style: {
         display: 'flex',
         flexDirection: 'column',
-        gap: '16px',
-        padding: '8px 0'
+        gap: '14px',
+        padding: '6px 0'
       }
     },
-      // Заголовок с персонализированным приветствием
       React.createElement('div', {
         style: {
-          textAlign: 'center',
-          marginBottom: '8px'
-        }
-      },
-        React.createElement('div', {
-          style: {
-            fontSize: '48px',
-            marginBottom: '8px',
-            animation: 'bounce 1s ease infinite'
-          }
-        }, personalGreeting.emoji),
-        React.createElement('div', {
-          style: {
-            fontSize: '20px',
-            fontWeight: '700',
-            color: 'var(--text, #1e293b)',
-            marginBottom: '4px'
-          }
-        }, personalGreeting.text),
-        React.createElement('div', {
-          style: {
-            fontSize: '14px',
-            color: '#64748b'
-          }
-        }, '3 шага правильной рутины:')
-      ),
-
-      // 🆕 NDTE Insight — показываем если вчера была тренировка
-      (() => {
-        const todayKey = getTodayKey();
-        const prevTrainings = HEYS.InsulinWave && HEYS.InsulinWave.getPreviousDayTrainings
-          ? HEYS.InsulinWave.getPreviousDayTrainings(todayKey, lsGet)
-          : null;
-
-        if (!prevTrainings || prevTrainings.totalKcal < 200) return null;
-
-        const prof = lsGet('heys_profile', { weight: 70, height: 170 });
-        const bmi = HEYS.InsulinWave.calculateBMI(prof.weight, prof.height);
-        const ndteData = HEYS.InsulinWave.calculateNDTE({
-          trainingKcal: prevTrainings.totalKcal,
-          hoursSince: prevTrainings.hoursSince,
-          bmi: bmi,
-          trainingType: prevTrainings.dominantType,
-          trainingsCount: prevTrainings.trainings.length
-        });
-
-        if (!ndteData.active) return null;
-
-        const boostPct = Math.round(ndteData.tdeeBoost * 100);
-        const wavePct = Math.round(ndteData.waveReduction * 100);
-
-        return React.createElement('div', {
-          style: {
-            background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-            borderRadius: '16px',
-            padding: '16px',
-            marginBottom: '16px',
-            color: '#fff',
-            boxShadow: '0 4px 14px rgba(16, 185, 129, 0.3)'
-          }
-        },
-          // Header with animated icon
-          React.createElement('div', {
-            style: {
-              display: 'flex',
-              alignItems: 'center',
-              gap: '10px',
-              marginBottom: '10px'
-            }
-          },
-            React.createElement('span', {
-              style: {
-                fontSize: '24px',
-                animation: 'ndteFireFlicker 1.5s ease-in-out infinite'
-              }
-            }, '🔥'),
-            React.createElement('span', {
-              style: {
-                fontSize: '16px',
-                fontWeight: '700'
-              }
-            }, 'Эффект вчерашней тренировки!')
-          ),
-          // Stats row
-          React.createElement('div', {
-            style: {
-              display: 'flex',
-              gap: '20px',
-              fontSize: '13px',
-              opacity: '0.95'
-            }
-          },
-            React.createElement('div', null,
-              React.createElement('div', { style: { fontWeight: '600', fontSize: '18px' } }, `+${boostPct}%`),
-              React.createElement('div', { style: { opacity: '0.8', fontSize: '11px' } }, 'к метаболизму')
-            ),
-            React.createElement('div', null,
-              React.createElement('div', { style: { fontWeight: '600', fontSize: '18px' } }, `-${wavePct}%`),
-              React.createElement('div', { style: { opacity: '0.8', fontSize: '11px' } }, 'к инс. волне')
-            ),
-            React.createElement('div', null,
-              React.createElement('div', { style: { fontWeight: '600', fontSize: '18px' } }, `${prevTrainings.totalKcal}`),
-              React.createElement('div', { style: { opacity: '0.8', fontSize: '11px' } }, 'ккал вчера')
-            )
-          ),
-          // Motivation text
-          React.createElement('div', {
-            style: {
-              marginTop: '10px',
-              fontSize: '12px',
-              opacity: '0.85',
-              fontStyle: 'italic'
-            }
-          }, ndteData.tdeeBoost >= 0.07
-            ? '💪 Отличная тренировка! Твой метаболизм работает на полную мощность.'
-            : '⚡ Хорошая активность! Метаболизм слегка ускорен.'
-          )
-        );
-      })(),
-
-      // Список рутин
-      React.createElement('div', {
-        style: {
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '12px'
-        }
-      },
-        routineItems.map((item, index) =>
-          React.createElement('div', {
-            key: item.id,
-            onClick: () => toggleItem(item.id),
-            style: {
-              display: 'flex',
-              alignItems: 'center',
-              gap: '14px',
-              padding: '14px 16px',
-              background: checkedItems.includes(item.id)
-                ? `linear-gradient(135deg, ${item.color}15, ${item.color}08)`
-                : '#f8fafc',
-              borderRadius: '14px',
-              cursor: 'pointer',
-              transition: 'all 0.2s ease',
-              border: checkedItems.includes(item.id)
-                ? `2px solid ${item.color}40`
-                : '2px solid transparent',
-              transform: checkedItems.includes(item.id) ? 'scale(1.02)' : 'scale(1)'
-            }
-          },
-            // Номер / галочка
-            React.createElement('div', {
-              style: {
-                width: '36px',
-                height: '36px',
-                borderRadius: '50%',
-                background: checkedItems.includes(item.id)
-                  ? `linear-gradient(135deg, ${item.color}, ${item.color}cc)`
-                  : '#e2e8f0',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: checkedItems.includes(item.id) ? '18px' : '14px',
-                fontWeight: '700',
-                color: checkedItems.includes(item.id) ? '#fff' : '#64748b',
-                transition: 'all 0.2s ease',
-                flexShrink: 0
-              }
-            }, checkedItems.includes(item.id) ? '✓' : (index + 1)),
-
-            // Эмодзи
-            React.createElement('div', {
-              style: {
-                fontSize: '28px',
-                flexShrink: 0
-              }
-            }, item.emoji),
-
-            // Текст
-            React.createElement('div', {
-              style: {
-                flex: 1,
-                minWidth: 0
-              }
-            },
-              React.createElement('div', {
-                style: {
-                  fontSize: '15px',
-                  fontWeight: '600',
-                  color: 'var(--text, #1e293b)',
-                  marginBottom: '2px'
-                }
-              }, item.title),
-              React.createElement('div', {
-                style: {
-                  fontSize: '12px',
-                  color: '#64748b',
-                  lineHeight: '1.3'
-                }
-              }, item.desc)
-            )
-          )
-        )
-      ),
-
-      // Мотивационная кнопка-плашка внизу (вместо кнопки в хедере)
-      React.createElement('button', {
-        onClick: handleFinish,
-        style: {
-          width: '100%',
-          textAlign: 'center',
-          padding: '18px 24px',
-          background: allChecked
-            ? 'linear-gradient(135deg, #fef3c7, #fde68a)'
-            : 'linear-gradient(135deg, #10b981, #059669)',
           borderRadius: '16px',
-          marginTop: '16px',
-          border: 'none',
-          cursor: 'pointer',
-          transition: 'all 0.2s ease',
-          transform: 'scale(1)',
-          boxShadow: allChecked
-            ? '0 4px 14px rgba(251, 191, 36, 0.4)'
-            : '0 4px 14px rgba(16, 185, 129, 0.4)'
-        },
-        onMouseDown: (e) => e.currentTarget.style.transform = 'scale(0.98)',
-        onMouseUp: (e) => e.currentTarget.style.transform = 'scale(1)',
-        onMouseLeave: (e) => e.currentTarget.style.transform = 'scale(1)'
+          padding: '14px 14px 12px',
+          background: 'linear-gradient(135deg, rgba(16,185,129,0.10), rgba(20,184,166,0.08))',
+          border: '1px solid rgba(16,185,129,0.2)'
+        }
       },
-        allChecked && React.createElement('div', {
-          style: { fontSize: '28px', marginBottom: '6px' }
-        }, '🏆'),
         React.createElement('div', {
           style: {
-            fontSize: allChecked ? '14px' : '13px',
-            fontWeight: '600',
-            color: allChecked ? '#92400e' : '#fff',
-            marginBottom: allChecked ? '8px' : '0'
+            fontSize: '13px',
+            fontWeight: '700',
+            color: '#047857',
+            marginBottom: '8px',
+            letterSpacing: '0.02em'
           }
-        }, allChecked ? 'Ты уже на пути к успеху!' : 'Можно пропустить'),
+        }, 'Финальный шаг: резинки + мини-растяжка'),
         React.createElement('div', {
           style: {
             fontSize: '18px',
-            fontWeight: '800',
-            color: allChecked ? '#b45309' : '#fff',
-            letterSpacing: '0.5px'
+            fontWeight: '700',
+            color: 'var(--text, #0f172a)',
+            marginBottom: '6px',
+            lineHeight: '1.3'
           }
-        }, randomPhrase)
+        }, copyVariant.opener),
+        React.createElement('div', {
+          style: {
+            fontSize: '13px',
+            lineHeight: '1.45',
+            color: '#334155'
+          }
+        }, copyVariant.science)
       ),
-
-      // Подсказка если не все отмечены
-      !allChecked && React.createElement('div', {
+      React.createElement('div', {
+        style: {
+          borderRadius: '14px',
+          border: '1px solid rgba(148, 163, 184, 0.28)',
+          background: '#f8fafc',
+          padding: '12px'
+        }
+      },
+        React.createElement('div', {
+          style: {
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '8px',
+            marginBottom: '8px'
+          }
+        },
+          React.createElement('div', {
+            style: {
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              minWidth: 0
+            }
+          },
+            React.createElement('span', { style: { fontSize: '22px' } }, '💪'),
+            React.createElement('div', { style: { minWidth: 0 } },
+              React.createElement('div', {
+                style: {
+                  fontSize: '14px',
+                  fontWeight: '700',
+                  color: '#0f172a'
+                }
+              }, 'Резинки + мини-растяжка утром'),
+              React.createElement('div', {
+                style: {
+                  fontSize: '11px',
+                  color: '#64748b',
+                  marginTop: '2px'
+                }
+              }, 'Метрика фиксируется после первого приёма пищи')
+            )
+          ),
+          React.createElement('span', {
+            title: badgeMeta.title,
+            style: {
+              ...badgeMeta.style,
+              fontSize: '10px',
+              fontWeight: '700',
+              borderRadius: '999px',
+              padding: '4px 8px',
+              textTransform: 'uppercase',
+              letterSpacing: '0.05em',
+              whiteSpace: 'nowrap'
+            }
+          }, badgeMeta.label)
+        ),
+        React.createElement('div', {
+          style: {
+            fontSize: '12px',
+            color: '#334155',
+            lineHeight: '1.45'
+          }
+        },
+          `Режим на сегодня: ${energyLabel}. `,
+          protocolText
+        ),
+        morningState.firstMealTime && React.createElement('div', {
+          style: {
+            marginTop: '8px',
+            fontSize: '11px',
+            color: '#64748b'
+          }
+        }, `Первый приём пищи: ${morningState.firstMealTime}`)
+      ),
+      React.createElement('button', {
+        onClick: proceedNext,
+        style: {
+          width: '100%',
+          textAlign: 'center',
+          padding: '16px 18px',
+          background: 'linear-gradient(135deg, #10b981, #059669)',
+          borderRadius: '14px',
+          border: 'none',
+          cursor: 'pointer',
+          fontSize: '16px',
+          fontWeight: '800',
+          color: '#fff',
+          letterSpacing: '0.02em'
+        }
+      }, 'Продолжить'),
+      React.createElement('div', {
         style: {
           textAlign: 'center',
-          fontSize: '12px',
-          color: '#94a3b8',
-          marginTop: '8px'
+          fontSize: '11px',
+          color: '#64748b'
         }
-      }, '↑ Отметь выполненные пункты или продолжай'),
+      }, 'После первого приёма пищи откроется подтверждение: done / missed + интенсивность.')
+    );
+  }
 
-      // CSS анимация
-      React.createElement('style', null, `
-        @keyframes bounce {
-          0%, 100% { transform: translateY(0); }
-          50% { transform: translateY(-8px); }
+  function MorningActivationFollowupStepComponent({ context }) {
+    const dateKey = context?.dateKey || getTodayKey();
+    const dayData = readDayData(dateKey, {});
+    const initialState = normalizeMorningActivationState(dateKey, dayData);
+    const [phase, setPhase] = useState('confirm');
+    const [selectedIntensity, setSelectedIntensity] = useState(initialState.intensity || null);
+    const [intensityRec, setIntensityRec] = useState(null);
+    const [postState, setPostState] = useState(() => {
+      const defaults = {
+        mood: clampMoodValue(dayData.moodMorning, 6),
+        wellbeing: clampMoodValue(dayData.wellbeingMorning, 6),
+        stress: clampMoodValue(dayData.stressMorning, 4)
+      };
+      return normalizePostState(initialState.postState, defaults) || defaults;
+    });
+    const firstMealTime = initialState.firstMealTime || getFirstMealTimeFromDay(dayData) || '—';
+
+    const setPostField = (field, value) => {
+      setPostState((prev) => ({
+        ...prev,
+        [field]: clampMoodValue(value, prev[field] || 5)
+      }));
+    };
+
+    const saveMissed = () => {
+      const nextState = normalizeMorningActivationState(dateKey, readDayData(dateKey, {}));
+      persistMorningActivationState(dateKey, {
+        status: 'missed',
+        intensity: null,
+        postState: null,
+        postEffect: null,
+        firstMealTime: nextState.firstMealTime || firstMealTime || null,
+        decidedAt: Date.now(),
+        followupSnoozeUntilMealCount: null
+      }, 'morning-activation-followup');
+      syncMorningActivationActivity(dateKey, {
+        ...nextState,
+        status: 'missed',
+        intensity: null
+      });
+      context?.onNext?.();
+    };
+
+    const saveDone = () => {
+      if (!selectedIntensity) return;
+      const nextState = normalizeMorningActivationState(dateKey, readDayData(dateKey, {}));
+      const normalizedPostState = normalizePostState(postState, {
+        mood: 6,
+        wellbeing: 6,
+        stress: 4
+      });
+      const postEffect = buildPostStateEffect(dayData, normalizedPostState);
+      const preparedState = {
+        ...nextState,
+        status: 'done',
+        intensity: selectedIntensity,
+        postState: normalizedPostState,
+        postEffect,
+        firstMealTime: nextState.firstMealTime || firstMealTime || null,
+        decidedAt: Date.now(),
+        followupSnoozeUntilMealCount: null
+      };
+      persistMorningActivationState(dateKey, preparedState, 'morning-activation-followup');
+      syncMorningActivationActivity(dateKey, preparedState);
+      try {
+        if (HEYS.game?.recordMorningActivationDone) {
+          HEYS.game.recordMorningActivationDone(dateKey);
         }
-      `)
+      } catch (e) {
+        console.warn('[HEYS.steps] recordMorningActivationDone failed:', e);
+      }
+      context?.onNext?.();
+    };
+
+    const actionBtnStyle = {
+      borderRadius: '12px',
+      border: '1px solid rgba(100,116,139,0.35)',
+      background: '#fff',
+      color: '#0f172a',
+      fontSize: '13px',
+      fontWeight: '600',
+      padding: '11px 12px',
+      cursor: 'pointer'
+    };
+
+    return React.createElement('div', {
+      style: {
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '12px',
+        padding: '8px 0'
+      }
+    },
+      React.createElement('div', {
+        style: {
+          borderRadius: '14px',
+          border: '1px solid rgba(16,185,129,0.2)',
+          background: 'rgba(16,185,129,0.08)',
+          padding: '12px'
+        }
+      },
+        React.createElement('div', {
+          style: { fontSize: '14px', fontWeight: '700', color: '#065f46', marginBottom: '4px' }
+        }, 'Подтверждение утренней зарядки'),
+        React.createElement('div', {
+          style: { fontSize: '12px', color: '#334155', lineHeight: '1.45' }
+        }, `После первого приёма пищи (${firstMealTime}) зафиксируй статус привычки.`)
+      ),
+      phase === 'confirm'
+        ? React.createElement('div', {
+          style: { display: 'flex', flexDirection: 'column', gap: '8px' }
+        },
+          React.createElement('button', {
+            style: {
+              ...actionBtnStyle,
+              border: '1px solid rgba(16,185,129,0.35)',
+              background: 'rgba(16,185,129,0.12)',
+              color: '#047857'
+            },
+            onClick: () => {
+              const fresh = readDayData(dateKey, {});
+              setIntensityRec(getMorningActivationIntensityRecommendation(fresh));
+              setPhase('intensity');
+            }
+          }, 'Сделал зарядку'),
+          React.createElement('button', {
+            style: {
+              ...actionBtnStyle,
+              border: '1px solid rgba(244,63,94,0.35)',
+              background: 'rgba(244,63,94,0.10)',
+              color: '#be123c'
+            },
+            onClick: saveMissed
+          }, 'Не сделал'),
+          React.createElement('button', {
+            style: actionBtnStyle,
+            onClick: () => context?.onClose?.()
+          }, 'Позже')
+        )
+        : React.createElement('div', {
+          style: { display: 'flex', flexDirection: 'column', gap: '8px' }
+        },
+          phase === 'intensity'
+            ? React.createElement(React.Fragment, null,
+              React.createElement('div', {
+                style: { fontSize: '12px', color: '#475569', marginBottom: '2px' }
+              }, 'Выбери интенсивность (событие запишется как «Зарядка»):'),
+              intensityRec && React.createElement('div', {
+                style: {
+                  fontSize: '11px',
+                  color: '#334155',
+                  lineHeight: '1.45',
+                  marginBottom: '6px',
+                  padding: '8px 10px',
+                  borderRadius: '10px',
+                  border: '1px solid rgba(99,102,241,0.25)',
+                  background: 'rgba(99,102,241,0.06)'
+                }
+              }, `🧠 ${intensityRec.hint}`),
+              React.createElement('button', {
+                style: {
+                  ...actionBtnStyle,
+                  border: selectedIntensity === 'super_light' ? '1px solid rgba(59,130,246,0.45)' : actionBtnStyle.border,
+                  background: selectedIntensity === 'super_light' ? 'rgba(59,130,246,0.08)' : actionBtnStyle.background,
+                  boxShadow: intensityRec?.intensity === 'super_light' ? '0 0 0 2px rgba(234,179,8,0.45)' : 'none'
+                },
+                onClick: () => {
+                  setSelectedIntensity('super_light');
+                  setPhase('post_state');
+                }
+              }, React.createElement(React.Fragment, null,
+                'Суперлегкая',
+                intensityRec?.intensity === 'super_light' && React.createElement('span', {
+                  style: { display: 'block', fontSize: '10px', fontWeight: '600', color: '#b45309', marginTop: '2px' }
+                }, 'рекомендуем по утру')
+              )),
+              React.createElement('button', {
+                style: {
+                  ...actionBtnStyle,
+                  border: selectedIntensity === 'medium' ? '1px solid rgba(245,158,11,0.45)' : actionBtnStyle.border,
+                  background: selectedIntensity === 'medium' ? 'rgba(245,158,11,0.08)' : actionBtnStyle.background,
+                  boxShadow: intensityRec?.intensity === 'medium' ? '0 0 0 2px rgba(234,179,8,0.45)' : 'none'
+                },
+                onClick: () => {
+                  setSelectedIntensity('medium');
+                  setPhase('post_state');
+                }
+              }, React.createElement(React.Fragment, null,
+                'Средне',
+                intensityRec?.intensity === 'medium' && React.createElement('span', {
+                  style: { display: 'block', fontSize: '10px', fontWeight: '600', color: '#b45309', marginTop: '2px' }
+                }, 'рекомендуем по утру')
+              )),
+              React.createElement('button', {
+                style: {
+                  ...actionBtnStyle,
+                  border: selectedIntensity === 'high' ? '1px solid rgba(244,63,94,0.45)' : actionBtnStyle.border,
+                  background: selectedIntensity === 'high' ? 'rgba(244,63,94,0.08)' : actionBtnStyle.background,
+                  boxShadow: intensityRec?.intensity === 'high' ? '0 0 0 2px rgba(234,179,8,0.45)' : 'none'
+                },
+                onClick: () => {
+                  setSelectedIntensity('high');
+                  setPhase('post_state');
+                }
+              }, React.createElement(React.Fragment, null,
+                'Высокоинтенсивная',
+                intensityRec?.intensity === 'high' && React.createElement('span', {
+                  style: { display: 'block', fontSize: '10px', fontWeight: '600', color: '#b45309', marginTop: '2px' }
+                }, 'рекомендуем по утру')
+              )),
+              React.createElement('button', {
+                style: {
+                  ...actionBtnStyle,
+                  background: '#f8fafc'
+                },
+                onClick: () => {
+                  setIntensityRec(null);
+                  setPhase('confirm');
+                }
+              }, 'Назад')
+            )
+            : React.createElement(React.Fragment, null,
+              React.createElement('div', {
+                style: { fontSize: '12px', color: '#475569', marginBottom: '2px' }
+              }, 'Как изменилось состояние после зарядки?'),
+              React.createElement('div', {
+                style: {
+                  display: 'grid',
+                  gridTemplateColumns: '1fr',
+                  gap: '8px'
+                }
+              },
+                React.createElement('div', {
+                  style: {
+                    borderRadius: '10px',
+                    border: '1px solid rgba(148,163,184,0.25)',
+                    padding: '8px'
+                  }
+                },
+                  React.createElement('div', { style: { fontSize: '12px', fontWeight: '600', marginBottom: '6px', color: '#334155' } }, `🙂 Настроение: ${postState.mood}/10`),
+                  React.createElement('input', {
+                    type: 'range',
+                    min: 1,
+                    max: 10,
+                    value: postState.mood,
+                    onChange: (event) => setPostField('mood', Number(event.target.value)),
+                    className: 'mc-quality-slider'
+                  })
+                ),
+                React.createElement('div', {
+                  style: {
+                    borderRadius: '10px',
+                    border: '1px solid rgba(148,163,184,0.25)',
+                    padding: '8px'
+                  }
+                },
+                  React.createElement('div', { style: { fontSize: '12px', fontWeight: '600', marginBottom: '6px', color: '#334155' } }, `⚡ Бодрость: ${postState.wellbeing}/10`),
+                  React.createElement('input', {
+                    type: 'range',
+                    min: 1,
+                    max: 10,
+                    value: postState.wellbeing,
+                    onChange: (event) => setPostField('wellbeing', Number(event.target.value)),
+                    className: 'mc-quality-slider'
+                  })
+                ),
+                React.createElement('div', {
+                  style: {
+                    borderRadius: '10px',
+                    border: '1px solid rgba(148,163,184,0.25)',
+                    padding: '8px'
+                  }
+                },
+                  React.createElement('div', { style: { fontSize: '12px', fontWeight: '600', marginBottom: '6px', color: '#334155' } }, `🧠 Стресс: ${postState.stress}/10`),
+                  React.createElement('input', {
+                    type: 'range',
+                    min: 1,
+                    max: 10,
+                    value: postState.stress,
+                    onChange: (event) => setPostField('stress', Number(event.target.value)),
+                    className: 'mc-quality-slider'
+                  })
+                )
+              ),
+              React.createElement('button', {
+                style: {
+                  ...actionBtnStyle,
+                  border: '1px solid rgba(16,185,129,0.45)',
+                  background: 'rgba(16,185,129,0.12)',
+                  color: '#047857'
+                },
+                onClick: saveDone
+              }, 'Сохранить зарядку'),
+              React.createElement('button', {
+                style: {
+                  ...actionBtnStyle,
+                  background: '#f8fafc'
+                },
+                onClick: () => setPhase('intensity')
+              }, 'Назад к интенсивности')
+            )
+        )
     );
   }
 
@@ -4638,22 +5196,36 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-3-ui: execute start');
   });
 
   registerStep('morningRoutine', {
-    title: 'Утренняя рутина',
-    hint: 'Начни день правильно!',
-    icon: '🌟',
+    title: 'Утренний фокус',
+    hint: 'Резинки + мини-растяжка',
+    icon: '💪',
     canSkip: true,
-    hideHeaderNext: true,  // Скрываем кнопку в хедере — используем плашку внизу
+    hideHeaderNext: true,
     component: MorningRoutineStepComponent,
     getInitialData: () => ({
-      checkedItems: []
+      selectedCopyId: null
     }),
-    save: (data) => {
-      // Опционально: можно сохранять что пользователь отметил
-      // Пока просто логируем для аналитики
-      if (data.checkedItems && data.checkedItems.length > 0) {
-        console.log('[MorningRoutine] Completed items:', data.checkedItems);
+    save: (data, context) => {
+      const dateKey = context?.dateKey || getTodayKey();
+      if (data?.selectedCopyId) {
+        persistMorningActivationState(dateKey, { copyId: data.selectedCopyId }, 'morning-routine-save');
       }
     },
+    xpAction: 'morning_routine_completed'
+  });
+
+  registerStep('morning_activation_followup', {
+    title: 'Зарядка после 1-го приёма',
+    hint: 'Статус привычки',
+    icon: '✅',
+    canSkip: true,
+    hideHeaderNext: true,
+    component: MorningActivationFollowupStepComponent,
+    getInitialData: (context) => {
+      const dateKey = context?.dateKey || getTodayKey();
+      return normalizeMorningActivationState(dateKey, readDayData(dateKey, {}));
+    },
+    save: () => { },
     xpAction: 'morning_routine_completed'
   });
 
@@ -6497,7 +7069,45 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
   }
 
   // === Компонент поиска продукта (Шаг 1) ===
+  const APS_PRODUCTS_SKELETON_DELAY_MS = 260;
+  const APS_PRODUCTS_SETTLE_FALLBACK_MS = 2200;
+
+  function getAddProductInitialSyncState() {
+    const cloud = HEYS?.cloud;
+    const syncSettled = !!(
+      window.HEYS?.initialSyncDone
+      || window.HEYS?.syncCompletedAt
+      || cloud?._syncCompletedAt
+    );
+    const syncInFlight = !!cloud?.isSyncing?.();
+    return { syncSettled, syncInFlight };
+  }
+
+  function AddProductResultsSkeleton() {
+    return React.createElement('div', { className: 'aps-results-skeleton' },
+      React.createElement('div', { className: 'aps-skeleton-title skeleton-block' }),
+      React.createElement('div', { className: 'aps-products-list aps-products-list--skeleton' },
+        Array.from({ length: 7 }, (_, index) => React.createElement('div', {
+          key: index,
+          className: 'aps-skeleton-card'
+        },
+          React.createElement('div', { className: 'aps-skeleton-icon skeleton-block' }),
+          React.createElement('div', { className: 'aps-skeleton-lines' },
+            React.createElement('div', { className: 'aps-skeleton-line aps-skeleton-line--primary skeleton-block' }),
+            React.createElement('div', { className: 'aps-skeleton-line aps-skeleton-line--secondary skeleton-block' })
+          ),
+          React.createElement('div', { className: 'aps-skeleton-actions' },
+            React.createElement('div', { className: 'aps-skeleton-action skeleton-block' }),
+            React.createElement('div', { className: 'aps-skeleton-action skeleton-block' }),
+            React.createElement('div', { className: 'aps-skeleton-action skeleton-block' })
+          )
+        ))
+      )
+    );
+  }
+
   function ProductSearchStep({ data, onChange, context }) {
+    const initialProductsSyncState = getAddProductInitialSyncState();
     const [searchInput, setSearchInput] = useState(data?.searchQuery || '');
     const [search, setSearch] = useState(data?.searchQuery || '');
     const [selectedCategory, setSelectedCategory] = useState('all');
@@ -6545,6 +7155,10 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     // Это решает проблему: при открытии модалки сразу после создания приёма
     // продукты ещё не загружены из облака, но после heysSyncCompleted они появятся
     const [productsVersion, setProductsVersion] = useState(globalProductsVersion);
+    const [isWaitingForProductsSettle, setIsWaitingForProductsSettle] = useState(
+      () => initialProductsSyncState.syncInFlight && !initialProductsSyncState.syncSettled
+    );
+    const [showProductsSkeleton, setShowProductsSkeleton] = useState(false);
 
     // Обновляем счётчик рекомендаций при изменении продуктов или mount
     useEffect(() => {
@@ -6562,8 +7176,74 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     }, [productsVersion]);
     const [usageStatsVersion, setUsageStatsVersion] = useState(0);
 
-    // 🔒 Ref для пропуска первого sync (предотвращает мерцание)
-    const initialSyncDoneRef = useRef(false);
+    // Фиксируем состояние sync на момент открытия: если sync уже завершён,
+    // можно рендерить сразу; если нет — ждём финальную версию списка.
+    const initialSyncDoneRef = useRef(initialProductsSyncState.syncSettled);
+
+    useEffect(() => {
+      if (!isWaitingForProductsSettle) {
+        setShowProductsSkeleton(false);
+        return;
+      }
+
+      const settleNow = (reason) => {
+        console.info('[HEYS.addProduct] ✅ Products settled for modal', {
+          reason,
+          productsVersion
+        });
+        initialSyncDoneRef.current = true;
+        setIsWaitingForProductsSettle(false);
+        setShowProductsSkeleton(false);
+      };
+
+      const maybeSettle = (reason) => {
+        const state = getAddProductInitialSyncState();
+        if (state.syncSettled || !state.syncInFlight) {
+          settleNow(reason);
+          return true;
+        }
+        return false;
+      };
+
+      if (maybeSettle('already-settled')) {
+        return undefined;
+      }
+
+      const skeletonTimer = setTimeout(() => {
+        setShowProductsSkeleton(true);
+      }, APS_PRODUCTS_SKELETON_DELAY_MS);
+
+      const fallbackTimer = setTimeout(() => {
+        console.info('[HEYS.addProduct] ⏱️ Products settle fallback', {
+          waitMs: APS_PRODUCTS_SETTLE_FALLBACK_MS,
+          productsVersion
+        });
+        settleNow('fallback-timeout');
+      }, APS_PRODUCTS_SETTLE_FALLBACK_MS);
+
+      const handleSettledEvent = (event) => {
+        const reason = event?.type || 'sync-event';
+        requestAnimationFrame(() => {
+          if (!maybeSettle(reason)) {
+            settleNow(reason + ':forced');
+          }
+        });
+      };
+
+      window.addEventListener('heysSyncCompleted', handleSettledEvent);
+      window.addEventListener('heys:products-updated', handleSettledEvent);
+      window.addEventListener('heysProductsUpdated', handleSettledEvent);
+      window.addEventListener('heys:products-version-changed', handleSettledEvent);
+
+      return () => {
+        clearTimeout(skeletonTimer);
+        clearTimeout(fallbackTimer);
+        window.removeEventListener('heysSyncCompleted', handleSettledEvent);
+        window.removeEventListener('heys:products-updated', handleSettledEvent);
+        window.removeEventListener('heysProductsUpdated', handleSettledEvent);
+        window.removeEventListener('heys:products-version-changed', handleSettledEvent);
+      };
+    }, [isWaitingForProductsSettle, productsVersion]);
 
     // Подписка на обновление продуктов (heysSyncCompleted или watch)
     useEffect(() => {
@@ -6591,12 +7271,12 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       };
 
       const handleSyncComplete = (e) => {
-        // 🔒 Пропускаем первый heysSyncCompleted — products уже загружены
+        // Если модалка открылась до завершения sync — первый heysSyncCompleted
+        // как раз и приносит финальную версию списка, его нельзя пропускать.
         if (e?.type === 'heysSyncCompleted') {
           if (!initialSyncDoneRef.current) {
             initialSyncDoneRef.current = true;
-            refreshUsageFromHistory();
-            return;
+            setIsWaitingForProductsSettle(false);
           }
         }
         // console.log('[AddProductStep] 🔄 heysSyncCompleted → refreshing products');
@@ -6614,6 +7294,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           detail: e?.detail,
           prevVersion: productsVersion
         });
+        initialSyncDoneRef.current = true;
+        setIsWaitingForProductsSettle(false);
         setProductsVersion(v => {
           const next = v + 1;
           console.log('[AddProductStep] ✅ productsVersion updating', { prev: v, next });
@@ -6630,6 +7312,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       if (HEYS.products?.watch) {
         unwatchProducts = HEYS.products.watch(() => {
           // console.log('[AddProductStep] 🔄 products.watch → refreshing products');
+          initialSyncDoneRef.current = true;
+          setIsWaitingForProductsSettle(false);
           setProductsVersion(v => v + 1);
           clearSearchCache();
         });
@@ -7528,6 +8212,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
     // Что показывать: результаты поиска или умный список
     const showSearch = lc.length > 0;
+    const shouldRenderSettledProducts = !isWaitingForProductsSettle;
 
     // Счётчик фото в текущем приёме
     const currentPhotoCount = context?.mealPhotos?.length || 0;
@@ -7657,8 +8342,9 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
       // === Скроллируемый список продуктов ===
       React.createElement('div', { className: 'aps-products-scroll' },
-        // Результаты поиска
-        showSearch && React.createElement('div', { className: 'aps-section' },
+        !shouldRenderSettledProducts && showProductsSkeleton && React.createElement(AddProductResultsSkeleton),
+
+        shouldRenderSettledProducts && showSearch && React.createElement('div', { className: 'aps-section' },
           React.createElement('div', { className: 'aps-section-title' },
             combinedResults.length > 0
               ? `Найдено: ${combinedResults.length}${sharedLoading ? ' ⏳' : ''}`
@@ -7739,7 +8425,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         ),
 
         // Умный список: часто + недавно используемые (объединённый)
-        !showSearch && smartProducts?.length > 0 && React.createElement('div', { className: 'aps-section' },
+        shouldRenderSettledProducts && !showSearch && smartProducts?.length > 0 && React.createElement('div', { className: 'aps-section' },
           React.createElement('div', { className: 'aps-section-title' }, '⚡ Ваши продукты'),
           React.createElement('div', { className: 'aps-products-list' },
             smartProducts.map(p => renderProductCard(p, true, true, true))
@@ -21996,7 +22682,9 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       if (value.startsWith('¤Z¤') && HEYS.store?.decompress) {
         try {
           value = HEYS.store.decompress(value.slice(3));
-        } catch (_) { }
+        } catch (_) {
+          // Ignore compressed payload parse errors
+        }
       }
       try {
         return JSON.parse(value);
@@ -22016,6 +22704,154 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
   function getCheckinSessionKey(clientId, dateKey) {
     return `heys_morning_checkin_done_${clientId || 'unknown'}_${dateKey || 'unknown'}`;
+  }
+
+  function countMealsWithItems(dayData) {
+    const meals = Array.isArray(dayData?.meals) ? dayData.meals : [];
+    return meals.filter((meal) => Array.isArray(meal?.items) && meal.items.length > 0).length;
+  }
+
+  function parseTimeToMinutes(time) {
+    if (typeof time !== 'string') return null;
+    const match = /^(\d{1,2}):(\d{2})$/.exec(time.trim());
+    if (!match) return null;
+    const hours = Number(match[1]);
+    const minutes = Number(match[2]);
+    if (Number.isNaN(hours) || Number.isNaN(minutes)) return null;
+    if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59) return null;
+    return hours * 60 + minutes;
+  }
+
+  function getFirstMealTime(dayData) {
+    const meals = Array.isArray(dayData?.meals) ? dayData.meals : [];
+    const times = meals
+      .filter((meal) => Array.isArray(meal?.items) && meal.items.length > 0)
+      .map((meal) => meal?.time)
+      .map(parseTimeToMinutes)
+      .filter((value) => Number.isFinite(value));
+    if (!times.length) return null;
+    const first = Math.min(...times);
+    const hh = String(Math.floor(first / 60)).padStart(2, '0');
+    const mm = String(first % 60).padStart(2, '0');
+    return `${hh}:${mm}`;
+  }
+
+  function writeDayData(dateKey, dayData) {
+    const key = `heys_dayv2_${dateKey}`;
+    if (HEYS.store?.set) {
+      HEYS.store.set(key, dayData);
+    } else if (HEYS.utils?.lsSet) {
+      HEYS.utils.lsSet(key, dayData);
+    } else {
+      try {
+        localStorage.setItem(key, JSON.stringify(dayData));
+      } catch (_) {
+        // Fallback storage is unavailable
+      }
+    }
+  }
+
+  function persistMorningActivationPatch(dateKey, patch, source = 'morning-activation') {
+    const dayData = readStoredValue(`heys_dayv2_${dateKey}`, {}) || {};
+    dayData.morningActivation = {
+      ...(dayData.morningActivation || {}),
+      ...patch
+    };
+    dayData.updatedAt = Date.now();
+    writeDayData(dateKey, dayData);
+    window.dispatchEvent(new CustomEvent('heys:day-updated', {
+      detail: {
+        date: dateKey,
+        field: 'morningActivation',
+        source,
+        forceReload: true
+      }
+    }));
+  }
+
+  function dayHasMorningActivationSyncedActivity(dayData) {
+    const trainings = Array.isArray(dayData?.trainings) ? dayData.trainings : [];
+    if (trainings.some((t) => t && t.source === 'morning_activation')) return true;
+    const household = Array.isArray(dayData?.householdActivities) ? dayData.householdActivities : [];
+    if (household.some((h) => h && h.source === 'morning_activation')) return true;
+    return false;
+  }
+
+  function shouldOpenMorningActivationFollowup(dayData) {
+    const firstMealTime = getFirstMealTime(dayData);
+    if (!firstMealTime) return { ok: false, firstMealTime: null };
+    const status = dayData?.morningActivation?.status;
+    if (status === 'done' || status === 'missed') {
+      return { ok: false, firstMealTime };
+    }
+    // Уже есть запись зарядки из фичи (trainings/household с source) — не дублируем опрос
+    if (dayHasMorningActivationSyncedActivity(dayData)) {
+      return { ok: false, firstMealTime };
+    }
+    return { ok: true, firstMealTime };
+  }
+
+  let followupOpening = false;
+
+  function maybeOpenMorningActivationFollowup(reason = 'unknown') {
+    if (followupOpening) return;
+    if (!HEYS.StepModal?.show) return;
+    if (!HEYS.StepModal?.registry?.morning_activation_followup) return;
+    if (document.getElementById('heys-step-modal-root')) return;
+
+    const currentClientId = getCurrentClientId();
+    if (!currentClientId) return;
+    const todayKey = getTodayKey();
+    const dayData = readStoredValue(`heys_dayv2_${todayKey}`, {}) || {};
+    const check = shouldOpenMorningActivationFollowup(dayData);
+    if (!check.ok) return;
+
+    const mealCount = countMealsWithItems(dayData);
+    const snoozeAt = dayData?.morningActivation?.followupSnoozeUntilMealCount;
+    if (snoozeAt != null && mealCount <= snoozeAt) {
+      console.info('[MorningCheckin] morning activation follow-up snoozed until next meal add', {
+        mealCount,
+        snoozeAt
+      });
+      return;
+    }
+
+    const currentState = dayData?.morningActivation || {};
+    if (currentState.status !== 'pending' || currentState.firstMealTime !== check.firstMealTime) {
+      persistMorningActivationPatch(todayKey, {
+        status: 'pending',
+        firstMealTime: check.firstMealTime
+      }, 'morning-activation-followup-open');
+    }
+
+    followupOpening = true;
+    HEYS.StepModal.show({
+      steps: ['morning_activation_followup'],
+      title: 'Утренняя зарядка',
+      showProgress: false,
+      showStreak: false,
+      showGreeting: false,
+      showTip: false,
+      allowSwipe: false,
+      context: { dateKey: todayKey, firstMealTime: check.firstMealTime, reason },
+      onClose: () => {
+        const fresh = readStoredValue(`heys_dayv2_${todayKey}`, {}) || {};
+        const mc = countMealsWithItems(fresh);
+        persistMorningActivationPatch(todayKey, {
+          followupSnoozeUntilMealCount: mc
+        }, 'morning-activation-followup-dismiss');
+        console.info('[MorningCheckin] morning activation follow-up dismissed (Позже) — repeat after next meal add', {
+          mealCount: mc
+        });
+        followupOpening = false;
+      },
+      onComplete: () => {
+        persistMorningActivationPatch(todayKey, {
+          followupSnoozeUntilMealCount: null
+        }, 'morning-activation-followup-complete');
+        followupOpening = false;
+      }
+    });
   }
 
   function debugDayStorage(todayKey, currentClientId, altKey) {
@@ -22075,7 +22911,9 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         sessionStorage.setItem(sessionKey, 'true');
         sessionStorage.removeItem('heys_morning_checkin_done');
       }
-    } catch (_) { }
+    } catch (_) {
+      // sessionStorage may be unavailable in private mode
+    }
     if (sessionStorage.getItem(sessionKey) === 'true') {
       console.info('[MorningCheckin] 🚫 Skip — sessionStorage флаг активен:', sessionKey);
       return false;
@@ -22468,6 +23306,22 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       }
     }
   };
+
+  window.addEventListener('heys:day-updated', (event) => {
+    const detail = event?.detail || {};
+    const dateKey = detail?.date || getTodayKey();
+    if (dateKey !== getTodayKey()) return;
+    if (detail?.source === 'morning-activation-followup-open') return;
+    if (detail?.source === 'morning-activation-followup-dismiss') return;
+    if (detail?.source === 'morning-activation-followup-complete') return;
+    setTimeout(() => maybeOpenMorningActivationFollowup(detail?.source || 'day-updated'), 60);
+  });
+
+  document.addEventListener('heys-stepmodal-ready', () => {
+    setTimeout(() => maybeOpenMorningActivationFollowup('stepmodal-ready'), 180);
+  });
+
+  setTimeout(() => maybeOpenMorningActivationFollowup('module-init'), 350);
 
   // console.log('[HEYS] MorningCheckin v2 loaded (using StepModal)');
 
@@ -38540,19 +39394,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       };
     }, [clientId]);
 
-    // === Pull-to-refresh ===
-    const {
-      pullProgress,
-      isRefreshing,
-      refreshStatus,
-      pullThreshold
-    } = HEYS.dayPullRefresh?.usePullToRefresh?.({
-      React,
-      date: selectedDate,
-      lsGet: HEYS.utils?.lsGet,
-      lsSet: HEYS.utils?.lsSet,
-      HEYS: window.HEYS
-    }) || { pullProgress: 0, isRefreshing: false, refreshStatus: 'idle', pullThreshold: 80 };
+    // Pull-to-refresh: только на вкладках День (stats/diary) — см. body.heys-pull-refresh-day-active + heys_day_pull_refresh_v1.js
 
     // Initialize and subscribe to state changes
     useEffect(() => {
@@ -38962,107 +39804,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       return Math.max(8, maxRow + 2);
     }, [widgets]);
 
-    // === Pull indicator helper ===
-    const pullIndicatorEl = (pullProgress > 0 || isRefreshing || refreshStatus !== 'idle')
-      ? React.createElement('div', {
-        className: 'pull-indicator'
-          + (isRefreshing ? ' refreshing' : '')
-          + (refreshStatus === 'ready' ? ' ready' : '')
-          + (refreshStatus === 'success' ? ' success' : '')
-          + ' status-' + refreshStatus,
-        style: {
-          height: isRefreshing ? 56 : Math.max(pullProgress, 0),
-          opacity: isRefreshing ? 1 : Math.min(pullProgress / 35, 1)
-        }
-      },
-        React.createElement('div', { className: 'pull-spinner' },
-          refreshStatus === 'success'
-            ? React.createElement('svg', {
-              className: 'pull-spinner-ring ready',
-              viewBox: '0 0 28 28',
-              style: { stroke: 'var(--success)' }
-            },
-              React.createElement('path', {
-                d: 'M7 14l5 5 9-9',
-                strokeWidth: 3,
-                fill: 'none',
-                strokeLinecap: 'round',
-                strokeLinejoin: 'round'
-              })
-            )
-            : refreshStatus === 'error'
-              ? React.createElement('svg', {
-                className: 'pull-spinner-ring',
-                viewBox: '0 0 28 28',
-                style: { stroke: 'var(--err, #ef4444)' }
-              },
-                React.createElement('path', {
-                  d: 'M8 8l12 12M20 8l-12 12',
-                  strokeWidth: 3,
-                  fill: 'none',
-                  strokeLinecap: 'round'
-                })
-              )
-              : refreshStatus === 'timeout'
-                ? React.createElement('svg', {
-                  className: 'pull-spinner-ring',
-                  viewBox: '0 0 28 28',
-                  style: { stroke: 'var(--warn, #f59e0b)' }
-                },
-                  React.createElement('path', {
-                    d: 'M14 7v8m0 4h.01',
-                    strokeWidth: 3,
-                    fill: 'none',
-                    strokeLinecap: 'round',
-                    strokeLinejoin: 'round'
-                  }),
-                  React.createElement('circle', {
-                    cx: 14, cy: 14, r: 10,
-                    strokeWidth: 2,
-                    fill: 'none'
-                  })
-                )
-                : refreshStatus === 'syncing'
-                  ? React.createElement('svg', {
-                    className: 'pull-spinner-ring spinning',
-                    viewBox: '0 0 28 28'
-                  },
-                    React.createElement('circle', {
-                      cx: 14, cy: 14, r: 10,
-                      strokeDasharray: '45 20',
-                      strokeDashoffset: 0
-                    })
-                  )
-                  : React.createElement('svg', {
-                    className: 'pull-spinner-ring' + (refreshStatus === 'ready' ? ' ready' : ''),
-                    viewBox: '0 0 28 28',
-                    style: {
-                      transform: `rotate(${-90 + Math.min(pullProgress / pullThreshold, 1) * 180}deg)`,
-                      transition: 'transform 0.1s ease-out'
-                    }
-                  },
-                    React.createElement('circle', {
-                      cx: 14, cy: 14, r: 10,
-                      strokeDasharray: 63,
-                      strokeDashoffset: 63 - (Math.min(pullProgress / pullThreshold, 1) * 63)
-                    })
-                  )
-        ),
-        React.createElement('span', {
-          className: 'pull-text'
-            + (refreshStatus === 'ready' ? ' ready' : '')
-            + (refreshStatus === 'syncing' ? ' syncing' : '')
-            + ' status-' + refreshStatus
-        },
-          refreshStatus === 'success' ? 'Готово!'
-            : refreshStatus === 'timeout' ? 'Синхронизация заняла слишком долго'
-              : refreshStatus === 'error' ? 'Ошибка синхронизации'
-                : refreshStatus === 'syncing' ? 'Синхронизация...'
-                  : refreshStatus === 'ready' ? 'Отпустите для обновления'
-                    : 'Потяните для обновления'
-        )
-      )
-      : null;
+    const pullIndicatorEl = null;
 
     // Render empty state (только после первичной гидратации layout)
     // Don't show empty state during sync loading — layout for new client may not have arrived yet
@@ -42353,7 +43095,6 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
         const [editing, setEditing] = useState(false);
         const [draftTitle, setDraftTitle] = useState(task.title);
-        const priority = PRIORITY_CONFIG[task.priority] || PRIORITY_CONFIG.p2;
         const isDone = task.status === 'done' || task.status === 'cancelled';
         const metaBadges = buildTaskMetaBadges(task);
         const trailingActions = React.Children.toArray(extraActions);
@@ -42433,10 +43174,6 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                     }, badge.label)),
                 ),
             ),
-            h('span', {
-                className: 'planning-task-row__priority',
-                style: { color: priority.color },
-            }, priority.label),
             h('div', { className: 'planning-task-row__actions' + (actionsClassName ? (' ' + actionsClassName) : '') },
                 trailingActions,
                 h('button', {
@@ -43600,7 +44337,13 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     const CALENDAR_TOUCH_DRAG_MOVE_CANCEL_THRESHOLD = 12;
     const CALENDAR_POINTER_DRAG_MOVE_THRESHOLD = 6;
     const CALENDAR_CELL_LONG_PRESS_MS = 280;
-    const CALENDAR_CELL_LONG_PRESS_MOVE_CANCEL_THRESHOLD = 10;
+    const CALENDAR_CELL_LONG_PRESS_MOVE_CANCEL_THRESHOLD = 30;
+    const CALENDAR_TOUCH_TAP_SLOP_PX = 14;
+    const CALENDAR_DAY_WINDOW_OPTIONS = [3, 5, 8];
+    const CALENDAR_DAY_WINDOW_STORAGE_KEY = 'heys_planning_calendar_day_window';
+    const CALENDAR_MIN_DAY_COLUMN_WIDTH = 72;
+    const CALENDAR_WINDOW_OVERSCAN_DAYS = 2;
+    const CALENDAR_DRAG_ZOOM_VISIBLE_DAYS = 8;
     const CALENDAR_TOUCH_DRAG_AUTO_SCROLL_EDGE = 56;
     const CALENDAR_TOUCH_DRAG_AUTO_SCROLL_STEP = 18;
     const CALENDAR_SLOT_DONE_BACKGROUND = 'linear-gradient(180deg, rgba(34, 197, 94, 0.94) 0%, rgba(21, 128, 61, 0.9) 100%)';
@@ -43623,6 +44366,17 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
     function buildCalendarDays(startIso, length) {
         return Array.from({ length }, (_, index) => addDays(startIso, index));
+    }
+
+    function readStoredCalendarDayWindow() {
+        try {
+            const raw = localStorage.getItem(CALENDAR_DAY_WINDOW_STORAGE_KEY);
+            const n = Number(raw);
+            if (CALENDAR_DAY_WINDOW_OPTIONS.indexOf(n) !== -1) return n;
+        } catch (error) {
+            // ignore
+        }
+        return 3;
     }
 
     function getWeekdayLabel(isoDate) {
@@ -43826,12 +44580,15 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         return lineCenter - visibleCenter;
     }
 
-    function resolveCalendarCellStart(date, displayHour) {
+    function resolveCalendarCellStart(date, displayHour, subHourMinutes) {
         const normalizedHour = Number(displayHour) || CALENDAR_START_HOUR;
-        const actualDate = normalizedHour >= 24 ? addDays(date, 1) : date;
+        const extraMinutes = Math.max(0, Math.min(59, Math.round(Number(subHourMinutes) || 0)));
+        const snappedExtra = Math.round(extraMinutes / CALENDAR_SNAP_MINUTES) * CALENDAR_SNAP_MINUTES;
+        const totalMinutes = normalizedHour * 60 + snappedExtra;
+        const actualDate = totalMinutes >= 24 * 60 ? addDays(date, 1) : date;
         return {
             date: actualDate,
-            time: formatCalendarHourLabel(normalizedHour),
+            time: formatClockTime(totalMinutes),
         };
     }
 
@@ -43842,6 +44599,19 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         return startMinutes < (CALENDAR_START_HOUR * 60)
             ? addDays(slotDate, -1)
             : slotDate;
+    }
+
+    function sendPlanningDebugLog(payload) {
+        const logRecord = {
+            sessionId: '236dee',
+            timestamp: Date.now(),
+            ...payload,
+        };
+        try {
+            console.info('[HEYS.planning][debug]', logRecord.message || 'event', logRecord);
+        } catch (error) {
+            // ignore
+        }
     }
 
     function getCalendarDisplayEndMinutes(slot) {
@@ -44227,6 +44997,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     }
 
     function QuickSlotModal({ draft, state, onClose }) {
+        const { isDesktop } = usePlanningViewport();
         const tasks = Array.isArray(state?.tasks) ? state.tasks : [];
         const projects = Array.isArray(state?.projects) ? state.projects : [];
         const activeProjectsQuick = useMemo(
@@ -44369,8 +45140,16 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             onClose();
         };
 
-        return h('div', { className: 'planning-modal-overlay planning-modal-overlay--quick-event', onClick: onClose },
-            h('div', { className: 'planning-modal planning-modal--quick-event', onClick: (event) => event.stopPropagation() },
+        return h('div', {
+            className: 'planning-modal-overlay planning-modal-overlay--quick-event'
+                + (!isDesktop ? ' planning-modal-overlay--quick-event-sheet' : ''),
+            onClick: onClose,
+        },
+            h('div', {
+                className: 'planning-modal planning-modal--quick-event'
+                    + (!isDesktop ? ' planning-modal--quick-event-sheet' : ''),
+                onClick: (event) => event.stopPropagation(),
+            },
                 h('div', { className: 'planning-modal__header planning-modal__header--quick-event' },
                     h('div', { className: 'planning-modal__header-copy' },
                         h('span', { className: 'planning-modal__header-title planning-modal__header-title--quick-event' }, 'Новое событие'),
@@ -44407,7 +45186,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                         ),
                         h('button', {
                             type: 'button',
-                            className: 'planning-quick-btn-done',
+                            className: 'planning-quick-btn-done planning-quick-btn-done--in-body',
                             onClick: save,
                         },
                             h('span', { className: 'planning-quick-btn-done__icon', 'aria-hidden': 'true' }, '✓'),
@@ -44508,6 +45287,14 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                         className: 'planning-quick-link-cancel',
                         onClick: onClose,
                     }, 'Отмена'),
+                    !isDesktop && h('button', {
+                        type: 'button',
+                        className: 'planning-quick-btn-done planning-quick-btn-done--footer',
+                        onClick: save,
+                    },
+                        h('span', { className: 'planning-quick-btn-done__icon', 'aria-hidden': 'true' }, '✓'),
+                        h('span', { className: 'planning-quick-btn-done__text' }, 'Готово'),
+                    ),
                 ),
             ),
         );
@@ -45019,16 +45806,20 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         allowNativeDrag,
         showResizeHandle,
         onDeleteClick,
+        isPastDay,
+        onQuickReschedule,
     }) {
         const slotTitle = parentGroupLabel ? (parentGroupLabel + ' · ' + title) : title;
         const toggleIcon = taskStatusToggleDone
             ? (STATUS_CONFIG.done?.icon || '●')
             : (STATUS_CONFIG.todo?.icon || '○');
         const toggleLabel = taskStatusToggleDone ? 'Вернуть в работу' : 'Завершить задачу';
+        const showCarryover = isPastDay && !taskStatusToggleDone && typeof onQuickReschedule === 'function';
         const showFooter = Boolean(
             showSubtitle
             || typeof onTaskStatusToggle === 'function'
-            || typeof onDeleteClick === 'function',
+            || typeof onDeleteClick === 'function'
+            || showCarryover,
         );
 
         return h('div', {
@@ -45078,6 +45869,9 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             onDragStart: (event) => {
                 event.dataTransfer.effectAllowed = 'move';
                 event.dataTransfer.setData('text/heys-planning-slot', JSON.stringify({ type: 'slot', slotId: slot.id }));
+                const emptyImg = new Image();
+                emptyImg.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+                event.dataTransfer.setDragImage(emptyImg, 0, 0);
             },
             onDragEnd: () => {
                 if (typeof onDragStateChange === 'function') onDragStateChange(false);
@@ -45119,6 +45913,24 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                             onDeleteClick(event);
                         },
                     }, h('span', { className: 'planning-calendar-slot__delete-icon', 'aria-hidden': 'true' }, '×')),
+                    showCarryover && h('button', {
+                        type: 'button',
+                        className: 'planning-calendar-slot__carryover',
+                        title: 'На сегодня',
+                        'aria-label': 'Перенести на сегодня',
+                        onPointerDown: (event) => event.stopPropagation(),
+                        onTouchStart: (event) => event.stopPropagation(),
+                        onClick: (event) => { event.stopPropagation(); onQuickReschedule('today'); },
+                    }, '→'),
+                    showCarryover && h('button', {
+                        type: 'button',
+                        className: 'planning-calendar-slot__carryover',
+                        title: 'На завтра',
+                        'aria-label': 'Перенести на завтра',
+                        onPointerDown: (event) => event.stopPropagation(),
+                        onTouchStart: (event) => event.stopPropagation(),
+                        onClick: (event) => { event.stopPropagation(); onQuickReschedule('tomorrow'); },
+                    }, '⇥'),
                 ),
             ),
             showResizeHandle && h('button', {
@@ -45173,7 +45985,6 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         allowNativeDrag,
     }) {
         const parentGroupLabel = buildTaskParentGroupLabel(task, taskLookup);
-        const priorityLabel = PRIORITY_CONFIG[task.priority]?.label || 'P2';
         const projectColor = getTaskProjectColor(task, projects);
 
         return h('div', {
@@ -45189,7 +46000,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                         payload: { type: 'task', taskId: task.id },
                         sourceKey: 'task:' + task.id,
                         title: task.title,
-                        badgeText: priorityLabel,
+                        badgeText: '',
                         parentGroupLabel,
                         accentColor: projectColor,
                     });
@@ -45203,7 +46014,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                         payload: { type: 'task', taskId: task.id },
                         sourceKey: 'task:' + task.id,
                         title: task.title,
-                        badgeText: priorityLabel,
+                        badgeText: '',
                         parentGroupLabel,
                         accentColor: projectColor,
                     });
@@ -45212,6 +46023,9 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             onDragStart: (event) => {
                 event.dataTransfer.effectAllowed = 'copyMove';
                 event.dataTransfer.setData('text/heys-planning-task', JSON.stringify({ type: 'task', taskId: task.id }));
+                const emptyImg = new Image();
+                emptyImg.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+                event.dataTransfer.setDragImage(emptyImg, 0, 0);
             },
             onDragEnd: () => {
                 if (typeof onDragStateChange === 'function') onDragStateChange(false);
@@ -45228,10 +46042,6 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                 }, parentGroupLabel),
                 h('span', { className: 'planning-calendar-unscheduled-pill__title' }, task.title),
             ),
-            h('span', {
-                className: 'planning-calendar-unscheduled-pill__priority',
-                style: { color: PRIORITY_CONFIG[task.priority]?.color, background: PRIORITY_CONFIG[task.priority]?.bg },
-            }, priorityLabel),
         );
     }
 
@@ -45240,7 +46050,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         const [slotDraft, setSlotDraft] = useState(null);
         const [selectedTaskId, setSelectedTaskId] = useState(null);
         const [resizePreview, setResizePreview] = useState(null);
-        const [calendarDayWindow, setCalendarDayWindow] = useState(3);
+        const [calendarDayWindow, setCalendarDayWindow] = useState(readStoredCalendarDayWindow);
         const [calendarViewportWidth, setCalendarViewportWidth] = useState(0);
         const [calendarViewportHeight, setCalendarViewportHeight] = useState(0);
         const [nowLineTop, setNowLineTop] = useState(() => getCalendarNowTop());
@@ -45248,21 +46058,19 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         const [headerDropState, setHeaderDropState] = useState({ day: '', mode: '' });
         const [calendarCellDropPreview, setCalendarCellDropPreview] = useState(null);
         const [calendarDropCommitAccent, setCalendarDropCommitAccent] = useState(null);
-        const [headerFrame, setHeaderFrame] = useState({ ready: false, top: 0, left: 0, width: 0, height: 0 });
+        const headerFrame = { ready: true, top: 0, left: 0, width: 0, height: 0 };
         const [isCalendarDragZoomActive, setIsCalendarDragZoomActive] = useState(false);
         const [touchDragPreview, setTouchDragPreview] = useState(null);
         const [touchDragSourceKey, setTouchDragSourceKey] = useState('');
         const [rangeSelectPreview, setRangeSelectPreview] = useState(null);
         const [slotDeleteTarget, setSlotDeleteTarget] = useState(null);
         const rangePointerSessionRef = useRef(null);
+        const rangeTouchSessionRef = useRef(null);
         const resizeStateRef = useRef(null);
-        const headerShellRef = useRef(null);
         const headerRef = useRef(null);
         const nowLineRef = useRef(null);
         const gridScrollRef = useRef(null);
-        const bodyScrollRef = useRef(null);
-        const headerScrollRef = useRef(null);
-        const headerTrackRef = useRef(null);
+        const bodyScrollRef = gridScrollRef;
         const previousDayWidthRef = useRef(0);
         const touchDragStateRef = useRef(null);
         const touchDragAutoScrollFrameRef = useRef(0);
@@ -45272,8 +46080,11 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         const dropCommitAccentTimerRef = useRef(0);
         const suppressCalendarClickUntilRef = useRef(0);
         const dayColumnWidthRef = useRef(0);
+        const calendarBodyScrollRafRef = useRef(0);
+        const [calendarWindowScrollTick, setCalendarWindowScrollTick] = useState(0);
         const calendarDaysRef = useRef([]);
         const isCalendarDragZoomActiveRef = useRef(false);
+        const [, setCalendarThemeTick] = useState(0);
         const todayIso = getPlanningTodayIso();
         const yesterdayIso = useMemo(() => addDays(todayIso, -1), [todayIso]);
         const calendarStartIso = useMemo(() => addDays(todayIso, -CALENDAR_LOOKBACK_DAYS), [todayIso]);
@@ -45282,9 +46093,10 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             [calendarStartIso],
         );
         const calendarEndIso = calendarDays[calendarDays.length - 1] || todayIso;
-        const visibleDayCount = Math.max(calendarDayWindow, isCalendarDragZoomActive ? 7 : 0);
-        const isCompactCalendarView = visibleDayCount >= 7;
-        const dayColumnWidth = Math.max(Math.round((calendarViewportWidth || (isDesktop ? 720 : 330)) / visibleDayCount), 1);
+        const visibleDayCount = Math.max(calendarDayWindow, isCalendarDragZoomActive ? CALENDAR_DRAG_ZOOM_VISIBLE_DAYS : 0);
+        const isCompactCalendarView = visibleDayCount >= CALENDAR_DRAG_ZOOM_VISIBLE_DAYS;
+        const rawDayColumnWidth = Math.round((calendarViewportWidth || (isDesktop ? 720 : 330)) / Math.max(visibleDayCount, 1));
+        const dayColumnWidth = Math.max(rawDayColumnWidth, CALENDAR_MIN_DAY_COLUMN_WIDTH);
         const desiredCalendarHalfViewport = Math.max(Math.round(calendarViewportHeight / 2), 0);
         const clampedNowLineTop = Math.max(0, Math.min(CALENDAR_TOTAL_HEIGHT, Number(nowLineTop) || 0));
         const calendarVerticalTopPadding = Math.max(desiredCalendarHalfViewport - clampedNowLineTop, 0);
@@ -45322,10 +46134,10 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             });
         };
 
-        const buildCalendarCellDropPreview = (day, hour, payload) => {
+        const buildCalendarCellDropPreview = (day, hour, payload, subHourMinutes) => {
             if (!day || hour == null || !isPlanningCalendarDragPayload(payload)) return null;
 
-            const start = resolveCalendarCellStart(day, hour);
+            const start = resolveCalendarCellStart(day, hour, subHourMinutes);
 
             if (payload.type === 'slot' && payload.slotId) {
                 const slot = state.slots.find((entry) => entry.id === payload.slotId);
@@ -45384,8 +46196,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             return null;
         };
 
-        const applyCalendarCellDropPreview = (day, hour, payload) => {
-            const nextPreview = buildCalendarCellDropPreview(day, hour, payload);
+        const applyCalendarCellDropPreview = (day, hour, payload, subHourMinutes) => {
+            const nextPreview = buildCalendarCellDropPreview(day, hour, payload, subHourMinutes);
             setCalendarCellDropPreview((current) => {
                 if (!nextPreview) return current ? null : current;
                 if (
@@ -45420,10 +46232,10 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             setCalendarDropCommitAccent((current) => (current ? null : current));
         };
 
-        const flashCalendarDropCommitAccent = (day, hour) => {
+        const flashCalendarDropCommitAccent = (day, hour, subHourMinutes) => {
             if (!day || hour == null) return;
 
-            const start = resolveCalendarCellStart(day, hour);
+            const start = resolveCalendarCellStart(day, hour, subHourMinutes);
             const markerMetrics = buildSlotMetrics({
                 startTime: start.time,
                 endTime: formatClockTime(timeToMinutes(start.time) + 30),
@@ -45456,9 +46268,9 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         const resolveCalendarDropTargetFromPoint = (clientX, clientY) => {
             const currentDayWidth = Math.max(dayColumnWidthRef.current || dayColumnWidth || 1, 1);
             const currentCalendarDays = calendarDaysRef.current || calendarDays;
-            const horizontalScrollLeft = bodyScrollRef.current?.scrollLeft || 0;
+            const horizontalScrollLeft = gridScrollRef.current?.scrollLeft || 0;
 
-            const headerNode = headerScrollRef.current;
+            const headerNode = headerRef.current;
             if (headerNode) {
                 const headerRect = headerNode.getBoundingClientRect();
                 const withinHeaderX = clientX >= headerRect.left && clientX <= headerRect.right;
@@ -45487,12 +46299,16 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             const day = currentCalendarDays[dayIndex];
             if (!day) return null;
 
-            const relativeY = clientY - bodyRect.top;
+            const stickyHeaderHeight = headerRef.current ? headerRef.current.getBoundingClientRect().height : 0;
+            const relativeY = clientY - bodyRect.top - stickyHeaderHeight + gridNode.scrollTop;
             const hourIndex = Math.max(0, Math.min(HOURS.length - 1, Math.floor(relativeY / CALENDAR_HOUR_HEIGHT)));
+            const withinCellY = relativeY - (hourIndex * CALENDAR_HOUR_HEIGHT);
+            const subHourMinutes = Math.round((withinCellY / CALENDAR_HOUR_HEIGHT) * 60 / CALENDAR_SNAP_MINUTES) * CALENDAR_SNAP_MINUTES;
             return {
                 type: 'cell',
                 day,
                 hour: HOURS[hourIndex],
+                subHourMinutes: Math.max(0, Math.min(45, subHourMinutes)),
             };
         };
 
@@ -45526,7 +46342,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             }
 
             if (isPlanningCalendarDragPayload(active?.payload) && dropTarget?.type === 'cell') {
-                applyCalendarCellDropPreview(dropTarget.day, dropTarget.hour, active?.payload);
+                applyCalendarCellDropPreview(dropTarget.day, dropTarget.hour, active?.payload, dropTarget.subHourMinutes);
             } else {
                 clearCalendarCellDropPreview();
             }
@@ -45543,9 +46359,9 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             if (context.slot?.id) state.deleteSlot(context.slot.id);
         };
 
-        const applyDragPayloadToCell = (date, hour, payload) => {
+        const applyDragPayloadToCell = (date, hour, payload, subHourMinutes) => {
             if (!payload) return;
-            const start = resolveCalendarCellStart(date, hour);
+            const start = resolveCalendarCellStart(date, hour, subHourMinutes);
             const startTime = start.time;
 
             if (payload.type === 'slot' && payload.slotId) {
@@ -45576,7 +46392,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             if (isCalendarDragZoomActiveRef.current) return;
             if (!isPlanningCalendarDragPayload(payload)) return;
 
-            const scrollContainer = bodyScrollRef.current || headerScrollRef.current;
+            const scrollContainer = gridScrollRef.current;
             const containerRect = scrollContainer?.getBoundingClientRect?.();
             if (!containerRect) return;
 
@@ -45627,7 +46443,6 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
                     if (Math.abs(deltaX) > 0.1) {
                         bodyNode.scrollLeft += deltaX;
-                        syncHeaderScroll();
                         touchDragBodyRectRef.current = null;
                         maybeActivateCalendarDragZoomFromPoint(active.lastX, active.payload);
                     }
@@ -45641,10 +46456,11 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                     }
                     const edge = Math.min(CALENDAR_TOUCH_DRAG_AUTO_SCROLL_EDGE, Math.max(rect.height * 0.12, 24));
                     let deltaY = 0;
-
-                    if (active.lastY <= rect.top + edge) {
+                    /* Only when the pointer is inside the grid vertically. If the finger is still in the
+                       day header (above rect.top), the old "top edge" branch fired and scrolled the grid. */
+                    if (active.lastY >= rect.top && active.lastY <= rect.top + edge) {
                         deltaY = -resolveAutoScrollDelta(active.lastY - rect.top, edge);
-                    } else if (active.lastY >= rect.bottom - edge) {
+                    } else if (active.lastY <= rect.bottom && active.lastY >= rect.bottom - edge) {
                         deltaY = resolveAutoScrollDelta(rect.bottom - active.lastY, edge);
                     }
 
@@ -45665,7 +46481,22 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             if (!current || current.activated) return;
 
             current.activated = true;
+            try { navigator.vibrate?.(10); } catch (_e) { /* unsupported */ }
             setTouchDragSourceKey(current.sourceKey || '');
+
+            let sourceHeight = 60;
+            let sourceWidth = dayColumnWidth || 120;
+            let grabOffsetX = 0;
+            let grabOffsetY = 0;
+            const sourceEl = current.targetNode;
+            if (sourceEl) {
+                const r = sourceEl.getBoundingClientRect();
+                if (r.height > 0) sourceHeight = r.height;
+                if (r.width > 0) sourceWidth = r.width;
+                grabOffsetX = current.startX - r.left;
+                grabOffsetY = current.startY - r.top;
+            }
+
             setTouchDragPreview({
                 kind: current.payload?.type === 'slot' ? 'slot' : 'task',
                 title: current.title || '',
@@ -45675,6 +46506,10 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                 background: current.background || '',
                 x: current.lastX,
                 y: current.lastY,
+                height: sourceHeight,
+                width: sourceWidth,
+                grabOffsetX,
+                grabOffsetY,
             });
 
             syncTouchDragDropState(current, current.lastX, current.lastY);
@@ -45768,8 +46603,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                 return;
             }
             if (dropTarget.type === 'cell') {
-                applyDragPayloadToCell(dropTarget.day, dropTarget.hour, active.payload);
-                flashCalendarDropCommitAccent(dropTarget.day, dropTarget.hour);
+                applyDragPayloadToCell(dropTarget.day, dropTarget.hour, active.payload, dropTarget.subHourMinutes);
+                flashCalendarDropCommitAccent(dropTarget.day, dropTarget.hour, dropTarget.subHourMinutes);
             }
         };
 
@@ -45970,12 +46805,40 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                 handlePointerCancel: null,
             };
 
-            if (active.pointerId != null && targetNode && typeof targetNode.setPointerCapture === 'function') {
+            const isTouchLike = pointerType === 'touch' || pointerType === 'pen';
+
+            if (!isTouchLike && active.pointerId != null && targetNode && typeof targetNode.setPointerCapture === 'function') {
                 try {
                     targetNode.setPointerCapture(active.pointerId);
                 } catch (error) {
                     // ignore
                 }
+            }
+
+            const removeHoldVisual = () => {
+                if (targetNode) targetNode.classList.remove('planning-calendar-slot--hold-active');
+            };
+
+            const clearSlotHoldTimer = () => {
+                if (active.holdTimer) { window.clearTimeout(active.holdTimer); active.holdTimer = 0; }
+                removeHoldVisual();
+            };
+
+            if (isTouchLike) {
+                targetNode.classList.add('planning-calendar-slot--hold-active');
+
+                active.holdTimer = window.setTimeout(() => {
+                    active.holdTimer = 0;
+                    const current = touchDragStateRef.current;
+                    if (!current || current !== active || current.activated) return;
+                    removeHoldVisual();
+                    if (gridScrollRef.current) gridScrollRef.current.style.touchAction = 'none';
+                    if (active.pointerId != null && targetNode && typeof targetNode.setPointerCapture === 'function') {
+                        try { targetNode.setPointerCapture(active.pointerId); } catch (_e) { /* ignore */ }
+                    }
+                    activateCalendarCustomDrag(current);
+                    syncTouchDragDropState(current, current.lastX, current.lastY);
+                }, CALENDAR_TOUCH_DRAG_HOLD_MS);
             }
 
             active.handlePointerMove = (moveEvent) => {
@@ -45990,6 +46853,13 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
                 if (!current.activated) {
                     const distance = Math.hypot(nextX - current.startX, nextY - current.startY);
+                    if (isTouchLike) {
+                        if (distance >= CALENDAR_TOUCH_DRAG_MOVE_CANCEL_THRESHOLD) {
+                            clearSlotHoldTimer();
+                            finishCalendarTouchDrag({ applyDrop: false, suppressClickAfterDrop: false });
+                        }
+                        return;
+                    }
                     if (distance < CALENDAR_POINTER_DRAG_MOVE_THRESHOLD) return;
                     activateCalendarCustomDrag(current);
                 }
@@ -46001,11 +46871,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                 setTouchDragPreview((preview) => {
                     if (!preview) return preview;
                     if (preview.x === nextX && preview.y === nextY) return preview;
-                    return {
-                        ...preview,
-                        x: nextX,
-                        y: nextY,
-                    };
+                    return { ...preview, x: nextX, y: nextY };
                 });
             };
 
@@ -46014,6 +46880,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                 if (!current || current !== active) return;
                 if (current.pointerId != null && pointerUpEvent.pointerId != null && current.pointerId !== pointerUpEvent.pointerId) return;
 
+                clearSlotHoldTimer();
+                if (isTouchLike && gridScrollRef.current) gridScrollRef.current.style.touchAction = '';
                 finishCalendarTouchDrag({
                     applyDrop: current.activated,
                     suppressClickAfterDrop: current.activated,
@@ -46026,6 +46894,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                 if (!current || current !== active) return;
                 if (current.pointerId != null && pointerCancelEvent.pointerId != null && current.pointerId !== pointerCancelEvent.pointerId) return;
 
+                clearSlotHoldTimer();
+                if (isTouchLike && gridScrollRef.current) gridScrollRef.current.style.touchAction = '';
                 finishCalendarTouchDrag({
                     applyDrop: false,
                     suppressClickAfterDrop: false,
@@ -46050,10 +46920,11 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
         useEffect(() => {
             const measure = () => {
-                const width = bodyScrollRef.current?.clientWidth || 0;
+                const width = gridScrollRef.current?.clientWidth || 0;
                 const height = gridScrollRef.current?.clientHeight || 0;
                 if (width) setCalendarViewportWidth(width);
                 if (height) setCalendarViewportHeight(height);
+                setCalendarWindowScrollTick((tick) => tick + 1);
             };
 
             measure();
@@ -46068,6 +46939,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             const resizeObserver = new ResizeObserver(() => {
                 const nextHeight = gridNode.clientHeight || 0;
                 setCalendarViewportHeight((current) => (current === nextHeight ? current : nextHeight));
+                setCalendarWindowScrollTick((tick) => tick + 1);
             });
 
             resizeObserver.observe(gridNode);
@@ -46075,7 +46947,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         }, []);
 
         useEffect(() => {
-            if (!bodyScrollRef.current) {
+            if (!gridScrollRef.current) {
                 previousDayWidthRef.current = dayColumnWidth;
                 return;
             }
@@ -46086,12 +46958,20 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                 return;
             }
 
-            const bodyNode = bodyScrollRef.current;
-            const nextScrollLeft = (bodyNode.scrollLeft / previousDayWidth) * dayColumnWidth;
-            bodyNode.scrollLeft = nextScrollLeft;
-            if (headerTrackRef.current) headerTrackRef.current.style.transform = 'translateX(' + (-nextScrollLeft) + 'px)';
+            const scrollNode = gridScrollRef.current;
+            const nextScrollLeft = (scrollNode.scrollLeft / previousDayWidth) * dayColumnWidth;
+            scrollNode.scrollLeft = nextScrollLeft;
             previousDayWidthRef.current = dayColumnWidth;
+            setCalendarWindowScrollTick((tick) => tick + 1);
         }, [dayColumnWidth]);
+
+        useEffect(() => {
+            try {
+                localStorage.setItem(CALENDAR_DAY_WINDOW_STORAGE_KEY, String(calendarDayWindow));
+            } catch (error) {
+                // ignore
+            }
+        }, [calendarDayWindow]);
 
         useEffect(() => {
             const deactivateDragZoom = () => {
@@ -46116,51 +46996,18 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         }, []);
 
         useEffect(() => {
-            const shell = headerShellRef.current;
-            const header = headerRef.current;
-            if (!shell || !header) return undefined;
-
-            const measureHeaderFrame = () => {
-                const shellRect = shell.getBoundingClientRect();
-                const nextFrame = {
-                    ready: true,
-                    top: Math.max(shellRect.top || 0, 0),
-                    left: shellRect.left,
-                    width: shellRect.width,
-                    height: header.offsetHeight || shellRect.height || 0,
-                };
-
-                setHeaderFrame((current) => {
-                    if (
-                        current.ready === nextFrame.ready &&
-                        Math.abs((current.top || 0) - nextFrame.top) < 1 &&
-                        Math.abs((current.left || 0) - nextFrame.left) < 1 &&
-                        Math.abs((current.width || 0) - nextFrame.width) < 1 &&
-                        Math.abs((current.height || 0) - nextFrame.height) < 1
-                    ) {
-                        return current;
-                    }
-                    return nextFrame;
-                });
+            const handleKeyDown = (event) => {
+                if (event.target?.tagName === 'INPUT' || event.target?.tagName === 'TEXTAREA' || event.target?.tagName === 'SELECT') return;
+                if (event.target?.isContentEditable) return;
+                if (event.key === 'ArrowLeft') { scrollCalendarByDays(-visibleDayCount); event.preventDefault(); }
+                else if (event.key === 'ArrowRight') { scrollCalendarByDays(visibleDayCount); event.preventDefault(); }
+                else if (event.key === 't' || event.key === 'T' || event.key === 'е' || event.key === 'Е') { scrollCalendarToTodayWindow(); event.preventDefault(); }
             };
+            window.addEventListener('keydown', handleKeyDown);
+            return () => window.removeEventListener('keydown', handleKeyDown);
+        }, [visibleDayCount, dayColumnWidth]);
 
-            measureHeaderFrame();
-
-            const resizeObserver = typeof ResizeObserver === 'function'
-                ? new ResizeObserver(() => measureHeaderFrame())
-                : null;
-
-            if (resizeObserver) {
-                resizeObserver.observe(shell);
-                resizeObserver.observe(header);
-            }
-
-            window.addEventListener('resize', measureHeaderFrame);
-            return () => {
-                window.removeEventListener('resize', measureHeaderFrame);
-                if (resizeObserver) resizeObserver.disconnect();
-            };
-        }, [calendarViewportWidth, isDesktop, calendarDays.length, state.tasks.length, state.slots.length]);
+        /* Header is now sticky inside the unified scroll container — no measurement needed */
 
         useEffect(() => {
             const updateNowLine = () => setNowLineTop(getCalendarNowTop());
@@ -46181,7 +47028,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         }, []);
 
         useEffect(() => {
-            if (!shouldCenterNow || !calendarViewportWidth || !calendarViewportHeight || !headerFrame.ready) return undefined;
+            if (!shouldCenterNow || !calendarViewportWidth || !calendarViewportHeight) return undefined;
 
             let frameId = 0;
             let retryFrameId = 0;
@@ -46233,43 +47080,24 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                 window.cancelAnimationFrame(frameId);
                 window.cancelAnimationFrame(retryFrameId);
             };
-        }, [calendarViewportWidth, calendarViewportHeight, shouldCenterNow, headerFrame.ready, headerFrame.height]);
+        }, [calendarViewportWidth, calendarViewportHeight, shouldCenterNow]);
 
-        const syncHeaderScroll = () => {
-            if (!headerTrackRef.current || !bodyScrollRef.current) return;
-            headerTrackRef.current.style.transform = 'translateX(' + (-bodyScrollRef.current.scrollLeft) + 'px)';
-        };
-
-        const scrollCalendarHorizontallyBy = (delta) => {
-            const bodyNode = bodyScrollRef.current;
-            if (!bodyNode || !Number.isFinite(delta) || Math.abs(delta) < 0.5) return;
-
-            bodyNode.scrollLeft += delta;
-            syncHeaderScroll();
-        };
-
-        const handleHeaderWheel = (event) => {
-            const deltaX = Number(event.deltaX) || 0;
-            const deltaY = Number(event.deltaY) || 0;
-            const hasHorizontalIntent = Math.abs(deltaX) > Math.abs(deltaY) || (event.shiftKey && Math.abs(deltaY) > 0.5);
-            if (!hasHorizontalIntent) return;
-
-            const horizontalDelta = Math.abs(deltaX) > 0.5 ? deltaX : deltaY;
-            if (Math.abs(horizontalDelta) < 0.5) return;
-
-            if (event.cancelable) event.preventDefault();
-            scrollCalendarHorizontallyBy(horizontalDelta);
+        const onCalendarGridScroll = () => {
+            if (calendarBodyScrollRafRef.current) return;
+            calendarBodyScrollRafRef.current = window.requestAnimationFrame(() => {
+                calendarBodyScrollRafRef.current = 0;
+                setCalendarWindowScrollTick((tick) => tick + 1);
+            });
         };
 
         const scrollCalendarByDays = (days) => {
-            if (!bodyScrollRef.current) return;
-            bodyScrollRef.current.scrollBy({ left: dayColumnWidth * days, behavior: 'smooth' });
+            if (!gridScrollRef.current) return;
+            gridScrollRef.current.scrollBy({ left: dayColumnWidth * days, behavior: 'smooth' });
         };
 
         const scrollCalendarToTodayWindow = () => {
-            if (!bodyScrollRef.current) return;
-            bodyScrollRef.current.scrollTo({ left: 0, behavior: 'smooth' });
-            syncHeaderScroll();
+            if (!gridScrollRef.current) return;
+            gridScrollRef.current.scrollTo({ left: 0, behavior: 'smooth' });
             setShouldCenterNow(true);
         };
 
@@ -46406,10 +47234,19 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                     return sum + Math.max(30, getCalendarDisplayEndMinutes(slot) - getCalendarDisplayMinutes(slot.startTime));
                 }, 0);
                 const level = Math.max(0, Math.min(4, Math.ceil(totalMinutes / 180)));
+                let pressureTone = 'free';
+                let pressureLabel = '';
+                if (totalMinutes === 0) { pressureTone = 'free'; pressureLabel = ''; }
+                else if (totalMinutes <= 120) { pressureTone = 'calm'; pressureLabel = formatDurationLabel(totalMinutes); }
+                else if (totalMinutes <= 300) { pressureTone = 'moderate'; pressureLabel = formatDurationLabel(totalMinutes); }
+                else if (totalMinutes <= 480) { pressureTone = 'loaded'; pressureLabel = formatDurationLabel(totalMinutes); }
+                else { pressureTone = 'overloaded'; pressureLabel = formatDurationLabel(totalMinutes); }
                 map[day] = {
                     count: daySlots.length,
                     totalMinutes,
                     level,
+                    pressureTone,
+                    pressureLabel,
                     label: daySlots.length
                         ? (daySlots.length + ' ' + pluralizeSlots(daySlots.length) + ' · ' + formatDurationLabel(totalMinutes))
                         : 'Свободно',
@@ -46418,10 +47255,47 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             return map;
         }, [calendarDays, slotsByDay]);
 
+        const calendarWindowLayout = useMemo(() => {
+            const len = calendarDays.length;
+            const colW = Math.max(dayColumnWidth, 1);
+            const vw = Math.max(calendarViewportWidth || 0, colW * Math.max(visibleDayCount, 1));
+            const scrollLeft = gridScrollRef.current ? gridScrollRef.current.scrollLeft : 0;
+            const overscan = CALENDAR_WINDOW_OVERSCAN_DAYS;
+            let firstIdx = Math.floor(scrollLeft / colW) - overscan;
+            firstIdx = Math.max(0, Math.min(Math.max(0, len - 1), firstIdx));
+            const colsNeeded = Math.max(1, Math.ceil(vw / colW) + overscan * 2 + 2);
+            let lastIdx = Math.min(len, firstIdx + colsNeeded);
+            if (lastIdx <= firstIdx) lastIdx = Math.min(len, firstIdx + 1);
+            const visibleDays = calendarDays.slice(firstIdx, lastIdx);
+            const leftSpacer = firstIdx * colW;
+            const rightSpacer = (len - lastIdx) * colW;
+            const gridTemplateColumns = `${leftSpacer}px repeat(${visibleDays.length}, ${colW}px) ${rightSpacer}px`;
+            return {
+                visibleDays,
+                firstIdx,
+                lastIdx,
+                gridTemplateColumns,
+                colW,
+            };
+        }, [calendarDays, dayColumnWidth, calendarViewportWidth, calendarWindowScrollTick, visibleDayCount]);
+
         const openNewSlot = (date, hour) => {
             if (shouldSuppressCalendarClick()) return;
             const start = resolveCalendarCellStart(date, hour);
             const end = resolveCalendarCellStart(date, hour + 1);
+            // #region agent log
+            sendPlanningDebugLog({
+                runId: 'range-debug-1',
+                hypothesisId: 'H6',
+                location: 'heys_planning_schedule_v1.js:openNewSlot',
+                message: 'openNewSlot committed',
+                data: {
+                    date: start.date,
+                    startTime: start.time,
+                    endTime: end.time,
+                },
+            });
+            // #endregion
             setSlotDraft(buildSlotDraft({
                 date: start.date,
                 startTime: start.time,
@@ -46429,13 +47303,417 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             }));
         };
 
-        const beginCalendarCellPointer = (day, event) => {
-            if (event.pointerType === 'mouse' && event.button !== 0) return;
-            if (rangePointerSessionRef.current) return;
-            const col = typeof event.currentTarget.closest === 'function'
-                ? event.currentTarget.closest('.planning-calendar-day-col')
+        const commitCalendarRangeDraft = (active, logOptions) => {
+            if (!active) return;
+
+            if (!active.moved) {
+                if (active.isTouchPointer) {
+                    const startMinutes = columnYToGridWallMinutes(
+                        active.y0,
+                        CALENDAR_TOTAL_HEIGHT,
+                        HOURS.length,
+                        CALENDAR_START_HOUR,
+                    );
+                    const endMinutes = startMinutes + (active.longPressActivated ? 60 : 30);
+                    suppressCalendarClick();
+                    setSlotDraft(buildSlotDraft({
+                        date: active.day,
+                        startTime: formatWallClockHm(startMinutes),
+                        endTime: formatWallClockHm(endMinutes),
+                        quickCreate: true,
+                    }));
+                    return;
+                }
+                if (!shouldSuppressCalendarClick()) {
+                    const hourIndex = Math.max(0, Math.min(HOURS.length - 1, Math.floor(active.y0 / CALENDAR_HOUR_HEIGHT)));
+                    openNewSlot(active.day, HOURS[hourIndex]);
+                }
+                return;
+            }
+
+            const effectiveY1 = active.longPressActivated
+                ? active.y0 + Math.max(CALENDAR_HOUR_HEIGHT, active.y1 - active.y0)
+                : active.y1;
+            const times = rangeColumnYToSlotTimes(
+                active.y0,
+                effectiveY1,
+                CALENDAR_TOTAL_HEIGHT,
+                HOURS.length,
+                CALENDAR_START_HOUR,
+            );
+            suppressCalendarClick();
+            setSlotDraft(buildSlotDraft({
+                date: active.day,
+                startTime: times.startTime,
+                endTime: times.endTime,
+                quickCreate: true,
+            }));
+
+            if (logOptions?.location && logOptions?.message) {
+                // #region agent log
+                sendPlanningDebugLog({
+                    runId: 'range-debug-1',
+                    hypothesisId: logOptions.hypothesisId || 'H7',
+                    location: logOptions.location,
+                    message: logOptions.message,
+                    data: {
+                        date: active.day,
+                        startTime: times.startTime,
+                        endTime: times.endTime,
+                    },
+                });
+                // #endregion
+            }
+        };
+
+        // Store latest beginCalendarCellTouch in a ref so native listeners
+        // always call the current version (avoids stale closure).
+        const cellTouchHandlerRef = useRef(null);
+
+        // Attach a single non-passive touchstart listener per day-column
+        // via ref callback. This avoids the React passive-listener issue.
+        const dayColTouchMapRef = useRef(new Map());
+
+        useEffect(() => {
+            const html = document.documentElement;
+            const bump = () => setCalendarThemeTick((n) => n + 1);
+            const observer = new MutationObserver((records) => {
+                for (const record of records) {
+                    if (record.attributeName === 'data-theme') bump();
+                }
+            });
+            observer.observe(html, { attributes: true, attributeFilter: ['data-theme'] });
+            return () => observer.disconnect();
+        }, []);
+
+        const makeDayColTouchRef = (day) => {
+            const prev = dayColTouchMapRef.current.get(day);
+            if (prev) return prev.refCb;
+            const entry = { node: null, handler: null, refCb: null };
+            entry.refCb = (node) => {
+                if (entry.node && entry.node !== node && entry.handler) {
+                    entry.node.removeEventListener('touchstart', entry.handler);
+                    if (entry.contextHandler) entry.node.removeEventListener('contextmenu', entry.contextHandler);
+                }
+                entry.node = node;
+                if (!node) { entry.handler = null; entry.contextHandler = null; return; }
+                entry.handler = (event) => {
+                    // Only fire for direct calendar-cell touches
+                    const cell = event.target?.closest?.('.planning-calendar-cell');
+                    if (!cell || !node.contains(cell)) return;
+                    // Read from ref to get the latest version
+                    const fn = cellTouchHandlerRef.current;
+                    if (fn) fn(day, event);
+                };
+                node.addEventListener('touchstart', entry.handler, { passive: true });
+                // Prevent native context menu on long press (Android/iOS) which
+                // would otherwise fire touchcancel before our hold timer completes.
+                entry.contextHandler = (e) => e.preventDefault();
+                node.addEventListener('contextmenu', entry.contextHandler);
+            };
+            dayColTouchMapRef.current.set(day, entry);
+            return entry.refCb;
+        };
+
+        const beginCalendarCellTouch = (day, event) => {
+            const touchPoint = event?.touches?.[0];
+            if (!touchPoint || (event?.touches?.length || 0) !== 1) return;
+            if (rangePointerSessionRef.current || rangeTouchSessionRef.current) return;
+
+            const col = typeof event.target?.closest === 'function'
+                ? event.target.closest('.planning-calendar-day-col')
                 : null;
             if (!col) return;
+
+            const rect = col.getBoundingClientRect();
+            const y = touchPoint.clientY - rect.top;
+            const session = {
+                day,
+                col,
+                targetNode: event.currentTarget || null,
+                touchId: touchPoint.identifier,
+                x0: touchPoint.clientX,
+                y0: y,
+                y1: y,
+                isTouchPointer: true,
+                activated: false,
+                moved: false,
+                longPressActivated: false,
+                holdTimer: 0,
+                prevBodyOverflow: '',
+                prevGridOverflow: '',
+                prevBodyTouchAction: '',
+                prevGridTouchAction: '',
+                didLogActivatedMove: false,
+                handleTouchMovePassive: null,
+                handleTouchMoveActive: null,
+                handleTouchEnd: null,
+                handleTouchCancel: null,
+            };
+            rangeTouchSessionRef.current = session;
+
+            // #region agent log
+            sendPlanningDebugLog({
+                runId: 'range-debug-1',
+                hypothesisId: 'H1-touch',
+                location: 'heys_planning_schedule_v1.js:beginCalendarCellTouch',
+                message: 'range touch start',
+                data: {
+                    touchId: session.touchId,
+                    bodyScrollTop: bodyScrollRef.current?.scrollTop || 0,
+                    gridScrollTop: gridScrollRef.current?.scrollTop || 0,
+                },
+            });
+            // #endregion
+
+            const clearHoldTimer = (active) => {
+                if (!active?.holdTimer) return;
+                window.clearTimeout(active.holdTimer);
+                active.holdTimer = 0;
+            };
+
+            const cleanupTouchSession = () => {
+                const active = rangeTouchSessionRef.current;
+                if (!active) return null;
+                if (typeof active.handleTouchMovePassive === 'function') {
+                    document.removeEventListener('touchmove', active.handleTouchMovePassive, true);
+                }
+                if (typeof active.handleTouchMoveActive === 'function') {
+                    document.removeEventListener('touchmove', active.handleTouchMoveActive, true);
+                }
+                if (typeof active.handleTouchEnd === 'function') {
+                    document.removeEventListener('touchend', active.handleTouchEnd, true);
+                }
+                if (typeof active.handleTouchCancel === 'function') {
+                    document.removeEventListener('touchcancel', active.handleTouchCancel, true);
+                }
+                rangeTouchSessionRef.current = null;
+                setRangeSelectPreview(null);
+                clearHoldTimer(active);
+                if (bodyScrollRef.current) {
+                    bodyScrollRef.current.style.overflow = active.prevBodyOverflow || '';
+                    bodyScrollRef.current.style.touchAction = active.prevBodyTouchAction || '';
+                }
+                if (gridScrollRef.current) {
+                    gridScrollRef.current.style.overflow = active.prevGridOverflow || '';
+                    gridScrollRef.current.style.touchAction = active.prevGridTouchAction || '';
+                }
+                return active;
+            };
+
+            const activateTouchRange = () => {
+                const active = rangeTouchSessionRef.current;
+                if (!active || active !== session || active.activated) {
+                    return;
+                }
+
+                active.activated = true;
+                active.longPressActivated = true;
+                try { navigator.vibrate?.(10); } catch (_e) { /* unsupported */ }
+
+                if (typeof active.handleTouchMovePassive === 'function') {
+                    document.removeEventListener('touchmove', active.handleTouchMovePassive, true);
+                }
+                if (typeof active.handleTouchMoveActive === 'function') {
+                    document.addEventListener('touchmove', active.handleTouchMoveActive, { passive: false, capture: true });
+                }
+
+                if (bodyScrollRef.current) bodyScrollRef.current.style.overflow = 'hidden';
+                if (gridScrollRef.current) gridScrollRef.current.style.overflow = 'hidden';
+                if (bodyScrollRef.current) bodyScrollRef.current.style.touchAction = 'none';
+                if (gridScrollRef.current) gridScrollRef.current.style.touchAction = 'none';
+
+                // #region agent log
+                sendPlanningDebugLog({
+                    runId: 'range-debug-1',
+                    hypothesisId: 'H1-touch',
+                    location: 'heys_planning_schedule_v1.js:touchHoldTimer',
+                    message: 'touch long press activated',
+                    data: {
+                        touchId: active.touchId,
+                        y0: active.y0,
+                        bodyOverflow: bodyScrollRef.current?.style?.overflow || '',
+                        gridOverflow: gridScrollRef.current?.style?.overflow || '',
+                    },
+                });
+                // #endregion
+
+                setRangeSelectPreview({
+                    day: active.day,
+                    top: active.y0,
+                    height: CALENDAR_HOUR_HEIGHT,
+                });
+            };
+
+            session.handleTouchMovePassive = (moveEvent) => {
+                const active = rangeTouchSessionRef.current;
+                if (!active || active !== session) return;
+
+                const point = getTouchEventPoint(moveEvent, active.touchId);
+                if (!point) return;
+
+                const r = active.col.getBoundingClientRect();
+                active.y1 = point.clientY - r.top;
+                const distanceY = Math.abs(active.y1 - active.y0);
+                const distanceX = Math.abs(point.clientX - (active.x0 || 0));
+
+                if (!active.activated && (distanceY >= CALENDAR_CELL_LONG_PRESS_MOVE_CANCEL_THRESHOLD || distanceX >= CALENDAR_CELL_LONG_PRESS_MOVE_CANCEL_THRESHOLD)) {
+                    sendPlanningDebugLog({
+                        runId: 'range-debug-1',
+                        hypothesisId: 'H2-touch',
+                        location: 'heys_planning_schedule_v1.js:touchMovePassive',
+                        message: 'touch hold cancelled by movement before activation',
+                        data: {
+                            touchId: active.touchId,
+                            distanceX,
+                            distanceY,
+                            threshold: CALENDAR_CELL_LONG_PRESS_MOVE_CANCEL_THRESHOLD,
+                        },
+                    });
+                    cleanupTouchSession();
+                }
+            };
+
+            session.handleTouchMoveActive = (moveEvent) => {
+                const active = rangeTouchSessionRef.current;
+                if (!active || active !== session || !active.activated) return;
+
+                const point = getTouchEventPoint(moveEvent, active.touchId);
+                if (!point) return;
+
+                const r = active.col.getBoundingClientRect();
+                active.y1 = point.clientY - r.top;
+
+                if (moveEvent.cancelable) moveEvent.preventDefault();
+                if (Math.abs(active.y1 - active.y0) >= RANGE_DRAG_THRESHOLD_PX) {
+                    active.moved = true;
+                }
+                if (!active.didLogActivatedMove) {
+                    active.didLogActivatedMove = true;
+                    // #region agent log
+                    sendPlanningDebugLog({
+                        runId: 'range-debug-1',
+                        hypothesisId: 'H3-touch',
+                        location: 'heys_planning_schedule_v1.js:touchMoveActive',
+                        message: 'touch activated move observed',
+                        data: {
+                            touchId: active.touchId,
+                            y0: active.y0,
+                            y1: active.y1,
+                            moved: active.moved,
+                            bodyScrollTop: bodyScrollRef.current?.scrollTop || 0,
+                            gridScrollTop: gridScrollRef.current?.scrollTop || 0,
+                        },
+                    });
+                    // #endregion
+                }
+                if (!active.moved && !active.longPressActivated) return;
+                const rawDown = active.y1 - active.y0;
+                const heightPx = Math.max(CALENDAR_HOUR_HEIGHT, rawDown);
+                setRangeSelectPreview({ day: active.day, top: active.y0, height: heightPx });
+            };
+
+            session.handleTouchEnd = (touchEndEvent) => {
+                const active = rangeTouchSessionRef.current;
+                if (!active || active !== session) return;
+                const point = getTouchEventPoint(touchEndEvent, active.touchId);
+                const cleaned = cleanupTouchSession();
+                if (!cleaned) return;
+
+                if (point) {
+                    const r = cleaned.col.getBoundingClientRect();
+                    cleaned.y1 = point.clientY - r.top;
+                }
+
+                // #region agent log
+                sendPlanningDebugLog({
+                    runId: 'range-debug-1',
+                    hypothesisId: 'H4-touch',
+                    location: 'heys_planning_schedule_v1.js:touchEnd',
+                    message: 'touch range finish',
+                    data: {
+                        touchId: cleaned.touchId,
+                        activated: cleaned.activated,
+                        moved: cleaned.moved,
+                        y0: cleaned.y0,
+                        y1: cleaned.y1,
+                    },
+                });
+                // #endregion
+
+                if (cleaned.activated) {
+                    commitCalendarRangeDraft(cleaned, {
+                        location: 'heys_planning_schedule_v1.js:touchEnd',
+                        message: 'range draft committed by touch end',
+                        hypothesisId: 'H7-touch',
+                    });
+                    return;
+                }
+
+                const yEnd = typeof cleaned.y1 === 'number' ? cleaned.y1 : cleaned.y0;
+                const dy = Math.abs(yEnd - cleaned.y0);
+                if (!cleaned.moved && dy <= CALENDAR_TOUCH_TAP_SLOP_PX) {
+                    commitCalendarRangeDraft(cleaned, {
+                        location: 'heys_planning_schedule_v1.js:touchTap',
+                        message: 'quick slot draft from tap',
+                        hypothesisId: 'H7-touch-tap',
+                    });
+                }
+            };
+
+            session.handleTouchCancel = (touchCancelEvent) => {
+                const active = rangeTouchSessionRef.current;
+                if (!active || active !== session) return;
+                const point = getTouchEventPoint(touchCancelEvent, active.touchId);
+                const cleaned = cleanupTouchSession();
+                if (!cleaned) return;
+
+                if (point) {
+                    const r = cleaned.col.getBoundingClientRect();
+                    cleaned.y1 = point.clientY - r.top;
+                }
+
+                // #region agent log
+                sendPlanningDebugLog({
+                    runId: 'range-debug-1',
+                    hypothesisId: 'H5-touch',
+                    location: 'heys_planning_schedule_v1.js:touchCancel',
+                    message: 'touch range cancelled',
+                    data: {
+                        touchId: cleaned.touchId,
+                        activated: cleaned.activated,
+                        moved: cleaned.moved,
+                        y0: cleaned.y0,
+                        y1: cleaned.y1,
+                    },
+                });
+                // #endregion
+
+                if (!cleaned.activated) return;
+                commitCalendarRangeDraft(cleaned, {
+                    location: 'heys_planning_schedule_v1.js:touchCancel',
+                    message: 'range draft committed by touch cancel',
+                    hypothesisId: 'H7-touch',
+                });
+            };
+
+            session.prevBodyOverflow = bodyScrollRef.current?.style?.overflow || '';
+            session.prevGridOverflow = gridScrollRef.current?.style?.overflow || '';
+            session.prevBodyTouchAction = bodyScrollRef.current?.style?.touchAction || '';
+            session.prevGridTouchAction = gridScrollRef.current?.style?.touchAction || '';
+            session.holdTimer = window.setTimeout(activateTouchRange, CALENDAR_CELL_LONG_PRESS_MS);
+
+            document.addEventListener('touchmove', session.handleTouchMovePassive, { passive: true, capture: true });
+            document.addEventListener('touchend', session.handleTouchEnd, { passive: true, capture: true });
+            document.addEventListener('touchcancel', session.handleTouchCancel, { passive: true, capture: true });
+        };
+
+        // Keep ref in sync so native listeners always call latest version
+        cellTouchHandlerRef.current = beginCalendarCellTouch;
+
+        const beginCalendarCellPointer = (day, event) => {
+            if (event.pointerType === 'mouse' && event.button !== 0) return;
+            if (rangePointerSessionRef.current || rangeTouchSessionRef.current) return;
 
             const pointerType = String(event.pointerType || '').toLowerCase();
             const isLikelyTouchDevice = !!usesTouchLikeInput;
@@ -46443,20 +47721,51 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                 || pointerType === 'pen'
                 || (!pointerType && isLikelyTouchDevice)
                 || (pointerType === 'mouse' && isLikelyTouchDevice);
+            if (isTouchPointer) return;
+
+            const col = typeof event.currentTarget.closest === 'function'
+                ? event.currentTarget.closest('.planning-calendar-day-col')
+                : null;
+            if (!col) return;
             const rect = col.getBoundingClientRect();
             const y = event.clientY - rect.top;
             const session = {
                 day,
                 col,
+                targetNode: event.currentTarget || null,
                 pointerId: event.pointerId,
                 y0: y,
                 y1: y,
                 isTouchPointer,
                 activated: !isTouchPointer,
                 moved: false,
+                longPressActivated: false,
                 holdTimer: 0,
+                prevTouchAction: '',
+                prevBodyOverflow: '',
+                prevGridOverflow: '',
+                prevBodyTouchAction: '',
+                prevGridTouchAction: '',
+                didLogActivatedMove: false,
             };
             rangePointerSessionRef.current = session;
+
+            // #region agent log
+            sendPlanningDebugLog({
+                runId: 'range-debug-1',
+                hypothesisId: 'H1',
+                location: 'heys_planning_schedule_v1.js:beginCalendarCellPointer',
+                message: 'range pointer down',
+                data: {
+                    pointerType,
+                    isLikelyTouchDevice,
+                    isTouchPointer,
+                    pointerId: session.pointerId,
+                    bodyScrollTop: bodyScrollRef.current?.scrollTop || 0,
+                    gridScrollTop: gridScrollRef.current?.scrollTop || 0,
+                },
+            });
+            // #endregion
 
             const clearHoldTimer = (active) => {
                 if (!active?.holdTimer) return;
@@ -46473,6 +47782,19 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                 const distance = Math.abs(active.y1 - active.y0);
                 if (!active.activated) {
                     if (active.isTouchPointer && distance >= CALENDAR_CELL_LONG_PRESS_MOVE_CANCEL_THRESHOLD) {
+                        // #region agent log
+                        sendPlanningDebugLog({
+                            runId: 'range-debug-1',
+                            hypothesisId: 'H2',
+                            location: 'heys_planning_schedule_v1.js:onMove',
+                            message: 'hold cancelled by movement before activation',
+                            data: {
+                                pointerId: active.pointerId,
+                                distance,
+                                threshold: CALENDAR_CELL_LONG_PRESS_MOVE_CANCEL_THRESHOLD,
+                            },
+                        });
+                        // #endregion
                         clearHoldTimer(active);
                         return;
                     }
@@ -46483,10 +47805,35 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                 if (Math.abs(active.y1 - active.y0) >= RANGE_DRAG_THRESHOLD_PX) {
                     active.moved = true;
                 }
-                if (!active.moved) return;
-                const topY = Math.min(active.y0, active.y1);
-                const heightPx = Math.max(RANGE_DRAG_THRESHOLD_PX, Math.abs(active.y1 - active.y0));
-                setRangeSelectPreview({ day: active.day, top: topY, height: heightPx });
+                if (!active.didLogActivatedMove) {
+                    active.didLogActivatedMove = true;
+                    // #region agent log
+                    sendPlanningDebugLog({
+                        runId: 'range-debug-1',
+                        hypothesisId: 'H3',
+                        location: 'heys_planning_schedule_v1.js:onMove',
+                        message: 'activated move observed',
+                        data: {
+                            pointerId: active.pointerId,
+                            y0: active.y0,
+                            y1: active.y1,
+                            moved: active.moved,
+                            bodyScrollTop: bodyScrollRef.current?.scrollTop || 0,
+                            gridScrollTop: gridScrollRef.current?.scrollTop || 0,
+                        },
+                    });
+                    // #endregion
+                }
+                if (!active.moved && !active.longPressActivated) return;
+                if (active.longPressActivated) {
+                    const rawDown = active.y1 - active.y0;
+                    const heightPx = Math.max(CALENDAR_HOUR_HEIGHT, rawDown);
+                    setRangeSelectPreview({ day: active.day, top: active.y0, height: heightPx });
+                } else {
+                    const topY = Math.min(active.y0, active.y1);
+                    const heightPx = Math.max(RANGE_DRAG_THRESHOLD_PX, Math.abs(active.y1 - active.y0));
+                    setRangeSelectPreview({ day: active.day, top: topY, height: heightPx });
+                }
             };
 
             const cleanupPointerSession = () => {
@@ -46498,6 +47845,28 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                 rangePointerSessionRef.current = null;
                 setRangeSelectPreview(null);
                 clearHoldTimer(active);
+                if (active.isTouchPointer && active.col) {
+                    active.col.style.touchAction = active.prevTouchAction || '';
+                }
+                if (active.isTouchPointer && bodyScrollRef.current) {
+                    bodyScrollRef.current.style.overflow = active.prevBodyOverflow || '';
+                    bodyScrollRef.current.style.touchAction = active.prevBodyTouchAction || '';
+                }
+                if (active.isTouchPointer && gridScrollRef.current) {
+                    gridScrollRef.current.style.overflow = active.prevGridOverflow || '';
+                    gridScrollRef.current.style.touchAction = active.prevGridTouchAction || '';
+                }
+                if (
+                    active.pointerId != null
+                    && active.targetNode
+                    && typeof active.targetNode.releasePointerCapture === 'function'
+                ) {
+                    try {
+                        active.targetNode.releasePointerCapture(active.pointerId);
+                    } catch (error) {
+                        // ignore
+                    }
+                }
                 return active;
             };
 
@@ -46509,67 +47878,123 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                 const r = active.col.getBoundingClientRect();
                 active.y1 = ev.clientY - r.top;
 
+                // #region agent log
+                sendPlanningDebugLog({
+                    runId: 'range-debug-1',
+                    hypothesisId: 'H4',
+                    location: 'heys_planning_schedule_v1.js:finish',
+                    message: 'range finish',
+                    data: {
+                        pointerId: active.pointerId,
+                        activated: active.activated,
+                        moved: active.moved,
+                        y0: active.y0,
+                        y1: active.y1,
+                        pointerType: String(ev.pointerType || ''),
+                    },
+                });
+                // #endregion
+
                 if (!active.activated) {
                     return;
                 }
-
-                if (!active.moved) {
-                    if (active.isTouchPointer) {
-                        const startMinutes = columnYToGridWallMinutes(
-                            active.y0,
-                            CALENDAR_TOTAL_HEIGHT,
-                            HOURS.length,
-                            CALENDAR_START_HOUR,
-                        );
-                        const endMinutes = startMinutes + 30;
-                        suppressCalendarClick();
-                        setSlotDraft(buildSlotDraft({
-                            date: active.day,
-                            startTime: formatWallClockHm(startMinutes),
-                            endTime: formatWallClockHm(endMinutes),
-                            quickCreate: true,
-                        }));
-                        return;
-                    }
-                    if (!shouldSuppressCalendarClick()) {
-                        const hourIndex = Math.max(0, Math.min(HOURS.length - 1, Math.floor(active.y0 / CALENDAR_HOUR_HEIGHT)));
-                        openNewSlot(active.day, HOURS[hourIndex]);
-                    }
-                    return;
-                }
-
-                const times = rangeColumnYToSlotTimes(
-                    active.y0,
-                    active.y1,
-                    CALENDAR_TOTAL_HEIGHT,
-                    HOURS.length,
-                    CALENDAR_START_HOUR,
-                );
-                suppressCalendarClick();
-                setSlotDraft(buildSlotDraft({
-                    date: active.day,
-                    startTime: times.startTime,
-                    endTime: times.endTime,
-                    quickCreate: true,
-                }));
+                commitCalendarRangeDraft(active, {
+                    location: 'heys_planning_schedule_v1.js:finish',
+                    message: 'range draft committed by finish',
+                    hypothesisId: 'H7',
+                });
             };
 
             const cancel = (ev) => {
                 const active = rangePointerSessionRef.current;
                 if (!active || ev.pointerId !== active.pointerId) return;
+                // #region agent log
+                sendPlanningDebugLog({
+                    runId: 'range-debug-1',
+                    hypothesisId: 'H5',
+                    location: 'heys_planning_schedule_v1.js:cancel',
+                    message: 'range cancelled',
+                    data: {
+                        pointerId: active.pointerId,
+                        activated: active.activated,
+                        moved: active.moved,
+                        pointerType: String(ev.pointerType || ''),
+                        bodyScrollTop: bodyScrollRef.current?.scrollTop || 0,
+                        gridScrollTop: gridScrollRef.current?.scrollTop || 0,
+                    },
+                });
+                // #endregion
                 cleanupPointerSession();
+
+                if (!active.activated) return;
+
+                // #region agent log
+                sendPlanningDebugLog({
+                    runId: 'range-debug-1',
+                    hypothesisId: 'H5',
+                    location: 'heys_planning_schedule_v1.js:cancel',
+                    message: 'cancel promoted to finish',
+                    data: {
+                        pointerId: active.pointerId,
+                        moved: active.moved,
+                        y0: active.y0,
+                        y1: active.y1,
+                    },
+                });
+                // #endregion
+
+                commitCalendarRangeDraft(active, {
+                    location: 'heys_planning_schedule_v1.js:cancel',
+                    message: 'range draft committed by cancel',
+                    hypothesisId: 'H7',
+                });
             };
 
             if (session.isTouchPointer) {
+                session.prevTouchAction = session.col?.style?.touchAction || '';
+                if (session.col) session.col.style.touchAction = 'none';
+                session.prevBodyOverflow = bodyScrollRef.current?.style?.overflow || '';
+                session.prevGridOverflow = gridScrollRef.current?.style?.overflow || '';
+                session.prevBodyTouchAction = bodyScrollRef.current?.style?.touchAction || '';
+                session.prevGridTouchAction = gridScrollRef.current?.style?.touchAction || '';
+                if (session.pointerId != null && session.targetNode && typeof session.targetNode.setPointerCapture === 'function') {
+                    try {
+                        session.targetNode.setPointerCapture(session.pointerId);
+                    } catch (error) {
+                        // ignore
+                    }
+                }
+                if (event.cancelable) event.preventDefault();
                 session.holdTimer = window.setTimeout(() => {
                     const active = rangePointerSessionRef.current;
                     if (!active || active !== session) return;
                     active.activated = true;
-                    active.moved = true;
+                    active.longPressActivated = true;
+                    try { navigator.vibrate?.(10); } catch (_e) { /* unsupported */ }
+                    if (bodyScrollRef.current) bodyScrollRef.current.style.overflow = 'hidden';
+                    if (gridScrollRef.current) gridScrollRef.current.style.overflow = 'hidden';
+                    if (bodyScrollRef.current) bodyScrollRef.current.style.touchAction = 'none';
+                    if (gridScrollRef.current) gridScrollRef.current.style.touchAction = 'none';
+                    // #region agent log
+                    sendPlanningDebugLog({
+                        runId: 'range-debug-1',
+                        hypothesisId: 'H1',
+                        location: 'heys_planning_schedule_v1.js:holdTimer',
+                        message: 'long press activated',
+                        data: {
+                            pointerId: active.pointerId,
+                            y0: active.y0,
+                            bodyOverflow: bodyScrollRef.current?.style?.overflow || '',
+                            gridOverflow: gridScrollRef.current?.style?.overflow || '',
+                            bodyTouchAction: bodyScrollRef.current?.style?.touchAction || '',
+                            gridTouchAction: gridScrollRef.current?.style?.touchAction || '',
+                        },
+                    });
+                    // #endregion
                     setRangeSelectPreview({
                         day: active.day,
                         top: active.y0,
-                        height: RANGE_DRAG_THRESHOLD_PX,
+                        height: CALENDAR_HOUR_HEIGHT,
                     });
                 }, CALENDAR_CELL_LONG_PRESS_MS);
             }
@@ -46653,48 +48078,73 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             className: 'planning-calendar-screen' + (isCompactCalendarView ? ' planning-calendar-screen--drag-zoom' : ''),
         },
             h('div', { className: 'planning-calendar-nav' },
+                h('span', { className: 'planning-calendar-nav__density-label' }, 'Сколько дней в ряд'),
                 h('button', { type: 'button', className: 'planning-btn planning-btn--sm', onClick: () => scrollCalendarByDays(-visibleDayCount) }, '‹'),
                 h('button', { type: 'button', className: 'planning-btn planning-btn--sm', onClick: scrollCalendarToTodayWindow }, 'Сегодня'),
-                h('div', { className: 'planning-calendar-nav__window-toggle', role: 'group', 'aria-label': 'Показывать 3 или 7 дней' },
-                    [3, 7].map((days) => h('button', {
+                h('div', { className: 'planning-calendar-nav__window-toggle', role: 'group', 'aria-label': 'Плотность календаря: дней в окне' },
+                    CALENDAR_DAY_WINDOW_OPTIONS.map((days) => h('button', {
                         key: 'days-window-' + days,
                         type: 'button',
                         className: 'planning-btn planning-btn--sm' + (calendarDayWindow === days ? ' planning-btn--active' : ''),
                         'aria-pressed': calendarDayWindow === days ? 'true' : 'false',
-                        title: 'Показывать ' + days + ' ' + (days === 3 ? 'дня' : 'дней'),
+                        title: 'Показывать ' + days + ' дн.',
                         onClick: () => setCalendarDayWindow(days),
                     }, days + 'д')),
                 ),
                 h('button', { type: 'button', className: 'planning-btn planning-btn--sm', onClick: () => scrollCalendarByDays(visibleDayCount) }, '›'),
+                h('button', {
+                    type: 'button',
+                    className: 'hdr-theme-btn planning-calendar-nav__theme-btn',
+                    'aria-label': 'Сменить тему',
+                    title: 'Сменить тему',
+                    onClick: (event) => {
+                        event.stopPropagation();
+                        const root = window.HEYS;
+                        if (typeof root?.cycleTheme === 'function') {
+                            root.cycleTheme();
+                            return;
+                        }
+                        const html = document.documentElement;
+                        const current = html.getAttribute('data-theme') || 'light';
+                        const next = current === 'dark' ? 'light' : 'dark';
+                        html.setAttribute('data-theme', next);
+                        const U = root?.utils || {};
+                        try {
+                            localStorage.setItem('heys_theme_pref', next);
+                            localStorage.setItem('heys_theme_explicit', '1');
+                            localStorage.setItem('heys_theme', next);
+                            if (U.lsSet) {
+                                U.lsSet('heys_theme_pref', next);
+                                U.lsSet('heys_theme_explicit', '1');
+                                U.lsSet('heys_theme', next);
+                            }
+                        } catch (err) {
+                            // ignore quota / private mode
+                        }
+                        setCalendarThemeTick((n) => n + 1);
+                    },
+                }, typeof document !== 'undefined' && document.documentElement.getAttribute('data-theme') === 'dark' ? '☀️' : '🌙'),
             ),
             h('div', {
-                ref: headerShellRef,
-                className: 'planning-calendar-header-shell',
-                style: headerFrame.ready ? { height: headerFrame.height + 'px' } : undefined,
+                ref: gridScrollRef,
+                className: 'planning-calendar-unified-scroll',
+                onScroll: onCalendarGridScroll,
             },
                 h('div', {
                     ref: headerRef,
-                    className: 'planning-calendar-header' + (headerFrame.ready ? ' planning-calendar-header--pinned' : ''),
-                    style: headerFrame.ready
-                        ? {
-                            top: headerFrame.top + 'px',
-                            left: headerFrame.left + 'px',
-                            width: headerFrame.width + 'px',
-                        }
-                        : undefined,
+                    className: 'planning-calendar-header planning-calendar-header--sticky',
                 },
-                    h('div', { className: 'planning-calendar-time-gutter' }),
+                    h('div', { className: 'planning-calendar-time-gutter planning-calendar-time-gutter--sticky-corner' }),
                     h('div', {
-                        ref: headerScrollRef,
-                        className: 'planning-calendar-days-scroll planning-calendar-days-scroll--header',
-                        onWheel: handleHeaderWheel,
-                    },
-                        h('div', {
-                            ref: headerTrackRef,
-                            className: 'planning-calendar-days-track planning-calendar-days-track--header',
-                            style: { '--planning-calendar-day-width': dayColumnWidth + 'px' },
+                        className: 'planning-calendar-days-track planning-calendar-days-track--header planning-calendar-days-track--windowed',
+                        style: {
+                            '--planning-calendar-day-width': dayColumnWidth + 'px',
+                            gridTemplateColumns: calendarWindowLayout.gridTemplateColumns,
+                            gridAutoColumns: 'unset',
                         },
-                            calendarDays.map((day) => h('div', {
+                    },
+                        h('div', { key: 'cal-win-spacer-left', className: 'planning-calendar-window-spacer', 'aria-hidden': 'true' }),
+                            calendarWindowLayout.visibleDays.map((day) => h('div', {
                                 key: day,
                                 className: 'planning-calendar-day-header'
                                     + (day === todayIso ? ' planning-calendar-day-header--today' : '')
@@ -46726,18 +48176,11 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                                     h('span', { className: 'planning-calendar-day-label' }, getWeekdayLabel(day)),
                                     h('span', { className: 'planning-calendar-day-date' }, day.slice(8)),
                                 ),
-                                dayOccupancyByDay[day]?.count > 0 && h('div', {
-                                    className: 'planning-calendar-day-occupancy',
+                                dayOccupancyByDay[day]?.pressureTone && dayOccupancyByDay[day].pressureTone !== 'free' && h('span', {
+                                    className: 'planning-calendar-day-pressure planning-calendar-day-pressure--' + dayOccupancyByDay[day].pressureTone,
                                     'aria-label': dayOccupancyByDay[day].label,
-                                },
-                                    Array.from({ length: 4 }, (_, index) => h('span', {
-                                        key: day + '-occupancy-' + index,
-                                        className: 'planning-calendar-day-occupancy__dot'
-                                            + (index < (dayOccupancyByDay[day]?.level || 0)
-                                                ? ' planning-calendar-day-occupancy__dot--active'
-                                                : ''),
-                                    })),
-                                ),
+                                    title: dayOccupancyByDay[day].label,
+                                }, dayOccupancyByDay[day].pressureLabel),
                                 headerDropState.day === day && headerDropState.mode === 'unschedule' && h('span', {
                                     className: 'planning-calendar-day-drop-hint',
                                     'aria-hidden': 'true',
@@ -46758,19 +48201,17 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                                     })),
                                 ),
                             )),
+                            h('div', { key: 'cal-win-spacer-right', className: 'planning-calendar-window-spacer', 'aria-hidden': 'true' }),
                         ),
                     ),
-                ),
-            ),
-            h('div', {
-                ref: gridScrollRef,
-                className: 'planning-calendar-grid',
-                style: {
-                    paddingTop: calendarVerticalTopPadding + 'px',
-                    paddingBottom: calendarVerticalBottomPadding + 'px',
+                h('div', {
+                    className: 'planning-calendar-body-row',
+                    style: {
+                        paddingTop: calendarVerticalTopPadding + 'px',
+                        paddingBottom: calendarVerticalBottomPadding + 'px',
+                    },
                 },
-            },
-                h('div', { className: 'planning-calendar-time-gutter planning-calendar-time-gutter--grid' },
+                    h('div', { className: 'planning-calendar-time-gutter planning-calendar-time-gutter--grid' },
                     calendarCellDropPreview && h('div', {
                         className: 'planning-calendar-time-drop-range',
                         style: {
@@ -46793,17 +48234,18 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                         h('span', { className: 'planning-calendar-time-drop-preview__arrow' }, '→'),
                     ),
                 ),
-                h('div', {
-                    ref: bodyScrollRef,
-                    className: 'planning-calendar-days-scroll planning-calendar-days-scroll--body',
-                    onScroll: syncHeaderScroll,
-                },
                     h('div', {
-                        className: 'planning-calendar-days-track planning-calendar-days-track--grid',
-                        style: { '--planning-calendar-day-width': dayColumnWidth + 'px' },
+                        className: 'planning-calendar-days-track planning-calendar-days-track--grid planning-calendar-days-track--windowed',
+                        style: {
+                            '--planning-calendar-day-width': dayColumnWidth + 'px',
+                            gridTemplateColumns: calendarWindowLayout.gridTemplateColumns,
+                            gridAutoColumns: 'unset',
+                        },
                     },
-                        calendarDays.map((day) => h('div', {
+                        h('div', { key: 'cal-body-win-spacer-left', className: 'planning-calendar-window-spacer', 'aria-hidden': 'true' }),
+                        calendarWindowLayout.visibleDays.map((day) => h('div', {
                             key: day,
+                            ref: makeDayColTouchRef(day),
                             className: 'planning-calendar-day-col'
                                 + (day === todayIso ? ' planning-calendar-day-col--today' : '')
                                 + (isWeekendDay(day) ? ' planning-calendar-day-col--weekend' : ''),
@@ -46815,6 +48257,9 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                                         ? ' planning-calendar-cell--drop-target'
                                         : ''),
                                 onPointerDown: (event) => beginCalendarCellPointer(day, event),
+                                onContextMenu: (event) => {
+                                    event.preventDefault();
+                                },
                                 onDragOver: (event) => {
                                     const payload = parsePlanningDragPayload(event);
                                     if (!isPlanningCalendarDragPayload(payload)) return;
@@ -46844,24 +48289,9 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                                     top: calendarCellDropPreview.top + 'px',
                                     height: calendarCellDropPreview.height + 'px',
                                     '--planning-calendar-drop-preview-color': calendarCellDropPreview.accentColor || '#64748b',
-                                    ...(calendarCellDropPreview.kind === 'slot' && calendarCellDropPreview.background
-                                        ? { background: calendarCellDropPreview.background }
-                                        : {}),
                                 },
                                 'aria-hidden': 'true',
-                            },
-                                h('div', { className: 'planning-calendar-drop-preview__body' },
-                                    calendarCellDropPreview.parentGroupLabel && h('span', {
-                                        className: 'planning-calendar-drop-preview__parent',
-                                    }, calendarCellDropPreview.parentGroupLabel),
-                                    h('span', {
-                                        className: 'planning-calendar-drop-preview__title',
-                                    }, calendarCellDropPreview.title),
-                                    h('span', {
-                                        className: 'planning-calendar-drop-preview__time',
-                                    }, calendarCellDropPreview.timeLabel),
-                                ),
-                            ),
+                            }),
                             calendarDropCommitAccent?.day === day && h('div', {
                                 className: 'planning-calendar-drop-commit-marker',
                                 style: { top: calendarDropCommitAccent.top + 'px' },
@@ -46916,6 +48346,13 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                                         suppressCalendarClick();
                                         setSlotDeleteTarget({ slot, day });
                                     },
+                                    isPastDay: day < todayIso,
+                                    onQuickReschedule: day < todayIso && !isTaskDone
+                                        ? (target) => {
+                                            const targetDate = target === 'tomorrow' ? addDays(todayIso, 1) : todayIso;
+                                            state.updateSlot(slot.id, { date: targetDate });
+                                        }
+                                        : undefined,
                                 });
                             }),
                             day === todayIso && isCalendarNowTopVisible(nowLineTop) && h('div', {
@@ -46928,32 +48365,31 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                                 h('span', { className: 'planning-calendar-now-line__bar' }),
                             ),
                         )),
+                        h('div', { key: 'cal-body-win-spacer-right', className: 'planning-calendar-window-spacer', 'aria-hidden': 'true' }),
                     ),
                 ),
             ),
             touchDragPreview && h('div', {
-                className: 'planning-calendar-touch-preview'
+                className: 'planning-calendar-drag-ghost'
                     + (touchDragPreview.kind === 'slot'
-                        ? ' planning-calendar-touch-preview--slot'
-                        : ' planning-calendar-touch-preview--task'),
+                        ? ' planning-calendar-drag-ghost--slot'
+                        : ' planning-calendar-drag-ghost--task'),
                 style: {
-                    left: touchDragPreview.x + 'px',
-                    top: touchDragPreview.y + 'px',
-                    '--planning-calendar-touch-preview-color': touchDragPreview.accentColor || '#64748b',
-                    ...(touchDragPreview.kind === 'slot' && touchDragPreview.background
-                        ? { background: touchDragPreview.background }
-                        : {}),
+                    left: (touchDragPreview.x - (touchDragPreview.grabOffsetX || 0)) + 'px',
+                    top: (touchDragPreview.y - (touchDragPreview.grabOffsetY || 0)) + 'px',
+                    width: (touchDragPreview.width || 100) + 'px',
+                    height: (touchDragPreview.height || 60) + 'px',
+                    background: touchDragPreview.background || undefined,
+                    '--planning-drag-ghost-accent': touchDragPreview.accentColor || '#64748b',
                 },
             },
-                h('div', { className: 'planning-calendar-touch-preview__body' },
-                    touchDragPreview.parentGroupLabel && h('span', {
-                        className: 'planning-calendar-touch-preview__parent',
-                    }, touchDragPreview.parentGroupLabel),
-                    h('span', { className: 'planning-calendar-touch-preview__title' }, touchDragPreview.title),
-                ),
-                touchDragPreview.badgeText && h('span', {
-                    className: 'planning-calendar-touch-preview__badge',
-                }, touchDragPreview.badgeText),
+                touchDragPreview.parentGroupLabel && h('span', {
+                    className: 'planning-calendar-slot__parent',
+                }, touchDragPreview.parentGroupLabel),
+                h('span', {
+                    className: 'planning-calendar-slot__title'
+                        + (touchDragPreview.parentGroupLabel ? ' planning-calendar-slot__title--with-parent' : ''),
+                }, touchDragPreview.title),
             ),
             slotDeleteTarget && h(SlotDeleteActionSheet, {
                 slot: slotDeleteTarget.slot,
@@ -48777,8 +50213,15 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             ),
         );
 
-        return h('div', { className: 'planning-tab', style: planningLayoutStyle },
-            h('div', { className: 'planning-content' },
+        return h('div', {
+            className: 'planning-tab',
+            style: planningLayoutStyle,
+            'data-no-pull-refresh': 'true',
+        },
+            h('div', {
+                className: 'planning-content'
+                    + (activeScreen === 'calendar' ? ' planning-content--calendar-lock-scroll' : ''),
+            },
                 CurrentScreen ? h(CurrentScreen, { state: planState }) : h(PlanningFallback),
             ),
             h('div', { className: 'planning-subnav-shell', 'aria-hidden': 'true' }),

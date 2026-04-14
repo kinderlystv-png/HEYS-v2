@@ -46,7 +46,9 @@
       if (value.startsWith('¤Z¤') && HEYS.store?.decompress) {
         try {
           value = HEYS.store.decompress(value.slice(3));
-        } catch (_) { }
+        } catch (_) {
+          // Ignore compressed payload parse errors
+        }
       }
       try {
         return JSON.parse(value);
@@ -66,6 +68,154 @@
 
   function getCheckinSessionKey(clientId, dateKey) {
     return `heys_morning_checkin_done_${clientId || 'unknown'}_${dateKey || 'unknown'}`;
+  }
+
+  function countMealsWithItems(dayData) {
+    const meals = Array.isArray(dayData?.meals) ? dayData.meals : [];
+    return meals.filter((meal) => Array.isArray(meal?.items) && meal.items.length > 0).length;
+  }
+
+  function parseTimeToMinutes(time) {
+    if (typeof time !== 'string') return null;
+    const match = /^(\d{1,2}):(\d{2})$/.exec(time.trim());
+    if (!match) return null;
+    const hours = Number(match[1]);
+    const minutes = Number(match[2]);
+    if (Number.isNaN(hours) || Number.isNaN(minutes)) return null;
+    if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59) return null;
+    return hours * 60 + minutes;
+  }
+
+  function getFirstMealTime(dayData) {
+    const meals = Array.isArray(dayData?.meals) ? dayData.meals : [];
+    const times = meals
+      .filter((meal) => Array.isArray(meal?.items) && meal.items.length > 0)
+      .map((meal) => meal?.time)
+      .map(parseTimeToMinutes)
+      .filter((value) => Number.isFinite(value));
+    if (!times.length) return null;
+    const first = Math.min(...times);
+    const hh = String(Math.floor(first / 60)).padStart(2, '0');
+    const mm = String(first % 60).padStart(2, '0');
+    return `${hh}:${mm}`;
+  }
+
+  function writeDayData(dateKey, dayData) {
+    const key = `heys_dayv2_${dateKey}`;
+    if (HEYS.store?.set) {
+      HEYS.store.set(key, dayData);
+    } else if (HEYS.utils?.lsSet) {
+      HEYS.utils.lsSet(key, dayData);
+    } else {
+      try {
+        localStorage.setItem(key, JSON.stringify(dayData));
+      } catch (_) {
+        // Fallback storage is unavailable
+      }
+    }
+  }
+
+  function persistMorningActivationPatch(dateKey, patch, source = 'morning-activation') {
+    const dayData = readStoredValue(`heys_dayv2_${dateKey}`, {}) || {};
+    dayData.morningActivation = {
+      ...(dayData.morningActivation || {}),
+      ...patch
+    };
+    dayData.updatedAt = Date.now();
+    writeDayData(dateKey, dayData);
+    window.dispatchEvent(new CustomEvent('heys:day-updated', {
+      detail: {
+        date: dateKey,
+        field: 'morningActivation',
+        source,
+        forceReload: true
+      }
+    }));
+  }
+
+  function dayHasMorningActivationSyncedActivity(dayData) {
+    const trainings = Array.isArray(dayData?.trainings) ? dayData.trainings : [];
+    if (trainings.some((t) => t && t.source === 'morning_activation')) return true;
+    const household = Array.isArray(dayData?.householdActivities) ? dayData.householdActivities : [];
+    if (household.some((h) => h && h.source === 'morning_activation')) return true;
+    return false;
+  }
+
+  function shouldOpenMorningActivationFollowup(dayData) {
+    const firstMealTime = getFirstMealTime(dayData);
+    if (!firstMealTime) return { ok: false, firstMealTime: null };
+    const status = dayData?.morningActivation?.status;
+    if (status === 'done' || status === 'missed') {
+      return { ok: false, firstMealTime };
+    }
+    // Уже есть запись зарядки из фичи (trainings/household с source) — не дублируем опрос
+    if (dayHasMorningActivationSyncedActivity(dayData)) {
+      return { ok: false, firstMealTime };
+    }
+    return { ok: true, firstMealTime };
+  }
+
+  let followupOpening = false;
+
+  function maybeOpenMorningActivationFollowup(reason = 'unknown') {
+    if (followupOpening) return;
+    if (!HEYS.StepModal?.show) return;
+    if (!HEYS.StepModal?.registry?.morning_activation_followup) return;
+    if (document.getElementById('heys-step-modal-root')) return;
+
+    const currentClientId = getCurrentClientId();
+    if (!currentClientId) return;
+    const todayKey = getTodayKey();
+    const dayData = readStoredValue(`heys_dayv2_${todayKey}`, {}) || {};
+    const check = shouldOpenMorningActivationFollowup(dayData);
+    if (!check.ok) return;
+
+    const mealCount = countMealsWithItems(dayData);
+    const snoozeAt = dayData?.morningActivation?.followupSnoozeUntilMealCount;
+    if (snoozeAt != null && mealCount <= snoozeAt) {
+      console.info('[MorningCheckin] morning activation follow-up snoozed until next meal add', {
+        mealCount,
+        snoozeAt
+      });
+      return;
+    }
+
+    const currentState = dayData?.morningActivation || {};
+    if (currentState.status !== 'pending' || currentState.firstMealTime !== check.firstMealTime) {
+      persistMorningActivationPatch(todayKey, {
+        status: 'pending',
+        firstMealTime: check.firstMealTime
+      }, 'morning-activation-followup-open');
+    }
+
+    followupOpening = true;
+    HEYS.StepModal.show({
+      steps: ['morning_activation_followup'],
+      title: 'Утренняя зарядка',
+      showProgress: false,
+      showStreak: false,
+      showGreeting: false,
+      showTip: false,
+      allowSwipe: false,
+      context: { dateKey: todayKey, firstMealTime: check.firstMealTime, reason },
+      onClose: () => {
+        const fresh = readStoredValue(`heys_dayv2_${todayKey}`, {}) || {};
+        const mc = countMealsWithItems(fresh);
+        persistMorningActivationPatch(todayKey, {
+          followupSnoozeUntilMealCount: mc
+        }, 'morning-activation-followup-dismiss');
+        console.info('[MorningCheckin] morning activation follow-up dismissed (Позже) — repeat after next meal add', {
+          mealCount: mc
+        });
+        followupOpening = false;
+      },
+      onComplete: () => {
+        persistMorningActivationPatch(todayKey, {
+          followupSnoozeUntilMealCount: null
+        }, 'morning-activation-followup-complete');
+        followupOpening = false;
+      }
+    });
   }
 
   function debugDayStorage(todayKey, currentClientId, altKey) {
@@ -125,7 +275,9 @@
         sessionStorage.setItem(sessionKey, 'true');
         sessionStorage.removeItem('heys_morning_checkin_done');
       }
-    } catch (_) { }
+    } catch (_) {
+      // sessionStorage may be unavailable in private mode
+    }
     if (sessionStorage.getItem(sessionKey) === 'true') {
       console.info('[MorningCheckin] 🚫 Skip — sessionStorage флаг активен:', sessionKey);
       return false;
@@ -518,6 +670,22 @@
       }
     }
   };
+
+  window.addEventListener('heys:day-updated', (event) => {
+    const detail = event?.detail || {};
+    const dateKey = detail?.date || getTodayKey();
+    if (dateKey !== getTodayKey()) return;
+    if (detail?.source === 'morning-activation-followup-open') return;
+    if (detail?.source === 'morning-activation-followup-dismiss') return;
+    if (detail?.source === 'morning-activation-followup-complete') return;
+    setTimeout(() => maybeOpenMorningActivationFollowup(detail?.source || 'day-updated'), 60);
+  });
+
+  document.addEventListener('heys-stepmodal-ready', () => {
+    setTimeout(() => maybeOpenMorningActivationFollowup('stepmodal-ready'), 180);
+  });
+
+  setTimeout(() => maybeOpenMorningActivationFollowup('module-init'), 350);
 
   // console.log('[HEYS] MorningCheckin v2 loaded (using StepModal)');
 

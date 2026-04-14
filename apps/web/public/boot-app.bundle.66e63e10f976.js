@@ -12322,6 +12322,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
         // � Debounce для auth_required toast
         const authErrorShownRef = useRef(false);
         const authErrorTimeoutRef = useRef(null);
+        /** Схлопывание парного heysSyncCompleted + heys:data-uploaded в один проход UI */
+        const syncCompleteDedupeAtRef = useRef(0);
         // �🔒 Cooldown после первого sync — не показываем "syncing" сразу после загрузки
         const initialSyncCompletedAtRef = useRef(0);
         const INITIAL_SYNC_COOLDOWN_MS = 3000; // 3 секунды после первого sync не показываем syncing
@@ -12358,14 +12360,6 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                 return window.HEYS?.cloud?.getPendingDetails?.() || { days: 0, products: 0, profile: 0, other: 0 };
             } catch (e) {
                 return { days: 0, products: 0, profile: 0, other: 0 };
-            }
-        }, []);
-
-        const getRuntimeSyncStatus = useCallback(() => {
-            try {
-                return window.HEYS?.cloud?.getSyncStatus?.() || null;
-            } catch (e) {
-                return null;
             }
         }, []);
 
@@ -12432,10 +12426,6 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
         }, []);
 
         const enterBackgroundPendingSync = useCallback(() => {
-            if (!syncLockShownForCurrentSyncRef.current || !slowInternetShownForCurrentSyncRef.current) {
-                return;
-            }
-
             longSyncFallbackActiveRef.current = true;
             clearSyncLockOverlay();
             clearSlowInternetHint();
@@ -12597,7 +12587,6 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
             const runtimeSyncActive = !!syncingStartRef.current && (
                 cloudStatus === 'syncing'
                 || isRuntimeUploadInProgress()
-                || getRuntimeSyncStatus() === 'syncing'
                 || syncProgressTotalRef.current > 0
             );
 
@@ -12611,13 +12600,19 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
 
             clearSyncLockOverlay();
             clearSlowInternetHint();
-        }, [armLongSyncFallback, armSlowInternetHint, armSyncLockOverlay, clearSlowInternetHint, clearSyncLockOverlay, cloudStatus, ensureSyncingStart, getRuntimeSyncStatus, isRuntimeUploadInProgress]);
+        }, [armLongSyncFallback, armSlowInternetHint, armSyncLockOverlay, clearSlowInternetHint, clearSyncLockOverlay, cloudStatus, ensureSyncingStart, isRuntimeUploadInProgress]);
 
         useEffect(() => {
             const handleSyncComplete = (e) => {
                 if (e?.type === 'heysSyncCompleted' && e?.detail?.phaseA) {
                     return;
                 }
+
+                const nowDedupe = Date.now();
+                if (nowDedupe - syncCompleteDedupeAtRef.current < 380) {
+                    return;
+                }
+                syncCompleteDedupeAtRef.current = nowDedupe;
 
                 // ⚡️ Первый heysSyncCompleted после инициализации не должен триггерить UI
                 // если не было фактических локальных изменений/отложенных синков — иначе мерцание
@@ -12796,7 +12791,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                 const isPersistent = e.detail?.persistent || false;
 
                 if (code === 'auth_required') {
-                    setCloudStatus('offline');
+                    setCloudStatus('session');
                     setRetryCountdown(0);
 
                     // 🔥 Debounce: показываем toast и делаем logout только если не делали в последние 10 сек
@@ -12896,6 +12891,11 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
 
                 setShowOfflineBanner(false);
                 setShowOnlineBanner(true);
+
+                if (cloudStatusRef.current === 'session') {
+                    setTimeout(() => setShowOnlineBanner(false), 2000);
+                    return;
+                }
 
                 // 🆕 Haptic feedback при восстановлении связи
                 if ('vibrate' in navigator) {
@@ -13073,7 +13073,6 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
 
                 const runtimePending = getRuntimePendingCount();
                 const uploadInProgress = isRuntimeUploadInProgress();
-                const runtimeSyncStatus = getRuntimeSyncStatus();
                 const hasPendingDelta = runtimePending !== pendingCountRef.current;
                 const shouldRefreshDetails = runtimePending > 0
                     && (hasPendingDelta || detailsTick % SYNC_STATUS_DETAILS_REFRESH_EVERY === 0);
@@ -13099,7 +13098,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                     setPendingCount(runtimePending);
                 }
 
-                if (runtimePending > 0 && !uploadInProgress && runtimeSyncStatus === 'synced') {
+                if (runtimePending > 0 && !uploadInProgress && syncProgressTotalRef.current === 0) {
                     syncingStartRef.current = null;
                     clearSyncLockOverlay();
                     clearSlowInternetHint();
@@ -13114,7 +13113,6 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                 const syncVisualActive = !!syncingStartRef.current && (
                     cloudStatusRef.current === 'syncing'
                     || uploadInProgress
-                    || runtimeSyncStatus === 'syncing'
                     || syncProgressTotalRef.current > 0
                 );
 
@@ -13140,7 +13138,11 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                     }
                 }
 
-                if (runtimePending === 0 && !uploadInProgress && runtimeSyncStatus === 'synced') {
+                if (runtimePending === 0 && !uploadInProgress && (
+                    syncingStartRef.current
+                    || cloudStatusRef.current === 'syncing'
+                    || syncProgressTotalRef.current > 0
+                )) {
                     pendingChangesRef.current = false;
                     showSyncedWithMinDuration();
                 }
@@ -13161,7 +13163,6 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
             enterBackgroundPendingSync,
             getRuntimePendingCount,
             getRuntimePendingDetails,
-            getRuntimeSyncStatus,
             isRuntimeUploadInProgress,
             showPendingSyncBanner,
             showSlowInternetHint,
@@ -19366,7 +19367,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
             return `${Math.floor(m / 60)} ч назад`;
         };
         const handleSyncBadgeClick = () => {
-            if (effectiveDisplayStatus === 'syncing' || effectiveDisplayStatus === 'offline') return;
+            if (effectiveDisplayStatus === 'syncing' || effectiveDisplayStatus === 'offline' || effectiveDisplayStatus === 'session') return;
             haptic('light');
             if (HEYS?.cloud?.syncClient && clientIdValue) {
                 console.info('[HEYS.sync] 🔄 Manual force-sync triggered from badge');
@@ -19835,7 +19836,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                 // ☁️ Cloud sync indicator (v2.0: forceSync on click, auto-fade, relative time tooltip)
                 React.createElement('div', {
                     key: 'cloudsync',
-                    className: 'cloud-sync-indicator ' + effectiveDisplayStatus + (effectiveDisplayStatus !== 'syncing' && effectiveDisplayStatus !== 'offline' ? ' cloud-sync-indicator--clickable' : ''),
+                    className: 'cloud-sync-indicator ' + effectiveDisplayStatus + (effectiveDisplayStatus !== 'syncing' && effectiveDisplayStatus !== 'offline' && effectiveDisplayStatus !== 'session' ? ' cloud-sync-indicator--clickable' : ''),
                     title: (() => {
                         const routingMode = HEYS?.cloud?.getRoutingStatus?.()?.mode || 'unknown';
                         const modeLabel = routingMode === 'direct' ? '🔗 Direct' : routingMode === 'proxy' ? '🔀 Proxy' : '';
@@ -19862,6 +19863,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                                 ? `Офлайн — ${pendingCount} изменений ожидают синхронизации`
                                 : 'Офлайн — данные сохраняются локально';
                             if (pendingBreakdownText) baseTitle += ` · ${pendingBreakdownText}`;
+                        } else if (effectiveDisplayStatus === 'session') {
+                            baseTitle = 'Сессия истекла — войдите снова';
                         } else if (effectiveDisplayStatus === 'error') {
                             baseTitle = retryCountdown > 0
                                 ? `Ошибка. Повтор через ${retryCountdown}с — нажмите для повтора`
@@ -19890,6 +19893,9 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                                 ),
                                 pendingCount > 0 && React.createElement('span', { key: 'pb', className: 'pending-badge' }, pendingCount)
                             ]
+                                : effectiveDisplayStatus === 'session' ? [
+                                    React.createElement('span', { key: 'sess', className: 'cloud-icon session', 'aria-hidden': 'true' }, '🔑'),
+                                ]
                                 : effectiveDisplayStatus === 'queued' ? [
                                     React.createElement('svg', { key: 'cloud', className: 'cloud-icon idle', viewBox: '0 0 24 24', width: 16, height: 16, fill: 'currentColor' },
                                         React.createElement('path', { d: 'M19.35 10.04A7.49 7.49 0 0 0 12 4C9.11 4 6.6 5.64 5.35 8.04A5.994 5.994 0 0 0 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z' })
@@ -20787,7 +20793,6 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
 
         const activeEditableRef = React.useRef(null);
         const [showKeyboardDismiss, setShowKeyboardDismiss] = React.useState(false);
-        const [showSlowInternetHintLocal, setShowSlowInternetHintLocal] = React.useState(false);
 
         const syncKeyboardDismiss = React.useCallback(() => {
             if (typeof window === 'undefined' || typeof document === 'undefined') return;
@@ -20874,20 +20879,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
             };
         }, [syncKeyboardDismiss]);
 
-        React.useEffect(() => {
-            if (!showSyncLockOverlay) {
-                setShowSlowInternetHintLocal(false);
-                return;
-            }
-
-            const timeoutId = setTimeout(() => {
-                setShowSlowInternetHintLocal(true);
-            }, 3000);
-
-            return () => clearTimeout(timeoutId);
-        }, [showSyncLockOverlay]);
-
-        const shouldShowSlowInternetHint = showSlowInternetHint || showSlowInternetHintLocal;
+        const shouldShowSlowInternetHint = showSlowInternetHint;
 
         return React.createElement(
             React.Fragment,
@@ -23584,6 +23576,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                 setClientId(pinAuthClient);
                 window.HEYS = window.HEYS || {};
                 window.HEYS.currentClientId = pinAuthClient;
+                // Sync heys_client_current so nsKey resolves correctly on next reload
+                try { localStorage.setItem('heys_client_current', JSON.stringify(pinAuthClient)); } catch (_) { }
                 console.warn('[AuthInit] restored PIN currentClientId', pinAuthClient?.slice(0, 8));
 
                 // 🛠️ Миграция legacy ключей без clientId → scoped (PIN flow)
@@ -23827,6 +23821,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                 setClientId(cid);
                 window.HEYS = window.HEYS || {};
                 window.HEYS.currentClientId = cid;
+                try { localStorage.setItem('heys_client_current', JSON.stringify(cid)); } catch (_) { }
                 cloudRef.syncClient(cid)
                     .then(function () { devLog('[AuthInit] static client login synced'); })
                     .catch(function (err) {
@@ -24809,6 +24804,23 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                 clearTimeout(timeout);
             };
         }, [initialTabLoaded]);
+
+        // Re-read profile when client ID becomes available (fixes namespace mismatch on boot)
+        React.useEffect(() => {
+            const handleClientChanged = (e) => {
+                const cid = e?.detail?.clientId;
+                if (!cid) return;
+                const U = window.HEYS?.utils;
+                if (!U?.lsGet) return;
+                const freshTab = getDefaultTabFromProfile();
+                if (freshTab !== defaultTab) {
+                    devLog(`[App] 🏠 Re-read default tab after client change: ${freshTab}`);
+                    setDefaultTabState(freshTab);
+                }
+            };
+            window.addEventListener('heys:client-changed', handleClientChanged);
+            return () => window.removeEventListener('heys:client-changed', handleClientChanged);
+        }, [defaultTab]);
 
         const setDefaultTab = React.useCallback((newDefaultTab) => {
             if (!HOME_TABS.includes(newDefaultTab)) return;
@@ -27284,6 +27296,16 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                 });
                 setTabImmediate(fallbackTab);
             }, [tab, cloudUser, clientId, isInitializing, defaultTab, setTabImmediate]);
+
+            // Pull-to-refresh (document-level) разрешён только на дневных вкладках — см. heys_day_pull_refresh_v1.js
+            React.useEffect(() => {
+                if (typeof document === 'undefined' || !document.body) return undefined;
+                const allow = tab === 'stats' || tab === 'diary';
+                document.body.classList.toggle('heys-pull-refresh-day-active', allow);
+                return () => {
+                    document.body.classList.remove('heys-pull-refresh-day-active');
+                };
+            }, [tab]);
 
             React.useEffect(() => {
                 let cancelled = false;
