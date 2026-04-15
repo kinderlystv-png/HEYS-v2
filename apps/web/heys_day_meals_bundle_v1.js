@@ -5092,16 +5092,16 @@
                             padding: '4px 0 10px',
                         },
                     },
-                    React.createElement('button', {
-                        type: 'button',
-                        className: 'btn',
-                        onClick: () => setShowAllLoadedMeals(true),
-                        style: {
-                            borderRadius: '12px',
-                            padding: '8px 12px',
-                            fontWeight: '600',
-                        },
-                    }, `Показать верхние ${hiddenTopMealsCount}`))
+                        React.createElement('button', {
+                            type: 'button',
+                            className: 'btn',
+                            onClick: () => setShowAllLoadedMeals(true),
+                            style: {
+                                borderRadius: '12px',
+                                padding: '8px 12px',
+                                fontWeight: '600',
+                            },
+                        }, `Показать верхние ${hiddenTopMealsCount}`))
                 );
             }
 
@@ -5121,17 +5121,17 @@
                         padding: '10px 0 4px',
                     },
                 },
-                React.createElement('button', {
-                    type: 'button',
-                    className: 'btn',
-                    onClick: loadMoreMeals,
-                    style: {
-                        minWidth: '160px',
-                        borderRadius: '12px',
-                        padding: '10px 14px',
-                        fontWeight: '600',
-                    },
-                }, `Показать ещё (${Math.max(0, totalMeals - visibleMealsLimit)})`))
+                    React.createElement('button', {
+                        type: 'button',
+                        className: 'btn',
+                        onClick: loadMoreMeals,
+                        style: {
+                            minWidth: '160px',
+                            borderRadius: '12px',
+                            padding: '10px 14px',
+                            fontWeight: '600',
+                        },
+                    }, `Показать ещё (${Math.max(0, totalMeals - visibleMealsLimit)})`))
             ];
         }, [
             addProductToMeal,
@@ -6077,6 +6077,16 @@
                                         lastLoadedUpdatedAtRef.current = newUpdatedAt;
                                         blockCloudUpdatesUntilRef.current = newUpdatedAt + 3000;
 
+                                        console.info('[HEYS.meal] ➕ Adding product to meal', {
+                                            product: finalProduct.name,
+                                            productId: String(productId),
+                                            grams,
+                                            mealIndex: addMealIndex,
+                                            dateKey: date,
+                                            updatedAt: newUpdatedAt,
+                                            blockUntilTs: newUpdatedAt + 3000,
+                                        });
+
                                         setDay((prevDay = {}) => {
                                             const updatedMeals = (prevDay.meals || []).map((m, i) =>
                                                 i === addMealIndex
@@ -6086,9 +6096,23 @@
                                             const newDayData = { ...prevDay, meals: updatedMeals, updatedAt: newUpdatedAt };
 
                                             const key = _scopedDayKey(date);
+                                            const prevMealItems = ((prevDay?.meals || [])[addMealIndex]?.items || []).length;
                                             try {
                                                 lsSet(key, newDayData);
+                                                console.info('[HEYS.meal] ✅ Product saved to localStorage', {
+                                                    product: finalProduct.name,
+                                                    key,
+                                                    mealIndex: addMealIndex,
+                                                    itemsInMeal: prevMealItems + 1,
+                                                    totalMeals: updatedMeals.length,
+                                                    updatedAt: newUpdatedAt,
+                                                });
                                             } catch (e) {
+                                                console.error('[HEYS.meal] ❌ Product lsSet failed', {
+                                                    product: finalProduct.name,
+                                                    key,
+                                                    error: String(e),
+                                                });
                                                 trackError(e, { source: 'day/_meals.js', action: 'save_product' });
                                             }
 

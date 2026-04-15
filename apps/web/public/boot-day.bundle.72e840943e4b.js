@@ -11,7 +11,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
         'heys_day_realdata_actions_v1.js',
         'heys_day_stats_v1.js',
         'heys_day_activity_v1.js',
-        'heys_day_trainings_v1.js',
+        'heys_day_trainings_v1.js?v=ma-label-fix-20260415c',
         'heys_day_training_popups_v1.js',
         'heys_day_sleep_score_popups_v1.js'
     ];
@@ -18805,16 +18805,16 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                             padding: '4px 0 10px',
                         },
                     },
-                    React.createElement('button', {
-                        type: 'button',
-                        className: 'btn',
-                        onClick: () => setShowAllLoadedMeals(true),
-                        style: {
-                            borderRadius: '12px',
-                            padding: '8px 12px',
-                            fontWeight: '600',
-                        },
-                    }, `Показать верхние ${hiddenTopMealsCount}`))
+                        React.createElement('button', {
+                            type: 'button',
+                            className: 'btn',
+                            onClick: () => setShowAllLoadedMeals(true),
+                            style: {
+                                borderRadius: '12px',
+                                padding: '8px 12px',
+                                fontWeight: '600',
+                            },
+                        }, `Показать верхние ${hiddenTopMealsCount}`))
                 );
             }
 
@@ -18834,17 +18834,17 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                         padding: '10px 0 4px',
                     },
                 },
-                React.createElement('button', {
-                    type: 'button',
-                    className: 'btn',
-                    onClick: loadMoreMeals,
-                    style: {
-                        minWidth: '160px',
-                        borderRadius: '12px',
-                        padding: '10px 14px',
-                        fontWeight: '600',
-                    },
-                }, `Показать ещё (${Math.max(0, totalMeals - visibleMealsLimit)})`))
+                    React.createElement('button', {
+                        type: 'button',
+                        className: 'btn',
+                        onClick: loadMoreMeals,
+                        style: {
+                            minWidth: '160px',
+                            borderRadius: '12px',
+                            padding: '10px 14px',
+                            fontWeight: '600',
+                        },
+                    }, `Показать ещё (${Math.max(0, totalMeals - visibleMealsLimit)})`))
             ];
         }, [
             addProductToMeal,
@@ -19790,6 +19790,16 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                                         lastLoadedUpdatedAtRef.current = newUpdatedAt;
                                         blockCloudUpdatesUntilRef.current = newUpdatedAt + 3000;
 
+                                        console.info('[HEYS.meal] ➕ Adding product to meal', {
+                                            product: finalProduct.name,
+                                            productId: String(productId),
+                                            grams,
+                                            mealIndex: addMealIndex,
+                                            dateKey: date,
+                                            updatedAt: newUpdatedAt,
+                                            blockUntilTs: newUpdatedAt + 3000,
+                                        });
+
                                         setDay((prevDay = {}) => {
                                             const updatedMeals = (prevDay.meals || []).map((m, i) =>
                                                 i === addMealIndex
@@ -19799,9 +19809,23 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                                             const newDayData = { ...prevDay, meals: updatedMeals, updatedAt: newUpdatedAt };
 
                                             const key = _scopedDayKey(date);
+                                            const prevMealItems = ((prevDay?.meals || [])[addMealIndex]?.items || []).length;
                                             try {
                                                 lsSet(key, newDayData);
+                                                console.info('[HEYS.meal] ✅ Product saved to localStorage', {
+                                                    product: finalProduct.name,
+                                                    key,
+                                                    mealIndex: addMealIndex,
+                                                    itemsInMeal: prevMealItems + 1,
+                                                    totalMeals: updatedMeals.length,
+                                                    updatedAt: newUpdatedAt,
+                                                });
                                             } catch (e) {
+                                                console.error('[HEYS.meal] ❌ Product lsSet failed', {
+                                                    product: finalProduct.name,
+                                                    key,
+                                                    error: String(e),
+                                                });
                                                 trackError(e, { source: 'day/_meals.js', action: 'save_product' });
                                             }
 
@@ -20786,10 +20810,9 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         const setDay = setDayRaw;
         const day = dayRaw;
         const dayRef = useRef(day);
-
-        useEffect(() => {
-            dayRef.current = day;
-        }, [day]);
+        // Синхронно: HEYS.Day.getDay() и flush должны видеть актуальный день в том же тике, что и setDay
+        // (иначе StepModal/MA может прочитать dayRef до commit useEffect).
+        dayRef.current = day;
 
         // === EARLY RETURN #2: защита если day стал undefined при logout ===
         // Это может произойти при race condition когда localStorage очищается во время рендера

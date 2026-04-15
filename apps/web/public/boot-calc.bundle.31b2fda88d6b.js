@@ -5371,7 +5371,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
             }
 
             const daySnap = JSON.stringify(stripMeta(day));
-            if (prevDaySnapRef.current === daySnap) return;
+            // force: всегда пишем в storage — иначе MA/модалки читают LS без последнего debounced-патча приёмов.
+            if (!force && prevDaySnapRef.current === daySnap) return;
 
             const updatedAt = day.updatedAt != null ? day.updatedAt : now();
 
@@ -6137,6 +6138,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
                     setDay(prevDay => {
                         const prevUpdatedAt = prevDay?.updatedAt || 0;
                         const prevMealsCount = (prevDay?.meals || []).length;
+                        const prevItemsCount = (prevDay?.meals || []).reduce((s, m) => s + (Array.isArray(m?.items) ? m.items.length : 0), 0);
+                        const payloadItemsCount = (normalizedPayload.meals || []).reduce((s, m) => s + (Array.isArray(m?.items) ? m.items.length : 0), 0);
 
                         // Защита от отката: принимаем payload, если он не старее
                         // или если в нём больше приемов пищи (локальный прогресс).
@@ -6157,7 +6160,26 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
                             payloadMealsCount,
                             forceReload
                         });
-                        return normalizedPayload;
+                        // MA persist/sync часто идёт сразу после добавления продукта: getFreshDayData может
+                        // отстать от React на один item. forceReload обходит старый guard — не откатываем meals.
+                        const maPayloadSources = (
+                            source === 'morning-activation-followup' ||
+                            source === 'morning-activation-sync' ||
+                            source === 'morning-activation'
+                        );
+                        let nextDay = normalizedPayload;
+                        // MA не редактирует приёмы: при **строго** большем числе строк в React — подменяем meals
+                        // (payload отстал от LS). При **равенстве** оставляем payload: prevDay в этом кадре часто ещё
+                        // без только что добавленной строки продукта — иначе теряем item.
+                        if (maPayloadSources && prevDay && Array.isArray(prevDay.meals) && prevItemsCount > payloadItemsCount) {
+                            console.info('[HEYS.day] 🛡️ MA payload: retain prev meals (React > payload lines)', {
+                                source,
+                                prevItemsCount,
+                                payloadItemsCount
+                            });
+                            nextDay = { ...normalizedPayload, meals: prevDay.meals };
+                        }
+                        return nextDay;
                     });
 
                     lastLoadedUpdatedAtRef.current = Math.max(lastLoadedUpdatedAtRef.current || 0, payloadUpdatedAt);
@@ -6207,11 +6229,13 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
                         const currentUpdatedAt = lastLoadedUpdatedAtRef.current || 0;
 
                         const storageMealsCount = (normalizedDay.meals || []).length;
+                        const storageItemsCount = (normalizedDay.meals || []).reduce((s, m) => s + (m?.items?.length || 0), 0);
                         console.info('[HEYS.day] 📥 storage snapshot', {
                             source,
                             storageUpdatedAt,
                             currentUpdatedAt,
                             storageMealsCount,
+                            storageItemsCount,
                             forceReload
                         });
 
@@ -6253,42 +6277,52 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
                                 return prevDay;
                             }
                             const prevMealsCount = (prevDay?.meals || []).length;
-                            if (storageMealsCount < prevMealsCount) {
-                                console.warn('[HEYS.day] ⚠️ Potential overwrite (meals count down)', {
+                            const prevItemsCount = (prevDay?.meals || []).reduce((s, m) => s + (m?.items?.length || 0), 0);
+                            const mealsDown = storageMealsCount < prevMealsCount;
+                            const itemsDown = storageItemsCount < prevItemsCount;
+                            if (mealsDown || itemsDown) {
+                                console.warn('[HEYS.day] ⚠️ Potential overwrite (meals/items count down)', {
                                     source,
                                     prevMealsCount,
                                     storageMealsCount,
+                                    prevItemsCount,
+                                    storageItemsCount,
                                     forceReload
                                 });
                             }
 
-                            const shouldSkipOverwrite = isStaleStorage && storageMealsCount < prevMealsCount;
+                            const shouldSkipOverwrite = isStaleStorage && (mealsDown || itemsDown);
                             if (shouldSkipOverwrite) {
-                                console.warn('[HEYS.day] 🛡️ Skip overwrite (stale + meals down)', {
+                                console.warn('[HEYS.day] 🛡️ Skip overwrite (stale + meals/items down)', {
                                     source,
                                     updatedDate,
                                     storageUpdatedAt,
                                     currentUpdatedAt,
                                     prevMealsCount,
                                     storageMealsCount,
+                                    prevItemsCount,
+                                    storageItemsCount,
                                     forceReload
                                 });
                                 return prevDay;
                             }
 
-                            // v25.8.6.6: Защита от cloud/fetchDays отката количества приёмов.
-                            // Внешние источники не должны уменьшать локально подтвержденные meals
-                            // (особенно кейс 1 -> 0 при запаздывающем merge/fetchDays).
+                            // v25.8.6.6+: Защита от cloud/fetchDays/hot-sync отката количества приёмов И продуктов.
+                            // Внешние источники не должны уменьшать локально подтвержденные meals/items
+                            // (кейс: продукт добавлен в существующий приём, meal count не изменился,
+                            // но облако ещё не получило новый item — hot-sync перезаписывает и item пропадает).
                             const shouldSkipExternalMealsRollback =
                                 isExternalSource &&
-                                storageMealsCount < prevMealsCount;
+                                (mealsDown || itemsDown);
 
                             if (shouldSkipExternalMealsRollback) {
-                                console.warn('[HEYS.day] 🛡️ Skip overwrite (external meals rollback)', {
+                                console.warn('[HEYS.day] 🛡️ Skip overwrite (external meals/items rollback)', {
                                     source,
                                     updatedDate,
                                     prevMealsCount,
                                     storageMealsCount,
+                                    prevItemsCount,
+                                    storageItemsCount,
                                     storageUpdatedAt,
                                     currentUpdatedAt,
                                     forceReload
@@ -6309,24 +6343,27 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
                                 const prevSupplementsTaken = JSON.stringify(prevDay.supplementsTaken || []);
                                 const newSupplementsTaken = JSON.stringify(newDay.supplementsTaken || []);
 
+                                const prevHouseholdJson = JSON.stringify(prevDay.householdActivities || []);
+                                const newHouseholdJson = JSON.stringify(newDay.householdActivities || []);
+
                                 const isSameContent =
                                     prevMealsJson === newMealsJson &&
                                     prevTrainingsJson === newTrainingsJson &&
+                                    prevHouseholdJson === newHouseholdJson &&
                                     prevDay.waterMl === newDay.waterMl &&
                                     prevDay.steps === newDay.steps &&
                                     prevDay.weightMorning === newDay.weightMorning &&
-                                    // Утренние оценки из чек-ина
                                     prevDay.moodMorning === newDay.moodMorning &&
                                     prevDay.wellbeingMorning === newDay.wellbeingMorning &&
                                     prevDay.stressMorning === newDay.stressMorning &&
-                                    // Витамины/добавки
                                     prevSupplementsPlanned === newSupplementsPlanned &&
                                     prevSupplementsTaken === newSupplementsTaken &&
-                                    // Данные сна — без проверки state не обновляется при сохранении через StepModal
                                     prevDay.sleepStart === newDay.sleepStart &&
                                     prevDay.sleepEnd === newDay.sleepEnd &&
                                     prevDay.sleepHours === newDay.sleepHours &&
-                                    prevDay.sleepQuality === newDay.sleepQuality;
+                                    prevDay.sleepQuality === newDay.sleepQuality &&
+                                    prevDay.morningActivation?.status === newDay.morningActivation?.status &&
+                                    prevDay.householdMin === newDay.householdMin;
 
                                 if (isSameContent) {
                                     return prevDay;
@@ -19340,16 +19377,16 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
                             padding: '4px 0 10px',
                         },
                     },
-                    React.createElement('button', {
-                        type: 'button',
-                        className: 'btn',
-                        onClick: () => setShowAllLoadedMeals(true),
-                        style: {
-                            borderRadius: '12px',
-                            padding: '8px 12px',
-                            fontWeight: '600',
-                        },
-                    }, `Показать верхние ${hiddenTopMealsCount}`))
+                        React.createElement('button', {
+                            type: 'button',
+                            className: 'btn',
+                            onClick: () => setShowAllLoadedMeals(true),
+                            style: {
+                                borderRadius: '12px',
+                                padding: '8px 12px',
+                                fontWeight: '600',
+                            },
+                        }, `Показать верхние ${hiddenTopMealsCount}`))
                 );
             }
 
@@ -19369,17 +19406,17 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
                         padding: '10px 0 4px',
                     },
                 },
-                React.createElement('button', {
-                    type: 'button',
-                    className: 'btn',
-                    onClick: loadMoreMeals,
-                    style: {
-                        minWidth: '160px',
-                        borderRadius: '12px',
-                        padding: '10px 14px',
-                        fontWeight: '600',
-                    },
-                }, `Показать ещё (${Math.max(0, totalMeals - visibleMealsLimit)})`))
+                    React.createElement('button', {
+                        type: 'button',
+                        className: 'btn',
+                        onClick: loadMoreMeals,
+                        style: {
+                            minWidth: '160px',
+                            borderRadius: '12px',
+                            padding: '10px 14px',
+                            fontWeight: '600',
+                        },
+                    }, `Показать ещё (${Math.max(0, totalMeals - visibleMealsLimit)})`))
             ];
         }, [
             addProductToMeal,
@@ -20325,6 +20362,16 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
                                         lastLoadedUpdatedAtRef.current = newUpdatedAt;
                                         blockCloudUpdatesUntilRef.current = newUpdatedAt + 3000;
 
+                                        console.info('[HEYS.meal] ➕ Adding product to meal', {
+                                            product: finalProduct.name,
+                                            productId: String(productId),
+                                            grams,
+                                            mealIndex: addMealIndex,
+                                            dateKey: date,
+                                            updatedAt: newUpdatedAt,
+                                            blockUntilTs: newUpdatedAt + 3000,
+                                        });
+
                                         setDay((prevDay = {}) => {
                                             const updatedMeals = (prevDay.meals || []).map((m, i) =>
                                                 i === addMealIndex
@@ -20334,9 +20381,23 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
                                             const newDayData = { ...prevDay, meals: updatedMeals, updatedAt: newUpdatedAt };
 
                                             const key = _scopedDayKey(date);
+                                            const prevMealItems = ((prevDay?.meals || [])[addMealIndex]?.items || []).length;
                                             try {
                                                 lsSet(key, newDayData);
+                                                console.info('[HEYS.meal] ✅ Product saved to localStorage', {
+                                                    product: finalProduct.name,
+                                                    key,
+                                                    mealIndex: addMealIndex,
+                                                    itemsInMeal: prevMealItems + 1,
+                                                    totalMeals: updatedMeals.length,
+                                                    updatedAt: newUpdatedAt,
+                                                });
                                             } catch (e) {
+                                                console.error('[HEYS.meal] ❌ Product lsSet failed', {
+                                                    product: finalProduct.name,
+                                                    key,
+                                                    error: String(e),
+                                                });
                                                 trackError(e, { source: 'day/_meals.js', action: 'save_product' });
                                             }
 

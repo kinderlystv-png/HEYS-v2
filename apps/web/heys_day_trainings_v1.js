@@ -34,14 +34,34 @@
     const safeTrainingTypes = Array.isArray(trainingTypes) ? trainingTypes : [];
     const safeTrainings = Array.isArray(TR) ? TR : [];
 
+    const MA_ZONE_SIGS = new Set(['8,0,0,0', '8,6,0,0', '4,8,8,2']);
+    function trainingZoneSig(training) {
+      const z = Array.isArray(training?.z) ? training.z : [];
+      return [0, 1, 2, 3].map((i) => Number(z[i]) || 0).join(',');
+    }
+
+    function isMorningActivationTraining(training) {
+      if (!training || typeof training !== 'object') return false;
+      if (training.source === 'morning_activation') return true;
+      const label = typeof training.activityLabel === 'string' ? training.activityLabel.trim().toLowerCase() : '';
+      if (label === 'зарядка') return true;
+      if (String(training.type) === 'strength' && MA_ZONE_SIGS.has(trainingZoneSig(training))) {
+        const raw = typeof training.activityLabel === 'string' ? training.activityLabel.trim() : '';
+        if (!raw) return true;
+      }
+      return false;
+    }
+
     function getTrainingDisplayLabel(training, trainingType, index) {
+      if (isMorningActivationTraining(training)) return 'Зарядка';
       const customLabel = typeof training?.activityLabel === 'string'
         ? training.activityLabel.trim()
         : '';
       return customLabel || trainingType?.label || ('Тренировка ' + (index + 1));
     }
 
-    function getTrainingDisplayMeta(displayLabel, trainingType) {
+    function getTrainingDisplayMeta(displayLabel, trainingType, training) {
+      if (isMorningActivationTraining(training)) return '';
       const baseLabel = trainingType?.label || '';
       if (!displayLabel || !baseLabel) return '';
       return displayLabel.toLowerCase() === baseLabel.toLowerCase() ? '' : baseLabel;
@@ -224,6 +244,7 @@
           time: rawT.time || '',
           type: rawT.type || '',
           activityLabel: rawT.activityLabel || '',
+          source: rawT.source || '',
           mood: rawT.mood ?? 0,
           wellbeing: rawT.wellbeing ?? 0,
           stress: rawT.stress ?? 0,
@@ -234,7 +255,7 @@
         const total = safeR0(kcalZ(0) + kcalZ(1) + kcalZ(2) + kcalZ(3));
         const trainingType = safeTrainingTypes.find(t => t.id === T.type);
         const displayLabel = getTrainingDisplayLabel(T, trainingType, ti);
-        const displayMeta = getTrainingDisplayMeta(displayLabel, trainingType);
+        const displayMeta = getTrainingDisplayMeta(displayLabel, trainingType, T);
 
         const getMoodEmoji = (v) =>
           v <= 0 ? null : v <= 2 ? '😢' : v <= 4 ? '😕' : v <= 6 ? '😐' : v <= 8 ? '😊' : '😄';
@@ -259,7 +280,7 @@
             className: 'compact-train-header',
             onClick: () => openTrainingPicker && openTrainingPicker(ti)
           },
-            React.createElement('span', { className: 'compact-train-icon' }, trainingType ? trainingType.icon : (trainIcons[ti] || '💪')),
+            React.createElement('span', { className: 'compact-train-icon' }, isMorningActivationTraining(T) ? '🧘' : (trainingType ? trainingType.icon : (trainIcons[ti] || '💪'))),
             React.createElement('div', { className: 'compact-train-title-box' },
               React.createElement('span', { className: 'compact-train-title' }, displayLabel),
               displayMeta && React.createElement('span', { className: 'compact-train-subtitle' }, displayMeta)

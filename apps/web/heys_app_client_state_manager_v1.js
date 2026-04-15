@@ -15,6 +15,7 @@
     }) {
         const { useEffect, useRef } = React;
         const skipTabSwitchRef = useRef(false);
+        const prevClientIdRef = useRef(clientId || null);
 
         // Автопереключение на домашнюю вкладку при выборе клиента
         // (пропускаем если это PWA shortcut action)
@@ -25,7 +26,11 @@
         // вкладки на секунды. setTabImmediate обходит startTransition → мгновенный switch.
         const immediateSetTab = setTabImmediate || setTab;
         useEffect(() => {
-            if (clientId && !skipTabSwitchRef.current) {
+            const previousClientId = prevClientIdRef.current;
+            const didClientChange = clientId && clientId !== previousClientId;
+            prevClientIdRef.current = clientId || null;
+
+            if (didClientChange && !skipTabSwitchRef.current) {
                 immediateSetTab(defaultTab);
             }
         }, [clientId, defaultTab, immediateSetTab]);

@@ -1127,6 +1127,8 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-3-ui: execute start');
       modalRoot.parentNode.removeChild(modalRoot);
       modalRoot = null;
     }
+
+    document.dispatchEvent(new CustomEvent('heys-stepmodal-closed'));
   }
 
   // === Экспорт ===
@@ -1289,6 +1291,133 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-3-ui: execute start');
     return lsGet(getUnscopedDayKey(dateKey), fallback) || fallback;
   }
 
+  function countMealItems(dayData) {
+    const meals = Array.isArray(dayData?.meals) ? dayData.meals : [];
+    return meals.reduce((sum, meal) => sum + (Array.isArray(meal?.items) ? meal.items.length : 0), 0);
+  }
+
+  function pickRicherDayData(a, b) {
+    const left = a && typeof a === 'object' ? a : {};
+    const right = b && typeof b === 'object' ? b : {};
+    const leftItems = countMealItems(left);
+    const rightItems = countMealItems(right);
+    if (rightItems !== leftItems) return rightItems > leftItems ? right : left;
+    const leftUpdated = Number(left.updatedAt) || 0;
+    const rightUpdated = Number(right.updatedAt) || 0;
+    return rightUpdated > leftUpdated ? right : left;
+  }
+
+  function flushDayTabBeforeRead() {
+    try {
+      if (typeof HEYS.Day?.requestFlush === 'function') {
+        HEYS.Day.requestFlush({ force: true });
+      }
+    } catch (_) {
+      // ignore flush errors
+    }
+  }
+
+  function invalidateDayReadCaches(dateKey) {
+    try {
+      if (HEYS.dayCache && typeof HEYS.dayCache.invalidate === 'function') {
+        HEYS.dayCache.invalidate(dateKey);
+      }
+    } catch (_) {
+      // ignore
+    }
+    const unscoped = getUnscopedDayKey(dateKey);
+    const scoped = getScopedDayKey(dateKey);
+    try {
+      if (HEYS.store?.invalidate) {
+        HEYS.store.invalidate(unscoped);
+        if (scoped) HEYS.store.invalidate(scoped);
+      }
+    } catch (_) {
+      // ignore
+    }
+  }
+
+  function readDayFromRawLocalStorage(dateKey) {
+    const cid = getCurrentClientId();
+    const keys = [];
+    if (cid) keys.push(`heys_${cid}_dayv2_${dateKey}`);
+    keys.push(`heys_dayv2_${dateKey}`);
+    let best = null;
+    let bestItems = -1;
+    for (let i = 0; i < keys.length; i++) {
+      const k = keys[i];
+      try {
+        const raw = global.localStorage?.getItem(k);
+        if (!raw) continue;
+        const obj = tryParseStoredValue(raw, null);
+        if (obj && typeof obj === 'object') {
+          const n = countMealItems(obj);
+          if (n > bestItems) {
+            bestItems = n;
+            best = obj;
+          }
+        }
+      } catch (_) {
+        // ignore parse errors
+      }
+    }
+    return best;
+  }
+
+  function getFreshDayData(dateKey) {
+    flushDayTabBeforeRead();
+    invalidateDayReadCaches(dateKey);
+
+    let result = readDayData(dateKey, {}) || {};
+    try {
+      const liveDay = HEYS.Day?.getDay?.();
+      if (liveDay && typeof liveDay === 'object') {
+        result = pickRicherDayData(result, liveDay);
+      }
+    } catch (_) {
+      // ignore live day read errors
+    }
+    const scopedKey = getScopedDayKey(dateKey);
+    if (scopedKey) {
+      const scopedData = lsGet(scopedKey, null);
+      if (scopedData && typeof scopedData === 'object') {
+        result = pickRicherDayData(result, scopedData);
+      }
+    }
+    const unscopedData = lsGet(getUnscopedDayKey(dateKey), null);
+    if (unscopedData && typeof unscopedData === 'object') {
+      result = pickRicherDayData(result, unscopedData);
+    }
+    const rawLocal = readDayFromRawLocalStorage(dateKey);
+    if (rawLocal && typeof rawLocal === 'object') {
+      result = pickRicherDayData(result, rawLocal);
+    }
+    return result && typeof result === 'object' ? result : {};
+  }
+
+  /** Перед MA persist/sync: приёмы из live только если там строго больше строк, чем в base (новый продукт уже в React). */
+  function mergeDayMealsPreferLiveIfRicher(dateKey, dayData) {
+    const base = dayData && typeof dayData === 'object' ? dayData : {};
+    try {
+      const live = HEYS.Day?.getDay?.();
+      if (!live || typeof live !== 'object') return base;
+      const dk = String(base.date || dateKey || '');
+      const lk = String(live.date || '');
+      if (lk && dk && lk !== dk) return base;
+      const countMealLines = (d) => (Array.isArray(d?.meals) ? d.meals : []).reduce((s, m) => {
+        return s + (Array.isArray(m?.items) ? m.items.length : 0);
+      }, 0);
+      const lc = countMealLines(live);
+      const bc = countMealLines(base);
+      if (lc > bc && Array.isArray(live.meals)) {
+        return { ...base, meals: live.meals };
+      }
+    } catch (_) {
+      // ignore
+    }
+    return base;
+  }
+
   function saveDayData(dateKey, dayData) {
     const scopedKey = getScopedDayKey(dateKey);
     if (scopedKey) {
@@ -1303,6 +1432,13 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-3-ui: execute start');
       HEYS.store.set(getUnscopedDayKey(dateKey), dayData);
     } else {
       lsSet(getUnscopedDayKey(dateKey), dayData);
+    }
+    try {
+      if (HEYS.dayCache && typeof HEYS.dayCache.notifyDateUpdated === 'function') {
+        HEYS.dayCache.notifyDateUpdated(dateKey);
+      }
+    } catch (_) {
+      // ignore
     }
   }
 
@@ -1441,17 +1577,18 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-3-ui: execute start');
 
   function getFirstMealTimeFromDay(dayData) {
     const meals = Array.isArray(dayData?.meals) ? dayData.meals : [];
-    const times = meals
-      .filter((meal) => Array.isArray(meal?.items) && meal.items.length > 0)
-      .map((meal) => meal?.time)
-      .map(parseTimeToMinutes)
-      .filter((value) => Number.isFinite(value));
-
-    if (!times.length) return null;
-    const first = Math.min(...times);
-    const hh = String(Math.floor(first / 60)).padStart(2, '0');
-    const mm = String(first % 60).padStart(2, '0');
-    return `${hh}:${mm}`;
+    const withItems = meals.filter((meal) => Array.isArray(meal?.items) && meal.items.length > 0);
+    if (!withItems.length) return null;
+    const minutesList = withItems
+      .map((meal) => parseTimeToMinutes(meal?.time))
+      .filter((m) => Number.isFinite(m));
+    if (minutesList.length) {
+      const first = Math.min(...minutesList);
+      const hh = String(Math.floor(first / 60)).padStart(2, '0');
+      const mm = String(first % 60).padStart(2, '0');
+      return `${hh}:${mm}`;
+    }
+    return null;
   }
 
   function getEnergyBucket(mood, wellbeing, stress) {
@@ -1591,7 +1728,15 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-3-ui: execute start');
   }
 
   function persistMorningActivationState(dateKey, nextState, source = 'morning-activation') {
-    const dayData = readDayData(dateKey, {});
+    try {
+      if (HEYS.Day && typeof HEYS.Day.requestFlush === 'function') {
+        HEYS.Day.requestFlush({ force: true });
+      }
+    } catch (_) {
+      // ignore
+    }
+    let dayData = getFreshDayData(dateKey);
+    dayData = mergeDayMealsPreferLiveIfRicher(dateKey, dayData);
     dayData.morningActivation = {
       ...(dayData.morningActivation || {}),
       ...nextState
@@ -1604,7 +1749,8 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-3-ui: execute start');
           date: dateKey,
           field: 'morningActivation',
           source,
-          forceReload: true
+          forceReload: true,
+          data: { ...dayData, date: dateKey }
         }
       }));
     }
@@ -1713,9 +1859,25 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-3-ui: execute start');
   }
 
   function removeMorningActivationArtifacts(dayData) {
+    const maZoneSignatures = new Set(['8,0,0,0', '8,6,0,0', '4,8,8,2']);
+    const trainingZoneSignature = (training) => {
+      const z = Array.isArray(training?.z) ? training.z : [];
+      return [0, 1, 2, 3].map((i) => Number(z[i]) || 0).join(',');
+    };
+    const isMorningActivationLike = (training) => {
+      if (!training || typeof training !== 'object') return false;
+      if (training.source === 'morning_activation') return true;
+      const label = typeof training.activityLabel === 'string' ? training.activityLabel.trim().toLowerCase() : '';
+      if (label === 'зарядка') return true;
+      if (String(training.type) === 'strength' && maZoneSignatures.has(trainingZoneSignature(training))) {
+        const rawLabel = typeof training.activityLabel === 'string' ? training.activityLabel.trim() : '';
+        if (!rawLabel) return true;
+      }
+      return false;
+    };
     let changed = false;
     const trainings = Array.isArray(dayData.trainings) ? dayData.trainings : [];
-    const filteredTrainings = trainings.filter((training) => training?.source !== 'morning_activation');
+    const filteredTrainings = trainings.filter((training) => !isMorningActivationLike(training));
     if (filteredTrainings.length !== trainings.length) {
       dayData.trainings = filteredTrainings;
       changed = true;
@@ -1744,64 +1906,52 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-3-ui: execute start');
   }
 
   function syncMorningActivationActivity(dateKey, stateInput) {
-    const dayData = readDayData(dateKey, {});
+    try {
+      if (HEYS.Day && typeof HEYS.Day.requestFlush === 'function') {
+        HEYS.Day.requestFlush({ force: true });
+      }
+    } catch (_) {
+      // ignore
+    }
+    let dayData = getFreshDayData(dateKey);
+    dayData = mergeDayMealsPreferLiveIfRicher(dateKey, dayData);
     const state = stateInput || normalizeMorningActivationState(dateKey, dayData);
     let changed = removeMorningActivationArtifacts(dayData);
 
     if (state.status === 'done' && state.intensity && MORNING_ACTIVATION_INTENSITY_PRESETS[state.intensity]) {
-      const intensityPreset = MORNING_ACTIVATION_INTENSITY_PRESETS[state.intensity];
-
-      if (state.intensity === 'super_light') {
-        const activities = Array.isArray(dayData.householdActivities) ? dayData.householdActivities.slice() : [];
-        activities.push({
-          minutes: intensityPreset.duration,
-          time: state.firstMealTime || '',
-          label: 'Зарядка',
-          source: 'morning_activation',
-          intensity: state.intensity,
-          mood: state.postState?.mood ?? null,
-          wellbeing: state.postState?.wellbeing ?? null,
-          stress: state.postState?.stress ?? null
-        });
-        dayData.householdActivities = activities;
-        dayData.householdMin = activities.reduce((sum, item) => sum + (Number(item?.minutes) || 0), 0);
-        dayData.householdTime = activities[0]?.time || '';
-        changed = true;
+      const minutesByZone = state.intensity === 'high'
+        ? [4, 8, 8, 2]
+        : state.intensity === 'medium'
+          ? [8, 6, 0, 0]
+          : [8, 0, 0, 0];
+      const trainings = Array.isArray(dayData.trainings) ? dayData.trainings.slice() : [];
+      const trainingEntry = {
+        z: minutesByZone,
+        time: state.firstMealTime || '',
+        type: 'strength',
+        activityLabel: 'Зарядка',
+        source: 'morning_activation',
+        intensity: state.intensity,
+        mood: state.postState?.mood ?? 0,
+        wellbeing: state.postState?.wellbeing ?? 0,
+        stress: state.postState?.stress ?? 0,
+        comment: ''
+      };
+      const emptyIndex = trainings.findIndex((training) => {
+        const totalMinutes = Array.isArray(training?.z)
+          ? training.z.reduce((sum, item) => sum + (Number(item) || 0), 0)
+          : 0;
+        return totalMinutes === 0 && !training?.type && !training?.activityLabel;
+      });
+      if (emptyIndex >= 0) {
+        trainings[emptyIndex] = trainingEntry;
+      } else if (trainings.length < 3) {
+        trainings.push(trainingEntry);
       } else {
-        const minutesByZone = state.intensity === 'high'
-          ? [4, 8, 8, 2]
-          : [8, 6, 0, 0];
-        const trainings = Array.isArray(dayData.trainings) ? dayData.trainings.slice() : [];
-        const trainingEntry = {
-          z: minutesByZone,
-          time: state.firstMealTime || '',
-          type: 'strength',
-          activityLabel: 'Зарядка',
-          source: 'morning_activation',
-          intensity: state.intensity,
-          mood: state.postState?.mood ?? 0,
-          wellbeing: state.postState?.wellbeing ?? 0,
-          stress: state.postState?.stress ?? 0,
-          comment: state.postState
-            ? `Post state: mood ${state.postState.mood}/10, wellbeing ${state.postState.wellbeing}/10, stress ${state.postState.stress}/10`
-            : ''
-        };
-        const emptyIndex = trainings.findIndex((training) => {
-          const totalMinutes = Array.isArray(training?.z)
-            ? training.z.reduce((sum, item) => sum + (Number(item) || 0), 0)
-            : 0;
-          return totalMinutes === 0 && !training?.type && !training?.activityLabel;
-        });
-        if (emptyIndex >= 0) {
-          trainings[emptyIndex] = trainingEntry;
-        } else if (trainings.length < 3) {
-          trainings.push(trainingEntry);
-        } else {
-          trainings[trainings.length - 1] = trainingEntry;
-        }
-        dayData.trainings = trainings;
-        changed = true;
+        trainings[trainings.length - 1] = trainingEntry;
       }
+      dayData.trainings = trainings;
+      changed = true;
     }
 
     if (!changed) return;
@@ -1814,7 +1964,8 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-3-ui: execute start');
           date: dateKey,
           field: 'morningActivation',
           source: 'morning-activation-sync',
-          forceReload: true
+          forceReload: true,
+          data: { ...dayData, date: dateKey }
         }
       }));
     }
@@ -4845,7 +4996,8 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-3-ui: execute start');
       };
       return normalizePostState(initialState.postState, defaults) || defaults;
     });
-    const firstMealTime = initialState.firstMealTime || getFirstMealTimeFromDay(dayData) || '—';
+    const firstMealTimeValue = initialState.firstMealTime || getFirstMealTimeFromDay(dayData) || null;
+    const firstMealTimeLabel = firstMealTimeValue || '—';
     const [calendarViewMode, setCalendarViewMode] = useState(() => getMorningActivationCalendarViewPreference());
     const calendarData = useMemo(
       () => buildMorningActivationCalendarData(dateKey, calendarViewMode),
@@ -4860,13 +5012,13 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-3-ui: execute start');
     };
 
     const saveMissed = () => {
-      const nextState = normalizeMorningActivationState(dateKey, readDayData(dateKey, {}));
+      const nextState = normalizeMorningActivationState(dateKey, getFreshDayData(dateKey));
       persistMorningActivationState(dateKey, {
         status: 'missed',
         intensity: null,
         postState: null,
         postEffect: null,
-        firstMealTime: nextState.firstMealTime || firstMealTime || null,
+        firstMealTime: nextState.firstMealTime || firstMealTimeValue || null,
         decidedAt: Date.now(),
         followupSnoozeUntilMealCount: null
       }, 'morning-activation-followup');
@@ -4880,7 +5032,14 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-3-ui: execute start');
 
     const saveDone = () => {
       if (!selectedIntensity) return;
-      const nextState = normalizeMorningActivationState(dateKey, readDayData(dateKey, {}));
+      try {
+        if (HEYS.Day && typeof HEYS.Day.requestFlush === 'function') {
+          HEYS.Day.requestFlush({ force: true });
+        }
+      } catch (_) {
+        // ignore
+      }
+      const nextState = normalizeMorningActivationState(dateKey, getFreshDayData(dateKey));
       const normalizedPostState = normalizePostState(postState, {
         mood: 6,
         wellbeing: 6,
@@ -4893,12 +5052,20 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-3-ui: execute start');
         intensity: selectedIntensity,
         postState: normalizedPostState,
         postEffect,
-        firstMealTime: nextState.firstMealTime || firstMealTime || null,
+        firstMealTime: nextState.firstMealTime || firstMealTimeValue || null,
         decidedAt: Date.now(),
         followupSnoozeUntilMealCount: null
       };
       persistMorningActivationState(dateKey, preparedState, 'morning-activation-followup');
       syncMorningActivationActivity(dateKey, preparedState);
+      const _verify = readDayData(dateKey, {});
+      console.warn('[MA.saveDone] SAVED', {
+        dateKey,
+        intensity: selectedIntensity,
+        maStatus: _verify?.morningActivation?.status,
+        trainingsCount: (_verify?.trainings || []).length,
+        trainingSources: (_verify?.trainings || []).map(t => t?.source).filter(Boolean)
+      });
       try {
         if (HEYS.game?.recordMorningActivationDone) {
           HEYS.game.recordMorningActivationDone(dateKey);
@@ -4941,7 +5108,7 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-3-ui: execute start');
         }, 'Подтверждение утренней зарядки'),
         React.createElement('div', {
           style: { fontSize: '12px', color: '#334155', lineHeight: '1.45' }
-        }, `После первого приёма пищи (${firstMealTime}) зафиксируй статус привычки.`)
+        }, `После первого приёма пищи (${firstMealTimeLabel}) зафиксируй статус привычки.`)
       ),
       React.createElement('div', {
         style: {
@@ -23090,86 +23257,270 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
   function getFirstMealTime(dayData) {
     const meals = Array.isArray(dayData?.meals) ? dayData.meals : [];
-    const times = meals
-      .filter((meal) => Array.isArray(meal?.items) && meal.items.length > 0)
-      .map((meal) => meal?.time)
-      .map(parseTimeToMinutes)
-      .filter((value) => Number.isFinite(value));
-    if (!times.length) return null;
-    const first = Math.min(...times);
-    const hh = String(Math.floor(first / 60)).padStart(2, '0');
-    const mm = String(first % 60).padStart(2, '0');
-    return `${hh}:${mm}`;
+    const withItems = meals.filter((meal) => Array.isArray(meal?.items) && meal.items.length > 0);
+    if (!withItems.length) return null;
+    const minutesList = withItems
+      .map((meal) => parseTimeToMinutes(meal?.time))
+      .filter((m) => Number.isFinite(m));
+    if (minutesList.length) {
+      const first = Math.min(...minutesList);
+      const hh = String(Math.floor(first / 60)).padStart(2, '0');
+      const mm = String(first % 60).padStart(2, '0');
+      return `${hh}:${mm}`;
+    }
+    return null;
   }
 
-  function writeDayData(dateKey, dayData) {
-    const key = `heys_dayv2_${dateKey}`;
+  /** Согласовано с heys_steps_v1.js readDayData: сначала scoped dayv2, иначе legacy unscoped. */
+  function readDayV2ScopedFirst(dateKey, fallback = {}) {
+    const cid = getCurrentClientId();
+    if (cid) {
+      const scopedKey = `heys_${cid}_dayv2_${dateKey}`;
+      const scoped = readStoredValue(scopedKey, null);
+      if (scoped && typeof scoped === 'object') return scoped;
+    }
+    return readStoredValue(`heys_dayv2_${dateKey}`, fallback) || fallback;
+  }
+
+  /** Согласовано с heys_steps_v1.js saveDayData: scoped + unscoped + dayCache. */
+  function writeDayV2ScopedAndLegacy(dateKey, dayData) {
+    const cid = getCurrentClientId();
+    if (cid) {
+      const scopedKey = `heys_${cid}_dayv2_${dateKey}`;
+      if (HEYS.store?.set) {
+        HEYS.store.set(scopedKey, dayData);
+      } else if (HEYS.utils?.lsSet) {
+        HEYS.utils.lsSet(scopedKey, dayData);
+      }
+    }
+    const unscopedKey = `heys_dayv2_${dateKey}`;
     if (HEYS.store?.set) {
-      HEYS.store.set(key, dayData);
+      HEYS.store.set(unscopedKey, dayData);
     } else if (HEYS.utils?.lsSet) {
-      HEYS.utils.lsSet(key, dayData);
+      HEYS.utils.lsSet(unscopedKey, dayData);
     } else {
       try {
-        localStorage.setItem(key, JSON.stringify(dayData));
+        localStorage.setItem(unscopedKey, JSON.stringify(dayData));
       } catch (_) {
         // Fallback storage is unavailable
       }
     }
+    try {
+      if (HEYS.dayCache && typeof HEYS.dayCache.notifyDateUpdated === 'function') {
+        HEYS.dayCache.notifyDateUpdated(dateKey);
+      }
+    } catch (_) {
+      // ignore
+    }
+  }
+
+  /** Как mergeDayMealsPreferLiveIfRicher в heys_steps_v1.js — не терять новый продукт в React перед патчем MA. */
+  function mergeMealsPreferLiveIfRicher(dateKey, dayData) {
+    const base = dayData && typeof dayData === 'object' ? dayData : {};
+    try {
+      const live = HEYS.Day?.getDay?.();
+      if (!live || typeof live !== 'object') return base;
+      const dk = String(base.date || dateKey || '');
+      const lk = String(live.date || '');
+      if (lk && dk && lk !== dk) return base;
+      const countMealLines = (d) => (Array.isArray(d?.meals) ? d.meals : []).reduce((s, m) => {
+        return s + (Array.isArray(m?.items) ? m.items.length : 0);
+      }, 0);
+      const lc = countMealLines(live);
+      const bc = countMealLines(base);
+      if (lc > bc && Array.isArray(live.meals)) {
+        return { ...base, meals: live.meals };
+      }
+    } catch (_) {
+      // ignore
+    }
+    return base;
   }
 
   function persistMorningActivationPatch(dateKey, patch, source = 'morning-activation') {
-    const dayData = readStoredValue(`heys_dayv2_${dateKey}`, {}) || {};
+    try {
+      if (HEYS.Day && typeof HEYS.Day.requestFlush === 'function') {
+        HEYS.Day.requestFlush({ force: true });
+      }
+    } catch (_) {
+      // ignore
+    }
+    let dayData = readDayV2ScopedFirst(dateKey, {}) || {};
+    dayData = mergeMealsPreferLiveIfRicher(dateKey, dayData);
     dayData.morningActivation = {
       ...(dayData.morningActivation || {}),
       ...patch
     };
     dayData.updatedAt = Date.now();
-    writeDayData(dateKey, dayData);
+    writeDayV2ScopedAndLegacy(dateKey, dayData);
     window.dispatchEvent(new CustomEvent('heys:day-updated', {
       detail: {
         date: dateKey,
         field: 'morningActivation',
         source,
-        forceReload: true
+        forceReload: true,
+        data: { ...dayData, date: dateKey }
       }
     }));
   }
 
+  // Zone signatures that identify morning activation trainings
+  // Mirrors MA_ZONE_SIGS + isMorningActivationTraining in heys_day_trainings_v1.js
+  const MA_ZONE_SIGS = new Set(['8,0,0,0', '8,6,0,0', '4,8,8,2']);
+  function maTrainingZoneSig(training) {
+    const z = Array.isArray(training?.z) ? training.z : [];
+    return [0, 1, 2, 3].map((i) => Number(z[i]) || 0).join(',');
+  }
+
   function dayHasMorningActivationSyncedActivity(dayData) {
     const trainings = Array.isArray(dayData?.trainings) ? dayData.trainings : [];
-    if (trainings.some((t) => t && t.source === 'morning_activation')) return true;
+    const foundTraining = trainings.find((t) => {
+      if (!t) return false;
+      if (t.source === 'morning_activation') return true;
+      const label = typeof t.activityLabel === 'string' ? t.activityLabel.trim().toLowerCase() : '';
+      if (label === 'зарядка') return true;
+      // Тренировка добавлена вручную через пикер: strength + zone-сигнатура зарядки + без кастомного названия
+      if (String(t.type) === 'strength' && MA_ZONE_SIGS.has(maTrainingZoneSig(t))) {
+        const raw = typeof t.activityLabel === 'string' ? t.activityLabel.trim() : '';
+        if (!raw) return true;
+      }
+      return false;
+    });
+    if (foundTraining) {
+      console.warn('[MA.guard] dayHasMorningActivationSyncedActivity=true via training', {
+        source: foundTraining.source,
+        activityLabel: foundTraining.activityLabel
+      });
+      return true;
+    }
     const household = Array.isArray(dayData?.householdActivities) ? dayData.householdActivities : [];
-    if (household.some((h) => h && h.source === 'morning_activation')) return true;
+    const foundHousehold = household.find((h) => h && h.source === 'morning_activation');
+    if (foundHousehold) {
+      console.warn('[MA.guard] dayHasMorningActivationSyncedActivity=true via household');
+      return true;
+    }
+    console.warn('[MA.guard] dayHasMorningActivationSyncedActivity=false', {
+      trainings: trainings.map(t => ({ source: t?.source, label: t?.activityLabel })),
+      householdSources: household.map(h => h?.source)
+    });
     return false;
   }
 
   function shouldOpenMorningActivationFollowup(dayData) {
+    const hasMealsWithItems = countMealsWithItems(dayData) > 0;
     const firstMealTime = getFirstMealTime(dayData);
-    if (!firstMealTime) return { ok: false, firstMealTime: null };
-    const status = dayData?.morningActivation?.status;
-    if (status === 'done' || status === 'missed') {
+    const maStatus = dayData?.morningActivation?.status;
+    const hasSynced = dayHasMorningActivationSyncedActivity(dayData);
+    const trainings = (dayData?.trainings || []).map(t => ({
+      source: t?.source,
+      label: t?.activityLabel,
+      zSum: Array.isArray(t?.z) ? t.z.reduce((s, v) => s + (Number(v) || 0), 0) : 0
+    }));
+    console.info('[MA.should] CHECK', {
+      hasMealsWithItems,
+      maStatus,
+      hasSynced,
+      trainings,
+      household: (dayData?.householdActivities || []).map(h => ({ source: h?.source, label: h?.label }))
+    });
+    if (!hasMealsWithItems) {
+      console.info('[MA.should] SKIP — no meals with items');
+      return { ok: false, firstMealTime: null };
+    }
+    if (maStatus === 'missed') {
+      console.info('[MA.should] SKIP — morningActivation missed');
       return { ok: false, firstMealTime };
     }
-    // Уже есть запись зарядки из фичи (trainings/household с source) — не дублируем опрос
-    if (dayHasMorningActivationSyncedActivity(dayData)) {
+    // «done» в storage без карточки зарядки в trainings — пользователь удалил активность; флаг done устарел.
+    if (maStatus === 'done' && hasSynced) {
+      console.info('[MA.should] SKIP — done и карточка зарядки ещё в дне');
       return { ok: false, firstMealTime };
     }
+    if (maStatus === 'done' && !hasSynced) {
+      console.info('[MA.should] CONTINUE — status done, но synced MA-активности нет (после удаления карточки)');
+    }
+    if (hasSynced) {
+      console.info('[MA.should] SKIP — synced MA-like activity in day');
+      return { ok: false, firstMealTime };
+    }
+    console.info('[MA.should] OPEN — нет MA-активности в дне, maStatus=', maStatus);
     return { ok: true, firstMealTime };
   }
 
+  /** Снимок для followup: store + актуальный React-день (удаление карточки может быть ещё не в LS). */
+  function readDayDataMergedForMaFollowup(todayKey) {
+    let d = readDayV2ScopedFirst(todayKey, {}) || {};
+    try {
+      const live = HEYS.Day && typeof HEYS.Day.getDay === 'function' ? HEYS.Day.getDay() : null;
+      const liveDate = live && (live.date || todayKey);
+      if (!live || String(liveDate) !== String(todayKey)) {
+        console.info('[MA.followup] read: store only (no live day or date mismatch)', {
+          todayKey,
+          liveDate: live ? liveDate : null,
+          mealsWithItems: countMealsWithItems(d),
+          maStatus: d?.morningActivation?.status
+        });
+        return d;
+      }
+      const nLive = countMealsWithItems(live);
+      const nStore = countMealsWithItems(d);
+      const useLiveMeals = nLive >= nStore;
+      const merged = {
+        ...d,
+        meals: useLiveMeals ? (live.meals || d.meals) : d.meals,
+        trainings: Array.isArray(live.trainings) ? live.trainings : d.trainings,
+        householdActivities: Array.isArray(live.householdActivities) ? live.householdActivities : d.householdActivities,
+        morningActivation: d.morningActivation || live.morningActivation
+      };
+      console.info('[MA.followup] read: merged store+live', {
+        todayKey,
+        mealsStore: nStore,
+        mealsLive: nLive,
+        useLiveMeals: useLiveMeals,
+        maStatus: merged.morningActivation?.status,
+        trainingsSlots: (merged.trainings || []).map((t, i) => ({
+          i,
+          zSum: Array.isArray(t?.z) ? t.z.reduce((s, v) => s + (Number(v) || 0), 0) : 0,
+          source: t?.source,
+          label: t?.activityLabel
+        }))
+      });
+      return merged;
+    } catch (e) {
+      console.info('[MA.followup] read: merge failed, store only', e && e.message);
+      return d;
+    }
+  }
+
   let followupOpening = false;
+  let lastMealSignalAt = 0;
+  let pendingFollowupAfterProductFlow = false;
 
   function maybeOpenMorningActivationFollowup(reason = 'unknown') {
-    if (followupOpening) return;
-    if (!HEYS.StepModal?.show) return;
-    if (!HEYS.StepModal?.registry?.morning_activation_followup) return;
-    if (document.getElementById('heys-step-modal-root')) return;
+    const _tag = '[MA.followup]';
+    if (followupOpening) { console.info(_tag, 'SKIP: followupOpening=true', { reason }); return; }
+    if (!HEYS.StepModal?.show) { console.info(_tag, 'SKIP: no StepModal.show', { reason }); return; }
+    if (!HEYS.StepModal?.registry?.morning_activation_followup) { console.info(_tag, 'SKIP: step not registered', { reason }); return; }
+    if (document.getElementById('heys-step-modal-root')) { console.info(_tag, 'SKIP: modal root exists', { reason }); return; }
 
     const currentClientId = getCurrentClientId();
-    if (!currentClientId) return;
+    if (!currentClientId) { console.info(_tag, 'SKIP: no clientId', { reason }); return; }
     const todayKey = getTodayKey();
-    const dayData = readStoredValue(`heys_dayv2_${todayKey}`, {}) || {};
+    const dayData = readDayDataMergedForMaFollowup(todayKey);
     const check = shouldOpenMorningActivationFollowup(dayData);
+
+    const _maStatus = dayData?.morningActivation?.status;
+    const _trainingSources = (dayData?.trainings || []).map(t => t?.source).filter(Boolean);
+    console.info(_tag, 'DECISION', {
+      reason,
+      ok: check.ok,
+      maStatus: _maStatus,
+      trainingSources: _trainingSources,
+      firstMealTime: check.firstMealTime,
+      mealsWithItems: countMealsWithItems(dayData),
+      hasSyncedGuard: dayHasMorningActivationSyncedActivity(dayData)
+    });
+
     if (!check.ok) return;
 
     const mealCount = countMealsWithItems(dayData);
@@ -23183,21 +23534,39 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     })();
     const followupSessionGuard = Number(followupSessionGuardRaw);
     if (Number.isFinite(followupSessionGuard) && mealCount <= followupSessionGuard) {
-      console.info('[MorningCheckin] morning activation follow-up guarded in session until next meal add', {
-        mealCount,
-        guardMealCount: followupSessionGuard,
-        reason
-      });
-      return;
+      const actualStatus = dayData?.morningActivation?.status;
+      const syncedNow = dayHasMorningActivationSyncedActivity(dayData);
+      const hasRealData = actualStatus === 'missed' || (actualStatus === 'done' && syncedNow) || syncedNow;
+      if (hasRealData) {
+        console.info(_tag, 'GUARD: confirmed by data', { guard: followupSessionGuard, mealCount, actualStatus, reason });
+        return;
+      }
+      const userActionReasons = ['product-added', 'stepmodal-closed'];
+      if (!userActionReasons.includes(reason)) {
+        console.info(_tag, 'GUARD: kept (not user action)', { guard: followupSessionGuard, mealCount, reason });
+        return;
+      }
+      if (reason === 'stepmodal-closed') {
+        const signalAgeMs = Date.now() - lastMealSignalAt;
+        if (!(Number.isFinite(signalAgeMs) && signalAgeMs >= 0 && signalAgeMs <= 2500)) {
+          console.info(_tag, 'GUARD: kept (stepmodal-closed without recent meal signal)', {
+            guard: followupSessionGuard,
+            mealCount,
+            signalAgeMs
+          });
+          return;
+        }
+      }
+      console.warn(_tag, 'GUARD OVERRIDE: data missing, user action', { guard: followupSessionGuard, mealCount, actualStatus, reason });
+      try { sessionStorage.removeItem(followupSessionGuardKey); } catch (_) { }
     }
     const snoozeAt = dayData?.morningActivation?.followupSnoozeUntilMealCount;
     if (snoozeAt != null && mealCount <= snoozeAt) {
-      console.info('[MorningCheckin] morning activation follow-up snoozed until next meal add', {
-        mealCount,
-        snoozeAt
-      });
+      console.info(_tag, 'SNOOZE: blocked', { mealCount, snoozeAt, reason });
       return;
     }
+
+    console.warn(_tag, 'OPENING MODAL', { reason, mealCount, maStatus: _maStatus, firstMealTime: check.firstMealTime });
 
     const currentState = dayData?.morningActivation || {};
     if (currentState.status !== 'pending' || currentState.firstMealTime !== check.firstMealTime) {
@@ -23223,7 +23592,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       allowSwipe: false,
       context: { dateKey: todayKey, firstMealTime: check.firstMealTime, reason },
       onClose: () => {
-        const fresh = readStoredValue(`heys_dayv2_${todayKey}`, {}) || {};
+        const fresh = readDayV2ScopedFirst(todayKey, {}) || {};
         const mc = countMealsWithItems(fresh);
         persistMorningActivationPatch(todayKey, {
           followupSnoozeUntilMealCount: mc
@@ -23239,6 +23608,12 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         followupOpening = false;
       },
       onComplete: () => {
+        const _freshData = readDayV2ScopedFirst(todayKey, {}) || {};
+        console.warn('[MA.followup] onComplete', {
+          maStatus: _freshData?.morningActivation?.status,
+          trainingSources: (_freshData?.trainings || []).map(t => t?.source).filter(Boolean),
+          todayKey
+        });
         persistMorningActivationPatch(todayKey, {
           followupSnoozeUntilMealCount: null
         }, 'morning-activation-followup-complete');
@@ -23327,9 +23702,9 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       }
     }
 
-    const dayData = readStoredValue(`heys_dayv2_${todayKey}`, {});
+    const dayData = readDayV2ScopedFirst(todayKey, {});
     const calendarKey = new Date().toISOString().slice(0, 10);
-    const altDayData = calendarKey !== todayKey ? readStoredValue(`heys_dayv2_${calendarKey}`, {}) : {};
+    const altDayData = calendarKey !== todayKey ? readDayV2ScopedFirst(calendarKey, {}) : {};
 
     const hasWeightPrimary = dayData && dayData.weightMorning != null && dayData.weightMorning !== '' && dayData.weightMorning !== 0;
     const hasWeightAlt = altDayData && altDayData.weightMorning != null && altDayData.weightMorning !== '' && altDayData.weightMorning !== 0;
@@ -23712,20 +24087,34 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     if (detail?.source === 'morning-activation-followup-open') return;
     if (detail?.source === 'morning-activation-followup-dismiss') return;
     if (detail?.source === 'morning-activation-followup-complete') return;
+    // Ignore saves from within the followup itself — status is being persisted, no need to re-check
+    if (detail?.source === 'morning-activation-followup') return;
+    if (detail?.source === 'morning-activation-sync') return;
+    // Only trigger followup if we are inside an active product-add flow.
+    // Background sync (local-write, HOT events) must NOT open the modal on their own.
+    if (!pendingFollowupAfterProductFlow) return;
+    console.info('[MA.event] day-updated (product-flow) →', detail?.source, { field: detail?.field });
     setTimeout(() => maybeOpenMorningActivationFollowup(detail?.source || 'day-updated'), 60);
   });
 
   window.addEventListener('heysProductAdded', () => {
-    // Усиливаем триггер: после добавления еды перепроверяем follow-up зарядки.
-    // Session/day guards внутри maybeOpenMorningActivationFollowup защищают от циклов.
-    setTimeout(() => maybeOpenMorningActivationFollowup('product-added'), 120);
+    lastMealSignalAt = Date.now();
+    pendingFollowupAfterProductFlow = true;
+    console.warn('[MA.event] heysProductAdded — pendingFollowupAfterProductFlow=true');
   });
 
-  document.addEventListener('heys-stepmodal-ready', () => {
-    setTimeout(() => maybeOpenMorningActivationFollowup('stepmodal-ready'), 180);
+  document.addEventListener('heys-stepmodal-closed', () => {
+    console.warn('[MA.event] heys-stepmodal-closed', { pendingFollowupAfterProductFlow });
+    if (!pendingFollowupAfterProductFlow) {
+      console.warn('[MA.event] heys-stepmodal-closed SKIP — not a product-add flow');
+      return;
+    }
+    pendingFollowupAfterProductFlow = false;
+    setTimeout(() => maybeOpenMorningActivationFollowup('stepmodal-closed'), 220);
   });
 
-  setTimeout(() => maybeOpenMorningActivationFollowup('module-init'), 350);
+  // module-init trigger removed: at page-load localStorage may not yet contain today's day data
+  // (HOT sync writes arrive later). The modal must only appear after a product-add flow.
 
   // console.log('[HEYS] MorningCheckin v2 loaded (using StepModal)');
 
@@ -40513,7 +40902,24 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
   // ── DOM ──
 
   function ensureBar() {
-    if (barEl) return barEl;
+    if (barEl && !barEl.isConnected) {
+      barEl = null;
+      progressEl = null;
+      queueMetaEl = null;
+      labelEl = null;
+      subtitleEl = null;
+      iconEl = null;
+    }
+    if (barEl) {
+      if (!progressEl) {
+        progressEl = barEl.querySelector('.heys-undo-bar__progress');
+        queueMetaEl = barEl.querySelector('.heys-undo-bar__meta');
+        labelEl = barEl.querySelector('.heys-undo-bar__label');
+        subtitleEl = barEl.querySelector('.heys-undo-bar__subtitle');
+        iconEl = barEl.querySelector('.heys-undo-bar__icon');
+      }
+      return barEl;
+    }
 
     barEl = document.createElement('div');
     barEl.className = 'heys-undo-bar';
@@ -40560,6 +40966,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
   function destroyBar() {
     if (!barEl) return;
+    stopProgress();
     barEl.classList.remove('heys-undo-bar--visible');
     setTimeout(() => {
       barEl?.remove();
@@ -40587,15 +40994,22 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
   // ── Progress animation ──
 
   function startProgress(duration) {
+    stopProgress();
     if (!progressEl) return;
     const start = performance.now();
 
     function tick(now) {
+      if (!progressEl) {
+        rafId = null;
+        return;
+      }
       const elapsed = now - start;
       const ratio = Math.max(0, 1 - elapsed / duration);
       progressEl.style.transform = 'scaleX(' + ratio + ')';
       if (ratio > 0 && currentUndo) {
         rafId = requestAnimationFrame(tick);
+      } else {
+        rafId = null;
       }
     }
 

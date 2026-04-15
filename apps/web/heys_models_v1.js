@@ -522,7 +522,9 @@
       // Сохраняем metadata для стабильности
       updatedAt: d.updatedAt || undefined,
       schemaVersion: d.schemaVersion || undefined,
-      _sourceId: d._sourceId || undefined
+      _sourceId: d._sourceId || undefined,
+      // Утренняя зарядка / follow-up (иначе ensureDay теряет статус при heys:day-updated)
+      morningActivation: (d.morningActivation && typeof d.morningActivation === 'object') ? d.morningActivation : undefined
     };
     // 🆕 v3.7.3: Не создаём пустые тренировки, только очищаем невалидные
     if (!Array.isArray(base.trainings)) base.trainings = [];
@@ -541,7 +543,7 @@
       const mood = (t && t.mood !== undefined) ? +t.mood : (t && t.quality !== undefined) ? +t.quality : 5;
       const wellbeing = (t && t.wellbeing !== undefined) ? +t.wellbeing : (t && t.feelAfter !== undefined) ? +t.feelAfter : 5;
       const stress = (t && t.stress !== undefined) ? +t.stress : 5;
-      return {
+      const out = {
         z: (t && Array.isArray(t.z)) ? [+t.z[0] || 0, +t.z[1] || 0, +t.z[2] || 0, +t.z[3] || 0] : [0, 0, 0, 0],
         time: (t && t.time) || '',
         type: (t && t.type) || '',
@@ -550,6 +552,10 @@
         stress: stress,
         comment: (t && t.comment) || ''
       };
+      if (t && t.source) out.source = t.source;
+      if (t && typeof t.activityLabel === 'string' && t.activityLabel.trim()) out.activityLabel = t.activityLabel.trim();
+      if (t && t.intensity) out.intensity = t.intensity;
+      return out;
     });
     return base;
   }

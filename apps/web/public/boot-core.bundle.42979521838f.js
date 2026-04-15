@@ -18086,7 +18086,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
 
 
 /* ===== heys_storage_supabase_v1.js ===== */
-// heys_storage_supabase_v1.js — Supabase bridge, auth, cloud sync, localStorage mirroring
+﻿// heys_storage_supabase_v1.js — Supabase bridge, auth, cloud sync, localStorage mirroring
 // v59: Fix cache invalidation on cloud sync — UI now shows synced data when changing dates
 // v60: FIX dayv2 overwrite — БЛОКИРОВКА записи старых данных из cloud в localStorage (timestamp check)
 // v61: FIX offline→online race — flush before download + dayv2 backup + meals count guard
@@ -18309,6 +18309,48 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
     }
 
     return { w: weight, h: height, g: gender };
+  }
+
+  const DEFAULT_TAB_SYNC_GRACE_BYPASS_MS = 15000;
+
+  function getPendingDefaultTabSyncState() {
+    const pending = global.HEYS?._pendingProfileSyncFlags?.defaultTab;
+    if (!pending || typeof pending !== 'object') return null;
+
+    const requestedTab = typeof pending.requestedTab === 'string' ? pending.requestedTab : '';
+    const createdAt = Number(pending.createdAt || 0);
+
+    if (!requestedTab || !Number.isFinite(createdAt) || createdAt <= 0) {
+      return null;
+    }
+
+    return { requestedTab, createdAt };
+  }
+
+  function clearPendingDefaultTabSyncState() {
+    if (!global.HEYS?._pendingProfileSyncFlags?.defaultTab) return;
+    delete global.HEYS._pendingProfileSyncFlags.defaultTab;
+  }
+
+  function shouldBypassGraceForDefaultTabSync(normalizedKey, value, now = Date.now()) {
+    if (normalizedKey !== 'heys_profile' || !value || typeof value !== 'object' || Array.isArray(value)) {
+      return false;
+    }
+
+    const pending = getPendingDefaultTabSyncState();
+    if (!pending) return false;
+
+    if ((now - pending.createdAt) > DEFAULT_TAB_SYNC_GRACE_BYPASS_MS) {
+      clearPendingDefaultTabSyncState();
+      return false;
+    }
+
+    if (value.defaultTab !== pending.requestedTab) {
+      return false;
+    }
+
+    clearPendingDefaultTabSyncState();
+    return true;
   }
 
   // ═══════════════════════════════════════════════════════════════════
@@ -19215,7 +19257,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
       merged.cycleDay = local.cycleDay || remote.cycleDay || null;
     }
 
-    // 🍽️ Meals: merge по ID с учётом УДАЛЕНИЙ
+    // �🍽️ Meals: merge по ID с учётом УДАЛЕНИЙ
     // Если local свежее и meal отсутствует в local — значит удалён!
     // НО: при forceKeepAll — объединяем ВСЁ (для pull-to-refresh после фикса багов)
     const localMeals = local.meals || [];
@@ -19223,6 +19265,26 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
     const mealsMap = new Map();
     const localMealIds = new Set(localMeals.filter(m => m?.id).map(m => m.id));
     const localIsNewer = (local.updatedAt || 0) >= (remote.updatedAt || 0);
+
+    // morningActivation: merge by freshness, but 'done'/'missed' status takes priority
+    // NOTE: This block must appear AFTER 'const localIsNewer' to avoid TDZ ReferenceError
+    {
+      const localMA = local.morningActivation || null;
+      const remoteMA = remote.morningActivation || null;
+      const localMAStatus = localMA?.status;
+      const remoteMAStatus = remoteMA?.status;
+      if (localMAStatus === 'done' || localMAStatus === 'missed') {
+        // Local status confirmed — always take local
+        merged.morningActivation = localMA;
+      } else if (remoteMAStatus === 'done' || remoteMAStatus === 'missed') {
+        // Remote confirmed, local not — take remote
+        merged.morningActivation = remoteMA;
+      } else if (localIsNewer) {
+        merged.morningActivation = localMA ?? remoteMA ?? null;
+      } else {
+        merged.morningActivation = remoteMA ?? localMA ?? null;
+      }
+    }
 
     // Добавляем remote meals, но ТОЛЬКО если:
     // 1. forceKeepAll = true (pull-to-refresh: берём ВСЕ meals), ИЛИ
@@ -19286,6 +19348,16 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
     // Local свежее — берём local тренировки как базу
     const localIsNewerForTrainings = (local.updatedAt || 0) >= (remote.updatedAt || 0);
 
+    const isMorningActivationTrainingRow = (t) => {
+      if (!t || typeof t !== 'object') return false;
+      if (t.source === 'morning_activation') return true;
+      const lab = String(t.activityLabel || '').trim().toLowerCase();
+      return lab === 'зарядка';
+    };
+    const localMaStatusForTrainings = local.morningActivation?.status;
+    const protectLocalMorningActivationRow =
+      localMaStatusForTrainings === 'done' || localMaStatusForTrainings === 'missed';
+
     const maxTrainings = Math.max(localTrainings.length, remoteTrainings.length, 3);
     for (let i = 0; i < maxTrainings; i++) {
       const lt = localTrainings[i] || { z: [0, 0, 0, 0] };
@@ -19308,8 +19380,13 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
         // Remote пустая, local непустая — берём local
         winner = lt;
       } else {
-        // Обе непустые, remote свежее — берём remote
-        winner = rt;
+        // Обе непустые, remote свежее — по умолчанию remote; но не затираем строку «Зарядка»,
+        // если в облаке на том же слоте ещё старая тренировка (лаг синка после done/missed).
+        if (protectLocalMorningActivationRow && isMorningActivationTrainingRow(lt) && !isMorningActivationTrainingRow(rt)) {
+          winner = lt;
+        } else {
+          winner = rt;
+        }
       }
       const loser = winner === lt ? rt : lt;
 
@@ -25940,16 +26017,20 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
     const _inGracePeriod = _graceAge < 10000;
     const _isProfileCompleted = normalizedKey === 'heys_profile' && value && typeof value === 'object' && value.profileCompleted === true;
     const _isWidgetLayout = normalizedKey && normalizedKey.includes('widget_layout');
+    const _isDefaultTabSync = shouldBypassGraceForDefaultTabSync(normalizedKey, value);
     // v5: dayv2 ключи полностью исключены из grace period.
     // Mirror-loop защита уже обеспечена muteMirror (true во время sync download)
     // и dedup check в interceptSetItem. persistDayData вызывается только из
     // пользовательских действий, а не из React re-render после cloud sync.
     const _isDayV2Data = normalizedKey && normalizedKey.includes('dayv2_') && !normalizedKey.includes('date');
-    if (_inGracePeriod && !_isProfileCompleted && !_isWidgetLayout && !_isDayV2Data) {
+    if (_inGracePeriod && !_isProfileCompleted && !_isWidgetLayout && !_isDayV2Data && !_isDefaultTabSync) {
       return;
     }
-    if (_inGracePeriod && (_isProfileCompleted || _isWidgetLayout)) {
-      console.info('[HEYS.sync] 🔓 Grace period bypassed for', _isWidgetLayout ? 'widget_layout' : 'profileCompleted', 'save');
+    if (_inGracePeriod && (_isProfileCompleted || _isWidgetLayout || _isDefaultTabSync)) {
+      const bypassReason = _isWidgetLayout
+        ? 'widget_layout'
+        : (_isProfileCompleted ? 'profileCompleted' : 'defaultTab');
+      console.info('[HEYS.sync] 🔓 Grace period bypassed for', bypassReason, 'save');
     }
     if (_inGracePeriod && _isDayV2Data) {
       pushSyncTrace('GRACE_PERIOD_BYPASS_dayv2', { key: normalizedKey, graceAge: Math.round(_graceAge), updatedAt: value?.updatedAt });
@@ -26529,6 +26610,20 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
       }
 
       if (baseKey.includes('dayv2_') && !/(^|_)dayv2_date$/.test(scopedKey)) {
+        // 🛡️ FIX: Protect dayv2 from hot-sync overwrite with stale cloud data.
+        // Hot-sync can receive cloud data that is older than the fresh local add
+        // (product was added locally but not yet uploaded). Without this check,
+        // the stale cloud version overwrites localStorage, making the product disappear.
+        // Mirrors the widget_layout protection above.
+        try {
+          const localObj = currentRaw ? JSON.parse(currentRaw) : null;
+          const localUp = localObj?.updatedAt;
+          const remoteUp = value?.updatedAt;
+          if (typeof localUp === 'number' && typeof remoteUp === 'number' && localUp > remoteUp) {
+            logCritical(`🛡️ [DAYV2 HOT] BLOCKED overwrite (local ${localUp} > remote ${remoteUp}): ${scopedKey}`);
+            return false; // local is newer — don't overwrite
+          }
+        } catch (_) { /* parse error — proceed normally */ }
         const wroteDay = writeDayKeyWithQuotaGuard(scopedKey, value, {
           preserveRecentDuringHydration: true,
           nowTs: Date.now()
@@ -28815,7 +28910,9 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
       // Сохраняем metadata для стабильности
       updatedAt: d.updatedAt || undefined,
       schemaVersion: d.schemaVersion || undefined,
-      _sourceId: d._sourceId || undefined
+      _sourceId: d._sourceId || undefined,
+      // Утренняя зарядка / follow-up (иначе ensureDay теряет статус при heys:day-updated)
+      morningActivation: (d.morningActivation && typeof d.morningActivation === 'object') ? d.morningActivation : undefined
     };
     // 🆕 v3.7.3: Не создаём пустые тренировки, только очищаем невалидные
     if (!Array.isArray(base.trainings)) base.trainings = [];
@@ -28834,7 +28931,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
       const mood = (t && t.mood !== undefined) ? +t.mood : (t && t.quality !== undefined) ? +t.quality : 5;
       const wellbeing = (t && t.wellbeing !== undefined) ? +t.wellbeing : (t && t.feelAfter !== undefined) ? +t.feelAfter : 5;
       const stress = (t && t.stress !== undefined) ? +t.stress : 5;
-      return {
+      const out = {
         z: (t && Array.isArray(t.z)) ? [+t.z[0] || 0, +t.z[1] || 0, +t.z[2] || 0, +t.z[3] || 0] : [0, 0, 0, 0],
         time: (t && t.time) || '',
         type: (t && t.type) || '',
@@ -28843,6 +28940,10 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
         stress: stress,
         comment: (t && t.comment) || ''
       };
+      if (t && t.source) out.source = t.source;
+      if (t && typeof t.activityLabel === 'string' && t.activityLabel.trim()) out.activityLabel = t.activityLabel.trim();
+      if (t && t.intensity) out.intensity = t.intensity;
+      return out;
     });
     return base;
   }

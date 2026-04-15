@@ -65,7 +65,24 @@
   // ── DOM ──
 
   function ensureBar() {
-    if (barEl) return barEl;
+    if (barEl && !barEl.isConnected) {
+      barEl = null;
+      progressEl = null;
+      queueMetaEl = null;
+      labelEl = null;
+      subtitleEl = null;
+      iconEl = null;
+    }
+    if (barEl) {
+      if (!progressEl) {
+        progressEl = barEl.querySelector('.heys-undo-bar__progress');
+        queueMetaEl = barEl.querySelector('.heys-undo-bar__meta');
+        labelEl = barEl.querySelector('.heys-undo-bar__label');
+        subtitleEl = barEl.querySelector('.heys-undo-bar__subtitle');
+        iconEl = barEl.querySelector('.heys-undo-bar__icon');
+      }
+      return barEl;
+    }
 
     barEl = document.createElement('div');
     barEl.className = 'heys-undo-bar';
@@ -112,6 +129,7 @@
 
   function destroyBar() {
     if (!barEl) return;
+    stopProgress();
     barEl.classList.remove('heys-undo-bar--visible');
     setTimeout(() => {
       barEl?.remove();
@@ -139,15 +157,22 @@
   // ── Progress animation ──
 
   function startProgress(duration) {
+    stopProgress();
     if (!progressEl) return;
     const start = performance.now();
 
     function tick(now) {
+      if (!progressEl) {
+        rafId = null;
+        return;
+      }
       const elapsed = now - start;
       const ratio = Math.max(0, 1 - elapsed / duration);
       progressEl.style.transform = 'scaleX(' + ratio + ')';
       if (ratio > 0 && currentUndo) {
         rafId = requestAnimationFrame(tick);
+      } else {
+        rafId = null;
       }
     }
 

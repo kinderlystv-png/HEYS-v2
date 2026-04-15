@@ -955,6 +955,8 @@
       modalRoot.parentNode.removeChild(modalRoot);
       modalRoot = null;
     }
+
+    document.dispatchEvent(new CustomEvent('heys-stepmodal-closed'));
   }
 
   // === Экспорт ===

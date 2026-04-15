@@ -126,6 +126,133 @@
     return lsGet(getUnscopedDayKey(dateKey), fallback) || fallback;
   }
 
+  function countMealItems(dayData) {
+    const meals = Array.isArray(dayData?.meals) ? dayData.meals : [];
+    return meals.reduce((sum, meal) => sum + (Array.isArray(meal?.items) ? meal.items.length : 0), 0);
+  }
+
+  function pickRicherDayData(a, b) {
+    const left = a && typeof a === 'object' ? a : {};
+    const right = b && typeof b === 'object' ? b : {};
+    const leftItems = countMealItems(left);
+    const rightItems = countMealItems(right);
+    if (rightItems !== leftItems) return rightItems > leftItems ? right : left;
+    const leftUpdated = Number(left.updatedAt) || 0;
+    const rightUpdated = Number(right.updatedAt) || 0;
+    return rightUpdated > leftUpdated ? right : left;
+  }
+
+  function flushDayTabBeforeRead() {
+    try {
+      if (typeof HEYS.Day?.requestFlush === 'function') {
+        HEYS.Day.requestFlush({ force: true });
+      }
+    } catch (_) {
+      // ignore flush errors
+    }
+  }
+
+  function invalidateDayReadCaches(dateKey) {
+    try {
+      if (HEYS.dayCache && typeof HEYS.dayCache.invalidate === 'function') {
+        HEYS.dayCache.invalidate(dateKey);
+      }
+    } catch (_) {
+      // ignore
+    }
+    const unscoped = getUnscopedDayKey(dateKey);
+    const scoped = getScopedDayKey(dateKey);
+    try {
+      if (HEYS.store?.invalidate) {
+        HEYS.store.invalidate(unscoped);
+        if (scoped) HEYS.store.invalidate(scoped);
+      }
+    } catch (_) {
+      // ignore
+    }
+  }
+
+  function readDayFromRawLocalStorage(dateKey) {
+    const cid = getCurrentClientId();
+    const keys = [];
+    if (cid) keys.push(`heys_${cid}_dayv2_${dateKey}`);
+    keys.push(`heys_dayv2_${dateKey}`);
+    let best = null;
+    let bestItems = -1;
+    for (let i = 0; i < keys.length; i++) {
+      const k = keys[i];
+      try {
+        const raw = global.localStorage?.getItem(k);
+        if (!raw) continue;
+        const obj = tryParseStoredValue(raw, null);
+        if (obj && typeof obj === 'object') {
+          const n = countMealItems(obj);
+          if (n > bestItems) {
+            bestItems = n;
+            best = obj;
+          }
+        }
+      } catch (_) {
+        // ignore parse errors
+      }
+    }
+    return best;
+  }
+
+  function getFreshDayData(dateKey) {
+    flushDayTabBeforeRead();
+    invalidateDayReadCaches(dateKey);
+
+    let result = readDayData(dateKey, {}) || {};
+    try {
+      const liveDay = HEYS.Day?.getDay?.();
+      if (liveDay && typeof liveDay === 'object') {
+        result = pickRicherDayData(result, liveDay);
+      }
+    } catch (_) {
+      // ignore live day read errors
+    }
+    const scopedKey = getScopedDayKey(dateKey);
+    if (scopedKey) {
+      const scopedData = lsGet(scopedKey, null);
+      if (scopedData && typeof scopedData === 'object') {
+        result = pickRicherDayData(result, scopedData);
+      }
+    }
+    const unscopedData = lsGet(getUnscopedDayKey(dateKey), null);
+    if (unscopedData && typeof unscopedData === 'object') {
+      result = pickRicherDayData(result, unscopedData);
+    }
+    const rawLocal = readDayFromRawLocalStorage(dateKey);
+    if (rawLocal && typeof rawLocal === 'object') {
+      result = pickRicherDayData(result, rawLocal);
+    }
+    return result && typeof result === 'object' ? result : {};
+  }
+
+  /** Перед MA persist/sync: приёмы из live только если там строго больше строк, чем в base (новый продукт уже в React). */
+  function mergeDayMealsPreferLiveIfRicher(dateKey, dayData) {
+    const base = dayData && typeof dayData === 'object' ? dayData : {};
+    try {
+      const live = HEYS.Day?.getDay?.();
+      if (!live || typeof live !== 'object') return base;
+      const dk = String(base.date || dateKey || '');
+      const lk = String(live.date || '');
+      if (lk && dk && lk !== dk) return base;
+      const countMealLines = (d) => (Array.isArray(d?.meals) ? d.meals : []).reduce((s, m) => {
+        return s + (Array.isArray(m?.items) ? m.items.length : 0);
+      }, 0);
+      const lc = countMealLines(live);
+      const bc = countMealLines(base);
+      if (lc > bc && Array.isArray(live.meals)) {
+        return { ...base, meals: live.meals };
+      }
+    } catch (_) {
+      // ignore
+    }
+    return base;
+  }
+
   function saveDayData(dateKey, dayData) {
     const scopedKey = getScopedDayKey(dateKey);
     if (scopedKey) {
@@ -140,6 +267,13 @@
       HEYS.store.set(getUnscopedDayKey(dateKey), dayData);
     } else {
       lsSet(getUnscopedDayKey(dateKey), dayData);
+    }
+    try {
+      if (HEYS.dayCache && typeof HEYS.dayCache.notifyDateUpdated === 'function') {
+        HEYS.dayCache.notifyDateUpdated(dateKey);
+      }
+    } catch (_) {
+      // ignore
     }
   }
 
@@ -278,17 +412,18 @@
 
   function getFirstMealTimeFromDay(dayData) {
     const meals = Array.isArray(dayData?.meals) ? dayData.meals : [];
-    const times = meals
-      .filter((meal) => Array.isArray(meal?.items) && meal.items.length > 0)
-      .map((meal) => meal?.time)
-      .map(parseTimeToMinutes)
-      .filter((value) => Number.isFinite(value));
-
-    if (!times.length) return null;
-    const first = Math.min(...times);
-    const hh = String(Math.floor(first / 60)).padStart(2, '0');
-    const mm = String(first % 60).padStart(2, '0');
-    return `${hh}:${mm}`;
+    const withItems = meals.filter((meal) => Array.isArray(meal?.items) && meal.items.length > 0);
+    if (!withItems.length) return null;
+    const minutesList = withItems
+      .map((meal) => parseTimeToMinutes(meal?.time))
+      .filter((m) => Number.isFinite(m));
+    if (minutesList.length) {
+      const first = Math.min(...minutesList);
+      const hh = String(Math.floor(first / 60)).padStart(2, '0');
+      const mm = String(first % 60).padStart(2, '0');
+      return `${hh}:${mm}`;
+    }
+    return null;
   }
 
   function getEnergyBucket(mood, wellbeing, stress) {
@@ -428,7 +563,15 @@
   }
 
   function persistMorningActivationState(dateKey, nextState, source = 'morning-activation') {
-    const dayData = readDayData(dateKey, {});
+    try {
+      if (HEYS.Day && typeof HEYS.Day.requestFlush === 'function') {
+        HEYS.Day.requestFlush({ force: true });
+      }
+    } catch (_) {
+      // ignore
+    }
+    let dayData = getFreshDayData(dateKey);
+    dayData = mergeDayMealsPreferLiveIfRicher(dateKey, dayData);
     dayData.morningActivation = {
       ...(dayData.morningActivation || {}),
       ...nextState
@@ -441,7 +584,8 @@
           date: dateKey,
           field: 'morningActivation',
           source,
-          forceReload: true
+          forceReload: true,
+          data: { ...dayData, date: dateKey }
         }
       }));
     }
@@ -550,9 +694,25 @@
   }
 
   function removeMorningActivationArtifacts(dayData) {
+    const maZoneSignatures = new Set(['8,0,0,0', '8,6,0,0', '4,8,8,2']);
+    const trainingZoneSignature = (training) => {
+      const z = Array.isArray(training?.z) ? training.z : [];
+      return [0, 1, 2, 3].map((i) => Number(z[i]) || 0).join(',');
+    };
+    const isMorningActivationLike = (training) => {
+      if (!training || typeof training !== 'object') return false;
+      if (training.source === 'morning_activation') return true;
+      const label = typeof training.activityLabel === 'string' ? training.activityLabel.trim().toLowerCase() : '';
+      if (label === 'зарядка') return true;
+      if (String(training.type) === 'strength' && maZoneSignatures.has(trainingZoneSignature(training))) {
+        const rawLabel = typeof training.activityLabel === 'string' ? training.activityLabel.trim() : '';
+        if (!rawLabel) return true;
+      }
+      return false;
+    };
     let changed = false;
     const trainings = Array.isArray(dayData.trainings) ? dayData.trainings : [];
-    const filteredTrainings = trainings.filter((training) => training?.source !== 'morning_activation');
+    const filteredTrainings = trainings.filter((training) => !isMorningActivationLike(training));
     if (filteredTrainings.length !== trainings.length) {
       dayData.trainings = filteredTrainings;
       changed = true;
@@ -581,64 +741,52 @@
   }
 
   function syncMorningActivationActivity(dateKey, stateInput) {
-    const dayData = readDayData(dateKey, {});
+    try {
+      if (HEYS.Day && typeof HEYS.Day.requestFlush === 'function') {
+        HEYS.Day.requestFlush({ force: true });
+      }
+    } catch (_) {
+      // ignore
+    }
+    let dayData = getFreshDayData(dateKey);
+    dayData = mergeDayMealsPreferLiveIfRicher(dateKey, dayData);
     const state = stateInput || normalizeMorningActivationState(dateKey, dayData);
     let changed = removeMorningActivationArtifacts(dayData);
 
     if (state.status === 'done' && state.intensity && MORNING_ACTIVATION_INTENSITY_PRESETS[state.intensity]) {
-      const intensityPreset = MORNING_ACTIVATION_INTENSITY_PRESETS[state.intensity];
-
-      if (state.intensity === 'super_light') {
-        const activities = Array.isArray(dayData.householdActivities) ? dayData.householdActivities.slice() : [];
-        activities.push({
-          minutes: intensityPreset.duration,
-          time: state.firstMealTime || '',
-          label: 'Зарядка',
-          source: 'morning_activation',
-          intensity: state.intensity,
-          mood: state.postState?.mood ?? null,
-          wellbeing: state.postState?.wellbeing ?? null,
-          stress: state.postState?.stress ?? null
-        });
-        dayData.householdActivities = activities;
-        dayData.householdMin = activities.reduce((sum, item) => sum + (Number(item?.minutes) || 0), 0);
-        dayData.householdTime = activities[0]?.time || '';
-        changed = true;
+      const minutesByZone = state.intensity === 'high'
+        ? [4, 8, 8, 2]
+        : state.intensity === 'medium'
+          ? [8, 6, 0, 0]
+          : [8, 0, 0, 0];
+      const trainings = Array.isArray(dayData.trainings) ? dayData.trainings.slice() : [];
+      const trainingEntry = {
+        z: minutesByZone,
+        time: state.firstMealTime || '',
+        type: 'strength',
+        activityLabel: 'Зарядка',
+        source: 'morning_activation',
+        intensity: state.intensity,
+        mood: state.postState?.mood ?? 0,
+        wellbeing: state.postState?.wellbeing ?? 0,
+        stress: state.postState?.stress ?? 0,
+        comment: ''
+      };
+      const emptyIndex = trainings.findIndex((training) => {
+        const totalMinutes = Array.isArray(training?.z)
+          ? training.z.reduce((sum, item) => sum + (Number(item) || 0), 0)
+          : 0;
+        return totalMinutes === 0 && !training?.type && !training?.activityLabel;
+      });
+      if (emptyIndex >= 0) {
+        trainings[emptyIndex] = trainingEntry;
+      } else if (trainings.length < 3) {
+        trainings.push(trainingEntry);
       } else {
-        const minutesByZone = state.intensity === 'high'
-          ? [4, 8, 8, 2]
-          : [8, 6, 0, 0];
-        const trainings = Array.isArray(dayData.trainings) ? dayData.trainings.slice() : [];
-        const trainingEntry = {
-          z: minutesByZone,
-          time: state.firstMealTime || '',
-          type: 'strength',
-          activityLabel: 'Зарядка',
-          source: 'morning_activation',
-          intensity: state.intensity,
-          mood: state.postState?.mood ?? 0,
-          wellbeing: state.postState?.wellbeing ?? 0,
-          stress: state.postState?.stress ?? 0,
-          comment: state.postState
-            ? `Post state: mood ${state.postState.mood}/10, wellbeing ${state.postState.wellbeing}/10, stress ${state.postState.stress}/10`
-            : ''
-        };
-        const emptyIndex = trainings.findIndex((training) => {
-          const totalMinutes = Array.isArray(training?.z)
-            ? training.z.reduce((sum, item) => sum + (Number(item) || 0), 0)
-            : 0;
-          return totalMinutes === 0 && !training?.type && !training?.activityLabel;
-        });
-        if (emptyIndex >= 0) {
-          trainings[emptyIndex] = trainingEntry;
-        } else if (trainings.length < 3) {
-          trainings.push(trainingEntry);
-        } else {
-          trainings[trainings.length - 1] = trainingEntry;
-        }
-        dayData.trainings = trainings;
-        changed = true;
+        trainings[trainings.length - 1] = trainingEntry;
       }
+      dayData.trainings = trainings;
+      changed = true;
     }
 
     if (!changed) return;
@@ -651,7 +799,8 @@
           date: dateKey,
           field: 'morningActivation',
           source: 'morning-activation-sync',
-          forceReload: true
+          forceReload: true,
+          data: { ...dayData, date: dateKey }
         }
       }));
     }
@@ -3682,7 +3831,8 @@
       };
       return normalizePostState(initialState.postState, defaults) || defaults;
     });
-    const firstMealTime = initialState.firstMealTime || getFirstMealTimeFromDay(dayData) || '—';
+    const firstMealTimeValue = initialState.firstMealTime || getFirstMealTimeFromDay(dayData) || null;
+    const firstMealTimeLabel = firstMealTimeValue || '—';
     const [calendarViewMode, setCalendarViewMode] = useState(() => getMorningActivationCalendarViewPreference());
     const calendarData = useMemo(
       () => buildMorningActivationCalendarData(dateKey, calendarViewMode),
@@ -3697,13 +3847,13 @@
     };
 
     const saveMissed = () => {
-      const nextState = normalizeMorningActivationState(dateKey, readDayData(dateKey, {}));
+      const nextState = normalizeMorningActivationState(dateKey, getFreshDayData(dateKey));
       persistMorningActivationState(dateKey, {
         status: 'missed',
         intensity: null,
         postState: null,
         postEffect: null,
-        firstMealTime: nextState.firstMealTime || firstMealTime || null,
+        firstMealTime: nextState.firstMealTime || firstMealTimeValue || null,
         decidedAt: Date.now(),
         followupSnoozeUntilMealCount: null
       }, 'morning-activation-followup');
@@ -3717,7 +3867,14 @@
 
     const saveDone = () => {
       if (!selectedIntensity) return;
-      const nextState = normalizeMorningActivationState(dateKey, readDayData(dateKey, {}));
+      try {
+        if (HEYS.Day && typeof HEYS.Day.requestFlush === 'function') {
+          HEYS.Day.requestFlush({ force: true });
+        }
+      } catch (_) {
+        // ignore
+      }
+      const nextState = normalizeMorningActivationState(dateKey, getFreshDayData(dateKey));
       const normalizedPostState = normalizePostState(postState, {
         mood: 6,
         wellbeing: 6,
@@ -3730,12 +3887,20 @@
         intensity: selectedIntensity,
         postState: normalizedPostState,
         postEffect,
-        firstMealTime: nextState.firstMealTime || firstMealTime || null,
+        firstMealTime: nextState.firstMealTime || firstMealTimeValue || null,
         decidedAt: Date.now(),
         followupSnoozeUntilMealCount: null
       };
       persistMorningActivationState(dateKey, preparedState, 'morning-activation-followup');
       syncMorningActivationActivity(dateKey, preparedState);
+      const _verify = readDayData(dateKey, {});
+      console.warn('[MA.saveDone] SAVED', {
+        dateKey,
+        intensity: selectedIntensity,
+        maStatus: _verify?.morningActivation?.status,
+        trainingsCount: (_verify?.trainings || []).length,
+        trainingSources: (_verify?.trainings || []).map(t => t?.source).filter(Boolean)
+      });
       try {
         if (HEYS.game?.recordMorningActivationDone) {
           HEYS.game.recordMorningActivationDone(dateKey);
@@ -3778,7 +3943,7 @@
         }, 'Подтверждение утренней зарядки'),
         React.createElement('div', {
           style: { fontSize: '12px', color: '#334155', lineHeight: '1.45' }
-        }, `После первого приёма пищи (${firstMealTime}) зафиксируй статус привычки.`)
+        }, `После первого приёма пищи (${firstMealTimeLabel}) зафиксируй статус привычки.`)
       ),
       React.createElement('div', {
         style: {

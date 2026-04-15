@@ -403,10 +403,9 @@
         const setDay = setDayRaw;
         const day = dayRaw;
         const dayRef = useRef(day);
-
-        useEffect(() => {
-            dayRef.current = day;
-        }, [day]);
+        // Синхронно: HEYS.Day.getDay() и flush должны видеть актуальный день в том же тике, что и setDay
+        // (иначе StepModal/MA может прочитать dayRef до commit useEffect).
+        dayRef.current = day;
 
         // === EARLY RETURN #2: защита если day стал undefined при logout ===
         // Это может произойти при race condition когда localStorage очищается во время рендера
