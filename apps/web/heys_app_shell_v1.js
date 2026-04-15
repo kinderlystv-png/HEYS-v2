@@ -781,7 +781,7 @@
             return `${Math.floor(m / 60)} ч назад`;
         };
         const handleSyncBadgeClick = () => {
-            if (effectiveDisplayStatus === 'syncing' || effectiveDisplayStatus === 'offline') return;
+            if (effectiveDisplayStatus === 'syncing' || effectiveDisplayStatus === 'offline' || effectiveDisplayStatus === 'session') return;
             haptic('light');
             if (HEYS?.cloud?.syncClient && clientIdValue) {
                 console.info('[HEYS.sync] 🔄 Manual force-sync triggered from badge');
@@ -1250,7 +1250,7 @@
                 // ☁️ Cloud sync indicator (v2.0: forceSync on click, auto-fade, relative time tooltip)
                 React.createElement('div', {
                     key: 'cloudsync',
-                    className: 'cloud-sync-indicator ' + effectiveDisplayStatus + (effectiveDisplayStatus !== 'syncing' && effectiveDisplayStatus !== 'offline' ? ' cloud-sync-indicator--clickable' : ''),
+                    className: 'cloud-sync-indicator ' + effectiveDisplayStatus + (effectiveDisplayStatus !== 'syncing' && effectiveDisplayStatus !== 'offline' && effectiveDisplayStatus !== 'session' ? ' cloud-sync-indicator--clickable' : ''),
                     title: (() => {
                         const routingMode = HEYS?.cloud?.getRoutingStatus?.()?.mode || 'unknown';
                         const modeLabel = routingMode === 'direct' ? '🔗 Direct' : routingMode === 'proxy' ? '🔀 Proxy' : '';
@@ -1277,6 +1277,8 @@
                                 ? `Офлайн — ${pendingCount} изменений ожидают синхронизации`
                                 : 'Офлайн — данные сохраняются локально';
                             if (pendingBreakdownText) baseTitle += ` · ${pendingBreakdownText}`;
+                        } else if (effectiveDisplayStatus === 'session') {
+                            baseTitle = 'Сессия истекла — войдите снова';
                         } else if (effectiveDisplayStatus === 'error') {
                             baseTitle = retryCountdown > 0
                                 ? `Ошибка. Повтор через ${retryCountdown}с — нажмите для повтора`
@@ -1305,6 +1307,9 @@
                                 ),
                                 pendingCount > 0 && React.createElement('span', { key: 'pb', className: 'pending-badge' }, pendingCount)
                             ]
+                                : effectiveDisplayStatus === 'session' ? [
+                                    React.createElement('span', { key: 'sess', className: 'cloud-icon session', 'aria-hidden': 'true' }, '🔑'),
+                                ]
                                 : effectiveDisplayStatus === 'queued' ? [
                                     React.createElement('svg', { key: 'cloud', className: 'cloud-icon idle', viewBox: '0 0 24 24', width: 16, height: 16, fill: 'currentColor' },
                                         React.createElement('path', { d: 'M19.35 10.04A7.49 7.49 0 0 0 12 4C9.11 4 6.6 5.64 5.35 8.04A5.994 5.994 0 0 0 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z' })

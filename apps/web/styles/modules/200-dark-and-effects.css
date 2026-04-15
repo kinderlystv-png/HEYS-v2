@@ -2093,6 +2093,11 @@
   color: #f87171;
 }
 
+[data-theme="dark"] .cloud-sync-indicator.session {
+  background: rgba(167, 139, 250, 0.16);
+  color: #c4b5fd;
+}
+
 /* EWS Badge dark mode (v1.0) */
 [data-theme="dark"] .ews-badge--medium {
   background: rgba(251, 146, 60, 0.2);

@@ -64,7 +64,13 @@ export async function loginWithHeysPin(page: Page): Promise<string> {
         }
     });
 
-    await page.reload({ waitUntil: 'domcontentloaded' });
+    try {
+        await page.goto('/', { waitUntil: 'load', timeout: 90_000 });
+    } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        if (!message.includes('interrupted')) throw err;
+        await page.waitForLoadState('load', { timeout: 90_000 });
+    }
 
     await page.waitForFunction(() => {
         const heysWindow = window as typeof window & {
@@ -148,7 +154,14 @@ export async function loginWithHeysPin(page: Page): Promise<string> {
     expect(loginResult.ok, loginResult.message || loginResult.error || 'PIN login failed').toBeTruthy();
     expect(loginResult.clientId, 'PIN login did not return a clientId').toBeTruthy();
 
-    await page.reload({ waitUntil: 'domcontentloaded' });
+    // Post-login the shell may navigate on its own; tolerate races with `goto('/')`.
+    try {
+        await page.goto('/', { waitUntil: 'load', timeout: 90_000 });
+    } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        if (!message.includes('interrupted')) throw err;
+        await page.waitForLoadState('load', { timeout: 90_000 });
+    }
 
     await expect
         .poll(async () => {

@@ -34,6 +34,17 @@
 
         queue.push(params.item);
 
+        const _pushTrace = typeof global.HEYS?.debug?.getSyncTraceBuffer === 'function'
+            ? global.HEYS.debug._pushSyncTrace || null : null;
+        const _key = params.item?.k || params.normalizedKey || '';
+        if (_key.includes('dayv2_')) {
+            const _v = params.item?.v;
+            const _mCnt = Array.isArray(_v?.meals) ? _v.meals.length : '?';
+            const _iCnt = Array.isArray(_v?.meals) ? _v.meals.reduce((s, m) => s + (m.items?.length || 0), 0) : '?';
+            const _msg = { key: _key, qLen: queue.length, meals: _mCnt, items: _iCnt, updatedAt: _v?.updatedAt, online: !!params.isOnline, waitSync: !!params.waitingForSync };
+            (global.console || console).info('[HEYS.syncTrace] ENQUEUE_dayv2', _msg);
+        }
+
         if (typeof params.persistQueue === 'function') params.persistQueue(queue);
         if (typeof params.notifyPendingChange === 'function') params.notifyPendingChange();
         if (typeof params.scheduleClientPush === 'function') params.scheduleClientPush();

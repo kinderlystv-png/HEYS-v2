@@ -52,6 +52,33 @@
       openTrainingPicker
     } = actions;
 
+    const hasMorningActivationDone = (() => {
+      if (day?.morningActivation?.status === 'done') return true;
+      const trainings = Array.isArray(day?.trainings) ? day.trainings : [];
+      if (trainings.some((t) => t && t.source === 'morning_activation')) return true;
+      const household = Array.isArray(day?.householdActivities) ? day.householdActivities : [];
+      if (household.some((h) => h && h.source === 'morning_activation')) return true;
+      return false;
+    })();
+
+    const openMorningActivationQuickAdd = () => {
+      const dateKey = day?.date || day?.dateKey || (HEYS.StepModal?.utils?.getTodayKey?.() || new Date().toISOString().slice(0, 10));
+      if (HEYS.StepModal?.show && HEYS.StepModal?.registry?.morning_activation_followup) {
+        HEYS.StepModal.show({
+          steps: ['morning_activation_followup'],
+          title: 'Утренняя зарядка',
+          showProgress: false,
+          showStreak: false,
+          showGreeting: false,
+          showTip: false,
+          allowSwipe: false,
+          context: { dateKey }
+        });
+        return;
+      }
+      openTrainingPicker?.(visibleTrainings || 0);
+    };
+
     return React.createElement('div', { className: 'compact-activity compact-card widget-shadow-diary-glass widget-outline-diary-glass' },
       React.createElement('div', { className: 'compact-card-header' }, '📏 АКТИВНОСТЬ'),
 
@@ -250,16 +277,36 @@
               }
             }, '+ Добавить')
           ),
-          // Кнопка добавления тренировки
-          visibleTrainings < 3 && React.createElement('button', {
-            className: 'add-training-btn',
-            onClick: () => {
-              const newIndex = visibleTrainings;
-              // НЕ увеличиваем visibleTrainings сразу — 
-              // он обновится автоматически когда тренировка сохранится
-              openTrainingPicker(newIndex);
+          React.createElement('div', {
+            style: {
+              display: 'flex',
+              gap: '6px',
+              alignItems: 'stretch',
+              marginTop: '6px'
             }
-          }, '+ Тренировка')
+          },
+            // Кнопка добавления тренировки
+            visibleTrainings < 3 && React.createElement('button', {
+              className: 'add-training-btn',
+              onClick: () => {
+                const newIndex = visibleTrainings;
+                // НЕ увеличиваем visibleTrainings сразу —
+                // он обновится автоматически когда тренировка сохранится
+                openTrainingPicker(newIndex);
+              },
+              style: {
+                flex: hasMorningActivationDone ? '1 1 100%' : '1 1 auto',
+                minWidth: 0,
+                padding: hasMorningActivationDone ? '14px 12px' : '12px 10px'
+              }
+            }, '+ Тренировка'),
+            !hasMorningActivationDone && React.createElement('button', {
+              className: 'add-training-btn add-charge-btn',
+              type: 'button',
+              onClick: openMorningActivationQuickAdd,
+              title: 'Добавить зарядку'
+            }, '⚡🔋')
+          )
         )
       ),
 

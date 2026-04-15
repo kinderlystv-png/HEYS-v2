@@ -76,6 +76,23 @@
             };
         }, [initialTabLoaded]);
 
+        // Re-read profile when client ID becomes available (fixes namespace mismatch on boot)
+        React.useEffect(() => {
+            const handleClientChanged = (e) => {
+                const cid = e?.detail?.clientId;
+                if (!cid) return;
+                const U = window.HEYS?.utils;
+                if (!U?.lsGet) return;
+                const freshTab = getDefaultTabFromProfile();
+                if (freshTab !== defaultTab) {
+                    devLog(`[App] 🏠 Re-read default tab after client change: ${freshTab}`);
+                    setDefaultTabState(freshTab);
+                }
+            };
+            window.addEventListener('heys:client-changed', handleClientChanged);
+            return () => window.removeEventListener('heys:client-changed', handleClientChanged);
+        }, [defaultTab]);
+
         const setDefaultTab = React.useCallback((newDefaultTab) => {
             if (!HOME_TABS.includes(newDefaultTab)) return;
 

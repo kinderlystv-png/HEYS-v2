@@ -712,6 +712,8 @@
         // � Debounce для auth_required toast
         const authErrorShownRef = useRef(false);
         const authErrorTimeoutRef = useRef(null);
+        /** Схлопывание парного heysSyncCompleted + heys:data-uploaded в один проход UI */
+        const syncCompleteDedupeAtRef = useRef(0);
         // �🔒 Cooldown после первого sync — не показываем "syncing" сразу после загрузки
         const initialSyncCompletedAtRef = useRef(0);
         const INITIAL_SYNC_COOLDOWN_MS = 3000; // 3 секунды после первого sync не показываем syncing
@@ -748,14 +750,6 @@
                 return window.HEYS?.cloud?.getPendingDetails?.() || { days: 0, products: 0, profile: 0, other: 0 };
             } catch (e) {
                 return { days: 0, products: 0, profile: 0, other: 0 };
-            }
-        }, []);
-
-        const getRuntimeSyncStatus = useCallback(() => {
-            try {
-                return window.HEYS?.cloud?.getSyncStatus?.() || null;
-            } catch (e) {
-                return null;
             }
         }, []);
 
@@ -822,10 +816,6 @@
         }, []);
 
         const enterBackgroundPendingSync = useCallback(() => {
-            if (!syncLockShownForCurrentSyncRef.current || !slowInternetShownForCurrentSyncRef.current) {
-                return;
-            }
-
             longSyncFallbackActiveRef.current = true;
             clearSyncLockOverlay();
             clearSlowInternetHint();
@@ -987,7 +977,6 @@
             const runtimeSyncActive = !!syncingStartRef.current && (
                 cloudStatus === 'syncing'
                 || isRuntimeUploadInProgress()
-                || getRuntimeSyncStatus() === 'syncing'
                 || syncProgressTotalRef.current > 0
             );
 
@@ -1001,13 +990,19 @@
 
             clearSyncLockOverlay();
             clearSlowInternetHint();
-        }, [armLongSyncFallback, armSlowInternetHint, armSyncLockOverlay, clearSlowInternetHint, clearSyncLockOverlay, cloudStatus, ensureSyncingStart, getRuntimeSyncStatus, isRuntimeUploadInProgress]);
+        }, [armLongSyncFallback, armSlowInternetHint, armSyncLockOverlay, clearSlowInternetHint, clearSyncLockOverlay, cloudStatus, ensureSyncingStart, isRuntimeUploadInProgress]);
 
         useEffect(() => {
             const handleSyncComplete = (e) => {
                 if (e?.type === 'heysSyncCompleted' && e?.detail?.phaseA) {
                     return;
                 }
+
+                const nowDedupe = Date.now();
+                if (nowDedupe - syncCompleteDedupeAtRef.current < 380) {
+                    return;
+                }
+                syncCompleteDedupeAtRef.current = nowDedupe;
 
                 // ⚡️ Первый heysSyncCompleted после инициализации не должен триггерить UI
                 // если не было фактических локальных изменений/отложенных синков — иначе мерцание
@@ -1186,7 +1181,7 @@
                 const isPersistent = e.detail?.persistent || false;
 
                 if (code === 'auth_required') {
-                    setCloudStatus('offline');
+                    setCloudStatus('session');
                     setRetryCountdown(0);
 
                     // 🔥 Debounce: показываем toast и делаем logout только если не делали в последние 10 сек
@@ -1286,6 +1281,11 @@
 
                 setShowOfflineBanner(false);
                 setShowOnlineBanner(true);
+
+                if (cloudStatusRef.current === 'session') {
+                    setTimeout(() => setShowOnlineBanner(false), 2000);
+                    return;
+                }
 
                 // 🆕 Haptic feedback при восстановлении связи
                 if ('vibrate' in navigator) {
@@ -1463,7 +1463,6 @@
 
                 const runtimePending = getRuntimePendingCount();
                 const uploadInProgress = isRuntimeUploadInProgress();
-                const runtimeSyncStatus = getRuntimeSyncStatus();
                 const hasPendingDelta = runtimePending !== pendingCountRef.current;
                 const shouldRefreshDetails = runtimePending > 0
                     && (hasPendingDelta || detailsTick % SYNC_STATUS_DETAILS_REFRESH_EVERY === 0);
@@ -1489,7 +1488,7 @@
                     setPendingCount(runtimePending);
                 }
 
-                if (runtimePending > 0 && !uploadInProgress && runtimeSyncStatus === 'synced') {
+                if (runtimePending > 0 && !uploadInProgress && syncProgressTotalRef.current === 0) {
                     syncingStartRef.current = null;
                     clearSyncLockOverlay();
                     clearSlowInternetHint();
@@ -1504,7 +1503,6 @@
                 const syncVisualActive = !!syncingStartRef.current && (
                     cloudStatusRef.current === 'syncing'
                     || uploadInProgress
-                    || runtimeSyncStatus === 'syncing'
                     || syncProgressTotalRef.current > 0
                 );
 
@@ -1530,7 +1528,11 @@
                     }
                 }
 
-                if (runtimePending === 0 && !uploadInProgress && runtimeSyncStatus === 'synced') {
+                if (runtimePending === 0 && !uploadInProgress && (
+                    syncingStartRef.current
+                    || cloudStatusRef.current === 'syncing'
+                    || syncProgressTotalRef.current > 0
+                )) {
                     pendingChangesRef.current = false;
                     showSyncedWithMinDuration();
                 }
@@ -1551,7 +1553,6 @@
             enterBackgroundPendingSync,
             getRuntimePendingCount,
             getRuntimePendingDetails,
-            getRuntimeSyncStatus,
             isRuntimeUploadInProgress,
             showPendingSyncBanner,
             showSlowInternetHint,

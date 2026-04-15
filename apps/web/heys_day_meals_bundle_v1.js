@@ -2165,8 +2165,21 @@
         }
       };
 
-      const handleAdd = ({ product, grams, mealIndex }) => {
+      const emitAddTrace = (event, payload = {}, level = 'info') => {
+        const debug = HEYS?.debug;
+        if (typeof debug?.pushAddTrace === 'function') {
+          debug.pushAddTrace(event, payload, level);
+          return;
+        }
+        const method = level === 'error' ? 'error' : (level === 'warn' ? 'warn' : 'info');
+        console[method](`[HEYS.addTrace] ${event}`, payload);
+      };
+
+      const handleAdd = ({ product, grams, mealIndex, _traceId, _origin }) => {
+        const traceId = _traceId || `dayadd-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
         console.info('[HEYS.day] ➕ Add product to meal (modal)', {
+          traceId,
+          origin: _origin || 'unknown',
           mealIndex,
           grams,
           productId: product?.id ?? product?.product_id ?? null,
@@ -2273,8 +2286,10 @@
 
         setDay((prevDay = {}) => {
           const mealsList = prevDay.meals || [];
+          const itemsBefore = mealsList?.[mealIndex]?.items?.length || 0;
           if (!mealsList[mealIndex]) {
             console.warn('[HEYS.day] ❌ Meal index not found for add', {
+              traceId,
               mealIndex,
               mealsCount: mealsList.length,
               productName: finalProduct?.name || null
@@ -2285,6 +2300,16 @@
               ? { ...m, items: [...(m.items || []), newItem] }
               : m
           );
+          const itemsAfter = meals?.[mealIndex]?.items?.length || 0;
+          emitAddTrace('🧱 setDay meal update', {
+            traceId,
+            mealIndex,
+            itemsBefore,
+            itemsAfter,
+            addedItemId: newItem.id,
+            addedProductId: newItem.product_id ?? null,
+            addedProductName: newItem.name || null
+          });
           return { ...prevDay, meals, updatedAt: newUpdatedAt };
         });
 
@@ -2294,6 +2319,23 @@
               HEYS.Day.requestFlush();
             }
           }, 50);
+        });
+
+        requestAnimationFrame(() => {
+          setTimeout(() => {
+            const latestDay = HEYS.Day?.getDay?.();
+            const meal = latestDay?.meals?.[mealIndex];
+            const mealItems = Array.isArray(meal?.items) ? meal.items : [];
+            const wasPersisted = mealItems.some((it) => it?.id === newItem.id);
+            emitAddTrace('🔎 post-add verify', {
+              traceId,
+              mealIndex,
+              addedItemId: newItem.id,
+              persistedInDayRef: wasPersisted,
+              mealItemsCount: mealItems.length,
+              date: latestDay?.date || date || null
+            });
+          }, 160);
         });
 
         try { navigator.vibrate?.(10); } catch (e) { }
@@ -5840,7 +5882,10 @@
 
         const persistDayData = React.useCallback((nextDayData, action = 'save_day') => {
             const key = _scopedDayKey(date);
+            const _mCnt = Array.isArray(nextDayData?.meals) ? nextDayData.meals.length : '?';
+            const _iCnt = Array.isArray(nextDayData?.meals) ? nextDayData.meals.reduce((s, m) => s + (m.items?.length || 0), 0) : '?';
             try {
+                console.info('[HEYS.syncTrace] PERSIST_DAY', { key, action, meals: _mCnt, items: _iCnt, updatedAt: nextDayData?.updatedAt });
                 lsSet(key, nextDayData);
             } catch (e) {
                 trackError(e, { source: 'day/_meals.js', action });

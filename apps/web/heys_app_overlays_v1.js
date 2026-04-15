@@ -120,7 +120,6 @@
 
         const activeEditableRef = React.useRef(null);
         const [showKeyboardDismiss, setShowKeyboardDismiss] = React.useState(false);
-        const [showSlowInternetHintLocal, setShowSlowInternetHintLocal] = React.useState(false);
 
         const syncKeyboardDismiss = React.useCallback(() => {
             if (typeof window === 'undefined' || typeof document === 'undefined') return;
@@ -207,20 +206,7 @@
             };
         }, [syncKeyboardDismiss]);
 
-        React.useEffect(() => {
-            if (!showSyncLockOverlay) {
-                setShowSlowInternetHintLocal(false);
-                return;
-            }
-
-            const timeoutId = setTimeout(() => {
-                setShowSlowInternetHintLocal(true);
-            }, 3000);
-
-            return () => clearTimeout(timeoutId);
-        }, [showSyncLockOverlay]);
-
-        const shouldShowSlowInternetHint = showSlowInternetHint || showSlowInternetHintLocal;
+        const shouldShowSlowInternetHint = showSlowInternetHint;
 
         return React.createElement(
             React.Fragment,

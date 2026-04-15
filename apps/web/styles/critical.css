@@ -127,6 +127,27 @@ body {
 
 .wrap.wrap--no-header {
   padding-top: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  max-height: 100vh;
+  min-height: 100dvh;
+  max-height: 100dvh;
+  overflow: hidden;
+}
+
+.wrap.wrap--no-header > .tab-content-swipeable {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.wrap.wrap--no-header > .tab-content-swipeable > .planning-tab {
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
 }
 
 /* Fixed header */
@@ -243,8 +264,8 @@ body {
   padding: 8px 12px;
   margin: 0;
   background: rgba(255, 255, 255, 0.97);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
   border-top: 0.5px solid rgba(0, 0, 0, 0.1);
   position: fixed;
   bottom: 0;

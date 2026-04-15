@@ -221,10 +221,12 @@
         resolvedTaskProjectIds,
         tabsSelector = '.tabs',
         fieldClassName,
+        modalMenuMode = false,
     }) {
         const fieldRef = useRef(null);
         const [menuOpen, setMenuOpen] = useState(false);
         const [menuMaxHeight, setMenuMaxHeight] = useState(null);
+        const isModalMenuMode = Boolean(modalMenuMode);
 
         const options = useMemo(
             () => buildQuickTargetOptions(projects, tasks, resolvedTaskProjectIds),
@@ -271,7 +273,7 @@
         }, [menuOpen]);
 
         useEffect(() => {
-            if (!menuOpen) return undefined;
+            if (!menuOpen || isModalMenuMode) return undefined;
 
             const recalculateMenuMaxHeight = () => {
                 if (typeof window === 'undefined') return;
@@ -293,9 +295,17 @@
                 window.removeEventListener('resize', recalculateMenuMaxHeight);
                 window.removeEventListener('scroll', recalculateMenuMaxHeight, true);
             };
-        }, [menuOpen, tabsSelector]);
+        }, [isModalMenuMode, menuOpen, tabsSelector]);
 
-        return h('div', { className: 'planning-quick-target-field' + (preview ? ' has-preview' : '') + (fieldClassName ? (' ' + fieldClassName) : '') },
+        const activeMenuValue = value;
+
+        return h('div', {
+            className: 'planning-quick-target-field'
+                + (preview ? ' has-preview' : '')
+                + (isModalMenuMode ? ' planning-quick-target-field--modal-menu' : '')
+                + (isModalMenuMode && menuOpen ? ' is-menu-open' : '')
+                + (fieldClassName ? (' ' + fieldClassName) : ''),
+        },
             h('div', {
                 className: 'planning-quick-target-select' + (menuOpen ? ' is-open' : ''),
                 ref: fieldRef,
@@ -316,27 +326,64 @@
                     }, selectedOption?.shortLabel || '📁 Без проекта'),
                     h('span', { className: 'planning-quick-target-trigger__chevron', 'aria-hidden': 'true' }, '▾'),
                 ),
+                isModalMenuMode && menuOpen && h('div', {
+                    className: 'planning-quick-target-menu__backdrop',
+                    onClick: (event) => { event.stopPropagation(); setMenuOpen(false); },
+                    onPointerDown: (event) => { event.stopPropagation(); },
+                }),
                 menuOpen && h('div', {
-                    className: 'planning-quick-target-menu',
+                    className: 'planning-quick-target-menu'
+                        + (isModalMenuMode ? ' planning-quick-target-menu--modal' : ''),
                     role: 'listbox',
-                    style: menuMaxHeight ? { maxHeight: menuMaxHeight + 'px' } : undefined,
+                    style: isModalMenuMode
+                        ? undefined
+                        : (menuMaxHeight ? { maxHeight: menuMaxHeight + 'px' } : undefined),
                 },
-                    options.map((option) => h('button', {
-                        key: option.value || '__root__',
-                        type: 'button',
-                        className: 'planning-quick-target-option'
-                            + (option.kind ? (' planning-quick-target-option--' + option.kind) : '')
-                            + (option.value === value ? ' active' : ''),
-                        style: option.kind === 'project' && option.projectColor
-                            ? { '--planning-quick-target-color': option.projectColor }
-                            : (option.depth > 0 ? { '--planning-quick-target-depth': String(option.depth) } : undefined),
-                        role: 'option',
-                        'aria-selected': option.value === value ? 'true' : 'false',
-                        onClick: () => {
-                            onChange(option.value);
-                            setMenuOpen(false);
-                        },
-                    }, option.label)),
+                    isModalMenuMode
+                        ? h('div', { className: 'planning-quick-target-menu__options' },
+                            options.map((option) => h('button', {
+                                key: option.value || '__root__',
+                                type: 'button',
+                                className: 'planning-quick-target-option'
+                                    + (option.kind ? (' planning-quick-target-option--' + option.kind) : '')
+                                    + (option.value === activeMenuValue ? ' active' : ''),
+                                style: option.kind === 'project' && option.projectColor
+                                    ? { '--planning-quick-target-color': option.projectColor }
+                                    : (option.depth > 0 ? { '--planning-quick-target-depth': String(option.depth) } : undefined),
+                                role: 'option',
+                                'aria-selected': option.value === activeMenuValue ? 'true' : 'false',
+                                onClick: () => {
+                                    onChange(option.value);
+                                    setMenuOpen(false);
+                                },
+                            }, option.label)),
+                        )
+                        : options.map((option) => h('button', {
+                            key: option.value || '__root__',
+                            type: 'button',
+                            className: 'planning-quick-target-option'
+                                + (option.kind ? (' planning-quick-target-option--' + option.kind) : '')
+                                + (option.value === activeMenuValue ? ' active' : ''),
+                            style: option.kind === 'project' && option.projectColor
+                                ? { '--planning-quick-target-color': option.projectColor }
+                                : (option.depth > 0 ? { '--planning-quick-target-depth': String(option.depth) } : undefined),
+                            role: 'option',
+                            'aria-selected': option.value === activeMenuValue ? 'true' : 'false',
+                            onClick: () => {
+                                onChange(option.value);
+                                setMenuOpen(false);
+                            },
+                        }, option.label)),
+                    isModalMenuMode && h('div', { className: 'planning-quick-target-menu__footer' },
+                        h('button', {
+                            type: 'button',
+                            className: 'planning-quick-target-menu__cancel',
+                            onClick: () => {
+                                onChange('');
+                                setMenuOpen(false);
+                            },
+                        }, 'Отменить выбор'),
+                    ),
                 ),
             ),
             preview && h('div', { className: 'planning-quick-target-preview' },

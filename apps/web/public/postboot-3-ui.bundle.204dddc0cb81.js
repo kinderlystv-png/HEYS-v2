@@ -1611,6 +1611,107 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-3-ui: execute start');
     return dayData;
   }
 
+  const MORNING_ACTIVATION_WEEKDAY_SHORT = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
+  const MORNING_ACTIVATION_CALENDAR_VIEW_KEY = 'morningActivationCalendarView';
+  const MORNING_ACTIVATION_CALENDAR_VIEW_28_DAYS = 'last_28_days';
+  const MORNING_ACTIVATION_CALENDAR_VIEW_MONTH = 'calendar_month';
+
+  function parseIsoDateKeyToLocalDate(dateKey) {
+    if (typeof dateKey !== 'string') return null;
+    const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateKey);
+    if (!match) return null;
+    const year = Number(match[1]);
+    const month = Number(match[2]) - 1;
+    const day = Number(match[3]);
+    const date = new Date(year, month, day, 12, 0, 0, 0);
+    if (Number.isNaN(date.getTime())) return null;
+    return date;
+  }
+
+  function formatDateToIsoKeyLocal(date) {
+    if (!(date instanceof Date) || Number.isNaN(date.getTime())) return getTodayKey();
+    const yyyy = date.getFullYear();
+    const mm = String(date.getMonth() + 1).padStart(2, '0');
+    const dd = String(date.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+  }
+
+  function getWeekdayMonFirst(date) {
+    const day = date.getDay(); // 0 (Sun) ... 6 (Sat)
+    return day === 0 ? 6 : day - 1;
+  }
+
+  function getMorningActivationCalendarViewPreference() {
+    const profile = lsGet('heys_profile', {}) || {};
+    const view = profile?.[MORNING_ACTIVATION_CALENDAR_VIEW_KEY];
+    if (view === MORNING_ACTIVATION_CALENDAR_VIEW_MONTH) return MORNING_ACTIVATION_CALENDAR_VIEW_MONTH;
+    return MORNING_ACTIVATION_CALENDAR_VIEW_28_DAYS;
+  }
+
+  function saveMorningActivationCalendarViewPreference(view) {
+    if (view !== MORNING_ACTIVATION_CALENDAR_VIEW_28_DAYS && view !== MORNING_ACTIVATION_CALENDAR_VIEW_MONTH) return;
+    const profile = lsGet('heys_profile', {}) || {};
+    if (profile?.[MORNING_ACTIVATION_CALENDAR_VIEW_KEY] === view) return;
+    profile[MORNING_ACTIVATION_CALENDAR_VIEW_KEY] = view;
+    lsSet('heys_profile', profile);
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('heys:profile-updated', {
+        detail: { profile, source: 'morning-activation-calendar-view' }
+      }));
+    }
+  }
+
+  function buildMorningActivationCalendarData(anchorDateKey, viewMode = MORNING_ACTIVATION_CALENDAR_VIEW_28_DAYS) {
+    const anchorDate = parseIsoDateKeyToLocalDate(anchorDateKey) || parseIsoDateKeyToLocalDate(getTodayKey()) || new Date();
+    const isMonthView = viewMode === MORNING_ACTIVATION_CALENDAR_VIEW_MONTH;
+    const effectiveDays = isMonthView
+      ? new Date(anchorDate.getFullYear(), anchorDate.getMonth() + 1, 0).getDate()
+      : 28;
+    const dayEntries = [];
+    const monthDate = new Date(anchorDate.getFullYear(), anchorDate.getMonth(), 1, 12, 0, 0, 0);
+
+    for (let offset = 0; offset < effectiveDays; offset++) {
+      const date = isMonthView
+        ? new Date(anchorDate.getFullYear(), anchorDate.getMonth(), offset + 1, 12, 0, 0, 0)
+        : (() => {
+          const d = new Date(anchorDate);
+          d.setDate(anchorDate.getDate() - (effectiveDays - 1 - offset));
+          return d;
+        })();
+      const dateKey = formatDateToIsoKeyLocal(date);
+      const state = normalizeMorningActivationState(dateKey, readDayData(dateKey, {}));
+      dayEntries.push({
+        dateKey,
+        dayOfMonth: date.getDate(),
+        status: state.status === 'done' || state.status === 'missed' ? state.status : null,
+        isToday: dateKey === anchorDateKey
+      });
+    }
+
+    const firstDate = parseIsoDateKeyToLocalDate(dayEntries[0]?.dateKey);
+    const leadingEmpty = firstDate ? getWeekdayMonFirst(firstDate) : 0;
+    const grid = [];
+    for (let i = 0; i < leadingEmpty; i++) {
+      grid.push({ isEmpty: true, id: `empty-${i}` });
+    }
+    dayEntries.forEach((item) => grid.push({ ...item, isEmpty: false, id: item.dateKey }));
+    while (grid.length % 7 !== 0) {
+      grid.push({ isEmpty: true, id: `tail-${grid.length}` });
+    }
+
+    const doneCount = dayEntries.filter((item) => item.status === 'done').length;
+    const missedCount = dayEntries.filter((item) => item.status === 'missed').length;
+    return {
+      grid,
+      doneCount,
+      missedCount,
+      viewMode: isMonthView ? MORNING_ACTIVATION_CALENDAR_VIEW_MONTH : MORNING_ACTIVATION_CALENDAR_VIEW_28_DAYS,
+      title: isMonthView
+        ? monthDate.toLocaleDateString('ru-RU', { month: 'long', year: 'numeric' })
+        : 'последние 28 дней'
+    };
+  }
+
   function removeMorningActivationArtifacts(dayData) {
     let changed = false;
     const trainings = Array.isArray(dayData.trainings) ? dayData.trainings : [];
@@ -4745,6 +4846,11 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-3-ui: execute start');
       return normalizePostState(initialState.postState, defaults) || defaults;
     });
     const firstMealTime = initialState.firstMealTime || getFirstMealTimeFromDay(dayData) || '—';
+    const [calendarViewMode, setCalendarViewMode] = useState(() => getMorningActivationCalendarViewPreference());
+    const calendarData = useMemo(
+      () => buildMorningActivationCalendarData(dateKey, calendarViewMode),
+      [dateKey, calendarViewMode]
+    );
 
     const setPostField = (field, value) => {
       setPostState((prev) => ({
@@ -4836,6 +4942,146 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-3-ui: execute start');
         React.createElement('div', {
           style: { fontSize: '12px', color: '#334155', lineHeight: '1.45' }
         }, `После первого приёма пищи (${firstMealTime}) зафиксируй статус привычки.`)
+      ),
+      React.createElement('div', {
+        style: {
+          borderRadius: '12px',
+          border: '1px solid rgba(148,163,184,0.28)',
+          background: '#fff',
+          padding: '10px 10px 8px'
+        }
+      },
+        React.createElement('div', {
+          style: {
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'baseline',
+            gap: '8px',
+            marginBottom: '8px'
+          }
+        },
+          React.createElement('div', { style: { fontSize: '12px', fontWeight: '700', color: '#0f172a' } }, 'Календарь привычки'),
+          React.createElement('div', { style: { fontSize: '10px', color: '#64748b', textTransform: 'capitalize' } }, calendarData.title)
+        ),
+        React.createElement('div', {
+          style: {
+            display: 'grid',
+            gridTemplateColumns: '1fr 1fr',
+            gap: '6px',
+            marginBottom: '8px'
+          }
+        },
+          React.createElement('button', {
+            type: 'button',
+            onClick: () => {
+              setCalendarViewMode(MORNING_ACTIVATION_CALENDAR_VIEW_28_DAYS);
+              saveMorningActivationCalendarViewPreference(MORNING_ACTIVATION_CALENDAR_VIEW_28_DAYS);
+            },
+            style: {
+              borderRadius: '8px',
+              border: calendarViewMode === MORNING_ACTIVATION_CALENDAR_VIEW_28_DAYS ? '1px solid rgba(59,130,246,0.55)' : '1px solid rgba(203,213,225,0.9)',
+              background: calendarViewMode === MORNING_ACTIVATION_CALENDAR_VIEW_28_DAYS ? 'rgba(59,130,246,0.10)' : '#f8fafc',
+              color: calendarViewMode === MORNING_ACTIVATION_CALENDAR_VIEW_28_DAYS ? '#1d4ed8' : '#475569',
+              fontSize: '10px',
+              fontWeight: '700',
+              padding: '6px 8px',
+              cursor: 'pointer'
+            }
+          }, '28 дней'),
+          React.createElement('button', {
+            type: 'button',
+            onClick: () => {
+              setCalendarViewMode(MORNING_ACTIVATION_CALENDAR_VIEW_MONTH);
+              saveMorningActivationCalendarViewPreference(MORNING_ACTIVATION_CALENDAR_VIEW_MONTH);
+            },
+            style: {
+              borderRadius: '8px',
+              border: calendarViewMode === MORNING_ACTIVATION_CALENDAR_VIEW_MONTH ? '1px solid rgba(59,130,246,0.55)' : '1px solid rgba(203,213,225,0.9)',
+              background: calendarViewMode === MORNING_ACTIVATION_CALENDAR_VIEW_MONTH ? 'rgba(59,130,246,0.10)' : '#f8fafc',
+              color: calendarViewMode === MORNING_ACTIVATION_CALENDAR_VIEW_MONTH ? '#1d4ed8' : '#475569',
+              fontSize: '10px',
+              fontWeight: '700',
+              padding: '6px 8px',
+              cursor: 'pointer'
+            }
+          }, 'Месяц')
+        ),
+        React.createElement('div', {
+          style: {
+            display: 'grid',
+            gridTemplateColumns: 'repeat(7, minmax(0, 1fr))',
+            gap: '4px',
+            marginBottom: '6px'
+          }
+        },
+          MORNING_ACTIVATION_WEEKDAY_SHORT.map((label) => React.createElement('div', {
+            key: `wd-${label}`,
+            style: {
+              fontSize: '10px',
+              color: '#94a3b8',
+              textAlign: 'center'
+            }
+          }, label))
+        ),
+        React.createElement('div', {
+          style: {
+            display: 'grid',
+            gridTemplateColumns: 'repeat(7, minmax(0, 1fr))',
+            gap: '4px'
+          }
+        },
+          calendarData.grid.map((cell) => {
+            if (cell.isEmpty) {
+              return React.createElement('div', {
+                key: cell.id,
+                style: { minHeight: '24px' }
+              });
+            }
+            const statusColor = cell.status === 'done'
+              ? '#10b981'
+              : (cell.status === 'missed' ? '#f43f5e' : '#cbd5e1');
+            return React.createElement('div', {
+              key: cell.id,
+              title: `${cell.dateKey}: ${cell.status === 'done' ? 'сделано' : (cell.status === 'missed' ? 'пропущено' : 'нет отметки')}`,
+              style: {
+                minHeight: '24px',
+                borderRadius: '8px',
+                border: cell.isToday ? '1px solid rgba(59,130,246,0.45)' : '1px solid rgba(226,232,240,0.95)',
+                background: cell.isToday ? 'rgba(59,130,246,0.06)' : '#f8fafc',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '4px',
+                fontSize: '10px',
+                color: '#334155'
+              }
+            },
+              React.createElement('span', {
+                style: {
+                  width: '5px',
+                  height: '5px',
+                  borderRadius: '999px',
+                  background: statusColor,
+                  flexShrink: 0
+                }
+              }),
+              React.createElement('span', null, cell.dayOfMonth)
+            );
+          })
+        ),
+        React.createElement('div', {
+          style: {
+            marginTop: '8px',
+            display: 'flex',
+            justifyContent: 'space-between',
+            gap: '8px',
+            fontSize: '10px',
+            color: '#64748b'
+          }
+        },
+          React.createElement('span', null, `Сделано: ${calendarData.doneCount}`),
+          React.createElement('span', null, `Пропущено: ${calendarData.missedCount}`)
+        )
       ),
       phase === 'confirm'
         ? React.createElement('div', {
@@ -6722,7 +6968,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       const itemsToAdd = previewItems.filter(item => !item._excluded);
       if (itemsToAdd.length === 0) return;
       setTimeout(() => {
-        itemsToAdd.forEach(item => {
+        itemsToAdd.forEach((item, idx) => {
+          const traceId = createAddTraceId(`preset-${idx + 1}`);
           const product = {
             id: item.product_id,
             product_id: item.product_id,
@@ -6740,7 +6987,20 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             gi: item.gi || 0,
             harm: item.harm || 0,
           };
-          context?.onAdd?.({ product, grams: item.grams, mealIndex: context?.mealIndex });
+          pushAddTrace('🧩 Preset item -> onAdd', {
+            traceId,
+            mealIndex: context?.mealIndex ?? null,
+            grams: item.grams,
+            productId: product.id ?? product.product_id ?? null,
+            productName: product.name || null
+          });
+          context?.onAdd?.({
+            product,
+            grams: item.grams,
+            mealIndex: context?.mealIndex,
+            _traceId: traceId,
+            _origin: 'preset-apply'
+          });
         });
         console.info('[HEYS.presets] ✅ Applied preset:', { name: selectedPreset?.name, count: itemsToAdd.length });
         if (HEYS.StepModal?.hide) {
@@ -6773,10 +7033,25 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     };
 
     const setItemGrams = (idx, val) => {
-      const g = parseInt(val, 10);
+      const raw = String(val ?? '').trim();
+      if (raw === '') {
+        setPreviewItems(items => items.map((item, i) =>
+          i !== idx ? item : { ...item, grams: '' }
+        ));
+        return;
+      }
+      const g = parseInt(raw, 10);
       setPreviewItems(items => items.map((item, i) =>
-        i !== idx ? item : { ...item, grams: isNaN(g) ? item.grams : Math.max(5, g) }
+        i !== idx ? item : { ...item, grams: isNaN(g) ? item.grams : g }
       ));
+    };
+
+    const commitItemGrams = (idx) => {
+      setPreviewItems(items => items.map((item, i) => {
+        if (i !== idx) return item;
+        const g = Number(item.grams);
+        return { ...item, grams: Number.isFinite(g) && g > 0 ? Math.max(5, Math.round(g)) : 100 };
+      }));
     };
 
     const toggleExclude = (idx) => {
@@ -6790,12 +7065,33 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     };
 
     const updateCreateItemGrams = (idx, val) => {
-      const g = parseInt(val, 10);
+      const raw = String(val ?? '').trim();
+      if (raw === '') {
+        setEditPreset(ep => ({
+          ...ep,
+          items: (ep?.items || []).map((item, i) =>
+            i !== idx ? item : { ...item, grams: '' }
+          )
+        }));
+        return;
+      }
+      const g = parseInt(raw, 10);
       setEditPreset(ep => ({
         ...ep,
         items: (ep?.items || []).map((item, i) =>
-          i !== idx ? item : { ...item, grams: isNaN(g) ? item.grams : Math.max(5, g) }
+          i !== idx ? item : { ...item, grams: isNaN(g) ? item.grams : g }
         )
+      }));
+    };
+
+    const commitCreateItemGrams = (idx) => {
+      setEditPreset(ep => ({
+        ...ep,
+        items: (ep?.items || []).map((item, i) => {
+          if (i !== idx) return item;
+          const g = Number(item.grams);
+          return { ...item, grams: Number.isFinite(g) && g > 0 ? Math.max(5, Math.round(g)) : 100 };
+        })
       }));
     };
 
@@ -6928,6 +7224,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                   value: item.grams,
                   min: 5,
                   onChange: (e) => setItemGrams(idx, e.target.value),
+                  onBlur: () => commitItemGrams(idx),
                   onFocus: (e) => e.target.select()
                 }),
                 React.createElement('span', { className: 'mpr-grams-unit' }, 'г'),
@@ -7024,6 +7321,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                   value: item.grams,
                   min: 5,
                   onChange: (e) => updateCreateItemGrams(idx, e.target.value),
+                  onBlur: () => commitCreateItemGrams(idx),
                   onFocus: (e) => e.target.select()
                 }),
                 React.createElement('span', { className: 'mpr-grams-unit' }, 'г'),
@@ -10682,7 +10980,16 @@ NOVA: 1
           ? { ...product, kcal100: derivedKcal100 }
           : product;
 
+        const traceId = createAddTraceId('grams-step');
+        const payload = {
+          product: productForSubmit,
+          grams,
+          mealIndex: context.mealIndex,
+          _traceId: traceId,
+          _origin: 'grams-step'
+        };
         console.info('[HEYS.addProduct] ➕ GramsStep onAdd', {
+          traceId,
           grams,
           mealIndex: context?.mealIndex ?? null,
           productId: productForSubmit?.id ?? productForSubmit?.product_id ?? null,
@@ -10690,11 +10997,19 @@ NOVA: 1
         });
         // ⚡ startTransition: defer heavy meal recalculation re-renders
         React.startTransition(() => {
-          context.onAdd({
-            product: productForSubmit,
-            grams,
-            mealIndex: context.mealIndex
-          });
+          try {
+            context.onAdd(payload);
+            pushAddTrace('✅ context.onAdd called (GramsStep)', {
+              traceId,
+              mealIndex: context?.mealIndex ?? null
+            });
+          } catch (error) {
+            pushAddTrace('❌ context.onAdd failed (GramsStep)', {
+              traceId,
+              mealIndex: context?.mealIndex ?? null,
+              error: error?.message || error
+            }, 'error');
+          }
         });
 
         // 🔊 Harm-based feedback sound
@@ -11204,6 +11519,40 @@ NOVA: 1
     });
   }
 
+  function createAddTraceId(origin = 'unknown') {
+    const rnd = Math.random().toString(36).slice(2, 7);
+    return `add-${Date.now().toString(36)}-${rnd}-${origin}`;
+  }
+
+  function pushAddTrace(event, payload = {}, level = 'info') {
+    try {
+      const root = window.HEYS = window.HEYS || {};
+      const debug = root.debug = root.debug || {};
+      const buffer = Array.isArray(debug.addTraceBuffer) ? debug.addTraceBuffer : [];
+      const entry = {
+        ts: Date.now(),
+        iso: new Date().toISOString(),
+        level,
+        event,
+        ...payload
+      };
+      buffer.push(entry);
+      if (buffer.length > 200) {
+        buffer.splice(0, buffer.length - 200);
+      }
+      debug.addTraceBuffer = buffer;
+      debug.pushAddTrace = pushAddTrace;
+      debug.getAddTraceBuffer = () => (Array.isArray(debug.addTraceBuffer) ? debug.addTraceBuffer.slice() : []);
+      debug.clearAddTraceBuffer = () => {
+        debug.addTraceBuffer = [];
+      };
+      const method = level === 'error' ? 'error' : (level === 'warn' ? 'warn' : 'info');
+      console[method](`[HEYS.addTrace] ${event}`, entry);
+    } catch (error) {
+      console.warn('[HEYS.addTrace] pushAddTrace failed', error);
+    }
+  }
+
   // === Главная функция показа модалки ===
   function showAddProductModal(options = {}) {
     const {
@@ -11387,18 +11736,35 @@ NOVA: 1
         // console.log('[AddProductStep] selectedProduct:', selectedProduct?.name, 'grams:', grams);
 
         if (selectedProduct && grams) {
+          const traceId = createAddTraceId('stepmodal-complete');
+          const payload = {
+            product: selectedProduct,
+            grams: grams,
+            mealIndex,
+            _traceId: traceId,
+            _origin: 'stepmodal-complete'
+          };
           console.info('[HEYS.addProduct] ✅ onComplete -> onAdd', {
+            traceId,
             mealIndex,
             grams,
             productId: selectedProduct.id ?? selectedProduct.product_id ?? null,
             productName: selectedProduct.name || null,
             source: selectedProduct._source || (selectedProduct._fromShared ? 'shared' : 'personal')
           });
-          onAdd?.({
-            product: selectedProduct,
-            grams: grams,
-            mealIndex
-          });
+          try {
+            onAdd?.(payload);
+            pushAddTrace('✅ onAdd callback completed (onComplete)', {
+              traceId,
+              mealIndex
+            });
+          } catch (error) {
+            pushAddTrace('❌ onAdd callback failed (onComplete)', {
+              traceId,
+              mealIndex,
+              error: error?.message || error
+            }, 'error');
+          }
 
           // 🔔 Dispatch event для advice module
           window.dispatchEvent(new CustomEvent('heysProductAdded', {
@@ -22807,6 +23173,23 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     if (!check.ok) return;
 
     const mealCount = countMealsWithItems(dayData);
+    const followupSessionGuardKey = `heys_morning_activation_followup_guard_${currentClientId || 'unknown'}_${todayKey}`;
+    const followupSessionGuardRaw = (() => {
+      try {
+        return sessionStorage.getItem(followupSessionGuardKey);
+      } catch (_) {
+        return null;
+      }
+    })();
+    const followupSessionGuard = Number(followupSessionGuardRaw);
+    if (Number.isFinite(followupSessionGuard) && mealCount <= followupSessionGuard) {
+      console.info('[MorningCheckin] morning activation follow-up guarded in session until next meal add', {
+        mealCount,
+        guardMealCount: followupSessionGuard,
+        reason
+      });
+      return;
+    }
     const snoozeAt = dayData?.morningActivation?.followupSnoozeUntilMealCount;
     if (snoozeAt != null && mealCount <= snoozeAt) {
       console.info('[MorningCheckin] morning activation follow-up snoozed until next meal add', {
@@ -22825,6 +23208,11 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     }
 
     followupOpening = true;
+    try {
+      sessionStorage.setItem(followupSessionGuardKey, String(mealCount));
+    } catch (_) {
+      // sessionStorage may be unavailable
+    }
     HEYS.StepModal.show({
       steps: ['morning_activation_followup'],
       title: 'Утренняя зарядка',
@@ -22843,12 +23231,22 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         console.info('[MorningCheckin] morning activation follow-up dismissed (Позже) — repeat after next meal add', {
           mealCount: mc
         });
+        try {
+          sessionStorage.setItem(followupSessionGuardKey, String(mc));
+        } catch (_) {
+          // sessionStorage may be unavailable
+        }
         followupOpening = false;
       },
       onComplete: () => {
         persistMorningActivationPatch(todayKey, {
           followupSnoozeUntilMealCount: null
         }, 'morning-activation-followup-complete');
+        try {
+          sessionStorage.setItem(followupSessionGuardKey, String(Number.MAX_SAFE_INTEGER));
+        } catch (_) {
+          // sessionStorage may be unavailable
+        }
         followupOpening = false;
       }
     });
@@ -23315,6 +23713,12 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     if (detail?.source === 'morning-activation-followup-dismiss') return;
     if (detail?.source === 'morning-activation-followup-complete') return;
     setTimeout(() => maybeOpenMorningActivationFollowup(detail?.source || 'day-updated'), 60);
+  });
+
+  window.addEventListener('heysProductAdded', () => {
+    // Усиливаем триггер: после добавления еды перепроверяем follow-up зарядки.
+    // Session/day guards внутри maybeOpenMorningActivationFollowup защищают от циклов.
+    setTimeout(() => maybeOpenMorningActivationFollowup('product-added'), 120);
   });
 
   document.addEventListener('heys-stepmodal-ready', () => {
@@ -41299,6 +41703,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             endTime: opts?.endTime || '10:00',
             source: opts?.source || 'user',
             recurrenceGroupId: opts?.recurrenceGroupId ? String(opts.recurrenceGroupId) : undefined,
+            isBackground: Boolean(opts?.isBackground),
+            bgColor: opts?.bgColor || undefined,
             createdAt: nowISO(),
             updatedAt: nowISO(),
         };
@@ -41318,6 +41724,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             endTime: opts?.endTime || '10:00',
             source: opts?.source || 'user',
             recurrenceGroupId: opts?.recurrenceGroupId ? String(opts.recurrenceGroupId) : undefined,
+            isBackground: Boolean(opts?.isBackground),
+            bgColor: opts?.bgColor || undefined,
             createdAt: now,
             updatedAt: now,
         }));
@@ -41808,10 +42216,12 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         resolvedTaskProjectIds,
         tabsSelector = '.tabs',
         fieldClassName,
+        modalMenuMode = false,
     }) {
         const fieldRef = useRef(null);
         const [menuOpen, setMenuOpen] = useState(false);
         const [menuMaxHeight, setMenuMaxHeight] = useState(null);
+        const isModalMenuMode = Boolean(modalMenuMode);
 
         const options = useMemo(
             () => buildQuickTargetOptions(projects, tasks, resolvedTaskProjectIds),
@@ -41858,7 +42268,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         }, [menuOpen]);
 
         useEffect(() => {
-            if (!menuOpen) return undefined;
+            if (!menuOpen || isModalMenuMode) return undefined;
 
             const recalculateMenuMaxHeight = () => {
                 if (typeof window === 'undefined') return;
@@ -41880,9 +42290,17 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                 window.removeEventListener('resize', recalculateMenuMaxHeight);
                 window.removeEventListener('scroll', recalculateMenuMaxHeight, true);
             };
-        }, [menuOpen, tabsSelector]);
+        }, [isModalMenuMode, menuOpen, tabsSelector]);
 
-        return h('div', { className: 'planning-quick-target-field' + (preview ? ' has-preview' : '') + (fieldClassName ? (' ' + fieldClassName) : '') },
+        const activeMenuValue = value;
+
+        return h('div', {
+            className: 'planning-quick-target-field'
+                + (preview ? ' has-preview' : '')
+                + (isModalMenuMode ? ' planning-quick-target-field--modal-menu' : '')
+                + (isModalMenuMode && menuOpen ? ' is-menu-open' : '')
+                + (fieldClassName ? (' ' + fieldClassName) : ''),
+        },
             h('div', {
                 className: 'planning-quick-target-select' + (menuOpen ? ' is-open' : ''),
                 ref: fieldRef,
@@ -41903,27 +42321,64 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                     }, selectedOption?.shortLabel || '📁 Без проекта'),
                     h('span', { className: 'planning-quick-target-trigger__chevron', 'aria-hidden': 'true' }, '▾'),
                 ),
+                isModalMenuMode && menuOpen && h('div', {
+                    className: 'planning-quick-target-menu__backdrop',
+                    onClick: (event) => { event.stopPropagation(); setMenuOpen(false); },
+                    onPointerDown: (event) => { event.stopPropagation(); },
+                }),
                 menuOpen && h('div', {
-                    className: 'planning-quick-target-menu',
+                    className: 'planning-quick-target-menu'
+                        + (isModalMenuMode ? ' planning-quick-target-menu--modal' : ''),
                     role: 'listbox',
-                    style: menuMaxHeight ? { maxHeight: menuMaxHeight + 'px' } : undefined,
+                    style: isModalMenuMode
+                        ? undefined
+                        : (menuMaxHeight ? { maxHeight: menuMaxHeight + 'px' } : undefined),
                 },
-                    options.map((option) => h('button', {
-                        key: option.value || '__root__',
-                        type: 'button',
-                        className: 'planning-quick-target-option'
-                            + (option.kind ? (' planning-quick-target-option--' + option.kind) : '')
-                            + (option.value === value ? ' active' : ''),
-                        style: option.kind === 'project' && option.projectColor
-                            ? { '--planning-quick-target-color': option.projectColor }
-                            : (option.depth > 0 ? { '--planning-quick-target-depth': String(option.depth) } : undefined),
-                        role: 'option',
-                        'aria-selected': option.value === value ? 'true' : 'false',
-                        onClick: () => {
-                            onChange(option.value);
-                            setMenuOpen(false);
-                        },
-                    }, option.label)),
+                    isModalMenuMode
+                        ? h('div', { className: 'planning-quick-target-menu__options' },
+                            options.map((option) => h('button', {
+                                key: option.value || '__root__',
+                                type: 'button',
+                                className: 'planning-quick-target-option'
+                                    + (option.kind ? (' planning-quick-target-option--' + option.kind) : '')
+                                    + (option.value === activeMenuValue ? ' active' : ''),
+                                style: option.kind === 'project' && option.projectColor
+                                    ? { '--planning-quick-target-color': option.projectColor }
+                                    : (option.depth > 0 ? { '--planning-quick-target-depth': String(option.depth) } : undefined),
+                                role: 'option',
+                                'aria-selected': option.value === activeMenuValue ? 'true' : 'false',
+                                onClick: () => {
+                                    onChange(option.value);
+                                    setMenuOpen(false);
+                                },
+                            }, option.label)),
+                        )
+                        : options.map((option) => h('button', {
+                            key: option.value || '__root__',
+                            type: 'button',
+                            className: 'planning-quick-target-option'
+                                + (option.kind ? (' planning-quick-target-option--' + option.kind) : '')
+                                + (option.value === activeMenuValue ? ' active' : ''),
+                            style: option.kind === 'project' && option.projectColor
+                                ? { '--planning-quick-target-color': option.projectColor }
+                                : (option.depth > 0 ? { '--planning-quick-target-depth': String(option.depth) } : undefined),
+                            role: 'option',
+                            'aria-selected': option.value === activeMenuValue ? 'true' : 'false',
+                            onClick: () => {
+                                onChange(option.value);
+                                setMenuOpen(false);
+                            },
+                        }, option.label)),
+                    isModalMenuMode && h('div', { className: 'planning-quick-target-menu__footer' },
+                        h('button', {
+                            type: 'button',
+                            className: 'planning-quick-target-menu__cancel',
+                            onClick: () => {
+                                onChange('');
+                                setMenuOpen(false);
+                            },
+                        }, 'Отменить выбор'),
+                    ),
                 ),
             ),
             preview && h('div', { className: 'planning-quick-target-preview' },
@@ -44327,6 +44782,16 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         { dow: 1, label: 'Пн' }, { dow: 2, label: 'Вт' }, { dow: 3, label: 'Ср' }, { dow: 4, label: 'Чт' },
         { dow: 5, label: 'Пт' }, { dow: 6, label: 'Сб' }, { dow: 0, label: 'Вс' },
     ];
+    const BACKGROUND_SLOT_COLORS = [
+        { value: '#3b82f6', label: 'Синий' },
+        { value: '#8b5cf6', label: 'Фиолетовый' },
+        { value: '#06b6d4', label: 'Бирюзовый' },
+        { value: '#22c55e', label: 'Зелёный' },
+        { value: '#eab308', label: 'Жёлтый' },
+        { value: '#f97316', label: 'Оранжевый' },
+        { value: '#ef4444', label: 'Красный' },
+        { value: '#94a3b8', label: 'Серый' },
+    ];
     const WEEKDAY_LABELS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
     const MINUTES_IN_DAY = 24 * 60;
     const CALENDAR_LOOKBACK_DAYS = 1;
@@ -44342,7 +44807,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     const CALENDAR_DAY_WINDOW_OPTIONS = [3, 5, 8];
     const CALENDAR_DAY_WINDOW_STORAGE_KEY = 'heys_planning_calendar_day_window';
     const CALENDAR_MIN_DAY_COLUMN_WIDTH = 72;
-    const CALENDAR_WINDOW_OVERSCAN_DAYS = 2;
+    const CALENDAR_WINDOW_OVERSCAN_DAYS = 15;
     const CALENDAR_DRAG_ZOOM_VISIBLE_DAYS = 8;
     const CALENDAR_TOUCH_DRAG_AUTO_SCROLL_EDGE = 56;
     const CALENDAR_TOUCH_DRAG_AUTO_SCROLL_STEP = 18;
@@ -44674,6 +45139,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             startTime: source?.startTime || '09:00',
             endTime: source?.endTime || '10:00',
             quickCreate: !!source?.quickCreate,
+            isBackground: Boolean(source?.isBackground),
+            bgColor: source?.bgColor || BACKGROUND_SLOT_COLORS[0].value,
         };
     }
 
@@ -44786,7 +45253,18 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         };
     }
 
-    function resolveCalendarSlotAppearance(slotDay, yesterdayIso, linkedTask, projects) {
+    function resolveCalendarSlotAppearance(slotDay, yesterdayIso, linkedTask, projects, slot) {
+        if (slot?.isBackground && slot.bgColor) {
+            const hex = slot.bgColor;
+            const r = parseInt(hex.slice(1, 3), 16);
+            const g = parseInt(hex.slice(3, 5), 16);
+            const b = parseInt(hex.slice(5, 7), 16);
+            return {
+                className: ' planning-calendar-slot--background',
+                color: 'linear-gradient(180deg, rgba(' + r + ',' + g + ',' + b + ',0.22) 0%, rgba(' + r + ',' + g + ',' + b + ',0.14) 100%)',
+            };
+        }
+
         if (linkedTask?.status === 'done') {
             return {
                 className: ' planning-calendar-slot--done',
@@ -44996,6 +45474,93 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         );
     }
 
+    const MONTH_NAMES_RU = [
+        'Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
+        'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь',
+    ];
+
+    function RepeatDateCalendar({ selectedDates, onToggleDate, onClear, anchorDate, onClose }) {
+        const anchor = new Date(String(anchorDate || '') + 'T12:00:00');
+        const [cur, setCur] = useState(() => new Date(anchor.getFullYear(), anchor.getMonth(), 1));
+        const year = cur.getFullYear();
+        const month = cur.getMonth();
+        const firstDay = new Date(year, month, 1);
+        const startOffset = (firstDay.getDay() + 6) % 7;
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+        const cells = [];
+        for (let i = 0; i < startOffset; i += 1) cells.push(null);
+        for (let d = 1; d <= daysInMonth; d += 1) cells.push(new Date(year, month, d, 12, 0, 0, 0));
+
+        const todayIso = dateStr();
+
+        const fmtIso = (dt) => {
+            const yy = dt.getFullYear();
+            const mm = String(dt.getMonth() + 1).padStart(2, '0');
+            const dd = String(dt.getDate()).padStart(2, '0');
+            return yy + '-' + mm + '-' + dd;
+        };
+
+        return h('div', { className: 'planning-repeat-calendar' },
+            h('div', { className: 'planning-repeat-calendar__header' },
+                h('button', {
+                    type: 'button',
+                    className: 'planning-repeat-calendar__nav',
+                    onClick: () => setCur(new Date(year, month - 1, 1)),
+                }, '\u2039'),
+                h('span', { className: 'planning-repeat-calendar__title' },
+                    MONTH_NAMES_RU[month] + ' ' + year,
+                ),
+                h('button', {
+                    type: 'button',
+                    className: 'planning-repeat-calendar__nav',
+                    onClick: () => setCur(new Date(year, month + 1, 1)),
+                }, '\u203A'),
+            ),
+            h('div', { className: 'planning-repeat-calendar__weekdays' },
+                ['\u041F\u043D', '\u0412\u0442', '\u0421\u0440', '\u0427\u0442', '\u041F\u0442', '\u0421\u0431', '\u0412\u0441'].map((label) =>
+                    h('div', { key: label, className: 'planning-repeat-calendar__wd' }, label),
+                ),
+            ),
+            h('div', { className: 'planning-repeat-calendar__grid' },
+                cells.map((cellDate, index) => {
+                    if (cellDate == null) {
+                        return h('div', { key: 'empty-' + index, className: 'planning-repeat-calendar__day planning-repeat-calendar__day--empty' });
+                    }
+                    const iso = fmtIso(cellDate);
+                    const isSelected = selectedDates.has(iso);
+                    const isToday = iso === todayIso;
+                    const isPast = iso < todayIso;
+                    return h('button', {
+                        key: iso,
+                        type: 'button',
+                        className: 'planning-repeat-calendar__day'
+                            + (isSelected ? ' planning-repeat-calendar__day--selected' : '')
+                            + (isToday ? ' planning-repeat-calendar__day--today' : '')
+                            + (isPast ? ' planning-repeat-calendar__day--past' : ''),
+                        onClick: () => onToggleDate(iso),
+                    }, cellDate.getDate());
+                }),
+            ),
+            h('div', { className: 'planning-repeat-calendar__footer' },
+                selectedDates.size > 0 && h('button', {
+                    type: 'button',
+                    className: 'planning-repeat-calendar__clear',
+                    onClick: onClear,
+                }, '\u0421\u0431\u0440\u043E\u0441\u0438\u0442\u044C'),
+                h('span', { className: 'planning-repeat-calendar__count' },
+                    selectedDates.size > 0
+                        ? '\u0412\u044B\u0431\u0440\u0430\u043D\u043E: ' + selectedDates.size
+                        : '',
+                ),
+                h('button', {
+                    type: 'button',
+                    className: 'planning-repeat-calendar__confirm',
+                    onClick: onClose,
+                }, '\u041F\u043E\u0434\u0442\u0432\u0435\u0440\u0434\u0438\u0442\u044C'),
+            ),
+        );
+    }
+
     function QuickSlotModal({ draft, state, onClose }) {
         const { isDesktop } = usePlanningViewport();
         const tasks = Array.isArray(state?.tasks) ? state.tasks : [];
@@ -45023,6 +45588,10 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         const [endTime, setEndTime] = useState(() => normalizeQuickModalTimeForInput(draft?.endTime || '10:00'));
         const [repeatWeekly, setRepeatWeekly] = useState(false);
         const [weekdaySet, setWeekdaySet] = useState(() => new Set([anchorDow]));
+        const [customDates, setCustomDates] = useState(() => new Set());
+        const [showDateCalendar, setShowDateCalendar] = useState(false);
+        const [isBackground, setIsBackground] = useState(false);
+        const [bgColor, setBgColor] = useState(BACKGROUND_SLOT_COLORS[0].value);
         const [quickTargetValue, setQuickTargetValue] = useState('');
         const [newProjectName, setNewProjectName] = useState('');
 
@@ -45042,6 +45611,10 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             setEndTime(normalizeQuickModalTimeForInput(draft?.endTime || '10:00'));
             setRepeatWeekly(false);
             setWeekdaySet(new Set([dow]));
+            setCustomDates(new Set());
+            setShowDateCalendar(false);
+            setIsBackground(false);
+            setBgColor(BACKGROUND_SLOT_COLORS[0].value);
             setQuickTargetValue('');
             setNewProjectName('');
         }, [draftSyncKey]);
@@ -45063,8 +45636,21 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             setRepeatWeekly(enabled);
             if (enabled) {
                 setWeekdaySet(new Set([new Date(String(date || '') + 'T12:00:00').getDay()]));
+                setCustomDates(new Set());
+                setShowDateCalendar(false);
             }
         };
+
+        const toggleCustomDate = (isoDate) => {
+            setCustomDates((prev) => {
+                const next = new Set(prev);
+                if (next.has(isoDate)) next.delete(isoDate);
+                else next.add(isoDate);
+                return next;
+            });
+        };
+
+        const hasCustomDates = customDates.size > 0;
 
         const save = () => {
             const cleanTitle = String(title || '').trim();
@@ -45100,7 +45686,35 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                     startTime: st,
                     endTime: et,
                     source: 'user',
+                    isBackground,
+                    bgColor: isBackground ? bgColor : undefined,
                 });
+            } else if (hasCustomDates) {
+                const groupId = uid();
+                const sorted = [...customDates].sort();
+                const slotOpts = sorted.map((d) => ({
+                    date: d,
+                    startTime: st,
+                    endTime: et,
+                    source: 'user',
+                    recurrenceGroupId: groupId,
+                    isBackground,
+                    bgColor: isBackground ? bgColor : undefined,
+                }));
+                if (!slotOpts.length) { onClose(); return; }
+                const task = state.addTask(taskTitle, {
+                    projectId: nextProjectId,
+                    parentTaskId: nextParentTaskId,
+                    startDate: sorted[0],
+                    dueDate: sorted[sorted.length - 1],
+                    plannedMinutes: durationMin,
+                    status: 'todo',
+                });
+                state.addSlotBatch(slotOpts.map((o) => ({
+                    ...o,
+                    taskId: task.id,
+                    title: '',
+                })));
             } else {
                 const groupId = uid();
                 const slotOpts = [];
@@ -45116,6 +45730,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                         endTime: et,
                         source: 'user',
                         recurrenceGroupId: groupId,
+                        isBackground,
+                        bgColor: isBackground ? bgColor : undefined,
                     });
                     if (d > lastSlotDate) lastSlotDate = d;
                 }
@@ -45227,6 +45843,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                             tasks,
                             resolvedTaskProjectIds: resolvedTaskProjectIdsQuick,
                             tabsSelector: '.tabs',
+                            modalMenuMode: true,
                         }),
                     ),
                     h('div', { className: 'planning-add-project' },
@@ -45261,12 +45878,12 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                                 checked: repeatWeekly,
                                 onChange: (event) => handleRepeatToggle(event.target.checked),
                             }),
-                            h('span', null, 'Повторять по дням недели'),
+                            h('span', null, '\u041F\u043E\u0432\u0442\u043E\u0440\u044F\u0442\u044C \u043F\u043E \u0434\u043D\u044F\u043C \u043D\u0435\u0434\u0435\u043B\u0438'),
                         ),
-                        repeatWeekly && h('div', {
+                        repeatWeekly && !hasCustomDates && h('div', {
                             className: 'planning-quick-repeat__days',
                             role: 'group',
-                            'aria-label': 'Дни повтора',
+                            'aria-label': '\u0414\u043D\u0438 \u043F\u043E\u0432\u0442\u043E\u0440\u0430',
                         },
                             QUICK_WEEKDAY_CHIPS.map(({ dow, label }) => h('button', {
                                 key: dow,
@@ -45276,8 +45893,55 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                                 onClick: () => toggleDow(dow),
                             }, label)),
                         ),
-                        repeatWeekly && h('p', { className: 'planning-quick-repeat__hint' },
-                            'До 8 недель от выбранной даты, те же часы.',
+                        repeatWeekly && !hasCustomDates && h('button', {
+                            type: 'button',
+                            className: 'planning-quick-repeat__pick-dates',
+                            onClick: () => setShowDateCalendar(true),
+                        }, '\uD83D\uDCC5 \u0412\u044B\u0431\u0440\u0430\u0442\u044C \u0434\u0430\u0442\u044B'),
+                        repeatWeekly && hasCustomDates && h('div', { className: 'planning-quick-repeat__custom-summary' },
+                            h('span', { className: 'planning-quick-repeat__badge' },
+                                '\u0412\u044B\u0431\u0440\u0430\u043D\u043E ' + customDates.size + ' ' + (
+                                    customDates.size === 1 ? '\u0434\u0430\u0442\u0430' :
+                                    customDates.size < 5 ? '\u0434\u0430\u0442\u044B' : '\u0434\u0430\u0442'
+                                ),
+                            ),
+                            h('button', {
+                                type: 'button',
+                                className: 'planning-quick-repeat__pick-dates',
+                                onClick: () => setShowDateCalendar(true),
+                            }, '\uD83D\uDCC5 \u0418\u0437\u043C\u0435\u043D\u0438\u0442\u044C'),
+                            h('button', {
+                                type: 'button',
+                                className: 'planning-quick-repeat__reset',
+                                onClick: () => { setCustomDates(new Set()); },
+                            }, '\u0421\u0431\u0440\u043E\u0441\u0438\u0442\u044C'),
+                        ),
+                        repeatWeekly && !hasCustomDates && h('p', { className: 'planning-quick-repeat__hint' },
+                            '\u0414\u043E 8 \u043D\u0435\u0434\u0435\u043B\u044C \u043E\u0442 \u0432\u044B\u0431\u0440\u0430\u043D\u043D\u043E\u0439 \u0434\u0430\u0442\u044B, \u0442\u0435 \u0436\u0435 \u0447\u0430\u0441\u044B.',
+                        ),
+                        repeatWeekly && hasCustomDates && h('p', { className: 'planning-quick-repeat__hint' },
+                            '\u0421\u043B\u043E\u0442\u044B \u0441\u043E\u0437\u0434\u0430\u0434\u0443\u0442\u0441\u044F \u043D\u0430 \u0432\u044B\u0431\u0440\u0430\u043D\u043D\u044B\u0435 \u0434\u0430\u0442\u044B, \u0442\u0435 \u0436\u0435 \u0447\u0430\u0441\u044B.',
+                        ),
+                    ),
+                    h('div', { className: 'planning-bg-section' },
+                        h('label', { className: 'planning-bg-section__toggle' },
+                            h('input', {
+                                type: 'checkbox',
+                                checked: isBackground,
+                                onChange: (event) => setIsBackground(event.target.checked),
+                            }),
+                            h('span', null, '\u0424\u043E\u043D\u043E\u0432\u043E\u0435 \u0441\u043E\u0431\u044B\u0442\u0438\u0435'),
+                        ),
+                        isBackground && h('div', { className: 'planning-bg-palette' },
+                            BACKGROUND_SLOT_COLORS.map((c) => h('button', {
+                                key: c.value,
+                                type: 'button',
+                                className: 'planning-bg-swatch' + (bgColor === c.value ? ' planning-bg-swatch--active' : ''),
+                                style: { background: c.value },
+                                title: c.label,
+                                'aria-label': c.label,
+                                onClick: () => setBgColor(c.value),
+                            })),
                         ),
                     ),
                 ),
@@ -45295,6 +45959,31 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                         h('span', { className: 'planning-quick-btn-done__icon', 'aria-hidden': 'true' }, '✓'),
                         h('span', { className: 'planning-quick-btn-done__text' }, 'Готово'),
                     ),
+                ),
+                showDateCalendar && h('div', {
+                    className: 'planning-repeat-calendar__backdrop',
+                    onClick: (event) => { event.stopPropagation(); setShowDateCalendar(false); },
+                    onPointerDown: (event) => { event.stopPropagation(); },
+                }),
+                showDateCalendar && h('div', {
+                    className: 'planning-repeat-calendar__overlay',
+                    onClick: (event) => event.stopPropagation(),
+                },
+                    h('div', { className: 'planning-repeat-calendar__overlay-header' },
+                        h('span', { className: 'planning-repeat-calendar__overlay-title' }, '\u0412\u044B\u0431\u043E\u0440 \u0434\u0430\u0442'),
+                        h('button', {
+                            type: 'button',
+                            className: 'planning-modal__close planning-modal__close--quick-event',
+                            onClick: () => setShowDateCalendar(false),
+                        }, '\u00D7'),
+                    ),
+                    h(RepeatDateCalendar, {
+                        selectedDates: customDates,
+                        onToggleDate: toggleCustomDate,
+                        onClear: () => setCustomDates(new Set()),
+                        anchorDate: date,
+                        onClose: () => setShowDateCalendar(false),
+                    }),
                 ),
             ),
         );
@@ -45431,6 +46120,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                     date: form.date,
                     startTime: form.startTime,
                     endTime: form.endTime,
+                    isBackground: form.isBackground,
+                    bgColor: form.isBackground ? form.bgColor : undefined,
                 };
                 if (form.id) state.updateSlot(form.id, slotPayloadLinked);
                 else state.addSlot(slotPayloadLinked);
@@ -45458,6 +46149,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                     date: form.date,
                     startTime: form.startTime,
                     endTime: form.endTime,
+                    isBackground: form.isBackground,
+                    bgColor: form.isBackground ? form.bgColor : undefined,
                 };
                 if (form.id) state.updateSlot(form.id, slotPayloadNew);
                 else state.addSlot(slotPayloadNew);
@@ -45471,20 +46164,22 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                 date: form.date,
                 startTime: form.startTime,
                 endTime: form.endTime,
+                isBackground: form.isBackground,
+                bgColor: form.isBackground ? form.bgColor : undefined,
             };
             if (form.id) state.updateSlot(form.id, slotPayload);
             else state.addSlot(slotPayload);
             onClose();
         };
 
-        return h('div', { className: 'planning-modal-overlay', onClick: onClose },
-            h('div', { className: 'planning-modal planning-modal--wide planning-modal--slot-unified', onClick: (event) => event.stopPropagation() },
-                h('div', { className: 'planning-modal__header' },
+        return h('div', { className: 'planning-modal-overlay planning-modal-overlay--quick-event', onClick: onClose },
+            h('div', { className: 'planning-modal planning-modal--slot-unified', onClick: (event) => event.stopPropagation() },
+                h('div', { className: 'planning-modal__header planning-modal__header--quick-event' },
                     h('div', { className: 'planning-modal__header-copy' },
-                        h('span', { className: 'planning-modal__header-title' }, headerTitle),
+                        h('span', { className: 'planning-modal__header-title planning-modal__header-title--quick-event' }, headerTitle),
                         h('span', { className: 'planning-modal__eyebrow' }, headerMeta),
                     ),
-                    h('button', { type: 'button', className: 'planning-modal__close', onClick: onClose }, '×'),
+                    h('button', { type: 'button', className: 'planning-modal__close planning-modal__close--quick-event', onClick: onClose }, '×'),
                 ),
                 h('div', { className: 'planning-modal__meta planning-modal__meta--summary' },
                     h('span', { className: 'planning-modal__meta-pill' }, 'Слот: ' + slotDurationLabel),
@@ -45615,6 +46310,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                                         tasks,
                                         resolvedTaskProjectIds: resolvedForQuickTarget,
                                         tabsSelector: '.tabs',
+                                        modalMenuMode: true,
                                     }),
                                 ),
                                 h('div', { className: 'planning-add-project' },
@@ -45647,6 +46343,27 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                                     'Если выбран проект или родитель, при сохранении создаётся задача и слот к ней привязывается. Или укажи связь через список «Задача» выше.',
                                 ),
                             ),
+                            h('div', { className: 'planning-bg-section' },
+                                h('label', { className: 'planning-bg-section__toggle' },
+                                    h('input', {
+                                        type: 'checkbox',
+                                        checked: form.isBackground,
+                                        onChange: (event) => handleField('isBackground', event.target.checked),
+                                    }),
+                                    h('span', null, '\u0424\u043E\u043D\u043E\u0432\u043E\u0435 \u0441\u043E\u0431\u044B\u0442\u0438\u0435'),
+                                ),
+                                form.isBackground && h('div', { className: 'planning-bg-palette' },
+                                    BACKGROUND_SLOT_COLORS.map((c) => h('button', {
+                                        key: c.value,
+                                        type: 'button',
+                                        className: 'planning-bg-swatch' + (form.bgColor === c.value ? ' planning-bg-swatch--active' : ''),
+                                        style: { background: c.value },
+                                        title: c.label,
+                                        'aria-label': c.label,
+                                        onClick: () => handleField('bgColor', c.value),
+                                    })),
+                                ),
+                            ),
                         ),
                     ),
                     linkedTask && h('section', { className: 'planning-modal__card planning-modal__card--full' },
@@ -45672,6 +46389,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                                     tasks,
                                     resolvedTaskProjectIds: resolvedForQuickTarget,
                                     tabsSelector: '.tabs',
+                                    modalMenuMode: true,
                                 }),
                             ),
                             h('div', { className: 'planning-modal__compact-grid planning-modal__compact-grid--triple' },
@@ -45751,13 +46469,20 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                         ),
                     ),
                 ),
-                h('div', { className: 'planning-modal__footer planning-modal__footer--spread' },
-                    form.id
-                        ? h('button', { type: 'button', className: 'planning-btn', onClick: () => onDelete(form.id) }, 'Удалить слот')
-                        : h('span'),
-                    h('div', { className: 'planning-modal__footer-actions' },
-                        h('button', { type: 'button', className: 'planning-btn', onClick: onClose }, 'Отмена'),
-                        h('button', { type: 'button', className: 'planning-btn planning-btn--primary', onClick: save }, linkedTask ? 'Сохранить всё' : 'Сохранить'),
+                h('div', { className: 'planning-modal__footer planning-modal__footer--quick-event' },
+                    form.id && h('button', {
+                        type: 'button',
+                        className: 'planning-quick-link-cancel planning-quick-link-cancel--danger',
+                        onClick: () => onDelete(form.id),
+                    }, 'Удалить'),
+                    h('button', { type: 'button', className: 'planning-quick-link-cancel', onClick: onClose }, 'Отмена'),
+                    h('button', {
+                        type: 'button',
+                        className: 'planning-quick-btn-done planning-quick-btn-done--footer',
+                        onClick: save,
+                    },
+                        h('span', { className: 'planning-quick-btn-done__icon', 'aria-hidden': 'true' }, '✓'),
+                        h('span', { className: 'planning-quick-btn-done__text' }, linkedTask ? 'Сохранить' : 'Сохранить'),
                     ),
                 ),
             ),
@@ -45990,10 +46715,18 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         return h('div', {
             className: 'planning-calendar-unscheduled-pill'
                 + (isTouchDragSource ? ' planning-calendar-unscheduled-pill--touch-dragging' : ''),
-            draggable: allowNativeDrag !== false,
-            style: { '--planning-unscheduled-project-color': projectColor },
+            draggable: (allowNativeDrag !== false) && !isTouchDevicePreferred(),
+            style: {
+                '--planning-unscheduled-project-color': projectColor,
+                touchAction: 'none',
+            },
             title: parentGroupLabel ? (parentGroupLabel + ' · ' + task.title) : task.title,
             onPointerDown: (event) => {
+                const pointerType = String(event?.pointerType || '').toLowerCase();
+                if ((pointerType === 'touch' || pointerType === 'pen') && event?.cancelable) {
+                    // On mobile, block native scroll/drag so custom calendar drag keeps receiving move events.
+                    event.preventDefault();
+                }
                 if (typeof onPointerDragStart === 'function') {
                     onPointerDragStart({
                         event,
@@ -46077,10 +46810,12 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         const touchDragBodyRectRef = useRef(null);
         const touchDragGridRectRef = useRef(null);
         const touchDragLayoutGenRef = useRef(0);
+        const headerDropStateRef = useRef({ day: '', mode: '' });
         const dropCommitAccentTimerRef = useRef(0);
         const suppressCalendarClickUntilRef = useRef(0);
         const dayColumnWidthRef = useRef(0);
         const calendarBodyScrollRafRef = useRef(0);
+        const calendarWindowBoundsRef = useRef({ firstIdx: -1, lastIdx: -1 });
         const [calendarWindowScrollTick, setCalendarWindowScrollTick] = useState(0);
         const calendarDaysRef = useRef([]);
         const isCalendarDragZoomActiveRef = useRef(false);
@@ -46111,6 +46846,10 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             setIsCalendarDragZoomActive((current) => (current === value ? current : value));
         };
 
+        useEffect(() => {
+            headerDropStateRef.current = headerDropState;
+        }, [headerDropState]);
+
         const shouldSuppressCalendarClick = () => suppressCalendarClickUntilRef.current > Date.now();
 
         const suppressCalendarClick = () => {
@@ -46121,6 +46860,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
         const applyHeaderDropState = (day, payload) => {
             const nextMode = resolveHeaderDropMode(payload);
+            const currentState = headerDropStateRef.current;
+            if (currentState.day === day && currentState.mode === nextMode) return;
             setHeaderDropState((current) => {
                 if (current.day === day && current.mode === nextMode) return current;
                 return { day, mode: nextMode };
@@ -46128,6 +46869,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         };
 
         const clearHeaderDropState = () => {
+            const currentState = headerDropStateRef.current;
+            if (!currentState.day && !currentState.mode) return;
             setHeaderDropState((current) => {
                 if (!current.day && !current.mode) return current;
                 return { day: '', mode: '' };
@@ -46150,7 +46893,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                     startTime: start.time,
                     endTime,
                 });
-                const appearance = resolveCalendarSlotAppearance(day, yesterdayIso, linkedTask, state.projects);
+                const appearance = resolveCalendarSlotAppearance(day, yesterdayIso, linkedTask, state.projects, null);
 
                 return {
                     day,
@@ -46329,7 +47072,10 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             return null;
         };
 
-        const canApplyDragPayloadToHeaderDay = (payload) => !!resolveHeaderDropContext(payload);
+        const canApplyDragPayloadToHeaderDay = (payload) => (
+            (payload?.type === 'task' && !!payload.taskId)
+            || (payload?.type === 'slot' && !!payload.slotId)
+        );
 
         const syncTouchDragDropState = (active, clientX, clientY) => {
             const dropTarget = resolveCalendarDropTargetFromPoint(clientX, clientY);
@@ -46391,6 +47137,11 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         const maybeActivateCalendarDragZoomFromPoint = (clientX, payload) => {
             if (isCalendarDragZoomActiveRef.current) return;
             if (!isPlanningCalendarDragPayload(payload)) return;
+            if (payload?.type === 'task' && calendarDayWindow < CALENDAR_DRAG_ZOOM_VISIBLE_DAYS) {
+                // For header task drag on narrow view, keep density stable (no 3→8 relayout)
+                // and rely on horizontal auto-scroll instead.
+                return;
+            }
 
             const scrollContainer = gridScrollRef.current;
             const containerRect = scrollContainer?.getBoundingClientRect?.();
@@ -46481,6 +47232,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             if (!current || current.activated) return;
 
             current.activated = true;
+            maybeActivateCalendarDragZoomFromPoint(current.lastX, current.payload);
             try { navigator.vibrate?.(10); } catch (_e) { /* unsupported */ }
             setTouchDragSourceKey(current.sourceKey || '');
 
@@ -46646,6 +47398,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                 lastX: clientX,
                 lastY: clientY,
                 activated: false,
+                useMoveToActivate: payload?.type === 'task',
                 holdTimer: 0,
                 handleTouchMove: null,
                 handleTouchMovePassive: null,
@@ -46685,7 +47438,11 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
                 if (!current.activated) {
                     const distance = Math.hypot(nextX - current.startX, nextY - current.startY);
-                    if (distance > CALENDAR_TOUCH_DRAG_MOVE_CANCEL_THRESHOLD) {
+                    if (current.useMoveToActivate) {
+                        if (distance >= CALENDAR_POINTER_DRAG_MOVE_THRESHOLD) {
+                            activateTouchDrag();
+                        }
+                    } else if (distance > CALENDAR_TOUCH_DRAG_MOVE_CANCEL_THRESHOLD) {
                         finishCalendarTouchDrag({ applyDrop: false, suppressClickAfterDrop: false });
                     }
                 }
@@ -46748,6 +47505,16 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                 });
             };
 
+            if (active.useMoveToActivate) {
+                // Task pills from calendar header: immediate touch drag, no long press.
+                touchDragStateRef.current = active;
+                document.addEventListener('touchmove', active.handleTouchMoveActive, { passive: false, capture: true });
+                document.addEventListener('touchend', active.handleTouchEnd, { passive: true, capture: true });
+                document.addEventListener('touchcancel', active.handleTouchCancel, { passive: true, capture: true });
+                activateCalendarCustomDrag(active);
+                return;
+            }
+
             active.holdTimer = window.setTimeout(activateTouchDrag, CALENDAR_TOUCH_DRAG_HOLD_MS);
             touchDragStateRef.current = active;
 
@@ -46794,6 +47561,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                 lastX: clientX,
                 lastY: clientY,
                 activated: false,
+                useMoveToActivate: payload?.type === 'task',
                 holdTimer: 0,
                 handleTouchMove: null,
                 handleTouchMovePassive: null,
@@ -46824,7 +47592,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                 removeHoldVisual();
             };
 
-            if (isTouchLike) {
+            if (isTouchLike && !active.useMoveToActivate) {
                 targetNode.classList.add('planning-calendar-slot--hold-active');
 
                 active.holdTimer = window.setTimeout(() => {
@@ -46854,14 +47622,24 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                 if (!current.activated) {
                     const distance = Math.hypot(nextX - current.startX, nextY - current.startY);
                     if (isTouchLike) {
-                        if (distance >= CALENDAR_TOUCH_DRAG_MOVE_CANCEL_THRESHOLD) {
+                        if (current.useMoveToActivate) {
+                            if (distance < CALENDAR_POINTER_DRAG_MOVE_THRESHOLD) return;
+                            if (gridScrollRef.current) gridScrollRef.current.style.touchAction = 'none';
+                            if (current.pointerId != null && targetNode && typeof targetNode.setPointerCapture === 'function') {
+                                try { targetNode.setPointerCapture(current.pointerId); } catch (_e) { /* ignore */ }
+                            }
+                            activateCalendarCustomDrag(current);
+                            syncTouchDragDropState(current, current.lastX, current.lastY);
+                        } else if (distance >= CALENDAR_TOUCH_DRAG_MOVE_CANCEL_THRESHOLD) {
                             clearSlotHoldTimer();
                             finishCalendarTouchDrag({ applyDrop: false, suppressClickAfterDrop: false });
                         }
-                        return;
+                        if (!current.activated) return;
                     }
-                    if (distance < CALENDAR_POINTER_DRAG_MOVE_THRESHOLD) return;
-                    activateCalendarCustomDrag(current);
+                    if (!current.activated) {
+                        if (distance < CALENDAR_POINTER_DRAG_MOVE_THRESHOLD) return;
+                        activateCalendarCustomDrag(current);
+                    }
                 }
 
                 if (moveEvent.cancelable) moveEvent.preventDefault();
@@ -46904,6 +47682,14 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             };
 
             touchDragStateRef.current = active;
+            if (isTouchLike && active.useMoveToActivate) {
+                if (gridScrollRef.current) gridScrollRef.current.style.touchAction = 'none';
+                if (active.pointerId != null && targetNode && typeof targetNode.setPointerCapture === 'function') {
+                    try { targetNode.setPointerCapture(active.pointerId); } catch (_e) { /* ignore */ }
+                }
+                activateCalendarCustomDrag(active);
+                syncTouchDragDropState(active, active.lastX, active.lastY);
+            }
             window.addEventListener('pointermove', active.handlePointerMove, { passive: false });
             window.addEventListener('pointerup', active.handlePointerUp);
             window.addEventListener('pointercancel', active.handlePointerCancel);
@@ -46962,6 +47748,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             const nextScrollLeft = (scrollNode.scrollLeft / previousDayWidth) * dayColumnWidth;
             scrollNode.scrollLeft = nextScrollLeft;
             previousDayWidthRef.current = dayColumnWidth;
+            calendarWindowBoundsRef.current = { firstIdx: -1, lastIdx: -1 };
             setCalendarWindowScrollTick((tick) => tick + 1);
         }, [dayColumnWidth]);
 
@@ -47086,6 +47873,19 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             if (calendarBodyScrollRafRef.current) return;
             calendarBodyScrollRafRef.current = window.requestAnimationFrame(() => {
                 calendarBodyScrollRafRef.current = 0;
+                const node = gridScrollRef.current;
+                if (!node) return;
+                const colW = Math.max(dayColumnWidthRef.current || dayColumnWidth || 1, 1);
+                const vw = node.clientWidth || colW;
+                const sl = node.scrollLeft;
+                const overscan = CALENDAR_WINDOW_OVERSCAN_DAYS;
+                let fi = Math.floor(sl / colW) - overscan;
+                fi = Math.max(0, fi);
+                const colsNeeded = Math.max(1, Math.ceil(vw / colW) + overscan * 2 + 2);
+                const li = fi + colsNeeded;
+                const prev = calendarWindowBoundsRef.current;
+                if (prev.firstIdx === fi && prev.lastIdx === li) return;
+                calendarWindowBoundsRef.current = { firstIdx: fi, lastIdx: li };
                 setCalendarWindowScrollTick((tick) => tick + 1);
             });
         };
@@ -47300,6 +48100,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                 date: start.date,
                 startTime: start.time,
                 endTime: end.time,
+                quickCreate: true,
             }));
         };
 
@@ -48075,7 +48876,9 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         };
 
         return h('div', {
-            className: 'planning-calendar-screen' + (isCompactCalendarView ? ' planning-calendar-screen--drag-zoom' : ''),
+            className: 'planning-calendar-screen'
+                + (isCompactCalendarView ? ' planning-calendar-screen--drag-zoom' : '')
+                + (touchDragPreview?.kind === 'task' ? ' planning-calendar-screen--task-dragging' : ''),
         },
             h('div', { className: 'planning-calendar-nav' },
                 h('span', { className: 'planning-calendar-nav__density-label' }, 'Сколько дней в ряд'),
@@ -48185,7 +48988,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                                     className: 'planning-calendar-day-drop-hint',
                                     'aria-hidden': 'true',
                                 }, '↺ без времени'),
-                                (unscheduledTasksByDay[day] || []).length > 0 && h('div', { className: 'planning-calendar-day-unscheduled' },
+                                h('div', { className: 'planning-calendar-day-unscheduled' },
                                     (unscheduledTasksByDay[day] || []).map((task) => h(CalendarUnscheduledTaskPill, {
                                         key: task.id,
                                         task,
@@ -48311,7 +49114,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                                     }
                                     : slot;
                                 const metrics = buildSlotMetrics(slotPreview);
-                                const appearance = resolveCalendarSlotAppearance(day, yesterdayIso, linkedTask, state.projects);
+                                const appearance = resolveCalendarSlotAppearance(day, yesterdayIso, linkedTask, state.projects, slot);
                                 const parentGroupLabel = linkedTask ? buildTaskParentGroupLabel(linkedTask, taskMap) : '';
                                 const showTaskStatusToggle = Boolean(
                                     linkedTask && linkedTask.status !== 'cancelled',

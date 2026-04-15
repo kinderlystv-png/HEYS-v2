@@ -17033,10 +17033,24 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
       _uploadInProgress = true;
       _uploadInFlightCount = batch.length;
 
+      // Sync trace for dayv2 items in batch
+      const _dayItems = batch.filter(it => it?.k?.includes('dayv2_'));
+      if (_dayItems.length > 0) {
+        _dayItems.forEach(it => {
+          const _v = it.v;
+          const _mCnt = Array.isArray(_v?.meals) ? _v.meals.length : '?';
+          const _iCnt = Array.isArray(_v?.meals) ? _v.meals.reduce((s, m) => s + (m.items?.length || 0), 0) : '?';
+          (window.console || console).info('[HEYS.syncTrace] UPLOAD_START_dayv2', { key: it.k, meals: _mCnt, items: _iCnt, updatedAt: _v?.updatedAt, batchTotal: batch.length });
+        });
+      }
+
       const canSync = getRpcOnlyMode();
       log('🔐 [UPLOAD] canSync check:', { _rpcOnlyMode: getRpcOnlyMode(), hasUser: !!getUser(), batchLen: batch.length, canSync });
       if (!canSync) {
         log('⚠️ [UPLOAD] canSync=false, returning batch to queue');
+        if (_dayItems.length > 0) {
+          (window.console || console).warn('[HEYS.syncTrace] UPLOAD_BLOCKED_canSync', { dayKeys: _dayItems.map(it => it.k), reason: 'canSync=false' });
+        }
         clientUpsertQueue.push(...batch);
         _uploadInProgress = false;
         _uploadInFlightCount = 0;
@@ -17101,6 +17115,10 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
             savePendingQueue(PENDING_CLIENT_QUEUE_KEY, clientUpsertQueue);
             notifyPendingChange();
 
+            if (_dayItems.length > 0) {
+              (window.console || console).warn('[HEYS.syncTrace] UPLOAD_FAIL_dayv2', { dayKeys: _dayItems.map(it => it.k), error: String(anyError), isAuth: isAuthErrorFlag });
+            }
+
             if (isAuthErrorFlag) {
               log('⚠️ [UPLOAD] Auth error, NOT retrying — waiting for login');
             } else if ((getInternal().retryAttempt || 0) < (getInternal().maxRetryAttempts || 5)) {
@@ -17111,6 +17129,11 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
           } else {
             resetRetry();
             logCritical(`☁️ [YANDEX] Сохранено в облако: ${totalSaved} записей`);
+            if (_dayItems.length > 0) {
+              _dayItems.forEach(it => {
+                (window.console || console).info('[HEYS.syncTrace] UPLOAD_OK_dayv2', { key: it.k, saved: totalSaved });
+              });
+            }
           }
 
           savePendingQueue(PENDING_CLIENT_QUEUE_KEY, clientUpsertQueue);
@@ -17929,6 +17952,17 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
 
         queue.push(params.item);
 
+        const _pushTrace = typeof global.HEYS?.debug?.getSyncTraceBuffer === 'function'
+            ? global.HEYS.debug._pushSyncTrace || null : null;
+        const _key = params.item?.k || params.normalizedKey || '';
+        if (_key.includes('dayv2_')) {
+            const _v = params.item?.v;
+            const _mCnt = Array.isArray(_v?.meals) ? _v.meals.length : '?';
+            const _iCnt = Array.isArray(_v?.meals) ? _v.meals.reduce((s, m) => s + (m.items?.length || 0), 0) : '?';
+            const _msg = { key: _key, qLen: queue.length, meals: _mCnt, items: _iCnt, updatedAt: _v?.updatedAt, online: !!params.isOnline, waitSync: !!params.waitingForSync };
+            (global.console || console).info('[HEYS.syncTrace] ENQUEUE_dayv2', _msg);
+        }
+
         if (typeof params.persistQueue === 'function') params.persistQueue(queue);
         if (typeof params.notifyPendingChange === 'function') params.notifyPendingChange();
         if (typeof params.scheduleClientPush === 'function') params.scheduleClientPush();
@@ -18092,6 +18126,26 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
     trace: (...args) => { if (window.console && typeof window.console.trace === 'function') window.console.trace(...args); }
   };
   const console = quietConsole;
+
+  // ═══════════════════════════════════════════════════════════════════
+  // 🔍 SYNC TRACE BUFFER — диагностика очереди и cloud миррoring
+  // ═══════════════════════════════════════════════════════════════════
+  const SYNC_TRACE_MAX = 300;
+  const _syncTraceBuffer = [];
+  function pushSyncTrace(event, payload, level) {
+    const entry = { ts: Date.now(), t: new Date().toISOString(), event, ...(payload || {}) };
+    _syncTraceBuffer.push(entry);
+    if (_syncTraceBuffer.length > SYNC_TRACE_MAX) _syncTraceBuffer.shift();
+    const tag = '[HEYS.syncTrace]';
+    if (level === 'warn') { (global.console || console).warn(tag, event, payload || ''); }
+    else if (level === 'error') { (global.console || console).error(tag, event, payload || ''); }
+    else { (global.console || console).info(tag, event, payload || ''); }
+  }
+  if (!global.HEYS) global.HEYS = {};
+  if (!global.HEYS.debug) global.HEYS.debug = {};
+  global.HEYS.debug.getSyncTraceBuffer = function () { return _syncTraceBuffer.slice(); };
+  global.HEYS.debug.clearSyncTraceBuffer = function () { _syncTraceBuffer.length = 0; };
+  global.HEYS.debug._pushSyncTrace = pushSyncTrace;
 
   // ═══════════════════════════════════════════════════════════════════
   // 🔧 КОНСТАНТЫ
@@ -21097,6 +21151,9 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
           return;
         }
 
+        if (muteMirror && isOurKey(k) && String(k).includes('dayv2_')) {
+          pushSyncTrace('MUTE_MIRROR_SKIP', { key: k }, 'warn');
+        }
         if (!muteMirror && isOurKey(k)) {
           // 🔒 Дедупликация: пропускаем повторные сохранения с тем же updatedAt
           const parsed = tryParse(v);
@@ -21105,8 +21162,9 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
           const lastSaved = _lastSavedKeys.get(k);
 
           if (lastSaved && updatedAt > 0 && lastSaved.updatedAt === updatedAt && (now - lastSaved.timestamp) < DEDUP_WINDOW_MS) {
-            // Пропускаем дубликат
-            // DEBUG (отключено): log(`🔄 [DEDUP] Skipped duplicate save: ${k} | updatedAt: ${updatedAt}`);
+            if (String(k).includes('dayv2_')) {
+              pushSyncTrace('INTERCEPT_DEDUP_SKIP', { key: k, updatedAt, age: now - lastSaved.timestamp }, 'warn');
+            }
             return;
           }
 
@@ -21120,7 +21178,17 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
           }
 
           if (needsClientStorage(k)) {
+            if (String(k).includes('dayv2_')) {
+              const _mCnt = Array.isArray(parsed?.meals) ? parsed.meals.length : '?';
+              const _iCnt = Array.isArray(parsed?.meals) ? parsed.meals.reduce((s, m) => s + (m.items?.length || 0), 0) : '?';
+              pushSyncTrace('INTERCEPT_MIRROR_dayv2', { key: k, meals: _mCnt, items: _iCnt, updatedAt: parsed?.updatedAt });
+            }
             cloud.saveClientKey(k, parsed);
+            if (!isHotSyncDisabled()) {
+              setTimeout(() => {
+                requestForegroundAutoSync('local-write', { minGapMs: 250 }).catch(() => { });
+              }, 0);
+            }
           } else {
             cloud.saveKey(k, parsed);
           }
@@ -25872,12 +25940,19 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
     const _inGracePeriod = _graceAge < 10000;
     const _isProfileCompleted = normalizedKey === 'heys_profile' && value && typeof value === 'object' && value.profileCompleted === true;
     const _isWidgetLayout = normalizedKey && normalizedKey.includes('widget_layout');
-    if (_inGracePeriod && !_isProfileCompleted && !_isWidgetLayout) {
-      // 🔇 Silent skip — data was just downloaded from cloud, no need to re-upload
+    // v5: dayv2 ключи полностью исключены из grace period.
+    // Mirror-loop защита уже обеспечена muteMirror (true во время sync download)
+    // и dedup check в interceptSetItem. persistDayData вызывается только из
+    // пользовательских действий, а не из React re-render после cloud sync.
+    const _isDayV2Data = normalizedKey && normalizedKey.includes('dayv2_') && !normalizedKey.includes('date');
+    if (_inGracePeriod && !_isProfileCompleted && !_isWidgetLayout && !_isDayV2Data) {
       return;
     }
     if (_inGracePeriod && (_isProfileCompleted || _isWidgetLayout)) {
       console.info('[HEYS.sync] 🔓 Grace period bypassed for', _isWidgetLayout ? 'widget_layout' : 'profileCompleted', 'save');
+    }
+    if (_inGracePeriod && _isDayV2Data) {
+      pushSyncTrace('GRACE_PERIOD_BYPASS_dayv2', { key: normalizedKey, graceAge: Math.round(_graceAge), updatedAt: value?.updatedAt });
     }
 
     const enqueueResult = enqueueClientSave({
@@ -26206,10 +26281,11 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
   // Console API: HEYS.cloud.hotSync.disable() / .enable() / .status() / .safeMode() / .normalMode()
   // ═══════════════════════════════════════════════════════════════════
   // and we also sync immediately when the tab/window becomes active again.
-  const FOREGROUND_AUTO_SYNC_INTERVAL_ACTIVE_MS = 3500;
-  const FOREGROUND_AUTO_SYNC_INTERVAL_IDLE_MS = 7000;
-  const FOREGROUND_AUTO_SYNC_INTERVAL_LOW_END_MS = 9000;
-  const FOREGROUND_AUTO_SYNC_MIN_GAP_MS = 2000;
+  const FOREGROUND_AUTO_SYNC_INTERVAL_ACTIVE_MS = 5000;
+  const FOREGROUND_AUTO_SYNC_INTERVAL_IDLE_MS = 5000;
+  const FOREGROUND_AUTO_SYNC_INTERVAL_LOW_END_MS = 7000;
+  const FOREGROUND_AUTO_SYNC_MIN_GAP_MS = 1500;
+  const FOREGROUND_AUTO_SYNC_FALLBACK_COOLDOWN_MS = 15000;
   const FOREGROUND_AUTO_SYNC_EXTENDED_EVERY = 3;
   const HOT_SYNC_AUTO_SAFE_THRESHOLD = 5; // consecutive errors to trigger auto-safe mode
   let foregroundAutoSyncTimer = null;
@@ -26256,6 +26332,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
     'supplementUserFlags'
   ]);
   let foregroundAutoSyncIdleStreak = 0;
+  let foregroundAutoSyncLastFallbackAt = 0;
   const foregroundHotSyncHistory = [];
 
   function getForegroundAutoSyncIntervalMs() {
@@ -26327,6 +26404,34 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
     cloud._lastForegroundHotSync = entry;
   }
 
+  function dispatchForegroundHotSyncCompleted(clientId, reason, hotSync) {
+    if (!global.dispatchEvent) return;
+    try {
+      global.dispatchEvent(new CustomEvent('heysSyncCompleted', {
+        detail: {
+          clientId,
+          phase: 'hot',
+          reason,
+          mode: hotSync?.mode || 'unknown',
+          updated: hotSync?.updated || 0,
+          fetchedKeyCount: hotSync?.fetchedKeyCount || 0,
+          markerScopes: Array.isArray(hotSync?.markerScopes) ? hotSync.markerScopes : [],
+          source: 'foreground-hot-sync'
+        }
+      }));
+    } catch (_) { }
+  }
+
+  async function maybeRunForegroundFullFallback(clientId, reason) {
+    const now = Date.now();
+    if ((now - foregroundAutoSyncLastFallbackAt) < FOREGROUND_AUTO_SYNC_FALLBACK_COOLDOWN_MS) {
+      return false;
+    }
+    foregroundAutoSyncLastFallbackAt = now;
+    await cloud.syncClient(clientId, { force: true, silent: true });
+    return true;
+  }
+
   function canRunForegroundAutoSync(clientId) {
     if (isHotSyncDisabled()) { console.info('[HEYS.sync] 🔇 hot-sync disabled via flag'); return false; }
     if (!clientId) { console.info('[HEYS.sync] 🔇 hot-sync skip: no clientId'); return false; }
@@ -26339,35 +26444,48 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
 
   function getForegroundHotSyncKeys(reason) {
     const today = new Date().toISOString().slice(0, 10);
-    const fastKeys = [
-      'heys_widget_layout_v1',
-      'heys_widget_layout_meta_v1',
-      'heys_profile'
-    ];
+    const allClientKeys = Array.isArray(CLIENT_SPECIFIC_KEYS) ? CLIENT_SPECIFIC_KEYS.slice() : [];
 
-    // Screen-awareness: include actively viewed day if different from today
+    // Screen-awareness: include actively viewed day if different from today.
     // Can be disabled: localStorage.setItem('heys_disable_screen_aware', '1')
     const activeDayKeys = [`heys_dayv2_${today}`];
-    if (isScreenAwareDisabled()) {
-      // screen-awareness off → only today
-    } else try {
-      const activeDate = global.HEYS?.DayUI?.getActiveDate?.() ||
-        global.HEYS?.store?.get?.('heys_active_day_date');
-      if (activeDate && typeof activeDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(activeDate) && activeDate !== today) {
-        activeDayKeys.push(`heys_dayv2_${activeDate}`);
+    if (!isScreenAwareDisabled()) {
+      try {
+        const activeDate = global.HEYS?.DayUI?.getActiveDate?.() ||
+          global.HEYS?.store?.get?.('heys_active_day_date');
+        if (activeDate && typeof activeDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(activeDate) && activeDate !== today) {
+          activeDayKeys.push(`heys_dayv2_${activeDate}`);
+        }
+      } catch (_) { /* no active date available — use today only */ }
+    }
+
+    // Include dynamic client keys currently present in storage
+    // (e.g. heys_milestone_* and future prefixed keys).
+    const dynamicPrefixedKeys = [];
+    try {
+      const ls = global.localStorage;
+      for (let i = 0; i < ls.length; i += 1) {
+        const rawKey = ls.key(i);
+        const baseKey = stripClientScopePrefixes(String(rawKey || '')).key;
+        if (!baseKey) continue;
+        if (baseKey.includes(CLIENT_KEY_PATTERNS.DAY_V2)) continue;
+        if (!isOurKey(baseKey)) continue;
+        if (needsClientStorage(baseKey) || needsClientStorage(rawKey)) {
+          dynamicPrefixedKeys.push(baseKey);
+        }
       }
-    } catch (_) { /* no active date available — use today only */ }
+    } catch (_) { /* ignore storage enumeration issues */ }
 
-    const extendedKeys = [
-      'heys_profile',
-      'heys_norms',
-      'heys_hr_zones',
-      ...activeDayKeys
-    ];
+    // Hidden/background reasons keep minimal pull.
+    if (reason === 'marker-scope') {
+      return Array.from(new Set([...allClientKeys, ...activeDayKeys, ...dynamicPrefixedKeys]));
+    }
+    if (typeof document !== 'undefined' && document.visibilityState === 'hidden') {
+      return Array.from(new Set(['heys_profile', ...activeDayKeys]));
+    }
 
-    const isFastVisibleTick = reason === 'visible-interval';
-    const shouldIncludeExtended = !isFastVisibleTick || (foregroundAutoSyncTick % FOREGROUND_AUTO_SYNC_EXTENDED_EVERY === 0);
-    return shouldIncludeExtended ? Array.from(new Set([...fastKeys, ...extendedKeys])) : fastKeys;
+    // Foreground visible mode: full client-specific set for cross-browser freshness.
+    return Array.from(new Set([...allClientKeys, ...activeDayKeys, ...dynamicPrefixedKeys]));
   }
 
   function getScopedClientStorageKey(clientId, baseKey) {
@@ -26442,6 +26560,22 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
         }
       }
 
+      if (baseKey === 'heys_products' && typeof window !== 'undefined' && window.dispatchEvent && Array.isArray(value)) {
+        const detail = {
+          products: value,
+          count: value.length,
+          source
+        };
+        window.dispatchEvent(new CustomEvent('heys:products-updated', { detail }));
+        window.dispatchEvent(new CustomEvent('heysProductsUpdated', { detail }));
+      }
+
+      if (baseKey.startsWith('heys_planning_') && typeof window !== 'undefined' && window.dispatchEvent) {
+        window.dispatchEvent(new CustomEvent('heys:planning-updated', {
+          detail: { key: baseKey, source }
+        }));
+      }
+
       return true;
     } catch (_) {
       return false;
@@ -26461,9 +26595,14 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
     if (changedScopes.length === 0) return []; // nothing changed → skip pull
 
     const needed = [];
+    let hasUnknownScope = false;
     for (const key of allKeys) {
       // Map key → scope and check if that scope changed
       if (key.includes('widget_layout') && changedScopes.includes('widgets')) {
+        needed.push(key);
+      } else if (key === 'heys_products' && changedScopes.includes('products')) {
+        needed.push(key);
+      } else if (key.startsWith('heys_planning_') && changedScopes.includes('planning')) {
         needed.push(key);
       } else if (key === 'heys_profile' && changedScopes.includes('profile')) {
         needed.push(key);
@@ -26471,12 +26610,36 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
         needed.push(key);
       } else if (key === 'heys_hr_zones' && changedScopes.includes('hr_zones')) {
         needed.push(key);
+      } else if ((key === 'heys_game' || key.startsWith('heys_milestone_') || key === 'heys_best_streak') && changedScopes.includes('game')) {
+        needed.push(key);
+      } else if (key.startsWith('heys_advice_') && changedScopes.includes('advice')) {
+        needed.push(key);
       } else if (key.includes('dayv2_')) {
         const dateMatch = key.match(/dayv2_(\d{4}-\d{2}-\d{2})$/);
         if (dateMatch && changedScopes.includes('day:' + dateMatch[1])) {
           needed.push(key);
         }
       }
+    }
+    for (const scope of changedScopes) {
+      if (
+        scope === 'widgets' ||
+        scope === 'products' ||
+        scope === 'planning' ||
+        scope === 'profile' ||
+        scope === 'norms' ||
+        scope === 'hr_zones' ||
+        scope === 'game' ||
+        scope === 'advice' ||
+        scope.startsWith('day:')
+      ) {
+        continue;
+      }
+      hasUnknownScope = true;
+      break;
+    }
+    if (hasUnknownScope) {
+      return allKeys;
     }
     return needed;
   }
@@ -26741,6 +26904,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
           (hotSyncTrace.fetchedKeys.length ? ` keys=${hotSyncTrace.fetchedKeys.join(', ')}` : '') +
           (hotSyncTrace.markerScopes.length ? ` scopes=${hotSyncTrace.markerScopes.join(', ')}` : '')
         );
+        dispatchForegroundHotSyncCompleted(clientId, reason, hotSync);
       } else if (hotSync.success) {
         foregroundAutoSyncIdleStreak += 1;
         if ((foregroundAutoSyncIdleStreak % HOT_SYNC_HEARTBEAT_EVERY) === 0) {
@@ -26787,8 +26951,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
 
       // Fallback: if lightweight key-sync is unavailable (e.g. no session token),
       // try the existing full sync path.
-      await cloud.syncClient(clientId, { force: true, silent: true });
-      return true;
+      await maybeRunForegroundFullFallback(clientId, reason + ':hot-failed');
+      return false;
     } catch (e) {
       console.warn('[HEYS.sync] ⚠️ Foreground auto-sync failed:', reason, e?.message || e);
       // Auto-safety: count exception as consecutive error
@@ -26797,6 +26961,9 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
         _hotSyncAutoSafeMode = true;
         console.warn(`[HEYS.sync] 🛡️ Auto-safe mode ON: ${_hotSyncConsecutiveErrors} consecutive failures — degrading to legacy sync`);
       }
+      try {
+        await maybeRunForegroundFullFallback(clientId, reason + ':exception');
+      } catch (_) { }
       return false;
     } finally {
       foregroundAutoSyncInFlight = false;

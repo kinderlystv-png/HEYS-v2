@@ -1374,6 +1374,30 @@ td:first-child input {
 
 .wrap.wrap--no-header {
   padding-top: 0;
+  /* Tasks tab: keep shell within the viewport so inner .planning-tab height: 100%
+     resolves to a real pixel height. Otherwise the page grows with the calendar
+     and the document scrolls — sticky nav / density bar scroll away. */
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  max-height: 100vh;
+  min-height: 100dvh;
+  max-height: 100dvh;
+  overflow: hidden;
+}
+
+.wrap.wrap--no-header > .tab-content-swipeable {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.wrap.wrap--no-header > .tab-content-swipeable > .planning-tab {
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
 }
 
 /* === 12. MODERN HEADER === */
@@ -4366,6 +4390,17 @@ td:first-child input {
   position: relative;
 }
 
+.cloud-sync-indicator.session {
+  background: rgba(139, 92, 246, 0.14);
+  color: #7c3aed;
+  position: relative;
+}
+
+.cloud-sync-indicator .cloud-icon.session {
+  font-size: 15px;
+  line-height: 1;
+}
+
 /* Бейдж с количеством pending изменений */
 .cloud-sync-indicator .pending-badge {
   position: absolute;
@@ -5611,9 +5646,9 @@ body:has(.offline-banner) .wrap {
   padding-bottom: 100px;
   /* Отступ под fixed tabs */
   position: relative;
-  contain: layout style;
+  contain: style;
   overflow: hidden;
-  /* Убрали transform: translateZ(0) — ломает position: fixed для FAB */
+  /* layout-containment, как и transform, ломает position: fixed для FAB */
   /* GPU acceleration включается только при анимации через will-change */
 }
 
@@ -5798,8 +5833,8 @@ body:has(.offline-banner) .wrap {
   padding: 8px 12px;
   margin: 0;
   background: rgba(255, 255, 255, 0.97);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
   border-top: 0.5px solid rgba(0, 0, 0, 0.1);
   border-radius: 0;
   position: fixed;
@@ -5822,9 +5857,14 @@ body:has(.offline-banner) .wrap {
   left: 0;
   right: 0;
   height: 4px;
-  background: rgba(0, 0, 0, 0.05);
-  z-index: 1001;
+  /* Light theme: track must stay visible on frosted .tabs (backdrop-filter + white glass). */
+  isolation: isolate;
+  z-index: 1002;
   pointer-events: none;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.92) 0%, rgba(226, 232, 240, 0.88) 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.95),
+    0 -1px 0 rgba(15, 23, 42, 0.12);
 }
 
 .crs-bar-green {
@@ -5833,7 +5873,9 @@ body:has(.offline-banner) .wrap {
   height: 100%;
   transform-origin: right center;
   will-change: transform, right, width;
-  /* background is set dynamically in JS; no color transition to avoid flicker */
+  /* applyCascadeVisual() wipes inline styles via cssText — CSS must provide colors. */
+  background: linear-gradient(90deg, #10b981, #34d399);
+  box-shadow: 0 0 4px rgba(52, 211, 153, 0.8), 0 0 10px rgba(16, 185, 129, 0.6), 0 0 16px rgba(5, 150, 105, 0.4);
   transition: transform 1.4s cubic-bezier(0.22, 1, 0.36, 1), right 1.8s cubic-bezier(0.22, 1, 0.36, 1), width 1.8s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
@@ -5843,7 +5885,8 @@ body:has(.offline-banner) .wrap {
   height: 100%;
   transform-origin: left center;
   will-change: transform, left, width;
-  /* background is set dynamically in JS; no color transition to avoid flicker */
+  background: linear-gradient(90deg, #dc2626, #f97316, #fde047);
+  box-shadow: 0 0 4px rgba(253, 224, 71, 0.7), 0 0 10px rgba(249, 115, 22, 0.6), 0 0 16px rgba(220, 38, 38, 0.4);
   transition: transform 1.4s cubic-bezier(0.22, 1, 0.36, 1), left 1.8s cubic-bezier(0.22, 1, 0.36, 1), width 1.8s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
@@ -5854,10 +5897,88 @@ body:has(.offline-banner) .wrap {
   height: 8px;
   border-radius: 50%;
   background: #ffffff;
+  box-shadow: 0 0 0 1.5px rgba(15, 23, 42, 0.15), 0 0 6px rgba(0, 0, 0, 0.12);
   transition: left 2s cubic-bezier(0.22, 1, 0.36, 1), transform 0.8s cubic-bezier(0.22, 1, 0.36, 1);
-  /* 🚀 PERF R6: removed static box-shadow; animation now uses transform+opacity */
   will-change: transform, opacity;
   opacity: 0.95;
+}
+
+/*
+ * CRS bar — яркая «линия каскада» в тёмной теме.
+ * Зелёный/оранжевый сегменты задаются inline в JS — перебиваем через !important.
+ */
+[data-theme="dark"] .crs-bar-container {
+  height: 4px;
+  background: linear-gradient(180deg, rgba(45, 212, 191, 0.28) 0%, rgba(15, 23, 42, 0.95) 55%, rgba(2, 6, 23, 0.98) 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    0 -1px 0 rgba(34, 211, 238, 0.45),
+    0 -8px 28px rgba(34, 211, 238, 0.14);
+}
+
+[data-theme="dark"] .crs-bar-green {
+  background: linear-gradient(90deg, #0d9488 0%, #14b8a6 35%, #5eead4 70%, #a7f3d0 100%) !important;
+  box-shadow:
+    0 0 6px rgba(94, 234, 212, 0.95),
+    0 0 14px rgba(45, 212, 191, 0.75),
+    0 0 22px rgba(16, 185, 129, 0.45) !important;
+}
+
+[data-theme="dark"] .crs-bar-orange {
+  background: linear-gradient(90deg, #fbbf24 0%, #fb923c 30%, #f43f5e 65%, #e879f9 100%) !important;
+  box-shadow:
+    0 0 6px rgba(251, 191, 36, 0.9),
+    0 0 14px rgba(249, 115, 22, 0.65),
+    0 0 20px rgba(244, 63, 94, 0.45) !important;
+}
+
+[data-theme="dark"] .crs-bar-divider {
+  width: 7px;
+  height: 7px;
+  background: radial-gradient(circle at 35% 30%, #ffffff 0%, #ecfeff 40%, #5eead4 100%);
+  box-shadow:
+    0 0 0 2px rgba(34, 211, 238, 0.45),
+    0 0 10px rgba(255, 255, 255, 0.55),
+    0 0 18px rgba(94, 234, 212, 0.5);
+  opacity: 1;
+}
+
+@media (prefers-color-scheme: dark) {
+  html:not([data-theme]) .crs-bar-container {
+    height: 4px;
+    background: linear-gradient(180deg, rgba(45, 212, 191, 0.28) 0%, rgba(15, 23, 42, 0.95) 55%, rgba(2, 6, 23, 0.98) 100%);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.22),
+      0 -1px 0 rgba(34, 211, 238, 0.45),
+      0 -8px 28px rgba(34, 211, 238, 0.14);
+  }
+
+  html:not([data-theme]) .crs-bar-green {
+    background: linear-gradient(90deg, #0d9488 0%, #14b8a6 35%, #5eead4 70%, #a7f3d0 100%) !important;
+    box-shadow:
+      0 0 6px rgba(94, 234, 212, 0.95),
+      0 0 14px rgba(45, 212, 191, 0.75),
+      0 0 22px rgba(16, 185, 129, 0.45) !important;
+  }
+
+  html:not([data-theme]) .crs-bar-orange {
+    background: linear-gradient(90deg, #fbbf24 0%, #fb923c 30%, #f43f5e 65%, #e879f9 100%) !important;
+    box-shadow:
+      0 0 6px rgba(251, 191, 36, 0.9),
+      0 0 14px rgba(249, 115, 22, 0.65),
+      0 0 20px rgba(244, 63, 94, 0.45) !important;
+  }
+
+  html:not([data-theme]) .crs-bar-divider {
+    width: 7px;
+    height: 7px;
+    background: radial-gradient(circle at 35% 30%, #ffffff 0%, #ecfeff 40%, #5eead4 100%);
+    box-shadow:
+      0 0 0 2px rgba(34, 211, 238, 0.45),
+      0 0 10px rgba(255, 255, 255, 0.55),
+      0 0 18px rgba(94, 234, 212, 0.5);
+    opacity: 1;
+  }
 }
 
 /* 🚀 PERF R6: replaced box-shadow with opacity+transform — GPU-compositable */

@@ -171,6 +171,23 @@
     if (!check.ok) return;
 
     const mealCount = countMealsWithItems(dayData);
+    const followupSessionGuardKey = `heys_morning_activation_followup_guard_${currentClientId || 'unknown'}_${todayKey}`;
+    const followupSessionGuardRaw = (() => {
+      try {
+        return sessionStorage.getItem(followupSessionGuardKey);
+      } catch (_) {
+        return null;
+      }
+    })();
+    const followupSessionGuard = Number(followupSessionGuardRaw);
+    if (Number.isFinite(followupSessionGuard) && mealCount <= followupSessionGuard) {
+      console.info('[MorningCheckin] morning activation follow-up guarded in session until next meal add', {
+        mealCount,
+        guardMealCount: followupSessionGuard,
+        reason
+      });
+      return;
+    }
     const snoozeAt = dayData?.morningActivation?.followupSnoozeUntilMealCount;
     if (snoozeAt != null && mealCount <= snoozeAt) {
       console.info('[MorningCheckin] morning activation follow-up snoozed until next meal add', {
@@ -189,6 +206,11 @@
     }
 
     followupOpening = true;
+    try {
+      sessionStorage.setItem(followupSessionGuardKey, String(mealCount));
+    } catch (_) {
+      // sessionStorage may be unavailable
+    }
     HEYS.StepModal.show({
       steps: ['morning_activation_followup'],
       title: 'Утренняя зарядка',
@@ -207,12 +229,22 @@
         console.info('[MorningCheckin] morning activation follow-up dismissed (Позже) — repeat after next meal add', {
           mealCount: mc
         });
+        try {
+          sessionStorage.setItem(followupSessionGuardKey, String(mc));
+        } catch (_) {
+          // sessionStorage may be unavailable
+        }
         followupOpening = false;
       },
       onComplete: () => {
         persistMorningActivationPatch(todayKey, {
           followupSnoozeUntilMealCount: null
         }, 'morning-activation-followup-complete');
+        try {
+          sessionStorage.setItem(followupSessionGuardKey, String(Number.MAX_SAFE_INTEGER));
+        } catch (_) {
+          // sessionStorage may be unavailable
+        }
         followupOpening = false;
       }
     });
@@ -679,6 +711,12 @@
     if (detail?.source === 'morning-activation-followup-dismiss') return;
     if (detail?.source === 'morning-activation-followup-complete') return;
     setTimeout(() => maybeOpenMorningActivationFollowup(detail?.source || 'day-updated'), 60);
+  });
+
+  window.addEventListener('heysProductAdded', () => {
+    // Усиливаем триггер: после добавления еды перепроверяем follow-up зарядки.
+    // Session/day guards внутри maybeOpenMorningActivationFollowup защищают от циклов.
+    setTimeout(() => maybeOpenMorningActivationFollowup('product-added'), 120);
   });
 
   document.addEventListener('heys-stepmodal-ready', () => {

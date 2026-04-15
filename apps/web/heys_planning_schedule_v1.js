@@ -45,6 +45,16 @@
         { dow: 1, label: 'Пн' }, { dow: 2, label: 'Вт' }, { dow: 3, label: 'Ср' }, { dow: 4, label: 'Чт' },
         { dow: 5, label: 'Пт' }, { dow: 6, label: 'Сб' }, { dow: 0, label: 'Вс' },
     ];
+    const BACKGROUND_SLOT_COLORS = [
+        { value: '#3b82f6', label: 'Синий' },
+        { value: '#8b5cf6', label: 'Фиолетовый' },
+        { value: '#06b6d4', label: 'Бирюзовый' },
+        { value: '#22c55e', label: 'Зелёный' },
+        { value: '#eab308', label: 'Жёлтый' },
+        { value: '#f97316', label: 'Оранжевый' },
+        { value: '#ef4444', label: 'Красный' },
+        { value: '#94a3b8', label: 'Серый' },
+    ];
     const WEEKDAY_LABELS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
     const MINUTES_IN_DAY = 24 * 60;
     const CALENDAR_LOOKBACK_DAYS = 1;
@@ -54,6 +64,14 @@
     const CALENDAR_TOUCH_DRAG_HOLD_MS = 180;
     const CALENDAR_TOUCH_DRAG_MOVE_CANCEL_THRESHOLD = 12;
     const CALENDAR_POINTER_DRAG_MOVE_THRESHOLD = 6;
+    const CALENDAR_CELL_LONG_PRESS_MS = 280;
+    const CALENDAR_CELL_LONG_PRESS_MOVE_CANCEL_THRESHOLD = 30;
+    const CALENDAR_TOUCH_TAP_SLOP_PX = 14;
+    const CALENDAR_DAY_WINDOW_OPTIONS = [3, 5, 8];
+    const CALENDAR_DAY_WINDOW_STORAGE_KEY = 'heys_planning_calendar_day_window';
+    const CALENDAR_MIN_DAY_COLUMN_WIDTH = 72;
+    const CALENDAR_WINDOW_OVERSCAN_DAYS = 15;
+    const CALENDAR_DRAG_ZOOM_VISIBLE_DAYS = 8;
     const CALENDAR_TOUCH_DRAG_AUTO_SCROLL_EDGE = 56;
     const CALENDAR_TOUCH_DRAG_AUTO_SCROLL_STEP = 18;
     const CALENDAR_SLOT_DONE_BACKGROUND = 'linear-gradient(180deg, rgba(34, 197, 94, 0.94) 0%, rgba(21, 128, 61, 0.9) 100%)';
@@ -76,6 +94,17 @@
 
     function buildCalendarDays(startIso, length) {
         return Array.from({ length }, (_, index) => addDays(startIso, index));
+    }
+
+    function readStoredCalendarDayWindow() {
+        try {
+            const raw = localStorage.getItem(CALENDAR_DAY_WINDOW_STORAGE_KEY);
+            const n = Number(raw);
+            if (CALENDAR_DAY_WINDOW_OPTIONS.indexOf(n) !== -1) return n;
+        } catch (error) {
+            // ignore
+        }
+        return 3;
     }
 
     function getWeekdayLabel(isoDate) {
@@ -279,12 +308,15 @@
         return lineCenter - visibleCenter;
     }
 
-    function resolveCalendarCellStart(date, displayHour) {
+    function resolveCalendarCellStart(date, displayHour, subHourMinutes) {
         const normalizedHour = Number(displayHour) || CALENDAR_START_HOUR;
-        const actualDate = normalizedHour >= 24 ? addDays(date, 1) : date;
+        const extraMinutes = Math.max(0, Math.min(59, Math.round(Number(subHourMinutes) || 0)));
+        const snappedExtra = Math.round(extraMinutes / CALENDAR_SNAP_MINUTES) * CALENDAR_SNAP_MINUTES;
+        const totalMinutes = normalizedHour * 60 + snappedExtra;
+        const actualDate = totalMinutes >= 24 * 60 ? addDays(date, 1) : date;
         return {
             date: actualDate,
-            time: formatCalendarHourLabel(normalizedHour),
+            time: formatClockTime(totalMinutes),
         };
     }
 
@@ -295,6 +327,19 @@
         return startMinutes < (CALENDAR_START_HOUR * 60)
             ? addDays(slotDate, -1)
             : slotDate;
+    }
+
+    function sendPlanningDebugLog(payload) {
+        const logRecord = {
+            sessionId: '236dee',
+            timestamp: Date.now(),
+            ...payload,
+        };
+        try {
+            console.info('[HEYS.planning][debug]', logRecord.message || 'event', logRecord);
+        } catch (error) {
+            // ignore
+        }
     }
 
     function getCalendarDisplayEndMinutes(slot) {
@@ -357,6 +402,8 @@
             startTime: source?.startTime || '09:00',
             endTime: source?.endTime || '10:00',
             quickCreate: !!source?.quickCreate,
+            isBackground: Boolean(source?.isBackground),
+            bgColor: source?.bgColor || BACKGROUND_SLOT_COLORS[0].value,
         };
     }
 
@@ -469,7 +516,18 @@
         };
     }
 
-    function resolveCalendarSlotAppearance(slotDay, yesterdayIso, linkedTask, projects) {
+    function resolveCalendarSlotAppearance(slotDay, yesterdayIso, linkedTask, projects, slot) {
+        if (slot?.isBackground && slot.bgColor) {
+            const hex = slot.bgColor;
+            const r = parseInt(hex.slice(1, 3), 16);
+            const g = parseInt(hex.slice(3, 5), 16);
+            const b = parseInt(hex.slice(5, 7), 16);
+            return {
+                className: ' planning-calendar-slot--background',
+                color: 'linear-gradient(180deg, rgba(' + r + ',' + g + ',' + b + ',0.22) 0%, rgba(' + r + ',' + g + ',' + b + ',0.14) 100%)',
+            };
+        }
+
         if (linkedTask?.status === 'done') {
             return {
                 className: ' planning-calendar-slot--done',
@@ -679,7 +737,95 @@
         );
     }
 
+    const MONTH_NAMES_RU = [
+        'Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
+        'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь',
+    ];
+
+    function RepeatDateCalendar({ selectedDates, onToggleDate, onClear, anchorDate, onClose }) {
+        const anchor = new Date(String(anchorDate || '') + 'T12:00:00');
+        const [cur, setCur] = useState(() => new Date(anchor.getFullYear(), anchor.getMonth(), 1));
+        const year = cur.getFullYear();
+        const month = cur.getMonth();
+        const firstDay = new Date(year, month, 1);
+        const startOffset = (firstDay.getDay() + 6) % 7;
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+        const cells = [];
+        for (let i = 0; i < startOffset; i += 1) cells.push(null);
+        for (let d = 1; d <= daysInMonth; d += 1) cells.push(new Date(year, month, d, 12, 0, 0, 0));
+
+        const todayIso = dateStr();
+
+        const fmtIso = (dt) => {
+            const yy = dt.getFullYear();
+            const mm = String(dt.getMonth() + 1).padStart(2, '0');
+            const dd = String(dt.getDate()).padStart(2, '0');
+            return yy + '-' + mm + '-' + dd;
+        };
+
+        return h('div', { className: 'planning-repeat-calendar' },
+            h('div', { className: 'planning-repeat-calendar__header' },
+                h('button', {
+                    type: 'button',
+                    className: 'planning-repeat-calendar__nav',
+                    onClick: () => setCur(new Date(year, month - 1, 1)),
+                }, '\u2039'),
+                h('span', { className: 'planning-repeat-calendar__title' },
+                    MONTH_NAMES_RU[month] + ' ' + year,
+                ),
+                h('button', {
+                    type: 'button',
+                    className: 'planning-repeat-calendar__nav',
+                    onClick: () => setCur(new Date(year, month + 1, 1)),
+                }, '\u203A'),
+            ),
+            h('div', { className: 'planning-repeat-calendar__weekdays' },
+                ['\u041F\u043D', '\u0412\u0442', '\u0421\u0440', '\u0427\u0442', '\u041F\u0442', '\u0421\u0431', '\u0412\u0441'].map((label) =>
+                    h('div', { key: label, className: 'planning-repeat-calendar__wd' }, label),
+                ),
+            ),
+            h('div', { className: 'planning-repeat-calendar__grid' },
+                cells.map((cellDate, index) => {
+                    if (cellDate == null) {
+                        return h('div', { key: 'empty-' + index, className: 'planning-repeat-calendar__day planning-repeat-calendar__day--empty' });
+                    }
+                    const iso = fmtIso(cellDate);
+                    const isSelected = selectedDates.has(iso);
+                    const isToday = iso === todayIso;
+                    const isPast = iso < todayIso;
+                    return h('button', {
+                        key: iso,
+                        type: 'button',
+                        className: 'planning-repeat-calendar__day'
+                            + (isSelected ? ' planning-repeat-calendar__day--selected' : '')
+                            + (isToday ? ' planning-repeat-calendar__day--today' : '')
+                            + (isPast ? ' planning-repeat-calendar__day--past' : ''),
+                        onClick: () => onToggleDate(iso),
+                    }, cellDate.getDate());
+                }),
+            ),
+            h('div', { className: 'planning-repeat-calendar__footer' },
+                selectedDates.size > 0 && h('button', {
+                    type: 'button',
+                    className: 'planning-repeat-calendar__clear',
+                    onClick: onClear,
+                }, '\u0421\u0431\u0440\u043E\u0441\u0438\u0442\u044C'),
+                h('span', { className: 'planning-repeat-calendar__count' },
+                    selectedDates.size > 0
+                        ? '\u0412\u044B\u0431\u0440\u0430\u043D\u043E: ' + selectedDates.size
+                        : '',
+                ),
+                h('button', {
+                    type: 'button',
+                    className: 'planning-repeat-calendar__confirm',
+                    onClick: onClose,
+                }, '\u041F\u043E\u0434\u0442\u0432\u0435\u0440\u0434\u0438\u0442\u044C'),
+            ),
+        );
+    }
+
     function QuickSlotModal({ draft, state, onClose }) {
+        const { isDesktop } = usePlanningViewport();
         const tasks = Array.isArray(state?.tasks) ? state.tasks : [];
         const projects = Array.isArray(state?.projects) ? state.projects : [];
         const activeProjectsQuick = useMemo(
@@ -705,6 +851,10 @@
         const [endTime, setEndTime] = useState(() => normalizeQuickModalTimeForInput(draft?.endTime || '10:00'));
         const [repeatWeekly, setRepeatWeekly] = useState(false);
         const [weekdaySet, setWeekdaySet] = useState(() => new Set([anchorDow]));
+        const [customDates, setCustomDates] = useState(() => new Set());
+        const [showDateCalendar, setShowDateCalendar] = useState(false);
+        const [isBackground, setIsBackground] = useState(false);
+        const [bgColor, setBgColor] = useState(BACKGROUND_SLOT_COLORS[0].value);
         const [quickTargetValue, setQuickTargetValue] = useState('');
         const [newProjectName, setNewProjectName] = useState('');
 
@@ -724,6 +874,10 @@
             setEndTime(normalizeQuickModalTimeForInput(draft?.endTime || '10:00'));
             setRepeatWeekly(false);
             setWeekdaySet(new Set([dow]));
+            setCustomDates(new Set());
+            setShowDateCalendar(false);
+            setIsBackground(false);
+            setBgColor(BACKGROUND_SLOT_COLORS[0].value);
             setQuickTargetValue('');
             setNewProjectName('');
         }, [draftSyncKey]);
@@ -745,8 +899,21 @@
             setRepeatWeekly(enabled);
             if (enabled) {
                 setWeekdaySet(new Set([new Date(String(date || '') + 'T12:00:00').getDay()]));
+                setCustomDates(new Set());
+                setShowDateCalendar(false);
             }
         };
+
+        const toggleCustomDate = (isoDate) => {
+            setCustomDates((prev) => {
+                const next = new Set(prev);
+                if (next.has(isoDate)) next.delete(isoDate);
+                else next.add(isoDate);
+                return next;
+            });
+        };
+
+        const hasCustomDates = customDates.size > 0;
 
         const save = () => {
             const cleanTitle = String(title || '').trim();
@@ -782,7 +949,35 @@
                     startTime: st,
                     endTime: et,
                     source: 'user',
+                    isBackground,
+                    bgColor: isBackground ? bgColor : undefined,
                 });
+            } else if (hasCustomDates) {
+                const groupId = uid();
+                const sorted = [...customDates].sort();
+                const slotOpts = sorted.map((d) => ({
+                    date: d,
+                    startTime: st,
+                    endTime: et,
+                    source: 'user',
+                    recurrenceGroupId: groupId,
+                    isBackground,
+                    bgColor: isBackground ? bgColor : undefined,
+                }));
+                if (!slotOpts.length) { onClose(); return; }
+                const task = state.addTask(taskTitle, {
+                    projectId: nextProjectId,
+                    parentTaskId: nextParentTaskId,
+                    startDate: sorted[0],
+                    dueDate: sorted[sorted.length - 1],
+                    plannedMinutes: durationMin,
+                    status: 'todo',
+                });
+                state.addSlotBatch(slotOpts.map((o) => ({
+                    ...o,
+                    taskId: task.id,
+                    title: '',
+                })));
             } else {
                 const groupId = uid();
                 const slotOpts = [];
@@ -798,6 +993,8 @@
                         endTime: et,
                         source: 'user',
                         recurrenceGroupId: groupId,
+                        isBackground,
+                        bgColor: isBackground ? bgColor : undefined,
                     });
                     if (d > lastSlotDate) lastSlotDate = d;
                 }
@@ -822,8 +1019,16 @@
             onClose();
         };
 
-        return h('div', { className: 'planning-modal-overlay planning-modal-overlay--quick-event', onClick: onClose },
-            h('div', { className: 'planning-modal planning-modal--quick-event', onClick: (event) => event.stopPropagation() },
+        return h('div', {
+            className: 'planning-modal-overlay planning-modal-overlay--quick-event'
+                + (!isDesktop ? ' planning-modal-overlay--quick-event-sheet' : ''),
+            onClick: onClose,
+        },
+            h('div', {
+                className: 'planning-modal planning-modal--quick-event'
+                    + (!isDesktop ? ' planning-modal--quick-event-sheet' : ''),
+                onClick: (event) => event.stopPropagation(),
+            },
                 h('div', { className: 'planning-modal__header planning-modal__header--quick-event' },
                     h('div', { className: 'planning-modal__header-copy' },
                         h('span', { className: 'planning-modal__header-title planning-modal__header-title--quick-event' }, 'Новое событие'),
@@ -860,7 +1065,7 @@
                         ),
                         h('button', {
                             type: 'button',
-                            className: 'planning-quick-btn-done',
+                            className: 'planning-quick-btn-done planning-quick-btn-done--in-body',
                             onClick: save,
                         },
                             h('span', { className: 'planning-quick-btn-done__icon', 'aria-hidden': 'true' }, '✓'),
@@ -901,6 +1106,7 @@
                             tasks,
                             resolvedTaskProjectIds: resolvedTaskProjectIdsQuick,
                             tabsSelector: '.tabs',
+                            modalMenuMode: true,
                         }),
                     ),
                     h('div', { className: 'planning-add-project' },
@@ -935,12 +1141,12 @@
                                 checked: repeatWeekly,
                                 onChange: (event) => handleRepeatToggle(event.target.checked),
                             }),
-                            h('span', null, 'Повторять по дням недели'),
+                            h('span', null, '\u041F\u043E\u0432\u0442\u043E\u0440\u044F\u0442\u044C \u043F\u043E \u0434\u043D\u044F\u043C \u043D\u0435\u0434\u0435\u043B\u0438'),
                         ),
-                        repeatWeekly && h('div', {
+                        repeatWeekly && !hasCustomDates && h('div', {
                             className: 'planning-quick-repeat__days',
                             role: 'group',
-                            'aria-label': 'Дни повтора',
+                            'aria-label': '\u0414\u043D\u0438 \u043F\u043E\u0432\u0442\u043E\u0440\u0430',
                         },
                             QUICK_WEEKDAY_CHIPS.map(({ dow, label }) => h('button', {
                                 key: dow,
@@ -950,8 +1156,55 @@
                                 onClick: () => toggleDow(dow),
                             }, label)),
                         ),
-                        repeatWeekly && h('p', { className: 'planning-quick-repeat__hint' },
-                            'До 8 недель от выбранной даты, те же часы.',
+                        repeatWeekly && !hasCustomDates && h('button', {
+                            type: 'button',
+                            className: 'planning-quick-repeat__pick-dates',
+                            onClick: () => setShowDateCalendar(true),
+                        }, '\uD83D\uDCC5 \u0412\u044B\u0431\u0440\u0430\u0442\u044C \u0434\u0430\u0442\u044B'),
+                        repeatWeekly && hasCustomDates && h('div', { className: 'planning-quick-repeat__custom-summary' },
+                            h('span', { className: 'planning-quick-repeat__badge' },
+                                '\u0412\u044B\u0431\u0440\u0430\u043D\u043E ' + customDates.size + ' ' + (
+                                    customDates.size === 1 ? '\u0434\u0430\u0442\u0430' :
+                                    customDates.size < 5 ? '\u0434\u0430\u0442\u044B' : '\u0434\u0430\u0442'
+                                ),
+                            ),
+                            h('button', {
+                                type: 'button',
+                                className: 'planning-quick-repeat__pick-dates',
+                                onClick: () => setShowDateCalendar(true),
+                            }, '\uD83D\uDCC5 \u0418\u0437\u043C\u0435\u043D\u0438\u0442\u044C'),
+                            h('button', {
+                                type: 'button',
+                                className: 'planning-quick-repeat__reset',
+                                onClick: () => { setCustomDates(new Set()); },
+                            }, '\u0421\u0431\u0440\u043E\u0441\u0438\u0442\u044C'),
+                        ),
+                        repeatWeekly && !hasCustomDates && h('p', { className: 'planning-quick-repeat__hint' },
+                            '\u0414\u043E 8 \u043D\u0435\u0434\u0435\u043B\u044C \u043E\u0442 \u0432\u044B\u0431\u0440\u0430\u043D\u043D\u043E\u0439 \u0434\u0430\u0442\u044B, \u0442\u0435 \u0436\u0435 \u0447\u0430\u0441\u044B.',
+                        ),
+                        repeatWeekly && hasCustomDates && h('p', { className: 'planning-quick-repeat__hint' },
+                            '\u0421\u043B\u043E\u0442\u044B \u0441\u043E\u0437\u0434\u0430\u0434\u0443\u0442\u0441\u044F \u043D\u0430 \u0432\u044B\u0431\u0440\u0430\u043D\u043D\u044B\u0435 \u0434\u0430\u0442\u044B, \u0442\u0435 \u0436\u0435 \u0447\u0430\u0441\u044B.',
+                        ),
+                    ),
+                    h('div', { className: 'planning-bg-section' },
+                        h('label', { className: 'planning-bg-section__toggle' },
+                            h('input', {
+                                type: 'checkbox',
+                                checked: isBackground,
+                                onChange: (event) => setIsBackground(event.target.checked),
+                            }),
+                            h('span', null, '\u0424\u043E\u043D\u043E\u0432\u043E\u0435 \u0441\u043E\u0431\u044B\u0442\u0438\u0435'),
+                        ),
+                        isBackground && h('div', { className: 'planning-bg-palette' },
+                            BACKGROUND_SLOT_COLORS.map((c) => h('button', {
+                                key: c.value,
+                                type: 'button',
+                                className: 'planning-bg-swatch' + (bgColor === c.value ? ' planning-bg-swatch--active' : ''),
+                                style: { background: c.value },
+                                title: c.label,
+                                'aria-label': c.label,
+                                onClick: () => setBgColor(c.value),
+                            })),
                         ),
                     ),
                 ),
@@ -961,6 +1214,39 @@
                         className: 'planning-quick-link-cancel',
                         onClick: onClose,
                     }, 'Отмена'),
+                    !isDesktop && h('button', {
+                        type: 'button',
+                        className: 'planning-quick-btn-done planning-quick-btn-done--footer',
+                        onClick: save,
+                    },
+                        h('span', { className: 'planning-quick-btn-done__icon', 'aria-hidden': 'true' }, '✓'),
+                        h('span', { className: 'planning-quick-btn-done__text' }, 'Готово'),
+                    ),
+                ),
+                showDateCalendar && h('div', {
+                    className: 'planning-repeat-calendar__backdrop',
+                    onClick: (event) => { event.stopPropagation(); setShowDateCalendar(false); },
+                    onPointerDown: (event) => { event.stopPropagation(); },
+                }),
+                showDateCalendar && h('div', {
+                    className: 'planning-repeat-calendar__overlay',
+                    onClick: (event) => event.stopPropagation(),
+                },
+                    h('div', { className: 'planning-repeat-calendar__overlay-header' },
+                        h('span', { className: 'planning-repeat-calendar__overlay-title' }, '\u0412\u044B\u0431\u043E\u0440 \u0434\u0430\u0442'),
+                        h('button', {
+                            type: 'button',
+                            className: 'planning-modal__close planning-modal__close--quick-event',
+                            onClick: () => setShowDateCalendar(false),
+                        }, '\u00D7'),
+                    ),
+                    h(RepeatDateCalendar, {
+                        selectedDates: customDates,
+                        onToggleDate: toggleCustomDate,
+                        onClear: () => setCustomDates(new Set()),
+                        anchorDate: date,
+                        onClose: () => setShowDateCalendar(false),
+                    }),
                 ),
             ),
         );
@@ -1097,6 +1383,8 @@
                     date: form.date,
                     startTime: form.startTime,
                     endTime: form.endTime,
+                    isBackground: form.isBackground,
+                    bgColor: form.isBackground ? form.bgColor : undefined,
                 };
                 if (form.id) state.updateSlot(form.id, slotPayloadLinked);
                 else state.addSlot(slotPayloadLinked);
@@ -1124,6 +1412,8 @@
                     date: form.date,
                     startTime: form.startTime,
                     endTime: form.endTime,
+                    isBackground: form.isBackground,
+                    bgColor: form.isBackground ? form.bgColor : undefined,
                 };
                 if (form.id) state.updateSlot(form.id, slotPayloadNew);
                 else state.addSlot(slotPayloadNew);
@@ -1137,20 +1427,22 @@
                 date: form.date,
                 startTime: form.startTime,
                 endTime: form.endTime,
+                isBackground: form.isBackground,
+                bgColor: form.isBackground ? form.bgColor : undefined,
             };
             if (form.id) state.updateSlot(form.id, slotPayload);
             else state.addSlot(slotPayload);
             onClose();
         };
 
-        return h('div', { className: 'planning-modal-overlay', onClick: onClose },
-            h('div', { className: 'planning-modal planning-modal--wide planning-modal--slot-unified', onClick: (event) => event.stopPropagation() },
-                h('div', { className: 'planning-modal__header' },
+        return h('div', { className: 'planning-modal-overlay planning-modal-overlay--quick-event', onClick: onClose },
+            h('div', { className: 'planning-modal planning-modal--slot-unified', onClick: (event) => event.stopPropagation() },
+                h('div', { className: 'planning-modal__header planning-modal__header--quick-event' },
                     h('div', { className: 'planning-modal__header-copy' },
-                        h('span', { className: 'planning-modal__header-title' }, headerTitle),
+                        h('span', { className: 'planning-modal__header-title planning-modal__header-title--quick-event' }, headerTitle),
                         h('span', { className: 'planning-modal__eyebrow' }, headerMeta),
                     ),
-                    h('button', { type: 'button', className: 'planning-modal__close', onClick: onClose }, '×'),
+                    h('button', { type: 'button', className: 'planning-modal__close planning-modal__close--quick-event', onClick: onClose }, '×'),
                 ),
                 h('div', { className: 'planning-modal__meta planning-modal__meta--summary' },
                     h('span', { className: 'planning-modal__meta-pill' }, 'Слот: ' + slotDurationLabel),
@@ -1281,6 +1573,7 @@
                                         tasks,
                                         resolvedTaskProjectIds: resolvedForQuickTarget,
                                         tabsSelector: '.tabs',
+                                        modalMenuMode: true,
                                     }),
                                 ),
                                 h('div', { className: 'planning-add-project' },
@@ -1313,6 +1606,27 @@
                                     'Если выбран проект или родитель, при сохранении создаётся задача и слот к ней привязывается. Или укажи связь через список «Задача» выше.',
                                 ),
                             ),
+                            h('div', { className: 'planning-bg-section' },
+                                h('label', { className: 'planning-bg-section__toggle' },
+                                    h('input', {
+                                        type: 'checkbox',
+                                        checked: form.isBackground,
+                                        onChange: (event) => handleField('isBackground', event.target.checked),
+                                    }),
+                                    h('span', null, '\u0424\u043E\u043D\u043E\u0432\u043E\u0435 \u0441\u043E\u0431\u044B\u0442\u0438\u0435'),
+                                ),
+                                form.isBackground && h('div', { className: 'planning-bg-palette' },
+                                    BACKGROUND_SLOT_COLORS.map((c) => h('button', {
+                                        key: c.value,
+                                        type: 'button',
+                                        className: 'planning-bg-swatch' + (form.bgColor === c.value ? ' planning-bg-swatch--active' : ''),
+                                        style: { background: c.value },
+                                        title: c.label,
+                                        'aria-label': c.label,
+                                        onClick: () => handleField('bgColor', c.value),
+                                    })),
+                                ),
+                            ),
                         ),
                     ),
                     linkedTask && h('section', { className: 'planning-modal__card planning-modal__card--full' },
@@ -1338,6 +1652,7 @@
                                     tasks,
                                     resolvedTaskProjectIds: resolvedForQuickTarget,
                                     tabsSelector: '.tabs',
+                                    modalMenuMode: true,
                                 }),
                             ),
                             h('div', { className: 'planning-modal__compact-grid planning-modal__compact-grid--triple' },
@@ -1417,13 +1732,20 @@
                         ),
                     ),
                 ),
-                h('div', { className: 'planning-modal__footer planning-modal__footer--spread' },
-                    form.id
-                        ? h('button', { type: 'button', className: 'planning-btn', onClick: () => onDelete(form.id) }, 'Удалить слот')
-                        : h('span'),
-                    h('div', { className: 'planning-modal__footer-actions' },
-                        h('button', { type: 'button', className: 'planning-btn', onClick: onClose }, 'Отмена'),
-                        h('button', { type: 'button', className: 'planning-btn planning-btn--primary', onClick: save }, linkedTask ? 'Сохранить всё' : 'Сохранить'),
+                h('div', { className: 'planning-modal__footer planning-modal__footer--quick-event' },
+                    form.id && h('button', {
+                        type: 'button',
+                        className: 'planning-quick-link-cancel planning-quick-link-cancel--danger',
+                        onClick: () => onDelete(form.id),
+                    }, 'Удалить'),
+                    h('button', { type: 'button', className: 'planning-quick-link-cancel', onClick: onClose }, 'Отмена'),
+                    h('button', {
+                        type: 'button',
+                        className: 'planning-quick-btn-done planning-quick-btn-done--footer',
+                        onClick: save,
+                    },
+                        h('span', { className: 'planning-quick-btn-done__icon', 'aria-hidden': 'true' }, '✓'),
+                        h('span', { className: 'planning-quick-btn-done__text' }, linkedTask ? 'Сохранить' : 'Сохранить'),
                     ),
                 ),
             ),
@@ -1472,16 +1794,20 @@
         allowNativeDrag,
         showResizeHandle,
         onDeleteClick,
+        isPastDay,
+        onQuickReschedule,
     }) {
         const slotTitle = parentGroupLabel ? (parentGroupLabel + ' · ' + title) : title;
         const toggleIcon = taskStatusToggleDone
             ? (STATUS_CONFIG.done?.icon || '●')
             : (STATUS_CONFIG.todo?.icon || '○');
         const toggleLabel = taskStatusToggleDone ? 'Вернуть в работу' : 'Завершить задачу';
+        const showCarryover = isPastDay && !taskStatusToggleDone && typeof onQuickReschedule === 'function';
         const showFooter = Boolean(
             showSubtitle
             || typeof onTaskStatusToggle === 'function'
-            || typeof onDeleteClick === 'function',
+            || typeof onDeleteClick === 'function'
+            || showCarryover,
         );
 
         return h('div', {
@@ -1531,6 +1857,9 @@
             onDragStart: (event) => {
                 event.dataTransfer.effectAllowed = 'move';
                 event.dataTransfer.setData('text/heys-planning-slot', JSON.stringify({ type: 'slot', slotId: slot.id }));
+                const emptyImg = new Image();
+                emptyImg.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+                event.dataTransfer.setDragImage(emptyImg, 0, 0);
             },
             onDragEnd: () => {
                 if (typeof onDragStateChange === 'function') onDragStateChange(false);
@@ -1572,6 +1901,24 @@
                             onDeleteClick(event);
                         },
                     }, h('span', { className: 'planning-calendar-slot__delete-icon', 'aria-hidden': 'true' }, '×')),
+                    showCarryover && h('button', {
+                        type: 'button',
+                        className: 'planning-calendar-slot__carryover',
+                        title: 'На сегодня',
+                        'aria-label': 'Перенести на сегодня',
+                        onPointerDown: (event) => event.stopPropagation(),
+                        onTouchStart: (event) => event.stopPropagation(),
+                        onClick: (event) => { event.stopPropagation(); onQuickReschedule('today'); },
+                    }, '→'),
+                    showCarryover && h('button', {
+                        type: 'button',
+                        className: 'planning-calendar-slot__carryover',
+                        title: 'На завтра',
+                        'aria-label': 'Перенести на завтра',
+                        onPointerDown: (event) => event.stopPropagation(),
+                        onTouchStart: (event) => event.stopPropagation(),
+                        onClick: (event) => { event.stopPropagation(); onQuickReschedule('tomorrow'); },
+                    }, '⇥'),
                 ),
             ),
             showResizeHandle && h('button', {
@@ -1626,23 +1973,30 @@
         allowNativeDrag,
     }) {
         const parentGroupLabel = buildTaskParentGroupLabel(task, taskLookup);
-        const priorityLabel = PRIORITY_CONFIG[task.priority]?.label || 'P2';
         const projectColor = getTaskProjectColor(task, projects);
 
         return h('div', {
             className: 'planning-calendar-unscheduled-pill'
                 + (isTouchDragSource ? ' planning-calendar-unscheduled-pill--touch-dragging' : ''),
-            draggable: allowNativeDrag !== false,
-            style: { '--planning-unscheduled-project-color': projectColor },
+            draggable: (allowNativeDrag !== false) && !isTouchDevicePreferred(),
+            style: {
+                '--planning-unscheduled-project-color': projectColor,
+                touchAction: 'none',
+            },
             title: parentGroupLabel ? (parentGroupLabel + ' · ' + task.title) : task.title,
             onPointerDown: (event) => {
+                const pointerType = String(event?.pointerType || '').toLowerCase();
+                if ((pointerType === 'touch' || pointerType === 'pen') && event?.cancelable) {
+                    // On mobile, block native scroll/drag so custom calendar drag keeps receiving move events.
+                    event.preventDefault();
+                }
                 if (typeof onPointerDragStart === 'function') {
                     onPointerDragStart({
                         event,
                         payload: { type: 'task', taskId: task.id },
                         sourceKey: 'task:' + task.id,
                         title: task.title,
-                        badgeText: priorityLabel,
+                        badgeText: '',
                         parentGroupLabel,
                         accentColor: projectColor,
                     });
@@ -1656,7 +2010,7 @@
                         payload: { type: 'task', taskId: task.id },
                         sourceKey: 'task:' + task.id,
                         title: task.title,
-                        badgeText: priorityLabel,
+                        badgeText: '',
                         parentGroupLabel,
                         accentColor: projectColor,
                     });
@@ -1665,6 +2019,9 @@
             onDragStart: (event) => {
                 event.dataTransfer.effectAllowed = 'copyMove';
                 event.dataTransfer.setData('text/heys-planning-task', JSON.stringify({ type: 'task', taskId: task.id }));
+                const emptyImg = new Image();
+                emptyImg.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+                event.dataTransfer.setDragImage(emptyImg, 0, 0);
             },
             onDragEnd: () => {
                 if (typeof onDragStateChange === 'function') onDragStateChange(false);
@@ -1681,10 +2038,6 @@
                 }, parentGroupLabel),
                 h('span', { className: 'planning-calendar-unscheduled-pill__title' }, task.title),
             ),
-            h('span', {
-                className: 'planning-calendar-unscheduled-pill__priority',
-                style: { color: PRIORITY_CONFIG[task.priority]?.color, background: PRIORITY_CONFIG[task.priority]?.bg },
-            }, priorityLabel),
         );
     }
 
@@ -1693,7 +2046,7 @@
         const [slotDraft, setSlotDraft] = useState(null);
         const [selectedTaskId, setSelectedTaskId] = useState(null);
         const [resizePreview, setResizePreview] = useState(null);
-        const [calendarDayWindow, setCalendarDayWindow] = useState(3);
+        const [calendarDayWindow, setCalendarDayWindow] = useState(readStoredCalendarDayWindow);
         const [calendarViewportWidth, setCalendarViewportWidth] = useState(0);
         const [calendarViewportHeight, setCalendarViewportHeight] = useState(0);
         const [nowLineTop, setNowLineTop] = useState(() => getCalendarNowTop());
@@ -1701,32 +2054,35 @@
         const [headerDropState, setHeaderDropState] = useState({ day: '', mode: '' });
         const [calendarCellDropPreview, setCalendarCellDropPreview] = useState(null);
         const [calendarDropCommitAccent, setCalendarDropCommitAccent] = useState(null);
-        const [headerFrame, setHeaderFrame] = useState({ ready: false, top: 0, left: 0, width: 0, height: 0 });
+        const headerFrame = { ready: true, top: 0, left: 0, width: 0, height: 0 };
         const [isCalendarDragZoomActive, setIsCalendarDragZoomActive] = useState(false);
         const [touchDragPreview, setTouchDragPreview] = useState(null);
         const [touchDragSourceKey, setTouchDragSourceKey] = useState('');
         const [rangeSelectPreview, setRangeSelectPreview] = useState(null);
         const [slotDeleteTarget, setSlotDeleteTarget] = useState(null);
         const rangePointerSessionRef = useRef(null);
+        const rangeTouchSessionRef = useRef(null);
         const resizeStateRef = useRef(null);
-        const headerShellRef = useRef(null);
         const headerRef = useRef(null);
         const nowLineRef = useRef(null);
         const gridScrollRef = useRef(null);
-        const bodyScrollRef = useRef(null);
-        const headerScrollRef = useRef(null);
-        const headerTrackRef = useRef(null);
+        const bodyScrollRef = gridScrollRef;
         const previousDayWidthRef = useRef(0);
         const touchDragStateRef = useRef(null);
         const touchDragAutoScrollFrameRef = useRef(0);
         const touchDragBodyRectRef = useRef(null);
         const touchDragGridRectRef = useRef(null);
         const touchDragLayoutGenRef = useRef(0);
+        const headerDropStateRef = useRef({ day: '', mode: '' });
         const dropCommitAccentTimerRef = useRef(0);
         const suppressCalendarClickUntilRef = useRef(0);
         const dayColumnWidthRef = useRef(0);
+        const calendarBodyScrollRafRef = useRef(0);
+        const calendarWindowBoundsRef = useRef({ firstIdx: -1, lastIdx: -1 });
+        const [calendarWindowScrollTick, setCalendarWindowScrollTick] = useState(0);
         const calendarDaysRef = useRef([]);
         const isCalendarDragZoomActiveRef = useRef(false);
+        const [, setCalendarThemeTick] = useState(0);
         const todayIso = getPlanningTodayIso();
         const yesterdayIso = useMemo(() => addDays(todayIso, -1), [todayIso]);
         const calendarStartIso = useMemo(() => addDays(todayIso, -CALENDAR_LOOKBACK_DAYS), [todayIso]);
@@ -1735,9 +2091,10 @@
             [calendarStartIso],
         );
         const calendarEndIso = calendarDays[calendarDays.length - 1] || todayIso;
-        const visibleDayCount = Math.max(calendarDayWindow, isCalendarDragZoomActive ? 7 : 0);
-        const isCompactCalendarView = visibleDayCount >= 7;
-        const dayColumnWidth = Math.max(Math.round((calendarViewportWidth || (isDesktop ? 720 : 330)) / visibleDayCount), 1);
+        const visibleDayCount = Math.max(calendarDayWindow, isCalendarDragZoomActive ? CALENDAR_DRAG_ZOOM_VISIBLE_DAYS : 0);
+        const isCompactCalendarView = visibleDayCount >= CALENDAR_DRAG_ZOOM_VISIBLE_DAYS;
+        const rawDayColumnWidth = Math.round((calendarViewportWidth || (isDesktop ? 720 : 330)) / Math.max(visibleDayCount, 1));
+        const dayColumnWidth = Math.max(rawDayColumnWidth, CALENDAR_MIN_DAY_COLUMN_WIDTH);
         const desiredCalendarHalfViewport = Math.max(Math.round(calendarViewportHeight / 2), 0);
         const clampedNowLineTop = Math.max(0, Math.min(CALENDAR_TOTAL_HEIGHT, Number(nowLineTop) || 0));
         const calendarVerticalTopPadding = Math.max(desiredCalendarHalfViewport - clampedNowLineTop, 0);
@@ -1752,6 +2109,10 @@
             setIsCalendarDragZoomActive((current) => (current === value ? current : value));
         };
 
+        useEffect(() => {
+            headerDropStateRef.current = headerDropState;
+        }, [headerDropState]);
+
         const shouldSuppressCalendarClick = () => suppressCalendarClickUntilRef.current > Date.now();
 
         const suppressCalendarClick = () => {
@@ -1762,6 +2123,8 @@
 
         const applyHeaderDropState = (day, payload) => {
             const nextMode = resolveHeaderDropMode(payload);
+            const currentState = headerDropStateRef.current;
+            if (currentState.day === day && currentState.mode === nextMode) return;
             setHeaderDropState((current) => {
                 if (current.day === day && current.mode === nextMode) return current;
                 return { day, mode: nextMode };
@@ -1769,16 +2132,18 @@
         };
 
         const clearHeaderDropState = () => {
+            const currentState = headerDropStateRef.current;
+            if (!currentState.day && !currentState.mode) return;
             setHeaderDropState((current) => {
                 if (!current.day && !current.mode) return current;
                 return { day: '', mode: '' };
             });
         };
 
-        const buildCalendarCellDropPreview = (day, hour, payload) => {
+        const buildCalendarCellDropPreview = (day, hour, payload, subHourMinutes) => {
             if (!day || hour == null || !isPlanningCalendarDragPayload(payload)) return null;
 
-            const start = resolveCalendarCellStart(day, hour);
+            const start = resolveCalendarCellStart(day, hour, subHourMinutes);
 
             if (payload.type === 'slot' && payload.slotId) {
                 const slot = state.slots.find((entry) => entry.id === payload.slotId);
@@ -1791,7 +2156,7 @@
                     startTime: start.time,
                     endTime,
                 });
-                const appearance = resolveCalendarSlotAppearance(day, yesterdayIso, linkedTask, state.projects);
+                const appearance = resolveCalendarSlotAppearance(day, yesterdayIso, linkedTask, state.projects, null);
 
                 return {
                     day,
@@ -1837,8 +2202,8 @@
             return null;
         };
 
-        const applyCalendarCellDropPreview = (day, hour, payload) => {
-            const nextPreview = buildCalendarCellDropPreview(day, hour, payload);
+        const applyCalendarCellDropPreview = (day, hour, payload, subHourMinutes) => {
+            const nextPreview = buildCalendarCellDropPreview(day, hour, payload, subHourMinutes);
             setCalendarCellDropPreview((current) => {
                 if (!nextPreview) return current ? null : current;
                 if (
@@ -1873,10 +2238,10 @@
             setCalendarDropCommitAccent((current) => (current ? null : current));
         };
 
-        const flashCalendarDropCommitAccent = (day, hour) => {
+        const flashCalendarDropCommitAccent = (day, hour, subHourMinutes) => {
             if (!day || hour == null) return;
 
-            const start = resolveCalendarCellStart(day, hour);
+            const start = resolveCalendarCellStart(day, hour, subHourMinutes);
             const markerMetrics = buildSlotMetrics({
                 startTime: start.time,
                 endTime: formatClockTime(timeToMinutes(start.time) + 30),
@@ -1909,9 +2274,9 @@
         const resolveCalendarDropTargetFromPoint = (clientX, clientY) => {
             const currentDayWidth = Math.max(dayColumnWidthRef.current || dayColumnWidth || 1, 1);
             const currentCalendarDays = calendarDaysRef.current || calendarDays;
-            const horizontalScrollLeft = bodyScrollRef.current?.scrollLeft || 0;
+            const horizontalScrollLeft = gridScrollRef.current?.scrollLeft || 0;
 
-            const headerNode = headerScrollRef.current;
+            const headerNode = headerRef.current;
             if (headerNode) {
                 const headerRect = headerNode.getBoundingClientRect();
                 const withinHeaderX = clientX >= headerRect.left && clientX <= headerRect.right;
@@ -1940,12 +2305,16 @@
             const day = currentCalendarDays[dayIndex];
             if (!day) return null;
 
-            const relativeY = clientY - bodyRect.top;
+            const stickyHeaderHeight = headerRef.current ? headerRef.current.getBoundingClientRect().height : 0;
+            const relativeY = clientY - bodyRect.top - stickyHeaderHeight + gridNode.scrollTop;
             const hourIndex = Math.max(0, Math.min(HOURS.length - 1, Math.floor(relativeY / CALENDAR_HOUR_HEIGHT)));
+            const withinCellY = relativeY - (hourIndex * CALENDAR_HOUR_HEIGHT);
+            const subHourMinutes = Math.round((withinCellY / CALENDAR_HOUR_HEIGHT) * 60 / CALENDAR_SNAP_MINUTES) * CALENDAR_SNAP_MINUTES;
             return {
                 type: 'cell',
                 day,
                 hour: HOURS[hourIndex],
+                subHourMinutes: Math.max(0, Math.min(45, subHourMinutes)),
             };
         };
 
@@ -1966,7 +2335,10 @@
             return null;
         };
 
-        const canApplyDragPayloadToHeaderDay = (payload) => !!resolveHeaderDropContext(payload);
+        const canApplyDragPayloadToHeaderDay = (payload) => (
+            (payload?.type === 'task' && !!payload.taskId)
+            || (payload?.type === 'slot' && !!payload.slotId)
+        );
 
         const syncTouchDragDropState = (active, clientX, clientY) => {
             const dropTarget = resolveCalendarDropTargetFromPoint(clientX, clientY);
@@ -1979,7 +2351,7 @@
             }
 
             if (isPlanningCalendarDragPayload(active?.payload) && dropTarget?.type === 'cell') {
-                applyCalendarCellDropPreview(dropTarget.day, dropTarget.hour, active?.payload);
+                applyCalendarCellDropPreview(dropTarget.day, dropTarget.hour, active?.payload, dropTarget.subHourMinutes);
             } else {
                 clearCalendarCellDropPreview();
             }
@@ -1996,9 +2368,9 @@
             if (context.slot?.id) state.deleteSlot(context.slot.id);
         };
 
-        const applyDragPayloadToCell = (date, hour, payload) => {
+        const applyDragPayloadToCell = (date, hour, payload, subHourMinutes) => {
             if (!payload) return;
-            const start = resolveCalendarCellStart(date, hour);
+            const start = resolveCalendarCellStart(date, hour, subHourMinutes);
             const startTime = start.time;
 
             if (payload.type === 'slot' && payload.slotId) {
@@ -2028,8 +2400,13 @@
         const maybeActivateCalendarDragZoomFromPoint = (clientX, payload) => {
             if (isCalendarDragZoomActiveRef.current) return;
             if (!isPlanningCalendarDragPayload(payload)) return;
+            if (payload?.type === 'task' && calendarDayWindow < CALENDAR_DRAG_ZOOM_VISIBLE_DAYS) {
+                // For header task drag on narrow view, keep density stable (no 3→8 relayout)
+                // and rely on horizontal auto-scroll instead.
+                return;
+            }
 
-            const scrollContainer = bodyScrollRef.current || headerScrollRef.current;
+            const scrollContainer = gridScrollRef.current;
             const containerRect = scrollContainer?.getBoundingClientRect?.();
             if (!containerRect) return;
 
@@ -2080,7 +2457,6 @@
 
                     if (Math.abs(deltaX) > 0.1) {
                         bodyNode.scrollLeft += deltaX;
-                        syncHeaderScroll();
                         touchDragBodyRectRef.current = null;
                         maybeActivateCalendarDragZoomFromPoint(active.lastX, active.payload);
                     }
@@ -2094,10 +2470,11 @@
                     }
                     const edge = Math.min(CALENDAR_TOUCH_DRAG_AUTO_SCROLL_EDGE, Math.max(rect.height * 0.12, 24));
                     let deltaY = 0;
-
-                    if (active.lastY <= rect.top + edge) {
+                    /* Only when the pointer is inside the grid vertically. If the finger is still in the
+                       day header (above rect.top), the old "top edge" branch fired and scrolled the grid. */
+                    if (active.lastY >= rect.top && active.lastY <= rect.top + edge) {
                         deltaY = -resolveAutoScrollDelta(active.lastY - rect.top, edge);
-                    } else if (active.lastY >= rect.bottom - edge) {
+                    } else if (active.lastY <= rect.bottom && active.lastY >= rect.bottom - edge) {
                         deltaY = resolveAutoScrollDelta(rect.bottom - active.lastY, edge);
                     }
 
@@ -2118,7 +2495,23 @@
             if (!current || current.activated) return;
 
             current.activated = true;
+            maybeActivateCalendarDragZoomFromPoint(current.lastX, current.payload);
+            try { navigator.vibrate?.(10); } catch (_e) { /* unsupported */ }
             setTouchDragSourceKey(current.sourceKey || '');
+
+            let sourceHeight = 60;
+            let sourceWidth = dayColumnWidth || 120;
+            let grabOffsetX = 0;
+            let grabOffsetY = 0;
+            const sourceEl = current.targetNode;
+            if (sourceEl) {
+                const r = sourceEl.getBoundingClientRect();
+                if (r.height > 0) sourceHeight = r.height;
+                if (r.width > 0) sourceWidth = r.width;
+                grabOffsetX = current.startX - r.left;
+                grabOffsetY = current.startY - r.top;
+            }
+
             setTouchDragPreview({
                 kind: current.payload?.type === 'slot' ? 'slot' : 'task',
                 title: current.title || '',
@@ -2128,6 +2521,10 @@
                 background: current.background || '',
                 x: current.lastX,
                 y: current.lastY,
+                height: sourceHeight,
+                width: sourceWidth,
+                grabOffsetX,
+                grabOffsetY,
             });
 
             syncTouchDragDropState(current, current.lastX, current.lastY);
@@ -2221,8 +2618,8 @@
                 return;
             }
             if (dropTarget.type === 'cell') {
-                applyDragPayloadToCell(dropTarget.day, dropTarget.hour, active.payload);
-                flashCalendarDropCommitAccent(dropTarget.day, dropTarget.hour);
+                applyDragPayloadToCell(dropTarget.day, dropTarget.hour, active.payload, dropTarget.subHourMinutes);
+                flashCalendarDropCommitAccent(dropTarget.day, dropTarget.hour, dropTarget.subHourMinutes);
             }
         };
 
@@ -2264,6 +2661,7 @@
                 lastX: clientX,
                 lastY: clientY,
                 activated: false,
+                useMoveToActivate: payload?.type === 'task',
                 holdTimer: 0,
                 handleTouchMove: null,
                 handleTouchMovePassive: null,
@@ -2303,7 +2701,11 @@
 
                 if (!current.activated) {
                     const distance = Math.hypot(nextX - current.startX, nextY - current.startY);
-                    if (distance > CALENDAR_TOUCH_DRAG_MOVE_CANCEL_THRESHOLD) {
+                    if (current.useMoveToActivate) {
+                        if (distance >= CALENDAR_POINTER_DRAG_MOVE_THRESHOLD) {
+                            activateTouchDrag();
+                        }
+                    } else if (distance > CALENDAR_TOUCH_DRAG_MOVE_CANCEL_THRESHOLD) {
                         finishCalendarTouchDrag({ applyDrop: false, suppressClickAfterDrop: false });
                     }
                 }
@@ -2366,6 +2768,16 @@
                 });
             };
 
+            if (active.useMoveToActivate) {
+                // Task pills from calendar header: immediate touch drag, no long press.
+                touchDragStateRef.current = active;
+                document.addEventListener('touchmove', active.handleTouchMoveActive, { passive: false, capture: true });
+                document.addEventListener('touchend', active.handleTouchEnd, { passive: true, capture: true });
+                document.addEventListener('touchcancel', active.handleTouchCancel, { passive: true, capture: true });
+                activateCalendarCustomDrag(active);
+                return;
+            }
+
             active.holdTimer = window.setTimeout(activateTouchDrag, CALENDAR_TOUCH_DRAG_HOLD_MS);
             touchDragStateRef.current = active;
 
@@ -2412,6 +2824,7 @@
                 lastX: clientX,
                 lastY: clientY,
                 activated: false,
+                useMoveToActivate: payload?.type === 'task',
                 holdTimer: 0,
                 handleTouchMove: null,
                 handleTouchMovePassive: null,
@@ -2423,12 +2836,40 @@
                 handlePointerCancel: null,
             };
 
-            if (active.pointerId != null && targetNode && typeof targetNode.setPointerCapture === 'function') {
+            const isTouchLike = pointerType === 'touch' || pointerType === 'pen';
+
+            if (!isTouchLike && active.pointerId != null && targetNode && typeof targetNode.setPointerCapture === 'function') {
                 try {
                     targetNode.setPointerCapture(active.pointerId);
                 } catch (error) {
                     // ignore
                 }
+            }
+
+            const removeHoldVisual = () => {
+                if (targetNode) targetNode.classList.remove('planning-calendar-slot--hold-active');
+            };
+
+            const clearSlotHoldTimer = () => {
+                if (active.holdTimer) { window.clearTimeout(active.holdTimer); active.holdTimer = 0; }
+                removeHoldVisual();
+            };
+
+            if (isTouchLike && !active.useMoveToActivate) {
+                targetNode.classList.add('planning-calendar-slot--hold-active');
+
+                active.holdTimer = window.setTimeout(() => {
+                    active.holdTimer = 0;
+                    const current = touchDragStateRef.current;
+                    if (!current || current !== active || current.activated) return;
+                    removeHoldVisual();
+                    if (gridScrollRef.current) gridScrollRef.current.style.touchAction = 'none';
+                    if (active.pointerId != null && targetNode && typeof targetNode.setPointerCapture === 'function') {
+                        try { targetNode.setPointerCapture(active.pointerId); } catch (_e) { /* ignore */ }
+                    }
+                    activateCalendarCustomDrag(current);
+                    syncTouchDragDropState(current, current.lastX, current.lastY);
+                }, CALENDAR_TOUCH_DRAG_HOLD_MS);
             }
 
             active.handlePointerMove = (moveEvent) => {
@@ -2443,8 +2884,25 @@
 
                 if (!current.activated) {
                     const distance = Math.hypot(nextX - current.startX, nextY - current.startY);
-                    if (distance < CALENDAR_POINTER_DRAG_MOVE_THRESHOLD) return;
-                    activateCalendarCustomDrag(current);
+                    if (isTouchLike) {
+                        if (current.useMoveToActivate) {
+                            if (distance < CALENDAR_POINTER_DRAG_MOVE_THRESHOLD) return;
+                            if (gridScrollRef.current) gridScrollRef.current.style.touchAction = 'none';
+                            if (current.pointerId != null && targetNode && typeof targetNode.setPointerCapture === 'function') {
+                                try { targetNode.setPointerCapture(current.pointerId); } catch (_e) { /* ignore */ }
+                            }
+                            activateCalendarCustomDrag(current);
+                            syncTouchDragDropState(current, current.lastX, current.lastY);
+                        } else if (distance >= CALENDAR_TOUCH_DRAG_MOVE_CANCEL_THRESHOLD) {
+                            clearSlotHoldTimer();
+                            finishCalendarTouchDrag({ applyDrop: false, suppressClickAfterDrop: false });
+                        }
+                        if (!current.activated) return;
+                    }
+                    if (!current.activated) {
+                        if (distance < CALENDAR_POINTER_DRAG_MOVE_THRESHOLD) return;
+                        activateCalendarCustomDrag(current);
+                    }
                 }
 
                 if (moveEvent.cancelable) moveEvent.preventDefault();
@@ -2454,11 +2912,7 @@
                 setTouchDragPreview((preview) => {
                     if (!preview) return preview;
                     if (preview.x === nextX && preview.y === nextY) return preview;
-                    return {
-                        ...preview,
-                        x: nextX,
-                        y: nextY,
-                    };
+                    return { ...preview, x: nextX, y: nextY };
                 });
             };
 
@@ -2467,6 +2921,8 @@
                 if (!current || current !== active) return;
                 if (current.pointerId != null && pointerUpEvent.pointerId != null && current.pointerId !== pointerUpEvent.pointerId) return;
 
+                clearSlotHoldTimer();
+                if (isTouchLike && gridScrollRef.current) gridScrollRef.current.style.touchAction = '';
                 finishCalendarTouchDrag({
                     applyDrop: current.activated,
                     suppressClickAfterDrop: current.activated,
@@ -2479,6 +2935,8 @@
                 if (!current || current !== active) return;
                 if (current.pointerId != null && pointerCancelEvent.pointerId != null && current.pointerId !== pointerCancelEvent.pointerId) return;
 
+                clearSlotHoldTimer();
+                if (isTouchLike && gridScrollRef.current) gridScrollRef.current.style.touchAction = '';
                 finishCalendarTouchDrag({
                     applyDrop: false,
                     suppressClickAfterDrop: false,
@@ -2487,6 +2945,14 @@
             };
 
             touchDragStateRef.current = active;
+            if (isTouchLike && active.useMoveToActivate) {
+                if (gridScrollRef.current) gridScrollRef.current.style.touchAction = 'none';
+                if (active.pointerId != null && targetNode && typeof targetNode.setPointerCapture === 'function') {
+                    try { targetNode.setPointerCapture(active.pointerId); } catch (_e) { /* ignore */ }
+                }
+                activateCalendarCustomDrag(active);
+                syncTouchDragDropState(active, active.lastX, active.lastY);
+            }
             window.addEventListener('pointermove', active.handlePointerMove, { passive: false });
             window.addEventListener('pointerup', active.handlePointerUp);
             window.addEventListener('pointercancel', active.handlePointerCancel);
@@ -2503,10 +2969,11 @@
 
         useEffect(() => {
             const measure = () => {
-                const width = bodyScrollRef.current?.clientWidth || 0;
+                const width = gridScrollRef.current?.clientWidth || 0;
                 const height = gridScrollRef.current?.clientHeight || 0;
                 if (width) setCalendarViewportWidth(width);
                 if (height) setCalendarViewportHeight(height);
+                setCalendarWindowScrollTick((tick) => tick + 1);
             };
 
             measure();
@@ -2521,6 +2988,7 @@
             const resizeObserver = new ResizeObserver(() => {
                 const nextHeight = gridNode.clientHeight || 0;
                 setCalendarViewportHeight((current) => (current === nextHeight ? current : nextHeight));
+                setCalendarWindowScrollTick((tick) => tick + 1);
             });
 
             resizeObserver.observe(gridNode);
@@ -2528,7 +2996,7 @@
         }, []);
 
         useEffect(() => {
-            if (!bodyScrollRef.current) {
+            if (!gridScrollRef.current) {
                 previousDayWidthRef.current = dayColumnWidth;
                 return;
             }
@@ -2539,12 +3007,21 @@
                 return;
             }
 
-            const bodyNode = bodyScrollRef.current;
-            const nextScrollLeft = (bodyNode.scrollLeft / previousDayWidth) * dayColumnWidth;
-            bodyNode.scrollLeft = nextScrollLeft;
-            if (headerTrackRef.current) headerTrackRef.current.style.transform = 'translateX(' + (-nextScrollLeft) + 'px)';
+            const scrollNode = gridScrollRef.current;
+            const nextScrollLeft = (scrollNode.scrollLeft / previousDayWidth) * dayColumnWidth;
+            scrollNode.scrollLeft = nextScrollLeft;
             previousDayWidthRef.current = dayColumnWidth;
+            calendarWindowBoundsRef.current = { firstIdx: -1, lastIdx: -1 };
+            setCalendarWindowScrollTick((tick) => tick + 1);
         }, [dayColumnWidth]);
+
+        useEffect(() => {
+            try {
+                localStorage.setItem(CALENDAR_DAY_WINDOW_STORAGE_KEY, String(calendarDayWindow));
+            } catch (error) {
+                // ignore
+            }
+        }, [calendarDayWindow]);
 
         useEffect(() => {
             const deactivateDragZoom = () => {
@@ -2569,51 +3046,18 @@
         }, []);
 
         useEffect(() => {
-            const shell = headerShellRef.current;
-            const header = headerRef.current;
-            if (!shell || !header) return undefined;
-
-            const measureHeaderFrame = () => {
-                const shellRect = shell.getBoundingClientRect();
-                const nextFrame = {
-                    ready: true,
-                    top: Math.max(shellRect.top || 0, 0),
-                    left: shellRect.left,
-                    width: shellRect.width,
-                    height: header.offsetHeight || shellRect.height || 0,
-                };
-
-                setHeaderFrame((current) => {
-                    if (
-                        current.ready === nextFrame.ready &&
-                        Math.abs((current.top || 0) - nextFrame.top) < 1 &&
-                        Math.abs((current.left || 0) - nextFrame.left) < 1 &&
-                        Math.abs((current.width || 0) - nextFrame.width) < 1 &&
-                        Math.abs((current.height || 0) - nextFrame.height) < 1
-                    ) {
-                        return current;
-                    }
-                    return nextFrame;
-                });
+            const handleKeyDown = (event) => {
+                if (event.target?.tagName === 'INPUT' || event.target?.tagName === 'TEXTAREA' || event.target?.tagName === 'SELECT') return;
+                if (event.target?.isContentEditable) return;
+                if (event.key === 'ArrowLeft') { scrollCalendarByDays(-visibleDayCount); event.preventDefault(); }
+                else if (event.key === 'ArrowRight') { scrollCalendarByDays(visibleDayCount); event.preventDefault(); }
+                else if (event.key === 't' || event.key === 'T' || event.key === 'е' || event.key === 'Е') { scrollCalendarToTodayWindow(); event.preventDefault(); }
             };
+            window.addEventListener('keydown', handleKeyDown);
+            return () => window.removeEventListener('keydown', handleKeyDown);
+        }, [visibleDayCount, dayColumnWidth]);
 
-            measureHeaderFrame();
-
-            const resizeObserver = typeof ResizeObserver === 'function'
-                ? new ResizeObserver(() => measureHeaderFrame())
-                : null;
-
-            if (resizeObserver) {
-                resizeObserver.observe(shell);
-                resizeObserver.observe(header);
-            }
-
-            window.addEventListener('resize', measureHeaderFrame);
-            return () => {
-                window.removeEventListener('resize', measureHeaderFrame);
-                if (resizeObserver) resizeObserver.disconnect();
-            };
-        }, [calendarViewportWidth, isDesktop, calendarDays.length, state.tasks.length, state.slots.length]);
+        /* Header is now sticky inside the unified scroll container — no measurement needed */
 
         useEffect(() => {
             const updateNowLine = () => setNowLineTop(getCalendarNowTop());
@@ -2634,7 +3078,7 @@
         }, []);
 
         useEffect(() => {
-            if (!shouldCenterNow || !calendarViewportWidth || !calendarViewportHeight || !headerFrame.ready) return undefined;
+            if (!shouldCenterNow || !calendarViewportWidth || !calendarViewportHeight) return undefined;
 
             let frameId = 0;
             let retryFrameId = 0;
@@ -2686,43 +3130,37 @@
                 window.cancelAnimationFrame(frameId);
                 window.cancelAnimationFrame(retryFrameId);
             };
-        }, [calendarViewportWidth, calendarViewportHeight, shouldCenterNow, headerFrame.ready, headerFrame.height]);
+        }, [calendarViewportWidth, calendarViewportHeight, shouldCenterNow]);
 
-        const syncHeaderScroll = () => {
-            if (!headerTrackRef.current || !bodyScrollRef.current) return;
-            headerTrackRef.current.style.transform = 'translateX(' + (-bodyScrollRef.current.scrollLeft) + 'px)';
-        };
-
-        const scrollCalendarHorizontallyBy = (delta) => {
-            const bodyNode = bodyScrollRef.current;
-            if (!bodyNode || !Number.isFinite(delta) || Math.abs(delta) < 0.5) return;
-
-            bodyNode.scrollLeft += delta;
-            syncHeaderScroll();
-        };
-
-        const handleHeaderWheel = (event) => {
-            const deltaX = Number(event.deltaX) || 0;
-            const deltaY = Number(event.deltaY) || 0;
-            const hasHorizontalIntent = Math.abs(deltaX) > Math.abs(deltaY) || (event.shiftKey && Math.abs(deltaY) > 0.5);
-            if (!hasHorizontalIntent) return;
-
-            const horizontalDelta = Math.abs(deltaX) > 0.5 ? deltaX : deltaY;
-            if (Math.abs(horizontalDelta) < 0.5) return;
-
-            if (event.cancelable) event.preventDefault();
-            scrollCalendarHorizontallyBy(horizontalDelta);
+        const onCalendarGridScroll = () => {
+            if (calendarBodyScrollRafRef.current) return;
+            calendarBodyScrollRafRef.current = window.requestAnimationFrame(() => {
+                calendarBodyScrollRafRef.current = 0;
+                const node = gridScrollRef.current;
+                if (!node) return;
+                const colW = Math.max(dayColumnWidthRef.current || dayColumnWidth || 1, 1);
+                const vw = node.clientWidth || colW;
+                const sl = node.scrollLeft;
+                const overscan = CALENDAR_WINDOW_OVERSCAN_DAYS;
+                let fi = Math.floor(sl / colW) - overscan;
+                fi = Math.max(0, fi);
+                const colsNeeded = Math.max(1, Math.ceil(vw / colW) + overscan * 2 + 2);
+                const li = fi + colsNeeded;
+                const prev = calendarWindowBoundsRef.current;
+                if (prev.firstIdx === fi && prev.lastIdx === li) return;
+                calendarWindowBoundsRef.current = { firstIdx: fi, lastIdx: li };
+                setCalendarWindowScrollTick((tick) => tick + 1);
+            });
         };
 
         const scrollCalendarByDays = (days) => {
-            if (!bodyScrollRef.current) return;
-            bodyScrollRef.current.scrollBy({ left: dayColumnWidth * days, behavior: 'smooth' });
+            if (!gridScrollRef.current) return;
+            gridScrollRef.current.scrollBy({ left: dayColumnWidth * days, behavior: 'smooth' });
         };
 
         const scrollCalendarToTodayWindow = () => {
-            if (!bodyScrollRef.current) return;
-            bodyScrollRef.current.scrollTo({ left: 0, behavior: 'smooth' });
-            syncHeaderScroll();
+            if (!gridScrollRef.current) return;
+            gridScrollRef.current.scrollTo({ left: 0, behavior: 'smooth' });
             setShouldCenterNow(true);
         };
 
@@ -2859,10 +3297,19 @@
                     return sum + Math.max(30, getCalendarDisplayEndMinutes(slot) - getCalendarDisplayMinutes(slot.startTime));
                 }, 0);
                 const level = Math.max(0, Math.min(4, Math.ceil(totalMinutes / 180)));
+                let pressureTone = 'free';
+                let pressureLabel = '';
+                if (totalMinutes === 0) { pressureTone = 'free'; pressureLabel = ''; }
+                else if (totalMinutes <= 120) { pressureTone = 'calm'; pressureLabel = formatDurationLabel(totalMinutes); }
+                else if (totalMinutes <= 300) { pressureTone = 'moderate'; pressureLabel = formatDurationLabel(totalMinutes); }
+                else if (totalMinutes <= 480) { pressureTone = 'loaded'; pressureLabel = formatDurationLabel(totalMinutes); }
+                else { pressureTone = 'overloaded'; pressureLabel = formatDurationLabel(totalMinutes); }
                 map[day] = {
                     count: daySlots.length,
                     totalMinutes,
                     level,
+                    pressureTone,
+                    pressureLabel,
                     label: daySlots.length
                         ? (daySlots.length + ' ' + pluralizeSlots(daySlots.length) + ' · ' + formatDurationLabel(totalMinutes))
                         : 'Свободно',
@@ -2871,91 +3318,754 @@
             return map;
         }, [calendarDays, slotsByDay]);
 
+        const calendarWindowLayout = useMemo(() => {
+            const len = calendarDays.length;
+            const colW = Math.max(dayColumnWidth, 1);
+            const vw = Math.max(calendarViewportWidth || 0, colW * Math.max(visibleDayCount, 1));
+            const scrollLeft = gridScrollRef.current ? gridScrollRef.current.scrollLeft : 0;
+            const overscan = CALENDAR_WINDOW_OVERSCAN_DAYS;
+            let firstIdx = Math.floor(scrollLeft / colW) - overscan;
+            firstIdx = Math.max(0, Math.min(Math.max(0, len - 1), firstIdx));
+            const colsNeeded = Math.max(1, Math.ceil(vw / colW) + overscan * 2 + 2);
+            let lastIdx = Math.min(len, firstIdx + colsNeeded);
+            if (lastIdx <= firstIdx) lastIdx = Math.min(len, firstIdx + 1);
+            const visibleDays = calendarDays.slice(firstIdx, lastIdx);
+            const leftSpacer = firstIdx * colW;
+            const rightSpacer = (len - lastIdx) * colW;
+            const gridTemplateColumns = `${leftSpacer}px repeat(${visibleDays.length}, ${colW}px) ${rightSpacer}px`;
+            return {
+                visibleDays,
+                firstIdx,
+                lastIdx,
+                gridTemplateColumns,
+                colW,
+            };
+        }, [calendarDays, dayColumnWidth, calendarViewportWidth, calendarWindowScrollTick, visibleDayCount]);
+
         const openNewSlot = (date, hour) => {
             if (shouldSuppressCalendarClick()) return;
             const start = resolveCalendarCellStart(date, hour);
             const end = resolveCalendarCellStart(date, hour + 1);
+            // #region agent log
+            sendPlanningDebugLog({
+                runId: 'range-debug-1',
+                hypothesisId: 'H6',
+                location: 'heys_planning_schedule_v1.js:openNewSlot',
+                message: 'openNewSlot committed',
+                data: {
+                    date: start.date,
+                    startTime: start.time,
+                    endTime: end.time,
+                },
+            });
+            // #endregion
             setSlotDraft(buildSlotDraft({
                 date: start.date,
                 startTime: start.time,
                 endTime: end.time,
+                quickCreate: true,
             }));
         };
 
+        const commitCalendarRangeDraft = (active, logOptions) => {
+            if (!active) return;
+
+            if (!active.moved) {
+                if (active.isTouchPointer) {
+                    const startMinutes = columnYToGridWallMinutes(
+                        active.y0,
+                        CALENDAR_TOTAL_HEIGHT,
+                        HOURS.length,
+                        CALENDAR_START_HOUR,
+                    );
+                    const endMinutes = startMinutes + (active.longPressActivated ? 60 : 30);
+                    suppressCalendarClick();
+                    setSlotDraft(buildSlotDraft({
+                        date: active.day,
+                        startTime: formatWallClockHm(startMinutes),
+                        endTime: formatWallClockHm(endMinutes),
+                        quickCreate: true,
+                    }));
+                    return;
+                }
+                if (!shouldSuppressCalendarClick()) {
+                    const hourIndex = Math.max(0, Math.min(HOURS.length - 1, Math.floor(active.y0 / CALENDAR_HOUR_HEIGHT)));
+                    openNewSlot(active.day, HOURS[hourIndex]);
+                }
+                return;
+            }
+
+            const effectiveY1 = active.longPressActivated
+                ? active.y0 + Math.max(CALENDAR_HOUR_HEIGHT, active.y1 - active.y0)
+                : active.y1;
+            const times = rangeColumnYToSlotTimes(
+                active.y0,
+                effectiveY1,
+                CALENDAR_TOTAL_HEIGHT,
+                HOURS.length,
+                CALENDAR_START_HOUR,
+            );
+            suppressCalendarClick();
+            setSlotDraft(buildSlotDraft({
+                date: active.day,
+                startTime: times.startTime,
+                endTime: times.endTime,
+                quickCreate: true,
+            }));
+
+            if (logOptions?.location && logOptions?.message) {
+                // #region agent log
+                sendPlanningDebugLog({
+                    runId: 'range-debug-1',
+                    hypothesisId: logOptions.hypothesisId || 'H7',
+                    location: logOptions.location,
+                    message: logOptions.message,
+                    data: {
+                        date: active.day,
+                        startTime: times.startTime,
+                        endTime: times.endTime,
+                    },
+                });
+                // #endregion
+            }
+        };
+
+        // Store latest beginCalendarCellTouch in a ref so native listeners
+        // always call the current version (avoids stale closure).
+        const cellTouchHandlerRef = useRef(null);
+
+        // Attach a single non-passive touchstart listener per day-column
+        // via ref callback. This avoids the React passive-listener issue.
+        const dayColTouchMapRef = useRef(new Map());
+
+        useEffect(() => {
+            const html = document.documentElement;
+            const bump = () => setCalendarThemeTick((n) => n + 1);
+            const observer = new MutationObserver((records) => {
+                for (const record of records) {
+                    if (record.attributeName === 'data-theme') bump();
+                }
+            });
+            observer.observe(html, { attributes: true, attributeFilter: ['data-theme'] });
+            return () => observer.disconnect();
+        }, []);
+
+        const makeDayColTouchRef = (day) => {
+            const prev = dayColTouchMapRef.current.get(day);
+            if (prev) return prev.refCb;
+            const entry = { node: null, handler: null, refCb: null };
+            entry.refCb = (node) => {
+                if (entry.node && entry.node !== node && entry.handler) {
+                    entry.node.removeEventListener('touchstart', entry.handler);
+                    if (entry.contextHandler) entry.node.removeEventListener('contextmenu', entry.contextHandler);
+                }
+                entry.node = node;
+                if (!node) { entry.handler = null; entry.contextHandler = null; return; }
+                entry.handler = (event) => {
+                    // Only fire for direct calendar-cell touches
+                    const cell = event.target?.closest?.('.planning-calendar-cell');
+                    if (!cell || !node.contains(cell)) return;
+                    // Read from ref to get the latest version
+                    const fn = cellTouchHandlerRef.current;
+                    if (fn) fn(day, event);
+                };
+                node.addEventListener('touchstart', entry.handler, { passive: true });
+                // Prevent native context menu on long press (Android/iOS) which
+                // would otherwise fire touchcancel before our hold timer completes.
+                entry.contextHandler = (e) => e.preventDefault();
+                node.addEventListener('contextmenu', entry.contextHandler);
+            };
+            dayColTouchMapRef.current.set(day, entry);
+            return entry.refCb;
+        };
+
+        const beginCalendarCellTouch = (day, event) => {
+            const touchPoint = event?.touches?.[0];
+            if (!touchPoint || (event?.touches?.length || 0) !== 1) return;
+            if (rangePointerSessionRef.current || rangeTouchSessionRef.current) return;
+
+            const col = typeof event.target?.closest === 'function'
+                ? event.target.closest('.planning-calendar-day-col')
+                : null;
+            if (!col) return;
+
+            const rect = col.getBoundingClientRect();
+            const y = touchPoint.clientY - rect.top;
+            const session = {
+                day,
+                col,
+                targetNode: event.currentTarget || null,
+                touchId: touchPoint.identifier,
+                x0: touchPoint.clientX,
+                y0: y,
+                y1: y,
+                isTouchPointer: true,
+                activated: false,
+                moved: false,
+                longPressActivated: false,
+                holdTimer: 0,
+                prevBodyOverflow: '',
+                prevGridOverflow: '',
+                prevBodyTouchAction: '',
+                prevGridTouchAction: '',
+                didLogActivatedMove: false,
+                handleTouchMovePassive: null,
+                handleTouchMoveActive: null,
+                handleTouchEnd: null,
+                handleTouchCancel: null,
+            };
+            rangeTouchSessionRef.current = session;
+
+            // #region agent log
+            sendPlanningDebugLog({
+                runId: 'range-debug-1',
+                hypothesisId: 'H1-touch',
+                location: 'heys_planning_schedule_v1.js:beginCalendarCellTouch',
+                message: 'range touch start',
+                data: {
+                    touchId: session.touchId,
+                    bodyScrollTop: bodyScrollRef.current?.scrollTop || 0,
+                    gridScrollTop: gridScrollRef.current?.scrollTop || 0,
+                },
+            });
+            // #endregion
+
+            const clearHoldTimer = (active) => {
+                if (!active?.holdTimer) return;
+                window.clearTimeout(active.holdTimer);
+                active.holdTimer = 0;
+            };
+
+            const cleanupTouchSession = () => {
+                const active = rangeTouchSessionRef.current;
+                if (!active) return null;
+                if (typeof active.handleTouchMovePassive === 'function') {
+                    document.removeEventListener('touchmove', active.handleTouchMovePassive, true);
+                }
+                if (typeof active.handleTouchMoveActive === 'function') {
+                    document.removeEventListener('touchmove', active.handleTouchMoveActive, true);
+                }
+                if (typeof active.handleTouchEnd === 'function') {
+                    document.removeEventListener('touchend', active.handleTouchEnd, true);
+                }
+                if (typeof active.handleTouchCancel === 'function') {
+                    document.removeEventListener('touchcancel', active.handleTouchCancel, true);
+                }
+                rangeTouchSessionRef.current = null;
+                setRangeSelectPreview(null);
+                clearHoldTimer(active);
+                if (bodyScrollRef.current) {
+                    bodyScrollRef.current.style.overflow = active.prevBodyOverflow || '';
+                    bodyScrollRef.current.style.touchAction = active.prevBodyTouchAction || '';
+                }
+                if (gridScrollRef.current) {
+                    gridScrollRef.current.style.overflow = active.prevGridOverflow || '';
+                    gridScrollRef.current.style.touchAction = active.prevGridTouchAction || '';
+                }
+                return active;
+            };
+
+            const activateTouchRange = () => {
+                const active = rangeTouchSessionRef.current;
+                if (!active || active !== session || active.activated) {
+                    return;
+                }
+
+                active.activated = true;
+                active.longPressActivated = true;
+                try { navigator.vibrate?.(10); } catch (_e) { /* unsupported */ }
+
+                if (typeof active.handleTouchMovePassive === 'function') {
+                    document.removeEventListener('touchmove', active.handleTouchMovePassive, true);
+                }
+                if (typeof active.handleTouchMoveActive === 'function') {
+                    document.addEventListener('touchmove', active.handleTouchMoveActive, { passive: false, capture: true });
+                }
+
+                if (bodyScrollRef.current) bodyScrollRef.current.style.overflow = 'hidden';
+                if (gridScrollRef.current) gridScrollRef.current.style.overflow = 'hidden';
+                if (bodyScrollRef.current) bodyScrollRef.current.style.touchAction = 'none';
+                if (gridScrollRef.current) gridScrollRef.current.style.touchAction = 'none';
+
+                // #region agent log
+                sendPlanningDebugLog({
+                    runId: 'range-debug-1',
+                    hypothesisId: 'H1-touch',
+                    location: 'heys_planning_schedule_v1.js:touchHoldTimer',
+                    message: 'touch long press activated',
+                    data: {
+                        touchId: active.touchId,
+                        y0: active.y0,
+                        bodyOverflow: bodyScrollRef.current?.style?.overflow || '',
+                        gridOverflow: gridScrollRef.current?.style?.overflow || '',
+                    },
+                });
+                // #endregion
+
+                setRangeSelectPreview({
+                    day: active.day,
+                    top: active.y0,
+                    height: CALENDAR_HOUR_HEIGHT,
+                });
+            };
+
+            session.handleTouchMovePassive = (moveEvent) => {
+                const active = rangeTouchSessionRef.current;
+                if (!active || active !== session) return;
+
+                const point = getTouchEventPoint(moveEvent, active.touchId);
+                if (!point) return;
+
+                const r = active.col.getBoundingClientRect();
+                active.y1 = point.clientY - r.top;
+                const distanceY = Math.abs(active.y1 - active.y0);
+                const distanceX = Math.abs(point.clientX - (active.x0 || 0));
+
+                if (!active.activated && (distanceY >= CALENDAR_CELL_LONG_PRESS_MOVE_CANCEL_THRESHOLD || distanceX >= CALENDAR_CELL_LONG_PRESS_MOVE_CANCEL_THRESHOLD)) {
+                    sendPlanningDebugLog({
+                        runId: 'range-debug-1',
+                        hypothesisId: 'H2-touch',
+                        location: 'heys_planning_schedule_v1.js:touchMovePassive',
+                        message: 'touch hold cancelled by movement before activation',
+                        data: {
+                            touchId: active.touchId,
+                            distanceX,
+                            distanceY,
+                            threshold: CALENDAR_CELL_LONG_PRESS_MOVE_CANCEL_THRESHOLD,
+                        },
+                    });
+                    cleanupTouchSession();
+                }
+            };
+
+            session.handleTouchMoveActive = (moveEvent) => {
+                const active = rangeTouchSessionRef.current;
+                if (!active || active !== session || !active.activated) return;
+
+                const point = getTouchEventPoint(moveEvent, active.touchId);
+                if (!point) return;
+
+                const r = active.col.getBoundingClientRect();
+                active.y1 = point.clientY - r.top;
+
+                if (moveEvent.cancelable) moveEvent.preventDefault();
+                if (Math.abs(active.y1 - active.y0) >= RANGE_DRAG_THRESHOLD_PX) {
+                    active.moved = true;
+                }
+                if (!active.didLogActivatedMove) {
+                    active.didLogActivatedMove = true;
+                    // #region agent log
+                    sendPlanningDebugLog({
+                        runId: 'range-debug-1',
+                        hypothesisId: 'H3-touch',
+                        location: 'heys_planning_schedule_v1.js:touchMoveActive',
+                        message: 'touch activated move observed',
+                        data: {
+                            touchId: active.touchId,
+                            y0: active.y0,
+                            y1: active.y1,
+                            moved: active.moved,
+                            bodyScrollTop: bodyScrollRef.current?.scrollTop || 0,
+                            gridScrollTop: gridScrollRef.current?.scrollTop || 0,
+                        },
+                    });
+                    // #endregion
+                }
+                if (!active.moved && !active.longPressActivated) return;
+                const rawDown = active.y1 - active.y0;
+                const heightPx = Math.max(CALENDAR_HOUR_HEIGHT, rawDown);
+                setRangeSelectPreview({ day: active.day, top: active.y0, height: heightPx });
+            };
+
+            session.handleTouchEnd = (touchEndEvent) => {
+                const active = rangeTouchSessionRef.current;
+                if (!active || active !== session) return;
+                const point = getTouchEventPoint(touchEndEvent, active.touchId);
+                const cleaned = cleanupTouchSession();
+                if (!cleaned) return;
+
+                if (point) {
+                    const r = cleaned.col.getBoundingClientRect();
+                    cleaned.y1 = point.clientY - r.top;
+                }
+
+                // #region agent log
+                sendPlanningDebugLog({
+                    runId: 'range-debug-1',
+                    hypothesisId: 'H4-touch',
+                    location: 'heys_planning_schedule_v1.js:touchEnd',
+                    message: 'touch range finish',
+                    data: {
+                        touchId: cleaned.touchId,
+                        activated: cleaned.activated,
+                        moved: cleaned.moved,
+                        y0: cleaned.y0,
+                        y1: cleaned.y1,
+                    },
+                });
+                // #endregion
+
+                if (cleaned.activated) {
+                    commitCalendarRangeDraft(cleaned, {
+                        location: 'heys_planning_schedule_v1.js:touchEnd',
+                        message: 'range draft committed by touch end',
+                        hypothesisId: 'H7-touch',
+                    });
+                    return;
+                }
+
+                const yEnd = typeof cleaned.y1 === 'number' ? cleaned.y1 : cleaned.y0;
+                const dy = Math.abs(yEnd - cleaned.y0);
+                if (!cleaned.moved && dy <= CALENDAR_TOUCH_TAP_SLOP_PX) {
+                    commitCalendarRangeDraft(cleaned, {
+                        location: 'heys_planning_schedule_v1.js:touchTap',
+                        message: 'quick slot draft from tap',
+                        hypothesisId: 'H7-touch-tap',
+                    });
+                }
+            };
+
+            session.handleTouchCancel = (touchCancelEvent) => {
+                const active = rangeTouchSessionRef.current;
+                if (!active || active !== session) return;
+                const point = getTouchEventPoint(touchCancelEvent, active.touchId);
+                const cleaned = cleanupTouchSession();
+                if (!cleaned) return;
+
+                if (point) {
+                    const r = cleaned.col.getBoundingClientRect();
+                    cleaned.y1 = point.clientY - r.top;
+                }
+
+                // #region agent log
+                sendPlanningDebugLog({
+                    runId: 'range-debug-1',
+                    hypothesisId: 'H5-touch',
+                    location: 'heys_planning_schedule_v1.js:touchCancel',
+                    message: 'touch range cancelled',
+                    data: {
+                        touchId: cleaned.touchId,
+                        activated: cleaned.activated,
+                        moved: cleaned.moved,
+                        y0: cleaned.y0,
+                        y1: cleaned.y1,
+                    },
+                });
+                // #endregion
+
+                if (!cleaned.activated) return;
+                commitCalendarRangeDraft(cleaned, {
+                    location: 'heys_planning_schedule_v1.js:touchCancel',
+                    message: 'range draft committed by touch cancel',
+                    hypothesisId: 'H7-touch',
+                });
+            };
+
+            session.prevBodyOverflow = bodyScrollRef.current?.style?.overflow || '';
+            session.prevGridOverflow = gridScrollRef.current?.style?.overflow || '';
+            session.prevBodyTouchAction = bodyScrollRef.current?.style?.touchAction || '';
+            session.prevGridTouchAction = gridScrollRef.current?.style?.touchAction || '';
+            session.holdTimer = window.setTimeout(activateTouchRange, CALENDAR_CELL_LONG_PRESS_MS);
+
+            document.addEventListener('touchmove', session.handleTouchMovePassive, { passive: true, capture: true });
+            document.addEventListener('touchend', session.handleTouchEnd, { passive: true, capture: true });
+            document.addEventListener('touchcancel', session.handleTouchCancel, { passive: true, capture: true });
+        };
+
+        // Keep ref in sync so native listeners always call latest version
+        cellTouchHandlerRef.current = beginCalendarCellTouch;
+
         const beginCalendarCellPointer = (day, event) => {
             if (event.pointerType === 'mouse' && event.button !== 0) return;
-            if (rangePointerSessionRef.current) return;
+            if (rangePointerSessionRef.current || rangeTouchSessionRef.current) return;
+
+            const pointerType = String(event.pointerType || '').toLowerCase();
+            const isLikelyTouchDevice = !!usesTouchLikeInput;
+            const isTouchPointer = pointerType === 'touch'
+                || pointerType === 'pen'
+                || (!pointerType && isLikelyTouchDevice)
+                || (pointerType === 'mouse' && isLikelyTouchDevice);
+            if (isTouchPointer) return;
+
             const col = typeof event.currentTarget.closest === 'function'
                 ? event.currentTarget.closest('.planning-calendar-day-col')
                 : null;
             if (!col) return;
-
             const rect = col.getBoundingClientRect();
             const y = event.clientY - rect.top;
             const session = {
                 day,
                 col,
+                targetNode: event.currentTarget || null,
                 pointerId: event.pointerId,
                 y0: y,
                 y1: y,
+                isTouchPointer,
+                activated: !isTouchPointer,
                 moved: false,
+                longPressActivated: false,
+                holdTimer: 0,
+                prevTouchAction: '',
+                prevBodyOverflow: '',
+                prevGridOverflow: '',
+                prevBodyTouchAction: '',
+                prevGridTouchAction: '',
+                didLogActivatedMove: false,
             };
             rangePointerSessionRef.current = session;
+
+            // #region agent log
+            sendPlanningDebugLog({
+                runId: 'range-debug-1',
+                hypothesisId: 'H1',
+                location: 'heys_planning_schedule_v1.js:beginCalendarCellPointer',
+                message: 'range pointer down',
+                data: {
+                    pointerType,
+                    isLikelyTouchDevice,
+                    isTouchPointer,
+                    pointerId: session.pointerId,
+                    bodyScrollTop: bodyScrollRef.current?.scrollTop || 0,
+                    gridScrollTop: gridScrollRef.current?.scrollTop || 0,
+                },
+            });
+            // #endregion
+
+            const clearHoldTimer = (active) => {
+                if (!active?.holdTimer) return;
+                window.clearTimeout(active.holdTimer);
+                active.holdTimer = 0;
+            };
 
             const onMove = (ev) => {
                 const active = rangePointerSessionRef.current;
                 if (!active || ev.pointerId !== active.pointerId) return;
                 const r = active.col.getBoundingClientRect();
                 active.y1 = ev.clientY - r.top;
+
+                const distance = Math.abs(active.y1 - active.y0);
+                if (!active.activated) {
+                    if (active.isTouchPointer && distance >= CALENDAR_CELL_LONG_PRESS_MOVE_CANCEL_THRESHOLD) {
+                        // #region agent log
+                        sendPlanningDebugLog({
+                            runId: 'range-debug-1',
+                            hypothesisId: 'H2',
+                            location: 'heys_planning_schedule_v1.js:onMove',
+                            message: 'hold cancelled by movement before activation',
+                            data: {
+                                pointerId: active.pointerId,
+                                distance,
+                                threshold: CALENDAR_CELL_LONG_PRESS_MOVE_CANCEL_THRESHOLD,
+                            },
+                        });
+                        // #endregion
+                        clearHoldTimer(active);
+                        return;
+                    }
+                    return;
+                }
+
+                if (ev.cancelable) ev.preventDefault();
                 if (Math.abs(active.y1 - active.y0) >= RANGE_DRAG_THRESHOLD_PX) {
                     active.moved = true;
-                    if (ev.cancelable) ev.preventDefault();
                 }
-                if (!active.moved) return;
-                const topY = Math.min(active.y0, active.y1);
-                const heightPx = Math.max(RANGE_DRAG_THRESHOLD_PX, Math.abs(active.y1 - active.y0));
-                setRangeSelectPreview({ day: active.day, top: topY, height: heightPx });
+                if (!active.didLogActivatedMove) {
+                    active.didLogActivatedMove = true;
+                    // #region agent log
+                    sendPlanningDebugLog({
+                        runId: 'range-debug-1',
+                        hypothesisId: 'H3',
+                        location: 'heys_planning_schedule_v1.js:onMove',
+                        message: 'activated move observed',
+                        data: {
+                            pointerId: active.pointerId,
+                            y0: active.y0,
+                            y1: active.y1,
+                            moved: active.moved,
+                            bodyScrollTop: bodyScrollRef.current?.scrollTop || 0,
+                            gridScrollTop: gridScrollRef.current?.scrollTop || 0,
+                        },
+                    });
+                    // #endregion
+                }
+                if (!active.moved && !active.longPressActivated) return;
+                if (active.longPressActivated) {
+                    const rawDown = active.y1 - active.y0;
+                    const heightPx = Math.max(CALENDAR_HOUR_HEIGHT, rawDown);
+                    setRangeSelectPreview({ day: active.day, top: active.y0, height: heightPx });
+                } else {
+                    const topY = Math.min(active.y0, active.y1);
+                    const heightPx = Math.max(RANGE_DRAG_THRESHOLD_PX, Math.abs(active.y1 - active.y0));
+                    setRangeSelectPreview({ day: active.day, top: topY, height: heightPx });
+                }
+            };
+
+            const cleanupPointerSession = () => {
+                const active = rangePointerSessionRef.current;
+                if (!active) return null;
+                window.removeEventListener('pointermove', onMove);
+                window.removeEventListener('pointerup', finish);
+                window.removeEventListener('pointercancel', cancel);
+                rangePointerSessionRef.current = null;
+                setRangeSelectPreview(null);
+                clearHoldTimer(active);
+                if (active.isTouchPointer && active.col) {
+                    active.col.style.touchAction = active.prevTouchAction || '';
+                }
+                if (active.isTouchPointer && bodyScrollRef.current) {
+                    bodyScrollRef.current.style.overflow = active.prevBodyOverflow || '';
+                    bodyScrollRef.current.style.touchAction = active.prevBodyTouchAction || '';
+                }
+                if (active.isTouchPointer && gridScrollRef.current) {
+                    gridScrollRef.current.style.overflow = active.prevGridOverflow || '';
+                    gridScrollRef.current.style.touchAction = active.prevGridTouchAction || '';
+                }
+                if (
+                    active.pointerId != null
+                    && active.targetNode
+                    && typeof active.targetNode.releasePointerCapture === 'function'
+                ) {
+                    try {
+                        active.targetNode.releasePointerCapture(active.pointerId);
+                    } catch (error) {
+                        // ignore
+                    }
+                }
+                return active;
             };
 
             const finish = (ev) => {
                 const active = rangePointerSessionRef.current;
                 if (!active || ev.pointerId !== active.pointerId) return;
-                window.removeEventListener('pointermove', onMove);
-                window.removeEventListener('pointerup', finish);
-                window.removeEventListener('pointercancel', finish);
-                rangePointerSessionRef.current = null;
-                setRangeSelectPreview(null);
+                cleanupPointerSession();
 
                 const r = active.col.getBoundingClientRect();
                 active.y1 = ev.clientY - r.top;
 
-                if (!active.moved) {
-                    if (!shouldSuppressCalendarClick()) {
-                        const hourIndex = Math.max(0, Math.min(HOURS.length - 1, Math.floor(active.y0 / CALENDAR_HOUR_HEIGHT)));
-                        openNewSlot(active.day, HOURS[hourIndex]);
-                    }
+                // #region agent log
+                sendPlanningDebugLog({
+                    runId: 'range-debug-1',
+                    hypothesisId: 'H4',
+                    location: 'heys_planning_schedule_v1.js:finish',
+                    message: 'range finish',
+                    data: {
+                        pointerId: active.pointerId,
+                        activated: active.activated,
+                        moved: active.moved,
+                        y0: active.y0,
+                        y1: active.y1,
+                        pointerType: String(ev.pointerType || ''),
+                    },
+                });
+                // #endregion
+
+                if (!active.activated) {
                     return;
                 }
-
-                const times = rangeColumnYToSlotTimes(
-                    active.y0,
-                    active.y1,
-                    CALENDAR_TOTAL_HEIGHT,
-                    HOURS.length,
-                    CALENDAR_START_HOUR,
-                );
-                suppressCalendarClick();
-                setSlotDraft(buildSlotDraft({
-                    date: active.day,
-                    startTime: times.startTime,
-                    endTime: times.endTime,
-                    quickCreate: true,
-                }));
+                commitCalendarRangeDraft(active, {
+                    location: 'heys_planning_schedule_v1.js:finish',
+                    message: 'range draft committed by finish',
+                    hypothesisId: 'H7',
+                });
             };
+
+            const cancel = (ev) => {
+                const active = rangePointerSessionRef.current;
+                if (!active || ev.pointerId !== active.pointerId) return;
+                // #region agent log
+                sendPlanningDebugLog({
+                    runId: 'range-debug-1',
+                    hypothesisId: 'H5',
+                    location: 'heys_planning_schedule_v1.js:cancel',
+                    message: 'range cancelled',
+                    data: {
+                        pointerId: active.pointerId,
+                        activated: active.activated,
+                        moved: active.moved,
+                        pointerType: String(ev.pointerType || ''),
+                        bodyScrollTop: bodyScrollRef.current?.scrollTop || 0,
+                        gridScrollTop: gridScrollRef.current?.scrollTop || 0,
+                    },
+                });
+                // #endregion
+                cleanupPointerSession();
+
+                if (!active.activated) return;
+
+                // #region agent log
+                sendPlanningDebugLog({
+                    runId: 'range-debug-1',
+                    hypothesisId: 'H5',
+                    location: 'heys_planning_schedule_v1.js:cancel',
+                    message: 'cancel promoted to finish',
+                    data: {
+                        pointerId: active.pointerId,
+                        moved: active.moved,
+                        y0: active.y0,
+                        y1: active.y1,
+                    },
+                });
+                // #endregion
+
+                commitCalendarRangeDraft(active, {
+                    location: 'heys_planning_schedule_v1.js:cancel',
+                    message: 'range draft committed by cancel',
+                    hypothesisId: 'H7',
+                });
+            };
+
+            if (session.isTouchPointer) {
+                session.prevTouchAction = session.col?.style?.touchAction || '';
+                if (session.col) session.col.style.touchAction = 'none';
+                session.prevBodyOverflow = bodyScrollRef.current?.style?.overflow || '';
+                session.prevGridOverflow = gridScrollRef.current?.style?.overflow || '';
+                session.prevBodyTouchAction = bodyScrollRef.current?.style?.touchAction || '';
+                session.prevGridTouchAction = gridScrollRef.current?.style?.touchAction || '';
+                if (session.pointerId != null && session.targetNode && typeof session.targetNode.setPointerCapture === 'function') {
+                    try {
+                        session.targetNode.setPointerCapture(session.pointerId);
+                    } catch (error) {
+                        // ignore
+                    }
+                }
+                if (event.cancelable) event.preventDefault();
+                session.holdTimer = window.setTimeout(() => {
+                    const active = rangePointerSessionRef.current;
+                    if (!active || active !== session) return;
+                    active.activated = true;
+                    active.longPressActivated = true;
+                    try { navigator.vibrate?.(10); } catch (_e) { /* unsupported */ }
+                    if (bodyScrollRef.current) bodyScrollRef.current.style.overflow = 'hidden';
+                    if (gridScrollRef.current) gridScrollRef.current.style.overflow = 'hidden';
+                    if (bodyScrollRef.current) bodyScrollRef.current.style.touchAction = 'none';
+                    if (gridScrollRef.current) gridScrollRef.current.style.touchAction = 'none';
+                    // #region agent log
+                    sendPlanningDebugLog({
+                        runId: 'range-debug-1',
+                        hypothesisId: 'H1',
+                        location: 'heys_planning_schedule_v1.js:holdTimer',
+                        message: 'long press activated',
+                        data: {
+                            pointerId: active.pointerId,
+                            y0: active.y0,
+                            bodyOverflow: bodyScrollRef.current?.style?.overflow || '',
+                            gridOverflow: gridScrollRef.current?.style?.overflow || '',
+                            bodyTouchAction: bodyScrollRef.current?.style?.touchAction || '',
+                            gridTouchAction: gridScrollRef.current?.style?.touchAction || '',
+                        },
+                    });
+                    // #endregion
+                    setRangeSelectPreview({
+                        day: active.day,
+                        top: active.y0,
+                        height: CALENDAR_HOUR_HEIGHT,
+                    });
+                }, CALENDAR_CELL_LONG_PRESS_MS);
+            }
 
             window.addEventListener('pointermove', onMove, { passive: false });
             window.addEventListener('pointerup', finish);
-            window.addEventListener('pointercancel', finish);
+            window.addEventListener('pointercancel', cancel);
         };
 
         const handleDropToCell = (date, hour, event) => {
@@ -3029,51 +4139,78 @@
         };
 
         return h('div', {
-            className: 'planning-calendar-screen' + (isCompactCalendarView ? ' planning-calendar-screen--drag-zoom' : ''),
+            className: 'planning-calendar-screen'
+                + (isCompactCalendarView ? ' planning-calendar-screen--drag-zoom' : '')
+                + (touchDragPreview?.kind === 'task' ? ' planning-calendar-screen--task-dragging' : ''),
         },
             h('div', { className: 'planning-calendar-nav' },
+                h('span', { className: 'planning-calendar-nav__density-label' }, 'Сколько дней в ряд'),
                 h('button', { type: 'button', className: 'planning-btn planning-btn--sm', onClick: () => scrollCalendarByDays(-visibleDayCount) }, '‹'),
                 h('button', { type: 'button', className: 'planning-btn planning-btn--sm', onClick: scrollCalendarToTodayWindow }, 'Сегодня'),
-                h('div', { className: 'planning-calendar-nav__window-toggle', role: 'group', 'aria-label': 'Показывать 3 или 7 дней' },
-                    [3, 7].map((days) => h('button', {
+                h('div', { className: 'planning-calendar-nav__window-toggle', role: 'group', 'aria-label': 'Плотность календаря: дней в окне' },
+                    CALENDAR_DAY_WINDOW_OPTIONS.map((days) => h('button', {
                         key: 'days-window-' + days,
                         type: 'button',
                         className: 'planning-btn planning-btn--sm' + (calendarDayWindow === days ? ' planning-btn--active' : ''),
                         'aria-pressed': calendarDayWindow === days ? 'true' : 'false',
-                        title: 'Показывать ' + days + ' ' + (days === 3 ? 'дня' : 'дней'),
+                        title: 'Показывать ' + days + ' дн.',
                         onClick: () => setCalendarDayWindow(days),
                     }, days + 'д')),
                 ),
                 h('button', { type: 'button', className: 'planning-btn planning-btn--sm', onClick: () => scrollCalendarByDays(visibleDayCount) }, '›'),
+                h('button', {
+                    type: 'button',
+                    className: 'hdr-theme-btn planning-calendar-nav__theme-btn',
+                    'aria-label': 'Сменить тему',
+                    title: 'Сменить тему',
+                    onClick: (event) => {
+                        event.stopPropagation();
+                        const root = window.HEYS;
+                        if (typeof root?.cycleTheme === 'function') {
+                            root.cycleTheme();
+                            return;
+                        }
+                        const html = document.documentElement;
+                        const current = html.getAttribute('data-theme') || 'light';
+                        const next = current === 'dark' ? 'light' : 'dark';
+                        html.setAttribute('data-theme', next);
+                        const U = root?.utils || {};
+                        try {
+                            localStorage.setItem('heys_theme_pref', next);
+                            localStorage.setItem('heys_theme_explicit', '1');
+                            localStorage.setItem('heys_theme', next);
+                            if (U.lsSet) {
+                                U.lsSet('heys_theme_pref', next);
+                                U.lsSet('heys_theme_explicit', '1');
+                                U.lsSet('heys_theme', next);
+                            }
+                        } catch (err) {
+                            // ignore quota / private mode
+                        }
+                        setCalendarThemeTick((n) => n + 1);
+                    },
+                }, typeof document !== 'undefined' && document.documentElement.getAttribute('data-theme') === 'dark' ? '☀️' : '🌙'),
             ),
             h('div', {
-                ref: headerShellRef,
-                className: 'planning-calendar-header-shell',
-                style: headerFrame.ready ? { height: headerFrame.height + 'px' } : undefined,
+                ref: gridScrollRef,
+                className: 'planning-calendar-unified-scroll',
+                onScroll: onCalendarGridScroll,
             },
                 h('div', {
                     ref: headerRef,
-                    className: 'planning-calendar-header' + (headerFrame.ready ? ' planning-calendar-header--pinned' : ''),
-                    style: headerFrame.ready
-                        ? {
-                            top: headerFrame.top + 'px',
-                            left: headerFrame.left + 'px',
-                            width: headerFrame.width + 'px',
-                        }
-                        : undefined,
+                    className: 'planning-calendar-header planning-calendar-header--sticky',
                 },
-                    h('div', { className: 'planning-calendar-time-gutter' }),
+                    h('div', { className: 'planning-calendar-time-gutter planning-calendar-time-gutter--sticky-corner' }),
                     h('div', {
-                        ref: headerScrollRef,
-                        className: 'planning-calendar-days-scroll planning-calendar-days-scroll--header',
-                        onWheel: handleHeaderWheel,
-                    },
-                        h('div', {
-                            ref: headerTrackRef,
-                            className: 'planning-calendar-days-track planning-calendar-days-track--header',
-                            style: { '--planning-calendar-day-width': dayColumnWidth + 'px' },
+                        className: 'planning-calendar-days-track planning-calendar-days-track--header planning-calendar-days-track--windowed',
+                        style: {
+                            '--planning-calendar-day-width': dayColumnWidth + 'px',
+                            gridTemplateColumns: calendarWindowLayout.gridTemplateColumns,
+                            gridAutoColumns: 'unset',
                         },
-                            calendarDays.map((day) => h('div', {
+                    },
+                        h('div', { key: 'cal-win-spacer-left', className: 'planning-calendar-window-spacer', 'aria-hidden': 'true' }),
+                            calendarWindowLayout.visibleDays.map((day) => h('div', {
                                 key: day,
                                 className: 'planning-calendar-day-header'
                                     + (day === todayIso ? ' planning-calendar-day-header--today' : '')
@@ -3105,23 +4242,16 @@
                                     h('span', { className: 'planning-calendar-day-label' }, getWeekdayLabel(day)),
                                     h('span', { className: 'planning-calendar-day-date' }, day.slice(8)),
                                 ),
-                                dayOccupancyByDay[day]?.count > 0 && h('div', {
-                                    className: 'planning-calendar-day-occupancy',
+                                dayOccupancyByDay[day]?.pressureTone && dayOccupancyByDay[day].pressureTone !== 'free' && h('span', {
+                                    className: 'planning-calendar-day-pressure planning-calendar-day-pressure--' + dayOccupancyByDay[day].pressureTone,
                                     'aria-label': dayOccupancyByDay[day].label,
-                                },
-                                    Array.from({ length: 4 }, (_, index) => h('span', {
-                                        key: day + '-occupancy-' + index,
-                                        className: 'planning-calendar-day-occupancy__dot'
-                                            + (index < (dayOccupancyByDay[day]?.level || 0)
-                                                ? ' planning-calendar-day-occupancy__dot--active'
-                                                : ''),
-                                    })),
-                                ),
+                                    title: dayOccupancyByDay[day].label,
+                                }, dayOccupancyByDay[day].pressureLabel),
                                 headerDropState.day === day && headerDropState.mode === 'unschedule' && h('span', {
                                     className: 'planning-calendar-day-drop-hint',
                                     'aria-hidden': 'true',
                                 }, '↺ без времени'),
-                                (unscheduledTasksByDay[day] || []).length > 0 && h('div', { className: 'planning-calendar-day-unscheduled' },
+                                h('div', { className: 'planning-calendar-day-unscheduled' },
                                     (unscheduledTasksByDay[day] || []).map((task) => h(CalendarUnscheduledTaskPill, {
                                         key: task.id,
                                         task,
@@ -3137,19 +4267,17 @@
                                     })),
                                 ),
                             )),
+                            h('div', { key: 'cal-win-spacer-right', className: 'planning-calendar-window-spacer', 'aria-hidden': 'true' }),
                         ),
                     ),
-                ),
-            ),
-            h('div', {
-                ref: gridScrollRef,
-                className: 'planning-calendar-grid',
-                style: {
-                    paddingTop: calendarVerticalTopPadding + 'px',
-                    paddingBottom: calendarVerticalBottomPadding + 'px',
+                h('div', {
+                    className: 'planning-calendar-body-row',
+                    style: {
+                        paddingTop: calendarVerticalTopPadding + 'px',
+                        paddingBottom: calendarVerticalBottomPadding + 'px',
+                    },
                 },
-            },
-                h('div', { className: 'planning-calendar-time-gutter planning-calendar-time-gutter--grid' },
+                    h('div', { className: 'planning-calendar-time-gutter planning-calendar-time-gutter--grid' },
                     calendarCellDropPreview && h('div', {
                         className: 'planning-calendar-time-drop-range',
                         style: {
@@ -3172,17 +4300,18 @@
                         h('span', { className: 'planning-calendar-time-drop-preview__arrow' }, '→'),
                     ),
                 ),
-                h('div', {
-                    ref: bodyScrollRef,
-                    className: 'planning-calendar-days-scroll planning-calendar-days-scroll--body',
-                    onScroll: syncHeaderScroll,
-                },
                     h('div', {
-                        className: 'planning-calendar-days-track planning-calendar-days-track--grid',
-                        style: { '--planning-calendar-day-width': dayColumnWidth + 'px' },
+                        className: 'planning-calendar-days-track planning-calendar-days-track--grid planning-calendar-days-track--windowed',
+                        style: {
+                            '--planning-calendar-day-width': dayColumnWidth + 'px',
+                            gridTemplateColumns: calendarWindowLayout.gridTemplateColumns,
+                            gridAutoColumns: 'unset',
+                        },
                     },
-                        calendarDays.map((day) => h('div', {
+                        h('div', { key: 'cal-body-win-spacer-left', className: 'planning-calendar-window-spacer', 'aria-hidden': 'true' }),
+                        calendarWindowLayout.visibleDays.map((day) => h('div', {
                             key: day,
+                            ref: makeDayColTouchRef(day),
                             className: 'planning-calendar-day-col'
                                 + (day === todayIso ? ' planning-calendar-day-col--today' : '')
                                 + (isWeekendDay(day) ? ' planning-calendar-day-col--weekend' : ''),
@@ -3194,6 +4323,9 @@
                                         ? ' planning-calendar-cell--drop-target'
                                         : ''),
                                 onPointerDown: (event) => beginCalendarCellPointer(day, event),
+                                onContextMenu: (event) => {
+                                    event.preventDefault();
+                                },
                                 onDragOver: (event) => {
                                     const payload = parsePlanningDragPayload(event);
                                     if (!isPlanningCalendarDragPayload(payload)) return;
@@ -3223,24 +4355,9 @@
                                     top: calendarCellDropPreview.top + 'px',
                                     height: calendarCellDropPreview.height + 'px',
                                     '--planning-calendar-drop-preview-color': calendarCellDropPreview.accentColor || '#64748b',
-                                    ...(calendarCellDropPreview.kind === 'slot' && calendarCellDropPreview.background
-                                        ? { background: calendarCellDropPreview.background }
-                                        : {}),
                                 },
                                 'aria-hidden': 'true',
-                            },
-                                h('div', { className: 'planning-calendar-drop-preview__body' },
-                                    calendarCellDropPreview.parentGroupLabel && h('span', {
-                                        className: 'planning-calendar-drop-preview__parent',
-                                    }, calendarCellDropPreview.parentGroupLabel),
-                                    h('span', {
-                                        className: 'planning-calendar-drop-preview__title',
-                                    }, calendarCellDropPreview.title),
-                                    h('span', {
-                                        className: 'planning-calendar-drop-preview__time',
-                                    }, calendarCellDropPreview.timeLabel),
-                                ),
-                            ),
+                            }),
                             calendarDropCommitAccent?.day === day && h('div', {
                                 className: 'planning-calendar-drop-commit-marker',
                                 style: { top: calendarDropCommitAccent.top + 'px' },
@@ -3260,7 +4377,7 @@
                                     }
                                     : slot;
                                 const metrics = buildSlotMetrics(slotPreview);
-                                const appearance = resolveCalendarSlotAppearance(day, yesterdayIso, linkedTask, state.projects);
+                                const appearance = resolveCalendarSlotAppearance(day, yesterdayIso, linkedTask, state.projects, slot);
                                 const parentGroupLabel = linkedTask ? buildTaskParentGroupLabel(linkedTask, taskMap) : '';
                                 const showTaskStatusToggle = Boolean(
                                     linkedTask && linkedTask.status !== 'cancelled',
@@ -3295,6 +4412,13 @@
                                         suppressCalendarClick();
                                         setSlotDeleteTarget({ slot, day });
                                     },
+                                    isPastDay: day < todayIso,
+                                    onQuickReschedule: day < todayIso && !isTaskDone
+                                        ? (target) => {
+                                            const targetDate = target === 'tomorrow' ? addDays(todayIso, 1) : todayIso;
+                                            state.updateSlot(slot.id, { date: targetDate });
+                                        }
+                                        : undefined,
                                 });
                             }),
                             day === todayIso && isCalendarNowTopVisible(nowLineTop) && h('div', {
@@ -3307,32 +4431,31 @@
                                 h('span', { className: 'planning-calendar-now-line__bar' }),
                             ),
                         )),
+                        h('div', { key: 'cal-body-win-spacer-right', className: 'planning-calendar-window-spacer', 'aria-hidden': 'true' }),
                     ),
                 ),
             ),
             touchDragPreview && h('div', {
-                className: 'planning-calendar-touch-preview'
+                className: 'planning-calendar-drag-ghost'
                     + (touchDragPreview.kind === 'slot'
-                        ? ' planning-calendar-touch-preview--slot'
-                        : ' planning-calendar-touch-preview--task'),
+                        ? ' planning-calendar-drag-ghost--slot'
+                        : ' planning-calendar-drag-ghost--task'),
                 style: {
-                    left: touchDragPreview.x + 'px',
-                    top: touchDragPreview.y + 'px',
-                    '--planning-calendar-touch-preview-color': touchDragPreview.accentColor || '#64748b',
-                    ...(touchDragPreview.kind === 'slot' && touchDragPreview.background
-                        ? { background: touchDragPreview.background }
-                        : {}),
+                    left: (touchDragPreview.x - (touchDragPreview.grabOffsetX || 0)) + 'px',
+                    top: (touchDragPreview.y - (touchDragPreview.grabOffsetY || 0)) + 'px',
+                    width: (touchDragPreview.width || 100) + 'px',
+                    height: (touchDragPreview.height || 60) + 'px',
+                    background: touchDragPreview.background || undefined,
+                    '--planning-drag-ghost-accent': touchDragPreview.accentColor || '#64748b',
                 },
             },
-                h('div', { className: 'planning-calendar-touch-preview__body' },
-                    touchDragPreview.parentGroupLabel && h('span', {
-                        className: 'planning-calendar-touch-preview__parent',
-                    }, touchDragPreview.parentGroupLabel),
-                    h('span', { className: 'planning-calendar-touch-preview__title' }, touchDragPreview.title),
-                ),
-                touchDragPreview.badgeText && h('span', {
-                    className: 'planning-calendar-touch-preview__badge',
-                }, touchDragPreview.badgeText),
+                touchDragPreview.parentGroupLabel && h('span', {
+                    className: 'planning-calendar-slot__parent',
+                }, touchDragPreview.parentGroupLabel),
+                h('span', {
+                    className: 'planning-calendar-slot__title'
+                        + (touchDragPreview.parentGroupLabel ? ' planning-calendar-slot__title--with-parent' : ''),
+                }, touchDragPreview.title),
             ),
             slotDeleteTarget && h(SlotDeleteActionSheet, {
                 slot: slotDeleteTarget.slot,

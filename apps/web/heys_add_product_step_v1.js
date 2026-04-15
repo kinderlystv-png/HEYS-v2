@@ -1452,7 +1452,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       const itemsToAdd = previewItems.filter(item => !item._excluded);
       if (itemsToAdd.length === 0) return;
       setTimeout(() => {
-        itemsToAdd.forEach(item => {
+        itemsToAdd.forEach((item, idx) => {
+          const traceId = createAddTraceId(`preset-${idx + 1}`);
           const product = {
             id: item.product_id,
             product_id: item.product_id,
@@ -1470,7 +1471,20 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             gi: item.gi || 0,
             harm: item.harm || 0,
           };
-          context?.onAdd?.({ product, grams: item.grams, mealIndex: context?.mealIndex });
+          pushAddTrace('🧩 Preset item -> onAdd', {
+            traceId,
+            mealIndex: context?.mealIndex ?? null,
+            grams: item.grams,
+            productId: product.id ?? product.product_id ?? null,
+            productName: product.name || null
+          });
+          context?.onAdd?.({
+            product,
+            grams: item.grams,
+            mealIndex: context?.mealIndex,
+            _traceId: traceId,
+            _origin: 'preset-apply'
+          });
         });
         console.info('[HEYS.presets] ✅ Applied preset:', { name: selectedPreset?.name, count: itemsToAdd.length });
         if (HEYS.StepModal?.hide) {
@@ -1503,10 +1517,25 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     };
 
     const setItemGrams = (idx, val) => {
-      const g = parseInt(val, 10);
+      const raw = String(val ?? '').trim();
+      if (raw === '') {
+        setPreviewItems(items => items.map((item, i) =>
+          i !== idx ? item : { ...item, grams: '' }
+        ));
+        return;
+      }
+      const g = parseInt(raw, 10);
       setPreviewItems(items => items.map((item, i) =>
-        i !== idx ? item : { ...item, grams: isNaN(g) ? item.grams : Math.max(5, g) }
+        i !== idx ? item : { ...item, grams: isNaN(g) ? item.grams : g }
       ));
+    };
+
+    const commitItemGrams = (idx) => {
+      setPreviewItems(items => items.map((item, i) => {
+        if (i !== idx) return item;
+        const g = Number(item.grams);
+        return { ...item, grams: Number.isFinite(g) && g > 0 ? Math.max(5, Math.round(g)) : 100 };
+      }));
     };
 
     const toggleExclude = (idx) => {
@@ -1520,12 +1549,33 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     };
 
     const updateCreateItemGrams = (idx, val) => {
-      const g = parseInt(val, 10);
+      const raw = String(val ?? '').trim();
+      if (raw === '') {
+        setEditPreset(ep => ({
+          ...ep,
+          items: (ep?.items || []).map((item, i) =>
+            i !== idx ? item : { ...item, grams: '' }
+          )
+        }));
+        return;
+      }
+      const g = parseInt(raw, 10);
       setEditPreset(ep => ({
         ...ep,
         items: (ep?.items || []).map((item, i) =>
-          i !== idx ? item : { ...item, grams: isNaN(g) ? item.grams : Math.max(5, g) }
+          i !== idx ? item : { ...item, grams: isNaN(g) ? item.grams : g }
         )
+      }));
+    };
+
+    const commitCreateItemGrams = (idx) => {
+      setEditPreset(ep => ({
+        ...ep,
+        items: (ep?.items || []).map((item, i) => {
+          if (i !== idx) return item;
+          const g = Number(item.grams);
+          return { ...item, grams: Number.isFinite(g) && g > 0 ? Math.max(5, Math.round(g)) : 100 };
+        })
       }));
     };
 
@@ -1658,6 +1708,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                   value: item.grams,
                   min: 5,
                   onChange: (e) => setItemGrams(idx, e.target.value),
+                  onBlur: () => commitItemGrams(idx),
                   onFocus: (e) => e.target.select()
                 }),
                 React.createElement('span', { className: 'mpr-grams-unit' }, 'г'),
@@ -1754,6 +1805,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                   value: item.grams,
                   min: 5,
                   onChange: (e) => updateCreateItemGrams(idx, e.target.value),
+                  onBlur: () => commitCreateItemGrams(idx),
                   onFocus: (e) => e.target.select()
                 }),
                 React.createElement('span', { className: 'mpr-grams-unit' }, 'г'),
@@ -1799,7 +1851,45 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
   }
 
   // === Компонент поиска продукта (Шаг 1) ===
+  const APS_PRODUCTS_SKELETON_DELAY_MS = 260;
+  const APS_PRODUCTS_SETTLE_FALLBACK_MS = 2200;
+
+  function getAddProductInitialSyncState() {
+    const cloud = HEYS?.cloud;
+    const syncSettled = !!(
+      window.HEYS?.initialSyncDone
+      || window.HEYS?.syncCompletedAt
+      || cloud?._syncCompletedAt
+    );
+    const syncInFlight = !!cloud?.isSyncing?.();
+    return { syncSettled, syncInFlight };
+  }
+
+  function AddProductResultsSkeleton() {
+    return React.createElement('div', { className: 'aps-results-skeleton' },
+      React.createElement('div', { className: 'aps-skeleton-title skeleton-block' }),
+      React.createElement('div', { className: 'aps-products-list aps-products-list--skeleton' },
+        Array.from({ length: 7 }, (_, index) => React.createElement('div', {
+          key: index,
+          className: 'aps-skeleton-card'
+        },
+          React.createElement('div', { className: 'aps-skeleton-icon skeleton-block' }),
+          React.createElement('div', { className: 'aps-skeleton-lines' },
+            React.createElement('div', { className: 'aps-skeleton-line aps-skeleton-line--primary skeleton-block' }),
+            React.createElement('div', { className: 'aps-skeleton-line aps-skeleton-line--secondary skeleton-block' })
+          ),
+          React.createElement('div', { className: 'aps-skeleton-actions' },
+            React.createElement('div', { className: 'aps-skeleton-action skeleton-block' }),
+            React.createElement('div', { className: 'aps-skeleton-action skeleton-block' }),
+            React.createElement('div', { className: 'aps-skeleton-action skeleton-block' })
+          )
+        ))
+      )
+    );
+  }
+
   function ProductSearchStep({ data, onChange, context }) {
+    const initialProductsSyncState = getAddProductInitialSyncState();
     const [searchInput, setSearchInput] = useState(data?.searchQuery || '');
     const [search, setSearch] = useState(data?.searchQuery || '');
     const [selectedCategory, setSelectedCategory] = useState('all');
@@ -1847,6 +1937,10 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     // Это решает проблему: при открытии модалки сразу после создания приёма
     // продукты ещё не загружены из облака, но после heysSyncCompleted они появятся
     const [productsVersion, setProductsVersion] = useState(globalProductsVersion);
+    const [isWaitingForProductsSettle, setIsWaitingForProductsSettle] = useState(
+      () => initialProductsSyncState.syncInFlight && !initialProductsSyncState.syncSettled
+    );
+    const [showProductsSkeleton, setShowProductsSkeleton] = useState(false);
 
     // Обновляем счётчик рекомендаций при изменении продуктов или mount
     useEffect(() => {
@@ -1864,8 +1958,74 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     }, [productsVersion]);
     const [usageStatsVersion, setUsageStatsVersion] = useState(0);
 
-    // 🔒 Ref для пропуска первого sync (предотвращает мерцание)
-    const initialSyncDoneRef = useRef(false);
+    // Фиксируем состояние sync на момент открытия: если sync уже завершён,
+    // можно рендерить сразу; если нет — ждём финальную версию списка.
+    const initialSyncDoneRef = useRef(initialProductsSyncState.syncSettled);
+
+    useEffect(() => {
+      if (!isWaitingForProductsSettle) {
+        setShowProductsSkeleton(false);
+        return;
+      }
+
+      const settleNow = (reason) => {
+        console.info('[HEYS.addProduct] ✅ Products settled for modal', {
+          reason,
+          productsVersion
+        });
+        initialSyncDoneRef.current = true;
+        setIsWaitingForProductsSettle(false);
+        setShowProductsSkeleton(false);
+      };
+
+      const maybeSettle = (reason) => {
+        const state = getAddProductInitialSyncState();
+        if (state.syncSettled || !state.syncInFlight) {
+          settleNow(reason);
+          return true;
+        }
+        return false;
+      };
+
+      if (maybeSettle('already-settled')) {
+        return undefined;
+      }
+
+      const skeletonTimer = setTimeout(() => {
+        setShowProductsSkeleton(true);
+      }, APS_PRODUCTS_SKELETON_DELAY_MS);
+
+      const fallbackTimer = setTimeout(() => {
+        console.info('[HEYS.addProduct] ⏱️ Products settle fallback', {
+          waitMs: APS_PRODUCTS_SETTLE_FALLBACK_MS,
+          productsVersion
+        });
+        settleNow('fallback-timeout');
+      }, APS_PRODUCTS_SETTLE_FALLBACK_MS);
+
+      const handleSettledEvent = (event) => {
+        const reason = event?.type || 'sync-event';
+        requestAnimationFrame(() => {
+          if (!maybeSettle(reason)) {
+            settleNow(reason + ':forced');
+          }
+        });
+      };
+
+      window.addEventListener('heysSyncCompleted', handleSettledEvent);
+      window.addEventListener('heys:products-updated', handleSettledEvent);
+      window.addEventListener('heysProductsUpdated', handleSettledEvent);
+      window.addEventListener('heys:products-version-changed', handleSettledEvent);
+
+      return () => {
+        clearTimeout(skeletonTimer);
+        clearTimeout(fallbackTimer);
+        window.removeEventListener('heysSyncCompleted', handleSettledEvent);
+        window.removeEventListener('heys:products-updated', handleSettledEvent);
+        window.removeEventListener('heysProductsUpdated', handleSettledEvent);
+        window.removeEventListener('heys:products-version-changed', handleSettledEvent);
+      };
+    }, [isWaitingForProductsSettle, productsVersion]);
 
     // Подписка на обновление продуктов (heysSyncCompleted или watch)
     useEffect(() => {
@@ -1893,12 +2053,12 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       };
 
       const handleSyncComplete = (e) => {
-        // 🔒 Пропускаем первый heysSyncCompleted — products уже загружены
+        // Если модалка открылась до завершения sync — первый heysSyncCompleted
+        // как раз и приносит финальную версию списка, его нельзя пропускать.
         if (e?.type === 'heysSyncCompleted') {
           if (!initialSyncDoneRef.current) {
             initialSyncDoneRef.current = true;
-            refreshUsageFromHistory();
-            return;
+            setIsWaitingForProductsSettle(false);
           }
         }
         // console.log('[AddProductStep] 🔄 heysSyncCompleted → refreshing products');
@@ -1916,6 +2076,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           detail: e?.detail,
           prevVersion: productsVersion
         });
+        initialSyncDoneRef.current = true;
+        setIsWaitingForProductsSettle(false);
         setProductsVersion(v => {
           const next = v + 1;
           console.log('[AddProductStep] ✅ productsVersion updating', { prev: v, next });
@@ -1932,6 +2094,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       if (HEYS.products?.watch) {
         unwatchProducts = HEYS.products.watch(() => {
           // console.log('[AddProductStep] 🔄 products.watch → refreshing products');
+          initialSyncDoneRef.current = true;
+          setIsWaitingForProductsSettle(false);
           setProductsVersion(v => v + 1);
           clearSearchCache();
         });
@@ -2830,6 +2994,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
     // Что показывать: результаты поиска или умный список
     const showSearch = lc.length > 0;
+    const shouldRenderSettledProducts = !isWaitingForProductsSettle;
 
     // Счётчик фото в текущем приёме
     const currentPhotoCount = context?.mealPhotos?.length || 0;
@@ -2959,8 +3124,9 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
       // === Скроллируемый список продуктов ===
       React.createElement('div', { className: 'aps-products-scroll' },
-        // Результаты поиска
-        showSearch && React.createElement('div', { className: 'aps-section' },
+        !shouldRenderSettledProducts && showProductsSkeleton && React.createElement(AddProductResultsSkeleton),
+
+        shouldRenderSettledProducts && showSearch && React.createElement('div', { className: 'aps-section' },
           React.createElement('div', { className: 'aps-section-title' },
             combinedResults.length > 0
               ? `Найдено: ${combinedResults.length}${sharedLoading ? ' ⏳' : ''}`
@@ -3041,7 +3207,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         ),
 
         // Умный список: часто + недавно используемые (объединённый)
-        !showSearch && smartProducts?.length > 0 && React.createElement('div', { className: 'aps-section' },
+        shouldRenderSettledProducts && !showSearch && smartProducts?.length > 0 && React.createElement('div', { className: 'aps-section' },
           React.createElement('div', { className: 'aps-section-title' }, '⚡ Ваши продукты'),
           React.createElement('div', { className: 'aps-products-list' },
             smartProducts.map(p => renderProductCard(p, true, true, true))
@@ -5298,7 +5464,16 @@ NOVA: 1
           ? { ...product, kcal100: derivedKcal100 }
           : product;
 
+        const traceId = createAddTraceId('grams-step');
+        const payload = {
+          product: productForSubmit,
+          grams,
+          mealIndex: context.mealIndex,
+          _traceId: traceId,
+          _origin: 'grams-step'
+        };
         console.info('[HEYS.addProduct] ➕ GramsStep onAdd', {
+          traceId,
           grams,
           mealIndex: context?.mealIndex ?? null,
           productId: productForSubmit?.id ?? productForSubmit?.product_id ?? null,
@@ -5306,11 +5481,19 @@ NOVA: 1
         });
         // ⚡ startTransition: defer heavy meal recalculation re-renders
         React.startTransition(() => {
-          context.onAdd({
-            product: productForSubmit,
-            grams,
-            mealIndex: context.mealIndex
-          });
+          try {
+            context.onAdd(payload);
+            pushAddTrace('✅ context.onAdd called (GramsStep)', {
+              traceId,
+              mealIndex: context?.mealIndex ?? null
+            });
+          } catch (error) {
+            pushAddTrace('❌ context.onAdd failed (GramsStep)', {
+              traceId,
+              mealIndex: context?.mealIndex ?? null,
+              error: error?.message || error
+            }, 'error');
+          }
         });
 
         // 🔊 Harm-based feedback sound
@@ -5820,6 +6003,40 @@ NOVA: 1
     });
   }
 
+  function createAddTraceId(origin = 'unknown') {
+    const rnd = Math.random().toString(36).slice(2, 7);
+    return `add-${Date.now().toString(36)}-${rnd}-${origin}`;
+  }
+
+  function pushAddTrace(event, payload = {}, level = 'info') {
+    try {
+      const root = window.HEYS = window.HEYS || {};
+      const debug = root.debug = root.debug || {};
+      const buffer = Array.isArray(debug.addTraceBuffer) ? debug.addTraceBuffer : [];
+      const entry = {
+        ts: Date.now(),
+        iso: new Date().toISOString(),
+        level,
+        event,
+        ...payload
+      };
+      buffer.push(entry);
+      if (buffer.length > 200) {
+        buffer.splice(0, buffer.length - 200);
+      }
+      debug.addTraceBuffer = buffer;
+      debug.pushAddTrace = pushAddTrace;
+      debug.getAddTraceBuffer = () => (Array.isArray(debug.addTraceBuffer) ? debug.addTraceBuffer.slice() : []);
+      debug.clearAddTraceBuffer = () => {
+        debug.addTraceBuffer = [];
+      };
+      const method = level === 'error' ? 'error' : (level === 'warn' ? 'warn' : 'info');
+      console[method](`[HEYS.addTrace] ${event}`, entry);
+    } catch (error) {
+      console.warn('[HEYS.addTrace] pushAddTrace failed', error);
+    }
+  }
+
   // === Главная функция показа модалки ===
   function showAddProductModal(options = {}) {
     const {
@@ -6003,18 +6220,35 @@ NOVA: 1
         // console.log('[AddProductStep] selectedProduct:', selectedProduct?.name, 'grams:', grams);
 
         if (selectedProduct && grams) {
+          const traceId = createAddTraceId('stepmodal-complete');
+          const payload = {
+            product: selectedProduct,
+            grams: grams,
+            mealIndex,
+            _traceId: traceId,
+            _origin: 'stepmodal-complete'
+          };
           console.info('[HEYS.addProduct] ✅ onComplete -> onAdd', {
+            traceId,
             mealIndex,
             grams,
             productId: selectedProduct.id ?? selectedProduct.product_id ?? null,
             productName: selectedProduct.name || null,
             source: selectedProduct._source || (selectedProduct._fromShared ? 'shared' : 'personal')
           });
-          onAdd?.({
-            product: selectedProduct,
-            grams: grams,
-            mealIndex
-          });
+          try {
+            onAdd?.(payload);
+            pushAddTrace('✅ onAdd callback completed (onComplete)', {
+              traceId,
+              mealIndex
+            });
+          } catch (error) {
+            pushAddTrace('❌ onAdd callback failed (onComplete)', {
+              traceId,
+              mealIndex,
+              error: error?.message || error
+            }, 'error');
+          }
 
           // 🔔 Dispatch event для advice module
           window.dispatchEvent(new CustomEvent('heysProductAdded', {

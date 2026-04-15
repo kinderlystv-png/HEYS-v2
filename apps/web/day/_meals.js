@@ -3134,7 +3134,10 @@
 
         const persistDayData = React.useCallback((nextDayData, action = 'save_day') => {
             const key = _scopedDayKey(date);
+            const _mCnt = Array.isArray(nextDayData?.meals) ? nextDayData.meals.length : '?';
+            const _iCnt = Array.isArray(nextDayData?.meals) ? nextDayData.meals.reduce((s, m) => s + (m.items?.length || 0), 0) : '?';
             try {
+                console.info('[HEYS.syncTrace] PERSIST_DAY', { key, action, meals: _mCnt, items: _iCnt, updatedAt: nextDayData?.updatedAt });
                 lsSet(key, nextDayData);
             } catch (e) {
                 trackError(e, { source: 'day/_meals.js', action });

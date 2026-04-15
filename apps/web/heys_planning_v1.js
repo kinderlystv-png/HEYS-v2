@@ -158,8 +158,15 @@
             ),
         );
 
-        return h('div', { className: 'planning-tab', style: planningLayoutStyle },
-            h('div', { className: 'planning-content' },
+        return h('div', {
+            className: 'planning-tab',
+            style: planningLayoutStyle,
+            'data-no-pull-refresh': 'true',
+        },
+            h('div', {
+                className: 'planning-content'
+                    + (activeScreen === 'calendar' ? ' planning-content--calendar-lock-scroll' : ''),
+            },
                 CurrentScreen ? h(CurrentScreen, { state: planState }) : h(PlanningFallback),
             ),
             h('div', { className: 'planning-subnav-shell', 'aria-hidden': 'true' }),

@@ -127,6 +127,8 @@
                 setClientId(pinAuthClient);
                 window.HEYS = window.HEYS || {};
                 window.HEYS.currentClientId = pinAuthClient;
+                // Sync heys_client_current so nsKey resolves correctly on next reload
+                try { localStorage.setItem('heys_client_current', JSON.stringify(pinAuthClient)); } catch (_) { }
                 console.warn('[AuthInit] restored PIN currentClientId', pinAuthClient?.slice(0, 8));
 
                 // 🛠️ Миграция legacy ключей без clientId → scoped (PIN flow)
@@ -370,6 +372,7 @@
                 setClientId(cid);
                 window.HEYS = window.HEYS || {};
                 window.HEYS.currentClientId = cid;
+                try { localStorage.setItem('heys_client_current', JSON.stringify(cid)); } catch (_) { }
                 cloudRef.syncClient(cid)
                     .then(function () { devLog('[AuthInit] static client login synced'); })
                     .catch(function (err) {

@@ -6730,19 +6730,7 @@
       };
     }, [clientId]);
 
-    // === Pull-to-refresh ===
-    const {
-      pullProgress,
-      isRefreshing,
-      refreshStatus,
-      pullThreshold
-    } = HEYS.dayPullRefresh?.usePullToRefresh?.({
-      React,
-      date: selectedDate,
-      lsGet: HEYS.utils?.lsGet,
-      lsSet: HEYS.utils?.lsSet,
-      HEYS: window.HEYS
-    }) || { pullProgress: 0, isRefreshing: false, refreshStatus: 'idle', pullThreshold: 80 };
+    // Pull-to-refresh: только на вкладках День (stats/diary) — см. body.heys-pull-refresh-day-active + heys_day_pull_refresh_v1.js
 
     // Initialize and subscribe to state changes
     useEffect(() => {
@@ -7152,107 +7140,7 @@
       return Math.max(8, maxRow + 2);
     }, [widgets]);
 
-    // === Pull indicator helper ===
-    const pullIndicatorEl = (pullProgress > 0 || isRefreshing || refreshStatus !== 'idle')
-      ? React.createElement('div', {
-        className: 'pull-indicator'
-          + (isRefreshing ? ' refreshing' : '')
-          + (refreshStatus === 'ready' ? ' ready' : '')
-          + (refreshStatus === 'success' ? ' success' : '')
-          + ' status-' + refreshStatus,
-        style: {
-          height: isRefreshing ? 56 : Math.max(pullProgress, 0),
-          opacity: isRefreshing ? 1 : Math.min(pullProgress / 35, 1)
-        }
-      },
-        React.createElement('div', { className: 'pull-spinner' },
-          refreshStatus === 'success'
-            ? React.createElement('svg', {
-              className: 'pull-spinner-ring ready',
-              viewBox: '0 0 28 28',
-              style: { stroke: 'var(--success)' }
-            },
-              React.createElement('path', {
-                d: 'M7 14l5 5 9-9',
-                strokeWidth: 3,
-                fill: 'none',
-                strokeLinecap: 'round',
-                strokeLinejoin: 'round'
-              })
-            )
-            : refreshStatus === 'error'
-              ? React.createElement('svg', {
-                className: 'pull-spinner-ring',
-                viewBox: '0 0 28 28',
-                style: { stroke: 'var(--err, #ef4444)' }
-              },
-                React.createElement('path', {
-                  d: 'M8 8l12 12M20 8l-12 12',
-                  strokeWidth: 3,
-                  fill: 'none',
-                  strokeLinecap: 'round'
-                })
-              )
-              : refreshStatus === 'timeout'
-                ? React.createElement('svg', {
-                  className: 'pull-spinner-ring',
-                  viewBox: '0 0 28 28',
-                  style: { stroke: 'var(--warn, #f59e0b)' }
-                },
-                  React.createElement('path', {
-                    d: 'M14 7v8m0 4h.01',
-                    strokeWidth: 3,
-                    fill: 'none',
-                    strokeLinecap: 'round',
-                    strokeLinejoin: 'round'
-                  }),
-                  React.createElement('circle', {
-                    cx: 14, cy: 14, r: 10,
-                    strokeWidth: 2,
-                    fill: 'none'
-                  })
-                )
-                : refreshStatus === 'syncing'
-                  ? React.createElement('svg', {
-                    className: 'pull-spinner-ring spinning',
-                    viewBox: '0 0 28 28'
-                  },
-                    React.createElement('circle', {
-                      cx: 14, cy: 14, r: 10,
-                      strokeDasharray: '45 20',
-                      strokeDashoffset: 0
-                    })
-                  )
-                  : React.createElement('svg', {
-                    className: 'pull-spinner-ring' + (refreshStatus === 'ready' ? ' ready' : ''),
-                    viewBox: '0 0 28 28',
-                    style: {
-                      transform: `rotate(${-90 + Math.min(pullProgress / pullThreshold, 1) * 180}deg)`,
-                      transition: 'transform 0.1s ease-out'
-                    }
-                  },
-                    React.createElement('circle', {
-                      cx: 14, cy: 14, r: 10,
-                      strokeDasharray: 63,
-                      strokeDashoffset: 63 - (Math.min(pullProgress / pullThreshold, 1) * 63)
-                    })
-                  )
-        ),
-        React.createElement('span', {
-          className: 'pull-text'
-            + (refreshStatus === 'ready' ? ' ready' : '')
-            + (refreshStatus === 'syncing' ? ' syncing' : '')
-            + ' status-' + refreshStatus
-        },
-          refreshStatus === 'success' ? 'Готово!'
-            : refreshStatus === 'timeout' ? 'Синхронизация заняла слишком долго'
-              : refreshStatus === 'error' ? 'Ошибка синхронизации'
-                : refreshStatus === 'syncing' ? 'Синхронизация...'
-                  : refreshStatus === 'ready' ? 'Отпустите для обновления'
-                    : 'Потяните для обновления'
-        )
-      )
-      : null;
+    const pullIndicatorEl = null;
 
     // Render empty state (только после первичной гидратации layout)
     // Don't show empty state during sync loading — layout for new client may not have arrived yet

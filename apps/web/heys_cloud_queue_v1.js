@@ -94,10 +94,24 @@
       _uploadInProgress = true;
       _uploadInFlightCount = batch.length;
 
+      // Sync trace for dayv2 items in batch
+      const _dayItems = batch.filter(it => it?.k?.includes('dayv2_'));
+      if (_dayItems.length > 0) {
+        _dayItems.forEach(it => {
+          const _v = it.v;
+          const _mCnt = Array.isArray(_v?.meals) ? _v.meals.length : '?';
+          const _iCnt = Array.isArray(_v?.meals) ? _v.meals.reduce((s, m) => s + (m.items?.length || 0), 0) : '?';
+          (window.console || console).info('[HEYS.syncTrace] UPLOAD_START_dayv2', { key: it.k, meals: _mCnt, items: _iCnt, updatedAt: _v?.updatedAt, batchTotal: batch.length });
+        });
+      }
+
       const canSync = getRpcOnlyMode();
       log('🔐 [UPLOAD] canSync check:', { _rpcOnlyMode: getRpcOnlyMode(), hasUser: !!getUser(), batchLen: batch.length, canSync });
       if (!canSync) {
         log('⚠️ [UPLOAD] canSync=false, returning batch to queue');
+        if (_dayItems.length > 0) {
+          (window.console || console).warn('[HEYS.syncTrace] UPLOAD_BLOCKED_canSync', { dayKeys: _dayItems.map(it => it.k), reason: 'canSync=false' });
+        }
         clientUpsertQueue.push(...batch);
         _uploadInProgress = false;
         _uploadInFlightCount = 0;
@@ -162,6 +176,10 @@
             savePendingQueue(PENDING_CLIENT_QUEUE_KEY, clientUpsertQueue);
             notifyPendingChange();
 
+            if (_dayItems.length > 0) {
+              (window.console || console).warn('[HEYS.syncTrace] UPLOAD_FAIL_dayv2', { dayKeys: _dayItems.map(it => it.k), error: String(anyError), isAuth: isAuthErrorFlag });
+            }
+
             if (isAuthErrorFlag) {
               log('⚠️ [UPLOAD] Auth error, NOT retrying — waiting for login');
             } else if ((getInternal().retryAttempt || 0) < (getInternal().maxRetryAttempts || 5)) {
@@ -172,6 +190,11 @@
           } else {
             resetRetry();
             logCritical(`☁️ [YANDEX] Сохранено в облако: ${totalSaved} записей`);
+            if (_dayItems.length > 0) {
+              _dayItems.forEach(it => {
+                (window.console || console).info('[HEYS.syncTrace] UPLOAD_OK_dayv2', { key: it.k, saved: totalSaved });
+              });
+            }
           }
 
           savePendingQueue(PENDING_CLIENT_QUEUE_KEY, clientUpsertQueue);
@@ -477,6 +500,10 @@
       });
     };
 
+    /**
+     * Статус синка для конкретного ключа в client upsert queue.
+     * Не вызывать без key как «глобальный» статус — для UI используйте getPendingCount / isUploadInProgress.
+     */
     cloud.getSyncStatus = function (key) {
       if (clientUpsertQueue.some(item => item.k === key)) {
         return 'pending';

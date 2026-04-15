@@ -1142,7 +1142,6 @@
 
         const [editing, setEditing] = useState(false);
         const [draftTitle, setDraftTitle] = useState(task.title);
-        const priority = PRIORITY_CONFIG[task.priority] || PRIORITY_CONFIG.p2;
         const isDone = task.status === 'done' || task.status === 'cancelled';
         const metaBadges = buildTaskMetaBadges(task);
         const trailingActions = React.Children.toArray(extraActions);
@@ -1222,10 +1221,6 @@
                     }, badge.label)),
                 ),
             ),
-            h('span', {
-                className: 'planning-task-row__priority',
-                style: { color: priority.color },
-            }, priority.label),
             h('div', { className: 'planning-task-row__actions' + (actionsClassName ? (' ' + actionsClassName) : '') },
                 trailingActions,
                 h('button', {

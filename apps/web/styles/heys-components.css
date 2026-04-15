@@ -6777,7 +6777,7 @@ body.tour-active .ios-pwa-banner {
 }
 
 .wrap.dropdown-blur-active>.tabs {
-  filter: blur(8px) saturate(0.85);
+  filter: blur(6px) saturate(0.85);
 }
 
 .wrap.dropdown-blur-active>.hdr .hdr-top {
@@ -7412,7 +7412,7 @@ body.tour-active .ios-pwa-banner {
 }
 
 [data-theme="dark"] .wrap.dropdown-blur-active>.tabs {
-  filter: blur(10px) saturate(0.75);
+  filter: blur(7px) saturate(0.75);
 }
 
 [data-theme="dark"] .client-dropdown__close {
@@ -8202,7 +8202,52 @@ body.tour-active .ios-pwa-banner {
   }
 }
 
+/* Ephemeral variant: same blur/card language as .sync-lock-overlay, short-lived (e.g. pull-refresh blocked while queue pending) */
+@keyframes heysSyncLockEphemeralIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes heysSyncLockEphemeralOut {
+  from {
+    opacity: 1;
+  }
+
+  to {
+    opacity: 0;
+  }
+}
+
+.sync-lock-overlay--ephemeral {
+  z-index: 10028;
+  animation: heysSyncLockEphemeralIn 0.22s ease-out both;
+  cursor: pointer;
+}
+
+.sync-lock-overlay--ephemeral.sync-lock-overlay--ephemeral-out {
+  pointer-events: none;
+  animation: heysSyncLockEphemeralOut 0.18s ease-in both;
+}
+
+/* Hold / queue-pending: full ring, no spin — distinct from long active sync */
+.sync-lock-overlay__spinner--hold::before {
+  animation: none;
+  border-color: rgba(59, 130, 246, 0.32);
+  border-top-color: rgba(59, 130, 246, 0.32);
+}
+
 @media (prefers-reduced-motion: reduce) {
+
+  .sync-lock-overlay--ephemeral,
+  .sync-lock-overlay--ephemeral.sync-lock-overlay--ephemeral-out {
+    animation: none;
+  }
+
   .sync-lock-overlay__spinner::before {
     animation: none;
   }
@@ -8233,6 +8278,11 @@ body.tour-active .ios-pwa-banner {
 [data-theme="dark"] .sync-lock-overlay__spinner::before {
   border-color: rgba(96, 165, 250, 0.18);
   border-top-color: #60a5fa;
+}
+
+[data-theme="dark"] .sync-lock-overlay__spinner--hold::before {
+  border-color: rgba(96, 165, 250, 0.3);
+  border-top-color: rgba(96, 165, 250, 0.3);
 }
 
 [data-theme="dark"] .sync-lock-overlay__cloud {

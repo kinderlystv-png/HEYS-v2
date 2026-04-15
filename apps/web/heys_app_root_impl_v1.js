@@ -688,6 +688,16 @@
                 setTabImmediate(fallbackTab);
             }, [tab, cloudUser, clientId, isInitializing, defaultTab, setTabImmediate]);
 
+            // Pull-to-refresh (document-level) разрешён только на дневных вкладках — см. heys_day_pull_refresh_v1.js
+            React.useEffect(() => {
+                if (typeof document === 'undefined' || !document.body) return undefined;
+                const allow = tab === 'stats' || tab === 'diary';
+                document.body.classList.toggle('heys-pull-refresh-day-active', allow);
+                return () => {
+                    document.body.classList.remove('heys-pull-refresh-day-active');
+                };
+            }, [tab]);
+
             React.useEffect(() => {
                 let cancelled = false;
 

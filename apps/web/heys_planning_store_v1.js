@@ -442,6 +442,8 @@
             endTime: opts?.endTime || '10:00',
             source: opts?.source || 'user',
             recurrenceGroupId: opts?.recurrenceGroupId ? String(opts.recurrenceGroupId) : undefined,
+            isBackground: Boolean(opts?.isBackground),
+            bgColor: opts?.bgColor || undefined,
             createdAt: nowISO(),
             updatedAt: nowISO(),
         };
@@ -461,6 +463,8 @@
             endTime: opts?.endTime || '10:00',
             source: opts?.source || 'user',
             recurrenceGroupId: opts?.recurrenceGroupId ? String(opts.recurrenceGroupId) : undefined,
+            isBackground: Boolean(opts?.isBackground),
+            bgColor: opts?.bgColor || undefined,
             createdAt: now,
             updatedAt: now,
         }));

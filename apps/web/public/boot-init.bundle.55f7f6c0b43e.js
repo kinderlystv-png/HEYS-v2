@@ -478,6 +478,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
   const EVENT_ICONS = {
     meal: '🥗',
     training: '💪',
+    morningActivation: '🧘',
     household: '🏠',
     sleep: '😴',
     checkin: '⚖️',
@@ -576,6 +577,18 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     sleepHours: 7.5,
     steps: 7000,
     weeklyTrainingLoad: 200
+  };
+
+  const MORNING_ACTIVATION_CASCADE_BONUS = {
+    super_light: 0.2,
+    medium: 0.4,
+    high: 0.6
+  };
+
+  const MORNING_ACTIVATION_INTENSITY_LABELS = {
+    super_light: 'суперлегкая',
+    medium: 'средняя',
+    high: 'высокая'
   };
 
   const SCORE_THRESHOLDS = {
@@ -801,6 +814,25 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         type: 'training', icon: EVENT_ICONS.training, positive: true, weight: 1.5,
         time: htr && htr.startTime, sortKey: htrSort !== null ? htrSort : 600,
         label: (htr && htr.type || 'Тренировка') + (htrMin ? ' ' + htrMin + ' мин' : '')
+      });
+    }
+
+    // Утренняя зарядка (отдельный поведенческий бонус за соблюдение ритуала)
+    var hActivation = dayObj && dayObj.morningActivation && typeof dayObj.morningActivation === 'object'
+      ? dayObj.morningActivation
+      : null;
+    if (hActivation && hActivation.status === 'done') {
+      var hIntensity = hActivation.intensity || 'super_light';
+      var hWeight = MORNING_ACTIVATION_CASCADE_BONUS[hIntensity] || MORNING_ACTIVATION_CASCADE_BONUS.super_light;
+      var hSort = parseTime(hActivation.firstMealTime || '') || 610;
+      evts.push({
+        type: 'morning_activation',
+        icon: EVENT_ICONS.morningActivation,
+        positive: true,
+        weight: hWeight,
+        time: hActivation.firstMealTime || null,
+        sortKey: hSort,
+        label: 'Зарядка · ' + (MORNING_ACTIVATION_INTENSITY_LABELS[hIntensity] || 'суперлегкая')
       });
     }
 
@@ -2819,6 +2851,45 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           console.info('[HEYS.cascade] 💪 No trainings today, streak=' + trainStreak + ' (no penalty yet)');
         }
       }
+    }
+
+    // ── ШАГ 3.5: Утренняя зарядка (поведенческий бонус за ритуал) ──
+    var morningActivation = day && day.morningActivation && typeof day.morningActivation === 'object'
+      ? day.morningActivation
+      : null;
+    var activationConfidence = getFactorConfidence(prevDays14, function (d) {
+      if (!d || !d.morningActivation || typeof d.morningActivation !== 'object') return null;
+      return d.morningActivation.status ? 1 : null;
+    });
+    confidenceMap.morningActivation = activationConfidence;
+    if (morningActivation && morningActivation.status === 'done') {
+      var activationIntensity = morningActivation.intensity || 'super_light';
+      var activationRaw = MORNING_ACTIVATION_CASCADE_BONUS[activationIntensity] || MORNING_ACTIVATION_CASCADE_BONUS.super_light;
+      var activationWeight = activationRaw * activationConfidence;
+      rawWeights.morningActivation = activationRaw;
+      score += activationWeight;
+      var activationTimeMins = parseTime(morningActivation.firstMealTime || '');
+      events.push({
+        type: 'morning_activation',
+        time: morningActivation.firstMealTime || null,
+        positive: true,
+        icon: EVENT_ICONS.morningActivation,
+        label: 'Зарядка · ' + (MORNING_ACTIVATION_INTENSITY_LABELS[activationIntensity] || 'суперлегкая'),
+        sortKey: activationTimeMins !== null ? activationTimeMins : 610,
+        weight: activationWeight
+      });
+      console.info('[HEYS.cascade] 🧘 Morning activation behavioral bonus:', {
+        intensity: activationIntensity,
+        rawBonus: +activationRaw.toFixed(2),
+        confidence: activationConfidence,
+        adjustedWeight: +activationWeight.toFixed(2)
+      });
+    } else {
+      rawWeights.morningActivation = 0;
+      console.info('[HEYS.cascade] 🧘 Morning activation bonus skipped:', {
+        hasState: !!morningActivation,
+        status: morningActivation ? morningActivation.status : null
+      });
     }
 
     // ── ШАГ 4: Засыпание (chronotype-adaptive sigmoid + consistency) ──
