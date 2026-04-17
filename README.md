@@ -3,12 +3,12 @@
 **Enterprise‑grade monorepo** — TypeScript/React ecosystem for nutrition
 tracking, training management, and productivity enhancement.
 
-[![Version](<https://img.shields.io/badge/version-15.1.0_(v13.3.0)-blue.svg>)](./apps/web/CHANGELOG.md)
+[![Monorepo Version](https://img.shields.io/badge/monorepo-13.0.0-blue.svg)](./package.json)
 [![Node](https://img.shields.io/badge/node-%3E%3D18.0.0-green.svg)](./.nvmrc)
 [![PNPM](https://img.shields.io/badge/pnpm-%3E%3D8.0.0-orange.svg)](./package.json)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 [![TypeScript](https://img.shields.io/badge/typescript-5.9.2-blue.svg)](./tsconfig.json)
-[![React](https://img.shields.io/badge/react-18.3.1-blue.svg)](./apps/web/package.json)
+[![React](https://img.shields.io/badge/react-18.2.0-blue.svg)](./apps/web/package.json)
 [![Build](https://img.shields.io/badge/build-passing-brightgreen.svg)](#)
 [![Tests](https://img.shields.io/badge/tests-✓_passing-brightgreen.svg)](#)
 [![Quality](https://img.shields.io/badge/code_quality-A+-brightgreen.svg)](#)
@@ -32,13 +32,15 @@ pnpm install
 pnpm dev
 
 # Or start specific applications
-pnpm dev:web      # Web application on port 3001
-pnpm dev:mobile   # Mobile app
-pnpm dev:desktop  # Desktop app
+pnpm dev:web      # Main web app on port 3001
+pnpm dev:landing  # Landing app on port 3003
 
 # Web + IW config watcher (dev)
 pnpm --dir apps/web run dev:full
 pnpm dev:web:full
+
+# Note: tg-mini/mobile scripts are currently not primary active entry points.
+# See docs/ARCHITECTURE.md for current app status.
 
 # Run tests
 pnpm test         # All tests

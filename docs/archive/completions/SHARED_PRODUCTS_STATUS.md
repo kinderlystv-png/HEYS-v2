@@ -12,32 +12,42 @@
 ### 1. Database Schema (100% Complete)
 
 **Files Created:**
+
 - `database/2025-12-16_shared_products.sql` (6.8KB)
 - `database/2025-12-16_shared_products_blocklist.sql` (3.3KB)
 - `database/2025-12-16_shared_products_pending.sql` (5.7KB)
 
 **Features:**
+
 - ✅ `shared_products` table — глобальная база всех пользователей HEYS
-- ✅ `shared_products_public` VIEW — безопасный SELECT без приватных полей (`created_by_user_id` скрыт)
-- ✅ `shared_products_blocklist` — локальная модерация куратора (скрытие продуктов для себя)
+- ✅ `shared_products_public` VIEW — безопасный SELECT без приватных полей
+  (`created_by_user_id` скрыт)
+- ✅ `shared_products_blocklist` — локальная модерация куратора (скрытие
+  продуктов для себя)
 - ✅ `shared_products_pending` — очередь заявок от PIN-клиентов
-- ✅ RLS политики для всех таблиц (curator scoping для blocklist/pending, глобальный доступ к shared)
+- ✅ RLS политики для всех таблиц (curator scoping для blocklist/pending,
+  глобальный доступ к shared)
 - ✅ Индексы для производительности (включая pg_trgm для быстрого поиска)
 - ✅ RPC функции:
   - `create_pending_product()` — создание заявки без session (PIN auth)
   - `get_client_blocklist()` — получение blocklist для PIN-клиента
 
 **SQL Ready:**
-- `docs/SHARED_PRODUCTS_SQL_READY.md` — готовые к выполнению запросы для Supabase Dashboard
+
+- `docs/SHARED_PRODUCTS_SQL_READY.md` — готовые к выполнению запросы для
+  Supabase Dashboard
 
 ### 2. Data Model (100% Complete)
 
 **File Modified:** `apps/web/heys_models_v1.js`
 
 **Changes:**
+
 - ✅ Добавлено поле `shared_origin_id` в typedef Product
-- ✅ Функция `computeProductFingerprint(product)` — SHA-256 fingerprint для глобальной дедупликации
-- ✅ Функция `normalizeProductName(name)` — нормализация имени (lowercase, trim, collapse whitespace, ё→е)
+- ✅ Функция `computeProductFingerprint(product)` — SHA-256 fingerprint для
+  глобальной дедупликации
+- ✅ Функция `normalizeProductName(name)` — нормализация имени (lowercase, trim,
+  collapse whitespace, ё→е)
 
 **Syntax Check:** ✅ PASS
 
@@ -46,26 +56,28 @@
 **File Modified:** `apps/web/heys_storage_supabase_v1.js`
 
 **New Cloud Methods:**
+
 ```javascript
 // Поиск
-cloud.searchSharedProducts(query, options)
+cloud.searchSharedProducts(query, options);
 
 // Публикация (curator)
-cloud.publishToShared(product)
+cloud.publishToShared(product);
 
 // Pending (PIN auth)
-cloud.createPendingProduct(clientId, product)
-cloud.getPendingProducts()
-cloud.approvePendingProduct(pendingId, productData)
-cloud.rejectPendingProduct(pendingId, reason)
+cloud.createPendingProduct(clientId, product);
+cloud.getPendingProducts();
+cloud.approvePendingProduct(pendingId, productData);
+cloud.rejectPendingProduct(pendingId, reason);
 
 // Blocklist
-cloud.getBlocklist()
-cloud.blockProduct(productId)
-cloud.unblockProduct(productId)
+cloud.getBlocklist();
+cloud.blockProduct(productId);
+cloud.unblockProduct(productId);
 ```
 
 **Features:**
+
 - ✅ Fingerprint-based deduplication
 - ✅ Soft merge при конфликте (возвращает `status: 'exists'` + existing ID)
 - ✅ Blocklist filtering в поиске (опция `excludeBlocklist`)
@@ -77,10 +89,13 @@ cloud.unblockProduct(productId)
 ### 4. Documentation (100% Complete)
 
 **Files Created:**
-- `docs/SHARED_PRODUCTS_IMPLEMENTATION.md` (15.3KB) — полное руководство по реализации
+
+- `docs/SHARED_PRODUCTS_IMPLEMENTATION.md` (15.3KB) — полное руководство по
+  реализации
 - `docs/SHARED_PRODUCTS_SQL_READY.md` (9.6KB) — готовые SQL запросы
 
 **Content:**
+
 - ✅ Подробные примеры кода для всех UI компонентов
 - ✅ Integration points (где и что менять)
 - ✅ Testing checklist (curator/PIN mode, online/offline)
@@ -95,9 +110,11 @@ cloud.unblockProduct(productId)
 ### High Priority
 
 #### 1. ProductsManager Enhancement
+
 **File**: `apps/web/heys_core_v12.js`
 
 **Tasks:**
+
 - [ ] Добавить state `productSource` (personal/shared/both)
 - [ ] Обновить функцию `search()` для поддержки двух источников
 - [ ] Реализовать `deduplicateResults()` по `shared_origin_id`
@@ -106,9 +123,11 @@ cloud.unblockProduct(productId)
 **Estimated Time**: 2-3 hours
 
 #### 2. RationTab Split
+
 **File**: `apps/web/heys_app_v12.js` или `heys_core_v12.js`
 
 **Tasks:**
+
 - [ ] Создать две подвкладки (👤 Продукты клиента / 🌐 Общая база)
 - [ ] Скрыть "🌐 Общая база" для PIN-клиентов
 - [ ] Реализовать `PersonalProductsView` с переключателем источника
@@ -117,9 +136,11 @@ cloud.unblockProduct(productId)
 **Estimated Time**: 3-4 hours
 
 #### 3. Product Creation Flow
+
 **File**: `apps/web/heys_add_product_step_v1.js`
 
 **Tasks:**
+
 - [ ] Добавить checkbox "Опубликовать в общую базу" (default: checked)
 - [ ] Публикация в shared после сохранения в personal (curator mode)
 - [ ] Создание pending-заявки (PIN mode)
@@ -130,9 +151,11 @@ cloud.unblockProduct(productId)
 ### Medium Priority
 
 #### 4. Offline Queue
+
 **File**: `apps/web/heys_storage_layer_v1.js` или новый файл
 
 **Tasks:**
+
 - [ ] Реализовать localStorage queue для offline публикаций
 - [ ] Retry logic с max 3 попытки
 - [ ] Online event listener для обработки queue
@@ -141,9 +164,11 @@ cloud.unblockProduct(productId)
 **Estimated Time**: 1-2 hours
 
 #### 5. Migration Script
+
 **File**: `apps/web/heys_migration_shared_v1.js` (новый)
 
 **Tasks:**
+
 - [ ] Функция миграции личных продуктов в shared
 - [ ] Batch processing (50 продуктов за раз)
 - [ ] Progress bar
@@ -154,9 +179,11 @@ cloud.unblockProduct(productId)
 ### Low Priority
 
 #### 6. UI Components
+
 **Files**: Возможно отдельные файлы компонентов
 
 **Tasks:**
+
 - [ ] `PendingProductCard` — карточка pending-заявки
 - [ ] `SharedProductCard` — карточка продукта из shared
 - [ ] `DuplicateModal` — модалка выбора при конфликте
@@ -169,6 +196,7 @@ cloud.unblockProduct(productId)
 ## 📋 Testing Plan
 
 ### Curator Mode
+
 1. ✅ Создание продукта → публикация в shared
 2. ✅ Поиск в shared → результаты возвращаются
 3. ✅ Выбор shared продукта → клонируется в personal
@@ -178,16 +206,19 @@ cloud.unblockProduct(productId)
 7. ✅ Blocklist → продукт скрывается из поиска
 
 ### PIN Mode
+
 1. ✅ Создание продукта → pending-заявка создаётся
 2. ✅ Поиск работает (если есть доступ к shared)
 3. ✅ Подвкладка "🌐 Общая база" НЕ отображается
 
 ### Offline
+
 1. ✅ Создание продукта offline → добавляется в queue
 2. ✅ При восстановлении online → queue обрабатывается
 3. ✅ Max retries (3) → уведомление об ошибке
 
 ### Edge Cases
+
 1. ✅ Дубликат fingerprint → модалка "Использовать существующий / Создать свой"
 2. ✅ Повторный выбор shared → не создаётся новый клон
 3. ✅ Orphan protection → MealItem всегда ссылается на personal product
@@ -235,12 +266,12 @@ cloud.unblockProduct(productId)
 
 ## 📊 Estimated Total Time
 
-| Phase | Tasks | Status | Time |
-|-------|-------|--------|------|
-| **Phase 1** | Database + Storage + Docs | ✅ Complete | ~6h |
-| **Phase 2** | UI Implementation | 🚧 Pending | ~12h |
-| **Phase 3** | Testing + Fixes | 🚧 Pending | ~3h |
-| **Total** | | | **~21h** |
+| Phase       | Tasks                     | Status      | Time     |
+| ----------- | ------------------------- | ----------- | -------- |
+| **Phase 1** | Database + Storage + Docs | ✅ Complete | ~6h      |
+| **Phase 2** | UI Implementation         | 🚧 Pending  | ~12h     |
+| **Phase 3** | Testing + Fixes           | 🚧 Pending  | ~3h      |
+| **Total**   |                           |             | **~21h** |
 
 **Current Progress**: 28% (6 / 21 hours)
 
@@ -258,12 +289,17 @@ cloud.unblockProduct(productId)
 
 ## 💡 Key Decisions Made
 
-1. **Global Database** — `shared_products` без curator scoping (все пользователи видят одни и те же продукты)
-2. **Local Blocklist** — модерация через персональный blocklist (не влияет на других пользователей)
-3. **VIEW для Security** — `shared_products_public` скрывает `created_by_user_id`, показывает только `is_mine`
+1. **Global Database** — `shared_products` без curator scoping (все пользователи
+   видят одни и те же продукты)
+2. **Local Blocklist** — модерация через персональный blocklist (не влияет на
+   других пользователей)
+3. **VIEW для Security** — `shared_products_public` скрывает
+   `created_by_user_id`, показывает только `is_mine`
 4. **Fingerprint для Dedupe** — SHA-256 из нормализованного имени + нутриентов
-5. **Clone Pattern** — shared продукты клонируются в personal для защиты от orphan products
-6. **Pending Queue** — PIN-клиенты создают заявки через RPC, куратор подтверждает
+5. **Clone Pattern** — shared продукты клонируются в personal для защиты от
+   orphan products
+6. **Pending Queue** — PIN-клиенты создают заявки через RPC, куратор
+   подтверждает
 
 ---
 
@@ -272,7 +308,8 @@ cloud.unblockProduct(productId)
 1. **Offline Publishing** — реализация в Phase 2 (localStorage queue)
 2. **Migration Script** — автоматическая миграция в Phase 2
 3. **UI Polish** — базовый дизайн в Phase 2, полировка позже
-4. **Analytics** — пока нет трекинга использования shared products (можно добавить позже)
+4. **Analytics** — пока нет трекинга использования shared products (можно
+   добавить позже)
 
 ---
 

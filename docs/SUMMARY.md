@@ -1,6 +1,6 @@
 # HEYS Documentation Summary
 
-> **Version: 1.3.0** | Complete navigation for HEYS project documentation
+> Last updated: 2026-04-17 | Navigation for active HEYS documentation
 
 ## 🚀 Core Documentation
 
@@ -16,29 +16,19 @@
 
 - [Next Steps - Unified Backlog](plans/NEXT_STEPS.md) ⭐
 - [Documentation Actualization System](plans/DOCS_ACTUALIZATION_SYSTEM.md)
-- [Comprehensive System Fixes Roadmap](plans/COMPREHENSIVE_SYSTEM_FIXES_ROADMAP.md)
+- [Plans Index](plans/README.md)
 - [Enhanced Error Logging System](plans/ENHANCED_ERROR_LOGGING_SYSTEM.md)
 - [Universal Navigation Maps System](plans/UNIVERSAL_NAVIGATION_MAPS_SYSTEM.md)
 
 ## 📚 Implementation Guides
 
 - [Smart Search with Typos](guides/smart_search.md) ⭐
-- [Anchor Automation System](guides/anchor_automation.md) ⭐
 - [Integration Guide Improvements](guides/INTEGRATION_GUIDE_IMPROVEMENTS.md)
 - [Scripts Organization](guides/SCRIPTS_ORGANIZATION.md)
 
-## 🔗 Anchor & Navigation System
-
-- [Anchor Automation README](anchors/ANCHOR_AUTOMATION_README.md)
-- [Universal Anchor Success](anchors/UNIVERSAL_ANCHOR_SUCCESS.md)
-- [Navigation Maps README](anchors/NAVIGATION_MAPS_README.md)
-
 ## 📊 Reports & Analysis
 
-- [Documentation Standardization Completion](reports/DOCUMENTATION_STANDARDIZATION_COMPLETION.md)
-  ⭐
-- [Improvements Final Report](reports/IMPROVEMENTS_FINAL_REPORT.md)
-- [Enhanced Error Diagnostics v2](reports/ENHANCED_ERROR_DIAGNOSTICS_v2.md)
+- [Archive of historical reports](archive/reports/)
 
 ## 📈 Metrics & Analytics
 
@@ -49,8 +39,6 @@
 
 ### 📚 Documentation Modules
 
-- **[Anchors & Navigation](anchors/README.md)** - Anchor system and navigation
-  maps
 - **[Automation Scripts](automation/README.md)** - Automated documentation and
   backup systems
 - **[Implementation Guides](guides/README.md)** - Step-by-step module
@@ -58,8 +46,7 @@
 - **[Metrics & Analytics](metrics/README.md)** - NPS and system performance
   analytics
 - **[Plans & Roadmaps](plans/README.md)** - Active project planning and roadmaps
-- **[Progress Reports](reports/README.md)** - Chronological improvement and
-  analysis reports
+- **[Archive](archive/README.md)** - Historical reports and legacy documentation
 - **[UI Components](ui/README.md)** - Dashboard and interface components
 - **[Archive](archive/README.md)** - Historical and legacy documentation
 
@@ -76,7 +63,6 @@ Core documents that every team member should know:
 
 - [Next Steps Backlog](plans/NEXT_STEPS.md)
 - [Smart Search Guide](guides/smart_search.md)
-- [Anchor Automation Guide](guides/anchor_automation.md)
 - [Metrics System](metrics/README.md)
 
 ### 📋 Planning Documents
@@ -95,20 +81,21 @@ Step-by-step guides for development:
 
 ### 📊 Reports & Analysis
 
-Progress reports and analysis:
+Historical progress reports and analysis:
 
-- All files in [`reports/`](reports/)
-- Performance analysis and improvement tracking
+- All files in [`archive/reports/`](archive/reports/)
 
 ### 🔗 System Integration
 
 Documentation for system components:
 
-- All files in [`anchors/`](anchors/)
+- Relevant files in [`automation/`](automation/) and [`guides/`](guides/)
 - Integration patterns and automation
 
 ## Version History
 
+- **v1.3.1** (2026-04-17): Removed retired anchor-system links and refreshed
+  navigation
 - **v1.3.0** (2025-08-30): Documentation standardization, unified versioning
 - **v1.2.x**: Legacy versions (see archive)
 - **v1.1.x**: Initial documentation structure
@@ -119,14 +106,15 @@ Documentation for system components:
 1. All new documents should include `1.3.0` placeholder
 2. Follow naming convention: `PascalCase.md` for English, `.ru.md` for Russian
 3. Update this summary when adding new documents
-4. Use anchor markers for cross-referencing: `@ANCHOR:CATEGORY:IDENTIFIER`
+4. Remove or update links when documents are archived, renamed, or deleted
 
 ## Links Validation
 
-Last checked: 2025-08-30  
+Last checked: 2026-04-17  
 Status: ✅ All internal links verified
 
 ---
 
-**Maintenance:** This summary is auto-updated by CI/CD pipeline.  
+**Maintenance:** Update this summary when top-level docs are added, moved, or
+removed.  
 **Issues:** Report broken links or missing documents via GitHub issues.

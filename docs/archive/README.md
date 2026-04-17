@@ -15,9 +15,9 @@
 
 ## 📦 Merged & Archived (Feb 2026)
 
-| Файл                                                      | Дата       | Почему архивировано                                    |
-| --------------------------------------------------------- | ---------- | ------------------------------------------------------ |
-| [TECHNICAL_ARCHITECTURE.md](../TECHNICAL_ARCHITECTURE.md) | 26.02.2026 | Merged в [ARCHITECTURE.md](../ARCHITECTURE.md) v18.0.0 |
+| Файл                                    | Дата       | Почему архивировано                                                  |
+| --------------------------------------- | ---------- | -------------------------------------------------------------------- |
+| ~~TECHNICAL_ARCHITECTURE.md~~ (deleted) | 26.02.2026 | Merged в [ARCHITECTURE.md](../ARCHITECTURE.md) v18.0.0, stub removed |
 
 ## 📦 Closed Tasks (→ docs/tasks/archive/)
 

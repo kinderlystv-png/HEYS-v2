@@ -1,91 +1,21 @@
-# 📚 HEYS PROJECT DOCUMENTATION
+# HEYS Project Documentation
 
-> **Default language: English**. Russian supplementary files have suffix
-> `.ru.md`. **Version: 1.3.0** | Last updated: 2025-08-30
+> Last updated: 2026-04-17
 
-## 🚀 Quick Start
+## Start here
 
-### Essential Documents
+| Document                                                                | Purpose                                        |
+| ----------------------------------------------------------------------- | ---------------------------------------------- |
+| [`.github/copilot-instructions.md`](../.github/copilot-instructions.md) | Agent rules (domain conventions, API, storage) |
+| [ARCHITECTURE.md](ARCHITECTURE.md)                                      | Architecture overview (v18.1.0)                |
+| [dev/QUALITY_GATE.md](dev/QUALITY_GATE.md)                              | Commit quality gate                            |
+| [dev/AUTOLIMITS.md](dev/AUTOLIMITS.md)                                  | Legacy growth control                          |
 
-- [HEYS Brief (Product v1)](HEYS_BRIEF.md) ⭐⭐⭐⭐⭐ - Current product brief
-  (Light-only, Widgets, Desktop Gate, PIN auth)
-- [Project Context](HEYS_Project_Context.md) ⭐⭐⭐⭐⭐ - Core project overview
-  and tech stack
-- [Development Methodology](HEYS_Development_Methodology.md) ⭐⭐⭐⭐⭐ -
-  Development principles and practices
-- [Quality Gate](dev/QUALITY_GATE.md) ⭐⭐⭐⭐⭐ - Early error detection and
-  blocking on commit
-- [Autolimits for Legacy](dev/AUTOLIMITS.md) ⭐⭐⭐⭐ - Legacy growth control
-- [Quick Start Checklist](Quick%20Start%20Checklist.md) ⭐⭐⭐⭐ - Getting
-  started guide
+## Deep dive
 
-### 🧱 Architecture & Quality
-
-- **[Module Architecture](dev/MODULE_ARCHITECTURE.md)** — правила модульности
-- **[Code Style](dev/CODE_STYLE.md)** — стандарты кода и стилей
-- **[Architecture Overview](ARCHITECTURE.md)** — общая архитектура проекта
-- **[Quality Gate](dev/QUALITY_GATE.md)** — единый стандарт качества
-- **[Autolimits](dev/AUTOLIMITS.md)** — регламент автолимитов legacy
-
-### 🔗 NAVIGATION
-
-- **[SUMMARY.md](SUMMARY.md)** ⭐⭐⭐⭐⭐ - Complete documentation index
-
-### � IMPLEMENTATION GUIDES
-
-- **[Smart Search Guide](guides/smart_search.md)** ⭐⭐⭐⭐⭐ - Smart search
-  with typos implementation
-- **[Anchor Automation Guide](guides/anchor_automation.md)** ⭐⭐⭐⭐⭐ -
-  Universal anchor system
-
-### � CURRENT PLANNING
-
-- **[Next Steps](plans/NEXT_STEPS.md)** ⭐⭐⭐⭐⭐ - Unified project backlog
-
-### � METRICS & ANALYTICS
-
-- **[Metrics System](metrics/README.md)** ⭐⭐⭐⭐ - NPS and analytics
-  collection
-
-## 🎯 PRIORITY FOR NEW TEAM MEMBERS
-
-1. **CRITICAL** ⭐⭐⭐⭐⭐:
-   - [Project Context](HEYS_Project_Context.md)
-   - [Development Methodology](HEYS_Development_Methodology.md)
-   - [Next Steps Backlog](plans/NEXT_STEPS.md)
-
-2. **ОЧЕНЬ ВАЖНО** ⭐⭐⭐⭐:
-   - `docs/anchors/ANCHOR_WORKFLOW_SOLUTION.md`
-   - `docs/anchors/NAVIGATION_MAPS_README.md`
-   - `docs/reports/IMPROVEMENTS_FINAL_REPORT.md`
-   - `docs/guides/INTEGRATION_GUIDE_IMPROVEMENTS.md`
-
-3. **ВАЖНО** ⭐⭐⭐:
-   - Остальные файлы в reports/
-
-## 📍 ЯКОРЯ НАВИГАЦИИ:
-
-<!-- ANCHOR_DOCS_MASTER_INDEX -->
-
-**MASTER INDEX:** Полная карта документации проекта HEYS
-
-<!-- ANCHOR_DOCS_AI_PRIORITY -->
-
-**AI PRIORITY:** Приоритетные файлы для быстрого старта ИИ
-
-<!-- ANCHOR_DOCS_ANCHOR_SYSTEM -->
-
-**ANCHOR SYSTEM:** Документация универсальной anchor системы
-
-<!-- ANCHOR_DOCS_REPORTS -->
-
-**REPORTS:** Отчеты о разработке и исправлениях
-
-<!-- ANCHOR_DOCS_GUIDES -->
-
-**GUIDES:** Руководства по интеграции и улучшениям
-
----
-
-💡 **Для нового ИИ:** Начни с файлов ⭐⭐⭐⭐⭐, затем ⭐⭐⭐⭐ - это сократит
-время вхождения в контекст с 40 минут до 5 минут!
+- [HEYS Brief](HEYS_BRIEF.md) — product brief
+- [Project Context](HEYS_Project_Context.md) — tech stack overview
+- [Development Methodology](HEYS_Development_Methodology.md) — dev principles
+- [Module Architecture](dev/MODULE_ARCHITECTURE.md) — modularity rules
+- [Code Style](dev/CODE_STYLE.md) — code standards
+- [SUMMARY.md](SUMMARY.md) — full documentation index

@@ -2,7 +2,8 @@
 
 ## 📋 Обзор
 
-Реализован полный модуль **Metabolic Intelligence v2.0** — ультимативная оценка метаболического здоровья с научным обоснованием.
+Реализован полный модуль **Metabolic Intelligence v2.0** — ультимативная оценка
+метаболического здоровья с научным обоснованием.
 
 **Дата**: 2025-12-14  
 **Версия**: 1.0.0  
@@ -14,47 +15,53 @@
 ## 🎯 Что реализовано
 
 ### Phase 0: Foundation (100%)
+
 ✅ Инвентаризация данных с fallback-правилами  
 ✅ Единый контракт `HEYS.Metabolic.getStatus()`  
 ✅ EMA сглаживание + гистерезис для риска  
 ✅ Performance: кэш 2мин, useMemo, early exit  
 ✅ Graceful degradation (PIN auth, offline)  
 ✅ Kill-switch через localStorage  
-✅ Микро-аналитика через HEYS.analytics  
+✅ Микро-аналитика через HEYS.analytics
 
 ### Phase 1: Enhanced Current State (100%)
+
 ✅ MetabolicStatusCard — статус 0-100  
 ✅ Метаболические фазы (anabolic/transitional/catabolic)  
 ✅ Risk indicators (low/medium/high) с Traffic Light  
 ✅ ReasonCard — причины с научным обоснованием  
 ✅ ActionCard — действия с ETA и эффектом  
-✅ Полная интеграция в InsightsTab  
+✅ Полная интеграция в InsightsTab
 
 ### Phase 2: Predictive Layer (100%)
+
 ✅ `calculateCrashRisk24h()` — прогноз срыва  
 ✅ `calculatePerformanceForecast()` — энергия на завтра  
 ✅ PredictiveDashboard UI  
 ✅ Учёт триггеров (недосып, стресс, выходные)  
-✅ Исторические паттерны  
+✅ Исторические паттерны
 
 ### Phase 3: Personalization (100%)
+
 ✅ `identifyPhenotype()` — метаболический тип  
 ✅ Толерантность к БЖУ  
 ✅ `calculatePersonalThresholds()` — персональные зоны  
 ✅ Feedback система (`submitFeedback()`)  
-✅ Learning loop  
+✅ Learning loop
 
 ### Phase 4: Integration (100%)
+
 ✅ `generateReport(period)` — отчёты  
 ✅ CSS модуль с BEM-naming  
 ✅ Responsive + Dark Mode  
-✅ Debug команды в консоли  
+✅ Debug команды в консоли
 
 ---
 
 ## 📁 Файловая структура
 
 ### Новые файлы
+
 ```
 apps/web/
 ├── heys_metabolic_intelligence_v1.js  (53KB) — core logic
@@ -63,6 +70,7 @@ apps/web/
 ```
 
 ### Изменённые файлы
+
 ```
 apps/web/
 ├── heys_predictive_insights_v1.js  — добавлены UI компоненты
@@ -76,6 +84,7 @@ apps/web/
 ## 🔑 API Reference
 
 ### Главная функция
+
 ```javascript
 const status = HEYS.Metabolic.getStatus({
   dateStr: '2025-12-14',     // дата (опционально, по умолчанию сегодня)
@@ -108,12 +117,21 @@ const status = HEYS.Metabolic.getStatus({
 ```
 
 ### Предиктивные функции
+
 ```javascript
 // Прогноз срыва на 24-48ч
-const prediction = HEYS.Metabolic.calculateCrashRisk24h(dateStr, profile, history);
+const prediction = HEYS.Metabolic.calculateCrashRisk24h(
+  dateStr,
+  profile,
+  history,
+);
 
 // Прогноз энергии на завтра
-const forecast = HEYS.Metabolic.calculatePerformanceForecast(dateStr, profile, history);
+const forecast = HEYS.Metabolic.calculatePerformanceForecast(
+  dateStr,
+  profile,
+  history,
+);
 
 // Определение фенотипа (≥30 дней)
 const phenotype = HEYS.Metabolic.identifyPhenotype(history, profile);
@@ -126,6 +144,7 @@ const report = HEYS.Metabolic.generateReport('week'); // 'week' | 'month'
 ```
 
 ### Feedback система
+
 ```javascript
 // Сохранить отклик на предсказание
 HEYS.Metabolic.submitFeedback('prediction_id_123', true, { details: '...' });
@@ -140,9 +159,11 @@ const stats = HEYS.Metabolic.getFeedbackStats();
 ## 🎨 UI Компоненты
 
 ### MetabolicStatusCard
+
 Главная карточка со статусом 0-100, метаболической фазой и риском.
 
 **Props:**
+
 ```javascript
 {
   lsGet: Function,      // функция U.lsGet
@@ -153,15 +174,18 @@ const stats = HEYS.Metabolic.getFeedbackStats();
 ```
 
 **Особенности:**
+
 - Раскрываемая (click to expand)
 - Цвет по score (зелёный >80, жёлтый >60, красный <40)
 - Метаболическая фаза с emoji
 - Risk level с цветовой кодировкой
 
 ### ReasonCard
+
 Карточка причины снижения статуса.
 
 **Структура:**
+
 ```javascript
 {
   id: 'protein_low',
@@ -175,14 +199,17 @@ const stats = HEYS.Metabolic.getFeedbackStats();
 ```
 
 **Фичи:**
+
 - Цвет границы по pillar
 - Кнопка "Научное обоснование"
 - Touch-friendly (≥44px)
 
 ### ActionCard
+
 Карточка приоритизированного действия.
 
 **Структура:**
+
 ```javascript
 {
   id: 'add_protein',
@@ -195,16 +222,19 @@ const stats = HEYS.Metabolic.getFeedbackStats();
 ```
 
 **Фичи:**
+
 - Цветовая индикация priority
 - ETA в минутах/часах
 - Ожидаемый эффект
 
 ### PredictiveDashboard
+
 Панель предиктивной аналитики (риск срыва + прогноз на завтра).
 
 **Показывается только при risk ≥ 30%**
 
 **Компоненты:**
+
 - CrashRiskAlert — алерт срыва с профилактикой
 - TomorrowForecast — прогноз энергии (раскрываемый)
 
@@ -215,6 +245,7 @@ const stats = HEYS.Metabolic.getFeedbackStats();
 ### Модуль: `725-metabolic-intelligence.css`
 
 **BEM naming convention:**
+
 ```css
 .metabolic-status-card              /* Block */
 .metabolic-status-card__header      /* Element */
@@ -222,6 +253,7 @@ const stats = HEYS.Metabolic.getFeedbackStats();
 ```
 
 **Ключевые классы:**
+
 - `.metabolic-status-card` — главная карточка
 - `.reason-card` — причина (с модификаторами по pillar)
 - `.action-card` — действие
@@ -230,11 +262,13 @@ const stats = HEYS.Metabolic.getFeedbackStats();
 - `.energy-window` — окно энергии
 
 **Responsive:**
+
 - Mobile-first подход
 - Breakpoint: 768px
 - Touch targets ≥44px
 
 **Dark Mode:**
+
 - `@media (prefers-color-scheme: dark)`
 - CSS переменные для цветов
 - Градиенты адаптированы под тёмную тему
@@ -244,6 +278,7 @@ const stats = HEYS.Metabolic.getFeedbackStats();
 ## 🔧 Конфигурация
 
 ### Kill-switch
+
 ```javascript
 // Отключить feature
 localStorage.setItem('heys_feature_metabolic_intelligence', '0');
@@ -253,6 +288,7 @@ localStorage.setItem('heys_feature_metabolic_intelligence', '1');
 ```
 
 ### Кэш
+
 ```javascript
 // Очистить кэш (принудительный пересчёт)
 HEYS.Metabolic.clearCache();
@@ -262,16 +298,17 @@ CONFIG.CACHE_TTL_MS = 2 * 60 * 1000; // 2 минуты
 ```
 
 ### Сглаживание
+
 ```javascript
 // EMA параметры
-CONFIG.SMOOTHING_ALPHA = 0.3;              // вес нового значения
-CONFIG.MAX_SCORE_CHANGE_PER_UPDATE = 15;  // max изменение за раз
+CONFIG.SMOOTHING_ALPHA = 0.3; // вес нового значения
+CONFIG.MAX_SCORE_CHANGE_PER_UPDATE = 15; // max изменение за раз
 
 // Гистерезис риска
 CONFIG.RISK_THRESHOLDS = {
   low: { enter: 30, exit: 25 },
   medium: { enter: 60, exit: 55 },
-  high: { enter: 85, exit: 80 }
+  high: { enter: 85, exit: 80 },
 };
 ```
 
@@ -280,55 +317,64 @@ CONFIG.RISK_THRESHOLDS = {
 ## 🧪 Тестирование
 
 ### Автоматическая валидация
+
 ✅ JavaScript syntax — PASS  
 ✅ File sizes — OK (53KB + 12KB)  
-✅ BEM naming — OK  
+✅ BEM naming — OK
 
 ### Smoke тесты (ручные)
+
 **Пустая история (0 дней):**
+
 - [ ] Показывается "Недостаточно данных"
 - [ ] Нет ошибок в консоли
 - [ ] CTA понятен
 
 **Мало данных (1-2 дня):**
+
 - [ ] Статус считается в "черновом" режиме
 - [ ] Confidence = low
 - [ ] Показывается "что не хватает"
 
 **Обычный день:**
+
 - [ ] Статус 0-100 отображается
 - [ ] Метаболическая фаза корректна
 - [ ] Причины логичны
 - [ ] Действия приоритезированы
 
 **Refeed Day:**
+
 - [ ] Статус НЕ падает при ratio 0.9-1.3
 - [ ] Показывается "Осознанный выбор"
 - [ ] Нет токсичных формулировок
 
 **PIN auth режим:**
+
 - [ ] Insights работает локально (user=null)
 - [ ] Нет обращений к Supabase без auth
 - [ ] Нет ошибок в консоли
 
 **High Risk (риск >60%):**
+
 - [ ] Показывается CrashRiskAlert
 - [ ] Профилактические стратегии логичны
 - [ ] Цветовая индикация корректна
 
 ### Debug команды
+
 ```javascript
 // Получить статус
-window.debugMetabolicStatus()
+window.debugMetabolicStatus();
 
 // Проверить insights
-window.debugPredictiveInsights()
+window.debugPredictiveInsights();
 
 // Inventory данных
-HEYS.Metabolic.inventoryData('2025-12-14')
+HEYS.Metabolic.inventoryData('2025-12-14');
 
 // Feedback статистика
-HEYS.Metabolic.getFeedbackStats()
+HEYS.Metabolic.getFeedbackStats();
 ```
 
 ---
@@ -338,19 +384,23 @@ HEYS.Metabolic.getFeedbackStats()
 Все метрики имеют научное обоснование. Основные источники:
 
 ### Metabolism
+
 - **TEF**: Westerterp, 2004 (PMID: 15507147)
 - **EPOC**: LaForgia et al., 2006 (PMID: 16825252)
 - **Adaptive Thermogenesis**: Rosenbaum & Leibel, 2010 (PMID: 20107198)
 
 ### Hormones
+
 - **Ghrelin/Leptin**: Spiegel et al., 2004 (PMID: 15531540)
 - **Sleep & Hunger**: Van Cauter, 1997
 
 ### Nutrition
+
 - **Protein Satiety**: Westerterp-Plantenga, 2008 (PMID: 18469287)
 - **Fiber & Gut**: Makki et al., 2018 (PMID: 29844096)
 
 ### Exercise
+
 - **Post-workout**: Colberg, 2010 (PMID: 20978206)
 - **GLUT4**: Ivy, 1988 (PMID: 3057318)
 
@@ -359,22 +409,27 @@ HEYS.Metabolic.getFeedbackStats()
 ## 🚀 Следующие шаги
 
 ### Для developer
+
 1. **Установить pnpm** (если нет):
+
    ```bash
    npm install -g pnpm
    ```
 
 2. **Запустить type-check**:
+
    ```bash
    pnpm type-check
    ```
 
 3. **Собрать production build**:
+
    ```bash
    pnpm build
    ```
 
 4. **Запустить dev server**:
+
    ```bash
    pnpm dev
    ```
@@ -385,6 +440,7 @@ HEYS.Metabolic.getFeedbackStats()
    - Протестировать на mobile (DevTools → iPhone SE)
 
 ### Для дальнейшего развития
+
 - [ ] Light-версия (упрощённая для обычных пользователей)
 - [ ] Curator Dashboard (расширенная версия для кураторов)
 - [ ] Export в PDF
@@ -396,6 +452,7 @@ HEYS.Metabolic.getFeedbackStats()
 ## 📝 Changelog
 
 ### v1.0.0 (2025-12-14)
+
 - ✅ Реализованы все 4 фазы
 - ✅ Full UI integration
 - ✅ CSS модуль с BEM
@@ -409,12 +466,14 @@ HEYS.Metabolic.getFeedbackStats()
 ## 📞 Support
 
 **Вопросы?** Проверь:
+
 1. Console errors (F12)
 2. localStorage `heys_feature_metabolic_intelligence`
 3. Debug команды (см. выше)
 4. Smoke тесты
 
 **Баги?** Используй debug output:
+
 ```javascript
 const status = window.debugMetabolicStatus();
 console.log('Debug info:', status?.debug);

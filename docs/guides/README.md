@@ -4,19 +4,11 @@
 > **Maintainer:** @development-team  
 > **Version:** 1.3.0
 
-## 🔝 READ FIRST
-
-- **[smart_search.md](smart_search.md)** ⭐⭐⭐⭐⭐ - Smart Search with Typos
-  API & implementation
-- **[anchor_automation.md](anchor_automation.md)** ⭐⭐⭐⭐⭐ - Universal anchor
-  system guide
-
-## 📚 ALL GUIDES
+## � ALL GUIDES
 
 | Guide                                                                  | Priority   | Module      | Description                      |
 | ---------------------------------------------------------------------- | ---------- | ----------- | -------------------------------- |
 | [smart_search.md](smart_search.md)                                     | ⭐⭐⭐⭐⭐ | Search      | Fuzzy search with typo tolerance |
-| [anchor_automation.md](anchor_automation.md)                           | ⭐⭐⭐⭐⭐ | Navigation  | Universal anchor system          |
 | [INTEGRATION_GUIDE_IMPROVEMENTS.md](INTEGRATION_GUIDE_IMPROVEMENTS.md) | ⭐⭐⭐⭐   | Integration | System integration patterns      |
 | [SCRIPTS_ORGANIZATION.md](SCRIPTS_ORGANIZATION.md)                     | ⭐⭐⭐     | DevOps      | Script organization standards    |
 
@@ -26,9 +18,7 @@
 
 1. **Start here:** [smart_search.md](smart_search.md) - Core search
    functionality
-2. **Then read:** [anchor_automation.md](anchor_automation.md) - Navigation
-   system
-3. **Finally:**
+2. **Then read:**
    [INTEGRATION_GUIDE_IMPROVEMENTS.md](INTEGRATION_GUIDE_IMPROVEMENTS.md) -
    Integration patterns
 

@@ -41,13 +41,13 @@ CREATE TABLE IF NOT EXISTS public.shared_products (
 );
 
 -- Индексы
-CREATE INDEX IF NOT EXISTS idx_shared_products_name_trgm 
+CREATE INDEX IF NOT EXISTS idx_shared_products_name_trgm
   ON public.shared_products USING GIN (name_norm gin_trgm_ops);
 
-CREATE INDEX IF NOT EXISTS idx_shared_products_created_by_user 
+CREATE INDEX IF NOT EXISTS idx_shared_products_created_by_user
   ON public.shared_products (created_by_user_id);
 
-CREATE INDEX IF NOT EXISTS idx_shared_products_created_at 
+CREATE INDEX IF NOT EXISTS idx_shared_products_created_at
   ON public.shared_products (created_at DESC);
 
 -- Триггер updated_at
@@ -69,7 +69,7 @@ CREATE TRIGGER trigger_shared_products_updated_at
 ALTER TABLE public.shared_products ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "shared_products_select_all" ON public.shared_products;
-CREATE POLICY "shared_products_select_all" 
+CREATE POLICY "shared_products_select_all"
   ON public.shared_products FOR SELECT USING (true);
 
 DROP POLICY IF EXISTS "shared_products_insert_auth" ON public.shared_products;
@@ -84,7 +84,7 @@ CREATE POLICY "shared_products_update_owner"
 
 -- VIEW (скрывает приватные поля)
 CREATE OR REPLACE VIEW public.shared_products_public AS
-SELECT 
+SELECT
   id, name, name_norm, simple100, complex100, protein100,
   badFat100, goodFat100, trans100, fiber100, gi, harm,
   category, portions, description, fingerprint, created_at,
@@ -114,10 +114,10 @@ CREATE TABLE IF NOT EXISTS public.shared_products_blocklist (
 );
 
 -- Индексы
-CREATE INDEX IF NOT EXISTS idx_shared_products_blocklist_curator 
+CREATE INDEX IF NOT EXISTS idx_shared_products_blocklist_curator
   ON public.shared_products_blocklist (curator_id);
 
-CREATE INDEX IF NOT EXISTS idx_shared_products_blocklist_product 
+CREATE INDEX IF NOT EXISTS idx_shared_products_blocklist_product
   ON public.shared_products_blocklist (product_id);
 
 -- RLS
@@ -169,13 +169,13 @@ CREATE TABLE IF NOT EXISTS public.shared_products_pending (
 );
 
 -- Индексы
-CREATE INDEX IF NOT EXISTS idx_shared_products_pending_curator 
+CREATE INDEX IF NOT EXISTS idx_shared_products_pending_curator
   ON public.shared_products_pending (curator_id, status);
 
-CREATE INDEX IF NOT EXISTS idx_shared_products_pending_fingerprint 
+CREATE INDEX IF NOT EXISTS idx_shared_products_pending_fingerprint
   ON public.shared_products_pending (fingerprint);
 
-CREATE INDEX IF NOT EXISTS idx_shared_products_pending_created_at 
+CREATE INDEX IF NOT EXISTS idx_shared_products_pending_created_at
   ON public.shared_products_pending (created_at DESC);
 
 -- RLS
@@ -210,10 +210,10 @@ DECLARE
   v_existing_id uuid;
 BEGIN
   -- Проверка: продукт уже есть в shared?
-  SELECT id INTO v_existing_id 
-  FROM public.shared_products 
+  SELECT id INTO v_existing_id
+  FROM public.shared_products
   WHERE fingerprint = p_fingerprint;
-  
+
   IF v_existing_id IS NOT NULL THEN
     RETURN jsonb_build_object(
       'status', 'exists',
@@ -223,10 +223,10 @@ BEGIN
   END IF;
 
   -- Получить куратора
-  SELECT curator_id INTO v_curator_id 
-  FROM public.clients 
+  SELECT curator_id INTO v_curator_id
+  FROM public.clients
   WHERE id = p_client_id;
-  
+
   IF v_curator_id IS NULL THEN
     RAISE EXCEPTION 'Client not found or has no curator';
   END IF;
@@ -258,26 +258,28 @@ GRANT SELECT, UPDATE, DELETE ON TABLE public.shared_products_pending TO authenti
 
 ```sql
 -- Проверка таблиц
-SELECT table_name FROM information_schema.tables 
-WHERE table_schema = 'public' 
+SELECT table_name FROM information_schema.tables
+WHERE table_schema = 'public'
   AND table_name LIKE 'shared_products%';
 
 -- Проверка VIEW
-SELECT table_name FROM information_schema.views 
-WHERE table_schema = 'public' 
+SELECT table_name FROM information_schema.views
+WHERE table_schema = 'public'
   AND table_name = 'shared_products_public';
 
 -- Проверка функций
-SELECT proname FROM pg_proc 
+SELECT proname FROM pg_proc
 WHERE proname IN ('create_pending_product', 'get_client_blocklist');
 
 -- Проверка RLS политик
-SELECT tablename, policyname FROM pg_policies 
+SELECT tablename, policyname FROM pg_policies
 WHERE tablename LIKE 'shared_products%';
 ```
 
 Expected output:
-- 3 таблицы: `shared_products`, `shared_products_blocklist`, `shared_products_pending`
+
+- 3 таблицы: `shared_products`, `shared_products_blocklist`,
+  `shared_products_pending`
 - 1 VIEW: `shared_products_public`
 - 2 функции: `create_pending_product`, `get_client_blocklist`
 - 6+ RLS политик

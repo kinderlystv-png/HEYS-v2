@@ -1,5 +1,5 @@
 ---
-description: HEYS v2 — core workspace rules for AI agents
+description: HEYS v2 — essential domain rules for AI agents
 applyTo: '**/*'
 ---
 
@@ -7,211 +7,40 @@ applyTo: '**/*'
 
 > Ответы по-русски, код на английском.
 
-## Always-on rules
+## Domain-specific patterns (agent will get these wrong without guidance)
 
-1. Не делать `git checkout/restore/reset` без явного запроса.
-2. Не предлагать localhost API: только production `https://api.heyslab.ru`.
-3. Не перезапускать dev/HMR без явной необходимости.
-4. `pnpm build` — только перед коммитом или по прямому запросу.
-5. После изменений в legacy runtime `apps/web/**`, влияющих на runtime bundle,
-   агент обязан сам запускать rebuild затронутых legacy/public bundle-файлов,
-   чтобы пользователь сразу видел правки на `localhost`. Базовая механика:
-   сначала selective rebuild через
-   `pnpm bundle:legacy:auto --files=<workspace-relative-paths>`, а при изменении
-   bundling config (`scripts/bundle-legacy.mjs`,
-   `scripts/legacy-bundle-config.mjs`) или если selective rebuild не обновил
-   нужный asset — полный
-   `pnpm --filter @heys/web run predev && pnpm bundle:legacy`. Минимально
-   обязательная валидация после rebuild: проверить, что обновились реальные
-   assets в `apps/web/public/boot-*.bundle.*.js` / `postboot-*.bundle.*.js`, что
-   хэши синхронизированы через `apps/web/bundle-manifest.json`, и что
-   ссылки/preload в `apps/web/index.html` смотрят на новый hashed asset.
-   Проверка браузера обязательна не всегда, а только для runtime-sensitive
-   случаев: изменения boot/postboot логики, инициализации, модалок/overlay,
-   загрузки entrypoint, подозрения на stale cache, неоднозначного selective
-   rebuild, или когда пользователь явно просит убедиться, что фикс реально
-   работает на `localhost`. В этих случаях агент обязан проверить фактически
-   загруженные `script[src]`; если страница держит старый bundle —
-   перезагрузить/переоткрыть страницу и перепроверить. Для low-risk изменений
-   достаточно файловой валидации после rebuild, но агент обязан явно сообщить
-   пользователю, выполнялась browser verification или была осознанно пропущена.
-   Запрещено считать задачу завершённой по одному diff'у без rebuild и
-   post-build валидации.
-6. Tailwind first; inline styles запрещены; custom CSS только в
-   `styles/heys-components.css`.
-7. Legacy `apps/web/heys_*.js` не переводить на TypeScript без явной просьбы.
-8. После изменений cloud functions обязательно: `./health-check.sh`; при `502` →
-   `./deploy-all.sh` и повторная проверка.
+- `dayTot.prot`, NOT `.protein`. `product.harm`, NOT `.harmScore`.
+- Protein = **3 kcal/g** (TEF-adjusted), NOT 4.
+- Storage keys: `heys_dayv2_*`, `heys_ews_weekly_v1`.
+- `MealItem` has no `category`; use `getProductFromItem(item, pIndex).category`.
+- API: only `HEYS.YandexAPI.rpc()` / `.rest()`; **no Supabase SDK**.
+- localStorage: `U.lsSet()` / `U.lsGet()`; **no raw localStorage**.
+- Protected RPC: `*_by_session` + `session_token`, never pass `client_id`.
+- Production API: `https://api.heyslab.ru` (never localhost).
+- Logs: `console.info('[HEYS.module] ...')`, no `console.log`.
+- No personal data in logs. No inline styles (Tailwind first).
 
-## Canonical patterns
+## Legacy bundle rebuild
 
-- RPC/REST: только `HEYS.YandexAPI.rpc()` и `HEYS.YandexAPI.rest()`; Supabase
-  SDK не использовать.
-- localStorage: использовать `U.lsSet()`/проектные storage helpers, не прямой
-  `localStorage.setItem()`.
-- Логи: `console.info/warn/error` с префиксом `[HEYS.module]`; `console.log` не
-  оставлять.
-- Не логировать персональные данные.
-- Использовать `dayTot.prot`, не `dayTot.protein`.
-- Использовать `product.harm`, не `product.harmScore`.
-- Использовать ключи `heys_dayv2_*` и `heys_ews_weekly_v1`.
-- У `MealItem` нет `category`; брать через
-  `getProductFromItem(item, pIndex).category`.
-- Для защищённых RPC использовать `*_by_session` + `session_token`, не
-  `client_id`.
-- Белок считать как `3 kcal/g` (TEF-adjusted), не `4 kcal/g`.
+When changing `apps/web/heys_*.js` that affects runtime:
 
-## Runtime context
-
-- Монорепо: legacy runtime в `apps/web/`, modern code в `apps/web/src/` и
-  `packages/*`.
-- Apps: `apps/web`, `apps/landing`, `apps/tg-mini`; backend/api logic:
-  `packages/core` и `yandex-cloud-functions/`.
-- `localhost` читает реальные legacy runtime assets из
-  `apps/web/public/boot-*.bundle.*.js` и `postboot-*.bundle.*.js`, а не только
-  исходники/промежуточные bundle-файлы.
-- Источник истины по текущим legacy hash-именам —
-  `apps/web/bundle-manifest.json`; после rebuild нужно сверять его с
-  `apps/web/index.html` и фактически загруженными в браузере
-  `boot-*.bundle.*.js` / `postboot-*.bundle.*.js`.
-- Новые фичи должны оставлять проверочные `console.info` логи на входе/выходе
-  ключевой логики.
-
-## Autonomous decision rules
-
-- Пользователь не обязан отдельно писать `rebuild`, `browser verification`,
-  `low-risk` или `high-risk`: агент обязан сам выбрать механику по путям файлов,
-  типу изменения и влиянию на runtime.
-- Для HEYS browser verification и вообще при открытии `apps/web` /
-  `localhost:3001` во встроенном браузере по умолчанию использовать мобильный
-  формат: узкий viewport/mobile emulation прежде, чем делать выводы о UI или
-  доступности экрана. Desktop-режим использовать только если пользователь явно
-  просит проверить десктоп, либо если задача относится именно к desktop gate.
-- Для low-risk задач вне legacy runtime и вне runtime-sensitive поведения агент
-  должен по умолчанию обходиться без browser verification: пользователь часто
-  сам проверяет визуальный результат, поэтому не нужно тратить время и токены на
-  браузер без явной пользы.
-- Если правка не затрагивает legacy runtime bundle или не меняет runtime-
-  поведение, агент не должен навязывать браузерную проверку.
-- Если правка затрагивает `apps/web/**` и попадает в legacy/public bundle,
-  rebuild и файловая post-build валидация обязательны всегда, даже если
-  пользователь об этом не просил.
-- Browser verification нужна по умолчанию только для runtime-sensitive случаев:
-  boot/postboot логика, init/entrypoint, overlay/modals, подозрение на stale
-  cache, неоднозначный rebuild, или явный запрос пользователя проверить
-  поведение на `localhost`.
-- Если HEYS во встроенном браузере открылся в desktop-ширине и показал экран
-  вида «Откройте на телефоне», агент должен сначала переключиться на
-  mobile/narrow viewport и только потом считать это багом приложения.
-- Если явных признаков runtime-risk нет, агент должен считать задачу low-risk,
-  ограничиться rebuild + файловой валидацией и не тратить токены на браузер.
-- Если после анализа агент сомневается, относится ли правка к runtime-sensitive,
-  он должен предпочесть более надёжный путь и выполнить browser verification.
-- Агент не должен спрашивать пользователя, нужен ли rebuild или browser
-  verification, если это можно определить из изменённых файлов и характера
-  задачи.
-- В финальном ответе агент обязан кратко сообщить, какой путь он выбрал: только
-  файловая валидация или файловая + браузерная, и почему.
-
-## Read more only when relevant
-
-- Архитектура и точки входа: `docs/ARCHITECTURE.md`, `docs/AI_KEY_FILES.md`
-- API/RPC и security: `docs/API_DOCUMENTATION.md`, `docs/SECURITY_RUNBOOK.md`
-- Data model/scoring: `docs/DATA_MODEL_REFERENCE.md`,
-  `docs/DATA_MODEL_NUTRITION.md`, `docs/DATA_MODEL_ANALYTICS.md`,
-  `docs/SCORING_REFERENCE.md`, `docs/APP_SYSTEMS_REFERENCE.md`,
-  `docs/CHANGELOG_DATA_MODEL.md`
-- Sync/storage: `docs/SYNC_REFERENCE.md`, `docs/CURATOR_VS_CLIENT.md`,
-  `docs/SYNC_PERFORMANCE_REPORT.md`, `docs/SYNC_PERFORMANCE_SESSIONS_LOG.md`,
-  `docs/dev/STORAGE_PATTERNS.md`, `docs/DATA_LOSS_PROTECTION.md`,
-  `docs/EWS_WEEKLY_CLOUD_SYNC_DEPLOYMENT.md`
-- Логи и debug groups: `docs/dev/LOGGING_DEBUG_GROUPS.md`
-- Insights/trial/meal planner: `HEYS_Insights_v5_Deep_Analytics_c7.md`,
-  `docs/AI_TRIAL_MACHINE.md`, `docs/MEAL_PLANNER_DOCUMENTATION.md`
-
-## Useful commands
-
-- `pnpm dev`, `pnpm dev:web`, `pnpm dev:landing`
-- `pnpm bundle:legacy:auto --files=<workspace-relative-paths>`
-- `pnpm --filter @heys/web run predev && pnpm bundle:legacy`
-- `pnpm type-check`, `pnpm test:run`, `pnpm test:all`
-- `pnpm push:safe` — безопасный non-interactive push (рекомендован для агентов)
-- `pnpm push:ready` — интерактивная подготовка What's New перед push
-- Frontend deploy: `bash scripts/deploy-frontend.sh`
-- Cloud functions:
-  `cd yandex-cloud-functions && ./validate-env.sh && ./health-check.sh`
-
-## Push and release rules
-
-**Запрещено:** `HUSKY=0 git push` — это обходит ВСЕ проверки и ломает CI.
-
-Каждый push в `main` проверяется CI на наличие актуальной записи в
-`apps/web/public/whats-new.json`. Без неё **и What's New Guard, и Deploy to
-Yandex Cloud падают**.
-
-### Рекомендуемый flow для агентов:
-
-1. Сделать все изменения, rebuild, коммиты
-2. Запустить `pnpm push:safe` — скрипт автоматически:
-   - проверит What's New
-  - если изменение technical и What's New не готов → авто-сгенерирует entry из git diff
-  - если изменение user-facing/UI/runtime → остановит push и отправит в `pnpm push:ready`
-   - закоммитит follow-up
-   - прогонит критические тесты
-   - выполнит push
-3. Для быстрого push без тестов: `pnpm push:safe -- --skip-tests`
-4. Для user-facing релизов: `pnpm push:ready`, вручную подтвердить смысл релиза и скрины
-5. Для кастомного текста What's New:
-   ```
-   node scripts/prepare-release.mjs --auto --title="Описание"
-   git add apps/web/public/whats-new.json
-   git commit -m "chore: add what's-new entry for <hash>"
-   pnpm push:safe -- --skip-tests
-   ```
-
-### Fallback (если push:safe недоступен):
-
-1. `node scripts/prepare-release.mjs --auto`
-2. `git add apps/web/public/whats-new.json`
-3. `git commit -m "chore: add what's-new entry for <hash>"`
-4. `pnpm prepare-release:check` → убедиться что exit 0
-5. `git push origin main`
-
-Подробнее: `docs/RELEASE_PROCESS.md`
-
-## Legacy bundle mini-playbook
-
-Когда меняешь runtime-код в `apps/web/**`, действуй так:
-
-1. Определи, влияет ли файл на legacy runtime bundle.
-2. Обязательно запусти selective rebuild:
-   `pnpm bundle:legacy:auto --files=<workspace-relative-paths>`.
-3. Если менялся bundling config или selective rebuild не обновил нужный asset —
-   обязательно запусти:
+1. `pnpm bundle:legacy:auto --files=<paths>` (selective rebuild).
+2. If bundling config changed or asset not updated →
    `pnpm --filter @heys/web run predev && pnpm bundle:legacy`.
-4. Всегда проверь файловую валидацию:
+3. Validate: `bundle-manifest.json` hash matches `index.html` preloads.
+4. Browser verification only for runtime-sensitive changes (boot/postboot,
+   modals, init, stale cache risk) or by explicit request.
+5. Report which hash updated and what validation was done.
 
-- `apps/web/public/boot-*.bundle.*.js` / `postboot-*.bundle.*.js` обновились;
-- `apps/web/bundle-manifest.json` содержит новый `boot-*` / `postboot-*` hash;
-- `apps/web/index.html` и preload-ссылки смотрят на новый hash.
+## Push
 
-5. Реши, нужна ли browser verification. Она обязательна, если правка:
+`pnpm push:safe` — always use instead of `git push`. Never `HUSKY=0 git push`.
+For user-facing releases: `pnpm push:ready`.
 
-- меняет runtime-поведение, инициализацию, модалки/overlay, boot/postboot;
-- касается загрузки entrypoint или есть риск stale cache;
-- дала неоднозначный результат selective rebuild;
-- должна быть подтверждена на `localhost` по запросу пользователя.
+## Commands
 
-6. Если browser verification нужна — проверь в браузере фактически загруженные
-   `script[src]`: `localhost` должен грузить новый hashed asset, а не старый.
-7. Если браузер держит старый asset — перезагрузи/переоткрой страницу и
-   перепроверь `script[src]`.
-8. Всегда сообщай пользователю:
-
-- какой именно `boot-*` / `postboot-*` hash обновился;
-- какая валидация была выполнена: только файловая или ещё и браузерная;
-- если браузерная проверка была выполнена — какой asset реально загружен в
-  `localhost`.
-
-9. Не завершай задачу по одному diff'у: нужен rebuild и как минимум файловая
-   post-build валидация.
+- `pnpm dev:web` / `pnpm dev:landing`
+- `pnpm bundle:legacy:auto --files=<paths>`
+- `pnpm type-check` / `pnpm test:run`
+- `pnpm push:safe`
+- Cloud functions: `cd yandex-cloud-functions && ./health-check.sh`

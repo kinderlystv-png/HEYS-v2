@@ -4,6 +4,7 @@
 # ===========================================
 
 # Архивные и устаревшие документы
+archive/
 docs/archive/
 docs/website/
 docs/sprints/
@@ -13,6 +14,7 @@ docs/guides/
 docs/metrics/
 docs/automation/
 docs/tasks/
+docs/reports/
 
 # Юридические документы (длинные, не нужны для кода)
 docs/legal/
@@ -31,6 +33,44 @@ yandex-cloud-functions/*/certs/
 coverage/
 test-results/
 *.lcov
+playwright-report/
+test-logs/
+performance-reports/
+security-reports/
+bundle-analysis/
+reports/
+
+# Исторические top-level отчёты и артефакты
+AI_PARSER_UPDATE_COMPLETE_v4.8.8.md
+DEPLOYMENT_REPORT_2026-01-09.md
+HEYS_Insights_v4_UI_Integration_Complete.md
+IMPLEMENTATION_COMPLETE_v5.0.md
+INCIDENT_RESOLUTION_2026-02-11.md
+ML_FEEDBACK_LOOP_VERIFICATION.md
+PATTERN_DIAGNOSTIC_RESOLUTION.md
+235.json
+406.json
+Untitled-1.json
+heys_shared_products_export.json
+lighthouse-report.json
+lighthouse-simple.json
+tmp_audit_science_info.*
+tmp_diff_*
+tmp_head_*
+monitoring.log
+emt-v3-stable-clean/
+
+# Root-level one-off diagnostics
+check_patterns_v2.js
+check_timestamps.cjs
+enrich_kv_with_timestamps.cjs
+fix_affordance.js
+fix_affordance2.js
+fix_inner.js
+fix_interactive.js
+fix_interactive2.js
+tmp_science_audit.js
+tmp_edit_client.js
 
 # Сборка и кеш
 dist/
