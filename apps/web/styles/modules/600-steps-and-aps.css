@@ -4147,6 +4147,230 @@ button.meal-quality-badge:active {
   padding: 10px 12px;
 }
 
+/* === Силовая: зоны vs конструктор === */
+.ts-strength-mode-section {
+  padding: 12px 10px;
+}
+
+.ts-strength-mode-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-slate-800, #1e293b);
+  text-align: center;
+  margin-bottom: 12px;
+}
+
+.ts-strength-mode-grid {
+  display: flex;
+  gap: 10px;
+}
+
+.ts-strength-mode-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 12px 10px;
+  background: #fff;
+  border: 2px solid var(--color-slate-200, #e2e8f0);
+  border-radius: 12px;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.ts-strength-mode-btn:active {
+  transform: scale(0.98);
+}
+
+.ts-strength-mode-btn.active {
+  border-color: var(--acc, #3b82f6);
+  background: rgba(59, 130, 246, 0.08);
+}
+
+.ts-sm-icon {
+  font-size: 22px;
+  line-height: 1;
+}
+
+.ts-sm-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-slate-800, #1e293b);
+}
+
+.ts-sm-hint {
+  font-size: 11px;
+  line-height: 1.35;
+  color: var(--color-slate-500, #64748b);
+}
+
+.ts-strength-mode-footnote {
+  margin: 12px 0 0;
+  padding: 8px 10px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--color-slate-600, #475569);
+  background: rgba(59, 130, 246, 0.06);
+  border-radius: 10px;
+  border: 1px solid rgba(59, 130, 246, 0.15);
+}
+
+[data-theme="dark"] .ts-strength-mode-footnote {
+  color: #cbd5e1;
+  background: rgba(59, 130, 246, 0.12);
+  border-color: rgba(96, 165, 250, 0.25);
+}
+
+/* === Конструктор силовой (модалка; дневник на карточке дня) === */
+.ts-wb-section {
+  padding: 12px 10px;
+}
+
+.ts-wb-head {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-slate-800, #1e293b);
+  margin-bottom: 6px;
+}
+
+.ts-wb-lead {
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--color-slate-600, #475569);
+  margin: 0 0 12px;
+}
+
+.ts-wb-duration {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.ts-wb-label {
+  font-size: 13px;
+  color: var(--color-slate-700, #334155);
+}
+
+.ts-wb-duration-input {
+  width: 88px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--color-slate-200, #e2e8f0);
+  font-size: 16px;
+  font-weight: 600;
+  text-align: center;
+  background: #fff;
+  color: var(--color-slate-900, #0f172a);
+}
+
+.ts-wb-exercise {
+  background: #fff;
+  border: 1px solid var(--color-slate-200, #e2e8f0);
+  border-radius: 12px;
+  padding: 10px;
+  margin-bottom: 10px;
+}
+
+.ts-wb-exercise-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.ts-wb-ex-num {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-slate-600, #475569);
+}
+
+.ts-wb-ex-remove {
+  border: none;
+  background: var(--color-slate-100, #f1f5f9);
+  color: var(--color-slate-600, #475569);
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+}
+
+.ts-wb-ex-name {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--color-slate-200, #e2e8f0);
+  font-size: 14px;
+  margin-bottom: 8px;
+}
+
+.ts-wb-ex-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.ts-wb-mini {
+  flex: 1;
+  min-width: 72px;
+  font-size: 11px;
+  color: var(--color-slate-600, #475569);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ts-wb-mini-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 6px 8px;
+  border-radius: 8px;
+  border: 1px solid var(--color-slate-200, #e2e8f0);
+  font-size: 14px;
+}
+
+.ts-wb-ex-note {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 6px 8px;
+  border-radius: 8px;
+  border: 1px solid var(--color-slate-200, #e2e8f0);
+  font-size: 13px;
+}
+
+.ts-wb-add-ex {
+  width: 100%;
+  margin-top: 4px;
+  padding: 10px;
+  border-radius: 10px;
+  border: 1px dashed var(--color-slate-300, #cbd5e1);
+  background: transparent;
+  color: var(--acc, #3b82f6);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+[data-theme="dark"] .ts-strength-mode-btn,
+[data-theme="dark"] .ts-wb-exercise,
+[data-theme="dark"] .ts-wb-duration-input {
+  background: rgba(15, 23, 42, 0.35);
+  border-color: rgba(148, 163, 184, 0.35);
+  color: var(--color-slate-100, #f1f5f9);
+}
+
+[data-theme="dark"] .ts-sm-label,
+[data-theme="dark"] .ts-wb-head {
+  color: var(--color-slate-100, #f1f5f9);
+}
+
 /* === Тип тренировки === */
 .ts-type-section {
   padding: 8px;

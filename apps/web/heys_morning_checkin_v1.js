@@ -324,8 +324,65 @@
   }
 
   let followupOpening = false;
+  let skipReasonOpening = false;
   let lastMealSignalAt = 0;
   let pendingFollowupAfterProductFlow = false;
+
+  function maybeOpenMorningActivationSkipReason(trigger = 'unknown', dateKeyArg) {
+    const _tag = '[MA.skipReason]';
+    if (skipReasonOpening) { console.info(_tag, 'SKIP: already opening', { trigger }); return; }
+    if (!HEYS.StepModal?.show) { console.info(_tag, 'SKIP: no StepModal', { trigger }); return; }
+    if (!HEYS.StepModal?.registry?.morning_activation_skip_reason) { console.info(_tag, 'SKIP: step not registered', { trigger }); return; }
+    if (document.getElementById('heys-step-modal-root')) { console.info(_tag, 'SKIP: modal root exists', { trigger }); return; }
+
+    const currentClientId = getCurrentClientId();
+    if (!currentClientId) { console.info(_tag, 'SKIP: no clientId', { trigger }); return; }
+
+    const dateKey = (typeof dateKeyArg === 'string' && dateKeyArg) ? dateKeyArg : getTodayKey();
+    const dayData = readDayDataMergedForMaFollowup(dateKey);
+    const ma = dayData?.morningActivation || {};
+
+    if (ma.status !== 'missed') { console.info(_tag, 'SKIP: not missed', { maStatus: ma.status, trigger }); return; }
+    if (!ma.skipReasonPending) { console.info(_tag, 'SKIP: not pending reason', { trigger }); return; }
+    if (ma.skipReasonId) { console.info(_tag, 'SKIP: reason already set', { trigger }); return; }
+    if (countMealsWithItems(dayData) < 1) { console.info(_tag, 'SKIP: no meals with items yet', { trigger }); return; }
+
+    const answeredKey = `heys_ma_skip_reason_answered_${currentClientId}_${dateKey}`;
+    try {
+      if (sessionStorage.getItem(answeredKey) === '1') { console.info(_tag, 'SKIP: already answered session', { trigger }); return; }
+    } catch (_) {
+      // ignore
+    }
+
+    console.warn(_tag, 'OPENING skip-reason modal', { trigger, dateKey });
+    skipReasonOpening = true;
+    try {
+      HEYS.StepModal.show({
+        steps: ['morning_activation_skip_reason'],
+        title: 'Зарядка',
+        showProgress: false,
+        showStreak: false,
+        showGreeting: false,
+        showTip: false,
+        allowSwipe: false,
+        context: { dateKey, reason: trigger },
+        onClose: () => {
+          skipReasonOpening = false;
+        },
+        onComplete: () => {
+          try {
+            sessionStorage.setItem(answeredKey, '1');
+          } catch (_) {
+            // ignore
+          }
+          skipReasonOpening = false;
+        }
+      });
+    } catch (e) {
+      skipReasonOpening = false;
+      console.warn(_tag, 'show failed', e);
+    }
+  }
 
   function maybeOpenMorningActivationFollowup(reason = 'unknown') {
     const _tag = '[MA.followup]';
@@ -921,6 +978,7 @@
     // Ignore saves from within the followup itself — status is being persisted, no need to re-check
     if (detail?.source === 'morning-activation-followup') return;
     if (detail?.source === 'morning-activation-sync') return;
+    if (detail?.source === 'morning-activation-skip-reason') return;
     // Only trigger followup if we are inside an active product-add flow.
     // Background sync (local-write, HOT events) must NOT open the modal on their own.
     if (!pendingFollowupAfterProductFlow) return;
@@ -932,6 +990,12 @@
     lastMealSignalAt = Date.now();
     pendingFollowupAfterProductFlow = true;
     console.warn('[MA.event] heysProductAdded — pendingFollowupAfterProductFlow=true');
+    setTimeout(() => maybeOpenMorningActivationSkipReason('product-added'), 240);
+  });
+
+  window.addEventListener('heys:ma-skip-reason-check', (ev) => {
+    const dk = ev && ev.detail && ev.detail.dateKey;
+    setTimeout(() => maybeOpenMorningActivationSkipReason('missed-save', dk), 90);
   });
 
   document.addEventListener('heys-stepmodal-closed', () => {

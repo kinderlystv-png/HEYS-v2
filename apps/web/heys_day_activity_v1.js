@@ -5,6 +5,106 @@
 ; (function (global) {
   const HEYS = global.HEYS = global.HEYS || {};
 
+  const MA_ZONE_SIGS_MONTH = new Set(['8,0,0,0', '8,6,0,0', '4,8,8,2']);
+
+  const MA_SKIP_REASON_LABEL_FALLBACK = {
+    no_time: 'Не было времени',
+    low_mood: 'Плохое настроение или самочувствие',
+    low_energy: 'Мало сил и энергии',
+    other_priority: 'Были другие приоритеты',
+    other: 'Другая причина'
+  };
+
+  function trainingZoneSigMonth(training) {
+    const z = Array.isArray(training?.z) ? training.z : [];
+    return [0, 1, 2, 3].map((i) => Number(z[i]) || 0).join(',');
+  }
+
+  function isMorningActivationTrainingMonth(training) {
+    if (!training || typeof training !== 'object') return false;
+    if (training.source === 'morning_activation') return true;
+    const label = typeof training.activityLabel === 'string' ? training.activityLabel.trim().toLowerCase() : '';
+    if (label === 'зарядка') return true;
+    if (String(training.type) === 'strength' && MA_ZONE_SIGS_MONTH.has(trainingZoneSigMonth(training))) {
+      const raw = typeof training.activityLabel === 'string' ? training.activityLabel.trim() : '';
+      if (!raw) return true;
+    }
+    return false;
+  }
+
+  function getTrainingDisplayLabelMonth(training, trainingType, index) {
+    if (isMorningActivationTrainingMonth(training)) return 'Зарядка';
+    const customLabel = typeof training?.activityLabel === 'string'
+      ? training.activityLabel.trim()
+      : '';
+    return customLabel || trainingType?.label || ('Тренировка ' + (index + 1));
+  }
+
+  function isTrainingSlotUsedMonth(t) {
+    if (!t || typeof t !== 'object') return false;
+    if (t.source === 'morning_activation') return true;
+    const z = Array.isArray(t.z) ? t.z : [];
+    if (z.some((m) => Number(m) > 0)) return true;
+    if (t.type && String(t.type).trim() !== '') return true;
+    return false;
+  }
+
+  function trainingKcalFromZones(tr, kcalMin, r0) {
+    const z = tr.z || [0, 0, 0, 0];
+    return z.reduce((s, min, i) => s + r0((+min || 0) * (kcalMin[i] || 0)), 0);
+  }
+
+  /**
+   * Собирает строки для блока «тренировки за 30 дней» (чтение дней из localStorage).
+   * Утреннюю зарядку (charge / morning_activation) не включаем — она в календаре зарядки выше.
+   * @returns {Array<{ dateKey: string, dateLine: string, typeLabel: string, kcal: number }>}
+   */
+  function collectMonthTrainingRows(params) {
+    const {
+      lsGet,
+      kcalMin = [0, 0, 0, 0],
+      trainingTypes = [],
+      r0: r0In,
+      formatDateDisplay,
+      todayISO,
+      parseISO,
+      fmtDate
+    } = params || {};
+    const r0 = typeof r0In === 'function' ? r0In : (v) => Math.round(v || 0);
+    if (typeof lsGet !== 'function' || typeof todayISO !== 'function' || typeof parseISO !== 'function' || typeof fmtDate !== 'function' || typeof formatDateDisplay !== 'function') {
+      return [];
+    }
+    const safeTypes = Array.isArray(trainingTypes) ? trainingTypes : [];
+    const rows = [];
+    const endD = parseISO(todayISO());
+    if (!endD || isNaN(endD.getTime())) return [];
+
+    for (let i = 0; i < 30; i++) {
+      const d = new Date(endD);
+      d.setDate(d.getDate() - i);
+      const dateKey = fmtDate(d);
+      // Логический ключ «heys_dayv2_DATE»: HEYS.utils.lsGet сам добавит clientId (nsKey).
+      // Нельзя передавать уже префиксованный heys_${cid}_dayv2_ — получится двойной clientId и null.
+      const stored = lsGet('heys_dayv2_' + dateKey, null);
+      if (!stored || typeof stored !== 'object') continue;
+      const trainings = Array.isArray(stored.trainings) ? stored.trainings : [];
+      for (let ti = 0; ti < trainings.length; ti++) {
+        const tr = trainings[ti];
+        if (!isTrainingSlotUsedMonth(tr)) continue;
+        if (isMorningActivationTrainingMonth(tr)) continue;
+        const trainingType = safeTypes.find((item) => item.id === tr.type);
+        const typeLabel = getTrainingDisplayLabelMonth(tr, trainingType, ti);
+        const kcal = trainingKcalFromZones(tr, kcalMin, r0);
+        const fd = formatDateDisplay(dateKey);
+        const dateLine = fd
+          ? (fd.sub ? fd.label + ' · ' + fd.sub : fd.label)
+          : dateKey;
+        rows.push({ dateKey, dateLine, typeLabel, kcal });
+      }
+    }
+    return rows;
+  }
+
   /**
    * Render activity card
    * @param {Object} params - Render parameters
@@ -38,7 +138,9 @@
       dayTargetDef,
       displayOptimum,
       tdee,
-      caloricDebt
+      caloricDebt,
+      monthTrainingsRows,
+      morningActivationCalendarBlock
     } = ctx;
     const safeR0 = typeof r0 === 'function' ? r0 : (v) => Math.round(v || 0);
     const {
@@ -59,6 +161,18 @@
       const household = Array.isArray(day?.householdActivities) ? day.householdActivities : [];
       if (household.some((h) => h && h.source === 'morning_activation')) return true;
       return false;
+    })();
+
+    const showMaSkippedChargeNotice = day?.morningActivation?.status === 'missed' && !hasMorningActivationDone;
+    const maSkipReasonSubtitle = (() => {
+      const id = day?.morningActivation?.skipReasonId;
+      if (!id) return null;
+      const list = HEYS.morningActivationSkipReasons;
+      if (Array.isArray(list) && list.length) {
+        const row = list.find((x) => x && x.id === id);
+        if (row) return row.label;
+      }
+      return MA_SKIP_REASON_LABEL_FALLBACK[id] || null;
     })();
 
     const openMorningActivationQuickAdd = () => {
@@ -310,14 +424,55 @@
         )
       ),
 
+      showMaSkippedChargeNotice && React.createElement('div', {
+        className: 'ma-skip-notice-card compact-card widget-shadow-diary-glass widget-outline-diary-glass',
+        role: 'status'
+      },
+      React.createElement('div', { className: 'ma-skip-notice-row' },
+        React.createElement('span', { className: 'ma-skip-notice-icon', 'aria-hidden': 'true' }, '⚡'),
+        React.createElement('div', { className: 'ma-skip-notice-text' },
+          React.createElement('div', { className: 'ma-skip-notice-title' }, 'Зарядка сегодня не в плане'),
+          React.createElement('div', { className: 'ma-skip-notice-sub' },
+            maSkipReasonSubtitle
+              ? maSkipReasonSubtitle
+              : (day?.morningActivation?.skipReasonPending
+                ? 'После добавления продукта в приём можно коротко отметить причину.'
+                : 'Ты отметил(а), что зарядку сегодня не планируешь.')
+          )
+        )
+      )
+      ),
+
       // Тренировки — компактные
-      trainingsBlock
+      trainingsBlock,
+
+      morningActivationCalendarBlock,
+
+      // Тренировки за последние 30 дней (сводка)
+      React.createElement('div', { className: 'month-trainings-card compact-card widget-shadow-diary-glass widget-outline-diary-glass' },
+        React.createElement('div', { className: 'month-trainings-card-header' },
+          React.createElement('span', { className: 'month-trainings-card-title' }, '📋 Тренировки за 30 дней')
+        ),
+        (!Array.isArray(monthTrainingsRows) || monthTrainingsRows.length === 0)
+          ? React.createElement('div', { className: 'month-trainings-empty' }, 'Нет тренировок за последние 30 дней')
+          : React.createElement('div', { className: 'month-trainings-list' },
+            monthTrainingsRows.map((row, ri) => React.createElement('div', {
+              key: 'mtr-' + ri + '-' + row.dateKey,
+              className: 'month-trainings-row'
+            },
+            React.createElement('span', { className: 'month-trainings-row-date' }, row.dateLine || row.dateKey),
+            React.createElement('span', { className: 'month-trainings-row-type' }, row.typeLabel),
+            React.createElement('span', { className: 'compact-badge train month-trainings-row-kcal' }, (row.kcal || 0) + ' ккал')
+            ))
+          )
+      )
     );
   }
 
   // Export
   HEYS.dayActivity = {
-    render: renderActivityCard
+    render: renderActivityCard,
+    collectMonthTrainingRows
   };
 
 })(window);

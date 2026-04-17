@@ -385,6 +385,34 @@
                             if (!storageMeaningful && isMeaningfulDayData(prevDay)) {
                                 return prevDay;
                             }
+                            const prevUpdatedAt = prevDay?.updatedAt || 0;
+                            if (storageUpdatedAt < prevUpdatedAt) {
+                                console.info('[HEYS.day] ⏭️ Skip storage overlay (LS older than React; unpersisted edit)', {
+                                    source,
+                                    storageUpdatedAt,
+                                    prevUpdatedAt
+                                });
+                                return prevDay;
+                            }
+                            const dayHasStrengthBuilder = (day) => {
+                                try {
+                                    const dhwb = HEYS.dayCalculations && typeof HEYS.dayCalculations.dayHasTrackableWorkoutBuilder === 'function'
+                                        ? HEYS.dayCalculations.dayHasTrackableWorkoutBuilder
+                                        : null;
+                                    if (dhwb && dhwb(day)) return true;
+                                } catch (e) { /* noop */ }
+                                const tr = day?.trainings;
+                                if (!Array.isArray(tr)) return false;
+                                return tr.some((t) => {
+                                    if (!t || String(t.type) !== 'strength') return false;
+                                    if (t.strengthEntryMode === 'workout_builder') return false;
+                                    const wl = t.workoutLog;
+                                    return !!(wl && Array.isArray(wl.exercises) && wl.exercises.length > 0);
+                                });
+                            };
+                            if (dayHasStrengthBuilder(prevDay) && !dayHasStrengthBuilder(newDay)) {
+                                return prevDay;
+                            }
                             const prevMealsCount = (prevDay?.meals || []).length;
                             const shouldSkipOverwrite = isStaleStorage && storageMealsCount < prevMealsCount;
                             if (shouldSkipOverwrite) {

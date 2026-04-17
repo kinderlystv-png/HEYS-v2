@@ -7,6 +7,1287 @@
   const HEYS = global.HEYS = global.HEYS || {};
   const React = global.React;
 
+  /** Как в шаге «Зоны пульса» / настройках профиля (индекс 0…3). */
+  const WB_KCAL_ZONE_LABELS = ['Разминка', 'Жиросжигание', 'Аэробная', 'Анаэробная'];
+
+  function readDayFromStore(dateStr) {
+    const U = HEYS.utils || {};
+    if (typeof U.lsGet !== 'function') return null;
+    let cid = '';
+    try {
+      const prof = U.lsGet('heys_profile', {}) || {};
+      cid = prof.clientId || prof.cid || '';
+    } catch (_) { /* noop */ }
+    const withCid = cid ? U.lsGet('heys_' + cid + '_dayv2_' + dateStr, null) : null;
+    return withCid || U.lsGet('heys_dayv2_' + dateStr, null) || null;
+  }
+
+  function pad2(n) {
+    return n < 10 ? '0' + n : '' + n;
+  }
+
+  function prevCalendarDateParts(y, m, d) {
+    const dt = new Date(y, m - 1, d);
+    dt.setDate(dt.getDate() - 1);
+    return { y: dt.getFullYear(), m: dt.getMonth() + 1, d: dt.getDate() };
+  }
+
+  function dayKeyFromParts(y, m, d) {
+    return y + '-' + pad2(m) + '-' + pad2(d);
+  }
+
+  /** Последние сохранённые вес/подходы/повторы по нормализованному имени (прошлые дни + раньше в этот день). */
+  function findLastExerciseSnapshot(dateKey, norm, curTi, curExi) {
+    const normKey = typeof HEYS.normalizeExerciseName === 'function'
+      ? HEYS.normalizeExerciseName(norm || '')
+      : String(norm || '').trim().toLowerCase().replace(/ё/g, 'е').replace(/\s+/g, ' ');
+    if (!normKey || !dateKey) return null;
+
+    function matchEx(ex) {
+      const n = typeof HEYS.normalizeExerciseName === 'function'
+        ? HEYS.normalizeExerciseName(ex && ex.name ? ex.name : '')
+        : String(ex && ex.name ? ex.name : '').trim().toLowerCase().replace(/ё/g, 'е').replace(/\s+/g, ' ');
+      return n === normKey;
+    }
+
+    function pickFromTrainingList(trainings, beforeTi, beforeExi, sameDay) {
+      let best = null;
+      if (!Array.isArray(trainings)) return null;
+      for (let ti = 0; ti < trainings.length; ti++) {
+        const tr = trainings[ti];
+        if (!tr || String(tr.type) !== 'strength' || tr.strengthEntryMode !== 'workout_builder') continue;
+        const wl = tr.workoutLog;
+        if (!wl || !Array.isArray(wl.exercises)) continue;
+        for (let exi = 0; exi < wl.exercises.length; exi++) {
+          if (sameDay) {
+            if (ti > curTi) continue;
+            if (ti === curTi && exi >= curExi) continue;
+          }
+          const ex = wl.exercises[exi];
+          if (!matchEx(ex)) continue;
+          const score = ti * 1000 + exi;
+          const prevScore = best ? best.ti * 1000 + best.exi : -1;
+          if (score > prevScore) best = { ti: ti, exi: exi, ex: ex };
+        }
+      }
+      return best;
+    }
+
+    const m0 = dateKey.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!m0) return null;
+    let y = +m0[1];
+    let mo = +m0[2];
+    let d = +m0[3];
+
+    for (let iter = 0; iter < 150; iter++) {
+      const prev = prevCalendarDateParts(y, mo, d);
+      y = prev.y;
+      mo = prev.m;
+      d = prev.d;
+      const dk = dayKeyFromParts(y, mo, d);
+      const day = readDayFromStore(dk);
+      const hit = pickFromTrainingList(day && day.trainings, 0, 0, false);
+      if (hit && hit.ex) {
+        const ex = hit.ex;
+        return {
+          sets: ex.sets,
+          reps: ex.reps,
+          weightKg: ex.weightKg != null ? String(ex.weightKg) : '',
+          approaches: Array.isArray(ex.approaches) && ex.approaches.length
+            ? ex.approaches.map(function (a) {
+              return {
+                weightKg: a.weightKg != null ? String(a.weightKg) : '',
+                reps: a.reps != null ? Math.max(1, Math.min(200, parseInt(a.reps, 10) || 1)) : 10
+              };
+            })
+            : null,
+          rpe: ex.rpe != null ? +ex.rpe : 0,
+          note: typeof ex.note === 'string' ? ex.note : ''
+        };
+      }
+    }
+
+    const todayDay = readDayFromStore(dateKey);
+    const hit2 = pickFromTrainingList(todayDay && todayDay.trainings, curTi, curExi, true);
+    if (hit2 && hit2.ex) {
+      const ex = hit2.ex;
+      return {
+        sets: ex.sets,
+        reps: ex.reps,
+        weightKg: ex.weightKg != null ? String(ex.weightKg) : '',
+        approaches: Array.isArray(ex.approaches) && ex.approaches.length
+          ? ex.approaches.map(function (a) {
+            return {
+              weightKg: a.weightKg != null ? String(a.weightKg) : '',
+              reps: a.reps != null ? Math.max(1, Math.min(200, parseInt(a.reps, 10) || 1)) : 10
+            };
+          })
+          : null,
+        rpe: ex.rpe != null ? +ex.rpe : 0,
+        note: typeof ex.note === 'string' ? ex.note : ''
+      };
+    }
+    return null;
+  }
+
+  function calcWorkoutBuilderVolumeKg(wl) {
+    const ex = wl && wl.exercises;
+    if (!Array.isArray(ex)) return 0;
+    let sum = 0;
+    for (let i = 0; i < ex.length; i++) {
+      const e = ex[i];
+      if (Array.isArray(e.approaches) && e.approaches.length > 0) {
+        for (let j = 0; j < e.approaches.length; j++) {
+          const a = e.approaches[j];
+          const w = parseFloat(String(a.weightKg || '').replace(',', '.')) || 0;
+          const reps = +a.reps || 0;
+          if (w > 0 && reps > 0) sum += w * reps;
+        }
+      } else {
+        const w = parseFloat(String(e.weightKg || '').replace(',', '.')) || 0;
+        const sets = +e.sets || 0;
+        const reps = +e.reps || 0;
+        if (w > 0 && sets > 0 && reps > 0) sum += w * sets * reps;
+      }
+    }
+    return sum;
+  }
+
+  /** Синхронные поля sets / reps / weightKg для облака и старых снимков — с первой строки approaches. */
+  function syncLegacyFieldsFromApproaches(row) {
+    const ap = row.approaches;
+    if (!Array.isArray(ap) || ap.length === 0) {
+      return { sets: 1, reps: 10, weightKg: '' };
+    }
+    return {
+      sets: ap.length,
+      reps: Math.max(1, parseInt(ap[0].reps, 10) || 1),
+      weightKg: ap[0].weightKg != null ? String(ap[0].weightKg) : ''
+    };
+  }
+
+  function approachOrdinalRu(i) {
+    return (i + 1) + '-й подход';
+  }
+
+  /** Сколько подходов в упражнении (для превью при свёрнутой карточке). */
+  function approachesCountForExercise(ex) {
+    if (!ex) return 1;
+    if (Array.isArray(ex.approaches) && ex.approaches.length > 0) {
+      return ex.approaches.length;
+    }
+    if (ex.sets != null) {
+      return Math.max(1, parseInt(ex.sets, 10) || 1);
+    }
+    return 1;
+  }
+
+  function approachesCountLabelRu(n) {
+    var n0 = Math.max(1, Math.min(999, parseInt(n, 10) || 1));
+    var nMod100 = n0 % 100;
+    var nMod10 = n0 % 10;
+    if (nMod100 >= 11 && nMod100 <= 19) return String(n0) + ' подходов';
+    if (nMod10 === 1) return String(n0) + ' подход';
+    if (nMod10 >= 2 && nMod10 <= 4) return String(n0) + ' подхода';
+    return String(n0) + ' подходов';
+  }
+
+  function approachesFromStoredExercise(ex) {
+    if (!ex) return [];
+    if (Array.isArray(ex.approaches) && ex.approaches.length > 0) {
+      return ex.approaches.map(function (a) {
+        return {
+          weightKg: a.weightKg != null ? String(a.weightKg) : '',
+          reps: a.reps != null ? Math.max(1, Math.min(200, parseInt(a.reps, 10) || 1)) : 10
+        };
+      });
+    }
+    const sets = ex.sets != null ? Math.max(1, parseInt(ex.sets, 10) || 1) : 1;
+    const reps = ex.reps != null ? Math.max(1, parseInt(ex.reps, 10) || 1) : 10;
+    const w = ex.weightKg != null ? String(ex.weightKg) : '';
+    const out = [];
+    for (let s = 0; s < sets; s++) {
+      out.push({ weightKg: w, reps: reps });
+    }
+    return out;
+  }
+
+  function formatExerciseHistoryLabel(dk, refDateKey) {
+    if (!dk || !refDateKey) return dk || '';
+    if (dk === refDateKey) return 'Сегодня';
+    try {
+      const t1 = new Date(dk + 'T12:00:00').getTime();
+      const t2 = new Date(refDateKey + 'T12:00:00').getTime();
+      const diff = Math.round((t2 - t1) / 86400000);
+      if (diff === 1) return 'Вчера';
+      return new Date(dk + 'T12:00:00').toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
+    } catch (_e) {
+      return dk;
+    }
+  }
+
+  /**
+   * До maxEntries предыдущих тренировок с этим упражнением (по дате одна запись — последняя сессия за день).
+   */
+  function findRecentExerciseUsages(normRaw, refDateKey, curTi, curExi, maxEntries) {
+    const normKey = typeof HEYS.normalizeExerciseName === 'function'
+      ? HEYS.normalizeExerciseName(normRaw || '')
+      : String(normRaw || '').trim().toLowerCase().replace(/ё/g, 'е').replace(/\s+/g, ' ');
+    if (!normKey || !refDateKey) return [];
+
+    function matchEx(ex) {
+      const n = typeof HEYS.normalizeExerciseName === 'function'
+        ? HEYS.normalizeExerciseName(ex && ex.name ? ex.name : '')
+        : String(ex && ex.name ? ex.name : '').trim().toLowerCase().replace(/ё/g, 'е').replace(/\s+/g, ' ');
+      return n === normKey;
+    }
+
+    function lexBefore(dk, ti, exi) {
+      if (dk < refDateKey) return true;
+      if (dk > refDateKey) return false;
+      if (ti < curTi) return true;
+      if (ti > curTi) return false;
+      return exi < curExi;
+    }
+
+    const byDate = new Map();
+
+    function consider(dk, ti, exi, ex) {
+      if (!ex || !matchEx(ex)) return;
+      if (!lexBefore(dk, ti, exi)) return;
+      const score = ti * 1000 + exi;
+      const prev = byDate.get(dk);
+      if (!prev || score > prev.score) {
+        byDate.set(dk, { score: score, ti: ti, exi: exi, ex: ex });
+      }
+    }
+
+    const day0 = readDayFromStore(refDateKey);
+    const tr0 = day0 && day0.trainings;
+    if (Array.isArray(tr0)) {
+      for (let tii = 0; tii < tr0.length; tii++) {
+        const tr = tr0[tii];
+        if (!tr || String(tr.type) !== 'strength' || tr.strengthEntryMode !== 'workout_builder') continue;
+        const wl = tr.workoutLog;
+        if (!wl || !Array.isArray(wl.exercises)) continue;
+        for (let exj = 0; exj < wl.exercises.length; exj++) {
+          consider(refDateKey, tii, exj, wl.exercises[exj]);
+        }
+      }
+    }
+
+    const m0 = refDateKey.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!m0) return [];
+    var y = +m0[1];
+    var mo = +m0[2];
+    var d = +m0[3];
+
+    for (var iter = 0; iter < 180; iter++) {
+      var prevParts = prevCalendarDateParts(y, mo, d);
+      y = prevParts.y;
+      mo = prevParts.m;
+      d = prevParts.d;
+      var dk = dayKeyFromParts(y, mo, d);
+      var day = readDayFromStore(dk);
+      var trList = day && day.trainings;
+      if (Array.isArray(trList)) {
+        for (var tii = 0; tii < trList.length; tii++) {
+          var tr2 = trList[tii];
+          if (!tr2 || String(tr2.type) !== 'strength' || tr2.strengthEntryMode !== 'workout_builder') continue;
+          var wl2 = tr2.workoutLog;
+          if (!wl2 || !Array.isArray(wl2.exercises)) continue;
+          for (var exj = 0; exj < wl2.exercises.length; exj++) {
+            consider(dk, tii, exj, wl2.exercises[exj]);
+          }
+        }
+      }
+    }
+
+    var keys = Array.from(byDate.keys()).sort().reverse();
+    var out = [];
+    for (var i = 0; i < keys.length && out.length < maxEntries; i++) {
+      var dk2 = keys[i];
+      var row = byDate.get(dk2);
+      out.push({
+        dateKey: dk2,
+        label: formatExerciseHistoryLabel(dk2, refDateKey),
+        approaches: approachesFromStoredExercise(row.ex)
+      });
+    }
+    return out;
+  }
+
+  /** Полоска дат прошлых тренировок + раскрытие подходов по клику. */
+  function WorkoutExerciseHistoryStrip(props) {
+    const { exerciseName, dateKey, ti, exi, haptic } = props || {};
+    var _st = React.useState(null);
+    var open = _st[0];
+    var setOpen = _st[1];
+
+    var entries = React.useMemo(function () {
+      return findRecentExerciseUsages(exerciseName, dateKey, ti, exi, 4);
+    }, [exerciseName, dateKey, ti, exi]);
+
+    if (!entries.length) return null;
+
+    var openEntry = open ? entries.find(function (x) { return x.dateKey === open; }) : null;
+
+    var detailEl = null;
+    if (openEntry) {
+      var apList = openEntry.approaches && openEntry.approaches.length > 0 ? openEntry.approaches : null;
+      detailEl = apList
+        ? React.createElement('ul', { className: 'ct-wb-ex-hist-detail' },
+          apList.map(function (a, i) {
+            var w = String(a.weightKg != null ? a.weightKg : '').trim();
+            var r = a.reps != null ? a.reps : '';
+            var wDisp = w || '—';
+            var rDisp = r !== '' ? String(r) : '—';
+            return React.createElement('li', { key: 'hl' + i },
+              (i + 1) + '-й подход: ' + wDisp + ' кг × ' + rDisp + ' повт.'
+            );
+          })
+        )
+        : React.createElement('p', { className: 'ct-wb-ex-hist-empty' }, 'Нет записей по подходам');
+    }
+
+    return React.createElement('div', { className: 'ct-wb-ex-hist' },
+      React.createElement('div', { className: 'ct-wb-ex-hist-head' },
+        React.createElement('span', { className: 'ct-wb-ex-hist-title' }, 'Раньше:'),
+        React.createElement('div', { className: 'ct-wb-ex-hist-chips' },
+          entries.map(function (e) {
+            return React.createElement('button', {
+              key: e.dateKey,
+              type: 'button',
+              className: 'ct-wb-ex-hist-chip' + (open === e.dateKey ? ' is-open' : ''),
+              title: e.dateKey,
+              onClick: function (ev) {
+                ev.stopPropagation();
+                setOpen(open === e.dateKey ? null : e.dateKey);
+                if (typeof haptic === 'function') haptic('light');
+              }
+            }, e.label);
+          })
+        )
+      ),
+      detailEl
+    );
+  }
+
+  /** Снимок из истории: либо готовый массив подходов, либо разворачивание sets×reps×вес. */
+  function buildApproachesFromSnapshot(snap, row) {
+    if (snap.approaches && snap.approaches.length > 0) {
+      return snap.approaches.map(function (a, idx) {
+        return {
+          id: 'ap_snap_' + Date.now() + '_' + idx,
+          weightKg: a.weightKg != null ? String(a.weightKg) : '',
+          reps: a.reps != null ? Math.max(1, Math.min(200, parseInt(a.reps, 10) || 1)) : 10
+        };
+      });
+    }
+    const nSets = snap.sets != null
+      ? Math.max(1, Math.min(50, parseInt(snap.sets, 10) || 1))
+      : Math.max(1, (row.approaches && row.approaches.length) || 1);
+    const r = snap.reps != null ? Math.max(1, Math.min(200, parseInt(snap.reps, 10) || 10)) : 10;
+    const w = snap.weightKg != null && String(snap.weightKg).trim() !== '' ? String(snap.weightKg) : '';
+    const out = [];
+    for (let s = 0; s < nSets; s++) {
+      out.push({
+        id: 'ap_snap_' + Date.now() + '_' + s,
+        weightKg: w,
+        reps: r
+      });
+    }
+    return out;
+  }
+
+  function cleanupSsGroups(exercises) {
+    const counts = {};
+    exercises.forEach(function (e) {
+      const g = +(e.ssGroup || 0);
+      if (g > 0) counts[g] = (counts[g] || 0) + 1;
+    });
+    return exercises.map(function (e) {
+      const g = +(e.ssGroup || 0);
+      if (g > 0 && counts[g] < 2) return { ...e, ssGroup: 0 };
+      return e;
+    });
+  }
+
+  function nextSsGroupId(exercises) {
+    let m = 0;
+    exercises.forEach(function (e) {
+      const g = +(e.ssGroup || 0);
+      if (g > m) m = g;
+    });
+    return m + 1;
+  }
+
+  function mergeSupersetLinks(exercises, fromIdx, toIdx) {
+    const a = exercises.map(function (e) {
+      return { ...e };
+    });
+    if (fromIdx === toIdx) return a;
+    const gA = +(a[fromIdx].ssGroup || 0);
+    const gB = +(a[toIdx].ssGroup || 0);
+    if (gA && gB && gA === gB) {
+      return a;
+    }
+    let target;
+    if (!gA && !gB) {
+      target = nextSsGroupId(exercises);
+    } else if (gA && gB && gA !== gB) {
+      const lo = Math.min(gA, gB);
+      const hi = Math.max(gA, gB);
+      return a.map(function (row) {
+        const g = +(row.ssGroup || 0);
+        const nextG = g === hi ? lo : g;
+        return { ...row, ssGroup: nextG };
+      });
+    } else {
+      target = gA || gB;
+    }
+    return a.map(function (row, i) {
+      if (i === fromIdx || i === toIdx) return { ...row, ssGroup: target };
+      return row;
+    });
+  }
+
+  function reorderExercises(arr, fromIdx, toIdx) {
+    if (fromIdx === toIdx) return arr.slice();
+    const a = arr.slice();
+    const item = a.splice(fromIdx, 1)[0];
+    a.splice(toIdx, 0, item);
+    return a;
+  }
+
+  /**
+   * Переставить упражнение: beforeIdx — позиция «вставить перед» в исходном массиве (0…n).
+   * После удаления элемента целевой индекс в укороченном массиве: beforeIdx > fromIdx → beforeIdx - 1.
+   */
+  function reorderExerciseToBeforeIndex(exercises, fromIdx, beforeIdx) {
+    const a = exercises.slice();
+    const n = a.length;
+    if (fromIdx < 0 || fromIdx >= n || beforeIdx < 0 || beforeIdx > n) return a;
+    const [moved] = a.splice(fromIdx, 1);
+    let toIdx = beforeIdx;
+    if (beforeIdx > fromIdx) toIdx = beforeIdx - 1;
+    toIdx = Math.max(0, Math.min(toIdx, a.length));
+    a.splice(toIdx, 0, moved);
+    return a;
+  }
+
+  function dissolveSsGroupEverywhere(exercises, groupId) {
+    const g = +groupId || 0;
+    if (g <= 0) return exercises.slice();
+    return exercises.map(function (row) {
+      if (+(row.ssGroup || 0) === g) return { ...row, ssGroup: 0 };
+      return row;
+    });
+  }
+
+  /** В dragover getData() часто пустой — храним вид DnD в замыкании модуля. */
+  let wbDndKind = null;
+  let wbDndFrom = null;
+
+  /**
+   * Список упражнений: линия вставки при перетаскивании порядка, drop «перед индексом».
+   */
+  function WorkoutBuilderExerciseList(props) {
+    const {
+      ti,
+      wlLive,
+      dateKey,
+      haptic,
+      patchTraining,
+      ensureWorkoutLogShape,
+      applyWorkoutLogToTraining,
+      wbApproachRepStepper
+    } = props || {};
+    const [insertBefore, setInsertBefore] = React.useState(null);
+    const [ssHover, setSsHover] = React.useState(null);
+    const [reorderDragActive, setReorderDragActive] = React.useState(false);
+    const [ssPickFrom, setSsPickFrom] = React.useState(null);
+    /** По id упражнения: свёрнут блок под шапкой (название, таблица, RPE…). */
+    const [wbExFolded, setWbExFolded] = React.useState({});
+
+    React.useEffect(function () {
+      function clearDnD() {
+        wbDndKind = null;
+        wbDndFrom = null;
+        setInsertBefore(null);
+        setSsHover(null);
+        setReorderDragActive(false);
+      }
+      global.addEventListener('dragend', clearDnD);
+      return function () {
+        global.removeEventListener('dragend', clearDnD);
+      };
+    }, []);
+
+    const exercises = wlLive.exercises;
+    const n = exercises.length;
+    const dk = typeof dateKey === 'string' ? dateKey : '';
+    const out = [];
+
+    for (let exi = 0; exi < n; exi++) {
+      const ex = exercises[exi];
+      if (insertBefore === exi && wbDndKind === 'reorder') {
+        out.push(React.createElement('div', {
+          key: 'wb-ins-' + exi,
+          className: 'ct-wb-ex-drop-line',
+          'aria-hidden': true
+        }));
+      }
+
+      const ssG = +(ex.ssGroup || 0);
+      const ssClass = ssG > 0 ? ' ct-wb-ex-row--ss ct-wb-ss-g' + (((ssG - 1) % 4) + 1) : '';
+      const ssHi = wbDndKind === 'ss' && ssHover === exi;
+      const ssPickHint = ssPickFrom != null && ssPickFrom !== exi;
+      const exRowStableKey = String(ex.id != null ? ex.id : 'exi-' + exi);
+      const isExFolded = !!wbExFolded[exRowStableKey];
+
+      out.push(React.createElement('div', {
+        key: ex.id || 'ex' + exi,
+        className: 'ct-wb-ex-row' + ssClass + (ssHi ? ' ct-wb-ex-row--ss-hover' : '') +
+          (ssPickHint ? ' ct-wb-ex-row--ss-pick-hint' : '') +
+          (isExFolded ? ' ct-wb-ex-row--folded' : ''),
+        onDragOver: function (e) {
+          if (wbDndKind === 'reorder') {
+            e.preventDefault();
+            e.stopPropagation();
+            try {
+              e.dataTransfer.dropEffect = 'move';
+            } catch (err) { /* noop */ }
+            const rect = e.currentTarget.getBoundingClientRect();
+            const mid = rect.top + rect.height / 2;
+            const before = e.clientY < mid ? exi : exi + 1;
+            setInsertBefore(before);
+          } else if (wbDndKind === 'ss') {
+            e.preventDefault();
+            e.stopPropagation();
+            try {
+              e.dataTransfer.dropEffect = 'copy';
+            } catch (err2) { /* noop */ }
+            setSsHover(exi);
+          }
+        },
+        onDragLeave: function (e) {
+          if (wbDndKind === 'ss') {
+            if (!e.currentTarget.contains(e.relatedTarget)) setSsHover(null);
+          }
+        },
+        onDrop: function (e) {
+          e.preventDefault();
+          e.stopPropagation();
+          const raw = e.dataTransfer.getData('text/plain') || '';
+          const rect = e.currentTarget.getBoundingClientRect();
+          const mid = rect.top + rect.height / 2;
+          const beforeIdx = e.clientY < mid ? exi : exi + 1;
+          if (raw.indexOf('heysWbSs:') === 0) {
+            const fromSs = parseInt(raw.split(':')[1], 10);
+            if (fromSs !== exi && !Number.isNaN(fromSs)) {
+              patchTraining(ti, function (t0) {
+                const wl0 = ensureWorkoutLogShape(t0);
+                wl0.exercises = mergeSupersetLinks(wl0.exercises, fromSs, exi);
+                return applyWorkoutLogToTraining(t0, wl0);
+              });
+            }
+            if (typeof haptic === 'function') haptic('medium');
+          } else if (raw.indexOf('heysWbReorder:') === 0 || wbDndKind === 'reorder') {
+            let from = NaN;
+            if (raw.indexOf('heysWbReorder:') === 0) {
+              from = parseInt(raw.split(':')[1], 10);
+            } else if (wbDndFrom != null) {
+              from = wbDndFrom;
+            }
+            if (!Number.isNaN(from)) {
+              patchTraining(ti, function (t0) {
+                const wl0 = ensureWorkoutLogShape(t0);
+                wl0.exercises = reorderExerciseToBeforeIndex(wl0.exercises, from, beforeIdx);
+                return applyWorkoutLogToTraining(t0, wl0);
+              });
+            }
+            if (typeof haptic === 'function') haptic('light');
+          }
+          wbDndKind = null;
+          wbDndFrom = null;
+          setInsertBefore(null);
+          setSsHover(null);
+        }
+      },
+      React.createElement('div', { className: 'ct-wb-ex-head' },
+        React.createElement('button', {
+          type: 'button',
+          className: 'ct-wb-ex-drag-order',
+          title: 'Перетащить — порядок упражнений',
+          'aria-label': 'Перетащить порядок',
+          draggable: true,
+          onDragStart: function (e) {
+            e.stopPropagation();
+            setSsPickFrom(null);
+            wbDndKind = 'reorder';
+            wbDndFrom = exi;
+            setReorderDragActive(true);
+            try {
+              e.dataTransfer.setData('text/plain', 'heysWbReorder:' + exi);
+              e.dataTransfer.effectAllowed = 'move';
+            } catch (err) { /* noop */ }
+          },
+          onClick: function (e) {
+            e.stopPropagation();
+          }
+        }, '⠿'),
+        React.createElement('span', { className: 'ct-wb-ex-num ct-wb-ex-num--full' }, 'Упражнение ' + (exi + 1)),
+        React.createElement('button', {
+          type: 'button',
+          className: 'ct-wb-ex-drag-ss ct-wb-ex-fold-toggle' + (isExFolded ? ' is-collapsed' : ''),
+          title: isExFolded ? 'Развернуть блок упражнения' : 'Свернуть блок упражнения',
+          'aria-expanded': !isExFolded,
+          'aria-label': isExFolded ? 'Развернуть' : 'Свернуть',
+          onClick: function (e) {
+            e.stopPropagation();
+            e.preventDefault();
+            if (typeof haptic === 'function') haptic('light');
+            setWbExFolded(function (prev) {
+              var next = { ...prev };
+              next[exRowStableKey] = !prev[exRowStableKey];
+              return next;
+            });
+          }
+        }, isExFolded ? 'Развернуть' : 'Свернуть'),
+        React.createElement('span', { className: 'ct-wb-ex-head-spacer' }),
+        React.createElement('span', { className: 'ct-wb-ex-ss-wrap' },
+          React.createElement('button', {
+            type: 'button',
+            className: 'ct-wb-ex-drag-ss' + (ssPickFrom === exi ? ' is-picking' : ''),
+            title: ssPickFrom === exi
+              ? 'Выбери второе упражнение (СС) или отмени'
+              : 'Супerset: нажми, затем на СС другого упражнения — или перетащи на карточку',
+            'aria-label': 'Суперсет',
+            draggable: true,
+            onDragStart: function (e) {
+              e.stopPropagation();
+              setSsPickFrom(null);
+              wbDndKind = 'ss';
+              wbDndFrom = exi;
+              try {
+                e.dataTransfer.setData('text/plain', 'heysWbSs:' + exi);
+                e.dataTransfer.effectAllowed = 'copy';
+              } catch (err) { /* noop */ }
+            },
+            onClick: function (e) {
+              e.stopPropagation();
+              e.preventDefault();
+              if (ssPickFrom == null) {
+                setSsPickFrom(exi);
+                if (typeof haptic === 'function') haptic('light');
+                return;
+              }
+              if (ssPickFrom === exi) {
+                setSsPickFrom(null);
+                return;
+              }
+              const partner = ssPickFrom;
+              setSsPickFrom(null);
+              patchTraining(ti, function (t0) {
+                const wl0 = ensureWorkoutLogShape(t0);
+                wl0.exercises = mergeSupersetLinks(wl0.exercises, partner, exi);
+                return applyWorkoutLogToTraining(t0, wl0);
+              });
+              if (typeof haptic === 'function') haptic('medium');
+            }
+          }, 'СС'),
+          ssPickFrom === exi && React.createElement('button', {
+            type: 'button',
+            className: 'ct-wb-ex-ss-pick-cancel',
+            title: 'Отменить выбор',
+            'aria-label': 'Отменить выбор суперсета',
+            onClick: function (e) {
+              e.stopPropagation();
+              e.preventDefault();
+              setSsPickFrom(null);
+              if (typeof haptic === 'function') haptic('light');
+            }
+          }, '✕')
+        ),
+        exercises.length > 1 && React.createElement('button', {
+          type: 'button',
+          className: 'ct-wb-ex-remove',
+          onClick: (e) => {
+            e.stopPropagation();
+            if (typeof haptic === 'function') haptic('light');
+            patchTraining(ti, (t0) => {
+              const wl0 = ensureWorkoutLogShape(t0);
+              wl0.exercises = wl0.exercises.filter((_, j) => j !== exi);
+              if (wl0.exercises.length === 0) {
+                wl0.exercises = [{
+                  id: 'ex_' + Date.now(),
+                  name: '',
+                  approaches: [{ id: 'ap_' + Date.now(), weightKg: '', reps: 10 }],
+                  note: '',
+                  ssGroup: 0,
+                  rpe: 0
+                }];
+              }
+              return applyWorkoutLogToTraining(t0, wl0);
+            });
+          }
+        }, '✕')
+      ),
+      isExFolded && (function () {
+        var apN = approachesCountForExercise(ex);
+        var nameDisp = String(ex.name || '').trim();
+        return React.createElement('div', { className: 'ct-wb-ex-name-folded' },
+          React.createElement('span', {
+            className: 'ct-wb-ex-name-folded-text',
+            title: nameDisp || 'Без названия'
+          }, nameDisp || 'Без названия'),
+          React.createElement('span', {
+            className: 'ct-wb-ex-name-folded-cnt',
+            'aria-label': approachesCountLabelRu(apN)
+          }, approachesCountLabelRu(apN))
+        );
+      })(),
+      !isExFolded && React.createElement(WorkoutExerciseNameField, {
+        key: 'wb-ex-name-' + exi,
+        listId: 'wb-ex-suggest-' + ti + '-' + exi,
+        focusTargetId: 'wb-ex-weight-' + ti + '-' + exi + '-0',
+        value: ex.name,
+        haptic: haptic,
+        onChange: function (v) {
+          patchTraining(ti, function (t0) {
+            const wl0 = ensureWorkoutLogShape(t0);
+            wl0.exercises = wl0.exercises.map(function (row, j) {
+              return j === exi ? { ...row, name: v } : row;
+            });
+            return applyWorkoutLogToTraining(t0, wl0);
+          });
+        },
+        onPick: function (picked) {
+          if (typeof HEYS.bumpExerciseUsage === 'function') {
+            HEYS.bumpExerciseUsage(picked);
+          }
+          const norm = typeof HEYS.normalizeExerciseName === 'function'
+            ? HEYS.normalizeExerciseName(picked)
+            : String(picked || '').trim().toLowerCase().replace(/ё/g, 'е').replace(/\s+/g, ' ');
+          const snap = dk && norm ? findLastExerciseSnapshot(dk, norm, ti, exi) : null;
+          if (!snap) return;
+          patchTraining(ti, function (t0) {
+            const wl0 = ensureWorkoutLogShape(t0);
+            wl0.exercises = wl0.exercises.map(function (row, j) {
+              if (j !== exi) return row;
+              const apNew = buildApproachesFromSnapshot(snap, row);
+              const merged = {
+                ...row,
+                name: picked,
+                approaches: apNew,
+                rpe: snap.rpe > 0 ? snap.rpe : row.rpe,
+                note: snap.note && String(snap.note).trim() ? snap.note : row.note
+              };
+              const leg = syncLegacyFieldsFromApproaches(merged);
+              return { ...merged, ...leg };
+            });
+            return applyWorkoutLogToTraining(t0, wl0);
+          });
+        }
+      }),
+      !isExFolded && React.createElement(WorkoutExerciseHistoryStrip, {
+        key: 'wb-ex-hist-' + ti + '-' + exi,
+        exerciseName: ex.name,
+        dateKey: dk,
+        ti: ti,
+        exi: exi,
+        haptic: haptic
+      }),
+      !isExFolded && (function () {
+        const approaches = Array.isArray(ex.approaches) && ex.approaches.length
+          ? ex.approaches
+          : [{ id: 'ap_fallback', weightKg: ex.weightKg != null ? String(ex.weightKg) : '', reps: ex.reps != null ? +ex.reps : 10 }];
+        return React.createElement('div', { className: 'ct-wb-ex-ap-table' },
+          React.createElement('div', { className: 'ct-wb-ex-ap-head', 'aria-hidden': true },
+            React.createElement('span', { className: 'ct-wb-ex-ap-h' }, 'Подход'),
+            React.createElement('span', { className: 'ct-wb-ex-ap-h' }, 'Вес'),
+            React.createElement('span', { className: 'ct-wb-ex-ap-h' }, 'Повторы')
+          ),
+          approaches.map(function (ap, api) {
+            return React.createElement('div', {
+              key: ap.id || 'wb-ap-' + ti + '-' + exi + '-' + api,
+              className: 'ct-wb-ex-ap-row'
+            },
+            React.createElement('div', { className: 'ct-wb-ex-ap-cell ct-wb-ex-ap-cell--label' },
+              React.createElement('span', { className: 'ct-wb-ex-ap-num' }, approachOrdinalRu(api)),
+              approaches.length > 1 && React.createElement('button', {
+                type: 'button',
+                className: 'ct-wb-ex-ap-remove',
+                title: 'Убрать подход',
+                'aria-label': 'Убрать ' + approachOrdinalRu(api),
+                onClick: function (e) {
+                  e.stopPropagation();
+                  if (typeof haptic === 'function') haptic('light');
+                  patchTraining(ti, function (t0) {
+                    const wl0 = ensureWorkoutLogShape(t0);
+                    wl0.exercises = wl0.exercises.map(function (row, j) {
+                      if (j !== exi) return row;
+                      const ap2 = (row.approaches || []).slice();
+                      if (ap2.length <= 1) return row;
+                      ap2.splice(api, 1);
+                      const merged = { ...row, approaches: ap2 };
+                      return { ...merged, ...syncLegacyFieldsFromApproaches(merged) };
+                    });
+                    return applyWorkoutLogToTraining(t0, wl0);
+                  });
+                }
+              }, '×')
+            ),
+            React.createElement('label', { className: 'ct-wb-ex-ap-cell ct-wb-ex-ap-cell--weight' },
+              React.createElement('input', {
+                type: 'text',
+                id: 'wb-ex-weight-' + ti + '-' + exi + '-' + api,
+                className: 'ct-wb-mini-inp',
+                placeholder: 'кг',
+                inputMode: 'decimal',
+                enterKeyHint: 'done',
+                autoComplete: 'off',
+                value: ap.weightKg != null ? String(ap.weightKg) : '',
+                onClick: function (e) { e.stopPropagation(); },
+                onChange: function (e) {
+                  const v = e.target.value;
+                  patchTraining(ti, function (t0) {
+                    const wl0 = ensureWorkoutLogShape(t0);
+                    wl0.exercises = wl0.exercises.map(function (row, j) {
+                      if (j !== exi) return row;
+                      const ap3 = (row.approaches || []).slice();
+                      if (!ap3[api]) return row;
+                      ap3[api] = { ...ap3[api], weightKg: v };
+                      const merged = { ...row, approaches: ap3 };
+                      return { ...merged, ...syncLegacyFieldsFromApproaches(merged) };
+                    });
+                    return applyWorkoutLogToTraining(t0, wl0);
+                  });
+                }
+              })
+            ),
+            React.createElement('div', { className: 'ct-wb-ex-ap-cell ct-wb-ex-ap-cell--reps' },
+              wbApproachRepStepper(ti, exi, api, Math.max(1, parseInt(ap.reps, 10) || 1), 1, 200)
+            )
+            );
+          }),
+          React.createElement('button', {
+            type: 'button',
+            className: 'ct-wb-add-approach-btn',
+            onClick: function (e) {
+              e.stopPropagation();
+              if (typeof haptic === 'function') haptic('light');
+              const nextIdx = approaches.length;
+              patchTraining(ti, function (t0) {
+                const wl0 = ensureWorkoutLogShape(t0);
+                wl0.exercises = wl0.exercises.map(function (row, j) {
+                  if (j !== exi) return row;
+                  const ap4 = (row.approaches && row.approaches.length ? row.approaches.slice() : [{ id: 'ap0', weightKg: '', reps: 10 }]);
+                  const lastAp = ap4[ap4.length - 1];
+                  const lastReps = lastAp ? Math.max(1, parseInt(lastAp.reps, 10) || 10) : 10;
+                  const lastW = lastAp && lastAp.weightKg != null ? String(lastAp.weightKg) : '';
+                  ap4.push({
+                    id: 'ap_' + Date.now(),
+                    weightKg: lastW,
+                    reps: lastReps
+                  });
+                  const merged = { ...row, approaches: ap4 };
+                  return { ...merged, ...syncLegacyFieldsFromApproaches(merged) };
+                });
+                return applyWorkoutLogToTraining(t0, wl0);
+              });
+              global.requestAnimationFrame(function () {
+                global.requestAnimationFrame(function () {
+                  var el = document.getElementById('wb-ex-weight-' + ti + '-' + exi + '-' + nextIdx);
+                  if (el && typeof el.focus === 'function') el.focus();
+                });
+              });
+            }
+          }, '+ Добавить подход')
+        );
+      })(),
+      !isExFolded && React.createElement('div', { className: 'ct-wb-ex-meta' },
+        React.createElement('div', { className: 'ct-wb-ex-rpe-row' },
+          React.createElement('span', { className: 'ct-wb-ex-rpe-label' }, 'RPE'),
+          [6, 7, 8, 9, 10].map(function (num) {
+            return React.createElement('button', {
+              type: 'button',
+              key: 'rpe-' + ti + '-' + exi + '-' + num,
+              className: 'ct-wb-ex-rpe-chip' + ((ex.rpe || 0) === num ? ' is-on' : ''),
+              onClick: function (e) {
+                e.stopPropagation();
+                patchTraining(ti, function (t0) {
+                  const wl0 = ensureWorkoutLogShape(t0);
+                  wl0.exercises = wl0.exercises.map(function (row, j) {
+                    if (j !== exi) return row;
+                    const nextR = (row.rpe || 0) === num ? 0 : num;
+                    return { ...row, rpe: nextR };
+                  });
+                  return applyWorkoutLogToTraining(t0, wl0);
+                });
+                if (typeof haptic === 'function') haptic('light');
+              }
+            }, String(num));
+          })
+        ),
+        React.createElement('input', {
+          type: 'text',
+          className: 'ct-wb-ex-note-inp',
+          placeholder: 'Заметка к упражнению',
+          value: ex.note || '',
+          onClick: function (e) {
+            e.stopPropagation();
+          },
+          onChange: function (e) {
+            const v = e.target.value;
+            patchTraining(ti, function (t0) {
+              const wl0 = ensureWorkoutLogShape(t0);
+              wl0.exercises = wl0.exercises.map(function (row, j) {
+                return j === exi ? { ...row, note: v } : row;
+              });
+              return applyWorkoutLogToTraining(t0, wl0);
+            });
+          }
+        })
+      )
+    ));
+
+      if (exi < n - 1) {
+        const gHere = +(exercises[exi].ssGroup || 0);
+        const gNext = +(exercises[exi + 1].ssGroup || 0);
+        if (gHere > 0 && gHere === gNext) {
+          const gColor = ((gHere - 1) % 4) + 1;
+          out.push(React.createElement('div', {
+            key: 'ss-conn-' + exi,
+            className: 'ct-wb-ex-ss-connector ct-wb-ss-conn-g' + gColor
+          },
+          React.createElement('span', { className: 'ct-wb-ex-ss-arrows', 'aria-hidden': true }, '⇄'),
+          React.createElement('button', {
+            type: 'button',
+            className: 'ct-wb-ex-ss-break',
+            title: 'Разъединить суперсет (все упражнения этой группы)',
+            'aria-label': 'Разъединить суперсет',
+            onClick: function (e) {
+              e.stopPropagation();
+              e.preventDefault();
+              patchTraining(ti, function (t0) {
+                const wl0 = ensureWorkoutLogShape(t0);
+                wl0.exercises = dissolveSsGroupEverywhere(wl0.exercises, gHere);
+                return applyWorkoutLogToTraining(t0, wl0);
+              });
+              if (typeof haptic === 'function') haptic('light');
+            }
+          }, '✕')
+          ));
+        }
+      }
+    }
+
+    if (insertBefore === n && wbDndKind === 'reorder') {
+      out.push(React.createElement('div', {
+        key: 'wb-ins-end',
+        className: 'ct-wb-ex-drop-line',
+        'aria-hidden': true
+      }));
+    }
+
+    return React.createElement('div', {
+      className: 'ct-wb-ex-list' + (reorderDragActive ? ' ct-wb-ex-list--reorder-drag' : '')
+    }, out);
+  }
+
+  /** Силовая (конструктор): квадратная кнопка по центру шапки — свернуть/развернуть тело карточки. */
+  function CollapsibleWorkoutBuilderTrainingCard(props) {
+    const {
+      cardClassName,
+      haptic,
+      openTrainingPicker,
+      trainingIndex,
+      headerIconChar,
+      titleBoxEl,
+      timeEl,
+      rightGroupEl,
+      foldedContentEl,
+      footerEl,
+      commentEl
+    } = props || {};
+    const [collapsed, setCollapsed] = React.useState(false);
+    const startSlot = React.createElement('div', { className: 'compact-train-header-start' },
+      React.createElement('span', { className: 'compact-train-icon' }, headerIconChar),
+      titleBoxEl
+    );
+    const foldBtn = React.createElement('button', {
+      type: 'button',
+      className: 'compact-train-fold-btn' + (collapsed ? ' is-collapsed' : ''),
+      title: collapsed ? 'Развернуть дневник' : 'Свернуть дневник',
+      'aria-expanded': !collapsed,
+      onClick: (e) => {
+        e.stopPropagation();
+        if (typeof haptic === 'function') haptic('light');
+        setCollapsed((c) => !c);
+      }
+    },
+    React.createElement('svg', {
+      className: 'compact-train-fold-svg',
+      width: 16,
+      height: 16,
+      viewBox: '0 0 24 24',
+      fill: 'none',
+      xmlns: 'http://www.w3.org/2000/svg',
+      'aria-hidden': true
+    },
+    React.createElement('path', {
+      d: 'M6 9l6 6 6-6',
+      stroke: 'currentColor',
+      strokeWidth: '2.2',
+      strokeLinecap: 'round',
+      strokeLinejoin: 'round'
+    }))
+    );
+    const endSlot = React.createElement('div', { className: 'compact-train-header-end' },
+      timeEl || null,
+      rightGroupEl
+    );
+    return React.createElement('div', {
+      className: cardClassName + (collapsed ? ' compact-train--wb-collapsed' : '')
+    },
+    React.createElement('div', {
+      className: 'compact-train-header compact-train-header--with-fold',
+      onClick: () => openTrainingPicker && openTrainingPicker(trainingIndex)
+    }, startSlot, foldBtn, endSlot),
+    !collapsed && React.createElement('div', { className: 'ct-wb-training-scale' },
+      foldedContentEl,
+      footerEl,
+      commentEl
+    )
+    );
+  }
+
+  /** Название упражнения: подсказки из HEYS.exerciseCatalog + частота (LS). */
+  function WorkoutExerciseNameField(props) {
+    const {
+      value,
+      onChange,
+      onPick,
+      listId,
+      haptic,
+      focusTargetId
+    } = props || {};
+    const [open, setOpen] = React.useState(false);
+    const [activeIdx, setActiveIdx] = React.useState(0);
+    const [favTick, setFavTick] = React.useState(0);
+    const blurTimerRef = React.useRef(null);
+
+    React.useEffect(function () {
+      setActiveIdx(0);
+    }, [value]);
+
+    const suggestions = React.useMemo(function () {
+      const fn = HEYS.getExerciseSuggestions;
+      if (typeof fn === 'function') {
+        try {
+          return fn(value || '', 12);
+        } catch (err) {
+          console.warn('[HEYS.dayTrainings] getExerciseSuggestions', err);
+        }
+      }
+      const cat = HEYS.exerciseCatalog;
+      if (!Array.isArray(cat) || cat.length === 0) return [];
+      const q = String(value || '')
+        .trim()
+        .toLowerCase()
+        .replace(/ё/g, 'е');
+      const normFn = typeof HEYS.normalizeExerciseName === 'function' ? HEYS.normalizeExerciseName : null;
+      if (!q) {
+        return cat.slice(0, 12).map(function (c) {
+          const norm = normFn ? normFn(c.name) : String(c.name || '').trim().toLowerCase().replace(/ё/g, 'е').replace(/\s+/g, ' ');
+          return {
+            name: c.name,
+            rank: c.rank,
+            norm: norm,
+            favorite: typeof HEYS.isExerciseFavoriteNorm === 'function' && norm ? HEYS.isExerciseFavoriteNorm(norm) : false
+          };
+        });
+      }
+      const out = [];
+      for (let i = 0; i < cat.length && out.length < 12; i++) {
+        const n = String(cat[i].name || '')
+          .toLowerCase()
+          .replace(/ё/g, 'е');
+        if (n.indexOf(q) >= 0) {
+          const norm = normFn ? normFn(cat[i].name) : n.replace(/\s+/g, ' ');
+          out.push({
+            name: cat[i].name,
+            rank: cat[i].rank,
+            norm: norm,
+            favorite: typeof HEYS.isExerciseFavoriteNorm === 'function' && norm ? HEYS.isExerciseFavoriteNorm(norm) : false
+          });
+        }
+      }
+      return out;
+    }, [value, favTick]);
+
+    const commitPick = function (name) {
+      if (blurTimerRef.current) {
+        clearTimeout(blurTimerRef.current);
+        blurTimerRef.current = null;
+      }
+      if (typeof onPick === 'function') onPick(name);
+      if (typeof haptic === 'function') haptic('light');
+      setOpen(false);
+      onChange(name);
+      if (focusTargetId) {
+        function tryFocusWeight() {
+          var el = document.getElementById(focusTargetId);
+          if (el && typeof el.focus === 'function') el.focus();
+        }
+        requestAnimationFrame(function () {
+          requestAnimationFrame(tryFocusWeight);
+        });
+        setTimeout(tryFocusWeight, 120);
+      }
+    };
+
+    const onInputChange = function (e) {
+      onChange(e.target.value);
+      setOpen(true);
+    };
+
+    const onKeyDown = function (e) {
+      if (!open || suggestions.length === 0) return;
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setActiveIdx(function (i) {
+          return Math.min(suggestions.length - 1, i + 1);
+        });
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setActiveIdx(function (i) {
+          return Math.max(0, i - 1);
+        });
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        const s = suggestions[activeIdx];
+        if (s) commitPick(s.name);
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        setOpen(false);
+      }
+    };
+
+    const nameNorm = typeof HEYS.normalizeExerciseName === 'function'
+      ? HEYS.normalizeExerciseName(value || '')
+      : String(value || '').trim().toLowerCase().replace(/ё/g, 'е').replace(/\s+/g, ' ');
+    const headerIsFav = !!(nameNorm && typeof HEYS.isExerciseFavoriteNorm === 'function' && HEYS.isExerciseFavoriteNorm(nameNorm));
+
+    return React.createElement('div', { className: 'ct-wb-ex-name-wrap' },
+      React.createElement('div', { className: 'ct-wb-ex-name-row' },
+        React.createElement('input', {
+          type: 'text',
+          className: 'ct-wb-ex-name',
+          placeholder: 'Название — поиск по каталогу',
+          autoComplete: 'off',
+          role: 'combobox',
+          'aria-expanded': open && suggestions.length > 0,
+          'aria-controls': listId,
+          'aria-autocomplete': 'list',
+          value: value,
+          onClick: function (e) {
+            e.stopPropagation();
+          },
+          onFocus: function (e) {
+            e.stopPropagation();
+            if (blurTimerRef.current) {
+              clearTimeout(blurTimerRef.current);
+              blurTimerRef.current = null;
+            }
+            setOpen(true);
+          },
+          onBlur: function () {
+            blurTimerRef.current = global.setTimeout(function () {
+              setOpen(false);
+              blurTimerRef.current = null;
+            }, 180);
+          },
+          onChange: function (e) {
+            e.stopPropagation();
+            onInputChange(e);
+          },
+          onKeyDown: function (e) {
+            e.stopPropagation();
+            onKeyDown(e);
+          }
+        }),
+        React.createElement('button', {
+          type: 'button',
+          className: 'ct-wb-ex-name-header-fav' + (headerIsFav ? ' is-on' : ''),
+          title: headerIsFav ? 'Убрать из избранного' : 'В избранное',
+          'aria-label': headerIsFav ? 'Убрать из избранного' : 'В избранное',
+          onClick: function (e) {
+            e.stopPropagation();
+            e.preventDefault();
+            var nm = String(value || '').trim();
+            if (!nm) return;
+            if (typeof HEYS.toggleExerciseFavorite === 'function') {
+              HEYS.toggleExerciseFavorite(nm);
+              setFavTick(function (t) {
+                return t + 1;
+              });
+            }
+            if (typeof haptic === 'function') haptic('light');
+          }
+        }, headerIsFav ? '★' : '☆')
+      ),
+      open && suggestions.length > 0 && React.createElement('ul', {
+        id: listId,
+        className: 'ct-wb-ex-name-suggest',
+        role: 'listbox',
+        onMouseDown: function (e) {
+          e.preventDefault();
+        },
+        onClick: function (e) {
+          e.stopPropagation();
+        }
+      }, suggestions.map(function (item, idx) {
+        const isFav = item.favorite || (typeof HEYS.isExerciseFavoriteNorm === 'function' && item.norm && HEYS.isExerciseFavoriteNorm(item.norm));
+        const starEl = React.createElement('button', {
+          type: 'button',
+          className: 'ct-wb-ex-name-suggest-fav' + (isFav ? ' is-on' : ''),
+          title: isFav ? 'Убрать из избранного' : 'В избранное',
+          'aria-label': isFav ? 'Убрать из избранного' : 'В избранное',
+          onMouseDown: function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            if (typeof HEYS.toggleExerciseFavorite === 'function') {
+              HEYS.toggleExerciseFavorite(item.name);
+              setFavTick(function (t) {
+                return t + 1;
+              });
+            }
+            if (typeof haptic === 'function') haptic('light');
+          }
+        }, isFav ? '★' : '☆');
+        const labelEl = React.createElement('span', {
+          className: 'ct-wb-ex-name-suggest-label',
+          onMouseDown: function (e) {
+            e.preventDefault();
+            commitPick(item.name);
+          }
+        }, item.name);
+        return React.createElement('li', {
+          key: (item.name || '') + '_' + idx,
+          role: 'option',
+          className: 'ct-wb-ex-name-suggest-item' + (idx === activeIdx ? ' is-active' : ''),
+          'aria-selected': idx === activeIdx,
+          onMouseEnter: function () {
+            setActiveIdx(idx);
+          }
+        }, labelEl, starEl);
+      }))
+    );
+  }
+
   function renderTrainingsBlock(params) {
     if (!React) return null;
 
@@ -25,7 +1306,8 @@
       kcalMin,
       kcalPerMin,
       weight,
-      r0
+      r0,
+      dateKey
     } = params || {};
 
     const safeR0 = typeof r0 === 'function' ? r0 : (v) => Math.round(v || 0);
@@ -62,6 +1344,23 @@
 
     function getTrainingDisplayMeta(displayLabel, trainingType, training) {
       if (isMorningActivationTraining(training)) return '';
+      const wl = training?.workoutLog;
+      if (
+        training?.strengthEntryMode === 'workout_builder' &&
+        wl &&
+        Array.isArray(wl.exercises) &&
+        wl.exercises.length
+      ) {
+        const vol = calcWorkoutBuilderVolumeKg(wl);
+        let volBit = '';
+        if (vol > 0) {
+          volBit =
+            vol >= 1000
+              ? ' · ~' + (vol / 1000).toFixed(1).replace(/\.0$/, '') + ' т объёма'
+              : ' · ~' + Math.round(vol) + ' кг объёма';
+        }
+        return 'Конструктор · ' + wl.exercises.length + ' упр.' + volBit;
+      }
       const baseLabel = trainingType?.label || '';
       if (!displayLabel || !baseLabel) return '';
       return displayLabel.toLowerCase() === baseLabel.toLowerCase() ? '' : baseLabel;
@@ -177,6 +1476,257 @@
       });
     };
 
+    function isStrengthWorkoutBuilder(t) {
+      if (String(t.type) !== 'strength') return false;
+      if (t.strengthEntryMode === 'workout_builder') return true;
+      const wl = t.workoutLog;
+      return !!(wl && typeof wl === 'object' && Array.isArray(wl.exercises) && wl.exercises.length > 0);
+    }
+
+    /** Силовая по зонам без дневника — можно включить конструктор без пересоздания тренировки */
+    function canOfferWorkoutBuilderOnCard(t) {
+      if (!t || String(t.type) !== 'strength') return false;
+      if (t.strengthEntryMode === 'workout_builder') return false;
+      const wl = t.workoutLog;
+      if (wl && Array.isArray(wl.exercises) && wl.exercises.length > 0) return false;
+      return true;
+    }
+
+    function clampWbZoneMin(n) {
+      return Math.max(0, Math.min(180, Math.round(Number(n) || 0)));
+    }
+
+    /** Минуты по зонам пульса для MET/ккал (heys_iw_utils.calculateTrainingKcal). */
+    function normalizeWorkoutLogZoneMinutes(raw, training) {
+      const rawZm = raw && Array.isArray(raw.zoneMinutes) ? raw.zoneMinutes : null;
+      if (rawZm && rawZm.length >= 4) {
+        return [0, 1, 2, 3].map((i) => clampWbZoneMin(rawZm[i]));
+      }
+      const tz = Array.isArray(training?.z) ? training.z : [];
+      if (tz.length >= 4 && [0, 1, 2, 3].some((i) => +tz[i] > 0)) {
+        return [0, 1, 2, 3].map((i) => clampWbZoneMin(tz[i]));
+      }
+      const dur = Math.round(Number(raw && raw.totalDurationMinutes));
+      if (Number.isFinite(dur) && dur > 0) {
+        const m = Math.max(1, Math.min(180, dur));
+        return [0, m, 0, 0];
+      }
+      return [0, 1, 0, 0];
+    }
+
+    function enableStrengthWorkoutBuilderOnCard(ti) {
+      if (typeof haptic === 'function') haptic('light');
+      patchTraining(ti, (t0) => {
+        const z0 = Array.isArray(t0.z) ? t0.z : [0, 0, 0, 0];
+        const sumMin = z0.reduce((s, m) => s + (+m || 0), 0);
+        const zoneMinutes = sumMin > 0
+          ? [0, 1, 2, 3].map((i) => clampWbZoneMin(z0[i]))
+          : [0, Math.max(1, Math.min(180, 45)), 0, 0];
+        const wl = {
+          version: 1,
+          zoneMinutes: zoneMinutes.slice(),
+          totalDurationMinutes: zoneMinutes.reduce((s, v) => s + (+v || 0), 0),
+          exercises: [{
+            id: 'ex_' + Date.now(),
+            name: '',
+            approaches: [{ id: 'ap_' + Date.now(), weightKg: '', reps: 10 }],
+            note: '',
+            ssGroup: 0,
+            rpe: 0
+          }]
+        };
+        return {
+          ...t0,
+          type: 'strength',
+          strengthEntryMode: 'workout_builder',
+          workoutLog: wl,
+          z: zoneMinutes.slice()
+        };
+      });
+    }
+
+    function ensureWorkoutLogShape(t) {
+      const raw = t.workoutLog || {};
+      const zoneMinutes = normalizeWorkoutLogZoneMinutes(raw, t);
+      let exercises = Array.isArray(raw.exercises) ? raw.exercises.slice() : [];
+      if (exercises.length === 0) {
+        exercises = [{
+          id: 'ex_0',
+          name: '',
+          approaches: [{ id: 'ap_0_0', weightKg: '', reps: 10 }],
+          note: '',
+          ssGroup: 0,
+          rpe: 0
+        }];
+      }
+      exercises = exercises.map((e, i) => {
+        const base = {
+          id: e.id || 'ex_' + i,
+          name: String(e.name || ''),
+          note: typeof e.note === 'string' ? e.note : '',
+          ssGroup: e.ssGroup != null ? Math.max(0, parseInt(e.ssGroup, 10) || 0) : 0,
+          rpe: e.rpe != null ? Math.max(0, Math.min(10, parseInt(e.rpe, 10) || 0)) : 0
+        };
+        let approaches = Array.isArray(e.approaches) && e.approaches.length > 0
+          ? e.approaches.map((a, ai) => ({
+            id: a.id || 'ap_' + i + '_' + ai,
+            weightKg: a.weightKg != null ? String(a.weightKg) : '',
+            reps: a.reps != null ? Math.max(1, Math.min(200, parseInt(a.reps, 10) || 1)) : 10
+          }))
+          : null;
+        if (!approaches || approaches.length === 0) {
+          const legacySets = e.sets != null ? Math.max(1, parseInt(e.sets, 10) || 1) : 1;
+          const legacyReps = e.reps != null ? Math.max(1, parseInt(e.reps, 10) || 1) : 10;
+          const legacyW = e.weightKg != null ? String(e.weightKg) : '';
+          approaches = [];
+          for (let s = 0; s < legacySets; s++) {
+            approaches.push({
+              id: 'ap_' + i + '_' + s,
+              weightKg: legacyW,
+              reps: legacyReps
+            });
+          }
+        }
+        const leg = syncLegacyFieldsFromApproaches({ approaches });
+        return {
+          ...base,
+          approaches,
+          sets: leg.sets,
+          reps: leg.reps,
+          weightKg: leg.weightKg
+        };
+      });
+      exercises = cleanupSsGroups(exercises);
+      const totalDurationMinutes = zoneMinutes.reduce((s, v) => s + (+v || 0), 0);
+      return {
+        version: 1,
+        zoneMinutes: zoneMinutes.slice(),
+        totalDurationMinutes,
+        exercises
+      };
+    }
+
+    function patchTraining(ti, mutator) {
+      if (typeof setDay !== 'function') return;
+      const ts = Date.now();
+      // Синхронно поднимаем ref до setDay: иначе heys:day-updated в том же тике видит старый LS и
+      // stale-guard (storageUpdatedAt < lastLoadedUpdatedAtRef) не срабатывает до коммита React —
+      // overlay из LS откатывает только что открытый дневник.
+      try {
+        if (HEYS.Day && typeof HEYS.Day.setLastLoadedUpdatedAt === 'function') {
+          HEYS.Day.setLastLoadedUpdatedAt(ts);
+        }
+        if (HEYS.Day && typeof HEYS.Day.setBlockCloudUpdates === 'function') {
+          HEYS.Day.setBlockCloudUpdates(ts + 3000);
+        }
+      } catch (_) { /* noop */ }
+      setDay((prevDay) => {
+        const list = [...(prevDay.trainings || [])];
+        const cur = { ...(list[ti] || {}) };
+        list[ti] = mutator(cur);
+        var nextDay = { ...prevDay, trainings: list, updatedAt: ts };
+        try {
+          HEYS.Day = HEYS.Day || {};
+          HEYS.Day._lastWbRowsByDate = HEYS.Day._lastWbRowsByDate || {};
+          var dkPatch = nextDay.date;
+          var sumWb = 0;
+          for (var pxi = 0; pxi < list.length; pxi++) {
+            var ptx = list[pxi];
+            if (!ptx || String(ptx.type) !== 'strength' || ptx.strengthEntryMode !== 'workout_builder') continue;
+            var wlx = ptx.workoutLog;
+            if (wlx && Array.isArray(wlx.exercises)) sumWb += wlx.exercises.length;
+          }
+          if (dkPatch) HEYS.Day._lastWbRowsByDate[dkPatch] = sumWb;
+          try {
+            if (dkPatch && typeof global.sessionStorage !== 'undefined' && global.sessionStorage) {
+              global.sessionStorage.setItem('heys_last_wbrows_' + dkPatch, String(sumWb));
+            }
+          } catch (_eSs) { /* noop */ }
+        } catch (_eWb) { /* noop */ }
+        return nextDay;
+      });
+      try {
+        global.setTimeout(function () {
+          if (HEYS.Day && typeof HEYS.Day.requestFlush === 'function') {
+            HEYS.Day.requestFlush({ force: true });
+          }
+        }, 16);
+      } catch (_) { /* noop */ }
+      // Не шлём heys:day-updated сами: слушатель перечитывает LS до debounced autosave; requestFlush форсит запись в store/облако.
+    }
+
+    function applyWorkoutLogToTraining(t, wl) {
+      const shaped = ensureWorkoutLogShape({ ...t, workoutLog: { ...wl } });
+      return {
+        ...t,
+        strengthEntryMode: 'workout_builder',
+        workoutLog: shaped,
+        z: shaped.zoneMinutes.slice()
+      };
+    }
+
+    /** Повторы в строке подхода (таблица): − число + */
+    function wbApproachRepStepper(ti, exi, api, curVal, minV, maxV) {
+      const clamp = function (n) {
+        return Math.max(minV, Math.min(maxV, Math.round(Number(n)) || minV));
+      };
+      const commit = function (next) {
+        const n = clamp(next);
+        patchTraining(ti, function (t0) {
+          const wl0 = ensureWorkoutLogShape(t0);
+          wl0.exercises = wl0.exercises.map(function (row, j) {
+            if (j !== exi) return row;
+            const ap = (row.approaches || []).slice();
+            if (!ap[api]) return row;
+            ap[api] = { ...ap[api], reps: n };
+            const merged = { ...row, approaches: ap };
+            return { ...merged, ...syncLegacyFieldsFromApproaches(merged) };
+          });
+          return applyWorkoutLogToTraining(t0, wl0);
+        });
+        if (typeof haptic === 'function') haptic('light');
+      };
+      const labelA = 'Повторы, ' + approachOrdinalRu(api);
+      return React.createElement('div', { className: 'ct-wb-mini ct-wb-stepper ct-wb-stepper--ap-reps' },
+        React.createElement('div', { className: 'ct-wb-stepper-row' },
+          React.createElement('button', {
+            type: 'button',
+            className: 'ct-wb-stepper-btn',
+            disabled: curVal <= minV,
+            'aria-label': labelA + ', уменьшить',
+            onClick: function (e) {
+              e.stopPropagation();
+              commit(curVal - 1);
+            }
+          }, '\u2212'),
+          React.createElement('input', {
+            type: 'number',
+            className: 'ct-wb-mini-inp ct-wb-stepper-inp',
+            min: minV,
+            max: maxV,
+            value: curVal,
+            inputMode: 'numeric',
+            'aria-label': labelA,
+            onClick: function (e) { e.stopPropagation(); },
+            onChange: function (e) {
+              const raw = parseInt(e.target.value, 10);
+              commit(Number.isFinite(raw) ? raw : curVal);
+            }
+          }),
+          React.createElement('button', {
+            type: 'button',
+            className: 'ct-wb-stepper-btn',
+            disabled: curVal >= maxV,
+            'aria-label': labelA + ', увеличить',
+            onClick: function (e) {
+              e.stopPropagation();
+              commit(curVal + 1);
+            }
+          }, '+')
+        )
+      );
+    }
+
     const removeHousehold = async (idx) => {
       const confirmed = await HEYS.ConfirmModal?.confirmDelete({
         icon: '🏠',
@@ -233,7 +1783,10 @@
     };
 
     return React.createElement('div', { className: 'compact-trainings' },
-      safeVisibleTrainings === 0 && safeHouseholdActivities.length === 0 && React.createElement('div', { className: 'empty-trainings' },
+      safeVisibleTrainings === 0 && safeHouseholdActivities.length === 0 && React.createElement('div', {
+        className: 'empty-trainings',
+        title: 'Силовые и другие тренировки при дефиците помогают сохранять мышечную массу и силовые показатели; учёт в HEYS — в калориях и самочувствии. Питание остаётся главным рычагом энергетического баланса.'
+      },
         React.createElement('span', { className: 'empty-trainings-icon' }, '🏃‍♂️'),
         React.createElement('span', { className: 'empty-trainings-text' }, 'Нет тренировок')
       ),
@@ -248,7 +1801,9 @@
           mood: rawT.mood ?? 0,
           wellbeing: rawT.wellbeing ?? 0,
           stress: rawT.stress ?? 0,
-          comment: rawT.comment || ''
+          comment: rawT.comment || '',
+          strengthEntryMode: rawT.strengthEntryMode,
+          workoutLog: rawT.workoutLog
         };
 
         const kcalZ = (i) => safeR0((+T.z[i] || 0) * (kcalMin?.[i] || 0));
@@ -272,55 +1827,173 @@
         const totalMinutes = (T.z || []).reduce((sum, m) => sum + (+m || 0), 0);
         const hasDuration = totalMinutes > 0;
 
+        const isBuilder = isStrengthWorkoutBuilder(T);
+        const wlLive = isBuilder ? ensureWorkoutLogShape(T) : null;
+
+        const zonesRow = !isBuilder && React.createElement('div', { className: 'compact-train-zones-inline' },
+          [0, 1, 2, 3].map((zi) => {
+            const hasValue = +T.z[zi] > 0;
+            return React.createElement('span', {
+              key: 'z' + zi,
+              className: 'compact-zone-inline' + (hasValue ? ' has-value' : ''),
+              onClick: (e) => showZoneFormula && showZoneFormula(ti, zi, e)
+            },
+              React.createElement('span', { className: 'zone-label' }, 'Z' + (zi + 1)),
+              React.createElement('span', { className: 'zone-value' }, hasValue ? T.z[zi] : '—'),
+              hasValue && React.createElement('span', { className: 'zone-kcal' }, kcalZ(zi))
+            );
+          })
+        );
+
+        const showBuilderCta = !isBuilder && canOfferWorkoutBuilderOnCard(T);
+        const strengthBuilderCtaRow = showBuilderCta && React.createElement('div', { className: 'ct-wb-enable-wrap' },
+          React.createElement('button', {
+            type: 'button',
+            className: 'ct-wb-enable-btn',
+            onClick: (e) => {
+              e.stopPropagation();
+              enableStrengthWorkoutBuilderOnCard(ti);
+            }
+          }, '📋 Дневник упражнений (подходы и повторы)')
+        );
+
+        const builderBody = isBuilder && wlLive && React.createElement('div', { className: 'ct-wb-card-body' },
+          React.createElement('div', { className: 'ct-wb-zones-for-kcal' },
+            React.createElement('div', { className: 'ct-wb-zones-for-kcal-title' }, 'Минуты по зонам для ккал'),
+            React.createElement('div', { className: 'ct-wb-zones-for-kcal-grid' },
+              [0, 1, 2, 3].map((zi) =>
+                React.createElement('label', { key: 'wbz' + zi, className: 'ct-wb-mini ct-wb-zone-mini' },
+                  React.createElement('span', { className: 'ct-wb-zone-mini-label' }, WB_KCAL_ZONE_LABELS[zi]),
+                  React.createElement('input', {
+                    type: 'number',
+                    className: 'ct-wb-mini-inp',
+                    min: 0,
+                    max: 180,
+                    inputMode: 'numeric',
+                    'aria-label': 'Минуты, зона «' + WB_KCAL_ZONE_LABELS[zi] + '»',
+                    value: wlLive.zoneMinutes[zi],
+                    onClick: (e) => e.stopPropagation(),
+                    onChange: (e) => {
+                      const n = clampWbZoneMin(parseInt(e.target.value, 10) || 0);
+                      patchTraining(ti, (t0) => {
+                        const wl0 = ensureWorkoutLogShape(t0);
+                        const nextZm = wl0.zoneMinutes.slice();
+                        nextZm[zi] = n;
+                        wl0.zoneMinutes = nextZm;
+                        wl0.totalDurationMinutes = nextZm.reduce((s, v) => s + (+v || 0), 0);
+                        return applyWorkoutLogToTraining(t0, wl0);
+                      });
+                    }
+                  })
+                )
+              )
+            )
+          ),
+          React.createElement(WorkoutBuilderExerciseList, {
+            key: 'wb-ex-list-' + ti,
+            ti: ti,
+            wlLive: wlLive,
+            dateKey: dateKey,
+            haptic: haptic,
+            patchTraining: patchTraining,
+            ensureWorkoutLogShape: ensureWorkoutLogShape,
+            applyWorkoutLogToTraining: applyWorkoutLogToTraining,
+            wbApproachRepStepper: wbApproachRepStepper
+          }),
+          React.createElement('button', {
+            type: 'button',
+            className: 'ct-wb-add-btn',
+            onClick: (e) => {
+              e.stopPropagation();
+              if (typeof haptic === 'function') haptic('light');
+              patchTraining(ti, (t0) => {
+                const wl0 = ensureWorkoutLogShape(t0);
+                wl0.exercises = wl0.exercises.concat([{
+                  id: 'ex_' + Date.now(),
+                  name: '',
+                  approaches: [{ id: 'ap_' + Date.now(), weightKg: '', reps: 10 }],
+                  note: '',
+                  ssGroup: 0,
+                  rpe: 0
+                }]);
+                return applyWorkoutLogToTraining(t0, wl0);
+              });
+            }
+          }, '+ Добавить упражнение')
+        );
+
+        const footerHintText = isBuilder
+          ? 'Заголовок — полная карточка · здесь дневник подходов'
+          : '✏️ Нажми для изменения';
+
+        const cardClass =
+          'compact-card compact-train compact-train--minimal widget-shadow-diary-glass widget-outline-diary-glass' +
+          (isBuilder ? ' compact-train--workout-builder' : '');
+
+        const headerIconChar = isMorningActivationTraining(T) ? '🧘' : (trainingType ? trainingType.icon : (trainIcons[ti] || '💪'));
+        const titleBoxEl = React.createElement('div', { className: 'compact-train-title-box' },
+          React.createElement('span', { className: 'compact-train-title' }, displayLabel),
+          displayMeta && React.createElement('span', { className: 'compact-train-subtitle' }, displayMeta)
+        );
+        const timeEl = T.time && React.createElement('span', { className: 'compact-train-time' }, T.time);
+        const rightGroupEl = React.createElement('div', { className: 'compact-right-group' },
+          React.createElement('span', { className: 'compact-badge train' }, total + ' ккал'),
+          React.createElement('button', {
+            className: 'compact-train-remove',
+            onClick: (e) => { e.stopPropagation(); removeTraining(ti); },
+            title: 'Убрать тренировку'
+          }, '×')
+        );
+
+        const footerEl = React.createElement('div', { className: 'compact-train-footer' },
+          hasDuration && React.createElement('span', { className: 'train-duration-badge' }, '⏱ ' + totalMinutes + ' мин'),
+          hasRatings && React.createElement('div', { className: 'train-ratings-inline' },
+            moodEmoji && React.createElement('span', { className: 'train-rating-mini mood', title: 'Настроение' }, moodEmoji + ' ' + T.mood),
+            wellbeingEmoji && React.createElement('span', { className: 'train-rating-mini wellbeing', title: 'Самочувствие' }, wellbeingEmoji + ' ' + T.wellbeing),
+            stressEmoji && React.createElement('span', { className: 'train-rating-mini stress', title: 'Усталость' }, stressEmoji + ' ' + T.stress)
+          ),
+          React.createElement('span', { className: 'tap-hint' }, footerHintText)
+        );
+
+        const commentEl = T.comment && React.createElement('div', { className: 'training-card-comment' },
+          '💬 ', T.comment
+        );
+
+        const foldedContentEl = React.createElement(React.Fragment, null, zonesRow, strengthBuilderCtaRow, builderBody);
+
+        if (isBuilder) {
+          return React.createElement(CollapsibleWorkoutBuilderTrainingCard, {
+            key: 'tr' + ti,
+            cardClassName: cardClass,
+            haptic,
+            openTrainingPicker,
+            trainingIndex: ti,
+            headerIconChar,
+            titleBoxEl,
+            timeEl,
+            rightGroupEl,
+            foldedContentEl,
+            footerEl,
+            commentEl
+          });
+        }
+
         return React.createElement('div', {
           key: 'tr' + ti,
-          className: 'compact-card compact-train compact-train--minimal widget-shadow-diary-glass widget-outline-diary-glass'
+          className: cardClass
         },
           React.createElement('div', {
             className: 'compact-train-header',
             onClick: () => openTrainingPicker && openTrainingPicker(ti)
           },
-            React.createElement('span', { className: 'compact-train-icon' }, isMorningActivationTraining(T) ? '🧘' : (trainingType ? trainingType.icon : (trainIcons[ti] || '💪'))),
-            React.createElement('div', { className: 'compact-train-title-box' },
-              React.createElement('span', { className: 'compact-train-title' }, displayLabel),
-              displayMeta && React.createElement('span', { className: 'compact-train-subtitle' }, displayMeta)
-            ),
-            T.time && React.createElement('span', { className: 'compact-train-time' }, T.time),
-            React.createElement('div', { className: 'compact-right-group' },
-              React.createElement('span', { className: 'compact-badge train' }, total + ' ккал'),
-              React.createElement('button', {
-                className: 'compact-train-remove',
-                onClick: (e) => { e.stopPropagation(); removeTraining(ti); },
-                title: 'Убрать тренировку'
-              }, '×')
-            )
+            React.createElement('span', { className: 'compact-train-icon' }, headerIconChar),
+            titleBoxEl,
+            timeEl,
+            rightGroupEl
           ),
-          React.createElement('div', { className: 'compact-train-zones-inline' },
-            [0, 1, 2, 3].map((zi) => {
-              const hasValue = +T.z[zi] > 0;
-              return React.createElement('span', {
-                key: 'z' + zi,
-                className: 'compact-zone-inline' + (hasValue ? ' has-value' : ''),
-                onClick: (e) => showZoneFormula && showZoneFormula(ti, zi, e)
-              },
-                React.createElement('span', { className: 'zone-label' }, 'Z' + (zi + 1)),
-                React.createElement('span', { className: 'zone-value' }, hasValue ? T.z[zi] : '—'),
-                hasValue && React.createElement('span', { className: 'zone-kcal' }, kcalZ(zi))
-              );
-            })
-          ),
-          React.createElement('div', { className: 'compact-train-footer' },
-            hasDuration && React.createElement('span', { className: 'train-duration-badge' }, '⏱ ' + totalMinutes + ' мин'),
-            hasRatings && React.createElement('div', { className: 'train-ratings-inline' },
-              moodEmoji && React.createElement('span', { className: 'train-rating-mini mood', title: 'Настроение' }, moodEmoji + ' ' + T.mood),
-              wellbeingEmoji && React.createElement('span', { className: 'train-rating-mini wellbeing', title: 'Самочувствие' }, wellbeingEmoji + ' ' + T.wellbeing),
-              stressEmoji && React.createElement('span', { className: 'train-rating-mini stress', title: 'Усталость' }, stressEmoji + ' ' + T.stress)
-            ),
-            React.createElement('span', { className: 'tap-hint' }, '✏️ Нажми для изменения')
-          ),
-          T.comment && React.createElement('div', { className: 'training-card-comment' },
-            '💬 ', T.comment
-          )
+          foldedContentEl,
+          footerEl,
+          commentEl
         );
       }),
       safeHouseholdActivities.map((h, hi) => {

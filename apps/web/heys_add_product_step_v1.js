@@ -1928,7 +1928,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
     // Доступ к навигации StepModal
     const stepContext = useContext(HEYS.StepModal?.Context || React.createContext({}));
-    const { goToStep, closeModal } = stepContext;
+    const { goToStep, closeModal, updateStepData, stepData: modalStepData } = stepContext;
 
     const { dateKey = '', day: contextDay } = context || {};
     const usageWindowDays = 21;
@@ -2684,33 +2684,45 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     const selectProduct = useCallback((product) => {
       haptic('light');
 
-      // ⚡ PERF: defer non-critical store reads into startTransition
       const productId = product.id ?? product.product_id ?? product.name;
       const lastGrams = lsGet(`heys_last_grams_${productId}`, null);
       const mlGrams = data._mlGrams || null;
       const defaultGrams = mlGrams || lastGrams || 100;
 
-      // ⚡ startTransition: defer heavy re-renders from product selection
+      const nextSearch = {
+        ...data,
+        selectedProduct: product,
+        grams: defaultGrams,
+        _mlGrams: null,
+        lastGrams: lastGrams
+      };
+
+      // SYNC: onChange must commit before goToStep. Wrapping onChange in startTransition
+      // deferred stepData.search — GramsStep mounted with no selectedProduct ("Сначала выберите продукт").
+      onChange(nextSearch);
+
+      if (typeof updateStepData === 'function') {
+        updateStepData('grams', {
+          ...(modalStepData?.grams || {}),
+          selectedProduct: product,
+          grams: defaultGrams,
+          lastGrams
+        });
+      }
+
       React.startTransition(() => {
         try {
           if (HEYS.store?.getHiddenProducts) {
             setHiddenProducts(HEYS.store.getHiddenProducts());
           }
         } catch (e) { /* no-op */ }
-
-        onChange({
-          ...data,
-          selectedProduct: product,
-          grams: defaultGrams,
-          _mlGrams: null,
-          lastGrams: lastGrams
-        });
       });
+
       // Автопереход на шаг граммов (index 4: search → grams)
       if (goToStep) {
         requestAnimationFrame(() => goToStep(4, 'left'));
       }
-    }, [data, onChange, goToStep]);
+    }, [data, onChange, goToStep, updateStepData, modalStepData]);
 
     // Кнопка "Новый продукт" — открытие внешней формы создания
     const handleNewProduct = useCallback(() => {
@@ -5261,6 +5273,7 @@ NOVA: 1
     // ВАЖНО: stepData?.create проверяется т.к. при создании нового продукта data.selectedProduct может не успеть обновиться
     const product = context?.editProduct
       || data.selectedProduct
+      || stepData?.grams?.selectedProduct
       || stepData?.create?.newProduct
       || stepData?.create?.selectedProduct
       || stepData?.search?.selectedProduct;

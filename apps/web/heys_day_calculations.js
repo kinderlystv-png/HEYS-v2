@@ -92,6 +92,61 @@
     return { kcal: K, carbs, simple, complex, prot, fat, bad, good, trans, fiber, gi, harm };
   }
 
+  /** Defaults must match ensureWorkoutLogShape (heys_day_trainings_v1.js). */
+  const WB_DEF_SETS = 1;
+  const WB_DEF_REPS = 10;
+
+  /** Строка конструктора силовой: есть что синхронизировать (не только пустой шаблон). */
+  function exerciseRowHasTrackableContent(e) {
+    if (!e) return false;
+    if (String(e.name || '').trim()) return true;
+    const asInt = (v) => {
+      if (v == null || v === '') return NaN;
+      if (typeof v === 'number') return Number.isFinite(v) ? Math.trunc(v) : NaN;
+      const n = parseInt(v, 10);
+      return Number.isFinite(n) ? n : NaN;
+    };
+    const ap = e.approaches;
+    if (Array.isArray(ap)) {
+      if (ap.length > 1) return true;
+      for (let i = 0; i < ap.length; i++) {
+        const a = ap[i];
+        if (a && String(a.weightKg || '').trim()) return true;
+        const r = asInt(a && a.reps);
+        if (Number.isFinite(r) && r !== WB_DEF_REPS) return true;
+      }
+    }
+    if (typeof e.weightKg === 'number' && Number.isFinite(e.weightKg) && e.weightKg > 0) return true;
+    if (String(e.weightKg || '').trim()) return true;
+    if (String(e.note || '').trim()) return true;
+    if ((+e.rpe || 0) > 0) return true;
+    if ((+e.ssGroup || 0) > 0) return true;
+    const sets = asInt(e.sets);
+    const reps = asInt(e.reps);
+    if (Number.isFinite(sets) && sets !== WB_DEF_SETS) return true;
+    if (Number.isFinite(reps) && reps !== WB_DEF_REPS) return true;
+    return false;
+  }
+
+  /** Минуты по зонам или заполненные упражнения в дневнике. */
+  function workoutLogHasTrackableContent(wl) {
+    if (!wl || typeof wl !== 'object') return false;
+    if (Array.isArray(wl.zoneMinutes) && wl.zoneMinutes.some((m) => +m > 0)) return true;
+    const ex = wl.exercises;
+    if (Array.isArray(ex) && ex.length > 1) return true;
+    if (Array.isArray(ex) && ex.some(exerciseRowHasTrackableContent)) return true;
+    return false;
+  }
+
+  function dayHasTrackableWorkoutBuilder(day) {
+    const tr = day && day.trainings;
+    if (!Array.isArray(tr)) return false;
+    return tr.some((t) => {
+      if (!t || String(t.type) !== 'strength' || t.strengthEntryMode !== 'workout_builder') return false;
+      return workoutLogHasTrackableContent(t.workoutLog);
+    });
+  }
+
   /**
    * Calculate day averages (mood, wellbeing, stress, dayScore)
    * @param {Array} meals - Meals array
@@ -114,7 +169,12 @@
     const realTrainings = (trainings || []).filter(t => {
       const hasTime = t.time && t.time.trim() !== '';
       const hasMinutes = t.z && Array.isArray(t.z) && t.z.some(m => m > 0);
-      return hasTime || hasMinutes;
+      const hasBuilder =
+        t.type === 'strength' &&
+        t.strengthEntryMode === 'workout_builder' &&
+        t.workoutLog &&
+        workoutLogHasTrackableContent(t.workoutLog);
+      return hasTime || hasMinutes || hasBuilder;
     });
     const trainingMoods = realTrainings.filter(t => t.mood && !isNaN(+t.mood)).map(t => +t.mood);
     const trainingWellbeing = realTrainings.filter(t => t.wellbeing && !isNaN(+t.wellbeing)).map(t => +t.wellbeing);
@@ -153,16 +213,53 @@
    */
   function normalizeTrainings(trainings = []) {
     return trainings.map((t = {}) => {
+      let next = t;
       if (t.quality !== undefined || t.feelAfter !== undefined) {
         const { quality, feelAfter, ...rest } = t;
-        return {
+        next = {
           ...rest,
           mood: rest.mood ?? quality ?? 5,
           wellbeing: rest.wellbeing ?? feelAfter ?? 5,
           stress: rest.stress ?? 5
         };
       }
-      return t;
+      // Repair: stepData merge once wrote feedback over training-info — constructor payload with wrong type
+      if (
+        next.workoutLog &&
+        typeof next.workoutLog === 'object' &&
+        next.strengthEntryMode === 'workout_builder' &&
+        String(next.type) !== 'strength'
+      ) {
+        next = { ...next, type: 'strength' };
+      }
+      if (
+        next.workoutLog &&
+        typeof next.workoutLog === 'object' &&
+        Array.isArray(next.workoutLog.exercises) &&
+        next.workoutLog.exercises.length > 0 &&
+        !next.strengthEntryMode
+      ) {
+        next = { ...next, type: 'strength', strengthEntryMode: 'workout_builder' };
+      }
+      if (
+        next.type === 'strength' &&
+        next.strengthEntryMode === 'workout_builder' &&
+        next.workoutLog &&
+        typeof next.workoutLog === 'object' &&
+        (!next.z || !Array.isArray(next.z) || !next.z.some((x) => +x > 0))
+      ) {
+        const wl = next.workoutLog;
+        if (Array.isArray(wl.zoneMinutes) && wl.zoneMinutes.length >= 4 && wl.zoneMinutes.some((x) => +x > 0)) {
+          const z = [0, 1, 2, 3].map((i) =>
+            Math.max(0, Math.min(180, Math.round(Number(wl.zoneMinutes[i]) || 0)))
+          );
+          next = { ...next, z };
+        } else if (typeof wl.totalDurationMinutes === 'number' && wl.totalDurationMinutes >= 1) {
+          const m = Math.max(1, Math.min(180, Math.round(wl.totalDurationMinutes)));
+          next = { ...next, z: [0, m, 0, 0] };
+        }
+      }
+      return next;
     });
   }
 
@@ -173,7 +270,18 @@
    */
   function cleanEmptyTrainings(trainings) {
     if (!Array.isArray(trainings)) return [];
-    return trainings.filter(t => t && t.z && t.z.some(z => z > 0));
+    return trainings.filter((t) => {
+      if (!t) return false;
+      if (t.z && Array.isArray(t.z) && t.z.some((z) => +z > 0)) return true;
+      if (t.type === 'strength' && t.strengthEntryMode === 'workout_builder' && t.workoutLog) {
+        const wl = t.workoutLog;
+        if (workoutLogHasTrackableContent(wl)) return true;
+        // Keep any non-empty exercises list: avoid dropping the slot while name/weight still "empty"
+        // by heuristics, or before debounced save — otherwise reload wipes data and cloud never gets it.
+        if (Array.isArray(wl.exercises) && wl.exercises.length >= 1) return true;
+      }
+      return false;
+    });
   }
 
   /**
@@ -272,7 +380,12 @@
       if (t?.mood != null && t?.wellbeing != null && t?.stress != null) {
         const hasTime = t.time && t.time.trim() !== '';
         const hasMins = t.z && Array.isArray(t.z) && t.z.some(m => m > 0);
-        if (hasTime || hasMins) perCheckIn.push(r1((+t.mood + +t.wellbeing + (10 - +t.stress)) / 3));
+        const hasBuilder =
+          t.type === 'strength' &&
+          t.strengthEntryMode === 'workout_builder' &&
+          t.workoutLog &&
+          workoutLogHasTrackableContent(t.workoutLog);
+        if (hasTime || hasMins || hasBuilder) perCheckIn.push(r1((+t.mood + +t.wellbeing + (10 - +t.stress)) / 3));
       }
     }
     if (perCheckIn.length >= 2) {
@@ -305,7 +418,10 @@
     sortMealsByTime,
     parseTimeToMinutes,
     formatMinutesToTime,
-    getProductFromItem
+    getProductFromItem,
+    exerciseRowHasTrackableContent,
+    workoutLogHasTrackableContent,
+    dayHasTrackableWorkoutBuilder
   };
 
 })(window);

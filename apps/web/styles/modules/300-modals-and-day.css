@@ -1342,6 +1342,539 @@
   border-color: var(--activity-border);
 }
 
+/* Месячная сводка тренировок под карточкой активности */
+.month-trainings-card {
+  margin-top: 10px;
+  padding: 10px 12px 12px;
+  border-radius: 12px;
+  background: var(--activity-bg, rgba(255, 255, 255, 0.65));
+  border: 1px solid var(--activity-border, rgba(148, 163, 184, 0.35));
+}
+
+.month-trainings-card-header {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 8px;
+}
+
+/* Как «Шаги» / заголовок календаря зарядки (.steps-label, .ma-habit-cal-heading) */
+.month-trainings-card-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-slate-700);
+  line-height: 1.3;
+}
+
+.month-trainings-empty {
+  font-size: 12px;
+  color: var(--color-slate-500, #64748b);
+  padding: 6px 2px 2px;
+}
+
+.month-trainings-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 220px;
+  overflow-y: auto;
+  padding-right: 2px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.month-trainings-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr) auto;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  line-height: 1.25;
+  padding: 6px 8px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.5);
+  border: 1px solid rgba(148, 163, 184, 0.25);
+}
+
+.month-trainings-row-date {
+  color: var(--color-slate-600, #475569);
+  font-weight: 600;
+  min-width: 0;
+  word-break: break-word;
+}
+
+.month-trainings-row-type {
+  color: var(--color-slate-800, #1e293b);
+  font-weight: 600;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.month-trainings-row-kcal {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+[data-theme="dark"] .month-trainings-card {
+  background: rgba(15, 23, 42, 0.55);
+  border-color: rgba(148, 163, 184, 0.28);
+}
+
+[data-theme="dark"] .month-trainings-card-title {
+  color: var(--heys-text-secondary);
+}
+
+[data-theme="dark"] .month-trainings-empty {
+  color: #94a3b8;
+}
+
+[data-theme="dark"] .month-trainings-row {
+  background: rgba(30, 41, 59, 0.65);
+  border-color: rgba(148, 163, 184, 0.22);
+}
+
+[data-theme="dark"] .month-trainings-row-date {
+  color: #94a3b8;
+}
+
+[data-theme="dark"] .month-trainings-row-type {
+  color: #f1f5f9;
+}
+
+/* Календарь привычки «утренняя зарядка» (модалка + карточка активности) */
+.ma-habit-cal-shell {
+  margin-top: 10px;
+  padding: 10px 12px 12px;
+  border-radius: 12px;
+  background: var(--activity-bg, rgba(255, 255, 255, 0.65));
+  border: 1px solid var(--activity-border, rgba(148, 163, 184, 0.35));
+}
+
+.ma-habit-cal-shell.ma-habit-cal--modal {
+  margin-top: 0;
+}
+
+.ma-habit-cal-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 6px 10px;
+  margin-bottom: 12px;
+}
+
+.ma-habit-cal-head-title-group {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 3px 4px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+/* Как у подписи «Шаги» в блоке активности (.steps-label) */
+.ma-habit-cal-heading {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-slate-700);
+  line-height: 1.3;
+}
+
+.ma-habit-cal-head-dot {
+  color: #94a3b8;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  padding: 0 1px;
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.ma-habit-cal-subtitle {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-slate-500);
+  text-transform: capitalize;
+  flex: 0 0 auto;
+  margin-left: auto;
+  text-align: right;
+  max-width: 100%;
+}
+
+/* Период: под шапкой, над днями недели; стрелки только в режиме «Месяц» */
+.ma-habit-cal-period {
+  width: min(100%, 252px);
+  margin-inline: auto;
+  margin-bottom: 12px;
+}
+
+.ma-habit-cal-period--month {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.ma-habit-cal-period--28 {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* Типографика, не «пилюля» — без рамки и заливки */
+.ma-habit-cal-period-nav {
+  flex-shrink: 0;
+  margin: 0;
+  padding: 2px 6px;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  color: var(--color-slate-600, #475569);
+  font-family: inherit;
+  font-size: 17px;
+  font-weight: 500;
+  line-height: 1.2;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.ma-habit-cal-period-nav:hover {
+  color: var(--color-slate-800, #1e293b);
+}
+
+.ma-habit-cal-period-nav:active {
+  opacity: 0.65;
+}
+
+.ma-habit-cal-period-nav:focus-visible {
+  outline: 2px solid rgba(59, 130, 246, 0.45);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.ma-habit-cal-period-label {
+  min-width: 0;
+}
+
+.ma-habit-cal-period-label--month {
+  flex: 1 1 auto;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-slate-700);
+  line-height: 1.3;
+  text-transform: capitalize;
+}
+
+.ma-habit-cal-period-label--28 {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-slate-600, #475569);
+  line-height: 1.3;
+  text-align: center;
+  text-transform: none;
+}
+
+.ma-habit-cal-mode-btn {
+  border-radius: 8px;
+  border: 1px solid rgba(203, 213, 225, 0.9);
+  background: #f8fafc;
+  color: #475569;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 6px 8px;
+  cursor: pointer;
+}
+
+.ma-habit-cal-mode-btn--inline {
+  border-radius: 6px;
+  padding: 2px 6px;
+  font-size: 9px;
+  font-weight: 600;
+  line-height: 1.25;
+  vertical-align: baseline;
+}
+
+.ma-habit-cal-mode-btn.is-active {
+  border-color: rgba(59, 130, 246, 0.55);
+  background: rgba(59, 130, 246, 0.1);
+  color: #1d4ed8;
+}
+
+/* Сетка календаря уже не на всю ширину карточки — визуально легче */
+.ma-habit-cal-matrix {
+  width: min(100%, 252px);
+  margin-inline: auto;
+}
+
+.ma-habit-cal-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 3px;
+  margin-bottom: 5px;
+}
+
+.ma-habit-cal-wd {
+  font-size: 9px;
+  font-weight: 600;
+  color: #94a3b8;
+  text-align: center;
+}
+
+.ma-habit-cal-wd--weekend {
+  color: #dc2626;
+}
+
+.ma-habit-cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 3px;
+}
+
+.ma-habit-cal-cell {
+  min-height: 24px;
+  border-radius: 7px;
+  border: 1px solid rgba(226, 232, 240, 0.95);
+  background: #f8fafc;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1px 2px;
+  font-size: 10px;
+  font-weight: 600;
+  color: #334155;
+}
+
+.ma-habit-cal-cell.is-neutral.is-weekend {
+  color: #b91c1c;
+}
+
+.ma-habit-cal-cell-inner {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+}
+
+.ma-habit-cal-cell--empty {
+  min-height: 24px;
+  border: none;
+  background: transparent;
+}
+
+.ma-habit-cal-cell.is-neutral {
+  color: #334155;
+}
+
+.ma-habit-cal-cell.is-today.is-neutral {
+  border-color: rgba(59, 130, 246, 0.5);
+  background: rgba(59, 130, 246, 0.08);
+  box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.12);
+}
+
+.ma-habit-cal-cell.is-done {
+  border-color: rgba(16, 185, 129, 0.42);
+  background: linear-gradient(145deg, #0d9488 0%, #14b8a6 32%, #2dd4bf 68%, #5eead4 100%);
+  color: #f0fdf4;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.08);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28), 0 1px 2px rgba(13, 148, 136, 0.22);
+}
+
+.ma-habit-cal-cell.is-missed {
+  border-color: rgba(251, 207, 216, 0.95);
+  background: linear-gradient(180deg, #f8f4f5 0%, rgba(252, 231, 243, 0.82) 100%);
+  color: #64748b;
+  text-shadow: none;
+  box-shadow: none;
+}
+
+.ma-habit-cal-cell.is-today.is-done {
+  border-color: rgba(153, 246, 228, 0.75);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.32), 0 0 0 1px rgba(45, 212, 191, 0.32);
+}
+
+.ma-habit-cal-cell.is-today.is-missed {
+  border-color: rgba(249, 168, 212, 0.55);
+  background: linear-gradient(180deg, rgba(255, 250, 251, 0.98) 0%, rgba(252, 231, 243, 0.88) 100%);
+  box-shadow: 0 0 0 1px rgba(251, 207, 216, 0.35);
+}
+
+.ma-habit-cal-daynum {
+  line-height: 1;
+  min-width: 1.1em;
+  text-align: center;
+}
+
+.ma-habit-cal-footer {
+  margin-top: 8px;
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 10px;
+  color: #64748b;
+}
+
+[data-theme="dark"] .ma-habit-cal-shell {
+  background: rgba(15, 23, 42, 0.55);
+  border-color: rgba(148, 163, 184, 0.28);
+}
+
+[data-theme="dark"] .ma-habit-cal-heading {
+  color: var(--heys-text-secondary);
+}
+
+[data-theme="dark"] .ma-habit-cal-head-dot {
+  color: #64748b;
+}
+
+[data-theme="dark"] .ma-habit-cal-subtitle {
+  color: var(--heys-text-muted);
+}
+
+[data-theme="dark"] .ma-habit-cal-period-nav {
+  background: transparent;
+  color: #94a3b8;
+}
+
+[data-theme="dark"] .ma-habit-cal-period-nav:hover {
+  color: #e2e8f0;
+}
+
+[data-theme="dark"] .ma-habit-cal-period-nav:active {
+  opacity: 0.7;
+}
+
+[data-theme="dark"] .ma-habit-cal-period-label--month {
+  color: var(--heys-text-secondary);
+}
+
+[data-theme="dark"] .ma-habit-cal-period-label--28 {
+  color: #94a3b8;
+}
+
+[data-theme="dark"] .ma-habit-cal-footer,
+[data-theme="dark"] .ma-habit-cal-wd {
+  color: #94a3b8;
+}
+
+[data-theme="dark"] .ma-habit-cal-wd--weekend {
+  color: #f87171;
+}
+
+[data-theme="dark"] .ma-habit-cal-cell.is-neutral.is-weekend {
+  color: #fca5a5;
+}
+
+[data-theme="dark"] .ma-habit-cal-mode-btn {
+  background: rgba(30, 41, 59, 0.65);
+  border-color: rgba(148, 163, 184, 0.35);
+  color: #cbd5e1;
+}
+
+[data-theme="dark"] .ma-habit-cal-mode-btn.is-active {
+  border-color: rgba(59, 130, 246, 0.55);
+  background: rgba(59, 130, 246, 0.15);
+  color: #93c5fd;
+}
+
+[data-theme="dark"] .ma-habit-cal-cell {
+  border-color: rgba(148, 163, 184, 0.25);
+  background: rgba(30, 41, 59, 0.65);
+  color: #e2e8f0;
+}
+
+[data-theme="dark"] .ma-habit-cal-cell.is-neutral {
+  color: #e2e8f0;
+}
+
+[data-theme="dark"] .ma-habit-cal-cell.is-today.is-neutral {
+  border-color: rgba(59, 130, 246, 0.5);
+  background: rgba(59, 130, 246, 0.12);
+}
+
+[data-theme="dark"] .ma-habit-cal-cell.is-done {
+  border-color: rgba(45, 212, 191, 0.38);
+  background: linear-gradient(145deg, #0f766e 0%, #0d9488 38%, #14b8a6 72%, #2dd4bf 100%);
+  color: #ecfdf5;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 1px 3px rgba(0, 0, 0, 0.28);
+}
+
+[data-theme="dark"] .ma-habit-cal-cell.is-missed {
+  border-color: rgba(244, 114, 182, 0.14);
+  background: linear-gradient(180deg, rgba(30, 41, 59, 0.72) 0%, rgba(58, 40, 50, 0.42) 100%);
+  color: #cbd5e1;
+  box-shadow: none;
+}
+
+[data-theme="dark"] .ma-habit-cal-cell.is-today.is-done {
+  border-color: rgba(94, 234, 212, 0.48);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 0 0 1px rgba(45, 212, 191, 0.28);
+}
+
+[data-theme="dark"] .ma-habit-cal-cell.is-today.is-missed {
+  border-color: rgba(96, 165, 250, 0.28);
+  background: linear-gradient(180deg, rgba(30, 41, 59, 0.75) 0%, rgba(58, 40, 50, 0.48) 100%);
+  box-shadow: 0 0 0 1px rgba(244, 114, 182, 0.1);
+}
+
+/* Плашка: зарядка не в плане (без тренировки зарядки) */
+.ma-skip-notice-card {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(244, 63, 94, 0.06);
+  border: 1px solid rgba(244, 63, 94, 0.22);
+}
+
+.ma-skip-notice-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.ma-skip-notice-icon {
+  font-size: 18px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.ma-skip-notice-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #9f1239;
+}
+
+.ma-skip-notice-sub {
+  margin-top: 4px;
+  font-size: 11px;
+  line-height: 1.4;
+  color: #64748b;
+}
+
+.ma-skip-reason-option:hover {
+  border-color: rgba(59, 130, 246, 0.45) !important;
+  background: rgba(59, 130, 246, 0.06) !important;
+}
+
+[data-theme="dark"] .ma-skip-notice-card {
+  background: rgba(244, 63, 94, 0.1);
+  border-color: rgba(244, 63, 94, 0.35);
+}
+
+[data-theme="dark"] .ma-skip-notice-title {
+  color: #fda4af;
+}
+
+[data-theme="dark"] .ma-skip-notice-sub {
+  color: #94a3b8;
+}
+
 /* Steps Slider */
 .steps-slider-container {
   margin-bottom: 20px;

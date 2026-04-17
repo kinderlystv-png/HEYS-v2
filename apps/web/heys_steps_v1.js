@@ -278,6 +278,15 @@
   }
 
   const MORNING_ACTIVATION_COPY_HISTORY_KEY = 'heys_morning_activation_copy_history_v1';
+
+  /** Подписи для UI (карточка дня + мини-модалка «почему без зарядки») */
+  const MORNING_ACTIVATION_SKIP_REASONS = [
+    { id: 'no_time', label: 'Не было времени' },
+    { id: 'low_mood', label: 'Плохое настроение или самочувствие' },
+    { id: 'low_energy', label: 'Мало сил и энергии' },
+    { id: 'other_priority', label: 'Были другие приоритеты' },
+    { id: 'other', label: 'Другая причина' }
+  ];
   const MORNING_ACTIVATION_INTENSITY_PRESETS = {
     super_light: {
       label: 'Суперлегкая',
@@ -590,107 +599,6 @@
       }));
     }
     return dayData;
-  }
-
-  const MORNING_ACTIVATION_WEEKDAY_SHORT = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
-  const MORNING_ACTIVATION_CALENDAR_VIEW_KEY = 'morningActivationCalendarView';
-  const MORNING_ACTIVATION_CALENDAR_VIEW_28_DAYS = 'last_28_days';
-  const MORNING_ACTIVATION_CALENDAR_VIEW_MONTH = 'calendar_month';
-
-  function parseIsoDateKeyToLocalDate(dateKey) {
-    if (typeof dateKey !== 'string') return null;
-    const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateKey);
-    if (!match) return null;
-    const year = Number(match[1]);
-    const month = Number(match[2]) - 1;
-    const day = Number(match[3]);
-    const date = new Date(year, month, day, 12, 0, 0, 0);
-    if (Number.isNaN(date.getTime())) return null;
-    return date;
-  }
-
-  function formatDateToIsoKeyLocal(date) {
-    if (!(date instanceof Date) || Number.isNaN(date.getTime())) return getTodayKey();
-    const yyyy = date.getFullYear();
-    const mm = String(date.getMonth() + 1).padStart(2, '0');
-    const dd = String(date.getDate()).padStart(2, '0');
-    return `${yyyy}-${mm}-${dd}`;
-  }
-
-  function getWeekdayMonFirst(date) {
-    const day = date.getDay(); // 0 (Sun) ... 6 (Sat)
-    return day === 0 ? 6 : day - 1;
-  }
-
-  function getMorningActivationCalendarViewPreference() {
-    const profile = lsGet('heys_profile', {}) || {};
-    const view = profile?.[MORNING_ACTIVATION_CALENDAR_VIEW_KEY];
-    if (view === MORNING_ACTIVATION_CALENDAR_VIEW_MONTH) return MORNING_ACTIVATION_CALENDAR_VIEW_MONTH;
-    return MORNING_ACTIVATION_CALENDAR_VIEW_28_DAYS;
-  }
-
-  function saveMorningActivationCalendarViewPreference(view) {
-    if (view !== MORNING_ACTIVATION_CALENDAR_VIEW_28_DAYS && view !== MORNING_ACTIVATION_CALENDAR_VIEW_MONTH) return;
-    const profile = lsGet('heys_profile', {}) || {};
-    if (profile?.[MORNING_ACTIVATION_CALENDAR_VIEW_KEY] === view) return;
-    profile[MORNING_ACTIVATION_CALENDAR_VIEW_KEY] = view;
-    lsSet('heys_profile', profile);
-    if (typeof window !== 'undefined') {
-      window.dispatchEvent(new CustomEvent('heys:profile-updated', {
-        detail: { profile, source: 'morning-activation-calendar-view' }
-      }));
-    }
-  }
-
-  function buildMorningActivationCalendarData(anchorDateKey, viewMode = MORNING_ACTIVATION_CALENDAR_VIEW_28_DAYS) {
-    const anchorDate = parseIsoDateKeyToLocalDate(anchorDateKey) || parseIsoDateKeyToLocalDate(getTodayKey()) || new Date();
-    const isMonthView = viewMode === MORNING_ACTIVATION_CALENDAR_VIEW_MONTH;
-    const effectiveDays = isMonthView
-      ? new Date(anchorDate.getFullYear(), anchorDate.getMonth() + 1, 0).getDate()
-      : 28;
-    const dayEntries = [];
-    const monthDate = new Date(anchorDate.getFullYear(), anchorDate.getMonth(), 1, 12, 0, 0, 0);
-
-    for (let offset = 0; offset < effectiveDays; offset++) {
-      const date = isMonthView
-        ? new Date(anchorDate.getFullYear(), anchorDate.getMonth(), offset + 1, 12, 0, 0, 0)
-        : (() => {
-          const d = new Date(anchorDate);
-          d.setDate(anchorDate.getDate() - (effectiveDays - 1 - offset));
-          return d;
-        })();
-      const dateKey = formatDateToIsoKeyLocal(date);
-      const state = normalizeMorningActivationState(dateKey, readDayData(dateKey, {}));
-      dayEntries.push({
-        dateKey,
-        dayOfMonth: date.getDate(),
-        status: state.status === 'done' || state.status === 'missed' ? state.status : null,
-        isToday: dateKey === anchorDateKey
-      });
-    }
-
-    const firstDate = parseIsoDateKeyToLocalDate(dayEntries[0]?.dateKey);
-    const leadingEmpty = firstDate ? getWeekdayMonFirst(firstDate) : 0;
-    const grid = [];
-    for (let i = 0; i < leadingEmpty; i++) {
-      grid.push({ isEmpty: true, id: `empty-${i}` });
-    }
-    dayEntries.forEach((item) => grid.push({ ...item, isEmpty: false, id: item.dateKey }));
-    while (grid.length % 7 !== 0) {
-      grid.push({ isEmpty: true, id: `tail-${grid.length}` });
-    }
-
-    const doneCount = dayEntries.filter((item) => item.status === 'done').length;
-    const missedCount = dayEntries.filter((item) => item.status === 'missed').length;
-    return {
-      grid,
-      doneCount,
-      missedCount,
-      viewMode: isMonthView ? MORNING_ACTIVATION_CALENDAR_VIEW_MONTH : MORNING_ACTIVATION_CALENDAR_VIEW_28_DAYS,
-      title: isMonthView
-        ? monthDate.toLocaleDateString('ru-RU', { month: 'long', year: 'numeric' })
-        : 'последние 28 дней'
-    };
   }
 
   function removeMorningActivationArtifacts(dayData) {
@@ -1684,7 +1592,7 @@
           '🎯 Какая активность ждёт тебя сегодня?'
         ),
         React.createElement('div', { className: 'mc-steps-purpose-sub' },
-          'Куратор увидит твой план и подстроит рекомендации по питанию'
+          'Куратор увидит твой план и подстроит рекомендации по питанию. Шаги и бытовое движение дополняют расход, но основной рычаг дефицита — питание относительно нормы дня.'
         )
       ),
       React.createElement('div', { className: 'mc-steps-display' },
@@ -1862,7 +1770,9 @@
       React.createElement('div', { className: 'deficit-hint' },
         'Отрицательный = дефицит (похудение)',
         React.createElement('br'),
-        'Положительный = профицит (набор)'
+        'Положительный = профицит (набор)',
+        React.createElement('br'),
+        'Норма дня в HEYS считается от вашего расхода; при затяжном жёстком дефиците метаболизм может адаптироваться — см. инсайт «Адаптивный термогенез».'
       ),
 
       // Быстрые пресеты
@@ -1888,7 +1798,7 @@
   // Регистрация шага дефицита
   registerStep('deficit', {
     title: 'Дефицит',
-    hint: 'Цель калорийности',
+    hint: 'Цель калорийности относительно нормы дня; устойчивый дефицит обычно переносится легче экстремального',
     icon: '📊',
     component: DeficitStepComponent,
     getInitialData: (ctx) => {
@@ -3833,11 +3743,8 @@
     });
     const firstMealTimeValue = initialState.firstMealTime || getFirstMealTimeFromDay(dayData) || null;
     const firstMealTimeLabel = firstMealTimeValue || '—';
-    const [calendarViewMode, setCalendarViewMode] = useState(() => getMorningActivationCalendarViewPreference());
-    const calendarData = useMemo(
-      () => buildMorningActivationCalendarData(dateKey, calendarViewMode),
-      [dateKey, calendarViewMode]
-    );
+    const readMaDayForCalendar = useCallback((dk) => readDayData(dk, {}), []);
+    const MorningActivationHabitCalendar = HEYS.morningActivationCalendar?.MorningActivationHabitCalendar;
 
     const setPostField = (field, value) => {
       setPostState((prev) => ({
@@ -3855,7 +3762,10 @@
         postEffect: null,
         firstMealTime: nextState.firstMealTime || firstMealTimeValue || null,
         decidedAt: Date.now(),
-        followupSnoozeUntilMealCount: null
+        followupSnoozeUntilMealCount: null,
+        skipReasonPending: true,
+        skipReasonId: null,
+        skipReasonCapturedAt: null
       }, 'morning-activation-followup');
       syncMorningActivationActivity(dateKey, {
         ...nextState,
@@ -3863,6 +3773,13 @@
         intensity: null
       });
       context?.onNext?.();
+      try {
+        setTimeout(() => {
+          window.dispatchEvent(new CustomEvent('heys:ma-skip-reason-check', { detail: { dateKey } }));
+        }, 160);
+      } catch (_) {
+        // ignore
+      }
     };
 
     const saveDone = () => {
@@ -3945,146 +3862,14 @@
           style: { fontSize: '12px', color: '#334155', lineHeight: '1.45' }
         }, `После первого приёма пищи (${firstMealTimeLabel}) зафиксируй статус привычки.`)
       ),
-      React.createElement('div', {
-        style: {
-          borderRadius: '12px',
-          border: '1px solid rgba(148,163,184,0.28)',
-          background: '#fff',
-          padding: '10px 10px 8px'
-        }
-      },
-        React.createElement('div', {
-          style: {
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'baseline',
-            gap: '8px',
-            marginBottom: '8px'
-          }
-        },
-          React.createElement('div', { style: { fontSize: '12px', fontWeight: '700', color: '#0f172a' } }, 'Календарь привычки'),
-          React.createElement('div', { style: { fontSize: '10px', color: '#64748b', textTransform: 'capitalize' } }, calendarData.title)
-        ),
-        React.createElement('div', {
-          style: {
-            display: 'grid',
-            gridTemplateColumns: '1fr 1fr',
-            gap: '6px',
-            marginBottom: '8px'
-          }
-        },
-          React.createElement('button', {
-            type: 'button',
-            onClick: () => {
-              setCalendarViewMode(MORNING_ACTIVATION_CALENDAR_VIEW_28_DAYS);
-              saveMorningActivationCalendarViewPreference(MORNING_ACTIVATION_CALENDAR_VIEW_28_DAYS);
-            },
-            style: {
-              borderRadius: '8px',
-              border: calendarViewMode === MORNING_ACTIVATION_CALENDAR_VIEW_28_DAYS ? '1px solid rgba(59,130,246,0.55)' : '1px solid rgba(203,213,225,0.9)',
-              background: calendarViewMode === MORNING_ACTIVATION_CALENDAR_VIEW_28_DAYS ? 'rgba(59,130,246,0.10)' : '#f8fafc',
-              color: calendarViewMode === MORNING_ACTIVATION_CALENDAR_VIEW_28_DAYS ? '#1d4ed8' : '#475569',
-              fontSize: '10px',
-              fontWeight: '700',
-              padding: '6px 8px',
-              cursor: 'pointer'
-            }
-          }, '28 дней'),
-          React.createElement('button', {
-            type: 'button',
-            onClick: () => {
-              setCalendarViewMode(MORNING_ACTIVATION_CALENDAR_VIEW_MONTH);
-              saveMorningActivationCalendarViewPreference(MORNING_ACTIVATION_CALENDAR_VIEW_MONTH);
-            },
-            style: {
-              borderRadius: '8px',
-              border: calendarViewMode === MORNING_ACTIVATION_CALENDAR_VIEW_MONTH ? '1px solid rgba(59,130,246,0.55)' : '1px solid rgba(203,213,225,0.9)',
-              background: calendarViewMode === MORNING_ACTIVATION_CALENDAR_VIEW_MONTH ? 'rgba(59,130,246,0.10)' : '#f8fafc',
-              color: calendarViewMode === MORNING_ACTIVATION_CALENDAR_VIEW_MONTH ? '#1d4ed8' : '#475569',
-              fontSize: '10px',
-              fontWeight: '700',
-              padding: '6px 8px',
-              cursor: 'pointer'
-            }
-          }, 'Месяц')
-        ),
-        React.createElement('div', {
-          style: {
-            display: 'grid',
-            gridTemplateColumns: 'repeat(7, minmax(0, 1fr))',
-            gap: '4px',
-            marginBottom: '6px'
-          }
-        },
-          MORNING_ACTIVATION_WEEKDAY_SHORT.map((label) => React.createElement('div', {
-            key: `wd-${label}`,
-            style: {
-              fontSize: '10px',
-              color: '#94a3b8',
-              textAlign: 'center'
-            }
-          }, label))
-        ),
-        React.createElement('div', {
-          style: {
-            display: 'grid',
-            gridTemplateColumns: 'repeat(7, minmax(0, 1fr))',
-            gap: '4px'
-          }
-        },
-          calendarData.grid.map((cell) => {
-            if (cell.isEmpty) {
-              return React.createElement('div', {
-                key: cell.id,
-                style: { minHeight: '24px' }
-              });
-            }
-            const statusColor = cell.status === 'done'
-              ? '#10b981'
-              : (cell.status === 'missed' ? '#f43f5e' : '#cbd5e1');
-            return React.createElement('div', {
-              key: cell.id,
-              title: `${cell.dateKey}: ${cell.status === 'done' ? 'сделано' : (cell.status === 'missed' ? 'пропущено' : 'нет отметки')}`,
-              style: {
-                minHeight: '24px',
-                borderRadius: '8px',
-                border: cell.isToday ? '1px solid rgba(59,130,246,0.45)' : '1px solid rgba(226,232,240,0.95)',
-                background: cell.isToday ? 'rgba(59,130,246,0.06)' : '#f8fafc',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '4px',
-                fontSize: '10px',
-                color: '#334155'
-              }
-            },
-              React.createElement('span', {
-                style: {
-                  width: '5px',
-                  height: '5px',
-                  borderRadius: '999px',
-                  background: statusColor,
-                  flexShrink: 0
-                }
-              }),
-              React.createElement('span', null, cell.dayOfMonth)
-            );
-          })
-        ),
-        React.createElement('div', {
-          style: {
-            marginTop: '8px',
-            display: 'flex',
-            justifyContent: 'space-between',
-            gap: '8px',
-            fontSize: '10px',
-            color: '#64748b'
-          }
-        },
-          React.createElement('span', null, `Сделано: ${calendarData.doneCount}`),
-          React.createElement('span', null, `Пропущено: ${calendarData.missedCount}`)
-        )
-      ),
+      MorningActivationHabitCalendar
+        ? React.createElement(MorningActivationHabitCalendar, {
+          dateKey,
+          readDayData: readMaDayForCalendar,
+          headingTitle: 'Календарь привычки',
+          layoutClass: 'ma-habit-cal--modal'
+        })
+        : null,
       phase === 'confirm'
         ? React.createElement('div', {
           style: { display: 'flex', flexDirection: 'column', gap: '8px' }
@@ -4110,11 +3895,11 @@
               color: '#be123c'
             },
             onClick: saveMissed
-          }, 'Не сделал'),
+          }, 'Не планирую сегодня'),
           React.createElement('button', {
             style: actionBtnStyle,
             onClick: () => context?.onClose?.()
-          }, 'Позже')
+          }, 'Сделаю позже')
         )
         : React.createElement('div', {
           style: { display: 'flex', flexDirection: 'column', gap: '8px' }
@@ -4443,6 +4228,48 @@
     xpAction: 'supplements_planned'
   });
 
+  function MorningActivationSkipReasonStepComponent({ context }) {
+    const dateKey = context?.dateKey || getTodayKey();
+    const btnBase = {
+      width: '100%',
+      textAlign: 'left',
+      padding: '12px 14px',
+      borderRadius: '12px',
+      border: '1px solid rgba(148,163,184,0.45)',
+      background: '#fff',
+      color: '#0f172a',
+      fontSize: '14px',
+      fontWeight: '600',
+      cursor: 'pointer'
+    };
+    const pick = (id) => {
+      persistMorningActivationState(dateKey, {
+        skipReasonId: id,
+        skipReasonPending: false,
+        skipReasonCapturedAt: Date.now()
+      }, 'morning-activation-skip-reason');
+      context?.onNext?.();
+    };
+    return React.createElement('div', {
+      className: 'ma-skip-reason-stack',
+      style: { display: 'flex', flexDirection: 'column', gap: '10px', padding: '4px 0 8px' }
+    },
+    React.createElement('div', {
+      style: { fontSize: '13px', fontWeight: '700', color: '#0f172a', marginBottom: '2px' }
+    }, 'Почему сегодня без зарядки?'),
+    React.createElement('div', {
+      style: { fontSize: '12px', color: '#64748b', lineHeight: '1.45', marginBottom: '4px' }
+    }, 'Выбери вариант — это только для твоей картины дня.'),
+    MORNING_ACTIVATION_SKIP_REASONS.map((opt) => React.createElement('button', {
+      key: opt.id,
+      type: 'button',
+      className: 'ma-skip-reason-option',
+      style: btnBase,
+      onClick: () => pick(opt.id)
+    }, opt.label))
+    );
+  }
+
   registerStep('morningRoutine', {
     title: 'Утренний фокус',
     hint: 'Резинки + мини-растяжка',
@@ -4477,9 +4304,22 @@
     xpAction: 'morning_routine_completed'
   });
 
+  registerStep('morning_activation_skip_reason', {
+    title: 'Зарядка',
+    hint: 'Почему не в плане сегодня?',
+    icon: '💬',
+    canSkip: true,
+    hideHeaderNext: true,
+    component: MorningActivationSkipReasonStepComponent,
+    getInitialData: () => ({}),
+    save: () => { }
+  });
+
   // =============================================
 
   // === Экспорт шагов ===
+  HEYS.morningActivationSkipReasons = MORNING_ACTIVATION_SKIP_REASONS;
+
   HEYS.Steps = {
     Weight: WeightStepComponent,
     SleepTime: SleepTimeStepComponent,

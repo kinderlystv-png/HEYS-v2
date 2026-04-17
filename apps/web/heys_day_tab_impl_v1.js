@@ -1168,8 +1168,48 @@
             kcalMin,
             kcalPerMin,
             weight,
-            r0
-        }) || null, [visibleTrainings, householdActivities, trainingTypes, weight, kcalMin, TR]);
+            r0,
+            dateKey: date
+        }) || null, [visibleTrainings, householdActivities, trainingTypes, weight, kcalMin, TR, date]);
+
+        // Сводка тренировок за 30 дней (чтение из localStorage по префиксу дня)
+        const monthTrainingsRows = useMemo(() => (
+            HEYS.dayActivity?.collectMonthTrainingRows?.({
+                lsGet,
+                kcalMin,
+                trainingTypes,
+                r0,
+                formatDateDisplay,
+                todayISO,
+                parseISO,
+                fmtDate
+            }) || []
+        ), [lsGet, kcalMin, trainingTypes, r0, day?.date, day?.updatedAt, day?.trainings]);
+
+        const readMaDayForActivityCalendar = React.useCallback((dk) => {
+            // Logical key heys_dayv2_* — HEYS.utils.lsGet applies client scope via nsKey (do not pass heys_<cid>_dayv2_* or key doubles).
+            const stored = lsGet('heys_dayv2_' + dk, {}) || {};
+            try {
+                const live = HEYS.Day?.getDay?.();
+                if (live && live.date === dk && dk === date) {
+                    const su = Number(stored.updatedAt) || 0;
+                    const lu = Number(live.updatedAt) || 0;
+                    return lu >= su ? live : stored;
+                }
+            } catch (_) { /* ignore */ }
+            return stored;
+        }, [lsGet, date, day?.updatedAt]);
+
+        const morningActivationCalendarBlock = useMemo(() => {
+            const Cal = HEYS.morningActivationCalendar?.MorningActivationHabitCalendar;
+            if (!Cal || !date) return null;
+            return React.createElement(Cal, {
+                dateKey: date,
+                readDayData: readMaDayForActivityCalendar,
+                headingTitle: '⚡ Календарь зарядки',
+                layoutClass: 'ma-habit-cal--activity'
+            });
+        }, [date, readMaDayForActivityCalendar, day?.updatedAt]);
 
         // Компактный блок сна и оценки дня в SaaS стиле (две плашки в розовом контейнере)
         // 🚀 PERF R7: memoize sideBlock — skip on popup/animation/water changes
@@ -1856,6 +1896,8 @@
             displayOptimum,
             tdee,
             caloricDebt,
+            monthTrainingsRows,
+            morningActivationCalendarBlock,
             r0,
             setDay,
             haptic,
@@ -1865,7 +1907,7 @@
             handleStepsDrag,
             openHouseholdPicker,
             openTrainingPicker
-        }), [stepsValue, stepsGoal, stepsPercent, stepsColor, stepsK, bmr, householdK, totalHouseholdMin, train1k, train2k, visibleTrainings, trainingsBlock, ndteBoostKcal, tefKcal, dayTargetDef, displayOptimum, tdee, caloricDebt, day?.isRefeedDay]);
+        }), [stepsValue, stepsGoal, stepsPercent, stepsColor, stepsK, bmr, householdK, totalHouseholdMin, train1k, train2k, visibleTrainings, trainingsBlock, monthTrainingsRows, morningActivationCalendarBlock, ndteBoostKcal, tefKcal, dayTargetDef, displayOptimum, tdee, caloricDebt, day?.isRefeedDay]);
 
         if (!HEYS.dayTabRender?.renderDayTabLayout) {
             throw new Error('[heys_day_v12] HEYS.dayTabRender not loaded before heys_day_v12.js');

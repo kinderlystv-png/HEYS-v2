@@ -528,14 +528,19 @@
     };
     // 🆕 v3.7.3: Не создаём пустые тренировки, только очищаем невалидные
     if (!Array.isArray(base.trainings)) base.trainings = [];
-    // Фильтруем пустые/невалидные тренировки (без времени И без зон)
+    // Фильтруем пустые/невалидные тренировки (без времени И без зон).
+    // Силовая с конструктором (workoutLog) должна сохраняться даже при z=0 и без time —
+    // иначе после reload теряются упражнения, пока «минуты по зонам» не тронут.
     const isValidTraining = (t) => {
       if (!t) return false;
-      // Есть время — валидна
       if (t.time && t.time !== '') return true;
-      // Есть хоть одна зона > 0 — валидна  
       const zones = t.z || [];
-      return zones.some(z => +z > 0);
+      if (zones.some(z => +z > 0)) return true;
+      if (String(t.type) === 'strength' && t.workoutLog && typeof t.workoutLog === 'object') {
+        const ex = t.workoutLog.exercises;
+        if (Array.isArray(ex) && ex.length >= 1) return true;
+      }
+      return false;
     };
     // Нормализуем существующие тренировки (миграция полей)
     base.trainings = base.trainings.filter(isValidTraining).map(t => {
@@ -555,6 +560,14 @@
       if (t && t.source) out.source = t.source;
       if (t && typeof t.activityLabel === 'string' && t.activityLabel.trim()) out.activityLabel = t.activityLabel.trim();
       if (t && t.intensity) out.intensity = t.intensity;
+      if (t && t.strengthEntryMode) out.strengthEntryMode = t.strengthEntryMode;
+      if (t && t.workoutLog && typeof t.workoutLog === 'object') {
+        try {
+          out.workoutLog = JSON.parse(JSON.stringify(t.workoutLog));
+        } catch {
+          out.workoutLog = t.workoutLog;
+        }
+      }
       return out;
     });
     return base;

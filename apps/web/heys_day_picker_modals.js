@@ -58,11 +58,30 @@
 
         const getVisibleTrainingsCount = (trainings) => {
             const tr = trainings || [];
-            const hasData = (t) => t && t.z && t.z.some(v => +v > 0);
-            if (tr[2] && hasData(tr[2])) return 3;
-            if (tr[1] && hasData(tr[1])) return 2;
-            if (tr[0] && hasData(tr[0])) return 1;
-            return 0;
+            const hasData = (t) => {
+                if (!t) return false;
+                if (t.z && Array.isArray(t.z) && t.z.some((v) => +v > 0)) return true;
+                try {
+                    const wlhc = HEYS.dayCalculations && typeof HEYS.dayCalculations.workoutLogHasTrackableContent === 'function'
+                        ? HEYS.dayCalculations.workoutLogHasTrackableContent
+                        : null;
+                    if (
+                        wlhc &&
+                        String(t.type) === 'strength' &&
+                        t.strengthEntryMode === 'workout_builder' &&
+                        t.workoutLog &&
+                        wlhc(t.workoutLog)
+                    ) {
+                        return true;
+                    }
+                } catch (e) { /* noop */ }
+                return false;
+            };
+            let res = 0;
+            if (tr[2] && hasData(tr[2])) res = 3;
+            else if (tr[1] && hasData(tr[1])) res = 2;
+            else if (tr[0] && hasData(tr[0])) res = 1;
+            return res;
         };
 
         // === Тренировки: количество видимых блоков ===

@@ -1,0 +1,11 @@
+# Cursor: exclude from AI indexing / @-mentions (reduces noise + token use).
+# Source edits stay in repo; agents can still open files manually if needed.
+
+# --- Legacy public bundles (minified, hash-named; huge diffs, not for LLM context) ---
+apps/web/public/**/*.bundle.*.js
+apps/web/public/**/*.bundle.*.js.gz
+apps/web/public/react-bundle.js
+apps/web/public/react-bundle.js.gz
+
+# --- Optional: large binary/reference dumps in repo root ---
+src/**/*.pdf

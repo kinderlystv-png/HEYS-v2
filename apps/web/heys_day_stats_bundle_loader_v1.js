@@ -5,11 +5,12 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
     const HEYS = (global.HEYS = global.HEYS || {});
 
     const scripts = [
+        'heys_morning_activation_calendar_v1.js',
         'heys_day_stats_vm_v1.js',
         'heys_day_realdata_actions_v1.js',
         'heys_day_stats_v1.js',
         'heys_day_activity_v1.js',
-        'heys_day_trainings_v1.js?v=ma-label-fix-20260415c',
+        'heys_day_trainings_v1.js',
         'heys_day_training_popups_v1.js',
         'heys_day_sleep_score_popups_v1.js'
     ];

@@ -987,7 +987,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                                     React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' } },
                                         React.createElement('span', {
                                             style: { fontWeight: 600, color: '#1e40af', fontSize: '14px' },
-                                            title: 'Источники: Mifflin (1990), Hall KD (2008), Forbes GB (2000), ACSM (2009)'
+                                            title: 'Источники: Mifflin (1990), Hall KD (2008), Forbes GB (2000), ACSM (2009). Колебания веса на весах частично вода и гликоген — ориентир на недельный тренд; подробнее в инсайте «Прогноз веса».'
                                         }, '📐 Расчёт достижения цели'),
                                         daysToGoal && React.createElement('span', {
                                             style: {
@@ -3370,7 +3370,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                   React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' } },
                     React.createElement('span', {
                       style: { fontWeight: 600, color: '#1e40af', fontSize: '14px' },
-                      title: 'Источники: Mifflin (1990), Hall KD (2008), Forbes GB (2000), ACSM (2009)'
+                      title: 'Источники: Mifflin (1990), Hall KD (2008), Forbes GB (2000), ACSM (2009). Колебания веса на весах частично вода и гликоген — ориентир на недельный тренд; подробнее в инсайте «Прогноз веса».'
                     }, '📐 Расчёт достижения цели'),
                     daysToGoal && React.createElement('span', {
                       style: {
@@ -20063,6 +20063,31 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
 
         const [settingsMenuOpen, setSettingsMenuOpen] = React.useState(false);
 
+        const canUseTasksAsHome = !cloudUser && !!clientId;
+        const HOME_TAB_OPTIONS = React.useMemo(() => {
+            const options = [
+                { key: 'widgets', label: 'Виджеты', icon: '🧩' },
+                { key: 'stats', label: 'Отчёты', icon: '📊' },
+                { key: 'diary', label: 'Дневник', icon: '🍽️' },
+                { key: 'insights', label: 'Советы', icon: '💡' },
+                { key: 'month', label: 'Месяц', icon: '🗓️' },
+            ];
+            if (canUseTasksAsHome) {
+                options.push({ key: 'tasks', label: 'Задачи', icon: '☑️' });
+            }
+            return options;
+        }, [canUseTasksAsHome]);
+
+        const handlePickHomeTab = (nextTab) => {
+            try {
+                setDefaultTab(nextTab);
+                HEYS.dayUtils?.haptic?.('light');
+                setSettingsMenuOpen(false);
+            } catch (e) {
+                // silent
+            }
+        };
+
         const primaryTabs = React.useMemo(() => {
             const items = [
                 { key: 'stats', label: 'Отчёты', buttonLabel: 'Итоги', icon: '📊', id: 'tour-stats-tab' },
@@ -20232,7 +20257,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                 ),
                 settingsMenuOpen && React.createElement(
                     'div',
-                    { className: 'tab-settings-menu' },
+                    { className: 'tab-settings-menu tab-settings-menu--with-home' },
                     React.createElement(
                         'div',
                         {
@@ -20256,6 +20281,43 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                         },
                         React.createElement('span', { className: 'tab-settings-icon' }, '📦'),
                         React.createElement('span', null, 'Список продуктов')
+                    ),
+                    React.createElement(
+                        'div',
+                        {
+                            className: 'tab-settings-home-wrap',
+                            role: 'group',
+                            'aria-label': 'Выбор домашней вкладки',
+                            onClick: (e) => e.stopPropagation(),
+                        },
+                        React.createElement('div', {
+                            className: 'widgets-home-tab-picker tab-settings-home-picker',
+                        },
+                            React.createElement('div', { className: 'widgets-home-tab-picker__title' }, 'Домашняя вкладка'),
+                            React.createElement('div', { className: 'widgets-home-tab-picker__hint' },
+                                'С неё приложение откроется в следующий раз'
+                            ),
+                            React.createElement('div', { className: 'widgets-home-tab-picker__options' },
+                                HOME_TAB_OPTIONS.map((option) => React.createElement('button', {
+                                    key: option.key,
+                                    type: 'button',
+                                    className: `widgets-home-tab-picker__option ${defaultTab === option.key ? 'active' : ''}`,
+                                    onClick: (e) => {
+                                        e.stopPropagation();
+                                        handlePickHomeTab(option.key);
+                                    },
+                                    'aria-pressed': defaultTab === option.key,
+                                    title: `Сделать домашней вкладкой: ${option.label}`,
+                                },
+                                    React.createElement('span', { className: 'widgets-home-tab-picker__option-icon' }, option.icon),
+                                    React.createElement('span', { className: 'widgets-home-tab-picker__option-label' }, option.label),
+                                    defaultTab === option.key && React.createElement('span', {
+                                        className: 'widgets-home-tab-picker__option-badge',
+                                        'aria-hidden': 'true',
+                                    }, '🏠')
+                                ))
+                            )
+                        )
                     )
                 )
             ),

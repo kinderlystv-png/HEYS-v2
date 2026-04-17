@@ -29,6 +29,8 @@
             displayOptimum,
             tdee,
             caloricDebt,
+            monthTrainingsRows,
+            morningActivationCalendarBlock,
             r0,
             setDay,
             haptic,
@@ -52,7 +54,9 @@
             // Metabolism (NDTE, TEF)
             ndteData, ndteBoostKcal, tefData, tefKcal,
             // Caloric calculations
-            dayTargetDef, displayOptimum, tdee, caloricDebt,
+            dayTargetDef, displayOptimum,             tdee, caloricDebt,
+            monthTrainingsRows,
+            morningActivationCalendarBlock,
             r0
         };
 

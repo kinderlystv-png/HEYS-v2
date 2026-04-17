@@ -985,7 +985,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                                     React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' } },
                                         React.createElement('span', {
                                             style: { fontWeight: 600, color: '#1e40af', fontSize: '14px' },
-                                            title: 'Источники: Mifflin (1990), Hall KD (2008), Forbes GB (2000), ACSM (2009)'
+                                            title: 'Источники: Mifflin (1990), Hall KD (2008), Forbes GB (2000), ACSM (2009). Колебания веса на весах частично вода и гликоген — ориентир на недельный тренд; подробнее в инсайте «Прогноз веса».'
                                         }, '📐 Расчёт достижения цели'),
                                         daysToGoal && React.createElement('span', {
                                             style: {

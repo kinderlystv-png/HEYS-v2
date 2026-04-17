@@ -151,6 +151,12 @@
 
     const isMeaningfulDayData = React.useCallback((data) => {
       if (!data || typeof data !== 'object') return false;
+      try {
+        const dc = HEYS.dayCalculations && typeof HEYS.dayCalculations.dayHasTrackableWorkoutBuilder === 'function'
+          ? HEYS.dayCalculations.dayHasTrackableWorkoutBuilder(data)
+          : false;
+        if (dc) return true;
+      } catch (e) { /* noop */ }
       const mealsCount = Array.isArray(data.meals) ? data.meals.length : 0;
       const trainingsCount = Array.isArray(data.trainings) ? data.trainings.length : 0;
       if (mealsCount > 0 || trainingsCount > 0) return true;

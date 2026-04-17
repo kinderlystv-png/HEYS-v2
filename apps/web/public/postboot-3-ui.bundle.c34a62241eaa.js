@@ -671,13 +671,13 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-3-ui: execute start');
         if (!config) return false;
         if (typeof config.shouldShow !== 'function') return true;
         try {
-          return config.shouldShow(context);
+          return config.shouldShow(context, stepData);
         } catch (e) {
           console.warn('[StepModal] shouldShow error:', config.id, e);
           return true;
         }
       });
-    }, [stepConfigs, contextKey]);
+    }, [stepConfigs, contextKey, stepData]);
 
     const totalSteps = visibleStepConfigs.length;
     const currentConfig = visibleStepConfigs[currentStepIndex];
@@ -687,23 +687,42 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-3-ui: execute start');
     const dailyTip = useMemo(() => getDailyTip(), []);
     const currentStreak = useMemo(() => getCurrentStreak(), []);
 
-    // Инициализация данных шагов (при изменении context)
+    // Инициализация данных шагов: полный сброс при смене context; дозаполнение при появлении новых видимых шагов (ветвление)
     const lastContextKeyRef = useRef(null);
+    const visibleIdsSig = useMemo(
+      () => visibleStepConfigs.map((c) => c && c.id).filter(Boolean).join('|'),
+      [visibleStepConfigs]
+    );
 
     useEffect(() => {
-      // Пропускаем если context не изменился
-      if (lastContextKeyRef.current === contextKey) return;
-      lastContextKeyRef.current = contextKey;
-
-      const initialData = {};
-      visibleStepConfigs.forEach(config => {
-        if (config.getInitialData) {
-          // Передаём context и уже собранные данные других шагов
-          initialData[config.id] = config.getInitialData(context, initialData);
-        }
+      if (lastContextKeyRef.current !== contextKey) {
+        lastContextKeyRef.current = contextKey;
+        const initialData = {};
+        visibleStepConfigs.forEach((config) => {
+          if (config.getInitialData) {
+            initialData[config.id] = config.getInitialData(context, initialData);
+          }
+        });
+        setStepData(initialData);
+        return;
+      }
+      setStepData((prev) => {
+        const next = { ...prev };
+        visibleStepConfigs.forEach((config) => {
+          if (config.getInitialData && next[config.id] === undefined) {
+            next[config.id] = config.getInitialData(context, next);
+          }
+        });
+        return next;
       });
-      setStepData(initialData);
-    }, [contextKey, visibleStepConfigs]);
+    }, [contextKey, visibleIdsSig, context, visibleStepConfigs]);
+
+    useEffect(() => {
+      setCurrentStepIndex((i) => {
+        const max = Math.max(0, totalSteps - 1);
+        return i > max ? max : i;
+      });
+    }, [totalSteps]);
 
     // Обновление данных шага
     const updateStepData = useCallback((stepId, data) => {
@@ -1162,6 +1181,397 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-3-ui: execute start');
 })(typeof window !== 'undefined' ? window : global);
 
 
+/* ===== heys_morning_activation_calendar_v1.js ===== */
+// heys_morning_activation_calendar_v1.js — shared «утренняя зарядка» habit calendar (modal + activity card)
+; (function (global) {
+  'use strict';
+
+  const HEYS = (global.HEYS = global.HEYS || {});
+  const React = global.React;
+  if (!React) return;
+
+  const { useState, useMemo, useCallback, useEffect, useRef } = React;
+
+  const WEEKDAY_SHORT = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
+  const CALENDAR_VIEW_KEY = 'morningActivationCalendarView';
+  const VIEW_28_DAYS = 'last_28_days';
+  const VIEW_MONTH = 'calendar_month';
+
+  function profileLsGet() {
+    const u = HEYS.utils || {};
+    if (typeof u.lsGet === 'function') return u.lsGet.bind(u);
+    if (HEYS.dayStorage?.lsGet) return HEYS.dayStorage.lsGet.bind(HEYS.dayStorage);
+    return (k, d) => d;
+  }
+
+  function profileLsSet() {
+    const u = HEYS.utils || {};
+    if (typeof u.lsSet === 'function') return u.lsSet.bind(u);
+    if (HEYS.dayStorage?.lsSet) return HEYS.dayStorage.lsSet.bind(HEYS.dayStorage);
+    return () => { };
+  }
+
+  function getTodayKeyFallback() {
+    if (HEYS.dayUtils?.todayISO) return HEYS.dayUtils.todayISO();
+    if (HEYS.StepModal?.utils?.getTodayKey) return HEYS.StepModal.utils.getTodayKey();
+    return new Date().toISOString().slice(0, 10);
+  }
+
+  function parseIsoDateKeyToLocalDate(dateKey) {
+    if (typeof dateKey !== 'string') return null;
+    const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateKey);
+    if (!match) return null;
+    const year = Number(match[1]);
+    const month = Number(match[2]) - 1;
+    const day = Number(match[3]);
+    const date = new Date(year, month, day, 12, 0, 0, 0);
+    if (Number.isNaN(date.getTime())) return null;
+    return date;
+  }
+
+  function formatDateToIsoKeyLocal(date) {
+    if (!(date instanceof Date) || Number.isNaN(date.getTime())) return getTodayKeyFallback();
+    const yyyy = date.getFullYear();
+    const mm = String(date.getMonth() + 1).padStart(2, '0');
+    const dd = String(date.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+  }
+
+  function getWeekdayMonFirst(date) {
+    const day = date.getDay();
+    return day === 0 ? 6 : day - 1;
+  }
+
+  function firstOfMonthIsoFromDateKey(dateKey) {
+    const d = parseIsoDateKeyToLocalDate(dateKey) || parseIsoDateKeyToLocalDate(getTodayKeyFallback());
+    return formatDateToIsoKeyLocal(new Date(d.getFullYear(), d.getMonth(), 1, 12, 0, 0, 0));
+  }
+
+  function shiftMonthAnchorIso(monthFirstIso, deltaMonths) {
+    const d = parseIsoDateKeyToLocalDate(monthFirstIso);
+    if (!d) return firstOfMonthIsoFromDateKey(getTodayKeyFallback());
+    const y = d.getFullYear();
+    const m = d.getMonth() + deltaMonths;
+    return formatDateToIsoKeyLocal(new Date(y, m, 1, 12, 0, 0, 0));
+  }
+
+  function isWeekendDateKey(dateKey) {
+    const d = parseIsoDateKeyToLocalDate(dateKey);
+    if (!d) return false;
+    const mon = getWeekdayMonFirst(d);
+    return mon === 5 || mon === 6;
+  }
+
+  function parseTimeToMinutes(time) {
+    if (typeof time !== 'string') return null;
+    const match = /^(\d{1,2}):(\d{2})$/.exec(time.trim());
+    if (!match) return null;
+    const hours = Number(match[1]);
+    const minutes = Number(match[2]);
+    if (Number.isNaN(hours) || Number.isNaN(minutes)) return null;
+    if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59) return null;
+    return hours * 60 + minutes;
+  }
+
+  function getFirstMealTimeFromDay(dayData) {
+    const meals = Array.isArray(dayData?.meals) ? dayData.meals : [];
+    const withItems = meals.filter((meal) => Array.isArray(meal?.items) && meal.items.length > 0);
+    if (!withItems.length) return null;
+    const minutesList = withItems
+      .map((meal) => parseTimeToMinutes(meal?.time))
+      .filter((m) => Number.isFinite(m));
+    if (minutesList.length) {
+      const first = Math.min(...minutesList);
+      const hh = String(Math.floor(first / 60)).padStart(2, '0');
+      const mm = String(first % 60).padStart(2, '0');
+      return `${hh}:${mm}`;
+    }
+    return null;
+  }
+
+  function clampMoodValue(value, fallback) {
+    const f = fallback === undefined ? 5 : fallback;
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric)) return f;
+    return Math.max(1, Math.min(10, Math.round(numeric)));
+  }
+
+  function normalizePostState(postState, fallback) {
+    if (!postState || typeof postState !== 'object') return fallback;
+    return {
+      mood: clampMoodValue(postState.mood, 5),
+      wellbeing: clampMoodValue(postState.wellbeing, 5),
+      stress: clampMoodValue(postState.stress, 5)
+    };
+  }
+
+  function normalizeMorningActivationState(dateKey, dayDataInput, readDayFn) {
+    const read = typeof readDayFn === 'function' ? readDayFn : () => ({});
+    const dayData = dayDataInput && typeof dayDataInput === 'object' ? dayDataInput : read(dateKey);
+    const stored = dayData?.morningActivation && typeof dayData.morningActivation === 'object'
+      ? dayData.morningActivation
+      : {};
+    const firstMealTime = stored.firstMealTime || getFirstMealTimeFromDay(dayData);
+    let status = stored.status;
+    if (status !== 'done' && status !== 'missed') {
+      status = firstMealTime ? 'pending' : 'pre_meal';
+    }
+    return {
+      status,
+      firstMealTime: firstMealTime || null,
+      intensity: stored.intensity || null,
+      postState: normalizePostState(stored.postState, null),
+      postEffect: stored.postEffect && typeof stored.postEffect === 'object' ? stored.postEffect : null,
+      copyId: stored.copyId || null,
+      decidedAt: stored.decidedAt || null
+    };
+  }
+
+  /** Align with activity card: charge logged as training/household counts as done for habit calendar. */
+  function hasMorningActivationEvidence(dayData) {
+    if (!dayData || typeof dayData !== 'object') return false;
+    if (dayData.morningActivation && dayData.morningActivation.status === 'done') return true;
+    const trainings = Array.isArray(dayData.trainings) ? dayData.trainings : [];
+    if (trainings.some((t) => t && t.source === 'morning_activation')) return true;
+    const household = Array.isArray(dayData.householdActivities) ? dayData.householdActivities : [];
+    if (household.some((h) => h && h.source === 'morning_activation')) return true;
+    return false;
+  }
+
+  /**
+   * effectiveTodayKey — граница «сегодня» (HEYS day, см. dayUtils.todayISO / 03:00).
+   * Прошлые дни без зарядки и без явного done → для календаря считаем пропуском (красный),
+   * даже если не открывали модалку и нет записей в дне.
+   */
+  function habitCalendarDisplayStatus(dateKey, readDayFn, effectiveTodayKey) {
+    const todayKey = effectiveTodayKey || getTodayKeyFallback();
+    const dayData = (typeof readDayFn === 'function' ? readDayFn(dateKey) : null) || {};
+    const state = normalizeMorningActivationState(dateKey, dayData, readDayFn);
+    if (state.status === 'missed') return 'missed';
+    if (state.status === 'done') return 'done';
+    if (hasMorningActivationEvidence(dayData)) return 'done';
+    // Будущие даты (режим «Месяц») — без окраски
+    if (dateKey > todayKey) return null;
+    // Сегодня: ещё можно сделать зарядку — нейтрально, пока нет done/пропуска/факта зарядки
+    if (dateKey === todayKey) return null;
+    // Прошлый HEYS-день без отметки «сделано» и без карточки зарядки → как пропуск
+    return 'missed';
+  }
+
+  function getMorningActivationCalendarViewPreference() {
+    const lsGet = profileLsGet();
+    const profile = lsGet('heys_profile', {}) || {};
+    const view = profile?.[CALENDAR_VIEW_KEY];
+    if (view === VIEW_MONTH) return VIEW_MONTH;
+    return VIEW_28_DAYS;
+  }
+
+  function saveMorningActivationCalendarViewPreference(view) {
+    if (view !== VIEW_28_DAYS && view !== VIEW_MONTH) return;
+    const lsGet = profileLsGet();
+    const lsSet = profileLsSet();
+    const profile = lsGet('heys_profile', {}) || {};
+    if (profile?.[CALENDAR_VIEW_KEY] === view) return;
+    profile[CALENDAR_VIEW_KEY] = view;
+    lsSet('heys_profile', profile);
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('heys:profile-updated', {
+        detail: { profile, source: 'morning-activation-calendar-view' }
+      }));
+    }
+  }
+
+  function buildMorningActivationCalendarData(anchorDateKey, viewMode, readDayFn) {
+    const heysTodayKey = getTodayKeyFallback();
+    const anchorDate = parseIsoDateKeyToLocalDate(anchorDateKey) || parseIsoDateKeyToLocalDate(heysTodayKey) || new Date();
+    const isMonthView = viewMode === VIEW_MONTH;
+    const effectiveDays = isMonthView
+      ? new Date(anchorDate.getFullYear(), anchorDate.getMonth() + 1, 0).getDate()
+      : 28;
+    const dayEntries = [];
+    const monthDate = new Date(anchorDate.getFullYear(), anchorDate.getMonth(), 1, 12, 0, 0, 0);
+
+    for (let offset = 0; offset < effectiveDays; offset++) {
+      const date = isMonthView
+        ? new Date(anchorDate.getFullYear(), anchorDate.getMonth(), offset + 1, 12, 0, 0, 0)
+        : (() => {
+          const d = new Date(anchorDate);
+          d.setDate(anchorDate.getDate() - (effectiveDays - 1 - offset));
+          return d;
+        })();
+      const dateKey = formatDateToIsoKeyLocal(date);
+      const display = habitCalendarDisplayStatus(dateKey, readDayFn, heysTodayKey);
+      dayEntries.push({
+        dateKey,
+        dayOfMonth: date.getDate(),
+        status: display,
+        isToday: dateKey === heysTodayKey
+      });
+    }
+
+    const firstDate = parseIsoDateKeyToLocalDate(dayEntries[0]?.dateKey);
+    const leadingEmpty = firstDate ? getWeekdayMonFirst(firstDate) : 0;
+    const grid = [];
+    for (let i = 0; i < leadingEmpty; i++) {
+      grid.push({ isEmpty: true, id: `empty-${i}` });
+    }
+    dayEntries.forEach((item) => grid.push({ ...item, isEmpty: false, id: item.dateKey }));
+    while (grid.length % 7 !== 0) {
+      grid.push({ isEmpty: true, id: `tail-${grid.length}` });
+    }
+
+    const doneCount = dayEntries.filter((item) => item.status === 'done').length;
+    const missedCount = dayEntries.filter((item) => item.status === 'missed').length;
+    return {
+      grid,
+      doneCount,
+      missedCount,
+      viewMode: isMonthView ? VIEW_MONTH : VIEW_28_DAYS,
+      title: isMonthView
+        ? monthDate.toLocaleDateString('ru-RU', { month: 'long', year: 'numeric' })
+        : 'Последние 28 дней'
+    };
+  }
+
+  /**
+   * @param {Object} props
+   * @param {string} props.dateKey — anchor ISO date
+   * @param {(dateKey: string) => object} props.readDayData
+   * @param {string} [props.headingTitle]
+   * @param {string} [props.layoutClass] — extra class on root shell (e.g. activity card)
+   */
+  function MorningActivationHabitCalendar(props) {
+    const {
+      dateKey,
+      readDayData,
+      headingTitle = 'Календарь привычки',
+      layoutClass = ''
+    } = props || {};
+
+    const stableRead = useCallback((dk) => {
+      if (typeof readDayData !== 'function') return {};
+      return readDayData(dk) || {};
+    }, [readDayData]);
+
+    const [calendarViewMode, setCalendarViewMode] = useState(() => getMorningActivationCalendarViewPreference());
+    const [monthAnchorKey, setMonthAnchorKey] = useState(() => firstOfMonthIsoFromDateKey(dateKey));
+    const prevDateKeyRef = useRef(dateKey);
+
+    useEffect(() => {
+      if (prevDateKeyRef.current === dateKey) return;
+      prevDateKeyRef.current = dateKey;
+      if (calendarViewMode !== VIEW_MONTH) return;
+      setMonthAnchorKey(firstOfMonthIsoFromDateKey(dateKey));
+    }, [dateKey, calendarViewMode]);
+
+    const effectiveAnchorKey = calendarViewMode === VIEW_MONTH ? monthAnchorKey : dateKey;
+
+    const calendarData = useMemo(
+      () => buildMorningActivationCalendarData(effectiveAnchorKey, calendarViewMode, stableRead),
+      [effectiveAnchorKey, calendarViewMode, stableRead]
+    );
+
+    const periodRow = calendarViewMode === VIEW_MONTH
+      ? React.createElement('div', { className: 'ma-habit-cal-period ma-habit-cal-period--month' },
+        React.createElement('button', {
+          type: 'button',
+          className: 'ma-habit-cal-period-nav',
+          'aria-label': 'Предыдущий месяц',
+          onClick: () => {
+            setMonthAnchorKey((k) => shiftMonthAnchorIso(k, -1));
+          }
+        }, '\u2039'),
+        React.createElement('span', {
+          className: 'ma-habit-cal-period-label ma-habit-cal-period-label--month',
+          'aria-live': 'polite'
+        }, calendarData.title),
+        React.createElement('button', {
+          type: 'button',
+          className: 'ma-habit-cal-period-nav',
+          'aria-label': 'Следующий месяц',
+          onClick: () => {
+            setMonthAnchorKey((k) => shiftMonthAnchorIso(k, 1));
+          }
+        }, '\u203A')
+      )
+      : React.createElement('div', { className: 'ma-habit-cal-period ma-habit-cal-period--28' },
+        React.createElement('span', { className: 'ma-habit-cal-period-label ma-habit-cal-period-label--28' }, calendarData.title)
+      );
+
+    return React.createElement('div', { className: 'ma-habit-cal-shell compact-card widget-shadow-diary-glass widget-outline-diary-glass ' + (layoutClass || '').trim() },
+      React.createElement('div', { className: 'ma-habit-cal-head' },
+        React.createElement('div', { className: 'ma-habit-cal-head-title-group' },
+          React.createElement('span', { className: 'ma-habit-cal-heading' }, headingTitle),
+          React.createElement('span', { className: 'ma-habit-cal-head-dot', 'aria-hidden': 'true' }, '\u00B7'),
+          React.createElement('button', {
+            type: 'button',
+            className: 'ma-habit-cal-mode-btn ma-habit-cal-mode-btn--inline' + (calendarViewMode === VIEW_28_DAYS ? ' is-active' : ''),
+            onClick: () => {
+              setCalendarViewMode(VIEW_28_DAYS);
+              saveMorningActivationCalendarViewPreference(VIEW_28_DAYS);
+            }
+          }, '28 дней'),
+          React.createElement('span', { className: 'ma-habit-cal-head-dot', 'aria-hidden': 'true' }, '\u00B7'),
+          React.createElement('button', {
+            type: 'button',
+            className: 'ma-habit-cal-mode-btn ma-habit-cal-mode-btn--inline' + (calendarViewMode === VIEW_MONTH ? ' is-active' : ''),
+            onClick: () => {
+              setCalendarViewMode(VIEW_MONTH);
+              saveMorningActivationCalendarViewPreference(VIEW_MONTH);
+              setMonthAnchorKey(firstOfMonthIsoFromDateKey(dateKey));
+            }
+          }, 'Месяц')
+        )
+      ),
+      periodRow,
+      React.createElement('div', { className: 'ma-habit-cal-matrix' },
+        React.createElement('div', { className: 'ma-habit-cal-weekdays' },
+          WEEKDAY_SHORT.map((label, idx) => React.createElement('div', {
+            key: 'wd-' + label,
+            className: 'ma-habit-cal-wd' + (idx >= 5 ? ' ma-habit-cal-wd--weekend' : '')
+          }, label))
+        ),
+        React.createElement('div', { className: 'ma-habit-cal-grid' },
+          calendarData.grid.map((cell) => {
+          if (cell.isEmpty) {
+            return React.createElement('div', { key: cell.id, className: 'ma-habit-cal-cell ma-habit-cal-cell--empty' });
+          }
+          const rowStatus = cell.status === 'done'
+            ? 'is-done'
+            : (cell.status === 'missed' ? 'is-missed' : 'is-neutral');
+          const weekend = isWeekendDateKey(cell.dateKey);
+          const title = `${cell.dateKey}: ${cell.status === 'done' ? 'сделано' : (cell.status === 'missed' ? 'пропущено' : 'нет отметки')}`;
+          return React.createElement('div', {
+            key: cell.id,
+            className: 'ma-habit-cal-cell ' + rowStatus + (cell.isToday ? ' is-today' : '') + (weekend ? ' is-weekend' : ''),
+            title
+          },
+          React.createElement('div', { className: 'ma-habit-cal-cell-inner' },
+            React.createElement('span', { className: 'ma-habit-cal-daynum' }, cell.dayOfMonth)
+          )
+          );
+        })
+        )
+      ),
+      React.createElement('div', { className: 'ma-habit-cal-footer' },
+        React.createElement('span', null, `Сделано: ${calendarData.doneCount}`),
+        React.createElement('span', null, `Пропущено: ${calendarData.missedCount}`)
+      )
+    );
+  }
+
+  HEYS.morningActivationCalendar = {
+    MorningActivationHabitCalendar,
+    buildMorningActivationCalendarData,
+    getMorningActivationCalendarViewPreference,
+    saveMorningActivationCalendarViewPreference,
+    VIEW_28_DAYS,
+    VIEW_MONTH,
+    WEEKDAY_SHORT
+  };
+})(window);
+
+
 /* ===== heys_steps_v1.js ===== */
 // heys_steps_v1.js — Библиотека шагов для StepModal
 // WeightStep, SleepTimeStep, SleepQualityStep, StepsGoalStep
@@ -1443,6 +1853,15 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-3-ui: execute start');
   }
 
   const MORNING_ACTIVATION_COPY_HISTORY_KEY = 'heys_morning_activation_copy_history_v1';
+
+  /** Подписи для UI (карточка дня + мини-модалка «почему без зарядки») */
+  const MORNING_ACTIVATION_SKIP_REASONS = [
+    { id: 'no_time', label: 'Не было времени' },
+    { id: 'low_mood', label: 'Плохое настроение или самочувствие' },
+    { id: 'low_energy', label: 'Мало сил и энергии' },
+    { id: 'other_priority', label: 'Были другие приоритеты' },
+    { id: 'other', label: 'Другая причина' }
+  ];
   const MORNING_ACTIVATION_INTENSITY_PRESETS = {
     super_light: {
       label: 'Суперлегкая',
@@ -1755,107 +2174,6 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-3-ui: execute start');
       }));
     }
     return dayData;
-  }
-
-  const MORNING_ACTIVATION_WEEKDAY_SHORT = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
-  const MORNING_ACTIVATION_CALENDAR_VIEW_KEY = 'morningActivationCalendarView';
-  const MORNING_ACTIVATION_CALENDAR_VIEW_28_DAYS = 'last_28_days';
-  const MORNING_ACTIVATION_CALENDAR_VIEW_MONTH = 'calendar_month';
-
-  function parseIsoDateKeyToLocalDate(dateKey) {
-    if (typeof dateKey !== 'string') return null;
-    const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateKey);
-    if (!match) return null;
-    const year = Number(match[1]);
-    const month = Number(match[2]) - 1;
-    const day = Number(match[3]);
-    const date = new Date(year, month, day, 12, 0, 0, 0);
-    if (Number.isNaN(date.getTime())) return null;
-    return date;
-  }
-
-  function formatDateToIsoKeyLocal(date) {
-    if (!(date instanceof Date) || Number.isNaN(date.getTime())) return getTodayKey();
-    const yyyy = date.getFullYear();
-    const mm = String(date.getMonth() + 1).padStart(2, '0');
-    const dd = String(date.getDate()).padStart(2, '0');
-    return `${yyyy}-${mm}-${dd}`;
-  }
-
-  function getWeekdayMonFirst(date) {
-    const day = date.getDay(); // 0 (Sun) ... 6 (Sat)
-    return day === 0 ? 6 : day - 1;
-  }
-
-  function getMorningActivationCalendarViewPreference() {
-    const profile = lsGet('heys_profile', {}) || {};
-    const view = profile?.[MORNING_ACTIVATION_CALENDAR_VIEW_KEY];
-    if (view === MORNING_ACTIVATION_CALENDAR_VIEW_MONTH) return MORNING_ACTIVATION_CALENDAR_VIEW_MONTH;
-    return MORNING_ACTIVATION_CALENDAR_VIEW_28_DAYS;
-  }
-
-  function saveMorningActivationCalendarViewPreference(view) {
-    if (view !== MORNING_ACTIVATION_CALENDAR_VIEW_28_DAYS && view !== MORNING_ACTIVATION_CALENDAR_VIEW_MONTH) return;
-    const profile = lsGet('heys_profile', {}) || {};
-    if (profile?.[MORNING_ACTIVATION_CALENDAR_VIEW_KEY] === view) return;
-    profile[MORNING_ACTIVATION_CALENDAR_VIEW_KEY] = view;
-    lsSet('heys_profile', profile);
-    if (typeof window !== 'undefined') {
-      window.dispatchEvent(new CustomEvent('heys:profile-updated', {
-        detail: { profile, source: 'morning-activation-calendar-view' }
-      }));
-    }
-  }
-
-  function buildMorningActivationCalendarData(anchorDateKey, viewMode = MORNING_ACTIVATION_CALENDAR_VIEW_28_DAYS) {
-    const anchorDate = parseIsoDateKeyToLocalDate(anchorDateKey) || parseIsoDateKeyToLocalDate(getTodayKey()) || new Date();
-    const isMonthView = viewMode === MORNING_ACTIVATION_CALENDAR_VIEW_MONTH;
-    const effectiveDays = isMonthView
-      ? new Date(anchorDate.getFullYear(), anchorDate.getMonth() + 1, 0).getDate()
-      : 28;
-    const dayEntries = [];
-    const monthDate = new Date(anchorDate.getFullYear(), anchorDate.getMonth(), 1, 12, 0, 0, 0);
-
-    for (let offset = 0; offset < effectiveDays; offset++) {
-      const date = isMonthView
-        ? new Date(anchorDate.getFullYear(), anchorDate.getMonth(), offset + 1, 12, 0, 0, 0)
-        : (() => {
-          const d = new Date(anchorDate);
-          d.setDate(anchorDate.getDate() - (effectiveDays - 1 - offset));
-          return d;
-        })();
-      const dateKey = formatDateToIsoKeyLocal(date);
-      const state = normalizeMorningActivationState(dateKey, readDayData(dateKey, {}));
-      dayEntries.push({
-        dateKey,
-        dayOfMonth: date.getDate(),
-        status: state.status === 'done' || state.status === 'missed' ? state.status : null,
-        isToday: dateKey === anchorDateKey
-      });
-    }
-
-    const firstDate = parseIsoDateKeyToLocalDate(dayEntries[0]?.dateKey);
-    const leadingEmpty = firstDate ? getWeekdayMonFirst(firstDate) : 0;
-    const grid = [];
-    for (let i = 0; i < leadingEmpty; i++) {
-      grid.push({ isEmpty: true, id: `empty-${i}` });
-    }
-    dayEntries.forEach((item) => grid.push({ ...item, isEmpty: false, id: item.dateKey }));
-    while (grid.length % 7 !== 0) {
-      grid.push({ isEmpty: true, id: `tail-${grid.length}` });
-    }
-
-    const doneCount = dayEntries.filter((item) => item.status === 'done').length;
-    const missedCount = dayEntries.filter((item) => item.status === 'missed').length;
-    return {
-      grid,
-      doneCount,
-      missedCount,
-      viewMode: isMonthView ? MORNING_ACTIVATION_CALENDAR_VIEW_MONTH : MORNING_ACTIVATION_CALENDAR_VIEW_28_DAYS,
-      title: isMonthView
-        ? monthDate.toLocaleDateString('ru-RU', { month: 'long', year: 'numeric' })
-        : 'последние 28 дней'
-    };
   }
 
   function removeMorningActivationArtifacts(dayData) {
@@ -2849,7 +3167,7 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-3-ui: execute start');
           '🎯 Какая активность ждёт тебя сегодня?'
         ),
         React.createElement('div', { className: 'mc-steps-purpose-sub' },
-          'Куратор увидит твой план и подстроит рекомендации по питанию'
+          'Куратор увидит твой план и подстроит рекомендации по питанию. Шаги и бытовое движение дополняют расход, но основной рычаг дефицита — питание относительно нормы дня.'
         )
       ),
       React.createElement('div', { className: 'mc-steps-display' },
@@ -3027,7 +3345,9 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-3-ui: execute start');
       React.createElement('div', { className: 'deficit-hint' },
         'Отрицательный = дефицит (похудение)',
         React.createElement('br'),
-        'Положительный = профицит (набор)'
+        'Положительный = профицит (набор)',
+        React.createElement('br'),
+        'Норма дня в HEYS считается от вашего расхода; при затяжном жёстком дефиците метаболизм может адаптироваться — см. инсайт «Адаптивный термогенез».'
       ),
 
       // Быстрые пресеты
@@ -3053,7 +3373,7 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-3-ui: execute start');
   // Регистрация шага дефицита
   registerStep('deficit', {
     title: 'Дефицит',
-    hint: 'Цель калорийности',
+    hint: 'Цель калорийности относительно нормы дня; устойчивый дефицит обычно переносится легче экстремального',
     icon: '📊',
     component: DeficitStepComponent,
     getInitialData: (ctx) => {
@@ -4998,11 +5318,8 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-3-ui: execute start');
     });
     const firstMealTimeValue = initialState.firstMealTime || getFirstMealTimeFromDay(dayData) || null;
     const firstMealTimeLabel = firstMealTimeValue || '—';
-    const [calendarViewMode, setCalendarViewMode] = useState(() => getMorningActivationCalendarViewPreference());
-    const calendarData = useMemo(
-      () => buildMorningActivationCalendarData(dateKey, calendarViewMode),
-      [dateKey, calendarViewMode]
-    );
+    const readMaDayForCalendar = useCallback((dk) => readDayData(dk, {}), []);
+    const MorningActivationHabitCalendar = HEYS.morningActivationCalendar?.MorningActivationHabitCalendar;
 
     const setPostField = (field, value) => {
       setPostState((prev) => ({
@@ -5020,7 +5337,10 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-3-ui: execute start');
         postEffect: null,
         firstMealTime: nextState.firstMealTime || firstMealTimeValue || null,
         decidedAt: Date.now(),
-        followupSnoozeUntilMealCount: null
+        followupSnoozeUntilMealCount: null,
+        skipReasonPending: true,
+        skipReasonId: null,
+        skipReasonCapturedAt: null
       }, 'morning-activation-followup');
       syncMorningActivationActivity(dateKey, {
         ...nextState,
@@ -5028,6 +5348,13 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-3-ui: execute start');
         intensity: null
       });
       context?.onNext?.();
+      try {
+        setTimeout(() => {
+          window.dispatchEvent(new CustomEvent('heys:ma-skip-reason-check', { detail: { dateKey } }));
+        }, 160);
+      } catch (_) {
+        // ignore
+      }
     };
 
     const saveDone = () => {
@@ -5110,146 +5437,14 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-3-ui: execute start');
           style: { fontSize: '12px', color: '#334155', lineHeight: '1.45' }
         }, `После первого приёма пищи (${firstMealTimeLabel}) зафиксируй статус привычки.`)
       ),
-      React.createElement('div', {
-        style: {
-          borderRadius: '12px',
-          border: '1px solid rgba(148,163,184,0.28)',
-          background: '#fff',
-          padding: '10px 10px 8px'
-        }
-      },
-        React.createElement('div', {
-          style: {
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'baseline',
-            gap: '8px',
-            marginBottom: '8px'
-          }
-        },
-          React.createElement('div', { style: { fontSize: '12px', fontWeight: '700', color: '#0f172a' } }, 'Календарь привычки'),
-          React.createElement('div', { style: { fontSize: '10px', color: '#64748b', textTransform: 'capitalize' } }, calendarData.title)
-        ),
-        React.createElement('div', {
-          style: {
-            display: 'grid',
-            gridTemplateColumns: '1fr 1fr',
-            gap: '6px',
-            marginBottom: '8px'
-          }
-        },
-          React.createElement('button', {
-            type: 'button',
-            onClick: () => {
-              setCalendarViewMode(MORNING_ACTIVATION_CALENDAR_VIEW_28_DAYS);
-              saveMorningActivationCalendarViewPreference(MORNING_ACTIVATION_CALENDAR_VIEW_28_DAYS);
-            },
-            style: {
-              borderRadius: '8px',
-              border: calendarViewMode === MORNING_ACTIVATION_CALENDAR_VIEW_28_DAYS ? '1px solid rgba(59,130,246,0.55)' : '1px solid rgba(203,213,225,0.9)',
-              background: calendarViewMode === MORNING_ACTIVATION_CALENDAR_VIEW_28_DAYS ? 'rgba(59,130,246,0.10)' : '#f8fafc',
-              color: calendarViewMode === MORNING_ACTIVATION_CALENDAR_VIEW_28_DAYS ? '#1d4ed8' : '#475569',
-              fontSize: '10px',
-              fontWeight: '700',
-              padding: '6px 8px',
-              cursor: 'pointer'
-            }
-          }, '28 дней'),
-          React.createElement('button', {
-            type: 'button',
-            onClick: () => {
-              setCalendarViewMode(MORNING_ACTIVATION_CALENDAR_VIEW_MONTH);
-              saveMorningActivationCalendarViewPreference(MORNING_ACTIVATION_CALENDAR_VIEW_MONTH);
-            },
-            style: {
-              borderRadius: '8px',
-              border: calendarViewMode === MORNING_ACTIVATION_CALENDAR_VIEW_MONTH ? '1px solid rgba(59,130,246,0.55)' : '1px solid rgba(203,213,225,0.9)',
-              background: calendarViewMode === MORNING_ACTIVATION_CALENDAR_VIEW_MONTH ? 'rgba(59,130,246,0.10)' : '#f8fafc',
-              color: calendarViewMode === MORNING_ACTIVATION_CALENDAR_VIEW_MONTH ? '#1d4ed8' : '#475569',
-              fontSize: '10px',
-              fontWeight: '700',
-              padding: '6px 8px',
-              cursor: 'pointer'
-            }
-          }, 'Месяц')
-        ),
-        React.createElement('div', {
-          style: {
-            display: 'grid',
-            gridTemplateColumns: 'repeat(7, minmax(0, 1fr))',
-            gap: '4px',
-            marginBottom: '6px'
-          }
-        },
-          MORNING_ACTIVATION_WEEKDAY_SHORT.map((label) => React.createElement('div', {
-            key: `wd-${label}`,
-            style: {
-              fontSize: '10px',
-              color: '#94a3b8',
-              textAlign: 'center'
-            }
-          }, label))
-        ),
-        React.createElement('div', {
-          style: {
-            display: 'grid',
-            gridTemplateColumns: 'repeat(7, minmax(0, 1fr))',
-            gap: '4px'
-          }
-        },
-          calendarData.grid.map((cell) => {
-            if (cell.isEmpty) {
-              return React.createElement('div', {
-                key: cell.id,
-                style: { minHeight: '24px' }
-              });
-            }
-            const statusColor = cell.status === 'done'
-              ? '#10b981'
-              : (cell.status === 'missed' ? '#f43f5e' : '#cbd5e1');
-            return React.createElement('div', {
-              key: cell.id,
-              title: `${cell.dateKey}: ${cell.status === 'done' ? 'сделано' : (cell.status === 'missed' ? 'пропущено' : 'нет отметки')}`,
-              style: {
-                minHeight: '24px',
-                borderRadius: '8px',
-                border: cell.isToday ? '1px solid rgba(59,130,246,0.45)' : '1px solid rgba(226,232,240,0.95)',
-                background: cell.isToday ? 'rgba(59,130,246,0.06)' : '#f8fafc',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '4px',
-                fontSize: '10px',
-                color: '#334155'
-              }
-            },
-              React.createElement('span', {
-                style: {
-                  width: '5px',
-                  height: '5px',
-                  borderRadius: '999px',
-                  background: statusColor,
-                  flexShrink: 0
-                }
-              }),
-              React.createElement('span', null, cell.dayOfMonth)
-            );
-          })
-        ),
-        React.createElement('div', {
-          style: {
-            marginTop: '8px',
-            display: 'flex',
-            justifyContent: 'space-between',
-            gap: '8px',
-            fontSize: '10px',
-            color: '#64748b'
-          }
-        },
-          React.createElement('span', null, `Сделано: ${calendarData.doneCount}`),
-          React.createElement('span', null, `Пропущено: ${calendarData.missedCount}`)
-        )
-      ),
+      MorningActivationHabitCalendar
+        ? React.createElement(MorningActivationHabitCalendar, {
+          dateKey,
+          readDayData: readMaDayForCalendar,
+          headingTitle: 'Календарь привычки',
+          layoutClass: 'ma-habit-cal--modal'
+        })
+        : null,
       phase === 'confirm'
         ? React.createElement('div', {
           style: { display: 'flex', flexDirection: 'column', gap: '8px' }
@@ -5275,11 +5470,11 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-3-ui: execute start');
               color: '#be123c'
             },
             onClick: saveMissed
-          }, 'Не сделал'),
+          }, 'Не планирую сегодня'),
           React.createElement('button', {
             style: actionBtnStyle,
             onClick: () => context?.onClose?.()
-          }, 'Позже')
+          }, 'Сделаю позже')
         )
         : React.createElement('div', {
           style: { display: 'flex', flexDirection: 'column', gap: '8px' }
@@ -5608,6 +5803,48 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-3-ui: execute start');
     xpAction: 'supplements_planned'
   });
 
+  function MorningActivationSkipReasonStepComponent({ context }) {
+    const dateKey = context?.dateKey || getTodayKey();
+    const btnBase = {
+      width: '100%',
+      textAlign: 'left',
+      padding: '12px 14px',
+      borderRadius: '12px',
+      border: '1px solid rgba(148,163,184,0.45)',
+      background: '#fff',
+      color: '#0f172a',
+      fontSize: '14px',
+      fontWeight: '600',
+      cursor: 'pointer'
+    };
+    const pick = (id) => {
+      persistMorningActivationState(dateKey, {
+        skipReasonId: id,
+        skipReasonPending: false,
+        skipReasonCapturedAt: Date.now()
+      }, 'morning-activation-skip-reason');
+      context?.onNext?.();
+    };
+    return React.createElement('div', {
+      className: 'ma-skip-reason-stack',
+      style: { display: 'flex', flexDirection: 'column', gap: '10px', padding: '4px 0 8px' }
+    },
+    React.createElement('div', {
+      style: { fontSize: '13px', fontWeight: '700', color: '#0f172a', marginBottom: '2px' }
+    }, 'Почему сегодня без зарядки?'),
+    React.createElement('div', {
+      style: { fontSize: '12px', color: '#64748b', lineHeight: '1.45', marginBottom: '4px' }
+    }, 'Выбери вариант — это только для твоей картины дня.'),
+    MORNING_ACTIVATION_SKIP_REASONS.map((opt) => React.createElement('button', {
+      key: opt.id,
+      type: 'button',
+      className: 'ma-skip-reason-option',
+      style: btnBase,
+      onClick: () => pick(opt.id)
+    }, opt.label))
+    );
+  }
+
   registerStep('morningRoutine', {
     title: 'Утренний фокус',
     hint: 'Резинки + мини-растяжка',
@@ -5642,9 +5879,22 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-3-ui: execute start');
     xpAction: 'morning_routine_completed'
   });
 
+  registerStep('morning_activation_skip_reason', {
+    title: 'Зарядка',
+    hint: 'Почему не в плане сегодня?',
+    icon: '💬',
+    canSkip: true,
+    hideHeaderNext: true,
+    component: MorningActivationSkipReasonStepComponent,
+    getInitialData: () => ({}),
+    save: () => { }
+  });
+
   // =============================================
 
   // === Экспорт шагов ===
+  HEYS.morningActivationSkipReasons = MORNING_ACTIVATION_SKIP_REASONS;
+
   HEYS.Steps = {
     Weight: WeightStepComponent,
     SleepTime: SleepTimeStepComponent,
@@ -7611,7 +7861,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
     // Доступ к навигации StepModal
     const stepContext = useContext(HEYS.StepModal?.Context || React.createContext({}));
-    const { goToStep, closeModal } = stepContext;
+    const { goToStep, closeModal, updateStepData, stepData: modalStepData } = stepContext;
 
     const { dateKey = '', day: contextDay } = context || {};
     const usageWindowDays = 21;
@@ -8367,33 +8617,45 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     const selectProduct = useCallback((product) => {
       haptic('light');
 
-      // ⚡ PERF: defer non-critical store reads into startTransition
       const productId = product.id ?? product.product_id ?? product.name;
       const lastGrams = lsGet(`heys_last_grams_${productId}`, null);
       const mlGrams = data._mlGrams || null;
       const defaultGrams = mlGrams || lastGrams || 100;
 
-      // ⚡ startTransition: defer heavy re-renders from product selection
+      const nextSearch = {
+        ...data,
+        selectedProduct: product,
+        grams: defaultGrams,
+        _mlGrams: null,
+        lastGrams: lastGrams
+      };
+
+      // SYNC: onChange must commit before goToStep. Wrapping onChange in startTransition
+      // deferred stepData.search — GramsStep mounted with no selectedProduct ("Сначала выберите продукт").
+      onChange(nextSearch);
+
+      if (typeof updateStepData === 'function') {
+        updateStepData('grams', {
+          ...(modalStepData?.grams || {}),
+          selectedProduct: product,
+          grams: defaultGrams,
+          lastGrams
+        });
+      }
+
       React.startTransition(() => {
         try {
           if (HEYS.store?.getHiddenProducts) {
             setHiddenProducts(HEYS.store.getHiddenProducts());
           }
         } catch (e) { /* no-op */ }
-
-        onChange({
-          ...data,
-          selectedProduct: product,
-          grams: defaultGrams,
-          _mlGrams: null,
-          lastGrams: lastGrams
-        });
       });
+
       // Автопереход на шаг граммов (index 4: search → grams)
       if (goToStep) {
         requestAnimationFrame(() => goToStep(4, 'left'));
       }
-    }, [data, onChange, goToStep]);
+    }, [data, onChange, goToStep, updateStepData, modalStepData]);
 
     // Кнопка "Новый продукт" — открытие внешней формы создания
     const handleNewProduct = useCallback(() => {
@@ -10944,6 +11206,7 @@ NOVA: 1
     // ВАЖНО: stepData?.create проверяется т.к. при создании нового продукта data.selectedProduct может не успеть обновиться
     const product = context?.editProduct
       || data.selectedProduct
+      || stepData?.grams?.selectedProduct
       || stepData?.create?.newProduct
       || stepData?.create?.selectedProduct
       || stepData?.search?.selectedProduct;
@@ -22583,7 +22846,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     const source = training || {};
     const type = source.type || 'cardio';
 
-    return {
+    const out = {
       type,
       activityLabel: normalizeActivityLabel(source.activityLabel) || getDefaultActivityLabel(type),
       time: source.time || getRoundedCurrentTime(),
@@ -22593,6 +22856,81 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       stress: normalizeTrainingRating(source.stress),
       comment: typeof source.comment === 'string' ? source.comment : ''
     };
+    if (source.strengthEntryMode === 'hr_zones' || source.strengthEntryMode === 'workout_builder') {
+      out.strengthEntryMode = source.strengthEntryMode;
+    }
+    if (source.workoutLog && typeof source.workoutLog === 'object') {
+      out.workoutLog = source.workoutLog;
+    }
+    return out;
+  }
+
+  function persistMergedTraining(ctx, allStepData, patch) {
+    const dateKey = ctx?.dateKey || new Date().toISOString().slice(0, 10);
+    const trainingIndex = ctx?.trainingIndex ?? 0;
+    const day = lsGet(`heys_dayv2_${dateKey}`, { date: dateKey });
+
+    const trainings = day.trainings || [];
+    while (trainings.length <= trainingIndex) {
+      trainings.push({ z: [0, 0, 0, 0] });
+    }
+
+    const infoData = allStepData?.['training-info'] || {};
+    const feedbackData = allStepData?.['training-feedback'] || {};
+    // Feedback is initialized before user may change type on step 1; it can still carry stale type/activity/time.
+    // Merge order: training-info and patch must win over feedback for those fields.
+    const merged = buildTrainingFormData({
+      ...feedbackData,
+      ...infoData,
+      ...patch
+    });
+
+    const finalTraining = {
+      z: merged.zones,
+      time: merged.time,
+      type: merged.type,
+      activityLabel: merged.activityLabel,
+      mood: merged.mood,
+      wellbeing: merged.wellbeing,
+      stress: merged.stress,
+      comment: merged.comment
+    };
+
+    if (merged.strengthEntryMode) {
+      finalTraining.strengthEntryMode = merged.strengthEntryMode;
+    }
+    if (merged.strengthEntryMode === 'workout_builder') {
+      if (merged.workoutLog && typeof merged.workoutLog === 'object') {
+        finalTraining.workoutLog = merged.workoutLog;
+      } else {
+        const m = Math.max(1, Math.min(180, Math.round(Number(merged.zones?.[1]) || 0) || 1));
+        finalTraining.workoutLog = {
+          version: 1,
+          zoneMinutes: [0, m, 0, 0],
+          totalDurationMinutes: m,
+          exercises: [{ id: 'ex_0', name: '', sets: 3, reps: 10, weightKg: '', note: '', ssGroup: 0, rpe: 0 }]
+        };
+      }
+    } else if (merged.strengthEntryMode === 'hr_zones') {
+      delete finalTraining.workoutLog;
+    }
+
+    trainings[trainingIndex] = finalTraining;
+
+    day.trainings = trainings;
+    day.updatedAt = Date.now();
+    lsSet(`heys_dayv2_${dateKey}`, day);
+
+    window.dispatchEvent(new CustomEvent('heys:day-updated', {
+      detail: { date: dateKey, field: 'trainings', source: 'training-step', forceReload: true }
+    }));
+
+    const totalMinutes = (finalTraining.z || []).reduce((sum, v) => sum + (Number(v) || 0), 0);
+    if (typeof window !== 'undefined' && totalMinutes > 0) {
+      window.dispatchEvent(new CustomEvent('heysTrainingAdded', {
+        detail: { minutes: totalMinutes, date: dateKey, trainingIndex }
+      }));
+    }
   }
 
   function readTrainingFormData(ctx) {
@@ -22932,7 +23270,46 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
   }
 
   // ========================================
-  // ШАГ 2: Зоны пульса
+  // Силовая: выбор пути (зоны vs конструктор)
+  // ========================================
+  function TrainingStrengthModeStep({ data, onChange }) {
+    const mode = data.mode || null;
+    const setMode = (m) => {
+      haptic('light');
+      onChange({ ...data, mode: m });
+    };
+    return React.createElement('div', { className: 'training-step' },
+      React.createElement('div', { className: 'ts-section ts-strength-mode-section' },
+        React.createElement('div', { className: 'ts-strength-mode-title' }, 'Силовая: как учесть нагрузку?'),
+        React.createElement('div', { className: 'ts-strength-mode-grid' },
+          React.createElement('button', {
+            type: 'button',
+            className: 'ts-strength-mode-btn' + (mode === 'hr_zones' ? ' active' : ''),
+            onClick: () => setMode('hr_zones')
+          },
+          React.createElement('span', { className: 'ts-sm-icon' }, '❤️'),
+          React.createElement('span', { className: 'ts-sm-label' }, 'Пульсовые зоны'),
+          React.createElement('span', { className: 'ts-sm-hint' }, 'Минуты по зонам — как раньше')
+          ),
+          React.createElement('button', {
+            type: 'button',
+            className: 'ts-strength-mode-btn' + (mode === 'workout_builder' ? ' active' : ''),
+            onClick: () => setMode('workout_builder')
+          },
+          React.createElement('span', { className: 'ts-sm-icon' }, '📋'),
+          React.createElement('span', { className: 'ts-sm-label' }, 'Конструктор'),
+          React.createElement('span', { className: 'ts-sm-hint' }, 'Упражнения, подходы и повторы')
+          )
+        ),
+        mode === 'workout_builder' && React.createElement('p', { className: 'ts-strength-mode-footnote' },
+          'После «Добавить» упражнения и длительность настраиваются в карточке тренировки в блоке активности.'
+        )
+      )
+    );
+  }
+
+  // ========================================
+  // ШАГ: Зоны пульса
   // ========================================
   function TrainingZonesStep({ data, onChange, context }) {
     const profile = useMemo(() => lsGet('heys_profile', {}), []);
@@ -23049,12 +23426,71 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     validate: () => true
   });
 
-  // Шаг 3: Зоны пульса
+  // Силовая: зоны или конструктор (только type === strength)
+  registerStep('training-strength-mode', {
+    title: 'Силовая',
+    hint: 'Зоны или конструктор',
+    icon: '🏋️',
+    component: TrainingStrengthModeStep,
+    shouldShow: (ctx, sd) => (sd['training-info'] || {}).type === 'strength',
+    getInitialData: (ctx, allData) => {
+      const info = allData?.['training-info'] || {};
+      const day = readTrainingFormData(ctx);
+      if (info.type !== 'strength') return { mode: null };
+      if (day.strengthEntryMode === 'hr_zones') return { mode: 'hr_zones' };
+      if (day.strengthEntryMode === 'workout_builder') return { mode: 'workout_builder' };
+      return { mode: null };
+    },
+    validate: (data) => data && (data.mode === 'hr_zones' || data.mode === 'workout_builder'),
+    getValidationMessage: () => 'Выберите способ учёта силовой тренировки',
+    save: (data, ctx, allStepData) => {
+      if (!data || data.mode !== 'workout_builder') return;
+      const info = allStepData?.['training-info'] || {};
+      if (info.type !== 'strength') return;
+      const base = readTrainingFormData(ctx);
+      let z4 = normalizeTrainingZones(base.zones || base.z || [0, 0, 0, 0]);
+      const sumZ = z4.reduce((s, v) => s + (+v || 0), 0);
+      const z1 = Array.isArray(base.zones) ? base.zones[1] : 0;
+      const defaultMin = Math.max(1, Math.min(180, Math.round(Number(z1)) || 1));
+      if (sumZ === 0) {
+        z4 = [0, defaultMin, 0, 0];
+      }
+      let wl = base.workoutLog;
+      const zmSum = z4.reduce((s, v) => s + (+v || 0), 0);
+      if (wl && typeof wl === 'object' && Array.isArray(wl.exercises) && wl.exercises.length) {
+        wl = {
+          ...wl,
+          version: 1,
+          zoneMinutes: z4.slice(),
+          totalDurationMinutes: zmSum
+        };
+      } else {
+        wl = {
+          version: 1,
+          zoneMinutes: z4.slice(),
+          totalDurationMinutes: zmSum,
+          exercises: [{ id: 'ex_0', name: '', sets: 3, reps: 10, weightKg: '', note: '', ssGroup: 0, rpe: 0 }]
+        };
+      }
+      persistMergedTraining(ctx, allStepData, {
+        zones: z4,
+        strengthEntryMode: 'workout_builder',
+        workoutLog: wl
+      });
+    }
+  });
+
+  // Зоны пульса (после выбора «зоны» для силовой; для кардио/хобби — сразу после ощущений)
   registerStep('training-zones', {
     title: 'Зоны пульса',
     hint: 'Минуты в каждой зоне',
     icon: '❤️',
     component: TrainingZonesStep,
+    shouldShow: (ctx, sd) => {
+      const t = (sd['training-info'] || {}).type;
+      if (t !== 'strength') return true;
+      return (sd['training-strength-mode'] || {}).mode === 'hr_zones';
+    },
     getInitialData: (ctx, allData) => {
       return {
         ...readTrainingFormData(ctx),
@@ -23072,52 +23508,12 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       return null;
     },
     save: (data, ctx, allStepData) => {
-      const dateKey = ctx?.dateKey || new Date().toISOString().slice(0, 10);
-      const trainingIndex = ctx?.trainingIndex ?? 0;
-      const day = lsGet(`heys_dayv2_${dateKey}`, { date: dateKey });
-
-      const trainings = day.trainings || [];
-      while (trainings.length <= trainingIndex) {
-        trainings.push({ z: [0, 0, 0, 0] });
-      }
-
-      // Объединяем данные всех шагов в один training payload
       const infoData = allStepData?.['training-info'] || {};
-      const feedbackData = allStepData?.['training-feedback'] || {};
-      const zonesData = data || {};
-      const finalData = buildTrainingFormData({
-        ...infoData,
-        ...feedbackData,
-        ...zonesData
-      });
-
-      const finalTraining = {
-        z: finalData.zones,
-        time: finalData.time,
-        type: finalData.type,
-        activityLabel: finalData.activityLabel,
-        mood: finalData.mood,
-        wellbeing: finalData.wellbeing,
-        stress: finalData.stress,
-        comment: finalData.comment
-      };
-
-      trainings[trainingIndex] = finalTraining;
-
-      day.trainings = trainings;
-      day.updatedAt = Date.now();
-      lsSet(`heys_dayv2_${dateKey}`, day);
-
-      window.dispatchEvent(new CustomEvent('heys:day-updated', {
-        detail: { date: dateKey, field: 'trainings', source: 'training-step', forceReload: true }
-      }));
-
-      const totalMinutes = (finalTraining.z || []).reduce((sum, v) => sum + (Number(v) || 0), 0);
-      if (typeof window !== 'undefined' && totalMinutes > 0) {
-        window.dispatchEvent(new CustomEvent('heysTrainingAdded', {
-          detail: { minutes: totalMinutes, date: dateKey, trainingIndex }
-        }));
+      const patch = { zones: (data || {}).zones };
+      if (infoData.type === 'strength') {
+        patch.strengthEntryMode = 'hr_zones';
       }
+      persistMergedTraining(ctx, allStepData, patch);
     }
   });
 
@@ -23131,7 +23527,12 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     }
 
     HEYS.StepModal.show({
-      steps: ['training-info', 'training-feedback', 'training-zones'],
+      steps: [
+        'training-info',
+        'training-feedback',
+        'training-strength-mode',
+        'training-zones'
+      ],
       title: trainingIndex > 0 ? `Тренировка ${trainingIndex + 1}` : 'Тренировка',
       showProgress: true,
       showStreak: false,
@@ -23141,12 +23542,12 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       finishLabel: 'Добавить', // Кнопка на последнем шаге
       context: { dateKey, trainingIndex },
       onComplete: (stepData) => {
-        const data = {
+        onComplete?.({
           ...(stepData['training-info'] || {}),
           ...(stepData['training-feedback'] || {}),
+          ...(stepData['training-strength-mode'] || {}),
           ...(stepData['training-zones'] || {})
-        };
-        onComplete?.(data);
+        });
       }
     });
   }
@@ -23493,8 +23894,65 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
   }
 
   let followupOpening = false;
+  let skipReasonOpening = false;
   let lastMealSignalAt = 0;
   let pendingFollowupAfterProductFlow = false;
+
+  function maybeOpenMorningActivationSkipReason(trigger = 'unknown', dateKeyArg) {
+    const _tag = '[MA.skipReason]';
+    if (skipReasonOpening) { console.info(_tag, 'SKIP: already opening', { trigger }); return; }
+    if (!HEYS.StepModal?.show) { console.info(_tag, 'SKIP: no StepModal', { trigger }); return; }
+    if (!HEYS.StepModal?.registry?.morning_activation_skip_reason) { console.info(_tag, 'SKIP: step not registered', { trigger }); return; }
+    if (document.getElementById('heys-step-modal-root')) { console.info(_tag, 'SKIP: modal root exists', { trigger }); return; }
+
+    const currentClientId = getCurrentClientId();
+    if (!currentClientId) { console.info(_tag, 'SKIP: no clientId', { trigger }); return; }
+
+    const dateKey = (typeof dateKeyArg === 'string' && dateKeyArg) ? dateKeyArg : getTodayKey();
+    const dayData = readDayDataMergedForMaFollowup(dateKey);
+    const ma = dayData?.morningActivation || {};
+
+    if (ma.status !== 'missed') { console.info(_tag, 'SKIP: not missed', { maStatus: ma.status, trigger }); return; }
+    if (!ma.skipReasonPending) { console.info(_tag, 'SKIP: not pending reason', { trigger }); return; }
+    if (ma.skipReasonId) { console.info(_tag, 'SKIP: reason already set', { trigger }); return; }
+    if (countMealsWithItems(dayData) < 1) { console.info(_tag, 'SKIP: no meals with items yet', { trigger }); return; }
+
+    const answeredKey = `heys_ma_skip_reason_answered_${currentClientId}_${dateKey}`;
+    try {
+      if (sessionStorage.getItem(answeredKey) === '1') { console.info(_tag, 'SKIP: already answered session', { trigger }); return; }
+    } catch (_) {
+      // ignore
+    }
+
+    console.warn(_tag, 'OPENING skip-reason modal', { trigger, dateKey });
+    skipReasonOpening = true;
+    try {
+      HEYS.StepModal.show({
+        steps: ['morning_activation_skip_reason'],
+        title: 'Зарядка',
+        showProgress: false,
+        showStreak: false,
+        showGreeting: false,
+        showTip: false,
+        allowSwipe: false,
+        context: { dateKey, reason: trigger },
+        onClose: () => {
+          skipReasonOpening = false;
+        },
+        onComplete: () => {
+          try {
+            sessionStorage.setItem(answeredKey, '1');
+          } catch (_) {
+            // ignore
+          }
+          skipReasonOpening = false;
+        }
+      });
+    } catch (e) {
+      skipReasonOpening = false;
+      console.warn(_tag, 'show failed', e);
+    }
+  }
 
   function maybeOpenMorningActivationFollowup(reason = 'unknown') {
     const _tag = '[MA.followup]';
@@ -24090,6 +24548,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     // Ignore saves from within the followup itself — status is being persisted, no need to re-check
     if (detail?.source === 'morning-activation-followup') return;
     if (detail?.source === 'morning-activation-sync') return;
+    if (detail?.source === 'morning-activation-skip-reason') return;
     // Only trigger followup if we are inside an active product-add flow.
     // Background sync (local-write, HOT events) must NOT open the modal on their own.
     if (!pendingFollowupAfterProductFlow) return;
@@ -24101,6 +24560,12 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     lastMealSignalAt = Date.now();
     pendingFollowupAfterProductFlow = true;
     console.warn('[MA.event] heysProductAdded — pendingFollowupAfterProductFlow=true');
+    setTimeout(() => maybeOpenMorningActivationSkipReason('product-added'), 240);
+  });
+
+  window.addEventListener('heys:ma-skip-reason-check', (ev) => {
+    const dk = ev && ev.detail && ev.detail.dateKey;
+    setTimeout(() => maybeOpenMorningActivationSkipReason('missed-save', dk), 90);
   });
 
   document.addEventListener('heys-stepmodal-closed', () => {
@@ -40005,20 +40470,11 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
   // === Main WidgetsTab Component ===
   function WidgetsTab({ selectedDate, clientId, cloudUser, setTab, setSelectedDate }) {
     const canUseTasksAsHome = !cloudUser && !!clientId;
-    const HOME_TAB_OPTIONS = useMemo(() => {
-      const options = [
-        { key: 'widgets', label: 'Виджеты', icon: '🧩' },
-        { key: 'stats', label: 'Отчёты', icon: '📊' },
-        { key: 'diary', label: 'Дневник', icon: '🍽️' },
-        { key: 'insights', label: 'Советы', icon: '💡' },
-        { key: 'month', label: 'Месяц', icon: '🗓️' }
-      ];
-      if (canUseTasksAsHome) {
-        options.push({ key: 'tasks', label: 'Задачи', icon: '☑️' });
-      }
-      return options;
+    const VALID_HOME_TABS = useMemo(() => {
+      const keys = ['widgets', 'stats', 'diary', 'insights', 'month'];
+      if (canUseTasksAsHome) keys.push('tasks');
+      return keys;
     }, [canUseTasksAsHome]);
-    const VALID_HOME_TABS = useMemo(() => HOME_TAB_OPTIONS.map((option) => option.key), [HOME_TAB_OPTIONS]);
     const getCurrentDefaultTab = useCallback(() => {
       const defaultTabFromApp = window.HEYS?.App?.getDefaultTab?.();
       if (VALID_HOME_TABS.includes(defaultTabFromApp)) return defaultTabFromApp;
@@ -40037,7 +40493,6 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     const [crashRiskDetails, setCrashRiskDetails] = useState(null);
     const [historyInfo, setHistoryInfo] = useState({ canUndo: false, canRedo: false });
     const [showGridOverlay, setShowGridOverlay] = useState(false); // Grid overlay toggle
-    const [showHomeTabPicker, setShowHomeTabPicker] = useState(false);
     const [showResetConfirm, setShowResetConfirm] = useState(false);
     const containerRef = useRef(null);
     const gridRef = useRef(null);
@@ -40545,7 +41000,6 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       HEYS.Widgets.resetLayout?.();
       setShowResetConfirm(false);
       setShowGridOverlay(false);
-      setShowHomeTabPicker(false);
       HEYS.dayUtils?.haptic?.('medium');
     }, []);
 
@@ -40567,23 +41021,10 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       }
     }, [defaultHomeTab, widgets]);
 
-    const handleSetDefaultHomeTab = useCallback((nextTab) => {
-      if (!VALID_HOME_TABS.includes(nextTab)) return;
-
-      try {
-        window.HEYS?.App?.setDefaultTab?.(nextTab);
-        setDefaultHomeTab(nextTab);
-        HEYS.dayUtils?.haptic?.('light');
-      } catch (e) {
-        console.warn('[HEYS.widgets] failed to update default home tab', e);
-      }
-    }, [VALID_HOME_TABS]);
-
     // Сбрасываем overlay при выходе из edit mode
     useEffect(() => {
       if (!isEditMode) {
         setShowGridOverlay(false);
-        setShowHomeTabPicker(false);
         setShowResetConfirm(false);
       }
     }, [isEditMode]);
@@ -40710,33 +41151,6 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       React.createElement('div', { className: 'widgets-edit-controls' },
         // Кнопки добавить/отменить/вернуть - показываем только в edit mode
         isEditMode && React.createElement('div', { className: 'widgets-edit-controls__stack' },
-          showHomeTabPicker && React.createElement('div', {
-            className: 'widgets-home-tab-picker',
-            role: 'group',
-            'aria-label': 'Выбор домашней вкладки'
-          },
-            React.createElement('div', { className: 'widgets-home-tab-picker__title' }, 'Домашняя вкладка'),
-            React.createElement('div', { className: 'widgets-home-tab-picker__hint' },
-              'С неё приложение откроется в следующий раз'
-            ),
-            React.createElement('div', { className: 'widgets-home-tab-picker__options' },
-              HOME_TAB_OPTIONS.map((option) => React.createElement('button', {
-                key: option.key,
-                type: 'button',
-                className: `widgets-home-tab-picker__option ${defaultHomeTab === option.key ? 'active' : ''}`,
-                onClick: () => handleSetDefaultHomeTab(option.key),
-                'aria-pressed': defaultHomeTab === option.key,
-                title: `Сделать домашней вкладкой: ${option.label}`
-              },
-                React.createElement('span', { className: 'widgets-home-tab-picker__option-icon' }, option.icon),
-                React.createElement('span', { className: 'widgets-home-tab-picker__option-label' }, option.label),
-                defaultHomeTab === option.key && React.createElement('span', {
-                  className: 'widgets-home-tab-picker__option-badge',
-                  'aria-hidden': 'true'
-                }, '🏠')
-              ))
-            )
-          ),
           React.createElement('div', { className: 'widgets-edit-controls__actions' },
             React.createElement('button', {
               id: 'tour-widgets-add',
@@ -40755,14 +41169,6 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
               title: 'Сбросить виджеты к дефолтной раскладке',
               'aria-label': 'Сбросить виджеты к дефолтной раскладке'
             }, '↺'),
-            React.createElement('button', {
-              className: `widgets-header__btn widgets-header__btn--home ${showHomeTabPicker ? 'active' : ''}`,
-              onClick: () => setShowHomeTabPicker((prev) => !prev),
-              title: showHomeTabPicker ? 'Скрыть выбор домашней вкладки' : 'Выбрать домашнюю вкладку',
-              'aria-expanded': showHomeTabPicker,
-              'aria-pressed': showHomeTabPicker,
-              'aria-label': showHomeTabPicker ? 'Скрыть выбор домашней вкладки' : 'Показать выбор домашней вкладки'
-            }, '🏠'),
             React.createElement('button', {
               className: `widgets-header__btn widgets-header__btn--undo ${!historyInfo.canUndo ? 'disabled' : ''}`,
               onClick: handleUndo,

@@ -6954,11 +6954,6 @@
 /* Make compact-train-header clickable */
 .compact-train-header {
   cursor: pointer;
-  transition: background 0.15s;
-}
-
-.compact-train-header:active {
-  background: #f8fafc;
 }
 
 /* Training Zones Section in Modal */

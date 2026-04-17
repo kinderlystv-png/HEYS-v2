@@ -1270,6 +1270,23 @@
     const protectLocalMorningActivationRow =
       localMaStatusForTrainings === 'done' || localMaStatusForTrainings === 'missed';
 
+    /** Для workout_builder сумма z часто 0 — без этого remote «пустышка» затирает локальный дневник. */
+    const workoutLogRichness = (t) => {
+      if (!t || !t.workoutLog || typeof t.workoutLog !== 'object') return 0;
+      const wl = t.workoutLog;
+      const n = Array.isArray(wl.exercises) ? wl.exercises.length : 0;
+      let score = n * 10;
+      if (n > 1) score += 5;
+      if (Array.isArray(wl.zoneMinutes) && wl.zoneMinutes.some((m) => +m > 0)) score += 100;
+      try {
+        const fn = global.HEYS && global.HEYS.dayCalculations && typeof global.HEYS.dayCalculations.workoutLogHasTrackableContent === 'function'
+          ? global.HEYS.dayCalculations.workoutLogHasTrackableContent
+          : null;
+        if (fn && fn(wl)) score += 1000;
+      } catch (e) { /* noop */ }
+      return score;
+    };
+
     const maxTrainings = Math.max(localTrainings.length, remoteTrainings.length, 3);
     for (let i = 0; i < maxTrainings; i++) {
       const lt = localTrainings[i] || { z: [0, 0, 0, 0] };
@@ -1291,6 +1308,21 @@
       } else if (rtSum === 0 && ltSum > 0) {
         // Remote пустая, local непустая — берём local
         winner = lt;
+      } else if (ltSum === 0 && rtSum === 0) {
+        const lRich = workoutLogRichness(lt);
+        const rRich = workoutLogRichness(rt);
+        if (lRich > rRich) {
+          winner = lt;
+        } else if (rRich > lRich) {
+          winner = rt;
+        } else if (lRich > 0 && rRich > 0) {
+          // Одинаковый «вес» дневника — не отдаём приоритет устаревшему remote только из‑за дня
+          winner = lt;
+        } else if (protectLocalMorningActivationRow && isMorningActivationTrainingRow(lt) && !isMorningActivationTrainingRow(rt)) {
+          winner = lt;
+        } else {
+          winner = rt;
+        }
       } else {
         // Обе непустые, remote свежее — по умолчанию remote; но не затираем строку «Зарядка»,
         // если в облаке на том же слоте ещё старая тренировка (лаг синка после done/missed).
@@ -4715,6 +4747,27 @@
   // Вспомогательная проверка «день содержит реальные данные»
   const isMeaningfulDayData = (data) => {
     if (!data || typeof data !== 'object') return false;
+    // Strength workout_builder: must upload even when zone minutes are 0 (unlike editing "minutes" on card).
+    // dayHasTrackableWorkoutBuilder alone can be false while user is filling rows — then cloud save was blocked.
+    try {
+      const tr = data.trainings;
+      if (Array.isArray(tr)) {
+        for (let i = 0; i < tr.length; i++) {
+          const t = tr[i];
+          if (!t || String(t.type) !== 'strength' || t.strengthEntryMode !== 'workout_builder') continue;
+          const wl = t.workoutLog;
+          if (wl && typeof wl === 'object' && Array.isArray(wl.exercises) && wl.exercises.length >= 1) {
+            return true;
+          }
+        }
+      }
+    } catch (e) { /* noop */ }
+    try {
+      const dc = global.HEYS && global.HEYS.dayCalculations && typeof global.HEYS.dayCalculations.dayHasTrackableWorkoutBuilder === 'function'
+        ? global.HEYS.dayCalculations.dayHasTrackableWorkoutBuilder(data)
+        : false;
+      if (dc) return true;
+    } catch (e) { /* noop */ }
     const mealsCount = Array.isArray(data.meals) ? data.meals.length : 0;
     const trainingsCount = Array.isArray(data.trainings) ? data.trainings.length : 0;
     if (mealsCount > 0 || trainingsCount > 0) return true;

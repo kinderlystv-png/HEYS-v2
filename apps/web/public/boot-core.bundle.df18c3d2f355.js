@@ -19358,6 +19358,23 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
     const protectLocalMorningActivationRow =
       localMaStatusForTrainings === 'done' || localMaStatusForTrainings === 'missed';
 
+    /** Для workout_builder сумма z часто 0 — без этого remote «пустышка» затирает локальный дневник. */
+    const workoutLogRichness = (t) => {
+      if (!t || !t.workoutLog || typeof t.workoutLog !== 'object') return 0;
+      const wl = t.workoutLog;
+      const n = Array.isArray(wl.exercises) ? wl.exercises.length : 0;
+      let score = n * 10;
+      if (n > 1) score += 5;
+      if (Array.isArray(wl.zoneMinutes) && wl.zoneMinutes.some((m) => +m > 0)) score += 100;
+      try {
+        const fn = global.HEYS && global.HEYS.dayCalculations && typeof global.HEYS.dayCalculations.workoutLogHasTrackableContent === 'function'
+          ? global.HEYS.dayCalculations.workoutLogHasTrackableContent
+          : null;
+        if (fn && fn(wl)) score += 1000;
+      } catch (e) { /* noop */ }
+      return score;
+    };
+
     const maxTrainings = Math.max(localTrainings.length, remoteTrainings.length, 3);
     for (let i = 0; i < maxTrainings; i++) {
       const lt = localTrainings[i] || { z: [0, 0, 0, 0] };
@@ -19379,6 +19396,21 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
       } else if (rtSum === 0 && ltSum > 0) {
         // Remote пустая, local непустая — берём local
         winner = lt;
+      } else if (ltSum === 0 && rtSum === 0) {
+        const lRich = workoutLogRichness(lt);
+        const rRich = workoutLogRichness(rt);
+        if (lRich > rRich) {
+          winner = lt;
+        } else if (rRich > lRich) {
+          winner = rt;
+        } else if (lRich > 0 && rRich > 0) {
+          // Одинаковый «вес» дневника — не отдаём приоритет устаревшему remote только из‑за дня
+          winner = lt;
+        } else if (protectLocalMorningActivationRow && isMorningActivationTrainingRow(lt) && !isMorningActivationTrainingRow(rt)) {
+          winner = lt;
+        } else {
+          winner = rt;
+        }
       } else {
         // Обе непустые, remote свежее — по умолчанию remote; но не затираем строку «Зарядка»,
         // если в облаке на том же слоте ещё старая тренировка (лаг синка после done/missed).
@@ -22803,6 +22835,27 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
   // Вспомогательная проверка «день содержит реальные данные»
   const isMeaningfulDayData = (data) => {
     if (!data || typeof data !== 'object') return false;
+    // Strength workout_builder: must upload even when zone minutes are 0 (unlike editing "minutes" on card).
+    // dayHasTrackableWorkoutBuilder alone can be false while user is filling rows — then cloud save was blocked.
+    try {
+      const tr = data.trainings;
+      if (Array.isArray(tr)) {
+        for (let i = 0; i < tr.length; i++) {
+          const t = tr[i];
+          if (!t || String(t.type) !== 'strength' || t.strengthEntryMode !== 'workout_builder') continue;
+          const wl = t.workoutLog;
+          if (wl && typeof wl === 'object' && Array.isArray(wl.exercises) && wl.exercises.length >= 1) {
+            return true;
+          }
+        }
+      }
+    } catch (e) { /* noop */ }
+    try {
+      const dc = global.HEYS && global.HEYS.dayCalculations && typeof global.HEYS.dayCalculations.dayHasTrackableWorkoutBuilder === 'function'
+        ? global.HEYS.dayCalculations.dayHasTrackableWorkoutBuilder(data)
+        : false;
+      if (dc) return true;
+    } catch (e) { /* noop */ }
     const mealsCount = Array.isArray(data.meals) ? data.meals.length : 0;
     const trainingsCount = Array.isArray(data.trainings) ? data.trainings.length : 0;
     if (mealsCount > 0 || trainingsCount > 0) return true;
@@ -28916,14 +28969,19 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
     };
     // 🆕 v3.7.3: Не создаём пустые тренировки, только очищаем невалидные
     if (!Array.isArray(base.trainings)) base.trainings = [];
-    // Фильтруем пустые/невалидные тренировки (без времени И без зон)
+    // Фильтруем пустые/невалидные тренировки (без времени И без зон).
+    // Силовая с конструктором (workoutLog) должна сохраняться даже при z=0 и без time —
+    // иначе после reload теряются упражнения, пока «минуты по зонам» не тронут.
     const isValidTraining = (t) => {
       if (!t) return false;
-      // Есть время — валидна
       if (t.time && t.time !== '') return true;
-      // Есть хоть одна зона > 0 — валидна  
       const zones = t.z || [];
-      return zones.some(z => +z > 0);
+      if (zones.some(z => +z > 0)) return true;
+      if (String(t.type) === 'strength' && t.workoutLog && typeof t.workoutLog === 'object') {
+        const ex = t.workoutLog.exercises;
+        if (Array.isArray(ex) && ex.length >= 1) return true;
+      }
+      return false;
     };
     // Нормализуем существующие тренировки (миграция полей)
     base.trainings = base.trainings.filter(isValidTraining).map(t => {
@@ -28943,6 +29001,14 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
       if (t && t.source) out.source = t.source;
       if (t && typeof t.activityLabel === 'string' && t.activityLabel.trim()) out.activityLabel = t.activityLabel.trim();
       if (t && t.intensity) out.intensity = t.intensity;
+      if (t && t.strengthEntryMode) out.strengthEntryMode = t.strengthEntryMode;
+      if (t && t.workoutLog && typeof t.workoutLog === 'object') {
+        try {
+          out.workoutLog = JSON.parse(JSON.stringify(t.workoutLog));
+        } catch {
+          out.workoutLog = t.workoutLog;
+        }
+      }
       return out;
     });
     return base;

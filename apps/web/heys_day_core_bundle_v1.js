@@ -2560,6 +2560,12 @@
 
         const isMeaningfulDayData = React.useCallback((data) => {
             if (!data || typeof data !== 'object') return false;
+            try {
+                const dc = HEYS.dayCalculations && typeof HEYS.dayCalculations.dayHasTrackableWorkoutBuilder === 'function'
+                    ? HEYS.dayCalculations.dayHasTrackableWorkoutBuilder(data)
+                    : false;
+                if (dc) return true;
+            } catch (e) { /* noop */ }
             const mealsCount = Array.isArray(data.meals) ? data.meals.length : 0;
             const trainingsCount = Array.isArray(data.trainings) ? data.trainings.length : 0;
             if (mealsCount > 0 || trainingsCount > 0) return true;
@@ -3002,6 +3008,61 @@
         return { kcal: K, carbs, simple, complex, prot, fat, bad, good, trans, fiber, gi, harm };
     }
 
+    /** Defaults must match ensureWorkoutLogShape (heys_day_trainings_v1.js). */
+    const WB_DEF_SETS = 1;
+    const WB_DEF_REPS = 10;
+
+    /** Строка конструктора силовой: есть что синхронизировать (не только пустой шаблон). */
+    function exerciseRowHasTrackableContent(e) {
+        if (!e) return false;
+        if (String(e.name || '').trim()) return true;
+        const asInt = (v) => {
+            if (v == null || v === '') return NaN;
+            if (typeof v === 'number') return Number.isFinite(v) ? Math.trunc(v) : NaN;
+            const n = parseInt(v, 10);
+            return Number.isFinite(n) ? n : NaN;
+        };
+        const ap = e.approaches;
+        if (Array.isArray(ap)) {
+            if (ap.length > 1) return true;
+            for (let i = 0; i < ap.length; i++) {
+                const a = ap[i];
+                if (a && String(a.weightKg || '').trim()) return true;
+                const r = asInt(a && a.reps);
+                if (Number.isFinite(r) && r !== WB_DEF_REPS) return true;
+            }
+        }
+        if (typeof e.weightKg === 'number' && Number.isFinite(e.weightKg) && e.weightKg > 0) return true;
+        if (String(e.weightKg || '').trim()) return true;
+        if (String(e.note || '').trim()) return true;
+        if ((+e.rpe || 0) > 0) return true;
+        if ((+e.ssGroup || 0) > 0) return true;
+        const sets = asInt(e.sets);
+        const reps = asInt(e.reps);
+        if (Number.isFinite(sets) && sets !== WB_DEF_SETS) return true;
+        if (Number.isFinite(reps) && reps !== WB_DEF_REPS) return true;
+        return false;
+    }
+
+    /** Минуты по зонам или заполненные упражнения в дневнике. */
+    function workoutLogHasTrackableContent(wl) {
+        if (!wl || typeof wl !== 'object') return false;
+        if (Array.isArray(wl.zoneMinutes) && wl.zoneMinutes.some((m) => +m > 0)) return true;
+        const ex = wl.exercises;
+        if (Array.isArray(ex) && ex.length > 1) return true;
+        if (Array.isArray(ex) && ex.some(exerciseRowHasTrackableContent)) return true;
+        return false;
+    }
+
+    function dayHasTrackableWorkoutBuilder(day) {
+        const tr = day && day.trainings;
+        if (!Array.isArray(tr)) return false;
+        return tr.some((t) => {
+            if (!t || String(t.type) !== 'strength' || t.strengthEntryMode !== 'workout_builder') return false;
+            return workoutLogHasTrackableContent(t.workoutLog);
+        });
+    }
+
     /**
      * Calculate day averages (mood, wellbeing, stress, dayScore)
      * @param {Array} meals - Meals array
@@ -3024,7 +3085,12 @@
         const realTrainings = (trainings || []).filter(t => {
             const hasTime = t.time && t.time.trim() !== '';
             const hasMinutes = t.z && Array.isArray(t.z) && t.z.some(m => m > 0);
-            return hasTime || hasMinutes;
+            const hasBuilder =
+                t.type === 'strength' &&
+                t.strengthEntryMode === 'workout_builder' &&
+                t.workoutLog &&
+                workoutLogHasTrackableContent(t.workoutLog);
+            return hasTime || hasMinutes || hasBuilder;
         });
         const trainingMoods = realTrainings.filter(t => t.mood && !isNaN(+t.mood)).map(t => +t.mood);
         const trainingWellbeing = realTrainings.filter(t => t.wellbeing && !isNaN(+t.wellbeing)).map(t => +t.wellbeing);
@@ -3060,16 +3126,52 @@
      */
     function normalizeTrainings(trainings = []) {
         return trainings.map((t = {}) => {
+            let next = t;
             if (t.quality !== undefined || t.feelAfter !== undefined) {
                 const { quality, feelAfter, ...rest } = t;
-                return {
+                next = {
                     ...rest,
                     mood: rest.mood ?? quality ?? 5,
                     wellbeing: rest.wellbeing ?? feelAfter ?? 5,
                     stress: rest.stress ?? 5
                 };
             }
-            return t;
+            if (
+                next.workoutLog &&
+                typeof next.workoutLog === 'object' &&
+                next.strengthEntryMode === 'workout_builder' &&
+                String(next.type) !== 'strength'
+            ) {
+                next = { ...next, type: 'strength' };
+            }
+            if (
+                next.workoutLog &&
+                typeof next.workoutLog === 'object' &&
+                Array.isArray(next.workoutLog.exercises) &&
+                next.workoutLog.exercises.length > 0 &&
+                !next.strengthEntryMode
+            ) {
+                next = { ...next, type: 'strength', strengthEntryMode: 'workout_builder' };
+            }
+            if (
+                next.type === 'strength' &&
+                next.strengthEntryMode === 'workout_builder' &&
+                next.workoutLog &&
+                typeof next.workoutLog === 'object' &&
+                (!next.z || !Array.isArray(next.z) || !next.z.some((x) => +x > 0))
+            ) {
+                const wl = next.workoutLog;
+                if (Array.isArray(wl.zoneMinutes) && wl.zoneMinutes.length >= 4 && wl.zoneMinutes.some((x) => +x > 0)) {
+                    const z = [0, 1, 2, 3].map((i) =>
+                        Math.max(0, Math.min(180, Math.round(Number(wl.zoneMinutes[i]) || 0)))
+                    );
+                    next = { ...next, z };
+                } else if (typeof wl.totalDurationMinutes === 'number' && wl.totalDurationMinutes >= 1) {
+                    const m = Math.max(1, Math.min(180, Math.round(wl.totalDurationMinutes)));
+                    next = { ...next, z: [0, m, 0, 0] };
+                }
+            }
+            return next;
         });
     }
 
@@ -3080,7 +3182,16 @@
      */
     function cleanEmptyTrainings(trainings) {
         if (!Array.isArray(trainings)) return [];
-        return trainings.filter(t => t && t.z && t.z.some(z => z > 0));
+        return trainings.filter((t) => {
+            if (!t) return false;
+            if (t.z && Array.isArray(t.z) && t.z.some((z) => +z > 0)) return true;
+            if (t.type === 'strength' && t.strengthEntryMode === 'workout_builder' && t.workoutLog) {
+                const wl = t.workoutLog;
+                if (workoutLogHasTrackableContent(wl)) return true;
+                if (Array.isArray(wl.exercises) && wl.exercises.length >= 1) return true;
+            }
+            return false;
+        });
     }
 
     /**
@@ -3138,7 +3249,10 @@
         sortMealsByTime,
         parseTimeToMinutes,
         formatMinutesToTime,
-        getProductFromItem
+        getProductFromItem,
+        exerciseRowHasTrackableContent,
+        workoutLogHasTrackableContent,
+        dayHasTrackableWorkoutBuilder
     };
 
 })(window);
@@ -3600,6 +3714,88 @@
                         // 🔒 Оптимизация: не вызываем setDay если контент идентичен (предотвращает мерцание)
                         setDay(prevDay => {
                             if (!storageMeaningful && isMeaningfulDayData(prevDay)) {
+                                return prevDay;
+                            }
+                            // React может быть новее LS (debounced autosave): ref ещё не поднят, тогда
+                            // внешний heys:day-updated с «тем же» storageUpdatedAt откатывает UI (дневник силы).
+                            const prevUpdatedAt = prevDay?.updatedAt || 0;
+                            // Не откатывать по LS даже при forceReload: hot-sync может шлют forceReload
+                            // со снимком до autosave и стирать дневник конструктора.
+                            if (storageUpdatedAt < prevUpdatedAt) {
+                                console.info('[HEYS.day] ⏭️ Skip storage overlay (LS older than React; unpersisted edit)', {
+                                    source,
+                                    storageUpdatedAt,
+                                    prevUpdatedAt
+                                });
+                                return prevDay;
+                            }
+                            // Равный updatedAt: overlay из LS может потерять workoutLog при том же timestamp.
+                            // Нельзя считать «есть конструктор» только по strengthEntryMode — шаблон 1×пустая строка
+                            // тоже workout_builder; hot-sync тогда не блокируется и затирает заполненный дневник.
+                            var __dayHasStrengthBuilder = function (day) {
+                                try {
+                                    var dhwb = HEYS && HEYS.dayCalculations && typeof HEYS.dayCalculations.dayHasTrackableWorkoutBuilder === 'function'
+                                        ? HEYS.dayCalculations.dayHasTrackableWorkoutBuilder
+                                        : null;
+                                    if (dhwb && dhwb(day)) return true;
+                                } catch (eDhwb) { /* noop */ }
+                                var tr = day && day.trainings;
+                                if (!Array.isArray(tr)) return false;
+                                for (var i2 = 0; i2 < tr.length; i2++) {
+                                    var t2 = tr[i2];
+                                    if (!t2 || String(t2.type) !== 'strength') continue;
+                                    if (t2.strengthEntryMode === 'workout_builder') continue;
+                                    var wl2 = t2.workoutLog;
+                                    if (wl2 && Array.isArray(wl2.exercises) && wl2.exercises.length > 0) return true;
+                                }
+                                return false;
+                            };
+                            if (__dayHasStrengthBuilder(prevDay) && !__dayHasStrengthBuilder(newDay)) {
+                                return prevDay;
+                            }
+                            /** Сумма длин workoutLog.exercises по слотам workout_builder (для анти-отката hot-sync). */
+                            var __sumWbExerciseLengths = function (day) {
+                                var tr = day && day.trainings;
+                                if (!Array.isArray(tr)) return 0;
+                                var s = 0;
+                                for (var iw = 0; iw < tr.length; iw++) {
+                                    var tw = tr[iw];
+                                    if (!tw || String(tw.type) !== 'strength' || tw.strengthEntryMode !== 'workout_builder') continue;
+                                    var wlw = tw.workoutLog;
+                                    if (wlw && Array.isArray(wlw.exercises)) s += wlw.exercises.length;
+                                }
+                                return s;
+                            };
+                            var prevWbRows = __sumWbExerciseLengths(prevDay);
+                            var newWbRows = __sumWbExerciseLengths(newDay);
+                            /** Same tab date as patchTraining / LS; prevDay.date can lag right after reload. */
+                            var dkGuard = (prevDay && prevDay.date) || date;
+                            var lastCommitWb = HEYS && HEYS.Day && HEYS.Day._lastWbRowsByDate && dkGuard
+                                ? HEYS.Day._lastWbRowsByDate[dkGuard]
+                                : null;
+                            var persistedWb = 0;
+                            try {
+                                if (dkGuard && typeof global.sessionStorage !== 'undefined' && global.sessionStorage) {
+                                    var rawW = global.sessionStorage.getItem('heys_last_wbrows_' + dkGuard);
+                                    if (rawW != null && rawW !== '') persistedWb = parseInt(rawW, 10) || 0;
+                                }
+                            } catch (eSs2) { /* noop */ }
+                            var refWbRows = Math.max(
+                                prevWbRows,
+                                typeof lastCommitWb === 'number' ? lastCommitWb : 0,
+                                persistedWb
+                            );
+                            /** Include foreground-hot-sync (not in externalSources[]) so WB rows are not rolled back. */
+                            var wbOverlayFromRemoteish =
+                                isExternalSource || source === 'foreground-hot-sync';
+                            /** Only when snapshot is not strictly newer than React: allow cloud/other tab to win by updatedAt. */
+                            var incomingUp = (newDay && newDay.updatedAt) || 0;
+                            var prevUpWb = (prevDay && prevDay.updatedAt) || 0;
+                            if (
+                                wbOverlayFromRemoteish &&
+                                refWbRows > newWbRows &&
+                                incomingUp <= prevUpWb
+                            ) {
                                 return prevDay;
                             }
                             const prevMealsCount = (prevDay?.meals || []).length;

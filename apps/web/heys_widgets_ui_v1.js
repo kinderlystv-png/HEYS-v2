@@ -6548,20 +6548,11 @@
   // === Main WidgetsTab Component ===
   function WidgetsTab({ selectedDate, clientId, cloudUser, setTab, setSelectedDate }) {
     const canUseTasksAsHome = !cloudUser && !!clientId;
-    const HOME_TAB_OPTIONS = useMemo(() => {
-      const options = [
-        { key: 'widgets', label: 'Виджеты', icon: '🧩' },
-        { key: 'stats', label: 'Отчёты', icon: '📊' },
-        { key: 'diary', label: 'Дневник', icon: '🍽️' },
-        { key: 'insights', label: 'Советы', icon: '💡' },
-        { key: 'month', label: 'Месяц', icon: '🗓️' }
-      ];
-      if (canUseTasksAsHome) {
-        options.push({ key: 'tasks', label: 'Задачи', icon: '☑️' });
-      }
-      return options;
+    const VALID_HOME_TABS = useMemo(() => {
+      const keys = ['widgets', 'stats', 'diary', 'insights', 'month'];
+      if (canUseTasksAsHome) keys.push('tasks');
+      return keys;
     }, [canUseTasksAsHome]);
-    const VALID_HOME_TABS = useMemo(() => HOME_TAB_OPTIONS.map((option) => option.key), [HOME_TAB_OPTIONS]);
     const getCurrentDefaultTab = useCallback(() => {
       const defaultTabFromApp = window.HEYS?.App?.getDefaultTab?.();
       if (VALID_HOME_TABS.includes(defaultTabFromApp)) return defaultTabFromApp;
@@ -6580,7 +6571,6 @@
     const [crashRiskDetails, setCrashRiskDetails] = useState(null);
     const [historyInfo, setHistoryInfo] = useState({ canUndo: false, canRedo: false });
     const [showGridOverlay, setShowGridOverlay] = useState(false); // Grid overlay toggle
-    const [showHomeTabPicker, setShowHomeTabPicker] = useState(false);
     const [showResetConfirm, setShowResetConfirm] = useState(false);
     const containerRef = useRef(null);
     const gridRef = useRef(null);
@@ -7088,7 +7078,6 @@
       HEYS.Widgets.resetLayout?.();
       setShowResetConfirm(false);
       setShowGridOverlay(false);
-      setShowHomeTabPicker(false);
       HEYS.dayUtils?.haptic?.('medium');
     }, []);
 
@@ -7110,23 +7099,10 @@
       }
     }, [defaultHomeTab, widgets]);
 
-    const handleSetDefaultHomeTab = useCallback((nextTab) => {
-      if (!VALID_HOME_TABS.includes(nextTab)) return;
-
-      try {
-        window.HEYS?.App?.setDefaultTab?.(nextTab);
-        setDefaultHomeTab(nextTab);
-        HEYS.dayUtils?.haptic?.('light');
-      } catch (e) {
-        console.warn('[HEYS.widgets] failed to update default home tab', e);
-      }
-    }, [VALID_HOME_TABS]);
-
     // Сбрасываем overlay при выходе из edit mode
     useEffect(() => {
       if (!isEditMode) {
         setShowGridOverlay(false);
-        setShowHomeTabPicker(false);
         setShowResetConfirm(false);
       }
     }, [isEditMode]);
@@ -7253,33 +7229,6 @@
       React.createElement('div', { className: 'widgets-edit-controls' },
         // Кнопки добавить/отменить/вернуть - показываем только в edit mode
         isEditMode && React.createElement('div', { className: 'widgets-edit-controls__stack' },
-          showHomeTabPicker && React.createElement('div', {
-            className: 'widgets-home-tab-picker',
-            role: 'group',
-            'aria-label': 'Выбор домашней вкладки'
-          },
-            React.createElement('div', { className: 'widgets-home-tab-picker__title' }, 'Домашняя вкладка'),
-            React.createElement('div', { className: 'widgets-home-tab-picker__hint' },
-              'С неё приложение откроется в следующий раз'
-            ),
-            React.createElement('div', { className: 'widgets-home-tab-picker__options' },
-              HOME_TAB_OPTIONS.map((option) => React.createElement('button', {
-                key: option.key,
-                type: 'button',
-                className: `widgets-home-tab-picker__option ${defaultHomeTab === option.key ? 'active' : ''}`,
-                onClick: () => handleSetDefaultHomeTab(option.key),
-                'aria-pressed': defaultHomeTab === option.key,
-                title: `Сделать домашней вкладкой: ${option.label}`
-              },
-                React.createElement('span', { className: 'widgets-home-tab-picker__option-icon' }, option.icon),
-                React.createElement('span', { className: 'widgets-home-tab-picker__option-label' }, option.label),
-                defaultHomeTab === option.key && React.createElement('span', {
-                  className: 'widgets-home-tab-picker__option-badge',
-                  'aria-hidden': 'true'
-                }, '🏠')
-              ))
-            )
-          ),
           React.createElement('div', { className: 'widgets-edit-controls__actions' },
             React.createElement('button', {
               id: 'tour-widgets-add',
@@ -7298,14 +7247,6 @@
               title: 'Сбросить виджеты к дефолтной раскладке',
               'aria-label': 'Сбросить виджеты к дефолтной раскладке'
             }, '↺'),
-            React.createElement('button', {
-              className: `widgets-header__btn widgets-header__btn--home ${showHomeTabPicker ? 'active' : ''}`,
-              onClick: () => setShowHomeTabPicker((prev) => !prev),
-              title: showHomeTabPicker ? 'Скрыть выбор домашней вкладки' : 'Выбрать домашнюю вкладку',
-              'aria-expanded': showHomeTabPicker,
-              'aria-pressed': showHomeTabPicker,
-              'aria-label': showHomeTabPicker ? 'Скрыть выбор домашней вкладки' : 'Показать выбор домашней вкладки'
-            }, '🏠'),
             React.createElement('button', {
               className: `widgets-header__btn widgets-header__btn--undo ${!historyInfo.canUndo ? 'disabled' : ''}`,
               onClick: handleUndo,

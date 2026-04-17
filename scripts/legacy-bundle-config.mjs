@@ -52,6 +52,7 @@ export const LEGACY_BUNDLES = {
         'heys_day_global_exports_v1.js',
     ],
     'boot-day': [
+        'heys_exercise_catalog_v1.js',
         'heys_day_stats_bundle_loader_v1.js',
         'heys_day_realdata_actions_v1.js',
         'heys_day_edit_grams_modal_v1.js',
@@ -246,6 +247,7 @@ export const LEGACY_BUNDLES = {
     'postboot-3-ui': [
         'heys_modal_manager_v1.js',
         'heys_step_modal_v1.js',
+        'heys_morning_activation_calendar_v1.js',
         'heys_steps_v1.js',
         'heys_add_product_step_v1.js',
         'heys_confirm_modal_v1.js',

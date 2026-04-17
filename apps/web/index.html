@@ -720,10 +720,10 @@
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
     <link rel="dns-prefetch" href="https://cdn.jsdelivr.net" />
     <!-- Preload критических boot-бандлов (2026-02-25 bundle migration) -->
-    <link rel="preload" href="boot-core.bundle.42979521838f.js" as="script" />
-    <link rel="preload" href="boot-calc.bundle.31b2fda88d6b.js" as="script" />
-    <link rel="preload" href="boot-day.bundle.72e840943e4b.js" as="script" />
-    <link rel="preload" href="boot-app.bundle.f4b399cd565c.js" as="script" />
+    <link rel="preload" href="boot-core.bundle.df18c3d2f355.js" as="script" />
+    <link rel="preload" href="boot-calc.bundle.ba66b3954442.js" as="script" />
+    <link rel="preload" href="boot-day.bundle.0938879bc23c.js" as="script" />
+    <link rel="preload" href="boot-app.bundle.a1360c691f46.js" as="script" />
     <link rel="preload" href="boot-init.bundle.55f7f6c0b43e.js" as="script" />
 
     <!-- React теперь бандлится локально через Vite (миграция с CDN 2026-01-21) -->
@@ -737,10 +737,10 @@
     <!-- Main CSS — async load (1.19MB via @import, не нужен для login gate) -->
     <!-- v12: Login gate имеет inline стили, main.css нужен только после загрузки бандлов -->
     <!-- v9.8: флаг __heysMainCSSLoaded + событие heysMainCSSLoaded для gate DayTab -->
-    <link rel="preload" href="styles/main.css?v=43" as="style"
+    <link rel="preload" href="styles/main.css?v=56" as="style"
         onload="this.onload=null;this.rel='stylesheet';window.__heysMainCSSLoaded=true;window.dispatchEvent(new CustomEvent('heysMainCSSLoaded'))" />
     <noscript>
-        <link rel="stylesheet" href="styles/main.css?v=43" />
+        <link rel="stylesheet" href="styles/main.css?v=56" />
     </noscript>
 
     <!-- v9.10: CSS load detection — detects both dev (main.css) and Vite production build
@@ -2825,10 +2825,10 @@
          Сгенерировано: node scripts/bundle-legacy.mjs  (pnpm bundle:legacy)
          Состав и хеши: bundle-manifest.json
          Хеш в имени = вечный кэш (cache-first SW). -->
-    <script defer src="boot-core.bundle.42979521838f.js" fetchpriority="high"></script>
-    <script defer src="boot-calc.bundle.31b2fda88d6b.js"></script>
-    <script defer src="boot-day.bundle.72e840943e4b.js"></script>
-    <script defer src="boot-app.bundle.f4b399cd565c.js"></script>
+    <script defer src="boot-core.bundle.df18c3d2f355.js" fetchpriority="high"></script>
+    <script defer src="boot-calc.bundle.ba66b3954442.js"></script>
+    <script defer src="boot-day.bundle.0938879bc23c.js"></script>
+    <script defer src="boot-app.bundle.a1360c691f46.js"></script>
     <script defer src="boot-init.bundle.55f7f6c0b43e.js"
         onerror="window.__heysShowRecoveryUI && window.__heysShowRecoveryUI('CRITICAL_SCRIPT_LOAD: boot-init.bundle')"></script>
 
@@ -2859,8 +2859,8 @@
         (function () {
             var POST_BOOT_BUNDLES = [
                 'postboot-1-game.bundle.87f0608cc06c.js',
-                'postboot-2-insights.bundle.84741746c046.js',
-                'postboot-3-ui.bundle.5aef5f61fba3.js'
+                'postboot-2-insights.bundle.0122659b6803.js',
+                'postboot-3-ui.bundle.c34a62241eaa.js'
             ];
             var LOCALHOST_TASKS_SOURCE_OVERRIDE = 'heys_planning_tasks_v1.js';
             var total = POST_BOOT_BUNDLES.length;

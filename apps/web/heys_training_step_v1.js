@@ -194,7 +194,7 @@
     const source = training || {};
     const type = source.type || 'cardio';
 
-    return {
+    const out = {
       type,
       activityLabel: normalizeActivityLabel(source.activityLabel) || getDefaultActivityLabel(type),
       time: source.time || getRoundedCurrentTime(),
@@ -204,6 +204,81 @@
       stress: normalizeTrainingRating(source.stress),
       comment: typeof source.comment === 'string' ? source.comment : ''
     };
+    if (source.strengthEntryMode === 'hr_zones' || source.strengthEntryMode === 'workout_builder') {
+      out.strengthEntryMode = source.strengthEntryMode;
+    }
+    if (source.workoutLog && typeof source.workoutLog === 'object') {
+      out.workoutLog = source.workoutLog;
+    }
+    return out;
+  }
+
+  function persistMergedTraining(ctx, allStepData, patch) {
+    const dateKey = ctx?.dateKey || new Date().toISOString().slice(0, 10);
+    const trainingIndex = ctx?.trainingIndex ?? 0;
+    const day = lsGet(`heys_dayv2_${dateKey}`, { date: dateKey });
+
+    const trainings = day.trainings || [];
+    while (trainings.length <= trainingIndex) {
+      trainings.push({ z: [0, 0, 0, 0] });
+    }
+
+    const infoData = allStepData?.['training-info'] || {};
+    const feedbackData = allStepData?.['training-feedback'] || {};
+    // Feedback is initialized before user may change type on step 1; it can still carry stale type/activity/time.
+    // Merge order: training-info and patch must win over feedback for those fields.
+    const merged = buildTrainingFormData({
+      ...feedbackData,
+      ...infoData,
+      ...patch
+    });
+
+    const finalTraining = {
+      z: merged.zones,
+      time: merged.time,
+      type: merged.type,
+      activityLabel: merged.activityLabel,
+      mood: merged.mood,
+      wellbeing: merged.wellbeing,
+      stress: merged.stress,
+      comment: merged.comment
+    };
+
+    if (merged.strengthEntryMode) {
+      finalTraining.strengthEntryMode = merged.strengthEntryMode;
+    }
+    if (merged.strengthEntryMode === 'workout_builder') {
+      if (merged.workoutLog && typeof merged.workoutLog === 'object') {
+        finalTraining.workoutLog = merged.workoutLog;
+      } else {
+        const m = Math.max(1, Math.min(180, Math.round(Number(merged.zones?.[1]) || 0) || 1));
+        finalTraining.workoutLog = {
+          version: 1,
+          zoneMinutes: [0, m, 0, 0],
+          totalDurationMinutes: m,
+          exercises: [{ id: 'ex_0', name: '', sets: 3, reps: 10, weightKg: '', note: '', ssGroup: 0, rpe: 0 }]
+        };
+      }
+    } else if (merged.strengthEntryMode === 'hr_zones') {
+      delete finalTraining.workoutLog;
+    }
+
+    trainings[trainingIndex] = finalTraining;
+
+    day.trainings = trainings;
+    day.updatedAt = Date.now();
+    lsSet(`heys_dayv2_${dateKey}`, day);
+
+    window.dispatchEvent(new CustomEvent('heys:day-updated', {
+      detail: { date: dateKey, field: 'trainings', source: 'training-step', forceReload: true }
+    }));
+
+    const totalMinutes = (finalTraining.z || []).reduce((sum, v) => sum + (Number(v) || 0), 0);
+    if (typeof window !== 'undefined' && totalMinutes > 0) {
+      window.dispatchEvent(new CustomEvent('heysTrainingAdded', {
+        detail: { minutes: totalMinutes, date: dateKey, trainingIndex }
+      }));
+    }
   }
 
   function readTrainingFormData(ctx) {
@@ -543,7 +618,46 @@
   }
 
   // ========================================
-  // ШАГ 2: Зоны пульса
+  // Силовая: выбор пути (зоны vs конструктор)
+  // ========================================
+  function TrainingStrengthModeStep({ data, onChange }) {
+    const mode = data.mode || null;
+    const setMode = (m) => {
+      haptic('light');
+      onChange({ ...data, mode: m });
+    };
+    return React.createElement('div', { className: 'training-step' },
+      React.createElement('div', { className: 'ts-section ts-strength-mode-section' },
+        React.createElement('div', { className: 'ts-strength-mode-title' }, 'Силовая: как учесть нагрузку?'),
+        React.createElement('div', { className: 'ts-strength-mode-grid' },
+          React.createElement('button', {
+            type: 'button',
+            className: 'ts-strength-mode-btn' + (mode === 'hr_zones' ? ' active' : ''),
+            onClick: () => setMode('hr_zones')
+          },
+          React.createElement('span', { className: 'ts-sm-icon' }, '❤️'),
+          React.createElement('span', { className: 'ts-sm-label' }, 'Пульсовые зоны'),
+          React.createElement('span', { className: 'ts-sm-hint' }, 'Минуты по зонам — как раньше')
+          ),
+          React.createElement('button', {
+            type: 'button',
+            className: 'ts-strength-mode-btn' + (mode === 'workout_builder' ? ' active' : ''),
+            onClick: () => setMode('workout_builder')
+          },
+          React.createElement('span', { className: 'ts-sm-icon' }, '📋'),
+          React.createElement('span', { className: 'ts-sm-label' }, 'Конструктор'),
+          React.createElement('span', { className: 'ts-sm-hint' }, 'Упражнения, подходы и повторы')
+          )
+        ),
+        mode === 'workout_builder' && React.createElement('p', { className: 'ts-strength-mode-footnote' },
+          'После «Добавить» упражнения и длительность настраиваются в карточке тренировки в блоке активности.'
+        )
+      )
+    );
+  }
+
+  // ========================================
+  // ШАГ: Зоны пульса
   // ========================================
   function TrainingZonesStep({ data, onChange, context }) {
     const profile = useMemo(() => lsGet('heys_profile', {}), []);
@@ -660,12 +774,71 @@
     validate: () => true
   });
 
-  // Шаг 3: Зоны пульса
+  // Силовая: зоны или конструктор (только type === strength)
+  registerStep('training-strength-mode', {
+    title: 'Силовая',
+    hint: 'Зоны или конструктор',
+    icon: '🏋️',
+    component: TrainingStrengthModeStep,
+    shouldShow: (ctx, sd) => (sd['training-info'] || {}).type === 'strength',
+    getInitialData: (ctx, allData) => {
+      const info = allData?.['training-info'] || {};
+      const day = readTrainingFormData(ctx);
+      if (info.type !== 'strength') return { mode: null };
+      if (day.strengthEntryMode === 'hr_zones') return { mode: 'hr_zones' };
+      if (day.strengthEntryMode === 'workout_builder') return { mode: 'workout_builder' };
+      return { mode: null };
+    },
+    validate: (data) => data && (data.mode === 'hr_zones' || data.mode === 'workout_builder'),
+    getValidationMessage: () => 'Выберите способ учёта силовой тренировки',
+    save: (data, ctx, allStepData) => {
+      if (!data || data.mode !== 'workout_builder') return;
+      const info = allStepData?.['training-info'] || {};
+      if (info.type !== 'strength') return;
+      const base = readTrainingFormData(ctx);
+      let z4 = normalizeTrainingZones(base.zones || base.z || [0, 0, 0, 0]);
+      const sumZ = z4.reduce((s, v) => s + (+v || 0), 0);
+      const z1 = Array.isArray(base.zones) ? base.zones[1] : 0;
+      const defaultMin = Math.max(1, Math.min(180, Math.round(Number(z1)) || 1));
+      if (sumZ === 0) {
+        z4 = [0, defaultMin, 0, 0];
+      }
+      let wl = base.workoutLog;
+      const zmSum = z4.reduce((s, v) => s + (+v || 0), 0);
+      if (wl && typeof wl === 'object' && Array.isArray(wl.exercises) && wl.exercises.length) {
+        wl = {
+          ...wl,
+          version: 1,
+          zoneMinutes: z4.slice(),
+          totalDurationMinutes: zmSum
+        };
+      } else {
+        wl = {
+          version: 1,
+          zoneMinutes: z4.slice(),
+          totalDurationMinutes: zmSum,
+          exercises: [{ id: 'ex_0', name: '', sets: 3, reps: 10, weightKg: '', note: '', ssGroup: 0, rpe: 0 }]
+        };
+      }
+      persistMergedTraining(ctx, allStepData, {
+        zones: z4,
+        strengthEntryMode: 'workout_builder',
+        workoutLog: wl
+      });
+    }
+  });
+
+  // Зоны пульса (после выбора «зоны» для силовой; для кардио/хобби — сразу после ощущений)
   registerStep('training-zones', {
     title: 'Зоны пульса',
     hint: 'Минуты в каждой зоне',
     icon: '❤️',
     component: TrainingZonesStep,
+    shouldShow: (ctx, sd) => {
+      const t = (sd['training-info'] || {}).type;
+      if (t !== 'strength') return true;
+      return (sd['training-strength-mode'] || {}).mode === 'hr_zones';
+    },
     getInitialData: (ctx, allData) => {
       return {
         ...readTrainingFormData(ctx),
@@ -683,52 +856,12 @@
       return null;
     },
     save: (data, ctx, allStepData) => {
-      const dateKey = ctx?.dateKey || new Date().toISOString().slice(0, 10);
-      const trainingIndex = ctx?.trainingIndex ?? 0;
-      const day = lsGet(`heys_dayv2_${dateKey}`, { date: dateKey });
-
-      const trainings = day.trainings || [];
-      while (trainings.length <= trainingIndex) {
-        trainings.push({ z: [0, 0, 0, 0] });
-      }
-
-      // Объединяем данные всех шагов в один training payload
       const infoData = allStepData?.['training-info'] || {};
-      const feedbackData = allStepData?.['training-feedback'] || {};
-      const zonesData = data || {};
-      const finalData = buildTrainingFormData({
-        ...infoData,
-        ...feedbackData,
-        ...zonesData
-      });
-
-      const finalTraining = {
-        z: finalData.zones,
-        time: finalData.time,
-        type: finalData.type,
-        activityLabel: finalData.activityLabel,
-        mood: finalData.mood,
-        wellbeing: finalData.wellbeing,
-        stress: finalData.stress,
-        comment: finalData.comment
-      };
-
-      trainings[trainingIndex] = finalTraining;
-
-      day.trainings = trainings;
-      day.updatedAt = Date.now();
-      lsSet(`heys_dayv2_${dateKey}`, day);
-
-      window.dispatchEvent(new CustomEvent('heys:day-updated', {
-        detail: { date: dateKey, field: 'trainings', source: 'training-step', forceReload: true }
-      }));
-
-      const totalMinutes = (finalTraining.z || []).reduce((sum, v) => sum + (Number(v) || 0), 0);
-      if (typeof window !== 'undefined' && totalMinutes > 0) {
-        window.dispatchEvent(new CustomEvent('heysTrainingAdded', {
-          detail: { minutes: totalMinutes, date: dateKey, trainingIndex }
-        }));
+      const patch = { zones: (data || {}).zones };
+      if (infoData.type === 'strength') {
+        patch.strengthEntryMode = 'hr_zones';
       }
+      persistMergedTraining(ctx, allStepData, patch);
     }
   });
 
@@ -742,7 +875,12 @@
     }
 
     HEYS.StepModal.show({
-      steps: ['training-info', 'training-feedback', 'training-zones'],
+      steps: [
+        'training-info',
+        'training-feedback',
+        'training-strength-mode',
+        'training-zones'
+      ],
       title: trainingIndex > 0 ? `Тренировка ${trainingIndex + 1}` : 'Тренировка',
       showProgress: true,
       showStreak: false,
@@ -752,12 +890,12 @@
       finishLabel: 'Добавить', // Кнопка на последнем шаге
       context: { dateKey, trainingIndex },
       onComplete: (stepData) => {
-        const data = {
+        onComplete?.({
           ...(stepData['training-info'] || {}),
           ...(stepData['training-feedback'] || {}),
+          ...(stepData['training-strength-mode'] || {}),
           ...(stepData['training-zones'] || {})
-        };
-        onComplete?.(data);
+        });
       }
     });
   }

@@ -499,13 +499,13 @@
         if (!config) return false;
         if (typeof config.shouldShow !== 'function') return true;
         try {
-          return config.shouldShow(context);
+          return config.shouldShow(context, stepData);
         } catch (e) {
           console.warn('[StepModal] shouldShow error:', config.id, e);
           return true;
         }
       });
-    }, [stepConfigs, contextKey]);
+    }, [stepConfigs, contextKey, stepData]);
 
     const totalSteps = visibleStepConfigs.length;
     const currentConfig = visibleStepConfigs[currentStepIndex];
@@ -515,23 +515,42 @@
     const dailyTip = useMemo(() => getDailyTip(), []);
     const currentStreak = useMemo(() => getCurrentStreak(), []);
 
-    // Инициализация данных шагов (при изменении context)
+    // Инициализация данных шагов: полный сброс при смене context; дозаполнение при появлении новых видимых шагов (ветвление)
     const lastContextKeyRef = useRef(null);
+    const visibleIdsSig = useMemo(
+      () => visibleStepConfigs.map((c) => c && c.id).filter(Boolean).join('|'),
+      [visibleStepConfigs]
+    );
 
     useEffect(() => {
-      // Пропускаем если context не изменился
-      if (lastContextKeyRef.current === contextKey) return;
-      lastContextKeyRef.current = contextKey;
-
-      const initialData = {};
-      visibleStepConfigs.forEach(config => {
-        if (config.getInitialData) {
-          // Передаём context и уже собранные данные других шагов
-          initialData[config.id] = config.getInitialData(context, initialData);
-        }
+      if (lastContextKeyRef.current !== contextKey) {
+        lastContextKeyRef.current = contextKey;
+        const initialData = {};
+        visibleStepConfigs.forEach((config) => {
+          if (config.getInitialData) {
+            initialData[config.id] = config.getInitialData(context, initialData);
+          }
+        });
+        setStepData(initialData);
+        return;
+      }
+      setStepData((prev) => {
+        const next = { ...prev };
+        visibleStepConfigs.forEach((config) => {
+          if (config.getInitialData && next[config.id] === undefined) {
+            next[config.id] = config.getInitialData(context, next);
+          }
+        });
+        return next;
       });
-      setStepData(initialData);
-    }, [contextKey, visibleStepConfigs]);
+    }, [contextKey, visibleIdsSig, context, visibleStepConfigs]);
+
+    useEffect(() => {
+      setCurrentStepIndex((i) => {
+        const max = Math.max(0, totalSteps - 1);
+        return i > max ? max : i;
+      });
+    }, [totalSteps]);
 
     // Обновление данных шага
     const updateStepData = useCallback((stepId, data) => {
