@@ -89,8 +89,8 @@ if (checkStatus !== 0) {
     writeLine('② Авто-генерация What\'s New entry...');
 
     const autoArgs = ['--auto'];
-    // Forward --title and --items if provided
-    args.filter((a) => a.startsWith('--title=') || a.startsWith('--items=')).forEach((a) => autoArgs.push(a));
+    // Forward --title, --items, and --allow-user-facing-auto if provided
+    args.filter((a) => a.startsWith('--title=') || a.startsWith('--items=') || a === '--allow-user-facing-auto').forEach((a) => autoArgs.push(a));
 
     const autoStatus = nodeScript(PREPARE_RELEASE, autoArgs);
     if (autoStatus !== 0) {
