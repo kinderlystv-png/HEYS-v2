@@ -7,13 +7,24 @@ applyTo: '**/*'
 
 > Ответы по-русски, код на английском.
 
+## Production stack (что СЕЙЧАС работает в проде)
+
+- **Backend**: Yandex Cloud Functions + API Gateway → `https://api.heyslab.ru`.
+- **Database**: Yandex Managed PostgreSQL 16
+  (`rc1b-obkgs83tnrd6a2m3.mdb.yandexcloud.net`).
+- **Frontend → backend**: только через `HEYS.YandexAPI.rpc()` / `.rest()`.
+- **Supabase**: полностью удалён 2026-04-18. В проекте Supabase SDK больше нет.
+  В новом коде НЕ добавлять `@supabase/*` зависимости.
+- **Telegram curator service**: удалён 2026-04-18 вместе с Supabase. Если
+  понадобится в будущем — реализовать заново поверх YC PostgreSQL.
+
 ## Domain-specific patterns (agent will get these wrong without guidance)
 
 - `dayTot.prot`, NOT `.protein`. `product.harm`, NOT `.harmScore`.
 - Protein = **3 kcal/g** (TEF-adjusted), NOT 4.
 - Storage keys: `heys_dayv2_*`, `heys_ews_weekly_v1`.
 - `MealItem` has no `category`; use `getProductFromItem(item, pIndex).category`.
-- API: only `HEYS.YandexAPI.rpc()` / `.rest()`; **no Supabase SDK**.
+- API: only `HEYS.YandexAPI.rpc()` / `.rest()`; **no Supabase SDK in new code**.
 - localStorage: `U.lsSet()` / `U.lsGet()`; **no raw localStorage**.
 - Protected RPC: `*_by_session` + `session_token`, never pass `client_id`.
 - Production API: `https://api.heyslab.ru` (never localhost).

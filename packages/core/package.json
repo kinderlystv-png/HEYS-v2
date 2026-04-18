@@ -41,7 +41,6 @@
   "dependencies": {
     "@heys/logger": "workspace:*",
     "@heys/shared": "workspace:*",
-    "@supabase/supabase-js": "^2.56.1",
     "date-fns": "^2.30.0",
     "zod": "^3.25.76"
   },

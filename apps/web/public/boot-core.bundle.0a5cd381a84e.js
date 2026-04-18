@@ -18086,7 +18086,17 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
 
 
 /* ===== heys_storage_supabase_v1.js ===== */
-﻿// heys_storage_supabase_v1.js — Supabase bridge, auth, cloud sync, localStorage mirroring
+﻿// heys_storage_supabase_v1.js — cloud storage bridge (HISTORICAL NAME)
+//
+// ⚠️  IMPORTANT (2025-12-25): Supabase JS SDK was removed from this module.
+//     Despite the filename, ALL cloud calls now route through HEYS.YandexAPI
+//     (Yandex Cloud Functions + API Gateway at https://api.heyslab.ru).
+//     The "supabase" suffix is kept for backwards compatibility with legacy
+//     boot order, bundle manifest hashes and localStorage keys
+//     (e.g. heys_supabase_auth_token — token name only, value is YC JWT).
+//     For new code: use HEYS.YandexAPI.rpc() / .rest() directly. Do NOT
+//     reintroduce a Supabase client here.
+//
 // v59: Fix cache invalidation on cloud sync — UI now shows synced data when changing dates
 // v60: FIX dayv2 overwrite — БЛОКИРОВКА записи старых данных из cloud в localStorage (timestamp check)
 // v61: FIX offline→online race — flush before download + dayv2 backup + meals count guard

@@ -8,8 +8,6 @@
 const cors = require('cors');
 const express = require('express');
 
-const { serverRouter } = require('../dist/server/router.js');
-
 const app = express();
 
 // Configuration from environment
@@ -112,9 +110,6 @@ app.post('/api/sms', async (req, res) => {
   }
 });
 
-app.use(serverRouter);
-
-// 404 handler
 app.use((req, res) => {
   res.status(404).json({
     error: 'Endpoint not found',
