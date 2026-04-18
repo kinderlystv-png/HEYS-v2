@@ -1,6 +1,21 @@
 {
   "releases": [
     {
+      "version": "2026.04.18.d4d0525e",
+      "buildHash": "d4d0525e",
+      "date": "2026-04-18",
+      "kind": "user-facing",
+      "profile": "user-facing-general",
+      "title": "Новые возможности и улучшения",
+      "items": [
+        {
+          "type": "fix",
+          "title": "Исправили синхронизацию и обновление данных",
+          "description": "Мы устранили проблемы с обновлением данных и улучшили стабильность синхронизации между сценариями приложения."
+        }
+      ]
+    },
+    {
       "version": "2026.04.18.c9e3fbef",
       "buildHash": "c9e3fbef",
       "date": "2026-04-18",
@@ -229,21 +244,6 @@
           "type": "improvement",
           "title": "Обновление бандлов приложения",
           "description": "Пересобраны legacy-чанки для доставки правок в PWA."
-        }
-      ]
-    },
-    {
-      "version": "2026.04.13.8315b964",
-      "buildHash": "8315b964",
-      "date": "2026-04-13",
-      "kind": "technical",
-      "profile": "technical-general",
-      "title": "Документация: снимки perf-аудита",
-      "items": [
-        {
-          "type": "improvement",
-          "title": "Архив отчётов perf-аудита",
-          "description": "В репозиторий добавлены свежие JSON/MD снимки multi-user perf audit — удобная опора для сравнения метрик в следующих итерациях оптимизации."
         }
       ]
     }
