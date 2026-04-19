@@ -83,7 +83,9 @@ interface ThreatAnalysisResult {
 }
 
 export interface SecurityAnalyticsConfig {
+  /** PostgREST base URL (legacy field name; same shape as former Supabase project URL). */
   supabaseUrl: string;
+  /** Service or anon API key for PostgREST `apikey` / `Authorization: Bearer`. */
   supabaseKey: string;
   enableRealTimeProcessing: boolean;
   enableAutomatedResponse: boolean;

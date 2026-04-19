@@ -404,7 +404,14 @@
             quickCreate: !!source?.quickCreate,
             isBackground: Boolean(source?.isBackground),
             bgColor: source?.bgColor || BACKGROUND_SLOT_COLORS[0].value,
+            recurrenceGroupId: source?.recurrenceGroupId ? String(source.recurrenceGroupId) : '',
         };
+    }
+
+    function collectSlotsByRecurrenceGroup(slots, recurrenceGroupId) {
+        const gid = String(recurrenceGroupId || '');
+        if (!gid) return [];
+        return (Array.isArray(slots) ? slots : []).filter((slot) => String(slot.recurrenceGroupId || '') === gid);
     }
 
     function snapCalendarGridMinutes(minutes) {
@@ -1252,7 +1259,8 @@
         );
     }
 
-    function SlotEditorModal({ draft, state, resolvedTaskProjectIds, onClose, onDelete }) {
+    function SlotEditorModal({ draft, state, resolvedTaskProjectIds, onClose }) {
+        const { isDesktop } = usePlanningViewport();
         const tasks = Array.isArray(state?.tasks) ? state.tasks : [];
         const projects = Array.isArray(state?.projects) ? state.projects : [];
         const activeProjects = useMemo(
@@ -1265,23 +1273,42 @@
         );
         const slots = Array.isArray(state?.slots) ? state.slots : [];
         const taskLookup = useMemo(() => buildTaskLookup(tasks), [tasks]);
-        const titleInputRef = useRef(null);
         const [showTaskDurationPicker, setShowTaskDurationPicker] = useState(false);
         const [showSlotDurationPicker, setShowSlotDurationPicker] = useState(false);
-        const [isTitleEditing, setIsTitleEditing] = useState(false);
         const [newSlotProjectName, setNewSlotProjectName] = useState('');
         const [form, setForm] = useState(() => buildUnifiedSlotDraft(draft, tasks, resolvedTaskProjectIds));
+        const anchorDowForDraft = useMemo(
+            () => new Date(String(dateStr(draft?.date) || '') + 'T12:00:00').getDay(),
+            [draft?.date],
+        );
+        const [repeatWeekly, setRepeatWeekly] = useState(false);
+        const [weekdaySet, setWeekdaySet] = useState(() => new Set([anchorDowForDraft]));
+        const [customDates, setCustomDates] = useState(() => new Set());
+        const [showDateCalendar, setShowDateCalendar] = useState(false);
 
         useEffect(() => {
             setForm(buildUnifiedSlotDraft(draft, tasks, resolvedTaskProjectIds));
-            setIsTitleEditing(false);
         }, [draft, tasks, resolvedTaskProjectIds]);
 
         useEffect(() => {
-            if (!isTitleEditing || !titleInputRef.current) return;
-            titleInputRef.current.focus();
-            if (typeof titleInputRef.current.select === 'function') titleInputRef.current.select();
-        }, [isTitleEditing]);
+            const anchorDate = dateStr(draft?.date);
+            const anchorDow = new Date(String(anchorDate || '') + 'T12:00:00').getDay();
+            const gid = String(draft?.recurrenceGroupId || '');
+            const siblings = gid && draft?.taskId
+                ? collectSlotsByRecurrenceGroup(slots, gid).filter((s) => s.taskId === draft.taskId)
+                : (gid ? collectSlotsByRecurrenceGroup(slots, gid) : []);
+            const uniqDates = [...new Set(siblings.map((s) => dateStr(s.date)))].sort();
+            if (uniqDates.length > 1) {
+                setRepeatWeekly(true);
+                setCustomDates(new Set(uniqDates));
+                setWeekdaySet(new Set([anchorDow]));
+            } else {
+                setRepeatWeekly(false);
+                setCustomDates(new Set());
+                setWeekdaySet(new Set([anchorDow]));
+            }
+            setShowDateCalendar(false);
+        }, [draft?.id, draft?.recurrenceGroupId, draft?.taskId, draft?.date, slots]);
 
         const linkedTask = tasks.find((task) => task.id === form.taskId) || null;
         const descendants = useMemo(
@@ -1301,20 +1328,10 @@
         const slotDurationMinutes = getSlotDurationMinutes(form);
         const slotDurationLabel = formatDurationLabel(slotDurationMinutes) || 'Без длительности';
         const taskDurationLabel = formatDurationLabel(form.taskPlannedMinutes) || 'Без оценки';
-        const priorityLabel = PRIORITY_CONFIG[form.taskPriority]?.label || 'P2';
-        const statusLabel = STATUS_CONFIG[form.taskStatus]?.label || 'В работе';
         const DurationPresetModal = HEYS.PlanningTasks && HEYS.PlanningTasks.DurationPresetModal;
         const headerTitle = linkedTask
             ? (form.taskTitle || linkedTask.title || 'Задача')
             : (String(form.title || '').trim() || 'Отдельное событие');
-        const headerMeta = [
-            form.date,
-            form.startTime + '–' + form.endTime,
-            slotDurationLabel,
-            linkedTask ? priorityLabel : '',
-            linkedTask ? statusLabel : '',
-        ].filter(Boolean).join(' · ');
-        const titleFieldLabel = linkedTask ? 'Название задачи' : 'Название события';
         const titleFieldValue = linkedTask ? form.taskTitle : form.title;
         const titleFieldPlaceholder = linkedTask ? 'Название задачи' : 'Название события';
 
@@ -1327,7 +1344,12 @@
 
         const handleLinkedTaskChange = (taskId) => {
             const nextTask = tasks.find((task) => task.id === taskId);
-            setIsTitleEditing(false);
+            const anchorIso = dateStr(form.date);
+            const anchorDow = new Date(String(anchorIso || '') + 'T12:00:00').getDay();
+            setRepeatWeekly(false);
+            setCustomDates(new Set());
+            setWeekdaySet(new Set([anchorDow]));
+            setShowDateCalendar(false);
             setForm((current) => ({
                 ...current,
                 taskId,
@@ -1344,7 +1366,43 @@
                 taskBaselineDueDate: nextTask?.baselineDueDate || '',
                 taskBaselinePlannedMinutes: nextTask?.baselinePlannedMinutes ? String(nextTask.baselinePlannedMinutes) : '',
                 taskBlockedByTaskIds: Array.isArray(nextTask?.blockedByTaskIds) ? nextTask.blockedByTaskIds.slice() : [],
+                recurrenceGroupId: '',
             }));
+        };
+
+        const hasCustomDates = customDates.size > 0;
+
+        const toggleDow = (dow) => {
+            setWeekdaySet((prev) => {
+                const next = new Set(prev);
+                if (next.has(dow)) {
+                    if (next.size <= 1) return next;
+                    next.delete(dow);
+                } else {
+                    next.add(dow);
+                }
+                return next;
+            });
+        };
+
+        const handleRepeatToggle = (enabled) => {
+            setRepeatWeekly(enabled);
+            if (enabled) {
+                const anchorIso = dateStr(form.date);
+                const dow = new Date(String(anchorIso || '') + 'T12:00:00').getDay();
+                setWeekdaySet(new Set([dow]));
+                setCustomDates(new Set());
+                setShowDateCalendar(false);
+            }
+        };
+
+        const toggleCustomDate = (isoDate) => {
+            setCustomDates((prev) => {
+                const next = new Set(prev);
+                if (next.has(isoDate)) next.delete(isoDate);
+                else next.add(isoDate);
+                return next;
+            });
         };
 
         const save = () => {
@@ -1377,14 +1435,78 @@
                     blockedByTaskIds: form.taskBlockedByTaskIds,
                 });
 
-                const slotPayloadLinked = {
+                let sm = timeToMinutes(form.startTime);
+                let em = timeToMinutes(form.endTime);
+                if (em <= sm) {
+                    const tmp = sm;
+                    sm = em;
+                    em = tmp + CALENDAR_SNAP_MINUTES;
+                }
+                const st = formatWallClockHm(sm);
+                const et = formatWallClockHm(em);
+
+                const baseSlotPayload = {
                     taskId: form.taskId,
                     title: '',
-                    date: form.date,
-                    startTime: form.startTime,
-                    endTime: form.endTime,
+                    startTime: st,
+                    endTime: et,
                     isBackground: form.isBackground,
                     bgColor: form.isBackground ? form.bgColor : undefined,
+                };
+
+                const gid = String(form.recurrenceGroupId || '');
+                const oldSiblings = gid
+                    ? collectSlotsByRecurrenceGroup(slots, gid).filter((s) => s.taskId === form.taskId)
+                    : [];
+                const oldIds = oldSiblings.map((s) => s.id).filter(Boolean);
+
+                if (repeatWeekly) {
+                    let dateList = [];
+                    if (hasCustomDates) {
+                        dateList = [...customDates].sort();
+                    } else {
+                        for (let i = 0; i <= QUICK_REPEAT_HORIZON_DAYS; i += 1) {
+                            const d = addDays(form.date, i);
+                            const dow = new Date(String(d) + 'T12:00:00').getDay();
+                            if (weekdaySet.has(dow)) dateList.push(d);
+                        }
+                    }
+                    if (!dateList.length) return;
+
+                    const groupId = uid();
+                    const idsToDrop = (oldIds.length ? oldIds : (form.id ? [form.id] : [])).filter(Boolean);
+                    if (typeof state.deleteSlotBatch === 'function' && idsToDrop.length) {
+                        state.deleteSlotBatch(idsToDrop);
+                    } else {
+                        idsToDrop.forEach((id) => state.deleteSlot(id));
+                    }
+
+                    const slotOpts = dateList.map((d) => ({
+                        ...baseSlotPayload,
+                        date: d,
+                        source: 'user',
+                        recurrenceGroupId: groupId,
+                    }));
+                    state.addSlotBatch(slotOpts.map((o) => ({
+                        ...o,
+                        taskId: form.taskId,
+                        title: '',
+                    })));
+                    onClose();
+                    return;
+                }
+
+                const others = oldIds.filter((id) => id !== form.id);
+                if (others.length && typeof state.deleteSlotBatch === 'function') {
+                    state.deleteSlotBatch(others);
+                } else if (others.length) {
+                    others.forEach((id) => state.deleteSlot(id));
+                }
+
+                const slotPayloadLinked = {
+                    ...baseSlotPayload,
+                    date: form.date,
+                    recurrenceGroupId: undefined,
                 };
                 if (form.id) state.updateSlot(form.id, slotPayloadLinked);
                 else state.addSlot(slotPayloadLinked);
@@ -1435,259 +1557,305 @@
             onClose();
         };
 
-        return h('div', { className: 'planning-modal-overlay planning-modal-overlay--quick-event', onClick: onClose },
-            h('div', { className: 'planning-modal planning-modal--slot-unified', onClick: (event) => event.stopPropagation() },
+        return h('div', {
+            className: 'planning-modal-overlay planning-modal-overlay--quick-event'
+                + (!isDesktop ? ' planning-modal-overlay--quick-event-sheet' : ''),
+            onClick: onClose,
+        },
+            h('div', {
+                className: 'planning-modal planning-modal--quick-event planning-modal--slot-edit'
+                    + (!isDesktop ? ' planning-modal--quick-event-sheet' : ''),
+                onClick: (event) => event.stopPropagation(),
+            },
                 h('div', { className: 'planning-modal__header planning-modal__header--quick-event' },
                     h('div', { className: 'planning-modal__header-copy' },
                         h('span', { className: 'planning-modal__header-title planning-modal__header-title--quick-event' }, headerTitle),
-                        h('span', { className: 'planning-modal__eyebrow' }, headerMeta),
                     ),
-                    h('button', { type: 'button', className: 'planning-modal__close planning-modal__close--quick-event', onClick: onClose }, '×'),
+                    h('button', {
+                        type: 'button',
+                        className: 'planning-modal__close planning-modal__close--quick-event',
+                        onClick: onClose,
+                        'aria-label': 'Закрыть',
+                    }, '×'),
                 ),
-                h('div', { className: 'planning-modal__meta planning-modal__meta--summary' },
-                    h('span', { className: 'planning-modal__meta-pill' }, 'Слот: ' + slotDurationLabel),
-                    linkedTask && h('span', { className: 'planning-modal__meta-pill' }, priorityLabel),
-                    linkedTask && h('span', { className: 'planning-modal__meta-pill' }, statusLabel),
-                    linkedTask && h('span', { className: 'planning-modal__meta-pill' }, 'Задача: ' + taskDurationLabel),
-                ),
-                h('div', { className: 'planning-modal__body' },
-                    h('section', { className: 'planning-modal__card planning-modal__card--full' },
-                        h('div', { className: 'planning-modal__card-header' },
-                            h('div', { className: 'planning-modal__card-kicker' }, 'Основное'),
-                            h('div', { className: 'planning-modal__card-title' }, linkedTask ? 'Слот и быстрые параметры' : 'Параметры события'),
-                            h('div', { className: 'planning-modal__card-hint' }, linkedTask ? 'Одна задача, один заголовок — ниже только быстрые параметры и планирование' : 'Календарный блок без связанной задачи'),
+                h('div', { className: 'planning-modal__body planning-modal__body--quick-event' },
+                    h('div', { className: 'planning-slot-edit-task-row' },
+                        h('label', { className: 'planning-slot-edit-task-row__label', htmlFor: 'planning-slot-edit-task' }, 'Задача'),
+                        h('select', {
+                            id: 'planning-slot-edit-task',
+                            className: 'planning-slot-edit-task-row__select',
+                            value: form.taskId,
+                            onChange: (event) => handleLinkedTaskChange(event.target.value),
+                        },
+                            h('option', { value: '' }, '— обычное событие —'),
+                            tasks.map((task) => h('option', {
+                                key: task.id,
+                                value: task.id,
+                            }, buildTaskHierarchyInfo(task, taskLookup, projects, resolvedTaskProjectIds).selectLabel)),
                         ),
-                        h('div', { className: 'planning-modal__stack' },
-                            h('div', { className: 'planning-modal__row' },
-                                h('div', { className: 'planning-modal__row-label' },
-                                    h('label', null, 'Задача'),
-                                    linkedTask && h('button', {
-                                        type: 'button',
-                                        className: 'planning-modal__icon-btn planning-modal__icon-btn--inline',
-                                        title: isTitleEditing ? 'Скрыть поле названия' : 'Изменить название задачи',
-                                        'aria-label': 'Изменить название задачи',
-                                        onClick: () => setIsTitleEditing((current) => !current),
-                                    }, '✎'),
+                    ),
+                    h('div', { className: 'planning-quick-title-field' },
+                        h('input', {
+                            id: 'planning-slot-edit-title',
+                            className: 'planning-quick-title-field__input',
+                            placeholder: titleFieldPlaceholder,
+                            value: titleFieldValue,
+                            onChange: (event) => handleField(linkedTask ? 'taskTitle' : 'title', event.target.value),
+                            autoComplete: 'off',
+                        }),
+                    ),
+                    h('div', { className: 'planning-quick-date-action-row' },
+                        h('div', { className: 'planning-quick-date-action-row__date' },
+                            h('label', { className: 'planning-quick-date-action-row__label', htmlFor: 'planning-slot-edit-date' }, 'Дата'),
+                            h('input', {
+                                id: 'planning-slot-edit-date',
+                                className: 'planning-quick-date-action-row__date-input',
+                                type: 'date',
+                                value: form.date,
+                                onChange: (event) => handleField('date', event.target.value),
+                            }),
+                        ),
+                        isDesktop && h('button', {
+                            type: 'button',
+                            className: 'planning-quick-btn-done planning-quick-btn-done--in-body',
+                            onClick: save,
+                        },
+                            h('span', { className: 'planning-quick-btn-done__icon', 'aria-hidden': 'true' }, '✓'),
+                            h('span', { className: 'planning-quick-btn-done__text' }, 'Сохранить'),
+                        ),
+                    ),
+                    h('div', { className: 'planning-quick-time-pair' },
+                        h('div', { className: 'planning-quick-time-pair__field' },
+                            h('label', { htmlFor: 'planning-slot-edit-start' }, 'Начало'),
+                            h('input', {
+                                id: 'planning-slot-edit-start',
+                                className: 'planning-quick-time-pair__input',
+                                type: 'time',
+                                step: 300,
+                                value: normalizeQuickModalTimeForInput(form.startTime || '09:00'),
+                                onChange: (event) => handleField(
+                                    'startTime',
+                                    normalizeQuickModalTimeForInput(event.target.value || '09:00'),
                                 ),
-                                h('select', {
-                                    value: form.taskId,
-                                    onChange: (event) => handleLinkedTaskChange(event.target.value),
-                                },
-                                    h('option', { value: '' }, '— обычное событие —'),
-                                    tasks.map((task) => h('option', {
-                                        key: task.id,
-                                        value: task.id,
-                                    }, buildTaskHierarchyInfo(task, taskLookup, projects, resolvedTaskProjectIds).selectLabel)),
+                            }),
+                        ),
+                        h('div', { className: 'planning-quick-time-pair__sep', 'aria-hidden': 'true' }, '—'),
+                        h('div', { className: 'planning-quick-time-pair__field' },
+                            h('label', { htmlFor: 'planning-slot-edit-end' }, 'Конец'),
+                            h('input', {
+                                id: 'planning-slot-edit-end',
+                                className: 'planning-quick-time-pair__input',
+                                type: 'time',
+                                step: 300,
+                                value: normalizeQuickModalTimeForInput(form.endTime || '10:00'),
+                                onChange: (event) => handleField(
+                                    'endTime',
+                                    normalizeQuickModalTimeForInput(event.target.value || '10:00'),
+                                ),
+                            }),
+                        ),
+                    ),
+                    h('div', { className: 'planning-slot-edit-duration-link' },
+                        h('button', {
+                            type: 'button',
+                            className: 'planning-slot-edit-duration-link__btn',
+                            onClick: () => setShowSlotDurationPicker(true),
+                        },
+                            'Длительность слота: ',
+                            h('span', { className: 'planning-slot-edit-duration-link__value' }, slotDurationLabel),
+                        ),
+                    ),
+                    linkedTask && h('div', { className: 'planning-slot-edit-status-row' },
+                        h('div', { className: 'planning-slot-edit-status-row__field' },
+                            h('label', { htmlFor: 'planning-slot-edit-status' }, 'Статус'),
+                            h('select', {
+                                id: 'planning-slot-edit-status',
+                                className: 'planning-slot-edit-status-row__select',
+                                value: form.taskStatus,
+                                onChange: (event) => handleField('taskStatus', event.target.value),
+                            },
+                                Object.keys(STATUS_CONFIG).map((key) => h('option', { key, value: key }, STATUS_CONFIG[key].label)),
+                            ),
+                        ),
+                        h('div', { className: 'planning-slot-edit-status-row__field' },
+                            h('label', { htmlFor: 'planning-slot-edit-priority' }, 'Приоритет'),
+                            h('select', {
+                                id: 'planning-slot-edit-priority',
+                                className: 'planning-slot-edit-status-row__select',
+                                value: form.taskPriority,
+                                onChange: (event) => handleField('taskPriority', event.target.value),
+                            },
+                                Object.keys(PRIORITY_CONFIG).map((key) => h('option', { key, value: key }, PRIORITY_CONFIG[key].label)),
+                            ),
+                        ),
+                    ),
+                    h('div', { className: 'planning-quick-slot-target-wrap' },
+                        h('div', { className: 'planning-quick-slot-target-wrap__label' }, 'Проект и подпроект'),
+                        h(PlanningQuickTargetField, {
+                            value: encodePlanningFieldsToQuickValue(form.taskProjectId, form.taskParentTaskId),
+                            onChange: (next) => {
+                                const fields = resolveQuickTargetToFormFields(next, tasks, resolvedForQuickTarget);
+                                setForm((current) => ({
+                                    ...current,
+                                    taskProjectId: fields.taskProjectId,
+                                    taskParentTaskId: fields.taskParentTaskId,
+                                }));
+                            },
+                            projects: activeProjects,
+                            tasks,
+                            resolvedTaskProjectIds: resolvedForQuickTarget,
+                            tabsSelector: '.tabs',
+                            modalMenuMode: true,
+                        }),
+                    ),
+                    h('div', { className: 'planning-add-project' },
+                        h('input', {
+                            className: 'planning-quick-input planning-quick-input--sm',
+                            placeholder: 'Новый проект...',
+                            value: newSlotProjectName,
+                            onChange: (event) => setNewSlotProjectName(event.target.value),
+                            onKeyDown: (event) => {
+                                if (event.key !== 'Enter') return;
+                                const name = String(newSlotProjectName || '').trim();
+                                if (!name) return;
+                                state.addProject(name);
+                                setNewSlotProjectName('');
+                            },
+                        }),
+                        h('button', {
+                            type: 'button',
+                            className: 'planning-add-btn planning-add-btn--project',
+                            onClick: () => {
+                                const name = String(newSlotProjectName || '').trim();
+                                if (!name) return;
+                                state.addProject(name);
+                                setNewSlotProjectName('');
+                            },
+                        }, '+ Проект'),
+                    ),
+                    linkedTask && h('div', { className: 'planning-quick-repeat' },
+                        h('label', { className: 'planning-quick-repeat__toggle' },
+                            h('input', {
+                                type: 'checkbox',
+                                checked: repeatWeekly,
+                                onChange: (event) => handleRepeatToggle(event.target.checked),
+                            }),
+                            h('span', null, '\u041F\u043E\u0432\u0442\u043E\u0440\u044F\u0442\u044C \u043F\u043E \u0434\u043D\u044F\u043C \u043D\u0435\u0434\u0435\u043B\u0438'),
+                        ),
+                        repeatWeekly && !hasCustomDates && h('div', {
+                            className: 'planning-quick-repeat__days',
+                            role: 'group',
+                            'aria-label': '\u0414\u043D\u0438 \u043F\u043E\u0432\u0442\u043E\u0440\u0430',
+                        },
+                            QUICK_WEEKDAY_CHIPS.map(({ dow, label }) => h('button', {
+                                key: dow,
+                                type: 'button',
+                                className: 'planning-weekday-chip' + (weekdaySet.has(dow) ? ' planning-weekday-chip--active' : ''),
+                                'aria-pressed': weekdaySet.has(dow) ? 'true' : 'false',
+                                onClick: () => toggleDow(dow),
+                            }, label)),
+                        ),
+                        repeatWeekly && !hasCustomDates && h('button', {
+                            type: 'button',
+                            className: 'planning-quick-repeat__pick-dates',
+                            onClick: () => setShowDateCalendar(true),
+                        }, '\uD83D\uDCC5 \u0412\u044B\u0431\u0440\u0430\u0442\u044C \u0434\u0430\u0442\u044B'),
+                        repeatWeekly && hasCustomDates && h('div', { className: 'planning-quick-repeat__custom-summary' },
+                            h('span', { className: 'planning-quick-repeat__badge' },
+                                '\u0412\u044B\u0431\u0440\u0430\u043D\u043E ' + customDates.size + ' ' + (
+                                    customDates.size === 1 ? '\u0434\u0430\u0442\u0430' :
+                                    customDates.size < 5 ? '\u0434\u0430\u0442\u044B' : '\u0434\u0430\u0442'
                                 ),
                             ),
-                            !linkedTask && h('div', { className: 'planning-modal__title-inline' },
-                                h('div', { className: 'planning-modal__title-inline-copy' },
-                                    h('span', { className: 'planning-modal__title-inline-label' }, titleFieldLabel),
-                                    h('span', {
-                                        className: 'planning-modal__title-inline-value' + (!String(titleFieldValue || '').trim() ? ' is-empty' : ''),
-                                    }, String(titleFieldValue || '').trim() || 'Без названия'),
-                                ),
+                            h('button', {
+                                type: 'button',
+                                className: 'planning-quick-repeat__pick-dates',
+                                onClick: () => setShowDateCalendar(true),
+                            }, '\uD83D\uDCC5 \u0418\u0437\u043C\u0435\u043D\u0438\u0442\u044C'),
+                            h('button', {
+                                type: 'button',
+                                className: 'planning-quick-repeat__reset',
+                                onClick: () => { setCustomDates(new Set()); },
+                            }, '\u0421\u0431\u0440\u043E\u0441\u0438\u0442\u044C'),
+                        ),
+                        repeatWeekly && !hasCustomDates && h('p', { className: 'planning-quick-repeat__hint' },
+                            '\u0414\u043E 8 \u043D\u0435\u0434\u0435\u043B\u044C \u043E\u0442 \u0432\u044B\u0431\u0440\u0430\u043D\u043D\u043E\u0439 \u0434\u0430\u0442\u044B, \u0442\u0435 \u0436\u0435 \u0447\u0430\u0441\u044B.',
+                        ),
+                        repeatWeekly && hasCustomDates && h('p', { className: 'planning-quick-repeat__hint' },
+                            '\u0421\u043B\u043E\u0442\u044B \u0441\u043E\u0437\u0434\u0430\u0434\u0443\u0442\u0441\u044F \u043D\u0430 \u0432\u044B\u0431\u0440\u0430\u043D\u043D\u044B\u0435 \u0434\u0430\u0442\u044B, \u0442\u0435 \u0436\u0435 \u0447\u0430\u0441\u044B.',
+                        ),
+                    ),
+                    !linkedTask && h('p', { className: 'planning-quick-repeat__hint' },
+                        'Если выбран проект или родитель без задачи в списке выше, при сохранении создаётся задача и слот к ней привязывается.',
+                    ),
+                    h('div', { className: 'planning-bg-section' },
+                        h('label', { className: 'planning-bg-section__toggle' },
+                            h('input', {
+                                type: 'checkbox',
+                                checked: form.isBackground,
+                                onChange: (event) => handleField('isBackground', event.target.checked),
+                            }),
+                            h('span', null, '\u0424\u043E\u043D\u043E\u0432\u043E\u0435 \u0441\u043E\u0431\u044B\u0442\u0438\u0435'),
+                        ),
+                        form.isBackground && h('div', { className: 'planning-bg-palette' },
+                            BACKGROUND_SLOT_COLORS.map((c) => h('button', {
+                                key: c.value,
+                                type: 'button',
+                                className: 'planning-bg-swatch' + (form.bgColor === c.value ? ' planning-bg-swatch--active' : ''),
+                                style: { background: c.value },
+                                title: c.label,
+                                'aria-label': c.label,
+                                onClick: () => handleField('bgColor', c.value),
+                            })),
+                        ),
+                    ),
+                    linkedTask && h('div', { className: 'planning-slot-edit-task-plan' },
+                        h('div', { className: 'planning-slot-edit-task-plan__title' }, 'Сроки и оценка задачи'),
+                        h('div', { className: 'planning-slot-edit-task-plan__grid' },
+                            h('div', { className: 'planning-slot-edit-task-plan__field' },
+                                h('label', { htmlFor: 'planning-slot-edit-task-start' }, 'Старт'),
+                                h('input', {
+                                    id: 'planning-slot-edit-task-start',
+                                    className: 'planning-slot-edit-task-plan__input',
+                                    type: 'date',
+                                    value: form.taskStartDate,
+                                    onChange: (event) => handleField('taskStartDate', event.target.value),
+                                }),
+                            ),
+                            h('div', { className: 'planning-slot-edit-task-plan__field' },
+                                h('label', { htmlFor: 'planning-slot-edit-task-due' }, 'Дедлайн'),
+                                h('input', {
+                                    id: 'planning-slot-edit-task-due',
+                                    className: 'planning-slot-edit-task-plan__input',
+                                    type: 'date',
+                                    value: form.taskDueDate,
+                                    onChange: (event) => handleField('taskDueDate', event.target.value),
+                                }),
+                            ),
+                            h('div', { className: 'planning-slot-edit-task-plan__field planning-slot-edit-task-plan__field--span' },
+                                h('label', null, 'Оценка задачи'),
                                 h('button', {
                                     type: 'button',
-                                    className: 'planning-modal__icon-btn',
-                                    title: isTitleEditing ? 'Скрыть поле названия' : 'Изменить название',
-                                    'aria-label': 'Изменить название',
-                                    onClick: () => setIsTitleEditing((current) => !current),
-                                }, '✎'),
-                            ),
-                            isTitleEditing && h('div', { className: 'planning-modal__row' },
-                                h('label', null, titleFieldLabel),
-                                h('input', {
-                                    ref: titleInputRef,
-                                    className: 'planning-modal__input',
-                                    placeholder: titleFieldPlaceholder,
-                                    value: titleFieldValue,
-                                    onChange: (event) => handleField(linkedTask ? 'taskTitle' : 'title', event.target.value),
-                                }),
-                            ),
-                            h('div', { className: 'planning-modal__time-row' },
-                                h('div', { className: 'planning-modal__row' },
-                                    h('label', null, 'Дата'),
-                                    h('input', {
-                                        type: 'date',
-                                        value: form.date,
-                                        onChange: (event) => handleField('date', event.target.value),
-                                    }),
-                                ),
-                                h('div', { className: 'planning-modal__row' },
-                                    h('label', null, 'Длительность'),
-                                    h('button', {
-                                        type: 'button',
-                                        className: 'planning-duration-trigger planning-duration-trigger--compact',
-                                        onClick: () => setShowSlotDurationPicker(true),
-                                    },
-                                        h('span', { className: 'planning-duration-trigger__value' }, slotDurationLabel),
-                                        h('span', { className: 'planning-duration-trigger__icon', 'aria-hidden': 'true' }, '⏱'),
-                                    ),
-                                ),
-                                h('div', { className: 'planning-modal__row' },
-                                    h('label', null, 'Старт'),
-                                    h('input', {
-                                        type: 'time',
-                                        value: form.startTime,
-                                        onChange: (event) => handleField('startTime', event.target.value),
-                                    }),
-                                ),
-                                h('div', { className: 'planning-modal__row' },
-                                    h('label', null, 'Окончание'),
-                                    h('input', {
-                                        type: 'time',
-                                        value: form.endTime,
-                                        onChange: (event) => handleField('endTime', event.target.value),
-                                    }),
-                                ),
-                            ),
-                            linkedTask && h('div', { className: 'planning-modal__compact-grid planning-modal__compact-grid--pair' },
-                                h('div', { className: 'planning-modal__row' },
-                                    h('label', null, 'Статус'),
-                                    h('select', { value: form.taskStatus, onChange: (event) => handleField('taskStatus', event.target.value) },
-                                        Object.keys(STATUS_CONFIG).map((key) => h('option', { key, value: key }, STATUS_CONFIG[key].label)),
-                                    ),
-                                ),
-                                h('div', { className: 'planning-modal__row' },
-                                    h('label', null, 'Приоритет'),
-                                    h('select', { value: form.taskPriority, onChange: (event) => handleField('taskPriority', event.target.value) },
-                                        Object.keys(PRIORITY_CONFIG).map((key) => h('option', { key, value: key }, PRIORITY_CONFIG[key].label)),
-                                    ),
-                                ),
-                            ),
-                            !linkedTask && h('div', { className: 'planning-modal__stack planning-modal__stack--slot-standalone-meta' },
-                                h('div', { className: 'planning-modal__row planning-modal__row--full' },
-                                    h('label', null, 'Проект и подпроект'),
-                                    h(PlanningQuickTargetField, {
-                                        value: encodePlanningFieldsToQuickValue(form.taskProjectId, form.taskParentTaskId),
-                                        onChange: (next) => {
-                                            const fields = resolveQuickTargetToFormFields(next, tasks, resolvedForQuickTarget);
-                                            setForm((current) => ({
-                                                ...current,
-                                                taskProjectId: fields.taskProjectId,
-                                                taskParentTaskId: fields.taskParentTaskId,
-                                            }));
-                                        },
-                                        projects: activeProjects,
-                                        tasks,
-                                        resolvedTaskProjectIds: resolvedForQuickTarget,
-                                        tabsSelector: '.tabs',
-                                        modalMenuMode: true,
-                                    }),
-                                ),
-                                h('div', { className: 'planning-add-project' },
-                                    h('input', {
-                                        className: 'planning-quick-input planning-quick-input--sm',
-                                        placeholder: 'Новый проект...',
-                                        value: newSlotProjectName,
-                                        onChange: (event) => setNewSlotProjectName(event.target.value),
-                                        onKeyDown: (event) => {
-                                            if (event.key === 'Enter') {
-                                                const name = String(newSlotProjectName || '').trim();
-                                                if (!name) return;
-                                                state.addProject(name);
-                                                setNewSlotProjectName('');
-                                            }
-                                        },
-                                    }),
-                                    h('button', {
-                                        type: 'button',
-                                        className: 'planning-add-btn planning-add-btn--project',
-                                        onClick: () => {
-                                            const name = String(newSlotProjectName || '').trim();
-                                            if (!name) return;
-                                            state.addProject(name);
-                                            setNewSlotProjectName('');
-                                        },
-                                    }, '+ Проект'),
-                                ),
-                                h('p', { className: 'planning-quick-repeat__hint' },
-                                    'Если выбран проект или родитель, при сохранении создаётся задача и слот к ней привязывается. Или укажи связь через список «Задача» выше.',
-                                ),
-                            ),
-                            h('div', { className: 'planning-bg-section' },
-                                h('label', { className: 'planning-bg-section__toggle' },
-                                    h('input', {
-                                        type: 'checkbox',
-                                        checked: form.isBackground,
-                                        onChange: (event) => handleField('isBackground', event.target.checked),
-                                    }),
-                                    h('span', null, '\u0424\u043E\u043D\u043E\u0432\u043E\u0435 \u0441\u043E\u0431\u044B\u0442\u0438\u0435'),
-                                ),
-                                form.isBackground && h('div', { className: 'planning-bg-palette' },
-                                    BACKGROUND_SLOT_COLORS.map((c) => h('button', {
-                                        key: c.value,
-                                        type: 'button',
-                                        className: 'planning-bg-swatch' + (form.bgColor === c.value ? ' planning-bg-swatch--active' : ''),
-                                        style: { background: c.value },
-                                        title: c.label,
-                                        'aria-label': c.label,
-                                        onClick: () => handleField('bgColor', c.value),
-                                    })),
+                                    className: 'planning-duration-trigger planning-duration-trigger--compact',
+                                    onClick: () => setShowTaskDurationPicker(true),
+                                },
+                                    h('span', { className: 'planning-duration-trigger__value' }, taskDurationLabel),
+                                    h('span', { className: 'planning-duration-trigger__icon', 'aria-hidden': 'true' }, '⏱'),
                                 ),
                             ),
                         ),
                     ),
-                    linkedTask && h('section', { className: 'planning-modal__card planning-modal__card--full' },
-                        h('div', { className: 'planning-modal__card-header' },
-                            h('div', { className: 'planning-modal__card-kicker' }, 'План задачи'),
-                            h('div', { className: 'planning-modal__card-title' }, 'Сроки, структура и оценка'),
-                            h('div', { className: 'planning-modal__card-hint' }, 'Без лишнего — только то, что влияет на планирование'),
+                    linkedTask && h('details', { className: 'planning-modal__details planning-modal__details--slot-advanced' },
+                        h('summary', { className: 'planning-modal__details-summary' },
+                            h('span', { className: 'planning-modal__details-title' }, 'Зависимости, baseline, другие слоты'),
+                            h('span', { className: 'planning-modal__details-hint' }, 'по желанию'),
                         ),
-                        h('div', { className: 'planning-modal__stack' },
-                            h('div', { className: 'planning-modal__row planning-modal__row--full' },
-                                h('label', null, 'Проект и подпроект'),
-                                h(PlanningQuickTargetField, {
-                                    value: encodePlanningFieldsToQuickValue(form.taskProjectId, form.taskParentTaskId),
-                                    onChange: (next) => {
-                                        const fields = resolveQuickTargetToFormFields(next, tasks, resolvedForQuickTarget);
-                                        setForm((current) => ({
-                                            ...current,
-                                            taskProjectId: fields.taskProjectId,
-                                            taskParentTaskId: fields.taskParentTaskId,
-                                        }));
-                                    },
-                                    projects: activeProjects,
-                                    tasks,
-                                    resolvedTaskProjectIds: resolvedForQuickTarget,
-                                    tabsSelector: '.tabs',
-                                    modalMenuMode: true,
-                                }),
-                            ),
-                            h('div', { className: 'planning-modal__compact-grid planning-modal__compact-grid--triple' },
-                                h('div', { className: 'planning-modal__row' },
-                                    h('label', null, 'Старт задачи'),
-                                    h('input', { type: 'date', value: form.taskStartDate, onChange: (event) => handleField('taskStartDate', event.target.value) }),
-                                ),
-                                h('div', { className: 'planning-modal__row' },
-                                    h('label', null, 'Дедлайн'),
-                                    h('input', { type: 'date', value: form.taskDueDate, onChange: (event) => handleField('taskDueDate', event.target.value) }),
-                                ),
-                                h('div', { className: 'planning-modal__row' },
-                                    h('label', null, 'Длительность задачи'),
-                                    h('button', {
-                                        type: 'button',
-                                        className: 'planning-duration-trigger planning-duration-trigger--compact' + (!taskDurationLabel ? ' is-empty' : ''),
-                                        onClick: () => setShowTaskDurationPicker(true),
-                                    },
-                                        h('span', { className: 'planning-duration-trigger__value' }, taskDurationLabel || 'Выбрать пресет'),
-                                        h('span', { className: 'planning-duration-trigger__icon', 'aria-hidden': 'true' }, '⏱'),
-                                    ),
-                                ),
-                            ),
-                        ),
-                    ),
-                    linkedTask && h('section', { className: 'planning-modal__card planning-modal__card--full' },
-                        h('div', { className: 'planning-modal__card-header' },
-                            h('div', { className: 'planning-modal__card-kicker' }, 'Дополнительно'),
-                            h('div', { className: 'planning-modal__card-title' }, 'Связи и baseline'),
-                            h('div', { className: 'planning-modal__card-hint' }, 'Редкие поля, но всё ещё на этой же странице'),
-                        ),
-                        h('div', { className: 'planning-modal__stack' },
-                            h('div', { className: 'planning-modal__row' },
-                                h('label', null, 'Зависимости'),
+                        h('div', { className: 'planning-modal__details-body' },
+                            h('div', { className: 'planning-slot-edit-advanced__block' },
+                                h('label', { className: 'planning-slot-edit-advanced__label', htmlFor: 'planning-slot-edit-deps' }, 'Зависимости'),
                                 h('select', {
+                                    id: 'planning-slot-edit-deps',
+                                    className: 'planning-slot-edit-advanced__multiselect',
                                     multiple: true,
                                     size: Math.min(4, Math.max(2, dependencyOptions.length || 2)),
                                     value: form.taskBlockedByTaskIds,
@@ -1707,25 +1875,39 @@
                                     )),
                                 ),
                             ),
-                            h('details', { className: 'planning-modal__details' },
-                                h('summary', { className: 'planning-modal__details-summary' },
-                                    h('span', { className: 'planning-modal__details-title' }, 'Baseline'),
-                                    h('span', { className: 'planning-modal__details-hint' }, 'Редко меняется'),
-                                ),
-                                h('div', { className: 'planning-modal__details-body' },
-                                    h('div', { className: 'planning-modal__compact-grid planning-modal__compact-grid--pair' },
-                                        h('div', { className: 'planning-modal__row' },
-                                            h('label', null, 'Baseline start'),
-                                            h('input', { type: 'date', value: form.taskBaselineStartDate, onChange: (event) => handleField('taskBaselineStartDate', event.target.value) }),
-                                        ),
-                                        h('div', { className: 'planning-modal__row' },
-                                            h('label', null, 'Baseline due'),
-                                            h('input', { type: 'date', value: form.taskBaselineDueDate, onChange: (event) => handleField('taskBaselineDueDate', event.target.value) }),
-                                        ),
-                                        h('div', { className: 'planning-modal__row planning-modal__row--full' },
-                                            h('label', null, 'Baseline minutes'),
-                                            h('input', { type: 'number', min: 0, value: form.taskBaselinePlannedMinutes, onChange: (event) => handleField('taskBaselinePlannedMinutes', event.target.value) }),
-                                        ),
+                            h('div', { className: 'planning-slot-edit-baseline' },
+                                h('div', { className: 'planning-slot-edit-baseline__title' }, 'Baseline'),
+                                h('div', { className: 'planning-slot-edit-baseline__grid' },
+                                    h('div', { className: 'planning-slot-edit-baseline__field' },
+                                        h('label', { htmlFor: 'planning-slot-edit-bl-start' }, 'Старт'),
+                                        h('input', {
+                                            id: 'planning-slot-edit-bl-start',
+                                            className: 'planning-slot-edit-baseline__input',
+                                            type: 'date',
+                                            value: form.taskBaselineStartDate,
+                                            onChange: (event) => handleField('taskBaselineStartDate', event.target.value),
+                                        }),
+                                    ),
+                                    h('div', { className: 'planning-slot-edit-baseline__field' },
+                                        h('label', { htmlFor: 'planning-slot-edit-bl-due' }, 'Срок'),
+                                        h('input', {
+                                            id: 'planning-slot-edit-bl-due',
+                                            className: 'planning-slot-edit-baseline__input',
+                                            type: 'date',
+                                            value: form.taskBaselineDueDate,
+                                            onChange: (event) => handleField('taskBaselineDueDate', event.target.value),
+                                        }),
+                                    ),
+                                    h('div', { className: 'planning-slot-edit-baseline__field planning-slot-edit-baseline__field--full' },
+                                        h('label', { htmlFor: 'planning-slot-edit-bl-min' }, 'Минуты'),
+                                        h('input', {
+                                            id: 'planning-slot-edit-bl-min',
+                                            className: 'planning-slot-edit-baseline__input',
+                                            type: 'number',
+                                            min: 0,
+                                            value: form.taskBaselinePlannedMinutes,
+                                            onChange: (event) => handleField('taskBaselinePlannedMinutes', event.target.value),
+                                        }),
                                     ),
                                 ),
                             ),
@@ -1736,16 +1918,28 @@
                     form.id && h('button', {
                         type: 'button',
                         className: 'planning-quick-link-cancel planning-quick-link-cancel--danger',
-                        onClick: () => onDelete(form.id),
+                        onClick: () => {
+                            const gid = String(form.recurrenceGroupId || '');
+                            const group = gid
+                                ? collectSlotsByRecurrenceGroup(slots, gid).filter((s) => s.taskId === form.taskId)
+                                : [];
+                            const ids = group.length ? group.map((s) => s.id) : [form.id];
+                            if (typeof state.deleteSlotBatch === 'function' && ids.length > 1) {
+                                state.deleteSlotBatch(ids);
+                            } else {
+                                ids.forEach((id) => state.deleteSlot(id));
+                            }
+                            onClose();
+                        },
                     }, 'Удалить'),
                     h('button', { type: 'button', className: 'planning-quick-link-cancel', onClick: onClose }, 'Отмена'),
-                    h('button', {
+                    !isDesktop && h('button', {
                         type: 'button',
                         className: 'planning-quick-btn-done planning-quick-btn-done--footer',
                         onClick: save,
                     },
                         h('span', { className: 'planning-quick-btn-done__icon', 'aria-hidden': 'true' }, '✓'),
-                        h('span', { className: 'planning-quick-btn-done__text' }, linkedTask ? 'Сохранить' : 'Сохранить'),
+                        h('span', { className: 'planning-quick-btn-done__text' }, 'Сохранить'),
                     ),
                 ),
             ),
@@ -1770,6 +1964,31 @@
                 onSelect: (minutes) => handleField('taskPlannedMinutes', minutes ? String(minutes) : ''),
                 onClose: () => setShowTaskDurationPicker(false),
             }),
+            linkedTask && showDateCalendar && h('div', {
+                className: 'planning-repeat-calendar__backdrop',
+                onClick: (event) => { event.stopPropagation(); setShowDateCalendar(false); },
+                onPointerDown: (event) => { event.stopPropagation(); },
+            }),
+            linkedTask && showDateCalendar && h('div', {
+                className: 'planning-repeat-calendar__overlay',
+                onClick: (event) => event.stopPropagation(),
+            },
+                h('div', { className: 'planning-repeat-calendar__overlay-header' },
+                    h('span', { className: 'planning-repeat-calendar__overlay-title' }, '\u0412\u044B\u0431\u043E\u0440 \u0434\u0430\u0442'),
+                    h('button', {
+                        type: 'button',
+                        className: 'planning-modal__close planning-modal__close--quick-event',
+                        onClick: () => setShowDateCalendar(false),
+                    }, '\u00D7'),
+                ),
+                h(RepeatDateCalendar, {
+                    selectedDates: customDates,
+                    onToggleDate: toggleCustomDate,
+                    onClear: () => setCustomDates(new Set()),
+                    anchorDate: form.date,
+                    onClose: () => setShowDateCalendar(false),
+                }),
+            ),
         );
     }
 
@@ -3289,6 +3508,23 @@
             return map;
         }, [calendarDays, unscheduledTasks, todayIso, calendarStartIso, calendarEndIso]);
 
+        const moveYesterdayUnscheduledToToday = () => {
+            const tasks = unscheduledTasksByDay[yesterdayIso] || [];
+            if (!tasks.length) return;
+            let moved = 0;
+            tasks.forEach((task) => {
+                const patch = buildTaskHeaderDayPatch(task, todayIso, todayIso);
+                if (patch) {
+                    state.updateTask(task.id, patch);
+                    moved += 1;
+                }
+            });
+            suppressCalendarClick();
+            if (moved && typeof console !== 'undefined' && typeof console.info === 'function') {
+                console.info('[HEYS.planning.calendar] Moved ' + moved + ' unscheduled task(s) from yesterday to today');
+            }
+        };
+
         const dayOccupancyByDay = useMemo(() => {
             const map = {};
             calendarDays.forEach((day) => {
@@ -4238,10 +4474,32 @@
                                 },
                                 onDrop: (event) => handleDropToHeaderDay(day, event),
                             },
-                                h('div', { className: 'planning-calendar-day-header__title' },
-                                    h('span', { className: 'planning-calendar-day-label' }, getWeekdayLabel(day)),
-                                    h('span', { className: 'planning-calendar-day-date' }, day.slice(8)),
-                                ),
+                                (day === yesterdayIso && (unscheduledTasksByDay[yesterdayIso] || []).length > 0)
+                                    ? h('div', {
+                                        className: 'planning-calendar-day-header__title planning-calendar-day-header__title--with-bulk',
+                                    },
+                                        h('div', { className: 'planning-calendar-day-header__title-row' },
+                                            h('div', { className: 'planning-calendar-day-header__title-dates' },
+                                                h('span', { className: 'planning-calendar-day-label' }, getWeekdayLabel(day)),
+                                                h('span', { className: 'planning-calendar-day-date' }, day.slice(8)),
+                                            ),
+                                            h('button', {
+                                                type: 'button',
+                                                className: 'planning-btn planning-btn--sm planning-calendar-day-header__bulk-today-btn',
+                                                title: 'Перенести все задачи без времени на сегодня',
+                                                'aria-label': 'Перенести все задачи без времени на сегодня',
+                                                onClick: (event) => {
+                                                    event.preventDefault();
+                                                    event.stopPropagation();
+                                                    moveYesterdayUnscheduledToToday();
+                                                },
+                                            }, 'Сегодня'),
+                                        ),
+                                    )
+                                    : h('div', { className: 'planning-calendar-day-header__title' },
+                                        h('span', { className: 'planning-calendar-day-label' }, getWeekdayLabel(day)),
+                                        h('span', { className: 'planning-calendar-day-date' }, day.slice(8)),
+                                    ),
                                 dayOccupancyByDay[day]?.pressureTone && dayOccupancyByDay[day].pressureTone !== 'free' && h('span', {
                                     className: 'planning-calendar-day-pressure planning-calendar-day-pressure--' + dayOccupancyByDay[day].pressureTone,
                                     'aria-label': dayOccupancyByDay[day].label,
@@ -4475,10 +4733,6 @@
                 state,
                 resolvedTaskProjectIds,
                 onClose: () => setSlotDraft(null),
-                onDelete: (slotId) => {
-                    state.deleteSlot(slotId);
-                    setSlotDraft(null);
-                },
             }),
             selectedTaskId && PlanningTasks.TaskDetailModal && h(PlanningTasks.TaskDetailModal, {
                 taskId: selectedTaskId,

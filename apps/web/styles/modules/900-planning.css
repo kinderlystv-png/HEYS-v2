@@ -2500,27 +2500,6 @@ body.planning-quick-event-modal-open .planning-subnav {
     max-width: 560px;
 }
 
-.planning-modal--slot-unified {
-    max-width: 480px;
-    padding: 0;
-    border: none;
-    border-radius: 20px;
-    position: relative;
-    box-shadow:
-        0 -8px 40px rgba(15, 23, 42, 0.2),
-        0 0 0 1px rgba(255, 255, 255, 0.06) inset;
-    overflow: hidden;
-    background: linear-gradient(180deg, #f8fafc 0%, #fff 28%, #fff 100%);
-}
-
-.planning-modal--slot-unified .planning-modal__body {
-    padding: 10px;
-}
-
-.planning-modal--slot-unified .planning-modal__meta--summary {
-    padding: 6px 16px 2px;
-}
-
 .planning-modal .planning-quick-target-field--modal-menu .planning-quick-target-select {
     position: static;
 }
@@ -2544,6 +2523,238 @@ body.planning-quick-event-modal-open .planning-subnav {
 
 .planning-modal--quick-event .planning-quick-target-field--modal-menu .planning-quick-target-select {
     position: static;
+}
+
+.planning-modal--quick-event.planning-modal--slot-edit {
+    max-width: 440px;
+}
+
+.planning-slot-edit-task-row {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    width: 100%;
+}
+
+.planning-slot-edit-task-row__label {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--planning-muted);
+}
+
+.planning-slot-edit-task-row__select {
+    width: 100%;
+    box-sizing: border-box;
+    border-radius: 10px;
+    padding: 10px 12px;
+    font-size: 14px;
+    font-weight: 600;
+    border: 1px solid rgba(15, 23, 42, 0.1);
+    background: #fff;
+    color: var(--planning-text);
+}
+
+.planning-slot-edit-duration-link {
+    margin: 2px 0 4px;
+}
+
+.planning-slot-edit-duration-link__btn {
+    display: inline-flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 4px;
+    padding: 2px 0;
+    margin: 0;
+    border: none;
+    background: none;
+    cursor: pointer;
+    font: inherit;
+    font-size: 12px;
+    color: var(--planning-muted);
+    text-align: left;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+.planning-slot-edit-duration-link__btn:hover {
+    color: var(--planning-text);
+}
+
+.planning-slot-edit-duration-link__value {
+    font-weight: 700;
+    color: var(--planning-text);
+    text-decoration: none;
+}
+
+.planning-slot-edit-status-row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.planning-slot-edit-status-row__field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+}
+
+.planning-slot-edit-status-row__field label {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--planning-muted);
+}
+
+.planning-slot-edit-status-row__select {
+    width: 100%;
+    box-sizing: border-box;
+    border-radius: 10px;
+    padding: 8px 10px;
+    font-size: 13px;
+    font-weight: 600;
+    border: 1px solid rgba(15, 23, 42, 0.1);
+    background: #fff;
+    color: var(--planning-text);
+}
+
+.planning-slot-edit-task-plan {
+    padding-top: 12px;
+    border-top: 1px solid rgba(15, 23, 42, 0.08);
+}
+
+.planning-slot-edit-task-plan__title {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--planning-muted);
+    margin-bottom: 8px;
+}
+
+.planning-slot-edit-task-plan__grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.planning-slot-edit-task-plan__field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+}
+
+.planning-slot-edit-task-plan__field--span {
+    grid-column: 1 / -1;
+}
+
+.planning-slot-edit-task-plan__field label {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--planning-muted);
+}
+
+.planning-slot-edit-task-plan__input {
+    width: 100%;
+    box-sizing: border-box;
+    border-radius: 10px;
+    padding: 8px 10px;
+    font-size: 14px;
+    font-weight: 600;
+    border: 1px solid rgba(15, 23, 42, 0.1);
+    background: #fff;
+    color: var(--planning-text);
+}
+
+.planning-modal__details--slot-advanced {
+    margin-top: 6px;
+}
+
+.planning-slot-edit-advanced__block {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 12px;
+}
+
+.planning-slot-edit-advanced__label {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--planning-muted);
+}
+
+.planning-slot-edit-advanced__multiselect {
+    width: 100%;
+    box-sizing: border-box;
+    min-height: 72px;
+    border-radius: 10px;
+    padding: 6px 8px;
+    font-size: 12px;
+    border: 1px solid rgba(15, 23, 42, 0.1);
+    background: #fff;
+    color: var(--planning-text);
+}
+
+.planning-slot-edit-baseline {
+    margin-top: 4px;
+}
+
+.planning-slot-edit-baseline__title {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--planning-muted);
+    margin-bottom: 8px;
+}
+
+.planning-slot-edit-baseline__grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.planning-slot-edit-baseline__field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+}
+
+.planning-slot-edit-baseline__field--full {
+    grid-column: 1 / -1;
+}
+
+.planning-slot-edit-baseline__field label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    color: var(--planning-muted);
+}
+
+.planning-slot-edit-baseline__input {
+    width: 100%;
+    box-sizing: border-box;
+    border-radius: 10px;
+    padding: 8px 10px;
+    font-size: 13px;
+    font-weight: 600;
+    border: 1px solid rgba(15, 23, 42, 0.1);
+    background: #fff;
+    color: var(--planning-text);
+}
+
+.planning-modal--slot-edit .planning-duration-trigger {
+    width: 100%;
+    justify-content: space-between;
 }
 
 .planning-quick-target-menu__backdrop {
@@ -3501,29 +3712,6 @@ body.planning-quick-event-modal-open .planning-subnav {
     outline: none;
 }
 
-.planning-modal--slot-unified .planning-modal__row select,
-.planning-modal--slot-unified .planning-modal__row input[type="date"],
-.planning-modal--slot-unified .planning-modal__row input[type="time"],
-.planning-modal--slot-unified .planning-modal__row input[type="number"] {
-    min-height: 24px;
-    height: 24px;
-    line-height: 1;
-    font-size: 9px !important;
-}
-
-.planning-modal--slot-unified .planning-modal__row input[type="date"]::-webkit-datetime-edit,
-.planning-modal--slot-unified .planning-modal__row input[type="time"]::-webkit-datetime-edit {
-    padding: 0;
-    font-size: 9px;
-    line-height: 1;
-}
-
-.planning-modal--slot-unified .planning-modal__row input[type="date"]::-webkit-calendar-picker-indicator,
-.planning-modal--slot-unified .planning-modal__row input[type="time"]::-webkit-calendar-picker-indicator {
-    transform: scale(0.72);
-    transform-origin: center;
-}
-
 .planning-modal__row textarea {
     resize: vertical;
     min-height: 60px;
@@ -3739,45 +3927,25 @@ body.planning-quick-event-modal-open .planning-subnav {
     font-size: 11px;
 }
 
-.planning-modal--slot-unified .planning-duration-trigger {
-    min-height: 24px;
-    padding: 4px 6px;
-    border-radius: 7px;
-    gap: 4px;
-}
-
-.planning-modal--slot-unified .planning-duration-trigger__value {
-    font-size: 9px;
-    line-height: 1.1;
-}
-
-.planning-modal--slot-unified .planning-duration-trigger__icon {
-    font-size: 9px;
-}
-
-.planning-modal--slot-unified .planning-btn {
-    padding: 6px 10px;
-    border-radius: 7px;
-    font-size: 10px;
-}
-
 .planning-linked-banner--empty {
     justify-content: flex-start;
     align-items: flex-start;
     line-height: 1.45;
 }
 
-.planning-modal--slot-unified .planning-linked-banner--empty {
-    min-height: 88px;
-}
-
 @media (max-width: 640px) {
-    .planning-modal--slot-unified {
+    .planning-modal--quick-event.planning-modal--slot-edit {
         max-height: 86vh;
     }
 
-    .planning-modal--slot-unified .planning-modal__body {
-        padding: 8px;
+    .planning-slot-edit-status-row,
+    .planning-slot-edit-task-plan__grid,
+    .planning-slot-edit-baseline__grid {
+        grid-template-columns: 1fr;
+    }
+
+    .planning-slot-edit-task-plan__field--span {
+        grid-column: auto;
     }
 
     .planning-modal__card-grid,
@@ -4023,6 +4191,42 @@ body.planning-quick-event-modal-open .planning-subnav {
     flex-direction: column;
     align-items: center;
     gap: 1px;
+}
+
+.planning-calendar-day-header__title--with-bulk {
+    width: 100%;
+    align-items: stretch;
+}
+
+.planning-calendar-day-header__title-row {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 4px;
+    width: 100%;
+}
+
+.planning-calendar-day-header__title-dates {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1px;
+    flex: 1;
+    min-width: 0;
+}
+
+.planning-calendar-day-header__bulk-today-btn {
+    flex-shrink: 0;
+    align-self: flex-start;
+    padding: 2px 5px;
+    font-size: 9px;
+    font-weight: 700;
+    line-height: 1.15;
+    max-width: 58px;
+    white-space: normal;
+    text-align: center;
+    word-break: break-word;
 }
 
 .planning-calendar-day-header--today {
@@ -5771,14 +5975,6 @@ body.planning-quick-event-modal-open .planning-subnav {
     border-color: rgba(147, 197, 253, 0.42);
 }
 
-[data-theme="dark"] .planning-modal--slot-unified {
-    color-scheme: dark;
-    background: linear-gradient(180deg, #111827 0%, #0f172a 36%, #0b1120 100%);
-    box-shadow:
-        0 -10px 44px rgba(0, 0, 0, 0.5),
-        0 0 0 1px rgba(255, 255, 255, 0.05) inset;
-}
-
 [data-theme="dark"] .planning-quick-link-cancel--danger {
     color: #f87171;
 }
@@ -5795,11 +5991,18 @@ body.planning-quick-event-modal-open .planning-subnav {
     background: var(--planning-surface, #0f172a);
 }
 
-[data-theme="dark"] .planning-modal--slot-unified .planning-modal__row select,
-[data-theme="dark"] .planning-modal--slot-unified .planning-modal__row select[multiple] {
-    background-color: var(--planning-surface-elevated);
+[data-theme="dark"] .planning-slot-edit-task-row__select,
+[data-theme="dark"] .planning-slot-edit-status-row__select,
+[data-theme="dark"] .planning-slot-edit-task-plan__input,
+[data-theme="dark"] .planning-slot-edit-advanced__multiselect,
+[data-theme="dark"] .planning-slot-edit-baseline__input {
+    background: rgba(15, 23, 42, 0.92);
+    border-color: rgba(255, 255, 255, 0.12);
     color: var(--planning-text);
-    border-color: var(--planning-border);
+}
+
+[data-theme="dark"] .planning-slot-edit-task-plan {
+    border-top-color: rgba(148, 163, 184, 0.12);
 }
 
 [data-theme="dark"] .planning-duration-modal__option:hover {

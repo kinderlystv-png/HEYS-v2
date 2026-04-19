@@ -64,7 +64,6 @@ const DEPENDENCY_CONFIG = {
     'pg',
     'mysql',
     'mongodb', // Базы данных
-    '@supabase/supabase-js', // Supabase клиент
   ],
 };
 

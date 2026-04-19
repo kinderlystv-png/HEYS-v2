@@ -313,14 +313,14 @@
   ```javascript
   // В sw.js processSyncQueue()
   for (const client of clients) {
-    client.postMessage({ type: 'TRIGGER_SUPABASE_SYNC' });
+    client.postMessage({ type: 'TRIGGER_HEYS_SYNC' });
   }
   ```
 
 - [ ] **4.3** В `heys_app_v12.js` слушать сообщение:
   ```javascript
   navigator.serviceWorker?.addEventListener('message', (event) => {
-    if (event.data?.type === 'TRIGGER_SUPABASE_SYNC') {
+    if (event.data?.type === 'TRIGGER_HEYS_SYNC') {
       HEYS.cloud?.retrySync?.();
     }
   });

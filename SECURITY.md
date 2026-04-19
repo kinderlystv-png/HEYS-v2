@@ -262,14 +262,15 @@ pnpm lint
 ## Compliance & Standards
 
 - **GDPR Considerations:** Если приложение используется в EU
-- **Data Retention:** Настройка retention policies в Supabase
-- **Audit Logs:** Supabase автоматически логирует database access
+- **Data Retention:** Retention policies в Yandex Managed PostgreSQL / политиках
+  приложения
+- **Audit Logs:** Логирование доступа к БД — по политикам YC и приложения
 
 ## Security Resources
 
 ### Documentation
 
-- [Supabase Security Best Practices](https://supabase.com/docs/guides/auth/row-level-security)
+- [PostgreSQL Row-Level Security](https://www.postgresql.org/docs/current/ddl-rowsecurity.html)
 - [OWASP Top 10](https://owasp.org/www-project-top-ten/)
 - [React Security Best Practices](https://reactjs.org/docs/dom-elements.html#dangerouslysetinnerhtml)
 

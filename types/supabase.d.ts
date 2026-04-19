@@ -1,4 +1,5 @@
-// types/supabase.d.ts - Generated from Supabase schema
+// types/supabase.d.ts — PostgreSQL / public schema typings (legacy filename).
+// Renaming this file requires updating tsconfig paths and imports; do not casually.
 export interface Database {
   public: {
     Tables: {
@@ -114,7 +115,10 @@ export type ClientKVStore = Tables<'client_kv_store'>;
 export type ClientKVStoreInsert = TablesInsert<'client_kv_store'>;
 export type ClientKVStoreUpdate = TablesUpdate<'client_kv_store'>;
 
-// Supabase client type with Database generic
-export interface TypedSupabaseClient {
-  from<T extends keyof Database['public']['Tables']>(table: T): any; // Would be properly typed with @supabase/supabase-js
+/** Minimal PostgREST-style client shape for typing helpers (no npm SDK). */
+export interface TypedPostgrestClient {
+  from<T extends keyof Database['public']['Tables']>(table: T): any;
 }
+
+/** @deprecated Use TypedPostgrestClient; alias kept for older references. */
+export type TypedSupabaseClient = TypedPostgrestClient;

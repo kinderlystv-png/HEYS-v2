@@ -59,12 +59,7 @@
       fetchpriority="high"
       crossorigin="anonymous"
     ></script>
-    <script
-      defer
-      src="https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js"
-      fetchpriority="low"
-      crossorigin="anonymous"
-    ></script>
+    <!-- Supabase JS CDN removed (legacy backup HTML) -->
 
     <!-- app modules with defer and optimized priority -->
     <script defer src="heys_dev_utils.js" fetchpriority="high"></script>

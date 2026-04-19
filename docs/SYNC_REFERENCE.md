@@ -366,7 +366,8 @@ if (!isRealAction) {
 ### Background Sync
 
 SW handles `sync` events from `heys-sync` registration. Posts
-`TRIGGER_SUPABASE_SYNC` message to client for queue drain.
+`TRIGGER_HEYS_SYNC` message to client for queue drain (neutral name; not tied to
+any vendor SDK).
 
 > **Note:** Background Sync is NOT supported on iOS Safari. Fallback: sync on
 > `online`/`visibilitychange` events.

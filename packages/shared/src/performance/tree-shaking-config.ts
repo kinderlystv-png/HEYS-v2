@@ -21,13 +21,12 @@ export const viteTreeShakingConfig = {
         unknownGlobalSideEffects: false,
       },
       // Внешние зависимости (не включаем в bundle)
-      external: ['react', 'react-dom', '@supabase/supabase-js', 'lodash'],
+      external: ['react', 'react-dom', 'lodash'],
       output: {
         // Mangling для уменьшения размера
         manualChunks: {
           vendor: ['react', 'react-dom'],
           utils: ['lodash', 'date-fns'],
-          supabase: ['@supabase/supabase-js'],
         },
       },
     },
@@ -101,7 +100,7 @@ export const webpackTreeShakingConfig = {
  */
 export const rollupTreeShakingConfig = {
   // Внешние зависимости
-  external: ['react', 'react-dom', '@supabase/supabase-js'],
+  external: ['react', 'react-dom'],
   output: {
     // ES modules для лучшего tree shaking
     format: 'es',
@@ -133,7 +132,7 @@ export const esbuildTreeShakingConfig = {
   treeShaking: true,
   format: 'esm',
   // Внешние зависимости
-  external: ['react', 'react-dom', '@supabase/supabase-js'],
+  external: ['react', 'react-dom'],
   // Настройки для tree shaking
   define: {
     'process.env.NODE_ENV': '"production"',

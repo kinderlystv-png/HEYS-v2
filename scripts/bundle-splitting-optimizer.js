@@ -146,7 +146,7 @@ function generateOptimizedChunks() {
     gaming: ['@heys/gaming'],
 
     // Storage and data persistence
-    storage: ['@heys/storage', '@supabase/supabase-js'],
+    storage: ['@heys/storage'],
 
     // Utilities and helpers
     utils: ['zod', 'date-fns'],
@@ -189,7 +189,7 @@ rollupOptions: {
       gaming: ['@heys/gaming'],
       
       // Storage and data
-      storage: ['@heys/storage', '@supabase/supabase-js'],
+      storage: ['@heys/storage'],
       
       // Utilities
       utils: ['zod', 'date-fns']

@@ -18,7 +18,6 @@ const targetVersions = {
   '@vitest/coverage-v8': '^3.2.4',
   '@vitest/ui': '^3.2.4',
   zod: '^3.25.76',
-  '@supabase/supabase-js': '^2.56.1',
 };
 
 const packagePaths = [

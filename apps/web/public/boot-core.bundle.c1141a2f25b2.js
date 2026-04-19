@@ -18096,6 +18096,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
 //     (e.g. heys_supabase_auth_token — token name only, value is YC JWT).
 //     For new code: use HEYS.YandexAPI.rpc() / .rest() directly. Do NOT
 //     reintroduce a Supabase client here.
+//     Policy: keep localStorage key `heys_supabase_auth_token` until an explicit
+//     migration ships; renaming without migration would sign users out.
 //
 // v59: Fix cache invalidation on cloud sync — UI now shows synced data when changing dates
 // v60: FIX dayv2 overwrite — БЛОКИРОВКА записи старых данных из cloud в localStorage (timestamp check)

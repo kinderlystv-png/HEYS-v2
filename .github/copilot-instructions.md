@@ -13,10 +13,21 @@ applyTo: '**/*'
 - **Database**: Yandex Managed PostgreSQL 16
   (`rc1b-obkgs83tnrd6a2m3.mdb.yandexcloud.net`).
 - **Frontend → backend**: только через `HEYS.YandexAPI.rpc()` / `.rest()`.
-- **Supabase**: полностью удалён 2026-04-18. В проекте Supabase SDK больше нет.
-  В новом коде НЕ добавлять `@supabase/*` зависимости.
+- **Supabase**: npm-пакеты `@supabase/*` не используются. Доступ к SQL-only
+  сценариям — через PostgREST-совместимый HTTP (`fetch`) или YC API. В новом
+  коде НЕ добавлять `@supabase/*` зависимости.
 - **Telegram curator service**: удалён 2026-04-18 вместе с Supabase. Если
   понадобится в будущем — реализовать заново поверх YC PostgreSQL.
+
+## Legacy naming (не трогать без миграции и согласования)
+
+- localStorage `heys_supabase_auth_token`, cookie `supabase-auth-token` — только
+  исторические имена; переименование = миграция сессий и регрессия.
+- Файл `types/supabase.d.ts` — типы схемы БД; переименование файла — отдельный
+  PR с обновлением `tsconfig`/импортов.
+- Service worker / прод: если появится `postMessage` для drain очереди,
+  использовать нейтральное имя типа `TRIGGER_HEYS_SYNC` (см.
+  `docs/SYNC_REFERENCE.md`), не vendor-префиксы.
 
 ## Domain-specific patterns (agent will get these wrong without guidance)
 

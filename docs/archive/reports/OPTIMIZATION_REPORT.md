@@ -84,7 +84,8 @@ history.
 - `vitest`, `@testing-library/react` - тестирование
 - `@playwright/test` - E2E тесты
 - `turbo` - monorepo управление
-- `@supabase/supabase-js` - база данных
+- ~~`@supabase/supabase-js`~~ — удалён; PostgREST через `fetch` при
+  необходимости
 
 ## 📋 ДАЛЬНЕЙШИЕ ВОЗМОЖНОСТИ ОПТИМИЗАЦИИ
 
@@ -108,7 +109,7 @@ pnpm remove sharp
 pnpm remove msw
 
 # Если не используется Supabase:
-pnpm remove @supabase/supabase-js
+<!-- pnpm remove @supabase/supabase-js — no longer applicable -->
 ```
 
 ## 🛡️ БЕЗОПАСНОСТЬ ИЗМЕНЕНИЙ

@@ -20,7 +20,6 @@
     "@commitlint/cli": 36637,
     "@commitlint/config-conventional": 18529,
     "@sentry/browser": 1263682,
-    "@supabase/supabase-js": 275459,
     "@swc/core": 123836,
     "@testing-library/jest-dom": 292394,
     "@testing-library/react": 341724,

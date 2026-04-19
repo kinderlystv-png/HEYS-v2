@@ -50,7 +50,6 @@ export default defineConfig({
       external: [
         'react',
         'react-dom',
-        '@supabase/supabase-js',
         // Добавляем библиотеки, которые должны оставаться внешними
         'lodash',
         'date-fns',
@@ -63,7 +62,6 @@ export default defineConfig({
           // Vendor chunks
           vendor: ['react', 'react-dom'],
           utils: ['lodash', 'date-fns', 'uuid'],
-          supabase: ['@supabase/supabase-js'],
 
           // App chunks на основе анализа
           performance: ['packages/shared/src/performance'],
@@ -132,7 +130,7 @@ export default defineConfig({
   // Оптимизации для разработки
   optimizeDeps: {
     // Предварительная сборка зависимостей
-    include: ['react', 'react-dom', '@supabase/supabase-js'],
+    include: ['react', 'react-dom'],
 
     // Исключаем из предварительной сборки
     exclude: [

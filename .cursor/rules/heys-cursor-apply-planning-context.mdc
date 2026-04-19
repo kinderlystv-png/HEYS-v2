@@ -1,0 +1,32 @@
+---
+description: Пользователь даёт снапшот/контекст задач HEYS из чата — применить в облако через agent ingest
+globs:
+alwaysApply: true
+---
+
+# HEYS — применить контекст планирования из Cursor (полный сценарий)
+
+Ты в репозитории HEYS-v2. Если пользователь прислал **текст контекста** (например блок `== HEYS Context Snapshot ==`, `[SNAPSHOT]`, структура Inbox/задач из вкладки «Задачи») и **хочет записать это в его HEYS** (формулировки вроде: примени, зафиксируй в HEYS, apply, записать в планирование, синхронизируй контекст, обнови задачи из снапшота):
+
+1. **Не проси PIN/session в чате.** Запись идёт через `planning_context_agent_ingest` и скрипт `scripts/heys-apply-context.mjs`.
+
+2. **Проверь env** (или попроси пользователя выставить разово в терминале перед вызовом):
+   - `HEYS_PLANNING_AGENT_SECRET` — как `PLANNING_AGENT_SECRET` на Cloud Function `heys-api-rpc`
+   - `HEYS_TARGET_CLIENT_ID` — UUID PIN-клиента (можно передать флагом `--target-client-id`)
+
+3. **Сохрани весь релевантный текст** (снапшот + краткие инструкции пользователя, если они влияют на смысл контекста) во **временный файл** в репо или `/tmp`, например `tmp/heys-context-apply.txt`.
+
+4. **Запусти из корня HEYS-v2:**
+   ```bash
+   node scripts/heys-apply-context.mjs /path/to/tmp/heys-context-apply.txt
+   ```
+   - Только разбор без записи: `node scripts/heys-apply-context.mjs --dry-run ...`
+   - Повтор после ответов на unresolved: возьми `audit.ingestId` из прошлого JSON-ответа и:
+     `node scripts/heys-apply-context.mjs --parent-ingest-id '<ingestId>' ...`
+   - Свой ключ идемпотентности: `--idempotency-key '...'` (≥8 символов). По умолчанию скрипт строит стабильный ключ от **хэша текста** (один и тот же файл → тот же ключ).
+
+5. **Ответ пользователю** после успеха: кратко по JSON — `applyStatus`, сколько создано/обновлено, `unresolved`, `audit.ingestId` / `idempotencyKey`. При ошибке — статус HTTP и `error` из тела.
+
+6. Если env не заданы — честно скажи, без выдуманного apply. Документация: `docs/dev/PLANNING_AGENT_INGEST.md`, промпт-спека: `docs/prompts/HEYS_CONTEXT_INTAKE.md`.
+
+**Что уже покрывает бэкенд-ингест:** проекты (сохраняются как были — passthrough), inbox, задачи, связи, слоты календаря/Ганта из явных подсказок времени в тексте, дедуп, идемпотентность.

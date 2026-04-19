@@ -2,28 +2,61 @@
 
 /**
  * HEYS Trial Expiration Notifier
- * 
- * Cron-скрипт для отправки уведомлений о истекающих триалах
- * Запуск: node cron-trial-notifications.js
- * Cron: 0 10 * * * (каждый день в 10:00)
+ *
+ * Cron script for expiring-trial SMS notifications.
+ * Uses PostgREST-compatible HTTP (same contract as legacy Supabase project URL + service key).
+ *
+ * Run: node scripts/cron-trial-notifications.js
+ * Cron: 0 10 * * * (daily 10:00)
  */
 
-import { createClient } from '@supabase/supabase-js';
-
-const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
-const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const POSTGREST_BASE =
+  process.env.HEYS_POSTGREST_URL ||
+  process.env.SUPABASE_URL ||
+  process.env.VITE_SUPABASE_URL;
+const SERVICE_KEY =
+  process.env.HEYS_POSTGREST_SERVICE_KEY ||
+  process.env.SUPABASE_SERVICE_ROLE_KEY;
 const SMS_RU_API_KEY = process.env.SMS_RU_API_KEY;
 const DRY_RUN = process.env.DRY_RUN === 'true';
 
-if (!SUPABASE_URL || !SUPABASE_KEY) {
-  console.error('❌ Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY');
+if (!POSTGREST_BASE || !SERVICE_KEY) {
+  console.error(
+    '❌ Missing PostgREST credentials. Set HEYS_POSTGREST_URL + HEYS_POSTGREST_SERVICE_KEY (or legacy SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY).',
+  );
   process.exit(1);
 }
 
-const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+const baseUrl = POSTGREST_BASE.replace(/\/$/, '');
+
+async function postRpc(functionName, body) {
+  const res = await fetch(`${baseUrl}/rest/v1/rpc/${functionName}`, {
+    method: 'POST',
+    headers: {
+      apikey: SERVICE_KEY,
+      Authorization: `Bearer ${SERVICE_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(body),
+  });
+  const text = await res.text();
+  if (!res.ok) {
+    const err = new Error(`RPC ${functionName} failed: ${res.status} ${text || res.statusText}`);
+    err.cause = res;
+    throw err;
+  }
+  if (!text) {
+    return null;
+  }
+  try {
+    return JSON.parse(text);
+  } catch {
+    return text;
+  }
+}
 
 /**
- * Отправка SMS через SMS.ru
+ * Send SMS via SMS.ru
  */
 async function sendSMS(phone, message) {
   if (!SMS_RU_API_KEY) {
@@ -36,56 +69,51 @@ async function sendSMS(phone, message) {
     api_id: SMS_RU_API_KEY,
     to: phone,
     msg: message,
-    json: '1'
+    json: '1',
   });
 
   try {
     const response = await fetch(`${url}?${params}`);
     const data = await response.json();
-    
+
     if (data.status === 'OK') {
       return { success: true, sms_id: data.sms[phone]?.sms_id };
-    } else {
-      return { success: false, error: data.status_text };
     }
+    return { success: false, error: data.status_text };
   } catch (error) {
     return { success: false, error: error.message };
   }
 }
 
 /**
- * Получить список истекающих триалов
+ * List trials expiring soon
  */
 async function getExpiringTrials() {
-  const { data, error } = await supabase.rpc('get_expiring_trials', {
-    hours_ahead: 24
-  });
-
-  if (error) {
+  try {
+    const data = await postRpc('get_expiring_trials', { hours_ahead: 24 });
+    return Array.isArray(data) ? data : [];
+  } catch (error) {
     console.error('❌ Error fetching expiring trials:', error);
     return [];
   }
-
-  return data || [];
 }
 
 /**
- * Проверить и обновить истекшие подписки
+ * Mark expired subscriptions
  */
 async function checkExpiredSubscriptions() {
-  const { error } = await supabase.rpc('check_expired_subscriptions');
-  
-  if (error) {
+  try {
+    await postRpc('check_expired_subscriptions', {});
+    console.log('✅ Checked and updated expired subscriptions');
+    return true;
+  } catch (error) {
     console.error('❌ Error checking expired subscriptions:', error);
     return false;
   }
-  
-  console.log('✅ Checked and updated expired subscriptions');
-  return true;
 }
 
 /**
- * Основная логика
+ * Main
  */
 async function main() {
   console.log('🔔 HEYS Trial Expiration Notifier');
@@ -93,12 +121,10 @@ async function main() {
   console.log('🧪 DRY RUN:', DRY_RUN);
   console.log('---');
 
-  // 1. Проверяем истекшие подписки
   await checkExpiredSubscriptions();
 
-  // 2. Получаем список истекающих триалов
   const expiringTrials = await getExpiringTrials();
-  
+
   if (expiringTrials.length === 0) {
     console.log('✅ No expiring trials in the next 24 hours');
     return;
@@ -107,7 +133,6 @@ async function main() {
   console.log(`📋 Found ${expiringTrials.length} expiring trial(s):`);
   console.log('---');
 
-  // 3. Отправляем уведомления
   for (const trial of expiringTrials) {
     const hoursLeft = Math.round(trial.hours_left);
     const message = `HEYS: Ваш триал-период заканчивается через ${hoursLeft} ч. Выберите тариф чтобы продолжить: https://heys-v2-web.vercel.app`;
@@ -133,8 +158,7 @@ async function main() {
   console.log('✅ Notification run completed');
 }
 
-// Запуск
-main().catch(error => {
+main().catch((error) => {
   console.error('💥 Fatal error:', error);
   process.exit(1);
 });

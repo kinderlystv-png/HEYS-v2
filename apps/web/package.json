@@ -35,7 +35,6 @@
     "@heys/shared": "workspace:*",
     "@heys/storage": "workspace:*",
     "@heys/ui": "workspace:*",
-    "@supabase/auth-helpers-nextjs": "^0.15.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-router-dom": "^6.15.0"

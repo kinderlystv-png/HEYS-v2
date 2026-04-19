@@ -5,11 +5,10 @@ import { log } from '../lib/browser-logger';
 // filepath: apps/web/src/middleware/auth.ts
 
 /**
- * JWT Authentication Middleware for HEYS API
- * Интегрируется с существующей Supabase аутентификацией
+ * JWT Authentication Middleware for HEYS API (stateless JWT decode).
+ * Production auth is Yandex Cloud / HEYS session tokens; no third-party auth SDK.
  */
 
-// Типы для безопасности
 interface AuthenticatedUser {
   id: string;
   email: string;
@@ -20,33 +19,8 @@ interface AuthenticatedUser {
 type RequestWithUser = Request & { user?: AuthenticatedUser };
 
 /**
- * Конфигурация JWT middleware
- */
-export interface AuthMiddlewareConfig {
-  requiredRole?: string | undefined;
-  allowAnonymous?: boolean | undefined;
-  skipPaths?: string[] | undefined;
-  supabaseUrl?: string | undefined;
-  supabaseAnonKey?: string | undefined;
-}
-
-// filepath: apps/web/src/middleware/auth.ts
-
-/**
- * JWT Authentication Middleware for HEYS API
- * Интегрируется с существующей Supabase аутентификацией
- */
-
-// Типы для безопасности
-interface AuthenticatedUser {
-  id: string;
-  email: string;
-  role?: string | undefined;
-  aud: string;
-}
-
-/**
- * Конфигурация JWT middleware
+ * Optional fields `supabaseUrl` / `supabaseAnonKey` are kept for backward-compatible
+ * config shapes; the middleware does not call remote auth providers.
  */
 export interface AuthMiddlewareConfig {
   requiredRole?: string | undefined;
@@ -108,12 +82,12 @@ export class JWTAuthMiddleware {
       return authValue.substring(7);
     }
 
-    // Проверяем cookie (fallback для браузерных запросов)
+    // Cookie fallback (legacy cookie name from older HEYS builds)
     const cookieValue = getHeader('cookie');
     if (cookieValue) {
-      const match = cookieValue.match(/supabase-auth-token=([^;]+)/);
-      if (match && match[1]) {
-        return match[1];
+      const legacy = cookieValue.match(/supabase-auth-token=([^;]+)/);
+      if (legacy?.[1]) {
+        return legacy[1];
       }
     }
 
@@ -121,7 +95,7 @@ export class JWTAuthMiddleware {
   }
 
   /**
-   * Базовая валидация JWT токена (без Supabase клиента)
+   * Базовая валидация JWT токена (структура + exp + role), без внешнего auth SDK.
    */
   private async validateTokenBasic(token: string): Promise<AuthResult> {
     try {
@@ -249,8 +223,6 @@ export class JWTAuthMiddleware {
  */
 export function createAuthMiddleware(config?: AuthMiddlewareConfig) {
   const authMiddleware = new JWTAuthMiddleware({
-    supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL || undefined,
-    supabaseAnonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || undefined,
     ...config,
   });
 

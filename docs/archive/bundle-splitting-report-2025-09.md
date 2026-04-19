@@ -42,7 +42,7 @@ manualChunks: {
   analytics: ['@heys/analytics'],
   search: ['@heys/search'],
   gaming: ['@heys/gaming'],
-  storage: ['@heys/storage', '@supabase/supabase-js'],  // Supabase удалён
+  storage: ['@heys/storage'],  // legacy chunk note; no @supabase package
   utils: ['zod', 'date-fns']
 }
 ```

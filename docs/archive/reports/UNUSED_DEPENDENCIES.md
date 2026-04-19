@@ -21,7 +21,7 @@
 - @changesets/changelog-github
 - @commitlint/cli
 - @commitlint/config-conventional
-- @supabase/supabase-js (если не используется)
+- ~~@supabase/supabase-js~~ (removed from monorepo dependencies)
 - @swc/core
 - @testing-library/jest-dom
 - @testing-library/user-event

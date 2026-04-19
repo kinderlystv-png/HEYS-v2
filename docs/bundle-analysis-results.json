@@ -20,7 +20,7 @@
       "nodeModulesCount": 11,
       "dependencies": 3,
       "devDependencies": 3,
-      "dependencyList": ["dompurify", "zod", "@supabase/supabase-js"]
+      "dependencyList": ["dompurify", "zod", "@heys/logger"]
     },
     "apps/web": {
       "nodeModulesSize": 0,

@@ -136,7 +136,7 @@ body {
   overflow: hidden;
 }
 
-.wrap.wrap--no-header > .tab-content-swipeable {
+.wrap.wrap--no-header>.tab-content-swipeable {
   flex: 1 1 auto;
   min-height: 0;
   overflow: hidden;
@@ -144,7 +144,7 @@ body {
   flex-direction: column;
 }
 
-.wrap.wrap--no-header > .tab-content-swipeable > .planning-tab {
+.wrap.wrap--no-header>.tab-content-swipeable>.planning-tab {
   flex: 1 1 auto;
   min-height: 0;
   width: 100%;

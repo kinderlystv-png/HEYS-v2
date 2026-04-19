@@ -493,6 +493,14 @@
         saveSlots(slots);
     }
 
+    function deleteSlotBatch(ids) {
+        const idSet = new Set((Array.isArray(ids) ? ids : []).map((id) => String(id || '')).filter(Boolean));
+        if (!idSet.size) return 0;
+        const slots = getSlots().filter((slot) => !idSet.has(String(slot.id || '')));
+        saveSlots(slots);
+        return idSet.size;
+    }
+
     function buildContextInboxPreview(text) {
         const normalized = String(text || '').replace(/\s+/g, ' ').trim();
         if (!normalized) return { title: '', preview: '' };
@@ -638,6 +646,7 @@
             addSlotBatch: (optsList) => { const list = addSlotBatch(optsList); refresh(); return list; },
             updateSlot: (id, patch) => { const slot = updateSlot(id, patch); refresh(); return slot; },
             deleteSlot: (id) => { deleteSlot(id); refresh(); },
+            deleteSlotBatch: (ids) => { const n = deleteSlotBatch(ids); if (n) refresh(); return n; },
             addContextInboxItem: (text, opts) => { const item = addContextInboxItem(text, opts); refresh(); return item; },
             updateContextInboxItem: (id, patch) => { const item = updateContextInboxItem(id, patch); refresh(); return item; },
             deleteContextInboxItem: (id) => { deleteContextInboxItem(id); refresh(); },
@@ -712,6 +721,7 @@
         addSlotBatch,
         updateSlot,
         deleteSlot,
+        deleteSlotBatch,
         getContextInboxItems,
         saveContextInboxItems,
         addContextInboxItem,
