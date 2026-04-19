@@ -888,7 +888,7 @@ td:first-child input {
   border-radius: 10px;
   padding: 8px 12px;
   font-size: 14px;
-  transition: all 0.2s ease;
+  transition: color, background-color, border-color, box-shadow 0.2s ease;
   background: #f9fafb;
 }
 
@@ -948,7 +948,7 @@ td:first-child input {
   padding: 10px 12px;
   font-size: 14px;
   background: #f9fafb;
-  transition: all 0.2s ease;
+  transition: color, background-color, border-color, box-shadow 0.2s ease;
 }
 
 .compact-note:focus {
@@ -1166,7 +1166,7 @@ td:first-child input {
   margin-left: 8px;
   cursor: pointer;
   border-radius: 6px;
-  transition: all 0.2s ease;
+  transition: color, background-color 0.2s ease;
 }
 
 .compact-train-remove:hover {
@@ -1186,7 +1186,7 @@ td:first-child input {
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: color, background-color, border-color 0.15s ease;
 }
 
 .compact-train-add:hover {
@@ -1201,7 +1201,7 @@ td:first-child input {
   border: 1px solid rgba(34, 197, 94, 0.2) !important;
   padding: 10px 12px !important;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: background-color, border-color 0.2s ease;
 }
 
 .compact-household:hover {
@@ -2730,7 +2730,7 @@ td:first-child input {
   border: 1px solid #e2e8f0;
   border-radius: 8px;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: background-color, border-color 0.15s ease;
 }
 
 .compact-zone-inline:hover {
@@ -2944,7 +2944,6 @@ td:first-child input {
   max-width: 100%;
 
   /* 🚀 PERF: GPU layer + containment — isolate header layout/style from page reflow */
-  will-change: transform;
   contain: layout style;
 }
 
@@ -3009,7 +3008,7 @@ td:first-child input {
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: color, background-color, border-color, transform 0.2s ease;
   backdrop-filter: blur(4px);
 }
 
@@ -3036,7 +3035,7 @@ td:first-child input {
   border-radius: 8px;
   font-size: 16px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: background-color, border-color, box-shadow, transform 0.2s ease;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
   flex-shrink: 0;
 }
@@ -3083,7 +3082,7 @@ td:first-child input {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s ease;
+  transition: box-shadow, transform 0.2s ease;
 }
 
 .theme-fab:hover {
@@ -4527,7 +4526,7 @@ td:first-child input {
   padding: 2px 6px;
   background: rgba(255, 255, 255, 0.1);
   border-radius: 8px;
-  transition: all 0.3s ease;
+  transition: color, background-color 0.3s ease;
   flex-shrink: 0;
 }
 
@@ -4815,7 +4814,7 @@ td:first-child input {
   height: 12px;
   background: rgba(255, 255, 255, 0.2);
   border-radius: 2px;
-  transition: all 0.3s ease;
+  transition: background-color, box-shadow 0.3s ease;
 }
 
 .weekly-milestone[data-reached="true"] {
@@ -5202,7 +5201,7 @@ td:first-child input {
   justify-content: center;
   cursor: pointer;
   font-size: 12px;
-  transition: all 0.2s ease;
+  transition: background-color, transform 0.2s ease;
   flex-shrink: 0;
 }
 
@@ -5505,7 +5504,7 @@ td:first-child input {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s ease;
+  transition: box-shadow, opacity 0.2s ease;
 }
 
 .achievement-badge.locked {
@@ -5840,7 +5839,7 @@ td:first-child input {
   border-radius: 8px;
   background: rgba(107, 114, 128, 0.1);
   color: var(--color-gray-500);
-  transition: all 0.3s ease;
+  transition: color, background-color 0.3s ease;
   cursor: default;
   flex-shrink: 0;
 }
@@ -6004,7 +6003,7 @@ td:first-child input {
   font-size: 14px;
   cursor: pointer;
   user-select: none;
-  transition: all 0.2s ease;
+  transition: background-color, transform, box-shadow 0.2s ease;
   animation: ewsBadgeAppear 0.4s ease;
   flex-shrink: 0;
   margin-left: -2px;
@@ -6204,7 +6203,7 @@ td:first-child input {
   font-size: 12px;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: background-color 0.2s;
 }
 
 .offline-banner-retry:hover {
@@ -6350,7 +6349,7 @@ body:has(.offline-banner) .wrap {
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: background-color 0.2s;
   box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3);
 }
 
@@ -6544,7 +6543,7 @@ body:has(.offline-banner) .wrap {
   border: 1px solid var(--color-slate-200);
   border-radius: 10px;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: background-color, border-color 0.15s ease;
   min-width: 140px;
 }
 
@@ -6656,7 +6655,7 @@ body:has(.offline-banner) .wrap {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.15s;
+  transition: background-color 0.15s;
 }
 
 .date-picker-nav:hover {
@@ -6701,7 +6700,7 @@ body:has(.offline-banner) .wrap {
   color: #374151;
   border-radius: 8px;
   cursor: pointer;
-  transition: all 0.1s;
+  transition: background-color 0.1s;
 }
 
 .date-picker-day:hover:not(.empty):not(.selected) {
@@ -6745,7 +6744,7 @@ body:has(.offline-banner) .wrap {
   font-size: 12px;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.15s;
+  transition: background-color, opacity 0.15s;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -7171,6 +7170,7 @@ body:has(.offline-banner) .wrap {
   /* Отступ под fixed tabs */
   position: relative;
   contain: style;
+  overflow-anchor: none;
   overflow: hidden;
   /* layout-containment, как и transform, ломает position: fixed для FAB */
   /* GPU acceleration включается только при анимации через will-change */
@@ -7366,7 +7366,6 @@ body:has(.offline-banner) .wrap {
   left: 0;
   right: 0;
   z-index: 1000;
-  will-change: transform;
   box-shadow: 0 -1px 20px rgba(0, 0, 0, 0.06);
   padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
   min-height: 58px;
@@ -7540,7 +7539,7 @@ body:has(.offline-banner) .wrap {
   color: #8e8e93;
   user-select: none;
   touch-action: manipulation;
-  transition: all 0.2s ease;
+  transition: color, background-color 0.2s ease;
   white-space: nowrap;
   text-align: center;
   line-height: 1.2;
@@ -7627,7 +7626,7 @@ body:has(.offline-banner) .wrap {
   border-radius: 0;
   background: transparent;
   color: #666;
-  transition: all 0.2s ease;
+  transition: color, background-color, box-shadow 0.2s ease;
   gap: 1px;
   max-width: none;
 }
@@ -7849,7 +7848,7 @@ body:has(.offline-banner) .wrap {
 .tab--home-candidate {
   position: relative;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: opacity, transform 0.2s ease;
 }
 
 .tab--home-candidate:not(.default-tab-indicator) {
@@ -7881,7 +7880,7 @@ body:has(.offline-banner) .wrap {
   opacity: 0.35 !important;
   filter: grayscale(0.5) blur(0.5px);
   pointer-events: none;
-  transition: all 0.3s ease;
+  transition: opacity, filter 0.3s ease;
 }
 
 /* Dark theme для подсказки */
@@ -9989,7 +9988,7 @@ body:has(.offline-banner) .wrap {
     font-size: 13px;
     color: #475569;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: background-color, border-color, box-shadow 0.2s ease;
     -webkit-tap-highlight-color: transparent;
     box-shadow: 0 3px 10px rgba(15, 23, 42, 0.06);
   }
@@ -11305,7 +11304,7 @@ body:has(.offline-banner) .wrap {
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: background-color, transform 0.15s ease;
 }
 
 .measurements-card__edit:active {
@@ -11512,7 +11511,7 @@ body:has(.offline-banner) .wrap {
   background: var(--color-white);
   font-weight: 700;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: background-color, transform 0.15s ease;
 }
 
 .measurements-card__button:active {
@@ -11553,7 +11552,7 @@ body:has(.offline-banner) .wrap {
 .profile-section {
   border-radius: 14px;
   overflow: hidden;
-  transition: all 0.2s ease;
+  transition: box-shadow, transform 0.2s ease;
 }
 
 .profile-section--collapsed {

@@ -164,7 +164,6 @@ body {
   background: #f8f9fa;
   padding: 12px 18px 0;
   max-width: 100%;
-  will-change: transform;
   contain: layout style;
 }
 
@@ -272,7 +271,6 @@ body {
   left: 0;
   right: 0;
   z-index: 1000;
-  will-change: transform;
   box-shadow: 0 -1px 20px rgba(0, 0, 0, 0.06);
   padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
   min-height: 58px;
