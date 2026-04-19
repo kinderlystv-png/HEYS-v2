@@ -33,6 +33,7 @@ export default function TrialForm({ ctaLabel }: TrialFormProps) {
   const [formState, setFormState] = useState<FormState>('idle')
   const [errorMessage, setErrorMessage] = useState('')
   const [utmParams, setUtmParams] = useState<UTMParams>({})
+  const [consentAccepted, setConsentAccepted] = useState(false)
 
   // Парсим UTM из URL при загрузке
   useEffect(() => {
@@ -71,6 +72,11 @@ export default function TrialForm({ ctaLabel }: TrialFormProps) {
 
     if (phoneDigits.length !== 10) {
       setErrorMessage('Введите корректный номер телефона')
+      return false
+    }
+
+    if (!consentAccepted) {
+      setErrorMessage('Необходимо принять политику конфиденциальности')
       return false
     }
 
@@ -285,16 +291,25 @@ export default function TrialForm({ ctaLabel }: TrialFormProps) {
       </button>
 
       {/* Согласие */}
-      <p className="mt-4 text-gray-500 text-xs text-center">
-        Нажимая кнопку, вы соглашаетесь с{' '}
-        <a href="/legal/user-agreement" className="text-blue-600 hover:underline">
-          условиями использования
-        </a>{' '}
-        и{' '}
-        <a href="/legal/privacy-policy" className="text-blue-600 hover:underline">
-          политикой конфиденциальности
-        </a>
-      </p>
+      <label className="mt-4 flex items-start gap-3 cursor-pointer select-none">
+        <input
+          type="checkbox"
+          checked={consentAccepted}
+          onChange={e => setConsentAccepted(e.target.checked)}
+          disabled={formState === 'loading'}
+          className="mt-0.5 h-4 w-4 shrink-0 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+        />
+        <span className="text-gray-500 text-xs leading-5">
+          Даю согласие на обработку персональных данных в соответствии с{' '}
+          <a href="/legal/privacy-policy" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline" onClick={e => e.stopPropagation()}>
+            политикой конфиденциальности
+          </a>{' '}
+          и принимаю{' '}
+          <a href="/legal/user-agreement" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline" onClick={e => e.stopPropagation()}>
+            условия использования
+          </a>
+        </span>
+      </label>
     </form>
   )
 }
