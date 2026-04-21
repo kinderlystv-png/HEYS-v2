@@ -85,6 +85,94 @@ describe('HEYS.syncQueueRuntimePure', () => {
     expect(doImmediateClientUpload).toHaveBeenCalledTimes(1);
   });
 
+  it('restorePersistentQueueState rehydrates in-flight batch after reload', () => {
+    global.HEYS = {};
+    loadModule();
+    const { restorePersistentQueueState } = global.HEYS.syncQueueRuntimePure;
+
+    const result = restorePersistentQueueState({
+      queue: [{ client_id: 'c1', k: 'heys_profile', v: { name: 'new' } }],
+      inFlightQueue: [{ client_id: 'c1', k: 'heys_dayv2_2026-04-21', v: { meals: [{ id: 1 }] } }],
+      compactQueue: (items) => items,
+    });
+
+    expect(result.restoredCount).toBe(1);
+    expect(result.queue).toHaveLength(2);
+    expect(result.queue[0].k).toBe('heys_dayv2_2026-04-21');
+  });
+
+  it('restorePersistentQueueState also rehydrates generic user-level in-flight batches', () => {
+    global.HEYS = {};
+    loadModule();
+    const { restorePersistentQueueState } = global.HEYS.syncQueueRuntimePure;
+
+    const result = restorePersistentQueueState({
+      queue: [{ user_id: 'u1', k: 'heys_profile', v: { firstName: 'New' } }],
+      inFlightQueue: [{ user_id: 'u1', k: 'heys_widget_layout_v1', v: { widgets: [{ id: 'water' }] } }],
+      compactQueue: (items) => {
+        const seen = new Map();
+        items.forEach((item) => seen.set(`${item.user_id}:${item.k}`, item));
+        return Array.from(seen.values());
+      },
+    });
+
+    expect(result.restoredCount).toBe(1);
+    expect(result.queue).toHaveLength(2);
+    expect(result.queue[0].k).toBe('heys_widget_layout_v1');
+  });
+
+  it('requeueInFlightBatch keeps newer queued write over older in-flight value', () => {
+    global.HEYS = {};
+    loadModule();
+    const { requeueInFlightBatch } = global.HEYS.syncQueueRuntimePure;
+
+    const result = requeueInFlightBatch({
+      batch: [{ client_id: 'c1', k: 'heys_profile', v: { name: 'old' } }],
+      queue: [{ client_id: 'c1', k: 'heys_profile', v: { name: 'new' } }],
+      compactQueue: (items) => {
+        const seen = new Map();
+        items.forEach((item) => seen.set(`${item.client_id}:${item.k}`, item));
+        return Array.from(seen.values());
+      },
+    });
+
+    expect(result).toHaveLength(1);
+    expect(result[0].v).toEqual({ name: 'new' });
+  });
+
+  it('requeueInFlightBatch keeps newer queued user-level write over older in-flight value', () => {
+    global.HEYS = {};
+    loadModule();
+    const { requeueInFlightBatch } = global.HEYS.syncQueueRuntimePure;
+
+    const result = requeueInFlightBatch({
+      batch: [{ user_id: 'u1', k: 'heys_profile', v: { theme: 'old' } }],
+      queue: [{ user_id: 'u1', k: 'heys_profile', v: { theme: 'new' } }],
+      compactQueue: (items) => {
+        const seen = new Map();
+        items.forEach((item) => seen.set(`${item.user_id}:${item.k}`, item));
+        return Array.from(seen.values());
+      },
+    });
+
+    expect(result).toHaveLength(1);
+    expect(result[0].v).toEqual({ theme: 'new' });
+  });
+
+  it('getSyncStatusForKey treats in-flight key as pending', () => {
+    global.HEYS = {};
+    loadModule();
+    const { getSyncStatusForKey } = global.HEYS.syncQueueRuntimePure;
+
+    expect(
+      getSyncStatusForKey({
+        key: 'heys_dayv2_2026-04-21',
+        queue: [],
+        inFlightQueue: [{ k: 'heys_dayv2_2026-04-21', v: {} }],
+      }),
+    ).toBe('pending');
+  });
+
   it('flushPendingQueueCore resolves true after immediate upload drains queue', async () => {
     global.HEYS = {};
     loadModule();
@@ -119,7 +207,7 @@ describe('HEYS.syncQueueRuntimePure', () => {
     const result = await flushPendingQueueCore({
       timeoutMs: 20,
       getSnapshot: () => ({ ...state }),
-      doImmediateClientUpload: async () => {},
+      doImmediateClientUpload: async () => { },
       getPendingCount: () => 1,
       addQueueDrainedListener: (handler) => listeners.push(handler),
       removeQueueDrainedListener: vi.fn(),

@@ -201,7 +201,7 @@
   if (!HEYS.dayUtils) {
     throw new Error('[heys_day_day_handlers] HEYS.dayUtils is required. Ensure heys_day_utils.js is loaded first.');
   }
-  const { haptic, lsGet } = HEYS.dayUtils;
+  const { haptic, lsGet, lsSet } = HEYS.dayUtils;
 
   /**
    * Create day-level handlers
@@ -225,6 +225,67 @@
     } = deps;
 
     HEYS.waterFeedback?.ensureBound?.();
+
+    function getLatestDaySnapshot() {
+      const baseKey = 'heys_dayv2_' + date;
+      const storedDay = typeof lsGet === 'function' ? lsGet(baseKey, null) : null;
+      const runtimeDay = typeof HEYS?.Day?.getDay === 'function' ? HEYS.Day.getDay() : null;
+
+      let snapshot = day && typeof day === 'object' ? day : {};
+
+      if (storedDay && typeof storedDay === 'object' && (storedDay.updatedAt || 0) > (snapshot.updatedAt || 0)) {
+        snapshot = storedDay;
+      }
+
+      if (runtimeDay && typeof runtimeDay === 'object' && (runtimeDay.updatedAt || 0) >= (snapshot.updatedAt || 0)) {
+        snapshot = runtimeDay;
+      }
+
+      return snapshot && typeof snapshot === 'object'
+        ? { ...snapshot }
+        : { date };
+    }
+
+    function persistDaySnapshotImmediately(nextDayData) {
+      if (!nextDayData || typeof nextDayData !== 'object') return;
+
+      const baseKey = 'heys_dayv2_' + date;
+
+      if (typeof HEYS?.Day?.setLastLoadedUpdatedAt === 'function') {
+        HEYS.Day.setLastLoadedUpdatedAt(nextDayData.updatedAt || Date.now());
+      }
+
+      try {
+        if (typeof lsSet === 'function') {
+          lsSet(baseKey, nextDayData);
+        } else if (HEYS.store && typeof HEYS.store.set === 'function') {
+          HEYS.store.set(baseKey, nextDayData);
+        } else {
+          global.localStorage?.setItem(baseKey, JSON.stringify(nextDayData));
+          if (typeof global.dispatchEvent === 'function') {
+            global.dispatchEvent(new CustomEvent('heys:data-saved', {
+              detail: { key: baseKey, type: 'day' }
+            }));
+          }
+        }
+      } catch (_error) {
+        // silent
+      }
+    }
+
+    function scheduleDayFlush(delayMs = 50) {
+      const raf = typeof global.requestAnimationFrame === 'function'
+        ? global.requestAnimationFrame.bind(global)
+        : (cb) => global.setTimeout(cb, 0);
+
+      raf(() => {
+        global.setTimeout(() => {
+          if (typeof HEYS?.Day?.requestFlush === 'function') {
+            HEYS.Day.requestFlush();
+          }
+        }, delayMs);
+      });
+    }
 
     /**
      * Open weight picker modal
@@ -303,14 +364,25 @@
      * React reconciliation does NOT remove DOM nodes it doesn't manage.
      */
     function runWaterAnimation(ml, options = {}) {
-      const newWater = (day.waterMl || 0) + ml;
-      const prevWater = day.waterMl || 0;
+      const liveDay = getLatestDaySnapshot();
+      const prevWater = liveDay.waterMl || 0;
+      const newWater = prevWater + ml;
       const hitGoal = waterGoal && newWater >= waterGoal && prevWater < waterGoal;
       const newUpdatedAt = Date.now();
       const blockUntil = newUpdatedAt + 3000;
+      const nextDaySnapshot = {
+        ...liveDay,
+        date,
+        waterMl: newWater,
+        lastWaterTime: newUpdatedAt,
+        updatedAt: newUpdatedAt
+      };
+
       if (typeof HEYS?.Day?.setBlockCloudUpdates === 'function') {
         HEYS.Day.setBlockCloudUpdates(blockUntil);
       }
+
+      persistDaySnapshotImmediately(nextDaySnapshot);
 
       // DOM-based visual animations (no React state = no re-render)
       const waterCard = document.getElementById('water-card');
@@ -346,10 +418,12 @@
         React.startTransition(() => {
           setDay(prev => {
             const nextWaterMl = (prev.waterMl || 0) + ml;
-            return { ...prev, waterMl: nextWaterMl, lastWaterTime: Date.now(), updatedAt: newUpdatedAt };
+            return { ...prev, waterMl: nextWaterMl, lastWaterTime: newUpdatedAt, updatedAt: newUpdatedAt };
           });
         });
       }, 0);
+
+      scheduleDayFlush();
 
       haptic('light');
       if (hitGoal) haptic('success');
@@ -392,10 +466,27 @@
      * Remove water (для исправления ошибок)
      */
     function removeWater(ml) {
-      const newWater = Math.max(0, (day.waterMl || 0) - ml);
-      React.startTransition(() => {
-        setDay(prev => ({ ...prev, waterMl: Math.max(0, (prev.waterMl || 0) - ml), updatedAt: Date.now() }));
+      const liveDay = getLatestDaySnapshot();
+      const newWater = Math.max(0, (liveDay.waterMl || 0) - ml);
+      const newUpdatedAt = Date.now();
+
+      if (typeof HEYS?.Day?.setBlockCloudUpdates === 'function') {
+        HEYS.Day.setBlockCloudUpdates(newUpdatedAt + 3000);
+      }
+
+      persistDaySnapshotImmediately({
+        ...liveDay,
+        date,
+        waterMl: newWater,
+        updatedAt: newUpdatedAt
       });
+
+      React.startTransition(() => {
+        setDay(prev => ({ ...prev, waterMl: Math.max(0, (prev.waterMl || 0) - ml), updatedAt: newUpdatedAt }));
+      });
+
+      scheduleDayFlush();
+
       haptic('light');
     }
 

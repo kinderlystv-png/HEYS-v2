@@ -1310,19 +1310,19 @@
                                 : effectiveDisplayStatus === 'session' ? [
                                     React.createElement('span', { key: 'sess', className: 'cloud-icon session', 'aria-hidden': 'true' }, '🔑'),
                                 ]
-                                : effectiveDisplayStatus === 'queued' ? [
-                                    React.createElement('svg', { key: 'cloud', className: 'cloud-icon idle', viewBox: '0 0 24 24', width: 16, height: 16, fill: 'currentColor' },
-                                        React.createElement('path', { d: 'M19.35 10.04A7.49 7.49 0 0 0 12 4C9.11 4 6.6 5.64 5.35 8.04A5.994 5.994 0 0 0 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z' })
-                                    ),
-                                    pendingCount > 0 && React.createElement('span', { key: 'pb', className: 'pending-badge' }, pendingCount)
-                                ]
-                                    : effectiveDisplayStatus === 'error' ? [
-                                        React.createElement('span', { key: 'warn', className: 'cloud-icon error' }, '⚠'),
-                                        retryCountdown > 0 && React.createElement('span', { key: 'cd', className: 'retry-countdown' }, retryCountdown)
-                                    ]
-                                        : React.createElement('svg', { key: 'cloud', className: 'cloud-icon idle', viewBox: '0 0 24 24', width: 16, height: 16, fill: 'currentColor' },
+                                    : effectiveDisplayStatus === 'queued' ? [
+                                        React.createElement('svg', { key: 'cloud', className: 'cloud-icon idle', viewBox: '0 0 24 24', width: 16, height: 16, fill: 'currentColor' },
                                             React.createElement('path', { d: 'M19.35 10.04A7.49 7.49 0 0 0 12 4C9.11 4 6.6 5.64 5.35 8.04A5.994 5.994 0 0 0 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z' })
-                                        )
+                                        ),
+                                        pendingCount > 0 && React.createElement('span', { key: 'pb', className: 'pending-badge' }, pendingCount)
+                                    ]
+                                        : effectiveDisplayStatus === 'error' ? [
+                                            React.createElement('span', { key: 'warn', className: 'cloud-icon error' }, '⚠'),
+                                            retryCountdown > 0 && React.createElement('span', { key: 'cd', className: 'retry-countdown' }, retryCountdown)
+                                        ]
+                                            : React.createElement('svg', { key: 'cloud', className: 'cloud-icon idle', viewBox: '0 0 24 24', width: 16, height: 16, fill: 'currentColor' },
+                                                React.createElement('path', { d: 'M19.35 10.04A7.49 7.49 0 0 0 12 4C9.11 4 6.6 5.64 5.35 8.04A5.994 5.994 0 0 0 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z' })
+                                            )
                 ),
                 // 🚨 EWS Badge (v1.3 - показывает актуальные предупреждения без ручного скрытия)
                 ewsData && React.createElement('div', {
@@ -1469,6 +1469,7 @@
             setTab,
             widgetsEditMode,
             defaultTab,
+            defaultTasksSubtab,
             setDefaultTab,
             clientId,
             selectedDate,
@@ -1492,9 +1493,54 @@
             return options;
         }, [canUseTasksAsHome]);
 
+        const TASKS_HOME_SUBTAB_OPTIONS = React.useMemo(() => {
+            const fallbackItems = [
+                { id: 'tasks', label: 'Список', shortLabel: 'Список', icon: '☑️' },
+                { id: 'calendar', label: 'Календарь', shortLabel: 'Кален.', icon: '📅' },
+                { id: 'gantt', label: 'Гант', shortLabel: 'Гант', icon: '📊' },
+                { id: 'context', label: 'Контекст', shortLabel: 'Конт.', icon: '🧠' },
+            ];
+            const sourceItems = Array.isArray(window.HEYS?.Planning?.SUBNAV_ITEMS) && window.HEYS.Planning.SUBNAV_ITEMS.length > 0
+                ? window.HEYS.Planning.SUBNAV_ITEMS
+                : fallbackItems;
+
+            return sourceItems
+                .map((item) => ({
+                    key: item.id || item.key,
+                    label: item.label || item.shortLabel || item.id || item.key,
+                    icon: item.icon || '•',
+                }))
+                .filter((item) => typeof item.key === 'string' && item.key.length > 0);
+        }, []);
+        const resolvedDefaultTasksSubtab = typeof defaultTasksSubtab === 'string' && defaultTasksSubtab.length > 0
+            ? defaultTasksSubtab
+            : 'calendar';
+        const currentTasksHomeOption = React.useMemo(() => {
+            return TASKS_HOME_SUBTAB_OPTIONS.find((option) => option.key === resolvedDefaultTasksSubtab)
+                || TASKS_HOME_SUBTAB_OPTIONS.find((option) => option.key === 'calendar')
+                || TASKS_HOME_SUBTAB_OPTIONS[0]
+                || null;
+        }, [TASKS_HOME_SUBTAB_OPTIONS, resolvedDefaultTasksSubtab]);
+
         const handlePickHomeTab = (nextTab) => {
             try {
+                if (nextTab === 'tasks') {
+                    setDefaultTab('tasks', { tasksSubtab: resolvedDefaultTasksSubtab });
+                    HEYS.dayUtils?.haptic?.('light');
+                    return;
+                }
+
                 setDefaultTab(nextTab);
+                HEYS.dayUtils?.haptic?.('light');
+                setSettingsMenuOpen(false);
+            } catch (e) {
+                // silent
+            }
+        };
+
+        const handlePickTasksHomeSubtab = (nextSubtab) => {
+            try {
+                setDefaultTab('tasks', { tasksSubtab: nextSubtab });
                 HEYS.dayUtils?.haptic?.('light');
                 setSettingsMenuOpen(false);
             } catch (e) {
@@ -1711,6 +1757,9 @@
                             React.createElement('div', { className: 'widgets-home-tab-picker__hint' },
                                 'С неё приложение откроется в следующий раз'
                             ),
+                            defaultTab === 'tasks' && currentTasksHomeOption && React.createElement('div', {
+                                className: 'widgets-home-tab-picker__current-subtab',
+                            }, `Внутри задач откроется: ${currentTasksHomeOption.label}`),
                             React.createElement('div', { className: 'widgets-home-tab-picker__options' },
                                 HOME_TAB_OPTIONS.map((option) => React.createElement('button', {
                                     key: option.key,
@@ -1730,6 +1779,36 @@
                                         'aria-hidden': 'true',
                                     }, '🏠')
                                 ))
+                            ),
+                            defaultTab === 'tasks' && canUseTasksAsHome && TASKS_HOME_SUBTAB_OPTIONS.length > 0 && React.createElement('div', {
+                                className: 'widgets-home-tab-picker__subtabs',
+                            },
+                                React.createElement('div', { className: 'widgets-home-tab-picker__subtitle' }, 'Подвкладка задач'),
+                                React.createElement('div', {
+                                    className: 'widgets-home-tab-picker__hint widgets-home-tab-picker__hint--nested',
+                                }, 'Что открыть внутри задач по умолчанию'),
+                                React.createElement('div', {
+                                    className: 'widgets-home-tab-picker__options widgets-home-tab-picker__options--nested',
+                                },
+                                    TASKS_HOME_SUBTAB_OPTIONS.map((option) => React.createElement('button', {
+                                        key: option.key,
+                                        type: 'button',
+                                        className: `widgets-home-tab-picker__option widgets-home-tab-picker__option--subtab ${resolvedDefaultTasksSubtab === option.key ? 'active' : ''}`,
+                                        onClick: (e) => {
+                                            e.stopPropagation();
+                                            handlePickTasksHomeSubtab(option.key);
+                                        },
+                                        'aria-pressed': resolvedDefaultTasksSubtab === option.key,
+                                        title: `Открывать внутри задач: ${option.label}`,
+                                    },
+                                        React.createElement('span', { className: 'widgets-home-tab-picker__option-icon' }, option.icon),
+                                        React.createElement('span', { className: 'widgets-home-tab-picker__option-label' }, option.label),
+                                        resolvedDefaultTasksSubtab === option.key && React.createElement('span', {
+                                            className: 'widgets-home-tab-picker__option-badge',
+                                            'aria-hidden': 'true',
+                                        }, '🏠')
+                                    ))
+                                )
                             )
                         )
                     )
@@ -1755,6 +1834,7 @@
             selectedDate,
             setSelectedDate,
             cloudUser,
+            defaultTasksSubtab,
             DayTabWithCloudSync,
             RationTabWithCloudSync,
             UserTabWithCloudSync,
@@ -1906,6 +1986,7 @@
                                                     ? React.createElement(window.HEYS.PlanningTab, {
                                                         key: 'tasks_' + String(clientId || ''),
                                                         clientId,
+                                                        defaultHomeScreen: defaultTasksSubtab,
                                                     })
                                                     : ((!cloudUser && clientId)
                                                         ? renderTabFallback('tasks', React.createElement('div', { style: { padding: 16 } },

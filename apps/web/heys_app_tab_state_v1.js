@@ -4,9 +4,15 @@
     const DEV = window.DEV || {};
     const devLog = typeof DEV.log === 'function' ? DEV.log.bind(DEV) : function () { };
     const HOME_TABS = ['widgets', 'stats', 'diary', 'insights', 'month', 'tasks'];
+    const TASKS_HOME_SUBTABS = ['tasks', 'calendar', 'gantt', 'context'];
+    const DEFAULT_TASKS_SUBTAB = 'calendar';
 
     function resolveHomeTab(candidate) {
         return HOME_TABS.includes(candidate) ? candidate : 'diary';
+    }
+
+    function resolveHomeTasksSubtab(candidate) {
+        return TASKS_HOME_SUBTABS.includes(candidate) ? candidate : DEFAULT_TASKS_SUBTAB;
     }
 
     function getChangedProfileFields(detail) {
@@ -23,14 +29,20 @@
         return [];
     }
 
-    function markPendingDefaultTabSync(nextTab) {
+    function markPendingDefaultTabSync(nextTab, nextTasksSubtab) {
         if (!window.HEYS) window.HEYS = {};
         if (!window.HEYS._pendingProfileSyncFlags) window.HEYS._pendingProfileSyncFlags = {};
 
-        window.HEYS._pendingProfileSyncFlags.defaultTab = {
+        const pendingState = {
             requestedTab: nextTab,
             createdAt: Date.now(),
         };
+
+        if (typeof nextTasksSubtab === 'string' && nextTasksSubtab.length > 0) {
+            pendingState.requestedTasksSubtab = resolveHomeTasksSubtab(nextTasksSubtab);
+        }
+
+        window.HEYS._pendingProfileSyncFlags.defaultTab = pendingState;
     }
 
     const useTabState = ({ React }) => {
@@ -40,10 +52,18 @@
             return resolveHomeTab(profile.defaultTab);
         };
 
+        const getDefaultTasksSubtabFromProfile = () => {
+            const U = window.HEYS?.utils;
+            const profile = U?.lsGet?.('heys_profile', {}) || {};
+            return resolveHomeTasksSubtab(profile.defaultTasksSubtab);
+        };
+
         const [defaultTab, setDefaultTabState] = React.useState('diary');
+        const [defaultTasksSubtab, setDefaultTasksSubtabState] = React.useState(DEFAULT_TASKS_SUBTAB);
         const [tab, rawSetTab] = React.useState('diary');
         const [initialTabLoaded, setInitialTabLoaded] = React.useState(false);
         const defaultTabRef = React.useRef(defaultTab);
+        const defaultTasksSubtabRef = React.useRef(defaultTasksSubtab);
         const tabRef = React.useRef(tab);
 
         const applyDefaultTabState = React.useCallback((nextDefaultTab) => {
@@ -51,23 +71,30 @@
             setDefaultTabState(nextDefaultTab);
         }, []);
 
+        const applyDefaultTasksSubtabState = React.useCallback((nextDefaultTasksSubtab) => {
+            defaultTasksSubtabRef.current = nextDefaultTasksSubtab;
+            setDefaultTasksSubtabState(nextDefaultTasksSubtab);
+        }, []);
+
         const setTabImmediate = React.useCallback((newTab) => {
             tabRef.current = newTab;
             rawSetTab(newTab);
         }, []);
 
-        // Wrap setTab in startTransition so heavy tab mount/unmount
-        // doesn't block the main thread (was causing 400-450ms click violations)
+        // Keep tab switches at normal priority. startTransition can starve here
+        // because the tasks screen emits frequent sync updates while it is mounted.
         const setTab = React.useCallback((newTab) => {
-            React.startTransition(() => {
-                tabRef.current = newTab;
-                rawSetTab(newTab);
-            });
+            tabRef.current = newTab;
+            rawSetTab(newTab);
         }, []);
 
         React.useEffect(() => {
             defaultTabRef.current = defaultTab;
         }, [defaultTab]);
+
+        React.useEffect(() => {
+            defaultTasksSubtabRef.current = defaultTasksSubtab;
+        }, [defaultTasksSubtab]);
 
         React.useEffect(() => {
             tabRef.current = tab;
@@ -90,8 +117,10 @@
                 if (!U?.lsGet) return false;
 
                 const savedTab = getDefaultTabFromProfile();
-                devLog(`[App] 🏠 Loading default tab from profile: ${savedTab}`);
+                const savedTasksSubtab = getDefaultTasksSubtabFromProfile();
+                devLog(`[App] 🏠 Loading default tab from profile: ${savedTab}` + (savedTab === 'tasks' ? ` · ${savedTasksSubtab}` : ''));
                 applyDefaultTabState(savedTab);
+                applyDefaultTasksSubtabState(savedTasksSubtab);
                 setTabImmediate(savedTab);
                 setInitialTabLoaded(true);
                 return true;
@@ -119,19 +148,22 @@
                 clearInterval(interval);
                 clearTimeout(timeout);
             };
-        }, [initialTabLoaded]);
+        }, [initialTabLoaded, applyDefaultTabState, applyDefaultTasksSubtabState, setTabImmediate]);
 
         const syncDefaultTabFromProfile = React.useCallback((reason, options = {}) => {
             const U = window.HEYS?.utils;
             if (!U?.lsGet) return false;
 
             const freshTab = getDefaultTabFromProfile();
+            const freshTasksSubtab = getDefaultTasksSubtabFromProfile();
             const currentTab = tabRef.current;
             const previousDefaultTab = defaultTabRef.current;
+            const previousDefaultTasksSubtab = defaultTasksSubtabRef.current;
             const shouldFollowSyncedDefault = options.followCurrentTab === true && currentTab === previousDefaultTab && freshTab !== currentTab;
             const didDefaultChange = freshTab !== previousDefaultTab;
+            const didTasksSubtabChange = freshTasksSubtab !== previousDefaultTasksSubtab;
 
-            if (!didDefaultChange && !shouldFollowSyncedDefault) {
+            if (!didDefaultChange && !didTasksSubtabChange && !shouldFollowSyncedDefault) {
                 return false;
             }
 
@@ -140,13 +172,18 @@
                 applyDefaultTabState(freshTab);
             }
 
+            if (didTasksSubtabChange) {
+                devLog(`[App] 🧭 Re-read default tasks subtab after ${reason}: ${freshTasksSubtab}`);
+                applyDefaultTasksSubtabState(freshTasksSubtab);
+            }
+
             if (shouldFollowSyncedDefault) {
                 devLog(`[App] 🧭 Following synced default tab after ${reason}: ${freshTab}`);
                 setTabImmediate(freshTab);
             }
 
             return true;
-        }, [applyDefaultTabState, setTabImmediate]);
+        }, [applyDefaultTabState, applyDefaultTasksSubtabState, setTabImmediate]);
 
         // Re-read profile when client ID becomes available (fixes namespace mismatch on boot)
         React.useEffect(() => {
@@ -162,7 +199,7 @@
         React.useEffect(() => {
             const handleProfileUpdated = (event) => {
                 const changedFields = getChangedProfileFields(event?.detail);
-                if (changedFields.length > 0 && !changedFields.includes('defaultTab')) return;
+                if (changedFields.length > 0 && !changedFields.includes('defaultTab') && !changedFields.includes('defaultTasksSubtab')) return;
 
                 syncDefaultTabFromProfile('profile update', { followCurrentTab: true });
             };
@@ -183,24 +220,47 @@
             };
         }, [syncDefaultTabFromProfile]);
 
-        const setDefaultTab = React.useCallback((newDefaultTab) => {
+        const setDefaultTab = React.useCallback((newDefaultTab, options = {}) => {
             if (!HOME_TABS.includes(newDefaultTab)) return;
 
             const U = window.HEYS?.utils;
             const profile = U?.lsGet?.('heys_profile', {}) || {};
-            const updatedProfile = { ...profile, defaultTab: newDefaultTab };
-            markPendingDefaultTabSync(newDefaultTab);
+            const currentDefaultTab = resolveHomeTab(profile.defaultTab);
+            const currentTasksSubtab = resolveHomeTasksSubtab(profile.defaultTasksSubtab ?? defaultTasksSubtabRef.current);
+            const requestedTasksSubtab = Object.prototype.hasOwnProperty.call(options, 'tasksSubtab')
+                ? options.tasksSubtab
+                : currentTasksSubtab;
+            const nextTasksSubtab = resolveHomeTasksSubtab(requestedTasksSubtab);
+
+            if (currentDefaultTab === newDefaultTab && currentTasksSubtab === nextTasksSubtab) {
+                applyDefaultTabState(newDefaultTab);
+                applyDefaultTasksSubtabState(nextTasksSubtab);
+                return;
+            }
+
+            const updatedProfile = {
+                ...profile,
+                defaultTab: newDefaultTab,
+                defaultTasksSubtab: nextTasksSubtab,
+            };
+            markPendingDefaultTabSync(newDefaultTab, nextTasksSubtab);
             U?.lsSet?.('heys_profile', updatedProfile);
             applyDefaultTabState(newDefaultTab);
+            applyDefaultTasksSubtabState(nextTasksSubtab);
 
             try {
                 window.dispatchEvent(new CustomEvent('heys:default-tab-changed', {
-                    detail: { defaultTab: newDefaultTab }
+                    detail: {
+                        defaultTab: newDefaultTab,
+                        defaultTasksSubtab: nextTasksSubtab,
+                    }
                 }));
                 window.dispatchEvent(new CustomEvent('heys:profile-updated', {
                     detail: {
                         field: 'defaultTab',
-                        fields: ['defaultTab'],
+                        fields: currentTasksSubtab === nextTasksSubtab
+                            ? ['defaultTab']
+                            : ['defaultTab', 'defaultTasksSubtab'],
                         source: 'local-default-tab',
                     }
                 }));
@@ -208,8 +268,8 @@
                 // silent
             }
 
-            devLog(`[App] 🏠 Default tab changed to: ${newDefaultTab}`);
-        }, [applyDefaultTabState]);
+            devLog(`[App] 🏠 Default tab changed to: ${newDefaultTab}` + (newDefaultTab === 'tasks' ? ` · ${nextTasksSubtab}` : ''));
+        }, [applyDefaultTabState, applyDefaultTasksSubtabState]);
 
         React.useEffect(() => {
             window.HEYS = window.HEYS || {};
@@ -217,22 +277,25 @@
             window.HEYS.App.setTab = setTab;
             window.HEYS.App.getTab = () => tab;
             window.HEYS.App.getDefaultTab = () => defaultTab;
+            window.HEYS.App.getDefaultTasksSubtab = () => defaultTasksSubtab;
             window.HEYS.App.setDefaultTab = setDefaultTab;
             return () => {
                 if (window.HEYS?.App) {
                     delete window.HEYS.App.setTab;
                     delete window.HEYS.App.getTab;
                     delete window.HEYS.App.getDefaultTab;
+                    delete window.HEYS.App.getDefaultTasksSubtab;
                     delete window.HEYS.App.setDefaultTab;
                 }
             };
-        }, [tab, setTab, defaultTab, setDefaultTab]);
+        }, [tab, setTab, defaultTab, defaultTasksSubtab, setDefaultTab]);
 
         return {
             tab,
             setTab,
             setTabImmediate,
             defaultTab,
+            defaultTasksSubtab,
             setDefaultTab,
         };
     };

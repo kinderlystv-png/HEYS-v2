@@ -17944,6 +17944,50 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
         return retryAttempt < maxRetryAttempts;
     }
 
+    function restorePersistentQueueState(params) {
+        const queue = Array.isArray(params?.queue) ? params.queue : [];
+        const inFlightQueue = Array.isArray(params?.inFlightQueue) ? params.inFlightQueue : [];
+        const compactQueue = typeof params?.compactQueue === 'function'
+            ? params.compactQueue
+            : (items) => items;
+
+        if (inFlightQueue.length === 0) {
+            return { queue: queue.slice(), restoredCount: 0 };
+        }
+
+        const restoredQueue = compactQueue([...inFlightQueue, ...queue]);
+        return {
+            queue: Array.isArray(restoredQueue) ? restoredQueue : [...inFlightQueue, ...queue],
+            restoredCount: inFlightQueue.length,
+        };
+    }
+
+    function requeueInFlightBatch(params) {
+        const queue = Array.isArray(params?.queue) ? params.queue : [];
+        const batch = Array.isArray(params?.batch) ? params.batch : [];
+        const compactQueue = typeof params?.compactQueue === 'function'
+            ? params.compactQueue
+            : (items) => items;
+
+        if (batch.length === 0) {
+            return queue.slice();
+        }
+
+        const mergedQueue = compactQueue([...batch, ...queue]);
+        return Array.isArray(mergedQueue) ? mergedQueue : [...batch, ...queue];
+    }
+
+    function getSyncStatusForKey(params) {
+        const key = String(params?.key || '');
+        if (!key) return 'synced';
+
+        const queue = Array.isArray(params?.queue) ? params.queue : [];
+        const inFlightQueue = Array.isArray(params?.inFlightQueue) ? params.inFlightQueue : [];
+        const hasKey = (items) => items.some((item) => item && item.k === key);
+
+        return (hasKey(queue) || hasKey(inFlightQueue)) ? 'pending' : 'synced';
+    }
+
     function enqueueClientSave(params) {
         const queue = params?.queue;
         if (!Array.isArray(queue) || !params?.item) {
@@ -18079,6 +18123,9 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
     HEYS.syncQueueRuntimePure = {
         isCriticalSyncKey,
         shouldScheduleRetryAfterRpcError,
+        restorePersistentQueueState,
+        requeueInFlightBatch,
+        getSyncStatusForKey,
         enqueueClientSave,
         flushPendingQueueCore,
     };
@@ -19771,6 +19818,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
   }
 
   const PENDING_QUEUE_KEY = 'heys_pending_sync_queue';
+  const PENDING_USER_INFLIGHT_QUEUE_KEY = 'heys_pending_sync_inflight_queue';
+  const PENDING_CLIENT_INFLIGHT_QUEUE_KEY = 'heys_pending_client_sync_inflight_queue';
   const PENDING_QUEUE_COMPRESS_MIN_BYTES = 16 * 1024;
   const PENDING_QUEUE_INLINE_VALUE_MAX_BYTES = 32 * 1024;
 
@@ -19783,7 +19832,10 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
     !_syncQueueRuntimePure ||
     typeof _syncQueueRuntimePure.enqueueClientSave !== 'function' ||
     typeof _syncQueueRuntimePure.flushPendingQueueCore !== 'function' ||
-    typeof _syncQueueRuntimePure.shouldScheduleRetryAfterRpcError !== 'function'
+    typeof _syncQueueRuntimePure.shouldScheduleRetryAfterRpcError !== 'function' ||
+    typeof _syncQueueRuntimePure.restorePersistentQueueState !== 'function' ||
+    typeof _syncQueueRuntimePure.requeueInFlightBatch !== 'function' ||
+    typeof _syncQueueRuntimePure.getSyncStatusForKey !== 'function'
   ) {
     throw new Error('[HEYS.storage] Load heys_sync_queue_runtime_pure_v1.js before heys_storage_supabase_v1.js (boot-core order)');
   }
@@ -19793,6 +19845,9 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
   const enqueueClientSave = _syncQueueRuntimePure.enqueueClientSave.bind(_syncQueueRuntimePure);
   const flushPendingQueueCore = _syncQueueRuntimePure.flushPendingQueueCore.bind(_syncQueueRuntimePure);
   const shouldScheduleRetryAfterRpcError = _syncQueueRuntimePure.shouldScheduleRetryAfterRpcError.bind(_syncQueueRuntimePure);
+  const restorePersistentQueueState = _syncQueueRuntimePure.restorePersistentQueueState.bind(_syncQueueRuntimePure);
+  const requeueInFlightBatch = _syncQueueRuntimePure.requeueInFlightBatch.bind(_syncQueueRuntimePure);
+  const getSyncStatusForKey = _syncQueueRuntimePure.getSyncStatusForKey.bind(_syncQueueRuntimePure);
 
   function getPendingQueueLocalStorageKey(item) {
     if (!item || typeof item !== 'object') return '';
@@ -20032,7 +20087,12 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
       if (isRecoverableStorageKey(normalizedKey)) kind = 'recoverable_cache';
       else if (normalizedKey.includes('dayv2_')) kind = 'dayv2';
       else if (normalizedKey.includes('_products')) kind = 'products';
-      else if (normalizedKey === PENDING_QUEUE_KEY || normalizedKey === PENDING_CLIENT_QUEUE_KEY) kind = 'pending_queue';
+      else if (
+        normalizedKey === PENDING_QUEUE_KEY ||
+        normalizedKey === PENDING_USER_INFLIGHT_QUEUE_KEY ||
+        normalizedKey === PENDING_CLIENT_QUEUE_KEY ||
+        normalizedKey === PENDING_CLIENT_INFLIGHT_QUEUE_KEY
+      ) kind = 'pending_queue';
       return {
         key: normalizedKey,
         kind,
@@ -20211,7 +20271,9 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
 
     // 2. Очищаем pending queues и тяжёлые кэши insights
     global.localStorage.removeItem(PENDING_QUEUE_KEY);
+    global.localStorage.removeItem(PENDING_USER_INFLIGHT_QUEUE_KEY);
     global.localStorage.removeItem(PENDING_CLIENT_QUEUE_KEY);
+    global.localStorage.removeItem(PENDING_CLIENT_INFLIGHT_QUEUE_KEY);
     global.localStorage.removeItem(SYNC_LOG_KEY);
     // Очищаем кэши insights (восстановятся при следующем запуске)
     const insightsKeys = [
@@ -20294,7 +20356,9 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
         } catch (e2) {
           // Всё ещё не помещается — удаляем pending queues и sync log
           global.localStorage.removeItem(PENDING_QUEUE_KEY);
+          global.localStorage.removeItem(PENDING_USER_INFLIGHT_QUEUE_KEY);
           global.localStorage.removeItem(PENDING_CLIENT_QUEUE_KEY);
+          global.localStorage.removeItem(PENDING_CLIENT_INFLIGHT_QUEUE_KEY);
           global.localStorage.removeItem(SYNC_LOG_KEY);
 
           try {
@@ -20443,24 +20507,62 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
     } catch (e) { }
   }
 
+  function isClientOnlySyncMode() {
+    return !!(_rpcOnlyMode && _pinAuthClientId);
+  }
+
+  function getPendingQueuesSnapshot() {
+    const clientQueueLen = Array.isArray(clientUpsertQueue) ? clientUpsertQueue.length : 0;
+    const clientPersistedInFlightLen = Array.isArray(clientUpsertInFlightQueue) ? clientUpsertInFlightQueue.length : 0;
+    const clientInFlightLen = (_uploadInProgress || clientPersistedInFlightLen > 0)
+      ? Math.max(_uploadInFlightCount, clientPersistedInFlightLen)
+      : 0;
+
+    const clientOnlyMode = isClientOnlySyncMode();
+    const userQueueLen = (!clientOnlyMode && Array.isArray(upsertQueue)) ? upsertQueue.length : 0;
+    const userPersistedInFlightLen = (!clientOnlyMode && Array.isArray(upsertInFlightQueue)) ? upsertInFlightQueue.length : 0;
+    const userInFlightLen = clientOnlyMode
+      ? 0
+      : ((_userUploadInProgress || userPersistedInFlightLen > 0)
+        ? Math.max(_userUploadInFlightCount, userPersistedInFlightLen)
+        : 0);
+
+    return {
+      isClientOnlyMode: clientOnlyMode,
+      clientQueueLen,
+      clientInFlightLen,
+      userQueueLen,
+      userInFlightLen,
+      queueLen: clientQueueLen + userQueueLen,
+      inFlight: clientInFlightLen + userInFlightLen,
+      uploadInProgress: !!_uploadInProgress || (!clientOnlyMode && !!_userUploadInProgress),
+      totalCount: clientQueueLen + clientInFlightLen + userQueueLen + userInFlightLen,
+    };
+  }
+
   /** Получить количество ожидающих изменений (включая in-flight) */
   cloud.getPendingCount = function () {
-    // 🔄 v=51: В PIN-auth режиме игнорируем upsertQueue — она для curator mode
-    const isClientOnlyMode = _rpcOnlyMode && _pinAuthClientId;
-    const userQueueLen = isClientOnlyMode ? 0 : upsertQueue.length;
-    return clientUpsertQueue.length + userQueueLen + (_uploadInProgress ? _uploadInFlightCount : 0);
+    return getPendingQueuesSnapshot().totalCount;
   };
 
   /** Проверить есть ли данные в процессе отправки */
   cloud.isUploadInProgress = function () {
-    return _uploadInProgress;
+    return getPendingQueuesSnapshot().uploadInProgress;
   };
 
   /** Получить детализацию pending (для UI) */
   cloud.getPendingDetails = function () {
     const details = { days: 0, products: 0, profile: 0, other: 0 };
 
-    const allItems = [...clientUpsertQueue, ...upsertQueue];
+    const snapshot = getPendingQueuesSnapshot();
+    const allItems = [];
+    if (Array.isArray(clientUpsertQueue)) allItems.push(...clientUpsertQueue);
+    if (Array.isArray(clientUpsertInFlightQueue)) allItems.push(...clientUpsertInFlightQueue);
+    if (!snapshot.isClientOnlyMode) {
+      if (Array.isArray(upsertQueue)) allItems.push(...upsertQueue);
+      if (Array.isArray(upsertInFlightQueue)) allItems.push(...upsertInFlightQueue);
+    }
+
     allItems.forEach(item => {
       const k = item.k || '';
       if (k.includes('dayv2_')) details.days++;
@@ -20484,14 +20586,12 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
    */
   cloud.flushPendingQueue = async function (timeoutMs = 5000) {
     const flushStartTs = Date.now();
-    const snapshotBefore = () => {
-      // 🔄 v=51: В PIN-auth режиме игнорируем upsertQueue — она для curator mode
-      const isClientOnlyMode = _rpcOnlyMode && _pinAuthClientId;
-      const clientQueueLen = clientUpsertQueue.length;
-      const userQueueLen = isClientOnlyMode ? 0 : upsertQueue.length;
-      const queueLen = clientQueueLen + userQueueLen;
-      const inFlight = _uploadInProgress ? _uploadInFlightCount : 0;
-      return { isClientOnlyMode, clientQueueLen, userQueueLen, queueLen, inFlight, uploadInProgress: _uploadInProgress };
+    const snapshotBefore = () => getPendingQueuesSnapshot();
+    const doImmediateAllUploads = async () => {
+      await doImmediateClientUpload();
+      if (!isClientOnlySyncMode()) {
+        await doImmediateUserUpload();
+      }
     };
 
     const before = snapshotBefore();
@@ -20506,7 +20606,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
         const s = snapshotBefore();
         return { queueLen: s.queueLen, inFlight: s.inFlight, uploadInProgress: s.uploadInProgress };
       },
-      doImmediateClientUpload,
+      doImmediateClientUpload: doImmediateAllUploads,
       getPendingCount: () => cloud.getPendingCount(),
       addQueueDrainedListener: (handler) => window.addEventListener('heys:queue-drained', handler),
       removeQueueDrainedListener: (handler) => window.removeEventListener('heys:queue-drained', handler),
@@ -20515,14 +20615,15 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
       now: () => Date.now(),
       onLog: (phase, payload) => {
         if (phase === 'check') {
+          const current = snapshotBefore();
           logCritical(
-            `🔄 [FLUSH] Check: clientQueue=${before.clientQueueLen}, userQueue=${upsertQueue.length}${before.isClientOnlyMode ? ' (ignored in PIN mode)' : ''}, inFlight=${before.inFlight}`
+            `🔄 [FLUSH] Check: clientQueue=${current.clientQueueLen}, userQueue=${current.userQueueLen}${current.isClientOnlyMode ? ' (ignored in PIN mode)' : ''}, inFlight=${current.inFlight}`
           );
-          if (before.queueLen === 0 && !before.uploadInProgress) {
+          if (current.queueLen === 0 && !current.uploadInProgress) {
             logCritical('✅ [FLUSH] Queue already empty and no uploads in progress');
           } else {
             logCritical(`🔄 [FLUSH] Need to upload ${totalBefore} pending items IMMEDIATELY...`);
-            if (before.queueLen > 0) {
+            if (current.queueLen > 0) {
               logCritical('🔄 [FLUSH] Starting IMMEDIATE upload (no debounce)...');
             }
           }
@@ -20542,7 +20643,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
         }
         if (phase === 'timeout') {
           const stillPending = payload?.stillPending ?? cloud.getPendingCount();
-          logCritical(`⚠️ [FLUSH] Timeout after ${timeoutMs}ms, ${stillPending} items still pending, inFlight=${_uploadInProgress}`);
+          logCritical(`⚠️ [FLUSH] Timeout after ${timeoutMs}ms, ${stillPending} items still pending, inFlight=${getPendingQueuesSnapshot().inFlight}`);
           logFlushSummary('timeout', stillPending);
           return;
         }
@@ -20656,7 +20757,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
 
   /** Событие: завершение синхронизации обеих очередей (upload) */
   function notifySyncCompletedIfDrained() {
-    if (clientUpsertQueue.length === 0 && upsertQueue.length === 0) {
+    const snapshot = getPendingQueuesSnapshot();
+    if (snapshot.totalCount === 0 && !snapshot.uploadInProgress) {
       syncProgressTotal = 0;
       syncProgressDone = 0;
       // Событие "очередь пуста" — для UI индикатора синхронизации
@@ -23273,10 +23375,15 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
                 phaseAData.forEach(row => {
                   if (row.v == null) return;
                   const pKey = scopeKeyForClientStorage(row.k, client_id);
+                  const normalizedSyncKey = normalizeKeyForSupabase(row.k, client_id);
                   // 🛡️ v65 FIX: skip foreign-scoped keys in Phase A too
                   if (isForeignClientScopedKey(pKey, client_id)) return;
                   // 🛡️ P2: write-time isolation guard
                   if (!assertSyncWriteOwnership(pKey, client_id, 'phase-a')) return;
+                  if (normalizedSyncKey && cloud.getSyncStatus(normalizedSyncKey) === 'pending') {
+                    logCritical(`🛡️ [PHASE A] Skip pending local mutation for ${normalizedSyncKey}`);
+                    return;
+                  }
                   try { lsPhaseA.setItem(pKey, JSON.stringify(row.v)); } catch (_) { }
                 });
                 muteMirror = false;
@@ -23499,12 +23606,17 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
                 return;
               }
               const key = scopeKeyForClientStorage(row.k, client_id);
+              const normalizedSyncKey = normalizeKeyForSupabase(row.k, client_id);
               if (isForeignClientScopedKey(key, client_id)) {
                 recordCloudGarbageCandidate(lightCloudGarbage, 'foreign', row.k);
                 return;
               }
               // 🛡️ P2: write-time isolation guard
               if (!assertSyncWriteOwnership(key, client_id, 'delta-light')) return;
+              if (normalizedSyncKey && cloud.getSyncStatus(normalizedSyncKey) === 'pending') {
+                logCritical(`🛡️ [DELTA LIGHT] Skip pending local mutation for ${normalizedSyncKey}`);
+                return;
+              }
 
               let valueToStore = row.v;
               // Декомпрессия если нужно
@@ -25379,6 +25491,19 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
 
   // Дебаунсинг для клиентских данных
   let clientUpsertQueue = loadPendingQueue(PENDING_CLIENT_QUEUE_KEY);
+  let clientUpsertInFlightQueue = loadPendingQueue(PENDING_CLIENT_INFLIGHT_QUEUE_KEY);
+  const restoredClientQueueState = restorePersistentQueueState({
+    queue: clientUpsertQueue,
+    inFlightQueue: clientUpsertInFlightQueue,
+    compactQueue: (items) => compactPendingQueue(items, PENDING_CLIENT_QUEUE_KEY),
+  });
+  clientUpsertQueue = restoredClientQueueState.queue;
+  clientUpsertInFlightQueue = [];
+  if (restoredClientQueueState.restoredCount > 0) {
+    savePendingQueue(PENDING_CLIENT_QUEUE_KEY, clientUpsertQueue);
+    savePendingQueue(PENDING_CLIENT_INFLIGHT_QUEUE_KEY, clientUpsertInFlightQueue);
+    logCritical(`♻️ [SYNC] Restored ${restoredClientQueueState.restoredCount} in-flight client item(s) after reload`);
+  }
   let clientUpsertTimer = null;
   let _uploadInProgress = false;  // 🔄 Флаг: данные в процессе отправки (in-flight)
   let _uploadLogTimer = null;
@@ -25419,6 +25544,42 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
   }
   let _uploadInFlightCount = 0;   // 🔄 Кол-во записей в in-flight запросе
 
+  function persistClientQueueDurabilityState() {
+    savePendingQueue(PENDING_CLIENT_QUEUE_KEY, clientUpsertQueue);
+    savePendingQueue(PENDING_CLIENT_INFLIGHT_QUEUE_KEY, clientUpsertInFlightQueue);
+  }
+
+  function setClientInFlightBatch(batch) {
+    clientUpsertInFlightQueue = compactPendingQueue(
+      (Array.isArray(batch) ? batch : []).map((item) => (item && typeof item === 'object') ? { ...item } : item),
+      PENDING_CLIENT_QUEUE_KEY,
+    );
+    persistClientQueueDurabilityState();
+    notifyPendingChange();
+  }
+
+  function clearClientInFlightBatch(options = {}) {
+    clientUpsertInFlightQueue = [];
+    savePendingQueue(PENDING_CLIENT_INFLIGHT_QUEUE_KEY, clientUpsertInFlightQueue);
+    if (options.notify !== false) {
+      notifyPendingChange();
+    }
+  }
+
+  function requeueClientInFlightBatch(batch, reason) {
+    clientUpsertQueue = requeueInFlightBatch({
+      queue: clientUpsertQueue,
+      batch: Array.isArray(batch) && batch.length ? batch : clientUpsertInFlightQueue,
+      compactQueue: (items) => compactPendingQueue(items, PENDING_CLIENT_QUEUE_KEY),
+    });
+    clientUpsertInFlightQueue = [];
+    persistClientQueueDurabilityState();
+    notifyPendingChange();
+    if (reason) {
+      logCritical(`♻️ [SYNC] Re-queued in-flight client batch (${reason})`);
+    }
+  }
+
   /**
    * 🔄 v=34: Выделенная функция upload — используется как с debounce, так и immediately
    * @param {Array} batch - массив items для отправки
@@ -25426,6 +25587,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
    */
   async function doClientUpload(batch) {
     if (!batch.length) {
+      clearClientInFlightBatch({ notify: false });
       _uploadInProgress = false;
       _uploadInFlightCount = 0;
       notifySyncCompletedIfDrained();
@@ -25434,8 +25596,12 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
 
     // 🚀 PERF: Serialize uploads — prevent concurrent network congestion & timeouts
     if (_uploadInProgress) {
-      clientUpsertQueue.push(...batch);
-      savePendingQueue(PENDING_CLIENT_QUEUE_KEY, clientUpsertQueue);
+      clientUpsertQueue = requeueInFlightBatch({
+        queue: clientUpsertQueue,
+        batch,
+        compactQueue: (items) => compactPendingQueue(items, PENDING_CLIENT_QUEUE_KEY),
+      });
+      persistClientQueueDurabilityState();
       notifyPendingChange();
       console.info('[HEYS.sync] ⏳ Upload serialized: ' + batch.length + ' items re-queued (in-flight: ' + _uploadInFlightCount + ')');
       // Schedule retry after current upload finishes
@@ -25456,6 +25622,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
 
     // Если отфильтровали всё — выходим
     if (!filteredBatch.length) {
+      clearClientInFlightBatch();
       _uploadInProgress = false;
       _uploadInFlightCount = 0;
       notifySyncCompletedIfDrained();
@@ -25474,11 +25641,9 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
     if (!canSync) {
       // Вернуть в очередь
       console.warn('⚠️ [UPLOAD] canSync=false, returning batch to queue');
-      clientUpsertQueue.push(...filteredBatch);
+      requeueClientInFlightBatch(filteredBatch, 'sync-disabled');
       _uploadInProgress = false;
       _uploadInFlightCount = 0;
-      savePendingQueue(PENDING_CLIENT_QUEUE_KEY, clientUpsertQueue);
-      notifyPendingChange();
       notifySyncCompletedIfDrained();
       return;
     }
@@ -25486,12 +25651,10 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
     // Не пытаемся отправить если нет сети — данные уже в localStorage
     if (!navigator.onLine) {
       // Вернуть в очередь для повторной отправки когда сеть появится
-      clientUpsertQueue.push(...filteredBatch);
+      requeueClientInFlightBatch(filteredBatch, 'offline');
       _uploadInProgress = false;
       _uploadInFlightCount = 0;
       incrementRetry();
-      savePendingQueue(PENDING_CLIENT_QUEUE_KEY, clientUpsertQueue);
-      notifyPendingChange();
       // Запланировать повторную попытку с exponential backoff
       scheduleClientPush();
       notifySyncCompletedIfDrained();
@@ -25515,10 +25678,9 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
       .filter(Boolean);
 
     if (!hydratedBatch.length) {
+      clearClientInFlightBatch();
       _uploadInProgress = false;
       _uploadInFlightCount = 0;
-      savePendingQueue(PENDING_CLIENT_QUEUE_KEY, clientUpsertQueue);
-      notifyPendingChange();
       notifySyncCompletedIfDrained();
       return;
     }
@@ -25561,7 +25723,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
 
         if (anyError) {
           incrementRetry();
-          savePendingQueue(PENDING_CLIENT_QUEUE_KEY, clientUpsertQueue);
+          clearClientInFlightBatch({ notify: false });
+          persistClientQueueDurabilityState();
           notifyPendingChange();
 
           // 🔧 v58 FIX: При auth ошибке НЕ планируем retry — бесполезно без токена!
@@ -25580,9 +25743,10 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
         } else {
           resetRetry();
           logUploadSummaryBuffered(totalSaved);
+          clearClientInFlightBatch({ notify: false });
         }
 
-        savePendingQueue(PENDING_CLIENT_QUEUE_KEY, clientUpsertQueue);
+        persistClientQueueDurabilityState();
         notifyPendingChange();
 
         // 🔄 Сбрасываем флаг и уведомляем о завершении
@@ -25602,9 +25766,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
       // 🔐 Если нет user — нельзя сохранять в обычном режиме
       if (!user) {
         log('⚠️ [SAVE] No user session, returning items to queue');
-        clientUpsertQueue.push(...hydratedBatch);
-        savePendingQueue(PENDING_CLIENT_QUEUE_KEY, clientUpsertQueue);
-        notifyPendingChange();
+        requeueClientInFlightBatch(hydratedBatch, 'missing-user-session');
         _uploadInProgress = false;
         _uploadInFlightCount = 0;
         notifySyncCompletedIfDrained();
@@ -25633,7 +25795,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
         // Вернуть в очередь
         clientUpsertQueue.push(...failedItems);
         incrementRetry();
-        savePendingQueue(PENDING_CLIENT_QUEUE_KEY, clientUpsertQueue);
+        clearClientInFlightBatch({ notify: false });
+        persistClientQueueDurabilityState();
         notifyPendingChange();
 
         const authError = results.find(r => !r.success && isAuthError(r.error))?.error;
@@ -25650,6 +25813,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
       } else {
         // Полный успех — сбрасываем retry счётчик
         resetRetry();
+        clearClientInFlightBatch({ notify: false });
       }
 
       // Критический лог: данные отправлены в облако (только успешные)
@@ -25677,13 +25841,14 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
       }
 
       // Обновляем персистентную очередь (если были ошибки, failedItems уже там)
-      savePendingQueue(PENDING_CLIENT_QUEUE_KEY, clientUpsertQueue);
+      persistClientQueueDurabilityState();
       notifyPendingChange();
     } catch (e) {
       // При ошибке — вернуть в очередь и увеличить retry
       clientUpsertQueue.push(...uniqueBatch);
       incrementRetry();
-      savePendingQueue(PENDING_CLIENT_QUEUE_KEY, clientUpsertQueue);
+      clearClientInFlightBatch({ notify: false });
+      persistClientQueueDurabilityState();
       notifyPendingChange();
       logCritical('❌ Ошибка сохранения в облако:', e.message || e);
 
@@ -25736,10 +25901,19 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
       clientUpsertTimer = null;
     }
 
+    if (_uploadInProgress) {
+      return;
+    }
+
     // Забираем всю очередь
     const batch = clientUpsertQueue.splice(0, clientUpsertQueue.length);
-    savePendingQueue(PENDING_CLIENT_QUEUE_KEY, clientUpsertQueue);
-    notifyPendingChange();
+    if (!batch.length) {
+      persistClientQueueDurabilityState();
+      notifyPendingChange();
+      return;
+    }
+
+    setClientInFlightBatch(batch);
 
     // Выполняем upload
     await doClientUpload(batch);
@@ -25752,24 +25926,48 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
     if (clientUpsertTimer) return;
 
     // Сохраняем очередь в localStorage для персистентности
-    savePendingQueue(PENDING_CLIENT_QUEUE_KEY, clientUpsertQueue);
+    persistClientQueueDurabilityState();
     notifyPendingChange();
 
     const delay = navigator.onLine ? 500 : getRetryDelay();
 
     clientUpsertTimer = setTimeout(async () => {
+      if (_uploadInProgress) {
+        clientUpsertTimer = null;
+        return;
+      }
+
       const batch = clientUpsertQueue.splice(0, clientUpsertQueue.length);
       clientUpsertTimer = null;
+      if (!batch.length) {
+        persistClientQueueDurabilityState();
+        notifyPendingChange();
+        return;
+      }
+
+      setClientInFlightBatch(batch);
       await doClientUpload(batch);
     }, delay);
   }
 
   // Функция для проверки статуса синхронизации
   cloud.getSyncStatus = function (key) {
-    if (clientUpsertQueue.some(item => item.k === key)) {
-      return 'pending'; // В очереди на отправку
+    const snapshot = getPendingQueuesSnapshot();
+    const queue = [];
+    const inFlightQueue = [];
+
+    if (Array.isArray(clientUpsertQueue)) queue.push(...clientUpsertQueue);
+    if (Array.isArray(clientUpsertInFlightQueue)) inFlightQueue.push(...clientUpsertInFlightQueue);
+    if (!snapshot.isClientOnlyMode) {
+      if (Array.isArray(upsertQueue)) queue.push(...upsertQueue);
+      if (Array.isArray(upsertInFlightQueue)) inFlightQueue.push(...upsertInFlightQueue);
     }
-    return 'synced'; // Синхронизировано
+
+    return getSyncStatusForKey({
+      key,
+      queue,
+      inFlightQueue,
+    });
   };
 
   // Функция для ожидания завершения синхронизации
@@ -26186,92 +26384,227 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
 
   // очередь upsert'ов
   let upsertQueue = loadPendingQueue(PENDING_QUEUE_KEY);
+  let upsertInFlightQueue = loadPendingQueue(PENDING_USER_INFLIGHT_QUEUE_KEY);
+  const restoredUserQueueState = restorePersistentQueueState({
+    queue: upsertQueue,
+    inFlightQueue: upsertInFlightQueue,
+    compactQueue: (items) => compactPendingQueue(items, PENDING_QUEUE_KEY),
+  });
+  upsertQueue = restoredUserQueueState.queue;
+  upsertInFlightQueue = [];
+  if (restoredUserQueueState.restoredCount > 0) {
+    savePendingQueue(PENDING_QUEUE_KEY, upsertQueue);
+    savePendingQueue(PENDING_USER_INFLIGHT_QUEUE_KEY, upsertInFlightQueue);
+    logCritical(`♻️ [SYNC] Restored ${restoredUserQueueState.restoredCount} in-flight user item(s) after reload`);
+  }
   let upsertTimer = null;
+  let _userUploadInProgress = false;
+  let _userUploadInFlightCount = 0;
+
+  function persistUserQueueDurabilityState() {
+    savePendingQueue(PENDING_QUEUE_KEY, upsertQueue);
+    savePendingQueue(PENDING_USER_INFLIGHT_QUEUE_KEY, upsertInFlightQueue);
+  }
+
+  function setUserInFlightBatch(batch) {
+    upsertInFlightQueue = compactPendingQueue(
+      (Array.isArray(batch) ? batch : []).map((item) => (item && typeof item === 'object') ? { ...item } : item),
+      PENDING_QUEUE_KEY,
+    );
+    persistUserQueueDurabilityState();
+    notifyPendingChange();
+  }
+
+  function clearUserInFlightBatch(options = {}) {
+    upsertInFlightQueue = [];
+    savePendingQueue(PENDING_USER_INFLIGHT_QUEUE_KEY, upsertInFlightQueue);
+    if (options.notify !== false) {
+      notifyPendingChange();
+    }
+  }
+
+  function requeueUserInFlightBatch(batch, reason) {
+    upsertQueue = requeueInFlightBatch({
+      queue: upsertQueue,
+      batch: Array.isArray(batch) && batch.length ? batch : upsertInFlightQueue,
+      compactQueue: (items) => compactPendingQueue(items, PENDING_QUEUE_KEY),
+    });
+    upsertInFlightQueue = [];
+    persistUserQueueDurabilityState();
+    notifyPendingChange();
+    if (reason) {
+      logCritical(`♻️ [SYNC] Re-queued in-flight user batch (${reason})`);
+    }
+  }
+
+  async function doUserUpload(batch) {
+    if (!batch.length) {
+      clearUserInFlightBatch({ notify: false });
+      _userUploadInProgress = false;
+      _userUploadInFlightCount = 0;
+      notifySyncCompletedIfDrained();
+      return;
+    }
+
+    if (_userUploadInProgress) {
+      upsertQueue = requeueInFlightBatch({
+        queue: upsertQueue,
+        batch,
+        compactQueue: (items) => compactPendingQueue(items, PENDING_QUEUE_KEY),
+      });
+      persistUserQueueDurabilityState();
+      notifyPendingChange();
+      schedulePush();
+      return;
+    }
+
+    _userUploadInProgress = true;
+    _userUploadInFlightCount = batch.length;
+
+    if (!client || !user) {
+      requeueUserInFlightBatch(batch, 'missing-auth-context');
+      _userUploadInProgress = false;
+      _userUploadInFlightCount = 0;
+      notifySyncCompletedIfDrained();
+      return;
+    }
+
+    if (!navigator.onLine) {
+      requeueUserInFlightBatch(batch, 'offline');
+      _userUploadInProgress = false;
+      _userUploadInFlightCount = 0;
+      incrementRetry();
+      schedulePush();
+      notifySyncCompletedIfDrained();
+      return;
+    }
+
+    const uniqueBatch = [];
+    const seenKeys = new Set();
+    for (let i = batch.length - 1; i >= 0; i--) {
+      const item = batch[i];
+      const key = `${item.user_id}:${item.k}`;
+      if (!seenKeys.has(key)) {
+        seenKeys.add(key);
+        uniqueBatch.unshift(item);
+      }
+    }
+
+    const hydratedBatch = uniqueBatch
+      .map(item => hydratePendingQueueItem(item))
+      .filter(Boolean);
+
+    if (!hydratedBatch.length) {
+      clearUserInFlightBatch({ notify: false });
+      persistUserQueueDurabilityState();
+      notifyPendingChange();
+      _userUploadInProgress = false;
+      _userUploadInFlightCount = 0;
+      notifySyncCompletedIfDrained();
+      return;
+    }
+
+    try {
+      const { error } = await YandexAPI.from('kv_store').upsert(hydratedBatch, { onConflict: 'user_id,k' });
+      if (error) {
+        requeueUserInFlightBatch(hydratedBatch, 'bulk-upsert-error');
+        incrementRetry();
+        _userUploadInProgress = false;
+        _userUploadInFlightCount = 0;
+        if (isAuthError(error)) {
+          handleAuthFailure(error);
+          notifySyncCompletedIfDrained();
+          return;
+        }
+        notifySyncError(error, Math.min(5, Math.ceil(getRetryDelay() / 1000)));
+        err('bulk upsert', error);
+        schedulePush();
+        notifySyncCompletedIfDrained();
+        return;
+      }
+
+      resetRetry();
+      clearUserInFlightBatch({ notify: false });
+      persistUserQueueDurabilityState();
+      notifyPendingChange();
+    } catch (e) {
+      requeueUserInFlightBatch(hydratedBatch, 'bulk-upsert-exception');
+      incrementRetry();
+      _userUploadInProgress = false;
+      _userUploadInFlightCount = 0;
+      if (isAuthError(e)) {
+        handleAuthFailure(e);
+        notifySyncCompletedIfDrained();
+        return;
+      }
+      notifySyncError(e, Math.min(5, Math.ceil(getRetryDelay() / 1000)));
+      err('bulk upsert exception', e);
+      schedulePush();
+      notifySyncCompletedIfDrained();
+      return;
+    }
+
+    syncProgressDone += hydratedBatch.length;
+    if (syncProgressTotal < syncProgressDone) {
+      syncProgressTotal = syncProgressDone;
+    }
+    notifySyncProgress(syncProgressTotal, syncProgressDone);
+
+    _userUploadInProgress = false;
+    _userUploadInFlightCount = 0;
+
+    if (upsertQueue.length > 0) {
+      schedulePush();
+    }
+
+    notifySyncCompletedIfDrained();
+  }
+
+  async function doImmediateUserUpload() {
+    if (upsertTimer) {
+      clearTimeout(upsertTimer);
+      upsertTimer = null;
+    }
+
+    if (_userUploadInProgress) {
+      return;
+    }
+
+    const batch = upsertQueue.splice(0, upsertQueue.length);
+    if (!batch.length) {
+      persistUserQueueDurabilityState();
+      notifyPendingChange();
+      return;
+    }
+
+    setUserInFlightBatch(batch);
+    await doUserUpload(batch);
+  }
+
   function schedulePush() {
     if (upsertTimer) return;
 
-    // Сохраняем очередь в localStorage для персистентности
-    savePendingQueue(PENDING_QUEUE_KEY, upsertQueue);
+    persistUserQueueDurabilityState();
     notifyPendingChange();
 
     const delay = navigator.onLine ? 300 : getRetryDelay();
 
     upsertTimer = setTimeout(async () => {
+      if (_userUploadInProgress) {
+        upsertTimer = null;
+        return;
+      }
+
       const batch = upsertQueue.splice(0, upsertQueue.length);
       upsertTimer = null;
-      if (!client || !user || !batch.length) {
-        savePendingQueue(PENDING_QUEUE_KEY, upsertQueue);
+      if (!batch.length) {
+        persistUserQueueDurabilityState();
         notifyPendingChange();
         return;
       }
-      // Не пытаемся отправить если нет сети — данные уже в localStorage
-      if (!navigator.onLine) {
-        // Вернуть в очередь для повторной отправки когда сеть появится
-        upsertQueue.push(...batch);
-        incrementRetry();
-        savePendingQueue(PENDING_QUEUE_KEY, upsertQueue);
-        notifyPendingChange();
-        // Запланировать повторную попытку с exponential backoff
-        schedulePush();
-        return;
-      }
 
-      // Удаляем дубликаты по комбинации user_id+k, оставляя последние значения
-      const uniqueBatch = [];
-      const seenKeys = new Set();
-      for (let i = batch.length - 1; i >= 0; i--) {
-        const item = batch[i];
-        const key = `${item.user_id}:${item.k}`;
-        if (!seenKeys.has(key)) {
-          seenKeys.add(key);
-          uniqueBatch.unshift(item);
-        }
-      }
-
-      try {
-        // YandexAPI для curator mode upsert
-        const { error } = await YandexAPI.from('kv_store').upsert(uniqueBatch, { onConflict: 'user_id,k' });
-        if (error) {
-          // При ошибке — вернуть в очередь
-          upsertQueue.push(...uniqueBatch);
-          incrementRetry();
-          savePendingQueue(PENDING_QUEUE_KEY, upsertQueue);
-          notifyPendingChange();
-          if (isAuthError(error)) {
-            handleAuthFailure(error);
-            return;
-          }
-          notifySyncError(error, Math.min(5, Math.ceil(getRetryDelay() / 1000)));
-          err('bulk upsert', error);
-          schedulePush();
-          return;
-        }
-        // Успех — сбрасываем retry счётчик
-        resetRetry();
-        savePendingQueue(PENDING_QUEUE_KEY, upsertQueue);
-        notifyPendingChange();
-      } catch (e) {
-        // При исключении — вернуть в очередь
-        upsertQueue.push(...uniqueBatch);
-        incrementRetry();
-        savePendingQueue(PENDING_QUEUE_KEY, upsertQueue);
-        notifyPendingChange();
-        if (isAuthError(e)) {
-          handleAuthFailure(e);
-          return;
-        }
-        notifySyncError(e, Math.min(5, Math.ceil(getRetryDelay() / 1000)));
-        err('bulk upsert exception', e);
-        schedulePush();
-      }
-
-      // Прогресс и завершение
-      syncProgressDone += hydratedBatch.length;
-      if (syncProgressTotal < syncProgressDone) {
-        syncProgressTotal = syncProgressDone;
-      }
-      notifySyncProgress(syncProgressTotal, syncProgressDone);
-      notifySyncCompletedIfDrained();
+      setUserInFlightBatch(batch);
+      await doUserUpload(batch);
     }, delay);
   }
 
@@ -27747,23 +28080,40 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
   // 🔐 Beforeunload: предупреждение если есть несохранённые данные
   if (typeof global.addEventListener === 'function') {
     global.addEventListener('beforeunload', (e) => {
-      const activeClientId = global.HEYS?.currentClientId || cloud.getCurrentClientId?.();
-      if (global.HEYS?._isLoggingOut || !activeClientId) {
+      if (global.HEYS?._isLoggingOut) {
         return;
       }
-      if (clientUpsertQueue && clientUpsertQueue.length > 0) {
-        logCritical(`⚠️ [BEFOREUNLOAD] ${clientUpsertQueue.length} unsaved items in queue!`);
-        // Сохраняем в localStorage (персистентность уже должна быть, но на всякий случай)
-        savePendingQueue(PENDING_CLIENT_QUEUE_KEY, clientUpsertQueue);
-        // Показываем предупреждение браузера (только если есть критические данные)
-        const hasCriticalData = clientUpsertQueue.some(item =>
-          item.k?.includes('products') || item.k?.includes('dayv2_')
-        );
-        if (hasCriticalData) {
-          e.preventDefault();
-          e.returnValue = 'У вас есть несохранённые данные. Покинуть страницу?';
-          return e.returnValue;
-        }
+
+      const snapshot = getPendingQueuesSnapshot();
+      if (snapshot.totalCount === 0 && !snapshot.uploadInProgress) {
+        return;
+      }
+
+      const pendingItems = [];
+      if (Array.isArray(clientUpsertQueue)) pendingItems.push(...clientUpsertQueue);
+      if (Array.isArray(clientUpsertInFlightQueue)) pendingItems.push(...clientUpsertInFlightQueue);
+      if (!snapshot.isClientOnlyMode) {
+        if (Array.isArray(upsertQueue)) pendingItems.push(...upsertQueue);
+        if (Array.isArray(upsertInFlightQueue)) pendingItems.push(...upsertInFlightQueue);
+      }
+
+      if ((clientUpsertQueue && clientUpsertQueue.length > 0) || (clientUpsertInFlightQueue && clientUpsertInFlightQueue.length > 0)) {
+        logCritical(`⚠️ [BEFOREUNLOAD] ${clientUpsertQueue.length + clientUpsertInFlightQueue.length} unsaved client item(s)!`);
+        persistClientQueueDurabilityState();
+      }
+
+      if (!snapshot.isClientOnlyMode && ((upsertQueue && upsertQueue.length > 0) || (upsertInFlightQueue && upsertInFlightQueue.length > 0))) {
+        logCritical(`⚠️ [BEFOREUNLOAD] ${upsertQueue.length + upsertInFlightQueue.length} unsaved user item(s)!`);
+        persistUserQueueDurabilityState();
+      }
+
+      const hasCriticalData = pendingItems.some(item =>
+        item.k?.includes('products') || item.k?.includes('dayv2_')
+      );
+      if (hasCriticalData) {
+        e.preventDefault();
+        e.returnValue = 'У вас есть несохранённые данные. Покинуть страницу?';
+        return e.returnValue;
       }
     });
   }
@@ -31833,6 +32183,18 @@ NOVA: 1-4
   const HEYS = global.HEYS = global.HEYS || {};
   const React = global.React;
 
+  function isInteractiveSwipeTarget(target) {
+    const element = target && target.nodeType === 1
+      ? target
+      : target?.parentElement;
+
+    if (!element || typeof element.closest !== 'function') return false;
+
+    return !!element.closest(
+      'button, input, textarea, select, option, label, a, summary, [role="button"], [data-swipe-ignore="true"]'
+    );
+  }
+
   /**
    * SwipeableRow — обёртка для элементов с поддержкой swipe-to-delete
    * @param {Object} props
@@ -31865,6 +32227,7 @@ NOVA: 1-4
 
       const handleTouchStart = (e) => {
         if (isDeleting) return;
+        if (isInteractiveSwipeTarget(e.target)) return;
         const touch = e.touches[0];
         touchState.current = {
           startX: touch.clientX,

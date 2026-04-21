@@ -26,6 +26,50 @@
         return retryAttempt < maxRetryAttempts;
     }
 
+    function restorePersistentQueueState(params) {
+        const queue = Array.isArray(params?.queue) ? params.queue : [];
+        const inFlightQueue = Array.isArray(params?.inFlightQueue) ? params.inFlightQueue : [];
+        const compactQueue = typeof params?.compactQueue === 'function'
+            ? params.compactQueue
+            : (items) => items;
+
+        if (inFlightQueue.length === 0) {
+            return { queue: queue.slice(), restoredCount: 0 };
+        }
+
+        const restoredQueue = compactQueue([...inFlightQueue, ...queue]);
+        return {
+            queue: Array.isArray(restoredQueue) ? restoredQueue : [...inFlightQueue, ...queue],
+            restoredCount: inFlightQueue.length,
+        };
+    }
+
+    function requeueInFlightBatch(params) {
+        const queue = Array.isArray(params?.queue) ? params.queue : [];
+        const batch = Array.isArray(params?.batch) ? params.batch : [];
+        const compactQueue = typeof params?.compactQueue === 'function'
+            ? params.compactQueue
+            : (items) => items;
+
+        if (batch.length === 0) {
+            return queue.slice();
+        }
+
+        const mergedQueue = compactQueue([...batch, ...queue]);
+        return Array.isArray(mergedQueue) ? mergedQueue : [...batch, ...queue];
+    }
+
+    function getSyncStatusForKey(params) {
+        const key = String(params?.key || '');
+        if (!key) return 'synced';
+
+        const queue = Array.isArray(params?.queue) ? params.queue : [];
+        const inFlightQueue = Array.isArray(params?.inFlightQueue) ? params.inFlightQueue : [];
+        const hasKey = (items) => items.some((item) => item && item.k === key);
+
+        return (hasKey(queue) || hasKey(inFlightQueue)) ? 'pending' : 'synced';
+    }
+
     function enqueueClientSave(params) {
         const queue = params?.queue;
         if (!Array.isArray(queue) || !params?.item) {
@@ -161,6 +205,9 @@
     HEYS.syncQueueRuntimePure = {
         isCriticalSyncKey,
         shouldScheduleRetryAfterRpcError,
+        restorePersistentQueueState,
+        requeueInFlightBatch,
+        getSyncStatusForKey,
         enqueueClientSave,
         flushPendingQueueCore,
     };

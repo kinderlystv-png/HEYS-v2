@@ -5,6 +5,18 @@
   const HEYS = global.HEYS = global.HEYS || {};
   const React = global.React;
 
+  function isInteractiveSwipeTarget(target) {
+    const element = target && target.nodeType === 1
+      ? target
+      : target?.parentElement;
+
+    if (!element || typeof element.closest !== 'function') return false;
+
+    return !!element.closest(
+      'button, input, textarea, select, option, label, a, summary, [role="button"], [data-swipe-ignore="true"]'
+    );
+  }
+
   /**
    * SwipeableRow — обёртка для элементов с поддержкой swipe-to-delete
    * @param {Object} props
@@ -37,6 +49,7 @@
 
       const handleTouchStart = (e) => {
         if (isDeleting) return;
+        if (isInteractiveSwipeTarget(e.target)) return;
         const touch = e.touches[0];
         touchState.current = {
           startX: touch.clientX,

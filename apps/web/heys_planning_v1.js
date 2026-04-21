@@ -19,6 +19,38 @@
         { id: 'gantt', label: 'Гант', shortLabel: 'Гант', icon: '📊' },
         { id: 'context', label: 'Контекст', shortLabel: 'Конт.', icon: '🧠' },
     ];
+    const DEFAULT_HOME_SCREEN = 'calendar';
+
+    function resolvePlanningHomeScreen(candidate) {
+        return SUBNAV_ITEMS.some((item) => item.id === candidate) ? candidate : DEFAULT_HOME_SCREEN;
+    }
+
+    function getInitialPlanningHomeScreen(candidate) {
+        if (typeof candidate === 'string' && candidate.length > 0) {
+            return resolvePlanningHomeScreen(candidate);
+        }
+
+        const appPreferredScreen = typeof HEYS?.App?.getDefaultTasksSubtab === 'function'
+            ? HEYS.App.getDefaultTasksSubtab()
+            : null;
+
+        return resolvePlanningHomeScreen(appPreferredScreen);
+    }
+
+    function resolveNextPlanningHomeScreen(currentScreen, requestedScreen, hasUserNavigated) {
+        const safeCurrentScreen = resolvePlanningHomeScreen(currentScreen);
+        const safeRequestedScreen = resolvePlanningHomeScreen(requestedScreen);
+
+        if (hasUserNavigated) return safeCurrentScreen;
+
+        // Only auto-apply when still at the initial default fallback screen.
+        // This prevents jumps caused by profile-updated / client-changed events
+        // when the parent's defaultTasksSubtab changes while PlanningTab is
+        // already showing a real subtab (meaning the profile loaded correctly).
+        if (safeCurrentScreen !== DEFAULT_HOME_SCREEN) return safeCurrentScreen;
+
+        return safeRequestedScreen;
+    }
 
     function PlanningFallback() {
         return h('div', { className: 'planning-tab' },
@@ -47,12 +79,26 @@
         };
     }
 
-    function PlanningTab() {
-        const [activeScreen, setActiveScreen] = useState('calendar');
+    function PlanningTab(props = {}) {
+        const requestedHomeScreen = getInitialPlanningHomeScreen(props.defaultHomeScreen);
+        const [activeScreen, setActiveScreen] = useState(() => requestedHomeScreen);
         const [layoutMetrics, setLayoutMetrics] = useState({ mainTabsHeight: 0, subnavHeight: 0 });
         const runtime = resolvePlanningRuntime();
         const planState = runtime.usePlanningState ? runtime.usePlanningState() : null;
         const subnavRef = useRef(null);
+        const hasUserNavigatedRef = useRef(false);
+
+        useEffect(() => {
+            setActiveScreen((currentScreen) => {
+                const nextScreen = resolveNextPlanningHomeScreen(
+                    currentScreen,
+                    requestedHomeScreen,
+                    hasUserNavigatedRef.current,
+                );
+
+                return currentScreen === nextScreen ? currentScreen : nextScreen;
+            });
+        }, [requestedHomeScreen]);
 
         useEffect(() => {
             if (typeof document === 'undefined' || !document.body) return undefined;
@@ -146,7 +192,10 @@
                     'aria-label': item.label,
                     'data-screen': item.id,
                     className: 'planning-subnav__item' + (activeScreen === item.id ? ' active' : ''),
-                    onClick: () => setActiveScreen(item.id),
+                    onClick: () => {
+                        hasUserNavigatedRef.current = true;
+                        setActiveScreen(item.id);
+                    },
                 },
                     h('span', { className: 'planning-subnav__icon', 'aria-hidden': 'true' }, item.icon),
                     h('span', {
@@ -177,6 +226,11 @@
     }
 
     HEYS.PlanningTab = PlanningTab;
+    Planning.SUBNAV_ITEMS = SUBNAV_ITEMS.slice();
+    Planning.DEFAULT_HOME_SCREEN = DEFAULT_HOME_SCREEN;
+    Planning.resolveHomeScreen = resolvePlanningHomeScreen;
+    Planning.getInitialHomeScreen = getInitialPlanningHomeScreen;
+    Planning.resolveNextHomeScreen = resolveNextPlanningHomeScreen;
     HEYS.PlanningData = Planning.Store || {};
     console.info('[HEYS.planning] ✅ PlanningTab coordinator registered');
 })();

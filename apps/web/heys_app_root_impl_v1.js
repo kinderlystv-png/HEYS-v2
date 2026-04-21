@@ -75,11 +75,12 @@
                 setTab: () => { },
                 setTabImmediate: () => { },
                 defaultTab: 'diary',
+                defaultTasksSubtab: 'calendar',
                 setDefaultTab: () => { },
             });
             const useTabState = getStableHook(AppTabState.useTabState, fallbackUseTabState);
             const tabState = useTabState({ React });
-            const { tab, setTab, setTabImmediate, defaultTab, setDefaultTab } = tabState;
+            const { tab, setTab, setTabImmediate, defaultTab, defaultTasksSubtab, setDefaultTab } = tabState;
 
             const { theme, resolvedTheme, cycleTheme } = useThemePreference();
             React.useEffect(() => {
@@ -907,6 +908,7 @@
                     GamificationBar: params.GamificationBar,
                     widgetsEditMode: params.widgetsEditMode,
                     defaultTab: params.defaultTab,
+                    defaultTasksSubtab: params.defaultTasksSubtab,
                     setDefaultTab: params.setDefaultTab,
                     slideDirection: params.slideDirection,
                     edgeBounce: params.edgeBounce,
@@ -955,6 +957,7 @@
                 GamificationBar,
                 widgetsEditMode,
                 defaultTab,
+                defaultTasksSubtab,
                 setDefaultTab,
                 slideDirection,
                 edgeBounce,
@@ -969,7 +972,7 @@
                 selectedDate, datePickerActiveDays, products, cachedProfile,
                 currentClientName, clients, showClientDropdown, isRpcMode,
                 cloudUser, cloudStatus, syncProgress, pendingCount, pendingDetails, pendingText, pendingActionItems, showPendingSyncBanner, retryCountdown,
-                widgetsEditMode, defaultTab, slideDirection, edgeBounce, syncVer]);
+                widgetsEditMode, defaultTab, defaultTasksSubtab, slideDirection, edgeBounce, syncVer]);
 
             const buildOverlaysProps = AppOverlaysProps.buildOverlaysProps
                 || ((params) => ({

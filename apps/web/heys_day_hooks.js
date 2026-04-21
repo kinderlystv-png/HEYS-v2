@@ -341,6 +341,32 @@
       }
     }, [getKey, lsSetFn, now, readExisting, stripPhotoData, isMeaningfulDayData]);
 
+    const getFreshestPersistedDay = React.useCallback((dateStr) => {
+      if (!dateStr) return null;
+
+      const key = getKey(dateStr);
+      const existing = readExisting(key);
+      const runtimeDay = typeof global.HEYS?.Day?.getDay === 'function'
+        ? global.HEYS.Day.getDay()
+        : null;
+
+      let freshest = null;
+
+      if (existing && typeof existing === 'object' && existing.date === dateStr) {
+        freshest = existing;
+      }
+
+      if (runtimeDay && typeof runtimeDay === 'object' && runtimeDay.date === dateStr) {
+        const runtimeUpdatedAt = runtimeDay.updatedAt || 0;
+        const freshestUpdatedAt = freshest?.updatedAt || 0;
+        if (runtimeUpdatedAt > freshestUpdatedAt) {
+          freshest = { ...runtimeDay };
+        }
+      }
+
+      return freshest;
+    }, [getKey, readExisting]);
+
     const flush = React.useCallback((options = {}) => {
       const force = options && options.force === true;
       if (!force && (disabled || isUnmountedRef.current)) return;
@@ -353,9 +379,34 @@
       }
 
       const daySnap = JSON.stringify(stripMeta(day));
-      if (prevDaySnapRef.current === daySnap) return;
-
       const updatedAt = day.updatedAt != null ? day.updatedAt : now();
+      const freshestPersistedDay = getFreshestPersistedDay(day.date);
+      const freshestUpdatedAt = freshestPersistedDay?.updatedAt || 0;
+      const freshestDaySnap = freshestPersistedDay
+        ? JSON.stringify(stripMeta(freshestPersistedDay))
+        : null;
+
+      const shouldPreserveFreshestPersistedDay = !!(
+        freshestPersistedDay &&
+        freshestPersistedDay.date === day.date &&
+        (
+          freshestUpdatedAt > updatedAt ||
+          (
+            freshestUpdatedAt === updatedAt &&
+            freshestDaySnap &&
+            freshestDaySnap !== daySnap &&
+            isMeaningfulDayData(freshestPersistedDay)
+          )
+        )
+      );
+
+      if (shouldPreserveFreshestPersistedDay) {
+        prevStoredSnapRef.current = JSON.stringify(freshestPersistedDay);
+        prevDaySnapRef.current = freshestDaySnap;
+        return;
+      }
+
+      if (prevDaySnapRef.current === daySnap) return;
 
       // Просто сохраняем все приёмы под текущую дату
       // Ночная логика теперь в todayISO() — до 3:00 "сегодня" = вчера
@@ -377,7 +428,7 @@
       saveToDate(day.date, payload);
       prevStoredSnapRef.current = JSON.stringify(payload);
       prevDaySnapRef.current = daySnap;
-    }, [day, now, saveToDate, stripMeta, disabled, getKey, readExisting, isMeaningfulDayData]);
+    }, [day, now, saveToDate, stripMeta, disabled, getKey, readExisting, isMeaningfulDayData, getFreshestPersistedDay]);
 
     React.useEffect(() => {
       // 🔒 ЗАЩИТА: Не инициализируем prevDaySnapRef до гидратации!

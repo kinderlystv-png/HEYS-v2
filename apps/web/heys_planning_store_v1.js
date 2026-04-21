@@ -26,9 +26,10 @@
     ];
 
     const PRIORITY_CONFIG = {
-        p1: { label: 'P1', color: '#ef4444', bg: 'rgba(239,68,68,0.12)' },
-        p2: { label: 'P2', color: '#f59e0b', bg: 'rgba(245,158,11,0.12)' },
-        p3: { label: 'P3', color: '#64748b', bg: 'rgba(100,116,139,0.14)' },
+        'p!': { label: 'P!', color: '#ea580c', bg: 'rgba(249,115,22,0.16)', border: 'rgba(249,115,22,0.28)' },
+        p1: { label: 'P1', color: '#ef4444', bg: 'rgba(239,68,68,0.12)', border: 'rgba(239,68,68,0.22)' },
+        p2: { label: 'P2', color: '#f59e0b', bg: 'rgba(245,158,11,0.12)', border: 'rgba(245,158,11,0.24)' },
+        p3: { label: 'P3', color: '#64748b', bg: 'rgba(100,116,139,0.14)', border: 'rgba(100,116,139,0.24)' },
     };
 
     const STATUS_CONFIG = {

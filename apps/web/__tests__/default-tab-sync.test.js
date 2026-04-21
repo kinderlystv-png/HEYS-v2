@@ -113,7 +113,7 @@ describe('HEYS default tab sync regression', () => {
 
     beforeEach(() => {
         fakeReact = createFakeReact();
-        profileStore = createProfileUtils({ defaultTab: 'tasks' });
+        profileStore = createProfileUtils({ defaultTab: 'tasks', defaultTasksSubtab: 'calendar' });
 
         window.DEV = {};
         window.HEYS = {
@@ -144,6 +144,24 @@ describe('HEYS default tab sync regression', () => {
         expect(tabState.defaultTab).toBe('diary');
     });
 
+    it('stores defaultTasksSubtab when tasks are chosen as home with a nested target', () => {
+        let tabState = mountTabState(fakeReact);
+
+        tabState.setDefaultTab('tasks', { tasksSubtab: 'gantt' });
+        tabState = renderTabState(fakeReact);
+
+        expect(profileStore.utils.lsSet).toHaveBeenCalledWith('heys_profile', expect.objectContaining({
+            defaultTab: 'tasks',
+            defaultTasksSubtab: 'gantt',
+        }));
+        expect(window.HEYS._pendingProfileSyncFlags?.defaultTab).toEqual(expect.objectContaining({
+            requestedTab: 'tasks',
+            requestedTasksSubtab: 'gantt',
+        }));
+        expect(tabState.defaultTasksSubtab).toBe('gantt');
+        expect(window.HEYS.App.getDefaultTasksSubtab()).toBe('gantt');
+    });
+
     it('follows synced defaultTab when current tab still matches stale startup tab', () => {
         let tabState = mountTabState(fakeReact);
 
@@ -163,6 +181,28 @@ describe('HEYS default tab sync regression', () => {
 
         expect(tabState.defaultTab).toBe('diary');
         expect(tabState.tab).toBe('diary');
+    });
+
+    it('re-reads defaultTasksSubtab from profile updates', () => {
+        let tabState = mountTabState(fakeReact);
+
+        expect(tabState.defaultTab).toBe('tasks');
+        expect(tabState.defaultTasksSubtab).toBe('calendar');
+
+        profileStore.setProfile({ defaultTab: 'tasks', defaultTasksSubtab: 'context' });
+        window.dispatchEvent(new CustomEvent('heys:profile-updated', {
+            detail: {
+                field: 'defaultTasksSubtab',
+                fields: ['defaultTasksSubtab'],
+                source: 'foreground-hot-sync',
+            },
+        }));
+
+        tabState = renderTabState(fakeReact);
+
+        expect(tabState.defaultTab).toBe('tasks');
+        expect(tabState.defaultTasksSubtab).toBe('context');
+        expect(tabState.tab).toBe('tasks');
     });
 
     it('does not override manually switched tab on synced defaultTab update', () => {

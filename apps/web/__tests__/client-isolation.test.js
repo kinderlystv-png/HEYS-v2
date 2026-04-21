@@ -101,6 +101,19 @@ function detectPostSwitchAnomalies(newClientId, oldClientId, mockLs) {
     return anomalies.length > 0 ? anomalies : null;
 }
 
+function normalizeKeyForSupabase(key, clientId) {
+    if (!key || typeof key !== 'string' || !clientId) return key;
+    const prefix = `heys_${clientId}_`;
+    if (!key.startsWith(prefix)) return key;
+    return `heys_${key.slice(prefix.length)}`;
+}
+
+function getSyncStatusForKey({ key, queue = [], inFlightQueue = [] }) {
+    if (!key) return 'synced';
+    const hasKey = (items) => items.some((item) => item && item.k === key);
+    return (hasKey(queue) || hasKey(inFlightQueue)) ? 'pending' : 'synced';
+}
+
 // ═══════════════════════════════════════════════════════════════════
 // Test constants
 // ═══════════════════════════════════════════════════════════════════
@@ -309,6 +322,33 @@ describe('Client Isolation — Sync Write Path Scenarios', () => {
         expect(_syncWriteIsolationViolations).toBe(0); // first filter caught it
     });
 
+    test('Phase A: skips own key when a fresher local mutation is pending', () => {
+        const phaseAData = [
+            { k: `heys_${CLIENT_A}_dayv2_2026-03-28`, v: { waterMl: 1600 } },
+            { k: `heys_${CLIENT_A}_profile`, v: { weight: 70 } },
+        ];
+        const clientUpsertQueue = [
+            { k: 'heys_dayv2_2026-03-28', v: { waterMl: 1700 } },
+        ];
+
+        const writtenKeys = [];
+        phaseAData.forEach(row => {
+            if (row.v == null) return;
+            const pKey = row.k;
+            const normalizedSyncKey = normalizeKeyForSupabase(row.k, CLIENT_A);
+            if (isForeignClientScopedKey(pKey, CLIENT_A)) return;
+            if (!assertSyncWriteOwnership(pKey, CLIENT_A, 'phase-a')) return;
+            if (normalizedSyncKey && getSyncStatusForKey({ key: normalizedSyncKey, queue: clientUpsertQueue }) === 'pending') {
+                return;
+            }
+            mockLs.setItem(pKey, JSON.stringify(row.v));
+            writtenKeys.push(pKey);
+        });
+
+        expect(writtenKeys).toEqual([`heys_${CLIENT_A}_profile`]);
+        expect(mockLs.getItem(`heys_${CLIENT_A}_dayv2_2026-03-28`)).toBeNull();
+    });
+
     /**
      * Scenario: If isForeignClientScopedKey somehow misses a key (e.g. scoping bug),
      * assertSyncWriteOwnership must still catch it.
@@ -344,6 +384,32 @@ describe('Client Isolation — Sync Write Path Scenarios', () => {
 
         expect(keysWritten).toBe(2);
         expect(_syncWriteIsolationViolations).toBe(0);
+    });
+
+    test('Delta Light: skips remote overwrite for pending local day mutation', () => {
+        const deltaData = [
+            { k: `heys_${CLIENT_A}_dayv2_2026-03-28`, v: { waterMl: 1600 } },
+            { k: `heys_${CLIENT_A}_products`, v: [{ name: 'Apple' }] },
+        ];
+        const clientUpsertQueue = [
+            { k: 'heys_dayv2_2026-03-28', v: { waterMl: 1700 } },
+        ];
+
+        const writtenKeys = [];
+        deltaData.forEach(row => {
+            const key = row.k;
+            const normalizedSyncKey = normalizeKeyForSupabase(row.k, CLIENT_A);
+            if (isForeignClientScopedKey(key, CLIENT_A)) return;
+            if (!assertSyncWriteOwnership(key, CLIENT_A, 'delta-light')) return;
+            if (normalizedSyncKey && getSyncStatusForKey({ key: normalizedSyncKey, queue: clientUpsertQueue }) === 'pending') {
+                return;
+            }
+            mockLs.setItem(key, JSON.stringify(row.v));
+            writtenKeys.push(key);
+        });
+
+        expect(writtenKeys).toEqual([`heys_${CLIENT_A}_products`]);
+        expect(mockLs.getItem(`heys_${CLIENT_A}_dayv2_2026-03-28`)).toBeNull();
     });
 
     /**

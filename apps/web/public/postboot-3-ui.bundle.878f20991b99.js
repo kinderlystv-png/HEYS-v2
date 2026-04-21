@@ -42107,9 +42107,10 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     ];
 
     const PRIORITY_CONFIG = {
-        p1: { label: 'P1', color: '#ef4444', bg: 'rgba(239,68,68,0.12)' },
-        p2: { label: 'P2', color: '#f59e0b', bg: 'rgba(245,158,11,0.12)' },
-        p3: { label: 'P3', color: '#64748b', bg: 'rgba(100,116,139,0.14)' },
+        'p!': { label: 'P!', color: '#ea580c', bg: 'rgba(249,115,22,0.16)', border: 'rgba(249,115,22,0.28)' },
+        p1: { label: 'P1', color: '#ef4444', bg: 'rgba(239,68,68,0.12)', border: 'rgba(239,68,68,0.22)' },
+        p2: { label: 'P2', color: '#f59e0b', bg: 'rgba(245,158,11,0.12)', border: 'rgba(245,158,11,0.24)' },
+        p3: { label: 'P3', color: '#64748b', bg: 'rgba(100,116,139,0.14)', border: 'rgba(100,116,139,0.24)' },
     };
 
     const STATUS_CONFIG = {
@@ -44194,9 +44195,12 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         return h('button', {
             className: 'planning-status-toggle' + (isTerminal ? ' is-terminal' : ''),
             type: 'button',
+            'data-swipe-ignore': 'true',
             'aria-label': label,
             title: label,
             disabled: isTerminal,
+            onPointerDown: (event) => event.stopPropagation(),
+            onTouchStart: (event) => event.stopPropagation(),
             onClick: (event) => {
                 event.stopPropagation();
                 if (isTerminal) return;
@@ -44363,6 +44367,185 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         return badges;
     }
 
+    function getDueDatePreset(isoDate, todayIso, tomorrowIso) {
+        if (!isoDate) return '';
+        if (isoDate === todayIso) return 'today';
+        if (isoDate === tomorrowIso) return 'tomorrow';
+        return 'custom';
+    }
+
+    function TaskPriorityButtons({ value, onChange }) {
+        return h('div', { className: 'planning-quick-add__actions planning-quick-add__actions--priority-row' },
+            Object.keys(PRIORITY_CONFIG).map((key) => {
+                const config = PRIORITY_CONFIG[key];
+                return h('button', {
+                    key,
+                    type: 'button',
+                    className: 'planning-priority-btn' + (value === key ? ' active' : ''),
+                    style: value === key
+                        ? { color: config.color, background: config.bg, borderColor: config.border || config.color }
+                        : undefined,
+                    onClick: () => onChange(key),
+                }, config.label);
+            }),
+        );
+    }
+
+    function TaskStatusButtons({ value, onChange }) {
+        return h('div', {
+            className: 'planning-task-editor__status-grid',
+            role: 'group',
+            'aria-label': 'Статус задачи',
+        },
+            Object.keys(STATUS_CONFIG).map((key) => h('button', {
+                key,
+                type: 'button',
+                className: 'planning-task-editor__status-btn' + (value === key ? ' active' : ''),
+                'aria-pressed': value === key ? 'true' : 'false',
+                onClick: () => onChange(key),
+            }, STATUS_CONFIG[key].label)),
+        );
+    }
+
+    function TaskDueDatePicker({
+        value,
+        onChange,
+        todayIso,
+        tomorrowIso,
+        inputRef,
+        buttonRef,
+        onCalendarClick,
+        isCalendarOpen,
+        ariaLabel,
+    }) {
+        const safeValue = value || '';
+        const dueDateLabel = formatIsoDateShort(safeValue, todayIso, tomorrowIso);
+        const duePreset = getDueDatePreset(safeValue, todayIso, tomorrowIso);
+        const isCalendarActive = duePreset === 'custom' || !!isCalendarOpen;
+
+        return h('div', {
+            className: 'planning-date-picker',
+            role: 'group',
+            'aria-label': ariaLabel || 'Дедлайн задачи',
+        },
+            h('input', {
+                ref: inputRef,
+                className: 'planning-date-picker__native-input',
+                type: 'date',
+                value: safeValue,
+                tabIndex: -1,
+                'aria-hidden': 'true',
+                onChange: (event) => onChange(event.target.value),
+            }),
+            h('button', {
+                type: 'button',
+                className: 'planning-date-picker__btn' + (duePreset === 'today' ? ' active' : ''),
+                'aria-pressed': duePreset === 'today' ? 'true' : 'false',
+                onClick: () => onChange(safeValue === todayIso ? '' : todayIso),
+            }, 'Сегодня'),
+            h('button', {
+                type: 'button',
+                className: 'planning-date-picker__btn' + (duePreset === 'tomorrow' ? ' active' : ''),
+                'aria-pressed': duePreset === 'tomorrow' ? 'true' : 'false',
+                onClick: () => onChange(safeValue === tomorrowIso ? '' : tomorrowIso),
+            }, 'Завтра'),
+            h('button', {
+                ref: buttonRef,
+                type: 'button',
+                className: 'planning-date-picker__btn planning-date-picker__btn--calendar'
+                    + (isCalendarActive ? ' active' : '')
+                    + (isCalendarOpen ? ' is-open' : ''),
+                title: dueDateLabel ? ('Открыть календарь, выбран дедлайн ' + dueDateLabel) : 'Открыть календарь',
+                'aria-label': dueDateLabel ? ('Открыть календарь, выбран дедлайн ' + dueDateLabel) : 'Открыть календарь',
+                'aria-pressed': isCalendarActive ? 'true' : 'false',
+                onClick: onCalendarClick,
+            }, '📅'),
+        );
+    }
+
+    function TaskComposerFields({
+        title,
+        onTitleChange,
+        titlePlaceholder,
+        titleInputRef,
+        onTitleKeyDown,
+        actionButtons,
+        primaryField,
+        priorityValue,
+        onPriorityChange,
+        dueDate,
+        onDueDateChange,
+        todayIso,
+        tomorrowIso,
+        dueDateInputRef,
+        dueCalendarButtonRef,
+        onDueCalendarClick,
+        isDueCalendarOpen,
+        dueAriaLabel,
+        durationValue,
+        onDurationClick,
+        durationPlaceholder,
+        durationMinimal,
+    }) {
+        return h('div', { className: 'planning-quick-add' },
+            h('div', { className: 'planning-quick-add__title-row' },
+                h('input', {
+                    ref: titleInputRef,
+                    className: 'planning-quick-input planning-quick-input--main',
+                    placeholder: titlePlaceholder || 'Новая задача...',
+                    value: title,
+                    onChange: (event) => onTitleChange(event.target.value),
+                    onKeyDown: onTitleKeyDown,
+                }),
+                actionButtons || null,
+            ),
+            h('div', { className: 'planning-quick-add__primary-row' },
+                primaryField,
+                h(TaskPriorityButtons, {
+                    value: priorityValue,
+                    onChange: onPriorityChange,
+                }),
+            ),
+            h('div', { className: 'planning-quick-add__secondary-row' },
+                h(TaskDueDatePicker, {
+                    value: dueDate,
+                    onChange: onDueDateChange,
+                    todayIso,
+                    tomorrowIso,
+                    inputRef: dueDateInputRef,
+                    buttonRef: dueCalendarButtonRef,
+                    onCalendarClick: onDueCalendarClick,
+                    isCalendarOpen: isDueCalendarOpen,
+                    ariaLabel: dueAriaLabel,
+                }),
+                h(DurationFieldButton, {
+                    value: durationValue,
+                    placeholder: durationPlaceholder || 'мин/дн',
+                    minimal: durationMinimal !== false,
+                    onClick: onDurationClick,
+                }),
+            ),
+        );
+    }
+
+    function TaskComposerCard({
+        cardTitle,
+        cardHint,
+        headerActions,
+        ...fieldsProps
+    }) {
+        return h('section', { className: 'planning-quick-add-card' },
+            (cardTitle || cardHint || headerActions) && h('div', { className: 'planning-quick-add-card__header' },
+                h('div', { className: 'planning-quick-add-card__copy' },
+                    cardTitle && h('span', { className: 'planning-quick-add-card__title' }, cardTitle),
+                    cardHint && h('span', { className: 'planning-quick-add-card__hint' }, cardHint),
+                ),
+                headerActions && h('div', { className: 'planning-tasks-toolbar' }, headerActions),
+            ),
+            h(TaskComposerFields, fieldsProps),
+        );
+    }
+
     function TaskRow(props) {
         const {
             task,
@@ -44381,8 +44564,13 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         const [editing, setEditing] = useState(false);
         const [draftTitle, setDraftTitle] = useState(task.title);
         const isDone = task.status === 'done' || task.status === 'cancelled';
+        const isUrgent = task.priority === 'p!';
         const metaBadges = buildTaskMetaBadges(task);
         const trailingActions = React.Children.toArray(extraActions);
+
+        const stopSwipeCapture = (event) => {
+            event.stopPropagation();
+        };
 
         const commitTitle = () => {
             const nextTitle = String(draftTitle || '').trim();
@@ -44394,7 +44582,9 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         };
 
         const rowContent = h('div', {
-            className: 'planning-task-row' + (isDone ? ' planning-task-row--done' : ''),
+            className: 'planning-task-row'
+                + (isDone ? ' planning-task-row--done' : '')
+                + (isUrgent ? ' planning-task-row--priority-urgent' : ''),
             draggable: !isMobile,
             onDragStart: (event) => {
                 event.dataTransfer.effectAllowed = 'move';
@@ -44428,10 +44618,13 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                 editing
                     ? h('input', {
                         className: 'planning-inline-input',
+                        'data-swipe-ignore': 'true',
                         value: draftTitle,
                         autoFocus: true,
                         onChange: (event) => setDraftTitle(event.target.value),
                         onBlur: commitTitle,
+                        onPointerDown: stopSwipeCapture,
+                        onTouchStart: stopSwipeCapture,
                         onKeyDown: (event) => {
                             if (event.key === 'Enter') commitTitle();
                             if (event.key === 'Escape') {
@@ -44441,35 +44634,74 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                         },
                         onClick: (event) => event.stopPropagation(),
                     })
-                    : h('button', {
-                        type: 'button',
-                        className: 'planning-task-row__title-trigger',
-                        title: 'Изменить название',
-                        onClick: (event) => {
-                            event.stopPropagation();
-                            setEditing(true);
+                    : h('div', { className: 'planning-task-row__main-line' },
+                        h('button', {
+                            type: 'button',
+                            className: 'planning-task-row__title-trigger',
+                            'data-swipe-ignore': 'true',
+                            title: 'Изменить название',
+                            onPointerDown: stopSwipeCapture,
+                            onTouchStart: stopSwipeCapture,
+                            onClick: (event) => {
+                                event.stopPropagation();
+                                setEditing(true);
+                            },
                         },
-                    },
-                        h('span', { className: 'planning-task-row__title' }, task.title),
+                            h('span', { className: 'planning-task-row__title' }, task.title),
+                        ),
+                        metaBadges.length > 0 && h('div', { className: 'planning-task-row__meta-list' },
+                            metaBadges.map((badge) => h('span', {
+                                key: badge.key,
+                                className: 'planning-task-row__meta-chip planning-task-row__meta-chip--' + badge.tone,
+                            }, badge.label)),
+                        ),
                     ),
-                metaBadges.length > 0 && h('div', { className: 'planning-task-row__meta-list' },
-                    metaBadges.map((badge) => h('span', {
-                        key: badge.key,
-                        className: 'planning-task-row__meta-chip planning-task-row__meta-chip--' + badge.tone,
-                    }, badge.label)),
-                ),
             ),
-            h('div', { className: 'planning-task-row__actions' + (actionsClassName ? (' ' + actionsClassName) : '') },
+            h('div', {
+                className: 'planning-task-row__actions' + (actionsClassName ? (' ' + actionsClassName) : ''),
+                'data-swipe-ignore': 'true',
+                onPointerDown: stopSwipeCapture,
+                onTouchStart: stopSwipeCapture,
+            },
                 trailingActions,
                 h('button', {
                     type: 'button',
                     className: 'planning-icon-btn',
+                    'data-swipe-ignore': 'true',
                     title: 'Добавить подзадачу',
+                    onPointerDown: stopSwipeCapture,
+                    onTouchStart: stopSwipeCapture,
                     onClick: (event) => {
                         event.stopPropagation();
                         onStartQuickAddSubtask(task);
                     },
                 }, '↳'),
+                h('button', {
+                    type: 'button',
+                    className: 'planning-icon-btn',
+                    'data-swipe-ignore': 'true',
+                    title: 'Редактировать задачу',
+                    'aria-label': 'Редактировать задачу',
+                    onPointerDown: stopSwipeCapture,
+                    onTouchStart: stopSwipeCapture,
+                    onClick: (event) => {
+                        event.stopPropagation();
+                        onSelect(task.id);
+                    },
+                }, '✎'),
+                h('button', {
+                    type: 'button',
+                    className: 'planning-icon-btn planning-icon-btn--danger',
+                    'data-swipe-ignore': 'true',
+                    title: 'Удалить задачу',
+                    'aria-label': 'Удалить задачу',
+                    onPointerDown: stopSwipeCapture,
+                    onTouchStart: stopSwipeCapture,
+                    onClick: (event) => {
+                        event.stopPropagation();
+                        onDelete(task.id);
+                    },
+                }, '🗑'),
             ),
         );
 
@@ -44664,6 +44896,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             onStartQuickAddProject,
             onStartQuickAddSubtask,
             onUpdateProject,
+            onDeleteProject,
             onReorderTasks,
             forceShowCompleted,
         } = props;
@@ -44706,6 +44939,12 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         const handleQuickAddClick = (event) => {
             event.stopPropagation();
             onStartQuickAddProject(project.id === '__none__' ? '' : project.id);
+        };
+
+        const handleDeleteProjectClick = (event) => {
+            event.stopPropagation();
+            if (project.id === '__none__' || typeof onDeleteProject !== 'function') return;
+            onDeleteProject(project.id);
         };
 
         return h('section', {
@@ -44754,6 +44993,13 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                         title: project.id === '__none__' ? 'Добавить задачу без проекта' : ('Добавить задачу в «' + project.name + '»'),
                         onClick: handleQuickAddClick,
                     }, '+ Задача'),
+                    project.id !== '__none__' && h('button', {
+                        type: 'button',
+                        className: 'planning-project-group__action-btn planning-project-group__action-btn--danger',
+                        title: 'Удалить проект «' + project.name + '» и перенести его задачи в «Без проекта»',
+                        'aria-label': 'Удалить проект «' + project.name + '»',
+                        onClick: handleDeleteProjectClick,
+                    }, '🗑'),
                 ),
                 h('span', { className: 'planning-project-group__chevron' + (collapsed ? ' collapsed' : '') }, '▾'),
             ),
@@ -44805,9 +45051,14 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         const task = tasks.find((entry) => entry.id === taskId);
         const [savedMarker, setSavedMarker] = useState(0);
         const [showDurationPicker, setShowDurationPicker] = useState(false);
+        const [showDueCalendar, setShowDueCalendar] = useState(false);
+        const dueCalendarButtonRef = useRef(null);
+        const dueDateInputRef = useRef(null);
         if (!task) return null;
 
         const effectiveProjectId = getResolvedTaskProjectId(task.id, resolvedTaskProjectIds) || '';
+        const todayIso = dateStr();
+        const tomorrowIso = addDaysToIsoDate(todayIso, 1);
 
         const descendants = useMemo(() => collectDescendantIds(tasks, task.id), [tasks, task.id]);
         const linkedSlots = useMemo(
@@ -44849,9 +45100,29 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
         const handleField = (field, value) => setForm((current) => ({ ...current, [field]: value }));
 
+        const handleDueDateChange = (nextValue) => {
+            handleField('dueDate', nextValue || '');
+            setShowDueCalendar(false);
+        };
+
         const handleDependencies = (event) => {
             const values = Array.from(event.target.selectedOptions || []).map((option) => option.value);
             handleField('blockedByTaskIds', values);
+        };
+
+        const openDueDatePicker = () => {
+            if (ReactDOM) {
+                setShowDueCalendar((value) => !value);
+                return;
+            }
+            const inputNode = dueDateInputRef.current;
+            if (!inputNode) return;
+            if (typeof inputNode.showPicker === 'function') {
+                inputNode.showPicker();
+                return;
+            }
+            inputNode.focus();
+            inputNode.click();
         };
 
         const handleSave = () => {
@@ -44895,105 +45166,188 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
         const parentOptions = tasks.filter((entry) => entry.id !== task.id && !descendants.has(entry.id));
         const dependencyOptions = tasks.filter((entry) => entry.id !== task.id && !descendants.has(entry.id));
+        const parentTitle = form.parentTaskId
+            ? ((tasks.find((entry) => entry.id === form.parentTaskId) || {}).title || 'Родитель выбран')
+            : 'Верхний уровень';
+        const dependencyPreview = form.blockedByTaskIds
+            .map((dependencyId) => {
+                const dependencyTask = tasks.find((entry) => entry.id === dependencyId);
+                return dependencyTask ? dependencyTask.title : '';
+            })
+            .filter(Boolean);
+        const dependencySummary = dependencyPreview.length > 0
+            ? (dependencyPreview.slice(0, 2).join(', ') + (dependencyPreview.length > 2 ? (' +' + (dependencyPreview.length - 2)) : ''))
+            : 'Пока без зависимостей';
+        const baselineSummaryParts = [];
+        if (form.baselineStartDate) baselineSummaryParts.push('старт ' + formatIsoDateShort(form.baselineStartDate, todayIso, tomorrowIso));
+        if (form.baselineDueDate) baselineSummaryParts.push('дедлайн ' + formatIsoDateShort(form.baselineDueDate, todayIso, tomorrowIso));
+        if (Number(form.baselinePlannedMinutes) > 0) baselineSummaryParts.push(formatMinutesSummary(form.baselinePlannedMinutes));
+        const baselineSummary = baselineSummaryParts.length > 0 ? baselineSummaryParts.join(' · ') : 'Baseline не задан';
+        const linkedSlotsSummary = linkedSlots.length > 0
+            ? (linkedSlots.length + ' в календаре')
+            : 'Слот ещё не поставлен';
+        const projectField = h('div', { className: 'planning-quick-target-field' },
+            h('select', {
+                className: 'planning-quick-select planning-quick-select--target',
+                value: form.projectId,
+                onChange: (event) => handleField('projectId', event.target.value),
+            },
+                h('option', { value: '' }, '— без проекта —'),
+                projects.map((project) => h('option', { key: project.id, value: project.id }, project.name)),
+            ),
+        );
 
         return h('div', { className: 'planning-modal-overlay', onClick: onClose },
-            h('div', { className: 'planning-modal', onClick: (event) => event.stopPropagation() },
+            h('div', { className: 'planning-modal planning-modal--task-editor', onClick: (event) => event.stopPropagation() },
                 h('div', { className: 'planning-modal__header' },
                     h('span', null, 'Задача'),
                     h('button', { type: 'button', className: 'planning-modal__close', onClick: onClose }, '×'),
                 ),
                 h('div', { className: 'planning-modal__body' },
-                    h('input', {
-                        className: 'planning-modal__input',
-                        value: form.title,
-                        placeholder: 'Название задачи',
-                        onChange: (event) => handleField('title', event.target.value),
+                    h(TaskComposerCard, {
+                        cardTitle: 'Редактирование задачи',
+                        cardHint: 'Та же шапка, что и в создании: заголовок, проект, приоритет, дедлайн и оценка — без кнопок создания.',
+                        title: form.title,
+                        onTitleChange: (value) => handleField('title', value),
+                        titlePlaceholder: 'Название задачи...',
+                        primaryField: projectField,
+                        priorityValue: form.priority,
+                        onPriorityChange: (value) => handleField('priority', value),
+                        dueDate: form.dueDate,
+                        onDueDateChange: handleDueDateChange,
+                        todayIso,
+                        tomorrowIso,
+                        dueDateInputRef,
+                        dueCalendarButtonRef,
+                        onDueCalendarClick: openDueDatePicker,
+                        isDueCalendarOpen: showDueCalendar,
+                        dueAriaLabel: 'Дедлайн задачи в редакторе',
+                        durationValue: form.plannedMinutes,
+                        onDurationClick: () => setShowDurationPicker(true),
+                        durationPlaceholder: 'мин/дн',
+                        durationMinimal: true,
                     }),
-                    h('div', { className: 'planning-modal__grid' },
-                        h('div', { className: 'planning-modal__row' },
-                            h('label', null, 'Статус'),
-                            h('select', { value: form.status, onChange: (event) => handleField('status', event.target.value) },
-                                Object.keys(STATUS_CONFIG).map((key) => h('option', { key, value: key }, STATUS_CONFIG[key].label)),
+                    h('div', { className: 'planning-modal__card-grid planning-task-editor-grid' },
+                        h('section', { className: 'planning-modal__card planning-modal__card--compact' },
+                            h('div', { className: 'planning-modal__card-header' },
+                                h('span', { className: 'planning-modal__card-kicker' }, 'Состояние'),
+                                h('span', { className: 'planning-modal__card-title' }, 'Статус и контекст'),
+                                h('span', { className: 'planning-modal__card-hint' }, parentTitle),
                             ),
-                        ),
-                        h('div', { className: 'planning-modal__row' },
-                            h('label', null, 'Приоритет'),
-                            h('select', { value: form.priority, onChange: (event) => handleField('priority', event.target.value) },
-                                Object.keys(PRIORITY_CONFIG).map((key) => h('option', { key, value: key }, PRIORITY_CONFIG[key].label)),
-                            ),
-                        ),
-                    ),
-                    h('div', { className: 'planning-modal__grid' },
-                        h('div', { className: 'planning-modal__row' },
-                            h('label', null, 'Проект'),
-                            h('select', { value: form.projectId, onChange: (event) => handleField('projectId', event.target.value) },
-                                h('option', { value: '' }, '— без проекта —'),
-                                projects.map((project) => h('option', { key: project.id, value: project.id }, project.name)),
-                            ),
-                        ),
-                        h('div', { className: 'planning-modal__row' },
-                            h('label', null, 'Родитель'),
-                            h('select', { value: form.parentTaskId, onChange: (event) => handleField('parentTaskId', event.target.value) },
-                                h('option', { value: '' }, '— верхний уровень —'),
-                                parentOptions.map((entry) => h('option', { key: entry.id, value: entry.id }, entry.title)),
-                            ),
-                        ),
-                    ),
-                    h('div', { className: 'planning-modal__grid' },
-                        h('div', { className: 'planning-modal__row' },
-                            h('label', null, 'Старт'),
-                            h('input', { type: 'date', value: form.startDate, onChange: (event) => handleField('startDate', event.target.value) }),
-                        ),
-                        h('div', { className: 'planning-modal__row' },
-                            h('label', null, 'Дедлайн'),
-                            h('input', { type: 'date', value: form.dueDate, onChange: (event) => handleField('dueDate', event.target.value) }),
-                        ),
-                    ),
-                    h('div', { className: 'planning-modal__grid' },
-                        h('div', { className: 'planning-modal__row' },
-                            h('label', null, 'Длительность'),
-                            h(DurationFieldButton, {
-                                value: form.plannedMinutes,
-                                placeholder: 'Выбрать пресет',
-                                compact: true,
-                                onClick: () => setShowDurationPicker(true),
+                            h(TaskStatusButtons, {
+                                value: form.status,
+                                onChange: (value) => handleField('status', value),
                             }),
+                            h('div', { className: 'planning-task-editor__field-stack' },
+                                h('div', { className: 'planning-task-editor__field' },
+                                    h('label', { className: 'planning-task-editor__label' }, 'Родитель'),
+                                    h('select', {
+                                        className: 'planning-quick-select planning-task-editor__select',
+                                        value: form.parentTaskId,
+                                        onChange: (event) => handleField('parentTaskId', event.target.value),
+                                    },
+                                        h('option', { value: '' }, '— верхний уровень —'),
+                                        parentOptions.map((entry) => h('option', { key: entry.id, value: entry.id }, entry.title)),
+                                    ),
+                                ),
+                            ),
                         ),
-                        h('div', { className: 'planning-modal__row' },
-                            h('label', null, 'Зависимости'),
-                            h('select', {
-                                multiple: true,
-                                size: Math.min(4, Math.max(2, dependencyOptions.length || 2)),
-                                value: form.blockedByTaskIds,
-                                onChange: handleDependencies,
-                            },
-                                dependencyOptions.map((entry) => h('option', { key: entry.id, value: entry.id }, entry.title)),
+                        h('section', { className: 'planning-modal__card planning-modal__card--compact' },
+                            h('div', { className: 'planning-modal__card-header' },
+                                h('span', { className: 'planning-modal__card-kicker' }, 'План'),
+                                h('span', { className: 'planning-modal__card-title' }, 'Старт и календарь'),
+                                h('span', { className: 'planning-modal__card-hint' }, linkedSlotsSummary),
+                            ),
+                            h('div', { className: 'planning-task-editor__field-stack' },
+                                h('div', { className: 'planning-task-editor__field' },
+                                    h('label', { className: 'planning-task-editor__label' }, 'Старт'),
+                                    h('input', {
+                                        className: 'planning-quick-select planning-task-editor__input',
+                                        type: 'date',
+                                        value: form.startDate,
+                                        onChange: (event) => handleField('startDate', event.target.value),
+                                    }),
+                                ),
+                                linkedSlots.length > 0
+                                    ? h('div', { className: 'planning-linked-banner planning-task-editor__banner' },
+                                        h('span', null, '📅 ' + linkedSlotsSummary),
+                                        h('span', null, linkedSlots[0].date),
+                                    )
+                                    : h('p', { className: 'planning-task-editor__hint' }, 'Если нужен слот, снизу уже есть быстрая кнопка «Запланировать».')
                             ),
                         ),
                     ),
-                    h('div', { className: 'planning-modal__section' },
-                        h('div', { className: 'planning-modal__section-title' }, 'Baseline'),
-                        h('div', { className: 'planning-modal__grid' },
-                            h('div', { className: 'planning-modal__row' },
-                                h('label', null, 'Baseline start'),
-                                h('input', { type: 'date', value: form.baselineStartDate, onChange: (event) => handleField('baselineStartDate', event.target.value) }),
-                            ),
-                            h('div', { className: 'planning-modal__row' },
-                                h('label', null, 'Baseline due'),
-                                h('input', { type: 'date', value: form.baselineDueDate, onChange: (event) => handleField('baselineDueDate', event.target.value) }),
-                            ),
+                    h('details', { className: 'planning-modal__details planning-task-editor__details' },
+                        h('summary', { className: 'planning-modal__details-summary' },
+                            h('span', { className: 'planning-modal__details-title' }, 'Зависимости'),
+                            h('span', { className: 'planning-modal__details-hint' }, dependencySummary),
                         ),
-                        h('div', { className: 'planning-modal__row' },
-                            h('label', null, 'Baseline minutes'),
-                            h('input', { type: 'number', min: 0, value: form.baselinePlannedMinutes, onChange: (event) => handleField('baselinePlannedMinutes', event.target.value) }),
+                        h('div', { className: 'planning-modal__details-body planning-task-editor__details-body' },
+                            h('div', { className: 'planning-task-editor__field' },
+                                h('label', { className: 'planning-task-editor__label' }, 'Зависимости'),
+                                h('select', {
+                                    multiple: true,
+                                    size: Math.min(5, Math.max(3, dependencyOptions.length || 3)),
+                                    className: 'planning-task-editor__select planning-task-editor__select--multi',
+                                    value: form.blockedByTaskIds,
+                                    onChange: handleDependencies,
+                                },
+                                    dependencyOptions.map((entry) => h('option', { key: entry.id, value: entry.id }, entry.title)),
+                                ),
+                            ),
                         ),
                     ),
-                    linkedSlots.length > 0 && h('div', { className: 'planning-modal__section' },
-                        h('div', { className: 'planning-modal__section-title' }, 'Привязанные слоты'),
-                        h('div', { className: 'planning-linked-list' },
-                            linkedSlots.map((slot) => h('div', { key: slot.id, className: 'planning-linked-list__item' },
-                                h('span', null, slot.date + ' · ' + slot.startTime + '–' + slot.endTime),
-                            )),
+                    h('details', { className: 'planning-modal__details planning-task-editor__details' },
+                        h('summary', { className: 'planning-modal__details-summary' },
+                            h('span', { className: 'planning-modal__details-title' }, 'Baseline'),
+                            h('span', { className: 'planning-modal__details-hint' }, baselineSummary),
+                        ),
+                        h('div', { className: 'planning-modal__details-body planning-task-editor__details-body' },
+                            h('div', { className: 'planning-modal__grid' },
+                                h('div', { className: 'planning-task-editor__field' },
+                                    h('label', { className: 'planning-task-editor__label' }, 'Baseline start'),
+                                    h('input', {
+                                        className: 'planning-quick-select planning-task-editor__input',
+                                        type: 'date',
+                                        value: form.baselineStartDate,
+                                        onChange: (event) => handleField('baselineStartDate', event.target.value),
+                                    }),
+                                ),
+                                h('div', { className: 'planning-task-editor__field' },
+                                    h('label', { className: 'planning-task-editor__label' }, 'Baseline due'),
+                                    h('input', {
+                                        className: 'planning-quick-select planning-task-editor__input',
+                                        type: 'date',
+                                        value: form.baselineDueDate,
+                                        onChange: (event) => handleField('baselineDueDate', event.target.value),
+                                    }),
+                                ),
+                            ),
+                        ),
+                        h('div', { className: 'planning-modal__details-body planning-task-editor__details-body' },
+                            h('div', { className: 'planning-task-editor__field' },
+                                h('label', { className: 'planning-task-editor__label' }, 'Baseline minutes'),
+                                h('input', {
+                                    className: 'planning-quick-select planning-task-editor__input',
+                                    type: 'number',
+                                    min: 0,
+                                    value: form.baselinePlannedMinutes,
+                                    onChange: (event) => handleField('baselinePlannedMinutes', event.target.value),
+                                }),
+                            ),
+                        ),
+                    ),
+                    linkedSlots.length > 0 && h('details', { className: 'planning-modal__details planning-task-editor__details' },
+                        h('summary', { className: 'planning-modal__details-summary' },
+                            h('span', { className: 'planning-modal__details-title' }, 'Привязанные слоты'),
+                            h('span', { className: 'planning-modal__details-hint' }, linkedSlotsSummary),
+                        ),
+                        h('div', { className: 'planning-modal__details-body planning-task-editor__details-body' },
+                            h('div', { className: 'planning-linked-list' },
+                                linkedSlots.map((slot) => h('div', { key: slot.id, className: 'planning-linked-list__item' },
+                                    h('span', null, slot.date + ' · ' + slot.startTime + '–' + slot.endTime),
+                                )),
+                            ),
                         ),
                     ),
                 ),
@@ -45023,6 +45377,15 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                 onSelect: (minutes) => handleField('plannedMinutes', minutes ? String(minutes) : ''),
                 onClose: () => setShowDurationPicker(false),
             }),
+            showDueCalendar && h(PlanningLoadDatePopover, {
+                valueISO: form.dueDate,
+                tasks,
+                slots,
+                anchorRef: dueCalendarButtonRef,
+                onSelect: handleDueDateChange,
+                onClear: () => handleDueDateChange(''),
+                onClose: () => setShowDueCalendar(false),
+            }),
         );
     }
 
@@ -45035,6 +45398,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         const [newTaskProjectId, setNewTaskProjectId] = useState('');
         const [newProjectName, setNewProjectName] = useState('');
         const [pendingDeletedTaskIds, setPendingDeletedTaskIds] = useState(() => new Set());
+        const [pendingDeletedProjectIds, setPendingDeletedProjectIds] = useState(() => new Set());
         const [selectedPriority, setSelectedPriority] = useState('p2');
         const [quickDueDate, setQuickDueDate] = useState('');
         const [quickMinutes, setQuickMinutes] = useState('');
@@ -45052,11 +45416,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         const isMobile = !viewport.isDesktop;
         const todayIso = dateStr();
         const tomorrowIso = addDaysToIsoDate(todayIso, 1);
-        const quickDueDateLabel = formatIsoDateShort(quickDueDate, todayIso, tomorrowIso);
-        const quickDuePreset = quickDueDate === todayIso
-            ? 'today'
-            : (quickDueDate === tomorrowIso ? 'tomorrow' : (quickDueDate ? 'custom' : ''));
-        const activeProjects = state.projects.filter((project) => project.status !== 'archived');
+        const activeProjects = state.projects.filter((project) => project.status !== 'archived' && !pendingDeletedProjectIds.has(project.id));
         const activeFilterCount = useMemo(() => (
             [filterStatus, filterPriority, filterProject, filterDueBucket].filter((value) => value !== 'all').length
         ), [filterStatus, filterPriority, filterProject, filterDueBucket]);
@@ -45196,6 +45556,29 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             });
         };
 
+        const markPendingDeletedProjects = (projectIds) => {
+            const nextIds = Array.from(new Set((projectIds || []).filter(Boolean)));
+            if (nextIds.length === 0) return nextIds;
+
+            setPendingDeletedProjectIds((current) => {
+                const next = new Set(current);
+                nextIds.forEach((projectId) => next.add(projectId));
+                return next;
+            });
+            return nextIds;
+        };
+
+        const unmarkPendingDeletedProjects = (projectIds) => {
+            const nextIds = Array.from(new Set((projectIds || []).filter(Boolean)));
+            if (nextIds.length === 0) return;
+
+            setPendingDeletedProjectIds((current) => {
+                const next = new Set(current);
+                nextIds.forEach((projectId) => next.delete(projectId));
+                return next;
+            });
+        };
+
         const handleDeleteTask = (taskId) => {
             const task = state.tasks.find((entry) => entry.id === taskId);
             if (!task) return;
@@ -45227,6 +45610,42 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                         state.deleteTask(taskId);
                     } finally {
                         unmarkPendingDeletedTasks(hiddenTaskIds);
+                    }
+                },
+            });
+        };
+
+        const handleDeleteProject = (projectId) => {
+            if (!projectId || projectId === '__none__') return;
+
+            const project = state.projects.find((entry) => entry.id === projectId);
+            if (!project) return;
+
+            if (!HEYS.Undo?.push) {
+                state.deleteProject(projectId);
+                return;
+            }
+
+            const context = {
+                projectId,
+                projectName: String(project.name || '').trim() || 'Проект',
+                hiddenProjectIds: markPendingDeletedProjects([projectId]),
+            };
+
+            HEYS.Undo.push({
+                label: 'Проект «' + context.projectName + '» удалён',
+                subtitle: 'Если не отменить, задачи проекта перейдут в «Без проекта».',
+                icon: '🗑',
+                duration: 4600,
+                context,
+                onUndo: (undoContext) => {
+                    unmarkPendingDeletedProjects(undoContext?.hiddenProjectIds);
+                },
+                onExpire: () => {
+                    try {
+                        state.deleteProject(projectId);
+                    } finally {
+                        unmarkPendingDeletedProjects([projectId]);
                     }
                 },
             });
@@ -45305,140 +45724,84 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
         return h('div', { className: 'planning-tasks-screen' },
             h('div', { className: 'planning-tasks-header' },
-                h('section', { className: 'planning-quick-add-card', ref: quickAddCardRef },
-                    h('div', { className: 'planning-quick-add-card__header' },
-                        h('div', { className: 'planning-quick-add-card__copy' },
-                            h('span', { className: 'planning-quick-add-card__title' }, 'Новая задача'),
-                            h('span', { className: 'planning-quick-add-card__hint' }, 'По умолчанию задача создаётся в работе. Можно сразу отправить её в готово или в драфт.'),
+                h('section', { ref: quickAddCardRef },
+                    h(TaskComposerCard, {
+                        cardTitle: 'Новая задача',
+                        cardHint: 'По умолчанию задача создаётся в работе. Можно сразу отправить её в готово или в драфт.',
+                        headerActions: h('button', {
+                            type: 'button',
+                            className: 'planning-filter-toggle' + (showFilters ? ' active' : '') + (activeFilterCount > 0 ? ' has-active' : ''),
+                            'aria-label': activeFilterCount > 0
+                                ? ('Фильтры, активно ' + activeFilterCount)
+                                : 'Фильтры',
+                            'aria-expanded': showFilters ? 'true' : 'false',
+                            title: activeFilterCount > 0
+                                ? ('Фильтры · активно ' + activeFilterCount)
+                                : 'Фильтры',
+                            onClick: () => setShowFilters((value) => !value),
+                        },
+                            h(FilterIcon),
+                            activeFilterCount > 0 && h('span', { className: 'planning-filter-toggle__badge' }, String(activeFilterCount)),
                         ),
-                        h('div', { className: 'planning-tasks-toolbar' },
+                        title: newTaskTitle,
+                        onTitleChange: setNewTaskTitle,
+                        titlePlaceholder: 'Новая задача...',
+                        titleInputRef: quickAddInputRef,
+                        onTitleKeyDown: (event) => event.key === 'Enter' && handleAddTask(),
+                        actionButtons: h('div', { className: 'planning-quick-add__create-actions' },
                             h('button', {
                                 type: 'button',
-                                className: 'planning-filter-toggle' + (showFilters ? ' active' : '') + (activeFilterCount > 0 ? ' has-active' : ''),
-                                'aria-label': activeFilterCount > 0
-                                    ? ('Фильтры, активно ' + activeFilterCount)
-                                    : 'Фильтры',
-                                'aria-expanded': showFilters ? 'true' : 'false',
-                                title: activeFilterCount > 0
-                                    ? ('Фильтры · активно ' + activeFilterCount)
-                                    : 'Фильтры',
-                                onClick: () => setShowFilters((value) => !value),
+                                className: 'planning-add-btn planning-add-btn--quick planning-add-btn--active-task',
+                                title: 'Создать задачу сразу в работе',
+                                'aria-label': 'Создать задачу сразу в работе',
+                                onClick: handleAddTask,
                             },
-                                h(FilterIcon),
-                                activeFilterCount > 0 && h('span', { className: 'planning-filter-toggle__badge' }, String(activeFilterCount)),
+                                h('span', { className: 'planning-add-btn__icon', 'aria-hidden': 'true' }, '+'),
+                                h('span', { className: 'planning-add-btn__label' }, 'В работу'),
                             ),
-                        ),
-                    ),
-                    h('div', { className: 'planning-quick-add' },
-                        h('div', { className: 'planning-quick-add__title-row' },
-                            h('input', {
-                                ref: quickAddInputRef,
-                                className: 'planning-quick-input planning-quick-input--main',
-                                placeholder: 'Новая задача...',
-                                value: newTaskTitle,
-                                onChange: (event) => setNewTaskTitle(event.target.value),
-                                onKeyDown: (event) => event.key === 'Enter' && handleAddTask(),
-                            }),
-                            h('div', { className: 'planning-quick-add__create-actions' },
-                                h('button', {
-                                    type: 'button',
-                                    className: 'planning-add-btn planning-add-btn--quick planning-add-btn--active-task',
-                                    title: 'Создать задачу сразу в работе',
-                                    'aria-label': 'Создать задачу сразу в работе',
-                                    onClick: handleAddTask,
-                                },
-                                    h('span', { className: 'planning-add-btn__icon', 'aria-hidden': 'true' }, '+'),
-                                    h('span', { className: 'planning-add-btn__label' }, 'В работу'),
-                                ),
-                                h('button', {
-                                    type: 'button',
-                                    className: 'planning-add-btn planning-add-btn--quick planning-add-btn--icon-only planning-add-btn--done-task',
-                                    title: 'Добавить уже завершённую задачу и поставить её в календарь текущим временем',
-                                    'aria-label': 'Добавить уже завершённую задачу',
-                                    onClick: handleAddCompletedTask,
-                                },
-                                    h('span', { className: 'planning-add-btn__icon', 'aria-hidden': 'true' }, '⚡'),
-                                ),
-                                h('button', {
-                                    type: 'button',
-                                    className: 'planning-add-btn planning-add-btn--quick planning-add-btn--icon-only planning-add-btn--draft-task',
-                                    title: 'Добавить задачу как драфт — в статусе «Ожидает начала»',
-                                    'aria-label': 'Добавить задачу как драфт',
-                                    onClick: handleAddDraftTask,
-                                },
-                                    h('span', { className: 'planning-add-btn__icon', 'aria-hidden': 'true' }, '⏸'),
-                                ),
-                            ),
-                        ),
-                        h('div', { className: 'planning-quick-add__primary-row' },
-                            h(PlanningQuickTargetField, {
-                                value: newTaskProjectId,
-                                onChange: setNewTaskProjectId,
-                                projects: activeProjects,
-                                tasks: visibleTasks,
-                                resolvedTaskProjectIds,
-                                tabsSelector: '.tabs',
-                            }),
-                            h('div', { className: 'planning-quick-add__actions planning-quick-add__actions--priority-row' },
-                                Object.keys(PRIORITY_CONFIG).map((key) => {
-                                    const config = PRIORITY_CONFIG[key];
-                                    return h('button', {
-                                        key,
-                                        type: 'button',
-                                        className: 'planning-priority-btn' + (selectedPriority === key ? ' active' : ''),
-                                        style: selectedPriority === key ? { color: config.color, background: config.bg } : undefined,
-                                        onClick: () => setSelectedPriority(key),
-                                    }, config.label);
-                                }),
-                            ),
-                        ),
-                        h('div', { className: 'planning-quick-add__secondary-row' },
-                            h('div', {
-                                className: 'planning-date-picker',
-                                role: 'group',
-                                'aria-label': 'Дедлайн задачи',
+                            h('button', {
+                                type: 'button',
+                                className: 'planning-add-btn planning-add-btn--quick planning-add-btn--icon-only planning-add-btn--done-task',
+                                title: 'Добавить уже завершённую задачу и поставить её в календарь текущим временем',
+                                'aria-label': 'Добавить уже завершённую задачу',
+                                onClick: handleAddCompletedTask,
                             },
-                                h('input', {
-                                    ref: quickDateInputRef,
-                                    className: 'planning-date-picker__native-input',
-                                    type: 'date',
-                                    value: quickDueDate,
-                                    tabIndex: -1,
-                                    'aria-hidden': 'true',
-                                    onChange: (event) => setQuickDueDate(event.target.value),
-                                }),
-                                h('button', {
-                                    type: 'button',
-                                    className: 'planning-date-picker__btn' + (quickDuePreset === 'today' ? ' active' : ''),
-                                    'aria-pressed': quickDuePreset === 'today' ? 'true' : 'false',
-                                    onClick: () => handleQuickDueDateChange(quickDueDate === todayIso ? '' : todayIso),
-                                }, 'Сегодня'),
-                                h('button', {
-                                    type: 'button',
-                                    className: 'planning-date-picker__btn' + (quickDuePreset === 'tomorrow' ? ' active' : ''),
-                                    'aria-pressed': quickDuePreset === 'tomorrow' ? 'true' : 'false',
-                                    onClick: () => handleQuickDueDateChange(quickDueDate === tomorrowIso ? '' : tomorrowIso),
-                                }, 'Завтра'),
-                                h('button', {
-                                    ref: quickCalendarButtonRef,
-                                    type: 'button',
-                                    className: 'planning-date-picker__btn planning-date-picker__btn--calendar'
-                                        + (quickDuePreset === 'custom' ? ' active' : '')
-                                        + (showQuickCalendar ? ' is-open' : ''),
-                                    title: quickDueDateLabel ? ('Открыть календарь, выбран дедлайн ' + quickDueDateLabel) : 'Открыть календарь',
-                                    'aria-label': quickDueDateLabel ? ('Открыть календарь, выбран дедлайн ' + quickDueDateLabel) : 'Открыть календарь',
-                                    'aria-pressed': (quickDuePreset === 'custom' || showQuickCalendar) ? 'true' : 'false',
-                                    onClick: openQuickDatePicker,
-                                }, '📅'),
+                                h('span', { className: 'planning-add-btn__icon', 'aria-hidden': 'true' }, '⚡'),
                             ),
-                            h(DurationFieldButton, {
-                                value: quickMinutes,
-                                placeholder: 'мин/дн',
-                                minimal: true,
-                                onClick: () => setShowQuickDurationPicker(true),
-                            }),
+                            h('button', {
+                                type: 'button',
+                                className: 'planning-add-btn planning-add-btn--quick planning-add-btn--icon-only planning-add-btn--draft-task',
+                                title: 'Добавить задачу как драфт — в статусе «Ожидает начала»',
+                                'aria-label': 'Добавить задачу как драфт',
+                                onClick: handleAddDraftTask,
+                            },
+                                h('span', { className: 'planning-add-btn__icon', 'aria-hidden': 'true' }, '⏸'),
+                            ),
                         ),
-                    ),
+                        primaryField: h(PlanningQuickTargetField, {
+                            value: newTaskProjectId,
+                            onChange: setNewTaskProjectId,
+                            projects: activeProjects,
+                            tasks: visibleTasks,
+                            resolvedTaskProjectIds,
+                            tabsSelector: '.tabs',
+                        }),
+                        priorityValue: selectedPriority,
+                        onPriorityChange: setSelectedPriority,
+                        dueDate: quickDueDate,
+                        onDueDateChange: handleQuickDueDateChange,
+                        todayIso,
+                        tomorrowIso,
+                        dueDateInputRef: quickDateInputRef,
+                        dueCalendarButtonRef: quickCalendarButtonRef,
+                        onDueCalendarClick: openQuickDatePicker,
+                        isDueCalendarOpen: showQuickCalendar,
+                        dueAriaLabel: 'Дедлайн новой задачи',
+                        durationValue: quickMinutes,
+                        onDurationClick: () => setShowQuickDurationPicker(true),
+                        durationPlaceholder: 'мин/дн',
+                        durationMinimal: true,
+                    }),
                     showFilters && h('div', { className: 'planning-filters-panel' },
                         h('div', { className: 'planning-filters-panel__header' },
                             h('span', { className: 'planning-filters-panel__title' }, 'Фильтры'),
@@ -45499,6 +45862,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                     onStartQuickAddProject: handleStartQuickAddForProject,
                     onStartQuickAddSubtask: handleStartQuickAddForSubtask,
                     onUpdateProject: state.updateProject,
+                    onDeleteProject: handleDeleteProject,
                     onReorderTasks: state.reorderTasks,
                     forceShowCompleted,
                 })),
@@ -45515,6 +45879,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                     onStartQuickAddProject: handleStartQuickAddForProject,
                     onStartQuickAddSubtask: handleStartQuickAddForSubtask,
                     onUpdateProject: state.updateProject,
+                    onDeleteProject: handleDeleteProject,
                     onReorderTasks: state.reorderTasks,
                     forceShowCompleted,
                 }),
@@ -51961,6 +52326,38 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         { id: 'gantt', label: 'Гант', shortLabel: 'Гант', icon: '📊' },
         { id: 'context', label: 'Контекст', shortLabel: 'Конт.', icon: '🧠' },
     ];
+    const DEFAULT_HOME_SCREEN = 'calendar';
+
+    function resolvePlanningHomeScreen(candidate) {
+        return SUBNAV_ITEMS.some((item) => item.id === candidate) ? candidate : DEFAULT_HOME_SCREEN;
+    }
+
+    function getInitialPlanningHomeScreen(candidate) {
+        if (typeof candidate === 'string' && candidate.length > 0) {
+            return resolvePlanningHomeScreen(candidate);
+        }
+
+        const appPreferredScreen = typeof HEYS?.App?.getDefaultTasksSubtab === 'function'
+            ? HEYS.App.getDefaultTasksSubtab()
+            : null;
+
+        return resolvePlanningHomeScreen(appPreferredScreen);
+    }
+
+    function resolveNextPlanningHomeScreen(currentScreen, requestedScreen, hasUserNavigated) {
+        const safeCurrentScreen = resolvePlanningHomeScreen(currentScreen);
+        const safeRequestedScreen = resolvePlanningHomeScreen(requestedScreen);
+
+        if (hasUserNavigated) return safeCurrentScreen;
+
+        // Only auto-apply when still at the initial default fallback screen.
+        // This prevents jumps caused by profile-updated / client-changed events
+        // when the parent's defaultTasksSubtab changes while PlanningTab is
+        // already showing a real subtab (meaning the profile loaded correctly).
+        if (safeCurrentScreen !== DEFAULT_HOME_SCREEN) return safeCurrentScreen;
+
+        return safeRequestedScreen;
+    }
 
     function PlanningFallback() {
         return h('div', { className: 'planning-tab' },
@@ -51989,12 +52386,26 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         };
     }
 
-    function PlanningTab() {
-        const [activeScreen, setActiveScreen] = useState('calendar');
+    function PlanningTab(props = {}) {
+        const requestedHomeScreen = getInitialPlanningHomeScreen(props.defaultHomeScreen);
+        const [activeScreen, setActiveScreen] = useState(() => requestedHomeScreen);
         const [layoutMetrics, setLayoutMetrics] = useState({ mainTabsHeight: 0, subnavHeight: 0 });
         const runtime = resolvePlanningRuntime();
         const planState = runtime.usePlanningState ? runtime.usePlanningState() : null;
         const subnavRef = useRef(null);
+        const hasUserNavigatedRef = useRef(false);
+
+        useEffect(() => {
+            setActiveScreen((currentScreen) => {
+                const nextScreen = resolveNextPlanningHomeScreen(
+                    currentScreen,
+                    requestedHomeScreen,
+                    hasUserNavigatedRef.current,
+                );
+
+                return currentScreen === nextScreen ? currentScreen : nextScreen;
+            });
+        }, [requestedHomeScreen]);
 
         useEffect(() => {
             if (typeof document === 'undefined' || !document.body) return undefined;
@@ -52088,7 +52499,10 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                     'aria-label': item.label,
                     'data-screen': item.id,
                     className: 'planning-subnav__item' + (activeScreen === item.id ? ' active' : ''),
-                    onClick: () => setActiveScreen(item.id),
+                    onClick: () => {
+                        hasUserNavigatedRef.current = true;
+                        setActiveScreen(item.id);
+                    },
                 },
                     h('span', { className: 'planning-subnav__icon', 'aria-hidden': 'true' }, item.icon),
                     h('span', {
@@ -52119,6 +52533,11 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     }
 
     HEYS.PlanningTab = PlanningTab;
+    Planning.SUBNAV_ITEMS = SUBNAV_ITEMS.slice();
+    Planning.DEFAULT_HOME_SCREEN = DEFAULT_HOME_SCREEN;
+    Planning.resolveHomeScreen = resolvePlanningHomeScreen;
+    Planning.getInitialHomeScreen = getInitialPlanningHomeScreen;
+    Planning.resolveNextHomeScreen = resolveNextPlanningHomeScreen;
     HEYS.PlanningData = Planning.Store || {};
     console.info('[HEYS.planning] ✅ PlanningTab coordinator registered');
 })();

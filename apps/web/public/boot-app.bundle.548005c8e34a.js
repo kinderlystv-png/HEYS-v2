@@ -19896,19 +19896,19 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                                 : effectiveDisplayStatus === 'session' ? [
                                     React.createElement('span', { key: 'sess', className: 'cloud-icon session', 'aria-hidden': 'true' }, '🔑'),
                                 ]
-                                : effectiveDisplayStatus === 'queued' ? [
-                                    React.createElement('svg', { key: 'cloud', className: 'cloud-icon idle', viewBox: '0 0 24 24', width: 16, height: 16, fill: 'currentColor' },
-                                        React.createElement('path', { d: 'M19.35 10.04A7.49 7.49 0 0 0 12 4C9.11 4 6.6 5.64 5.35 8.04A5.994 5.994 0 0 0 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z' })
-                                    ),
-                                    pendingCount > 0 && React.createElement('span', { key: 'pb', className: 'pending-badge' }, pendingCount)
-                                ]
-                                    : effectiveDisplayStatus === 'error' ? [
-                                        React.createElement('span', { key: 'warn', className: 'cloud-icon error' }, '⚠'),
-                                        retryCountdown > 0 && React.createElement('span', { key: 'cd', className: 'retry-countdown' }, retryCountdown)
-                                    ]
-                                        : React.createElement('svg', { key: 'cloud', className: 'cloud-icon idle', viewBox: '0 0 24 24', width: 16, height: 16, fill: 'currentColor' },
+                                    : effectiveDisplayStatus === 'queued' ? [
+                                        React.createElement('svg', { key: 'cloud', className: 'cloud-icon idle', viewBox: '0 0 24 24', width: 16, height: 16, fill: 'currentColor' },
                                             React.createElement('path', { d: 'M19.35 10.04A7.49 7.49 0 0 0 12 4C9.11 4 6.6 5.64 5.35 8.04A5.994 5.994 0 0 0 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z' })
-                                        )
+                                        ),
+                                        pendingCount > 0 && React.createElement('span', { key: 'pb', className: 'pending-badge' }, pendingCount)
+                                    ]
+                                        : effectiveDisplayStatus === 'error' ? [
+                                            React.createElement('span', { key: 'warn', className: 'cloud-icon error' }, '⚠'),
+                                            retryCountdown > 0 && React.createElement('span', { key: 'cd', className: 'retry-countdown' }, retryCountdown)
+                                        ]
+                                            : React.createElement('svg', { key: 'cloud', className: 'cloud-icon idle', viewBox: '0 0 24 24', width: 16, height: 16, fill: 'currentColor' },
+                                                React.createElement('path', { d: 'M19.35 10.04A7.49 7.49 0 0 0 12 4C9.11 4 6.6 5.64 5.35 8.04A5.994 5.994 0 0 0 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z' })
+                                            )
                 ),
                 // 🚨 EWS Badge (v1.3 - показывает актуальные предупреждения без ручного скрытия)
                 ewsData && React.createElement('div', {
@@ -20055,6 +20055,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
             setTab,
             widgetsEditMode,
             defaultTab,
+            defaultTasksSubtab,
             setDefaultTab,
             clientId,
             selectedDate,
@@ -20078,9 +20079,54 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
             return options;
         }, [canUseTasksAsHome]);
 
+        const TASKS_HOME_SUBTAB_OPTIONS = React.useMemo(() => {
+            const fallbackItems = [
+                { id: 'tasks', label: 'Список', shortLabel: 'Список', icon: '☑️' },
+                { id: 'calendar', label: 'Календарь', shortLabel: 'Кален.', icon: '📅' },
+                { id: 'gantt', label: 'Гант', shortLabel: 'Гант', icon: '📊' },
+                { id: 'context', label: 'Контекст', shortLabel: 'Конт.', icon: '🧠' },
+            ];
+            const sourceItems = Array.isArray(window.HEYS?.Planning?.SUBNAV_ITEMS) && window.HEYS.Planning.SUBNAV_ITEMS.length > 0
+                ? window.HEYS.Planning.SUBNAV_ITEMS
+                : fallbackItems;
+
+            return sourceItems
+                .map((item) => ({
+                    key: item.id || item.key,
+                    label: item.label || item.shortLabel || item.id || item.key,
+                    icon: item.icon || '•',
+                }))
+                .filter((item) => typeof item.key === 'string' && item.key.length > 0);
+        }, []);
+        const resolvedDefaultTasksSubtab = typeof defaultTasksSubtab === 'string' && defaultTasksSubtab.length > 0
+            ? defaultTasksSubtab
+            : 'calendar';
+        const currentTasksHomeOption = React.useMemo(() => {
+            return TASKS_HOME_SUBTAB_OPTIONS.find((option) => option.key === resolvedDefaultTasksSubtab)
+                || TASKS_HOME_SUBTAB_OPTIONS.find((option) => option.key === 'calendar')
+                || TASKS_HOME_SUBTAB_OPTIONS[0]
+                || null;
+        }, [TASKS_HOME_SUBTAB_OPTIONS, resolvedDefaultTasksSubtab]);
+
         const handlePickHomeTab = (nextTab) => {
             try {
+                if (nextTab === 'tasks') {
+                    setDefaultTab('tasks', { tasksSubtab: resolvedDefaultTasksSubtab });
+                    HEYS.dayUtils?.haptic?.('light');
+                    return;
+                }
+
                 setDefaultTab(nextTab);
+                HEYS.dayUtils?.haptic?.('light');
+                setSettingsMenuOpen(false);
+            } catch (e) {
+                // silent
+            }
+        };
+
+        const handlePickTasksHomeSubtab = (nextSubtab) => {
+            try {
+                setDefaultTab('tasks', { tasksSubtab: nextSubtab });
                 HEYS.dayUtils?.haptic?.('light');
                 setSettingsMenuOpen(false);
             } catch (e) {
@@ -20297,6 +20343,9 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                             React.createElement('div', { className: 'widgets-home-tab-picker__hint' },
                                 'С неё приложение откроется в следующий раз'
                             ),
+                            defaultTab === 'tasks' && currentTasksHomeOption && React.createElement('div', {
+                                className: 'widgets-home-tab-picker__current-subtab',
+                            }, `Внутри задач откроется: ${currentTasksHomeOption.label}`),
                             React.createElement('div', { className: 'widgets-home-tab-picker__options' },
                                 HOME_TAB_OPTIONS.map((option) => React.createElement('button', {
                                     key: option.key,
@@ -20316,6 +20365,36 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                                         'aria-hidden': 'true',
                                     }, '🏠')
                                 ))
+                            ),
+                            defaultTab === 'tasks' && canUseTasksAsHome && TASKS_HOME_SUBTAB_OPTIONS.length > 0 && React.createElement('div', {
+                                className: 'widgets-home-tab-picker__subtabs',
+                            },
+                                React.createElement('div', { className: 'widgets-home-tab-picker__subtitle' }, 'Подвкладка задач'),
+                                React.createElement('div', {
+                                    className: 'widgets-home-tab-picker__hint widgets-home-tab-picker__hint--nested',
+                                }, 'Что открыть внутри задач по умолчанию'),
+                                React.createElement('div', {
+                                    className: 'widgets-home-tab-picker__options widgets-home-tab-picker__options--nested',
+                                },
+                                    TASKS_HOME_SUBTAB_OPTIONS.map((option) => React.createElement('button', {
+                                        key: option.key,
+                                        type: 'button',
+                                        className: `widgets-home-tab-picker__option widgets-home-tab-picker__option--subtab ${resolvedDefaultTasksSubtab === option.key ? 'active' : ''}`,
+                                        onClick: (e) => {
+                                            e.stopPropagation();
+                                            handlePickTasksHomeSubtab(option.key);
+                                        },
+                                        'aria-pressed': resolvedDefaultTasksSubtab === option.key,
+                                        title: `Открывать внутри задач: ${option.label}`,
+                                    },
+                                        React.createElement('span', { className: 'widgets-home-tab-picker__option-icon' }, option.icon),
+                                        React.createElement('span', { className: 'widgets-home-tab-picker__option-label' }, option.label),
+                                        resolvedDefaultTasksSubtab === option.key && React.createElement('span', {
+                                            className: 'widgets-home-tab-picker__option-badge',
+                                            'aria-hidden': 'true',
+                                        }, '🏠')
+                                    ))
+                                )
                             )
                         )
                     )
@@ -20341,6 +20420,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
             selectedDate,
             setSelectedDate,
             cloudUser,
+            defaultTasksSubtab,
             DayTabWithCloudSync,
             RationTabWithCloudSync,
             UserTabWithCloudSync,
@@ -20492,6 +20572,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                                                     ? React.createElement(window.HEYS.PlanningTab, {
                                                         key: 'tasks_' + String(clientId || ''),
                                                         clientId,
+                                                        defaultHomeScreen: defaultTasksSubtab,
                                                     })
                                                     : ((!cloudUser && clientId)
                                                         ? renderTabFallback('tasks', React.createElement('div', { style: { padding: 16 } },
@@ -23597,6 +23678,22 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
             try { localStorage.removeItem(key); } catch (_) { }
         };
 
+        const isPinRestoreAuthError = (error) => {
+            const code = String(error?.code || error?.status || error?.statusCode || '').toLowerCase();
+            const message = String(error?.message || error || '').toLowerCase();
+            if (code === '401' || code === '403') return true;
+            return (
+                message.includes('unauthorized') ||
+                message.includes('auth_required') ||
+                message.includes('no session token') ||
+                message.includes('no auth token') ||
+                message.includes('invalid token') ||
+                message.includes('token expired') ||
+                message.includes('jwt') ||
+                message.includes('forbidden')
+            );
+        };
+
         // Минимальная инициализация — только загрузка из localStorage
         // opts.skipClientRestore: не восстанавливать выбранного клиента из heys_client_current
         // opts.skipPinAuthRestore: не восстанавливать PIN-auth клиента
@@ -23832,10 +23929,18 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                 .catch((err) => {
                     devWarn('[App] ❌ Ошибка восстановления PIN-сессии:', err);
                     trackError(err, { scope: 'AppAuthInit', action: 'restore_pin_session' });
-                    // При ошибке показываем экран логина
-                    __heysShowGateLogin();
-                    removeGlobalValue('heys_pin_auth_client');
-                    setClientId(null);
+                    if (isPinRestoreAuthError(err)) {
+                        // Реально невалидная auth/session — сбрасываем PIN-сессию
+                        __heysShowGateLogin();
+                        removeGlobalValue('heys_pin_auth_client');
+                        setClientId(null);
+                    } else {
+                        // Временная сетевая/серверная ошибка — сохраняем локальную PIN-сессию
+                        devWarn('[App] 🌩️ Temporary PIN restore failure — keeping local session cache');
+                        initLocalData();
+                        setStatus('offline');
+                        __heysDismissGate();
+                    }
                 })
                 .finally(() => {
                     setIsInitializing(false);
@@ -23888,8 +23993,15 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                     .then(function () { devLog('[AuthInit] static client login synced'); })
                     .catch(function (err) {
                         devWarn('[AuthInit] static client login sync error:', err);
-                        removeGlobalValue('heys_pin_auth_client');
-                        setClientId(null);
+                        if (isPinRestoreAuthError(err)) {
+                            removeGlobalValue('heys_pin_auth_client');
+                            setClientId(null);
+                            __heysShowGateLogin();
+                        } else {
+                            initLocalData();
+                            setStatus('offline');
+                            __heysDismissGate();
+                        }
                     })
                     .finally(function () { setIsInitializing(false); });
 
@@ -24795,9 +24907,15 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
     const DEV = window.DEV || {};
     const devLog = typeof DEV.log === 'function' ? DEV.log.bind(DEV) : function () { };
     const HOME_TABS = ['widgets', 'stats', 'diary', 'insights', 'month', 'tasks'];
+    const TASKS_HOME_SUBTABS = ['tasks', 'calendar', 'gantt', 'context'];
+    const DEFAULT_TASKS_SUBTAB = 'calendar';
 
     function resolveHomeTab(candidate) {
         return HOME_TABS.includes(candidate) ? candidate : 'diary';
+    }
+
+    function resolveHomeTasksSubtab(candidate) {
+        return TASKS_HOME_SUBTABS.includes(candidate) ? candidate : DEFAULT_TASKS_SUBTAB;
     }
 
     function getChangedProfileFields(detail) {
@@ -24814,14 +24932,20 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
         return [];
     }
 
-    function markPendingDefaultTabSync(nextTab) {
+    function markPendingDefaultTabSync(nextTab, nextTasksSubtab) {
         if (!window.HEYS) window.HEYS = {};
         if (!window.HEYS._pendingProfileSyncFlags) window.HEYS._pendingProfileSyncFlags = {};
 
-        window.HEYS._pendingProfileSyncFlags.defaultTab = {
+        const pendingState = {
             requestedTab: nextTab,
             createdAt: Date.now(),
         };
+
+        if (typeof nextTasksSubtab === 'string' && nextTasksSubtab.length > 0) {
+            pendingState.requestedTasksSubtab = resolveHomeTasksSubtab(nextTasksSubtab);
+        }
+
+        window.HEYS._pendingProfileSyncFlags.defaultTab = pendingState;
     }
 
     const useTabState = ({ React }) => {
@@ -24831,10 +24955,18 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
             return resolveHomeTab(profile.defaultTab);
         };
 
+        const getDefaultTasksSubtabFromProfile = () => {
+            const U = window.HEYS?.utils;
+            const profile = U?.lsGet?.('heys_profile', {}) || {};
+            return resolveHomeTasksSubtab(profile.defaultTasksSubtab);
+        };
+
         const [defaultTab, setDefaultTabState] = React.useState('diary');
+        const [defaultTasksSubtab, setDefaultTasksSubtabState] = React.useState(DEFAULT_TASKS_SUBTAB);
         const [tab, rawSetTab] = React.useState('diary');
         const [initialTabLoaded, setInitialTabLoaded] = React.useState(false);
         const defaultTabRef = React.useRef(defaultTab);
+        const defaultTasksSubtabRef = React.useRef(defaultTasksSubtab);
         const tabRef = React.useRef(tab);
 
         const applyDefaultTabState = React.useCallback((nextDefaultTab) => {
@@ -24842,23 +24974,30 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
             setDefaultTabState(nextDefaultTab);
         }, []);
 
+        const applyDefaultTasksSubtabState = React.useCallback((nextDefaultTasksSubtab) => {
+            defaultTasksSubtabRef.current = nextDefaultTasksSubtab;
+            setDefaultTasksSubtabState(nextDefaultTasksSubtab);
+        }, []);
+
         const setTabImmediate = React.useCallback((newTab) => {
             tabRef.current = newTab;
             rawSetTab(newTab);
         }, []);
 
-        // Wrap setTab in startTransition so heavy tab mount/unmount
-        // doesn't block the main thread (was causing 400-450ms click violations)
+        // Keep tab switches at normal priority. startTransition can starve here
+        // because the tasks screen emits frequent sync updates while it is mounted.
         const setTab = React.useCallback((newTab) => {
-            React.startTransition(() => {
-                tabRef.current = newTab;
-                rawSetTab(newTab);
-            });
+            tabRef.current = newTab;
+            rawSetTab(newTab);
         }, []);
 
         React.useEffect(() => {
             defaultTabRef.current = defaultTab;
         }, [defaultTab]);
+
+        React.useEffect(() => {
+            defaultTasksSubtabRef.current = defaultTasksSubtab;
+        }, [defaultTasksSubtab]);
 
         React.useEffect(() => {
             tabRef.current = tab;
@@ -24881,8 +25020,10 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                 if (!U?.lsGet) return false;
 
                 const savedTab = getDefaultTabFromProfile();
-                devLog(`[App] 🏠 Loading default tab from profile: ${savedTab}`);
+                const savedTasksSubtab = getDefaultTasksSubtabFromProfile();
+                devLog(`[App] 🏠 Loading default tab from profile: ${savedTab}` + (savedTab === 'tasks' ? ` · ${savedTasksSubtab}` : ''));
                 applyDefaultTabState(savedTab);
+                applyDefaultTasksSubtabState(savedTasksSubtab);
                 setTabImmediate(savedTab);
                 setInitialTabLoaded(true);
                 return true;
@@ -24910,19 +25051,22 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                 clearInterval(interval);
                 clearTimeout(timeout);
             };
-        }, [initialTabLoaded]);
+        }, [initialTabLoaded, applyDefaultTabState, applyDefaultTasksSubtabState, setTabImmediate]);
 
         const syncDefaultTabFromProfile = React.useCallback((reason, options = {}) => {
             const U = window.HEYS?.utils;
             if (!U?.lsGet) return false;
 
             const freshTab = getDefaultTabFromProfile();
+            const freshTasksSubtab = getDefaultTasksSubtabFromProfile();
             const currentTab = tabRef.current;
             const previousDefaultTab = defaultTabRef.current;
+            const previousDefaultTasksSubtab = defaultTasksSubtabRef.current;
             const shouldFollowSyncedDefault = options.followCurrentTab === true && currentTab === previousDefaultTab && freshTab !== currentTab;
             const didDefaultChange = freshTab !== previousDefaultTab;
+            const didTasksSubtabChange = freshTasksSubtab !== previousDefaultTasksSubtab;
 
-            if (!didDefaultChange && !shouldFollowSyncedDefault) {
+            if (!didDefaultChange && !didTasksSubtabChange && !shouldFollowSyncedDefault) {
                 return false;
             }
 
@@ -24931,13 +25075,18 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                 applyDefaultTabState(freshTab);
             }
 
+            if (didTasksSubtabChange) {
+                devLog(`[App] 🧭 Re-read default tasks subtab after ${reason}: ${freshTasksSubtab}`);
+                applyDefaultTasksSubtabState(freshTasksSubtab);
+            }
+
             if (shouldFollowSyncedDefault) {
                 devLog(`[App] 🧭 Following synced default tab after ${reason}: ${freshTab}`);
                 setTabImmediate(freshTab);
             }
 
             return true;
-        }, [applyDefaultTabState, setTabImmediate]);
+        }, [applyDefaultTabState, applyDefaultTasksSubtabState, setTabImmediate]);
 
         // Re-read profile when client ID becomes available (fixes namespace mismatch on boot)
         React.useEffect(() => {
@@ -24953,7 +25102,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
         React.useEffect(() => {
             const handleProfileUpdated = (event) => {
                 const changedFields = getChangedProfileFields(event?.detail);
-                if (changedFields.length > 0 && !changedFields.includes('defaultTab')) return;
+                if (changedFields.length > 0 && !changedFields.includes('defaultTab') && !changedFields.includes('defaultTasksSubtab')) return;
 
                 syncDefaultTabFromProfile('profile update', { followCurrentTab: true });
             };
@@ -24974,24 +25123,47 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
             };
         }, [syncDefaultTabFromProfile]);
 
-        const setDefaultTab = React.useCallback((newDefaultTab) => {
+        const setDefaultTab = React.useCallback((newDefaultTab, options = {}) => {
             if (!HOME_TABS.includes(newDefaultTab)) return;
 
             const U = window.HEYS?.utils;
             const profile = U?.lsGet?.('heys_profile', {}) || {};
-            const updatedProfile = { ...profile, defaultTab: newDefaultTab };
-            markPendingDefaultTabSync(newDefaultTab);
+            const currentDefaultTab = resolveHomeTab(profile.defaultTab);
+            const currentTasksSubtab = resolveHomeTasksSubtab(profile.defaultTasksSubtab ?? defaultTasksSubtabRef.current);
+            const requestedTasksSubtab = Object.prototype.hasOwnProperty.call(options, 'tasksSubtab')
+                ? options.tasksSubtab
+                : currentTasksSubtab;
+            const nextTasksSubtab = resolveHomeTasksSubtab(requestedTasksSubtab);
+
+            if (currentDefaultTab === newDefaultTab && currentTasksSubtab === nextTasksSubtab) {
+                applyDefaultTabState(newDefaultTab);
+                applyDefaultTasksSubtabState(nextTasksSubtab);
+                return;
+            }
+
+            const updatedProfile = {
+                ...profile,
+                defaultTab: newDefaultTab,
+                defaultTasksSubtab: nextTasksSubtab,
+            };
+            markPendingDefaultTabSync(newDefaultTab, nextTasksSubtab);
             U?.lsSet?.('heys_profile', updatedProfile);
             applyDefaultTabState(newDefaultTab);
+            applyDefaultTasksSubtabState(nextTasksSubtab);
 
             try {
                 window.dispatchEvent(new CustomEvent('heys:default-tab-changed', {
-                    detail: { defaultTab: newDefaultTab }
+                    detail: {
+                        defaultTab: newDefaultTab,
+                        defaultTasksSubtab: nextTasksSubtab,
+                    }
                 }));
                 window.dispatchEvent(new CustomEvent('heys:profile-updated', {
                     detail: {
                         field: 'defaultTab',
-                        fields: ['defaultTab'],
+                        fields: currentTasksSubtab === nextTasksSubtab
+                            ? ['defaultTab']
+                            : ['defaultTab', 'defaultTasksSubtab'],
                         source: 'local-default-tab',
                     }
                 }));
@@ -24999,8 +25171,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                 // silent
             }
 
-            devLog(`[App] 🏠 Default tab changed to: ${newDefaultTab}`);
-        }, [applyDefaultTabState]);
+            devLog(`[App] 🏠 Default tab changed to: ${newDefaultTab}` + (newDefaultTab === 'tasks' ? ` · ${nextTasksSubtab}` : ''));
+        }, [applyDefaultTabState, applyDefaultTasksSubtabState]);
 
         React.useEffect(() => {
             window.HEYS = window.HEYS || {};
@@ -25008,22 +25180,25 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
             window.HEYS.App.setTab = setTab;
             window.HEYS.App.getTab = () => tab;
             window.HEYS.App.getDefaultTab = () => defaultTab;
+            window.HEYS.App.getDefaultTasksSubtab = () => defaultTasksSubtab;
             window.HEYS.App.setDefaultTab = setDefaultTab;
             return () => {
                 if (window.HEYS?.App) {
                     delete window.HEYS.App.setTab;
                     delete window.HEYS.App.getTab;
                     delete window.HEYS.App.getDefaultTab;
+                    delete window.HEYS.App.getDefaultTasksSubtab;
                     delete window.HEYS.App.setDefaultTab;
                 }
             };
-        }, [tab, setTab, defaultTab, setDefaultTab]);
+        }, [tab, setTab, defaultTab, defaultTasksSubtab, setDefaultTab]);
 
         return {
             tab,
             setTab,
             setTabImmediate,
             defaultTab,
+            defaultTasksSubtab,
             setDefaultTab,
         };
     };
@@ -26104,6 +26279,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
         GamificationBar,
         widgetsEditMode,
         defaultTab,
+        defaultTasksSubtab,
         setDefaultTab,
         slideDirection,
         edgeBounce,
@@ -26155,6 +26331,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
             GamificationBar,
             widgetsEditMode,
             defaultTab,
+            defaultTasksSubtab,
             setDefaultTab,
             slideDirection,
             edgeBounce,
@@ -26849,11 +27026,12 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                 setTab: () => { },
                 setTabImmediate: () => { },
                 defaultTab: 'diary',
+                defaultTasksSubtab: 'calendar',
                 setDefaultTab: () => { },
             });
             const useTabState = getStableHook(AppTabState.useTabState, fallbackUseTabState);
             const tabState = useTabState({ React });
-            const { tab, setTab, setTabImmediate, defaultTab, setDefaultTab } = tabState;
+            const { tab, setTab, setTabImmediate, defaultTab, defaultTasksSubtab, setDefaultTab } = tabState;
 
             const { theme, resolvedTheme, cycleTheme } = useThemePreference();
             React.useEffect(() => {
@@ -27681,6 +27859,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                     GamificationBar: params.GamificationBar,
                     widgetsEditMode: params.widgetsEditMode,
                     defaultTab: params.defaultTab,
+                    defaultTasksSubtab: params.defaultTasksSubtab,
                     setDefaultTab: params.setDefaultTab,
                     slideDirection: params.slideDirection,
                     edgeBounce: params.edgeBounce,
@@ -27729,6 +27908,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                 GamificationBar,
                 widgetsEditMode,
                 defaultTab,
+                defaultTasksSubtab,
                 setDefaultTab,
                 slideDirection,
                 edgeBounce,
@@ -27743,7 +27923,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                 selectedDate, datePickerActiveDays, products, cachedProfile,
                 currentClientName, clients, showClientDropdown, isRpcMode,
                 cloudUser, cloudStatus, syncProgress, pendingCount, pendingDetails, pendingText, pendingActionItems, showPendingSyncBanner, retryCountdown,
-                widgetsEditMode, defaultTab, slideDirection, edgeBounce, syncVer]);
+                widgetsEditMode, defaultTab, defaultTasksSubtab, slideDirection, edgeBounce, syncVer]);
 
             const buildOverlaysProps = AppOverlaysProps.buildOverlaysProps
                 || ((params) => ({

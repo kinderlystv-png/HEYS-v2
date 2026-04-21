@@ -86,6 +86,22 @@
             try { localStorage.removeItem(key); } catch (_) { }
         };
 
+        const isPinRestoreAuthError = (error) => {
+            const code = String(error?.code || error?.status || error?.statusCode || '').toLowerCase();
+            const message = String(error?.message || error || '').toLowerCase();
+            if (code === '401' || code === '403') return true;
+            return (
+                message.includes('unauthorized') ||
+                message.includes('auth_required') ||
+                message.includes('no session token') ||
+                message.includes('no auth token') ||
+                message.includes('invalid token') ||
+                message.includes('token expired') ||
+                message.includes('jwt') ||
+                message.includes('forbidden')
+            );
+        };
+
         // Минимальная инициализация — только загрузка из localStorage
         // opts.skipClientRestore: не восстанавливать выбранного клиента из heys_client_current
         // opts.skipPinAuthRestore: не восстанавливать PIN-auth клиента
@@ -321,10 +337,18 @@
                 .catch((err) => {
                     devWarn('[App] ❌ Ошибка восстановления PIN-сессии:', err);
                     trackError(err, { scope: 'AppAuthInit', action: 'restore_pin_session' });
-                    // При ошибке показываем экран логина
-                    __heysShowGateLogin();
-                    removeGlobalValue('heys_pin_auth_client');
-                    setClientId(null);
+                    if (isPinRestoreAuthError(err)) {
+                        // Реально невалидная auth/session — сбрасываем PIN-сессию
+                        __heysShowGateLogin();
+                        removeGlobalValue('heys_pin_auth_client');
+                        setClientId(null);
+                    } else {
+                        // Временная сетевая/серверная ошибка — сохраняем локальную PIN-сессию
+                        devWarn('[App] 🌩️ Temporary PIN restore failure — keeping local session cache');
+                        initLocalData();
+                        setStatus('offline');
+                        __heysDismissGate();
+                    }
                 })
                 .finally(() => {
                     setIsInitializing(false);
@@ -377,8 +401,15 @@
                     .then(function () { devLog('[AuthInit] static client login synced'); })
                     .catch(function (err) {
                         devWarn('[AuthInit] static client login sync error:', err);
-                        removeGlobalValue('heys_pin_auth_client');
-                        setClientId(null);
+                        if (isPinRestoreAuthError(err)) {
+                            removeGlobalValue('heys_pin_auth_client');
+                            setClientId(null);
+                            __heysShowGateLogin();
+                        } else {
+                            initLocalData();
+                            setStatus('offline');
+                            __heysDismissGate();
+                        }
                     })
                     .finally(function () { setIsInitializing(false); });
 
