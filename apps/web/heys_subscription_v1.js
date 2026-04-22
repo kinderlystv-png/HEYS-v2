@@ -89,9 +89,14 @@
   }
 
   function setCachedStatus(status) {
+    const prev = _cachedStatus;
     _cachedStatus = status;
     _cachedAt = Date.now();
-    writeCacheValue(CACHE_KEY, { status, ts: _cachedAt });
+    // Не пишем в storage если статус не изменился — иначе обновление ts
+    // каждые 5 минут триггерит бесполезный cloud sync
+    if (prev !== status) {
+      writeCacheValue(CACHE_KEY, { status, ts: _cachedAt });
+    }
   }
 
   function clearCache() {

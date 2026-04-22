@@ -20682,7 +20682,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
   // ═══════════════════════════════════════════════════════════════════
 
   const SYNC_LOG_KEY = 'heys_sync_log';
-  const MAX_SYNC_LOG_ENTRIES = 50;
+  const MAX_SYNC_LOG_ENTRIES = 150;
   const SYNC_PROGRESS_EVENT = 'heys:sync-progress';
   const SYNC_COMPLETED_EVENT = 'heysSyncCompleted';
   let syncProgressTotal = 0;
@@ -22823,6 +22823,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
       logCritical(`✅ Загружено ${loadedCount} ключей для клиента ${clientId.slice(0, 8)}`);
       const syncDuration = Math.round(performance.now() - syncStartTime);
       logCritical(`✅ [SYNC DONE] client=${clientId.slice(0, 8)} keys=${loadedCount} ms=${syncDuration} via=rpc${isDelta ? ' (delta)' : ' (full)'}`);
+      addSyncLogEntry('download_ok', { n: loadedCount, ms: syncDuration, mode: isDelta ? 'delta' : 'full', via: 'yandex' });
 
       // 🚀 Delta Sync: сохраняем timestamp для следующего delta sync
       try {
@@ -25191,6 +25192,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
         }
 
         logCritical(`✅ [SYNC DONE] client=${client_id.slice(0, 8)} keys=${data?.length || 0} ms=${syncDuration} force=${!!forceSync}`);
+        addSyncLogEntry('download_ok', { n: data?.length || 0, ms: syncDuration, mode: isForceDelta ? 'forceDelta' : isDeltaFastPath ? 'deltaFast' : 'full', via: 'rpc', force: !!forceSync });
 
         // 🚨 Разрешаем сохранение после первого sync
         initialSyncCompleted = true;
@@ -25628,6 +25630,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
     // 🔄 Помечаем что данные "в полёте"
     _uploadInProgress = true;
     _uploadInFlightCount = filteredBatch.length;
+    const _uploadStartTs = Date.now();
 
     // [SYNC] лог — всегда видим в консоли без флага
     const _syncKeys = filteredBatch.map(item => {
@@ -25637,6 +25640,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
     const _syncKeySummary = Object.entries(
       _syncKeys.reduce((acc, k) => { acc[k] = (acc[k] || 0) + 1; return acc; }, {})
     ).map(([k, n]) => n > 1 ? `${k}×${n}` : k).join(', ');
+    addSyncLogEntry('upload_start', { n: filteredBatch.length, keys: _syncKeySummary });
     logCritical(`[SYNC] → отправка ${filteredBatch.length} записей: ${_syncKeySummary}`);
 
     // 🔐 v=54 FIX: После миграции на Yandex API — ВСЕГДА используем RPC режим!
@@ -25750,6 +25754,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
         } else {
           resetRetry();
           logUploadSummaryBuffered(totalSaved);
+          addSyncLogEntry('upload_ok', { n: totalSaved, keys: _syncKeySummary, ms: Date.now() - (_uploadStartTs || 0) });
           clearClientInFlightBatch({ notify: false });
         }
 

@@ -667,8 +667,6 @@
     function useCloudSyncStatus() {
         const React = window.React;
         const { useState, useRef, useCallback, useEffect } = React;
-        // 🔍 Маркер монтирования — подтверждает что новый бандл загружен
-        console.info('[HEYS.sync] [IND] useCloudSyncStatus MOUNTED (bundle 8b3c)');
         const [cloudStatus, setCloudStatus] = useState(() => navigator.onLine ? 'idle' : 'offline');
         const [pendingCount, setPendingCount] = useState(0);
         const [pendingDetails, setPendingDetails] = useState(createEmptyPendingDetails);
@@ -754,6 +752,14 @@
         const SYNC_STATUS_POLL_IDLE_MS = 2200;
         const SYNC_STATUS_POLL_HIDDEN_MS = 4000;
         const SYNC_STATUS_DETAILS_REFRESH_EVERY = 3;
+
+        // 🔍 Маркер монтирования — только при реальном mount, не на каждом рендере
+        useEffect(() => {
+            console.info('[HEYS.sync] [IND] useCloudSyncStatus MOUNTED (bundle c4bd)');
+            return () => {
+                console.info('[HEYS.sync] [IND] useCloudSyncStatus UNMOUNTED');
+            };
+        }, []);
 
         const getRuntimePendingCount = useCallback(() => {
             try {
@@ -1099,6 +1105,11 @@
                 }
 
                 pendingChangesRef.current = false;
+                // Сбрасываем старый syncedTimeout чтобы гард не заблокировал переход в synced
+                if (syncedTimeoutRef.current) {
+                    clearTimeout(syncedTimeoutRef.current);
+                    syncedTimeoutRef.current = null;
+                }
                 showSyncedWithMinDuration();
             };
 
@@ -1187,6 +1198,10 @@
                         }
 
                         pendingChangesRef.current = false;
+                        if (syncedTimeoutRef.current) {
+                            clearTimeout(syncedTimeoutRef.current);
+                            syncedTimeoutRef.current = null;
+                        }
                         showSyncedWithMinDuration();
                     }, 5000);
                 }

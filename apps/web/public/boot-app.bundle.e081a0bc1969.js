@@ -5518,9 +5518,14 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
   }
 
   function setCachedStatus(status) {
+    const prev = _cachedStatus;
     _cachedStatus = status;
     _cachedAt = Date.now();
-    writeCacheValue(CACHE_KEY, { status, ts: _cachedAt });
+    // Не пишем в storage если статус не изменился — иначе обновление ts
+    // каждые 5 минут триггерит бесполезный cloud sync
+    if (prev !== status) {
+      writeCacheValue(CACHE_KEY, { status, ts: _cachedAt });
+    }
   }
 
   function clearCache() {
@@ -12277,8 +12282,6 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
     function useCloudSyncStatus() {
         const React = window.React;
         const { useState, useRef, useCallback, useEffect } = React;
-        // 🔍 Маркер монтирования — подтверждает что новый бандл загружен
-        console.info('[HEYS.sync] [IND] useCloudSyncStatus MOUNTED (bundle 8b3c)');
         const [cloudStatus, setCloudStatus] = useState(() => navigator.onLine ? 'idle' : 'offline');
         const [pendingCount, setPendingCount] = useState(0);
         const [pendingDetails, setPendingDetails] = useState(createEmptyPendingDetails);
@@ -12364,6 +12367,14 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
         const SYNC_STATUS_POLL_IDLE_MS = 2200;
         const SYNC_STATUS_POLL_HIDDEN_MS = 4000;
         const SYNC_STATUS_DETAILS_REFRESH_EVERY = 3;
+
+        // 🔍 Маркер монтирования — только при реальном mount, не на каждом рендере
+        useEffect(() => {
+            console.info('[HEYS.sync] [IND] useCloudSyncStatus MOUNTED (bundle c4bd)');
+            return () => {
+                console.info('[HEYS.sync] [IND] useCloudSyncStatus UNMOUNTED');
+            };
+        }, []);
 
         const getRuntimePendingCount = useCallback(() => {
             try {
@@ -12709,6 +12720,11 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                 }
 
                 pendingChangesRef.current = false;
+                // Сбрасываем старый syncedTimeout чтобы гард не заблокировал переход в synced
+                if (syncedTimeoutRef.current) {
+                    clearTimeout(syncedTimeoutRef.current);
+                    syncedTimeoutRef.current = null;
+                }
                 showSyncedWithMinDuration();
             };
 
@@ -12797,6 +12813,10 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                         }
 
                         pendingChangesRef.current = false;
+                        if (syncedTimeoutRef.current) {
+                            clearTimeout(syncedTimeoutRef.current);
+                            syncedTimeoutRef.current = null;
+                        }
                         showSyncedWithMinDuration();
                     }, 5000);
                 }
@@ -19489,6 +19509,58 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
         const handleSyncBadgeClick = () => {
             if (effectiveDisplayStatus === 'syncing' || effectiveDisplayStatus === 'offline' || effectiveDisplayStatus === 'session') return;
             haptic('light');
+            // Build and copy comprehensive debug snapshot to clipboard
+            try {
+                const now = new Date();
+                const pad = (n) => String(n).padStart(2, '0');
+                const ts = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+                const syncLog = HEYS?.cloud?.getSyncLog?.() || [];
+                const logLines = syncLog.map(e => {
+                    const t = e.ts ? new Date(e.ts).toISOString().replace('T', ' ').replace('Z', '') : '?';
+                    const det = e.details ? ' ' + JSON.stringify(e.details) : '';
+                    return `[HEYS.sync] ${t} ${e.type || ''}${det}`;
+                });
+                // Runtime state
+                const rt = {};
+                try {
+                    const _rr = HEYS?.cloud?.getRoutingStatus?.();
+                    rt.status = (_rr && typeof _rr === 'object') ? JSON.stringify(_rr) : (_rr || effectiveDisplayStatus);
+                    rt.pending = HEYS?.cloud?.getPendingCount?.() || 0;
+                    rt.pendingDet = HEYS?.cloud?.getPendingDetails?.();
+                    rt.syncing = !!HEYS?.cloud?.isSyncing?.();
+                    rt.uploading = !!HEYS?.cloud?.isUploadInProgress?.();
+                    rt.isAuth = !!HEYS?.cloud?.isAuthenticated?.();
+                    rt.isPin = !!HEYS?.cloud?.isPinAuthClient?.();
+                    rt.client = (HEYS?.cloud?.getCurrentClientId?.() || clientIdValue || '').slice(0, 8);
+                    rt.online = navigator.onLine;
+                    const lsSyncTs = localStorage.getItem(`heys_${clientIdValue}_last_sync_ts`);
+                    rt.lastSyncTs = lsSyncTs || null;
+                    // Queues
+                    const clientQ = localStorage.getItem('heys_pending_client_sync_queue');
+                    const inflightQ = localStorage.getItem('heys_pending_client_sync_inflight_queue');
+                    rt.clientQueue = clientQ ? JSON.parse(clientQ).length : 0;
+                    rt.inflightQueue = inflightQ ? JSON.parse(inflightQ).length : 0;
+                } catch (_) { }
+                const lines = [
+                    `=== HEYS Sync Debug Snapshot @ ${ts} ===`,
+                    `status:       ${rt.status}`,
+                    `online:       ${rt.online}`,
+                    `isAuth:       ${rt.isAuth}  isPin: ${rt.isPin}  client: ${rt.client}***`,
+                    `syncing:      ${rt.syncing}  uploading: ${rt.uploading}`,
+                    `pending:      ${rt.pending}  ${rt.pendingDet ? JSON.stringify(rt.pendingDet) : ''}`,
+                    `clientQueue:  ${rt.clientQueue}  inflight: ${rt.inflightQueue}`,
+                    `lastSyncTs:   ${rt.lastSyncTs || '—'}`,
+                    '',
+                    `=== Sync Log (${logLines.length} entries) ===`,
+                    ...(logLines.length ? logLines : ['[HEYS.sync] (пусто)']),
+                ];
+                const text = lines.join('\n');
+                if (navigator?.clipboard?.writeText) {
+                    navigator.clipboard.writeText(text).then(() => {
+                        HEYS?.Toast?.success?.('Sync debug скопирован');
+                    }).catch(() => { });
+                }
+            } catch (e) { /* noop */ }
             if (HEYS?.cloud?.syncClient && clientIdValue) {
                 console.info('[HEYS.sync] 🔄 Manual force-sync triggered from badge');
                 HEYS.cloud.syncClient(clientIdValue, { force: true });

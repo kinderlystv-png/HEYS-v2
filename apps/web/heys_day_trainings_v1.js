@@ -615,343 +615,343 @@
           setSsHover(null);
         }
       },
-      React.createElement('div', { className: 'ct-wb-ex-head' },
-        React.createElement('button', {
-          type: 'button',
-          className: 'ct-wb-ex-drag-order',
-          title: 'Перетащить — порядок упражнений',
-          'aria-label': 'Перетащить порядок',
-          draggable: true,
-          onDragStart: function (e) {
-            e.stopPropagation();
-            setSsPickFrom(null);
-            wbDndKind = 'reorder';
-            wbDndFrom = exi;
-            setReorderDragActive(true);
-            try {
-              e.dataTransfer.setData('text/plain', 'heysWbReorder:' + exi);
-              e.dataTransfer.effectAllowed = 'move';
-            } catch (err) { /* noop */ }
-          },
-          onClick: function (e) {
-            e.stopPropagation();
-          }
-        }, '⠿'),
-        React.createElement('span', { className: 'ct-wb-ex-num ct-wb-ex-num--full' }, 'Упражнение ' + (exi + 1)),
-        React.createElement('button', {
-          type: 'button',
-          className: 'ct-wb-ex-drag-ss ct-wb-ex-fold-toggle' + (isExFolded ? ' is-collapsed' : ''),
-          title: isExFolded ? 'Развернуть блок упражнения' : 'Свернуть блок упражнения',
-          'aria-expanded': !isExFolded,
-          'aria-label': isExFolded ? 'Развернуть' : 'Свернуть',
-          onClick: function (e) {
-            e.stopPropagation();
-            e.preventDefault();
-            if (typeof haptic === 'function') haptic('light');
-            setWbExFolded(function (prev) {
-              var next = { ...prev };
-              next[exRowStableKey] = !prev[exRowStableKey];
-              return next;
-            });
-          }
-        }, isExFolded ? 'Развернуть' : 'Свернуть'),
-        React.createElement('span', { className: 'ct-wb-ex-head-spacer' }),
-        React.createElement('span', { className: 'ct-wb-ex-ss-wrap' },
+        React.createElement('div', { className: 'ct-wb-ex-head' },
           React.createElement('button', {
             type: 'button',
-            className: 'ct-wb-ex-drag-ss' + (ssPickFrom === exi ? ' is-picking' : ''),
-            title: ssPickFrom === exi
-              ? 'Выбери второе упражнение (СС) или отмени'
-              : 'Супerset: нажми, затем на СС другого упражнения — или перетащи на карточку',
-            'aria-label': 'Суперсет',
+            className: 'ct-wb-ex-drag-order',
+            title: 'Перетащить — порядок упражнений',
+            'aria-label': 'Перетащить порядок',
             draggable: true,
             onDragStart: function (e) {
               e.stopPropagation();
               setSsPickFrom(null);
-              wbDndKind = 'ss';
+              wbDndKind = 'reorder';
               wbDndFrom = exi;
+              setReorderDragActive(true);
               try {
-                e.dataTransfer.setData('text/plain', 'heysWbSs:' + exi);
-                e.dataTransfer.effectAllowed = 'copy';
+                e.dataTransfer.setData('text/plain', 'heysWbReorder:' + exi);
+                e.dataTransfer.effectAllowed = 'move';
               } catch (err) { /* noop */ }
             },
             onClick: function (e) {
               e.stopPropagation();
-              e.preventDefault();
-              if (ssPickFrom == null) {
-                setSsPickFrom(exi);
-                if (typeof haptic === 'function') haptic('light');
-                return;
-              }
-              if (ssPickFrom === exi) {
-                setSsPickFrom(null);
-                return;
-              }
-              const partner = ssPickFrom;
-              setSsPickFrom(null);
-              patchTraining(ti, function (t0) {
-                const wl0 = ensureWorkoutLogShape(t0);
-                wl0.exercises = mergeSupersetLinks(wl0.exercises, partner, exi);
-                return applyWorkoutLogToTraining(t0, wl0);
-              });
-              if (typeof haptic === 'function') haptic('medium');
             }
-          }, 'СС'),
-          ssPickFrom === exi && React.createElement('button', {
+          }, '⠿'),
+          React.createElement('span', { className: 'ct-wb-ex-num ct-wb-ex-num--full' }, 'Упражнение ' + (exi + 1)),
+          React.createElement('button', {
             type: 'button',
-            className: 'ct-wb-ex-ss-pick-cancel',
-            title: 'Отменить выбор',
-            'aria-label': 'Отменить выбор суперсета',
+            className: 'ct-wb-ex-drag-ss ct-wb-ex-fold-toggle' + (isExFolded ? ' is-collapsed' : ''),
+            title: isExFolded ? 'Развернуть блок упражнения' : 'Свернуть блок упражнения',
+            'aria-expanded': !isExFolded,
+            'aria-label': isExFolded ? 'Развернуть' : 'Свернуть',
             onClick: function (e) {
               e.stopPropagation();
               e.preventDefault();
-              setSsPickFrom(null);
               if (typeof haptic === 'function') haptic('light');
+              setWbExFolded(function (prev) {
+                var next = { ...prev };
+                next[exRowStableKey] = !prev[exRowStableKey];
+                return next;
+              });
+            }
+          }, isExFolded ? 'Развернуть' : 'Свернуть'),
+          React.createElement('span', { className: 'ct-wb-ex-head-spacer' }),
+          React.createElement('span', { className: 'ct-wb-ex-ss-wrap' },
+            React.createElement('button', {
+              type: 'button',
+              className: 'ct-wb-ex-drag-ss' + (ssPickFrom === exi ? ' is-picking' : ''),
+              title: ssPickFrom === exi
+                ? 'Выбери второе упражнение (СС) или отмени'
+                : 'Супerset: нажми, затем на СС другого упражнения — или перетащи на карточку',
+              'aria-label': 'Суперсет',
+              draggable: true,
+              onDragStart: function (e) {
+                e.stopPropagation();
+                setSsPickFrom(null);
+                wbDndKind = 'ss';
+                wbDndFrom = exi;
+                try {
+                  e.dataTransfer.setData('text/plain', 'heysWbSs:' + exi);
+                  e.dataTransfer.effectAllowed = 'copy';
+                } catch (err) { /* noop */ }
+              },
+              onClick: function (e) {
+                e.stopPropagation();
+                e.preventDefault();
+                if (ssPickFrom == null) {
+                  setSsPickFrom(exi);
+                  if (typeof haptic === 'function') haptic('light');
+                  return;
+                }
+                if (ssPickFrom === exi) {
+                  setSsPickFrom(null);
+                  return;
+                }
+                const partner = ssPickFrom;
+                setSsPickFrom(null);
+                patchTraining(ti, function (t0) {
+                  const wl0 = ensureWorkoutLogShape(t0);
+                  wl0.exercises = mergeSupersetLinks(wl0.exercises, partner, exi);
+                  return applyWorkoutLogToTraining(t0, wl0);
+                });
+                if (typeof haptic === 'function') haptic('medium');
+              }
+            }, 'СС'),
+            ssPickFrom === exi && React.createElement('button', {
+              type: 'button',
+              className: 'ct-wb-ex-ss-pick-cancel',
+              title: 'Отменить выбор',
+              'aria-label': 'Отменить выбор суперсета',
+              onClick: function (e) {
+                e.stopPropagation();
+                e.preventDefault();
+                setSsPickFrom(null);
+                if (typeof haptic === 'function') haptic('light');
+              }
+            }, '✕')
+          ),
+          exercises.length > 1 && React.createElement('button', {
+            type: 'button',
+            className: 'ct-wb-ex-remove',
+            onClick: (e) => {
+              e.stopPropagation();
+              if (typeof haptic === 'function') haptic('light');
+              patchTraining(ti, (t0) => {
+                const wl0 = ensureWorkoutLogShape(t0);
+                wl0.exercises = wl0.exercises.filter((_, j) => j !== exi);
+                if (wl0.exercises.length === 0) {
+                  wl0.exercises = [{
+                    id: 'ex_' + Date.now(),
+                    name: '',
+                    approaches: [{ id: 'ap_' + Date.now(), weightKg: '', reps: 10 }],
+                    note: '',
+                    ssGroup: 0,
+                    rpe: 0
+                  }];
+                }
+                return applyWorkoutLogToTraining(t0, wl0);
+              });
             }
           }, '✕')
         ),
-        exercises.length > 1 && React.createElement('button', {
-          type: 'button',
-          className: 'ct-wb-ex-remove',
-          onClick: (e) => {
-            e.stopPropagation();
-            if (typeof haptic === 'function') haptic('light');
-            patchTraining(ti, (t0) => {
+        isExFolded && (function () {
+          var apN = approachesCountForExercise(ex);
+          var nameDisp = String(ex.name || '').trim();
+          return React.createElement('div', { className: 'ct-wb-ex-name-folded' },
+            React.createElement('span', {
+              className: 'ct-wb-ex-name-folded-text',
+              title: nameDisp || 'Без названия'
+            }, nameDisp || 'Без названия'),
+            React.createElement('span', {
+              className: 'ct-wb-ex-name-folded-cnt',
+              'aria-label': approachesCountLabelRu(apN)
+            }, approachesCountLabelRu(apN))
+          );
+        })(),
+        !isExFolded && React.createElement(WorkoutExerciseNameField, {
+          key: 'wb-ex-name-' + exi,
+          listId: 'wb-ex-suggest-' + ti + '-' + exi,
+          focusTargetId: 'wb-ex-weight-' + ti + '-' + exi + '-0',
+          value: ex.name,
+          haptic: haptic,
+          onChange: function (v) {
+            patchTraining(ti, function (t0) {
               const wl0 = ensureWorkoutLogShape(t0);
-              wl0.exercises = wl0.exercises.filter((_, j) => j !== exi);
-              if (wl0.exercises.length === 0) {
-                wl0.exercises = [{
-                  id: 'ex_' + Date.now(),
-                  name: '',
-                  approaches: [{ id: 'ap_' + Date.now(), weightKg: '', reps: 10 }],
-                  note: '',
-                  ssGroup: 0,
-                  rpe: 0
-                }];
-              }
+              wl0.exercises = wl0.exercises.map(function (row, j) {
+                return j === exi ? { ...row, name: v } : row;
+              });
+              return applyWorkoutLogToTraining(t0, wl0);
+            });
+          },
+          onPick: function (picked) {
+            if (typeof HEYS.bumpExerciseUsage === 'function') {
+              HEYS.bumpExerciseUsage(picked);
+            }
+            const norm = typeof HEYS.normalizeExerciseName === 'function'
+              ? HEYS.normalizeExerciseName(picked)
+              : String(picked || '').trim().toLowerCase().replace(/ё/g, 'е').replace(/\s+/g, ' ');
+            const snap = dk && norm ? findLastExerciseSnapshot(dk, norm, ti, exi) : null;
+            if (!snap) return;
+            patchTraining(ti, function (t0) {
+              const wl0 = ensureWorkoutLogShape(t0);
+              wl0.exercises = wl0.exercises.map(function (row, j) {
+                if (j !== exi) return row;
+                const apNew = buildApproachesFromSnapshot(snap, row);
+                const merged = {
+                  ...row,
+                  name: picked,
+                  approaches: apNew,
+                  rpe: snap.rpe > 0 ? snap.rpe : row.rpe,
+                  note: snap.note && String(snap.note).trim() ? snap.note : row.note
+                };
+                const leg = syncLegacyFieldsFromApproaches(merged);
+                return { ...merged, ...leg };
+              });
               return applyWorkoutLogToTraining(t0, wl0);
             });
           }
-        }, '✕')
-      ),
-      isExFolded && (function () {
-        var apN = approachesCountForExercise(ex);
-        var nameDisp = String(ex.name || '').trim();
-        return React.createElement('div', { className: 'ct-wb-ex-name-folded' },
-          React.createElement('span', {
-            className: 'ct-wb-ex-name-folded-text',
-            title: nameDisp || 'Без названия'
-          }, nameDisp || 'Без названия'),
-          React.createElement('span', {
-            className: 'ct-wb-ex-name-folded-cnt',
-            'aria-label': approachesCountLabelRu(apN)
-          }, approachesCountLabelRu(apN))
-        );
-      })(),
-      !isExFolded && React.createElement(WorkoutExerciseNameField, {
-        key: 'wb-ex-name-' + exi,
-        listId: 'wb-ex-suggest-' + ti + '-' + exi,
-        focusTargetId: 'wb-ex-weight-' + ti + '-' + exi + '-0',
-        value: ex.name,
-        haptic: haptic,
-        onChange: function (v) {
-          patchTraining(ti, function (t0) {
-            const wl0 = ensureWorkoutLogShape(t0);
-            wl0.exercises = wl0.exercises.map(function (row, j) {
-              return j === exi ? { ...row, name: v } : row;
-            });
-            return applyWorkoutLogToTraining(t0, wl0);
-          });
-        },
-        onPick: function (picked) {
-          if (typeof HEYS.bumpExerciseUsage === 'function') {
-            HEYS.bumpExerciseUsage(picked);
-          }
-          const norm = typeof HEYS.normalizeExerciseName === 'function'
-            ? HEYS.normalizeExerciseName(picked)
-            : String(picked || '').trim().toLowerCase().replace(/ё/g, 'е').replace(/\s+/g, ' ');
-          const snap = dk && norm ? findLastExerciseSnapshot(dk, norm, ti, exi) : null;
-          if (!snap) return;
-          patchTraining(ti, function (t0) {
-            const wl0 = ensureWorkoutLogShape(t0);
-            wl0.exercises = wl0.exercises.map(function (row, j) {
-              if (j !== exi) return row;
-              const apNew = buildApproachesFromSnapshot(snap, row);
-              const merged = {
-                ...row,
-                name: picked,
-                approaches: apNew,
-                rpe: snap.rpe > 0 ? snap.rpe : row.rpe,
-                note: snap.note && String(snap.note).trim() ? snap.note : row.note
-              };
-              const leg = syncLegacyFieldsFromApproaches(merged);
-              return { ...merged, ...leg };
-            });
-            return applyWorkoutLogToTraining(t0, wl0);
-          });
-        }
-      }),
-      !isExFolded && React.createElement(WorkoutExerciseHistoryStrip, {
-        key: 'wb-ex-hist-' + ti + '-' + exi,
-        exerciseName: ex.name,
-        dateKey: dk,
-        ti: ti,
-        exi: exi,
-        haptic: haptic
-      }),
-      !isExFolded && (function () {
-        const approaches = Array.isArray(ex.approaches) && ex.approaches.length
-          ? ex.approaches
-          : [{ id: 'ap_fallback', weightKg: ex.weightKg != null ? String(ex.weightKg) : '', reps: ex.reps != null ? +ex.reps : 10 }];
-        return React.createElement('div', { className: 'ct-wb-ex-ap-table' },
-          React.createElement('div', { className: 'ct-wb-ex-ap-head', 'aria-hidden': true },
-            React.createElement('span', { className: 'ct-wb-ex-ap-h' }, 'Подход'),
-            React.createElement('span', { className: 'ct-wb-ex-ap-h' }, 'Вес'),
-            React.createElement('span', { className: 'ct-wb-ex-ap-h' }, 'Повторы')
-          ),
-          approaches.map(function (ap, api) {
-            return React.createElement('div', {
-              key: ap.id || 'wb-ap-' + ti + '-' + exi + '-' + api,
-              className: 'ct-wb-ex-ap-row'
-            },
-            React.createElement('div', { className: 'ct-wb-ex-ap-cell ct-wb-ex-ap-cell--label' },
-              React.createElement('span', { className: 'ct-wb-ex-ap-num' }, approachOrdinalRu(api)),
-              approaches.length > 1 && React.createElement('button', {
-                type: 'button',
-                className: 'ct-wb-ex-ap-remove',
-                title: 'Убрать подход',
-                'aria-label': 'Убрать ' + approachOrdinalRu(api),
-                onClick: function (e) {
-                  e.stopPropagation();
-                  if (typeof haptic === 'function') haptic('light');
-                  patchTraining(ti, function (t0) {
-                    const wl0 = ensureWorkoutLogShape(t0);
-                    wl0.exercises = wl0.exercises.map(function (row, j) {
-                      if (j !== exi) return row;
-                      const ap2 = (row.approaches || []).slice();
-                      if (ap2.length <= 1) return row;
-                      ap2.splice(api, 1);
-                      const merged = { ...row, approaches: ap2 };
-                      return { ...merged, ...syncLegacyFieldsFromApproaches(merged) };
-                    });
-                    return applyWorkoutLogToTraining(t0, wl0);
-                  });
-                }
-              }, '×')
+        }),
+        !isExFolded && React.createElement(WorkoutExerciseHistoryStrip, {
+          key: 'wb-ex-hist-' + ti + '-' + exi,
+          exerciseName: ex.name,
+          dateKey: dk,
+          ti: ti,
+          exi: exi,
+          haptic: haptic
+        }),
+        !isExFolded && (function () {
+          const approaches = Array.isArray(ex.approaches) && ex.approaches.length
+            ? ex.approaches
+            : [{ id: 'ap_fallback', weightKg: ex.weightKg != null ? String(ex.weightKg) : '', reps: ex.reps != null ? +ex.reps : 10 }];
+          return React.createElement('div', { className: 'ct-wb-ex-ap-table' },
+            React.createElement('div', { className: 'ct-wb-ex-ap-head', 'aria-hidden': true },
+              React.createElement('span', { className: 'ct-wb-ex-ap-h' }, 'Подход'),
+              React.createElement('span', { className: 'ct-wb-ex-ap-h' }, 'Вес'),
+              React.createElement('span', { className: 'ct-wb-ex-ap-h' }, 'Повторы')
             ),
-            React.createElement('label', { className: 'ct-wb-ex-ap-cell ct-wb-ex-ap-cell--weight' },
-              React.createElement('input', {
-                type: 'text',
-                id: 'wb-ex-weight-' + ti + '-' + exi + '-' + api,
-                className: 'ct-wb-mini-inp',
-                placeholder: 'кг',
-                inputMode: 'decimal',
-                enterKeyHint: 'done',
-                autoComplete: 'off',
-                value: ap.weightKg != null ? String(ap.weightKg) : '',
-                onClick: function (e) { e.stopPropagation(); },
-                onChange: function (e) {
-                  const v = e.target.value;
-                  patchTraining(ti, function (t0) {
-                    const wl0 = ensureWorkoutLogShape(t0);
-                    wl0.exercises = wl0.exercises.map(function (row, j) {
-                      if (j !== exi) return row;
-                      const ap3 = (row.approaches || []).slice();
-                      if (!ap3[api]) return row;
-                      ap3[api] = { ...ap3[api], weightKg: v };
-                      const merged = { ...row, approaches: ap3 };
-                      return { ...merged, ...syncLegacyFieldsFromApproaches(merged) };
-                    });
-                    return applyWorkoutLogToTraining(t0, wl0);
-                  });
-                }
-              })
-            ),
-            React.createElement('div', { className: 'ct-wb-ex-ap-cell ct-wb-ex-ap-cell--reps' },
-              wbApproachRepStepper(ti, exi, api, Math.max(1, parseInt(ap.reps, 10) || 1), 1, 200)
-            )
-            );
-          }),
-          React.createElement('button', {
-            type: 'button',
-            className: 'ct-wb-add-approach-btn',
-            onClick: function (e) {
-              e.stopPropagation();
-              if (typeof haptic === 'function') haptic('light');
-              const nextIdx = approaches.length;
-              patchTraining(ti, function (t0) {
-                const wl0 = ensureWorkoutLogShape(t0);
-                wl0.exercises = wl0.exercises.map(function (row, j) {
-                  if (j !== exi) return row;
-                  const ap4 = (row.approaches && row.approaches.length ? row.approaches.slice() : [{ id: 'ap0', weightKg: '', reps: 10 }]);
-                  const lastAp = ap4[ap4.length - 1];
-                  const lastReps = lastAp ? Math.max(1, parseInt(lastAp.reps, 10) || 10) : 10;
-                  const lastW = lastAp && lastAp.weightKg != null ? String(lastAp.weightKg) : '';
-                  ap4.push({
-                    id: 'ap_' + Date.now(),
-                    weightKg: lastW,
-                    reps: lastReps
-                  });
-                  const merged = { ...row, approaches: ap4 };
-                  return { ...merged, ...syncLegacyFieldsFromApproaches(merged) };
-                });
-                return applyWorkoutLogToTraining(t0, wl0);
-              });
-              global.requestAnimationFrame(function () {
-                global.requestAnimationFrame(function () {
-                  var el = document.getElementById('wb-ex-weight-' + ti + '-' + exi + '-' + nextIdx);
-                  if (el && typeof el.focus === 'function') el.focus();
-                });
-              });
-            }
-          }, '+ Добавить подход')
-        );
-      })(),
-      !isExFolded && React.createElement('div', { className: 'ct-wb-ex-meta' },
-        React.createElement('div', { className: 'ct-wb-ex-rpe-row' },
-          React.createElement('span', { className: 'ct-wb-ex-rpe-label' }, 'RPE'),
-          [6, 7, 8, 9, 10].map(function (num) {
-            return React.createElement('button', {
+            approaches.map(function (ap, api) {
+              return React.createElement('div', {
+                key: ap.id || 'wb-ap-' + ti + '-' + exi + '-' + api,
+                className: 'ct-wb-ex-ap-row'
+              },
+                React.createElement('div', { className: 'ct-wb-ex-ap-cell ct-wb-ex-ap-cell--label' },
+                  React.createElement('span', { className: 'ct-wb-ex-ap-num' }, approachOrdinalRu(api)),
+                  approaches.length > 1 && React.createElement('button', {
+                    type: 'button',
+                    className: 'ct-wb-ex-ap-remove',
+                    title: 'Убрать подход',
+                    'aria-label': 'Убрать ' + approachOrdinalRu(api),
+                    onClick: function (e) {
+                      e.stopPropagation();
+                      if (typeof haptic === 'function') haptic('light');
+                      patchTraining(ti, function (t0) {
+                        const wl0 = ensureWorkoutLogShape(t0);
+                        wl0.exercises = wl0.exercises.map(function (row, j) {
+                          if (j !== exi) return row;
+                          const ap2 = (row.approaches || []).slice();
+                          if (ap2.length <= 1) return row;
+                          ap2.splice(api, 1);
+                          const merged = { ...row, approaches: ap2 };
+                          return { ...merged, ...syncLegacyFieldsFromApproaches(merged) };
+                        });
+                        return applyWorkoutLogToTraining(t0, wl0);
+                      });
+                    }
+                  }, '×')
+                ),
+                React.createElement('label', { className: 'ct-wb-ex-ap-cell ct-wb-ex-ap-cell--weight' },
+                  React.createElement('input', {
+                    type: 'text',
+                    id: 'wb-ex-weight-' + ti + '-' + exi + '-' + api,
+                    className: 'ct-wb-mini-inp',
+                    placeholder: 'кг',
+                    inputMode: 'decimal',
+                    enterKeyHint: 'done',
+                    autoComplete: 'off',
+                    value: ap.weightKg != null ? String(ap.weightKg) : '',
+                    onClick: function (e) { e.stopPropagation(); },
+                    onChange: function (e) {
+                      const v = e.target.value;
+                      patchTraining(ti, function (t0) {
+                        const wl0 = ensureWorkoutLogShape(t0);
+                        wl0.exercises = wl0.exercises.map(function (row, j) {
+                          if (j !== exi) return row;
+                          const ap3 = (row.approaches || []).slice();
+                          if (!ap3[api]) return row;
+                          ap3[api] = { ...ap3[api], weightKg: v };
+                          const merged = { ...row, approaches: ap3 };
+                          return { ...merged, ...syncLegacyFieldsFromApproaches(merged) };
+                        });
+                        return applyWorkoutLogToTraining(t0, wl0);
+                      });
+                    }
+                  })
+                ),
+                React.createElement('div', { className: 'ct-wb-ex-ap-cell ct-wb-ex-ap-cell--reps' },
+                  wbApproachRepStepper(ti, exi, api, Math.max(1, parseInt(ap.reps, 10) || 1), 1, 200)
+                )
+              );
+            }),
+            React.createElement('button', {
               type: 'button',
-              key: 'rpe-' + ti + '-' + exi + '-' + num,
-              className: 'ct-wb-ex-rpe-chip' + ((ex.rpe || 0) === num ? ' is-on' : ''),
+              className: 'ct-wb-add-approach-btn',
               onClick: function (e) {
                 e.stopPropagation();
+                if (typeof haptic === 'function') haptic('light');
+                const nextIdx = approaches.length;
                 patchTraining(ti, function (t0) {
                   const wl0 = ensureWorkoutLogShape(t0);
                   wl0.exercises = wl0.exercises.map(function (row, j) {
                     if (j !== exi) return row;
-                    const nextR = (row.rpe || 0) === num ? 0 : num;
-                    return { ...row, rpe: nextR };
+                    const ap4 = (row.approaches && row.approaches.length ? row.approaches.slice() : [{ id: 'ap0', weightKg: '', reps: 10 }]);
+                    const lastAp = ap4[ap4.length - 1];
+                    const lastReps = lastAp ? Math.max(1, parseInt(lastAp.reps, 10) || 10) : 10;
+                    const lastW = lastAp && lastAp.weightKg != null ? String(lastAp.weightKg) : '';
+                    ap4.push({
+                      id: 'ap_' + Date.now(),
+                      weightKg: lastW,
+                      reps: lastReps
+                    });
+                    const merged = { ...row, approaches: ap4 };
+                    return { ...merged, ...syncLegacyFieldsFromApproaches(merged) };
                   });
                   return applyWorkoutLogToTraining(t0, wl0);
                 });
-                if (typeof haptic === 'function') haptic('light');
+                global.requestAnimationFrame(function () {
+                  global.requestAnimationFrame(function () {
+                    var el = document.getElementById('wb-ex-weight-' + ti + '-' + exi + '-' + nextIdx);
+                    if (el && typeof el.focus === 'function') el.focus();
+                  });
+                });
               }
-            }, String(num));
-          })
-        ),
-        React.createElement('input', {
-          type: 'text',
-          className: 'ct-wb-ex-note-inp',
-          placeholder: 'Заметка к упражнению',
-          value: ex.note || '',
-          onClick: function (e) {
-            e.stopPropagation();
-          },
-          onChange: function (e) {
-            const v = e.target.value;
-            patchTraining(ti, function (t0) {
-              const wl0 = ensureWorkoutLogShape(t0);
-              wl0.exercises = wl0.exercises.map(function (row, j) {
-                return j === exi ? { ...row, note: v } : row;
+            }, '+ Добавить подход')
+          );
+        })(),
+        !isExFolded && React.createElement('div', { className: 'ct-wb-ex-meta' },
+          React.createElement('div', { className: 'ct-wb-ex-rpe-row' },
+            React.createElement('span', { className: 'ct-wb-ex-rpe-label' }, 'RPE'),
+            [6, 7, 8, 9, 10].map(function (num) {
+              return React.createElement('button', {
+                type: 'button',
+                key: 'rpe-' + ti + '-' + exi + '-' + num,
+                className: 'ct-wb-ex-rpe-chip' + ((ex.rpe || 0) === num ? ' is-on' : ''),
+                onClick: function (e) {
+                  e.stopPropagation();
+                  patchTraining(ti, function (t0) {
+                    const wl0 = ensureWorkoutLogShape(t0);
+                    wl0.exercises = wl0.exercises.map(function (row, j) {
+                      if (j !== exi) return row;
+                      const nextR = (row.rpe || 0) === num ? 0 : num;
+                      return { ...row, rpe: nextR };
+                    });
+                    return applyWorkoutLogToTraining(t0, wl0);
+                  });
+                  if (typeof haptic === 'function') haptic('light');
+                }
+              }, String(num));
+            })
+          ),
+          React.createElement('input', {
+            type: 'text',
+            className: 'ct-wb-ex-note-inp',
+            placeholder: 'Заметка к упражнению',
+            value: ex.note || '',
+            onClick: function (e) {
+              e.stopPropagation();
+            },
+            onChange: function (e) {
+              const v = e.target.value;
+              patchTraining(ti, function (t0) {
+                const wl0 = ensureWorkoutLogShape(t0);
+                wl0.exercises = wl0.exercises.map(function (row, j) {
+                  return j === exi ? { ...row, note: v } : row;
+                });
+                return applyWorkoutLogToTraining(t0, wl0);
               });
-              return applyWorkoutLogToTraining(t0, wl0);
-            });
-          }
-        })
-      )
-    ));
+            }
+          })
+        )
+      ));
 
       if (exi < n - 1) {
         const gHere = +(exercises[exi].ssGroup || 0);
@@ -962,23 +962,23 @@
             key: 'ss-conn-' + exi,
             className: 'ct-wb-ex-ss-connector ct-wb-ss-conn-g' + gColor
           },
-          React.createElement('span', { className: 'ct-wb-ex-ss-arrows', 'aria-hidden': true }, '⇄'),
-          React.createElement('button', {
-            type: 'button',
-            className: 'ct-wb-ex-ss-break',
-            title: 'Разъединить суперсет (все упражнения этой группы)',
-            'aria-label': 'Разъединить суперсет',
-            onClick: function (e) {
-              e.stopPropagation();
-              e.preventDefault();
-              patchTraining(ti, function (t0) {
-                const wl0 = ensureWorkoutLogShape(t0);
-                wl0.exercises = dissolveSsGroupEverywhere(wl0.exercises, gHere);
-                return applyWorkoutLogToTraining(t0, wl0);
-              });
-              if (typeof haptic === 'function') haptic('light');
-            }
-          }, '✕')
+            React.createElement('span', { className: 'ct-wb-ex-ss-arrows', 'aria-hidden': true }, '⇄'),
+            React.createElement('button', {
+              type: 'button',
+              className: 'ct-wb-ex-ss-break',
+              title: 'Разъединить суперсет (все упражнения этой группы)',
+              'aria-label': 'Разъединить суперсет',
+              onClick: function (e) {
+                e.stopPropagation();
+                e.preventDefault();
+                patchTraining(ti, function (t0) {
+                  const wl0 = ensureWorkoutLogShape(t0);
+                  wl0.exercises = dissolveSsGroupEverywhere(wl0.exercises, gHere);
+                  return applyWorkoutLogToTraining(t0, wl0);
+                });
+                if (typeof haptic === 'function') haptic('light');
+              }
+            }, '✕')
           ));
         }
       }
@@ -1028,22 +1028,22 @@
         setCollapsed((c) => !c);
       }
     },
-    React.createElement('svg', {
-      className: 'compact-train-fold-svg',
-      width: 16,
-      height: 16,
-      viewBox: '0 0 24 24',
-      fill: 'none',
-      xmlns: 'http://www.w3.org/2000/svg',
-      'aria-hidden': true
-    },
-    React.createElement('path', {
-      d: 'M6 9l6 6 6-6',
-      stroke: 'currentColor',
-      strokeWidth: '2.2',
-      strokeLinecap: 'round',
-      strokeLinejoin: 'round'
-    }))
+      React.createElement('svg', {
+        className: 'compact-train-fold-svg',
+        width: 16,
+        height: 16,
+        viewBox: '0 0 24 24',
+        fill: 'none',
+        xmlns: 'http://www.w3.org/2000/svg',
+        'aria-hidden': true
+      },
+        React.createElement('path', {
+          d: 'M6 9l6 6 6-6',
+          stroke: 'currentColor',
+          strokeWidth: '2.2',
+          strokeLinecap: 'round',
+          strokeLinejoin: 'round'
+        }))
     );
     const endSlot = React.createElement('div', { className: 'compact-train-header-end' },
       timeEl || null,
@@ -1052,15 +1052,15 @@
     return React.createElement('div', {
       className: cardClassName + (collapsed ? ' compact-train--wb-collapsed' : '')
     },
-    React.createElement('div', {
-      className: 'compact-train-header compact-train-header--with-fold',
-      onClick: () => openTrainingPicker && openTrainingPicker(trainingIndex)
-    }, startSlot, foldBtn, endSlot),
-    !collapsed && React.createElement('div', { className: 'ct-wb-training-scale' },
-      foldedContentEl,
-      footerEl,
-      commentEl
-    )
+      React.createElement('div', {
+        className: 'compact-train-header compact-train-header--with-fold',
+        onClick: () => openTrainingPicker && openTrainingPicker(trainingIndex)
+      }, startSlot, foldBtn, endSlot),
+      !collapsed && React.createElement('div', { className: 'ct-wb-training-scale' },
+        foldedContentEl,
+        footerEl,
+        commentEl
+      )
     );
   }
 
@@ -1455,7 +1455,12 @@
           if (typeof setVisibleTrainings === 'function') {
             setVisibleTrainings((prev) => Math.max(0, prev - 1));
           }
-
+          // Форсируем запись в store/облако — без этого sync не триггерится
+          global.setTimeout(function () {
+            if (HEYS.Day && typeof HEYS.Day.requestFlush === 'function') {
+              HEYS.Day.requestFlush({ force: true });
+            }
+          }, 16);
           return {
             trainings: previousTrainings,
             visibleTrainings: previousVisibleTrainings,
@@ -1759,7 +1764,12 @@
               };
             });
           }
-
+          // Форсируем запись в store/облако — без этого sync не триггерится
+          global.setTimeout(function () {
+            if (HEYS.Day && typeof HEYS.Day.requestFlush === 'function') {
+              HEYS.Day.requestFlush({ force: true });
+            }
+          }, 16);
           return {
             activities: previousActivities,
             removedActivity,
