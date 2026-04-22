@@ -2756,6 +2756,17 @@
                 return;
             }
 
+            // Hot-sync loop protection: если content localStorage идентичен current state
+            // (сравнение без updatedAt через stripMeta) — skip, чтобы не создавать upload loop.
+            // hot-sync может получить dayv2 из облака → setDay → autosave → upload → hot-sync → ...
+            if (!force && freshestDaySnap && freshestDaySnap === daySnap) {
+                if (typeof console !== 'undefined') console.info('[HEYS.sync] [IND] flush: dayv2 content guard HIT (freshest===current, skip write) updatedAt=' + updatedAt);
+                return;
+            }
+            if (!force && freshestDaySnap) {
+                if (typeof console !== 'undefined') console.info('[HEYS.sync] [IND] flush: dayv2 content guard MISS (content differs) updatedAt=' + updatedAt + ' freshestUpdatedAt=' + freshestUpdatedAt);
+            }
+
             // force: всегда пишем в storage — иначе MA/модалки читают LS без последнего debounced-патча приёмов.
             if (!force && prevDaySnapRef.current === daySnap) return;
 

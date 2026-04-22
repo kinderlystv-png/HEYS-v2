@@ -11999,7 +11999,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
     const PENDING_SYNC_UI_QUEUE_KEY = 'heys_pending_sync_ui_queue';
     const MAX_PENDING_SYNC_UI_ITEMS = 5;
     const PENDING_SYNC_UI_TTL_MS = 3 * 24 * 60 * 60 * 1000;
-    const PENDING_SYNC_UI_SKIPPED_SOURCES = new Set(['merge', 'cloud-sync', 'force-sync', 'cascade-guard-unlock']);
+    const PENDING_SYNC_UI_SKIPPED_SOURCES = new Set(['merge', 'cloud-sync', 'force-sync', 'cascade-guard-unlock', 'foreground-hot-sync']);
 
     const createEmptyPendingDetails = () => ({ days: 0, products: 0, profile: 0, other: 0 });
 
@@ -12277,22 +12277,37 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
     function useCloudSyncStatus() {
         const React = window.React;
         const { useState, useRef, useCallback, useEffect } = React;
+        // 🔍 Маркер монтирования — подтверждает что новый бандл загружен
+        console.info('[HEYS.sync] [IND] useCloudSyncStatus MOUNTED (bundle 8b3c)');
         const [cloudStatus, setCloudStatus] = useState(() => navigator.onLine ? 'idle' : 'offline');
         const [pendingCount, setPendingCount] = useState(0);
         const [pendingDetails, setPendingDetails] = useState(createEmptyPendingDetails);
         const [pendingActionItems, setPendingActionItems] = useState(() => {
-            const persistedItems = readPendingActionQueue();
-            if (persistedItems.length > 0) return persistedItems;
-
+            // 🛡️ Проверяем runtime-состояние ДО чтения localStorage. Если в runtime
+            // ничего не ждёт отправки и upload не идёт — сразу чистим persisted
+            // очередь, чтобы фантомные записи прошлой сессии не вводили в заблуждение.
             try {
                 const runtimePendingCount = window.HEYS?.cloud?.getPendingCount?.() || 0;
                 const runtimePendingDetails = window.HEYS?.cloud?.getPendingDetails?.() || createEmptyPendingDetails();
+                const uploadInProgress = !!window.HEYS?.cloud?.isUploadInProgress?.();
+                const onLine = typeof navigator !== 'undefined' ? !!navigator.onLine : true;
+
                 if (runtimePendingCount > 0) {
+                    const persistedItems = readPendingActionQueue();
+                    if (persistedItems.length > 0) return persistedItems;
                     return buildFallbackPendingActionQueue(runtimePendingDetails);
                 }
-            } catch { }
 
-            return [];
+                if (onLine && !uploadInProgress) {
+                    // Реально ничего не ждёт — выкидываем застрявший persisted state
+                    try { localStorage.removeItem(PENDING_SYNC_UI_QUEUE_KEY); } catch { }
+                    return [];
+                }
+
+                return readPendingActionQueue();
+            } catch {
+                return readPendingActionQueue();
+            }
         });
         const [showOfflineBanner, setShowOfflineBanner] = useState(false);
         const [showOnlineBanner, setShowOnlineBanner] = useState(false);
@@ -12313,6 +12328,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
         const slowInternetShownForCurrentSyncRef = useRef(false);
 
         const cloudSyncTimeoutRef = useRef(null);
+        const queueDrainedFallbackRef = useRef(null);
         const pendingChangesRef = useRef(false);
         const syncingStartRef = useRef(null);
         const syncedTimeoutRef = useRef(null);
@@ -12327,6 +12343,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
         // �🔒 Cooldown после первого sync — не показываем "syncing" сразу после загрузки
         const initialSyncCompletedAtRef = useRef(0);
         const INITIAL_SYNC_COOLDOWN_MS = 3000; // 3 секунды после первого sync не показываем syncing
+        // 🔕 Timestamp когда последний раз индикатор ушёл в idle (пост-синк cooldown)
+        const lastIdleAtRef = useRef(0);
         // Refs для state-значений, читаемых из event handlers — стабилизирует deps эффекта
         const cloudStatusRef = useRef(cloudStatus);
         const pendingCountRef = useRef(pendingCount);
@@ -12379,6 +12397,23 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
         }, []);
 
         const pushPendingActionItem = useCallback((detail) => {
+            // 🛡️ Race-condition guard: не добавляем UI-плашку, если runtime-очередь пуста
+            // и upload не идёт — это значит данные уже синхронизированы (типично для
+            // PIN/RPC режима, где запись в облако завершается мгновенно). Иначе фантомные
+            // записи накапливаются в localStorage и показывают "Локальные изменения ждут
+            // отправки" даже когда всё успешно синхронизировано.
+            try {
+                const runtimePending = (typeof window !== 'undefined' && window.HEYS?.cloud?.getPendingCount)
+                    ? (window.HEYS.cloud.getPendingCount() || 0)
+                    : 0;
+                const uploadInProgress = (typeof window !== 'undefined' && window.HEYS?.cloud?.isUploadInProgress)
+                    ? !!window.HEYS.cloud.isUploadInProgress()
+                    : false;
+                const onLine = typeof navigator !== 'undefined' ? !!navigator.onLine : true;
+                if (onLine && runtimePending === 0 && !uploadInProgress) {
+                    return;
+                }
+            } catch { /* noop — на ошибках всё равно пушим */ }
             commitPendingActionItems(mergePendingActionQueue(pendingActionItemsRef.current, detail));
         }, [commitPendingActionItems]);
 
@@ -12514,6 +12549,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                 return;
             }
 
+            console.info('[HEYS.sync] [IND] startSyncingState called, current=' + cloudStatusRef.current + ' syncingStart=' + !!syncingStartRef.current);
+
             if (!syncingStartRef.current) {
                 syncLockShownForCurrentSyncRef.current = false;
                 slowInternetShownForCurrentSyncRef.current = false;
@@ -12526,6 +12563,14 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
             if (syncedTimeoutRef.current) {
                 clearTimeout(syncedTimeoutRef.current);
                 syncedTimeoutRef.current = null;
+            }
+
+            // FIX: сбрасываем 2s idle-timeout (cloudSyncTimeoutRef) — иначе он сработает
+            // в середине нового синка и поставит status='idle', создавая idle→syncing→idle цикл.
+            if (cloudSyncTimeoutRef.current) {
+                console.info('[HEYS.sync] [IND] startSyncingState: cleared cloudSyncTimeout (prevents idle during re-sync)');
+                clearTimeout(cloudSyncTimeoutRef.current);
+                cloudSyncTimeoutRef.current = null;
             }
 
             if (!syncingDelayTimeoutRef.current) {
@@ -12578,6 +12623,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                 setSyncProgress({ synced: 0, total: 0 });
                 if (cloudSyncTimeoutRef.current) clearTimeout(cloudSyncTimeoutRef.current);
                 cloudSyncTimeoutRef.current = setTimeout(() => {
+                    console.info('[HEYS.sync] [IND] cloudSyncTimeout fired → idle (pendingChanges=' + pendingChangesRef.current + ')');
+                    lastIdleAtRef.current = Date.now();
                     setCloudStatus('idle');
                 }, 2000);
             }, remaining);
@@ -12626,11 +12673,14 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                     if (!initialSyncCompletedAtRef.current) {
                         initialSyncCompletedAtRef.current = Date.now();
                     }
+                    console.info('[HEYS.sync] [IND] sync-complete: skip (no pending work)');
                     return;
                 }
 
                 const runtimePending = getRuntimePendingCount();
                 const uploadInProgress = isRuntimeUploadInProgress();
+
+                console.info('[HEYS.sync] [IND] sync-complete: pending=' + runtimePending + ' upload=' + uploadInProgress + ' hadWork=' + !!hadPendingWork + ' status=' + cloudStatusRef.current);
 
                 if (syncingDelayTimeoutRef.current) {
                     clearTimeout(syncingDelayTimeoutRef.current);
@@ -12674,6 +12724,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                 }
 
                 if (syncedTimeoutRef.current) {
+                    console.info('[HEYS.sync] [IND] data-saved: skip (syncedTimeout active), key=' + (e?.detail?.key || '?'));
                     return;
                 }
 
@@ -12683,9 +12734,39 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                     ? Date.now() - initialSyncCompletedAtRef.current
                     : Infinity;
                 if (timeSinceInitialSync < INITIAL_SYNC_COOLDOWN_MS) {
-                    // Тихо сохраняем без UI-индикации
+                    console.info('[HEYS.sync] [IND] data-saved: skip (initial-cooldown ' + Math.round(timeSinceInitialSync) + 'ms), key=' + (e?.detail?.key || '?'));
                     return;
                 }
+
+                // 🔕 Не показываем индикатор для сохранений в течение 3с после hot-sync
+                // (advice, debug, presets, usage_stats и любые другие реактивные ключи)
+                const sinceHotSync = Date.now() - (window.__heysHotSyncLastWriteAt || 0);
+                if (sinceHotSync < 3000) {
+                    console.info('[HEYS.sync] [IND] data-saved: skip (hot-sync cooldown ' + Math.round(sinceHotSync) + 'ms), key=' + (e?.detail?.key || '?'));
+                    return;
+                }
+
+                // 🔕 Не прерываем фазу synced→idle (иначе 2с таймер на idle отменяется и цикл не завершается)
+                if (cloudStatusRef.current === 'synced') {
+                    console.info('[HEYS.sync] [IND] data-saved: skip (synced-phase), key=' + (e?.detail?.key || '?'));
+                    return;
+                }
+
+                // 🔕 После перехода в idle даём 5с покоя (cascade DCS пишет data каждые ~1с)
+                const sinceIdle = Date.now() - lastIdleAtRef.current;
+                if (lastIdleAtRef.current > 0 && sinceIdle < 5000) {
+                    console.info('[HEYS.sync] [IND] data-saved: skip (post-idle cooldown ' + Math.round(sinceIdle) + 'ms), key=' + (e?.detail?.key || '?'));
+                    return;
+                }
+
+                // 🔕 Если syncingStart уже активен — повторный вызов не нужен
+                // (предотвращает flood startSyncingState при rapid writes каждые ~35ms)
+                if (syncingStartRef.current) {
+                    console.info('[HEYS.sync] [IND] data-saved: skip (syncingStart active), key=' + (e?.detail?.key || '?'));
+                    return;
+                }
+
+                console.info('[HEYS.sync] [IND] data-saved: → startSyncingState, key=' + (e?.detail?.key || '?') + ' sinceHotSync=' + Math.round(sinceHotSync) + 'ms');
 
                 if (cloudSyncTimeoutRef.current) {
                     clearTimeout(cloudSyncTimeoutRef.current);
@@ -12745,6 +12826,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                 setPendingCount(count);
                 setPendingDetails(details);
 
+                console.info('[HEYS.sync] [IND] pending-change: count=' + count + ' upload=' + uploadInProgress + ' syncingStart=' + !!syncingStartRef.current + ' status=' + cloudStatusRef.current);
+
                 if (count > 0) {
                     ensureFallbackPendingActionItems(details);
                     if (longSyncFallbackActiveRef.current) {
@@ -12764,8 +12847,12 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                     setCloudStatus('offline');
                 } else if (count > 0 && navigator.onLine) {
                     pendingChangesRef.current = true;
-                    if (uploadInProgress || syncProgressTotalRef.current > 0 || syncingStartRef.current) {
-                        startSyncingState();
+                    if (syncingStartRef.current) {
+                        // syncingStart уже активен — ничего делать не нужно, цикл уже запущен
+                    } else if (uploadInProgress || syncProgressTotalRef.current > 0) {
+                        if (cloudStatusRef.current !== 'syncing') {
+                            startSyncingState();
+                        }
                     } else {
                         syncingStartRef.current = null;
                         setCloudStatus('queued');
@@ -12778,9 +12865,10 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
             const handleSyncProgress = (e) => {
                 const { synced, done, total } = e.detail || {};
                 const completed = typeof done === 'number' ? done : synced;
+                console.info('[HEYS.sync] [IND] sync-progress: completed=' + completed + ' total=' + total);
                 if (typeof completed === 'number' && typeof total === 'number') {
                     setSyncProgress({ synced: completed, total });
-                    if (navigator.onLine && total > 0) {
+                    if (navigator.onLine && total > 0 && !syncingStartRef.current) {
                         startSyncingState();
                     }
                 }
@@ -12859,6 +12947,35 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                     return;
                 }
 
+                // Не показываем галочку если анимация синка не запускалась
+                // (данные синкались тихо, в фоне, без уведомления пользователя)
+                if (!syncingStartRef.current && cloudStatusRef.current === 'idle') {
+                    console.info('[HEYS.sync] [IND] queue-drained: skip (syncingStart=null, status=idle)');
+                    return;
+                }
+
+                // Не показываем галочку если дрейн произошёл в 3с после hot-sync write
+                const sinceHotSync = Date.now() - (window.__heysHotSyncLastWriteAt || 0);
+                if (sinceHotSync < 3000) {
+                    console.info('[HEYS.sync] [IND] queue-drained: skip (hot-sync cooldown ' + Math.round(sinceHotSync) + 'ms)');
+                    // Если уже был запущен синк — планируем отложенный showSynced после окончания cooldown
+                    if (syncingStartRef.current || cloudStatusRef.current === 'syncing' || cloudStatusRef.current === 'queued') {
+                        if (queueDrainedFallbackRef.current) clearTimeout(queueDrainedFallbackRef.current);
+                        queueDrainedFallbackRef.current = setTimeout(() => {
+                            queueDrainedFallbackRef.current = null;
+                            const stillPending = getRuntimePendingCount();
+                            const stillUploading = isRuntimeUploadInProgress();
+                            const st = cloudStatusRef.current;
+                            if (navigator.onLine && !stillPending && !stillUploading && (st === 'queued' || st === 'syncing')) {
+                                console.info('[HEYS.sync] [IND] queue-drained: fallback showSynced (post hot-sync cooldown) status=' + st);
+                                showSyncedWithMinDuration();
+                            }
+                        }, 3000 - sinceHotSync + 150);
+                    }
+                    return;
+                }
+
+                console.info('[HEYS.sync] [IND] queue-drained: → showSynced, sinceHotSync=' + Math.round(sinceHotSync) + 'ms status=' + cloudStatusRef.current);
                 showSyncedWithMinDuration();
             };
 
@@ -13033,6 +13150,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                 if (syncLockTimeoutRef.current) clearTimeout(syncLockTimeoutRef.current);
                 if (slowInternetHintTimeoutRef.current) clearTimeout(slowInternetHintTimeoutRef.current);
                 if (longSyncFallbackTimeoutRef.current) clearTimeout(longSyncFallbackTimeoutRef.current);
+                if (queueDrainedFallbackRef.current) clearTimeout(queueDrainedFallbackRef.current);
                 if (retryIntervalRef.current) clearInterval(retryIntervalRef.current);
                 // 🆕 Очистка таймера офлайн
                 if (offlineDurationIntervalRef.current) clearInterval(offlineDurationIntervalRef.current);
@@ -13102,6 +13220,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                     syncingStartRef.current = null;
                     clearSyncLockOverlay();
                     clearSlowInternetHint();
+                    console.info('[HEYS.sync] [IND] tick: → queued, pending=' + runtimePending);
                     setCloudStatus('queued');
                     schedule(true);
                     return;
@@ -13143,6 +13262,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                     || cloudStatusRef.current === 'syncing'
                     || syncProgressTotalRef.current > 0
                 )) {
+                    console.info('[HEYS.sync] [IND] tick: → showSynced, syncingStart=' + !!syncingStartRef.current + ' status=' + cloudStatusRef.current);
                     pendingChangesRef.current = false;
                     showSyncedWithMinDuration();
                 }

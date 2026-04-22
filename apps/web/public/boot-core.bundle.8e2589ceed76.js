@@ -25519,12 +25519,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
       _uploadLogTimer = null;
     }
     if (_uploadLogBufferedTotal <= 0) return;
-    const suffix = _uploadLogBufferedBatches > 1 ? ` (${_uploadLogBufferedBatches} batch)` : '';
-    if (_uploadLogBufferedTotal >= UPLOAD_SUMMARY_LOG_MIN_ITEMS || _uploadLogBufferedBatches >= UPLOAD_SUMMARY_LOG_MIN_BATCHES) {
-      logCritical(`☁️ [YANDEX] Сохранено в облако: ${_uploadLogBufferedTotal} записей${suffix}`);
-    } else {
-      log(`☁️ [YANDEX] Small upload batch hidden from normal logs: ${_uploadLogBufferedTotal} items${suffix}`);
-    }
+    const suffix = _uploadLogBufferedBatches > 1 ? ` (${_uploadLogBufferedBatches} батча)` : '';
+    logCritical(`[SYNC] ✅ Сохранено в облако: ${_uploadLogBufferedTotal} записей${suffix}`);
     _uploadLogBufferedTotal = 0;
     _uploadLogBufferedBatches = 0;
   }
@@ -25633,6 +25629,16 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
     _uploadInProgress = true;
     _uploadInFlightCount = filteredBatch.length;
 
+    // [SYNC] лог — всегда видим в консоли без флага
+    const _syncKeys = filteredBatch.map(item => {
+      const k = item.k || '';
+      return k.replace(/^heys_[0-9a-f]{8}-[0-9a-f-]+_/, 'heys_');
+    });
+    const _syncKeySummary = Object.entries(
+      _syncKeys.reduce((acc, k) => { acc[k] = (acc[k] || 0) + 1; return acc; }, {})
+    ).map(([k, n]) => n > 1 ? `${k}×${n}` : k).join(', ');
+    logCritical(`[SYNC] → отправка ${filteredBatch.length} записей: ${_syncKeySummary}`);
+
     // 🔐 v=54 FIX: После миграции на Yandex API — ВСЕГДА используем RPC режим!
     // _rpcOnlyMode = true устанавливается для ВСЕХ (и клиент PIN, и куратор)
     // Supabase SDK удалён — нет смысла проверять client/user для legacy branch
@@ -25722,6 +25728,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
         }
 
         if (anyError) {
+          logCritical(`[SYNC] ❌ Ошибка отправки: ${anyError}`);
           incrementRetry();
           clearClientInFlightBatch({ notify: false });
           persistClientQueueDurabilityState();
@@ -26297,6 +26304,12 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
     }
     if (_inGracePeriod && _isDayV2Data) {
       pushSyncTrace('GRACE_PERIOD_BYPASS_dayv2', { key: normalizedKey, graceAge: Math.round(_graceAge), updatedAt: value?.updatedAt });
+    }
+
+    // Диагностика: логируем добавление dayv2 в upload queue с caller
+    if (normalizedKey && normalizedKey.includes('dayv2_') && !normalizedKey.includes('date')) {
+      const callerLine = (new Error().stack || '').split('\n')[2] || '?';
+      console.info('[HEYS.sync] [IND] saveClientKey: dayv2 enqueue key=' + normalizedKey + ' updatedAt=' + (upsertObj.v && upsertObj.v.updatedAt) + ' caller=' + callerLine.trim());
     }
 
     const enqueueResult = enqueueClientSave({
@@ -27397,6 +27410,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
           (hotSyncTrace.fetchedKeys.length ? ` keys=${hotSyncTrace.fetchedKeys.join(', ')}` : '') +
           (hotSyncTrace.markerScopes.length ? ` scopes=${hotSyncTrace.markerScopes.join(', ')}` : '')
         );
+        // Метка времени для подавления UI-индикатора реактивных сохранений
+        try { window.__heysHotSyncLastWriteAt = Date.now(); } catch (_) { }
         dispatchForegroundHotSyncCompleted(clientId, reason, hotSync);
       } else if (hotSync.success) {
         foregroundAutoSyncIdleStreak += 1;
