@@ -19866,6 +19866,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
     'heys_advice_trace_day_v1',
     'heys_perf_log',  // debug tool — not user data
     'heys_boot_log',  // boot diagnostics — local only
+    'heys_sync_log',              // sync metadata — local only, syncing it causes infinite loop
+    'heys_pending_sync_ui_queue', // sync badge UI state — local only, must not be synced to cloud
   ]);
 
   const LOCAL_ONLY_STORAGE_SUFFIXES = [
