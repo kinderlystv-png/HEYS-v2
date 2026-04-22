@@ -25733,6 +25733,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
 
         if (anyError) {
           logCritical(`[SYNC] ❌ Ошибка отправки: ${anyError}`);
+          addSyncLogEntry('upload_error', { keys: _syncKeySummary, err: String(anyError).slice(0, 80), auth: isAuthError });
           incrementRetry();
           clearClientInFlightBatch({ notify: false });
           persistClientQueueDurabilityState();
@@ -25863,6 +25864,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
       persistClientQueueDurabilityState();
       notifyPendingChange();
       logCritical('❌ Ошибка сохранения в облако:', e.message || e);
+      addSyncLogEntry('upload_error', { keys: _syncKeySummary, err: String(e?.message || e).slice(0, 80) });
 
       // Авторизационные ошибки — требуем вход
       if (isAuthError(e)) {
