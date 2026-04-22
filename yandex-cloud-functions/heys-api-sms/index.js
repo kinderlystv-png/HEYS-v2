@@ -5,16 +5,19 @@
 
 const SMS_API_KEY = process.env.SMS_API_KEY;
 
+const ALLOW_LOCALHOST_ORIGINS = process.env.ALLOW_LOCALHOST_ORIGINS === '1';
 const ALLOWED_ORIGINS = [
   'https://heyslab.ru',
   'https://www.heyslab.ru',
   'https://app.heyslab.ru',
   'https://heys-static.website.yandexcloud.net',
   'https://heys-v2-web.vercel.app',
-  'http://localhost:3001',
-  'http://127.0.0.1:3001',
-  'http://localhost:5173',
-  'http://127.0.0.1:5173',
+  ...(ALLOW_LOCALHOST_ORIGINS ? [
+    'http://localhost:3001',
+    'http://127.0.0.1:3001',
+    'http://localhost:5173',
+    'http://127.0.0.1:5173',
+  ] : []),
 ];
 
 function getCorsHeaders(origin) {

@@ -47,12 +47,15 @@ const PG_CONFIG = {
 };
 
 // CORS headers — whitelist only production origins
+const ALLOW_LOCALHOST_ORIGINS = process.env.ALLOW_LOCALHOST_ORIGINS === '1';
 const ALLOWED_ORIGINS = [
   'https://app.heyslab.ru',
   'https://heyslab.ru',
   'https://www.heyslab.ru',
-  'http://localhost:3001',
-  'http://127.0.0.1:3001',
+  ...(ALLOW_LOCALHOST_ORIGINS ? [
+    'http://localhost:3001',
+    'http://127.0.0.1:3001',
+  ] : []),
 ];
 
 function getCorsHeaders(requestOrigin) {
