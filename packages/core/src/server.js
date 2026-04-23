@@ -24,7 +24,10 @@ const ALLOWED_ORIGINS = (process.env.API_ALLOWED_ORIGINS || '')
   .split(',')
   .map((origin) => origin.trim())
   .filter((origin) => Boolean(origin));
-const EFFECTIVE_ORIGINS = ALLOWED_ORIGINS.length ? ALLOWED_ORIGINS : DEFAULT_ALLOWED_ORIGINS;
+// In development always include localhost origins regardless of API_ALLOWED_ORIGINS
+const EFFECTIVE_ORIGINS = NODE_ENV === 'development'
+  ? [...new Set([...DEFAULT_ALLOWED_ORIGINS, ...ALLOWED_ORIGINS])]
+  : (ALLOWED_ORIGINS.length ? ALLOWED_ORIGINS : DEFAULT_ALLOWED_ORIGINS);
 
 // Basic middleware
 app.use(
@@ -43,8 +46,10 @@ app.use(
     credentials: true,
   }),
 );
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// Dev proxy must accept large RPC bodies (e.g. batch_upsert_client_kv_by_session).
+const JSON_BODY_LIMIT = process.env.API_JSON_BODY_LIMIT || '20mb';
+app.use(express.json({ limit: JSON_BODY_LIMIT }));
+app.use(express.urlencoded({ extended: true, limit: JSON_BODY_LIMIT }));
 
 // Health check endpoint
 app.get('/health', (req, res) => {
@@ -80,33 +85,80 @@ app.get('/api/analytics', (req, res) => {
   res.json({ message: 'Analytics API endpoint', database: DATABASE_NAME });
 });
 
+// Dev proxy: forward /rpc and /rest to production API (server-to-server, no CORS issues)
+const PROD_API = 'https://api.heyslab.ru';
+async function proxyToProd(req, res) {
+  try {
+    const url = `${PROD_API}${req.originalUrl}`;
+    const proxyRes = await fetch(url, {
+      method: req.method,
+      headers: {
+        'Content-Type': 'application/json',
+        ...(req.headers['authorization'] ? { authorization: req.headers['authorization'] } : {}),
+        ...(req.headers['x-session-token'] ? { 'x-session-token': req.headers['x-session-token'] } : {}),
+        ...(req.headers['x-forwarded-for'] ? {} : { 'x-forwarded-for': req.ip }),
+      },
+      body: ['POST', 'PUT', 'PATCH'].includes(req.method) ? JSON.stringify(req.body) : undefined,
+    });
+    const data = await proxyRes.json().catch(() => ({}));
+    res.status(proxyRes.status).json(data);
+  } catch (err) {
+    console.error('[Dev Proxy] Error:', err.message);
+    res.status(502).json({ error: 'Dev proxy error', details: err.message });
+  }
+}
+app.all('/rpc', proxyToProd);
+app.all('/rpc/*', proxyToProd);
+app.all('/rest', proxyToProd);
+app.all('/rest/*', proxyToProd);
+app.all('/auth/*', proxyToProd);
+console.log(`🔀 Dev proxy: /rpc, /rest, /auth → ${PROD_API}`);
+
 // SMS Proxy endpoint (обход CORS для SMS.ru)
 app.post('/api/sms', async (req, res) => {
   try {
-    const { api_id, to, msg } = req.body;
+    // api_id MUST come from server env, never from client request
+    const apiKey = process.env.SMS_API_KEY;
+    if (!apiKey) {
+      console.error('[SMS] SMS_API_KEY not configured');
+      return res.status(503).json({ error: 'SMS service not configured' });
+    }
 
-    if (!api_id || !to || !msg) {
-      return res.status(400).json({ error: 'Missing required fields: api_id, to, msg' });
+    const { to, msg } = req.body;
+
+    if (!to || !msg) {
+      return res.status(400).json({ error: 'Missing required fields: to, msg' });
+    }
+
+    // Validate E.164-compatible Russian phone number
+    const phoneClean = String(to).replace(/[\s\-\(\)]/g, '');
+    if (!/^\+?[78]\d{10}$/.test(phoneClean)) {
+      return res.status(400).json({ error: 'Invalid phone number format' });
+    }
+
+    // Cap message length to prevent abuse
+    if (String(msg).length > 480) {
+      return res.status(400).json({ error: 'Message too long (max 480 chars)' });
     }
 
     // Формируем URL для SMS.ru
     const params = new URLSearchParams({
-      api_id,
-      to,
-      msg,
+      api_id: apiKey,
+      to: phoneClean,
+      msg: String(msg),
       json: '1',
-      from: 'HEYS' // Одобренный отправитель
+      from: 'HEYS',
     });
 
     const smsResponse = await fetch(`https://sms.ru/sms/send?${params.toString()}`);
     const result = await smsResponse.json();
 
-    console.log(`📲 SMS to ${to}: status ${result.status_code}`);
+    console.info(`[HEYS.sms] SMS to ${phoneClean.slice(0, -4)}****: status ${result.status_code}`);
     return res.json(result);
 
   } catch (error) {
     console.error('[SMS Proxy] Error:', error);
-    return res.status(500).json({ error: 'SMS proxy error', details: error.message });
+    return res.status(500).json({ error: 'SMS proxy error' });
   }
 });
 
