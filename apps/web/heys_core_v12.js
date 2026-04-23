@@ -4509,6 +4509,13 @@
       }
       return result;
     },
+    /** Личная база: поиск по id (в т.ч. для dayv2 / orphan — shared id здесь не ищем) */
+    getById: (id) => {
+      if (id == null || id === '') return null;
+      const sid = String(id);
+      const all = HEYS.products.getAll?.() || [];
+      return all.find((p) => String(p?.id ?? p?.product_id ?? '') === sid) || null;
+    },
     setAll: (arr, opts = {}) => {
       const newLen = arr?.length || 0;
       const source = opts.source || 'unknown';

@@ -592,6 +592,21 @@
         }
       }
 
+      const sharedProducts = global.HEYS?.cloud?.getCachedSharedProducts?.() || [];
+      if (sharedProducts.length > 0) {
+        for (const [name, orphanData] of [...orphanProductsMap.entries()]) {
+          const synthetic = {
+            name: orphanData?.name || name,
+            product_id: orphanData?.product_id ?? orphanData?.productId,
+            productId: orphanData?.product_id ?? orphanData?.productId,
+            fingerprint: orphanData?.fingerprint,
+          };
+          if (resolveProductByItem(synthetic, sharedProducts)) {
+            orphanProductsMap.delete(name);
+          }
+        }
+      }
+
       const afterCount = orphanProductsMap.size;
 
       // Если количество изменилось — диспатчим событие для обновления UI
@@ -633,7 +648,8 @@
       };
 
       // Получаем текущие продукты (ключ = name LOWERCASE для консистентности с getDayData)
-      const products = lsGet('heys_products', []);
+      const rawProducts = lsGet('heys_products', []);
+      const products = Array.isArray(rawProducts) ? rawProducts : [];
       const productsMap = new Map();
       const productsById = new Map(); // Для восстановления по id
       products.forEach(p => {
@@ -1878,6 +1894,20 @@
             }
           }
 
+          // 🌐 Общая база: в приёме может быть shared id / fingerprint без локального клона в heys_products
+          if (!product && itemName) {
+            const sharedEarly = global.HEYS?.cloud?.getCachedSharedProducts?.() || [];
+            const fromSharedEarly = resolveProductByItem(item, sharedEarly);
+            if (fromSharedEarly) {
+              product = fromSharedEarly;
+              productsMap.set(itemNameLower, fromSharedEarly);
+              if (itemNameNorm) productsMap.set(itemNameNorm, fromSharedEarly);
+              if (orphanProductsMap.has(itemName)) orphanProductsMap.delete(itemName);
+              if (itemNameNorm && orphanProductsMap.has(itemNameNorm)) orphanProductsMap.delete(itemNameNorm);
+              if (orphanProductsMap.has(itemNameLower)) orphanProductsMap.delete(itemNameLower);
+            }
+          }
+
           const src = product || item; // item может иметь inline kcal100, protein100 и т.д.
 
           // Трекаем orphan-продукты (когда используется штамп вместо базы)
@@ -1929,6 +1959,11 @@
             // Трекаем только если база загружена И продукт реально не найден в обеих базах
             if (hasProductsLoaded && !foundInFresh && !foundInShared) {
               trackOrphanProduct(item, dateStr);
+            } else if (foundInFresh || foundInShared) {
+              const n = String(item.name || '').trim();
+              if (n && orphanProductsMap.has(n)) orphanProductsMap.delete(n);
+              if (itemNameNorm && orphanProductsMap.has(itemNameNorm)) orphanProductsMap.delete(itemNameNorm);
+              if (orphanProductsMap.has(itemNameLower)) orphanProductsMap.delete(itemNameLower);
             }
           }
 

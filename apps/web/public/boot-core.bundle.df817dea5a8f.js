@@ -13219,6 +13219,13 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
       }
       return result;
     },
+    /** Личная база: поиск по id (в т.ч. для dayv2 / orphan — shared id здесь не ищем) */
+    getById: (id) => {
+      if (id == null || id === '') return null;
+      const sid = String(id);
+      const all = HEYS.products.getAll?.() || [];
+      return all.find((p) => String(p?.id ?? p?.product_id ?? '') === sid) || null;
+    },
     setAll: (arr, opts = {}) => {
       const newLen = arr?.length || 0;
       const source = opts.source || 'unknown';
@@ -28877,6 +28884,12 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
       _sharedProductsCache = filtered;
       _sharedProductsCacheTime = Date.now();
       log(`[SHARED PRODUCTS] Loaded ${filtered.length} products total, cached`);
+
+      try {
+        if (typeof global !== 'undefined' && global.HEYS?.orphanProducts?.recalculate) {
+          global.HEYS.orphanProducts.recalculate();
+        }
+      } catch (_) { /* ignore */ }
 
       // 🚀 Сохраняем в localStorage для быстрого восстановления при следующей загрузке
       try {

@@ -25559,6 +25559,10 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         const byName = new Map();
         const byId = new Map();
         const byFingerprint = new Map(); // 🆕 v4.6.0
+        if (products && !Array.isArray(products)) {
+            console.warn('[HEYS.reports] buildProductIndex: expected array, got', typeof products, '— skipping');
+            return { byName, byId, byFingerprint };
+        }
         (products || []).forEach(p => {
             const nm = String(p.name || p.title || '').trim().toLowerCase();
             if (nm) byName.set(nm, p);
@@ -26375,7 +26379,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             const fromStore = global.HEYS?.products?.getAll?.() || [];
             if (fromStore.length > 0) return fromStore;
             const U = (global.HEYS && HEYS.utils) || { lsGet: (k, d) => d };
-            return U.lsGet?.('heys_products', []) || [];
+            const rawLs = U.lsGet?.('heys_products', []) || [];
+            return Array.isArray(rawLs) ? rawLs : [];
         }, [propsProducts]);
         const prodIndex = useMemo(() => buildProductIndex(products), [products]);
 

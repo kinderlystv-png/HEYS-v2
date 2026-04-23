@@ -10723,6 +10723,12 @@
       _sharedProductsCacheTime = Date.now();
       log(`[SHARED PRODUCTS] Loaded ${filtered.length} products total, cached`);
 
+      try {
+        if (typeof global !== 'undefined' && global.HEYS?.orphanProducts?.recalculate) {
+          global.HEYS.orphanProducts.recalculate();
+        }
+      } catch (_) { /* ignore */ }
+
       // 🚀 Сохраняем в localStorage для быстрого восстановления при следующей загрузке
       try {
         if (getStorageSize() < 3.8) {
