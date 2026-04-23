@@ -13212,6 +13212,11 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
       if (shouldLogProducts('getAll')) {
         console.log('[PRODUCTS.getAll] fromStore:', fromStore.length, 'fromUtils:', fromUtils.length, 'result:', result.length);
       }
+      // 🛡️ Safety: always return array (guards against corrupted storage values)
+      if (!Array.isArray(result)) {
+        console.warn('[PRODUCTS.getAll] non-array result:', typeof result, result?.constructor?.name, '— returning []');
+        return [];
+      }
       return result;
     },
     setAll: (arr, opts = {}) => {
@@ -30010,6 +30015,10 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
 
   function buildProductIndex(ps) {
     const byId = new Map(), byName = new Map(), byFingerprint = new Map(); // 🆕 v4.6.0
+    if (ps && !Array.isArray(ps)) {
+      console.warn('[HEYS.models] buildProductIndex: expected array, got', typeof ps, ps?.constructor?.name, '— skipping index build');
+      return { byId, byName, byFingerprint };
+    }
     (ps || []).forEach(p => {
       if (!p) return;
       const id = (p.id != null ? p.id : p.product_id);

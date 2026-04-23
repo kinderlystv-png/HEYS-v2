@@ -4502,6 +4502,11 @@
       if (shouldLogProducts('getAll')) {
         console.log('[PRODUCTS.getAll] fromStore:', fromStore.length, 'fromUtils:', fromUtils.length, 'result:', result.length);
       }
+      // 🛡️ Safety: always return array (guards against corrupted storage values)
+      if (!Array.isArray(result)) {
+        console.warn('[PRODUCTS.getAll] non-array result:', typeof result, result?.constructor?.name, '— returning []');
+        return [];
+      }
       return result;
     },
     setAll: (arr, opts = {}) => {
