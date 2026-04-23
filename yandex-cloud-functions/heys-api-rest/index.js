@@ -170,7 +170,12 @@ function getCorsHeaders(origin) {
     'Access-Control-Allow-Headers': 'Content-Type, Authorization, Prefer, apikey',
     'Access-Control-Allow-Credentials': 'true',
     'Content-Type': 'application/json',
-    'Vary': 'Origin'  // 🔐 Важно для кэширования
+    'Vary': 'Origin',  // 🔐 Важно для кэширования
+    // 🔒 Security headers
+    'Strict-Transport-Security': 'max-age=63072000; includeSubDomains',
+    'X-Content-Type-Options': 'nosniff',
+    'X-Frame-Options': 'DENY',
+    'Referrer-Policy': 'strict-origin-when-cross-origin'
   };
 
   // 🔐 Только разрешённые origin получают ACAO
@@ -440,7 +445,14 @@ module.exports.handler = async function (event, context) {
         }
 
         if (params.order) {
-          query += ` ORDER BY ${params.order.replace('.desc', ' DESC').replace('.asc', ' ASC')}`;
+          // Strict whitelist: column[.asc|.desc] where column is [a-zA-Z_][a-zA-Z0-9_]*.
+          // Prevents SQL injection via ORDER BY (subqueries, comments, multi-statement, etc.).
+          const orderMatch = String(params.order).match(/^([a-zA-Z_][a-zA-Z0-9_]*)(\.(asc|desc))?$/);
+          if (orderMatch) {
+            const orderCol = orderMatch[1];
+            const orderDir = orderMatch[3] === 'desc' ? 'DESC' : 'ASC';
+            query += ` ORDER BY "${orderCol}" ${orderDir}`;
+          }
         }
 
         if (params.limit) {

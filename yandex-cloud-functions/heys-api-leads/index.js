@@ -74,7 +74,12 @@ function getCorsHeaders(origin) {
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type',
     'Access-Control-Allow-Credentials': 'true',
-    'Content-Type': 'application/json'
+    'Content-Type': 'application/json',
+    // 🔒 Security headers
+    'Strict-Transport-Security': 'max-age=63072000; includeSubDomains',
+    'X-Content-Type-Options': 'nosniff',
+    'X-Frame-Options': 'DENY',
+    'Referrer-Policy': 'strict-origin-when-cross-origin'
   };
 }
 

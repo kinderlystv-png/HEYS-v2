@@ -27,7 +27,12 @@ function getCorsHeaders(origin) {
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type',
     'Access-Control-Allow-Credentials': 'true',
-    'Content-Type': 'application/json'
+    'Content-Type': 'application/json',
+    // 🔒 Security headers
+    'Strict-Transport-Security': 'max-age=63072000; includeSubDomains',
+    'X-Content-Type-Options': 'nosniff',
+    'X-Frame-Options': 'DENY',
+    'Referrer-Policy': 'strict-origin-when-cross-origin'
   };
 }
 
@@ -75,7 +80,7 @@ module.exports.handler = async function (event, context) {
     }
 
     // Получаем IP клиента (из тела запроса или заголовков)
-    const clientIP = ip || 
+    const clientIP = ip ||
       event.headers?.['x-forwarded-for']?.split(',')[0]?.trim() ||
       event.headers?.['x-real-ip'] ||
       event.requestContext?.identity?.sourceIp ||
@@ -95,7 +100,7 @@ module.exports.handler = async function (event, context) {
     const result = await response.json();
 
     // Логируем (без чувствительных данных)
-    console.log('[SMS]', { 
+    console.log('[SMS]', {
       to: to.slice(0, 4) + '***',
       status: result.status,
       status_code: result.status_code
@@ -109,11 +114,11 @@ module.exports.handler = async function (event, context) {
 
   } catch (error) {
     console.error('[SMS Error]', error.message);
-    
+
     return {
       statusCode: 500,
       headers: corsHeaders,
-      body: JSON.stringify({ 
+      body: JSON.stringify({
         error: 'SMS sending error',
         message: error.message
       })

@@ -122,7 +122,12 @@ function getCorsHeaders(origin) {
     'Access-Control-Allow-Headers': 'Content-Type, Authorization, apikey, x-client-info',
     'Access-Control-Max-Age': '86400',
     'Content-Type': 'application/json',
-    'Vary': 'Origin'  // 🔐 Важно для корректного кэширования
+    'Vary': 'Origin',  // 🔐 Важно для корректного кэширования
+    // 🔒 Security headers
+    'Strict-Transport-Security': 'max-age=63072000; includeSubDomains',
+    'X-Content-Type-Options': 'nosniff',
+    'X-Frame-Options': 'DENY',
+    'Referrer-Policy': 'strict-origin-when-cross-origin'
   };
 
   if (origin && ALLOWED_ORIGINS.has(origin)) {

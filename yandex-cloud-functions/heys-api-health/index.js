@@ -12,7 +12,12 @@ const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type, apikey, Authorization, x-client-info, prefer, x-supabase-api-version',
-  'Access-Control-Max-Age': '86400'
+  'Access-Control-Max-Age': '86400',
+  // 🔒 Security headers
+  'Strict-Transport-Security': 'max-age=63072000; includeSubDomains',
+  'X-Content-Type-Options': 'nosniff',
+  'X-Frame-Options': 'DENY',
+  'Referrer-Policy': 'strict-origin-when-cross-origin'
 };
 
 module.exports.handler = async function (event, context) {

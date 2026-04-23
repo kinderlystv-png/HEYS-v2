@@ -98,7 +98,12 @@ function getCorsHeaders(requestOrigin) {
     'Access-Control-Allow-Origin': origin,
     'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Client-Id',
-    'Content-Type': 'application/json'
+    'Content-Type': 'application/json',
+    // 🔒 Security headers
+    'Strict-Transport-Security': 'max-age=63072000; includeSubDomains',
+    'X-Content-Type-Options': 'nosniff',
+    'X-Frame-Options': 'DENY',
+    'Referrer-Policy': 'strict-origin-when-cross-origin'
   };
 }
 
@@ -150,6 +155,18 @@ async function createPayment(body, clientId) {
   }
   if (!returnUrl) {
     return errorResponse(400, 'Return URL required', 'NO_RETURN_URL');
+  }
+
+  // Whitelist: returnUrl must point to the production HEYS app to prevent open-redirect
+  // through YuKassa confirmation flow.
+  const ALLOWED_RETURN_HOSTS = new Set(['app.heyslab.ru']);
+  try {
+    const parsed = new URL(returnUrl);
+    if (parsed.protocol !== 'https:' || !ALLOWED_RETURN_HOSTS.has(parsed.hostname)) {
+      return errorResponse(400, 'Return URL not allowed', 'INVALID_RETURN_URL');
+    }
+  } catch {
+    return errorResponse(400, 'Return URL malformed', 'INVALID_RETURN_URL');
   }
 
   const planInfo = PLANS[plan];
