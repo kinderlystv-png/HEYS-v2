@@ -724,19 +724,15 @@
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
     <link rel="dns-prefetch" href="https://cdn.jsdelivr.net" />
     <!-- Preload критических boot-бандлов (2026-02-25 bundle migration) -->
-    <link rel="preload" href="boot-core.bundle.df817dea5a8f.js" as="script" />
-    <link rel="preload" href="boot-calc.bundle.e81d4cf4bb63.js" as="script" />
-    <link rel="preload" href="boot-day.bundle.8acdfc9877f7.js" as="script" />
-    <link rel="preload" href="boot-app.bundle.7092bf4f7676.js" as="script" />
+    <link rel="preload" href="boot-core.bundle.cad321183ca3.js" as="script" />
+    <link rel="preload" href="boot-calc.bundle.6e0932082447.js" as="script" />
+    <link rel="preload" href="boot-day.bundle.00665f67b8d3.js" as="script" />
+    <link rel="preload" href="boot-app.bundle.cbbe3afec39f.js" as="script" />
     <link rel="preload" href="boot-init.bundle.42b73b15a6dc.js" as="script" />
 
     <!-- React теперь бандлится локально через Vite (миграция с CDN 2026-01-21) -->
 
-    <!-- Resource hints for better caching (prefetch, not preload to avoid warnings) -->
-    <link rel="prefetch" href="heys_core_v12.js?v=2" />
-    <link rel="prefetch" href="heys_simple_analytics.js" />
-    <!-- heys_storage_supabase_v1.js — prefetch удалён, файл локальный, SDK удалён -->
-    <link rel="prefetch" href="heys_models_v1.js" />
+    <!-- Non-critical JS prefetch deferred to idle after appReady (see postboot onAllDone) -->
 
     <!-- Main CSS — async load (1.19MB via @import, не нужен для login gate) -->
     <!-- v12: Login gate имеет inline стили, main.css нужен только после загрузки бандлов -->
@@ -2831,10 +2827,10 @@
          Сгенерировано: node scripts/bundle-legacy.mjs  (pnpm bundle:legacy)
          Состав и хеши: bundle-manifest.json
          Хеш в имени = вечный кэш (cache-first SW). -->
-    <script defer src="boot-core.bundle.df817dea5a8f.js" fetchpriority="high"></script>
-    <script defer src="boot-calc.bundle.e81d4cf4bb63.js"></script>
-    <script defer src="boot-day.bundle.8acdfc9877f7.js"></script>
-    <script defer src="boot-app.bundle.7092bf4f7676.js"></script>
+    <script defer src="boot-core.bundle.cad321183ca3.js" fetchpriority="high"></script>
+    <script defer src="boot-calc.bundle.6e0932082447.js"></script>
+    <script defer src="boot-day.bundle.00665f67b8d3.js"></script>
+    <script defer src="boot-app.bundle.cbbe3afec39f.js"></script>
     <script defer src="boot-init.bundle.42b73b15a6dc.js"
         onerror="window.__heysShowRecoveryUI && window.__heysShowRecoveryUI('CRITICAL_SCRIPT_LOAD: boot-init.bundle')"></script>
 
@@ -2962,6 +2958,28 @@
                 console.info('[HEYS.postboot] ✅ All ' + total + ' post-boot bundles loaded (parallel) in ' + totalMs + 'ms');
                 window.__heysPerfMark && window.__heysPerfMark('PostBoot: all bundles loaded (' + totalMs + 'ms parallel)');
                 window.__heysPostbootDone = true;
+
+                try {
+                    var scheduleNonCriticalPrefetch = function () {
+                        var urls = ['heys_core_v12.js?v=2', 'heys_simple_analytics.js', 'heys_models_v1.js'];
+                        urls.forEach(function (href) {
+                            var l = document.createElement('link');
+                            l.rel = 'prefetch';
+                            l.href = href;
+                            document.head.appendChild(l);
+                        });
+                    };
+                    var ric = window.requestIdleCallback || function (cb) {
+                        setTimeout(function () { cb({ timeRemaining: function () { return 24; }, didTimeout: false }); }, 2000);
+                    };
+                    ric(function () { scheduleNonCriticalPrefetch(); }, { timeout: 12000 });
+                } catch (ePref) { /* noop */ }
+
+                try {
+                    if (window.HEYS && HEYS.TabPrefetch && typeof HEYS.TabPrefetch.scheduleAfterPostboot === 'function') {
+                        HEYS.TabPrefetch.scheduleAfterPostboot();
+                    }
+                } catch (eTab) { /* noop */ }
 
                 // 📊 Per-bundle timing summary
                 console.info('[HEYS.postboot] 📊 Per-bundle timing:', JSON.stringify(pbBundleTimes));

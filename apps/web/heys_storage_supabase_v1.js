@@ -2449,6 +2449,84 @@
     return written;
   }
 
+  /** Debounced disk writes for hot pending queues (client + user) — reduces main-thread churn */
+  const PENDING_SAVE_DEBOUNCE_MS = 120;
+  const _pendingLsFlushTimers = Object.create(null);
+  const _pendingLsLastQueueRef = Object.create(null);
+
+  function isDebouncedPendingQueueKey(key) {
+    return key === PENDING_QUEUE_KEY || key === PENDING_CLIENT_QUEUE_KEY;
+  }
+
+  function flushDebouncedPendingQueueWrites() {
+    try {
+      Object.keys(_pendingLsFlushTimers).forEach((k) => {
+        clearTimeout(_pendingLsFlushTimers[k]);
+        delete _pendingLsFlushTimers[k];
+      });
+      [PENDING_CLIENT_QUEUE_KEY, PENDING_QUEUE_KEY].forEach((storageKey) => {
+        const q = _pendingLsLastQueueRef[storageKey];
+        if (q) {
+          delete _pendingLsLastQueueRef[storageKey];
+          savePendingQueueImmediate(storageKey, q);
+        }
+      });
+    } catch (_) { /* noop */ }
+  }
+
+  function scheduleDebouncedSavePendingQueue(key, queue) {
+    _pendingLsLastQueueRef[key] = queue;
+    if (_pendingLsFlushTimers[key]) clearTimeout(_pendingLsFlushTimers[key]);
+    _pendingLsFlushTimers[key] = setTimeout(() => {
+      _pendingLsFlushTimers[key] = null;
+      const latest = _pendingLsLastQueueRef[key];
+      if (latest) {
+        delete _pendingLsLastQueueRef[key];
+        savePendingQueueImmediate(key, latest);
+      }
+    }, PENDING_SAVE_DEBOUNCE_MS);
+  }
+
+  /** Сохранить очередь в localStorage (немедленно; внутренний ремонт очереди, in-flight ключи) */
+  function savePendingQueueImmediate(key, queue) {
+    const perf = global.HEYS?.perfMainThread;
+    const run = () => {
+      try {
+        const queueRef = Array.isArray(queue) ? queue : [];
+        const filteredQueue = filterLocalOnlyPendingQueueItems(queueRef, key, { mutate: true });
+        const originalLength = filteredQueue.length;
+        const compactedQueue = compactPendingQueue(filteredQueue, key, { mutate: true });
+
+        if (compactedQueue.length > 0) {
+          const persistableQueue = compactedQueue.map(item => createPersistablePendingQueueItem(item, key));
+          let serializedQueue = JSON.stringify(persistableQueue);
+          const Store = global.HEYS?.store;
+          if ((serializedQueue.length * 2) >= PENDING_QUEUE_COMPRESS_MIN_BYTES && typeof Store?.compress === 'function') {
+            try {
+              const compressedQueue = Store.compress(persistableQueue);
+              if (typeof compressedQueue === 'string' && compressedQueue.length < serializedQueue.length) {
+                serializedQueue = compressedQueue;
+              }
+            } catch (_) { }
+          }
+
+          if ((originalLength - compactedQueue.length) >= 3) {
+            logQuotaThrottled(`pending-queue-compacted:${key}`, `🗜️ [SYNC] Pending queue compacted: ${key} ${originalLength} → ${compactedQueue.length}`);
+          }
+
+          safeSetItem(key, serializedQueue);
+        } else {
+          global.localStorage.removeItem(key);
+        }
+      } catch (e) { }
+    };
+    if (perf && typeof perf.measureSync === 'function') {
+      perf.measureSync('savePendingQueue:' + String(key).slice(0, 40), run, { threshold: 10 });
+    } else {
+      run();
+    }
+  }
+
   /** Загрузить очередь из localStorage */
   function loadPendingQueue(key) {
     try {
@@ -2464,7 +2542,7 @@
       const compacted = compactPendingQueue(localOnlyFiltered, key);
 
       if (Array.isArray(parsed) && (localOnlyFiltered.length !== parsed.length || compacted.length !== localOnlyFiltered.length)) {
-        savePendingQueue(key, compacted);
+        savePendingQueueImmediate(key, compacted);
       }
 
       return compacted;
@@ -2475,34 +2553,21 @@
 
   /** Сохранить очередь в localStorage */
   function savePendingQueue(key, queue) {
-    try {
-      const queueRef = Array.isArray(queue) ? queue : [];
-      const filteredQueue = filterLocalOnlyPendingQueueItems(queueRef, key, { mutate: true });
-      const originalLength = filteredQueue.length;
-      const compactedQueue = compactPendingQueue(filteredQueue, key, { mutate: true });
+    if (isDebouncedPendingQueueKey(key)) {
+      scheduleDebouncedSavePendingQueue(key, queue);
+      return;
+    }
+    savePendingQueueImmediate(key, queue);
+  }
 
-      if (compactedQueue.length > 0) {
-        const persistableQueue = compactedQueue.map(item => createPersistablePendingQueueItem(item, key));
-        let serializedQueue = JSON.stringify(persistableQueue);
-        const Store = global.HEYS?.store;
-        if ((serializedQueue.length * 2) >= PENDING_QUEUE_COMPRESS_MIN_BYTES && typeof Store?.compress === 'function') {
-          try {
-            const compressedQueue = Store.compress(persistableQueue);
-            if (typeof compressedQueue === 'string' && compressedQueue.length < serializedQueue.length) {
-              serializedQueue = compressedQueue;
-            }
-          } catch (_) { }
-        }
-
-        if ((originalLength - compactedQueue.length) >= 3) {
-          logQuotaThrottled(`pending-queue-compacted:${key}`, `🗜️ [SYNC] Pending queue compacted: ${key} ${originalLength} → ${compactedQueue.length}`);
-        }
-
-        safeSetItem(key, serializedQueue);
-      } else {
-        global.localStorage.removeItem(key);
-      }
-    } catch (e) { }
+  if (typeof window !== 'undefined' && !window.__heysDebouncedQueueFlushHook) {
+    window.__heysDebouncedQueueFlushHook = true;
+    window.addEventListener('pagehide', () => { flushDebouncedPendingQueueWrites(); });
+    if (typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'hidden') flushDebouncedPendingQueueWrites();
+      });
+    }
   }
 
   function isClientOnlySyncMode() {
@@ -2553,6 +2618,9 @@
     return getPendingQueuesSnapshot().uploadInProgress;
   };
 
+  /** Сбросить debounced pending-queue записи на диск (перед flush в облако / при уходе со страницы) */
+  cloud.flushDebouncedPendingQueueWrites = flushDebouncedPendingQueueWrites;
+
   /** Получить детализацию pending (для UI) */
   cloud.getPendingDetails = function () {
     const details = { days: 0, products: 0, profile: 0, other: 0 };
@@ -2588,6 +2656,7 @@
    * @returns {Promise<boolean>} - true если очередь очищена, false если timeout
    */
   cloud.flushPendingQueue = async function (timeoutMs = 5000) {
+    flushDebouncedPendingQueueWrites();
     const flushStartTs = Date.now();
     const snapshotBefore = () => getPendingQueuesSnapshot();
     const doImmediateAllUploads = async () => {
@@ -2707,19 +2776,27 @@
 
   /** Добавить запись в журнал синхронизации */
   function addSyncLogEntry(type, details) {
-    try {
-      const log = JSON.parse(global.localStorage.getItem(SYNC_LOG_KEY) || '[]');
-      log.unshift({
-        ts: Date.now(),
-        type, // 'sync_ok' | 'sync_error' | 'offline' | 'online' | 'quota_error'
-        details
-      });
-      // Ограничиваем размер лога
-      if (log.length > MAX_SYNC_LOG_ENTRIES) {
-        log.length = MAX_SYNC_LOG_ENTRIES;
-      }
-      global.localStorage.setItem(SYNC_LOG_KEY, JSON.stringify(log));
-    } catch (e) { }
+    const perf = global.HEYS?.perfMainThread;
+    const run = () => {
+      try {
+        const log = JSON.parse(global.localStorage.getItem(SYNC_LOG_KEY) || '[]');
+        log.unshift({
+          ts: Date.now(),
+          type, // 'sync_ok' | 'sync_error' | 'offline' | 'online' | 'quota_error'
+          details
+        });
+        // Ограничиваем размер лога
+        if (log.length > MAX_SYNC_LOG_ENTRIES) {
+          log.length = MAX_SYNC_LOG_ENTRIES;
+        }
+        global.localStorage.setItem(SYNC_LOG_KEY, JSON.stringify(log));
+      } catch (e) { }
+    };
+    if (perf && typeof perf.measureSync === 'function') {
+      perf.measureSync('addSyncLogEntry:' + String(type).slice(0, 24), run, { threshold: 10 });
+    } else {
+      run();
+    }
   }
 
   /** Получить журнал синхронизации */
@@ -2737,17 +2814,25 @@
   };
 
   /** Событие для UI об изменении pending count */
+  const _notifyPendingRafFn = global.requestAnimationFrame
+    ? global.requestAnimationFrame.bind(global)
+    : function (cb) { return setTimeout(cb, 0); };
+  let _notifyPendingRaf = null;
   function notifyPendingChange() {
-    const count = cloud.getPendingCount();
-    const details = cloud.getPendingDetails();
-    // Defer event dispatch to avoid setState during render
-    queueMicrotask(() => {
-      try {
-        global.dispatchEvent(new CustomEvent('heys:pending-change', {
-          detail: { count, details }
-        }));
-      } catch (e) { }
-      updateSyncProgressTotal();
+    if (_notifyPendingRaf != null) return;
+    _notifyPendingRaf = _notifyPendingRafFn(() => {
+      _notifyPendingRaf = null;
+      const count = cloud.getPendingCount();
+      const details = cloud.getPendingDetails();
+      // Defer event dispatch to avoid setState during render
+      queueMicrotask(() => {
+        try {
+          global.dispatchEvent(new CustomEvent('heys:pending-change', {
+            detail: { count, details }
+          }));
+        } catch (e) { }
+        updateSyncProgressTotal();
+      });
     });
   }
 

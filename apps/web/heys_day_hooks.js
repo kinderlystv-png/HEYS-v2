@@ -378,13 +378,23 @@
         if (isMeaningfulDayData(existing) && !isMeaningfulDayData(day)) return;
       }
 
-      const daySnap = JSON.stringify(stripMeta(day));
-      const updatedAt = day.updatedAt != null ? day.updatedAt : now();
       const freshestPersistedDay = getFreshestPersistedDay(day.date);
       const freshestUpdatedAt = freshestPersistedDay?.updatedAt || 0;
-      const freshestDaySnap = freshestPersistedDay
-        ? JSON.stringify(stripMeta(freshestPersistedDay))
-        : null;
+      let daySnap;
+      let freshestDaySnap = null;
+      const measureSnaps = () => {
+        daySnap = JSON.stringify(stripMeta(day));
+        freshestDaySnap = freshestPersistedDay
+          ? JSON.stringify(stripMeta(freshestPersistedDay))
+          : null;
+      };
+      const pmFlush = global.HEYS?.perfMainThread;
+      if (pmFlush && typeof pmFlush.measureSync === 'function') {
+        pmFlush.measureSync('useDayAutosave:flushSnaps', measureSnaps, { threshold: 14 });
+      } else {
+        measureSnaps();
+      }
+      const updatedAt = day.updatedAt != null ? day.updatedAt : now();
 
       const shouldPreserveFreshestPersistedDay = !!(
         freshestPersistedDay &&
@@ -453,7 +463,15 @@
 
       // 🔒 ЗАЩИТА: Инициализируем prevDaySnapRef при первом включении
       // Это предотвращает ложный save сразу после isHydrated=true
-      const daySnap = JSON.stringify(stripMeta(day));
+      let daySnap;
+      const pmCmp = global.HEYS?.perfMainThread;
+      if (pmCmp && typeof pmCmp.measureSync === 'function') {
+        pmCmp.measureSync('useDayAutosave:daySnap', () => {
+          daySnap = JSON.stringify(stripMeta(day));
+        }, { threshold: 14 });
+      } else {
+        daySnap = JSON.stringify(stripMeta(day));
+      }
 
       if (prevDaySnapRef.current === null) {
         // Первый запуск после гидратации — просто запоминаем состояние без save

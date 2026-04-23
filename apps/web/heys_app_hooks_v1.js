@@ -748,6 +748,10 @@
         const indDataSavedSkipLogRef = useRef({ sig: '', at: 0 });
         /** Давит спам [IND] pending-change при одинаковом снимке очереди (notifyPendingChange дёргается пачкой). */
         const indPendingChangeLogRef = useRef({ sig: '', at: 0 });
+        /** rAF-схлопывание pending-change → меньше синхронных setState под пачку enqueue */
+        const pendingChangeRafRef = useRef(null);
+        /** rAF-схлопывание тяжёлого UI-пути data-saved (startSyncingState + таймеры) */
+        const dataSavedUiRafRef = useRef(null);
         const initialSyncCompletedAtRef = useRef(0);
         const INITIAL_SYNC_COOLDOWN_MS = 3000; // 3 секунды после первого sync не показываем syncing
         // 🔕 Timestamp когда последний раз индикатор ушёл в idle (пост-синк cooldown)
@@ -1270,41 +1274,48 @@
 
                 console.info('[HEYS.sync] [IND] data-saved: → startSyncingState, key=' + (e?.detail?.key || '?') + ' sinceHotSync=' + (sinceHotSync === Infinity ? 'n/a' : Math.round(sinceHotSync) + 'ms'));
 
-                if (cloudSyncTimeoutRef.current) {
-                    clearTimeout(cloudSyncTimeoutRef.current);
-                    cloudSyncTimeoutRef.current = null;
-                }
-
-                startSyncingState();
-
-                if (!cloudSyncTimeoutRef.current) {
-                    cloudSyncTimeoutRef.current = setTimeout(() => {
-                        const runtimePending = getRuntimePendingCount();
-                        const uploadInProgress = isRuntimeUploadInProgress();
-
-                        if (!navigator.onLine) {
-                            setCloudStatus('offline');
-                            return;
+                const armDataSavedHeavyUi = () => {
+                    if (dataSavedUiRafRef.current != null) return;
+                    dataSavedUiRafRef.current = window.requestAnimationFrame(() => {
+                        dataSavedUiRafRef.current = null;
+                        if (cloudSyncTimeoutRef.current) {
+                            clearTimeout(cloudSyncTimeoutRef.current);
+                            cloudSyncTimeoutRef.current = null;
                         }
 
-                        if (uploadInProgress) {
-                            startSyncingState();
-                            return;
-                        }
+                        startSyncingState();
 
-                        if (runtimePending > 0) {
-                            setCloudStatus('queued');
-                            return;
-                        }
+                        if (!cloudSyncTimeoutRef.current) {
+                            cloudSyncTimeoutRef.current = setTimeout(() => {
+                                const runtimePending = getRuntimePendingCount();
+                                const uploadInProgress = isRuntimeUploadInProgress();
 
-                        pendingChangesRef.current = false;
-                        if (syncedTimeoutRef.current) {
-                            clearTimeout(syncedTimeoutRef.current);
-                            syncedTimeoutRef.current = null;
+                                if (!navigator.onLine) {
+                                    setCloudStatus('offline');
+                                    return;
+                                }
+
+                                if (uploadInProgress) {
+                                    startSyncingState();
+                                    return;
+                                }
+
+                                if (runtimePending > 0) {
+                                    setCloudStatus('queued');
+                                    return;
+                                }
+
+                                pendingChangesRef.current = false;
+                                if (syncedTimeoutRef.current) {
+                                    clearTimeout(syncedTimeoutRef.current);
+                                    syncedTimeoutRef.current = null;
+                                }
+                                showSyncedWithMinDuration();
+                            }, 5000);
                         }
-                        showSyncedWithMinDuration();
-                    }, 5000);
-                }
+                    });
+                };
+                armDataSavedHeavyUi();
             };
 
             const handleDayUpdated = (e) => {
@@ -1321,56 +1332,60 @@
             };
 
             const handlePendingChange = (e) => {
-                const eventCount = e.detail?.count || 0;
-                const runtimeCount = getRuntimePendingCount();
-                const count = typeof runtimeCount === 'number' ? runtimeCount : eventCount;
-                const details = count > 0
-                    ? getRuntimePendingDetails()
-                    : createEmptyPendingDetails();
-                const uploadInProgress = isRuntimeUploadInProgress();
-                setPendingCount(count);
-                setPendingDetails(details);
+                if (pendingChangeRafRef.current != null) return;
+                pendingChangeRafRef.current = window.requestAnimationFrame(() => {
+                    pendingChangeRafRef.current = null;
+                    const eventCount = e.detail?.count || 0;
+                    const runtimeCount = getRuntimePendingCount();
+                    const count = typeof runtimeCount === 'number' ? runtimeCount : eventCount;
+                    const details = count > 0
+                        ? getRuntimePendingDetails()
+                        : createEmptyPendingDetails();
+                    const uploadInProgress = isRuntimeUploadInProgress();
+                    setPendingCount(count);
+                    setPendingDetails(details);
 
-                const _pcSig = `${count}|${uploadInProgress}|${!!syncingStartRef.current}|${cloudStatusRef.current}`;
-                const _pcNow = Date.now();
-                const _pcR = indPendingChangeLogRef.current;
-                if (!(_pcR.sig === _pcSig && _pcNow - _pcR.at < 2500)) {
-                    _pcR.sig = _pcSig;
-                    _pcR.at = _pcNow;
-                    console.info('[HEYS.sync] [IND] pending-change: count=' + count + ' upload=' + uploadInProgress + ' syncingStart=' + !!syncingStartRef.current + ' status=' + cloudStatusRef.current);
-                }
-
-                if (count > 0) {
-                    ensureFallbackPendingActionItems(details);
-                    if (longSyncFallbackActiveRef.current) {
-                        setShowPendingSyncBanner(true);
+                    const _pcSig = `${count}|${uploadInProgress}|${!!syncingStartRef.current}|${cloudStatusRef.current}`;
+                    const _pcNow = Date.now();
+                    const _pcR = indPendingChangeLogRef.current;
+                    if (!(_pcR.sig === _pcSig && _pcNow - _pcR.at < 2500)) {
+                        _pcR.sig = _pcSig;
+                        _pcR.at = _pcNow;
+                        console.info('[HEYS.sync] [IND] pending-change: count=' + count + ' upload=' + uploadInProgress + ' syncingStart=' + !!syncingStartRef.current + ' status=' + cloudStatusRef.current);
                     }
-                } else {
-                    clearPendingActionItems();
-                    resetLongSyncFallback();
-                }
 
-                if (syncProgressTotalRef.current > 0 && count < syncProgressTotalRef.current) {
-                    setSyncProgress(prev => ({ ...prev, synced: prev.total - count }));
-                }
-
-                if (count > 0 && !navigator.onLine) {
-                    pendingChangesRef.current = true;
-                    setCloudStatus('offline');
-                } else if (count > 0 && navigator.onLine) {
-                    pendingChangesRef.current = true;
-                    if (syncingStartRef.current) {
-                        // syncingStart уже активен — ничего делать не нужно, цикл уже запущен
-                    } else if (uploadInProgress || syncProgressTotalRef.current > 0) {
-                        if (cloudStatusRef.current !== 'syncing') {
-                            startSyncingState();
+                    if (count > 0) {
+                        ensureFallbackPendingActionItems(details);
+                        if (longSyncFallbackActiveRef.current) {
+                            setShowPendingSyncBanner(true);
                         }
                     } else {
-                        setCloudStatus('queued');
+                        clearPendingActionItems();
+                        resetLongSyncFallback();
                     }
-                } else if (count === 0 && !uploadInProgress && !syncingStartRef.current && navigator.onLine && cloudStatusRef.current !== 'synced') {
-                    setCloudStatus('idle');
-                }
+
+                    if (syncProgressTotalRef.current > 0 && count < syncProgressTotalRef.current) {
+                        setSyncProgress(prev => ({ ...prev, synced: prev.total - count }));
+                    }
+
+                    if (count > 0 && !navigator.onLine) {
+                        pendingChangesRef.current = true;
+                        setCloudStatus('offline');
+                    } else if (count > 0 && navigator.onLine) {
+                        pendingChangesRef.current = true;
+                        if (syncingStartRef.current) {
+                            // syncingStart уже активен — ничего делать не нужно, цикл уже запущен
+                        } else if (uploadInProgress || syncProgressTotalRef.current > 0) {
+                            if (cloudStatusRef.current !== 'syncing') {
+                                startSyncingState();
+                            }
+                        } else {
+                            setCloudStatus('queued');
+                        }
+                    } else if (count === 0 && !uploadInProgress && !syncingStartRef.current && navigator.onLine && cloudStatusRef.current !== 'synced') {
+                        setCloudStatus('idle');
+                    }
+                });
             };
 
             const handleSyncProgress = (e) => {
@@ -1657,6 +1672,14 @@
                 window.removeEventListener('online', handleOnline);
                 window.removeEventListener('offline', handleOffline);
                 document.removeEventListener('visibilitychange', syncOfflineDurationOnVisible);
+                if (pendingChangeRafRef.current != null) {
+                    window.cancelAnimationFrame(pendingChangeRafRef.current);
+                    pendingChangeRafRef.current = null;
+                }
+                if (dataSavedUiRafRef.current != null) {
+                    window.cancelAnimationFrame(dataSavedUiRafRef.current);
+                    dataSavedUiRafRef.current = null;
+                }
                 if (cloudSyncTimeoutRef.current) clearTimeout(cloudSyncTimeoutRef.current);
                 if (syncedTimeoutRef.current) clearTimeout(syncedTimeoutRef.current);
                 if (syncingDelayTimeoutRef.current) clearTimeout(syncingDelayTimeoutRef.current);

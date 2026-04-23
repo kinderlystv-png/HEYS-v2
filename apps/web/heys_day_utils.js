@@ -2614,6 +2614,120 @@
     return daysData;
   }
 
+  // --- Day content equality (fingerprints) — avoids hot-path JSON.stringify on full meals/trainings ---
+  function compactMealsContentSignature(meals) {
+    const arr = Array.isArray(meals) ? meals : [];
+    if (arr.length === 0) return '0';
+    return arr.map((m, idx) => {
+      const items = Array.isArray(m && m.items) ? m.items : [];
+      const itemSig = items.map((it, j) => [
+        (it && (it.productId || it.id)) || j,
+        Math.round(Number(it && it.grams) || 0),
+        Math.round(Number(it && it.kcal) || 0),
+        it && it.deleted ? 'd' : ''
+      ].join('.')).join(',');
+      return [
+        (m && m.id) || ('i' + idx),
+        String((m && m.updatedAt) || 0),
+        Math.round(Number(m && m.grams) || 0),
+        Math.round(Number(m && m.kcal) || 0),
+        String((m && m.time) || ''),
+        String((m && m.name) || '').slice(0, 120),
+        items.length,
+        itemSig
+      ].join('|');
+    }).join('\n');
+  }
+
+  function compactTrainingsContentSignature(trainings) {
+    const arr = Array.isArray(trainings) ? trainings : [];
+    if (arr.length === 0) return '0';
+    return arr.map((t, idx) => [
+      (t && t.id) || ('i' + idx),
+      String((t && t.updatedAt) || 0),
+      String((t && t.type) || ''),
+      Math.round(Number(t && t.minutes) || 0),
+      Math.round(Number(t && t.kcal) || 0)
+    ].join('|')).join('\n');
+  }
+
+  function mealsTrainingsDeepEqual(a, b) {
+    return JSON.stringify(a || []) === JSON.stringify(b || []);
+  }
+
+  /**
+   * DayTab hydrated path: same user-visible content as heys_day_effects / doLocal (no supplements/household).
+   */
+  function isSameDayHydratedContent(prevDay, newDay) {
+    if (!prevDay || !newDay || prevDay.date !== newDay.date) return false;
+    const pm = prevDay.meals || [];
+    const nm = newDay.meals || [];
+    const pt = prevDay.trainings || [];
+    const nt = newDay.trainings || [];
+    if (pm.length !== nm.length || pt.length !== nt.length) return false;
+    const mealsOk = compactMealsContentSignature(pm) === compactMealsContentSignature(nm)
+      || mealsTrainingsDeepEqual(pm, nm);
+    const trainOk = compactTrainingsContentSignature(pt) === compactTrainingsContentSignature(nt)
+      || mealsTrainingsDeepEqual(pt, nt);
+    if (!mealsOk || !trainOk) return false;
+    return prevDay.waterMl === newDay.waterMl &&
+      prevDay.steps === newDay.steps &&
+      prevDay.weightMorning === newDay.weightMorning &&
+      !!prevDay.isFastingDay === !!newDay.isFastingDay &&
+      !!prevDay.isIncomplete === !!newDay.isIncomplete &&
+      prevDay.moodMorning === newDay.moodMorning &&
+      prevDay.wellbeingMorning === newDay.wellbeingMorning &&
+      prevDay.stressMorning === newDay.stressMorning &&
+      prevDay.moodAvg === newDay.moodAvg &&
+      prevDay.wellbeingAvg === newDay.wellbeingAvg &&
+      prevDay.stressAvg === newDay.stressAvg &&
+      prevDay.dayScore === newDay.dayScore &&
+      prevDay.dayScoreRaw === newDay.dayScoreRaw &&
+      prevDay.dayScoreManual === newDay.dayScoreManual &&
+      prevDay.sleepStart === newDay.sleepStart &&
+      prevDay.sleepEnd === newDay.sleepEnd &&
+      prevDay.sleepHours === newDay.sleepHours &&
+      prevDay.sleepQuality === newDay.sleepQuality;
+  }
+
+  /**
+   * heys:day-updated merge path: supplements + household + morningActivation etc.
+   */
+  function isSameDayStorageMergeContent(prevDay, newDay) {
+    if (!prevDay || !newDay || prevDay.date !== newDay.date) return false;
+    const pm = prevDay.meals || [];
+    const nm = newDay.meals || [];
+    const pt = prevDay.trainings || [];
+    const nt = newDay.trainings || [];
+    if (pm.length !== nm.length || pt.length !== nt.length) return false;
+    const mealsOk = compactMealsContentSignature(pm) === compactMealsContentSignature(nm)
+      || mealsTrainingsDeepEqual(pm, nm);
+    const trainOk = compactTrainingsContentSignature(pt) === compactTrainingsContentSignature(nt)
+      || mealsTrainingsDeepEqual(pt, nt);
+    if (!mealsOk || !trainOk) return false;
+    const prevSupplementsPlanned = JSON.stringify(prevDay.supplementsPlanned || []);
+    const newSupplementsPlanned = JSON.stringify(newDay.supplementsPlanned || []);
+    const prevSupplementsTaken = JSON.stringify(prevDay.supplementsTaken || []);
+    const newSupplementsTaken = JSON.stringify(newDay.supplementsTaken || []);
+    const prevHouseholdJson = JSON.stringify(prevDay.householdActivities || []);
+    const newHouseholdJson = JSON.stringify(newDay.householdActivities || []);
+    return prevHouseholdJson === newHouseholdJson &&
+      prevDay.waterMl === newDay.waterMl &&
+      prevDay.steps === newDay.steps &&
+      prevDay.weightMorning === newDay.weightMorning &&
+      prevDay.moodMorning === newDay.moodMorning &&
+      prevDay.wellbeingMorning === newDay.wellbeingMorning &&
+      prevDay.stressMorning === newDay.stressMorning &&
+      prevSupplementsPlanned === newSupplementsPlanned &&
+      prevSupplementsTaken === newSupplementsTaken &&
+      prevDay.sleepStart === newDay.sleepStart &&
+      prevDay.sleepEnd === newDay.sleepEnd &&
+      prevDay.sleepHours === newDay.sleepHours &&
+      prevDay.sleepQuality === newDay.sleepQuality &&
+      prevDay.morningActivation?.status === newDay.morningActivation?.status &&
+      prevDay.householdMin === newDay.householdMin;
+  }
+
   // === Exports ===
   // Всё экспортируется через HEYS.dayUtils
   // POPULAR_CACHE — приватный, не экспортируется (инкапсуляция)
@@ -2692,7 +2806,9 @@
     invalidateDayCache,
     clearDaysCache,
     getDaysCacheStats,
-    preloadMonthDays
+    preloadMonthDays,
+    isSameDayHydratedContent,
+    isSameDayStorageMergeContent
   };
 
 })(window);

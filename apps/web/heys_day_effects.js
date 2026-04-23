@@ -143,37 +143,11 @@
                     // so the date header updates instantly on click
                     React.startTransition(() => {
                         setDay(prevDay => {
-                            // Сравниваем по КОНТЕНТУ, а не по метаданным (updatedAt может отличаться между локальной и облачной версией)
-                            if (prevDay && prevDay.date === newDay.date) {
-                                const prevMealsJson = JSON.stringify(prevDay.meals || []);
-                                const newMealsJson = JSON.stringify(newDay.meals || []);
-                                const prevTrainingsJson = JSON.stringify(prevDay.trainings || []);
-                                const newTrainingsJson = JSON.stringify(newDay.trainings || []);
-                                const isSameContent =
-                                    prevMealsJson === newMealsJson &&
-                                    prevTrainingsJson === newTrainingsJson &&
-                                    prevDay.waterMl === newDay.waterMl &&
-                                    prevDay.steps === newDay.steps &&
-                                    prevDay.weightMorning === newDay.weightMorning &&
-                                    !!prevDay.isFastingDay === !!newDay.isFastingDay &&
-                                    !!prevDay.isIncomplete === !!newDay.isIncomplete &&
-                                    prevDay.moodMorning === newDay.moodMorning &&
-                                    prevDay.wellbeingMorning === newDay.wellbeingMorning &&
-                                    prevDay.stressMorning === newDay.stressMorning &&
-                                    prevDay.moodAvg === newDay.moodAvg &&
-                                    prevDay.wellbeingAvg === newDay.wellbeingAvg &&
-                                    prevDay.stressAvg === newDay.stressAvg &&
-                                    prevDay.dayScore === newDay.dayScore &&
-                                    prevDay.dayScoreRaw === newDay.dayScoreRaw &&
-                                    prevDay.dayScoreManual === newDay.dayScoreManual &&
-                                    prevDay.sleepStart === newDay.sleepStart &&
-                                    prevDay.sleepEnd === newDay.sleepEnd &&
-                                    prevDay.sleepHours === newDay.sleepHours &&
-                                    prevDay.sleepQuality === newDay.sleepQuality;
-                                if (isSameContent) {
-                                    // Данные не изменились — оставляем предыдущий объект (без ре-рендера)
-                                    return prevDay;
-                                }
+                            const eq = HEYS.dayUtils && typeof HEYS.dayUtils.isSameDayHydratedContent === 'function'
+                                ? HEYS.dayUtils.isSameDayHydratedContent(prevDay, newDay)
+                                : false;
+                            if (eq) {
+                                return prevDay;
                             }
                             return newDay;
                         });
