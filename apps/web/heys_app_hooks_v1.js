@@ -664,6 +664,21 @@
         return trimPendingActionQueue(nextQueue);
     };
 
+    /** PIN + API proxy: later full-screen lock and "slow internet" hint (extra hop, dev-friendly). */
+    const getPinProxySyncOverlayDelaysMs = () => {
+        const DEFAULT_LOCK_MS = 2000;
+        const DEFAULT_HINT_MS = 5000;
+        const PIN_PROXY_LOCK_MS = 4500;
+        const PIN_PROXY_HINT_MS = 10000;
+        try {
+            const cloud = HEYS.cloud;
+            if (cloud?.isPinAuthClient?.() === true && cloud?.isUsingDirectConnection?.() === false) {
+                return { longSyncLockMs: PIN_PROXY_LOCK_MS, slowInternetHintMs: PIN_PROXY_HINT_MS };
+            }
+        } catch (_) { /* noop */ }
+        return { longSyncLockMs: DEFAULT_LOCK_MS, slowInternetHintMs: DEFAULT_HINT_MS };
+    };
+
     function useCloudSyncStatus() {
         const React = window.React;
         const { useState, useRef, useCallback, useEffect } = React;
@@ -745,8 +760,6 @@
 
         const MIN_SYNCING_DURATION = 1500;
         const SYNCING_DELAY = 400;
-        const LONG_SYNC_LOCK_DELAY = 2000;
-        const SLOW_INTERNET_HINT_DELAY = 5000;
         const NON_BLOCKING_SYNC_DELAY = 15000;
         const SYNC_STATUS_POLL_ACTIVE_MS = 1200;
         const SYNC_STATUS_POLL_IDLE_MS = 2200;
@@ -883,14 +896,15 @@
                     syncLockShownForCurrentSyncRef.current = true;
                     setShowSyncLockOverlay(true);
                 }
-            }, LONG_SYNC_LOCK_DELAY);
+            }, getPinProxySyncOverlayDelaysMs().longSyncLockMs);
         }, [isRuntimeUploadInProgress, showSyncLockOverlay]);
 
         const armSlowInternetHint = useCallback(() => {
             if (slowInternetHintTimeoutRef.current || showSlowInternetHint) return;
 
             const elapsed = syncingStartRef.current ? Date.now() - syncingStartRef.current : 0;
-            const remaining = Math.max(0, SLOW_INTERNET_HINT_DELAY - elapsed);
+            const { slowInternetHintMs } = getPinProxySyncOverlayDelaysMs();
+            const remaining = Math.max(0, slowInternetHintMs - elapsed);
 
             slowInternetHintTimeoutRef.current = setTimeout(() => {
                 slowInternetHintTimeoutRef.current = null;
@@ -1641,16 +1655,17 @@
                 );
 
                 if (syncVisualActive && !longSyncFallbackActiveRef.current) {
+                    const { longSyncLockMs, slowInternetHintMs } = getPinProxySyncOverlayDelaysMs();
                     if (cloudStatusRef.current !== 'syncing') {
                         setCloudStatus('syncing');
                     }
 
-                    if (syncElapsedMs >= LONG_SYNC_LOCK_DELAY && !syncLockShownForCurrentSyncRef.current) {
+                    if (syncElapsedMs >= longSyncLockMs && !syncLockShownForCurrentSyncRef.current) {
                         syncLockShownForCurrentSyncRef.current = true;
                         setShowSyncLockOverlay(true);
                     }
 
-                    if (syncElapsedMs >= SLOW_INTERNET_HINT_DELAY && !slowInternetShownForCurrentSyncRef.current) {
+                    if (syncElapsedMs >= slowInternetHintMs && !slowInternetShownForCurrentSyncRef.current) {
                         slowInternetShownForCurrentSyncRef.current = true;
                         setShowSlowInternetHint(true);
                     }

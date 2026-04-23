@@ -6363,7 +6363,9 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
                 }
 
                 // 🔧 v4.9.0: Определяем внешние источники (cloud sync)
-                const externalSources = ['cloud', 'cloud-sync', 'merge', 'fetchDays'];
+                // foreground-hot-sync тоже внешний — должен блокироваться blockCloudUpdatesUntilRef
+                // иначе hot-sync → setDay → autosave → upload → hot-sync loop
+                const externalSources = ['cloud', 'cloud-sync', 'merge', 'fetchDays', 'foreground-hot-sync'];
                 const isExternalSource = externalSources.includes(source);
 
                 // 🔒 Блокируем ЛЮБЫЕ внешние обновления (включая forceReload)

@@ -362,6 +362,9 @@
             // 🦴 Skeleton timing: запоминаем момент первого paint
             window.__heysSkelStart = Date.now();
             window.__heysSkelVisible = true;
+            var API_BASE = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+                ? 'http://localhost:4001'
+                : 'https://api.heyslab.ru';
 
             // 🚀 SPECULATIVE PREFETCH: запускаем НАСТОЯЩИЙ delta fetch при парсинге HTML
             // Не ждём React (+0.9с) — начинаем запрос к API сразу → экономим ~1с
@@ -372,7 +375,7 @@
                 if (cid) {
                     var syncTs = localStorage.getItem('heys_' + cid + '_last_sync_ts');
                     if (syncTs && syncTs !== 'null') {
-                        var pfUrl = 'https://api.heyslab.ru/rest/v1/client_kv_store'
+                        var pfUrl = API_BASE + '/rest/v1/client_kv_store'
                             + '?select=k%2Cv%2Cupdated_at'
                             + '&client_id=eq.' + encodeURIComponent(cid)
                             + '&updated_at=gt.' + encodeURIComponent(syncTs)
@@ -397,26 +400,26 @@
                         // PIN sync now uses bootstrapClientSync → heys-api-rest CF (paginated).
                         // Old /rpc warm-up was useless: POST /rpc without fn → 400 before getPool().
                         // REST warm-up actually hits DB pool + returns tiny response (1 row).
-                        fetch('https://api.heyslab.ru/health', { mode: 'cors', cache: 'no-store' })
+                        fetch(API_BASE + '/health', { mode: 'cors', cache: 'no-store' })
                             .then(function () { window.__heysPerfMark && window.__heysPerfMark('CF health warm-up done'); })
                             .catch(function () { });
-                        fetch('https://api.heyslab.ru/rest/v1/shared_products?select=id&limit=1', { mode: 'cors', cache: 'no-store' })
+                        fetch(API_BASE + '/rest/v1/shared_products?select=id&limit=1', { mode: 'cors', cache: 'no-store' })
                             .then(function () { window.__heysPerfMark && window.__heysPerfMark('CF rest warm-up done'); })
                             .catch(function () { });
                     }
                 } else {
                     // v60 FIX: Warm up /health + /rest CF (first PIN login)
-                    fetch('https://api.heyslab.ru/health', { mode: 'cors', cache: 'no-store' })
+                    fetch(API_BASE + '/health', { mode: 'cors', cache: 'no-store' })
                         .then(function () { window.__heysPerfMark && window.__heysPerfMark('CF health warm-up done'); })
                         .catch(function () { });
-                    fetch('https://api.heyslab.ru/rest/v1/shared_products?select=id&limit=1', { mode: 'cors', cache: 'no-store' })
+                    fetch(API_BASE + '/rest/v1/shared_products?select=id&limit=1', { mode: 'cors', cache: 'no-store' })
                         .then(function () { window.__heysPerfMark && window.__heysPerfMark('CF rest warm-up done'); })
                         .catch(function () { });
                 }
             } catch (e) {
                 try {
-                    fetch('https://api.heyslab.ru/health', { mode: 'cors', cache: 'no-store' }).catch(function () { });
-                    fetch('https://api.heyslab.ru/rest/v1/shared_products?select=id&limit=1', { mode: 'cors', cache: 'no-store' }).catch(function () { });
+                    fetch(API_BASE + '/health', { mode: 'cors', cache: 'no-store' }).catch(function () { });
+                    fetch(API_BASE + '/rest/v1/shared_products?select=id&limit=1', { mode: 'cors', cache: 'no-store' }).catch(function () { });
                 } catch (e2) { }
             }
 
@@ -720,11 +723,11 @@
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
     <link rel="dns-prefetch" href="https://cdn.jsdelivr.net" />
     <!-- Preload критических boot-бандлов (2026-02-25 bundle migration) -->
-    <link rel="preload" href="boot-core.bundle.b7d82c4c5b0a.js" as="script" />
-    <link rel="preload" href="boot-calc.bundle.ace7932016f9.js" as="script" />
+    <link rel="preload" href="boot-core.bundle.f20fc3e938ea.js" as="script" />
+    <link rel="preload" href="boot-calc.bundle.4e1c71343fa0.js" as="script" />
     <link rel="preload" href="boot-day.bundle.8acdfc9877f7.js" as="script" />
-    <link rel="preload" href="boot-app.bundle.e081a0bc1969.js" as="script" />
-    <link rel="preload" href="boot-init.bundle.55f7f6c0b43e.js" as="script" />
+    <link rel="preload" href="boot-app.bundle.17120ecb943d.js" as="script" />
+    <link rel="preload" href="boot-init.bundle.88aaf2b693f2.js" as="script" />
 
     <!-- React теперь бандлится локально через Vite (миграция с CDN 2026-01-21) -->
 
@@ -1862,7 +1865,9 @@
     </script>
     <script>
         (function () {
-            var API = 'https://api.heyslab.ru';
+            var API = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+                ? 'http://localhost:4001'
+                : 'https://api.heyslab.ru';
             var AUTH_RATE_KEY = 'heys_auth_rate_limit_v1';
             // Временный curator autologin — отключается одним флагом без раскопок.
             var TEMP_CURATOR_AUTOLOGIN_ENABLED = true;
@@ -2825,11 +2830,11 @@
          Сгенерировано: node scripts/bundle-legacy.mjs  (pnpm bundle:legacy)
          Состав и хеши: bundle-manifest.json
          Хеш в имени = вечный кэш (cache-first SW). -->
-    <script defer src="boot-core.bundle.b7d82c4c5b0a.js" fetchpriority="high"></script>
-    <script defer src="boot-calc.bundle.ace7932016f9.js"></script>
+    <script defer src="boot-core.bundle.f20fc3e938ea.js" fetchpriority="high"></script>
+    <script defer src="boot-calc.bundle.4e1c71343fa0.js"></script>
     <script defer src="boot-day.bundle.8acdfc9877f7.js"></script>
-    <script defer src="boot-app.bundle.e081a0bc1969.js"></script>
-    <script defer src="boot-init.bundle.55f7f6c0b43e.js"
+    <script defer src="boot-app.bundle.17120ecb943d.js"></script>
+    <script defer src="boot-init.bundle.88aaf2b693f2.js"
         onerror="window.__heysShowRecoveryUI && window.__heysShowRecoveryUI('CRITICAL_SCRIPT_LOAD: boot-init.bundle')"></script>
 
     <!-- PERF: Detect returning user (localStorage has profile) → skip card unfold animations -->

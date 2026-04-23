@@ -13567,14 +13567,21 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
   'use strict';
 
   const HEYS = global.HEYS = global.HEYS || {};
+  const isLocalBrowserDev =
+    typeof window !== 'undefined' &&
+    typeof location !== 'undefined' &&
+    (location.hostname === 'localhost' || location.hostname === '127.0.0.1') &&
+    !(typeof navigator !== 'undefined' && /jsdom/i.test(navigator.userAgent || ''));
 
   // ═══════════════════════════════════════════════════════════════════
   // 🔧 КОНФИГУРАЦИЯ
   // ═══════════════════════════════════════════════════════════════════
 
   const CONFIG = {
-    // Production API (Yandex Cloud)
-    API_URL: 'https://api.heyslab.ru',
+    // Production API (Yandex Cloud); local browser dev goes through localhost proxy
+    API_URL: isLocalBrowserDev
+      ? 'http://localhost:4001'
+      : 'https://api.heyslab.ru',
 
     // Endpoints
     ENDPOINTS: {
@@ -13858,7 +13865,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
   async function rest(table, options = {}) {
     const { method = 'GET', filters = {}, data = null, select, limit, offset, order, upsert, onConflict } = options;
 
-    // Строим URL с параметрами (формат: /rest/v1/{table}?params)
+    // Строим URL с параметрами (формат: /rest/{table}?params)
     const params = new URLSearchParams();
     if (select) params.set('select', select);
     if (limit) params.set('limit', String(limit));
@@ -13883,7 +13890,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
     });
 
     const queryString = params.toString();
-    const url = `${CONFIG.API_URL}/rest/v1/${table}${queryString ? '?' + queryString : ''}`;
+    const url = `${CONFIG.API_URL}/rest/${table}${queryString ? '?' + queryString : ''}`;
 
     try {
       log(`REST: ${method} ${table}`, filters);
@@ -15558,7 +15565,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
     window.YandexAPI = YandexAPI;
   }
 
-  log('✅ YandexAPI module loaded (api.heyslab.ru)');
+  log(`✅ YandexAPI module loaded (${CONFIG.API_URL})`);
 
 })(typeof window !== 'undefined' ? window : global);
 

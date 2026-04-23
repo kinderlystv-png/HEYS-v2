@@ -9693,22 +9693,28 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         if (AppCloudInit.initCloud) {
             AppCloudInit.initCloud();
         } else if (window.HEYS.cloud && typeof HEYS.cloud.init === 'function') {
+            const isLocalBrowserDev = typeof window !== 'undefined'
+                && typeof window.location !== 'undefined'
+                && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+                && !(typeof navigator !== 'undefined' && /jsdom/i.test(navigator.userAgent || ''));
+            const apiBaseUrl = isLocalBrowserDev ? 'http://localhost:4001' : 'https://api.heyslab.ru';
+
             if (!HEYS._heysApiHealthPingSent) {
                 HEYS._heysApiHealthPingSent = true;
-                fetch('https://api.heyslab.ru/health', { method: 'GET' }).catch(() => { });
+                fetch(`${apiBaseUrl}/health`, { method: 'GET' }).catch(() => { });
             }
 
             // 🆕 v2025-12-22: На production используем ТОЛЬКО Yandex Cloud API
             // Supabase SDK инициализируется для совместимости cloud.signIn/signOut,
-            // но основной трафик идёт через HEYS.YandexAPI
-            const supabaseUrl = 'https://api.heyslab.ru';  // Yandex Cloud API для всех сред
+            // но основной трафик идёт через HEYS.YandexAPI / локальный proxy в dev
+            const supabaseUrl = apiBaseUrl;
 
             HEYS.cloud.init({
                 url: supabaseUrl,
                 anonKey:
                     'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVrcW9sY3ppcWN1cGxxZmdybXNoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUyNTE1NDUsImV4cCI6MjA3MDgyNzU0NX0.Nzd8--PyGMJvIHqFoCQKNUOwpxnrAZuslQHtAjcE1Ds',
-                // localhost fallback больше не нужен — используем Yandex API везде
-                localhostProxyUrl: undefined
+                // В локальном dev legacy cloud sync должен ходить через localhost proxy
+                localhostProxyUrl: isLocalBrowserDev ? apiBaseUrl : undefined
             });
         }
 

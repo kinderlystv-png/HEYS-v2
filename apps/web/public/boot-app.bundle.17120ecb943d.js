@@ -12279,6 +12279,21 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
         return trimPendingActionQueue(nextQueue);
     };
 
+    /** PIN + API proxy: later full-screen lock and "slow internet" hint (extra hop, dev-friendly). */
+    const getPinProxySyncOverlayDelaysMs = () => {
+        const DEFAULT_LOCK_MS = 2000;
+        const DEFAULT_HINT_MS = 5000;
+        const PIN_PROXY_LOCK_MS = 4500;
+        const PIN_PROXY_HINT_MS = 10000;
+        try {
+            const cloud = HEYS.cloud;
+            if (cloud?.isPinAuthClient?.() === true && cloud?.isUsingDirectConnection?.() === false) {
+                return { longSyncLockMs: PIN_PROXY_LOCK_MS, slowInternetHintMs: PIN_PROXY_HINT_MS };
+            }
+        } catch (_) { /* noop */ }
+        return { longSyncLockMs: DEFAULT_LOCK_MS, slowInternetHintMs: DEFAULT_HINT_MS };
+    };
+
     function useCloudSyncStatus() {
         const React = window.React;
         const { useState, useRef, useCallback, useEffect } = React;
@@ -12360,8 +12375,6 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
 
         const MIN_SYNCING_DURATION = 1500;
         const SYNCING_DELAY = 400;
-        const LONG_SYNC_LOCK_DELAY = 2000;
-        const SLOW_INTERNET_HINT_DELAY = 5000;
         const NON_BLOCKING_SYNC_DELAY = 15000;
         const SYNC_STATUS_POLL_ACTIVE_MS = 1200;
         const SYNC_STATUS_POLL_IDLE_MS = 2200;
@@ -12498,14 +12511,15 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                     syncLockShownForCurrentSyncRef.current = true;
                     setShowSyncLockOverlay(true);
                 }
-            }, LONG_SYNC_LOCK_DELAY);
+            }, getPinProxySyncOverlayDelaysMs().longSyncLockMs);
         }, [isRuntimeUploadInProgress, showSyncLockOverlay]);
 
         const armSlowInternetHint = useCallback(() => {
             if (slowInternetHintTimeoutRef.current || showSlowInternetHint) return;
 
             const elapsed = syncingStartRef.current ? Date.now() - syncingStartRef.current : 0;
-            const remaining = Math.max(0, SLOW_INTERNET_HINT_DELAY - elapsed);
+            const { slowInternetHintMs } = getPinProxySyncOverlayDelaysMs();
+            const remaining = Math.max(0, slowInternetHintMs - elapsed);
 
             slowInternetHintTimeoutRef.current = setTimeout(() => {
                 slowInternetHintTimeoutRef.current = null;
@@ -13256,16 +13270,17 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                 );
 
                 if (syncVisualActive && !longSyncFallbackActiveRef.current) {
+                    const { longSyncLockMs, slowInternetHintMs } = getPinProxySyncOverlayDelaysMs();
                     if (cloudStatusRef.current !== 'syncing') {
                         setCloudStatus('syncing');
                     }
 
-                    if (syncElapsedMs >= LONG_SYNC_LOCK_DELAY && !syncLockShownForCurrentSyncRef.current) {
+                    if (syncElapsedMs >= longSyncLockMs && !syncLockShownForCurrentSyncRef.current) {
                         syncLockShownForCurrentSyncRef.current = true;
                         setShowSyncLockOverlay(true);
                     }
 
-                    if (syncElapsedMs >= SLOW_INTERNET_HINT_DELAY && !slowInternetShownForCurrentSyncRef.current) {
+                    if (syncElapsedMs >= slowInternetHintMs && !slowInternetShownForCurrentSyncRef.current) {
                         slowInternetShownForCurrentSyncRef.current = true;
                         setShowSlowInternetHint(true);
                     }
@@ -26050,24 +26065,29 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
         }
 
         const doFetch = fetcher || fetch;
+        const isLocalBrowserDev = typeof window !== 'undefined'
+            && typeof window.location !== 'undefined'
+            && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+            && !(typeof navigator !== 'undefined' && /jsdom/i.test(navigator.userAgent || ''));
+        const apiBaseUrl = isLocalBrowserDev ? 'http://localhost:4001' : 'https://api.heyslab.ru';
 
         // 🔥 Warm-up ping — один раз за жизнь страницы (initCloud + initialize fallback делят флаг)
         if (!HEYS._heysApiHealthPingSent) {
             HEYS._heysApiHealthPingSent = true;
-            doFetch('https://api.heyslab.ru/health', { method: 'GET' }).catch(() => { });
+            doFetch(`${apiBaseUrl}/health`, { method: 'GET' }).catch(() => { });
         }
 
         // 🆕 v2025-12-22: На production используем ТОЛЬКО Yandex Cloud API
         // Supabase SDK инициализируется для совместимости cloud.signIn/signOut,
-        // но основной трафик идёт через HEYS.YandexAPI
-        const supabaseUrl = 'https://api.heyslab.ru';
+        // но основной трафик идёт через HEYS.YandexAPI / локальный proxy в dev
+        const supabaseUrl = apiBaseUrl;
 
         HEYS.cloud.init({
             url: supabaseUrl,
             anonKey:
                 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVrcW9sY3ppcWN1cGxxZmdybXNoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUyNTE1NDUsImV4cCI6MjA3MDgyNzU0NX0.Nzd8--PyGMJvIHqFoCQKNUOwpxnrAZuslQHtAjcE1Ds',
-            // localhost fallback больше не нужен — используем Yandex API везде
-            localhostProxyUrl: undefined,
+            // В локальном dev legacy cloud sync должен ходить через localhost proxy
+            localhostProxyUrl: isLocalBrowserDev ? apiBaseUrl : undefined,
         });
 
         return { initialized: true, url: supabaseUrl };
