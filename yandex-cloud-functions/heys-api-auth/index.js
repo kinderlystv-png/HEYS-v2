@@ -62,6 +62,36 @@ const ALLOWED_ORIGINS = new Set([
  * Возвращает CORS headers с проверкой origin.
  * Если origin не в whitelist — не ставим Access-Control-Allow-Origin.
  */
+// ═══════════════════════════════════════════════════════════════════════════
+// 🛡️ In-memory login rate limiting (brute-force protection)
+// Per-IP: max 10 attempts / 15 min. Resets on success.
+// Note: per-instance state — sufficient against naive brute force.
+// ═══════════════════════════════════════════════════════════════════════════
+const LOGIN_MAX_ATTEMPTS = 10;
+const LOGIN_LOCKOUT_MS = 15 * 60 * 1000; // 15 min
+const loginAttempts = new Map(); // ip → { count, resetAt }
+
+function checkLoginRateLimit(ip) {
+  const now = Date.now();
+  const rec = loginAttempts.get(ip);
+  if (!rec || now > rec.resetAt) return { allowed: true };
+  if (rec.count >= LOGIN_MAX_ATTEMPTS) {
+    return { allowed: false, retryAfter: Math.ceil((rec.resetAt - now) / 1000) };
+  }
+  return { allowed: true };
+}
+
+function recordLoginAttempt(ip, success) {
+  const now = Date.now();
+  if (success) { loginAttempts.delete(ip); return; }
+  const rec = loginAttempts.get(ip);
+  if (!rec || now > rec.resetAt) {
+    loginAttempts.set(ip, { count: 1, resetAt: now + LOGIN_LOCKOUT_MS });
+  } else {
+    rec.count++;
+  }
+}
+
 function getCorsHeaders(origin) {
   const headers = {
     'Access-Control-Allow-Methods': 'GET, POST, PATCH, DELETE, OPTIONS',
@@ -178,7 +208,16 @@ function verifyPassword(password, hash, salt) {
 // Handlers
 // ═══════════════════════════════════════════════════════════════════════════
 
-async function handleLogin(body, jwtSecret) {
+async function handleLogin(body, jwtSecret, ip) {
+  // 🛡️ Rate limit check
+  const rl = checkLoginRateLimit(ip);
+  if (!rl.allowed) {
+    return {
+      statusCode: 429,
+      body: JSON.stringify({ error: 'Too many login attempts', retryAfter: rl.retryAfter })
+    };
+  }
+
   const { email, password } = body;
 
   if (!email || !password) {
@@ -199,6 +238,7 @@ async function handleLogin(body, jwtSecret) {
     );
 
     if (result.rows.length === 0) {
+      recordLoginAttempt(ip, false);
       return {
         statusCode: 401,
         body: JSON.stringify({ error: 'Invalid credentials' })
@@ -209,11 +249,14 @@ async function handleLogin(body, jwtSecret) {
 
     // Проверяем пароль
     if (!verifyPassword(password, curator.password_hash, curator.password_salt)) {
+      recordLoginAttempt(ip, false);
       return {
         statusCode: 401,
         body: JSON.stringify({ error: 'Invalid credentials' })
       };
     }
+
+    recordLoginAttempt(ip, true);
 
     // Обновляем last_login
     await client.query(
@@ -251,7 +294,7 @@ async function handleLogin(body, jwtSecret) {
     console.error('Login error:', e);
     return {
       statusCode: 500,
-      body: JSON.stringify({ error: 'Internal server error', details: e.message })
+      body: JSON.stringify({ error: 'Internal server error' })
     };
   } finally {
     client.release();
@@ -819,12 +862,18 @@ module.exports.handler = async function (event, context) {
   }
 
   const authHeader = event.headers?.Authorization || event.headers?.authorization;
+  const clientIp = (
+    event.headers?.['x-forwarded-for']?.split(',')[0]?.trim() ??
+    event.headers?.['X-Forwarded-For']?.split(',')[0]?.trim() ??
+    event.requestContext?.identity?.sourceIp ??
+    'unknown'
+  );
 
   let result;
 
   switch (action) {
     case 'login':
-      result = await handleLogin(body, JWT_SECRET);
+      result = await handleLogin(body, JWT_SECRET, clientIp);
       break;
     case 'verify':
       result = await handleVerify(body, authHeader, JWT_SECRET);

@@ -924,6 +924,16 @@ module.exports.handler = async function (event, context) {
   }
 
   // Парсим тело запроса
+  // 🛡️ Body size limit: 256 KB — защита от DoS через огромные payload'ы
+  const MAX_BODY_BYTES = 256 * 1024;
+  if (event.body && typeof event.body === 'string' && Buffer.byteLength(event.body, 'utf8') > MAX_BODY_BYTES) {
+    return {
+      statusCode: 413,
+      headers: corsHeaders,
+      body: JSON.stringify({ error: 'Payload too large' })
+    };
+  }
+
   let params = {};
   try {
     if (event.body) {

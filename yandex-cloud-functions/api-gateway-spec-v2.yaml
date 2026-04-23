@@ -167,6 +167,9 @@ paths:
   /auth/login:
     post:
       summary: Curator login (email + password)
+      x-yc-apigateway-throttling:
+        rate: 5
+        unit: MINUTE
       x-yc-apigateway-integration:
         type: cloud_functions
         function_id: d4ef3c4o67vdg7o4c4d3
@@ -191,6 +194,9 @@ paths:
   /auth/register:
     post:
       summary: Register new curator (admin only)
+      x-yc-apigateway-throttling:
+        rate: 2
+        unit: MINUTE
       x-yc-apigateway-integration:
         type: cloud_functions
         function_id: d4ef3c4o67vdg7o4c4d3
