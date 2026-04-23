@@ -1084,19 +1084,19 @@ module.exports.handler = async function (event, context) {
       const loadRes =
         kv.kind === 'session'
           ? await client.query(
-              `select * from batch_get_client_kv_by_session(
+            `select * from batch_get_client_kv_by_session(
           p_session_token => $1::text,
           p_keys => $2::text[]
         )`,
-              [kv.sessionToken, keysToLoad],
-            )
+            [kv.sessionToken, keysToLoad],
+          )
           : await client.query(
-              `select * from batch_get_client_kv_by_client_id(
+            `select * from batch_get_client_kv_by_client_id(
           p_client_id => $1::uuid,
           p_keys => $2::text[]
         )`,
-              [kv.clientId, keysToLoad],
-            );
+            [kv.clientId, keysToLoad],
+          );
       const batchGetRow = loadRes.rows[0];
       const batchGetPayload =
         batchGetRow?.batch_get_client_kv_by_session ?? batchGetRow?.batch_get_client_kv_by_client_id;

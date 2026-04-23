@@ -23,6 +23,40 @@ const path = require('path');
 
 const YUKASSA_API_URL = 'https://api.yookassa.ru/v3/payments';
 
+// ЮKassa notification IP ranges (https://yookassa.ru/developers/using-api/webhooks)
+// All webhook POSTs must originate from these CIDRs.
+const YUKASSA_IP_CIDRS = [
+  { base: [185, 71, 76, 0], prefix: 27 },
+  { base: [185, 71, 77, 0], prefix: 27 },
+  { base: [77, 75, 153, 0], prefix: 25 },
+  { base: [77, 75, 154, 128], prefix: 25 },
+  { base: [2a02, 0, 0, 0], prefix: -1 }, // placeholder, handled separately
+];
+
+function ipToInt(parts) {
+  return ((parts[0] << 24) | (parts[1] << 16) | (parts[2] << 8) | parts[3]) >>> 0;
+}
+
+function isInCidr(ip, base, prefix) {
+  const mask = prefix === 32 ? 0xFFFFFFFF : ((~0 << (32 - prefix)) >>> 0);
+  return (ipToInt(ip) & mask) === (ipToInt(base) & mask);
+}
+
+function isYukassaIp(rawIp) {
+  if (!rawIp) return false;
+  // Strip port if present (e.g. "185.71.76.1:12345")
+  const ipStr = rawIp.split(':')[0];
+  const parts = ipStr.split('.').map(Number);
+  if (parts.length !== 4 || parts.some(isNaN)) return false;
+
+  return (
+    isInCidr(parts, [185, 71, 76, 0], 27) ||
+    isInCidr(parts, [185, 71, 77, 0], 27) ||
+    isInCidr(parts, [77, 75, 153, 0], 25) ||
+    isInCidr(parts, [77, 75, 154, 128], 25)
+  );
+}
+
 // Тарифные планы (цены в копейках для точности, в рублях для API)
 const PLANS = {
   base: { price: 1990, name: 'Base', description: 'HEYS Base подписка на 1 месяц' },
@@ -264,14 +298,26 @@ async function createPayment(body, clientId) {
 // 🔔 WEBHOOK — Обработка уведомлений от ЮKassa
 // ═══════════════════════════════════════════════════════════════════════════════
 
-async function handleWebhook(body) {
-  const { event, object } = body;
+async function handleWebhook(body, event) {
+  // 🔐 Verify request originates from YuKassa IPs
+  const rawIp =
+    event?.headers?.['x-forwarded-for']?.split(',')[0]?.trim() ||
+    event?.headers?.['X-Forwarded-For']?.split(',')[0]?.trim() ||
+    event?.requestContext?.identity?.sourceIp ||
+    '';
 
-  if (!event || !object) {
+  if (!isYukassaIp(rawIp)) {
+    console.warn(`[WEBHOOK] Rejected request from non-YuKassa IP: ${rawIp}`);
+    return jsonResponse(403, { error: 'Forbidden' });
+  }
+
+  const { event: webhookEvent, object } = body;
+
+  if (!webhookEvent || !object) {
     return errorResponse(400, 'Invalid webhook payload', 'INVALID_WEBHOOK');
   }
 
-  console.log(`[WEBHOOK] Received: ${event}, payment_id: ${object.id}`);
+  console.log(`[WEBHOOK] Received: ${webhookEvent}, payment_id: ${object.id}`);
 
   const externalPaymentId = object.id;
   const newStatus = object.status;
@@ -316,7 +362,7 @@ async function handleWebhook(body) {
       payment.id,
       newStatus,
       internalStatus,
-      JSON.stringify({ webhook_event: event, webhook_received_at: new Date().toISOString() })
+      JSON.stringify({ webhook_event: webhookEvent, webhook_received_at: new Date().toISOString() })
     ]);
 
     // 3. Если платёж успешен — активируем подписку
@@ -457,7 +503,7 @@ module.exports.handler = async function (event, context) {
 
     // Route: POST /payments/webhook
     if (method === 'POST' && path.includes('/webhook')) {
-      return await handleWebhook(body);
+      return await handleWebhook(body, event);
     }
 
     // Route: GET /payments/status

@@ -63,32 +63,56 @@ const ALLOWED_ORIGINS = new Set([
  * Если origin не в whitelist — не ставим Access-Control-Allow-Origin.
  */
 // ═══════════════════════════════════════════════════════════════════════════
-// 🛡️ In-memory login rate limiting (brute-force protection)
-// Per-IP: max 10 attempts / 15 min. Resets on success.
-// Note: per-instance state — sufficient against naive brute force.
+// 🛡️ DB-level login rate limiting (brute-force protection)
+// Per-IP: max 10 attempts / 15 min. Persisted in auth_rate_limits table so
+// limits survive YC Function cold starts and work across parallel instances.
+// Migration: database/2026-04-23_curator_login_rate_limits.sql
 // ═══════════════════════════════════════════════════════════════════════════
 const LOGIN_MAX_ATTEMPTS = 10;
-const LOGIN_LOCKOUT_MS = 15 * 60 * 1000; // 15 min
-const loginAttempts = new Map(); // ip → { count, resetAt }
 
-function checkLoginRateLimit(ip) {
-  const now = Date.now();
-  const rec = loginAttempts.get(ip);
-  if (!rec || now > rec.resetAt) return { allowed: true };
-  if (rec.count >= LOGIN_MAX_ATTEMPTS) {
-    return { allowed: false, retryAfter: Math.ceil((rec.resetAt - now) / 1000) };
+async function checkLoginRateLimit(ip) {
+  const pool = getPool();
+  const client = await pool.connect();
+  try {
+    const res = await client.query(
+      `SELECT attempts, reset_at FROM auth_rate_limits WHERE ip = $1 AND reset_at > NOW()`,
+      [ip]
+    );
+    if (res.rows.length === 0) return { allowed: true };
+    const { attempts, reset_at } = res.rows[0];
+    if (attempts >= LOGIN_MAX_ATTEMPTS) {
+      const retryAfter = Math.max(1, Math.ceil((new Date(reset_at).getTime() - Date.now()) / 1000));
+      return { allowed: false, retryAfter };
+    }
+    return { allowed: true };
+  } finally {
+    client.release();
   }
-  return { allowed: true };
 }
 
-function recordLoginAttempt(ip, success) {
-  const now = Date.now();
-  if (success) { loginAttempts.delete(ip); return; }
-  const rec = loginAttempts.get(ip);
-  if (!rec || now > rec.resetAt) {
-    loginAttempts.set(ip, { count: 1, resetAt: now + LOGIN_LOCKOUT_MS });
-  } else {
-    rec.count++;
+async function recordLoginAttempt(ip, success) {
+  const pool = getPool();
+  const client = await pool.connect();
+  try {
+    if (success) {
+      await client.query('DELETE FROM auth_rate_limits WHERE ip = $1', [ip]);
+    } else {
+      await client.query(`
+        INSERT INTO auth_rate_limits(ip, attempts, reset_at)
+        VALUES($1, 1, NOW() + INTERVAL '15 minutes')
+        ON CONFLICT(ip) DO UPDATE SET
+          attempts = CASE
+            WHEN auth_rate_limits.reset_at <= NOW() THEN 1
+            ELSE auth_rate_limits.attempts + 1
+          END,
+          reset_at = CASE
+            WHEN auth_rate_limits.reset_at <= NOW() THEN NOW() + INTERVAL '15 minutes'
+            ELSE auth_rate_limits.reset_at
+          END
+      `, [ip]);
+    }
+  } finally {
+    client.release();
   }
 }
 
@@ -209,8 +233,8 @@ function verifyPassword(password, hash, salt) {
 // ═══════════════════════════════════════════════════════════════════════════
 
 async function handleLogin(body, jwtSecret, ip) {
-  // 🛡️ Rate limit check
-  const rl = checkLoginRateLimit(ip);
+  // 🛡️ Rate limit check (DB-level, multi-instance safe)
+  const rl = await checkLoginRateLimit(ip);
   if (!rl.allowed) {
     return {
       statusCode: 429,
@@ -238,7 +262,7 @@ async function handleLogin(body, jwtSecret, ip) {
     );
 
     if (result.rows.length === 0) {
-      recordLoginAttempt(ip, false);
+      await recordLoginAttempt(ip, false);
       return {
         statusCode: 401,
         body: JSON.stringify({ error: 'Invalid credentials' })
@@ -249,14 +273,14 @@ async function handleLogin(body, jwtSecret, ip) {
 
     // Проверяем пароль
     if (!verifyPassword(password, curator.password_hash, curator.password_salt)) {
-      recordLoginAttempt(ip, false);
+      await recordLoginAttempt(ip, false);
       return {
         statusCode: 401,
         body: JSON.stringify({ error: 'Invalid credentials' })
       };
     }
 
-    recordLoginAttempt(ip, true);
+    await recordLoginAttempt(ip, true);
 
     // Обновляем last_login
     await client.query(
@@ -377,7 +401,7 @@ async function handleGetClients(curatorId) {
     console.error('GetClients error:', e);
     return {
       statusCode: 500,
-      body: JSON.stringify({ error: 'Internal server error', details: e.message })
+      body: JSON.stringify({ error: 'Internal server error' })
     };
   } finally {
     client.release();
@@ -418,7 +442,7 @@ async function handleCreateClient(curatorId, body) {
     console.error('CreateClient error:', e);
     return {
       statusCode: 500,
-      body: JSON.stringify({ error: 'Internal server error', details: e.message })
+      body: JSON.stringify({ error: 'Internal server error' })
     };
   } finally {
     client.release();
@@ -543,7 +567,7 @@ async function handleUpdateClient(curatorId, clientId, body) {
     }
     return {
       statusCode: 500,
-      body: JSON.stringify({ error: 'Internal server error', details: e.message })
+      body: JSON.stringify({ error: 'Internal server error' })
     };
   } finally {
     client.release();
@@ -590,7 +614,7 @@ async function handleDeleteClient(curatorId, clientId) {
     console.error('DeleteClient error:', e);
     return {
       statusCode: 500,
-      body: JSON.stringify({ error: 'Internal server error', details: e.message })
+      body: JSON.stringify({ error: 'Internal server error' })
     };
   } finally {
     client.release();
@@ -698,7 +722,7 @@ async function handleGetClientKv(curatorId, clientId, options = {}) {
     console.error('[GetClientKv] ERROR:', e.message, e.stack);
     return {
       statusCode: 500,
-      body: JSON.stringify({ error: 'Internal server error', details: e.message })
+      body: JSON.stringify({ error: 'Internal server error' })
     };
   } finally {
     client.release();
@@ -777,7 +801,7 @@ async function handleRegister(body, jwtSecret) {
     console.error('Register error:', e);
     return {
       statusCode: 500,
-      body: JSON.stringify({ error: 'Internal server error', details: e.message })
+      body: JSON.stringify({ error: 'Internal server error' })
     };
   } finally {
     client.release();
