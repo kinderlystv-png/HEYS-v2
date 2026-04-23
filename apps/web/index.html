@@ -362,6 +362,7 @@
             // 🦴 Skeleton timing: запоминаем момент первого paint
             window.__heysSkelStart = Date.now();
             window.__heysSkelVisible = true;
+            /* Локально :4001 — префетч same-origin; прямой /rpc с localhost на api.heyslab.ru падает на preflight (Allow-Origin только прод-домен) */
             var API_BASE = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
                 ? 'http://localhost:4001'
                 : 'https://api.heyslab.ru';
@@ -723,11 +724,11 @@
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
     <link rel="dns-prefetch" href="https://cdn.jsdelivr.net" />
     <!-- Preload критических boot-бандлов (2026-02-25 bundle migration) -->
-    <link rel="preload" href="boot-core.bundle.f20fc3e938ea.js" as="script" />
-    <link rel="preload" href="boot-calc.bundle.4e1c71343fa0.js" as="script" />
+    <link rel="preload" href="boot-core.bundle.1164728e3089.js" as="script" />
+    <link rel="preload" href="boot-calc.bundle.380e4c4770d5.js" as="script" />
     <link rel="preload" href="boot-day.bundle.8acdfc9877f7.js" as="script" />
-    <link rel="preload" href="boot-app.bundle.17120ecb943d.js" as="script" />
-    <link rel="preload" href="boot-init.bundle.88aaf2b693f2.js" as="script" />
+    <link rel="preload" href="boot-app.bundle.7092bf4f7676.js" as="script" />
+    <link rel="preload" href="boot-init.bundle.42b73b15a6dc.js" as="script" />
 
     <!-- React теперь бандлится локально через Vite (миграция с CDN 2026-01-21) -->
 
@@ -2830,11 +2831,11 @@
          Сгенерировано: node scripts/bundle-legacy.mjs  (pnpm bundle:legacy)
          Состав и хеши: bundle-manifest.json
          Хеш в имени = вечный кэш (cache-first SW). -->
-    <script defer src="boot-core.bundle.f20fc3e938ea.js" fetchpriority="high"></script>
-    <script defer src="boot-calc.bundle.4e1c71343fa0.js"></script>
+    <script defer src="boot-core.bundle.1164728e3089.js" fetchpriority="high"></script>
+    <script defer src="boot-calc.bundle.380e4c4770d5.js"></script>
     <script defer src="boot-day.bundle.8acdfc9877f7.js"></script>
-    <script defer src="boot-app.bundle.17120ecb943d.js"></script>
-    <script defer src="boot-init.bundle.88aaf2b693f2.js"
+    <script defer src="boot-app.bundle.7092bf4f7676.js"></script>
+    <script defer src="boot-init.bundle.42b73b15a6dc.js"
         onerror="window.__heysShowRecoveryUI && window.__heysShowRecoveryUI('CRITICAL_SCRIPT_LOAD: boot-init.bundle')"></script>
 
     <!-- PERF: Detect returning user (localStorage has profile) → skip card unfold animations -->

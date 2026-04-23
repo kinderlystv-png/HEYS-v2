@@ -2459,6 +2459,9 @@
     // Импортируем утилиты из dayUtils
     const getDayUtils = () => HEYS.dayUtils || {};
 
+    // Глобальный дедуп логов: несколько экземпляров useDayAutosave (разные даты) иначе спамят одинаковым HIT.
+    const __heysDayv2FlushGuardLogState = { updatedAt: null, at: 0 };
+
     // Хук для централизованного автосохранения дня с учётом гонок и межвкладочной синхронизации
     // Поддерживает ночную логику: приёмы 00:00-02:59 сохраняются под следующий календарный день
     function useDayAutosave({
@@ -2760,7 +2763,15 @@
             // (сравнение без updatedAt через stripMeta) — skip, чтобы не создавать upload loop.
             // hot-sync может получить dayv2 из облака → setDay → autosave → upload → hot-sync → ...
             if (!force && freshestDaySnap && freshestDaySnap === daySnap) {
-                if (typeof console !== 'undefined') console.info('[HEYS.sync] [IND] flush: dayv2 content guard HIT (freshest===current, skip write) updatedAt=' + updatedAt);
+                const t = Date.now();
+                const r = __heysDayv2FlushGuardLogState;
+                // Один лог на окно времени: updatedAt дёргается часто, несколько инстансов хука — иначе простыня HIT.
+                if (t - r.at < 8000) return;
+                r.updatedAt = updatedAt;
+                r.at = t;
+                if (typeof console !== 'undefined') {
+                    console.info('[HEYS.sync] [IND] flush: dayv2 content guard HIT (freshest===current, skip write) updatedAt=' + updatedAt);
+                }
                 return;
             }
             if (!force && freshestDaySnap) {

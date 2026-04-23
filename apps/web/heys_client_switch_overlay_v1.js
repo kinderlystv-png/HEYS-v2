@@ -62,6 +62,18 @@
             }, FADE_OUT);
         }, [cleanup]);
 
+        // Dismiss after switchClient finishes (emitSwitchStage 'done') OR after gate/shell dispatches
+        // heys:client-changed. Relying only on client-changed races useSyncEffects dedupe/order.
+        const completeAndFade = useCallback(() => {
+            if (!activeSwitchRef.current) return;
+            activeSwitchRef.current = false;
+            cleanup();
+            setStageKey('done');
+            timerRef.current = setTimeout(() => {
+                fadeOut();
+            }, DONE_DISPLAY);
+        }, [cleanup, fadeOut]);
+
         useEffect(() => {
             // Skip for PIN clients (single-client, no switch possible)
             const isPinClient = () => HEYS.cloud?.isPinAuthClient?.() === true;
@@ -89,21 +101,16 @@
                 if (!stage || !STAGES[stage]) return;
                 if (clientId && activeClientIdRef.current && clientId !== activeClientIdRef.current) return;
                 setStageKey(stage);
+                if (stage === 'done') {
+                    completeAndFade();
+                }
             };
 
             const onChanged = (e) => {
                 if (!activeSwitchRef.current) return;
                 const clientId = e.detail?.clientId;
                 if (clientId && activeClientIdRef.current && clientId !== activeClientIdRef.current) return;
-
-                activeSwitchRef.current = false;
-
-                cleanup();
-                setStageKey('done');
-
-                timerRef.current = setTimeout(() => {
-                    fadeOut();
-                }, DONE_DISPLAY);
+                completeAndFade();
             };
 
             const onSyncError = (e) => {
@@ -129,7 +136,7 @@
                 window.removeEventListener('heys:sync-error', onSyncError);
                 cleanup();
             };
-        }, [cleanup, fadeOut]);
+        }, [cleanup, fadeOut, completeAndFade]);
 
         if (!visible) return null;
 

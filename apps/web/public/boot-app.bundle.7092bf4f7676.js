@@ -12359,6 +12359,10 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
         /** Схлопывание парного heysSyncCompleted + heys:data-uploaded в один проход UI */
         const syncCompleteDedupeAtRef = useRef(0);
         // �🔒 Cooldown после первого sync — не показываем "syncing" сразу после загрузки
+        /** Давит спам [IND] data-saved: skip при одном и том же reason+key (dayv2 во время sync). */
+        const indDataSavedSkipLogRef = useRef({ sig: '', at: 0 });
+        /** Давит спам [IND] pending-change при одинаковом снимке очереди (notifyPendingChange дёргается пачкой). */
+        const indPendingChangeLogRef = useRef({ sig: '', at: 0 });
         const initialSyncCompletedAtRef = useRef(0);
         const INITIAL_SYNC_COOLDOWN_MS = 3000; // 3 секунды после первого sync не показываем syncing
         // 🔕 Timestamp когда последний раз индикатор ушёл в idle (пост-синк cooldown)
@@ -12368,10 +12372,19 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
         const pendingCountRef = useRef(pendingCount);
         const pendingActionItemsRef = useRef(pendingActionItems);
         const syncProgressTotalRef = useRef(0);
+        /** Снимок UI синка для tick (async — state из замыкания устаревает) */
+        const showSyncLockOverlayRef = useRef(false);
+        const showSlowInternetHintRef = useRef(false);
+        const showPendingSyncBannerRef = useRef(false);
+        const indSyncModalHeartbeatRef = useRef(0);
+        const prevSyncLockOverlayRef = useRef(false);
         cloudStatusRef.current = cloudStatus;
         pendingCountRef.current = pendingCount;
         pendingActionItemsRef.current = pendingActionItems;
         syncProgressTotalRef.current = syncProgress.total;
+        showSyncLockOverlayRef.current = showSyncLockOverlay;
+        showSlowInternetHintRef.current = showSlowInternetHint;
+        showPendingSyncBannerRef.current = showPendingSyncBanner;
 
         const MIN_SYNCING_DURATION = 1500;
         const SYNCING_DELAY = 400;
@@ -12388,6 +12401,38 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                 console.info('[HEYS.sync] [IND] useCloudSyncStatus UNMOUNTED');
             };
         }, []);
+
+        useEffect(() => {
+            if (showSyncLockOverlay && !prevSyncLockOverlayRef.current) {
+                let rp = 0;
+                let up = false;
+                let cid = '';
+                let snapStr = '';
+                let detStr = '';
+                try {
+                    rp = window.HEYS?.cloud?.getPendingCount?.() || 0;
+                    up = !!window.HEYS?.cloud?.isUploadInProgress?.();
+                    cid = (window.HEYS?.cloud?.getCurrentClientId?.() || '').slice(0, 8);
+                    const snap = window.HEYS?.cloud?.getPendingQueuesSnapshot?.();
+                    if (snap) {
+                        snapStr = ' clientQ=' + snap.clientQueueLen + '+' + snap.clientInFlightLen
+                            + ' userQ=' + snap.userQueueLen + '+' + snap.userInFlightLen
+                            + ' uploadIP=' + !!snap.uploadInProgress;
+                    }
+                    const det = window.HEYS?.cloud?.getPendingDetails?.();
+                    if (det && typeof det === 'object') {
+                        detStr = ' breakdown day=' + det.days + ' prod=' + det.products + ' prof=' + det.profile + ' other=' + det.other;
+                    }
+                } catch (_) { /* noop */ }
+                const hint = !cid ? ' | БЕЗ client: user-queue не уйдёт в RPC до выбора клиента (heys_client_current)' : '';
+                console.info('[HEYS.sync] [IND] sync-lock-overlay: OPEN status=' + cloudStatusRef.current + ' pending=' + rp + ' upload=' + up + ' client~=' + (cid || '(none)') + snapStr + detStr + hint);
+            }
+            if (!showSyncLockOverlay && prevSyncLockOverlayRef.current) {
+                console.info('[HEYS.sync] [IND] sync-lock-overlay: CLOSE');
+                indSyncModalHeartbeatRef.current = 0;
+            }
+            prevSyncLockOverlayRef.current = showSyncLockOverlay;
+        }, [showSyncLockOverlay]);
 
         const getRuntimePendingCount = useCallback(() => {
             try {
@@ -12412,6 +12457,21 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                 return false;
             }
         }, []);
+
+        /** User-queue ждёт RPC, но нет heys_client_current — syncProgress «висячий» не должен включать lock/syncing */
+        const isUserQueueBlockedWithoutClient = () => {
+            try {
+                const cid = window.HEYS?.cloud?.getCurrentClientId?.();
+                if (cid) return false;
+                const snap = window.HEYS?.cloud?.getPendingQueuesSnapshot?.();
+                if (!snap) return false;
+                const userQ = (snap.userQueueLen || 0) + (snap.userInFlightLen || 0);
+                const clientQ = (snap.clientQueueLen || 0) + (snap.clientInFlightLen || 0);
+                return userQ > 0 && clientQ === 0 && !snap.uploadInProgress;
+            } catch (_) {
+                return false;
+            }
+        };
 
         const commitPendingActionItems = useCallback((items) => {
             const safeItems = trimPendingActionQueue(items);
@@ -12503,9 +12563,10 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                 if (!navigator.onLine) return;
 
                 const uploadInProgress = isRuntimeUploadInProgress();
+                const deadlock = isUserQueueBlockedWithoutClient();
                 const syncActive = cloudStatusRef.current === 'syncing'
                     || uploadInProgress
-                    || syncProgressTotalRef.current > 0;
+                    || (syncProgressTotalRef.current > 0 && !deadlock);
 
                 if (syncingStartRef.current && syncActive) {
                     syncLockShownForCurrentSyncRef.current = true;
@@ -12527,9 +12588,10 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                 if (!navigator.onLine) return;
 
                 const uploadInProgress = isRuntimeUploadInProgress();
+                const deadlock = isUserQueueBlockedWithoutClient();
                 const syncActive = cloudStatusRef.current === 'syncing'
                     || uploadInProgress
-                    || syncProgressTotalRef.current > 0;
+                    || (syncProgressTotalRef.current > 0 && !deadlock);
 
                 if (syncingStartRef.current && syncActive) {
                     slowInternetShownForCurrentSyncRef.current = true;
@@ -12551,10 +12613,11 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
 
                 const runtimePending = getRuntimePendingCount();
                 const uploadInProgress = isRuntimeUploadInProgress();
+                const deadlock = isUserQueueBlockedWithoutClient();
                 const syncActive = cloudStatusRef.current === 'syncing'
                     || uploadInProgress
-                    || syncProgressTotalRef.current > 0
-                    || runtimePending > 0;
+                    || (syncProgressTotalRef.current > 0 && !deadlock)
+                    || (runtimePending > 0 && !deadlock);
 
                 if (syncingStartRef.current && syncActive) {
                     enterBackgroundPendingSync();
@@ -12602,6 +12665,13 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                 syncingDelayTimeoutRef.current = setTimeout(() => {
                     syncingDelayTimeoutRef.current = null;
                     if (syncingStartRef.current && !syncedTimeoutRef.current) {
+                        if (isUserQueueBlockedWithoutClient()) {
+                            const snap = window.HEYS?.cloud?.getPendingQueuesSnapshot?.();
+                            const uq = snap ? ((snap.userQueueLen || 0) + (snap.userInFlightLen || 0)) : 0;
+                            console.info('[HEYS.sync] [IND] syncing-delay: остаёмся queued (нет heys_client_current, только user-queue pending=' + uq + ') — полноэкранный «синк» не показываем');
+                            setCloudStatus('queued');
+                            return;
+                        }
                         setCloudStatus('syncing');
                     }
                 }, SYNCING_DELAY);
@@ -12656,10 +12726,11 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
         }, [clearPendingActionItems, clearSlowInternetHint, clearSyncLockOverlay, getRuntimePendingCount, isRuntimeUploadInProgress, resetLongSyncFallback, startSyncingState]);
 
         useEffect(() => {
+            const runtimeDeadlock = isUserQueueBlockedWithoutClient();
             const runtimeSyncActive = !!syncingStartRef.current && (
                 cloudStatus === 'syncing'
                 || isRuntimeUploadInProgress()
-                || syncProgressTotalRef.current > 0
+                || (syncProgressTotalRef.current > 0 && !runtimeDeadlock)
             );
 
             if (runtimeSyncActive) {
@@ -12728,7 +12799,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
 
                 if (runtimePending > 0) {
                     pendingChangesRef.current = true;
-                    syncingStartRef.current = null;
+                    // Не сбрасываем syncingStartRef: иначе handleDataSaved снова вызывает
+                    // startSyncingState на каждом heys:data-saved (например пачка dayv2).
                     setCloudStatus('queued');
                     return;
                 }
@@ -12740,6 +12812,18 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                     syncedTimeoutRef.current = null;
                 }
                 showSyncedWithMinDuration();
+            };
+
+            const IND_DATA_SAVED_SKIP_LOG_MS = 4000;
+            const logDataSavedSkipOnce = (reasonKey, detailSuffix, e) => {
+                const key = String(e?.detail?.key ?? '?');
+                const sig = reasonKey + '|' + key;
+                const now = Date.now();
+                const r = indDataSavedSkipLogRef.current;
+                if (r.sig === sig && now - r.at < IND_DATA_SAVED_SKIP_LOG_MS) return;
+                r.sig = sig;
+                r.at = now;
+                console.info('[HEYS.sync] [IND] data-saved: skip (' + reasonKey + (detailSuffix || '') + '), key=' + key);
             };
 
             const handleDataSaved = (e) => {
@@ -12754,7 +12838,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                 }
 
                 if (syncedTimeoutRef.current) {
-                    console.info('[HEYS.sync] [IND] data-saved: skip (syncedTimeout active), key=' + (e?.detail?.key || '?'));
+                    logDataSavedSkipOnce('syncedTimeout active', '', e);
                     return;
                 }
 
@@ -12764,39 +12848,42 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                     ? Date.now() - initialSyncCompletedAtRef.current
                     : Infinity;
                 if (timeSinceInitialSync < INITIAL_SYNC_COOLDOWN_MS) {
-                    console.info('[HEYS.sync] [IND] data-saved: skip (initial-cooldown ' + Math.round(timeSinceInitialSync) + 'ms), key=' + (e?.detail?.key || '?'));
+                    logDataSavedSkipOnce('initial-cooldown', ' ' + Math.round(timeSinceInitialSync) + 'ms', e);
                     return;
                 }
 
                 // 🔕 Не показываем индикатор для сохранений в течение 3с после hot-sync
                 // (advice, debug, presets, usage_stats и любые другие реактивные ключи)
-                const sinceHotSync = Date.now() - (window.__heysHotSyncLastWriteAt || 0);
+                const _hotAt = window.__heysHotSyncLastWriteAt;
+                const sinceHotSync = (typeof _hotAt === 'number' && _hotAt > 0)
+                    ? (Date.now() - _hotAt)
+                    : Infinity;
                 if (sinceHotSync < 3000) {
-                    console.info('[HEYS.sync] [IND] data-saved: skip (hot-sync cooldown ' + Math.round(sinceHotSync) + 'ms), key=' + (e?.detail?.key || '?'));
+                    logDataSavedSkipOnce('hot-sync cooldown', ' ' + Math.round(sinceHotSync) + 'ms', e);
                     return;
                 }
 
                 // 🔕 Не прерываем фазу synced→idle (иначе 2с таймер на idle отменяется и цикл не завершается)
                 if (cloudStatusRef.current === 'synced') {
-                    console.info('[HEYS.sync] [IND] data-saved: skip (synced-phase), key=' + (e?.detail?.key || '?'));
+                    logDataSavedSkipOnce('synced-phase', '', e);
                     return;
                 }
 
                 // 🔕 После перехода в idle даём 5с покоя (cascade DCS пишет data каждые ~1с)
                 const sinceIdle = Date.now() - lastIdleAtRef.current;
                 if (lastIdleAtRef.current > 0 && sinceIdle < 5000) {
-                    console.info('[HEYS.sync] [IND] data-saved: skip (post-idle cooldown ' + Math.round(sinceIdle) + 'ms), key=' + (e?.detail?.key || '?'));
+                    logDataSavedSkipOnce('post-idle cooldown', ' ' + Math.round(sinceIdle) + 'ms', e);
                     return;
                 }
 
                 // 🔕 Если syncingStart уже активен — повторный вызов не нужен
                 // (предотвращает flood startSyncingState при rapid writes каждые ~35ms)
                 if (syncingStartRef.current) {
-                    console.info('[HEYS.sync] [IND] data-saved: skip (syncingStart active), key=' + (e?.detail?.key || '?'));
+                    logDataSavedSkipOnce('syncingStart active', '', e);
                     return;
                 }
 
-                console.info('[HEYS.sync] [IND] data-saved: → startSyncingState, key=' + (e?.detail?.key || '?') + ' sinceHotSync=' + Math.round(sinceHotSync) + 'ms');
+                console.info('[HEYS.sync] [IND] data-saved: → startSyncingState, key=' + (e?.detail?.key || '?') + ' sinceHotSync=' + (sinceHotSync === Infinity ? 'n/a' : Math.round(sinceHotSync) + 'ms'));
 
                 if (cloudSyncTimeoutRef.current) {
                     clearTimeout(cloudSyncTimeoutRef.current);
@@ -12821,7 +12908,6 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                         }
 
                         if (runtimePending > 0) {
-                            syncingStartRef.current = null;
                             setCloudStatus('queued');
                             return;
                         }
@@ -12860,7 +12946,14 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                 setPendingCount(count);
                 setPendingDetails(details);
 
-                console.info('[HEYS.sync] [IND] pending-change: count=' + count + ' upload=' + uploadInProgress + ' syncingStart=' + !!syncingStartRef.current + ' status=' + cloudStatusRef.current);
+                const _pcSig = `${count}|${uploadInProgress}|${!!syncingStartRef.current}|${cloudStatusRef.current}`;
+                const _pcNow = Date.now();
+                const _pcR = indPendingChangeLogRef.current;
+                if (!(_pcR.sig === _pcSig && _pcNow - _pcR.at < 2500)) {
+                    _pcR.sig = _pcSig;
+                    _pcR.at = _pcNow;
+                    console.info('[HEYS.sync] [IND] pending-change: count=' + count + ' upload=' + uploadInProgress + ' syncingStart=' + !!syncingStartRef.current + ' status=' + cloudStatusRef.current);
+                }
 
                 if (count > 0) {
                     ensureFallbackPendingActionItems(details);
@@ -12888,7 +12981,6 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                             startSyncingState();
                         }
                     } else {
-                        syncingStartRef.current = null;
                         setCloudStatus('queued');
                     }
                 } else if (count === 0 && !uploadInProgress && !syncingStartRef.current && navigator.onLine && cloudStatusRef.current !== 'synced') {
@@ -12989,9 +13081,12 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                 }
 
                 // Не показываем галочку если дрейн произошёл в 3с после hot-sync write
-                const sinceHotSync = Date.now() - (window.__heysHotSyncLastWriteAt || 0);
-                if (sinceHotSync < 3000) {
-                    console.info('[HEYS.sync] [IND] queue-drained: skip (hot-sync cooldown ' + Math.round(sinceHotSync) + 'ms)');
+                const _hotAtQd = window.__heysHotSyncLastWriteAt;
+                const sinceHotSyncQd = (typeof _hotAtQd === 'number' && _hotAtQd > 0)
+                    ? (Date.now() - _hotAtQd)
+                    : Infinity;
+                if (sinceHotSyncQd < 3000) {
+                    console.info('[HEYS.sync] [IND] queue-drained: skip (hot-sync cooldown ' + Math.round(sinceHotSyncQd) + 'ms)');
                     // Если уже был запущен синк — планируем отложенный showSynced после окончания cooldown
                     if (syncingStartRef.current || cloudStatusRef.current === 'syncing' || cloudStatusRef.current === 'queued') {
                         if (queueDrainedFallbackRef.current) clearTimeout(queueDrainedFallbackRef.current);
@@ -13004,12 +13099,12 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                                 console.info('[HEYS.sync] [IND] queue-drained: fallback showSynced (post hot-sync cooldown) status=' + st);
                                 showSyncedWithMinDuration();
                             }
-                        }, 3000 - sinceHotSync + 150);
+                        }, Math.max(0, 3000 - sinceHotSyncQd + 150));
                     }
                     return;
                 }
 
-                console.info('[HEYS.sync] [IND] queue-drained: → showSynced, sinceHotSync=' + Math.round(sinceHotSync) + 'ms status=' + cloudStatusRef.current);
+                console.info('[HEYS.sync] [IND] queue-drained: → showSynced, sinceHotSync=' + (sinceHotSyncQd === Infinity ? 'n/a' : Math.round(sinceHotSyncQd) + 'ms') + ' status=' + cloudStatusRef.current);
                 showSyncedWithMinDuration();
             };
 
@@ -13063,7 +13158,6 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                     if (uploadInProgress || syncProgressTotalRef.current > 0) {
                         startSyncingState();
                     } else {
-                        syncingStartRef.current = null;
                         setCloudStatus('queued');
                     }
                 } else {
@@ -13223,6 +13317,48 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
             const tick = () => {
                 if (cancelled) return;
 
+                const SYNC_UI_HEARTBEAT_MS = 5000;
+                const _hbNow = Date.now();
+                const _blockingModal = showSyncLockOverlayRef.current || showSlowInternetHintRef.current || showPendingSyncBannerRef.current;
+                if (_blockingModal && (_hbNow - indSyncModalHeartbeatRef.current >= SYNC_UI_HEARTBEAT_MS)) {
+                    indSyncModalHeartbeatRef.current = _hbNow;
+                    let rpHb = 0;
+                    let upHb = false;
+                    let cidHb = '';
+                    try {
+                        rpHb = window.HEYS?.cloud?.getPendingCount?.() || 0;
+                        upHb = !!window.HEYS?.cloud?.isUploadInProgress?.();
+                        cidHb = (window.HEYS?.cloud?.getCurrentClientId?.() || '').slice(0, 8);
+                    } catch (_) { /* noop */ }
+                    const elapsedHb = syncingStartRef.current ? (_hbNow - syncingStartRef.current) : 0;
+                    const deadlockHb = isUserQueueBlockedWithoutClient();
+                    const syncVisHb = !!syncingStartRef.current && (
+                        cloudStatusRef.current === 'syncing'
+                        || upHb
+                        || (syncProgressTotalRef.current > 0 && !deadlockHb)
+                    );
+                    let snapHb = '';
+                    try {
+                        const s = window.HEYS?.cloud?.getPendingQueuesSnapshot?.();
+                        if (s) {
+                            snapHb = ' cq=' + s.clientQueueLen + '+' + s.clientInFlightLen + ' uq=' + s.userQueueLen + '+' + s.userInFlightLen;
+                        }
+                    } catch (_) { /* noop */ }
+                    console.info('[HEYS.sync] [IND] sync-ui heartbeat: elapsedMs=' + Math.round(elapsedHb)
+                        + ' status=' + cloudStatusRef.current
+                        + ' runtimePending=' + rpHb
+                        + ' upload=' + upHb
+                        + ' syncProgTotal=' + syncProgressTotalRef.current
+                        + ' syncVisualActive=' + syncVisHb
+                        + ' lockOverlay=' + showSyncLockOverlayRef.current
+                        + ' slowHint=' + showSlowInternetHintRef.current
+                        + ' pendBanner=' + showPendingSyncBannerRef.current
+                        + ' longFallback=' + !!longSyncFallbackActiveRef.current
+                        + ' syncedTimeout=' + !!syncedTimeoutRef.current
+                        + ' client~=' + (cidHb || '(none)')
+                        + snapHb);
+                }
+
                 const runtimePending = getRuntimePendingCount();
                 const uploadInProgress = isRuntimeUploadInProgress();
                 const hasPendingDelta = runtimePending !== pendingCountRef.current;
@@ -13251,7 +13387,6 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                 }
 
                 if (runtimePending > 0 && !uploadInProgress && syncProgressTotalRef.current === 0) {
-                    syncingStartRef.current = null;
                     clearSyncLockOverlay();
                     clearSlowInternetHint();
                     console.info('[HEYS.sync] [IND] tick: → queued, pending=' + runtimePending);
@@ -13263,10 +13398,11 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                 const syncElapsedMs = syncingStartRef.current
                     ? Date.now() - syncingStartRef.current
                     : 0;
+                const userQueueDeadlock = isUserQueueBlockedWithoutClient();
                 const syncVisualActive = !!syncingStartRef.current && (
                     cloudStatusRef.current === 'syncing'
                     || uploadInProgress
-                    || syncProgressTotalRef.current > 0
+                    || (syncProgressTotalRef.current > 0 && !userQueueDeadlock)
                 );
 
                 if (syncVisualActive && !longSyncFallbackActiveRef.current) {
@@ -13275,12 +13411,12 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                         setCloudStatus('syncing');
                     }
 
-                    if (syncElapsedMs >= longSyncLockMs && !syncLockShownForCurrentSyncRef.current) {
+                    if (syncElapsedMs >= longSyncLockMs && !syncLockShownForCurrentSyncRef.current && !userQueueDeadlock) {
                         syncLockShownForCurrentSyncRef.current = true;
                         setShowSyncLockOverlay(true);
                     }
 
-                    if (syncElapsedMs >= slowInternetHintMs && !slowInternetShownForCurrentSyncRef.current) {
+                    if (syncElapsedMs >= slowInternetHintMs && !slowInternetShownForCurrentSyncRef.current && !userQueueDeadlock) {
                         slowInternetShownForCurrentSyncRef.current = true;
                         setShowSlowInternetHint(true);
                     }
@@ -13297,9 +13433,12 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                     || cloudStatusRef.current === 'syncing'
                     || syncProgressTotalRef.current > 0
                 )) {
-                    console.info('[HEYS.sync] [IND] tick: → showSynced, syncingStart=' + !!syncingStartRef.current + ' status=' + cloudStatusRef.current);
-                    pendingChangesRef.current = false;
-                    showSyncedWithMinDuration();
+                    // showSyncedWithMinDuration уже выставляет syncedTimeoutRef — без гарда каждый poll пишет лог
+                    if (!syncedTimeoutRef.current) {
+                        console.info('[HEYS.sync] [IND] tick: → showSynced, syncingStart=' + !!syncingStartRef.current + ' status=' + cloudStatusRef.current);
+                        pendingChangesRef.current = false;
+                        showSyncedWithMinDuration();
+                    }
                 }
 
                 schedule(syncVisualActive || runtimePending > 0 || uploadInProgress);
@@ -20898,6 +21037,18 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
             }, FADE_OUT);
         }, [cleanup]);
 
+        // Dismiss after switchClient finishes (emitSwitchStage 'done') OR after gate/shell dispatches
+        // heys:client-changed. Relying only on client-changed races useSyncEffects dedupe/order.
+        const completeAndFade = useCallback(() => {
+            if (!activeSwitchRef.current) return;
+            activeSwitchRef.current = false;
+            cleanup();
+            setStageKey('done');
+            timerRef.current = setTimeout(() => {
+                fadeOut();
+            }, DONE_DISPLAY);
+        }, [cleanup, fadeOut]);
+
         useEffect(() => {
             // Skip for PIN clients (single-client, no switch possible)
             const isPinClient = () => HEYS.cloud?.isPinAuthClient?.() === true;
@@ -20925,21 +21076,16 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                 if (!stage || !STAGES[stage]) return;
                 if (clientId && activeClientIdRef.current && clientId !== activeClientIdRef.current) return;
                 setStageKey(stage);
+                if (stage === 'done') {
+                    completeAndFade();
+                }
             };
 
             const onChanged = (e) => {
                 if (!activeSwitchRef.current) return;
                 const clientId = e.detail?.clientId;
                 if (clientId && activeClientIdRef.current && clientId !== activeClientIdRef.current) return;
-
-                activeSwitchRef.current = false;
-
-                cleanup();
-                setStageKey('done');
-
-                timerRef.current = setTimeout(() => {
-                    fadeOut();
-                }, DONE_DISPLAY);
+                completeAndFade();
             };
 
             const onSyncError = (e) => {
@@ -20965,7 +21111,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                 window.removeEventListener('heys:sync-error', onSyncError);
                 cleanup();
             };
-        }, [cleanup, fadeOut]);
+        }, [cleanup, fadeOut, completeAndFade]);
 
         if (!visible) return null;
 
@@ -26079,14 +26225,13 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
 
         // 🆕 v2025-12-22: На production используем ТОЛЬКО Yandex Cloud API
         // Supabase SDK инициализируется для совместимости cloud.signIn/signOut,
-        // но основной трафик идёт через HEYS.YandexAPI / локальный proxy в dev
+        // но основной трафик идёт через HEYS.YandexAPI / локальный proxy в dev (CORS на POST /rpc)
         const supabaseUrl = apiBaseUrl;
 
         HEYS.cloud.init({
             url: supabaseUrl,
             anonKey:
                 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVrcW9sY3ppcWN1cGxxZmdybXNoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUyNTE1NDUsImV4cCI6MjA3MDgyNzU0NX0.Nzd8--PyGMJvIHqFoCQKNUOwpxnrAZuslQHtAjcE1Ds',
-            // В локальном dev legacy cloud sync должен ходить через localhost proxy
             localhostProxyUrl: isLocalBrowserDev ? apiBaseUrl : undefined,
         });
 

@@ -5133,6 +5133,9 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
     // Импортируем утилиты из dayUtils
     const getDayUtils = () => HEYS.dayUtils || {};
 
+    // Глобальный дедуп логов: несколько экземпляров useDayAutosave (разные даты) иначе спамят одинаковым HIT.
+    const __heysDayv2FlushGuardLogState = { updatedAt: null, at: 0 };
+
     // Хук для централизованного автосохранения дня с учётом гонок и межвкладочной синхронизации
     // Поддерживает ночную логику: приёмы 00:00-02:59 сохраняются под следующий календарный день
     function useDayAutosave({
@@ -5434,7 +5437,15 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
             // (сравнение без updatedAt через stripMeta) — skip, чтобы не создавать upload loop.
             // hot-sync может получить dayv2 из облака → setDay → autosave → upload → hot-sync → ...
             if (!force && freshestDaySnap && freshestDaySnap === daySnap) {
-                if (typeof console !== 'undefined') console.info('[HEYS.sync] [IND] flush: dayv2 content guard HIT (freshest===current, skip write) updatedAt=' + updatedAt);
+                const t = Date.now();
+                const r = __heysDayv2FlushGuardLogState;
+                // Один лог на окно времени: updatedAt дёргается часто, несколько инстансов хука — иначе простыня HIT.
+                if (t - r.at < 8000) return;
+                r.updatedAt = updatedAt;
+                r.at = t;
+                if (typeof console !== 'undefined') {
+                    console.info('[HEYS.sync] [IND] flush: dayv2 content guard HIT (freshest===current, skip write) updatedAt=' + updatedAt);
+                }
                 return;
             }
             if (!force && freshestDaySnap) {
@@ -10637,17 +10648,32 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
     
     const y = cur.getFullYear(), m = cur.getMonth();
     
-    // Загружаем данные при смене месяца
+    // Загружаем данные при смене месяца (сначала локально, затем догружаем месяц из облака).
     React.useEffect(() => {
-      if (getActiveDaysForMonth) {
+      if (!getActiveDaysForMonth) return;
+      let cancelled = false;
+      const applyLocal = () => {
+        if (cancelled) return;
         try {
-          const data = getActiveDaysForMonth(y, m);
-          setMonthData(data);
+          setMonthData(getActiveDaysForMonth(y, m));
         } catch (e) {
           setMonthData(null);
         }
+      };
+      applyLocal();
+      const dim = new Date(y, m + 1, 0).getDate();
+      const datesInMonth = [];
+      for (let d = 1; d <= dim; d += 1) {
+        datesInMonth.push(fmtDate(new Date(y, m, d)));
       }
-    }, [y, m, getActiveDaysForMonth]);
+      const cloud = global.HEYS && global.HEYS.cloud;
+      if (cloud && typeof cloud.fetchDays === 'function' && navigator.onLine) {
+        cloud.fetchDays(datesInMonth).finally(() => {
+          if (!cancelled) applyLocal();
+        });
+      }
+      return () => { cancelled = true; };
+    }, [y, m, getActiveDaysForMonth, fmtDate]);
     
     // Преобразуем activeDays в Map (fallback если нет getActiveDaysForMonth)
     const daysDataMap = React.useMemo(() => {

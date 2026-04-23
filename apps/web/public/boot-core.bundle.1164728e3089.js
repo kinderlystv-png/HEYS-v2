@@ -13578,7 +13578,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
   // ═══════════════════════════════════════════════════════════════════
 
   const CONFIG = {
-    // Production API (Yandex Cloud); local browser dev goes through localhost proxy
+    // Локально — через Node :4001: POST /rpc с браузера на api.heyslab.ru ломается preflight
+    // (Allow-Origin часто только https://heyslab.ru). Прокси — same-origin для Vite.
     API_URL: isLocalBrowserDev
       ? 'http://localhost:4001'
       : 'https://api.heyslab.ru',
@@ -13595,8 +13596,9 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
     },
 
     // Таймауты (нарастающие; верхняя попытка capped — меньше «зависло на 30с» при плохой сети)
-    TIMEOUT_MS: 12000,
-    TIMEOUT_ESCALATION_MS: [12000, 18000, 22000],
+    // Локально: крупный bootstrap через прокси — чуть длиннее окно, чем на проде
+    TIMEOUT_MS: isLocalBrowserDev ? 60000 : 12000,
+    TIMEOUT_ESCALATION_MS: isLocalBrowserDev ? [60000, 90000, 120000] : [12000, 18000, 22000],
 
     // Retry логика (exponential backoff; последний шаг чуть короче для UX)
     // v59 FIX I: Increased delays for cold-start resilience.
@@ -14851,7 +14853,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
         return { success: false, error: 'No curator token' };
       }
 
-      const url = `${API_BASE}/rest/client_kv_store?user_id=eq.${userId}&client_id=eq.${clientId}&k=eq.${encodeURIComponent(key)}`;
+      const url = `${CONFIG.API_URL}/rest/client_kv_store?user_id=eq.${userId}&client_id=eq.${clientId}&k=eq.${encodeURIComponent(key)}`;
 
       const response = await fetch(url, {
         method: 'DELETE',
@@ -17143,6 +17145,9 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
             }
           }
 
+          // FIX: если во время загрузки в очередь добавились новые элементы — запланировать следующую отправку
+          if (clientUpsertQueue.length > 0) scheduleClientPush();
+
           savePendingQueue(PENDING_CLIENT_QUEUE_KEY, clientUpsertQueue);
           notifyPendingChange();
 
@@ -17244,6 +17249,9 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
 
         scheduleClientPush();
       }
+
+      // FIX: если во время загрузки в очередь добавились новые элементы — запланировать следующую отправку
+      if (clientUpsertQueue.length > 0) scheduleClientPush();
 
       setSyncProgressDone(uniqueBatch.length);
 
@@ -18686,6 +18694,56 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
     return normalized;
   }
 
+  /** Временный шард каталога при 413 на RPC — мержится с heys_products при download. */
+  const HEYS_PRODUCTS_RPC_TAIL_K = 'heys_products_rpc_tail';
+
+  function mergeProductsRpcTailRawClientRows(rows, clientId) {
+    if (!Array.isArray(rows) || rows.length === 0 || !clientId) return rows;
+    let tailIdx = -1;
+    let mainIdx = -1;
+    for (let i = 0; i < rows.length; i++) {
+      const nk = normalizeKeyForSupabase(rows[i]?.k, clientId);
+      if (nk === HEYS_PRODUCTS_RPC_TAIL_K) tailIdx = i;
+      if (nk === 'heys_products') mainIdx = i;
+    }
+    if (tailIdx < 0) return rows;
+    const tailArr = Array.isArray(rows[tailIdx]?.v) ? rows[tailIdx].v : [];
+    const out = rows.filter((_, i) => i !== tailIdx);
+    if (mainIdx >= 0) {
+      const newMainIdx = mainIdx > tailIdx ? mainIdx - 1 : mainIdx;
+      const mainRow = out[newMainIdx];
+      const mainArr = Array.isArray(mainRow?.v) ? mainRow.v : [];
+      mainRow.v = [...mainArr, ...tailArr];
+      return out;
+    }
+    const tr = rows[tailIdx];
+    out.push({ ...tr, k: 'heys_products', v: tailArr });
+    return out;
+  }
+
+  function mergeProductsRpcTailDeduped(deduped, client_id) {
+    if (!Array.isArray(deduped) || !client_id) return deduped;
+    const tailScoped = scopeKeyForClientStorage(HEYS_PRODUCTS_RPC_TAIL_K, client_id);
+    const mainScoped = scopeKeyForClientStorage('heys_products', client_id);
+    const ti = deduped.findIndex(d => d.scopedKey === tailScoped);
+    if (ti < 0) return deduped;
+    const tailEntry = deduped[ti];
+    const tailArr = Array.isArray(tailEntry.row?.v) ? tailEntry.row.v : [];
+    const withoutTail = deduped.filter((_, i) => i !== ti);
+    const mi = withoutTail.findIndex(d => d.scopedKey === mainScoped);
+    if (mi >= 0) {
+      const r = withoutTail[mi].row;
+      const mainArr = Array.isArray(r.v) ? r.v : [];
+      r.v = [...mainArr, ...tailArr];
+      return withoutTail;
+    }
+    withoutTail.push({
+      scopedKey: mainScoped,
+      row: { ...tailEntry.row, k: 'heys_products', v: tailArr }
+    });
+    return withoutTail;
+  }
+
   // ═══════════════════════════════════════════════════════════════════
   // 🌐 ГЛОБАЛЬНОЕ СОСТОЯНИЕ
   // ═══════════════════════════════════════════════════════════════════
@@ -18754,6 +18812,22 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
   // in PIN auth restore so controllerchange can detect this window and defer PWA reload.
   let _authSyncPending = false;
   let originalSetItem = null;
+  let _logoutSuppressionUntil = 0;
+
+  function isLogoutSuppressionActive() {
+    try {
+      if (global.HEYS?._isLoggingOut) return true;
+    } catch (_) { }
+    return Date.now() < _logoutSuppressionUntil;
+  }
+
+  function armLogoutSuppression(ms = 5000) {
+    _logoutSuppressionUntil = Date.now() + ms;
+    try {
+      global.HEYS = global.HEYS || {};
+      global.HEYS._logoutSuppressionUntil = _logoutSuppressionUntil;
+    } catch (_) { }
+  }
 
   // 🚨 Флаг блокировки сохранения до завершения первого sync
   let initialSyncCompleted = false;
@@ -18926,6 +19000,12 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
    */
   let _syncInFlight = null; // { clientId, promise }
   let _syncLastCompleted = {}; // 🚀 PERF: { clientId: timestamp } — cooldown after sync
+  /** Пока идёт syncClient(clientId) — user-queue может использовать clientId до записи heys_client_current */
+  let _activeSyncClientId = null;
+  let _deferUserPushNoClientTimer = null;
+  let _deferUserPushBackoffMs = 2500;
+  const USER_QUEUE_NO_CLIENT_BACKOFF_MIN_MS = 2500;
+  const USER_QUEUE_NO_CLIENT_BACKOFF_MAX_MS = 30000;
 
   cloud.syncClient = async function (clientId, options = {}) {
     // Deduplication: если sync для этого же клиента уже идёт — вернём тот же Promise
@@ -18945,6 +19025,10 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
 
     logCritical('[syncClient] START clientId:', clientId?.slice(0, 8), 'user:', !!user, 'isPinAuth:', _rpcOnlyMode && _pinAuthClientId === clientId);
 
+    _activeSyncClientId = clientId || null;
+    clearDeferredUserPushNoClientTimer();
+    _deferUserPushBackoffMs = USER_QUEUE_NO_CLIENT_BACKOFF_MIN_MS;
+
     // 🔧 Clear scope-fix dedup log set for fresh sync cycle
     _scopeFixLoggedKeys.clear();
     _scopeFixSummaryLogged = false;
@@ -18960,6 +19044,17 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
         if (!syncMethodReady) {
           return { success: false, deferred: true, error: 'sync_method_not_ready' };
         }
+
+        // User-queue: clientId уже известен sync-циклу, даже если heys_client_current ещё не записан в LS
+        try {
+          if (user && (upsertQueue.length || upsertInFlightQueue.length) && !_userUploadInProgress) {
+            if (upsertTimer) {
+              clearTimeout(upsertTimer);
+              upsertTimer = null;
+            }
+            schedulePush();
+          }
+        } catch (_) { /* очереди ещё не инициализированы — пропуск */ }
 
         // 🔄 AUTO REFRESH: Проверяем и обновляем токен перед sync (только для куратора)
         if (!isPinAuth && typeof cloud.ensureValidToken === 'function') {
@@ -19020,6 +19115,9 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
         if (_syncInFlight && _syncInFlight.clientId === clientId) {
           _syncInFlight = null;
         }
+        if (_activeSyncClientId === clientId) {
+          _activeSyncClientId = null;
+        }
         // 🚀 PERF: Record completion time for cooldown
         _syncLastCompleted[clientId] = Date.now();
       }
@@ -19028,6 +19126,47 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
     _syncInFlight = { clientId, promise: syncPromise };
     return syncPromise;
   };
+
+  function clearDeferredUserPushNoClientTimer() {
+    if (_deferUserPushNoClientTimer) {
+      clearTimeout(_deferUserPushNoClientTimer);
+      _deferUserPushNoClientTimer = null;
+    }
+  }
+
+  /**
+   * User-queue не может уйти в RPC без clientId; вместо schedulePush(300ms) — backoff, иначе спам re-queue.
+   * Когда появится getCurrentClientId / HEYS.currentClientId / _activeSyncClientId — обычный schedulePush.
+   */
+  function scheduleUserQueueRetryWhenNoClient() {
+    if (_deferUserPushNoClientTimer) return;
+    const tick = () => {
+      _deferUserPushNoClientTimer = null;
+      if (!user || (!upsertQueue.length && !upsertInFlightQueue.length)) {
+        _deferUserPushBackoffMs = USER_QUEUE_NO_CLIENT_BACKOFF_MIN_MS;
+        return;
+      }
+      const rpcTarget = (typeof cloud.getCurrentClientId === 'function' && cloud.getCurrentClientId())
+        || global.HEYS?.currentClientId
+        || _activeSyncClientId;
+      if (rpcTarget) {
+        _deferUserPushBackoffMs = USER_QUEUE_NO_CLIENT_BACKOFF_MIN_MS;
+        if (upsertTimer) {
+          clearTimeout(upsertTimer);
+          upsertTimer = null;
+        }
+        schedulePush();
+        return;
+      }
+      const delay = Math.min(_deferUserPushBackoffMs, USER_QUEUE_NO_CLIENT_BACKOFF_MAX_MS);
+      _deferUserPushBackoffMs = Math.min(
+        Math.max(Math.floor(_deferUserPushBackoffMs * 1.5), USER_QUEUE_NO_CLIENT_BACKOFF_MIN_MS),
+        USER_QUEUE_NO_CLIENT_BACKOFF_MAX_MS,
+      );
+      _deferUserPushNoClientTimer = setTimeout(tick, delay);
+    };
+    _deferUserPushNoClientTimer = setTimeout(tick, _deferUserPushBackoffMs);
+  }
 
   // v61: Expose sync-in-flight state for PWA reload deferral (heys_platform_apis_v1.js checks this)
   cloud.isSyncing = () => (_syncInFlight ? _syncInFlight.promise : null);
@@ -20554,6 +20693,11 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
     return getPendingQueuesSnapshot().totalCount;
   };
 
+  /** Снимок очередей (для UI/логов): client vs user, in-flight, upload */
+  cloud.getPendingQueuesSnapshot = function () {
+    return getPendingQueuesSnapshot();
+  };
+
   /** Проверить есть ли данные в процессе отправки */
   cloud.isUploadInProgress = function () {
     return getPendingQueuesSnapshot().uploadInProgress;
@@ -21361,6 +21505,10 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
           return;
         }
 
+        if (isLogoutSuppressionActive()) {
+          return;
+        }
+
         // 🔒 Никогда не зеркалим ключи авторизации (и любые sb-* ключи)
         try {
           const keyStr = String(k || '');
@@ -21897,6 +22045,10 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
       user = data.user;
       logCritical('[AUTH] ✅ user установлен:', user?.email);
 
+      // До bootstrapSync и любых schedulePush: kv_store снят с REST whitelist — без RPC-режима
+      // doUserUpload уйдёт в legacy upsert и получит 404.
+      _rpcOnlyMode = true;
+
       // 🔄 Сохраняем токен в localStorage (в формате совместимом со старым кодом)
       try {
         const tokenData = {
@@ -21930,10 +22082,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
       await cloud.bootstrapSync();
       status = 'online';
 
-      // 🔐 v=35 FIX: После миграции на Yandex API ВКЛЮЧАЕМ RPC режим для ВСЕХ!
-      // Supabase SDK отключён, все операции через REST API (= RPC режим)
-      // Раньше было _rpcOnlyMode = false, что ломало sync (canSync = false)
-      _rpcOnlyMode = true;
+      // _rpcOnlyMode уже true до bootstrapSync (см. выше)
 
       // 🛡️ Защитный период: игнорируем SIGNED_OUT в течение 10 секунд после signIn
       _ignoreSignedOutUntil = Date.now() + 10000;
@@ -21950,12 +22099,25 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
   };
 
   cloud.signOut = function () {
+    armLogoutSuppression();
+    try {
+      global.HEYS = global.HEYS || {};
+      global.HEYS._isLoggingOut = true;
+    } catch (_) { }
+
     // scope: 'local' — очищаем только локальную сессию, НЕ инвалидируем refresh token на сервере.
     // Это предотвращает 400 Bad Request если пользователь сразу залогинится обратно,
     // т.к. SDK в памяти мог закэшировать старый refresh token.
     if (client) client.auth.signOut({ scope: 'local' });
+    dropAllPendingSyncState('sign-out');
     user = null;
     status = 'offline';
+    _rpcOnlyMode = false;
+    _pinAuthClientId = null;
+    _ignoreSignedOutUntil = 0;
+    _activeSyncClientId = null;
+    _syncInFlight = null;
+    _syncInProgress = null;
     if (global.HEYS) {
       global.HEYS.currentClientId = null;
       if (global.HEYS.store?.flushMemory) {
@@ -21968,6 +22130,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
       localStorage.removeItem('heys_supabase_auth_token');
       // 🆕 v2.1: Очистка curator session для TrialQueue админки
       localStorage.removeItem('heys_curator_session');
+      localStorage.removeItem('heys_pin_auth_client');
+      localStorage.removeItem('heys_session_token');
     } catch (e) { }
     // 🔄 Сброс флагов sync — при следующем входе нужна новая синхронизация
     initialSyncCompleted = false;
@@ -21976,6 +22140,17 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
     try {
       localStorage.removeItem('heys_connection_mode');
     } catch (e) { }
+    try {
+      window.dispatchEvent(new Event('heys:auth-changed'));
+    } catch (_) { }
+    setTimeout(() => {
+      try {
+        if (global.HEYS && Date.now() >= _logoutSuppressionUntil) {
+          global.HEYS._isLoggingOut = false;
+          global.HEYS._logoutSuppressionUntil = 0;
+        }
+      } catch (_) { }
+    }, 5100);
     logCritical('🚪 Выход из системы');
   };
 
@@ -22299,13 +22474,12 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
   };
 
   /**
-   * Очищает невалидные продукты в ОБЛАКЕ
-   * Проверяет ОБЕ таблицы: kv_store И client_kv_store
-   * Удаляет записи с мусорными продуктами и пустые legacy записи
+   * Очищает невалидные продукты в ОБЛАКЕ (client_kv_store).
+   * kv_store больше не в whitelist heys-api-rest (только RPC) — REST-очистку legacy kv_store не вызываем, иначе 404.
    */
   cloud.cleanupCloudProducts = async function () {
     try {
-      if (!client || !user) return { error: 'Not authenticated' };
+      if (!user) return { error: 'Not authenticated' };
 
       // Сохраняем user.id локально — user может стать null во время async операций
       const userId = user.id;
@@ -22319,30 +22493,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
       let totalDeleted = 0;
       let totalRecords = 0;
 
-      // ===== 1. ОЧИСТКА kv_store (глобальные данные) =====
-      const { data: kvData, error: kvError } = await YandexAPI.from('kv_store')
-        .select('k,v')
-        .eq('user_id', userId)
-        .like('k', '%products%');
-
-      if (kvError) {
-        logCritical('☁️ [CLOUD CLEANUP] kv_store error:', kvError.message);
-      } else if (kvData && kvData.length > 0) {
-        totalRecords += kvData.length;
-        for (const row of kvData) {
-          // Проверяем что user ещё авторизован (мог logout во время цикла)
-          if (!user) {
-            log('☁️ [CLOUD CLEANUP] Aborted — user logged out');
-            return { error: 'User logged out during cleanup' };
-          }
-          const result = await cleanupProductRecord('kv_store', row, { user_id: userId }, clientId);
-          totalCleaned += result.cleaned;
-          totalAfter += result.kept;
-          if (result.deleted) totalDeleted++;
-        }
-      }
-
-      // ===== 2. ОЧИСТКА client_kv_store (данные клиента) =====
+      // ===== 1. ОЧИСТКА client_kv_store (данные клиента) =====
       const { data: clientData, error: clientError } = await YandexAPI.from('client_kv_store')
         .select('k,v')
         .eq('client_id', clientId)
@@ -22386,8 +22537,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
    * - Тихий режим для OK записей
    */
   async function cleanupProductRecord(table, row, filters, clientId) {
-    // Защита от race condition при logout
-    if (!client || !user) {
+    // Защита от race condition при logout (YandexAPI mode — no Supabase client)
+    if (!user) {
       return { cleaned: 0, kept: 0, error: 'Not authenticated' };
     }
 
@@ -22477,7 +22628,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
   cloud.bootstrapSync = async function () {
     try {
       muteMirror = true;
-      if (!client || !user) { muteMirror = false; return; }
+      if (!user) { muteMirror = false; return; }
 
       // 🧹 Очистка невалидных продуктов перед синхронизацией
       cloud.cleanupProducts();
@@ -22490,12 +22641,22 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
         return;
       }
 
+      // heys-api-rest: kv_store не в whitelist — SELECT даёт 404 в Network; при RPC-режиме не вызываем.
+      if (_rpcOnlyMode) {
+        logCritical('bootstrapSync: пропуск kv_store (RPC-only, legacy user-bootstrap не используется)');
+        muteMirror = false;
+        return;
+      }
+
       const { data, error } = await YandexAPI.from('kv_store').select('k,v,updated_at');
 
       // Graceful degradation: если сеть не работает — продолжаем с localStorage
       if (error) {
         if (error.isNetworkFailure) {
           console.warn('[HEYS.cloud] 📴 bootstrapSync: работаем offline с локальными данными');
+        } else if (error.code === 404 || error.code === '404') {
+          // heys-api-rest: таблица kv_store не в whitelist — SELECT всегда 404
+          logCritical('bootstrapSync: kv_store REST недоступен (404) — legacy user-bootstrap пропущен');
         } else {
           err('bootstrap select', error);
         }
@@ -22695,13 +22856,15 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
         }
       }
 
+      const syncRowsMerged = mergeProductsRpcTailRawClientRows(Array.isArray(data) ? data.slice() : [], clientId);
+
       // Собираем список ключей, пришедших из облака (нормализованные)
-      const remoteKeys = new Set((data || []).map(row => row?.k).filter(Boolean));
+      const remoteKeys = new Set(syncRowsMerged.map(row => row?.k).filter(Boolean));
       const hasRemoteProfile = remoteKeys.has('heys_profile');
 
       // 🛡️ SAFE MODE: НЕ чистим все локальные ключи.
       // Перезаписываем только те, что пришли из облака.
-      const hasRemoteData = Array.isArray(data) && data.length > 0;
+      const hasRemoteData = Array.isArray(syncRowsMerged) && syncRowsMerged.length > 0;
       if (!hasRemoteData) {
         logCritical(`⚠️ [YANDEX SYNC] Remote empty, local keys preserved (${keysToRemove.length})`);
       }
@@ -22709,7 +22872,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
       // Записываем новые данные и собираем ключи для инвалидации кэша
       const syncedKeys = [];
       const _cloudGarbage = createCloudGarbageCollector();
-      (data || []).forEach(row => {
+      syncRowsMerged.forEach(row => {
         try {
           // Ключи в client_kv_store уже нормализованы (heys_profile, heys_dayv2_2025-12-12)
           if (isForeignClientScopedKey(row?.k, clientId)) {
@@ -22894,61 +23057,239 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
         updated_at: item.updated_at || new Date().toISOString()
       }));
 
-      // 🔧 Логируем размер для диагностики больших данных
+      const Store = global.HEYS?.store;
+      const isProductsBaseKey = (k) => {
+        const s = String(k || '');
+        return s === 'heys_products' || /(^|_)heys_products$/.test(s);
+      };
+      const isProductsFamilyRpcKey = (k) => {
+        const s = String(k || '');
+        return isProductsBaseKey(s) || s === HEYS_PRODUCTS_RPC_TAIL_K;
+      };
+
+      const slimProductsForRpcUpload = (products, tier) => {
+        if (!Array.isArray(products)) return products;
+        const stripKeys = tier >= 2
+          ? ['photo', 'image', 'imageUrl', 'imageData', 'thumb', 'thumbnail', 'rawPhoto', 'barcodeImage', 'icon']
+          : ['photo', 'image', 'imageUrl', 'rawPhoto'];
+        const maxStr = tier >= 2 ? 400 : 2000;
+        return products.map(p => {
+          if (!p || typeof p !== 'object') return p;
+          const o = { ...p };
+          for (let si = 0; si < stripKeys.length; si++) delete o[stripKeys[si]];
+          if (typeof o.notes === 'string' && o.notes.length > maxStr) o.notes = o.notes.slice(0, maxStr);
+          if (typeof o.description === 'string' && o.description.length > maxStr) o.description = o.description.slice(0, maxStr);
+          if (typeof o.name === 'string' && o.name.length > 200) o.name = o.name.slice(0, 200);
+          return o;
+        });
+      };
+
+      const productsArrayFromClientKvValue = (v) => {
+        if (Array.isArray(v)) return v;
+        if (typeof v === 'string' && v.startsWith('¤Z¤') && Store && typeof Store.decompress === 'function') {
+          try {
+            const d = Store.decompress(v);
+            return Array.isArray(d) ? d : null;
+          } catch (_) {
+            return null;
+          }
+        }
+        return null;
+      };
+
+      // 🗜️ Slim + pattern-compress heys_products / tail before RPC (gateway 413).
+      for (let ii = 0; ii < yandexItems.length; ii++) {
+        const row = yandexItems[ii];
+        if (!row || !isProductsFamilyRpcKey(row.k)) continue;
+        if (typeof row.v === 'string' && row.v.startsWith('¤Z¤')) continue;
+        const arr0 = productsArrayFromClientKvValue(row.v);
+        if (!Array.isArray(arr0)) continue;
+        row.v = slimProductsForRpcUpload(arr0, 1);
+        if (!Store) continue;
+        try {
+          const raw = JSON.stringify(row.v);
+          if (raw.length < 2048) continue;
+          let wire = typeof Store.compressProductsWire === 'function' ? Store.compressProductsWire(row.v) : null;
+          if (!wire && typeof Store.compress === 'function') {
+            const c = Store.compress(row.v);
+            if (typeof c === 'string' && c.startsWith('¤Z¤')) wire = c;
+          }
+          if (typeof wire === 'string' && wire.startsWith('¤Z¤') && wire.length + 8 < raw.length) {
+            row.v = wire;
+            logCritical(`🗜️ [YANDEX SAVE] Compressed ${row.k} ${Math.round(raw.length / 1024)}KB → ${Math.round(wire.length / 1024)}KB`);
+          }
+        } catch (_) { /* keep */ }
+      }
+
       const jsonSize = JSON.stringify(yandexItems).length;
       const jsonSizeKB = Math.round(jsonSize / 1024);
-
       if (jsonSize > 100000) {
         logCritical(`⚠️ [YANDEX SAVE] Large payload: ${jsonSizeKB}KB, ${yandexItems.length} items`);
       }
 
-      // 🔧 Для очень больших данных (>500KB) логируем и предупреждаем
-      if (jsonSize > 500000) {
-        logCritical(`🚨 [YANDEX SAVE] VERY LARGE payload: ${jsonSizeKB}KB — splitting into chunks`);
-      }
+      const isPayloadTooLargeRpc = (err) => {
+        const msg = String(err?.message || err || '');
+        const code = err && err.code;
+        return code === 413 || /413|payload too large|request entity too large/i.test(msg);
+      };
 
-      // 🚀 PERF: Split large payloads into chunks to prevent timeouts
-      const CHUNK_MAX_BYTES = 100 * 1024; // 100KB per chunk
-      if (jsonSize > CHUNK_MAX_BYTES) {
-        const chunks = [];
-        let currentChunk = [];
-        let currentSize = 2; // account for []
-        for (const item of yandexItems) {
-          const itemSize = JSON.stringify(item).length + 1; // +1 for comma
-          if (currentSize + itemSize > CHUNK_MAX_BYTES && currentChunk.length > 0) {
-            chunks.push(currentChunk);
-            currentChunk = [];
-            currentSize = 2;
-          }
-          currentChunk.push(item);
-          currentSize += itemSize;
+      const itemWireBytes = (it) => {
+        try {
+          return JSON.stringify({ k: it.k, v: it.v, updated_at: it.updated_at }).length;
+        } catch (_) {
+          return 1e9;
         }
-        if (currentChunk.length > 0) chunks.push(currentChunk);
+      };
 
-        logCritical(`📦 [YANDEX SAVE] Split ${jsonSizeKB}KB payload into ${chunks.length} chunks`);
-        let totalSaved = 0;
-        for (let ci = 0; ci < chunks.length; ci++) {
-          const chunkResult = await YandexAPI.batchSaveKV(clientId, chunks[ci]);
-          if (!chunkResult.success) {
-            logCritical(`❌ [YANDEX SAVE] Chunk ${ci + 1}/${chunks.length} failed: ${chunkResult.error}`);
-            return { success: false, error: chunkResult.error, saved: totalSaved };
-          }
-          totalSaved += chunkResult.saved || chunks[ci].length;
+      // Budget for p_items JSON only (session wrapper adds overhead — stay conservative).
+      const P_ITEMS_BUDGET_BYTES = 96 * 1024;
+
+      const buildSizeBudgetChunks = () => {
+        const isolated = [];
+        const rest = [];
+        for (let i = 0; i < yandexItems.length; i++) {
+          const it = yandexItems[i];
+          if (isProductsFamilyRpcKey(it.k)) isolated.push([it]);
+          else rest.push(it);
         }
-        logCritical(`☁️ [YANDEX SAVE] Chunked save complete: ${totalSaved} records (${chunks.length} chunks, ${jsonSizeKB}KB) for ${clientId.slice(0, 8)}`);
-        return { success: true, saved: totalSaved };
+        const out = [];
+        let cur = [];
+        let curSz = 0;
+        for (let j = 0; j < rest.length; j++) {
+          const it = rest[j];
+          const sz = itemWireBytes(it);
+          if (sz > P_ITEMS_BUDGET_BYTES) {
+            if (cur.length) {
+              out.push(cur);
+              cur = [];
+              curSz = 0;
+            }
+            out.push([it]);
+            continue;
+          }
+          if (cur.length && curSz + sz > P_ITEMS_BUDGET_BYTES) {
+            out.push(cur);
+            cur = [];
+            curSz = 0;
+          }
+          cur.push(it);
+          curSz += sz;
+        }
+        if (cur.length) out.push(cur);
+        for (let k = 0; k < isolated.length; k++) out.push(isolated[k]);
+        return out;
+      };
+
+      let didSaveProductsMain = false;
+      let didSplitProductsUpload = false;
+
+      const uploadChunkResilient = async (chunk) => {
+        let res = await YandexAPI.batchSaveKV(clientId, chunk);
+        if (res.success) {
+          for (let ui = 0; ui < chunk.length; ui++) {
+            if (isProductsBaseKey(chunk[ui]?.k)) didSaveProductsMain = true;
+          }
+          return { success: true, saved: res.saved || chunk.length };
+        }
+        if (isPayloadTooLargeRpc(res.error) && chunk.length > 1) {
+          const mid = Math.ceil(chunk.length / 2);
+          const a = await uploadChunkResilient(chunk.slice(0, mid));
+          if (!a.success) return a;
+          const b = await uploadChunkResilient(chunk.slice(mid));
+          return {
+            success: !!(a.success && b.success),
+            saved: (a.saved || 0) + (b.saved || 0),
+            error: b.error || a.error,
+          };
+        }
+        if (isPayloadTooLargeRpc(res.error) && chunk.length === 1) {
+          const it = { ...chunk[0] };
+          const tryWireUpload = async (value) => {
+            const attempt = await YandexAPI.batchSaveKV(clientId, [{ ...it, v: value }]);
+            if (attempt.success) return { ok: true, saved: attempt.saved || 1 };
+            const one = await YandexAPI.saveKV(clientId, it.k, value);
+            if (one.success) return { ok: true, saved: 1 };
+            return { ok: false, err: one.error || attempt.error };
+          };
+
+          if (Store && typeof it.v === 'object' && it.v !== null && !Array.isArray(it.v)) {
+            try {
+              const c = Store.compress(it.v);
+              if (typeof c === 'string' && c.startsWith('¤Z¤')) {
+                const w = await tryWireUpload(c);
+                if (w.ok) {
+                  if (isProductsBaseKey(it.k)) didSaveProductsMain = true;
+                  return { success: true, saved: w.saved || 1 };
+                }
+              }
+            } catch (_) { /* fall through */ }
+          }
+
+          if (isProductsBaseKey(it.k) && Store) {
+            const arr = productsArrayFromClientKvValue(it.v);
+            if (Array.isArray(arr) && arr.length > 0) {
+              const slim2 = slimProductsForRpcUpload(arr, 2);
+              let wire2 = typeof Store.compressProductsWire === 'function' ? Store.compressProductsWire(slim2) : null;
+              if (!wire2 && typeof Store.compress === 'function') {
+                const c2 = Store.compress(slim2);
+                if (typeof c2 === 'string' && c2.startsWith('¤Z¤')) wire2 = c2;
+              }
+              if (wire2) {
+                const w2 = await tryWireUpload(wire2);
+                if (w2.ok) {
+                  didSaveProductsMain = true;
+                  return { success: true, saved: w2.saved || 1 };
+                }
+              }
+              if (arr.length >= 2) {
+                const mid = Math.ceil(arr.length / 2);
+                const partA = slimProductsForRpcUpload(arr.slice(0, mid), 2);
+                const partB = slimProductsForRpcUpload(arr.slice(mid), 2);
+                const t1 = await YandexAPI.saveKV(clientId, HEYS_PRODUCTS_RPC_TAIL_K, partB);
+                if (!t1.success) return { success: false, saved: 0, error: t1.error || res.error };
+                const t2 = await YandexAPI.saveKV(clientId, it.k, partA);
+                if (!t2.success) return { success: false, saved: 0, error: t2.error || res.error };
+                didSaveProductsMain = true;
+                didSplitProductsUpload = true;
+                logCritical(`📑 [YANDEX SAVE] Split heys_products RPC: ${partA.length} + ${partB.length} items (413 fallback)`);
+                return { success: true, saved: 1 };
+              }
+            }
+          }
+
+          const sk = await YandexAPI.saveKV(clientId, it.k, it.v);
+          if (sk.success) {
+            if (isProductsBaseKey(it.k)) didSaveProductsMain = true;
+            return { success: true, saved: 1 };
+          }
+          return { success: false, saved: 0, error: sk.error || res.error };
+        }
+        return { success: false, saved: 0, error: res.error };
+      };
+
+      const chunks = buildSizeBudgetChunks();
+      if (chunks.length > 1 || jsonSize > P_ITEMS_BUDGET_BYTES) {
+        logCritical(`📦 [YANDEX SAVE] RPC plan: ${chunks.length} chunk(s) (budget ${Math.round(P_ITEMS_BUDGET_BYTES / 1024)}KB p_items), total ${jsonSizeKB}KB`);
       }
 
-      // 🆕 Используем YandexAPI.batchSaveKV вместо RPC
-      const result = await YandexAPI.batchSaveKV(clientId, yandexItems);
-
-      if (!result.success) {
-        logCritical(`❌ [YANDEX SAVE] Ошибка: ${result.error || 'Unknown error'}`);
-        return { success: false, error: result.error || 'Unknown error' };
+      let totalSaved = 0;
+      for (let ci = 0; ci < chunks.length; ci++) {
+        const r = await uploadChunkResilient(chunks[ci]);
+        if (!r.success) {
+          logCritical(`❌ [YANDEX SAVE] Chunk ${ci + 1}/${chunks.length} failed: ${r.error}`);
+          return { success: false, error: r.error, saved: totalSaved };
+        }
+        totalSaved += r.saved || chunks[ci].length;
       }
 
-      logCritical(`☁️ [YANDEX SAVE] Сохранено ${result.saved} записей (${jsonSizeKB}KB) для клиента ${clientId.slice(0, 8)}`);
-      return { success: true, saved: result.saved };
+      if (didSaveProductsMain && !didSplitProductsUpload && typeof YandexAPI.deleteKV === 'function') {
+        queueMicrotask(() => {
+          YandexAPI.deleteKV(clientId, HEYS_PRODUCTS_RPC_TAIL_K).catch(() => { });
+        });
+      }
+
+      logCritical(`☁️ [YANDEX SAVE] Сохранено ${totalSaved} записей (${jsonSizeKB}KB) для клиента ${clientId.slice(0, 8)}`);
+      return { success: true, saved: totalSaved };
 
     } catch (e) {
       logCritical(`❌ [YANDEX SAVE] Exception: ${e.message}`);
@@ -23609,7 +23950,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
           const lightCloudGarbage = createCloudGarbageCollector();
           let lightKeysWritten = 0;
           const lightSyncedKeys = [];
-          (data || []).forEach(row => {
+          const lightRows = mergeProductsRpcTailRawClientRows(Array.isArray(data) ? data.slice() : [], client_id);
+          lightRows.forEach(row => {
             try {
               if (isSensitiveSessionStorageKey(row?.k)) {
                 recordCloudGarbageCandidate(lightCloudGarbage, 'sensitive', row.k);
@@ -23755,12 +24097,14 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
         // clearNamespace стирал все локальные данные, включая продукты!
         // Теперь просто перезаписываем только те ключи, что пришли с сервера
 
+        const dataForDedup = mergeProductsRpcTailRawClientRows(Array.isArray(data) ? data.slice() : [], client_id);
+
         // 🔄 ФАЗ 1: ДЕДУПЛИКАЦИЯ — если несколько ключей в БД превращаются в один scoped key,
         // берём самый свежий по updated_at (поле БД, не JSON)
         const keyGroups = new Map(); // scopedKey → [{ row, updated_at_ts }]
         const fullSyncCloudGarbage = createCloudGarbageCollector();
 
-        (data || []).forEach(row => {
+        dataForDedup.forEach(row => {
           if (isSensitiveSessionStorageKey(row?.k)) {
             recordCloudGarbageCandidate(fullSyncCloudGarbage, 'sensitive', row.k);
             return;
@@ -23933,7 +24277,9 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
           return String(a.scopedKey || '').localeCompare(String(b.scopedKey || ''));
         });
 
-        log(`📊 [DEDUP] ${data?.length || 0} DB keys → ${deduped.length} unique scoped keys`);
+        const dedupedForPhase2 = mergeProductsRpcTailDeduped(deduped, client_id);
+
+        log(`📊 [DEDUP] ${data?.length || 0} DB keys → ${dedupedForPhase2.length} unique scoped keys`);
 
         // ⏱️ TIMING: Отслеживаем время обработки 
         let keyProcessingStart = performance.now();
@@ -23953,9 +24299,9 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
         // ⚡ PERF R23: Chunked processing — yield to browser every 20 keys
         // Prevents 90+ consecutive long tasks from React scheduler during heavy sync
         const SYNC_DEDUP_CHUNK = 20;
-        for (let _ci = 0; _ci < deduped.length; _ci += SYNC_DEDUP_CHUNK) {
+        for (let _ci = 0; _ci < dedupedForPhase2.length; _ci += SYNC_DEDUP_CHUNK) {
           if (_ci > 0) await new Promise(r => setTimeout(r, 0));
-          const _chunk = deduped.slice(_ci, Math.min(_ci + SYNC_DEDUP_CHUNK, deduped.length));
+          const _chunk = dedupedForPhase2.slice(_ci, Math.min(_ci + SYNC_DEDUP_CHUNK, dedupedForPhase2.length));
           _chunk.forEach(({ scopedKey, row }) => {
             try {
               let key = scopedKey;
@@ -25236,49 +25582,63 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
           }, 2000); // Задержка 2 сек чтобы не блокировать UI
         }
 
-        // � v6: Shared products теперь грузятся ПАРАЛЛЕЛЬНО с sync (см. начало _syncInProgress)
-        // Здесь просто ждём если ещё не закончились
-        if (_sharedProductsPromise) {
-          await _sharedProductsPromise;
-          _sharedProductsPromise = null;
-        }
-
-        // 🆕 v4.8.0: Синхронизация игнор-листа удалённых продуктов с облаком
-        // Это предотвращает "воскрешение" удалённых продуктов на других устройствах
-        if (global.HEYS?.deletedProducts?.exportForSync) {
-          const deletedListKey = `heys_${client_id}_deleted_products`;
-          try {
-            // Пробуем загрузить из облака
-            const { data: cloudDeleted, error: deletedError } = await YandexAPI.from('client_kv_store')
-              .select('v')
-              .eq('client_id', client_id)
-              .eq('k', deletedListKey);
-
-            const deletedRow = Array.isArray(cloudDeleted) ? cloudDeleted[0] : cloudDeleted;
-            if (!deletedError && deletedRow?.v) {
-              // Мержим облачные с локальными
-              const imported = global.HEYS.deletedProducts.importFromSync(deletedRow.v);
-              if (imported > 0) {
-                logCritical(`☁️ [DELETED SYNC] Merged ${imported} deleted products from cloud`);
-              }
-            }
-
-            // Отправляем локальный список в облако
-            const localExport = global.HEYS.deletedProducts.exportForSync();
-            if (Object.keys(localExport.entries).length > 0) {
-              const upsertObj = {
-                client_id: client_id,
-                k: deletedListKey,
-                v: localExport,
-                updated_at: new Date().toISOString()
-              };
-              clientUpsertQueue.push(upsertObj);
-              scheduleClientPush();
-              logCritical(`☁️ [DELETED SYNC] Queued ${Object.keys(localExport.entries).length / 2} deleted products for cloud sync`);
-            }
-          } catch (e) {
-            console.warn('[DELETED SYNC] Error:', e);
+        const runNonCriticalPostSyncTail = async () => {
+          // � v6: Shared products теперь грузятся ПАРАЛЛЕЛЬНО с sync (см. начало _syncInProgress)
+          // Для client switch НЕ блокируем возврат в gate/shell: shared products и deleted sync
+          // не критичны для отображения нового клиента.
+          if (_sharedProductsPromise) {
+            await _sharedProductsPromise;
+            _sharedProductsPromise = null;
           }
+
+          // 🆕 v4.8.0: Синхронизация игнор-листа удалённых продуктов с облаком
+          // Это предотвращает "воскрешение" удалённых продуктов на других устройствах
+          if (global.HEYS?.deletedProducts?.exportForSync) {
+            const deletedListKey = `heys_${client_id}_deleted_products`;
+            try {
+              // Пробуем загрузить из облака
+              const { data: cloudDeleted, error: deletedError } = await YandexAPI.from('client_kv_store')
+                .select('v')
+                .eq('client_id', client_id)
+                .eq('k', deletedListKey);
+
+              const deletedRow = Array.isArray(cloudDeleted) ? cloudDeleted[0] : cloudDeleted;
+              if (!deletedError && deletedRow?.v) {
+                // Мержим облачные с локальными
+                const imported = global.HEYS.deletedProducts.importFromSync(deletedRow.v);
+                if (imported > 0) {
+                  logCritical(`☁️ [DELETED SYNC] Merged ${imported} deleted products from cloud`);
+                }
+              }
+
+              // Отправляем локальный список в облако
+              const localExport = global.HEYS.deletedProducts.exportForSync();
+              if (Object.keys(localExport.entries).length > 0) {
+                const upsertObj = {
+                  client_id: client_id,
+                  k: deletedListKey,
+                  v: localExport,
+                  updated_at: new Date().toISOString()
+                };
+                clientUpsertQueue.push(upsertObj);
+                scheduleClientPush();
+                logCritical(`☁️ [DELETED SYNC] Queued ${Object.keys(localExport.entries).length / 2} deleted products for cloud sync`);
+              }
+            } catch (e) {
+              console.warn('[DELETED SYNC] Error:', e);
+            }
+          }
+        };
+
+        if (options?.deferNonCriticalTail) {
+          logCritical(`[HEYS.sync] ⏭️ Deferring non-critical post-sync tail for ${client_id?.slice(0, 8)}...`);
+          setTimeout(() => {
+            runNonCriticalPostSyncTail().catch((tailErr) => {
+              console.warn('[HEYS.sync] ⚠️ Deferred post-sync tail failed:', tailErr?.message || tailErr);
+            });
+          }, 0);
+        } else {
+          await runNonCriticalPostSyncTail();
         }
 
         // Уведомляем приложение о завершении синхронизации (для обновления stepsGoal и т.д.)
@@ -25322,7 +25682,12 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
   };
 
   cloud.isAuthenticated = function () {
-    return status === CONNECTION_STATUS.ONLINE && !!user;
+    if (status !== CONNECTION_STATUS.ONLINE) return false;
+    if (user) return true;
+    // PIN / phone session: cloudUser is null but Yandex REST + fetchDays still work.
+    // Without this, useSmartPrefetch never pulls nearby days and the diary feels "empty offline".
+    if (_pinAuthClientId != null) return true;
+    return false;
   };
 
   cloud.fetchDays = async function (dates) {
@@ -25515,6 +25880,20 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
     savePendingQueue(PENDING_CLIENT_INFLIGHT_QUEUE_KEY, clientUpsertInFlightQueue);
     logCritical(`♻️ [SYNC] Restored ${restoredClientQueueState.restoredCount} in-flight client item(s) after reload`);
   }
+  // v72: Rows merged into clientUpsertQueue never went through enqueueClientSave — без notify +
+  // scheduleClientPush UI и RPC upload стартуют только после случайного data-saved / syncClient.
+  try {
+    if (clientUpsertQueue.length > 0) {
+      queueMicrotask(() => {
+        try {
+          notifyPendingChange();
+          if (typeof navigator !== 'undefined' && navigator.onLine) {
+            scheduleClientPush();
+          }
+        } catch (_) { }
+      });
+    }
+  } catch (_) { }
   let clientUpsertTimer = null;
   let _uploadInProgress = false;  // 🔄 Флаг: данные в процессе отправки (in-flight)
   let _uploadLogTimer = null;
@@ -25549,6 +25928,16 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
     if (_uploadLogTimer) return;
     _uploadLogTimer = setTimeout(() => flushBufferedUploadLog(), UPLOAD_SUMMARY_BUFFER_MS);
   }
+
+  function resetBufferedUploadLog() {
+    if (_uploadLogTimer) {
+      clearTimeout(_uploadLogTimer);
+      _uploadLogTimer = null;
+    }
+    _uploadLogBufferedTotal = 0;
+    _uploadLogBufferedBatches = 0;
+  }
+
   let _uploadInFlightCount = 0;   // 🔄 Кол-во записей в in-flight запросе
 
   function persistClientQueueDurabilityState() {
@@ -25574,6 +25963,10 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
   }
 
   function requeueClientInFlightBatch(batch, reason) {
+    if (isLogoutSuppressionActive()) {
+      clearClientInFlightBatch();
+      return;
+    }
     clientUpsertQueue = requeueInFlightBatch({
       queue: clientUpsertQueue,
       batch: Array.isArray(batch) && batch.length ? batch : clientUpsertInFlightQueue,
@@ -25593,6 +25986,15 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
    * @returns {Promise<void>}
    */
   async function doClientUpload(batch) {
+    if (isLogoutSuppressionActive()) {
+      clearClientInFlightBatch({ notify: false });
+      _uploadInProgress = false;
+      _uploadInFlightCount = 0;
+      notifyPendingChange();
+      notifySyncCompletedIfDrained();
+      return;
+    }
+
     if (!batch.length) {
       clearClientInFlightBatch({ notify: false });
       _uploadInProgress = false;
@@ -25692,14 +26094,24 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
       }
     }
 
-    const hydratedBatch = uniqueBatch
-      .map(item => hydratePendingQueueItem(item))
-      .filter(Boolean);
+    const _hydratePairs = uniqueBatch.map((orig) => ({ orig, hydrated: hydratePendingQueueItem(orig) }));
+    const _failedHydrate = _hydratePairs.filter((p) => !p.hydrated).map((p) => p.orig);
+    if (_failedHydrate.length) {
+      logQuotaThrottled(
+        'client-upload-hydrate-miss',
+        `⚠️ [SYNC] Re-queued ${_failedHydrate.length} client item(s) — ref hydrate miss (value not in localStorage yet)`,
+      );
+      clientUpsertQueue = compactPendingQueue([..._failedHydrate, ...clientUpsertQueue], PENDING_CLIENT_QUEUE_KEY);
+      persistClientQueueDurabilityState();
+      notifyPendingChange();
+    }
+    const hydratedBatch = _hydratePairs.filter((p) => p.hydrated).map((p) => p.hydrated);
 
     if (!hydratedBatch.length) {
-      clearClientInFlightBatch();
+      clearClientInFlightBatch({ notify: false });
       _uploadInProgress = false;
       _uploadInFlightCount = 0;
+      if (_failedHydrate.length) scheduleClientPush();
       notifySyncCompletedIfDrained();
       return;
     }
@@ -25727,6 +26139,15 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
         let isAuthError = false; // 🔧 v58 FIX: отслеживаем auth ошибки
         for (const [clientId, items] of Object.entries(byClientId)) {
           const result = await cloud.saveClientViaRPC(clientId, items);
+          if (isLogoutSuppressionActive()) {
+            clearClientInFlightBatch({ notify: false });
+            _uploadInProgress = false;
+            _uploadInFlightCount = 0;
+            persistClientQueueDurabilityState();
+            notifyPendingChange();
+            notifySyncCompletedIfDrained();
+            return;
+          }
           if (result.success) {
             totalSaved += result.saved || items.length;
           } else {
@@ -25779,6 +26200,24 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
           scheduleClientPush();
         }
         notifySyncCompletedIfDrained();
+        // 🔧 v72: PIN/RPC path never hit curator upsert branch — без этого useCloudSyncStatus
+        // не получает второй сигнал после heysSyncCompleted (download) и залипает на
+        // «Сохранил локально» / syncingStart + data-saved skip.
+        try {
+          if (typeof window !== 'undefined' && window.dispatchEvent) {
+            queueMicrotask(() => {
+              try {
+                window.dispatchEvent(new CustomEvent('heys:data-uploaded', {
+                  detail: {
+                    saved: totalSaved || 0,
+                    viaRpc: true,
+                    hadError: !!anyError,
+                  }
+                }));
+              } catch (_) { }
+            });
+          }
+        } catch (_) { }
         return;
       }
 
@@ -25866,6 +26305,15 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
       persistClientQueueDurabilityState();
       notifyPendingChange();
     } catch (e) {
+      if (isLogoutSuppressionActive()) {
+        clearClientInFlightBatch({ notify: false });
+        _uploadInProgress = false;
+        _uploadInFlightCount = 0;
+        persistClientQueueDurabilityState();
+        notifyPendingChange();
+        notifySyncCompletedIfDrained();
+        return;
+      }
       // При ошибке — вернуть в очередь и увеличить retry
       clientUpsertQueue.push(...uniqueBatch);
       incrementRetry();
@@ -25946,6 +26394,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
    * Debounced upload — стандартный способ с 500ms задержкой
    */
   function scheduleClientPush() {
+    if (isLogoutSuppressionActive()) return;
     if (clientUpsertTimer) return;
 
     // Сохраняем очередь в localStorage для персистентности
@@ -26051,6 +26500,10 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
     }
 
     if (!client_id) {
+      return;
+    }
+
+    if (isLogoutSuppressionActive()) {
       return;
     }
 
@@ -26426,6 +26879,18 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
     savePendingQueue(PENDING_USER_INFLIGHT_QUEUE_KEY, upsertInFlightQueue);
     logCritical(`♻️ [SYNC] Restored ${restoredUserQueueState.restoredCount} in-flight user item(s) after reload`);
   }
+  try {
+    if (upsertQueue.length > 0) {
+      queueMicrotask(() => {
+        try {
+          notifyPendingChange();
+          if (typeof navigator !== 'undefined' && navigator.onLine) {
+            schedulePush();
+          }
+        } catch (_) { }
+      });
+    }
+  } catch (_) { }
   let upsertTimer = null;
   let _userUploadInProgress = false;
   let _userUploadInFlightCount = 0;
@@ -26453,6 +26918,10 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
   }
 
   function requeueUserInFlightBatch(batch, reason) {
+    if (isLogoutSuppressionActive()) {
+      clearUserInFlightBatch();
+      return;
+    }
     upsertQueue = requeueInFlightBatch({
       queue: upsertQueue,
       batch: Array.isArray(batch) && batch.length ? batch : upsertInFlightQueue,
@@ -26462,11 +26931,25 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
     persistUserQueueDurabilityState();
     notifyPendingChange();
     if (reason) {
-      logCritical(`♻️ [SYNC] Re-queued in-flight user batch (${reason})`);
+      if (reason === 'no-client-id') {
+        logQuotaThrottled('requeue-user-no-client', `♻️ [SYNC] Re-queued in-flight user batch (${reason})`);
+      } else {
+        logCritical(`♻️ [SYNC] Re-queued in-flight user batch (${reason})`);
+      }
     }
   }
 
   async function doUserUpload(batch) {
+    if (isLogoutSuppressionActive()) {
+      clearUserInFlightBatch({ notify: false });
+      persistUserQueueDurabilityState();
+      notifyPendingChange();
+      _userUploadInProgress = false;
+      _userUploadInFlightCount = 0;
+      notifySyncCompletedIfDrained();
+      return;
+    }
+
     if (!batch.length) {
       clearUserInFlightBatch({ notify: false });
       _userUploadInProgress = false;
@@ -26490,7 +26973,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
     _userUploadInProgress = true;
     _userUploadInFlightCount = batch.length;
 
-    if (!client || !user) {
+    // YandexAPI mode: Supabase `client` is always null; user + YandexAPI are sufficient.
+    if (!user) {
       requeueUserInFlightBatch(batch, 'missing-auth-context');
       _userUploadInProgress = false;
       _userUploadInFlightCount = 0;
@@ -26519,9 +27003,18 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
       }
     }
 
-    const hydratedBatch = uniqueBatch
-      .map(item => hydratePendingQueueItem(item))
-      .filter(Boolean);
+    const _uHydratePairs = uniqueBatch.map((orig) => ({ orig, hydrated: hydratePendingQueueItem(orig) }));
+    const _uFailedHydrate = _uHydratePairs.filter((p) => !p.hydrated).map((p) => p.orig);
+    if (_uFailedHydrate.length) {
+      logQuotaThrottled(
+        'user-upload-hydrate-miss',
+        `⚠️ [SYNC] Re-queued ${_uFailedHydrate.length} user item(s) — ref hydrate miss`,
+      );
+      upsertQueue = compactPendingQueue([..._uFailedHydrate, ...upsertQueue], PENDING_QUEUE_KEY);
+      persistUserQueueDurabilityState();
+      notifyPendingChange();
+    }
+    const hydratedBatch = _uHydratePairs.filter((p) => p.hydrated).map((p) => p.hydrated);
 
     if (!hydratedBatch.length) {
       clearUserInFlightBatch({ notify: false });
@@ -26529,34 +27022,80 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
       notifyPendingChange();
       _userUploadInProgress = false;
       _userUploadInFlightCount = 0;
+      if (_uFailedHydrate.length) schedulePush();
       notifySyncCompletedIfDrained();
       return;
     }
 
     try {
-      const { error } = await YandexAPI.from('kv_store').upsert(hydratedBatch, { onConflict: 'user_id,k' });
-      if (error) {
-        requeueUserInFlightBatch(hydratedBatch, 'bulk-upsert-error');
-        incrementRetry();
-        _userUploadInProgress = false;
-        _userUploadInFlightCount = 0;
-        if (isAuthError(error)) {
-          handleAuthFailure(error);
+      // heys-api-rest: kv_store снят с whitelist — REST upsert всегда 404.
+      // User-level очередь отправляем в client_kv_store через batchSaveKV (как clientUpsertQueue), если есть clientId.
+      const rpcClientId = (typeof cloud.getCurrentClientId === 'function' && cloud.getCurrentClientId())
+        || global.HEYS?.currentClientId
+        || _activeSyncClientId;
+      if (user && rpcClientId) {
+        const rpcItems = hydratedBatch.map((item) => ({
+          k: item.k,
+          v: item.v,
+          updated_at: item.updated_at || new Date().toISOString(),
+        }));
+        const rpcResult = await cloud.saveClientViaRPC(rpcClientId, rpcItems);
+        if (isLogoutSuppressionActive()) {
+          clearUserInFlightBatch({ notify: false });
+          persistUserQueueDurabilityState();
+          notifyPendingChange();
+          _userUploadInProgress = false;
+          _userUploadInFlightCount = 0;
           notifySyncCompletedIfDrained();
           return;
         }
-        notifySyncError(error, Math.min(5, Math.ceil(getRetryDelay() / 1000)));
-        err('bulk upsert', error);
-        schedulePush();
+        if (!rpcResult.success) {
+          requeueUserInFlightBatch(hydratedBatch, 'rpc-user-queue-error');
+          incrementRetry();
+          _userUploadInProgress = false;
+          _userUploadInFlightCount = 0;
+          if (isAuthError({ message: rpcResult.error })) {
+            handleAuthFailure({ message: rpcResult.error });
+            notifySyncCompletedIfDrained();
+            return;
+          }
+          notifySyncError({ message: rpcResult.error }, Math.min(5, Math.ceil(getRetryDelay() / 1000)));
+          err('user-queue rpc save', rpcResult.error);
+          schedulePush();
+          notifySyncCompletedIfDrained();
+          return;
+        }
+        resetRetry();
+        clearUserInFlightBatch({ notify: false });
+        persistUserQueueDurabilityState();
+        notifyPendingChange();
+        if (typeof window !== 'undefined' && window.dispatchEvent) {
+          window.dispatchEvent(new CustomEvent('heys:data-uploaded', { detail: { saved: hydratedBatch.length } }));
+        }
+      } else {
+        // Без выбранного клиента REST kv_store тоже недоступен — не спамим 404, ждём clientId.
+        logQuotaThrottled(
+          'user-upload-no-client',
+          '⚠️ [SYNC] user-queue: нет heys_client_current — откладываем до выбора клиента',
+        );
+        requeueUserInFlightBatch(hydratedBatch, 'no-client-id');
+        _userUploadInProgress = false;
+        _userUploadInFlightCount = 0;
+        _deferUserPushBackoffMs = USER_QUEUE_NO_CLIENT_BACKOFF_MIN_MS;
+        scheduleUserQueueRetryWhenNoClient();
         notifySyncCompletedIfDrained();
         return;
       }
-
-      resetRetry();
-      clearUserInFlightBatch({ notify: false });
-      persistUserQueueDurabilityState();
-      notifyPendingChange();
     } catch (e) {
+      if (isLogoutSuppressionActive()) {
+        clearUserInFlightBatch({ notify: false });
+        persistUserQueueDurabilityState();
+        notifyPendingChange();
+        _userUploadInProgress = false;
+        _userUploadInFlightCount = 0;
+        notifySyncCompletedIfDrained();
+        return;
+      }
       requeueUserInFlightBatch(hydratedBatch, 'bulk-upsert-exception');
       incrementRetry();
       _userUploadInProgress = false;
@@ -26611,7 +27150,11 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
   }
 
   function schedulePush() {
+    if (isLogoutSuppressionActive()) return;
     if (upsertTimer) return;
+
+    clearDeferredUserPushNoClientTimer();
+    _deferUserPushBackoffMs = USER_QUEUE_NO_CLIENT_BACKOFF_MIN_MS;
 
     persistUserQueueDurabilityState();
     notifyPendingChange();
@@ -26638,6 +27181,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
   }
 
   cloud.saveKey = function (k, v) {
+    if (isLogoutSuppressionActive()) return;
     if (!user || !k) return;
 
     if (isLocalOnlyStorageKey(k)) return;
@@ -26742,6 +27286,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
 
   /** Принудительный retry синхронизации */
   cloud.retrySync = function () {
+    if (isLogoutSuppressionActive()) return false;
     if (!navigator.onLine) return false;
 
     resetRetry(); // Сбрасываем exponential backoff
@@ -26764,6 +27309,42 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
   // Алиасы для внешних вызовов
   cloud.sync = cloud.retrySync;
   cloud.pushAll = cloud.retrySync;
+
+  function dropAllPendingSyncState(reason = 'reset') {
+    if (clientUpsertTimer) {
+      clearTimeout(clientUpsertTimer);
+      clientUpsertTimer = null;
+    }
+    if (upsertTimer) {
+      clearTimeout(upsertTimer);
+      upsertTimer = null;
+    }
+    clearDeferredUserPushNoClientTimer();
+    resetBufferedUploadLog();
+
+    clientUpsertQueue = [];
+    clientUpsertInFlightQueue = [];
+    upsertQueue = [];
+    upsertInFlightQueue = [];
+
+    _uploadInProgress = false;
+    _uploadInFlightCount = 0;
+    _userUploadInProgress = false;
+    _userUploadInFlightCount = 0;
+
+    syncProgressTotal = 0;
+    syncProgressDone = 0;
+    retryAttempt = 0;
+
+    persistClientQueueDurabilityState();
+    persistUserQueueDurabilityState();
+    notifyPendingChange();
+    notifySyncCompletedIfDrained();
+
+    if (reason) {
+      logCritical(`🧹 [SYNC] Cleared pending sync state (${reason})`);
+    }
+  }
 
   // Near-real-time cross-device sync for active devices.
   // While the page is visible we periodically run a lightweight forced delta sync,
@@ -27785,6 +28366,9 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
     // Если тот же клиент — ничего не делаем
     if (oldClientId === newClientId) {
       log('Клиент уже выбран:', newClientId);
+      // Gate/shell set _switchClientInProgress=true before switchClient; we never enter try/finally below.
+      try { cloud._switchClientInProgress = false; } catch (_) { }
+      emitSwitchStage('done');
       return true;
     }
 
@@ -27905,7 +28489,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
         try { global.localStorage.removeItem('heys_pin_auth_client'); } catch (_) { }
         // 🚀 PERF v7.0: Use syncClient for dedup — prevents double sync
         // when DayTabWithCloudSync also calls syncClient on client change
-        await cloud.syncClient(newClientId, { force: true });
+        await cloud.syncClient(newClientId, { force: true, deferNonCriticalTail: true });
       } else {
         logCritical('🔐 [SWITCH] Нет Supabase сессии — используем RPC sync');
         _rpcOnlyMode = true; // Клиент по PIN — RPC режим для сохранений
@@ -27916,7 +28500,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
         // 🚀 v58 FIX: Use syncClient for dedup — same pattern as curator path (L6948)
         // Previously called syncClientViaRPC directly, bypassing _syncInFlight dedup.
         // This caused double sync when cloud.init PIN restore also calls syncClient.
-        const rpcResult = await cloud.syncClient(newClientId, { force: true });
+        const rpcResult = await cloud.syncClient(newClientId, { force: true, deferNonCriticalTail: true });
         if (!rpcResult?.success) {
           throw new Error(rpcResult?.error || 'RPC sync failed');
         }
@@ -30658,6 +31242,41 @@ NOVA: 1-4
     }
   }
 
+  /**
+   * То же сжатие паттернами, что compress(), но порог ~1.5% — для RPC upload
+   * больших каталогов heys_products (шлюз 413 на batch_upsert_client_kv_by_session).
+   * Возвращает строку с префиксом ¤Z¤ или null если выгода слишком мала.
+   */
+  function compressProductsWire(obj) {
+    try {
+      if (obj == null || typeof obj !== 'object') return null;
+      const seen = new WeakSet();
+      let json = JSON.stringify(obj, (key, value) => {
+        if (typeof value === 'object' && value !== null) {
+          if (seen.has(value)) {
+            return undefined;
+          }
+          seen.add(value);
+        }
+        return value;
+      });
+      if (json.length <= 384) return null;
+      json = json.replace(/:(-?\d+)\.0+(?=[,}\]])/g, ':$1');
+      json = json.replace(/:(-?\d+\.\d*?)0+(?=[,}\]])/g, ':$1');
+      let compressed = json;
+      for (const [pattern, code] of Object.entries(COMPRESS_PATTERNS)) {
+        compressed = compressed.split(pattern).join(code);
+      }
+      const RATIO = 0.985;
+      if (compressed.length < json.length * RATIO) {
+        return '¤Z¤' + compressed;
+      }
+      return null;
+    } catch (e) {
+      return null;
+    }
+  }
+
   function decompress(str) {
     try {
       if (!str || !str.startsWith('¤Z¤')) {
@@ -31618,6 +32237,7 @@ NOVA: 1-4
   // 🔧 Экспорт compress/decompress для использования в cloud sync
   Store.decompress = decompress;
   Store.compress = compress;
+  Store.compressProductsWire = compressProductsWire;
 
 })(window);
 

@@ -99,6 +99,41 @@
     }
   }
 
+  /**
+   * То же сжатие паттернами, что compress(), но порог ~1.5% — для RPC upload
+   * больших каталогов heys_products (шлюз 413 на batch_upsert_client_kv_by_session).
+   * Возвращает строку с префиксом ¤Z¤ или null если выгода слишком мала.
+   */
+  function compressProductsWire(obj) {
+    try {
+      if (obj == null || typeof obj !== 'object') return null;
+      const seen = new WeakSet();
+      let json = JSON.stringify(obj, (key, value) => {
+        if (typeof value === 'object' && value !== null) {
+          if (seen.has(value)) {
+            return undefined;
+          }
+          seen.add(value);
+        }
+        return value;
+      });
+      if (json.length <= 384) return null;
+      json = json.replace(/:(-?\d+)\.0+(?=[,}\]])/g, ':$1');
+      json = json.replace(/:(-?\d+\.\d*?)0+(?=[,}\]])/g, ':$1');
+      let compressed = json;
+      for (const [pattern, code] of Object.entries(COMPRESS_PATTERNS)) {
+        compressed = compressed.split(pattern).join(code);
+      }
+      const RATIO = 0.985;
+      if (compressed.length < json.length * RATIO) {
+        return '¤Z¤' + compressed;
+      }
+      return null;
+    } catch (e) {
+      return null;
+    }
+  }
+
   function decompress(str) {
     try {
       if (!str || !str.startsWith('¤Z¤')) {
@@ -1059,5 +1094,6 @@
   // 🔧 Экспорт compress/decompress для использования в cloud sync
   Store.decompress = decompress;
   Store.compress = compress;
+  Store.compressProductsWire = compressProductsWire;
 
 })(window);

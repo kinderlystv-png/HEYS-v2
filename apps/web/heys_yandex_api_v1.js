@@ -17,7 +17,8 @@
   // ═══════════════════════════════════════════════════════════════════
 
   const CONFIG = {
-    // Production API (Yandex Cloud); local browser dev goes through localhost proxy
+    // Локально — через Node :4001: POST /rpc с браузера на api.heyslab.ru ломается preflight
+    // (Allow-Origin часто только https://heyslab.ru). Прокси — same-origin для Vite.
     API_URL: isLocalBrowserDev
       ? 'http://localhost:4001'
       : 'https://api.heyslab.ru',
@@ -34,8 +35,9 @@
     },
 
     // Таймауты (нарастающие; верхняя попытка capped — меньше «зависло на 30с» при плохой сети)
-    TIMEOUT_MS: 12000,
-    TIMEOUT_ESCALATION_MS: [12000, 18000, 22000],
+    // Локально: крупный bootstrap через прокси — чуть длиннее окно, чем на проде
+    TIMEOUT_MS: isLocalBrowserDev ? 60000 : 12000,
+    TIMEOUT_ESCALATION_MS: isLocalBrowserDev ? [60000, 90000, 120000] : [12000, 18000, 22000],
 
     // Retry логика (exponential backoff; последний шаг чуть короче для UX)
     // v59 FIX I: Increased delays for cold-start resilience.
@@ -1290,7 +1292,7 @@
         return { success: false, error: 'No curator token' };
       }
 
-      const url = `${API_BASE}/rest/client_kv_store?user_id=eq.${userId}&client_id=eq.${clientId}&k=eq.${encodeURIComponent(key)}`;
+      const url = `${CONFIG.API_URL}/rest/client_kv_store?user_id=eq.${userId}&client_id=eq.${clientId}&k=eq.${encodeURIComponent(key)}`;
 
       const response = await fetch(url, {
         method: 'DELETE',

@@ -197,6 +197,9 @@
             }
           }
 
+          // FIX: если во время загрузки в очередь добавились новые элементы — запланировать следующую отправку
+          if (clientUpsertQueue.length > 0) scheduleClientPush();
+
           savePendingQueue(PENDING_CLIENT_QUEUE_KEY, clientUpsertQueue);
           notifyPendingChange();
 
@@ -298,6 +301,9 @@
 
         scheduleClientPush();
       }
+
+      // FIX: если во время загрузки в очередь добавились новые элементы — запланировать следующую отправку
+      if (clientUpsertQueue.length > 0) scheduleClientPush();
 
       setSyncProgressDone(uniqueBatch.length);
 

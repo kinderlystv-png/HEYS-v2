@@ -1,19 +1,19 @@
 {
   "boot-core": {
-    "file": "boot-core.bundle.f20fc3e938ea.js",
-    "hash": "f20fc3e938ea",
-    "sourceFingerprint": "61e160d7d37d",
+    "file": "boot-core.bundle.1164728e3089.js",
+    "hash": "1164728e3089",
+    "sourceFingerprint": "6f2e45d297cf",
     "fileCount": 29,
-    "size": 1438171,
-    "builtAt": "2026-04-23T17:18:41.787Z"
+    "size": 1464364,
+    "builtAt": "2026-04-23T21:02:27.209Z"
   },
   "boot-calc": {
-    "file": "boot-calc.bundle.4e1c71343fa0.js",
-    "hash": "4e1c71343fa0",
-    "sourceFingerprint": "0eff830cd7fc",
+    "file": "boot-calc.bundle.380e4c4770d5.js",
+    "hash": "380e4c4770d5",
+    "sourceFingerprint": "579a92ef0a2a",
     "fileCount": 19,
-    "size": 1139232,
-    "builtAt": "2026-04-23T15:39:27.648Z"
+    "size": 1140621,
+    "builtAt": "2026-04-23T21:02:27.777Z"
   },
   "boot-day": {
     "file": "boot-day.bundle.8acdfc9877f7.js",
@@ -24,20 +24,20 @@
     "builtAt": "2026-04-21T21:03:38.316Z"
   },
   "boot-app": {
-    "file": "boot-app.bundle.17120ecb943d.js",
-    "hash": "17120ecb943d",
-    "sourceFingerprint": "873baaef1034",
+    "file": "boot-app.bundle.7092bf4f7676.js",
+    "hash": "7092bf4f7676",
+    "sourceFingerprint": "23b64f60d4e2",
     "fileCount": 51,
-    "size": 1365161,
-    "builtAt": "2026-04-23T17:18:43.208Z"
+    "size": 1374369,
+    "builtAt": "2026-04-23T21:02:28.721Z"
   },
   "boot-init": {
-    "file": "boot-init.bundle.88aaf2b693f2.js",
-    "hash": "88aaf2b693f2",
-    "sourceFingerprint": "8de8b2d90472",
+    "file": "boot-init.bundle.42b73b15a6dc.js",
+    "hash": "42b73b15a6dc",
+    "sourceFingerprint": "3f69a8cb10f1",
     "fileCount": 8,
-    "size": 450178,
-    "builtAt": "2026-04-23T17:18:44.888Z"
+    "size": 450061,
+    "builtAt": "2026-04-23T21:02:29.194Z"
   },
   "postboot-1-game": {
     "file": "postboot-1-game.bundle.87f0608cc06c.js",

@@ -7,6 +7,9 @@
 
 const cors = require('cors');
 const express = require('express');
+const { Readable } = require('stream');
+const { pipeline } = require('stream/promises');
+const { buildDefaultAllowedOrigins } = require('./corsOrigins');
 
 const app = express();
 
@@ -14,12 +17,7 @@ const app = express();
 const PORT = process.env.API_PORT || process.env.PORT || 4001;
 const NODE_ENV = process.env.NODE_ENV || 'development';
 const DATABASE_NAME = process.env.DATABASE_NAME || 'projectB';
-const DEFAULT_ALLOWED_ORIGINS = [
-  'http://localhost:3001',
-  'http://localhost:3000',
-  'http://localhost:3002',
-  'http://localhost:3003'
-];
+const DEFAULT_ALLOWED_ORIGINS = buildDefaultAllowedOrigins();
 const ALLOWED_ORIGINS = (process.env.API_ALLOWED_ORIGINS || '')
   .split(',')
   .map((origin) => origin.trim())
@@ -86,25 +84,97 @@ app.get('/api/analytics', (req, res) => {
 });
 
 // Dev proxy: forward /rpc and /rest to production API (server-to-server, no CORS issues)
-const PROD_API = 'https://api.heyslab.ru';
+const PROD_API = (process.env.HEYS_DEV_PROXY_TARGET || 'https://api.heyslab.ru').replace(/\/$/, '');
+
+function buildUpstreamHeaders(req) {
+  const h = {};
+  const copy = (name) => {
+    const v = req.headers[name];
+    if (v === undefined || v === '') return;
+    h[name] = Array.isArray(v) ? v.join(', ') : String(v);
+  };
+  copy('authorization');
+  copy('apikey');
+  copy('prefer');
+  copy('accept');
+  copy('accept-profile');
+  copy('content-profile');
+  copy('content-type');
+  copy('range');
+  copy('x-client-info');
+  copy('x-session-token');
+  copy('cookie');
+  copy('if-none-match');
+  copy('if-modified-since');
+  if (!req.headers['x-forwarded-for'] && req.ip) {
+    h['x-forwarded-for'] = req.ip;
+  }
+  return h;
+}
+
 async function proxyToProd(req, res) {
   try {
     const url = `${PROD_API}${req.originalUrl}`;
-    const proxyRes = await fetch(url, {
-      method: req.method,
-      headers: {
-        'Content-Type': 'application/json',
-        ...(req.headers['authorization'] ? { authorization: req.headers['authorization'] } : {}),
-        ...(req.headers['x-session-token'] ? { 'x-session-token': req.headers['x-session-token'] } : {}),
-        ...(req.headers['x-forwarded-for'] ? {} : { 'x-forwarded-for': req.ip }),
-      },
-      body: ['POST', 'PUT', 'PATCH'].includes(req.method) ? JSON.stringify(req.body) : undefined,
+    const method = req.method;
+    const headers = buildUpstreamHeaders(req);
+    // heys-api-rest / heys-api-auth: без ALLOW_LOCALHOST_ORIGINS=1 на CF Origin «http://localhost:3001»
+    // даёт 403 {error:'cors_denied'}. Это server→server hop — подставляем разрешённый prod-origin (BFF).
+    headers.origin = 'https://app.heyslab.ru';
+    // Иначе undici запрашивает gzip, декодирует body, но может оставить Content-Encoding — браузер ломается (ERR_CONTENT_DECODING_FAILED).
+    headers['accept-encoding'] = 'identity';
+    if (['GET', 'HEAD', 'OPTIONS'].includes(method)) {
+      delete headers['content-type'];
+    } else if (['POST', 'PUT', 'PATCH'].includes(method) && !headers['content-type']) {
+      headers['content-type'] = 'application/json';
+    }
+
+    const init = { method, headers, referrerPolicy: 'no-referrer' };
+    if (['POST', 'PUT', 'PATCH'].includes(method)) {
+      init.body = JSON.stringify(req.body ?? {});
+    }
+
+    const proxyRes = await fetch(url, init);
+    const status = proxyRes.status;
+
+    if (res.writableEnded) return;
+
+    res.status(status);
+    const hopByHop = new Set(['transfer-encoding', 'connection', 'keep-alive']);
+    const skipUpstreamCors = new Set([
+      'access-control-allow-origin',
+      'access-control-allow-credentials',
+      'access-control-allow-methods',
+      'access-control-allow-headers',
+      'access-control-expose-headers',
+      'access-control-max-age',
+    ]);
+    // Node fetch декодирует gzip/br/deflate в response.body, но часто оставляет исходные
+    // Content-Encoding / Content-Length. Браузер тогда «декодирует» второй раз → ERR_CONTENT_DECODING_FAILED.
+    const skipAfterDecode = new Set(['content-encoding', 'content-length']);
+    proxyRes.headers.forEach((value, key) => {
+      const lower = key.toLowerCase();
+      if (hopByHop.has(lower)) return;
+      if (skipUpstreamCors.has(lower)) return;
+      if (skipAfterDecode.has(lower)) return;
+      try {
+        res.setHeader(key, value);
+      } catch (_) { /* ignore duplicate / invalid */ }
     });
-    const data = await proxyRes.json().catch(() => ({}));
-    res.status(proxyRes.status).json(data);
+
+    // Стриминг в браузер — не ждём полного тела от апстрима в памяти Node (быстрее bootstrap на больших JSON)
+    if (proxyRes.body) {
+      const nodeReadable = Readable.fromWeb(proxyRes.body);
+      await pipeline(nodeReadable, res);
+    } else {
+      res.end();
+    }
   } catch (err) {
-    console.error('[Dev Proxy] Error:', err.message);
-    res.status(502).json({ error: 'Dev proxy error', details: err.message });
+    console.error('[Dev Proxy]', req.method, req.originalUrl, err.message);
+    if (!res.headersSent) {
+      res.status(502).json({ error: 'Dev proxy error', details: err.message });
+    } else if (!res.writableEnded) {
+      res.destroy(err);
+    }
   }
 }
 app.all('/rpc', proxyToProd);

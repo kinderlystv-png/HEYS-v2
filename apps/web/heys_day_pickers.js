@@ -30,17 +30,32 @@
     
     const y = cur.getFullYear(), m = cur.getMonth();
     
-    // Загружаем данные при смене месяца
+    // Загружаем данные при смене месяца (сначала локально, затем догружаем месяц из облака).
     React.useEffect(() => {
-      if (getActiveDaysForMonth) {
+      if (!getActiveDaysForMonth) return;
+      let cancelled = false;
+      const applyLocal = () => {
+        if (cancelled) return;
         try {
-          const data = getActiveDaysForMonth(y, m);
-          setMonthData(data);
+          setMonthData(getActiveDaysForMonth(y, m));
         } catch (e) {
           setMonthData(null);
         }
+      };
+      applyLocal();
+      const dim = new Date(y, m + 1, 0).getDate();
+      const datesInMonth = [];
+      for (let d = 1; d <= dim; d += 1) {
+        datesInMonth.push(fmtDate(new Date(y, m, d)));
       }
-    }, [y, m, getActiveDaysForMonth]);
+      const cloud = global.HEYS && global.HEYS.cloud;
+      if (cloud && typeof cloud.fetchDays === 'function' && navigator.onLine) {
+        cloud.fetchDays(datesInMonth).finally(() => {
+          if (!cancelled) applyLocal();
+        });
+      }
+      return () => { cancelled = true; };
+    }, [y, m, getActiveDaysForMonth, fmtDate]);
     
     // Преобразуем activeDays в Map (fallback если нет getActiveDaysForMonth)
     const daysDataMap = React.useMemo(() => {

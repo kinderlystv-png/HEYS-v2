@@ -94,7 +94,6 @@
                 url: supabaseUrl,
                 anonKey:
                     'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVrcW9sY3ppcWN1cGxxZmdybXNoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUyNTE1NDUsImV4cCI6MjA3MDgyNzU0NX0.Nzd8--PyGMJvIHqFoCQKNUOwpxnrAZuslQHtAjcE1Ds',
-                // В локальном dev legacy cloud sync должен ходить через localhost proxy
                 localhostProxyUrl: isLocalBrowserDev ? apiBaseUrl : undefined
             });
         }
