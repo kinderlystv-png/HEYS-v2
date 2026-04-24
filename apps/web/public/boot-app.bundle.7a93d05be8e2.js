@@ -12384,6 +12384,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
         const showPendingSyncBannerRef = useRef(false);
         const indSyncModalHeartbeatRef = useRef(0);
         const prevSyncLockOverlayRef = useRef(false);
+        const prevCloudStatusSampleRef = useRef(cloudStatus);
         cloudStatusRef.current = cloudStatus;
         pendingCountRef.current = pendingCount;
         pendingActionItemsRef.current = pendingActionItems;
@@ -12407,6 +12408,19 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                 console.info('[HEYS.sync] [IND] useCloudSyncStatus UNMOUNTED');
             };
         }, []);
+
+        // Sampled perf: sync badge state transitions (localStorage heys_perf_smoothness_sample = "1")
+        useEffect(() => {
+            try {
+                if (prevCloudStatusSampleRef.current === cloudStatus) return;
+                prevCloudStatusSampleRef.current = cloudStatus;
+                if (typeof global.localStorage === 'undefined' || global.localStorage.getItem('heys_perf_smoothness_sample') !== '1') return;
+                const bump = global.HEYS?.debug?.bumpSmoothnessCounter;
+                if (typeof bump !== 'function') return;
+                bump('sync_ui_transition');
+                bump('sync_ui_to_' + String(cloudStatus || 'unknown').replace(/[^a-z0-9_]/gi, '_').slice(0, 24));
+            } catch (_) { /* noop */ }
+        }, [cloudStatus]);
 
         useEffect(() => {
             if (showSyncLockOverlay && !prevSyncLockOverlayRef.current) {
@@ -12432,9 +12446,19 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                 } catch (_) { /* noop */ }
                 const hint = !cid ? ' | БЕЗ client: user-queue не уйдёт в RPC до выбора клиента (heys_client_current)' : '';
                 console.info('[HEYS.sync] [IND] sync-lock-overlay: OPEN status=' + cloudStatusRef.current + ' pending=' + rp + ' upload=' + up + ' client~=' + (cid || '(none)') + snapStr + detStr + hint);
+                try {
+                    if (typeof global.localStorage !== 'undefined' && global.localStorage.getItem('heys_perf_smoothness_sample') === '1' && typeof global.HEYS?.debug?.bumpSmoothnessCounter === 'function') {
+                        global.HEYS.debug.bumpSmoothnessCounter('sync_lock_overlay_open');
+                    }
+                } catch (_) { /* noop */ }
             }
             if (!showSyncLockOverlay && prevSyncLockOverlayRef.current) {
                 console.info('[HEYS.sync] [IND] sync-lock-overlay: CLOSE');
+                try {
+                    if (typeof global.localStorage !== 'undefined' && global.localStorage.getItem('heys_perf_smoothness_sample') === '1' && typeof global.HEYS?.debug?.bumpSmoothnessCounter === 'function') {
+                        global.HEYS.debug.bumpSmoothnessCounter('sync_lock_overlay_close');
+                    }
+                } catch (_) { /* noop */ }
                 indSyncModalHeartbeatRef.current = 0;
             }
             prevSyncLockOverlayRef.current = showSyncLockOverlay;
@@ -13420,8 +13444,12 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                 }
 
                 if (runtimePending > 0 && !uploadInProgress && syncProgressTotalRef.current === 0) {
-                    clearSyncLockOverlay();
+                    // Between RPC batches pending>0 while upload=false is normal — do not clear
+                    // the full-screen lock here or it flickers open/closed (curator jank).
                     clearSlowInternetHint();
+                    if (!syncingStartRef.current) {
+                        clearSyncLockOverlay();
+                    }
                     console.info('[HEYS.sync] [IND] tick: → queued, pending=' + runtimePending);
                     setCloudStatus('queued');
                     schedule(true);
@@ -13439,15 +13467,13 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                 );
 
                 if (syncVisualActive && !longSyncFallbackActiveRef.current) {
-                    const { longSyncLockMs, slowInternetHintMs } = getPinProxySyncOverlayDelaysMs();
+                    const { slowInternetHintMs } = getPinProxySyncOverlayDelaysMs();
                     if (cloudStatusRef.current !== 'syncing') {
                         setCloudStatus('syncing');
                     }
 
-                    if (syncElapsedMs >= longSyncLockMs && !syncLockShownForCurrentSyncRef.current && !userQueueDeadlock) {
-                        syncLockShownForCurrentSyncRef.current = true;
-                        setShowSyncLockOverlay(true);
-                    }
+                    // Full-screen lock: only via armSyncLockOverlay (startSyncingState) — avoids
+                    // duplicate open paths racing with the poll tick.
 
                     if (syncElapsedMs >= slowInternetHintMs && !slowInternetShownForCurrentSyncRef.current && !userQueueDeadlock) {
                         slowInternetShownForCurrentSyncRef.current = true;
@@ -26209,14 +26235,22 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                     console.log('[PWA Update] 🗑️ Clearing all caches...');
                     navigator.serviceWorker.controller.postMessage('clearAllCaches');
 
-                    // Ждём подтверждения очистки кэшей (макс 2 сек)
+                    // Ждём подтверждения очистки кэшей (макс 2 сек) — всегда снимаем listener
                     await new Promise((resolve) => {
-                        const timeout = setTimeout(resolve, 2000);
+                        let settled = false;
+                        const done = () => {
+                            if (settled) return;
+                            settled = true;
+                            try {
+                                navigator.serviceWorker.removeEventListener('message', handler);
+                            } catch (e) { /* noop */ }
+                            resolve();
+                        };
+                        const timeout = setTimeout(done, 2000);
                         const handler = (event) => {
                             if (event.data?.type === 'CACHES_CLEARED') {
                                 clearTimeout(timeout);
-                                navigator.serviceWorker.removeEventListener('message', handler);
-                                resolve();
+                                done();
                             }
                         };
                         navigator.serviceWorker.addEventListener('message', handler);

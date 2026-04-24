@@ -312,18 +312,84 @@
       return v;
     };
   })(Store.get);
+  /** Replay writes deferred during cloud.switchClient (see cloud._flushDeferredWritesAfterSwitch). */
+  const HEYS_SCOPED_LEAD_RE = /^heys_([a-f0-9-]{36})_/i;
+  Store.__replayDeferredSwitchWrites = function (rows, newClientId, oldClientId) {
+    if (!Array.isArray(rows) || !rows.length) return { replayed: 0, skipped: 0 };
+    let replayed = 0;
+    let skipped = 0;
+    const oldC = oldClientId || '';
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i];
+      const sk = row && row.sk;
+      const v = row && row.v;
+      if (!sk || v === undefined || typeof v === 'function') {
+        skipped++;
+        continue;
+      }
+      const m = typeof sk === 'string' ? sk.match(HEYS_SCOPED_LEAD_RE) : null;
+      const lead = m && m[1];
+      if (lead && lead !== newClientId && (!oldC || lead !== oldC)) {
+        skipped++;
+        continue;
+      }
+      if (lead === newClientId) {
+        memory.set(sk, v);
+        rawSet(sk, v);
+        if (watchers.has(sk)) watchers.get(sk).forEach(fn => { try { fn(v); } catch (e) { } });
+        try {
+          if (global.HEYS && typeof global.HEYS.saveClientKey === 'function' && newClientId) {
+            global.HEYS.saveClientKey(newClientId, sk, v);
+          }
+        } catch (e) { }
+        replayed++;
+        continue;
+      }
+      if (oldC && lead === oldC) {
+        try {
+          if (global.HEYS && typeof global.HEYS.saveClientKey === 'function') {
+            global.HEYS.saveClientKey(oldC, sk, v);
+          }
+        } catch (e) { }
+        replayed++;
+        continue;
+      }
+      if (!lead && newClientId && sk.indexOf(newClientId) >= 0) {
+        memory.set(sk, v);
+        rawSet(sk, v);
+        if (watchers.has(sk)) watchers.get(sk).forEach(fn => { try { fn(v); } catch (e) { } });
+        try {
+          if (global.HEYS && typeof global.HEYS.saveClientKey === 'function') {
+            global.HEYS.saveClientKey(newClientId, sk, v);
+          }
+        } catch (e) { }
+        replayed++;
+        continue;
+      }
+      skipped++;
+    }
+    return { replayed, skipped };
+  };
+
   Store.set = function (k, v) {
+    const sk = scoped(k);
     // 🔧 v69 FIX: Блокируем все записи во время switchClient.
     // Gate flow теперь НЕ меняет currentClientId до завершения switch,
     // но на случай если другой путь всё же вызовет Store.set — блокируем.
     if (global.HEYS?.cloud?._switchClientInProgress) {
       // Разрешаем только служебные ключи
       if (!/^heys_(clients|client_current|last_client_id)$/i.test(k)) {
-        console.warn('[Store.set] 🛡️ BLOCKED during switchClient:', k);
+        try {
+          const c = global.HEYS.cloud;
+          if (!c._deferredStoreWriteMap || typeof c._deferredStoreWriteMap.set !== 'function') {
+            c._deferredStoreWriteMap = new Map();
+          }
+          c._deferredStoreWriteMap.set(sk, { sk, v });
+        } catch (_) { }
+        console.warn('[Store.set] 🛡️ DEFERRED during switchClient:', k);
         return;
       }
     }
-    const sk = scoped(k);
     memory.set(sk, v);
     rawSet(sk, v);
     if (watchers.has(sk)) watchers.get(sk).forEach(fn => { try { fn(v); } catch (e) { } });

@@ -124,14 +124,22 @@
                     console.log('[PWA Update] 🗑️ Clearing all caches...');
                     navigator.serviceWorker.controller.postMessage('clearAllCaches');
 
-                    // Ждём подтверждения очистки кэшей (макс 2 сек)
+                    // Ждём подтверждения очистки кэшей (макс 2 сек) — всегда снимаем listener
                     await new Promise((resolve) => {
-                        const timeout = setTimeout(resolve, 2000);
+                        let settled = false;
+                        const done = () => {
+                            if (settled) return;
+                            settled = true;
+                            try {
+                                navigator.serviceWorker.removeEventListener('message', handler);
+                            } catch (e) { /* noop */ }
+                            resolve();
+                        };
+                        const timeout = setTimeout(done, 2000);
                         const handler = (event) => {
                             if (event.data?.type === 'CACHES_CLEARED') {
                                 clearTimeout(timeout);
-                                navigator.serviceWorker.removeEventListener('message', handler);
-                                resolve();
+                                done();
                             }
                         };
                         navigator.serviceWorker.addEventListener('message', handler);

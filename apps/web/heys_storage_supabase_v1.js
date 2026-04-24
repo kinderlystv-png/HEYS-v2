@@ -1959,6 +1959,18 @@
 
     const localStorageKey = item.__persistKey || getPendingQueueLocalStorageKey(item);
     const fallbackKeys = [localStorageKey, item.k].filter(Boolean);
+    // Post-switch: persisted ref may still point at heys_<oldUuid>_… while item.client_id is already new.
+    try {
+      if (item.client_id) {
+        const nk = stripClientScopePrefixes(String(item.k || '')).key;
+        if (nk) {
+          const rescoped = scopeKeyForClientStorage(nk, item.client_id);
+          if (rescoped && !fallbackKeys.includes(rescoped)) {
+            fallbackKeys.unshift(rescoped);
+          }
+        }
+      }
+    } catch (_) { }
 
     for (const key of fallbackKeys) {
       try {
@@ -1970,6 +1982,12 @@
           ? Store.decompress(raw)
           : JSON.parse(raw);
 
+        try {
+          if (key && key !== localStorageKey && key !== item.k) {
+            bumpSmoothnessCounter('pending_hydrate_remap_ok');
+          }
+        } catch (_) { }
+
         return {
           ...item,
           v: value
@@ -1978,8 +1996,63 @@
     }
 
     logQuotaThrottled(`pending-queue-hydrate-miss:${item.k}`, `⚠️ [SYNC] Pending queue ref hydrate missed local value: ${item.k}`);
+    bumpSmoothnessCounter('pending_hydrate_miss');
     return null;
   }
+
+  /**
+   * After switchClient clears _switchClientInProgress, replay writes that were deferred
+   * (Store.set / saveClientKey) so nothing is dropped mid-switch.
+   */
+  cloud._flushDeferredWritesAfterSwitch = function (newClientId, oldClientId) {
+    if (!newClientId) return;
+    try {
+      bumpSmoothnessCounter('deferred_switch_flush_start');
+    } catch (_) { }
+    try {
+      const storeMap = cloud._deferredStoreWriteMap;
+      if (storeMap && typeof storeMap.values === 'function' && storeMap.size > 0 && global.HEYS?.store && typeof global.HEYS.store.__replayDeferredSwitchWrites === 'function') {
+        const rows = Array.from(storeMap.values());
+        storeMap.clear();
+        const rep = global.HEYS.store.__replayDeferredSwitchWrites(rows, newClientId, oldClientId || '');
+        try {
+          bumpSmoothnessCounter('deferred_store_replay_' + (rep.replayed > 0 ? 'ok' : 'noop'));
+        } catch (_) { }
+      }
+    } catch (_) {
+      try { bumpSmoothnessCounter('deferred_store_replay_err'); } catch (__) { }
+    }
+    try {
+      let dm = cloud._deferredSaveClientKeyMap;
+      if (!dm || typeof dm.clear !== 'function' || typeof dm.values !== 'function') {
+        cloud._deferredSaveClientKeyMap = new Map();
+        dm = cloud._deferredSaveClientKeyMap;
+      }
+      if (dm.size > 0) {
+        const rows = Array.from(dm.values());
+        dm.clear();
+        const oldC = oldClientId || '';
+        for (let i = 0; i < rows.length; i++) {
+          const row = rows[i];
+          if (!row || !row.client_id || !row.k) continue;
+          const lead = getLeadingClientScopeId(row.k);
+          if (lead) {
+            if (lead !== newClientId && (!oldC || lead !== oldC)) continue;
+          } else {
+            if (row.client_id !== newClientId && (!oldC || row.client_id !== oldC)) continue;
+          }
+          try {
+            cloud.saveClientKey(row.client_id, row.k, row.value);
+            bumpSmoothnessCounter('deferred_save_replay_ok');
+          } catch (_) {
+            bumpSmoothnessCounter('deferred_save_replay_err');
+          }
+        }
+      }
+    } catch (_) {
+      try { bumpSmoothnessCounter('deferred_save_replay_batch_err'); } catch (__) { }
+    }
+  };
 
   // ═══════════════════════════════════════════════════════════════════
   // 🧹 QUOTA MANAGEMENT — ЗАЩИТА ОТ ПЕРЕПОЛНЕНИЯ STORAGE
@@ -2875,7 +2948,9 @@
             }));
           }
         } catch (e) { }
-        updateSyncProgressTotal();
+        // PERF: do not call updateSyncProgressTotal() here — it ratcheted total on every
+        // pending signature change and drove curator sync UI + overlay thrash. Progress
+        // updates on upload start (doClientUpload) and RPC/legacy batch completion.
       });
     });
   }
@@ -8081,6 +8156,10 @@
     _uploadInProgress = true;
     _uploadInFlightCount = filteredBatch.length;
     const _uploadStartTs = Date.now();
+    // One progress ceiling update per upload attempt (not on every pending-change).
+    try {
+      updateSyncProgressTotal();
+    } catch (_) { /* noop */ }
 
     // [SYNC] лог — всегда видим в консоли без флага
     const _syncKeys = filteredBatch.map(item => {
@@ -8265,6 +8344,13 @@
             });
           }
         } catch (_) { }
+
+        syncProgressDone += hydratedBatch.length;
+        if (syncProgressTotal < syncProgressDone) {
+          syncProgressTotal = syncProgressDone;
+        }
+        notifySyncProgress(syncProgressTotal, syncProgressDone);
+
         return;
       }
 
@@ -8455,6 +8541,22 @@
     if (_clientUpload413BackoffUntil > Date.now()) {
       delay = Math.max(delay, Math.min(120000, _clientUpload413BackoffUntil - Date.now()));
     }
+    // Curator path: stretch debounce when the whole queue is non-critical burst keys (advice/cascade/debug).
+    try {
+      if (!_pinAuthClientId && Array.isArray(clientUpsertQueue) && clientUpsertQueue.length > 0) {
+        const _runtimePure = global.HEYS?.syncQueueRuntimePure;
+        const _isCrit = _runtimePure && typeof _runtimePure.isCriticalSyncKey === 'function'
+          ? _runtimePure.isCriticalSyncKey.bind(_runtimePure)
+          : () => true;
+        const onlyBurst = clientUpsertQueue.every((it) => {
+          if (!it || !it.k || !it.client_id) return false;
+          const nk = normalizeKeyForSupabase(it.k, it.client_id);
+          if (!nk || _isCrit(nk)) return false;
+          return nk.includes('advice_') || nk.includes('cascade_') || nk.includes('_debug') || nk.includes('feedback');
+        });
+        if (onlyBurst) delay = Math.max(delay, 950);
+      }
+    } catch (_) { }
 
     clientUpsertTimer = setTimeout(async () => {
       if (_uploadInProgress) {
@@ -8517,6 +8619,7 @@
       normalizedKey,
       waitingForSync,
       isOnline: navigator.onLine,
+      uploadInProgress: !!_uploadInProgress,
       pendingQueueStorageKey: PENDING_CLIENT_QUEUE_KEY,
       persistQueue: (queue) => savePendingQueue(PENDING_CLIENT_QUEUE_KEY, queue),
       notifyPendingChange,
@@ -8586,11 +8689,16 @@
     }
 
     if (cloud._switchClientInProgress) {
-      // 🔧 v69 FIX: Полная блокировка ВСЕХ cloud-записей во время switch.
-      // Gate flow теперь ждёт завершения switchClient перед обновлением currentClientId,
-      // поэтому любая запись во время switch — это либо stale debounce от старого клиента,
-      // либо race condition. Безопаснее заблокировать всё.
-      logCritical(`🛡️ [SAVE BLOCKED] switchClient in progress — blocking ALL saves. key='${k}' target='${(client_id || '').slice(0, 8)}'`);
+      // 🔧 v72: Defer (last-write-wins per client_id+k) and replay in switchClient finally — lossless vs drop.
+      try {
+        if (!cloud._deferredSaveClientKeyMap || typeof cloud._deferredSaveClientKeyMap.set !== 'function') {
+          cloud._deferredSaveClientKeyMap = new Map();
+        }
+        const dedupeKey = String(client_id || '') + '\u0000' + String(k || '');
+        cloud._deferredSaveClientKeyMap.set(dedupeKey, { client_id, k, value });
+        bumpSmoothnessCounter('deferred_save_switch_queue');
+      } catch (_) { }
+      logCritical(`🛡️ [SAVE DEFERRED] switchClient in progress — queued replay. key='${k}' target='${(client_id || '').slice(0, 8)}'`);
       return;
     }
 
@@ -9055,6 +9163,9 @@
 
     _userUploadInProgress = true;
     _userUploadInFlightCount = batch.length;
+    try {
+      updateSyncProgressTotal();
+    } catch (_) { /* noop */ }
 
     // YandexAPI mode: Supabase `client` is always null; user + YandexAPI are sufficient.
     if (!user) {
@@ -10471,6 +10582,7 @@
       log('Клиент уже выбран:', newClientId);
       // Gate/shell set _switchClientInProgress=true before switchClient; we never enter try/finally below.
       try { cloud._switchClientInProgress = false; } catch (_) { }
+      try { cloud._flushDeferredWritesAfterSwitch(newClientId, oldClientId); } catch (_) { }
       emitSwitchStage('done');
       return true;
     }
@@ -10774,6 +10886,9 @@
     } finally {
       // 🔧 v63 FIX #1: Снимаем флаг после завершения (успех или ошибка)
       cloud._switchClientInProgress = false;
+      try {
+        cloud._flushDeferredWritesAfterSwitch(newClientId, oldClientId);
+      } catch (_) { }
     }
   };
 

@@ -2036,20 +2036,30 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
     if (!window.__heysSwUnifiedMessageBound) {
       window.__heysSwUnifiedMessageBound = true;
       const deferSwPortWork = (fn) => {
+        const run = () => {
+          const t0 = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+          try {
+            fn();
+          } catch (e) {
+            console.warn('[SW] deferred message handler error', e);
+          } finally {
+            try {
+              if (global.localStorage && global.localStorage.getItem('heys_perf_smoothness_sample') === '1' && global.HEYS?.debug?.bumpSmoothnessCounter) {
+                const dt = ((typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now()) - t0;
+                const b = dt < 16 ? 'b0_16' : dt < 100 ? 'b16_100' : 'b100p';
+                global.HEYS.debug.bumpSmoothnessCounter('sw_deferred_ms_' + b);
+              }
+            } catch (_) { /* noop */ }
+          }
+        };
         try {
           if (typeof queueMicrotask === 'function') {
-            queueMicrotask(() => {
-              try {
-                fn();
-              } catch (e) {
-                console.warn('[SW] deferred message handler error', e);
-              }
-            });
+            queueMicrotask(run);
           } else {
-            setTimeout(fn, 0);
+            setTimeout(run, 0);
           }
         } catch (_) {
-          setTimeout(fn, 0);
+          setTimeout(run, 0);
         }
       };
       navigator.serviceWorker.addEventListener('message', (event) => {
@@ -18080,7 +18090,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
         const shouldImmediate =
             isCriticalSyncKey(params.normalizedKey) &&
             !!params.isOnline &&
-            !params.waitingForSync;
+            !params.waitingForSync &&
+            !params.uploadInProgress;
 
         if (shouldImmediate && typeof params.doImmediateClientUpload === 'function') {
             try {
@@ -20214,6 +20225,18 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
 
     const localStorageKey = item.__persistKey || getPendingQueueLocalStorageKey(item);
     const fallbackKeys = [localStorageKey, item.k].filter(Boolean);
+    // Post-switch: persisted ref may still point at heys_<oldUuid>_… while item.client_id is already new.
+    try {
+      if (item.client_id) {
+        const nk = stripClientScopePrefixes(String(item.k || '')).key;
+        if (nk) {
+          const rescoped = scopeKeyForClientStorage(nk, item.client_id);
+          if (rescoped && !fallbackKeys.includes(rescoped)) {
+            fallbackKeys.unshift(rescoped);
+          }
+        }
+      }
+    } catch (_) { }
 
     for (const key of fallbackKeys) {
       try {
@@ -20225,6 +20248,12 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
           ? Store.decompress(raw)
           : JSON.parse(raw);
 
+        try {
+          if (key && key !== localStorageKey && key !== item.k) {
+            bumpSmoothnessCounter('pending_hydrate_remap_ok');
+          }
+        } catch (_) { }
+
         return {
           ...item,
           v: value
@@ -20233,8 +20262,63 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
     }
 
     logQuotaThrottled(`pending-queue-hydrate-miss:${item.k}`, `⚠️ [SYNC] Pending queue ref hydrate missed local value: ${item.k}`);
+    bumpSmoothnessCounter('pending_hydrate_miss');
     return null;
   }
+
+  /**
+   * After switchClient clears _switchClientInProgress, replay writes that were deferred
+   * (Store.set / saveClientKey) so nothing is dropped mid-switch.
+   */
+  cloud._flushDeferredWritesAfterSwitch = function (newClientId, oldClientId) {
+    if (!newClientId) return;
+    try {
+      bumpSmoothnessCounter('deferred_switch_flush_start');
+    } catch (_) { }
+    try {
+      const storeMap = cloud._deferredStoreWriteMap;
+      if (storeMap && typeof storeMap.values === 'function' && storeMap.size > 0 && global.HEYS?.store && typeof global.HEYS.store.__replayDeferredSwitchWrites === 'function') {
+        const rows = Array.from(storeMap.values());
+        storeMap.clear();
+        const rep = global.HEYS.store.__replayDeferredSwitchWrites(rows, newClientId, oldClientId || '');
+        try {
+          bumpSmoothnessCounter('deferred_store_replay_' + (rep.replayed > 0 ? 'ok' : 'noop'));
+        } catch (_) { }
+      }
+    } catch (_) {
+      try { bumpSmoothnessCounter('deferred_store_replay_err'); } catch (__) { }
+    }
+    try {
+      let dm = cloud._deferredSaveClientKeyMap;
+      if (!dm || typeof dm.clear !== 'function' || typeof dm.values !== 'function') {
+        cloud._deferredSaveClientKeyMap = new Map();
+        dm = cloud._deferredSaveClientKeyMap;
+      }
+      if (dm.size > 0) {
+        const rows = Array.from(dm.values());
+        dm.clear();
+        const oldC = oldClientId || '';
+        for (let i = 0; i < rows.length; i++) {
+          const row = rows[i];
+          if (!row || !row.client_id || !row.k) continue;
+          const lead = getLeadingClientScopeId(row.k);
+          if (lead) {
+            if (lead !== newClientId && (!oldC || lead !== oldC)) continue;
+          } else {
+            if (row.client_id !== newClientId && (!oldC || row.client_id !== oldC)) continue;
+          }
+          try {
+            cloud.saveClientKey(row.client_id, row.k, row.value);
+            bumpSmoothnessCounter('deferred_save_replay_ok');
+          } catch (_) {
+            bumpSmoothnessCounter('deferred_save_replay_err');
+          }
+        }
+      }
+    } catch (_) {
+      try { bumpSmoothnessCounter('deferred_save_replay_batch_err'); } catch (__) { }
+    }
+  };
 
   // ═══════════════════════════════════════════════════════════════════
   // 🧹 QUOTA MANAGEMENT — ЗАЩИТА ОТ ПЕРЕПОЛНЕНИЯ STORAGE
@@ -21130,7 +21214,9 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
             }));
           }
         } catch (e) { }
-        updateSyncProgressTotal();
+        // PERF: do not call updateSyncProgressTotal() here — it ratcheted total on every
+        // pending signature change and drove curator sync UI + overlay thrash. Progress
+        // updates on upload start (doClientUpload) and RPC/legacy batch completion.
       });
     });
   }
@@ -26336,6 +26422,10 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
     _uploadInProgress = true;
     _uploadInFlightCount = filteredBatch.length;
     const _uploadStartTs = Date.now();
+    // One progress ceiling update per upload attempt (not on every pending-change).
+    try {
+      updateSyncProgressTotal();
+    } catch (_) { /* noop */ }
 
     // [SYNC] лог — всегда видим в консоли без флага
     const _syncKeys = filteredBatch.map(item => {
@@ -26520,6 +26610,13 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
             });
           }
         } catch (_) { }
+
+        syncProgressDone += hydratedBatch.length;
+        if (syncProgressTotal < syncProgressDone) {
+          syncProgressTotal = syncProgressDone;
+        }
+        notifySyncProgress(syncProgressTotal, syncProgressDone);
+
         return;
       }
 
@@ -26710,6 +26807,22 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
     if (_clientUpload413BackoffUntil > Date.now()) {
       delay = Math.max(delay, Math.min(120000, _clientUpload413BackoffUntil - Date.now()));
     }
+    // Curator path: stretch debounce when the whole queue is non-critical burst keys (advice/cascade/debug).
+    try {
+      if (!_pinAuthClientId && Array.isArray(clientUpsertQueue) && clientUpsertQueue.length > 0) {
+        const _runtimePure = global.HEYS?.syncQueueRuntimePure;
+        const _isCrit = _runtimePure && typeof _runtimePure.isCriticalSyncKey === 'function'
+          ? _runtimePure.isCriticalSyncKey.bind(_runtimePure)
+          : () => true;
+        const onlyBurst = clientUpsertQueue.every((it) => {
+          if (!it || !it.k || !it.client_id) return false;
+          const nk = normalizeKeyForSupabase(it.k, it.client_id);
+          if (!nk || _isCrit(nk)) return false;
+          return nk.includes('advice_') || nk.includes('cascade_') || nk.includes('_debug') || nk.includes('feedback');
+        });
+        if (onlyBurst) delay = Math.max(delay, 950);
+      }
+    } catch (_) { }
 
     clientUpsertTimer = setTimeout(async () => {
       if (_uploadInProgress) {
@@ -26772,6 +26885,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
       normalizedKey,
       waitingForSync,
       isOnline: navigator.onLine,
+      uploadInProgress: !!_uploadInProgress,
       pendingQueueStorageKey: PENDING_CLIENT_QUEUE_KEY,
       persistQueue: (queue) => savePendingQueue(PENDING_CLIENT_QUEUE_KEY, queue),
       notifyPendingChange,
@@ -26841,11 +26955,16 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
     }
 
     if (cloud._switchClientInProgress) {
-      // 🔧 v69 FIX: Полная блокировка ВСЕХ cloud-записей во время switch.
-      // Gate flow теперь ждёт завершения switchClient перед обновлением currentClientId,
-      // поэтому любая запись во время switch — это либо stale debounce от старого клиента,
-      // либо race condition. Безопаснее заблокировать всё.
-      logCritical(`🛡️ [SAVE BLOCKED] switchClient in progress — blocking ALL saves. key='${k}' target='${(client_id || '').slice(0, 8)}'`);
+      // 🔧 v72: Defer (last-write-wins per client_id+k) and replay in switchClient finally — lossless vs drop.
+      try {
+        if (!cloud._deferredSaveClientKeyMap || typeof cloud._deferredSaveClientKeyMap.set !== 'function') {
+          cloud._deferredSaveClientKeyMap = new Map();
+        }
+        const dedupeKey = String(client_id || '') + '\u0000' + String(k || '');
+        cloud._deferredSaveClientKeyMap.set(dedupeKey, { client_id, k, value });
+        bumpSmoothnessCounter('deferred_save_switch_queue');
+      } catch (_) { }
+      logCritical(`🛡️ [SAVE DEFERRED] switchClient in progress — queued replay. key='${k}' target='${(client_id || '').slice(0, 8)}'`);
       return;
     }
 
@@ -27310,6 +27429,9 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
 
     _userUploadInProgress = true;
     _userUploadInFlightCount = batch.length;
+    try {
+      updateSyncProgressTotal();
+    } catch (_) { /* noop */ }
 
     // YandexAPI mode: Supabase `client` is always null; user + YandexAPI are sufficient.
     if (!user) {
@@ -28726,6 +28848,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
       log('Клиент уже выбран:', newClientId);
       // Gate/shell set _switchClientInProgress=true before switchClient; we never enter try/finally below.
       try { cloud._switchClientInProgress = false; } catch (_) { }
+      try { cloud._flushDeferredWritesAfterSwitch(newClientId, oldClientId); } catch (_) { }
       emitSwitchStage('done');
       return true;
     }
@@ -29029,6 +29152,9 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
     } finally {
       // 🔧 v63 FIX #1: Снимаем флаг после завершения (успех или ошибка)
       cloud._switchClientInProgress = false;
+      try {
+        cloud._flushDeferredWritesAfterSwitch(newClientId, oldClientId);
+      } catch (_) { }
     }
   };
 
@@ -31823,18 +31949,84 @@ NOVA: 1-4
       return v;
     };
   })(Store.get);
+  /** Replay writes deferred during cloud.switchClient (see cloud._flushDeferredWritesAfterSwitch). */
+  const HEYS_SCOPED_LEAD_RE = /^heys_([a-f0-9-]{36})_/i;
+  Store.__replayDeferredSwitchWrites = function (rows, newClientId, oldClientId) {
+    if (!Array.isArray(rows) || !rows.length) return { replayed: 0, skipped: 0 };
+    let replayed = 0;
+    let skipped = 0;
+    const oldC = oldClientId || '';
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i];
+      const sk = row && row.sk;
+      const v = row && row.v;
+      if (!sk || v === undefined || typeof v === 'function') {
+        skipped++;
+        continue;
+      }
+      const m = typeof sk === 'string' ? sk.match(HEYS_SCOPED_LEAD_RE) : null;
+      const lead = m && m[1];
+      if (lead && lead !== newClientId && (!oldC || lead !== oldC)) {
+        skipped++;
+        continue;
+      }
+      if (lead === newClientId) {
+        memory.set(sk, v);
+        rawSet(sk, v);
+        if (watchers.has(sk)) watchers.get(sk).forEach(fn => { try { fn(v); } catch (e) { } });
+        try {
+          if (global.HEYS && typeof global.HEYS.saveClientKey === 'function' && newClientId) {
+            global.HEYS.saveClientKey(newClientId, sk, v);
+          }
+        } catch (e) { }
+        replayed++;
+        continue;
+      }
+      if (oldC && lead === oldC) {
+        try {
+          if (global.HEYS && typeof global.HEYS.saveClientKey === 'function') {
+            global.HEYS.saveClientKey(oldC, sk, v);
+          }
+        } catch (e) { }
+        replayed++;
+        continue;
+      }
+      if (!lead && newClientId && sk.indexOf(newClientId) >= 0) {
+        memory.set(sk, v);
+        rawSet(sk, v);
+        if (watchers.has(sk)) watchers.get(sk).forEach(fn => { try { fn(v); } catch (e) { } });
+        try {
+          if (global.HEYS && typeof global.HEYS.saveClientKey === 'function') {
+            global.HEYS.saveClientKey(newClientId, sk, v);
+          }
+        } catch (e) { }
+        replayed++;
+        continue;
+      }
+      skipped++;
+    }
+    return { replayed, skipped };
+  };
+
   Store.set = function (k, v) {
+    const sk = scoped(k);
     // 🔧 v69 FIX: Блокируем все записи во время switchClient.
     // Gate flow теперь НЕ меняет currentClientId до завершения switch,
     // но на случай если другой путь всё же вызовет Store.set — блокируем.
     if (global.HEYS?.cloud?._switchClientInProgress) {
       // Разрешаем только служебные ключи
       if (!/^heys_(clients|client_current|last_client_id)$/i.test(k)) {
-        console.warn('[Store.set] 🛡️ BLOCKED during switchClient:', k);
+        try {
+          const c = global.HEYS.cloud;
+          if (!c._deferredStoreWriteMap || typeof c._deferredStoreWriteMap.set !== 'function') {
+            c._deferredStoreWriteMap = new Map();
+          }
+          c._deferredStoreWriteMap.set(sk, { sk, v });
+        } catch (_) { }
+        console.warn('[Store.set] 🛡️ DEFERRED during switchClient:', k);
         return;
       }
     }
-    const sk = scoped(k);
     memory.set(sk, v);
     rawSet(sk, v);
     if (watchers.has(sk)) watchers.get(sk).forEach(fn => { try { fn(v); } catch (e) { } });

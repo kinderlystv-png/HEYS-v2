@@ -718,20 +718,30 @@
     if (!window.__heysSwUnifiedMessageBound) {
       window.__heysSwUnifiedMessageBound = true;
       const deferSwPortWork = (fn) => {
+        const run = () => {
+          const t0 = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+          try {
+            fn();
+          } catch (e) {
+            console.warn('[SW] deferred message handler error', e);
+          } finally {
+            try {
+              if (global.localStorage && global.localStorage.getItem('heys_perf_smoothness_sample') === '1' && global.HEYS?.debug?.bumpSmoothnessCounter) {
+                const dt = ((typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now()) - t0;
+                const b = dt < 16 ? 'b0_16' : dt < 100 ? 'b16_100' : 'b100p';
+                global.HEYS.debug.bumpSmoothnessCounter('sw_deferred_ms_' + b);
+              }
+            } catch (_) { /* noop */ }
+          }
+        };
         try {
           if (typeof queueMicrotask === 'function') {
-            queueMicrotask(() => {
-              try {
-                fn();
-              } catch (e) {
-                console.warn('[SW] deferred message handler error', e);
-              }
-            });
+            queueMicrotask(run);
           } else {
-            setTimeout(fn, 0);
+            setTimeout(run, 0);
           }
         } catch (_) {
-          setTimeout(fn, 0);
+          setTimeout(run, 0);
         }
       };
       navigator.serviceWorker.addEventListener('message', (event) => {

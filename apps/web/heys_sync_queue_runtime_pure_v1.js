@@ -106,7 +106,8 @@
         const shouldImmediate =
             isCriticalSyncKey(params.normalizedKey) &&
             !!params.isOnline &&
-            !params.waitingForSync;
+            !params.waitingForSync &&
+            !params.uploadInProgress;
 
         if (shouldImmediate && typeof params.doImmediateClientUpload === 'function') {
             try {

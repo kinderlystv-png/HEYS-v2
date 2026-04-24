@@ -60,7 +60,9 @@ class ServiceWorkerManagerImpl implements ServiceWorkerManager {
       // Слушаем обновления Service Worker
       this.setupUpdateListener();
 
-      // Слушаем сообщения от Service Worker
+      // Сообщения SW обрабатывает единый deferred listener в legacy `heys_platform_apis_v1.js`
+      // (`window.__heysSwUnifiedMessageBound`). Второй listener здесь давал дубли + тяжёлый default
+      // с полным `event.data` → Chrome `[Violation] message handler took Nms`.
       this.setupMessageListener();
 
       // Принудительное обновление существующего SW
@@ -263,6 +265,11 @@ class ServiceWorkerManagerImpl implements ServiceWorkerManager {
    * Настройка слушателя сообщений от Service Worker
    */
   private setupMessageListener(): void {
+    const w = typeof window !== 'undefined' ? (window as Window & { __heysSwUnifiedMessageBound?: boolean }) : null;
+    if (w?.__heysSwUnifiedMessageBound) {
+      return;
+    }
+
     navigator.serviceWorker.addEventListener('message', (event) => {
       const { type, data } = event.data || {};
 
@@ -281,7 +288,10 @@ class ServiceWorkerManagerImpl implements ServiceWorkerManager {
           break;
 
         default:
-          log.debug('SW Manager: Message from Service Worker', { payload: event.data });
+          // Не логируем весь payload — SYNC_* / UPDATE_* идут часто и раздувают main-thread work.
+          if (type && typeof type === 'string') {
+            log.debug(`SW Manager: SW message type=${type} (no handler)`);
+          }
       }
     });
   }
