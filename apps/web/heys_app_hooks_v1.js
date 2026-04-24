@@ -785,12 +785,24 @@
         const SYNC_STATUS_POLL_IDLE_MS = 2200;
         const SYNC_STATUS_POLL_HIDDEN_MS = 4000;
         const SYNC_STATUS_DETAILS_REFRESH_EVERY = 3;
+        const isIndDebugEnabled = () => {
+            try {
+                return global.localStorage?.getItem('heys_debug_sync') === 'true'
+                    || global.localStorage?.getItem('heys_debug_ind') === 'true';
+            } catch (_) {
+                return false;
+            }
+        };
+        const indLog = (...args) => {
+            if (!isIndDebugEnabled()) return;
+            try { console.info(...args); } catch (_) { /* noop */ }
+        };
 
         // 🔍 Маркер монтирования — только при реальном mount, не на каждом рендере
         useEffect(() => {
-            console.info('[HEYS.sync] [IND] useCloudSyncStatus MOUNTED (bundle c4bd)');
+            indLog('[HEYS.sync] [IND] useCloudSyncStatus MOUNTED (bundle c4bd)');
             return () => {
-                console.info('[HEYS.sync] [IND] useCloudSyncStatus UNMOUNTED');
+                indLog('[HEYS.sync] [IND] useCloudSyncStatus UNMOUNTED');
             };
         }, []);
 
@@ -830,7 +842,7 @@
                     }
                 } catch (_) { /* noop */ }
                 const hint = !cid ? ' | БЕЗ client: user-queue не уйдёт в RPC до выбора клиента (heys_client_current)' : '';
-                console.info('[HEYS.sync] [IND] sync-lock-overlay: OPEN status=' + cloudStatusRef.current + ' pending=' + rp + ' upload=' + up + ' client~=' + (cid || '(none)') + snapStr + detStr + hint);
+                indLog('[HEYS.sync] [IND] sync-lock-overlay: OPEN status=' + cloudStatusRef.current + ' pending=' + rp + ' upload=' + up + ' client~=' + (cid || '(none)') + snapStr + detStr + hint);
                 try {
                     if (typeof global.localStorage !== 'undefined' && global.localStorage.getItem('heys_perf_smoothness_sample') === '1' && typeof global.HEYS?.debug?.bumpSmoothnessCounter === 'function') {
                         global.HEYS.debug.bumpSmoothnessCounter('sync_lock_overlay_open');
@@ -838,7 +850,7 @@
                 } catch (_) { /* noop */ }
             }
             if (!showSyncLockOverlay && prevSyncLockOverlayRef.current) {
-                console.info('[HEYS.sync] [IND] sync-lock-overlay: CLOSE');
+                indLog('[HEYS.sync] [IND] sync-lock-overlay: CLOSE');
                 try {
                     if (typeof global.localStorage !== 'undefined' && global.localStorage.getItem('heys_perf_smoothness_sample') === '1' && typeof global.HEYS?.debug?.bumpSmoothnessCounter === 'function') {
                         global.HEYS.debug.bumpSmoothnessCounter('sync_lock_overlay_close');
@@ -1052,7 +1064,7 @@
                 return;
             }
 
-            console.info('[HEYS.sync] [IND] startSyncingState called, current=' + cloudStatusRef.current + ' syncingStart=' + !!syncingStartRef.current);
+            indLog('[HEYS.sync] [IND] startSyncingState called, current=' + cloudStatusRef.current + ' syncingStart=' + !!syncingStartRef.current);
 
             if (!syncingStartRef.current) {
                 syncLockShownForCurrentSyncRef.current = false;
@@ -1071,7 +1083,7 @@
             // FIX: сбрасываем 2s idle-timeout (cloudSyncTimeoutRef) — иначе он сработает
             // в середине нового синка и поставит status='idle', создавая idle→syncing→idle цикл.
             if (cloudSyncTimeoutRef.current) {
-                console.info('[HEYS.sync] [IND] startSyncingState: cleared cloudSyncTimeout (prevents idle during re-sync)');
+                indLog('[HEYS.sync] [IND] startSyncingState: cleared cloudSyncTimeout (prevents idle during re-sync)');
                 clearTimeout(cloudSyncTimeoutRef.current);
                 cloudSyncTimeoutRef.current = null;
             }
@@ -1083,7 +1095,7 @@
                         if (isUserQueueBlockedWithoutClient()) {
                             const snap = window.HEYS?.cloud?.getPendingQueuesSnapshot?.();
                             const uq = snap ? ((snap.userQueueLen || 0) + (snap.userInFlightLen || 0)) : 0;
-                            console.info('[HEYS.sync] [IND] syncing-delay: остаёмся queued (нет heys_client_current, только user-queue pending=' + uq + ') — полноэкранный «синк» не показываем');
+                            indLog('[HEYS.sync] [IND] syncing-delay: остаёмся queued (нет heys_client_current, только user-queue pending=' + uq + ') — полноэкранный «синк» не показываем');
                             setCloudStatus('queued');
                             return;
                         }
@@ -1133,7 +1145,7 @@
                 setSyncProgress({ synced: 0, total: 0 });
                 if (cloudSyncTimeoutRef.current) clearTimeout(cloudSyncTimeoutRef.current);
                 cloudSyncTimeoutRef.current = setTimeout(() => {
-                    console.info('[HEYS.sync] [IND] cloudSyncTimeout fired → idle (pendingChanges=' + pendingChangesRef.current + ')');
+                    indLog('[HEYS.sync] [IND] cloudSyncTimeout fired → idle (pendingChanges=' + pendingChangesRef.current + ')');
                     lastIdleAtRef.current = Date.now();
                     setCloudStatus('idle');
                 }, 2000);
@@ -1184,14 +1196,14 @@
                     if (!initialSyncCompletedAtRef.current) {
                         initialSyncCompletedAtRef.current = Date.now();
                     }
-                    console.info('[HEYS.sync] [IND] sync-complete: skip (no pending work)');
+                    indLog('[HEYS.sync] [IND] sync-complete: skip (no pending work)');
                     return;
                 }
 
                 const runtimePending = getRuntimePendingCount();
                 const uploadInProgress = isRuntimeUploadInProgress();
 
-                console.info('[HEYS.sync] [IND] sync-complete: pending=' + runtimePending + ' upload=' + uploadInProgress + ' hadWork=' + !!hadPendingWork + ' status=' + cloudStatusRef.current);
+                indLog('[HEYS.sync] [IND] sync-complete: pending=' + runtimePending + ' upload=' + uploadInProgress + ' hadWork=' + !!hadPendingWork + ' status=' + cloudStatusRef.current);
 
                 if (syncingDelayTimeoutRef.current) {
                     clearTimeout(syncingDelayTimeoutRef.current);
@@ -1238,7 +1250,7 @@
                 if (r.sig === sig && now - r.at < IND_DATA_SAVED_SKIP_LOG_MS) return;
                 r.sig = sig;
                 r.at = now;
-                console.info('[HEYS.sync] [IND] data-saved: skip (' + reasonKey + (detailSuffix || '') + '), key=' + key);
+                indLog('[HEYS.sync] [IND] data-saved: skip (' + reasonKey + (detailSuffix || '') + '), key=' + key);
             };
 
             const handleDataSaved = (e) => {
@@ -1298,7 +1310,7 @@
                     return;
                 }
 
-                console.info('[HEYS.sync] [IND] data-saved: → startSyncingState, key=' + (e?.detail?.key || '?') + ' sinceHotSync=' + (sinceHotSync === Infinity ? 'n/a' : Math.round(sinceHotSync) + 'ms'));
+                indLog('[HEYS.sync] [IND] data-saved: → startSyncingState, key=' + (e?.detail?.key || '?') + ' sinceHotSync=' + (sinceHotSync === Infinity ? 'n/a' : Math.round(sinceHotSync) + 'ms'));
 
                 const armDataSavedHeavyUi = () => {
                     if (dataSavedUiRafRef.current != null) return;
@@ -1377,7 +1389,7 @@
                     if (!(_pcR.sig === _pcSig && _pcNow - _pcR.at < 2500)) {
                         _pcR.sig = _pcSig;
                         _pcR.at = _pcNow;
-                        console.info('[HEYS.sync] [IND] pending-change: count=' + count + ' upload=' + uploadInProgress + ' syncingStart=' + !!syncingStartRef.current + ' status=' + cloudStatusRef.current);
+                        indLog('[HEYS.sync] [IND] pending-change: count=' + count + ' upload=' + uploadInProgress + ' syncingStart=' + !!syncingStartRef.current + ' status=' + cloudStatusRef.current);
                     }
 
                     if (count > 0) {
@@ -1426,7 +1438,7 @@
                     r.completed = completed;
                     r.total = total;
                     r.at = now;
-                    console.info('[HEYS.sync] [IND] sync-progress: completed=' + completed + ' total=' + total);
+                    indLog('[HEYS.sync] [IND] sync-progress: completed=' + completed + ' total=' + total);
                     setSyncProgress({ synced: completed, total });
                     if (navigator.onLine && total > 0 && !syncingStartRef.current) {
                         startSyncingState();
@@ -1510,7 +1522,7 @@
                 // Не показываем галочку если анимация синка не запускалась
                 // (данные синкались тихо, в фоне, без уведомления пользователя)
                 if (!syncingStartRef.current && cloudStatusRef.current === 'idle') {
-                    console.info('[HEYS.sync] [IND] queue-drained: skip (syncingStart=null, status=idle)');
+                    indLog('[HEYS.sync] [IND] queue-drained: skip (syncingStart=null, status=idle)');
                     return;
                 }
 
@@ -1520,7 +1532,7 @@
                     ? (Date.now() - _hotAtQd)
                     : Infinity;
                 if (sinceHotSyncQd < 3000) {
-                    console.info('[HEYS.sync] [IND] queue-drained: skip (hot-sync cooldown ' + Math.round(sinceHotSyncQd) + 'ms)');
+                    indLog('[HEYS.sync] [IND] queue-drained: skip (hot-sync cooldown ' + Math.round(sinceHotSyncQd) + 'ms)');
                     // Если уже был запущен синк — планируем отложенный showSynced после окончания cooldown
                     if (syncingStartRef.current || cloudStatusRef.current === 'syncing' || cloudStatusRef.current === 'queued') {
                         if (queueDrainedFallbackRef.current) clearTimeout(queueDrainedFallbackRef.current);
@@ -1530,7 +1542,7 @@
                             const stillUploading = isRuntimeUploadInProgress();
                             const st = cloudStatusRef.current;
                             if (navigator.onLine && !stillPending && !stillUploading && (st === 'queued' || st === 'syncing')) {
-                                console.info('[HEYS.sync] [IND] queue-drained: fallback showSynced (post hot-sync cooldown) status=' + st);
+                                indLog('[HEYS.sync] [IND] queue-drained: fallback showSynced (post hot-sync cooldown) status=' + st);
                                 showSyncedWithMinDuration();
                             }
                         }, Math.max(0, 3000 - sinceHotSyncQd + 150));
@@ -1538,7 +1550,7 @@
                     return;
                 }
 
-                console.info('[HEYS.sync] [IND] queue-drained: → showSynced, sinceHotSync=' + (sinceHotSyncQd === Infinity ? 'n/a' : Math.round(sinceHotSyncQd) + 'ms') + ' status=' + cloudStatusRef.current);
+                indLog('[HEYS.sync] [IND] queue-drained: → showSynced, sinceHotSync=' + (sinceHotSyncQd === Infinity ? 'n/a' : Math.round(sinceHotSyncQd) + 'ms') + ' status=' + cloudStatusRef.current);
                 showSyncedWithMinDuration();
             };
 
@@ -1786,7 +1798,7 @@
                             snapHb = ' cq=' + s.clientQueueLen + '+' + s.clientInFlightLen + ' uq=' + s.userQueueLen + '+' + s.userInFlightLen;
                         }
                     } catch (_) { /* noop */ }
-                    console.info('[HEYS.sync] [IND] sync-ui heartbeat: elapsedMs=' + Math.round(elapsedHb)
+                    indLog('[HEYS.sync] [IND] sync-ui heartbeat: elapsedMs=' + Math.round(elapsedHb)
                         + ' status=' + cloudStatusRef.current
                         + ' runtimePending=' + rpHb
                         + ' upload=' + upHb
@@ -1835,7 +1847,7 @@
                     if (!syncingStartRef.current) {
                         clearSyncLockOverlay();
                     }
-                    console.info('[HEYS.sync] [IND] tick: → queued, pending=' + runtimePending);
+                    indLog('[HEYS.sync] [IND] tick: → queued, pending=' + runtimePending);
                     setCloudStatus('queued');
                     schedule(true);
                     return;
@@ -1879,7 +1891,7 @@
                 )) {
                     // showSyncedWithMinDuration уже выставляет syncedTimeoutRef — без гарда каждый poll пишет лог
                     if (!syncedTimeoutRef.current) {
-                        console.info('[HEYS.sync] [IND] tick: → showSynced, syncingStart=' + !!syncingStartRef.current + ' status=' + cloudStatusRef.current);
+                        indLog('[HEYS.sync] [IND] tick: → showSynced, syncingStart=' + !!syncingStartRef.current + ' status=' + cloudStatusRef.current);
                         pendingChangesRef.current = false;
                         showSyncedWithMinDuration();
                     }

@@ -2447,6 +2447,51 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       [latestProducts, dateKey, favorites, hiddenProducts, effectiveUsageStats, usageWindowDays]
     );
 
+    // Fallback для модалки: если нет частот/избранных, показываем рабочий список, а не пустой экран.
+    const modalFallbackProducts = useMemo(() => {
+      const hidden = hiddenProducts instanceof Set
+        ? hiddenProducts
+        : new Set(Array.isArray(hiddenProducts) ? hiddenProducts : []);
+      const list = Array.isArray(latestProducts) ? latestProducts : [];
+      const visible = list.filter((p) => {
+        const pid = String(p?.id || p?.product_id || p?.name || '');
+        return !!pid && !hidden.has(pid);
+      });
+      // Приоритет: избранные сверху, затем по свежести изменения/создания.
+      const fav = favorites instanceof Set
+        ? favorites
+        : new Set(Array.isArray(favorites) ? favorites : []);
+      const sorted = [...visible].sort((a, b) => {
+        const aId = String(a?.id || a?.product_id || a?.name || '');
+        const bId = String(b?.id || b?.product_id || b?.name || '');
+        const aFav = fav.has(aId);
+        const bFav = fav.has(bId);
+        if (aFav !== bFav) return aFav ? -1 : 1;
+        const aTs = Number(a?.updatedAt || a?.createdAt || 0);
+        const bTs = Number(b?.updatedAt || b?.createdAt || 0);
+        if (aTs !== bTs) return bTs - aTs;
+        return String(a?.name || '').localeCompare(String(b?.name || ''), 'ru');
+      });
+      return sorted.slice(0, 24);
+    }, [latestProducts, hiddenProducts, favorites]);
+
+    useEffect(() => {
+      try {
+        const now = Date.now();
+        if (!HEYS.__addProductPipeLogAt || now - HEYS.__addProductPipeLogAt > 4000) {
+          HEYS.__addProductPipeLogAt = now;
+          console.info('[HEYS.modal:PIPE]', {
+            latestProducts: Array.isArray(latestProducts) ? latestProducts.length : -1,
+            smartProducts: Array.isArray(smartProducts) ? smartProducts.length : -1,
+            fallbackProducts: Array.isArray(modalFallbackProducts) ? modalFallbackProducts.length : -1,
+            favorites: favorites instanceof Set ? favorites.size : 0,
+            usageStats: effectiveUsageStats instanceof Map ? effectiveUsageStats.size : 0,
+            hidden: hiddenProducts instanceof Set ? hiddenProducts.size : 0,
+          });
+        }
+      } catch (_) { /* noop */ }
+    }, [latestProducts, smartProducts, modalFallbackProducts, favorites, effectiveUsageStats, hiddenProducts]);
+
     // Поиск с фильтром категории
     // Используем normalizeText из SmartSearch (единый источник)
     const normalizeSearch = HEYS?.SmartSearchWithTypos?.utils?.normalizeText
@@ -3220,9 +3265,17 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
         // Умный список: часто + недавно используемые (объединённый)
         shouldRenderSettledProducts && !showSearch && smartProducts?.length > 0 && React.createElement('div', { className: 'aps-section' },
-          React.createElement('div', { className: 'aps-section-title' }, '⚡ Ваши продукты'),
+          React.createElement('div', { className: 'aps-section-title' }, '⚡ Частые и избранные'),
           React.createElement('div', { className: 'aps-products-list' },
             smartProducts.map(p => renderProductCard(p, true, true, true))
+          )
+        ),
+
+        // Fallback: если умный список пуст, всё равно показываем продукты
+        shouldRenderSettledProducts && !showSearch && (!smartProducts || smartProducts.length === 0) && modalFallbackProducts?.length > 0 && React.createElement('div', { className: 'aps-section' },
+          React.createElement('div', { className: 'aps-section-title' }, '🧩 Ваши продукты (резервный список)'),
+          React.createElement('div', { className: 'aps-products-list' },
+            modalFallbackProducts.map(p => renderProductCard(p, true, true, true))
           )
         )
       )

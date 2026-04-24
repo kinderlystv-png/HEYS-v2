@@ -133,9 +133,13 @@
 
           const normalized = ensureDay(v, profNow);
           lastLoadedUpdatedAtRef.current = v.updatedAt || 0;
-          setDayRaw(normalized);
+          React.startTransition(() => {
+            setDayRaw(normalized);
+          });
         } else {
-          setDayRaw(ensureDay({ date }, profNow));
+          React.startTransition(() => {
+            setDayRaw(ensureDay({ date }, profNow));
+          });
         }
         setIsHydrated(true);
       };
@@ -162,7 +166,9 @@
               if (cloudUpdatedAt > lastLoadedUpdatedAtRef.current) {
                 const normalized = ensureDay(cloudData, prof);
                 lastLoadedUpdatedAtRef.current = cloudUpdatedAt;
-                setDayRaw(normalized);
+                React.startTransition(() => {
+                  setDayRaw(normalized);
+                });
               }
             }
           } catch (err) {
@@ -213,7 +219,9 @@
           // Only update if data is newer
           if (dataUpdatedAt > lastLoadedUpdatedAtRef.current) {
             lastLoadedUpdatedAtRef.current = dataUpdatedAt;
-            setDayRaw(normalized);
+            React.startTransition(() => {
+              setDayRaw(normalized);
+            });
           }
         }
       };

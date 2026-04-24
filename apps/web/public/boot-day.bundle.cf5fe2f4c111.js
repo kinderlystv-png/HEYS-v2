@@ -14973,7 +14973,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     const HEYS = global.HEYS = global.HEYS || {};
 
     function useOrphanState(params) {
-        const { React, day, HEYS: HEYSRef } = params || {};
+        const { React, day, date, HEYS: HEYSRef } = params || {};
         if (!React) return { orphanCount: 0 };
 
         const ctx = HEYSRef || HEYS;
@@ -14998,11 +14998,29 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             };
         }, [ctx]);
 
+        // После смены даты / загрузки приёмов пересчитываем карту сирот против актуального каталога
+        // (иначе после restore на одном дне при переходе на другой снова всплывают ложные «не в базе»).
+        React.useEffect(() => {
+            if (!date || !day || day.date !== date) return;
+            const id = window.requestAnimationFrame(() => {
+                try {
+                    if (ctx?.orphanProducts?.recalculate) {
+                        ctx.orphanProducts.recalculate();
+                    }
+                } catch (_) { /* noop */ }
+            });
+            return () => window.cancelAnimationFrame(id);
+        }, [date, day?.date, day?.meals, ctx]);
+
         const orphanCount = React.useMemo(() => {
             // eslint-disable-next-line react-hooks/exhaustive-deps
             void orphanVersion; // Зависимость для пересчёта
+            // Только сироты текущего календарного дня — глобальная карта накапливает все отсканированные дни
+            if (date && typeof ctx?.orphanProducts?.countForDate === 'function') {
+                return ctx.orphanProducts.countForDate(date) || 0;
+            }
             return ctx?.orphanProducts?.count?.() || 0;
-        }, [orphanVersion, day?.meals]);
+        }, [orphanVersion, day?.meals, date, ctx]);
 
         return { orphanCount };
     }
@@ -16609,31 +16627,37 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         const isReadOnly = subscriptionStatus.status === 'read_only';
 
         // === Diary Section (extracted) ===
-        const diarySection = heysRef.dayDiarySection?.renderDiarySection?.({
-            React,
-            isMobile: ctx.isMobile,
-            mobileSubTab: ctx.mobileSubTab,
-            goalProgressBar: ctx.goalProgressBar,
-            mealsChart: ctx.mealsChart,
-            insulinWaveData: ctx.insulinWaveData,
-            insulinExpanded: ctx.insulinExpanded,
-            setInsulinExpanded: ctx.setInsulinExpanded,
-            openExclusivePopup: ctx.openExclusivePopup,
-            addMeal: ctx.addMeal,
-            day: ctx.day,
-            mealsUI: ctx.mealsUI,
-            daySummary: ctx.daySummary,
-            caloricDebt: ctx.caloricDebt,
-            eatenKcal: ctx.eatenKcal,
-            optimum: ctx.optimum,
-            displayOptimum: ctx.displayOptimum,
-            date: ctx.date,
-            prof: ctx.prof,
-            pIndex: ctx.pIndex,
-            dayTot: ctx.dayTot,
-            normAbs: ctx.normAbs,
-            HEYS: heysRef
-        }) || null;
+        // Phase split: render lightweight placeholder first, heavy diary mounts after first paint.
+        const diarySection = ctx.heavyUiReady
+            ? (heysRef.dayDiarySection?.renderDiarySection?.({
+                React,
+                isMobile: ctx.isMobile,
+                mobileSubTab: ctx.mobileSubTab,
+                goalProgressBar: ctx.goalProgressBar,
+                mealsChart: ctx.mealsChart,
+                insulinWaveData: ctx.insulinWaveData,
+                insulinExpanded: ctx.insulinExpanded,
+                setInsulinExpanded: ctx.setInsulinExpanded,
+                openExclusivePopup: ctx.openExclusivePopup,
+                addMeal: ctx.addMeal,
+                day: ctx.day,
+                mealsUI: ctx.mealsUI,
+                daySummary: ctx.daySummary,
+                caloricDebt: ctx.caloricDebt,
+                eatenKcal: ctx.eatenKcal,
+                optimum: ctx.optimum,
+                displayOptimum: ctx.displayOptimum,
+                date: ctx.date,
+                prof: ctx.prof,
+                pIndex: ctx.pIndex,
+                dayTot: ctx.dayTot,
+                normAbs: ctx.normAbs,
+                HEYS: heysRef
+            }) || null)
+            : React.createElement('div', {
+                className: 'card tone-slate',
+                style: { marginTop: 10, minHeight: 140, opacity: 0.7 }
+            }, 'Подготавливаем дневник...');
 
         if (!heysRef.dayPageShell?.renderDayPage) {
             throw new Error('[heys_day_tab_render_v1] HEYS.dayPageShell not loaded before renderDayTabLayout');
@@ -21209,9 +21233,23 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
         // Флаг: данные загружены (из localStorage или Supabase)
         const [isHydrated, setIsHydrated] = useState(false);
+        // Двухфазный рендер: тяжелую часть дневника поднимаем после первого paint.
+        const [heavyUiReady, setHeavyUiReady] = useState(false);
 
         // State для развёрнутости NDTE badge (Next-Day Training Effect)
         const [ndteExpanded, setNdteExpanded] = useState(false);
+
+        useEffect(() => {
+            setHeavyUiReady(false);
+            let timeoutId = null;
+            const rafId = requestAnimationFrame(() => {
+                timeoutId = setTimeout(() => setHeavyUiReady(true), 120);
+            });
+            return () => {
+                cancelAnimationFrame(rafId);
+                if (timeoutId) clearTimeout(timeoutId);
+            };
+        }, [date]);
 
         // Ref для отслеживания предыдущей даты (нужен для flush перед сменой)
         const prevDateRef = React.useRef(date);
@@ -22302,7 +22340,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         if (!HEYS.dayOrphanState?.useOrphanState) {
             throw new Error('[heys_day_v12] HEYS.dayOrphanState not loaded before heys_day_v12.js');
         }
-        const orphanState = HEYS.dayOrphanState.useOrphanState({ React, day, HEYS: window.HEYS }) || {};
+        const orphanState = HEYS.dayOrphanState.useOrphanState({ React, day, date, HEYS: window.HEYS }) || {};
 
         const dailyTableState = extractedDailyTableState;
         const {
@@ -22514,7 +22552,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         const { orphanCount = 0 } = orphanState;
 
         // === Phase 13A Integration: Use extracted orphan alert renderer ===
-        const orphanAlert = HEYS.dayOrphanAlert?.renderOrphanAlert?.({ orphanCount }) || false;
+        const orphanAlert = HEYS.dayOrphanAlert?.renderOrphanAlert?.({ orphanCount, date }) || false;
 
         // === Hero display (tour override + colors + deficit) — extracted ===
         if (!HEYS.dayHeroDisplay?.buildHeroDisplay) {
@@ -22892,7 +22930,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             mealsUI,
             daySummary,
             dayTot,
-            normAbs
+            normAbs,
+            heavyUiReady
         });
     };
 

@@ -7387,7 +7387,21 @@
    * @returns {React.Element|boolean} Alert element or false if no orphans
    */
   function renderOrphanAlert(params) {
-    const { orphanCount } = params;
+    const { orphanCount, date } = params;
+    const listForUi = (date && HEYS.orphanProducts?.getAllForDate)
+      ? (HEYS.orphanProducts.getAllForDate(date) || [])
+      : (HEYS.orphanProducts?.getAll?.() || []);
+    try {
+      const listLen = listForUi.length;
+      if (orphanCount > 0 || listLen > 0) {
+        console.warn('[HEYS.orphan:PIPE] render alert', {
+          orphanCount,
+          date: date || null,
+          listLen,
+          sample: listForUi.slice(0, 3).map((o) => o?.name || '(no-name)')
+        });
+      }
+    } catch (_) { /* noop */ }
     
     if (!orphanCount || orphanCount === 0) {
       return false;
@@ -7422,7 +7436,9 @@
             fontSize: '12px',
             lineHeight: '1.4'
           } 
-        }, 'Калории считаются по сохранённым данным. Нажми чтобы увидеть список.'),
+        }, date
+          ? `Калории считаются по сохранённым данным за выбранный день (${date}). Нажми чтобы увидеть список.`
+          : 'Калории считаются по сохранённым данным. Нажми чтобы увидеть список.'),
         // Список orphan-продуктов
         React.createElement('details', { 
           style: { marginTop: '8px' }
@@ -7443,7 +7459,7 @@
               color: '#78350f'
             } 
           },
-            (HEYS.orphanProducts?.getAll?.() || []).map((o, i) => 
+            listForUi.map((o, i) => 
               React.createElement('li', { key: o.name || i, style: { marginBottom: '4px' } },
                 React.createElement('strong', null, o.name),
                 ` — ${o.hasInlineData ? '✓ можно восстановить' : '⚠️ нет данных'}`,

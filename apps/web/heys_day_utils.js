@@ -447,6 +447,16 @@
   // Отслеживание продуктов, для которых данные берутся из штампа вместо базы
   const orphanProductsMap = new Map(); // name => { name, usedInDays: Set, firstSeen }
   const orphanLoggedRecently = new Map(); // name => timestamp (throttle логов)
+  const shouldLogOrphanTrace = () => {
+    try {
+      return !!(
+        HEYS?.debug?.orphansTrace === true ||
+        global?.localStorage?.getItem('heys_debug_orphans_trace') === 'true'
+      );
+    } catch (_) {
+      return false;
+    }
+  };
   const normalizeProductName = HEYS.models?.normalizeProductName
     || ((name) => String(name || '').toLowerCase().trim().replace(/\s+/g, ' ').replace(/ё/g, 'е'));
 
@@ -491,6 +501,56 @@
     );
   }
 
+  function copySnapshotFields(item, target) {
+    if (!item || !target) return target;
+    const numericFields = [
+      'kcal100', 'protein100', 'carbs100', 'fat100',
+      'simple100', 'complex100', 'badFat100', 'goodFat100', 'trans100',
+      'fiber100', 'sodium100',
+      'omega3_100', 'omega6_100', 'nutrient_density',
+      'vitamin_a', 'vitamin_c', 'vitamin_d', 'vitamin_e', 'vitamin_k',
+      'vitamin_b1', 'vitamin_b2', 'vitamin_b3', 'vitamin_b6', 'vitamin_b9', 'vitamin_b12',
+      'calcium', 'iron', 'magnesium', 'phosphorus', 'potassium', 'zinc', 'selenium', 'iodine'
+    ];
+    numericFields.forEach((field) => {
+      if (target[field] == null && item[field] != null) {
+        target[field] = item[field];
+      }
+    });
+    const itemNova = item.nova_group ?? item.novaGroup;
+    if (target.nova_group == null && itemNova != null) {
+      target.nova_group = itemNova;
+    }
+    if (target.novaGroup == null && target.nova_group != null) {
+      target.novaGroup = target.nova_group;
+    }
+    if (target.additives == null && Array.isArray(item.additives) && item.additives.length) {
+      target.additives = item.additives;
+    }
+    const boolFields = ['is_organic', 'is_whole_grain', 'is_fermented', 'is_raw'];
+    boolFields.forEach((field) => {
+      if (target[field] == null && item[field] != null) {
+        target[field] = item[field];
+      }
+    });
+    return target;
+  }
+
+  function enrichProductMaybe(product) {
+    if (!product) return product;
+    const normalized = global.HEYS?.models?.normalizeProductFields
+      ? global.HEYS.models.normalizeProductFields(product)
+      : product;
+    if (global.HEYS?.Harm?.enrichProduct) {
+      try {
+        return global.HEYS.Harm.enrichProduct(normalized) || normalized;
+      } catch {
+        return normalized;
+      }
+    }
+    return normalized;
+  }
+
   function trackOrphanProduct(item, dateStr) {
     if (!item || !item.name) return;
     if (isSyntheticEstimatedItem(item)) return;
@@ -510,8 +570,9 @@
         firstSeen: Date.now(),
         hasInlineData: item.kcal100 != null
       });
-      // Первое обнаружение — логируем с датой
-      console.warn(`[HEYS] Orphan product: "${name}" — используются данные из штампа (день: ${dateStr || 'unknown'})`);
+      if (shouldLogOrphanTrace()) {
+        console.info('[HEYS.orphan-trace] track new', { name, dateStr, productId, fingerprint });
+      }
     } else {
       const orphanData = orphanProductsMap.get(name);
       orphanData.usedInDays.add(dateStr);
@@ -537,14 +598,53 @@
       return orphanProductsMap.size;
     },
 
+    /** Сироты, встречающиеся в записи дня dateStr (YYYY-MM-DD) — для баннера на вкладке дня */
+    countForDate(dateStr) {
+      const ds = String(dateStr || '').trim();
+      if (!ds) return orphanProductsMap.size;
+      let n = 0;
+      for (const o of orphanProductsMap.values()) {
+        if (o && o.usedInDays && typeof o.usedInDays.has === 'function' && o.usedInDays.has(ds)) {
+          n++;
+        }
+      }
+      return n;
+    },
+
+    getAllForDate(dateStr) {
+      const ds = String(dateStr || '').trim();
+      if (!ds) return this.getAll();
+      return Array.from(orphanProductsMap.values())
+        .filter((o) => o && o.usedInDays && typeof o.usedInDays.has === 'function' && o.usedInDays.has(ds))
+        .map((o) => ({
+          ...o,
+          usedInDays: Array.from(o.usedInDays),
+          daysCount: o.usedInDays.size
+        }));
+    },
+
     // Есть ли orphan-продукты?
     hasAny() {
       return orphanProductsMap.size > 0;
     },
 
+    hasAnyForDate(dateStr) {
+      return this.countForDate(dateStr) > 0;
+    },
+
+    track(item, dateStr) {
+      trackOrphanProduct(item, dateStr);
+    },
+
     // Очистить (после синхронизации или исправления)
     clear() {
+      const before = orphanProductsMap.size;
       orphanProductsMap.clear();
+      if (before > 0 && typeof global.dispatchEvent === 'function') {
+        global.dispatchEvent(new CustomEvent('heys:orphan-updated', {
+          detail: { count: 0, removed: before }
+        }));
+      }
     },
 
     // Удалить конкретный по имени (если продукт добавили обратно в базу)
@@ -560,6 +660,14 @@
     // Пересчитать orphan-продукты на основе актуальной базы
     // Вызывается после добавления продукта или удаления item из meal
     recalculate() {
+      if (shouldLogOrphanTrace()) {
+        const n = global.HEYS?.products?.getAll?.()?.length;
+        console.info('[HEYS.orphan-trace] recalculate start', {
+          mapSize: orphanProductsMap.size,
+          getAllLength: n,
+          hasGetAll: !!global.HEYS?.products?.getAll
+        });
+      }
       if (!global.HEYS?.products?.getAll) return;
 
       const products = global.HEYS.products.getAll();
@@ -615,6 +723,9 @@
           detail: { count: afterCount, removed: beforeCount - afterCount }
         }));
       }
+      if (shouldLogOrphanTrace()) {
+        console.info('[HEYS.orphan-trace] recalculate end', { beforeCount, afterCount: orphanProductsMap.size });
+      }
     },
 
     // Показать в консоли красивую таблицу
@@ -635,40 +746,48 @@
     // Восстановить orphan-продукты в базу из штампов в днях
     async restore() {
       const U = HEYS.utils || {};
-      const lsGet = U.lsGet || ((k, d) => {
-        try { return JSON.parse(localStorage.getItem(k)) || d; } catch { return d; }
-      });
-      const lsSet = U.lsSet || ((k, v) => localStorage.setItem(k, JSON.stringify(v)));
+      const lsGet = HEYS.store?.get
+        ? (k, d) => HEYS.store.get(k, d)
+        : (U.lsGet || ((k, d) => {
+          try { return JSON.parse(localStorage.getItem(k)) || d; } catch { return d; }
+        }));
+      const lsSet = HEYS.store?.set
+        ? (k, v) => HEYS.store.set(k, v)
+        : (U.lsSet || ((k, v) => localStorage.setItem(k, JSON.stringify(v))));
       const parseStoredValue = (raw) => {
-        if (!raw || typeof raw !== 'string') return null;
+        if (!raw) return null;
+        if (typeof raw === 'object') return raw;
+        if (typeof raw !== 'string') return null;
         if (raw.startsWith('¤Z¤') && HEYS.store?.decompress) {
           return HEYS.store.decompress(raw);
         }
         try { return JSON.parse(raw); } catch { return null; }
       };
 
-      // Получаем текущие продукты (ключ = name LOWERCASE для консистентности с getDayData)
-      const rawProducts = lsGet('heys_products', []);
-      const products = Array.isArray(rawProducts) ? rawProducts : [];
+      const products = Array.isArray(HEYS.products?.getAll?.())
+        ? HEYS.products.getAll()
+        : (Array.isArray(lsGet('heys_products', [])) ? lsGet('heys_products', []) : []);
       const productsMap = new Map();
-      const productsById = new Map(); // Для восстановления по id
-      products.forEach(p => {
+      const productsById = new Map();
+      products.forEach((p) => {
         if (p && p.name) {
           const name = String(p.name).trim().toLowerCase();
           if (name) productsMap.set(name, p);
-          if (p.id) productsById.set(String(p.id), p);
+          const pid = p.id ?? p.product_id;
+          if (pid != null) productsById.set(String(pid), p);
         }
       });
 
-      // Собираем orphan-продукты из всех дней
-      // Ключи могут быть: heys_dayv2_YYYY-MM-DD (legacy) или heys_<clientId>_dayv2_YYYY-MM-DD
       const restored = [];
       const keys = Object.keys(localStorage).filter(k => k.includes('_dayv2_'));
 
-      // 🔇 v4.7.0: DEBUG логи отключены
-
-      // Debug: показать какие orphan продукты мы ищем
-      const orphanNames = Array.from(orphanProductsMap.keys());
+      if (shouldLogOrphanTrace()) {
+        console.info('[HEYS.orphan-trace] restore scan', {
+          orphanKeys: Array.from(orphanProductsMap.keys()),
+          dayKeys: keys.length,
+          baseCount: products.length
+        });
+      }
 
       let checkedItems = 0;
       let foundWithData = 0;
@@ -676,7 +795,8 @@
 
       for (const key of keys) {
         try {
-          const day = parseStoredValue(localStorage.getItem(key));
+          const storedDay = HEYS.store?.get ? HEYS.store.get(key, null) : null;
+          const day = parseStoredValue(storedDay ?? localStorage.getItem(key));
           if (!day || !day.meals) continue;
 
           for (const meal of day.meals) {
@@ -688,18 +808,16 @@
               if (!itemName) continue;
 
               const hasData = item.kcal100 != null;
-              const inBase = productsMap.has(itemNameLower) || (item.product_id && productsById.has(String(item.product_id)));
+              const pid = item.product_id ?? item.productId;
+              const inBase = productsMap.has(itemNameLower) || (pid != null && productsById.has(String(pid)));
 
               if (hasData) foundWithData++;
               if (inBase) alreadyInBase++;
 
-              // 🔇 v4.7.0: DEBUG логи отключены
-
-              // Если продукта нет в базе по имени И есть inline данные
               if (itemName && !inBase && hasData) {
                 const restoredProduct = {
-                  id: item.product_id || ('restored_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8)),
-                  name: itemName, // Сохраняем оригинальное имя
+                  id: pid || ('restored_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8)),
+                  name: itemName,
                   kcal100: item.kcal100,
                   protein100: item.protein100 || 0,
                   fat100: item.fat100 || 0,
@@ -715,9 +833,11 @@
                   restoredAt: Date.now(),
                   restoredFrom: 'orphan_stamp'
                 };
-                productsMap.set(itemNameLower, restoredProduct);
-                restored.push(restoredProduct);
-                // 🔇 v4.7.0: Лог отключён
+                copySnapshotFields(item, restoredProduct);
+                const enriched = enrichProductMaybe(restoredProduct);
+                productsMap.set(itemNameLower, enriched);
+                if (enriched.id != null) productsById.set(String(enriched.id), enriched);
+                restored.push(enriched);
               }
             }
           }
@@ -726,15 +846,20 @@
         }
       }
 
-      // 🔇 v4.7.0: DEBUG лог отключён
-
       if (restored.length > 0) {
-        // Сохраняем обновлённую базу
-        const newProducts = Array.from(productsMap.values());
+        if (products.length === 0) {
+          console.error('[HEYS] ❌ RESTORE BLOCKED: база продуктов пуста (corruption guard).');
+          return { success: false, count: 0, products: [], error: 'BLOCKED_EMPTY_BASE' };
+        }
 
-        // Используем HEYS.products.setAll для синхронизации с облаком и React state
+        const newProducts = Array.from(productsMap.values());
+        if (newProducts.length < products.length * 0.5) {
+          console.error(`[HEYS] ❌ RESTORE BLOCKED: новое кол-во (${newProducts.length}) < 50% от текущего (${products.length})`);
+          return { success: false, count: 0, products: [], error: 'BLOCKED_DATA_LOSS' };
+        }
+
         if (HEYS.products?.setAll) {
-          HEYS.products.setAll(newProducts);
+          HEYS.products.setAll(newProducts, { source: 'button-restore-orphans' });
         } else {
           lsSet('heys_products', newProducts);
           console.warn('[HEYS] ⚠️ Products saved via lsSet only (no cloud sync)');
@@ -743,18 +868,17 @@
         if (HEYS.cloud?.flushPendingQueue) {
           try {
             await HEYS.cloud.flushPendingQueue(3000);
-          } catch (e) { }
+          } catch (e) { /* noop */ }
         }
 
-        // Очищаем orphan-трекинг
-        this.clear();
-
-        // Обновляем индекс продуктов если есть
         if (HEYS.products?.buildSearchIndex) {
           HEYS.products.buildSearchIndex();
         }
 
-        // Уведомляем UI об обновлении продуктов
+        if (typeof this.recalculate === 'function') {
+          try { this.recalculate(); } catch (_e) { /* noop */ }
+        }
+
         if (typeof window !== 'undefined' && window.dispatchEvent) {
           window.dispatchEvent(new CustomEvent('heysProductsUpdated', {
             detail: { products: newProducts, restored: restored.length }
@@ -1803,38 +1927,44 @@
         ? 'heys_' + clientId + '_dayv2_' + dateStr
         : 'heys_dayv2_' + dateStr;
 
-      const raw = localStorage.getItem(scopedKey);
-      if (!raw) return null;
+      const logicalDayKey = 'heys_dayv2_' + dateStr;
+      // Читаем через lsGet: тот же путь, что и остальное приложение (scoped + decompress + legacy migrate).
+      let dayData = (U && typeof U.lsGet === 'function') ? U.lsGet(logicalDayKey, null) : null;
 
-      let dayData = null;
-      const parseHit = _dayV2RawParseCache.get(scopedKey);
-      if (parseHit && parseHit.raw === raw) {
-        dayData = parseHit.dayData;
-      } else {
-        if (raw.startsWith('¤Z¤')) {
-          if (HEYS.store?.decompress) {
-            dayData = HEYS.store.decompress(raw);
-          } else {
-            let str = raw.substring(3);
-            const patterns = {
-              '¤n¤': '"name":"', '¤k¤': '"kcal100"', '¤p¤': '"protein100"',
-              '¤c¤': '"carbs100"', '¤f¤': '"fat100"'
-            };
-            for (const [code, pattern] of Object.entries(patterns)) {
-              str = str.split(code).join(pattern);
-            }
-            dayData = JSON.parse(str);
-          }
+      if (!dayData || typeof dayData !== 'object') {
+        const raw = localStorage.getItem(scopedKey);
+        if (!raw) return null;
+
+        dayData = null;
+        const parseHit = _dayV2RawParseCache.get(scopedKey);
+        if (parseHit && parseHit.raw === raw) {
+          dayData = parseHit.dayData;
         } else {
-          dayData = JSON.parse(raw);
+          if (raw.startsWith('¤Z¤')) {
+            if (HEYS.store?.decompress) {
+              dayData = HEYS.store.decompress(raw);
+            } else {
+              let str = raw.substring(3);
+              const patterns = {
+                '¤n¤': '"name":"', '¤k¤': '"kcal100"', '¤p¤': '"protein100"',
+                '¤c¤': '"carbs100"', '¤f¤': '"fat100"'
+              };
+              for (const [code, pattern] of Object.entries(patterns)) {
+                str = str.split(code).join(pattern);
+              }
+              dayData = JSON.parse(str);
+            }
+          } else {
+            dayData = JSON.parse(raw);
+          }
+          if (dayData && typeof dayData === 'object') {
+            _dayV2RawParseCache.set(scopedKey, { raw, dayData });
+            _trimDayV2ParseCache();
+          }
         }
-        if (dayData && typeof dayData === 'object') {
-          _dayV2RawParseCache.set(scopedKey, { raw, dayData });
-          _trimDayV2ParseCache();
-        }
-      }
 
-      if (!dayData) return null;
+        if (!dayData || typeof dayData !== 'object') return null;
+      }
 
       // Считаем калории и макросы из meals
       let totalKcal = 0, totalProt = 0, totalFat = 0, totalCarbs = 0;
@@ -1958,6 +2088,17 @@
 
             // Трекаем только если база загружена И продукт реально не найден в обеих базах
             if (hasProductsLoaded && !foundInFresh && !foundInShared) {
+              if (shouldLogOrphanTrace()) {
+                console.info('[HEYS.orphan-trace] getDayData orphan miss', {
+                  dateStr,
+                  itemName: String(item.name || '').trim(),
+                  productId: item.product_id ?? item.productId ?? null,
+                  fingerprint: item.fingerprint || null,
+                  freshCount: freshProducts.length,
+                  sharedCount: sharedProducts.length,
+                  hasInlineData: item.kcal100 != null
+                });
+              }
               trackOrphanProduct(item, dateStr);
             } else if (foundInFresh || foundInShared) {
               const n = String(item.name || '').trim();

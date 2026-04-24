@@ -1164,6 +1164,21 @@
       const startTime = performance.now();
       const result = performSearch();
       const duration = performance.now() - startTime;
+      try {
+        const now = Date.now();
+        if ((now - (productsLogState.lastSearch || 0)) > 4000) {
+          productsLogState.lastSearch = now;
+          if ((products?.length || 0) < 25 || (query && query.trim().length >= 2 && (result?.length || 0) === 0)) {
+            console.warn('[HEYS.search:PIPE]', {
+              query,
+              productsLen: products?.length || 0,
+              searchIndexSize: searchIndex?.size || 0,
+              resultLen: result?.length || 0,
+              durationMs: Math.round(duration),
+            });
+          }
+        }
+      } catch (_) { /* noop */ }
 
       // Трекинг поиска
       if (window.HEYS && window.HEYS.analytics) {
@@ -4444,7 +4459,7 @@
   HEYS.core = { validateInput }; // Создаем объект core с валидацией
 
   // products helper API (thin wrapper over store + local fallback)
-  const productsLogState = { lastGetAll: 0, lastSetAll: 0 };
+  const productsLogState = { lastGetAll: 0, lastSetAll: 0, lastPipe: 0, lastSearch: 0 };
   const shouldLogProducts = (type) => {
     // 🔇 v4.8.2: Отключено по умолчанию — включить через HEYS.debug.products = true
     const debugEnabled = !!(HEYS && HEYS.debug && HEYS.debug.products);
@@ -4502,6 +4517,25 @@
       if (shouldLogProducts('getAll')) {
         console.log('[PRODUCTS.getAll] fromStore:', fromStore.length, 'fromUtils:', fromUtils.length, 'result:', result.length);
       }
+      // Постоянная диагностика проблем с загрузкой каталога (throttled)
+      try {
+        const now = Date.now();
+        const shouldPipeLog = (now - (productsLogState.lastPipe || 0)) > 7000;
+        const suspiciousSmall = !Array.isArray(result) || result.length < 25;
+        if (shouldPipeLog && suspiciousSmall) {
+          productsLogState.lastPipe = now;
+          const sharedLen = HEYS?.cloud?.getCachedSharedProducts?.()?.length || 0;
+          const sample = Array.isArray(result) ? result.slice(0, 3).map((p) => p?.name || '(no-name)') : [];
+          console.warn('[HEYS.products:PIPE] small personal catalog', {
+            fromStore: Array.isArray(fromStore) ? fromStore.length : -1,
+            fromUtils: Array.isArray(fromUtils) ? fromUtils.length : -1,
+            resultLen: Array.isArray(result) ? result.length : -1,
+            sharedLen,
+            currentClientId: HEYS?.currentClientId || null,
+            sample,
+          });
+        }
+      } catch (_) { /* noop */ }
       // 🛡️ Safety: always return array (guards against corrupted storage values)
       if (!Array.isArray(result)) {
         console.warn('[PRODUCTS.getAll] non-array result:', typeof result, result?.constructor?.name, '— returning []');
@@ -4598,6 +4632,21 @@
       } else if (HEYS.utils && HEYS.utils.lsSet) {
         HEYS.utils.lsSet('heys_products', arr);
       }
+      try {
+        const now = Date.now();
+        if ((now - (productsLogState.lastSetAll || 0)) > 4000) {
+          productsLogState.lastSetAll = now;
+          const withIron = Array.isArray(arr) ? arr.filter((p) => p && +p.iron > 0).length : 0;
+          console.info('[HEYS.products:SET]', {
+            source,
+            len: Array.isArray(arr) ? arr.length : -1,
+            withIron,
+            allowShrink: !!opts.allowShrink,
+            skipCloud: !!opts.skipCloud,
+            skipNotify: !!opts.skipNotify,
+          });
+        }
+      } catch (_) { /* noop */ }
     },
     watch: (fn) => { if (HEYS.store && HEYS.store.watch) return HEYS.store.watch('heys_products', fn); return () => { }; },
 

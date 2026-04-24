@@ -58,31 +58,37 @@
         const isReadOnly = subscriptionStatus.status === 'read_only';
 
         // === Diary Section (extracted) ===
-        const diarySection = heysRef.dayDiarySection?.renderDiarySection?.({
-            React,
-            isMobile: ctx.isMobile,
-            mobileSubTab: ctx.mobileSubTab,
-            goalProgressBar: ctx.goalProgressBar,
-            mealsChart: ctx.mealsChart,
-            insulinWaveData: ctx.insulinWaveData,
-            insulinExpanded: ctx.insulinExpanded,
-            setInsulinExpanded: ctx.setInsulinExpanded,
-            openExclusivePopup: ctx.openExclusivePopup,
-            addMeal: ctx.addMeal,
-            day: ctx.day,
-            mealsUI: ctx.mealsUI,
-            daySummary: ctx.daySummary,
-            caloricDebt: ctx.caloricDebt,
-            eatenKcal: ctx.eatenKcal,
-            optimum: ctx.optimum,
-            displayOptimum: ctx.displayOptimum,
-            date: ctx.date,
-            prof: ctx.prof,
-            pIndex: ctx.pIndex,
-            dayTot: ctx.dayTot,
-            normAbs: ctx.normAbs,
-            HEYS: heysRef
-        }) || null;
+        // Phase split: render lightweight placeholder first, heavy diary mounts after first paint.
+        const diarySection = ctx.heavyUiReady
+            ? (heysRef.dayDiarySection?.renderDiarySection?.({
+                React,
+                isMobile: ctx.isMobile,
+                mobileSubTab: ctx.mobileSubTab,
+                goalProgressBar: ctx.goalProgressBar,
+                mealsChart: ctx.mealsChart,
+                insulinWaveData: ctx.insulinWaveData,
+                insulinExpanded: ctx.insulinExpanded,
+                setInsulinExpanded: ctx.setInsulinExpanded,
+                openExclusivePopup: ctx.openExclusivePopup,
+                addMeal: ctx.addMeal,
+                day: ctx.day,
+                mealsUI: ctx.mealsUI,
+                daySummary: ctx.daySummary,
+                caloricDebt: ctx.caloricDebt,
+                eatenKcal: ctx.eatenKcal,
+                optimum: ctx.optimum,
+                displayOptimum: ctx.displayOptimum,
+                date: ctx.date,
+                prof: ctx.prof,
+                pIndex: ctx.pIndex,
+                dayTot: ctx.dayTot,
+                normAbs: ctx.normAbs,
+                HEYS: heysRef
+            }) || null)
+            : React.createElement('div', {
+                className: 'card tone-slate',
+                style: { marginTop: 10, minHeight: 140, opacity: 0.7 }
+            }, 'Подготавливаем дневник...');
 
         if (!heysRef.dayPageShell?.renderDayPage) {
             throw new Error('[heys_day_tab_render_v1] HEYS.dayPageShell not loaded before renderDayTabLayout');

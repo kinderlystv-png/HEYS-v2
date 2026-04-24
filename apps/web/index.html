@@ -27,6 +27,9 @@
                 '[LoginGate]': 'startup',
 
                 '[HEYS.sync]': 'sync',
+                /* perf / profiler: same группа что sync — иначе логи глотаются при DEFAULT_LOG_GROUPS */
+                '[HEYS.perf]': 'sync',
+                '[HEYS.react-profiler]': 'sync',
                 '[HEYS.sinhron]': 'sync',
                 '[SYNC ERROR]': 'sync',
 
@@ -724,11 +727,11 @@
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
     <link rel="dns-prefetch" href="https://cdn.jsdelivr.net" />
     <!-- Preload критических boot-бандлов (2026-02-25 bundle migration) -->
-    <link rel="preload" href="boot-core.bundle.0ea305066e23.js" as="script" />
-    <link rel="preload" href="boot-calc.bundle.6e0932082447.js" as="script" />
-    <link rel="preload" href="boot-day.bundle.00665f67b8d3.js" as="script" />
-    <link rel="preload" href="boot-app.bundle.82586075b4ba.js" as="script" />
-    <link rel="preload" href="boot-init.bundle.42b73b15a6dc.js" as="script" />
+    <link rel="preload" href="boot-core.bundle.bcf244d29b7e.js" as="script" />
+    <link rel="preload" href="boot-calc.bundle.523df335462f.js" as="script" />
+    <link rel="preload" href="boot-day.bundle.cf5fe2f4c111.js" as="script" />
+    <link rel="preload" href="boot-app.bundle.2307e21836d9.js" as="script" />
+    <link rel="preload" href="boot-init.bundle.9a0f095c4098.js" as="script" />
 
     <!-- React теперь бандлится локально через Vite (миграция с CDN 2026-01-21) -->
 
@@ -2827,11 +2830,11 @@
          Сгенерировано: node scripts/bundle-legacy.mjs  (pnpm bundle:legacy)
          Состав и хеши: bundle-manifest.json
          Хеш в имени = вечный кэш (cache-first SW). -->
-    <script defer src="boot-core.bundle.0ea305066e23.js" fetchpriority="high"></script>
-    <script defer src="boot-calc.bundle.6e0932082447.js"></script>
-    <script defer src="boot-day.bundle.00665f67b8d3.js"></script>
-    <script defer src="boot-app.bundle.82586075b4ba.js"></script>
-    <script defer src="boot-init.bundle.42b73b15a6dc.js"
+    <script defer src="boot-core.bundle.bcf244d29b7e.js" fetchpriority="high"></script>
+    <script defer src="boot-calc.bundle.523df335462f.js"></script>
+    <script defer src="boot-day.bundle.cf5fe2f4c111.js"></script>
+    <script defer src="boot-app.bundle.2307e21836d9.js"></script>
+    <script defer src="boot-init.bundle.9a0f095c4098.js"
         onerror="window.__heysShowRecoveryUI && window.__heysShowRecoveryUI('CRITICAL_SCRIPT_LOAD: boot-init.bundle')"></script>
 
     <!-- PERF: Detect returning user (localStorage has profile) → skip card unfold animations -->
@@ -2860,9 +2863,9 @@
     <script>
         (function () {
             var POST_BOOT_BUNDLES = [
-                'postboot-1-game.bundle.87f0608cc06c.js',
-                'postboot-2-insights.bundle.a6721643420e.js',
-                'postboot-3-ui.bundle.5f5a1c9ad408.js'
+                'postboot-1-game.bundle.c9ede82e092a.js',
+                'postboot-2-insights.bundle.16e2989937d4.js',
+                'postboot-3-ui.bundle.6c64c00585df.js'
             ];
             var LOCALHOST_TASKS_SOURCE_OVERRIDE = 'heys_planning_tasks_v1.js';
             var total = POST_BOOT_BUNDLES.length;

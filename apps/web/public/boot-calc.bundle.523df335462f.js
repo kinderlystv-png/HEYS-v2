@@ -2885,11 +2885,21 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
     };
 
     // === Orphan Products Tracking ===
-    // Отслеживание продуктов, для которых данные берутся из штампа вместо базы
-    const orphanProductsMap = new Map(); // name => { name, usedInDays: Set, firstSeen }
+    // Карта сирот и HEYS.orphanProducts задаются в heys_day_utils.js (загружается следом в boot-calc).
+    // Здесь только хелперы для getDayData в этом файле — пишем в тот же singleton через .track / .remove.
     const orphanLoggedRecently = new Map(); // name => timestamp (throttle логов)
     const normalizeProductName = HEYS.models?.normalizeProductName
       || ((name) => String(name || '').toLowerCase().trim().replace(/\s+/g, ' ').replace(/ё/g, 'е'));
+    const shouldLogOrphanDebug = () => {
+      try {
+        return !!(
+          HEYS?.debug?.orphans === true ||
+          global?.localStorage?.getItem('heys_debug_orphans') === 'true'
+        );
+      } catch (_) {
+        return false;
+      }
+    };
 
     function resolveProductByItem(item, productsList) {
       if (!item) return null;
@@ -2932,714 +2942,23 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
       );
     }
 
-    const shouldLogRecovery = () => {
-        // 🔇 v4.8.2: Recovery логи только при явном HEYS.debug.recovery = true
-        return !!(HEYS && HEYS.debug && HEYS.debug.recovery);
-    };
-    const logRecovery = (level, ...args) => {
-        if (!shouldLogRecovery()) return;
-        const fn = console[level] || console.log;
-        fn(...args);
-    };
-
-    function copySnapshotFields(item, target) {
-        if (!item || !target) return target;
-
-        const numericFields = [
-            'kcal100', 'protein100', 'carbs100', 'fat100',
-            'simple100', 'complex100', 'badFat100', 'goodFat100', 'trans100',
-            'fiber100', 'sodium100',
-            'omega3_100', 'omega6_100', 'nutrient_density',
-            'vitamin_a', 'vitamin_c', 'vitamin_d', 'vitamin_e', 'vitamin_k',
-            'vitamin_b1', 'vitamin_b2', 'vitamin_b3', 'vitamin_b6', 'vitamin_b9', 'vitamin_b12',
-            'calcium', 'iron', 'magnesium', 'phosphorus', 'potassium', 'zinc', 'selenium', 'iodine'
-        ];
-
-        numericFields.forEach((field) => {
-            if (target[field] == null && item[field] != null) {
-                target[field] = item[field];
-            }
-        });
-
-        const itemNova = item.nova_group ?? item.novaGroup;
-        if (target.nova_group == null && itemNova != null) {
-            target.nova_group = itemNova;
-        }
-        if (target.novaGroup == null && target.nova_group != null) {
-            target.novaGroup = target.nova_group;
-        }
-
-        if (target.additives == null && Array.isArray(item.additives) && item.additives.length) {
-            target.additives = item.additives;
-        }
-
-        const boolFields = ['is_organic', 'is_whole_grain', 'is_fermented', 'is_raw'];
-        boolFields.forEach((field) => {
-            if (target[field] == null && item[field] != null) {
-                target[field] = item[field];
-            }
-        });
-
-        return target;
-    }
-
-    function enrichProductMaybe(product) {
-        if (!product) return product;
-        const normalized = global.HEYS?.models?.normalizeProductFields
-            ? global.HEYS.models.normalizeProductFields(product)
-            : product;
-
-        if (global.HEYS?.Harm?.enrichProduct) {
-            try {
-                return global.HEYS.Harm.enrichProduct(normalized) || normalized;
-            } catch {
-                return normalized;
-            }
-        }
-
-        return normalized;
-    }
-
     function trackOrphanProduct(item, dateStr) {
-        if (!item || !item.name) return;
-        if (isSyntheticEstimatedItem(item)) return;
-        const name = String(item.name).trim();
-        if (!name) return;
-        const normalizedName = normalizeProductName(name);
-        const productId = item.product_id ?? item.productId ?? null;
-        const fingerprint = item.fingerprint || null;
-
-        if (!orphanProductsMap.has(name)) {
-            orphanProductsMap.set(name, {
-                name: name,
-                normalizedName,
-                product_id: productId,
-                fingerprint,
-                usedInDays: new Set([dateStr]),
-                firstSeen: Date.now(),
-                hasInlineData: item.kcal100 != null
-            });
-            // 🔇 v4.7.0: Тихий режим — orphan логи отключены (см. HEYS.orphanProducts.list())
-        } else {
-            const orphanData = orphanProductsMap.get(name);
-            orphanData.usedInDays.add(dateStr);
-            if (!orphanData.product_id && productId != null) orphanData.product_id = productId;
-            if (!orphanData.fingerprint && fingerprint) orphanData.fingerprint = fingerprint;
-            if (!orphanData.normalizedName && normalizedName) orphanData.normalizedName = normalizedName;
+      try {
+        if (typeof global.HEYS?.orphanProducts?.track === 'function') {
+          global.HEYS.orphanProducts.track(item, dateStr);
         }
+      } catch (_e) { /* noop */ }
     }
 
-    // API для просмотра orphan-продуктов
-    HEYS.orphanProducts = {
-        // Получить список всех orphan-продуктов
-        getAll() {
-            return Array.from(orphanProductsMap.values()).map(o => ({
-                ...o,
-                usedInDays: Array.from(o.usedInDays),
-                daysCount: o.usedInDays.size
-            }));
-        },
+    function orphanProductsRemoveKeys(itemName, itemNameNorm, itemNameLower) {
+      const op = global.HEYS?.orphanProducts;
+      if (!op || typeof op.remove !== 'function') return;
+      const n = String(itemName || '').trim();
+      if (n) op.remove(n);
+      if (itemNameNorm) op.remove(String(itemNameNorm));
+      if (itemNameLower) op.remove(String(itemNameLower));
+    }
 
-        // Количество orphan-продуктов
-        count() {
-            return orphanProductsMap.size;
-        },
-
-        // Есть ли orphan-продукты?
-        hasAny() {
-            return orphanProductsMap.size > 0;
-        },
-
-        // Очистить (после синхронизации или исправления)
-        clear() {
-            orphanProductsMap.clear();
-        },
-
-        // Удалить конкретный по имени (если продукт добавили обратно в базу)
-        remove(productName) {
-            const name = String(productName || '').trim();
-            if (name) {
-                orphanProductsMap.delete(name);
-                // Также пробуем lowercase
-                orphanProductsMap.delete(name.toLowerCase());
-            }
-        },
-
-        // Пересчитать orphan-продукты на основе актуальной базы
-        // Вызывается после добавления продукта или удаления item из meal
-        // v4.8.0: Теперь проверяет и по product_id, не только по name
-        recalculate() {
-            const beforeCount = orphanProductsMap.size;
-
-            if (global.HEYS?.products?.getAll) {
-                const products = global.HEYS.products.getAll();
-                const productNamesLower = new Set();
-                const productNamesNormalized = new Set();
-                const productIds = new Set();
-                const productFingerprints = new Set();
-                products.forEach((product) => {
-                    if (!product || typeof product !== 'object') return;
-                    const productName = String(product.name || '').trim();
-                    if (productName) {
-                        productNamesLower.add(productName.toLowerCase());
-                        productNamesNormalized.add(normalizeProductName(productName));
-                    }
-                    const pid = product.id ?? product.product_id;
-                    if (pid != null) productIds.add(String(pid));
-                    if (product.fingerprint) productFingerprints.add(product.fingerprint);
-                });
-
-                for (const [name, orphanData] of orphanProductsMap) {
-                    const hasName = productNamesLower.has(String(name || '').toLowerCase());
-                    const hasNormalizedName = orphanData?.normalizedName && productNamesNormalized.has(orphanData.normalizedName);
-                    const hasId = orphanData?.product_id != null && productIds.has(String(orphanData.product_id));
-                    const hasFingerprint = orphanData?.fingerprint && productFingerprints.has(orphanData.fingerprint);
-                    if (hasName || hasNormalizedName || hasId || hasFingerprint) {
-                        orphanProductsMap.delete(name);
-                    }
-                }
-            }
-
-            const sharedProducts = global.HEYS?.cloud?.getCachedSharedProducts?.() || [];
-            if (sharedProducts.length > 0) {
-                for (const [name, orphanData] of [...orphanProductsMap.entries()]) {
-                    const synthetic = {
-                        name: orphanData?.name || name,
-                        product_id: orphanData?.product_id ?? orphanData?.productId,
-                        productId: orphanData?.product_id ?? orphanData?.productId,
-                        fingerprint: orphanData?.fingerprint,
-                    };
-                    if (resolveProductByItem(synthetic, sharedProducts)) {
-                        orphanProductsMap.delete(name);
-                    }
-                }
-            }
-
-            const afterCount = orphanProductsMap.size;
-
-            // Если количество изменилось — диспатчим событие для обновления UI
-            if (beforeCount !== afterCount && typeof global.dispatchEvent === 'function') {
-                global.dispatchEvent(new CustomEvent('heys:orphan-updated', {
-                    detail: { count: afterCount, removed: beforeCount - afterCount }
-                }));
-            }
-        },
-
-        // Показать в консоли красивую таблицу
-        log() {
-            const all = this.getAll();
-            if (all.length === 0) {
-                console.log('✅ Нет orphan-продуктов — все данные берутся из базы');
-                return;
-            }
-            console.warn(`⚠️ Найдено ${all.length} orphan-продуктов (данные из штампа):`);
-            console.table(all.map(o => ({
-                Название: o.name,
-                'Дней использования': o.daysCount,
-                'Есть данные': o.hasInlineData ? '✓' : '✗'
-            })));
-        },
-
-        // Восстановить orphan-продукты в базу из штампов в днях
-        async restore() {
-            const U = HEYS.utils || {};
-            const lsGet = HEYS.store?.get
-                ? (k, d) => HEYS.store.get(k, d)
-                : (U.lsGet || ((k, d) => {
-                    try { return JSON.parse(localStorage.getItem(k)) || d; } catch { return d; }
-                }));
-            const lsSet = HEYS.store?.set
-                ? (k, v) => HEYS.store.set(k, v)
-                : (U.lsSet || ((k, v) => localStorage.setItem(k, JSON.stringify(v))));
-            const parseStoredValue = (raw) => {
-                if (!raw) return null;
-                if (typeof raw === 'object') return raw;
-                if (typeof raw !== 'string') return null;
-                if (raw.startsWith('¤Z¤') && HEYS.store?.decompress) {
-                    return HEYS.store.decompress(raw);
-                }
-                try { return JSON.parse(raw); } catch { return null; }
-            };
-
-            // Получаем текущие продукты (ключ = name LOWERCASE для консистентности с getDayData)
-            const rawProducts = lsGet('heys_products', []);
-            const products = Array.isArray(rawProducts) ? rawProducts : [];
-            const productsMap = new Map();
-            const productsById = new Map(); // Для восстановления по id
-            products.forEach(p => {
-                if (p && p.name) {
-                    const name = String(p.name).trim().toLowerCase();
-                    if (name) productsMap.set(name, p);
-                    if (p.id) productsById.set(String(p.id), p);
-                }
-            });
-
-            // Собираем orphan-продукты из всех дней
-            // Ключи могут быть: heys_dayv2_YYYY-MM-DD (legacy) или heys_<clientId>_dayv2_YYYY-MM-DD
-            const restored = [];
-            const keys = Object.keys(localStorage).filter(k => k.includes('_dayv2_'));
-
-            // 🔇 v4.7.0: Debug логи отключены
-            const orphanNames = Array.from(orphanProductsMap.keys());
-
-            let checkedItems = 0;
-            let foundWithData = 0;
-            let alreadyInBase = 0;
-
-            for (const key of keys) {
-                try {
-                    const storedDay = HEYS.store?.get ? HEYS.store.get(key, null) : null;
-                    const day = parseStoredValue(storedDay ?? localStorage.getItem(key));
-                    if (!day || !day.meals) continue;
-
-                    for (const meal of day.meals) {
-                        for (const item of (meal.items || [])) {
-                            checkedItems++;
-                            const itemName = String(item.name || '').trim();
-                            const itemNameLower = itemName.toLowerCase();
-                            if (!itemName) continue;
-
-                            const hasData = item.kcal100 != null;
-                            const inBase = productsMap.has(itemNameLower) || (item.product_id && productsById.has(String(item.product_id)));
-
-                            if (hasData) foundWithData++;
-                            if (inBase) alreadyInBase++;
-
-                            // 🔇 v4.7.0: Debug логи отключены
-
-                            // Если продукта нет в базе по имени И есть inline данные
-                            if (itemName && !inBase && hasData) {
-                                const restoredProduct = {
-                                    id: item.product_id || ('restored_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8)),
-                                    name: itemName, // Сохраняем оригинальное имя
-                                    kcal100: item.kcal100,
-                                    protein100: item.protein100 || 0,
-                                    fat100: item.fat100 || 0,
-                                    carbs100: item.carbs100 || 0,
-                                    simple100: item.simple100 || 0,
-                                    complex100: item.complex100 || 0,
-                                    badFat100: item.badFat100 || 0,
-                                    goodFat100: item.goodFat100 || 0,
-                                    trans100: item.trans100 || 0,
-                                    fiber100: item.fiber100 || 0,
-                                    gi: item.gi || 50,
-                                    harm: item.harm ?? item.harmScore ?? 0,
-                                    restoredAt: Date.now(),
-                                    restoredFrom: 'orphan_stamp'
-                                };
-                                copySnapshotFields(item, restoredProduct);
-                                const enriched = enrichProductMaybe(restoredProduct);
-                                productsMap.set(itemNameLower, enriched);
-                                restored.push(enriched);
-                                // 🔇 v4.7.0: Логи восстановления отключены
-                            }
-                        }
-                    }
-                } catch (e) {
-                    // Пропускаем битые записи
-                }
-            }
-
-            // 🔇 v4.7.0: Stats лог отключён (см. return.stats)
-
-            if (restored.length > 0) {
-                // 🔒 SAFETY: НИКОГДА не перезаписывать если products пустой — это означает corrupted state
-                if (products.length === 0) {
-                    console.error('[HEYS] ❌ RESTORE BLOCKED: localStorage products пустой! Это признак corruption.');
-                    console.error('[HEYS] Для восстановления запусти: await HEYS.YandexAPI.rest("shared_products").then(r => { HEYS.store.set("heys_products", r.data || r); location.reload(); })');
-                    return { success: false, count: 0, products: [], error: 'BLOCKED_EMPTY_BASE' };
-                }
-
-                // 🔒 SAFETY: Проверяем что НЕ уменьшаем количество продуктов
-                const newProducts = Array.from(productsMap.values());
-                if (newProducts.length < products.length * 0.5) {
-                    console.error(`[HEYS] ❌ RESTORE BLOCKED: Новое кол-во (${newProducts.length}) меньше 50% от текущего (${products.length})`);
-                    return { success: false, count: 0, products: [], error: 'BLOCKED_DATA_LOSS' };
-                }
-
-                // 🔍 DEBUG: Лог перед сохранением
-                console.log('[HEYS] 🔍 RESTORE DEBUG:', {
-                    restoredCount: restored.length,
-                    newProductsCount: newProducts.length,
-                    previousCount: products.length,
-                    hasSetAll: !!HEYS.products?.setAll,
-                    hasStore: !!HEYS.store?.set,
-                    restoredSample: restored.slice(0, 3).map(p => ({ id: p.id, name: p.name }))
-                });
-
-                // Используем HEYS.products.setAll для синхронизации с облаком и React state
-                if (HEYS.products?.setAll) {
-                    console.log('[HEYS] 🔍 Calling HEYS.products.setAll with', newProducts.length, 'products');
-                    HEYS.products.setAll(newProducts, { source: 'button-restore-orphans' });
-
-                    // 🔍 DEBUG: Проверяем что сохранилось
-                    setTimeout(() => {
-                        const afterSave = HEYS.products.getAll();
-                        const restoredStillThere = restored.every(rp =>
-                            afterSave.some(p => p.id === rp.id || p.name?.toLowerCase() === rp.name?.toLowerCase())
-                        );
-                        console.log('[HEYS] 🔍 POST-SAVE CHECK:', {
-                            savedCount: afterSave.length,
-                            restoredStillPresent: restoredStillThere,
-                            missingRestored: restoredStillThere ? 0 : restored.filter(rp =>
-                                !afterSave.some(p => p.id === rp.id || p.name?.toLowerCase() === rp.name?.toLowerCase())
-                            ).map(p => p.name)
-                        });
-                    }, 500);
-                } else {
-                    lsSet('heys_products', newProducts);
-                    console.warn('[HEYS] ⚠️ Products saved via lsSet only (no cloud sync)');
-                }
-
-                if (HEYS.cloud?.flushPendingQueue) {
-                    try {
-                        await HEYS.cloud.flushPendingQueue(3000);
-                    } catch (e) { }
-                }
-
-                // Очищаем orphan-трекинг
-                this.clear();
-
-                // Обновляем индекс продуктов если есть
-                if (HEYS.products?.buildSearchIndex) {
-                    HEYS.products.buildSearchIndex();
-                }
-
-                // Уведомляем UI об обновлении продуктов
-                if (typeof window !== 'undefined' && window.dispatchEvent) {
-                    window.dispatchEvent(new CustomEvent('heysProductsUpdated', {
-                        detail: { products: newProducts, restored: restored.length }
-                    }));
-                }
-
-                console.log(`✅ Восстановлено ${restored.length} продуктов в базу`);
-                return { success: true, count: restored.length, products: restored };
-            }
-
-            console.log('ℹ️ Нечего восстанавливать — нет данных в штампах');
-            return { success: false, count: 0, products: [] };
-        },
-
-        /**
-         * 🔄 autoRecoverOnLoad — Автоматическая проверка и восстановление orphan-продуктов при загрузке
-         * Вызывается после загрузки продуктов (sync или localStorage)
-         * 
-         * Логика:
-         * 1. Сканирует все дни (heys_dayv2_*)
-         * 2. Для каждого продукта в приёмах пищи проверяет наличие в локальной базе
-         * 3. Если не найден — пытается восстановить:
-         *    a) Из штампа (kcal100, protein100, etc. в meal item) — приоритет
-         *    b) Из shared_products через HEYS.YandexAPI.rpc — fallback
-         * 4. Добавляет восстановленные продукты в локальную базу
-         * 
-         * @param {Object} options - Опции
-         * @param {boolean} options.verbose - Подробный лог (default: false)
-         * @param {boolean} options.tryShared - Пытаться восстановить из shared_products (default: true)
-         * @returns {Promise<{recovered: number, fromStamp: number, fromShared: number, missing: string[]}>}
-         */
-        async autoRecoverOnLoad(options = {}) {
-            const { verbose = false, tryShared = true } = options;
-            const U = HEYS.utils || {};
-            const lsGet = HEYS.store?.get
-                ? (k, d) => HEYS.store.get(k, d)
-                : (U.lsGet || ((k, d) => {
-                    try { return JSON.parse(localStorage.getItem(k)) || d; } catch { return d; }
-                }));
-            const parseStoredValue = (raw) => {
-                if (!raw) return null;
-                if (typeof raw === 'object') return raw;
-                if (typeof raw !== 'string') return null;
-                if (raw.startsWith('¤Z¤') && HEYS.store?.decompress) {
-                    return HEYS.store.decompress(raw);
-                }
-                try { return JSON.parse(raw); } catch { return null; }
-            };
-
-            const startTime = Date.now();
-            logRecovery('log', '[RECOVERY] 🔄 autoRecoverOnLoad START', { verbose, tryShared });
-
-            // 1. Собираем текущие продукты в Map по id и по name (lowercase)
-            // 🔧 FIX: Используем HEYS.products.getAll() который читает правильный scoped ключ
-            const products = (HEYS.products?.getAll?.() || lsGet('heys_products', []));
-            const productsById = new Map();
-            const productsByName = new Map();
-            const productsByFingerprint = new Map();
-            const normalizeName = HEYS.models?.normalizeProductName || ((n) => String(n || '').toLowerCase().trim().replace(/\s+/g, ' ').replace(/ё/g, 'е'));
-            products.forEach(p => {
-                if (p && p.id) productsById.set(String(p.id), p);
-                if (p && p.name) productsByName.set(normalizeName(p.name), p);
-                if (p && p.fingerprint) productsByFingerprint.set(p.fingerprint, p);
-            });
-
-            logRecovery('log', `[RECOVERY] 📦 Локальная база: ${products.length} продуктов (byId: ${productsById.size}, byName: ${productsByName.size}, byFP: ${productsByFingerprint.size})`);
-
-            // 2. Собираем все уникальные продукты из всех дней
-            const keys = Object.keys(localStorage).filter(k => k.includes('_dayv2_'));
-            const missingProducts = new Map(); // product_id or name => { item, dateStr, hasStamp }
-
-            for (const key of keys) {
-                try {
-                    const storedDay = HEYS.store?.get ? HEYS.store.get(key, null) : null;
-                    const day = parseStoredValue(storedDay ?? localStorage.getItem(key));
-                    if (!day || !day.meals) continue;
-                    const dateStr = key.split('_dayv2_').pop();
-
-                    for (const meal of day.meals) {
-                        for (const item of (meal.items || [])) {
-                            const productId = item.product_id ? String(item.product_id) : null;
-                            const itemName = String(item.name || '').trim();
-                            const itemNameNorm = normalizeName(itemName);
-                            const itemFingerprint = item.fingerprint || null;
-
-                            // Проверяем есть ли в базе
-                            const foundById = productId && productsById.has(productId);
-                            const foundByFingerprint = itemFingerprint && productsByFingerprint.has(itemFingerprint);
-                            const foundByName = itemNameNorm && productsByName.has(itemNameNorm);
-
-                            if (!foundById && !foundByFingerprint && !foundByName && itemName) {
-                                const key = itemFingerprint || productId || itemNameNorm;
-                                if (!missingProducts.has(key)) {
-                                    const stampData = item.kcal100 != null ? {
-                                        kcal100: item.kcal100,
-                                        protein100: item.protein100 || 0,
-                                        fat100: item.fat100 || 0,
-                                        carbs100: item.carbs100 || 0,
-                                        simple100: item.simple100 || 0,
-                                        complex100: item.complex100 || 0,
-                                        badFat100: item.badFat100 || 0,
-                                        goodFat100: item.goodFat100 || 0,
-                                        trans100: item.trans100 || 0,
-                                        fiber100: item.fiber100 || 0,
-                                        gi: item.gi,
-                                        harm: item.harm ?? item.harmScore
-                                    } : null;
-
-                                    if (stampData) {
-                                        copySnapshotFields(item, stampData);
-                                    }
-
-                                    missingProducts.set(key, {
-                                        productId,
-                                        name: itemName,
-                                        fingerprint: itemFingerprint,
-                                        hasStamp: item.kcal100 != null,
-                                        stampData: stampData,
-                                        firstSeenDate: dateStr
-                                    });
-                                }
-                            }
-                        }
-                    }
-                } catch (e) {
-                    // Пропускаем битые записи
-                }
-            }
-
-            if (missingProducts.size === 0) {
-                logRecovery('log', `[RECOVERY] ✅ Нет orphan-продуктов (проверено ${keys.length} дней)`);
-                return { recovered: 0, fromStamp: 0, fromShared: 0, missing: [] };
-            }
-
-            logRecovery('warn', `[RECOVERY] ⚠️ Найдено ${missingProducts.size} orphan-продуктов в ${keys.length} днях`);
-
-            // 🔇 v4.7.0: Лог про отсутствующие отключён (см. return.missing));
-
-            // 3. Пытаемся восстановить
-            const recovered = [];
-            let fromStamp = 0;
-            let fromShared = 0;
-            let skippedDeleted = 0; // 🆕 v4.8.0: Счётчик пропущенных удалённых
-            const stillMissing = [];
-
-            // 🪦 FIX v4.9.1: Строим Set удалённых имён из heys_deleted_ids (Store-based, надёжный)
-            // HEYS.deletedProducts — localStorage-based, может потеряться при overflow/cleanup.
-            // heys_deleted_ids — Store-based, синхронизирован с облаком, НАДЁЖНЫЙ.
-            const _tombstonesRecovery = window.HEYS?.store?.get?.('heys_deleted_ids') || [];
-            const _deletedNamesSet = new Set();
-            const _deletedIdsSet = new Set();
-            if (Array.isArray(_tombstonesRecovery)) {
-                const _normTS = (n) => String(n || '').toLowerCase().trim();
-                _tombstonesRecovery.forEach(t => {
-                    if (t.name) _deletedNamesSet.add(_normTS(t.name));
-                    if (t.id) _deletedIdsSet.add(String(t.id));
-                });
-            }
-
-            // Хелпер: проверка tombstones (оба источника)
-            const _isProductTombstoned = (name, productId) => {
-                const _normCheck = (n) => String(n || '').toLowerCase().trim();
-                if (name && _deletedNamesSet.has(_normCheck(name))) return true;
-                if (productId && _deletedIdsSet.has(String(productId))) return true;
-                if (HEYS.deletedProducts?.isDeleted?.(name)) return true;
-                if (HEYS.deletedProducts?.isDeleted?.(productId)) return true;
-                return false;
-            };
-
-            // 3a. Восстановление из штампов
-            for (const [key, data] of missingProducts) {
-                // 🆕 v4.9.1: Проверяем ОБА tombstone-источника (heys_deleted_ids + deletedProducts)
-                if (_isProductTombstoned(data.name, data.productId)) {
-                    skippedDeleted++;
-                    if (verbose) console.log(`[HEYS] ⏭️ Пропускаю удалённый продукт: "${data.name}" (tombstone)`);
-                    continue;
-                }
-
-                if (data.hasStamp && data.stampData) {
-                    const restoredProduct = {
-                        id: data.productId || ('restored_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8)),
-                        name: data.name,
-                        fingerprint: data.fingerprint,
-                        ...data.stampData,
-                        gi: data.stampData.gi ?? 50,
-                        harm: data.stampData.harm ?? 0,
-                        _recoveredFrom: 'stamp',
-                        _recoveredAt: Date.now()
-                    };
-                    const enriched = enrichProductMaybe(restoredProduct);
-                    recovered.push(enriched);
-                    productsById.set(String(enriched.id), enriched);
-                    productsByName.set(normalizeName(data.name), enriched);
-                    if (data.fingerprint) productsByFingerprint.set(data.fingerprint, enriched);
-                    fromStamp++;
-                    // 🔇 v4.7.0: Лог восстановления отключён
-                } else {
-                    stillMissing.push(data);
-                }
-            }
-
-            // 3b. Пытаемся найти в shared_products (если есть YandexAPI)
-            if (tryShared && stillMissing.length > 0 && HEYS.YandexAPI?.rpc) {
-                try {
-                    // 🔇 v4.7.0: verbose логи отключены
-
-                    const { data: sharedProducts, error } = await HEYS.YandexAPI.rpc('get_shared_products', {});
-
-                    if (!error && Array.isArray(sharedProducts)) {
-                        // Создаём индекс shared продуктов по id и name
-                        const sharedByFingerprint = new Map();
-                        const sharedById = new Map();
-                        const sharedByName = new Map();
-                        sharedProducts.forEach(p => {
-                            if (p && p.fingerprint) sharedByFingerprint.set(p.fingerprint, p);
-                            if (p && p.id) sharedById.set(String(p.id), p);
-                            if (p && p.name) sharedByName.set(normalizeName(p.name), p);
-                        });
-
-                        for (const data of stillMissing) {
-                            // 🆕 v4.9.1: Проверяем ОБА tombstone-источника (heys_deleted_ids + deletedProducts)
-                            if (_isProductTombstoned(data.name, data.productId)) {
-                                skippedDeleted++;
-                                if (verbose) console.log(`[HEYS] ⏭️ Пропускаю удалённый продукт (shared): "${data.name}" (tombstone)`);
-                                continue;
-                            }
-
-                            // Ищем сначала по id, потом по имени
-                            let found = null;
-                            if (data.fingerprint) found = sharedByFingerprint.get(data.fingerprint);
-                            if (!found && data.productId) found = sharedById.get(data.productId);
-                            if (!found && data.name) found = sharedByName.get(normalizeName(data.name));
-
-                            if (found) {
-                                // Клонируем из shared
-                                const cloned = HEYS.products?.addFromShared?.(found);
-                                if (cloned) {
-                                    cloned._recoveredFrom = 'shared';
-                                    cloned._recoveredAt = Date.now();
-                                    recovered.push(cloned);
-                                    fromShared++;
-                                    // 🔇 v4.7.0: Лог отключён
-                                }
-                            }
-                        }
-                    }
-                } catch (e) {
-                    // 🔇 v4.7.0: Только критические ошибки
-                }
-            }
-
-            // 4. Сохраняем восстановленные продукты (если были восстановлены из штампов)
-            logRecovery('log', `[RECOVERY] 📊 Результат: fromStamp=${fromStamp}, fromShared=${fromShared}, stillMissing=${stillMissing.length}`);
-
-            if (fromStamp > 0) {
-                // 🔒 SAFETY: Проверяем что products НЕ пустой (признак corruption)
-                if (products.length === 0) {
-                    console.error('[RECOVERY] ❌ autoRecover BLOCKED: localStorage products пустой! Не сохраняем только orphan-ы.');
-                    console.error('[HEYS] Для восстановления запусти: await HEYS.YandexAPI.rest("shared_products").then(r => { HEYS.store.set("heys_products", r.data || r); location.reload(); })');
-                    // Но диспатчим событие чтобы UI показал ошибку
-                    window.dispatchEvent(new CustomEvent('heys:recovery-blocked', {
-                        detail: { reason: 'EMPTY_BASE', recoveredCount: recovered.length }
-                    }));
-                    // 🐛 FIX v1.1: Было Object.keys(orphans) — orphans не определена, заменено на missingProducts
-                    return { success: false, recovered: [], fromStamp: 0, fromShared: 0, stillMissing: Array.from(missingProducts.keys()), error: 'BLOCKED_EMPTY_BASE' };
-                }
-
-                const stampRecovered = recovered.filter(p => p._recoveredFrom === 'stamp');
-                const newProducts = [...products, ...stampRecovered];
-
-                logRecovery('log', `[RECOVERY] 💾 Сохраняю: было ${products.length}, добавляю ${stampRecovered.length}, итого ${newProducts.length}`);
-
-                if (HEYS.products?.setAll) {
-                    logRecovery('log', '[RECOVERY] 🔄 Вызываю HEYS.products.setAll...');
-                    HEYS.products.setAll(newProducts, { source: 'orphan-recovery' });
-
-                    // Проверяем сохранение
-                    const afterSave = HEYS.products.getAll?.() || [];
-                    logRecovery('log', `[RECOVERY] ✅ После setAll: ${afterSave.length} продуктов в базе`);
-                } else {
-                    logRecovery('warn', '[RECOVERY] ⚠️ HEYS.products.setAll недоступен, использую lsSet');
-                    const storeSet = HEYS.store?.set;
-                    if (storeSet) {
-                        storeSet('heys_products', newProducts);
-                    } else if (U.lsSet) {
-                        U.lsSet('heys_products', newProducts);
-                    } else {
-                        localStorage.setItem('heys_products', JSON.stringify(newProducts));
-                    }
-                }
-
-                // Обновляем индекс
-                if (HEYS.products?.buildSearchIndex) {
-                    HEYS.products.buildSearchIndex();
-                }
-            }
-
-            // 5. Очищаем orphan-трекинг для восстановленных
-            recovered.forEach(p => this.remove(p.name));
-
-            // Собираем имена тех, кого так и не нашли
-            const finalMissing = [];
-            for (const data of stillMissing) {
-                const wasRecovered = recovered.some(p =>
-                    (data.fingerprint && p.fingerprint === data.fingerprint) ||
-                    (data.productId && String(p.id) === data.productId) ||
-                    normalizeName(p.name) === normalizeName(data.name)
-                );
-                if (!wasRecovered) {
-                    finalMissing.push(data.name);
-                    // 🔇 v4.7.0: Лог отключён (см. return.missing)
-                }
-            }
-
-            // 🔇 v4.7.0: Итоговый лог отключён (данные в return)
-
-            const elapsed = Date.now() - startTime;
-            logRecovery('log', `[RECOVERY] 🏁 autoRecoverOnLoad END: recovered=${recovered.length}, skippedDeleted=${skippedDeleted}, elapsed=${elapsed}ms`);
-
-            // 🆕 v4.8.0: Лог пропущенных удалённых
-            if (skippedDeleted > 0 && verbose) {
-                console.log(`[HEYS] 🚫 Пропущено ${skippedDeleted} удалённых продуктов (в игнор-листе)`);
-            }
-
-            // Диспатчим событие для UI
-            if (recovered.length > 0 && typeof window !== 'undefined' && window.dispatchEvent) {
-                window.dispatchEvent(new CustomEvent('heys:orphans-recovered', {
-                    detail: { recovered: recovered.length, fromStamp, fromShared, missing: finalMissing }
-                }));
-            }
-
-            return { recovered: recovered.length, fromStamp, fromShared, missing: finalMissing };
-        }
-    };
 
     // === Haptic Feedback ===
     // Track if user has interacted (required for vibrate API)
@@ -4528,9 +3847,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
                             product = freshProduct;
                             productsMap.set(itemNameLower, freshProduct);
                             if (itemNameNorm) productsMap.set(itemNameNorm, freshProduct);
-                            if (orphanProductsMap.has(itemName)) orphanProductsMap.delete(itemName);
-                            if (itemNameNorm && orphanProductsMap.has(itemNameNorm)) orphanProductsMap.delete(itemNameNorm);
-                            if (orphanProductsMap.has(itemNameLower)) orphanProductsMap.delete(itemNameLower);
+                            orphanProductsRemoveKeys(itemName, itemNameNorm, itemNameLower);
                         } else if (freshProducts.length > 0) {
                             const similar = freshProducts.filter(p => {
                                 const pName = String(p.name || '').trim().toLowerCase();
@@ -4555,9 +3872,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
                             product = fromSharedEarly;
                             productsMap.set(itemNameLower, fromSharedEarly);
                             if (itemNameNorm) productsMap.set(itemNameNorm, fromSharedEarly);
-                            if (orphanProductsMap.has(itemName)) orphanProductsMap.delete(itemName);
-                            if (itemNameNorm && orphanProductsMap.has(itemNameNorm)) orphanProductsMap.delete(itemNameNorm);
-                            if (orphanProductsMap.has(itemNameLower)) orphanProductsMap.delete(itemNameLower);
+                            orphanProductsRemoveKeys(itemName, itemNameNorm, itemNameLower);
                         }
                     }
 
@@ -4606,12 +3921,41 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
                         const foundInShared = resolveProductByItem(item, sharedProducts);
 
                         if (hasProductsLoaded && !foundInFresh && !foundInShared) {
+                            if (shouldLogOrphanDebug()) {
+                                const itemNameNorm = normalizeProductName(itemName);
+                                const freshSample = freshProducts
+                                    .filter((p) => p && p.name)
+                                    .map((p) => String(p.name).trim())
+                                    .filter((name) => {
+                                        const n = normalizeProductName(name);
+                                        return n.includes(itemNameNorm.slice(0, 8)) || itemNameNorm.includes(n.slice(0, 8));
+                                    })
+                                    .slice(0, 3);
+                                const sharedSample = sharedProducts
+                                    .filter((p) => p && p.name)
+                                    .map((p) => String(p.name).trim())
+                                    .filter((name) => {
+                                        const n = normalizeProductName(name);
+                                        return n.includes(itemNameNorm.slice(0, 8)) || itemNameNorm.includes(n.slice(0, 8));
+                                    })
+                                    .slice(0, 3);
+                                console.info('[HEYS.orphan-debug] miss', {
+                                    date: dateStr,
+                                    itemName,
+                                    itemNameNorm,
+                                    productId: item.product_id ?? item.productId ?? null,
+                                    fingerprint: item.fingerprint || null,
+                                    freshProductsCount: freshProducts.length,
+                                    sharedProductsCount: sharedProducts.length,
+                                    freshSimilar: freshSample,
+                                    sharedSimilar: sharedSample,
+                                    hasInlineData: item.kcal100 != null,
+                                });
+                            }
                             trackOrphanProduct(item, dateStr);
                         } else if (foundInFresh || foundInShared) {
                             const n = String(item.name || '').trim();
-                            if (n && orphanProductsMap.has(n)) orphanProductsMap.delete(n);
-                            if (itemNameNorm && orphanProductsMap.has(itemNameNorm)) orphanProductsMap.delete(itemNameNorm);
-                            if (orphanProductsMap.has(itemNameLower)) orphanProductsMap.delete(itemNameLower);
+                            orphanProductsRemoveKeys(n || itemName, itemNameNorm, itemNameLower);
                         }
                     }
 
@@ -5647,13 +4991,19 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
                 if (t - r.at < 8000) return;
                 r.updatedAt = updatedAt;
                 r.at = t;
-                if (typeof console !== 'undefined') {
+                if (typeof console !== 'undefined' && (
+                    global?.localStorage?.getItem('heys_debug_sync') === 'true' ||
+                    global?.localStorage?.getItem('heys_debug_ind') === 'true'
+                )) {
                     console.info('[HEYS.sync] [IND] flush: dayv2 content guard HIT (freshest===current, skip write) updatedAt=' + updatedAt);
                 }
                 return;
             }
             if (!force && freshestDaySnap) {
-                if (typeof console !== 'undefined') console.info('[HEYS.sync] [IND] flush: dayv2 content guard MISS (content differs) updatedAt=' + updatedAt + ' freshestUpdatedAt=' + freshestUpdatedAt);
+                if (typeof console !== 'undefined' && (
+                    global?.localStorage?.getItem('heys_debug_sync') === 'true' ||
+                    global?.localStorage?.getItem('heys_debug_ind') === 'true'
+                )) console.info('[HEYS.sync] [IND] flush: dayv2 content guard MISS (content differs) updatedAt=' + updatedAt + ' freshestUpdatedAt=' + freshestUpdatedAt);
             }
 
             // force: всегда пишем в storage — иначе MA/модалки читают LS без последнего debounced-патча приёмов.
@@ -6360,6 +5710,15 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
                     // Данные сохранятся при следующем изменении (добавление еды, воды и т.д.)
                     const newDay = ensureDay(cleanedDay, profNow);
                     // 🔒 Оптимизация: не вызываем setDay если данные идентичны (предотвращает мерцание)
+                    try {
+                        if (HEYS.perf && typeof HEYS.perf.markCommitHint === 'function') {
+                            HEYS.perf.markCommitHint('date-effect:doLocal', {
+                                date,
+                                mealsCount: (cleanedDay.meals || []).length,
+                                hasStoredData: true
+                            });
+                        }
+                    } catch (_) { /* noop */ }
                     setDay(prevDay => {
                         const eq = HEYS.dayUtils && typeof HEYS.dayUtils.isSameDayHydratedContent === 'function'
                             ? HEYS.dayUtils.isSameDayHydratedContent(prevDay, newDay)
@@ -6369,6 +5728,11 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
                     });
                 } else {
                     // create a clean default day for the selected date (don't inherit previous trainings)
+                    try {
+                        if (HEYS.perf && typeof HEYS.perf.markCommitHint === 'function') {
+                            HEYS.perf.markCommitHint('date-effect:doLocal-default', { date });
+                        }
+                    } catch (_) { /* noop */ }
                     const defaultDay = ensureDay({
                         date: date,
                         meals: (loadMealsForDate(date) || []),
@@ -6426,9 +5790,14 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
         // Слушаем событие обновления данных дня (от Morning Check-in или внешних изменений)
         // НЕ слушаем heysSyncCompleted — это вызывает бесконечный цикл при каждом сохранении
         // 🔧 v3.19.1: Защита от дублирующихся событий fetchDays
-        const lastProcessedEventRef = React.useRef({ date: null, source: null, timestamp: 0 });
+        const lastProcessedEventRef = React.useRef({ date: null, source: null, timestamp: 0, fetchKey: '' });
         const dayUpdateLogBufferRef = React.useRef([]);
         const dayUpdateLogTimerRef = React.useRef(null);
+        const pendingDayApplyRafRef = React.useRef(null);
+        const pendingDayForceReloadRef = React.useRef(false);
+        const lastDayApplySourceRef = React.useRef('unknown');
+        const lastAppliedSignatureRef = React.useRef('');
+        const lastAppliedAtRef = React.useRef(0);
 
         React.useEffect(() => {
             const flushDayUpdateLog = () => {
@@ -6466,6 +5835,17 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
                 const updatedAt = e.detail?.updatedAt;
                 const payloadData = e.detail?.data;
 
+                try {
+                    if (HEYS.perf && typeof HEYS.perf.markCommitHint === 'function') {
+                        HEYS.perf.markCommitHint('day-updated:recv', {
+                            source: e.detail?.source || 'unknown',
+                            updatedDate: e.detail?.date,
+                            batch: !!e.detail?.batch,
+                            forceReload: !!e.detail?.forceReload
+                        });
+                    }
+                } catch (_) { /* noop */ }
+
                 // v25.8.6.1: Handle timestamp-only sync (prevent fetchDays overwrite)
                 if (syncTimestampOnly && updatedAt) {
                     const newTimestamp = Math.max(lastLoadedUpdatedAtRef.current || 0, updatedAt);
@@ -6481,16 +5861,19 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
                     blockUntil: blockCloudUpdatesUntilRef.current
                 });
 
-                // 🔧 v3.19.1: Дедупликация событий — игнорируем одинаковые события в течение 100мс
+                // 🔧 v3.19.1: Дедуп fetchDays — batch first date менялся между вызовами; ключ по полному списку дат.
                 const now = Date.now();
                 const last = lastProcessedEventRef.current;
+                const fetchDaysKey = (source === 'fetchDays' && e.detail?.batch && Array.isArray(e.detail?.dates))
+                    ? [...new Set(e.detail.dates.filter(Boolean).map(String))].sort().join(',')
+                    : String(updatedDate || '');
                 if (source === 'fetchDays' &&
-                    last.date === updatedDate &&
                     last.source === source &&
-                    now - last.timestamp < 100) {
-                    return; // Пропускаем дубликат
+                    last.fetchKey === fetchDaysKey &&
+                    now - last.timestamp < 450) {
+                    return; // Пропускаем дубликат / coalesced повтор
                 }
-                lastProcessedEventRef.current = { date: updatedDate, source, timestamp: now };
+                lastProcessedEventRef.current = { date: updatedDate, source, timestamp: now, fetchKey: fetchDaysKey };
 
                 // 🔒 Игнорируем события во время начальной синхронизации
                 // doLocal() в конце синхронизации загрузит все финальные данные
@@ -6506,6 +5889,17 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
                     const payloadUpdatedAt = normalizedPayload.updatedAt || updatedAt || Date.now();
                     const payloadMealsCount = (normalizedPayload.meals || []).length;
 
+                    try {
+                        if (HEYS.perf && typeof HEYS.perf.markCommitHint === 'function') {
+                            HEYS.perf.markCommitHint('day-updated:payload', {
+                                source,
+                                date: normalizedPayload?.date || date,
+                                mealsCount: payloadMealsCount
+                            });
+                        }
+                    } catch (_) { /* noop */ }
+
+                    React.startTransition(() => {
                     setDay(prevDay => {
                         const prevUpdatedAt = prevDay?.updatedAt || 0;
                         const prevMealsCount = (prevDay?.meals || []).length;
@@ -6552,6 +5946,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
                         }
                         return nextDay;
                     });
+                    });
 
                     lastLoadedUpdatedAtRef.current = Math.max(lastLoadedUpdatedAtRef.current || 0, payloadUpdatedAt);
                     return;
@@ -6584,8 +5979,38 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
                 // Если date не указан, совпадает с текущим, или текущий есть в batch.dates — перезагружаем
                 const isBatchForCurrentDate = e.detail?.batch && Array.isArray(e.detail?.dates) && e.detail.dates.includes(date);
                 if (!updatedDate || updatedDate === date || isBatchForCurrentDate) {
-                    const profNow = getProfile();
-                    const dayRead = readDayV2(date, lsGet);
+                    lastDayApplySourceRef.current = source;
+                    pendingDayForceReloadRef.current = pendingDayForceReloadRef.current || !!forceReload;
+                    if (pendingDayApplyRafRef.current != null) {
+                        return;
+                    }
+                    pendingDayApplyRafRef.current = requestAnimationFrame(() => {
+                        pendingDayApplyRafRef.current = null;
+                        const pendingSource = lastDayApplySourceRef.current;
+                        const pendingForceReload = pendingDayForceReloadRef.current;
+                        const applySignature = [String(date || ''), String(pendingSource || ''), pendingForceReload ? '1' : '0'].join('|');
+                        const nowApply = Date.now();
+                        const sigCooldownMs = (pendingSource === 'fetchDays' && pendingForceReload) ? 720 : 220;
+                        if (lastAppliedSignatureRef.current === applySignature && (nowApply - lastAppliedAtRef.current) < sigCooldownMs) {
+                            pendingDayForceReloadRef.current = false;
+                            return;
+                        }
+                        try {
+                            if (HEYS.perf && typeof HEYS.perf.markCommitHint === 'function') {
+                                HEYS.perf.markCommitHint('day-updated:raf-apply', {
+                                    source: pendingSource,
+                                    date,
+                                    forceReload: pendingForceReload
+                                });
+                            }
+                        } catch (_) { /* noop */ }
+                        React.startTransition(() => {
+                            const forceReload = pendingDayForceReloadRef.current;
+                            pendingDayForceReloadRef.current = false;
+                            const source = lastDayApplySourceRef.current;
+
+                            const profNow = getProfile();
+                            const dayRead = readDayV2(date, lsGet);
                     const key = dayRead.key;
                     const v = dayRead.value;
                     const hasStoredData = !!(v && typeof v === 'object' && (
@@ -6788,17 +6213,38 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
                             // Обновляем ref только если приняли данные из storage
                             lastLoadedUpdatedAtRef.current = storageUpdatedAt;
 
-                            if (prevDay && prevDay.date === newDay.date) {
+                            // Равный updatedAt: снимок из LS/облака может отстать по waterMl на один тик
+                            // (persist через Store + hot-sync с тем же timestamp).
+                            var mergedForReturn = newDay;
+                            if (storageUpdatedAt === prevUpdatedAt && prevDay && mergedForReturn) {
+                                var prevWml = +(prevDay.waterMl || 0);
+                                var nextWml = +(mergedForReturn.waterMl || 0);
+                                if (prevWml > nextWml) {
+                                    var prevLw = +(prevDay.lastWaterTime || 0);
+                                    var nextLw = +(mergedForReturn.lastWaterTime || 0);
+                                    mergedForReturn = {
+                                        ...mergedForReturn,
+                                        waterMl: prevWml,
+                                        lastWaterTime: Math.max(prevLw, nextLw) || mergedForReturn.lastWaterTime
+                                    };
+                                }
+                            }
+
+                            if (prevDay && prevDay.date === mergedForReturn.date) {
                                 const eq = HEYS.dayUtils && typeof HEYS.dayUtils.isSameDayStorageMergeContent === 'function'
-                                    ? HEYS.dayUtils.isSameDayStorageMergeContent(prevDay, newDay)
+                                    ? HEYS.dayUtils.isSameDayStorageMergeContent(prevDay, mergedForReturn)
                                     : false;
                                 if (eq) {
                                     return prevDay;
                                 }
                             }
-                            return newDay;
+                            return mergedForReturn;
                         });
+                        lastAppliedSignatureRef.current = applySignature;
+                        lastAppliedAtRef.current = Date.now();
                     }
+                        });
+                    });
                 }
             };
 
@@ -6806,6 +6252,10 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
             global.addEventListener('heys:day-updated', handleDayUpdated);
 
             return () => {
+                if (pendingDayApplyRafRef.current != null) {
+                    cancelAnimationFrame(pendingDayApplyRafRef.current);
+                    pendingDayApplyRafRef.current = null;
+                }
                 global.removeEventListener('heys:day-updated', handleDayUpdated);
                 if (dayUpdateLogTimerRef.current) {
                     clearTimeout(dayUpdateLogTimerRef.current);
@@ -7709,9 +7159,34 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
 
             persistDaySnapshotImmediately(nextDaySnapshot);
 
+            // Сразу обновляем React state (без startTransition — иначе цифра воды может приехать через секунды под нагрузкой)
+            setDay(prev => ({
+                ...prev,
+                waterMl: newWater,
+                lastWaterTime: newUpdatedAt,
+                updatedAt: newUpdatedAt
+            }));
+
             // DOM-based visual animations (no React state = no re-render)
             const waterCard = document.getElementById('water-card');
             if (waterCard) {
+                // Сразу обновляем цифру на кольце (React может отстать от LS / hot-sync)
+                const goalRing = Math.max(1, Number(waterGoal) || 2000);
+                const ringFill = waterCard.querySelector('.water-ring-fill');
+                if (ringFill) {
+                    ringFill.style.strokeDasharray = Math.min(100, ((newWater || 0) / goalRing) * 100) + ' 100';
+                }
+                const ringVal = waterCard.querySelector('.water-ring-value');
+                const ringUnit = waterCard.querySelector('.water-ring-unit');
+                if (ringVal) {
+                    ringVal.textContent = (newWater || 0) >= 1000
+                        ? String(((newWater || 0) / 1000).toFixed(1)).replace('.0', '')
+                        : String(newWater || 0);
+                }
+                if (ringUnit) {
+                    ringUnit.textContent = (newWater || 0) >= 1000 ? 'л' : 'мл';
+                }
+
                 // "+250" text animation above the ring
                 const ringCont = waterCard.querySelector('.water-ring-container');
                 if (ringCont) {
@@ -7737,16 +7212,6 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
                     setTimeout(() => { if (dropCont.parentNode) dropCont.remove(); }, 1200);
                 }
             }
-
-            // Defer heavy day state update via setTimeout(0) + startTransition
-            setTimeout(() => {
-                React.startTransition(() => {
-                    setDay(prev => {
-                        const nextWaterMl = (prev.waterMl || 0) + ml;
-                        return { ...prev, waterMl: nextWaterMl, lastWaterTime: newUpdatedAt, updatedAt: newUpdatedAt };
-                    });
-                });
-            }, 0);
 
             scheduleDayFlush();
 
@@ -7805,7 +7270,26 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
                 updatedAt: newUpdatedAt
             });
 
-            setDay(prev => ({ ...prev, waterMl: Math.max(0, (prev.waterMl || 0) - ml), updatedAt: newUpdatedAt }));
+            const waterCardRm = document.getElementById('water-card');
+            if (waterCardRm) {
+                const goalRing = Math.max(1, Number(waterGoal) || 2000);
+                const ringFill = waterCardRm.querySelector('.water-ring-fill');
+                if (ringFill) {
+                    ringFill.style.strokeDasharray = Math.min(100, ((newWater || 0) / goalRing) * 100) + ' 100';
+                }
+                const ringVal = waterCardRm.querySelector('.water-ring-value');
+                const ringUnit = waterCardRm.querySelector('.water-ring-unit');
+                if (ringVal) {
+                    ringVal.textContent = (newWater || 0) >= 1000
+                        ? String(((newWater || 0) / 1000).toFixed(1)).replace('.0', '')
+                        : String(newWater || 0);
+                }
+                if (ringUnit) {
+                    ringUnit.textContent = (newWater || 0) >= 1000 ? 'л' : 'мл';
+                }
+            }
+
+            setDay(prev => ({ ...prev, waterMl: newWater, updatedAt: newUpdatedAt }));
 
             scheduleDayFlush();
 
@@ -8555,6 +8039,16 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
   // Отслеживание продуктов, для которых данные берутся из штампа вместо базы
   const orphanProductsMap = new Map(); // name => { name, usedInDays: Set, firstSeen }
   const orphanLoggedRecently = new Map(); // name => timestamp (throttle логов)
+  const shouldLogOrphanTrace = () => {
+    try {
+      return !!(
+        HEYS?.debug?.orphansTrace === true ||
+        global?.localStorage?.getItem('heys_debug_orphans_trace') === 'true'
+      );
+    } catch (_) {
+      return false;
+    }
+  };
   const normalizeProductName = HEYS.models?.normalizeProductName
     || ((name) => String(name || '').toLowerCase().trim().replace(/\s+/g, ' ').replace(/ё/g, 'е'));
 
@@ -8599,6 +8093,56 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
     );
   }
 
+  function copySnapshotFields(item, target) {
+    if (!item || !target) return target;
+    const numericFields = [
+      'kcal100', 'protein100', 'carbs100', 'fat100',
+      'simple100', 'complex100', 'badFat100', 'goodFat100', 'trans100',
+      'fiber100', 'sodium100',
+      'omega3_100', 'omega6_100', 'nutrient_density',
+      'vitamin_a', 'vitamin_c', 'vitamin_d', 'vitamin_e', 'vitamin_k',
+      'vitamin_b1', 'vitamin_b2', 'vitamin_b3', 'vitamin_b6', 'vitamin_b9', 'vitamin_b12',
+      'calcium', 'iron', 'magnesium', 'phosphorus', 'potassium', 'zinc', 'selenium', 'iodine'
+    ];
+    numericFields.forEach((field) => {
+      if (target[field] == null && item[field] != null) {
+        target[field] = item[field];
+      }
+    });
+    const itemNova = item.nova_group ?? item.novaGroup;
+    if (target.nova_group == null && itemNova != null) {
+      target.nova_group = itemNova;
+    }
+    if (target.novaGroup == null && target.nova_group != null) {
+      target.novaGroup = target.nova_group;
+    }
+    if (target.additives == null && Array.isArray(item.additives) && item.additives.length) {
+      target.additives = item.additives;
+    }
+    const boolFields = ['is_organic', 'is_whole_grain', 'is_fermented', 'is_raw'];
+    boolFields.forEach((field) => {
+      if (target[field] == null && item[field] != null) {
+        target[field] = item[field];
+      }
+    });
+    return target;
+  }
+
+  function enrichProductMaybe(product) {
+    if (!product) return product;
+    const normalized = global.HEYS?.models?.normalizeProductFields
+      ? global.HEYS.models.normalizeProductFields(product)
+      : product;
+    if (global.HEYS?.Harm?.enrichProduct) {
+      try {
+        return global.HEYS.Harm.enrichProduct(normalized) || normalized;
+      } catch {
+        return normalized;
+      }
+    }
+    return normalized;
+  }
+
   function trackOrphanProduct(item, dateStr) {
     if (!item || !item.name) return;
     if (isSyntheticEstimatedItem(item)) return;
@@ -8618,8 +8162,9 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
         firstSeen: Date.now(),
         hasInlineData: item.kcal100 != null
       });
-      // Первое обнаружение — логируем с датой
-      console.warn(`[HEYS] Orphan product: "${name}" — используются данные из штампа (день: ${dateStr || 'unknown'})`);
+      if (shouldLogOrphanTrace()) {
+        console.info('[HEYS.orphan-trace] track new', { name, dateStr, productId, fingerprint });
+      }
     } else {
       const orphanData = orphanProductsMap.get(name);
       orphanData.usedInDays.add(dateStr);
@@ -8645,14 +8190,53 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
       return orphanProductsMap.size;
     },
 
+    /** Сироты, встречающиеся в записи дня dateStr (YYYY-MM-DD) — для баннера на вкладке дня */
+    countForDate(dateStr) {
+      const ds = String(dateStr || '').trim();
+      if (!ds) return orphanProductsMap.size;
+      let n = 0;
+      for (const o of orphanProductsMap.values()) {
+        if (o && o.usedInDays && typeof o.usedInDays.has === 'function' && o.usedInDays.has(ds)) {
+          n++;
+        }
+      }
+      return n;
+    },
+
+    getAllForDate(dateStr) {
+      const ds = String(dateStr || '').trim();
+      if (!ds) return this.getAll();
+      return Array.from(orphanProductsMap.values())
+        .filter((o) => o && o.usedInDays && typeof o.usedInDays.has === 'function' && o.usedInDays.has(ds))
+        .map((o) => ({
+          ...o,
+          usedInDays: Array.from(o.usedInDays),
+          daysCount: o.usedInDays.size
+        }));
+    },
+
     // Есть ли orphan-продукты?
     hasAny() {
       return orphanProductsMap.size > 0;
     },
 
+    hasAnyForDate(dateStr) {
+      return this.countForDate(dateStr) > 0;
+    },
+
+    track(item, dateStr) {
+      trackOrphanProduct(item, dateStr);
+    },
+
     // Очистить (после синхронизации или исправления)
     clear() {
+      const before = orphanProductsMap.size;
       orphanProductsMap.clear();
+      if (before > 0 && typeof global.dispatchEvent === 'function') {
+        global.dispatchEvent(new CustomEvent('heys:orphan-updated', {
+          detail: { count: 0, removed: before }
+        }));
+      }
     },
 
     // Удалить конкретный по имени (если продукт добавили обратно в базу)
@@ -8668,6 +8252,14 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
     // Пересчитать orphan-продукты на основе актуальной базы
     // Вызывается после добавления продукта или удаления item из meal
     recalculate() {
+      if (shouldLogOrphanTrace()) {
+        const n = global.HEYS?.products?.getAll?.()?.length;
+        console.info('[HEYS.orphan-trace] recalculate start', {
+          mapSize: orphanProductsMap.size,
+          getAllLength: n,
+          hasGetAll: !!global.HEYS?.products?.getAll
+        });
+      }
       if (!global.HEYS?.products?.getAll) return;
 
       const products = global.HEYS.products.getAll();
@@ -8723,6 +8315,9 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
           detail: { count: afterCount, removed: beforeCount - afterCount }
         }));
       }
+      if (shouldLogOrphanTrace()) {
+        console.info('[HEYS.orphan-trace] recalculate end', { beforeCount, afterCount: orphanProductsMap.size });
+      }
     },
 
     // Показать в консоли красивую таблицу
@@ -8743,40 +8338,48 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
     // Восстановить orphan-продукты в базу из штампов в днях
     async restore() {
       const U = HEYS.utils || {};
-      const lsGet = U.lsGet || ((k, d) => {
-        try { return JSON.parse(localStorage.getItem(k)) || d; } catch { return d; }
-      });
-      const lsSet = U.lsSet || ((k, v) => localStorage.setItem(k, JSON.stringify(v)));
+      const lsGet = HEYS.store?.get
+        ? (k, d) => HEYS.store.get(k, d)
+        : (U.lsGet || ((k, d) => {
+          try { return JSON.parse(localStorage.getItem(k)) || d; } catch { return d; }
+        }));
+      const lsSet = HEYS.store?.set
+        ? (k, v) => HEYS.store.set(k, v)
+        : (U.lsSet || ((k, v) => localStorage.setItem(k, JSON.stringify(v))));
       const parseStoredValue = (raw) => {
-        if (!raw || typeof raw !== 'string') return null;
+        if (!raw) return null;
+        if (typeof raw === 'object') return raw;
+        if (typeof raw !== 'string') return null;
         if (raw.startsWith('¤Z¤') && HEYS.store?.decompress) {
           return HEYS.store.decompress(raw);
         }
         try { return JSON.parse(raw); } catch { return null; }
       };
 
-      // Получаем текущие продукты (ключ = name LOWERCASE для консистентности с getDayData)
-      const rawProducts = lsGet('heys_products', []);
-      const products = Array.isArray(rawProducts) ? rawProducts : [];
+      const products = Array.isArray(HEYS.products?.getAll?.())
+        ? HEYS.products.getAll()
+        : (Array.isArray(lsGet('heys_products', [])) ? lsGet('heys_products', []) : []);
       const productsMap = new Map();
-      const productsById = new Map(); // Для восстановления по id
-      products.forEach(p => {
+      const productsById = new Map();
+      products.forEach((p) => {
         if (p && p.name) {
           const name = String(p.name).trim().toLowerCase();
           if (name) productsMap.set(name, p);
-          if (p.id) productsById.set(String(p.id), p);
+          const pid = p.id ?? p.product_id;
+          if (pid != null) productsById.set(String(pid), p);
         }
       });
 
-      // Собираем orphan-продукты из всех дней
-      // Ключи могут быть: heys_dayv2_YYYY-MM-DD (legacy) или heys_<clientId>_dayv2_YYYY-MM-DD
       const restored = [];
       const keys = Object.keys(localStorage).filter(k => k.includes('_dayv2_'));
 
-      // 🔇 v4.7.0: DEBUG логи отключены
-
-      // Debug: показать какие orphan продукты мы ищем
-      const orphanNames = Array.from(orphanProductsMap.keys());
+      if (shouldLogOrphanTrace()) {
+        console.info('[HEYS.orphan-trace] restore scan', {
+          orphanKeys: Array.from(orphanProductsMap.keys()),
+          dayKeys: keys.length,
+          baseCount: products.length
+        });
+      }
 
       let checkedItems = 0;
       let foundWithData = 0;
@@ -8784,7 +8387,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
 
       for (const key of keys) {
         try {
-          const day = parseStoredValue(localStorage.getItem(key));
+          const storedDay = HEYS.store?.get ? HEYS.store.get(key, null) : null;
+          const day = parseStoredValue(storedDay ?? localStorage.getItem(key));
           if (!day || !day.meals) continue;
 
           for (const meal of day.meals) {
@@ -8796,18 +8400,16 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
               if (!itemName) continue;
 
               const hasData = item.kcal100 != null;
-              const inBase = productsMap.has(itemNameLower) || (item.product_id && productsById.has(String(item.product_id)));
+              const pid = item.product_id ?? item.productId;
+              const inBase = productsMap.has(itemNameLower) || (pid != null && productsById.has(String(pid)));
 
               if (hasData) foundWithData++;
               if (inBase) alreadyInBase++;
 
-              // 🔇 v4.7.0: DEBUG логи отключены
-
-              // Если продукта нет в базе по имени И есть inline данные
               if (itemName && !inBase && hasData) {
                 const restoredProduct = {
-                  id: item.product_id || ('restored_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8)),
-                  name: itemName, // Сохраняем оригинальное имя
+                  id: pid || ('restored_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8)),
+                  name: itemName,
                   kcal100: item.kcal100,
                   protein100: item.protein100 || 0,
                   fat100: item.fat100 || 0,
@@ -8823,9 +8425,11 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
                   restoredAt: Date.now(),
                   restoredFrom: 'orphan_stamp'
                 };
-                productsMap.set(itemNameLower, restoredProduct);
-                restored.push(restoredProduct);
-                // 🔇 v4.7.0: Лог отключён
+                copySnapshotFields(item, restoredProduct);
+                const enriched = enrichProductMaybe(restoredProduct);
+                productsMap.set(itemNameLower, enriched);
+                if (enriched.id != null) productsById.set(String(enriched.id), enriched);
+                restored.push(enriched);
               }
             }
           }
@@ -8834,15 +8438,20 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
         }
       }
 
-      // 🔇 v4.7.0: DEBUG лог отключён
-
       if (restored.length > 0) {
-        // Сохраняем обновлённую базу
-        const newProducts = Array.from(productsMap.values());
+        if (products.length === 0) {
+          console.error('[HEYS] ❌ RESTORE BLOCKED: база продуктов пуста (corruption guard).');
+          return { success: false, count: 0, products: [], error: 'BLOCKED_EMPTY_BASE' };
+        }
 
-        // Используем HEYS.products.setAll для синхронизации с облаком и React state
+        const newProducts = Array.from(productsMap.values());
+        if (newProducts.length < products.length * 0.5) {
+          console.error(`[HEYS] ❌ RESTORE BLOCKED: новое кол-во (${newProducts.length}) < 50% от текущего (${products.length})`);
+          return { success: false, count: 0, products: [], error: 'BLOCKED_DATA_LOSS' };
+        }
+
         if (HEYS.products?.setAll) {
-          HEYS.products.setAll(newProducts);
+          HEYS.products.setAll(newProducts, { source: 'button-restore-orphans' });
         } else {
           lsSet('heys_products', newProducts);
           console.warn('[HEYS] ⚠️ Products saved via lsSet only (no cloud sync)');
@@ -8851,18 +8460,17 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
         if (HEYS.cloud?.flushPendingQueue) {
           try {
             await HEYS.cloud.flushPendingQueue(3000);
-          } catch (e) { }
+          } catch (e) { /* noop */ }
         }
 
-        // Очищаем orphan-трекинг
-        this.clear();
-
-        // Обновляем индекс продуктов если есть
         if (HEYS.products?.buildSearchIndex) {
           HEYS.products.buildSearchIndex();
         }
 
-        // Уведомляем UI об обновлении продуктов
+        if (typeof this.recalculate === 'function') {
+          try { this.recalculate(); } catch (_e) { /* noop */ }
+        }
+
         if (typeof window !== 'undefined' && window.dispatchEvent) {
           window.dispatchEvent(new CustomEvent('heysProductsUpdated', {
             detail: { products: newProducts, restored: restored.length }
@@ -9911,38 +9519,44 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
         ? 'heys_' + clientId + '_dayv2_' + dateStr
         : 'heys_dayv2_' + dateStr;
 
-      const raw = localStorage.getItem(scopedKey);
-      if (!raw) return null;
+      const logicalDayKey = 'heys_dayv2_' + dateStr;
+      // Читаем через lsGet: тот же путь, что и остальное приложение (scoped + decompress + legacy migrate).
+      let dayData = (U && typeof U.lsGet === 'function') ? U.lsGet(logicalDayKey, null) : null;
 
-      let dayData = null;
-      const parseHit = _dayV2RawParseCache.get(scopedKey);
-      if (parseHit && parseHit.raw === raw) {
-        dayData = parseHit.dayData;
-      } else {
-        if (raw.startsWith('¤Z¤')) {
-          if (HEYS.store?.decompress) {
-            dayData = HEYS.store.decompress(raw);
-          } else {
-            let str = raw.substring(3);
-            const patterns = {
-              '¤n¤': '"name":"', '¤k¤': '"kcal100"', '¤p¤': '"protein100"',
-              '¤c¤': '"carbs100"', '¤f¤': '"fat100"'
-            };
-            for (const [code, pattern] of Object.entries(patterns)) {
-              str = str.split(code).join(pattern);
-            }
-            dayData = JSON.parse(str);
-          }
+      if (!dayData || typeof dayData !== 'object') {
+        const raw = localStorage.getItem(scopedKey);
+        if (!raw) return null;
+
+        dayData = null;
+        const parseHit = _dayV2RawParseCache.get(scopedKey);
+        if (parseHit && parseHit.raw === raw) {
+          dayData = parseHit.dayData;
         } else {
-          dayData = JSON.parse(raw);
+          if (raw.startsWith('¤Z¤')) {
+            if (HEYS.store?.decompress) {
+              dayData = HEYS.store.decompress(raw);
+            } else {
+              let str = raw.substring(3);
+              const patterns = {
+                '¤n¤': '"name":"', '¤k¤': '"kcal100"', '¤p¤': '"protein100"',
+                '¤c¤': '"carbs100"', '¤f¤': '"fat100"'
+              };
+              for (const [code, pattern] of Object.entries(patterns)) {
+                str = str.split(code).join(pattern);
+              }
+              dayData = JSON.parse(str);
+            }
+          } else {
+            dayData = JSON.parse(raw);
+          }
+          if (dayData && typeof dayData === 'object') {
+            _dayV2RawParseCache.set(scopedKey, { raw, dayData });
+            _trimDayV2ParseCache();
+          }
         }
-        if (dayData && typeof dayData === 'object') {
-          _dayV2RawParseCache.set(scopedKey, { raw, dayData });
-          _trimDayV2ParseCache();
-        }
-      }
 
-      if (!dayData) return null;
+        if (!dayData || typeof dayData !== 'object') return null;
+      }
 
       // Считаем калории и макросы из meals
       let totalKcal = 0, totalProt = 0, totalFat = 0, totalCarbs = 0;
@@ -10066,6 +9680,17 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
 
             // Трекаем только если база загружена И продукт реально не найден в обеих базах
             if (hasProductsLoaded && !foundInFresh && !foundInShared) {
+              if (shouldLogOrphanTrace()) {
+                console.info('[HEYS.orphan-trace] getDayData orphan miss', {
+                  dateStr,
+                  itemName: String(item.name || '').trim(),
+                  productId: item.product_id ?? item.productId ?? null,
+                  fingerprint: item.fingerprint || null,
+                  freshCount: freshProducts.length,
+                  sharedCount: sharedProducts.length,
+                  hasInlineData: item.kcal100 != null
+                });
+              }
               trackOrphanProduct(item, dateStr);
             } else if (foundInFresh || foundInShared) {
               const n = String(item.name || '').trim();
@@ -22355,7 +21980,21 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
    * @returns {React.Element|boolean} Alert element or false if no orphans
    */
   function renderOrphanAlert(params) {
-    const { orphanCount } = params;
+    const { orphanCount, date } = params;
+    const listForUi = (date && HEYS.orphanProducts?.getAllForDate)
+      ? (HEYS.orphanProducts.getAllForDate(date) || [])
+      : (HEYS.orphanProducts?.getAll?.() || []);
+    try {
+      const listLen = listForUi.length;
+      if (orphanCount > 0 || listLen > 0) {
+        console.warn('[HEYS.orphan:PIPE] render alert', {
+          orphanCount,
+          date: date || null,
+          listLen,
+          sample: listForUi.slice(0, 3).map((o) => o?.name || '(no-name)')
+        });
+      }
+    } catch (_) { /* noop */ }
     
     if (!orphanCount || orphanCount === 0) {
       return false;
@@ -22390,7 +22029,9 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
             fontSize: '12px',
             lineHeight: '1.4'
           } 
-        }, 'Калории считаются по сохранённым данным. Нажми чтобы увидеть список.'),
+        }, date
+          ? `Калории считаются по сохранённым данным за выбранный день (${date}). Нажми чтобы увидеть список.`
+          : 'Калории считаются по сохранённым данным. Нажми чтобы увидеть список.'),
         // Список orphan-продуктов
         React.createElement('details', { 
           style: { marginTop: '8px' }
@@ -22411,7 +22052,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
               color: '#78350f'
             } 
           },
-            (HEYS.orphanProducts?.getAll?.() || []).map((o, i) => 
+            listForUi.map((o, i) => 
               React.createElement('li', { key: o.name || i, style: { marginBottom: '4px' } },
                 React.createElement('strong', null, o.name),
                 ` — ${o.hasInlineData ? '✓ можно восстановить' : '⚠️ нет данных'}`,

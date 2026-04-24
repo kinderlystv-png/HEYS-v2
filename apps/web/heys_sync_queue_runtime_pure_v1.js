@@ -89,7 +89,11 @@
         const _pushTrace = typeof global.HEYS?.debug?.getSyncTraceBuffer === 'function'
             ? global.HEYS.debug._pushSyncTrace || null : null;
         const _key = params.item?.k || params.normalizedKey || '';
-        if (_key.includes('dayv2_')) {
+        const _syncTraceVerbose = !!(
+            global.HEYS?.debug?.syncTrace === true ||
+            (typeof global.localStorage !== 'undefined' && global.localStorage?.getItem('heys_debug_sync_trace') === 'true')
+        );
+        if (_syncTraceVerbose && _key.includes('dayv2_')) {
             const _v = params.item?.v;
             const _mCnt = Array.isArray(_v?.meals) ? _v.meals.length : '?';
             const _iCnt = Array.isArray(_v?.meals) ? _v.meals.reduce((s, m) => s + (m.items?.length || 0), 0) : '?';

@@ -144,15 +144,14 @@ describe('HEYS.dayDayHandlers water persistence', () => {
     );
     expect(global.HEYS.Day.setLastLoadedUpdatedAt).toHaveBeenCalledWith(1734000003000);
     expect(global.HEYS.Day.setBlockCloudUpdates).toHaveBeenCalledWith(1734000006000);
-    expect(setDay).not.toHaveBeenCalled();
+    expect(setDay).toHaveBeenCalledTimes(1);
+    expect(currentDay.waterMl).toBe(1100);
+    expect(currentDay.updatedAt).toBe(1734000003000);
     expect(dispatchEventSpy).toHaveBeenCalled();
     expect(getElementByIdSpy).toHaveBeenCalledWith('water-card');
 
     vi.runAllTimers();
 
-    expect(setDay).toHaveBeenCalledTimes(1);
-    expect(currentDay.waterMl).toBe(1100);
-    expect(currentDay.updatedAt).toBe(1734000003000);
     expect(global.HEYS.Day.requestFlush).toHaveBeenCalledTimes(1);
   });
 
@@ -197,9 +196,10 @@ describe('HEYS.dayDayHandlers water persistence', () => {
       })
     );
 
+    expect(currentDay.waterMl).toBe(700);
+
     vi.runAllTimers();
 
-    expect(currentDay.waterMl).toBe(700);
     expect(global.HEYS.Day.requestFlush).toHaveBeenCalledTimes(1);
   });
 

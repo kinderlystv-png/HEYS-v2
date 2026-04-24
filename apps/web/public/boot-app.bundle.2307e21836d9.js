@@ -12400,12 +12400,24 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
         const SYNC_STATUS_POLL_IDLE_MS = 2200;
         const SYNC_STATUS_POLL_HIDDEN_MS = 4000;
         const SYNC_STATUS_DETAILS_REFRESH_EVERY = 3;
+        const isIndDebugEnabled = () => {
+            try {
+                return global.localStorage?.getItem('heys_debug_sync') === 'true'
+                    || global.localStorage?.getItem('heys_debug_ind') === 'true';
+            } catch (_) {
+                return false;
+            }
+        };
+        const indLog = (...args) => {
+            if (!isIndDebugEnabled()) return;
+            try { console.info(...args); } catch (_) { /* noop */ }
+        };
 
         // 🔍 Маркер монтирования — только при реальном mount, не на каждом рендере
         useEffect(() => {
-            console.info('[HEYS.sync] [IND] useCloudSyncStatus MOUNTED (bundle c4bd)');
+            indLog('[HEYS.sync] [IND] useCloudSyncStatus MOUNTED (bundle c4bd)');
             return () => {
-                console.info('[HEYS.sync] [IND] useCloudSyncStatus UNMOUNTED');
+                indLog('[HEYS.sync] [IND] useCloudSyncStatus UNMOUNTED');
             };
         }, []);
 
@@ -12445,7 +12457,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                     }
                 } catch (_) { /* noop */ }
                 const hint = !cid ? ' | БЕЗ client: user-queue не уйдёт в RPC до выбора клиента (heys_client_current)' : '';
-                console.info('[HEYS.sync] [IND] sync-lock-overlay: OPEN status=' + cloudStatusRef.current + ' pending=' + rp + ' upload=' + up + ' client~=' + (cid || '(none)') + snapStr + detStr + hint);
+                indLog('[HEYS.sync] [IND] sync-lock-overlay: OPEN status=' + cloudStatusRef.current + ' pending=' + rp + ' upload=' + up + ' client~=' + (cid || '(none)') + snapStr + detStr + hint);
                 try {
                     if (typeof global.localStorage !== 'undefined' && global.localStorage.getItem('heys_perf_smoothness_sample') === '1' && typeof global.HEYS?.debug?.bumpSmoothnessCounter === 'function') {
                         global.HEYS.debug.bumpSmoothnessCounter('sync_lock_overlay_open');
@@ -12453,7 +12465,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                 } catch (_) { /* noop */ }
             }
             if (!showSyncLockOverlay && prevSyncLockOverlayRef.current) {
-                console.info('[HEYS.sync] [IND] sync-lock-overlay: CLOSE');
+                indLog('[HEYS.sync] [IND] sync-lock-overlay: CLOSE');
                 try {
                     if (typeof global.localStorage !== 'undefined' && global.localStorage.getItem('heys_perf_smoothness_sample') === '1' && typeof global.HEYS?.debug?.bumpSmoothnessCounter === 'function') {
                         global.HEYS.debug.bumpSmoothnessCounter('sync_lock_overlay_close');
@@ -12667,7 +12679,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                 return;
             }
 
-            console.info('[HEYS.sync] [IND] startSyncingState called, current=' + cloudStatusRef.current + ' syncingStart=' + !!syncingStartRef.current);
+            indLog('[HEYS.sync] [IND] startSyncingState called, current=' + cloudStatusRef.current + ' syncingStart=' + !!syncingStartRef.current);
 
             if (!syncingStartRef.current) {
                 syncLockShownForCurrentSyncRef.current = false;
@@ -12686,7 +12698,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
             // FIX: сбрасываем 2s idle-timeout (cloudSyncTimeoutRef) — иначе он сработает
             // в середине нового синка и поставит status='idle', создавая idle→syncing→idle цикл.
             if (cloudSyncTimeoutRef.current) {
-                console.info('[HEYS.sync] [IND] startSyncingState: cleared cloudSyncTimeout (prevents idle during re-sync)');
+                indLog('[HEYS.sync] [IND] startSyncingState: cleared cloudSyncTimeout (prevents idle during re-sync)');
                 clearTimeout(cloudSyncTimeoutRef.current);
                 cloudSyncTimeoutRef.current = null;
             }
@@ -12698,7 +12710,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                         if (isUserQueueBlockedWithoutClient()) {
                             const snap = window.HEYS?.cloud?.getPendingQueuesSnapshot?.();
                             const uq = snap ? ((snap.userQueueLen || 0) + (snap.userInFlightLen || 0)) : 0;
-                            console.info('[HEYS.sync] [IND] syncing-delay: остаёмся queued (нет heys_client_current, только user-queue pending=' + uq + ') — полноэкранный «синк» не показываем');
+                            indLog('[HEYS.sync] [IND] syncing-delay: остаёмся queued (нет heys_client_current, только user-queue pending=' + uq + ') — полноэкранный «синк» не показываем');
                             setCloudStatus('queued');
                             return;
                         }
@@ -12748,7 +12760,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                 setSyncProgress({ synced: 0, total: 0 });
                 if (cloudSyncTimeoutRef.current) clearTimeout(cloudSyncTimeoutRef.current);
                 cloudSyncTimeoutRef.current = setTimeout(() => {
-                    console.info('[HEYS.sync] [IND] cloudSyncTimeout fired → idle (pendingChanges=' + pendingChangesRef.current + ')');
+                    indLog('[HEYS.sync] [IND] cloudSyncTimeout fired → idle (pendingChanges=' + pendingChangesRef.current + ')');
                     lastIdleAtRef.current = Date.now();
                     setCloudStatus('idle');
                 }, 2000);
@@ -12799,14 +12811,14 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                     if (!initialSyncCompletedAtRef.current) {
                         initialSyncCompletedAtRef.current = Date.now();
                     }
-                    console.info('[HEYS.sync] [IND] sync-complete: skip (no pending work)');
+                    indLog('[HEYS.sync] [IND] sync-complete: skip (no pending work)');
                     return;
                 }
 
                 const runtimePending = getRuntimePendingCount();
                 const uploadInProgress = isRuntimeUploadInProgress();
 
-                console.info('[HEYS.sync] [IND] sync-complete: pending=' + runtimePending + ' upload=' + uploadInProgress + ' hadWork=' + !!hadPendingWork + ' status=' + cloudStatusRef.current);
+                indLog('[HEYS.sync] [IND] sync-complete: pending=' + runtimePending + ' upload=' + uploadInProgress + ' hadWork=' + !!hadPendingWork + ' status=' + cloudStatusRef.current);
 
                 if (syncingDelayTimeoutRef.current) {
                     clearTimeout(syncingDelayTimeoutRef.current);
@@ -12853,7 +12865,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                 if (r.sig === sig && now - r.at < IND_DATA_SAVED_SKIP_LOG_MS) return;
                 r.sig = sig;
                 r.at = now;
-                console.info('[HEYS.sync] [IND] data-saved: skip (' + reasonKey + (detailSuffix || '') + '), key=' + key);
+                indLog('[HEYS.sync] [IND] data-saved: skip (' + reasonKey + (detailSuffix || '') + '), key=' + key);
             };
 
             const handleDataSaved = (e) => {
@@ -12913,7 +12925,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                     return;
                 }
 
-                console.info('[HEYS.sync] [IND] data-saved: → startSyncingState, key=' + (e?.detail?.key || '?') + ' sinceHotSync=' + (sinceHotSync === Infinity ? 'n/a' : Math.round(sinceHotSync) + 'ms'));
+                indLog('[HEYS.sync] [IND] data-saved: → startSyncingState, key=' + (e?.detail?.key || '?') + ' sinceHotSync=' + (sinceHotSync === Infinity ? 'n/a' : Math.round(sinceHotSync) + 'ms'));
 
                 const armDataSavedHeavyUi = () => {
                     if (dataSavedUiRafRef.current != null) return;
@@ -12992,7 +13004,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                     if (!(_pcR.sig === _pcSig && _pcNow - _pcR.at < 2500)) {
                         _pcR.sig = _pcSig;
                         _pcR.at = _pcNow;
-                        console.info('[HEYS.sync] [IND] pending-change: count=' + count + ' upload=' + uploadInProgress + ' syncingStart=' + !!syncingStartRef.current + ' status=' + cloudStatusRef.current);
+                        indLog('[HEYS.sync] [IND] pending-change: count=' + count + ' upload=' + uploadInProgress + ' syncingStart=' + !!syncingStartRef.current + ' status=' + cloudStatusRef.current);
                     }
 
                     if (count > 0) {
@@ -13041,7 +13053,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                     r.completed = completed;
                     r.total = total;
                     r.at = now;
-                    console.info('[HEYS.sync] [IND] sync-progress: completed=' + completed + ' total=' + total);
+                    indLog('[HEYS.sync] [IND] sync-progress: completed=' + completed + ' total=' + total);
                     setSyncProgress({ synced: completed, total });
                     if (navigator.onLine && total > 0 && !syncingStartRef.current) {
                         startSyncingState();
@@ -13125,7 +13137,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                 // Не показываем галочку если анимация синка не запускалась
                 // (данные синкались тихо, в фоне, без уведомления пользователя)
                 if (!syncingStartRef.current && cloudStatusRef.current === 'idle') {
-                    console.info('[HEYS.sync] [IND] queue-drained: skip (syncingStart=null, status=idle)');
+                    indLog('[HEYS.sync] [IND] queue-drained: skip (syncingStart=null, status=idle)');
                     return;
                 }
 
@@ -13135,7 +13147,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                     ? (Date.now() - _hotAtQd)
                     : Infinity;
                 if (sinceHotSyncQd < 3000) {
-                    console.info('[HEYS.sync] [IND] queue-drained: skip (hot-sync cooldown ' + Math.round(sinceHotSyncQd) + 'ms)');
+                    indLog('[HEYS.sync] [IND] queue-drained: skip (hot-sync cooldown ' + Math.round(sinceHotSyncQd) + 'ms)');
                     // Если уже был запущен синк — планируем отложенный showSynced после окончания cooldown
                     if (syncingStartRef.current || cloudStatusRef.current === 'syncing' || cloudStatusRef.current === 'queued') {
                         if (queueDrainedFallbackRef.current) clearTimeout(queueDrainedFallbackRef.current);
@@ -13145,7 +13157,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                             const stillUploading = isRuntimeUploadInProgress();
                             const st = cloudStatusRef.current;
                             if (navigator.onLine && !stillPending && !stillUploading && (st === 'queued' || st === 'syncing')) {
-                                console.info('[HEYS.sync] [IND] queue-drained: fallback showSynced (post hot-sync cooldown) status=' + st);
+                                indLog('[HEYS.sync] [IND] queue-drained: fallback showSynced (post hot-sync cooldown) status=' + st);
                                 showSyncedWithMinDuration();
                             }
                         }, Math.max(0, 3000 - sinceHotSyncQd + 150));
@@ -13153,7 +13165,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                     return;
                 }
 
-                console.info('[HEYS.sync] [IND] queue-drained: → showSynced, sinceHotSync=' + (sinceHotSyncQd === Infinity ? 'n/a' : Math.round(sinceHotSyncQd) + 'ms') + ' status=' + cloudStatusRef.current);
+                indLog('[HEYS.sync] [IND] queue-drained: → showSynced, sinceHotSync=' + (sinceHotSyncQd === Infinity ? 'n/a' : Math.round(sinceHotSyncQd) + 'ms') + ' status=' + cloudStatusRef.current);
                 showSyncedWithMinDuration();
             };
 
@@ -13401,7 +13413,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                             snapHb = ' cq=' + s.clientQueueLen + '+' + s.clientInFlightLen + ' uq=' + s.userQueueLen + '+' + s.userInFlightLen;
                         }
                     } catch (_) { /* noop */ }
-                    console.info('[HEYS.sync] [IND] sync-ui heartbeat: elapsedMs=' + Math.round(elapsedHb)
+                    indLog('[HEYS.sync] [IND] sync-ui heartbeat: elapsedMs=' + Math.round(elapsedHb)
                         + ' status=' + cloudStatusRef.current
                         + ' runtimePending=' + rpHb
                         + ' upload=' + upHb
@@ -13450,7 +13462,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                     if (!syncingStartRef.current) {
                         clearSyncLockOverlay();
                     }
-                    console.info('[HEYS.sync] [IND] tick: → queued, pending=' + runtimePending);
+                    indLog('[HEYS.sync] [IND] tick: → queued, pending=' + runtimePending);
                     setCloudStatus('queued');
                     schedule(true);
                     return;
@@ -13494,7 +13506,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                 )) {
                     // showSyncedWithMinDuration уже выставляет syncedTimeoutRef — без гарда каждый poll пишет лог
                     if (!syncedTimeoutRef.current) {
-                        console.info('[HEYS.sync] [IND] tick: → showSynced, syncingStart=' + !!syncingStartRef.current + ' status=' + cloudStatusRef.current);
+                        indLog('[HEYS.sync] [IND] tick: → showSynced, syncingStart=' + !!syncingStartRef.current + ' status=' + cloudStatusRef.current);
                         pendingChangesRef.current = false;
                         showSyncedWithMinDuration();
                     }
@@ -19043,6 +19055,222 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
     if (!React) return;
     const U = HEYS.utils || {};
 
+    HEYS.debug = HEYS.debug || {};
+    HEYS.perf = HEYS.perf || {};
+    const HEYS_PROFILER_RING = [];
+    const HEYS_PROFILER_RING_MAX = 80;
+    const HEYS_SLOW_COMMIT_SOURCE_STATS = {};
+    let _heysProfilerLogTimer = null;
+    let _heysProfilerBootLogged = false;
+
+    const __HEYS_RP = (window.__HEYS_REACT_PROFILER__ = window.__HEYS_REACT_PROFILER__ || {
+        onRenderCalls: 0,
+        lastOnRenderAt: 0,
+        wrappedIds: [],
+        recordWrap(id) {
+            const s = String(id || '');
+            if (s && this.wrappedIds.indexOf(s) === -1) this.wrappedIds.push(s);
+        },
+        reset() {
+            this.onRenderCalls = 0;
+            this.lastOnRenderAt = 0;
+            this.wrappedIds.length = 0;
+        }
+    });
+
+    function heysReactProfilerFlagRaw() {
+        try {
+            const u = (typeof window.location !== 'undefined' && window.location && window.location.search)
+                ? new URLSearchParams(window.location.search).get('reactProfiler')
+                : null;
+            if (u === '1' || u === 'true' || u === 'yes') return 'url';
+            const ls = window.localStorage.getItem('heys_debug_react_profiler');
+            if (ls != null && ls !== '') return ls;
+        } catch (_) { /* noop */ }
+        return null;
+    }
+
+    function heysReactProfilerEnabled() {
+        try {
+            if (HEYS.debug && HEYS.debug.reactProfiler === true) return true;
+            const raw = heysReactProfilerFlagRaw();
+            if (raw === 'url') return true;
+            const s = String(raw || '').trim().toLowerCase();
+            return s === 'true' || s === '1' || s === 'yes' || s === 'on';
+        } catch (_) {
+            return false;
+        }
+    }
+
+    function heysProfilerOnRender(id, phase, actualDuration, baseDuration) {
+        __HEYS_RP.onRenderCalls += 1;
+        __HEYS_RP.lastOnRenderAt = Date.now();
+        const ad = +actualDuration || 0;
+        HEYS_PROFILER_RING.push({
+            id: String(id || '?'),
+            phase: String(phase || '?'),
+            ms: Math.round(ad * 10) / 10,
+            baseMs: Math.round((+baseDuration || 0) * 10) / 10,
+            t: Date.now()
+        });
+        if (HEYS_PROFILER_RING.length > HEYS_PROFILER_RING_MAX) {
+            HEYS_PROFILER_RING.splice(0, HEYS_PROFILER_RING.length - HEYS_PROFILER_RING_MAX);
+        }
+        if (_heysProfilerLogTimer) return;
+        _heysProfilerLogTimer = setTimeout(() => {
+            _heysProfilerLogTimer = null;
+            const recent = HEYS_PROFILER_RING.slice(-40);
+            const slow = recent.filter((r) => r.ms >= 8).sort((a, b) => b.ms - a.ms);
+            if (slow.length) {
+                console.info('[HEYS.sync] perf react-profiler slow commits (batched)', slow.slice(0, 14));
+            }
+        }, 450);
+    }
+
+    function heysSlowCommitThresholdMs() {
+        try {
+            const v = parseInt(window.localStorage.getItem('heys_debug_slow_commit_ms'), 10);
+            return v > 0 ? v : 48;
+        } catch (_) {
+            return 48;
+        }
+    }
+
+    function recordSlowCommitSource(id, ms, hint) {
+        const tag = String(hint?.tag || 'unknown');
+        const stat = HEYS_SLOW_COMMIT_SOURCE_STATS[tag] || {
+            tag,
+            hits: 0,
+            maxMs: 0,
+            sumMs: 0,
+            lastAt: 0,
+            tabs: {}
+        };
+        stat.hits += 1;
+        stat.sumMs += ms;
+        stat.maxMs = Math.max(stat.maxMs, ms);
+        stat.lastAt = Date.now();
+        const tab = String(id || '?');
+        stat.tabs[tab] = (stat.tabs[tab] || 0) + 1;
+        HEYS_SLOW_COMMIT_SOURCE_STATS[tag] = stat;
+    }
+
+    /** Измеряет время коммита поддерева (render → layout). Не зависит от React.Profiler.onRender — в некоторых сборках Profiler не вызывает колбэк. */
+    function HeysReactSubtreeProbe(props) {
+        const id = props.id;
+        const children = props.children;
+        const t0 = performance.now();
+        React.useLayoutEffect(function () {
+            const ms = performance.now() - t0;
+            heysProfilerOnRender(String(id || '?'), 'commit-probe', ms, ms);
+            const perf = HEYS.perf;
+            if (perf && typeof perf.commitTraceEnabled === 'function' && perf.commitTraceEnabled()
+                && ms >= heysSlowCommitThresholdMs()) {
+                let hint = null;
+                try {
+                    hint = window.__HEYS_COMMIT_HINT__;
+                } catch (_) { /* noop */ }
+                recordSlowCommitSource(id, ms, hint);
+                console.warn('[HEYS.sync] perf slow tab commit', {
+                    tab: String(id || '?'),
+                    ms: Math.round(ms * 10) / 10,
+                    thresholdMs: heysSlowCommitThresholdMs(),
+                    hint
+                });
+                try {
+                    window.__HEYS_COMMIT_HINT__ = null;
+                } catch (_) { /* noop */ }
+            }
+        });
+        return children;
+    }
+    HeysReactSubtreeProbe.displayName = 'HeysReactSubtreeProbe';
+
+    function dumpReactProfilerRingImpl(n) {
+        const k = Math.min(Math.max((n | 0) || 40, 1), HEYS_PROFILER_RING_MAX);
+        const slice = HEYS_PROFILER_RING.slice(-k);
+        if (!slice.length) {
+            console.warn('[HEYS.sync] perf react-profiler ring empty', {
+                hint: 'Включите: localStorage.setItem("heys_debug_react_profiler","true") или ?reactProfiler=1 в URL, затем полный reload.',
+                enabled: heysReactProfilerEnabled(),
+                rawFlag: heysReactProfilerFlagRaw(),
+                hasReactProfiler: !!React.Profiler,
+                hasCommitProbe: typeof React.useLayoutEffect === 'function',
+                sawBootLog: !!_heysProfilerBootLogged,
+                wrappedIds: __HEYS_RP.wrappedIds.slice(),
+                onRenderCalls: __HEYS_RP.onRenderCalls
+            });
+            return slice;
+        }
+        console.table(slice);
+        return slice;
+    }
+
+    HEYS.debug.dumpReactProfilerRing = dumpReactProfilerRingImpl;
+    HEYS.perf.dumpReactProfilerRing = dumpReactProfilerRingImpl;
+    HEYS.perf.getSlowCommitSourceStats = function getSlowCommitSourceStats(limit) {
+        const top = Object.values(HEYS_SLOW_COMMIT_SOURCE_STATS)
+            .sort((a, b) => (b.sumMs - a.sumMs) || (b.hits - a.hits))
+            .slice(0, Math.max((limit | 0) || 10, 1))
+            .map((s) => ({
+                tag: s.tag,
+                hits: s.hits,
+                avgMs: Math.round((s.sumMs / Math.max(s.hits, 1)) * 10) / 10,
+                maxMs: Math.round(s.maxMs * 10) / 10,
+                lastAt: s.lastAt,
+                tabs: s.tabs
+            }));
+        console.table(top);
+        return top;
+    };
+    HEYS.perf.clearSlowCommitSourceStats = function clearSlowCommitSourceStats() {
+        Object.keys(HEYS_SLOW_COMMIT_SOURCE_STATS).forEach((k) => delete HEYS_SLOW_COMMIT_SOURCE_STATS[k]);
+    };
+
+    HEYS.debug.reactProfilerStatus = function reactProfilerStatus() {
+        const st = {
+            flagLs: (() => { try { return window.localStorage.getItem('heys_debug_react_profiler'); } catch (_) { return null; } })(),
+            flagRaw: heysReactProfilerFlagRaw(),
+            flagDebug: !!(HEYS.debug && HEYS.debug.reactProfiler === true),
+            enabled: heysReactProfilerEnabled(),
+            hasReactProfiler: !!React.Profiler,
+            usesCommitProbe: true,
+            commitTrace: !!(HEYS.perf && typeof HEYS.perf.commitTraceEnabled === 'function' && HEYS.perf.commitTraceEnabled()),
+            slowCommitThresholdMs: (typeof heysSlowCommitThresholdMs === 'function' ? heysSlowCommitThresholdMs() : 48),
+            ringLen: HEYS_PROFILER_RING.length,
+            sawBootLog: !!_heysProfilerBootLogged,
+            wrappedIds: __HEYS_RP.wrappedIds.slice(),
+            onRenderCalls: __HEYS_RP.onRenderCalls,
+            lastOnRenderAt: __HEYS_RP.lastOnRenderAt
+        };
+        st.slowCommitSources = Object.keys(HEYS_SLOW_COMMIT_SOURCE_STATS).length;
+        console.info('[HEYS.sync] perf react-profiler status', st);
+        return st;
+    };
+    HEYS.perf.reactProfilerStatus = HEYS.debug.reactProfilerStatus;
+
+    let _heysProfilerMissingLogged = false;
+    function wrapReactProfiler(id, node) {
+        if (!node) return node;
+        if (!heysReactProfilerEnabled()) return node;
+        if (typeof React.useLayoutEffect !== 'function') {
+            if (!_heysProfilerMissingLogged) {
+                _heysProfilerMissingLogged = true;
+                console.warn('[HEYS.sync] perf react-profiler: React.useLayoutEffect недоступен — сбор метрик невозможен.');
+            }
+            return node;
+        }
+        __HEYS_RP.recordWrap(id);
+        if (!_heysProfilerBootLogged) {
+            _heysProfilerBootLogged = true;
+            console.info('[HEYS.sync] perf react-profiler: включено (commit-probe через useLayoutEffect). ' +
+                'Медленные коммиты: console.warn «[HEYS.sync] perf slow tab commit» + hint. ' +
+                'HOT: «[HEYS.sync] perf hot-sync finished» при heys_debug_commit_trace / react_profiler. ' +
+                'dump: HEYS.perf.dumpReactProfilerRing(50) · status: HEYS.perf.reactProfilerStatus() · top sources: HEYS.perf.getSlowCommitSourceStats(10)');
+        }
+        return React.createElement(HeysReactSubtreeProbe, { id: String(id) }, node);
+    }
+
     const tryParseStoredValue = (raw, fallback) => {
         if (raw === null || raw === undefined) return fallback;
         if (typeof raw === 'string') {
@@ -19762,16 +19990,36 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
             loadEWSData();
 
             // Reload on day-data-changed event
+            let postSyncHeavyTimer = null;
+            const schedulePostSyncHeavyWork = (reason) => {
+                if (postSyncHeavyTimer) {
+                    clearTimeout(postSyncHeavyTimer);
+                }
+                postSyncHeavyTimer = setTimeout(() => {
+                    postSyncHeavyTimer = null;
+                    const run = () => {
+                        ewsLoaded = false;
+                        loadEWSData();
+                    };
+                    if (typeof window.requestIdleCallback === 'function') {
+                        window.requestIdleCallback(run, { timeout: 1500 });
+                    } else {
+                        setTimeout(run, 0);
+                    }
+                    try {
+                        HEYS.perf?.markCommitHint?.('app-shell:post-sync-heavy', { reason });
+                    } catch (_) { /* noop */ }
+                }, 280);
+            };
+
             const handleDayDataChanged = () => {
-                ewsLoaded = false; // allow reload on data change
-                loadEWSData();
+                schedulePostSyncHeavyWork('day-data-changed');
             };
             window.addEventListener('day-data-changed', handleDayDataChanged);
 
             // Reload after sync complete
             const handleSyncComplete = () => {
-                ewsLoaded = false; // allow reload after sync
-                setTimeout(loadEWSData, 500); // Small delay to ensure data is written
+                schedulePostSyncHeavyWork('sync-complete');
             };
             window.addEventListener('heysSyncCompleted', handleSyncComplete);
 
@@ -19784,6 +20032,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
 
             return () => {
                 if (retryTimeoutId) clearTimeout(retryTimeoutId);
+                if (postSyncHeavyTimer) clearTimeout(postSyncHeavyTimer);
                 window.removeEventListener('heys-ews-ready', handleEWSReady);
                 window.removeEventListener('day-data-changed', handleDayDataChanged);
                 window.removeEventListener('heysSyncCompleted', handleSyncComplete);
@@ -20985,33 +21234,33 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
             React.createElement(
                 'div',
                 { style: (tab === 'stats' || tab === 'diary') ? undefined : { height: 0, overflow: 'hidden' } },
-                React.createElement(DayTabWithCloudSync, {
+                wrapReactProfiler('DayTab', React.createElement(DayTabWithCloudSync, {
                     key: 'day_' + String(clientId || ''),
                     products,
                     clientId,
                     selectedDate,
                     setSelectedDate,
                     subTab: (tab === 'stats' || tab === 'diary') ? tab : 'stats',
-                })
+                }))
             ),
             (tab !== 'stats' && tab !== 'diary') && (
                 tab === 'ration'
-                    ? React.createElement(RationTabWithCloudSync, {
+                    ? wrapReactProfiler('RationTab', React.createElement(RationTabWithCloudSync, {
                         key: 'ration_' + String(clientId || ''),
                         products,
                         setProducts,
                         clientId,
-                    })
+                    }))
                     : tab === 'insights'
                         ? (window.HEYS?.PredictiveInsights?.components?.InsightsTab
-                            ? React.createElement(window.HEYS.PredictiveInsights.components.InsightsTab, {
+                            ? wrapReactProfiler('InsightsTab', React.createElement(window.HEYS.PredictiveInsights.components.InsightsTab, {
                                 key: 'insights_' + String(clientId || '') + '_' + selectedDate,
                                 lsGet: window.HEYS?.utils?.lsGet,
                                 profile: null,
                                 pIndex: null,
                                 optimum: null,
                                 selectedDate: selectedDate,
-                            })
+                            }))
                             : renderTabFallback('insights', React.createElement('div', { style: { padding: 16 } },
                                 React.createElement('div', { className: 'skeleton-sparkline', style: { height: 160, marginBottom: 16 } }),
                                 React.createElement('div', { className: 'skeleton-block', style: { height: 100 } })
@@ -21101,6 +21350,10 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
     function AppShell(props) {
         const { hideContent, clientId, tab } = props;
         const shouldRenderContent = !!clientId;
+        let profilerMountKey = 'p0';
+        try {
+            profilerMountKey = heysReactProfilerEnabled() ? 'p1' : 'p0';
+        } catch (_) { /* noop */ }
 
         return React.createElement(
             'div',
@@ -21110,7 +21363,9 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
             },
             shouldRenderContent && tab !== 'tasks' && React.createElement(MemoAppHeader, props),
             shouldRenderContent && React.createElement(MemoAppTabsNav, props),
-            shouldRenderContent && React.createElement(MemoAppTabContent, props)
+            shouldRenderContent && React.createElement(MemoAppTabContent, Object.assign({}, props, {
+                key: 'appTabContent_' + String(clientId || '') + '_' + String(tab || '') + '_' + profilerMountKey
+            }))
         );
     }
 

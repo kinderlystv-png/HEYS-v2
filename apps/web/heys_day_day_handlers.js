@@ -384,9 +384,32 @@
 
       persistDaySnapshotImmediately(nextDaySnapshot);
 
+      setDay(prev => ({
+        ...prev,
+        waterMl: newWater,
+        lastWaterTime: newUpdatedAt,
+        updatedAt: newUpdatedAt
+      }));
+
       // DOM-based visual animations (no React state = no re-render)
       const waterCard = document.getElementById('water-card');
       if (waterCard) {
+        const goalRing = Math.max(1, Number(waterGoal) || 2000);
+        const ringFill = waterCard.querySelector('.water-ring-fill');
+        if (ringFill) {
+          ringFill.style.strokeDasharray = Math.min(100, ((newWater || 0) / goalRing) * 100) + ' 100';
+        }
+        const ringVal = waterCard.querySelector('.water-ring-value');
+        const ringUnit = waterCard.querySelector('.water-ring-unit');
+        if (ringVal) {
+          ringVal.textContent = (newWater || 0) >= 1000
+            ? String(((newWater || 0) / 1000).toFixed(1)).replace('.0', '')
+            : String(newWater || 0);
+        }
+        if (ringUnit) {
+          ringUnit.textContent = (newWater || 0) >= 1000 ? 'л' : 'мл';
+        }
+
         // "+250" text animation above the ring
         const ringCont = waterCard.querySelector('.water-ring-container');
         if (ringCont) {
@@ -412,16 +435,6 @@
           setTimeout(() => { if (dropCont.parentNode) dropCont.remove(); }, 1200);
         }
       }
-
-      // Defer heavy day state update via setTimeout(0) + startTransition
-      setTimeout(() => {
-        React.startTransition(() => {
-          setDay(prev => {
-            const nextWaterMl = (prev.waterMl || 0) + ml;
-            return { ...prev, waterMl: nextWaterMl, lastWaterTime: newUpdatedAt, updatedAt: newUpdatedAt };
-          });
-        });
-      }, 0);
 
       scheduleDayFlush();
 
@@ -481,9 +494,26 @@
         updatedAt: newUpdatedAt
       });
 
-      React.startTransition(() => {
-        setDay(prev => ({ ...prev, waterMl: Math.max(0, (prev.waterMl || 0) - ml), updatedAt: newUpdatedAt }));
-      });
+      const waterCardRm = document.getElementById('water-card');
+      if (waterCardRm) {
+        const goalRing = Math.max(1, Number(waterGoal) || 2000);
+        const ringFill = waterCardRm.querySelector('.water-ring-fill');
+        if (ringFill) {
+          ringFill.style.strokeDasharray = Math.min(100, ((newWater || 0) / goalRing) * 100) + ' 100';
+        }
+        const ringVal = waterCardRm.querySelector('.water-ring-value');
+        const ringUnit = waterCardRm.querySelector('.water-ring-unit');
+        if (ringVal) {
+          ringVal.textContent = (newWater || 0) >= 1000
+            ? String(((newWater || 0) / 1000).toFixed(1)).replace('.0', '')
+            : String(newWater || 0);
+        }
+        if (ringUnit) {
+          ringUnit.textContent = (newWater || 0) >= 1000 ? 'л' : 'мл';
+        }
+      }
+
+      setDay(prev => ({ ...prev, waterMl: newWater, updatedAt: newUpdatedAt }));
 
       scheduleDayFlush();
 

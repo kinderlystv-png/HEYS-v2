@@ -141,6 +141,15 @@
                     // 🔒 Оптимизация: не вызываем setDay если данные идентичны (предотвращает мерцание)
                     // 🚀 PERF: startTransition defers the heavy content re-render
                     // so the date header updates instantly on click
+                    try {
+                        if (HEYS.perf && typeof HEYS.perf.markCommitHint === 'function') {
+                            HEYS.perf.markCommitHint('date-effect:doLocal', {
+                                date,
+                                mealsCount: (cleanedDay.meals || []).length,
+                                hasStoredData: true
+                            });
+                        }
+                    } catch (_) { /* noop */ }
                     React.startTransition(() => {
                         setDay(prevDay => {
                             const eq = HEYS.dayUtils && typeof HEYS.dayUtils.isSameDayHydratedContent === 'function'
@@ -170,6 +179,11 @@
                         stressAvg: '',
                         dayComment: ''
                     }, profNow);
+                    try {
+                        if (HEYS.perf && typeof HEYS.perf.markCommitHint === 'function') {
+                            HEYS.perf.markCommitHint('date-effect:doLocal-default', { date });
+                        }
+                    } catch (_) { /* noop */ }
                     React.startTransition(() => {
                         setDay(defaultDay);
                         setIsHydrated(true);
@@ -211,7 +225,12 @@
         // Слушаем событие обновления данных дня (от Morning Check-in или внешних изменений)
         // НЕ слушаем heysSyncCompleted — это вызывает бесконечный цикл при каждом сохранении
         // 🔧 v3.19.1: Защита от дублирующихся событий fetchDays
-        const lastProcessedEventRef = React.useRef({ date: null, source: null, timestamp: 0 });
+        const lastProcessedEventRef = React.useRef({ date: null, source: null, timestamp: 0, fetchKey: '' });
+        const pendingDayApplyRafRef = React.useRef(null);
+        const pendingDayForceReloadRef = React.useRef(false);
+        const lastDayApplySourceRef = React.useRef('unknown');
+        const lastAppliedSignatureRef = React.useRef('');
+        const lastAppliedAtRef = React.useRef(0);
 
         React.useEffect(() => {
             const handleDayUpdated = (e) => {
@@ -219,6 +238,17 @@
                 const source = e.detail?.source || 'unknown';
                 const forceReload = e.detail?.forceReload || false;
                 const eventData = e.detail?.data || null;
+
+                try {
+                    if (HEYS.perf && typeof HEYS.perf.markCommitHint === 'function') {
+                        HEYS.perf.markCommitHint('day-updated:recv', {
+                            source: e.detail?.source || 'unknown',
+                            updatedDate: e.detail?.date,
+                            batch: !!e.detail?.batch,
+                            forceReload: !!e.detail?.forceReload
+                        });
+                    }
+                } catch (_) { /* noop */ }
 
                 if (source === 'day-stats-real-data-cta' || eventData?.isFastingDay || eventData?.isIncomplete) {
                     try {
@@ -250,16 +280,18 @@
                     });
                 }
 
-                // 🔧 v3.19.1: Дедупликация событий — игнорируем одинаковые события в течение 100мс
                 const now = Date.now();
                 const last = lastProcessedEventRef.current;
+                const fetchDaysKey = (source === 'fetchDays' && e.detail?.batch && Array.isArray(e.detail?.dates))
+                    ? [...new Set(e.detail.dates.filter(Boolean).map(String))].sort().join(',')
+                    : String(updatedDate || '');
                 if (source === 'fetchDays' &&
-                    last.date === updatedDate &&
                     last.source === source &&
-                    now - last.timestamp < 100) {
-                    return; // Пропускаем дубликат
+                    last.fetchKey === fetchDaysKey &&
+                    now - last.timestamp < 450) {
+                    return;
                 }
-                lastProcessedEventRef.current = { date: updatedDate, source, timestamp: now };
+                lastProcessedEventRef.current = { date: updatedDate, source, timestamp: now, fetchKey: fetchDaysKey };
 
                 // 🔒 Игнорируем события во время начальной синхронизации
                 // doLocal() в конце синхронизации загрузит все финальные данные
@@ -292,8 +324,38 @@
                 // Если date не указан, совпадает с текущим, или текущий есть в batch.dates — перезагружаем
                 const isBatchForCurrentDate = e.detail?.batch && Array.isArray(e.detail?.dates) && e.detail.dates.includes(date);
                 if (!updatedDate || updatedDate === date || isBatchForCurrentDate) {
-                    const profNow = getProfile();
-                    const dayRead = readDayV2(date, lsGet);
+                    lastDayApplySourceRef.current = source;
+                    pendingDayForceReloadRef.current = pendingDayForceReloadRef.current || !!forceReload;
+                    if (pendingDayApplyRafRef.current != null) {
+                        return;
+                    }
+                    pendingDayApplyRafRef.current = requestAnimationFrame(() => {
+                        pendingDayApplyRafRef.current = null;
+                        const pendingSource = lastDayApplySourceRef.current;
+                        const pendingForceReload = pendingDayForceReloadRef.current;
+                        const applySignature = [String(date || ''), String(pendingSource || ''), pendingForceReload ? '1' : '0'].join('|');
+                        const nowApply = Date.now();
+                        const sigCooldownMs = (pendingSource === 'fetchDays' && pendingForceReload) ? 720 : 220;
+                        if (lastAppliedSignatureRef.current === applySignature && (nowApply - lastAppliedAtRef.current) < sigCooldownMs) {
+                            pendingDayForceReloadRef.current = false;
+                            return;
+                        }
+                        try {
+                            if (HEYS.perf && typeof HEYS.perf.markCommitHint === 'function') {
+                                HEYS.perf.markCommitHint('day-updated:raf-apply', {
+                                    source: pendingSource,
+                                    date,
+                                    forceReload: pendingForceReload
+                                });
+                            }
+                        } catch (_) { /* noop */ }
+                        React.startTransition(() => {
+                            const forceReload = pendingDayForceReloadRef.current;
+                            pendingDayForceReloadRef.current = false;
+                            const source = lastDayApplySourceRef.current;
+
+                            const profNow = getProfile();
+                            const dayRead = readDayV2(date, lsGet);
                     const key = dayRead.key;
                     const v = dayRead.value;
                     if (v && (source === 'day-stats-real-data-cta' || v.isFastingDay || v.isIncomplete)) {
@@ -494,9 +556,13 @@
                                     updatedAt: newDay.updatedAt || 0
                                 });
                             }
+                            lastAppliedSignatureRef.current = applySignature;
+                            lastAppliedAtRef.current = Date.now();
                             return newDay;
                         });
                     }
+                        });
+                    });
                 }
             };
 
@@ -504,6 +570,10 @@
             global.addEventListener('heys:day-updated', handleDayUpdated);
 
             return () => {
+                if (pendingDayApplyRafRef.current != null) {
+                    cancelAnimationFrame(pendingDayApplyRafRef.current);
+                    pendingDayApplyRafRef.current = null;
+                }
                 global.removeEventListener('heys:day-updated', handleDayUpdated);
             };
         }, [date]);
@@ -523,7 +593,9 @@
                 const v = dayRead.value;
                 if (v && v.date) {
                     const newDay = ensureDay(v, profNow);
-                    setDay(newDay);
+                    React.startTransition(() => {
+                        setDay(newDay);
+                    });
                     window.DEV?.log?.(`[DAY_EFFECTS] Reloaded day after product rename: "${oldName}" → "${newName}"`);
                 }
             };

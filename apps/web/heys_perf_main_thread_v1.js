@@ -38,7 +38,7 @@
         : Date.now()) - t0;
       if (shouldSampleSlow(dt, opts && opts.threshold)) {
         try {
-          (global.console || console).info('[HEYS.perf]', label, Math.round(dt) + 'ms');
+          (global.console || console).info('[HEYS.sync] perf main-thread', label, Math.round(dt) + 'ms');
         } catch (_) { /* noop */ }
       }
     }

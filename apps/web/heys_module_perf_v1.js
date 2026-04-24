@@ -244,6 +244,56 @@
         ...report
       };
       return JSON.stringify(data, null, 2);
+    },
+
+    /**
+     * Диагностика тяжёлых коммитов DayTab: то же «включение», что у react-probe
+     * (localStorage heys_debug_react_profiler / ?reactProfiler=1) или heys_debug_commit_trace=1.
+     */
+    commitTraceEnabled() {
+      try {
+        if (HEYS.debug && HEYS.debug.reactProfiler === true) return true;
+        const ls = window.localStorage && window.localStorage.getItem('heys_debug_react_profiler');
+        if (ls != null && ls !== '') {
+          const s = String(ls).trim().toLowerCase();
+          if (s === 'true' || s === '1' || s === 'yes' || s === 'on') return true;
+        }
+        const ls2 = window.localStorage && window.localStorage.getItem('heys_debug_commit_trace');
+        if (ls2 === '1' || String(ls2 || '').trim().toLowerCase() === 'true') return true;
+        if (window.location && window.location.search) {
+          const u = new URLSearchParams(window.location.search).get('reactProfiler');
+          if (u === '1' || u === 'true' || u === 'yes') return true;
+        }
+      } catch (e) { /* noop */ }
+      return false;
+    },
+
+    /** Последняя подсказка для HEYS.perf slow commit-probe (перезаписывается). */
+    markCommitHint(tag, detail) {
+      if (!this.commitTraceEnabled()) return;
+      try {
+        window.__HEYS_COMMIT_HINT__ = {
+          tag: String(tag || ''),
+          detail: detail == null ? null : detail,
+          at: Date.now(),
+          perfT: typeof performance !== 'undefined' && performance.now ? performance.now() : 0
+        };
+      } catch (e) { /* noop */ }
+    },
+
+    /**
+     * Справка: DevTools пишет [Violation] 'message' handler на react-bundle.js — это типично React 18 Scheduler
+     * (очередь через MessageChannel), а не отдельный обработчик приложения. Большие ms = долгий синхронный commit.
+     */
+    whyReactMessageViolations() {
+      const msg = '«message» на react-bundle.js:1 — обычно React 18 Scheduler (MessageChannel), не SW/postMessage приложения. ' +
+        'Длинные ms = тяжёлый синхронный рендер/коммит корня. Корреляция: heys_debug_commit_trace=1 или react_profiler, reload → ' +
+        'логи «[HEYS.sync] perf hot-sync finished» и «[HEYS.sync] perf slow tab commit» (консоль HEYS фильтрует по группам; префикс [HEYS.sync] в дефолте). ' +
+        'Порог slow: heys_debug_slow_commit_ms.';
+      try {
+        (global.console || console).info('[HEYS.sync] perf help: react message violations', msg);
+      } catch (e) { /* noop */ }
+      return msg;
     }
   };
 

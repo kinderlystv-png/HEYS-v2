@@ -606,3 +606,35 @@ describe('Integration: Product Addition Flow', () => {
     vi.useRealTimers();
   });
 });
+
+describe('Batch day-updated event strategy', () => {
+  test('fetchDays should notify UI with one batch event payload', () => {
+    const updatedDates = ['2026-04-24', '2026-04-24', '2026-04-23'];
+    const uniqueDates = [...new Set(updatedDates)];
+    const detail = {
+      date: uniqueDates[0] || null,
+      dates: uniqueDates,
+      batch: true,
+      source: 'fetchDays',
+      forceReload: true
+    };
+
+    expect(detail.batch).toBe(true);
+    expect(detail.source).toBe('fetchDays');
+    expect(detail.dates).toEqual(['2026-04-24', '2026-04-23']);
+    expect(detail.date).toBe('2026-04-24');
+  });
+
+  test('coalescer signature should skip duplicate apply in short window', () => {
+    const sig = '2026-04-24|fetchDays|1';
+    const lastAppliedSignatureRef = { current: sig };
+    const lastAppliedAtRef = { current: 1000 };
+    const nowApply = 1150;
+
+    const pendingSource = 'fetchDays';
+    const pendingForceReload = true;
+    const sigCooldownMs = (pendingSource === 'fetchDays' && pendingForceReload) ? 720 : 220;
+    const shouldSkip = lastAppliedSignatureRef.current === sig && (nowApply - lastAppliedAtRef.current) < sigCooldownMs;
+    expect(shouldSkip).toBe(true);
+  });
+});

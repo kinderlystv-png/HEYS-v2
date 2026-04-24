@@ -585,6 +585,56 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
         ...report
       };
       return JSON.stringify(data, null, 2);
+    },
+
+    /**
+     * Диагностика тяжёлых коммитов DayTab: то же «включение», что у react-probe
+     * (localStorage heys_debug_react_profiler / ?reactProfiler=1) или heys_debug_commit_trace=1.
+     */
+    commitTraceEnabled() {
+      try {
+        if (HEYS.debug && HEYS.debug.reactProfiler === true) return true;
+        const ls = window.localStorage && window.localStorage.getItem('heys_debug_react_profiler');
+        if (ls != null && ls !== '') {
+          const s = String(ls).trim().toLowerCase();
+          if (s === 'true' || s === '1' || s === 'yes' || s === 'on') return true;
+        }
+        const ls2 = window.localStorage && window.localStorage.getItem('heys_debug_commit_trace');
+        if (ls2 === '1' || String(ls2 || '').trim().toLowerCase() === 'true') return true;
+        if (window.location && window.location.search) {
+          const u = new URLSearchParams(window.location.search).get('reactProfiler');
+          if (u === '1' || u === 'true' || u === 'yes') return true;
+        }
+      } catch (e) { /* noop */ }
+      return false;
+    },
+
+    /** Последняя подсказка для HEYS.perf slow commit-probe (перезаписывается). */
+    markCommitHint(tag, detail) {
+      if (!this.commitTraceEnabled()) return;
+      try {
+        window.__HEYS_COMMIT_HINT__ = {
+          tag: String(tag || ''),
+          detail: detail == null ? null : detail,
+          at: Date.now(),
+          perfT: typeof performance !== 'undefined' && performance.now ? performance.now() : 0
+        };
+      } catch (e) { /* noop */ }
+    },
+
+    /**
+     * Справка: DevTools пишет [Violation] 'message' handler на react-bundle.js — это типично React 18 Scheduler
+     * (очередь через MessageChannel), а не отдельный обработчик приложения. Большие ms = долгий синхронный commit.
+     */
+    whyReactMessageViolations() {
+      const msg = '«message» на react-bundle.js:1 — обычно React 18 Scheduler (MessageChannel), не SW/postMessage приложения. ' +
+        'Длинные ms = тяжёлый синхронный рендер/коммит корня. Корреляция: heys_debug_commit_trace=1 или react_profiler, reload → ' +
+        'логи «[HEYS.sync] perf hot-sync finished» и «[HEYS.sync] perf slow tab commit» (консоль HEYS фильтрует по группам; префикс [HEYS.sync] в дефолте). ' +
+        'Порог slow: heys_debug_slow_commit_ms.';
+      try {
+        (global.console || console).info('[HEYS.sync] perf help: react message violations', msg);
+      } catch (e) { /* noop */ }
+      return msg;
     }
   };
 
@@ -9913,6 +9963,21 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
       const startTime = performance.now();
       const result = performSearch();
       const duration = performance.now() - startTime;
+      try {
+        const now = Date.now();
+        if ((now - (productsLogState.lastSearch || 0)) > 4000) {
+          productsLogState.lastSearch = now;
+          if ((products?.length || 0) < 25 || (query && query.trim().length >= 2 && (result?.length || 0) === 0)) {
+            console.warn('[HEYS.search:PIPE]', {
+              query,
+              productsLen: products?.length || 0,
+              searchIndexSize: searchIndex?.size || 0,
+              resultLen: result?.length || 0,
+              durationMs: Math.round(duration),
+            });
+          }
+        }
+      } catch (_) { /* noop */ }
 
       // Трекинг поиска
       if (window.HEYS && window.HEYS.analytics) {
@@ -13193,7 +13258,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
   HEYS.core = { validateInput }; // Создаем объект core с валидацией
 
   // products helper API (thin wrapper over store + local fallback)
-  const productsLogState = { lastGetAll: 0, lastSetAll: 0 };
+  const productsLogState = { lastGetAll: 0, lastSetAll: 0, lastPipe: 0, lastSearch: 0 };
   const shouldLogProducts = (type) => {
     // 🔇 v4.8.2: Отключено по умолчанию — включить через HEYS.debug.products = true
     const debugEnabled = !!(HEYS && HEYS.debug && HEYS.debug.products);
@@ -13251,6 +13316,25 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
       if (shouldLogProducts('getAll')) {
         console.log('[PRODUCTS.getAll] fromStore:', fromStore.length, 'fromUtils:', fromUtils.length, 'result:', result.length);
       }
+      // Постоянная диагностика проблем с загрузкой каталога (throttled)
+      try {
+        const now = Date.now();
+        const shouldPipeLog = (now - (productsLogState.lastPipe || 0)) > 7000;
+        const suspiciousSmall = !Array.isArray(result) || result.length < 25;
+        if (shouldPipeLog && suspiciousSmall) {
+          productsLogState.lastPipe = now;
+          const sharedLen = HEYS?.cloud?.getCachedSharedProducts?.()?.length || 0;
+          const sample = Array.isArray(result) ? result.slice(0, 3).map((p) => p?.name || '(no-name)') : [];
+          console.warn('[HEYS.products:PIPE] small personal catalog', {
+            fromStore: Array.isArray(fromStore) ? fromStore.length : -1,
+            fromUtils: Array.isArray(fromUtils) ? fromUtils.length : -1,
+            resultLen: Array.isArray(result) ? result.length : -1,
+            sharedLen,
+            currentClientId: HEYS?.currentClientId || null,
+            sample,
+          });
+        }
+      } catch (_) { /* noop */ }
       // 🛡️ Safety: always return array (guards against corrupted storage values)
       if (!Array.isArray(result)) {
         console.warn('[PRODUCTS.getAll] non-array result:', typeof result, result?.constructor?.name, '— returning []');
@@ -13347,6 +13431,21 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
       } else if (HEYS.utils && HEYS.utils.lsSet) {
         HEYS.utils.lsSet('heys_products', arr);
       }
+      try {
+        const now = Date.now();
+        if ((now - (productsLogState.lastSetAll || 0)) > 4000) {
+          productsLogState.lastSetAll = now;
+          const withIron = Array.isArray(arr) ? arr.filter((p) => p && +p.iron > 0).length : 0;
+          console.info('[HEYS.products:SET]', {
+            source,
+            len: Array.isArray(arr) ? arr.length : -1,
+            withIron,
+            allowShrink: !!opts.allowShrink,
+            skipCloud: !!opts.skipCloud,
+            skipNotify: !!opts.skipNotify,
+          });
+        }
+      } catch (_) { /* noop */ }
     },
     watch: (fn) => { if (HEYS.store && HEYS.store.watch) return HEYS.store.watch('heys_products', fn); return () => { }; },
 
@@ -18073,7 +18172,11 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
         const _pushTrace = typeof global.HEYS?.debug?.getSyncTraceBuffer === 'function'
             ? global.HEYS.debug._pushSyncTrace || null : null;
         const _key = params.item?.k || params.normalizedKey || '';
-        if (_key.includes('dayv2_')) {
+        const _syncTraceVerbose = !!(
+            global.HEYS?.debug?.syncTrace === true ||
+            (typeof global.localStorage !== 'undefined' && global.localStorage?.getItem('heys_debug_sync_trace') === 'true')
+        );
+        if (_syncTraceVerbose && _key.includes('dayv2_')) {
             const _v = params.item?.v;
             const _mCnt = Array.isArray(_v?.meals) ? _v.meals.length : '?';
             const _iCnt = Array.isArray(_v?.meals) ? _v.meals.reduce((s, m) => s + (m.items?.length || 0), 0) : '?';
@@ -18250,7 +18353,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
         : Date.now()) - t0;
       if (shouldSampleSlow(dt, opts && opts.threshold)) {
         try {
-          (global.console || console).info('[HEYS.perf]', label, Math.round(dt) + 'ms');
+          (global.console || console).info('[HEYS.sync] perf main-thread', label, Math.round(dt) + 'ms');
         } catch (_) { /* noop */ }
       }
     }
@@ -18832,40 +18935,62 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
 
   /** Временный шард каталога при 413 на RPC — мержится с heys_products при download. */
   const HEYS_PRODUCTS_RPC_TAIL_K = 'heys_products_rpc_tail';
+  const isProductsTailRpcKey = (k) => String(k || '') === HEYS_PRODUCTS_RPC_TAIL_K
+    || String(k || '').startsWith(`${HEYS_PRODUCTS_RPC_TAIL_K}_`);
 
   function mergeProductsRpcTailRawClientRows(rows, clientId) {
     if (!Array.isArray(rows) || rows.length === 0 || !clientId) return rows;
-    let tailIdx = -1;
+    const tailIdxs = [];
     let mainIdx = -1;
     for (let i = 0; i < rows.length; i++) {
       const nk = normalizeKeyForSupabase(rows[i]?.k, clientId);
-      if (nk === HEYS_PRODUCTS_RPC_TAIL_K) tailIdx = i;
+      if (isProductsTailRpcKey(nk)) tailIdxs.push(i);
       if (nk === 'heys_products') mainIdx = i;
     }
-    if (tailIdx < 0) return rows;
-    const tailArr = Array.isArray(rows[tailIdx]?.v) ? rows[tailIdx].v : [];
-    const out = rows.filter((_, i) => i !== tailIdx);
+    if (tailIdxs.length === 0) return rows;
+    const tailSet = new Set(tailIdxs);
+    const tailRows = tailIdxs
+      .map((idx) => rows[idx])
+      .sort((a, b) => String(a?.k || '').localeCompare(String(b?.k || '')));
+    const tailArr = [];
+    for (let i = 0; i < tailRows.length; i++) {
+      const arr = Array.isArray(tailRows[i]?.v) ? tailRows[i].v : [];
+      if (arr.length) tailArr.push(...arr);
+    }
+    const out = rows.filter((_, i) => !tailSet.has(i));
     if (mainIdx >= 0) {
-      const newMainIdx = mainIdx > tailIdx ? mainIdx - 1 : mainIdx;
+      const tailsBeforeMain = tailIdxs.filter((i) => i < mainIdx).length;
+      const newMainIdx = mainIdx - tailsBeforeMain;
       const mainRow = out[newMainIdx];
       const mainArr = Array.isArray(mainRow?.v) ? mainRow.v : [];
       mainRow.v = [...mainArr, ...tailArr];
       return out;
     }
-    const tr = rows[tailIdx];
+    const tr = tailRows[0] || rows[tailIdxs[0]];
     out.push({ ...tr, k: 'heys_products', v: tailArr });
     return out;
   }
 
   function mergeProductsRpcTailDeduped(deduped, client_id) {
     if (!Array.isArray(deduped) || !client_id) return deduped;
-    const tailScoped = scopeKeyForClientStorage(HEYS_PRODUCTS_RPC_TAIL_K, client_id);
     const mainScoped = scopeKeyForClientStorage('heys_products', client_id);
-    const ti = deduped.findIndex(d => d.scopedKey === tailScoped);
-    if (ti < 0) return deduped;
-    const tailEntry = deduped[ti];
-    const tailArr = Array.isArray(tailEntry.row?.v) ? tailEntry.row.v : [];
-    const withoutTail = deduped.filter((_, i) => i !== ti);
+    const tailIdxs = [];
+    for (let i = 0; i < deduped.length; i++) {
+      const scopedKey = String(deduped[i]?.scopedKey || '');
+      const normalized = normalizeKeyForSupabase(scopedKey, client_id);
+      if (isProductsTailRpcKey(normalized)) tailIdxs.push(i);
+    }
+    if (tailIdxs.length === 0) return deduped;
+    const tailSet = new Set(tailIdxs);
+    const tailEntries = tailIdxs
+      .map((idx) => deduped[idx])
+      .sort((a, b) => String(a?.row?.k || '').localeCompare(String(b?.row?.k || '')));
+    const tailArr = [];
+    for (let i = 0; i < tailEntries.length; i++) {
+      const arr = Array.isArray(tailEntries[i]?.row?.v) ? tailEntries[i].row.v : [];
+      if (arr.length) tailArr.push(...arr);
+    }
+    const withoutTail = deduped.filter((_, i) => !tailSet.has(i));
     const mi = withoutTail.findIndex(d => d.scopedKey === mainScoped);
     if (mi >= 0) {
       const r = withoutTail[mi].row;
@@ -18875,7 +19000,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
     }
     withoutTail.push({
       scopedKey: mainScoped,
-      row: { ...tailEntry.row, k: 'heys_products', v: tailArr }
+      row: { ...(tailEntries[0]?.row || {}), k: 'heys_products', v: tailArr }
     });
     return withoutTail;
   }
@@ -18892,6 +19017,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
   let _syncPauseUntil = 0;
   let _syncPauseToken = 0;
   let _syncPauseReason = '';
+  let _productsSaveBlockedUntil = 0;
 
   cloud.pauseSync = function (durationMs = 10 * 60 * 1000, reason = '') {
     const now = Date.now();
@@ -21428,12 +21554,33 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
   // 🔐 Критический лог — ВСЕГДА виден (синхронизация, auth, важные операции)
   function logCritical() {
     try {
+      // Шумные индикаторные/диагностические логи оставляем только в debug-режиме,
+      // чтобы не перегружать main thread на проде/обычном локальном запуске.
+      if (!isDebugSync() && arguments.length > 0) {
+        const first = String(arguments[0] || '');
+        if (
+          first.includes('[IND]') ||
+          first.includes('[SAVE DEBUG]') ||
+          first.includes('[TIMESTAMP CHECK]')
+        ) {
+          return;
+        }
+      }
       if (global.console && typeof global.console.info === 'function') {
         global.console.info.apply(global.console, ['[HEYS.sync]'].concat([].slice.call(arguments)));
         return;
       }
       console.info.apply(console, ['[HEYS.sync]'].concat([].slice.call(arguments)));
     } catch (e) { }
+  }
+
+  const _syncLogThrottleMap = new Map();
+  function logCriticalThrottled(throttleKey, intervalMs, ...args) {
+    const now = Date.now();
+    const last = _syncLogThrottleMap.get(throttleKey) || 0;
+    if (now - last < Math.max(0, intervalMs || 0)) return;
+    _syncLogThrottleMap.set(throttleKey, now);
+    logCritical(...args);
   }
 
   /**
@@ -21901,11 +22048,9 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
               pushSyncTrace('INTERCEPT_MIRROR_dayv2', { key: k, meals: _mCnt, items: _iCnt, updatedAt: parsed?.updatedAt });
             }
             cloud.saveClientKey(k, parsed);
-            if (!isHotSyncDisabled()) {
-              setTimeout(() => {
-                requestForegroundAutoSync('local-write', { minGapMs: 250 }).catch(() => { });
-              }, 0);
-            }
+            // ⚡ PERF: hot-sync от каждого local-write создавал шторм таймеров и message handlers.
+            // Синхронизацию уже делает очередь cloud.saveClientKey + scheduleClientPush, поэтому
+            // здесь не дёргаем requestForegroundAutoSync.
           } else {
             cloud.saveKey(k, parsed);
           }
@@ -22133,7 +22278,11 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
           cloud.syncClient(pinAuthClient).then(result => {
             _authSyncPending = false;
             if (result?.success) {
-              logCritical('✅ [YANDEX RESTORE] Sync завершён:', result.loaded, 'ключей');
+              const raw = result.loaded ?? result.keys ?? result.saved;
+              const keyCount = (typeof raw === 'number' && Number.isFinite(raw))
+                ? raw
+                : (typeof raw === 'string' && /^\d+$/.test(raw) ? parseInt(raw, 10) : 0);
+              logCritical('✅ [YANDEX RESTORE] Sync завершён:', keyCount, 'ключей');
             } else {
               logCritical('⚠️ [YANDEX RESTORE] Sync failed:', result?.error || 'no result');
             }
@@ -23401,11 +23550,28 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
       };
       const isProductsFamilyRpcKey = (k) => {
         const s = String(k || '');
-        return isProductsBaseKey(s) || s === HEYS_PRODUCTS_RPC_TAIL_K;
+        return isProductsBaseKey(s) || isProductsTailRpcKey(s);
       };
 
       const slimProductsForRpcUpload = (products, tier) => {
         if (!Array.isArray(products)) return products;
+        if (tier >= 3) {
+          // Аварийный ultra-slim при 413: оставляем только поля, нужные для резолва и базовых расчётов.
+          return products.map((p) => {
+            if (!p || typeof p !== 'object') return p;
+            return {
+              id: p.id ?? p.product_id ?? null,
+              product_id: p.product_id ?? p.id ?? null,
+              name: typeof p.name === 'string' ? p.name.slice(0, 160) : '',
+              kcal100: p.kcal100 ?? null,
+              protein100: p.protein100 ?? null,
+              fat100: p.fat100 ?? null,
+              carbs100: p.carbs100 ?? null,
+              updatedAt: p.updatedAt ?? p.updated_at ?? null,
+              fingerprint: p.fingerprint ?? null,
+            };
+          });
+        }
         const stripKeys = tier >= 2
           ? ['photo', 'image', 'imageUrl', 'imageData', 'thumb', 'thumbnail', 'rawPhoto', 'barcodeImage', 'icon']
           : ['photo', 'image', 'imageUrl', 'rawPhoto'];
@@ -23616,17 +23782,73 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
                 }
               }
               if (arr.length >= 2) {
-                const mid = Math.ceil(arr.length / 2);
-                const partA = slimProductsForRpcUpload(arr.slice(0, mid), 2);
-                const partB = slimProductsForRpcUpload(arr.slice(mid), 2);
-                const t1 = await YandexAPI.saveKV(clientId, HEYS_PRODUCTS_RPC_TAIL_K, partB);
-                if (!t1.success) return { success: false, saved: 0, error: t1.error || res.error };
-                const t2 = await YandexAPI.saveKV(clientId, it.k, partA);
+                // Жёсткий fallback при 413: бьём products на N шардов фиксированного размера
+                // и сохраняем как heys_products + heys_products_rpc_tail_1..N.
+                const shardTargetBytes = 42 * 1024;
+                const slim = slimProductsForRpcUpload(arr, 3);
+                const shards = [];
+                let cur = [];
+                let curBytes = 0;
+                for (let si = 0; si < slim.length; si++) {
+                  const one = slim[si];
+                  const oneBytes = Math.max(1, JSON.stringify(one).length + 1);
+                  if (cur.length > 0 && curBytes + oneBytes > shardTargetBytes) {
+                    shards.push(cur);
+                    cur = [];
+                    curBytes = 0;
+                  }
+                  cur.push(one);
+                  curBytes += oneBytes;
+                }
+                if (cur.length > 0) shards.push(cur);
+                if (shards.length === 0) shards.push([]);
+
+                const mainShard = shards[0];
+                const tails = shards.slice(1);
+
+                const t2 = await YandexAPI.saveKV(clientId, it.k, mainShard);
                 if (!t2.success) return { success: false, saved: 0, error: t2.error || res.error };
+
+                for (let ti = 0; ti < tails.length; ti++) {
+                  const tailKey = `${HEYS_PRODUCTS_RPC_TAIL_K}_${ti + 1}`;
+                  const tr = await YandexAPI.saveKV(clientId, tailKey, tails[ti]);
+                  if (!tr.success) return { success: false, saved: 0, error: tr.error || res.error };
+                }
+
+                // best-effort cleanup неиспользуемых старых tail-ключей
+                if (typeof YandexAPI.deleteKV === 'function') {
+                  for (let ci = tails.length + 1; ci <= 12; ci++) {
+                    YandexAPI.deleteKV(clientId, `${HEYS_PRODUCTS_RPC_TAIL_K}_${ci}`).catch(() => { });
+                  }
+                }
                 didSaveProductsMain = true;
-                didSplitProductsUpload = true;
-                logCritical(`📑 [YANDEX SAVE] Split heys_products RPC: ${partA.length} + ${partB.length} items (413 fallback)`);
+                didSplitProductsUpload = tails.length > 0;
+                logCritical(`📑 [YANDEX SAVE] Split heys_products RPC: ${shards.length} shard(s), total=${arr.length} items (413 fallback)`);
                 return { success: true, saved: 1 };
+              }
+            }
+          }
+
+          // Последний fallback для heys_products: ultra-slim + compress.
+          // Лучше сохранить урезанный каталог, чем бесконечно ловить 413 и держать очередь.
+          if (isProductsBaseKey(it.k) && Store) {
+            const arr3 = productsArrayFromClientKvValue(it.v);
+            if (Array.isArray(arr3) && arr3.length > 0) {
+              const slim3 = slimProductsForRpcUpload(arr3, 3);
+              let wire3 = null;
+              try {
+                if (typeof Store.compressProductsWire === 'function') wire3 = Store.compressProductsWire(slim3);
+                if ((!wire3 || typeof wire3 !== 'string') && typeof Store.compress === 'function') {
+                  const c3 = Store.compress(slim3);
+                  if (typeof c3 === 'string' && c3.startsWith('¤Z¤')) wire3 = c3;
+                }
+              } catch (_) { /* noop */ }
+
+              const u3 = await tryWireUpload(wire3 || slim3);
+              if (u3.ok) {
+                didSaveProductsMain = true;
+                logCritical(`🧩 [YANDEX SAVE] Ultra-slim heys_products fallback applied (${arr3.length} items)`);
+                return { success: true, saved: u3.saved || 1 };
               }
             }
           }
@@ -23659,6 +23881,9 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
       if (didSaveProductsMain && !didSplitProductsUpload && typeof YandexAPI.deleteKV === 'function') {
         queueMicrotask(() => {
           YandexAPI.deleteKV(clientId, HEYS_PRODUCTS_RPC_TAIL_K).catch(() => { });
+          for (let ci = 1; ci <= 12; ci++) {
+            YandexAPI.deleteKV(clientId, `${HEYS_PRODUCTS_RPC_TAIL_K}_${ci}`).catch(() => { });
+          }
         });
       }
 
@@ -26064,6 +26289,53 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
     return false;
   };
 
+  let _fetchDaysBackoffUntil = 0;
+  const _fetchDaysInFlight = new Map();
+
+  // Parallel fetchDays (bootstrap + prefetch + stats) used different inflight keys → N UI events.
+  // Coalesce notifications within a short window so DayTab does one heavy apply per burst.
+  let _fetchDaysNotifyTimer = null;
+  let _fetchDaysNotifyClientId = null;
+  const _fetchDaysNotifyDates = new Set();
+  const flushFetchDaysUiNotify = () => {
+    if (_fetchDaysNotifyTimer) {
+      clearTimeout(_fetchDaysNotifyTimer);
+      _fetchDaysNotifyTimer = null;
+    }
+    if (_fetchDaysNotifyDates.size === 0) return;
+    const uniqueDates = [..._fetchDaysNotifyDates].sort();
+    _fetchDaysNotifyDates.clear();
+    const cid = _fetchDaysNotifyClientId;
+    _fetchDaysNotifyClientId = null;
+    log(`[fetchDays] Notifying UI about ${uniqueDates.length} updated days (coalesced from parallel fetches)`);
+    global.dispatchEvent(new CustomEvent('heys:day-updated', {
+      detail: {
+        date: uniqueDates[0] || null,
+        dates: uniqueDates,
+        batch: true,
+        source: 'fetchDays',
+        forceReload: true,
+        clientId: cid || undefined
+      }
+    }));
+  };
+  const scheduleFetchDaysUiNotify = (clientId, uniqueDates) => {
+    if (!Array.isArray(uniqueDates) || uniqueDates.length === 0) return;
+    const cId = clientId || null;
+    if (_fetchDaysNotifyClientId && cId && _fetchDaysNotifyClientId !== cId) {
+      flushFetchDaysUiNotify();
+    }
+    _fetchDaysNotifyClientId = cId || _fetchDaysNotifyClientId;
+    uniqueDates.forEach((d) => {
+      if (d) _fetchDaysNotifyDates.add(String(d));
+    });
+    if (_fetchDaysNotifyTimer) return;
+    _fetchDaysNotifyTimer = setTimeout(() => {
+      _fetchDaysNotifyTimer = null;
+      flushFetchDaysUiNotify();
+    }, 140);
+  };
+
   cloud.fetchDays = async function (dates) {
     // YandexAPI не требует client/user — работает через API Gateway
     if (!Array.isArray(dates) || dates.length === 0) return [];
@@ -26071,21 +26343,68 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
     if (!clientId) return [];
     if (typeof cloud.isSyncPaused === 'function' && cloud.isSyncPaused()) return [];
 
-    // 🔧 FIX: Ключи в базе могут быть как нормализованные, так и scoped (c clientId)
-    const dayKeys = dates.map((d) => `heys_dayv2_${d}`);
-    const scopedDayKeys = dates.map((d) => `heys_${clientId}_dayv2_${d}`);
-    const keysToFetch = [...new Set([...dayKeys, ...scopedDayKeys])];
-    try {
-      // YandexAPI имеет встроенный timeout
-      const { data, error } = await YandexAPI.from('client_kv_store')
-        .select('k,v,updated_at')
-        .eq('client_id', clientId)
-        .in('k', keysToFetch);
-      if (error) {
-        err('fetchDays select', error);
+    const stableDates = [...new Set(dates.filter(Boolean).map(String))].sort();
+    const inflightKey = `${clientId}:${stableDates.join('|')}`;
+    if (_fetchDaysInFlight.has(inflightKey)) {
+      return _fetchDaysInFlight.get(inflightKey);
+    }
+    const runFetchDays = async () => {
+      const now = Date.now();
+      if (_fetchDaysBackoffUntil > now) {
+        log(`[fetchDays] backoff active (${_fetchDaysBackoffUntil - now}ms), skip`);
         return [];
       }
 
+      // 🔧 FIX: Ключи в базе могут быть как нормализованные, так и scoped (c clientId)
+      const dayKeys = stableDates.map((d) => `heys_dayv2_${d}`);
+      const scopedDayKeys = stableDates.map((d) => `heys_${clientId}_dayv2_${d}`);
+      const keysToFetch = [...new Set([...dayKeys, ...scopedDayKeys])];
+      const CHUNK_SIZE = 10;
+      const MAX_RETRIES = 2;
+      const chunks = [];
+      for (let i = 0; i < keysToFetch.length; i += CHUNK_SIZE) {
+        chunks.push(keysToFetch.slice(i, i + CHUNK_SIZE));
+      }
+
+      const mergedData = [];
+      const isRetryableError = (error) => {
+        const status = Number(error?.status || error?.code || 0);
+        if (status === 429 || status === 502 || status === 503 || status === 504) return true;
+        const msg = String(error?.message || '').toLowerCase();
+        return msg.includes('502') || msg.includes('503') || msg.includes('504') || msg.includes('gateway') || msg.includes('timeout');
+      };
+
+      for (let ci = 0; ci < chunks.length; ci++) {
+        const chunkKeys = chunks[ci];
+        let attempt = 0;
+        let chunkDone = false;
+        while (!chunkDone && attempt <= MAX_RETRIES) {
+          const { data, error } = await YandexAPI.from('client_kv_store')
+            .select('k,v,updated_at')
+            .eq('client_id', clientId)
+            .in('k', chunkKeys);
+          if (!error) {
+            if (Array.isArray(data) && data.length > 0) mergedData.push(...data);
+            chunkDone = true;
+            break;
+          }
+          attempt += 1;
+          if (!isRetryableError(error) || attempt > MAX_RETRIES) {
+            err('fetchDays select', error);
+            if (isRetryableError(error)) {
+              const cooldownMs = 3500 + Math.floor(Math.random() * 1500);
+              _fetchDaysBackoffUntil = Date.now() + cooldownMs;
+              console.warn('[HEYS.sync] fetchDays backoff armed', { cooldownMs, chunks: chunks.length, failedChunk: ci + 1 });
+            }
+            chunkDone = true;
+            break;
+          }
+          const retryDelayMs = Math.min(1800, 400 * attempt + Math.floor(Math.random() * 220));
+          await new Promise((resolve) => setTimeout(resolve, retryDelayMs));
+        }
+      }
+
+      const data = mergedData;
       const ls = global.localStorage;
       muteMirror = true;
 
@@ -26195,21 +26514,21 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
         // Убираем дубликаты (на случай если API вернул повторяющиеся строки)
         const uniqueDates = [...new Set(updatedDates)];
         log(`[fetchDays] Notifying UI about ${uniqueDates.length} updated days (from ${data?.length || 0} rows)`);
-        // Отправляем событие для каждой уникальной даты
-        uniqueDates.forEach(date => {
-          global.dispatchEvent(new CustomEvent('heys:day-updated', {
-            detail: { date, source: 'fetchDays', forceReload: true }
-          }));
-        });
+        scheduleFetchDaysUiNotify(clientId, uniqueDates);
       }
 
       muteMirror = false;
       return data || [];
-    } catch (e) {
+    };
+    const promise = runFetchDays().catch((e) => {
       muteMirror = false;
       err('fetchDays exception', e);
       return [];
-    }
+    }).finally(() => {
+      _fetchDaysInFlight.delete(inflightKey);
+    });
+    _fetchDaysInFlight.set(inflightKey, promise);
+    return promise;
   };
 
   cloud.shouldSyncClient = function (client_id, maxAgeMs) {
@@ -27020,6 +27339,12 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
       return;
     }
 
+    // После stale-block у products даём короткий cooldown, чтобы не гонять один и тот же
+    // тяжёлый payload по кругу и не нагружать main thread.
+    if ((k === 'heys_products' || (k && k.includes('products'))) && _productsSaveBlockedUntil > Date.now()) {
+      return;
+    }
+
     // Для дней проверяем что это объект, для остальных ключей пропускаем любые типы
     if (k && k.includes('dayv2_') && !k.includes('backup') && !k.includes('date')) {
       if (typeof value !== 'object' || value === null) {
@@ -27062,19 +27387,41 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
       log(`🚫 [SAVE DEFERRED] Products save blocked — waiting for initial sync to load cloud version`);
       return;
     }
+    // После завершения initial sync даём окну стабилизации остыть:
+    // React-эффекты часто пытаются тут же повторно записать тот же heys_products.
+    if ((k === 'heys_products' || normalizedKey === 'heys_products') && cloud._syncCompletedAt) {
+      const ageAfterSync = Date.now() - cloud._syncCompletedAt;
+      if (ageAfterSync >= 0 && ageAfterSync < 20000) {
+        return;
+      }
+    }
     // v4.8.3: Timestamp check для products — блокируем если сохраняемая версия СТАРЕЕ текущей
     // React useEffect с debounce может попытаться сохранить stale state ПОСЛЕ того как sync загрузил свежую версию
     if ((k === 'heys_products' || normalizedKey === 'heys_products') && Array.isArray(value) && value.length > 0) {
+      // Быстрый дедуп: если fingerprint не менялся, не гоняем тяжёлый upload и очередь.
+      const _fpArr = value.map(p => (p?.name || '') + (p?.updatedAt || '')).join('|');
+      let _fpHash = 0;
+      for (let _ci = 0; _ci < _fpArr.length; _ci++) {
+        _fpHash = ((_fpHash << 5) - _fpHash + _fpArr.charCodeAt(_ci)) | 0;
+      }
+      const _incomingFingerprint = value.length + ':' + Math.abs(_fpHash);
+      if (cloud._productsFingerprint && cloud._productsFingerprint === _incomingFingerprint) {
+        return;
+      }
+
       // v4.8.6: ПЕРВИЧНАЯ защита — качественная проверка ДО попыток чтения localStorage
       const savingWithIron = value.filter(p => p && p.iron && +p.iron > 0).length;
-      const savingWithTs = value.filter(p => p && p.updatedAt).length;
-      logCritical(`🔍 [SAVE DEBUG] Products to save: total=${value.length}, withIron=${savingWithIron}, withTimestamp=${savingWithTs}`);
+      if (isDebugSync()) {
+        const savingWithTs = value.filter(p => p && p.updatedAt).length;
+        logCritical(`🔍 [SAVE DEBUG] Products to save: total=${value.length}, withIron=${savingWithIron}, withTimestamp=${savingWithTs}`);
+      }
 
       // 🚨 КРИТИЧЕСКАЯ защита: если пытаемся сохранить продукты БЕЗ микронутриентов — это stale state!
       // В облаке 290+ products с железом, а React пытается сохранить <50 — БЛОКИРУЕМ
       if (savingWithIron < 50) {
-        logCritical(`🚨 [SAVE BLOCKED] Quality check: only ${savingWithIron} products with iron (expected 250+)`);
-        logCritical(`   This is stale React state without micronutrients. Refusing to overwrite cloud.`);
+        _productsSaveBlockedUntil = Date.now() + 25000;
+        logCriticalThrottled('save-blocked-quality-low-iron', 20000, `🚨 [SAVE BLOCKED] Quality check: only ${savingWithIron} products with iron (expected 250+)`);
+        logCriticalThrottled('save-blocked-quality-low-iron-reason', 20000, '   This is stale React state without micronutrients. Refusing to overwrite cloud.');
         return;
       }
 
@@ -27086,8 +27433,10 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
           const current = JSON.parse(currentRaw);
           if (Array.isArray(current) && current.length > 0) {
             const currentWithIron = current.filter(p => p && p.iron && +p.iron > 0).length;
-            const currentWithTs = current.filter(p => p && p.updatedAt).length;
-            logCritical(`🔍 [SAVE DEBUG] Current localStorage: total=${current.length}, withIron=${currentWithIron}, withTimestamp=${currentWithTs}`);
+            if (isDebugSync()) {
+              const currentWithTs = current.filter(p => p && p.updatedAt).length;
+              logCritical(`🔍 [SAVE DEBUG] Current localStorage: total=${current.length}, withIron=${currentWithIron}, withTimestamp=${currentWithTs}`);
+            }
 
             // Находим самый свежий updatedAt в обеих версиях
             const getMaxTimestamp = (arr) => {
@@ -27105,23 +27454,27 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
             const currentMaxTs = getMaxTimestamp(current);
             const delta = currentMaxTs - savingMaxTs;
 
-            logCritical(`🔍 [TIMESTAMP CHECK] savingMaxTs=${savingMaxTs} (${new Date(savingMaxTs).toISOString()})`);
-            logCritical(`🔍 [TIMESTAMP CHECK] currentMaxTs=${currentMaxTs} (${new Date(currentMaxTs).toISOString()})`);
-            logCritical(`🔍 [TIMESTAMP CHECK] delta=${delta}ms (${Math.round(delta / 1000)}s), threshold=30000ms`);
+            if (isDebugSync()) {
+              logCritical(`🔍 [TIMESTAMP CHECK] savingMaxTs=${savingMaxTs} (${new Date(savingMaxTs).toISOString()})`);
+              logCritical(`🔍 [TIMESTAMP CHECK] currentMaxTs=${currentMaxTs} (${new Date(currentMaxTs).toISOString()})`);
+              logCritical(`🔍 [TIMESTAMP CHECK] delta=${delta}ms (${Math.round(delta / 1000)}s), threshold=30000ms`);
+            }
 
             // Если сохраняемая версия старее текущей на >30 секунд — блокируем (это stale state)
             if (currentMaxTs > 0 && savingMaxTs > 0 && delta > 30000) {
-              logCritical(`🚨 [SAVE BLOCKED] Stale products: saving timestamp ${new Date(savingMaxTs).toISOString()} vs current ${new Date(currentMaxTs).toISOString()}`);
-              logCritical(`   React state outdated (delta ${Math.round(delta / 1000)}s), current localStorage is fresher`);
-              logCritical(`   Refusing to overwrite ${currentWithIron} products with iron with stale version (${savingWithIron} products with iron)`);
+              _productsSaveBlockedUntil = Date.now() + 25000;
+              logCriticalThrottled('save-blocked-stale-ts', 20000, `🚨 [SAVE BLOCKED] Stale products: saving timestamp ${new Date(savingMaxTs).toISOString()} vs current ${new Date(currentMaxTs).toISOString()}`);
+              logCriticalThrottled('save-blocked-stale-ts-reason', 20000, `   React state outdated (delta ${Math.round(delta / 1000)}s), current localStorage is fresher`);
+              logCriticalThrottled('save-blocked-stale-ts-refuse', 20000, `   Refusing to overwrite ${currentWithIron} products with iron with stale version (${savingWithIron} products with iron)`);
               return;
             }
 
             // v4.8.5: Дополнительная защита на основе КАЧЕСТВА данных (если прошли первичную проверку)
             // Если сохраняемая версия имеет ЗНАЧИТЕЛЬНО меньше микронутриентов — блокируем
             if (currentWithIron >= 100 && savingWithIron < currentWithIron * 0.5) {
-              logCritical(`🚨 [SAVE BLOCKED] Quality degradation: current has ${currentWithIron} products with iron, saving only ${savingWithIron}`);
-              logCritical(`   This looks like stale React state without micronutrients. Blocking save.`);
+              _productsSaveBlockedUntil = Date.now() + 25000;
+              logCriticalThrottled('save-blocked-quality-degrade', 20000, `🚨 [SAVE BLOCKED] Quality degradation: current has ${currentWithIron} products with iron, saving only ${savingWithIron}`);
+              logCriticalThrottled('save-blocked-quality-degrade-reason', 20000, '   This looks like stale React state without micronutrients. Blocking save.');
               return;
             }
           }
@@ -27147,11 +27500,15 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
       }
       const _fingerprint = value.length + ':' + Math.abs(_fpHash);
       if (cloud._productsFingerprint === _fingerprint) {
-        console.info('[HEYS.sync] 🔄 Delta-sync: products не изменились (fingerprint=' + _fingerprint + '), upload пропущен');
+        if (isDebugSync()) {
+          console.info('[HEYS.sync] 🔄 Delta-sync: products не изменились (fingerprint=' + _fingerprint + '), upload пропущен');
+        }
         return;
       }
       cloud._productsFingerprint = _fingerprint;
-      console.info('[HEYS.sync] 🔄 Delta-sync: products изменились (new fingerprint=' + _fingerprint + '), upload разрешён');
+      if (isDebugSync()) {
+        console.info('[HEYS.sync] 🔄 Delta-sync: products изменились (new fingerprint=' + _fingerprint + '), upload разрешён');
+      }
     }
 
     // �🚨 КРИТИЧЕСКАЯ ЗАЩИТА: Фильтруем невалидные продукты перед сохранением
@@ -27221,7 +27578,9 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
       const bypassReason = _isWidgetLayout
         ? 'widget_layout'
         : (_isProfileCompleted ? 'profileCompleted' : 'defaultTab');
-      console.info('[HEYS.sync] 🔓 Grace period bypassed for', bypassReason, 'save');
+      if (isDebugSync()) {
+        console.info('[HEYS.sync] 🔓 Grace period bypassed for', bypassReason, 'save');
+      }
     }
     if (_inGracePeriod && _isDayV2Data) {
       pushSyncTrace('GRACE_PERIOD_BYPASS_dayv2', { key: normalizedKey, graceAge: Math.round(_graceAge), updatedAt: value?.updatedAt });
@@ -27229,8 +27588,10 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
 
     // Диагностика: логируем добавление dayv2 в upload queue с caller
     if (normalizedKey && normalizedKey.includes('dayv2_') && !normalizedKey.includes('date')) {
-      const callerLine = (new Error().stack || '').split('\n')[2] || '?';
-      console.info('[HEYS.sync] [IND] saveClientKey: dayv2 enqueue key=' + normalizedKey + ' updatedAt=' + (upsertObj.v && upsertObj.v.updatedAt) + ' caller=' + callerLine.trim());
+      if (isDebugSync()) {
+        const callerLine = (new Error().stack || '').split('\n')[2] || '?';
+        console.info('[HEYS.sync] [IND] saveClientKey: dayv2 enqueue key=' + normalizedKey + ' updatedAt=' + (upsertObj.v && upsertObj.v.updatedAt) + ' caller=' + callerLine.trim());
+      }
     }
 
     const isCascadeDcsKey = normalizedKey && /cascade_dcs_/i.test(String(normalizedKey));
@@ -27830,10 +28191,10 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
   // Console API: HEYS.cloud.hotSync.disable() / .enable() / .status() / .safeMode() / .normalMode()
   // ═══════════════════════════════════════════════════════════════════
   // and we also sync immediately when the tab/window becomes active again.
-  const FOREGROUND_AUTO_SYNC_INTERVAL_ACTIVE_MS = 5000;
-  const FOREGROUND_AUTO_SYNC_INTERVAL_IDLE_MS = 5000;
-  const FOREGROUND_AUTO_SYNC_INTERVAL_LOW_END_MS = 7000;
-  const FOREGROUND_AUTO_SYNC_MIN_GAP_MS = 1500;
+  const FOREGROUND_AUTO_SYNC_INTERVAL_ACTIVE_MS = 12000;
+  const FOREGROUND_AUTO_SYNC_INTERVAL_IDLE_MS = 18000;
+  const FOREGROUND_AUTO_SYNC_INTERVAL_LOW_END_MS = 25000;
+  const FOREGROUND_AUTO_SYNC_MIN_GAP_MS = 8000;
   const FOREGROUND_AUTO_SYNC_FALLBACK_COOLDOWN_MS = 15000;
   const FOREGROUND_AUTO_SYNC_EXTENDED_EVERY = 3;
   const HOT_SYNC_AUTO_SAFE_THRESHOLD = 5; // consecutive errors to trigger auto-safe mode
@@ -28463,8 +28824,10 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
     foregroundAutoSyncLastAt = now;
 
     try {
+      const __hotSyncT0 = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
       console.info('[HEYS.sync] ⚡ Foreground auto-sync:', reason, clientId.slice(0, 8));
       const hotSync = await runForegroundHotKeySync(clientId, reason);
+      const __hotSyncWallMs = (typeof performance !== 'undefined' && performance.now) ? (performance.now() - __hotSyncT0) : 0;
       const hotSyncTrace = {
         ts: now,
         clientId: clientId.slice(0, 8),
@@ -28480,9 +28843,34 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
       };
       rememberForegroundHotSyncRun(hotSyncTrace);
 
+      try {
+        const perf = window.HEYS && window.HEYS.perf;
+        if (perf && typeof perf.commitTraceEnabled === 'function' && perf.commitTraceEnabled()) {
+          const fk = Array.isArray(hotSync.fetchedKeys) ? hotSync.fetchedKeys.slice(0, 12) : [];
+          console.info('[HEYS.sync] perf hot-sync finished', {
+            reason,
+            wallMs: Math.round(__hotSyncWallMs * 10) / 10,
+            updated: hotSync.updated || 0,
+            fetchedKeyCount: hotSync.fetchedKeyCount || 0,
+            keys: fk,
+            success: !!hotSync.success
+          });
+          if (hotSync.updated > 0 && typeof perf.markCommitHint === 'function') {
+            perf.markCommitHint('hot-sync:updated', {
+              reason,
+              wallMs: Math.round(__hotSyncWallMs * 10) / 10,
+              updated: hotSync.updated,
+              keys: fk
+            });
+          }
+        }
+      } catch (_) { /* noop */ }
+
       if (hotSync.updated > 0) {
         foregroundAutoSyncIdleStreak = 0;
-        logCritical(
+        logCriticalThrottled(
+          `hot-updated:${String(reason || 'unknown')}`,
+          12000,
           `⚡ [HOT] ${reason}: mode=${hotSyncTrace.mode} updated=${hotSyncTrace.updated}/${hotSyncTrace.fetchedKeyCount}` +
           (hotSyncTrace.fetchedKeys.length ? ` keys=${hotSyncTrace.fetchedKeys.join(', ')}` : '') +
           (hotSyncTrace.markerScopes.length ? ` scopes=${hotSyncTrace.markerScopes.join(', ')}` : '')
@@ -28504,7 +28892,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
 
       if (hotSync.authMissing) {
         foregroundAutoSyncAuthFailCount += 1;
-        logCritical(`⏸️ [HOT] ${reason}: auth missing, mode=${hotSyncTrace.mode}`);
+        logCriticalThrottled(`hot-auth-missing:${String(reason || 'unknown')}`, 15000, `⏸️ [HOT] ${reason}: auth missing, mode=${hotSyncTrace.mode}`);
         if (foregroundAutoSyncAuthFailCount >= 3) {
           console.warn('[HEYS.sync] ⏸️ Foreground auto-sync paused: no session token');
           stopForegroundAutoSyncLoop();
@@ -28586,7 +28974,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
       return;
     }
     startForegroundAutoSyncLoop();
-    requestForegroundAutoSync('visibility-visible', { minGapMs: 250 }).catch(() => { });
+    requestForegroundAutoSync('visibility-visible', { minGapMs: 5000 }).catch(() => { });
   }
 
   if (typeof document !== 'undefined' && document.addEventListener) {
@@ -28598,11 +28986,11 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
 
   if (global.addEventListener) {
     global.addEventListener('focus', function () {
-      requestForegroundAutoSync('window-focus', { minGapMs: 250 }).catch(() => { });
+      requestForegroundAutoSync('window-focus', { minGapMs: 5000 }).catch(() => { });
       startForegroundAutoSyncLoop();
     });
     global.addEventListener('pageshow', function () {
-      requestForegroundAutoSync('pageshow', { minGapMs: 0 }).catch(() => { });
+      requestForegroundAutoSync('pageshow', { minGapMs: 5000 }).catch(() => { });
       startForegroundAutoSyncLoop();
     });
     global.addEventListener('beforeunload', function () {

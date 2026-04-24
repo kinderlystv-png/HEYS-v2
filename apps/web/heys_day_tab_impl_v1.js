@@ -369,9 +369,23 @@
 
         // Флаг: данные загружены (из localStorage или Supabase)
         const [isHydrated, setIsHydrated] = useState(false);
+        // Двухфазный рендер: тяжелую часть дневника поднимаем после первого paint.
+        const [heavyUiReady, setHeavyUiReady] = useState(false);
 
         // State для развёрнутости NDTE badge (Next-Day Training Effect)
         const [ndteExpanded, setNdteExpanded] = useState(false);
+
+        useEffect(() => {
+            setHeavyUiReady(false);
+            let timeoutId = null;
+            const rafId = requestAnimationFrame(() => {
+                timeoutId = setTimeout(() => setHeavyUiReady(true), 120);
+            });
+            return () => {
+                cancelAnimationFrame(rafId);
+                if (timeoutId) clearTimeout(timeoutId);
+            };
+        }, [date]);
 
         // Ref для отслеживания предыдущей даты (нужен для flush перед сменой)
         const prevDateRef = React.useRef(date);
@@ -1462,7 +1476,7 @@
         if (!HEYS.dayOrphanState?.useOrphanState) {
             throw new Error('[heys_day_v12] HEYS.dayOrphanState not loaded before heys_day_v12.js');
         }
-        const orphanState = HEYS.dayOrphanState.useOrphanState({ React, day, HEYS: window.HEYS }) || {};
+        const orphanState = HEYS.dayOrphanState.useOrphanState({ React, day, date, HEYS: window.HEYS }) || {};
 
         const dailyTableState = extractedDailyTableState;
         const {
@@ -1674,7 +1688,7 @@
         const { orphanCount = 0 } = orphanState;
 
         // === Phase 13A Integration: Use extracted orphan alert renderer ===
-        const orphanAlert = HEYS.dayOrphanAlert?.renderOrphanAlert?.({ orphanCount }) || false;
+        const orphanAlert = HEYS.dayOrphanAlert?.renderOrphanAlert?.({ orphanCount, date }) || false;
 
         // === Hero display (tour override + colors + deficit) — extracted ===
         if (!HEYS.dayHeroDisplay?.buildHeroDisplay) {
@@ -2052,7 +2066,8 @@
             mealsUI,
             daySummary,
             dayTot,
-            normAbs
+            normAbs,
+            heavyUiReady
         });
     };
 
