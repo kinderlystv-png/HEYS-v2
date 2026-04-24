@@ -6678,7 +6678,41 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
    * Called automatically when products sync from cloud (heysProductsUpdated event)
    * @param {Array<Object>} products - Products to potentially update (only those with nutrient changes will cascade)
    */
-  const cascadeBatchProductUpdates = (products, previousProducts = null) => {
+  /** Yield main thread between day chunks (curator switch + large merges stay responsive). */
+  const __cascadeYieldToMain = function (budgetMs) {
+    const ms = Number.isFinite(budgetMs) ? Math.max(0, budgetMs) : 48;
+    return new Promise(function (resolve) {
+      if (typeof requestIdleCallback !== 'undefined') {
+        requestIdleCallback(function () { resolve(); }, { timeout: Math.max(32, ms) });
+      } else {
+        setTimeout(resolve, 0);
+      }
+    });
+  };
+
+  const __resolveCascadeClientId = function () {
+    try {
+      if (HEYS && HEYS.currentClientId && typeof HEYS.currentClientId === 'string') {
+        return HEYS.currentClientId;
+      }
+    } catch (_) { /* noop */ }
+    try {
+      if (HEYS && HEYS.cloud && typeof HEYS.cloud.getCurrentClientId === 'function') {
+        const cid = HEYS.cloud.getCurrentClientId();
+        if (cid && typeof cid === 'string') return cid;
+      }
+    } catch (_) { /* noop */ }
+    try {
+      const raw = global.localStorage.getItem('heys_client_current');
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      if (typeof parsed === 'string') return parsed;
+      if (parsed && typeof parsed === 'object' && parsed.id) return String(parsed.id);
+    } catch (_) { /* noop */ }
+    return null;
+  };
+
+  const cascadeBatchProductUpdates = async function (products, previousProducts = null, { todayEventDelayMs = 80 } = {}) {
     if (!Array.isArray(products) || products.length === 0) return;
 
     const prevArr = Array.isArray(previousProducts) ? previousProducts : null;
@@ -6717,96 +6751,124 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
     console.log(`[HEYS.sync] 🔄 Cascade batch update: ${changesMap.size} products changed`);
 
-    // Single pass through all days — efficient!
-    const dayKeys = Object.keys(localStorage).filter(k => k.includes('_dayv2_'));
+    const cascadeClientId = __resolveCascadeClientId();
+    const dayKeysAll = Object.keys(localStorage).filter(function (k) { return k.includes('_dayv2_'); });
+    let dayKeys = dayKeysAll;
+    if (cascadeClientId) {
+      const pfx = 'heys_' + cascadeClientId + '_dayv2_';
+      dayKeys = dayKeysAll.filter(function (k) { return k.startsWith(pfx); });
+      if (dayKeys.length === 0 && dayKeysAll.length > 0) {
+        console.warn('[HEYS.sync] ⚠️ Cascade: no scoped dayv2 keys for client', cascadeClientId.slice(0, 8), '— falling back to full scan');
+        dayKeys = dayKeysAll;
+      }
+    }
+
     let updatedDays = 0;
     let updatedItems = 0;
+    const CHUNK = 5;
 
-    for (const key of dayKeys) {
-      try {
-        const day = readStoredValue(key, null);
-        if (!day || !day.meals) continue;
+    for (let offset = 0; offset < dayKeys.length; offset += CHUNK) {
+      const slice = dayKeys.slice(offset, offset + CHUNK);
+      for (let ki = 0; ki < slice.length; ki++) {
+        const key = slice[ki];
+        try {
+          const day = readStoredValue(key, null);
+          if (!day || !day.meals) continue;
 
-        let dayChanged = false;
+          let dayChanged = false;
 
-        for (const meal of day.meals) {
-          if (!meal.items) continue;
-          for (const item of meal.items) {
-            const itemPid = String(item.product_id ?? item.productId ?? '');
-            const change = changesMap.get(itemPid);
+          for (let mi = 0; mi < day.meals.length; mi++) {
+            const meal = day.meals[mi];
+            if (!meal.items) continue;
+            for (let ii = 0; ii < meal.items.length; ii++) {
+              const item = meal.items[ii];
+              const itemPid = String(item.product_id ?? item.productId ?? '');
+              const change = changesMap.get(itemPid);
 
-            if (change) {
-              const { new: newProduct, nameChanged, nutrientsChanged } = change;
+              if (change) {
+                const newProduct = change.new;
+                const nameChanged = change.nameChanged;
+                const nutrientsChanged = change.nutrientsChanged;
 
-              if (nameChanged) {
-                item.name = newProduct.name;
+                if (nameChanged) {
+                  item.name = newProduct.name;
+                }
+
+                if (nutrientsChanged) {
+                  // Macronutrients
+                  item.kcal100 = newProduct.kcal100;
+                  item.protein100 = newProduct.protein100;
+                  item.fat100 = newProduct.fat100;
+                  item.simple100 = newProduct.simple100;
+                  item.complex100 = newProduct.complex100;
+                  item.badFat100 = newProduct.badFat100;
+                  item.goodFat100 = newProduct.goodFat100;
+                  item.trans100 = newProduct.trans100;
+                  item.fiber100 = newProduct.fiber100;
+                  item.gi = newProduct.gi ?? newProduct.gi100;
+                  item.harm = HEYS.models?.normalizeHarm?.(newProduct) ?? newProduct.harm;
+
+                  // 🆕 v5.0 Enrichment: Micronutrients (batch cascade)
+                  if (newProduct.iron != null) item.iron = newProduct.iron;
+                  if (newProduct.magnesium != null) item.magnesium = newProduct.magnesium;
+                  if (newProduct.zinc != null) item.zinc = newProduct.zinc;
+                  if (newProduct.selenium != null) item.selenium = newProduct.selenium;
+                  if (newProduct.calcium != null) item.calcium = newProduct.calcium;
+                  if (newProduct.phosphorus != null) item.phosphorus = newProduct.phosphorus;
+                  if (newProduct.potassium != null) item.potassium = newProduct.potassium;
+                  if (newProduct.iodine != null) item.iodine = newProduct.iodine;
+
+                  if (newProduct.vitamin_a != null) item.vitamin_a = newProduct.vitamin_a;
+                  if (newProduct.vitamin_b1 != null) item.vitamin_b1 = newProduct.vitamin_b1;
+                  if (newProduct.vitamin_b2 != null) item.vitamin_b2 = newProduct.vitamin_b2;
+                  if (newProduct.vitamin_b3 != null) item.vitamin_b3 = newProduct.vitamin_b3;
+                  if (newProduct.vitamin_b6 != null) item.vitamin_b6 = newProduct.vitamin_b6;
+                  if (newProduct.vitamin_b9 != null) item.vitamin_b9 = newProduct.vitamin_b9;
+                  if (newProduct.vitamin_b12 != null) item.vitamin_b12 = newProduct.vitamin_b12;
+                  if (newProduct.vitamin_c != null) item.vitamin_c = newProduct.vitamin_c;
+                  if (newProduct.vitamin_d != null) item.vitamin_d = newProduct.vitamin_d;
+                  if (newProduct.vitamin_e != null) item.vitamin_e = newProduct.vitamin_e;
+                  if (newProduct.vitamin_k != null) item.vitamin_k = newProduct.vitamin_k;
+
+                  if (newProduct.omega3_100 != null) item.omega3_100 = newProduct.omega3_100;
+                  if (newProduct.omega6_100 != null) item.omega6_100 = newProduct.omega6_100;
+                  if (newProduct.cholesterol != null) item.cholesterol = newProduct.cholesterol;
+
+                  if (newProduct.is_fermented != null) item.is_fermented = newProduct.is_fermented;
+                  if (newProduct.is_raw != null) item.is_raw = newProduct.is_raw;
+                  if (newProduct.is_organic != null) item.is_organic = newProduct.is_organic;
+                  if (newProduct.is_whole_grain != null) item.is_whole_grain = newProduct.is_whole_grain;
+                  if (newProduct.nova_group != null) item.nova_group = newProduct.nova_group;
+                }
+
+                dayChanged = true;
+                updatedItems++;
               }
-
-              if (nutrientsChanged) {
-                // Macronutrients
-                item.kcal100 = newProduct.kcal100;
-                item.protein100 = newProduct.protein100;
-                item.fat100 = newProduct.fat100;
-                item.simple100 = newProduct.simple100;
-                item.complex100 = newProduct.complex100;
-                item.badFat100 = newProduct.badFat100;
-                item.goodFat100 = newProduct.goodFat100;
-                item.trans100 = newProduct.trans100;
-                item.fiber100 = newProduct.fiber100;
-                item.gi = newProduct.gi ?? newProduct.gi100;
-                item.harm = HEYS.models?.normalizeHarm?.(newProduct) ?? newProduct.harm;
-
-                // 🆕 v5.0 Enrichment: Micronutrients (batch cascade)
-                if (newProduct.iron != null) item.iron = newProduct.iron;
-                if (newProduct.magnesium != null) item.magnesium = newProduct.magnesium;
-                if (newProduct.zinc != null) item.zinc = newProduct.zinc;
-                if (newProduct.selenium != null) item.selenium = newProduct.selenium;
-                if (newProduct.calcium != null) item.calcium = newProduct.calcium;
-                if (newProduct.phosphorus != null) item.phosphorus = newProduct.phosphorus;
-                if (newProduct.potassium != null) item.potassium = newProduct.potassium;
-                if (newProduct.iodine != null) item.iodine = newProduct.iodine;
-
-                if (newProduct.vitamin_a != null) item.vitamin_a = newProduct.vitamin_a;
-                if (newProduct.vitamin_b1 != null) item.vitamin_b1 = newProduct.vitamin_b1;
-                if (newProduct.vitamin_b2 != null) item.vitamin_b2 = newProduct.vitamin_b2;
-                if (newProduct.vitamin_b3 != null) item.vitamin_b3 = newProduct.vitamin_b3;
-                if (newProduct.vitamin_b6 != null) item.vitamin_b6 = newProduct.vitamin_b6;
-                if (newProduct.vitamin_b9 != null) item.vitamin_b9 = newProduct.vitamin_b9;
-                if (newProduct.vitamin_b12 != null) item.vitamin_b12 = newProduct.vitamin_b12;
-                if (newProduct.vitamin_c != null) item.vitamin_c = newProduct.vitamin_c;
-                if (newProduct.vitamin_d != null) item.vitamin_d = newProduct.vitamin_d;
-                if (newProduct.vitamin_e != null) item.vitamin_e = newProduct.vitamin_e;
-                if (newProduct.vitamin_k != null) item.vitamin_k = newProduct.vitamin_k;
-
-                if (newProduct.omega3_100 != null) item.omega3_100 = newProduct.omega3_100;
-                if (newProduct.omega6_100 != null) item.omega6_100 = newProduct.omega6_100;
-                if (newProduct.cholesterol != null) item.cholesterol = newProduct.cholesterol;
-
-                if (newProduct.is_fermented != null) item.is_fermented = newProduct.is_fermented;
-                if (newProduct.is_raw != null) item.is_raw = newProduct.is_raw;
-                if (newProduct.is_organic != null) item.is_organic = newProduct.is_organic;
-                if (newProduct.is_whole_grain != null) item.is_whole_grain = newProduct.is_whole_grain;
-                if (newProduct.nova_group != null) item.nova_group = newProduct.nova_group;
-              }
-
-              dayChanged = true;
-              updatedItems++;
             }
           }
-        }
 
-        if (dayChanged) {
-          day.updatedAt = Date.now();
-          writeRawValue(key, day);
-          updatedDays++;
+          if (dayChanged) {
+            day.updatedAt = Date.now();
+            // После pull из облака каскад только синхронизирует meal items с каталогом — не зеркалим
+            // каждый день в upload (interceptSetItem → saveClientKey), иначе десятки dayv2 в очереди и фризы.
+            if (typeof HEYS.cloud?.writeLocalKvWithoutMirror === 'function') {
+              HEYS.cloud.writeLocalKvWithoutMirror(key, day);
+            } else {
+              writeRawValue(key, day);
+            }
+            updatedDays++;
+          }
+        } catch (e) {
+          console.warn('[HEYS] Batch cascade error for key:', key, e);
         }
-      } catch (e) {
-        console.warn('[HEYS] Batch cascade error for key:', key, e);
+      }
+      if (offset + CHUNK < dayKeys.length) {
+        await __cascadeYieldToMain(48);
       }
     }
 
     if (updatedDays > 0) {
-      console.info(`[HEYS.sync] ✅ Batch cascade complete: ${updatedItems} items in ${updatedDays} days`);
+      console.info(`[HEYS.sync] ✅ Batch cascade complete: ${updatedItems} items in ${updatedDays} days (local-only mirror skip)`);
       // Clear caches to reflect changes
       HEYS.models?.clearMealTotalsCache?.();
 
@@ -6821,7 +6883,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           detail: { source: 'cascade-batch', date: _cascadeTodayDate }
         }));
         console.info('[HEYS.sync] 📅 Dispatched heys:day-updated for today after cascade batch:', _cascadeTodayDate);
-      }, 80);
+      }, todayEventDelayMs);
 
       window.dispatchEvent(new CustomEvent('heys:mealitems-cascaded', {
         detail: { batchSize: changesMap.size, updatedDays, updatedItems }
@@ -6842,7 +6904,11 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       window.addEventListener('heysProductsUpdated', (event) => {
         if (event?.detail?.source === 'cloud-sync' && Array.isArray(event.detail.products)) {
           console.log('[HEYS.sync] 🔄 Products synced from cloud, triggering cascade update...');
-          cascadeBatchProductUpdates(event.detail.products, event?.detail?.previousProducts);
+          const prev = event?.detail?.previousProducts;
+          const prods = event.detail.products;
+          void cascadeBatchProductUpdates(prods, prev, { todayEventDelayMs: 1200 }).catch(function (err) {
+            console.warn('[HEYS.sync] ⚠️ Cascade batch failed:', err && err.message ? err.message : err);
+          });
         }
       });
     }
@@ -40687,6 +40753,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
       const onDayUpdated = (event) => {
         if (event?.detail?.batch) return;
+        if (event?.detail?.source === 'cascade-batch') return;
         const evClientId = event?.detail?.clientId;
         // heys:day-updated may not always carry clientId — refresh unconditionally if missing
         if (evClientId && clientId && evClientId !== clientId && !clientId.startsWith(evClientId)) return;

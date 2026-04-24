@@ -12004,7 +12004,10 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
     const PENDING_SYNC_UI_QUEUE_KEY = 'heys_pending_sync_ui_queue';
     const MAX_PENDING_SYNC_UI_ITEMS = 5;
     const PENDING_SYNC_UI_TTL_MS = 3 * 24 * 60 * 60 * 1000;
-    const PENDING_SYNC_UI_SKIPPED_SOURCES = new Set(['merge', 'cloud-sync', 'force-sync', 'cascade-guard-unlock', 'foreground-hot-sync']);
+    const PENDING_SYNC_UI_SKIPPED_SOURCES = new Set([
+        'merge', 'cloud-sync', 'force-sync', 'cascade-guard-unlock', 'foreground-hot-sync',
+        'cascade-batch'
+    ]);
 
     const createEmptyPendingDetails = () => ({ days: 0, products: 0, profile: 0, other: 0 });
 
@@ -19991,24 +19994,60 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
 
             // Reload on day-data-changed event
             let postSyncHeavyTimer = null;
+            let postSyncHeavyQuietTimer = null;
+            let postSyncHeavyGen = 0;
             const schedulePostSyncHeavyWork = (reason) => {
                 if (postSyncHeavyTimer) {
                     clearTimeout(postSyncHeavyTimer);
                 }
+                if (postSyncHeavyQuietTimer) {
+                    clearTimeout(postSyncHeavyQuietTimer);
+                    postSyncHeavyQuietTimer = null;
+                }
+                const gen = ++postSyncHeavyGen;
                 postSyncHeavyTimer = setTimeout(() => {
                     postSyncHeavyTimer = null;
-                    const run = () => {
-                        ewsLoaded = false;
-                        loadEWSData();
+                    const QUIET_THRESHOLD = 10;
+                    const STEP_MS = 450;
+                    const MAX_STEPS = 56;
+
+                    const waitThenRun = (step) => {
+                        if (gen !== postSyncHeavyGen) return;
+                        let pending = 0;
+                        let uploading = false;
+                        try {
+                            pending = typeof HEYS?.cloud?.getPendingCount === 'function'
+                                ? (HEYS.cloud.getPendingCount() || 0)
+                                : 0;
+                            uploading = typeof HEYS?.cloud?.isUploadInProgress === 'function'
+                                ? !!HEYS.cloud.isUploadInProgress()
+                                : false;
+                        } catch (_) { /* noop */ }
+                        const busy = pending > QUIET_THRESHOLD || (uploading && pending > 2);
+                        if (busy && step < MAX_STEPS) {
+                            postSyncHeavyQuietTimer = setTimeout(() => waitThenRun(step + 1), STEP_MS);
+                            return;
+                        }
+                        postSyncHeavyQuietTimer = null;
+                        if (gen !== postSyncHeavyGen) return;
+                        const run = () => {
+                            ewsLoaded = false;
+                            loadEWSData();
+                        };
+                        if (typeof window.requestIdleCallback === 'function') {
+                            window.requestIdleCallback(run, { timeout: 2000 });
+                        } else {
+                            setTimeout(run, 0);
+                        }
+                        try {
+                            HEYS.perf?.markCommitHint?.('app-shell:post-sync-heavy', {
+                                reason,
+                                pendingAfterWait: pending,
+                                quietSteps: step
+                            });
+                        } catch (_) { /* noop */ }
                     };
-                    if (typeof window.requestIdleCallback === 'function') {
-                        window.requestIdleCallback(run, { timeout: 1500 });
-                    } else {
-                        setTimeout(run, 0);
-                    }
-                    try {
-                        HEYS.perf?.markCommitHint?.('app-shell:post-sync-heavy', { reason });
-                    } catch (_) { /* noop */ }
+                    waitThenRun(0);
                 }, 280);
             };
 
@@ -20031,8 +20070,10 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
             }, 5 * 60 * 1000);
 
             return () => {
+                postSyncHeavyGen++;
                 if (retryTimeoutId) clearTimeout(retryTimeoutId);
                 if (postSyncHeavyTimer) clearTimeout(postSyncHeavyTimer);
+                if (postSyncHeavyQuietTimer) clearTimeout(postSyncHeavyQuietTimer);
                 window.removeEventListener('heys-ews-ready', handleEWSReady);
                 window.removeEventListener('day-data-changed', handleDayDataChanged);
                 window.removeEventListener('heysSyncCompleted', handleSyncComplete);
@@ -25626,7 +25667,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                 'cloud', 'merge', 'step-modal', 'fetchDays',
                 'deficit-step', 'household-step', 'training-step', 'steps-step',
                 'measurements-step', 'cold-exposure-step',
-                'cycle-auto', 'cycle-clear', 'cycle-save', 'cycle-step'
+                'cycle-auto', 'cycle-clear', 'cycle-save', 'cycle-step',
+                'cascade-batch'
             ];
 
             const handleDayUpdate = (e) => {

@@ -6707,6 +6707,7 @@
 
       const onDayUpdated = (event) => {
         if (event?.detail?.batch) return;
+        if (event?.detail?.source === 'cascade-batch') return;
         const evClientId = event?.detail?.clientId;
         // heys:day-updated may not always carry clientId — refresh unconditionally if missing
         if (evClientId && clientId && evClientId !== clientId && !clientId.startsWith(evClientId)) return;

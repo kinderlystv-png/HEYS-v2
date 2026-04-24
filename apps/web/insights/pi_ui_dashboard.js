@@ -1912,7 +1912,11 @@
 
         // perf: тяжёлые вычисления (30 дней из localStorage + EWS detect) не должны
         // блокировать main thread синхронно при day-updated — откладываем через setTimeout
-        const deferredCollect = () => setTimeout(collectWarnings, 0);
+        const deferredCollect = (e) => {
+          const d = e && e.detail;
+          if (d && (d.batch || d.source === 'cascade-batch')) return;
+          setTimeout(collectWarnings, 0);
+        };
 
         collectWarnings();
         const interval = setInterval(collectWarnings, 5 * 60 * 1000);

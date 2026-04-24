@@ -258,7 +258,8 @@
                 'cloud', 'merge', 'step-modal', 'fetchDays',
                 'deficit-step', 'household-step', 'training-step', 'steps-step',
                 'measurements-step', 'cold-exposure-step',
-                'cycle-auto', 'cycle-clear', 'cycle-save', 'cycle-step'
+                'cycle-auto', 'cycle-clear', 'cycle-save', 'cycle-step',
+                'cascade-batch'
             ];
 
             const handleDayUpdate = (e) => {

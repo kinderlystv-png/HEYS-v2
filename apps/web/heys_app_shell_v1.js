@@ -942,24 +942,60 @@
 
             // Reload on day-data-changed event
             let postSyncHeavyTimer = null;
+            let postSyncHeavyQuietTimer = null;
+            let postSyncHeavyGen = 0;
             const schedulePostSyncHeavyWork = (reason) => {
                 if (postSyncHeavyTimer) {
                     clearTimeout(postSyncHeavyTimer);
                 }
+                if (postSyncHeavyQuietTimer) {
+                    clearTimeout(postSyncHeavyQuietTimer);
+                    postSyncHeavyQuietTimer = null;
+                }
+                const gen = ++postSyncHeavyGen;
                 postSyncHeavyTimer = setTimeout(() => {
                     postSyncHeavyTimer = null;
-                    const run = () => {
-                        ewsLoaded = false;
-                        loadEWSData();
+                    const QUIET_THRESHOLD = 10;
+                    const STEP_MS = 450;
+                    const MAX_STEPS = 56;
+
+                    const waitThenRun = (step) => {
+                        if (gen !== postSyncHeavyGen) return;
+                        let pending = 0;
+                        let uploading = false;
+                        try {
+                            pending = typeof HEYS?.cloud?.getPendingCount === 'function'
+                                ? (HEYS.cloud.getPendingCount() || 0)
+                                : 0;
+                            uploading = typeof HEYS?.cloud?.isUploadInProgress === 'function'
+                                ? !!HEYS.cloud.isUploadInProgress()
+                                : false;
+                        } catch (_) { /* noop */ }
+                        const busy = pending > QUIET_THRESHOLD || (uploading && pending > 2);
+                        if (busy && step < MAX_STEPS) {
+                            postSyncHeavyQuietTimer = setTimeout(() => waitThenRun(step + 1), STEP_MS);
+                            return;
+                        }
+                        postSyncHeavyQuietTimer = null;
+                        if (gen !== postSyncHeavyGen) return;
+                        const run = () => {
+                            ewsLoaded = false;
+                            loadEWSData();
+                        };
+                        if (typeof window.requestIdleCallback === 'function') {
+                            window.requestIdleCallback(run, { timeout: 2000 });
+                        } else {
+                            setTimeout(run, 0);
+                        }
+                        try {
+                            HEYS.perf?.markCommitHint?.('app-shell:post-sync-heavy', {
+                                reason,
+                                pendingAfterWait: pending,
+                                quietSteps: step
+                            });
+                        } catch (_) { /* noop */ }
                     };
-                    if (typeof window.requestIdleCallback === 'function') {
-                        window.requestIdleCallback(run, { timeout: 1500 });
-                    } else {
-                        setTimeout(run, 0);
-                    }
-                    try {
-                        HEYS.perf?.markCommitHint?.('app-shell:post-sync-heavy', { reason });
-                    } catch (_) { /* noop */ }
+                    waitThenRun(0);
                 }, 280);
             };
 
@@ -982,8 +1018,10 @@
             }, 5 * 60 * 1000);
 
             return () => {
+                postSyncHeavyGen++;
                 if (retryTimeoutId) clearTimeout(retryTimeoutId);
                 if (postSyncHeavyTimer) clearTimeout(postSyncHeavyTimer);
+                if (postSyncHeavyQuietTimer) clearTimeout(postSyncHeavyQuietTimer);
                 window.removeEventListener('heys-ews-ready', handleEWSReady);
                 window.removeEventListener('day-data-changed', handleDayDataChanged);
                 window.removeEventListener('heysSyncCompleted', handleSyncComplete);

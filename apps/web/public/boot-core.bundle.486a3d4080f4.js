@@ -24702,15 +24702,19 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
         // берём самый свежий по updated_at (поле БД, не JSON)
         const keyGroups = new Map(); // scopedKey → [{ row, updated_at_ts }]
         const fullSyncCloudGarbage = createCloudGarbageCollector();
+        /** Сколько inbound-строк отфильтровано до группировки (диагностика «dayv2 после дедупа (0)»). */
+        const dedupIngress = { sensitive: 0, foreign: 0, doubleScoped: 0, quoted: 0, accepted: 0 };
 
         dataForDedup.forEach(row => {
           if (isSensitiveSessionStorageKey(row?.k)) {
+            dedupIngress.sensitive++;
             recordCloudGarbageCandidate(fullSyncCloudGarbage, 'sensitive', row.k);
             return;
           }
           let key = scopeKeyForClientStorage(row.k, client_id);
 
           if (isForeignClientScopedKey(key, client_id)) {
+            dedupIngress.foreign++;
             recordCloudGarbageCandidate(fullSyncCloudGarbage, 'foreign', row.k);
             return;
           }
@@ -24721,17 +24725,20 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
           //    с UUID в суффиксе (last_grams_<productId>, insights_feedback_<clientId>, xp_cache)
           const { strippedClientIds: _nestedScopes } = stripClientScopePrefixes(row.k);
           if (_nestedScopes.length >= 2) {
+            dedupIngress.doubleScoped++;
             recordCloudGarbageCandidate(fullSyncCloudGarbage, 'doubleScoped', row.k);
             return;
           }
 
           // 2. Ключи с кавычками в имени (баг сериализации)
           if (key.includes('"')) {
+            dedupIngress.quoted++;
             recordCloudGarbageCandidate(fullSyncCloudGarbage, 'quoted', row.k);
             return;
           }
 
           // Группируем по scoped key
+          dedupIngress.accepted++;
           if (!keyGroups.has(key)) {
             keyGroups.set(key, []);
           }
@@ -24863,7 +24870,59 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
         const dayv2AfterDedup = uniqSorted(deduped
           .filter(d => d.scopedKey.includes('dayv2_') && !isDayv2MetaKey(d.scopedKey))
           .map(d => extractDayv2Date(d.scopedKey)));
-        window.console.info('[HEYS.sinhron] 📦 dayv2 после дедупа (' + dayv2AfterDedup.length + '):', formatListForSyncLog(dayv2AfterDedup));
+
+        let dayv2ScopedGroups = 0;
+        keyGroups.forEach((_, scopedKey) => {
+          if (scopedKey.includes('dayv2_') && !isDayv2MetaKey(scopedKey) && extractDayv2Date(scopedKey)) {
+            dayv2ScopedGroups++;
+          }
+        });
+        let rawDayRowsInPayload = 0;
+        for (let _ri = 0; _ri < dataForDedup.length; _ri++) {
+          const _scoped = scopeKeyForClientStorage(dataForDedup[_ri]?.k, client_id);
+          if (!_scoped.includes('dayv2_') || isDayv2MetaKey(_scoped)) continue;
+          if (extractDayv2Date(_scoped)) rawDayRowsInPayload++;
+        }
+
+        if (dayv2AfterDedup.length === 0) {
+          if (dataForDedup.length === 0) {
+            window.console.info('[HEYS.sinhron] 📦 dayv2 после дедупа (0): (empty) — inbound 0 rows (light/no-op sync)');
+          } else if (rawDayRowsInPayload === 0) {
+            window.console.info(
+              '[HEYS.sinhron] 📦 dayv2 после дедупа (0): (empty) — нет dayv2-ключей с датой во входе (rows=' +
+                dataForDedup.length +
+                ', coarseDayLikeRows=' +
+                stats.DAY +
+                ')'
+            );
+          } else {
+            window.console.warn('[HEYS.sinhron] ⚠️ dayv2 после дедупа (0) при rawDayRowsInPayload>0 — проверьте foreign/doubleScoped/ingress', {
+              clientId: String(client_id || '').slice(0, 8),
+              dbRows: data?.length || 0,
+              mergedRows: dataForDedup.length,
+              coarseDayLikeRows: stats.DAY,
+              rawDayRowsInPayload,
+              dayv2ScopedGroups,
+              dedupedRows: deduped.length,
+              ingressSkips: {
+                sensitive: dedupIngress.sensitive,
+                foreign: dedupIngress.foreign,
+                doubleScoped: dedupIngress.doubleScoped,
+                quoted: dedupIngress.quoted,
+                accepted: dedupIngress.accepted
+              },
+              cloudGarbage: {
+                foreign: fullSyncCloudGarbage.foreign.size,
+                doubleScoped: fullSyncCloudGarbage.doubleScoped.size,
+                quoted: fullSyncCloudGarbage.quoted.size,
+                sensitive: fullSyncCloudGarbage.sensitive.size
+              },
+              detailLogs: isSyncDetailLogsEnabled() ? 'on (heys_debug_sync / __heysLogControl)' : 'off'
+            });
+          }
+        } else {
+          window.console.info('[HEYS.sinhron] 📦 dayv2 после дедупа (' + dayv2AfterDedup.length + '):', formatListForSyncLog(dayv2AfterDedup));
+        }
 
         deduped.sort((a, b) => {
           const aDate = getDateFromDayKey(a.scopedKey);
@@ -25921,25 +25980,29 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
         // 🚀 PERF: Force-written dayv2 dates — dispatch ONE batch event instead of N individual
         if (forceWrittenDates.length > 0) {
           cloud._syncCompletedAt = cloud._syncCompletedAt || Date.now();
-          // 1. Batch event: triggers cache/cascade invalidation for ALL dates at once
-          window.dispatchEvent(new CustomEvent('heys:day-updated', {
-            detail: {
-              dates: forceWrittenDates,
-              date: forceWrittenDates[forceWrittenDates.length - 1],
-              source: 'force-sync',
-              forceReload: true,
-              batch: true
-            }
-          }));
-          // 2. Individual event for today: ensures the visible day page re-reads from localStorage
-          //    (day_effects checks updatedDate === date, so batch.date alone may miss the viewed day)
+          // 1. Today fires immediately so the visible day page is always fresh
           const _today = new Date().toISOString().slice(0, 10);
           if (forceWrittenDates.includes(_today)) {
             window.dispatchEvent(new CustomEvent('heys:day-updated', {
               detail: { date: _today, source: 'force-sync', forceReload: true }
             }));
           }
-          log('📅 [EVENT] heys:day-updated BATCH dispatched for ' + forceWrittenDates.length + ' force-written dates');
+          // 2. Full historical batch is deferred ~300 ms so React can render the post-switch
+          //    UI (profile, today, products) before being hit with 100+ historical dates at once.
+          //    Days are already in localStorage so non-visible history stays consistent.
+          const _frozenDates = forceWrittenDates.slice();
+          setTimeout(() => {
+            window.dispatchEvent(new CustomEvent('heys:day-updated', {
+              detail: {
+                dates: _frozenDates,
+                date: _frozenDates[_frozenDates.length - 1],
+                source: 'force-sync',
+                forceReload: true,
+                batch: true
+              }
+            }));
+            log('📅 [EVENT] heys:day-updated BATCH dispatched (deferred) for ' + _frozenDates.length + ' force-written dates');
+          }, 300);
         }
 
         if (batchedDayV2Writes.length > 0) {
@@ -25991,7 +26054,12 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
             });
           };
           await writeRemaining();
-          window.console.info('[HEYS.sinhron] ✅ BATCH WRITE ' + batchedDayV2Writes.length + ' dayv2 records (chunked):', formatListForSyncLog(updatedDates));
+          window.console.info(
+            '[HEYS.sinhron] ✅ BATCH WRITE ' + batchedDayV2Writes.length + ' dayv2 records (chunked):',
+            updatedDates.length > 0
+              ? formatListForSyncLog(updatedDates)
+              : '(none mirrored locally — quota guard / skipped writes; see dayv2 quota warnings above)'
+          );
           // � FIX v65: Помечаем sync завершённым ДО heys:day-updated, чтобы cascade pre-sync guard
           // не блокировал recompute: когда renderCard вызывается из day-updated обработчика,
           // _cascadeSyncDone=true → cache MISS → computeCascadeState с реальной историей → CRS ≠ null → bar settling
@@ -27222,6 +27290,25 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
     }
   }
 
+  /**
+   * Запись в localStorage минуя interceptSetItem → saveClientKey (без постановки в sync-очередь).
+   * Нужна для batch-cascade после cloud-sync: дни уже пришли с сервера, каскад лишь выравнивает meal items
+   * под каталог продуктов — повторный upload десятков dayv2 создаёт «52 несохранённых» и лаги UI.
+   */
+  cloud.writeLocalKvWithoutMirror = function (key, value) {
+    if (typeof key !== 'string' || !key) return;
+    try {
+      const serialized = typeof value === 'string' ? value : JSON.stringify(value);
+      const setFn = originalSetItem || global.localStorage.setItem.bind(global.localStorage);
+      setFn(key, serialized);
+      if (global.HEYS?.store?.invalidate) {
+        try { global.HEYS.store.invalidate(key); } catch (_) { /* noop */ }
+      }
+    } catch (e) {
+      console.warn('[HEYS.sync] writeLocalKvWithoutMirror failed:', key, e && e.message ? e.message : e);
+    }
+  };
+
   // Поддерживает старую сигнатуру saveClientKey(k, v) — в этом случае client_id берётся из HEYS.currentClientId.
   cloud.saveClientKey = function (...args) {
     let client_id, k, value;
@@ -28346,10 +28433,22 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
     if (isHotSyncDisabled()) { console.info('[HEYS.sync] 🔇 hot-sync disabled via flag'); return false; }
     if (!clientId) { console.info('[HEYS.sync] 🔇 hot-sync skip: no clientId'); return false; }
     if (cloud._switchClientInProgress) { console.info('[HEYS.sync] 🔇 hot-sync skip: switchClient in progress'); return false; }
+    try {
+      const qUntil = Number(cloud._hotSyncQuietUntilMs) || 0;
+      if (qUntil > 0 && Date.now() < qUntil) {
+        console.info('[HEYS.sync] 🔇 hot-sync skip: post-switch cooldown');
+        return false;
+      }
+    } catch (_) { /* noop */ }
     if (!navigator.onLine) return false;
     if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return false;
     const isPinAuth = _pinAuthClientId && _pinAuthClientId === clientId;
-    return Boolean(isPinAuth || user);
+    let hasCuratorTok = false;
+    try {
+      const cs = global.localStorage.getItem('heys_curator_session');
+      if (cs && cs.length > 10) hasCuratorTok = true;
+    } catch (_) { /* noop */ }
+    return Boolean(isPinAuth || user || hasCuratorTok);
   }
 
   function getForegroundHotSyncKeys(reason) {
@@ -28584,7 +28683,18 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
       (typeof HEYS !== 'undefined' && HEYS.auth?.getSessionToken?.()) ||
       global.localStorage.getItem('heys_session_token')
     );
-    const isCuratorMode = !hasSessionToken && !!user;
+    const hasCuratorSession = (() => {
+      try {
+        const storedToken = global.localStorage.getItem('heys_supabase_auth_token');
+        if (!storedToken) return false;
+        const parsed = JSON.parse(storedToken);
+        return !!(parsed && parsed.user && parsed.access_token);
+      } catch (_) {
+        return false;
+      }
+    })();
+    const isCuratorLike = !!(user || hasCuratorSession);
+    const isCuratorMode = !hasSessionToken && isCuratorLike;
 
     // Phase 1b: check change markers before pulling data
     // Can be disabled: localStorage.setItem('heys_disable_markers', '1')
@@ -28615,8 +28725,10 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
             keysToFetch = changedKeys;
           }
         } else if (markerResult?.error === 'No session token') {
-          // Neither session nor curator auth available
-          return { success: false, updated: 0, failed: 0, authMissing: true, mode: 'no-auth', fetchedKeys: [], fetchedKeyCount: 0, markerScopes };
+          // PIN / legacy: no session. Curator uses Supabase JWT — marker API may still say "No session token".
+          if (!isCuratorMode) {
+            return { success: false, updated: 0, failed: 0, authMissing: true, mode: 'no-auth', fetchedKeys: [], fetchedKeyCount: 0, markerScopes };
+          }
         }
         // If markers returned error → fallback to full key set (keysToFetch unchanged)
       } catch (_) {
@@ -28637,7 +28749,9 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
         }
 
         if (batchResult?.error === 'No session token') {
-          return { success: false, updated: 0, failed: 0, authMissing: true, mode: 'no-auth', fetchedKeys: keysToFetch, fetchedKeyCount: keysToFetch.length, markerScopes };
+          if (!isCuratorMode) {
+            return { success: false, updated: 0, failed: 0, authMissing: true, mode: 'no-auth', fetchedKeys: keysToFetch, fetchedKeyCount: keysToFetch.length, markerScopes };
+          }
         }
 
         if (batchResult && !batchResult.error && Array.isArray(batchResult.data)) {
@@ -29315,6 +29429,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
     }
     emitSwitchStage('loading', { pendingCount: _pendingBeforeSwitch });
     log('📥 Загружаем данные нового клиента...');
+    let _switchUsedCuratorPath = false;
     try {
       // Проверяем есть ли сессия куратора (токен в localStorage)
       // ⚠️ Не полагаемся на переменную `user` — она может быть не синхронизирована!
@@ -29358,6 +29473,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
         try { global.localStorage.removeItem('heys_pin_auth_client'); } catch (_) { }
         // 🚀 PERF v7.0: Use syncClient for dedup — prevents double sync
         // when DayTabWithCloudSync also calls syncClient on client change
+        _switchUsedCuratorPath = true;
         await cloud.syncClient(newClientId, { force: true, deferNonCriticalTail: true });
       } else {
         logCritical('🔐 [SWITCH] Нет Supabase сессии — используем RPC sync');
@@ -29543,6 +29659,21 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
       try {
         cloud._flushDeferredWritesAfterSwitch(newClientId, oldClientId);
       } catch (_) { }
+      // Dedupe pending client rows (same client_id + k) after burst merges / deferred replay
+      try {
+        if (Array.isArray(clientUpsertQueue) && clientUpsertQueue.length > 1) {
+          const beforeDedup = clientUpsertQueue.length;
+          compactPendingQueue(clientUpsertQueue, PENDING_CLIENT_QUEUE_KEY, { mutate: true });
+          persistClientQueueDurabilityState();
+          if (clientUpsertQueue.length < beforeDedup) {
+            logCritical(`🧹 [SWITCH] Deduped client upload queue: ${beforeDedup} → ${clientUpsertQueue.length} rows`);
+          }
+        }
+      } catch (_) { /* noop */ }
+      // Pause foreground hot-sync briefly so curator switch + upload tail does not stack with HOT pulls
+      try {
+        cloud._hotSyncQuietUntilMs = Date.now() + (_switchUsedCuratorPath ? 18000 : 2200);
+      } catch (_) { /* noop */ }
     }
   };
 

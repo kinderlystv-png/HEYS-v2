@@ -14875,7 +14875,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     const CLOUD_SYNC_CONFIG = {
         ENABLED: true,           // Enable cloud sync
         LOAD_TIMEOUT_MS: 6000,   // Max wait time for cloud load (6s — covers slow 3G)
-        SAVE_TIMEOUT_MS: 5000,   // Max wait time for cloud save
+        SAVE_TIMEOUT_MS: 8000,   // Base max wait for cloud save (extended when sync queue is busy)
         FALLBACK_TO_LOCAL: true  // Use localStorage if cloud fails
     };
 
@@ -15863,6 +15863,16 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                     weekStart: currentWeekSnapshot.weekStart
                 });
 
+                let saveTimeoutMs = CLOUD_SYNC_CONFIG.SAVE_TIMEOUT_MS;
+                try {
+                    const pending = typeof HEYS?.cloud?.getPendingCount === 'function'
+                        ? (HEYS.cloud.getPendingCount() || 0)
+                        : 0;
+                    if (pending > 4) {
+                        saveTimeoutMs = Math.min(28000, saveTimeoutMs + pending * 350);
+                    }
+                } catch (_) { /* noop */ }
+
                 const { data: result, error: saveError } = await Promise.race([
                     HEYS.YandexAPI.rpc('upsert_weekly_snapshot_by_session', {
                         p_session_token: sessionToken,
@@ -15877,7 +15887,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                     }),
                     new Promise((_, reject) => setTimeout(
                         () => reject(new Error('Cloud save timeout')),
-                        CLOUD_SYNC_CONFIG.SAVE_TIMEOUT_MS
+                        saveTimeoutMs
                     ))
                 ]);
 
@@ -34526,7 +34536,11 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
         // perf: тяжёлые вычисления (30 дней из localStorage + EWS detect) не должны
         // блокировать main thread синхронно при day-updated — откладываем через setTimeout
-        const deferredCollect = () => setTimeout(collectWarnings, 0);
+        const deferredCollect = (e) => {
+          const d = e && e.detail;
+          if (d && (d.batch || d.source === 'cascade-batch')) return;
+          setTimeout(collectWarnings, 0);
+        };
 
         collectWarnings();
         const interval = setInterval(collectWarnings, 5 * 60 * 1000);

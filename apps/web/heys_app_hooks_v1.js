@@ -389,7 +389,10 @@
     const PENDING_SYNC_UI_QUEUE_KEY = 'heys_pending_sync_ui_queue';
     const MAX_PENDING_SYNC_UI_ITEMS = 5;
     const PENDING_SYNC_UI_TTL_MS = 3 * 24 * 60 * 60 * 1000;
-    const PENDING_SYNC_UI_SKIPPED_SOURCES = new Set(['merge', 'cloud-sync', 'force-sync', 'cascade-guard-unlock', 'foreground-hot-sync']);
+    const PENDING_SYNC_UI_SKIPPED_SOURCES = new Set([
+        'merge', 'cloud-sync', 'force-sync', 'cascade-guard-unlock', 'foreground-hot-sync',
+        'cascade-batch'
+    ]);
 
     const createEmptyPendingDetails = () => ({ days: 0, products: 0, profile: 0, other: 0 });
 
