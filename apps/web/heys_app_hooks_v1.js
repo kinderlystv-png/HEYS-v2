@@ -752,6 +752,8 @@
         const pendingChangeRafRef = useRef(null);
         /** rAF-схлопывание тяжёлого UI-пути data-saved (startSyncingState + таймеры) */
         const dataSavedUiRafRef = useRef(null);
+        /** Дедupe sync-progress: одинаковые (completed,total) подряд гоняют React и логи */
+        const syncProgressDedupeRef = useRef({ completed: -1, total: -1, at: 0 });
         const initialSyncCompletedAtRef = useRef(0);
         const INITIAL_SYNC_COOLDOWN_MS = 3000; // 3 секунды после первого sync не показываем syncing
         // 🔕 Timestamp когда последний раз индикатор ушёл в idle (пост-синк cooldown)
@@ -1391,8 +1393,16 @@
             const handleSyncProgress = (e) => {
                 const { synced, done, total } = e.detail || {};
                 const completed = typeof done === 'number' ? done : synced;
-                console.info('[HEYS.sync] [IND] sync-progress: completed=' + completed + ' total=' + total);
                 if (typeof completed === 'number' && typeof total === 'number') {
+                    const now = Date.now();
+                    const r = syncProgressDedupeRef.current;
+                    if (completed === r.completed && total === r.total && (now - r.at) < 70) {
+                        return;
+                    }
+                    r.completed = completed;
+                    r.total = total;
+                    r.at = now;
+                    console.info('[HEYS.sync] [IND] sync-progress: completed=' + completed + ' total=' + total);
                     setSyncProgress({ synced: completed, total });
                     if (navigator.onLine && total > 0 && !syncingStartRef.current) {
                         startSyncingState();

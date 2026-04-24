@@ -713,6 +713,136 @@
     }
 
     bootLog('registering...');
+
+    // One SW `message` listener — avoids duplicate handlers + defers heavy branches off the SW event turn.
+    if (!window.__heysSwUnifiedMessageBound) {
+      window.__heysSwUnifiedMessageBound = true;
+      const deferSwPortWork = (fn) => {
+        try {
+          if (typeof queueMicrotask === 'function') {
+            queueMicrotask(() => {
+              try {
+                fn();
+              } catch (e) {
+                console.warn('[SW] deferred message handler error', e);
+              }
+            });
+          } else {
+            setTimeout(fn, 0);
+          }
+        } catch (_) {
+          setTimeout(fn, 0);
+        }
+      };
+      navigator.serviceWorker.addEventListener('message', (event) => {
+        const t = event && event.data && event.data.type;
+        if (!t) return;
+
+        if (t === 'UPDATE_AVAILABLE') {
+          deferSwPortWork(() => {
+            console.log('[SW] 🆕 Background update detected:', event.data.version);
+            showUpdateBadge(event.data.version);
+            showUpdateNotification();
+          });
+          return;
+        }
+
+        if (t === 'UPDATE_REQUIRED') {
+          deferSwPortWork(() => {
+            console.log('[SW] 🧭 Version mismatch — forcing update:', event.data.version);
+            transitionSwUpdateState(SW_UPDATE_STATES.DETECTED, 'update-required-msg');
+            if (typeof HEYS.forceCheckAndUpdate === 'function') {
+              HEYS.forceCheckAndUpdate();
+            } else {
+              triggerSkipWaiting({
+                fallbackMs: 5000,
+                showModal: true,
+                source: 'update-required',
+              });
+            }
+          });
+          return;
+        }
+
+        if (t === 'CACHES_CLEARED') {
+          deferSwPortWork(() => {
+            const managedByChecks = sessionStorage.getItem('heys_update_managed_by_checks') === 'true';
+            if (managedByChecks) {
+              console.log('[SW] ✅ Caches cleared — lifecycle managed by update_checks, skipping reload here');
+              try {
+                sessionStorage.removeItem('heys_update_managed_by_checks');
+              } catch (e) { /* noop */ }
+              return;
+            }
+
+            const requiresLogout = sessionStorage.getItem('heys_update_requires_logout') === 'true';
+            console.log('[SW] ✅ Caches cleared — resetting session for fresh data from cloud');
+
+            if (requiresLogout) {
+              window.HEYS = window.HEYS || {};
+              window.HEYS._isLoggingOut = true;
+            }
+
+            if (requiresLogout) {
+              try {
+                if (HEYS.cloud?.signOut) {
+                  HEYS.cloud.signOut();
+                }
+
+                const keysToRemove = [];
+                const keysToKeep = ['heys_products', 'heys_profile', 'heys_norms', 'heys_hr_zones'];
+
+                for (let i = 0; i < localStorage.length; i++) {
+                  const key = localStorage.key(i);
+                  if (!keysToKeep.some(k => key.includes(k)) && !key.startsWith('heys_dayv2_')) {
+                    keysToRemove.push(key);
+                  }
+                }
+
+                keysToRemove.forEach(key => localStorage.removeItem(key));
+                console.log(`[SW] 🗑️ Removed ${keysToRemove.length} session keys, kept critical data`);
+
+                sessionStorage.clear();
+
+                console.log('[SW] ✅ Session cleared safely, reloading...');
+              } catch (e) {
+                console.warn('[SW] Session clear error:', e);
+              }
+            }
+
+            try {
+              sessionStorage.removeItem('heys_update_requires_logout');
+            } catch (e) { /* noop */ }
+
+            setTimeout(() => {
+              try {
+                sessionStorage.removeItem('heys_pending_update');
+              } catch (e) { /* noop */ }
+              clearUpdateLock();
+              transitionSwUpdateState(SW_UPDATE_STATES.RELOADING, 'caches-cleared');
+              const url = new URL(window.location.href);
+              url.searchParams.set('_v', Date.now().toString());
+              window.location.href = url.toString();
+            }, 100);
+          });
+          return;
+        }
+
+        if (t === 'SYNC_START' && window.HEYS?.cloud?.sync) {
+          deferSwPortWork(() => {
+            window.HEYS.cloud.sync();
+          });
+          return;
+        }
+
+        if (t === 'SYNC_COMPLETE') {
+          deferSwPortWork(() => {
+            window.dispatchEvent(new CustomEvent('heys:sync-complete'));
+          });
+        }
+      });
+    }
+
     navigator.serviceWorker.register('/sw.js')
       .then((registration) => {
         console.log('[SW] ✅ Registered successfully');
@@ -747,98 +877,7 @@
           })();
         }
 
-        // Слушаем сообщения от SW (включая UPDATE_AVAILABLE)
-        navigator.serviceWorker.addEventListener('message', (event) => {
-          if (event.data?.type === 'UPDATE_AVAILABLE') {
-            console.log('[SW] 🆕 Background update detected:', event.data.version);
-            showUpdateBadge(event.data.version);
-            showUpdateNotification();
-          }
-          if (event.data?.type === 'UPDATE_REQUIRED') {
-            console.log('[SW] 🧭 Version mismatch — forcing update:', event.data.version);
-            transitionSwUpdateState(SW_UPDATE_STATES.DETECTED, 'update-required-msg');
-            if (typeof HEYS.forceCheckAndUpdate === 'function') {
-              HEYS.forceCheckAndUpdate();
-            } else {
-              triggerSkipWaiting({
-                fallbackMs: 5000,
-                showModal: true,
-                source: 'update-required',
-              });
-            }
-          }
-          if (event.data?.type === 'CACHES_CLEARED') {
-            // 🔒 Guard: если update_checks управляет lifecycle, не делаем reload отсюда.
-            // update_checks сам вызовет triggerSkipWaiting → controllerchange → cache-busted reload.
-            const managedByChecks = sessionStorage.getItem('heys_update_managed_by_checks') === 'true';
-            if (managedByChecks) {
-              console.log('[SW] ✅ Caches cleared — lifecycle managed by update_checks, skipping reload here');
-              try { sessionStorage.removeItem('heys_update_managed_by_checks'); } catch (e) { }
-              return;
-            }
-
-            const requiresLogout = sessionStorage.getItem('heys_update_requires_logout') === 'true';
-            console.log('[SW] ✅ Caches cleared — resetting session for fresh data from cloud');
-
-            if (requiresLogout) {
-              // ✅ Guard для хуков — показываем экран выхода до очистки
-              window.HEYS = window.HEYS || {};
-              window.HEYS._isLoggingOut = true;
-            }
-
-            // 🔄 Сброс сессии ТОЛЬКО при апдейте
-            // ⚠️ КРИТИЧНО: НЕ очищаем localStorage.clear() — это удаляет heys_products!
-            // Вместо этого удаляем только сессионные ключи, сохраняя критические данные
-            if (requiresLogout) {
-              try {
-                // 1. Завершаем auth сессию (если есть)
-                if (HEYS.cloud?.signOut) {
-                  HEYS.cloud.signOut();
-                }
-
-                // 2. Удаляем только сессионные данные, НЕ трогая products/profile
-                // ❌ БЫЛО: localStorage.clear(); — удаляло ВСЮ базу продуктов!
-                // ✅ СТАЛО: выборочная очистка
-                const keysToRemove = [];
-                const keysToKeep = ['heys_products', 'heys_profile', 'heys_norms', 'heys_hr_zones'];
-
-                for (let i = 0; i < localStorage.length; i++) {
-                  const key = localStorage.key(i);
-                  // Сохраняем критические ключи и данные дней
-                  if (!keysToKeep.some(k => key.includes(k)) && !key.startsWith('heys_dayv2_')) {
-                    keysToRemove.push(key);
-                  }
-                }
-
-                keysToRemove.forEach(key => localStorage.removeItem(key));
-                console.log(`[SW] 🗑️ Removed ${keysToRemove.length} session keys, kept critical data`);
-
-                // 3. Очищаем sessionStorage полностью (там только кэш)
-                sessionStorage.clear();
-
-                console.log('[SW] ✅ Session cleared safely, reloading...');
-              } catch (e) {
-                console.warn('[SW] Session clear error:', e);
-              }
-            }
-
-            // Сбрасываем маркер после обработки
-            try {
-              sessionStorage.removeItem('heys_update_requires_logout');
-            } catch (e) { }
-
-            // 4. Перезагружаем страницу с cache-busting — пользователь увидит экран входа
-            setTimeout(() => {
-              // Очищаем флаги перед reload чтобы не триггерить повторный controllerchange
-              try { sessionStorage.removeItem('heys_pending_update'); } catch (e) { }
-              clearUpdateLock();
-              transitionSwUpdateState(SW_UPDATE_STATES.RELOADING, 'caches-cleared');
-              const url = new URL(window.location.href);
-              url.searchParams.set('_v', Date.now().toString());
-              window.location.href = url.toString();
-            }, 100);
-          }
-        });
+        // SW postMessage — единый deferred listener (__heysSwUnifiedMessageBound) выше.
 
         // Проверяем обновления каждые 60 секунд (не будим SW-проверки в фоновой вкладке)
         setInterval(() => {
@@ -910,16 +949,6 @@
       .catch((error) => {
         console.log('[SW] ❌ Registration failed', error);
       });
-
-    // Слушаем сообщения от SW
-    navigator.serviceWorker.addEventListener('message', (event) => {
-      if (event.data?.type === 'SYNC_START' && window.HEYS?.cloud?.sync) {
-        window.HEYS.cloud.sync();
-      }
-      if (event.data?.type === 'SYNC_COMPLETE') {
-        window.dispatchEvent(new CustomEvent('heys:sync-complete'));
-      }
-    });
 
     // Offline/Online banner
     window.addEventListener('offline', showOfflineNotification);

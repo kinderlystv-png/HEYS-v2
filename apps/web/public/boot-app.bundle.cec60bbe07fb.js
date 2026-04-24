@@ -12367,6 +12367,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
         const pendingChangeRafRef = useRef(null);
         /** rAF-схлопывание тяжёлого UI-пути data-saved (startSyncingState + таймеры) */
         const dataSavedUiRafRef = useRef(null);
+        /** Дедupe sync-progress: одинаковые (completed,total) подряд гоняют React и логи */
+        const syncProgressDedupeRef = useRef({ completed: -1, total: -1, at: 0 });
         const initialSyncCompletedAtRef = useRef(0);
         const INITIAL_SYNC_COOLDOWN_MS = 3000; // 3 секунды после первого sync не показываем syncing
         // 🔕 Timestamp когда последний раз индикатор ушёл в idle (пост-синк cooldown)
@@ -13006,8 +13008,16 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
             const handleSyncProgress = (e) => {
                 const { synced, done, total } = e.detail || {};
                 const completed = typeof done === 'number' ? done : synced;
-                console.info('[HEYS.sync] [IND] sync-progress: completed=' + completed + ' total=' + total);
                 if (typeof completed === 'number' && typeof total === 'number') {
+                    const now = Date.now();
+                    const r = syncProgressDedupeRef.current;
+                    if (completed === r.completed && total === r.total && (now - r.at) < 70) {
+                        return;
+                    }
+                    r.completed = completed;
+                    r.total = total;
+                    r.at = now;
+                    console.info('[HEYS.sync] [IND] sync-progress: completed=' + completed + ' total=' + total);
                     setSyncProgress({ synced: completed, total });
                     if (navigator.onLine && total > 0 && !syncingStartRef.current) {
                         startSyncingState();
@@ -19904,9 +19914,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
             } catch (e) { }
 
             const applyDate = () => {
-                React.startTransition(() => {
-                    setSelectedDate(nextDate);
-                });
+                setSelectedDate(nextDate);
                 haptic('light');
             };
 
@@ -20879,7 +20887,6 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
             edgeBounce,
             onTouchStart,
             onTouchEnd,
-            syncVer,
             clientId,
             setTab,
             products,
@@ -20964,7 +20971,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
             (tab !== 'stats' && tab !== 'diary') && (
                 tab === 'ration'
                     ? React.createElement(RationTabWithCloudSync, {
-                        key: 'ration' + syncVer + '_' + String(clientId || ''),
+                        key: 'ration_' + String(clientId || ''),
                         products,
                         setProducts,
                         clientId,
@@ -20972,7 +20979,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                     : tab === 'insights'
                         ? (window.HEYS?.PredictiveInsights?.components?.InsightsTab
                             ? React.createElement(window.HEYS.PredictiveInsights.components.InsightsTab, {
-                                key: 'insights' + syncVer + '_' + String(clientId || '') + '_' + selectedDate,
+                                key: 'insights_' + String(clientId || '') + '_' + selectedDate,
                                 lsGet: window.HEYS?.utils?.lsGet,
                                 profile: null,
                                 pIndex: null,
@@ -20986,7 +20993,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                         : tab === 'month'
                             ? (window.HEYS?.ReportsTab
                                 ? React.createElement(window.HEYS.ReportsTab, {
-                                    key: 'month' + syncVer + '_' + String(clientId || '') + '_' + selectedDate,
+                                    key: 'month_' + String(clientId || '') + '_' + selectedDate,
                                     selectedDate,
                                     setSelectedDate,
                                     clientId,
@@ -21008,7 +21015,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                                     : tab === 'overview'
                                         ? (window.HEYS && window.HEYS.DataOverviewTab
                                             ? React.createElement(window.HEYS.DataOverviewTab, {
-                                                key: 'overview' + syncVer + '_' + String(clientId || ''),
+                                                key: 'overview_' + String(clientId || ''),
                                                 clientId,
                                                 setTab,
                                                 setSelectedDate,

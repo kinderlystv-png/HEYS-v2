@@ -71,6 +71,26 @@
   global.HEYS.debug.clearSyncTraceBuffer = function () { _syncTraceBuffer.length = 0; };
   global.HEYS.debug._pushSyncTrace = pushSyncTrace;
 
+  // Sampled perf counters (opt-in: localStorage heys_perf_smoothness_sample = "1")
+  const _smoothnessMinute = { start: Date.now(), counts: Object.create(null) };
+  function bumpSmoothnessCounter(name) {
+    try {
+      if (!global.localStorage || global.localStorage.getItem('heys_perf_smoothness_sample') !== '1') return;
+    } catch (_) { return; }
+    const now = Date.now();
+    if (now - _smoothnessMinute.start > 60000) {
+      const c = _smoothnessMinute.counts;
+      const keys = Object.keys(c);
+      if (keys.length) {
+        pushSyncTrace('PERF_SMOOTHNESS_WINDOW', { ms: now - _smoothnessMinute.start, counts: { ...c } });
+      }
+      _smoothnessMinute.counts = Object.create(null);
+      _smoothnessMinute.start = now;
+    }
+    _smoothnessMinute.counts[name] = (_smoothnessMinute.counts[name] || 0) + 1;
+  }
+  global.HEYS.debug.bumpSmoothnessCounter = bumpSmoothnessCounter;
+
   // ═══════════════════════════════════════════════════════════════════
   // 🔧 КОНСТАНТЫ
   // ═══════════════════════════════════════════════════════════════════
@@ -2759,6 +2779,13 @@
   const SYNC_COMPLETED_EVENT = 'heysSyncCompleted';
   let syncProgressTotal = 0;
   let syncProgressDone = 0;
+  /** Dedupe identical pending snapshots (burst enqueue + scheduleClientPush). */
+  let _lastPendingEmitSig = '';
+  /** Throttle identical sync-progress pairs (React + logs). */
+  let _lastSyncProgressEmittedTotal = -1;
+  let _lastSyncProgressEmittedDone = -1;
+  let _lastSyncProgressEmitAt = 0;
+  const SYNC_PROGRESS_DEDUPE_MS = 55;
   const AUTH_ERROR_CODES = new Set(['401', '42501', 'PGRST301']);
 
   /** Проверка, является ли ошибка ошибкой авторизации (401, RLS) */
@@ -2824,12 +2851,29 @@
       _notifyPendingRaf = null;
       const count = cloud.getPendingCount();
       const details = cloud.getPendingDetails();
+      const snap = getPendingQueuesSnapshot();
+      const pendingSig = [
+        count,
+        snap.uploadInProgress ? 1 : 0,
+        snap.clientQueueLen,
+        snap.clientInFlightLen,
+        snap.userQueueLen,
+        snap.userInFlightLen,
+        details.days,
+        details.products,
+        details.profile,
+        details.other
+      ].join(':');
       // Defer event dispatch to avoid setState during render
       queueMicrotask(() => {
         try {
-          global.dispatchEvent(new CustomEvent('heys:pending-change', {
-            detail: { count, details }
-          }));
+          if (pendingSig !== _lastPendingEmitSig) {
+            _lastPendingEmitSig = pendingSig;
+            bumpSmoothnessCounter('pending_change_emit');
+            global.dispatchEvent(new CustomEvent('heys:pending-change', {
+              detail: { count, details }
+            }));
+          }
         } catch (e) { }
         updateSyncProgressTotal();
       });
@@ -2838,8 +2882,22 @@
 
   /** Событие: прогресс синхронизации */
   function notifySyncProgress(total, done) {
+    const t = Number(total) || 0;
+    const d = Number(done) || 0;
+    const now = Date.now();
+    if (
+      t === _lastSyncProgressEmittedTotal &&
+      d === _lastSyncProgressEmittedDone &&
+      (now - _lastSyncProgressEmitAt) < SYNC_PROGRESS_DEDUPE_MS
+    ) {
+      return;
+    }
+    _lastSyncProgressEmittedTotal = t;
+    _lastSyncProgressEmittedDone = d;
+    _lastSyncProgressEmitAt = now;
+    bumpSmoothnessCounter('sync_progress_emit');
     try {
-      global.dispatchEvent(new CustomEvent(SYNC_PROGRESS_EVENT, { detail: { total, done } }));
+      global.dispatchEvent(new CustomEvent(SYNC_PROGRESS_EVENT, { detail: { total: t, done: d } }));
     } catch (e) { }
   }
 
@@ -2847,6 +2905,9 @@
   function notifySyncCompletedIfDrained() {
     const snapshot = getPendingQueuesSnapshot();
     if (snapshot.totalCount === 0 && !snapshot.uploadInProgress) {
+      _lastPendingEmitSig = '';
+      _lastSyncProgressEmittedTotal = -1;
+      _lastSyncProgressEmittedDone = -1;
       syncProgressTotal = 0;
       syncProgressDone = 0;
       // Событие "очередь пуста" — для UI индикатора синхронизации
@@ -5056,6 +5117,22 @@
         } catch (_) { /* keep */ }
       }
 
+      const isCascadeDcsRpcKey = (k) => /cascade_dcs_/i.test(String(k || ''));
+      for (let ci = 0; ci < yandexItems.length; ci++) {
+        const row = yandexItems[ci];
+        if (!row || !isCascadeDcsRpcKey(row.k)) continue;
+        if (typeof row.v === 'string' && row.v.startsWith('¤Z¤')) continue;
+        if (!row.v || typeof row.v !== 'object' || Array.isArray(row.v)) continue;
+        const slim = {};
+        const dkeys = Object.keys(row.v);
+        for (let di = 0; di < dkeys.length; di++) {
+          const dk = dkeys[di];
+          const dv = row.v[dk];
+          slim[dk] = typeof dv === 'number' ? Math.round(dv * 1000) / 1000 : dv;
+        }
+        row.v = slim;
+      }
+
       const jsonSize = JSON.stringify(yandexItems).length;
       const jsonSizeKB = Math.round(jsonSize / 1024);
       if (jsonSize > 100000) {
@@ -5075,6 +5152,27 @@
           return 1e9;
         }
       };
+
+      const LARGE_ITEM_PRECOMPRESS_BYTES = 48 * 1024;
+      if (Store && typeof Store.compress === 'function') {
+        for (let pj = 0; pj < yandexItems.length; pj++) {
+          const row = yandexItems[pj];
+          if (!row) continue;
+          if (typeof row.v === 'string' && row.v.startsWith('¤Z¤')) continue;
+          if (row.v === null || typeof row.v !== 'object' || Array.isArray(row.v)) continue;
+          const sz0 = itemWireBytes(row);
+          if (sz0 < LARGE_ITEM_PRECOMPRESS_BYTES) continue;
+          try {
+            const c = Store.compress(row.v);
+            if (typeof c !== 'string' || !c.startsWith('¤Z¤')) continue;
+            const sz1 = JSON.stringify({ k: row.k, v: c, updated_at: row.updated_at }).length;
+            if (sz1 + 400 < sz0) {
+              row.v = c;
+              logCritical(`🗜️ [YANDEX SAVE] Pre-RPC compress ${row.k}: ${Math.round(sz0 / 1024)}KB → ${Math.round(sz1 / 1024)}KB`);
+            }
+          } catch (_) { /* noop */ }
+        }
+      }
 
       // Budget for p_items JSON only (session wrapper adds overhead — stay conservative).
       const P_ITEMS_BUDGET_BYTES = 96 * 1024;
@@ -7801,6 +7899,8 @@
   };
 
   // Дебаунсинг для клиентских данных
+  /** @type {number} */
+  let _clientUpload413BackoffUntil = 0;
   let clientUpsertQueue = loadPendingQueue(PENDING_CLIENT_QUEUE_KEY);
   let clientUpsertInFlightQueue = loadPendingQueue(PENDING_CLIENT_INFLIGHT_QUEUE_KEY);
   const restoredClientQueueState = restorePersistentQueueState({
@@ -7830,6 +7930,10 @@
     }
   } catch (_) { }
   let clientUpsertTimer = null;
+  /** Debounced cloud enqueue for high-churn cascade DCS history (one upload per burst). */
+  const CASCADE_DCS_ENQUEUE_DEBOUNCE_MS = 380;
+  const _cascadeDcsEnqueueTimers = new Map();
+  const _cascadeDcsEnqueueLatest = new Map();
   let _uploadInProgress = false;  // 🔄 Флаг: данные в процессе отправки (in-flight)
   let _uploadLogTimer = null;
   let _uploadLogBufferedTotal = 0;
@@ -8099,6 +8203,13 @@
         if (anyError) {
           logCritical(`[SYNC] ❌ Ошибка отправки: ${anyError}`);
           addSyncLogEntry('upload_error', { keys: _syncKeySummary, err: String(anyError).slice(0, 80), auth: isAuthError });
+          if (/413|payload too large|request entity too large/i.test(String(anyError))) {
+            _clientUpload413BackoffUntil = Date.now() + 45000;
+            try {
+              if (global.HEYS?.debug?.bumpSmoothnessCounter) global.HEYS.debug.bumpSmoothnessCounter('client_upload_413');
+            } catch (_) { /* noop */ }
+            logCritical(`🧊 [SYNC] 413 backoff: delaying client push ~45s to avoid RPC retry storm`);
+          }
           incrementRetry();
           clearClientInFlightBatch({ notify: false });
           persistClientQueueDurabilityState();
@@ -8119,6 +8230,7 @@
           }
         } else {
           resetRetry();
+          _clientUpload413BackoffUntil = 0;
           logUploadSummaryBuffered(totalSaved);
           addSyncLogEntry('upload_ok', { n: totalSaved, keys: _syncKeySummary, ms: Date.now() - (_uploadStartTs || 0) });
           clearClientInFlightBatch({ notify: false });
@@ -8328,15 +8440,21 @@
   /**
    * Debounced upload — стандартный способ с 500ms задержкой
    */
-  function scheduleClientPush() {
+  function scheduleClientPush(opts) {
     if (isLogoutSuppressionActive()) return;
     if (clientUpsertTimer) return;
 
     // Сохраняем очередь в localStorage для персистентности
     persistClientQueueDurabilityState();
-    notifyPendingChange();
+    // enqueueClientSave уже вызвал notifyPendingChange — не дублируем
+    if (!opts || !opts.__fromEnqueue) {
+      notifyPendingChange();
+    }
 
-    const delay = navigator.onLine ? 500 : getRetryDelay();
+    let delay = navigator.onLine ? 500 : getRetryDelay();
+    if (_clientUpload413BackoffUntil > Date.now()) {
+      delay = Math.max(delay, Math.min(120000, _clientUpload413BackoffUntil - Date.now()));
+    }
 
     clientUpsertTimer = setTimeout(async () => {
       if (_uploadInProgress) {
@@ -8391,6 +8509,31 @@
       checkSync();
     });
   };
+
+  function enqueueClientUpsertForUpload(upsertObj, normalizedKey, k, client_id, waitingForSync) {
+    const enqueueResult = enqueueClientSave({
+      queue: clientUpsertQueue,
+      item: upsertObj,
+      normalizedKey,
+      waitingForSync,
+      isOnline: navigator.onLine,
+      pendingQueueStorageKey: PENDING_CLIENT_QUEUE_KEY,
+      persistQueue: (queue) => savePendingQueue(PENDING_CLIENT_QUEUE_KEY, queue),
+      notifyPendingChange,
+      scheduleClientPush,
+      doImmediateClientUpload: () => {
+        console.info('[HEYS.sync] ⚡ Immediate upload', { key: k, client: client_id?.slice(0, 8) });
+        return doImmediateClientUpload();
+      },
+      onImmediateUploadError: (e) => {
+        console.warn('[HEYS.sync] ⚠️ Immediate upload failed', e?.message || e);
+      },
+    });
+    if (enqueueResult.shouldImmediate) {
+      log(`[HEYS.sync] Immediate upload path selected for '${normalizedKey}'`);
+    }
+  }
+
   // Поддерживает старую сигнатуру saveClientKey(k, v) — в этом случае client_id берётся из HEYS.currentClientId.
   cloud.saveClientKey = function (...args) {
     let client_id, k, value;
@@ -8716,26 +8859,31 @@
       console.info('[HEYS.sync] [IND] saveClientKey: dayv2 enqueue key=' + normalizedKey + ' updatedAt=' + (upsertObj.v && upsertObj.v.updatedAt) + ' caller=' + callerLine.trim());
     }
 
-    const enqueueResult = enqueueClientSave({
-      queue: clientUpsertQueue,
-      item: upsertObj,
-      normalizedKey,
-      waitingForSync,
-      isOnline: navigator.onLine,
-      persistQueue: (queue) => savePendingQueue(PENDING_CLIENT_QUEUE_KEY, queue),
-      notifyPendingChange,
-      scheduleClientPush,
-      doImmediateClientUpload: () => {
-        console.info('[HEYS.sync] ⚡ Immediate upload', { key: k, client: client_id?.slice(0, 8) });
-        return doImmediateClientUpload();
-      },
-      onImmediateUploadError: (e) => {
-        console.warn('[HEYS.sync] ⚠️ Immediate upload failed', e?.message || e);
-      },
-    });
-    if (enqueueResult.shouldImmediate) {
-      log(`[HEYS.sync] Immediate upload path selected for '${normalizedKey}'`);
+    const isCascadeDcsKey = normalizedKey && /cascade_dcs_/i.test(String(normalizedKey));
+    if (isCascadeDcsKey) {
+      const slotKey = `${client_id}:${normalizedKey}`;
+      _cascadeDcsEnqueueLatest.set(slotKey, { upsertObj, normalizedKey, waitingForSync, client_id, k });
+      const prevT = _cascadeDcsEnqueueTimers.get(slotKey);
+      if (prevT) clearTimeout(prevT);
+      const tid = setTimeout(() => {
+        _cascadeDcsEnqueueTimers.delete(slotKey);
+        const payload = _cascadeDcsEnqueueLatest.get(slotKey);
+        _cascadeDcsEnqueueLatest.delete(slotKey);
+        if (!payload) return;
+        payload.upsertObj.updated_at = new Date().toISOString();
+        enqueueClientUpsertForUpload(
+          payload.upsertObj,
+          payload.normalizedKey,
+          payload.k,
+          payload.client_id,
+          payload.waitingForSync,
+        );
+      }, CASCADE_DCS_ENQUEUE_DEBOUNCE_MS);
+      _cascadeDcsEnqueueTimers.set(slotKey, tid);
+      return;
     }
+
+    enqueueClientUpsertForUpload(upsertObj, normalizedKey, k, client_id, waitingForSync);
   };
 
   // Функция только проверяет существование клиента (больше НЕ создаём автоматически)
@@ -9913,6 +10061,26 @@
     const now = Date.now();
     const minGapMs = Number.isFinite(options.minGapMs) ? options.minGapMs : FOREGROUND_AUTO_SYNC_MIN_GAP_MS;
     if ((now - foregroundAutoSyncLastAt) < minGapMs) return false;
+
+    // Backpressure: не тянем hot-sync пока очередь синка перегружена (снижает шторм UI + RPC)
+    const BACKPRESSURE_SKIP_REASONS = new Set(['visible-interval', 'local-write', 'window-focus', 'pageshow']);
+    if (BACKPRESSURE_SKIP_REASONS.has(String(reason || ''))) {
+      try {
+        const snapBp = getPendingQueuesSnapshot();
+        const deepQueue = (snapBp.queueLen || 0) + (snapBp.inFlight || 0) > 45;
+        const heavyUpload = !!snapBp.uploadInProgress && (snapBp.queueLen || 0) > 15;
+        if (deepQueue || heavyUpload) {
+          console.info('[HEYS.sync] 🔇 hot-sync skip: queue backpressure', {
+            reason,
+            total: snapBp.totalCount,
+            q: snapBp.queueLen,
+            inflight: snapBp.inFlight,
+            upload: !!snapBp.uploadInProgress
+          });
+          return false;
+        }
+      } catch (_) { /* noop */ }
+    }
 
     foregroundAutoSyncInFlight = true;
     foregroundAutoSyncLastAt = now;

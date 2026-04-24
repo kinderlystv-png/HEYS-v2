@@ -57,7 +57,50 @@ describe('HEYS.syncQueueRuntimePure', () => {
     expect(persistQueue).toHaveBeenCalledTimes(1);
     expect(notifyPendingChange).toHaveBeenCalledTimes(1);
     expect(scheduleClientPush).toHaveBeenCalledTimes(1);
+    expect(scheduleClientPush).toHaveBeenCalledWith({ __fromEnqueue: true });
     expect(result.shouldImmediate).toBe(false);
+  });
+
+  it('enqueueClientSave compacts duplicate client identities when pendingQueueStorageKey is set', () => {
+    global.HEYS = {};
+    const pqPath = path.resolve(__dirname, '../heys_pending_queue_pure_v1.js');
+    eval(fs.readFileSync(pqPath, 'utf8'));
+    loadModule();
+    const { enqueueClientSave } = global.HEYS.syncQueueRuntimePure;
+    const { PENDING_CLIENT_QUEUE_KEY } = global.HEYS.pendingQueuePure;
+
+    const queue = [];
+    const persistQueue = vi.fn();
+
+    enqueueClientSave({
+      queue,
+      item: { client_id: 'c1', k: 'heys_cascade_dcs_v9', v: { a: 1 } },
+      normalizedKey: 'heys_cascade_dcs_v9',
+      waitingForSync: true,
+      isOnline: true,
+      pendingQueueStorageKey: PENDING_CLIENT_QUEUE_KEY,
+      persistQueue,
+      notifyPendingChange: vi.fn(),
+      scheduleClientPush: vi.fn(),
+      doImmediateClientUpload: vi.fn(),
+    });
+
+    enqueueClientSave({
+      queue,
+      item: { client_id: 'c1', k: 'heys_cascade_dcs_v9', v: { a: 2 } },
+      normalizedKey: 'heys_cascade_dcs_v9',
+      waitingForSync: true,
+      isOnline: true,
+      pendingQueueStorageKey: PENDING_CLIENT_QUEUE_KEY,
+      persistQueue,
+      notifyPendingChange: vi.fn(),
+      scheduleClientPush: vi.fn(),
+      doImmediateClientUpload: vi.fn(),
+    });
+
+    expect(queue).toHaveLength(1);
+    expect(queue[0].v).toEqual({ a: 2 });
+    expect(persistQueue).toHaveBeenCalled();
   });
 
   it('enqueueClientSave triggers immediate upload for critical keys when online', () => {

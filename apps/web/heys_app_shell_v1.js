@@ -903,9 +903,7 @@
             } catch (e) { }
 
             const applyDate = () => {
-                React.startTransition(() => {
-                    setSelectedDate(nextDate);
-                });
+                setSelectedDate(nextDate);
                 haptic('light');
             };
 
@@ -1878,7 +1876,6 @@
             edgeBounce,
             onTouchStart,
             onTouchEnd,
-            syncVer,
             clientId,
             setTab,
             products,
@@ -1963,7 +1960,7 @@
             (tab !== 'stats' && tab !== 'diary') && (
                 tab === 'ration'
                     ? React.createElement(RationTabWithCloudSync, {
-                        key: 'ration' + syncVer + '_' + String(clientId || ''),
+                        key: 'ration_' + String(clientId || ''),
                         products,
                         setProducts,
                         clientId,
@@ -1971,7 +1968,7 @@
                     : tab === 'insights'
                         ? (window.HEYS?.PredictiveInsights?.components?.InsightsTab
                             ? React.createElement(window.HEYS.PredictiveInsights.components.InsightsTab, {
-                                key: 'insights' + syncVer + '_' + String(clientId || '') + '_' + selectedDate,
+                                key: 'insights_' + String(clientId || '') + '_' + selectedDate,
                                 lsGet: window.HEYS?.utils?.lsGet,
                                 profile: null,
                                 pIndex: null,
@@ -1985,7 +1982,7 @@
                         : tab === 'month'
                             ? (window.HEYS?.ReportsTab
                                 ? React.createElement(window.HEYS.ReportsTab, {
-                                    key: 'month' + syncVer + '_' + String(clientId || '') + '_' + selectedDate,
+                                    key: 'month_' + String(clientId || '') + '_' + selectedDate,
                                     selectedDate,
                                     setSelectedDate,
                                     clientId,
@@ -2007,7 +2004,7 @@
                                     : tab === 'overview'
                                         ? (window.HEYS && window.HEYS.DataOverviewTab
                                             ? React.createElement(window.HEYS.DataOverviewTab, {
-                                                key: 'overview' + syncVer + '_' + String(clientId || ''),
+                                                key: 'overview_' + String(clientId || ''),
                                                 clientId,
                                                 setTab,
                                                 setSelectedDate,

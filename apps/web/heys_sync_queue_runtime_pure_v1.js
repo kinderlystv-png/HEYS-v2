@@ -78,6 +78,14 @@
 
         queue.push(params.item);
 
+        // 🚀 PERF: collapse duplicate (client_id,k) rows immediately so bursts
+        // (e.g. cascade DCS history) do not inflate queue depth / pending-change churn.
+        const pq = global.HEYS && global.HEYS.pendingQueuePure;
+        const psk = params.pendingQueueStorageKey;
+        if (psk && pq && typeof pq.compactPendingQueue === 'function') {
+            pq.compactPendingQueue(queue, psk, { mutate: true });
+        }
+
         const _pushTrace = typeof global.HEYS?.debug?.getSyncTraceBuffer === 'function'
             ? global.HEYS.debug._pushSyncTrace || null : null;
         const _key = params.item?.k || params.normalizedKey || '';
@@ -91,7 +99,9 @@
 
         if (typeof params.persistQueue === 'function') params.persistQueue(queue);
         if (typeof params.notifyPendingChange === 'function') params.notifyPendingChange();
-        if (typeof params.scheduleClientPush === 'function') params.scheduleClientPush();
+        if (typeof params.scheduleClientPush === 'function') {
+            params.scheduleClientPush({ __fromEnqueue: true });
+        }
 
         const shouldImmediate =
             isCriticalSyncKey(params.normalizedKey) &&

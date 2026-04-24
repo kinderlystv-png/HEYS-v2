@@ -2031,6 +2031,136 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
     }
 
     bootLog('registering...');
+
+    // One SW `message` listener — avoids duplicate handlers + defers heavy branches off the SW event turn.
+    if (!window.__heysSwUnifiedMessageBound) {
+      window.__heysSwUnifiedMessageBound = true;
+      const deferSwPortWork = (fn) => {
+        try {
+          if (typeof queueMicrotask === 'function') {
+            queueMicrotask(() => {
+              try {
+                fn();
+              } catch (e) {
+                console.warn('[SW] deferred message handler error', e);
+              }
+            });
+          } else {
+            setTimeout(fn, 0);
+          }
+        } catch (_) {
+          setTimeout(fn, 0);
+        }
+      };
+      navigator.serviceWorker.addEventListener('message', (event) => {
+        const t = event && event.data && event.data.type;
+        if (!t) return;
+
+        if (t === 'UPDATE_AVAILABLE') {
+          deferSwPortWork(() => {
+            console.log('[SW] 🆕 Background update detected:', event.data.version);
+            showUpdateBadge(event.data.version);
+            showUpdateNotification();
+          });
+          return;
+        }
+
+        if (t === 'UPDATE_REQUIRED') {
+          deferSwPortWork(() => {
+            console.log('[SW] 🧭 Version mismatch — forcing update:', event.data.version);
+            transitionSwUpdateState(SW_UPDATE_STATES.DETECTED, 'update-required-msg');
+            if (typeof HEYS.forceCheckAndUpdate === 'function') {
+              HEYS.forceCheckAndUpdate();
+            } else {
+              triggerSkipWaiting({
+                fallbackMs: 5000,
+                showModal: true,
+                source: 'update-required',
+              });
+            }
+          });
+          return;
+        }
+
+        if (t === 'CACHES_CLEARED') {
+          deferSwPortWork(() => {
+            const managedByChecks = sessionStorage.getItem('heys_update_managed_by_checks') === 'true';
+            if (managedByChecks) {
+              console.log('[SW] ✅ Caches cleared — lifecycle managed by update_checks, skipping reload here');
+              try {
+                sessionStorage.removeItem('heys_update_managed_by_checks');
+              } catch (e) { /* noop */ }
+              return;
+            }
+
+            const requiresLogout = sessionStorage.getItem('heys_update_requires_logout') === 'true';
+            console.log('[SW] ✅ Caches cleared — resetting session for fresh data from cloud');
+
+            if (requiresLogout) {
+              window.HEYS = window.HEYS || {};
+              window.HEYS._isLoggingOut = true;
+            }
+
+            if (requiresLogout) {
+              try {
+                if (HEYS.cloud?.signOut) {
+                  HEYS.cloud.signOut();
+                }
+
+                const keysToRemove = [];
+                const keysToKeep = ['heys_products', 'heys_profile', 'heys_norms', 'heys_hr_zones'];
+
+                for (let i = 0; i < localStorage.length; i++) {
+                  const key = localStorage.key(i);
+                  if (!keysToKeep.some(k => key.includes(k)) && !key.startsWith('heys_dayv2_')) {
+                    keysToRemove.push(key);
+                  }
+                }
+
+                keysToRemove.forEach(key => localStorage.removeItem(key));
+                console.log(`[SW] 🗑️ Removed ${keysToRemove.length} session keys, kept critical data`);
+
+                sessionStorage.clear();
+
+                console.log('[SW] ✅ Session cleared safely, reloading...');
+              } catch (e) {
+                console.warn('[SW] Session clear error:', e);
+              }
+            }
+
+            try {
+              sessionStorage.removeItem('heys_update_requires_logout');
+            } catch (e) { /* noop */ }
+
+            setTimeout(() => {
+              try {
+                sessionStorage.removeItem('heys_pending_update');
+              } catch (e) { /* noop */ }
+              clearUpdateLock();
+              transitionSwUpdateState(SW_UPDATE_STATES.RELOADING, 'caches-cleared');
+              const url = new URL(window.location.href);
+              url.searchParams.set('_v', Date.now().toString());
+              window.location.href = url.toString();
+            }, 100);
+          });
+          return;
+        }
+
+        if (t === 'SYNC_START' && window.HEYS?.cloud?.sync) {
+          deferSwPortWork(() => {
+            window.HEYS.cloud.sync();
+          });
+          return;
+        }
+
+        if (t === 'SYNC_COMPLETE') {
+          deferSwPortWork(() => {
+            window.dispatchEvent(new CustomEvent('heys:sync-complete'));
+          });
+        }
+      });
+    }
+
     navigator.serviceWorker.register('/sw.js')
       .then((registration) => {
         console.log('[SW] ✅ Registered successfully');
@@ -2065,98 +2195,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
           })();
         }
 
-        // Слушаем сообщения от SW (включая UPDATE_AVAILABLE)
-        navigator.serviceWorker.addEventListener('message', (event) => {
-          if (event.data?.type === 'UPDATE_AVAILABLE') {
-            console.log('[SW] 🆕 Background update detected:', event.data.version);
-            showUpdateBadge(event.data.version);
-            showUpdateNotification();
-          }
-          if (event.data?.type === 'UPDATE_REQUIRED') {
-            console.log('[SW] 🧭 Version mismatch — forcing update:', event.data.version);
-            transitionSwUpdateState(SW_UPDATE_STATES.DETECTED, 'update-required-msg');
-            if (typeof HEYS.forceCheckAndUpdate === 'function') {
-              HEYS.forceCheckAndUpdate();
-            } else {
-              triggerSkipWaiting({
-                fallbackMs: 5000,
-                showModal: true,
-                source: 'update-required',
-              });
-            }
-          }
-          if (event.data?.type === 'CACHES_CLEARED') {
-            // 🔒 Guard: если update_checks управляет lifecycle, не делаем reload отсюда.
-            // update_checks сам вызовет triggerSkipWaiting → controllerchange → cache-busted reload.
-            const managedByChecks = sessionStorage.getItem('heys_update_managed_by_checks') === 'true';
-            if (managedByChecks) {
-              console.log('[SW] ✅ Caches cleared — lifecycle managed by update_checks, skipping reload here');
-              try { sessionStorage.removeItem('heys_update_managed_by_checks'); } catch (e) { }
-              return;
-            }
-
-            const requiresLogout = sessionStorage.getItem('heys_update_requires_logout') === 'true';
-            console.log('[SW] ✅ Caches cleared — resetting session for fresh data from cloud');
-
-            if (requiresLogout) {
-              // ✅ Guard для хуков — показываем экран выхода до очистки
-              window.HEYS = window.HEYS || {};
-              window.HEYS._isLoggingOut = true;
-            }
-
-            // 🔄 Сброс сессии ТОЛЬКО при апдейте
-            // ⚠️ КРИТИЧНО: НЕ очищаем localStorage.clear() — это удаляет heys_products!
-            // Вместо этого удаляем только сессионные ключи, сохраняя критические данные
-            if (requiresLogout) {
-              try {
-                // 1. Завершаем auth сессию (если есть)
-                if (HEYS.cloud?.signOut) {
-                  HEYS.cloud.signOut();
-                }
-
-                // 2. Удаляем только сессионные данные, НЕ трогая products/profile
-                // ❌ БЫЛО: localStorage.clear(); — удаляло ВСЮ базу продуктов!
-                // ✅ СТАЛО: выборочная очистка
-                const keysToRemove = [];
-                const keysToKeep = ['heys_products', 'heys_profile', 'heys_norms', 'heys_hr_zones'];
-
-                for (let i = 0; i < localStorage.length; i++) {
-                  const key = localStorage.key(i);
-                  // Сохраняем критические ключи и данные дней
-                  if (!keysToKeep.some(k => key.includes(k)) && !key.startsWith('heys_dayv2_')) {
-                    keysToRemove.push(key);
-                  }
-                }
-
-                keysToRemove.forEach(key => localStorage.removeItem(key));
-                console.log(`[SW] 🗑️ Removed ${keysToRemove.length} session keys, kept critical data`);
-
-                // 3. Очищаем sessionStorage полностью (там только кэш)
-                sessionStorage.clear();
-
-                console.log('[SW] ✅ Session cleared safely, reloading...');
-              } catch (e) {
-                console.warn('[SW] Session clear error:', e);
-              }
-            }
-
-            // Сбрасываем маркер после обработки
-            try {
-              sessionStorage.removeItem('heys_update_requires_logout');
-            } catch (e) { }
-
-            // 4. Перезагружаем страницу с cache-busting — пользователь увидит экран входа
-            setTimeout(() => {
-              // Очищаем флаги перед reload чтобы не триггерить повторный controllerchange
-              try { sessionStorage.removeItem('heys_pending_update'); } catch (e) { }
-              clearUpdateLock();
-              transitionSwUpdateState(SW_UPDATE_STATES.RELOADING, 'caches-cleared');
-              const url = new URL(window.location.href);
-              url.searchParams.set('_v', Date.now().toString());
-              window.location.href = url.toString();
-            }, 100);
-          }
-        });
+        // SW postMessage — единый deferred listener (__heysSwUnifiedMessageBound) выше.
 
         // Проверяем обновления каждые 60 секунд (не будим SW-проверки в фоновой вкладке)
         setInterval(() => {
@@ -2228,16 +2267,6 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
       .catch((error) => {
         console.log('[SW] ❌ Registration failed', error);
       });
-
-    // Слушаем сообщения от SW
-    navigator.serviceWorker.addEventListener('message', (event) => {
-      if (event.data?.type === 'SYNC_START' && window.HEYS?.cloud?.sync) {
-        window.HEYS.cloud.sync();
-      }
-      if (event.data?.type === 'SYNC_COMPLETE') {
-        window.dispatchEvent(new CustomEvent('heys:sync-complete'));
-      }
-    });
 
     // Offline/Online banner
     window.addEventListener('offline', showOfflineNotification);
@@ -18023,6 +18052,14 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
 
         queue.push(params.item);
 
+        // 🚀 PERF: collapse duplicate (client_id,k) rows immediately so bursts
+        // (e.g. cascade DCS history) do not inflate queue depth / pending-change churn.
+        const pq = global.HEYS && global.HEYS.pendingQueuePure;
+        const psk = params.pendingQueueStorageKey;
+        if (psk && pq && typeof pq.compactPendingQueue === 'function') {
+            pq.compactPendingQueue(queue, psk, { mutate: true });
+        }
+
         const _pushTrace = typeof global.HEYS?.debug?.getSyncTraceBuffer === 'function'
             ? global.HEYS.debug._pushSyncTrace || null : null;
         const _key = params.item?.k || params.normalizedKey || '';
@@ -18036,7 +18073,9 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
 
         if (typeof params.persistQueue === 'function') params.persistQueue(queue);
         if (typeof params.notifyPendingChange === 'function') params.notifyPendingChange();
-        if (typeof params.scheduleClientPush === 'function') params.scheduleClientPush();
+        if (typeof params.scheduleClientPush === 'function') {
+            params.scheduleClientPush({ __fromEnqueue: true });
+        }
 
         const shouldImmediate =
             isCriticalSyncKey(params.normalizedKey) &&
@@ -18286,6 +18325,26 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
   global.HEYS.debug.getSyncTraceBuffer = function () { return _syncTraceBuffer.slice(); };
   global.HEYS.debug.clearSyncTraceBuffer = function () { _syncTraceBuffer.length = 0; };
   global.HEYS.debug._pushSyncTrace = pushSyncTrace;
+
+  // Sampled perf counters (opt-in: localStorage heys_perf_smoothness_sample = "1")
+  const _smoothnessMinute = { start: Date.now(), counts: Object.create(null) };
+  function bumpSmoothnessCounter(name) {
+    try {
+      if (!global.localStorage || global.localStorage.getItem('heys_perf_smoothness_sample') !== '1') return;
+    } catch (_) { return; }
+    const now = Date.now();
+    if (now - _smoothnessMinute.start > 60000) {
+      const c = _smoothnessMinute.counts;
+      const keys = Object.keys(c);
+      if (keys.length) {
+        pushSyncTrace('PERF_SMOOTHNESS_WINDOW', { ms: now - _smoothnessMinute.start, counts: { ...c } });
+      }
+      _smoothnessMinute.counts = Object.create(null);
+      _smoothnessMinute.start = now;
+    }
+    _smoothnessMinute.counts[name] = (_smoothnessMinute.counts[name] || 0) + 1;
+  }
+  global.HEYS.debug.bumpSmoothnessCounter = bumpSmoothnessCounter;
 
   // ═══════════════════════════════════════════════════════════════════
   // 🔧 КОНСТАНТЫ
@@ -20975,6 +21034,13 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
   const SYNC_COMPLETED_EVENT = 'heysSyncCompleted';
   let syncProgressTotal = 0;
   let syncProgressDone = 0;
+  /** Dedupe identical pending snapshots (burst enqueue + scheduleClientPush). */
+  let _lastPendingEmitSig = '';
+  /** Throttle identical sync-progress pairs (React + logs). */
+  let _lastSyncProgressEmittedTotal = -1;
+  let _lastSyncProgressEmittedDone = -1;
+  let _lastSyncProgressEmitAt = 0;
+  const SYNC_PROGRESS_DEDUPE_MS = 55;
   const AUTH_ERROR_CODES = new Set(['401', '42501', 'PGRST301']);
 
   /** Проверка, является ли ошибка ошибкой авторизации (401, RLS) */
@@ -21040,12 +21106,29 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
       _notifyPendingRaf = null;
       const count = cloud.getPendingCount();
       const details = cloud.getPendingDetails();
+      const snap = getPendingQueuesSnapshot();
+      const pendingSig = [
+        count,
+        snap.uploadInProgress ? 1 : 0,
+        snap.clientQueueLen,
+        snap.clientInFlightLen,
+        snap.userQueueLen,
+        snap.userInFlightLen,
+        details.days,
+        details.products,
+        details.profile,
+        details.other
+      ].join(':');
       // Defer event dispatch to avoid setState during render
       queueMicrotask(() => {
         try {
-          global.dispatchEvent(new CustomEvent('heys:pending-change', {
-            detail: { count, details }
-          }));
+          if (pendingSig !== _lastPendingEmitSig) {
+            _lastPendingEmitSig = pendingSig;
+            bumpSmoothnessCounter('pending_change_emit');
+            global.dispatchEvent(new CustomEvent('heys:pending-change', {
+              detail: { count, details }
+            }));
+          }
         } catch (e) { }
         updateSyncProgressTotal();
       });
@@ -21054,8 +21137,22 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
 
   /** Событие: прогресс синхронизации */
   function notifySyncProgress(total, done) {
+    const t = Number(total) || 0;
+    const d = Number(done) || 0;
+    const now = Date.now();
+    if (
+      t === _lastSyncProgressEmittedTotal &&
+      d === _lastSyncProgressEmittedDone &&
+      (now - _lastSyncProgressEmitAt) < SYNC_PROGRESS_DEDUPE_MS
+    ) {
+      return;
+    }
+    _lastSyncProgressEmittedTotal = t;
+    _lastSyncProgressEmittedDone = d;
+    _lastSyncProgressEmitAt = now;
+    bumpSmoothnessCounter('sync_progress_emit');
     try {
-      global.dispatchEvent(new CustomEvent(SYNC_PROGRESS_EVENT, { detail: { total, done } }));
+      global.dispatchEvent(new CustomEvent(SYNC_PROGRESS_EVENT, { detail: { total: t, done: d } }));
     } catch (e) { }
   }
 
@@ -21063,6 +21160,9 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
   function notifySyncCompletedIfDrained() {
     const snapshot = getPendingQueuesSnapshot();
     if (snapshot.totalCount === 0 && !snapshot.uploadInProgress) {
+      _lastPendingEmitSig = '';
+      _lastSyncProgressEmittedTotal = -1;
+      _lastSyncProgressEmittedDone = -1;
       syncProgressTotal = 0;
       syncProgressDone = 0;
       // Событие "очередь пуста" — для UI индикатора синхронизации
@@ -23272,6 +23372,22 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
         } catch (_) { /* keep */ }
       }
 
+      const isCascadeDcsRpcKey = (k) => /cascade_dcs_/i.test(String(k || ''));
+      for (let ci = 0; ci < yandexItems.length; ci++) {
+        const row = yandexItems[ci];
+        if (!row || !isCascadeDcsRpcKey(row.k)) continue;
+        if (typeof row.v === 'string' && row.v.startsWith('¤Z¤')) continue;
+        if (!row.v || typeof row.v !== 'object' || Array.isArray(row.v)) continue;
+        const slim = {};
+        const dkeys = Object.keys(row.v);
+        for (let di = 0; di < dkeys.length; di++) {
+          const dk = dkeys[di];
+          const dv = row.v[dk];
+          slim[dk] = typeof dv === 'number' ? Math.round(dv * 1000) / 1000 : dv;
+        }
+        row.v = slim;
+      }
+
       const jsonSize = JSON.stringify(yandexItems).length;
       const jsonSizeKB = Math.round(jsonSize / 1024);
       if (jsonSize > 100000) {
@@ -23291,6 +23407,27 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
           return 1e9;
         }
       };
+
+      const LARGE_ITEM_PRECOMPRESS_BYTES = 48 * 1024;
+      if (Store && typeof Store.compress === 'function') {
+        for (let pj = 0; pj < yandexItems.length; pj++) {
+          const row = yandexItems[pj];
+          if (!row) continue;
+          if (typeof row.v === 'string' && row.v.startsWith('¤Z¤')) continue;
+          if (row.v === null || typeof row.v !== 'object' || Array.isArray(row.v)) continue;
+          const sz0 = itemWireBytes(row);
+          if (sz0 < LARGE_ITEM_PRECOMPRESS_BYTES) continue;
+          try {
+            const c = Store.compress(row.v);
+            if (typeof c !== 'string' || !c.startsWith('¤Z¤')) continue;
+            const sz1 = JSON.stringify({ k: row.k, v: c, updated_at: row.updated_at }).length;
+            if (sz1 + 400 < sz0) {
+              row.v = c;
+              logCritical(`🗜️ [YANDEX SAVE] Pre-RPC compress ${row.k}: ${Math.round(sz0 / 1024)}KB → ${Math.round(sz1 / 1024)}KB`);
+            }
+          } catch (_) { /* noop */ }
+        }
+      }
 
       // Budget for p_items JSON only (session wrapper adds overhead — stay conservative).
       const P_ITEMS_BUDGET_BYTES = 96 * 1024;
@@ -26017,6 +26154,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
   };
 
   // Дебаунсинг для клиентских данных
+  /** @type {number} */
+  let _clientUpload413BackoffUntil = 0;
   let clientUpsertQueue = loadPendingQueue(PENDING_CLIENT_QUEUE_KEY);
   let clientUpsertInFlightQueue = loadPendingQueue(PENDING_CLIENT_INFLIGHT_QUEUE_KEY);
   const restoredClientQueueState = restorePersistentQueueState({
@@ -26046,6 +26185,10 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
     }
   } catch (_) { }
   let clientUpsertTimer = null;
+  /** Debounced cloud enqueue for high-churn cascade DCS history (one upload per burst). */
+  const CASCADE_DCS_ENQUEUE_DEBOUNCE_MS = 380;
+  const _cascadeDcsEnqueueTimers = new Map();
+  const _cascadeDcsEnqueueLatest = new Map();
   let _uploadInProgress = false;  // 🔄 Флаг: данные в процессе отправки (in-flight)
   let _uploadLogTimer = null;
   let _uploadLogBufferedTotal = 0;
@@ -26315,6 +26458,13 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
         if (anyError) {
           logCritical(`[SYNC] ❌ Ошибка отправки: ${anyError}`);
           addSyncLogEntry('upload_error', { keys: _syncKeySummary, err: String(anyError).slice(0, 80), auth: isAuthError });
+          if (/413|payload too large|request entity too large/i.test(String(anyError))) {
+            _clientUpload413BackoffUntil = Date.now() + 45000;
+            try {
+              if (global.HEYS?.debug?.bumpSmoothnessCounter) global.HEYS.debug.bumpSmoothnessCounter('client_upload_413');
+            } catch (_) { /* noop */ }
+            logCritical(`🧊 [SYNC] 413 backoff: delaying client push ~45s to avoid RPC retry storm`);
+          }
           incrementRetry();
           clearClientInFlightBatch({ notify: false });
           persistClientQueueDurabilityState();
@@ -26335,6 +26485,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
           }
         } else {
           resetRetry();
+          _clientUpload413BackoffUntil = 0;
           logUploadSummaryBuffered(totalSaved);
           addSyncLogEntry('upload_ok', { n: totalSaved, keys: _syncKeySummary, ms: Date.now() - (_uploadStartTs || 0) });
           clearClientInFlightBatch({ notify: false });
@@ -26544,15 +26695,21 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
   /**
    * Debounced upload — стандартный способ с 500ms задержкой
    */
-  function scheduleClientPush() {
+  function scheduleClientPush(opts) {
     if (isLogoutSuppressionActive()) return;
     if (clientUpsertTimer) return;
 
     // Сохраняем очередь в localStorage для персистентности
     persistClientQueueDurabilityState();
-    notifyPendingChange();
+    // enqueueClientSave уже вызвал notifyPendingChange — не дублируем
+    if (!opts || !opts.__fromEnqueue) {
+      notifyPendingChange();
+    }
 
-    const delay = navigator.onLine ? 500 : getRetryDelay();
+    let delay = navigator.onLine ? 500 : getRetryDelay();
+    if (_clientUpload413BackoffUntil > Date.now()) {
+      delay = Math.max(delay, Math.min(120000, _clientUpload413BackoffUntil - Date.now()));
+    }
 
     clientUpsertTimer = setTimeout(async () => {
       if (_uploadInProgress) {
@@ -26607,6 +26764,31 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
       checkSync();
     });
   };
+
+  function enqueueClientUpsertForUpload(upsertObj, normalizedKey, k, client_id, waitingForSync) {
+    const enqueueResult = enqueueClientSave({
+      queue: clientUpsertQueue,
+      item: upsertObj,
+      normalizedKey,
+      waitingForSync,
+      isOnline: navigator.onLine,
+      pendingQueueStorageKey: PENDING_CLIENT_QUEUE_KEY,
+      persistQueue: (queue) => savePendingQueue(PENDING_CLIENT_QUEUE_KEY, queue),
+      notifyPendingChange,
+      scheduleClientPush,
+      doImmediateClientUpload: () => {
+        console.info('[HEYS.sync] ⚡ Immediate upload', { key: k, client: client_id?.slice(0, 8) });
+        return doImmediateClientUpload();
+      },
+      onImmediateUploadError: (e) => {
+        console.warn('[HEYS.sync] ⚠️ Immediate upload failed', e?.message || e);
+      },
+    });
+    if (enqueueResult.shouldImmediate) {
+      log(`[HEYS.sync] Immediate upload path selected for '${normalizedKey}'`);
+    }
+  }
+
   // Поддерживает старую сигнатуру saveClientKey(k, v) — в этом случае client_id берётся из HEYS.currentClientId.
   cloud.saveClientKey = function (...args) {
     let client_id, k, value;
@@ -26932,26 +27114,31 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
       console.info('[HEYS.sync] [IND] saveClientKey: dayv2 enqueue key=' + normalizedKey + ' updatedAt=' + (upsertObj.v && upsertObj.v.updatedAt) + ' caller=' + callerLine.trim());
     }
 
-    const enqueueResult = enqueueClientSave({
-      queue: clientUpsertQueue,
-      item: upsertObj,
-      normalizedKey,
-      waitingForSync,
-      isOnline: navigator.onLine,
-      persistQueue: (queue) => savePendingQueue(PENDING_CLIENT_QUEUE_KEY, queue),
-      notifyPendingChange,
-      scheduleClientPush,
-      doImmediateClientUpload: () => {
-        console.info('[HEYS.sync] ⚡ Immediate upload', { key: k, client: client_id?.slice(0, 8) });
-        return doImmediateClientUpload();
-      },
-      onImmediateUploadError: (e) => {
-        console.warn('[HEYS.sync] ⚠️ Immediate upload failed', e?.message || e);
-      },
-    });
-    if (enqueueResult.shouldImmediate) {
-      log(`[HEYS.sync] Immediate upload path selected for '${normalizedKey}'`);
+    const isCascadeDcsKey = normalizedKey && /cascade_dcs_/i.test(String(normalizedKey));
+    if (isCascadeDcsKey) {
+      const slotKey = `${client_id}:${normalizedKey}`;
+      _cascadeDcsEnqueueLatest.set(slotKey, { upsertObj, normalizedKey, waitingForSync, client_id, k });
+      const prevT = _cascadeDcsEnqueueTimers.get(slotKey);
+      if (prevT) clearTimeout(prevT);
+      const tid = setTimeout(() => {
+        _cascadeDcsEnqueueTimers.delete(slotKey);
+        const payload = _cascadeDcsEnqueueLatest.get(slotKey);
+        _cascadeDcsEnqueueLatest.delete(slotKey);
+        if (!payload) return;
+        payload.upsertObj.updated_at = new Date().toISOString();
+        enqueueClientUpsertForUpload(
+          payload.upsertObj,
+          payload.normalizedKey,
+          payload.k,
+          payload.client_id,
+          payload.waitingForSync,
+        );
+      }, CASCADE_DCS_ENQUEUE_DEBOUNCE_MS);
+      _cascadeDcsEnqueueTimers.set(slotKey, tid);
+      return;
     }
+
+    enqueueClientUpsertForUpload(upsertObj, normalizedKey, k, client_id, waitingForSync);
   };
 
   // Функция только проверяет существование клиента (больше НЕ создаём автоматически)
@@ -28129,6 +28316,26 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
     const now = Date.now();
     const minGapMs = Number.isFinite(options.minGapMs) ? options.minGapMs : FOREGROUND_AUTO_SYNC_MIN_GAP_MS;
     if ((now - foregroundAutoSyncLastAt) < minGapMs) return false;
+
+    // Backpressure: не тянем hot-sync пока очередь синка перегружена (снижает шторм UI + RPC)
+    const BACKPRESSURE_SKIP_REASONS = new Set(['visible-interval', 'local-write', 'window-focus', 'pageshow']);
+    if (BACKPRESSURE_SKIP_REASONS.has(String(reason || ''))) {
+      try {
+        const snapBp = getPendingQueuesSnapshot();
+        const deepQueue = (snapBp.queueLen || 0) + (snapBp.inFlight || 0) > 45;
+        const heavyUpload = !!snapBp.uploadInProgress && (snapBp.queueLen || 0) > 15;
+        if (deepQueue || heavyUpload) {
+          console.info('[HEYS.sync] 🔇 hot-sync skip: queue backpressure', {
+            reason,
+            total: snapBp.totalCount,
+            q: snapBp.queueLen,
+            inflight: snapBp.inFlight,
+            upload: !!snapBp.uploadInProgress
+          });
+          return false;
+        }
+      } catch (_) { /* noop */ }
+    }
 
     foregroundAutoSyncInFlight = true;
     foregroundAutoSyncLastAt = now;

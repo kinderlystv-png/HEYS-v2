@@ -6689,6 +6689,7 @@
     // This effect bridges the gap so widgets update after client switch / cloud sync.
     // Also clears isSyncLoading to reveal widgets with all animations at once.
     useEffect(() => {
+      let dayRefreshTimer = null;
       const onSyncCompleted = (event) => {
         const evClientId = event?.detail?.clientId;
         if (!evClientId || !clientId) return;
@@ -6705,16 +6706,22 @@
       };
 
       const onDayUpdated = (event) => {
+        if (event?.detail?.batch) return;
         const evClientId = event?.detail?.clientId;
         // heys:day-updated may not always carry clientId — refresh unconditionally if missing
         if (evClientId && clientId && evClientId !== clientId && !clientId.startsWith(evClientId)) return;
-        HEYS.Widgets.data?.refresh?.();
+        if (dayRefreshTimer) clearTimeout(dayRefreshTimer);
+        dayRefreshTimer = setTimeout(() => {
+          dayRefreshTimer = null;
+          HEYS.Widgets.data?.refresh?.();
+        }, 100);
       };
 
       window.addEventListener('heysSyncCompleted', onSyncCompleted);
       window.addEventListener('heys:day-updated', onDayUpdated);
 
       return () => {
+        if (dayRefreshTimer) clearTimeout(dayRefreshTimer);
         window.removeEventListener('heysSyncCompleted', onSyncCompleted);
         window.removeEventListener('heys:day-updated', onDayUpdated);
       };

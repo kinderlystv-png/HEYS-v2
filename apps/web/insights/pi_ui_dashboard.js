@@ -1602,15 +1602,37 @@
       const [dataVersion, setDataVersion] = useState(0);
 
       useEffect(() => {
-        const handleDataRefresh = () => {
-          HEYS.RelapseRisk?.invalidateSnapshot?.();
+        let refreshRaf = null;
+        const flushRefresh = () => {
+          refreshRaf = null;
+          try {
+            HEYS.RelapseRisk?.invalidateSnapshot?.();
+          } catch (_) { /* noop */ }
           setDataVersion((value) => value + 1);
+        };
+        const handleDataRefresh = () => {
+          if (refreshRaf != null) return;
+          if (typeof window.requestAnimationFrame === 'function') {
+            refreshRaf = window.requestAnimationFrame(flushRefresh);
+          } else {
+            refreshRaf = window.setTimeout(flushRefresh, 0);
+          }
         };
 
         const events = ['heys:day-updated', 'day-updated', 'heysSyncCompleted', 'day-saved'];
         events.forEach((eventName) => window.addEventListener(eventName, handleDataRefresh));
 
         return () => {
+          if (refreshRaf != null) {
+            try {
+              if (typeof window.cancelAnimationFrame === 'function' && typeof window.requestAnimationFrame === 'function') {
+                window.cancelAnimationFrame(refreshRaf);
+              } else {
+                window.clearTimeout(refreshRaf);
+              }
+            } catch (_) { /* noop */ }
+            refreshRaf = null;
+          }
           events.forEach((eventName) => window.removeEventListener(eventName, handleDataRefresh));
         };
       }, []);
