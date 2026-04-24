@@ -5,7 +5,7 @@
     "sourceFingerprint": "986754fcdc81",
     "fileCount": 30,
     "size": 1485950,
-    "builtAt": "2026-04-24T00:37:22.764Z"
+    "builtAt": "2026-04-24T00:45:24.906Z"
   },
   "boot-calc": {
     "file": "boot-calc.bundle.6e0932082447.js",
@@ -13,7 +13,7 @@
     "sourceFingerprint": "f497c2f2f206",
     "fileCount": 19,
     "size": 1154767,
-    "builtAt": "2026-04-23T23:14:02.525Z"
+    "builtAt": "2026-04-24T00:45:25.073Z"
   },
   "boot-day": {
     "file": "boot-day.bundle.00665f67b8d3.js",
@@ -21,15 +21,15 @@
     "sourceFingerprint": "10597ed5367d",
     "fileCount": 54,
     "size": 1092520,
-    "builtAt": "2026-04-23T23:14:02.884Z"
+    "builtAt": "2026-04-24T00:45:25.224Z"
   },
   "boot-app": {
-    "file": "boot-app.bundle.7a93d05be8e2.js",
-    "hash": "7a93d05be8e2",
-    "sourceFingerprint": "89766f0688aa",
+    "file": "boot-app.bundle.82586075b4ba.js",
+    "hash": "82586075b4ba",
+    "sourceFingerprint": "0c32fe575e1e",
     "fileCount": 52,
-    "size": 1382051,
-    "builtAt": "2026-04-24T00:37:23.230Z"
+    "size": 1383081,
+    "builtAt": "2026-04-24T00:48:57.775Z"
   },
   "boot-init": {
     "file": "boot-init.bundle.42b73b15a6dc.js",
@@ -37,7 +37,7 @@
     "sourceFingerprint": "3f69a8cb10f1",
     "fileCount": 8,
     "size": 450061,
-    "builtAt": "2026-04-23T23:14:05.399Z"
+    "builtAt": "2026-04-24T00:45:25.620Z"
   },
   "postboot-1-game": {
     "file": "postboot-1-game.bundle.87f0608cc06c.js",
@@ -45,7 +45,7 @@
     "sourceFingerprint": "2eb120b532de",
     "fileCount": 31,
     "size": 1756624,
-    "builtAt": "2026-04-23T23:14:06.207Z"
+    "builtAt": "2026-04-24T00:45:25.922Z"
   },
   "postboot-2-insights": {
     "file": "postboot-2-insights.bundle.a6721643420e.js",
@@ -53,7 +53,7 @@
     "sourceFingerprint": "b52862e9d968",
     "fileCount": 39,
     "size": 1905865,
-    "builtAt": "2026-04-24T00:01:51.777Z"
+    "builtAt": "2026-04-24T00:45:26.106Z"
   },
   "postboot-3-ui": {
     "file": "postboot-3-ui.bundle.5f5a1c9ad408.js",
@@ -61,6 +61,6 @@
     "sourceFingerprint": "17567cde8921",
     "fileCount": 36,
     "size": 2344826,
-    "builtAt": "2026-04-24T00:01:52.393Z"
+    "builtAt": "2026-04-24T00:45:26.317Z"
   }
 }

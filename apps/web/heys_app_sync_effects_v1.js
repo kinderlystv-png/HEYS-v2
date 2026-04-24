@@ -2,6 +2,20 @@
 (function () {
     const HEYS = window.HEYS = window.HEYS || {};
 
+    function buildProductsFingerprint(list) {
+        if (!Array.isArray(list) || list.length === 0) return '0:0';
+        let hash = 2166136261 >>> 0;
+        for (let i = 0; i < list.length; i++) {
+            const p = list[i] || {};
+            const token = `${p.id || p.name || ''}|${p.updatedAt || ''}|${p.iron || ''}`;
+            for (let j = 0; j < token.length; j++) {
+                hash ^= token.charCodeAt(j);
+                hash = Math.imul(hash, 16777619) >>> 0;
+            }
+        }
+        return `${list.length}:${hash}`;
+    }
+
     const useSyncEffects = ({
         React,
         U,
@@ -117,18 +131,21 @@
                                 setProducts(prev => {
                                     const prevIron = Array.isArray(prev) ? prev.filter(p => p?.iron && +p.iron > 0).length : 0;
                                     const loadedIron = filteredProducts.filter(p => p?.iron && +p.iron > 0).length;
+                                    const prevFp = buildProductsFingerprint(prev);
+                                    const loadedFp = buildProductsFingerprint(filteredProducts);
 
                                     // 🔍 v4.8.7: DEBUG — какое состояние пытаемся обновить
                                     console.info(`[HEYS.sync] 🔍 setProducts callback: prev.length=${prev.length}, prevIron=${prevIron}, loadedIron=${loadedIron}`);
 
-                                    // Если качество одинаковое — не обновляем (оптимизация)
-                                    // Если качество разное — ВСЕГДА обновляем (42 Fe → 290 Fe)
-                                    if (Array.isArray(prev) && prev.length === filteredProducts.length && prevIron === loadedIron) {
-                                        console.info(`[HEYS.sync] 🚫 React state NOT updated (same quality)`);
+                                    // Если данные реально совпадают по содержимому — можно не трогать state.
+                                    // Одной проверки length/withIron недостаточно: другой клиент или другой набор
+                                    // может иметь те же метрики, из-за чего UI оставался на старой версии.
+                                    if (Array.isArray(prev) && prev.length === filteredProducts.length && prevIron === loadedIron && prevFp === loadedFp) {
+                                        console.info(`[HEYS.sync] 🚫 React state NOT updated (same fingerprint)`);
                                         return prev;
                                     }
 
-                                    console.info(`[HEYS.sync] 🔄 React state updated: ${prev.length}→${filteredProducts.length} products, ${prevIron}→${loadedIron} with iron`);
+                                    console.info(`[HEYS.sync] 🔄 React state updated: ${prev.length}→${filteredProducts.length} products, ${prevIron}→${loadedIron} with iron, fpChanged=${prevFp !== loadedFp}`);
                                     return filteredProducts;
                                 });
                             }
