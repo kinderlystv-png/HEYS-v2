@@ -9825,6 +9825,24 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                 doRender();
             } else {
                 console.info('[HEYS.init] ⏳ Waiting for main.css before React mount (skeleton stays visible)');
+                // Adaptive CSS gate timeout: short on fast networks (no regression),
+                // generous on slow networks (avoids "naked DOM" flashes — black circles, etc).
+                // Uses Network Information API where available, otherwise falls back to default.
+                var cssTimeoutMs = 4000;
+                try {
+                    var conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+                    if (conn && conn.effectiveType) {
+                        if (conn.effectiveType === 'slow-2g' || conn.effectiveType === '2g') {
+                            cssTimeoutMs = 15000;
+                        } else if (conn.effectiveType === '3g') {
+                            cssTimeoutMs = 10000;
+                        }
+                    }
+                    if (conn && conn.saveData === true) {
+                        cssTimeoutMs = Math.max(cssTimeoutMs, 8000);
+                    }
+                } catch (e) { /* Network Information API not supported — keep default */ }
+
                 var cssTimer = null;
                 var onCSS = function () {
                     clearTimeout(cssTimer);
@@ -9832,13 +9850,11 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                     doRender();
                 };
                 window.addEventListener('heysMainCSSLoaded', onCSS, { once: true });
-                // v9.9: Reduced from 10s to 3s — index.html has polling fallback,
-                // and CSS Gate #2 in DayTab was removed (no cumulative penalty)
                 cssTimer = setTimeout(function () {
                     window.removeEventListener('heysMainCSSLoaded', onCSS);
-                    console.warn('[HEYS.init] ⚠️ CSS timeout (3s) — mounting React without main.css');
+                    console.warn('[HEYS.init] ⚠️ CSS timeout (' + cssTimeoutMs + 'ms) — mounting React without main.css');
                     doRender();
-                }, 3000);
+                }, cssTimeoutMs);
             }
         }
 

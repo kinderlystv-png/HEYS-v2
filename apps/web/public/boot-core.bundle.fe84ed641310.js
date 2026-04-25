@@ -153,6 +153,17 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
   // Storage key для флагов
   const FLAGS_KEY = 'heys_feature_flags';
 
+  // γ.1: dispatch on flag change so subsystems (e.g. OverlayStore memo) can invalidate.
+  function _dispatchFlagChange(flagName, value) {
+    try {
+      if (typeof window !== 'undefined' && window.dispatchEvent) {
+        window.dispatchEvent(new CustomEvent('heys:flag-changed', {
+          detail: { name: flagName, value: !!value },
+        }));
+      }
+    } catch (_) { /* noop */ }
+  }
+
   // Значения по умолчанию для всех флагов
   const DEFAULT_FLAGS = {
     // === App Refactoring Flags ===
@@ -233,6 +244,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
       currentFlags[flagName] = true;
       saveFlags(currentFlags);
       devLog(`[FeatureFlags] Enabled: ${flagName}`);
+      _dispatchFlagChange(flagName, true);
     },
 
     /**
@@ -247,6 +259,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
       currentFlags[flagName] = false;
       saveFlags(currentFlags);
       devLog(`[FeatureFlags] Disabled: ${flagName}`);
+      _dispatchFlagChange(flagName, false);
     },
 
     /**
@@ -34459,12 +34472,49 @@ NOVA: 1-4
       if (HEYS.store && HEYS.store.set) {
         HEYS.store.set(STORE_KEY, rows);
         invalidateMergedView();
+        // γ.3: notify other tabs that overlay changed.
+        _broadcastOverlayWrite(rows.length);
         return true;
       }
     } catch (e) {
       console.warn('[OverlayStore] writeRaw failed:', e && e.message);
     }
     return false;
+  }
+
+  // γ.3: cross-tab overlay sync via BroadcastChannel (mirrors heys_day_updates pattern).
+  let _bc = null;
+  let _bcSendingTabId = null;
+  function _initBroadcastChannel() {
+    if (_bc !== null) return _bc;
+    try {
+      if (typeof global !== 'undefined' && 'BroadcastChannel' in global) {
+        _bcSendingTabId = (global.crypto && global.crypto.randomUUID)
+          ? global.crypto.randomUUID()
+          : (Date.now() + '-' + Math.random().toString(36).slice(2, 8));
+        _bc = new global.BroadcastChannel('heys_products_overlay_v2');
+        _bc.onmessage = (ev) => {
+          try {
+            if (!ev || !ev.data || ev.data.tabId === _bcSendingTabId) return;
+            if (ev.data.type === 'overlay-write') {
+              invalidateMergedView();
+            }
+          } catch (_) { /* noop */ }
+        };
+      }
+    } catch (e) {
+      console.warn('[OverlayStore] BroadcastChannel init failed (non-fatal):', e && e.message);
+      _bc = null;
+    }
+    return _bc;
+  }
+
+  function _broadcastOverlayWrite(rowCount) {
+    const ch = _initBroadcastChannel();
+    if (!ch) return;
+    try {
+      ch.postMessage({ type: 'overlay-write', tabId: _bcSendingTabId, rows: rowCount, ts: Date.now() });
+    } catch (_) { /* noop */ }
   }
 
   // ─────────────────────────────────────────────────────────────────────
@@ -34540,7 +34590,61 @@ NOVA: 1-4
     const view = toMergedView(sharedById);
     _mergedViewCache = view; // null is also cacheable — invalidate via heys:shared-products-updated
     _mergedViewSharedRef = sharedById;
+
+    // γ.2: write health metric on first successful merged read post-flip.
+    // Once per session — guarded by _healthWrittenThisSession.
+    if (view && view !== null && Array.isArray(view) && view.length > 0) {
+      _maybeWriteHealth(view);
+    }
+
     return view;
+  }
+
+  // γ.2: health metric + first-flip toast (once per session).
+  let _healthWrittenThisSession = false;
+  function _maybeWriteHealth(merged) {
+    if (_healthWrittenThisSession) return;
+    try {
+      const flagOn = HEYS.flags?.isEnabled?.('overlay_products_v2');
+      if (!flagOn) return; // health is for the overlay-canonical state
+      _healthWrittenThisSession = true;
+
+      const rows = readRaw();
+      const customCount = rows.filter(r => r && r._custom).length;
+      const linkedCount = rows.length - customCount;
+      const withIron = merged.filter(p => p && Number(p.iron) > 0).length;
+      const withCalcium = merged.filter(p => p && Number(p.calcium) > 0).length;
+      const withSodium = merged.filter(p => p && Number(p.sodium100) > 0).length;
+
+      const health = {
+        ts: Date.now(),
+        total: merged.length,
+        withIron,
+        withCalcium,
+        withSodium,
+        overlayRows: rows.length,
+        customRows: customCount,
+        sharedLinkedRows: linkedCount,
+        flagState: !!flagOn,
+      };
+      try {
+        global.localStorage.setItem('heys_overlay_health', JSON.stringify(health));
+      } catch (_) { /* noop */ }
+      console.info('[HEYS.products] overlay health', health);
+
+      // First-flip toast — show once per user per device.
+      const NOTIFIED_KEY = 'heys_overlay_user_notified';
+      if (global.localStorage.getItem(NOTIFIED_KEY) !== 'true') {
+        try {
+          if (HEYS.Toast?.success) {
+            HEYS.Toast.success('Данные нутриентов восстановлены — статистика iron/calcium теперь точнее.');
+          }
+          global.localStorage.setItem(NOTIFIED_KEY, 'true');
+        } catch (_) { /* noop */ }
+      }
+    } catch (e) {
+      console.warn('[HEYS.products] health write failed (non-fatal):', e && e.message);
+    }
   }
 
   // ─────────────────────────────────────────────────────────────────────
@@ -34598,18 +34702,60 @@ NOVA: 1-4
     return false;
   }
 
+  // Helper: build aux indexes for shared by fingerprint and normalized name.
+  // Used for fallback linking when local row lacks `shared_origin_id`.
+  let _sharedByFingerprintRef = null;
+  let _sharedByFingerprint = null;
+  let _sharedByNameRef = null;
+  let _sharedByName = null;
+  function _normalizeName(n) {
+    return String(n || '').toLowerCase().trim().replace(/\s+/g, ' ').replace(/ё/g, 'е');
+  }
+  function _getSharedAuxIndexes(sharedById) {
+    if (_sharedByFingerprintRef !== sharedById) {
+      const byFp = new Map();
+      const byName = new Map();
+      sharedById.forEach((sp) => {
+        if (!sp) return;
+        if (sp.fingerprint) byFp.set(String(sp.fingerprint), sp);
+        if (sp.name) byName.set(_normalizeName(sp.name), sp);
+      });
+      _sharedByFingerprint = byFp;
+      _sharedByName = byName;
+      _sharedByFingerprintRef = sharedById;
+      _sharedByNameRef = sharedById;
+    }
+    return { byFingerprint: _sharedByFingerprint, byName: _sharedByName };
+  }
+
   function migrate(flatArr, sharedById) {
     if (!Array.isArray(flatArr)) return { ok: false, reason: 'input-not-array' };
     if (!sharedById || sharedById.size === 0) {
       return { ok: false, reason: 'shared-cache-empty' };
     }
+    const aux = _getSharedAuxIndexes(sharedById);
     const out = [];
     let typeA = 0;
     let typeB = 0;
+    let typeAByFallback = 0; // linked to shared via fingerprint/name (no shared_origin_id in legacy)
     for (const p of flatArr) {
       if (!p || p.id == null) continue;
-      const sid = p.shared_origin_id ? String(p.shared_origin_id) : null;
-      const sharedRow = sid && sharedById.get(sid);
+      let sid = p.shared_origin_id ? String(p.shared_origin_id) : null;
+      let sharedRow = sid && sharedById.get(sid);
+
+      // Fallback linking: if no explicit shared_origin_id, try fingerprint then name match.
+      // This rescues legacy data that predates shared linkage.
+      if (!sharedRow) {
+        if (p.fingerprint) {
+          sharedRow = aux.byFingerprint.get(String(p.fingerprint));
+          if (sharedRow) { sid = String(sharedRow.id); typeAByFallback++; }
+        }
+        if (!sharedRow && p.name) {
+          sharedRow = aux.byName.get(_normalizeName(p.name));
+          if (sharedRow) { sid = String(sharedRow.id); typeAByFallback++; }
+        }
+      }
+
       if (sharedRow) {
         const overrides = {};
         for (const f of NUTRIENT_FIELDS) {
@@ -34652,7 +34798,7 @@ NOVA: 1-4
         typeB++;
       }
     }
-    return { ok: true, rows: out, typeA, typeB };
+    return { ok: true, rows: out, typeA, typeB, typeAByFallback };
   }
 
   // ─────────────────────────────────────────────────────────────────────
@@ -34705,8 +34851,19 @@ NOVA: 1-4
     try {
       global.addEventListener('heys:shared-products-updated', invalidateMergedView);
       global.addEventListener('heysSyncCompleted', invalidateMergedView);
+      // γ.1 kill-switch: when overlay flag toggles, invalidate memo so the next
+      // getAll() reads via the freshly-evaluated wrapper path (overlay vs legacy).
+      global.addEventListener('heys:flag-changed', (e) => {
+        if (e && e.detail && e.detail.name === 'overlay_products_v2') {
+          invalidateMergedView();
+        }
+      });
     } catch (_) { /* noop */ }
   }
+
+  // γ.3: init BroadcastChannel listener at module load so cross-tab invalidation
+  // works even before any local writeRaw() call.
+  _initBroadcastChannel();
 
   // ─────────────────────────────────────────────────────────────────────
   // Diagnostics surface — readable from devtools console.
@@ -34719,16 +34876,21 @@ NOVA: 1-4
     const legacyKey = `heys_${cid}_products`;
     const tryParse = (raw) => { try { return raw == null ? null : JSON.parse(raw); } catch (_) { return null; } };
     const legacyVal = tryParse(global.localStorage && global.localStorage.getItem(legacyKey));
+    const rows = readRaw();
+    const customCount = rows.filter(r => r && r._custom).length;
 
     const out = {
       flag_overlay_products_v2: HEYS.flags?.isEnabled?.('overlay_products_v2'),
       flag_dual_write_legacy: HEYS.flags?.isEnabled?.('dual_write_legacy'),
-      overlay_rows: readRaw().length,
+      overlay_rows: rows.length,
+      overlay_typeA: rows.length - customCount,
+      overlay_typeB_custom: customCount,
       legacy_len: Array.isArray(legacyVal) ? legacyVal.length : (typeof legacyVal === 'string' ? `<${legacyVal.length} chars>` : null),
       shared_cache_size: HEYS.cloud?.getSharedIndex?.()?.size ?? 0,
       health: tryParse(global.localStorage && global.localStorage.getItem('heys_overlay_health')),
       migrated_at: global.localStorage && global.localStorage.getItem('heys_overlay_migrated_at'),
       migration_status: global.localStorage && global.localStorage.getItem('heys_overlay_migration_status'),
+      migration_version: global.localStorage && global.localStorage.getItem('heys_overlay_migration_version'),
       migration_aborted: global.localStorage && global.localStorage.getItem('heys_overlay_migration_aborted'),
       perf_alpha: tryParse(global.localStorage && global.localStorage.getItem('heys_overlay_phase_alpha_perf')),
       cid,
@@ -34743,6 +34905,53 @@ NOVA: 1-4
     global.localStorage.removeItem('heys_overlay_migrated_at');
     global.localStorage.removeItem('heys_overlay_migration_status');
     console.info('[HEYS.diagnostics] Overlay migration markers cleared. Reload to retry.');
+  };
+
+  // γ.4: manual re-migration without page reload. Useful when shared base
+  // changed or after a one-shot upgrade to migrate() fallback logic. Reads
+  // current legacy via HEYS.products.getAll() (post-self-heal) and re-translates
+  // into overlay shape, capturing fingerprint/name fallback links to shared.
+  HEYS.diagnostics.relinkOverlay = function () {
+    const cloud = HEYS.cloud;
+    const sharedById = cloud && cloud.getSharedIndex && cloud.getSharedIndex();
+    if (!sharedById || sharedById.size === 0) {
+      console.warn('[HEYS.diagnostics] relinkOverlay: shared cache empty');
+      return null;
+    }
+    const Products = HEYS.products;
+    if (!Products || !Products.getAll) {
+      console.warn('[HEYS.diagnostics] relinkOverlay: HEYS.products unavailable');
+      return null;
+    }
+    // Source: post-self-heal merged view from legacy (NOT raw LS).
+    // We must temporarily disable overlay flag if on, to read legacy directly.
+    const flagWasOn = HEYS.flags?.isEnabled?.('overlay_products_v2');
+    if (flagWasOn) HEYS.flags.disable('overlay_products_v2');
+    let flat = null;
+    try {
+      flat = Products.getAll();
+    } finally {
+      if (flagWasOn) HEYS.flags.enable('overlay_products_v2');
+    }
+    if (!Array.isArray(flat)) {
+      console.warn('[HEYS.diagnostics] relinkOverlay: legacy getAll did not return array');
+      return null;
+    }
+    const result = migrate(flat, sharedById);
+    if (!result.ok) {
+      console.warn('[HEYS.diagnostics] relinkOverlay aborted:', result.reason);
+      return result;
+    }
+    writeRaw(result.rows);
+    invalidateMergedView();
+    _healthWrittenThisSession = false; // re-run health write on next read
+    console.info('[HEYS.diagnostics] relinkOverlay ok', {
+      typeA: result.typeA,
+      typeAByFallback: result.typeAByFallback,
+      typeB: result.typeB,
+      total: result.rows.length,
+    });
+    return result;
   };
 
   // ─────────────────────────────────────────────────────────────────────

@@ -16678,7 +16678,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             }) || null)
             : React.createElement('div', { className: 'deferred-card-slot deferred-card-slot--loading', style: { marginTop: 10 } },
                 React.createElement('div', {
-                    className: 'deferred-card-skeleton',
+                    className: 'deferred-card-skeleton deferred-card-skeleton--delayed',
                     style: { minHeight: '260px' }
                 },
                     React.createElement('div', { className: 'deferred-card-skeleton__shimmer' }),

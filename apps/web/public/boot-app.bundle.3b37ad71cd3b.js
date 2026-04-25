@@ -14549,15 +14549,23 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                 const cloud = window.HEYS.cloud;
                 if (!Overlay || !Products || !cloud) return;
 
-                // Idempotency: skip if migrated within last 7 days OR aborted recently.
+                // Idempotency: skip if migrated within last 7 days AND on current version,
+                // unless aborted (then aborted gate wins).
+                // CURRENT_MIGRATION_VERSION bumps when migrate() logic changes (e.g. fingerprint
+                // fallback added). On version mismatch we re-run regardless of TTL.
+                const CURRENT_MIGRATION_VERSION = 2; // v2: fingerprint/name fallback to shared
                 const ABORT_KEY = 'heys_overlay_migration_aborted';
                 const TS_KEY = 'heys_overlay_migrated_at';
                 const STATUS_KEY = 'heys_overlay_migration_status';
+                const VERSION_KEY = 'heys_overlay_migration_version';
                 const SEVEN_DAYS_MS = 7 * 86400 * 1000;
                 let migratedAt = 0;
+                let storedVersion = 0;
                 try { migratedAt = parseInt(localStorage.getItem(TS_KEY) || '0', 10) || 0; } catch (_) { /* noop */ }
+                try { storedVersion = parseInt(localStorage.getItem(VERSION_KEY) || '0', 10) || 0; } catch (_) { /* noop */ }
                 if (localStorage.getItem(ABORT_KEY) === 'true') return;
-                if (migratedAt > 0 && (Date.now() - migratedAt) < SEVEN_DAYS_MS) return;
+                const onCurrentVersion = storedVersion >= CURRENT_MIGRATION_VERSION;
+                if (onCurrentVersion && migratedAt > 0 && (Date.now() - migratedAt) < SEVEN_DAYS_MS) return;
 
                 // Get shared snapshot. If empty, defer until heys:shared-products-updated event.
                 const sharedById = cloud.getSharedIndex && cloud.getSharedIndex();
@@ -14637,10 +14645,13 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                 try {
                     localStorage.setItem(TS_KEY, String(Date.now()));
                     localStorage.setItem(STATUS_KEY, 'success');
+                    localStorage.setItem(VERSION_KEY, String(CURRENT_MIGRATION_VERSION));
                     localStorage.removeItem(ABORT_KEY);
                 } catch (_) { /* noop */ }
                 console.info('[HEYS.products] overlay migration ok', {
+                    version: CURRENT_MIGRATION_VERSION,
                     typeA: result.typeA,
+                    typeAByFallback: result.typeAByFallback || 0,
                     typeB: result.typeB,
                     total: result.rows.length,
                 });
@@ -21400,6 +21411,21 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
             return fallbackNode;
         };
 
+        const tabFallbackSkeleton = (icon, label, minHeight) => React.createElement('div',
+            { className: 'deferred-card-slot deferred-card-slot--loading', style: { padding: 16 } },
+            React.createElement('div',
+                {
+                    className: 'deferred-card-skeleton',
+                    style: { minHeight: (minHeight || 240) + 'px' }
+                },
+                React.createElement('div', { className: 'deferred-card-skeleton__shimmer' }),
+                React.createElement('div', { className: 'deferred-card-skeleton__content' },
+                    React.createElement('div', { className: 'deferred-card-skeleton__icon' }, icon),
+                    React.createElement('div', { className: 'deferred-card-skeleton__label' }, label)
+                )
+            )
+        );
+
         return React.createElement(
             'div',
             {
@@ -21450,10 +21476,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                                 optimum: null,
                                 selectedDate: selectedDate,
                             }))
-                            : renderTabFallback('insights', React.createElement('div', { style: { padding: 16 } },
-                                React.createElement('div', { className: 'skeleton-sparkline', style: { height: 160, marginBottom: 16 } }),
-                                React.createElement('div', { className: 'skeleton-block', style: { height: 100 } })
-                            )))
+                            : renderTabFallback('insights', tabFallbackSkeleton('🔮', 'Готовим инсайты…', 280)))
                         : tab === 'month'
                             ? (window.HEYS?.ReportsTab
                                 ? React.createElement(window.HEYS.ReportsTab, {
@@ -21462,10 +21485,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                                     setSelectedDate,
                                     clientId,
                                 })
-                                : renderTabFallback('month', React.createElement('div', { style: { padding: 16 } },
-                                    React.createElement('div', { className: 'skeleton-sparkline', style: { height: 160, marginBottom: 16 } }),
-                                    React.createElement('div', { className: 'skeleton-block', style: { height: 100 } })
-                                )))
+                                : renderTabFallback('month', tabFallbackSkeleton('📊', 'Готовим отчёты…', 280)))
                             : (tab === 'stats' || tab === 'diary')
                                 ? null
                                 : tab === 'user'
@@ -21484,10 +21504,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                                                 setTab,
                                                 setSelectedDate,
                                             })
-                                            : renderTabFallback('overview', React.createElement('div', { style: { padding: 16 } },
-                                                React.createElement('div', { className: 'skeleton-sparkline', style: { height: 80, marginBottom: 16 } }),
-                                                React.createElement('div', { className: 'skeleton-block', style: { height: 100 } })
-                                            )))
+                                            : renderTabFallback('overview', tabFallbackSkeleton('📋', 'Готовим обзор…', 200)))
                                         : tab === 'widgets'
                                             ? (window.HEYS && window.HEYS.Widgets && window.HEYS.Widgets.WidgetsTab
                                                 ? React.createElement(window.HEYS.Widgets.WidgetsTab, {
@@ -21501,10 +21518,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                                                     setTab,
                                                     setSelectedDate,
                                                 })
-                                                : renderTabFallback('widgets', React.createElement('div', { style: { padding: 16 } },
-                                                    React.createElement('div', { className: 'skeleton-sparkline', style: { height: 80, marginBottom: 16 } }),
-                                                    React.createElement('div', { className: 'skeleton-block', style: { height: 100 } })
-                                                )))
+                                                : renderTabFallback('widgets', tabFallbackSkeleton('🧩', 'Готовим виджеты…', 200)))
                                             : tab === 'tasks'
                                                 ? ((!cloudUser && clientId) && window.HEYS?.PlanningTab
                                                     ? React.createElement(window.HEYS.PlanningTab, {
@@ -21513,15 +21527,9 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                                                         defaultHomeScreen: defaultTasksSubtab,
                                                     })
                                                     : ((!cloudUser && clientId)
-                                                        ? renderTabFallback('tasks', React.createElement('div', { style: { padding: 16 } },
-                                                            React.createElement('div', { className: 'skeleton-header', style: { width: 150, marginBottom: 16 } }),
-                                                            React.createElement('div', { className: 'skeleton-block', style: { height: 200 } })
-                                                        ))
+                                                        ? renderTabFallback('tasks', tabFallbackSkeleton('✅', 'Готовим задачи…', 280))
                                                         : null))
-                                                : renderTabFallback('default_' + String(tab || 'unknown'), React.createElement('div', { style: { padding: 16 } },
-                                                    React.createElement('div', { className: 'skeleton-header', style: { width: 150, marginBottom: 16 } }),
-                                                    React.createElement('div', { className: 'skeleton-block', style: { height: 200 } })
-                                                ))
+                                                : renderTabFallback('default_' + String(tab || 'unknown'), tabFallbackSkeleton('📂', 'Готовим вкладку…', 280))
             )
         );
     }
@@ -25515,9 +25523,9 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
         const lastIncrementRef = React.useRef(0);
 
         React.useEffect(() => {
-            const handleCycleUpdate = (e) => {
-                const source = e.detail?.source;
-                const field = e.detail?.field;
+            const handleCycleUpdate = (detail) => {
+                const source = detail?.source;
+                const field = detail?.field;
 
                 // Обновляем календарь при: cycleDay changes ИЛИ cloud-sync/force-sync/merge
                 const isCycleUpdate = field === 'cycleDay' || (source && source.startsWith('cycle'));
@@ -25559,10 +25567,21 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                 }, 500); // 🛡️ v64: Увеличен с 300 до 500ms для лучшего debounce
             };
 
-            window.addEventListener('heys:day-updated', handleCycleUpdate);
+            // PERF NEW-1: миграция handleCycleUpdate на dispatcher next-frame lane.
+            // Calendar update уже debounced 500-800мс внутри — defer на frame дешёво.
+            // heysSyncCompleted остаётся на window (отдельный event, не часть dispatcher).
+            const dispatcher = window.HEYS?.events?.dayUpdated;
+            let unsubDayUpdated;
+            if (dispatcher && typeof dispatcher.subscribe === 'function') {
+                unsubDayUpdated = dispatcher.subscribe(handleCycleUpdate, { priority: 'next-frame' });
+            } else {
+                const wrap = (e) => handleCycleUpdate(e?.detail || {});
+                window.addEventListener('heys:day-updated', wrap);
+                unsubDayUpdated = () => window.removeEventListener('heys:day-updated', wrap);
+            }
             window.addEventListener('heysSyncCompleted', handleSyncComplete);
             return () => {
-                window.removeEventListener('heys:day-updated', handleCycleUpdate);
+                if (unsubDayUpdated) unsubDayUpdated();
                 window.removeEventListener('heysSyncCompleted', handleSyncComplete);
                 if (calendarDebounceRef.current) {
                     clearTimeout(calendarDebounceRef.current);
@@ -25847,9 +25866,9 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                 'cascade-batch'
             ];
 
-            const handleDayUpdate = (e) => {
-                const source = e.detail?.source;
-                const field = e.detail?.field;
+            const handleDayUpdate = (detail) => {
+                const source = detail?.source;
+                const field = detail?.field;
 
                 if (field === 'cycleDay') return;
                 if (source && IGNORED_SOURCES.includes(source)) {
@@ -25862,8 +25881,17 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                 setSyncVer((v) => v + 1);
             };
 
-            window.addEventListener('heys:day-updated', handleDayUpdate);
-            return () => window.removeEventListener('heys:day-updated', handleDayUpdate);
+            // PERF NEW-1: миграция на dispatcher next-frame lane.
+            // setSyncVer триггерит React tree re-render — defer на следующий кадр через
+            // dispatcher батчит несколько эвентов в один setSyncVer per frame, не блокируя текущий.
+            // Fallback на window event если dispatcher не загружен.
+            const dispatcher = window.HEYS?.events?.dayUpdated;
+            if (dispatcher && typeof dispatcher.subscribe === 'function') {
+                return dispatcher.subscribe(handleDayUpdate, { priority: 'next-frame' });
+            }
+            const wrap = (e) => handleDayUpdate(e?.detail || {});
+            window.addEventListener('heys:day-updated', wrap);
+            return () => window.removeEventListener('heys:day-updated', wrap);
         }, [setSyncVer]);
 
         React.useEffect(() => {

@@ -92,9 +92,9 @@
         const lastIncrementRef = React.useRef(0);
 
         React.useEffect(() => {
-            const handleCycleUpdate = (e) => {
-                const source = e.detail?.source;
-                const field = e.detail?.field;
+            const handleCycleUpdate = (detail) => {
+                const source = detail?.source;
+                const field = detail?.field;
 
                 // Обновляем календарь при: cycleDay changes ИЛИ cloud-sync/force-sync/merge
                 const isCycleUpdate = field === 'cycleDay' || (source && source.startsWith('cycle'));
@@ -136,10 +136,21 @@
                 }, 500); // 🛡️ v64: Увеличен с 300 до 500ms для лучшего debounce
             };
 
-            window.addEventListener('heys:day-updated', handleCycleUpdate);
+            // PERF NEW-1: миграция handleCycleUpdate на dispatcher next-frame lane.
+            // Calendar update уже debounced 500-800мс внутри — defer на frame дешёво.
+            // heysSyncCompleted остаётся на window (отдельный event, не часть dispatcher).
+            const dispatcher = window.HEYS?.events?.dayUpdated;
+            let unsubDayUpdated;
+            if (dispatcher && typeof dispatcher.subscribe === 'function') {
+                unsubDayUpdated = dispatcher.subscribe(handleCycleUpdate, { priority: 'next-frame' });
+            } else {
+                const wrap = (e) => handleCycleUpdate(e?.detail || {});
+                window.addEventListener('heys:day-updated', wrap);
+                unsubDayUpdated = () => window.removeEventListener('heys:day-updated', wrap);
+            }
             window.addEventListener('heysSyncCompleted', handleSyncComplete);
             return () => {
-                window.removeEventListener('heys:day-updated', handleCycleUpdate);
+                if (unsubDayUpdated) unsubDayUpdated();
                 window.removeEventListener('heysSyncCompleted', handleSyncComplete);
                 if (calendarDebounceRef.current) {
                     clearTimeout(calendarDebounceRef.current);

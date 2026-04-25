@@ -6705,10 +6705,10 @@
         setIsSyncLoading(false);
       };
 
-      const onDayUpdated = (event) => {
-        if (event?.detail?.batch) return;
-        if (event?.detail?.source === 'cascade-batch') return;
-        const evClientId = event?.detail?.clientId;
+      const onDayUpdated = (detail) => {
+        if (detail?.batch) return;
+        if (detail?.source === 'cascade-batch') return;
+        const evClientId = detail?.clientId;
         // heys:day-updated may not always carry clientId — refresh unconditionally if missing
         if (evClientId && clientId && evClientId !== clientId && !clientId.startsWith(evClientId)) return;
         if (dayRefreshTimer) clearTimeout(dayRefreshTimer);
@@ -6718,13 +6718,23 @@
         }, 100);
       };
 
+      // PERF NEW-1: миграция onDayUpdated на dispatcher next-frame lane.
+      // Refresh widgets уже debounced 100мс — defer на frame дешёво.
       window.addEventListener('heysSyncCompleted', onSyncCompleted);
-      window.addEventListener('heys:day-updated', onDayUpdated);
+      const dispatcher = window.HEYS?.events?.dayUpdated;
+      let unsubDayUpdated;
+      if (dispatcher && typeof dispatcher.subscribe === 'function') {
+        unsubDayUpdated = dispatcher.subscribe(onDayUpdated, { priority: 'next-frame' });
+      } else {
+        const wrap = (e) => onDayUpdated(e?.detail || {});
+        window.addEventListener('heys:day-updated', wrap);
+        unsubDayUpdated = () => window.removeEventListener('heys:day-updated', wrap);
+      }
 
       return () => {
         if (dayRefreshTimer) clearTimeout(dayRefreshTimer);
         window.removeEventListener('heysSyncCompleted', onSyncCompleted);
-        window.removeEventListener('heys:day-updated', onDayUpdated);
+        if (unsubDayUpdated) unsubDayUpdated();
       };
     }, [clientId]);
 

@@ -262,9 +262,9 @@
                 'cascade-batch'
             ];
 
-            const handleDayUpdate = (e) => {
-                const source = e.detail?.source;
-                const field = e.detail?.field;
+            const handleDayUpdate = (detail) => {
+                const source = detail?.source;
+                const field = detail?.field;
 
                 if (field === 'cycleDay') return;
                 if (source && IGNORED_SOURCES.includes(source)) {
@@ -277,8 +277,17 @@
                 setSyncVer((v) => v + 1);
             };
 
-            window.addEventListener('heys:day-updated', handleDayUpdate);
-            return () => window.removeEventListener('heys:day-updated', handleDayUpdate);
+            // PERF NEW-1: миграция на dispatcher next-frame lane.
+            // setSyncVer триггерит React tree re-render — defer на следующий кадр через
+            // dispatcher батчит несколько эвентов в один setSyncVer per frame, не блокируя текущий.
+            // Fallback на window event если dispatcher не загружен.
+            const dispatcher = window.HEYS?.events?.dayUpdated;
+            if (dispatcher && typeof dispatcher.subscribe === 'function') {
+                return dispatcher.subscribe(handleDayUpdate, { priority: 'next-frame' });
+            }
+            const wrap = (e) => handleDayUpdate(e?.detail || {});
+            window.addEventListener('heys:day-updated', wrap);
+            return () => window.removeEventListener('heys:day-updated', wrap);
         }, [setSyncVer]);
 
         React.useEffect(() => {

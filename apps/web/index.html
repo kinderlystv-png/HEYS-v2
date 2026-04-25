@@ -729,11 +729,11 @@
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
     <link rel="dns-prefetch" href="https://cdn.jsdelivr.net" />
     <!-- Preload критических boot-бандлов (2026-02-25 bundle migration) -->
-    <link rel="preload" href="boot-core.bundle.99dbfe0a7b18.js" as="script" />
+    <link rel="preload" href="boot-core.bundle.fe84ed641310.js" as="script" />
     <link rel="preload" href="boot-calc.bundle.d39a7be350c0.js" as="script" />
-    <link rel="preload" href="boot-day.bundle.266dec44c6e9.js" as="script" />
-    <link rel="preload" href="boot-app.bundle.cbe7f92e0567.js" as="script" />
-    <link rel="preload" href="boot-init.bundle.9a0f095c4098.js" as="script" />
+    <link rel="preload" href="boot-day.bundle.dbd22493fcec.js" as="script" />
+    <link rel="preload" href="boot-app.bundle.3b37ad71cd3b.js" as="script" />
+    <link rel="preload" href="boot-init.bundle.13d494a394c3.js" as="script" />
 
     <!-- React теперь бандлится локально через Vite (миграция с CDN 2026-01-21) -->
 
@@ -778,7 +778,8 @@
                 return;
             }
             // Polling fallback for dev mode or delayed CSS loading
-            var checks = 0, maxChecks = 15; // 15 × 200ms = 3s max
+            // (purely for logging — actual CSS gate is in heys_app_initialize_v1.js with adaptive timeout)
+            var checks = 0, maxChecks = 30; // 30 × 200ms = 6s max
             var timer = setInterval(function () {
                 checks++;
                 if (window.__heysMainCSSLoaded) { clearInterval(timer); return; }
@@ -798,7 +799,7 @@
                 }
                 if (checks >= maxChecks) {
                     clearInterval(timer);
-                    console.warn('[HEYS.css] ⚠️ main.css polling exhausted (3s) — onload will handle it');
+                    console.warn('[HEYS.css] ⚠️ main.css polling exhausted (6s) — onload will handle it');
                 }
             }, 200);
         })();
@@ -2832,11 +2833,11 @@
          Сгенерировано: node scripts/bundle-legacy.mjs  (pnpm bundle:legacy)
          Состав и хеши: bundle-manifest.json
          Хеш в имени = вечный кэш (cache-first SW). -->
-    <script defer src="boot-core.bundle.99dbfe0a7b18.js" fetchpriority="high"></script>
+    <script defer src="boot-core.bundle.fe84ed641310.js" fetchpriority="high"></script>
     <script defer src="boot-calc.bundle.d39a7be350c0.js"></script>
-    <script defer src="boot-day.bundle.266dec44c6e9.js"></script>
-    <script defer src="boot-app.bundle.cbe7f92e0567.js"></script>
-    <script defer src="boot-init.bundle.9a0f095c4098.js"
+    <script defer src="boot-day.bundle.dbd22493fcec.js"></script>
+    <script defer src="boot-app.bundle.3b37ad71cd3b.js"></script>
+    <script defer src="boot-init.bundle.13d494a394c3.js"
         onerror="window.__heysShowRecoveryUI && window.__heysShowRecoveryUI('CRITICAL_SCRIPT_LOAD: boot-init.bundle')"></script>
 
     <!-- PERF: Detect returning user (localStorage has profile) → skip card unfold animations -->
@@ -2867,7 +2868,7 @@
             var POST_BOOT_BUNDLES = [
                 'postboot-1-game.bundle.84d4da76641a.js',
                 'postboot-2-insights.bundle.fa0e6ac4bba4.js',
-                'postboot-3-ui.bundle.87e5a2b843fd.js'
+                'postboot-3-ui.bundle.080ef4a55e41.js'
             ];
             var LOCALHOST_TASKS_SOURCE_OVERRIDE = 'heys_planning_tasks_v1.js';
             var total = POST_BOOT_BUNDLES.length;
