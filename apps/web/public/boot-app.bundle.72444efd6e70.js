@@ -12609,16 +12609,17 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
 
                 const uploadInProgress = isRuntimeUploadInProgress();
                 const deadlock = isUserQueueBlockedWithoutClient();
+                const runtimePending = getRuntimePendingCount();
                 const syncActive = cloudStatusRef.current === 'syncing'
                     || uploadInProgress
                     || (syncProgressTotalRef.current > 0 && !deadlock);
 
-                if (syncingStartRef.current && syncActive) {
+                if (syncingStartRef.current && syncActive && (uploadInProgress || runtimePending > 0)) {
                     syncLockShownForCurrentSyncRef.current = true;
                     setShowSyncLockOverlay(true);
                 }
             }, getPinProxySyncOverlayDelaysMs().longSyncLockMs);
-        }, [isRuntimeUploadInProgress, showSyncLockOverlay]);
+        }, [getRuntimePendingCount, isRuntimeUploadInProgress, showSyncLockOverlay]);
 
         const armSlowInternetHint = useCallback(() => {
             if (slowInternetHintTimeoutRef.current || showSlowInternetHint) return;
@@ -12763,7 +12764,11 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                 setSyncProgress({ synced: 0, total: 0 });
                 if (cloudSyncTimeoutRef.current) clearTimeout(cloudSyncTimeoutRef.current);
                 cloudSyncTimeoutRef.current = setTimeout(() => {
-                    indLog('[HEYS.sync] [IND] cloudSyncTimeout fired → idle (pendingChanges=' + pendingChangesRef.current + ')');
+                    const runtimePending = getRuntimePendingCount();
+                    const uploadInProgress = isRuntimeUploadInProgress();
+                    indLog('[HEYS.sync] [IND] cloudSyncTimeout fired → idle (pendingChanges=' + pendingChangesRef.current + ' runtimePending=' + runtimePending + ' uploadInProgress=' + uploadInProgress + ')');
+                    if (pendingChangesRef.current && (runtimePending > 0 || uploadInProgress)) return;
+                    pendingChangesRef.current = false;
                     lastIdleAtRef.current = Date.now();
                     setCloudStatus('idle');
                 }, 2000);
@@ -12998,8 +13003,6 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                         ? getRuntimePendingDetails()
                         : createEmptyPendingDetails();
                     const uploadInProgress = isRuntimeUploadInProgress();
-                    setPendingCount(count);
-                    setPendingDetails(details);
 
                     const _pcSig = `${count}|${uploadInProgress}|${!!syncingStartRef.current}|${cloudStatusRef.current}`;
                     const _pcNow = Date.now();
@@ -13010,37 +13013,45 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                         indLog('[HEYS.sync] [IND] pending-change: count=' + count + ' upload=' + uploadInProgress + ' syncingStart=' + !!syncingStartRef.current + ' status=' + cloudStatusRef.current);
                     }
 
-                    if (count > 0) {
-                        ensureFallbackPendingActionItems(details);
-                        if (longSyncFallbackActiveRef.current) {
-                            setShowPendingSyncBanner(true);
-                        }
-                    } else {
-                        clearPendingActionItems();
-                        resetLongSyncFallback();
-                    }
+                    // Batch all setState calls into a single React render pass (React 17 doesn't
+                    // auto-batch outside event handlers — RAF is an external context).
+                    const _batchFn = window.ReactDOM?.unstable_batchedUpdates || ((fn) => fn());
+                    _batchFn(() => {
+                        setPendingCount(count);
+                        setPendingDetails(details);
 
-                    if (syncProgressTotalRef.current > 0 && count < syncProgressTotalRef.current) {
-                        setSyncProgress(prev => ({ ...prev, synced: prev.total - count }));
-                    }
-
-                    if (count > 0 && !navigator.onLine) {
-                        pendingChangesRef.current = true;
-                        setCloudStatus('offline');
-                    } else if (count > 0 && navigator.onLine) {
-                        pendingChangesRef.current = true;
-                        if (syncingStartRef.current) {
-                            // syncingStart уже активен — ничего делать не нужно, цикл уже запущен
-                        } else if (uploadInProgress || syncProgressTotalRef.current > 0) {
-                            if (cloudStatusRef.current !== 'syncing') {
-                                startSyncingState();
+                        if (count > 0) {
+                            ensureFallbackPendingActionItems(details);
+                            if (longSyncFallbackActiveRef.current) {
+                                setShowPendingSyncBanner(true);
                             }
                         } else {
-                            setCloudStatus('queued');
+                            clearPendingActionItems();
+                            resetLongSyncFallback();
                         }
-                    } else if (count === 0 && !uploadInProgress && !syncingStartRef.current && navigator.onLine && cloudStatusRef.current !== 'synced') {
-                        setCloudStatus('idle');
-                    }
+
+                        if (syncProgressTotalRef.current > 0 && count < syncProgressTotalRef.current) {
+                            setSyncProgress(prev => ({ ...prev, synced: prev.total - count }));
+                        }
+
+                        if (count > 0 && !navigator.onLine) {
+                            pendingChangesRef.current = true;
+                            setCloudStatus('offline');
+                        } else if (count > 0 && navigator.onLine) {
+                            pendingChangesRef.current = true;
+                            if (syncingStartRef.current) {
+                                // syncingStart уже активен — ничего делать не нужно, цикл уже запущен
+                            } else if (uploadInProgress || syncProgressTotalRef.current > 0) {
+                                if (cloudStatusRef.current !== 'syncing') {
+                                    startSyncingState();
+                                }
+                            } else {
+                                setCloudStatus('queued');
+                            }
+                        } else if (count === 0 && !uploadInProgress && !syncingStartRef.current && navigator.onLine && cloudStatusRef.current !== 'synced') {
+                            setCloudStatus('idle');
+                        }
+                    });
                 });
             };
 
@@ -13438,25 +13449,27 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                     && (hasPendingDelta || detailsTick % SYNC_STATUS_DETAILS_REFRESH_EVERY === 0);
 
                 detailsTick += 1;
-                if (shouldRefreshDetails || (runtimePending === 0 && pendingCountRef.current > 0)) {
-                    const nextDetails = runtimePending > 0
-                        ? getRuntimePendingDetails()
-                        : createEmptyPendingDetails();
-                    setPendingDetails(nextDetails);
-                }
-
+                const _tickBatch = window.ReactDOM?.unstable_batchedUpdates || ((fn) => fn());
                 if (!navigator.onLine) {
                     clearSyncLockOverlay();
                     clearSlowInternetHint();
-                    if (hasPendingDelta) setPendingCount(runtimePending);
-                    setCloudStatus('offline');
+                    _tickBatch(() => {
+                        if (hasPendingDelta) setPendingCount(runtimePending);
+                        setCloudStatus('offline');
+                    });
                     schedule(false);
                     return;
                 }
 
-                if (hasPendingDelta) {
-                    setPendingCount(runtimePending);
-                }
+                _tickBatch(() => {
+                    if (hasPendingDelta) setPendingCount(runtimePending);
+                    if (shouldRefreshDetails || (runtimePending === 0 && pendingCountRef.current > 0)) {
+                        const nextDetails = runtimePending > 0
+                            ? getRuntimePendingDetails()
+                            : createEmptyPendingDetails();
+                        setPendingDetails(nextDetails);
+                    }
+                });
 
                 if (runtimePending > 0 && !uploadInProgress && syncProgressTotalRef.current === 0) {
                     // Between RPC batches pending>0 while upload=false is normal — do not clear
@@ -14342,6 +14355,21 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
             subTab
         });
     }
+
+    // 🚀 PERF: Memoize DayTabWithCloudSync so it does NOT re-render when AppRoot re-renders
+    // due to sync indicator state changes (useCloudSyncStatus updates pendingCount, cloudStatus, etc.
+    // multiple times per second during sync). DayTab's relevant props (products, clientId,
+    // selectedDate, subTab) are now signature-stable after the prof/products stabilization fixes.
+    // Without memo, every sync event triggers full DayTab tree reconciliation (~300ms).
+    DayTabWithCloudSync = React.memo(DayTabWithCloudSync, function dayTabPropsEqual(prev, next) {
+        if (prev.clientId !== next.clientId) return false;
+        if (prev.selectedDate !== next.selectedDate) return false;
+        if (prev.subTab !== next.subTab) return false;
+        // products ref is stabilized by signature in useProductsContext — ref equality is safe
+        if (prev.products !== next.products) return false;
+        // setSelectedDate from useState is stable; no check needed
+        return true;
+    });
 
     // Skeleton для Ration/Products
     function RationSkeleton() {
@@ -21670,6 +21698,24 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
         return viewportWidth <= 900 && (hasCoarsePointer || hasTouchPoints);
     }
 
+    // iOS has a native keyboard dismiss button (▼) in the keyboard toolbar — no need for ours.
+    function isIOSDevice() {
+        if (typeof navigator === 'undefined' || typeof window === 'undefined') return false;
+        return /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+            (navigator.platform === 'MacIntel' && Number(navigator.maxTouchPoints) > 1);
+    }
+
+    // Returns true only when the software keyboard is actually open (visualViewport shrinks).
+    function isKeyboardActuallyVisible() {
+        if (typeof window === 'undefined') return false;
+        const vp = window.visualViewport;
+        if (!vp) return false;
+        const layoutHeight = Math.round(window.innerHeight || 0);
+        const viewportHeight = Math.round(vp.height || layoutHeight);
+        const viewportOffsetTop = Math.round(vp.offsetTop || 0);
+        return (layoutHeight - viewportHeight - viewportOffsetTop) > 80;
+    }
+
     function getBottomTabsOccupiedPx() {
         if (typeof document === 'undefined') return 0;
 
@@ -21751,7 +21797,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
             root.style.setProperty(KEYBOARD_DISMISS_BOTTOM_VAR, `${offsets.bottom}px`);
             root.style.setProperty(KEYBOARD_DISMISS_RIGHT_VAR, `${offsets.right}px`);
 
-            const shouldShow = Boolean(activeEditable) && isMobileKeyboardContext();
+            const shouldShow = Boolean(activeEditable) && isMobileKeyboardContext() && !isIOSDevice() && isKeyboardActuallyVisible();
             setShowKeyboardDismiss((prev) => (prev === shouldShow ? prev : shouldShow));
         }, []);
 

@@ -36,6 +36,7 @@
     "dev": "cross-env PORT=3001 turbo run dev --concurrency=15",
     "dev:api": "node -r dotenv/config packages/core/src/server.js dotenv_config_path=.env.development.local",
     "dev:landing": "cross-env PORT=3003 pnpm --filter='@heys/landing' run dev",
+    "dev:local": "concurrently -k -n \"api,web\" --prefix-colors \"cyan,green\" \"cross-env PORT=4001 API_PORT=4001 DATABASE_NAME=projectB NODE_ENV=development node packages/core/src/server.js\" \"cross-env PORT=3001 pnpm --filter='@heys/web' run dev\"",
     "dev:web": "cross-env PORT=3001 pnpm --filter='@heys/web' run dev",
     "dev:web:full": "concurrently -k -n web,iw \"pnpm --filter='@heys/web' run dev\" \"pnpm --filter='@heys/web' run dev:iw-config\"",
     "docker:build": "docker build -t heys:latest .",

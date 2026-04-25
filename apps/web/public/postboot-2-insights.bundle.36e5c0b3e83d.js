@@ -15781,7 +15781,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         }
 
         // 2. Sync current week to cloud (if enabled)
-        if (CLOUD_SYNC_CONFIG.ENABLED && currentWeekSnapshot && typeof HEYS?.YandexAPI?.rpc === 'function') {
+        // PIN auth clients have no user session — upsert_weekly_snapshot_by_session requires full auth
+        if (CLOUD_SYNC_CONFIG.ENABLED && currentWeekSnapshot && typeof HEYS?.YandexAPI?.rpc === 'function' && !HEYS.cloud?.isPinAuthClient?.()) {
             try {
                 // Helper function: validate token content (not just existence)
                 const isValidToken = (token) => {

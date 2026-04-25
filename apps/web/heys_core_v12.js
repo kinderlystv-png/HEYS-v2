@@ -4895,6 +4895,11 @@
       if (/^heys_(clients|client_current|session_token)$/i.test(k)) return k;
       // 3) если клиента нет — работаем как есть
       if (!cid) return k;
+      // 3.5) если ключ уже client-scoped — не добавляем clientId повторно.
+      // Часть Day flow передаёт сюда уже готовые ключи вида
+      // heys_{clientId}_dayv2_YYYY-MM-DD; повторный namespace пишет день в
+      // heys_{clientId}_{clientId}_dayv2_..., из-за чего refresh читает старый день.
+      if (String(k).includes(cid)) return k;
       // 4) все остальные наши ключи префиксуем
       if (/^(heys_|day_)/i.test(k)) {
         return k.replace(/^(heys_|day_)/i, (m) => m + cid + '_');

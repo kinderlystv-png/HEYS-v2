@@ -51,6 +51,24 @@
         return viewportWidth <= 900 && (hasCoarsePointer || hasTouchPoints);
     }
 
+    // iOS has a native keyboard dismiss button (▼) in the keyboard toolbar — no need for ours.
+    function isIOSDevice() {
+        if (typeof navigator === 'undefined' || typeof window === 'undefined') return false;
+        return /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+            (navigator.platform === 'MacIntel' && Number(navigator.maxTouchPoints) > 1);
+    }
+
+    // Returns true only when the software keyboard is actually open (visualViewport shrinks).
+    function isKeyboardActuallyVisible() {
+        if (typeof window === 'undefined') return false;
+        const vp = window.visualViewport;
+        if (!vp) return false;
+        const layoutHeight = Math.round(window.innerHeight || 0);
+        const viewportHeight = Math.round(vp.height || layoutHeight);
+        const viewportOffsetTop = Math.round(vp.offsetTop || 0);
+        return (layoutHeight - viewportHeight - viewportOffsetTop) > 80;
+    }
+
     function getBottomTabsOccupiedPx() {
         if (typeof document === 'undefined') return 0;
 
@@ -132,7 +150,7 @@
             root.style.setProperty(KEYBOARD_DISMISS_BOTTOM_VAR, `${offsets.bottom}px`);
             root.style.setProperty(KEYBOARD_DISMISS_RIGHT_VAR, `${offsets.right}px`);
 
-            const shouldShow = Boolean(activeEditable) && isMobileKeyboardContext();
+            const shouldShow = Boolean(activeEditable) && isMobileKeyboardContext() && !isIOSDevice() && isKeyboardActuallyVisible();
             setShowKeyboardDismiss((prev) => (prev === shouldShow ? prev : shouldShow));
         }, []);
 

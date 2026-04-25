@@ -7,6 +7,7 @@
         const {
             React,
             HEYSRef,
+            renderStatsBlock = true,
             // actions deps
             openExclusivePopup,
             haptic,
@@ -221,12 +222,14 @@
             }
         };
 
-        const statsBlock = HEYSLocal.dayStats?.render?.({
-            React,
-            vm: statsVm,
-            actions: statsActions,
-            data: statsData
-        }) || React.createElement('div', { style: { padding: '12px' } }, '⚠️ Stats module not loaded');
+        const statsBlock = renderStatsBlock
+            ? (HEYSLocal.dayStats?.render?.({
+                React,
+                vm: statsVm,
+                actions: statsActions,
+                data: statsData
+            }) || React.createElement('div', { style: { padding: '12px' } }, '⚠️ Stats module not loaded'))
+            : null;
 
         const mealsChart = HEYSLocal.dayMealsChartUI?.renderMealsChart?.({
             React,

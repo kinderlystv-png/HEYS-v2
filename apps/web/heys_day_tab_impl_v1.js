@@ -322,7 +322,13 @@
         }
 
         // prodSig/pIndex/debug now handled by dayProductsContext
-        const prof = getProfile();
+        // 🚀 PERF: Stabilize prof — getProfile() creates a new object on every call.
+        // Without memoization every AppRoot re-render (caused by sync indicator state updates)
+        // triggers sparklineData + computeCaloricBalance recompute → 300-400ms violations.
+        // We read key scalar fields once (cheap), build a stable signature string, and only
+        // recompute prof when the profile is actually changed by the user.
+        const _profSig = (() => { const r = U.lsGet('heys_profile', {}) || {}; return String(r.sex || r.gender || '') + '|' + (+r.height || 0) + '|' + (+r.weight || 0) + '|' + (r.birthDate || r.age || 0) + '|' + (+r.deficitPctTarget || 0) + '|' + (r.pal || r.activityLevel || r.activity || '') + '|' + (+r.weightGoal || 0); })();
+        const prof = React.useMemo(() => getProfile(), [_profSig]); // eslint-disable-line react-hooks/exhaustive-deps
         // date приходит из props (selectedDate из App header)
         const date = selectedDate || todayISO();
         const setDate = setSelectedDate;
@@ -358,6 +364,7 @@
         // 'diary' — дневник питания (суточные итоги, приёмы пищи)
         // Теперь subTab приходит из props (из нижнего меню App)
         const mobileSubTab = props.subTab || 'stats';
+        const showStatsContent = !isMobile || mobileSubTab === 'stats';
 
         // === СВАЙП ДЛЯ ПОД-ВКЛАДОК УБРАН ===
         // Теперь свайп между stats/diary обрабатывается глобально в App
@@ -1167,28 +1174,32 @@
 
         // Компактные тренировки в SaaS стиле (вынесено в модуль)
         // 🚀 PERF R7: memoize — only rebuild on training data changes
-        const trainingsBlock = useMemo(() => HEYS.dayTrainings?.renderTrainingsBlock?.({
-            haptic,
-            setDay,
-            setVisibleTrainings,
-            visibleTrainings,
-            householdActivities,
-            openTrainingPicker,
-            showZoneFormula,
-            openHouseholdPicker,
-            showHouseholdFormula,
-            trainingTypes,
-            TR,
-            kcalMin,
-            kcalPerMin,
-            weight,
-            r0,
-            dateKey: date
-        }) || null, [visibleTrainings, householdActivities, trainingTypes, weight, kcalMin, TR, date]);
+        const trainingsBlock = useMemo(() => {
+            if (!showStatsContent) return null;
+            return HEYS.dayTrainings?.renderTrainingsBlock?.({
+                haptic,
+                setDay,
+                setVisibleTrainings,
+                visibleTrainings,
+                householdActivities,
+                openTrainingPicker,
+                showZoneFormula,
+                openHouseholdPicker,
+                showHouseholdFormula,
+                trainingTypes,
+                TR,
+                kcalMin,
+                kcalPerMin,
+                weight,
+                r0,
+                dateKey: date
+            }) || null;
+        }, [showStatsContent, visibleTrainings, householdActivities, trainingTypes, weight, kcalMin, TR, date]);
 
         // Сводка тренировок за 30 дней (чтение из localStorage по префиксу дня)
-        const monthTrainingsRows = useMemo(() => (
-            HEYS.dayActivity?.collectMonthTrainingRows?.({
+        const monthTrainingsRows = useMemo(() => {
+            if (!showStatsContent) return [];
+            return HEYS.dayActivity?.collectMonthTrainingRows?.({
                 lsGet,
                 kcalMin,
                 trainingTypes,
@@ -1197,8 +1208,8 @@
                 todayISO,
                 parseISO,
                 fmtDate
-            }) || []
-        ), [lsGet, kcalMin, trainingTypes, r0, day?.date, day?.updatedAt, day?.trainings]);
+            }) || [];
+        }, [showStatsContent, lsGet, kcalMin, trainingTypes, r0, day?.date, day?.updatedAt, day?.trainings]);
 
         const readMaDayForActivityCalendar = React.useCallback((dk) => {
             // Logical key heys_dayv2_* — HEYS.utils.lsGet applies client scope via nsKey (do not pass heys_<cid>_dayv2_* or key doubles).
@@ -1215,6 +1226,7 @@
         }, [lsGet, date, day?.updatedAt]);
 
         const morningActivationCalendarBlock = useMemo(() => {
+            if (!showStatsContent) return null;
             const Cal = HEYS.morningActivationCalendar?.MorningActivationHabitCalendar;
             if (!Cal || !date) return null;
             return React.createElement(Cal, {
@@ -1223,34 +1235,37 @@
                 headingTitle: '⚡ Календарь зарядки',
                 layoutClass: 'ma-habit-cal--activity'
             });
-        }, [date, readMaDayForActivityCalendar, day?.updatedAt]);
+        }, [showStatsContent, date, readMaDayForActivityCalendar, day?.updatedAt]);
 
         // Компактный блок сна и оценки дня в SaaS стиле (две плашки в розовом контейнере)
         // 🚀 PERF R7: memoize sideBlock — skip on popup/animation/water changes
-        const sideBlock = useMemo(() => HEYS.daySideBlock?.renderSideBlock?.({
-            React,
-            day,
-            date,
-            sleepH,
-            getYesterdayData,
-            getCompareArrow,
-            getScoreEmoji,
-            getScoreGradient,
-            getScoreTextColor,
-            dayScoreValues,
-            setPendingDayScore,
-            setShowDayScorePicker,
-            setDay,
-            calculateDayAverages,
-            openSleepQualityPicker,
-            measurementsNeedUpdate,
-            openMeasurementsEditor,
-            measurementsByField,
-            measurementsHistory,
-            measurementsMonthlyProgress,
-            measurementsLastDateFormatted,
-            renderMeasurementSpark
-        }) || null, [day?.sleepHours, day?.sleepQuality, day?.moodAvg, day?.wellbeingAvg, day?.stressAvg, day?.dayScore, day?.dayScoreManual, date, sleepH, measurementsNeedUpdate, measurementsLastDateFormatted]);
+        const sideBlock = useMemo(() => {
+            if (!showStatsContent) return null;
+            return HEYS.daySideBlock?.renderSideBlock?.({
+                React,
+                day,
+                date,
+                sleepH,
+                getYesterdayData,
+                getCompareArrow,
+                getScoreEmoji,
+                getScoreGradient,
+                getScoreTextColor,
+                dayScoreValues,
+                setPendingDayScore,
+                setShowDayScorePicker,
+                setDay,
+                calculateDayAverages,
+                openSleepQualityPicker,
+                measurementsNeedUpdate,
+                openMeasurementsEditor,
+                measurementsByField,
+                measurementsHistory,
+                measurementsMonthlyProgress,
+                measurementsLastDateFormatted,
+                renderMeasurementSpark
+            }) || null;
+        }, [showStatsContent, day?.sleepHours, day?.sleepQuality, day?.moodAvg, day?.wellbeingAvg, day?.stressAvg, day?.dayScore, day?.dayScoreManual, date, sleepH, measurementsNeedUpdate, measurementsLastDateFormatted]);
 
         // === Cycle state (extracted) ===
         if (!HEYS.dayCycleState?.useCycleState) {
@@ -1268,16 +1283,18 @@
             clearCycleDay
         } = cycleState;
 
-        const cycleCard = HEYS.dayCycleCard?.renderCycleCard?.({
-            React,
-            showCycleCard,
-            cyclePhase,
-            cycleEditMode,
-            setCycleEditMode,
-            day,
-            saveCycleDay,
-            clearCycleDay
-        }) || null;
+        const cycleCard = showStatsContent
+            ? (HEYS.dayCycleCard?.renderCycleCard?.({
+                React,
+                showCycleCard,
+                cyclePhase,
+                cycleEditMode,
+                setCycleEditMode,
+                day,
+                saveCycleDay,
+                clearCycleDay
+            }) || null)
+            : null;
 
         // compareBlock удалён по требованию
 
@@ -1344,7 +1361,7 @@
             getDailyNutrientColor,
             getDailyNutrientTooltip,
             HEYS: window.HEYS
-        }) || {}, [day, pIndex, optimum]);
+        }) || {}, [day?.meals, day?.savedEatenKcal, day?.savedEatenProt, day?.savedEatenCarbs, day?.savedEatenFat, day?.savedEatenFiber, pIndex, optimum]);
         const {
             dayTot = { kcal: 0, carbs: 0, simple: 0, complex: 0, prot: 0, fat: 0, bad: 0, good: 0, trans: 0, fiber: 0, gi: 0, harm: 0 },
             normPerc = {},
@@ -1526,6 +1543,7 @@
         const { weightTrend, monthForecast, weightSparklineData, cycleHistoryAnalysis } =
             HEYS.dayWeightTrends?.computeWeightTrends?.({
                 React,
+                isEnabled: showStatsContent,
                 date,
                 day,
                 chartPeriod,
@@ -1593,6 +1611,7 @@
             M,
             getMealType,
             getMealQualityScore,
+            includeWeeklyInsights: showStatsContent,
             HEYS: window.HEYS
         }) || {};
         // === Caloric display state (extracted) ===
@@ -1721,6 +1740,7 @@
         const statsBlockResult = HEYS.dayStatsBlock.buildStatsBlock({
             React,
             HEYSRef: window.HEYS,
+            renderStatsBlock: showStatsContent,
             openExclusivePopup,
             haptic,
             setDay,
@@ -1834,30 +1854,33 @@
         }
         // 🚀 PERF R7: memoize waterCard — only rebuild on water-related state changes.
         // Skips rebuild on popup/animation/mood/sleep changes.
-        const waterCard = useMemo(() => HEYS.dayWaterCard.buildWaterCard({
-            React,
-            day,
-            prof,
-            waterGoal,
-            waterGoalBreakdown,
-            waterPresets,
-            waterMotivation,
-            waterLastDrink,
-            waterAddedAnim,
-            showWaterDrop,
-            showWaterTooltip,
-            setDay,
-            haptic,
-            setWaterAddedAnim,
-            setShowWaterDrop,
-            setShowWaterTooltip,
-            handleWaterRingDown,
-            handleWaterRingUp,
-            handleWaterRingLeave,
-            openExclusivePopup,
-            addWater,
-            removeWater
-        }), [day?.waterMl, day?.date, waterGoal, waterGoalBreakdown, waterMotivation, waterLastDrink, waterAddedAnim, showWaterDrop, showWaterTooltip]);
+        const waterCard = useMemo(() => {
+            if (!showStatsContent) return null;
+            return HEYS.dayWaterCard.buildWaterCard({
+                React,
+                day,
+                prof,
+                waterGoal,
+                waterGoalBreakdown,
+                waterPresets,
+                waterMotivation,
+                waterLastDrink,
+                waterAddedAnim,
+                showWaterDrop,
+                showWaterTooltip,
+                setDay,
+                haptic,
+                setWaterAddedAnim,
+                setShowWaterDrop,
+                setShowWaterTooltip,
+                handleWaterRingDown,
+                handleWaterRingUp,
+                handleWaterRingLeave,
+                openExclusivePopup,
+                addWater,
+                removeWater
+            });
+        }, [showStatsContent, day?.waterMl, day?.date, waterGoal, waterGoalBreakdown, waterMotivation, waterLastDrink, waterAddedAnim, showWaterDrop, showWaterTooltip]);
 
         // === COMPACT ACTIVITY INPUT ===
         if (!HEYS.dayStepsUI?.useStepsState) {
@@ -1885,43 +1908,46 @@
         }
         // 🚀 PERF R7: memoize compactActivity — only rebuild on activity/energy changes.
         // Skips rebuild on popup/animation/water/mood changes.
-        const compactActivity = useMemo(() => HEYS.dayActivityCard.buildActivityCard({
-            React,
-            day,
-            prof,
-            stepsValue,
-            stepsGoal,
-            stepsPercent,
-            stepsColor,
-            stepsK,
-            bmr,
-            householdK,
-            totalHouseholdMin,
-            householdActivities,
-            train1k,
-            train2k,
-            visibleTrainings,
-            trainingsBlock,
-            ndteData,
-            ndteBoostKcal,
-            tefData,
-            tefKcal,
-            dayTargetDef,
-            displayOptimum,
-            tdee,
-            caloricDebt,
-            monthTrainingsRows,
-            morningActivationCalendarBlock,
-            r0,
-            setDay,
-            haptic,
-            setMetricPopup,
-            setTefInfoPopup,
-            openStepsGoalPicker,
-            handleStepsDrag,
-            openHouseholdPicker,
-            openTrainingPicker
-        }), [stepsValue, stepsGoal, stepsPercent, stepsColor, stepsK, bmr, householdK, totalHouseholdMin, train1k, train2k, visibleTrainings, trainingsBlock, monthTrainingsRows, morningActivationCalendarBlock, ndteBoostKcal, tefKcal, dayTargetDef, displayOptimum, tdee, caloricDebt, day?.isRefeedDay]);
+        const compactActivity = useMemo(() => {
+            if (!showStatsContent) return null;
+            return HEYS.dayActivityCard.buildActivityCard({
+                React,
+                day,
+                prof,
+                stepsValue,
+                stepsGoal,
+                stepsPercent,
+                stepsColor,
+                stepsK,
+                bmr,
+                householdK,
+                totalHouseholdMin,
+                householdActivities,
+                train1k,
+                train2k,
+                visibleTrainings,
+                trainingsBlock,
+                ndteData,
+                ndteBoostKcal,
+                tefData,
+                tefKcal,
+                dayTargetDef,
+                displayOptimum,
+                tdee,
+                caloricDebt,
+                monthTrainingsRows,
+                morningActivationCalendarBlock,
+                r0,
+                setDay,
+                haptic,
+                setMetricPopup,
+                setTefInfoPopup,
+                openStepsGoalPicker,
+                handleStepsDrag,
+                openHouseholdPicker,
+                openTrainingPicker
+            });
+        }, [showStatsContent, stepsValue, stepsGoal, stepsPercent, stepsColor, stepsK, bmr, householdK, totalHouseholdMin, train1k, train2k, visibleTrainings, trainingsBlock, monthTrainingsRows, morningActivationCalendarBlock, ndteBoostKcal, tefKcal, dayTargetDef, displayOptimum, tdee, caloricDebt, day?.isRefeedDay]);
 
         if (!HEYS.dayTabRender?.renderDayTabLayout) {
             throw new Error('[heys_day_v12] HEYS.dayTabRender not loaded before heys_day_v12.js');

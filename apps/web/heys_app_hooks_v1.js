@@ -994,16 +994,17 @@
 
                 const uploadInProgress = isRuntimeUploadInProgress();
                 const deadlock = isUserQueueBlockedWithoutClient();
+                const runtimePending = getRuntimePendingCount();
                 const syncActive = cloudStatusRef.current === 'syncing'
                     || uploadInProgress
                     || (syncProgressTotalRef.current > 0 && !deadlock);
 
-                if (syncingStartRef.current && syncActive) {
+                if (syncingStartRef.current && syncActive && (uploadInProgress || runtimePending > 0)) {
                     syncLockShownForCurrentSyncRef.current = true;
                     setShowSyncLockOverlay(true);
                 }
             }, getPinProxySyncOverlayDelaysMs().longSyncLockMs);
-        }, [isRuntimeUploadInProgress, showSyncLockOverlay]);
+        }, [getRuntimePendingCount, isRuntimeUploadInProgress, showSyncLockOverlay]);
 
         const armSlowInternetHint = useCallback(() => {
             if (slowInternetHintTimeoutRef.current || showSlowInternetHint) return;
@@ -1148,7 +1149,11 @@
                 setSyncProgress({ synced: 0, total: 0 });
                 if (cloudSyncTimeoutRef.current) clearTimeout(cloudSyncTimeoutRef.current);
                 cloudSyncTimeoutRef.current = setTimeout(() => {
-                    indLog('[HEYS.sync] [IND] cloudSyncTimeout fired → idle (pendingChanges=' + pendingChangesRef.current + ')');
+                    const runtimePending = getRuntimePendingCount();
+                    const uploadInProgress = isRuntimeUploadInProgress();
+                    indLog('[HEYS.sync] [IND] cloudSyncTimeout fired → idle (pendingChanges=' + pendingChangesRef.current + ' runtimePending=' + runtimePending + ' uploadInProgress=' + uploadInProgress + ')');
+                    if (pendingChangesRef.current && (runtimePending > 0 || uploadInProgress)) return;
+                    pendingChangesRef.current = false;
                     lastIdleAtRef.current = Date.now();
                     setCloudStatus('idle');
                 }, 2000);
@@ -1383,8 +1388,6 @@
                         ? getRuntimePendingDetails()
                         : createEmptyPendingDetails();
                     const uploadInProgress = isRuntimeUploadInProgress();
-                    setPendingCount(count);
-                    setPendingDetails(details);
 
                     const _pcSig = `${count}|${uploadInProgress}|${!!syncingStartRef.current}|${cloudStatusRef.current}`;
                     const _pcNow = Date.now();
@@ -1395,37 +1398,45 @@
                         indLog('[HEYS.sync] [IND] pending-change: count=' + count + ' upload=' + uploadInProgress + ' syncingStart=' + !!syncingStartRef.current + ' status=' + cloudStatusRef.current);
                     }
 
-                    if (count > 0) {
-                        ensureFallbackPendingActionItems(details);
-                        if (longSyncFallbackActiveRef.current) {
-                            setShowPendingSyncBanner(true);
-                        }
-                    } else {
-                        clearPendingActionItems();
-                        resetLongSyncFallback();
-                    }
+                    // Batch all setState calls into a single React render pass (React 17 doesn't
+                    // auto-batch outside event handlers — RAF is an external context).
+                    const _batchFn = window.ReactDOM?.unstable_batchedUpdates || ((fn) => fn());
+                    _batchFn(() => {
+                        setPendingCount(count);
+                        setPendingDetails(details);
 
-                    if (syncProgressTotalRef.current > 0 && count < syncProgressTotalRef.current) {
-                        setSyncProgress(prev => ({ ...prev, synced: prev.total - count }));
-                    }
-
-                    if (count > 0 && !navigator.onLine) {
-                        pendingChangesRef.current = true;
-                        setCloudStatus('offline');
-                    } else if (count > 0 && navigator.onLine) {
-                        pendingChangesRef.current = true;
-                        if (syncingStartRef.current) {
-                            // syncingStart уже активен — ничего делать не нужно, цикл уже запущен
-                        } else if (uploadInProgress || syncProgressTotalRef.current > 0) {
-                            if (cloudStatusRef.current !== 'syncing') {
-                                startSyncingState();
+                        if (count > 0) {
+                            ensureFallbackPendingActionItems(details);
+                            if (longSyncFallbackActiveRef.current) {
+                                setShowPendingSyncBanner(true);
                             }
                         } else {
-                            setCloudStatus('queued');
+                            clearPendingActionItems();
+                            resetLongSyncFallback();
                         }
-                    } else if (count === 0 && !uploadInProgress && !syncingStartRef.current && navigator.onLine && cloudStatusRef.current !== 'synced') {
-                        setCloudStatus('idle');
-                    }
+
+                        if (syncProgressTotalRef.current > 0 && count < syncProgressTotalRef.current) {
+                            setSyncProgress(prev => ({ ...prev, synced: prev.total - count }));
+                        }
+
+                        if (count > 0 && !navigator.onLine) {
+                            pendingChangesRef.current = true;
+                            setCloudStatus('offline');
+                        } else if (count > 0 && navigator.onLine) {
+                            pendingChangesRef.current = true;
+                            if (syncingStartRef.current) {
+                                // syncingStart уже активен — ничего делать не нужно, цикл уже запущен
+                            } else if (uploadInProgress || syncProgressTotalRef.current > 0) {
+                                if (cloudStatusRef.current !== 'syncing') {
+                                    startSyncingState();
+                                }
+                            } else {
+                                setCloudStatus('queued');
+                            }
+                        } else if (count === 0 && !uploadInProgress && !syncingStartRef.current && navigator.onLine && cloudStatusRef.current !== 'synced') {
+                            setCloudStatus('idle');
+                        }
+                    });
                 });
             };
 
@@ -1823,25 +1834,27 @@
                     && (hasPendingDelta || detailsTick % SYNC_STATUS_DETAILS_REFRESH_EVERY === 0);
 
                 detailsTick += 1;
-                if (shouldRefreshDetails || (runtimePending === 0 && pendingCountRef.current > 0)) {
-                    const nextDetails = runtimePending > 0
-                        ? getRuntimePendingDetails()
-                        : createEmptyPendingDetails();
-                    setPendingDetails(nextDetails);
-                }
-
+                const _tickBatch = window.ReactDOM?.unstable_batchedUpdates || ((fn) => fn());
                 if (!navigator.onLine) {
                     clearSyncLockOverlay();
                     clearSlowInternetHint();
-                    if (hasPendingDelta) setPendingCount(runtimePending);
-                    setCloudStatus('offline');
+                    _tickBatch(() => {
+                        if (hasPendingDelta) setPendingCount(runtimePending);
+                        setCloudStatus('offline');
+                    });
                     schedule(false);
                     return;
                 }
 
-                if (hasPendingDelta) {
-                    setPendingCount(runtimePending);
-                }
+                _tickBatch(() => {
+                    if (hasPendingDelta) setPendingCount(runtimePending);
+                    if (shouldRefreshDetails || (runtimePending === 0 && pendingCountRef.current > 0)) {
+                        const nextDetails = runtimePending > 0
+                            ? getRuntimePendingDetails()
+                            : createEmptyPendingDetails();
+                        setPendingDetails(nextDetails);
+                    }
+                });
 
                 if (runtimePending > 0 && !uploadInProgress && syncProgressTotalRef.current === 0) {
                     // Between RPC batches pending>0 while upload=false is normal — do not clear

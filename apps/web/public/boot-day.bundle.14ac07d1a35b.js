@@ -4202,8 +4202,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
             // 🔧 FIX: savedEatenKcal only when there are meal lines (avoid stale kcal after clearing diary)
             const hasAnyMealItems = (dayData.meals || []).some((m) => Array.isArray(m?.items) && m.items.length > 0);
             const fallbackKcal = hasAnyMealItems && +dayData.savedEatenKcal > 0
-                ? +dayData.savedEatenKcal
-                : fallbackTotalKcal;
+              ? +dayData.savedEatenKcal
+              : fallbackTotalKcal;
             return {
               date: dateStr,
               kcal: fallbackKcal,
@@ -4309,7 +4309,6 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
       day?.isFastingDay,
       day?.isIncomplete,
       day?.savedDisplayOptimum,
-      day?.updatedAt,
       sparklineRefreshKey
     ]);
 
@@ -6284,6 +6283,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
       M,
       getMealType,
       getMealQualityScore,
+      includeWeeklyInsights = true,
       HEYS: heysGlobal
     } = ctx || {};
 
@@ -6309,6 +6309,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
 
     // Тренд калорий за последние N дней (среднее превышение/дефицит)
     const kcalTrend = React.useMemo(() => {
+      if (!includeWeeklyInsights) return null;
       if (!sparklineData || sparklineData.length < 3 || !optimum || optimum <= 0) return null;
 
       try {
@@ -6346,11 +6347,12 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
       } catch (e) {
         return null;
       }
-    }, [sparklineData, optimum]);
+    }, [includeWeeklyInsights, sparklineData, optimum]);
 
     // === BALANCE VIZ — Мини-график баланса за неделю ===
     // Визуализация для карточки "Инсайты недели"
     const balanceViz = React.useMemo(() => {
+      if (!includeWeeklyInsights) return null;
       // Если нет caloricDebt — создаём базовую визуализацию из текущего дня
       const dayBreakdown = caloricDebt?.dayBreakdown || [];
 
@@ -6647,10 +6649,11 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
         daysCount: dayBreakdown.length,
         severityTone        // mild/warning/critical
       };
-    }, [caloricDebt, eatenKcal, optimum, safeDay.trainings, safeDay.meals, pIndex, prof]);
+    }, [includeWeeklyInsights, caloricDebt, eatenKcal, optimum, safeDay.trainings, safeDay.meals, pIndex, prof]);
 
     // Данные для heatmap текущей недели (пн-вс)
     const weekHeatmapData = React.useMemo(() => {
+      if (!includeWeeklyInsights) return null;
       if (!date || !fmtDate) {
         return {
           days: [],
@@ -6946,7 +6949,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
       } catch (e) { }
 
       return { days, inNorm, withData, streak, weekendPattern, avgRatioPct, totalEaten, totalBurned, avgTargetDeficit, todayExcluded };
-    }, [date, optimum, pIndex, safeProducts, prof, eatenKcal, safeDay.updatedAt, safeDay.isRefeedDay]);
+    }, [includeWeeklyInsights, date, optimum, pIndex, safeProducts, prof, eatenKcal, safeDay.updatedAt, safeDay.isRefeedDay]);
 
     // === Мини-график калорий по приёмам ===
     const mealsChartData = React.useMemo(() => {
@@ -10927,6 +10930,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
   HEYS.dayWeightTrends.computeWeightTrends = function computeWeightTrends(ctx) {
     const {
       React,
+      isEnabled = true,
       date,
       day,
       chartPeriod,
@@ -10939,6 +10943,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
     const H = heysCtx || HEYS;
 
     const weightTrend = React.useMemo(() => {
+      if (!isEnabled) return null;
       try {
         const today = new Date(date);
         const weights = [];
@@ -10960,7 +10965,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
             if (raw) {
               dayData = raw.startsWith('¤Z¤') ? JSON.parse(raw.substring(3)) : JSON.parse(raw);
             }
-          } catch (e) {}
+          } catch (e) { }
 
           if (dayData && dayData.weightMorning != null && dayData.weightMorning !== '' && dayData.weightMorning !== 0) {
             const cycleDayValue = dayData.cycleDay || null;
@@ -11033,9 +11038,10 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
       } catch (e) {
         return null;
       }
-    }, [date, day?.weightMorning, day?.cycleDay]);
+    }, [isEnabled, date, day?.weightMorning, day?.cycleDay]);
 
     const monthForecast = React.useMemo(() => {
+      if (!isEnabled) return null;
       if (!weightTrend || weightTrend.slope === undefined) return null;
 
       const monthChange = weightTrend.slope * 30;
@@ -11048,9 +11054,10 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
         text: '~' + sign + format + ' кг/мес',
         direction: monthChange < 0 ? 'down' : monthChange > 0 ? 'up' : 'same'
       };
-    }, [weightTrend]);
+    }, [isEnabled, weightTrend]);
 
     const weightSparklineData = React.useMemo(() => {
+      if (!isEnabled) return [];
       try {
         const realToday = new Date(date + 'T12:00:00');
         const realTodayStr = date;
@@ -11086,7 +11093,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
                 trainingTypes
               };
             }
-          } catch (e) {}
+          } catch (e) { }
           return null;
         };
 
@@ -11216,9 +11223,10 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
       } catch (e) {
         return [];
       }
-    }, [date, day?.weightMorning, day?.cycleDay, chartPeriod, prof?.weightGoal]);
+    }, [isEnabled, date, day?.weightMorning, day?.cycleDay, chartPeriod, prof?.weightGoal]);
 
     const cycleHistoryAnalysis = React.useMemo(() => {
+      if (!isEnabled) return null;
       if (!day?.cycleDay) return null;
 
       try {
@@ -11242,7 +11250,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
       } catch (e) {
         return null;
       }
-    }, [day?.cycleDay]);
+    }, [isEnabled, day?.cycleDay]);
 
     return { weightTrend, monthForecast, weightSparklineData, cycleHistoryAnalysis };
   };
@@ -14717,6 +14725,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         const {
             React,
             HEYSRef,
+            renderStatsBlock = true,
             // actions deps
             openExclusivePopup,
             haptic,
@@ -14931,12 +14940,14 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             }
         };
 
-        const statsBlock = HEYSLocal.dayStats?.render?.({
-            React,
-            vm: statsVm,
-            actions: statsActions,
-            data: statsData
-        }) || React.createElement('div', { style: { padding: '12px' } }, '⚠️ Stats module not loaded');
+        const statsBlock = renderStatsBlock
+            ? (HEYSLocal.dayStats?.render?.({
+                React,
+                vm: statsVm,
+                actions: statsActions,
+                data: statsData
+            }) || React.createElement('div', { style: { padding: '12px' } }, '⚠️ Stats module not loaded'))
+            : null;
 
         const mealsChart = HEYSLocal.dayMealsChartUI?.renderMealsChart?.({
             React,
@@ -15854,22 +15865,33 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             return () => window.removeEventListener('heys:local-product-updated', handleLocalProductUpdated);
         }, [ctx]);
 
-        const products = React.useMemo(() => {
-            // 🔧 FIX: Если есть override от event — используем его (самые свежие данные)
-            if (localProductsOverride && localProductsOverride.length > 0) {
-                return localProductsOverride;
-            }
+        // 🚀 PERF: Compute candidate array first, then stabilize by signature.
+        // When AppRoot re-renders due to sync indicator state changes, setProducts() may have been
+        // called with a new array reference containing identical data (hot-sync refreshes same
+        // 364 products). Without stabilization sparklineData recomputes on every sync event (~333ms).
+        // Strategy: compute signature of candidate → if identical to previous, keep old stable ref.
+        const _candidateProducts = React.useMemo(() => {
+            if (localProductsOverride && localProductsOverride.length > 0) return localProductsOverride;
             if (safePropsProducts.length > 0) return safePropsProducts;
-            // Fallback: берём из глобального хранилища
             const fromStore = ctx.products?.getAll?.() || [];
             if (Array.isArray(fromStore) && fromStore.length > 0) return fromStore;
-            // Последний fallback: из localStorage напрямую
             const U = ctx.utils || {};
             const lsData = U.lsGet?.('heys_products', []) || [];
             return Array.isArray(lsData) ? lsData : [];
-        }, [safePropsProducts, localProductsOverride]); // 🔧 FIX: добавлена зависимость от localProductsOverride
+        }, [safePropsProducts, localProductsOverride]);
 
-        const prodSig = React.useMemo(() => productsSignature(products), [products]);
+        const _candidateSig = React.useMemo(() => productsSignature(_candidateProducts), [_candidateProducts]);
+
+        // Stable ref: only updates when content actually changes (sig differs)
+        const _stableProductsRef = React.useRef(_candidateProducts);
+        const _stableSigRef = React.useRef(_candidateSig);
+        if (_candidateSig !== _stableSigRef.current) {
+            _stableProductsRef.current = _candidateProducts;
+            _stableSigRef.current = _candidateSig;
+        }
+        const products = _stableProductsRef.current;
+
+        const prodSig = _candidateSig;
         const pIndex = React.useMemo(() => buildProductIndex(products), [prodSig]);
 
         // Debug info (minimal)
@@ -17135,7 +17157,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             t.harm = gSum ? harmSum / gSum : 0;
             return t;
         }
-        const totals = mTotals(meal);
+        const totals = React.useMemo(() => mTotals(meal), [meal, pIndex]);
         const manualType = meal.mealType;
         const autoTypeInfo = getMealType(mealIndex, meal, allMeals, pIndex);
         const mealTypeInfo = manualType && U.MEAL_TYPES && U.MEAL_TYPES[manualType]
@@ -17159,16 +17181,15 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
             const mealTimeMin = mealHour * 60 + mealMinute;
 
-            const mealTotals = M.mealTotals ? M.mealTotals(meal, pIndex) : { kcal: 0 };
             return HEYS.InsulinWave.calculateActivityContext({
                 mealTimeMin,
-                mealKcal: mealTotals.kcal || 0,
+                mealKcal: totals.kcal || 0,
                 trainings: dayData?.trainings || [],
                 householdMin: dayData.householdMin || 0,
                 steps: dayData.steps || 0,
                 allMeals: allMeals,
             });
-        }, [meal?.time, meal?.items, dayData?.trainings, dayData?.householdMin, dayData?.steps, allMeals, pIndex]);
+        }, [meal?.time, meal?.items, dayData?.trainings, dayData?.householdMin, dayData?.steps, allMeals, totals?.kcal]);
 
         const mealQuality = React.useMemo(() => {
             if (!meal?.items || meal.items.length === 0) return null;
@@ -18885,7 +18906,10 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         if (prevProps.mealIndex !== nextProps.mealIndex) return false;
         if (prevProps.displayIndex !== nextProps.displayIndex) return false;
         if (prevProps.isExpanded !== nextProps.isExpanded) return false;
-        if (prevProps.allMeals !== nextProps.allMeals) return false;
+        if (prevProps.dayData?.steps !== nextProps.dayData?.steps) return false;
+        if (prevProps.dayData?.householdMin !== nextProps.dayData?.householdMin) return false;
+        if (prevProps.dayData?.trainings !== nextProps.dayData?.trainings) return false;
+        if (prevProps.optimum !== nextProps.optimum) return false;
         return true;
     });
 
@@ -21186,7 +21210,13 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         }
 
         // prodSig/pIndex/debug now handled by dayProductsContext
-        const prof = getProfile();
+        // 🚀 PERF: Stabilize prof — getProfile() creates a new object on every call.
+        // Without memoization every AppRoot re-render (caused by sync indicator state updates)
+        // triggers sparklineData + computeCaloricBalance recompute → 300-400ms violations.
+        // We read key scalar fields once (cheap), build a stable signature string, and only
+        // recompute prof when the profile is actually changed by the user.
+        const _profSig = (() => { const r = U.lsGet('heys_profile', {}) || {}; return String(r.sex || r.gender || '') + '|' + (+r.height || 0) + '|' + (+r.weight || 0) + '|' + (r.birthDate || r.age || 0) + '|' + (+r.deficitPctTarget || 0) + '|' + (r.pal || r.activityLevel || r.activity || '') + '|' + (+r.weightGoal || 0); })();
+        const prof = React.useMemo(() => getProfile(), [_profSig]); // eslint-disable-line react-hooks/exhaustive-deps
         // date приходит из props (selectedDate из App header)
         const date = selectedDate || todayISO();
         const setDate = setSelectedDate;
@@ -21222,6 +21252,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         // 'diary' — дневник питания (суточные итоги, приёмы пищи)
         // Теперь subTab приходит из props (из нижнего меню App)
         const mobileSubTab = props.subTab || 'stats';
+        const showStatsContent = !isMobile || mobileSubTab === 'stats';
 
         // === СВАЙП ДЛЯ ПОД-ВКЛАДОК УБРАН ===
         // Теперь свайп между stats/diary обрабатывается глобально в App
@@ -22031,28 +22062,32 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
         // Компактные тренировки в SaaS стиле (вынесено в модуль)
         // 🚀 PERF R7: memoize — only rebuild on training data changes
-        const trainingsBlock = useMemo(() => HEYS.dayTrainings?.renderTrainingsBlock?.({
-            haptic,
-            setDay,
-            setVisibleTrainings,
-            visibleTrainings,
-            householdActivities,
-            openTrainingPicker,
-            showZoneFormula,
-            openHouseholdPicker,
-            showHouseholdFormula,
-            trainingTypes,
-            TR,
-            kcalMin,
-            kcalPerMin,
-            weight,
-            r0,
-            dateKey: date
-        }) || null, [visibleTrainings, householdActivities, trainingTypes, weight, kcalMin, TR, date]);
+        const trainingsBlock = useMemo(() => {
+            if (!showStatsContent) return null;
+            return HEYS.dayTrainings?.renderTrainingsBlock?.({
+                haptic,
+                setDay,
+                setVisibleTrainings,
+                visibleTrainings,
+                householdActivities,
+                openTrainingPicker,
+                showZoneFormula,
+                openHouseholdPicker,
+                showHouseholdFormula,
+                trainingTypes,
+                TR,
+                kcalMin,
+                kcalPerMin,
+                weight,
+                r0,
+                dateKey: date
+            }) || null;
+        }, [showStatsContent, visibleTrainings, householdActivities, trainingTypes, weight, kcalMin, TR, date]);
 
         // Сводка тренировок за 30 дней (чтение из localStorage по префиксу дня)
-        const monthTrainingsRows = useMemo(() => (
-            HEYS.dayActivity?.collectMonthTrainingRows?.({
+        const monthTrainingsRows = useMemo(() => {
+            if (!showStatsContent) return [];
+            return HEYS.dayActivity?.collectMonthTrainingRows?.({
                 lsGet,
                 kcalMin,
                 trainingTypes,
@@ -22061,8 +22096,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                 todayISO,
                 parseISO,
                 fmtDate
-            }) || []
-        ), [lsGet, kcalMin, trainingTypes, r0, day?.date, day?.updatedAt, day?.trainings]);
+            }) || [];
+        }, [showStatsContent, lsGet, kcalMin, trainingTypes, r0, day?.date, day?.updatedAt, day?.trainings]);
 
         const readMaDayForActivityCalendar = React.useCallback((dk) => {
             // Logical key heys_dayv2_* — HEYS.utils.lsGet applies client scope via nsKey (do not pass heys_<cid>_dayv2_* or key doubles).
@@ -22079,6 +22114,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         }, [lsGet, date, day?.updatedAt]);
 
         const morningActivationCalendarBlock = useMemo(() => {
+            if (!showStatsContent) return null;
             const Cal = HEYS.morningActivationCalendar?.MorningActivationHabitCalendar;
             if (!Cal || !date) return null;
             return React.createElement(Cal, {
@@ -22087,34 +22123,37 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                 headingTitle: '⚡ Календарь зарядки',
                 layoutClass: 'ma-habit-cal--activity'
             });
-        }, [date, readMaDayForActivityCalendar, day?.updatedAt]);
+        }, [showStatsContent, date, readMaDayForActivityCalendar, day?.updatedAt]);
 
         // Компактный блок сна и оценки дня в SaaS стиле (две плашки в розовом контейнере)
         // 🚀 PERF R7: memoize sideBlock — skip on popup/animation/water changes
-        const sideBlock = useMemo(() => HEYS.daySideBlock?.renderSideBlock?.({
-            React,
-            day,
-            date,
-            sleepH,
-            getYesterdayData,
-            getCompareArrow,
-            getScoreEmoji,
-            getScoreGradient,
-            getScoreTextColor,
-            dayScoreValues,
-            setPendingDayScore,
-            setShowDayScorePicker,
-            setDay,
-            calculateDayAverages,
-            openSleepQualityPicker,
-            measurementsNeedUpdate,
-            openMeasurementsEditor,
-            measurementsByField,
-            measurementsHistory,
-            measurementsMonthlyProgress,
-            measurementsLastDateFormatted,
-            renderMeasurementSpark
-        }) || null, [day?.sleepHours, day?.sleepQuality, day?.moodAvg, day?.wellbeingAvg, day?.stressAvg, day?.dayScore, day?.dayScoreManual, date, sleepH, measurementsNeedUpdate, measurementsLastDateFormatted]);
+        const sideBlock = useMemo(() => {
+            if (!showStatsContent) return null;
+            return HEYS.daySideBlock?.renderSideBlock?.({
+                React,
+                day,
+                date,
+                sleepH,
+                getYesterdayData,
+                getCompareArrow,
+                getScoreEmoji,
+                getScoreGradient,
+                getScoreTextColor,
+                dayScoreValues,
+                setPendingDayScore,
+                setShowDayScorePicker,
+                setDay,
+                calculateDayAverages,
+                openSleepQualityPicker,
+                measurementsNeedUpdate,
+                openMeasurementsEditor,
+                measurementsByField,
+                measurementsHistory,
+                measurementsMonthlyProgress,
+                measurementsLastDateFormatted,
+                renderMeasurementSpark
+            }) || null;
+        }, [showStatsContent, day?.sleepHours, day?.sleepQuality, day?.moodAvg, day?.wellbeingAvg, day?.stressAvg, day?.dayScore, day?.dayScoreManual, date, sleepH, measurementsNeedUpdate, measurementsLastDateFormatted]);
 
         // === Cycle state (extracted) ===
         if (!HEYS.dayCycleState?.useCycleState) {
@@ -22132,16 +22171,18 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             clearCycleDay
         } = cycleState;
 
-        const cycleCard = HEYS.dayCycleCard?.renderCycleCard?.({
-            React,
-            showCycleCard,
-            cyclePhase,
-            cycleEditMode,
-            setCycleEditMode,
-            day,
-            saveCycleDay,
-            clearCycleDay
-        }) || null;
+        const cycleCard = showStatsContent
+            ? (HEYS.dayCycleCard?.renderCycleCard?.({
+                React,
+                showCycleCard,
+                cyclePhase,
+                cycleEditMode,
+                setCycleEditMode,
+                day,
+                saveCycleDay,
+                clearCycleDay
+            }) || null)
+            : null;
 
         // compareBlock удалён по требованию
 
@@ -22208,7 +22249,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             getDailyNutrientColor,
             getDailyNutrientTooltip,
             HEYS: window.HEYS
-        }) || {}, [day, pIndex, optimum]);
+        }) || {}, [day?.meals, day?.savedEatenKcal, day?.savedEatenProt, day?.savedEatenCarbs, day?.savedEatenFat, day?.savedEatenFiber, pIndex, optimum]);
         const {
             dayTot = { kcal: 0, carbs: 0, simple: 0, complex: 0, prot: 0, fat: 0, bad: 0, good: 0, trans: 0, fiber: 0, gi: 0, harm: 0 },
             normPerc = {},
@@ -22390,6 +22431,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         const { weightTrend, monthForecast, weightSparklineData, cycleHistoryAnalysis } =
             HEYS.dayWeightTrends?.computeWeightTrends?.({
                 React,
+                isEnabled: showStatsContent,
                 date,
                 day,
                 chartPeriod,
@@ -22457,6 +22499,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             M,
             getMealType,
             getMealQualityScore,
+            includeWeeklyInsights: showStatsContent,
             HEYS: window.HEYS
         }) || {};
         // === Caloric display state (extracted) ===
@@ -22585,6 +22628,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         const statsBlockResult = HEYS.dayStatsBlock.buildStatsBlock({
             React,
             HEYSRef: window.HEYS,
+            renderStatsBlock: showStatsContent,
             openExclusivePopup,
             haptic,
             setDay,
@@ -22698,30 +22742,33 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         }
         // 🚀 PERF R7: memoize waterCard — only rebuild on water-related state changes.
         // Skips rebuild on popup/animation/mood/sleep changes.
-        const waterCard = useMemo(() => HEYS.dayWaterCard.buildWaterCard({
-            React,
-            day,
-            prof,
-            waterGoal,
-            waterGoalBreakdown,
-            waterPresets,
-            waterMotivation,
-            waterLastDrink,
-            waterAddedAnim,
-            showWaterDrop,
-            showWaterTooltip,
-            setDay,
-            haptic,
-            setWaterAddedAnim,
-            setShowWaterDrop,
-            setShowWaterTooltip,
-            handleWaterRingDown,
-            handleWaterRingUp,
-            handleWaterRingLeave,
-            openExclusivePopup,
-            addWater,
-            removeWater
-        }), [day?.waterMl, day?.date, waterGoal, waterGoalBreakdown, waterMotivation, waterLastDrink, waterAddedAnim, showWaterDrop, showWaterTooltip]);
+        const waterCard = useMemo(() => {
+            if (!showStatsContent) return null;
+            return HEYS.dayWaterCard.buildWaterCard({
+                React,
+                day,
+                prof,
+                waterGoal,
+                waterGoalBreakdown,
+                waterPresets,
+                waterMotivation,
+                waterLastDrink,
+                waterAddedAnim,
+                showWaterDrop,
+                showWaterTooltip,
+                setDay,
+                haptic,
+                setWaterAddedAnim,
+                setShowWaterDrop,
+                setShowWaterTooltip,
+                handleWaterRingDown,
+                handleWaterRingUp,
+                handleWaterRingLeave,
+                openExclusivePopup,
+                addWater,
+                removeWater
+            });
+        }, [showStatsContent, day?.waterMl, day?.date, waterGoal, waterGoalBreakdown, waterMotivation, waterLastDrink, waterAddedAnim, showWaterDrop, showWaterTooltip]);
 
         // === COMPACT ACTIVITY INPUT ===
         if (!HEYS.dayStepsUI?.useStepsState) {
@@ -22749,43 +22796,46 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         }
         // 🚀 PERF R7: memoize compactActivity — only rebuild on activity/energy changes.
         // Skips rebuild on popup/animation/water/mood changes.
-        const compactActivity = useMemo(() => HEYS.dayActivityCard.buildActivityCard({
-            React,
-            day,
-            prof,
-            stepsValue,
-            stepsGoal,
-            stepsPercent,
-            stepsColor,
-            stepsK,
-            bmr,
-            householdK,
-            totalHouseholdMin,
-            householdActivities,
-            train1k,
-            train2k,
-            visibleTrainings,
-            trainingsBlock,
-            ndteData,
-            ndteBoostKcal,
-            tefData,
-            tefKcal,
-            dayTargetDef,
-            displayOptimum,
-            tdee,
-            caloricDebt,
-            monthTrainingsRows,
-            morningActivationCalendarBlock,
-            r0,
-            setDay,
-            haptic,
-            setMetricPopup,
-            setTefInfoPopup,
-            openStepsGoalPicker,
-            handleStepsDrag,
-            openHouseholdPicker,
-            openTrainingPicker
-        }), [stepsValue, stepsGoal, stepsPercent, stepsColor, stepsK, bmr, householdK, totalHouseholdMin, train1k, train2k, visibleTrainings, trainingsBlock, monthTrainingsRows, morningActivationCalendarBlock, ndteBoostKcal, tefKcal, dayTargetDef, displayOptimum, tdee, caloricDebt, day?.isRefeedDay]);
+        const compactActivity = useMemo(() => {
+            if (!showStatsContent) return null;
+            return HEYS.dayActivityCard.buildActivityCard({
+                React,
+                day,
+                prof,
+                stepsValue,
+                stepsGoal,
+                stepsPercent,
+                stepsColor,
+                stepsK,
+                bmr,
+                householdK,
+                totalHouseholdMin,
+                householdActivities,
+                train1k,
+                train2k,
+                visibleTrainings,
+                trainingsBlock,
+                ndteData,
+                ndteBoostKcal,
+                tefData,
+                tefKcal,
+                dayTargetDef,
+                displayOptimum,
+                tdee,
+                caloricDebt,
+                monthTrainingsRows,
+                morningActivationCalendarBlock,
+                r0,
+                setDay,
+                haptic,
+                setMetricPopup,
+                setTefInfoPopup,
+                openStepsGoalPicker,
+                handleStepsDrag,
+                openHouseholdPicker,
+                openTrainingPicker
+            });
+        }, [showStatsContent, stepsValue, stepsGoal, stepsPercent, stepsColor, stepsK, bmr, householdK, totalHouseholdMin, train1k, train2k, visibleTrainings, trainingsBlock, monthTrainingsRows, morningActivationCalendarBlock, ndteBoostKcal, tefKcal, dayTargetDef, displayOptimum, tdee, caloricDebt, day?.isRefeedDay]);
 
         if (!HEYS.dayTabRender?.renderDayTabLayout) {
             throw new Error('[heys_day_v12] HEYS.dayTabRender not loaded before heys_day_v12.js');

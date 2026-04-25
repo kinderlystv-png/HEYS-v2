@@ -66,6 +66,7 @@
       M,
       getMealType,
       getMealQualityScore,
+      includeWeeklyInsights = true,
       HEYS: heysGlobal
     } = ctx || {};
 
@@ -91,6 +92,7 @@
 
     // Тренд калорий за последние N дней (среднее превышение/дефицит)
     const kcalTrend = React.useMemo(() => {
+      if (!includeWeeklyInsights) return null;
       if (!sparklineData || sparklineData.length < 3 || !optimum || optimum <= 0) return null;
 
       try {
@@ -128,11 +130,12 @@
       } catch (e) {
         return null;
       }
-    }, [sparklineData, optimum]);
+    }, [includeWeeklyInsights, sparklineData, optimum]);
 
     // === BALANCE VIZ — Мини-график баланса за неделю ===
     // Визуализация для карточки "Инсайты недели"
     const balanceViz = React.useMemo(() => {
+      if (!includeWeeklyInsights) return null;
       // Если нет caloricDebt — создаём базовую визуализацию из текущего дня
       const dayBreakdown = caloricDebt?.dayBreakdown || [];
 
@@ -429,10 +432,11 @@
         daysCount: dayBreakdown.length,
         severityTone        // mild/warning/critical
       };
-    }, [caloricDebt, eatenKcal, optimum, safeDay.trainings, safeDay.meals, pIndex, prof]);
+    }, [includeWeeklyInsights, caloricDebt, eatenKcal, optimum, safeDay.trainings, safeDay.meals, pIndex, prof]);
 
     // Данные для heatmap текущей недели (пн-вс)
     const weekHeatmapData = React.useMemo(() => {
+      if (!includeWeeklyInsights) return null;
       if (!date || !fmtDate) {
         return {
           days: [],
@@ -728,7 +732,7 @@
       } catch (e) { }
 
       return { days, inNorm, withData, streak, weekendPattern, avgRatioPct, totalEaten, totalBurned, avgTargetDeficit, todayExcluded };
-    }, [date, optimum, pIndex, safeProducts, prof, eatenKcal, safeDay.updatedAt, safeDay.isRefeedDay]);
+    }, [includeWeeklyInsights, date, optimum, pIndex, safeProducts, prof, eatenKcal, safeDay.updatedAt, safeDay.isRefeedDay]);
 
     // === Мини-график калорий по приёмам ===
     const mealsChartData = React.useMemo(() => {

@@ -1,35 +1,35 @@
 {
   "boot-core": {
-    "file": "boot-core.bundle.486a3d4080f4.js",
-    "hash": "486a3d4080f4",
-    "sourceFingerprint": "c281c5473473",
+    "file": "boot-core.bundle.278cbf686fde.js",
+    "hash": "278cbf686fde",
+    "sourceFingerprint": "3b16b139cb81",
     "fileCount": 30,
-    "size": 1476987,
-    "builtAt": "2026-04-24T20:27:35.916Z"
+    "size": 1517467,
+    "builtAt": "2026-04-25T11:18:58.086Z"
   },
   "boot-calc": {
-    "file": "boot-calc.bundle.523df335462f.js",
-    "hash": "523df335462f",
-    "sourceFingerprint": "3c9cf03d7339",
+    "file": "boot-calc.bundle.6f1526af1012.js",
+    "hash": "6f1526af1012",
+    "sourceFingerprint": "1fb6f7574943",
     "fileCount": 19,
-    "size": 1109382,
-    "builtAt": "2026-04-24T20:13:59.476Z"
+    "size": 1132788,
+    "builtAt": "2026-04-25T11:18:58.245Z"
   },
   "boot-day": {
-    "file": "boot-day.bundle.cf5fe2f4c111.js",
-    "hash": "cf5fe2f4c111",
-    "sourceFingerprint": "b34a29b86351",
+    "file": "boot-day.bundle.14ac07d1a35b.js",
+    "hash": "14ac07d1a35b",
+    "sourceFingerprint": "08f57dc574a9",
     "fileCount": 54,
-    "size": 1074185,
-    "builtAt": "2026-04-24T20:13:59.649Z"
+    "size": 1100537,
+    "builtAt": "2026-04-25T11:18:58.415Z"
   },
   "boot-app": {
-    "file": "boot-app.bundle.9ac90d0b7ea7.js",
-    "hash": "9ac90d0b7ea7",
-    "sourceFingerprint": "bdef404d759f",
+    "file": "boot-app.bundle.72444efd6e70.js",
+    "hash": "72444efd6e70",
+    "sourceFingerprint": "364083716698",
     "fileCount": 52,
-    "size": 1367708,
-    "builtAt": "2026-04-24T20:27:36.100Z"
+    "size": 1399741,
+    "builtAt": "2026-04-25T11:18:58.592Z"
   },
   "boot-init": {
     "file": "boot-init.bundle.9a0f095c4098.js",
@@ -48,19 +48,19 @@
     "builtAt": "2026-04-24T20:14:00.183Z"
   },
   "postboot-2-insights": {
-    "file": "postboot-2-insights.bundle.9ab89ebfa022.js",
-    "hash": "9ab89ebfa022",
-    "sourceFingerprint": "b929d928bccf",
+    "file": "postboot-2-insights.bundle.36e5c0b3e83d.js",
+    "hash": "36e5c0b3e83d",
+    "sourceFingerprint": "3d481dbd6484",
     "fileCount": 39,
-    "size": 1868057,
-    "builtAt": "2026-04-24T20:27:36.388Z"
+    "size": 1906630,
+    "builtAt": "2026-04-25T11:18:58.785Z"
   },
   "postboot-3-ui": {
-    "file": "postboot-3-ui.bundle.1c5e7452767c.js",
-    "hash": "1c5e7452767c",
-    "sourceFingerprint": "2a7a0b598c14",
+    "file": "postboot-3-ui.bundle.8e76e252448e.js",
+    "hash": "8e76e252448e",
+    "sourceFingerprint": "ff577c9da51a",
     "fileCount": 36,
-    "size": 2305122,
-    "builtAt": "2026-04-24T20:27:36.699Z"
+    "size": 2351311,
+    "builtAt": "2026-04-25T11:18:59.035Z"
   }
 }

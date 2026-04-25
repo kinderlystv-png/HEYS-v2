@@ -219,6 +219,21 @@
         });
     }
 
+    // 🚀 PERF: Memoize DayTabWithCloudSync so it does NOT re-render when AppRoot re-renders
+    // due to sync indicator state changes (useCloudSyncStatus updates pendingCount, cloudStatus, etc.
+    // multiple times per second during sync). DayTab's relevant props (products, clientId,
+    // selectedDate, subTab) are now signature-stable after the prof/products stabilization fixes.
+    // Without memo, every sync event triggers full DayTab tree reconciliation (~300ms).
+    DayTabWithCloudSync = React.memo(DayTabWithCloudSync, function dayTabPropsEqual(prev, next) {
+        if (prev.clientId !== next.clientId) return false;
+        if (prev.selectedDate !== next.selectedDate) return false;
+        if (prev.subTab !== next.subTab) return false;
+        // products ref is stabilized by signature in useProductsContext — ref equality is safe
+        if (prev.products !== next.products) return false;
+        // setSelectedDate from useState is stable; no check needed
+        return true;
+    });
+
     // Skeleton для Ration/Products
     function RationSkeleton() {
         return React.createElement('div', { style: { padding: 16 } },

@@ -264,8 +264,8 @@
             // 🔧 FIX: savedEatenKcal only when there are meal lines (avoid stale kcal after clearing diary)
             const hasAnyMealItems = (dayData.meals || []).some((m) => Array.isArray(m?.items) && m.items.length > 0);
             const fallbackKcal = hasAnyMealItems && +dayData.savedEatenKcal > 0
-                ? +dayData.savedEatenKcal
-                : fallbackTotalKcal;
+              ? +dayData.savedEatenKcal
+              : fallbackTotalKcal;
             return {
               date: dateStr,
               kcal: fallbackKcal,
@@ -371,7 +371,6 @@
       day?.isFastingDay,
       day?.isIncomplete,
       day?.savedDisplayOptimum,
-      day?.updatedAt,
       sparklineRefreshKey
     ]);
 

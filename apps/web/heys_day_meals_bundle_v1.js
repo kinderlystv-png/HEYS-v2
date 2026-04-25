@@ -2965,7 +2965,7 @@
             t.harm = gSum ? harmSum / gSum : 0;
             return t;
         }
-        const totals = mTotals(meal);
+        const totals = React.useMemo(() => mTotals(meal), [meal, pIndex]);
         const manualType = meal.mealType;
         const autoTypeInfo = getMealType(mealIndex, meal, allMeals, pIndex);
         const mealTypeInfo = manualType && U.MEAL_TYPES && U.MEAL_TYPES[manualType]
@@ -2989,16 +2989,15 @@
 
             const mealTimeMin = mealHour * 60 + mealMinute;
 
-            const mealTotals = M.mealTotals ? M.mealTotals(meal, pIndex) : { kcal: 0 };
             return HEYS.InsulinWave.calculateActivityContext({
                 mealTimeMin,
-                mealKcal: mealTotals.kcal || 0,
+                mealKcal: totals.kcal || 0,
                 trainings: dayData?.trainings || [],
                 householdMin: dayData.householdMin || 0,
                 steps: dayData.steps || 0,
                 allMeals: allMeals,
             });
-        }, [meal?.time, meal?.items, dayData?.trainings, dayData?.householdMin, dayData?.steps, allMeals, pIndex]);
+        }, [meal?.time, meal?.items, dayData?.trainings, dayData?.householdMin, dayData?.steps, allMeals, totals?.kcal]);
 
         const mealQuality = React.useMemo(() => {
             if (!meal?.items || meal.items.length === 0) return null;
@@ -4715,7 +4714,10 @@
         if (prevProps.mealIndex !== nextProps.mealIndex) return false;
         if (prevProps.displayIndex !== nextProps.displayIndex) return false;
         if (prevProps.isExpanded !== nextProps.isExpanded) return false;
-        if (prevProps.allMeals !== nextProps.allMeals) return false;
+        if (prevProps.dayData?.steps !== nextProps.dayData?.steps) return false;
+        if (prevProps.dayData?.householdMin !== nextProps.dayData?.householdMin) return false;
+        if (prevProps.dayData?.trainings !== nextProps.dayData?.trainings) return false;
+        if (prevProps.optimum !== nextProps.optimum) return false;
         return true;
     });
 

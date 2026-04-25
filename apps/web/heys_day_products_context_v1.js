@@ -34,22 +34,33 @@
             return () => window.removeEventListener('heys:local-product-updated', handleLocalProductUpdated);
         }, [ctx]);
 
-        const products = React.useMemo(() => {
-            // 🔧 FIX: Если есть override от event — используем его (самые свежие данные)
-            if (localProductsOverride && localProductsOverride.length > 0) {
-                return localProductsOverride;
-            }
+        // 🚀 PERF: Compute candidate array first, then stabilize by signature.
+        // When AppRoot re-renders due to sync indicator state changes, setProducts() may have been
+        // called with a new array reference containing identical data (hot-sync refreshes same
+        // 364 products). Without stabilization sparklineData recomputes on every sync event (~333ms).
+        // Strategy: compute signature of candidate → if identical to previous, keep old stable ref.
+        const _candidateProducts = React.useMemo(() => {
+            if (localProductsOverride && localProductsOverride.length > 0) return localProductsOverride;
             if (safePropsProducts.length > 0) return safePropsProducts;
-            // Fallback: берём из глобального хранилища
             const fromStore = ctx.products?.getAll?.() || [];
             if (Array.isArray(fromStore) && fromStore.length > 0) return fromStore;
-            // Последний fallback: из localStorage напрямую
             const U = ctx.utils || {};
             const lsData = U.lsGet?.('heys_products', []) || [];
             return Array.isArray(lsData) ? lsData : [];
-        }, [safePropsProducts, localProductsOverride]); // 🔧 FIX: добавлена зависимость от localProductsOverride
+        }, [safePropsProducts, localProductsOverride]);
 
-        const prodSig = React.useMemo(() => productsSignature(products), [products]);
+        const _candidateSig = React.useMemo(() => productsSignature(_candidateProducts), [_candidateProducts]);
+
+        // Stable ref: only updates when content actually changes (sig differs)
+        const _stableProductsRef = React.useRef(_candidateProducts);
+        const _stableSigRef = React.useRef(_candidateSig);
+        if (_candidateSig !== _stableSigRef.current) {
+            _stableProductsRef.current = _candidateProducts;
+            _stableSigRef.current = _candidateSig;
+        }
+        const products = _stableProductsRef.current;
+
+        const prodSig = _candidateSig;
         const pIndex = React.useMemo(() => buildProductIndex(products), [prodSig]);
 
         // Debug info (minimal)

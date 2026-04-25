@@ -230,6 +230,111 @@
     return `heys_${cid}_${k}`;
   }
 
+  function dayItemsCount(day) {
+    if (!day || !Array.isArray(day.meals)) return 0;
+    return day.meals.reduce((sum, meal) => sum + (Array.isArray(meal?.items) ? meal.items.length : 0), 0);
+  }
+
+  function shouldRecoverDoubleScopedDay(currentValue, recoveredValue) {
+    if (!recoveredValue || typeof recoveredValue !== 'object') return false;
+    if (!currentValue || typeof currentValue !== 'object') return true;
+    const currentUpdatedAt = Number(currentValue.updatedAt || 0);
+    const recoveredUpdatedAt = Number(recoveredValue.updatedAt || 0);
+    if (recoveredUpdatedAt > currentUpdatedAt) return true;
+    if (recoveredUpdatedAt === currentUpdatedAt && dayItemsCount(recoveredValue) > dayItemsCount(currentValue)) {
+      return true;
+    }
+    return false;
+  }
+
+  function validProductsList(value) {
+    if (!Array.isArray(value)) return [];
+    return value.filter(p => p && typeof p.name === 'string' && p.name.trim().length > 0);
+  }
+
+  function backupProductsList(value) {
+    if (Array.isArray(value)) return validProductsList(value);
+    if (value && Array.isArray(value.data)) return validProductsList(value.data);
+    if (value && Array.isArray(value.products)) return validProductsList(value.products);
+    return [];
+  }
+
+  function looksLikeProductsCatalogKey(key) {
+    if (typeof key !== 'string') return false;
+    if (!/products/i.test(key)) return false;
+    if (/(shared|hidden|favorite|deleted|usage|search|cache|rpc_tail)/i.test(key)) return false;
+    return (
+      key === 'heys_products' ||
+      /^heys_[a-f0-9-]{36}_products$/i.test(key) ||
+      /^heys_[a-f0-9-]{36}_heys_products$/i.test(key) ||
+      /^heys_[a-f0-9-]{36}_[a-f0-9-]{36}_products$/i.test(key)
+    );
+  }
+
+  function findRecoverableProducts(scopedKey) {
+    try {
+      const cid = ns();
+      const preferred = [];
+      if (scopedKey) preferred.push(scopedKey);
+      if (cid) {
+        preferred.push(`heys_${cid}_products`);
+        preferred.push(`heys_${cid}_heys_products`);
+        preferred.push(`heys_${cid}_${cid}_products`);
+      }
+      preferred.push('heys_products');
+
+      const seen = new Set();
+      const keys = [];
+      preferred.forEach(key => {
+        if (key && !seen.has(key)) {
+          seen.add(key);
+          keys.push(key);
+        }
+      });
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && !seen.has(key) && looksLikeProductsCatalogKey(key)) {
+          seen.add(key);
+          keys.push(key);
+        }
+      }
+
+      let best = null;
+      let bestLen = 0;
+      let bestKey = '';
+      keys.forEach(key => {
+        const candidate = validProductsList(rawGet(key, undefined));
+        if (candidate.length > bestLen) {
+          best = candidate;
+          bestLen = candidate.length;
+          bestKey = key;
+        }
+      });
+      if (bestLen > 0) return { value: best, key: bestKey, length: bestLen, source: 'catalog' };
+
+      const backupKeys = [];
+      if (cid) {
+        backupKeys.push(`heys_${cid}_products_backup`);
+        backupKeys.push(`heys_${cid}_heys_products_backup`);
+      }
+      backupKeys.push('heys_products_backup');
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && /products_backup$/i.test(key) && !backupKeys.includes(key)) backupKeys.push(key);
+      }
+      backupKeys.forEach(key => {
+        const candidate = backupProductsList(rawGet(key, undefined));
+        if (candidate.length > bestLen) {
+          best = candidate;
+          bestLen = candidate.length;
+          bestKey = key;
+        }
+      });
+      if (bestLen > 0) return { value: best, key: bestKey, length: bestLen, source: 'backup' };
+    } catch (e) { }
+    return null;
+  }
+
   Store.get = function (k, def) { const sk = scoped(k); if (memory.has(sk)) return memory.get(sk); const v = rawGet(sk, def); memory.set(sk, v); return v; };
   // If scoped key not present, try unscoped legacy key and migrate it into scoped namespace
   Store.get = (function (orig) {
@@ -241,6 +346,15 @@
       // вызов lsGet(key, {}) возвращает null вместо {}
       if (memory.has(sk)) {
         const cached = memory.get(sk);
+        if (k === 'heys_products' && Array.isArray(cached) && cached.length === 0) {
+          const recovered = findRecoverableProducts(sk);
+          if (recovered && recovered.length > 0) {
+            memory.set(sk, recovered.value);
+            rawSet(sk, recovered.value);
+            console.warn('[Store.get] 🛠️ Recovered products from', recovered.source, recovered.key, '→', sk, `(${recovered.length})`);
+            return recovered.value;
+          }
+        }
         // Возвращаем кэш только если он не null/undefined, или если def тоже null/undefined
         if (cached !== null && cached !== undefined) {
           return cached;
@@ -252,6 +366,23 @@
         return cached;
       }
       let v = rawGet(sk, undefined);
+      try {
+        const cid = ns();
+        const isDayV2 = cid && typeof sk === 'string' && sk.includes('dayv2_');
+        const ownPrefix = `heys_${cid}_`;
+        if (isDayV2 && sk.startsWith(ownPrefix)) {
+          const doubleScopedKey = `heys_${cid}_${sk.slice(ownPrefix.length)}`;
+          if (doubleScopedKey !== sk) {
+            const recovered = rawGet(doubleScopedKey, undefined);
+            if (shouldRecoverDoubleScopedDay(v, recovered)) {
+              v = recovered;
+              memory.set(sk, recovered);
+              rawSet(sk, recovered);
+              console.warn('[Store.get] 🛠️ Recovered double-scoped day key:', doubleScopedKey, '→', sk);
+            }
+          }
+        }
+      } catch (e) { }
       if (v === undefined || v === null) {
         // try legacy unscoped key (with safeguards for heys_game)
         try {
@@ -287,26 +418,25 @@
         // Fallback: if products are stored under another clientId scope
         if (k === 'heys_products') {
           try {
-            const keys = Object.keys(localStorage).filter((key) => /^heys_[^_]+_products$/i.test(key));
-            let best = null;
-            let bestLen = 0;
-            for (const key of keys) {
-              const candidate = rawGet(key, undefined);
-              const len = Array.isArray(candidate) ? candidate.length : 0;
-              if (len > bestLen) {
-                bestLen = len;
-                best = candidate;
-              }
-            }
-            if (best && bestLen > 0) {
-              memory.set(sk, best);
-              rawSet(sk, best);
-              return best;
+            const recovered = findRecoverableProducts(sk);
+            if (recovered && recovered.length > 0) {
+              memory.set(sk, recovered.value);
+              rawSet(sk, recovered.value);
+              console.warn('[Store.get] 🛠️ Recovered products from', recovered.source, recovered.key, '→', sk, `(${recovered.length})`);
+              return recovered.value;
             }
           } catch (e) { }
         }
         // return default
         v = def;
+      }
+      if (k === 'heys_products' && Array.isArray(v) && v.length === 0) {
+        const recovered = findRecoverableProducts(sk);
+        if (recovered && recovered.length > 0) {
+          v = recovered.value;
+          rawSet(sk, recovered.value);
+          console.warn('[Store.get] 🛠️ Recovered products from', recovered.source, recovered.key, '→', sk, `(${recovered.length})`);
+        }
       }
       memory.set(sk, v);
       return v;

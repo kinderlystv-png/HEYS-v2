@@ -9,6 +9,7 @@
   HEYS.dayWeightTrends.computeWeightTrends = function computeWeightTrends(ctx) {
     const {
       React,
+      isEnabled = true,
       date,
       day,
       chartPeriod,
@@ -21,6 +22,7 @@
     const H = heysCtx || HEYS;
 
     const weightTrend = React.useMemo(() => {
+      if (!isEnabled) return null;
       try {
         const today = new Date(date);
         const weights = [];
@@ -42,7 +44,7 @@
             if (raw) {
               dayData = raw.startsWith('¤Z¤') ? JSON.parse(raw.substring(3)) : JSON.parse(raw);
             }
-          } catch (e) {}
+          } catch (e) { }
 
           if (dayData && dayData.weightMorning != null && dayData.weightMorning !== '' && dayData.weightMorning !== 0) {
             const cycleDayValue = dayData.cycleDay || null;
@@ -115,9 +117,10 @@
       } catch (e) {
         return null;
       }
-    }, [date, day?.weightMorning, day?.cycleDay]);
+    }, [isEnabled, date, day?.weightMorning, day?.cycleDay]);
 
     const monthForecast = React.useMemo(() => {
+      if (!isEnabled) return null;
       if (!weightTrend || weightTrend.slope === undefined) return null;
 
       const monthChange = weightTrend.slope * 30;
@@ -130,9 +133,10 @@
         text: '~' + sign + format + ' кг/мес',
         direction: monthChange < 0 ? 'down' : monthChange > 0 ? 'up' : 'same'
       };
-    }, [weightTrend]);
+    }, [isEnabled, weightTrend]);
 
     const weightSparklineData = React.useMemo(() => {
+      if (!isEnabled) return [];
       try {
         const realToday = new Date(date + 'T12:00:00');
         const realTodayStr = date;
@@ -168,7 +172,7 @@
                 trainingTypes
               };
             }
-          } catch (e) {}
+          } catch (e) { }
           return null;
         };
 
@@ -298,9 +302,10 @@
       } catch (e) {
         return [];
       }
-    }, [date, day?.weightMorning, day?.cycleDay, chartPeriod, prof?.weightGoal]);
+    }, [isEnabled, date, day?.weightMorning, day?.cycleDay, chartPeriod, prof?.weightGoal]);
 
     const cycleHistoryAnalysis = React.useMemo(() => {
+      if (!isEnabled) return null;
       if (!day?.cycleDay) return null;
 
       try {
@@ -324,7 +329,7 @@
       } catch (e) {
         return null;
       }
-    }, [day?.cycleDay]);
+    }, [isEnabled, day?.cycleDay]);
 
     return { weightTrend, monthForecast, weightSparklineData, cycleHistoryAnalysis };
   };

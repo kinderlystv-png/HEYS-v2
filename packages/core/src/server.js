@@ -113,6 +113,10 @@ function buildUpstreamHeaders(req) {
 }
 
 async function proxyToProd(req, res) {
+  const PROXY_RETRIES = 2;
+  const PROXY_RETRY_DELAY_MS = 250;
+
+  for (let attempt = 0; attempt <= PROXY_RETRIES; attempt++) {
   try {
     const url = `${PROD_API}${req.originalUrl}`;
     const method = req.method;
@@ -168,14 +172,23 @@ async function proxyToProd(req, res) {
     } else {
       res.end();
     }
+    return; // success
   } catch (err) {
+    const isNetworkError = err.name === 'TypeError' && err.message === 'fetch failed';
+    if (isNetworkError && attempt < PROXY_RETRIES) {
+      console.warn(`[Dev Proxy] fetch failed (attempt ${attempt + 1}/${PROXY_RETRIES + 1}), retrying in ${PROXY_RETRY_DELAY_MS}ms...`);
+      await new Promise(r => setTimeout(r, PROXY_RETRY_DELAY_MS));
+      continue;
+    }
     console.error('[Dev Proxy]', req.method, req.originalUrl, err.message);
     if (!res.headersSent) {
       res.status(502).json({ error: 'Dev proxy error', details: err.message });
     } else if (!res.writableEnded) {
       res.destroy(err);
     }
+    return;
   }
+  } // end retry loop
 }
 app.all('/rpc', proxyToProd);
 app.all('/rpc/*', proxyToProd);
@@ -249,6 +262,16 @@ app.listen(PORT, () => {
   console.log(`🏥 Health: http://localhost:${PORT}/health`);
   console.log(`📡 API: http://localhost:${PORT}/api`);
   console.log(`⏰ Started at: ${new Date().toISOString()}`);
+
+  // Pre-warm upstream TLS connection so first real requests don't fail
+  fetch(`${PROD_API}/health`, {
+    headers: { origin: 'https://app.heyslab.ru', 'accept-encoding': 'identity' },
+    referrerPolicy: 'no-referrer',
+  }).then(() => {
+    console.log(`🔥 Upstream pre-warmed: ${PROD_API}`);
+  }).catch((e) => {
+    console.warn(`⚠️ Upstream pre-warm failed: ${e.message}`);
+  });
 });
 
 module.exports = app;

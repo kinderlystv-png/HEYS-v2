@@ -47,7 +47,9 @@
 
   const DEBUG_EVENTS_KEY = 'heys_debug_events';
   const DEBUG_EVENTS_LIMIT = 50;
+  const DEBUG_EVENTS_FLUSH_MS = 10000;
   const debugEvents = [];
+  let _debugFlushTimer = null;
   const perfMeasureStarts = new Map();
 
   const perfState = {
@@ -139,9 +141,12 @@
       if (debugEvents.length > DEBUG_EVENTS_LIMIT) {
         debugEvents.splice(0, debugEvents.length - DEBUG_EVENTS_LIMIT);
       }
-      try {
-        writeStoredValue(DEBUG_EVENTS_KEY, debugEvents);
-      } catch (e) { }
+      if (!_debugFlushTimer) {
+        _debugFlushTimer = setTimeout(() => {
+          _debugFlushTimer = null;
+          try { writeStoredValue(DEBUG_EVENTS_KEY, debugEvents); } catch (e) { }
+        }, DEBUG_EVENTS_FLUSH_MS);
+      }
     } catch (e) { }
   }
 
