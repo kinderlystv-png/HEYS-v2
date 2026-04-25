@@ -34742,17 +34742,18 @@ NOVA: 1-4
       if (!p || p.id == null) continue;
       let sid = p.shared_origin_id ? String(p.shared_origin_id) : null;
       let sharedRow = sid && sharedById.get(sid);
+      let linkedByFallback = false;
 
       // Fallback linking: if no explicit shared_origin_id, try fingerprint then name match.
       // This rescues legacy data that predates shared linkage.
       if (!sharedRow) {
         if (p.fingerprint) {
           sharedRow = aux.byFingerprint.get(String(p.fingerprint));
-          if (sharedRow) { sid = String(sharedRow.id); typeAByFallback++; }
+          if (sharedRow) { sid = String(sharedRow.id); linkedByFallback = true; typeAByFallback++; }
         }
         if (!sharedRow && p.name) {
           sharedRow = aux.byName.get(_normalizeName(p.name));
-          if (sharedRow) { sid = String(sharedRow.id); typeAByFallback++; }
+          if (sharedRow) { sid = String(sharedRow.id); linkedByFallback = true; typeAByFallback++; }
         }
       }
 
@@ -34760,6 +34761,11 @@ NOVA: 1-4
         const overrides = {};
         for (const f of NUTRIENT_FIELDS) {
           if (p[f] !== undefined && !_eqLoose(p[f], sharedRow[f])) overrides[f] = p[f];
+        }
+        // Preserve local name if it differs (esp. on fallback link by normalized name —
+        // legacy "Молоко 2,5" matches shared "Молоко 2,5%" but display should keep local).
+        if (p.name && p.name !== sharedRow.name) {
+          overrides.name = p.name;
         }
         if (Array.isArray(p.portions) && p.portions.length > 0) {
           // Portions: store full array as override on any content diff.
@@ -34830,6 +34836,10 @@ NOVA: 1-4
           // Allow merged view to FILL missing local fields from shared.
           // Only undefined/null are "absence" — explicit 0 is data and must round-trip.
           if (pre[f] === undefined || pre[f] === null) continue;
+          // For `name`: allow post == normalized-equal-to pre (fallback-link case where
+          // legacy "Молоко 2,5" matched shared "Молоко 2,5%"; UI keeps local via override
+          // but if override missed, normalize-equal is acceptable).
+          if (f === 'name' && _normalizeName(pre.name) === _normalizeName(post.name)) continue;
           errors.push({ kind: 'field-mismatch', id: pre.id, field: f, pre: pre[f], post: post[f] });
         }
       }
@@ -34904,6 +34914,7 @@ NOVA: 1-4
     global.localStorage.removeItem('heys_overlay_migration_aborted');
     global.localStorage.removeItem('heys_overlay_migrated_at');
     global.localStorage.removeItem('heys_overlay_migration_status');
+    global.localStorage.removeItem('heys_overlay_migration_version');
     console.info('[HEYS.diagnostics] Overlay migration markers cleared. Reload to retry.');
   };
 
@@ -34911,6 +34922,8 @@ NOVA: 1-4
   // changed or after a one-shot upgrade to migrate() fallback logic. Reads
   // current legacy via HEYS.products.getAll() (post-self-heal) and re-translates
   // into overlay shape, capturing fingerprint/name fallback links to shared.
+  // Also stamps migration markers (status=success, version=current) so the
+  // interceptor's dual-write hook resumes immediately.
   HEYS.diagnostics.relinkOverlay = function () {
     const cloud = HEYS.cloud;
     const sharedById = cloud && cloud.getSharedIndex && cloud.getSharedIndex();
@@ -34945,6 +34958,16 @@ NOVA: 1-4
     writeRaw(result.rows);
     invalidateMergedView();
     _healthWrittenThisSession = false; // re-run health write on next read
+
+    // Stamp migration markers so dual-write hook resumes (gate is migration_status === 'success').
+    try {
+      const CURRENT_MIGRATION_VERSION = 2;
+      global.localStorage.setItem('heys_overlay_migrated_at', String(Date.now()));
+      global.localStorage.setItem('heys_overlay_migration_status', 'success');
+      global.localStorage.setItem('heys_overlay_migration_version', String(CURRENT_MIGRATION_VERSION));
+      global.localStorage.removeItem('heys_overlay_migration_aborted');
+    } catch (_) { /* noop */ }
+
     console.info('[HEYS.diagnostics] relinkOverlay ok', {
       typeA: result.typeA,
       typeAByFallback: result.typeAByFallback,

@@ -729,15 +729,26 @@
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
     <link rel="dns-prefetch" href="https://cdn.jsdelivr.net" />
     <!-- Preload критических boot-бандлов (2026-02-25 bundle migration) -->
-    <link rel="preload" href="boot-core.bundle.fe84ed641310.js" as="script" />
+    <link rel="preload" href="boot-core.bundle.4b98735b1212.js" as="script" />
     <link rel="preload" href="boot-calc.bundle.d39a7be350c0.js" as="script" />
-    <link rel="preload" href="boot-day.bundle.dbd22493fcec.js" as="script" />
-    <link rel="preload" href="boot-app.bundle.3b37ad71cd3b.js" as="script" />
+    <link rel="preload" href="boot-day.bundle.1f9deaaf4bb6.js" as="script" />
+    <link rel="preload" href="boot-app.bundle.9bc4824a6bf8.js" as="script" />
     <link rel="preload" href="boot-init.bundle.13d494a394c3.js" as="script" />
 
     <!-- React теперь бандлится локально через Vite (миграция с CDN 2026-01-21) -->
 
     <!-- Non-critical JS prefetch deferred to idle after appReady (see postboot onAllDone) -->
+
+    <!-- SVG safety-net: ensures stroke-only paths/circles (sparklines, rings, charts)
+         render correctly on slow networks before main.css arrives. Without these rules,
+         <path>/<circle> default to fill: black, producing visible artifacts. -->
+    <style id="heys-svg-fallback">
+      .sparkline-line, .sparkline-goal, .sparkline-streak-line,
+      .weight-sparkline-line, .water-sparkline-line,
+      .water-ring-bg, .water-ring-fill,
+      .sparkline-forecast-mask, .weight-sparkline-forecast-mask,
+      .reports-sparkline__svg .reports-sparkline__line { fill: none; }
+    </style>
 
     <!-- Main CSS — async load (1.19MB via @import, не нужен для login gate) -->
     <!-- v12: Login gate имеет inline стили, main.css нужен только после загрузки бандлов -->
@@ -2833,10 +2844,10 @@
          Сгенерировано: node scripts/bundle-legacy.mjs  (pnpm bundle:legacy)
          Состав и хеши: bundle-manifest.json
          Хеш в имени = вечный кэш (cache-first SW). -->
-    <script defer src="boot-core.bundle.fe84ed641310.js" fetchpriority="high"></script>
+    <script defer src="boot-core.bundle.4b98735b1212.js" fetchpriority="high"></script>
     <script defer src="boot-calc.bundle.d39a7be350c0.js"></script>
-    <script defer src="boot-day.bundle.dbd22493fcec.js"></script>
-    <script defer src="boot-app.bundle.3b37ad71cd3b.js"></script>
+    <script defer src="boot-day.bundle.1f9deaaf4bb6.js"></script>
+    <script defer src="boot-app.bundle.9bc4824a6bf8.js"></script>
     <script defer src="boot-init.bundle.13d494a394c3.js"
         onerror="window.__heysShowRecoveryUI && window.__heysShowRecoveryUI('CRITICAL_SCRIPT_LOAD: boot-init.bundle')"></script>
 
@@ -2868,7 +2879,7 @@
             var POST_BOOT_BUNDLES = [
                 'postboot-1-game.bundle.84d4da76641a.js',
                 'postboot-2-insights.bundle.fa0e6ac4bba4.js',
-                'postboot-3-ui.bundle.080ef4a55e41.js'
+                'postboot-3-ui.bundle.e8377c0d4d8c.js'
             ];
             var LOCALHOST_TASKS_SOURCE_OVERRIDE = 'heys_planning_tasks_v1.js';
             var total = POST_BOOT_BUNDLES.length;

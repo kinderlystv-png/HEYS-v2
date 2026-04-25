@@ -14490,7 +14490,12 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                 if (recoveryScheduled || cancelled) return;
                 if (!window.HEYS.orphanProducts?.autoRecoverOnLoad) return;
 
-                if (clientId && recoveryRunCache.has(clientId)) return;
+                if (clientId && recoveryRunCache.has(clientId)) {
+                    // Recovery already ran this session — but migration may still need to fire
+                    // (e.g., recovery's first run failed, OR migration trigger missed).
+                    try { runOverlayMigrationOnce(clientId); } catch (_) { /* noop */ }
+                    return;
+                }
 
                 const currentProducts = getLatestProducts();
                 const cachedShared = window.HEYS?.cloud?.getCachedSharedProducts?.() || [];
@@ -14501,6 +14506,9 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                     if (recoveryAttempts <= MAX_RECOVERY_ATTEMPTS) {
                         setTimeout(() => runOrphanRecovery(options), RECOVERY_RETRY_MS);
                     }
+                    // Try migration anyway — it has its own gate (shared cache + idempotency).
+                    // This ensures migration fires even if recovery never reaches threshold.
+                    try { runOverlayMigrationOnce(clientId); } catch (_) { /* noop */ }
                     return;
                 }
 
@@ -14579,11 +14587,31 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                     return;
                 }
 
-                // Source: HEYS.products.getAll() post-self-heal (NOT raw LS).
-                // CRITICAL: this captures any α-with-flag-on legacy mutations.
-                const flat = Products.getAll();
+                // Source: HEYS.products.getAll() POST-SELF-HEAL via the LEGACY path.
+                // CRITICAL: with overlay flag ON and overlay empty, wrapped getAll() goes
+                // overlay → returns [] without falling back to legacy. Migration must read
+                // legacy directly. Temporarily disable flag to force legacy read.
+                const flagWasOn = window.HEYS.flags?.isEnabled?.('overlay_products_v2');
+                if (flagWasOn) window.HEYS.flags.disable('overlay_products_v2');
+                let flat = null;
+                try {
+                    flat = Products.getAll();
+                } finally {
+                    if (flagWasOn) window.HEYS.flags.enable('overlay_products_v2');
+                }
                 if (!Array.isArray(flat)) {
-                    console.warn('[HEYS.overlay] migration source not an array; skipping');
+                    console.warn('[HEYS.products] migration source not an array; skipping');
+                    return;
+                }
+                // Defer migration if legacy isn't populated yet (early boot before sync).
+                // Re-trigger on heysSyncCompleted to catch the populated state.
+                if (flat.length === 0) {
+                    console.info('[HEYS.products] migration deferred — legacy is empty (sync not done)');
+                    const onSyncDone = () => {
+                        window.removeEventListener('heysSyncCompleted', onSyncDone);
+                        try { runOverlayMigrationOnce(cid); } catch (_) { /* noop */ }
+                    };
+                    window.addEventListener('heysSyncCompleted', onSyncDone, { once: true });
                     return;
                 }
 
@@ -14623,18 +14651,21 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                 }
 
                 // Verifier: id-set parity + nutrient field parity.
+                // Capture previous overlay state BEFORE writing new rows — for safe rollback.
+                const previousOverlayRows = Overlay.readRaw();
                 Overlay.writeRaw(result.rows);
                 const merged = Overlay.toMergedView(sharedById) || [];
                 const verify = Overlay.verifyMigration(flat, merged);
                 if (!verify.ok) {
-                    // Roll back: clear overlay + mark aborted.
-                    Overlay.writeRaw([]);
+                    // Roll back to previous overlay state — DO NOT clear to [].
+                    // Empty overlay would cause UI to show no products when flag is on.
+                    Overlay.writeRaw(previousOverlayRows);
                     try {
                         localStorage.setItem(ABORT_KEY, 'true');
                         localStorage.setItem(STATUS_KEY, 'aborted');
-                        window.__diag_overlay = { errors: verify.errors, totalErrors: verify.totalErrors, pre: flat, post: merged };
+                        window.__diag_overlay = { errors: verify.errors, totalErrors: verify.totalErrors, pre: flat, post: merged, restoredRows: previousOverlayRows.length };
                     } catch (_) { /* noop */ }
-                    console.warn('[HEYS.products] overlay migration verifier failed:', verify.totalErrors, 'errors. Sample:', verify.errors);
+                    console.warn('[HEYS.products] overlay migration verifier failed:', verify.totalErrors, 'errors. Sample:', verify.errors, 'Restored to previous overlay (', previousOverlayRows.length, 'rows)');
                     if (window.HEYS.Toast?.warning) {
                         window.HEYS.Toast.warning('Миграция продуктов прервана — несовпадение данных. Откройте __diag_overlay в консоли.');
                     }

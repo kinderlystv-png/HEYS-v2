@@ -671,7 +671,15 @@
       ref.raf = requestAnimationFrame(() => {
         ref.raf = 0;
         if (!ref.pending) return;
-        setResizePreview(ref.pending);
+        // PERF NEW-10: startTransition помечает обновление как low-priority.
+        // При быстром drag React сможет прервать незаконченный render если придёт
+        // следующий pointermove → setResizePreview не блокирует input frame budget.
+        // Если startTransition недоступен (старый React) — fallback на прямой setState.
+        if (typeof React.startTransition === 'function') {
+          React.startTransition(() => setResizePreview(ref.pending));
+        } else {
+          setResizePreview(ref.pending);
+        }
         ref.pending = null;
       });
     }, []);

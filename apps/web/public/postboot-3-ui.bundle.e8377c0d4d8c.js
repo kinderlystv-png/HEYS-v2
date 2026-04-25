@@ -31807,6 +31807,22 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         this._originalElement.style.opacity = '0.3';
       }
 
+      // PERF NEW-18: кэшируем grid element + rect + ghost dimensions один раз на drag start.
+      // Раньше: move() делал document.querySelector + getBoundingClientRect + offsetWidth/Height
+      // на каждый pointermove (60+ раз/сек) → forced layout reflow на каждый кадр.
+      // Теперь: считываем один раз. Если окно ресайзнётся во время drag — погрешность,
+      // но это редкий edge-case (пользователь физически не делает то и другое одновременно).
+      this._cachedGridEl = document.querySelector('.widgets-grid');
+      this._cachedGridRect = this._cachedGridEl ? this._cachedGridEl.getBoundingClientRect() : null;
+      if (this._originalElement) {
+        this._cachedOriginalDims = {
+          width: this._originalElement.offsetWidth,
+          height: this._originalElement.offsetHeight,
+        };
+      } else {
+        this._cachedOriginalDims = { width: 150, height: 140 };
+      }
+
       // Вибрация при начале drag
       if (navigator.vibrate) {
         navigator.vibrate(15);
@@ -31950,20 +31966,17 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         y: event.clientY || event.touches?.[0]?.clientY || 0
       };
 
-      // Двигаем ghost
+      // PERF NEW-18: используем cached dimensions из start() — без forced layout per move.
       if (this._ghostElement) {
-        const original = this._originalElement;
-        const width = original ? original.offsetWidth : 150;
-        const height = original ? original.offsetHeight : 140;
-
-        this._ghostElement.style.left = `${this._currentPos.x - width / 2}px`;
-        this._ghostElement.style.top = `${this._currentPos.y - height / 2}px`;
+        const dims = this._cachedOriginalDims || { width: 150, height: 140 };
+        this._ghostElement.style.left = `${this._currentPos.x - dims.width / 2}px`;
+        this._ghostElement.style.top = `${this._currentPos.y - dims.height / 2}px`;
       }
 
-      // Вычисляем новую grid позицию
-      const grid = document.querySelector('.widgets-grid');
-      if (grid) {
-        const rect = grid.getBoundingClientRect();
+      // PERF NEW-18: cached grid element + rect — без querySelector + getBoundingClientRect per move.
+      const grid = this._cachedGridEl;
+      const rect = this._cachedGridRect;
+      if (grid && rect) {
         const relX = this._currentPos.x - rect.left;
         const relY = this._currentPos.y - rect.top;
 
@@ -32211,6 +32224,10 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       this._dropIntent = null;
       this._scrollIntent = false;
       this._touchDragReadyAt = 0;
+      // PERF NEW-18: clear cached layout refs (важно — иначе stale rect при повторном drag)
+      this._cachedGridEl = null;
+      this._cachedGridRect = null;
+      this._cachedOriginalDims = null;
       // Очищаем сохранённые размеры placeholder
       this._placeholderCols = null;
       this._placeholderRows = null;
@@ -34773,7 +34790,15 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       ref.raf = requestAnimationFrame(() => {
         ref.raf = 0;
         if (!ref.pending) return;
-        setResizePreview(ref.pending);
+        // PERF NEW-10: startTransition помечает обновление как low-priority.
+        // При быстром drag React сможет прервать незаконченный render если придёт
+        // следующий pointermove → setResizePreview не блокирует input frame budget.
+        // Если startTransition недоступен (старый React) — fallback на прямой setState.
+        if (typeof React.startTransition === 'function') {
+          React.startTransition(() => setResizePreview(ref.pending));
+        } else {
+          setResizePreview(ref.pending);
+        }
         ref.pending = null;
       });
     }, []);
