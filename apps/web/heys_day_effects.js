@@ -5,6 +5,16 @@
 
     const HEYS = global.HEYS = global.HEYS || {};
 
+    // PERF Foundation 2: in-memory cache для readDayV2 (TTL=200мс, no write-aware).
+    // Покрывает повторные reads одного и того же date-key в одном render burst
+    // (DayTab + sidebar + sparklines часто читают тот же день за < 16мс окно).
+    // TTL короткий чтобы быстро отражать external writes (autosave, sync, cascade).
+    // Конфликта с HEYS.store.invalidate ниже НЕТ: invalidate чистит HEYS.store кэш,
+    // а наш _readDayV2Cache — независимая Map (consumed/seeded только этим модулем).
+    const _readDayV2Cache = (HEYS.lruCache && typeof HEYS.lruCache.create === 'function')
+        ? HEYS.lruCache.create({ name: 'readDayV2', max: 30, ttlMs: 200 })
+        : null;
+
     // v69 FIX: Resolve scoped dayv2 key to prevent cross-client contamination
     function getScopedDayV2Key(dateStr) {
         const cid = HEYS.currentClientId || HEYS.utils?.getCurrentClientId?.() || '';
@@ -14,16 +24,32 @@
     // v69 FIX: Read from scoped key first, fallback to unscoped for legacy
     function readDayV2(dateStr, lsGet) {
         const cid = HEYS.currentClientId || HEYS.utils?.getCurrentClientId?.() || '';
+
+        // PERF F2: cache key включает clientId+dateStr; ttl 200мс окно.
+        const cacheKey = cid + '|' + dateStr;
+        if (_readDayV2Cache) {
+            const cached = _readDayV2Cache.get(cacheKey);
+            if (cached) return cached;
+        }
+
+        let result;
         if (cid) {
             const scopedKey = 'heys_' + cid + '_dayv2_' + dateStr;
             HEYS?.store?.invalidate?.(scopedKey);
             const v = lsGet(scopedKey, null);
-            if (v) return { key: scopedKey, value: v };
+            if (v) {
+                result = { key: scopedKey, value: v };
+            }
         }
-        const unscopedKey = 'heys_dayv2_' + dateStr;
-        HEYS?.store?.invalidate?.(unscopedKey);
-        const v = lsGet(unscopedKey, null);
-        return v ? { key: unscopedKey, value: v } : { key: unscopedKey, value: null };
+        if (!result) {
+            const unscopedKey = 'heys_dayv2_' + dateStr;
+            HEYS?.store?.invalidate?.(unscopedKey);
+            const v = lsGet(unscopedKey, null);
+            result = v ? { key: unscopedKey, value: v } : { key: unscopedKey, value: null };
+        }
+
+        if (_readDayV2Cache) _readDayV2Cache.set(cacheKey, result);
+        return result;
     }
 
     function getReact() {
