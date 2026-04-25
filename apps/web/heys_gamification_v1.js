@@ -6107,21 +6107,31 @@
       }
     });
 
-    // perf: defer до idle-времени браузера — не блокируем scroll и активные кадры
-    // requestIdleCallback ждёт пока браузер не освободится (в отличие от setTimeout(0),
-    // который стреляет в ближайший macrotask, блокируя scroll)
-    window.addEventListener('heys:day-updated', () => {
-      const run = () => {
+    // PERF Foundation 1: миграция на dispatcher 'idle' lane.
+    // Dispatcher объединяет дубли эвентов в окне → не пересчитываем при cascade-batch
+    // на каждый день, только один раз на батч. Если dispatcher недоступен (load order edge) —
+    // fallback на старый window.addEventListener (тоже с rIC внутри).
+    const dispatcher = (typeof window !== 'undefined') && window.HEYS?.events?.dayUpdated;
+    if (dispatcher && typeof dispatcher.subscribe === 'function') {
+      dispatcher.subscribe(() => {
         if (HEYS.game?.recalculateDailyMissionsProgress) {
           HEYS.game.recalculateDailyMissionsProgress();
         }
-      };
-      if (typeof requestIdleCallback === 'function') {
-        requestIdleCallback(run, { timeout: 2000 });
-      } else {
-        setTimeout(run, 300);
-      }
-    });
+      }, { priority: 'idle' });
+    } else {
+      window.addEventListener('heys:day-updated', () => {
+        const run = () => {
+          if (HEYS.game?.recalculateDailyMissionsProgress) {
+            HEYS.game.recalculateDailyMissionsProgress();
+          }
+        };
+        if (typeof requestIdleCallback === 'function') {
+          requestIdleCallback(run, { timeout: 2000 });
+        } else {
+          setTimeout(run, 300);
+        }
+      });
+    }
   }
 
 })(typeof window !== 'undefined' ? window : global);

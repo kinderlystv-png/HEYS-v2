@@ -40,14 +40,29 @@ export function App() {
           window.HEYS = {};
         }
 
-        // Загружаем продукты из localStorage
+        // Загружаем продукты из localStorage.
+        // PERF: при больших каталогах (5000+ items) JSON.parse даёт 50-100мс jank на boot.
+        // Откладываем парсинг до idle, чтобы не блокировать React hydration.
         const storedProducts = localStorage.getItem('products');
+        type IdleAPI = {
+          requestIdleCallback?: (cb: IdleRequestCallback, opts?: { timeout?: number }) => number;
+        };
+        const w = window as unknown as IdleAPI;
+        const idle: (cb: () => void) => void = typeof w.requestIdleCallback === 'function'
+          ? (cb) => { w.requestIdleCallback!(() => cb(), { timeout: 1500 }); }
+          : (cb) => { setTimeout(cb, 0); };
+
         if (storedProducts) {
-          const parsedProducts = JSON.parse(storedProducts);
-          setProducts(parsedProducts);
-          log.debug('Products loaded from localStorage', { count: parsedProducts.length });
+          idle(() => {
+            try {
+              const parsedProducts = JSON.parse(storedProducts);
+              setProducts(parsedProducts);
+              log.debug('Products loaded from localStorage', { count: parsedProducts.length });
+            } catch (parseErr) {
+              logError(parseErr as Error, { context: 'products-parse-deferred' });
+            }
+          });
         } else {
-          // Создаём пустой массив продуктов
           const initialProducts: Array<Record<string, unknown>> = [];
           localStorage.setItem('products', JSON.stringify(initialProducts));
           setProducts(initialProducts);

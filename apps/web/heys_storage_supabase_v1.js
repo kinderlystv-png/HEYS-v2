@@ -101,6 +101,48 @@
     DAY: 'day'
   };
 
+  // 🛟 Cloud row decompress safety net. ok=false → caller MUST skip the write
+  // (better to leave the previous value than to write garbage compressed string).
+  function decompressCloudRowValue(rawValue, contextKey) {
+    if (typeof rawValue !== 'string' || !rawValue.startsWith('¤Z¤')) {
+      return { value: rawValue, ok: true };
+    }
+    const Store = global.HEYS && global.HEYS.store;
+    if (!Store || typeof Store.decompress !== 'function') {
+      console.warn('[HEYS.products] cloud-row decompress unavailable', { key: contextKey });
+      return { value: null, ok: false };
+    }
+    try {
+      const decoded = Store.decompress(rawValue);
+      return { value: decoded, ok: true };
+    } catch (e) {
+      console.warn('[HEYS.products] cloud-row decompress failed', { key: contextKey, error: e && e.message });
+      return { value: null, ok: false };
+    }
+  }
+
+  // 🪵 TEMP: лог количества продуктов при записи из cloud в localStorage.
+  // Снять, когда выясним, почему количество откатывается.
+  function logProductsCloudWrite(path, key, value) {
+    try {
+      if (!key || !/^heys_.*products$/.test(key)) return;
+      // Skip помеси типа hidden/favorite/deleted_products — они нас не интересуют
+      if (/(_hidden_products|_favorite_products|_deleted_products|_rpc_tail)/.test(key)) return;
+      const len = Array.isArray(value) ? value.length : -1;
+      // Прочитать текущий localStorage, чтобы понять, shrink или нет
+      let localLen = -1;
+      try {
+        const raw = global.localStorage.getItem(key);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed)) localLen = parsed.length;
+        }
+      } catch (_) { /* noop */ }
+      const decision = (localLen > 0 && len >= 0 && len < localLen) ? 'OVERWRITE-SHRINK' : 'WRITE';
+      console.info('[HEYS.products] cloud-write', { path, key, localLen, incomingLen: len, delta: len - localLen, decision });
+    } catch (_) { /* noop */ }
+  }
+
   /** Ключи, требующие client-specific storage */
   const CLIENT_SPECIFIC_KEYS = [
     // Основные данные клиента
@@ -649,6 +691,52 @@
   let _syncPauseToken = 0;
   let _syncPauseReason = '';
   let _productsSaveBlockedUntil = 0;
+
+  // 🔁 v4.9.x FUNDAMENTAL FIX: deferred retry для products после блок-окон
+  // Старая архитектура: гейты waitingForSync, 20s product-grace, 10s general-grace
+  // делали silent `return` — реальные user-правки терялись.
+  // Новая архитектура: вместо drop'а — планируем повторную отправку,
+  // которая дождётся закрытия окон, перечитает СВЕЖИЙ heys_products из localStorage
+  // (учитывая cloud merge) и пере-вызовет saveClientKey. Идемпотентно — несколько
+  // блокировок схлопываются в один retry; quality-проверки снова применятся.
+  let _productsRetryScheduled = false;
+  function scheduleProductsPostWindowRetry(client_id) {
+    if (!client_id) return;
+    if (_productsRetryScheduled) return;
+    _productsRetryScheduled = true;
+
+    const tryRetry = () => {
+      if (!initialSyncCompleted) {
+        setTimeout(tryRetry, 1000);
+        return;
+      }
+      const ageAfterSync = cloud._syncCompletedAt ? (Date.now() - cloud._syncCompletedAt) : Infinity;
+      const graceRemaining = Math.max(0, 20500 - ageAfterSync);
+      const cooldownRemaining = Math.max(0, _productsSaveBlockedUntil - Date.now());
+      const wait = Math.max(graceRemaining, cooldownRemaining);
+      if (wait > 0) {
+        setTimeout(tryRetry, wait + 100);
+        return;
+      }
+      _productsRetryScheduled = false;
+      try {
+        const scopedKey = `heys_${client_id}_products`;
+        const raw = global.localStorage && global.localStorage.getItem(scopedKey);
+        if (!raw) return;
+        let value = null;
+        try {
+          value = HEYS && HEYS.store && typeof HEYS.store.decompress === 'function'
+            ? HEYS.store.decompress(raw)
+            : JSON.parse(raw);
+        } catch (_) { return; }
+        if (!Array.isArray(value) || value.length === 0) return;
+        try { logCritical(`🔁 [PRODUCTS RETRY] Re-pushing products after windows closed: ${value.length} items`); } catch (_) {}
+        cloud.saveClientKey(client_id, 'heys_products', value);
+      } catch (_) { /* best-effort */ }
+    };
+
+    setTimeout(tryRetry, 200);
+  }
 
   cloud.pauseSync = function (durationMs = 10 * 60 * 1000, reason = '') {
     const now = Date.now();
@@ -1282,10 +1370,21 @@
 
     if (!local || !remote) return null;
 
-    // Если данные идентичны — merge не нужен
-    const localJson = JSON.stringify({ ...local, updatedAt: 0, _sourceId: '' });
-    const remoteJson = JSON.stringify({ ...remote, updatedAt: 0, _sourceId: '' });
-    if (localJson === remoteJson) return null;
+    // PERF #8 + Foundation 0: content-hash вместо двойного JSON.stringify.
+    // Раньше: O(meals + trainings + supplements) sequenся на каждый sync-tick.
+    // Теперь: hashDay использует cached _h полей → O(1) после первой инициализации.
+    // Fallback на stringify сохранён, если contentHash не загружен (load-order edge).
+    const ch = global.HEYS?.contentHash;
+    if (ch && typeof ch.hashDay === 'function') {
+      // Hash без updatedAt — оба объекта проходят те же шаги hash, updatedAt не входит в primitives части
+      const localHash = ch.hashDay(local);
+      const remoteHash = ch.hashDay(remote);
+      if (localHash === remoteHash) return null;
+    } else {
+      const localJson = JSON.stringify({ ...local, updatedAt: 0, _sourceId: '' });
+      const remoteJson = JSON.stringify({ ...remote, updatedAt: 0, _sourceId: '' });
+      if (localJson === remoteJson) return null;
+    }
 
     const merged = {
       ...remote, // База — remote
@@ -3613,6 +3712,28 @@
       // Сохраняем оригинальный метод в глобальную переменную
       originalSetItem = global.localStorage.setItem.bind(global.localStorage);
       global.localStorage.setItem = function (k, v) {
+        // 🪵 TEMP: лог любых записей в localStorage по products-ключам
+        try {
+          if (typeof k === 'string' && /^heys_.*products$/.test(k) && !/(_hidden_products|_favorite_products|_deleted_products|_rpc_tail)/.test(k)) {
+            let len = -1;
+            let kind = typeof v;
+            try {
+              const parsed = typeof v === 'string' ? JSON.parse(v) : v;
+              if (Array.isArray(parsed)) {
+                len = parsed.length;
+                kind = 'array';
+              } else if (typeof parsed === 'string') {
+                kind = parsed.startsWith('¤Z¤') ? 'compressed-string' : 'string';
+              } else {
+                kind = parsed === null ? 'null' : typeof parsed;
+              }
+            } catch (_) {
+              kind = typeof v === 'string' && v.startsWith('"¤Z¤') ? 'wrapped-compressed' : typeof v;
+            }
+            const stack = (new Error().stack || '').split('\n').slice(2, 6).map(s => s.trim()).join(' <- ');
+            console.info('[HEYS.products] ls.setItem', { key: k, kind, len, rawSize: typeof v === 'string' ? v.length : -1, stack });
+          }
+        } catch (_) { /* noop */ }
         // Используем безопасную запись с обработкой QuotaExceeded
         if (!safeSetItem(k, v)) {
           // Если не удалось сохранить даже после очистки — логируем
@@ -4827,13 +4948,13 @@
 
           // 🔧 FIX 2025-12-26: Декомпрессия данных из cloud
           // Если данные были ошибочно сохранены в сжатом виде — декомпрессируем
-          let valueToStore = row.v;
+          const __decompBoot = decompressCloudRowValue(row.v, key);
+          if (!__decompBoot.ok) {
+            return; // skip this row — would write garbage to localStorage
+          }
+          let valueToStore = __decompBoot.value;
           if (typeof row.v === 'string' && row.v.startsWith('¤Z¤')) {
-            const Store = global.HEYS?.store;
-            if (Store && typeof Store.decompress === 'function') {
-              valueToStore = Store.decompress(row.v);
-              log(`🔧 [BOOTSTRAP] Decompressed ${key} from cloud`);
-            }
+            log(`🔧 [BOOTSTRAP] Decompressed ${key} from cloud`);
           }
 
           // 🛡️ v61 FIX: Защита dayv2 от перезатирания пустыми данными
@@ -4872,6 +4993,7 @@
 
           // Глобальный ключ или ключ текущего клиента — загружаем
           ls.setItem(key, JSON.stringify(valueToStore));
+          logProductsCloudWrite('bootstrap', key, valueToStore);
           loadedCount++;
         } catch (e) { }
       });
@@ -5004,13 +5126,13 @@
 
           // 🔧 FIX 2025-12-26: Декомпрессия данных из cloud
           // Если данные были ошибочно сохранены в сжатом виде — декомпрессируем
-          let valueToStore = row.v;
+          const __decompYandex = decompressCloudRowValue(row.v, row.k);
+          if (!__decompYandex.ok) {
+            return; // skip this row — would write garbage to localStorage
+          }
+          let valueToStore = __decompYandex.value;
           if (typeof row.v === 'string' && row.v.startsWith('¤Z¤')) {
-            const Store = global.HEYS?.store;
-            if (Store && typeof Store.decompress === 'function') {
-              valueToStore = Store.decompress(row.v);
-              log(`🔧 [YANDEX SYNC] Decompressed ${row.k} from cloud`);
-            }
+            log(`🔧 [YANDEX SYNC] Decompressed ${row.k} from cloud`);
           }
           const isDayKey = localKey.includes('dayv2_');
           if (isDayKey && (valueToStore == null || valueToStore === 'null')) {
@@ -5056,6 +5178,7 @@
           }
 
           ls.setItem(localKey, JSON.stringify(valueToStore));
+          logProductsCloudWrite('yandex-sync', localKey, valueToStore);
           syncedKeys.push(row.k); // Сохраняем оригинальный ключ для инвалидации
           loadedCount++;
         } catch (e) {
@@ -6200,18 +6323,16 @@
                 return;
               }
 
-              let valueToStore = row.v;
-              // Декомпрессия если нужно
-              if (typeof row.v === 'string' && row.v.startsWith('¤Z¤')) {
-                const Store = global.HEYS?.store;
-                if (Store && typeof Store.decompress === 'function') {
-                  valueToStore = Store.decompress(row.v);
-                }
+              const __decompDelta = decompressCloudRowValue(row.v, row.k);
+              if (!__decompDelta.ok) {
+                return; // skip this row — would write garbage to localStorage
               }
+              let valueToStore = __decompDelta.value;
               // Пропускаем null dayv2
               if (key.includes('dayv2_') && (valueToStore == null || valueToStore === 'null')) return;
 
               ls.setItem(key, JSON.stringify(valueToStore));
+              logProductsCloudWrite('delta-light', key, valueToStore);
               lightSyncedKeys.push(row.k);
               lightKeysWritten++;
             } catch (_) { }
@@ -9098,18 +9219,23 @@
       updated_at: (new Date()).toISOString(),
     };
 
-    // �️ v4.8.3: НЕ сохраняем продукты в облако ДО завершения initial sync
-    // При старте React useEffect([products]) отправляет stale localStorage в cloud,
-    // перезатирая обогащённые микронутриентами данные. Sync сам загрузит актуальную версию.
+    // 🛡️ v4.8.3 / v4.9.x: НЕ сохраняем products в облако ДО завершения initial sync
+    // При старте React useEffect([products]) может отправить stale localStorage в cloud,
+    // перезатирая обогащённые данные. Sync сам загрузит актуальную версию.
+    // FUNDAMENTAL FIX: вместо silent drop — планируем retry после закрытия окна,
+    // который перечитает СВЕЖИЙ localStorage (с merged cloud + user-правки) и пере-вызовет save.
     if (waitingForSync && k && (k.includes('products') || k === 'heys_products')) {
-      log(`🚫 [SAVE DEFERRED] Products save blocked — waiting for initial sync to load cloud version`);
+      log(`⏳ [SAVE DEFERRED] Products save during initial sync — scheduled retry after sync window`);
+      scheduleProductsPostWindowRetry(client_id);
       return;
     }
-    // После завершения initial sync даём окну стабилизации остыть:
+    // После завершения initial sync даём окну стабилизации остыть (20s):
     // React-эффекты часто пытаются тут же повторно записать тот же heys_products.
+    // FUNDAMENTAL FIX: тоже планируем retry — реальные user-правки в этом окне не теряем.
     if ((k === 'heys_products' || normalizedKey === 'heys_products') && cloud._syncCompletedAt) {
       const ageAfterSync = Date.now() - cloud._syncCompletedAt;
       if (ageAfterSync >= 0 && ageAfterSync < 20000) {
+        scheduleProductsPostWindowRetry(client_id);
         return;
       }
     }
@@ -9134,14 +9260,15 @@
         logCritical(`🔍 [SAVE DEBUG] Products to save: total=${value.length}, withIron=${savingWithIron}, withTimestamp=${savingWithTs}`);
       }
 
-      // 🚨 КРИТИЧЕСКАЯ защита: если пытаемся сохранить продукты БЕЗ микронутриентов — это stale state!
-      // В облаке 290+ products с железом, а React пытается сохранить <50 — БЛОКИРУЕМ
-      if (savingWithIron < 50) {
-        _productsSaveBlockedUntil = Date.now() + 25000;
-        logCriticalThrottled('save-blocked-quality-low-iron', 20000, `🚨 [SAVE BLOCKED] Quality check: only ${savingWithIron} products with iron (expected 250+)`);
-        logCriticalThrottled('save-blocked-quality-low-iron-reason', 20000, '   This is stale React state without micronutrients. Refusing to overwrite cloud.');
-        return;
-      }
+      // v4.9.x FUNDAMENTAL FIX: УБРАН абсолютный порог `savingWithIron < 50`.
+      // Он был ложным эвристиком: для пользователей с каталогом без iron-данных
+      // он блокировал ВСЕ сохранения навсегда (cooldown 25s регенерируется на каждой попытке).
+      // Регрессия теперь определяется относительно текущего localStorage:
+      //   - shrink-protection в HEYS.products.setAll (heys_core_v12.js) ловит сжатие массива,
+      //   - relative iron-degrade check ниже ловит стирание микронутриентов,
+      //   - timestamp-check ниже ловит stale React state,
+      //   - empty-array check ниже ловит пустые массивы.
+      // Это покрывает реальные регрессии без false positives.
 
       try {
         const currentKey = client_id ? `heys_${client_id}_products` : 'heys_products';
@@ -9289,7 +9416,12 @@
     // и dedup check в interceptSetItem. persistDayData вызывается только из
     // пользовательских действий, а не из React re-render после cloud sync.
     const _isDayV2Data = normalizedKey && normalizedKey.includes('dayv2_') && !normalizedKey.includes('date');
+    const _isProducts = normalizedKey === 'heys_products' || k === 'heys_products' || (k && k.includes('products'));
     if (_inGracePeriod && !_isProfileCompleted && !_isWidgetLayout && !_isDayV2Data && !_isDefaultTabSync) {
+      // FUNDAMENTAL FIX: для products — не теряем write молча, ставим retry после grace period
+      if (_isProducts) {
+        scheduleProductsPostWindowRetry(client_id);
+      }
       return;
     }
     if (_inGracePeriod && (_isProfileCompleted || _isWidgetLayout || _isDefaultTabSync)) {
@@ -10141,6 +10273,15 @@
 
     const scopedKey = getScopedClientStorageKey(clientId, baseKey);
     if (!scopedKey) return false;
+
+    // 🛟 Decompress cloud-stored compressed values BEFORE serialize/write.
+    // Otherwise '¤Z¤...' string lands in localStorage as JSON-quoted string.
+    const __decompHot = decompressCloudRowValue(value, baseKey);
+    if (!__decompHot.ok) {
+      return false; // skip — better than corrupting localStorage with the compressed string
+    }
+    value = __decompHot.value;
+
     let serialized = null;
     try {
       serialized = JSON.stringify(value);
@@ -10153,6 +10294,33 @@
       const currentRaw = global.localStorage.getItem(scopedKey);
       const previousValue = currentRaw ? tryParse(currentRaw) : null;
       if (currentRaw === serialized) return false;
+
+      // 🪵 TEMP: HOT sync products write — кто и когда, что было, что стало.
+      // Условие на любой *_products ключ (но не hidden/favorite/deleted).
+      try {
+        const isProductsKey = (typeof baseKey === 'string' && /^heys_.*products$/.test(baseKey) && !/(_hidden_products|_favorite_products|_deleted_products|_rpc_tail)/.test(baseKey))
+          || (typeof scopedKey === 'string' && /^heys_.*products$/.test(scopedKey) && !/(_hidden_products|_favorite_products|_deleted_products|_rpc_tail)/.test(scopedKey));
+        if (isProductsKey) {
+          let localLen = -1;
+          try {
+            const parsed = currentRaw ? JSON.parse(currentRaw) : null;
+            if (Array.isArray(parsed)) localLen = parsed.length;
+          } catch (_) { /* noop */ }
+          const incomingLen = Array.isArray(value) ? value.length : -1;
+          const decision = (localLen > 0 && incomingLen >= 0 && incomingLen < localLen) ? 'OVERWRITE-SHRINK' : 'WRITE';
+          console.info('[HEYS.products] hot-sync write', {
+            source,
+            baseKey,
+            scopedKey,
+            localLen,
+            incomingLen,
+            delta: incomingLen >= 0 && localLen >= 0 ? incomingLen - localLen : null,
+            decision,
+            valueType: typeof value,
+            valueIsArray: Array.isArray(value),
+          });
+        }
+      } catch (_) { /* noop */ }
 
       // 🛡️ FIX: Protect widget_layout from hot-sync race condition.
       // Hot-sync can fetch stale cloud data before doImmediateClientUpload completes.
@@ -10436,29 +10604,58 @@
       return { success: false, updated: 0, failed: 0, reason: 'no_getkv', mode: 'no-getkv', fetchedKeys: keys, fetchedKeyCount: keys.length, markerScopes };
     }
 
-    const results = await Promise.allSettled(keys.map((key) => YandexAPI.getKV(clientId, key)));
-
+    // PERF NEW-13: progressive hydration с soft 3s budget.
+    // Раньше: await Promise.allSettled(...) ждал САМЫЙ МЕДЛЕННЫЙ ключ.
+    // На Slow 4G один тайм-аут (12-22с) → весь foreground залипал на это время.
+    // Теперь: каждый ключ применяется через applyForegroundHotSyncValue ПО МЕРЕ ПРИХОДА;
+    // агрегат возвращается через 3с budget или после всех — что раньше. Поздние ответы
+    // продолжают применяться (side effect), но не блокируют await.
+    const SOFT_BUDGET_MS = 3000;
     let updated = 0;
     let failed = 0;
     let authMissing = false;
+    let returnedEarly = false;
+    let lateArrivals = 0;
 
-    results.forEach((result, index) => {
-      const key = keys[index];
+    const handleResult = (key, result) => {
       if (result.status !== 'fulfilled') {
-        failed += 1;
+        if (!returnedEarly) failed += 1; else lateArrivals += 1;
         return;
       }
-
       const payload = result.value || {};
       if (payload.error) {
-        if (payload.error === 'No session token') authMissing = true;
-        failed += 1;
+        if (payload.error === 'No session token' && !returnedEarly) authMissing = true;
+        if (!returnedEarly) failed += 1; else lateArrivals += 1;
         return;
       }
-
       if (payload.data == null) return;
-      if (applyForegroundHotSyncValue(clientId, key, payload.data)) {
-        updated += 1;
+      const applied = applyForegroundHotSyncValue(clientId, key, payload.data);
+      if (applied) {
+        if (!returnedEarly) updated += 1;
+        else lateArrivals += 1;
+      }
+    };
+
+    const tasks = keys.map((key) =>
+      YandexAPI.getKV(clientId, key)
+        .then((value) => handleResult(key, { status: 'fulfilled', value }))
+        .catch((reason) => handleResult(key, { status: 'rejected', reason }))
+    );
+
+    await Promise.race([
+      Promise.allSettled(tasks),
+      new Promise((resolve) => setTimeout(resolve, SOFT_BUDGET_MS)),
+    ]);
+    returnedEarly = true;
+
+    // Поздние ответы продолжают применяться в фоне (через handleResult выше).
+    // Логируем количество для наблюдения и при необходимости флашим память.
+    Promise.allSettled(tasks).then(() => {
+      if (lateArrivals > 0) {
+        console.info(`[HEYS.sync] 🐢 hot-sync late arrivals: ${lateArrivals} key(s) applied after ${SOFT_BUDGET_MS}ms budget`);
+        if (global.HEYS?.store?.flushMemory) {
+          try { global.HEYS.store.flushMemory(); } catch (_) { /* noop */ }
+        }
       }
     });
 
@@ -11380,6 +11577,35 @@
    * Получить shared products из кэша (синхронно)
    * @returns {Array} Массив продуктов или пустой массив
    */
+  // 🛟 Phase α: shared products id-index для overlay merged view.
+  // Инвалидируется автоматически при перезаписи _sharedProductsCache.
+  let _sharedIndexCache = null;
+  let _sharedIndexCacheLen = -1;
+
+  function _invalidateSharedIndex() {
+    _sharedIndexCache = null;
+    _sharedIndexCacheLen = -1;
+    // Notify listeners (OverlayStore subscribes).
+    try {
+      if (typeof window !== 'undefined' && window.dispatchEvent) {
+        window.dispatchEvent(new CustomEvent('heys:shared-products-updated'));
+      }
+    } catch (_) { /* noop */ }
+  }
+
+  cloud.getSharedIndex = function () {
+    const arr = cloud.getCachedSharedProducts();
+    // Cheap dirty-check: rebuild if cache was reassigned (length changed) or first call.
+    if (_sharedIndexCache && _sharedIndexCacheLen === arr.length) return _sharedIndexCache;
+    const map = new Map();
+    for (const p of arr) {
+      if (p && p.id != null) map.set(String(p.id), p);
+    }
+    _sharedIndexCache = map;
+    _sharedIndexCacheLen = arr.length;
+    return map;
+  };
+
   cloud.getCachedSharedProducts = function () {
     // 🚀 Если memory cache пустой — попробовать восстановить из localStorage
     if ((!_sharedProductsCache || _sharedProductsCache.length === 0)) {
@@ -11390,6 +11616,7 @@
           if (parsed && parsed.ts && (Date.now() - parsed.ts) < SHARED_PRODUCTS_LS_TTL && Array.isArray(parsed.data)) {
             _sharedProductsCache = parsed.data;
             _sharedProductsCacheTime = parsed.ts;
+            _invalidateSharedIndex();
             logCritical(`📦 [SHARED PRODUCTS] Restored ${parsed.data.length} products from localStorage cache`);
           }
         }
@@ -11444,12 +11671,29 @@
         return { data: null, error };
       }
 
+      // 🪵 TEMP: server-side count для shared products (rpc vs rest)
+      try {
+        console.info('[HEYS.products] shared-fetch', {
+          fromServer: Array.isArray(data) ? data.length : -1,
+          limit,
+          excludeBlocklist,
+        });
+      } catch (_) { /* noop */ }
+
       // Фильтрация blocklist на клиенте (если нужно)
       let filtered = (data || []).map(normalizeSharedProduct);
       if (excludeBlocklist && user) {
         const blocklist = await cloud.getBlocklist();
         const blocklistSet = new Set(blocklist.map(id => id));
         filtered = filtered.filter(p => !blocklistSet.has(p.id));
+        if (filtered.length !== (data || []).length) {
+          try {
+            console.info('[HEYS.products] shared-fetch blocklist-filtered', {
+              before: (data || []).length,
+              after: filtered.length,
+            });
+          } catch (_) { /* noop */ }
+        }
       }
 
       const backfillSharedHarm = async (items) => {
@@ -11505,6 +11749,7 @@
       // 🔧 v3.19.0: Сохраняем в кэш для orphan check и других утилит
       _sharedProductsCache = filtered;
       _sharedProductsCacheTime = Date.now();
+      _invalidateSharedIndex();
       log(`[SHARED PRODUCTS] Loaded ${filtered.length} products total, cached`);
 
       try {
@@ -11760,6 +12005,7 @@
           created_at: new Date().toISOString()
         };
         _sharedProductsCache = [newSharedProduct, ..._sharedProductsCache];
+        _invalidateSharedIndex();
       }
 
       return {

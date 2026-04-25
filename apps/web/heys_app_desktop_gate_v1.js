@@ -27,18 +27,28 @@
                 setIsCurator(cloudUserLocal != null);
             };
             checkCurator();
-            const tick = () => {
-                if (typeof document !== 'undefined' && document.hidden) return;
-                checkCurator();
-            };
-            const interval = setInterval(tick, 5000);
+            // PERF: убран setInterval(5s) — он будил CPU даже на скрытых вкладках.
+            // Состояние curator меняется только в моменты login/logout/restore session,
+            // которые сопровождаются явными событиями. Достаточно реагировать на:
+            //  • visibilitychange → visible (возврат на вкладку)
+            //  • focus (мог пройти flow в другой вкладке)
+            //  • heys:auth-changed / storage event (cross-tab login/logout)
             const onVis = () => {
                 if (typeof document !== 'undefined' && !document.hidden) checkCurator();
             };
+            const onStorage = (e) => {
+                const k = e?.key || '';
+                if (k.includes('curator') || k.includes('session') || k === 'heys_user') checkCurator();
+            };
             document.addEventListener('visibilitychange', onVis);
+            window.addEventListener('focus', checkCurator);
+            window.addEventListener('heys:auth-changed', checkCurator);
+            window.addEventListener('storage', onStorage);
             return () => {
-                clearInterval(interval);
                 document.removeEventListener('visibilitychange', onVis);
+                window.removeEventListener('focus', checkCurator);
+                window.removeEventListener('heys:auth-changed', checkCurator);
+                window.removeEventListener('storage', onStorage);
             };
         }, []);
 

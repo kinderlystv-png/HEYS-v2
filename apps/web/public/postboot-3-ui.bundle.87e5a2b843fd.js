@@ -5937,6 +5937,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 (function (global) {
   const HEYS = global.HEYS = global.HEYS || {};
   const { useState, useMemo, useCallback, useEffect, useRef, useContext } = React;
+  // useDeferredValue (React 18+) — деферим heavy filter под печать.
+  const useDeferredValue = React.useDeferredValue || ((v) => v);
 
   // === ГЛОБАЛЬНЫЙ СЧЁТЧИК ВЕРСИИ ПРОДУКТОВ ===
   // Должен быть доступен всем компонентам внутри модуля
@@ -6582,9 +6584,20 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     const dayKeys = Object.keys(localStorage).filter(k => k.includes('_dayv2_'));
     let updatedDays = 0;
     let updatedItems = 0;
+    let skippedByPrefilter = 0;
+
+    // PERF NEW-5: raw-string pre-filter — skip JSON.parse для дней без затронутого продукта.
+    const _pidNeedles = ['"product_id":"' + pid + '"', '"productId":"' + pid + '"'];
 
     for (const key of dayKeys) {
       try {
+        const rawCheck = (typeof localStorage !== 'undefined') ? localStorage.getItem(key) : null;
+        if (rawCheck && typeof rawCheck === 'string' && !rawCheck.startsWith('¤Z¤')) {
+          if (rawCheck.indexOf(_pidNeedles[0]) === -1 && rawCheck.indexOf(_pidNeedles[1]) === -1) {
+            skippedByPrefilter += 1;
+            continue;
+          }
+        }
         const day = readStoredValue(key, null);
         if (!day || !day.meals) continue;
 
@@ -6664,7 +6677,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     }
 
     if (updatedDays > 0) {
-      console.log(`[HEYS] Cascade update: ${updatedItems} items in ${updatedDays} days`);
+      console.log(`[HEYS] Cascade update: ${updatedItems} items in ${updatedDays} days (skipped ${skippedByPrefilter} via raw-string pre-filter)`);
       // Clear caches to reflect changes
       HEYS.models?.clearMealTotalsCache?.();
       window.dispatchEvent(new CustomEvent('heys:mealitems-cascaded', {
@@ -6765,13 +6778,42 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
     let updatedDays = 0;
     let updatedItems = 0;
+    let skippedByPrefilter = 0;
     const CHUNK = 5;
+
+    // PERF NEW-5: prebuild «product ID needles» один раз — для быстрого raw-string contains-check.
+    // Любой из этих substrings в JSON дня означает «этот день потенциально содержит изменённый продукт».
+    // Не идеально (false positive если pid случайно встретится в другом контексте — крайне редко
+    // для UUID-like product_ids), зато избегаем JSON.parse + meal-loop для дней БЕЗ изменённых продуктов.
+    const _changedPidNeedles = [];
+    for (const pid of changesMap.keys()) {
+      // покрываем оба формата: "product_id":"X" и "productId":"X"
+      _changedPidNeedles.push('"product_id":"' + pid + '"');
+      _changedPidNeedles.push('"productId":"' + pid + '"');
+    }
 
     for (let offset = 0; offset < dayKeys.length; offset += CHUNK) {
       const slice = dayKeys.slice(offset, offset + CHUNK);
       for (let ki = 0; ki < slice.length; ki++) {
         const key = slice[ki];
         try {
+          // PERF NEW-5: raw-string pre-filter перед JSON.parse.
+          // Compressed values (¤Z¤ prefix) не покрываем — для них делаем full path как раньше.
+          const rawCheck = (typeof localStorage !== 'undefined') ? localStorage.getItem(key) : null;
+          if (rawCheck && typeof rawCheck === 'string' && !rawCheck.startsWith('¤Z¤')) {
+            let mightContain = false;
+            for (let ni = 0; ni < _changedPidNeedles.length; ni++) {
+              if (rawCheck.indexOf(_changedPidNeedles[ni]) !== -1) {
+                mightContain = true;
+                break;
+              }
+            }
+            if (!mightContain) {
+              skippedByPrefilter += 1;
+              continue;
+            }
+          }
+
           const day = readStoredValue(key, null);
           if (!day || !day.meals) continue;
 
@@ -6868,7 +6910,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     }
 
     if (updatedDays > 0) {
-      console.info(`[HEYS.sync] ✅ Batch cascade complete: ${updatedItems} items in ${updatedDays} days (local-only mirror skip)`);
+      console.info(`[HEYS.sync] ✅ Batch cascade complete: ${updatedItems} items in ${updatedDays} days (skipped ${skippedByPrefilter} via raw-string pre-filter, local-only mirror skip)`);
       // Clear caches to reflect changes
       HEYS.models?.clearMealTotalsCache?.();
 
@@ -7742,13 +7784,26 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       );
     };
 
+    // PERF NEW-2: deferred + memoized search results.
+    // Без этого: фильтрация 5000 продуктов на каждый keystroke = 50-150ms jank.
+    // useDeferredValue даёт React пропустить кадры при быстрой печати; useMemo
+    // переиспользует результат, если ни запрос, ни products не менялись.
+    const _allProductsForSearch = context?.products || [];
+    const _deferredCreateSearch = useDeferredValue(createSearch);
+    const _searchResults = useMemo(() => {
+      const lc = (_deferredCreateSearch || '').toLowerCase().trim();
+      if (lc.length < 1) return [];
+      const out = [];
+      for (let i = 0; i < _allProductsForSearch.length && out.length < 6; i++) {
+        const p = _allProductsForSearch[i];
+        if ((p.name || '').toLowerCase().includes(lc)) out.push(p);
+      }
+      return out;
+    }, [_deferredCreateSearch, _allProductsForSearch]);
+
     // --- Create/Edit view ---
     const renderCreate = () => {
-      const allProducts = context?.products || [];
-      const lc = createSearch.toLowerCase().trim();
-      const searchResults = lc.length >= 1
-        ? allProducts.filter(p => (p.name || '').toLowerCase().includes(lc)).slice(0, 6)
-        : [];
+      const searchResults = _searchResults;
       return React.createElement('div', { className: 'mpr-create' },
         React.createElement('input', {
           className: 'mpr-create-name-input',
@@ -31682,7 +31737,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       document.addEventListener('pointerup', this._boundUp);
       // touchmove НЕ добавляем здесь — он добавляется в start() только когда drag реально стартует.
       // Пассивный drag-phase listener не нужен и блокирует нативный скролл до старта.
-      document.addEventListener('touchend', this._boundUp);
+      // touchend — passive: handler не вызывает preventDefault, нужен для очистки drag state.
+      document.addEventListener('touchend', this._boundUp, { passive: true });
     },
 
     /**

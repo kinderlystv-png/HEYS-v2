@@ -45,6 +45,15 @@
         return fromMeals > 0 ? fromMeals : (Number(day.savedEatenKcal) || 0);
     }
 
+    // PERF #6 + Foundation 0/2: per-day status score cache, версионируется через hashDay.
+    // Раньше: каждый EWS detect re-вычислял score для 7 recent days синхронно.
+    // Теперь: hashDay(day) → cache.get(hash) → если miss, считаем и кэшируем.
+    // При мутации дня — hashDay меняется → cache miss → fresh recompute.
+    // Старые entries вытесняются LRU. Кэш независим от _statusCalculated на самом day-объекте.
+    const _ewsScoreCache = (HEYS.lruCache && typeof HEYS.lruCache.create === 'function')
+        ? HEYS.lruCache.create({ name: 'ews-day-score', max: 90 })
+        : null;
+
     // Thresholds for warnings
     const THRESHOLDS = {
         HEALTH_SCORE_DECLINE_DAYS: 3,
@@ -1990,16 +1999,49 @@
         const recentDays = days.slice(-7); // Most recent 7 days
         const statusScores = [];
 
+        // PERF #6: hashDay-versioned cache hit before any compute.
+        // hashDay использует cached meal._h полей → дёшево после первого вызова.
+        const _ch = HEYS && HEYS.contentHash;
+        const _useDayHashCache = !!(_ewsScoreCache && _ch && typeof _ch.hashDay === 'function');
+
         for (const day of recentDays) {
             // Try to get cached status or calculate
             let status = null;
 
+            // 1. Fastest: in-line precomputed value on day object
             if (day.statusScore !== undefined) {
                 status = day.statusScore;
             } else if (day._statusCalculated && day._statusCalculated.score !== undefined) {
                 status = day._statusCalculated.score;
+            } else if (_useDayHashCache) {
+                // 2. Versioned cache lookup by content hash
+                const dayHash = _ch.hashDay(day);
+                const cached = _ewsScoreCache.get(dayHash);
+                if (cached !== null && cached !== undefined) {
+                    status = cached;
+                } else if (typeof HEYS !== 'undefined' && HEYS.DayScore && typeof HEYS.DayScore.calculateDayScore === 'function') {
+                    try {
+                        const result = HEYS.DayScore.calculateDayScore({ dayData: day });
+                        if (result && result.score !== undefined) {
+                            status = result.score;
+                            _ewsScoreCache.set(dayHash, status);
+                        }
+                    } catch (e) {
+                        console.warn('ews / detect ⚠️ failed to calculate DayScore for day', day.date, e.message);
+                    }
+                } else if (typeof HEYS !== 'undefined' && HEYS.Status && typeof HEYS.Status.calculateStatus === 'function') {
+                    try {
+                        const result = HEYS.Status.calculateStatus({ dayData: day });
+                        if (result && result.score !== undefined) {
+                            status = result.score;
+                            _ewsScoreCache.set(dayHash, status);
+                        }
+                    } catch (e) {
+                        console.warn('ews / detect ⚠️ failed to calculate status for day', day.date, e.message);
+                    }
+                }
             } else if (typeof HEYS !== 'undefined' && HEYS.DayScore && typeof HEYS.DayScore.calculateDayScore === 'function') {
-                // Prefer unified Day Score over raw Status Score
+                // Legacy fallback: no contentHash util — compute every time
                 try {
                     const result = HEYS.DayScore.calculateDayScore({ dayData: day });
                     if (result && result.score !== undefined) {
@@ -2009,7 +2051,6 @@
                     console.warn('ews / detect ⚠️ failed to calculate DayScore for day', day.date, e.message);
                 }
             } else if (typeof HEYS !== 'undefined' && HEYS.Status && typeof HEYS.Status.calculateStatus === 'function') {
-                // Fallback to raw Status Score
                 try {
                     const result = HEYS.Status.calculateStatus({ dayData: day });
                     if (result && result.score !== undefined) {

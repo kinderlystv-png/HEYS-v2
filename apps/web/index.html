@@ -32,6 +32,8 @@
                 '[HEYS.react-profiler]': 'sync',
                 '[HEYS.sinhron]': 'sync',
                 '[SYNC ERROR]': 'sync',
+                /* 🪵 TEMP: products trace logs — мапим в sync, чтобы видеть без доп. настроек */
+                '[HEYS.products]': 'sync',
 
                 '[HEYS.cloud:ERR]': 'cloud',
                 '[HEYS.cloud]': 'cloud',
@@ -727,10 +729,10 @@
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
     <link rel="dns-prefetch" href="https://cdn.jsdelivr.net" />
     <!-- Preload критических boot-бандлов (2026-02-25 bundle migration) -->
-    <link rel="preload" href="boot-core.bundle.278cbf686fde.js" as="script" />
-    <link rel="preload" href="boot-calc.bundle.6f1526af1012.js" as="script" />
-    <link rel="preload" href="boot-day.bundle.14ac07d1a35b.js" as="script" />
-    <link rel="preload" href="boot-app.bundle.72444efd6e70.js" as="script" />
+    <link rel="preload" href="boot-core.bundle.e9ad4cf36617.js" as="script" />
+    <link rel="preload" href="boot-calc.bundle.5bb13f374027.js" as="script" />
+    <link rel="preload" href="boot-day.bundle.4076b05b8717.js" as="script" />
+    <link rel="preload" href="boot-app.bundle.47f318b38058.js" as="script" />
     <link rel="preload" href="boot-init.bundle.9a0f095c4098.js" as="script" />
 
     <!-- React теперь бандлится локально через Vite (миграция с CDN 2026-01-21) -->
@@ -2830,10 +2832,10 @@
          Сгенерировано: node scripts/bundle-legacy.mjs  (pnpm bundle:legacy)
          Состав и хеши: bundle-manifest.json
          Хеш в имени = вечный кэш (cache-first SW). -->
-    <script defer src="boot-core.bundle.278cbf686fde.js" fetchpriority="high"></script>
-    <script defer src="boot-calc.bundle.6f1526af1012.js"></script>
-    <script defer src="boot-day.bundle.14ac07d1a35b.js"></script>
-    <script defer src="boot-app.bundle.72444efd6e70.js"></script>
+    <script defer src="boot-core.bundle.e9ad4cf36617.js" fetchpriority="high"></script>
+    <script defer src="boot-calc.bundle.5bb13f374027.js"></script>
+    <script defer src="boot-day.bundle.4076b05b8717.js"></script>
+    <script defer src="boot-app.bundle.47f318b38058.js"></script>
     <script defer src="boot-init.bundle.9a0f095c4098.js"
         onerror="window.__heysShowRecoveryUI && window.__heysShowRecoveryUI('CRITICAL_SCRIPT_LOAD: boot-init.bundle')"></script>
 
@@ -2863,9 +2865,9 @@
     <script>
         (function () {
             var POST_BOOT_BUNDLES = [
-                'postboot-1-game.bundle.c9ede82e092a.js',
-                'postboot-2-insights.bundle.36e5c0b3e83d.js',
-                'postboot-3-ui.bundle.8e76e252448e.js'
+                'postboot-1-game.bundle.84d4da76641a.js',
+                'postboot-2-insights.bundle.fa0e6ac4bba4.js',
+                'postboot-3-ui.bundle.87e5a2b843fd.js'
             ];
             var LOCALHOST_TASKS_SOURCE_OVERRIDE = 'heys_planning_tasks_v1.js';
             var total = POST_BOOT_BUNDLES.length;

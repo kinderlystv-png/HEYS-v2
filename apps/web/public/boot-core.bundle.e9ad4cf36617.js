@@ -169,6 +169,10 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
 
     // === Rollback флаг ===
     'use_legacy_monolith': false,       // true = старый код, false = новые модули
+
+    // === Products Overlay v2 (architectural refactor, see plan structured-mixing-stallman.md) ===
+    'overlay_products_v2': false,       // true = read heys_products via OverlayStore merged view
+    'dual_write_legacy': true,          // during phases β/γ: keep writing legacy heys_products
   };
 
   /**
@@ -336,6 +340,460 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
     devLog('[FeatureFlags] Initialized with flags:', currentFlags);
   }
 })();
+
+
+/* ===== heys_content_hash_v1.js ===== */
+// heys_content_hash_v1.js — Foundation 0: content-addressed identity layer.
+//
+// Зачем: paттерн «JSON.stringify(весь день) для сравнения отпечатка» на горячих путях
+// (autosave, mergeDayData, EWS scoring) — O(meals × items) на каждый тик.
+// Замена через FNV-1a + per-item кэш `_h` поля в meal/training/supplement даёт
+// 5-21× speedup в steady state (бенчмарк tmp/heys-bench/content_hash_bench.mjs).
+//
+// API:
+//   HEYS.contentHash.fnv1a(str)          — базовый hash, возвращает hex строку (8 chars)
+//   HEYS.contentHash.hashMeal(meal)      — hash приёма пищи, обновляет meal._h
+//   HEYS.contentHash.hashItem(item)      — hash meal item / training / supplement
+//   HEYS.contentHash.hashDay(day)        — комбинированный hash дня (use cached _h)
+//   HEYS.contentHash.invalidateMeal(m)   — сбросить meal._h, форсируя пересчёт
+//   HEYS.contentHash.combine(...hashes)  — комбинировать произвольный набор хешей
+//
+// Дизайн:
+//   • _h — string поле, исключается из user-visible payload
+//   • При мутации items/nutrients вызывать invalidateMeal(m) перед save
+//   • hashDay переиспользует все meal._h без stringify
+//
+// БЕЗОПАСНОСТЬ:
+//   • Hash коллизии возможны (32-bit). Для perf-сравнения это ОК — false equal приведёт
+//     к редкому пропуску save, но user data не теряется (на следующем save проверка повторится).
+//   • Для криптографических задач НЕ использовать.
+//
+(function (global) {
+  'use strict';
+  const HEYS = global.HEYS = global.HEYS || {};
+
+  // ── FNV-1a 32-bit ────────────────────────────────────────────────────────
+  // Простой и быстрый — на JS оказался не медленнее xxhash32, на 30% проще.
+  function fnv1a(str) {
+    if (str == null) return '00000000';
+    let h = 0x811c9dc5;
+    for (let i = 0; i < str.length; i++) {
+      h ^= str.charCodeAt(i);
+      h = Math.imul(h, 0x01000193);
+    }
+    // Уплотняем до 8 hex для коротких ключей кэша
+    return (h >>> 0).toString(16).padStart(8, '0');
+  }
+
+  // ── per-item hash ────────────────────────────────────────────────────────
+  // Используется для meal items, trainings, supplements.
+  // Не модифицирует item — возвращает hash. Caller сам кладёт в `_h`.
+  // ВАЖНО: исключаем `_h` из stringify, иначе fallback path `t._h = h` (enumerable)
+  // приведёт к разным хешам между runs (1-й run без _h, 2-й с _h в payload).
+  function hashItem(item) {
+    if (!item) return '00000000';
+    if (item._h !== undefined) {
+      const { _h, ...rest } = item;
+      return fnv1a(JSON.stringify(rest));
+    }
+    return fnv1a(JSON.stringify(item));
+  }
+
+  // ── meal hash ────────────────────────────────────────────────────────────
+  // Кэшируется в meal._h. Если присутствует и не помечен dirty — переиспользуется.
+  function hashMeal(meal) {
+    if (!meal) return '00000000';
+    if (typeof meal._h === 'string' && meal._h.length === 8) return meal._h;
+    // Сериализуем БЕЗ _h (если осталось от старой версии) и БЕЗ id (id стабильный)
+    const { _h, ...rest } = meal;
+    const h = fnv1a(JSON.stringify(rest));
+    // Безопасная мутация: добавляем _h non-enumerable, чтобы не уехало в JSON.stringify
+    // основного payload (который сам не использует stripMeta — типа upload в облако).
+    try {
+      Object.defineProperty(meal, '_h', {
+        value: h,
+        enumerable: false,
+        writable: true,
+        configurable: true,
+      });
+    } catch (_) {
+      meal._h = h; // fallback: если объект frozen, просто игнорируем
+    }
+    return h;
+  }
+
+  // Инвалидация: вызывать перед save если меняли items/nutrients/name
+  function invalidateMeal(meal) {
+    if (!meal) return;
+    try { delete meal._h; } catch (_) { meal._h = null; }
+  }
+
+  // ── day-level combined hash ──────────────────────────────────────────────
+  // Используется autosave и mergeDayData для O(1) сравнения.
+  //
+  // Стратегия: разделить большие/частые vs маленькие/редкие поля.
+  //   • БОЛЬШИЕ (meals, trainings, supplements) — через cached _h на каждый item.
+  //     Это даёт основной win — JSON.stringify этих массивов и есть основная стоимость.
+  //   • ОСТАЛЬНЫЕ поля (householdMin, sleepStart, dayScore, morningActivation, ...) —
+  //     простой JSON.stringify оставшегося объекта. Эти поля маленькие (~100 байт),
+  //     stringify тривиален. Это даёт безопасность — никаких пропущенных полей.
+  //
+  // Поля исключаются из хеша:
+  //   • updatedAt, _sourceId, _mergedAt — meta, не часть контента
+  //   • _h — наш собственный кэш
+  //   • meals, trainings, supplementsPlanned, supplementsTaken — обработаны отдельно
+  //
+  const EXCLUDED_DAY_KEYS = new Set([
+    'updatedAt', '_sourceId', '_mergedAt', '_h',
+    'meals', 'trainings', 'supplementsPlanned', 'supplementsTaken',
+  ]);
+
+  function hashDay(day) {
+    if (!day) return '00000000';
+    const parts = [];
+
+    // 1. Большие массивы — через cached _h
+    const meals = day.meals || [];
+    for (let i = 0; i < meals.length; i++) parts.push(hashMeal(meals[i]));
+
+    const trainings = day.trainings || [];
+    for (let i = 0; i < trainings.length; i++) {
+      const t = trainings[i];
+      if (t && typeof t._h === 'string' && t._h.length === 8) { parts.push(t._h); continue; }
+      const h = hashItem(t);
+      if (t) {
+        try { Object.defineProperty(t, '_h', { value: h, enumerable: false, writable: true, configurable: true }); }
+        catch (_) { t._h = h; }
+      }
+      parts.push(h);
+    }
+
+    const sp = day.supplementsPlanned || [];
+    for (let i = 0; i < sp.length; i++) parts.push(hashItem(sp[i]));
+    const st = day.supplementsTaken || [];
+    for (let i = 0; i < st.length; i++) parts.push(hashItem(st[i]));
+
+    // 2. Все остальные поля — собрать в плоский объект и сериализовать.
+    // Это покрывает household*, sleep*, dayScore*, dayComment, cycleDay, morningActivation, etc.
+    // Объект маленький (~100-300 байт), stringify тривиален.
+    const rest = {};
+    const keys = Object.keys(day).sort(); // sort для детерминированности
+    for (let i = 0; i < keys.length; i++) {
+      const k = keys[i];
+      if (EXCLUDED_DAY_KEYS.has(k)) continue;
+      rest[k] = day[k];
+    }
+    parts.push(fnv1a(JSON.stringify(rest)));
+
+    return fnv1a(parts.join('|'));
+  }
+
+  // Утилита: комбинировать произвольный набор хешей (для custom сценариев)
+  function combine(...hashes) {
+    return fnv1a(hashes.filter(Boolean).join('|'));
+  }
+
+  HEYS.contentHash = {
+    fnv1a,
+    hashItem,
+    hashMeal,
+    invalidateMeal,
+    hashDay,
+    combine,
+    // Версия — на случай если изменим алгоритм в будущем
+    version: 1,
+  };
+
+  // Лёгкая телеметрия — счётчик вызовов hashDay для диагностики
+  let _hashDayCalls = 0;
+  const origHashDay = HEYS.contentHash.hashDay;
+  HEYS.contentHash.hashDay = function (day) {
+    _hashDayCalls += 1;
+    return origHashDay(day);
+  };
+  HEYS.contentHash.getStats = function () {
+    return { hashDayCalls: _hashDayCalls, version: 1 };
+  };
+})(typeof window !== 'undefined' ? window : globalThis);
+
+
+/* ===== heys_day_updated_dispatcher_v1.js ===== */
+// heys_day_updated_dispatcher_v1.js — Foundation 1: priority dispatcher для heys:day-updated.
+//
+// Зачем: 13+ файлов подписаны на window.addEventListener('heys:day-updated'). При cascade-batch
+// или sync-pull эвент диспатчится N раз → N × 13 синхронных колбэков на main thread.
+// Только 2-3 из 13 действительно тяжелые (cascade card invalidation, leaderboard, EWS).
+// Остальные — лёгкие cache.delete или setState.
+//
+// Решение: dispatcher подписывается на window event ОДИН раз и маршрутизирует подписчиков
+// через приоритетные lane'ы с дедупликацией в окне. Старые window.addEventListener-подписчики
+// продолжают работать БЕЗ изменений — dispatcher не интерцептит, не блокирует.
+//
+// Lane'ы:
+//   • immediate   — синхронно (для critical UX, например cascade card визуальная корректность)
+//   • next-frame  — через requestAnimationFrame (medium-cost обработчики)
+//   • idle        — через requestIdleCallback (background work, EWS, gamification)
+//
+// API (только для НОВЫХ подписчиков; старые используют window.addEventListener):
+//   const off = HEYS.events.dayUpdated.subscribe(handler, { priority: 'next-frame' })
+//   off()                                                                  // отписаться
+//   HEYS.events.dayUpdated.getStats()                                      // диагностика
+//
+// Дедупликация:
+//   • Каждый lane имеет Map<dedupeKey, lastDetail>; повторный эвент в окне до flush
+//     перезаписывает detail (последний выигрывает).
+//   • dedupeKey = detail.dedupeKey || `${detail.date}|${detail.source}`
+//
+(function (global) {
+  'use strict';
+  const HEYS = global.HEYS = global.HEYS || {};
+  HEYS.events = HEYS.events || {};
+
+  if (HEYS.events.dayUpdated && HEYS.events.dayUpdated.version) return; // re-load guard
+
+  const handlers = {
+    immediate: new Set(),
+    'next-frame': new Set(),
+    idle: new Set(),
+  };
+
+  const pending = {
+    immediate: new Map(),
+    'next-frame': new Map(),
+    idle: new Map(),
+  };
+  let nextFrameScheduled = false;
+  let idleScheduled = false;
+
+  // Telemetry
+  let totalDispatched = 0;
+  let totalDeduped = 0;
+
+  function getDedupeKey(detail) {
+    if (!detail) return '';
+    if (typeof detail.dedupeKey === 'string') return detail.dedupeKey;
+    return [detail.date || detail.dateStr || '', detail.source || ''].join('|');
+  }
+
+  function flushLane(priority) {
+    const queue = pending[priority];
+    if (queue.size === 0) return;
+    const items = Array.from(queue.values());
+    queue.clear();
+    const callbacks = Array.from(handlers[priority]);
+    for (let i = 0; i < items.length; i++) {
+      for (let j = 0; j < callbacks.length; j++) {
+        try { callbacks[j](items[i]); }
+        catch (e) {
+          if (typeof console !== 'undefined') {
+            console.warn('[HEYS.events.dayUpdated] handler error in', priority, e);
+          }
+        }
+      }
+    }
+  }
+
+  function scheduleNextFrame() {
+    if (nextFrameScheduled) return;
+    nextFrameScheduled = true;
+    const raf = global.requestAnimationFrame || ((cb) => global.setTimeout(cb, 16));
+    raf(() => {
+      nextFrameScheduled = false;
+      flushLane('next-frame');
+    });
+  }
+
+  function scheduleIdle() {
+    if (idleScheduled) return;
+    idleScheduled = true;
+    const ric = global.requestIdleCallback || ((cb) => global.setTimeout(cb, 32));
+    ric(() => {
+      idleScheduled = false;
+      flushLane('idle');
+    }, { timeout: 1000 });
+  }
+
+  function enqueue(detail) {
+    const key = getDedupeKey(detail);
+    totalDispatched += 1;
+
+    if (handlers.immediate.size > 0) {
+      if (pending.immediate.has(key)) totalDeduped += 1;
+      pending.immediate.set(key, detail);
+      flushLane('immediate'); // immediate flushes synchronously
+    }
+    if (handlers['next-frame'].size > 0) {
+      if (pending['next-frame'].has(key)) totalDeduped += 1;
+      pending['next-frame'].set(key, detail);
+      scheduleNextFrame();
+    }
+    if (handlers.idle.size > 0) {
+      if (pending.idle.has(key)) totalDeduped += 1;
+      pending.idle.set(key, detail);
+      scheduleIdle();
+    }
+  }
+
+  // Слушаем window event → маршрутизируем через lane'ы (для новых подписчиков).
+  // Старые window.addEventListener-подписчики получают эвент напрямую от window — мы их не трогаем.
+  if (typeof global.addEventListener === 'function') {
+    global.addEventListener('heys:day-updated', (e) => {
+      enqueue((e && e.detail) || {});
+    });
+  }
+
+  function subscribe(handler, opts) {
+    if (typeof handler !== 'function') return () => {};
+    const priority = (opts && opts.priority) || 'next-frame';
+    const set = handlers[priority] || handlers['next-frame'];
+    set.add(handler);
+    return () => { set.delete(handler); };
+  }
+
+  function getStats() {
+    return {
+      handlerCounts: {
+        immediate: handlers.immediate.size,
+        'next-frame': handlers['next-frame'].size,
+        idle: handlers.idle.size,
+      },
+      pendingCounts: {
+        immediate: pending.immediate.size,
+        'next-frame': pending['next-frame'].size,
+        idle: pending.idle.size,
+      },
+      totalDispatched,
+      totalDeduped,
+    };
+  }
+
+  HEYS.events.dayUpdated = {
+    subscribe,
+    getStats,
+    version: 1,
+  };
+})(typeof window !== 'undefined' ? window : globalThis);
+
+
+/* ===== heys_lru_cache_v1.js ===== */
+// heys_lru_cache_v1.js — Foundation 2: in-memory cache layer с write-stamp протоколом.
+//
+// Зачем: горячие пути (readDayV2, product list hydrate) делают JSON.parse одного и того же
+// LS-контента по 2-3 раза за рендер. На больших каталогах — 50-100мс parse jank каждый раз.
+//
+// Контракт invalidate (Plan v3 Option B — write-stamp comparison):
+//   • Cache хранит value + stamp.
+//   • Writes (явный source: 'write') → cache.delete + writeStamps[key] = now.
+//   • Reads (явный source: 'read') → no-op. Кэш считается валидным, если cache.stamp >= writeStamps[key].
+//   • Без явного source — defaults to 'write' для безопасности (старые места кода).
+//
+// API:
+//   const cache = HEYS.lruCache.create({ name, max, ttlMs })
+//   cache.get(key)                       — получить cached value или null
+//   cache.set(key, value)                — положить в кэш с текущим stamp
+//   cache.invalidate(key, opts)          — opts.source: 'write'|'read'|undefined
+//   cache.invalidateAll()                — полная очистка (без stamp bump)
+//   cache.size()
+//   cache.stats()
+//
+// Дизайн LRU:
+//   • Map preserves insertion order → on get, delete+set перемещает в конец (most recent).
+//   • При size > max — удалить first entry (least recent).
+//
+(function (global) {
+  'use strict';
+  const HEYS = global.HEYS = global.HEYS || {};
+
+  if (HEYS.lruCache && HEYS.lruCache.version) return; // re-load guard
+
+  function create(opts) {
+    opts = opts || {};
+    const name = opts.name || 'unnamed';
+    const max = opts.max || 200;
+    const ttlMs = opts.ttlMs || 0; // 0 = no TTL
+    const cache = new Map();        // key -> { value, stamp, expires }
+    const writeStamps = new Map();  // key -> last write timestamp
+    let hits = 0;
+    let misses = 0;
+    let evictions = 0;
+
+    function now() { return performance.now ? performance.now() : Date.now(); }
+
+    function isExpired(entry) {
+      return ttlMs > 0 && entry.expires < now();
+    }
+
+    function get(key) {
+      const entry = cache.get(key);
+      if (!entry) { misses += 1; return null; }
+      // TTL check
+      if (isExpired(entry)) {
+        cache.delete(key);
+        misses += 1;
+        return null;
+      }
+      // Write-stamp check: если был write после нашего cache stamp — invalidate
+      const lastWrite = writeStamps.get(key) || 0;
+      if (entry.stamp < lastWrite) {
+        cache.delete(key);
+        misses += 1;
+        return null;
+      }
+      // LRU: переместить в конец
+      cache.delete(key);
+      cache.set(key, entry);
+      hits += 1;
+      return entry.value;
+    }
+
+    function set(key, value) {
+      // Если уже есть — удалить, чтобы insertion order обновился
+      cache.delete(key);
+      cache.set(key, {
+        value,
+        stamp: now(),
+        expires: ttlMs > 0 ? now() + ttlMs : Infinity,
+      });
+      // LRU eviction
+      if (cache.size > max) {
+        const firstKey = cache.keys().next().value;
+        cache.delete(firstKey);
+        evictions += 1;
+      }
+    }
+
+    function invalidate(key, opts) {
+      const source = opts && opts.source;
+      // По умолчанию — 'write' (безопасный legacy). Только явный 'read' → no-op.
+      if (source === 'read') return;
+      cache.delete(key);
+      writeStamps.set(key, now());
+    }
+
+    function invalidateAll() {
+      cache.clear();
+      // не трогаем writeStamps — последующие set с правильным stamp нормально вытеснят старые writes
+    }
+
+    function size() { return cache.size; }
+
+    function stats() {
+      const total = hits + misses;
+      return {
+        name, size: cache.size, max, ttlMs,
+        hits, misses, evictions,
+        hitRate: total > 0 ? hits / total : 0,
+      };
+    }
+
+    return { get, set, invalidate, invalidateAll, size, stats };
+  }
+
+  HEYS.lruCache = {
+    create,
+    version: 1,
+  };
+})(typeof window !== 'undefined' ? window : globalThis);
 
 
 /* ===== heys_module_perf_v1.js ===== */
@@ -11628,6 +12086,15 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
         // 10. Сохранить объединённый массив
         const mergedProducts = [...updatedProducts, ...newProducts];
         debugLog('merged', { total: mergedProducts.length, added: newProducts.length, updated: updatedCount });
+        // 🪵 TEMP: явный лог итога merge при «Синхронизация с общей базой»
+        console.info('[HEYS.products] merge', {
+          source: 'restoreFromSharedBase',
+          was: currentProducts.length,
+          shared: sharedProducts.length,
+          added: newProducts.length,
+          updated: updatedCount,
+          total: mergedProducts.length,
+        });
 
         if (HEYS.products?.setAll) {
           HEYS.products.setAll(mergedProducts, { source: 'import-pasted' });
@@ -13276,11 +13743,44 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
     return true;
   };
 
+  // 🪵 TEMP: лог количества продуктов на каждом setAll/getAll/merge/cloud-write.
+  // Снять, когда выясним, почему количество откатывается.
+  HEYS._productsTraceLastLen = HEYS._productsTraceLastLen ?? null;
+
+  // 🛟 Self-heal helper (shared by getAll и setAll anti-shrink reader).
+  // Распаковывает сжатые/обёрнутые строки: '¤Z¤...' и '"¤Z¤..."' (JSON-обёрнутая).
+  const tryDecompressToArray = (raw) => {
+    if (typeof raw !== 'string' || !raw) return null;
+    try {
+      let candidate = raw;
+      if (candidate.startsWith('"') && candidate.endsWith('"')) {
+        try { candidate = JSON.parse(candidate); } catch (_) { /* noop */ }
+      }
+      if (typeof candidate === 'string' && candidate.startsWith('¤Z¤') && HEYS.store?.decompress) {
+        const decompressed = HEYS.store.decompress(candidate);
+        if (Array.isArray(decompressed)) return decompressed;
+      }
+    } catch (_) { /* noop */ }
+    return null;
+  };
+
   HEYS.products = HEYS.products || {
     getAll: () => {
       const fromStore = (HEYS.store && HEYS.store.get && HEYS.store.get('heys_products', [])) || [];
       const fromUtils = (HEYS.utils && HEYS.utils.lsGet && HEYS.utils.lsGet('heys_products', [])) || [];
       let result = fromStore.length > 0 ? fromStore : fromUtils;
+
+      if (!Array.isArray(result)) {
+        const recovered = tryDecompressToArray(typeof result === 'string' ? result : null)
+          || tryDecompressToArray(typeof fromStore === 'string' ? fromStore : null)
+          || tryDecompressToArray(typeof fromUtils === 'string' ? fromUtils : null);
+        if (Array.isArray(recovered) && recovered.length > 0) {
+          console.info('[HEYS.products] getAll self-heal', { len: recovered.length });
+          if (HEYS.store?.set) HEYS.store.set('heys_products', recovered);
+          else if (HEYS.utils?.lsSet) HEYS.utils.lsSet('heys_products', recovered);
+          result = recovered;
+        }
+      }
 
       // Fallback: if result is suspiciously small, try other clientId namespaces
       if (Array.isArray(result) && result.length <= 1) {
@@ -13342,9 +13842,36 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
       } catch (_) { /* noop */ }
       // 🛡️ Safety: always return array (guards against corrupted storage values)
       if (!Array.isArray(result)) {
-        console.warn('[PRODUCTS.getAll] non-array result:', typeof result, result?.constructor?.name, '— returning []');
+        try {
+          const sig = `${typeof result}:${result?.constructor?.name}:${typeof fromStore}/${typeof fromUtils}`;
+          if (HEYS._productsTraceLastNonArraySig !== sig) {
+            HEYS._productsTraceLastNonArraySig = sig;
+            console.warn('[HEYS.products] getAll non-array', {
+              type: typeof result,
+              ctor: result?.constructor?.name,
+              fromStoreType: typeof fromStore,
+              fromUtilsType: typeof fromUtils,
+              fromStoreLen: Array.isArray(fromStore) ? fromStore.length : -1,
+              fromUtilsLen: Array.isArray(fromUtils) ? fromUtils.length : -1,
+              sample: typeof result === 'string' ? result.slice(0, 30) : null,
+            });
+          }
+        } catch (_) { /* noop */ }
+        HEYS._productsTraceLastLen = 0;
         return [];
       }
+      try {
+        const prev = HEYS._productsTraceLastLen;
+        if (prev !== result.length) {
+          console.info('[HEYS.products] getAll', {
+            len: result.length,
+            prevLen: prev,
+            fromStore: fromStore.length,
+            fromUtils: fromUtils.length,
+          });
+          HEYS._productsTraceLastLen = result.length;
+        }
+      } catch (_) { /* noop */ }
       return result;
     },
     /** Личная база: поиск по id (в т.ч. для dayv2 / orphan — shared id здесь не ищем) */
@@ -13398,15 +13925,21 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
             }
           }
 
-          // Проверяем все найденные ключи и берём максимум
+          // Проверяем все найденные ключи и берём максимум.
+          // 🛟 Decompress-aware: если raw — JSON-обёрнутая или сырая '¤Z¤...' compressed string,
+          // достаём настоящий массив через tryDecompressToArray (иначе anti-shrink думает что нет данных).
           for (const key of keysToTry) {
             try {
               const raw = localStorage.getItem(key);
-              if (raw) {
-                const parsed = JSON.parse(raw);
-                if (Array.isArray(parsed) && parsed.length > fromLocalStorage.length) {
-                  fromLocalStorage = parsed;
-                }
+              if (!raw) continue;
+              let parsed = null;
+              try { parsed = JSON.parse(raw); } catch (_) { /* not json */ }
+              if (!Array.isArray(parsed)) {
+                const recovered = tryDecompressToArray(raw);
+                if (Array.isArray(recovered)) parsed = recovered;
+              }
+              if (Array.isArray(parsed) && parsed.length > fromLocalStorage.length) {
+                fromLocalStorage = parsed;
               }
             } catch (e) { /* skip invalid */ }
           }
@@ -13416,9 +13949,14 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
         const currentLen = Math.max(fromGetAll.length, fromLocalStorage.length);
 
         if (currentLen > 0 && newLen < currentLen) {
-          console.warn(`[PRODUCTS.setAll] ⛔ BLOCKED: попытка уменьшить с ${currentLen} до ${newLen} без allowShrink.`);
-          console.warn(`[PRODUCTS.setAll] Source: ${opts.source || 'unknown'}, fromGetAll: ${fromGetAll.length}, fromLocalStorage: ${fromLocalStorage.length}`);
-          console.warn('[PRODUCTS.setAll] Stack:', new Error().stack?.split('\n').slice(1, 5).join(' <- '));
+          console.warn('[HEYS.products] setAll BLOCKED', {
+            source: opts.source || 'unknown',
+            was: currentLen,
+            attemptedNow: newLen,
+            fromGetAll: fromGetAll.length,
+            fromLocalStorage: fromLocalStorage.length,
+            stack: new Error().stack?.split('\n').slice(1, 5).map(s => s.trim()).join(' <- '),
+          });
           return; // НЕ перезаписываем!
         }
       }
@@ -13437,20 +13975,50 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
         HEYS.utils.lsSet('heys_products', arr);
       }
       try {
-        const now = Date.now();
-        if ((now - (productsLogState.lastSetAll || 0)) > 4000) {
-          productsLogState.lastSetAll = now;
-          const withIron = Array.isArray(arr) ? arr.filter((p) => p && +p.iron > 0).length : 0;
-          console.info('[HEYS.products:SET]', {
-            source,
-            len: Array.isArray(arr) ? arr.length : -1,
-            withIron,
-            allowShrink: !!opts.allowShrink,
-            skipCloud: !!opts.skipCloud,
-            skipNotify: !!opts.skipNotify,
-          });
-        }
+        const withIron = Array.isArray(arr) ? arr.filter((p) => p && +p.iron > 0).length : 0;
+        const stack = (new Error().stack || '').split('\n').slice(2, 5).map(s => s.trim()).join(' <- ');
+        console.info('[HEYS.products] setAll', {
+          source,
+          was: HEYS._productsTraceLastLen,
+          now: Array.isArray(arr) ? arr.length : -1,
+          withIron,
+          allowShrink: !!opts.allowShrink,
+          skipCloud: !!opts.skipCloud,
+          skipNotify: !!opts.skipNotify,
+          stack,
+        });
+        HEYS._productsTraceLastLen = Array.isArray(arr) ? arr.length : HEYS._productsTraceLastLen;
       } catch (_) { /* noop */ }
+
+      // ──────────────────────────────────────────────────────────────────
+      // Phase β: dual-write to overlay store. Runs AFTER legacy write so
+      // overlay reflects the canonical state. Gated on:
+      //   - dual_write_legacy flag (default true; off → no dual-write)
+      //   - migration succeeded (heys_overlay_migration_status === 'success')
+      // Defensive: never break the legacy path.
+      // ──────────────────────────────────────────────────────────────────
+      try {
+        if (!Array.isArray(arr)) return;
+        if (!HEYS.flags || !HEYS.flags.isEnabled || !HEYS.flags.isEnabled('dual_write_legacy')) return;
+        if (typeof localStorage === 'undefined') return;
+        if (localStorage.getItem('heys_overlay_migration_status') !== 'success') return;
+        const Overlay = HEYS.OverlayStore;
+        const cloud = HEYS.cloud;
+        if (!Overlay || !cloud || !cloud.getSharedIndex) return;
+        const sharedById = cloud.getSharedIndex();
+        if (!sharedById || sharedById.size === 0) return; // shared not ready; skip
+
+        // Translate full snapshot → overlay shape via existing migrate().
+        // This is a complete replace (matches setAll semantics).
+        const result = Overlay.migrate(arr, sharedById);
+        if (!result.ok) {
+          console.warn('[HEYS.products] dual-write skipped:', result.reason);
+          return;
+        }
+        Overlay.writeRaw(result.rows);
+      } catch (e) {
+        console.warn('[HEYS.products] dual-write failed (non-fatal):', e && e.message);
+      }
     },
     watch: (fn) => { if (HEYS.store && HEYS.store.watch) return HEYS.store.watch('heys_products', fn); return () => { }; },
 
@@ -13619,16 +14187,42 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
       const products = HEYS.products.getAll();
       const original = products.length;
 
-      const seen = new Map();
-      const unique = [];
-
-      for (const p of products) {
-        const key = (p.name || '').trim().toLowerCase();
-        if (!seen.has(key)) {
-          seen.set(key, true);
-          unique.push(p);
+      // 🛟 Score-based dedupe: при одинаковом нормализованном имени побеждает запись с большим
+      // числом заполненных полей (нутриенты / порции / updatedAt). user_modified всегда побеждает.
+      const NUTRIENT_FIELDS = [
+        'kcal100', 'protein100', 'fat100', 'carbs100',
+        'simple100', 'complex100', 'badFat100', 'goodFat100', 'trans100', 'fiber100',
+        'iron', 'calcium', 'magnesium', 'phosphorus', 'potassium', 'sodium100',
+        'vitaminA', 'vitaminC', 'vitaminD', 'vitaminE', 'vitaminK',
+        'vitaminB1', 'vitaminB2', 'vitaminB3', 'vitaminB6', 'vitaminB9', 'vitaminB12',
+        'gi', 'harm',
+      ];
+      const scoreProduct = (p) => {
+        if (!p) return -1;
+        if (p.user_modified) return 1e9;
+        let s = 0;
+        for (const f of NUTRIENT_FIELDS) {
+          const v = Number(p[f]);
+          if (Number.isFinite(v) && v !== 0) s++;
         }
-      }
+        if (Array.isArray(p.portions) && p.portions.length > 0) s += 2;
+        s += Math.min(1, (Number(p.updatedAt) || 0) / 1e16);
+        return s;
+      };
+
+      const bestByKey = new Map(); // key → { product, idx } — idx сохраняет исходный порядок
+      products.forEach((p, idx) => {
+        const key = (p?.name || '').trim().toLowerCase();
+        if (!key) return; // продукты без имени отбрасываем (как и раньше неявно)
+        const prev = bestByKey.get(key);
+        if (!prev || scoreProduct(p) > scoreProduct(prev.product)) {
+          bestByKey.set(key, { product: p, idx });
+        }
+      });
+
+      const unique = Array.from(bestByKey.values())
+        .sort((a, b) => a.idx - b.idx)
+        .map(({ product }) => product);
 
       const removed = original - unique.length;
 
@@ -13665,6 +14259,81 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
       return { fixed, total: products.length };
     }
   };
+
+  // ─────────────────────────────────────────────────────────────────────
+  // Phase α: overlay-products read wrapper. Flag-gated, default OFF.
+  //
+  // When overlay_products_v2 is OFF → behavior identical to today (legacy `_origGetAll`).
+  // When ON  → read merged view from OverlayStore. If view returns null
+  //            (empty shared cache + Type A overlay rows), fall back to legacy
+  //            so UI stays alive while shared cache populates.
+  //
+  // The wrapper is installed only ONCE; re-evaluation of HEYS.products.getAll
+  // beyond this point inherits the wrapper.
+  // ─────────────────────────────────────────────────────────────────────
+  (function installOverlayWrapper() {
+    if (!HEYS.products || HEYS.products.__overlayWrapped) return;
+
+    const _origGetAll = HEYS.products.getAll;
+    const _origGetById = HEYS.products.getById;
+
+    HEYS.products.getAll = function () {
+      const enabled = HEYS.flags && typeof HEYS.flags.isEnabled === 'function'
+        && HEYS.flags.isEnabled('overlay_products_v2');
+      if (!enabled) return _origGetAll();
+
+      try {
+        const Overlay = HEYS.OverlayStore;
+        if (!Overlay || typeof Overlay.getMergedView !== 'function') return _origGetAll();
+        const view = Overlay.getMergedView();
+        if (view === null) return _origGetAll(); // empty shared cache; defer
+        return view;
+      } catch (e) {
+        console.warn('[HEYS.products] overlay getAll failed; fallback to legacy:', e && e.message);
+        return _origGetAll();
+      }
+    };
+
+    HEYS.products.getById = function (id) {
+      const enabled = HEYS.flags && typeof HEYS.flags.isEnabled === 'function'
+        && HEYS.flags.isEnabled('overlay_products_v2');
+      if (!enabled) return _origGetById(id);
+
+      try {
+        const Overlay = HEYS.OverlayStore;
+        if (!Overlay) return _origGetById(id);
+        // Special-case: getById must consult overlay for items NOT in_my_list
+        // (so dayv2 stamps can resolve products user has soft-removed).
+        const raw = Overlay.getRowById(id);
+        if (raw) {
+          if (raw._custom) return raw;
+          const sharedById = HEYS.cloud && HEYS.cloud.getSharedIndex
+            ? HEYS.cloud.getSharedIndex() : null;
+          const base = sharedById && raw.shared_origin_id
+            ? sharedById.get(String(raw.shared_origin_id)) : null;
+          if (base) {
+            return Object.assign({}, base, raw.overrides || {}, {
+              id: raw.id,
+              shared_origin_id: raw.shared_origin_id,
+              fingerprint: raw.fingerprint || base.fingerprint,
+              user_modified: !!raw.user_modified,
+            });
+          }
+          // Type A overlay row but shared cache empty → bare overlay shape lacks nutrients.
+          // Fall through to legacy (which has full snapshot) instead of returning broken row.
+          return _origGetById(id);
+        }
+        // Fall through to legacy lookup if no overlay row.
+        return _origGetById(id);
+      } catch (e) {
+        console.warn('[HEYS.products] overlay getById failed; fallback to legacy:', e && e.message);
+        return _origGetById(id);
+      }
+    };
+
+    HEYS.products.__overlayWrapped = true;
+  })();
+
   HEYS.RationTab = RationTab;
   HEYS.Ration = RationTab;
 })(window);
@@ -13849,8 +14518,12 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
         err(`Attempt ${i + 1}/${retries + 1} failed (timeout=${timeoutMs}ms):`, e.message);
 
         if (i < retries) {
-          const delay = CONFIG.RETRY_DELAY_ESCALATION_MS[i] || CONFIG.RETRY_DELAY_MS;
-          console.info(`[HEYS.api] ↩️ Retry ${i + 1}/${retries} in ${delay}ms...`);
+          const baseDelay = CONFIG.RETRY_DELAY_ESCALATION_MS[i] || CONFIG.RETRY_DELAY_MS;
+          // PERF NEW-14: jitter ±30% — десинхронизирует ретраи между вкладками/клиентами,
+          // чтобы после cold-start 502 не приходила thundering herd через 2с/4.5с/7с в lockstep.
+          const jitter = (Math.random() - 0.5) * 0.6 * baseDelay; // ±30% от base
+          const delay = Math.max(100, Math.round(baseDelay + jitter));
+          console.info(`[HEYS.api] ↩️ Retry ${i + 1}/${retries} in ${delay}ms (base=${baseDelay}±30%)...`);
           await new Promise(r => setTimeout(r, delay));
         }
       }
@@ -18480,6 +19153,48 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
     DAY: 'day'
   };
 
+  // 🛟 Cloud row decompress safety net. ok=false → caller MUST skip the write
+  // (better to leave the previous value than to write garbage compressed string).
+  function decompressCloudRowValue(rawValue, contextKey) {
+    if (typeof rawValue !== 'string' || !rawValue.startsWith('¤Z¤')) {
+      return { value: rawValue, ok: true };
+    }
+    const Store = global.HEYS && global.HEYS.store;
+    if (!Store || typeof Store.decompress !== 'function') {
+      console.warn('[HEYS.products] cloud-row decompress unavailable', { key: contextKey });
+      return { value: null, ok: false };
+    }
+    try {
+      const decoded = Store.decompress(rawValue);
+      return { value: decoded, ok: true };
+    } catch (e) {
+      console.warn('[HEYS.products] cloud-row decompress failed', { key: contextKey, error: e && e.message });
+      return { value: null, ok: false };
+    }
+  }
+
+  // 🪵 TEMP: лог количества продуктов при записи из cloud в localStorage.
+  // Снять, когда выясним, почему количество откатывается.
+  function logProductsCloudWrite(path, key, value) {
+    try {
+      if (!key || !/^heys_.*products$/.test(key)) return;
+      // Skip помеси типа hidden/favorite/deleted_products — они нас не интересуют
+      if (/(_hidden_products|_favorite_products|_deleted_products|_rpc_tail)/.test(key)) return;
+      const len = Array.isArray(value) ? value.length : -1;
+      // Прочитать текущий localStorage, чтобы понять, shrink или нет
+      let localLen = -1;
+      try {
+        const raw = global.localStorage.getItem(key);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed)) localLen = parsed.length;
+        }
+      } catch (_) { /* noop */ }
+      const decision = (localLen > 0 && len >= 0 && len < localLen) ? 'OVERWRITE-SHRINK' : 'WRITE';
+      console.info('[HEYS.products] cloud-write', { path, key, localLen, incomingLen: len, delta: len - localLen, decision });
+    } catch (_) { /* noop */ }
+  }
+
   /** Ключи, требующие client-specific storage */
   const CLIENT_SPECIFIC_KEYS = [
     // Основные данные клиента
@@ -19028,6 +19743,52 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
   let _syncPauseToken = 0;
   let _syncPauseReason = '';
   let _productsSaveBlockedUntil = 0;
+
+  // 🔁 v4.9.x FUNDAMENTAL FIX: deferred retry для products после блок-окон
+  // Старая архитектура: гейты waitingForSync, 20s product-grace, 10s general-grace
+  // делали silent `return` — реальные user-правки терялись.
+  // Новая архитектура: вместо drop'а — планируем повторную отправку,
+  // которая дождётся закрытия окон, перечитает СВЕЖИЙ heys_products из localStorage
+  // (учитывая cloud merge) и пере-вызовет saveClientKey. Идемпотентно — несколько
+  // блокировок схлопываются в один retry; quality-проверки снова применятся.
+  let _productsRetryScheduled = false;
+  function scheduleProductsPostWindowRetry(client_id) {
+    if (!client_id) return;
+    if (_productsRetryScheduled) return;
+    _productsRetryScheduled = true;
+
+    const tryRetry = () => {
+      if (!initialSyncCompleted) {
+        setTimeout(tryRetry, 1000);
+        return;
+      }
+      const ageAfterSync = cloud._syncCompletedAt ? (Date.now() - cloud._syncCompletedAt) : Infinity;
+      const graceRemaining = Math.max(0, 20500 - ageAfterSync);
+      const cooldownRemaining = Math.max(0, _productsSaveBlockedUntil - Date.now());
+      const wait = Math.max(graceRemaining, cooldownRemaining);
+      if (wait > 0) {
+        setTimeout(tryRetry, wait + 100);
+        return;
+      }
+      _productsRetryScheduled = false;
+      try {
+        const scopedKey = `heys_${client_id}_products`;
+        const raw = global.localStorage && global.localStorage.getItem(scopedKey);
+        if (!raw) return;
+        let value = null;
+        try {
+          value = HEYS && HEYS.store && typeof HEYS.store.decompress === 'function'
+            ? HEYS.store.decompress(raw)
+            : JSON.parse(raw);
+        } catch (_) { return; }
+        if (!Array.isArray(value) || value.length === 0) return;
+        try { logCritical(`🔁 [PRODUCTS RETRY] Re-pushing products after windows closed: ${value.length} items`); } catch (_) {}
+        cloud.saveClientKey(client_id, 'heys_products', value);
+      } catch (_) { /* best-effort */ }
+    };
+
+    setTimeout(tryRetry, 200);
+  }
 
   cloud.pauseSync = function (durationMs = 10 * 60 * 1000, reason = '') {
     const now = Date.now();
@@ -19661,10 +20422,21 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
 
     if (!local || !remote) return null;
 
-    // Если данные идентичны — merge не нужен
-    const localJson = JSON.stringify({ ...local, updatedAt: 0, _sourceId: '' });
-    const remoteJson = JSON.stringify({ ...remote, updatedAt: 0, _sourceId: '' });
-    if (localJson === remoteJson) return null;
+    // PERF #8 + Foundation 0: content-hash вместо двойного JSON.stringify.
+    // Раньше: O(meals + trainings + supplements) sequenся на каждый sync-tick.
+    // Теперь: hashDay использует cached _h полей → O(1) после первой инициализации.
+    // Fallback на stringify сохранён, если contentHash не загружен (load-order edge).
+    const ch = global.HEYS?.contentHash;
+    if (ch && typeof ch.hashDay === 'function') {
+      // Hash без updatedAt — оба объекта проходят те же шаги hash, updatedAt не входит в primitives части
+      const localHash = ch.hashDay(local);
+      const remoteHash = ch.hashDay(remote);
+      if (localHash === remoteHash) return null;
+    } else {
+      const localJson = JSON.stringify({ ...local, updatedAt: 0, _sourceId: '' });
+      const remoteJson = JSON.stringify({ ...remote, updatedAt: 0, _sourceId: '' });
+      if (localJson === remoteJson) return null;
+    }
 
     const merged = {
       ...remote, // База — remote
@@ -21992,6 +22764,28 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
       // Сохраняем оригинальный метод в глобальную переменную
       originalSetItem = global.localStorage.setItem.bind(global.localStorage);
       global.localStorage.setItem = function (k, v) {
+        // 🪵 TEMP: лог любых записей в localStorage по products-ключам
+        try {
+          if (typeof k === 'string' && /^heys_.*products$/.test(k) && !/(_hidden_products|_favorite_products|_deleted_products|_rpc_tail)/.test(k)) {
+            let len = -1;
+            let kind = typeof v;
+            try {
+              const parsed = typeof v === 'string' ? JSON.parse(v) : v;
+              if (Array.isArray(parsed)) {
+                len = parsed.length;
+                kind = 'array';
+              } else if (typeof parsed === 'string') {
+                kind = parsed.startsWith('¤Z¤') ? 'compressed-string' : 'string';
+              } else {
+                kind = parsed === null ? 'null' : typeof parsed;
+              }
+            } catch (_) {
+              kind = typeof v === 'string' && v.startsWith('"¤Z¤') ? 'wrapped-compressed' : typeof v;
+            }
+            const stack = (new Error().stack || '').split('\n').slice(2, 6).map(s => s.trim()).join(' <- ');
+            console.info('[HEYS.products] ls.setItem', { key: k, kind, len, rawSize: typeof v === 'string' ? v.length : -1, stack });
+          }
+        } catch (_) { /* noop */ }
         // Используем безопасную запись с обработкой QuotaExceeded
         if (!safeSetItem(k, v)) {
           // Если не удалось сохранить даже после очистки — логируем
@@ -23206,13 +24000,13 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
 
           // 🔧 FIX 2025-12-26: Декомпрессия данных из cloud
           // Если данные были ошибочно сохранены в сжатом виде — декомпрессируем
-          let valueToStore = row.v;
+          const __decompBoot = decompressCloudRowValue(row.v, key);
+          if (!__decompBoot.ok) {
+            return; // skip this row — would write garbage to localStorage
+          }
+          let valueToStore = __decompBoot.value;
           if (typeof row.v === 'string' && row.v.startsWith('¤Z¤')) {
-            const Store = global.HEYS?.store;
-            if (Store && typeof Store.decompress === 'function') {
-              valueToStore = Store.decompress(row.v);
-              log(`🔧 [BOOTSTRAP] Decompressed ${key} from cloud`);
-            }
+            log(`🔧 [BOOTSTRAP] Decompressed ${key} from cloud`);
           }
 
           // 🛡️ v61 FIX: Защита dayv2 от перезатирания пустыми данными
@@ -23251,6 +24045,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
 
           // Глобальный ключ или ключ текущего клиента — загружаем
           ls.setItem(key, JSON.stringify(valueToStore));
+          logProductsCloudWrite('bootstrap', key, valueToStore);
           loadedCount++;
         } catch (e) { }
       });
@@ -23383,13 +24178,13 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
 
           // 🔧 FIX 2025-12-26: Декомпрессия данных из cloud
           // Если данные были ошибочно сохранены в сжатом виде — декомпрессируем
-          let valueToStore = row.v;
+          const __decompYandex = decompressCloudRowValue(row.v, row.k);
+          if (!__decompYandex.ok) {
+            return; // skip this row — would write garbage to localStorage
+          }
+          let valueToStore = __decompYandex.value;
           if (typeof row.v === 'string' && row.v.startsWith('¤Z¤')) {
-            const Store = global.HEYS?.store;
-            if (Store && typeof Store.decompress === 'function') {
-              valueToStore = Store.decompress(row.v);
-              log(`🔧 [YANDEX SYNC] Decompressed ${row.k} from cloud`);
-            }
+            log(`🔧 [YANDEX SYNC] Decompressed ${row.k} from cloud`);
           }
           const isDayKey = localKey.includes('dayv2_');
           if (isDayKey && (valueToStore == null || valueToStore === 'null')) {
@@ -23435,6 +24230,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
           }
 
           ls.setItem(localKey, JSON.stringify(valueToStore));
+          logProductsCloudWrite('yandex-sync', localKey, valueToStore);
           syncedKeys.push(row.k); // Сохраняем оригинальный ключ для инвалидации
           loadedCount++;
         } catch (e) {
@@ -24579,18 +25375,16 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
                 return;
               }
 
-              let valueToStore = row.v;
-              // Декомпрессия если нужно
-              if (typeof row.v === 'string' && row.v.startsWith('¤Z¤')) {
-                const Store = global.HEYS?.store;
-                if (Store && typeof Store.decompress === 'function') {
-                  valueToStore = Store.decompress(row.v);
-                }
+              const __decompDelta = decompressCloudRowValue(row.v, row.k);
+              if (!__decompDelta.ok) {
+                return; // skip this row — would write garbage to localStorage
               }
+              let valueToStore = __decompDelta.value;
               // Пропускаем null dayv2
               if (key.includes('dayv2_') && (valueToStore == null || valueToStore === 'null')) return;
 
               ls.setItem(key, JSON.stringify(valueToStore));
+              logProductsCloudWrite('delta-light', key, valueToStore);
               lightSyncedKeys.push(row.k);
               lightKeysWritten++;
             } catch (_) { }
@@ -27477,18 +28271,23 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
       updated_at: (new Date()).toISOString(),
     };
 
-    // �️ v4.8.3: НЕ сохраняем продукты в облако ДО завершения initial sync
-    // При старте React useEffect([products]) отправляет stale localStorage в cloud,
-    // перезатирая обогащённые микронутриентами данные. Sync сам загрузит актуальную версию.
+    // 🛡️ v4.8.3 / v4.9.x: НЕ сохраняем products в облако ДО завершения initial sync
+    // При старте React useEffect([products]) может отправить stale localStorage в cloud,
+    // перезатирая обогащённые данные. Sync сам загрузит актуальную версию.
+    // FUNDAMENTAL FIX: вместо silent drop — планируем retry после закрытия окна,
+    // который перечитает СВЕЖИЙ localStorage (с merged cloud + user-правки) и пере-вызовет save.
     if (waitingForSync && k && (k.includes('products') || k === 'heys_products')) {
-      log(`🚫 [SAVE DEFERRED] Products save blocked — waiting for initial sync to load cloud version`);
+      log(`⏳ [SAVE DEFERRED] Products save during initial sync — scheduled retry after sync window`);
+      scheduleProductsPostWindowRetry(client_id);
       return;
     }
-    // После завершения initial sync даём окну стабилизации остыть:
+    // После завершения initial sync даём окну стабилизации остыть (20s):
     // React-эффекты часто пытаются тут же повторно записать тот же heys_products.
+    // FUNDAMENTAL FIX: тоже планируем retry — реальные user-правки в этом окне не теряем.
     if ((k === 'heys_products' || normalizedKey === 'heys_products') && cloud._syncCompletedAt) {
       const ageAfterSync = Date.now() - cloud._syncCompletedAt;
       if (ageAfterSync >= 0 && ageAfterSync < 20000) {
+        scheduleProductsPostWindowRetry(client_id);
         return;
       }
     }
@@ -27513,14 +28312,15 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
         logCritical(`🔍 [SAVE DEBUG] Products to save: total=${value.length}, withIron=${savingWithIron}, withTimestamp=${savingWithTs}`);
       }
 
-      // 🚨 КРИТИЧЕСКАЯ защита: если пытаемся сохранить продукты БЕЗ микронутриентов — это stale state!
-      // В облаке 290+ products с железом, а React пытается сохранить <50 — БЛОКИРУЕМ
-      if (savingWithIron < 50) {
-        _productsSaveBlockedUntil = Date.now() + 25000;
-        logCriticalThrottled('save-blocked-quality-low-iron', 20000, `🚨 [SAVE BLOCKED] Quality check: only ${savingWithIron} products with iron (expected 250+)`);
-        logCriticalThrottled('save-blocked-quality-low-iron-reason', 20000, '   This is stale React state without micronutrients. Refusing to overwrite cloud.');
-        return;
-      }
+      // v4.9.x FUNDAMENTAL FIX: УБРАН абсолютный порог `savingWithIron < 50`.
+      // Он был ложным эвристиком: для пользователей с каталогом без iron-данных
+      // он блокировал ВСЕ сохранения навсегда (cooldown 25s регенерируется на каждой попытке).
+      // Регрессия теперь определяется относительно текущего localStorage:
+      //   - shrink-protection в HEYS.products.setAll (heys_core_v12.js) ловит сжатие массива,
+      //   - relative iron-degrade check ниже ловит стирание микронутриентов,
+      //   - timestamp-check ниже ловит stale React state,
+      //   - empty-array check ниже ловит пустые массивы.
+      // Это покрывает реальные регрессии без false positives.
 
       try {
         const currentKey = client_id ? `heys_${client_id}_products` : 'heys_products';
@@ -27668,7 +28468,12 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
     // и dedup check в interceptSetItem. persistDayData вызывается только из
     // пользовательских действий, а не из React re-render после cloud sync.
     const _isDayV2Data = normalizedKey && normalizedKey.includes('dayv2_') && !normalizedKey.includes('date');
+    const _isProducts = normalizedKey === 'heys_products' || k === 'heys_products' || (k && k.includes('products'));
     if (_inGracePeriod && !_isProfileCompleted && !_isWidgetLayout && !_isDayV2Data && !_isDefaultTabSync) {
+      // FUNDAMENTAL FIX: для products — не теряем write молча, ставим retry после grace period
+      if (_isProducts) {
+        scheduleProductsPostWindowRetry(client_id);
+      }
       return;
     }
     if (_inGracePeriod && (_isProfileCompleted || _isWidgetLayout || _isDefaultTabSync)) {
@@ -28520,6 +29325,15 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
 
     const scopedKey = getScopedClientStorageKey(clientId, baseKey);
     if (!scopedKey) return false;
+
+    // 🛟 Decompress cloud-stored compressed values BEFORE serialize/write.
+    // Otherwise '¤Z¤...' string lands in localStorage as JSON-quoted string.
+    const __decompHot = decompressCloudRowValue(value, baseKey);
+    if (!__decompHot.ok) {
+      return false; // skip — better than corrupting localStorage with the compressed string
+    }
+    value = __decompHot.value;
+
     let serialized = null;
     try {
       serialized = JSON.stringify(value);
@@ -28532,6 +29346,33 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
       const currentRaw = global.localStorage.getItem(scopedKey);
       const previousValue = currentRaw ? tryParse(currentRaw) : null;
       if (currentRaw === serialized) return false;
+
+      // 🪵 TEMP: HOT sync products write — кто и когда, что было, что стало.
+      // Условие на любой *_products ключ (но не hidden/favorite/deleted).
+      try {
+        const isProductsKey = (typeof baseKey === 'string' && /^heys_.*products$/.test(baseKey) && !/(_hidden_products|_favorite_products|_deleted_products|_rpc_tail)/.test(baseKey))
+          || (typeof scopedKey === 'string' && /^heys_.*products$/.test(scopedKey) && !/(_hidden_products|_favorite_products|_deleted_products|_rpc_tail)/.test(scopedKey));
+        if (isProductsKey) {
+          let localLen = -1;
+          try {
+            const parsed = currentRaw ? JSON.parse(currentRaw) : null;
+            if (Array.isArray(parsed)) localLen = parsed.length;
+          } catch (_) { /* noop */ }
+          const incomingLen = Array.isArray(value) ? value.length : -1;
+          const decision = (localLen > 0 && incomingLen >= 0 && incomingLen < localLen) ? 'OVERWRITE-SHRINK' : 'WRITE';
+          console.info('[HEYS.products] hot-sync write', {
+            source,
+            baseKey,
+            scopedKey,
+            localLen,
+            incomingLen,
+            delta: incomingLen >= 0 && localLen >= 0 ? incomingLen - localLen : null,
+            decision,
+            valueType: typeof value,
+            valueIsArray: Array.isArray(value),
+          });
+        }
+      } catch (_) { /* noop */ }
 
       // 🛡️ FIX: Protect widget_layout from hot-sync race condition.
       // Hot-sync can fetch stale cloud data before doImmediateClientUpload completes.
@@ -28815,29 +29656,58 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
       return { success: false, updated: 0, failed: 0, reason: 'no_getkv', mode: 'no-getkv', fetchedKeys: keys, fetchedKeyCount: keys.length, markerScopes };
     }
 
-    const results = await Promise.allSettled(keys.map((key) => YandexAPI.getKV(clientId, key)));
-
+    // PERF NEW-13: progressive hydration с soft 3s budget.
+    // Раньше: await Promise.allSettled(...) ждал САМЫЙ МЕДЛЕННЫЙ ключ.
+    // На Slow 4G один тайм-аут (12-22с) → весь foreground залипал на это время.
+    // Теперь: каждый ключ применяется через applyForegroundHotSyncValue ПО МЕРЕ ПРИХОДА;
+    // агрегат возвращается через 3с budget или после всех — что раньше. Поздние ответы
+    // продолжают применяться (side effect), но не блокируют await.
+    const SOFT_BUDGET_MS = 3000;
     let updated = 0;
     let failed = 0;
     let authMissing = false;
+    let returnedEarly = false;
+    let lateArrivals = 0;
 
-    results.forEach((result, index) => {
-      const key = keys[index];
+    const handleResult = (key, result) => {
       if (result.status !== 'fulfilled') {
-        failed += 1;
+        if (!returnedEarly) failed += 1; else lateArrivals += 1;
         return;
       }
-
       const payload = result.value || {};
       if (payload.error) {
-        if (payload.error === 'No session token') authMissing = true;
-        failed += 1;
+        if (payload.error === 'No session token' && !returnedEarly) authMissing = true;
+        if (!returnedEarly) failed += 1; else lateArrivals += 1;
         return;
       }
-
       if (payload.data == null) return;
-      if (applyForegroundHotSyncValue(clientId, key, payload.data)) {
-        updated += 1;
+      const applied = applyForegroundHotSyncValue(clientId, key, payload.data);
+      if (applied) {
+        if (!returnedEarly) updated += 1;
+        else lateArrivals += 1;
+      }
+    };
+
+    const tasks = keys.map((key) =>
+      YandexAPI.getKV(clientId, key)
+        .then((value) => handleResult(key, { status: 'fulfilled', value }))
+        .catch((reason) => handleResult(key, { status: 'rejected', reason }))
+    );
+
+    await Promise.race([
+      Promise.allSettled(tasks),
+      new Promise((resolve) => setTimeout(resolve, SOFT_BUDGET_MS)),
+    ]);
+    returnedEarly = true;
+
+    // Поздние ответы продолжают применяться в фоне (через handleResult выше).
+    // Логируем количество для наблюдения и при необходимости флашим память.
+    Promise.allSettled(tasks).then(() => {
+      if (lateArrivals > 0) {
+        console.info(`[HEYS.sync] 🐢 hot-sync late arrivals: ${lateArrivals} key(s) applied after ${SOFT_BUDGET_MS}ms budget`);
+        if (global.HEYS?.store?.flushMemory) {
+          try { global.HEYS.store.flushMemory(); } catch (_) { /* noop */ }
+        }
       }
     });
 
@@ -29759,6 +30629,35 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
    * Получить shared products из кэша (синхронно)
    * @returns {Array} Массив продуктов или пустой массив
    */
+  // 🛟 Phase α: shared products id-index для overlay merged view.
+  // Инвалидируется автоматически при перезаписи _sharedProductsCache.
+  let _sharedIndexCache = null;
+  let _sharedIndexCacheLen = -1;
+
+  function _invalidateSharedIndex() {
+    _sharedIndexCache = null;
+    _sharedIndexCacheLen = -1;
+    // Notify listeners (OverlayStore subscribes).
+    try {
+      if (typeof window !== 'undefined' && window.dispatchEvent) {
+        window.dispatchEvent(new CustomEvent('heys:shared-products-updated'));
+      }
+    } catch (_) { /* noop */ }
+  }
+
+  cloud.getSharedIndex = function () {
+    const arr = cloud.getCachedSharedProducts();
+    // Cheap dirty-check: rebuild if cache was reassigned (length changed) or first call.
+    if (_sharedIndexCache && _sharedIndexCacheLen === arr.length) return _sharedIndexCache;
+    const map = new Map();
+    for (const p of arr) {
+      if (p && p.id != null) map.set(String(p.id), p);
+    }
+    _sharedIndexCache = map;
+    _sharedIndexCacheLen = arr.length;
+    return map;
+  };
+
   cloud.getCachedSharedProducts = function () {
     // 🚀 Если memory cache пустой — попробовать восстановить из localStorage
     if ((!_sharedProductsCache || _sharedProductsCache.length === 0)) {
@@ -29769,6 +30668,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
           if (parsed && parsed.ts && (Date.now() - parsed.ts) < SHARED_PRODUCTS_LS_TTL && Array.isArray(parsed.data)) {
             _sharedProductsCache = parsed.data;
             _sharedProductsCacheTime = parsed.ts;
+            _invalidateSharedIndex();
             logCritical(`📦 [SHARED PRODUCTS] Restored ${parsed.data.length} products from localStorage cache`);
           }
         }
@@ -29823,12 +30723,29 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
         return { data: null, error };
       }
 
+      // 🪵 TEMP: server-side count для shared products (rpc vs rest)
+      try {
+        console.info('[HEYS.products] shared-fetch', {
+          fromServer: Array.isArray(data) ? data.length : -1,
+          limit,
+          excludeBlocklist,
+        });
+      } catch (_) { /* noop */ }
+
       // Фильтрация blocklist на клиенте (если нужно)
       let filtered = (data || []).map(normalizeSharedProduct);
       if (excludeBlocklist && user) {
         const blocklist = await cloud.getBlocklist();
         const blocklistSet = new Set(blocklist.map(id => id));
         filtered = filtered.filter(p => !blocklistSet.has(p.id));
+        if (filtered.length !== (data || []).length) {
+          try {
+            console.info('[HEYS.products] shared-fetch blocklist-filtered', {
+              before: (data || []).length,
+              after: filtered.length,
+            });
+          } catch (_) { /* noop */ }
+        }
       }
 
       const backfillSharedHarm = async (items) => {
@@ -29884,6 +30801,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
       // 🔧 v3.19.0: Сохраняем в кэш для orphan check и других утилит
       _sharedProductsCache = filtered;
       _sharedProductsCacheTime = Date.now();
+      _invalidateSharedIndex();
       log(`[SHARED PRODUCTS] Loaded ${filtered.length} products total, cached`);
 
       try {
@@ -30139,6 +31057,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
           created_at: new Date().toISOString()
         };
         _sharedProductsCache = [newSharedProduct, ..._sharedProductsCache];
+        _invalidateSharedIndex();
       }
 
       return {
@@ -33459,6 +34378,429 @@ NOVA: 1-4
   Store.compressProductsWire = compressProductsWire;
 
 })(window);
+
+
+/* ===== heys_products_overlay_v1.js ===== */
+// heys_products_overlay_v1.js
+// Phase α: foundation for overlay-only products architecture (see plan structured-mixing-stallman.md).
+// Flag-gated. While overlay_products_v2 is OFF, this module is dormant — exports OverlayStore
+// for QA testing but no part of HEYS reads from it.
+//
+// Schema (overlay row):
+//   Type A (linked to shared_products):
+//     { id, shared_origin_id, fingerprint?, overrides:{}, in_my_list:bool,
+//       user_modified:bool, cloned_at?, shared_updated_at? }
+//   Type B (custom, no shared origin):
+//     { id, _custom:true, name, ...full nutrient schema..., in_my_list:bool,
+//       user_modified?:bool, fingerprint? }
+//
+// Per-client storage key: 'heys_products_overlay_v2' (Store layer adds heys_<cid>_ prefix).
+
+; (function (global) {
+  const HEYS = global.HEYS = global.HEYS || {};
+
+  const STORE_KEY = 'heys_products_overlay_v2';
+
+  // Idempotent module load guard — prevents leaked listeners + closure stomp on double-include.
+  if (HEYS.OverlayStore && HEYS.OverlayStore.STORE_KEY === STORE_KEY) {
+    return;
+  }
+
+  // ─────────────────────────────────────────────────────────────────────
+  // Memoized merged view cache. Key invariants:
+  //  - getAll() returns referentially-identical array unless invalidated.
+  //  - Invalidated on: overlay write, shared cache update, heysSyncCompleted.
+  //  - Object.freeze applied in dev (HEYS.flags isEnabled 'dev_module_logging').
+  // ─────────────────────────────────────────────────────────────────────
+  let _mergedViewCache = null;
+  let _mergedViewSharedRef = null;
+
+  function invalidateMergedView() {
+    _mergedViewCache = null;
+    _mergedViewSharedRef = null;
+  }
+
+  // ─────────────────────────────────────────────────────────────────────
+  // Raw store I/O (no merging). Per-client via Store layer scoping.
+  // ─────────────────────────────────────────────────────────────────────
+  function readRaw() {
+    try {
+      const v = HEYS.store && HEYS.store.get && HEYS.store.get(STORE_KEY, []);
+      return Array.isArray(v) ? v : [];
+    } catch (_) {
+      return [];
+    }
+  }
+
+  function writeRaw(rows) {
+    if (!Array.isArray(rows)) return false;
+    try {
+      if (HEYS.store && HEYS.store.set) {
+        HEYS.store.set(STORE_KEY, rows);
+        invalidateMergedView();
+        return true;
+      }
+    } catch (e) {
+      console.warn('[OverlayStore] writeRaw failed:', e && e.message);
+    }
+    return false;
+  }
+
+  // ─────────────────────────────────────────────────────────────────────
+  // Merged view: overlay rows + shared base.
+  //
+  // sharedById: Map(shared_origin_id → sharedRow). MUST be obtained from
+  // cloud.getSharedIndex() so that all granular ops in one transaction see
+  // the same snapshot.
+  //
+  // Returns:
+  //   - Array (frozen in dev) of full product objects when ready.
+  //   - null when sharedById is empty AND any Type A overlay row exists.
+  //     Caller (the wrapper at HEYS.products.getAll) MUST fall back to
+  //     legacy _origGetAll() and schedule a retry on heys:shared-products-updated.
+  // ─────────────────────────────────────────────────────────────────────
+  function toMergedView(sharedById) {
+    const rows = readRaw();
+    if (rows.length === 0) return Object.freeze([]);
+
+    // Empty-shared-cache guard: if any Type A row exists, refuse to render
+    // a broken view. Caller falls back to legacy.
+    const hasTypeA = rows.some(r => r && !r._custom && r.shared_origin_id);
+    if (hasTypeA && (!sharedById || sharedById.size === 0)) return null;
+
+    const out = [];
+    for (const r of rows) {
+      if (!r) continue;
+      if (r.in_my_list === false) continue; // soft-removed; getById may bypass this
+      if (r._custom) {
+        out.push(r);
+        continue;
+      }
+      const base = sharedById && sharedById.get(String(r.shared_origin_id));
+      if (!base) {
+        // Shared row missing for a Type A overlay — keep overlay as-is so the row
+        // does not vanish from UI. Future shared refresh re-merges.
+        out.push(r);
+        continue;
+      }
+      const merged = Object.assign({}, base, r.overrides || {}, {
+        id: r.id,
+        shared_origin_id: r.shared_origin_id,
+        fingerprint: r.fingerprint || base.fingerprint,
+        user_modified: !!r.user_modified,
+      });
+      out.push(merged);
+    }
+
+    // Dev-mode: freeze to fail fast on accidental mutation.
+    try {
+      if (HEYS.flags?.isEnabled?.('dev_module_logging')) Object.freeze(out);
+    } catch (_) { /* noop */ }
+    return out;
+  }
+
+  // ─────────────────────────────────────────────────────────────────────
+  // Memoized public read. Wrapper at HEYS.products.getAll() should call this
+  // and fall back to legacy on `null` return.
+  // ─────────────────────────────────────────────────────────────────────
+  function getMergedView() {
+    const cloud = HEYS.cloud;
+    const sharedById = cloud && typeof cloud.getSharedIndex === 'function'
+      ? cloud.getSharedIndex()
+      : new Map();
+
+    // Map-reference equality: cloud.getSharedIndex() memoizes a stable Map
+    // reference per content version (rebuilt on _invalidateSharedIndex).
+    // Reference comparison is correct AND collision-free (vs prior size+charcode hash).
+    if (_mergedViewCache !== null && _mergedViewSharedRef === sharedById) {
+      return _mergedViewCache;
+    }
+
+    const view = toMergedView(sharedById);
+    _mergedViewCache = view; // null is also cacheable — invalidate via heys:shared-products-updated
+    _mergedViewSharedRef = sharedById;
+    return view;
+  }
+
+  // ─────────────────────────────────────────────────────────────────────
+  // Granular write API (used by setAll shim in phase β; harmless to land now).
+  // ─────────────────────────────────────────────────────────────────────
+  function upsertRow(row) {
+    if (!row || row.id == null) return false;
+    const rows = readRaw();
+    const idx = rows.findIndex(r => r && String(r.id) === String(row.id));
+    if (idx >= 0) rows[idx] = Object.assign({}, rows[idx], row);
+    else rows.push(row);
+    return writeRaw(rows);
+  }
+
+  function removeRow(id) {
+    if (id == null) return false;
+    const rows = readRaw();
+    const sid = String(id);
+    const filtered = rows.filter(r => r && String(r.id) !== sid);
+    if (filtered.length === rows.length) return false;
+    return writeRaw(filtered);
+  }
+
+  function getRowById(id) {
+    if (id == null) return null;
+    const sid = String(id);
+    const rows = readRaw();
+    return rows.find(r => r && String(r.id) === sid) || null;
+  }
+
+  // ─────────────────────────────────────────────────────────────────────
+  // Migration utility (phase β will call this from the boot path with a sharedById
+  // snapshot). Translates legacy flat array → overlay rows.
+  //
+  // Strategy:
+  //  - Has shared_origin_id with matching shared row: Type A. Compute deltas
+  //    between local fields and shared fields; sparse `overrides` keeps only diffs.
+  //  - Otherwise: Type B (_custom: true), copy full data.
+  //  - PRESERVES every `id` (essential for dayv2 stamp resolution).
+  // ─────────────────────────────────────────────────────────────────────
+  const NUTRIENT_FIELDS = [
+    'kcal100', 'protein100', 'fat100', 'carbs100',
+    'simple100', 'complex100', 'badFat100', 'goodFat100', 'trans100', 'fiber100',
+    'iron', 'calcium', 'magnesium', 'phosphorus', 'potassium', 'sodium100',
+    'vitaminA', 'vitaminC', 'vitaminD', 'vitaminE', 'vitaminK',
+    'vitaminB1', 'vitaminB2', 'vitaminB3', 'vitaminB6', 'vitaminB9', 'vitaminB12',
+    'gi', 'harm',
+  ];
+
+  function _eqLoose(a, b) {
+    if (a === b) return true;
+    if (a == null && b == null) return true;
+    const na = Number(a), nb = Number(b);
+    if (Number.isFinite(na) && Number.isFinite(nb)) return Math.abs(na - nb) < 1e-6;
+    return false;
+  }
+
+  function migrate(flatArr, sharedById) {
+    if (!Array.isArray(flatArr)) return { ok: false, reason: 'input-not-array' };
+    if (!sharedById || sharedById.size === 0) {
+      return { ok: false, reason: 'shared-cache-empty' };
+    }
+    const out = [];
+    let typeA = 0;
+    let typeB = 0;
+    for (const p of flatArr) {
+      if (!p || p.id == null) continue;
+      const sid = p.shared_origin_id ? String(p.shared_origin_id) : null;
+      const sharedRow = sid && sharedById.get(sid);
+      if (sharedRow) {
+        const overrides = {};
+        for (const f of NUTRIENT_FIELDS) {
+          if (p[f] !== undefined && !_eqLoose(p[f], sharedRow[f])) overrides[f] = p[f];
+        }
+        if (Array.isArray(p.portions) && p.portions.length > 0) {
+          // Portions: store full array as override on any content diff.
+          // Length-only check would silently lose user edits to portion grams/labels.
+          const sharedPortions = Array.isArray(sharedRow.portions) ? sharedRow.portions : [];
+          let portionsDiffer = p.portions.length !== sharedPortions.length;
+          if (!portionsDiffer) {
+            for (let i = 0; i < p.portions.length; i++) {
+              const lp = p.portions[i] || {};
+              const sp = sharedPortions[i] || {};
+              if (lp.label !== sp.label || !_eqLoose(lp.grams, sp.grams) || !_eqLoose(lp.kcal, sp.kcal)) {
+                portionsDiffer = true;
+                break;
+              }
+            }
+          }
+          if (portionsDiffer) overrides.portions = p.portions;
+        }
+        out.push({
+          id: p.id,
+          shared_origin_id: sid,
+          fingerprint: p.fingerprint || sharedRow.fingerprint || null,
+          overrides,
+          in_my_list: true,
+          user_modified: !!p.user_modified,
+          cloned_at: p.cloned_at || p.clonedAt || null,
+          shared_updated_at: p.shared_updated_at || sharedRow.shared_updated_at || sharedRow.updated_at || null,
+        });
+        typeA++;
+      } else {
+        out.push(Object.assign({}, p, {
+          _custom: true,
+          in_my_list: true,
+          user_modified: p.user_modified !== false,
+        }));
+        typeB++;
+      }
+    }
+    return { ok: true, rows: out, typeA, typeB };
+  }
+
+  // ─────────────────────────────────────────────────────────────────────
+  // Verifier: id-set parity + full nutrient field parity (ε = 1e-6).
+  // Used by phase β migration to halt on mismatch.
+  // ─────────────────────────────────────────────────────────────────────
+  function verifyMigration(preFlat, postMerged) {
+    const errors = [];
+    const preIds = new Set(preFlat.filter(r => r && r.id != null).map(r => String(r.id)));
+    const postIds = new Set(postMerged.filter(r => r && r.id != null).map(r => String(r.id)));
+
+    for (const id of preIds) {
+      if (!postIds.has(id)) {
+        errors.push({ kind: 'missing-id', id });
+      }
+    }
+
+    const postById = new Map();
+    for (const r of postMerged) if (r && r.id != null) postById.set(String(r.id), r);
+
+    const fieldsToCheck = NUTRIENT_FIELDS.concat(['name']);
+    for (const pre of preFlat) {
+      if (!pre || pre.id == null) continue;
+      const post = postById.get(String(pre.id));
+      if (!post) continue; // already reported above
+      for (const f of fieldsToCheck) {
+        if (pre[f] === undefined && post[f] === undefined) continue;
+        if (!_eqLoose(pre[f], post[f])) {
+          // Allow merged view to FILL missing local fields from shared.
+          // Only undefined/null are "absence" — explicit 0 is data and must round-trip.
+          if (pre[f] === undefined || pre[f] === null) continue;
+          errors.push({ kind: 'field-mismatch', id: pre.id, field: f, pre: pre[f], post: post[f] });
+        }
+      }
+      // Portions length check (separate — array, not numeric).
+      const prePortLen = Array.isArray(pre.portions) ? pre.portions.length : 0;
+      const postPortLen = Array.isArray(post.portions) ? post.portions.length : 0;
+      if (prePortLen > 0 && prePortLen !== postPortLen) {
+        errors.push({ kind: 'portions-length', id: pre.id, pre: prePortLen, post: postPortLen });
+      }
+    }
+    return { ok: errors.length === 0, errors: errors.slice(0, 20), totalErrors: errors.length };
+  }
+
+  // ─────────────────────────────────────────────────────────────────────
+  // Wire shared-cache invalidation event listener.
+  // Anyone refreshing _sharedProductsCache should dispatch this event.
+  // ─────────────────────────────────────────────────────────────────────
+  if (typeof global !== 'undefined' && global.addEventListener) {
+    try {
+      global.addEventListener('heys:shared-products-updated', invalidateMergedView);
+      global.addEventListener('heysSyncCompleted', invalidateMergedView);
+    } catch (_) { /* noop */ }
+  }
+
+  // ─────────────────────────────────────────────────────────────────────
+  // Diagnostics surface — readable from devtools console.
+  // Plan ref: fix block 9 + 10. Solo dev / power user inspection.
+  // ─────────────────────────────────────────────────────────────────────
+  HEYS.diagnostics = HEYS.diagnostics || {};
+
+  HEYS.diagnostics.overlay = function () {
+    const cid = (HEYS.currentClientId && String(HEYS.currentClientId)) || '<no-cid>';
+    const legacyKey = `heys_${cid}_products`;
+    const tryParse = (raw) => { try { return raw == null ? null : JSON.parse(raw); } catch (_) { return null; } };
+    const legacyVal = tryParse(global.localStorage && global.localStorage.getItem(legacyKey));
+
+    const out = {
+      flag_overlay_products_v2: HEYS.flags?.isEnabled?.('overlay_products_v2'),
+      flag_dual_write_legacy: HEYS.flags?.isEnabled?.('dual_write_legacy'),
+      overlay_rows: readRaw().length,
+      legacy_len: Array.isArray(legacyVal) ? legacyVal.length : (typeof legacyVal === 'string' ? `<${legacyVal.length} chars>` : null),
+      shared_cache_size: HEYS.cloud?.getSharedIndex?.()?.size ?? 0,
+      health: tryParse(global.localStorage && global.localStorage.getItem('heys_overlay_health')),
+      migrated_at: global.localStorage && global.localStorage.getItem('heys_overlay_migrated_at'),
+      migration_status: global.localStorage && global.localStorage.getItem('heys_overlay_migration_status'),
+      migration_aborted: global.localStorage && global.localStorage.getItem('heys_overlay_migration_aborted'),
+      perf_alpha: tryParse(global.localStorage && global.localStorage.getItem('heys_overlay_phase_alpha_perf')),
+      cid,
+    };
+    try { console.table(out); } catch (_) { console.log(out); }
+    return out;
+  };
+
+  HEYS.diagnostics.retryOverlayMigration = function () {
+    if (!global.localStorage) return;
+    global.localStorage.removeItem('heys_overlay_migration_aborted');
+    global.localStorage.removeItem('heys_overlay_migrated_at');
+    global.localStorage.removeItem('heys_overlay_migration_status');
+    console.info('[HEYS.diagnostics] Overlay migration markers cleared. Reload to retry.');
+  };
+
+  // ─────────────────────────────────────────────────────────────────────
+  // Phase α benchmark harness — run via HEYS.diagnostics.benchOverlay() in console.
+  // Phase β gate: p95Cold < 5 ms, p95Warm < 0.1 ms (200 rows × 364 shared).
+  // ─────────────────────────────────────────────────────────────────────
+  HEYS.diagnostics.benchOverlay = function (iters = 200) {
+    const cloud = HEYS.cloud;
+    if (!cloud || !cloud.getSharedIndex) {
+      console.warn('[bench] cloud.getSharedIndex unavailable');
+      return null;
+    }
+    const sharedById = cloud.getSharedIndex();
+    if (sharedById.size === 0) {
+      console.warn('[bench] shared cache empty; load shared products first');
+      return null;
+    }
+    const overlayLen = readRaw().length;
+    const samples = { cold: [], warm: [] };
+    // COLD samples — invalidate before each call, measure full toMergedView.
+    for (let i = 0; i < iters; i++) {
+      invalidateMergedView();
+      const t0 = performance.now();
+      toMergedView(sharedById);
+      samples.cold.push(performance.now() - t0);
+    }
+    // WARM samples — prime cache once, then measure memoized hits without invalidation.
+    invalidateMergedView();
+    getMergedView(); // prime
+    for (let i = 0; i < iters; i++) {
+      const t1 = performance.now();
+      getMergedView();
+      samples.warm.push(performance.now() - t1);
+    }
+    const p = (arr, q) => arr.slice().sort((a, b) => a - b)[Math.floor(arr.length * q)];
+    const result = {
+      iters,
+      overlay_rows: overlayLen,
+      shared_size: sharedById.size,
+      cold_p50: +p(samples.cold, 0.5).toFixed(3),
+      cold_p95: +p(samples.cold, 0.95).toFixed(3),
+      warm_p50: +p(samples.warm, 0.5).toFixed(3),
+      warm_p95: +p(samples.warm, 0.95).toFixed(3),
+      gate_cold_ok: p(samples.cold, 0.95) < 5,
+      gate_warm_ok: p(samples.warm, 0.95) < 0.1,
+    };
+    console.table(result);
+    try {
+      global.localStorage.setItem('heys_overlay_phase_alpha_perf', JSON.stringify(Object.assign(result, { ts: Date.now() })));
+    } catch (_) { /* noop */ }
+    return result;
+  };
+
+  // ─────────────────────────────────────────────────────────────────────
+  // Export
+  // ─────────────────────────────────────────────────────────────────────
+  HEYS.OverlayStore = {
+    STORE_KEY,
+    readRaw,
+    writeRaw,
+    upsertRow,
+    removeRow,
+    getRowById,
+    toMergedView,
+    getMergedView,
+    invalidate: invalidateMergedView,
+    migrate,
+    verifyMigration,
+    NUTRIENT_FIELDS,
+  };
+
+  // Brief boot note (only if dev logging on; otherwise silent in prod).
+  try {
+    if (HEYS.flags?.isEnabled?.('dev_module_logging')) {
+      console.info('[OverlayStore] loaded (flag overlay_products_v2:', HEYS.flags?.isEnabled?.('overlay_products_v2'), ')');
+    }
+  } catch (_) { /* noop */ }
+
+})(typeof window !== 'undefined' ? window : globalThis);
 
 
 /* ===== heys_dayv2_cache_v1.js ===== */

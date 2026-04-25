@@ -13221,7 +13221,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
             document.addEventListener('mousemove', onMove);
             document.addEventListener('mouseup', onEnd);
             document.addEventListener('touchmove', onMove, { passive: false });
-            document.addEventListener('touchend', onEnd);
+            document.addEventListener('touchend', onEnd, { passive: true });
 
             // Initial touch position → DOM-only update (no React render)
             const clientX = e.touches ? e.touches[0].clientX : e.clientX;
@@ -13475,7 +13475,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
             document.addEventListener('mousemove', handleMove);
             document.addEventListener('mouseup', handleEnd);
             document.addEventListener('touchmove', handleMove, { passive: false });
-            document.addEventListener('touchend', handleEnd);
+            document.addEventListener('touchend', handleEnd, { passive: true });
         }
 
         return {
@@ -16677,9 +16677,16 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                 HEYS: heysRef
             }) || null)
             : React.createElement('div', {
-                className: 'card tone-slate',
-                style: { marginTop: 10, minHeight: 140, opacity: 0.7 }
-            }, 'Подготавливаем дневник...');
+                className: 'skeleton-page',
+                style: { marginTop: 10, minHeight: 260 }
+            },
+                React.createElement('div', { className: 'skeleton-card skeleton-meal' },
+                    React.createElement('div', { className: 'skeleton-meal-header' }),
+                    React.createElement('div', { className: 'skeleton-search' }),
+                    React.createElement('div', { className: 'skeleton-item' }),
+                    React.createElement('div', { className: 'skeleton-item' })
+                )
+            );
 
         if (!heysRef.dayPageShell?.renderDayPage) {
             throw new Error('[heys_day_tab_render_v1] HEYS.dayPageShell not loaded before renderDayTabLayout');

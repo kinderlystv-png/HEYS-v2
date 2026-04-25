@@ -172,7 +172,7 @@
             document.addEventListener('mousemove', onMove);
             document.addEventListener('mouseup', onEnd);
             document.addEventListener('touchmove', onMove, { passive: false });
-            document.addEventListener('touchend', onEnd);
+            document.addEventListener('touchend', onEnd, { passive: true });
 
             // Initial touch position → DOM-only update (no React render)
             const clientX = e.touches ? e.touches[0].clientX : e.clientX;

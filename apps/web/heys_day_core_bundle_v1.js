@@ -2060,6 +2060,18 @@
             return rest;
         }, []);
 
+        // PERF Foundation 0: content-hash вместо JSON.stringify(stripMeta(day)).
+        // На дне с 200+ meal items — JSON.stringify ~100мс. Hash через cached _h полей — ~0.3мс.
+        // Fallback на stringify если contentHash не загружен (редкий load-order edge case).
+        const computeDaySnap = React.useCallback((payload) => {
+            if (!payload) return '';
+            const ch = global.HEYS?.contentHash;
+            if (ch && typeof ch.hashDay === 'function') {
+                return ch.hashDay(payload);
+            }
+            return JSON.stringify(stripMeta(payload));
+        }, [stripMeta]);
+
         const readExisting = React.useCallback((key) => {
             if (!key) return null;
             try {
@@ -2274,9 +2286,9 @@
             let daySnap;
             let freshestDaySnap = null;
             const measureSnaps = () => {
-                daySnap = JSON.stringify(stripMeta(day));
+                daySnap = computeDaySnap(day);
                 freshestDaySnap = freshestPersistedDay
-                    ? JSON.stringify(stripMeta(freshestPersistedDay))
+                    ? computeDaySnap(freshestPersistedDay)
                     : null;
             };
             const pmFlush = global.HEYS?.perfMainThread;
@@ -2344,7 +2356,7 @@
             saveToDate(day.date, payload);
             prevStoredSnapRef.current = JSON.stringify(payload);
             prevDaySnapRef.current = daySnap;
-        }, [day, now, saveToDate, stripMeta, disabled, getKey, readExisting, isMeaningfulDayData, getFreshestPersistedDay]);
+        }, [day, now, saveToDate, stripMeta, disabled, getKey, readExisting, isMeaningfulDayData, getFreshestPersistedDay, computeDaySnap]);
 
         React.useEffect(() => {
             // 🔒 ЗАЩИТА: Не инициализируем prevDaySnapRef до гидратации!
@@ -2357,11 +2369,11 @@
             const current = readExisting(key);
             if (current) {
                 prevStoredSnapRef.current = JSON.stringify(current);
-                prevDaySnapRef.current = JSON.stringify(stripMeta(current));
+                prevDaySnapRef.current = computeDaySnap(current);
             } else {
-                prevDaySnapRef.current = JSON.stringify(stripMeta(day));
+                prevDaySnapRef.current = computeDaySnap(day);
             }
-        }, [day && day.date, getKey, readExisting, stripMeta, disabled]);
+        }, [day && day.date, getKey, readExisting, stripMeta, disabled, computeDaySnap]);
 
         React.useEffect(() => {
             if (disabled) return; // ЗАЩИТА: не запускать таймер до гидратации
@@ -2373,10 +2385,10 @@
             const pmCmp = global.HEYS?.perfMainThread;
             if (pmCmp && typeof pmCmp.measureSync === 'function') {
                 pmCmp.measureSync('useDayAutosave:daySnap', () => {
-                    daySnap = JSON.stringify(stripMeta(day));
+                    daySnap = computeDaySnap(day);
                 }, { threshold: 14 });
             } else {
-                daySnap = JSON.stringify(stripMeta(day));
+                daySnap = computeDaySnap(day);
             }
 
             if (prevDaySnapRef.current === null) {
@@ -2396,7 +2408,7 @@
             global.clearTimeout(timerRef.current);
             timerRef.current = global.setTimeout(flush, debounceMs);
             return () => { global.clearTimeout(timerRef.current); };
-        }, [day, debounceMs, flush, stripMeta, disabled]);
+        }, [day, debounceMs, flush, stripMeta, disabled, computeDaySnap]);
 
         React.useEffect(() => {
             return () => {

@@ -128,8 +128,12 @@
         err(`Attempt ${i + 1}/${retries + 1} failed (timeout=${timeoutMs}ms):`, e.message);
 
         if (i < retries) {
-          const delay = CONFIG.RETRY_DELAY_ESCALATION_MS[i] || CONFIG.RETRY_DELAY_MS;
-          console.info(`[HEYS.api] ↩️ Retry ${i + 1}/${retries} in ${delay}ms...`);
+          const baseDelay = CONFIG.RETRY_DELAY_ESCALATION_MS[i] || CONFIG.RETRY_DELAY_MS;
+          // PERF NEW-14: jitter ±30% — десинхронизирует ретраи между вкладками/клиентами,
+          // чтобы после cold-start 502 не приходила thundering herd через 2с/4.5с/7с в lockstep.
+          const jitter = (Math.random() - 0.5) * 0.6 * baseDelay; // ±30% от base
+          const delay = Math.max(100, Math.round(baseDelay + jitter));
+          console.info(`[HEYS.api] ↩️ Retry ${i + 1}/${retries} in ${delay}ms (base=${baseDelay}±30%)...`);
           await new Promise(r => setTimeout(r, delay));
         }
       }

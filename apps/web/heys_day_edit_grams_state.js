@@ -60,7 +60,7 @@
             document.addEventListener('mousemove', handleMove);
             document.addEventListener('mouseup', handleEnd);
             document.addEventListener('touchmove', handleMove, { passive: false });
-            document.addEventListener('touchend', handleEnd);
+            document.addEventListener('touchend', handleEnd, { passive: true });
         }
 
         return {

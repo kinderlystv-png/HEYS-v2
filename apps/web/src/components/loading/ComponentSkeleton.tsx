@@ -3,6 +3,23 @@
 
 import React from 'react';
 
+// PERF NEW-19: module-level injection guard.
+let _skeletonStylesInjected = false;
+function ensureSkeletonStyles(): void {
+  if (_skeletonStylesInjected || typeof document === 'undefined') return;
+  _skeletonStylesInjected = true;
+  const style = document.createElement('style');
+  style.id = 'skeleton-animation';
+  style.textContent = `
+    @keyframes skeleton-pulse {
+      0% { opacity: 1; }
+      50% { opacity: 0.6; }
+      100% { opacity: 1; }
+    }
+  `;
+  document.head.appendChild(style);
+}
+
 interface SkeletonProps {
   /** Тип skeleton */
   variant?: 'text' | 'rectangular' | 'circular' | 'card';
@@ -34,22 +51,8 @@ export const ComponentSkeleton: React.FC<SkeletonProps> = ({
     height: typeof height === 'number' ? `${height}px` : height,
   };
 
-  // Создаем CSS animation если не существует
-  React.useEffect(() => {
-    const styleId = 'skeleton-animation';
-    if (!document.getElementById(styleId)) {
-      const style = document.createElement('style');
-      style.id = styleId;
-      style.textContent = `
-        @keyframes skeleton-pulse {
-          0% { opacity: 1; }
-          50% { opacity: 0.6; }
-          100% { opacity: 1; }
-        }
-      `;
-      document.head.appendChild(style);
-    }
-  }, []);
+  // PERF NEW-19: module-level guard, нет useEffect — нет лишних DOM touch'ей.
+  ensureSkeletonStyles();
 
   if (variant === 'text') {
     return (

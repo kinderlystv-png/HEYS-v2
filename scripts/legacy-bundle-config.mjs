@@ -2,6 +2,9 @@ export const LEGACY_BUNDLES = {
     'boot-core': [
         'heys_dev_utils.js',
         'heys_feature_flags_v1.js',
+        'heys_content_hash_v1.js',
+        'heys_day_updated_dispatcher_v1.js',
+        'heys_lru_cache_v1.js',
         'heys_module_perf_v1.js',
         'heys_module_loader_v1.js',
         'heys_bootstrap_v1.js',
@@ -25,6 +28,7 @@ export const LEGACY_BUNDLES = {
         'heys_storage_supabase_v1.js',
         'heys_models_v1.js',
         'heys_storage_layer_v1.js',
+        'heys_products_overlay_v1.js',
         'heys_dayv2_cache_v1.js',
         'heys_wheel_picker.js',
         'heys_swipeable.js',

@@ -4734,6 +4734,18 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
             return rest;
         }, []);
 
+        // PERF Foundation 0: content-hash вместо JSON.stringify(stripMeta(day)).
+        // На дне с 200+ meal items — JSON.stringify ~100мс. Hash через cached _h полей — ~0.3мс.
+        // Fallback на stringify если contentHash не загружен (редкий load-order edge case).
+        const computeDaySnap = React.useCallback((payload) => {
+            if (!payload) return '';
+            const ch = global.HEYS?.contentHash;
+            if (ch && typeof ch.hashDay === 'function') {
+                return ch.hashDay(payload);
+            }
+            return JSON.stringify(stripMeta(payload));
+        }, [stripMeta]);
+
         const readExisting = React.useCallback((key) => {
             if (!key) return null;
             try {
@@ -4948,9 +4960,9 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
             let daySnap;
             let freshestDaySnap = null;
             const measureSnaps = () => {
-                daySnap = JSON.stringify(stripMeta(day));
+                daySnap = computeDaySnap(day);
                 freshestDaySnap = freshestPersistedDay
-                    ? JSON.stringify(stripMeta(freshestPersistedDay))
+                    ? computeDaySnap(freshestPersistedDay)
                     : null;
             };
             const pmFlush = global.HEYS?.perfMainThread;
@@ -5018,7 +5030,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
             saveToDate(day.date, payload);
             prevStoredSnapRef.current = JSON.stringify(payload);
             prevDaySnapRef.current = daySnap;
-        }, [day, now, saveToDate, stripMeta, disabled, getKey, readExisting, isMeaningfulDayData, getFreshestPersistedDay]);
+        }, [day, now, saveToDate, stripMeta, disabled, getKey, readExisting, isMeaningfulDayData, getFreshestPersistedDay, computeDaySnap]);
 
         React.useEffect(() => {
             // 🔒 ЗАЩИТА: Не инициализируем prevDaySnapRef до гидратации!
@@ -5031,11 +5043,11 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
             const current = readExisting(key);
             if (current) {
                 prevStoredSnapRef.current = JSON.stringify(current);
-                prevDaySnapRef.current = JSON.stringify(stripMeta(current));
+                prevDaySnapRef.current = computeDaySnap(current);
             } else {
-                prevDaySnapRef.current = JSON.stringify(stripMeta(day));
+                prevDaySnapRef.current = computeDaySnap(day);
             }
-        }, [day && day.date, getKey, readExisting, stripMeta, disabled]);
+        }, [day && day.date, getKey, readExisting, stripMeta, disabled, computeDaySnap]);
 
         React.useEffect(() => {
             if (disabled) return; // ЗАЩИТА: не запускать таймер до гидратации
@@ -5047,10 +5059,10 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
             const pmCmp = global.HEYS?.perfMainThread;
             if (pmCmp && typeof pmCmp.measureSync === 'function') {
                 pmCmp.measureSync('useDayAutosave:daySnap', () => {
-                    daySnap = JSON.stringify(stripMeta(day));
+                    daySnap = computeDaySnap(day);
                 }, { threshold: 14 });
             } else {
-                daySnap = JSON.stringify(stripMeta(day));
+                daySnap = computeDaySnap(day);
             }
 
             if (prevDaySnapRef.current === null) {
@@ -5070,7 +5082,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
             global.clearTimeout(timerRef.current);
             timerRef.current = global.setTimeout(flush, debounceMs);
             return () => { global.clearTimeout(timerRef.current); };
-        }, [day, debounceMs, flush, stripMeta, disabled]);
+        }, [day, debounceMs, flush, stripMeta, disabled, computeDaySnap]);
 
         React.useEffect(() => {
             return () => {
@@ -8641,6 +8653,16 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
         }
 
         if (data.hasStamp && data.stampData) {
+          // 🛟 Gap-filler: не создаём дубликат, если уже есть такой же по имени с заполненными нутриентами.
+          // Это блокирует цикл «orphan-recovery → дублирующая stamp-only запись → dedupe теряет полную версию».
+          const existingByName = productsByName.get(normalizeName(data.name));
+          const hasNutrients = !!existingByName && (
+            Number(existingByName.kcal100) > 0 ||
+            Number(existingByName.iron) > 0 ||
+            Number(existingByName.simple100) > 0
+          );
+          if (hasNutrients) continue;
+
           const restoredProduct = {
             id: data.productId || ('restored_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8)),
             name: data.name,
@@ -8712,12 +8734,40 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
         }
       }
 
+      // 🪵 TEMP: Диагностика orphan-recovery — кто, откуда, почему gap-filler не помогает
+      try {
+        const stampRec = recovered.filter(p => p._recoveredFrom === 'stamp');
+        const sharedRec = recovered.filter(p => p._recoveredFrom === 'shared');
+        const sample = stampRec.slice(0, 8).map(p => p.name);
+        const sampleDates = [];
+        if (stampRec.length > 0) {
+          // Найти первую дату dayv2 для каждого orphan имени (чтобы понять откуда взялся)
+          const stampNames = new Set(stampRec.map(p => normalizeName(p.name)));
+          for (const [, mData] of missingProducts) {
+            if (stampNames.has(normalizeName(mData.name)) && sampleDates.length < 8) {
+              sampleDates.push({ name: mData.name, firstSeen: mData.firstSeenDate });
+            }
+          }
+        }
+        console.info('[HEYS.products] orphan-recovery', {
+          localCount: products.length,
+          missingTotal: missingProducts.size,
+          stampRecovered: stampRec.length,
+          sharedRecovered: sharedRec.length,
+          stillMissing: stillMissing.length,
+          skippedDeleted,
+          sampleStampNames: sample,
+          sampleStampSources: sampleDates,
+          sharedAvailable: typeof HEYS.cloud?.getCachedSharedProducts === 'function' ? HEYS.cloud.getCachedSharedProducts().length : 'n/a',
+        });
+      } catch (_) { /* noop */ }
+
       // 4. Сохраняем восстановленные продукты (если были восстановлены из штампов)
       if (fromStamp > 0) {
         const newProducts = [...products, ...recovered.filter(p => p._recoveredFrom === 'stamp')];
 
         if (HEYS.products?.setAll) {
-          HEYS.products.setAll(newProducts);
+          HEYS.products.setAll(newProducts, { source: 'orphan-auto-recover' });
         } else {
           const lsSet = U.lsSet || ((k, v) => localStorage.setItem(k, JSON.stringify(v)));
           lsSet('heys_products', newProducts);

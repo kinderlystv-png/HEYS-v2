@@ -14523,7 +14523,115 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                             window.HEYS.Toast.success(msg);
                         }
                     }
+
+                    // ──────────────────────────────────────────────────────────
+                    // Phase β: one-shot overlay migration. Runs once per client
+                    // per session (gated by recoveryRunCache + LS markers).
+                    // Source = HEYS.products.getAll() post-self-heal (NOT raw LS).
+                    // ──────────────────────────────────────────────────────────
+                    try {
+                        runOverlayMigrationOnce(clientId);
+                    } catch (e) {
+                        // Defensive: never let overlay migration break recovery flow.
+                        if (window.console && window.console.warn) {
+                            console.warn('[HEYS.overlay] migration error (non-fatal):', e && e.message);
+                        }
+                    }
                 }).catch(() => { });
+            };
+
+            // Phase β: one-shot overlay migration (idempotent, gated by LS markers).
+            const runOverlayMigrationOnce = (cid) => {
+                if (!cid) return;
+                if (typeof window === 'undefined' || !window.HEYS) return;
+                const Overlay = window.HEYS.OverlayStore;
+                const Products = window.HEYS.products;
+                const cloud = window.HEYS.cloud;
+                if (!Overlay || !Products || !cloud) return;
+
+                // Idempotency: skip if migrated within last 7 days OR aborted recently.
+                const ABORT_KEY = 'heys_overlay_migration_aborted';
+                const TS_KEY = 'heys_overlay_migrated_at';
+                const STATUS_KEY = 'heys_overlay_migration_status';
+                const SEVEN_DAYS_MS = 7 * 86400 * 1000;
+                let migratedAt = 0;
+                try { migratedAt = parseInt(localStorage.getItem(TS_KEY) || '0', 10) || 0; } catch (_) { /* noop */ }
+                if (localStorage.getItem(ABORT_KEY) === 'true') return;
+                if (migratedAt > 0 && (Date.now() - migratedAt) < SEVEN_DAYS_MS) return;
+
+                // Get shared snapshot. If empty, defer until heys:shared-products-updated event.
+                const sharedById = cloud.getSharedIndex && cloud.getSharedIndex();
+                if (!sharedById || sharedById.size === 0) {
+                    // Defer: re-try once when shared cache populates.
+                    const onSharedReady = () => {
+                        window.removeEventListener('heys:shared-products-updated', onSharedReady);
+                        try { runOverlayMigrationOnce(cid); } catch (_) { /* noop */ }
+                    };
+                    window.addEventListener('heys:shared-products-updated', onSharedReady, { once: true });
+                    return;
+                }
+
+                // Source: HEYS.products.getAll() post-self-heal (NOT raw LS).
+                // CRITICAL: this captures any α-with-flag-on legacy mutations.
+                const flat = Products.getAll();
+                if (!Array.isArray(flat)) {
+                    console.warn('[HEYS.overlay] migration source not an array; skipping');
+                    return;
+                }
+
+                // Snapshot pre-migration for rollback safety (90-day retention; cleanup in phase ε).
+                try {
+                    const snapKey = `heys_products_pre_overlay_${Date.now()}`;
+                    if (window.HEYS.utils && window.HEYS.utils.lsSet) {
+                        window.HEYS.utils.lsSet(snapKey, flat);
+                    }
+                } catch (_) { /* noop */ }
+
+                // Translate to overlay rows.
+                const result = Overlay.migrate(flat, sharedById);
+                if (!result.ok) {
+                    console.warn('[HEYS.products] overlay migration aborted:', result.reason);
+                    try {
+                        localStorage.setItem(ABORT_KEY, 'true');
+                        localStorage.setItem(STATUS_KEY, 'aborted');
+                        window.__diag_overlay = { reason: result.reason, pre: flat, post: null };
+                    } catch (_) { /* noop */ }
+                    if (window.HEYS.Toast?.warning) {
+                        window.HEYS.Toast.warning('Миграция продуктов прервана — работаем на legacy. Откройте __diag_overlay в консоли.');
+                    }
+                    return;
+                }
+
+                // Verifier: id-set parity + nutrient field parity.
+                Overlay.writeRaw(result.rows);
+                const merged = Overlay.toMergedView(sharedById) || [];
+                const verify = Overlay.verifyMigration(flat, merged);
+                if (!verify.ok) {
+                    // Roll back: clear overlay + mark aborted.
+                    Overlay.writeRaw([]);
+                    try {
+                        localStorage.setItem(ABORT_KEY, 'true');
+                        localStorage.setItem(STATUS_KEY, 'aborted');
+                        window.__diag_overlay = { errors: verify.errors, totalErrors: verify.totalErrors, pre: flat, post: merged };
+                    } catch (_) { /* noop */ }
+                    console.warn('[HEYS.products] overlay migration verifier failed:', verify.totalErrors, 'errors. Sample:', verify.errors);
+                    if (window.HEYS.Toast?.warning) {
+                        window.HEYS.Toast.warning('Миграция продуктов прервана — несовпадение данных. Откройте __diag_overlay в консоли.');
+                    }
+                    return;
+                }
+
+                // Success: stamp markers + log.
+                try {
+                    localStorage.setItem(TS_KEY, String(Date.now()));
+                    localStorage.setItem(STATUS_KEY, 'success');
+                    localStorage.removeItem(ABORT_KEY);
+                } catch (_) { /* noop */ }
+                console.info('[HEYS.products] overlay migration ok', {
+                    typeA: result.typeA,
+                    typeB: result.typeB,
+                    total: result.rows.length,
+                });
             };
 
             // Если sync для этого клиента уже был — сразу загружаем продукты
@@ -21433,7 +21541,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
             shouldRenderContent && tab !== 'tasks' && React.createElement(MemoAppHeader, props),
             shouldRenderContent && React.createElement(MemoAppTabsNav, props),
             shouldRenderContent && React.createElement(MemoAppTabContent, Object.assign({}, props, {
-                key: 'appTabContent_' + String(clientId || '') + '_' + String(tab || '') + '_' + profilerMountKey
+                key: 'appTabContent_' + String(clientId || '') + '_' + profilerMountKey
             }))
         );
     }
@@ -25026,18 +25134,28 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                 setIsCurator(cloudUserLocal != null);
             };
             checkCurator();
-            const tick = () => {
-                if (typeof document !== 'undefined' && document.hidden) return;
-                checkCurator();
-            };
-            const interval = setInterval(tick, 5000);
+            // PERF: убран setInterval(5s) — он будил CPU даже на скрытых вкладках.
+            // Состояние curator меняется только в моменты login/logout/restore session,
+            // которые сопровождаются явными событиями. Достаточно реагировать на:
+            //  • visibilitychange → visible (возврат на вкладку)
+            //  • focus (мог пройти flow в другой вкладке)
+            //  • heys:auth-changed / storage event (cross-tab login/logout)
             const onVis = () => {
                 if (typeof document !== 'undefined' && !document.hidden) checkCurator();
             };
+            const onStorage = (e) => {
+                const k = e?.key || '';
+                if (k.includes('curator') || k.includes('session') || k === 'heys_user') checkCurator();
+            };
             document.addEventListener('visibilitychange', onVis);
+            window.addEventListener('focus', checkCurator);
+            window.addEventListener('heys:auth-changed', checkCurator);
+            window.addEventListener('storage', onStorage);
             return () => {
-                clearInterval(interval);
                 document.removeEventListener('visibilitychange', onVis);
+                window.removeEventListener('focus', checkCurator);
+                window.removeEventListener('heys:auth-changed', checkCurator);
+                window.removeEventListener('storage', onStorage);
             };
         }, []);
 

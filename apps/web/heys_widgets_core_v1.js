@@ -1865,7 +1865,8 @@
       document.addEventListener('pointerup', this._boundUp);
       // touchmove НЕ добавляем здесь — он добавляется в start() только когда drag реально стартует.
       // Пассивный drag-phase listener не нужен и блокирует нативный скролл до старта.
-      document.addEventListener('touchend', this._boundUp);
+      // touchend — passive: handler не вызывает preventDefault, нужен для очистки drag state.
+      document.addEventListener('touchend', this._boundUp, { passive: true });
     },
 
     /**

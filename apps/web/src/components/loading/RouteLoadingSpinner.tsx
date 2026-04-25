@@ -3,6 +3,33 @@
 
 import React from 'react';
 
+// PERF NEW-19: module-level guard для одноразовой инжекции стилей.
+// Раньше каждый mount запускал useEffect с getElementById чек — даже после
+// первой инжекции это лишний DOM-touch на frequent mount/unmount cycles.
+let _routeLoadingStylesInjected = false;
+function ensureRouteLoadingStyles(): void {
+  if (_routeLoadingStylesInjected || typeof document === 'undefined') return;
+  _routeLoadingStylesInjected = true;
+  const style = document.createElement('style');
+  style.id = 'route-loading-animation';
+  style.textContent = `
+    @keyframes route-loading-spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .route-loading-fade-in {
+      animation: route-loading-fade-in 0.3s ease-in;
+    }
+
+    @keyframes route-loading-fade-in {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  `;
+  document.head.appendChild(style);
+}
+
 interface RouteLoadingSpinnerProps {
   /** Показывать прогресс загрузки */
   showProgress?: boolean;
@@ -82,30 +109,9 @@ export const RouteLoadingSpinner: React.FC<RouteLoadingSpinnerProps> = ({
         padding: '40px 20px',
       };
 
-  // Создаем CSS animation
-  React.useEffect(() => {
-    const styleId = 'route-loading-animation';
-    if (!document.getElementById(styleId)) {
-      const style = document.createElement('style');
-      style.id = styleId;
-      style.textContent = `
-        @keyframes route-loading-spin {
-          0% { transform: rotate(0deg); }
-          100% { transform: rotate(360deg); }
-        }
-        
-        .route-loading-fade-in {
-          animation: route-loading-fade-in 0.3s ease-in;
-        }
-        
-        @keyframes route-loading-fade-in {
-          from { opacity: 0; transform: translateY(10px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-      `;
-      document.head.appendChild(style);
-    }
-  }, []);
+  // PERF NEW-19: module-level injection — guard в memory, не в DOM.
+  // useEffect вообще не нужен — стили инжектятся при первой загрузке модуля.
+  ensureRouteLoadingStyles();
 
   return (
     <div style={containerStyle} className="route-loading-fade-in">
