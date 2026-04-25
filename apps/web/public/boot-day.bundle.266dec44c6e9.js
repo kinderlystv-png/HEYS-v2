@@ -16676,15 +16676,16 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                 normAbs: ctx.normAbs,
                 HEYS: heysRef
             }) || null)
-            : React.createElement('div', {
-                className: 'skeleton-page',
-                style: { marginTop: 10, minHeight: 260 }
-            },
-                React.createElement('div', { className: 'skeleton-card skeleton-meal' },
-                    React.createElement('div', { className: 'skeleton-meal-header' }),
-                    React.createElement('div', { className: 'skeleton-search' }),
-                    React.createElement('div', { className: 'skeleton-item' }),
-                    React.createElement('div', { className: 'skeleton-item' })
+            : React.createElement('div', { className: 'deferred-card-slot deferred-card-slot--loading', style: { marginTop: 10 } },
+                React.createElement('div', {
+                    className: 'deferred-card-skeleton',
+                    style: { minHeight: '260px' }
+                },
+                    React.createElement('div', { className: 'deferred-card-skeleton__shimmer' }),
+                    React.createElement('div', { className: 'deferred-card-skeleton__content' },
+                        React.createElement('div', { className: 'deferred-card-skeleton__icon' }, '📔'),
+                        React.createElement('div', { className: 'deferred-card-skeleton__label' }, 'Готовим дневник…')
+                    )
                 )
             );
 
@@ -20081,6 +20082,13 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             setNewItemIds,
         } = deps;
 
+        // PERF NEW-3: dayRef стабилизирует callbacks которые читают `day` для validation/undo metadata.
+        // Раньше: `day` в deps useCallback'ов → callback recreates каждый render → MealCard.memo
+        // bypass'ится → все meal cards re-render даже при unchanged data.
+        // Теперь: ref обновляется на каждый render, но идентичность callbacks стабильна.
+        const dayRef = React.useRef(day);
+        dayRef.current = day;
+
         const persistDayData = React.useCallback((nextDayData, action = 'save_day') => {
             const key = _scopedDayKey(date);
             const _mCnt = Array.isArray(nextDayData?.meals) ? nextDayData.meals.length : '?';
@@ -20558,7 +20566,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         }, [setDay, emitPlannerReplanRequest]);
 
         const removeMeal = React.useCallback(async (i) => {
-            const mealToRemove = day.meals?.[i];
+            const mealToRemove = dayRef.current.meals?.[i];
             if (!mealToRemove) return;
 
             const confirmed = await HEYS.ConfirmModal?.confirmDelete?.({
@@ -20607,7 +20615,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                     });
                 },
             });
-        }, [haptic, setDay, day, markUndoWindow, persistDayData, runUndoableDayMutation]);
+        }, [haptic, setDay, markUndoWindow, persistDayData, runUndoableDayMutation]);
 
         const addProductToMeal = React.useCallback((mi, p) => {
             if (HEYS.Paywall && !HEYS.Paywall.canWriteSync()) {
@@ -20700,7 +20708,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         }, [setDay, emitPlannerReplanRequestDebounced]);
 
         const removeItem = React.useCallback((mi, itId) => {
-            const sourceMeal = day.meals?.[mi];
+            const sourceMeal = dayRef.current.meals?.[mi];
             if (!sourceMeal) return;
 
             const mealId = sourceMeal.id;
@@ -20757,10 +20765,10 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                     recalculateOrphanProducts();
                 },
             });
-        }, [haptic, setDay, day, markUndoWindow, persistDayData, recalculateOrphanProducts, runUndoableDayMutation, emitPlannerReplanRequest]);
+        }, [haptic, setDay, markUndoWindow, persistDayData, recalculateOrphanProducts, runUndoableDayMutation, emitPlannerReplanRequest]);
 
         const removePhoto = React.useCallback(async (mi, photoId, options = {}) => {
-            const sourceMeal = day.meals?.[mi];
+            const sourceMeal = dayRef.current.meals?.[mi];
             if (!sourceMeal) return false;
 
             const mealId = sourceMeal.id;
@@ -20832,7 +20840,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                     }
                 },
             });
-        }, [day, haptic, markUndoWindow, persistDayData, runUndoableDayMutation, setDay]);
+        }, [haptic, markUndoWindow, persistDayData, runUndoableDayMutation, setDay]);
 
         const updateMealField = React.useCallback((mealIndex, field, value) => {
             setDay((prevDay) => {

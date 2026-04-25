@@ -13990,35 +13990,9 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
         HEYS._productsTraceLastLen = Array.isArray(arr) ? arr.length : HEYS._productsTraceLastLen;
       } catch (_) { /* noop */ }
 
-      // ──────────────────────────────────────────────────────────────────
-      // Phase β: dual-write to overlay store. Runs AFTER legacy write so
-      // overlay reflects the canonical state. Gated on:
-      //   - dual_write_legacy flag (default true; off → no dual-write)
-      //   - migration succeeded (heys_overlay_migration_status === 'success')
-      // Defensive: never break the legacy path.
-      // ──────────────────────────────────────────────────────────────────
-      try {
-        if (!Array.isArray(arr)) return;
-        if (!HEYS.flags || !HEYS.flags.isEnabled || !HEYS.flags.isEnabled('dual_write_legacy')) return;
-        if (typeof localStorage === 'undefined') return;
-        if (localStorage.getItem('heys_overlay_migration_status') !== 'success') return;
-        const Overlay = HEYS.OverlayStore;
-        const cloud = HEYS.cloud;
-        if (!Overlay || !cloud || !cloud.getSharedIndex) return;
-        const sharedById = cloud.getSharedIndex();
-        if (!sharedById || sharedById.size === 0) return; // shared not ready; skip
-
-        // Translate full snapshot → overlay shape via existing migrate().
-        // This is a complete replace (matches setAll semantics).
-        const result = Overlay.migrate(arr, sharedById);
-        if (!result.ok) {
-          console.warn('[HEYS.products] dual-write skipped:', result.reason);
-          return;
-        }
-        Overlay.writeRaw(result.rows);
-      } catch (e) {
-        console.warn('[HEYS.products] dual-write failed (non-fatal):', e && e.message);
-      }
+      // Phase β: dual-write moved to interceptSetItem for universal coverage
+      // (catches self-heal, best-keyspace fallback, hot-sync, and any future
+      // direct legacy writers, not just setAll). See heys_storage_supabase_v1.js.
     },
     watch: (fn) => { if (HEYS.store && HEYS.store.watch) return HEYS.store.watch('heys_products', fn); return () => { }; },
 
@@ -21064,10 +21038,16 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
     '_advice_trace_day_v1'
   ];
 
+  const LOCAL_ONLY_STORAGE_PREFIXES = [
+    'heys_products_pre_overlay_',  // β: rollback snapshots, never sync to cloud
+    'heys_overlay_',               // β/γ: overlay-specific markers (migrated_at, status, etc.)
+  ];
+
   function isLocalOnlyStorageKey(key) {
     const normalizedKey = String(key || '');
     if (!normalizedKey) return false;
     if (LOCAL_ONLY_STORAGE_EXACT_KEYS.has(normalizedKey)) return true;
+    if (LOCAL_ONLY_STORAGE_PREFIXES.some((prefix) => normalizedKey.startsWith(prefix))) return true;
     return LOCAL_ONLY_STORAGE_SUFFIXES.some((suffix) => normalizedKey.endsWith(suffix));
   }
 
@@ -22791,6 +22771,47 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
           // Если не удалось сохранить даже после очистки — логируем
           console.warn('[HEYS] Не удалось сохранить:', k);
           return;
+        }
+
+        // ──────────────────────────────────────────────────────────────────
+        // Phase β: universal dual-write to overlay store. Catches ALL writes
+        // to legacy heys_<cid>_products regardless of code path (setAll, Store.set
+        // self-heal, best-keyspace fallback, applyForegroundHotSyncValue, etc.).
+        // Plan ref: β-audit fix #1 (CRITICAL — was silently bypassed by ~20 sites).
+        //
+        // Skip:
+        //   - the overlay key itself (would loop forever)
+        //   - pre_overlay snapshots (rollback safety, not real products)
+        //   - hidden/favorite/deleted/rpc_tail (not the personal product list)
+        // Gate:
+        //   - dual_write_legacy flag
+        //   - migration_status === 'success'
+        //   - shared cache populated
+        // ──────────────────────────────────────────────────────────────────
+        try {
+          const keyStr = String(k || '');
+          const isOverlayKey = keyStr.endsWith('_products_overlay_v2') || keyStr === 'heys_products_overlay_v2';
+          const isPreOverlay = keyStr.indexOf('heys_products_pre_overlay_') === 0;
+          const isProductsKey = /^heys_.*products$/.test(keyStr) && !/(_hidden_products|_favorite_products|_deleted_products|_rpc_tail)/.test(keyStr);
+          if (isProductsKey && !isOverlayKey && !isPreOverlay
+              && global.HEYS && global.HEYS.flags
+              && global.HEYS.flags.isEnabled && global.HEYS.flags.isEnabled('dual_write_legacy')
+              && global.localStorage.getItem('heys_overlay_migration_status') === 'success'
+              && global.HEYS.OverlayStore && global.HEYS.cloud && global.HEYS.cloud.getSharedIndex) {
+            const sharedById = global.HEYS.cloud.getSharedIndex();
+            if (sharedById && sharedById.size > 0) {
+              let arr = null;
+              try { arr = typeof v === 'string' ? JSON.parse(v) : v; } catch (_) { /* noop */ }
+              if (Array.isArray(arr)) {
+                const result = global.HEYS.OverlayStore.migrate(arr, sharedById);
+                if (result.ok) {
+                  global.HEYS.OverlayStore.writeRaw(result.rows);
+                }
+              }
+            }
+          }
+        } catch (e) {
+          console.warn('[HEYS.products] interceptor dual-write failed (non-fatal):', e && e.message);
         }
 
         if (isLogoutSuppressionActive()) {

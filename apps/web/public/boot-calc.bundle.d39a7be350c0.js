@@ -5586,19 +5586,44 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
 
     const HEYS = global.HEYS = global.HEYS || {};
 
+    // PERF Foundation 2: in-memory cache для readDayV2 (TTL=200мс, no write-aware).
+    // Покрывает повторные reads одного и того же date-key в одном render burst
+    // (DayTab + sidebar + sparklines часто читают тот же день за < 16мс окно).
+    // TTL короткий чтобы быстро отражать external writes (autosave, sync, cascade).
+    // Конфликта с HEYS.store.invalidate ниже НЕТ: invalidate чистит HEYS.store кэш,
+    // а наш _readDayV2Cache — независимая Map.
+    const _readDayV2Cache = (HEYS.lruCache && typeof HEYS.lruCache.create === 'function')
+        ? HEYS.lruCache.create({ name: 'readDayV2', max: 30, ttlMs: 200 })
+        : null;
+
     // v69 FIX: Read from scoped dayv2 key first, fallback to unscoped for legacy
     function readDayV2(dateStr, lsGet) {
         const cid = HEYS.currentClientId || HEYS.utils?.getCurrentClientId?.() || '';
+
+        const cacheKey = cid + '|' + dateStr;
+        if (_readDayV2Cache) {
+            const cached = _readDayV2Cache.get(cacheKey);
+            if (cached) return cached;
+        }
+
+        let result;
         if (cid) {
             const scopedKey = 'heys_' + cid + '_dayv2_' + dateStr;
             HEYS?.store?.invalidate?.(scopedKey);
             const v = lsGet(scopedKey, null);
-            if (v) return { key: scopedKey, value: v };
+            if (v) {
+                result = { key: scopedKey, value: v };
+            }
         }
-        const unscopedKey = 'heys_dayv2_' + dateStr;
-        HEYS?.store?.invalidate?.(unscopedKey);
-        const v = lsGet(unscopedKey, null);
-        return v ? { key: unscopedKey, value: v } : { key: unscopedKey, value: null };
+        if (!result) {
+            const unscopedKey = 'heys_dayv2_' + dateStr;
+            HEYS?.store?.invalidate?.(unscopedKey);
+            const v = lsGet(unscopedKey, null);
+            result = v ? { key: unscopedKey, value: v } : { key: unscopedKey, value: null };
+        }
+
+        if (_readDayV2Cache) _readDayV2Cache.set(cacheKey, result);
+        return result;
     }
 
     function getReact() {
@@ -20525,6 +20550,13 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
             setNewItemIds,
         } = deps;
 
+        // PERF NEW-3: dayRef стабилизирует callbacks которые читают `day` для validation/undo metadata.
+        // Раньше: `day` в deps useCallback'ов → callback recreates каждый render → MealCard.memo
+        // bypass'ится → все meal cards re-render даже при unchanged data.
+        // Теперь: ref обновляется на каждый render, но идентичность callbacks стабильна.
+        const dayRef = React.useRef(day);
+        dayRef.current = day;
+
         const persistDayData = React.useCallback((nextDayData, action = 'save_day') => {
             const key = _scopedDayKey(date);
             const _mCnt = Array.isArray(nextDayData?.meals) ? nextDayData.meals.length : '?';
@@ -21002,7 +21034,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
         }, [setDay, emitPlannerReplanRequest]);
 
         const removeMeal = React.useCallback(async (i) => {
-            const mealToRemove = day.meals?.[i];
+            const mealToRemove = dayRef.current.meals?.[i];
             if (!mealToRemove) return;
 
             const confirmed = await HEYS.ConfirmModal?.confirmDelete?.({
@@ -21051,7 +21083,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
                     });
                 },
             });
-        }, [haptic, setDay, day, markUndoWindow, persistDayData, runUndoableDayMutation]);
+        }, [haptic, setDay, markUndoWindow, persistDayData, runUndoableDayMutation]);
 
         const addProductToMeal = React.useCallback((mi, p) => {
             if (HEYS.Paywall && !HEYS.Paywall.canWriteSync()) {
@@ -21144,7 +21176,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
         }, [setDay, emitPlannerReplanRequestDebounced]);
 
         const removeItem = React.useCallback((mi, itId) => {
-            const sourceMeal = day.meals?.[mi];
+            const sourceMeal = dayRef.current.meals?.[mi];
             if (!sourceMeal) return;
 
             const mealId = sourceMeal.id;
@@ -21201,10 +21233,10 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
                     recalculateOrphanProducts();
                 },
             });
-        }, [haptic, setDay, day, markUndoWindow, persistDayData, recalculateOrphanProducts, runUndoableDayMutation, emitPlannerReplanRequest]);
+        }, [haptic, setDay, markUndoWindow, persistDayData, recalculateOrphanProducts, runUndoableDayMutation, emitPlannerReplanRequest]);
 
         const removePhoto = React.useCallback(async (mi, photoId, options = {}) => {
-            const sourceMeal = day.meals?.[mi];
+            const sourceMeal = dayRef.current.meals?.[mi];
             if (!sourceMeal) return false;
 
             const mealId = sourceMeal.id;
@@ -21276,7 +21308,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
                     }
                 },
             });
-        }, [day, haptic, markUndoWindow, persistDayData, runUndoableDayMutation, setDay]);
+        }, [haptic, markUndoWindow, persistDayData, runUndoableDayMutation, setDay]);
 
         const updateMealField = React.useCallback((mealIndex, field, value) => {
             setDay((prevDay) => {

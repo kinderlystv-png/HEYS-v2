@@ -3134,6 +3134,13 @@
             setNewItemIds,
         } = deps;
 
+        // PERF NEW-3: dayRef стабилизирует callbacks которые читают `day` для validation/undo metadata.
+        // Раньше: `day` в deps useCallback'ов → callback recreates каждый render → MealCard.memo
+        // bypass'ится → все meal cards re-render даже при unchanged data.
+        // Теперь: ref обновляется на каждый render, но идентичность callbacks стабильна.
+        const dayRef = React.useRef(day);
+        dayRef.current = day;
+
         const persistDayData = React.useCallback((nextDayData, action = 'save_day') => {
             const key = _scopedDayKey(date);
             const _mCnt = Array.isArray(nextDayData?.meals) ? nextDayData.meals.length : '?';
@@ -3611,7 +3618,7 @@
         }, [setDay, emitPlannerReplanRequest]);
 
         const removeMeal = React.useCallback(async (i) => {
-            const mealToRemove = day.meals?.[i];
+            const mealToRemove = dayRef.current.meals?.[i];
             if (!mealToRemove) return;
 
             const confirmed = await HEYS.ConfirmModal?.confirmDelete?.({
@@ -3660,7 +3667,7 @@
                     });
                 },
             });
-        }, [haptic, setDay, day, markUndoWindow, persistDayData, runUndoableDayMutation]);
+        }, [haptic, setDay, markUndoWindow, persistDayData, runUndoableDayMutation]);
 
         const addProductToMeal = React.useCallback((mi, p) => {
             if (HEYS.Paywall && !HEYS.Paywall.canWriteSync()) {
@@ -3753,7 +3760,7 @@
         }, [setDay, emitPlannerReplanRequestDebounced]);
 
         const removeItem = React.useCallback((mi, itId) => {
-            const sourceMeal = day.meals?.[mi];
+            const sourceMeal = dayRef.current.meals?.[mi];
             if (!sourceMeal) return;
 
             const mealId = sourceMeal.id;
@@ -3810,10 +3817,10 @@
                     recalculateOrphanProducts();
                 },
             });
-        }, [haptic, setDay, day, markUndoWindow, persistDayData, recalculateOrphanProducts, runUndoableDayMutation, emitPlannerReplanRequest]);
+        }, [haptic, setDay, markUndoWindow, persistDayData, recalculateOrphanProducts, runUndoableDayMutation, emitPlannerReplanRequest]);
 
         const removePhoto = React.useCallback(async (mi, photoId, options = {}) => {
-            const sourceMeal = day.meals?.[mi];
+            const sourceMeal = dayRef.current.meals?.[mi];
             if (!sourceMeal) return false;
 
             const mealId = sourceMeal.id;
@@ -3885,7 +3892,7 @@
                     }
                 },
             });
-        }, [day, haptic, markUndoWindow, persistDayData, runUndoableDayMutation, setDay]);
+        }, [haptic, markUndoWindow, persistDayData, runUndoableDayMutation, setDay]);
 
         const updateMealField = React.useCallback((mealIndex, field, value) => {
             setDay((prevDay) => {

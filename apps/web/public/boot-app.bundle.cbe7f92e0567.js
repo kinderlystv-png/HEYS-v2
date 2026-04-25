@@ -14602,6 +14602,18 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                     return;
                 }
 
+                // β.6 sanity gate: if input has rows but migrate produced none
+                // (every row had id == null), refuse to stamp success.
+                if (flat.length > 0 && result.rows.length === 0) {
+                    console.warn('[HEYS.products] overlay migration aborted: zero-rows from non-empty input', { flatLen: flat.length });
+                    try {
+                        localStorage.setItem(ABORT_KEY, 'true');
+                        localStorage.setItem(STATUS_KEY, 'aborted');
+                        window.__diag_overlay = { reason: 'zero-rows-from-nonempty-input', pre: flat, post: null };
+                    } catch (_) { /* noop */ }
+                    return;
+                }
+
                 // Verifier: id-set parity + nutrient field parity.
                 Overlay.writeRaw(result.rows);
                 const merged = Overlay.toMergedView(sharedById) || [];
