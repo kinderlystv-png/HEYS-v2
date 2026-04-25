@@ -55,7 +55,7 @@ function classify(src) {
     // ── CRITICAL (high priority — нужны до первого рендера) ──────────────────
     // Bootstrap, platform, core infrastructure
     if (/^heys_(dev_utils|feature_flags|module_perf|module_loader|bootstrap|platform_apis|pwa_module|simple_analytics)/.test(name)) return 'critical';
-    if (/^heys_(smart_search|shared_products_export_fields|export_utils|core_v12|yandex_api|cloud_merge|cloud_storage_utils|cloud_shared|cloud_queue|storage_photos|storage_supabase|models|storage_layer)/.test(name)) return 'critical';
+    if (/^heys_(smart_search|shared_products_export_fields|export_utils|core_v12|yandex_api|cloud_merge|cloud_storage_utils|cloud_shared|cloud_queue|storage_photos|storage_supabase|models|storage_layer|products_overlay)/.test(name)) return 'critical';
     // Auth & Subscription
     if (/^heys_(auth|subscription|trial_queue|paywall|login_screen|ui_onboarding)/.test(name)) return 'critical';
     // App shell infrastructure (heys_app_* with high priority)

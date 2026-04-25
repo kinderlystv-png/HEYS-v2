@@ -20642,18 +20642,31 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
             haptic('light');
 
-            console.info('[HEYS.day] ➕ addProductToMeal', {
-                mealIndex: mi,
-                productId: p?.id ?? p?.product_id ?? null,
-                productName: p?.name || null,
-                source: p?._source || (p?._fromShared ? 'shared' : 'personal')
-            });
+            // 🔬 [HEYS.day-trace] 1/8 entry — what we're trying to add and to which meal.
+            try {
+                console.info('[HEYS.day-trace] 1/8 addProductToMeal entry', {
+                    date,
+                    mealIndex: mi,
+                    productSource: p?._source || (p?._fromShared ? 'shared' : 'personal'),
+                    productId: p?.id ?? p?.product_id ?? null,
+                    productName: p?.name || null,
+                    productKcal100: p?.kcal100,
+                    gramsHint: p?.grams,
+                });
+            } catch (_) { /* noop */ }
 
             let finalProduct = p;
             if (p?._fromShared || p?._source === 'shared' || p?.is_shared) {
                 const cloned = HEYS.products?.addFromShared?.(p);
                 if (cloned) {
                     finalProduct = cloned;
+                    try {
+                        console.info('[HEYS.day-trace] 2/8 cloned from shared', {
+                            originalId: p?.id,
+                            clonedId: cloned?.id,
+                            name: cloned?.name,
+                        });
+                    } catch (_) { /* noop */ }
                 }
             }
 
@@ -20677,6 +20690,17 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                 gi: finalProduct.gi ?? finalProduct.gi100,
                 harm: harmVal,  // Normalized harm (0-10)
             };
+            // 🔬 [HEYS.day-trace] 3/8 item built — final shape going into the meal.
+            try {
+                console.info('[HEYS.day-trace] 3/8 item built', {
+                    itemId: item.id,
+                    product_id: item.product_id,
+                    name: item.name,
+                    grams: item.grams,
+                    kcal100: item.kcal100,
+                    hasInline: item.kcal100 != null && item.protein100 != null,
+                });
+            } catch (_) { /* noop */ }
             const newUpdatedAt = Date.now();
             if (lastLoadedUpdatedAtRef) lastLoadedUpdatedAtRef.current = newUpdatedAt;
             if (blockCloudUpdatesUntilRef) blockCloudUpdatesUntilRef.current = newUpdatedAt + 3000;
@@ -20689,10 +20713,32 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                         productName: finalProduct?.name || null
                     });
                 }
+                const before = (mealsList[mi]?.items || []).length;
                 const meals = mealsList.map((m, i) => i === mi ? { ...m, items: [...(m.items || []), item] } : m);
                 const newDayData = { ...prevDay, meals, updatedAt: newUpdatedAt };
                 const key = _scopedDayKey(date);
+                // 🔬 [HEYS.day-trace] 4/8 setDay applied — items count change in target meal.
                 try {
+                    console.info('[HEYS.day-trace] 4/8 setDay applied', {
+                        date: prevDay.date,
+                        key,
+                        mealIndex: mi,
+                        itemsBefore: before,
+                        itemsAfter: (newDayData.meals?.[mi]?.items || []).length,
+                        totalItems: meals.reduce((acc, m) => acc + ((m.items || []).length), 0),
+                        updatedAt: newUpdatedAt,
+                    });
+                } catch (_) { /* noop */ }
+                try {
+                    // 🔬 [HEYS.day-trace] 5/8 LS write — about to persist day to localStorage.
+                    try {
+                        console.info('[HEYS.day-trace] 5/8 LS write', {
+                            key,
+                            mealsCount: meals.length,
+                            totalItems: meals.reduce((acc, m) => acc + ((m.items || []).length), 0),
+                            updatedAt: newUpdatedAt,
+                        });
+                    } catch (_) { /* noop */ }
                     lsSet(key, newDayData);
                 } catch (e) {
                     trackError(e, { source: 'day/_meals.js', action: 'save_product_quick' });

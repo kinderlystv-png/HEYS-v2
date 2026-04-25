@@ -21,6 +21,17 @@
   // Storage key для флагов
   const FLAGS_KEY = 'heys_feature_flags';
 
+  // γ.1: dispatch on flag change so subsystems (e.g. OverlayStore memo) can invalidate.
+  function _dispatchFlagChange(flagName, value) {
+    try {
+      if (typeof window !== 'undefined' && window.dispatchEvent) {
+        window.dispatchEvent(new CustomEvent('heys:flag-changed', {
+          detail: { name: flagName, value: !!value },
+        }));
+      }
+    } catch (_) { /* noop */ }
+  }
+
   // Значения по умолчанию для всех флагов
   const DEFAULT_FLAGS = {
     // === App Refactoring Flags ===
@@ -37,6 +48,10 @@
 
     // === Rollback флаг ===
     'use_legacy_monolith': false,       // true = старый код, false = новые модули
+
+    // === Products Overlay v2 (architectural refactor, see plan structured-mixing-stallman.md) ===
+    'overlay_products_v2': true,        // canonical reader (Phase γ rollout 2026-04-25)
+    'dual_write_legacy': true,          // keep writing legacy heys_products for backward-compat
   };
 
   /**
@@ -97,6 +112,7 @@
       currentFlags[flagName] = true;
       saveFlags(currentFlags);
       devLog(`[FeatureFlags] Enabled: ${flagName}`);
+      _dispatchFlagChange(flagName, true);
     },
 
     /**
@@ -111,6 +127,7 @@
       currentFlags[flagName] = false;
       saveFlags(currentFlags);
       devLog(`[FeatureFlags] Disabled: ${flagName}`);
+      _dispatchFlagChange(flagName, false);
     },
 
     /**

@@ -2824,6 +2824,15 @@
         // 10. Сохранить объединённый массив
         const mergedProducts = [...updatedProducts, ...newProducts];
         debugLog('merged', { total: mergedProducts.length, added: newProducts.length, updated: updatedCount });
+        // 🪵 TEMP: явный лог итога merge при «Синхронизация с общей базой»
+        console.info('[HEYS.products] merge', {
+          source: 'restoreFromSharedBase',
+          was: currentProducts.length,
+          shared: sharedProducts.length,
+          added: newProducts.length,
+          updated: updatedCount,
+          total: mergedProducts.length,
+        });
 
         if (HEYS.products?.setAll) {
           HEYS.products.setAll(mergedProducts, { source: 'import-pasted' });
@@ -4472,11 +4481,44 @@
     return true;
   };
 
+  // 🪵 TEMP: лог количества продуктов на каждом setAll/getAll/merge/cloud-write.
+  // Снять, когда выясним, почему количество откатывается.
+  HEYS._productsTraceLastLen = HEYS._productsTraceLastLen ?? null;
+
+  // 🛟 Self-heal helper (shared by getAll и setAll anti-shrink reader).
+  // Распаковывает сжатые/обёрнутые строки: '¤Z¤...' и '"¤Z¤..."' (JSON-обёрнутая).
+  const tryDecompressToArray = (raw) => {
+    if (typeof raw !== 'string' || !raw) return null;
+    try {
+      let candidate = raw;
+      if (candidate.startsWith('"') && candidate.endsWith('"')) {
+        try { candidate = JSON.parse(candidate); } catch (_) { /* noop */ }
+      }
+      if (typeof candidate === 'string' && candidate.startsWith('¤Z¤') && HEYS.store?.decompress) {
+        const decompressed = HEYS.store.decompress(candidate);
+        if (Array.isArray(decompressed)) return decompressed;
+      }
+    } catch (_) { /* noop */ }
+    return null;
+  };
+
   HEYS.products = HEYS.products || {
     getAll: () => {
       const fromStore = (HEYS.store && HEYS.store.get && HEYS.store.get('heys_products', [])) || [];
       const fromUtils = (HEYS.utils && HEYS.utils.lsGet && HEYS.utils.lsGet('heys_products', [])) || [];
       let result = fromStore.length > 0 ? fromStore : fromUtils;
+
+      if (!Array.isArray(result)) {
+        const recovered = tryDecompressToArray(typeof result === 'string' ? result : null)
+          || tryDecompressToArray(typeof fromStore === 'string' ? fromStore : null)
+          || tryDecompressToArray(typeof fromUtils === 'string' ? fromUtils : null);
+        if (Array.isArray(recovered) && recovered.length > 0) {
+          console.info('[HEYS.products] getAll self-heal', { len: recovered.length });
+          if (HEYS.store?.set) HEYS.store.set('heys_products', recovered);
+          else if (HEYS.utils?.lsSet) HEYS.utils.lsSet('heys_products', recovered);
+          result = recovered;
+        }
+      }
 
       // Fallback: if result is suspiciously small, try other clientId namespaces
       if (Array.isArray(result) && result.length <= 1) {
@@ -4538,9 +4580,30 @@
       } catch (_) { /* noop */ }
       // 🛡️ Safety: always return array (guards against corrupted storage values)
       if (!Array.isArray(result)) {
-        console.warn('[PRODUCTS.getAll] non-array result:', typeof result, result?.constructor?.name, '— returning []');
+        try {
+          const sig = `${typeof result}:${result?.constructor?.name}:${typeof fromStore}/${typeof fromUtils}`;
+          if (HEYS._productsTraceLastNonArraySig !== sig) {
+            HEYS._productsTraceLastNonArraySig = sig;
+            console.warn('[HEYS.products] getAll non-array', {
+              type: typeof result,
+              ctor: result?.constructor?.name,
+              fromStoreType: typeof fromStore,
+              fromUtilsType: typeof fromUtils,
+              fromStoreLen: Array.isArray(fromStore) ? fromStore.length : -1,
+              fromUtilsLen: Array.isArray(fromUtils) ? fromUtils.length : -1,
+              sample: typeof result === 'string' ? result.slice(0, 30) : null,
+            });
+          }
+        } catch (_) { /* noop */ }
+        HEYS._productsTraceLastLen = 0;
         return [];
       }
+      try {
+        // Update tracker silently; verbose getAll logging removed for prod.
+        if (HEYS._productsTraceLastLen !== result.length) {
+          HEYS._productsTraceLastLen = result.length;
+        }
+      } catch (_) { /* noop */ }
       return result;
     },
     /** Личная база: поиск по id (в т.ч. для dayv2 / orphan — shared id здесь не ищем) */
@@ -4594,27 +4657,45 @@
             }
           }
 
-          // Проверяем все найденные ключи и берём максимум
+          // Проверяем все найденные ключи и берём максимум.
+          // 🛟 Decompress-aware: если raw — JSON-обёрнутая или сырая '¤Z¤...' compressed string,
+          // достаём настоящий массив через tryDecompressToArray (иначе anti-shrink думает что нет данных).
           for (const key of keysToTry) {
             try {
               const raw = localStorage.getItem(key);
-              if (raw) {
-                const parsed = JSON.parse(raw);
-                if (Array.isArray(parsed) && parsed.length > fromLocalStorage.length) {
-                  fromLocalStorage = parsed;
-                }
+              if (!raw) continue;
+              let parsed = null;
+              try { parsed = JSON.parse(raw); } catch (_) { /* not json */ }
+              if (!Array.isArray(parsed)) {
+                const recovered = tryDecompressToArray(raw);
+                if (Array.isArray(recovered)) parsed = recovered;
+              }
+              if (Array.isArray(parsed) && parsed.length > fromLocalStorage.length) {
+                fromLocalStorage = parsed;
               }
             } catch (e) { /* skip invalid */ }
           }
         } catch (e) { /* ignore */ }
 
-        // Берём МАКСИМУМ из обоих источников
-        const currentLen = Math.max(fromGetAll.length, fromLocalStorage.length);
+        // Берём МАКСИМУМ из обоих источников.
+        // CRITICAL: when overlay flag is ON, the canonical source IS overlay (which feeds getAll).
+        // Legacy LS may be stale-but-larger (cloud retry, orphan-recovery write that
+        // didn't make it through dual-write, etc). Trusting legacy LS would block legitimate
+        // adds when the user's React state reads from overlay (smaller).
+        const overlayOn = HEYS.flags && HEYS.flags.isEnabled && HEYS.flags.isEnabled('overlay_products_v2');
+        const currentLen = overlayOn
+          ? fromGetAll.length                                   // overlay-canonical: trust the read side
+          : Math.max(fromGetAll.length, fromLocalStorage.length); // legacy: max of both
 
         if (currentLen > 0 && newLen < currentLen) {
-          console.warn(`[PRODUCTS.setAll] ⛔ BLOCKED: попытка уменьшить с ${currentLen} до ${newLen} без allowShrink.`);
-          console.warn(`[PRODUCTS.setAll] Source: ${opts.source || 'unknown'}, fromGetAll: ${fromGetAll.length}, fromLocalStorage: ${fromLocalStorage.length}`);
-          console.warn('[PRODUCTS.setAll] Stack:', new Error().stack?.split('\n').slice(1, 5).join(' <- '));
+          console.warn('[HEYS.products] setAll BLOCKED', {
+            source: opts.source || 'unknown',
+            was: currentLen,
+            attemptedNow: newLen,
+            fromGetAll: fromGetAll.length,
+            fromLocalStorage: fromLocalStorage.length,
+            stack: new Error().stack?.split('\n').slice(1, 5).map(s => s.trim()).join(' <- '),
+          });
           return; // НЕ перезаписываем!
         }
       }
@@ -4633,20 +4714,19 @@
         HEYS.utils.lsSet('heys_products', arr);
       }
       try {
-        const now = Date.now();
-        if ((now - (productsLogState.lastSetAll || 0)) > 4000) {
-          productsLogState.lastSetAll = now;
+        // Compact setAll log only when length changes meaningfully OR shrink path.
+        const newLen = Array.isArray(arr) ? arr.length : -1;
+        const prevLen = HEYS._productsTraceLastLen;
+        if (newLen !== prevLen) {
           const withIron = Array.isArray(arr) ? arr.filter((p) => p && +p.iron > 0).length : 0;
-          console.info('[HEYS.products:SET]', {
-            source,
-            len: Array.isArray(arr) ? arr.length : -1,
-            withIron,
-            allowShrink: !!opts.allowShrink,
-            skipCloud: !!opts.skipCloud,
-            skipNotify: !!opts.skipNotify,
-          });
+          console.info('[HEYS.products] setAll', { source, was: prevLen, now: newLen, withIron, allowShrink: !!opts.allowShrink });
         }
+        HEYS._productsTraceLastLen = newLen >= 0 ? newLen : prevLen;
       } catch (_) { /* noop */ }
+
+      // Phase β: dual-write moved to interceptSetItem for universal coverage
+      // (catches self-heal, best-keyspace fallback, hot-sync, and any future
+      // direct legacy writers, not just setAll). See heys_storage_supabase_v1.js.
     },
     watch: (fn) => { if (HEYS.store && HEYS.store.watch) return HEYS.store.watch('heys_products', fn); return () => { }; },
 
@@ -4709,7 +4789,7 @@
         }
         if (!changed) return existing;
         const newProducts = products.map(p => p.id === existing.id ? { ...p, ...next } : p);
-        HEYS.products.setAll(newProducts);
+        HEYS.products.setAll(newProducts, { source: 'shared-merge-missing' });
         return { ...existing, ...next };
       };
 
@@ -4801,7 +4881,7 @@
 
       // Добавляем в локальную базу
       const newProducts = [...products, withDerived];
-      HEYS.products.setAll(newProducts);
+      HEYS.products.setAll(newProducts, { source: 'add-from-shared' });
 
       // 🔇 v4.7.1: Лог отключён
       return withDerived;
@@ -4815,16 +4895,42 @@
       const products = HEYS.products.getAll();
       const original = products.length;
 
-      const seen = new Map();
-      const unique = [];
-
-      for (const p of products) {
-        const key = (p.name || '').trim().toLowerCase();
-        if (!seen.has(key)) {
-          seen.set(key, true);
-          unique.push(p);
+      // 🛟 Score-based dedupe: при одинаковом нормализованном имени побеждает запись с большим
+      // числом заполненных полей (нутриенты / порции / updatedAt). user_modified всегда побеждает.
+      const NUTRIENT_FIELDS = [
+        'kcal100', 'protein100', 'fat100', 'carbs100',
+        'simple100', 'complex100', 'badFat100', 'goodFat100', 'trans100', 'fiber100',
+        'iron', 'calcium', 'magnesium', 'phosphorus', 'potassium', 'sodium100',
+        'vitaminA', 'vitaminC', 'vitaminD', 'vitaminE', 'vitaminK',
+        'vitaminB1', 'vitaminB2', 'vitaminB3', 'vitaminB6', 'vitaminB9', 'vitaminB12',
+        'gi', 'harm',
+      ];
+      const scoreProduct = (p) => {
+        if (!p) return -1;
+        if (p.user_modified) return 1e9;
+        let s = 0;
+        for (const f of NUTRIENT_FIELDS) {
+          const v = Number(p[f]);
+          if (Number.isFinite(v) && v !== 0) s++;
         }
-      }
+        if (Array.isArray(p.portions) && p.portions.length > 0) s += 2;
+        s += Math.min(1, (Number(p.updatedAt) || 0) / 1e16);
+        return s;
+      };
+
+      const bestByKey = new Map(); // key → { product, idx } — idx сохраняет исходный порядок
+      products.forEach((p, idx) => {
+        const key = (p?.name || '').trim().toLowerCase();
+        if (!key) return; // продукты без имени отбрасываем (как и раньше неявно)
+        const prev = bestByKey.get(key);
+        if (!prev || scoreProduct(p) > scoreProduct(prev.product)) {
+          bestByKey.set(key, { product: p, idx });
+        }
+      });
+
+      const unique = Array.from(bestByKey.values())
+        .sort((a, b) => a.idx - b.idx)
+        .map(({ product }) => product);
 
       const removed = original - unique.length;
 
@@ -4855,12 +4961,104 @@
         return p;
       });
       if (fixed > 0) {
-        HEYS.products.setAll(updated);
+        HEYS.products.setAll(updated, { source: 'fix-missing-kcal' });
         console.log(`[HEYS] 🔧 Исправлено ${fixed} продуктов с пустым kcal100`);
       }
       return { fixed, total: products.length };
     }
   };
+
+  // ─────────────────────────────────────────────────────────────────────
+  // Phase α: overlay-products read wrapper. Flag-gated, default OFF.
+  //
+  // When overlay_products_v2 is OFF → behavior identical to today (legacy `_origGetAll`).
+  // When ON  → read merged view from OverlayStore. If view returns null
+  //            (empty shared cache + Type A overlay rows), fall back to legacy
+  //            so UI stays alive while shared cache populates.
+  //
+  // The wrapper is installed only ONCE; re-evaluation of HEYS.products.getAll
+  // beyond this point inherits the wrapper.
+  // ─────────────────────────────────────────────────────────────────────
+  (function installOverlayWrapper() {
+    if (!HEYS.products || HEYS.products.__overlayWrapped) return;
+
+    const _origGetAll = HEYS.products.getAll;
+    const _origGetById = HEYS.products.getById;
+
+    HEYS.products.getAll = function () {
+      const enabled = HEYS.flags && typeof HEYS.flags.isEnabled === 'function'
+        && HEYS.flags.isEnabled('overlay_products_v2');
+      if (!enabled) return _origGetAll();
+
+      try {
+        const Overlay = HEYS.OverlayStore;
+        if (!Overlay || typeof Overlay.getMergedView !== 'function') return _origGetAll();
+        const view = Overlay.getMergedView();
+        if (view === null) return _origGetAll(); // empty shared cache; defer
+        return view;
+      } catch (e) {
+        console.warn('[HEYS.products] overlay getAll failed; fallback to legacy:', e && e.message);
+        return _origGetAll();
+      }
+    };
+
+    // Final fallback: stamp-only resolution cache populated by autoRecoverOnLoad.
+    // Used when day-render asks for a product_id that was never persisted to
+    // overlay/legacy (orphan from stamps without a shared match). Returns macro-only
+    // shape derived from the meal stamp — enough for day rendering, not for global lists.
+    function _resolveFromStampCache(id) {
+      try {
+        const cache = HEYS.orphanProducts && HEYS.orphanProducts._stampResolutionCache;
+        if (cache && typeof cache.get === 'function' && id != null) {
+          return cache.get(String(id)) || null;
+        }
+      } catch (_) { /* noop */ }
+      return null;
+    }
+
+    HEYS.products.getById = function (id) {
+      const enabled = HEYS.flags && typeof HEYS.flags.isEnabled === 'function'
+        && HEYS.flags.isEnabled('overlay_products_v2');
+      if (!enabled) {
+        const legacy = _origGetById(id);
+        return legacy || _resolveFromStampCache(id);
+      }
+
+      try {
+        const Overlay = HEYS.OverlayStore;
+        if (!Overlay) return _origGetById(id) || _resolveFromStampCache(id);
+        // Special-case: getById must consult overlay for items NOT in_my_list
+        // (so dayv2 stamps can resolve products user has soft-removed).
+        const raw = Overlay.getRowById(id);
+        if (raw) {
+          if (raw._custom) return raw;
+          const sharedById = HEYS.cloud && HEYS.cloud.getSharedIndex
+            ? HEYS.cloud.getSharedIndex() : null;
+          const base = sharedById && raw.shared_origin_id
+            ? sharedById.get(String(raw.shared_origin_id)) : null;
+          if (base) {
+            return Object.assign({}, base, raw.overrides || {}, {
+              id: raw.id,
+              shared_origin_id: raw.shared_origin_id,
+              fingerprint: raw.fingerprint || base.fingerprint,
+              user_modified: !!raw.user_modified,
+            });
+          }
+          // Type A overlay row but shared cache empty → bare overlay shape lacks nutrients.
+          // Fall through to legacy (which has full snapshot) instead of returning broken row.
+          return _origGetById(id) || _resolveFromStampCache(id);
+        }
+        // Fall through to legacy lookup if no overlay row.
+        return _origGetById(id) || _resolveFromStampCache(id);
+      } catch (e) {
+        console.warn('[HEYS.products] overlay getById failed; fallback to legacy:', e && e.message);
+        return _origGetById(id) || _resolveFromStampCache(id);
+      }
+    };
+
+    HEYS.products.__overlayWrapped = true;
+  })();
+
   HEYS.RationTab = RationTab;
   HEYS.Ration = RationTab;
 })(window);

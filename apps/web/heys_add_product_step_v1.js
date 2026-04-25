@@ -158,7 +158,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     nextProducts[idx] = updated;
 
     if (HEYS.products?.setAll) {
-      HEYS.products.setAll(nextProducts);
+      HEYS.products.setAll(nextProducts, { source: 'edit-product' });
     } else if (HEYS.store?.set) {
       HEYS.store.set('heys_products', nextProducts);
     } else if (U.lsSet) {
@@ -215,7 +215,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     }
 
     if (HEYS.products?.setAll) {
-      HEYS.products.setAll(nextProducts);
+      HEYS.products.setAll(nextProducts, { source: 'mark-user-modified' });
     } else if (HEYS.store?.set) {
       HEYS.store.set('heys_products', nextProducts);
     } else if (U.lsSet) {
@@ -619,7 +619,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     };
 
     if (HEYS.products?.setAll) {
-      HEYS.products.setAll(nextProducts);
+      HEYS.products.setAll(nextProducts, { source: 'create-product-step' });
     } else if (HEYS.store?.set) {
       HEYS.store.set('heys_products', nextProducts);
     } else if (U.lsSet) {
@@ -2232,7 +2232,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     // Всегда берём актуальные продукты из глобального стора (если появились новые)
     // productsVersion в зависимостях заставляет пересчитать при синхронизации
     const latestProducts = useMemo(() => {
-      console.log('[AddProductStep] 🔄 latestProducts useMemo START', { productsVersion });
+      // [verbose log removed — was firing hundreds of times per session, drowning trace channel]
       const base = Array.isArray(context?.products) ? context.products : [];
 
       // Пробуем получить из HEYS.products.getAll()
@@ -2281,11 +2281,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         ? merged.filter((p) => !pendingDeletedProductIds.has(String(p?.id ?? p?.product_id ?? p?.name)))
         : merged;
 
-      console.log('[AddProductStep] ✅ latestProducts useMemo DONE', {
-        count: filtered.length,
-        sampleIds: merged.slice(0, 3).map(p => p.id),
-        productsVersion
-      });
+      // [verbose log removed — useMemo DONE drowns the trace channel]
       return filtered;
     }, [context, pendingDeletedProductIds, productsVersion]);
 
@@ -3052,7 +3048,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         });
 
         if (HEYS.products?.setAll) {
-          HEYS.products.setAll(filtered);
+          HEYS.products.setAll(filtered, { source: 'delete-product', allowShrink: true });
         } else if (HEYS.store?.set) {
           HEYS.store.set('heys_products', filtered);
         } else if (U.lsSet) {
@@ -5180,6 +5176,13 @@ NOVA: 1
         const U = HEYS.utils || {};
         const products = HEYS.products?.getAll?.() || U.lsGet?.('heys_products', []) || [];
 
+        // CRITICAL: ensure id is set BEFORE save. Without id, OverlayStore.migrate
+        // filters the product out (id == null guard) → product disappears from overlay.
+        if (updatedProduct.id == null) {
+          const uid = (HEYS.utils && HEYS.utils.uid) || ((prefix = 'p_') => prefix + Date.now() + '_' + Math.random().toString(36).slice(2, 8));
+          updatedProduct.id = uid('p_');
+        }
+
         // Проверка на дубликат
         const normName = (updatedProduct.name || '').trim().toLowerCase();
         const existingPersonal = products.find(p =>
@@ -5194,8 +5197,7 @@ NOVA: 1
 
           const newProducts = [...products, updatedProduct];
           if (HEYS.products?.setAll) {
-            HEYS.products.setAll(newProducts);
-            console.log('[HarmSelectStep] ✅ Сохранён в базу с harm:', harm, updatedProduct.name);
+            HEYS.products.setAll(newProducts, { source: 'harm-select-add' });
           } else if (HEYS.store?.set) {
             HEYS.store.set('heys_products', newProducts);
             console.log('[HarmSelectStep] ✅ Сохранён через store с harm:', harm);
@@ -5208,7 +5210,7 @@ NOVA: 1
           const touchedExisting = { ...existingPersonal, updatedAt: Date.now() };
           const touchedProducts = products.map(p => p.id === existingPersonal.id ? touchedExisting : p);
           if (HEYS.products?.setAll) {
-            HEYS.products.setAll(touchedProducts);
+            HEYS.products.setAll(touchedProducts, { source: 'harm-select-update' });
             console.info('[HarmSelectStep] 🔄 Обновлён updatedAt у продукта:', existingPersonal.name);
           }
         }
@@ -5606,6 +5608,19 @@ NOVA: 1
     }, [data, onChange, kcal100]);
 
     const handleSubmit = useCallback(() => {
+      // 🔬 [HEYS.day-trace] 0/8 button click — green «✓ Добавить» pressed in GramsStep modal.
+      try {
+        console.info('[HEYS.day-trace] 0/8 GramsStep button click', {
+          hasProduct: !!product,
+          grams,
+          mealIndex: context?.mealIndex ?? null,
+          productId: product?.id ?? product?.product_id ?? null,
+          productName: product?.name || null,
+          isEditMode: !!context?.isEditMode,
+          hasOnAdd: typeof context?.onAdd === 'function',
+          hasOnSave: typeof context?.onSave === 'function',
+        });
+      } catch (_) { /* noop */ }
       if (!product || grams <= 0) {
         console.warn('[HEYS.addProduct] ⚠️ GramsStep submit blocked', {
           hasProduct: !!product,

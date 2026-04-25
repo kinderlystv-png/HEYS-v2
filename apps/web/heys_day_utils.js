@@ -582,8 +582,23 @@
     }
   }
 
+  // Safety: auto-clear _recoveryInProgress after 8s if autoRecoverOnLoad never runs
+  // (e.g. no clientId, error in recovery flow). Prevents permanent suppression of warnings.
+  if (typeof window !== 'undefined') {
+    setTimeout(() => {
+      if (HEYS.orphanProducts && HEYS.orphanProducts._recoveryInProgress === true) {
+        HEYS.orphanProducts._recoveryInProgress = false;
+      }
+    }, 8000);
+  }
+
   // API для просмотра orphan-продуктов
   HEYS.orphanProducts = {
+    // Initialize as TRUE at boot — warning is suppressed until first autoRecoverOnLoad finishes.
+    // Otherwise UI shows "1 продукт не найден" briefly between initial render and recovery setAll.
+    // Safety: auto-clear after 8s if recovery never runs (e.g. no clientId yet).
+    _recoveryInProgress: true,
+
     // Получить список всех orphan-продуктов
     getAll() {
       return Array.from(orphanProductsMap.values()).map(o => ({
@@ -911,6 +926,9 @@
      * @returns {Promise<{recovered: number, fromStamp: number, fromShared: number, missing: string[]}>}
      */
     async autoRecoverOnLoad(options = {}) {
+      // Mark recovery in progress so UI can skip orphan-warning flicker during the
+      // ~100-500ms window between initial render and recovery setAll.
+      try { HEYS.orphanProducts._recoveryInProgress = true; } catch (_) { /* noop */ }
       const { verbose = false, tryShared = true } = options;
       const U = HEYS.utils || {};
       const lsGet = U.lsGet || ((k, d) => {
@@ -1001,6 +1019,7 @@
 
       if (missingProducts.size === 0) {
         if (verbose) console.log(`[HEYS] ✅ Все продукты найдены в базе (${Date.now() - startTime}ms)`);
+        try { HEYS.orphanProducts._recoveryInProgress = false; } catch (_) { /* noop */ }
         return { recovered: 0, fromStamp: 0, fromShared: 0, missing: [] };
       }
 
@@ -1049,6 +1068,16 @@
         }
 
         if (data.hasStamp && data.stampData) {
+          // 🛟 Gap-filler: не создаём дубликат, если уже есть такой же по имени с заполненными нутриентами.
+          // Это блокирует цикл «orphan-recovery → дублирующая stamp-only запись → dedupe теряет полную версию».
+          const existingByName = productsByName.get(normalizeName(data.name));
+          const hasNutrients = !!existingByName && (
+            Number(existingByName.kcal100) > 0 ||
+            Number(existingByName.iron) > 0 ||
+            Number(existingByName.simple100) > 0
+          );
+          if (hasNutrients) continue;
+
           const restoredProduct = {
             id: data.productId || ('restored_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8)),
             name: data.name,
@@ -1120,22 +1149,66 @@
         }
       }
 
-      // 4. Сохраняем восстановленные продукты (если были восстановлены из штампов)
-      if (fromStamp > 0) {
-        const newProducts = [...products, ...recovered.filter(p => p._recoveredFrom === 'stamp')];
-
-        if (HEYS.products?.setAll) {
-          HEYS.products.setAll(newProducts);
-        } else {
-          const lsSet = U.lsSet || ((k, v) => localStorage.setItem(k, JSON.stringify(v)));
-          lsSet('heys_products', newProducts);
+      // Compact orphan-recovery summary + detailed breakdown when only 1-3 recovered.
+      try {
+        const stampRec = recovered.filter(p => p._recoveredFrom === 'stamp');
+        const sharedRec = recovered.filter(p => p._recoveredFrom === 'shared');
+        if (stampRec.length > 0 || sharedRec.length > 0 || stillMissing.length > 0) {
+          console.info('[HEYS.products] orphan-recovery', {
+            localCount: products.length,
+            missingTotal: missingProducts.size,
+            stampRecovered: stampRec.length,
+            sharedRecovered: sharedRec.length,
+            stillMissing: stillMissing.length,
+            skippedDeleted,
+            // Always include first-3 names of each bucket — quickly diagnose "что именно".
+            stampNames: stampRec.slice(0, 8).map(p => p.name),
+            sharedNames: sharedRec.slice(0, 8).map(p => p.name),
+            stillMissingNames: stillMissing.slice(0, 8).map(d => d.name),
+          });
         }
+      } catch (_) { /* noop */ }
+      // 🔬 Per-product details: log first 5 always, all if ≤10. Useful when we want to see
+      // exactly which products are being recovered from stamp (iron-less) vs shared (iron-rich).
+      try {
+        if (recovered.length > 0) {
+          const sample = recovered.length <= 10 ? recovered : recovered.slice(0, 5);
+          for (const p of sample) {
+            const data = missingProducts.get(p.fingerprint || p.id || normalizeName(p.name)) || null;
+            console.info('[HEYS.products] orphan-recovery detail', {
+              source: p._recoveredFrom,
+              id: p.id,
+              name: p.name,
+              fingerprint: (p.fingerprint || '').slice(0, 12),
+              firstSeenDate: data ? data.firstSeenDate : '(unknown)',
+              kcal100: p.kcal100,
+              hasIron: Number(p.iron) > 0,
+            });
+          }
+          if (recovered.length > 10) {
+            console.info('[HEYS.products] orphan-recovery (showing first 5 of', recovered.length, ')');
+          }
+        }
+      } catch (_) { /* noop */ }
 
-        // Обновляем индекс
-        if (HEYS.products?.buildSearchIndex) {
-          HEYS.products.buildSearchIndex();
+      // 4. Phase ε / lazy stamp resolution.
+      // Stamp-recovered products carry only macros (no iron/calcium/vitamins) — pushing them
+      // into heys_products / overlay would (a) silently degrade nutrient counts on aggregation,
+      // (b) inflate the per-user product list with rows the user never created, (c) keep cycling
+      // them through cloud on every reload. Instead we keep them in a side cache and resolve
+      // lazily via getById from day-render. Cache is rebuilt every boot from current stamps.
+      const stampOnly = recovered.filter(p => p._recoveredFrom === 'stamp');
+      if (stampOnly.length > 0) {
+        if (!HEYS.orphanProducts._stampResolutionCache
+            || typeof HEYS.orphanProducts._stampResolutionCache.set !== 'function') {
+          HEYS.orphanProducts._stampResolutionCache = new Map();
+        }
+        const cache = HEYS.orphanProducts._stampResolutionCache;
+        for (const p of stampOnly) {
+          if (p && p.id != null) cache.set(String(p.id), p);
         }
       }
+      // Shared-recovered (full nutrients) already went through addFromShared → setAll above.
 
       // 5. Очищаем orphan-трекинг для восстановленных
       recovered.forEach(p => this.remove(p.name));
@@ -1166,6 +1239,9 @@
           detail: { recovered: recovered.length, fromStamp, fromShared, missing: finalMissing }
         }));
       }
+
+      // Clear recovery flag — alert may now show legitimate orphans (those not recovered).
+      try { HEYS.orphanProducts._recoveryInProgress = false; } catch (_) { /* noop */ }
 
       return { recovered: recovered.length, fromStamp, fromShared, missing: finalMissing };
     }

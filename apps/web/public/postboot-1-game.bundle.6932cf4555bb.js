@@ -2886,8 +2886,16 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
       // Keep only last 7 days
       gameData.missionHistory = gameData.missionHistory.slice(-7);
 
-      // Save both
-      setStoredValue(dayKey, dayData);
+      // 🔧 RACE FIX (same as updateDailyMission): re-read LS and merge only
+      // dailyMissions field to avoid clobbering concurrent flush() writes.
+      const _freshDayInit = readStoredValue(dayKey, {});
+      if (_freshDayInit && _freshDayInit.date === today && Array.isArray(_freshDayInit.meals)) {
+        _freshDayInit.dailyMissions = dayData.dailyMissions;
+        setStoredValue(dayKey, _freshDayInit);
+        dayData = _freshDayInit;
+      } else {
+        setStoredValue(dayKey, dayData);
+      }
 
       // Update local gameData mirror for compatibility (if any legacy code reads it)
       gameData.dailyMissions = dayData.dailyMissions;
@@ -3165,8 +3173,19 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
       }
     }
 
-    // Save dayData
-    setStoredValue(dayKey, dayData);
+    // 🔧 RACE FIX: re-read LS immediately before write to avoid clobbering
+    // concurrent writes from React's flush() (e.g. addProductToMeal in progress).
+    // Without this, gamification's stale dayData snapshot overwrites the user's
+    // freshly added meal item and the product silently disappears on next refresh.
+    const _freshDay = readStoredValue(dayKey, {});
+    if (_freshDay && _freshDay.date === today && Array.isArray(_freshDay.meals)) {
+      // Patch only the dailyMissions field on the freshest snapshot.
+      _freshDay.dailyMissions = dayData.dailyMissions;
+      setStoredValue(dayKey, _freshDay);
+      dayData = _freshDay;
+    } else {
+      setStoredValue(dayKey, dayData);
+    }
 
     // Mirror to gameData for safety
     gameData.dailyMissions = dayData.dailyMissions;
@@ -3175,7 +3194,14 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
     // Проверяем бонус за все 3 миссии — автоклейм
     if (dayData.dailyMissions.completedCount >= 3 && !dayData.dailyMissions.bonusClaimed) {
       dayData.dailyMissions.bonusClaimed = true;
-      setStoredValue(dayKey, dayData); // Save bonus state to day
+      // Re-read again before second write — guard against concurrent updates.
+      const _freshDay2 = readStoredValue(dayKey, {});
+      if (_freshDay2 && _freshDay2.date === today && Array.isArray(_freshDay2.meals)) {
+        _freshDay2.dailyMissions = dayData.dailyMissions;
+        setStoredValue(dayKey, _freshDay2);
+      } else {
+        setStoredValue(dayKey, dayData); // Save bonus state to day
+      }
 
       gameData.dailyMissions = dayData.dailyMissions; // Mirror
       saveData();

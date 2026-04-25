@@ -2177,6 +2177,20 @@
 
       const handleAdd = ({ product, grams, mealIndex, _traceId, _origin }) => {
         const traceId = _traceId || `dayadd-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
+        // 🔬 [HEYS.day-trace] 1/8 entry — modal-driven add (handleAdd in heys_day_add_product.js).
+        try {
+          console.info('[HEYS.day-trace] 1/8 handleAdd entry', {
+            traceId,
+            origin: _origin || 'unknown',
+            date,
+            mealIndex,
+            grams,
+            productId: product?.id ?? product?.product_id ?? null,
+            productName: product?.name || null,
+            productKcal100: product?.kcal100,
+            productSource: product?._source || (product?._fromShared ? 'shared' : 'personal'),
+          });
+        } catch (_) { /* noop */ }
         console.info('[HEYS.day] ➕ Add product to meal (modal)', {
           traceId,
           origin: _origin || 'unknown',
@@ -2272,6 +2286,20 @@
           });
         }
 
+        // 🔬 [HEYS.day-trace] 3/8 item built — what's actually going into the meal.
+        try {
+          console.info('[HEYS.day-trace] 3/8 item built', {
+            traceId,
+            itemId: newItem.id,
+            product_id: newItem.product_id,
+            name: newItem.name,
+            grams: newItem.grams,
+            kcal100: newItem.kcal100,
+            iron: newItem.iron,
+            hasInline: itemHasNutrients,
+          });
+        } catch (_) { /* noop */ }
+
         const newUpdatedAt = Date.now();
         if (HEYS.Day?.setBlockCloudUpdates) {
           HEYS.Day.setBlockCloudUpdates(newUpdatedAt + 3000);
@@ -2310,11 +2338,38 @@
             addedProductId: newItem.product_id ?? null,
             addedProductName: newItem.name || null
           });
+          // 🔬 [HEYS.day-trace] 4/8 setDay applied — items count change in target meal.
+          try {
+            const _totalItems = meals.reduce((acc, m) => acc + ((m.items || []).length), 0);
+            console.info('[HEYS.day-trace] 4/8 setDay applied', {
+              traceId,
+              date: prevDay.date,
+              mealIndex,
+              itemsBefore,
+              itemsAfter,
+              totalItems: _totalItems,
+              updatedAt: newUpdatedAt,
+            });
+          } catch (_) { /* noop */ }
           return { ...prevDay, meals, updatedAt: newUpdatedAt };
         });
 
         requestAnimationFrame(() => {
           setTimeout(() => {
+            // 🔬 [HEYS.day-trace] 4b/8 requestFlush — about to call flush which writes day to LS.
+            try {
+              const _d = HEYS.Day?.getDay?.();
+              const _meals = (_d && Array.isArray(_d.meals)) ? _d.meals : [];
+              const _totalItems = _meals.reduce((acc, m) => acc + ((m.items || []).length), 0);
+              console.info('[HEYS.day-trace] 4b/8 requestFlush', {
+                traceId,
+                hasFlush: !!(HEYS.Day && HEYS.Day.requestFlush),
+                dayDate: _d && _d.date,
+                mealsCount: _meals.length,
+                totalItems: _totalItems,
+                dayUpdatedAt: _d && _d.updatedAt,
+              });
+            } catch (_) { /* noop */ }
             if (HEYS.Day?.requestFlush) {
               HEYS.Day.requestFlush();
             }
@@ -6425,18 +6480,31 @@
 
             haptic('light');
 
-            console.info('[HEYS.day] ➕ addProductToMeal', {
-                mealIndex: mi,
-                productId: p?.id ?? p?.product_id ?? null,
-                productName: p?.name || null,
-                source: p?._source || (p?._fromShared ? 'shared' : 'personal')
-            });
+            // 🔬 [HEYS.day-trace] 1/8 entry — what we're trying to add and to which meal.
+            try {
+                console.info('[HEYS.day-trace] 1/8 addProductToMeal entry', {
+                    date,
+                    mealIndex: mi,
+                    productSource: p?._source || (p?._fromShared ? 'shared' : 'personal'),
+                    productId: p?.id ?? p?.product_id ?? null,
+                    productName: p?.name || null,
+                    productKcal100: p?.kcal100,
+                    gramsHint: p?.grams,
+                });
+            } catch (_) { /* noop */ }
 
             let finalProduct = p;
             if (p?._fromShared || p?._source === 'shared' || p?.is_shared) {
                 const cloned = HEYS.products?.addFromShared?.(p);
                 if (cloned) {
                     finalProduct = cloned;
+                    try {
+                        console.info('[HEYS.day-trace] 2/8 cloned from shared', {
+                            originalId: p?.id,
+                            clonedId: cloned?.id,
+                            name: cloned?.name,
+                        });
+                    } catch (_) { /* noop */ }
                 }
             }
 
@@ -6460,6 +6528,17 @@
                 gi: finalProduct.gi ?? finalProduct.gi100,
                 harm: harmVal,  // Normalized harm (0-10)
             };
+            // 🔬 [HEYS.day-trace] 3/8 item built — final shape going into the meal.
+            try {
+                console.info('[HEYS.day-trace] 3/8 item built', {
+                    itemId: item.id,
+                    product_id: item.product_id,
+                    name: item.name,
+                    grams: item.grams,
+                    kcal100: item.kcal100,
+                    hasInline: item.kcal100 != null && item.protein100 != null,
+                });
+            } catch (_) { /* noop */ }
             const newUpdatedAt = Date.now();
             if (lastLoadedUpdatedAtRef) lastLoadedUpdatedAtRef.current = newUpdatedAt;
             if (blockCloudUpdatesUntilRef) blockCloudUpdatesUntilRef.current = newUpdatedAt + 3000;
@@ -6472,10 +6551,32 @@
                         productName: finalProduct?.name || null
                     });
                 }
+                const before = (mealsList[mi]?.items || []).length;
                 const meals = mealsList.map((m, i) => i === mi ? { ...m, items: [...(m.items || []), item] } : m);
                 const newDayData = { ...prevDay, meals, updatedAt: newUpdatedAt };
                 const key = _scopedDayKey(date);
+                // 🔬 [HEYS.day-trace] 4/8 setDay applied — items count change in target meal.
                 try {
+                    console.info('[HEYS.day-trace] 4/8 setDay applied', {
+                        date: prevDay.date,
+                        key,
+                        mealIndex: mi,
+                        itemsBefore: before,
+                        itemsAfter: (newDayData.meals?.[mi]?.items || []).length,
+                        totalItems: meals.reduce((acc, m) => acc + ((m.items || []).length), 0),
+                        updatedAt: newUpdatedAt,
+                    });
+                } catch (_) { /* noop */ }
+                try {
+                    // 🔬 [HEYS.day-trace] 5/8 LS write — about to persist day to localStorage.
+                    try {
+                        console.info('[HEYS.day-trace] 5/8 LS write', {
+                            key,
+                            mealsCount: meals.length,
+                            totalItems: meals.reduce((acc, m) => acc + ((m.items || []).length), 0),
+                            updatedAt: newUpdatedAt,
+                        });
+                    } catch (_) { /* noop */ }
                     lsSet(key, newDayData);
                 } catch (e) {
                     trackError(e, { source: 'day/_meals.js', action: 'save_product_quick' });
@@ -7395,26 +7496,78 @@
    * @param {Object} params - Parameters
    * @returns {React.Element|boolean} Alert element or false if no orphans
    */
+  // Throttle suppression logs: a render-heavy DayTab can hit them dozens of times
+  // per second otherwise. We only need the first SUPPRESSED to confirm the gate works.
+  let _lastSuppressedAt = 0;
+  function _shouldLogSuppress() {
+    const now = Date.now();
+    if (now - _lastSuppressedAt < 2000) return false;
+    _lastSuppressedAt = now;
+    return true;
+  }
+
   function renderOrphanAlert(params) {
     const { orphanCount, date } = params;
     const listForUi = (date && HEYS.orphanProducts?.getAllForDate)
       ? (HEYS.orphanProducts.getAllForDate(date) || [])
       : (HEYS.orphanProducts?.getAll?.() || []);
-    try {
-      const listLen = listForUi.length;
-      if (orphanCount > 0 || listLen > 0) {
-        console.warn('[HEYS.orphan:PIPE] render alert', {
-          orphanCount,
-          date: date || null,
-          listLen,
-          sample: listForUi.slice(0, 3).map((o) => o?.name || '(no-name)')
-        });
-      }
-    } catch (_) { /* noop */ }
-    
+
     if (!orphanCount || orphanCount === 0) {
       return false;
     }
+
+    // Suppress during the brief recovery window (~100-500ms after boot).
+    if (HEYS.orphanProducts && HEYS.orphanProducts._recoveryInProgress === true) {
+      if (_shouldLogSuppress()) {
+        console.info('[HEYS.products] orphan-warning SUPPRESSED (recovery in progress)', {
+          orphanCount,
+          listLen: listForUi.length,
+        });
+      }
+      return false;
+    }
+
+    // Re-validate: orphanProductsMap can carry stale entries from early renders
+    // that ran before overlay was hydrated. Filter listForUi by what's actually
+    // unresolvable now via getById + stamp cache. If everything resolves, the
+    // tracker is stale — silently clean it and skip the warning.
+    const trulyUnresolved = [];
+    for (const o of listForUi) {
+      const id = o?.product_id ?? o?.productId ?? null;
+      let resolved = null;
+      if (id != null && HEYS.products && typeof HEYS.products.getById === 'function') {
+        try { resolved = HEYS.products.getById(id); } catch (_) { resolved = null; }
+      }
+      if (resolved) {
+        if (typeof HEYS.orphanProducts?.remove === 'function') {
+          try { HEYS.orphanProducts.remove(o.name); } catch (_) { /* noop */ }
+        }
+        continue;
+      }
+      trulyUnresolved.push(o);
+    }
+    if (trulyUnresolved.length === 0) {
+      if (_shouldLogSuppress()) {
+        console.info('[HEYS.products] orphan-warning SUPPRESSED (all entries resolvable)', {
+          cleanedFromTracker: listForUi.length,
+        });
+      }
+      return false;
+    }
+
+    // Warning IS rendering in DOM — log once with the unresolved sample so we know
+    // exactly which products show up and why suppression couldn't catch them.
+    try {
+      console.warn('[HEYS.products] orphan-warning RENDERED IN DOM', {
+        date: date || null,
+        unresolvedCount: trulyUnresolved.length,
+        unresolvedSample: trulyUnresolved.slice(0, 3).map(o => ({
+          name: o?.name,
+          productId: o?.product_id ?? o?.productId,
+          hasInlineData: !!o?.hasInlineData,
+        })),
+      });
+    } catch (_) { /* noop */ }
     
     return React.createElement('div', {
       className: 'orphan-alert compact-card',
@@ -7438,7 +7591,10 @@
             marginBottom: '4px',
             fontSize: '14px'
           } 
-        }, `${orphanCount} продукт${orphanCount === 1 ? '' : orphanCount < 5 ? 'а' : 'ов'} не найден${orphanCount === 1 ? '' : 'о'} в базе`),
+        }, (function () {
+          const n = trulyUnresolved.length;
+          return `${n} продукт${n === 1 ? '' : n < 5 ? 'а' : 'ов'} не найден${n === 1 ? '' : 'о'} в базе`;
+        })()),
         React.createElement('div', { 
           style: { 
             color: '#a16207', 
@@ -7468,7 +7624,7 @@
               color: '#78350f'
             } 
           },
-            listForUi.map((o, i) => 
+            trulyUnresolved.map((o, i) =>
               React.createElement('li', { key: o.name || i, style: { marginBottom: '4px' } },
                 React.createElement('strong', null, o.name),
                 ` — ${o.hasInlineData ? '✓ можно восстановить' : '⚠️ нет данных'}`,

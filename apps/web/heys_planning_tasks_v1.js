@@ -21,6 +21,29 @@
     const { PRIORITY_CONFIG, STATUS_CONFIG, DUE_BUCKETS, PROJECT_COLORS } = Planning.Constants;
     const { clamp, dateStr, sortByOrder, timeToMinutes, minutesToTime, getDueBucket, getTaskDurationMinutes } = Planning.Utils;
 
+    const TASKS_UI_SCALE_STORAGE_KEY = 'heys_planning_tasks_ui_scale_v1';
+    const TASKS_UI_SCALE_MIN = 0.6;
+    const TASKS_UI_SCALE_MAX = 1.4;
+    const TASKS_UI_SCALE_STEP = 0.05;
+    const TASKS_UI_SCALE_DEFAULT = 0.8;
+
+    function clampTasksUiScale(value) {
+        if (!Number.isFinite(value)) return TASKS_UI_SCALE_DEFAULT;
+        if (value < TASKS_UI_SCALE_MIN) return TASKS_UI_SCALE_MIN;
+        if (value > TASKS_UI_SCALE_MAX) return TASKS_UI_SCALE_MAX;
+        return Math.round(value * 100) / 100;
+    }
+
+    function readSavedTasksUiScale() {
+        try {
+            const raw = window.localStorage.getItem(TASKS_UI_SCALE_STORAGE_KEY);
+            if (raw == null) return TASKS_UI_SCALE_DEFAULT;
+            return clampTasksUiScale(Number.parseFloat(raw));
+        } catch (_) {
+            return TASKS_UI_SCALE_DEFAULT;
+        }
+    }
+
     const DURATION_PRESETS = [
         { label: '15 мин', shortLabel: '15м', minutes: 15 },
         { label: '30 мин', shortLabel: '30м', minutes: 30 },
@@ -1427,7 +1450,7 @@
                 trailingActions,
                 h('button', {
                     type: 'button',
-                    className: 'planning-icon-btn',
+                    className: 'planning-icon-btn planning-icon-btn--subtask',
                     'data-swipe-ignore': 'true',
                     title: 'Добавить подзадачу',
                     onPointerDown: stopSwipeCapture,
@@ -1439,7 +1462,7 @@
                 }, '↳'),
                 h('button', {
                     type: 'button',
-                    className: 'planning-icon-btn',
+                    className: 'planning-icon-btn planning-icon-btn--edit',
                     'data-swipe-ignore': 'true',
                     title: 'Редактировать задачу',
                     'aria-label': 'Редактировать задачу',
@@ -1810,54 +1833,87 @@
     function TaskDetailModal({ taskId, state, resolvedTaskProjectIds, onDeleteTask, onClose }) {
         const { tasks, projects, slots } = state;
         const task = tasks.find((entry) => entry.id === taskId);
-        const [savedMarker, setSavedMarker] = useState(0);
-        const [showDurationPicker, setShowDurationPicker] = useState(false);
-        const [showDueCalendar, setShowDueCalendar] = useState(false);
-        const dueCalendarButtonRef = useRef(null);
-        const dueDateInputRef = useRef(null);
-        if (!task) return null;
-
-        const effectiveProjectId = getResolvedTaskProjectId(task.id, resolvedTaskProjectIds) || '';
+        const taskKey = task ? task.id : '';
+        const effectiveProjectId = task ? (getResolvedTaskProjectId(task.id, resolvedTaskProjectIds) || '') : '';
         const todayIso = dateStr();
         const tomorrowIso = addDaysToIsoDate(todayIso, 1);
 
-        const descendants = useMemo(() => collectDescendantIds(tasks, task.id), [tasks, task.id]);
+        const [savedMarker, setSavedMarker] = useState(0);
+        const [showDurationPicker, setShowDurationPicker] = useState(false);
+        const [showDueCalendar, setShowDueCalendar] = useState(false);
+        const [showDependencyPicker, setShowDependencyPicker] = useState(false);
+        const [confirmDelete, setConfirmDelete] = useState(false);
+        const dueCalendarButtonRef = useRef(null);
+        const dueDateInputRef = useRef(null);
+        const titleInputRef = useRef(null);
+        const confirmDeleteTimerRef = useRef(0);
+
+        const descendants = useMemo(
+            () => (task ? collectDescendantIds(tasks, task.id) : new Set()),
+            [tasks, taskKey],
+        );
         const linkedSlots = useMemo(
-            () => slots.filter((slot) => slot.taskId === task.id),
-            [slots, task.id],
+            () => (task ? slots.filter((slot) => slot.taskId === task.id) : []),
+            [slots, taskKey],
         );
 
-        const [form, setForm] = useState(() => ({
-            title: task.title,
-            status: task.status,
-            priority: task.priority,
-            projectId: effectiveProjectId,
-            parentTaskId: task.parentTaskId || '',
-            startDate: task.startDate || '',
-            dueDate: task.dueDate || '',
-            plannedMinutes: task.plannedMinutes || '',
-            baselineStartDate: task.baselineStartDate || '',
-            baselineDueDate: task.baselineDueDate || '',
-            baselinePlannedMinutes: task.baselinePlannedMinutes || '',
-            blockedByTaskIds: Array.isArray(task.blockedByTaskIds) ? task.blockedByTaskIds.slice() : [],
-        }));
+        const buildFormFromTask = (sourceTask, projectId) => ({
+            title: sourceTask?.title || '',
+            status: sourceTask?.status || 'todo',
+            priority: sourceTask?.priority || 'p2',
+            projectId: projectId || '',
+            parentTaskId: sourceTask?.parentTaskId || '',
+            startDate: sourceTask?.startDate || '',
+            dueDate: sourceTask?.dueDate || '',
+            plannedMinutes: sourceTask?.plannedMinutes || '',
+            baselineStartDate: sourceTask?.baselineStartDate || '',
+            baselineDueDate: sourceTask?.baselineDueDate || '',
+            baselinePlannedMinutes: sourceTask?.baselinePlannedMinutes || '',
+            blockedByTaskIds: Array.isArray(sourceTask?.blockedByTaskIds) ? sourceTask.blockedByTaskIds.slice() : [],
+        });
+
+        const [form, setForm] = useState(() => buildFormFromTask(task, effectiveProjectId));
 
         React.useEffect(() => {
-            setForm({
-                title: task.title,
-                status: task.status,
-                priority: task.priority,
-                projectId: effectiveProjectId,
-                parentTaskId: task.parentTaskId || '',
-                startDate: task.startDate || '',
-                dueDate: task.dueDate || '',
-                plannedMinutes: task.plannedMinutes || '',
-                baselineStartDate: task.baselineStartDate || '',
-                baselineDueDate: task.baselineDueDate || '',
-                baselinePlannedMinutes: task.baselinePlannedMinutes || '',
-                blockedByTaskIds: Array.isArray(task.blockedByTaskIds) ? task.blockedByTaskIds.slice() : [],
-            });
-        }, [effectiveProjectId, savedMarker, task]);
+            if (!task) return;
+            setForm(buildFormFromTask(task, effectiveProjectId));
+            // eslint-disable-next-line react-hooks/exhaustive-deps
+        }, [taskKey, savedMarker]);
+
+        React.useEffect(() => {
+            const handleKey = (event) => {
+                if (event.key === 'Escape') {
+                    event.preventDefault();
+                    onClose();
+                }
+            };
+            window.addEventListener('keydown', handleKey);
+            return () => window.removeEventListener('keydown', handleKey);
+        }, [onClose]);
+
+        React.useEffect(() => {
+            if (!task) return;
+            const inputNode = titleInputRef.current;
+            if (!inputNode) return;
+            const focusTimer = window.setTimeout(() => {
+                try { inputNode.focus(); } catch (_) {}
+            }, 60);
+            return () => window.clearTimeout(focusTimer);
+        }, [taskKey]);
+
+        React.useEffect(() => () => {
+            if (confirmDeleteTimerRef.current) {
+                window.clearTimeout(confirmDeleteTimerRef.current);
+                confirmDeleteTimerRef.current = 0;
+            }
+        }, []);
+
+        const eligibleTargetTasks = useMemo(
+            () => (task ? tasks.filter((entry) => entry.id !== task.id && !descendants.has(entry.id)) : []),
+            [tasks, taskKey, descendants],
+        );
+
+        if (!task) return null;
 
         const handleField = (field, value) => setForm((current) => ({ ...current, [field]: value }));
 
@@ -1866,9 +1922,42 @@
             setShowDueCalendar(false);
         };
 
-        const handleDependencies = (event) => {
-            const values = Array.from(event.target.selectedOptions || []).map((option) => option.value);
-            handleField('blockedByTaskIds', values);
+        const toggleDependency = (depId) => {
+            if (!depId) return;
+            setForm((current) => {
+                const list = Array.isArray(current.blockedByTaskIds) ? current.blockedByTaskIds : [];
+                const next = list.includes(depId) ? list.filter((id) => id !== depId) : [...list, depId];
+                return { ...current, blockedByTaskIds: next };
+            });
+        };
+        const removeDependency = (depId) => {
+            if (!depId) return;
+            setForm((current) => ({
+                ...current,
+                blockedByTaskIds: (current.blockedByTaskIds || []).filter((id) => id !== depId),
+            }));
+        };
+
+        const handleDeleteClick = () => {
+            if (!confirmDelete) {
+                setConfirmDelete(true);
+                if (confirmDeleteTimerRef.current) window.clearTimeout(confirmDeleteTimerRef.current);
+                confirmDeleteTimerRef.current = window.setTimeout(() => {
+                    setConfirmDelete(false);
+                    confirmDeleteTimerRef.current = 0;
+                }, 4000);
+                return;
+            }
+            if (confirmDeleteTimerRef.current) {
+                window.clearTimeout(confirmDeleteTimerRef.current);
+                confirmDeleteTimerRef.current = 0;
+            }
+            if (typeof onDeleteTask === 'function') {
+                onDeleteTask(task.id);
+            } else {
+                state.deleteTask(task.id);
+            }
+            onClose();
         };
 
         const openDueDatePicker = () => {
@@ -1914,30 +2003,34 @@
         const handleQuickSchedule = () => {
             const slotDate = form.startDate || form.dueDate || dateStr();
             const plannedMinutes = Number(form.plannedMinutes) > 0 ? Number(form.plannedMinutes) : getTaskDurationMinutes(task);
-            const startMinutes = 9 * 60;
+            const todayDateStr = dateStr();
+            let startMinutes;
+            if (slotDate === todayDateStr) {
+                const now = new Date();
+                const nowMinutes = now.getHours() * 60 + now.getMinutes();
+                startMinutes = Math.min(Math.ceil((nowMinutes + 5) / 15) * 15, 23 * 60 + 45);
+            } else {
+                startMinutes = 9 * 60;
+            }
             state.addSlot({
                 taskId: task.id,
                 date: slotDate,
-                startTime: '09:00',
+                startTime: Planning.Utils.minutesToTime(startMinutes),
                 endTime: Planning.Utils.minutesToTime(startMinutes + plannedMinutes),
                 title: '',
             });
             onClose();
         };
 
-        const parentOptions = tasks.filter((entry) => entry.id !== task.id && !descendants.has(entry.id));
-        const dependencyOptions = tasks.filter((entry) => entry.id !== task.id && !descendants.has(entry.id));
+        const dependencyTasks = form.blockedByTaskIds
+            .map((dependencyId) => tasks.find((entry) => entry.id === dependencyId))
+            .filter(Boolean);
+        const dependencyAvailable = eligibleTargetTasks.filter((entry) => !form.blockedByTaskIds.includes(entry.id));
         const parentTitle = form.parentTaskId
             ? ((tasks.find((entry) => entry.id === form.parentTaskId) || {}).title || 'Родитель выбран')
             : 'Верхний уровень';
-        const dependencyPreview = form.blockedByTaskIds
-            .map((dependencyId) => {
-                const dependencyTask = tasks.find((entry) => entry.id === dependencyId);
-                return dependencyTask ? dependencyTask.title : '';
-            })
-            .filter(Boolean);
-        const dependencySummary = dependencyPreview.length > 0
-            ? (dependencyPreview.slice(0, 2).join(', ') + (dependencyPreview.length > 2 ? (' +' + (dependencyPreview.length - 2)) : ''))
+        const dependencySummary = dependencyTasks.length > 0
+            ? (dependencyTasks.slice(0, 2).map((entry) => entry.title).join(', ') + (dependencyTasks.length > 2 ? (' +' + (dependencyTasks.length - 2)) : ''))
             : 'Пока без зависимостей';
         const baselineSummaryParts = [];
         if (form.baselineStartDate) baselineSummaryParts.push('старт ' + formatIsoDateShort(form.baselineStartDate, todayIso, tomorrowIso));
@@ -1947,16 +2040,25 @@
         const linkedSlotsSummary = linkedSlots.length > 0
             ? (linkedSlots.length + ' в календаре')
             : 'Слот ещё не поставлен';
-        const projectField = h('div', { className: 'planning-quick-target-field' },
-            h('select', {
-                className: 'planning-quick-select planning-quick-select--target',
-                value: form.projectId,
-                onChange: (event) => handleField('projectId', event.target.value),
-            },
-                h('option', { value: '' }, '— без проекта —'),
-                projects.map((project) => h('option', { key: project.id, value: project.id }, project.name)),
-            ),
-        );
+        const quickTargetValue = form.parentTaskId
+            ? createQuickTargetValue('task', form.parentTaskId)
+            : (form.projectId ? createQuickTargetValue('project', form.projectId) : '');
+        const handleQuickTargetChange = (nextValue) => {
+            const resolved = resolveQuickTargetValue(nextValue, eligibleTargetTasks, resolvedTaskProjectIds);
+            setForm((current) => ({
+                ...current,
+                projectId: resolved.projectId || '',
+                parentTaskId: resolved.parentTaskId || '',
+            }));
+        };
+        const projectField = h(PlanningQuickTargetField, {
+            value: quickTargetValue,
+            onChange: handleQuickTargetChange,
+            projects,
+            tasks: eligibleTargetTasks,
+            resolvedTaskProjectIds,
+            tabsSelector: '.tabs',
+        });
 
         return h('div', { className: 'planning-modal-overlay', onClick: onClose },
             h('div', { className: 'planning-modal planning-modal--task-editor', onClick: (event) => event.stopPropagation() },
@@ -1967,10 +2069,16 @@
                 h('div', { className: 'planning-modal__body' },
                     h(TaskComposerCard, {
                         cardTitle: 'Редактирование задачи',
-                        cardHint: 'Та же шапка, что и в создании: заголовок, проект, приоритет, дедлайн и оценка — без кнопок создания.',
                         title: form.title,
                         onTitleChange: (value) => handleField('title', value),
                         titlePlaceholder: 'Название задачи...',
+                        titleInputRef,
+                        onTitleKeyDown: (event) => {
+                            if (event.key === 'Enter' && !event.shiftKey) {
+                                event.preventDefault();
+                                handleSave();
+                            }
+                        },
                         primaryField: projectField,
                         priorityValue: form.priority,
                         onPriorityChange: (value) => handleField('priority', value),
@@ -1999,19 +2107,6 @@
                                 value: form.status,
                                 onChange: (value) => handleField('status', value),
                             }),
-                            h('div', { className: 'planning-task-editor__field-stack' },
-                                h('div', { className: 'planning-task-editor__field' },
-                                    h('label', { className: 'planning-task-editor__label' }, 'Родитель'),
-                                    h('select', {
-                                        className: 'planning-quick-select planning-task-editor__select',
-                                        value: form.parentTaskId,
-                                        onChange: (event) => handleField('parentTaskId', event.target.value),
-                                    },
-                                        h('option', { value: '' }, '— верхний уровень —'),
-                                        parentOptions.map((entry) => h('option', { key: entry.id, value: entry.id }, entry.title)),
-                                    ),
-                                ),
-                            ),
                         ),
                         h('section', { className: 'planning-modal__card planning-modal__card--compact' },
                             h('div', { className: 'planning-modal__card-header' },
@@ -2046,14 +2141,43 @@
                         h('div', { className: 'planning-modal__details-body planning-task-editor__details-body' },
                             h('div', { className: 'planning-task-editor__field' },
                                 h('label', { className: 'planning-task-editor__label' }, 'Зависимости'),
-                                h('select', {
-                                    multiple: true,
-                                    size: Math.min(5, Math.max(3, dependencyOptions.length || 3)),
-                                    className: 'planning-task-editor__select planning-task-editor__select--multi',
-                                    value: form.blockedByTaskIds,
-                                    onChange: handleDependencies,
-                                },
-                                    dependencyOptions.map((entry) => h('option', { key: entry.id, value: entry.id }, entry.title)),
+                                h('div', { className: 'planning-dependency-chips', role: 'list' },
+                                    dependencyTasks.length === 0
+                                        ? h('span', { className: 'planning-dependency-chips__empty' }, 'Нет зависимостей')
+                                        : dependencyTasks.map((entry) => h('span', {
+                                            key: entry.id,
+                                            className: 'planning-dependency-chip',
+                                            role: 'listitem',
+                                        },
+                                            h('span', { className: 'planning-dependency-chip__label' }, entry.title || 'Без названия'),
+                                            h('button', {
+                                                type: 'button',
+                                                className: 'planning-dependency-chip__remove',
+                                                onClick: () => removeDependency(entry.id),
+                                                'aria-label': 'Убрать «' + (entry.title || 'задачу') + '»',
+                                                title: 'Убрать',
+                                            }, '×'),
+                                        )),
+                                ),
+                                h('button', {
+                                    type: 'button',
+                                    className: 'planning-btn planning-btn--sm planning-dependency-add',
+                                    onClick: () => setShowDependencyPicker((value) => !value),
+                                    disabled: dependencyAvailable.length === 0,
+                                    'aria-expanded': showDependencyPicker ? 'true' : 'false',
+                                }, showDependencyPicker ? 'Закрыть' : '+ Добавить зависимость'),
+                                showDependencyPicker && h('div', { className: 'planning-dependency-picker' },
+                                    dependencyAvailable.length === 0
+                                        ? h('div', { className: 'planning-dependency-picker__empty' }, 'Все доступные задачи уже добавлены')
+                                        : dependencyAvailable.map((entry) => h('button', {
+                                            key: entry.id,
+                                            type: 'button',
+                                            className: 'planning-dependency-picker__item',
+                                            onClick: () => toggleDependency(entry.id),
+                                        },
+                                            h('span', { className: 'planning-dependency-picker__plus', 'aria-hidden': 'true' }, '+'),
+                                            h('span', { className: 'planning-dependency-picker__title' }, entry.title || 'Без названия'),
+                                        )),
                                 ),
                             ),
                         ),
@@ -2115,16 +2239,10 @@
                 h('div', { className: 'planning-modal__footer planning-modal__footer--spread' },
                     h('button', {
                         type: 'button',
-                        className: 'planning-btn',
-                        onClick: () => {
-                            if (typeof onDeleteTask === 'function') {
-                                onDeleteTask(task.id);
-                            } else {
-                                state.deleteTask(task.id);
-                            }
-                            onClose();
-                        },
-                    }, 'Удалить'),
+                        className: 'planning-btn planning-btn--danger' + (confirmDelete ? ' planning-btn--danger-armed' : ''),
+                        onClick: handleDeleteClick,
+                        title: confirmDelete ? 'Нажми ещё раз, чтобы удалить' : 'Удалить задачу',
+                    }, confirmDelete ? 'Точно удалить?' : 'Удалить'),
                     h('div', { className: 'planning-modal__footer-actions' },
                         h('button', { type: 'button', className: 'planning-btn', onClick: handleQuickSchedule }, linkedSlots.length > 0 ? 'Добавить слот' : 'Запланировать'),
                         h('button', { type: 'button', className: 'planning-btn planning-btn--primary', onClick: handleSave }, 'Сохранить'),
@@ -2171,6 +2289,20 @@
         const [showQuickCalendar, setShowQuickCalendar] = useState(false);
         const [showQuickDurationPicker, setShowQuickDurationPicker] = useState(false);
         const [selectedTaskId, setSelectedTaskId] = useState(null);
+        const [tasksUiScale, setTasksUiScale] = useState(readSavedTasksUiScale);
+
+        React.useEffect(() => {
+            try { window.localStorage.setItem(TASKS_UI_SCALE_STORAGE_KEY, String(tasksUiScale)); } catch (_) {}
+            const planningTab = typeof document !== 'undefined' ? document.querySelector('.planning-tab') : null;
+            if (!planningTab) return undefined;
+            planningTab.style.setProperty('--planning-tasks-ui-scale', String(tasksUiScale));
+            return () => {
+                planningTab.style.removeProperty('--planning-tasks-ui-scale');
+            };
+        }, [tasksUiScale]);
+
+        const adjustTasksUiScale = (delta) => setTasksUiScale((value) => clampTasksUiScale(value + delta));
+        const resetTasksUiScale = () => setTasksUiScale(TASKS_UI_SCALE_DEFAULT);
         const viewport = Planning.Hooks && Planning.Hooks.usePlanningViewport
             ? Planning.Hooks.usePlanningViewport()
             : { isDesktop: false };
@@ -2656,6 +2788,35 @@
                 }),
                 h('button', { type: 'button', className: 'planning-add-btn planning-add-btn--project', onClick: handleAddProject }, '+ Проект'),
             ),
+            (() => {
+                const scaleControl = h('div', {
+                    className: 'planning-tasks-scale-fab',
+                    role: 'group',
+                    'aria-label': 'Масштаб интерфейса задач',
+                    onDoubleClick: resetTasksUiScale,
+                    title: 'Двойной клик — сброс',
+                },
+                    h('button', {
+                        type: 'button',
+                        className: 'planning-tasks-scale-fab__btn',
+                        onClick: () => adjustTasksUiScale(-TASKS_UI_SCALE_STEP),
+                        disabled: tasksUiScale <= TASKS_UI_SCALE_MIN + 1e-6,
+                        'aria-label': 'Уменьшить масштаб',
+                    }, '−'),
+                    h('span', { className: 'planning-tasks-scale-fab__value', 'aria-live': 'polite' }, Math.round(tasksUiScale * 100) + '%'),
+                    h('button', {
+                        type: 'button',
+                        className: 'planning-tasks-scale-fab__btn',
+                        onClick: () => adjustTasksUiScale(TASKS_UI_SCALE_STEP),
+                        disabled: tasksUiScale >= TASKS_UI_SCALE_MAX - 1e-6,
+                        'aria-label': 'Увеличить масштаб',
+                    }, '+'),
+                );
+
+                return ReactDOM && typeof ReactDOM.createPortal === 'function' && typeof document !== 'undefined' && document.body
+                    ? ReactDOM.createPortal(scaleControl, document.body)
+                    : scaleControl;
+            })(),
             selectedTaskId && h(TaskDetailModal, {
                 taskId: selectedTaskId,
                 state,

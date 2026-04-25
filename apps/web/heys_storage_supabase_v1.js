@@ -121,27 +121,8 @@
     }
   }
 
-  // 🪵 TEMP: лог количества продуктов при записи из cloud в localStorage.
-  // Снять, когда выясним, почему количество откатывается.
-  function logProductsCloudWrite(path, key, value) {
-    try {
-      if (!key || !/^heys_.*products$/.test(key)) return;
-      // Skip помеси типа hidden/favorite/deleted_products — они нас не интересуют
-      if (/(_hidden_products|_favorite_products|_deleted_products|_rpc_tail)/.test(key)) return;
-      const len = Array.isArray(value) ? value.length : -1;
-      // Прочитать текущий localStorage, чтобы понять, shrink или нет
-      let localLen = -1;
-      try {
-        const raw = global.localStorage.getItem(key);
-        if (raw) {
-          const parsed = JSON.parse(raw);
-          if (Array.isArray(parsed)) localLen = parsed.length;
-        }
-      } catch (_) { /* noop */ }
-      const decision = (localLen > 0 && len >= 0 && len < localLen) ? 'OVERWRITE-SHRINK' : 'WRITE';
-      console.info('[HEYS.products] cloud-write', { path, key, localLen, incomingLen: len, delta: len - localLen, decision });
-    } catch (_) { /* noop */ }
-  }
+  // (cloud-write verbose logging removed for prod; HOT-sync BLOCK warn covers shrink protection)
+  function logProductsCloudWrite(_path, _key, _value) { /* no-op stub kept for callsite compat */ }
 
   /** Ключи, требующие client-specific storage */
   const CLIENT_SPECIFIC_KEYS = [
@@ -2012,10 +1993,16 @@
     '_advice_trace_day_v1'
   ];
 
+  const LOCAL_ONLY_STORAGE_PREFIXES = [
+    'heys_products_pre_overlay_',  // β: rollback snapshots, never sync to cloud
+    'heys_overlay_',               // β/γ: overlay-specific markers (migrated_at, status, etc.)
+  ];
+
   function isLocalOnlyStorageKey(key) {
     const normalizedKey = String(key || '');
     if (!normalizedKey) return false;
     if (LOCAL_ONLY_STORAGE_EXACT_KEYS.has(normalizedKey)) return true;
+    if (LOCAL_ONLY_STORAGE_PREFIXES.some((prefix) => normalizedKey.startsWith(prefix))) return true;
     return LOCAL_ONLY_STORAGE_SUFFIXES.some((suffix) => normalizedKey.endsWith(suffix));
   }
 
@@ -3711,34 +3698,191 @@
 
       // Сохраняем оригинальный метод в глобальную переменную
       originalSetItem = global.localStorage.setItem.bind(global.localStorage);
+      // Track last seen totalItems per dayv2 key to detect regressions (writer
+      // overwrites with stale snapshot). On regression we escalate to warn+stack.
+      const _dayv2LastSeenItems = new Map();
       global.localStorage.setItem = function (k, v) {
-        // 🪵 TEMP: лог любых записей в localStorage по products-ключам
+        // 🔬 [HEYS.day-trace] 5b/8 LS interceptor — every dayv2 setItem is captured here.
         try {
-          if (typeof k === 'string' && /^heys_.*products$/.test(k) && !/(_hidden_products|_favorite_products|_deleted_products|_rpc_tail)/.test(k)) {
-            let len = -1;
-            let kind = typeof v;
+          if (typeof k === 'string' && /heys_(?:[0-9a-f-]+_)?dayv2_\d{4}-\d{2}-\d{2}/.test(k)) {
+            // Use Store.decompress to handle compressed values correctly.
+            let parsed = null;
             try {
-              const parsed = typeof v === 'string' ? JSON.parse(v) : v;
-              if (Array.isArray(parsed)) {
-                len = parsed.length;
-                kind = 'array';
-              } else if (typeof parsed === 'string') {
-                kind = parsed.startsWith('¤Z¤') ? 'compressed-string' : 'string';
+              const _Store = global.HEYS && global.HEYS.store;
+              if (_Store && typeof _Store.decompress === 'function' && typeof v === 'string') {
+                parsed = _Store.decompress(v);
               } else {
-                kind = parsed === null ? 'null' : typeof parsed;
+                parsed = typeof v === 'string' ? JSON.parse(v) : v;
               }
-            } catch (_) {
-              kind = typeof v === 'string' && v.startsWith('"¤Z¤') ? 'wrapped-compressed' : typeof v;
+            } catch (_) { /* noop */ }
+            const _meals = (parsed && Array.isArray(parsed.meals)) ? parsed.meals : null;
+            const _totalItems = _meals ? _meals.reduce((acc, m) => acc + ((m && Array.isArray(m.items)) ? m.items.length : 0), 0) : null;
+            // Regression detection: did we just shrink a previously-larger snapshot?
+            // This is the smoking gun for stale-writer races (e.g. gamification overwrite).
+            const _prevItems = _dayv2LastSeenItems.get(k);
+            const _shrunk = _prevItems != null && _totalItems != null && _totalItems < _prevItems;
+            if (_totalItems != null) _dayv2LastSeenItems.set(k, Math.max(_prevItems || 0, _totalItems));
+            if (_shrunk) {
+              // Escalate: regression detected. Warn + stack trace identifies the writer.
+              console.warn('[HEYS.day-trace] 5b/8 LS interceptor ⚠️ SHRINK', {
+                key: k,
+                prevTotalItems: _prevItems,
+                newTotalItems: _totalItems,
+                vSize: typeof v === 'string' ? v.length : '<obj>',
+                updatedAt: parsed && parsed.updatedAt,
+                sourceId: parsed && parsed._sourceId,
+                stack: new Error().stack.split('\n').slice(1, 10).join('\n'),
+              });
+            } else {
+              // Normal write — single-line info, no stack noise.
+              console.info('[HEYS.day-trace] 5b/8 LS interceptor', {
+                key: k,
+                mealsCount: _meals ? _meals.length : '<not-array>',
+                totalItems: _totalItems,
+                updatedAt: parsed && parsed.updatedAt,
+              });
             }
-            const stack = (new Error().stack || '').split('\n').slice(2, 6).map(s => s.trim()).join(' <- ');
-            console.info('[HEYS.products] ls.setItem', { key: k, kind, len, rawSize: typeof v === 'string' ? v.length : -1, stack });
           }
         } catch (_) { /* noop */ }
+        // (verbose ls.setItem logging removed for prod; HOT-sync BLOCK + setAll BLOCKED still warn)
         // Используем безопасную запись с обработкой QuotaExceeded
         if (!safeSetItem(k, v)) {
           // Если не удалось сохранить даже после очистки — логируем
           console.warn('[HEYS] Не удалось сохранить:', k);
           return;
+        }
+
+        // ──────────────────────────────────────────────────────────────────
+        // Phase β: universal dual-write to overlay store. Catches ALL writes
+        // to legacy heys_<cid>_products regardless of code path (setAll, Store.set
+        // self-heal, best-keyspace fallback, applyForegroundHotSyncValue, etc.).
+        // Plan ref: β-audit fix #1 (CRITICAL — was silently bypassed by ~20 sites).
+        //
+        // Skip:
+        //   - the overlay key itself (would loop forever)
+        //   - pre_overlay snapshots (rollback safety, not real products)
+        //   - hidden/favorite/deleted/rpc_tail (not the personal product list)
+        // Gate:
+        //   - dual_write_legacy flag
+        //   - migration_status === 'success'
+        //   - shared cache populated
+        // ──────────────────────────────────────────────────────────────────
+        try {
+          const keyStr = String(k || '');
+          const isOverlayKey = keyStr.endsWith('_products_overlay_v2') || keyStr === 'heys_products_overlay_v2';
+          const isPreOverlay = keyStr.indexOf('heys_products_pre_overlay_') === 0;
+          const isProductsKey = /^heys_.*products$/.test(keyStr) && !/(_hidden_products|_favorite_products|_deleted_products|_rpc_tail)/.test(keyStr);
+          if (isProductsKey && !isOverlayKey && !isPreOverlay
+              && global.HEYS && global.HEYS.flags
+              && global.HEYS.flags.isEnabled && global.HEYS.flags.isEnabled('dual_write_legacy')
+              && global.localStorage.getItem('heys_overlay_migration_status') === 'success'
+              && global.HEYS.OverlayStore && global.HEYS.cloud && global.HEYS.cloud.getSharedIndex) {
+            const sharedById = global.HEYS.cloud.getSharedIndex();
+            if (sharedById && sharedById.size > 0) {
+              // Decompress if needed: Store.set compresses big arrays into '¤Z¤...' strings.
+              let arr = null;
+              if (typeof v === 'string') {
+                if (v.startsWith('¤Z¤') && global.HEYS.store && typeof global.HEYS.store.decompress === 'function') {
+                  try { arr = global.HEYS.store.decompress(v); } catch (_) { /* noop */ }
+                } else {
+                  try { arr = JSON.parse(v); } catch (_) { /* noop */ }
+                }
+              } else {
+                arr = v;
+              }
+              // 🔬 TRACE: ALWAYS log when interceptor runs for products keys (with reason if skipped).
+              try {
+                console.info('[HEYS.products] interceptor enter', {
+                  keyTail: keyStr.slice(-30),
+                  vKind: typeof v === 'string' ? (v.startsWith('¤Z¤') ? 'compressed' : v.startsWith('"') ? 'json-string' : 'raw') : typeof v,
+                  vSize: typeof v === 'string' ? v.length : (Array.isArray(v) ? v.length + ' items' : '?'),
+                  arrParsed: Array.isArray(arr) ? `array[${arr.length}]` : 'NOT-ARRAY',
+                });
+              } catch (_) { /* noop */ }
+              if (Array.isArray(arr)) {
+                const result = global.HEYS.OverlayStore.migrate(arr, sharedById);
+                // 🔬 TRACE: migrate result
+                try {
+                  console.info('[HEYS.products] dual-write trace', {
+                    keyTail: keyStr.slice(-30),
+                    arrLen: arr.length,
+                    migrateOk: result && result.ok,
+                    migrateRows: result && result.rows ? result.rows.length : 0,
+                    typeA: result?.typeA, typeAByFallback: result?.typeAByFallback, typeB: result?.typeB,
+                  });
+                } catch (_) { /* noop */ }
+                if (result.ok) {
+                  // Guards against cloud-stale data overwriting richer overlay state.
+                  // Two checks: (a) iron-cliff (was: stale data with iron=1 vs local 200+),
+                  // (b) length-shrink (cloud's smaller heys_products clobbering orphan-recovered
+                  // 95 stamps that were just added). Both indicate the source has stale info.
+                  const prevRows = global.HEYS.OverlayStore.readRaw();
+                  const prevLen = Array.isArray(prevRows) ? prevRows.length : 0;
+                  const newLen = result.rows.length;
+
+                  const prevMerged = global.HEYS.OverlayStore.toMergedView(sharedById) || [];
+                  const prevIronCount = Array.isArray(prevMerged) ? prevMerged.filter(p => p && Number(p.iron) > 0).length : 0;
+                  let newIronCount = 0;
+                  for (const r of result.rows) {
+                    if (!r) continue;
+                    if (r._custom) {
+                      if (Number(r.iron) > 0) newIronCount++;
+                    } else {
+                      const base = sharedById.get(String(r.shared_origin_id));
+                      const iron = (r.overrides && r.overrides.iron != null) ? Number(r.overrides.iron) : (base ? Number(base.iron) : 0);
+                      if (iron > 0) newIronCount++;
+                    }
+                  }
+
+                  // Stale-cloud guard: skip dual-write when incoming data looks dramatically
+                  // worse than current overlay (iron-cliff OR length-cliff).
+                  const ironCliff = prevIronCount > 10 && newIronCount < (prevIronCount / 2);
+                  const lengthCliff = prevLen > 50 && newLen < prevLen * 0.7;
+
+                  // ID-merge guard: local-only additions (Type B custom OR user_modified) must
+                  // survive cloud-restore that doesn't yet have them. Detect by id-set diff:
+                  // if current overlay has user-additions the incoming arr lacks, MERGE them back.
+                  let rowsToWrite = result.rows;
+                  let rescuedCount = 0;
+                  try {
+                    if (Array.isArray(prevRows) && prevRows.length > 0) {
+                      const newIds = new Set(result.rows.map(r => String(r?.id || '')));
+                      const localOnly = prevRows.filter(r => {
+                        if (!r || r.id == null) return false;
+                        if (newIds.has(String(r.id))) return false;
+                        // Preserve only local-only additions: customs OR user-modified.
+                        return r._custom === true || r.user_modified === true;
+                      });
+                      if (localOnly.length > 0) {
+                        rowsToWrite = result.rows.concat(localOnly);
+                        rescuedCount = localOnly.length;
+                      }
+                    }
+                  } catch (_) { /* noop */ }
+
+                  if (ironCliff || lengthCliff) {
+                    console.warn('[HEYS.products] dual-write SKIP stale-cloud', {
+                      reason: ironCliff ? (lengthCliff ? 'iron+length-cliff' : 'iron-cliff') : 'length-cliff',
+                      prevLen, newLen, lenRatio: prevLen > 0 ? (newLen / prevLen).toFixed(3) : 'n/a',
+                      prevIron: prevIronCount, newIron: newIronCount,
+                      arrLen: arr.length,
+                    });
+                  } else {
+                    if (rescuedCount > 0) {
+                      console.info('[HEYS.products] dual-write rescued local-only rows', {
+                        rescuedCount,
+                        total: rowsToWrite.length,
+                        sampleNames: prevRows.filter(r => r && (r._custom || r.user_modified)).slice(0, 3).map(r => r.name),
+                      });
+                    }
+                    global.HEYS.OverlayStore.writeRaw(rowsToWrite);
+                  }
+                }
+              }
+            }
+          }
+        } catch (e) {
+          console.warn('[HEYS.products] interceptor dual-write failed (non-fatal):', e && e.message);
         }
 
         if (isLogoutSuppressionActive()) {
@@ -8577,6 +8721,25 @@
     addSyncLogEntry('upload_start', { n: filteredBatch.length, keys: _syncKeySummary });
     logCritical(`[SYNC] → отправка ${filteredBatch.length} записей: ${_syncKeySummary}`);
 
+    // 🔬 [HEYS.day-trace] 6c/8 batch upload — dayv2 keys leaving for cloud RIGHT NOW.
+    try {
+      for (const item of filteredBatch) {
+        const k = item && item.k;
+        if (typeof k === 'string' && /heys_(?:[0-9a-f-]+_)?dayv2_\d{4}-\d{2}-\d{2}/.test(k)) {
+          const v = item && item.v;
+          const _meals = (v && Array.isArray(v.meals)) ? v.meals : [];
+          const _totalItems = _meals.reduce((acc, m) => acc + ((m && Array.isArray(m.items)) ? m.items.length : 0), 0);
+          console.info('[HEYS.day-trace] 6c/8 batch upload outbound', {
+            key: k,
+            mealsCount: _meals.length,
+            totalItems: _totalItems,
+            updatedAt: v && v.updatedAt,
+            sourceId: v && v._sourceId,
+          });
+        }
+      }
+    } catch (_) { /* noop */ }
+
     // 🔐 v=54 FIX: После миграции на Yandex API — ВСЕГДА используем RPC режим!
     // _rpcOnlyMode = true устанавливается для ВСЕХ (и клиент PIN, и куратор)
     // Supabase SDK удалён — нет смысла проверять client/user для legacy branch
@@ -9018,6 +9181,25 @@
   };
 
   function enqueueClientUpsertForUpload(upsertObj, normalizedKey, k, client_id, waitingForSync) {
+    // 🔬 [HEYS.day-trace] 6a/8 cloud queue enqueue — dayv2 key entering pending upload queue.
+    try {
+      if (typeof normalizedKey === 'string' && /^heys_dayv2_\d{4}-\d{2}-\d{2}/.test(normalizedKey)) {
+        const v = upsertObj && upsertObj.v;
+        const _meals = (v && Array.isArray(v.meals)) ? v.meals : [];
+        const _totalItems = _meals.reduce((acc, m) => acc + ((m && Array.isArray(m.items)) ? m.items.length : 0), 0);
+        const _sz = (function () { try { return JSON.stringify(v).length; } catch (_) { return -1; } })();
+        console.info('[HEYS.day-trace] 6a/8 cloud queue enqueue', {
+          key: normalizedKey,
+          rawKey: k,
+          mealsCount: _meals.length,
+          totalItems: _totalItems,
+          updatedAt: v && v.updatedAt,
+          sourceId: v && v._sourceId,
+          sizeChars: _sz,
+          waitingForSync,
+        });
+      }
+    } catch (_) { /* noop */ }
     const enqueueResult = enqueueClientSave({
       queue: clientUpsertQueue,
       item: upsertObj,
@@ -9207,9 +9389,42 @@
     }
 
     // 🔄 НОРМАЛИЗАЦИЯ КЛЮЧА: Убираем client_id из ключа перед сохранением в Supabase
-    // В localStorage используются scoped ключи (heys_{clientId}_dayv2_...), 
+    // В localStorage используются scoped ключи (heys_{clientId}_dayv2_...),
     // но в Supabase client_id хранится отдельно в колонке, поэтому ключ должен быть heys_dayv2_...
     let normalizedKey = client_id ? normalizeKeyForSupabase(k, client_id) : k;
+
+    // 🔬 [HEYS.day-trace] 6b/8 cloud.saveClientKey path (rare for dayv2; usually interceptor catches first).
+    try {
+      if (typeof normalizedKey === 'string' && /^heys_dayv2_\d{4}-\d{2}-\d{2}/.test(normalizedKey)) {
+        const _meals = (value && Array.isArray(value.meals)) ? value.meals : [];
+        const _totalItems = _meals.reduce((acc, m) => acc + ((m && Array.isArray(m.items)) ? m.items.length : 0), 0);
+        console.info('[HEYS.day-trace] 6b/8 saveClientKey direct', {
+          key: normalizedKey,
+          mealsCount: _meals.length,
+          totalItems: _totalItems,
+          updatedAt: value && value.updatedAt,
+        });
+      }
+    } catch (_) { /* noop */ }
+
+    // ──────────────────────────────────────────────────────────────────
+    // Phase ε: skip cloud upload of legacy heys_products when overlay is canonical.
+    // Overlay key heys_products_overlay_v2 (~30 KB) carries authoritative state;
+    // legacy snapshot (~80–700 KB) is dead weight on the wire and the only
+    // remaining 413-trigger for the products payload.
+    // Local LS write of heys_<cid>_products is still allowed (kept as a
+    // fallback read source if anything still calls _origGetAll).
+    // Gated on: flag overlay_products_v2 ON + migration_status === 'success'.
+    // ──────────────────────────────────────────────────────────────────
+    if (normalizedKey === 'heys_products'
+        && global.HEYS && global.HEYS.flags
+        && global.HEYS.flags.isEnabled && global.HEYS.flags.isEnabled('overlay_products_v2')
+        && global.localStorage.getItem('heys_overlay_migration_status') === 'success') {
+      try {
+        console.info('[HEYS.products] cloud-push skipped {key: legacy heys_products, reason: overlay-canonical}');
+      } catch (_) { /* noop */ }
+      return;
+    }
 
     const upsertObj = {
       user_id: user?.id || null, // 🔐 PIN auth: user может быть null
@@ -10271,6 +10486,20 @@
     if (!clientId || !baseKey || value == null) return false;
     if (isSensitiveSessionStorageKey(baseKey)) return false;
 
+    // Phase ε: drop incoming HOT-sync of legacy heys_products when overlay is canonical.
+    // Cloud copy of this key is no longer being pushed by us; whatever sits in cloud is
+    // either stale (older device on older code) or our own retained pre-cutover snapshot.
+    // Applying it would clobber overlay-driven local state with old data.
+    if (baseKey === 'heys_products'
+        && global.HEYS && global.HEYS.flags
+        && global.HEYS.flags.isEnabled && global.HEYS.flags.isEnabled('overlay_products_v2')
+        && global.localStorage.getItem('heys_overlay_migration_status') === 'success') {
+      try {
+        console.info('[HEYS.products] hot-sync skipped {key: legacy heys_products, reason: overlay-canonical}');
+      } catch (_) { /* noop */ }
+      return false;
+    }
+
     const scopedKey = getScopedClientStorageKey(clientId, baseKey);
     if (!scopedKey) return false;
 
@@ -10295,30 +10524,40 @@
       const previousValue = currentRaw ? tryParse(currentRaw) : null;
       if (currentRaw === serialized) return false;
 
-      // 🪵 TEMP: HOT sync products write — кто и когда, что было, что стало.
-      // Условие на любой *_products ключ (но не hidden/favorite/deleted).
+      // HOT sync products anti-shrink + nutrient-completeness guard.
+      // Block legitimate cloud → local overwrite when local has MORE data
+      // (length OR more iron-bearing rows). Mirrors the dayv2/widget_layout pattern.
+      // The dual-write-via-interceptor will still keep overlay in sync; this
+      // protects orphan-recovered local state from being clobbered by stale cloud.
       try {
         const isProductsKey = (typeof baseKey === 'string' && /^heys_.*products$/.test(baseKey) && !/(_hidden_products|_favorite_products|_deleted_products|_rpc_tail)/.test(baseKey))
           || (typeof scopedKey === 'string' && /^heys_.*products$/.test(scopedKey) && !/(_hidden_products|_favorite_products|_deleted_products|_rpc_tail)/.test(scopedKey));
         if (isProductsKey) {
-          let localLen = -1;
+          let localArr = null;
           try {
             const parsed = currentRaw ? JSON.parse(currentRaw) : null;
-            if (Array.isArray(parsed)) localLen = parsed.length;
+            if (Array.isArray(parsed)) localArr = parsed;
           } catch (_) { /* noop */ }
-          const incomingLen = Array.isArray(value) ? value.length : -1;
-          const decision = (localLen > 0 && incomingLen >= 0 && incomingLen < localLen) ? 'OVERWRITE-SHRINK' : 'WRITE';
-          console.info('[HEYS.products] hot-sync write', {
-            source,
-            baseKey,
-            scopedKey,
-            localLen,
-            incomingLen,
-            delta: incomingLen >= 0 && localLen >= 0 ? incomingLen - localLen : null,
-            decision,
-            valueType: typeof value,
-            valueIsArray: Array.isArray(value),
-          });
+          const incomingArr = Array.isArray(value) ? value : null;
+          if (localArr && incomingArr) {
+            const localLen = localArr.length;
+            const incomingLen = incomingArr.length;
+            const localWithIron = localArr.filter(p => p && Number(p.iron) > 0).length;
+            const incomingWithIron = incomingArr.filter(p => p && Number(p.iron) > 0).length;
+            // Block if (a) cloud shrinks AND loses nutrients, OR (b) length equal but cloud loses
+            // significant nutrient data. The latter catches stale-cloud overwrites that match length
+            // but have iron=1 vs local iron=200+ (race seen in production logs 2026-04-25).
+            const significantIronLoss = localWithIron > 0 && incomingWithIron < (localWithIron / 2);
+            if ((localLen > incomingLen && localWithIron > incomingWithIron) || significantIronLoss) {
+              console.warn('[HEYS.products] hot-sync BLOCK overwrite-shrink', {
+                source,
+                localLen, incomingLen,
+                localWithIron, incomingWithIron,
+                reason: localLen > incomingLen ? 'shrink-with-nutrient-loss' : 'iron-cliff',
+              });
+              return false;
+            }
+          }
         }
       } catch (_) { /* noop */ }
 
@@ -11671,29 +11910,12 @@
         return { data: null, error };
       }
 
-      // 🪵 TEMP: server-side count для shared products (rpc vs rest)
-      try {
-        console.info('[HEYS.products] shared-fetch', {
-          fromServer: Array.isArray(data) ? data.length : -1,
-          limit,
-          excludeBlocklist,
-        });
-      } catch (_) { /* noop */ }
-
       // Фильтрация blocklist на клиенте (если нужно)
       let filtered = (data || []).map(normalizeSharedProduct);
       if (excludeBlocklist && user) {
         const blocklist = await cloud.getBlocklist();
         const blocklistSet = new Set(blocklist.map(id => id));
         filtered = filtered.filter(p => !blocklistSet.has(p.id));
-        if (filtered.length !== (data || []).length) {
-          try {
-            console.info('[HEYS.products] shared-fetch blocklist-filtered', {
-              before: (data || []).length,
-              after: filtered.length,
-            });
-          } catch (_) { /* noop */ }
-        }
       }
 
       const backfillSharedHarm = async (items) => {

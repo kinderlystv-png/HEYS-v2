@@ -318,6 +318,19 @@
       };
 
       try {
+        // 🔬 [HEYS.day-trace] 5/8 LS write — about to persist day to localStorage.
+        try {
+          const _meals = toStore.meals || [];
+          const _totalItems = _meals.reduce((acc, m) => acc + ((m.items || []).length), 0);
+          console.info('[HEYS.day-trace] 5/8 LS write', {
+            key,
+            date: dateStr,
+            mealsCount: _meals.length,
+            totalItems: _totalItems,
+            updatedAt: toStore.updatedAt,
+            sourceId: toStore._sourceId,
+          });
+        } catch (_) { /* noop */ }
         lsSetFn(key, toStore);
         if (toStore.isFastingDay || toStore.isIncomplete || current?.isFastingDay || current?.isIncomplete) {
           const storedAfterWrite = readExisting(key);

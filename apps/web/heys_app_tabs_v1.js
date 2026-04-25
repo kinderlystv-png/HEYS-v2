@@ -353,7 +353,12 @@
                 if (recoveryScheduled || cancelled) return;
                 if (!window.HEYS.orphanProducts?.autoRecoverOnLoad) return;
 
-                if (clientId && recoveryRunCache.has(clientId)) return;
+                if (clientId && recoveryRunCache.has(clientId)) {
+                    // Recovery already ran this session — but migration may still need to fire
+                    // (e.g., recovery's first run failed, OR migration trigger missed).
+                    try { runOverlayMigrationOnce(clientId); } catch (_) { /* noop */ }
+                    return;
+                }
 
                 const currentProducts = getLatestProducts();
                 const cachedShared = window.HEYS?.cloud?.getCachedSharedProducts?.() || [];
@@ -364,6 +369,9 @@
                     if (recoveryAttempts <= MAX_RECOVERY_ATTEMPTS) {
                         setTimeout(() => runOrphanRecovery(options), RECOVERY_RETRY_MS);
                     }
+                    // Try migration anyway — it has its own gate (shared cache + idempotency).
+                    // This ensures migration fires even if recovery never reaches threshold.
+                    try { runOverlayMigrationOnce(clientId); } catch (_) { /* noop */ }
                     return;
                 }
 
@@ -386,7 +394,188 @@
                             window.HEYS.Toast.success(msg);
                         }
                     }
+
+                    // ──────────────────────────────────────────────────────────
+                    // Phase β: one-shot overlay migration. Runs once per client
+                    // per session (gated by recoveryRunCache + LS markers).
+                    // Source = HEYS.products.getAll() post-self-heal (NOT raw LS).
+                    // ──────────────────────────────────────────────────────────
+                    try {
+                        runOverlayMigrationOnce(clientId);
+                    } catch (e) {
+                        // Defensive: never let overlay migration break recovery flow.
+                        if (window.console && window.console.warn) {
+                            console.warn('[HEYS.overlay] migration error (non-fatal):', e && e.message);
+                        }
+                    }
                 }).catch(() => { });
+            };
+
+            // Phase β: one-shot overlay migration (idempotent, gated by LS markers).
+            const runOverlayMigrationOnce = (cid) => {
+                if (!cid) return;
+                if (typeof window === 'undefined' || !window.HEYS) return;
+                const Overlay = window.HEYS.OverlayStore;
+                const Products = window.HEYS.products;
+                const cloud = window.HEYS.cloud;
+                if (!Overlay || !Products || !cloud) return;
+
+                // Idempotency: skip if migrated within last 7 days AND on current version,
+                // unless aborted (then aborted gate wins).
+                // CURRENT_MIGRATION_VERSION bumps when migrate() logic changes (e.g. fingerprint
+                // fallback added). On version mismatch we re-run regardless of TTL.
+                const CURRENT_MIGRATION_VERSION = 2; // v2: fingerprint/name fallback to shared
+                const ABORT_KEY = 'heys_overlay_migration_aborted';
+                const TS_KEY = 'heys_overlay_migrated_at';
+                const STATUS_KEY = 'heys_overlay_migration_status';
+                const VERSION_KEY = 'heys_overlay_migration_version';
+                const SEVEN_DAYS_MS = 7 * 86400 * 1000;
+                let migratedAt = 0;
+                let storedVersion = 0;
+                try { migratedAt = parseInt(localStorage.getItem(TS_KEY) || '0', 10) || 0; } catch (_) { /* noop */ }
+                try { storedVersion = parseInt(localStorage.getItem(VERSION_KEY) || '0', 10) || 0; } catch (_) { /* noop */ }
+                if (localStorage.getItem(ABORT_KEY) === 'true') return;
+                const onCurrentVersion = storedVersion >= CURRENT_MIGRATION_VERSION;
+                if (onCurrentVersion && migratedAt > 0 && (Date.now() - migratedAt) < SEVEN_DAYS_MS) return;
+
+                // Get shared snapshot. If empty, defer until heys:shared-products-updated event.
+                const sharedById = cloud.getSharedIndex && cloud.getSharedIndex();
+                if (!sharedById || sharedById.size === 0) {
+                    // Defer: re-try once when shared cache populates.
+                    const onSharedReady = () => {
+                        window.removeEventListener('heys:shared-products-updated', onSharedReady);
+                        try { runOverlayMigrationOnce(cid); } catch (_) { /* noop */ }
+                    };
+                    window.addEventListener('heys:shared-products-updated', onSharedReady, { once: true });
+                    return;
+                }
+
+                // Source: HEYS.products.getAll() POST-SELF-HEAL via the LEGACY path.
+                // CRITICAL: with overlay flag ON and overlay empty, wrapped getAll() goes
+                // overlay → returns [] without falling back to legacy. Migration must read
+                // legacy directly. Temporarily disable flag to force legacy read.
+                const flagWasOn = window.HEYS.flags?.isEnabled?.('overlay_products_v2');
+                if (flagWasOn) window.HEYS.flags.disable('overlay_products_v2');
+                let flat = null;
+                try {
+                    flat = Products.getAll();
+                } finally {
+                    if (flagWasOn) window.HEYS.flags.enable('overlay_products_v2');
+                }
+                if (!Array.isArray(flat)) {
+                    console.warn('[HEYS.products] migration source not an array; skipping');
+                    return;
+                }
+                // Defer migration if legacy isn't populated yet (early boot before sync).
+                // Re-trigger on heysSyncCompleted to catch the populated state.
+                if (flat.length === 0) {
+                    console.info('[HEYS.products] migration deferred — legacy is empty (sync not done)');
+                    const onSyncDone = () => {
+                        window.removeEventListener('heysSyncCompleted', onSyncDone);
+                        try { runOverlayMigrationOnce(cid); } catch (_) { /* noop */ }
+                    };
+                    window.addEventListener('heysSyncCompleted', onSyncDone, { once: true });
+                    return;
+                }
+
+                // Anti-shrink: if existing overlay is bigger than legacy or contains custom rows,
+                // running migration would silently destroy data (Type B custom rows can never be
+                // reconstructed from legacy heys_products since legacy is denormalized snapshots).
+                // This protects against an incognito-style flow where cloud restore lands BOTH
+                // legacy (older, smaller) and overlay v2 (newer, full) — migration must not
+                // clobber overlay with stale legacy.
+                try {
+                    const existingOverlay = Overlay.readRaw() || [];
+                    const existingCustom = existingOverlay.filter(r => r && r._custom).length;
+                    const overlayBigger = existingOverlay.length > flat.length;
+                    if (existingCustom > 0 || overlayBigger) {
+                        console.info('[HEYS.products] migration skipped: existing overlay larger or has custom rows', {
+                            existingLen: existingOverlay.length,
+                            existingCustom,
+                            legacyLen: flat.length,
+                        });
+                        // Stamp success markers so we don't retry every reload.
+                        try {
+                            localStorage.setItem(TS_KEY, String(Date.now()));
+                            localStorage.setItem(STATUS_KEY, 'success');
+                            localStorage.setItem(VERSION_KEY, String(CURRENT_MIGRATION_VERSION));
+                            localStorage.removeItem(ABORT_KEY);
+                        } catch (_) { /* noop */ }
+                        return;
+                    }
+                } catch (_) { /* noop */ }
+
+                // Snapshot pre-migration for rollback safety (90-day retention; cleanup in phase ε).
+                try {
+                    const snapKey = `heys_products_pre_overlay_${Date.now()}`;
+                    if (window.HEYS.utils && window.HEYS.utils.lsSet) {
+                        window.HEYS.utils.lsSet(snapKey, flat);
+                    }
+                } catch (_) { /* noop */ }
+
+                // Translate to overlay rows.
+                const result = Overlay.migrate(flat, sharedById);
+                if (!result.ok) {
+                    console.warn('[HEYS.products] overlay migration aborted:', result.reason);
+                    try {
+                        localStorage.setItem(ABORT_KEY, 'true');
+                        localStorage.setItem(STATUS_KEY, 'aborted');
+                        window.__diag_overlay = { reason: result.reason, pre: flat, post: null };
+                    } catch (_) { /* noop */ }
+                    if (window.HEYS.Toast?.warning) {
+                        window.HEYS.Toast.warning('Миграция продуктов прервана — работаем на legacy. Откройте __diag_overlay в консоли.');
+                    }
+                    return;
+                }
+
+                // β.6 sanity gate: if input has rows but migrate produced none
+                // (every row had id == null), refuse to stamp success.
+                if (flat.length > 0 && result.rows.length === 0) {
+                    console.warn('[HEYS.products] overlay migration aborted: zero-rows from non-empty input', { flatLen: flat.length });
+                    try {
+                        localStorage.setItem(ABORT_KEY, 'true');
+                        localStorage.setItem(STATUS_KEY, 'aborted');
+                        window.__diag_overlay = { reason: 'zero-rows-from-nonempty-input', pre: flat, post: null };
+                    } catch (_) { /* noop */ }
+                    return;
+                }
+
+                // Verifier: id-set parity + nutrient field parity.
+                // Capture previous overlay state BEFORE writing new rows — for safe rollback.
+                const previousOverlayRows = Overlay.readRaw();
+                Overlay.writeRaw(result.rows);
+                const merged = Overlay.toMergedView(sharedById) || [];
+                const verify = Overlay.verifyMigration(flat, merged);
+                if (!verify.ok) {
+                    // Roll back to previous overlay state — DO NOT clear to [].
+                    // Empty overlay would cause UI to show no products when flag is on.
+                    Overlay.writeRaw(previousOverlayRows);
+                    try {
+                        localStorage.setItem(ABORT_KEY, 'true');
+                        localStorage.setItem(STATUS_KEY, 'aborted');
+                        window.__diag_overlay = { errors: verify.errors, totalErrors: verify.totalErrors, pre: flat, post: merged, restoredRows: previousOverlayRows.length };
+                    } catch (_) { /* noop */ }
+                    console.warn('[HEYS.products] overlay migration verifier failed:', verify.totalErrors, 'errors. Sample:', verify.errors, 'Restored to previous overlay (', previousOverlayRows.length, 'rows)');
+                    if (window.HEYS.Toast?.warning) {
+                        window.HEYS.Toast.warning('Миграция продуктов прервана — несовпадение данных. Откройте __diag_overlay в консоли.');
+                    }
+                    return;
+                }
+
+                // Success: stamp markers + log.
+                try {
+                    localStorage.setItem(TS_KEY, String(Date.now()));
+                    localStorage.setItem(STATUS_KEY, 'success');
+                    localStorage.setItem(VERSION_KEY, String(CURRENT_MIGRATION_VERSION));
+                    localStorage.removeItem(ABORT_KEY);
+                } catch (_) { /* noop */ }
+                console.info('[HEYS.products] overlay migration ok', {
+                    version: CURRENT_MIGRATION_VERSION,
+                    typeA: result.typeA,
+                    typeAByFallback: result.typeAByFallback || 0,
+                    typeB: result.typeB,
+                    total: result.rows.length,
+                });
             };
 
             // Если sync для этого клиента уже был — сразу загружаем продукты

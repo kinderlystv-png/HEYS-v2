@@ -14277,14 +14277,31 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
       }
     };
 
+    // Final fallback: stamp-only resolution cache populated by autoRecoverOnLoad.
+    // Used when day-render asks for a product_id that was never persisted to
+    // overlay/legacy (orphan from stamps without a shared match). Returns macro-only
+    // shape derived from the meal stamp — enough for day rendering, not for global lists.
+    function _resolveFromStampCache(id) {
+      try {
+        const cache = HEYS.orphanProducts && HEYS.orphanProducts._stampResolutionCache;
+        if (cache && typeof cache.get === 'function' && id != null) {
+          return cache.get(String(id)) || null;
+        }
+      } catch (_) { /* noop */ }
+      return null;
+    }
+
     HEYS.products.getById = function (id) {
       const enabled = HEYS.flags && typeof HEYS.flags.isEnabled === 'function'
         && HEYS.flags.isEnabled('overlay_products_v2');
-      if (!enabled) return _origGetById(id);
+      if (!enabled) {
+        const legacy = _origGetById(id);
+        return legacy || _resolveFromStampCache(id);
+      }
 
       try {
         const Overlay = HEYS.OverlayStore;
-        if (!Overlay) return _origGetById(id);
+        if (!Overlay) return _origGetById(id) || _resolveFromStampCache(id);
         // Special-case: getById must consult overlay for items NOT in_my_list
         // (so dayv2 stamps can resolve products user has soft-removed).
         const raw = Overlay.getRowById(id);
@@ -14304,13 +14321,13 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
           }
           // Type A overlay row but shared cache empty → bare overlay shape lacks nutrients.
           // Fall through to legacy (which has full snapshot) instead of returning broken row.
-          return _origGetById(id);
+          return _origGetById(id) || _resolveFromStampCache(id);
         }
         // Fall through to legacy lookup if no overlay row.
-        return _origGetById(id);
+        return _origGetById(id) || _resolveFromStampCache(id);
       } catch (e) {
         console.warn('[HEYS.products] overlay getById failed; fallback to legacy:', e && e.message);
-        return _origGetById(id);
+        return _origGetById(id) || _resolveFromStampCache(id);
       }
     };
 
@@ -22733,7 +22750,52 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
 
       // Сохраняем оригинальный метод в глобальную переменную
       originalSetItem = global.localStorage.setItem.bind(global.localStorage);
+      // Track last seen totalItems per dayv2 key to detect regressions (writer
+      // overwrites with stale snapshot). On regression we escalate to warn+stack.
+      const _dayv2LastSeenItems = new Map();
       global.localStorage.setItem = function (k, v) {
+        // 🔬 [HEYS.day-trace] 5b/8 LS interceptor — every dayv2 setItem is captured here.
+        try {
+          if (typeof k === 'string' && /heys_(?:[0-9a-f-]+_)?dayv2_\d{4}-\d{2}-\d{2}/.test(k)) {
+            // Use Store.decompress to handle compressed values correctly.
+            let parsed = null;
+            try {
+              const _Store = global.HEYS && global.HEYS.store;
+              if (_Store && typeof _Store.decompress === 'function' && typeof v === 'string') {
+                parsed = _Store.decompress(v);
+              } else {
+                parsed = typeof v === 'string' ? JSON.parse(v) : v;
+              }
+            } catch (_) { /* noop */ }
+            const _meals = (parsed && Array.isArray(parsed.meals)) ? parsed.meals : null;
+            const _totalItems = _meals ? _meals.reduce((acc, m) => acc + ((m && Array.isArray(m.items)) ? m.items.length : 0), 0) : null;
+            // Regression detection: did we just shrink a previously-larger snapshot?
+            // This is the smoking gun for stale-writer races (e.g. gamification overwrite).
+            const _prevItems = _dayv2LastSeenItems.get(k);
+            const _shrunk = _prevItems != null && _totalItems != null && _totalItems < _prevItems;
+            if (_totalItems != null) _dayv2LastSeenItems.set(k, Math.max(_prevItems || 0, _totalItems));
+            if (_shrunk) {
+              // Escalate: regression detected. Warn + stack trace identifies the writer.
+              console.warn('[HEYS.day-trace] 5b/8 LS interceptor ⚠️ SHRINK', {
+                key: k,
+                prevTotalItems: _prevItems,
+                newTotalItems: _totalItems,
+                vSize: typeof v === 'string' ? v.length : '<obj>',
+                updatedAt: parsed && parsed.updatedAt,
+                sourceId: parsed && parsed._sourceId,
+                stack: new Error().stack.split('\n').slice(1, 10).join('\n'),
+              });
+            } else {
+              // Normal write — single-line info, no stack noise.
+              console.info('[HEYS.day-trace] 5b/8 LS interceptor', {
+                key: k,
+                mealsCount: _meals ? _meals.length : '<not-array>',
+                totalItems: _totalItems,
+                updatedAt: parsed && parsed.updatedAt,
+              });
+            }
+          }
+        } catch (_) { /* noop */ }
         // (verbose ls.setItem logging removed for prod; HOT-sync BLOCK + setAll BLOCKED still warn)
         // Используем безопасную запись с обработкой QuotaExceeded
         if (!safeSetItem(k, v)) {
@@ -22780,9 +22842,18 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
               } else {
                 arr = v;
               }
+              // 🔬 TRACE: ALWAYS log when interceptor runs for products keys (with reason if skipped).
+              try {
+                console.info('[HEYS.products] interceptor enter', {
+                  keyTail: keyStr.slice(-30),
+                  vKind: typeof v === 'string' ? (v.startsWith('¤Z¤') ? 'compressed' : v.startsWith('"') ? 'json-string' : 'raw') : typeof v,
+                  vSize: typeof v === 'string' ? v.length : (Array.isArray(v) ? v.length + ' items' : '?'),
+                  arrParsed: Array.isArray(arr) ? `array[${arr.length}]` : 'NOT-ARRAY',
+                });
+              } catch (_) { /* noop */ }
               if (Array.isArray(arr)) {
                 const result = global.HEYS.OverlayStore.migrate(arr, sharedById);
-                // 🔬 TRACE: interceptor dual-write
+                // 🔬 TRACE: migrate result
                 try {
                   console.info('[HEYS.products] dual-write trace', {
                     keyTail: keyStr.slice(-30),
@@ -22793,9 +22864,14 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
                   });
                 } catch (_) { /* noop */ }
                 if (result.ok) {
-                  // Guard: if the new dump has dramatically fewer iron-bearing entries
-                  // than current overlay (cloud-stale snapshot), skip the write to
-                  // preserve the richer state. Re-syncs through HOT or next setAll.
+                  // Guards against cloud-stale data overwriting richer overlay state.
+                  // Two checks: (a) iron-cliff (was: stale data with iron=1 vs local 200+),
+                  // (b) length-shrink (cloud's smaller heys_products clobbering orphan-recovered
+                  // 95 stamps that were just added). Both indicate the source has stale info.
+                  const prevRows = global.HEYS.OverlayStore.readRaw();
+                  const prevLen = Array.isArray(prevRows) ? prevRows.length : 0;
+                  const newLen = result.rows.length;
+
                   const prevMerged = global.HEYS.OverlayStore.toMergedView(sharedById) || [];
                   const prevIronCount = Array.isArray(prevMerged) ? prevMerged.filter(p => p && Number(p.iron) > 0).length : 0;
                   let newIronCount = 0;
@@ -22809,14 +22885,49 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
                       if (iron > 0) newIronCount++;
                     }
                   }
-                  if (prevIronCount > 10 && newIronCount < (prevIronCount / 2)) {
-                    console.warn('[HEYS.products] dual-write SKIP iron-cliff', {
-                      prevIron: prevIronCount,
-                      newIron: newIronCount,
+
+                  // Stale-cloud guard: skip dual-write when incoming data looks dramatically
+                  // worse than current overlay (iron-cliff OR length-cliff).
+                  const ironCliff = prevIronCount > 10 && newIronCount < (prevIronCount / 2);
+                  const lengthCliff = prevLen > 50 && newLen < prevLen * 0.7;
+
+                  // ID-merge guard: local-only additions (Type B custom OR user_modified) must
+                  // survive cloud-restore that doesn't yet have them. Detect by id-set diff:
+                  // if current overlay has user-additions the incoming arr lacks, MERGE them back.
+                  let rowsToWrite = result.rows;
+                  let rescuedCount = 0;
+                  try {
+                    if (Array.isArray(prevRows) && prevRows.length > 0) {
+                      const newIds = new Set(result.rows.map(r => String(r?.id || '')));
+                      const localOnly = prevRows.filter(r => {
+                        if (!r || r.id == null) return false;
+                        if (newIds.has(String(r.id))) return false;
+                        // Preserve only local-only additions: customs OR user-modified.
+                        return r._custom === true || r.user_modified === true;
+                      });
+                      if (localOnly.length > 0) {
+                        rowsToWrite = result.rows.concat(localOnly);
+                        rescuedCount = localOnly.length;
+                      }
+                    }
+                  } catch (_) { /* noop */ }
+
+                  if (ironCliff || lengthCliff) {
+                    console.warn('[HEYS.products] dual-write SKIP stale-cloud', {
+                      reason: ironCliff ? (lengthCliff ? 'iron+length-cliff' : 'iron-cliff') : 'length-cliff',
+                      prevLen, newLen, lenRatio: prevLen > 0 ? (newLen / prevLen).toFixed(3) : 'n/a',
+                      prevIron: prevIronCount, newIron: newIronCount,
                       arrLen: arr.length,
                     });
                   } else {
-                    global.HEYS.OverlayStore.writeRaw(result.rows);
+                    if (rescuedCount > 0) {
+                      console.info('[HEYS.products] dual-write rescued local-only rows', {
+                        rescuedCount,
+                        total: rowsToWrite.length,
+                        sampleNames: prevRows.filter(r => r && (r._custom || r.user_modified)).slice(0, 3).map(r => r.name),
+                      });
+                    }
+                    global.HEYS.OverlayStore.writeRaw(rowsToWrite);
                   }
                 }
               }
@@ -27662,6 +27773,25 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
     addSyncLogEntry('upload_start', { n: filteredBatch.length, keys: _syncKeySummary });
     logCritical(`[SYNC] → отправка ${filteredBatch.length} записей: ${_syncKeySummary}`);
 
+    // 🔬 [HEYS.day-trace] 6c/8 batch upload — dayv2 keys leaving for cloud RIGHT NOW.
+    try {
+      for (const item of filteredBatch) {
+        const k = item && item.k;
+        if (typeof k === 'string' && /heys_(?:[0-9a-f-]+_)?dayv2_\d{4}-\d{2}-\d{2}/.test(k)) {
+          const v = item && item.v;
+          const _meals = (v && Array.isArray(v.meals)) ? v.meals : [];
+          const _totalItems = _meals.reduce((acc, m) => acc + ((m && Array.isArray(m.items)) ? m.items.length : 0), 0);
+          console.info('[HEYS.day-trace] 6c/8 batch upload outbound', {
+            key: k,
+            mealsCount: _meals.length,
+            totalItems: _totalItems,
+            updatedAt: v && v.updatedAt,
+            sourceId: v && v._sourceId,
+          });
+        }
+      }
+    } catch (_) { /* noop */ }
+
     // 🔐 v=54 FIX: После миграции на Yandex API — ВСЕГДА используем RPC режим!
     // _rpcOnlyMode = true устанавливается для ВСЕХ (и клиент PIN, и куратор)
     // Supabase SDK удалён — нет смысла проверять client/user для legacy branch
@@ -28103,6 +28233,25 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
   };
 
   function enqueueClientUpsertForUpload(upsertObj, normalizedKey, k, client_id, waitingForSync) {
+    // 🔬 [HEYS.day-trace] 6a/8 cloud queue enqueue — dayv2 key entering pending upload queue.
+    try {
+      if (typeof normalizedKey === 'string' && /^heys_dayv2_\d{4}-\d{2}-\d{2}/.test(normalizedKey)) {
+        const v = upsertObj && upsertObj.v;
+        const _meals = (v && Array.isArray(v.meals)) ? v.meals : [];
+        const _totalItems = _meals.reduce((acc, m) => acc + ((m && Array.isArray(m.items)) ? m.items.length : 0), 0);
+        const _sz = (function () { try { return JSON.stringify(v).length; } catch (_) { return -1; } })();
+        console.info('[HEYS.day-trace] 6a/8 cloud queue enqueue', {
+          key: normalizedKey,
+          rawKey: k,
+          mealsCount: _meals.length,
+          totalItems: _totalItems,
+          updatedAt: v && v.updatedAt,
+          sourceId: v && v._sourceId,
+          sizeChars: _sz,
+          waitingForSync,
+        });
+      }
+    } catch (_) { /* noop */ }
     const enqueueResult = enqueueClientSave({
       queue: clientUpsertQueue,
       item: upsertObj,
@@ -28292,9 +28441,42 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
     }
 
     // 🔄 НОРМАЛИЗАЦИЯ КЛЮЧА: Убираем client_id из ключа перед сохранением в Supabase
-    // В localStorage используются scoped ключи (heys_{clientId}_dayv2_...), 
+    // В localStorage используются scoped ключи (heys_{clientId}_dayv2_...),
     // но в Supabase client_id хранится отдельно в колонке, поэтому ключ должен быть heys_dayv2_...
     let normalizedKey = client_id ? normalizeKeyForSupabase(k, client_id) : k;
+
+    // 🔬 [HEYS.day-trace] 6b/8 cloud.saveClientKey path (rare for dayv2; usually interceptor catches first).
+    try {
+      if (typeof normalizedKey === 'string' && /^heys_dayv2_\d{4}-\d{2}-\d{2}/.test(normalizedKey)) {
+        const _meals = (value && Array.isArray(value.meals)) ? value.meals : [];
+        const _totalItems = _meals.reduce((acc, m) => acc + ((m && Array.isArray(m.items)) ? m.items.length : 0), 0);
+        console.info('[HEYS.day-trace] 6b/8 saveClientKey direct', {
+          key: normalizedKey,
+          mealsCount: _meals.length,
+          totalItems: _totalItems,
+          updatedAt: value && value.updatedAt,
+        });
+      }
+    } catch (_) { /* noop */ }
+
+    // ──────────────────────────────────────────────────────────────────
+    // Phase ε: skip cloud upload of legacy heys_products when overlay is canonical.
+    // Overlay key heys_products_overlay_v2 (~30 KB) carries authoritative state;
+    // legacy snapshot (~80–700 KB) is dead weight on the wire and the only
+    // remaining 413-trigger for the products payload.
+    // Local LS write of heys_<cid>_products is still allowed (kept as a
+    // fallback read source if anything still calls _origGetAll).
+    // Gated on: flag overlay_products_v2 ON + migration_status === 'success'.
+    // ──────────────────────────────────────────────────────────────────
+    if (normalizedKey === 'heys_products'
+        && global.HEYS && global.HEYS.flags
+        && global.HEYS.flags.isEnabled && global.HEYS.flags.isEnabled('overlay_products_v2')
+        && global.localStorage.getItem('heys_overlay_migration_status') === 'success') {
+      try {
+        console.info('[HEYS.products] cloud-push skipped {key: legacy heys_products, reason: overlay-canonical}');
+      } catch (_) { /* noop */ }
+      return;
+    }
 
     const upsertObj = {
       user_id: user?.id || null, // 🔐 PIN auth: user может быть null
@@ -29355,6 +29537,20 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
   function applyForegroundHotSyncValue(clientId, baseKey, value, source = 'foreground-hot-sync') {
     if (!clientId || !baseKey || value == null) return false;
     if (isSensitiveSessionStorageKey(baseKey)) return false;
+
+    // Phase ε: drop incoming HOT-sync of legacy heys_products when overlay is canonical.
+    // Cloud copy of this key is no longer being pushed by us; whatever sits in cloud is
+    // either stale (older device on older code) or our own retained pre-cutover snapshot.
+    // Applying it would clobber overlay-driven local state with old data.
+    if (baseKey === 'heys_products'
+        && global.HEYS && global.HEYS.flags
+        && global.HEYS.flags.isEnabled && global.HEYS.flags.isEnabled('overlay_products_v2')
+        && global.localStorage.getItem('heys_overlay_migration_status') === 'success') {
+      try {
+        console.info('[HEYS.products] hot-sync skipped {key: legacy heys_products, reason: overlay-canonical}');
+      } catch (_) { /* noop */ }
+      return false;
+    }
 
     const scopedKey = getScopedClientStorageKey(clientId, baseKey);
     if (!scopedKey) return false;
@@ -34720,6 +34916,19 @@ NOVA: 1-4
     return { byFingerprint: _sharedByFingerprint, byName: _sharedByName };
   }
 
+  // Generate stable fallback id when legacy product has none.
+  // Use fingerprint hash → 'p_fp_<hex>' for deterministic id (same fingerprint = same id).
+  // Otherwise normalize name to 'p_name_<hash>'. Last resort: random uid.
+  function _ensureProductId(p) {
+    if (p.id != null) return p.id;
+    if (p.fingerprint) return 'p_fp_' + String(p.fingerprint).slice(0, 16);
+    if (p.name) {
+      const norm = String(p.name).toLowerCase().trim().replace(/\s+/g, '_').replace(/[^a-zа-я0-9_]/gi, '');
+      return 'p_name_' + norm.slice(0, 24);
+    }
+    return 'p_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+  }
+
   function migrate(flatArr, sharedById) {
     if (!Array.isArray(flatArr)) return { ok: false, reason: 'input-not-array' };
     if (!sharedById || sharedById.size === 0) {
@@ -34730,8 +34939,15 @@ NOVA: 1-4
     let typeA = 0;
     let typeB = 0;
     let typeAByFallback = 0; // linked to shared via fingerprint/name (no shared_origin_id in legacy)
+    let idGenerated = 0; // products that lacked an id (legacy data) — we generated one
     for (const p of flatArr) {
-      if (!p || p.id == null) continue;
+      if (!p) continue;
+      // CRITICAL: if id is missing, generate stable fallback. Otherwise migrate would drop the row,
+      // leaving legacy data orphaned in localStorage with no overlay representation.
+      if (p.id == null) {
+        p.id = _ensureProductId(p);
+        idGenerated++;
+      }
       let sid = p.shared_origin_id ? String(p.shared_origin_id) : null;
       let sharedRow = sid && sharedById.get(sid);
       let linkedByFallback = false;
@@ -34796,7 +35012,7 @@ NOVA: 1-4
         typeB++;
       }
     }
-    return { ok: true, rows: out, typeA, typeB, typeAByFallback };
+    return { ok: true, rows: out, typeA, typeB, typeAByFallback, idGenerated };
   }
 
   // ─────────────────────────────────────────────────────────────────────
@@ -34898,6 +35114,47 @@ NOVA: 1-4
       cid,
     };
     try { console.table(out); } catch (_) { console.log(out); }
+    return out;
+  };
+
+  // Detailed comparison: legacy LS vs overlay vs derived merged view.
+  // Use this when you suspect overlay drift from legacy.
+  HEYS.diagnostics.compareStores = function () {
+    const cid = (HEYS.currentClientId && String(HEYS.currentClientId)) || '<no-cid>';
+    const legacyKey = `heys_${cid}_products`;
+    const overlayKey = `heys_${cid}_${STORE_KEY}`;
+    const tryParseLs = (raw) => {
+      if (!raw) return null;
+      try {
+        if (raw.startsWith('¤Z¤') && HEYS.store?.decompress) return HEYS.store.decompress(raw);
+        return JSON.parse(raw);
+      } catch (_) { return null; }
+    };
+    const legacyArr = tryParseLs(global.localStorage.getItem(legacyKey));
+    const overlayArr = readRaw();
+    const sharedById = HEYS.cloud?.getSharedIndex?.() || new Map();
+    const merged = toMergedView(sharedById) || [];
+
+    // Find products in legacy missing from overlay.
+    const overlayIds = new Set(overlayArr.map(r => String(r?.id || '')));
+    const inLegacyNotInOverlay = (Array.isArray(legacyArr) ? legacyArr : [])
+      .filter(p => p && !overlayIds.has(String(p.id)))
+      .map(p => ({ id: p.id, name: p.name, fingerprint: (p.fingerprint || '').slice(0, 12) }));
+
+    const out = {
+      legacy_len: Array.isArray(legacyArr) ? legacyArr.length : -1,
+      overlay_len: overlayArr.length,
+      merged_len: merged.length,
+      shared_size: sharedById.size,
+      legacy_with_iron: Array.isArray(legacyArr) ? legacyArr.filter(p => p && Number(p.iron) > 0).length : 0,
+      merged_with_iron: merged.filter(p => p && Number(p.iron) > 0).length,
+      missing_from_overlay_count: inLegacyNotInOverlay.length,
+      missing_from_overlay_sample: inLegacyNotInOverlay.slice(0, 10),
+    };
+    try { console.table(out); } catch (_) { console.log(out); }
+    if (inLegacyNotInOverlay.length > 0) {
+      console.info('[HEYS.diagnostics] Products in legacy but NOT in overlay (first 10):', out.missing_from_overlay_sample);
+    }
     return out;
   };
 
@@ -35042,6 +35299,29 @@ NOVA: 1-4
   try {
     if (HEYS.flags?.isEnabled?.('dev_module_logging')) {
       console.info('[OverlayStore] loaded (flag overlay_products_v2:', HEYS.flags?.isEnabled?.('overlay_products_v2'), ')');
+    }
+  } catch (_) { /* noop */ }
+
+  // Pre-overlay snapshot cleanup — purge rollback snapshots older than 90 days.
+  // Snapshots (heys_products_pre_overlay_<ts>) are written before each migration
+  // as forensic-recovery; after 3 months they are dead weight in LS.
+  try {
+    const SNAPSHOT_TTL_MS = 90 * 86400 * 1000;
+    const now = Date.now();
+    const ls = global.localStorage;
+    if (ls) {
+      const toDelete = [];
+      for (let i = 0; i < ls.length; i++) {
+        const k = ls.key(i);
+        if (k && k.indexOf('heys_products_pre_overlay_') === 0) {
+          const ts = parseInt(k.slice('heys_products_pre_overlay_'.length), 10);
+          if (Number.isFinite(ts) && (now - ts) > SNAPSHOT_TTL_MS) toDelete.push(k);
+        }
+      }
+      if (toDelete.length > 0) {
+        for (const k of toDelete) ls.removeItem(k);
+        console.info('[HEYS.products] snapshot cleanup', { removed: toDelete.length, ttlDays: 90 });
+      }
     }
   } catch (_) { /* noop */ }
 

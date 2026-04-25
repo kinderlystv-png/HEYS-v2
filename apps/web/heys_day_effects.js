@@ -133,6 +133,20 @@
                 const dayRead = readDayV2(date, lsGet);
                 const key = dayRead.key;
                 const v = dayRead.value;
+                // 🔬 [HEYS.day-trace] 7/8 boot LS read — what came back from localStorage on refresh.
+                try {
+                    const _meals = (v && Array.isArray(v.meals)) ? v.meals : [];
+                    const _totalItems = _meals.reduce((acc, m) => acc + ((m && Array.isArray(m.items)) ? m.items.length : 0), 0);
+                    console.info('[HEYS.day-trace] 7/8 boot LS read', {
+                        date,
+                        key,
+                        hasValue: !!v,
+                        mealsCount: _meals.length,
+                        totalItems: _totalItems,
+                        updatedAt: v && v.updatedAt,
+                        sourceId: v && v._sourceId,
+                    });
+                } catch (_) { /* noop */ }
                 if (v && (v.isFastingDay || v.isIncomplete)) {
                     console.info('[HEYS.dayRealData] 🔄 doLocal read day', {
                         date,
@@ -264,6 +278,27 @@
                 const source = e.detail?.source || 'unknown';
                 const forceReload = e.detail?.forceReload || false;
                 const eventData = e.detail?.data || null;
+
+                // 🔬 [HEYS.day-trace] 8/8 day-updated event — fires only when the event
+                // actually carries fresh meals data (not just a syncTimestamp ping).
+                try {
+                    const isForCurrent = !updatedDate || updatedDate === date || (e.detail?.batch && Array.isArray(e.detail?.dates) && e.detail.dates.includes(date));
+                    const _meals = (eventData && Array.isArray(eventData.meals)) ? eventData.meals : null;
+                    if (isForCurrent && _meals != null) {
+                        const _totalItems = _meals.reduce((acc, m) => acc + ((m && Array.isArray(m.items)) ? m.items.length : 0), 0);
+                        console.info('[HEYS.day-trace] 8/8 day-updated event', {
+                            currentDate: date,
+                            updatedDate,
+                            source,
+                            forceReload,
+                            blockedRemainingMs: Math.max(0, blockCloudUpdatesUntilRef.current - Date.now()),
+                            eventMealsCount: _meals.length,
+                            eventTotalItems: _totalItems,
+                            eventUpdatedAt: eventData && eventData.updatedAt,
+                            lastLoadedUpdatedAtRef: lastLoadedUpdatedAtRef.current,
+                        });
+                    }
+                } catch (_) { /* noop */ }
 
                 try {
                     if (HEYS.perf && typeof HEYS.perf.markCommitHint === 'function') {
@@ -582,6 +617,21 @@
                                     updatedAt: newDay.updatedAt || 0
                                 });
                             }
+                            // 🔬 [HEYS.day-trace] 8b/8 day applied — final commit of cloud/external data into React state.
+                            try {
+                                const _meals = newDay.meals || [];
+                                const _totalItems = _meals.reduce((acc, m) => acc + ((m && Array.isArray(m.items)) ? m.items.length : 0), 0);
+                                console.info('[HEYS.day-trace] 8b/8 day applied (state replaced)', {
+                                    currentDate: date,
+                                    source,
+                                    fromUpdatedAt: prevDay?.updatedAt || 0,
+                                    toUpdatedAt: newDay.updatedAt || 0,
+                                    fromMeals: (prevDay?.meals || []).length,
+                                    toMeals: _meals.length,
+                                    fromTotalItems: (prevDay?.meals || []).reduce((acc, m) => acc + ((m && Array.isArray(m.items)) ? m.items.length : 0), 0),
+                                    toTotalItems: _totalItems,
+                                });
+                            } catch (_) { /* noop */ }
                             lastAppliedSignatureRef.current = applySignature;
                             lastAppliedAtRef.current = Date.now();
                             return newDay;

@@ -4907,6 +4907,19 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
             };
 
             try {
+                // 🔬 [HEYS.day-trace] 5/8 LS write — about to persist day via flush().
+                try {
+                    const _meals = toStore.meals || [];
+                    const _totalItems = _meals.reduce((acc, m) => acc + ((m.items || []).length), 0);
+                    console.info('[HEYS.day-trace] 5/8 LS write (saveToDate)', {
+                        key,
+                        date: dateStr,
+                        mealsCount: _meals.length,
+                        totalItems: _totalItems,
+                        updatedAt: toStore.updatedAt,
+                        sourceId: toStore._sourceId,
+                    });
+                } catch (_) { /* noop */ }
                 lsSetFn(key, toStore);
                 if (channelRef.current && !isUnmountedRef.current) {
                     try {
@@ -4945,22 +4958,59 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
         }, [getKey, readExisting]);
 
         const flush = React.useCallback((options = {}) => {
-            const force = options && options.force === true;
+            let force = options && options.force === true;
             if (!force && (disabled || isUnmountedRef.current)) return;
-            if (!day || !day.date) return;
+            // 🔧 RACE FIX: prefer ref-based day if it's newer than the closure-day.
+            // flush() is invoked via RAF+setTimeout from addProductToMeal, which can
+            // fire before React has committed the setDay state update — meaning the
+            // closure-`day` is stale (still has 2 items while user just added the 3rd).
+            // HEYS.Day.getDay() reads from the ref kept in sync via setDayRaw, so it
+            // always has the freshest snapshot. This fix prevents the silent
+            // "product disappears after refresh" bug.
+            const _closureDay = day;
+            let _effDay = _closureDay;
+            try {
+                const _refDay = global.HEYS && global.HEYS.Day && typeof global.HEYS.Day.getDay === 'function'
+                    ? global.HEYS.Day.getDay()
+                    : null;
+                if (_refDay && _refDay.date === (_closureDay && _closureDay.date)
+                    && (_refDay.updatedAt || 0) > ((_closureDay && _closureDay.updatedAt) || 0)) {
+                    _effDay = _refDay;
+                    // Force the write — the closure-`day` is stale, so guards downstream
+                    // (which compare effDay snap vs freshestPersisted snap derived from
+                    // the same ref) would incorrectly say "nothing changed". Without
+                    // force, flush exits early and the user's add disappears on refresh.
+                    force = true;
+                    try {
+                        const _cm = (_closureDay && _closureDay.meals) || [];
+                        const _rm = _refDay.meals || [];
+                        const _cItems = _cm.reduce((a, m) => a + ((m.items || []).length), 0);
+                        const _rItems = _rm.reduce((a, m) => a + ((m.items || []).length), 0);
+                        if (_cItems !== _rItems) {
+                            console.info('[HEYS.day-trace] 4d/8 flush picked ref over closure (race-recovery, force=true)', {
+                                closureItems: _cItems,
+                                refItems: _rItems,
+                                closureUpdatedAt: _closureDay && _closureDay.updatedAt,
+                                refUpdatedAt: _refDay.updatedAt,
+                            });
+                        }
+                    } catch (_) { /* noop */ }
+                }
+            } catch (_) { /* noop */ }
+            if (!_effDay || !_effDay.date) return;
 
             if (force) {
-                const key = getKey(day.date);
+                const key = getKey(_effDay.date);
                 const existing = readExisting(key);
-                if (isMeaningfulDayData(existing) && !isMeaningfulDayData(day)) return;
+                if (isMeaningfulDayData(existing) && !isMeaningfulDayData(_effDay)) return;
             }
 
-            const freshestPersistedDay = getFreshestPersistedDay(day.date);
+            const freshestPersistedDay = getFreshestPersistedDay(_effDay.date);
             const freshestUpdatedAt = freshestPersistedDay?.updatedAt || 0;
             let daySnap;
             let freshestDaySnap = null;
             const measureSnaps = () => {
-                daySnap = computeDaySnap(day);
+                daySnap = computeDaySnap(_effDay);
                 freshestDaySnap = freshestPersistedDay
                     ? computeDaySnap(freshestPersistedDay)
                     : null;
@@ -4971,11 +5021,11 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
             } else {
                 measureSnaps();
             }
-            const updatedAt = day.updatedAt != null ? day.updatedAt : now();
+            const updatedAt = _effDay.updatedAt != null ? _effDay.updatedAt : now();
 
             const shouldPreserveFreshestPersistedDay = !!(
                 freshestPersistedDay &&
-                freshestPersistedDay.date === day.date &&
+                freshestPersistedDay.date === _effDay.date &&
                 (
                     freshestUpdatedAt > updatedAt ||
                     (
@@ -5021,13 +5071,25 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
             // force: всегда пишем в storage — иначе MA/модалки читают LS без последнего debounced-патча приёмов.
             if (!force && prevDaySnapRef.current === daySnap) return;
 
+            // 🔬 [HEYS.day-trace] 4c/8 inside flush — confirm we're using freshest day snapshot.
+            try {
+                const _meals = _effDay.meals || [];
+                const _totalItems = _meals.reduce((acc, m) => acc + ((m.items || []).length), 0);
+                console.info('[HEYS.day-trace] 4c/8 inside flush about to write', {
+                    effMealsCount: _meals.length,
+                    effTotalItems: _totalItems,
+                    effUpdatedAt: _effDay.updatedAt,
+                    pickedFromRef: _effDay !== _closureDay,
+                });
+            } catch (_) { /* noop */ }
+
             // Просто сохраняем все приёмы под текущую дату
             // Ночная логика теперь в todayISO() — до 3:00 "сегодня" = вчера
             const payload = {
-                ...day,
+                ..._effDay,
                 updatedAt,
             };
-            saveToDate(day.date, payload);
+            saveToDate(_effDay.date, payload);
             prevStoredSnapRef.current = JSON.stringify(payload);
             prevDaySnapRef.current = daySnap;
         }, [day, now, saveToDate, stripMeta, disabled, getKey, readExisting, isMeaningfulDayData, getFreshestPersistedDay, computeDaySnap]);
@@ -5716,8 +5778,20 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
                     v.updatedAt || v.waterMl || v.steps || v.weightMorning
                 ));
 
-                // � DEBUG v59 → v4.8.2: Отключено — слишком много логов при навигации
-                // console.log(`[DAY LOAD] date=${date}, key=${key}, hasData=${hasStoredData}, meals=${v?.meals?.length || 0}`);
+                // 🔬 [HEYS.day-trace] 7/8 boot LS read — what came back from localStorage on refresh.
+                try {
+                    const _meals = (v && Array.isArray(v.meals)) ? v.meals : [];
+                    const _totalItems = _meals.reduce((acc, m) => acc + ((m && Array.isArray(m.items)) ? m.items.length : 0), 0);
+                    console.info('[HEYS.day-trace] 7/8 boot LS read', {
+                        date,
+                        key,
+                        hasStoredData,
+                        mealsCount: _meals.length,
+                        totalItems: _totalItems,
+                        updatedAt: v && v.updatedAt,
+                        sourceId: v && v._sourceId,
+                    });
+                } catch (_) { /* noop */ }
 
                 if (hasStoredData) {
                     const normalizedDay = v?.date ? v : { ...v, date };
@@ -5871,6 +5945,29 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
                 const syncTimestampOnly = e.detail?.syncTimestampOnly || false;
                 const updatedAt = e.detail?.updatedAt;
                 const payloadData = e.detail?.data;
+
+                // 🔬 [HEYS.day-trace] 8/8 day-updated event — fires only when the event
+                // actually carries fresh data for the current day (not just a syncTimestamp ping).
+                // Without this filter the trace floods on fetchDays bursts (10+ events for 1 day).
+                try {
+                    const isForCurrent = !updatedDate || updatedDate === date || (e.detail?.batch && Array.isArray(e.detail?.dates) && e.detail.dates.includes(date));
+                    const _meals = (payloadData && Array.isArray(payloadData.meals)) ? payloadData.meals : null;
+                    const hasMeaningfulPayload = !syncTimestampOnly && _meals != null;
+                    if (isForCurrent && hasMeaningfulPayload) {
+                        const _totalItems = _meals.reduce((acc, m) => acc + ((m && Array.isArray(m.items)) ? m.items.length : 0), 0);
+                        console.info('[HEYS.day-trace] 8/8 day-updated event', {
+                            currentDate: date,
+                            updatedDate,
+                            source,
+                            forceReload,
+                            blockedRemainingMs: blockCloudUpdatesUntilRef ? Math.max(0, blockCloudUpdatesUntilRef.current - Date.now()) : null,
+                            eventMealsCount: _meals.length,
+                            eventTotalItems: _totalItems,
+                            eventUpdatedAt: payloadData && payloadData.updatedAt,
+                            lastLoadedUpdatedAtRef: lastLoadedUpdatedAtRef.current,
+                        });
+                    }
+                } catch (_) { /* noop */ }
 
                 try {
                     if (HEYS.perf && typeof HEYS.perf.markCommitHint === 'function') {
@@ -8211,8 +8308,23 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
     }
   }
 
+  // Safety: auto-clear _recoveryInProgress after 8s if autoRecoverOnLoad never runs
+  // (e.g. no clientId, error in recovery flow). Prevents permanent suppression of warnings.
+  if (typeof window !== 'undefined') {
+    setTimeout(() => {
+      if (HEYS.orphanProducts && HEYS.orphanProducts._recoveryInProgress === true) {
+        HEYS.orphanProducts._recoveryInProgress = false;
+      }
+    }, 8000);
+  }
+
   // API для просмотра orphan-продуктов
   HEYS.orphanProducts = {
+    // Initialize as TRUE at boot — warning is suppressed until first autoRecoverOnLoad finishes.
+    // Otherwise UI shows "1 продукт не найден" briefly between initial render and recovery setAll.
+    // Safety: auto-clear after 8s if recovery never runs (e.g. no clientId yet).
+    _recoveryInProgress: true,
+
     // Получить список всех orphan-продуктов
     getAll() {
       return Array.from(orphanProductsMap.values()).map(o => ({
@@ -8540,6 +8652,9 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
      * @returns {Promise<{recovered: number, fromStamp: number, fromShared: number, missing: string[]}>}
      */
     async autoRecoverOnLoad(options = {}) {
+      // Mark recovery in progress so UI can skip orphan-warning flicker during the
+      // ~100-500ms window between initial render and recovery setAll.
+      try { HEYS.orphanProducts._recoveryInProgress = true; } catch (_) { /* noop */ }
       const { verbose = false, tryShared = true } = options;
       const U = HEYS.utils || {};
       const lsGet = U.lsGet || ((k, d) => {
@@ -8630,6 +8745,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
 
       if (missingProducts.size === 0) {
         if (verbose) console.log(`[HEYS] ✅ Все продукты найдены в базе (${Date.now() - startTime}ms)`);
+        try { HEYS.orphanProducts._recoveryInProgress = false; } catch (_) { /* noop */ }
         return { recovered: 0, fromStamp: 0, fromShared: 0, missing: [] };
       }
 
@@ -8759,7 +8875,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
         }
       }
 
-      // Compact orphan-recovery summary (full diagnostics remain in __diag_overlay if needed).
+      // Compact orphan-recovery summary + detailed breakdown when only 1-3 recovered.
       try {
         const stampRec = recovered.filter(p => p._recoveredFrom === 'stamp');
         const sharedRec = recovered.filter(p => p._recoveredFrom === 'shared');
@@ -8770,26 +8886,55 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
             stampRecovered: stampRec.length,
             sharedRecovered: sharedRec.length,
             stillMissing: stillMissing.length,
+            skippedDeleted,
+            // Always include first-3 names of each bucket — quickly diagnose "что именно".
+            stampNames: stampRec.slice(0, 8).map(p => p.name),
+            sharedNames: sharedRec.slice(0, 8).map(p => p.name),
+            stillMissingNames: stillMissing.slice(0, 8).map(d => d.name),
           });
         }
       } catch (_) { /* noop */ }
-
-      // 4. Сохраняем восстановленные продукты (если были восстановлены из штампов)
-      if (fromStamp > 0) {
-        const newProducts = [...products, ...recovered.filter(p => p._recoveredFrom === 'stamp')];
-
-        if (HEYS.products?.setAll) {
-          HEYS.products.setAll(newProducts, { source: 'orphan-auto-recover' });
-        } else {
-          const lsSet = U.lsSet || ((k, v) => localStorage.setItem(k, JSON.stringify(v)));
-          lsSet('heys_products', newProducts);
+      // 🔬 Per-product details: log first 5 always, all if ≤10. Useful when we want to see
+      // exactly which products are being recovered from stamp (iron-less) vs shared (iron-rich).
+      try {
+        if (recovered.length > 0) {
+          const sample = recovered.length <= 10 ? recovered : recovered.slice(0, 5);
+          for (const p of sample) {
+            const data = missingProducts.get(p.fingerprint || p.id || normalizeName(p.name)) || null;
+            console.info('[HEYS.products] orphan-recovery detail', {
+              source: p._recoveredFrom,
+              id: p.id,
+              name: p.name,
+              fingerprint: (p.fingerprint || '').slice(0, 12),
+              firstSeenDate: data ? data.firstSeenDate : '(unknown)',
+              kcal100: p.kcal100,
+              hasIron: Number(p.iron) > 0,
+            });
+          }
+          if (recovered.length > 10) {
+            console.info('[HEYS.products] orphan-recovery (showing first 5 of', recovered.length, ')');
+          }
         }
+      } catch (_) { /* noop */ }
 
-        // Обновляем индекс
-        if (HEYS.products?.buildSearchIndex) {
-          HEYS.products.buildSearchIndex();
+      // 4. Phase ε / lazy stamp resolution.
+      // Stamp-recovered products carry only macros (no iron/calcium/vitamins) — pushing them
+      // into heys_products / overlay would (a) silently degrade nutrient counts on aggregation,
+      // (b) inflate the per-user product list with rows the user never created, (c) keep cycling
+      // them through cloud on every reload. Instead we keep them in a side cache and resolve
+      // lazily via getById from day-render. Cache is rebuilt every boot from current stamps.
+      const stampOnly = recovered.filter(p => p._recoveredFrom === 'stamp');
+      if (stampOnly.length > 0) {
+        if (!HEYS.orphanProducts._stampResolutionCache
+            || typeof HEYS.orphanProducts._stampResolutionCache.set !== 'function') {
+          HEYS.orphanProducts._stampResolutionCache = new Map();
+        }
+        const cache = HEYS.orphanProducts._stampResolutionCache;
+        for (const p of stampOnly) {
+          if (p && p.id != null) cache.set(String(p.id), p);
         }
       }
+      // Shared-recovered (full nutrients) already went through addFromShared → setAll above.
 
       // 5. Очищаем orphan-трекинг для восстановленных
       recovered.forEach(p => this.remove(p.name));
@@ -8820,6 +8965,9 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
           detail: { recovered: recovered.length, fromStamp, fromShared, missing: finalMissing }
         }));
       }
+
+      // Clear recovery flag — alert may now show legitimate orphans (those not recovered).
+      try { HEYS.orphanProducts._recoveryInProgress = false; } catch (_) { /* noop */ }
 
       return { recovered: recovered.length, fromStamp, fromShared, missing: finalMissing };
     }
@@ -16832,6 +16980,20 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
 
       const handleAdd = ({ product, grams, mealIndex, _traceId, _origin }) => {
         const traceId = _traceId || `dayadd-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
+        // 🔬 [HEYS.day-trace] 1/8 entry — modal-driven add (handleAdd in heys_day_add_product.js).
+        try {
+          console.info('[HEYS.day-trace] 1/8 handleAdd entry', {
+            traceId,
+            origin: _origin || 'unknown',
+            date,
+            mealIndex,
+            grams,
+            productId: product?.id ?? product?.product_id ?? null,
+            productName: product?.name || null,
+            productKcal100: product?.kcal100,
+            productSource: product?._source || (product?._fromShared ? 'shared' : 'personal'),
+          });
+        } catch (_) { /* noop */ }
         console.info('[HEYS.day] ➕ Add product to meal (modal)', {
           traceId,
           origin: _origin || 'unknown',
@@ -16927,6 +17089,20 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
           });
         }
 
+        // 🔬 [HEYS.day-trace] 3/8 item built — what's actually going into the meal.
+        try {
+          console.info('[HEYS.day-trace] 3/8 item built', {
+            traceId,
+            itemId: newItem.id,
+            product_id: newItem.product_id,
+            name: newItem.name,
+            grams: newItem.grams,
+            kcal100: newItem.kcal100,
+            iron: newItem.iron,
+            hasInline: itemHasNutrients,
+          });
+        } catch (_) { /* noop */ }
+
         const newUpdatedAt = Date.now();
         if (HEYS.Day?.setBlockCloudUpdates) {
           HEYS.Day.setBlockCloudUpdates(newUpdatedAt + 3000);
@@ -16965,11 +17141,38 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
             addedProductId: newItem.product_id ?? null,
             addedProductName: newItem.name || null
           });
+          // 🔬 [HEYS.day-trace] 4/8 setDay applied — items count change in target meal.
+          try {
+            const _totalItems = meals.reduce((acc, m) => acc + ((m.items || []).length), 0);
+            console.info('[HEYS.day-trace] 4/8 setDay applied', {
+              traceId,
+              date: prevDay.date,
+              mealIndex,
+              itemsBefore,
+              itemsAfter,
+              totalItems: _totalItems,
+              updatedAt: newUpdatedAt,
+            });
+          } catch (_) { /* noop */ }
           return { ...prevDay, meals, updatedAt: newUpdatedAt };
         });
 
         requestAnimationFrame(() => {
           setTimeout(() => {
+            // 🔬 [HEYS.day-trace] 4b/8 requestFlush — about to call flush which writes day to LS.
+            try {
+              const _d = HEYS.Day?.getDay?.();
+              const _meals = (_d && Array.isArray(_d.meals)) ? _d.meals : [];
+              const _totalItems = _meals.reduce((acc, m) => acc + ((m.items || []).length), 0);
+              console.info('[HEYS.day-trace] 4b/8 requestFlush', {
+                traceId,
+                hasFlush: !!(HEYS.Day && HEYS.Day.requestFlush),
+                dayDate: _d && _d.date,
+                mealsCount: _meals.length,
+                totalItems: _totalItems,
+                dayUpdatedAt: _d && _d.updatedAt,
+              });
+            } catch (_) { /* noop */ }
             if (HEYS.Day?.requestFlush) {
               HEYS.Day.requestFlush();
             }
@@ -21080,18 +21283,31 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
 
             haptic('light');
 
-            console.info('[HEYS.day] ➕ addProductToMeal', {
-                mealIndex: mi,
-                productId: p?.id ?? p?.product_id ?? null,
-                productName: p?.name || null,
-                source: p?._source || (p?._fromShared ? 'shared' : 'personal')
-            });
+            // 🔬 [HEYS.day-trace] 1/8 entry — what we're trying to add and to which meal.
+            try {
+                console.info('[HEYS.day-trace] 1/8 addProductToMeal entry', {
+                    date,
+                    mealIndex: mi,
+                    productSource: p?._source || (p?._fromShared ? 'shared' : 'personal'),
+                    productId: p?.id ?? p?.product_id ?? null,
+                    productName: p?.name || null,
+                    productKcal100: p?.kcal100,
+                    gramsHint: p?.grams,
+                });
+            } catch (_) { /* noop */ }
 
             let finalProduct = p;
             if (p?._fromShared || p?._source === 'shared' || p?.is_shared) {
                 const cloned = HEYS.products?.addFromShared?.(p);
                 if (cloned) {
                     finalProduct = cloned;
+                    try {
+                        console.info('[HEYS.day-trace] 2/8 cloned from shared', {
+                            originalId: p?.id,
+                            clonedId: cloned?.id,
+                            name: cloned?.name,
+                        });
+                    } catch (_) { /* noop */ }
                 }
             }
 
@@ -21115,6 +21331,17 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
                 gi: finalProduct.gi ?? finalProduct.gi100,
                 harm: harmVal,  // Normalized harm (0-10)
             };
+            // 🔬 [HEYS.day-trace] 3/8 item built — final shape going into the meal.
+            try {
+                console.info('[HEYS.day-trace] 3/8 item built', {
+                    itemId: item.id,
+                    product_id: item.product_id,
+                    name: item.name,
+                    grams: item.grams,
+                    kcal100: item.kcal100,
+                    hasInline: item.kcal100 != null && item.protein100 != null,
+                });
+            } catch (_) { /* noop */ }
             const newUpdatedAt = Date.now();
             if (lastLoadedUpdatedAtRef) lastLoadedUpdatedAtRef.current = newUpdatedAt;
             if (blockCloudUpdatesUntilRef) blockCloudUpdatesUntilRef.current = newUpdatedAt + 3000;
@@ -21127,10 +21354,32 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
                         productName: finalProduct?.name || null
                     });
                 }
+                const before = (mealsList[mi]?.items || []).length;
                 const meals = mealsList.map((m, i) => i === mi ? { ...m, items: [...(m.items || []), item] } : m);
                 const newDayData = { ...prevDay, meals, updatedAt: newUpdatedAt };
                 const key = _scopedDayKey(date);
+                // 🔬 [HEYS.day-trace] 4/8 setDay applied — items count change in target meal.
                 try {
+                    console.info('[HEYS.day-trace] 4/8 setDay applied', {
+                        date: prevDay.date,
+                        key,
+                        mealIndex: mi,
+                        itemsBefore: before,
+                        itemsAfter: (newDayData.meals?.[mi]?.items || []).length,
+                        totalItems: meals.reduce((acc, m) => acc + ((m.items || []).length), 0),
+                        updatedAt: newUpdatedAt,
+                    });
+                } catch (_) { /* noop */ }
+                try {
+                    // 🔬 [HEYS.day-trace] 5/8 LS write — about to persist day to localStorage.
+                    try {
+                        console.info('[HEYS.day-trace] 5/8 LS write', {
+                            key,
+                            mealsCount: meals.length,
+                            totalItems: meals.reduce((acc, m) => acc + ((m.items || []).length), 0),
+                            updatedAt: newUpdatedAt,
+                        });
+                    } catch (_) { /* noop */ }
                     lsSet(key, newDayData);
                 } catch (e) {
                     trackError(e, { source: 'day/_meals.js', action: 'save_product_quick' });
@@ -22050,26 +22299,78 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
    * @param {Object} params - Parameters
    * @returns {React.Element|boolean} Alert element or false if no orphans
    */
+  // Throttle suppression logs: a render-heavy DayTab can hit them dozens of times
+  // per second otherwise. We only need the first SUPPRESSED to confirm the gate works.
+  let _lastSuppressedAt = 0;
+  function _shouldLogSuppress() {
+    const now = Date.now();
+    if (now - _lastSuppressedAt < 2000) return false;
+    _lastSuppressedAt = now;
+    return true;
+  }
+
   function renderOrphanAlert(params) {
     const { orphanCount, date } = params;
     const listForUi = (date && HEYS.orphanProducts?.getAllForDate)
       ? (HEYS.orphanProducts.getAllForDate(date) || [])
       : (HEYS.orphanProducts?.getAll?.() || []);
-    try {
-      const listLen = listForUi.length;
-      if (orphanCount > 0 || listLen > 0) {
-        console.warn('[HEYS.orphan:PIPE] render alert', {
-          orphanCount,
-          date: date || null,
-          listLen,
-          sample: listForUi.slice(0, 3).map((o) => o?.name || '(no-name)')
-        });
-      }
-    } catch (_) { /* noop */ }
-    
+
     if (!orphanCount || orphanCount === 0) {
       return false;
     }
+
+    // Suppress during the brief recovery window (~100-500ms after boot).
+    if (HEYS.orphanProducts && HEYS.orphanProducts._recoveryInProgress === true) {
+      if (_shouldLogSuppress()) {
+        console.info('[HEYS.products] orphan-warning SUPPRESSED (recovery in progress)', {
+          orphanCount,
+          listLen: listForUi.length,
+        });
+      }
+      return false;
+    }
+
+    // Re-validate: orphanProductsMap can carry stale entries from early renders
+    // that ran before overlay was hydrated. Filter listForUi by what's actually
+    // unresolvable now via getById + stamp cache. If everything resolves, the
+    // tracker is stale — silently clean it and skip the warning.
+    const trulyUnresolved = [];
+    for (const o of listForUi) {
+      const id = o?.product_id ?? o?.productId ?? null;
+      let resolved = null;
+      if (id != null && HEYS.products && typeof HEYS.products.getById === 'function') {
+        try { resolved = HEYS.products.getById(id); } catch (_) { resolved = null; }
+      }
+      if (resolved) {
+        if (typeof HEYS.orphanProducts?.remove === 'function') {
+          try { HEYS.orphanProducts.remove(o.name); } catch (_) { /* noop */ }
+        }
+        continue;
+      }
+      trulyUnresolved.push(o);
+    }
+    if (trulyUnresolved.length === 0) {
+      if (_shouldLogSuppress()) {
+        console.info('[HEYS.products] orphan-warning SUPPRESSED (all entries resolvable)', {
+          cleanedFromTracker: listForUi.length,
+        });
+      }
+      return false;
+    }
+
+    // Warning IS rendering in DOM — log once with the unresolved sample so we know
+    // exactly which products show up and why suppression couldn't catch them.
+    try {
+      console.warn('[HEYS.products] orphan-warning RENDERED IN DOM', {
+        date: date || null,
+        unresolvedCount: trulyUnresolved.length,
+        unresolvedSample: trulyUnresolved.slice(0, 3).map(o => ({
+          name: o?.name,
+          productId: o?.product_id ?? o?.productId,
+          hasInlineData: !!o?.hasInlineData,
+        })),
+      });
+    } catch (_) { /* noop */ }
     
     return React.createElement('div', {
       className: 'orphan-alert compact-card',
@@ -22093,7 +22394,10 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
             marginBottom: '4px',
             fontSize: '14px'
           } 
-        }, `${orphanCount} продукт${orphanCount === 1 ? '' : orphanCount < 5 ? 'а' : 'ов'} не найден${orphanCount === 1 ? '' : 'о'} в базе`),
+        }, (function () {
+          const n = trulyUnresolved.length;
+          return `${n} продукт${n === 1 ? '' : n < 5 ? 'а' : 'ов'} не найден${n === 1 ? '' : 'о'} в базе`;
+        })()),
         React.createElement('div', { 
           style: { 
             color: '#a16207', 
@@ -22123,7 +22427,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
               color: '#78350f'
             } 
           },
-            listForUi.map((o, i) => 
+            trulyUnresolved.map((o, i) =>
               React.createElement('li', { key: o.name || i, style: { marginBottom: '4px' } },
                 React.createElement('strong', null, o.name),
                 ` — ${o.hasInlineData ? '✓ можно восстановить' : '⚠️ нет данных'}`,
@@ -22611,6 +22915,20 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
 
       const handleAdd = ({ product, grams, mealIndex, _traceId, _origin }) => {
         const traceId = _traceId || `dayadd-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
+        // 🔬 [HEYS.day-trace] 1/8 entry — modal-driven add (handleAdd in heys_day_add_product.js).
+        try {
+          console.info('[HEYS.day-trace] 1/8 handleAdd entry', {
+            traceId,
+            origin: _origin || 'unknown',
+            date,
+            mealIndex,
+            grams,
+            productId: product?.id ?? product?.product_id ?? null,
+            productName: product?.name || null,
+            productKcal100: product?.kcal100,
+            productSource: product?._source || (product?._fromShared ? 'shared' : 'personal'),
+          });
+        } catch (_) { /* noop */ }
         console.info('[HEYS.day] ➕ Add product to meal (modal)', {
           traceId,
           origin: _origin || 'unknown',
@@ -22706,6 +23024,20 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
           });
         }
 
+        // 🔬 [HEYS.day-trace] 3/8 item built — what's actually going into the meal.
+        try {
+          console.info('[HEYS.day-trace] 3/8 item built', {
+            traceId,
+            itemId: newItem.id,
+            product_id: newItem.product_id,
+            name: newItem.name,
+            grams: newItem.grams,
+            kcal100: newItem.kcal100,
+            iron: newItem.iron,
+            hasInline: itemHasNutrients,
+          });
+        } catch (_) { /* noop */ }
+
         const newUpdatedAt = Date.now();
         if (HEYS.Day?.setBlockCloudUpdates) {
           HEYS.Day.setBlockCloudUpdates(newUpdatedAt + 3000);
@@ -22744,11 +23076,38 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
             addedProductId: newItem.product_id ?? null,
             addedProductName: newItem.name || null
           });
+          // 🔬 [HEYS.day-trace] 4/8 setDay applied — items count change in target meal.
+          try {
+            const _totalItems = meals.reduce((acc, m) => acc + ((m.items || []).length), 0);
+            console.info('[HEYS.day-trace] 4/8 setDay applied', {
+              traceId,
+              date: prevDay.date,
+              mealIndex,
+              itemsBefore,
+              itemsAfter,
+              totalItems: _totalItems,
+              updatedAt: newUpdatedAt,
+            });
+          } catch (_) { /* noop */ }
           return { ...prevDay, meals, updatedAt: newUpdatedAt };
         });
 
         requestAnimationFrame(() => {
           setTimeout(() => {
+            // 🔬 [HEYS.day-trace] 4b/8 requestFlush — about to call flush which writes day to LS.
+            try {
+              const _d = HEYS.Day?.getDay?.();
+              const _meals = (_d && Array.isArray(_d.meals)) ? _d.meals : [];
+              const _totalItems = _meals.reduce((acc, m) => acc + ((m.items || []).length), 0);
+              console.info('[HEYS.day-trace] 4b/8 requestFlush', {
+                traceId,
+                hasFlush: !!(HEYS.Day && HEYS.Day.requestFlush),
+                dayDate: _d && _d.date,
+                mealsCount: _meals.length,
+                totalItems: _totalItems,
+                dayUpdatedAt: _d && _d.updatedAt,
+              });
+            } catch (_) { /* noop */ }
             if (HEYS.Day?.requestFlush) {
               HEYS.Day.requestFlush();
             }

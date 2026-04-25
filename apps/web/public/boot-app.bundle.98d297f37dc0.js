@@ -14615,6 +14615,33 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                     return;
                 }
 
+                // Anti-shrink: if existing overlay is bigger than legacy or contains custom rows,
+                // running migration would silently destroy data (Type B custom rows can never be
+                // reconstructed from legacy heys_products since legacy is denormalized snapshots).
+                // This protects against an incognito-style flow where cloud restore lands BOTH
+                // legacy (older, smaller) and overlay v2 (newer, full) — migration must not
+                // clobber overlay with stale legacy.
+                try {
+                    const existingOverlay = Overlay.readRaw() || [];
+                    const existingCustom = existingOverlay.filter(r => r && r._custom).length;
+                    const overlayBigger = existingOverlay.length > flat.length;
+                    if (existingCustom > 0 || overlayBigger) {
+                        console.info('[HEYS.products] migration skipped: existing overlay larger or has custom rows', {
+                            existingLen: existingOverlay.length,
+                            existingCustom,
+                            legacyLen: flat.length,
+                        });
+                        // Stamp success markers so we don't retry every reload.
+                        try {
+                            localStorage.setItem(TS_KEY, String(Date.now()));
+                            localStorage.setItem(STATUS_KEY, 'success');
+                            localStorage.setItem(VERSION_KEY, String(CURRENT_MIGRATION_VERSION));
+                            localStorage.removeItem(ABORT_KEY);
+                        } catch (_) { /* noop */ }
+                        return;
+                    }
+                } catch (_) { /* noop */ }
+
                 // Snapshot pre-migration for rollback safety (90-day retention; cleanup in phase ε).
                 try {
                     const snapKey = `heys_products_pre_overlay_${Date.now()}`;

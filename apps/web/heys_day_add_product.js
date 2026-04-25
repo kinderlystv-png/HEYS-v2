@@ -433,6 +433,20 @@
 
       const handleAdd = ({ product, grams, mealIndex, _traceId, _origin }) => {
         const traceId = _traceId || `dayadd-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
+        // 🔬 [HEYS.day-trace] 1/8 entry — modal-driven add (handleAdd in heys_day_add_product.js).
+        try {
+          console.info('[HEYS.day-trace] 1/8 handleAdd entry', {
+            traceId,
+            origin: _origin || 'unknown',
+            date,
+            mealIndex,
+            grams,
+            productId: product?.id ?? product?.product_id ?? null,
+            productName: product?.name || null,
+            productKcal100: product?.kcal100,
+            productSource: product?._source || (product?._fromShared ? 'shared' : 'personal'),
+          });
+        } catch (_) { /* noop */ }
         console.info('[HEYS.day] ➕ Add product to meal (modal)', {
           traceId,
           origin: _origin || 'unknown',
@@ -528,6 +542,20 @@
           });
         }
 
+        // 🔬 [HEYS.day-trace] 3/8 item built — what's actually going into the meal.
+        try {
+          console.info('[HEYS.day-trace] 3/8 item built', {
+            traceId,
+            itemId: newItem.id,
+            product_id: newItem.product_id,
+            name: newItem.name,
+            grams: newItem.grams,
+            kcal100: newItem.kcal100,
+            iron: newItem.iron,
+            hasInline: itemHasNutrients,
+          });
+        } catch (_) { /* noop */ }
+
         const newUpdatedAt = Date.now();
         if (HEYS.Day?.setBlockCloudUpdates) {
           HEYS.Day.setBlockCloudUpdates(newUpdatedAt + 3000);
@@ -566,11 +594,38 @@
             addedProductId: newItem.product_id ?? null,
             addedProductName: newItem.name || null
           });
+          // 🔬 [HEYS.day-trace] 4/8 setDay applied — items count change in target meal.
+          try {
+            const _totalItems = meals.reduce((acc, m) => acc + ((m.items || []).length), 0);
+            console.info('[HEYS.day-trace] 4/8 setDay applied', {
+              traceId,
+              date: prevDay.date,
+              mealIndex,
+              itemsBefore,
+              itemsAfter,
+              totalItems: _totalItems,
+              updatedAt: newUpdatedAt,
+            });
+          } catch (_) { /* noop */ }
           return { ...prevDay, meals, updatedAt: newUpdatedAt };
         });
 
         requestAnimationFrame(() => {
           setTimeout(() => {
+            // 🔬 [HEYS.day-trace] 4b/8 requestFlush — about to call flush which writes day to LS.
+            try {
+              const _d = HEYS.Day?.getDay?.();
+              const _meals = (_d && Array.isArray(_d.meals)) ? _d.meals : [];
+              const _totalItems = _meals.reduce((acc, m) => acc + ((m.items || []).length), 0);
+              console.info('[HEYS.day-trace] 4b/8 requestFlush', {
+                traceId,
+                hasFlush: !!(HEYS.Day && HEYS.Day.requestFlush),
+                dayDate: _d && _d.date,
+                mealsCount: _meals.length,
+                totalItems: _totalItems,
+                dayUpdatedAt: _d && _d.updatedAt,
+              });
+            } catch (_) { /* noop */ }
             if (HEYS.Day?.requestFlush) {
               HEYS.Day.requestFlush();
             }

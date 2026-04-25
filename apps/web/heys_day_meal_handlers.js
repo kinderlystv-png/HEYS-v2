@@ -411,6 +411,19 @@
         return;
       }
 
+      // 🔬 [HEYS.day-trace] 1/8 entry — what we're trying to add and to which meal.
+      try {
+        console.info('[HEYS.day-trace] 1/8 addProductToMeal entry', {
+          date,
+          mealIndex: mi,
+          productSource: p?._fromShared ? 'shared' : (p?._source || (p?.is_shared ? 'shared' : 'personal')),
+          productId: p?.id ?? p?.product_id,
+          productName: p?.name,
+          productKcal100: p?.kcal100,
+          gramsHint: p?.grams,
+        });
+      } catch (_) { /* noop */ }
+
       haptic('light'); // Вибрация при добавлении
 
       // 🔧 FIX: Auto-clone shared product to personal base (prevents orphans)
@@ -419,7 +432,13 @@
         const cloned = HEYS.products?.addFromShared?.(p);
         if (cloned) {
           finalProduct = cloned;
-          // 🔇 v4.7.0: Лог отключён
+          try {
+            console.info('[HEYS.day-trace] 2/8 cloned from shared', {
+              originalId: p?.id,
+              clonedId: cloned?.id,
+              name: cloned?.name,
+            });
+          } catch (_) { /* noop */ }
         }
       }
 
@@ -446,9 +465,33 @@
         harm: harmVal  // Normalized harm (0-10)
       };
 
+      // 🔬 [HEYS.day-trace] 3/8 item built — what's actually going into the meal.
+      try {
+        console.info('[HEYS.day-trace] 3/8 item built', {
+          itemId: item.id,
+          product_id: item.product_id,
+          name: item.name,
+          grams: item.grams,
+          kcal100: item.kcal100,
+          hasInline: item.kcal100 != null && item.protein100 != null,
+        });
+      } catch (_) { /* noop */ }
+
       setDay(prevDay => {
+        const before = (prevDay.meals?.[mi]?.items || []).length;
         const meals = (prevDay.meals || []).map((m, i) => i === mi ? { ...m, items: [...(m.items || []), item] } : m);
-        return { ...prevDay, meals, updatedAt: Date.now() };
+        const next = { ...prevDay, meals, updatedAt: Date.now() };
+        // 🔬 [HEYS.day-trace] 4/8 setDay applied — meal item count went from X to X+1.
+        try {
+          console.info('[HEYS.day-trace] 4/8 setDay applied', {
+            date: prevDay.date,
+            mealIndex: mi,
+            itemsBefore: before,
+            itemsAfter: (next.meals?.[mi]?.items || []).length,
+            updatedAt: next.updatedAt,
+          });
+        } catch (_) { /* noop */ }
+        return next;
       });
 
       // Track new item for animation

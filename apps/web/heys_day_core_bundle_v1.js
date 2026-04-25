@@ -2233,6 +2233,19 @@
             };
 
             try {
+                // 🔬 [HEYS.day-trace] 5/8 LS write — about to persist day via flush().
+                try {
+                    const _meals = toStore.meals || [];
+                    const _totalItems = _meals.reduce((acc, m) => acc + ((m.items || []).length), 0);
+                    console.info('[HEYS.day-trace] 5/8 LS write (saveToDate)', {
+                        key,
+                        date: dateStr,
+                        mealsCount: _meals.length,
+                        totalItems: _totalItems,
+                        updatedAt: toStore.updatedAt,
+                        sourceId: toStore._sourceId,
+                    });
+                } catch (_) { /* noop */ }
                 lsSetFn(key, toStore);
                 if (channelRef.current && !isUnmountedRef.current) {
                     try {
@@ -2271,22 +2284,59 @@
         }, [getKey, readExisting]);
 
         const flush = React.useCallback((options = {}) => {
-            const force = options && options.force === true;
+            let force = options && options.force === true;
             if (!force && (disabled || isUnmountedRef.current)) return;
-            if (!day || !day.date) return;
+            // 🔧 RACE FIX: prefer ref-based day if it's newer than the closure-day.
+            // flush() is invoked via RAF+setTimeout from addProductToMeal, which can
+            // fire before React has committed the setDay state update — meaning the
+            // closure-`day` is stale (still has 2 items while user just added the 3rd).
+            // HEYS.Day.getDay() reads from the ref kept in sync via setDayRaw, so it
+            // always has the freshest snapshot. This fix prevents the silent
+            // "product disappears after refresh" bug.
+            const _closureDay = day;
+            let _effDay = _closureDay;
+            try {
+                const _refDay = global.HEYS && global.HEYS.Day && typeof global.HEYS.Day.getDay === 'function'
+                    ? global.HEYS.Day.getDay()
+                    : null;
+                if (_refDay && _refDay.date === (_closureDay && _closureDay.date)
+                    && (_refDay.updatedAt || 0) > ((_closureDay && _closureDay.updatedAt) || 0)) {
+                    _effDay = _refDay;
+                    // Force the write — the closure-`day` is stale, so guards downstream
+                    // (which compare effDay snap vs freshestPersisted snap derived from
+                    // the same ref) would incorrectly say "nothing changed". Without
+                    // force, flush exits early and the user's add disappears on refresh.
+                    force = true;
+                    try {
+                        const _cm = (_closureDay && _closureDay.meals) || [];
+                        const _rm = _refDay.meals || [];
+                        const _cItems = _cm.reduce((a, m) => a + ((m.items || []).length), 0);
+                        const _rItems = _rm.reduce((a, m) => a + ((m.items || []).length), 0);
+                        if (_cItems !== _rItems) {
+                            console.info('[HEYS.day-trace] 4d/8 flush picked ref over closure (race-recovery, force=true)', {
+                                closureItems: _cItems,
+                                refItems: _rItems,
+                                closureUpdatedAt: _closureDay && _closureDay.updatedAt,
+                                refUpdatedAt: _refDay.updatedAt,
+                            });
+                        }
+                    } catch (_) { /* noop */ }
+                }
+            } catch (_) { /* noop */ }
+            if (!_effDay || !_effDay.date) return;
 
             if (force) {
-                const key = getKey(day.date);
+                const key = getKey(_effDay.date);
                 const existing = readExisting(key);
-                if (isMeaningfulDayData(existing) && !isMeaningfulDayData(day)) return;
+                if (isMeaningfulDayData(existing) && !isMeaningfulDayData(_effDay)) return;
             }
 
-            const freshestPersistedDay = getFreshestPersistedDay(day.date);
+            const freshestPersistedDay = getFreshestPersistedDay(_effDay.date);
             const freshestUpdatedAt = freshestPersistedDay?.updatedAt || 0;
             let daySnap;
             let freshestDaySnap = null;
             const measureSnaps = () => {
-                daySnap = computeDaySnap(day);
+                daySnap = computeDaySnap(_effDay);
                 freshestDaySnap = freshestPersistedDay
                     ? computeDaySnap(freshestPersistedDay)
                     : null;
@@ -2297,11 +2347,11 @@
             } else {
                 measureSnaps();
             }
-            const updatedAt = day.updatedAt != null ? day.updatedAt : now();
+            const updatedAt = _effDay.updatedAt != null ? _effDay.updatedAt : now();
 
             const shouldPreserveFreshestPersistedDay = !!(
                 freshestPersistedDay &&
-                freshestPersistedDay.date === day.date &&
+                freshestPersistedDay.date === _effDay.date &&
                 (
                     freshestUpdatedAt > updatedAt ||
                     (
@@ -2347,13 +2397,25 @@
             // force: всегда пишем в storage — иначе MA/модалки читают LS без последнего debounced-патча приёмов.
             if (!force && prevDaySnapRef.current === daySnap) return;
 
+            // 🔬 [HEYS.day-trace] 4c/8 inside flush — confirm we're using freshest day snapshot.
+            try {
+                const _meals = _effDay.meals || [];
+                const _totalItems = _meals.reduce((acc, m) => acc + ((m.items || []).length), 0);
+                console.info('[HEYS.day-trace] 4c/8 inside flush about to write', {
+                    effMealsCount: _meals.length,
+                    effTotalItems: _totalItems,
+                    effUpdatedAt: _effDay.updatedAt,
+                    pickedFromRef: _effDay !== _closureDay,
+                });
+            } catch (_) { /* noop */ }
+
             // Просто сохраняем все приёмы под текущую дату
             // Ночная логика теперь в todayISO() — до 3:00 "сегодня" = вчера
             const payload = {
-                ...day,
+                ..._effDay,
                 updatedAt,
             };
-            saveToDate(day.date, payload);
+            saveToDate(_effDay.date, payload);
             prevStoredSnapRef.current = JSON.stringify(payload);
             prevDaySnapRef.current = daySnap;
         }, [day, now, saveToDate, stripMeta, disabled, getKey, readExisting, isMeaningfulDayData, getFreshestPersistedDay, computeDaySnap]);
@@ -3042,8 +3104,20 @@
                     v.updatedAt || v.waterMl || v.steps || v.weightMorning
                 ));
 
-                // � DEBUG v59 → v4.8.2: Отключено — слишком много логов при навигации
-                // console.log(`[DAY LOAD] date=${date}, key=${key}, hasData=${hasStoredData}, meals=${v?.meals?.length || 0}`);
+                // 🔬 [HEYS.day-trace] 7/8 boot LS read — what came back from localStorage on refresh.
+                try {
+                    const _meals = (v && Array.isArray(v.meals)) ? v.meals : [];
+                    const _totalItems = _meals.reduce((acc, m) => acc + ((m && Array.isArray(m.items)) ? m.items.length : 0), 0);
+                    console.info('[HEYS.day-trace] 7/8 boot LS read', {
+                        date,
+                        key,
+                        hasStoredData,
+                        mealsCount: _meals.length,
+                        totalItems: _totalItems,
+                        updatedAt: v && v.updatedAt,
+                        sourceId: v && v._sourceId,
+                    });
+                } catch (_) { /* noop */ }
 
                 if (hasStoredData) {
                     const normalizedDay = v?.date ? v : { ...v, date };
@@ -3197,6 +3271,29 @@
                 const syncTimestampOnly = e.detail?.syncTimestampOnly || false;
                 const updatedAt = e.detail?.updatedAt;
                 const payloadData = e.detail?.data;
+
+                // 🔬 [HEYS.day-trace] 8/8 day-updated event — fires only when the event
+                // actually carries fresh data for the current day (not just a syncTimestamp ping).
+                // Without this filter the trace floods on fetchDays bursts (10+ events for 1 day).
+                try {
+                    const isForCurrent = !updatedDate || updatedDate === date || (e.detail?.batch && Array.isArray(e.detail?.dates) && e.detail.dates.includes(date));
+                    const _meals = (payloadData && Array.isArray(payloadData.meals)) ? payloadData.meals : null;
+                    const hasMeaningfulPayload = !syncTimestampOnly && _meals != null;
+                    if (isForCurrent && hasMeaningfulPayload) {
+                        const _totalItems = _meals.reduce((acc, m) => acc + ((m && Array.isArray(m.items)) ? m.items.length : 0), 0);
+                        console.info('[HEYS.day-trace] 8/8 day-updated event', {
+                            currentDate: date,
+                            updatedDate,
+                            source,
+                            forceReload,
+                            blockedRemainingMs: blockCloudUpdatesUntilRef ? Math.max(0, blockCloudUpdatesUntilRef.current - Date.now()) : null,
+                            eventMealsCount: _meals.length,
+                            eventTotalItems: _totalItems,
+                            eventUpdatedAt: payloadData && payloadData.updatedAt,
+                            lastLoadedUpdatedAtRef: lastLoadedUpdatedAtRef.current,
+                        });
+                    }
+                } catch (_) { /* noop */ }
 
                 try {
                     if (HEYS.perf && typeof HEYS.perf.markCommitHint === 'function') {

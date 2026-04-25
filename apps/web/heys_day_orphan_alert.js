@@ -12,26 +12,78 @@
    * @param {Object} params - Parameters
    * @returns {React.Element|boolean} Alert element or false if no orphans
    */
+  // Throttle suppression logs: a render-heavy DayTab can hit them dozens of times
+  // per second otherwise. We only need the first SUPPRESSED to confirm the gate works.
+  let _lastSuppressedAt = 0;
+  function _shouldLogSuppress() {
+    const now = Date.now();
+    if (now - _lastSuppressedAt < 2000) return false;
+    _lastSuppressedAt = now;
+    return true;
+  }
+
   function renderOrphanAlert(params) {
     const { orphanCount, date } = params;
     const listForUi = (date && HEYS.orphanProducts?.getAllForDate)
       ? (HEYS.orphanProducts.getAllForDate(date) || [])
       : (HEYS.orphanProducts?.getAll?.() || []);
-    try {
-      const listLen = listForUi.length;
-      if (orphanCount > 0 || listLen > 0) {
-        console.warn('[HEYS.orphan:PIPE] render alert', {
-          orphanCount,
-          date: date || null,
-          listLen,
-          sample: listForUi.slice(0, 3).map((o) => o?.name || '(no-name)')
-        });
-      }
-    } catch (_) { /* noop */ }
-    
+
     if (!orphanCount || orphanCount === 0) {
       return false;
     }
+
+    // Suppress during the brief recovery window (~100-500ms after boot).
+    if (HEYS.orphanProducts && HEYS.orphanProducts._recoveryInProgress === true) {
+      if (_shouldLogSuppress()) {
+        console.info('[HEYS.products] orphan-warning SUPPRESSED (recovery in progress)', {
+          orphanCount,
+          listLen: listForUi.length,
+        });
+      }
+      return false;
+    }
+
+    // Re-validate: orphanProductsMap can carry stale entries from early renders
+    // that ran before overlay was hydrated. Filter listForUi by what's actually
+    // unresolvable now via getById + stamp cache. If everything resolves, the
+    // tracker is stale — silently clean it and skip the warning.
+    const trulyUnresolved = [];
+    for (const o of listForUi) {
+      const id = o?.product_id ?? o?.productId ?? null;
+      let resolved = null;
+      if (id != null && HEYS.products && typeof HEYS.products.getById === 'function') {
+        try { resolved = HEYS.products.getById(id); } catch (_) { resolved = null; }
+      }
+      if (resolved) {
+        if (typeof HEYS.orphanProducts?.remove === 'function') {
+          try { HEYS.orphanProducts.remove(o.name); } catch (_) { /* noop */ }
+        }
+        continue;
+      }
+      trulyUnresolved.push(o);
+    }
+    if (trulyUnresolved.length === 0) {
+      if (_shouldLogSuppress()) {
+        console.info('[HEYS.products] orphan-warning SUPPRESSED (all entries resolvable)', {
+          cleanedFromTracker: listForUi.length,
+        });
+      }
+      return false;
+    }
+
+    // Warning IS rendering in DOM — log once with the unresolved sample so we know
+    // exactly which products show up and why suppression couldn't catch them.
+    try {
+      console.warn('[HEYS.products] orphan-warning RENDERED IN DOM', {
+        date: date || null,
+        unresolvedCount: trulyUnresolved.length,
+        unresolvedSample: trulyUnresolved.slice(0, 3).map(o => ({
+          name: o?.name,
+          productId: o?.product_id ?? o?.productId,
+          hasInlineData: !!o?.hasInlineData,
+        })),
+      });
+    } catch (_) { /* noop */ }
     
     return React.createElement('div', {
       className: 'orphan-alert compact-card',
@@ -55,7 +107,10 @@
             marginBottom: '4px',
             fontSize: '14px'
           } 
-        }, `${orphanCount} продукт${orphanCount === 1 ? '' : orphanCount < 5 ? 'а' : 'ов'} не найден${orphanCount === 1 ? '' : 'о'} в базе`),
+        }, (function () {
+          const n = trulyUnresolved.length;
+          return `${n} продукт${n === 1 ? '' : n < 5 ? 'а' : 'ов'} не найден${n === 1 ? '' : 'о'} в базе`;
+        })()),
         React.createElement('div', { 
           style: { 
             color: '#a16207', 
@@ -85,7 +140,7 @@
               color: '#78350f'
             } 
           },
-            listForUi.map((o, i) => 
+            trulyUnresolved.map((o, i) =>
               React.createElement('li', { key: o.name || i, style: { marginBottom: '4px' } },
                 React.createElement('strong', null, o.name),
                 ` — ${o.hasInlineData ? '✓ можно восстановить' : '⚠️ нет данных'}`,
