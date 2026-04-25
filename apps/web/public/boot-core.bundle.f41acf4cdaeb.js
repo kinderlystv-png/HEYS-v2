@@ -182,8 +182,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
     'use_legacy_monolith': false,       // true = старый код, false = новые модули
 
     // === Products Overlay v2 (architectural refactor, see plan structured-mixing-stallman.md) ===
-    'overlay_products_v2': false,       // true = read heys_products via OverlayStore merged view
-    'dual_write_legacy': true,          // during phases β/γ: keep writing legacy heys_products
+    'overlay_products_v2': true,        // canonical reader (Phase γ rollout 2026-04-25)
+    'dual_write_legacy': true,          // keep writing legacy heys_products for backward-compat
   };
 
   /**
@@ -13874,14 +13874,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
         return [];
       }
       try {
-        const prev = HEYS._productsTraceLastLen;
-        if (prev !== result.length) {
-          console.info('[HEYS.products] getAll', {
-            len: result.length,
-            prevLen: prev,
-            fromStore: fromStore.length,
-            fromUtils: fromUtils.length,
-          });
+        // Update tracker silently; verbose getAll logging removed for prod.
+        if (HEYS._productsTraceLastLen !== result.length) {
           HEYS._productsTraceLastLen = result.length;
         }
       } catch (_) { /* noop */ }
@@ -13958,8 +13952,15 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
           }
         } catch (e) { /* ignore */ }
 
-        // Берём МАКСИМУМ из обоих источников
-        const currentLen = Math.max(fromGetAll.length, fromLocalStorage.length);
+        // Берём МАКСИМУМ из обоих источников.
+        // CRITICAL: when overlay flag is ON, the canonical source IS overlay (which feeds getAll).
+        // Legacy LS may be stale-but-larger (cloud retry, orphan-recovery write that
+        // didn't make it through dual-write, etc). Trusting legacy LS would block legitimate
+        // adds when the user's React state reads from overlay (smaller).
+        const overlayOn = HEYS.flags && HEYS.flags.isEnabled && HEYS.flags.isEnabled('overlay_products_v2');
+        const currentLen = overlayOn
+          ? fromGetAll.length                                   // overlay-canonical: trust the read side
+          : Math.max(fromGetAll.length, fromLocalStorage.length); // legacy: max of both
 
         if (currentLen > 0 && newLen < currentLen) {
           console.warn('[HEYS.products] setAll BLOCKED', {
@@ -13988,19 +13989,14 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
         HEYS.utils.lsSet('heys_products', arr);
       }
       try {
-        const withIron = Array.isArray(arr) ? arr.filter((p) => p && +p.iron > 0).length : 0;
-        const stack = (new Error().stack || '').split('\n').slice(2, 5).map(s => s.trim()).join(' <- ');
-        console.info('[HEYS.products] setAll', {
-          source,
-          was: HEYS._productsTraceLastLen,
-          now: Array.isArray(arr) ? arr.length : -1,
-          withIron,
-          allowShrink: !!opts.allowShrink,
-          skipCloud: !!opts.skipCloud,
-          skipNotify: !!opts.skipNotify,
-          stack,
-        });
-        HEYS._productsTraceLastLen = Array.isArray(arr) ? arr.length : HEYS._productsTraceLastLen;
+        // Compact setAll log only when length changes meaningfully OR shrink path.
+        const newLen = Array.isArray(arr) ? arr.length : -1;
+        const prevLen = HEYS._productsTraceLastLen;
+        if (newLen !== prevLen) {
+          const withIron = Array.isArray(arr) ? arr.filter((p) => p && +p.iron > 0).length : 0;
+          console.info('[HEYS.products] setAll', { source, was: prevLen, now: newLen, withIron, allowShrink: !!opts.allowShrink });
+        }
+        HEYS._productsTraceLastLen = newLen >= 0 ? newLen : prevLen;
       } catch (_) { /* noop */ }
 
       // Phase β: dual-write moved to interceptSetItem for universal coverage
@@ -14068,7 +14064,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
         }
         if (!changed) return existing;
         const newProducts = products.map(p => p.id === existing.id ? { ...p, ...next } : p);
-        HEYS.products.setAll(newProducts);
+        HEYS.products.setAll(newProducts, { source: 'shared-merge-missing' });
         return { ...existing, ...next };
       };
 
@@ -14160,7 +14156,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
 
       // Добавляем в локальную базу
       const newProducts = [...products, withDerived];
-      HEYS.products.setAll(newProducts);
+      HEYS.products.setAll(newProducts, { source: 'add-from-shared' });
 
       // 🔇 v4.7.1: Лог отключён
       return withDerived;
@@ -14240,7 +14236,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
         return p;
       });
       if (fixed > 0) {
-        HEYS.products.setAll(updated);
+        HEYS.products.setAll(updated, { source: 'fix-missing-kcal' });
         console.log(`[HEYS] 🔧 Исправлено ${fixed} продуктов с пустым kcal100`);
       }
       return { fixed, total: products.length };
@@ -19160,27 +19156,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
     }
   }
 
-  // 🪵 TEMP: лог количества продуктов при записи из cloud в localStorage.
-  // Снять, когда выясним, почему количество откатывается.
-  function logProductsCloudWrite(path, key, value) {
-    try {
-      if (!key || !/^heys_.*products$/.test(key)) return;
-      // Skip помеси типа hidden/favorite/deleted_products — они нас не интересуют
-      if (/(_hidden_products|_favorite_products|_deleted_products|_rpc_tail)/.test(key)) return;
-      const len = Array.isArray(value) ? value.length : -1;
-      // Прочитать текущий localStorage, чтобы понять, shrink или нет
-      let localLen = -1;
-      try {
-        const raw = global.localStorage.getItem(key);
-        if (raw) {
-          const parsed = JSON.parse(raw);
-          if (Array.isArray(parsed)) localLen = parsed.length;
-        }
-      } catch (_) { /* noop */ }
-      const decision = (localLen > 0 && len >= 0 && len < localLen) ? 'OVERWRITE-SHRINK' : 'WRITE';
-      console.info('[HEYS.products] cloud-write', { path, key, localLen, incomingLen: len, delta: len - localLen, decision });
-    } catch (_) { /* noop */ }
-  }
+  // (cloud-write verbose logging removed for prod; HOT-sync BLOCK warn covers shrink protection)
+  function logProductsCloudWrite(_path, _key, _value) { /* no-op stub kept for callsite compat */ }
 
   /** Ключи, требующие client-specific storage */
   const CLIENT_SPECIFIC_KEYS = [
@@ -22757,28 +22734,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
       // Сохраняем оригинальный метод в глобальную переменную
       originalSetItem = global.localStorage.setItem.bind(global.localStorage);
       global.localStorage.setItem = function (k, v) {
-        // 🪵 TEMP: лог любых записей в localStorage по products-ключам
-        try {
-          if (typeof k === 'string' && /^heys_.*products$/.test(k) && !/(_hidden_products|_favorite_products|_deleted_products|_rpc_tail)/.test(k)) {
-            let len = -1;
-            let kind = typeof v;
-            try {
-              const parsed = typeof v === 'string' ? JSON.parse(v) : v;
-              if (Array.isArray(parsed)) {
-                len = parsed.length;
-                kind = 'array';
-              } else if (typeof parsed === 'string') {
-                kind = parsed.startsWith('¤Z¤') ? 'compressed-string' : 'string';
-              } else {
-                kind = parsed === null ? 'null' : typeof parsed;
-              }
-            } catch (_) {
-              kind = typeof v === 'string' && v.startsWith('"¤Z¤') ? 'wrapped-compressed' : typeof v;
-            }
-            const stack = (new Error().stack || '').split('\n').slice(2, 6).map(s => s.trim()).join(' <- ');
-            console.info('[HEYS.products] ls.setItem', { key: k, kind, len, rawSize: typeof v === 'string' ? v.length : -1, stack });
-          }
-        } catch (_) { /* noop */ }
+        // (verbose ls.setItem logging removed for prod; HOT-sync BLOCK + setAll BLOCKED still warn)
         // Используем безопасную запись с обработкой QuotaExceeded
         if (!safeSetItem(k, v)) {
           // Если не удалось сохранить даже после очистки — логируем
@@ -22813,12 +22769,55 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
               && global.HEYS.OverlayStore && global.HEYS.cloud && global.HEYS.cloud.getSharedIndex) {
             const sharedById = global.HEYS.cloud.getSharedIndex();
             if (sharedById && sharedById.size > 0) {
+              // Decompress if needed: Store.set compresses big arrays into '¤Z¤...' strings.
               let arr = null;
-              try { arr = typeof v === 'string' ? JSON.parse(v) : v; } catch (_) { /* noop */ }
+              if (typeof v === 'string') {
+                if (v.startsWith('¤Z¤') && global.HEYS.store && typeof global.HEYS.store.decompress === 'function') {
+                  try { arr = global.HEYS.store.decompress(v); } catch (_) { /* noop */ }
+                } else {
+                  try { arr = JSON.parse(v); } catch (_) { /* noop */ }
+                }
+              } else {
+                arr = v;
+              }
               if (Array.isArray(arr)) {
                 const result = global.HEYS.OverlayStore.migrate(arr, sharedById);
+                // 🔬 TRACE: interceptor dual-write
+                try {
+                  console.info('[HEYS.products] dual-write trace', {
+                    keyTail: keyStr.slice(-30),
+                    arrLen: arr.length,
+                    migrateOk: result && result.ok,
+                    migrateRows: result && result.rows ? result.rows.length : 0,
+                    typeA: result?.typeA, typeAByFallback: result?.typeAByFallback, typeB: result?.typeB,
+                  });
+                } catch (_) { /* noop */ }
                 if (result.ok) {
-                  global.HEYS.OverlayStore.writeRaw(result.rows);
+                  // Guard: if the new dump has dramatically fewer iron-bearing entries
+                  // than current overlay (cloud-stale snapshot), skip the write to
+                  // preserve the richer state. Re-syncs through HOT or next setAll.
+                  const prevMerged = global.HEYS.OverlayStore.toMergedView(sharedById) || [];
+                  const prevIronCount = Array.isArray(prevMerged) ? prevMerged.filter(p => p && Number(p.iron) > 0).length : 0;
+                  let newIronCount = 0;
+                  for (const r of result.rows) {
+                    if (!r) continue;
+                    if (r._custom) {
+                      if (Number(r.iron) > 0) newIronCount++;
+                    } else {
+                      const base = sharedById.get(String(r.shared_origin_id));
+                      const iron = (r.overrides && r.overrides.iron != null) ? Number(r.overrides.iron) : (base ? Number(base.iron) : 0);
+                      if (iron > 0) newIronCount++;
+                    }
+                  }
+                  if (prevIronCount > 10 && newIronCount < (prevIronCount / 2)) {
+                    console.warn('[HEYS.products] dual-write SKIP iron-cliff', {
+                      prevIron: prevIronCount,
+                      newIron: newIronCount,
+                      arrLen: arr.length,
+                    });
+                  } else {
+                    global.HEYS.OverlayStore.writeRaw(result.rows);
+                  }
                 }
               }
             }
@@ -29381,30 +29380,40 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
       const previousValue = currentRaw ? tryParse(currentRaw) : null;
       if (currentRaw === serialized) return false;
 
-      // 🪵 TEMP: HOT sync products write — кто и когда, что было, что стало.
-      // Условие на любой *_products ключ (но не hidden/favorite/deleted).
+      // HOT sync products anti-shrink + nutrient-completeness guard.
+      // Block legitimate cloud → local overwrite when local has MORE data
+      // (length OR more iron-bearing rows). Mirrors the dayv2/widget_layout pattern.
+      // The dual-write-via-interceptor will still keep overlay in sync; this
+      // protects orphan-recovered local state from being clobbered by stale cloud.
       try {
         const isProductsKey = (typeof baseKey === 'string' && /^heys_.*products$/.test(baseKey) && !/(_hidden_products|_favorite_products|_deleted_products|_rpc_tail)/.test(baseKey))
           || (typeof scopedKey === 'string' && /^heys_.*products$/.test(scopedKey) && !/(_hidden_products|_favorite_products|_deleted_products|_rpc_tail)/.test(scopedKey));
         if (isProductsKey) {
-          let localLen = -1;
+          let localArr = null;
           try {
             const parsed = currentRaw ? JSON.parse(currentRaw) : null;
-            if (Array.isArray(parsed)) localLen = parsed.length;
+            if (Array.isArray(parsed)) localArr = parsed;
           } catch (_) { /* noop */ }
-          const incomingLen = Array.isArray(value) ? value.length : -1;
-          const decision = (localLen > 0 && incomingLen >= 0 && incomingLen < localLen) ? 'OVERWRITE-SHRINK' : 'WRITE';
-          console.info('[HEYS.products] hot-sync write', {
-            source,
-            baseKey,
-            scopedKey,
-            localLen,
-            incomingLen,
-            delta: incomingLen >= 0 && localLen >= 0 ? incomingLen - localLen : null,
-            decision,
-            valueType: typeof value,
-            valueIsArray: Array.isArray(value),
-          });
+          const incomingArr = Array.isArray(value) ? value : null;
+          if (localArr && incomingArr) {
+            const localLen = localArr.length;
+            const incomingLen = incomingArr.length;
+            const localWithIron = localArr.filter(p => p && Number(p.iron) > 0).length;
+            const incomingWithIron = incomingArr.filter(p => p && Number(p.iron) > 0).length;
+            // Block if (a) cloud shrinks AND loses nutrients, OR (b) length equal but cloud loses
+            // significant nutrient data. The latter catches stale-cloud overwrites that match length
+            // but have iron=1 vs local iron=200+ (race seen in production logs 2026-04-25).
+            const significantIronLoss = localWithIron > 0 && incomingWithIron < (localWithIron / 2);
+            if ((localLen > incomingLen && localWithIron > incomingWithIron) || significantIronLoss) {
+              console.warn('[HEYS.products] hot-sync BLOCK overwrite-shrink', {
+                source,
+                localLen, incomingLen,
+                localWithIron, incomingWithIron,
+                reason: localLen > incomingLen ? 'shrink-with-nutrient-loss' : 'iron-cliff',
+              });
+              return false;
+            }
+          }
         }
       } catch (_) { /* noop */ }
 
@@ -30757,29 +30766,12 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
         return { data: null, error };
       }
 
-      // 🪵 TEMP: server-side count для shared products (rpc vs rest)
-      try {
-        console.info('[HEYS.products] shared-fetch', {
-          fromServer: Array.isArray(data) ? data.length : -1,
-          limit,
-          excludeBlocklist,
-        });
-      } catch (_) { /* noop */ }
-
       // Фильтрация blocklist на клиенте (если нужно)
       let filtered = (data || []).map(normalizeSharedProduct);
       if (excludeBlocklist && user) {
         const blocklist = await cloud.getBlocklist();
         const blocklistSet = new Set(blocklist.map(id => id));
         filtered = filtered.filter(p => !blocklistSet.has(p.id));
-        if (filtered.length !== (data || []).length) {
-          try {
-            console.info('[HEYS.products] shared-fetch blocklist-filtered', {
-              before: (data || []).length,
-              after: filtered.length,
-            });
-          } catch (_) { /* noop */ }
-        }
       }
 
       const backfillSharedHarm = async (items) => {

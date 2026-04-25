@@ -1094,6 +1094,7 @@
         React.createElement('path', {
           d: pathD,
           className: 'sparkline-line',
+          fill: 'none',
           style: {
             stroke: 'url(#kcalLineGradient)',
             strokeDasharray: totalPathLength,
@@ -1106,6 +1107,7 @@
             key: 'streak-' + i,
             d: data.path,
             className: 'sparkline-streak-line sparkline-streak-animated',
+            fill: 'none',
             style: {
               strokeDasharray: data.segmentLength,
               strokeDashoffset: data.segmentLength,

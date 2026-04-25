@@ -6091,7 +6091,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     nextProducts[idx] = updated;
 
     if (HEYS.products?.setAll) {
-      HEYS.products.setAll(nextProducts);
+      HEYS.products.setAll(nextProducts, { source: 'edit-product' });
     } else if (HEYS.store?.set) {
       HEYS.store.set('heys_products', nextProducts);
     } else if (U.lsSet) {
@@ -6148,7 +6148,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     }
 
     if (HEYS.products?.setAll) {
-      HEYS.products.setAll(nextProducts);
+      HEYS.products.setAll(nextProducts, { source: 'mark-user-modified' });
     } else if (HEYS.store?.set) {
       HEYS.store.set('heys_products', nextProducts);
     } else if (U.lsSet) {
@@ -6552,7 +6552,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     };
 
     if (HEYS.products?.setAll) {
-      HEYS.products.setAll(nextProducts);
+      HEYS.products.setAll(nextProducts, { source: 'create-product-step' });
     } else if (HEYS.store?.set) {
       HEYS.store.set('heys_products', nextProducts);
     } else if (U.lsSet) {
@@ -8985,7 +8985,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         });
 
         if (HEYS.products?.setAll) {
-          HEYS.products.setAll(filtered);
+          HEYS.products.setAll(filtered, { source: 'delete-product', allowShrink: true });
         } else if (HEYS.store?.set) {
           HEYS.store.set('heys_products', filtered);
         } else if (U.lsSet) {
@@ -11113,6 +11113,15 @@ NOVA: 1
         const U = HEYS.utils || {};
         const products = HEYS.products?.getAll?.() || U.lsGet?.('heys_products', []) || [];
 
+        // 🔬 TRACE: product creation flow
+        console.info('[HEYS.products] add-trace 1/3 commit', {
+          name: updatedProduct.name,
+          id: updatedProduct.id,
+          fingerprint: updatedProduct.fingerprint,
+          existingProductsLen: products.length,
+          harm: updatedProduct.harm,
+        });
+
         // Проверка на дубликат
         const normName = (updatedProduct.name || '').trim().toLowerCase();
         const existingPersonal = products.find(p =>
@@ -11126,9 +11135,17 @@ NOVA: 1
           }
 
           const newProducts = [...products, updatedProduct];
+          console.info('[HEYS.products] add-trace 2/3 setAll-call', {
+            from: products.length,
+            to: newProducts.length,
+            source: 'harm-select-add',
+          });
           if (HEYS.products?.setAll) {
-            HEYS.products.setAll(newProducts);
-            console.log('[HarmSelectStep] ✅ Сохранён в базу с harm:', harm, updatedProduct.name);
+            HEYS.products.setAll(newProducts, { source: 'harm-select-add' });
+            console.info('[HEYS.products] add-trace 3/3 setAll-returned', {
+              postSetGetAllLen: HEYS.products?.getAll?.()?.length,
+              postSetOverlayLen: HEYS.OverlayStore?.readRaw?.()?.length,
+            });
           } else if (HEYS.store?.set) {
             HEYS.store.set('heys_products', newProducts);
             console.log('[HarmSelectStep] ✅ Сохранён через store с harm:', harm);
@@ -11141,7 +11158,7 @@ NOVA: 1
           const touchedExisting = { ...existingPersonal, updatedAt: Date.now() };
           const touchedProducts = products.map(p => p.id === existingPersonal.id ? touchedExisting : p);
           if (HEYS.products?.setAll) {
-            HEYS.products.setAll(touchedProducts);
+            HEYS.products.setAll(touchedProducts, { source: 'harm-select-update' });
             console.info('[HarmSelectStep] 🔄 Обновлён updatedAt у продукта:', existingPersonal.name);
           }
         }

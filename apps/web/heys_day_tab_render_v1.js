@@ -85,10 +85,18 @@
                 normAbs: ctx.normAbs,
                 HEYS: heysRef
             }) || null)
-            : React.createElement('div', {
-                className: 'card tone-slate',
-                style: { marginTop: 10, minHeight: 140, opacity: 0.7 }
-            }, 'Подготавливаем дневник...');
+            : React.createElement('div', { className: 'deferred-card-slot deferred-card-slot--loading', style: { marginTop: 10 } },
+                React.createElement('div', {
+                    className: 'deferred-card-skeleton deferred-card-skeleton--delayed',
+                    style: { minHeight: '260px' }
+                },
+                    React.createElement('div', { className: 'deferred-card-skeleton__shimmer' }),
+                    React.createElement('div', { className: 'deferred-card-skeleton__content' },
+                        React.createElement('div', { className: 'deferred-card-skeleton__icon' }, '📔'),
+                        React.createElement('div', { className: 'deferred-card-skeleton__label' }, 'Готовим дневник…')
+                    )
+                )
+            );
 
         if (!heysRef.dayPageShell?.renderDayPage) {
             throw new Error('[heys_day_tab_render_v1] HEYS.dayPageShell not loaded before renderDayTabLayout');

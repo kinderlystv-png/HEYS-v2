@@ -715,7 +715,7 @@
     <link rel="stylesheet" href="/styles/tailwind.css" />
 
     <!-- Critical CSS for instant rendering -->
-    <link rel="stylesheet" href="styles/critical.css?v=5" />
+    <link rel="stylesheet" href="styles/critical.css?v=6" />
 
     <!-- Pattern Debugger CSS (отладочная модалка — загружаем async, не нужен для FCP) -->
     <link rel="preload" href="insights/pi_pattern_debugger.css?v=2" as="style"
@@ -729,11 +729,11 @@
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
     <link rel="dns-prefetch" href="https://cdn.jsdelivr.net" />
     <!-- Preload критических boot-бандлов (2026-02-25 bundle migration) -->
-    <link rel="preload" href="boot-core.bundle.4b98735b1212.js" as="script" />
-    <link rel="preload" href="boot-calc.bundle.d39a7be350c0.js" as="script" />
+    <link rel="preload" href="boot-core.bundle.f41acf4cdaeb.js" as="script" />
+    <link rel="preload" href="boot-calc.bundle.e1725c49c60a.js" as="script" />
     <link rel="preload" href="boot-day.bundle.1f9deaaf4bb6.js" as="script" />
     <link rel="preload" href="boot-app.bundle.9bc4824a6bf8.js" as="script" />
-    <link rel="preload" href="boot-init.bundle.13d494a394c3.js" as="script" />
+    <link rel="preload" href="boot-init.bundle.c687b8274f01.js" as="script" />
 
     <!-- React теперь бандлится локально через Vite (миграция с CDN 2026-01-21) -->
 
@@ -743,20 +743,28 @@
          render correctly on slow networks before main.css arrives. Without these rules,
          <path>/<circle> default to fill: black, producing visible artifacts. -->
     <style id="heys-svg-fallback">
+      /* Stroke-only paths (lines, glows, goals, masks) */
       .sparkline-line, .sparkline-goal, .sparkline-streak-line,
       .weight-sparkline-line, .water-sparkline-line,
+      .water-weekly-line, .water-weekly-line-glow,
       .water-ring-bg, .water-ring-fill,
       .sparkline-forecast-mask, .weight-sparkline-forecast-mask,
       .reports-sparkline__svg .reports-sparkline__line { fill: none; }
+      /* Area/dot paths normally use gradient/colored fill — fall back to transparent
+         until main.css applies real styling */
+      .water-weekly-area, .water-weekly-dot,
+      .sparkline-area, .sparkline-area-animated,
+      .weight-sparkline-area { fill: transparent; }
     </style>
 
     <!-- Main CSS — async load (1.19MB via @import, не нужен для login gate) -->
     <!-- v12: Login gate имеет inline стили, main.css нужен только после загрузки бандлов -->
     <!-- v9.8: флаг __heysMainCSSLoaded + событие heysMainCSSLoaded для gate DayTab -->
-    <link rel="preload" href="styles/main.css?v=56" as="style"
-        onload="this.onload=null;this.rel='stylesheet';window.__heysMainCSSLoaded=true;window.dispatchEvent(new CustomEvent('heysMainCSSLoaded'))" />
+    <link rel="preload" href="styles/main.css?v=57" as="style"
+        onload="this.onload=null;this.rel='stylesheet';window.__heysMainCSSLoaded=true;window.dispatchEvent(new CustomEvent('heysMainCSSLoaded'));(function(){var l=document.createElement('link');l.rel='stylesheet';l.href='styles/main-deferred.css?v=1';l.onload=function(){window.__heysMainDeferredCSSLoaded=true;window.dispatchEvent(new CustomEvent('heysMainDeferredCSSLoaded'));};l.onerror=function(){console.warn('[HEYS.css] ⚠️ main-deferred.css load failed — Insights/Metabolic/Planning tabs will render unstyled');};document.head.appendChild(l);setTimeout(function(){if(!window.__heysMainDeferredCSSLoaded){console.warn('[HEYS.css] ⚠️ main-deferred.css not loaded after 30s');}},30000);})();" />
     <noscript>
-        <link rel="stylesheet" href="styles/main.css?v=56" />
+        <link rel="stylesheet" href="styles/main.css?v=57" />
+        <link rel="stylesheet" href="styles/main-deferred.css?v=1" />
     </noscript>
 
     <!-- v9.10: CSS load detection — detects both dev (main.css) and Vite production build
@@ -2844,11 +2852,11 @@
          Сгенерировано: node scripts/bundle-legacy.mjs  (pnpm bundle:legacy)
          Состав и хеши: bundle-manifest.json
          Хеш в имени = вечный кэш (cache-first SW). -->
-    <script defer src="boot-core.bundle.4b98735b1212.js" fetchpriority="high"></script>
-    <script defer src="boot-calc.bundle.d39a7be350c0.js"></script>
+    <script defer src="boot-core.bundle.f41acf4cdaeb.js" fetchpriority="high"></script>
+    <script defer src="boot-calc.bundle.e1725c49c60a.js"></script>
     <script defer src="boot-day.bundle.1f9deaaf4bb6.js"></script>
     <script defer src="boot-app.bundle.9bc4824a6bf8.js"></script>
-    <script defer src="boot-init.bundle.13d494a394c3.js"
+    <script defer src="boot-init.bundle.c687b8274f01.js"
         onerror="window.__heysShowRecoveryUI && window.__heysShowRecoveryUI('CRITICAL_SCRIPT_LOAD: boot-init.bundle')"></script>
 
     <!-- PERF: Detect returning user (localStorage has profile) → skip card unfold animations -->
@@ -2879,7 +2887,7 @@
             var POST_BOOT_BUNDLES = [
                 'postboot-1-game.bundle.84d4da76641a.js',
                 'postboot-2-insights.bundle.fa0e6ac4bba4.js',
-                'postboot-3-ui.bundle.e8377c0d4d8c.js'
+                'postboot-3-ui.bundle.de6b7a2cb712.js'
             ];
             var LOCALHOST_TASKS_SOURCE_OVERRIDE = 'heys_planning_tasks_v1.js';
             var total = POST_BOOT_BUNDLES.length;

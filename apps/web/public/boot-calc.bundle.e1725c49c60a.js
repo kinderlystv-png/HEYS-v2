@@ -8759,32 +8759,19 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
         }
       }
 
-      // 🪵 TEMP: Диагностика orphan-recovery — кто, откуда, почему gap-filler не помогает
+      // Compact orphan-recovery summary (full diagnostics remain in __diag_overlay if needed).
       try {
         const stampRec = recovered.filter(p => p._recoveredFrom === 'stamp');
         const sharedRec = recovered.filter(p => p._recoveredFrom === 'shared');
-        const sample = stampRec.slice(0, 8).map(p => p.name);
-        const sampleDates = [];
-        if (stampRec.length > 0) {
-          // Найти первую дату dayv2 для каждого orphan имени (чтобы понять откуда взялся)
-          const stampNames = new Set(stampRec.map(p => normalizeName(p.name)));
-          for (const [, mData] of missingProducts) {
-            if (stampNames.has(normalizeName(mData.name)) && sampleDates.length < 8) {
-              sampleDates.push({ name: mData.name, firstSeen: mData.firstSeenDate });
-            }
-          }
+        if (stampRec.length > 0 || sharedRec.length > 0 || stillMissing.length > 0) {
+          console.info('[HEYS.products] orphan-recovery', {
+            localCount: products.length,
+            missingTotal: missingProducts.size,
+            stampRecovered: stampRec.length,
+            sharedRecovered: sharedRec.length,
+            stillMissing: stillMissing.length,
+          });
         }
-        console.info('[HEYS.products] orphan-recovery', {
-          localCount: products.length,
-          missingTotal: missingProducts.size,
-          stampRecovered: stampRec.length,
-          sharedRecovered: sharedRec.length,
-          stillMissing: stillMissing.length,
-          skippedDeleted,
-          sampleStampNames: sample,
-          sampleStampSources: sampleDates,
-          sharedAvailable: typeof HEYS.cloud?.getCachedSharedProducts === 'function' ? HEYS.cloud.getCachedSharedProducts().length : 'n/a',
-        });
       } catch (_) { /* noop */ }
 
       // 4. Сохраняем восстановленные продукты (если были восстановлены из штампов)

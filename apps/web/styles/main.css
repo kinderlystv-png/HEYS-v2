@@ -15,11 +15,12 @@
  * 08. Profile Wizard ............. modules/700-profile-wizard.css
  * 09. Refeed Day ................. modules/710-refeed.css
  * 09a. Yesterday Verify .......... modules/715-yesterday-verify.css
- * 10. Predictive Insights ........ modules/720-predictive-insights.css
- * 11. Metabolic Intelligence ..... modules/725-metabolic-intelligence.css
- * 12. Widgets Dashboard .......... modules/730-widgets-dashboard.css
+ * 10. Predictive Insights ........ modules/720-predictive-insights.css  → main-deferred.css
+ * 11. Metabolic Intelligence ..... modules/725-metabolic-intelligence.css → main-deferred.css
+ * 12. Widgets Dashboard .......... modules/730-widgets-dashboard.css (KEPT — DayTab/Reports deps)
  * 12a. Cascade Card .............. modules/740-cascade-card.css
  * 13. Meal Optimizer ............. modules/800-meal-optimizer.css
+ * 14. Planning ................... modules/900-planning.css            → main-deferred.css
  */
 @import url("./modules/001-design-tokens.css");
 @import url("./modules/000-base-and-gamification.css");
@@ -33,12 +34,11 @@
 @import url("./modules/700-profile-wizard.css");
 @import url("./modules/710-refeed.css");
 @import url("./modules/715-yesterday-verify.css");
-@import url("./modules/720-predictive-insights.css");
-@import url("./modules/725-metabolic-intelligence.css");
+/* 720-predictive-insights, 725-metabolic-intelligence, 900-planning moved to main-deferred.css
+ * (chained preload after main.css onload — see index.html). 2026-04-25 split. */
 @import url("./modules/730-widgets-dashboard.css");
 @import url("./modules/740-cascade-card.css");
 @import url("./modules/800-meal-optimizer.css");
-@import url("./modules/900-planning.css");
 
 /* Component-specific styles (BEM) */
 @import url("./heys-components.css");

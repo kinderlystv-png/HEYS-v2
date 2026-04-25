@@ -413,3 +413,292 @@ body {
   background: #0a84ff;
   color: white;
 }
+
+/* ═══════════════════════════════════════════════════════════════
+ * v10.2: DayTab first-paint critical CSS
+ * Базовый layout для карточек (metrics/sparkline/water/macros/side/activity),
+ * чтобы при render до прихода main.css UI выглядел стилизованно, а не голым.
+ * Только base-layout (display, padding, margin, border-radius, background).
+ * Без animations/hover/transition — они в main.css.
+ * Литеральные цвета — независимость от design tokens.
+ * ═══════════════════════════════════════════════════════════════ */
+
+/* Card base + tone modifiers (источник: 000-base-and-gamification.css:261, .tone-* варианты) */
+.card {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 10px;
+  box-sizing: border-box;
+}
+
+.card.tone-slate {
+  background: #f8fafc;
+}
+
+.card.tone-blue {
+  background: rgba(59, 130, 246, 0.08);
+}
+
+.card.tone-yellow {
+  background: rgba(234, 179, 8, 0.08);
+}
+
+.card.tone-green {
+  background: rgba(34, 197, 94, 0.08);
+}
+
+.card.tone-red {
+  background: rgba(239, 68, 68, 0.08);
+}
+
+/* Page backgrounds (источник: 730-widgets-dashboard.css :140-203, 287-325) */
+.page-day {
+  position: relative;
+  padding-bottom: calc(150px + env(safe-area-inset-bottom, 0px));
+  min-height: calc(100vh - 60px);
+}
+
+.page-reports {
+  padding-bottom: calc(150px + env(safe-area-inset-bottom, 0px));
+}
+
+/* Metrics cards (источник: 100-metrics-and-graphs.css:35-119) */
+.metrics-cards {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin-top: 8px;
+  margin-bottom: 8px;
+}
+
+.metrics-card {
+  position: relative;
+  min-width: 0;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 8px 4px;
+  text-align: center;
+}
+
+.metrics-icon {
+  font-size: 16px;
+  margin-bottom: 2px;
+}
+
+.metrics-value {
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.2;
+  margin-bottom: 2px;
+}
+
+.metrics-label {
+  font-size: 9px;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  font-weight: 500;
+}
+
+/* Kcal sparkline container (источник: 100-metrics-and-graphs.css:149-200) */
+.kcal-sparkline-container {
+  display: block;
+  background: linear-gradient(135deg, #ecfdf5 0%, #dcfce7 100%);
+  border: 1px solid #bbf7d0;
+  border-radius: 12px;
+  padding: 12px 12px 14px;
+  padding-top: 24px;
+  margin-top: 4px;
+  overflow: visible;
+}
+
+.kcal-sparkline-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.kcal-sparkline-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #166534;
+}
+
+.kcal-header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Macro rings (источник: 100-metrics-and-graphs.css:5218-5291) */
+.macro-rings {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+}
+
+.macro-ring-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.macro-ring {
+  position: relative;
+  width: 96px;
+  height: 96px;
+}
+
+.macro-ring-svg {
+  width: 100%;
+  height: 100%;
+}
+
+.macro-ring-value {
+  font-size: 13px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.macro-ring-label {
+  font-size: 10px;
+  color: #64748b;
+  text-transform: uppercase;
+}
+
+/* Water card layout (источник: 400-water-and-hydration.css:29-100) */
+.water-card-content {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 16px;
+  align-items: center;
+}
+
+.water-ring-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.water-goal-text {
+  font-size: 11px;
+  color: #64748b;
+}
+
+.water-goal-breakdown {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 11px;
+}
+
+/* Side blocks (sleep, day-score, trainings — источник: 000-base-and-gamification.css:751-764) */
+.side-row {
+  display: flex;
+  flex-direction: row;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.side-col {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+/* Activity cards row + formula card */
+.activity-cards-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.formula-card {
+  flex: 1;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 10px;
+  min-width: 0;
+}
+
+/* Diary section base spacing (для verticals between блоками) */
+.diary-section-separator {
+  margin: 24px 0 0;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+ * Dark theme overrides for DayTab first-paint critical
+ * ═══════════════════════════════════════════════════════════════ */
+
+@media (prefers-color-scheme: dark) {
+  html:not([data-theme]) .card {
+    background: #1f2937;
+    border-color: #374151;
+  }
+
+  html:not([data-theme]) .card.tone-slate {
+    background: #111827;
+  }
+
+  html:not([data-theme]) .metrics-card {
+    background: #1e293b;
+    border-color: #334155;
+  }
+
+  html:not([data-theme]) .metrics-label {
+    color: #94a3b8;
+  }
+
+  html:not([data-theme]) .kcal-sparkline-container {
+    background: linear-gradient(135deg, #064e3b 0%, #052e16 100%);
+    border-color: #166534;
+  }
+
+  html:not([data-theme]) .kcal-sparkline-title {
+    color: #86efac;
+  }
+
+  html:not([data-theme]) .formula-card {
+    background: #1f2937;
+    border-color: #374151;
+  }
+}
+
+[data-theme="dark"] .card {
+  background: #1f2937;
+  border-color: #374151;
+}
+
+[data-theme="dark"] .card.tone-slate {
+  background: #111827;
+}
+
+[data-theme="dark"] .metrics-card {
+  background: #1e293b;
+  border-color: #334155;
+}
+
+[data-theme="dark"] .metrics-label {
+  color: #94a3b8;
+}
+
+[data-theme="dark"] .kcal-sparkline-container {
+  background: linear-gradient(135deg, #064e3b 0%, #052e16 100%);
+  border-color: #166534;
+}
+
+[data-theme="dark"] .kcal-sparkline-title {
+  color: #86efac;
+}
+
+[data-theme="dark"] .formula-card {
+  background: #1f2937;
+  border-color: #374151;
+}

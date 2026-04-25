@@ -9828,18 +9828,21 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                 // Adaptive CSS gate timeout: short on fast networks (no regression),
                 // generous on slow networks (avoids "naked DOM" flashes — black circles, etc).
                 // Uses Network Information API where available, otherwise falls back to default.
+                // Rationale for slow values: main.css is ~1.2MB; on 3G (~750 Kbps effective)
+                // it needs ~13–25s including @import-ed modules. Better to keep app-loader
+                // skeleton visible than render unstyled DOM.
                 var cssTimeoutMs = 4000;
                 try {
                     var conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
                     if (conn && conn.effectiveType) {
                         if (conn.effectiveType === 'slow-2g' || conn.effectiveType === '2g') {
-                            cssTimeoutMs = 15000;
+                            cssTimeoutMs = 90000;
                         } else if (conn.effectiveType === '3g') {
-                            cssTimeoutMs = 10000;
+                            cssTimeoutMs = 30000;
                         }
                     }
                     if (conn && conn.saveData === true) {
-                        cssTimeoutMs = Math.max(cssTimeoutMs, 8000);
+                        cssTimeoutMs = Math.max(cssTimeoutMs, 15000);
                     }
                 } catch (e) { /* Network Information API not supported — keep default */ }
 

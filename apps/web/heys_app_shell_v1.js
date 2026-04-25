@@ -2200,6 +2200,21 @@
             return fallbackNode;
         };
 
+        const tabFallbackSkeleton = (icon, label, minHeight) => React.createElement('div',
+            { className: 'deferred-card-slot deferred-card-slot--loading', style: { padding: 16 } },
+            React.createElement('div',
+                {
+                    className: 'deferred-card-skeleton',
+                    style: { minHeight: (minHeight || 240) + 'px' }
+                },
+                React.createElement('div', { className: 'deferred-card-skeleton__shimmer' }),
+                React.createElement('div', { className: 'deferred-card-skeleton__content' },
+                    React.createElement('div', { className: 'deferred-card-skeleton__icon' }, icon),
+                    React.createElement('div', { className: 'deferred-card-skeleton__label' }, label)
+                )
+            )
+        );
+
         return React.createElement(
             'div',
             {
@@ -2250,10 +2265,7 @@
                                 optimum: null,
                                 selectedDate: selectedDate,
                             }))
-                            : renderTabFallback('insights', React.createElement('div', { style: { padding: 16 } },
-                                React.createElement('div', { className: 'skeleton-sparkline', style: { height: 160, marginBottom: 16 } }),
-                                React.createElement('div', { className: 'skeleton-block', style: { height: 100 } })
-                            )))
+                            : renderTabFallback('insights', tabFallbackSkeleton('🔮', 'Готовим инсайты…', 280)))
                         : tab === 'month'
                             ? (window.HEYS?.ReportsTab
                                 ? React.createElement(window.HEYS.ReportsTab, {
@@ -2262,10 +2274,7 @@
                                     setSelectedDate,
                                     clientId,
                                 })
-                                : renderTabFallback('month', React.createElement('div', { style: { padding: 16 } },
-                                    React.createElement('div', { className: 'skeleton-sparkline', style: { height: 160, marginBottom: 16 } }),
-                                    React.createElement('div', { className: 'skeleton-block', style: { height: 100 } })
-                                )))
+                                : renderTabFallback('month', tabFallbackSkeleton('📊', 'Готовим отчёты…', 280)))
                             : (tab === 'stats' || tab === 'diary')
                                 ? null
                                 : tab === 'user'
@@ -2284,10 +2293,7 @@
                                                 setTab,
                                                 setSelectedDate,
                                             })
-                                            : renderTabFallback('overview', React.createElement('div', { style: { padding: 16 } },
-                                                React.createElement('div', { className: 'skeleton-sparkline', style: { height: 80, marginBottom: 16 } }),
-                                                React.createElement('div', { className: 'skeleton-block', style: { height: 100 } })
-                                            )))
+                                            : renderTabFallback('overview', tabFallbackSkeleton('📋', 'Готовим обзор…', 200)))
                                         : tab === 'widgets'
                                             ? (window.HEYS && window.HEYS.Widgets && window.HEYS.Widgets.WidgetsTab
                                                 ? React.createElement(window.HEYS.Widgets.WidgetsTab, {
@@ -2301,10 +2307,7 @@
                                                     setTab,
                                                     setSelectedDate,
                                                 })
-                                                : renderTabFallback('widgets', React.createElement('div', { style: { padding: 16 } },
-                                                    React.createElement('div', { className: 'skeleton-sparkline', style: { height: 80, marginBottom: 16 } }),
-                                                    React.createElement('div', { className: 'skeleton-block', style: { height: 100 } })
-                                                )))
+                                                : renderTabFallback('widgets', tabFallbackSkeleton('🧩', 'Готовим виджеты…', 200)))
                                             : tab === 'tasks'
                                                 ? ((!cloudUser && clientId) && window.HEYS?.PlanningTab
                                                     ? React.createElement(window.HEYS.PlanningTab, {
@@ -2313,15 +2316,9 @@
                                                         defaultHomeScreen: defaultTasksSubtab,
                                                     })
                                                     : ((!cloudUser && clientId)
-                                                        ? renderTabFallback('tasks', React.createElement('div', { style: { padding: 16 } },
-                                                            React.createElement('div', { className: 'skeleton-header', style: { width: 150, marginBottom: 16 } }),
-                                                            React.createElement('div', { className: 'skeleton-block', style: { height: 200 } })
-                                                        ))
+                                                        ? renderTabFallback('tasks', tabFallbackSkeleton('✅', 'Готовим задачи…', 280))
                                                         : null))
-                                                : renderTabFallback('default_' + String(tab || 'unknown'), React.createElement('div', { style: { padding: 16 } },
-                                                    React.createElement('div', { className: 'skeleton-header', style: { width: 150, marginBottom: 16 } }),
-                                                    React.createElement('div', { className: 'skeleton-block', style: { height: 200 } })
-                                                ))
+                                                : renderTabFallback('default_' + String(tab || 'unknown'), tabFallbackSkeleton('📂', 'Готовим вкладку…', 280))
             )
         );
     }
@@ -2353,7 +2350,7 @@
             shouldRenderContent && tab !== 'tasks' && React.createElement(MemoAppHeader, props),
             shouldRenderContent && React.createElement(MemoAppTabsNav, props),
             shouldRenderContent && React.createElement(MemoAppTabContent, Object.assign({}, props, {
-                key: 'appTabContent_' + String(clientId || '') + '_' + String(tab || '') + '_' + profilerMountKey
+                key: 'appTabContent_' + String(clientId || '') + '_' + profilerMountKey
             }))
         );
     }

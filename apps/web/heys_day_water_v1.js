@@ -172,17 +172,32 @@
         React.createElement('div', { className: 'water-ring-container' },
           React.createElement('div', {
             className: 'water-ring-large',
+            style: { position: 'relative', width: '72px', height: '72px' },
             onMouseDown: handleWaterRingDown,
             onMouseUp: handleWaterRingUp,
             onMouseLeave: handleWaterRingLeave,
             onTouchStart: handleWaterRingDown,
             onTouchEnd: handleWaterRingUp
           },
-            React.createElement('svg', { viewBox: '0 0 36 36', className: 'water-ring-svg' },
-              React.createElement('circle', { className: 'water-ring-bg', cx: 18, cy: 18, r: 15.9 }),
+            React.createElement('svg', {
+              viewBox: '0 0 36 36',
+              className: 'water-ring-svg',
+              style: { width: '100%', height: '100%', transform: 'rotate(-90deg)' }
+            },
+              React.createElement('circle', {
+                className: 'water-ring-bg',
+                cx: 18, cy: 18, r: 15.9,
+                fill: 'none',
+                stroke: '#bae6fd',
+                strokeWidth: 3
+              }),
               React.createElement('circle', {
                 className: 'water-ring-fill',
                 cx: 18, cy: 18, r: 15.9,
+                fill: 'none',
+                stroke: '#0ea5e9',
+                strokeWidth: 3,
+                strokeLinecap: 'round',
                 style: { strokeDasharray: Math.min(100, ((day.waterMl || 0) / waterGoal) * 100) + ' 100' }
               })
             ),

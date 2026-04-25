@@ -1,0 +1,15 @@
+/* main-deferred.css — split from main.css on 2026-04-25
+ * Loaded via chained preload AFTER main.css (in index.html onload-handler).
+ * Contains heavy modules used only on dedicated tabs (Insights, Metabolic, Planning).
+ *
+ * Cascade-ordering preserved: these modules originally appeared at the END of main.css cascade.
+ * They still arrive AFTER main.css thanks to chained preload via heysMainCSSLoaded event,
+ * so any overrides defined here continue to win.
+ *
+ * 730-widgets-dashboard.css INTENTIONALLY KEPT IN main.css — it contains DayTab-critical
+ * selectors (.page-day, .page-reports, .widget--water-pulse, .macro-ring*) used by JS
+ * outside the Widgets tab. See [heys_day_day_handlers.js:148] and DayPageShell rendering.
+ */
+@import url("./modules/720-predictive-insights.css");
+@import url("./modules/725-metabolic-intelligence.css");
+@import url("./modules/900-planning.css");
