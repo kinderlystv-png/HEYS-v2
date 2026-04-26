@@ -2847,5 +2847,6 @@
         DurationPresetModal,
         TaskDetailModal,
         TasksScreen,
+        buildResolvedTaskProjectMap,
     };
 })();

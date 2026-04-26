@@ -12726,13 +12726,34 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
       );
     };
 
+    // 📡 Helper: уведомляем UI о смене pending-очереди (бейдж, другие табы, etc).
+    // Same-tab event + cross-tab BroadcastChannel (если поддерживается).
+    function notifyPendingUpdated() {
+      try {
+        window.dispatchEvent(new CustomEvent('heys:pending-products-updated'));
+      } catch (_) { /* noop */ }
+      try {
+        const bc = new BroadcastChannel('heys_pending_products');
+        bc.postMessage({ type: 'pending-updated', at: Date.now() });
+        setTimeout(() => { try { bc.close(); } catch (_) { /* noop */ } }, 200);
+      } catch (_) { /* BroadcastChannel может отсутствовать */ }
+    }
+
     // Одобрить pending заявку
     async function approvePending(pending) {
       try {
         // Передаём и pendingId и productData
         const result = await window.HEYS?.cloud?.approvePendingProduct?.(pending.id, pending.product_data);
+        // 🛡 Race: заявка уже обработана другим куратором
+        if (result?.status === 'race') {
+          HEYS.Toast?.warning(result.message || 'Заявка уже обработана другим куратором') || alert(result.message || 'Заявка уже обработана');
+          setPendingProducts(prev => prev.filter(p => p.id !== pending.id));
+          notifyPendingUpdated();
+          return;
+        }
         if (result?.error) {
-          HEYS.Toast?.error('Ошибка: ' + result.error.message) || alert('Ошибка: ' + result.error.message);
+          const msg = result.error?.message || (typeof result.error === 'string' ? result.error : 'неизвестная ошибка');
+          HEYS.Toast?.error('Ошибка: ' + msg) || alert('Ошибка: ' + msg);
           return;
         }
         // Обновляем список
@@ -12742,6 +12763,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
         } else {
           HEYS.Toast?.success(`Продукт "${pending.product_data?.name || pending.name_norm}" добавлен в общую базу!`) || alert(`✅ Продукт "${pending.product_data?.name || pending.name_norm}" добавлен в общую базу!`);
         }
+        notifyPendingUpdated();
       } catch (err) {
         console.error('[APPROVE] Error:', err);
         HEYS.Toast?.error('Ошибка при подтверждении: ' + err.message) || alert('Ошибка при подтверждении: ' + err.message);
@@ -12752,13 +12774,22 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
     async function rejectPending(pending, reason = '') {
       try {
         const result = await window.HEYS?.cloud?.rejectPendingProduct?.(pending.id, reason);
+        // 🛡 Race
+        if (result?.status === 'race') {
+          HEYS.Toast?.warning(result.message || 'Заявка уже обработана другим куратором') || alert(result.message || 'Заявка уже обработана');
+          setPendingProducts(prev => prev.filter(p => p.id !== pending.id));
+          notifyPendingUpdated();
+          return;
+        }
         if (result?.error) {
-          HEYS.Toast?.error('Ошибка: ' + result.error.message) || alert('Ошибка: ' + result.error.message);
+          const msg = result.error?.message || (typeof result.error === 'string' ? result.error : 'неизвестная ошибка');
+          HEYS.Toast?.error('Ошибка: ' + msg) || alert('Ошибка: ' + msg);
           return;
         }
         // Обновляем список
         setPendingProducts(prev => prev.filter(p => p.id !== pending.id));
         HEYS.Toast?.info(`Заявка "${pending.product_data?.name || pending.name_norm}" отклонена`) || alert(`❌ Заявка "${pending.product_data?.name || pending.name_norm}" отклонена`);
+        notifyPendingUpdated();
       } catch (err) {
         console.error('[REJECT] Error:', err);
         HEYS.Toast?.error('Ошибка при отклонении: ' + err.message) || alert('Ошибка при отклонении: ' + err.message);
@@ -31516,30 +31547,46 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
         || HEYS.utils?.lsGet?.('heys_session_token', null)
         || (() => { try { return JSON.parse(localStorage.getItem('heys_session_token')); } catch { return null; } })();
       if (!sessionToken) {
-        return { data: null, error: 'No session token', status: 'error' };
+        return { data: null, error: 'No session token', status: 'error', message: 'Нет активной сессии PIN-клиента' };
       }
+
+      // 🔍 Вычисляем fingerprint и name_norm на клиенте (нужны серверу для дедупа)
+      let fingerprint = null;
+      let nameNorm = null;
+      try {
+        if (HEYS?.models?.computeProductFingerprint) {
+          fingerprint = await HEYS.models.computeProductFingerprint(product);
+        }
+      } catch (_) { /* fallback to null — сервер сам резолвит */ }
+      try {
+        if (HEYS?.models?.normalizeProductName) {
+          nameNorm = HEYS.models.normalizeProductName(product?.name || '');
+        }
+      } catch (_) { /* fallback to null */ }
 
       const { data, error } = await YandexAPI.rpc('create_pending_product_by_session', {
         p_session_token: sessionToken,
         p_name: product.name,
-        p_product_data: product
+        p_product_data: product,
+        p_fingerprint: fingerprint,
+        p_name_norm: nameNorm
       });
 
       if (error) {
         err('[SHARED PRODUCTS] Pending create error:', error);
-        return { data: null, error, status: 'error' };
+        return { data: null, error, status: 'error', message: (error && error.message) || String(error) };
       }
 
       log('[SHARED PRODUCTS] Pending created:', data);
       return {
         data,
         error: null,
-        status: data.status,
-        message: data.message
+        status: data?.status || 'pending',
+        message: data?.message || ''
       };
     } catch (e) {
       err('[SHARED PRODUCTS] Unexpected error:', e);
-      return { data: null, error: e.message, status: 'error' };
+      return { data: null, error: e.message, status: 'error', message: e.message };
     }
   };
 
@@ -31595,19 +31642,34 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
       }
 
       // 2. Обновляем статус заявки
-      const { error: updateError } = await YandexAPI.rest('shared_products_pending', {
+      // 🛡 Race-prevention: фильтр status='pending' гарантирует что approve не сработает
+      // повторно если другой куратор уже обработал эту заявку.
+      const { data: updateData, error: updateError } = await YandexAPI.rest('shared_products_pending', {
         method: 'PATCH',
-        filters: { 'eq.id': pendingId },
+        filters: { 'eq.id': pendingId, 'eq.status': 'pending' },
         data: {
           status: 'approved',
           moderated_at: new Date().toISOString(),
           moderated_by: user.id
-        }
+        },
+        select: '*'
       });
 
       if (updateError) {
         err('[SHARED PRODUCTS] Approve update error:', updateError);
         return { data: null, error: updateError, status: 'error' };
+      }
+
+      // 0 строк обновлено → заявка уже была approved/rejected другим куратором
+      const updatedRows = Array.isArray(updateData) ? updateData.length : (updateData ? 1 : 0);
+      if (updatedRows === 0) {
+        log('[SHARED PRODUCTS] Approve race: pending already moderated:', pendingId);
+        return {
+          data: null,
+          error: { message: 'already_moderated' },
+          status: 'race',
+          message: 'Заявка уже обработана другим куратором'
+        };
       }
 
       log('[SHARED PRODUCTS] Approved pending:', pendingId);
@@ -31635,9 +31697,11 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
     }
 
     try {
+      // 🛡 Race-prevention: фильтр status='pending' гарантирует что reject не сработает
+      // повторно если другой куратор уже обработал эту заявку.
       const { data, error } = await YandexAPI.rest('shared_products_pending', {
         method: 'PATCH',
-        filters: { 'eq.id': pendingId },
+        filters: { 'eq.id': pendingId, 'eq.status': 'pending' },
         data: {
           status: 'rejected',
           reject_reason: reason,
@@ -31651,6 +31715,18 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
       if (error) {
         err('[SHARED PRODUCTS] Reject error:', error);
         return { data: null, error };
+      }
+
+      // 0 строк обновлено → уже была обработана
+      const updatedRows = Array.isArray(data) ? data.length : (data ? 1 : 0);
+      if (updatedRows === 0) {
+        log('[SHARED PRODUCTS] Reject race: pending already moderated:', pendingId);
+        return {
+          data: null,
+          error: { message: 'already_moderated' },
+          status: 'race',
+          message: 'Заявка уже обработана другим куратором'
+        };
       }
 
       log('[SHARED PRODUCTS] Rejected pending:', pendingId);
@@ -35099,6 +35175,16 @@ NOVA: 1-4
     scope: 'global', /* maxSize unbounded — rely on age */ maxAge: 90 * DAY_MS,
     cloudSync: 'never', pruneStrategy: 'wipe-by-age',
     description: 'Pre-migration snapshot (90-day TTL, then wipe).',
+  });
+
+  // Planning Gantt v2 — UI prefs (zoom level, toolbar toggles, collapsed groups, view position,
+  // schema migration version flag). Local-only; users can re-set on each device. Scope is global
+  // by design — UI taste is shared across PIN clients on the same device.
+  register('planning_gantt_prefs', {
+    pattern: /^heys_planning_gantt_(zoom|toggles|groups_collapsed|view_pos|schema_v)_v1$/,
+    scope: 'global', maxSize: 8 * KB, maxAge: 0,
+    cloudSync: 'never', pruneStrategy: 'manual',
+    description: 'Gantt v2 UI prefs (zoom, toggles, collapsed groups, view position, schema flag).',
   });
   register('products_overlay', {
     pattern: /^heys_[a-f0-9-]{36}_heys_products_overlay_v2$/,

@@ -51,6 +51,7 @@
         const Layout = HEYS.PlanningGanttLayout;
         const Utils = HEYS.Planning && HEYS.Planning.Utils;
         const Migration = HEYS.PlanningGanttMigration;
+        const Touch = HEYS.PlanningGanttTouch;
 
         if (!state || !Layout || !Utils) {
             return h(GanttFallback, { message: 'Planning runtime не готов.' });
@@ -120,6 +121,134 @@
             scroll.scrollTo({ left: Math.max(0, targetX), behavior: 'smooth' });
         }, [todayDayIndex, dayWidth]);
 
+        // ── Touch interactions: drag-to-move (Phase 2a) ─────────────────────
+        const tasksByIdRef = useRef(new Map());
+        useEffect(() => {
+            const m = new Map();
+            (state.tasks || []).forEach((t) => m.set(t.id, t));
+            tasksByIdRef.current = m;
+        }, [state.tasks]);
+        const getTaskById = useCallback((id) => tasksByIdRef.current.get(id), []);
+
+        const handleMoveTask = useCallback((taskId, deltaDays) => {
+            const task = tasksByIdRef.current.get(taskId);
+            if (!task || !state.updateTask) return;
+            const patch = {};
+            if (task.startDate) patch.startDate = Utils.addDays(task.startDate, deltaDays);
+            if (task.dueDate) patch.dueDate = Utils.addDays(task.dueDate, deltaDays);
+            if (Object.keys(patch).length > 0) state.updateTask(taskId, patch);
+        }, [state, Utils]);
+
+        const handleResizeTask = useCallback((taskId, side, deltaDays) => {
+            const task = tasksByIdRef.current.get(taskId);
+            if (!task || !state.updateTask) return;
+            if (side === 'start' && task.startDate) {
+                const candidate = Utils.addDays(task.startDate, deltaDays);
+                // Guard: new startDate must not exceed dueDate.
+                if (task.dueDate && candidate > task.dueDate) return;
+                state.updateTask(taskId, { startDate: candidate });
+            } else if (side === 'end' && task.dueDate) {
+                const candidate = Utils.addDays(task.dueDate, deltaDays);
+                // Guard: new dueDate must not precede startDate.
+                if (task.startDate && candidate < task.startDate) return;
+                state.updateTask(taskId, { dueDate: candidate });
+            }
+        }, [state, Utils]);
+
+        // Tap → quick-edit bottom sheet (Phase 3). "Открыть детали" inside sheet
+        // escalates to TaskDetailModal for advanced fields (subtasks, blockedByTaskIds).
+        const [quickEditTaskId, setQuickEditTaskId] = useState(null);
+        const [selectedTaskId, setSelectedTaskId] = useState(null);
+        const handleTapTask = useCallback((taskId) => {
+            setQuickEditTaskId(taskId);
+        }, []);
+        const handleOpenDetails = useCallback((taskId) => {
+            setQuickEditTaskId(null);
+            setSelectedTaskId(taskId);
+        }, []);
+        const handleDeleteTaskFromSheet = useCallback((taskId) => {
+            if (state.deleteTask) state.deleteTask(taskId);
+        }, [state]);
+        const handleUpdateTaskFromSheet = useCallback((taskId, patch) => {
+            if (state.updateTask) state.updateTask(taskId, patch);
+        }, [state]);
+        const resolvedTaskProjectIds = useMemo(() => {
+            const PlanningTasks = HEYS.PlanningTasks;
+            if (PlanningTasks && typeof PlanningTasks.buildResolvedTaskProjectMap === 'function') {
+                return PlanningTasks.buildResolvedTaskProjectMap(state.tasks, state.projects);
+            }
+            return new Map();
+        }, [state.tasks, state.projects]);
+
+        const quickEditTask = useMemo(() => {
+            if (!quickEditTaskId) return null;
+            return tasksByIdRef.current.get(quickEditTaskId) || null;
+        }, [quickEditTaskId, state.tasks]);
+
+        const handleZoomEnd = useCallback((snappedDayWidth) => {
+            if (typeof snappedDayWidth === 'number' && snappedDayWidth > 0) {
+                setDayWidth(snappedDayWidth);
+            }
+        }, []);
+
+        // ── Phase 4b: critical path / slack / conflicts (lazy via toggles) ──
+        const CriticalPath = HEYS.PlanningGanttCriticalPath;
+        const cycleWarnedRef = useRef(false);
+
+        const criticalResult = useMemo(() => {
+            if (!toggles.criticalPath || !CriticalPath) return { criticalIds: new Set(), hasCycle: false };
+            try { return CriticalPath.computeCriticalPath(state.tasks, Utils); }
+            catch (e) { return { criticalIds: new Set(), hasCycle: false }; }
+        }, [toggles.criticalPath, state.tasks, Utils, CriticalPath]);
+
+        const conflictIds = useMemo(() => {
+            if (!toggles.conflicts || !CriticalPath) return new Set();
+            try { return CriticalPath.detectConflicts(state.tasks); }
+            catch (e) { return new Set(); }
+        }, [toggles.conflicts, state.tasks, CriticalPath]);
+
+        const slackByTaskId = useMemo(() => {
+            if (!toggles.slack || !CriticalPath) return new Map();
+            const m = new Map();
+            (state.tasks || []).forEach((t) => {
+                const slack = CriticalPath.computeProgressSlack(t, todayIso, Utils);
+                if (slack > 10) m.set(t.id, slack); // > 10% behind highlights
+            });
+            return m;
+        }, [toggles.slack, state.tasks, todayIso, Utils, CriticalPath]);
+
+        // Surface cycle detection to the user once via confirmModal.
+        useEffect(() => {
+            if (!toggles.criticalPath) { cycleWarnedRef.current = false; return; }
+            if (!criticalResult.hasCycle || cycleWarnedRef.current) return;
+            cycleWarnedRef.current = true;
+            const cm = HEYS.confirmModal;
+            if (cm && typeof cm.show === 'function') {
+                try {
+                    cm.show({
+                        icon: '⚠️',
+                        title: 'Цикл в зависимостях',
+                        text: 'Невозможно вычислить критический путь — задачи блокируют друг друга по кругу. Проверьте blockedByTaskIds в деталях задачи.',
+                        confirmText: 'Понятно',
+                        cancelText: '',
+                    });
+                } catch (e) { /* noop */ }
+            }
+        }, [toggles.criticalPath, criticalResult.hasCycle]);
+
+        const dragApi = (Touch && typeof Touch.useGanttDragInteractions === 'function')
+            ? Touch.useGanttDragInteractions({
+                scrollRef, screenRef,
+                timelineStart: timelineBounds.start,
+                dayWidth,
+                onMoveTask: handleMoveTask,
+                onResizeTask: handleResizeTask,
+                onTapTask: handleTapTask,
+                onZoomEnd: handleZoomEnd,
+                getTaskById,
+            })
+            : { onPointerDown: null, dragPreview: null };
+
         // Initial scroll-to-today on mount (if today within bounds).
         useEffect(() => {
             if (todayDayIndex < 0) return;
@@ -140,6 +269,11 @@
         };
 
         // ── Render ──────────────────────────────────────────────────────────
+        const PlanningTasks = HEYS.PlanningTasks;
+        const TaskDetailModal = PlanningTasks && PlanningTasks.TaskDetailModal;
+        const QuickEdit = HEYS.PlanningGanttQuickEdit;
+        const QuickEditSheet = QuickEdit && QuickEdit.GanttQuickEditSheet;
+
         return h('div', {
             className: 'planning-gantt2-screen no-swipe-zone',
             ref: screenRef,
@@ -152,7 +286,61 @@
                 relevantTasks, timelineDays, dayWidth, todayIso, todayDayIndex,
                 timelineStart: timelineBounds.start,
                 layout, collapsed, setCollapsed, projects: state.projects, toggles,
+                onBarPointerDown: dragApi.onPointerDown,
+                criticalIds: criticalResult.criticalIds,
+                conflictIds,
+                slackByTaskId,
             }),
+            dragApi.dragPreview && renderDragGhost(dragApi.dragPreview, dayWidth, timelineBounds.start, getTaskById),
+            quickEditTask && QuickEditSheet && h(QuickEditSheet, {
+                task: quickEditTask,
+                projects: state.projects,
+                onUpdate: handleUpdateTaskFromSheet,
+                onDelete: handleDeleteTaskFromSheet,
+                onOpenDetails: TaskDetailModal ? handleOpenDetails : null,
+                onClose: () => setQuickEditTaskId(null),
+            }),
+            selectedTaskId && TaskDetailModal && h(TaskDetailModal, {
+                taskId: selectedTaskId,
+                state,
+                resolvedTaskProjectIds,
+                onClose: () => setSelectedTaskId(null),
+            }),
+        );
+    }
+
+    function renderDragGhost(preview, dayWidth, timelineStart, getTaskById) {
+        if (!preview) return null;
+        // Ghost positioned in viewport via fixed coords; centered on finger via grabOffsets.
+        const left = preview.x - preview.grabOffsetX;
+        const top = preview.y - preview.grabOffsetY;
+        const dt = preview.deltaDays || 0;
+        const dtLabel = dt === 0
+            ? ''
+            : (dt > 0 ? '+' + dt : String(dt)) + (Math.abs(dt) === 1 ? ' день' : ' дн.');
+        const modeLabel = preview.mode === 'resize-start' ? '← начало'
+            : preview.mode === 'resize-end' ? 'конец →'
+            : '';
+        const hint = [modeLabel, dtLabel].filter(Boolean).join(' · ');
+
+        return h('div', {
+            className: 'planning-gantt2-drag-ghost'
+                + (preview.mode === 'resize-start' ? ' is-resize-start' : '')
+                + (preview.mode === 'resize-end' ? ' is-resize-end' : ''),
+            style: {
+                position: 'fixed',
+                left: left + 'px',
+                top: top + 'px',
+                width: preview.width + 'px',
+                height: preview.height + 'px',
+                background: preview.background,
+                pointerEvents: 'none',
+                zIndex: 1000,
+                transform: 'translate3d(0,0,0)',
+            },
+        },
+            h('div', { className: 'planning-gantt2-drag-ghost__label' }, preview.label || ''),
+            hint && h('div', { className: 'planning-gantt2-drag-ghost__hint' }, hint),
         );
     }
 
@@ -173,22 +361,30 @@
                 onClick: scrollToToday,
                 'aria-label': 'Прокрутить к сегодня',
             }, 'Сегодня'),
-            h('div', { className: 'planning-gantt2-toolbar__group planning-gantt2-toolbar__group--right' },
-                renderToggleBtn(toggles, setToggles, 'baseline', 'Baseline'),
-                renderToggleBtn(toggles, setToggles, 'deps', 'Связи'),
+            h('div', { className: 'planning-gantt2-toolbar__group planning-gantt2-toolbar__group--right planning-gantt2-toolbar__group--scroll' },
+                renderToggleBtn(toggles, setToggles, 'criticalPath', '★', 'Критический путь'),
+                renderToggleBtn(toggles, setToggles, 'conflicts', '⚠', 'Конфликты'),
+                renderToggleBtn(toggles, setToggles, 'slack', '⏱', 'Отставание'),
+                renderToggleBtn(toggles, setToggles, 'baseline', '▭', 'Baseline'),
+                renderToggleBtn(toggles, setToggles, 'deps', '↗', 'Связи'),
             ),
         );
     }
 
-    function renderToggleBtn(toggles, setToggles, key, label) {
+    function renderToggleBtn(toggles, setToggles, key, icon, label) {
         return h('button', {
             type: 'button',
             className: 'planning-gantt2-toggle-btn' + (toggles[key] ? ' is-active' : ''),
             onClick: () => setToggles((prev) => ({ ...prev, [key]: !prev[key] })),
-        }, label);
+            'aria-label': label || icon,
+            title: label || icon,
+        },
+            h('span', { className: 'planning-gantt2-toggle-btn__icon', 'aria-hidden': 'true' }, icon),
+            label && h('span', { className: 'planning-gantt2-toggle-btn__label' }, label),
+        );
     }
 
-    function renderScrollArea({ scrollRef, handleScroll, relevantTasks, timelineDays, dayWidth, todayIso, todayDayIndex, timelineStart, layout, collapsed, setCollapsed, projects, toggles }) {
+    function renderScrollArea({ scrollRef, handleScroll, relevantTasks, timelineDays, dayWidth, todayIso, todayDayIndex, timelineStart, layout, collapsed, setCollapsed, projects, toggles, onBarPointerDown, criticalIds, conflictIds, slackByTaskId }) {
         const Layout = HEYS.PlanningGanttLayout;
         const Utils = HEYS.Planning && HEYS.Planning.Utils;
         const totalWidth = (timelineDays.length * dayWidth);
@@ -288,7 +484,11 @@
                                 className: 'planning-gantt2-group-row',
                                 style: { top: row.top + 'px', height: row.height + 'px' },
                             })
-                            : renderTaskRow(row, layout.taskMetrics[row.task.id], dayWidth, projects)),
+                            : renderTaskRow(row, layout.taskMetrics[row.task.id], dayWidth, projects, onBarPointerDown, {
+                                isCritical: criticalIds && criticalIds.has(row.task.id),
+                                isConflict: conflictIds && conflictIds.has(row.task.id),
+                                slack: slackByTaskId && slackByTaskId.get(row.task.id),
+                            })),
                     ),
                 ),
             ),
@@ -303,7 +503,11 @@
         return safe.slice(0, 2).toUpperCase();
     }
 
-    function renderTaskRow(row, metrics, dayWidth, projects) {
+    function renderTaskRow(row, metrics, dayWidth, projects, onBarPointerDown, extras) {
+        const isCritical = extras && extras.isCritical;
+        const isConflict = extras && extras.isConflict;
+        const slack = extras && typeof extras.slack === 'number' ? extras.slack : 0;
+        const hasSlack = slack > 0;
         const Utils = HEYS.Planning && HEYS.Planning.Utils;
         const task = row.task;
         const color = (Utils && Utils.getTaskProjectColor)
@@ -339,6 +543,7 @@
                         background: color,
                     },
                     title: task.title,
+                    onPointerDown: onBarPointerDown ? (e) => onBarPointerDown(e, task.id, { isResizable: false }) : undefined,
                 }),
                 h('div', {
                     className: 'planning-gantt2-milestone-label',
@@ -358,7 +563,11 @@
             'data-task-id': task.id,
         },
             h('div', {
-                className: 'planning-gantt2-bar' + (isDone ? ' is-done' : ''),
+                className: 'planning-gantt2-bar'
+                    + (isDone ? ' is-done' : '')
+                    + (isCritical ? ' is-critical' : '')
+                    + (isConflict ? ' is-conflict' : '')
+                    + (hasSlack ? ' is-behind' : ''),
                 style: {
                     left: barLeft + 'px',
                     width: Math.max(dayWidth, barWidth) + 'px',
@@ -368,7 +577,8 @@
                     '--bar-progress-color': color,
                 },
                 'data-task-id': task.id,
-                title: task.title,
+                title: hasSlack ? (task.title + ' · отстаёт на ' + Math.round(slack) + '%') : task.title,
+                onPointerDown: onBarPointerDown ? (e) => onBarPointerDown(e, task.id, { isResizable: true }) : undefined,
             },
                 progress > 0 && h('div', {
                     className: 'planning-gantt2-bar__progress',

@@ -258,6 +258,16 @@
     cloudSync: 'never', pruneStrategy: 'wipe-by-age',
     description: 'Pre-migration snapshot (90-day TTL, then wipe).',
   });
+
+  // Planning Gantt v2 — UI prefs (zoom level, toolbar toggles, collapsed groups, view position,
+  // schema migration version flag). Local-only; users can re-set on each device. Scope is global
+  // by design — UI taste is shared across PIN clients on the same device.
+  register('planning_gantt_prefs', {
+    pattern: /^heys_planning_gantt_(zoom|toggles|groups_collapsed|view_pos|schema_v)_v1$/,
+    scope: 'global', maxSize: 8 * KB, maxAge: 0,
+    cloudSync: 'never', pruneStrategy: 'manual',
+    description: 'Gantt v2 UI prefs (zoom, toggles, collapsed groups, view position, schema flag).',
+  });
   register('products_overlay', {
     pattern: /^heys_[a-f0-9-]{36}_heys_products_overlay_v2$/,
     scope: 'per-client', /* maxSize unbounded */ maxAge: 0,

@@ -28,8 +28,12 @@
         return Math.max(min, Math.min(max, value));
     }
 
+    function clampDayWidth(value) {
+        return clamp(Number(value) || DEFAULT_DAY_WIDTH, ZOOM_MIN, ZOOM_MAX);
+    }
+
     function snapDayWidth(value) {
-        const safe = clamp(Number(value) || DEFAULT_DAY_WIDTH, ZOOM_MIN, ZOOM_MAX);
+        const safe = clampDayWidth(value);
         let best = ZOOM_SNAP_VALUES[0];
         let bestDist = Math.abs(best - safe);
         for (let i = 1; i < ZOOM_SNAP_VALUES.length; i += 1) {
@@ -218,6 +222,7 @@
 
     HEYS.PlanningGanttLayout = {
         // Pure helpers (testable)
+        clampDayWidth,
         snapDayWidth,
         pinchRatioToWidth,
         computeRelevantTasks,
