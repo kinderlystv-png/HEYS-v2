@@ -52768,6 +52768,11 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         const screenRef = useRef(null);
         const todayIso = Utils.dateStr();
 
+        // Phase 6 — virtualization. Track scrollTop + viewportHeight to render only the
+        // visible row slice (+ buffer). Updates throttled via rAF in handleScroll.
+        const [scrollTop, setScrollTop] = useState(0);
+        const [viewportH, setViewportH] = useState(0);
+
         // ── Pure data (memoized) ────────────────────────────────────────────
         const relevantTasks = useMemo(() => Layout.computeRelevantTasks(state.tasks), [state.tasks]);
         const timelineBounds = useMemo(() => Layout.computeTimelineBounds(relevantTasks, todayIso), [relevantTasks, todayIso]);
@@ -52777,9 +52782,17 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
         const todayDayIndex = timelineDays.indexOf(todayIso);
 
+        // Phase 6 — visible row slice. Buffer 5 rows before/after viewport.
+        const visibleSlice = useMemo(() =>
+            Layout.computeVisibleSlice(layout.rows, scrollTop, viewportH, Layout.TASK_ROW_HEIGHT, 5),
+            [layout.rows, scrollTop, viewportH]);
+
         // ── Scroll handlers ─────────────────────────────────────────────────
         // Toggle .is-scrolled-right when scrollLeft > 12px (fluid labels collapse).
+        // Also reposition mini-overview window-indicator via direct DOM transform (no re-render).
         const scrollRafRef = useRef(0);
+        const miniIndicatorRef = useRef(null);
+        const miniStripRef = useRef(null);
         const handleScroll = useCallback(() => {
             if (scrollRafRef.current) return;
             scrollRafRef.current = window.requestAnimationFrame(() => {
@@ -52789,6 +52802,21 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                 if (!screen || !scroll) return;
                 const isScrolledRight = scroll.scrollLeft > 12;
                 screen.classList.toggle('is-scrolled-right', isScrolledRight);
+                // Phase 6: track scrollTop for row virtualization.
+                setScrollTop(scroll.scrollTop);
+                // Mini-overview: reposition the window indicator by ratio of scroll/total.
+                const indicator = miniIndicatorRef.current;
+                const strip = miniStripRef.current;
+                if (indicator && strip && scroll.scrollWidth > scroll.clientWidth) {
+                    const stripWidth = strip.clientWidth;
+                    const ratioWidth = scroll.clientWidth / scroll.scrollWidth;
+                    const indicatorWidth = Math.max(24, ratioWidth * stripWidth);
+                    indicator.style.width = indicatorWidth + 'px';
+                    const totalScrollable = Math.max(1, scroll.scrollWidth - scroll.clientWidth);
+                    const ratio = Math.max(0, Math.min(1, scroll.scrollLeft / totalScrollable));
+                    const x = ratio * Math.max(0, stripWidth - indicatorWidth);
+                    indicator.style.transform = 'translate3d(' + x + 'px, 0, 0)';
+                }
             });
         }, []);
 
@@ -52797,6 +52825,46 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                 window.cancelAnimationFrame(scrollRafRef.current);
                 scrollRafRef.current = 0;
             }
+        }, []);
+
+        // Block heys_app_swipe_nav_v1 from intercepting horizontal pulls inside the Gantt.
+        // React synthetic stopPropagation isn't enough — React 18+ uses single-root event
+        // delegation, so the swipe-nav onTouchStart handler may fire from the same root
+        // listener regardless. A NATIVE listener with stopImmediatePropagation halts the
+        // bubble before React's delegation root sees it, killing all parent handlers.
+        useEffect(() => {
+            const el = screenRef.current;
+            if (!el) return undefined;
+            const stop = (e) => {
+                e.stopPropagation();
+                if (typeof e.stopImmediatePropagation === 'function') e.stopImmediatePropagation();
+            };
+            el.addEventListener('touchstart', stop, { passive: true });
+            el.addEventListener('touchmove', stop, { passive: true });
+            el.addEventListener('touchend', stop, { passive: true });
+            el.addEventListener('touchcancel', stop, { passive: true });
+            return () => {
+                el.removeEventListener('touchstart', stop);
+                el.removeEventListener('touchmove', stop);
+                el.removeEventListener('touchend', stop);
+                el.removeEventListener('touchcancel', stop);
+            };
+        }, []);
+
+        // Phase 6 — observe scroll-area size for virtualization viewport.
+        useEffect(() => {
+            const el = scrollRef.current;
+            if (!el || typeof ResizeObserver !== 'function') return undefined;
+            const ro = new ResizeObserver((entries) => {
+                const entry = entries[0];
+                if (!entry) return;
+                const next = Math.round(entry.contentRect.height);
+                setViewportH((prev) => (prev === next ? prev : next));
+            });
+            ro.observe(el);
+            // Seed once.
+            setViewportH(el.clientHeight);
+            return () => ro.disconnect();
         }, []);
 
         // ── Today scroll-to button ──────────────────────────────────────────
@@ -52937,8 +53005,12 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
         // Initial scroll-to-today on mount (if today within bounds).
         useEffect(() => {
-            if (todayDayIndex < 0) return;
-            const t = window.setTimeout(scrollToToday, 60);
+            const t = window.setTimeout(() => {
+                if (todayDayIndex >= 0) scrollToToday();
+                // Run handleScroll once on mount to size and position the mini-overview
+                // indicator (it has no initial layout otherwise).
+                handleScroll();
+            }, 60);
             return () => window.clearTimeout(t);
         }, []); // mount only
 
@@ -52967,11 +53039,23 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             'data-no-pull-refresh': 'true',
         },
             renderToolbar({ ZOOM_PRESETS, dayWidth, setDayWidth, toggles, setToggles, scrollToToday, todayAvailable: todayDayIndex >= 0 }),
+            toggles.miniOverview && relevantTasks.length > 0 && renderMiniOverview({
+                miniStripRef,
+                miniIndicatorRef,
+                tasks: relevantTasks,
+                projects: state.projects,
+                timelineStart: timelineBounds.start,
+                timelineDays,
+                scrollRef,
+                dayWidth,
+                Utils,
+            }),
             renderScrollArea({
                 scrollRef, handleScroll,
                 relevantTasks, timelineDays, dayWidth, todayIso, todayDayIndex,
                 timelineStart: timelineBounds.start,
-                layout, collapsed, setCollapsed, projects: state.projects, toggles,
+                layout, visibleRows: visibleSlice.slice,
+                collapsed, setCollapsed, projects: state.projects, toggles,
                 onBarPointerDown: dragApi.onPointerDown,
                 criticalIds: criticalResult.criticalIds,
                 conflictIds,
@@ -53057,6 +53141,63 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         );
     }
 
+    function renderMiniOverview({ miniStripRef, miniIndicatorRef, tasks, projects, timelineStart, timelineDays, scrollRef, dayWidth, Utils }) {
+        const totalDays = timelineDays.length;
+        if (totalDays <= 0) return null;
+
+        // Build flattened task bars in mini-strip coords (% of total).
+        // Skip tasks without a date span.
+        const items = [];
+        for (let i = 0; i < tasks.length; i += 1) {
+            const t = tasks[i];
+            const start = t.startDate || t.dueDate;
+            const end = t.dueDate || t.startDate;
+            if (!start || !end) continue;
+            const startOffset = Utils.diffDays(timelineStart, start);
+            const endOffset = Utils.diffDays(timelineStart, end);
+            if (startOffset < 0 || endOffset > totalDays) continue;
+            const leftPct = (startOffset / totalDays) * 100;
+            const widthPct = Math.max(0.4, ((endOffset - startOffset + 1) / totalDays) * 100);
+            const color = (Utils.getTaskProjectColor)
+                ? Utils.getTaskProjectColor(t, projects)
+                : '#64748b';
+            items.push({ id: t.id, leftPct, widthPct, color });
+        }
+
+        const onStripTap = (e) => {
+            const scroll = scrollRef.current;
+            const strip = miniStripRef.current;
+            if (!scroll || !strip) return;
+            const rect = strip.getBoundingClientRect();
+            const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / Math.max(1, rect.width)));
+            const totalScrollable = Math.max(0, scroll.scrollWidth - scroll.clientWidth);
+            const targetLeft = ratio * totalScrollable;
+            scroll.scrollTo({ left: targetLeft, behavior: 'smooth' });
+        };
+
+        return h('div', {
+            className: 'planning-gantt2-mini-overview',
+            ref: miniStripRef,
+            onClick: onStripTap,
+            'aria-label': 'Обзор таймлайна — нажмите для перехода',
+        },
+            items.map((item) => h('div', {
+                key: 'mini-' + item.id,
+                className: 'planning-gantt2-mini-bar',
+                style: {
+                    left: item.leftPct + '%',
+                    width: item.widthPct + '%',
+                    background: item.color,
+                },
+            })),
+            h('div', {
+                className: 'planning-gantt2-mini-indicator',
+                ref: miniIndicatorRef,
+                'aria-hidden': 'true',
+            }),
+        );
+    }
+
     function renderToggleBtn(toggles, setToggles, key, icon, label) {
         return h('button', {
             type: 'button',
@@ -53070,7 +53211,10 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         );
     }
 
-    function renderScrollArea({ scrollRef, handleScroll, relevantTasks, timelineDays, dayWidth, todayIso, todayDayIndex, timelineStart, layout, collapsed, setCollapsed, projects, toggles, onBarPointerDown, criticalIds, conflictIds, slackByTaskId }) {
+    function renderScrollArea({ scrollRef, handleScroll, relevantTasks, timelineDays, dayWidth, todayIso, todayDayIndex, timelineStart, layout, visibleRows, collapsed, setCollapsed, projects, toggles, onBarPointerDown, criticalIds, conflictIds, slackByTaskId }) {
+        // Phase 6: render only the visible slice (virtualization). Fall back to full rows on the
+        // first frame before viewportH is measured.
+        const rowsToRender = (Array.isArray(visibleRows) && visibleRows.length > 0) ? visibleRows : layout.rows;
         const Layout = HEYS.PlanningGanttLayout;
         const Utils = HEYS.Planning && HEYS.Planning.Utils;
         const totalWidth = (timelineDays.length * dayWidth);
@@ -53125,7 +53269,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                 },
                     // Sticky left labels column
                     h('div', { className: 'planning-gantt2-row-labels', style: { height: totalHeight + 'px' } },
-                        layout.rows.map((row) => row.type === 'group'
+                        rowsToRender.map((row) => row.type === 'group'
                             ? h('div', {
                                 key: 'label-group-' + row.id,
                                 className: 'planning-gantt2-label planning-gantt2-label--group',
@@ -53174,7 +53318,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                             style: { left: (todayDayIndex * dayWidth + (dayWidth / 2)) + 'px' },
                         }),
                         // Bars / milestones / group rows
-                        layout.rows.map((row) => row.type === 'group'
+                        rowsToRender.map((row) => row.type === 'group'
                             ? h('div', {
                                 key: 'body-group-' + row.id,
                                 className: 'planning-gantt2-group-row',
