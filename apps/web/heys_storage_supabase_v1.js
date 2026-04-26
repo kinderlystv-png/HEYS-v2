@@ -7604,7 +7604,12 @@
                   // Если merged.length === remoteProducts.length (нет изменений) — сохраняем merged
                   // Это безопасно т.к. merged уже включает все локальные продукты
                   // 🛡️ v4.8.1: Дополнительная проверка на память — могли добавить продукты после чтения
-                  const memoryCount = global.HEYS?.products?.getAll?.()?.length || 0;
+                  // NOTE: когда overlay_products_v2 включён, getAll() возвращает 360+ (shared+custom),
+                  // а не per-client продукты. Используем currentLocal как per-client baseline.
+                  const _overlayOnForMem = global.HEYS?.flags?.isEnabled?.('overlay_products_v2');
+                  const memoryCount = _overlayOnForMem
+                    ? currentLocal.length
+                    : (global.HEYS?.products?.getAll?.()?.length || 0);
                   if (merged.length === remoteProducts.length && merged.length === currentLocal.length && merged.length >= memoryCount) {
                     if (global.HEYS?.products?.setAll) {
                       global.HEYS.products.setAll(merged, { source: 'cloud-sync', skipNotify: true, skipCloud: true, allowShrink: true });
@@ -7620,7 +7625,11 @@
                   // Fallback: сохраняем merged и синхронизируем
                   // 🛡️ v4.8.1: Проверяем что merged не меньше текущего количества в памяти
                   // Это предотвращает race condition когда новые продукты добавлены между чтением и merge
-                  const currentInMemory = global.HEYS?.products?.getAll?.()?.length || 0;
+                  // NOTE: когда overlay включён, getAll() возвращает 360+ (shared+overlay merged view).
+                  // Per-client products sync работает только с per-client списком → используем currentLocal.
+                  const currentInMemory = global.HEYS?.flags?.isEnabled?.('overlay_products_v2')
+                    ? currentLocal.length
+                    : (global.HEYS?.products?.getAll?.()?.length || 0);
                   if (merged.length < currentInMemory) {
                     // v4.8.2: Разрешаем уменьшение если это дедупликация (разница <= 5%)
                     const shrinkPct = ((currentInMemory - merged.length) / currentInMemory) * 100;
