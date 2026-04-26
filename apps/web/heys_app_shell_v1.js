@@ -1878,8 +1878,6 @@
                 { key: 'stats', label: 'Отчёты', buttonLabel: 'Итоги', icon: '📊', id: 'tour-stats-tab' },
                 { key: 'diary', label: 'Дневник', buttonLabel: 'Еда', icon: '🍴', id: 'tour-diary-tab' },
                 { key: 'widgets', label: 'Виджеты', buttonLabel: 'Виджеты', icon: '🎛️', id: 'tour-widgets-tab' },
-                { key: 'insights', label: 'Инсайты', buttonLabel: 'Инсайты', icon: '🔮', id: 'tour-insights-tab' },
-                { key: 'month', label: 'Месяц', buttonLabel: 'Месяц', icon: '📅', id: 'tour-month-tab' },
             ];
 
             if (!cloudUser && clientId) {
@@ -1892,6 +1890,11 @@
                     id: 'tour-tasks-tab',
                 });
             }
+
+            items.push(
+                { key: 'insights', label: 'Инсайты', buttonLabel: 'Инсайты', icon: '🔮', id: 'tour-insights-tab' },
+                { key: 'month', label: 'Месяц', buttonLabel: 'Месяц', icon: '📅', id: 'tour-month-tab' },
+            );
 
             return items;
         }, [cloudUser, clientId]);

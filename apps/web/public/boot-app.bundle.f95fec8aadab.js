@@ -21224,8 +21224,6 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                 { key: 'stats', label: 'Отчёты', buttonLabel: 'Итоги', icon: '📊', id: 'tour-stats-tab' },
                 { key: 'diary', label: 'Дневник', buttonLabel: 'Еда', icon: '🍴', id: 'tour-diary-tab' },
                 { key: 'widgets', label: 'Виджеты', buttonLabel: 'Виджеты', icon: '🎛️', id: 'tour-widgets-tab' },
-                { key: 'insights', label: 'Инсайты', buttonLabel: 'Инсайты', icon: '🔮', id: 'tour-insights-tab' },
-                { key: 'month', label: 'Месяц', buttonLabel: 'Месяц', icon: '📅', id: 'tour-month-tab' },
             ];
 
             if (!cloudUser && clientId) {
@@ -21238,6 +21236,11 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                     id: 'tour-tasks-tab',
                 });
             }
+
+            items.push(
+                { key: 'insights', label: 'Инсайты', buttonLabel: 'Инсайты', icon: '🔮', id: 'tour-insights-tab' },
+                { key: 'month', label: 'Месяц', buttonLabel: 'Месяц', icon: '📅', id: 'tour-month-tab' },
+            );
 
             return items;
         }, [cloudUser, clientId]);
@@ -25457,9 +25460,9 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
 
     const useSwipeNavigation = ({ React, tab, setTab }) => {
         // === SWIPE NAVIGATION ===
-        // Свайп работает только между 4 вкладками переключателя (по кругу)
+        // Свайп работает между 4 вкладками по кругу: Отчёты → Дневник → Виджеты → Задачи → Отчёты
         // widgets исключаются из свайпа когда editMode активен (drag & drop)
-        const SWIPEABLE_TABS = ['widgets', 'stats', 'diary', 'insights', 'month'];
+        const SWIPEABLE_TABS = ['stats', 'diary', 'widgets', 'tasks'];
         const touchRef = React.useRef({ startX: 0, startY: 0, startTime: 0 });
         const slideTimerRef = React.useRef(0);
         const MIN_SWIPE_DISTANCE = 60;
@@ -25509,7 +25512,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
             if (Math.abs(deltaY) > Math.abs(deltaX) * 0.7) return; // Более мягкое условие
             if (Math.abs(deltaX) < MIN_SWIPE_DISTANCE) return;
 
-            // Свайп работает между 4 вкладками переключателя (по кругу)
+            // Свайп работает между 4 вкладками по кругу: Отчёты → Дневник → Виджеты → Задачи
             const currentIndex = SWIPEABLE_TABS.indexOf(tab);
 
             // Если текущая вкладка не в свайпабельных — игнорируем

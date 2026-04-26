@@ -7,9 +7,9 @@
 
     const useSwipeNavigation = ({ React, tab, setTab }) => {
         // === SWIPE NAVIGATION ===
-        // Свайп работает только между 4 вкладками переключателя (по кругу)
+        // Свайп работает между 4 вкладками по кругу: Отчёты → Дневник → Виджеты → Задачи → Отчёты
         // widgets исключаются из свайпа когда editMode активен (drag & drop)
-        const SWIPEABLE_TABS = ['widgets', 'stats', 'diary', 'insights', 'month'];
+        const SWIPEABLE_TABS = ['stats', 'diary', 'widgets', 'tasks'];
         const touchRef = React.useRef({ startX: 0, startY: 0, startTime: 0 });
         const slideTimerRef = React.useRef(0);
         const MIN_SWIPE_DISTANCE = 60;
@@ -59,7 +59,7 @@
             if (Math.abs(deltaY) > Math.abs(deltaX) * 0.7) return; // Более мягкое условие
             if (Math.abs(deltaX) < MIN_SWIPE_DISTANCE) return;
 
-            // Свайп работает между 4 вкладками переключателя (по кругу)
+            // Свайп работает между 4 вкладками по кругу: Отчёты → Дневник → Виджеты → Задачи
             const currentIndex = SWIPEABLE_TABS.indexOf(tab);
 
             // Если текущая вкладка не в свайпабельных — игнорируем
