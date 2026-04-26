@@ -29652,26 +29652,30 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
         && global.localStorage.getItem('heys_overlay_migration_status') === 'success') {
       try {
         const incomingArr = Array.isArray(value) ? value : null;
-        if (incomingArr && incomingArr.length > 0
-            && global.HEYS.OverlayStore && global.HEYS.cloud && global.HEYS.cloud.getSharedIndex) {
-          const sharedById = global.HEYS.cloud.getSharedIndex();
-          if (sharedById && sharedById.size > 0) {
-            const prevRows = global.HEYS.OverlayStore.readRaw() || [];
-            const prevIds = new Set(prevRows.map(r => String(r && r.id != null ? r.id : '')).filter(Boolean));
-            const newCustom = incomingArr.filter(p => {
-              if (!p || p.id == null || !p.name) return false;
-              if (prevIds.has(String(p.id))) return false;       // already in overlay
-              if (sharedById.has(String(p.id))) return false;    // shared — handled by overlay
-              return true;                                        // new custom from another device
-            });
-            if (newCustom.length > 0) {
-              const newRows = newCustom.map(p => Object.assign({}, p, { _custom: true }));
-              global.HEYS.OverlayStore.writeRaw(prevRows.concat(newRows));
-              console.info('[HEYS.products] hot-sync Phase-ε: upserted ' + newCustom.length + ' custom product(s) from other device',
-                newCustom.map(p => p.name));
-            } else {
-              console.info('[HEYS.products] hot-sync skipped {key: legacy heys_products, reason: overlay-canonical}');
-            }
+        if (incomingArr && incomingArr.length > 0 && global.HEYS.OverlayStore) {
+          // Shared catalog may not be loaded yet when HOT-sync fires at pageshow.
+          // Use it to exclude shared products when available; otherwise include all
+          // products missing from the overlay (worst case: a shared product gets a
+          // _custom row temporarily — harmless, overlay getById returns it with full data).
+          const sharedById = (global.HEYS.cloud && global.HEYS.cloud.getSharedIndex)
+            ? global.HEYS.cloud.getSharedIndex()
+            : null;
+          const prevRows = global.HEYS.OverlayStore.readRaw() || [];
+          const prevIds = new Set(prevRows.map(r => String(r && r.id != null ? r.id : '')).filter(Boolean));
+          const newCustom = incomingArr.filter(p => {
+            if (!p || p.id == null || !p.name) return false;
+            if (prevIds.has(String(p.id))) return false;                          // already in overlay
+            if (sharedById && sharedById.size > 0
+                && sharedById.has(String(p.id))) return false;                    // shared — skip
+            return true;                                                          // new product from another device
+          });
+          if (newCustom.length > 0) {
+            const newRows = newCustom.map(p => Object.assign({}, p, { _custom: true }));
+            global.HEYS.OverlayStore.writeRaw(prevRows.concat(newRows));
+            console.info('[HEYS.products] hot-sync Phase-ε: upserted ' + newCustom.length + ' product(s) from other device',
+              newCustom.map(p => p.name));
+          } else {
+            console.info('[HEYS.products] hot-sync skipped {key: legacy heys_products, reason: overlay-canonical}');
           }
         }
       } catch (_) { /* noop */ }
