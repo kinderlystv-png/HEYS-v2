@@ -94,7 +94,7 @@ apps/web/heys_cycle_v1.js:44
 apps/web/heys_day_add_product.js:664
 apps/web/heys_day_add_product.js:679
 apps/web/heys_day_core_bundle_v1.js:2029
-apps/web/heys_day_core_bundle_v1.js:3830
+apps/web/heys_day_core_bundle_v1.js:3842
 apps/web/heys_day_core_bundle_v1.js:404
 apps/web/heys_day_core_bundle_v1.js:52
 apps/web/heys_day_effects.js:736
