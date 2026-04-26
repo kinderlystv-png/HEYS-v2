@@ -36,12 +36,88 @@
     return y + '-' + pad2(m) + '-' + pad2(d);
   }
 
+  /**
+   * Модульный кэш исторических сканов. Ключи — '<funcTag>|<normName>|<refDate>|<curTi>|<curExi>'.
+   * Полная инвалидация по событию heys:day-updated (приходит при любом изменении dayv2_*).
+   * Без кэша на cold-render с 8 упражнениями было до ~2880 LS-чтений.
+   */
+  const _historyCache = (function () {
+    const map = new Map();
+    function clear() { map.clear(); }
+    if (typeof global.addEventListener === 'function') {
+      try {
+        global.addEventListener('heys:day-updated', clear);
+        global.addEventListener('storage', function (e) {
+          if (!e || !e.key) { clear(); return; }
+          if (String(e.key).indexOf('dayv2_') >= 0) clear();
+        });
+      } catch (_e) { /* noop */ }
+    }
+    return {
+      get: function (key) { return map.has(key) ? map.get(key) : undefined; },
+      set: function (key, val) {
+        if (map.size > 600) {
+          const firstKey = map.keys().next().value;
+          map.delete(firstKey);
+        }
+        map.set(key, val);
+        return val;
+      },
+      clear: clear,
+      _size: function () { return map.size; }
+    };
+  })();
+
+  function _normName(s) {
+    return typeof HEYS.normalizeExerciseName === 'function'
+      ? HEYS.normalizeExerciseName(s || '')
+      : String(s || '').trim().toLowerCase().replace(/ё/g, 'е').replace(/\s+/g, ' ');
+  }
+
+  /** Web Audio короткий двойной бип на финише отдыха (чтобы не зависеть только от вибры). */
+  let _audioCtx = null;
+  function _getAudioCtx() {
+    if (_audioCtx) return _audioCtx;
+    try {
+      const Ctor = global.AudioContext || global.webkitAudioContext;
+      if (!Ctor) return null;
+      _audioCtx = new Ctor();
+    } catch (_e) {
+      _audioCtx = null;
+    }
+    return _audioCtx;
+  }
+  function playRestDoneBeep() {
+    const ctx = _getAudioCtx();
+    if (!ctx) return;
+    if (ctx.state === 'suspended') {
+      try { ctx.resume(); } catch (_e) { /* noop */ }
+    }
+    function tone(startOffset, freq, durMs, gainPeak) {
+      const t0 = ctx.currentTime + startOffset;
+      const t1 = t0 + durMs / 1000;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, t0);
+      gain.gain.setValueAtTime(0.0001, t0);
+      gain.gain.exponentialRampToValueAtTime(gainPeak, t0 + 0.012);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t1);
+      osc.connect(gain).connect(ctx.destination);
+      osc.start(t0);
+      osc.stop(t1 + 0.02);
+    }
+    tone(0,    880, 120, 0.18);
+    tone(0.18, 1320, 180, 0.22);
+  }
+
   /** Последние сохранённые вес/подходы/повторы по нормализованному имени (прошлые дни + раньше в этот день). */
   function findLastExerciseSnapshot(dateKey, norm, curTi, curExi) {
-    const normKey = typeof HEYS.normalizeExerciseName === 'function'
-      ? HEYS.normalizeExerciseName(norm || '')
-      : String(norm || '').trim().toLowerCase().replace(/ё/g, 'е').replace(/\s+/g, ' ');
+    const normKey = _normName(norm);
     if (!normKey || !dateKey) return null;
+    const cacheKey = 'last|' + normKey + '|' + dateKey + '|' + curTi + '|' + curExi;
+    const cached = _historyCache.get(cacheKey);
+    if (cached !== undefined) return cached;
 
     function matchEx(ex) {
       const n = typeof HEYS.normalizeExerciseName === 'function'
@@ -73,44 +149,7 @@
       return best;
     }
 
-    const m0 = dateKey.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-    if (!m0) return null;
-    let y = +m0[1];
-    let mo = +m0[2];
-    let d = +m0[3];
-
-    for (let iter = 0; iter < 150; iter++) {
-      const prev = prevCalendarDateParts(y, mo, d);
-      y = prev.y;
-      mo = prev.m;
-      d = prev.d;
-      const dk = dayKeyFromParts(y, mo, d);
-      const day = readDayFromStore(dk);
-      const hit = pickFromTrainingList(day && day.trainings, 0, 0, false);
-      if (hit && hit.ex) {
-        const ex = hit.ex;
-        return {
-          sets: ex.sets,
-          reps: ex.reps,
-          weightKg: ex.weightKg != null ? String(ex.weightKg) : '',
-          approaches: Array.isArray(ex.approaches) && ex.approaches.length
-            ? ex.approaches.map(function (a) {
-              return {
-                weightKg: a.weightKg != null ? String(a.weightKg) : '',
-                reps: a.reps != null ? Math.max(1, Math.min(200, parseInt(a.reps, 10) || 1)) : 10
-              };
-            })
-            : null,
-          rpe: ex.rpe != null ? +ex.rpe : 0,
-          note: typeof ex.note === 'string' ? ex.note : ''
-        };
-      }
-    }
-
-    const todayDay = readDayFromStore(dateKey);
-    const hit2 = pickFromTrainingList(todayDay && todayDay.trainings, curTi, curExi, true);
-    if (hit2 && hit2.ex) {
-      const ex = hit2.ex;
+    function snapshotFromEx(ex) {
       return {
         sets: ex.sets,
         reps: ex.reps,
@@ -127,7 +166,32 @@
         note: typeof ex.note === 'string' ? ex.note : ''
       };
     }
-    return null;
+
+    const m0 = dateKey.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!m0) return _historyCache.set(cacheKey, null);
+    let y = +m0[1];
+    let mo = +m0[2];
+    let d = +m0[3];
+
+    for (let iter = 0; iter < 150; iter++) {
+      const prev = prevCalendarDateParts(y, mo, d);
+      y = prev.y;
+      mo = prev.m;
+      d = prev.d;
+      const dk = dayKeyFromParts(y, mo, d);
+      const day = readDayFromStore(dk);
+      const hit = pickFromTrainingList(day && day.trainings, 0, 0, false);
+      if (hit && hit.ex) {
+        return _historyCache.set(cacheKey, snapshotFromEx(hit.ex));
+      }
+    }
+
+    const todayDay = readDayFromStore(dateKey);
+    const hit2 = pickFromTrainingList(todayDay && todayDay.trainings, curTi, curExi, true);
+    if (hit2 && hit2.ex) {
+      return _historyCache.set(cacheKey, snapshotFromEx(hit2.ex));
+    }
+    return _historyCache.set(cacheKey, null);
   }
 
   function calcWorkoutBuilderVolumeKg(wl) {
@@ -230,10 +294,11 @@
    * До maxEntries предыдущих тренировок с этим упражнением (по дате одна запись — последняя сессия за день).
    */
   function findRecentExerciseUsages(normRaw, refDateKey, curTi, curExi, maxEntries) {
-    const normKey = typeof HEYS.normalizeExerciseName === 'function'
-      ? HEYS.normalizeExerciseName(normRaw || '')
-      : String(normRaw || '').trim().toLowerCase().replace(/ё/g, 'е').replace(/\s+/g, ' ');
+    const normKey = _normName(normRaw);
     if (!normKey || !refDateKey) return [];
+    const cacheKey = 'rec|' + normKey + '|' + refDateKey + '|' + curTi + '|' + curExi + '|' + maxEntries;
+    const cached = _historyCache.get(cacheKey);
+    if (cached !== undefined) return cached;
 
     function matchEx(ex) {
       const n = typeof HEYS.normalizeExerciseName === 'function'
@@ -277,7 +342,7 @@
     }
 
     const m0 = refDateKey.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-    if (!m0) return [];
+    if (!m0) return _historyCache.set(cacheKey, []);
     var y = +m0[1];
     var mo = +m0[2];
     var d = +m0[3];
@@ -314,7 +379,285 @@
         approaches: approachesFromStoredExercise(row.ex)
       });
     }
-    return out;
+    return _historyCache.set(cacheKey, out);
+  }
+
+  function approachVolumeKg(a) {
+    if (!a) return 0;
+    const w = parseFloat(String(a.weightKg || '').replace(',', '.')) || 0;
+    const r = +a.reps || 0;
+    return w > 0 && r > 0 ? w * r : 0;
+  }
+
+  function exerciseRecordsFromApproaches(approaches) {
+    let maxSet = 0, maxW = 0, total = 0;
+    if (!Array.isArray(approaches)) return { maxSet: 0, maxW: 0, total: 0 };
+    for (let i = 0; i < approaches.length; i++) {
+      const a = approaches[i];
+      const w = parseFloat(String(a.weightKg || '').replace(',', '.')) || 0;
+      const r = +a.reps || 0;
+      const vol = w > 0 && r > 0 ? w * r : 0;
+      if (vol > maxSet) maxSet = vol;
+      if (w > maxW) maxW = w;
+      total += vol;
+    }
+    return { maxSet: maxSet, maxW: maxW, total: total };
+  }
+
+  function recordsFromStoredExercise(ex) {
+    if (!ex) return { maxSet: 0, maxW: 0, total: 0 };
+    if (Array.isArray(ex.approaches) && ex.approaches.length > 0) {
+      return exerciseRecordsFromApproaches(ex.approaches);
+    }
+    const w = parseFloat(String(ex.weightKg || '').replace(',', '.')) || 0;
+    const sets = Math.max(0, parseInt(ex.sets, 10) || 0);
+    const reps = Math.max(0, parseInt(ex.reps, 10) || 0);
+    if (w > 0 && sets > 0 && reps > 0) {
+      const setVol = w * reps;
+      return { maxSet: setVol, maxW: w, total: setVol * sets };
+    }
+    return { maxSet: 0, maxW: 0, total: 0 };
+  }
+
+  /** Исторические рекорды для упражнения (max вес × повторы за подход, max вес, max объём за сессию). */
+  function findExerciseHistoricalRecord(normRaw, refDateKey, curTi, curExi) {
+    const normKey = _normName(normRaw);
+    if (!normKey || !refDateKey) return null;
+    const cacheKey = 'rec_max|' + normKey + '|' + refDateKey + '|' + curTi + '|' + curExi;
+    const cached = _historyCache.get(cacheKey);
+    if (cached !== undefined) return cached;
+
+    function matchEx(ex) {
+      const n = typeof HEYS.normalizeExerciseName === 'function'
+        ? HEYS.normalizeExerciseName(ex && ex.name ? ex.name : '')
+        : String(ex && ex.name ? ex.name : '').trim().toLowerCase().replace(/ё/g, 'е').replace(/\s+/g, ' ');
+      return n === normKey;
+    }
+
+    function lexBefore(dk, ti, exi) {
+      if (dk < refDateKey) return true;
+      if (dk > refDateKey) return false;
+      if (ti < curTi) return true;
+      if (ti > curTi) return false;
+      return exi < curExi;
+    }
+
+    let maxSet = 0, maxW = 0, maxTotal = 0, found = false;
+
+    function consider(dk, ti, exi, ex) {
+      if (!ex || !matchEx(ex)) return;
+      if (!lexBefore(dk, ti, exi)) return;
+      const r = recordsFromStoredExercise(ex);
+      if (r.maxSet > maxSet) maxSet = r.maxSet;
+      if (r.maxW > maxW) maxW = r.maxW;
+      if (r.total > maxTotal) maxTotal = r.total;
+      found = true;
+    }
+
+    const day0 = readDayFromStore(refDateKey);
+    const tr0 = day0 && day0.trainings;
+    if (Array.isArray(tr0)) {
+      for (let tii = 0; tii < tr0.length; tii++) {
+        const tr = tr0[tii];
+        if (!tr || String(tr.type) !== 'strength' || tr.strengthEntryMode !== 'workout_builder') continue;
+        const wl = tr.workoutLog;
+        if (!wl || !Array.isArray(wl.exercises)) continue;
+        for (let exj = 0; exj < wl.exercises.length; exj++) {
+          consider(refDateKey, tii, exj, wl.exercises[exj]);
+        }
+      }
+    }
+
+    const m0 = refDateKey.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!m0) return _historyCache.set(cacheKey, found ? { maxSet: maxSet, maxW: maxW, total: maxTotal } : null);
+    let y = +m0[1], mo = +m0[2], d = +m0[3];
+    for (let iter = 0; iter < 180; iter++) {
+      const prev = prevCalendarDateParts(y, mo, d);
+      y = prev.y; mo = prev.m; d = prev.d;
+      const dk = dayKeyFromParts(y, mo, d);
+      const day = readDayFromStore(dk);
+      const trList = day && day.trainings;
+      if (!Array.isArray(trList)) continue;
+      for (let tii = 0; tii < trList.length; tii++) {
+        const tr2 = trList[tii];
+        if (!tr2 || String(tr2.type) !== 'strength' || tr2.strengthEntryMode !== 'workout_builder') continue;
+        const wl2 = tr2.workoutLog;
+        if (!wl2 || !Array.isArray(wl2.exercises)) continue;
+        for (let exj = 0; exj < wl2.exercises.length; exj++) {
+          consider(dk, tii, exj, wl2.exercises[exj]);
+        }
+      }
+    }
+
+    return _historyCache.set(cacheKey, found ? { maxSet: maxSet, maxW: maxW, total: maxTotal } : null);
+  }
+
+  function formatRestSec(sec) {
+    const s = Math.max(0, Math.round(+sec || 0));
+    const mm = Math.floor(s / 60);
+    const ss = s % 60;
+    return mm + ':' + (ss < 10 ? '0' + ss : '' + ss);
+  }
+
+  const REST_PRESETS = [60, 90, 120, 180];
+  function nextRestPreset(cur) {
+    const i = REST_PRESETS.indexOf(+cur || 90);
+    return REST_PRESETS[(i + 1) % REST_PRESETS.length];
+  }
+
+  function restSecForRpe(rpe) {
+    const r = +rpe || 0;
+    if (r >= 9) return 180;
+    if (r >= 7) return 120;
+    if (r >= 1) return 60;
+    return 90;
+  }
+
+  function formatWorkoutDuration(ms) {
+    const total = Math.max(0, Math.floor(ms / 1000));
+    const hh = Math.floor(total / 3600);
+    const mm = Math.floor((total % 3600) / 60);
+    const ss = total % 60;
+    if (hh > 0) {
+      return hh + ':' + (mm < 10 ? '0' + mm : '' + mm) + ':' + (ss < 10 ? '0' + ss : '' + ss);
+    }
+    return mm + ':' + (ss < 10 ? '0' + ss : '' + ss);
+  }
+
+  function formatVolumeKg(v) {
+    const n = Math.max(0, +v || 0);
+    if (n >= 1000) {
+      const t = n / 1000;
+      const fixed = t >= 10 ? Math.round(t) : Math.round(t * 10) / 10;
+      return String(fixed) + ' т';
+    }
+    return Math.round(n) + ' кг';
+  }
+
+  /** Сумма тоннажа (вес × повторы) всех завершённых подходов всех silов в указанный день. */
+  function computeDayTotalTonnage(dateKey) {
+    if (!dateKey) return 0;
+    const day = readDayFromStore(dateKey);
+    if (!day || !Array.isArray(day.trainings)) return 0;
+    let total = 0;
+    for (let i = 0; i < day.trainings.length; i++) {
+      const tr = day.trainings[i];
+      if (!tr || String(tr.type) !== 'strength' || tr.strengthEntryMode !== 'workout_builder') continue;
+      const wl = tr.workoutLog;
+      if (!wl || !Array.isArray(wl.exercises)) continue;
+      for (let j = 0; j < wl.exercises.length; j++) {
+        const ex = wl.exercises[j];
+        const aps = ex && Array.isArray(ex.approaches) ? ex.approaches : [];
+        for (let k = 0; k < aps.length; k++) {
+          const a = aps[k];
+          if (!a || !a.done) continue;
+          const w = parseFloat(String(a.weightKg || '').replace(',', '.')) || 0;
+          const r = +a.reps || 0;
+          if (w > 0 && r > 0) total += w * r;
+        }
+      }
+    }
+    return total;
+  }
+
+  /** Сколько workout_builder-тренировок на дне. */
+  function countStrengthWorkoutsOnDay(dateKey) {
+    if (!dateKey) return 0;
+    const day = readDayFromStore(dateKey);
+    if (!day || !Array.isArray(day.trainings)) return 0;
+    let n = 0;
+    for (let i = 0; i < day.trainings.length; i++) {
+      const tr = day.trainings[i];
+      if (tr && String(tr.type) === 'strength' && tr.strengthEntryMode === 'workout_builder') n += 1;
+    }
+    return n;
+  }
+
+  /** Ближайший прошлый день, в котором был ненулевой тоннаж workout_builder. */
+  function findPrevDayTonnage(refDateKey) {
+    if (!refDateKey) return null;
+    const m0 = refDateKey.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!m0) return null;
+    let y = +m0[1], mo = +m0[2], d = +m0[3];
+    for (let iter = 0; iter < 90; iter++) {
+      const prev = prevCalendarDateParts(y, mo, d);
+      y = prev.y; mo = prev.m; d = prev.d;
+      const dk = dayKeyFromParts(y, mo, d);
+      const t = computeDayTotalTonnage(dk);
+      if (t > 0) return { dateKey: dk, total: t };
+    }
+    return null;
+  }
+
+  /** Найти ближайшую прошлую workout_builder-тренировку (до refDateKey/curTi) и вернуть копию её упражнений (без done, id обновлены). */
+  function findLastWorkoutBuilderExercises(refDateKey, curTi) {
+    function takeFromTrainings(trainings, sameDayBeforeTi) {
+      if (!Array.isArray(trainings)) return null;
+      let bestIdx = -1;
+      for (let tii = 0; tii < trainings.length; tii++) {
+        const tr = trainings[tii];
+        if (!tr || String(tr.type) !== 'strength' || tr.strengthEntryMode !== 'workout_builder') continue;
+        const wl = tr.workoutLog;
+        if (!wl || !Array.isArray(wl.exercises) || wl.exercises.length === 0) continue;
+        const hasName = wl.exercises.some(function (ex) { return ex && String(ex.name || '').trim(); });
+        if (!hasName) continue;
+        if (sameDayBeforeTi != null && tii >= sameDayBeforeTi) continue;
+        if (tii > bestIdx) bestIdx = tii;
+      }
+      if (bestIdx < 0) return null;
+      const wl2 = trainings[bestIdx].workoutLog;
+      return { exercises: wl2.exercises };
+    }
+    const day0 = readDayFromStore(refDateKey);
+    const todayHit = day0 && takeFromTrainings(day0.trainings, curTi);
+    if (todayHit) return todayHit;
+    const m0 = refDateKey.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!m0) return null;
+    let y = +m0[1], mo = +m0[2], d = +m0[3];
+    for (let iter = 0; iter < 180; iter++) {
+      const prev = prevCalendarDateParts(y, mo, d);
+      y = prev.y; mo = prev.m; d = prev.d;
+      const dk = dayKeyFromParts(y, mo, d);
+      const day = readDayFromStore(dk);
+      const hit = day && takeFromTrainings(day.trainings, null);
+      if (hit) {
+        return { dateKey: dk, exercises: hit.exercises };
+      }
+    }
+    return null;
+  }
+
+  /** Скопировать упражнения для повтора: новые id, done сброшены, restManual сохранён. */
+  function cloneExercisesForReplay(srcExercises) {
+    const ts = Date.now();
+    return srcExercises.map(function (ex, i) {
+      const aps = Array.isArray(ex.approaches) && ex.approaches.length > 0
+        ? ex.approaches.map(function (a, ai) {
+          return {
+            id: 'ap_replay_' + ts + '_' + i + '_' + ai,
+            weightKg: a.weightKg != null ? String(a.weightKg) : '',
+            reps: a.reps != null ? Math.max(1, Math.min(200, parseInt(a.reps, 10) || 1)) : 10,
+            done: false
+          };
+        })
+        : [{ id: 'ap_replay_' + ts + '_' + i + '_0', weightKg: '', reps: 10, done: false }];
+      return {
+        id: 'ex_replay_' + ts + '_' + i,
+        name: String(ex.name || ''),
+        approaches: aps,
+        note: typeof ex.note === 'string' ? ex.note : '',
+        ssGroup: ex.ssGroup != null ? Math.max(0, parseInt(ex.ssGroup, 10) || 0) : 0,
+        rpe: ex.rpe != null ? Math.max(0, Math.min(10, parseInt(ex.rpe, 10) || 0)) : 0,
+        restSec: ex.restSec != null && REST_PRESETS.indexOf(+ex.restSec) >= 0 ? +ex.restSec : 90,
+        restManual: !!ex.restManual
+      };
+    });
+  }
+
+  function fmtKgDelta(diff) {
+    const v = Math.round(diff * 10) / 10;
+    const abs = Math.abs(v);
+    return (v > 0 ? '+' : '−') + (abs % 1 === 0 ? String(abs) : abs.toFixed(1)) + ' кг';
   }
 
   /** Полоска дат прошлых тренировок + раскрытие подходов по клику. */
@@ -325,11 +668,12 @@
     var setOpen = _st[1];
 
     var entries = React.useMemo(function () {
-      return findRecentExerciseUsages(exerciseName, dateKey, ti, exi, 4);
+      return findRecentExerciseUsages(exerciseName, dateKey, ti, exi, 8);
     }, [exerciseName, dateKey, ti, exi]);
 
     if (!entries.length) return null;
 
+    var chipEntries = entries.slice(0, 4);
     var openEntry = open ? entries.find(function (x) { return x.dateKey === open; }) : null;
 
     var detailEl = null;
@@ -350,11 +694,64 @@
         : React.createElement('p', { className: 'ct-wb-ex-hist-empty' }, 'Нет записей по подходам');
     }
 
+    var sparkEl = null;
+    if (entries.length >= 2) {
+      var series = entries.slice().reverse().map(function (e) {
+        var rec = exerciseRecordsFromApproaches(e.approaches);
+        return { total: rec.total, label: e.label };
+      });
+      var values = series.map(function (s) { return s.total; });
+      var maxV = Math.max.apply(null, values);
+      if (maxV > 0) {
+        var minV = Math.min.apply(null, values);
+        var rangeV = (maxV - minV) || 1;
+        var W = 88, H = 22, PAD = 2;
+        var stepX = (W - PAD * 2) / Math.max(1, series.length - 1);
+        var ptsArr = [];
+        for (var pi = 0; pi < series.length; pi++) {
+          var px = PAD + pi * stepX;
+          var py = PAD + (1 - (series[pi].total - minV) / rangeV) * (H - PAD * 2);
+          ptsArr.push(px.toFixed(1) + ',' + py.toFixed(1));
+        }
+        var lastX = PAD + (series.length - 1) * stepX;
+        var lastY = PAD + (1 - (series[series.length - 1].total - minV) / rangeV) * (H - PAD * 2);
+        var deltaPct = null;
+        if (series.length >= 2 && series[series.length - 2].total > 0) {
+          deltaPct = ((series[series.length - 1].total - series[series.length - 2].total) / series[series.length - 2].total) * 100;
+        }
+        var trendCls = deltaPct == null ? 'is-flat' : (deltaPct > 1 ? 'is-up' : (deltaPct < -1 ? 'is-down' : 'is-flat'));
+        sparkEl = React.createElement('span', {
+          className: 'ct-wb-ex-sparkline ' + trendCls,
+          title: 'Объём (вес × повторы) за последние ' + series.length + ' тренировок'
+        },
+          React.createElement('svg', {
+            width: W, height: H,
+            viewBox: '0 0 ' + W + ' ' + H,
+            className: 'ct-wb-ex-sparkline-svg',
+            'aria-hidden': true
+          },
+            React.createElement('polyline', {
+              points: ptsArr.join(' '),
+              fill: 'none',
+              stroke: 'currentColor',
+              strokeWidth: 1.6,
+              strokeLinejoin: 'round',
+              strokeLinecap: 'round'
+            }),
+            React.createElement('circle', { cx: lastX, cy: lastY, r: 2.4, fill: 'currentColor' })
+          ),
+          deltaPct != null && Math.abs(deltaPct) >= 1 && React.createElement('span', {
+            className: 'ct-wb-ex-sparkline-delta'
+          }, (deltaPct > 0 ? '+' : '') + Math.round(deltaPct) + '%')
+        );
+      }
+    }
+
     return React.createElement('div', { className: 'ct-wb-ex-hist' },
       React.createElement('div', { className: 'ct-wb-ex-hist-head' },
         React.createElement('span', { className: 'ct-wb-ex-hist-title' }, 'Раньше:'),
         React.createElement('div', { className: 'ct-wb-ex-hist-chips' },
-          entries.map(function (e) {
+          chipEntries.map(function (e) {
             return React.createElement('button', {
               key: e.dateKey,
               type: 'button',
@@ -367,7 +764,8 @@
               }
             }, e.label);
           })
-        )
+        ),
+        sparkEl
       ),
       detailEl
     );
@@ -529,6 +927,257 @@
     const dk = typeof dateKey === 'string' ? dateKey : '';
     const out = [];
 
+    /** Таймер отдыха в стиле секундомера: { startTs, thresholdSec, exi, api, exName, notified } или null.
+     *  startTs — момент начала отдыха; thresholdSec — желаемая длительность; пользователь видит count-up.
+     *  При достижении threshold однократно вибрирует + бипает (notified=true). Дальше продолжает считать «сверх».
+     *  Тап «+10с» добавляет к thresholdSec — даёт буфер «дойти до снаряда / взять вес».
+     */
+    const [restTimer, setRestTimer] = React.useState(null);
+    const [restNow, setRestNow] = React.useState(Date.now());
+    React.useEffect(function () {
+      if (!restTimer) return;
+      const id = global.setInterval(function () {
+        setRestNow(Date.now());
+      }, 250);
+      return function () { global.clearInterval(id); };
+    }, [restTimer && restTimer.startTs]);
+    React.useEffect(function () {
+      if (!restTimer || restTimer.notified) return;
+      const elapsedSec = (restNow - restTimer.startTs) / 1000;
+      if (elapsedSec >= restTimer.thresholdSec) {
+        try {
+          if (typeof navigator !== 'undefined' && navigator.vibrate) {
+            navigator.vibrate([80, 60, 80, 60, 120]);
+          }
+        } catch (_e) { /* noop */ }
+        try { playRestDoneBeep(); } catch (_e) { /* noop */ }
+        if (typeof haptic === 'function') haptic('success');
+        setRestTimer(function (prev) {
+          if (!prev) return prev;
+          return { ...prev, notified: true };
+        });
+      }
+    }, [restNow, restTimer]);
+
+    /** Память исторических рекордов и последней сессии — пересчёт только при смене имён/даты. */
+    const exerciseNamesSig = exercises
+      .map(function (ex) { return ex ? String(ex.name || '') : ''; })
+      .join('|');
+    const exerciseStats = React.useMemo(function () {
+      const out2 = [];
+      for (let i = 0; i < exercises.length; i++) {
+        const ex = exercises[i];
+        const name = ex && ex.name ? String(ex.name) : '';
+        if (!dk || !name.trim()) {
+          out2.push({ last: null, record: null });
+          continue;
+        }
+        out2.push({
+          last: findLastExerciseSnapshot(dk, name, ti, i),
+          record: findExerciseHistoricalRecord(name, dk, ti, i)
+        });
+      }
+      return out2;
+    }, [exerciseNamesSig, dk, ti]);
+
+    /** Какие упражнения уже полностью завершены (все подходы ✓). */
+    const allDoneByExi = exercises.map(function (ex) {
+      const aps = (ex && Array.isArray(ex.approaches)) ? ex.approaches : [];
+      if (aps.length === 0) return false;
+      for (let k = 0; k < aps.length; k++) {
+        if (!aps[k] || !aps[k].done) return false;
+      }
+      return true;
+    });
+
+    /** Подсчёт выполненных подходов и сводных метрик за тренировку. */
+    const workoutAggregate = React.useMemo(function () {
+      let totalApproaches = 0, doneApproaches = 0;
+      let totalVolume = 0, maxWeight = 0, prCount = 0;
+      let hasAnyName = false;
+      for (let i = 0; i < exercises.length; i++) {
+        const ex = exercises[i];
+        if (!ex) continue;
+        if (String(ex.name || '').trim()) hasAnyName = true;
+        const aps = Array.isArray(ex.approaches) ? ex.approaches : [];
+        const histMaxSet = exerciseStats[i] && exerciseStats[i].record ? exerciseStats[i].record.maxSet : 0;
+        for (let k = 0; k < aps.length; k++) {
+          totalApproaches += 1;
+          const a = aps[k];
+          if (!a) continue;
+          const w = parseFloat(String(a.weightKg || '').replace(',', '.')) || 0;
+          const r = +a.reps || 0;
+          const vol = w > 0 && r > 0 ? w * r : 0;
+          if (a.done) {
+            doneApproaches += 1;
+            totalVolume += vol;
+            if (w > maxWeight) maxWeight = w;
+            if (histMaxSet > 0 && vol > histMaxSet + 0.05) prCount += 1;
+          }
+        }
+      }
+      const allDone = totalApproaches > 0 && doneApproaches === totalApproaches && hasAnyName;
+      return {
+        totalApproaches: totalApproaches,
+        doneApproaches: doneApproaches,
+        totalVolume: totalVolume,
+        maxWeight: maxWeight,
+        prCount: prCount,
+        allDone: allDone,
+        hasAnyDone: doneApproaches > 0
+      };
+    }, [exerciseNamesSig, dk, ti, exercises]);
+
+    /** Авто-сворачивание упражнения после последнего ✓. */
+    const prevAllDoneRef = React.useRef([]);
+    React.useEffect(function () {
+      const prev = prevAllDoneRef.current;
+      const newlyDoneIds = [];
+      for (let i = 0; i < allDoneByExi.length; i++) {
+        if (allDoneByExi[i] && !prev[i]) {
+          const ex = exercises[i];
+          newlyDoneIds.push(String(ex && ex.id != null ? ex.id : 'exi-' + i));
+        }
+      }
+      prevAllDoneRef.current = allDoneByExi.slice();
+      if (newlyDoneIds.length > 0) {
+        setWbExFolded(function (prevFolded) {
+          const next = { ...prevFolded };
+          for (let j = 0; j < newlyDoneIds.length; j++) next[newlyDoneIds[j]] = true;
+          return next;
+        });
+      }
+    }, [allDoneByExi.join('|')]);
+
+    /** Старт-стоп тренировки в самом workoutLog (переживает релоад). */
+    const wlStartedAt = +(wlLive && wlLive.startedAt) || 0;
+    const wlCompletedAt = +(wlLive && wlLive.completedAt) || 0;
+    React.useEffect(function () {
+      if (!workoutAggregate.hasAnyDone) {
+        if (wlStartedAt > 0 && workoutAggregate.totalApproaches > 0) {
+          patchTraining(ti, function (t0) {
+            const wl0 = ensureWorkoutLogShape(t0);
+            delete wl0.startedAt;
+            delete wl0.completedAt;
+            return applyWorkoutLogToTraining(t0, wl0);
+          });
+        }
+        return;
+      }
+      if (workoutAggregate.allDone) {
+        if (!wlCompletedAt) {
+          patchTraining(ti, function (t0) {
+            const wl0 = ensureWorkoutLogShape(t0);
+            if (!wl0.startedAt) wl0.startedAt = Date.now();
+            wl0.completedAt = Date.now();
+            return applyWorkoutLogToTraining(t0, wl0);
+          });
+        }
+        return;
+      }
+      if (!wlStartedAt) {
+        patchTraining(ti, function (t0) {
+          const wl0 = ensureWorkoutLogShape(t0);
+          if (!wl0.startedAt) wl0.startedAt = Date.now();
+          delete wl0.completedAt;
+          return applyWorkoutLogToTraining(t0, wl0);
+        });
+      } else if (wlCompletedAt) {
+        patchTraining(ti, function (t0) {
+          const wl0 = ensureWorkoutLogShape(t0);
+          delete wl0.completedAt;
+          return applyWorkoutLogToTraining(t0, wl0);
+        });
+      }
+    }, [workoutAggregate.hasAnyDone, workoutAggregate.allDone, workoutAggregate.totalApproaches, wlStartedAt, wlCompletedAt, ti]);
+
+    /** Тик для отображения общего таймера тренировки. */
+    const [workoutNow, setWorkoutNow] = React.useState(Date.now());
+    React.useEffect(function () {
+      if (!wlStartedAt || wlCompletedAt) return;
+      const id = global.setInterval(function () {
+        setWorkoutNow(Date.now());
+      }, 1000);
+      return function () { global.clearInterval(id); };
+    }, [wlStartedAt, wlCompletedAt]);
+
+    /** Wake Lock пока есть незавершённые подходы и хотя бы один уже выполнен. */
+    React.useEffect(function () {
+      if (typeof navigator === 'undefined' || !navigator.wakeLock || !navigator.wakeLock.request) return;
+      if (!workoutAggregate.hasAnyDone || workoutAggregate.allDone) return;
+      let sentinel = null;
+      let cancelled = false;
+      function acquire() {
+        navigator.wakeLock.request('screen').then(function (s) {
+          if (cancelled) {
+            try { s.release(); } catch (_e) { /* noop */ }
+            return;
+          }
+          sentinel = s;
+          try {
+            sentinel.addEventListener('release', function () {
+              if (!cancelled) sentinel = null;
+            });
+          } catch (_e) { /* noop */ }
+        }).catch(function () { /* noop — не критично */ });
+      }
+      function onVis() {
+        if (document.visibilityState === 'visible' && !sentinel && !cancelled) acquire();
+      }
+      acquire();
+      document.addEventListener('visibilitychange', onVis);
+      return function () {
+        cancelled = true;
+        document.removeEventListener('visibilitychange', onVis);
+        if (sentinel) {
+          try { sentinel.release(); } catch (_e) { /* noop */ }
+          sentinel = null;
+        }
+      };
+    }, [workoutAggregate.hasAnyDone, workoutAggregate.allDone]);
+
+    const prevExLenRef = React.useRef(n);
+    React.useEffect(function () {
+      const prevLen = prevExLenRef.current;
+      if (n > prevLen && n > 1) {
+        setWbExFolded(function (prev) {
+          const next = { ...prev };
+          for (let i = 0; i < n - 1; i++) {
+            const ex = exercises[i];
+            const key = String(ex && ex.id != null ? ex.id : 'exi-' + i);
+            next[key] = true;
+          }
+          return next;
+        });
+      }
+      prevExLenRef.current = n;
+    }, [n]);
+
+    if (wlStartedAt > 0 && workoutAggregate.totalApproaches > 0 && !workoutAggregate.allDone) {
+      const elapsed = (wlCompletedAt > 0 ? wlCompletedAt : workoutNow) - wlStartedAt;
+      out.push(React.createElement('div', {
+        key: 'wb-workout-pill',
+        className: 'ct-wb-workout-pill',
+        role: 'status',
+        'aria-live': 'off',
+        onClick: function (e) { e.stopPropagation(); }
+      },
+        React.createElement('span', { className: 'ct-wb-workout-pill-icon', 'aria-hidden': true }, '⏱'),
+        React.createElement('span', { className: 'ct-wb-workout-pill-time' }, formatWorkoutDuration(elapsed)),
+        React.createElement('span', { className: 'ct-wb-workout-pill-sep', 'aria-hidden': true }, '·'),
+        React.createElement('span', { className: 'ct-wb-workout-pill-progress' },
+          workoutAggregate.doneApproaches + ' / ' + workoutAggregate.totalApproaches + ' ✓'),
+        workoutAggregate.totalVolume > 0 && React.createElement(React.Fragment, null,
+          React.createElement('span', { className: 'ct-wb-workout-pill-sep', 'aria-hidden': true }, '·'),
+          React.createElement('span', { className: 'ct-wb-workout-pill-vol' }, formatVolumeKg(workoutAggregate.totalVolume))
+        ),
+        workoutAggregate.prCount > 0 && React.createElement('span', {
+          className: 'ct-wb-workout-pill-pr',
+          title: 'Личных рекордов в этой тренировке: ' + workoutAggregate.prCount
+        }, '🏆 ' + workoutAggregate.prCount)
+      ));
+    }
+
     for (let exi = 0; exi < n; exi++) {
       const ex = exercises[exi];
       if (insertBefore === exi && wbDndKind === 'reorder') {
@@ -586,6 +1235,16 @@
           if (raw.indexOf('heysWbSs:') === 0) {
             const fromSs = parseInt(raw.split(':')[1], 10);
             if (fromSs !== exi && !Number.isNaN(fromSs)) {
+              const aEx = exercises[fromSs];
+              const bEx = exercises[exi];
+              const aId = String(aEx && aEx.id != null ? aEx.id : 'exi-' + fromSs);
+              const bId = String(bEx && bEx.id != null ? bEx.id : 'exi-' + exi);
+              setWbExFolded(function (prev) {
+                const next = { ...prev };
+                delete next[aId];
+                delete next[bId];
+                return next;
+              });
               patchTraining(ti, function (t0) {
                 const wl0 = ensureWorkoutLogShape(t0);
                 wl0.exercises = mergeSupersetLinks(wl0.exercises, fromSs, exi);
@@ -689,6 +1348,16 @@
                 }
                 const partner = ssPickFrom;
                 setSsPickFrom(null);
+                const aEx = exercises[partner];
+                const bEx = exercises[exi];
+                const aId = String(aEx && aEx.id != null ? aEx.id : 'exi-' + partner);
+                const bId = String(bEx && bEx.id != null ? bEx.id : 'exi-' + exi);
+                setWbExFolded(function (prev) {
+                  const next = { ...prev };
+                  delete next[aId];
+                  delete next[bId];
+                  return next;
+                });
                 patchTraining(ti, function (t0) {
                   const wl0 = ensureWorkoutLogShape(t0);
                   wl0.exercises = mergeSupersetLinks(wl0.exercises, partner, exi);
@@ -737,11 +1406,50 @@
         isExFolded && (function () {
           var apN = approachesCountForExercise(ex);
           var nameDisp = String(ex.name || '').trim();
+          var stats = exerciseStats[exi] || {};
+          var curStats = exerciseRecordsFromApproaches(ex.approaches);
+          var prevStats = stats.last
+            ? exerciseRecordsFromApproaches(approachesFromStoredExercise({ approaches: stats.last.approaches, sets: stats.last.sets, reps: stats.last.reps, weightKg: stats.last.weightKg }))
+            : null;
+          var hasCurrent = curStats.total > 0;
+          var deltaEls = [];
+          if (hasCurrent && prevStats && prevStats.total > 0) {
+            var dW = curStats.maxW - prevStats.maxW;
+            var dT = curStats.total - prevStats.total;
+            if (Math.abs(dW) >= 0.05) {
+              deltaEls.push(React.createElement('span', {
+                key: 'dw',
+                className: 'ct-wb-ex-folded-delta ' + (dW > 0 ? 'is-up' : 'is-down'),
+                title: 'Макс. вес vs прошлый раз'
+              }, (dW > 0 ? '↑' : '↓') + ' ' + fmtKgDelta(dW)));
+            }
+            if (Math.abs(dT) >= 0.5) {
+              deltaEls.push(React.createElement('span', {
+                key: 'dt',
+                className: 'ct-wb-ex-folded-delta ' + (dT > 0 ? 'is-up' : 'is-down'),
+                title: 'Объём (вес × повторы) vs прошлый раз'
+              }, (dT > 0 ? '↑' : '↓') + ' ' + fmtKgDelta(dT)));
+            }
+            if (deltaEls.length === 0 && hasCurrent) {
+              deltaEls.push(React.createElement('span', {
+                key: 'eq',
+                className: 'ct-wb-ex-folded-delta is-eq',
+                title: 'Без изменений vs прошлый раз'
+              }, '= ' + fmtKgDelta(0)));
+            }
+          }
+          var isPR = !!(stats.record && hasCurrent && curStats.maxSet > stats.record.maxSet + 0.05);
+          var prEl = isPR && React.createElement('span', {
+            className: 'ct-wb-ex-folded-pr',
+            title: 'Личный рекорд: вес × повторы превысил исторический максимум'
+          }, '🏆');
           return React.createElement('div', { className: 'ct-wb-ex-name-folded' },
             React.createElement('span', {
               className: 'ct-wb-ex-name-folded-text',
               title: nameDisp || 'Без названия'
             }, nameDisp || 'Без названия'),
+            prEl,
+            deltaEls.length > 0 && React.createElement('span', { className: 'ct-wb-ex-folded-deltas' }, deltaEls),
             React.createElement('span', {
               className: 'ct-wb-ex-name-folded-cnt',
               'aria-label': approachesCountLabelRu(apN)
@@ -803,19 +1511,30 @@
           const approaches = Array.isArray(ex.approaches) && ex.approaches.length
             ? ex.approaches
             : [{ id: 'ap_fallback', weightKg: ex.weightKg != null ? String(ex.weightKg) : '', reps: ex.reps != null ? +ex.reps : 10 }];
+          var statsForApRow = exerciseStats[exi] || {};
+          var historicalMaxSet = statsForApRow.record ? statsForApRow.record.maxSet : 0;
+          var restPresetSec = ex.restSec != null && REST_PRESETS.indexOf(+ex.restSec) >= 0 ? +ex.restSec : 90;
           return React.createElement('div', { className: 'ct-wb-ex-ap-table' },
             React.createElement('div', { className: 'ct-wb-ex-ap-head', 'aria-hidden': true },
               React.createElement('span', { className: 'ct-wb-ex-ap-h' }, 'Подход'),
               React.createElement('span', { className: 'ct-wb-ex-ap-h' }, 'Вес'),
-              React.createElement('span', { className: 'ct-wb-ex-ap-h' }, 'Повторы')
+              React.createElement('span', { className: 'ct-wb-ex-ap-h' }, 'Повторы'),
+              React.createElement('span', { className: 'ct-wb-ex-ap-h ct-wb-ex-ap-h--done', title: 'Отметить подход выполненным' }, '✓')
             ),
             approaches.map(function (ap, api) {
+              var apVol = approachVolumeKg(ap);
+              var isApPR = !!(historicalMaxSet > 0 && apVol > historicalMaxSet + 0.05);
+              var isApDone = !!ap.done;
               return React.createElement('div', {
                 key: ap.id || 'wb-ap-' + ti + '-' + exi + '-' + api,
-                className: 'ct-wb-ex-ap-row'
+                className: 'ct-wb-ex-ap-row' + (isApDone ? ' ct-wb-ex-ap-row--done' : '') + (isApPR ? ' ct-wb-ex-ap-row--pr' : '')
               },
                 React.createElement('div', { className: 'ct-wb-ex-ap-cell ct-wb-ex-ap-cell--label' },
                   React.createElement('span', { className: 'ct-wb-ex-ap-num' }, approachOrdinalRu(api)),
+                  isApPR && React.createElement('span', {
+                    className: 'ct-wb-ex-ap-pr',
+                    title: 'Личный рекорд: ' + Math.round(apVol) + ' кг (вес × повторы)'
+                  }, '🏆'),
                   approaches.length > 1 && React.createElement('button', {
                     type: 'button',
                     className: 'ct-wb-ex-ap-remove',
@@ -869,6 +1588,72 @@
                 ),
                 React.createElement('div', { className: 'ct-wb-ex-ap-cell ct-wb-ex-ap-cell--reps' },
                   wbApproachRepStepper(ti, exi, api, Math.max(1, parseInt(ap.reps, 10) || 1), 1, 200)
+                ),
+                React.createElement('div', { className: 'ct-wb-ex-ap-cell ct-wb-ex-ap-cell--done' },
+                  React.createElement('button', {
+                    type: 'button',
+                    className: 'ct-wb-ex-ap-done-btn' + (isApDone ? ' is-on' : ''),
+                    title: isApDone ? 'Подход выполнен — снять отметку' : 'Отметить подход выполненным',
+                    'aria-label': (isApDone ? 'Снять отметку с подхода: ' : 'Отметить подход выполненным: ') + approachOrdinalRu(api),
+                    'aria-pressed': isApDone,
+                    onClick: function (e) {
+                      e.stopPropagation();
+                      const wasDone = isApDone;
+                      patchTraining(ti, function (t0) {
+                        const wl0 = ensureWorkoutLogShape(t0);
+                        wl0.exercises = wl0.exercises.map(function (row, j) {
+                          if (j !== exi) return row;
+                          const apX = (row.approaches || []).slice();
+                          if (!apX[api]) return row;
+                          apX[api] = { ...apX[api], done: !wasDone };
+                          const merged = { ...row, approaches: apX };
+                          return { ...merged, ...syncLegacyFieldsFromApproaches(merged) };
+                        });
+                        let totalAp = 0, doneAp = 0, hasName = false;
+                        for (let ii = 0; ii < wl0.exercises.length; ii++) {
+                          const ex0 = wl0.exercises[ii];
+                          if (!ex0) continue;
+                          if (String(ex0.name || '').trim()) hasName = true;
+                          const aps0 = Array.isArray(ex0.approaches) ? ex0.approaches : [];
+                          for (let kk = 0; kk < aps0.length; kk++) {
+                            totalAp += 1;
+                            if (aps0[kk] && aps0[kk].done) doneAp += 1;
+                          }
+                        }
+                        const allDoneNew = totalAp > 0 && doneAp === totalAp && hasName;
+                        const hasDoneNew = doneAp > 0;
+                        const nowTs = Date.now();
+                        if (!hasDoneNew) {
+                          delete wl0.startedAt;
+                          delete wl0.completedAt;
+                        } else if (allDoneNew) {
+                          if (!wl0.startedAt) wl0.startedAt = nowTs;
+                          wl0.completedAt = nowTs;
+                        } else {
+                          if (!wl0.startedAt) wl0.startedAt = nowTs;
+                          if (wl0.completedAt) delete wl0.completedAt;
+                        }
+                        return applyWorkoutLogToTraining(t0, wl0);
+                      });
+                      if (!wasDone) {
+                        if (typeof haptic === 'function') haptic('success');
+                        try {
+                          if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(15);
+                        } catch (_e) { /* noop */ }
+                        setRestTimer({
+                          startTs: Date.now(),
+                          thresholdSec: restPresetSec,
+                          exi: exi,
+                          api: api,
+                          exName: ex.name || ('Упражнение ' + (exi + 1)),
+                          notified: false
+                        });
+                        setRestNow(Date.now());
+                      } else {
+                        if (typeof haptic === 'function') haptic('light');
+                      }
+                    }
+                  }, isApDone ? '✓' : '○')
                 )
               );
             }),
@@ -922,14 +1707,37 @@
                     wl0.exercises = wl0.exercises.map(function (row, j) {
                       if (j !== exi) return row;
                       const nextR = (row.rpe || 0) === num ? 0 : num;
-                      return { ...row, rpe: nextR };
+                      const next = { ...row, rpe: nextR };
+                      if (!row.restManual) next.restSec = restSecForRpe(nextR);
+                      return next;
                     });
                     return applyWorkoutLogToTraining(t0, wl0);
                   });
                   if (typeof haptic === 'function') haptic('light');
                 }
               }, String(num));
-            })
+            }),
+            React.createElement('button', {
+              type: 'button',
+              className: 'ct-wb-ex-rest-chip' + (ex.restManual ? ' is-manual' : ' is-auto'),
+              title: ex.restManual
+                ? 'Отдых между подходами (задан вручную) — нажмите для переключения 60/90/120/180 с'
+                : 'Отдых между подходами (авто по RPE) — нажмите чтобы переключить вручную',
+              'aria-label': 'Отдых между подходами: ' + formatRestSec(ex.restSec != null ? +ex.restSec : 90) + (ex.restManual ? ' (вручную)' : ' (авто по RPE)') + '. Нажмите для смены.',
+              onClick: function (e) {
+                e.stopPropagation();
+                const cur = ex.restSec != null ? +ex.restSec : 90;
+                const nxt = nextRestPreset(cur);
+                patchTraining(ti, function (t0) {
+                  const wl0 = ensureWorkoutLogShape(t0);
+                  wl0.exercises = wl0.exercises.map(function (row, j) {
+                    return j === exi ? { ...row, restSec: nxt, restManual: true } : row;
+                  });
+                  return applyWorkoutLogToTraining(t0, wl0);
+                });
+                if (typeof haptic === 'function') haptic('light');
+              }
+            }, '⏱ ' + formatRestSec(ex.restSec != null ? +ex.restSec : 90) + (ex.restManual ? '' : ' · авто'))
           ),
           React.createElement('input', {
             type: 'text',
@@ -990,6 +1798,184 @@
         className: 'ct-wb-ex-drop-line',
         'aria-hidden': true
       }));
+    }
+
+    if (workoutAggregate.allDone && wlStartedAt > 0) {
+      const elapsedMs = (wlCompletedAt > 0 ? wlCompletedAt : workoutNow) - wlStartedAt;
+      const tonnage = workoutAggregate.totalVolume;
+      let prevTonnageSum = 0;
+      let prevHasData = false;
+      for (let pi = 0; pi < exercises.length; pi++) {
+        const stats = exerciseStats[pi];
+        if (!stats || !stats.last) continue;
+        const aps = approachesFromStoredExercise({
+          approaches: stats.last.approaches,
+          sets: stats.last.sets,
+          reps: stats.last.reps,
+          weightKg: stats.last.weightKg
+        });
+        const r = exerciseRecordsFromApproaches(aps);
+        if (r.total > 0) {
+          prevTonnageSum += r.total;
+          prevHasData = true;
+        }
+      }
+      let tonnageDeltaPct = null;
+      if (prevHasData && prevTonnageSum > 0 && tonnage > 0) {
+        tonnageDeltaPct = ((tonnage - prevTonnageSum) / prevTonnageSum) * 100;
+      }
+      const dayWorkoutCount = countStrengthWorkoutsOnDay(dk);
+      const dayTonnage = computeDayTotalTonnage(dk);
+      const showDayRow = dayWorkoutCount > 1 && dayTonnage > 0;
+      let dayTonnageDeltaPct = null;
+      let prevDayLabel = null;
+      if (showDayRow) {
+        const prevDay = findPrevDayTonnage(dk);
+        if (prevDay && prevDay.total > 0) {
+          dayTonnageDeltaPct = ((dayTonnage - prevDay.total) / prevDay.total) * 100;
+          prevDayLabel = formatExerciseHistoryLabel(prevDay.dateKey, dk);
+        }
+      }
+      out.push(React.createElement('div', {
+        key: 'wb-summary-card',
+        className: 'ct-wb-summary-card',
+        role: 'status',
+        onClick: function (e) { e.stopPropagation(); }
+      },
+        React.createElement('div', { className: 'ct-wb-summary-title' },
+          React.createElement('span', { className: 'ct-wb-summary-emoji', 'aria-hidden': true }, '🎉'),
+          React.createElement('span', null, 'Тренировка завершена!')
+        ),
+        React.createElement('div', { className: 'ct-wb-summary-grid' },
+          React.createElement('div', { className: 'ct-wb-summary-cell' },
+            React.createElement('span', { className: 'ct-wb-summary-cell-label' }, 'Длительность'),
+            React.createElement('span', { className: 'ct-wb-summary-cell-value' }, formatWorkoutDuration(elapsedMs))
+          ),
+          React.createElement('div', { className: 'ct-wb-summary-cell' },
+            React.createElement('span', { className: 'ct-wb-summary-cell-label' }, 'Тоннаж'),
+            React.createElement('span', { className: 'ct-wb-summary-cell-value' },
+              formatVolumeKg(tonnage),
+              tonnageDeltaPct != null && Math.abs(tonnageDeltaPct) >= 1 && React.createElement('span', {
+                className: 'ct-wb-summary-cell-delta ' + (tonnageDeltaPct > 0 ? 'is-up' : 'is-down')
+              }, (tonnageDeltaPct > 0 ? ' ↑' : ' ↓') + Math.abs(Math.round(tonnageDeltaPct)) + '%')
+            )
+          ),
+          React.createElement('div', { className: 'ct-wb-summary-cell' },
+            React.createElement('span', { className: 'ct-wb-summary-cell-label' }, 'Макс. вес'),
+            React.createElement('span', { className: 'ct-wb-summary-cell-value' },
+              workoutAggregate.maxWeight > 0 ? Math.round(workoutAggregate.maxWeight * 10) / 10 + ' кг' : '—')
+          ),
+          React.createElement('div', { className: 'ct-wb-summary-cell' + (workoutAggregate.prCount > 0 ? ' is-pr' : '') },
+            React.createElement('span', { className: 'ct-wb-summary-cell-label' }, 'PR за день'),
+            React.createElement('span', { className: 'ct-wb-summary-cell-value' },
+              workoutAggregate.prCount > 0 ? '🏆 ' + workoutAggregate.prCount : '—')
+          )
+        ),
+        showDayRow && React.createElement('div', { className: 'ct-wb-summary-day-row' },
+          React.createElement('span', { className: 'ct-wb-summary-day-label' },
+            'Сегодня всего (×' + dayWorkoutCount + ' силовых)'),
+          React.createElement('span', { className: 'ct-wb-summary-day-value' },
+            formatVolumeKg(dayTonnage),
+            dayTonnageDeltaPct != null && Math.abs(dayTonnageDeltaPct) >= 1 && prevDayLabel && React.createElement('span', {
+              className: 'ct-wb-summary-cell-delta ' + (dayTonnageDeltaPct > 0 ? 'is-up' : 'is-down'),
+              title: 'vs ' + prevDayLabel
+            }, (dayTonnageDeltaPct > 0 ? ' ↑' : ' ↓') + Math.abs(Math.round(dayTonnageDeltaPct)) + '% vs ' + prevDayLabel.toLowerCase())
+          )
+        )
+      ));
+    }
+
+    if (restTimer) {
+      const elapsedMs = Math.max(0, restNow - restTimer.startTs);
+      const elapsedSec = Math.floor(elapsedMs / 1000);
+      const thresholdSec = Math.max(1, +restTimer.thresholdSec || 90);
+      const overSec = Math.max(0, elapsedSec - thresholdSec);
+      const reached = elapsedSec >= thresholdSec;
+      const fillFrac = reached ? 1 : Math.min(1, elapsedMs / (thresholdSec * 1000));
+
+      const RING_R = 36;
+      const RING_C = 2 * Math.PI * RING_R;
+      const dashOffset = RING_C * (1 - fillFrac);
+
+      out.push(React.createElement('div', {
+        key: 'wb-rest-stopwatch',
+        className: 'ct-wb-rest-watch'
+          + (reached ? ' is-reached' : '')
+          + (reached && overSec >= 1 ? ' is-overflow' : ''),
+        role: 'timer',
+        'aria-live': 'off',
+        onClick: function (e) { e.stopPropagation(); }
+      },
+        React.createElement('div', { className: 'ct-wb-rest-watch-ring-wrap' },
+          React.createElement('svg', {
+            className: 'ct-wb-rest-watch-svg',
+            viewBox: '0 0 80 80',
+            width: 80,
+            height: 80,
+            'aria-hidden': true
+          },
+            React.createElement('circle', {
+              className: 'ct-wb-rest-watch-track',
+              cx: 40, cy: 40, r: RING_R,
+              fill: 'none',
+              stroke: 'currentColor',
+              strokeWidth: 5
+            }),
+            React.createElement('circle', {
+              className: 'ct-wb-rest-watch-arc',
+              cx: 40, cy: 40, r: RING_R,
+              fill: 'none',
+              stroke: 'currentColor',
+              strokeWidth: 5,
+              strokeLinecap: 'round',
+              strokeDasharray: RING_C.toFixed(2),
+              strokeDashoffset: dashOffset.toFixed(2),
+              transform: 'rotate(-90 40 40)'
+            })
+          ),
+          React.createElement('div', { className: 'ct-wb-rest-watch-center' },
+            React.createElement('div', { className: 'ct-wb-rest-watch-time' }, formatRestSec(elapsedSec)),
+            React.createElement('div', { className: 'ct-wb-rest-watch-threshold' },
+              reached
+                ? (overSec >= 1 ? '+' + formatRestSec(overSec) + ' сверх' : 'Готов!')
+                : 'из ' + formatRestSec(thresholdSec)
+            )
+          )
+        ),
+        React.createElement('div', { className: 'ct-wb-rest-watch-actions' },
+          React.createElement('button', {
+            type: 'button',
+            className: 'ct-wb-rest-watch-btn ct-wb-rest-watch-btn--add',
+            title: '+10 секунд к желаемой паузе (нужно дойти до снаряда / взять вес)',
+            'aria-label': 'Добавить 10 секунд к желаемой паузе',
+            onClick: function (e) {
+              e.stopPropagation();
+              setRestTimer(function (prev) {
+                if (!prev) return prev;
+                const newThreshold = Math.min(900, (+prev.thresholdSec || 90) + 10);
+                const stillReachable = (Date.now() - prev.startTs) / 1000 < newThreshold;
+                return {
+                  ...prev,
+                  thresholdSec: newThreshold,
+                  notified: stillReachable ? false : prev.notified
+                };
+              });
+              if (typeof haptic === 'function') haptic('light');
+            }
+          }, '+10с'),
+          React.createElement('button', {
+            type: 'button',
+            className: 'ct-wb-rest-watch-btn ct-wb-rest-watch-btn--stop',
+            title: 'Закрыть таймер',
+            'aria-label': 'Закрыть таймер отдыха',
+            onClick: function (e) {
+              e.stopPropagation();
+              setRestTimer(null);
+              if (typeof haptic === 'function') haptic('light');
+            }
+          }, '✕')
+        )
+      ));
     }
 
     return React.createElement('div', {
@@ -1491,6 +2477,7 @@
     /** Силовая по зонам без дневника — можно включить конструктор без пересоздания тренировки */
     function canOfferWorkoutBuilderOnCard(t) {
       if (!t || String(t.type) !== 'strength') return false;
+      if (isMorningActivationTraining(t)) return false;
       if (t.strengthEntryMode === 'workout_builder') return false;
       const wl = t.workoutLog;
       if (wl && Array.isArray(wl.exercises) && wl.exercises.length > 0) return false;
@@ -1570,13 +2557,16 @@
           name: String(e.name || ''),
           note: typeof e.note === 'string' ? e.note : '',
           ssGroup: e.ssGroup != null ? Math.max(0, parseInt(e.ssGroup, 10) || 0) : 0,
-          rpe: e.rpe != null ? Math.max(0, Math.min(10, parseInt(e.rpe, 10) || 0)) : 0
+          rpe: e.rpe != null ? Math.max(0, Math.min(10, parseInt(e.rpe, 10) || 0)) : 0,
+          restSec: e.restSec != null && REST_PRESETS.indexOf(+e.restSec) >= 0 ? +e.restSec : 90,
+          restManual: !!e.restManual
         };
         let approaches = Array.isArray(e.approaches) && e.approaches.length > 0
           ? e.approaches.map((a, ai) => ({
             id: a.id || 'ap_' + i + '_' + ai,
             weightKg: a.weightKg != null ? String(a.weightKg) : '',
-            reps: a.reps != null ? Math.max(1, Math.min(200, parseInt(a.reps, 10) || 1)) : 10
+            reps: a.reps != null ? Math.max(1, Math.min(200, parseInt(a.reps, 10) || 1)) : 10,
+            done: !!a.done
           }))
           : null;
         if (!approaches || approaches.length === 0) {
@@ -1603,12 +2593,17 @@
       });
       exercises = cleanupSsGroups(exercises);
       const totalDurationMinutes = zoneMinutes.reduce((s, v) => s + (+v || 0), 0);
-      return {
+      const out = {
         version: 1,
         zoneMinutes: zoneMinutes.slice(),
         totalDurationMinutes,
         exercises
       };
+      const startedAtNum = Number.isFinite(+raw.startedAt) ? +raw.startedAt : 0;
+      if (startedAtNum > 0) out.startedAt = startedAtNum;
+      const completedAtNum = Number.isFinite(+raw.completedAt) ? +raw.completedAt : 0;
+      if (completedAtNum > 0) out.completedAt = completedAtNum;
+      return out;
     }
 
     function patchTraining(ti, mutator) {
@@ -1910,6 +2905,36 @@
             applyWorkoutLogToTraining: applyWorkoutLogToTraining,
             wbApproachRepStepper: wbApproachRepStepper
           }),
+          (function () {
+            const exs = (wlLive && Array.isArray(wlLive.exercises)) ? wlLive.exercises : [];
+            const isFresh = exs.length === 0 || (exs.length === 1
+              && !String(exs[0]?.name || '').trim()
+              && !(exs[0]?.approaches || []).some(function (a) { return !!a.done; }));
+            if (!isFresh) return null;
+            const lastSession = dateKey ? findLastWorkoutBuilderExercises(dateKey, ti) : null;
+            if (!lastSession || !lastSession.exercises || !lastSession.exercises.length) return null;
+            const exCount = lastSession.exercises.length;
+            const dateLabel = lastSession.dateKey
+              ? formatExerciseHistoryLabel(lastSession.dateKey, dateKey)
+              : 'недавно';
+            return React.createElement('button', {
+              type: 'button',
+              className: 'ct-wb-replay-btn',
+              title: 'Скопировать упражнения из прошлой силовой (' + dateLabel + ', ' + exCount + ' упр.)',
+              onClick: (e) => {
+                e.stopPropagation();
+                if (typeof haptic === 'function') haptic('light');
+                const cloned = cloneExercisesForReplay(lastSession.exercises);
+                patchTraining(ti, (t0) => {
+                  const wl0 = ensureWorkoutLogShape(t0);
+                  wl0.exercises = cloned;
+                  delete wl0.startedAt;
+                  delete wl0.completedAt;
+                  return applyWorkoutLogToTraining(t0, wl0);
+                });
+              }
+            }, '↻ Повторить ' + dateLabel.toLowerCase() + ' (' + exCount + ' упр.)');
+          })(),
           React.createElement('button', {
             type: 'button',
             className: 'ct-wb-add-btn',

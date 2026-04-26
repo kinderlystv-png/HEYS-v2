@@ -256,7 +256,7 @@
           version: 1,
           zoneMinutes: [0, m, 0, 0],
           totalDurationMinutes: m,
-          exercises: [{ id: 'ex_0', name: '', sets: 3, reps: 10, weightKg: '', note: '', ssGroup: 0, rpe: 0 }]
+          exercises: [{ id: 'ex_0', name: '', sets: 1, reps: 10, weightKg: '', note: '', ssGroup: 0, rpe: 0 }]
         };
       }
     } else if (merged.strengthEntryMode === 'hr_zones') {
@@ -817,7 +817,7 @@
           version: 1,
           zoneMinutes: z4.slice(),
           totalDurationMinutes: zmSum,
-          exercises: [{ id: 'ex_0', name: '', sets: 3, reps: 10, weightKg: '', note: '', ssGroup: 0, rpe: 0 }]
+          exercises: [{ id: 'ex_0', name: '', sets: 1, reps: 10, weightKg: '', note: '', ssGroup: 0, rpe: 0 }]
         };
       }
       persistMergedTraining(ctx, allStepData, {
