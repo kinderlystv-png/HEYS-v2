@@ -26467,8 +26467,35 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
                 }
               }
 
+              // ⛔ Phase-ε READ-side: overlay_v2 — direct passthrough.
+              // Overlay row schema is {id, shared_origin_id, overrides, in_my_list, _custom?} —
+              // НЕТ top-level name, поэтому legacy-фильтр `p.name` всегда уничтожал бы их.
+              // Имя приходит из shared-каталога при merge во view, поэтому здесь не валидируем.
+              // Tombstone-фильтрация делается в OverlayStore.toMergedView, не здесь.
+              if (key.includes('_products_overlay_v2') && !key.includes('_products_pre_overlay_')) {
+                try {
+                  if (Array.isArray(row.v)) {
+                    ls.setItem(key, JSON.stringify(row.v));
+                    logCritical(`✅ [OVERLAY-V2 PULL] Saved ${row.v.length} rows to LS: ${key.slice(-50)}`);
+                  }
+                } catch (e) { /* noop */ }
+                return;
+              }
+
               // ЗАЩИТА И MERGE: Умное объединение продуктов (не затираем локальные)
-              if (key.includes('_products') && !key.includes('_products_backup') && !key.includes('_hidden_products') && !key.includes('_favorite_products') && !key.includes('_deleted_products')) {
+              if (key.includes('_products') && !key.includes('_products_backup') && !key.includes('_hidden_products') && !key.includes('_favorite_products') && !key.includes('_deleted_products') && !key.includes('_products_overlay_v2') && !key.includes('_products_pre_overlay_')) {
+                // ⛔ Phase-ε READ-side: legacy heys_<cid>_products is dead-data when overlay-canonical.
+                // Symmetric to push-side skip at line ~9517 (cloud-push skipped). Облачный legacy-снимок
+                // может быть stale stub (1 row), который через merge → setAll(allowShrink:true) затирает
+                // overlay merged-view в памяти. Источник истины — heys_products_overlay_v2.
+                const _overlayCanonical = global.HEYS && global.HEYS.flags
+                  && global.HEYS.flags.isEnabled && global.HEYS.flags.isEnabled('overlay_products_v2')
+                  && global.localStorage.getItem('heys_overlay_migration_status') === 'success';
+                if (_overlayCanonical) {
+                  logCritical(`⏭️ [PRODUCTS PULL] Skipped legacy ${key.slice(-50)} (${Array.isArray(row.v) ? row.v.length : '?'} rows): overlay-canonical`);
+                  return;
+                }
+
                 let remoteProducts;
                 // 🔇 PERF: Отключено — много логов
                 // console.log('📦 [PRODUCTS DEBUG] Processing products key:', key, 'raw row.k:', row.k, 'row.v length:', Array.isArray(row.v) ? row.v.length : 'not array');

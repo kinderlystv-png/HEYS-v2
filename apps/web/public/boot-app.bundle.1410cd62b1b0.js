@@ -14695,6 +14695,28 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                     }
                 } catch (_) { /* noop */ }
 
+                // 🛡️ Anti-tiny-legacy guard: если migration уже была success на этом устройстве
+                // (для любого клиента) и flat подозрительно мал (<= 3 продуктов), это почти наверняка
+                // stale 1-row legacy snapshot из облака. Defer миграцию до прихода cloud overlay-v2
+                // (heysSyncCompleted событие). Без этого guard cloud's stale heys_products (1 row)
+                // мигрирует в 1-row overlay, затирая всё.
+                try {
+                    const wasMigratedBefore = (parseInt(localStorage.getItem(VERSION_KEY) || '0', 10) || 0) >= 1
+                        || localStorage.getItem(STATUS_KEY) === 'success';
+                    if (wasMigratedBefore && flat.length <= 3) {
+                        console.warn('[HEYS.products] migration deferred: tiny legacy after prior success — likely stale cloud stub', {
+                            legacyLen: flat.length,
+                            existingOverlayLen: (Overlay.readRaw() || []).length,
+                        });
+                        const onSyncDone = () => {
+                            window.removeEventListener('heysSyncCompleted', onSyncDone);
+                            try { runOverlayMigrationOnce(cid); } catch (_) { /* noop */ }
+                        };
+                        window.addEventListener('heysSyncCompleted', onSyncDone, { once: true });
+                        return;
+                    }
+                } catch (_) { /* noop */ }
+
                 // Snapshot pre-migration for rollback safety (90-day retention; cleanup in phase ε).
                 try {
                     const snapKey = `heys_products_pre_overlay_${Date.now()}`;
