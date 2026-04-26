@@ -553,6 +553,9 @@
 
   function trackOrphanProduct(item, dateStr) {
     if (!item || !item.name) return;
+    // ⚡ Разовые продукты (_oneTime: true) by design не должны быть в БД —
+    // они НЕ сироты, рендерятся через стамп-фоллбэк.
+    if (item._oneTime === true) return;
     if (isSyntheticEstimatedItem(item)) return;
     const name = String(item.name).trim();
     if (!name) return;

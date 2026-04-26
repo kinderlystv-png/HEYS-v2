@@ -1254,7 +1254,13 @@
                     const cardContent = React.createElement('div', { className: 'mpc', style: harmToneStyle || undefined },
                         React.createElement('div', { className: 'mpc-row1' },
                             categoryIcon && React.createElement('span', { className: 'mpc-category-icon' }, categoryIcon),
-                            React.createElement('span', { className: 'mpc-name' }, p.name),
+                            React.createElement('span', { className: 'mpc-name' },
+                                p.name,
+                                it._oneTime && React.createElement('span', {
+                                    className: 'mpc-name-oneoff',
+                                    title: 'Разовый продукт — не сохранён в базу',
+                                }, ' (разово)')
+                            ),
                             harmBadge && React.createElement('span', {
                                 className: 'mpc-badge',
                                 style: { color: harmBadge.color },
@@ -1336,7 +1342,13 @@
 
                     return React.createElement('div', { key: it.id, className: 'mpc', style: harmToneStyle ? { marginBottom: '6px', ...harmToneStyle } : { marginBottom: '6px' } },
                         React.createElement('div', { className: 'mpc-row1' },
-                            React.createElement('span', { className: 'mpc-name' }, p.name),
+                            React.createElement('span', { className: 'mpc-name' },
+                                p.name,
+                                it._oneTime && React.createElement('span', {
+                                    className: 'mpc-name-oneoff',
+                                    title: 'Разовый продукт — не сохранён в базу',
+                                }, ' (разово)')
+                            ),
                             React.createElement('input', {
                                 type: 'number',
                                 className: 'mpc-grams',

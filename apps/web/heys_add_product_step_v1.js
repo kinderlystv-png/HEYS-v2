@@ -3503,7 +3503,10 @@ NOVA: 1
     const [parsedPreview, setParsedPreview] = useState(null);
     const textareaRef = useRef(null);
 
-    // 🌐 Публикация в общую базу (по умолчанию включено)
+    // ⚡ Режим добавления: 'oneTime' (разово, без записи в базу — дефолт) | 'persist' (в базу)
+    const [createMode, setCreateMode] = useState(() => stepData?.create?.mode || 'oneTime');
+
+    // 🌐 Публикация в общую базу (по умолчанию включено; для oneTime скрывается)
     const [publishToShared, setPublishToShared] = useState(true);
 
     // Определяем тип пользователя (куратор или клиент по PIN)
@@ -3786,36 +3789,46 @@ NOVA: 1
     }, [pasteText, parseProductLine, searchQuery, formatMissingFields]);
 
     // Подготовить продукт и перейти на шаг вредности (БЕЗ СОХРАНЕНИЯ В БАЗУ!)
-    // Сохранение происходит ПОСЛЕ подтверждения вредности в HarmSelectStep
+    // Сохранение происходит ПОСЛЕ подтверждения вредности в HarmSelectStep — но
+    // ТОЛЬКО если createMode === 'persist'. Для 'oneTime' setAll пропускается.
     const handleCreate = useCallback(async () => {
       if (!parsedPreview) return;
 
       haptic('medium');
 
-      const preparedProduct = await ensureProductFingerprint(parsedPreview);
+      const baseProduct = await ensureProductFingerprint(parsedPreview);
+      // Помечаем продукт _oneTime: true когда mode === 'oneTime'.
+      // Флаг едет с продуктом через все steps и в итоге попадает в meal item.
+      const preparedProduct = createMode === 'oneTime'
+        ? { ...baseProduct, _oneTime: true }
+        : baseProduct;
       if (preparedProduct?.fingerprint && preparedProduct !== parsedPreview) {
         setParsedPreview(preparedProduct);
       }
 
-      console.log('[CreateProductStep] 📝 Подготовлен продукт:', preparedProduct?.name || parsedPreview.name);
-      console.log('[CreateProductStep] ⏭️ Переходим на шаг порций (сохранение будет после вредности)');
+      console.log('[CreateProductStep] 📝 Подготовлен продукт:', preparedProduct?.name || parsedPreview.name, 'mode:', createMode);
+      console.log('[CreateProductStep] ⏭️ Переходим на шаг порций (сохранение в базу: ' + (createMode === 'persist' ? 'да' : 'нет — разово') + ')');
 
       // 1. Обновляем данные текущего шага (БЕЗ сохранения в базу!)
       onChange({
         ...data,
         newProduct: preparedProduct,
         selectedProduct: preparedProduct,
-        grams: 100
+        grams: 100,
+        mode: createMode
       });
 
       // 4. ТАКЖЕ обновляем данные шага harm и grams (чтобы сразу видели продукт)
       if (updateStepData) {
+        updateStepData('create', { mode: createMode });
         updateStepData('harm', {
-          product: preparedProduct
+          product: preparedProduct,
+          mode: createMode
         });
         updateStepData('grams', {
           selectedProduct: preparedProduct,
-          grams: 100
+          grams: 100,
+          mode: createMode
         });
       }
 
@@ -3824,7 +3837,7 @@ NOVA: 1
       if (goToStep) {
         setTimeout(() => goToStep(2, 'left'), 150);
       }
-    }, [parsedPreview, data, onChange, context, goToStep, updateStepData, publishToShared, isCurator, ensureProductFingerprint]);
+    }, [parsedPreview, data, onChange, context, goToStep, updateStepData, publishToShared, isCurator, ensureProductFingerprint, createMode]);
 
     // Авто-добавление fingerprint для превью (после парсинга)
     useEffect(() => {
@@ -3885,6 +3898,36 @@ NOVA: 1
       React.createElement('div', { className: 'aps-create-header' },
         React.createElement('span', { className: 'aps-create-icon' }, '➕'),
         React.createElement('span', { className: 'aps-create-title' }, 'Создать новый продукт')
+      ),
+
+      // ⚡ Чузер режима: разово vs в базу
+      React.createElement('div', {
+        className: 'aps-create-mode-selector',
+        role: 'radiogroup',
+        'aria-label': 'Режим добавления продукта'
+      },
+        React.createElement('button', {
+          type: 'button',
+          className: 'aps-create-mode-btn' + (createMode === 'oneTime' ? ' active' : ''),
+          role: 'radio',
+          'aria-checked': createMode === 'oneTime',
+          onClick: () => { haptic('light'); setCreateMode('oneTime'); }
+        },
+          React.createElement('span', { className: 'aps-create-mode-icon' }, '⚡'),
+          React.createElement('span', { className: 'aps-create-mode-label' }, 'Разово в этот приём'),
+          React.createElement('span', { className: 'aps-create-mode-hint' }, 'Не засорит базу')
+        ),
+        React.createElement('button', {
+          type: 'button',
+          className: 'aps-create-mode-btn' + (createMode === 'persist' ? ' active' : ''),
+          role: 'radio',
+          'aria-checked': createMode === 'persist',
+          onClick: () => { haptic('light'); setCreateMode('persist'); }
+        },
+          React.createElement('span', { className: 'aps-create-mode-icon' }, '📥'),
+          React.createElement('span', { className: 'aps-create-mode-label' }, 'Сохранить в базу'),
+          React.createElement('span', { className: 'aps-create-mode-hint' }, 'Можно использовать снова')
+        )
       ),
 
       // Подсказка о поисковом запросе
@@ -3962,8 +4005,8 @@ NOVA: 1
         )
       ),
 
-      // 🌐 Checkbox: Опубликовать в общую базу
-      parsedPreview && React.createElement('label', {
+      // 🌐 Checkbox: Опубликовать в общую базу — скрыт для oneTime (продукт не сохраняется локально)
+      parsedPreview && createMode === 'persist' && React.createElement('label', {
         style: {
           display: 'flex',
           alignItems: 'center',
@@ -5181,7 +5224,16 @@ NOVA: 1
       }
 
       // 🔐 СОХРАНЕНИЕ ПРОДУКТА В БАЗУ (перенесено из CreateProductStep)
-      if (updatedProduct) {
+      // ⚡ Для разовых продуктов (_oneTime: true) — НЕ сохраняем в базу.
+      // Стамп уже инлайнится в meal item, getProductFromItem умеет фоллбэкать на стамп.
+      const isOneTime = !!(updatedProduct && updatedProduct._oneTime);
+      if (updatedProduct && isOneTime && updatedProduct.id == null) {
+        // Выдаём префикс 'oneoff_' для дебаг-видимости в логах/LS.
+        const uid = (HEYS.utils && HEYS.utils.uid) || ((prefix = 'oneoff_') => prefix + Date.now() + '_' + Math.random().toString(36).slice(2, 8));
+        updatedProduct.id = uid('oneoff_');
+        console.info('[HarmSelectStep] ⚡ One-time product (НЕ сохраняем в базу):', updatedProduct.name, 'id:', updatedProduct.id);
+      }
+      if (updatedProduct && !isOneTime) {
         const U = HEYS.utils || {};
         const products = HEYS.products?.getAll?.() || U.lsGet?.('heys_products', []) || [];
 

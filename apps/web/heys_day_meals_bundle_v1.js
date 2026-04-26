@@ -2189,6 +2189,7 @@
             productName: product?.name || null,
             productKcal100: product?.kcal100,
             productSource: product?._source || (product?._fromShared ? 'shared' : 'personal'),
+            isOneTime: !!product?._oneTime,
           });
         } catch (_) { /* noop */ }
         console.info('[HEYS.day] ➕ Add product to meal (modal)', {
@@ -2200,9 +2201,11 @@
           productName: product?.name || null,
           source: product?._source || (product?._fromShared ? 'shared' : 'personal')
         });
-        // 🌐 Если продукт из общей базы — автоматически клонируем в личную
+        // 🌐 Если продукт из общей базы — автоматически клонируем в личную.
+        // ⚡ Разовые продукты (_oneTime) пропускают это — они вообще не должны
+        // попадать в личную базу.
         let finalProduct = product;
-        if (product?._fromShared || product?._source === 'shared') {
+        if (!product?._oneTime && (product?._fromShared || product?._source === 'shared')) {
           const cloned = window.HEYS?.products?.addFromShared?.(product);
           if (cloned) {
             finalProduct = cloned;
@@ -2232,6 +2235,9 @@
           fingerprint: finalProduct.fingerprint,
           grams: grams || 100,
           portions: Array.isArray(finalProduct.portions) ? finalProduct.portions : undefined,
+          // ⚡ Разовый продукт — флаг едет с item'ом во все downstream-системы
+          // (cloud sync, orphan-tracking, render). Стамп уже инлайнится ниже.
+          ...(finalProduct._oneTime && { _oneTime: true }),
           ...(finalProduct.kcal100 !== undefined && {
             kcal100: computeTEFKcal100(finalProduct),
             protein100: finalProduct.protein100,
@@ -2399,30 +2405,35 @@
           detail: { product, grams }
         }));
 
-        try {
-          if (HEYS.store?.set) {
-            HEYS.store.set(`heys_last_grams_${productId}`, grams);
-          } else if (U.lsSet) {
-            U.lsSet(`heys_last_grams_${productId}`, grams);
-          } else {
-            localStorage.setItem(`heys_last_grams_${productId}`, JSON.stringify(grams));
-          }
+        // ⚡ Skip grams-tracking для разовых продуктов: их productId уникален и
+        // никогда не повторится → запись в last_grams/grams_history засоряет LS
+        // и cloud-sync без всякой пользы.
+        if (!finalProduct?._oneTime) {
+          try {
+            if (HEYS.store?.set) {
+              HEYS.store.set(`heys_last_grams_${productId}`, grams);
+            } else if (U.lsSet) {
+              U.lsSet(`heys_last_grams_${productId}`, grams);
+            } else {
+              localStorage.setItem(`heys_last_grams_${productId}`, JSON.stringify(grams));
+            }
 
-          const history = HEYS.store?.get
-            ? HEYS.store.get('heys_grams_history', {})
-            : (U.lsGet ? U.lsGet('heys_grams_history', {}) : {});
-          if (!history[productId]) history[productId] = [];
-          history[productId].push(grams);
-          if (history[productId].length > 20) history[productId].shift();
+            const history = HEYS.store?.get
+              ? HEYS.store.get('heys_grams_history', {})
+              : (U.lsGet ? U.lsGet('heys_grams_history', {}) : {});
+            if (!history[productId]) history[productId] = [];
+            history[productId].push(grams);
+            if (history[productId].length > 20) history[productId].shift();
 
-          if (HEYS.store?.set) {
-            HEYS.store.set('heys_grams_history', history);
-          } else if (U.lsSet) {
-            U.lsSet('heys_grams_history', history);
-          } else {
-            localStorage.setItem('heys_grams_history', JSON.stringify(history));
-          }
-        } catch (e) { }
+            if (HEYS.store?.set) {
+              HEYS.store.set('heys_grams_history', history);
+            } else if (U.lsSet) {
+              U.lsSet('heys_grams_history', history);
+            } else {
+              localStorage.setItem('heys_grams_history', JSON.stringify(history));
+            }
+          } catch (e) { }
+        }
 
         if (activeMultiProductMode && HEYS.dayAddProductSummary?.show) {
           // Build updated day with the just-added item for the summary modal.
@@ -4057,7 +4068,13 @@
                     const cardContent = React.createElement('div', { className: 'mpc', style: harmToneStyle || undefined },
                         React.createElement('div', { className: 'mpc-row1' },
                             categoryIcon && React.createElement('span', { className: 'mpc-category-icon' }, categoryIcon),
-                            React.createElement('span', { className: 'mpc-name' }, p.name),
+                            React.createElement('span', { className: 'mpc-name' },
+                                p.name,
+                                it._oneTime && React.createElement('span', {
+                                    className: 'mpc-name-oneoff',
+                                    title: 'Разовый продукт — не сохранён в базу',
+                                }, ' (разово)')
+                            ),
                             harmBadge && React.createElement('span', {
                                 className: 'mpc-badge',
                                 style: { color: harmBadge.color },
@@ -4139,7 +4156,13 @@
 
                     return React.createElement('div', { key: it.id, className: 'mpc', style: harmToneStyle ? { marginBottom: '6px', ...harmToneStyle } : { marginBottom: '6px' } },
                         React.createElement('div', { className: 'mpc-row1' },
-                            React.createElement('span', { className: 'mpc-name' }, p.name),
+                            React.createElement('span', { className: 'mpc-name' },
+                                p.name,
+                                it._oneTime && React.createElement('span', {
+                                    className: 'mpc-name-oneoff',
+                                    title: 'Разовый продукт — не сохранён в базу',
+                                }, ' (разово)')
+                            ),
                             React.createElement('input', {
                                 type: 'number',
                                 className: 'mpc-grams',
@@ -7539,6 +7562,15 @@
     // tracker is stale — silently clean it and skip the warning.
     const trulyUnresolved = [];
     for (const o of listForUi) {
+      // ⚡ Defense in depth: разовые продукты by design не в БД, не показываем алерт.
+      if (o && (o._oneTime === true ||
+                (typeof o.product_id === 'string' && o.product_id.indexOf('oneoff_') === 0) ||
+                (typeof o.productId === 'string' && o.productId.indexOf('oneoff_') === 0))) {
+        if (typeof HEYS.orphanProducts?.remove === 'function') {
+          try { HEYS.orphanProducts.remove(o.name); } catch (_) { /* noop */ }
+        }
+        continue;
+      }
       const id = o?.product_id ?? o?.productId ?? null;
       let resolved = null;
       if (id != null && HEYS.products && typeof HEYS.products.getById === 'function') {

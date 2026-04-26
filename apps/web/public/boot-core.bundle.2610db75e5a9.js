@@ -6630,6 +6630,11 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
       return;
     }
     const idKey = String(productId);
+    // ⚡ Skip разовые продукты: их ID уникален и никогда не повторится →
+    // запись в usage_stats — мусор и для LS, и для cloud-sync.
+    if (idKey.indexOf('oneoff_') === 0) {
+      return;
+    }
     const stats = userProductStats.get(idKey) || { count: 0, lastUsed: 0 };
     stats.count++;
     stats.lastUsed = Date.now();

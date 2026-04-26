@@ -5889,3 +5889,101 @@ button.meal-quality-badge:active {
   background: rgba(255, 255, 255, 0.1);
   color: #9ca3af;
 }
+/* ===========================================================================
+   ⚡ Чузер режима добавления продукта (разово / в базу) — CreateProductStep
+   ========================================================================= */
+
+.aps-create-mode-selector {
+  display: flex;
+  gap: 8px;
+  margin: 8px 0 14px 0;
+}
+
+.aps-create-mode-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 10px 8px;
+  background: var(--color-slate-100);
+  border: 2px solid transparent;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-align: center;
+}
+
+.aps-create-mode-btn:active {
+  transform: scale(0.96);
+}
+
+.aps-create-mode-btn.active {
+  background: #dbeafe;
+  border-color: var(--color-blue-500);
+}
+
+.aps-create-mode-icon {
+  font-size: 20px;
+  line-height: 1;
+}
+
+.aps-create-mode-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-slate-700);
+}
+
+.aps-create-mode-btn.active .aps-create-mode-label {
+  color: #2563eb;
+}
+
+.aps-create-mode-hint {
+  font-size: 10px;
+  color: var(--color-slate-500);
+}
+
+[data-theme="dark"] .aps-create-mode-btn {
+  background: var(--color-slate-700);
+}
+
+[data-theme="dark"] .aps-create-mode-btn.active {
+  background: #1e3a8a;
+  border-color: var(--color-blue-500);
+}
+
+[data-theme="dark"] .aps-create-mode-label {
+  color: var(--color-slate-200);
+}
+
+[data-theme="dark"] .aps-create-mode-hint {
+  color: var(--color-slate-400);
+}
+
+@media (max-width: 480px) {
+  .aps-create-mode-btn {
+    padding: 8px 6px;
+  }
+  .aps-create-mode-label {
+    font-size: 11px;
+  }
+  .aps-create-mode-hint {
+    font-size: 9px;
+  }
+}
+
+/* ===========================================================================
+   ⚡ Метка «(разово)» рядом с именем продукта в meal item
+   ========================================================================= */
+
+.mpc-name-oneoff {
+  font-size: 0.85em;
+  font-weight: 500;
+  color: var(--color-slate-500, #64748b);
+  font-style: italic;
+  margin-left: 2px;
+}
+
+[data-theme="dark"] .mpc-name-oneoff {
+  color: var(--color-slate-400, #94a3b8);
+}

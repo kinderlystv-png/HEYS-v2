@@ -49,6 +49,15 @@
     // tracker is stale — silently clean it and skip the warning.
     const trulyUnresolved = [];
     for (const o of listForUi) {
+      // ⚡ Defense in depth: разовые продукты by design не в БД, не показываем алерт.
+      if (o && (o._oneTime === true ||
+                (typeof o.product_id === 'string' && o.product_id.indexOf('oneoff_') === 0) ||
+                (typeof o.productId === 'string' && o.productId.indexOf('oneoff_') === 0))) {
+        if (typeof HEYS.orphanProducts?.remove === 'function') {
+          try { HEYS.orphanProducts.remove(o.name); } catch (_) { /* noop */ }
+        }
+        continue;
+      }
       const id = o?.product_id ?? o?.productId ?? null;
       let resolved = null;
       if (id != null && HEYS.products && typeof HEYS.products.getById === 'function') {
