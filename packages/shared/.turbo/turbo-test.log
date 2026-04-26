@@ -5,15 +5,14 @@
 
  RUN  v3.2.4 /Users/poplavskijanton/HEYS-v2/packages/shared
 
- ✓ src/security/__tests__/security.test.ts (34 tests) 103ms
-{"level":"warn","time":"2026-04-26T10:28:53.579Z","pid":4287,"hostname":"localhost","environment":"development","name":"heys-app","msg":"CRITICAL AUDIT EVENT","timestamp":"2026-04-26T10:28:53.578Z","component":"AdvancedAuditLogger","metadata":{"id":"audit_1777199333578_x6ohqdq3h","timestamp":"2026-04-26T10:28:53.578Z","correlationId":"corr_1777199333578_q2i4vivvu","eventType":"security_event","action":"brute_force_attempt","severity":"critical","source":"security_system","metadata":{"attemptCount":5},"success":true,"complianceFlags":["security_incident"],"gdprRelevant":false,"userId":"user123","duration":0.02572599999984959}}
-{"level":"warn","time":"2026-04-26T10:28:53.689Z","pid":4287,"hostname":"localhost","environment":"development","name":"heys-app","msg":"CRITICAL AUDIT EVENT","timestamp":"2026-04-26T10:28:53.689Z","component":"AdvancedAuditLogger","metadata":{"id":"audit_1777199333689_ksjom5704","timestamp":"2026-04-26T10:28:53.689Z","correlationId":"corr_1777199333689_0gwwaciwj","eventType":"security_event","action":"security1","severity":"critical","source":"system","metadata":{},"success":true,"complianceFlags":[],"gdprRelevant":false,"duration":0.003800999999839405}}
-{"level":"warn","time":"2026-04-26T10:28:53.693Z","pid":4287,"hostname":"localhost","environment":"development","name":"heys-app","msg":"CRITICAL AUDIT EVENT","timestamp":"2026-04-26T10:28:53.693Z","component":"AdvancedAuditLogger","metadata":{"id":"audit_1777199333693_1ji265ri2","timestamp":"2026-04-26T10:28:53.693Z","correlationId":"corr_1777199333693_883u11ah4","eventType":"security_event","action":"security1","severity":"critical","source":"system","metadata":{},"success":true,"complianceFlags":[],"gdprRelevant":false,"duration":0.018597000000227126}}
+{"level":"warn","time":"2026-04-26T14:39:40.556Z","pid":14951,"hostname":"localhost","environment":"development","name":"heys-app","msg":"CRITICAL AUDIT EVENT","timestamp":"2026-04-26T14:39:40.555Z","component":"AdvancedAuditLogger","metadata":{"id":"audit_1777214380555_q72y2fej1","timestamp":"2026-04-26T14:39:40.555Z","correlationId":"corr_1777214380555_cotvh4lww","eventType":"security_event","action":"brute_force_attempt","severity":"critical","source":"security_system","metadata":{"attemptCount":5},"success":true,"complianceFlags":["security_incident"],"gdprRelevant":false,"userId":"user123","duration":0.02642799999921408}}
+{"level":"warn","time":"2026-04-26T14:39:40.564Z","pid":14951,"hostname":"localhost","environment":"development","name":"heys-app","msg":"CRITICAL AUDIT EVENT","timestamp":"2026-04-26T14:39:40.564Z","component":"AdvancedAuditLogger","metadata":{"id":"audit_1777214380564_mlc5f6sg0","timestamp":"2026-04-26T14:39:40.564Z","correlationId":"corr_1777214380564_7bfyp3q0k","eventType":"security_event","action":"security1","severity":"critical","source":"system","metadata":{},"success":true,"complianceFlags":[],"gdprRelevant":false,"duration":0.003276999999798136}}
+{"level":"warn","time":"2026-04-26T14:39:40.564Z","pid":14951,"hostname":"localhost","environment":"development","name":"heys-app","msg":"CRITICAL AUDIT EVENT","timestamp":"2026-04-26T14:39:40.564Z","component":"AdvancedAuditLogger","metadata":{"id":"audit_1777214380564_o6fml5nqf","timestamp":"2026-04-26T14:39:40.564Z","correlationId":"corr_1777214380564_oe2ljj40l","eventType":"security_event","action":"security1","severity":"critical","source":"system","metadata":{},"success":true,"complianceFlags":[],"gdprRelevant":false,"duration":0.009039999999913562}}
+{"level":"warn","time":"2026-04-26T14:39:40.672Z","pid":14951,"hostname":"localhost","environment":"development","name":"heys-app","msg":"CRITICAL AUDIT EVENT","timestamp":"2026-04-26T14:39:40.672Z","component":"AdvancedAuditLogger","metadata":{"id":"audit_1777214380672_ed7mtwgwr","timestamp":"2026-04-26T14:39:40.672Z","correlationId":"corr_1777214380672_v100jr9v5","eventType":"security_event","action":"critical_breach","severity":"critical","source":"security_system","metadata":{},"success":true,"complianceFlags":["security_incident"],"gdprRelevant":false,"duration":0.014970000000175787}}
+{"level":"error","time":"2026-04-26T14:39:40.675Z","pid":14951,"hostname":"localhost","environment":"development","name":"heys-app","msg":"Audit Logger Error","timestamp":"2026-04-26T14:39:40.675Z","component":"AdvancedAuditLogger","metadata":{"error":{}}}
 stdout | src/monitoring/__tests__/monitoring-service.test.ts > MonitoringService > Initialization > should initialize successfully with valid config
 [INFO] Shutting down monitoring service [90mundefined[39m
 
-{"level":"warn","time":"2026-04-26T10:28:53.868Z","pid":4287,"hostname":"localhost","environment":"development","name":"heys-app","msg":"CRITICAL AUDIT EVENT","timestamp":"2026-04-26T10:28:53.868Z","component":"AdvancedAuditLogger","metadata":{"id":"audit_1777199333868_8yyz1ha5x","timestamp":"2026-04-26T10:28:53.868Z","correlationId":"corr_1777199333868_oqm744lf2","eventType":"security_event","action":"critical_breach","severity":"critical","source":"security_system","metadata":{},"success":true,"complianceFlags":["security_incident"],"gdprRelevant":false,"duration":0.01665799999864248}}
-{"level":"error","time":"2026-04-26T10:28:53.870Z","pid":4287,"hostname":"localhost","environment":"development","name":"heys-app","msg":"Audit Logger Error","timestamp":"2026-04-26T10:28:53.870Z","component":"AdvancedAuditLogger","metadata":{"error":{}}}
 stdout | src/monitoring/__tests__/monitoring-service.test.ts > MonitoringService > Error Capturing > should capture errors with context
 [INFO] Shutting down monitoring service [90mundefined[39m
 
@@ -26,45 +25,155 @@ stdout | src/monitoring/__tests__/monitoring-service.test.ts > MonitoringService
 stdout | src/monitoring/__tests__/monitoring-service.test.ts > MonitoringService > Performance Monitoring > should measure performance of sync functions
 [INFO] Shutting down monitoring service [90mundefined[39m
 
- ✓ src/monitoring/AdvancedAuditLogger.test.ts (36 tests) 460ms
+stderr | src/performance/LazyLoader.basic.test.ts > LazyLoader - Основные функции > Работа с элементами > должен обрабатывать различные типы элементов
+DOMException [NotSupportedError]: Failed to load script "http://localhost:3000/script.js". JavaScript file loading is disabled.
+    at HTMLScriptElement.#loadScript (file:///Users/poplavskijanton/HEYS-v2/node_modules/[4m.pnpm[24m/happy-dom@20.0.10/node_modules/[4mhappy-dom[24m/src/nodes/html-script-element/HTMLScriptElement.ts:656:19)
+    at HTMLScriptElement.[connectedToDocument] (file:///Users/poplavskijanton/HEYS-v2/node_modules/[4m.pnpm[24m/happy-dom@20.0.10/node_modules/[4mhappy-dom[24m/src/nodes/html-script-element/HTMLScriptElement.ts:362:21)
+    at HTMLScriptElement.[connectedToNode] (file:///Users/poplavskijanton/HEYS-v2/node_modules/[4m.pnpm[24m/happy-dom@20.0.10/node_modules/[4mhappy-dom[24m/src/nodes/node/Node.ts:992:44)
+    at HTMLHeadElement.[appendChild] (file:///Users/poplavskijanton/HEYS-v2/node_modules/[4m.pnpm[24m/happy-dom@20.0.10/node_modules/[4mhappy-dom[24m/src/nodes/node/Node.ts:523:39)
+    at HTMLHeadElement.[appendChild] (file:///Users/poplavskijanton/HEYS-v2/node_modules/[4m.pnpm[24m/happy-dom@20.0.10/node_modules/[4mhappy-dom[24m/src/nodes/element/Element.ts:1353:56)
+    at HTMLHeadElement.appendChild (file:///Users/poplavskijanton/HEYS-v2/node_modules/[4m.pnpm[24m/happy-dom@20.0.10/node_modules/[4mhappy-dom[24m/src/nodes/node/Node.ts:383:42)
+    at [90m/Users/poplavskijanton/HEYS-v2/packages/shared/[39msrc/performance/LazyLoader.ts:407:21
+    at new Promise (<anonymous>)
+    at LazyLoader.loadScript [90m(/Users/poplavskijanton/HEYS-v2/packages/shared/[39msrc/performance/LazyLoader.ts:386:12[90m)[39m
+    at LazyLoader.performLoad [90m(/Users/poplavskijanton/HEYS-v2/packages/shared/[39msrc/performance/LazyLoader.ts:306:20[90m)[39m
+
+ ✓ src/performance/LazyLoader.basic.test.ts (10 tests) 41ms
+ ✓ src/monitoring/AdvancedAuditLogger.test.ts (36 tests) 305ms
 stdout | src/monitoring/__tests__/monitoring-service.test.ts > MonitoringService > Performance Monitoring > should measure performance of async functions
 [INFO] Shutting down monitoring service [90mundefined[39m
 
 stdout | src/monitoring/__tests__/monitoring-service.test.ts > MonitoringService > Performance Monitoring > should handle performance measurement errors
 [INFO] Shutting down monitoring service [90mundefined[39m
 
-[2026-04-26 13:28:54.026] [32mINFO[39m: [36m[heys-system] Service Worker registered successfully[39m
+[2026-04-26 17:39:40.920] [32mINFO[39m: [36m[heys-system] Service Worker registered successfully[39m
     [35mservice[39m: "heys-system"
     [35menvironment[39m: "test"
     [35mversion[39m: "14.0.0"
     [35mmodule[39m: "performance"
     [35mcomponent[39m: "AdvancedCacheManager"
-    [35m@timestamp[39m: "2026-04-26T10:28:54.026Z"
+    [35m@timestamp[39m: "2026-04-26T14:39:40.920Z"
     [35m@version[39m: "1"
-[2026-04-26 13:28:54.027] [33mWARN[39m: [36m[heys-system] Compression worker initialization failed[39m
+[2026-04-26 17:39:40.920] [33mWARN[39m: [36m[heys-system] Compression worker initialization failed[39m
     [35mservice[39m: "heys-system"
     [35menvironment[39m: "test"
     [35mversion[39m: "14.0.0"
     [35mmodule[39m: "performance"
     [35mcomponent[39m: "AdvancedCacheManager"
-    [35m@timestamp[39m: "2026-04-26T10:28:54.027Z"
+    [35m@timestamp[39m: "2026-04-26T14:39:40.920Z"
     [35m@version[39m: "1"
     error: {}
-[2026-04-26 13:28:54.027] [32mINFO[39m: [36m[heys-system] AdvancedCacheManager initialized successfully[39m
+[2026-04-26 17:39:40.920] [32mINFO[39m: [36m[heys-system] AdvancedCacheManager initialized successfully[39m
     [35mservice[39m: "heys-system"
     [35menvironment[39m: "test"
     [35mversion[39m: "14.0.0"
     [35mmodule[39m: "performance"
     [35mcomponent[39m: "AdvancedCacheManager"
-    [35m@timestamp[39m: "2026-04-26T10:28:54.027Z"
+    [35m@timestamp[39m: "2026-04-26T14:39:40.920Z"
     [35m@version[39m: "1"
-[2026-04-26 13:28:54.229] [32mINFO[39m: [36m[heys-system] Запуск Lighthouse аудита для https://example.com...[39m
+[2026-04-26 17:39:41.256] [32mINFO[39m: [36m[heys-system] Performance profiling enabled[39m
+    [35mservice[39m: "heys-system"
+    [35menvironment[39m: "test"
+    [35mversion[39m: "14.0.0"
+    [35mmodule[39m: "performance"
+    [35mcomponent[39m: "performance"
+    [35m@timestamp[39m: "2026-04-26T14:39:41.256Z"
+    [35m@version[39m: "1"
+[2026-04-26 17:39:41.257] [32mINFO[39m: [36m[heys-system] Setting max concurrent requests to 6[39m
+    [35mservice[39m: "heys-system"
+    [35menvironment[39m: "test"
+    [35mversion[39m: "14.0.0"
+    [35mmodule[39m: "performance"
+    [35mcomponent[39m: "MobilePerformanceOptimizer"
+    [35m@timestamp[39m: "2026-04-26T14:39:41.257Z"
+    [35m@version[39m: "1"
+[2026-04-26 17:39:41.257] [32mINFO[39m: [36m[heys-system] Enabling compression[39m
+    [35mservice[39m: "heys-system"
+    [35menvironment[39m: "test"
+    [35mversion[39m: "14.0.0"
+    [35mmodule[39m: "performance"
+    [35mcomponent[39m: "MobilePerformanceOptimizer"
+    [35m@timestamp[39m: "2026-04-26T14:39:41.257Z"
+    [35m@version[39m: "1"
+[2026-04-26 17:39:41.257] [32mINFO[39m: [36m[heys-system] Optimizing animation performance[39m
+    [35mservice[39m: "heys-system"
+    [35menvironment[39m: "test"
+    [35mversion[39m: "14.0.0"
+    [35mmodule[39m: "performance"
+    [35mcomponent[39m: "MobilePerformanceOptimizer"
+    [35m@timestamp[39m: "2026-04-26T14:39:41.257Z"
+    [35m@version[39m: "1"
+[2026-04-26 17:39:41.286] [32mINFO[39m: [36m[heys-system] Enabling batched rendering[39m
+    [35mservice[39m: "heys-system"
+    [35menvironment[39m: "test"
+    [35mversion[39m: "14.0.0"
+    [35mmodule[39m: "performance"
+    [35mcomponent[39m: "MobilePerformanceOptimizer"
+    [35m@timestamp[39m: "2026-04-26T14:39:41.286Z"
+    [35m@version[39m: "1"
+[2026-04-26 17:39:41.286] [32mINFO[39m: [36m[heys-system] Setting max concurrent requests to 2[39m
+    [35mservice[39m: "heys-system"
+    [35menvironment[39m: "test"
+    [35mversion[39m: "14.0.0"
+    [35mmodule[39m: "performance"
+    [35mcomponent[39m: "MobilePerformanceOptimizer"
+    [35m@timestamp[39m: "2026-04-26T14:39:41.286Z"
+    [35m@version[39m: "1"
+[2026-04-26 17:39:41.286] [32mINFO[39m: [36m[heys-system] Enabling compression[39m
+    [35mservice[39m: "heys-system"
+    [35menvironment[39m: "test"
+    [35mversion[39m: "14.0.0"
+    [35mmodule[39m: "performance"
+    [35mcomponent[39m: "MobilePerformanceOptimizer"
+    [35m@timestamp[39m: "2026-04-26T14:39:41.286Z"
+    [35m@version[39m: "1"
+[2026-04-26 17:39:41.286] [32mINFO[39m: [36m[heys-system] Enabling minimal caching strategy[39m
+    [35mservice[39m: "heys-system"
+    [35menvironment[39m: "test"
+    [35mversion[39m: "14.0.0"
+    [35mmodule[39m: "performance"
+    [35mcomponent[39m: "MobilePerformanceOptimizer"
+    [35m@timestamp[39m: "2026-04-26T14:39:41.286Z"
+    [35m@version[39m: "1"
+[2026-04-26 17:39:41.286] [32mINFO[39m: [36m[heys-system] Enabling batched rendering[39m
+    [35mservice[39m: "heys-system"
+    [35menvironment[39m: "test"
+    [35mversion[39m: "14.0.0"
+    [35mmodule[39m: "performance"
+    [35mcomponent[39m: "MobilePerformanceOptimizer"
+    [35m@timestamp[39m: "2026-04-26T14:39:41.286Z"
+    [35m@version[39m: "1"
+[2026-04-26 17:39:41.286] [32mINFO[39m: [36m[heys-system] Setting max concurrent requests to 2[39m
+    [35mservice[39m: "heys-system"
+    [35menvironment[39m: "test"
+    [35mversion[39m: "14.0.0"
+    [35mmodule[39m: "performance"
+    [35mcomponent[39m: "MobilePerformanceOptimizer"
+    [35m@timestamp[39m: "2026-04-26T14:39:41.286Z"
+    [35m@version[39m: "1"
+[2026-04-26 17:39:41.287] [32mINFO[39m: [36m[heys-system] Enabling compression[39m
+    [35mservice[39m: "heys-system"
+    [35menvironment[39m: "test"
+    [35mversion[39m: "14.0.0"
+    [35mmodule[39m: "performance"
+    [35mcomponent[39m: "MobilePerformanceOptimizer"
+    [35m@timestamp[39m: "2026-04-26T14:39:41.287Z"
+    [35m@version[39m: "1"
+[2026-04-26 17:39:41.287] [32mINFO[39m: [36m[heys-system] Enabling minimal caching strategy[39m
+    [35mservice[39m: "heys-system"
+    [35menvironment[39m: "test"
+    [35mversion[39m: "14.0.0"
+    [35mmodule[39m: "performance"
+    [35mcomponent[39m: "MobilePerformanceOptimizer"
+    [35m@timestamp[39m: "2026-04-26T14:39:41.287Z"
+    [35m@version[39m: "1"
+[2026-04-26 17:39:41.357] [32mINFO[39m: [36m[heys-system] Запуск Lighthouse аудита для https://example.com...[39m
     [35mservice[39m: "heys-system"
     [35menvironment[39m: "test"
     [35mversion[39m: "14.0.0"
     [35mmodule[39m: "performance"
     [35mcomponent[39m: "LighthouseOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:28:54.229Z"
+    [35m@timestamp[39m: "2026-04-26T14:39:41.357Z"
     [35m@version[39m: "1"
 stdout | src/monitoring/__tests__/monitoring-service.test.ts > MonitoringService > Performance Monitoring > should detect slow operations
 [INFO] Shutting down monitoring service [90mundefined[39m
@@ -96,2294 +205,217 @@ stdout | src/monitoring/__tests__/monitoring-service.test.ts > MonitoringService
 stdout | src/monitoring/__tests__/monitoring-service.test.ts > MonitoringService > Flush and Shutdown > should flush monitoring data
 [INFO] Shutting down monitoring service [90mundefined[39m
 
- ✓ src/monitoring/__tests__/monitoring-service.test.ts (24 tests) 1342ms
-   ✓ MonitoringService > Initialization > should initialize successfully with valid config  329ms
+ ✓ src/monitoring/__tests__/monitoring-service.test.ts (24 tests) 924ms
    ✓ MonitoringService > Performance Monitoring > should detect slow operations  602ms
-[2026-04-26 13:28:54.623] [32mINFO[39m: [36m[heys-system] Performance profiling enabled[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "performance"
-    [35m@timestamp[39m: "2026-04-26T10:28:54.624Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:28:54.624] [32mINFO[39m: [36m[heys-system] Setting max concurrent requests to 6[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:28:54.624Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:28:54.624] [32mINFO[39m: [36m[heys-system] Enabling compression[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:28:54.624Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:28:54.624] [32mINFO[39m: [36m[heys-system] Optimizing animation performance[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:28:54.624Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:28:54.851] [32mINFO[39m: [36m[heys-system] Enabling batched rendering[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:28:54.851Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:28:54.908] [32mINFO[39m: [36m[heys-system] Setting max concurrent requests to 2[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:28:54.908Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:28:54.908] [32mINFO[39m: [36m[heys-system] Enabling compression[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:28:54.908Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:28:54.908] [32mINFO[39m: [36m[heys-system] Enabling minimal caching strategy[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:28:54.908Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:28:54.910] [32mINFO[39m: [36m[heys-system] Enabling batched rendering[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:28:54.910Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:28:54.910] [32mINFO[39m: [36m[heys-system] Setting max concurrent requests to 2[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:28:54.910Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:28:54.910] [32mINFO[39m: [36m[heys-system] Enabling compression[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:28:54.910Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:28:54.910] [32mINFO[39m: [36m[heys-system] Enabling minimal caching strategy[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:28:54.910Z"
-    [35m@version[39m: "1"
-{"level":"error","time":"2026-04-26T10:28:55.635Z","pid":4284,"hostname":"localhost","environment":"development","name":"heys-app","msg":"Rate limiting error","timestamp":"2026-04-26T10:28:55.635Z","component":"RateLimitMiddleware","metadata":{"error":{}}}
- ✓ src/security/AdvancedRateLimiter.test.ts (16 tests) 2246ms
-   ✓ AdvancedRateLimiter > Basic Rate Limiting > should reset after window expires  1102ms
-   ✓ AdvancedRateLimiter > Cleanup > should clean up old entries  1101ms
+{"level":"error","time":"2026-04-26T14:39:42.702Z","pid":14946,"hostname":"localhost","environment":"development","name":"heys-app","msg":"Rate limiting error","timestamp":"2026-04-26T14:39:42.702Z","component":"RateLimitMiddleware","metadata":{"error":{}}}
+ ✓ src/security/AdvancedRateLimiter.test.ts (16 tests) 2227ms
+   ✓ AdvancedRateLimiter > Basic Rate Limiting > should reset after window expires  1101ms
+   ✓ AdvancedRateLimiter > Cleanup > should clean up old entries  1102ms
 stderr | src/performance/advanced-cache-strategies.test.ts > AdvancedCacheManager > Memory Cache Operations > should store and retrieve data from memory cache
 Cache cleanup error: Error: Cleanup timeout
     at Timeout._onTimeout [90m(/Users/poplavskijanton/HEYS-v2/packages/shared/[39msrc/performance/advanced-cache-strategies.test.ts:269:62[90m)[39m
 [90m    at listOnTimeout (node:internal/timers:608:17)[39m
 [90m    at processTimers (node:internal/timers:543:7)[39m
 
-[2026-04-26 13:28:56.037] [32mINFO[39m: [36m[heys-system] Service Worker registered successfully[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "AdvancedCacheManager"
-    [35m@timestamp[39m: "2026-04-26T10:28:56.037Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:28:56.037] [33mWARN[39m: [36m[heys-system] Compression worker initialization failed[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "AdvancedCacheManager"
-    [35m@timestamp[39m: "2026-04-26T10:28:56.037Z"
-    [35m@version[39m: "1"
-    error: {}
-[2026-04-26 13:28:56.038] [32mINFO[39m: [36m[heys-system] AdvancedCacheManager initialized successfully[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "AdvancedCacheManager"
-    [35m@timestamp[39m: "2026-04-26T10:28:56.038Z"
-    [35m@version[39m: "1"
- ✓ src/performance/advanced-cache-strategies.test.ts (34 tests) 2148ms
-   ✓ AdvancedCacheManager > Memory Cache Operations > should store and retrieve data from memory cache  2013ms
-[2026-04-26 13:28:56.049] [33mWARN[39m: [36m[heys-system] Cache invalidation partially failed[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "AdvancedCacheManager"
-    [35m@timestamp[39m: "2026-04-26T10:28:56.049Z"
-    [35m@version[39m: "1"
-    error: {}
-[2026-04-26 13:28:56.050] [33mWARN[39m: [36m[heys-system] IndexedDB clear failed[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "AdvancedCacheManager"
-    [35m@timestamp[39m: "2026-04-26T10:28:56.050Z"
-    [35m@version[39m: "1"
-    error: {}
-[2026-04-26 13:28:56.050] [32mINFO[39m: [36m[heys-system] Service Worker registered successfully[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "AdvancedCacheManager"
-    [35m@timestamp[39m: "2026-04-26T10:28:56.050Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:28:56.050] [33mWARN[39m: [36m[heys-system] Compression worker initialization failed[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "AdvancedCacheManager"
-    [35m@timestamp[39m: "2026-04-26T10:28:56.050Z"
-    [35m@version[39m: "1"
-    error: {}
-[2026-04-26 13:28:56.051] [32mINFO[39m: [36m[heys-system] AdvancedCacheManager initialized successfully[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "AdvancedCacheManager"
-    [35m@timestamp[39m: "2026-04-26T10:28:56.051Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:28:56.051] [32mINFO[39m: [36m[heys-system] Service Worker registered successfully[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "AdvancedCacheManager"
-    [35m@timestamp[39m: "2026-04-26T10:28:56.051Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:28:56.051] [33mWARN[39m: [36m[heys-system] Compression worker initialization failed[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "AdvancedCacheManager"
-    [35m@timestamp[39m: "2026-04-26T10:28:56.051Z"
-    [35m@version[39m: "1"
-    error: {}
-[2026-04-26 13:28:56.051] [32mINFO[39m: [36m[heys-system] AdvancedCacheManager initialized successfully[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "AdvancedCacheManager"
-    [35m@timestamp[39m: "2026-04-26T10:28:56.051Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:28:56.051] [33mWARN[39m: [36m[heys-system] IndexedDB clear failed[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "AdvancedCacheManager"
-    [35m@timestamp[39m: "2026-04-26T10:28:56.051Z"
-    [35m@version[39m: "1"
-    error: {}
-[2026-04-26 13:28:56.051] [33mWARN[39m: [36m[heys-system] IndexedDB clear failed[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "AdvancedCacheManager"
-    [35m@timestamp[39m: "2026-04-26T10:28:56.051Z"
-    [35m@version[39m: "1"
-    error: {}
-[2026-04-26 13:28:56.052] [32mINFO[39m: [36m[heys-system] Service Worker registered successfully[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "AdvancedCacheManager"
-    [35m@timestamp[39m: "2026-04-26T10:28:56.052Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:28:56.052] [33mWARN[39m: [36m[heys-system] Compression worker initialization failed[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "AdvancedCacheManager"
-    [35m@timestamp[39m: "2026-04-26T10:28:56.052Z"
-    [35m@version[39m: "1"
-    error: {}
-[2026-04-26 13:28:56.052] [32mINFO[39m: [36m[heys-system] AdvancedCacheManager initialized successfully[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "AdvancedCacheManager"
-    [35m@timestamp[39m: "2026-04-26T10:28:56.052Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:28:56.053] [33mWARN[39m: [36m[heys-system] IndexedDB clear failed[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "AdvancedCacheManager"
-    [35m@timestamp[39m: "2026-04-26T10:28:56.053Z"
-    [35m@version[39m: "1"
-    error: {}
-[2026-04-26 13:28:56.053] [32mINFO[39m: [36m[heys-system] Service Worker registered successfully[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "AdvancedCacheManager"
-    [35m@timestamp[39m: "2026-04-26T10:28:56.053Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:28:56.053] [33mWARN[39m: [36m[heys-system] Compression worker initialization failed[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "AdvancedCacheManager"
-    [35m@timestamp[39m: "2026-04-26T10:28:56.053Z"
-    [35m@version[39m: "1"
-    error: {}
-[2026-04-26 13:28:56.053] [32mINFO[39m: [36m[heys-system] AdvancedCacheManager initialized successfully[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "AdvancedCacheManager"
-    [35m@timestamp[39m: "2026-04-26T10:28:56.053Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:28:56.053] [32mINFO[39m: [36m[heys-system] Service Worker registered successfully[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "AdvancedCacheManager"
-    [35m@timestamp[39m: "2026-04-26T10:28:56.053Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:28:56.053] [33mWARN[39m: [36m[heys-system] Compression worker initialization failed[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "AdvancedCacheManager"
-    [35m@timestamp[39m: "2026-04-26T10:28:56.053Z"
-    [35m@version[39m: "1"
-    error: {}
-[2026-04-26 13:28:56.053] [32mINFO[39m: [36m[heys-system] AdvancedCacheManager initialized successfully[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "AdvancedCacheManager"
-    [35m@timestamp[39m: "2026-04-26T10:28:56.053Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:28:56.054] [33mWARN[39m: [36m[heys-system] IndexedDB clear failed[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "AdvancedCacheManager"
-    [35m@timestamp[39m: "2026-04-26T10:28:56.054Z"
-    [35m@version[39m: "1"
-    error: {}
-[2026-04-26 13:28:56.054] [33mWARN[39m: [36m[heys-system] IndexedDB clear failed[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "AdvancedCacheManager"
-    [35m@timestamp[39m: "2026-04-26T10:28:56.054Z"
-    [35m@version[39m: "1"
-    error: {}
-[2026-04-26 13:28:56.054] [32mINFO[39m: [36m[heys-system] Service Worker registered successfully[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "AdvancedCacheManager"
-    [35m@timestamp[39m: "2026-04-26T10:28:56.054Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:28:56.054] [33mWARN[39m: [36m[heys-system] Compression worker initialization failed[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "AdvancedCacheManager"
-    [35m@timestamp[39m: "2026-04-26T10:28:56.054Z"
-    [35m@version[39m: "1"
-    error: {}
-[2026-04-26 13:28:56.054] [32mINFO[39m: [36m[heys-system] AdvancedCacheManager initialized successfully[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "AdvancedCacheManager"
-    [35m@timestamp[39m: "2026-04-26T10:28:56.054Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:28:56.055] [33mWARN[39m: [36m[heys-system] IndexedDB clear failed[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "AdvancedCacheManager"
-    [35m@timestamp[39m: "2026-04-26T10:28:56.055Z"
-    [35m@version[39m: "1"
-    error: {}
-[2026-04-26 13:28:56.055] [32mINFO[39m: [36m[heys-system] Service Worker registered successfully[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "AdvancedCacheManager"
-    [35m@timestamp[39m: "2026-04-26T10:28:56.055Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:28:56.055] [33mWARN[39m: [36m[heys-system] Compression worker initialization failed[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "AdvancedCacheManager"
-    [35m@timestamp[39m: "2026-04-26T10:28:56.055Z"
-    [35m@version[39m: "1"
-    error: {}
-[2026-04-26 13:28:56.055] [32mINFO[39m: [36m[heys-system] AdvancedCacheManager initialized successfully[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "AdvancedCacheManager"
-    [35m@timestamp[39m: "2026-04-26T10:28:56.055Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:28:56.055] [33mWARN[39m: [36m[heys-system] IndexedDB store failed[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "AdvancedCacheManager"
-    [35m@timestamp[39m: "2026-04-26T10:28:56.055Z"
-    [35m@version[39m: "1"
-    error: {}
-[2026-04-26 13:28:56.056] [33mWARN[39m: [36m[heys-system] IndexedDB clear failed[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "AdvancedCacheManager"
-    [35m@timestamp[39m: "2026-04-26T10:28:56.056Z"
-    [35m@version[39m: "1"
-    error: {}
-[2026-04-26 13:28:56.056] [32mINFO[39m: [36m[heys-system] Service Worker registered successfully[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "AdvancedCacheManager"
-    [35m@timestamp[39m: "2026-04-26T10:28:56.056Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:28:56.056] [33mWARN[39m: [36m[heys-system] Compression worker initialization failed[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "AdvancedCacheManager"
-    [35m@timestamp[39m: "2026-04-26T10:28:56.056Z"
-    [35m@version[39m: "1"
-    error: {}
-[2026-04-26 13:28:56.056] [32mINFO[39m: [36m[heys-system] AdvancedCacheManager initialized successfully[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "AdvancedCacheManager"
-    [35m@timestamp[39m: "2026-04-26T10:28:56.056Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:28:56.057] [33mWARN[39m: [36m[heys-system] IndexedDB clear failed[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "AdvancedCacheManager"
-    [35m@timestamp[39m: "2026-04-26T10:28:56.057Z"
-    [35m@version[39m: "1"
-    error: {}
-[2026-04-26 13:28:56.057] [32mINFO[39m: [36m[heys-system] Service Worker registered successfully[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "AdvancedCacheManager"
-    [35m@timestamp[39m: "2026-04-26T10:28:56.057Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:28:56.057] [33mWARN[39m: [36m[heys-system] Compression worker initialization failed[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "AdvancedCacheManager"
-    [35m@timestamp[39m: "2026-04-26T10:28:56.057Z"
-    [35m@version[39m: "1"
-    error: {}
-[2026-04-26 13:28:56.057] [32mINFO[39m: [36m[heys-system] AdvancedCacheManager initialized successfully[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "AdvancedCacheManager"
-    [35m@timestamp[39m: "2026-04-26T10:28:56.057Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:28:56.058] [33mWARN[39m: [36m[heys-system] IndexedDB clear failed[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "AdvancedCacheManager"
-    [35m@timestamp[39m: "2026-04-26T10:28:56.058Z"
-    [35m@version[39m: "1"
-    error: {}
-[2026-04-26 13:28:56.058] [32mINFO[39m: [36m[heys-system] Service Worker registered successfully[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "AdvancedCacheManager"
-    [35m@timestamp[39m: "2026-04-26T10:28:56.058Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:28:56.058] [33mWARN[39m: [36m[heys-system] Compression worker initialization failed[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "AdvancedCacheManager"
-    [35m@timestamp[39m: "2026-04-26T10:28:56.058Z"
-    [35m@version[39m: "1"
-    error: {}
-[2026-04-26 13:28:56.058] [32mINFO[39m: [36m[heys-system] AdvancedCacheManager initialized successfully[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "AdvancedCacheManager"
-    [35m@timestamp[39m: "2026-04-26T10:28:56.058Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:28:56.058] [33mWARN[39m: [36m[heys-system] Cache invalidation partially failed[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "AdvancedCacheManager"
-    [35m@timestamp[39m: "2026-04-26T10:28:56.058Z"
-    [35m@version[39m: "1"
-    error: {}
-[2026-04-26 13:28:56.058] [33mWARN[39m: [36m[heys-system] Cache invalidation partially failed[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "AdvancedCacheManager"
-    [35m@timestamp[39m: "2026-04-26T10:28:56.058Z"
-    [35m@version[39m: "1"
-    error: {}
-[2026-04-26 13:28:56.058] [33mWARN[39m: [36m[heys-system] IndexedDB clear failed[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "AdvancedCacheManager"
-    [35m@timestamp[39m: "2026-04-26T10:28:56.058Z"
-    [35m@version[39m: "1"
-    error: {}
-[2026-04-26 13:28:56.059] [32mINFO[39m: [36m[heys-system] Service Worker registered successfully[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "AdvancedCacheManager"
-    [35m@timestamp[39m: "2026-04-26T10:28:56.059Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:28:56.059] [33mWARN[39m: [36m[heys-system] Compression worker initialization failed[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "AdvancedCacheManager"
-    [35m@timestamp[39m: "2026-04-26T10:28:56.059Z"
-    [35m@version[39m: "1"
-    error: {}
-[2026-04-26 13:28:56.059] [32mINFO[39m: [36m[heys-system] AdvancedCacheManager initialized successfully[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "AdvancedCacheManager"
-    [35m@timestamp[39m: "2026-04-26T10:28:56.059Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:28:56.059] [33mWARN[39m: [36m[heys-system] IndexedDB clear failed[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "AdvancedCacheManager"
-    [35m@timestamp[39m: "2026-04-26T10:28:56.059Z"
-    [35m@version[39m: "1"
-    error: {}
-[2026-04-26 13:28:56.059] [32mINFO[39m: [36m[heys-system] Service Worker registered successfully[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "AdvancedCacheManager"
-    [35m@timestamp[39m: "2026-04-26T10:28:56.059Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:28:56.060] [33mWARN[39m: [36m[heys-system] Compression worker initialization failed[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "AdvancedCacheManager"
-    [35m@timestamp[39m: "2026-04-26T10:28:56.060Z"
-    [35m@version[39m: "1"
-    error: {}
-[2026-04-26 13:28:56.060] [32mINFO[39m: [36m[heys-system] AdvancedCacheManager initialized successfully[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "AdvancedCacheManager"
-    [35m@timestamp[39m: "2026-04-26T10:28:56.060Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:28:56.060] [33mWARN[39m: [36m[heys-system] IndexedDB clear failed[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "AdvancedCacheManager"
-    [35m@timestamp[39m: "2026-04-26T10:28:56.060Z"
-    [35m@version[39m: "1"
-    error: {}
-[2026-04-26 13:28:56.060] [33mWARN[39m: [36m[heys-system] IndexedDB clear failed[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "AdvancedCacheManager"
-    [35m@timestamp[39m: "2026-04-26T10:28:56.060Z"
-    [35m@version[39m: "1"
-    error: {}
-[2026-04-26 13:28:56.146] [32mINFO[39m: [36m[heys-system] Cache hit (304): http://localhost:3000/test[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "HTTPCacheStrategy"
-    [35m@timestamp[39m: "2026-04-26T10:28:56.146Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:28:56.147] [32mINFO[39m: [36m[heys-system] Preloaded: /style.css[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "HTTPCacheStrategy"
-    [35m@timestamp[39m: "2026-04-26T10:28:56.147Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:28:56.147] [32mINFO[39m: [36m[heys-system] Preloaded: /script.js[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "HTTPCacheStrategy"
-    [35m@timestamp[39m: "2026-04-26T10:28:56.147Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:28:56.148] [33mWARN[39m: [36m[heys-system] Failed to preload /failing-resource.css[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "HTTPCacheStrategy"
-    [35m@timestamp[39m: "2026-04-26T10:28:56.148Z"
-    [35m@version[39m: "1"
-    error: {}
-[2026-04-26 13:28:56.170] [32mINFO[39m: [36m[heys-system] Service Worker registered successfully[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "AdvancedCacheManager"
-    [35m@timestamp[39m: "2026-04-26T10:28:56.170Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:28:56.170] [33mWARN[39m: [36m[heys-system] Compression worker initialization failed[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "AdvancedCacheManager"
-    [35m@timestamp[39m: "2026-04-26T10:28:56.170Z"
-    [35m@version[39m: "1"
-    error: {}
-[2026-04-26 13:28:56.170] [32mINFO[39m: [36m[heys-system] AdvancedCacheManager initialized successfully[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "AdvancedCacheManager"
-    [35m@timestamp[39m: "2026-04-26T10:28:56.170Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:28:56.170] [33mWARN[39m: [36m[heys-system] IndexedDB clear failed[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "AdvancedCacheManager"
-    [35m@timestamp[39m: "2026-04-26T10:28:56.170Z"
-    [35m@version[39m: "1"
-    error: {}
-[2026-04-26 13:28:56.171] [31mERROR[39m: [36m[heys-system] Service Worker registration failed[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "AdvancedCacheManager"
-    [35m@timestamp[39m: "2026-04-26T10:28:56.171Z"
-    [35m@version[39m: "1"
-    error: {}
-[2026-04-26 13:28:56.171] [33mWARN[39m: [36m[heys-system] Compression worker initialization failed[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "AdvancedCacheManager"
-    [35m@timestamp[39m: "2026-04-26T10:28:56.171Z"
-    [35m@version[39m: "1"
-    error: {}
-[2026-04-26 13:28:56.171] [32mINFO[39m: [36m[heys-system] AdvancedCacheManager initialized successfully[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "AdvancedCacheManager"
-    [35m@timestamp[39m: "2026-04-26T10:28:56.171Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:28:56.171] [33mWARN[39m: [36m[heys-system] IndexedDB clear failed[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "AdvancedCacheManager"
-    [35m@timestamp[39m: "2026-04-26T10:28:56.171Z"
-    [35m@version[39m: "1"
-    error: {}
- ✓ src/performance/performance.test.ts (27 tests) 2299ms
-   ✓ NetworkOptimizer > should handle request retries  2003ms
-[2026-04-26 13:28:57.231] [32mINFO[39m: [36m[heys-system] Аудит завершен. Скор: 74[39m
+ ✓ src/performance/advanced-cache-strategies.test.ts (34 tests) 2055ms
+   ✓ AdvancedCacheManager > Memory Cache Operations > should store and retrieve data from memory cache  2016ms
+ ✓ src/performance/performance.test.ts (27 tests) 2046ms
+   ✓ NetworkOptimizer > should handle request retries  2004ms
+[2026-04-26 17:39:44.358] [32mINFO[39m: [36m[heys-system] Аудит завершен. Скор: 79[39m
     [35mservice[39m: "heys-system"
     [35menvironment[39m: "test"
     [35mversion[39m: "14.0.0"
     [35mmodule[39m: "performance"
     [35mcomponent[39m: "LighthouseOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:28:57.231Z"
+    [35m@timestamp[39m: "2026-04-26T14:39:44.358Z"
     [35m@version[39m: "1"
- ✓ src/performance/LighthouseOptimizer.test.ts (17 tests) 4039ms
-   ✓ LighthouseOptimizer > Выполнение оптимизации > должен выполнять план оптимизации  3516ms
+[2026-04-26 17:39:44.553] [32mINFO[39m: [36m[heys-system] Touch optimization initialized[39m
+    [35mservice[39m: "heys-system"
+    [35menvironment[39m: "test"
+    [35mversion[39m: "14.0.0"
+    [35mmodule[39m: "performance"
+    [35mcomponent[39m: "MobilePerformanceOptimizer"
+    [35m@timestamp[39m: "2026-04-26T14:39:44.796Z"
+    [35m@version[39m: "1"
+ ✓ src/performance/LighthouseOptimizer.test.ts (17 tests) 4044ms
+   ✓ LighthouseOptimizer > Выполнение оптимизации > должен выполнять план оптимизации  3525ms
    ✓ LighthouseOptimizer > Выполнение оптимизации > должен отслеживать прогресс оптимизации  506ms
- ✓ src/__tests__/monitoring.test.ts (8 tests) 282ms
- ✓ src/performance/__tests__/logger-import-guard.test.ts (2 tests) 19ms
- ✓ src/performance/mobile-performance-optimizer.test.ts (29 tests) 378ms
-[2026-04-26 13:29:00.561] [32mINFO[39m: [36m[heys-system] Touch optimization initialized[39m
+[2026-04-26 17:39:44.802] [32mINFO[39m: [36m[heys-system] Network optimization initialized[39m
     [35mservice[39m: "heys-system"
     [35menvironment[39m: "test"
     [35mversion[39m: "14.0.0"
     [35mmodule[39m: "performance"
     [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.561Z"
+    [35m@timestamp[39m: "2026-04-26T14:39:44.802Z"
     [35m@version[39m: "1"
-[2026-04-26 13:29:00.562] [32mINFO[39m: [36m[heys-system] Network optimization initialized[39m
+[2026-04-26 17:39:44.803] [32mINFO[39m: [36m[heys-system] Battery optimization initialized[39m
     [35mservice[39m: "heys-system"
     [35menvironment[39m: "test"
     [35mversion[39m: "14.0.0"
     [35mmodule[39m: "performance"
     [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.562Z"
+    [35m@timestamp[39m: "2026-04-26T14:39:44.803Z"
     [35m@version[39m: "1"
-[2026-04-26 13:29:00.562] [32mINFO[39m: [36m[heys-system] Battery optimization initialized[39m
+[2026-04-26 17:39:44.803] [32mINFO[39m: [36m[heys-system] Memory optimization initialized[39m
     [35mservice[39m: "heys-system"
     [35menvironment[39m: "test"
     [35mversion[39m: "14.0.0"
     [35mmodule[39m: "performance"
     [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.562Z"
+    [35m@timestamp[39m: "2026-04-26T14:39:44.803Z"
     [35m@version[39m: "1"
-[2026-04-26 13:29:00.562] [32mINFO[39m: [36m[heys-system] Memory optimization initialized[39m
+[2026-04-26 17:39:44.803] [32mINFO[39m: [36m[heys-system] Adaptive loading initialized[39m
     [35mservice[39m: "heys-system"
     [35menvironment[39m: "test"
     [35mversion[39m: "14.0.0"
     [35mmodule[39m: "performance"
     [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.562Z"
+    [35m@timestamp[39m: "2026-04-26T14:39:44.803Z"
     [35m@version[39m: "1"
-[2026-04-26 13:29:00.562] [32mINFO[39m: [36m[heys-system] Adaptive loading initialized[39m
+[2026-04-26 17:39:44.804] [32mINFO[39m: [36m[heys-system] Mobile Performance Optimizer initialized successfully[39m
     [35mservice[39m: "heys-system"
     [35menvironment[39m: "test"
     [35mversion[39m: "14.0.0"
     [35mmodule[39m: "performance"
     [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.562Z"
+    [35m@timestamp[39m: "2026-04-26T14:39:44.804Z"
     [35m@version[39m: "1"
-[2026-04-26 13:29:00.563] [32mINFO[39m: [36m[heys-system] Mobile Performance Optimizer initialized successfully[39m
+[2026-04-26 17:39:44.805] [32mINFO[39m: [36m[heys-system] Touch optimization initialized[39m
     [35mservice[39m: "heys-system"
     [35menvironment[39m: "test"
     [35mversion[39m: "14.0.0"
     [35mmodule[39m: "performance"
     [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.563Z"
+    [35m@timestamp[39m: "2026-04-26T14:39:44.805Z"
     [35m@version[39m: "1"
-[2026-04-26 13:29:00.564] [32mINFO[39m: [36m[heys-system] Touch optimization initialized[39m
+[2026-04-26 17:39:44.805] [32mINFO[39m: [36m[heys-system] Network optimization initialized[39m
     [35mservice[39m: "heys-system"
     [35menvironment[39m: "test"
     [35mversion[39m: "14.0.0"
     [35mmodule[39m: "performance"
     [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.564Z"
+    [35m@timestamp[39m: "2026-04-26T14:39:44.805Z"
     [35m@version[39m: "1"
-[2026-04-26 13:29:00.564] [32mINFO[39m: [36m[heys-system] Network optimization initialized[39m
+[2026-04-26 17:39:44.805] [32mINFO[39m: [36m[heys-system] Battery optimization initialized[39m
     [35mservice[39m: "heys-system"
     [35menvironment[39m: "test"
     [35mversion[39m: "14.0.0"
     [35mmodule[39m: "performance"
     [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.564Z"
+    [35m@timestamp[39m: "2026-04-26T14:39:44.805Z"
     [35m@version[39m: "1"
-[2026-04-26 13:29:00.564] [32mINFO[39m: [36m[heys-system] Battery optimization initialized[39m
+[2026-04-26 17:39:44.805] [32mINFO[39m: [36m[heys-system] Memory optimization initialized[39m
     [35mservice[39m: "heys-system"
     [35menvironment[39m: "test"
     [35mversion[39m: "14.0.0"
     [35mmodule[39m: "performance"
     [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.564Z"
+    [35m@timestamp[39m: "2026-04-26T14:39:44.805Z"
     [35m@version[39m: "1"
-[2026-04-26 13:29:00.693] [32mINFO[39m: [36m[heys-system] Memory optimization initialized[39m
+[2026-04-26 17:39:44.806] [32mINFO[39m: [36m[heys-system] Adaptive loading initialized[39m
     [35mservice[39m: "heys-system"
     [35menvironment[39m: "test"
     [35mversion[39m: "14.0.0"
     [35mmodule[39m: "performance"
     [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.693Z"
+    [35m@timestamp[39m: "2026-04-26T14:39:44.806Z"
     [35m@version[39m: "1"
-[2026-04-26 13:29:00.693] [32mINFO[39m: [36m[heys-system] Adaptive loading initialized[39m
+[2026-04-26 17:39:44.806] [32mINFO[39m: [36m[heys-system] Mobile Performance Optimizer initialized successfully[39m
     [35mservice[39m: "heys-system"
     [35menvironment[39m: "test"
     [35mversion[39m: "14.0.0"
     [35mmodule[39m: "performance"
     [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.693Z"
+    [35m@timestamp[39m: "2026-04-26T14:39:44.806Z"
     [35m@version[39m: "1"
-[2026-04-26 13:29:00.693] [32mINFO[39m: [36m[heys-system] Mobile Performance Optimizer initialized successfully[39m
+[2026-04-26 17:39:44.806] [32mINFO[39m: [36m[heys-system] Touch optimization initialized[39m
     [35mservice[39m: "heys-system"
     [35menvironment[39m: "test"
     [35mversion[39m: "14.0.0"
     [35mmodule[39m: "performance"
     [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.693Z"
+    [35m@timestamp[39m: "2026-04-26T14:39:44.806Z"
     [35m@version[39m: "1"
-[2026-04-26 13:29:00.693] [32mINFO[39m: [36m[heys-system] Touch optimization initialized[39m
+[2026-04-26 17:39:44.806] [32mINFO[39m: [36m[heys-system] Network optimization initialized[39m
     [35mservice[39m: "heys-system"
     [35menvironment[39m: "test"
     [35mversion[39m: "14.0.0"
     [35mmodule[39m: "performance"
     [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.693Z"
+    [35m@timestamp[39m: "2026-04-26T14:39:44.806Z"
     [35m@version[39m: "1"
-[2026-04-26 13:29:00.693] [32mINFO[39m: [36m[heys-system] Network optimization initialized[39m
+[2026-04-26 17:39:44.806] [32mINFO[39m: [36m[heys-system] Battery optimization initialized[39m
     [35mservice[39m: "heys-system"
     [35menvironment[39m: "test"
     [35mversion[39m: "14.0.0"
     [35mmodule[39m: "performance"
     [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.693Z"
+    [35m@timestamp[39m: "2026-04-26T14:39:44.806Z"
     [35m@version[39m: "1"
-[2026-04-26 13:29:00.693] [32mINFO[39m: [36m[heys-system] Battery optimization initialized[39m
+[2026-04-26 17:39:44.806] [32mINFO[39m: [36m[heys-system] Memory optimization initialized[39m
     [35mservice[39m: "heys-system"
     [35menvironment[39m: "test"
     [35mversion[39m: "14.0.0"
     [35mmodule[39m: "performance"
     [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.693Z"
+    [35m@timestamp[39m: "2026-04-26T14:39:44.806Z"
     [35m@version[39m: "1"
-[2026-04-26 13:29:00.693] [32mINFO[39m: [36m[heys-system] Memory optimization initialized[39m
+[2026-04-26 17:39:44.806] [32mINFO[39m: [36m[heys-system] Adaptive loading initialized[39m
     [35mservice[39m: "heys-system"
     [35menvironment[39m: "test"
     [35mversion[39m: "14.0.0"
     [35mmodule[39m: "performance"
     [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.693Z"
+    [35m@timestamp[39m: "2026-04-26T14:39:44.806Z"
     [35m@version[39m: "1"
-[2026-04-26 13:29:00.693] [32mINFO[39m: [36m[heys-system] Adaptive loading initialized[39m
+[2026-04-26 17:39:44.806] [32mINFO[39m: [36m[heys-system] Mobile Performance Optimizer initialized successfully[39m
     [35mservice[39m: "heys-system"
     [35menvironment[39m: "test"
     [35mversion[39m: "14.0.0"
     [35mmodule[39m: "performance"
     [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.693Z"
+    [35m@timestamp[39m: "2026-04-26T14:39:44.806Z"
     [35m@version[39m: "1"
-[2026-04-26 13:29:00.694] [32mINFO[39m: [36m[heys-system] Mobile Performance Optimizer initialized successfully[39m
+{"level":"info","time":"2026-04-26T14:39:44.975Z","pid":15048,"hostname":"localhost","environment":"development","name":"heys-app","msg":"Running XSS Scanner...","timestamp":"2026-04-26T14:39:44.975Z","component":"PenetrationTestFramework"}
+{"level":"info","time":"2026-04-26T14:39:44.980Z","pid":15048,"hostname":"localhost","environment":"development","name":"heys-app","msg":"Running XSS Scanner...","timestamp":"2026-04-26T14:39:44.980Z","component":"PenetrationTestFramework"}
+{"level":"info","time":"2026-04-26T14:39:44.981Z","pid":15048,"hostname":"localhost","environment":"development","name":"heys-app","msg":"Running XSS Scanner...","timestamp":"2026-04-26T14:39:44.981Z","component":"PenetrationTestFramework"}
+{"level":"info","time":"2026-04-26T14:39:44.982Z","pid":15048,"hostname":"localhost","environment":"development","name":"heys-app","msg":"Running SQL Injection Scanner...","timestamp":"2026-04-26T14:39:44.982Z","component":"PenetrationTestFramework"}
+{"level":"info","time":"2026-04-26T14:39:44.983Z","pid":15048,"hostname":"localhost","environment":"development","name":"heys-app","msg":"Running XSS Scanner...","timestamp":"2026-04-26T14:39:44.983Z","component":"PenetrationTestFramework"}
+{"level":"info","time":"2026-04-26T14:39:44.985Z","pid":15048,"hostname":"localhost","environment":"development","name":"heys-app","msg":"Running XSS Scanner...","timestamp":"2026-04-26T14:39:44.985Z","component":"PenetrationTestFramework"}
+{"level":"info","time":"2026-04-26T14:39:44.986Z","pid":15048,"hostname":"localhost","environment":"development","name":"heys-app","msg":"Running XSS Scanner...","timestamp":"2026-04-26T14:39:44.986Z","component":"PenetrationTestFramework"}
+ ✓ src/performance/mobile-performance-optimizer.test.ts (29 tests) 458ms
+[2026-04-26 17:39:44.818] [32mINFO[39m: [36m[heys-system] Touch optimization initialized[39m
     [35mservice[39m: "heys-system"
     [35menvironment[39m: "test"
     [35mversion[39m: "14.0.0"
     [35mmodule[39m: "performance"
     [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.694Z"
+    [35m@timestamp[39m: "2026-04-26T14:39:44.818Z"
     [35m@version[39m: "1"
-[2026-04-26 13:29:00.704] [32mINFO[39m: [36m[heys-system] Touch optimization initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.704Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.704] [32mINFO[39m: [36m[heys-system] Network optimization initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.704Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.707] [32mINFO[39m: [36m[heys-system] Battery optimization initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.707Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.707] [32mINFO[39m: [36m[heys-system] Memory optimization initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.707Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.708] [32mINFO[39m: [36m[heys-system] Adaptive loading initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.708Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.708] [32mINFO[39m: [36m[heys-system] Mobile Performance Optimizer initialized successfully[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.708Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.708] [32mINFO[39m: [36m[heys-system] Touch optimization initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.708Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.708] [32mINFO[39m: [36m[heys-system] Network optimization initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.708Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.709] [32mINFO[39m: [36m[heys-system] Network optimization initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.709Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.709] [32mINFO[39m: [36m[heys-system] Battery optimization initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.709Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.709] [32mINFO[39m: [36m[heys-system] Memory optimization initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.709Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.709] [32mINFO[39m: [36m[heys-system] Battery optimization initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.709Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.709] [32mINFO[39m: [36m[heys-system] Adaptive loading initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.709Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.709] [32mINFO[39m: [36m[heys-system] Memory optimization initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.709Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.709] [32mINFO[39m: [36m[heys-system] Mobile Performance Optimizer initialized successfully[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.709Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.709] [32mINFO[39m: [36m[heys-system] Adaptive loading initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.709Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.709] [32mINFO[39m: [36m[heys-system] Mobile Performance Optimizer initialized successfully[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.709Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.710] [32mINFO[39m: [36m[heys-system] Touch optimization initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.710Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.710] [32mINFO[39m: [36m[heys-system] Network optimization initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.710Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.710] [32mINFO[39m: [36m[heys-system] Battery optimization initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.710Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.710] [32mINFO[39m: [36m[heys-system] Memory optimization initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.710Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.710] [32mINFO[39m: [36m[heys-system] Adaptive loading initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.710Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.710] [32mINFO[39m: [36m[heys-system] Mobile Performance Optimizer initialized successfully[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.710Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.710] [32mINFO[39m: [36m[heys-system] Touch optimization initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.710Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.710] [32mINFO[39m: [36m[heys-system] Network optimization initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.710Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.711] [32mINFO[39m: [36m[heys-system] Battery optimization initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.711Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.711] [32mINFO[39m: [36m[heys-system] Memory optimization initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.711Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.711] [32mINFO[39m: [36m[heys-system] Adaptive loading initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.711Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.711] [32mINFO[39m: [36m[heys-system] Mobile Performance Optimizer initialized successfully[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.711Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.711] [32mINFO[39m: [36m[heys-system] Touch optimization initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.711Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.711] [32mINFO[39m: [36m[heys-system] Network optimization initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.711Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.711] [32mINFO[39m: [36m[heys-system] Battery optimization initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.711Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.711] [32mINFO[39m: [36m[heys-system] Memory optimization initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.711Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.711] [32mINFO[39m: [36m[heys-system] Adaptive loading initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.711Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.712] [32mINFO[39m: [36m[heys-system] Mobile Performance Optimizer initialized successfully[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.712Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.712] [32mINFO[39m: [36m[heys-system] Touch optimization initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.712Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.712] [32mINFO[39m: [36m[heys-system] Network optimization initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.712Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.712] [32mINFO[39m: [36m[heys-system] Battery optimization initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.712Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.712] [32mINFO[39m: [36m[heys-system] Memory optimization initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.712Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.713] [32mINFO[39m: [36m[heys-system] Adaptive loading initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.713Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.713] [32mINFO[39m: [36m[heys-system] Mobile Performance Optimizer initialized successfully[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.713Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.808] [32mINFO[39m: [36m[heys-system] Touch optimization initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.808Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.808] [32mINFO[39m: [36m[heys-system] Network optimization initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.808Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.809] [32mINFO[39m: [36m[heys-system] Battery optimization initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.809Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.809] [32mINFO[39m: [36m[heys-system] Memory optimization initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.809Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.810] [32mINFO[39m: [36m[heys-system] Adaptive loading initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.810Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.810] [32mINFO[39m: [36m[heys-system] Mobile Performance Optimizer initialized successfully[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.810Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.811] [32mINFO[39m: [36m[heys-system] Touch optimization initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.811Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.811] [32mINFO[39m: [36m[heys-system] Network optimization initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.811Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.811] [32mINFO[39m: [36m[heys-system] Battery optimization initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.811Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.811] [32mINFO[39m: [36m[heys-system] Memory optimization initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.811Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.811] [32mINFO[39m: [36m[heys-system] Adaptive loading initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.811Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.811] [32mINFO[39m: [36m[heys-system] Mobile Performance Optimizer initialized successfully[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.811Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.811] [32mINFO[39m: [36m[heys-system] Touch optimization initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.811Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.811] [32mINFO[39m: [36m[heys-system] Network optimization initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.811Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.811] [32mINFO[39m: [36m[heys-system] Battery optimization initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.811Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.811] [32mINFO[39m: [36m[heys-system] Memory optimization initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.811Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.811] [32mINFO[39m: [36m[heys-system] Adaptive loading initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.811Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.812] [32mINFO[39m: [36m[heys-system] Mobile Performance Optimizer initialized successfully[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.812Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.812] [32mINFO[39m: [36m[heys-system] Touch optimization initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.812Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.812] [32mINFO[39m: [36m[heys-system] Network optimization initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.812Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.812] [32mINFO[39m: [36m[heys-system] Battery optimization initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.812Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.812] [32mINFO[39m: [36m[heys-system] Memory optimization initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.812Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.812] [32mINFO[39m: [36m[heys-system] Adaptive loading initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.812Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.812] [32mINFO[39m: [36m[heys-system] Mobile Performance Optimizer initialized successfully[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.812Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.812] [32mINFO[39m: [36m[heys-system] Touch optimization initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.812Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.812] [32mINFO[39m: [36m[heys-system] Network optimization initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.812Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.813] [32mINFO[39m: [36m[heys-system] Battery optimization initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.813Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.813] [32mINFO[39m: [36m[heys-system] Memory optimization initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.813Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.813] [32mINFO[39m: [36m[heys-system] Adaptive loading initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.813Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.813] [32mINFO[39m: [36m[heys-system] Mobile Performance Optimizer initialized successfully[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.813Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.855] [32mINFO[39m: [36m[heys-system] Touch optimization initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.855Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.855] [32mINFO[39m: [36m[heys-system] Network optimization initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.855Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.855] [32mINFO[39m: [36m[heys-system] Battery optimization initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.855Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.855] [32mINFO[39m: [36m[heys-system] Memory optimization initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.855Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.855] [32mINFO[39m: [36m[heys-system] Adaptive loading initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.855Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.855] [32mINFO[39m: [36m[heys-system] Mobile Performance Optimizer initialized successfully[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.855Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.856] [32mINFO[39m: [36m[heys-system] Touch optimization initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.856Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.856] [32mINFO[39m: [36m[heys-system] Network optimization initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.856Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.856] [32mINFO[39m: [36m[heys-system] Battery optimization initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.856Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.856] [32mINFO[39m: [36m[heys-system] Memory optimization initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.856Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.856] [32mINFO[39m: [36m[heys-system] Adaptive loading initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.856Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.856] [32mINFO[39m: [36m[heys-system] Mobile Performance Optimizer initialized successfully[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.856Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.857] [32mINFO[39m: [36m[heys-system] Touch optimization initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.857Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.857] [32mINFO[39m: [36m[heys-system] Network optimization initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.857Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.857] [32mINFO[39m: [36m[heys-system] Battery optimization initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.857Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.857] [32mINFO[39m: [36m[heys-system] Memory optimization initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.857Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.857] [32mINFO[39m: [36m[heys-system] Adaptive loading initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.857Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.857] [32mINFO[39m: [36m[heys-system] Mobile Performance Optimizer initialized successfully[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.857Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.857] [32mINFO[39m: [36m[heys-system] Touch optimization initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.858Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.858] [32mINFO[39m: [36m[heys-system] Network optimization initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.858Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.858] [32mINFO[39m: [36m[heys-system] Battery optimization initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.858Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.858] [32mINFO[39m: [36m[heys-system] Memory optimization initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.858Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.858] [32mINFO[39m: [36m[heys-system] Adaptive loading initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.858Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.858] [32mINFO[39m: [36m[heys-system] Mobile Performance Optimizer initialized successfully[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.858Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.858] [32mINFO[39m: [36m[heys-system] Touch optimization initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.858Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.858] [32mINFO[39m: [36m[heys-system] Network optimization initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.858Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.858] [32mINFO[39m: [36m[heys-system] Battery optimization initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.858Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.858] [32mINFO[39m: [36m[heys-system] Memory optimization initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.858Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.859] [32mINFO[39m: [36m[heys-system] Adaptive loading initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.859Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.859] [32mINFO[39m: [36m[heys-system] Mobile Performance Optimizer initialized successfully[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.859Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.859] [32mINFO[39m: [36m[heys-system] Touch optimization initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.859Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.859] [32mINFO[39m: [36m[heys-system] Network optimization initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.859Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.859] [32mINFO[39m: [36m[heys-system] Battery optimization initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.859Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.860] [32mINFO[39m: [36m[heys-system] Memory optimization initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.860Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.860] [32mINFO[39m: [36m[heys-system] Adaptive loading initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.860Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.860] [32mINFO[39m: [36m[heys-system] Mobile Performance Optimizer initialized successfully[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.860Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.860] [32mINFO[39m: [36m[heys-system] Touch optimization initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.860Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.860] [32mINFO[39m: [36m[heys-system] Network optimization initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.860Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.860] [32mINFO[39m: [36m[heys-system] Battery optimization initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.860Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.860] [32mINFO[39m: [36m[heys-system] Memory optimization initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.860Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.860] [32mINFO[39m: [36m[heys-system] Adaptive loading initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.860Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.860] [32mINFO[39m: [36m[heys-system] Mobile Performance Optimizer initialized successfully[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.860Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.861] [32mINFO[39m: [36m[heys-system] Touch optimization initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.861Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.909] [32mINFO[39m: [36m[heys-system] Network optimization initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.909Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.909] [32mINFO[39m: [36m[heys-system] Battery optimization initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.909Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.910] [32mINFO[39m: [36m[heys-system] Memory optimization initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.910Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.910] [32mINFO[39m: [36m[heys-system] Adaptive loading initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.910Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.910] [32mINFO[39m: [36m[heys-system] Mobile Performance Optimizer initialized successfully[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.910Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.911] [32mINFO[39m: [36m[heys-system] Touch optimization initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.911Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.911] [32mINFO[39m: [36m[heys-system] Network optimization initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.911Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.911] [32mINFO[39m: [36m[heys-system] Battery optimization initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.911Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.911] [32mINFO[39m: [36m[heys-system] Memory optimization initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.911Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.911] [32mINFO[39m: [36m[heys-system] Adaptive loading initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.911Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.911] [32mINFO[39m: [36m[heys-system] Mobile Performance Optimizer initialized successfully[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.911Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.912] [32mINFO[39m: [36m[heys-system] Touch optimization initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.912Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.912] [32mINFO[39m: [36m[heys-system] Network optimization initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.912Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.913] [32mINFO[39m: [36m[heys-system] Battery optimization initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.913Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.913] [32mINFO[39m: [36m[heys-system] Memory optimization initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.913Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.913] [32mINFO[39m: [36m[heys-system] Adaptive loading initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.913Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.913] [32mINFO[39m: [36m[heys-system] Mobile Performance Optimizer initialized successfully[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.913Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.913] [32mINFO[39m: [36m[heys-system] Touch optimization initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.913Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.913] [32mINFO[39m: [36m[heys-system] Network optimization initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.913Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.915] [32mINFO[39m: [36m[heys-system] Battery optimization initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.915Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.915] [32mINFO[39m: [36m[heys-system] Memory optimization initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.915Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.915] [32mINFO[39m: [36m[heys-system] Adaptive loading initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.915Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.916] [32mINFO[39m: [36m[heys-system] Mobile Performance Optimizer initialized successfully[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.916Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.916] [32mINFO[39m: [36m[heys-system] Touch optimization initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.916Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.916] [32mINFO[39m: [36m[heys-system] Network optimization initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.916Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.917] [32mINFO[39m: [36m[heys-system] Battery optimization initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.917Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.917] [32mINFO[39m: [36m[heys-system] Memory optimization initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.917Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.917] [32mINFO[39m: [36m[heys-system] Adaptive loading initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.917Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.917] [32mINFO[39m: [36m[heys-system] Mobile Performance Optimizer initialized successfully[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.917Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.920] [32mINFO[39m: [36m[heys-system] Touch optimization initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.920Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.920] [32mINFO[39m: [36m[heys-system] Network optimization initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.920Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.920] [32mINFO[39m: [36m[heys-system] Touch optimization initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.920Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.921] [32mINFO[39m: [36m[heys-system] Battery optimization initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.921Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.921] [32mINFO[39m: [36m[heys-system] Network optimization initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.921Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.921] [32mINFO[39m: [36m[heys-system] Memory optimization initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.921Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.921] [32mINFO[39m: [36m[heys-system] Battery optimization initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.921Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.921] [32mINFO[39m: [36m[heys-system] Adaptive loading initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.921Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.921] [32mINFO[39m: [36m[heys-system] Mobile Performance Optimizer initialized successfully[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.921Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.921] [32mINFO[39m: [36m[heys-system] Memory optimization initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.921Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.921] [32mINFO[39m: [36m[heys-system] Adaptive loading initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.921Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.921] [32mINFO[39m: [36m[heys-system] Mobile Performance Optimizer initialized successfully[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.921Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.922] [32mINFO[39m: [36m[heys-system] Touch optimization initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.922Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.922] [32mINFO[39m: [36m[heys-system] Network optimization initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.922Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.922] [32mINFO[39m: [36m[heys-system] Battery optimization initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.922Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.923] [32mINFO[39m: [36m[heys-system] Memory optimization initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.923Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.923] [32mINFO[39m: [36m[heys-system] Adaptive loading initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.923Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.923] [32mINFO[39m: [36m[heys-system] Mobile Performance Optimizer initialized successfully[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.923Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.923] [32mINFO[39m: [36m[heys-system] Touch optimization initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.923Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.923] [32mINFO[39m: [36m[heys-system] Network optimization initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.923Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.924] [32mINFO[39m: [36m[heys-system] Touch optimization initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.924Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.924] [32mINFO[39m: [36m[heys-system] Battery optimization initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.924Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.924] [32mINFO[39m: [36m[heys-system] Network optimization initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.924Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.924] [32mINFO[39m: [36m[heys-system] Memory optimization initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.924Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.924] [32mINFO[39m: [36m[heys-system] Battery optimization initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.924Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.924] [32mINFO[39m: [36m[heys-system] Adaptive loading initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.924Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.924] [32mINFO[39m: [36m[heys-system] Mobile Performance Optimizer initialized successfully[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.924Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.924] [32mINFO[39m: [36m[heys-system] Memory optimization initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.924Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.924] [32mINFO[39m: [36m[heys-system] Adaptive loading initialized[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.924Z"
-    [35m@version[39m: "1"
-[2026-04-26 13:29:00.924] [32mINFO[39m: [36m[heys-system] Mobile Performance Optimizer initialized successfully[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mmodule[39m: "performance"
-    [35mcomponent[39m: "MobilePerformanceOptimizer"
-    [35m@timestamp[39m: "2026-04-26T10:29:00.924Z"
-    [35m@version[39m: "1"
-{"level":"info","time":"2026-04-26T10:29:02.319Z","pid":4419,"hostname":"localhost","environment":"development","name":"heys-app","msg":"Running XSS Scanner...","timestamp":"2026-04-26T10:29:02.317Z","component":"PenetrationTestFramework"}
-{"level":"info","time":"2026-04-26T10:29:02.327Z","pid":4419,"hostname":"localhost","environment":"development","name":"heys-app","msg":"Running XSS Scanner...","timestamp":"2026-04-26T10:29:02.327Z","component":"PenetrationTestFramework"}
-{"level":"info","time":"2026-04-26T10:29:02.328Z","pid":4419,"hostname":"localhost","environment":"development","name":"heys-app","msg":"Running XSS Scanner...","timestamp":"2026-04-26T10:29:02.328Z","component":"PenetrationTestFramework"}
-{"level":"info","time":"2026-04-26T10:29:02.335Z","pid":4419,"hostname":"localhost","environment":"development","name":"heys-app","msg":"Running SQL Injection Scanner...","timestamp":"2026-04-26T10:29:02.335Z","component":"PenetrationTestFramework"}
-{"level":"info","time":"2026-04-26T10:29:02.448Z","pid":4419,"hostname":"localhost","environment":"development","name":"heys-app","msg":"Running XSS Scanner...","timestamp":"2026-04-26T10:29:02.448Z","component":"PenetrationTestFramework"}
-{"level":"info","time":"2026-04-26T10:29:02.453Z","pid":4419,"hostname":"localhost","environment":"development","name":"heys-app","msg":"Running XSS Scanner...","timestamp":"2026-04-26T10:29:02.453Z","component":"PenetrationTestFramework"}
-{"level":"info","time":"2026-04-26T10:29:02.468Z","pid":4419,"hostname":"localhost","environment":"development","name":"heys-app","msg":"Running XSS Scanner...","timestamp":"2026-04-26T10:29:02.468Z","component":"PenetrationTestFramework"}
-{"level":"info","time":"2026-04-26T10:29:02.469Z","pid":4419,"hostname":"localhost","environment":"development","name":"heys-app","msg":"Running XSS Scanner...","timestamp":"2026-04-26T10:29:02.469Z","component":"PenetrationTestFramework"}
-{"level":"info","time":"2026-04-26T10:29:02.320Z","pid":4419,"hostname":"localhost","environment":"development","name":"heys-app","msg":"Running SQL Injection Scanner...","timestamp":"2026-04-26T10:29:02.320Z","component":"PenetrationTestFramework"}
-{"level":"info","time":"2026-04-26T10:29:02.322Z","pid":4419,"hostname":"localhost","environment":"development","name":"heys-app","msg":"Running Input Validation Scanner...","timestamp":"2026-04-26T10:29:02.322Z","component":"PenetrationTestFramework"}
-{"level":"info","time":"2026-04-26T10:29:02.325Z","pid":4419,"hostname":"localhost","environment":"development","name":"heys-app","msg":"Running Authentication Bypass Scanner...","timestamp":"2026-04-26T10:29:02.325Z","component":"PenetrationTestFramework"}
-{"level":"info","time":"2026-04-26T10:29:02.328Z","pid":4419,"hostname":"localhost","environment":"development","name":"heys-app","msg":"Running Input Validation Scanner...","timestamp":"2026-04-26T10:29:02.328Z","component":"PenetrationTestFramework"}
-{"level":"info","time":"2026-04-26T10:29:02.328Z","pid":4419,"hostname":"localhost","environment":"development","name":"heys-app","msg":"Running Authentication Bypass Scanner...","timestamp":"2026-04-26T10:29:02.328Z","component":"PenetrationTestFramework"}
-{"level":"info","time":"2026-04-26T10:29:02.335Z","pid":4419,"hostname":"localhost","environment":"development","name":"heys-app","msg":"Running Authentication Bypass Scanner...","timestamp":"2026-04-26T10:29:02.335Z","component":"PenetrationTestFramework"}
-{"level":"info","time":"2026-04-26T10:29:02.448Z","pid":4419,"hostname":"localhost","environment":"development","name":"heys-app","msg":"Running SQL Injection Scanner...","timestamp":"2026-04-26T10:29:02.448Z","component":"PenetrationTestFramework"}
-{"level":"info","time":"2026-04-26T10:29:02.448Z","pid":4419,"hostname":"localhost","environment":"development","name":"heys-app","msg":"Running Input Validation Scanner...","timestamp":"2026-04-26T10:29:02.448Z","component":"PenetrationTestFramework"}
-{"level":"info","time":"2026-04-26T10:29:02.451Z","pid":4419,"hostname":"localhost","environment":"development","name":"heys-app","msg":"Running Authentication Bypass Scanner...","timestamp":"2026-04-26T10:29:02.451Z","component":"PenetrationTestFramework"}
-{"level":"info","time":"2026-04-26T10:29:02.456Z","pid":4419,"hostname":"localhost","environment":"development","name":"heys-app","msg":"Running SQL Injection Scanner...","timestamp":"2026-04-26T10:29:02.456Z","component":"PenetrationTestFramework"}
-{"level":"info","time":"2026-04-26T10:29:02.456Z","pid":4419,"hostname":"localhost","environment":"development","name":"heys-app","msg":"Running Input Validation Scanner...","timestamp":"2026-04-26T10:29:02.456Z","component":"PenetrationTestFramework"}
-{"level":"info","time":"2026-04-26T10:29:02.464Z","pid":4419,"hostname":"localhost","environment":"development","name":"heys-app","msg":"Running Authentication Bypass Scanner...","timestamp":"2026-04-26T10:29:02.464Z","component":"PenetrationTestFramework"}
-{"level":"info","time":"2026-04-26T10:29:02.468Z","pid":4419,"hostname":"localhost","environment":"development","name":"heys-app","msg":"Running SQL Injection Scanner...","timestamp":"2026-04-26T10:29:02.468Z","component":"PenetrationTestFramework"}
-{"level":"info","time":"2026-04-26T10:29:02.468Z","pid":4419,"hostname":"localhost","environment":"development","name":"heys-app","msg":"Running Input Validation Scanner...","timestamp":"2026-04-26T10:29:02.468Z","component":"PenetrationTestFramework"}
-{"level":"info","time":"2026-04-26T10:29:02.469Z","pid":4419,"hostname":"localhost","environment":"development","name":"heys-app","msg":"Running Authentication Bypass Scanner...","timestamp":"2026-04-26T10:29:02.469Z","component":"PenetrationTestFramework"}
-{"level":"info","time":"2026-04-26T10:29:02.469Z","pid":4419,"hostname":"localhost","environment":"development","name":"heys-app","msg":"Running Custom XSS Scanner...","timestamp":"2026-04-26T10:29:02.469Z","component":"PenetrationTestFramework"}
-{"level":"info","time":"2026-04-26T10:29:02.469Z","pid":4419,"hostname":"localhost","environment":"development","name":"heys-app","msg":"Running SQL Injection Scanner...","timestamp":"2026-04-26T10:29:02.469Z","component":"PenetrationTestFramework"}
-{"level":"info","time":"2026-04-26T10:29:02.469Z","pid":4419,"hostname":"localhost","environment":"development","name":"heys-app","msg":"Running Input Validation Scanner...","timestamp":"2026-04-26T10:29:02.469Z","component":"PenetrationTestFramework"}
-{"level":"info","time":"2026-04-26T10:29:02.470Z","pid":4419,"hostname":"localhost","environment":"development","name":"heys-app","msg":"Running Authentication Bypass Scanner...","timestamp":"2026-04-26T10:29:02.470Z","component":"PenetrationTestFramework"}
- ✓ src/security/__tests__/pentest.test.ts (18 tests) 417ms
- ✓ src/performance/bundle-optimizer.test.ts (28 tests) 350ms
-   ✓ BundleOptimizer > Performance Monitoring > should clear cache and reset statistics  321ms
- ✓ src/__tests__/utils.test.ts (12 tests) 138ms
- ✓ src/security/AdvancedEncryption.test.ts (25 tests) 179ms
- ✓ src/performance/BundleAnalyzer.test.ts (11 tests) 362ms
-   ✓ BundleAnalyzer - Упрощенные тесты > Baseline операции > должен бросать ошибку при попытке сохранить baseline без метрик  347ms
- ✓ src/performance/LazyLoader.simple.test.ts (19 tests) 66ms
- ✓ src/performance/BundleAnalyzer.simple.test.ts (11 tests) 127ms
-stdout | src/performance/__tests__/logger-guard.test.ts > Performance module logger guard > should track migration progress
-
-📊 Logger migration progress:
-   Files still using @heys/logger directly: 0
-   Target: 0 (only logger.ts should import @heys/logger)
-
-
- ✓ src/performance/__tests__/logger-guard.test.ts (3 tests) 182ms
+{"level":"info","time":"2026-04-26T14:39:45.136Z","pid":15048,"hostname":"localhost","environment":"development","name":"heys-app","msg":"Running XSS Scanner...","timestamp":"2026-04-26T14:39:45.136Z","component":"PenetrationTestFramework"}
+{"level":"info","time":"2026-04-26T14:39:44.976Z","pid":15048,"hostname":"localhost","environment":"development","name":"heys-app","msg":"Running SQL Injection Scanner...","timestamp":"2026-04-26T14:39:44.976Z","component":"PenetrationTestFramework"}
+{"level":"info","time":"2026-04-26T14:39:44.977Z","pid":15048,"hostname":"localhost","environment":"development","name":"heys-app","msg":"Running Input Validation Scanner...","timestamp":"2026-04-26T14:39:44.976Z","component":"PenetrationTestFramework"}
+{"level":"info","time":"2026-04-26T14:39:44.978Z","pid":15048,"hostname":"localhost","environment":"development","name":"heys-app","msg":"Running Authentication Bypass Scanner...","timestamp":"2026-04-26T14:39:44.978Z","component":"PenetrationTestFramework"}
+{"level":"info","time":"2026-04-26T14:39:44.981Z","pid":15048,"hostname":"localhost","environment":"development","name":"heys-app","msg":"Running Input Validation Scanner...","timestamp":"2026-04-26T14:39:44.981Z","component":"PenetrationTestFramework"}
+{"level":"info","time":"2026-04-26T14:39:44.982Z","pid":15048,"hostname":"localhost","environment":"development","name":"heys-app","msg":"Running Authentication Bypass Scanner...","timestamp":"2026-04-26T14:39:44.982Z","component":"PenetrationTestFramework"}
+{"level":"info","time":"2026-04-26T14:39:44.983Z","pid":15048,"hostname":"localhost","environment":"development","name":"heys-app","msg":"Running Authentication Bypass Scanner...","timestamp":"2026-04-26T14:39:44.983Z","component":"PenetrationTestFramework"}
+{"level":"info","time":"2026-04-26T14:39:44.983Z","pid":15048,"hostname":"localhost","environment":"development","name":"heys-app","msg":"Running SQL Injection Scanner...","timestamp":"2026-04-26T14:39:44.983Z","component":"PenetrationTestFramework"}
+{"level":"info","time":"2026-04-26T14:39:44.983Z","pid":15048,"hostname":"localhost","environment":"development","name":"heys-app","msg":"Running Input Validation Scanner...","timestamp":"2026-04-26T14:39:44.983Z","component":"PenetrationTestFramework"}
+{"level":"info","time":"2026-04-26T14:39:44.984Z","pid":15048,"hostname":"localhost","environment":"development","name":"heys-app","msg":"Running Authentication Bypass Scanner...","timestamp":"2026-04-26T14:39:44.984Z","component":"PenetrationTestFramework"}
+{"level":"info","time":"2026-04-26T14:39:44.985Z","pid":15048,"hostname":"localhost","environment":"development","name":"heys-app","msg":"Running SQL Injection Scanner...","timestamp":"2026-04-26T14:39:44.985Z","component":"PenetrationTestFramework"}
+{"level":"info","time":"2026-04-26T14:39:44.985Z","pid":15048,"hostname":"localhost","environment":"development","name":"heys-app","msg":"Running Input Validation Scanner...","timestamp":"2026-04-26T14:39:44.985Z","component":"PenetrationTestFramework"}
+{"level":"info","time":"2026-04-26T14:39:44.985Z","pid":15048,"hostname":"localhost","environment":"development","name":"heys-app","msg":"Running Authentication Bypass Scanner...","timestamp":"2026-04-26T14:39:44.985Z","component":"PenetrationTestFramework"}
+{"level":"info","time":"2026-04-26T14:39:44.987Z","pid":15048,"hostname":"localhost","environment":"development","name":"heys-app","msg":"Running SQL Injection Scanner...","timestamp":"2026-04-26T14:39:44.987Z","component":"PenetrationTestFramework"}
+{"level":"info","time":"2026-04-26T14:39:44.987Z","pid":15048,"hostname":"localhost","environment":"development","name":"heys-app","msg":"Running Input Validation Scanner...","timestamp":"2026-04-26T14:39:44.987Z","component":"PenetrationTestFramework"}
+{"level":"info","time":"2026-04-26T14:39:45.133Z","pid":15048,"hostname":"localhost","environment":"development","name":"heys-app","msg":"Running Authentication Bypass Scanner...","timestamp":"2026-04-26T14:39:45.133Z","component":"PenetrationTestFramework"}
+{"level":"info","time":"2026-04-26T14:39:45.133Z","pid":15048,"hostname":"localhost","environment":"development","name":"heys-app","msg":"Running Custom XSS Scanner...","timestamp":"2026-04-26T14:39:45.133Z","component":"PenetrationTestFramework"}
+{"level":"info","time":"2026-04-26T14:39:45.138Z","pid":15048,"hostname":"localhost","environment":"development","name":"heys-app","msg":"Running SQL Injection Scanner...","timestamp":"2026-04-26T14:39:45.138Z","component":"PenetrationTestFramework"}
+{"level":"info","time":"2026-04-26T14:39:45.138Z","pid":15048,"hostname":"localhost","environment":"development","name":"heys-app","msg":"Running Input Validation Scanner...","timestamp":"2026-04-26T14:39:45.138Z","component":"PenetrationTestFramework"}
+{"level":"info","time":"2026-04-26T14:39:45.141Z","pid":15048,"hostname":"localhost","environment":"development","name":"heys-app","msg":"Running Authentication Bypass Scanner...","timestamp":"2026-04-26T14:39:45.141Z","component":"PenetrationTestFramework"}
+ ✓ src/security/__tests__/pentest.test.ts (18 tests) 264ms
+ ✓ src/performance/BundleAnalyzer.test.ts (11 tests) 9ms
+ ✓ src/performance/bundle-optimizer.test.ts (28 tests) 317ms
+ ✓ src/__tests__/monitoring.test.ts (8 tests) 242ms
 stderr | src/performance/LazyLoader.test.ts > LazyLoader - Основные функции > Работа с элементами > должен обрабатывать различные типы элементов
 DOMException [NotSupportedError]: Failed to load script "http://localhost:3000/script.js". JavaScript file loading is disabled.
     at HTMLScriptElement.#loadScript (file:///Users/poplavskijanton/HEYS-v2/node_modules/[4m.pnpm[24m/happy-dom@20.0.10/node_modules/[4mhappy-dom[24m/src/nodes/html-script-element/HTMLScriptElement.ts:656:19)
@@ -2397,30 +429,29 @@ DOMException [NotSupportedError]: Failed to load script "http://localhost:3000/s
     at LazyLoader.loadScript [90m(/Users/poplavskijanton/HEYS-v2/packages/shared/[39msrc/performance/LazyLoader.ts:386:12[90m)[39m
     at LazyLoader.performLoad [90m(/Users/poplavskijanton/HEYS-v2/packages/shared/[39msrc/performance/LazyLoader.ts:306:20[90m)[39m
 
- ✓ src/performance/LazyLoader.test.ts (10 tests) 226ms
-stderr | src/performance/LazyLoader.basic.test.ts > LazyLoader - Основные функции > Работа с элементами > должен обрабатывать различные типы элементов
-DOMException [NotSupportedError]: Failed to load script "http://localhost:3000/script.js". JavaScript file loading is disabled.
-    at HTMLScriptElement.#loadScript (file:///Users/poplavskijanton/HEYS-v2/node_modules/[4m.pnpm[24m/happy-dom@20.0.10/node_modules/[4mhappy-dom[24m/src/nodes/html-script-element/HTMLScriptElement.ts:656:19)
-    at HTMLScriptElement.[connectedToDocument] (file:///Users/poplavskijanton/HEYS-v2/node_modules/[4m.pnpm[24m/happy-dom@20.0.10/node_modules/[4mhappy-dom[24m/src/nodes/html-script-element/HTMLScriptElement.ts:362:21)
-    at HTMLScriptElement.[connectedToNode] (file:///Users/poplavskijanton/HEYS-v2/node_modules/[4m.pnpm[24m/happy-dom@20.0.10/node_modules/[4mhappy-dom[24m/src/nodes/node/Node.ts:992:44)
-    at HTMLHeadElement.[appendChild] (file:///Users/poplavskijanton/HEYS-v2/node_modules/[4m.pnpm[24m/happy-dom@20.0.10/node_modules/[4mhappy-dom[24m/src/nodes/node/Node.ts:523:39)
-    at HTMLHeadElement.[appendChild] (file:///Users/poplavskijanton/HEYS-v2/node_modules/[4m.pnpm[24m/happy-dom@20.0.10/node_modules/[4mhappy-dom[24m/src/nodes/element/Element.ts:1353:56)
-    at HTMLHeadElement.appendChild (file:///Users/poplavskijanton/HEYS-v2/node_modules/[4m.pnpm[24m/happy-dom@20.0.10/node_modules/[4mhappy-dom[24m/src/nodes/node/Node.ts:383:42)
-    at [90m/Users/poplavskijanton/HEYS-v2/packages/shared/[39msrc/performance/LazyLoader.ts:407:21
-    at new Promise (<anonymous>)
-    at LazyLoader.loadScript [90m(/Users/poplavskijanton/HEYS-v2/packages/shared/[39msrc/performance/LazyLoader.ts:386:12[90m)[39m
-    at LazyLoader.performLoad [90m(/Users/poplavskijanton/HEYS-v2/packages/shared/[39msrc/performance/LazyLoader.ts:306:20[90m)[39m
+ ✓ src/performance/LazyLoader.test.ts (10 tests) 274ms
+stdout | src/performance/__tests__/logger-guard.test.ts > Performance module logger guard > should track migration progress
 
- ✓ src/performance/LazyLoader.basic.test.ts (10 tests) 603ms
-   ✓ LazyLoader - Основные функции > Работа с элементами > должен обрабатывать элементы без атрибутов  444ms
- ✓ src/performance/CodeSplitter.simple.test.ts (13 tests) 15ms
- ✓ src/performance/TreeShaker.test.ts (12 tests) 8ms
- ✓ src/performance/TreeShaker.simple.test.ts (12 tests) 11ms
- ✓ src/performance/CodeSplitter.test.ts (11 tests) 11ms
- ✓ src/__tests__/legacy.test.ts (12 tests) 8ms
+📊 Logger migration progress:
+   Files still using @heys/logger directly: 0
+   Target: 0 (only logger.ts should import @heys/logger)
+
+
+ ✓ src/performance/__tests__/logger-guard.test.ts (3 tests) 14ms
+ ✓ src/__tests__/utils.test.ts (12 tests) 14ms
+ ✓ src/performance/BundleAnalyzer.simple.test.ts (11 tests) 10ms
+ ✓ src/security/AdvancedEncryption.test.ts (25 tests) 36ms
+ ✓ src/security/__tests__/security.test.ts (34 tests) 407ms
+ ✓ src/performance/LazyLoader.simple.test.ts (19 tests) 167ms
+ ✓ src/performance/__tests__/logger-import-guard.test.ts (2 tests) 70ms
+ ✓ src/performance/CodeSplitter.simple.test.ts (13 tests) 8ms
+ ✓ src/performance/CodeSplitter.test.ts (11 tests) 6ms
+ ✓ src/performance/TreeShaker.simple.test.ts (12 tests) 10ms
+ ✓ src/performance/TreeShaker.test.ts (12 tests) 11ms
+ ✓ src/__tests__/legacy.test.ts (12 tests) 6ms
 
  Test Files  25 passed (25)
       Tests  434 passed (434)
-   Start at  13:28:45
-   Duration  32.45s (transform 6.99s, setup 0ms, collect 23.93s, tests 16.02s, environment 82.04s, prepare 35.54s)
+   Start at  17:39:35
+   Duration  20.04s (transform 3.23s, setup 0ms, collect 11.34s, tests 13.97s, environment 53.53s, prepare 23.58s)
 

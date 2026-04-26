@@ -5,11 +5,23 @@
 
  RUN  v3.2.4 /Users/poplavskijanton/HEYS-v2/packages/core
 
- ✓ src/__tests__/training.test.ts (5 tests) 19ms
+ ✓ src/__tests__/my-first.test.ts (3 tests) 5ms
+ ✓ src/tests/security-automation-basic.test.js (23 tests) 22ms
+ ✓ src/__tests__/training.test.ts (5 tests) 76ms
+ ✓ src/__tests__/food.test.ts (9 tests) 10ms
+ ✓ src/__tests__/user.test.ts (7 tests) 13ms
+ ✓ src/__tests__/legacy.test.ts (18 tests) 31ms
+[2026-04-26 17:39:46.906] [31mERROR[39m: [36m[heys-system] Analytics provider error[39m
+    [35mservice[39m: "heys-system"
+    [35menvironment[39m: "test"
+    [35mversion[39m: "14.0.0"
+    [35mprovider[39m: "Object"
+    [35m@timestamp[39m: "2026-04-26T14:39:46.906Z"
+    [35m@version[39m: "1"
+    error: {}
+ ✓ src/__tests__/secure.test.ts (12 tests) 151ms
+ ✓ src/__tests__/cors-origins.test.js (3 tests) 5ms
  ✓ src/__tests__/basic.test.ts (3 tests) 4ms
- ✓ src/tests/security-automation-basic.test.js (23 tests) 108ms
- ✓ src/__tests__/food.test.ts (9 tests) 167ms
- ✓ src/__tests__/legacy.test.ts (18 tests) 90ms
 stdout | src/__tests__/debug-validation.test.ts > Debug Validation > should validate user schema directly
 Validation result: {
   isValid: [33mtrue[39m,
@@ -22,7 +34,7 @@ Validation result: {
     password: [32m'SecurePassword123!'[39m,
     role: [32m'user'[39m,
     isActive: [33mtrue[39m,
-    createdAt: [35m2026-04-26T10:29:03.580Z[39m
+    createdAt: [35m2026-04-26T14:39:50.882Z[39m
   }
 }
 User data: {
@@ -32,7 +44,7 @@ User data: {
   password: [32m'SecurePassword123!'[39m,
   role: [32m'user'[39m,
   isActive: [33mtrue[39m,
-  createdAt: [35m2026-04-26T10:29:03.580Z[39m
+  createdAt: [35m2026-04-26T14:39:50.882Z[39m
 }
 Schema: {
   shape: [36m[Function: shape][39m,
@@ -68,14 +80,10 @@ Schema: {
   typeName: [32m'ZodObject'[39m
 }
 
- ✓ src/__tests__/debug-validation.test.ts (1 test) 7ms
- ✓ src/__tests__/secure.test.ts (12 tests) 249ms
- ✓ src/__tests__/cors-origins.test.js (3 tests) 9ms
- ✓ src/__tests__/my-first.test.ts (3 tests) 11ms
- ✓ src/__tests__/user.test.ts (7 tests) 318ms
+ ✓ src/__tests__/debug-validation.test.ts (1 test) 6ms
 
  Test Files  10 passed (10)
       Tests  84 passed (84)
-   Start at  13:28:54
-   Duration  14.69s (transform 3.24s, setup 2.00s, collect 7.67s, tests 980ms, environment 32.75s, prepare 16.08s)
+   Start at  17:39:41
+   Duration  9.63s (transform 1.28s, setup 572ms, collect 3.28s, tests 322ms, environment 21.57s, prepare 13.17s)
 
