@@ -6047,6 +6047,47 @@ body:has(.planning-modal-overlay) .planning-tasks-scale-fab {
     pointer-events: none;
 }
 
+/* Mini-overview strip (Phase 5) — compressed timeline preview above the scroll-area.
+   Tasks render as 2-3px bars at proportional positions; window-indicator shows current viewport. */
+.planning-gantt2-mini-overview {
+    position: relative;
+    height: 24px;
+    margin: 0 12px 4px;
+    border-radius: 8px;
+    background: var(--planning-surface-elevated);
+    border: 1px solid var(--planning-border);
+    overflow: hidden;
+    cursor: pointer;
+    touch-action: manipulation;
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+.planning-gantt2-mini-bar {
+    position: absolute;
+    top: 6px;
+    bottom: 6px;
+    border-radius: 2px;
+    pointer-events: none;
+    opacity: 0.7;
+    min-width: 2px;
+}
+
+.planning-gantt2-mini-indicator {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 24px;
+    border-radius: 6px;
+    background: var(--planning-accent-soft);
+    border: 1.5px solid var(--planning-accent);
+    transform: translate3d(0, 0, 0);
+    transition: transform 16ms linear, width 16ms linear;
+    pointer-events: none;
+    will-change: transform;
+}
+
 /* Drag ghost (touch interactions Phase 2) */
 .planning-gantt2-bar.is-dragging,
 .planning-gantt2-milestone.is-dragging {
