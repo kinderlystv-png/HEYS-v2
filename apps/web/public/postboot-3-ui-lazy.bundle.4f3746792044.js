@@ -9266,8 +9266,8 @@ NOVA: 1
     const [parsedPreview, setParsedPreview] = useState(null);
     const textareaRef = useRef(null);
 
-    // ⚡ Режим добавления: 'oneTime' (разово, без записи в базу — дефолт) | 'persist' (в базу)
-    const [createMode, setCreateMode] = useState(() => stepData?.create?.mode || 'oneTime');
+    // 📥 Режим добавления: 'persist' (в базу — дефолт) | 'oneTime' (разово, без записи)
+    const [createMode, setCreateMode] = useState(() => stepData?.create?.mode || 'persist');
 
     // 🌐 Публикация в общую базу (по умолчанию включено; для oneTime скрывается)
     const [publishToShared, setPublishToShared] = useState(true);
@@ -9663,23 +9663,12 @@ NOVA: 1
         React.createElement('span', { className: 'aps-create-title' }, 'Создать новый продукт')
       ),
 
-      // ⚡ Чузер режима: разово vs в базу
+      // 📥 Чузер режима: в базу (дефолт) vs разово
       React.createElement('div', {
         className: 'aps-create-mode-selector',
         role: 'radiogroup',
         'aria-label': 'Режим добавления продукта'
       },
-        React.createElement('button', {
-          type: 'button',
-          className: 'aps-create-mode-btn' + (createMode === 'oneTime' ? ' active' : ''),
-          role: 'radio',
-          'aria-checked': createMode === 'oneTime',
-          onClick: () => { haptic('light'); setCreateMode('oneTime'); }
-        },
-          React.createElement('span', { className: 'aps-create-mode-icon' }, '⚡'),
-          React.createElement('span', { className: 'aps-create-mode-label' }, 'Разово в этот приём'),
-          React.createElement('span', { className: 'aps-create-mode-hint' }, 'Не засорит базу')
-        ),
         React.createElement('button', {
           type: 'button',
           className: 'aps-create-mode-btn' + (createMode === 'persist' ? ' active' : ''),
@@ -9690,6 +9679,17 @@ NOVA: 1
           React.createElement('span', { className: 'aps-create-mode-icon' }, '📥'),
           React.createElement('span', { className: 'aps-create-mode-label' }, 'Сохранить в базу'),
           React.createElement('span', { className: 'aps-create-mode-hint' }, 'Можно использовать снова')
+        ),
+        React.createElement('button', {
+          type: 'button',
+          className: 'aps-create-mode-btn' + (createMode === 'oneTime' ? ' active' : ''),
+          role: 'radio',
+          'aria-checked': createMode === 'oneTime',
+          onClick: () => { haptic('light'); setCreateMode('oneTime'); }
+        },
+          React.createElement('span', { className: 'aps-create-mode-icon' }, '⚡'),
+          React.createElement('span', { className: 'aps-create-mode-label' }, 'Разово в этот приём'),
+          React.createElement('span', { className: 'aps-create-mode-hint' }, 'Не засорит базу')
         )
       ),
 
