@@ -1803,6 +1803,76 @@
 
         const [settingsMenuOpen, setSettingsMenuOpen] = React.useState(false);
 
+        // 🔔 Бейдж модерации на ⚙️-иконке: показываем JWT-куратору количество pending-заявок.
+        // Init из sessionStorage чтобы избежать flash 0→N при reload.
+        const [pendingCount, setPendingCount] = React.useState(() => {
+            try {
+                const raw = sessionStorage.getItem('heys_pending_count_cache');
+                const n = raw ? parseInt(raw, 10) : 0;
+                return Number.isFinite(n) && n >= 0 ? n : 0;
+            } catch (_) { return 0; }
+        });
+        const [isCuratorBadge, setIsCuratorBadge] = React.useState(false);
+
+        // Detect curator (JWT login). Listen to heys:auth-changed для смены состояния.
+        React.useEffect(() => {
+            const recheck = () => {
+                try {
+                    const fn = window.HEYS?.auth?.isCuratorSession;
+                    setIsCuratorBadge(typeof fn === 'function' ? !!fn() : !!window.HEYS?.cloud?.getUser?.());
+                } catch (_) { setIsCuratorBadge(false); }
+            };
+            recheck();
+            window.addEventListener('heys:auth-changed', recheck);
+            return () => window.removeEventListener('heys:auth-changed', recheck);
+        }, []);
+
+        // Загружаем pending count при куратор-сессии: при mount, по событиям, polling 60s.
+        React.useEffect(() => {
+            if (!isCuratorBadge) {
+                setPendingCount(0);
+                try { sessionStorage.removeItem('heys_pending_count_cache'); } catch (_) { /* noop */ }
+                return undefined;
+            }
+            let cancelled = false;
+            const refresh = async () => {
+                try {
+                    const r = await window.HEYS?.cloud?.getPendingProducts?.();
+                    if (cancelled) return;
+                    const n = Array.isArray(r?.data) ? r.data.length : 0;
+                    setPendingCount(n);
+                    try { sessionStorage.setItem('heys_pending_count_cache', String(n)); } catch (_) { /* noop */ }
+                } catch (_) { /* network errors silently ignored — bейдж лучше чем noop */ }
+            };
+            refresh();
+
+            const onUpdate = () => refresh();
+            window.addEventListener('heys:pending-product-created', onUpdate);
+            window.addEventListener('heys:pending-products-updated', onUpdate);
+
+            // Cross-tab: BroadcastChannel
+            let bc = null;
+            try {
+                bc = new BroadcastChannel('heys_pending_products');
+                bc.onmessage = onUpdate;
+            } catch (_) { /* старые браузеры без BC */ }
+
+            // Polling 60s — только когда вкладка видна и онлайн
+            const id = setInterval(() => {
+                if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return;
+                if (typeof navigator !== 'undefined' && navigator.onLine === false) return;
+                refresh();
+            }, 60_000);
+
+            return () => {
+                cancelled = true;
+                clearInterval(id);
+                window.removeEventListener('heys:pending-product-created', onUpdate);
+                window.removeEventListener('heys:pending-products-updated', onUpdate);
+                try { bc?.close?.(); } catch (_) { /* noop */ }
+            };
+        }, [isCuratorBadge]);
+
         const canUseTasksAsHome = !cloudUser && !!clientId;
         const HOME_TAB_OPTIONS = React.useMemo(() => {
             const options = [
@@ -2040,7 +2110,19 @@
                             setSettingsMenuOpen(!settingsMenuOpen);
                         },
                     },
-                    React.createElement('span', { className: 'tab-icon' }, '⚙️'),
+                    React.createElement(
+                        'span',
+                        { className: 'tab-icon', style: { position: 'relative' } },
+                        '⚙️',
+                        isCuratorBadge && pendingCount > 0 && React.createElement(
+                            'span',
+                            {
+                                className: 'tab-pending-badge',
+                                'aria-label': `${pendingCount} pending`,
+                            },
+                            pendingCount > 99 ? '99+' : String(pendingCount)
+                        )
+                    ),
                     React.createElement('span', { className: 'tab-text' }, 'Настройки'),
                 ),
                 settingsMenuOpen && React.createElement(

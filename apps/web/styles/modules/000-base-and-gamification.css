@@ -8442,6 +8442,36 @@ body:has(.offline-banner) .wrap {
   justify-content: center;
 }
 
+/* === Бейдж модерации на ⚙️-иконке (только для куратора, pendingCount > 0) === */
+.tab-pending-badge {
+  position: absolute;
+  top: -4px;
+  right: -8px;
+  min-width: 16px;
+  max-width: 28px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 10px;
+  background: #ef4444;
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 16px;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  /* CRITICAL: pointer-events:none — иначе клик по бейджу не откроет dropdown настроек. */
+  pointer-events: none;
+  box-shadow: 0 2px 4px rgba(239, 68, 68, 0.4);
+}
+
+[data-theme="dark"] .tab-pending-badge {
+  background: #f87171;
+  color: #1f2937;
+  box-shadow: 0 4px 10px -8px rgba(248, 113, 113, 0.8);
+}
+
 /* === Индикатор вкладки по умолчанию в режиме редактирования === */
 .tab.tab-switch.default-tab-indicator,
 .tab.default-tab-indicator {

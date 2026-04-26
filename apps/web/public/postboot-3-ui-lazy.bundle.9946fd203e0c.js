@@ -53082,10 +53082,20 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             );
         }
 
+        // Stop touch event propagation so the parent `.tab-content-swipeable` (heys_app_swipe_nav_v1)
+        // never sees them. The .no-swipe-zone class on the screen root should already gate this via
+        // closest() — but on iOS Safari during horizontal scroll the synthetic event sometimes
+        // bypasses that check; explicit stopPropagation is the bulletproof fix.
+        const stopTouch = (e) => { e.stopPropagation(); };
+
         return h('div', {
-            className: 'planning-gantt2-scroll',
+            className: 'planning-gantt2-scroll no-swipe-zone',
             ref: scrollRef,
             onScroll: handleScroll,
+            onTouchStart: stopTouch,
+            onTouchMove: stopTouch,
+            onTouchEnd: stopTouch,
+            onTouchCancel: stopTouch,
         },
             h('div', {
                 className: 'planning-gantt2-grid',

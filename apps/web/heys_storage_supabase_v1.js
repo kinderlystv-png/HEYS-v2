@@ -12451,30 +12451,46 @@
         || HEYS.utils?.lsGet?.('heys_session_token', null)
         || (() => { try { return JSON.parse(localStorage.getItem('heys_session_token')); } catch { return null; } })();
       if (!sessionToken) {
-        return { data: null, error: 'No session token', status: 'error' };
+        return { data: null, error: 'No session token', status: 'error', message: 'Нет активной сессии PIN-клиента' };
       }
+
+      // 🔍 Вычисляем fingerprint и name_norm на клиенте (нужны серверу для дедупа)
+      let fingerprint = null;
+      let nameNorm = null;
+      try {
+        if (HEYS?.models?.computeProductFingerprint) {
+          fingerprint = await HEYS.models.computeProductFingerprint(product);
+        }
+      } catch (_) { /* fallback to null — сервер сам резолвит */ }
+      try {
+        if (HEYS?.models?.normalizeProductName) {
+          nameNorm = HEYS.models.normalizeProductName(product?.name || '');
+        }
+      } catch (_) { /* fallback to null */ }
 
       const { data, error } = await YandexAPI.rpc('create_pending_product_by_session', {
         p_session_token: sessionToken,
         p_name: product.name,
-        p_product_data: product
+        p_product_data: product,
+        p_fingerprint: fingerprint,
+        p_name_norm: nameNorm
       });
 
       if (error) {
         err('[SHARED PRODUCTS] Pending create error:', error);
-        return { data: null, error, status: 'error' };
+        return { data: null, error, status: 'error', message: (error && error.message) || String(error) };
       }
 
       log('[SHARED PRODUCTS] Pending created:', data);
       return {
         data,
         error: null,
-        status: data.status,
-        message: data.message
+        status: data?.status || 'pending',
+        message: data?.message || ''
       };
     } catch (e) {
       err('[SHARED PRODUCTS] Unexpected error:', e);
-      return { data: null, error: e.message, status: 'error' };
+      return { data: null, error: e.message, status: 'error', message: e.message };
     }
   };
 
@@ -12530,19 +12546,34 @@
       }
 
       // 2. Обновляем статус заявки
-      const { error: updateError } = await YandexAPI.rest('shared_products_pending', {
+      // 🛡 Race-prevention: фильтр status='pending' гарантирует что approve не сработает
+      // повторно если другой куратор уже обработал эту заявку.
+      const { data: updateData, error: updateError } = await YandexAPI.rest('shared_products_pending', {
         method: 'PATCH',
-        filters: { 'eq.id': pendingId },
+        filters: { 'eq.id': pendingId, 'eq.status': 'pending' },
         data: {
           status: 'approved',
           moderated_at: new Date().toISOString(),
           moderated_by: user.id
-        }
+        },
+        select: '*'
       });
 
       if (updateError) {
         err('[SHARED PRODUCTS] Approve update error:', updateError);
         return { data: null, error: updateError, status: 'error' };
+      }
+
+      // 0 строк обновлено → заявка уже была approved/rejected другим куратором
+      const updatedRows = Array.isArray(updateData) ? updateData.length : (updateData ? 1 : 0);
+      if (updatedRows === 0) {
+        log('[SHARED PRODUCTS] Approve race: pending already moderated:', pendingId);
+        return {
+          data: null,
+          error: { message: 'already_moderated' },
+          status: 'race',
+          message: 'Заявка уже обработана другим куратором'
+        };
       }
 
       log('[SHARED PRODUCTS] Approved pending:', pendingId);
@@ -12570,9 +12601,11 @@
     }
 
     try {
+      // 🛡 Race-prevention: фильтр status='pending' гарантирует что reject не сработает
+      // повторно если другой куратор уже обработал эту заявку.
       const { data, error } = await YandexAPI.rest('shared_products_pending', {
         method: 'PATCH',
-        filters: { 'eq.id': pendingId },
+        filters: { 'eq.id': pendingId, 'eq.status': 'pending' },
         data: {
           status: 'rejected',
           reject_reason: reason,
@@ -12586,6 +12619,18 @@
       if (error) {
         err('[SHARED PRODUCTS] Reject error:', error);
         return { data: null, error };
+      }
+
+      // 0 строк обновлено → уже была обработана
+      const updatedRows = Array.isArray(data) ? data.length : (data ? 1 : 0);
+      if (updatedRows === 0) {
+        log('[SHARED PRODUCTS] Reject race: pending already moderated:', pendingId);
+        return {
+          data: null,
+          error: { message: 'already_moderated' },
+          status: 'race',
+          message: 'Заявка уже обработана другим куратором'
+        };
       }
 
       log('[SHARED PRODUCTS] Rejected pending:', pendingId);

@@ -239,9 +239,12 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
   };
 
   const isCuratorUser = () => {
+    // PIN-куратора у нас нет — только JWT-куратор и PIN-клиенты.
+    // hasCuratorJwt() убран как fallback потому что давал false-positive
+    // PIN-клиентам со стейл `heys_curator_session` от прошлой сессии.
     const isCuratorSession = HEYS.auth?.isCuratorSession;
-    if (typeof isCuratorSession === 'function') return isCuratorSession();
-    return !!HEYS.cloud?.getUser?.() || hasCuratorJwt();
+    if (typeof isCuratorSession === 'function') return !!isCuratorSession();
+    return !!HEYS.cloud?.getUser?.();
   };
 
   const isSharedProduct = (product) => {
@@ -3819,8 +3822,12 @@ NOVA: 1
       });
 
       // 4. ТАКЖЕ обновляем данные шага harm и grams (чтобы сразу видели продукт)
+      // 🌐 publishToShared прокидываем в stepData.create — иначе HarmSelectStep
+      // прочитает дефолт (?? true) и публикация сработает даже при снятой галочке.
+      // Для oneTime — принудительно false (продукт в общую базу не предлагаем).
+      const effectivePublishToShared = createMode === 'oneTime' ? false : !!publishToShared;
       if (updateStepData) {
-        updateStepData('create', { mode: createMode });
+        updateStepData('create', { mode: createMode, publishToShared: effectivePublishToShared });
         updateStepData('harm', {
           product: preparedProduct,
           mode: createMode
@@ -3911,7 +3918,7 @@ NOVA: 1
           className: 'aps-create-mode-btn' + (createMode === 'persist' ? ' active' : ''),
           role: 'radio',
           'aria-checked': createMode === 'persist',
-          onClick: () => { haptic('light'); setCreateMode('persist'); }
+          onClick: () => { haptic('light'); setCreateMode('persist'); setPublishToShared(true); }
         },
           React.createElement('span', { className: 'aps-create-mode-icon' }, '📥'),
           React.createElement('span', { className: 'aps-create-mode-label' }, 'Сохранить в базу'),
@@ -3922,7 +3929,7 @@ NOVA: 1
           className: 'aps-create-mode-btn' + (createMode === 'oneTime' ? ' active' : ''),
           role: 'radio',
           'aria-checked': createMode === 'oneTime',
-          onClick: () => { haptic('light'); setCreateMode('oneTime'); }
+          onClick: () => { haptic('light'); setCreateMode('oneTime'); setPublishToShared(false); }
         },
           React.createElement('span', { className: 'aps-create-mode-icon' }, '⚡'),
           React.createElement('span', { className: 'aps-create-mode-label' }, 'Разово в этот приём'),
@@ -5167,6 +5174,9 @@ NOVA: 1
     // Показывать ли breakdown
     const [showBreakdown, setShowBreakdown] = useState(true);
 
+    // 🛡 Anti-double-fire: блокирует повторный запуск публикации при двойном тапе.
+    const isProcessingPublishRef = useRef(false);
+
     // WheelPicker для кастомного значения
     const WheelPicker = HEYS.StepModal?.WheelPicker;
 
@@ -5285,34 +5295,97 @@ NOVA: 1
         }
 
         // 🌐 Публикация в shared (async, не блокируем переход)
+        // ⛔ oneTime отрезан внешним if (!isOneTime). Здесь работаем только с persist-продуктами.
         const publishToShared = stepData?.create?.publishToShared ?? true;
         const isCurator = isCuratorUser();
+        const Toast = HEYS.Toast;
 
-        if (publishToShared && HEYS.cloud) {
-          (async () => {
-            try {
-              if (HEYS.models?.computeProductFingerprint) {
-                const fingerprint = await HEYS.models.computeProductFingerprint(updatedProduct);
-                const existing = await HEYS.cloud.searchSharedProducts?.('', { fingerprint, limit: 1 });
-                if (existing?.data?.length > 0) {
-                  console.log('[HarmSelectStep] 🔄 Продукт уже в shared:', existing.data[0].name);
-                  return;
+        if (publishToShared && HEYS.cloud && !isProcessingPublishRef.current) {
+          // 🌐 Offline-guard: без сети RPC всё равно упадёт — лучше явный Toast.
+          if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+            Toast?.warning?.('Нет сети — заявка не отправлена. Попробуйте позже.');
+          } else {
+            isProcessingPublishRef.current = true;
+            (async () => {
+              try {
+                // 🔍 Дедуп: возможно похожий уже в shared (по fingerprint)
+                let fingerprint = null;
+                if (HEYS.models?.computeProductFingerprint) {
+                  try { fingerprint = await HEYS.models.computeProductFingerprint(updatedProduct); } catch (_) { /* noop */ }
+                  if (fingerprint && HEYS.cloud.searchSharedProducts) {
+                    try {
+                      const existing = await HEYS.cloud.searchSharedProducts('', { fingerprint, limit: 1 });
+                      if (existing?.data?.length > 0) {
+                        const existingName = existing.data[0]?.name || updatedProduct.name;
+                        console.info('[HarmSelectStep] ℹ️ Похожий уже в shared:', existingName);
+                        Toast?.info?.(`Похожий продукт уже в общей базе: «${existingName}»`);
+                        return;
+                      }
+                    } catch (_) { /* fingerprint check best-effort, не блокируем основной путь */ }
+                  }
                 }
-              }
 
-              if (isCurator && HEYS.cloud.publishToShared) {
-                const result = await HEYS.cloud.publishToShared(updatedProduct);
-                console.log('[HarmSelectStep] ✅ Опубликован в shared:', result);
-              } else if (HEYS.cloud.createPendingProduct) {
-                const clientId = readGlobalValue('heys_client_current', null);
-                if (clientId) {
-                  await HEYS.cloud.createPendingProduct(clientId, updatedProduct);
+                if (isCurator && HEYS.cloud.publishToShared) {
+                  // ✨ JWT-куратор: прямая публикация
+                  const result = await HEYS.cloud.publishToShared(updatedProduct);
+                  if (result && (result.error || result.status === 'error')) {
+                    const msg = result.message || (typeof result.error === 'string' ? result.error : (result.error?.message || 'неизвестная ошибка'));
+                    console.error('[HarmSelectStep] ❌ Ошибка публикации в shared:', result);
+                    Toast?.error?.(`Не удалось опубликовать в общую базу: ${msg}`);
+                  } else if (result && result.status === 'exists') {
+                    console.info('[HarmSelectStep] ℹ️ Уже в shared:', result);
+                    Toast?.info?.('Продукт уже есть в общей базе');
+                  } else {
+                    console.info('[HarmSelectStep] ✅ Опубликован в shared:', result);
+                    Toast?.success?.('Продукт опубликован в общую базу');
+                    try {
+                      window.dispatchEvent(new CustomEvent('heys:shared-products-updated'));
+                    } catch (_) { /* noop */ }
+                  }
+                } else if (HEYS.cloud.createPendingProduct) {
+                  // 📨 PIN-клиент: заявка на модерацию
+                  const clientId = readGlobalValue('heys_client_current', null);
+                  if (typeof clientId !== 'string' || !clientId.trim()) {
+                    console.error('[HarmSelectStep] ❌ clientId отсутствует или невалидный');
+                    Toast?.error?.('Не удалось отправить на модерацию: clientId отсутствует');
+                    return;
+                  }
+                  const result = await HEYS.cloud.createPendingProduct(clientId, updatedProduct);
+                  const status = result?.status;
+                  if (status === 'pending') {
+                    console.info('[HarmSelectStep] 📨 Заявка отправлена куратору:', result);
+                    Toast?.success?.('Заявка на модерацию отправлена куратору');
+                    // 📡 Уведомляем UI куратора (та же вкладка + cross-tab через BroadcastChannel)
+                    try {
+                      window.dispatchEvent(new CustomEvent('heys:pending-product-created'));
+                    } catch (_) { /* noop */ }
+                    try {
+                      const bc = new BroadcastChannel('heys_pending_products');
+                      bc.postMessage({ type: 'pending-created', at: Date.now() });
+                      setTimeout(() => { try { bc.close(); } catch (_) { /* noop */ } }, 200);
+                    } catch (_) { /* BroadcastChannel может отсутствовать в старых браузерах */ }
+                  } else if (status === 'exists') {
+                    console.info('[HarmSelectStep] ℹ️ Уже в shared:', result);
+                    Toast?.info?.('Продукт уже есть в общей базе');
+                  } else if (status === 'pending_dup') {
+                    console.info('[HarmSelectStep] ℹ️ Заявка с таким продуктом уже на модерации:', result);
+                    Toast?.info?.('Заявка уже отправлена ранее — ждёт модерации');
+                  } else if (status === 'error' || result?.error) {
+                    const msg = result?.message || (typeof result?.error === 'string' ? result.error : (result?.error?.message || 'неизвестная ошибка'));
+                    console.error('[HarmSelectStep] ❌ Ошибка отправки на модерацию:', result);
+                    Toast?.error?.(`Не удалось отправить на модерацию: ${msg}`);
+                  } else {
+                    console.warn('[HarmSelectStep] ⚠️ Неожиданный ответ createPendingProduct:', result);
+                  }
                 }
+              } catch (publishErr) {
+                console.error('[HarmSelectStep] ❌ Unexpected publish error:', publishErr);
+                Toast?.error?.(`Ошибка публикации: ${publishErr?.message || publishErr}`);
+              } finally {
+                isProcessingPublishRef.current = false;
               }
-            } catch (err) {
-              console.error('[HarmSelectStep] ❌ Ошибка публикации:', err);
-            }
-          })();
+            })();
+          }
         }
       }
 

@@ -188,9 +188,13 @@
     // 🔧 FIX: Очищаем curator токен ПЕРЕД PIN-авторизацией
     // Если остался старый heys_supabase_auth_token от куратора,
     // switchClient ошибочно определит hasCuratorSession=true и очистит _pinAuthClientId
-    // Это ломало синхронизацию для PIN-клиентов (данные не загружались в облако)
+    // Это ломало синхронизацию для PIN-клиентов (данные не загружались в облако).
+    // Также очищаем heys_curator_session — иначе isCuratorSession() даёт
+    // false-positive PIN-клиенту (стейл-токен от прошлого куратор-логина),
+    // что отправляет flow публикации продукта в неправильную ветку.
     try {
       localStorage.removeItem('heys_supabase_auth_token');
+      localStorage.removeItem('heys_curator_session');
     } catch (_) { }
 
     const phoneNorm = normalizePhone(phone);

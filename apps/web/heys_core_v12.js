@@ -3432,13 +3432,34 @@
       );
     };
 
+    // 📡 Helper: уведомляем UI о смене pending-очереди (бейдж, другие табы, etc).
+    // Same-tab event + cross-tab BroadcastChannel (если поддерживается).
+    function notifyPendingUpdated() {
+      try {
+        window.dispatchEvent(new CustomEvent('heys:pending-products-updated'));
+      } catch (_) { /* noop */ }
+      try {
+        const bc = new BroadcastChannel('heys_pending_products');
+        bc.postMessage({ type: 'pending-updated', at: Date.now() });
+        setTimeout(() => { try { bc.close(); } catch (_) { /* noop */ } }, 200);
+      } catch (_) { /* BroadcastChannel может отсутствовать */ }
+    }
+
     // Одобрить pending заявку
     async function approvePending(pending) {
       try {
         // Передаём и pendingId и productData
         const result = await window.HEYS?.cloud?.approvePendingProduct?.(pending.id, pending.product_data);
+        // 🛡 Race: заявка уже обработана другим куратором
+        if (result?.status === 'race') {
+          HEYS.Toast?.warning(result.message || 'Заявка уже обработана другим куратором') || alert(result.message || 'Заявка уже обработана');
+          setPendingProducts(prev => prev.filter(p => p.id !== pending.id));
+          notifyPendingUpdated();
+          return;
+        }
         if (result?.error) {
-          HEYS.Toast?.error('Ошибка: ' + result.error.message) || alert('Ошибка: ' + result.error.message);
+          const msg = result.error?.message || (typeof result.error === 'string' ? result.error : 'неизвестная ошибка');
+          HEYS.Toast?.error('Ошибка: ' + msg) || alert('Ошибка: ' + msg);
           return;
         }
         // Обновляем список
@@ -3448,6 +3469,7 @@
         } else {
           HEYS.Toast?.success(`Продукт "${pending.product_data?.name || pending.name_norm}" добавлен в общую базу!`) || alert(`✅ Продукт "${pending.product_data?.name || pending.name_norm}" добавлен в общую базу!`);
         }
+        notifyPendingUpdated();
       } catch (err) {
         console.error('[APPROVE] Error:', err);
         HEYS.Toast?.error('Ошибка при подтверждении: ' + err.message) || alert('Ошибка при подтверждении: ' + err.message);
@@ -3458,13 +3480,22 @@
     async function rejectPending(pending, reason = '') {
       try {
         const result = await window.HEYS?.cloud?.rejectPendingProduct?.(pending.id, reason);
+        // 🛡 Race
+        if (result?.status === 'race') {
+          HEYS.Toast?.warning(result.message || 'Заявка уже обработана другим куратором') || alert(result.message || 'Заявка уже обработана');
+          setPendingProducts(prev => prev.filter(p => p.id !== pending.id));
+          notifyPendingUpdated();
+          return;
+        }
         if (result?.error) {
-          HEYS.Toast?.error('Ошибка: ' + result.error.message) || alert('Ошибка: ' + result.error.message);
+          const msg = result.error?.message || (typeof result.error === 'string' ? result.error : 'неизвестная ошибка');
+          HEYS.Toast?.error('Ошибка: ' + msg) || alert('Ошибка: ' + msg);
           return;
         }
         // Обновляем список
         setPendingProducts(prev => prev.filter(p => p.id !== pending.id));
         HEYS.Toast?.info(`Заявка "${pending.product_data?.name || pending.name_norm}" отклонена`) || alert(`❌ Заявка "${pending.product_data?.name || pending.name_norm}" отклонена`);
+        notifyPendingUpdated();
       } catch (err) {
         console.error('[REJECT] Error:', err);
         HEYS.Toast?.error('Ошибка при отклонении: ' + err.message) || alert('Ошибка при отклонении: ' + err.message);
