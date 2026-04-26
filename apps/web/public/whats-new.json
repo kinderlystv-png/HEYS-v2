@@ -1,8 +1,8 @@
 {
   "releases": [
     {
-      "version": "2026.04.26.db68ab0e",
-      "buildHash": "db68ab0e",
+      "version": "2026.04.26.497084cc",
+      "buildHash": "497084cc",
       "date": "2026-04-26",
       "kind": "user-facing",
       "profile": "user-facing-general",
