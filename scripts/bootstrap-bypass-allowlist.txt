@@ -81,8 +81,8 @@ apps/web/heys_core_v12.js:1927
 apps/web/heys_core_v12.js:4301
 apps/web/heys_core_v12.js:5076
 apps/web/heys_cycle_v1.js:44
-apps/web/heys_day_add_product.js:664
-apps/web/heys_day_add_product.js:679
+apps/web/heys_day_add_product.js:674
+apps/web/heys_day_add_product.js:689
 apps/web/heys_day_core_bundle_v1.js:2029
 apps/web/heys_day_core_bundle_v1.js:3842
 apps/web/heys_day_core_bundle_v1.js:404
@@ -160,9 +160,9 @@ apps/web/heys_pwa_module_v1.js:68
 apps/web/heys_ratio_zones_v1.js:73
 apps/web/heys_refeed_v1.js:76
 apps/web/heys_simple_analytics.js:130
-apps/web/heys_smart_search_v2.js:796
-apps/web/heys_smart_search_v2.js:867
-apps/web/heys_smart_search_v2.js:894
+apps/web/heys_smart_search_v2.js:801
+apps/web/heys_smart_search_v2.js:872
+apps/web/heys_smart_search_v2.js:899
 apps/web/heys_step_modal_v1.js:29
 apps/web/heys_steps_v1.js:58
 apps/web/heys_storage_layer_v1.js:169
