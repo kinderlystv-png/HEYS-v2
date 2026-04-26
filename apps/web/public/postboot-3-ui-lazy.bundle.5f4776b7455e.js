@@ -42224,7 +42224,6 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         PROJECTS: 'heys_planning_projects',
         TASKS: 'heys_planning_tasks',
         SLOTS: 'heys_planning_slots',
-        CONTEXT_INBOX: 'heys_planning_inbox_v1',
         LINKS: 'heys_planning_links_v1',
     };
 
@@ -42371,6 +42370,13 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         return Math.max(min, Math.min(max, value));
     }
 
+    function clampProgress(value, status) {
+        if (typeof value === 'number' && Number.isFinite(value)) {
+            return clamp(Math.round(value), 0, 100);
+        }
+        return status === 'done' ? 100 : 0;
+    }
+
     function timeToMinutes(timeValue) {
         if (!timeValue || typeof timeValue !== 'string') return 0;
         const [hours, minutes] = timeValue.split(':').map(Number);
@@ -42390,15 +42396,6 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             const rightOrder = Number(right?.order ?? 0);
             if (leftOrder !== rightOrder) return leftOrder - rightOrder;
             return String(left?.createdAt || '').localeCompare(String(right?.createdAt || ''));
-        });
-    }
-
-    function sortContextInboxItems(items) {
-        return (Array.isArray(items) ? items : []).slice().sort((left, right) => {
-            const leftUpdated = String(left?.updatedAt || left?.createdAt || '');
-            const rightUpdated = String(right?.updatedAt || right?.createdAt || '');
-            if (leftUpdated !== rightUpdated) return rightUpdated.localeCompare(leftUpdated);
-            return String(right?.id || '').localeCompare(String(left?.id || ''));
         });
     }
 
@@ -42499,14 +42496,6 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         lsSet(KEYS.SLOTS, sortByOrder(slots || []));
     }
 
-    function getContextInboxItems() {
-        return sortContextInboxItems(lsGet(KEYS.CONTEXT_INBOX, []));
-    }
-
-    function saveContextInboxItems(items) {
-        lsSet(KEYS.CONTEXT_INBOX, sortContextInboxItems(items || []));
-    }
-
     function getNextOrder(items, predicate) {
         return items.filter(predicate).length;
     }
@@ -42563,6 +42552,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             baselineStartDate: opts?.baselineStartDate || undefined,
             baselineDueDate: opts?.baselineDueDate || undefined,
             baselinePlannedMinutes: Number(opts?.baselinePlannedMinutes) > 0 ? Number(opts.baselinePlannedMinutes) : undefined,
+            progress: clampProgress(opts?.progress, opts?.status || 'in_progress'),
+            isMilestone: opts?.isMilestone === true,
             order: getNextOrder(tasks, (item) => (item.projectId || '') === (projectId || '') && (item.parentTaskId || '') === (parentTaskId || '')),
             createdAt: nowISO(),
             updatedAt: nowISO(),
@@ -42590,6 +42581,24 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             next.completedAt = nowISO();
         } else if (patch?.status && patch.status !== 'done') {
             next.completedAt = undefined;
+        }
+
+        if (patch && Object.prototype.hasOwnProperty.call(patch, 'isMilestone')) {
+            next.isMilestone = patch.isMilestone === true;
+        }
+
+        if (patch && Object.prototype.hasOwnProperty.call(patch, 'progress')) {
+            next.progress = clampProgress(patch.progress, next.status);
+            if (next.progress === 100 && next.status !== 'done' && next.status !== 'cancelled') {
+                next.status = 'done';
+                if (!current.completedAt) next.completedAt = nowISO();
+            }
+        } else if (patch?.status === 'done') {
+            next.progress = 100;
+        } else if (patch?.status && patch.status !== 'done' && current.progress === 100) {
+            next.progress = 0;
+        } else if (typeof current.progress !== 'number') {
+            next.progress = clampProgress(undefined, next.status);
         }
 
         tasks[index] = next;
@@ -42712,71 +42721,6 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         return idSet.size;
     }
 
-    function buildContextInboxPreview(text) {
-        const normalized = String(text || '').replace(/\s+/g, ' ').trim();
-        if (!normalized) return { title: '', preview: '' };
-        const titleBase = normalized.slice(0, 72).trim();
-        return {
-            title: normalized.length > 72 ? titleBase + '…' : titleBase,
-            preview: normalized.length > 180 ? normalized.slice(0, 180).trim() + '…' : normalized,
-        };
-    }
-
-    function addContextInboxItem(text, opts) {
-        const body = String(text || '').trim();
-        if (!body) return null;
-
-        const items = getContextInboxItems();
-        const now = nowISO();
-        const presentation = buildContextInboxPreview(body);
-        const item = {
-            id: uid(),
-            type: opts?.type || 'capture',
-            status: opts?.status || 'new',
-            source: opts?.source || 'user',
-            privacy: opts?.privacy || 'standard',
-            title: presentation.title || 'Новая запись',
-            preview: presentation.preview,
-            body,
-            linkedTaskIds: Array.isArray(opts?.linkedTaskIds) ? opts.linkedTaskIds.slice() : [],
-            createdAt: now,
-            updatedAt: now,
-        };
-
-        saveContextInboxItems([item].concat(items));
-        return item;
-    }
-
-    function updateContextInboxItem(id, patch) {
-        const items = getContextInboxItems();
-        const index = items.findIndex((item) => item.id === id);
-        if (index === -1) return null;
-
-        const current = items[index];
-        const nextBody = patch?.body != null ? String(patch.body || '').trim() : current.body;
-        const presentation = nextBody ? buildContextInboxPreview(nextBody) : null;
-        const next = {
-            ...current,
-            ...patch,
-            body: nextBody,
-            title: presentation ? (patch?.title || presentation.title || current.title) : (patch?.title || current.title),
-            preview: presentation ? presentation.preview : current.preview,
-            linkedTaskIds: Array.isArray(patch?.linkedTaskIds)
-                ? patch.linkedTaskIds.filter(Boolean)
-                : current.linkedTaskIds,
-            updatedAt: nowISO(),
-        };
-
-        items[index] = next;
-        saveContextInboxItems(items);
-        return next;
-    }
-
-    function deleteContextInboxItem(id) {
-        const items = getContextInboxItems().filter((item) => item.id !== id);
-        saveContextInboxItems(items);
-    }
-
     // ── Links (graph edges) ──────────────────────────────────────────
 
     function getLinks() {
@@ -42818,18 +42762,71 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         });
     }
 
+    function getPlanningCloudClientId() {
+        try {
+            if (HEYS.cloud && typeof HEYS.cloud.getClientId === 'function') {
+                const id = String(HEYS.cloud.getClientId() || '');
+                if (id) return id;
+            }
+        } catch (e) { /* noop */ }
+        try {
+            if (typeof localStorage !== 'undefined') {
+                return localStorage.getItem('heys_pin_auth_client')
+                    || localStorage.getItem('heys_client_current')
+                    || '';
+            }
+        } catch (e) { /* noop */ }
+        return '';
+    }
+
+    function refreshPlanningFromCloud() {
+        const YandexAPI = HEYS.YandexAPI;
+        const Store = HEYS.Planning && HEYS.Planning.Store;
+        if (!YandexAPI || !Store || typeof YandexAPI.getKVBatch !== 'function') {
+            return Promise.resolve({ ok: false, reason: 'no_api' });
+        }
+        const clientId = getPlanningCloudClientId();
+        const keys = [
+            'heys_planning_projects',
+            'heys_planning_tasks',
+            'heys_planning_slots',
+            'heys_planning_links_v1',
+        ];
+        return YandexAPI.getKVBatch(clientId, keys).then(function (res) {
+            if (res.error || !Array.isArray(res.data)) {
+                return { ok: false, reason: res.error || 'batch_failed' };
+            }
+            res.data.forEach(function (item) {
+                if (!item || item.k == null || item.v == null) return;
+                if (item.k === 'heys_planning_projects' && typeof Store.saveProjects === 'function') {
+                    Store.saveProjects(item.v);
+                } else if (item.k === 'heys_planning_tasks' && typeof Store.saveTasks === 'function') {
+                    Store.saveTasks(item.v);
+                } else if (item.k === 'heys_planning_slots' && typeof Store.saveSlots === 'function') {
+                    Store.saveSlots(item.v);
+                } else if (item.k === 'heys_planning_links_v1' && typeof Store.saveLinks === 'function') {
+                    Store.saveLinks(item.v);
+                }
+            });
+            try {
+                if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
+                    window.dispatchEvent(new CustomEvent('heys:planning-updated'));
+                }
+            } catch (e) { /* noop */ }
+            return { ok: true };
+        });
+    }
+
     function usePlanningState() {
         const [projects, setProjects] = useState(getProjects);
         const [tasks, setTasks] = useState(getTasks);
         const [slots, setSlots] = useState(getSlots);
-        const [contextInboxItems, setContextInboxItems] = useState(getContextInboxItems);
         const [links, setLinks] = useState(getLinks);
 
         const refresh = useCallback(() => {
             setProjects(getProjects());
             setTasks(getTasks());
             setSlots(getSlots());
-            setContextInboxItems(getContextInboxItems());
             setLinks(getLinks());
         }, []);
 
@@ -42858,16 +42855,13 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             updateSlot: (id, patch) => { const slot = updateSlot(id, patch); refresh(); return slot; },
             deleteSlot: (id) => { deleteSlot(id); refresh(); },
             deleteSlotBatch: (ids) => { const n = deleteSlotBatch(ids); if (n) refresh(); return n; },
-            addContextInboxItem: (text, opts) => { const item = addContextInboxItem(text, opts); refresh(); return item; },
-            updateContextInboxItem: (id, patch) => { const item = updateContextInboxItem(id, patch); refresh(); return item; },
-            deleteContextInboxItem: (id) => { deleteContextInboxItem(id); refresh(); },
             addLink: (fromId, toId, opts) => { const link = addLink(fromId, toId, opts); refresh(); return link; },
             deleteLink: (id) => { deleteLink(id); refresh(); },
             getLinksFor,
             refresh,
         }), [refresh]);
 
-        return { projects, tasks, slots, contextInboxItems, links, ...api };
+        return { projects, tasks, slots, links, ...api };
     }
 
     function usePlanningViewport() {
@@ -42902,6 +42896,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         diffDays,
         getWeekDays,
         clamp,
+        clampProgress,
         timeToMinutes,
         minutesToTime,
         localDateISO,
@@ -42933,11 +42928,6 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         updateSlot,
         deleteSlot,
         deleteSlotBatch,
-        getContextInboxItems,
-        saveContextInboxItems,
-        addContextInboxItem,
-        updateContextInboxItem,
-        deleteContextInboxItem,
         getLinks,
         saveLinks,
         addLink,
@@ -42949,6 +42939,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         usePlanningState,
         usePlanningViewport,
     };
+
+    Planning.refreshPlanningFromCloud = refreshPlanningFromCloud;
 })();
 
 
@@ -51288,1309 +51280,726 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 })();
 
 
-/* ===== heys_planning_context_v1.js ===== */
-// heys_planning_context_v1.js — Context screen for HEYS planning
+/* ===== heys_planning_gantt_migration_v1.js ===== */
+// heys_planning_gantt_migration_v1.js — idempotent backfill of progress/isMilestone for tasks
+(function () {
+    'use strict';
+
+    const HEYS = window.HEYS = window.HEYS || {};
+    const SCHEMA_VERSION_KEY = 'heys_planning_gantt_schema_v_v1';
+    const SCHEMA_VERSION = '2';
+
+    function lsGet(key, fallback) {
+        try {
+            if (HEYS.utils && typeof HEYS.utils.lsGet === 'function') {
+                return HEYS.utils.lsGet(key, fallback);
+            }
+        } catch (e) { /* noop */ }
+        return fallback;
+    }
+
+    function lsSet(key, value) {
+        try {
+            if (HEYS.utils && typeof HEYS.utils.lsSet === 'function') {
+                HEYS.utils.lsSet(key, value);
+            }
+        } catch (e) { /* noop */ }
+    }
+
+    function clampProgress(value, status) {
+        if (typeof value === 'number' && Number.isFinite(value)) {
+            return Math.max(0, Math.min(100, Math.round(value)));
+        }
+        return status === 'done' ? 100 : 0;
+    }
+
+    function migrateAndStamp(opts) {
+        const respectFlag = !(opts && opts.force === true);
+        if (respectFlag && lsGet(SCHEMA_VERSION_KEY, null) === SCHEMA_VERSION) {
+            return { ok: true, alreadyDone: true };
+        }
+
+        const Store = HEYS.Planning && HEYS.Planning.Store;
+        if (!Store || typeof Store.getTasks !== 'function' || typeof Store.saveTasks !== 'function') {
+            return { ok: false, reason: 'store_unavailable' };
+        }
+
+        const tasks = Store.getTasks();
+        let changed = 0;
+        const migrated = tasks.map((t) => {
+            const hasProgress = typeof t.progress === 'number' && Number.isFinite(t.progress);
+            const hasMilestone = t.isMilestone === true || t.isMilestone === false;
+            if (hasProgress && hasMilestone) return t;
+            changed += 1;
+            return {
+                ...t,
+                progress: hasProgress ? clampProgress(t.progress, t.status) : clampProgress(undefined, t.status),
+                isMilestone: t.isMilestone === true,
+            };
+        });
+
+        if (changed > 0) Store.saveTasks(migrated);
+        lsSet(SCHEMA_VERSION_KEY, SCHEMA_VERSION);
+        return { ok: true, migrated: changed, total: tasks.length };
+    }
+
+    let pendingTimer = 0;
+    function scheduleMigration(opts) {
+        if (pendingTimer) {
+            window.clearTimeout(pendingTimer);
+            pendingTimer = 0;
+        }
+        pendingTimer = window.setTimeout(() => {
+            pendingTimer = 0;
+            try { migrateAndStamp(opts); } catch (e) { console.warn('[gantt-migration]', e); }
+        }, 1000);
+    }
+
+    function attachCloudSyncWatcher() {
+        if (typeof window === 'undefined' || !window.addEventListener) return;
+        // Cloud may overwrite tasks with un-migrated rows. Re-run migration ignoring
+        // the schema flag — the migration itself is idempotent (no-op when fields are set).
+        window.addEventListener('heys:planning-updated', () => scheduleMigration({ force: true }));
+    }
+
+    HEYS.PlanningGanttMigration = {
+        run: migrateAndStamp,
+        schedule: scheduleMigration,
+        SCHEMA_VERSION,
+        SCHEMA_VERSION_KEY,
+    };
+
+    attachCloudSyncWatcher();
+})();
+
+
+/* ===== heys_planning_gantt_layout_v1.js ===== */
+// heys_planning_gantt_layout_v1.js — pure layout helpers for Gantt v2
+// No React; relies on HEYS.Planning.Utils for date math.
+(function () {
+    'use strict';
+
+    const HEYS = window.HEYS = window.HEYS || {};
+
+    // Snap targets — covers quarter-view (12px/day) up to wide hour-zoom (120px/day).
+    const ZOOM_SNAP_VALUES = [12, 18, 28, 40, 56, 80, 120];
+    const ZOOM_MIN = 12;
+    const ZOOM_MAX = 120;
+    const DEFAULT_DAY_WIDTH = 28;
+
+    const GROUP_ROW_HEIGHT = 44;
+    const TASK_ROW_HEIGHT = 44;
+    const VIRTUAL_BUFFER_DEFAULT = 5;
+
+    // Mon-Sun two-letter labels (matches existing WEEKDAY_LABELS in heys_planning_schedule_v1.js)
+    const WEEKDAY_LABELS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
+
+    function resolveUtils() {
+        const utils = HEYS.Planning && HEYS.Planning.Utils;
+        if (!utils) throw new Error('[gantt-layout] HEYS.Planning.Utils unavailable');
+        return utils;
+    }
+
+    function clamp(value, min, max) {
+        return Math.max(min, Math.min(max, value));
+    }
+
+    function snapDayWidth(value) {
+        const safe = clamp(Number(value) || DEFAULT_DAY_WIDTH, ZOOM_MIN, ZOOM_MAX);
+        let best = ZOOM_SNAP_VALUES[0];
+        let bestDist = Math.abs(best - safe);
+        for (let i = 1; i < ZOOM_SNAP_VALUES.length; i += 1) {
+            const v = ZOOM_SNAP_VALUES[i];
+            const d = Math.abs(v - safe);
+            if (d < bestDist) { best = v; bestDist = d; }
+        }
+        return best;
+    }
+
+    function pinchRatioToWidth(initialWidth, ratio) {
+        const safeInitial = clamp(Number(initialWidth) || DEFAULT_DAY_WIDTH, ZOOM_MIN, ZOOM_MAX);
+        const safeRatio = Number(ratio) || 1;
+        return clamp(safeInitial * safeRatio, ZOOM_MIN, ZOOM_MAX);
+    }
+
+    function isRelevantTask(task) {
+        if (!task) return false;
+        if (task.status === 'cancelled') return false;
+        return !!(task.startDate || task.dueDate || task.baselineStartDate || task.baselineDueDate);
+    }
+
+    function computeRelevantTasks(tasks) {
+        return (Array.isArray(tasks) ? tasks : []).filter(isRelevantTask);
+    }
+
+    // Compute timeline bounds with ±2-year clamp from today (perf safety against far-future dates).
+    function computeTimelineBounds(relevantTasks, todayIso) {
+        const utils = resolveUtils();
+        const today = todayIso || utils.dateStr();
+        const minClamp = utils.addDays(today, -730);
+        const maxClamp = utils.addDays(today, 730);
+
+        const dates = [];
+        relevantTasks.forEach((task) => {
+            [task.startDate, task.dueDate, task.baselineStartDate, task.baselineDueDate].forEach((value) => {
+                if (value) dates.push(value);
+            });
+        });
+        if (dates.length === 0) {
+            return { start: utils.addDays(today, -3), end: utils.addDays(today, 17) };
+        }
+        const sorted = dates.slice().sort();
+        let start = utils.addDays(sorted[0], -2);
+        let end = utils.addDays(sorted[sorted.length - 1], 4);
+        if (start < minClamp) start = minClamp;
+        if (end > maxClamp) end = maxClamp;
+        if (start > end) start = end;
+        return { start, end };
+    }
+
+    function computeTimelineDays(bounds) {
+        const utils = resolveUtils();
+        const length = Math.max(1, utils.diffDays(bounds.start, bounds.end) + 1);
+        const days = new Array(length);
+        for (let i = 0; i < length; i += 1) days[i] = utils.addDays(bounds.start, i);
+        return days;
+    }
+
+    // Build groups: { project, tasks } per project (filtered by status !== 'archived').
+    // '__none__' bucket holds tasks without project. Empty buckets dropped.
+    function computeGroupedTasks(relevantTasks, projects) {
+        const buckets = new Map();
+        const activeProjects = (Array.isArray(projects) ? projects : []).filter((p) => p && p.status !== 'archived');
+        activeProjects.forEach((project) => {
+            buckets.set(project.id, { project, tasks: [] });
+        });
+        const noneBucket = {
+            project: { id: '__none__', name: 'Без проекта', color: '#94a3b8' },
+            tasks: [],
+        };
+        buckets.set('__none__', noneBucket);
+
+        relevantTasks.forEach((task) => {
+            const key = task.projectId && buckets.has(task.projectId) ? task.projectId : '__none__';
+            buckets.get(key).tasks.push(task);
+        });
+
+        return Array.from(buckets.values())
+            .map((entry) => ({
+                ...entry,
+                tasks: entry.tasks.slice().sort((left, right) => (left.order || 0) - (right.order || 0)),
+            }))
+            .filter((entry) => entry.tasks.length > 0);
+    }
+
+    // Compute rows + per-task metrics. Returns absolute-positioned layout.
+    // collapsed: { [projectId]: true } — collapse a group's tasks (group row still rendered).
+    function computeRowsAndMetrics(grouped, timelineStartIso, dayWidth, collapsed) {
+        const utils = resolveUtils();
+        const taskTopById = {};
+        const taskMetrics = {};
+        const rows = [];
+        const collapsedSet = collapsed || {};
+        let cursorTop = 0;
+
+        grouped.forEach((group) => {
+            rows.push({
+                type: 'group',
+                id: group.project.id,
+                top: cursorTop,
+                height: GROUP_ROW_HEIGHT,
+                group,
+            });
+            cursorTop += GROUP_ROW_HEIGHT;
+            if (collapsedSet[group.project.id]) return;
+
+            group.tasks.forEach((task) => {
+                rows.push({
+                    type: 'task',
+                    id: task.id,
+                    top: cursorTop,
+                    height: TASK_ROW_HEIGHT,
+                    task,
+                    group,
+                });
+                taskTopById[task.id] = cursorTop;
+
+                const startDate = task.startDate || task.dueDate;
+                const dueDate = task.dueDate || task.startDate;
+                if (startDate && dueDate) {
+                    const startOffset = utils.diffDays(timelineStartIso, startDate);
+                    const dueOffset = utils.diffDays(timelineStartIso, dueDate);
+                    const left = startOffset * dayWidth;
+                    const width = Math.max(dayWidth, ((dueOffset - startOffset) + 1) * dayWidth);
+                    taskMetrics[task.id] = {
+                        left,
+                        right: left + width,
+                        centerY: cursorTop + (TASK_ROW_HEIGHT / 2),
+                    };
+                }
+                cursorTop += TASK_ROW_HEIGHT;
+            });
+        });
+
+        return { rows, taskTopById, taskMetrics, height: cursorTop };
+    }
+
+    // Virtualization slice: rows visible within [scrollTop, scrollTop + viewportH] +/- buffer rows.
+    // Returns { startIdx, endIdx, slice } — slice is rows.slice(startIdx, endIdx).
+    function computeVisibleSlice(rows, scrollTop, viewportH, rowHeight, buffer) {
+        const safeRows = Array.isArray(rows) ? rows : [];
+        if (safeRows.length === 0) return { startIdx: 0, endIdx: 0, slice: [] };
+        const safeRowH = Number(rowHeight) > 0 ? Number(rowHeight) : TASK_ROW_HEIGHT;
+        const safeBuffer = Number(buffer) >= 0 ? Number(buffer) : VIRTUAL_BUFFER_DEFAULT;
+        const safeScrollTop = Math.max(0, Number(scrollTop) || 0);
+        const safeViewportH = Math.max(0, Number(viewportH) || 0);
+
+        if (safeViewportH === 0) {
+            // Fallback: render the first ~30 rows when viewport size unknown (initial mount).
+            return { startIdx: 0, endIdx: Math.min(safeRows.length, 30), slice: safeRows.slice(0, Math.min(safeRows.length, 30)) };
+        }
+
+        // Use first row's top as anchor — rows are absolute-positioned.
+        // We can binary-search but linear is fine for hundreds of rows.
+        let firstVisible = 0;
+        for (let i = 0; i < safeRows.length; i += 1) {
+            const row = safeRows[i];
+            const rowBottom = row.top + (row.height || safeRowH);
+            if (rowBottom > safeScrollTop) { firstVisible = i; break; }
+            firstVisible = safeRows.length;
+        }
+        let lastVisible = firstVisible;
+        const viewportBottom = safeScrollTop + safeViewportH;
+        for (let i = firstVisible; i < safeRows.length; i += 1) {
+            if (safeRows[i].top >= viewportBottom) break;
+            lastVisible = i;
+        }
+
+        const startIdx = Math.max(0, firstVisible - safeBuffer);
+        const endIdx = Math.min(safeRows.length, lastVisible + safeBuffer + 1);
+        return { startIdx, endIdx, slice: safeRows.slice(startIdx, endIdx) };
+    }
+
+    function isWeekendDay(iso) {
+        if (!iso || typeof iso !== 'string') return false;
+        const date = new Date(iso + 'T12:00:00');
+        const day = date.getDay();
+        return day === 0 || day === 6;
+    }
+
+    function weekdayLabelForIso(iso) {
+        const date = new Date(iso + 'T12:00:00');
+        return WEEKDAY_LABELS[(date.getDay() + 6) % 7];
+    }
+
+    HEYS.PlanningGanttLayout = {
+        // Pure helpers (testable)
+        snapDayWidth,
+        pinchRatioToWidth,
+        computeRelevantTasks,
+        computeTimelineBounds,
+        computeTimelineDays,
+        computeGroupedTasks,
+        computeRowsAndMetrics,
+        computeVisibleSlice,
+        isWeekendDay,
+        weekdayLabelForIso,
+        // Constants
+        ZOOM_SNAP_VALUES,
+        ZOOM_MIN,
+        ZOOM_MAX,
+        DEFAULT_DAY_WIDTH,
+        GROUP_ROW_HEIGHT,
+        TASK_ROW_HEIGHT,
+        VIRTUAL_BUFFER_DEFAULT,
+        WEEKDAY_LABELS,
+    };
+})();
+
+
+/* ===== heys_planning_gantt_v2.js ===== */
+// heys_planning_gantt_v2.js — mobile-native Gantt screen (Phase 1: layout + statique render)
+// Touch interactions arrive in Phase 2; bottom-sheet quick-edit in Phase 3.
 (function () {
     'use strict';
 
     const HEYS = window.HEYS = window.HEYS || {};
     const React = window.React;
-    const Planning = HEYS.Planning || {};
-    if (!React || !Planning.Store || !Planning.Utils) return;
+    if (!React) return;
 
     const h = React.createElement;
-    const { useEffect, useMemo, useRef, useState } = React;
-    const { dateStr, getTaskDurationMinutes } = Planning.Utils;
+    const { useEffect, useMemo, useRef, useState, useCallback } = React;
 
-    function readDayRecord(isoDate) {
-        const key = 'heys_dayv2_' + String(isoDate || '');
-        try {
-            if (window.U && typeof window.U.lsGet === 'function') {
-                return window.U.lsGet(key, null) || null;
-            }
-            if (HEYS.store && typeof HEYS.store.get === 'function') {
-                return HEYS.store.get(key, null) || null;
-            }
-        } catch (error) {
-            console.warn('[HEYS.planning.context] day record read failed', error);
-        }
-        return null;
-    }
+    const LS_ZOOM = 'heys_planning_gantt_zoom_v1';
+    const LS_TOGGLES = 'heys_planning_gantt_toggles_v1';
+    const LS_GROUPS = 'heys_planning_gantt_groups_collapsed_v1';
 
-    function getSessionTokenForPlanningRpc() {
+    const DEFAULT_TOGGLES = {
+        deps: false,
+        baseline: false,
+        criticalPath: false,
+        conflicts: true,
+        slack: false,
+        miniOverview: true,
+    };
+
+    function lsGet(key, fallback) {
         try {
-            if (HEYS.auth && typeof HEYS.auth.getSessionToken === 'function') {
-                var t = HEYS.auth.getSessionToken();
-                if (t) return typeof t === 'string' ? t : String(t);
+            if (HEYS.utils && typeof HEYS.utils.lsGet === 'function') {
+                return HEYS.utils.lsGet(key, fallback);
             }
         } catch (e) { /* noop */ }
-        try {
-            if (typeof localStorage !== 'undefined') {
-                return localStorage.getItem('heys_session_token') || '';
-            }
-        } catch (e2) { /* noop */ }
-        return '';
+        return fallback;
     }
 
-    function getTargetClientIdForPrompt() {
-        var id = '';
+    function lsSet(key, value) {
         try {
-            if (HEYS.cloud && typeof HEYS.cloud.getClientId === 'function') {
-                id = String(HEYS.cloud.getClientId() || '');
+            if (HEYS.utils && typeof HEYS.utils.lsSet === 'function') {
+                HEYS.utils.lsSet(key, value);
             }
         } catch (e) { /* noop */ }
-        if (!id && typeof localStorage !== 'undefined') {
-            id = localStorage.getItem('heys_pin_auth_client') || localStorage.getItem('heys_client_current') || '';
-        }
-        return id;
     }
 
-    function refreshPlanningFromCloud() {
-        var YandexAPI = HEYS.YandexAPI;
-        var Store = HEYS.Planning && HEYS.Planning.Store;
-        if (!YandexAPI || !Store || typeof YandexAPI.getKVBatch !== 'function') {
-            return Promise.resolve({ ok: false, reason: 'no_api' });
+    function GanttFallback({ message }) {
+        return h('div', { className: 'planning-gantt2-fallback' },
+            message || 'Gantt v2 загружается…',
+        );
+    }
+
+    function GanttScreenV2(props) {
+        const state = props && props.state;
+        const Layout = HEYS.PlanningGanttLayout;
+        const Utils = HEYS.Planning && HEYS.Planning.Utils;
+        const Migration = HEYS.PlanningGanttMigration;
+
+        if (!state || !Layout || !Utils) {
+            return h(GanttFallback, { message: 'Planning runtime не готов.' });
         }
-        var clientId = getTargetClientIdForPrompt();
-        var keys = [
-            'heys_planning_projects',
-            'heys_planning_tasks',
-            'heys_planning_slots',
-            'heys_planning_inbox_v1',
-            'heys_planning_links_v1',
-        ];
-        return YandexAPI.getKVBatch(clientId, keys).then(function (res) {
-            if (res.error || !Array.isArray(res.data)) {
-                return { ok: false, reason: res.error || 'batch_failed' };
-            }
-            res.data.forEach(function (item) {
-                if (!item || item.k == null || item.v == null) return;
-                if (item.k === 'heys_planning_projects' && typeof Store.saveProjects === 'function') {
-                    Store.saveProjects(item.v);
-                } else if (item.k === 'heys_planning_tasks' && typeof Store.saveTasks === 'function') {
-                    Store.saveTasks(item.v);
-                } else if (item.k === 'heys_planning_slots' && typeof Store.saveSlots === 'function') {
-                    Store.saveSlots(item.v);
-                } else if (item.k === 'heys_planning_inbox_v1' && typeof Store.saveContextInboxItems === 'function') {
-                    Store.saveContextInboxItems(item.v);
-                } else if (item.k === 'heys_planning_links_v1' && typeof Store.saveLinks === 'function') {
-                    Store.saveLinks(item.v);
-                }
+
+        // ── One-shot migration on mount + re-run on cloud-update ────────────
+        const migrationRanRef = useRef(false);
+        useEffect(() => {
+            if (migrationRanRef.current) return;
+            migrationRanRef.current = true;
+            try { Migration && Migration.run && Migration.run(); } catch (e) { /* noop */ }
+        }, [Migration]);
+
+        // ── Persisted state ─────────────────────────────────────────────────
+        const [dayWidth, setDayWidth] = useState(() => {
+            const stored = Number(lsGet(LS_ZOOM, Layout.DEFAULT_DAY_WIDTH));
+            return stored >= Layout.ZOOM_MIN && stored <= Layout.ZOOM_MAX ? Layout.snapDayWidth(stored) : Layout.DEFAULT_DAY_WIDTH;
+        });
+        const [toggles, setToggles] = useState(() => ({ ...DEFAULT_TOGGLES, ...(lsGet(LS_TOGGLES, {}) || {}) }));
+        const [collapsed, setCollapsed] = useState(() => lsGet(LS_GROUPS, {}) || {});
+
+        useEffect(() => { lsSet(LS_ZOOM, dayWidth); }, [dayWidth]);
+        useEffect(() => { lsSet(LS_TOGGLES, toggles); }, [toggles]);
+        useEffect(() => { lsSet(LS_GROUPS, collapsed); }, [collapsed]);
+
+        // ── Transient state ─────────────────────────────────────────────────
+        const scrollRef = useRef(null);
+        const screenRef = useRef(null);
+        const todayIso = Utils.dateStr();
+
+        // ── Pure data (memoized) ────────────────────────────────────────────
+        const relevantTasks = useMemo(() => Layout.computeRelevantTasks(state.tasks), [state.tasks]);
+        const timelineBounds = useMemo(() => Layout.computeTimelineBounds(relevantTasks, todayIso), [relevantTasks, todayIso]);
+        const timelineDays = useMemo(() => Layout.computeTimelineDays(timelineBounds), [timelineBounds]);
+        const grouped = useMemo(() => Layout.computeGroupedTasks(relevantTasks, state.projects), [relevantTasks, state.projects]);
+        const layout = useMemo(() => Layout.computeRowsAndMetrics(grouped, timelineBounds.start, dayWidth, collapsed), [grouped, timelineBounds.start, dayWidth, collapsed]);
+
+        const todayDayIndex = timelineDays.indexOf(todayIso);
+
+        // ── Scroll handlers ─────────────────────────────────────────────────
+        // Toggle .is-scrolled-right when scrollLeft > 12px (fluid labels collapse).
+        const scrollRafRef = useRef(0);
+        const handleScroll = useCallback(() => {
+            if (scrollRafRef.current) return;
+            scrollRafRef.current = window.requestAnimationFrame(() => {
+                scrollRafRef.current = 0;
+                const screen = screenRef.current;
+                const scroll = scrollRef.current;
+                if (!screen || !scroll) return;
+                const isScrolledRight = scroll.scrollLeft > 12;
+                screen.classList.toggle('is-scrolled-right', isScrolledRight);
             });
-            // Same-tab localStorage writes do not emit "storage"; Planning usePlanningState listens for this.
-            try {
-                if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
-                    window.dispatchEvent(new CustomEvent('heys:planning-updated'));
-                }
-            } catch (e) { /* noop */ }
-            return { ok: true };
-        });
-    }
+        }, []);
 
-    function formatTimestamp(isoString) {
-        if (!isoString) return 'только что';
-        const parsed = new Date(isoString);
-        if (Number.isNaN(parsed.getTime())) return 'только что';
-        return parsed.toLocaleString('ru-RU', {
-            day: 'numeric',
-            month: 'short',
-            hour: '2-digit',
-            minute: '2-digit',
-        });
-    }
-
-    function pluralize(count, one, few, many) {
-        const safeCount = Math.abs(Number(count) || 0);
-        const mod10 = safeCount % 10;
-        const mod100 = safeCount % 100;
-        if (mod10 === 1 && mod100 !== 11) return one;
-        if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return few;
-        return many;
-    }
-
-    function formatHours(value) {
-        const safeValue = Number(value);
-        if (!Number.isFinite(safeValue) || safeValue <= 0) return 'нет данных';
-        if (Math.abs(safeValue - Math.round(safeValue)) < 0.05) return Math.round(safeValue) + ' ч';
-        return safeValue.toFixed(1).replace('.', ',') + ' ч';
-    }
-
-    function formatMinutes(value) {
-        const safeValue = Math.max(0, Math.round(Number(value) || 0));
-        if (!safeValue) return '0 мин';
-        if (safeValue % 60 === 0) return (safeValue / 60) + ' ч';
-        const hours = Math.floor(safeValue / 60);
-        const minutes = safeValue % 60;
-        if (hours > 0) return hours + 'ч ' + minutes + 'м';
-        return minutes + ' мин';
-    }
-
-    function getCapturePlaceholder() {
-        return 'Например: «нужно вернуться к офферу, Даша устала после репетиции, лучше не ставить тяжёлые задачи на вечер»';
-    }
-
-    var CONTEXT_TYPES = [
-        { id: 'capture', label: 'Мысль', icon: '💭' },
-        { id: 'task', label: 'Задача', icon: '☑️' },
-        { id: 'thread', label: 'Тема', icon: '🧵' },
-        { id: 'decision', label: 'Решение', icon: '✅' },
-        { id: 'question', label: 'Вопрос', icon: '❓' },
-        { id: 'constraint', label: 'Ограничение', icon: '🚧' },
-        { id: 'value', label: 'Ценность', icon: '💎' },
-    ];
-
-    function getTypeMeta(typeId) {
-        return CONTEXT_TYPES.find(function (t) { return t.id === typeId; }) || CONTEXT_TYPES[0];
-    }
-
-    function buildContextCapsule(state, todayIso) {
-        const tasks = Array.isArray(state?.tasks) ? state.tasks : [];
-        const slots = Array.isArray(state?.slots) ? state.slots : [];
-        const inboxItems = Array.isArray(state?.contextInboxItems) ? state.contextInboxItems : [];
-        const dayRecord = readDayRecord(todayIso) || {};
-
-        const activeTasks = tasks.filter((task) => task && task.status !== 'done');
-        const todayDueCount = activeTasks.filter((task) => task.dueDate === todayIso).length;
-        const overdueCount = activeTasks.filter((task) => task.dueDate && task.dueDate < todayIso).length;
-        const todaySlots = slots.filter((slot) => slot && slot.date === todayIso);
-        const scheduledMinutes = todaySlots.reduce((total, slot) => total + getTaskDurationMinutes(slot), 0);
-        const inboxFreshCount = inboxItems.filter((item) => item && item.status !== 'archived').length;
-
-        const sleepHours = Number(
-            dayRecord?.sleepHours
-            || dayRecord?.sleep_hours
-            || dayRecord?.sleep?.hours
-            || dayRecord?.sleep?.totalHours
-            || 0
-        );
-
-        const stressScore = Number(
-            dayRecord?.stress
-            || dayRecord?.stressLevel
-            || dayRecord?.mood?.stress
-            || dayRecord?.body?.stress
-            || 0
-        );
-
-        const protein = Number(
-            dayRecord?.dayTot?.prot
-            || dayRecord?.dayTot?.protein
-            || dayRecord?.nutrition?.prot
-            || 0
-        );
-
-        let modeKey = 'steady';
-        let modeLabel = 'Ровный режим';
-        let advice = 'Можно смело переводить мысли в конкретные шаги и раскладывать их по проектам.';
-
-        if ((sleepHours > 0 && sleepHours < 6.5) || stressScore >= 7) {
-            modeKey = 'careful';
-            modeLabel = 'Бережный режим';
-            advice = 'Сегодня лучше собирать контекст и резать задачи на короткие шаги, а не тащить тяжёлый фронт.';
-        } else if (overdueCount >= 3 || todayDueCount >= 3 || scheduledMinutes >= (4 * 60) || inboxFreshCount >= 6) {
-            modeKey = 'focus';
-            modeLabel = 'Режим фокуса';
-            advice = 'Контекста уже много — стоит быстро превращать заметки во 2–3 приоритетные задачи, чтобы не утонуть в облаке мыслей.';
-        }
-
-        return {
-            todayIso,
-            sleepHours,
-            stressScore,
-            protein,
-            overdueCount,
-            todayDueCount,
-            scheduledMinutes,
-            inboxFreshCount,
-            modeKey,
-            modeLabel,
-            advice,
-        };
-    }
-
-    function ContextMetricCard(props) {
-        return h('div', { className: 'planning-context-metric-card' }, [
-            h('div', { key: 'label', className: 'planning-context-metric-card__label' }, props.label),
-            h('div', { key: 'value', className: 'planning-context-metric-card__value' }, props.value),
-            props.hint ? h('div', { key: 'hint', className: 'planning-context-metric-card__hint' }, props.hint) : null,
-        ]);
-    }
-
-    function ContextCapsuleSection(props) {
-        const capsule = props.capsule;
-        const dueHint = capsule.todayDueCount > 0
-            ? capsule.todayDueCount + ' ' + pluralize(capsule.todayDueCount, 'дедлайн', 'дедлайна', 'дедлайнов') + ' сегодня'
-            : 'сегодня без жёстких дедлайнов';
-
-        return h('section', { className: 'planning-card planning-context-hero' }, [
-            h('div', { key: 'header', className: 'planning-context-hero__header' }, [
-                h('div', { key: 'eyebrow', className: 'planning-context-hero__eyebrow' }, 'Context capsule · сегодня'),
-                h('div', { key: 'titleRow', className: 'planning-context-hero__title-row' }, [
-                    h('h3', { key: 'title', className: 'planning-section__title' }, 'Контекст дня'),
-                    h('span', {
-                        key: 'mode',
-                        className: 'planning-context-badge planning-context-badge--' + capsule.modeKey,
-                    }, capsule.modeLabel),
-                ]),
-                h('p', { key: 'desc', className: 'planning-section__desc' }, capsule.advice),
-            ]),
-            h('div', { key: 'metrics', className: 'planning-context-metrics-grid' }, [
-                h(ContextMetricCard, {
-                    key: 'sleep',
-                    label: 'Сон',
-                    value: formatHours(capsule.sleepHours),
-                    hint: capsule.sleepHours > 0 ? 'ориентир на восстановление' : 'данные появятся из дневного слота',
-                }),
-                h(ContextMetricCard, {
-                    key: 'stress',
-                    label: 'Стресс',
-                    value: capsule.stressScore > 0 ? String(capsule.stressScore).replace('.', ',') + '/10' : 'нет данных',
-                    hint: dueHint,
-                }),
-                h(ContextMetricCard, {
-                    key: 'plan',
-                    label: 'План на сегодня',
-                    value: formatMinutes(capsule.scheduledMinutes),
-                    hint: capsule.overdueCount > 0
-                        ? capsule.overdueCount + ' ' + pluralize(capsule.overdueCount, 'хвост', 'хвоста', 'хвостов')
-                        : 'без просроченных хвостов',
-                }),
-                h(ContextMetricCard, {
-                    key: 'captures',
-                    label: 'Во входящих',
-                    value: capsule.inboxFreshCount + ' ' + pluralize(capsule.inboxFreshCount, 'запись', 'записи', 'записей'),
-                    hint: capsule.protein > 0 ? 'белок: ' + Math.round(capsule.protein) + ' г' : 'контекст ждёт разборки',
-                }),
-            ]),
-        ]);
-    }
-
-    function QuickCaptureSection(props) {
-        var CAPTURE_DRAFT_KEY = 'heys_planning_context_capture_draft_v1';
-        const [draft, setDraft] = useState('');
-        const [selectedType, setSelectedType] = useState('capture');
-        const [error, setError] = useState('');
-
-        useEffect(function () {
-            try {
-                var raw = null;
-                if (window.U && typeof window.U.lsGet === 'function') {
-                    raw = window.U.lsGet(CAPTURE_DRAFT_KEY, null);
-                } else if (HEYS.store && typeof HEYS.store.get === 'function') {
-                    raw = HEYS.store.get(CAPTURE_DRAFT_KEY, null);
-                } else if (typeof window !== 'undefined' && window.localStorage) {
-                    raw = window.localStorage.getItem(CAPTURE_DRAFT_KEY);
-                    if (raw) raw = JSON.parse(raw);
-                }
-                if (!raw || typeof raw !== 'object') return;
-                var savedText = String(raw.text || '');
-                var savedType = String(raw.type || 'capture');
-                if (savedText) setDraft(savedText);
-                if (CONTEXT_TYPES.some(function (ct) { return ct.id === savedType; })) setSelectedType(savedType);
-            } catch (error) {
-                console.warn('[HEYS.planning.context] capture draft restore failed', error);
+        useEffect(() => () => {
+            if (scrollRafRef.current) {
+                window.cancelAnimationFrame(scrollRafRef.current);
+                scrollRafRef.current = 0;
             }
         }, []);
 
-        useEffect(function () {
-            try {
-                var payload = { text: String(draft || ''), type: String(selectedType || 'capture') };
-                if (!payload.text.trim()) {
-                    if (window.U && typeof window.U.lsDel === 'function') {
-                        window.U.lsDel(CAPTURE_DRAFT_KEY);
-                    } else if (HEYS.store && typeof HEYS.store.del === 'function') {
-                        HEYS.store.del(CAPTURE_DRAFT_KEY);
-                    } else if (typeof window !== 'undefined' && window.localStorage) {
-                        window.localStorage.removeItem(CAPTURE_DRAFT_KEY);
-                    }
-                    return;
-                }
-                if (window.U && typeof window.U.lsSet === 'function') {
-                    window.U.lsSet(CAPTURE_DRAFT_KEY, payload);
-                } else if (HEYS.store && typeof HEYS.store.set === 'function') {
-                    HEYS.store.set(CAPTURE_DRAFT_KEY, payload);
-                } else if (typeof window !== 'undefined' && window.localStorage) {
-                    window.localStorage.setItem(CAPTURE_DRAFT_KEY, JSON.stringify(payload));
-                }
-            } catch (error) {
-                console.warn('[HEYS.planning.context] capture draft save failed', error);
-            }
-        }, [draft, selectedType]);
+        // ── Today scroll-to button ──────────────────────────────────────────
+        const scrollToToday = useCallback(() => {
+            const scroll = scrollRef.current;
+            if (!scroll || todayDayIndex < 0) return;
+            const targetX = (todayDayIndex * dayWidth) - 80; // small offset so today isn't at very edge
+            scroll.scrollTo({ left: Math.max(0, targetX), behavior: 'smooth' });
+        }, [todayDayIndex, dayWidth]);
 
-        function handleSave() {
-            const text = String(draft || '').trim();
-            if (!text) {
-                setError('Нужен хотя бы один факт, мысль или сигнал — пустоту даже ИИ не распакует.');
-                return;
-            }
-            if (selectedType === 'task') {
-                var item = props.onCaptureAsTask(text);
-                if (!item) { setError('Не получилось создать задачу.'); return; }
-            } else {
-                var item = props.onCapture(text, { type: selectedType });
-                if (!item) { setError('Не получилось сохранить запись.'); return; }
-            }
-            setDraft('');
-            setError('');
-            try {
-                if (window.U && typeof window.U.lsDel === 'function') {
-                    window.U.lsDel(CAPTURE_DRAFT_KEY);
-                } else if (HEYS.store && typeof HEYS.store.del === 'function') {
-                    HEYS.store.del(CAPTURE_DRAFT_KEY);
-                } else if (typeof window !== 'undefined' && window.localStorage) {
-                    window.localStorage.removeItem(CAPTURE_DRAFT_KEY);
-                }
-            } catch (error) {
-                console.warn('[HEYS.planning.context] capture draft clear failed', error);
-            }
+        // Initial scroll-to-today on mount (if today within bounds).
+        useEffect(() => {
+            if (todayDayIndex < 0) return;
+            const t = window.setTimeout(scrollToToday, 60);
+            return () => window.clearTimeout(t);
+        }, []); // mount only
+
+        // ── Zoom controls ───────────────────────────────────────────────────
+        const ZOOM_PRESETS = [
+            { label: 'S', value: 28 },
+            { label: 'M', value: 40 },
+            { label: 'L', value: 56 },
+        ];
+
+        const cssVars = {
+            '--gantt-day-w': dayWidth + 'px',
+            '--gantt-days': timelineDays.length,
+        };
+
+        // ── Render ──────────────────────────────────────────────────────────
+        return h('div', {
+            className: 'planning-gantt2-screen no-swipe-zone',
+            ref: screenRef,
+            style: cssVars,
+            'data-no-pull-refresh': 'true',
+        },
+            renderToolbar({ ZOOM_PRESETS, dayWidth, setDayWidth, toggles, setToggles, scrollToToday, todayAvailable: todayDayIndex >= 0 }),
+            renderScrollArea({
+                scrollRef, handleScroll,
+                relevantTasks, timelineDays, dayWidth, todayIso, todayDayIndex,
+                timelineStart: timelineBounds.start,
+                layout, collapsed, setCollapsed, projects: state.projects, toggles,
+            }),
+        );
+    }
+
+    function renderToolbar({ ZOOM_PRESETS, dayWidth, setDayWidth, toggles, setToggles, scrollToToday, todayAvailable }) {
+        const zoomBtn = (preset) => h('button', {
+            key: preset.label,
+            type: 'button',
+            className: 'planning-gantt2-zoom-btn' + (dayWidth === preset.value ? ' is-active' : ''),
+            onClick: () => setDayWidth(preset.value),
+            'aria-label': 'Zoom ' + preset.label,
+        }, preset.label);
+
+        return h('div', { className: 'planning-gantt2-toolbar' },
+            h('div', { className: 'planning-gantt2-toolbar__group' }, ZOOM_PRESETS.map(zoomBtn)),
+            todayAvailable && h('button', {
+                type: 'button',
+                className: 'planning-gantt2-today-pill',
+                onClick: scrollToToday,
+                'aria-label': 'Прокрутить к сегодня',
+            }, 'Сегодня'),
+            h('div', { className: 'planning-gantt2-toolbar__group planning-gantt2-toolbar__group--right' },
+                renderToggleBtn(toggles, setToggles, 'baseline', 'Baseline'),
+                renderToggleBtn(toggles, setToggles, 'deps', 'Связи'),
+            ),
+        );
+    }
+
+    function renderToggleBtn(toggles, setToggles, key, label) {
+        return h('button', {
+            type: 'button',
+            className: 'planning-gantt2-toggle-btn' + (toggles[key] ? ' is-active' : ''),
+            onClick: () => setToggles((prev) => ({ ...prev, [key]: !prev[key] })),
+        }, label);
+    }
+
+    function renderScrollArea({ scrollRef, handleScroll, relevantTasks, timelineDays, dayWidth, todayIso, todayDayIndex, timelineStart, layout, collapsed, setCollapsed, projects, toggles }) {
+        const Layout = HEYS.PlanningGanttLayout;
+        const Utils = HEYS.Planning && HEYS.Planning.Utils;
+        const totalWidth = (timelineDays.length * dayWidth);
+        const totalHeight = layout.height;
+
+        if (relevantTasks.length === 0) {
+            return h('div', { className: 'planning-gantt2-empty' },
+                'Нет задач с датами. Добавь даты или baseline на экране задач.',
+            );
         }
 
-        return h('section', { className: 'planning-card planning-context-capture' }, [
-            h('div', { key: 'header', className: 'planning-context-section-head' }, [
-                h('h3', { key: 'title', className: 'planning-section__title' }, 'Быстрый capture'),
-                h('p', { key: 'desc', className: 'planning-section__desc' }, 'Сохрани мысль в inbox: это быстрый сбор контекста. Разбор по категориям и приоритетам делает агент на шаге «🧠 Всё».'),
-            ]),
-            h('div', { key: 'types', className: 'planning-context-type-chips' },
-                CONTEXT_TYPES.map(function (ct) {
-                    return h('button', {
-                        key: ct.id,
-                        type: 'button',
-                        className: 'planning-context-type-chip' + (selectedType === ct.id ? ' planning-context-type-chip--active' : '') + ' planning-context-type-chip--' + ct.id,
-                        onClick: function () { setSelectedType(ct.id); },
-                    }, ct.icon + ' ' + ct.label);
-                })
-            ),
-            h('textarea', {
-                key: 'input',
-                className: 'planning-context-capture__input',
-                value: draft,
-                placeholder: getCapturePlaceholder(),
-                rows: 3,
-                onChange: (event) => {
-                    setDraft(event?.target?.value || '');
-                    if (error) setError('');
+        return h('div', {
+            className: 'planning-gantt2-scroll',
+            ref: scrollRef,
+            onScroll: handleScroll,
+        },
+            h('div', {
+                className: 'planning-gantt2-grid',
+                style: {
+                    minWidth: 'calc(var(--gantt-labels-w, 140px) + ' + totalWidth + 'px)',
                 },
-            }),
-            h('div', { key: 'footer', className: 'planning-context-capture__footer' }, [
-                h('div', { key: 'meta', className: 'planning-context-capture__meta' },
-                    selectedType === 'task'
-                        ? 'Сразу создастся задача в списке.'
-                        : 'Сохраняется в inbox и синхронизируется между устройствами. Авто-разбор включается через «🧠 Всё».'
+            },
+                // Sticky corner (top-left)
+                h('div', { className: 'planning-gantt2-corner' }, 'Задачи'),
+                // Sticky timeline header (top)
+                h('div', { className: 'planning-gantt2-timeline-header', style: { width: totalWidth + 'px' } },
+                    timelineDays.map((day) => h('div', {
+                        key: day,
+                        className: 'planning-gantt2-day-cell'
+                            + (day === todayIso ? ' is-today' : '')
+                            + (Layout.isWeekendDay(day) ? ' is-weekend' : ''),
+                        style: { width: dayWidth + 'px' },
+                    },
+                        h('span', { className: 'planning-gantt2-day-name' }, Layout.weekdayLabelForIso(day)),
+                        h('span', { className: 'planning-gantt2-day-num' }, day.slice(8)),
+                    )),
                 ),
-                h('div', { key: 'actions', className: 'planning-context-capture__actions' }, [
-                    h('button', {
-                        key: 'agent',
-                        type: 'button',
-                        className: 'planning-btn planning-btn--secondary',
-                        onClick: function () {
-                            if (typeof props.onOpenAgentHandoff === 'function') props.onOpenAgentHandoff();
-                        },
-                    }, 'Разобрать через агента'),
-                    h('button', {
-                        key: 'save',
-                        type: 'button',
-                        className: 'planning-btn planning-btn--primary',
-                        onClick: handleSave,
-                    }, selectedType === 'task' ? 'Создать задачу' : 'Сохранить'),
-                ]),
-            ]),
-            error ? h('div', { key: 'error', className: 'planning-context-inline-error' }, error) : null,
-        ]);
-    }
-
-    function InboxEntry(props) {
-        const item = props.item;
-        const linkedCount = Array.isArray(item?.linkedTaskIds) ? item.linkedTaskIds.length : 0;
-        const typeMeta = getTypeMeta(item?.type);
-        const manualMode = !!props.manualMode;
-        const resolutionMeta = (function () {
-            if (item?.type === 'decision' || item?.status === 'archived') {
-                return { label: 'Решено', className: 'planning-context-resolution-badge--done' };
-            }
-            if (item?.type === 'question') {
-                return { label: 'Ждёт решения', className: 'planning-context-resolution-badge--waiting' };
-            }
-            return { label: 'В контексте', className: 'planning-context-resolution-badge--context' };
-        })();
-        const [showTypeMenu, setShowTypeMenu] = useState(false);
-        const [showActions, setShowActions] = useState(false);
-        const bodyText = String(item?.body || item?.preview || '');
-        const compactBody = bodyText.length > 190 ? bodyText.slice(0, 190) + '…' : bodyText;
-
-        return h('article', { className: 'planning-context-entry planning-context-entry--type-' + (item?.type || 'capture') }, [
-            h('div', { key: 'head', className: 'planning-context-entry__head' }, [
-                h('div', { key: 'titleWrap', className: 'planning-context-entry__title-wrap' }, [
-                    h('span', { key: 'icon', className: 'planning-context-entry__type-icon' }, typeMeta.icon),
-                    h('div', { key: 'title', className: 'planning-context-entry__title' }, item?.title || 'Без названия'),
-                ]),
-                h('div', { key: 'meta', className: 'planning-context-entry__meta' }, [
-                    h('span', {
-                        key: 'type',
-                        className: 'planning-context-type-badge planning-context-type-badge--' + (item?.type || 'capture'),
-                    }, typeMeta.label),
-                    h('span', { key: 'time', className: 'planning-context-entry__time' }, formatTimestamp(item?.updatedAt || item?.createdAt)),
-                ]),
-            ]),
-            h('div', { key: 'body', className: 'planning-context-entry__body' }, manualMode ? bodyText : compactBody),
-            h(
-                'div',
-                { key: 'linked', className: 'planning-context-entry__linked' },
-                [
-                    h('span', {
-                        key: 'resolution',
-                        className: 'planning-context-resolution-badge ' + resolutionMeta.className,
-                    }, resolutionMeta.label),
-                    h('span', { key: 'links' },
-                        linkedCount > 0
-                            ? '🔗 Связи: ' + linkedCount + ' ' + pluralize(linkedCount, 'связь', 'связи', 'связей')
-                            : '🔗 Связи: пока без связей'
-                    ),
-                ]
-            ),
-            manualMode ? h('div', { key: 'footer', className: 'planning-context-entry__footer' }, [
-                h('div', { key: 'actions', className: 'planning-context-entry__actions' }, [
-                    h('button', {
-                        key: 'toggle-actions',
-                        type: 'button',
-                        className: 'planning-btn planning-btn--ghost planning-btn--sm',
-                        onClick: function () { setShowActions(!showActions); },
-                    }, showActions ? 'Скрыть действия' : '⋯ Действия'),
-                    showActions ? h('div', { key: 'actions-expanded', className: 'planning-context-entry__actions-expanded' }, [
-                        h('button', {
-                            key: 'promote',
-                            type: 'button',
-                            className: 'planning-btn planning-btn--ghost planning-btn--sm',
-                            onClick: function () { props.onPromote(item); },
-                        }, linkedCount > 0 ? '+ задача' : '→ В задачу'),
-                        h('div', { key: 'retype-wrap', className: 'planning-context-retype-wrap' }, [
-                            h('button', {
-                                key: 'retype',
-                                type: 'button',
-                                className: 'planning-btn planning-btn--ghost planning-btn--sm',
-                                onClick: function () { setShowTypeMenu(!showTypeMenu); },
-                            }, '🏷 Тип'),
-                            showTypeMenu ? h('div', { key: 'menu', className: 'planning-context-retype-menu' },
-                                CONTEXT_TYPES.filter(function (ct) { return ct.id !== 'task' && ct.id !== item?.type; }).map(function (ct) {
-                                    return h('button', {
-                                        key: ct.id,
-                                        type: 'button',
-                                        className: 'planning-context-retype-menu__item',
-                                        onClick: function () {
-                                            props.onRetype(item.id, ct.id);
-                                            setShowTypeMenu(false);
-                                        },
-                                    }, ct.icon + ' ' + ct.label);
-                                })
-                            ) : null,
-                        ]),
-                        h('button', {
-                            key: 'delete',
-                            type: 'button',
-                            className: 'planning-btn planning-btn--ghost planning-btn--sm planning-btn--danger',
-                            onClick: function () { props.onDelete(item.id); },
-                        }, '✕'),
-                    ]) : null,
-                ]),
-            ]) : null,
-        ]);
-    }
-
-    function ContextInboxSection(props) {
-        const items = Array.isArray(props.items) ? props.items : [];
-        const [manualMode, setManualMode] = useState(false);
-        return h('section', { className: 'planning-card planning-context-inbox' }, [
-            h('div', { key: 'header', className: 'planning-context-section-head' }, [
-                h('div', { key: 'head-row', className: 'planning-context-inbox__header-row' }, [
-                    h('h3', { key: 'title', className: 'planning-section__title' }, 'Inbox контекста'),
-                    h('button', {
-                        key: 'manual-mode',
-                        type: 'button',
-                        className: 'planning-btn planning-btn--ghost planning-btn--sm',
-                        onClick: function () { setManualMode(!manualMode); },
-                    }, manualMode ? 'Авто-режим' : 'Ручное редактирование'),
-                ]),
-                h('p', { key: 'desc', className: 'planning-section__desc' }, manualMode
-                    ? 'Ручной режим: можно промоутить в задачи, менять тип и удалять записи.'
-                    : 'Журнал контекста. Основной поток: «🧠 Всё» → агент сам применяет изменения.'),
-            ]),
-            items.length
-                ? h('div', { key: 'list', className: 'planning-context-entry-list' }, items.map(function (item) {
-                    return h(InboxEntry, {
-                        key: item.id,
-                        item: item,
-                        manualMode: manualMode,
-                        onDelete: props.onDelete,
-                        onPromote: props.onPromote,
-                        onRetype: props.onRetype,
-                    });
-                }))
-                : h('div', { key: 'empty', className: 'planning-empty planning-empty--subtle' }, [
-                    h('div', { key: 'title', className: 'planning-empty__title' }, 'Пока пусто'),
-                    h('div', { key: 'desc', className: 'planning-empty__desc' }, 'Добавь первую заметку выше — и начнём собирать твой жизненный контекст прямо внутри HEYS.'),
-                ]),
-        ]);
-    }
-
-    function AgentHandoffSection(props) {
-        const [copied, setCopied] = useState('');
-        const [applyBusy, setApplyBusy] = useState(false);
-        const [applyNotice, setApplyNotice] = useState('');
-        const [agentPromptExtra, setAgentPromptExtra] = useState('');
-
-        function buildInboxText() {
-            var items = Array.isArray(props.items) ? props.items : [];
-            if (!items.length) return 'Inbox пуст.';
-            return items.map(function (item, idx) {
-                var meta = getTypeMeta(item?.type);
-                return (idx + 1) + '. ' + meta.icon + ' [' + meta.label + '] ' + (item?.title || '') + '\n   ' + (item?.body || item?.preview || '');
-            }).join('\n\n');
-        }
-
-        function buildDayContext() {
-            var capsule = props.capsule;
-            if (!capsule) return 'Нет данных о дне.';
-            var lines = [
-                'Дата: ' + capsule.todayIso,
-                'Режим: ' + capsule.modeLabel,
-                'Сон: ' + formatHours(capsule.sleepHours),
-                'Стресс: ' + (capsule.stressScore > 0 ? capsule.stressScore + '/10' : 'нет данных'),
-                'Дедлайны сегодня: ' + capsule.todayDueCount,
-                'Просроченные: ' + capsule.overdueCount,
-                'Забронировано: ' + formatMinutes(capsule.scheduledMinutes),
-                'Inbox: ' + capsule.inboxFreshCount + ' записей',
-                '',
-                'Совет: ' + capsule.advice,
-            ];
-            return lines.join('\n');
-        }
-
-        function getRecentDayEntries(limit) {
-            var entries = [];
-            var safeLimit = Math.max(1, Number(limit) || 5);
-            try {
-                if (typeof window === 'undefined' || !window.localStorage) return entries;
-                var storage = window.localStorage;
-                for (var i = 0; i < storage.length; i += 1) {
-                    var key = String(storage.key(i) || '');
-                    if (key.indexOf('heys_dayv2_') !== 0) continue;
-                    var iso = key.slice('heys_dayv2_'.length);
-                    if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) continue;
-                    entries.push({ iso: iso, record: readDayRecord(iso) || {} });
-                }
-            } catch (error) {
-                console.warn('[HEYS.planning.context] recent day records read failed', error);
-            }
-
-            entries.sort(function (a, b) {
-                return a.iso < b.iso ? 1 : -1;
-            });
-            return entries.slice(0, safeLimit);
-        }
-
-        function normalizeInlineText(value) {
-            return String(value || '').replace(/\s+/g, ' ').trim();
-        }
-
-        function buildRecentDaysContext() {
-            var entries = getRecentDayEntries(5);
-            if (!entries.length) return 'Нет данных за последние дни.';
-
-            return entries.map(function (entry) {
-                var record = entry.record || {};
-                var sleepHours = Number(
-                    record?.sleepHours
-                    || record?.sleep_hours
-                    || record?.sleep?.hours
-                    || record?.sleep?.totalHours
-                    || 0
-                );
-                var stressScore = Number(
-                    record?.stress
-                    || record?.stressLevel
-                    || record?.mood?.stress
-                    || record?.body?.stress
-                    || 0
-                );
-                var protein = Number(
-                    record?.dayTot?.prot
-                    || record?.dayTot?.protein
-                    || record?.nutrition?.prot
-                    || 0
-                );
-                var note = normalizeInlineText(
-                    record?.note
-                    || record?.notes
-                    || record?.comment
-                    || record?.dayComment
-                    || record?.summary
-                    || ''
-                );
-
-                var parts = [
-                    '- ' + entry.iso,
-                    'sleep=' + formatHours(sleepHours),
-                    'stress=' + (stressScore > 0 ? String(stressScore).replace('.', ',') + '/10' : 'нет данных'),
-                    'protein=' + (protein > 0 ? Math.round(protein) + ' г' : 'нет данных'),
-                ];
-                if (note) parts.push('note=' + note.slice(0, 220));
-                return parts.join(' | ');
-            }).join('\n');
-        }
-
-        function buildSnapshotTextForIngest() {
-            return '== HEYS Context Snapshot ==\n\n--- Контекст дня ---\n' + buildDayContext() + '\n\n--- Inbox ---\n' + buildInboxText();
-        }
-
-        function buildFullContext() {
-            var snapshot = buildSnapshotTextForIngest();
-            var targetClientId = getTargetClientIdForPrompt();
-            return [
-                'Ты — context copilot HEYS-v2. Не переспрашивай, кроме unresolved.',
-                'Сразу делай anti-duplicate-first и APPLY_NOW=true.',
-                '',
-                'APPLY:',
-                '- api_first: POST /planning/context-ingest (fn=planning_context_ingest)',
-                '- fallback: browser_if_api_unavailable',
-                '- idempotency_key: <stable-key-per-message>',
-                '- dedupe_order: exact_match > semantic_match > safe_skip > created_new',
-                '- apply_required: true (разбор без попытки apply считается неполным ответом)',
-                '- если apply не выполнен: явно укажи причину и статус apply_failed/analyzed_only',
-                '- если нужен follow-up по unresolved: после ответа пользователя сразу повтори ingest с parentIngestId',
-                '',
-                '[APPLY_IDENTITY]',
-                '- actorId: текущий PIN-клиент HEYS',
-                '- targetClientId: ' + (targetClientId || '<войди по PIN — id подставится из сессии>'),
-                '- targetScope: planning_only',
-                '- if targetClientId missing/invalid => apply_failed (do not write)',
-                '',
-                'Если есть unresolved (Ждёт решения / question):',
-                '1) задай короткие вопросы',
-                '2) после моих ответов сразу follow-up ingest (parentIngestId)',
-                '',
-                'Ответ строго:',
-                '- Факт → Что сделал → Почему',
-                '- PLAN: now / next / later',
-                '- AUDIT: ingestId, parentIngestId, idempotencyKey, applyStatus, fallbackUsed',
-                '',
-                '═══ КОНТЕКСТ ═══',
-                '',
-                '[SNAPSHOT]',
-                snapshot,
-                '',
-                '[HEYS_DAYS_LAST_5]',
-                buildRecentDaysContext(),
-                '',
-                '[ДОП.КОНТЕКСТ]',
-                '<опционально>',
-            ].join('\n');
-        }
-
-        function handleApplyInHeys() {
-            var token = getSessionTokenForPlanningRpc();
-            if (!token) {
-                setApplyNotice('Нужна PIN-сессия: не найден session token.');
-                return;
-            }
-            if (!HEYS.YandexAPI || typeof HEYS.YandexAPI.rpc !== 'function') {
-                setApplyNotice('API клиента недоступен.');
-                return;
-            }
-            setApplyBusy(true);
-            setApplyNotice('');
-            var idem = 'ctx-ingest-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 10);
-            var extra = String(agentPromptExtra || '').trim();
-            var rawPromptText = '';
-            if (extra) {
-                if (extra.indexOf('--- Inbox ---') >= 0) {
-                    rawPromptText = '[ДОПОЛНИТЕЛЬНЫЙ КОНТЕКСТ]\n' + extra;
-                } else {
-                    var lines = extra.split('\n').map(function (l) { return l.trim(); }).filter(Boolean);
-                    var titleLine = lines[0] || extra;
-                    var bodyOneLine = lines.slice(1).join(' ').trim() || titleLine;
-                    rawPromptText = '[ДОПОЛНИТЕЛЬНЫЙ КОНТЕКСТ]\n--- Inbox ---\n1. ☑️ [Задача] ' + titleLine + '\n   ' + bodyOneLine;
-                }
-            }
-            var payload = {
-                source: 'heys_context_apply_button',
-                applyNow: true,
-                dryRun: false,
-                idempotencyKey: idem,
-                policy: { antiDuplicateFirst: true, maxNowTasks: 3 },
-                input: {
-                    sessionToken: token,
-                    snapshotText: buildSnapshotTextForIngest(),
-                    daysLast5Text: buildRecentDaysContext(),
-                    rawPromptText: rawPromptText,
-                    clientTs: new Date().toISOString(),
-                    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
+                // Sticky labels column (left) + body
+                h('div', {
+                    className: 'planning-gantt2-body-wrap',
+                    style: { height: totalHeight + 'px' },
                 },
-            };
-            HEYS.YandexAPI.rpc('planning_context_ingest', payload).then(function (res) {
-                if (res.error) {
-                    setApplyNotice(String(res.error.message || 'Ошибка RPC'));
-                    setApplyBusy(false);
-                    return;
-                }
-                var data = res.data;
-                if (!data || data.ok === false) {
-                    var em = data && data.error && data.error.message ? data.error.message : 'ingest отклонён';
-                    setApplyNotice(em);
-                    setApplyBusy(false);
-                    return;
-                }
-                return refreshPlanningFromCloud().then(function (pull) {
-                    if (!pull.ok) {
-                        setApplyNotice('Сервер применил изменения, но локальное обновление с облака не удалось — перезайди в «Задачи».');
-                    } else {
-                        var m = data.metrics || {};
-                        var s = data.summary || {};
-                        setApplyNotice('Готово: новых сущностей ' + (s.created || 0) + ', слотов ' + (m.ingestSlotsAdded || 0) + ', полей сроков ' + (m.scheduleFieldsApplied || 0) + '.');
-                    }
-                    setApplyBusy(false);
-                });
-            }).catch(function (err) {
-                setApplyNotice(err && err.message ? err.message : 'Сеть');
-                setApplyBusy(false);
-            });
-        }
-
-        function copyToClipboard(text, label) {
-            if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
-                navigator.clipboard.writeText(text).then(function () {
-                    setCopied(label);
-                    setTimeout(function () { setCopied(''); }, 2000);
-                }).catch(function () {
-                    setCopied('error');
-                    setTimeout(function () { setCopied(''); }, 2000);
-                });
-            }
-        }
-
-        return h('section', { id: 'planning-agent-handoff', className: 'planning-card planning-context-handoff' }, [
-            h('div', { key: 'header', className: 'planning-context-section-head' }, [
-                h('h3', { key: 'title', className: 'planning-section__title' }, '🤖 Передать агенту'),
-                h('p', { key: 'desc', className: 'planning-section__desc' }, 'Скопируй в чат или примени сразу в HEYS: задачи, inbox, связи, сроки и слоты календаря (из текста строк вида «до 2026-04-20», «2ч», «10:00»).'),
-            ]),
-            h('label', { key: 'extraLabel', className: 'planning-context-handoff__extra-label', htmlFor: 'planning-context-agent-extra' }, 'Доп. текст к применению (планы, сроки — попадёт в ingest как rawPrompt):'),
-            h('textarea', {
-                key: 'extra',
-                id: 'planning-context-agent-extra',
-                className: 'planning-context-handoff__extra',
-                placeholder: 'Например: сегодня вайбкодить приложения 3ч с 14:00, дедлайн по прототипу 2026-04-18',
-                value: agentPromptExtra,
-                onChange: function (e) { setAgentPromptExtra(e.target.value); },
-                rows: 3,
-            }),
-            h('div', { key: 'buttons', className: 'planning-context-handoff__buttons' }, [
-                h('button', {
-                    key: 'inbox',
-                    type: 'button',
-                    className: 'planning-btn planning-btn--secondary planning-context-handoff__btn',
-                    onClick: function () { copyToClipboard(buildInboxText(), 'inbox'); },
-                }, [
-                    h('span', { key: 'icon', className: 'planning-context-handoff__icon' }, '📋'),
-                    h('span', { key: 'label' }, copied === 'inbox' ? 'Скопировано!' : 'Inbox'),
-                ]),
-                h('button', {
-                    key: 'day',
-                    type: 'button',
-                    className: 'planning-btn planning-btn--secondary planning-context-handoff__btn',
-                    onClick: function () { copyToClipboard(buildDayContext(), 'day'); },
-                }, [
-                    h('span', { key: 'icon', className: 'planning-context-handoff__icon' }, '📊'),
-                    h('span', { key: 'label' }, copied === 'day' ? 'Скопировано!' : 'Контекст дня'),
-                ]),
-                h('button', {
-                    key: 'full',
-                    type: 'button',
-                    className: 'planning-btn planning-btn--primary planning-context-handoff__btn',
-                    onClick: function () { copyToClipboard(buildFullContext(), 'full'); },
-                }, [
-                    h('span', { key: 'icon', className: 'planning-context-handoff__icon' }, '🧠'),
-                    h('span', { key: 'label' }, copied === 'full' ? 'Скопировано!' : 'Всё'),
-                ]),
-                h('button', {
-                    key: 'apply',
-                    type: 'button',
-                    className: 'planning-btn planning-btn--secondary planning-context-handoff__btn',
-                    disabled: applyBusy,
-                    onClick: handleApplyInHeys,
-                }, [
-                    h('span', { key: 'icon', className: 'planning-context-handoff__icon' }, '⚡'),
-                    h('span', { key: 'label' }, applyBusy ? 'Применяю…' : 'Применить в HEYS'),
-                ]),
-            ]),
-            applyNotice
-                ? h('div', { key: 'applyNote', className: 'planning-context-handoff__notice', role: 'status' }, applyNotice)
-                : null,
-            copied === 'error' ? h('div', { key: 'err', className: 'planning-context-inline-error' }, 'Не удалось скопировать.') : null,
-        ]);
+                    // Sticky left labels column
+                    h('div', { className: 'planning-gantt2-row-labels', style: { height: totalHeight + 'px' } },
+                        layout.rows.map((row) => row.type === 'group'
+                            ? h('div', {
+                                key: 'label-group-' + row.id,
+                                className: 'planning-gantt2-label planning-gantt2-label--group',
+                                style: { top: row.top + 'px', height: row.height + 'px' },
+                            },
+                                h('button', {
+                                    type: 'button',
+                                    className: 'planning-gantt2-group-toggle',
+                                    onClick: () => setCollapsed((cur) => ({ ...cur, [row.group.project.id]: !cur[row.group.project.id] })),
+                                    'aria-label': 'Свернуть/развернуть группу',
+                                }, collapsed[row.group.project.id] ? '▸' : '▾'),
+                                h('span', {
+                                    className: 'planning-gantt2-group-chip',
+                                    style: { background: row.group.project.color },
+                                    title: row.group.project.name,
+                                }, projectInitials(row.group.project.name)),
+                                h('span', { className: 'planning-gantt2-group-name' }, row.group.project.name),
+                                h('span', { className: 'planning-gantt2-group-count' }, row.group.tasks.length),
+                            )
+                            : h('div', {
+                                key: 'label-task-' + row.id,
+                                className: 'planning-gantt2-label planning-gantt2-label--task',
+                                style: { top: row.top + 'px', height: row.height + 'px' },
+                            },
+                                h('span', {
+                                    className: 'planning-gantt2-task-chip',
+                                    style: { background: row.group.project.color },
+                                    title: row.task.title,
+                                }, projectInitials(row.task.title || row.group.project.name)),
+                                h('div', { className: 'planning-gantt2-task-text' },
+                                    h('div', { className: 'planning-gantt2-task-title' }, row.task.title || 'Без названия'),
+                                    h('div', { className: 'planning-gantt2-task-meta' },
+                                        [row.task.startDate, row.task.dueDate].filter(Boolean).join(' → ') || 'Без дат',
+                                    ),
+                                ),
+                            )),
+                    ),
+                    // Timeline body
+                    h('div', {
+                        className: 'planning-gantt2-timeline-body',
+                        style: { width: totalWidth + 'px', height: totalHeight + 'px' },
+                    },
+                        // Today line
+                        todayDayIndex >= 0 && h('div', {
+                            className: 'planning-gantt2-today-line',
+                            style: { left: (todayDayIndex * dayWidth + (dayWidth / 2)) + 'px' },
+                        }),
+                        // Bars / milestones / group rows
+                        layout.rows.map((row) => row.type === 'group'
+                            ? h('div', {
+                                key: 'body-group-' + row.id,
+                                className: 'planning-gantt2-group-row',
+                                style: { top: row.top + 'px', height: row.height + 'px' },
+                            })
+                            : renderTaskRow(row, layout.taskMetrics[row.task.id], dayWidth, projects)),
+                    ),
+                ),
+            ),
+        );
     }
 
-    function GraphSection(props) {
-        var tasks = Array.isArray(props.tasks) ? props.tasks : [];
-        var projects = Array.isArray(props.projects) ? props.projects : [];
-        var items = Array.isArray(props.items) ? props.items : [];
-        var links = Array.isArray(props.links) ? props.links : [];
-        var totalNodes = tasks.length + projects.length + items.length;
-        var canvasRef = useRef(null);
-        var dragStateRef = useRef({ active: false, lastX: 0, lastY: 0, vx: 0.004, vy: 0.002 });
-        var animationRef = useRef(null);
-        var projectedRef = useRef([]);
-        var selectedIndexRef = useRef(-1);
-        var pointerTravelRef = useRef(0);
-        var zoomRef = useRef(1);
-        var pointersRef = useRef({});
-        var pinchRef = useRef({ active: false, startDistance: 0, startZoom: 1 });
-        var [selectedLabel, setSelectedLabel] = useState('');
-        var [zoomUi, setZoomUi] = useState(1);
+    function projectInitials(name) {
+        const safe = String(name || '').trim();
+        if (!safe) return '··';
+        const parts = safe.split(/\s+/);
+        if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+        return safe.slice(0, 2).toUpperCase();
+    }
 
-        var graphData = useMemo(function () {
-            var nodes = [];
-            var indexById = Object.create(null);
+    function renderTaskRow(row, metrics, dayWidth, projects) {
+        const Utils = HEYS.Planning && HEYS.Planning.Utils;
+        const task = row.task;
+        const color = (Utils && Utils.getTaskProjectColor)
+            ? Utils.getTaskProjectColor(task, projects)
+            : (row.group.project.color || '#64748b');
 
-            function pushNode(entity, type) {
-                if (!entity || !entity.id || indexById[entity.id] != null) return;
-                indexById[entity.id] = nodes.length;
-                nodes.push({
-                    id: entity.id,
-                    type: type,
-                    label: entity.title || entity.name || entity.preview || 'Узел',
-                });
-            }
-
-            tasks.forEach(function (task) { pushNode(task, 'task'); });
-            projects.forEach(function (project) { pushNode(project, 'project'); });
-            items.forEach(function (item) { pushNode(item, item?.type || 'capture'); });
-
-            var graphLinks = links
-                .filter(function (link) { return link && indexById[link.fromId] != null && indexById[link.toId] != null; })
-                .map(function (link) {
-                    return {
-                        source: indexById[link.fromId],
-                        target: indexById[link.toId],
-                        relation: link.relation || 'related',
-                    };
-                });
-
-            return { nodes: nodes, links: graphLinks };
-        }, [tasks, projects, items, links]);
-
-        useEffect(function () {
-            var canvas = canvasRef.current;
-            if (!canvas) return;
-            var ctx = canvas.getContext('2d');
-            if (!ctx) return;
-
-            var dpr = Math.max(1, window.devicePixelRatio || 1);
-            var cssWidth = canvas.clientWidth || 320;
-            var cssHeight = canvas.clientHeight || 220;
-            canvas.width = Math.round(cssWidth * dpr);
-            canvas.height = Math.round(cssHeight * dpr);
-            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-
-            var nodes = graphData.nodes;
-            var graphLinks = graphData.links;
-            if (!nodes.length) {
-                ctx.clearRect(0, 0, cssWidth, cssHeight);
-                return;
-            }
-
-            var centerX = cssWidth / 2;
-            var centerY = cssHeight / 2;
-            var radius = Math.min(cssWidth, cssHeight) * 0.32;
-            var perspective = radius * 2.4;
-            var state = dragStateRef.current;
-
-            var points = nodes.map(function (_, idx) {
-                var t = nodes.length <= 1 ? 0.5 : idx / (nodes.length - 1);
-                var phi = Math.acos(1 - 2 * t);
-                var theta = Math.PI * (1 + Math.sqrt(5)) * idx;
-                return {
-                    x: radius * Math.sin(phi) * Math.cos(theta),
-                    y: radius * Math.cos(phi),
-                    z: radius * Math.sin(phi) * Math.sin(theta),
-                };
+        if (!metrics) {
+            // Task has no datable span (shouldn't happen — relevantTasks filter), render placeholder.
+            return h('div', {
+                key: 'body-row-' + row.id,
+                className: 'planning-gantt2-row planning-gantt2-row--undated',
+                style: { top: row.top + 'px', height: row.height + 'px' },
             });
-
-            function rotateY(point, angle) {
-                var cosA = Math.cos(angle);
-                var sinA = Math.sin(angle);
-                var x = point.x * cosA + point.z * sinA;
-                var z = -point.x * sinA + point.z * cosA;
-                point.x = x;
-                point.z = z;
-            }
-
-            function rotateX(point, angle) {
-                var cosA = Math.cos(angle);
-                var sinA = Math.sin(angle);
-                var y = point.y * cosA - point.z * sinA;
-                var z = point.y * sinA + point.z * cosA;
-                point.y = y;
-                point.z = z;
-            }
-
-            function project(point) {
-                var zoom = Math.max(0.65, Math.min(2.4, zoomRef.current || 1));
-                var scale = (perspective / (perspective + point.z + radius)) * zoom;
-                return {
-                    x: centerX + point.x * scale,
-                    y: centerY + point.y * scale,
-                    z: point.z,
-                    scale: scale,
-                };
-            }
-
-            function draw() {
-                ctx.clearRect(0, 0, cssWidth, cssHeight);
-
-                points.forEach(function (point) {
-                    rotateY(point, state.vx);
-                    rotateX(point, state.vy);
-                });
-                if (!state.active) {
-                    state.vx *= 0.988;
-                    state.vy *= 0.988;
-                    if (Math.abs(state.vx) < 0.00015) state.vx = 0;
-                    if (Math.abs(state.vy) < 0.00015) state.vy = 0;
-                }
-
-                var projected = points.map(project);
-                projectedRef.current = projected;
-                var selectedIndex = selectedIndexRef.current;
-
-                graphLinks.forEach(function (link) {
-                    var a = projected[link.source];
-                    var b = projected[link.target];
-                    if (!a || !b) return;
-                    var isSelected = selectedIndex >= 0 && (link.source === selectedIndex || link.target === selectedIndex);
-                    ctx.strokeStyle = isSelected ? 'rgba(37, 99, 235, 0.72)' : 'rgba(59, 130, 246, 0.22)';
-                    ctx.lineWidth = isSelected ? 1.8 : 1;
-                    ctx.beginPath();
-                    ctx.moveTo(a.x, a.y);
-                    ctx.lineTo(b.x, b.y);
-                    ctx.stroke();
-                });
-
-                var drawOrder = projected
-                    .map(function (p, idx) { return { idx: idx, p: p }; })
-                    .sort(function (a, b) { return a.p.z - b.p.z; });
-
-                drawOrder.forEach(function (entry) {
-                    var p = entry.p;
-                    var node = nodes[entry.idx];
-                    var isSelected = entry.idx === selectedIndex;
-                    var zoom = Math.max(0.65, Math.min(2.4, zoomRef.current || 1));
-                    var size = Math.max(2.8, 4.2 * p.scale + 1.8);
-                    var color = node.type === 'task'
-                        ? '#16a34a'
-                        : node.type === 'project'
-                            ? '#7c3aed'
-                            : '#2563eb';
-                    if (isSelected) {
-                        ctx.beginPath();
-                        ctx.fillStyle = 'rgba(37, 99, 235, 0.22)';
-                        ctx.arc(p.x, p.y, size * 2.4, 0, Math.PI * 2);
-                        ctx.fill();
-                    }
-                    ctx.beginPath();
-                    ctx.fillStyle = color;
-                    ctx.arc(p.x, p.y, size, 0, Math.PI * 2);
-                    ctx.fill();
-
-                });
-
-                if (Math.max(0.65, Math.min(2.4, zoomRef.current || 1)) >= 1.35 || selectedIndex >= 0) {
-                    var occupied = [];
-                    var labelCandidates = drawOrder.slice().reverse();
-                    labelCandidates.forEach(function (entry) {
-                        var p = entry.p;
-                        var node = nodes[entry.idx];
-                        var zoom = Math.max(0.65, Math.min(2.4, zoomRef.current || 1));
-                        var isSelected = entry.idx === selectedIndex;
-                        if (!isSelected && zoom < 1.35) return;
-
-                        var shortLabel = String(node.label || 'Узел').slice(0, 24);
-                        if (shortLabel.length < String(node.label || '').length) shortLabel += '…';
-                        var fontSize = isSelected ? 11 : 10;
-                        ctx.font = fontSize + 'px system-ui, -apple-system, Segoe UI, sans-serif';
-                        var textWidth = ctx.measureText(shortLabel).width;
-                        var x = p.x + 8;
-                        var y = p.y - 8;
-                        var box = {
-                            x1: x - 2,
-                            y1: y - fontSize - 1,
-                            x2: x + textWidth + 2,
-                            y2: y + 3,
-                        };
-
-                        var overlaps = occupied.some(function (o) {
-                            return !(box.x2 < o.x1 || box.x1 > o.x2 || box.y2 < o.y1 || box.y1 > o.y2);
-                        });
-                        if (overlaps && !isSelected) return;
-
-                        var alpha = isSelected ? 0.95 : Math.max(0.45, Math.min(0.9, 0.35 + p.scale));
-                        ctx.fillStyle = 'rgba(15, 23, 42, ' + alpha.toFixed(2) + ')';
-                        ctx.fillText(shortLabel, x, y);
-                        occupied.push(box);
-                    });
-                }
-
-                animationRef.current = window.requestAnimationFrame(draw);
-            }
-
-            animationRef.current = window.requestAnimationFrame(draw);
-            return function () {
-                if (animationRef.current) window.cancelAnimationFrame(animationRef.current);
-            };
-        }, [graphData]);
-
-        function handlePointerDown(event) {
-            var state = dragStateRef.current;
-            state.active = true;
-            state.lastX = event.clientX || 0;
-            state.lastY = event.clientY || 0;
-            pointerTravelRef.current = 0;
-            pointersRef.current[event.pointerId] = { x: event.clientX || 0, y: event.clientY || 0 };
-            var pointerIds = Object.keys(pointersRef.current);
-            if (pointerIds.length === 2) {
-                var p1 = pointersRef.current[pointerIds[0]];
-                var p2 = pointersRef.current[pointerIds[1]];
-                var dist = Math.hypot((p2.x - p1.x), (p2.y - p1.y));
-                pinchRef.current = { active: true, startDistance: dist || 1, startZoom: zoomRef.current || 1 };
-            }
         }
 
-        function handlePointerMove(event) {
-            var state = dragStateRef.current;
-            if (pointersRef.current[event.pointerId]) {
-                pointersRef.current[event.pointerId].x = event.clientX || 0;
-                pointersRef.current[event.pointerId].y = event.clientY || 0;
-            }
-            var pointerIds = Object.keys(pointersRef.current);
-            if (pointerIds.length === 2 && pinchRef.current.active) {
-                var p1 = pointersRef.current[pointerIds[0]];
-                var p2 = pointersRef.current[pointerIds[1]];
-                var dist = Math.hypot((p2.x - p1.x), (p2.y - p1.y));
-                var nextZoom = pinchRef.current.startZoom * (dist / (pinchRef.current.startDistance || 1));
-                zoomRef.current = Math.max(0.65, Math.min(2.4, nextZoom));
-                setZoomUi(zoomRef.current);
-                return;
-            }
-            if (!state.active) return;
-            var x = event.clientX || 0;
-            var y = event.clientY || 0;
-            var dx = x - state.lastX;
-            var dy = y - state.lastY;
-            state.lastX = x;
-            state.lastY = y;
-            pointerTravelRef.current += Math.abs(dx) + Math.abs(dy);
-            state.vx = dx * 0.0009;
-            state.vy = dy * 0.0009;
-        }
+        const isMilestone = task.isMilestone === true;
+        const progress = typeof task.progress === 'number' ? Math.max(0, Math.min(100, task.progress)) : 0;
+        const isDone = task.status === 'done';
 
-        function handlePointerUp(event) {
-            var state = dragStateRef.current;
-            state.active = false;
-            delete pointersRef.current[event.pointerId];
-            if (Object.keys(pointersRef.current).length < 2) {
-                pinchRef.current.active = false;
-            }
-            if (pointerTravelRef.current < 10 && graphData.nodes.length) {
-                var canvas = canvasRef.current;
-                var projected = projectedRef.current || [];
-                if (canvas && event) {
-                    var rect = canvas.getBoundingClientRect();
-                    var localX = (event.clientX || 0) - rect.left;
-                    var localY = (event.clientY || 0) - rect.top;
-                    var nearestIndex = -1;
-                    var nearestDist = Infinity;
-                    projected.forEach(function (p, idx) {
-                        var dx = p.x - localX;
-                        var dy = p.y - localY;
-                        var dist = Math.sqrt(dx * dx + dy * dy);
-                        if (dist < nearestDist) {
-                            nearestDist = dist;
-                            nearestIndex = idx;
-                        }
-                    });
-                    if (nearestIndex >= 0 && nearestDist <= 22) {
-                        selectedIndexRef.current = nearestIndex;
-                        setSelectedLabel(graphData.nodes[nearestIndex].label || 'Узел');
-                    } else {
-                        selectedIndexRef.current = -1;
-                        setSelectedLabel('');
-                    }
-                }
-            }
-        }
-
-        function handleWheel(event) {
-            if (!event) return;
-            event.preventDefault();
-            var delta = event.deltaY > 0 ? -0.08 : 0.08;
-            zoomRef.current = Math.max(0.65, Math.min(2.4, (zoomRef.current || 1) + delta));
-            setZoomUi(zoomRef.current);
-        }
-
-        function handleResetView() {
-            zoomRef.current = 1;
-            setZoomUi(1);
-            selectedIndexRef.current = -1;
-            setSelectedLabel('');
-            dragStateRef.current.vx = 0.004;
-            dragStateRef.current.vy = 0.002;
-        }
-
-        return h('section', { className: 'planning-card planning-context-graph' }, [
-            h('div', { key: 'header', className: 'planning-context-section-head' }, [
-                h('h3', { key: 'title', className: 'planning-section__title' }, 'Карта связей'),
-                h('p', { key: 'desc', className: 'planning-section__desc' }, 'Узлы — это задачи, проекты и inbox-записи. Связи создаются автоматически при промоуте, а также вручную агентом.'),
-            ]),
-            h('div', { key: 'canvasWrap', className: 'planning-context-graph-canvas-wrap' }, [
-                h('canvas', {
-                    key: 'canvas',
-                    ref: canvasRef,
-                    className: 'planning-context-graph-canvas',
-                    onWheel: handleWheel,
-                    onPointerDown: handlePointerDown,
-                    onPointerMove: handlePointerMove,
-                    onPointerUp: handlePointerUp,
-                    onPointerCancel: handlePointerUp,
-                    onPointerLeave: handlePointerUp,
+        if (isMilestone) {
+            // Diamond on dueDate axis
+            return h('div', {
+                key: 'body-row-' + row.id,
+                className: 'planning-gantt2-row planning-gantt2-row--milestone',
+                style: { top: row.top + 'px', height: row.height + 'px' },
+                'data-task-id': task.id,
+            },
+                h('div', {
+                    className: 'planning-gantt2-milestone' + (isDone ? ' is-done' : ''),
+                    style: {
+                        left: (metrics.right - 8) + 'px',  // center the 16px diamond on dueDate
+                        top: ((row.height - 16) / 2) + 'px',
+                        background: color,
+                    },
+                    title: task.title,
                 }),
-                h('div', { key: 'hint', className: 'planning-context-graph-canvas-hint' }, 'Крути пальцем: 3D-карта узлов и связей'),
-                h('button', {
-                    key: 'reset',
-                    type: 'button',
-                    className: 'planning-btn planning-btn--ghost planning-btn--sm planning-context-graph-reset',
-                    onClick: handleResetView,
-                }, 'Reset view'),
-            ]),
-            h('div', { key: 'legend', className: 'planning-context-graph-legend' }, [
-                h('span', { key: 'l-task', className: 'planning-context-graph-legend__item planning-context-graph-legend__item--task' }, 'task'),
-                h('span', { key: 'l-project', className: 'planning-context-graph-legend__item planning-context-graph-legend__item--project' }, 'project'),
-                h('span', { key: 'l-context', className: 'planning-context-graph-legend__item planning-context-graph-legend__item--context' }, 'context'),
-                h('span', { key: 'l-zoom', className: 'planning-context-graph-legend__item' }, 'zoom x' + Number(zoomUi || 1).toFixed(2)),
-                selectedLabel ? h('span', { key: 'l-selected', className: 'planning-context-graph-legend__selected' }, 'Выбрано: ' + selectedLabel) : null,
-            ]),
-            h('div', { key: 'stats', className: 'planning-context-graph__stats' }, [
-                h('div', { key: 'nodes', className: 'planning-context-graph__stat' }, [
-                    h('span', { key: 'val', className: 'planning-context-graph__val' }, String(totalNodes)),
-                    h('span', { key: 'label', className: 'planning-context-graph__label' }, pluralize(totalNodes, 'узел', 'узла', 'узлов')),
-                ]),
-                h('div', { key: 'edges', className: 'planning-context-graph__stat' }, [
-                    h('span', { key: 'val', className: 'planning-context-graph__val' }, String(links.length)),
-                    h('span', { key: 'label', className: 'planning-context-graph__label' }, pluralize(links.length, 'связь', 'связи', 'связей')),
-                ]),
-            ]),
-            links.length > 0
-                ? h('div', { key: 'list', className: 'planning-context-graph__links' },
-                    links.slice(0, 10).map(function (link) {
-                        return h('div', { key: link.id, className: 'planning-context-graph__link' }, [
-                            h('span', { key: 'rel', className: 'planning-context-graph__rel' }, link.label || link.relation || '→'),
-                            h('span', { key: 'ids', className: 'planning-context-graph__ids' },
-                                (link.fromId || '?').substring(0, 8) + ' → ' + (link.toId || '?').substring(0, 8)
-                            ),
-                        ]);
-                    })
-                )
-                : h('div', { key: 'empty', className: 'planning-context-graph__empty' }, 'Связи появятся по мере промоутов и работы с агентом.'),
-        ]);
+                h('div', {
+                    className: 'planning-gantt2-milestone-label',
+                    style: { left: (metrics.right + 12) + 'px', top: 0, height: row.height + 'px' },
+                }, task.title),
+            );
+        }
+
+        const barLeft = metrics.left;
+        const barWidth = metrics.right - metrics.left;
+        const barHeight = Math.min(28, row.height - 8);
+
+        return h('div', {
+            key: 'body-row-' + row.id,
+            className: 'planning-gantt2-row',
+            style: { top: row.top + 'px', height: row.height + 'px' },
+            'data-task-id': task.id,
+        },
+            h('div', {
+                className: 'planning-gantt2-bar' + (isDone ? ' is-done' : ''),
+                style: {
+                    left: barLeft + 'px',
+                    width: Math.max(dayWidth, barWidth) + 'px',
+                    top: ((row.height - barHeight) / 2) + 'px',
+                    height: barHeight + 'px',
+                    background: color,
+                    '--bar-progress-color': color,
+                },
+                'data-task-id': task.id,
+                title: task.title,
+            },
+                progress > 0 && h('div', {
+                    className: 'planning-gantt2-bar__progress',
+                    style: { width: progress + '%' },
+                }),
+                h('div', { className: 'planning-gantt2-bar__label' }, task.title),
+            ),
+        );
     }
 
-    function ContextScreen(props) {
-        const state = props.state;
-        const todayIso = useMemo(function () { return dateStr(new Date()); }, []);
-        const capsule = useMemo(function () { return buildContextCapsule(state, todayIso); }, [state, todayIso]);
-        const inboxItems = Array.isArray(state?.contextInboxItems) ? state.contextInboxItems : [];
-        const links = Array.isArray(state?.links) ? state.links : [];
-
-        function handleCapture(text, opts) {
-            if (!state || typeof state.addContextInboxItem !== 'function') return null;
-            return state.addContextInboxItem(text, {
-                source: 'manual',
-                type: opts?.type || 'capture',
-            });
-        }
-
-        function handleCaptureAsTask(text) {
-            if (!state || typeof state.addTask !== 'function') return null;
-            return state.addTask(text, { priority: 'p2', status: 'todo' });
-        }
-
-        function handleOpenAgentHandoff() {
-            if (typeof document === 'undefined') return;
-            var handoffSection = document.getElementById('planning-agent-handoff');
-            if (!handoffSection || typeof handoffSection.scrollIntoView !== 'function') return;
-            handoffSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
-
-        function handleDelete(itemId) {
-            if (!state || typeof state.deleteContextInboxItem !== 'function') return;
-            state.deleteContextInboxItem(itemId);
-        }
-
-        function handleRetype(itemId, newType) {
-            if (!state || typeof state.updateContextInboxItem !== 'function') return;
-            state.updateContextInboxItem(itemId, { type: newType });
-        }
-
-        function handlePromote(item) {
-            if (!state || typeof state.addTask !== 'function' || typeof state.updateContextInboxItem !== 'function') return;
-            var title = String(item?.title || item?.preview || '').trim() || 'Контекстная задача';
-            var task = state.addTask(title, { priority: 'p2', status: 'todo' });
-            if (!task || !task.id) return;
-
-            var linkedTaskIds = Array.isArray(item?.linkedTaskIds) ? item.linkedTaskIds.slice() : [];
-            if (linkedTaskIds.indexOf(task.id) === -1) linkedTaskIds.push(task.id);
-            state.updateContextInboxItem(item.id, {
-                status: 'linked',
-                linkedTaskIds: linkedTaskIds,
-            });
-
-            if (typeof state.addLink === 'function') {
-                state.addLink(item.id, task.id, {
-                    fromType: 'inbox',
-                    toType: 'task',
-                    relation: 'promoted_to',
-                    label: 'Промоут',
-                });
-            }
-        }
-
-        return h('div', { className: 'planning-context-screen' }, [
-            h(ContextCapsuleSection, { key: 'capsule', capsule: capsule }),
-            h(QuickCaptureSection, {
-                key: 'capture',
-                onCapture: handleCapture,
-                onCaptureAsTask: handleCaptureAsTask,
-                onOpenAgentHandoff: handleOpenAgentHandoff,
-            }),
-            h(ContextInboxSection, {
-                key: 'inbox',
-                items: inboxItems,
-                onDelete: handleDelete,
-                onPromote: handlePromote,
-                onRetype: handleRetype,
-            }),
-            h(AgentHandoffSection, { key: 'handoff', items: inboxItems, capsule: capsule }),
-            h(GraphSection, {
-                key: 'graph',
-                items: inboxItems,
-                projects: state?.projects,
-                tasks: state?.tasks,
-                links: links,
-            }),
-        ]);
-    }
-
-    Planning.refreshPlanningFromCloud = refreshPlanningFromCloud;
-
-    HEYS.PlanningContext = {
-        ContextScreen,
-    };
+    HEYS.PlanningGantt = { GanttScreen: GanttScreenV2 };
 })();
 
 
@@ -52614,7 +52023,6 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         { id: 'tasks', label: 'Список', shortLabel: 'Список', icon: '☑️' },
         { id: 'calendar', label: 'Календарь', shortLabel: 'Кален.', icon: '📅' },
         { id: 'gantt', label: 'Гант', shortLabel: 'Гант', icon: '📊' },
-        { id: 'context', label: 'Контекст', shortLabel: 'Конт.', icon: '🧠' },
     ];
     const DEFAULT_HOME_SCREEN = 'calendar';
 
@@ -52662,15 +52070,17 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     function resolvePlanningRuntime() {
         const TasksScreen = HEYS.PlanningTasks && HEYS.PlanningTasks.TasksScreen;
         const CalendarScreen = HEYS.PlanningSchedule && HEYS.PlanningSchedule.CalendarScreen;
-        const GanttScreen = HEYS.PlanningSchedule && HEYS.PlanningSchedule.GanttScreen;
-        const ContextScreen = HEYS.PlanningContext && HEYS.PlanningContext.ContextScreen;
+        const useGanttV2 = !!(HEYS.featureFlags && typeof HEYS.featureFlags.isEnabled === 'function'
+            && HEYS.featureFlags.isEnabled('gantt_v2'));
+        const GanttScreen = useGanttV2 && HEYS.PlanningGantt && HEYS.PlanningGantt.GanttScreen
+            ? HEYS.PlanningGantt.GanttScreen
+            : (HEYS.PlanningSchedule && HEYS.PlanningSchedule.GanttScreen);
         const usePlanningState = Planning.Hooks && Planning.Hooks.usePlanningState;
 
         return {
             TasksScreen,
             CalendarScreen,
             GanttScreen,
-            ContextScreen,
             usePlanningState,
             store: Planning.Store || {},
         };
@@ -52771,9 +52181,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         const CurrentScreen = useMemo(() => {
             if (activeScreen === 'calendar') return runtime.CalendarScreen;
             if (activeScreen === 'gantt') return runtime.GanttScreen;
-            if (activeScreen === 'context') return runtime.ContextScreen;
             return runtime.TasksScreen;
-        }, [activeScreen, runtime.CalendarScreen, runtime.ContextScreen, runtime.GanttScreen, runtime.TasksScreen]);
+        }, [activeScreen, runtime.CalendarScreen, runtime.GanttScreen, runtime.TasksScreen]);
 
         if (!planState || !runtime.TasksScreen || !runtime.CalendarScreen || !runtime.GanttScreen) {
             console.warn('[HEYS.planning] Planning split modules are not ready yet');

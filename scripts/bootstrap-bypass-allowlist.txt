@@ -108,7 +108,7 @@ apps/web/heys_dev_utils.js:22
 apps/web/heys_dev_utils.js:76
 apps/web/heys_exercise_catalog_v1.js:144
 apps/web/heys_exercise_catalog_v1.js:170
-apps/web/heys_feature_flags_v1.js:90
+apps/web/heys_feature_flags_v1.js:95
 apps/web/heys_gamification_bar_v1.js:1419
 apps/web/heys_gamification_bar_v1.js:1420
 apps/web/heys_gamification_bar_v1.js:1421
@@ -136,12 +136,11 @@ apps/web/heys_models_v1.js:404
 apps/web/heys_module_perf_v1.js:67
 apps/web/heys_morning_checkin_v1.js:134
 apps/web/heys_perf_main_thread_v1.js:2
-apps/web/heys_planning_context_v1.js:322
 apps/web/heys_planning_schedule_v1.js:3239
 apps/web/heys_planning_schedule_v1.js:4415
 apps/web/heys_planning_schedule_v1.js:4416
 apps/web/heys_planning_schedule_v1.js:4417
-apps/web/heys_planning_store_v1.js:261
+apps/web/heys_planning_store_v1.js:258
 apps/web/heys_planning_tasks_v1.js:2295
 apps/web/heys_platform_apis_v1.js:177
 apps/web/heys_platform_apis_v1.js:581

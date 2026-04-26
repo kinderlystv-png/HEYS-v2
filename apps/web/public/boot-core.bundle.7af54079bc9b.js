@@ -193,6 +193,11 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
     // Phase 5: enforcement ON by default. Boot audit prunes oversized keys per registry policies;
     // cloudSync:'merge' keys (insights_feedback, hidden_products) go through _mergeAndPrune.
     'storage_audit_enforce': true,
+
+    // === Gantt v2 — mobile-native rebuild (plan prancy-frolicking-anchor.md) ===
+    // Default OFF. Enable via HEYS.featureFlags.enable('gantt_v2') after smoke-test.
+    // Disable mid-flight to revert to legacy GanttScreen instantly.
+    'gantt_v2': false,
   };
 
   /**
@@ -19219,7 +19224,6 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
     'heys_planning_projects',
     'heys_planning_tasks',
     'heys_planning_slots',
-    'heys_planning_inbox_v1',
     'heys_planning_links_v1',
   ];
 

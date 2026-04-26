@@ -633,12 +633,6 @@
       "snippet": "// Enable: localStorage.setItem('heys_debug_perf', 'true') — logs all slow spans"
     },
     {
-      "file": "apps/web/heys_planning_context_v1.js",
-      "line": 322,
-      "category": "review",
-      "snippet": "window.localStorage.setItem(CAPTURE_DRAFT_KEY, JSON.stringify(payload));"
-    },
-    {
       "file": "apps/web/heys_planning_schedule_v1.js",
       "line": 3239,
       "category": "review",

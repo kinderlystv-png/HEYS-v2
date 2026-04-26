@@ -159,7 +159,6 @@
     'heys_planning_projects',
     'heys_planning_tasks',
     'heys_planning_slots',
-    'heys_planning_inbox_v1',
     'heys_planning_links_v1',
   ];
 

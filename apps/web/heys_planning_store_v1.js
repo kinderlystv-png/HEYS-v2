@@ -14,7 +14,6 @@
         PROJECTS: 'heys_planning_projects',
         TASKS: 'heys_planning_tasks',
         SLOTS: 'heys_planning_slots',
-        CONTEXT_INBOX: 'heys_planning_inbox_v1',
         LINKS: 'heys_planning_links_v1',
     };
 
@@ -161,6 +160,13 @@
         return Math.max(min, Math.min(max, value));
     }
 
+    function clampProgress(value, status) {
+        if (typeof value === 'number' && Number.isFinite(value)) {
+            return clamp(Math.round(value), 0, 100);
+        }
+        return status === 'done' ? 100 : 0;
+    }
+
     function timeToMinutes(timeValue) {
         if (!timeValue || typeof timeValue !== 'string') return 0;
         const [hours, minutes] = timeValue.split(':').map(Number);
@@ -180,15 +186,6 @@
             const rightOrder = Number(right?.order ?? 0);
             if (leftOrder !== rightOrder) return leftOrder - rightOrder;
             return String(left?.createdAt || '').localeCompare(String(right?.createdAt || ''));
-        });
-    }
-
-    function sortContextInboxItems(items) {
-        return (Array.isArray(items) ? items : []).slice().sort((left, right) => {
-            const leftUpdated = String(left?.updatedAt || left?.createdAt || '');
-            const rightUpdated = String(right?.updatedAt || right?.createdAt || '');
-            if (leftUpdated !== rightUpdated) return rightUpdated.localeCompare(leftUpdated);
-            return String(right?.id || '').localeCompare(String(left?.id || ''));
         });
     }
 
@@ -289,14 +286,6 @@
         lsSet(KEYS.SLOTS, sortByOrder(slots || []));
     }
 
-    function getContextInboxItems() {
-        return sortContextInboxItems(lsGet(KEYS.CONTEXT_INBOX, []));
-    }
-
-    function saveContextInboxItems(items) {
-        lsSet(KEYS.CONTEXT_INBOX, sortContextInboxItems(items || []));
-    }
-
     function getNextOrder(items, predicate) {
         return items.filter(predicate).length;
     }
@@ -353,6 +342,8 @@
             baselineStartDate: opts?.baselineStartDate || undefined,
             baselineDueDate: opts?.baselineDueDate || undefined,
             baselinePlannedMinutes: Number(opts?.baselinePlannedMinutes) > 0 ? Number(opts.baselinePlannedMinutes) : undefined,
+            progress: clampProgress(opts?.progress, opts?.status || 'in_progress'),
+            isMilestone: opts?.isMilestone === true,
             order: getNextOrder(tasks, (item) => (item.projectId || '') === (projectId || '') && (item.parentTaskId || '') === (parentTaskId || '')),
             createdAt: nowISO(),
             updatedAt: nowISO(),
@@ -380,6 +371,24 @@
             next.completedAt = nowISO();
         } else if (patch?.status && patch.status !== 'done') {
             next.completedAt = undefined;
+        }
+
+        if (patch && Object.prototype.hasOwnProperty.call(patch, 'isMilestone')) {
+            next.isMilestone = patch.isMilestone === true;
+        }
+
+        if (patch && Object.prototype.hasOwnProperty.call(patch, 'progress')) {
+            next.progress = clampProgress(patch.progress, next.status);
+            if (next.progress === 100 && next.status !== 'done' && next.status !== 'cancelled') {
+                next.status = 'done';
+                if (!current.completedAt) next.completedAt = nowISO();
+            }
+        } else if (patch?.status === 'done') {
+            next.progress = 100;
+        } else if (patch?.status && patch.status !== 'done' && current.progress === 100) {
+            next.progress = 0;
+        } else if (typeof current.progress !== 'number') {
+            next.progress = clampProgress(undefined, next.status);
         }
 
         tasks[index] = next;
@@ -502,71 +511,6 @@
         return idSet.size;
     }
 
-    function buildContextInboxPreview(text) {
-        const normalized = String(text || '').replace(/\s+/g, ' ').trim();
-        if (!normalized) return { title: '', preview: '' };
-        const titleBase = normalized.slice(0, 72).trim();
-        return {
-            title: normalized.length > 72 ? titleBase + '…' : titleBase,
-            preview: normalized.length > 180 ? normalized.slice(0, 180).trim() + '…' : normalized,
-        };
-    }
-
-    function addContextInboxItem(text, opts) {
-        const body = String(text || '').trim();
-        if (!body) return null;
-
-        const items = getContextInboxItems();
-        const now = nowISO();
-        const presentation = buildContextInboxPreview(body);
-        const item = {
-            id: uid(),
-            type: opts?.type || 'capture',
-            status: opts?.status || 'new',
-            source: opts?.source || 'user',
-            privacy: opts?.privacy || 'standard',
-            title: presentation.title || 'Новая запись',
-            preview: presentation.preview,
-            body,
-            linkedTaskIds: Array.isArray(opts?.linkedTaskIds) ? opts.linkedTaskIds.slice() : [],
-            createdAt: now,
-            updatedAt: now,
-        };
-
-        saveContextInboxItems([item].concat(items));
-        return item;
-    }
-
-    function updateContextInboxItem(id, patch) {
-        const items = getContextInboxItems();
-        const index = items.findIndex((item) => item.id === id);
-        if (index === -1) return null;
-
-        const current = items[index];
-        const nextBody = patch?.body != null ? String(patch.body || '').trim() : current.body;
-        const presentation = nextBody ? buildContextInboxPreview(nextBody) : null;
-        const next = {
-            ...current,
-            ...patch,
-            body: nextBody,
-            title: presentation ? (patch?.title || presentation.title || current.title) : (patch?.title || current.title),
-            preview: presentation ? presentation.preview : current.preview,
-            linkedTaskIds: Array.isArray(patch?.linkedTaskIds)
-                ? patch.linkedTaskIds.filter(Boolean)
-                : current.linkedTaskIds,
-            updatedAt: nowISO(),
-        };
-
-        items[index] = next;
-        saveContextInboxItems(items);
-        return next;
-    }
-
-    function deleteContextInboxItem(id) {
-        const items = getContextInboxItems().filter((item) => item.id !== id);
-        saveContextInboxItems(items);
-    }
-
     // ── Links (graph edges) ──────────────────────────────────────────
 
     function getLinks() {
@@ -608,18 +552,71 @@
         });
     }
 
+    function getPlanningCloudClientId() {
+        try {
+            if (HEYS.cloud && typeof HEYS.cloud.getClientId === 'function') {
+                const id = String(HEYS.cloud.getClientId() || '');
+                if (id) return id;
+            }
+        } catch (e) { /* noop */ }
+        try {
+            if (typeof localStorage !== 'undefined') {
+                return localStorage.getItem('heys_pin_auth_client')
+                    || localStorage.getItem('heys_client_current')
+                    || '';
+            }
+        } catch (e) { /* noop */ }
+        return '';
+    }
+
+    function refreshPlanningFromCloud() {
+        const YandexAPI = HEYS.YandexAPI;
+        const Store = HEYS.Planning && HEYS.Planning.Store;
+        if (!YandexAPI || !Store || typeof YandexAPI.getKVBatch !== 'function') {
+            return Promise.resolve({ ok: false, reason: 'no_api' });
+        }
+        const clientId = getPlanningCloudClientId();
+        const keys = [
+            'heys_planning_projects',
+            'heys_planning_tasks',
+            'heys_planning_slots',
+            'heys_planning_links_v1',
+        ];
+        return YandexAPI.getKVBatch(clientId, keys).then(function (res) {
+            if (res.error || !Array.isArray(res.data)) {
+                return { ok: false, reason: res.error || 'batch_failed' };
+            }
+            res.data.forEach(function (item) {
+                if (!item || item.k == null || item.v == null) return;
+                if (item.k === 'heys_planning_projects' && typeof Store.saveProjects === 'function') {
+                    Store.saveProjects(item.v);
+                } else if (item.k === 'heys_planning_tasks' && typeof Store.saveTasks === 'function') {
+                    Store.saveTasks(item.v);
+                } else if (item.k === 'heys_planning_slots' && typeof Store.saveSlots === 'function') {
+                    Store.saveSlots(item.v);
+                } else if (item.k === 'heys_planning_links_v1' && typeof Store.saveLinks === 'function') {
+                    Store.saveLinks(item.v);
+                }
+            });
+            try {
+                if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
+                    window.dispatchEvent(new CustomEvent('heys:planning-updated'));
+                }
+            } catch (e) { /* noop */ }
+            return { ok: true };
+        });
+    }
+
     function usePlanningState() {
         const [projects, setProjects] = useState(getProjects);
         const [tasks, setTasks] = useState(getTasks);
         const [slots, setSlots] = useState(getSlots);
-        const [contextInboxItems, setContextInboxItems] = useState(getContextInboxItems);
         const [links, setLinks] = useState(getLinks);
 
         const refresh = useCallback(() => {
             setProjects(getProjects());
             setTasks(getTasks());
             setSlots(getSlots());
-            setContextInboxItems(getContextInboxItems());
             setLinks(getLinks());
         }, []);
 
@@ -648,16 +645,13 @@
             updateSlot: (id, patch) => { const slot = updateSlot(id, patch); refresh(); return slot; },
             deleteSlot: (id) => { deleteSlot(id); refresh(); },
             deleteSlotBatch: (ids) => { const n = deleteSlotBatch(ids); if (n) refresh(); return n; },
-            addContextInboxItem: (text, opts) => { const item = addContextInboxItem(text, opts); refresh(); return item; },
-            updateContextInboxItem: (id, patch) => { const item = updateContextInboxItem(id, patch); refresh(); return item; },
-            deleteContextInboxItem: (id) => { deleteContextInboxItem(id); refresh(); },
             addLink: (fromId, toId, opts) => { const link = addLink(fromId, toId, opts); refresh(); return link; },
             deleteLink: (id) => { deleteLink(id); refresh(); },
             getLinksFor,
             refresh,
         }), [refresh]);
 
-        return { projects, tasks, slots, contextInboxItems, links, ...api };
+        return { projects, tasks, slots, links, ...api };
     }
 
     function usePlanningViewport() {
@@ -692,6 +686,7 @@
         diffDays,
         getWeekDays,
         clamp,
+        clampProgress,
         timeToMinutes,
         minutesToTime,
         localDateISO,
@@ -723,11 +718,6 @@
         updateSlot,
         deleteSlot,
         deleteSlotBatch,
-        getContextInboxItems,
-        saveContextInboxItems,
-        addContextInboxItem,
-        updateContextInboxItem,
-        deleteContextInboxItem,
         getLinks,
         saveLinks,
         addLink,
@@ -739,4 +729,6 @@
         usePlanningState,
         usePlanningViewport,
     };
+
+    Planning.refreshPlanningFromCloud = refreshPlanningFromCloud;
 })();

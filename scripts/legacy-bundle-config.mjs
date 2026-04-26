@@ -296,7 +296,9 @@ export const LEGACY_BUNDLES = {
         'heys_planning_quick_target_v1.js',
         'heys_planning_tasks_v1.js',
         'heys_planning_schedule_v1.js',
-        'heys_planning_context_v1.js',
+        'heys_planning_gantt_migration_v1.js',
+        'heys_planning_gantt_layout_v1.js',
+        'heys_planning_gantt_v2.js',
         'heys_planning_v1.js',
     ],
 };
