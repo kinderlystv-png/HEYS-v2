@@ -10723,8 +10723,16 @@
           window.HEYS.products = window.HEYS.products || {};
           window.HEYS.products.contentVersion = (window.HEYS.products.contentVersion || 0) + 1;
         } catch (_) { /* noop */ }
-        window.dispatchEvent(new CustomEvent('heys:products-updated', { detail }));
-        window.dispatchEvent(new CustomEvent('heysProductsUpdated', { detail }));
+        // Defer event dispatch out of the HOT sync message handler so that synchronous
+        // listeners (orphanProducts.recalculate, normalizePersonalProducts, etc.) don't
+        // block the main thread inside the message handler. Products are already written
+        // to localStorage — listeners reading HEYS.products.getAll() see fresh data.
+        setTimeout(function () {
+          if (typeof window !== 'undefined' && window.dispatchEvent) {
+            window.dispatchEvent(new CustomEvent('heys:products-updated', { detail }));
+            window.dispatchEvent(new CustomEvent('heysProductsUpdated', { detail }));
+          }
+        }, 0);
       }
 
       if (baseKey.startsWith('heys_planning_') && typeof window !== 'undefined' && window.dispatchEvent) {

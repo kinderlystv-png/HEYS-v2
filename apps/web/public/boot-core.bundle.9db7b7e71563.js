@@ -5101,7 +5101,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
   // ============================================================================
 
   // === App Version & Auto-logout on Update ===
-  const APP_VERSION = '2026.04.26.0037.077eb4b4'; // synced with build-meta.json on 2026-02-26
+  const APP_VERSION = '2026.04.26.1723.c3e741e0'; // synced with build-meta.json on 2026-02-26
 
   HEYS.version = APP_VERSION;
 
@@ -29778,8 +29778,16 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
           window.HEYS.products = window.HEYS.products || {};
           window.HEYS.products.contentVersion = (window.HEYS.products.contentVersion || 0) + 1;
         } catch (_) { /* noop */ }
-        window.dispatchEvent(new CustomEvent('heys:products-updated', { detail }));
-        window.dispatchEvent(new CustomEvent('heysProductsUpdated', { detail }));
+        // Defer event dispatch out of the HOT sync message handler so that synchronous
+        // listeners (orphanProducts.recalculate, normalizePersonalProducts, etc.) don't
+        // block the main thread inside the message handler. Products are already written
+        // to localStorage — listeners reading HEYS.products.getAll() see fresh data.
+        setTimeout(function () {
+          if (typeof window !== 'undefined' && window.dispatchEvent) {
+            window.dispatchEvent(new CustomEvent('heys:products-updated', { detail }));
+            window.dispatchEvent(new CustomEvent('heysProductsUpdated', { detail }));
+          }
+        }, 0);
       }
 
       if (baseKey.startsWith('heys_planning_') && typeof window !== 'undefined' && window.dispatchEvent) {

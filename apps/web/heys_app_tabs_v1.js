@@ -376,12 +376,13 @@
                 }
             };
 
-            window.addEventListener('heys:products-updated', handleProductsUpdated);
+            // heys:products-updated removed — heysProductsUpdated always fires alongside it
+            // (both dispatched together in applyForegroundHotSyncValue) so subscribing to both
+            // caused handleProductsUpdated to run twice per HOT sync.
             window.addEventListener('heysProductsUpdated', handleProductsUpdated);
             window.addEventListener('heysSyncCompleted', handleProductsUpdated);
 
             return () => {
-                window.removeEventListener('heys:products-updated', handleProductsUpdated);
                 window.removeEventListener('heysProductsUpdated', handleProductsUpdated);
                 window.removeEventListener('heysSyncCompleted', handleProductsUpdated);
             };

@@ -8700,10 +8700,20 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
       if (verbose) console.log(`[HEYS] Локальная база: ${products.length} продуктов`);
 
       // 2. Собираем все уникальные продукты из всех дней
+      // Yield before heavy dayv2 scan so the React Scheduler message handler returns
+      // immediately — without this, 90+ days × JSON.parse runs synchronously inside
+      // the scheduler's onmessage, causing an 8+ second 'message' handler violation.
+      await new Promise(function(r) { setTimeout(r, 0); });
+
       const keys = Object.keys(localStorage).filter(k => k.includes('_dayv2_'));
       const missingProducts = new Map(); // product_id or name => { item, dateStr, hasStamp }
 
-      for (const key of keys) {
+      for (let _ki = 0; _ki < keys.length; _ki++) {
+        // Yield every 15 keys to keep frames responsive during large histories.
+        if (_ki > 0 && _ki % 15 === 0) {
+          await new Promise(function(r) { setTimeout(r, 0); });
+        }
+        const key = keys[_ki];
         try {
           const day = parseStoredValue(localStorage.getItem(key));
           if (!day || !day.meals) continue;
@@ -8723,9 +8733,9 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
               const foundByName = itemNameNorm && productsByName.has(itemNameNorm);
 
               if (!foundById && !foundByFingerprint && !foundByName && itemName) {
-                const key = itemFingerprint || productId || itemNameNorm; // 🆕 Приоритет: fingerprint → id → name
-                if (!missingProducts.has(key)) {
-                  missingProducts.set(key, {
+                const lookupKey = itemFingerprint || productId || itemNameNorm; // 🆕 Приоритет: fingerprint → id → name
+                if (!missingProducts.has(lookupKey)) {
+                  missingProducts.set(lookupKey, {
                     productId,
                     name: itemName,
                     fingerprint: itemFingerprint, // 🆕 v4.6.0
