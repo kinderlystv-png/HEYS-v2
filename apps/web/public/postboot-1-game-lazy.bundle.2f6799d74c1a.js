@@ -7549,8 +7549,6 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
                 HEYS.store.set(OUTCOME_PROFILE_KEY, payload);
             } else if (U.lsSet) {
                 U.lsSet(OUTCOME_PROFILE_KEY, payload);
-            } else {
-                localStorage.setItem(OUTCOME_PROFILE_KEY, JSON.stringify(payload));
             }
         } catch (e) {
             // Ignore storage errors
@@ -7587,8 +7585,6 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
                 HEYS.store.set(OUTCOME_PENDING_KEY, payload);
             } else if (U.lsSet) {
                 U.lsSet(OUTCOME_PENDING_KEY, payload);
-            } else {
-                localStorage.setItem(OUTCOME_PENDING_KEY, JSON.stringify(payload));
             }
         } catch (e) {
             // Ignore storage errors
@@ -7953,8 +7949,6 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
                 HEYS.store.set(RATING_KEY, ratings);
             } else if (U.lsSet) {
                 U.lsSet(RATING_KEY, ratings);
-            } else {
-                localStorage.setItem(RATING_KEY, JSON.stringify(ratings));
             }
         } catch (e) { }
     }
@@ -8008,8 +8002,6 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
                     HEYS.store.set(RATING_KEY, parsed);
                 } else if (U.lsSet) {
                     U.lsSet(RATING_KEY, parsed);
-                } else {
-                    localStorage.setItem(RATING_KEY, JSON.stringify(parsed));
                 }
             }
             return parsed;
@@ -8150,8 +8142,6 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
                 HEYS.store.set(key, String(Date.now()));
             } else if (U.lsSet) {
                 U.lsSet(key, String(Date.now()));
-            } else {
-                localStorage.setItem(key, String(Date.now()));
             }
         } catch (e) { }
     }
@@ -8192,8 +8182,6 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
                 HEYS.store.set(RECOMMENDATION_PATTERNS_KEY, patterns);
             } else if (U.lsSet) {
                 U.lsSet(RECOMMENDATION_PATTERNS_KEY, patterns);
-            } else {
-                localStorage.setItem(RECOMMENDATION_PATTERNS_KEY, JSON.stringify(patterns));
             }
         } catch (e) { }
     }
@@ -8704,8 +8692,6 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
                 HEYS.store.set(ADVICE_SETTINGS_KEY, merged);
             } else if (U.lsSet) {
                 U.lsSet(ADVICE_SETTINGS_KEY, merged);
-            } else {
-                localStorage.setItem(ADVICE_SETTINGS_KEY, JSON.stringify(merged));
             }
             // Emit event для UI
             window.dispatchEvent(new CustomEvent('heysAdviceSettingsChanged', { detail: merged }));
@@ -8792,8 +8778,6 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
                     HEYS.store.set(PERSONAL_BESTS_KEY, bests);
                 } else if (U.lsSet) {
                     U.lsSet(PERSONAL_BESTS_KEY, bests);
-                } else {
-                    localStorage.setItem(PERSONAL_BESTS_KEY, JSON.stringify(bests));
                 }
             } catch (e) { }
 
@@ -8858,8 +8842,6 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
                 HEYS.store.set(CHAIN_STORAGE_KEY, chains);
             } else if (U.lsSet) {
                 U.lsSet(CHAIN_STORAGE_KEY, chains);
-            } else {
-                localStorage.setItem(CHAIN_STORAGE_KEY, JSON.stringify(chains));
             }
         } catch (e) { }
     }
@@ -8890,8 +8872,6 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
                     HEYS.store.set(CHAIN_STORAGE_KEY, chains);
                 } else if (U.lsSet) {
                     U.lsSet(CHAIN_STORAGE_KEY, chains);
-                } else {
-                    localStorage.setItem(CHAIN_STORAGE_KEY, JSON.stringify(chains));
                 }
 
                 return chainConfig.next;
@@ -8955,8 +8935,6 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
                 HEYS.store.set(SCHEDULED_KEY, scheduled);
             } else if (U.lsSet) {
                 U.lsSet(SCHEDULED_KEY, scheduled);
-            } else {
-                localStorage.setItem(SCHEDULED_KEY, JSON.stringify(scheduled));
             }
 
             // Уведомление об отложке
@@ -8990,8 +8968,6 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
                     HEYS.store.set(SCHEDULED_KEY, remaining);
                 } else if (U.lsSet) {
                     U.lsSet(SCHEDULED_KEY, remaining);
-                } else {
-                    localStorage.setItem(SCHEDULED_KEY, JSON.stringify(remaining));
                 }
             }
 
@@ -9268,8 +9244,6 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
                     HEYS.store.set(key, nextValue);
                 } else if (U.lsSet) {
                     U.lsSet(key, nextValue);
-                } else {
-                    localStorage.setItem(key, nextValue);
                 }
             }
         } catch (e) { }
@@ -9361,8 +9335,6 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
                     HEYS.store.set(key, value);
                 } else if (U.lsSet) {
                     U.lsSet(key, value);
-                } else {
-                    localStorage.setItem(key, value);
                 }
             } catch (e) { }
         }
@@ -9941,8 +9913,6 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
                     HEYS.store.set(TRACKING_KEY, stats);
                 } else if (U.lsSet) {
                     U.lsSet(TRACKING_KEY, stats);
-                } else {
-                    localStorage.setItem(TRACKING_KEY, JSON.stringify(stats));
                 }
             }
             return stats;
@@ -9963,8 +9933,6 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
                 HEYS.store.set(TRACKING_KEY, stats);
             } else if (U.lsSet) {
                 U.lsSet(TRACKING_KEY, stats);
-            } else {
-                localStorage.setItem(TRACKING_KEY, JSON.stringify(stats));
             }
         } catch (e) {
             // Ignore storage errors
@@ -11075,8 +11043,6 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
                 HEYS.store.set(key, value);
             } else if (U.lsSet) {
                 U.lsSet(key, value);
-            } else {
-                localStorage.setItem(key, JSON.stringify(value));
             }
         } catch (e) {
             // Ignore storage errors
@@ -13592,8 +13558,6 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
                 HEYS.store.set(key, '1');
             } else if (U.lsSet) {
                 U.lsSet(key, '1');
-            } else {
-                localStorage.setItem(key, '1');
             }
         } catch (e) {
             // Ignore storage errors
@@ -13683,8 +13647,6 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
                         HEYS.store.set(key, String(currentStreak));
                     } else if (U.lsSet) {
                         U.lsSet(key, String(currentStreak));
-                    } else {
-                        localStorage.setItem(key, String(currentStreak));
                     }
                 } catch (e) {
                     // Ignore storage errors
@@ -17064,7 +17026,7 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
                         triggers: ['tab_open'],
                         ttl: 6000,
                         onShow: () => {
-                            try { localStorage.setItem('heys_best_day_last_check', Date.now().toString()); } catch (e) { }
+                            try { const H = window.HEYS || {}, U = H.utils || {}; if (H.store?.set) H.store.set('heys_best_day_last_check', String(Date.now())); else if (U.lsSet) U.lsSet('heys_best_day_last_check', String(Date.now())); } catch (e) { }
                         }
                     });
                 }
@@ -17146,7 +17108,7 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
                 score: 1.0,
                 triggers: ['product_added'],
                 ttl: 5000,
-                onShow: () => { try { localStorage.setItem('heys_first_meal_tip', '1'); } catch (e) { } }
+                onShow: () => { try { const H = window.HEYS || {}, U = H.utils || {}; if (H.store?.set) H.store.set('heys_first_meal_tip', '1'); else if (U.lsSet) U.lsSet('heys_first_meal_tip', '1'); } catch (e) { } }
             });
         }
 
@@ -17769,7 +17731,7 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
                         triggers: ['tab_open'],
                         ttl: 6000,
                         onShow: () => {
-                            try { localStorage.setItem('heys_evening_snacker_check', Date.now().toString()); } catch (e) { }
+                            try { const H = window.HEYS || {}, U = H.utils || {}; if (H.store?.set) H.store.set('heys_evening_snacker_check', String(Date.now())); else if (U.lsSet) U.lsSet('heys_evening_snacker_check', String(Date.now())); } catch (e) { }
                         }
                     });
                 }
@@ -17802,7 +17764,7 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
                         triggers: ['tab_open'],
                         ttl: 6000,
                         onShow: () => {
-                            try { localStorage.setItem('heys_morning_skipper_check', Date.now().toString()); } catch (e) { }
+                            try { const H = window.HEYS || {}, U = H.utils || {}; if (H.store?.set) H.store.set('heys_morning_skipper_check', String(Date.now())); else if (U.lsSet) U.lsSet('heys_morning_skipper_check', String(Date.now())); } catch (e) { }
                         }
                     });
                 }
@@ -17850,7 +17812,7 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
                         triggers: ['tab_open'],
                         ttl: 10000,
                         onShow: () => {
-                            try { localStorage.setItem('heys_chronic_undereating_check', Date.now().toString()); } catch (e) { }
+                            try { const H = window.HEYS || {}, U = H.utils || {}; if (H.store?.set) H.store.set('heys_chronic_undereating_check', String(Date.now())); else if (U.lsSet) U.lsSet('heys_chronic_undereating_check', String(Date.now())); } catch (e) { }
                         }
                     });
                 }

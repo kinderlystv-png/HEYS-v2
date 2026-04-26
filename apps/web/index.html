@@ -734,10 +734,10 @@
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
     <link rel="dns-prefetch" href="https://cdn.jsdelivr.net" />
     <!-- Preload критических boot-бандлов (2026-02-25 bundle migration) -->
-    <link rel="preload" href="boot-core.bundle.c5fbafd5cc6f.js" as="script" />
-    <link rel="preload" href="boot-calc.bundle.330aa3649edf.js" as="script" />
-    <link rel="preload" href="boot-day.bundle.6d30de05cb86.js" as="script" />
-    <link rel="preload" href="boot-app.bundle.98d297f37dc0.js" as="script" />
+    <link rel="preload" href="boot-core.bundle.65d9e212fdfa.js" as="script" />
+    <link rel="preload" href="boot-calc.bundle.eebe5eb25b57.js" as="script" />
+    <link rel="preload" href="boot-day.bundle.a54ebdd52ba2.js" as="script" />
+    <link rel="preload" href="boot-app.bundle.a1f9d9f76f04.js" as="script" />
     <link rel="preload" href="boot-init.bundle.c687b8274f01.js" as="script" />
 
     <!-- React теперь бандлится локально через Vite (миграция с CDN 2026-01-21) -->
@@ -2342,7 +2342,7 @@
 
             // ─── Статус загрузки бандлов ──────────────────────────────────────
             var BOOT_BUNDLES = ['react-bundle', 'boot-core', 'boot-calc', 'boot-day', 'boot-app', 'boot-init'];
-            var POST_BUNDLES = ['postboot-1-game', 'postboot-2-insights', 'postboot-3-ui'];
+            var POST_BUNDLES = ['postboot-1-game-eager', 'postboot-2-insights-eager', 'postboot-3-ui-eager'];
 
             function hlgLogBundleStatus(trigger) {
                 var entries = (performance && performance.getEntriesByType) ? performance.getEntriesByType('resource') : [];
@@ -2857,10 +2857,10 @@
          Сгенерировано: node scripts/bundle-legacy.mjs  (pnpm bundle:legacy)
          Состав и хеши: bundle-manifest.json
          Хеш в имени = вечный кэш (cache-first SW). -->
-    <script defer src="boot-core.bundle.c5fbafd5cc6f.js" fetchpriority="high"></script>
-    <script defer src="boot-calc.bundle.330aa3649edf.js"></script>
-    <script defer src="boot-day.bundle.6d30de05cb86.js"></script>
-    <script defer src="boot-app.bundle.98d297f37dc0.js"></script>
+    <script defer src="boot-core.bundle.65d9e212fdfa.js" fetchpriority="high"></script>
+    <script defer src="boot-calc.bundle.eebe5eb25b57.js"></script>
+    <script defer src="boot-day.bundle.a54ebdd52ba2.js"></script>
+    <script defer src="boot-app.bundle.a1f9d9f76f04.js"></script>
     <script defer src="boot-init.bundle.c687b8274f01.js"
         onerror="window.__heysShowRecoveryUI && window.__heysShowRecoveryUI('CRITICAL_SCRIPT_LOAD: boot-init.bundle')"></script>
 
@@ -2890,9 +2890,9 @@
     <script>
         (function () {
             var POST_BOOT_BUNDLES = [
-                'postboot-1-game.bundle.6932cf4555bb.js',
-                'postboot-2-insights.bundle.fa0e6ac4bba4.js',
-                'postboot-3-ui.bundle.c9a5fc35101c.js'
+                'postboot-1-game-eager.bundle.12640debd1c9.js',
+                'postboot-2-insights-eager.bundle.a0a7ac600be1.js',
+                'postboot-3-ui-eager.bundle.54dd0b5be5b6.js'
             ];
             var LOCALHOST_TASKS_SOURCE_OVERRIDE = 'heys_planning_tasks_v1.js';
             var total = POST_BOOT_BUNDLES.length;
@@ -3110,6 +3110,25 @@
                         ? ((window.__heysSkelReplacedAt - window.__heysSkelStart) / 1000).toFixed(1)
                         : '?';
                     console.info('[PERF] 🏁 SESSION SUMMARY: total=' + bootTime + 's, skeleton=' + skelDuration + 's visible, transfer=' + (totalTransfer / 1024).toFixed(0) + 'KB');
+
+                    // Boot perf baseline — rolling last 10 boots in LS for before/after comparison.
+                    // Cold = first session per 7-day overlay-migration window.
+                    try {
+                        var raw = localStorage.getItem('heys_boot_perf_baseline_v1');
+                        var arr = raw ? JSON.parse(raw) : [];
+                        if (!Array.isArray(arr)) arr = [];
+                        var cold = localStorage.getItem('heys_overlay_migration_status') !== 'success';
+                        arr.push({
+                            ts: Date.now(),
+                            bootTime: bootTime === '?' ? null : parseFloat(bootTime),
+                            skelDuration: skelDuration === '?' ? null : parseFloat(skelDuration),
+                            cold: cold,
+                            transferKB: Math.round(totalTransfer / 1024),
+                            optimized: !!(window.HEYS && window.HEYS.flags && window.HEYS.flags.isEnabled('boot_optimized_v1')),
+                        });
+                        if (arr.length > 10) arr = arr.slice(arr.length - 10);
+                        localStorage.setItem('heys_boot_perf_baseline_v1', JSON.stringify(arr));
+                    } catch (_) { /* noop */ }
                 } catch (e) {
                     console.warn('[PERF] ⚠️ Resource Timing unavailable:', e.message);
                 }

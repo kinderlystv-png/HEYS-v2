@@ -63,6 +63,12 @@ else
   fi
 fi
 
+echo "🔍 Проверка прямых localStorage.setItem (Phase 3 lint gate, warn-only)..."
+node scripts/lint-direct-localstorage-writes.mjs || {
+  echo "❌ localStorage lint завершился с ошибкой (новые нелистованные вызовы). Push отменён."
+  exit 1
+}
+
 echo "🧪 Запуск критических тестов sync/auth/storage/products/models..."
 
 # Запускаем тесты для синхронизации, авторизации, storage layer, защиты продуктов и моделей данных

@@ -2144,6 +2144,23 @@
         );
     }
 
+    var _lazyTabCache = Object.create(null);
+    function _lazyTab(key, loaderKey, getComp) {
+        if (!_lazyTabCache[key]) {
+            _lazyTabCache[key] = React.lazy(function () {
+                var loadFn = window.HEYS && window.HEYS[loaderKey];
+                var p = loadFn ? loadFn() : Promise.resolve();
+                return p.then(function () {
+                    var comp = getComp();
+                    return { default: comp || function _LazyTabPlaceholder() { return null; } };
+                }).catch(function () {
+                    return { default: function _LazyTabError() { return null; } };
+                });
+            });
+        }
+        return _lazyTabCache[key];
+    }
+
     function AppTabContent(props) {
         const {
             tab,
@@ -2163,6 +2180,12 @@
             RationTabWithCloudSync,
             UserTabWithCloudSync,
         } = props;
+
+        const [, _tickPostboot] = React.useReducer(function(n) { return n + 1; }, 0);
+        React.useEffect(function() {
+            window.addEventListener('heys:postboot-lazy-ready', _tickPostboot);
+            return function() { window.removeEventListener('heys:postboot-lazy-ready', _tickPostboot); };
+        }, []);
 
         const TAB_SKELETON_DELAY_MS = 240;
         const tabSkeletonSince = window.__heysTabSkeletonSince = window.__heysTabSkeletonSince || Object.create(null);
@@ -2256,25 +2279,29 @@
                         clientId,
                     }))
                     : tab === 'insights'
-                        ? (window.HEYS?.PredictiveInsights?.components?.InsightsTab
-                            ? wrapReactProfiler('InsightsTab', React.createElement(window.HEYS.PredictiveInsights.components.InsightsTab, {
-                                key: 'insights_' + String(clientId || '') + '_' + selectedDate,
-                                lsGet: window.HEYS?.utils?.lsGet,
-                                profile: null,
-                                pIndex: null,
-                                optimum: null,
-                                selectedDate: selectedDate,
-                            }))
-                            : renderTabFallback('insights', tabFallbackSkeleton('🔮', 'Готовим инсайты…', 280)))
+                        ? React.createElement(React.Suspense, { fallback: tabFallbackSkeleton('🔮', 'Готовим инсайты…', 280) },
+                            wrapReactProfiler('InsightsTab', React.createElement(
+                                _lazyTab('insights', '__loadPostboot3Ui', function() { return window.HEYS?.PredictiveInsights?.components?.InsightsTab; }),
+                                {
+                                    key: 'insights_' + String(clientId || '') + '_' + selectedDate,
+                                    lsGet: window.HEYS?.utils?.lsGet,
+                                    profile: null,
+                                    pIndex: null,
+                                    optimum: null,
+                                    selectedDate: selectedDate,
+                                }
+                            )))
                         : tab === 'month'
-                            ? (window.HEYS?.ReportsTab
-                                ? React.createElement(window.HEYS.ReportsTab, {
-                                    key: 'month_' + String(clientId || '') + '_' + selectedDate,
-                                    selectedDate,
-                                    setSelectedDate,
-                                    clientId,
-                                })
-                                : renderTabFallback('month', tabFallbackSkeleton('📊', 'Готовим отчёты…', 280)))
+                            ? React.createElement(React.Suspense, { fallback: tabFallbackSkeleton('📊', 'Готовим отчёты…', 280) },
+                                React.createElement(
+                                    _lazyTab('month', '__loadPostboot3Ui', function() { return window.HEYS?.ReportsTab; }),
+                                    {
+                                        key: 'month_' + String(clientId || '') + '_' + selectedDate,
+                                        selectedDate: selectedDate,
+                                        setSelectedDate: setSelectedDate,
+                                        clientId: clientId,
+                                    }
+                                ))
                             : (tab === 'stats' || tab === 'diary')
                                 ? null
                                 : tab === 'user'
@@ -2286,38 +2313,44 @@
                                         clientId,
                                     })
                                     : tab === 'overview'
-                                        ? (window.HEYS && window.HEYS.DataOverviewTab
-                                            ? React.createElement(window.HEYS.DataOverviewTab, {
-                                                key: 'overview_' + String(clientId || ''),
-                                                clientId,
-                                                setTab,
-                                                setSelectedDate,
-                                            })
-                                            : renderTabFallback('overview', tabFallbackSkeleton('📋', 'Готовим обзор…', 200)))
+                                        ? React.createElement(React.Suspense, { fallback: tabFallbackSkeleton('📋', 'Готовим обзор…', 200) },
+                                            React.createElement(
+                                                _lazyTab('overview', '__loadPostboot3Ui', function() { return window.HEYS?.DataOverviewTab; }),
+                                                {
+                                                    key: 'overview_' + String(clientId || ''),
+                                                    clientId: clientId,
+                                                    setTab: setTab,
+                                                    setSelectedDate: setSelectedDate,
+                                                }
+                                            ))
                                         : tab === 'widgets'
-                                            ? (window.HEYS && window.HEYS.Widgets && window.HEYS.Widgets.WidgetsTab
-                                                ? React.createElement(window.HEYS.Widgets.WidgetsTab, {
-                                                    // NOTE: syncVer намеренно убран из key — WidgetsTab подписан на
-                                                    // data:updated/day:updated события и не нуждается в remount при синке.
-                                                    // syncVer в key вызывает flash всего контента вкладки.
-                                                    key: 'widgets_' + String(clientId || '') + '_' + selectedDate,
-                                                    clientId,
-                                                    cloudUser,
-                                                    selectedDate,
-                                                    setTab,
-                                                    setSelectedDate,
-                                                })
-                                                : renderTabFallback('widgets', tabFallbackSkeleton('🧩', 'Готовим виджеты…', 200)))
+                                            ? React.createElement(React.Suspense, { fallback: tabFallbackSkeleton('🧩', 'Готовим виджеты…', 200) },
+                                                React.createElement(
+                                                    _lazyTab('widgets', '__loadPostboot3Ui', function() { return window.HEYS?.Widgets?.WidgetsTab; }),
+                                                    {
+                                                        // NOTE: syncVer намеренно убран из key — WidgetsTab подписан на
+                                                        // data:updated/day:updated события и не нуждается в remount при синке.
+                                                        // syncVer в key вызывает flash всего контента вкладки.
+                                                        key: 'widgets_' + String(clientId || '') + '_' + selectedDate,
+                                                        clientId: clientId,
+                                                        cloudUser: cloudUser,
+                                                        selectedDate: selectedDate,
+                                                        setTab: setTab,
+                                                        setSelectedDate: setSelectedDate,
+                                                    }
+                                                ))
                                             : tab === 'tasks'
-                                                ? ((!cloudUser && clientId) && window.HEYS?.PlanningTab
-                                                    ? React.createElement(window.HEYS.PlanningTab, {
-                                                        key: 'tasks_' + String(clientId || ''),
-                                                        clientId,
-                                                        defaultHomeScreen: defaultTasksSubtab,
-                                                    })
-                                                    : ((!cloudUser && clientId)
-                                                        ? renderTabFallback('tasks', tabFallbackSkeleton('✅', 'Готовим задачи…', 280))
-                                                        : null))
+                                                ? ((!cloudUser && clientId)
+                                                    ? React.createElement(React.Suspense, { fallback: tabFallbackSkeleton('✅', 'Готовим задачи…', 280) },
+                                                        React.createElement(
+                                                            _lazyTab('tasks', '__loadPostboot3Ui', function() { return window.HEYS?.PlanningTab; }),
+                                                            {
+                                                                key: 'tasks_' + String(clientId || ''),
+                                                                clientId: clientId,
+                                                                defaultHomeScreen: defaultTasksSubtab,
+                                                            }
+                                                        ))
+                                                    : null)
                                                 : renderTabFallback('default_' + String(tab || 'unknown'), tabFallbackSkeleton('📂', 'Готовим вкладку…', 280))
             )
         );

@@ -7,6 +7,60 @@
 
     const TAB_SKELETON_DELAY_MS = 260;
 
+    // ──────────────────────────────────────────────────────────────────────
+    // Phase 5C: one-shot cleanup of *_insights_feedback_default keys.
+    // These are written before profile loads (no UUID → wrong key scope),
+    // can reach 970 KB+, and are the main cause of localStorage overflow.
+    // On cleanup: merge unique records into the per-client key, then delete.
+    // ──────────────────────────────────────────────────────────────────────
+    let _p5cRan = false;
+    function _runDefaultFeedbackCleanup(cid) {
+        if (_p5cRan) return;
+        _p5cRan = true;
+        try {
+            const FEEDBACK_MAX_HISTORY = 30;
+            const defaultKeys = [];
+            for (let i = 0; i < localStorage.length; i++) {
+                const k = localStorage.key(i);
+                if (k && k.includes('_insights_feedback_') && k.endsWith('_default')) {
+                    defaultKeys.push(k);
+                }
+            }
+            if (defaultKeys.length === 0) return;
+            for (const dk of defaultKeys) {
+                try {
+                    const raw = localStorage.getItem(dk);
+                    if (!raw) { localStorage.removeItem(dk); continue; }
+                    let arr;
+                    try { arr = JSON.parse(raw); } catch (_) { localStorage.removeItem(dk); continue; }
+                    if (!Array.isArray(arr)) { localStorage.removeItem(dk); continue; }
+                    // Migrate into the per-client key when clientId is known.
+                    if (cid) {
+                        const clientKey = dk.replace(/_default$/, '_' + cid);
+                        try {
+                            const existingRaw = localStorage.getItem(clientKey);
+                            const existing = (() => { try { return JSON.parse(existingRaw || '[]'); } catch (_) { return []; } })();
+                            const byId = new Map();
+                            for (const rec of [...arr, ...(Array.isArray(existing) ? existing : [])]) {
+                                if (rec && rec.id && !byId.has(rec.id)) byId.set(rec.id, rec);
+                            }
+                            const merged = Array.from(byId.values())
+                                .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))
+                                .slice(0, FEEDBACK_MAX_HISTORY);
+                            if (window.HEYS && window.HEYS.store && typeof window.HEYS.store.set === 'function') {
+                                window.HEYS.store.set(clientKey, merged);
+                            } else {
+                                localStorage.setItem(clientKey, JSON.stringify(merged));
+                            }
+                        } catch (_) { /* noop — merge failure must not prevent _default deletion */ }
+                    }
+                    localStorage.removeItem(dk);
+                    console.info('[HEYS.p5c] Cleaned default feedback key', dk, '(' + arr.length + ' records)', cid ? '→ merged to per-client key' : '(no cid, deleted only)');
+                } catch (_) { /* noop */ }
+            }
+        } catch (_) { /* noop */ }
+    }
+
     function useDelayedSkeleton(shouldShow, key) {
         const [visible, setVisible] = React.useState(false);
 
@@ -124,7 +178,15 @@
                         window.__heysGatedRender = false;
                     }
                     console.info('[HEYS.sceleton] ✅ DayTab unlocked:', reason);
-                    setLoading(false);
+                    // boot_optimized_v1: defer the heavy App-tree render via startTransition
+                    // so Header/Skeleton stay interactive while DayTab subtree commits in
+                    // a deferred lane. Saves ~150-300ms perceived jank
+                    // (plan gleaming-pondering-dewdrop.md, Phase 1.2).
+                    if (React.startTransition && window.HEYS?.flags?.isEnabled?.('boot_optimized_v1')) {
+                        React.startTransition(() => setLoading(false));
+                    } else {
+                        setLoading(false);
+                    }
                 };
 
                 // v9.9: CSS Gate #2 removed — CSS Gate #1 (heys_app_initialize_v1.js)
@@ -576,6 +638,30 @@
                     typeB: result.typeB,
                     total: result.rows.length,
                 });
+
+                // ──────────────────────────────────────────────────────────
+                // Phase 5C: delete *_default feedback keys (overflow keys
+                // written before profile loaded — main source of 970 KB blobs).
+                // Runs once per session; migrates records to per-client key.
+                // ──────────────────────────────────────────────────────────
+                _runDefaultFeedbackCleanup(clientId);
+
+                // ──────────────────────────────────────────────────────────
+                // Phase 2b: storage audit (enforce mode when flag on, else shadow).
+                // Fires once after first overlay migration completes successfully;
+                // re-fires on subsequent boots only if 6h gate has lapsed OR
+                // audit version changed. With storage_audit_enforce:true, actually
+                // prunes/wipes oversized keys; manual keys go through _mergeAndPrune.
+                // ──────────────────────────────────────────────────────────
+                try {
+                    if (window.HEYS.storageRegistry && typeof window.HEYS.storageRegistry.runAuditOnce === 'function') {
+                        window.HEYS.storageRegistry.runAuditOnce().catch((e) => {
+                            console.warn('[HEYS.storageRegistry] audit error (non-fatal):', e && e.message);
+                        });
+                    }
+                } catch (e) {
+                    console.warn('[HEYS.storageRegistry] audit invocation failed (non-fatal):', e && e.message);
+                }
             };
 
             // Если sync для этого клиента уже был — сразу загружаем продукты

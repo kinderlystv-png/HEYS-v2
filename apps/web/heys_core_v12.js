@@ -196,32 +196,26 @@
    */
   function lsSet(key, val) {
     try {
-      // 🔧 FIX: Для client-specific ключей используем HEYS.store.set (с scoped-ключами)
-      if (window.HEYS?.store?.set && window.HEYS?.currentClientId) {
-        const clientSpecificKeys = ['heys_products', 'heys_profile', 'heys_hr_zones', 'heys_norms', 'heys_game'];
-        // ⚠️ ИСКЛЮЧЕНИЕ: heys_dayv2_date — глобальный ключ (текущая выбранная дата), НЕ client-specific!
-        const isGlobalKey = key === 'heys_dayv2_date';
-        const isClientSpecific = !isGlobalKey && (clientSpecificKeys.some(k => key === k || key.includes('dayv2_')));
-        if (isClientSpecific) {
-          window.HEYS.store.set(key, val);
-          // Событие для offline-индикатора
-          const type = key.includes('dayv2') ? 'meal'
-            : key.includes('product') ? 'product'
-              : key.includes('profile') ? 'profile'
-                : 'data';
-          window.dispatchEvent(new CustomEvent('heys:data-saved', { detail: { key, type } }));
-          return;
-        }
+      // Route ALL writes through HEYS.store.set when available — it compresses automatically.
+      // Store.set's scoped() is idempotent: keys already containing the cid are returned unchanged,
+      // so nsKey-scoped keys (from the client-scoped IIFE below) are never double-prefixed.
+      if (window.HEYS?.store?.set) {
+        window.HEYS.store.set(key, val);
+        const type = key.includes('dayv2') ? 'meal'
+          : key.includes('product') ? 'product'
+            : key.includes('profile') ? 'profile'
+              : 'data';
+        window.dispatchEvent(new CustomEvent('heys:data-saved', { detail: { key, type } }));
+        return;
       }
-      // PERF: skip write + event dispatch if value is identical to what's already stored
+      // Store not yet ready (early boot) — write uncompressed.
+      // Skip if identical to avoid spurious events.
       const serialized = JSON.stringify(val);
       try {
         const existing = localStorage.getItem(key);
         if (existing === serialized) return;
       } catch (_) { /* proceed to write */ }
-      // Fallback на прямой localStorage для глобальных ключей
       localStorage.setItem(key, serialized);
-      // Событие для offline-индикатора с типом изменения
       const type = key.includes('dayv2') ? 'meal'
         : key.includes('product') ? 'product'
           : key.includes('profile') ? 'profile'

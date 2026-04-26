@@ -52,6 +52,15 @@
     // === Products Overlay v2 (architectural refactor, see plan structured-mixing-stallman.md) ===
     'overlay_products_v2': true,        // canonical reader (Phase γ rollout 2026-04-25)
     'dual_write_legacy': true,          // keep writing legacy heys_products for backward-compat
+
+    // === Boot performance optimization (plan gleaming-pondering-dewdrop.md) ===
+    'boot_optimized_v1': true,          // master gate for boot perf changes; disable for instant rollback
+    'calendar_diag': false,             // enable verbose 30-day LS scan in useDatePickerActiveDays
+
+    // === Storage audit enforcement (plan structured-mixing-stallman.md Phase 2b) ===
+    // Phase 5: enforcement ON by default. Boot audit prunes oversized keys per registry policies;
+    // cloudSync:'merge' keys (insights_feedback, hidden_products) go through _mergeAndPrune.
+    'storage_audit_enforce': true,
   };
 
   /**

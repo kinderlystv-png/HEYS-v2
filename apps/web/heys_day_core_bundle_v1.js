@@ -3156,13 +3156,21 @@
                             });
                         }
                     } catch (_) { /* noop */ }
-                    setDay(prevDay => {
-                        const eq = HEYS.dayUtils && typeof HEYS.dayUtils.isSameDayHydratedContent === 'function'
-                            ? HEYS.dayUtils.isSameDayHydratedContent(prevDay, newDay)
-                            : false;
-                        if (eq) return prevDay;
-                        return newDay;
-                    });
+                    const _commitStored = function() {
+                        setDay(prevDay => {
+                            const eq = HEYS.dayUtils && typeof HEYS.dayUtils.isSameDayHydratedContent === 'function'
+                                ? HEYS.dayUtils.isSameDayHydratedContent(prevDay, newDay)
+                                : false;
+                            if (eq) return prevDay;
+                            return newDay;
+                        });
+                        setIsHydrated(true);
+                    };
+                    if (React.startTransition && window.HEYS?.flags?.isEnabled?.('boot_optimized_v1')) {
+                        React.startTransition(_commitStored);
+                    } else {
+                        _commitStored();
+                    }
                 } else {
                     // create a clean default day for the selected date (don't inherit previous trainings)
                     try {
@@ -3185,12 +3193,16 @@
                         stressAvg: '',
                         dayComment: ''
                     }, profNow);
-                    setDay(defaultDay);
+                    const _commitDefault = function() {
+                        setDay(defaultDay);
+                        setIsHydrated(true);
+                    };
+                    if (React.startTransition && window.HEYS?.flags?.isEnabled?.('boot_optimized_v1')) {
+                        React.startTransition(_commitDefault);
+                    } else {
+                        _commitDefault();
+                    }
                 }
-
-                // ВАЖНО: данные загружены, теперь можно сохранять
-                // Продукты приходят через props.products, не нужно обновлять локально
-                setIsHydrated(true);
             };
 
             if (clientId && cloud && typeof cloud.bootstrapClientSync === 'function') {

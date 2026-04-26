@@ -1,0 +1,28 @@
+{
+  "_comment": "Boot performance baselines for Phase 2-3 bundle split (plan gleaming-pondering-dewdrop.md). Checked by scripts/perf-baseline-check.mjs (CI, PR-only).",
+  "_updated": "2026-04-26",
+
+  "eager_stub_size_max_bytes": 50000,
+
+  "lazy_chunk_load_p95_slow_4g_ms": 2500,
+  "lazy_chunk_load_p95_4g_ms": 800,
+
+  "boot_warm_total_p95_ms": 500,
+  "boot_cold_total_p95_ms": 3500,
+
+  "calendar_diag_skipped_when_flag_off": true,
+
+  "first_render_components_max": 60,
+
+  "eager_stub_sizes_actual": {
+    "postboot-1-game-eager": 2600,
+    "postboot-2-insights-eager": 3200,
+    "postboot-3-ui-eager": 7900
+  },
+
+  "lazy_chunk_sizes_actual": {
+    "postboot-1-game-lazy": 1640000,
+    "postboot-2-insights-lazy": 1780000,
+    "postboot-3-ui-lazy": 2210000
+  }
+}

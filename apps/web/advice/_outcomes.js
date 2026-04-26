@@ -128,8 +128,6 @@
                 HEYS.store.set(OUTCOME_PROFILE_KEY, payload);
             } else if (U.lsSet) {
                 U.lsSet(OUTCOME_PROFILE_KEY, payload);
-            } else {
-                localStorage.setItem(OUTCOME_PROFILE_KEY, JSON.stringify(payload));
             }
         } catch (e) {
             // Ignore storage errors
@@ -166,8 +164,6 @@
                 HEYS.store.set(OUTCOME_PENDING_KEY, payload);
             } else if (U.lsSet) {
                 U.lsSet(OUTCOME_PENDING_KEY, payload);
-            } else {
-                localStorage.setItem(OUTCOME_PENDING_KEY, JSON.stringify(payload));
             }
         } catch (e) {
             // Ignore storage errors

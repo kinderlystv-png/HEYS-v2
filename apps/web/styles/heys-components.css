@@ -12233,14 +12233,6 @@ body.tour-active .ios-pwa-banner {
   justify-content: center;
 }
 
-.diary-compact-summary__pill--trend {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  column-gap: clamp(3px, 0.8vw, 5px);
-  justify-content: initial;
-}
-
 .diary-compact-summary__metric {
   display: inline-flex;
   align-items: center;
@@ -12248,9 +12240,7 @@ body.tour-active .ios-pwa-banner {
 }
 
 .diary-compact-summary__metric--trend {
-  justify-self: center;
   min-width: 0;
-  padding-right: 2px;
 }
 
 .diary-compact-summary__label {
@@ -12338,18 +12328,14 @@ body.tour-active .ios-pwa-banner {
 
 @media (max-width: 640px) {
   .diary-compact-summary {
-    grid-template-columns: minmax(0, 1.02fr) minmax(0, 0.74fr) minmax(0, 1.66fr);
+    grid-template-columns: minmax(0, 1.12fr) minmax(0, 0.70fr) minmax(0, 1.50fr);
     gap: 5px;
     margin-bottom: 16px;
   }
 
   .diary-compact-summary__pill {
     min-height: 38px;
-    padding: 7px 10px;
-  }
-
-  .diary-compact-summary__pill--trend {
-    column-gap: 2px;
+    padding: 7px 8px;
   }
 
   .diary-compact-summary__label {

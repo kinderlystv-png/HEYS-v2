@@ -168,6 +168,12 @@ async function proxyToProd(req, res) {
     // Стриминг в браузер — не ждём полного тела от апстрима в памяти Node (быстрее bootstrap на больших JSON)
     if (proxyRes.body) {
       const nodeReadable = Readable.fromWeb(proxyRes.body);
+      // Undici emits 'error' on the Readable in the next tick (via emitErrorNT) when the upstream
+      // connection is aborted (ETIMEDOUT). Without a listener Node throws "Unhandled error event"
+      // and crashes. pipeline() attaches its own listener synchronously, but loses the race on
+      // Node 24 because the error fires in process.processTicksAndRejections after our await
+      // suspension point. A noop listener prevents the crash; pipeline's rejection still propagates.
+      nodeReadable.on('error', () => {});
       await pipeline(nodeReadable, res);
     } else {
       res.end();
@@ -251,6 +257,22 @@ app.use((req, res) => {
     method: req.method,
     path: req.originalUrl,
   });
+});
+
+// Dev-server safety net: network errors from the upstream proxy (ETIMEDOUT, terminated, etc.)
+// occasionally escape to the process level. Log and continue — don't crash the dev server.
+process.on('uncaughtException', (err) => {
+  const msg = err?.message ?? String(err);
+  const isProxyNoise = /terminated|ETIMEDOUT|ECONNRESET|Premature close/i.test(msg);
+  if (isProxyNoise) {
+    console.warn('[Dev Proxy] uncaught network error (ignored):', msg);
+  } else {
+    console.error('[Server] uncaughtException — re-throwing:', err);
+    process.exit(1);
+  }
+});
+process.on('unhandledRejection', (reason) => {
+  console.error('[Server] unhandledRejection:', reason);
 });
 
 // Start server

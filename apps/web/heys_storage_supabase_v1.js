@@ -2379,9 +2379,10 @@
         const key = global.localStorage.key(i);
         if (!key) continue;
         const matchesSuffix = suffixMatchers.some((suffix) => key.endsWith(suffix));
-        const isInsightsFeedbackKey = key.includes('_insights_feedback_') || key.startsWith('heys_insights_feedback_');
         const isTestKey = /^test_/i.test(key);
-        if (exactKeys.has(key) || key.startsWith('heys_last_grams_') || matchesSuffix || isInsightsFeedbackKey || isTestKey) {
+        // Note: _insights_feedback_* keys are intentionally excluded here.
+        // cleanupViaRegistry() prunes them to maxSize instead of wiping, preserving ML weights.
+        if (exactKeys.has(key) || key.startsWith('heys_last_grams_') || matchesSuffix || isTestKey) {
           optionalKeys.push(key);
         }
       }
@@ -2394,6 +2395,77 @@
 
       return optionalKeys.length;
     } catch (e) {
+      return 0;
+    }
+  }
+
+  /**
+   * Registry-aware cleanup: prune/wipe localStorage keys per their declared policies.
+   * Called at the start of aggressiveCleanup() — before any hardcoded pattern deletion.
+   * Unlike cleanupOptionalPreferenceStorage which wipes entire arrays, this function
+   * PRUNES array keys to their policy maxSize, preserving the most recent records.
+   * Handles insights_feedback keys safely: prune to 30 records, not delete.
+   * Returns estimated bytes freed.
+   */
+  function cleanupViaRegistry() {
+    try {
+      const reg = global.HEYS && global.HEYS.storageRegistry;
+      if (!reg || typeof reg.match !== 'function') return 0;
+
+      const keys = [];
+      for (let i = 0; i < global.localStorage.length; i++) {
+        const k = global.localStorage.key(i);
+        if (k) keys.push(k);
+      }
+
+      let freed = 0;
+      for (const k of keys) {
+        try {
+          if (reg.isNeverTouch && reg.isNeverTouch(k)) continue;
+          const policy = reg.match(k);
+          if (!policy || policy.maxSize == null) continue;
+          const raw = global.localStorage.getItem(k);
+          if (!raw) continue;
+          const sizeBytes = (k.length + raw.length) * 2;
+          if (sizeBytes <= policy.maxSize) continue;
+
+          if (policy.maxSize === 0 || policy.pruneStrategy === 'wipe') {
+            global.localStorage.removeItem(k);
+            freed += sizeBytes;
+            logCritical('🧹 [registry] wipe ' + k + ': ' + (sizeBytes / 1024).toFixed(1) + ' KB');
+          } else {
+            // Prune: works for sliding-window, oldest-first, and manual keys (local-only prune in emergency).
+            let parsed;
+            try { parsed = JSON.parse(raw); } catch (_) { parsed = null; }
+            if (!Array.isArray(parsed)) {
+              global.localStorage.removeItem(k);
+              freed += sizeBytes;
+              continue;
+            }
+            // Remove from front (oldest) until the array fits within maxSize or only 1 item remains.
+            let pruned = parsed;
+            while (pruned.length > 1 && (k.length + JSON.stringify(pruned).length) * 2 > policy.maxSize) {
+              pruned = pruned.slice(1);
+            }
+            const prunedStr = JSON.stringify(pruned);
+            const prunedSize = (k.length + prunedStr.length) * 2;
+            try {
+              global.localStorage.setItem(k, prunedStr);
+              freed += sizeBytes - prunedSize;
+              logCritical('🧹 [registry] pruned ' + k + ': ' + (sizeBytes / 1024).toFixed(1) + ' KB → ' + (prunedSize / 1024).toFixed(1) + ' KB');
+            } catch (_) {
+              // If the prune write itself fails (quota), fall back to removing the key entirely.
+              global.localStorage.removeItem(k);
+              freed += sizeBytes;
+            }
+          }
+        } catch (_) { /* noop — never let one key block the rest */ }
+      }
+      if (freed > 0) {
+        logCritical('🧹 [registry] суммарно освобождено: ' + (freed / 1024).toFixed(1) + ' KB');
+      }
+      return freed;
+    } catch (_) {
       return 0;
     }
   }
@@ -2465,6 +2537,10 @@
   /** Агрессивная очистка при критическом переполнении */
   function aggressiveCleanup() {
     logQuotaThrottled('quota-aggressive', '🚨 Агрессивная очистка storage...');
+
+    // 0. Registry-aware prune: trims known keys per declared policies before any hardcoded deletion.
+    // Prevents blindly wiping user-state arrays (ML weights, feedback history) — prunes instead.
+    cleanupViaRegistry();
 
     // 1. Сначала удаляем то, что можно безопасно восстановить
     cleanupRecoverableStorage();
@@ -2542,6 +2618,12 @@
         if (quotaMeta.kind === 'recoverable_cache') {
           try { global.localStorage.removeItem(key); } catch (_) { }
           logQuotaThrottled('quota-recoverable-skip', `⚠️ [STORAGE] Quota: пропускаем recoverable cache write: ${quotaMeta.summary}`);
+          return false;
+        }
+        // Если другой таб держит advisory cleanup lock (Phase 4) — возвращаем false
+        // чтобы вызывающий код поставил запись в pending-очередь, не запуская конкурентный cleanup.
+        if (global.HEYS?.storageRegistry?.isCleanupActive?.()) {
+          logQuotaThrottled('quota-cleanup-defer', `⚠️ [STORAGE] Quota: cleanup активен в другом табе, defer: ${quotaMeta.summary}`);
           return false;
         }
         // Сначала очищаем безопасно-восстановимые ключи и старые данные
@@ -7977,6 +8059,14 @@
 
         if (productsUpdated && Array.isArray(latestProducts)) {
           if (typeof window !== 'undefined' && window.dispatchEvent) {
+            // boot_optimized_v1 / S4: bump content-version counter so React useMemo
+            // dependents (prodRec.findAlternative et al.) invalidate even when the
+            // products array reference is reused across overlay/HOT-sync writes.
+            try {
+              window.HEYS = window.HEYS || {};
+              window.HEYS.products = window.HEYS.products || {};
+              window.HEYS.products.contentVersion = (window.HEYS.products.contentVersion || 0) + 1;
+            } catch (_) { /* noop */ }
             window.dispatchEvent(new CustomEvent('heys:products-updated', {
               detail: { products: latestProducts, previousProducts, count: latestProducts.length, source: 'cloud-sync' }
             }));
@@ -10627,6 +10717,12 @@
           count: value.length,
           source
         };
+        // boot_optimized_v1 / S4: bump content-version counter (see plan).
+        try {
+          window.HEYS = window.HEYS || {};
+          window.HEYS.products = window.HEYS.products || {};
+          window.HEYS.products.contentVersion = (window.HEYS.products.contentVersion || 0) + 1;
+        } catch (_) { /* noop */ }
         window.dispatchEvent(new CustomEvent('heys:products-updated', { detail }));
         window.dispatchEvent(new CustomEvent('heysProductsUpdated', { detail }));
       }

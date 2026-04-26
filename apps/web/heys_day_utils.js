@@ -368,7 +368,7 @@
       const lsGet = U.lsGet || ((k, d) => {
         try { return JSON.parse(localStorage.getItem(k)) || d; } catch { return d; }
       });
-      const lsSet = U.lsSet || ((k, v) => localStorage.setItem(k, JSON.stringify(v)));
+      const lsSet = U.lsSet || HEYS.store?.set?.bind(HEYS.store) || ((k, v) => console.warn('[purgeFromDiary] Store unavailable; write dropped:', k));
 
       // Собираем все ключи дней
       const keys = Object.keys(localStorage).filter(k => k.includes('_dayv2_'));
@@ -768,7 +768,7 @@
         }));
       const lsSet = HEYS.store?.set
         ? (k, v) => HEYS.store.set(k, v)
-        : (U.lsSet || ((k, v) => localStorage.setItem(k, JSON.stringify(v))));
+        : (U.lsSet || ((k, v) => console.warn('[OrphanProducts.restore] Store unavailable; write dropped:', k)));
       const parseStoredValue = (raw) => {
         if (!raw) return null;
         if (typeof raw === 'object') return raw;
@@ -1355,14 +1355,11 @@
 
   function lsSet(k, v) {
     try {
-      // Приоритет: HEYS.utils (с namespace) → HEYS.store → localStorage fallback
-      if (HEYS.utils && typeof HEYS.utils.lsSet === 'function') {
-        return HEYS.utils.lsSet(k, v);
-      }
-      if (HEYS.store && typeof HEYS.store.set === 'function') {
-        return HEYS.store.set(k, v);
-      }
-      localStorage.setItem(k, JSON.stringify(v));
+      // Приоритет: HEYS.utils (с namespace + compress) → HEYS.store (compress) → drop
+      if (HEYS.utils && typeof HEYS.utils.lsSet === 'function') return HEYS.utils.lsSet(k, v);
+      if (HEYS.store && typeof HEYS.store.set === 'function') return HEYS.store.set(k, v);
+      // Neither available — should not happen post-boot; drop with warning
+      console.warn('[HEYS.day.lsSet] Store unavailable; write dropped:', k);
     } catch (e) { }
   }
 

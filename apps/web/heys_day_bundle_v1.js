@@ -7109,7 +7109,13 @@
                         });
                         return best;
                     };
-                    const alternative = findAlternative(p, products);
+                    // boot_optimized_v1 / Phase 1.3: memoize findAlternative — the
+                    // 509-product candidate pool scoring is the dominant cost when
+                    // multiple meal items render. Cache invalidates on
+                    // HEYS.products.contentVersion bump (see S4 in plan).
+                    const alternative = window.HEYS && window.HEYS.__memoFindAlt
+                        ? window.HEYS.__memoFindAlt(p, products, findAlternative)
+                        : findAlternative(p, products);
 
                     const cardContent = React.createElement('div', { className: 'mpc', style: harmToneStyle || undefined },
                         React.createElement('div', { className: 'mpc-row1' },

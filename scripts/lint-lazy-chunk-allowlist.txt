@@ -1,0 +1,4 @@
+# lint-lazy-chunk-allowlist.txt
+# One repo-root-relative path per line.
+# Files listed here are skipped by lint-lazy-chunk-constant-access.mjs.
+# Use sparingly — the lint exists to catch accidental top-level writes.

@@ -5830,13 +5830,21 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
                             });
                         }
                     } catch (_) { /* noop */ }
-                    setDay(prevDay => {
-                        const eq = HEYS.dayUtils && typeof HEYS.dayUtils.isSameDayHydratedContent === 'function'
-                            ? HEYS.dayUtils.isSameDayHydratedContent(prevDay, newDay)
-                            : false;
-                        if (eq) return prevDay;
-                        return newDay;
-                    });
+                    const _commitStored = function() {
+                        setDay(prevDay => {
+                            const eq = HEYS.dayUtils && typeof HEYS.dayUtils.isSameDayHydratedContent === 'function'
+                                ? HEYS.dayUtils.isSameDayHydratedContent(prevDay, newDay)
+                                : false;
+                            if (eq) return prevDay;
+                            return newDay;
+                        });
+                        setIsHydrated(true);
+                    };
+                    if (React.startTransition && window.HEYS?.flags?.isEnabled?.('boot_optimized_v1')) {
+                        React.startTransition(_commitStored);
+                    } else {
+                        _commitStored();
+                    }
                 } else {
                     // create a clean default day for the selected date (don't inherit previous trainings)
                     try {
@@ -5859,12 +5867,16 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
                         stressAvg: '',
                         dayComment: ''
                     }, profNow);
-                    setDay(defaultDay);
+                    const _commitDefault = function() {
+                        setDay(defaultDay);
+                        setIsHydrated(true);
+                    };
+                    if (React.startTransition && window.HEYS?.flags?.isEnabled?.('boot_optimized_v1')) {
+                        React.startTransition(_commitDefault);
+                    } else {
+                        _commitDefault();
+                    }
                 }
-
-                // ВАЖНО: данные загружены, теперь можно сохранять
-                // Продукты приходят через props.products, не нужно обновлять локально
-                setIsHydrated(true);
             };
 
             if (clientId && cloud && typeof cloud.bootstrapClientSync === 'function') {
@@ -8094,7 +8106,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
       const lsGet = U.lsGet || ((k, d) => {
         try { return JSON.parse(localStorage.getItem(k)) || d; } catch { return d; }
       });
-      const lsSet = U.lsSet || ((k, v) => localStorage.setItem(k, JSON.stringify(v)));
+      const lsSet = U.lsSet || HEYS.store?.set?.bind(HEYS.store) || ((k, v) => console.warn('[purgeFromDiary] Store unavailable; write dropped:', k));
 
       // Собираем все ключи дней
       const keys = Object.keys(localStorage).filter(k => k.includes('_dayv2_'));
@@ -8494,7 +8506,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
         }));
       const lsSet = HEYS.store?.set
         ? (k, v) => HEYS.store.set(k, v)
-        : (U.lsSet || ((k, v) => localStorage.setItem(k, JSON.stringify(v))));
+        : (U.lsSet || ((k, v) => console.warn('[OrphanProducts.restore] Store unavailable; write dropped:', k)));
       const parseStoredValue = (raw) => {
         if (!raw) return null;
         if (typeof raw === 'object') return raw;
@@ -9081,14 +9093,11 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
 
   function lsSet(k, v) {
     try {
-      // Приоритет: HEYS.utils (с namespace) → HEYS.store → localStorage fallback
-      if (HEYS.utils && typeof HEYS.utils.lsSet === 'function') {
-        return HEYS.utils.lsSet(k, v);
-      }
-      if (HEYS.store && typeof HEYS.store.set === 'function') {
-        return HEYS.store.set(k, v);
-      }
-      localStorage.setItem(k, JSON.stringify(v));
+      // Приоритет: HEYS.utils (с namespace + compress) → HEYS.store (compress) → drop
+      if (HEYS.utils && typeof HEYS.utils.lsSet === 'function') return HEYS.utils.lsSet(k, v);
+      if (HEYS.store && typeof HEYS.store.set === 'function') return HEYS.store.set(k, v);
+      // Neither available — should not happen post-boot; drop with warning
+      console.warn('[HEYS.day.lsSet] Store unavailable; write dropped:', k);
     } catch (e) { }
   }
 
@@ -18849,7 +18858,13 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
                         });
                         return best;
                     };
-                    const alternative = findAlternative(p, products);
+                    // boot_optimized_v1 / Phase 1.3: memoize findAlternative — the
+                    // 509-product candidate pool scoring is the dominant cost when
+                    // multiple meal items render. Cache invalidates on
+                    // HEYS.products.contentVersion bump (see S4 in plan).
+                    const alternative = window.HEYS && window.HEYS.__memoFindAlt
+                        ? window.HEYS.__memoFindAlt(p, products, findAlternative)
+                        : findAlternative(p, products);
 
                     const cardContent = React.createElement('div', { className: 'mpc', style: harmToneStyle || undefined },
                         React.createElement('div', { className: 'mpc-row1' },

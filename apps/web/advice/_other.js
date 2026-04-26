@@ -265,7 +265,7 @@
                         triggers: ['tab_open'],
                         ttl: 6000,
                         onShow: () => {
-                            try { localStorage.setItem('heys_best_day_last_check', Date.now().toString()); } catch (e) { }
+                            try { const H = window.HEYS || {}, U = H.utils || {}; if (H.store?.set) H.store.set('heys_best_day_last_check', String(Date.now())); else if (U.lsSet) U.lsSet('heys_best_day_last_check', String(Date.now())); } catch (e) { }
                         }
                     });
                 }
@@ -347,7 +347,7 @@
                 score: 1.0,
                 triggers: ['product_added'],
                 ttl: 5000,
-                onShow: () => { try { localStorage.setItem('heys_first_meal_tip', '1'); } catch (e) { } }
+                onShow: () => { try { const H = window.HEYS || {}, U = H.utils || {}; if (H.store?.set) H.store.set('heys_first_meal_tip', '1'); else if (U.lsSet) U.lsSet('heys_first_meal_tip', '1'); } catch (e) { } }
             });
         }
 
@@ -970,7 +970,7 @@
                         triggers: ['tab_open'],
                         ttl: 6000,
                         onShow: () => {
-                            try { localStorage.setItem('heys_evening_snacker_check', Date.now().toString()); } catch (e) { }
+                            try { const H = window.HEYS || {}, U = H.utils || {}; if (H.store?.set) H.store.set('heys_evening_snacker_check', String(Date.now())); else if (U.lsSet) U.lsSet('heys_evening_snacker_check', String(Date.now())); } catch (e) { }
                         }
                     });
                 }
@@ -1003,7 +1003,7 @@
                         triggers: ['tab_open'],
                         ttl: 6000,
                         onShow: () => {
-                            try { localStorage.setItem('heys_morning_skipper_check', Date.now().toString()); } catch (e) { }
+                            try { const H = window.HEYS || {}, U = H.utils || {}; if (H.store?.set) H.store.set('heys_morning_skipper_check', String(Date.now())); else if (U.lsSet) U.lsSet('heys_morning_skipper_check', String(Date.now())); } catch (e) { }
                         }
                     });
                 }
@@ -1051,7 +1051,7 @@
                         triggers: ['tab_open'],
                         ttl: 10000,
                         onShow: () => {
-                            try { localStorage.setItem('heys_chronic_undereating_check', Date.now().toString()); } catch (e) { }
+                            try { const H = window.HEYS || {}, U = H.utils || {}; if (H.store?.set) H.store.set('heys_chronic_undereating_check', String(Date.now())); else if (U.lsSet) U.lsSet('heys_chronic_undereating_check', String(Date.now())); } catch (e) { }
                         }
                     });
                 }

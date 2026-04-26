@@ -5,54 +5,11 @@
 
  RUN  v3.2.4 /Users/poplavskijanton/HEYS-v2/packages/core
 
- ✓ src/__tests__/user.test.ts (7 tests) 38ms
- ✓ src/__tests__/food.test.ts (9 tests) 11ms
- ❯ src/tests/security-automation-basic.test.js (23 tests | 4 failed) 88ms
-   ✓ КТ4 - Автоматизация безопасности - Базовая проверка > Файлы скриптов безопасности > SAST Scanner должен существовать 3ms
-   ✓ КТ4 - Автоматизация безопасности - Базовая проверка > Файлы скриптов безопасности > Dependency Checker должен существовать 1ms
-   ✓ КТ4 - Автоматизация безопасности - Базовая проверка > Файлы скриптов безопасности > Security Report Consolidator должен существовать 1ms
-   × КТ4 - Автоматизация безопасности - Базовая проверка > GitHub Actions Workflow > Workflow файл должен существовать 56ms
-     → expected false to be true // Object.is equality
-   × КТ4 - Автоматизация безопасности - Базовая проверка > GitHub Actions Workflow > Workflow должен содержать security jobs 1ms
-     → ENOENT: no such file or directory, open '/Users/poplavskijanton/HEYS-v2/.github/workflows/security-scan.yml'
-   ✓ КТ4 - Автоматизация безопасности - Базовая проверка > Структура безопасности > Директория scripts/security должна существовать 0ms
-   ✓ КТ4 - Автоматизация безопасности - Базовая проверка > Структура безопасности > Все основные скрипты должны быть ES modules 1ms
-   ✓ КТ4 - Автоматизация безопасности - Базовая проверка > Структура безопасности > Скрипты должны содержать правильные shebang для Node.js 1ms
-   ✓ КТ4 - Автоматизация безопасности - Базовая проверка > Конфигурация безопасности > SAST Scanner должен иметь правила безопасности 1ms
-   ✓ КТ4 - Автоматизация безопасности - Базовая проверка > Конфигурация безопасности > Dependency Checker должен проверять критические пакеты 0ms
-   ✓ КТ4 - Автоматизация безопасности - Базовая проверка > Конфигурация безопасности > Security Report должен иметь систему оценки 0ms
-   ✓ КТ4 - Автоматизация безопасности - Базовая проверка > Система отчетности > Скрипты должны поддерживать JSON отчеты 11ms
-   ✓ КТ4 - Автоматизация безопасности - Базовая проверка > Система отчетности > Должна быть поддержка HTML отчетов 0ms
-   ✓ КТ4 - Автоматизация безопасности - Базовая проверка > Система отчетности > Должна быть поддержка SARIF формата 0ms
-   × КТ4 - Автоматизация безопасности - Базовая проверка > Интеграция CI/CD > Workflow должен использовать наши скрипты 0ms
-     → ENOENT: no such file or directory, open '/Users/poplavskijanton/HEYS-v2/.github/workflows/security-scan.yml'
-   × КТ4 - Автоматизация безопасности - Базовая проверка > Интеграция CI/CD > Workflow должен поддерживать различные триггеры 2ms
-     → ENOENT: no such file or directory, open '/Users/poplavskijanton/HEYS-v2/.github/workflows/security-scan.yml'
-   ✓ КТ4 - Автоматизация безопасности - Базовая проверка > Функциональность детекции > SAST Scanner должен детектировать различные типы уязвимостей 1ms
-   ✓ КТ4 - Автоматизация безопасности - Базовая проверка > Функциональность детекции > Dependency Checker должен проверять уровни критичности 1ms
-   ✓ КТ4 - Автоматизация безопасности - Базовая проверка > Консолидация отчетов > Report Consolidator должен поддерживать множественные источники 0ms
-   ✓ КТ4 - Автоматизация безопасности - Базовая проверка > Консолидация отчетов > Должна быть система дедупликации уязвимостей 0ms
-   ✓ КТ4 - Автоматизация безопасности - Базовая проверка > Консолидация отчетов > Должны быть compliance проверки 0ms
-   ✓ КТ4 - Файловая структура проекта > Основные директории должны существовать 0ms
-   ✓ КТ4 - Файловая структура проекта > package.json должен содержать необходимые зависимости 1ms
- ✓ src/__tests__/training.test.ts (5 tests) 10ms
- ✓ src/__tests__/legacy.test.ts (18 tests) 15ms
- ✓ src/__tests__/secure.test.ts (12 tests) 35ms
-[2025-12-26 00:38:38.724] [32mINFO[39m: [36m[heys-system] Telegram auth verified successfully[39m
-    [35mservice[39m: "heys-system"
-    [35menvironment[39m: "test"
-    [35mversion[39m: "14.0.0"
-    [35mip[39m: "::ffff:127.0.0.1"
-    [35mhasInitData[39m: true
-    [35mallowedListConfigured[39m: true
-    [35muserId[39m: 123
-    [35msessionExpiresAt[39m: "2025-12-26T09:38:38.723Z"
-    [35m@timestamp[39m: "2025-12-25T21:38:38.724Z"
-    [35m@version[39m: "1"
- ✓ src/server/__tests__/router.supabase.test.ts (3 tests) 1269ms
-   ✓ serverRouter Supabase integration > issues Supabase-backed session when Telegram user is mapped  924ms
- ✓ src/__tests__/my-first.test.ts (3 tests) 5ms
- ✓ src/__tests__/basic.test.ts (3 tests) 6ms
+ ✓ src/__tests__/training.test.ts (5 tests) 19ms
+ ✓ src/__tests__/basic.test.ts (3 tests) 4ms
+ ✓ src/tests/security-automation-basic.test.js (23 tests) 108ms
+ ✓ src/__tests__/food.test.ts (9 tests) 167ms
+ ✓ src/__tests__/legacy.test.ts (18 tests) 90ms
 stdout | src/__tests__/debug-validation.test.ts > Debug Validation > should validate user schema directly
 Validation result: {
   isValid: [33mtrue[39m,
@@ -65,7 +22,7 @@ Validation result: {
     password: [32m'SecurePassword123!'[39m,
     role: [32m'user'[39m,
     isActive: [33mtrue[39m,
-    createdAt: [35m2025-12-25T21:38:43.130Z[39m
+    createdAt: [35m2026-04-26T10:29:03.580Z[39m
   }
 }
 User data: {
@@ -75,7 +32,7 @@ User data: {
   password: [32m'SecurePassword123!'[39m,
   role: [32m'user'[39m,
   isActive: [33mtrue[39m,
-  createdAt: [35m2025-12-25T21:38:43.130Z[39m
+  createdAt: [35m2026-04-26T10:29:03.580Z[39m
 }
 Schema: {
   shape: [36m[Function: shape][39m,
@@ -111,69 +68,14 @@ Schema: {
   typeName: [32m'ZodObject'[39m
 }
 
- ✓ src/__tests__/debug-validation.test.ts (1 test) 6ms
+ ✓ src/__tests__/debug-validation.test.ts (1 test) 7ms
+ ✓ src/__tests__/secure.test.ts (12 tests) 249ms
+ ✓ src/__tests__/cors-origins.test.js (3 tests) 9ms
+ ✓ src/__tests__/my-first.test.ts (3 tests) 11ms
+ ✓ src/__tests__/user.test.ts (7 tests) 318ms
 
-⎯⎯⎯⎯⎯⎯⎯ Failed Tests 4 ⎯⎯⎯⎯⎯⎯⎯
+ Test Files  10 passed (10)
+      Tests  84 passed (84)
+   Start at  13:28:54
+   Duration  14.69s (transform 3.24s, setup 2.00s, collect 7.67s, tests 980ms, environment 32.75s, prepare 16.08s)
 
- FAIL  src/tests/security-automation-basic.test.js > КТ4 - Автоматизация безопасности - Базовая проверка > GitHub Actions Workflow > Workflow файл должен существовать
-AssertionError: expected false to be true // Object.is equality
-
-[32m- Expected[39m
-[31m+ Received[39m
-
-[32m- true[39m
-[31m+ false[39m
-
- ❯ src/tests/security-automation-basic.test.js:65:43
-     63|     it('Workflow файл должен существовать', () => {
-     64|       const workflowPath = path.resolve(__dirname, '../../../../.githu…
-     65|       expect(fs.existsSync(workflowPath)).toBe(true);
-       |                                           ^
-     66|     });
-     67| 
-
-⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/4]⎯
-
- FAIL  src/tests/security-automation-basic.test.js > КТ4 - Автоматизация безопасности - Базовая проверка > GitHub Actions Workflow > Workflow должен содержать security jobs
-Error: ENOENT: no such file or directory, open '/Users/poplavskijanton/HEYS-v2/.github/workflows/security-scan.yml'
- ❯ src/tests/security-automation-basic.test.js:70:26
-     68|     it('Workflow должен содержать security jobs', () => {
-     69|       const workflowPath = path.resolve(__dirname, '../../../../.githu…
-     70|       const content = fs.readFileSync(workflowPath, 'utf8');
-       |                          ^
-     71|       
-     72|       expect(content).toContain('name: 🛡️ Security Scan & SAST');
-
-⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/4]⎯
-
- FAIL  src/tests/security-automation-basic.test.js > КТ4 - Автоматизация безопасности - Базовая проверка > Интеграция CI/CD > Workflow должен использовать наши скрипты
-Error: ENOENT: no such file or directory, open '/Users/poplavskijanton/HEYS-v2/.github/workflows/security-scan.yml'
- ❯ src/tests/security-automation-basic.test.js:170:26
-    168|     it('Workflow должен использовать наши скрипты', () => {
-    169|       const workflowPath = path.resolve(__dirname, '../../../../.githu…
-    170|       const content = fs.readFileSync(workflowPath, 'utf8');
-       |                          ^
-    171|       
-    172|       expect(content).toContain('scripts/security/sast-scan.js');
-
-⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/4]⎯
-
- FAIL  src/tests/security-automation-basic.test.js > КТ4 - Автоматизация безопасности - Базовая проверка > Интеграция CI/CD > Workflow должен поддерживать различные триггеры
-Error: ENOENT: no such file or directory, open '/Users/poplavskijanton/HEYS-v2/.github/workflows/security-scan.yml'
- ❯ src/tests/security-automation-basic.test.js:179:26
-    177|     it('Workflow должен поддерживать различные триггеры', () => {
-    178|       const workflowPath = path.resolve(__dirname, '../../../../.githu…
-    179|       const content = fs.readFileSync(workflowPath, 'utf8');
-       |                          ^
-    180|       
-    181|       expect(content).toContain('on:');
-
-⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/4]⎯
-
-
- Test Files  1 failed | 9 passed (10)
-      Tests  4 failed | 80 passed (84)
-   Start at  00:38:31
-   Duration  11.32s (transform 1.48s, setup 483ms, collect 5.68s, tests 1.48s, environment 23.58s, prepare 13.29s)
-
- ELIFECYCLE  Test failed. See above for more details.

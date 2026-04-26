@@ -1,5 +1,11 @@
 # HEYS-v2 — project instructions
 
+## Язык общения
+
+**Всегда отвечай на русском языке.** Это касается всех объяснений, вопросов,
+комментариев и любого текстового общения с пользователем. Код, переменные и
+технические идентификаторы остаются на английском.
+
 ## Local dev
 
 - **Use `pnpm dev:local`** to start the local stack. It runs API (`:4001`) and
@@ -57,6 +63,106 @@ reader is **`HEYS.OverlayStore` merged view** (file
 - `apps/web/heys_app_tabs_v1.js` — `runOverlayMigrationOnce` boot trigger.
 - `scripts/lint-shared-cache-writes.mjs` — pre-commit gate ensuring
   `_sharedProductsCache =` always pairs with `_invalidateSharedIndex()`.
+
+## Storage management (Phase 2b: enforce mode, post-2026-04)
+
+`apps/web/heys_storage_registry_v1.js` is the single source of truth for
+`localStorage` policies. Phases 1 + 2a + 2b are shipped:
+
+- **Phase 1**: registry + diagnostics, read-only.
+- **Phase 2a**: shadow-mode boot audit — proposals written to
+  `heys_storage_audit_pending_v1`, no LS mutations.
+- **Phase 2b**: enforce mode behind `storage_audit_enforce` flag (default
+  **false**). Flip to `true` via `HEYS.flags.enable('storage_audit_enforce')`
+  after reviewing pending log. `cloudSync:'merge'` keys (insights_feedback,
+  hidden_products) are NOT enforced — deferred to Phase 5 cloud-merge. Phases
+  3–5 add lint gate, quota meter, and cloud-merge for user-state keys (see plan
+  `/Users/poplavskijanton/.claude/plans/structured-mixing-stallman.md`).
+
+### Why a registry
+
+Audits found ~2.3 MB across ~10 keys with one offender
+(`_insights_feedback_default`) at 970 KB despite a declared 96 KB cap. Three
+independent failures combined: compression bypass before `Store.set` boots,
+non-retroactive cap enforcement, and a `'default'` clientId fallback. The
+registry centralises policies so caps apply uniformly at boot, on writes, and
+via diagnostics — not whack-a-mole per call site.
+
+### Public API
+
+```js
+HEYS.storageRegistry.register(name, {
+  pattern, // RegExp | exact string
+  scope, // 'per-client' | 'global' | 'per-date'
+  maxSize, // bytes; 0 = forbidden, undefined = unbounded
+  maxAge, // ms; 0 = no TTL
+  cloudSync, // 'merge' | 'mirror' | 'local-only' | 'never'
+  pruneStrategy, // 'sliding-window' | 'oldest-first' | 'wipe' | 'wipe-by-age' | 'manual'
+  description,
+});
+HEYS.storageRegistry.match(key); // first matching policy or null
+HEYS.storageRegistry.analyze(key, rawValue); // { sizeBytes, policy, violations, neverTouch }
+HEYS.storageRegistry.list();
+```
+
+### Diagnostics
+
+- `HEYS.diagnostics.storageAudit({ redact: true, topN: 20 })` — full snapshot:
+  totals, top-N keys, unknown keys (no policy), policy violations, recent audit
+  log entries. UUIDs in keys redacted to `<cid>` by default. Read-only.
+- `HEYS.diagnostics.runStorageAuditNow({ bypassLock? })` — trigger audit on
+  demand (bypasses 6h gate). In enforce mode actually deletes/prunes.
+- `HEYS.diagnostics.storageAuditPending()` — view Phase 2a shadow proposals.
+- `HEYS.diagnostics.restoreAuditDeletion(key)` — restore a key from the 24h
+  recycle bin (`heys_storage_audit_recycle_v1`). Returns
+  `{ restored, reason? }`.
+- `HEYS.diagnostics.storagePolicy(key)` — inspect a single key's policy.
+- `HEYS.diagnostics.browserStorageEstimate()` — `navigator.storage.estimate()`
+  wrapper (browser-level secondary safety net).
+- `HEYS.storageRegistry.isCleanupActive()` — returns true if another tab is
+  mid-cleanup (sync advisory flag `heys_storage_cleanup_active`, 5s TTL).
+
+### Direct-write lint gate (Phase 3, warn-only)
+
+`scripts/lint-direct-localstorage-writes.mjs` scans source files for direct
+`localStorage.setItem` calls and checks them against
+`scripts/bootstrap-bypass-allowlist.txt`. Wired into `.husky/pre-push`.
+
+- **Warn-only (Phase 3):** all allowlisted sites → stderr warnings; exit 0. New
+  (unlisted) sites → exit 1 → blocks push.
+- **Strict (Phase 5):** `--strict` flag treats all warnings as errors.
+- **Allowlist format:** `relative/path:lineNumber` per line, `#` = comment.
+  Remove entries as files are migrated.
+- **Excluded from scan:** `heys_storage_supabase_v1.js` (interceptor),
+  `heys_storage_registry_v1.js` (audit infra), generated bundles
+  (`heys_advice_bundle_v1.js`, `heys_day_bundle_v1.js`,
+  `heys_day_meals_bundle_v1.js`).
+
+Phase 3 migration complete: `apps/web/advice/*.js` (24 sites) migrated to
+`HEYS.store?.set || HEYS.utils.lsSet` tiered pattern. Allowlist shrank from 193
+→ 169 warnings. Phase 4 covers remaining `insights/`, `heys_app_hooks_v1.js`,
+`heys_app_backup_v1.js`, etc.
+
+Bypass inventory: `apps/web/__perf_baselines__/storage-bypass-inventory.json`
+(193 sites, categorised as bootstrap/phase3/phase4/review).
+
+### Hard never-touch allowlist
+
+Auth-critical keys are refused by `analyze()` regardless of any matching policy:
+`heys_supabase_auth_token`, `heys_pin_auth_client`, `^sb-`. Phase 2+ audit
+strategies skip these.
+
+### Critical files (storage)
+
+- `apps/web/heys_storage_registry_v1.js` — registry + diagnostics (Phase 1).
+- `apps/web/heys_storage_layer_v1.js` — Store.set/get; compression `'¤Z¤'`
+  prefix.
+- `apps/web/heys_storage_supabase_v1.js` — cloud-side, `safeSetItem` 3-tier
+  reactive recovery; `interceptSetItem` universal hook.
+- `apps/web/insights/pi_feedback_loop.js:534-549` — canonical
+  `pruneHistoryToStorageBudget` (sliding-window; reused by Phase 2 audit).
+- `apps/web/insights/pi_feedback_loop.js:573-596` — canonical
+  `trimLegacyRecords` (schema upgrader; reused by Phase 5 cloud-merge).
 
 ## Day-write race fix (post-2026-04-26)
 
@@ -132,6 +238,20 @@ window.__heysLogControl.reset();
 `__heysLogControl.all()` survives reloads. If you can't figure out why the
 console is screaming with hundreds of messages on boot, the first thing to try
 is `__heysLogControl.reset()`.
+
+**If `reset()` doesn't seem to help** (you still see `ews / detect`,
+`[MEALREC]`, `[HEYS.prodRec]`, `[HEYS.api] REST/RPC` floods after reload), nuke
+the stored groups directly — the in-memory reset is sometimes overridden by
+stale localStorage:
+
+```js
+localStorage.removeItem('heys_log_groups_v1');
+localStorage.removeItem('heys_log_verbose');
+location.reload();
+```
+
+This guarantees the next boot uses the hardcoded `DEFAULT_LOG_GROUPS` from
+`index.html` (`['startup', 'sync']`).
 
 **Available groups** (from [index.html](apps/web/index.html)
 `PREFIX_GROUP_MAP`):

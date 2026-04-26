@@ -54,27 +54,17 @@
 
     const writeStoredValue = (key, value) => {
         try {
-            if (HEYS.store?.set) {
-                HEYS.store.set(key, value);
-                return;
-            }
-            if (U.lsSet) {
-                U.lsSet(key, value);
-                return;
-            }
-            const serialized = typeof value === 'string' ? value : JSON.stringify(value);
-            localStorage.setItem(key, serialized);
+            if (HEYS.store?.set) { HEYS.store.set(key, value); return; }
+            const utils = HEYS.utils || {};
+            if (utils.lsSet) { utils.lsSet(key, value); return; }
         } catch { }
     };
 
     const writeGlobalValue = (key, value) => {
         try {
-            if (HEYS.store?.set) {
-                HEYS.store.set(key, value);
-                return;
-            }
-            const serialized = typeof value === 'string' ? value : JSON.stringify(value);
-            localStorage.setItem(key, serialized);
+            if (HEYS.store?.set) { HEYS.store.set(key, value); return; }
+            const utils = HEYS.utils || {};
+            if (utils.lsSet) { utils.lsSet(key, value); return; }
         } catch { }
     };
 

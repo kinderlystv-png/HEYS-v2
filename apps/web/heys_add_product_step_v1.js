@@ -64,6 +64,9 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
   const writeRawValue = (key, value) => {
     try {
+      if (HEYS.store?.set) { HEYS.store.set(key, value); return; }
+      const utils = (HEYS.utils || {});
+      if (utils.lsSet) { utils.lsSet(key, value); return; }
       const serialized = typeof value === 'string' ? value : JSON.stringify(value);
       localStorage.setItem(key, serialized);
     } catch { }
@@ -3924,9 +3927,15 @@ NOVA: 1
         React.createElement('button', {
           type: 'button',
           className: 'aps-create-example-btn',
-          onClick: () => setPasteText(''),
-          disabled: !pasteText
-        }, '🗑 Очистить поле'),
+          onClick: async () => {
+            setPasteText('');
+            try {
+              const text = await navigator.clipboard.readText();
+              if (text) setPasteText(text);
+            } catch (_) {}
+          },
+          disabled: false
+        }, '📋 Вставить из буфера'),
         React.createElement('span', { className: 'aps-create-example-note' }, 'Формат для поля вставки')
       ),
 

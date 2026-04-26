@@ -1,0 +1,1170 @@
+{
+  "generated": "2026-04-26",
+  "total": 193,
+  "byCategory": {
+    "phase4": 21,
+    "bootstrap": 36,
+    "review": 112,
+    "phase3": 24
+  },
+  "sites": [
+    {
+      "file": "apps/web/heys_add_product_step_v1.js",
+      "line": 68,
+      "category": "phase4",
+      "snippet": "localStorage.setItem(key, serialized);"
+    },
+    {
+      "file": "apps/web/heys_app_auth_init_v1.js",
+      "line": 147,
+      "category": "bootstrap",
+      "snippet": "try { localStorage.setItem('heys_client_current', JSON.stringify(pinAuthClient))"
+    },
+    {
+      "file": "apps/web/heys_app_auth_init_v1.js",
+      "line": 160,
+      "category": "bootstrap",
+      "snippet": "localStorage.setItem(scopedKey, rawLegacy);"
+    },
+    {
+      "file": "apps/web/heys_app_auth_init_v1.js",
+      "line": 399,
+      "category": "bootstrap",
+      "snippet": "try { localStorage.setItem('heys_client_current', JSON.stringify(cid)); } catch "
+    },
+    {
+      "file": "apps/web/heys_app_backup_v1.js",
+      "line": 126,
+      "category": "phase4",
+      "snippet": "localStorage.setItem(`${key}_backup`, JSON.stringify(snapshot));"
+    },
+    {
+      "file": "apps/web/heys_app_backup_v1.js",
+      "line": 154,
+      "category": "phase4",
+      "snippet": "localStorage.setItem('heys_backup_meta', JSON.stringify(meta));"
+    },
+    {
+      "file": "apps/web/heys_app_backup_v1.js",
+      "line": 226,
+      "category": "phase4",
+      "snippet": "localStorage.setItem(key, JSON.stringify(snapshot.data));"
+    },
+    {
+      "file": "apps/web/heys_app_backup_v1.js",
+      "line": 305,
+      "category": "phase4",
+      "snippet": "localStorage.setItem(key, JSON.stringify(dayData));"
+    },
+    {
+      "file": "apps/web/heys_app_gate_flow_v1.js",
+      "line": 47,
+      "category": "phase4",
+      "snippet": "localStorage.setItem(key, serialized);"
+    },
+    {
+      "file": "apps/web/heys_app_hooks_v1.js",
+      "line": 66,
+      "category": "phase4",
+      "snippet": "localStorage.setItem(key, serialized);"
+    },
+    {
+      "file": "apps/web/heys_app_hooks_v1.js",
+      "line": 77,
+      "category": "phase4",
+      "snippet": "localStorage.setItem(key, serialized);"
+    },
+    {
+      "file": "apps/web/heys_app_hooks_v1.js",
+      "line": 212,
+      "category": "phase4",
+      "snippet": "localStorage.setItem(THEME_PREF_KEY, theme);"
+    },
+    {
+      "file": "apps/web/heys_app_hooks_v1.js",
+      "line": 213,
+      "category": "phase4",
+      "snippet": "localStorage.setItem(THEME_EXPLICIT_KEY, theme === 'auto' ? '0' : '1');"
+    },
+    {
+      "file": "apps/web/heys_app_hooks_v1.js",
+      "line": 214,
+      "category": "phase4",
+      "snippet": "localStorage.setItem(LEGACY_THEME_KEY, resolvedTheme);"
+    },
+    {
+      "file": "apps/web/heys_app_hooks_v1.js",
+      "line": 562,
+      "category": "phase4",
+      "snippet": "localStorage.setItem(PENDING_SYNC_UI_QUEUE_KEY, JSON.stringify(safeItems));"
+    },
+    {
+      "file": "apps/web/heys_app_shell_v1.js",
+      "line": 145,
+      "category": "phase4",
+      "snippet": "hint: 'Включите: localStorage.setItem(\"heys_debug_react_profiler\",\"true\") или ?r"
+    },
+    {
+      "file": "apps/web/heys_app_shell_v1.js",
+      "line": 261,
+      "category": "phase4",
+      "snippet": "localStorage.setItem(key, serialized);"
+    },
+    {
+      "file": "apps/web/heys_app_tabs_v1.js",
+      "line": 507,
+      "category": "bootstrap",
+      "snippet": "localStorage.setItem(TS_KEY, String(Date.now()));"
+    },
+    {
+      "file": "apps/web/heys_app_tabs_v1.js",
+      "line": 508,
+      "category": "bootstrap",
+      "snippet": "localStorage.setItem(STATUS_KEY, 'success');"
+    },
+    {
+      "file": "apps/web/heys_app_tabs_v1.js",
+      "line": 509,
+      "category": "bootstrap",
+      "snippet": "localStorage.setItem(VERSION_KEY, String(CURRENT_MIGRATION_VERSION));"
+    },
+    {
+      "file": "apps/web/heys_app_tabs_v1.js",
+      "line": 529,
+      "category": "bootstrap",
+      "snippet": "localStorage.setItem(ABORT_KEY, 'true');"
+    },
+    {
+      "file": "apps/web/heys_app_tabs_v1.js",
+      "line": 530,
+      "category": "bootstrap",
+      "snippet": "localStorage.setItem(STATUS_KEY, 'aborted');"
+    },
+    {
+      "file": "apps/web/heys_app_tabs_v1.js",
+      "line": 544,
+      "category": "bootstrap",
+      "snippet": "localStorage.setItem(ABORT_KEY, 'true');"
+    },
+    {
+      "file": "apps/web/heys_app_tabs_v1.js",
+      "line": 545,
+      "category": "bootstrap",
+      "snippet": "localStorage.setItem(STATUS_KEY, 'aborted');"
+    },
+    {
+      "file": "apps/web/heys_app_tabs_v1.js",
+      "line": 562,
+      "category": "bootstrap",
+      "snippet": "localStorage.setItem(ABORT_KEY, 'true');"
+    },
+    {
+      "file": "apps/web/heys_app_tabs_v1.js",
+      "line": 563,
+      "category": "bootstrap",
+      "snippet": "localStorage.setItem(STATUS_KEY, 'aborted');"
+    },
+    {
+      "file": "apps/web/heys_app_tabs_v1.js",
+      "line": 575,
+      "category": "bootstrap",
+      "snippet": "localStorage.setItem(TS_KEY, String(Date.now()));"
+    },
+    {
+      "file": "apps/web/heys_app_tabs_v1.js",
+      "line": 576,
+      "category": "bootstrap",
+      "snippet": "localStorage.setItem(STATUS_KEY, 'success');"
+    },
+    {
+      "file": "apps/web/heys_app_tabs_v1.js",
+      "line": 577,
+      "category": "bootstrap",
+      "snippet": "localStorage.setItem(VERSION_KEY, String(CURRENT_MIGRATION_VERSION));"
+    },
+    {
+      "file": "apps/web/heys_app_update_notifications_v1.js",
+      "line": 17,
+      "category": "review",
+      "snippet": "localStorage.setItem(key, serialized);"
+    },
+    {
+      "file": "apps/web/heys_audio_v1.js",
+      "line": 15,
+      "category": "bootstrap",
+      "snippet": "* Kill switch: localStorage.setItem('heys_audio_disabled', 'true')"
+    },
+    {
+      "file": "apps/web/heys_audio_v1.js",
+      "line": 75,
+      "category": "bootstrap",
+      "snippet": "localStorage.setItem(key, JSON.stringify(value));"
+    },
+    {
+      "file": "apps/web/heys_auth_v1.js",
+      "line": 16,
+      "category": "bootstrap",
+      "snippet": "localStorage.setItem(k, JSON.stringify(v));"
+    },
+    {
+      "file": "apps/web/heys_auth_v1.js",
+      "line": 281,
+      "category": "bootstrap",
+      "snippet": "localStorage.setItem('heys_pin_auth_client', clientId);"
+    },
+    {
+      "file": "apps/web/heys_auth_v1.js",
+      "line": 288,
+      "category": "bootstrap",
+      "snippet": "localStorage.setItem('heys_pending_client_name', JSON.stringify(clientName));"
+    },
+    {
+      "file": "apps/web/heys_auth_v1.js",
+      "line": 423,
+      "category": "bootstrap",
+      "snippet": "localStorage.setItem('heys_session_token', oldToken);"
+    },
+    {
+      "file": "apps/web/heys_auth_v1.js",
+      "line": 427,
+      "category": "bootstrap",
+      "snippet": "localStorage.setItem('heys_session_token', oldToken);"
+    },
+    {
+      "file": "apps/web/heys_auth_v1.js",
+      "line": 449,
+      "category": "bootstrap",
+      "snippet": "localStorage.setItem('heys_session_token', JSON.stringify(token));"
+    },
+    {
+      "file": "apps/web/heys_cascade_card_v1.js",
+      "line": 1245,
+      "category": "bootstrap",
+      "snippet": "localStorage.setItem(key, json);"
+    },
+    {
+      "file": "apps/web/heys_cascade_card_v1.js",
+      "line": 3612,
+      "category": "bootstrap",
+      "snippet": "localStorage.setItem(cacheKey, cachePayload);"
+    },
+    {
+      "file": "apps/web/heys_cascade_card_v1.js",
+      "line": 3621,
+      "category": "bootstrap",
+      "snippet": "localStorage.setItem(perDateKey, perDatePayload);"
+    },
+    {
+      "file": "apps/web/heys_consents_v1.js",
+      "line": 260,
+      "category": "review",
+      "snippet": "localStorage.setItem(key, JSON.stringify(data));"
+    },
+    {
+      "file": "apps/web/heys_consents_v1.js",
+      "line": 846,
+      "category": "review",
+      "snippet": "localStorage.setItem(cacheKey, docCacheVersion);"
+    },
+    {
+      "file": "apps/web/heys_core_v12.js",
+      "line": 223,
+      "category": "review",
+      "snippet": "localStorage.setItem(key, serialized);"
+    },
+    {
+      "file": "apps/web/heys_core_v12.js",
+      "line": 842,
+      "category": "review",
+      "snippet": "localStorage.setItem(getRationSubtabKey(), JSON.stringify(activeSubtab));"
+    },
+    {
+      "file": "apps/web/heys_core_v12.js",
+      "line": 1933,
+      "category": "review",
+      "snippet": "localStorage.setItem(testKey, '1');"
+    },
+    {
+      "file": "apps/web/heys_core_v12.js",
+      "line": 4307,
+      "category": "review",
+      "snippet": "U.lsSet ? U.lsSet('heys_emoji_style', style) : localStorage.setItem('heys_emoji_"
+    },
+    {
+      "file": "apps/web/heys_core_v12.js",
+      "line": 5082,
+      "category": "review",
+      "snippet": "try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { }"
+    },
+    {
+      "file": "apps/web/heys_cycle_v1.js",
+      "line": 44,
+      "category": "review",
+      "snippet": "localStorage.setItem(key, serialized);"
+    },
+    {
+      "file": "apps/web/heys_day_add_product.js",
+      "line": 664,
+      "category": "review",
+      "snippet": "localStorage.setItem(`heys_last_grams_${productId}`, JSON.stringify(grams));"
+    },
+    {
+      "file": "apps/web/heys_day_add_product.js",
+      "line": 679,
+      "category": "review",
+      "snippet": "localStorage.setItem('heys_grams_history', JSON.stringify(history));"
+    },
+    {
+      "file": "apps/web/heys_day_core_bundle_v1.js",
+      "line": 52,
+      "category": "review",
+      "snippet": "localStorage.setItem(DELETED_PRODUCTS_KEY, JSON.stringify(data));"
+    },
+    {
+      "file": "apps/web/heys_day_core_bundle_v1.js",
+      "line": 404,
+      "category": "review",
+      "snippet": "localStorage.setItem(k, JSON.stringify(v));"
+    },
+    {
+      "file": "apps/web/heys_day_core_bundle_v1.js",
+      "line": 2029,
+      "category": "review",
+      "snippet": "try { localStorage.setItem(key, JSON.stringify(val)); } catch (e) { }"
+    },
+    {
+      "file": "apps/web/heys_day_core_bundle_v1.js",
+      "line": 3830,
+      "category": "review",
+      "snippet": "localStorage.setItem('heys_theme', nextTheme);"
+    },
+    {
+      "file": "apps/web/heys_day_effects.js",
+      "line": 736,
+      "category": "review",
+      "snippet": "localStorage.setItem('heys_theme_pref', themePreference);"
+    },
+    {
+      "file": "apps/web/heys_day_effects.js",
+      "line": 737,
+      "category": "review",
+      "snippet": "localStorage.setItem('heys_theme_explicit', themePreference === 'auto' ? '0' : '"
+    },
+    {
+      "file": "apps/web/heys_day_effects.js",
+      "line": 738,
+      "category": "review",
+      "snippet": "localStorage.setItem('heys_theme', nextTheme);"
+    },
+    {
+      "file": "apps/web/heys_day_effects.js",
+      "line": 744,
+      "category": "review",
+      "snippet": "localStorage.setItem('heys_theme_pref', themePreference);"
+    },
+    {
+      "file": "apps/web/heys_day_effects.js",
+      "line": 745,
+      "category": "review",
+      "snippet": "localStorage.setItem('heys_theme_explicit', themePreference === 'auto' ? '0' : '"
+    },
+    {
+      "file": "apps/web/heys_day_effects.js",
+      "line": 746,
+      "category": "review",
+      "snippet": "localStorage.setItem('heys_theme', nextTheme);"
+    },
+    {
+      "file": "apps/web/heys_day_engagement_effects.js",
+      "line": 114,
+      "category": "review",
+      "snippet": "else localStorage.setItem('heys_first_perfect_meal', '1');"
+    },
+    {
+      "file": "apps/web/heys_day_insights_data_v1.js",
+      "line": 830,
+      "category": "review",
+      "snippet": "localStorage.setItem(todayKey, String(mealsChartAvgScore));"
+    },
+    {
+      "file": "apps/web/heys_day_meals_chart_ui_v1.js",
+      "line": 296,
+      "category": "review",
+      "snippet": "utils.lsSet ? utils.lsSet('heys_meal_hint_shown', '1') : localStorage.setItem('h"
+    },
+    {
+      "file": "apps/web/heys_day_meals_chart_ui_v1.js",
+      "line": 367,
+      "category": "review",
+      "snippet": "try { utils.lsSet ? utils.lsSet('heys_meal_hint_shown', '1') : localStorage.setI"
+    },
+    {
+      "file": "apps/web/heys_day_storage_v1.js",
+      "line": 28,
+      "category": "review",
+      "snippet": "localStorage.setItem(key, JSON.stringify(value));"
+    },
+    {
+      "file": "apps/web/heys_day_utils.js",
+      "line": 63,
+      "category": "review",
+      "snippet": "localStorage.setItem(DELETED_PRODUCTS_KEY, JSON.stringify(data));"
+    },
+    {
+      "file": "apps/web/heys_day_utils.js",
+      "line": 371,
+      "category": "review",
+      "snippet": "const lsSet = U.lsSet || ((k, v) => localStorage.setItem(k, JSON.stringify(v)));"
+    },
+    {
+      "file": "apps/web/heys_day_utils.js",
+      "line": 421,
+      "category": "review",
+      "snippet": "localStorage.setItem(key, HEYS.store.compress(day));"
+    },
+    {
+      "file": "apps/web/heys_day_utils.js",
+      "line": 423,
+      "category": "review",
+      "snippet": "localStorage.setItem(key, JSON.stringify(day));"
+    },
+    {
+      "file": "apps/web/heys_day_utils.js",
+      "line": 771,
+      "category": "review",
+      "snippet": ": (U.lsSet || ((k, v) => localStorage.setItem(k, JSON.stringify(v))));"
+    },
+    {
+      "file": "apps/web/heys_day_utils.js",
+      "line": 1365,
+      "category": "review",
+      "snippet": "localStorage.setItem(k, JSON.stringify(v));"
+    },
+    {
+      "file": "apps/web/heys_dev_utils.js",
+      "line": 22,
+      "category": "review",
+      "snippet": "// 3. localStorage: localStorage.setItem('heys_debug_verbose', 'true')"
+    },
+    {
+      "file": "apps/web/heys_dev_utils.js",
+      "line": 76,
+      "category": "review",
+      "snippet": "localStorage.setItem('heys_debug_verbose', 'true');"
+    },
+    {
+      "file": "apps/web/heys_exercise_catalog_v1.js",
+      "line": 144,
+      "category": "review",
+      "snippet": "if (global.localStorage) global.localStorage.setItem(LS_KEY, JSON.stringify(obj)"
+    },
+    {
+      "file": "apps/web/heys_exercise_catalog_v1.js",
+      "line": 170,
+      "category": "review",
+      "snippet": "global.localStorage.setItem(LS_FAV, JSON.stringify({ norms: norms.slice(0, 40) }"
+    },
+    {
+      "file": "apps/web/heys_feature_flags_v1.js",
+      "line": 90,
+      "category": "bootstrap",
+      "snippet": "localStorage.setItem(FLAGS_KEY, JSON.stringify(flags));"
+    },
+    {
+      "file": "apps/web/heys_gamification_bar_v1.js",
+      "line": 1419,
+      "category": "review",
+      "snippet": "localStorage.setItem('heys_theme_pref', next);"
+    },
+    {
+      "file": "apps/web/heys_gamification_bar_v1.js",
+      "line": 1420,
+      "category": "review",
+      "snippet": "localStorage.setItem('heys_theme_explicit', '1');"
+    },
+    {
+      "file": "apps/web/heys_gamification_bar_v1.js",
+      "line": 1421,
+      "category": "review",
+      "snippet": "localStorage.setItem('heys_theme', next);"
+    },
+    {
+      "file": "apps/web/heys_gamification_bar_v1.js",
+      "line": 1427,
+      "category": "review",
+      "snippet": "localStorage.setItem('heys_theme_pref', next);"
+    },
+    {
+      "file": "apps/web/heys_gamification_bar_v1.js",
+      "line": 1428,
+      "category": "review",
+      "snippet": "localStorage.setItem('heys_theme_explicit', '1');"
+    },
+    {
+      "file": "apps/web/heys_gamification_bar_v1.js",
+      "line": 1429,
+      "category": "review",
+      "snippet": "localStorage.setItem('heys_theme', next);"
+    },
+    {
+      "file": "apps/web/heys_gamification_v1.js",
+      "line": 39,
+      "category": "review",
+      "snippet": "localStorage.setItem(key, JSON.stringify(value));"
+    },
+    {
+      "file": "apps/web/heys_gamification_v1.js",
+      "line": 41,
+      "category": "review",
+      "snippet": "localStorage.setItem(key, String(value));"
+    },
+    {
+      "file": "apps/web/heys_gamification_v1.js",
+      "line": 1526,
+      "category": "review",
+      "snippet": "localStorage.setItem(_getXPCacheKey(), JSON.stringify(data));"
+    },
+    {
+      "file": "apps/web/heys_gamification_v1.js",
+      "line": 5940,
+      "category": "review",
+      "snippet": "localStorage.setItem('heys_debug_gamification', 'true');"
+    },
+    {
+      "file": "apps/web/heys_insulin_wave_v1.js",
+      "line": 866,
+      "category": "review",
+      "snippet": "localStorage.setItem(GAP_HISTORY_KEY, JSON.stringify(gapHistory));"
+    },
+    {
+      "file": "apps/web/heys_iw_config_loader.js",
+      "line": 146,
+      "category": "review",
+      "snippet": "localStorage.setItem(CONFIG_CACHE_KEY, JSON.stringify(rawConfig));"
+    },
+    {
+      "file": "apps/web/heys_iw_config_loader.js",
+      "line": 148,
+      "category": "review",
+      "snippet": "localStorage.setItem(CONFIG_CACHE_META_KEY, JSON.stringify(meta));"
+    },
+    {
+      "file": "apps/web/heys_iw_lipolysis.js",
+      "line": 58,
+      "category": "review",
+      "snippet": "localStorage.setItem(LIPOLYSIS_RECORD_KEY, JSON.stringify(newRecord));"
+    },
+    {
+      "file": "apps/web/heys_iw_lipolysis.js",
+      "line": 94,
+      "category": "review",
+      "snippet": "localStorage.setItem(LIPOLYSIS_HISTORY_KEY, JSON.stringify(sorted));"
+    },
+    {
+      "file": "apps/web/heys_leaderboard_v1.js",
+      "line": 98,
+      "category": "review",
+      "snippet": "localStorage.setItem(LOCAL_KEY, enabled ? 'true' : 'false');"
+    },
+    {
+      "file": "apps/web/heys_meal_optimizer_v1.js",
+      "line": 1822,
+      "category": "review",
+      "snippet": "localStorage.setItem(ACTIONS_KEY, JSON.stringify(trimmed));"
+    },
+    {
+      "file": "apps/web/heys_meal_step_v1.js",
+      "line": 54,
+      "category": "review",
+      "snippet": "localStorage.setItem(key, JSON.stringify(val));"
+    },
+    {
+      "file": "apps/web/heys_metabolic_intelligence_v1.js",
+      "line": 1254,
+      "category": "review",
+      "snippet": "localStorage.setItem(riskKey, riskSerialized);"
+    },
+    {
+      "file": "apps/web/heys_metabolic_intelligence_v1.js",
+      "line": 2011,
+      "category": "review",
+      "snippet": "try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { }"
+    },
+    {
+      "file": "apps/web/heys_metabolic_intelligence_v1.js",
+      "line": 2190,
+      "category": "review",
+      "snippet": "try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { }"
+    },
+    {
+      "file": "apps/web/heys_metabolic_intelligence_v1.js",
+      "line": 2332,
+      "category": "review",
+      "snippet": "try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { }"
+    },
+    {
+      "file": "apps/web/heys_metabolic_intelligence_v1.js",
+      "line": 2416,
+      "category": "review",
+      "snippet": "localStorage.setItem(key, JSON.stringify(value));"
+    },
+    {
+      "file": "apps/web/heys_models_v1.js",
+      "line": 404,
+      "category": "review",
+      "snippet": "localStorage.setItem(PORTION_HISTORY_KEY, JSON.stringify(history));"
+    },
+    {
+      "file": "apps/web/heys_module_perf_v1.js",
+      "line": 67,
+      "category": "review",
+      "snippet": "localStorage.setItem(key, JSON.stringify(value));"
+    },
+    {
+      "file": "apps/web/heys_morning_checkin_v1.js",
+      "line": 134,
+      "category": "review",
+      "snippet": "localStorage.setItem(unscopedKey, JSON.stringify(dayData));"
+    },
+    {
+      "file": "apps/web/heys_perf_main_thread_v1.js",
+      "line": 2,
+      "category": "review",
+      "snippet": "// Enable: localStorage.setItem('heys_debug_perf', 'true') — logs all slow spans"
+    },
+    {
+      "file": "apps/web/heys_planning_context_v1.js",
+      "line": 322,
+      "category": "review",
+      "snippet": "window.localStorage.setItem(CAPTURE_DRAFT_KEY, JSON.stringify(payload));"
+    },
+    {
+      "file": "apps/web/heys_planning_schedule_v1.js",
+      "line": 3239,
+      "category": "review",
+      "snippet": "localStorage.setItem(CALENDAR_DAY_WINDOW_STORAGE_KEY, String(calendarDayWindow))"
+    },
+    {
+      "file": "apps/web/heys_planning_schedule_v1.js",
+      "line": 4415,
+      "category": "review",
+      "snippet": "localStorage.setItem('heys_theme_pref', next);"
+    },
+    {
+      "file": "apps/web/heys_planning_schedule_v1.js",
+      "line": 4416,
+      "category": "review",
+      "snippet": "localStorage.setItem('heys_theme_explicit', '1');"
+    },
+    {
+      "file": "apps/web/heys_planning_schedule_v1.js",
+      "line": 4417,
+      "category": "review",
+      "snippet": "localStorage.setItem('heys_theme', next);"
+    },
+    {
+      "file": "apps/web/heys_planning_store_v1.js",
+      "line": 261,
+      "category": "review",
+      "snippet": "localStorage.setItem(key, JSON.stringify(value));"
+    },
+    {
+      "file": "apps/web/heys_planning_tasks_v1.js",
+      "line": 2295,
+      "category": "review",
+      "snippet": "try { window.localStorage.setItem(TASKS_UI_SCALE_STORAGE_KEY, String(tasksUiScal"
+    },
+    {
+      "file": "apps/web/heys_platform_apis_v1.js",
+      "line": 177,
+      "category": "review",
+      "snippet": "localStorage.setItem(UPDATE_LOCK_KEY, JSON.stringify({ timestamp: Date.now() }))"
+    },
+    {
+      "file": "apps/web/heys_platform_apis_v1.js",
+      "line": 581,
+      "category": "review",
+      "snippet": "localStorage.setItem(UPDATE_ATTEMPT_KEY, JSON.stringify(attempt));"
+    },
+    {
+      "file": "apps/web/heys_predictive_insights_v1.js",
+      "line": 48,
+      "category": "review",
+      "snippet": "global.localStorage.setItem('heys_insights_debug', '1');"
+    },
+    {
+      "file": "apps/web/heys_products_overlay_v1.js",
+      "line": 221,
+      "category": "bootstrap",
+      "snippet": "global.localStorage.setItem('heys_overlay_health', JSON.stringify(health));"
+    },
+    {
+      "file": "apps/web/heys_products_overlay_v1.js",
+      "line": 232,
+      "category": "bootstrap",
+      "snippet": "global.localStorage.setItem(NOTIFIED_KEY, 'true');"
+    },
+    {
+      "file": "apps/web/heys_products_overlay_v1.js",
+      "line": 616,
+      "category": "bootstrap",
+      "snippet": "global.localStorage.setItem('heys_overlay_migrated_at', String(Date.now()));"
+    },
+    {
+      "file": "apps/web/heys_products_overlay_v1.js",
+      "line": 617,
+      "category": "bootstrap",
+      "snippet": "global.localStorage.setItem('heys_overlay_migration_status', 'success');"
+    },
+    {
+      "file": "apps/web/heys_products_overlay_v1.js",
+      "line": 618,
+      "category": "bootstrap",
+      "snippet": "global.localStorage.setItem('heys_overlay_migration_version', String(CURRENT_MIG"
+    },
+    {
+      "file": "apps/web/heys_products_overlay_v1.js",
+      "line": 677,
+      "category": "bootstrap",
+      "snippet": "global.localStorage.setItem('heys_overlay_phase_alpha_perf', JSON.stringify(Obje"
+    },
+    {
+      "file": "apps/web/heys_profile_step_v1.js",
+      "line": 436,
+      "category": "review",
+      "snippet": "localStorage.setItem('heys_registration_in_progress', 'true');"
+    },
+    {
+      "file": "apps/web/heys_profile_step_v1.js",
+      "line": 1033,
+      "category": "review",
+      "snippet": "localStorage.setItem('heys_clients', JSON.stringify(updatedClients));"
+    },
+    {
+      "file": "apps/web/heys_profile_step_v1.js",
+      "line": 1165,
+      "category": "review",
+      "snippet": "localStorage.setItem('heys_clients', JSON.stringify(updatedClients));"
+    },
+    {
+      "file": "apps/web/heys_profile_step_v1.js",
+      "line": 1586,
+      "category": "review",
+      "snippet": "localStorage.setItem(scopedKey, JSON.stringify(legacyProfile));"
+    },
+    {
+      "file": "apps/web/heys_pwa_module_v1.js",
+      "line": 68,
+      "category": "bootstrap",
+      "snippet": "localStorage.setItem('heys_debug', enabled ? '1' : '0');"
+    },
+    {
+      "file": "apps/web/heys_ratio_zones_v1.js",
+      "line": 73,
+      "category": "review",
+      "snippet": "localStorage.setItem('heys_ratio_zones', JSON.stringify(zones));"
+    },
+    {
+      "file": "apps/web/heys_refeed_v1.js",
+      "line": 76,
+      "category": "review",
+      "snippet": "localStorage.setItem(key, serialized);"
+    },
+    {
+      "file": "apps/web/heys_simple_analytics.js",
+      "line": 130,
+      "category": "review",
+      "snippet": "localStorage.setItem(key, JSON.stringify(value));"
+    },
+    {
+      "file": "apps/web/heys_smart_search_v2.js",
+      "line": 796,
+      "category": "review",
+      "snippet": "localStorage.setItem(USER_STATS_MIGRATED_KEY, JSON.stringify(true));"
+    },
+    {
+      "file": "apps/web/heys_smart_search_v2.js",
+      "line": 867,
+      "category": "review",
+      "snippet": "localStorage.setItem(USER_STATS_KEY, JSON.stringify(data));"
+    },
+    {
+      "file": "apps/web/heys_smart_search_v2.js",
+      "line": 894,
+      "category": "review",
+      "snippet": "localStorage.setItem(USER_STATS_SYNC_KEY, JSON.stringify(ts));"
+    },
+    {
+      "file": "apps/web/heys_step_modal_v1.js",
+      "line": 29,
+      "category": "review",
+      "snippet": "localStorage.setItem(key, JSON.stringify(val));"
+    },
+    {
+      "file": "apps/web/heys_steps_v1.js",
+      "line": 58,
+      "category": "review",
+      "snippet": "localStorage.setItem(key, JSON.stringify(value));"
+    },
+    {
+      "file": "apps/web/heys_storage_layer_v1.js",
+      "line": 169,
+      "category": "bootstrap",
+      "snippet": "localStorage.setItem(k, compressed);"
+    },
+    {
+      "file": "apps/web/heys_storage_layer_v1.js",
+      "line": 200,
+      "category": "bootstrap",
+      "snippet": "localStorage.setItem(k, compress(v));"
+    },
+    {
+      "file": "apps/web/heys_storage_photos_v1.js",
+      "line": 208,
+      "category": "review",
+      "snippet": "global.localStorage.setItem(PENDING_PHOTOS_KEY, JSON.stringify(pending));"
+    },
+    {
+      "file": "apps/web/heys_storage_photos_v1.js",
+      "line": 323,
+      "category": "review",
+      "snippet": "global.localStorage.setItem(PENDING_PHOTOS_KEY, JSON.stringify(stillPending));"
+    },
+    {
+      "file": "apps/web/heys_subscription_v1.js",
+      "line": 62,
+      "category": "review",
+      "snippet": "localStorage.setItem(key, JSON.stringify(value));"
+    },
+    {
+      "file": "apps/web/heys_subscriptions_v1.js",
+      "line": 558,
+      "category": "review",
+      "snippet": "localStorage.setItem('heys_pending_payment', JSON.stringify({"
+    },
+    {
+      "file": "apps/web/heys_training_step_v1.js",
+      "line": 29,
+      "category": "review",
+      "snippet": "localStorage.setItem(key, JSON.stringify(val));"
+    },
+    {
+      "file": "apps/web/heys_trial_queue_v1.js",
+      "line": 57,
+      "category": "review",
+      "snippet": "localStorage.setItem(k, JSON.stringify(v));"
+    },
+    {
+      "file": "apps/web/heys_ui_onboarding_v1.js",
+      "line": 173,
+      "category": "review",
+      "snippet": "localStorage.setItem(INTERRUPTED_STEP_KEY, String(state.currentStepIndex));"
+    },
+    {
+      "file": "apps/web/heys_ui_onboarding_v1.js",
+      "line": 775,
+      "category": "review",
+      "snippet": "localStorage.setItem(STORAGE_KEY, 'true');"
+    },
+    {
+      "file": "apps/web/heys_ui_onboarding_v1.js",
+      "line": 1123,
+      "category": "review",
+      "snippet": "localStorage.setItem(INSIGHTS_STORAGE_KEY, 'true');"
+    },
+    {
+      "file": "apps/web/heys_ui_onboarding_v1.js",
+      "line": 1149,
+      "category": "review",
+      "snippet": "localStorage.setItem(INSIGHTS_STORAGE_KEY, 'true');"
+    },
+    {
+      "file": "apps/web/heys_ui_onboarding_v1.js",
+      "line": 1655,
+      "category": "review",
+      "snippet": "localStorage.setItem(WIDGETS_STORAGE_KEY, 'true');"
+    },
+    {
+      "file": "apps/web/heys_ui_onboarding_v1.js",
+      "line": 1670,
+      "category": "review",
+      "snippet": "localStorage.setItem(WIDGETS_STORAGE_KEY, 'true');"
+    },
+    {
+      "file": "apps/web/heys_user_tab_impl_v1.js",
+      "line": 378,
+      "category": "review",
+      "snippet": "else localStorage.setItem(SECTIONS_KEY, JSON.stringify(next));"
+    },
+    {
+      "file": "apps/web/heys_user_tab_impl_v1.js",
+      "line": 572,
+      "category": "review",
+      "snippet": "localStorage.setItem('heys_clients', JSON.stringify(updatedClients));"
+    },
+    {
+      "file": "apps/web/heys_user_v12.js",
+      "line": 147,
+      "category": "review",
+      "snippet": "localStorage.setItem(key, serialized);"
+    },
+    {
+      "file": "apps/web/heys_user_v12.js",
+      "line": 158,
+      "category": "review",
+      "snippet": "localStorage.setItem(key, serialized);"
+    },
+    {
+      "file": "apps/web/heys_weekly_reports_v2.js",
+      "line": 36,
+      "category": "review",
+      "snippet": "localStorage.setItem(k, JSON.stringify(v));"
+    },
+    {
+      "file": "apps/web/heys_whats_new_modal_v1.js",
+      "line": 70,
+      "category": "review",
+      "snippet": "try { localStorage.setItem(key, value); } catch { /* noop */ }"
+    },
+    {
+      "file": "apps/web/heys_widgets_core_v1.js",
+      "line": 386,
+      "category": "review",
+      "snippet": "localStorage.setItem(STORAGE_META_KEY, JSON.stringify(meta));"
+    },
+    {
+      "file": "apps/web/heys_widgets_core_v1.js",
+      "line": 1049,
+      "category": "review",
+      "snippet": "localStorage.setItem(STORAGE_KEY, JSON.stringify(layoutData));"
+    },
+    {
+      "file": "apps/web/heys_widgets_ui_v1.js",
+      "line": 4799,
+      "category": "review",
+      "snippet": "localStorage.setItem(RELAPSE_PROFILE_STORAGE_KEY, JSON.stringify(profileKey.trim"
+    },
+    {
+      "file": "apps/web/heys_widgets_ui_v1.js",
+      "line": 7028,
+      "category": "review",
+      "snippet": "localStorage.setItem(scopedKey, JSON.stringify(dayData));"
+    },
+    {
+      "file": "apps/web/heys_yandex_api_v1.js",
+      "line": 800,
+      "category": "review",
+      "snippet": "localStorage.setItem('heys_session_token', namespacedRaw);"
+    },
+    {
+      "file": "apps/web/heys_yesterday_verify_v1.js",
+      "line": 36,
+      "category": "review",
+      "snippet": "localStorage.setItem(k, JSON.stringify(v));"
+    },
+    {
+      "file": "apps/web/heys_yesterday_verify_v1.js",
+      "line": 389,
+      "category": "review",
+      "snippet": "localStorage.setItem('heys_debug_yesterday_zero_payload', JSON.stringify(payload"
+    },
+    {
+      "file": "apps/web/heys_yesterday_verify_v1.js",
+      "line": 1127,
+      "category": "review",
+      "snippet": "localStorage.setItem('heys_debug_yesterday_info', JSON.stringify(info));"
+    },
+    {
+      "file": "apps/web/heys_yesterday_verify_v1.js",
+      "line": 1129,
+      "category": "review",
+      "snippet": "localStorage.setItem('heys_debug_yesterday_info', JSON.stringify({ empty: true }"
+    },
+    {
+      "file": "apps/web/advice/_core.js",
+      "line": 274,
+      "category": "phase3",
+      "snippet": "localStorage.setItem(RATING_KEY, JSON.stringify(ratings));"
+    },
+    {
+      "file": "apps/web/advice/_core.js",
+      "line": 329,
+      "category": "phase3",
+      "snippet": "localStorage.setItem(RATING_KEY, JSON.stringify(parsed));"
+    },
+    {
+      "file": "apps/web/advice/_core.js",
+      "line": 471,
+      "category": "phase3",
+      "snippet": "localStorage.setItem(key, String(Date.now()));"
+    },
+    {
+      "file": "apps/web/advice/_core.js",
+      "line": 513,
+      "category": "phase3",
+      "snippet": "localStorage.setItem(RECOMMENDATION_PATTERNS_KEY, JSON.stringify(patterns));"
+    },
+    {
+      "file": "apps/web/advice/_core.js",
+      "line": 1025,
+      "category": "phase3",
+      "snippet": "localStorage.setItem(ADVICE_SETTINGS_KEY, JSON.stringify(merged));"
+    },
+    {
+      "file": "apps/web/advice/_core.js",
+      "line": 1113,
+      "category": "phase3",
+      "snippet": "localStorage.setItem(PERSONAL_BESTS_KEY, JSON.stringify(bests));"
+    },
+    {
+      "file": "apps/web/advice/_core.js",
+      "line": 1179,
+      "category": "phase3",
+      "snippet": "localStorage.setItem(CHAIN_STORAGE_KEY, JSON.stringify(chains));"
+    },
+    {
+      "file": "apps/web/advice/_core.js",
+      "line": 1211,
+      "category": "phase3",
+      "snippet": "localStorage.setItem(CHAIN_STORAGE_KEY, JSON.stringify(chains));"
+    },
+    {
+      "file": "apps/web/advice/_core.js",
+      "line": 1276,
+      "category": "phase3",
+      "snippet": "localStorage.setItem(SCHEDULED_KEY, JSON.stringify(scheduled));"
+    },
+    {
+      "file": "apps/web/advice/_core.js",
+      "line": 1311,
+      "category": "phase3",
+      "snippet": "localStorage.setItem(SCHEDULED_KEY, JSON.stringify(remaining));"
+    },
+    {
+      "file": "apps/web/advice/_core.js",
+      "line": 1589,
+      "category": "phase3",
+      "snippet": "localStorage.setItem(key, nextValue);"
+    },
+    {
+      "file": "apps/web/advice/_core.js",
+      "line": 1682,
+      "category": "phase3",
+      "snippet": "localStorage.setItem(key, value);"
+    },
+    {
+      "file": "apps/web/advice/_core.js",
+      "line": 2262,
+      "category": "phase3",
+      "snippet": "localStorage.setItem(TRACKING_KEY, JSON.stringify(stats));"
+    },
+    {
+      "file": "apps/web/advice/_core.js",
+      "line": 2284,
+      "category": "phase3",
+      "snippet": "localStorage.setItem(TRACKING_KEY, JSON.stringify(stats));"
+    },
+    {
+      "file": "apps/web/advice/_core.js",
+      "line": 3396,
+      "category": "phase3",
+      "snippet": "localStorage.setItem(key, JSON.stringify(value));"
+    },
+    {
+      "file": "apps/web/advice/_core.js",
+      "line": 5913,
+      "category": "phase3",
+      "snippet": "localStorage.setItem(key, '1');"
+    },
+    {
+      "file": "apps/web/advice/_core.js",
+      "line": 6004,
+      "category": "phase3",
+      "snippet": "localStorage.setItem(key, String(currentStreak));"
+    },
+    {
+      "file": "apps/web/advice/_other.js",
+      "line": 268,
+      "category": "phase3",
+      "snippet": "try { localStorage.setItem('heys_best_day_last_check', Date.now().toString()); }"
+    },
+    {
+      "file": "apps/web/advice/_other.js",
+      "line": 350,
+      "category": "phase3",
+      "snippet": "onShow: () => { try { localStorage.setItem('heys_first_meal_tip', '1'); } catch "
+    },
+    {
+      "file": "apps/web/advice/_other.js",
+      "line": 973,
+      "category": "phase3",
+      "snippet": "try { localStorage.setItem('heys_evening_snacker_check', Date.now().toString());"
+    },
+    {
+      "file": "apps/web/advice/_other.js",
+      "line": 1006,
+      "category": "phase3",
+      "snippet": "try { localStorage.setItem('heys_morning_skipper_check', Date.now().toString());"
+    },
+    {
+      "file": "apps/web/advice/_other.js",
+      "line": 1054,
+      "category": "phase3",
+      "snippet": "try { localStorage.setItem('heys_chronic_undereating_check', Date.now().toString"
+    },
+    {
+      "file": "apps/web/advice/_outcomes.js",
+      "line": 132,
+      "category": "phase3",
+      "snippet": "localStorage.setItem(OUTCOME_PROFILE_KEY, JSON.stringify(payload));"
+    },
+    {
+      "file": "apps/web/advice/_outcomes.js",
+      "line": 170,
+      "category": "phase3",
+      "snippet": "localStorage.setItem(OUTCOME_PENDING_KEY, JSON.stringify(payload));"
+    },
+    {
+      "file": "apps/web/insights/pi_early_warning.js",
+      "line": 627,
+      "category": "phase4",
+      "snippet": "localStorage.setItem(TRENDS_STORAGE_KEY, JSON.stringify(trendsData));"
+    },
+    {
+      "file": "apps/web/insights/pi_early_warning.js",
+      "line": 965,
+      "category": "phase4",
+      "snippet": "localStorage.setItem(WEEKLY_PROGRESS_STORAGE_KEY, JSON.stringify(progressData));"
+    },
+    {
+      "file": "apps/web/insights/pi_early_warning.js",
+      "line": 1029,
+      "category": "phase4",
+      "snippet": "localStorage.setItem(WEEKLY_PROGRESS_STORAGE_KEY, JSON.stringify(progressData));"
+    },
+    {
+      "file": "apps/web/insights/pi_early_warning.js",
+      "line": 1503,
+      "category": "phase4",
+      "snippet": "localStorage.setItem(WEEKLY_PROGRESS_STORAGE_KEY, JSON.stringify(progressData));"
+    },
+    {
+      "file": "apps/web/insights/pi_meal_rec_feedback.js",
+      "line": 192,
+      "category": "phase4",
+      "snippet": "localStorage.setItem(legacyKey, JSON.stringify(feedback));"
+    },
+    {
+      "file": "apps/web/insights/pi_ui_meal_rec_card.js",
+      "line": 652,
+      "category": "phase4",
+      "snippet": "else localStorage.setItem(key, JSON.stringify(updatedDay));"
+    },
+    {
+      "file": "apps/web/insights/pi_ui_meal_rec_card.js",
+      "line": 910,
+      "category": "phase4",
+      "snippet": "else localStorage.setItem(key, JSON.stringify(updatedDay));"
+    }
+  ]
+}

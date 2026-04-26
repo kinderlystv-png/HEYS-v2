@@ -501,6 +501,62 @@
     return { replayed, skipped };
   };
 
+  // ── HEYS internal quota meter (Phase 4) ────────────────────────────────
+  // Checks HEYS own 4.5 MB budget every 50 writes (full LS scan, acceptable
+  // since it's amortised). Browser-level navigator.storage.estimate() is used
+  // only as a secondary safety net logged at 95% if HEYS budget constant is wrong.
+  const HEYS_BUDGET_BYTES = 4.5 * 1024 * 1024;
+  let _quotaWriteCounter = 0;
+  const QUOTA_CHECK_INTERVAL = 50;
+  let _quotaWarned75 = false, _quotaWarned85 = false, _quotaWarned95 = false;
+
+  function _measureLsBytes() {
+    let total = 0;
+    try {
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (!k) continue;
+        total += (k.length + (localStorage.getItem(k) || '').length) * 2;
+      }
+    } catch (_) {}
+    return total;
+  }
+
+  function _triggerEmergencyAudit() {
+    try {
+      const reg = global.HEYS?.storageRegistry;
+      if (reg && typeof reg.runStorageAuditOnce === 'function') {
+        reg.runStorageAuditOnce({ force: true, bypassIdle: true });
+      }
+    } catch (_) {}
+  }
+
+  function maybeReportQuota() {
+    if (++_quotaWriteCounter < QUOTA_CHECK_INTERVAL) return;
+    _quotaWriteCounter = 0;
+    const used = _measureLsBytes();
+    const pct = used / HEYS_BUDGET_BYTES;
+    if (pct >= 0.95 && !_quotaWarned95) {
+      _quotaWarned95 = true;
+      console.warn('[HEYS.storage] HEYS budget 95% — emergency audit triggered');
+      _triggerEmergencyAudit();
+      if (navigator.storage?.estimate) {
+        navigator.storage.estimate().then(({ usage, quota }) => {
+          if (quota && usage / quota >= 0.95) {
+            console.warn('[HEYS.storage] Browser quota also 95% — HEYS_BUDGET_BYTES may be too high');
+          }
+        }).catch(() => {});
+      }
+    } else if (pct >= 0.85 && !_quotaWarned85) {
+      _quotaWarned85 = true;
+      console.warn('[HEYS.storage] HEYS budget 85%');
+    } else if (pct >= 0.75 && !_quotaWarned75) {
+      _quotaWarned75 = true;
+      console.info('[HEYS.storage] HEYS budget 75%');
+    }
+  }
+  // ────────────────────────────────────────────────────────────────────────
+
   Store.set = function (k, v) {
     const sk = scoped(k);
     // 🔧 v69 FIX: Блокируем все записи во время switchClient.
@@ -522,6 +578,7 @@
     }
     memory.set(sk, v);
     rawSet(sk, v);
+    maybeReportQuota();
     if (watchers.has(sk)) watchers.get(sk).forEach(fn => { try { fn(v); } catch (e) { } });
     try {
       if (global.HEYS && typeof global.HEYS.saveClientKey === 'function') {

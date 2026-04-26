@@ -13,23 +13,14 @@
 			"problemMatcher": []
 		},
 		{
-			"label": "Start Frontend (Port 3001)",
+			"label": "Start Dev Stack (Web 3001 + API 4001)",
 			"type": "shell",
 			"command": "pnpm",
 			"args": [
-				"--filter",
-				"@heys/web",
 				"run",
-				"dev"
+				"dev:local"
 			],
 			"group": "build",
-			"options": {
-				"env": {
-					"PORT": "3001",
-					"VITE_PORT": "3001",
-					"API_PORT": "4001"
-				}
-			},
 			"presentation": {
 				"echo": true,
 				"reveal": "always",
@@ -45,7 +36,7 @@
 				},
 				"background": {
 					"activeOnStart": true,
-					"beginsPattern": "\\[vite\\]",
+					"beginsPattern": "\\[(api|web)\\]",
 					"endsPattern": "Local:.*http://localhost:3001"
 				}
 			}
@@ -149,15 +140,6 @@
 				"clear": false
 			},
 			"isBackground": true
-		},
-		{
-			"label": "Start Full Stack (Ports 3001 & 4001)",
-			"dependsOrder": "parallel",
-			"dependsOn": [
-				"Start Frontend (Port 3001)",
-				"Start API Server (Port 4001)"
-			],
-			"group": "build"
 		},
 		{
 			"label": "Build for Production",

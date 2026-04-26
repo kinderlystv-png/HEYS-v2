@@ -34,6 +34,7 @@ const PUB_DIR = resolve(WEB_DIR, 'public');
 const MANIFEST = resolve(WEB_DIR, 'bundle-manifest.json');
 
 const INDEX_HTML = resolve(WEB_DIR, 'index.html');
+const LAZY_MANIFEST = resolve(PUB_DIR, 'lazy-manifest.json');
 
 const DRY_RUN = process.argv.includes('--dry-run');
 const SELECTED_BUNDLES = (() => {
@@ -286,6 +287,16 @@ async function main() {
         }
 
         syncIndexHtml(builtEntries);
+
+        // Write lazy-manifest.json: maps lazy-chunk bundle names → their hashed filenames.
+        // Façade stubs fetch this at runtime so they always load the current-deploy URL (S1).
+        const lazyEntries = Object.fromEntries(
+            Object.entries(manifest).filter(([name]) => name.endsWith('-lazy'))
+        );
+        if (Object.keys(lazyEntries).length > 0) {
+            writeFileSync(LAZY_MANIFEST, JSON.stringify(lazyEntries, null, 2), 'utf8');
+            console.info(`[bundle-legacy] 📋 lazy-manifest.json → ${Object.keys(lazyEntries).join(', ')}`);
+        }
     }
 
     // ── Step: Pre-compress bundles with gzip ─────────────────────────────

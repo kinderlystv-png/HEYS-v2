@@ -28,7 +28,9 @@ export const LEGACY_BUNDLES = {
         'heys_storage_supabase_v1.js',
         'heys_models_v1.js',
         'heys_storage_layer_v1.js',
+        'heys_storage_registry_v1.js',
         'heys_products_overlay_v1.js',
+        'heys_find_alt_memo_v1.js',
         'heys_dayv2_cache_v1.js',
         'heys_wheel_picker.js',
         'heys_swipeable.js',
@@ -176,7 +178,10 @@ export const LEGACY_BUNDLES = {
         'heys_app_entry_v1.js',
         'heys_app_v12.js',
     ],
-    'postboot-1-game': [
+    'postboot-1-game-eager': [
+        'heys_game_facade_v1.js',
+    ],
+    'postboot-1-game-lazy': [
         'heys_daily_missions_v1.js',
         'heys_gamification_v1.js',
         'heys_advice_rules_v1.js',
@@ -209,7 +214,10 @@ export const LEGACY_BUNDLES = {
         'heys_subscriptions_v1.js',
         'heys_status_v1.js',
     ],
-    'postboot-2-insights': [
+    'postboot-2-insights-eager': [
+        'insights/pi_facade.js',
+    ],
+    'postboot-2-insights-lazy': [
         'insights/pi_constants.js',
         'insights/pi_stats.js',
         'insights/pi_thresholds.js',
@@ -250,8 +258,11 @@ export const LEGACY_BUNDLES = {
         'insights/pi_ui_dashboard.js',
         'insights/pi_pattern_debugger.js',
     ],
-    'postboot-3-ui': [
+    'postboot-3-ui-eager': [
         'heys_modal_manager_v1.js',
+        'heys_postboot3_facade_v1.js',
+    ],
+    'postboot-3-ui-lazy': [
         'heys_step_modal_v1.js',
         'heys_morning_activation_calendar_v1.js',
         'heys_steps_v1.js',

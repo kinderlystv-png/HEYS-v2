@@ -274,7 +274,11 @@
                     return;
                 }
 
-                setSyncVer((v) => v + 1);
+                if (React.startTransition && window.HEYS?.flags?.isEnabled?.('boot_optimized_v1')) {
+                    React.startTransition(() => setSyncVer((v) => v + 1));
+                } else {
+                    setSyncVer((v) => v + 1);
+                }
             };
 
             // PERF NEW-1: миграция на dispatcher next-frame lane.

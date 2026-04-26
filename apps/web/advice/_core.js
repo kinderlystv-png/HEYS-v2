@@ -270,8 +270,6 @@
                 HEYS.store.set(RATING_KEY, ratings);
             } else if (U.lsSet) {
                 U.lsSet(RATING_KEY, ratings);
-            } else {
-                localStorage.setItem(RATING_KEY, JSON.stringify(ratings));
             }
         } catch (e) { }
     }
@@ -325,8 +323,6 @@
                     HEYS.store.set(RATING_KEY, parsed);
                 } else if (U.lsSet) {
                     U.lsSet(RATING_KEY, parsed);
-                } else {
-                    localStorage.setItem(RATING_KEY, JSON.stringify(parsed));
                 }
             }
             return parsed;
@@ -467,8 +463,6 @@
                 HEYS.store.set(key, String(Date.now()));
             } else if (U.lsSet) {
                 U.lsSet(key, String(Date.now()));
-            } else {
-                localStorage.setItem(key, String(Date.now()));
             }
         } catch (e) { }
     }
@@ -509,8 +503,6 @@
                 HEYS.store.set(RECOMMENDATION_PATTERNS_KEY, patterns);
             } else if (U.lsSet) {
                 U.lsSet(RECOMMENDATION_PATTERNS_KEY, patterns);
-            } else {
-                localStorage.setItem(RECOMMENDATION_PATTERNS_KEY, JSON.stringify(patterns));
             }
         } catch (e) { }
     }
@@ -1021,8 +1013,6 @@
                 HEYS.store.set(ADVICE_SETTINGS_KEY, merged);
             } else if (U.lsSet) {
                 U.lsSet(ADVICE_SETTINGS_KEY, merged);
-            } else {
-                localStorage.setItem(ADVICE_SETTINGS_KEY, JSON.stringify(merged));
             }
             // Emit event для UI
             window.dispatchEvent(new CustomEvent('heysAdviceSettingsChanged', { detail: merged }));
@@ -1109,8 +1099,6 @@
                     HEYS.store.set(PERSONAL_BESTS_KEY, bests);
                 } else if (U.lsSet) {
                     U.lsSet(PERSONAL_BESTS_KEY, bests);
-                } else {
-                    localStorage.setItem(PERSONAL_BESTS_KEY, JSON.stringify(bests));
                 }
             } catch (e) { }
 
@@ -1175,8 +1163,6 @@
                 HEYS.store.set(CHAIN_STORAGE_KEY, chains);
             } else if (U.lsSet) {
                 U.lsSet(CHAIN_STORAGE_KEY, chains);
-            } else {
-                localStorage.setItem(CHAIN_STORAGE_KEY, JSON.stringify(chains));
             }
         } catch (e) { }
     }
@@ -1207,8 +1193,6 @@
                     HEYS.store.set(CHAIN_STORAGE_KEY, chains);
                 } else if (U.lsSet) {
                     U.lsSet(CHAIN_STORAGE_KEY, chains);
-                } else {
-                    localStorage.setItem(CHAIN_STORAGE_KEY, JSON.stringify(chains));
                 }
 
                 return chainConfig.next;
@@ -1272,8 +1256,6 @@
                 HEYS.store.set(SCHEDULED_KEY, scheduled);
             } else if (U.lsSet) {
                 U.lsSet(SCHEDULED_KEY, scheduled);
-            } else {
-                localStorage.setItem(SCHEDULED_KEY, JSON.stringify(scheduled));
             }
 
             // Уведомление об отложке
@@ -1307,8 +1289,6 @@
                     HEYS.store.set(SCHEDULED_KEY, remaining);
                 } else if (U.lsSet) {
                     U.lsSet(SCHEDULED_KEY, remaining);
-                } else {
-                    localStorage.setItem(SCHEDULED_KEY, JSON.stringify(remaining));
                 }
             }
 
@@ -1585,8 +1565,6 @@
                     HEYS.store.set(key, nextValue);
                 } else if (U.lsSet) {
                     U.lsSet(key, nextValue);
-                } else {
-                    localStorage.setItem(key, nextValue);
                 }
             }
         } catch (e) { }
@@ -1678,8 +1656,6 @@
                     HEYS.store.set(key, value);
                 } else if (U.lsSet) {
                     U.lsSet(key, value);
-                } else {
-                    localStorage.setItem(key, value);
                 }
             } catch (e) { }
         }
@@ -2258,8 +2234,6 @@
                     HEYS.store.set(TRACKING_KEY, stats);
                 } else if (U.lsSet) {
                     U.lsSet(TRACKING_KEY, stats);
-                } else {
-                    localStorage.setItem(TRACKING_KEY, JSON.stringify(stats));
                 }
             }
             return stats;
@@ -2280,8 +2254,6 @@
                 HEYS.store.set(TRACKING_KEY, stats);
             } else if (U.lsSet) {
                 U.lsSet(TRACKING_KEY, stats);
-            } else {
-                localStorage.setItem(TRACKING_KEY, JSON.stringify(stats));
             }
         } catch (e) {
             // Ignore storage errors
@@ -3392,8 +3364,6 @@
                 HEYS.store.set(key, value);
             } else if (U.lsSet) {
                 U.lsSet(key, value);
-            } else {
-                localStorage.setItem(key, JSON.stringify(value));
             }
         } catch (e) {
             // Ignore storage errors
@@ -5909,8 +5879,6 @@
                 HEYS.store.set(key, '1');
             } else if (U.lsSet) {
                 U.lsSet(key, '1');
-            } else {
-                localStorage.setItem(key, '1');
             }
         } catch (e) {
             // Ignore storage errors
@@ -6000,8 +5968,6 @@
                         HEYS.store.set(key, String(currentStreak));
                     } else if (U.lsSet) {
                         U.lsSet(key, String(currentStreak));
-                    } else {
-                        localStorage.setItem(key, String(currentStreak));
                     }
                 } catch (e) {
                     // Ignore storage errors

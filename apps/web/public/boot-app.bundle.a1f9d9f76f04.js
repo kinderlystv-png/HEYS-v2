@@ -11669,27 +11669,17 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
 
     const writeStoredValue = (key, value) => {
         try {
-            if (HEYS.store?.set) {
-                HEYS.store.set(key, value);
-                return;
-            }
-            if (U.lsSet) {
-                U.lsSet(key, value);
-                return;
-            }
-            const serialized = typeof value === 'string' ? value : JSON.stringify(value);
-            localStorage.setItem(key, serialized);
+            if (HEYS.store?.set) { HEYS.store.set(key, value); return; }
+            const utils = HEYS.utils || {};
+            if (utils.lsSet) { utils.lsSet(key, value); return; }
         } catch { }
     };
 
     const writeGlobalValue = (key, value) => {
         try {
-            if (HEYS.store?.set) {
-                HEYS.store.set(key, value);
-                return;
-            }
-            const serialized = typeof value === 'string' ? value : JSON.stringify(value);
-            localStorage.setItem(key, serialized);
+            if (HEYS.store?.set) { HEYS.store.set(key, value); return; }
+            const utils = HEYS.utils || {};
+            if (utils.lsSet) { utils.lsSet(key, value); return; }
         } catch { }
     };
 
@@ -14144,6 +14134,60 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
 
     const TAB_SKELETON_DELAY_MS = 260;
 
+    // ──────────────────────────────────────────────────────────────────────
+    // Phase 5C: one-shot cleanup of *_insights_feedback_default keys.
+    // These are written before profile loads (no UUID → wrong key scope),
+    // can reach 970 KB+, and are the main cause of localStorage overflow.
+    // On cleanup: merge unique records into the per-client key, then delete.
+    // ──────────────────────────────────────────────────────────────────────
+    let _p5cRan = false;
+    function _runDefaultFeedbackCleanup(cid) {
+        if (_p5cRan) return;
+        _p5cRan = true;
+        try {
+            const FEEDBACK_MAX_HISTORY = 30;
+            const defaultKeys = [];
+            for (let i = 0; i < localStorage.length; i++) {
+                const k = localStorage.key(i);
+                if (k && k.includes('_insights_feedback_') && k.endsWith('_default')) {
+                    defaultKeys.push(k);
+                }
+            }
+            if (defaultKeys.length === 0) return;
+            for (const dk of defaultKeys) {
+                try {
+                    const raw = localStorage.getItem(dk);
+                    if (!raw) { localStorage.removeItem(dk); continue; }
+                    let arr;
+                    try { arr = JSON.parse(raw); } catch (_) { localStorage.removeItem(dk); continue; }
+                    if (!Array.isArray(arr)) { localStorage.removeItem(dk); continue; }
+                    // Migrate into the per-client key when clientId is known.
+                    if (cid) {
+                        const clientKey = dk.replace(/_default$/, '_' + cid);
+                        try {
+                            const existingRaw = localStorage.getItem(clientKey);
+                            const existing = (() => { try { return JSON.parse(existingRaw || '[]'); } catch (_) { return []; } })();
+                            const byId = new Map();
+                            for (const rec of [...arr, ...(Array.isArray(existing) ? existing : [])]) {
+                                if (rec && rec.id && !byId.has(rec.id)) byId.set(rec.id, rec);
+                            }
+                            const merged = Array.from(byId.values())
+                                .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))
+                                .slice(0, FEEDBACK_MAX_HISTORY);
+                            if (window.HEYS && window.HEYS.store && typeof window.HEYS.store.set === 'function') {
+                                window.HEYS.store.set(clientKey, merged);
+                            } else {
+                                localStorage.setItem(clientKey, JSON.stringify(merged));
+                            }
+                        } catch (_) { /* noop — merge failure must not prevent _default deletion */ }
+                    }
+                    localStorage.removeItem(dk);
+                    console.info('[HEYS.p5c] Cleaned default feedback key', dk, '(' + arr.length + ' records)', cid ? '→ merged to per-client key' : '(no cid, deleted only)');
+                } catch (_) { /* noop */ }
+            }
+        } catch (_) { /* noop */ }
+    }
+
     function useDelayedSkeleton(shouldShow, key) {
         const [visible, setVisible] = React.useState(false);
 
@@ -14261,7 +14305,15 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                         window.__heysGatedRender = false;
                     }
                     console.info('[HEYS.sceleton] ✅ DayTab unlocked:', reason);
-                    setLoading(false);
+                    // boot_optimized_v1: defer the heavy App-tree render via startTransition
+                    // so Header/Skeleton stay interactive while DayTab subtree commits in
+                    // a deferred lane. Saves ~150-300ms perceived jank
+                    // (plan gleaming-pondering-dewdrop.md, Phase 1.2).
+                    if (React.startTransition && window.HEYS?.flags?.isEnabled?.('boot_optimized_v1')) {
+                        React.startTransition(() => setLoading(false));
+                    } else {
+                        setLoading(false);
+                    }
                 };
 
                 // v9.9: CSS Gate #2 removed — CSS Gate #1 (heys_app_initialize_v1.js)
@@ -14713,6 +14765,30 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                     typeB: result.typeB,
                     total: result.rows.length,
                 });
+
+                // ──────────────────────────────────────────────────────────
+                // Phase 5C: delete *_default feedback keys (overflow keys
+                // written before profile loaded — main source of 970 KB blobs).
+                // Runs once per session; migrates records to per-client key.
+                // ──────────────────────────────────────────────────────────
+                _runDefaultFeedbackCleanup(clientId);
+
+                // ──────────────────────────────────────────────────────────
+                // Phase 2b: storage audit (enforce mode when flag on, else shadow).
+                // Fires once after first overlay migration completes successfully;
+                // re-fires on subsequent boots only if 6h gate has lapsed OR
+                // audit version changed. With storage_audit_enforce:true, actually
+                // prunes/wipes oversized keys; manual keys go through _mergeAndPrune.
+                // ──────────────────────────────────────────────────────────
+                try {
+                    if (window.HEYS.storageRegistry && typeof window.HEYS.storageRegistry.runAuditOnce === 'function') {
+                        window.HEYS.storageRegistry.runAuditOnce().catch((e) => {
+                            console.warn('[HEYS.storageRegistry] audit error (non-fatal):', e && e.message);
+                        });
+                    }
+                } catch (e) {
+                    console.warn('[HEYS.storageRegistry] audit invocation failed (non-fatal):', e && e.message);
+                }
             };
 
             // Если sync для этого клиента уже был — сразу загружаем продукты
@@ -21413,6 +21489,23 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
         );
     }
 
+    var _lazyTabCache = Object.create(null);
+    function _lazyTab(key, loaderKey, getComp) {
+        if (!_lazyTabCache[key]) {
+            _lazyTabCache[key] = React.lazy(function () {
+                var loadFn = window.HEYS && window.HEYS[loaderKey];
+                var p = loadFn ? loadFn() : Promise.resolve();
+                return p.then(function () {
+                    var comp = getComp();
+                    return { default: comp || function _LazyTabPlaceholder() { return null; } };
+                }).catch(function () {
+                    return { default: function _LazyTabError() { return null; } };
+                });
+            });
+        }
+        return _lazyTabCache[key];
+    }
+
     function AppTabContent(props) {
         const {
             tab,
@@ -21432,6 +21525,12 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
             RationTabWithCloudSync,
             UserTabWithCloudSync,
         } = props;
+
+        const [, _tickPostboot] = React.useReducer(function(n) { return n + 1; }, 0);
+        React.useEffect(function() {
+            window.addEventListener('heys:postboot-lazy-ready', _tickPostboot);
+            return function() { window.removeEventListener('heys:postboot-lazy-ready', _tickPostboot); };
+        }, []);
 
         const TAB_SKELETON_DELAY_MS = 240;
         const tabSkeletonSince = window.__heysTabSkeletonSince = window.__heysTabSkeletonSince || Object.create(null);
@@ -21525,25 +21624,29 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                         clientId,
                     }))
                     : tab === 'insights'
-                        ? (window.HEYS?.PredictiveInsights?.components?.InsightsTab
-                            ? wrapReactProfiler('InsightsTab', React.createElement(window.HEYS.PredictiveInsights.components.InsightsTab, {
-                                key: 'insights_' + String(clientId || '') + '_' + selectedDate,
-                                lsGet: window.HEYS?.utils?.lsGet,
-                                profile: null,
-                                pIndex: null,
-                                optimum: null,
-                                selectedDate: selectedDate,
-                            }))
-                            : renderTabFallback('insights', tabFallbackSkeleton('🔮', 'Готовим инсайты…', 280)))
+                        ? React.createElement(React.Suspense, { fallback: tabFallbackSkeleton('🔮', 'Готовим инсайты…', 280) },
+                            wrapReactProfiler('InsightsTab', React.createElement(
+                                _lazyTab('insights', '__loadPostboot3Ui', function() { return window.HEYS?.PredictiveInsights?.components?.InsightsTab; }),
+                                {
+                                    key: 'insights_' + String(clientId || '') + '_' + selectedDate,
+                                    lsGet: window.HEYS?.utils?.lsGet,
+                                    profile: null,
+                                    pIndex: null,
+                                    optimum: null,
+                                    selectedDate: selectedDate,
+                                }
+                            )))
                         : tab === 'month'
-                            ? (window.HEYS?.ReportsTab
-                                ? React.createElement(window.HEYS.ReportsTab, {
-                                    key: 'month_' + String(clientId || '') + '_' + selectedDate,
-                                    selectedDate,
-                                    setSelectedDate,
-                                    clientId,
-                                })
-                                : renderTabFallback('month', tabFallbackSkeleton('📊', 'Готовим отчёты…', 280)))
+                            ? React.createElement(React.Suspense, { fallback: tabFallbackSkeleton('📊', 'Готовим отчёты…', 280) },
+                                React.createElement(
+                                    _lazyTab('month', '__loadPostboot3Ui', function() { return window.HEYS?.ReportsTab; }),
+                                    {
+                                        key: 'month_' + String(clientId || '') + '_' + selectedDate,
+                                        selectedDate: selectedDate,
+                                        setSelectedDate: setSelectedDate,
+                                        clientId: clientId,
+                                    }
+                                ))
                             : (tab === 'stats' || tab === 'diary')
                                 ? null
                                 : tab === 'user'
@@ -21555,38 +21658,44 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                                         clientId,
                                     })
                                     : tab === 'overview'
-                                        ? (window.HEYS && window.HEYS.DataOverviewTab
-                                            ? React.createElement(window.HEYS.DataOverviewTab, {
-                                                key: 'overview_' + String(clientId || ''),
-                                                clientId,
-                                                setTab,
-                                                setSelectedDate,
-                                            })
-                                            : renderTabFallback('overview', tabFallbackSkeleton('📋', 'Готовим обзор…', 200)))
+                                        ? React.createElement(React.Suspense, { fallback: tabFallbackSkeleton('📋', 'Готовим обзор…', 200) },
+                                            React.createElement(
+                                                _lazyTab('overview', '__loadPostboot3Ui', function() { return window.HEYS?.DataOverviewTab; }),
+                                                {
+                                                    key: 'overview_' + String(clientId || ''),
+                                                    clientId: clientId,
+                                                    setTab: setTab,
+                                                    setSelectedDate: setSelectedDate,
+                                                }
+                                            ))
                                         : tab === 'widgets'
-                                            ? (window.HEYS && window.HEYS.Widgets && window.HEYS.Widgets.WidgetsTab
-                                                ? React.createElement(window.HEYS.Widgets.WidgetsTab, {
-                                                    // NOTE: syncVer намеренно убран из key — WidgetsTab подписан на
-                                                    // data:updated/day:updated события и не нуждается в remount при синке.
-                                                    // syncVer в key вызывает flash всего контента вкладки.
-                                                    key: 'widgets_' + String(clientId || '') + '_' + selectedDate,
-                                                    clientId,
-                                                    cloudUser,
-                                                    selectedDate,
-                                                    setTab,
-                                                    setSelectedDate,
-                                                })
-                                                : renderTabFallback('widgets', tabFallbackSkeleton('🧩', 'Готовим виджеты…', 200)))
+                                            ? React.createElement(React.Suspense, { fallback: tabFallbackSkeleton('🧩', 'Готовим виджеты…', 200) },
+                                                React.createElement(
+                                                    _lazyTab('widgets', '__loadPostboot3Ui', function() { return window.HEYS?.Widgets?.WidgetsTab; }),
+                                                    {
+                                                        // NOTE: syncVer намеренно убран из key — WidgetsTab подписан на
+                                                        // data:updated/day:updated события и не нуждается в remount при синке.
+                                                        // syncVer в key вызывает flash всего контента вкладки.
+                                                        key: 'widgets_' + String(clientId || '') + '_' + selectedDate,
+                                                        clientId: clientId,
+                                                        cloudUser: cloudUser,
+                                                        selectedDate: selectedDate,
+                                                        setTab: setTab,
+                                                        setSelectedDate: setSelectedDate,
+                                                    }
+                                                ))
                                             : tab === 'tasks'
-                                                ? ((!cloudUser && clientId) && window.HEYS?.PlanningTab
-                                                    ? React.createElement(window.HEYS.PlanningTab, {
-                                                        key: 'tasks_' + String(clientId || ''),
-                                                        clientId,
-                                                        defaultHomeScreen: defaultTasksSubtab,
-                                                    })
-                                                    : ((!cloudUser && clientId)
-                                                        ? renderTabFallback('tasks', tabFallbackSkeleton('✅', 'Готовим задачи…', 280))
-                                                        : null))
+                                                ? ((!cloudUser && clientId)
+                                                    ? React.createElement(React.Suspense, { fallback: tabFallbackSkeleton('✅', 'Готовим задачи…', 280) },
+                                                        React.createElement(
+                                                            _lazyTab('tasks', '__loadPostboot3Ui', function() { return window.HEYS?.PlanningTab; }),
+                                                            {
+                                                                key: 'tasks_' + String(clientId || ''),
+                                                                clientId: clientId,
+                                                                defaultHomeScreen: defaultTasksSubtab,
+                                                            }
+                                                        ))
+                                                    : null)
                                                 : renderTabFallback('default_' + String(tab || 'unknown'), tabFallbackSkeleton('📂', 'Готовим вкладку…', 280))
             )
         );
@@ -23967,19 +24076,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                 }
                 if (U && typeof U.lsSet === 'function') {
                     U.lsSet(`${key}_backup`, snapshot);
-                } else {
-                    try {
-                        localStorage.setItem(`${key}_backup`, JSON.stringify(snapshot));
-                    } catch (error) {
-                        HEYS.analytics?.trackError?.(error, { context: 'backupAllKeys', key });
-                    }
-                    if (window.HEYS && typeof window.HEYS.saveClientKey === 'function') {
-                        try {
-                            window.HEYS.saveClientKey(`${key}_backup`, snapshot);
-                        } catch (error) {
-                            HEYS.analytics?.trackError?.(error, { context: 'backupAllKeys:saveClientKey', key });
-                        }
-                    }
+                } else if (window.HEYS?.store?.set) {
+                    window.HEYS.store.set(`${key}_backup`, snapshot);
                 }
                 if (filePayload) {
                     filePayload.items.push(snapshot);
@@ -23995,17 +24093,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
             };
             if (U && typeof U.lsSet === 'function') {
                 U.lsSet('heys_backup_meta', meta);
-            } else {
-                try {
-                    localStorage.setItem('heys_backup_meta', JSON.stringify(meta));
-                } catch (error) { }
-                if (window.HEYS && typeof window.HEYS.saveClientKey === 'function') {
-                    try {
-                        window.HEYS.saveClientKey('heys_backup_meta', meta);
-                    } catch (error) {
-                        HEYS.analytics?.trackError?.(error, { context: 'backupAllKeys:saveClientKey', key: 'heys_backup_meta' });
-                    }
-                }
+            } else if (window.HEYS?.store?.set) {
+                window.HEYS.store.set('heys_backup_meta', meta);
             }
             setBackupMeta(meta);
             if (shouldDownload && filePayload && filePayload.items.length) {
@@ -24067,17 +24156,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                     setProducts(Array.isArray(snapshot.data) ? snapshot.data : []);
                 } else if (U && typeof U.lsSet === 'function') {
                     U.lsSet(key, snapshot.data);
-                } else {
-                    try {
-                        localStorage.setItem(key, JSON.stringify(snapshot.data));
-                    } catch (error) { }
-                    if (window.HEYS && typeof window.HEYS.saveClientKey === 'function') {
-                        try {
-                            window.HEYS.saveClientKey(key, snapshot.data);
-                        } catch (error) {
-                            HEYS.analytics?.trackError?.(error, { context: 'restoreFromBackup:saveClientKey', key });
-                        }
-                    }
+                } else if (window.HEYS?.store?.set) {
+                    window.HEYS.store.set(key, snapshot.data);
                 }
                 restored++;
             });
@@ -24146,15 +24226,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                 }
                 if (U && typeof U.lsSet === 'function') {
                     U.lsSet(key, dayData);
-                } else {
-                    try {
-                        localStorage.setItem(key, JSON.stringify(dayData));
-                    } catch (_) { }
-                    if (window.HEYS && typeof window.HEYS.saveClientKey === 'function') {
-                        try {
-                            window.HEYS.saveClientKey(key, dayData);
-                        } catch (_) { }
-                    }
+                } else if (window.HEYS?.store?.set) {
+                    window.HEYS.store.set(key, dayData);
                 }
                 restoredDates.push(dateStr);
             };
@@ -25936,7 +26009,11 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                     return;
                 }
 
-                setSyncVer((v) => v + 1);
+                if (React.startTransition && window.HEYS?.flags?.isEnabled?.('boot_optimized_v1')) {
+                    React.startTransition(() => setSyncVer((v) => v + 1));
+                } else {
+                    setSyncVer((v) => v + 1);
+                }
             };
 
             // PERF NEW-1: миграция на dispatcher next-frame lane.
@@ -27128,8 +27205,11 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                 const result = getActiveDaysForMonth(year, month, profile, effectiveProducts);
                 window.console.info('[HEYS.calendar] 🗓️ useDatePickerActiveDays пересчёт: calendarVer=' + calendarVer + ' month=' + (month + 1) + ' activeDays=' + (result?.size || 0) + ' products=' + effectiveProducts.length);
 
-                // 🔍 ДИАГНОСТИКА: Сравниваем результат с localStorage напрямую
-                try {
+                // 🔍 ДИАГНОСТИКА: Сравниваем результат с localStorage напрямую.
+                // Gated behind `calendar_diag` flag — full 30-day decompress+parse loop costs
+                // 200-400ms per dep change. Default off in prod (plan gleaming-pondering-dewdrop.md).
+                const _diagEnabled = window.HEYS?.flags?.isEnabled?.('calendar_diag');
+                if (_diagEnabled) try {
                     const cid = clientId || window.HEYS?.currentClientId || '';
                     const cidShort = cid ? cid.slice(0, 8) : 'none';
                     const daysInMonth = new Date(year, month + 1, 0).getDate();

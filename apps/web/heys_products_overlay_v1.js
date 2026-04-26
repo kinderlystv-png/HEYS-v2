@@ -81,6 +81,13 @@
             if (!ev || !ev.data || ev.data.tabId === _bcSendingTabId) return;
             if (ev.data.type === 'overlay-write') {
               invalidateMergedView();
+              // boot_optimized_v1 / S4: bump content-version counter so React useMemo
+              // dependents in this tab invalidate when another tab writes overlay.
+              try {
+                global.HEYS = global.HEYS || {};
+                global.HEYS.products = global.HEYS.products || {};
+                global.HEYS.products.contentVersion = (global.HEYS.products.contentVersion || 0) + 1;
+              } catch (_) { /* noop */ }
             }
           } catch (_) { /* noop */ }
         };

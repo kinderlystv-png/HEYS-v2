@@ -97,6 +97,61 @@ const product = {
 
 let store;
 
+// Воспроизводим lsSet из heys_core_v12.js (Phase 5 Block A fix)
+function makeLsSet(heysStore, localStorage) {
+  return function lsSet(key, val) {
+    try {
+      if (heysStore?.set) {
+        heysStore.set(key, val);
+        return;
+      }
+      const serialized = JSON.stringify(val);
+      try {
+        const existing = localStorage.getItem(key);
+        if (existing === serialized) return;
+      } catch (_) {}
+      localStorage.setItem(key, serialized);
+    } catch (e) {}
+  };
+}
+
+describe('lsSet — routing через Store.set (Phase 5 Block A)', () => {
+  it('routing через Store.set когда доступен — не пишет в localStorage напрямую', () => {
+    const lsSetMock = { calls: [] };
+    const storeMock = { set: (k, v) => lsSetMock.calls.push({ k, v }) };
+    const ls = { getItem: () => null, setItem: () => {} };
+    const lsSetSpy = { setItemCalls: 0 };
+    ls.setItem = (...args) => { lsSetSpy.setItemCalls++; };
+
+    const lsSet = makeLsSet(storeMock, ls);
+    lsSet('heys_insights_feedback_default', [{ id: 1 }]);
+
+    expect(lsSetMock.calls).toHaveLength(1);
+    expect(lsSetMock.calls[0].k).toBe('heys_insights_feedback_default');
+    expect(lsSetSpy.setItemCalls).toBe(0); // НЕ должен писать напрямую
+  });
+
+  it('routing через localStorage когда Store недоступен (early boot)', () => {
+    const ls = { getItem: () => null, setItemCalls: 0, setItem: function(k, v) { this.setItemCalls++; this[k] = v; } };
+    const lsSet = makeLsSet(null, ls);
+    lsSet('heys_insights_feedback_default', [{ id: 1 }]);
+
+    expect(ls.setItemCalls).toBe(1);
+  });
+
+  it('insights_feedback_default теперь идёт через Store.set — без прямого localStorage.setItem', () => {
+    // Ранее: heys_insights_feedback_default не был в clientSpecificKeys → падал в localStorage без сжатия
+    // Теперь: Store.set вызывается для ЛЮБОГО ключа когда доступен
+    const storeCalls = [];
+    const storeMock = { set: (k, v) => storeCalls.push(k) };
+    const ls = { getItem: () => null, setItem: () => { throw new Error('должен идти через Store'); } };
+    const lsSet = makeLsSet(storeMock, ls);
+
+    expect(() => lsSet('heys_insights_feedback_uuid-123', [])).not.toThrow();
+    expect(storeCalls).toContain('heys_insights_feedback_uuid-123');
+  });
+});
+
 describe('storage compress/decompress', () => {
   beforeEach(() => {
     store = {};

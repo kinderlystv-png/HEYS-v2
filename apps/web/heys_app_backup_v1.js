@@ -121,19 +121,8 @@
                 }
                 if (U && typeof U.lsSet === 'function') {
                     U.lsSet(`${key}_backup`, snapshot);
-                } else {
-                    try {
-                        localStorage.setItem(`${key}_backup`, JSON.stringify(snapshot));
-                    } catch (error) {
-                        HEYS.analytics?.trackError?.(error, { context: 'backupAllKeys', key });
-                    }
-                    if (window.HEYS && typeof window.HEYS.saveClientKey === 'function') {
-                        try {
-                            window.HEYS.saveClientKey(`${key}_backup`, snapshot);
-                        } catch (error) {
-                            HEYS.analytics?.trackError?.(error, { context: 'backupAllKeys:saveClientKey', key });
-                        }
-                    }
+                } else if (window.HEYS?.store?.set) {
+                    window.HEYS.store.set(`${key}_backup`, snapshot);
                 }
                 if (filePayload) {
                     filePayload.items.push(snapshot);
@@ -149,17 +138,8 @@
             };
             if (U && typeof U.lsSet === 'function') {
                 U.lsSet('heys_backup_meta', meta);
-            } else {
-                try {
-                    localStorage.setItem('heys_backup_meta', JSON.stringify(meta));
-                } catch (error) { }
-                if (window.HEYS && typeof window.HEYS.saveClientKey === 'function') {
-                    try {
-                        window.HEYS.saveClientKey('heys_backup_meta', meta);
-                    } catch (error) {
-                        HEYS.analytics?.trackError?.(error, { context: 'backupAllKeys:saveClientKey', key: 'heys_backup_meta' });
-                    }
-                }
+            } else if (window.HEYS?.store?.set) {
+                window.HEYS.store.set('heys_backup_meta', meta);
             }
             setBackupMeta(meta);
             if (shouldDownload && filePayload && filePayload.items.length) {
@@ -221,17 +201,8 @@
                     setProducts(Array.isArray(snapshot.data) ? snapshot.data : []);
                 } else if (U && typeof U.lsSet === 'function') {
                     U.lsSet(key, snapshot.data);
-                } else {
-                    try {
-                        localStorage.setItem(key, JSON.stringify(snapshot.data));
-                    } catch (error) { }
-                    if (window.HEYS && typeof window.HEYS.saveClientKey === 'function') {
-                        try {
-                            window.HEYS.saveClientKey(key, snapshot.data);
-                        } catch (error) {
-                            HEYS.analytics?.trackError?.(error, { context: 'restoreFromBackup:saveClientKey', key });
-                        }
-                    }
+                } else if (window.HEYS?.store?.set) {
+                    window.HEYS.store.set(key, snapshot.data);
                 }
                 restored++;
             });
@@ -300,15 +271,8 @@
                 }
                 if (U && typeof U.lsSet === 'function') {
                     U.lsSet(key, dayData);
-                } else {
-                    try {
-                        localStorage.setItem(key, JSON.stringify(dayData));
-                    } catch (_) { }
-                    if (window.HEYS && typeof window.HEYS.saveClientKey === 'function') {
-                        try {
-                            window.HEYS.saveClientKey(key, dayData);
-                        } catch (_) { }
-                    }
+                } else if (window.HEYS?.store?.set) {
+                    window.HEYS.store.set(key, dayData);
                 }
                 restoredDates.push(dateStr);
             };

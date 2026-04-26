@@ -10,11 +10,11 @@
     "command": "workbench.action.tasks.runTask",
     "args": "Run All Tests"
   },
-  // 3. запуск dev-сервера на Ctrl+Shift+H
+  // 3. запуск full-stack dev (web 3001 + api 4001) на Ctrl+Shift+H
   {
     "key": "ctrl+shift+h",
     "command": "workbench.action.tasks.runTask",
-    "args": "Start Frontend (Port 3001)"
+    "args": "Start Dev Stack (Web 3001 + API 4001)"
   },
   // 4. запуск лендинга на Ctrl+Shift+J
   {

@@ -93,8 +93,11 @@
                 const result = getActiveDaysForMonth(year, month, profile, effectiveProducts);
                 window.console.info('[HEYS.calendar] 🗓️ useDatePickerActiveDays пересчёт: calendarVer=' + calendarVer + ' month=' + (month + 1) + ' activeDays=' + (result?.size || 0) + ' products=' + effectiveProducts.length);
 
-                // 🔍 ДИАГНОСТИКА: Сравниваем результат с localStorage напрямую
-                try {
+                // 🔍 ДИАГНОСТИКА: Сравниваем результат с localStorage напрямую.
+                // Gated behind `calendar_diag` flag — full 30-day decompress+parse loop costs
+                // 200-400ms per dep change. Default off in prod (plan gleaming-pondering-dewdrop.md).
+                const _diagEnabled = window.HEYS?.flags?.isEnabled?.('calendar_diag');
+                if (_diagEnabled) try {
                     const cid = clientId || window.HEYS?.currentClientId || '';
                     const cidShort = cid ? cid.slice(0, 8) : 'none';
                     const daysInMonth = new Date(year, month + 1, 0).getDate();
