@@ -7421,13 +7421,30 @@
               if (key.includes('_products') && !key.includes('_products_backup') && !key.includes('_hidden_products') && !key.includes('_favorite_products') && !key.includes('_deleted_products') && !key.includes('_products_overlay_v2') && !key.includes('_products_pre_overlay_')) {
                 // ⛔ Phase-ε READ-side: legacy heys_<cid>_products is dead-data when overlay-canonical.
                 // Symmetric to push-side skip at line ~9517 (cloud-push skipped). Облачный legacy-снимок
-                // может быть stale stub (1 row), который через merge → setAll(allowShrink:true) затирает
-                // overlay merged-view в памяти. Источник истины — heys_products_overlay_v2.
-                const _overlayCanonical = global.HEYS && global.HEYS.flags
-                  && global.HEYS.flags.isEnabled && global.HEYS.flags.isEnabled('overlay_products_v2')
-                  && global.localStorage.getItem('heys_overlay_migration_status') === 'success';
+                // может быть stale stub (1 row или 150-row), который через merge → setAll(allowShrink:true)
+                // затирает overlay merged-view в памяти. Источник истины — heys_products_overlay_v2.
+                //
+                // Точный сигнал "overlay активен как источник истины" = flag ON AND (status='success' OR
+                // overlay LS уже содержит хотя бы 1 строку). Второе условие закрывает race на первом
+                // bootstrap-sync после PIN-restore: cloud heys_products приходит ДО того как
+                // runOverlayMigrationOnce успел поставить status='success', но overlay LS уже мог быть
+                // populated через [OVERLAY-V2 PULL] handler в этой же sync-итерации.
+                const _flagOn = global.HEYS && global.HEYS.flags
+                  && global.HEYS.flags.isEnabled && global.HEYS.flags.isEnabled('overlay_products_v2');
+                let _overlayHasRows = false;
+                if (_flagOn) {
+                  try {
+                    const _store = global.HEYS && global.HEYS.OverlayStore;
+                    if (_store && typeof _store.readRaw === 'function') {
+                      const _rows = _store.readRaw();
+                      _overlayHasRows = Array.isArray(_rows) && _rows.length > 0;
+                    }
+                  } catch (_) { /* noop */ }
+                }
+                const _statusSuccess = global.localStorage.getItem('heys_overlay_migration_status') === 'success';
+                const _overlayCanonical = _flagOn && (_statusSuccess || _overlayHasRows);
                 if (_overlayCanonical) {
-                  logCritical(`⏭️ [PRODUCTS PULL] Skipped legacy ${key.slice(-50)} (${Array.isArray(row.v) ? row.v.length : '?'} rows): overlay-canonical`);
+                  logCritical(`⏭️ [PRODUCTS PULL] Skipped legacy ${key.slice(-50)} (${Array.isArray(row.v) ? row.v.length : '?'} rows): overlay-canonical (status=${_statusSuccess ? 'success' : 'pending'}, overlayRows=${_overlayHasRows ? '>0' : '0'})`);
                   return;
                 }
 
@@ -9541,14 +9558,26 @@
     // fallback read source if anything still calls _origGetAll).
     // Gated on: flag overlay_products_v2 ON + migration_status === 'success'.
     // ──────────────────────────────────────────────────────────────────
+    // Gate: flag overlay_products_v2 ON AND (migration_status=success OR overlay LS has rows).
+    // Второе условие закрывает гонку на свежих устройствах после PIN-restore.
     if (normalizedKey === 'heys_products'
         && global.HEYS && global.HEYS.flags
-        && global.HEYS.flags.isEnabled && global.HEYS.flags.isEnabled('overlay_products_v2')
-        && global.localStorage.getItem('heys_overlay_migration_status') === 'success') {
+        && global.HEYS.flags.isEnabled && global.HEYS.flags.isEnabled('overlay_products_v2')) {
+      let __pushOverlayHasRows = false;
       try {
-        console.info('[HEYS.products] cloud-push skipped {key: legacy heys_products, reason: overlay-canonical}');
+        const __store = global.HEYS && global.HEYS.OverlayStore;
+        if (__store && typeof __store.readRaw === 'function') {
+          const __rows = __store.readRaw();
+          __pushOverlayHasRows = Array.isArray(__rows) && __rows.length > 0;
+        }
       } catch (_) { /* noop */ }
-      return;
+      const __pushStatusOk = global.localStorage.getItem('heys_overlay_migration_status') === 'success';
+      if (__pushStatusOk || __pushOverlayHasRows) {
+        try {
+          console.info('[HEYS.products] cloud-push skipped {key: legacy heys_products, reason: overlay-canonical}');
+        } catch (_) { /* noop */ }
+        return;
+      }
     }
 
     const upsertObj = {
@@ -10617,10 +10646,24 @@
     // Applying it would clobber overlay-driven local state with old data.
     // EXCEPTION: before dropping, upsert any incoming custom products that are missing
     // from the local overlay — handles cross-device sync of user-added custom products.
+    // Gate: flag overlay_products_v2 ON AND (migration_status=success OR overlay LS has rows).
+    // Второе условие защищает свежие устройства от первого HOT-sync до миграции.
+    let __hotOverlayHasRows = false;
+    if (baseKey === 'heys_products'
+        && global.HEYS && global.HEYS.flags
+        && global.HEYS.flags.isEnabled && global.HEYS.flags.isEnabled('overlay_products_v2')) {
+      try {
+        const __store = global.HEYS && global.HEYS.OverlayStore;
+        if (__store && typeof __store.readRaw === 'function') {
+          const __rows = __store.readRaw();
+          __hotOverlayHasRows = Array.isArray(__rows) && __rows.length > 0;
+        }
+      } catch (_) { /* noop */ }
+    }
     if (baseKey === 'heys_products'
         && global.HEYS && global.HEYS.flags
         && global.HEYS.flags.isEnabled && global.HEYS.flags.isEnabled('overlay_products_v2')
-        && global.localStorage.getItem('heys_overlay_migration_status') === 'success') {
+        && (global.localStorage.getItem('heys_overlay_migration_status') === 'success' || __hotOverlayHasRows)) {
       try {
         const incomingArr = Array.isArray(value) ? value : null;
         if (incomingArr && incomingArr.length > 0 && global.HEYS.OverlayStore) {
