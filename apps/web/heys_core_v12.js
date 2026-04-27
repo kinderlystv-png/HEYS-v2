@@ -2006,6 +2006,22 @@
         console.warn('[baza] ⚠️ ШАГ 5.5/7 — tombstone save error:', te.message);
       }
 
+      // --- ШАГ 5.6: удалить из OverlayStore ---
+      // 🆕 КРИТИЧНО: когда overlay_products_v2 ON, getAll() читает overlay merged view.
+      // Tombstone+legacy delete не трогают overlay row → row остаётся с in_my_list:true →
+      // следующий getAll() возвращает удалённый продукт → setProducts восстанавливает его в state →
+      // продукт мгновенно возвращается на UI. Удаляем row из overlay чтобы это не происходило.
+      try {
+        if (window.HEYS?.OverlayStore?.removeRow) {
+          const overlayRemoved = window.HEYS.OverlayStore.removeRow(targetProduct?.id ?? id);
+          console.info('[baza] 🧱 ШАГ 5.6/7 — OverlayStore.removeRow:', overlayRemoved ? '✅ удалён' : '— не найден в overlay');
+        } else {
+          console.info('[baza] ℹ️ ШАГ 5.6/7 — OverlayStore.removeRow недоступен (overlay flag OFF?)');
+        }
+      } catch (oe) {
+        console.warn('[baza] ⚠️ ШАГ 5.6/7 — OverlayStore.removeRow error:', oe.message);
+      }
+
       // --- ШАГ 6: setProducts ---
       console.info('[baza] ⚛️ ШАГ 6/7 — Вызов setProducts(filtered) — React state обновится асинхронно');
       setProducts(filtered);

@@ -11300,6 +11300,22 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
         console.warn('[baza] ⚠️ ШАГ 5.5/7 — tombstone save error:', te.message);
       }
 
+      // --- ШАГ 5.6: удалить из OverlayStore ---
+      // 🆕 КРИТИЧНО: когда overlay_products_v2 ON, getAll() читает overlay merged view.
+      // Tombstone+legacy delete не трогают overlay row → row остаётся с in_my_list:true →
+      // следующий getAll() возвращает удалённый продукт → setProducts восстанавливает его в state →
+      // продукт мгновенно возвращается на UI. Удаляем row из overlay чтобы это не происходило.
+      try {
+        if (window.HEYS?.OverlayStore?.removeRow) {
+          const overlayRemoved = window.HEYS.OverlayStore.removeRow(targetProduct?.id ?? id);
+          console.info('[baza] 🧱 ШАГ 5.6/7 — OverlayStore.removeRow:', overlayRemoved ? '✅ удалён' : '— не найден в overlay');
+        } else {
+          console.info('[baza] ℹ️ ШАГ 5.6/7 — OverlayStore.removeRow недоступен (overlay flag OFF?)');
+        }
+      } catch (oe) {
+        console.warn('[baza] ⚠️ ШАГ 5.6/7 — OverlayStore.removeRow error:', oe.message);
+      }
+
       // --- ШАГ 6: setProducts ---
       console.info('[baza] ⚛️ ШАГ 6/7 — Вызов setProducts(filtered) — React state обновится асинхронно');
       setProducts(filtered);
@@ -36426,11 +36442,32 @@ NOVA: 1-4
     const hasTypeA = rows.some(r => r && !r._custom && r.shared_origin_id);
     if (hasTypeA && (!sharedById || sharedById.size === 0)) return null;
 
+    // 🪦 Defensive tombstone awareness: if cloud-sync brings back an overlay row
+    // (Type A from another device, or Type B that was never propagated to it),
+    // we must not show products user explicitly deleted on this device.
+    // Both sources checked: heys_deleted_ids (Store, cloud-synced) + HEYS.deletedProducts.
+    let _tombIds = null;
+    let _tombNames = null;
+    try {
+      const _ts = HEYS.store?.get?.('heys_deleted_ids');
+      if (Array.isArray(_ts) && _ts.length > 0) {
+        _tombIds = new Set(_ts.map(t => t && t.id != null ? String(t.id) : '').filter(Boolean));
+        _tombNames = new Set(_ts.map(t => (t && t.name ? String(t.name).trim().toLowerCase() : '')).filter(Boolean));
+      }
+    } catch (_) { /* noop */ }
+
     const out = [];
     for (const r of rows) {
       if (!r) continue;
       if (r.in_my_list === false) continue; // soft-removed; getById may bypass this
+      // Tombstone defense: skip rows whose id matches a deleted entry
+      if (_tombIds && r.id != null && _tombIds.has(String(r.id))) continue;
       if (r._custom) {
+        // Type B custom row — skip if name is tombstoned
+        if (_tombNames && r.name) {
+          const _nrm = String(r.name).trim().toLowerCase();
+          if (_tombNames.has(_nrm)) continue;
+        }
         out.push(r);
         continue;
       }
@@ -36440,6 +36477,12 @@ NOVA: 1-4
         // does not vanish from UI. Future shared refresh re-merges.
         out.push(r);
         continue;
+      }
+      // Type A row — merge with shared base. Skip if shared base name is tombstoned
+      // (covers case where overlay row didn't carry name, but shared-origin matches a deleted product).
+      if (_tombNames && base.name) {
+        const _bnrm = String(base.name).trim().toLowerCase();
+        if (_tombNames.has(_bnrm)) continue;
       }
       const merged = Object.assign({}, base, r.overrides || {}, {
         id: r.id,
