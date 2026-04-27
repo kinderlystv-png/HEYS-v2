@@ -5057,11 +5057,34 @@
       return null;
     }
 
+    // 🪦 Tombstone helper: проверяет, есть ли продукт (по id/name) в heys_deleted_ids.
+    // Используется в getById чтобы согласовать поведение с toMergedView/getAll —
+    // если product юзером удалён (tombstone), getById тоже должен возвращать null,
+    // тогда вызывающий код (meal-item resolver, orphan-recovery) увидит его как
+    // отсутствующий и сможет показать banner с выбором действия.
+    function _isProductTombstoned(productOrRaw) {
+      if (!productOrRaw) return false;
+      try {
+        const tombstones = HEYS.store && HEYS.store.get
+          ? HEYS.store.get('heys_deleted_ids') : null;
+        if (!Array.isArray(tombstones) || tombstones.length === 0) return false;
+        const pid = productOrRaw.id != null ? String(productOrRaw.id) : null;
+        const pname = productOrRaw.name ? String(productOrRaw.name).trim().toLowerCase() : null;
+        for (const t of tombstones) {
+          if (!t) continue;
+          if (pid && t.id != null && String(t.id) === pid) return true;
+          if (pname && t.name && String(t.name).trim().toLowerCase() === pname) return true;
+        }
+      } catch (_) { /* noop */ }
+      return false;
+    }
+
     HEYS.products.getById = function (id) {
       const enabled = HEYS.flags && typeof HEYS.flags.isEnabled === 'function'
         && HEYS.flags.isEnabled('overlay_products_v2');
       if (!enabled) {
         const legacy = _origGetById(id);
+        if (legacy && _isProductTombstoned(legacy)) return _resolveFromStampCache(id);
         return legacy || _resolveFromStampCache(id);
       }
 
@@ -5072,25 +5095,41 @@
         // (so dayv2 stamps can resolve products user has soft-removed).
         const raw = Overlay.getRowById(id);
         if (raw) {
-          if (raw._custom) return raw;
+          // 🪦 Tombstone check: если row tombstoned, считаем не найденным.
+          // Stamp-cache подхватит как orphan → banner покажет выбор «восстановить»/«разовым».
+          // Для Type B проверяем по name. Для Type A — резолвим shared name и проверяем.
+          if (raw._custom) {
+            if (_isProductTombstoned(raw)) {
+              return _resolveFromStampCache(id);
+            }
+            return raw;
+          }
           const sharedById = HEYS.cloud && HEYS.cloud.getSharedIndex
             ? HEYS.cloud.getSharedIndex() : null;
           const base = sharedById && raw.shared_origin_id
             ? sharedById.get(String(raw.shared_origin_id)) : null;
           if (base) {
-            return Object.assign({}, base, raw.overrides || {}, {
+            const merged = Object.assign({}, base, raw.overrides || {}, {
               id: raw.id,
               shared_origin_id: raw.shared_origin_id,
               fingerprint: raw.fingerprint || base.fingerprint,
               user_modified: !!raw.user_modified,
             });
+            if (_isProductTombstoned(merged)) {
+              return _resolveFromStampCache(id);
+            }
+            return merged;
           }
           // Type A overlay row but shared cache empty → bare overlay shape lacks nutrients.
           // Fall through to legacy (which has full snapshot) instead of returning broken row.
-          return _origGetById(id) || _resolveFromStampCache(id);
+          const legacy = _origGetById(id);
+          if (legacy && _isProductTombstoned(legacy)) return _resolveFromStampCache(id);
+          return legacy || _resolveFromStampCache(id);
         }
         // Fall through to legacy lookup if no overlay row.
-        return _origGetById(id) || _resolveFromStampCache(id);
+        const legacy = _origGetById(id);
+        if (legacy && _isProductTombstoned(legacy)) return _resolveFromStampCache(id);
+        return legacy || _resolveFromStampCache(id);
       } catch (e) {
         console.warn('[HEYS.products] overlay getById failed; fallback to legacy:', e && e.message);
         return _origGetById(id) || _resolveFromStampCache(id);

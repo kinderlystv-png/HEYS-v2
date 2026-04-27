@@ -1160,6 +1160,13 @@
                     let product = null;
                     if (item.product_id != null && global.HEYS?.products?.getById) {
                         product = global.HEYS.products.getById(item.product_id);
+                        // 🪦 Stamp-cache fallback (heys_core_v12.js:5050+) возвращает product с
+                        // _recoveredFrom='stamp' — это значит что в реальной базе продукта НЕТ,
+                        // он живёт только в meal-stamp. Считаем не-resolved → код пойдёт по
+                        // orphan-tracking ветке и banner покажет выбор «восстановить» / «разовым».
+                        if (product && product._recoveredFrom === 'stamp') {
+                            product = null;
+                        }
                     }
                     if (!product && itemName) {
                         product = productsMap.get(itemNameLower) || productsMap.get(itemNameNorm) || null;

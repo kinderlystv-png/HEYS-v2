@@ -3834,6 +3834,13 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
                     let product = null;
                     if (item.product_id != null && global.HEYS?.products?.getById) {
                         product = global.HEYS.products.getById(item.product_id);
+                        // 🪦 Stamp-cache fallback (heys_core_v12.js:5050+) возвращает product с
+                        // _recoveredFrom='stamp' — это значит что в реальной базе продукта НЕТ,
+                        // он живёт только в meal-stamp. Считаем не-resolved → код пойдёт по
+                        // orphan-tracking ветке и banner покажет выбор «восстановить» / «разовым».
+                        if (product && product._recoveredFrom === 'stamp') {
+                            product = null;
+                        }
                     }
                     if (!product && itemName) {
                         product = productsMap.get(itemNameLower) || productsMap.get(itemNameNorm) || null;
@@ -9943,6 +9950,16 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
           let product = null;
           if (item.product_id != null && global.HEYS?.products?.getById) {
             product = global.HEYS.products.getById(item.product_id);
+            // 🪦 Stamp-cache fallback (heys_core_v12.js:5050+) возвращает product с
+            // _recoveredFrom='stamp' — это означает что в реальной базе продукта НЕТ,
+            // он живёт только в meal-stamp. Для orphan-tracking считаем не-resolved
+            // (track() ниже на строке ~2270 регистрирует его в orphanProductsMap →
+            // banner покажет выбор «восстановить» / «сделать разовым»).
+            // Калькуляция нутриентов не страдает: src = product || item ниже всё равно
+            // возьмёт inline-stamp из item (kcal100, protein100, ...).
+            if (product && product._recoveredFrom === 'stamp') {
+              product = null;
+            }
           }
           if (!product && itemName) {
             product = productsMap.get(itemNameLower) || productsMap.get(itemNameNorm) || null;
@@ -22540,7 +22557,13 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
       if (id != null && HEYS.products && typeof HEYS.products.getById === 'function') {
         try { resolved = HEYS.products.getById(id); } catch (_) { resolved = null; }
       }
-      if (resolved) {
+      // 🪦 КРИТИЧНО: getById имеет fallback на _stampResolutionCache (heys_core_v12.js:5060),
+      // который возвращает продукт даже если его НЕТ в реальной базе (overlay/personal).
+      // Маркер _recoveredFrom='stamp' ставится в heys_day_utils.js:1240 для stamp-cache записей.
+      // Такой «найденный» продукт — это и есть orphan, который мы хотим показать в баннере
+      // с выбором «восстановить» / «сделать разовыми». Без этой проверки banner молчит.
+      const isStampOnlyFallback = resolved && resolved._recoveredFrom === 'stamp';
+      if (resolved && !isStampOnlyFallback) {
         if (typeof HEYS.orphanProducts?.remove === 'function') {
           try { HEYS.orphanProducts.remove(o.name); } catch (_) { /* noop */ }
         }

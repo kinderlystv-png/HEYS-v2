@@ -63,7 +63,13 @@
       if (id != null && HEYS.products && typeof HEYS.products.getById === 'function') {
         try { resolved = HEYS.products.getById(id); } catch (_) { resolved = null; }
       }
-      if (resolved) {
+      // 🪦 КРИТИЧНО: getById имеет fallback на _stampResolutionCache (heys_core_v12.js:5060),
+      // который возвращает продукт даже если его НЕТ в реальной базе (overlay/personal).
+      // Маркер _recoveredFrom='stamp' ставится в heys_day_utils.js:1240 для stamp-cache записей.
+      // Такой «найденный» продукт — это и есть orphan, который мы хотим показать в баннере
+      // с выбором «восстановить» / «сделать разовыми». Без этой проверки banner молчит.
+      const isStampOnlyFallback = resolved && resolved._recoveredFrom === 'stamp';
+      if (resolved && !isStampOnlyFallback) {
         if (typeof HEYS.orphanProducts?.remove === 'function') {
           try { HEYS.orphanProducts.remove(o.name); } catch (_) { /* noop */ }
         }
