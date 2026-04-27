@@ -735,7 +735,7 @@
     <link rel="dns-prefetch" href="https://cdn.jsdelivr.net" />
     <!-- Preload критических boot-бандлов (2026-02-25 bundle migration) -->
     <link rel="preload" href="boot-core.bundle.148d70684a30.js" as="script" />
-    <link rel="preload" href="boot-calc.bundle.3b64613b1bb4.js" as="script" />
+    <link rel="preload" href="boot-calc.bundle.40c20a929880.js" as="script" />
     <link rel="preload" href="boot-day.bundle.9e22fa73c9e6.js" as="script" />
     <link rel="preload" href="boot-app.bundle.aa47d482cabb.js" as="script" />
     <link rel="preload" href="boot-init.bundle.c687b8274f01.js" as="script" />
@@ -766,10 +766,10 @@
     <!-- v12: Login gate имеет inline стили, main.css нужен только после загрузки бандлов -->
     <!-- v9.8: флаг __heysMainCSSLoaded + событие heysMainCSSLoaded для gate DayTab -->
     <link rel="preload" href="styles/main.css?v=57" as="style"
-        onload="this.onload=null;this.rel='stylesheet';window.__heysMainCSSLoaded=true;window.dispatchEvent(new CustomEvent('heysMainCSSLoaded'));(function(){var l=document.createElement('link');l.rel='stylesheet';l.href='styles/main-deferred.css?v=1';l.onload=function(){window.__heysMainDeferredCSSLoaded=true;window.dispatchEvent(new CustomEvent('heysMainDeferredCSSLoaded'));};l.onerror=function(){console.warn('[HEYS.css] ⚠️ main-deferred.css load failed — Insights/Metabolic/Planning tabs will render unstyled');};document.head.appendChild(l);setTimeout(function(){if(!window.__heysMainDeferredCSSLoaded){console.warn('[HEYS.css] ⚠️ main-deferred.css not loaded after 30s');}},30000);})();" />
+        onload="this.onload=null;this.rel='stylesheet';window.__heysMainCSSLoaded=true;window.dispatchEvent(new CustomEvent('heysMainCSSLoaded'));(function(){var l=document.createElement('link');l.rel='stylesheet';l.href='styles/main-deferred.css?v=5';l.onload=function(){window.__heysMainDeferredCSSLoaded=true;window.dispatchEvent(new CustomEvent('heysMainDeferredCSSLoaded'));};l.onerror=function(){console.warn('[HEYS.css] ⚠️ main-deferred.css load failed — Insights/Metabolic/Planning tabs will render unstyled');};document.head.appendChild(l);setTimeout(function(){if(!window.__heysMainDeferredCSSLoaded){console.warn('[HEYS.css] ⚠️ main-deferred.css not loaded after 30s');}},30000);})();" />
     <noscript>
         <link rel="stylesheet" href="styles/main.css?v=57" />
-        <link rel="stylesheet" href="styles/main-deferred.css?v=1" />
+        <link rel="stylesheet" href="styles/main-deferred.css?v=5" />
     </noscript>
 
     <!-- v9.10: CSS load detection — detects both dev (main.css) and Vite production build
@@ -2858,7 +2858,7 @@
          Состав и хеши: bundle-manifest.json
          Хеш в имени = вечный кэш (cache-first SW). -->
     <script defer src="boot-core.bundle.148d70684a30.js" fetchpriority="high"></script>
-    <script defer src="boot-calc.bundle.3b64613b1bb4.js"></script>
+    <script defer src="boot-calc.bundle.40c20a929880.js"></script>
     <script defer src="boot-day.bundle.9e22fa73c9e6.js"></script>
     <script defer src="boot-app.bundle.aa47d482cabb.js"></script>
     <script defer src="boot-init.bundle.c687b8274f01.js"

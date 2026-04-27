@@ -160,32 +160,81 @@
               )
             )
           ),
-          // Кнопка восстановления
-          React.createElement('button', {
-            style: {
-              marginTop: '10px',
-              padding: '8px 16px',
-              background: '#f59e0b',
-              color: '#fff',
-              border: 'none',
-              borderRadius: '8px',
-              fontWeight: 600,
-              fontSize: '13px',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px'
-            },
-            onClick: async () => {
-              const result = await HEYS.orphanProducts?.restore?.();
-              if (result?.success) {
-                HEYS.Toast?.success(`Восстановлено ${result.count} продуктов! Обновите страницу для применения.`) || alert(`✅ Восстановлено ${result.count} продуктов!\nОбновите страницу для применения.`);
-                window.location.reload();
-              } else {
-                HEYS.Toast?.warning('Не удалось восстановить — нет данных в штампах.') || alert('⚠️ Не удалось восстановить — нет данных в штампах.');
+          // Контейнер с двумя кнопками: «Восстановить в базу» + «Сделать разовыми»
+          React.createElement('div', {
+            style: { marginTop: '10px', display: 'flex', gap: '8px', flexWrap: 'wrap' }
+          },
+            // Кнопка восстановления (исходное поведение — продукт возвращается в личную базу)
+            React.createElement('button', {
+              style: {
+                padding: '8px 16px',
+                background: '#f59e0b',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '8px',
+                fontWeight: 600,
+                fontSize: '13px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px'
+              },
+              title: 'Вернуть продукты в личную базу (как обычные)',
+              onClick: async () => {
+                const result = await HEYS.orphanProducts?.restore?.();
+                if (result?.success) {
+                  HEYS.Toast?.success(`Восстановлено ${result.count} продуктов! Обновите страницу для применения.`) || alert(`✅ Восстановлено ${result.count} продуктов!\nОбновите страницу для применения.`);
+                  window.location.reload();
+                } else {
+                  HEYS.Toast?.warning('Не удалось восстановить — нет данных в штампах.') || alert('⚠️ Не удалось восстановить — нет данных в штампах.');
+                }
               }
-            }
-          }, '🔧 Восстановить в базу')
+            }, '🔧 Восстановить в базу'),
+
+            // ⚡ Новая кнопка «Сделать разовыми» — конвертирует meal-items в _oneTime,
+            // данные остаются в истории приёмов, личная база не засоряется.
+            // Доступна только если есть orphans с inline-stamp (kcal100 != null).
+            (function () {
+              const eligible = trulyUnresolved.filter(function (o) { return o && o.hasInlineData === true; });
+              if (eligible.length === 0) return null;
+              return React.createElement('button', {
+                style: {
+                  padding: '8px 16px',
+                  background: '#8b5cf6',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontWeight: 600,
+                  fontSize: '13px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                },
+                title: 'Оставить продукты только в истории приёмов, не возвращая в личную базу',
+                onClick: function () {
+                  try {
+                    const r = HEYS.orphanProducts && typeof HEYS.orphanProducts.markAllAsOneTime === 'function'
+                      ? HEYS.orphanProducts.markAllAsOneTime(eligible)
+                      : null;
+                    if (r && r.success) {
+                      const n = r.convertedItems;
+                      const word = n === 1 ? 'запись' : (n < 5 ? 'записи' : 'записей');
+                      HEYS.Toast?.success(`${n} ${word} помечен${n === 1 ? 'а' : 'ы'} разовыми. Обновляем...`)
+                        || alert(`⚡ ${n} ${word} помечен${n === 1 ? 'а' : 'ы'} разовыми.`);
+                      setTimeout(function () { try { window.location.reload(); } catch (_) { /* noop */ } }, 600);
+                    } else {
+                      HEYS.Toast?.warning('Нет продуктов с данными в штампах для конвертации.')
+                        || alert('⚠️ Нет продуктов с данными в штампах для конвертации.');
+                    }
+                  } catch (e) {
+                    console.error('[orphan-alert] markAllAsOneTime failed:', e);
+                    HEYS.Toast?.error('Ошибка: ' + (e?.message || e)) || alert('❌ Ошибка: ' + (e?.message || e));
+                  }
+                }
+              }, '⚡ Сделать разовыми (' + eligible.length + ')');
+            })()
+          )
         )
       )
     );

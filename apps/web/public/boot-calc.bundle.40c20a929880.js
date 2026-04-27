@@ -8499,6 +8499,139 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
       })));
     },
 
+    // ⚡ Пометить orphan-продукты разовыми (вместо восстановления в базу).
+    // Юзер удалил продукт → его данные остаются только в meal-item (stamp), как у oneTime.
+    // Сканирует все dayv2_* ключи, ставит item._oneTime=true на matching items с inline-stamp,
+    // bumpит day.updatedAt, dispatchит heys:day-updated для каждого изменённого дня.
+    // Tombstone не трогаем — юзер явно удалил продукт, мы уважаем интент.
+    // Параметр orphansToConvert (опционально) — список из getAll()/getAllForDate(); если не передан —
+    // берём всех текущих orphans с hasInlineData=true.
+    markAllAsOneTime(orphansToConvert) {
+      const U = HEYS.utils || {};
+      // Используем Store/utils.lsSet — оба триггерят interceptSetItem (cloud-sync queue).
+      // Прямой localStorage.setItem обходил бы compress-aware Store layer.
+      const lsSet = HEYS.store?.set
+        ? (k, v) => HEYS.store.set(k, v)
+        : (U.lsSet || ((k, v) => console.warn('[orphanProducts.markAllAsOneTime] no LS writer:', k)));
+      const list = Array.isArray(orphansToConvert) && orphansToConvert.length > 0
+        ? orphansToConvert
+        : this.getAll().filter((o) => o && o.hasInlineData === true);
+      if (list.length === 0) {
+        return { success: false, convertedItems: 0, affectedDates: [], productsConverted: 0, failed: [] };
+      }
+
+      // Множества для матчинга: по id и по name (lower-cased)
+      const targetIds = new Set();
+      const targetNames = new Set();
+      for (const o of list) {
+        const oid = o?.product_id ?? o?.productId;
+        if (oid != null) targetIds.add(String(oid));
+        const oname = String(o?.name || '').trim().toLowerCase();
+        if (oname) targetNames.add(oname);
+      }
+
+      // Decompress-aware читалка LS
+      const parseStoredValue = (raw) => {
+        if (!raw) return null;
+        if (typeof raw === 'object') return raw;
+        if (typeof raw !== 'string') return null;
+        if (raw.startsWith('¤Z¤') && HEYS.store?.decompress) {
+          try { return HEYS.store.decompress(raw); } catch { return null; }
+        }
+        try { return JSON.parse(raw); } catch { return null; }
+      };
+
+      const dayKeys = [];
+      try {
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && /_dayv2_\d{4}-\d{2}-\d{2}$/.test(key)) dayKeys.push(key);
+        }
+      } catch (_) { /* noop */ }
+
+      const affectedDates = new Set();
+      const failed = [];
+      let convertedItems = 0;
+
+      for (const key of dayKeys) {
+        try {
+          const raw = localStorage.getItem(key);
+          // Читаем СВЕЖАЙШУЮ версию с диска перед mutate (race-safety vs useDayAutosave flush).
+          const day = parseStoredValue(raw);
+          if (!day || !Array.isArray(day.meals)) continue;
+          let dayChanged = false;
+          for (const meal of day.meals) {
+            if (!meal || !Array.isArray(meal.items)) continue;
+            for (const it of meal.items) {
+              if (!it) continue;
+              if (it._oneTime === true) continue; // уже разовый — пропускаем
+              const itId = it.product_id != null ? String(it.product_id) : null;
+              const itName = String(it.name || '').trim().toLowerCase();
+              const matchById = itId && targetIds.has(itId);
+              const matchByName = itName && targetNames.has(itName);
+              if (!matchById && !matchByName) continue;
+              // Гард: нужны inline-данные, иначе нечего сохранять
+              if (it.kcal100 == null && it.protein100 == null) continue;
+              it._oneTime = true;
+              convertedItems++;
+              dayChanged = true;
+            }
+          }
+          if (dayChanged) {
+            day.updatedAt = Date.now();
+            const dateMatch = key.match(/_dayv2_(\d{4}-\d{2}-\d{2})$/);
+            const dateStr = dateMatch ? dateMatch[1] : null;
+            if (dateStr) affectedDates.add(dateStr);
+            // Через Store.set — он triggerит interceptSetItem для cloud-sync queue.
+            try {
+              lsSet(key, day);
+            } catch (writeErr) {
+              failed.push({ key, dateStr, message: writeErr?.message || String(writeErr) });
+              continue;
+            }
+            // Уведомляем UI о том что день изменился
+            if (dateStr && typeof global.dispatchEvent === 'function') {
+              try {
+                global.dispatchEvent(new CustomEvent('heys:day-updated', {
+                  detail: { date: dateStr, source: 'orphan-to-onetime' }
+                }));
+              } catch (_) { /* noop */ }
+            }
+          }
+        } catch (e) {
+          failed.push({ key, message: e?.message || String(e) });
+        }
+      }
+
+      // Чистим orphan-tracker от конвертированных (на след. boot scanner всё равно их пропустит,
+      // но в текущей сессии хотим чтобы баннер исчез сразу)
+      try {
+        for (const o of list) {
+          if (o?.name) {
+            orphanProductsMap.delete(o.name);
+            orphanProductsMap.delete(String(o.name).toLowerCase());
+          }
+        }
+      } catch (_) { /* noop */ }
+
+      // Триггерим UI re-render orphan-баннера
+      if (typeof global.dispatchEvent === 'function') {
+        try {
+          global.dispatchEvent(new CustomEvent('heys:orphan-updated', {
+            detail: { reason: 'mark-onetime', converted: convertedItems }
+          }));
+        } catch (_) { /* noop */ }
+      }
+
+      return {
+        success: convertedItems > 0,
+        convertedItems,
+        affectedDates: Array.from(affectedDates).sort(),
+        productsConverted: list.length,
+        failed
+      };
+    },
+
     // Восстановить orphan-продукты в базу из штампов в днях
     async restore() {
       const U = HEYS.utils || {};
@@ -8558,6 +8691,9 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
           for (const meal of day.meals) {
             for (const item of (meal.items || [])) {
               if (isSyntheticEstimatedItem(item)) continue;
+              // ⚡ Разовые продукты (_oneTime: true) by design не должны воскрешаться в базу —
+              // их данные живут в meal-item (stamp), личная база остаётся чистой по интенту юзера.
+              if (item && item._oneTime === true) continue;
               checkedItems++;
               const itemName = String(item.name || '').trim();
               const itemNameLower = itemName.toLowerCase();
@@ -8725,6 +8861,9 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
           for (const meal of day.meals) {
             for (const item of (meal.items || [])) {
               if (isSyntheticEstimatedItem(item)) continue;
+              // ⚡ Разовые продукты (_oneTime: true) пропускаем на boot-recovery —
+              // юзер уже выбрал «оставить в истории, не возвращать в базу».
+              if (item && item._oneTime === true) continue;
               const productId = item.product_id ? String(item.product_id) : null;
               const itemName = String(item.name || '').trim();
               const itemNameNorm = normalizeName(itemName); // 🆕 v4.6.0: Используем normalizeProductName
@@ -22498,32 +22637,81 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
               )
             )
           ),
-          // Кнопка восстановления
-          React.createElement('button', {
-            style: {
-              marginTop: '10px',
-              padding: '8px 16px',
-              background: '#f59e0b',
-              color: '#fff',
-              border: 'none',
-              borderRadius: '8px',
-              fontWeight: 600,
-              fontSize: '13px',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px'
-            },
-            onClick: async () => {
-              const result = await HEYS.orphanProducts?.restore?.();
-              if (result?.success) {
-                HEYS.Toast?.success(`Восстановлено ${result.count} продуктов! Обновите страницу для применения.`) || alert(`✅ Восстановлено ${result.count} продуктов!\nОбновите страницу для применения.`);
-                window.location.reload();
-              } else {
-                HEYS.Toast?.warning('Не удалось восстановить — нет данных в штампах.') || alert('⚠️ Не удалось восстановить — нет данных в штампах.');
+          // Контейнер с двумя кнопками: «Восстановить в базу» + «Сделать разовыми»
+          React.createElement('div', {
+            style: { marginTop: '10px', display: 'flex', gap: '8px', flexWrap: 'wrap' }
+          },
+            // Кнопка восстановления (исходное поведение — продукт возвращается в личную базу)
+            React.createElement('button', {
+              style: {
+                padding: '8px 16px',
+                background: '#f59e0b',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '8px',
+                fontWeight: 600,
+                fontSize: '13px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px'
+              },
+              title: 'Вернуть продукты в личную базу (как обычные)',
+              onClick: async () => {
+                const result = await HEYS.orphanProducts?.restore?.();
+                if (result?.success) {
+                  HEYS.Toast?.success(`Восстановлено ${result.count} продуктов! Обновите страницу для применения.`) || alert(`✅ Восстановлено ${result.count} продуктов!\nОбновите страницу для применения.`);
+                  window.location.reload();
+                } else {
+                  HEYS.Toast?.warning('Не удалось восстановить — нет данных в штампах.') || alert('⚠️ Не удалось восстановить — нет данных в штампах.');
+                }
               }
-            }
-          }, '🔧 Восстановить в базу')
+            }, '🔧 Восстановить в базу'),
+
+            // ⚡ Новая кнопка «Сделать разовыми» — конвертирует meal-items в _oneTime,
+            // данные остаются в истории приёмов, личная база не засоряется.
+            // Доступна только если есть orphans с inline-stamp (kcal100 != null).
+            (function () {
+              const eligible = trulyUnresolved.filter(function (o) { return o && o.hasInlineData === true; });
+              if (eligible.length === 0) return null;
+              return React.createElement('button', {
+                style: {
+                  padding: '8px 16px',
+                  background: '#8b5cf6',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontWeight: 600,
+                  fontSize: '13px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                },
+                title: 'Оставить продукты только в истории приёмов, не возвращая в личную базу',
+                onClick: function () {
+                  try {
+                    const r = HEYS.orphanProducts && typeof HEYS.orphanProducts.markAllAsOneTime === 'function'
+                      ? HEYS.orphanProducts.markAllAsOneTime(eligible)
+                      : null;
+                    if (r && r.success) {
+                      const n = r.convertedItems;
+                      const word = n === 1 ? 'запись' : (n < 5 ? 'записи' : 'записей');
+                      HEYS.Toast?.success(`${n} ${word} помечен${n === 1 ? 'а' : 'ы'} разовыми. Обновляем...`)
+                        || alert(`⚡ ${n} ${word} помечен${n === 1 ? 'а' : 'ы'} разовыми.`);
+                      setTimeout(function () { try { window.location.reload(); } catch (_) { /* noop */ } }, 600);
+                    } else {
+                      HEYS.Toast?.warning('Нет продуктов с данными в штампах для конвертации.')
+                        || alert('⚠️ Нет продуктов с данными в штампах для конвертации.');
+                    }
+                  } catch (e) {
+                    console.error('[orphan-alert] markAllAsOneTime failed:', e);
+                    HEYS.Toast?.error('Ошибка: ' + (e?.message || e)) || alert('❌ Ошибка: ' + (e?.message || e));
+                  }
+                }
+              }, '⚡ Сделать разовыми (' + eligible.length + ')');
+            })()
+          )
         )
       )
     );
