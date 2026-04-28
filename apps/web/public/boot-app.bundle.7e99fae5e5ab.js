@@ -7503,7 +7503,9 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
           alert(`✅ Клиент "${leadName}" создан, но PIN не получен от сервера. Используйте «Перевыпустить PIN» в карточке.`);
         } else {
           // P0.7: показываем модалку с PIN и deep-link на Telegram-бот
-          const botUsername = (typeof window !== 'undefined' && window.HEYS && window.HEYS.config && window.HEYS.config.clientBotUsername) || 'heys_client_bot';
+          // Default = реальный username нашего @heyslab_bot (HEYS Personal).
+          // Override через HEYS.config.clientBotUsername если когда-нибудь сменим бота.
+          const botUsername = (typeof window !== 'undefined' && window.HEYS && window.HEYS.config && window.HEYS.config.clientBotUsername) || 'heyslab_bot';
           const deepLink = pinToken
             ? `https://t.me/${botUsername}?start=${pinToken}`
             : null;
