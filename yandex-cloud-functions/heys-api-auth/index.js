@@ -543,9 +543,11 @@ async function handleUpdateClient(curatorId, clientId, body) {
     phoneNormalized = '+7' + body10;
   }
 
-  // Validate pin if provided
-  let pinHash = null;
-  let pinSalt = null;
+  // Validate pin if provided. NOTE: actual bcrypt-hashing happens on the DB side
+  // (crypt(pin, gen_salt('bf'))) because verify_client_pin_v3 expects bcrypt.
+  // Earlier SHA256 produced hashes incompatible with verify_client_pin_v3 — clients
+  // could not log in after a PIN change.
+  let plainPin = null;
   if (pin) {
     if (!/^\d{4,6}$/.test(pin)) {
       return {
@@ -553,9 +555,7 @@ async function handleUpdateClient(curatorId, clientId, body) {
         body: JSON.stringify({ error: 'PIN must be 4–6 digits' })
       };
     }
-    const crypto = require('crypto');
-    pinSalt = crypto.randomBytes(16).toString('hex');
-    pinHash = crypto.createHash('sha256').update(`${pin}:${pinSalt}`).digest('hex');
+    plainPin = pin;
   }
 
   const client = await getClient();
@@ -576,11 +576,15 @@ async function handleUpdateClient(curatorId, clientId, body) {
       setClauses.push(`phone_normalized = $${idx++}`);
       params.push(phoneNormalized);
     }
-    if (pinHash) {
-      setClauses.push(`pin_hash = $${idx++}`);
-      params.push(pinHash);
-      setClauses.push(`pin_salt = $${idx++}`);
-      params.push(pinSalt);
+    if (plainPin) {
+      // bcrypt через pgcrypto в SQL — совместимо с verify_client_pin_v3
+      setClauses.push(`pin_hash = crypt($${idx++}, gen_salt('bf'))`);
+      params.push(plainPin);
+      // Сбрасываем pin_salt (legacy SHA256-схема его требовала, bcrypt salt уже в hash)
+      setClauses.push(`pin_salt = NULL`);
+      setClauses.push(`pin_updated_at = NOW()`);
+      setClauses.push(`pin_failed_attempts = 0`);
+      setClauses.push(`pin_locked_until = NULL`);
     }
     setClauses.push(`updated_at = NOW()`);
     params.push(clientId);

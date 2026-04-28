@@ -5,6 +5,46 @@
     <meta charset="UTF-8" />
     <!-- � Preconnect: DNS+TCP+TLS ahead of time -->
     <link rel="preconnect" href="https://api.heyslab.ru" crossorigin />
+    <!-- 🟦 Telegram in-app browser detection: показывает баннер с инструкцией
+         «открыть в Safari/Chrome» для возможности установить PWA на главный экран -->
+    <script>
+        (function () {
+            try {
+                var ua = navigator.userAgent || '';
+                var inTelegram = /Telegram/i.test(ua) || /TelegramWebView|TelegramWebviewProxy/.test(ua) ||
+                    (typeof window !== 'undefined' && (window.TelegramWebviewProxy || window.TelegramWebView));
+                if (!inTelegram) return;
+                if (sessionStorage.getItem('heys_tg_banner_dismissed') === '1') return;
+
+                document.addEventListener('DOMContentLoaded', function () {
+                    var isIOS = /iPad|iPhone|iPod/.test(ua);
+                    var banner = document.createElement('div');
+                    banner.id = 'heys-tg-banner';
+                    banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;padding:14px 18px;font:600 13px/1.4 -apple-system,system-ui,sans-serif;box-shadow:0 6px 20px rgba(0,0,0,.25);';
+                    banner.innerHTML =
+                        '<div style="display:flex;align-items:flex-start;gap:12px">' +
+                        '  <div style="font-size:20px;line-height:1">📲</div>' +
+                        '  <div style="flex:1">' +
+                        '    <div style="font-size:14px;margin-bottom:4px">Откройте HEYS в браузере</div>' +
+                        '    <div style="font-weight:400;font-size:12px;opacity:.95">' +
+                        (isIOS
+                            ? 'Нажмите <b>•••</b> в правом нижнем углу Telegram → <b>«Открыть в Safari»</b>. После этого: <b>Поделиться</b> → <b>«На экран Домой»</b> для установки HEYS как приложения.'
+                            : 'Нажмите <b>⋮</b> в правом верхнем углу Telegram → <b>«Открыть в браузере»</b>. После этого в Chrome: меню → <b>«Установить приложение»</b>.') +
+                        '    </div>' +
+                        '  </div>' +
+                        '  <button id="heys-tg-banner-close" type="button" style="background:rgba(0,0,0,.25);color:#fff;border:none;border-radius:6px;width:28px;height:28px;font-size:16px;cursor:pointer;flex-shrink:0">×</button>' +
+                        '</div>';
+                    document.body.insertBefore(banner, document.body.firstChild);
+                    document.getElementById('heys-tg-banner-close').addEventListener('click', function () {
+                        banner.remove();
+                        try { sessionStorage.setItem('heys_tg_banner_dismissed', '1'); } catch (e) { }
+                    });
+                });
+            } catch (e) {
+                // ignore — не блокируем загрузку приложения из-за этой штуки
+            }
+        })();
+    </script>
     <!-- �🔍 PWA Debug: Boot timing logger (saved to localStorage for mobile diagnosis) -->
     <script>
         (function () {
