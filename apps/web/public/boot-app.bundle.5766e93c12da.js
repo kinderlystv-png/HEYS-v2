@@ -7388,6 +7388,10 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
 
         if (res.success) {
           loadData(true);
+          // 🔄 Hot-sync: убрали из очереди → обновить во всех вкладках.
+          window.dispatchEvent(new CustomEvent('heys:clients-updated', {
+            detail: { action: 'removedFromQueue', clientId }
+          }));
           return;
         }
 
@@ -7480,6 +7484,10 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
 
       if (res.success) {
         loadData(true);
+        // 🔄 Hot-sync: лид отклонён, лидов меньше → можно обновить badge.
+        window.dispatchEvent(new CustomEvent('heys:clients-updated', {
+          detail: { action: 'leadRejected', leadId: lead.id }
+        }));
       } else {
         alert('Ошибка: ' + (res.message || 'Не удалось отклонить лида'));
       }
@@ -7501,6 +7509,10 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
       if (res.success) {
         loadData(true);
         setActiveTab('pending');
+        // 🔄 Hot-sync: лид → клиент. Уведомляем глобальный список клиентов.
+        window.dispatchEvent(new CustomEvent('heys:clients-updated', {
+          detail: { action: 'leadConverted', clientId: res.client_id }
+        }));
         const generatedPin = res.pin;
         const pinToken = res.pin_token;
         if (!generatedPin) {
@@ -7543,6 +7555,10 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
 
       if (res.success) {
         loadData(true);
+        // 🔄 Hot-sync: статус клиента изменился (rejected) → обновить во всех вкладках.
+        window.dispatchEvent(new CustomEvent('heys:clients-updated', {
+          detail: { action: 'requestRejected', clientId }
+        }));
       } else {
         alert('Ошибка: ' + (res.message || 'Не удалось отклонить заявку'));
       }
@@ -13979,6 +13995,25 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                 return { data: [], source: 'error' };
             }
         }, [cloud]);
+
+        // 🔄 Hot-sync: слушаем heys:clients-updated и пере-загружаем список клиентов.
+        // Диспатчится из TrialQueueAdmin после approve/activate/reject и из
+        // ClientSubscriptionButton после действий куратора. Без этого новые
+        // клиенты / сменённый статус видны только после refresh страницы.
+        useEffect(() => {
+            if (!cloudUser?.id) return;
+            const handler = async (ev) => {
+                try {
+                    const result = await fetchClientsFromCloud(cloudUser.id);
+                    if (result?.data) setClients(result.data);
+                    console.info('[HEYS.clients] 🔄 hot-sync via heys:clients-updated', ev?.detail || {});
+                } catch (e) {
+                    console.warn('[HEYS.clients] hot-sync error:', e.message);
+                }
+            };
+            window.addEventListener('heys:clients-updated', handler);
+            return () => window.removeEventListener('heys:clients-updated', handler);
+        }, [cloudUser, fetchClientsFromCloud, setClients]);
 
         const addClientToCloud = useCallback(async (arg) => {
             const payload = typeof arg === 'string' ? { name: arg } : (arg || {});

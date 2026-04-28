@@ -1543,6 +1543,10 @@
 
         if (res.success) {
           loadData(true);
+          // 🔄 Hot-sync: убрали из очереди → обновить во всех вкладках.
+          window.dispatchEvent(new CustomEvent('heys:clients-updated', {
+            detail: { action: 'removedFromQueue', clientId }
+          }));
           return;
         }
 
@@ -1635,6 +1639,10 @@
 
       if (res.success) {
         loadData(true);
+        // 🔄 Hot-sync: лид отклонён, лидов меньше → можно обновить badge.
+        window.dispatchEvent(new CustomEvent('heys:clients-updated', {
+          detail: { action: 'leadRejected', leadId: lead.id }
+        }));
       } else {
         alert('Ошибка: ' + (res.message || 'Не удалось отклонить лида'));
       }
@@ -1656,6 +1664,10 @@
       if (res.success) {
         loadData(true);
         setActiveTab('pending');
+        // 🔄 Hot-sync: лид → клиент. Уведомляем глобальный список клиентов.
+        window.dispatchEvent(new CustomEvent('heys:clients-updated', {
+          detail: { action: 'leadConverted', clientId: res.client_id }
+        }));
         const generatedPin = res.pin;
         const pinToken = res.pin_token;
         if (!generatedPin) {
@@ -1698,6 +1710,10 @@
 
       if (res.success) {
         loadData(true);
+        // 🔄 Hot-sync: статус клиента изменился (rejected) → обновить во всех вкладках.
+        window.dispatchEvent(new CustomEvent('heys:clients-updated', {
+          detail: { action: 'requestRejected', clientId }
+        }));
       } else {
         alert('Ошибка: ' + (res.message || 'Не удалось отклонить заявку'));
       }

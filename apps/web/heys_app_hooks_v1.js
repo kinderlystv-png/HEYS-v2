@@ -2140,6 +2140,25 @@
             }
         }, [cloud]);
 
+        // 🔄 Hot-sync: слушаем heys:clients-updated и пере-загружаем список клиентов.
+        // Диспатчится из TrialQueueAdmin после approve/activate/reject и из
+        // ClientSubscriptionButton после действий куратора. Без этого новые
+        // клиенты / сменённый статус видны только после refresh страницы.
+        useEffect(() => {
+            if (!cloudUser?.id) return;
+            const handler = async (ev) => {
+                try {
+                    const result = await fetchClientsFromCloud(cloudUser.id);
+                    if (result?.data) setClients(result.data);
+                    console.info('[HEYS.clients] 🔄 hot-sync via heys:clients-updated', ev?.detail || {});
+                } catch (e) {
+                    console.warn('[HEYS.clients] hot-sync error:', e.message);
+                }
+            };
+            window.addEventListener('heys:clients-updated', handler);
+            return () => window.removeEventListener('heys:clients-updated', handler);
+        }, [cloudUser, fetchClientsFromCloud, setClients]);
+
         const addClientToCloud = useCallback(async (arg) => {
             const payload = typeof arg === 'string' ? { name: arg } : (arg || {});
             const clientName = (payload.name || '').trim() || `Клиент ${clients.length + 1}`;
