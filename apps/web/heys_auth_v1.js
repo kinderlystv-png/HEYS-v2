@@ -362,17 +362,21 @@
       return { ok: false, error: 'api_not_ready' };
     }
 
-    const salt = generateSalt();
-    const pinHash = await hashPin(newPin, salt);
-
-    const res = await api.rpc('reset_client_pin', {
+    // Phase 1 hotfix: используем admin_set_client_pin (bcrypt в БД через crypt()),
+    // совместимо с verify_client_pin_v3. Старая reset_client_pin писала SHA256 —
+    // клиент не мог войти после смены PIN.
+    const res = await api.rpc('admin_set_client_pin', {
       p_client_id: clientId,
-      p_pin_salt: salt,
-      p_pin_hash: pinHash,
+      p_pin: newPin,
     });
 
     if (res.error) {
       return { ok: false, error: 'server_error', message: res.error.message };
+    }
+
+    const fnData = res.data?.admin_set_client_pin || res.data || res;
+    if (fnData && fnData.success === false) {
+      return { ok: false, error: fnData.error, message: fnData.error };
     }
 
     return { ok: true };

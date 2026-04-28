@@ -339,6 +339,8 @@ const CURATOR_ONLY_FUNCTIONS = [
   'admin_get_leads',                  // Список лидов с лендинга
   'admin_convert_lead',               // Конвертация лида в клиента
   'admin_update_lead_status',         // Обновление статуса лида (отклонение и т.д.)
+  'admin_set_client_pin',             // 🆕 Установка PIN с bcrypt (Phase 1 hotfix, замена reset_client_pin)
+  'admin_regenerate_pin',             // 🆕 Перевыпуск PIN+pin_token (P0.7)
 
   // === GAMIFICATION AUDIT ===
   'log_gamification_event_by_curator',
