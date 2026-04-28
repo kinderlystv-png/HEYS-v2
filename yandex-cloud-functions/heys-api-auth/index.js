@@ -370,6 +370,54 @@ async function handleVerify(body, authHeader, jwtSecret) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
+// 🚪 CLIENT LOGOUT — отзыв клиентской сессии (P0.15)
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * POST /auth/client-logout
+ * Body: { session_token: string }  (или Authorization: Bearer <token>)
+ *
+ * Дёргает SQL-функцию revoke_session(p_session_token), которая ставит
+ * client_sessions.revoked_at = NOW() для соответствующего token_hash.
+ * После этого токен сразу невалиден для всех endpoint'ов, проверяющих
+ * client_sessions (heys-api-payments, heys-api-rpc и т.д.).
+ */
+async function handleClientLogout(body, authHeader) {
+  const token =
+    body?.session_token ||
+    body?.token ||
+    (authHeader ? authHeader.replace(/^Bearer\s+/i, '').trim() : null);
+
+  if (!token || typeof token !== 'string') {
+    return {
+      statusCode: 400,
+      body: JSON.stringify({ error: 'session_token required' }),
+    };
+  }
+
+  const client = await getClient();
+  try {
+    const result = await client.query(
+      `SELECT public.revoke_session($1) AS revoked`,
+      [token]
+    );
+    const revoked = result.rows?.[0]?.revoked === true;
+    return {
+      statusCode: 200,
+      body: JSON.stringify({ ok: true, revoked }),
+    };
+  } catch (e) {
+    console.error('[AUTH] revoke_session error:', e.message);
+    return {
+      statusCode: 500,
+      body: JSON.stringify({ error: 'Logout failed' }),
+    };
+  } finally {
+    client.release();
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
 // 🔐 GET CLIENTS — Curator-only endpoint (JWT required)
 // ═══════════════════════════════════════════════════════════════════════════
 
@@ -909,6 +957,10 @@ module.exports.handler = async function (event, context) {
       break;
     case 'register':
       result = await handleRegister(body, JWT_SECRET);
+      break;
+    case 'client-logout':
+      // P0.15: отзыв клиентской PIN-сессии
+      result = await handleClientLogout(body, authHeader);
       break;
     case 'clients':
       // 🔐 Требует JWT авторизации

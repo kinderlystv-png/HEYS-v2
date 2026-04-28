@@ -204,6 +204,59 @@
             setLoading(false);
         };
 
+        // Вернуть деньги (P0.5) — refund последнего completed платежа в ЮKassa.
+        const handleRefund = async () => {
+            console.info('[HEYS.subs] 💰 Запрос refund', { clientId: client.id, clientName: client.name });
+            try {
+                // Получаем последний completed платёж клиента
+                const { data: payments, error: payErr } = await HEYS.YandexAPI
+                    .from('payments')
+                    .select('id, amount, plan, created_at, status')
+                    .eq('client_id', client.id)
+                    .eq('status', 'completed')
+                    .order('created_at', { ascending: false })
+                    .limit(1);
+
+                if (payErr) {
+                    HEYS.Toast?.error?.('Не удалось получить платёж: ' + payErr.message);
+                    return;
+                }
+                const lastPayment = (payments || [])[0];
+                if (!lastPayment) {
+                    HEYS.Toast?.warning?.('У клиента нет завершённых платежей для возврата.');
+                    return;
+                }
+
+                const ok = confirm(
+                    `Вернуть ${lastPayment.amount}₽ за тариф ${lastPayment.plan}?\n\n` +
+                    `Платёж от ${new Date(lastPayment.created_at).toLocaleString('ru-RU')}.\n` +
+                    `Клиент сразу потеряет доступ (статус → read_only).`
+                );
+                if (!ok) return;
+
+                setLoading(true);
+                const { data: res, error } = await HEYS.YandexAPI.refundPayment(lastPayment.id);
+                setLoading(false);
+
+                if (error) {
+                    console.error('[HEYS.subs] ❌ refund error', error);
+                    HEYS.Toast?.error?.('Ошибка возврата: ' + (error.message || 'неизвестная'));
+                    return;
+                }
+
+                console.info('[HEYS.subs] ✅ Refund initiated', res);
+                HEYS.Toast?.success?.(
+                    `✅ Возврат инициирован (${res.amount}₽). Деньги вернутся в течение нескольких минут.`
+                );
+                onUpdate?.();
+                closeModal();
+            } catch (e) {
+                setLoading(false);
+                console.error('[HEYS.subs] ❌ refund exception', e);
+                HEYS.Toast?.error?.('Ошибка: ' + (e.message || 'не удалось вернуть деньги'));
+            }
+        };
+
         // Сбросить подписку
         const handleCancel = async () => {
             console.info('[HEYS.subs] 🚫 Запрос на сброс подписки', { clientId: client.id, clientName: client.name });
@@ -397,6 +450,10 @@
                     },
                     style: { ...btnBase, background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe' }
                 }, '➕ Продлить подписку'),
+                status === 'active' && h('button', {
+                    onClick: handleRefund, disabled: loading,
+                    style: { ...btnBase, background: '#fef3c7', color: '#92400e', border: '1px solid #fcd34d' }
+                }, loading ? '⏳ Возврат...' : '💰 Вернуть деньги (последний платёж)'),
                 status !== 'none' && h('button', {
                     onClick: handleCancel, disabled: loading,
                     style: { ...btnBase, background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca' }
@@ -1117,7 +1174,10 @@
                                                     color: curatorTab === 'queue' ? '#0f172a' : 'rgba(255,255,255,0.8)'
                                                 }
                                             },
-                                            '📋 Очередь'
+                                            // P0.11: бейдж "+N" если есть новые лиды
+                                            HEYS.TrialQueue?.NewLeadsBadge
+                                                ? React.createElement(HEYS.TrialQueue.NewLeadsBadge, null, '📋 Очередь')
+                                                : '📋 Очередь'
                                         )
                                     ),
                                     // Warnings (cache/error) в хедере

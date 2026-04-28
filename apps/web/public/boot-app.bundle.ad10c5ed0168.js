@@ -7133,24 +7133,22 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
     },
 
     /**
-     * Сконвертировать лид в клиента (v3.0)
-     * Создаёт клиента, ставит PIN, добавляет в очередь
+     * Сконвертировать лид в клиента (v4.0 — P0.6: автогенерация PIN на стороне БД)
+     * Создаёт клиента с криптографически случайным 4-значным PIN, добавляет в очередь.
+     * PIN возвращается ОДИН РАЗ в ответе — куратор должен сразу передать клиенту.
+     *
      * @param {number} leadId - ID лида
-     * @param {string} pin - PIN-код для клиента (4-6 цифр)
-     * @param {string} [curatorId] - UUID куратора
-     * @returns {Promise<{success: boolean, client_id?: string, error?: string}>}
+     * @param {string} [curatorId] - UUID куратора (опционально, JWT-injected)
+     * @returns {Promise<{success: boolean, client_id?: string, pin?: string, error?: string, message?: string}>}
      */
-    async convertLead(leadId, pin, curatorId) {
+    async convertLead(leadId, curatorId) {
       const api = HEYS.YandexAPI;
       if (!api) {
         return { success: false, error: 'api_not_ready', message: 'API не готов' };
       }
 
       try {
-        const params = {
-          p_lead_id: leadId,
-          p_pin: pin
-        };
+        const params = { p_lead_id: leadId };
         if (curatorId) {
           params.p_curator_id = curatorId;
         }
@@ -7206,6 +7204,66 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
   // ========================================
 
   /**
+   * NewLeadsBadge — компонент-индикатор количества новых заявок (P0.11).
+   * Каждые 60 секунд дёргает adminAPI.getLeads('new') и рисует красный бейдж
+   * рядом с label, если count > 0. Скрывает себя если запрос упал/нет лидов.
+   *
+   * Использование:
+   *   React.createElement(HEYS.TrialQueue.NewLeadsBadge, { children: '📋 Очередь' })
+   */
+  function NewLeadsBadge({ children, pollIntervalMs = 60000 }) {
+    const [count, setCount] = React.useState(0);
+
+    React.useEffect(() => {
+      let alive = true;
+      const tick = async () => {
+        try {
+          const res = await adminAPI.getLeads('new');
+          if (!alive) return;
+          if (res.success && Array.isArray(res.data)) {
+            setCount(res.data.length);
+          }
+        } catch (e) {
+          console.warn('[NewLeadsBadge] poll failed:', e.message);
+        }
+      };
+      tick();
+      const id = setInterval(tick, pollIntervalMs);
+      return () => { alive = false; clearInterval(id); };
+    }, [pollIntervalMs]);
+
+    if (!count || count <= 0) {
+      return children;
+    }
+
+    return React.createElement(
+      'span',
+      { style: { display: 'inline-flex', alignItems: 'center', gap: 6 } },
+      children,
+      React.createElement(
+        'span',
+        {
+          style: {
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            minWidth: 18,
+            height: 18,
+            padding: '0 5px',
+            borderRadius: 9,
+            background: '#dc2626',
+            color: '#fff',
+            fontSize: 11,
+            fontWeight: 700,
+            lineHeight: 1,
+          }
+        },
+        String(count)
+      )
+    );
+  }
+
+  /**
    * TrialQueueAdmin — UI для управления очередью
    * @param {Object} props - { onClose }
    */
@@ -7221,9 +7279,10 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
     // Диалог активации триала (v3.0: с выбором даты)
     const [trialDialog, setTrialDialog] = React.useState(null); // { clientId, clientName }
     const [trialStartDate, setTrialStartDate] = React.useState('');
-    // Диалог конвертации лида (v3.0)
+    // Диалог конвертации лида (v4.0 — P0.6: PIN генерируется на стороне БД)
     const [convertDialog, setConvertDialog] = React.useState(null); // { leadId, leadName, leadPhone }
-    const [convertPin, setConvertPin] = React.useState('');
+    // Диалог "PIN сгенерирован" с deep-link (P0.7)
+    const [pinResult, setPinResult] = React.useState(null); // { name, phone, pin, deepLink }
 
     // Загрузка данных
     const loadData = React.useCallback(async (isSilent = false) => {
@@ -7268,6 +7327,14 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
 
     React.useEffect(() => {
       loadData(false);
+    }, [loadData]);
+
+    // P0.11: polling каждые 30 секунд — куратор видит новые лиды без F5
+    React.useEffect(() => {
+      const intervalId = setInterval(() => {
+        loadData(true); // isSilent=true — без спиннера
+      }, 30000);
+      return () => clearInterval(intervalId);
     }, [loadData]);
 
     // Группировка по статусам (v2.0: pending/rejected вместо offer/queued)
@@ -7393,9 +7460,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
       }
     };
 
-    // Конвертировать лид в клиента (v3.0)
+    // Конвертировать лид в клиента (v4.0 — P0.6: PIN автогенерируется в БД)
     const handleConvertLead = (lead) => {
-      setConvertPin('');
       setConvertDialog({ leadId: lead.id, leadName: lead.name, leadPhone: lead.phone });
     };
 
@@ -7416,29 +7482,47 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
     };
 
     const confirmConvertLead = async () => {
-      if (!convertDialog || !convertPin) return;
-
-      if (convertPin.length < 4) {
-        alert('PIN должен быть минимум 4 цифры');
-        return;
-      }
+      if (!convertDialog) return;
 
       setActionLoading('lead-' + convertDialog.leadId);
+      const leadName = convertDialog.leadName;
+      const leadPhone = convertDialog.leadPhone;
+      const leadId = convertDialog.leadId;
       setConvertDialog(null);
 
-      const res = await adminAPI.convertLead(convertDialog.leadId, convertPin);
+      // P0.6: PIN генерируется на стороне БД, мы его только получаем
+      const res = await adminAPI.convertLead(leadId);
       setActionLoading(null);
 
       if (res.success) {
         loadData(true);
-        setActiveTab('pending'); // Переключаем на вкладку "Ждут триала", куда попадает новый клиент
-        if (res.already_existed) {
-          alert(`ℹ️ Клиент с этим телефоном уже существует. Лид помечен как сконвертированный.`);
+        setActiveTab('pending');
+        const generatedPin = res.pin;
+        const pinToken = res.pin_token;
+        if (!generatedPin) {
+          alert(`✅ Клиент "${leadName}" создан, но PIN не получен от сервера. Используйте «Перевыпустить PIN» в карточке.`);
         } else {
-          alert(`✅ Клиент "${convertDialog.leadName}" создан! PIN: ${convertPin}`);
+          // P0.7: показываем модалку с PIN и deep-link на Telegram-бот
+          const botUsername = (typeof window !== 'undefined' && window.HEYS && window.HEYS.config && window.HEYS.config.clientBotUsername) || 'heys_client_bot';
+          const deepLink = pinToken
+            ? `https://t.me/${botUsername}?start=${pinToken}`
+            : null;
+          setPinResult({
+            name: leadName,
+            phone: leadPhone,
+            pin: generatedPin,
+            deepLink,
+          });
         }
+      } else if (res.error === 'phone_already_has_active' || res.code === 'PHONE_ALREADY_TRIAL') {
+        alert(
+          `ℹ️ У клиента с телефоном ${leadPhone} уже есть активная заявка/триал/подписка.\n` +
+          `Лид НЕ конвертирован.`
+        );
+      } else if (res.error === 'lead_already_converted') {
+        alert(`ℹ️ Этот лид уже был сконвертирован ранее.`);
       } else {
-        alert('Ошибка: ' + (res.message || 'Не удалось создать клиента'));
+        alert('Ошибка: ' + (res.message || res.error || 'Не удалось создать клиента'));
       }
     };
 
@@ -8041,32 +8125,20 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
           React.createElement('div', {
             style: { fontSize: '14px', color: '#6b7280', marginBottom: '16px' }
           }, `Телефон: ${convertDialog.leadPhone}`),
-          React.createElement('label', {
-            style: { display: 'block', fontSize: '13px', fontWeight: 500, color: 'var(--text, #374151)', marginBottom: '6px' }
-          }, 'PIN-код для клиента:'),
-          React.createElement('input', {
-            type: 'text',
-            inputMode: 'numeric',
-            pattern: '[0-9]*',
-            maxLength: 6,
-            placeholder: '1234',
-            value: convertPin,
-            onChange: (e) => setConvertPin(e.target.value.replace(/\D/g, '')),
+          React.createElement('div', {
             style: {
-              width: '100%',
+              fontSize: '13px',
+              color: '#374151',
+              background: '#f3f4f6',
               padding: '10px 12px',
               borderRadius: '8px',
-              border: '1px solid #d1d5db',
-              fontSize: '18px',
-              textAlign: 'center',
-              letterSpacing: '8px',
-              marginBottom: '8px',
-              boxSizing: 'border-box'
+              marginBottom: '20px',
+              lineHeight: 1.5,
             }
-          }),
-          React.createElement('div', {
-            style: { fontSize: '12px', color: '#9ca3af', marginBottom: '20px' }
-          }, 'Минимум 4 цифры. Сообщите PIN клиенту для входа.'),
+          },
+            '🔐 PIN сгенерируется автоматически и будет показан после создания клиента. ',
+            'Скопируйте его и передайте клиенту в Telegram/WhatsApp один раз.'
+          ),
           React.createElement('div', {
             style: { display: 'flex', gap: '10px', justifyContent: 'flex-end' }
           },
@@ -8084,21 +8156,163 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
             }, 'Отмена'),
             React.createElement('button', {
               onClick: confirmConvertLead,
-              disabled: convertPin.length < 4,
               style: {
                 padding: '10px 20px',
                 borderRadius: '8px',
                 border: 'none',
-                background: convertPin.length >= 4
-                  ? 'linear-gradient(135deg, #8b5cf6, #7c3aed)'
-                  : '#d1d5db',
+                background: 'linear-gradient(135deg, #8b5cf6, #7c3aed)',
                 color: '#fff',
-                cursor: convertPin.length >= 4 ? 'pointer' : 'not-allowed',
+                cursor: 'pointer',
                 fontSize: '14px',
                 fontWeight: 600
               }
-            }, '✅ Создать')
+            }, '✅ Создать клиента')
           )
+        )
+      ),
+
+      // ========== ДИАЛОГ: PIN сгенерирован (P0.7) ==========
+      pinResult && React.createElement('div', {
+        style: {
+          position: 'fixed',
+          top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(0,0,0,0.55)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 10001
+        },
+        onClick: (e) => { if (e.target === e.currentTarget) setPinResult(null); }
+      },
+        React.createElement('div', {
+          style: {
+            background: 'var(--card, #fff)',
+            borderRadius: '16px',
+            padding: '24px',
+            width: '420px',
+            maxWidth: '92vw',
+            boxShadow: '0 20px 60px rgba(0,0,0,0.35)'
+          }
+        },
+          React.createElement('div', {
+            style: { fontSize: '18px', fontWeight: 700, marginBottom: '8px', color: 'var(--text, #1f2937)' }
+          }, '✅ Клиент создан'),
+          React.createElement('div', {
+            style: { fontSize: '13px', color: '#6b7280', marginBottom: '20px' }
+          }, `${pinResult.name} · ${pinResult.phone}`),
+
+          React.createElement('div', {
+            style: { fontSize: '12px', color: '#6b7280', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' }
+          }, 'PIN'),
+          React.createElement('div', {
+            style: {
+              fontSize: '32px',
+              fontWeight: 700,
+              letterSpacing: '12px',
+              textAlign: 'center',
+              padding: '14px',
+              background: '#f3f4f6',
+              borderRadius: '12px',
+              fontFamily: 'monospace',
+              marginBottom: '8px'
+            }
+          }, pinResult.pin),
+          React.createElement('button', {
+            onClick: () => {
+              navigator.clipboard?.writeText(pinResult.pin).then(() => HEYS.Toast?.success?.('PIN скопирован'));
+            },
+            style: {
+              width: '100%',
+              padding: '10px',
+              borderRadius: '8px',
+              border: '1px solid #d1d5db',
+              background: '#fff',
+              cursor: 'pointer',
+              fontSize: '13px',
+              fontWeight: 600,
+              marginBottom: '20px'
+            }
+          }, '📋 Скопировать PIN'),
+
+          pinResult.deepLink && React.createElement(React.Fragment, null,
+            React.createElement('div', {
+              style: { fontSize: '12px', color: '#6b7280', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' }
+            }, 'Ссылка для клиента (Telegram-бот)'),
+            React.createElement('div', {
+              style: {
+                fontSize: '11px',
+                padding: '10px 12px',
+                background: '#f3f4f6',
+                borderRadius: '8px',
+                wordBreak: 'break-all',
+                fontFamily: 'monospace',
+                marginBottom: '8px',
+                color: '#374151'
+              }
+            }, pinResult.deepLink),
+            React.createElement('div', {
+              style: { display: 'flex', gap: '8px', marginBottom: '20px' }
+            },
+              React.createElement('button', {
+                onClick: () => {
+                  navigator.clipboard?.writeText(pinResult.deepLink).then(() => HEYS.Toast?.success?.('Ссылка скопирована'));
+                },
+                style: {
+                  flex: 1,
+                  padding: '10px',
+                  borderRadius: '8px',
+                  border: '1px solid #d1d5db',
+                  background: '#fff',
+                  cursor: 'pointer',
+                  fontSize: '13px',
+                  fontWeight: 600
+                }
+              }, '📋 Копировать ссылку'),
+              React.createElement('a', {
+                href: pinResult.deepLink,
+                target: '_blank',
+                rel: 'noopener noreferrer',
+                style: {
+                  flex: 1,
+                  padding: '10px',
+                  borderRadius: '8px',
+                  border: 'none',
+                  background: 'linear-gradient(135deg, #2563eb, #1d4ed8)',
+                  color: '#fff',
+                  cursor: 'pointer',
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  textAlign: 'center',
+                  textDecoration: 'none',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }
+              }, '✈️ Открыть в Telegram')
+            )
+          ),
+
+          React.createElement('div', {
+            style: { fontSize: '12px', color: '#6b7280', marginBottom: '16px', lineHeight: 1.5 }
+          },
+            '👉 Передайте PIN и ссылку клиенту в его мессенджере. ',
+            'Ссылка действует 7 дней — клиент откроет её в Telegram, бот пришлёт инструкцию.'
+          ),
+
+          React.createElement('button', {
+            onClick: () => setPinResult(null),
+            style: {
+              width: '100%',
+              padding: '11px',
+              borderRadius: '8px',
+              border: 'none',
+              background: '#1f2937',
+              color: '#fff',
+              cursor: 'pointer',
+              fontSize: '14px',
+              fontWeight: 600
+            }
+          }, 'Готово')
         )
       ),
 
@@ -8150,6 +8364,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
     TrialCapacityWidget,
     QueueStatusCard,
     TrialQueueAdmin, // Админ-панель
+    NewLeadsBadge,   // P0.11: бейдж "+N новых лидов" на табе «Очередь»
   };
 
   // 🔇 v4.7.0: Лог загрузки отключён
@@ -22697,6 +22912,59 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
             setLoading(false);
         };
 
+        // Вернуть деньги (P0.5) — refund последнего completed платежа в ЮKassa.
+        const handleRefund = async () => {
+            console.info('[HEYS.subs] 💰 Запрос refund', { clientId: client.id, clientName: client.name });
+            try {
+                // Получаем последний completed платёж клиента
+                const { data: payments, error: payErr } = await HEYS.YandexAPI
+                    .from('payments')
+                    .select('id, amount, plan, created_at, status')
+                    .eq('client_id', client.id)
+                    .eq('status', 'completed')
+                    .order('created_at', { ascending: false })
+                    .limit(1);
+
+                if (payErr) {
+                    HEYS.Toast?.error?.('Не удалось получить платёж: ' + payErr.message);
+                    return;
+                }
+                const lastPayment = (payments || [])[0];
+                if (!lastPayment) {
+                    HEYS.Toast?.warning?.('У клиента нет завершённых платежей для возврата.');
+                    return;
+                }
+
+                const ok = confirm(
+                    `Вернуть ${lastPayment.amount}₽ за тариф ${lastPayment.plan}?\n\n` +
+                    `Платёж от ${new Date(lastPayment.created_at).toLocaleString('ru-RU')}.\n` +
+                    `Клиент сразу потеряет доступ (статус → read_only).`
+                );
+                if (!ok) return;
+
+                setLoading(true);
+                const { data: res, error } = await HEYS.YandexAPI.refundPayment(lastPayment.id);
+                setLoading(false);
+
+                if (error) {
+                    console.error('[HEYS.subs] ❌ refund error', error);
+                    HEYS.Toast?.error?.('Ошибка возврата: ' + (error.message || 'неизвестная'));
+                    return;
+                }
+
+                console.info('[HEYS.subs] ✅ Refund initiated', res);
+                HEYS.Toast?.success?.(
+                    `✅ Возврат инициирован (${res.amount}₽). Деньги вернутся в течение нескольких минут.`
+                );
+                onUpdate?.();
+                closeModal();
+            } catch (e) {
+                setLoading(false);
+                console.error('[HEYS.subs] ❌ refund exception', e);
+                HEYS.Toast?.error?.('Ошибка: ' + (e.message || 'не удалось вернуть деньги'));
+            }
+        };
+
         // Сбросить подписку
         const handleCancel = async () => {
             console.info('[HEYS.subs] 🚫 Запрос на сброс подписки', { clientId: client.id, clientName: client.name });
@@ -22890,6 +23158,10 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                     },
                     style: { ...btnBase, background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe' }
                 }, '➕ Продлить подписку'),
+                status === 'active' && h('button', {
+                    onClick: handleRefund, disabled: loading,
+                    style: { ...btnBase, background: '#fef3c7', color: '#92400e', border: '1px solid #fcd34d' }
+                }, loading ? '⏳ Возврат...' : '💰 Вернуть деньги (последний платёж)'),
                 status !== 'none' && h('button', {
                     onClick: handleCancel, disabled: loading,
                     style: { ...btnBase, background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca' }
@@ -23610,7 +23882,10 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                                                     color: curatorTab === 'queue' ? '#0f172a' : 'rgba(255,255,255,0.8)'
                                                 }
                                             },
-                                            '📋 Очередь'
+                                            // P0.11: бейдж "+N" если есть новые лиды
+                                            HEYS.TrialQueue?.NewLeadsBadge
+                                                ? React.createElement(HEYS.TrialQueue.NewLeadsBadge, null, '📋 Очередь')
+                                                : '📋 Очередь'
                                         )
                                     ),
                                     // Warnings (cache/error) в хедере

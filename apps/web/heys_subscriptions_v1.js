@@ -988,6 +988,305 @@
   }
 
   // =====================================================
+  // Phase 1 (A.7): «Свяжитесь с куратором» вместо ЮKassa pay-wall
+  // =====================================================
+
+  // Глобальный флаг: false = pay-wall заглушен, true = активен.
+  // Включается перед Phase 2 деплоя heys-api-payments.
+  if (!HEYS.config) HEYS.config = {};
+  if (typeof HEYS.config.paymentsEnabled !== 'boolean') {
+    HEYS.config.paymentsEnabled = false;
+  }
+  if (typeof HEYS.config.curatorContactUrl !== 'string') {
+    HEYS.config.curatorContactUrl = 'https://t.me/heyslab_support';
+  }
+
+  /**
+   * Экран «свяжитесь с куратором» — показывается во всех точках, где раньше
+   * вёл pay-wall с ЮKassa. После Phase 2 заменится на реальный PaymentScreen
+   * через HEYS.config.paymentsEnabled = true.
+   */
+  function ContactCuratorScreen({ onClose, isReadOnly }) {
+    const contactUrl = HEYS.config.curatorContactUrl || 'https://t.me/heyslab_support';
+
+    return h('div', {
+      style: { padding: '24px 20px', textAlign: 'center', maxWidth: 380, margin: '0 auto' }
+    },
+      h('div', { style: { fontSize: 56, marginBottom: 12 } }, '👨‍⚕️'),
+      h('h3', {
+        style: {
+          fontSize: 20, fontWeight: 700, color: '#0f172a', marginBottom: 12, margin: '0 0 12px 0'
+        }
+      },
+        isReadOnly
+          ? 'Триал завершён'
+          : 'Оформление подписки'
+      ),
+      h('p', {
+        style: { fontSize: 14, color: '#64748b', lineHeight: 1.55, marginBottom: 24 }
+      },
+        isReadOnly
+          ? 'Чтобы продолжить пользоваться HEYS — свяжитесь с вашим куратором. Он оформит подписку и продлит доступ.'
+          : 'Чтобы оформить подписку — напишите вашему куратору. Он подберёт подходящий тариф и оформит оплату индивидуально.'
+      ),
+      h('a', {
+        href: contactUrl,
+        target: '_blank',
+        rel: 'noopener noreferrer',
+        style: {
+          display: 'block',
+          padding: '14px 24px',
+          background: 'linear-gradient(135deg, #2563eb, #1d4ed8)',
+          color: '#fff',
+          fontSize: 15,
+          fontWeight: 700,
+          borderRadius: 12,
+          textDecoration: 'none',
+          marginBottom: 12,
+        }
+      }, '✈️ Написать куратору в Telegram'),
+      onClose && h('button', {
+        onClick: onClose,
+        style: {
+          width: '100%',
+          padding: '12px',
+          background: 'transparent',
+          border: '1px solid #e5e7eb',
+          color: '#64748b',
+          fontSize: 14,
+          borderRadius: 12,
+          cursor: 'pointer',
+        }
+      }, 'Закрыть')
+    );
+  }
+
+  /**
+   * Открывает контактную модалку через StepModal или fallback на window.alert.
+   * Используется как обработчик upgrade-кликов в Фазе 1.
+   */
+  function openCuratorContactModal(opts = {}) {
+    if (HEYS.StepModal && HEYS.StepModal.show) {
+      HEYS.StepModal.show({
+        steps: ['payment_required'],
+        showProgress: false,
+        showGreeting: false,
+      });
+      return;
+    }
+    // Fallback: открываем напрямую Telegram куратора в новой вкладке
+    const url = HEYS.config.curatorContactUrl || 'https://t.me/heyslab_support';
+    window.open(url, '_blank', 'noopener,noreferrer');
+  }
+
+  // =====================================================
+  // P0.8: TrialCountdownBanner — sticky-плашка обратного отсчёта
+  // =====================================================
+
+  /**
+   * Sticky-плашка, висит сверху страницы. Цвет и текст зависят от
+   * subscription_status и days_left:
+   *   trial, daysLeft > 3 → нейтральная синяя
+   *   trial, 1 <= daysLeft <= 3 → жёлтая с CTA «Оформить»
+   *   read_only / daysLeft <= 0 → красная блокирующая с CTA
+   *   active / none → не рендерится
+   */
+  function TrialCountdownBanner({ subscriptionStatus, trialEndsAt, subscriptionEndsAt, onUpgrade, onClose }) {
+    const status = subscriptionStatus || 'none';
+    const endDate = subscriptionEndsAt || trialEndsAt;
+    const daysLeft = endDate ? daysUntil(endDate) : null;
+
+    if (status === 'active') return null;
+    if (status === 'none' && daysLeft === null) return null;
+
+    let bg, color, border, text, ctaText;
+
+    if (status === 'read_only' || (daysLeft !== null && daysLeft <= 0)) {
+      bg = '#fee2e2'; color = '#991b1b'; border = '#fca5a5';
+      text = '🔒 Доступ ограничен. Чтобы продолжить, оформите подписку.';
+      ctaText = 'Оформить подписку';
+    } else if (status === 'trial' && daysLeft !== null && daysLeft <= 3) {
+      bg = '#fef3c7'; color = '#92400e'; border = '#fcd34d';
+      text = `⏰ Осталось ${daysLeft} ${daysLeft === 1 ? 'день' : daysLeft < 5 ? 'дня' : 'дней'} триала.`;
+      ctaText = 'Оформить подписку →';
+    } else if (status === 'trial' && daysLeft !== null) {
+      bg = '#dbeafe'; color = '#1e40af'; border = '#93c5fd';
+      text = `🎫 Триал до ${formatDate(trialEndsAt)} (${daysLeft} дн. осталось)`;
+      ctaText = 'Оформить';
+    } else if (status === 'trial_pending') {
+      bg = '#dbeafe'; color = '#1e40af'; border = '#93c5fd';
+      text = '🕐 Триал ожидает старта';
+      ctaText = null;
+    } else {
+      return null;
+    }
+
+    return h('div', {
+      style: {
+        position: 'sticky',
+        top: 0,
+        zIndex: 9000,
+        background: bg,
+        color,
+        borderBottom: `1px solid ${border}`,
+        padding: '8px 14px',
+        fontSize: 13,
+        fontWeight: 600,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: 12,
+      }
+    },
+      h('span', { style: { flex: 1 } }, text),
+      ctaText && h('button', {
+        onClick: onUpgrade,
+        style: {
+          padding: '6px 12px',
+          borderRadius: 8,
+          border: 'none',
+          background: color,
+          color: '#fff',
+          fontSize: 12,
+          fontWeight: 700,
+          cursor: 'pointer',
+          whiteSpace: 'nowrap',
+        }
+      }, ctaText),
+      onClose && h('button', {
+        onClick: onClose,
+        title: 'Закрыть',
+        style: {
+          background: 'transparent',
+          border: 'none',
+          color,
+          fontSize: 18,
+          cursor: 'pointer',
+          padding: '0 4px',
+          lineHeight: 1,
+        }
+      }, '×')
+    );
+  }
+
+  /**
+   * Welcome-модалка при первом успешном входе клиента.
+   * Использует localStorage флаг heys_first_login_<clientId>.
+   */
+  function WelcomeFirstLogin({ clientName, trialEndsAt, onClose }) {
+    const days = trialEndsAt ? daysUntil(trialEndsAt) : 7;
+
+    return h('div', {
+      style: {
+        position: 'fixed',
+        inset: 0,
+        background: 'rgba(0,0,0,0.55)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 10000,
+      },
+      onClick: (e) => { if (e.target === e.currentTarget) onClose(); }
+    },
+      h('div', {
+        style: {
+          width: 420,
+          maxWidth: '92vw',
+          background: '#fff',
+          borderRadius: 18,
+          padding: 28,
+          boxShadow: '0 30px 80px rgba(0,0,0,0.35)',
+          textAlign: 'center',
+        }
+      },
+        h('div', { style: { fontSize: 56, marginBottom: 12 } }, '🎉'),
+        h('div', { style: { fontSize: 22, fontWeight: 700, color: '#0f172a', marginBottom: 8 } },
+          `${clientName ? clientName + ', добро пожаловать в HEYS!' : 'Добро пожаловать в HEYS!'}`
+        ),
+        h('div', { style: { fontSize: 14, color: '#64748b', marginBottom: 18, lineHeight: 1.55 } },
+          `Триал на ${days} дней начался${trialEndsAt ? ` — до ${formatDate(trialEndsAt)}.` : '.'}`,
+          h('br'),
+          h('br'),
+          'За это время вы успеете завести дневник, получить первые рекомендации и понять, ',
+          'подходит ли HEYS лично вам.'
+        ),
+        h('button', {
+          onClick: onClose,
+          style: {
+            padding: '12px 24px',
+            borderRadius: 10,
+            border: 'none',
+            background: 'linear-gradient(135deg, #2563eb, #1d4ed8)',
+            color: '#fff',
+            fontSize: 14,
+            fontWeight: 700,
+            cursor: 'pointer',
+            width: '100%',
+          }
+        }, 'Начать!')
+      )
+    );
+  }
+
+  /**
+   * Автоматический монтаж countdown-баннера и welcome-модалки.
+   * Вызывается из shell приложения после успешного логина клиента.
+   *
+   * Использование (в любом месте shell):
+   *   HEYS.Subscriptions.mountTrialUI({
+   *     clientId: '...',
+   *     clientName: 'Иван',
+   *     subscriptionStatus: 'trial',
+   *     trialEndsAt: '2026-05-05T...',
+   *     onUpgrade: () => HEYS.Subscriptions.showPaymentRequired(),
+   *   });
+   */
+  function mountTrialUI({ clientId, clientName, subscriptionStatus, trialEndsAt, subscriptionEndsAt, onUpgrade }) {
+    if (typeof document === 'undefined' || !React || !ReactDOM) return null;
+
+    // 1. Sticky countdown banner — монтируем в начало body
+    let bannerHost = document.getElementById('heys-trial-banner-host');
+    if (!bannerHost) {
+      bannerHost = document.createElement('div');
+      bannerHost.id = 'heys-trial-banner-host';
+      document.body.insertBefore(bannerHost, document.body.firstChild);
+    }
+    const bannerRoot = bannerHost._heysRoot || ReactDOM.createRoot(bannerHost);
+    bannerHost._heysRoot = bannerRoot;
+
+    bannerRoot.render(
+      h(TrialCountdownBanner, {
+        subscriptionStatus,
+        trialEndsAt,
+        subscriptionEndsAt,
+        onUpgrade: onUpgrade || (() => showPaymentRequired()),
+      })
+    );
+
+    // 2. Welcome-модалка при первом логине
+    const welcomeKey = `heys_first_login_${clientId}`;
+    if (subscriptionStatus === 'trial' && clientId && !localStorage.getItem(welcomeKey)) {
+      let welcomeHost = document.getElementById('heys-welcome-host');
+      if (!welcomeHost) {
+        welcomeHost = document.createElement('div');
+        welcomeHost.id = 'heys-welcome-host';
+        document.body.appendChild(welcomeHost);
+      }
+      const welcomeRoot = welcomeHost._heysRoot || ReactDOM.createRoot(welcomeHost);
+      welcomeHost._heysRoot = welcomeRoot;
+
+      const close = () => {
+        try { localStorage.setItem(welcomeKey, '1'); } catch {}
+        welcomeRoot.render(null);
+      };
+
+      welcomeRoot.render(
+        h(WelcomeFirstLogin, { clientName, trialEndsAt, onClose: close })
+      );
+    }
+  }
+
+  // =====================================================
   // ЭКСПОРТ
   // =====================================================
 
@@ -1021,8 +1320,81 @@
     PaymentScreen,
     PaymentSuccessScreen,
     PaywallBanner,
-    SubscriptionSection
+    SubscriptionSection,
+
+    // P0.8: countdown + welcome
+    TrialCountdownBanner,
+    WelcomeFirstLogin,
+    mountTrialUI,
+
+    // Phase 1 (A.7): «свяжитесь с куратором» вместо ЮKassa
+    ContactCuratorScreen,
+    openCuratorContactModal,
   };
+
+  // =====================================================
+  // P0.8: Auto-bootstrap countdown-баннера и welcome-модалки
+  // =====================================================
+  //
+  // Слушает heys:profile-updated и при наличии активного клиента и
+  // данных подписки — монтирует TrialCountdownBanner + WelcomeFirstLogin
+  // в начало document.body. Это позволяет UI работать без явных правок
+  // в shell-приложении.
+
+  function readProfileForUI() {
+    try {
+      const profile = (HEYS.utils?.lsGet?.('heys_profile')) || {};
+      const clientId = HEYS.currentClientId || localStorage.getItem('heys_client_current') || null;
+      return {
+        clientId: clientId ? String(clientId).replace(/"/g, '') : null,
+        clientName: profile.name || profile.first_name || null,
+        subscriptionStatus: profile.subscription_status || null,
+        trialEndsAt: profile.trial_ends_at || null,
+        subscriptionEndsAt: profile.subscription_ends_at || profile.subscription_expires_at || null,
+      };
+    } catch {
+      return { clientId: null };
+    }
+  }
+
+  function autoMountTrialUI() {
+    const data = readProfileForUI();
+    if (!data.clientId || !data.subscriptionStatus) return;
+    // active и none без trial_ends_at — нечего показывать
+    if (data.subscriptionStatus === 'active') {
+      // Удаляем баннер если он был
+      const host = document.getElementById('heys-trial-banner-host');
+      if (host && host._heysRoot) host._heysRoot.render(null);
+      return;
+    }
+    mountTrialUI({
+      ...data,
+      onUpgrade: () => {
+        // Phase 1: pay-wall выключен → открываем «Свяжитесь с куратором».
+        // Phase 2: HEYS.config.paymentsEnabled = true → ЮKassa pay-wall.
+        if (HEYS.config.paymentsEnabled) {
+          showPaymentRequired();
+        } else {
+          openCuratorContactModal();
+        }
+      },
+    });
+  }
+
+  if (typeof window !== 'undefined') {
+    // На профиль-апдейт пере-монтируем
+    window.addEventListener('heys:profile-updated', () => {
+      try { autoMountTrialUI(); } catch (e) { console.warn('[Subs.autoMount] error:', e.message); }
+    });
+    // На смену клиента — тоже
+    window.addEventListener('heys:client-changed', () => {
+      try { autoMountTrialUI(); } catch {}
+    });
+    // Первоначальный mount после загрузки скрипта (через 1 тик чтобы успели прийти LS-данные)
+    setTimeout(() => {
+      try { autoMountTrialUI(); } catch {}
+    }, 100);
+  }
 
   // =====================================================
   // РЕГИСТРАЦИЯ ШАГА для StepModal
@@ -1041,6 +1413,14 @@
       hideBackButton: true,
 
       render: ({ onComplete }) => {
+        // Phase 1 (A.7): pay-wall с ЮKassa выключен по умолчанию.
+        // Чтобы включить — set HEYS.config.paymentsEnabled = true (Phase 2).
+        const paymentsEnabled = !!(HEYS.config && HEYS.config.paymentsEnabled);
+
+        if (!paymentsEnabled) {
+          return h(ContactCuratorScreen, { onClose: onComplete });
+        }
+
         const [selectedPlan, setSelectedPlan] = React.useState('pro');
         const [showPayment, setShowPayment] = React.useState(false);
 
@@ -1088,7 +1468,7 @@
           h('div', { style: plansStyle },
             h(PlanCard, { plan: 'base', isSelected: selectedPlan === 'base', onSelect: setSelectedPlan }),
             h(PlanCard, { plan: 'pro', isSelected: selectedPlan === 'pro', onSelect: setSelectedPlan }),
-            h(PlanCard, { plan: 'pro_plus', isSelected: selectedPlan === 'pro_plus', onSelect: setSelectedPlan })
+            h(PlanCard, { plan: 'proplus', isSelected: selectedPlan === 'proplus', onSelect: setSelectedPlan })
           ),
           h('button', { style: buttonStyle, onClick: () => setShowPayment(true) },
             'Оформить подписку'

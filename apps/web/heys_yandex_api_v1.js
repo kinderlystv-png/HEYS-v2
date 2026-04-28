@@ -1813,10 +1813,18 @@
     try {
       log(`createPayment: clientId=${clientId}, plan=${plan}`);
 
+      const sessionToken = getSessionTokenForKV();
+      if (!sessionToken) {
+        const msg = 'Нет активной сессии клиента. Войдите по PIN, чтобы оформить подписку.';
+        err('createPayment: no session token');
+        return { data: null, error: { message: msg, code: 'NO_SESSION' } };
+      }
+
       const response = await fetch(`${CONFIG.API_URL}/payments/create`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${sessionToken}`
         },
         body: JSON.stringify({
           clientId,
@@ -1847,16 +1855,107 @@
    * @param {string} clientId - ID клиента (для безопасности)
    * @returns {Promise<{data: {status, paid, amount}, error: any}>}
    */
+  /**
+   * Logout клиента (отзыв PIN-сессии). После вызова токен невалиден.
+   * Локальный heys_session_token также удаляется. (P0.15)
+   * @returns {Promise<{ok: boolean, error?: any}>}
+   */
+  async function clientLogout() {
+    try {
+      const sessionToken = getSessionTokenForKV();
+      if (!sessionToken) {
+        // Нечего отзывать
+        try { localStorage.removeItem('heys_session_token'); } catch {}
+        return { ok: true };
+      }
+
+      const response = await fetch(`${CONFIG.API_URL}/auth/client-logout`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${sessionToken}`,
+        },
+        body: JSON.stringify({ session_token: sessionToken }),
+      });
+
+      // Удаляем локальный токен независимо от результата сервера —
+      // если сервер не ответил, на клиенте всё равно logout.
+      try {
+        localStorage.removeItem('heys_session_token');
+      } catch {}
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        return { ok: false, error: data };
+      }
+
+      return { ok: true };
+    } catch (e) {
+      err('clientLogout failed:', e.message);
+      try { localStorage.removeItem('heys_session_token'); } catch {}
+      return { ok: false, error: { message: e.message } };
+    }
+  }
+
+  /**
+   * Инициировать refund платежа куратором.
+   * @param {string} paymentId — UUID платежа в нашей БД (payments.id)
+   * @param {number} [amount] — частичная сумма (по умолчанию полная)
+   * @returns {Promise<{data: {refundId, status}, error: any}>}
+   */
+  async function refundPayment(paymentId, amount) {
+    try {
+      log(`refundPayment: paymentId=${paymentId}, amount=${amount || 'full'}`);
+
+      const curatorToken = getCuratorToken();
+      if (!curatorToken) {
+        const msg = 'Нет токена куратора. Войдите заново.';
+        err('refundPayment: no curator token');
+        return { data: null, error: { message: msg, code: 'NO_TOKEN' } };
+      }
+
+      const response = await fetch(`${CONFIG.API_URL}/payments/refund`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${curatorToken}`,
+        },
+        body: JSON.stringify({ paymentId, amount }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}`);
+      }
+
+      const data = await response.json();
+      log(`refundPayment success:`, data);
+      return { data, error: null };
+    } catch (e) {
+      err('refundPayment failed:', e.message);
+      _lastError = e.message;
+      return { data: null, error: { message: e.message } };
+    }
+  }
+
   async function getPaymentStatus(paymentId, clientId) {
     try {
       log(`getPaymentStatus: paymentId=${paymentId}`);
+
+      const sessionToken = getSessionTokenForKV();
+      if (!sessionToken) {
+        const msg = 'Нет активной сессии клиента.';
+        err('getPaymentStatus: no session token');
+        return { data: null, error: { message: msg, code: 'NO_SESSION' } };
+      }
 
       const response = await fetch(
         `${CONFIG.API_URL}/payments/status?paymentId=${encodeURIComponent(paymentId)}&clientId=${encodeURIComponent(clientId)}`,
         {
           method: 'GET',
           headers: {
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${sessionToken}`
           }
         }
       );
@@ -1916,6 +2015,8 @@
     // � Payments (ЮKassa)
     createPayment,
     getPaymentStatus,
+    refundPayment,
+    clientLogout,
 
     // �📝 Consents
     logConsents,
