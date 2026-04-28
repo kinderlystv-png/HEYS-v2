@@ -32,6 +32,10 @@ const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID;
 // Окно дедупликации (30 минут)
 const DEDUPLICATION_WINDOW_MINUTES = 30;
 
+// Rate-limit: максимум N submit'ов с одного IP за W минут (P0.13)
+const RATE_LIMIT_MAX_PER_WINDOW = 5;
+const RATE_LIMIT_WINDOW_MINUTES = 15;
+
 const ALLOWED_ORIGINS = [
   'https://heyslab.ru',
   'https://www.heyslab.ru',
@@ -163,6 +167,7 @@ module.exports.handler = async function (event, context) {
     const {
       name,
       phone,
+      email,
       messenger,
       utm_source,
       utm_medium,
@@ -172,8 +177,20 @@ module.exports.handler = async function (event, context) {
       referrer,
       landing_page,
       intent,
-      plan
+      plan,
+      website, // 🍯 honeypot (P0.13) — должно быть пустым
     } = body;
+
+    // 🍯 Honeypot (P0.13): боты обычно заполняют все поля. Если website непустой —
+    // это автомат. Возвращаем 200 чтобы не палить детект, но в БД ничего не пишем.
+    if (website && String(website).trim().length > 0) {
+      console.log('[Leads] BOT_BLOCKED honeypot filled:', String(website).slice(0, 100));
+      return {
+        statusCode: 200,
+        headers: corsHeaders,
+        body: JSON.stringify({ success: true, status: 'received' }),
+      };
+    }
 
     // Валидация
     if (!name || !phone || !messenger) {
@@ -187,6 +204,22 @@ module.exports.handler = async function (event, context) {
       };
     }
 
+    // Email опционален, но если задан — должен быть валидным
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email))) {
+      return {
+        statusCode: 400,
+        headers: corsHeaders,
+        body: JSON.stringify({ success: false, error: 'Invalid email format' }),
+      };
+    }
+
+    // IP клиента для rate-limit
+    const clientIp =
+      event.headers?.['x-forwarded-for']?.split(',')[0]?.trim() ||
+      event.headers?.['X-Forwarded-For']?.split(',')[0]?.trim() ||
+      event.requestContext?.identity?.sourceIp ||
+      'unknown';
+
     // Нормализуем телефон к формату +7XXXXXXXXXX
     const normalizedPhone = normalizePhone(phone);
 
@@ -195,6 +228,36 @@ module.exports.handler = async function (event, context) {
     const client = await pool.connect();
 
     try {
+      // 🛑 Rate-limit (P0.13): максимум RATE_LIMIT_MAX_PER_WINDOW submit'ов
+      // с одного IP за RATE_LIMIT_WINDOW_MINUTES минут.
+      const rateRes = await client.query(
+        `SELECT COUNT(*)::int AS cnt
+         FROM lead_submission_attempts
+         WHERE ip_address = $1
+           AND attempted_at > NOW() - ($2 || ' minutes')::INTERVAL`,
+        [clientIp, RATE_LIMIT_WINDOW_MINUTES]
+      );
+      const recentAttempts = rateRes.rows?.[0]?.cnt || 0;
+      if (recentAttempts >= RATE_LIMIT_MAX_PER_WINDOW) {
+        console.warn(`[Leads] RATE_LIMITED ip=${clientIp} attempts=${recentAttempts}`);
+        return {
+          statusCode: 429,
+          headers: { ...corsHeaders, 'Retry-After': String(RATE_LIMIT_WINDOW_MINUTES * 60) },
+          body: JSON.stringify({
+            success: false,
+            error: 'Too many requests',
+            retry_after_seconds: RATE_LIMIT_WINDOW_MINUTES * 60,
+          }),
+        };
+      }
+
+      // Логируем попытку (даже если потом откажемся вставлять — для статистики)
+      await client.query(
+        `INSERT INTO lead_submission_attempts (ip_address, honeypot_filled)
+         VALUES ($1, false)`,
+        [clientIp]
+      );
+
       // Таблица leads создаётся миграциями (database/yandex_migration/001_schema.sql)
       // с правильным типом id UUID DEFAULT gen_random_uuid()
 
@@ -212,19 +275,40 @@ module.exports.handler = async function (event, context) {
       let isDuplicate = false;
 
       if (duplicateCheck.rows.length > 0) {
-        // Дубликат найден — возвращаем существующий ID
+        // Дубликат в скользящем окне — возвращаем существующий ID
         leadId = duplicateCheck.rows[0].id;
         isDuplicate = true;
-        console.log('[Leads] Duplicate detected:', leadId, 'within', DEDUPLICATION_WINDOW_MINUTES, 'minutes');
+        console.log('[Leads] Duplicate (window) detected:', leadId, 'within', DEDUPLICATION_WINDOW_MINUTES, 'minutes');
       } else {
-        // 2. Вставляем новый лид
-        const result = await client.query(`
-          INSERT INTO leads (name, phone, messenger, utm_source, utm_medium, utm_campaign, utm_term, utm_content, referrer, landing_page)
-          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-          RETURNING id
-        `, [name, normalizedPhone, messenger, utm_source, utm_medium, utm_campaign, utm_term, utm_content, referrer, landing_page]);
+        // 2. Вставляем новый лид. Partial UNIQUE-индекс leads_active_phone_idx
+        // (миграция 2026-04-28_leads_dedup) может бросить 23505 если phone уже
+        // имеет активный лид (status IN 'new'/'contacted'/'trial_started').
+        try {
+          const result = await client.query(`
+            INSERT INTO leads (name, phone, email, messenger, utm_source, utm_medium, utm_campaign, utm_term, utm_content, referrer, landing_page, ip_address)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+            RETURNING id
+          `, [name, normalizedPhone, email || null, messenger, utm_source, utm_medium, utm_campaign, utm_term, utm_content, referrer, landing_page, clientIp]);
 
-        leadId = result.rows[0].id;
+          leadId = result.rows[0].id;
+        } catch (insErr) {
+          if (insErr?.code === '23505') {
+            // unique_violation — есть активный лид с этим телефоном
+            const existing = await client.query(
+              `SELECT id FROM leads
+               WHERE phone = $1
+                 AND status IN ('new', 'contacted', 'trial_started')
+               ORDER BY created_at DESC
+               LIMIT 1`,
+              [normalizedPhone]
+            );
+            leadId = existing.rows?.[0]?.id || null;
+            isDuplicate = true;
+            console.log('[Leads] Duplicate (active) detected via unique_violation:', leadId);
+          } else {
+            throw insErr;
+          }
+        }
       }
 
       // 3. Отправляем уведомление в Telegram только для новых лидов
