@@ -12,8 +12,14 @@
  *   PG_HOST, PG_PORT, PG_DATABASE, PG_USER, PG_PASSWORD — PostgreSQL
  */
 
-const { getPool } = require('../shared/db-pool');
+const { getPool } = require('./shared/db-pool');
+const {
+  extractBearerToken,
+  verifyClientSession,
+  verifyCuratorJwt,
+} = require('./shared/auth-helpers');
 const { v4: uuidv4 } = require('uuid');
+const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 
@@ -24,13 +30,12 @@ const path = require('path');
 const YUKASSA_API_URL = 'https://api.yookassa.ru/v3/payments';
 
 // ЮKassa notification IP ranges (https://yookassa.ru/developers/using-api/webhooks)
-// All webhook POSTs must originate from these CIDRs.
+// All webhook POSTs must originate from these CIDRs. IPv4 only — ЮKassa не шлёт с IPv6.
 const YUKASSA_IP_CIDRS = [
   { base: [185, 71, 76, 0], prefix: 27 },
   { base: [185, 71, 77, 0], prefix: 27 },
   { base: [77, 75, 153, 0], prefix: 25 },
   { base: [77, 75, 154, 128], prefix: 25 },
-  { base: [2a02, 0, 0, 0], prefix: -1 }, // placeholder, handled separately
 ];
 
 function ipToInt(parts) {
@@ -178,15 +183,17 @@ async function createPayment(body, clientId) {
   const client = await pool.connect();
   let paymentId;
   let clientPhone = null;
+  let clientEmail = null;
 
   try {
-    // Получаем телефон клиента для чека 54-ФЗ
+    // Получаем телефон + email клиента для чека 54-ФЗ
     const clientResult = await client.query(`
-      SELECT phone FROM clients WHERE id = $1
+      SELECT phone, email FROM clients WHERE id = $1
     `, [clientId]);
 
     if (clientResult.rows.length > 0) {
       clientPhone = clientResult.rows[0].phone;
+      clientEmail = clientResult.rows[0].email;
     }
 
     const insertResult = await client.query(`
@@ -218,9 +225,14 @@ async function createPayment(body, clientId) {
         return_url: returnUrl
       },
       description: planInfo.description,
-      // 54-ФЗ: электронный чек (онлайн-касса через ЮKassa)
+      // 54-ФЗ: электронный чек (онлайн-касса через ЮKassa).
+      // ЮKassa требует phone ИЛИ email в customer. Приоритет email при наличии,
+      // дополнительно прикладываем phone — клиент получает чек на оба канала.
       receipt: {
-        customer: clientPhone ? { phone: clientPhone } : {},
+        customer: {
+          ...(clientEmail ? { email: clientEmail } : {}),
+          ...(clientPhone ? { phone: clientPhone } : {}),
+        },
         items: [{
           description: planInfo.description,
           quantity: '1.00',
@@ -315,114 +327,410 @@ async function createPayment(body, clientId) {
 // 🔔 WEBHOOK — Обработка уведомлений от ЮKassa
 // ═══════════════════════════════════════════════════════════════════════════════
 
+/**
+ * Проверка HMAC-подписи webhook'а ЮKassa.
+ * Опциональная — если YUKASSA_WEBHOOK_SECRET не задан в env, пропускаем
+ * (только IP-allowlist). Это позволяет постепенно мигрировать на HMAC после
+ * настройки секрета в кабинете ЮKassa.
+ *
+ * @param {string} rawBody — raw HTTP body запроса
+ * @param {object} headers — event.headers
+ * @returns {{ok: true} | {ok: false, reason: string}}
+ */
+function verifyWebhookSignature(rawBody, headers) {
+  const secret = process.env.YUKASSA_WEBHOOK_SECRET;
+  if (!secret) {
+    return { ok: true, reason: 'no-secret-configured' };
+  }
+
+  const signature =
+    headers?.['x-webhook-signature'] ||
+    headers?.['X-Webhook-Signature'] ||
+    headers?.['authorization']?.replace(/^Bearer\s+/i, '') ||
+    headers?.['Authorization']?.replace(/^Bearer\s+/i, '') ||
+    null;
+
+  if (!signature || typeof signature !== 'string') {
+    return { ok: false, reason: 'no-signature' };
+  }
+
+  const computed = crypto.createHmac('sha256', secret).update(rawBody, 'utf8').digest('hex');
+
+  // Используем timingSafeEqual для защиты от timing-атак
+  const sigBuf = Buffer.from(signature, 'hex');
+  const expBuf = Buffer.from(computed, 'hex');
+  if (sigBuf.length !== expBuf.length) return { ok: false, reason: 'sig-length-mismatch' };
+  const valid = crypto.timingSafeEqual(sigBuf, expBuf);
+  return valid ? { ok: true } : { ok: false, reason: 'sig-mismatch' };
+}
+
+/**
+ * Идемпотентная обработка одного события ЮKassa (webhook или poll-результат).
+ * Используется и в handleWebhook, и в cron-poll (P0.4).
+ *
+ * Логика:
+ *  1. INSERT в payment_events (с UNIQUE constraint) — если ON CONFLICT, считаем
+ *     событие уже обработанным и выходим без UPDATE.
+ *  2. Иначе — обновляем payments + (если succeeded) clients в одной транзакции.
+ *  3. Расчёт subscription_ends_at: GREATEST(NOW, current_ends) + INTERVAL '1 month',
+ *     чтобы продление прибавлялось к остатку текущей подписки.
+ *
+ * @param {object} client — pg client (внутри pool.connect)
+ * @param {object} ctx
+ * @param {string} ctx.externalPaymentId — object.id из ЮKassa
+ * @param {string} ctx.eventType — 'payment.succeeded' / 'payment.canceled' / ...
+ * @param {string} ctx.externalStatus — object.status (succeeded / canceled / pending / waiting_for_capture)
+ * @param {object} ctx.rawPayload — полный JSON-объект webhook'а (event + object)
+ * @param {string} [ctx.sourceIp] — IP источника для аудита
+ * @returns {Promise<{applied: boolean, payment?: object, reason?: string}>}
+ */
+async function applyPaymentStatus(client, ctx) {
+  const { externalPaymentId, eventType, externalStatus, rawPayload, sourceIp } = ctx;
+
+  await client.query('BEGIN');
+
+  try {
+    // 1. Находим платёж заранее (нужен payment_id для FK в payment_events)
+    const findResult = await client.query(
+      `SELECT id, client_id, plan, status FROM payments
+       WHERE external_payment_id = $1
+       FOR UPDATE`,
+      [externalPaymentId]
+    );
+
+    const payment = findResult.rows[0] || null;
+
+    // 2. Регистрируем событие; UNIQUE constraint обеспечивает идемпотентность
+    const insertResult = await client.query(
+      `INSERT INTO payment_events
+        (payment_id, external_payment_id, event_type, external_status, raw_payload, source_ip)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       ON CONFLICT ON CONSTRAINT payment_events_unique DO NOTHING
+       RETURNING id`,
+      [
+        payment?.id || null,
+        externalPaymentId,
+        eventType,
+        externalStatus,
+        JSON.stringify(rawPayload || {}),
+        sourceIp || null,
+      ]
+    );
+
+    if (insertResult.rows.length === 0) {
+      // Событие уже обрабатывалось — выходим, не трогая БД
+      await client.query('COMMIT');
+      console.log(
+        `[PAYMENT_EVENT] duplicate ${eventType}/${externalStatus} for ${externalPaymentId} — skipped`
+      );
+      return { applied: false, reason: 'duplicate' };
+    }
+
+    // 3. Если платежа в нашей БД нет — это «чужой» webhook (тестовый или для
+    //    другого мерчанта попавший к нам). Мы его залогировали, но не действуем.
+    if (!payment) {
+      await client.query('COMMIT');
+      console.warn(`[PAYMENT_EVENT] payment not found in DB: ${externalPaymentId}`);
+      return { applied: false, reason: 'payment-not-found' };
+    }
+
+    // 4. Маппинг внешнего статуса → наш статус
+    let internalStatus = payment.status;
+    if (externalStatus === 'succeeded') internalStatus = 'completed';
+    else if (externalStatus === 'canceled') internalStatus = 'failed';
+    else if (externalStatus === 'waiting_for_capture') internalStatus = 'waiting_capture';
+    // pending — оставляем текущий
+
+    // refund.succeeded — отдельный статус
+    if (eventType === 'refund.succeeded') internalStatus = 'refunded';
+
+    // 5. UPDATE payments
+    await client.query(
+      `UPDATE payments
+       SET external_status = $2,
+           status = $3,
+           metadata = metadata || $4::jsonb,
+           updated_at = NOW()
+       WHERE id = $1`,
+      [
+        payment.id,
+        externalStatus,
+        internalStatus,
+        JSON.stringify({
+          last_event: eventType,
+          last_event_at: new Date().toISOString(),
+        }),
+      ]
+    );
+
+    // 6. Применяем эффекты к подписке клиента
+    if (eventType === 'payment.succeeded' && externalStatus === 'succeeded') {
+      // Продление: GREATEST(NOW(), current_ends_at) + INTERVAL '1 month'.
+      // Это корректно работает и для первой покупки (current=NULL → берём NOW),
+      // и для досрочного продления (берём конец текущей подписки).
+      const updRes = await client.query(
+        `UPDATE clients
+         SET subscription_status = 'active',
+             subscription_plan = $2,
+             subscription_starts_at = COALESCE(subscription_starts_at, NOW()),
+             subscription_ends_at =
+               GREATEST(NOW(), COALESCE(subscription_ends_at, NOW())) + INTERVAL '1 month',
+             updated_at = NOW()
+         WHERE id = $1
+         RETURNING subscription_ends_at`,
+        [payment.client_id, payment.plan]
+      );
+
+      const newEndsAt = updRes.rows?.[0]?.subscription_ends_at;
+
+      // 7. period_start / period_end в payment-записи (для отчётности)
+      await client.query(
+        `UPDATE payments
+         SET period_start = COALESCE(period_start, NOW()),
+             period_end = $2
+         WHERE id = $1`,
+        [payment.id, newEndsAt]
+      );
+
+      console.log(
+        `[PAYMENT_EVENT] activated subscription ${payment.plan} for client ${payment.client_id} until ${newEndsAt?.toISOString?.() || newEndsAt}`
+      );
+    } else if (eventType === 'refund.succeeded') {
+      // Возврат: переводим клиента в read_only немедленно, обнуляем ends_at.
+      await client.query(
+        `UPDATE clients
+         SET subscription_status = 'read_only',
+             subscription_ends_at = NOW(),
+             updated_at = NOW()
+         WHERE id = $1`,
+        [payment.client_id]
+      );
+      console.log(
+        `[PAYMENT_EVENT] refund applied: client ${payment.client_id} → read_only`
+      );
+    }
+    // payment.canceled / payment.waiting_for_capture не трогают clients —
+    // подписка не активируется, но и не отзывается.
+
+    await client.query('COMMIT');
+    return { applied: true, payment };
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  }
+}
+
+/**
+ * Проверка internal-cron-token. Используется для poll-фолбэка (P0.4),
+ * когда наш внутренний скрипт получает свежий статус из ЮKassa и хочет
+ * передать его в общий webhook-pipeline без IP-allowlist и HMAC.
+ *
+ * Токен хранится в env INTERNAL_CRON_TOKEN. Если задан — заголовок
+ * X-Internal-Cron-Token должен совпадать. Это альтернатива IP/HMAC проверкам.
+ */
+function isInternalCronCall(headers) {
+  const expected = process.env.INTERNAL_CRON_TOKEN;
+  if (!expected) return false;
+  const provided =
+    headers?.['x-internal-cron-token'] ||
+    headers?.['X-Internal-Cron-Token'] ||
+    null;
+  if (!provided || typeof provided !== 'string') return false;
+  const a = Buffer.from(provided, 'utf8');
+  const b = Buffer.from(expected, 'utf8');
+  if (a.length !== b.length) return false;
+  return crypto.timingSafeEqual(a, b);
+}
+
 async function handleWebhook(body, event) {
-  // 🔐 Verify request originates from YuKassa IPs
-  const rawIp =
-    event?.headers?.['x-forwarded-for']?.split(',')[0]?.trim() ||
-    event?.headers?.['X-Forwarded-For']?.split(',')[0]?.trim() ||
+  const headers = event?.headers || {};
+  const internalCron = isInternalCronCall(headers);
+
+  const clientIp =
+    headers['x-forwarded-for']?.split(',')[0]?.trim() ||
+    headers['X-Forwarded-For']?.split(',')[0]?.trim() ||
     event?.requestContext?.identity?.sourceIp ||
     '';
 
-  if (!isYukassaIp(rawIp)) {
-    console.warn(`[WEBHOOK] Rejected request from non-YuKassa IP: ${rawIp}`);
-    return jsonResponse(403, { error: 'Forbidden' });
+  if (!internalCron) {
+    // 🔐 Verify request originates from YuKassa IPs
+    if (!isYukassaIp(clientIp)) {
+      console.warn(`[WEBHOOK] Rejected request from non-YuKassa IP: ${clientIp}`);
+      return jsonResponse(403, { error: 'Forbidden' });
+    }
+
+    // 🔐 HMAC-проверка подписи (если YUKASSA_WEBHOOK_SECRET настроен)
+    const rawBody = typeof event?.body === 'string'
+      ? event.body
+      : JSON.stringify(body || {});
+    const sigCheck = verifyWebhookSignature(rawBody, headers);
+    if (!sigCheck.ok) {
+      console.warn(`[WEBHOOK] HMAC signature check failed: ${sigCheck.reason}`);
+      return jsonResponse(403, { error: 'Invalid signature', reason: sigCheck.reason });
+    }
+    if (sigCheck.reason === 'no-secret-configured') {
+      console.warn('[WEBHOOK] YUKASSA_WEBHOOK_SECRET not set — relying on IP allowlist only');
+    }
+  } else {
+    console.log('[WEBHOOK] Internal cron call accepted (IP/HMAC checks skipped)');
   }
 
-  const { event: webhookEvent, object } = body;
+  // sourceIp для аудита — для cron берём фиксированный маркер
+  const sourceIp = internalCron ? 'internal-cron' : clientIp;
+
+  const { event: webhookEvent, object } = body || {};
 
   if (!webhookEvent || !object) {
     return errorResponse(400, 'Invalid webhook payload', 'INVALID_WEBHOOK');
   }
 
-  console.log(`[WEBHOOK] Received: ${webhookEvent}, payment_id: ${object.id}`);
-
-  const externalPaymentId = object.id;
-  const newStatus = object.status;
-  const metadata = object.metadata || {};
+  console.log(`[WEBHOOK] Received: ${webhookEvent}, payment_id: ${object.id}, status: ${object.status}`);
 
   const pool = getPool();
   const client = await pool.connect();
 
   try {
-
-    // 1. Находим платёж по external_payment_id
-    const findResult = await client.query(`
-      SELECT id, client_id, plan, status FROM payments 
-      WHERE external_payment_id = $1
-    `, [externalPaymentId]);
-
-    if (findResult.rows.length === 0) {
-      console.warn(`[WEBHOOK] Payment not found: ${externalPaymentId}`);
-      // Не ошибка — может быть дубликат или тестовый платёж
-      return jsonResponse(200, { received: true, warning: 'Payment not found' });
-    }
-
-    const payment = findResult.rows[0];
-    console.log(`[WEBHOOK] Found payment: ${payment.id}, current status: ${payment.status}`);
-
-    // 2. Обновляем статус платежа
-    let internalStatus = 'pending';
-    if (newStatus === 'succeeded') {
-      internalStatus = 'completed';
-    } else if (newStatus === 'canceled') {
-      internalStatus = 'failed';
-    }
-
-    await client.query(`
-      UPDATE payments 
-      SET external_status = $2, 
-          status = $3,
-          metadata = metadata || $4,
-          updated_at = NOW()
-      WHERE id = $1
-    `, [
-      payment.id,
-      newStatus,
-      internalStatus,
-      JSON.stringify({ webhook_event: webhookEvent, webhook_received_at: new Date().toISOString() })
-    ]);
-
-    // 3. Если платёж успешен — активируем подписку
-    if (newStatus === 'succeeded') {
-      console.log(`[WEBHOOK] Payment succeeded! Activating subscription for client ${payment.client_id}`);
-
-      // Вызываем существующую SQL функцию activate_subscription
-      // Но она создаёт новый платёж — нам нужно просто обновить клиента
-      // Используем прямое обновление:
-      const now = new Date();
-      const subscriptionEnd = new Date(now);
-      subscriptionEnd.setMonth(subscriptionEnd.getMonth() + 1);
-
-      await client.query(`
-        UPDATE clients 
-        SET subscription_status = 'active',
-            subscription_plan = $2,
-            subscription_starts_at = NOW(),
-            subscription_ends_at = $3,
-            updated_at = NOW()
-        WHERE id = $1
-      `, [payment.client_id, payment.plan, subscriptionEnd.toISOString()]);
-
-      // Обновляем period в платеже
-      await client.query(`
-        UPDATE payments 
-        SET period_start = NOW(), 
-            period_end = $2
-        WHERE id = $1
-      `, [payment.id, subscriptionEnd.toISOString()]);
-
-      console.log(`[WEBHOOK] Subscription activated until ${subscriptionEnd.toISOString()}`);
-    }
+    const result = await applyPaymentStatus(client, {
+      externalPaymentId: object.id,
+      eventType: webhookEvent,
+      externalStatus: object.status,
+      rawPayload: body,
+      sourceIp: sourceIp,
+    });
 
     return jsonResponse(200, {
       received: true,
-      paymentId: payment.id,
-      status: internalStatus
+      applied: result.applied,
+      reason: result.reason,
+      paymentId: result.payment?.id,
     });
-
   } catch (error) {
     console.error('[WEBHOOK] Processing error:', error);
     return errorResponse(500, 'Webhook processing failed', 'WEBHOOK_ERROR');
+  } finally {
+    client.release();
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 💰 REFUND — Возврат денег куратором (P0.5)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Инициирует refund в ЮKassa. Доступно только куратору, владеющему клиентом.
+ * Сам платёж переводится в 'refunded' уже через webhook refund.succeeded
+ * (обрабатывается в applyPaymentStatus, P0.3).
+ *
+ * @param {object} body — { paymentId, amount? } (amount опционально, по умолчанию полный)
+ * @param {string} curatorId — UUID куратора из проверенного JWT
+ */
+async function refundPayment(body, curatorId) {
+  const { paymentId, amount: customAmount } = body || {};
+  if (!paymentId) {
+    return errorResponse(400, 'paymentId required', 'NO_PAYMENT_ID');
+  }
+
+  const pool = getPool();
+  const client = await pool.connect();
+
+  try {
+    // 1. Достаём платёж + проверяем, что клиент принадлежит куратору
+    const findResult = await client.query(
+      `SELECT p.id, p.client_id, p.external_payment_id, p.amount, p.status,
+              c.curator_id, c.name AS client_name
+       FROM payments p
+       JOIN clients c ON c.id = p.client_id
+       WHERE p.id = $1`,
+      [paymentId]
+    );
+
+    if (findResult.rows.length === 0) {
+      return errorResponse(404, 'Payment not found', 'NOT_FOUND');
+    }
+    const payment = findResult.rows[0];
+
+    if (String(payment.curator_id) !== String(curatorId)) {
+      console.warn(
+        `[REFUND] curator ${curatorId} tried to refund foreign payment ${paymentId}`
+      );
+      return errorResponse(403, 'Forbidden — not your client', 'FORBIDDEN');
+    }
+
+    if (payment.status !== 'completed') {
+      return errorResponse(
+        400,
+        `Cannot refund payment in status '${payment.status}' — only 'completed' allowed`,
+        'INVALID_STATUS'
+      );
+    }
+
+    if (!payment.external_payment_id) {
+      return errorResponse(400, 'Payment has no external_payment_id', 'NO_EXTERNAL_ID');
+    }
+
+    const refundAmount = customAmount ? Number(customAmount) : Number(payment.amount);
+    if (!(refundAmount > 0) || refundAmount > Number(payment.amount)) {
+      return errorResponse(400, 'Invalid refund amount', 'INVALID_AMOUNT');
+    }
+
+    // 2. Вызываем ЮKassa POST /v3/refunds
+    const idempotenceKey = uuidv4();
+    const yukassaResp = await fetch('https://api.yookassa.ru/v3/refunds', {
+      method: 'POST',
+      headers: {
+        Authorization: getYukassaAuthHeader(),
+        'Idempotence-Key': idempotenceKey,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        payment_id: payment.external_payment_id,
+        amount: { value: refundAmount.toFixed(2), currency: 'RUB' },
+        description: `Refund initiated by curator for client "${payment.client_name}"`,
+      }),
+    });
+
+    const yukassaResult = await yukassaResp.json();
+
+    if (!yukassaResp.ok) {
+      console.error('[REFUND] YuKassa error:', yukassaResult);
+      return errorResponse(
+        502,
+        `YuKassa refund failed: ${yukassaResult?.description || 'unknown'}`,
+        'YUKASSA_ERROR'
+      );
+    }
+
+    console.log(
+      `[REFUND] Refund created: ${yukassaResult.id} for payment ${payment.id}, amount ${refundAmount}`
+    );
+
+    // 3. Метим в нашей БД, что refund initiated. Финальный переход в 'refunded'
+    //    произойдёт через webhook refund.succeeded.
+    await client.query(
+      `UPDATE payments
+       SET metadata = metadata || $2::jsonb,
+           updated_at = NOW()
+       WHERE id = $1`,
+      [
+        payment.id,
+        JSON.stringify({
+          refund_initiated_at: new Date().toISOString(),
+          refund_initiated_by: curatorId,
+          refund_external_id: yukassaResult.id,
+          refund_status: yukassaResult.status,
+        }),
+      ]
+    );
+
+    return jsonResponse(200, {
+      success: true,
+      refundId: yukassaResult.id,
+      status: yukassaResult.status,
+      amount: refundAmount,
+    });
+  } catch (error) {
+    console.error('[REFUND] error:', error);
+    return errorResponse(500, 'Refund failed', 'INTERNAL_ERROR');
   } finally {
     client.release();
   }
@@ -475,6 +783,84 @@ async function getPaymentStatus(paymentId, clientId) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// 🔐 AUTH — проверка клиентской сессии для /create и /status
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Проверяет Bearer-токен клиентской сессии. Если в запросе явно указан clientId
+ * (header X-Client-Id или body.clientId) — он должен совпадать с client_id из
+ * сессии, иначе 403 (защита от попыток оплатить чужую подписку).
+ *
+ * @returns {{clientId: string} | {error: object}}
+ */
+/**
+ * Проверяет JWT-токен куратора (тот же формат, что выдаёт heys-api-auth/login).
+ * Возвращает curator_id или error-response.
+ *
+ * @returns {{curatorId: string} | {error: object}}
+ */
+function authenticateCuratorRequest(event) {
+  const token = extractBearerToken(event);
+  if (!token) {
+    return { error: errorResponse(401, 'Authentication required', 'NO_AUTH') };
+  }
+
+  const jwtSecret = process.env.JWT_SECRET;
+  if (!jwtSecret || jwtSecret.length < 32) {
+    console.error('[PAYMENTS] JWT_SECRET missing or too short');
+    return { error: errorResponse(500, 'Server misconfigured', 'JWT_SECRET_MISSING') };
+  }
+
+  const result = verifyCuratorJwt(token, jwtSecret);
+  if (!result.valid) {
+    console.warn(`[PAYMENTS] Invalid curator JWT: ${result.error}`);
+    return { error: errorResponse(401, 'Invalid or expired token', 'INVALID_JWT') };
+  }
+
+  // payload должен содержать curator_id (sub) или user_id — берём первое подходящее
+  const curatorId =
+    result.payload?.curator_id ||
+    result.payload?.sub ||
+    result.payload?.user_id ||
+    result.payload?.id;
+  if (!curatorId) {
+    console.warn('[PAYMENTS] JWT payload has no curator_id');
+    return { error: errorResponse(401, 'Token missing curator_id', 'INVALID_JWT_PAYLOAD') };
+  }
+
+  return { curatorId };
+}
+
+async function authenticateClientRequest(event, requestedClientId) {
+  const token = extractBearerToken(event);
+  if (!token) {
+    console.warn('[PAYMENTS] Missing bearer token');
+    return { error: errorResponse(401, 'Authentication required', 'NO_AUTH') };
+  }
+
+  const pool = getPool();
+  const client = await pool.connect();
+  try {
+    const session = await verifyClientSession(client, token);
+    if (!session) {
+      console.warn('[PAYMENTS] Invalid or expired session');
+      return { error: errorResponse(401, 'Invalid or expired session', 'INVALID_SESSION') };
+    }
+
+    if (requestedClientId && String(requestedClientId) !== String(session.client_id)) {
+      console.warn(
+        `[PAYMENTS] clientId mismatch: requested=${requestedClientId} session=${session.client_id}`
+      );
+      return { error: errorResponse(403, 'Client ID mismatch', 'CLIENT_ID_MISMATCH') };
+    }
+
+    return { clientId: session.client_id };
+  } finally {
+    client.release();
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // 🚀 MAIN HANDLER
 // ═══════════════════════════════════════════════════════════════════════════════
 
@@ -504,29 +890,41 @@ module.exports.handler = async function (event, context) {
   // Parse query params
   const params = event.queryStringParameters || {};
 
-  // Get client ID from header or body
-  const clientId = event.headers?.['x-client-id'] ||
+  // Client ID указанный явно (для логирования). Доверять ему НЕЛЬЗЯ —
+  // окончательный clientId будет получен из проверенной сессии ниже.
+  const requestedClientId = event.headers?.['x-client-id'] ||
     event.headers?.['X-Client-Id'] ||
     body.clientId ||
     params.clientId;
 
-  console.log(`[PAYMENTS] ${method} ${path} | clientId: ${clientId || 'none'}`);
+  console.log(`[PAYMENTS] ${method} ${path} | requestedClientId: ${requestedClientId || 'none'}`);
 
   try {
-    // Route: POST /payments/create
+    // Route: POST /payments/create — требует Bearer-токен сессии клиента
     if (method === 'POST' && path.includes('/create')) {
-      return await createPayment(body, clientId);
+      const auth = await authenticateClientRequest(event, requestedClientId);
+      if (auth.error) return auth.error;
+      return await createPayment(body, auth.clientId);
     }
 
-    // Route: POST /payments/webhook
+    // Route: POST /payments/webhook — без сессионной auth (HMAC + IP в P0.2)
     if (method === 'POST' && path.includes('/webhook')) {
       return await handleWebhook(body, event);
     }
 
-    // Route: GET /payments/status
+    // Route: POST /payments/refund — куратор инициирует возврат денег (P0.5)
+    if (method === 'POST' && path.includes('/refund')) {
+      const auth = authenticateCuratorRequest(event);
+      if (auth.error) return auth.error;
+      return await refundPayment(body, auth.curatorId);
+    }
+
+    // Route: GET /payments/status — требует Bearer-токен сессии клиента
     if (method === 'GET' && path.includes('/status')) {
+      const auth = await authenticateClientRequest(event, requestedClientId);
+      if (auth.error) return auth.error;
       const paymentId = params.paymentId || params.id;
-      return await getPaymentStatus(paymentId, clientId);
+      return await getPaymentStatus(paymentId, auth.clientId);
     }
 
     // Health check
@@ -546,3 +944,7 @@ module.exports.handler = async function (event, context) {
     return errorResponse(500, 'Internal server error', 'INTERNAL_ERROR');
   }
 };
+
+// Экспортируем applyPaymentStatus для переиспользования в cron-poll (P0.4)
+module.exports.applyPaymentStatus = applyPaymentStatus;
+module.exports.PLANS = PLANS;
