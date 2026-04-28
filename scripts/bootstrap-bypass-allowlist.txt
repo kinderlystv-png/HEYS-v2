@@ -66,9 +66,10 @@ apps/web/heys_auth_v1.js:16
 apps/web/heys_auth_v1.js:285
 apps/web/heys_auth_v1.js:289
 apps/web/heys_auth_v1.js:292
-apps/web/heys_auth_v1.js:427
 apps/web/heys_auth_v1.js:431
-apps/web/heys_auth_v1.js:453
+apps/web/heys_auth_v1.js:435
+apps/web/heys_auth_v1.js:439
+apps/web/heys_auth_v1.js:457
 apps/web/heys_cascade_card_v1.js:1245
 apps/web/heys_cascade_card_v1.js:3612
 apps/web/heys_cascade_card_v1.js:3621
