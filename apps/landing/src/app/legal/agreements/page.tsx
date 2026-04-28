@@ -28,6 +28,13 @@ export default function AgreementsPage() {
             description: 'Отдельное согласие на обработку специальной категории персональных данных (ст. 10 152-ФЗ).',
             icon: '❤️',
         },
+        {
+            title: 'Условия возврата денежных средств',
+            href: '/legal/refund',
+            version: '1.0',
+            description: 'Сроки и порядок возврата средств за оплаченные подписки тарифов Base, Pro, Pro+.',
+            icon: '💰',
+        },
     ];
 
     return (

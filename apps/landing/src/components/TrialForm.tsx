@@ -29,11 +29,15 @@ interface TrialFormProps {
 export default function TrialForm({ ctaLabel }: TrialFormProps) {
   const [name, setName] = useState('')
   const [phoneDigits, setPhoneDigits] = useState('') // только 10 цифр без ведущей 7
+  const [email, setEmail] = useState('')
   const [messenger, setMessenger] = useState<Messenger>('telegram')
   const [formState, setFormState] = useState<FormState>('idle')
   const [errorMessage, setErrorMessage] = useState('')
   const [utmParams, setUtmParams] = useState<UTMParams>({})
   const [consentAccepted, setConsentAccepted] = useState(false)
+  // 🍯 Honeypot (P0.13): скрытое поле, которое настоящие пользователи не видят.
+  // Боты часто заполняют все поля автоматически — если website непустой, отбраковываем.
+  const [website, setWebsite] = useState('')
 
   // Парсим UTM из URL при загрузке
   useEffect(() => {
@@ -75,6 +79,13 @@ export default function TrialForm({ ctaLabel }: TrialFormProps) {
       return false
     }
 
+    // Email опционален, но если введён — должен быть валиден
+    const emailTrim = email.trim()
+    if (emailTrim && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailTrim)) {
+      setErrorMessage('Проверьте формат email')
+      return false
+    }
+
     if (!consentAccepted) {
       setErrorMessage('Необходимо принять политику конфиденциальности')
       return false
@@ -101,7 +112,9 @@ export default function TrialForm({ ctaLabel }: TrialFormProps) {
         body: JSON.stringify({
           name: name.trim(),
           phone: '7' + phoneDigits,
+          email: email.trim() || undefined,
           messenger,
+          website, // honeypot — должен быть пустым
           // UTM параметры
           ...utmParams,
           // Технические данные
@@ -205,6 +218,38 @@ export default function TrialForm({ ctaLabel }: TrialFormProps) {
             disabled={formState === 'loading'}
           />
         </div>
+      </div>
+
+      {/* Email (опционально) — для чека ЮKassa и резервной связи (P0.12) */}
+      <div className="mb-4">
+        <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+          Email <span className="text-gray-400 font-normal">(необязательно — для чека)</span>
+        </label>
+        <input
+          type="email"
+          id="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="you@example.com"
+          autoComplete="email"
+          className="w-full px-4 py-3 rounded-xl border border-gray-300 bg-gray-50 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-all"
+          disabled={formState === 'loading'}
+        />
+      </div>
+
+      {/* 🍯 Honeypot (P0.13): скрыто от людей, видно ботам.
+          Если бот заполнит — на сервере отбрасываем тихо. */}
+      <div aria-hidden="true" className="absolute -left-[9999px] -top-[9999px] w-px h-px overflow-hidden">
+        <label htmlFor="website-bot-check">Website (do not fill)</label>
+        <input
+          type="text"
+          id="website-bot-check"
+          name="website"
+          tabIndex={-1}
+          autoComplete="off"
+          value={website}
+          onChange={(e) => setWebsite(e.target.value)}
+        />
       </div>
 
       {/* Выбор мессенджера */}
