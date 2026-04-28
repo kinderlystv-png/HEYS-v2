@@ -170,6 +170,7 @@ apps/web/heys_storage_photos_v1.js:208
 apps/web/heys_storage_photos_v1.js:323
 apps/web/heys_subscription_v1.js:62
 apps/web/heys_subscriptions_v1.js:558
+apps/web/heys_subscriptions_v1.js:1279
 apps/web/heys_training_step_v1.js:29
 apps/web/heys_trial_queue_v1.js:57
 apps/web/heys_ui_onboarding_v1.js:1123
