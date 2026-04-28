@@ -1,0 +1,147 @@
+/**
+ * heys-cron-trial-drip — daily Telegram drip notifications (P0.7, Phase 1)
+ *
+ * Запускается timer-trigger'ом ежедневно (10:00 МСК = 07:00 UTC).
+ * Логика идентична scripts/cron-trial-notifications.js, но обёрнута в
+ * cloud-function handler.
+ *
+ * 1. SELECT check_expired_subscriptions() — переводит истёкшие триалы в read_only
+ * 2. SELECT * FROM get_trial_drip_targets() — список (client_id, name, telegram_chat_id, drip_stage, days_left)
+ * 3. Для каждого: POST https://api.heyslab.ru/bot/send (с X-Internal-Cron-Token)
+ * 4. SELECT mark_drip_sent(client_id, stage) — помечаем как отправленное
+ *
+ * ENV:
+ *   PG_HOST, PG_PORT, PG_DATABASE, PG_USER, PG_PASSWORD — БД (передаются deploy-all.sh)
+ *   BOT_API_URL                 — base URL (default https://api.heyslab.ru)
+ *   INTERNAL_CRON_TOKEN         — общий с heys-bot-client (из Lockbox)
+ *   APP_URL                     — куда вести клиента (default https://app.heyslab.ru)
+ */
+
+const { getPool } = require('./shared/db-pool');
+
+const BOT_API_URL = process.env.BOT_API_URL || 'https://api.heyslab.ru';
+const INTERNAL_CRON_TOKEN = process.env.INTERNAL_CRON_TOKEN;
+const APP_URL = process.env.APP_URL || 'https://app.heyslab.ru';
+
+function dripText(stage, name, daysLeft) {
+  const safeName = name || 'там';
+  switch (stage) {
+    case 'welcome':
+      return (
+        `<b>${safeName}</b>, добро пожаловать в HEYS! 🎉\n\n` +
+        'Триал активирован на 7 дней. За это время вы успеете:\n' +
+        '• Завести дневник питания\n' +
+        '• Получить первые рекомендации алгоритма\n' +
+        '• Понять, подходит ли HEYS лично вам\n\n' +
+        'В конце триала ваш куратор расскажет о тарифах для продолжения.'
+      );
+    case 'mid':
+      return (
+        `<b>${safeName}</b>, прошло половина триала.\n\n` +
+        `До конца — ${daysLeft} дн.\n\n` +
+        'Если есть вопросы по работе с приложением — напишите вашему куратору, ' +
+        'мы поможем разобраться.'
+      );
+    case 'prepay':
+      return (
+        `<b>${safeName}</b>, до конца триала ${daysLeft} дн.\n\n` +
+        'Чтобы продолжить пользоваться HEYS, свяжитесь с вашим куратором — ' +
+        'он подберёт тариф и оформит подписку.'
+      );
+    case 'lastcall':
+      return (
+        `<b>${safeName}</b>, последний день триала ⏰\n\n` +
+        'Завтра доступ к редактированию будет ограничен. ' +
+        'Если хотите продолжить — напишите куратору сегодня.'
+      );
+    case 'expired':
+      return (
+        `<b>${safeName}</b>, триал-период завершён.\n\n` +
+        'Доступ к редактированию данных временно ограничен. ' +
+        'Чтобы вернуться к полному функционалу — свяжитесь с куратором, ' +
+        'он оформит подписку индивидуально.'
+      );
+    default:
+      return null;
+  }
+}
+
+function dripButtons(stage) {
+  return {
+    inline_keyboard: [[{ text: '🚀 Открыть HEYS', url: APP_URL }]],
+  };
+}
+
+async function sendBotMessage(chatId, text, replyMarkup) {
+  const res = await fetch(`${BOT_API_URL}/bot/send`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Internal-Cron-Token': INTERNAL_CRON_TOKEN,
+    },
+    body: JSON.stringify({ chat_id: chatId, text, reply_markup: replyMarkup }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(`bot/send ${res.status}: ${data.error || 'unknown'}`);
+  }
+  return data;
+}
+
+module.exports.handler = async function (event, context) {
+  const started = Date.now();
+  console.log(`[CRON-DRIP] started at ${new Date().toISOString()}`);
+
+  if (!INTERNAL_CRON_TOKEN) {
+    console.error('[CRON-DRIP] INTERNAL_CRON_TOKEN not set');
+    return { statusCode: 500, body: JSON.stringify({ error: 'missing token' }) };
+  }
+
+  const pool = getPool();
+  const client = await pool.connect();
+
+  let processed = 0;
+  let sent = 0;
+  let skipped = 0;
+  let errors = 0;
+
+  try {
+    try {
+      await client.query(`SELECT check_expired_subscriptions()`);
+      console.log('[CRON-DRIP] check_expired_subscriptions OK');
+    } catch (e) {
+      console.warn('[CRON-DRIP] check_expired_subscriptions failed:', e.message);
+    }
+
+    const targets = await client.query(`SELECT * FROM get_trial_drip_targets()`);
+    console.log(`[CRON-DRIP] candidates: ${targets.rows.length}`);
+
+    for (const row of targets.rows) {
+      processed += 1;
+      const stage = row.drip_stage;
+      const text = dripText(stage, row.name, row.days_left);
+      if (!text) {
+        skipped += 1;
+        continue;
+      }
+
+      try {
+        await sendBotMessage(Number(row.telegram_chat_id), text, dripButtons(stage));
+        await client.query(`SELECT mark_drip_sent($1::uuid, $2::text)`, [row.client_id, stage]);
+        sent += 1;
+        console.log(`[CRON-DRIP] sent stage=${stage} client=${row.client_id}`);
+      } catch (e) {
+        errors += 1;
+        console.error(`[CRON-DRIP] error stage=${stage} client=${row.client_id}:`, e.message);
+      }
+    }
+  } finally {
+    client.release();
+  }
+
+  const duration = ((Date.now() - started) / 1000).toFixed(1);
+  const summary = { duration_s: duration, processed, sent, skipped, errors };
+  console.log(`[CRON-DRIP] done`, summary);
+
+  return { statusCode: 200, body: JSON.stringify(summary) };
+};

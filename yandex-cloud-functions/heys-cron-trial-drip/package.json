@@ -1,0 +1,9 @@
+{
+  "name": "heys-cron-trial-drip",
+  "version": "1.0.0",
+  "description": "Daily Telegram drip notifications for trial clients (P0.7, Phase 1)",
+  "main": "index.js",
+  "dependencies": {
+    "pg": "^8.11.3"
+  }
+}
