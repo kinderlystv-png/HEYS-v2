@@ -14721,6 +14721,10 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
     'admin_convert_lead',
     'admin_update_lead_status',       // 🆕 v3.0: Отклонение лидов
 
+    // === PIN MANAGEMENT (Phase 1 hotfix — bcrypt в БД) ===
+    'admin_set_client_pin',           // 🆕 plain pin → bcrypt в БД (замена reset_client_pin)
+    'admin_regenerate_pin',           // 🆕 авто-перевыпуск PIN+pin_token
+
     // === GAMIFICATION AUDIT ===
     'log_gamification_event_by_curator',
     'get_gamification_events_by_curator',
