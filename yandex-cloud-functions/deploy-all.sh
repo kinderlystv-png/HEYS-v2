@@ -118,6 +118,10 @@ get_function_config() {
             echo "nodejs18 index.handler 128m 5s" ;;
         "heys-api-payments")
             echo "nodejs18 index.handler 256m 15s" ;;
+        "heys-bot-client")
+            echo "nodejs18 index.handler 256m 15s" ;;
+        "heys-cron-trial-drip")
+            echo "nodejs18 index.handler 256m 60s" ;;
         "heys-client-daily-backup")
             echo "nodejs18 index.handler 256m 300s" ;;
         "heys-backup")
@@ -187,6 +191,37 @@ build_env_flags() {
         fi
         if [ -n "$YUKASSA_SECRET_KEY" ]; then
             env_flags+=" --environment YUKASSA_SECRET_KEY=$YUKASSA_SECRET_KEY"
+        fi
+        # HMAC-секрет webhook'ов ЮKassa (опциональный — без него работает IP-only)
+        if [ -n "$YUKASSA_WEBHOOK_SECRET" ]; then
+            env_flags+=" --environment YUKASSA_WEBHOOK_SECRET=$YUKASSA_WEBHOOK_SECRET"
+        fi
+        # Internal cron token для poll-фолбэка (P0.4)
+        if [ -n "$INTERNAL_CRON_TOKEN" ]; then
+            env_flags+=" --environment INTERNAL_CRON_TOKEN=$INTERNAL_CRON_TOKEN"
+        fi
+    fi
+
+    # Telegram-бот для клиентов (P0.7)
+    if [[ "$func_name" == "heys-bot-client" ]]; then
+        if [ -n "$TELEGRAM_CLIENT_BOT_TOKEN" ]; then
+            env_flags+=" --environment TELEGRAM_CLIENT_BOT_TOKEN=$TELEGRAM_CLIENT_BOT_TOKEN"
+        fi
+        if [ -n "$INTERNAL_CRON_TOKEN" ]; then
+            env_flags+=" --environment INTERNAL_CRON_TOKEN=$INTERNAL_CRON_TOKEN"
+        fi
+        if [ -n "$APP_URL" ]; then
+            env_flags+=" --environment APP_URL=$APP_URL"
+        fi
+    fi
+
+    # Cron drip-уведомлений (Phase 1, P0.7) — нужны pg + INTERNAL_CRON_TOKEN + APP_URL
+    if [[ "$func_name" == "heys-cron-trial-drip" ]]; then
+        if [ -n "$INTERNAL_CRON_TOKEN" ]; then
+            env_flags+=" --environment INTERNAL_CRON_TOKEN=$INTERNAL_CRON_TOKEN"
+        fi
+        if [ -n "$APP_URL" ]; then
+            env_flags+=" --environment APP_URL=$APP_URL"
         fi
     fi
     

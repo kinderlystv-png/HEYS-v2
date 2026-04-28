@@ -258,6 +258,42 @@ paths:
         type: cloud_functions
         function_id: d4ef3c4o67vdg7o4c4d3
 
+  /auth/client-logout:
+    post:
+      summary: Revoke client PIN-session (P0.15)
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4ef3c4o67vdg7o4c4d3
+    options:
+      summary: CORS preflight for client-logout
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4ef3c4o67vdg7o4c4d3
+
+  # ═══════════════════════════════════════════════════════════════
+  # Telegram Bot для клиентов (P0.7) — heys-bot-client (d4ednfmrg21i8j1svtqs)
+  # ═══════════════════════════════════════════════════════════════
+  /bot/webhook:
+    post:
+      summary: Telegram webhook handler — handles /start <pin_token>
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4ednfmrg21i8j1svtqs
+
+  /bot/send:
+    post:
+      summary: Internal send (cron drip → Telegram message via bot). Protected by X-Internal-Cron-Token header.
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4ednfmrg21i8j1svtqs
+
+  /bot/health:
+    get:
+      summary: Bot service healthcheck
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4ednfmrg21i8j1svtqs
+
   # ═══════════════════════════════════════════════════════════════
   # Payments — ЮKassa интеграция
   # ═══════════════════════════════════════════════════════════════
