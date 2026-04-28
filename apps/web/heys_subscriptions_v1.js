@@ -1263,9 +1263,25 @@
       })
     );
 
-    // 2. Welcome-модалка при первом логине
+    // 2. Welcome-модалка при первом логине.
+    //
+    // ВАЖНО: НЕ показываем welcome если StepModal уже открыт (например, идёт
+    // первый чек-ин, согласия или onboarding-tour). Иначе welcome-overlay
+    // перекрывает события касания на ползунках/кнопках чек-ина.
     const welcomeKey = `heys_first_login_${clientId}`;
-    if (subscriptionStatus === 'trial' && clientId && !localStorage.getItem(welcomeKey)) {
+    const stepModalOpen = !!(typeof document !== 'undefined' && (
+      document.querySelector('[data-step-modal]') ||
+      document.querySelector('.step-modal-overlay') ||
+      document.querySelector('.heys-step-modal') ||
+      (window.HEYS?.StepModal && window.HEYS.StepModal.isOpen?.())
+    ));
+
+    if (
+      subscriptionStatus === 'trial' &&
+      clientId &&
+      !localStorage.getItem(welcomeKey) &&
+      !stepModalOpen
+    ) {
       let welcomeHost = document.getElementById('heys-welcome-host');
       if (!welcomeHost) {
         welcomeHost = document.createElement('div');
@@ -1278,6 +1294,13 @@
       const close = () => {
         try { localStorage.setItem(welcomeKey, '1'); } catch {}
         welcomeRoot.render(null);
+        // Полностью убираем host из DOM, чтобы пустой div с inset:0 не висел
+        // и не перехватывал клики случайно.
+        setTimeout(() => {
+          if (welcomeHost && welcomeHost.parentNode) {
+            welcomeHost.parentNode.removeChild(welcomeHost);
+          }
+        }, 50);
       };
 
       welcomeRoot.render(
@@ -1381,6 +1404,34 @@
     });
   }
 
+  /**
+   * Принудительно обновить heys_profile из get_subscription_status_by_session
+   * и выпустить heys:profile-updated. Используется после успешного PIN-login,
+   * чтобы canEdit-проверки сразу видели свежий subscription_status='trial'
+   * без ожидания page reload.
+   */
+  async function refreshProfileSubscription() {
+    try {
+      const status = await getStatus();
+      if (!status || status.success === false) return;
+
+      const profile = (HEYS.utils?.lsGet?.('heys_profile')) || {};
+      const updated = {
+        ...profile,
+        subscription_status: status.status || profile.subscription_status,
+        subscription_plan: status.plan || profile.subscription_plan,
+        trial_started_at: status.trial_started_at || profile.trial_started_at,
+        trial_ends_at: status.trial_ends_at || profile.trial_ends_at,
+        subscription_ends_at: status.active_until || status.subscription_ends_at || profile.subscription_ends_at,
+      };
+      HEYS.utils?.lsSet?.('heys_profile', updated);
+      window.dispatchEvent(new CustomEvent('heys:profile-updated', { detail: { source: 'auth-changed', subscription_status: updated.subscription_status } }));
+      devLog('[Subscriptions] Profile refreshed after auth-changed:', updated.subscription_status);
+    } catch (e) {
+      devWarn('[Subscriptions] refreshProfileSubscription failed:', e.message);
+    }
+  }
+
   if (typeof window !== 'undefined') {
     // На профиль-апдейт пере-монтируем
     window.addEventListener('heys:profile-updated', () => {
@@ -1389,6 +1440,12 @@
     // На смену клиента — тоже
     window.addEventListener('heys:client-changed', () => {
       try { autoMountTrialUI(); } catch {}
+    });
+    // 🔑 На auth-changed (после PIN-login) — рефрешим subscription_status в профиле,
+    // иначе canEdit берёт устаревший кеш и блокирует приложение пока clear-cache.
+    window.addEventListener('heys:auth-changed', () => {
+      // Небольшая задержка, чтобы сервер успел дать актуальную сессию
+      setTimeout(() => { refreshProfileSubscription(); }, 200);
     });
     // Первоначальный mount после загрузки скрипта (через 1 тик чтобы успели прийти LS-данные)
     setTimeout(() => {
