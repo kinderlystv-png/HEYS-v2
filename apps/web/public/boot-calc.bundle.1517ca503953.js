@@ -13702,7 +13702,23 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
                     } catch (_) { }
                     return {};
                 })();
-                return settings.toastsEnabled !== false;
+                // Если в settings явно есть ключ — берём его значение.
+                if (Object.prototype.hasOwnProperty.call(settings, 'toastsEnabled')) {
+                    return settings.toastsEnabled !== false;
+                }
+                // Settings пусты. Различаем returning user (есть session/pin/last_client_id
+                // в LS — sync скоро принесёт настройки) и нового юзера (никаких маркеров).
+                // Для returning — стартуем с false чтобы не показывать toasts до прихода
+                // реальных настроек; handleSyncCompleted позже подымет до true если у юзера ON.
+                // Для нового — оставляем default true (исторический friendly behavior).
+                let isReturning = false;
+                try {
+                    isReturning = !!localStorage.getItem('heys_pin_auth_client') ||
+                                  !!localStorage.getItem('heys_session_token') ||
+                                  !!localStorage.getItem('heys_last_client_id') ||
+                                  !!localStorage.getItem('heys_supabase_auth_token');
+                } catch (_) { }
+                return !isReturning;
             } catch (e) {
                 return true;
             }
@@ -13721,6 +13737,15 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
                         }
                         const raw = localStorage.getItem('heys_advice_settings');
                         if (raw) return JSON.parse(raw);
+                        // Аналогично toastsEnabled: returning user → false до прихода sync.
+                        let isReturning = false;
+                        try {
+                            isReturning = !!localStorage.getItem('heys_pin_auth_client') ||
+                                          !!localStorage.getItem('heys_session_token') ||
+                                          !!localStorage.getItem('heys_last_client_id') ||
+                                          !!localStorage.getItem('heys_supabase_auth_token');
+                        } catch (_) { }
+                        if (isReturning) return { adviceSoundEnabled: false };
                     } catch (_) { }
                     return {};
                 })();

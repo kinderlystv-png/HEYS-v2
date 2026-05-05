@@ -803,7 +803,7 @@
                 }, '×')
             ),
 
-            // Центр: Title или счётчик продуктов
+            // Центр: Title / hint / точки прогресса
             React.createElement('div', { className: 'mc-header-center' },
               context.headerExtra
                 ? context.headerExtra
@@ -820,7 +820,22 @@
                     maxFontSize: 12,
                     minFontSize: 9
                   })
+                ),
+              // 🆕 Точки прогресса в шапке (компактный вариант)
+              showProgress && totalSteps > 1 && React.createElement('div', { className: 'mc-progress-dots mc-progress-dots--in-header' },
+                visibleStepConfigs.map((config, i) =>
+                  config.hidden ? null : React.createElement('button', {
+                    key: i,
+                    className: 'mc-progress-dot' + (i === currentStepIndex ? ' active' : '') + (i < currentStepIndex ? ' completed' : ''),
+                    onClick: () => {
+                      if (i !== currentStepIndex) {
+                        goToStep(i, i > currentStepIndex ? 'left' : 'right');
+                      }
+                    },
+                    'aria-label': `Шаг ${i + 1}`
+                  })
                 )
+              )
             ),
 
             // Правая часть: headerRight ИЛИ кнопка Готово/Далее
@@ -836,24 +851,6 @@
                 }, currentStepIndex === totalSteps - 1
                   ? (currentConfig.nextLabel || finishLabel)
                   : (currentConfig.nextLabel || 'Далее')))
-            )
-          ),
-
-          // Progress dots (кружочки) — кликабельные для навигации
-          // Скрытые шаги (hidden: true) не отображаются в progress
-          showProgress && totalSteps > 1 && React.createElement('div', { className: 'mc-progress-dots' },
-            visibleStepConfigs.map((config, i) =>
-              // Пропускаем скрытые шаги
-              config.hidden ? null : React.createElement('button', {
-                key: i,
-                className: 'mc-progress-dot' + (i === currentStepIndex ? ' active' : '') + (i < currentStepIndex ? ' completed' : ''),
-                onClick: () => {
-                  if (i !== currentStepIndex) {
-                    goToStep(i, i > currentStepIndex ? 'left' : 'right');
-                  }
-                },
-                'aria-label': `Шаг ${i + 1}`
-              })
             )
           ),
 
