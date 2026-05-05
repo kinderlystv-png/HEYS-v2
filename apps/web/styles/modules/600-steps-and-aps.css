@@ -827,6 +827,28 @@
   background: #34d399;
 }
 
+/* 🆕 Компактный вариант точек внутри mc-header-center */
+.mc-header-center:has(.mc-progress-dots--in-header) {
+  flex-direction: column;
+  gap: 4px;
+}
+
+.mc-progress-dots--in-header {
+  gap: 5px;
+  padding: 0;
+}
+
+.mc-progress-dots--in-header .mc-progress-dot {
+  width: 6px;
+  height: 6px;
+  padding: 0;
+  border: none;
+}
+
+.mc-progress-dots--in-header .mc-progress-dot.active {
+  transform: scale(1.3);
+}
+
 /* === 06. SWIPE HINT === */
 .mc-swipe-hint {
   display: flex;
@@ -959,14 +981,14 @@
 .aps-new-product-btn {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 10px 12px;
+  gap: 6px;
+  padding: 6px 10px;
   background: linear-gradient(135deg, #dbeafe 0%, #ede9fe 100%);
   border: 1.5px dashed #93c5fd;
   border-radius: 10px;
   cursor: pointer;
   transition: all 0.2s ease;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
   color: #2563eb;
 }
@@ -997,15 +1019,15 @@
 }
 
 .aps-new-icon {
-  width: 22px;
-  height: 22px;
+  width: 18px;
+  height: 18px;
   background: #2563eb;
   color: var(--color-white);
   border-radius: 6px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 16px;
+  font-size: 13px;
   font-weight: 700;
 }
 
@@ -2178,12 +2200,22 @@
 }
 
 .aps-product-meta {
-  font-size: 10px;
+  font-size: clamp(8px, 2.6vw, 10px);
   color: #9ca3af;
   display: flex;
   align-items: baseline;
   gap: 4px;
   margin-top: 1px;
+  flex-wrap: nowrap;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.aps-product-meta > * {
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .aps-meta-kcal {
@@ -2196,12 +2228,12 @@
 
 .aps-meta-macros {
   color: #9ca3af;
-  font-size: 10px;
+  font-size: inherit;
 }
 
 .aps-product-usage {
   color: #94a3b8;
-  font-size: 9px;
+  font-size: inherit;
 }
 
 [data-theme="dark"] .aps-meta-kcal {
@@ -2749,6 +2781,97 @@
 .desktop-add-product .aps-open-text {
   white-space: normal;
   overflow-wrap: anywhere;
+}
+
+.aps-open-row-quick {
+  display: flex;
+  gap: 4px;
+  width: 100%;
+  align-items: stretch;
+}
+
+/* Селекторы с повышенной специфичностью (0-3-0+) перебивают
+   `.mpc-toggle-add-row .aps-open-btn { flex: 1 }` из 000-base-... */
+.aps-open-buttons .aps-open-row-quick > .aps-open-btn--quick,
+.mpc-toggle-add-row .aps-open-row-quick > .aps-open-btn--quick,
+.mpc-toggle-add-row.single .aps-open-row-quick > .aps-open-btn--quick {
+  flex: 1 1 0;
+  min-width: 0;
+  width: auto;
+  max-width: none;
+  height: 40px;
+  padding: 4px 6px;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  white-space: normal;
+  overflow-wrap: break-word;
+  word-break: normal;
+  font-size: 12px;
+  line-height: 1.2;
+}
+
+.aps-open-row-quick > .aps-open-btn--quick .aps-open-text {
+  white-space: normal;
+  overflow-wrap: break-word;
+  word-break: normal;
+  text-align: center;
+}
+
+/* Скрыть пустой icon-span (когда эмодзи перенесена в text) */
+.aps-open-btn .aps-open-icon:empty {
+  display: none;
+}
+
+.aps-open-buttons .aps-open-row-quick > .aps-open-btn--repeat,
+.mpc-toggle-add-row .aps-open-row-quick > .aps-open-btn--repeat,
+.mpc-toggle-add-row.single .aps-open-row-quick > .aps-open-btn--repeat {
+  flex: 0 0 40px;
+  width: 40px;
+  min-width: 40px;
+  max-width: 40px;
+  height: 40px;
+  padding: 0;
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+}
+
+.aps-open-btn--repeat {
+  background: #dcfce7;
+  border-color: #86efac;
+  color: #14532d;
+  font-weight: 700;
+  font-size: 17px;
+  justify-content: center;
+  align-items: center;
+}
+
+.aps-open-btn--repeat:hover {
+  background: #bbf7d0;
+  border-color: #4ade80;
+  color: #052e16;
+}
+
+.aps-open-btn--repeat .aps-open-icon:empty {
+  display: none;
+}
+
+[data-theme="dark"] .aps-open-btn--repeat {
+  background: rgba(34, 197, 94, 0.18);
+  border-color: rgba(34, 197, 94, 0.45);
+  color: #bbf7d0;
+}
+
+[data-theme="dark"] .aps-open-btn--repeat:hover {
+  background: rgba(34, 197, 94, 0.28);
+  border-color: rgba(34, 197, 94, 0.65);
+  color: #dcfce7;
 }
 
 .aps-open-btn--quick {

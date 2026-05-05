@@ -106,7 +106,17 @@
         variant: 'fill',
         row: 1,
         className: 'confirm-modal-btn--multi-continue'
-      }
+      },
+      // 🆕 «Ещё N продуктов» — без промежуточной summary-модалки
+      ...[2, 3, 4].map((n) => ({
+        key: `add-${n}`,
+        label: `ещё ${n}`,
+        value: `add-${n}`,
+        style: 'primary',
+        variant: 'outline',
+        row: 2,
+        className: 'confirm-modal-btn--repeat'
+      }))
     ];
 
     const mealItems = (currentMeal.items || []).map((item) => {
@@ -244,6 +254,14 @@
     if (modalResult === 'add-more' && onAddMore) {
       onAddMore(currentDay);
     }
+
+    // 🆕 add-2 / add-3 / add-4 → autoRepeat
+    if (typeof modalResult === 'string' && /^add-(\d+)$/.test(modalResult) && onAddMore) {
+      const repeatCount = parseInt(modalResult.slice(4), 10);
+      if (Number.isFinite(repeatCount) && repeatCount > 1) {
+        onAddMore(currentDay, repeatCount);
+      }
+    }
   }
 
   HEYS.dayAddProductSummary = HEYS.dayAddProductSummary || {};
@@ -258,6 +276,7 @@
     setDay,
     isCurrentMeal = false,
     multiProductMode = false,
+    autoRepeatCount = 0, // 🆕 «Подряд N продуктов» — open AddProductStep с автоповтором без summary
     buttonText = 'Добавить еще продукт',
     buttonIcon = '🔍',
     buttonClassName = '',
@@ -387,6 +406,7 @@
       };
 
       let activeMultiProductMode = multiProductMode;
+      let activeAutoRepeatActive = (typeof autoRepeatCount === 'number' && autoRepeatCount > 1);
       // Tracks the day snapshot that was passed to the last openAddModal call.
       // handleAdd uses this as the base when building updatedDayForSummary so it
       // always includes all products added in previous iterations (the React-closure
@@ -404,6 +424,12 @@
         activeMultiProductMode = nextMultiProductMode;
         lastOpenedDay = latestDay;
 
+        const nextAutoRepeatCount = typeof override.autoRepeatCount === 'number'
+          ? override.autoRepeatCount
+          : autoRepeatCount;
+
+        activeAutoRepeatActive = (typeof nextAutoRepeatCount === 'number' && nextAutoRepeatCount > 1);
+
         if (window.HEYS?.AddProductStep?.show) {
           window.HEYS.AddProductStep.show({
             mealIndex: mi,
@@ -412,6 +438,7 @@
             day: latestDay,
             dateKey: date,
             multiProductMode: nextMultiProductMode,
+            autoRepeatCount: nextAutoRepeatCount,
             onAdd: handleAdd,
             onAddPhoto: handleAddPhoto,
             onNewProduct: handleNewProduct
@@ -691,6 +718,11 @@
           } catch (e) { }
         }
 
+        // 🆕 autoRepeat: молчаливое повторение N раз — пропускаем summary, AddProductStep сам делает goToStep(0)
+        if (activeAutoRepeatActive) {
+          return;
+        }
+
         if (activeMultiProductMode && HEYS.dayAddProductSummary?.show) {
           // Build updated day with the just-added item for the summary modal.
           // Multiple fallback sources: lastOpenedDay tracks what openAddModal
@@ -729,7 +761,10 @@
                 getProductFromItem,
                 per100,
                 scale,
-                onAddMore: (updatedDay) => openAddModal({ day: updatedDay }),
+                onAddMore: (updatedDay, autoRepeatCount) => openAddModal({
+                  day: updatedDay,
+                  autoRepeatCount: autoRepeatCount || 0
+                }),
                 onAddLast: (updatedDay) => openAddModal({ day: updatedDay, multiProductMode: false })
               });
             }, 100);
@@ -738,7 +773,7 @@
       };
 
       openAddModal();
-    }, [mi, date, day, setDay, getLatestDay, getLatestProducts, multiProductMode]);
+    }, [mi, date, day, setDay, getLatestDay, getLatestProducts, multiProductMode, autoRepeatCount]);
 
     return React.createElement('button', {
       className: 'aps-open-btn'

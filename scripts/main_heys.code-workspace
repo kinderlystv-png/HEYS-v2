@@ -8,6 +8,9 @@
 		},
 		{
 			"path": "../../ALPHACORE"
+		},
+		{
+			"path": "../../PokeBoy"
 		}
 	],
 	"settings": {

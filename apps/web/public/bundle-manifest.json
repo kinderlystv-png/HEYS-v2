@@ -13,7 +13,7 @@
     "sourceFingerprint": "cd05fa3ff120",
     "fileCount": 19,
     "size": 1160445,
-    "builtAt": "2026-05-05T12:27:38.370Z"
+    "builtAt": "2026-05-05T17:07:51.659Z"
   },
   "boot-day": {
     "file": "boot-day.bundle.8d80b6cb2c09.js",
@@ -21,7 +21,7 @@
     "sourceFingerprint": "6386222655a5",
     "fileCount": 54,
     "size": 1088174,
-    "builtAt": "2026-05-05T12:27:38.507Z"
+    "builtAt": "2026-05-05T17:07:51.797Z"
   },
   "boot-app": {
     "file": "boot-app.bundle.b9048bf02679.js",
@@ -85,6 +85,6 @@
     "sourceFingerprint": "19139c7a0763",
     "fileCount": 40,
     "size": 2365237,
-    "builtAt": "2026-05-05T15:31:32.261Z"
+    "builtAt": "2026-05-05T17:07:52.044Z"
   }
 }
