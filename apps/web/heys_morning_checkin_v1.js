@@ -609,7 +609,19 @@
 
     if (HEYS.ProfileSteps && HEYS.ProfileSteps.isProfileIncomplete) {
       if (HEYS.ProfileSteps.isProfileIncomplete(profile)) {
-        console.log('[MorningCheckin] 🆕 Profile incomplete — forcing checkin with registration steps');
+        // Diagnostic dump чтобы понять почему именно incomplete
+        console.log('[MorningCheckin] 🆕 Profile incomplete — forcing checkin with registration steps', {
+          firstName: profile && profile.firstName,
+          birthDate: profile && profile.birthDate,
+          weight: profile && profile.weight,
+          height: profile && profile.height,
+          gender: profile && profile.gender,
+          age: profile && profile.age,
+          profileCompleted: profile && profile.profileCompleted,
+          source: 'morning_checkin.shouldShowMorningCheckin',
+          currentClientId: (window.HEYS && window.HEYS.currentClientId) ? String(window.HEYS.currentClientId).slice(0, 8) : 'NULL',
+          scopedKeyExists: !!localStorage.getItem(`heys_${currentClientId || (window.HEYS && window.HEYS.currentClientId)}_profile`)
+        });
         return true;
       }
     }

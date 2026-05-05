@@ -8913,21 +8913,22 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         ),
 
         React.createElement('div', { className: 'aps-product-actions' },
-          showHide && !isFromShared && React.createElement('button', {
-            className: 'aps-hide-btn' + (isHidden ? ' aps-hide-btn--active' : ''),
-            onClick: (e) => toggleHidden(e, pid, product.name, isHidden),
-            title: isHidden ? 'Вернуть в список' : 'Скрыть из списка'
-          }, '✕'),
+          // Кнопка избранного — только для личных (слева)
+          showFavorite && !isFromShared && React.createElement('button', {
+            className: 'aps-fav-btn' + (isFav ? ' active' : ''),
+            onClick: (e) => toggleFavorite(e, pid)
+          }, isFav ? '★' : '☆'),
           !isFromShared && React.createElement('button', {
             className: 'aps-delete-btn',
             onClick: (e) => handleDeleteProduct(e, product),
             title: 'Удалить из базы'
           }, '🗑️'),
-          // Кнопка избранного — только для личных
-          showFavorite && !isFromShared && React.createElement('button', {
-            className: 'aps-fav-btn' + (isFav ? ' active' : ''),
-            onClick: (e) => toggleFavorite(e, pid)
-          }, isFav ? '★' : '☆')
+          // Скрыть из списка (справа)
+          showHide && !isFromShared && React.createElement('button', {
+            className: 'aps-hide-btn' + (isHidden ? ' aps-hide-btn--active' : ''),
+            onClick: (e) => toggleHidden(e, pid, product.name, isHidden),
+            title: isHidden ? 'Вернуть в список' : 'Скрыть из списка'
+          }, '✕')
         )
       );
     };
@@ -24425,7 +24426,19 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
     if (HEYS.ProfileSteps && HEYS.ProfileSteps.isProfileIncomplete) {
       if (HEYS.ProfileSteps.isProfileIncomplete(profile)) {
-        console.log('[MorningCheckin] 🆕 Profile incomplete — forcing checkin with registration steps');
+        // Diagnostic dump чтобы понять почему именно incomplete
+        console.log('[MorningCheckin] 🆕 Profile incomplete — forcing checkin with registration steps', {
+          firstName: profile && profile.firstName,
+          birthDate: profile && profile.birthDate,
+          weight: profile && profile.weight,
+          height: profile && profile.height,
+          gender: profile && profile.gender,
+          age: profile && profile.age,
+          profileCompleted: profile && profile.profileCompleted,
+          source: 'morning_checkin.shouldShowMorningCheckin',
+          currentClientId: (window.HEYS && window.HEYS.currentClientId) ? String(window.HEYS.currentClientId).slice(0, 8) : 'NULL',
+          scopedKeyExists: !!localStorage.getItem(`heys_${currentClientId || (window.HEYS && window.HEYS.currentClientId)}_profile`)
+        });
         return true;
       }
     }

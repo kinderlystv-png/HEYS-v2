@@ -25897,8 +25897,47 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                     // 🔄 ВАЖНО: Для новых пользователей с незаполненным профилем
                     // показываем чек-ин ДАЖЕ во время инициализации!
                     const U = HEYS.utils || {};
-                    const profile = U.lsGet ? U.lsGet('heys_profile', {}) : {};
+                    let profile = U.lsGet ? U.lsGet('heys_profile', {}) : {};
+                    // 🛡️ Defensive scoped re-read: lsGet иногда возвращает {} если
+                    // HEYS.currentClientId не выставлен в момент вызова. Перечитываем
+                    // scoped key напрямую, чтобы isProfileIncomplete не отдал TRUE
+                    // на пустой fallback.
+                    try {
+                        const hasAnyData = profile && (profile.firstName || profile.birthDate || profile.weight);
+                        if (!hasAnyData) {
+                            const cid = clientIdRef.current || eventClientId || (window.HEYS && window.HEYS.currentClientId) || '';
+                            if (cid) {
+                                const scopedRaw = localStorage.getItem(`heys_${cid}_profile`);
+                                if (scopedRaw) {
+                                    const scoped = JSON.parse(scopedRaw);
+                                    if (scoped && (scoped.firstName || scoped.birthDate || scoped.weight)) {
+                                        console.warn('[MorningCheckin] 🛡️ defensive re-read scoped profile from app-hook (lsGet returned empty)', {
+                                            cid: String(cid).slice(0, 8),
+                                            hadFirstName: !!scoped.firstName,
+                                            hadBirthDate: !!scoped.birthDate,
+                                            hadWeight: !!scoped.weight,
+                                            scopedProfileCompleted: !!scoped.profileCompleted
+                                        });
+                                        profile = scoped;
+                                    }
+                                }
+                            }
+                        }
+                    } catch (_) { }
                     const isProfileIncomplete = HEYS.ProfileSteps?.isProfileIncomplete?.(profile);
+                    if (isProfileIncomplete) {
+                        // Diagnostic dump перед тем как принимать решение по wizard
+                        console.warn('[MorningCheckin] 🔍 isProfileIncomplete=true — dump profile param', {
+                            firstName: profile && profile.firstName,
+                            birthDate: profile && profile.birthDate,
+                            weight: profile && profile.weight,
+                            height: profile && profile.height,
+                            gender: profile && profile.gender,
+                            profileCompleted: profile && profile.profileCompleted,
+                            source: 'app_morning_checkin.handleSyncCompleted',
+                            currentClientId: (window.HEYS && window.HEYS.currentClientId) ? String(window.HEYS.currentClientId).slice(0, 8) : 'NULL'
+                        });
+                    }
 
                     // 🆕 v1.9.2 FIX: isInitializing=true у куратора означает ожидание getClients() —
                     // сетевой запрос завершается ПОСЛЕ heysSyncCompleted и НЕ должен блокировать чекин.
