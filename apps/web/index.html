@@ -52,7 +52,11 @@
             window.__heysBootStart = Date.now();
             var LOG_GROUPS_KEY = 'heys_log_groups_v1';
             var LEGACY_VERBOSE_KEY = 'heys_debug_verbose';
-            var DEFAULT_LOG_GROUPS = ['startup', 'sync'];
+            // 'ui' group enabled by default — даёт wizard / morning-checkin / profile /
+            // consents / advice / onboarding логи без необходимости __heysLogControl.all().
+            // Это compromise между verbosity и debuggability — без них trace race conditions
+            // на cold-start under VPN практически невозможен.
+            var DEFAULT_LOG_GROUPS = ['startup', 'sync', 'ui'];
             var EXTRA_LOG_GROUPS = ['startup-detail', 'sync-detail', 'insights'];
             var PREFIX_GROUP_MAP = {
                 '[HEYS.startup]': 'startup',
@@ -139,7 +143,9 @@
                 '[WelcomeStep]': 'ui',
                 '[AuthInit]': 'ui',
                 '[ONBOARDING]': 'ui',
-                '[Onboarding]': 'ui'
+                '[Onboarding]': 'ui',
+                /* Advice toasts / settings — frequently inspected during boot debug */
+                '[HEYS.advice]': 'ui'
             };
             var KNOWN_GROUPS = Array.from(new Set(DEFAULT_LOG_GROUPS.concat(EXTRA_LOG_GROUPS, Object.keys(PREFIX_GROUP_MAP).map(function (prefix) {
                 return PREFIX_GROUP_MAP[prefix];
