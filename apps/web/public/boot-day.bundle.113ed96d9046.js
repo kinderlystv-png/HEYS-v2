@@ -20481,7 +20481,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                                         margin: '8px 0'
                                     }
                                 },
-                                    // Кнопка "Быстро добавить 1 продукт"
+                                    // Кнопка "Быстро добавить 1 продукт" — синий primary fill (как в summary)
                                     React.createElement('button', {
                                         className: 'flow-selection-btn flow-selection-btn--quick',
                                         style: {
@@ -20489,16 +20489,16 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                                             alignItems: 'center',
                                             gap: '12px',
                                             padding: '14px 16px',
-                                            border: '1px solid #e2e8f0',
+                                            border: 'none',
                                             borderRadius: '12px',
-                                            background: '#fff',
+                                            background: '#3b82f6',
+                                            color: '#ffffff',
                                             cursor: 'pointer',
                                             textAlign: 'left',
                                             transition: 'all 0.15s ease'
                                         },
                                         onClick: () => {
                                             window.HEYS.ConfirmModal.hide();
-                                            // Lazy-вычисляем актуальный индекс на момент клика
                                             const actualIdx = findMealIndex();
                                             if (actualIdx >= 0) {
                                                 setTimeout(() => openAddProductModal(actualIdx, false), 100);
@@ -20512,14 +20512,14 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                                             style: { flex: 1 }
                                         },
                                             React.createElement('div', {
-                                                style: { fontWeight: '600', color: '#1e293b', fontSize: '15px' }
+                                                style: { fontWeight: '700', color: '#ffffff', fontSize: '15px' }
                                             }, 'Быстро добавить 1 продукт'),
                                             React.createElement('div', {
-                                                style: { fontSize: '12px', color: '#64748b', marginTop: '2px' }
+                                                style: { fontSize: '12px', color: 'rgba(255,255,255,0.85)', marginTop: '2px' }
                                             }, 'Выбрать продукт и сразу закрыть')
                                         )
                                     ),
-                                    // Кнопка "Добавить несколько продуктов"
+                                    // Кнопка "Добавить несколько продуктов" — зелёный success fill (как в summary)
                                     React.createElement('button', {
                                         className: 'flow-selection-btn flow-selection-btn--multi',
                                         style: {
@@ -20527,16 +20527,16 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                                             alignItems: 'center',
                                             gap: '12px',
                                             padding: '14px 16px',
-                                            border: '2px solid #3b82f6',
+                                            border: 'none',
                                             borderRadius: '12px',
-                                            background: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)',
+                                            background: '#22c55e',
+                                            color: '#ffffff',
                                             cursor: 'pointer',
                                             textAlign: 'left',
                                             transition: 'all 0.15s ease'
                                         },
                                         onClick: () => {
                                             window.HEYS.ConfirmModal.hide();
-                                            // Lazy-вычисляем актуальный индекс на момент клика
                                             const actualIdx = findMealIndex();
                                             if (actualIdx >= 0) {
                                                 setTimeout(() => openAddProductModal(actualIdx, true), 100);
@@ -20550,10 +20550,10 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                                             style: { flex: 1 }
                                         },
                                             React.createElement('div', {
-                                                style: { fontWeight: '600', color: '#1e40af', fontSize: '15px' }
+                                                style: { fontWeight: '700', color: '#ffffff', fontSize: '15px' }
                                             }, 'Добавить несколько продуктов'),
                                             React.createElement('div', {
-                                                style: { fontSize: '12px', color: '#3b82f6', marginTop: '2px' }
+                                                style: { fontSize: '12px', color: 'rgba(255,255,255,0.9)', marginTop: '2px' }
                                             }, 'Формировать приём пошагово')
                                         )
                                     ),

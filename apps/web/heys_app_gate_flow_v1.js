@@ -1026,6 +1026,13 @@
                                             resolved = true;
                                             writeGlobalValue('heys_last_client_id', targetClientId);
                                             try { writeGlobalValue('heys_client_phone', phoneNorm); } catch (_) { }
+                                            // Sync HEYS.currentClientId до setClientId, чтобы lsGet
+                                            // (с auto-scope для clientSpecificKeys) корректно подхватил
+                                            // scoped профиль до того как стартует wizard-проверка.
+                                            try {
+                                                window.HEYS = window.HEYS || {};
+                                                window.HEYS.currentClientId = targetClientId;
+                                            } catch (_) { }
                                             setClientId(targetClientId);
                                         };
                                         const phaseAHandler = (e) => {
