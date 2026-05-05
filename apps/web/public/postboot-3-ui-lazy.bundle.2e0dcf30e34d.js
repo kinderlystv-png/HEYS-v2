@@ -21266,20 +21266,27 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
     // 🛡️ Defensive: если переданный объект пустой ({}) или без firstName —
     // возможно lsGet прочитал legacy global ключ до того как HEYS.currentClientId
-    // был выставлен. Перечитываем scoped key напрямую.
+    // был выставлен, ИЛИ memory cache в HEYS.store держит stale значение.
+    // Перечитываем scoped key напрямую через raw localStorage с decompression.
     if (!profile.firstName && !profile.birthDate && !profile.weight) {
       try {
         const cid = (window.HEYS?.currentClientId || '').toString();
         if (cid) {
-          const scopedRaw = localStorage.getItem(`heys_${cid}_profile`);
+          let scopedRaw = localStorage.getItem(`heys_${cid}_profile`);
           if (scopedRaw) {
-            const scoped = JSON.parse(scopedRaw);
+            // HEYS.store сжимает значения с prefix '¤Z¤' — обязательно декомпрессить
+            if (typeof scopedRaw === 'string' && scopedRaw.startsWith('¤Z¤') && window.HEYS?.store?.decompress) {
+              try { scopedRaw = window.HEYS.store.decompress(scopedRaw.slice(3)); } catch (_) { }
+            }
+            let scoped = null;
+            try { scoped = JSON.parse(scopedRaw); } catch (_) { }
             if (scoped && (scoped.firstName || scoped.birthDate || scoped.weight)) {
               console.warn('[ProfileSteps] defensive re-read scoped profile (param was empty)', {
                 cid: cid.slice(0, 8),
                 hadFirstName: !!scoped.firstName,
                 hadBirthDate: !!scoped.birthDate,
-                hadWeight: !!scoped.weight
+                hadWeight: !!scoped.weight,
+                wasCompressed: scopedRaw && typeof scopedRaw === 'object'
               });
               profile = scoped;
             }
@@ -24408,9 +24415,14 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       if (!hasAnyData) {
         const cid = currentClientId || (window.HEYS && window.HEYS.currentClientId) || '';
         if (cid) {
-          const scopedRaw = localStorage.getItem(`heys_${cid}_profile`);
+          let scopedRaw = localStorage.getItem(`heys_${cid}_profile`);
           if (scopedRaw) {
-            const scoped = JSON.parse(scopedRaw);
+            // 🔧 Decompress если значение сжато (HEYS.store prefix '¤Z¤')
+            if (typeof scopedRaw === 'string' && scopedRaw.startsWith('¤Z¤') && HEYS.store?.decompress) {
+              try { scopedRaw = HEYS.store.decompress(scopedRaw.slice(3)); } catch (_) { }
+            }
+            let scoped = null;
+            try { scoped = JSON.parse(scopedRaw); } catch (_) { }
             if (scoped && (scoped.firstName || scoped.birthDate || scoped.weight)) {
               console.warn('[MorningCheckin] 🛡️ defensive re-read scoped profile (lsGet returned empty)', {
                 cid: String(cid).slice(0, 8),

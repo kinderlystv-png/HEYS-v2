@@ -25907,9 +25907,14 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                         if (!hasAnyData) {
                             const cid = clientIdRef.current || eventClientId || (window.HEYS && window.HEYS.currentClientId) || '';
                             if (cid) {
-                                const scopedRaw = localStorage.getItem(`heys_${cid}_profile`);
+                                let scopedRaw = localStorage.getItem(`heys_${cid}_profile`);
                                 if (scopedRaw) {
-                                    const scoped = JSON.parse(scopedRaw);
+                                    // 🔧 Decompress если значение сжато (HEYS.store prefix '¤Z¤')
+                                    if (typeof scopedRaw === 'string' && scopedRaw.startsWith('¤Z¤') && HEYS.store?.decompress) {
+                                        try { scopedRaw = HEYS.store.decompress(scopedRaw.slice(3)); } catch (_) { }
+                                    }
+                                    let scoped = null;
+                                    try { scoped = JSON.parse(scopedRaw); } catch (_) { }
                                     if (scoped && (scoped.firstName || scoped.birthDate || scoped.weight)) {
                                         console.warn('[MorningCheckin] 🛡️ defensive re-read scoped profile from app-hook (lsGet returned empty)', {
                                             cid: String(cid).slice(0, 8),

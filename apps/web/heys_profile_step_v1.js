@@ -1562,20 +1562,27 @@
 
     // 🛡️ Defensive: если переданный объект пустой ({}) или без firstName —
     // возможно lsGet прочитал legacy global ключ до того как HEYS.currentClientId
-    // был выставлен. Перечитываем scoped key напрямую.
+    // был выставлен, ИЛИ memory cache в HEYS.store держит stale значение.
+    // Перечитываем scoped key напрямую через raw localStorage с decompression.
     if (!profile.firstName && !profile.birthDate && !profile.weight) {
       try {
         const cid = (window.HEYS?.currentClientId || '').toString();
         if (cid) {
-          const scopedRaw = localStorage.getItem(`heys_${cid}_profile`);
+          let scopedRaw = localStorage.getItem(`heys_${cid}_profile`);
           if (scopedRaw) {
-            const scoped = JSON.parse(scopedRaw);
+            // HEYS.store сжимает значения с prefix '¤Z¤' — обязательно декомпрессить
+            if (typeof scopedRaw === 'string' && scopedRaw.startsWith('¤Z¤') && window.HEYS?.store?.decompress) {
+              try { scopedRaw = window.HEYS.store.decompress(scopedRaw.slice(3)); } catch (_) { }
+            }
+            let scoped = null;
+            try { scoped = JSON.parse(scopedRaw); } catch (_) { }
             if (scoped && (scoped.firstName || scoped.birthDate || scoped.weight)) {
               console.warn('[ProfileSteps] defensive re-read scoped profile (param was empty)', {
                 cid: cid.slice(0, 8),
                 hadFirstName: !!scoped.firstName,
                 hadBirthDate: !!scoped.birthDate,
-                hadWeight: !!scoped.weight
+                hadWeight: !!scoped.weight,
+                wasCompressed: scopedRaw && typeof scopedRaw === 'object'
               });
               profile = scoped;
             }
