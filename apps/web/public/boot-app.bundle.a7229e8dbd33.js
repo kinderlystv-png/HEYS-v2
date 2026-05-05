@@ -25408,7 +25408,27 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
 
         // 🔐 FIX v52: PIN auth имеет ПРИОРИТЕТ над куратором!
         // Если есть PIN-сессия — НЕ восстанавливаем куратора (предотвращает ререндер)
-        const pinAuthClient = readGlobalValue('heys_pin_auth_client', null);
+        let pinAuthClient = readGlobalValue('heys_pin_auth_client', null);
+        let pinRecoveredFromSession = false;
+
+        // 🔄 Stage 1: recover PIN session from session_token + last_client_id
+        // Если pin_auth_client потёрт но session_token жив — восстанавливаем clientId
+        // из last_client_id (пишется при успешном логине). Это закрывает race
+        // когда state-drift (logout/expiry/cleanup) убрал маркер pin_auth_client,
+        // но активная сессия на сервере ещё валидна.
+        if (!pinAuthClient && !storedUser) {
+            const sessionTokenRaw = readGlobalValue('heys_session_token', null);
+            const lastClientIdRaw = readGlobalValue('heys_last_client_id', null);
+            const sessionTokenOk = sessionTokenRaw && (typeof sessionTokenRaw === 'string' ? sessionTokenRaw.trim().length > 0 : true);
+            const lastClientId = typeof lastClientIdRaw === 'string' ? lastClientIdRaw : null;
+            if (sessionTokenOk && lastClientId && lastClientId.length >= 8) {
+                pinAuthClient = lastClientId;
+                pinRecoveredFromSession = true;
+                try { localStorage.setItem('heys_pin_auth_client', lastClientId); } catch (_) { }
+                console.info('[HEYS.entry] 🔄 PIN session recovered from session_token + last_client_id:', lastClientId.substring(0, 8) + '...');
+            }
+        }
+
         const hasPinSession = !!pinAuthClient;
 
         if (storedUser && cloudRef && !hasPinSession) {
@@ -25443,7 +25463,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                 });
         } else if (hasPinSession && cloudRef) {
             // 🔐 PIN auth — приоритет над куратором (клиент вошёл по телефону+PIN)
-            devLog('[App] 🔐 Восстановление PIN-сессии:', pinAuthClient.substring(0, 8) + '...');
+            devLog('[App] 🔐 Восстановление PIN-сессии:', pinAuthClient.substring(0, 8) + '...', pinRecoveredFromSession ? '(recovered from session_token)' : '');
 
             // Восстанавливаем RPC-режим
             if (cloudRef.setPinAuthClient) {
@@ -25469,6 +25489,12 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                         // Реально невалидная auth/session — сбрасываем PIN-сессию
                         __heysShowGateLogin();
                         removeGlobalValue('heys_pin_auth_client');
+                        // Stage 1: при auth-error чистим тоже session_token —
+                        // он либо протух, либо отозван. Иначе следующий boot
+                        // снова попробует recovery и снова упадёт.
+                        if (pinRecoveredFromSession) {
+                            removeGlobalValue('heys_session_token');
+                        }
                         setClientId(null);
                     } else {
                         // Временная сетевая/серверная ошибка — сохраняем локальную PIN-сессию

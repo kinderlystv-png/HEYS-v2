@@ -775,9 +775,9 @@
     <link rel="dns-prefetch" href="https://cdn.jsdelivr.net" />
     <!-- Preload критических boot-бандлов (2026-02-25 bundle migration) -->
     <link rel="preload" href="boot-core.bundle.6feed2c63236.js" as="script" />
-    <link rel="preload" href="boot-calc.bundle.e228cd4e9fc4.js" as="script" />
-    <link rel="preload" href="boot-day.bundle.9e22fa73c9e6.js" as="script" />
-    <link rel="preload" href="boot-app.bundle.5766e93c12da.js" as="script" />
+    <link rel="preload" href="boot-calc.bundle.1bdd6142f42f.js" as="script" />
+    <link rel="preload" href="boot-day.bundle.fd74ca1b1a5d.js" as="script" />
+    <link rel="preload" href="boot-app.bundle.a7229e8dbd33.js" as="script" />
     <link rel="preload" href="boot-init.bundle.c687b8274f01.js" as="script" />
 
     <!-- React теперь бандлится локально через Vite (миграция с CDN 2026-01-21) -->
@@ -1499,11 +1499,31 @@
                         return !!(parsed.user && parsed.user.id);
                     } catch (_) { return false; }
                 })();
-                window.__heysHasSession = hasPinAuth || hasCuratorSession || hasSupabaseToken;
+                // 🔐 Stage 1: session_token + last_client_id = recoverable PIN session.
+                // Если pin_auth_client потёрт (logout/expiry/race), но session_token жив
+                // и есть запомненный последний клиент — это всё равно returning user,
+                // JS-init восстановит _pinAuthClientId из last_client_id.
+                var hasRecoverablePin = (function () {
+                    try {
+                        if (hasPinAuth) return false; // уже учтено
+                        var rawTok = localStorage.getItem('heys_session_token');
+                        if (!rawTok) return false;
+                        var tok = (function () { try { return JSON.parse(rawTok); } catch (_) { return rawTok; } })();
+                        var tokOk = typeof tok === 'string' ? tok.trim().length > 0 : !!tok;
+                        if (!tokOk) return false;
+                        var rawLast = localStorage.getItem('heys_last_client_id');
+                        if (!rawLast) return false;
+                        var lastId = (function () { try { return JSON.parse(rawLast); } catch (_) { return rawLast; } })();
+                        return typeof lastId === 'string' && lastId.length >= 8;
+                    } catch (_) { return false; }
+                })();
+                window.__heysHasSession = hasPinAuth || hasCuratorSession || hasSupabaseToken || hasRecoverablePin;
+                window.__heysHasRecoverablePin = hasRecoverablePin;
             } catch (_) {
                 window.__heysHasSession = false;
+                window.__heysHasRecoverablePin = false;
             }
-            window.__heysLog && window.__heysLog('Session detected: ' + window.__heysHasSession);
+            window.__heysLog && window.__heysLog('Session detected: ' + window.__heysHasSession + (window.__heysHasRecoverablePin ? ' (via session_token recovery)' : ''));
         })();
     </script>
 
@@ -2898,9 +2918,9 @@
          Состав и хеши: bundle-manifest.json
          Хеш в имени = вечный кэш (cache-first SW). -->
     <script defer src="boot-core.bundle.6feed2c63236.js" fetchpriority="high"></script>
-    <script defer src="boot-calc.bundle.e228cd4e9fc4.js"></script>
-    <script defer src="boot-day.bundle.9e22fa73c9e6.js"></script>
-    <script defer src="boot-app.bundle.5766e93c12da.js"></script>
+    <script defer src="boot-calc.bundle.1bdd6142f42f.js"></script>
+    <script defer src="boot-day.bundle.fd74ca1b1a5d.js"></script>
+    <script defer src="boot-app.bundle.a7229e8dbd33.js"></script>
     <script defer src="boot-init.bundle.c687b8274f01.js"
         onerror="window.__heysShowRecoveryUI && window.__heysShowRecoveryUI('CRITICAL_SCRIPT_LOAD: boot-init.bundle')"></script>
 

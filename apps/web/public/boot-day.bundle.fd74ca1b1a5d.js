@@ -17497,7 +17497,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             ),
             React.createElement('div', { className: 'row desktop-add-product', style: { justifyContent: 'space-between', alignItems: 'center' } },
                 React.createElement('div', { className: 'section-title' }, 'Добавить продукт'),
-                React.createElement('div', { className: 'aps-open-buttons' },
+                React.createElement('div', { className: 'aps-open-buttons aps-open-buttons--column' },
                     React.createElement(MealAddProduct, {
                         mi: mealIndex,
                         products,
@@ -17523,6 +17523,24 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                         highlightCurrent: true,
                         ariaLabel: 'Добавить несколько продуктов'
                     }),
+                    // 🆕 Кнопки «Подряд 2/3/4» — без summary-модалки между продуктами
+                    React.createElement('div', { className: 'aps-open-row-repeat' },
+                        [2, 3, 4].map(n => React.createElement(MealAddProduct, {
+                            key: `repeat-${n}`,
+                            mi: mealIndex,
+                            products,
+                            date,
+                            setDay,
+                            isCurrentMeal,
+                            multiProductMode: true,
+                            autoRepeatCount: n,
+                            buttonText: `${n} подряд`,
+                            buttonIcon: '',
+                            buttonClassName: 'aps-open-btn--repeat',
+                            highlightCurrent: false,
+                            ariaLabel: `Добавить ${n} продукта подряд без промежуточной модалки`
+                        }))
+                    ),
                 ),
             ),
             React.createElement('div', { style: { overflowX: 'auto', marginTop: '8px' } }, React.createElement('table', { className: 'tbl meals-table' },
@@ -17601,6 +17619,24 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                             highlightCurrent: true,
                             ariaLabel: 'Добавить несколько продуктов'
                         }),
+                        // 🆕 Кнопки «Подряд 2/3/4» — без summary-модалки между продуктами
+                        React.createElement('div', { className: 'aps-open-row-repeat' },
+                            [2, 3, 4].map(n => React.createElement(MealAddProduct, {
+                                key: `repeat-${n}`,
+                                mi: mealIndex,
+                                products,
+                                date,
+                                setDay,
+                                isCurrentMeal,
+                                multiProductMode: true,
+                                autoRepeatCount: n,
+                                buttonText: `${n} подряд`,
+                                buttonIcon: '',
+                                buttonClassName: 'aps-open-btn--repeat',
+                                highlightCurrent: false,
+                                ariaLabel: `Добавить ${n} продукта подряд без промежуточной модалки`
+                            }))
+                        ),
                     ),
                 ),
                 isExpanded && (meal.items || []).map((it) => {
@@ -20269,12 +20305,13 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                             const mealName = savedMealName || `приём ${mealIndex + 1}`;
 
                             // Функция открытия модалки добавления продукта
-                            const openAddProductModal = (targetMealIndex, multiProductMode, dayOverride) => {
+                            const openAddProductModal = (targetMealIndex, multiProductMode, dayOverride, autoRepeatCount) => {
                                 if (!window.HEYS?.AddProductStep?.show) return;
 
                                 window.HEYS.AddProductStep.show({
                                     mealIndex: targetMealIndex,
                                     multiProductMode: multiProductMode,
+                                    autoRepeatCount: autoRepeatCount || 0, // 🆕 «Подряд N продуктов»
                                     products: products,
                                     day: dayOverride || HEYS.Day?.getDay?.() || day,
                                     dateKey: date,
@@ -20373,6 +20410,11 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                                             if (history[productId].length > 20) history[productId].shift();
                                             lsSet('heys_grams_history', history);
                                         } catch (e) { }
+                                        // 🆕 autoRepeat: молчаливое повторение N раз — пропускаем summary, AddProductStep сам делает goToStep(0)
+                                        if (autoRepeatCount && autoRepeatCount > 1) {
+                                            if (scrollToDiaryHeading) scrollToDiaryHeading();
+                                            return;
+                                        }
                                         if (multiProductMode && HEYS.dayAddProductSummary?.show) {
                                             // Build updated day inline: setDay is async and
                                             // HEYS.Day.getDay() (dayRef.current) won't reflect
@@ -20405,7 +20447,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                                                         getProductFromItem,
                                                         per100,
                                                         scale,
-                                                        onAddMore: (updatedDay) => openAddProductModal(addMealIndex, true, updatedDay),
+                                                        onAddMore: (updatedDay, autoRepeatCount) => openAddProductModal(addMealIndex, true, updatedDay, autoRepeatCount || 0),
                                                         onAddLast: (updatedDay) => openAddProductModal(addMealIndex, false, updatedDay),
                                                     });
                                                 }, 100);
@@ -20514,6 +20556,43 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                                                 style: { fontSize: '12px', color: '#3b82f6', marginTop: '2px' }
                                             }, 'Формировать приём пошагово')
                                         )
+                                    ),
+                                    // 🆕 Кнопки «Подряд 2/3/4» — без промежуточной summary-модалки
+                                    React.createElement('div', {
+                                        style: { display: 'flex', gap: '8px', marginTop: '4px' }
+                                    },
+                                        [2, 3, 4].map(n => React.createElement('button', {
+                                            key: `repeat-${n}`,
+                                            className: 'flow-selection-btn flow-selection-btn--repeat',
+                                            style: {
+                                                flex: 1,
+                                                display: 'flex',
+                                                flexDirection: 'column',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                gap: '2px',
+                                                padding: '12px 8px',
+                                                border: '1px solid #e2e8f0',
+                                                borderRadius: '12px',
+                                                background: '#fff',
+                                                cursor: 'pointer',
+                                                transition: 'all 0.15s ease'
+                                            },
+                                            onClick: () => {
+                                                window.HEYS.ConfirmModal.hide();
+                                                const actualIdx = findMealIndex();
+                                                if (actualIdx >= 0) {
+                                                    setTimeout(() => openAddProductModal(actualIdx, true, undefined, n), 100);
+                                                }
+                                            }
+                                        },
+                                            React.createElement('div', {
+                                                style: { fontSize: '20px', fontWeight: '700', color: '#1e293b', lineHeight: 1 }
+                                            }, String(n)),
+                                            React.createElement('div', {
+                                                style: { fontSize: '11px', color: '#64748b' }
+                                            }, 'подряд')
+                                        ))
                                     )
                                 ),
                                 // Скрываем стандартную кнопку confirm — используем кастомные внутри text

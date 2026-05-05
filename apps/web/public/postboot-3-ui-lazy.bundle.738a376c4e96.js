@@ -11613,6 +11613,30 @@ NOVA: 1
       }
 
       if (HEYS.StepModal?.hide) {
+        // 🆕 autoRepeatCount: молча повторить выбор продукта N раз и завершить без summary-модалки
+        if (context?.hasAutoRepeat && typeof context?.consumeAutoRepeatStep === 'function') {
+          const remaining = context.consumeAutoRepeatStep();
+          if (remaining <= 0) {
+            HEYS.StepModal.hide({ scrollToDiary: true });
+            return;
+          }
+          updateStepData?.('search', {
+            ...stepData?.search,
+            selectedProduct: null,
+            grams,
+            lastGrams: grams
+          });
+          updateStepData?.('grams', {
+            ...stepData?.grams,
+            selectedProduct: null,
+            grams
+          });
+          setTimeout(() => {
+            goToStep?.(0, 'right');
+          }, 0);
+          return;
+        }
+
         if (!context?.multiProductMode) {
           HEYS.StepModal.hide({ scrollToDiary: true });
           return;
@@ -12144,6 +12168,7 @@ NOVA: 1
       day,
       dateKey = new Date().toISOString().slice(0, 10),
       multiProductMode = false,
+      autoRepeatCount = 0, // 🆕 «Подряд N продуктов» — молча повторяет выбор N раз без summary
       initialSearch = '', // 🆕 Предзаполнение поиска (MealRec UX fix)
       initialGrams = 100, // 🆕 v24: Smart Grams Pre-fill (R6, Sprint 1)
       onAdd,
@@ -12151,6 +12176,10 @@ NOVA: 1
       onNewProduct,
       onClose
     } = options;
+
+    let autoRepeatRemaining = (typeof autoRepeatCount === 'number' && autoRepeatCount > 1)
+      ? Math.floor(autoRepeatCount)
+      : 0;
 
     // Всегда берём актуальные продукты из хранилища (providedProducts может быть устаревшим)
     const U = HEYS.utils || {};
@@ -12254,6 +12283,12 @@ NOVA: 1
         dateKey,
         mealIndex,
         multiProductMode,
+        // 🆕 autoRepeat: closure-переменная не сериализуется → contextKey стабилен между шагами
+        hasAutoRepeat: autoRepeatRemaining > 0,
+        consumeAutoRepeatStep: () => {
+          if (autoRepeatRemaining > 0) autoRepeatRemaining -= 1;
+          return autoRepeatRemaining;
+        },
         onNewProduct,
         onAdd, // Передаём callback для добавления в приём пищи
         onAddPhoto, // Callback для добавления фото к приёму
