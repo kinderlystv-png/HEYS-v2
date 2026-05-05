@@ -25896,53 +25896,14 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
 
                     // 🔄 ВАЖНО: Для новых пользователей с незаполненным профилем
                     // показываем чек-ин ДАЖЕ во время инициализации!
+                    // Force-raw read минуя Store.get memory cache — закрывает race
+                    // под VPN когда «третий» heysSyncCompleted срабатывает с устаревшим cache.
                     const U = HEYS.utils || {};
-                    let profile = U.lsGet ? U.lsGet('heys_profile', {}) : {};
-                    // 🛡️ Defensive scoped re-read: lsGet иногда возвращает {} если
-                    // HEYS.currentClientId не выставлен в момент вызова. Перечитываем
-                    // scoped key напрямую, чтобы isProfileIncomplete не отдал TRUE
-                    // на пустой fallback.
-                    try {
-                        const hasAnyData = profile && (profile.firstName || profile.birthDate || profile.weight);
-                        if (!hasAnyData) {
-                            const cid = clientIdRef.current || eventClientId || (window.HEYS && window.HEYS.currentClientId) || '';
-                            if (cid) {
-                                let scopedRaw = localStorage.getItem(`heys_${cid}_profile`);
-                                if (scopedRaw) {
-                                    // 🔧 Decompress если значение сжато (HEYS.store prefix '¤Z¤')
-                                    if (typeof scopedRaw === 'string' && scopedRaw.startsWith('¤Z¤') && HEYS.store?.decompress) {
-                                        try { scopedRaw = HEYS.store.decompress(scopedRaw.slice(3)); } catch (_) { }
-                                    }
-                                    let scoped = null;
-                                    try { scoped = JSON.parse(scopedRaw); } catch (_) { }
-                                    if (scoped && (scoped.firstName || scoped.birthDate || scoped.weight)) {
-                                        console.warn('[MorningCheckin] 🛡️ defensive re-read scoped profile from app-hook (lsGet returned empty)', {
-                                            cid: String(cid).slice(0, 8),
-                                            hadFirstName: !!scoped.firstName,
-                                            hadBirthDate: !!scoped.birthDate,
-                                            hadWeight: !!scoped.weight,
-                                            scopedProfileCompleted: !!scoped.profileCompleted
-                                        });
-                                        profile = scoped;
-                                    }
-                                }
-                            }
-                        }
-                    } catch (_) { }
+                    const cidForRead = clientIdRef.current || eventClientId || (window.HEYS && window.HEYS.currentClientId) || '';
+                    const profile = (HEYS.MorningCheckinUtils?.readProfileForceRawScoped?.(cidForRead))
+                        || (U.lsGet ? U.lsGet('heys_profile', {}) : {})
+                        || {};
                     const isProfileIncomplete = HEYS.ProfileSteps?.isProfileIncomplete?.(profile);
-                    if (isProfileIncomplete) {
-                        // Diagnostic dump перед тем как принимать решение по wizard
-                        console.warn('[MorningCheckin] 🔍 isProfileIncomplete=true — dump profile param', {
-                            firstName: profile && profile.firstName,
-                            birthDate: profile && profile.birthDate,
-                            weight: profile && profile.weight,
-                            height: profile && profile.height,
-                            gender: profile && profile.gender,
-                            profileCompleted: profile && profile.profileCompleted,
-                            source: 'app_morning_checkin.handleSyncCompleted',
-                            currentClientId: (window.HEYS && window.HEYS.currentClientId) ? String(window.HEYS.currentClientId).slice(0, 8) : 'NULL'
-                        });
-                    }
 
                     // 🆕 v1.9.2 FIX: isInitializing=true у куратора означает ожидание getClients() —
                     // сетевой запрос завершается ПОСЛЕ heysSyncCompleted и НЕ должен блокировать чекин.
@@ -25958,38 +25919,6 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                         // Уже знакомый пользователь — isInitializing = просто ожидание getClients()
                         // Продолжаем показывать чекин как обычно
                         console.info('[MorningCheckin] ℹ️ isInitializing=true но профиль заполнен — продолжаем');
-                    }
-
-                    // 🛡️ Final safety net: даже если isProfileIncomplete=true, ещё раз
-                    // проверяем scoped LS напрямую (с decompression). Если там есть
-                    // реальные данные профиля — abort и не показываем wizard. Это
-                    // предотвращает кратковременный flash wizard'а когда первый
-                    // heysSyncCompleted срабатывает раньше чем lsGet/store видит
-                    // только что записанный Phase A профиль (memory cache stale или
-                    // race с currentClientId).
-                    if (isProfileIncomplete) {
-                        try {
-                            const cidFinal = clientIdRef.current || eventClientId || (window.HEYS && window.HEYS.currentClientId) || '';
-                            if (cidFinal) {
-                                let scopedRaw = localStorage.getItem(`heys_${cidFinal}_profile`);
-                                if (scopedRaw) {
-                                    if (typeof scopedRaw === 'string' && scopedRaw.startsWith('¤Z¤') && HEYS.store?.decompress) {
-                                        try { scopedRaw = HEYS.store.decompress(scopedRaw.slice(3)); } catch (_) { }
-                                    }
-                                    let scoped = null;
-                                    try { scoped = JSON.parse(scopedRaw); } catch (_) { }
-                                    if (scoped && (scoped.firstName || scoped.birthDate || scoped.weight)) {
-                                        console.warn('[MorningCheckin] 🛡️ FINAL SAFETY: aborting wizard — scoped LS has profile data despite isProfileIncomplete=true', {
-                                            cid: String(cidFinal).slice(0, 8),
-                                            scopedFirstName: scoped.firstName,
-                                            scopedWeight: scoped.weight,
-                                            scopedProfileCompleted: !!scoped.profileCompleted
-                                        });
-                                        return; // НЕ показывать wizard
-                                    }
-                                }
-                            }
-                        } catch (_) { }
                     }
 
                     // Проверяем что clientId из события совпадает с текущим в localStorage
@@ -26014,39 +25943,6 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                         if (window.HEYS?.ui?.suppressMorningCheckin) {
                             console.warn('[MorningCheckin] 🛑 suppressMorningCheckin=true — подавляем');
                             return;
-                        }
-
-                        // 🛡️ FINAL SAFETY (post-shouldShow): даже если shouldShowMorningCheckin
-                        // вернул TRUE, ещё раз проверяем raw scoped LS. Если там есть реальные
-                        // данные профиля — НЕ показываем wizard. shouldShowMorningCheckin внутри
-                        // запускает isProfileIncomplete с readStoredValue, который может вернуть
-                        // stale memory-cache value. Raw localStorage всегда видит актуальное.
-                        if (shouldShow === true) {
-                            try {
-                                const cidFinal = clientIdRef.current || eventClientId || (window.HEYS && window.HEYS.currentClientId) || '';
-                                if (cidFinal) {
-                                    let scopedRaw = localStorage.getItem(`heys_${cidFinal}_profile`);
-                                    if (scopedRaw) {
-                                        if (typeof scopedRaw === 'string' && scopedRaw.startsWith('¤Z¤') && HEYS.store?.decompress) {
-                                            try { scopedRaw = HEYS.store.decompress(scopedRaw.slice(3)); } catch (_) { }
-                                        }
-                                        let scoped = null;
-                                        try { scoped = JSON.parse(scopedRaw); } catch (_) { }
-                                        if (scoped && (scoped.firstName || scoped.birthDate || scoped.weight)) {
-                                            console.warn('[MorningCheckin] 🛡️ POST-shouldShow SAFETY: aborting wizard — scoped LS has profile data', {
-                                                cid: String(cidFinal).slice(0, 8),
-                                                scopedFirstName: scoped.firstName,
-                                                scopedWeight: scoped.weight,
-                                                scopedBirthDate: scoped.birthDate,
-                                                scopedProfileCompleted: !!scoped.profileCompleted
-                                            });
-                                            // Если профиль реально готов, форсируем shouldShow=false для setShowMorningCheckin
-                                            setShowMorningCheckin((prev) => (prev === false ? prev : false));
-                                            return;
-                                        }
-                                    }
-                                }
-                            } catch (_) { }
                         }
 
                         // 🔒 Не обновляем если значение то же (предотвращает ре-рендер)

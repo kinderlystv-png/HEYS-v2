@@ -136,7 +136,7 @@ apps/web/heys_metabolic_intelligence_v1.js:2332
 apps/web/heys_metabolic_intelligence_v1.js:2416
 apps/web/heys_models_v1.js:404
 apps/web/heys_module_perf_v1.js:67
-apps/web/heys_morning_checkin_v1.js:134
+apps/web/heys_morning_checkin_v1.js:155
 apps/web/heys_perf_main_thread_v1.js:2
 apps/web/heys_planning_schedule_v1.js:3239
 apps/web/heys_planning_schedule_v1.js:4415
@@ -155,8 +155,8 @@ apps/web/heys_products_overlay_v1.js:645
 apps/web/heys_products_overlay_v1.js:704
 apps/web/heys_profile_step_v1.js:1033
 apps/web/heys_profile_step_v1.js:1165
-apps/web/heys_profile_step_v1.js:1621
-apps/web/heys_profile_step_v1.js:1655
+apps/web/heys_profile_step_v1.js:1604
+apps/web/heys_profile_step_v1.js:1638
 apps/web/heys_profile_step_v1.js:436
 apps/web/heys_pwa_module_v1.js:68
 apps/web/heys_ratio_zones_v1.js:73

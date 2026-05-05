@@ -1560,35 +1560,18 @@
       return true;
     }
 
-    // 🛡️ Defensive: если переданный объект пустой ({}) или без firstName —
-    // возможно lsGet прочитал legacy global ключ до того как HEYS.currentClientId
-    // был выставлен, ИЛИ memory cache в HEYS.store держит stale значение.
-    // Перечитываем scoped key напрямую через raw localStorage с decompression.
+    // 🛡️ Defensive: если переданный объект пустой ({}) или без основных полей —
+    // возможно caller передал stale snapshot. Перечитываем scoped key напрямую
+    // через force-raw helper (минует Store.get cache).
     if (!profile.firstName && !profile.birthDate && !profile.weight) {
-      try {
-        const cid = (window.HEYS?.currentClientId || '').toString();
-        if (cid) {
-          let scopedRaw = localStorage.getItem(`heys_${cid}_profile`);
-          if (scopedRaw) {
-            // HEYS.store сжимает значения с prefix '¤Z¤' — обязательно декомпрессить
-            if (typeof scopedRaw === 'string' && scopedRaw.startsWith('¤Z¤') && window.HEYS?.store?.decompress) {
-              try { scopedRaw = window.HEYS.store.decompress(scopedRaw.slice(3)); } catch (_) { }
-            }
-            let scoped = null;
-            try { scoped = JSON.parse(scopedRaw); } catch (_) { }
-            if (scoped && (scoped.firstName || scoped.birthDate || scoped.weight)) {
-              console.warn('[ProfileSteps] defensive re-read scoped profile (param was empty)', {
-                cid: cid.slice(0, 8),
-                hadFirstName: !!scoped.firstName,
-                hadBirthDate: !!scoped.birthDate,
-                hadWeight: !!scoped.weight,
-                wasCompressed: scopedRaw && typeof scopedRaw === 'object'
-              });
-              profile = scoped;
-            }
-          }
+      const cid = (window.HEYS?.currentClientId || '').toString();
+      const helper = window.HEYS?.MorningCheckinUtils?.readProfileForceRawScoped;
+      if (cid && typeof helper === 'function') {
+        const scoped = helper(cid);
+        if (scoped && (scoped.firstName || scoped.birthDate || scoped.weight)) {
+          profile = scoped;
         }
-      } catch (_) { }
+      }
     }
 
     // Если есть флаг profileCompleted — используем его (надёжный способ)

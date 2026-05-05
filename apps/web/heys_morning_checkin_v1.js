@@ -60,6 +60,27 @@
     return value;
   }
 
+  // 🔧 Force-raw профиль из scoped LS, минуя HEYS.store memory cache.
+  // Cache в Store.get имеет легаси-логику: если cache содержит null
+  // (от предыдущего store.get(key, null)), последующие store.get(key, {})
+  // возвращают def без чтения LS. Это нормально для большинства callers,
+  // но в read-after-sync критичных местах (wizard trigger) даёт race.
+  // Helper всегда читает raw localStorage с decompression — авторитетный
+  // источник истины. Возвращает null если scoped/legacy LS пустые.
+  function readProfileForceRawScoped(clientId) {
+    if (!clientId) return null;
+    let raw = null;
+    try { raw = localStorage.getItem(`heys_${clientId}_profile`); } catch (_) { return null; }
+    if (!raw) {
+      try { raw = localStorage.getItem('heys_profile'); } catch (_) { return null; }
+      if (!raw) return null;
+    }
+    if (typeof raw === 'string' && raw.startsWith('¤Z¤') && global.HEYS?.store?.decompress) {
+      try { raw = global.HEYS.store.decompress(raw.slice(3)); } catch (_) { return null; }
+    }
+    try { return JSON.parse(raw); } catch (_) { return null; }
+  }
+
   function getCurrentClientId() {
     const U = HEYS.utils || {};
     if (U.getCurrentClientId) return U.getCurrentClientId();
@@ -582,35 +603,8 @@
 
     // 🔒 КРИТИЧНО: Если профиль не заполнен — ВСЕГДА показываем!
     // Регистрационные шаги (profile-personal, profile-body, etc.) обязательны для новых пользователей
-    let profile = readStoredValue('heys_profile', {});
-    // 🛡️ Defensive: readStoredValue может вернуть {} если HEYS.currentClientId
-    // не выставлен (race с setClientId). В этом случае читаем scoped key напрямую,
-    // чтобы не показывать wizard юзеру у которого профиль уже есть в LS.
-    try {
-      const hasAnyData = profile && (profile.firstName || profile.birthDate || profile.weight);
-      if (!hasAnyData) {
-        const cid = currentClientId || (window.HEYS && window.HEYS.currentClientId) || '';
-        if (cid) {
-          let scopedRaw = localStorage.getItem(`heys_${cid}_profile`);
-          if (scopedRaw) {
-            // 🔧 Decompress если значение сжато (HEYS.store prefix '¤Z¤')
-            if (typeof scopedRaw === 'string' && scopedRaw.startsWith('¤Z¤') && HEYS.store?.decompress) {
-              try { scopedRaw = HEYS.store.decompress(scopedRaw.slice(3)); } catch (_) { }
-            }
-            let scoped = null;
-            try { scoped = JSON.parse(scopedRaw); } catch (_) { }
-            if (scoped && (scoped.firstName || scoped.birthDate || scoped.weight)) {
-              console.warn('[MorningCheckin] 🛡️ defensive re-read scoped profile (lsGet returned empty)', {
-                cid: String(cid).slice(0, 8),
-                hadFirstName: !!scoped.firstName,
-                hadBirthDate: !!scoped.birthDate
-              });
-              profile = scoped;
-            }
-          }
-        }
-      }
-    } catch (_) { }
+    // Force-raw read минуя Store.get memory cache (закрывает race под VPN).
+    const profile = readProfileForceRawScoped(currentClientId) || readStoredValue('heys_profile', {}) || {};
 
     if (HEYS.ProfileSteps && HEYS.ProfileSteps.isProfileIncomplete) {
       if (HEYS.ProfileSteps.isProfileIncomplete(profile)) {
@@ -805,6 +799,11 @@
   // === Экспорт (обратная совместимость) ===
   HEYS.MorningCheckin = MorningCheckin;
   HEYS.shouldShowMorningCheckin = shouldShowMorningCheckin;
+  // Утилитарный helper для force-raw read профиля минуя Store.get memory cache.
+  // Используется в read-after-sync критичных местах (handleSyncCompleted handler,
+  // isProfileIncomplete defensive read) чтобы избежать race с устаревшим cache.
+  HEYS.MorningCheckinUtils = HEYS.MorningCheckinUtils || {};
+  HEYS.MorningCheckinUtils.readProfileForceRawScoped = readProfileForceRawScoped;
 
   // PERF v7.1: notify boot-chain hook that deferred module is ready
   window.dispatchEvent(new CustomEvent('heys-morning-checkin-ready'));
