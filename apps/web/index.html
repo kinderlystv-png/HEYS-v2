@@ -132,7 +132,14 @@
                 '[Refeed]': 'ui',
                 '[CONSENTS]': 'ui',
                 '[Widgets Registry]': 'ui',
-                '[App]': 'ui'
+                '[App]': 'ui',
+                /* Wizard / morning-checkin / profile flow */
+                '[MorningCheckin]': 'ui',
+                '[ProfileSteps]': 'ui',
+                '[WelcomeStep]': 'ui',
+                '[AuthInit]': 'ui',
+                '[ONBOARDING]': 'ui',
+                '[Onboarding]': 'ui'
             };
             var KNOWN_GROUPS = Array.from(new Set(DEFAULT_LOG_GROUPS.concat(EXTRA_LOG_GROUPS, Object.keys(PREFIX_GROUP_MAP).map(function (prefix) {
                 return PREFIX_GROUP_MAP[prefix];
