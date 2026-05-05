@@ -1560,6 +1560,30 @@
       return true;
     }
 
+    // 🛡️ Defensive: если переданный объект пустой ({}) или без firstName —
+    // возможно lsGet прочитал legacy global ключ до того как HEYS.currentClientId
+    // был выставлен. Перечитываем scoped key напрямую.
+    if (!profile.firstName && !profile.birthDate && !profile.weight) {
+      try {
+        const cid = (window.HEYS?.currentClientId || '').toString();
+        if (cid) {
+          const scopedRaw = localStorage.getItem(`heys_${cid}_profile`);
+          if (scopedRaw) {
+            const scoped = JSON.parse(scopedRaw);
+            if (scoped && (scoped.firstName || scoped.birthDate || scoped.weight)) {
+              console.warn('[ProfileSteps] defensive re-read scoped profile (param was empty)', {
+                cid: cid.slice(0, 8),
+                hadFirstName: !!scoped.firstName,
+                hadBirthDate: !!scoped.birthDate,
+                hadWeight: !!scoped.weight
+              });
+              profile = scoped;
+            }
+          }
+        }
+      } catch (_) { }
+    }
+
     // Если есть флаг profileCompleted — используем его (надёжный способ)
     if (profile.profileCompleted === true) {
       localStorage.removeItem('heys_registration_in_progress');

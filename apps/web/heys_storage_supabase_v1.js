@@ -6288,7 +6288,12 @@
               const today = new Date().toISOString().slice(0, 10);
               const criticalBaseKeys = [
                 'heys_profile', 'heys_norms', 'heys_products',
-                'heys_hr_zones', `heys_dayv2_${today}`
+                'heys_hr_zones', `heys_dayv2_${today}`,
+                // Stage 2 expansion: настройки UI которые нужны до первого рендера —
+                // toggle советов / звука / прочитанные подсказки. Один RPC, тот же
+                // round-trip, не добавляет latency. Закрывает race когда тосты вылезали
+                // с дефолтным toastsEnabled=true до прихода реального флага из cloud.
+                'heys_advice_settings', 'heys_advice_read_today'
               ];
               const criticalScopedKeys = criticalBaseKeys.map(bk => `heys_${client_id}_${bk.slice('heys_'.length)}`);
               const allCriticalKeys = [...criticalBaseKeys, ...criticalScopedKeys];

@@ -582,7 +582,31 @@
 
     // 🔒 КРИТИЧНО: Если профиль не заполнен — ВСЕГДА показываем!
     // Регистрационные шаги (profile-personal, profile-body, etc.) обязательны для новых пользователей
-    const profile = readStoredValue('heys_profile', {});
+    let profile = readStoredValue('heys_profile', {});
+    // 🛡️ Defensive: readStoredValue может вернуть {} если HEYS.currentClientId
+    // не выставлен (race с setClientId). В этом случае читаем scoped key напрямую,
+    // чтобы не показывать wizard юзеру у которого профиль уже есть в LS.
+    try {
+      const hasAnyData = profile && (profile.firstName || profile.birthDate || profile.weight);
+      if (!hasAnyData) {
+        const cid = currentClientId || (window.HEYS && window.HEYS.currentClientId) || '';
+        if (cid) {
+          const scopedRaw = localStorage.getItem(`heys_${cid}_profile`);
+          if (scopedRaw) {
+            const scoped = JSON.parse(scopedRaw);
+            if (scoped && (scoped.firstName || scoped.birthDate || scoped.weight)) {
+              console.warn('[MorningCheckin] 🛡️ defensive re-read scoped profile (lsGet returned empty)', {
+                cid: String(cid).slice(0, 8),
+                hadFirstName: !!scoped.firstName,
+                hadBirthDate: !!scoped.birthDate
+              });
+              profile = scoped;
+            }
+          }
+        }
+      }
+    } catch (_) { }
+
     if (HEYS.ProfileSteps && HEYS.ProfileSteps.isProfileIncomplete) {
       if (HEYS.ProfileSteps.isProfileIncomplete(profile)) {
         console.log('[MorningCheckin] 🆕 Profile incomplete — forcing checkin with registration steps');

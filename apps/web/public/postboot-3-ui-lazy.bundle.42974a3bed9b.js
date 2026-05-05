@@ -9019,23 +9019,22 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           },
             React.createElement('span', { className: 'aps-new-icon' }, '+'),
             React.createElement('span', null, 'Новый продукт')
+          ),
+          // Кнопка "Готовые наборы" — в одной строке с фото/новый продукт
+          React.createElement('button', {
+            className: 'aps-new-product-btn aps-ready-sets-btn',
+            onClick: () => {
+              console.info('[HEYS.presets] ✅ Открываем Готовые наборы');
+              setPresetsOpen(true);
+            }
+          },
+            React.createElement('span', { className: 'aps-new-icon aps-ready-sets-icon' }, '🍽️'),
+            React.createElement('span', null, 'Наборы'),
+            suggestedPresetsCount > 0 && React.createElement('span', {
+              className: 'aps-ready-sets-badge',
+              title: `${suggestedPresetsCount} рекомендаций ждут подтверждения`
+            }, suggestedPresetsCount)
           )
-        ),
-
-        // Кнопка "Готовые наборы"
-        React.createElement('button', {
-          className: 'aps-ready-sets-btn',
-          onClick: () => {
-            console.info('[HEYS.presets] ✅ Открываем Готовые наборы');
-            setPresetsOpen(true);
-          }
-        },
-          React.createElement('span', { className: 'aps-ready-sets-icon' }, '🍽️'),
-          React.createElement('span', null, 'Готовые наборы'),
-          suggestedPresetsCount > 0 && React.createElement('span', {
-            className: 'aps-ready-sets-badge',
-            title: `${suggestedPresetsCount} рекомендаций ждут подтверждения`
-          }, suggestedPresetsCount)
         ),
 
         // Поле поиска
@@ -21264,6 +21263,30 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       return true;
     }
 
+    // 🛡️ Defensive: если переданный объект пустой ({}) или без firstName —
+    // возможно lsGet прочитал legacy global ключ до того как HEYS.currentClientId
+    // был выставлен. Перечитываем scoped key напрямую.
+    if (!profile.firstName && !profile.birthDate && !profile.weight) {
+      try {
+        const cid = (window.HEYS?.currentClientId || '').toString();
+        if (cid) {
+          const scopedRaw = localStorage.getItem(`heys_${cid}_profile`);
+          if (scopedRaw) {
+            const scoped = JSON.parse(scopedRaw);
+            if (scoped && (scoped.firstName || scoped.birthDate || scoped.weight)) {
+              console.warn('[ProfileSteps] defensive re-read scoped profile (param was empty)', {
+                cid: cid.slice(0, 8),
+                hadFirstName: !!scoped.firstName,
+                hadBirthDate: !!scoped.birthDate,
+                hadWeight: !!scoped.weight
+              });
+              profile = scoped;
+            }
+          }
+        }
+      } catch (_) { }
+    }
+
     // Если есть флаг profileCompleted — используем его (надёжный способ)
     if (profile.profileCompleted === true) {
       localStorage.removeItem('heys_registration_in_progress');
@@ -24375,7 +24398,31 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
     // 🔒 КРИТИЧНО: Если профиль не заполнен — ВСЕГДА показываем!
     // Регистрационные шаги (profile-personal, profile-body, etc.) обязательны для новых пользователей
-    const profile = readStoredValue('heys_profile', {});
+    let profile = readStoredValue('heys_profile', {});
+    // 🛡️ Defensive: readStoredValue может вернуть {} если HEYS.currentClientId
+    // не выставлен (race с setClientId). В этом случае читаем scoped key напрямую,
+    // чтобы не показывать wizard юзеру у которого профиль уже есть в LS.
+    try {
+      const hasAnyData = profile && (profile.firstName || profile.birthDate || profile.weight);
+      if (!hasAnyData) {
+        const cid = currentClientId || (window.HEYS && window.HEYS.currentClientId) || '';
+        if (cid) {
+          const scopedRaw = localStorage.getItem(`heys_${cid}_profile`);
+          if (scopedRaw) {
+            const scoped = JSON.parse(scopedRaw);
+            if (scoped && (scoped.firstName || scoped.birthDate || scoped.weight)) {
+              console.warn('[MorningCheckin] 🛡️ defensive re-read scoped profile (lsGet returned empty)', {
+                cid: String(cid).slice(0, 8),
+                hadFirstName: !!scoped.firstName,
+                hadBirthDate: !!scoped.birthDate
+              });
+              profile = scoped;
+            }
+          }
+        }
+      }
+    } catch (_) { }
+
     if (HEYS.ProfileSteps && HEYS.ProfileSteps.isProfileIncomplete) {
       if (HEYS.ProfileSteps.isProfileIncomplete(profile)) {
         console.log('[MorningCheckin] 🆕 Profile incomplete — forcing checkin with registration steps');
