@@ -26016,6 +26016,39 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                             return;
                         }
 
+                        // 🛡️ FINAL SAFETY (post-shouldShow): даже если shouldShowMorningCheckin
+                        // вернул TRUE, ещё раз проверяем raw scoped LS. Если там есть реальные
+                        // данные профиля — НЕ показываем wizard. shouldShowMorningCheckin внутри
+                        // запускает isProfileIncomplete с readStoredValue, который может вернуть
+                        // stale memory-cache value. Raw localStorage всегда видит актуальное.
+                        if (shouldShow === true) {
+                            try {
+                                const cidFinal = clientIdRef.current || eventClientId || (window.HEYS && window.HEYS.currentClientId) || '';
+                                if (cidFinal) {
+                                    let scopedRaw = localStorage.getItem(`heys_${cidFinal}_profile`);
+                                    if (scopedRaw) {
+                                        if (typeof scopedRaw === 'string' && scopedRaw.startsWith('¤Z¤') && HEYS.store?.decompress) {
+                                            try { scopedRaw = HEYS.store.decompress(scopedRaw.slice(3)); } catch (_) { }
+                                        }
+                                        let scoped = null;
+                                        try { scoped = JSON.parse(scopedRaw); } catch (_) { }
+                                        if (scoped && (scoped.firstName || scoped.birthDate || scoped.weight)) {
+                                            console.warn('[MorningCheckin] 🛡️ POST-shouldShow SAFETY: aborting wizard — scoped LS has profile data', {
+                                                cid: String(cidFinal).slice(0, 8),
+                                                scopedFirstName: scoped.firstName,
+                                                scopedWeight: scoped.weight,
+                                                scopedBirthDate: scoped.birthDate,
+                                                scopedProfileCompleted: !!scoped.profileCompleted
+                                            });
+                                            // Если профиль реально готов, форсируем shouldShow=false для setShowMorningCheckin
+                                            setShowMorningCheckin((prev) => (prev === false ? prev : false));
+                                            return;
+                                        }
+                                    }
+                                }
+                            } catch (_) { }
+                        }
+
                         // 🔒 Не обновляем если значение то же (предотвращает ре-рендер)
                         setShowMorningCheckin((prev) => (prev === shouldShow ? prev : shouldShow));
                     } else {
