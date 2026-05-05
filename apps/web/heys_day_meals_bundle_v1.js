@@ -3382,34 +3382,21 @@
             React.createElement('div', { className: 'row desktop-add-product', style: { justifyContent: 'space-between', alignItems: 'center' } },
                 React.createElement('div', { className: 'section-title' }, 'Добавить продукт'),
                 React.createElement('div', { className: 'aps-open-buttons aps-open-buttons--column' },
-                    React.createElement(MealAddProduct, {
-                        mi: mealIndex,
-                        products,
-                        date,
-                        setDay,
-                        isCurrentMeal,
-                        buttonText: 'Быстро добавить 1 продукт',
-                        buttonIcon: '⚡',
-                        buttonClassName: 'aps-open-btn--quick',
-                        highlightCurrent: false,
-                        ariaLabel: 'Быстро добавить 1 продукт'
-                    }),
-                    React.createElement(MealAddProduct, {
-                        mi: mealIndex,
-                        products,
-                        date,
-                        setDay,
-                        isCurrentMeal,
-                        multiProductMode: true,
-                        buttonText: 'Добавить несколько продуктов',
-                        buttonIcon: '➕',
-                        buttonClassName: 'aps-open-btn--multi',
-                        highlightCurrent: true,
-                        ariaLabel: 'Добавить несколько продуктов'
-                    }),
-                    // 🆕 Кнопки «Подряд 2/3/4» — без summary-модалки между продуктами
-                    React.createElement('div', { className: 'aps-open-row-repeat' },
-                        [2, 3, 4].map(n => React.createElement(MealAddProduct, {
+                    React.createElement('div', { className: 'aps-open-row-quick' },
+                        React.createElement(MealAddProduct, {
+                            mi: mealIndex,
+                            products,
+                            date,
+                            setDay,
+                            isCurrentMeal,
+                            buttonText: 'Добавить 1 продукт',
+                            buttonIcon: '⚡',
+                            buttonClassName: 'aps-open-btn--quick',
+                            highlightCurrent: false,
+                            ariaLabel: 'Добавить 1 продукт'
+                        }),
+                        // 🆕 Кнопки «Подряд 2/3/4» — справа от «Добавить 1 продукт», минимальной ширины
+                        ...[2, 3, 4].map(n => React.createElement(MealAddProduct, {
                             key: `repeat-${n}`,
                             mi: mealIndex,
                             products,
@@ -3425,6 +3412,19 @@
                             ariaLabel: `Добавить ${n} продукта подряд без промежуточной модалки`
                         }))
                     ),
+                    React.createElement(MealAddProduct, {
+                        mi: mealIndex,
+                        products,
+                        date,
+                        setDay,
+                        isCurrentMeal,
+                        multiProductMode: true,
+                        buttonText: 'Добавить несколько продуктов',
+                        buttonIcon: '➕',
+                        buttonClassName: 'aps-open-btn--multi',
+                        highlightCurrent: true,
+                        ariaLabel: 'Добавить несколько продуктов'
+                    }),
                 ),
             ),
             React.createElement('div', { style: { overflowX: 'auto', marginTop: '8px' } }, React.createElement('table', { className: 'tbl meals-table' },
@@ -3478,34 +3478,21 @@
                         ),
                     ),
                     React.createElement('div', { className: 'aps-open-buttons' },
-                        React.createElement(MealAddProduct, {
-                            mi: mealIndex,
-                            products,
-                            date,
-                            setDay,
-                            isCurrentMeal,
-                            buttonText: 'Быстро добавить 1 продукт',
-                            buttonIcon: '⚡',
-                            buttonClassName: 'aps-open-btn--quick',
-                            highlightCurrent: false,
-                            ariaLabel: 'Быстро добавить 1 продукт'
-                        }),
-                        React.createElement(MealAddProduct, {
-                            mi: mealIndex,
-                            products,
-                            date,
-                            setDay,
-                            isCurrentMeal,
-                            multiProductMode: true,
-                            buttonText: 'Добавить несколько продуктов',
-                            buttonIcon: '➕',
-                            buttonClassName: 'aps-open-btn--multi',
-                            highlightCurrent: true,
-                            ariaLabel: 'Добавить несколько продуктов'
-                        }),
-                        // 🆕 Кнопки «Подряд 2/3/4» — без summary-модалки между продуктами
-                        React.createElement('div', { className: 'aps-open-row-repeat' },
-                            [2, 3, 4].map(n => React.createElement(MealAddProduct, {
+                        React.createElement('div', { className: 'aps-open-row-quick' },
+                            React.createElement(MealAddProduct, {
+                                mi: mealIndex,
+                                products,
+                                date,
+                                setDay,
+                                isCurrentMeal,
+                                buttonText: 'Добавить 1 продукт',
+                                buttonIcon: '⚡',
+                                buttonClassName: 'aps-open-btn--quick',
+                                highlightCurrent: false,
+                                ariaLabel: 'Добавить 1 продукт'
+                            }),
+                            // 🆕 Кнопки «Подряд 2/3/4» — справа от «Добавить 1 продукт», минимальной ширины
+                            ...[2, 3, 4].map(n => React.createElement(MealAddProduct, {
                                 key: `repeat-${n}`,
                                 mi: mealIndex,
                                 products,
@@ -3521,6 +3508,19 @@
                                 ariaLabel: `Добавить ${n} продукта подряд без промежуточной модалки`
                             }))
                         ),
+                        React.createElement(MealAddProduct, {
+                            mi: mealIndex,
+                            products,
+                            date,
+                            setDay,
+                            isCurrentMeal,
+                            multiProductMode: true,
+                            buttonText: 'Добавить несколько продуктов',
+                            buttonIcon: '➕',
+                            buttonClassName: 'aps-open-btn--multi',
+                            highlightCurrent: true,
+                            ariaLabel: 'Добавить несколько продуктов'
+                        }),
                     ),
                 ),
                 isExpanded && (meal.items || []).map((it) => {
@@ -6441,7 +6441,7 @@
                                             }, 'Формировать приём пошагово')
                                         )
                                     ),
-                                    // 🆕 Кнопки «Подряд 2/3/4» — без промежуточной summary-модалки
+                                    // 🆕 Кнопки «Добавить 2/3/4» — без промежуточной summary-модалки
                                     React.createElement('div', {
                                         style: { display: 'flex', gap: '8px', marginTop: '4px' }
                                     },
@@ -6451,14 +6451,15 @@
                                             style: {
                                                 flex: 1,
                                                 display: 'flex',
-                                                flexDirection: 'column',
                                                 alignItems: 'center',
                                                 justifyContent: 'center',
-                                                gap: '2px',
                                                 padding: '12px 8px',
-                                                border: '1px solid #e2e8f0',
+                                                border: '1px solid #86efac',
                                                 borderRadius: '12px',
-                                                background: '#fff',
+                                                background: '#dcfce7',
+                                                color: '#14532d',
+                                                fontSize: '15px',
+                                                fontWeight: '700',
                                                 cursor: 'pointer',
                                                 transition: 'all 0.15s ease'
                                             },
@@ -6469,14 +6470,7 @@
                                                     setTimeout(() => openAddProductModal(actualIdx, true, undefined, n), 100);
                                                 }
                                             }
-                                        },
-                                            React.createElement('div', {
-                                                style: { fontSize: '20px', fontWeight: '700', color: '#1e293b', lineHeight: 1 }
-                                            }, String(n)),
-                                            React.createElement('div', {
-                                                style: { fontSize: '11px', color: '#64748b' }
-                                            }, 'подряд')
-                                        ))
+                                        }, `Добавить ${n}`))
                                     )
                                 ),
                                 // Скрываем стандартную кнопку confirm — используем кастомные внутри text

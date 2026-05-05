@@ -1012,20 +1012,46 @@
                                     const fn = auth && auth.loginClient;
                                     const res = fn ? await fn({ phone, pin }) : { ok: false, error: 'cloud_not_ready' };
                                     if (res && res.ok && res.clientId) {
-                                        try {
-                                            if (HEYS.cloud && HEYS.cloud.switchClient) {
-                                                await HEYS.cloud.switchClient(res.clientId);
-                                            } else {
-                                                U.lsSet('heys_client_current', res.clientId);
+                                        const targetClientId = res.clientId;
+                                        const phoneNorm = (HEYS.auth?.normalizePhone?.(phone) || phone);
+
+                                        // 🚀 Stage 2: вместо `await switchClient` (5–10с под VPN) — резолвим
+                                        // setClientId по эвенту heysSyncCompleted{phaseA:true} (~300-800мс).
+                                        // Полный sync продолжается в фоне. Caller получает res сразу
+                                        // после loginClient и закрывает форму, AppShell монтируется
+                                        // как только Phase A отгрузит 5 критичных ключей.
+                                        let resolved = false;
+                                        const finalize = () => {
+                                            if (resolved) return;
+                                            resolved = true;
+                                            writeGlobalValue('heys_last_client_id', targetClientId);
+                                            try { writeGlobalValue('heys_client_phone', phoneNorm); } catch (_) { }
+                                            setClientId(targetClientId);
+                                        };
+                                        const phaseAHandler = (e) => {
+                                            if (resolved) return;
+                                            if (e && e.detail && e.detail.phaseA && e.detail.clientId === targetClientId) {
+                                                window.removeEventListener('heysSyncCompleted', phaseAHandler);
+                                                finalize();
                                             }
-                                            writeGlobalValue('heys_last_client_id', res.clientId);
-                                            // 📱 Сохраняем телефон для ПЭП (SMS-верификация согласий)
-                                            try {
-                                                const phoneNorm = HEYS.auth?.normalizePhone?.(phone) || phone;
-                                                writeGlobalValue('heys_client_phone', phoneNorm);
-                                            } catch (_) { }
-                                            setClientId(res.clientId);
-                                        } catch (_) { }
+                                        };
+                                        window.addEventListener('heysSyncCompleted', phaseAHandler);
+
+                                        if (HEYS.cloud && HEYS.cloud.switchClient) {
+                                            // Fire-and-forget: фон ведёт полный sync, мы ждём только Phase A
+                                            HEYS.cloud.switchClient(targetClientId)
+                                                .catch(() => { /* sync ошибки обрабатываются нижестоящими слоями */ })
+                                                .finally(() => {
+                                                    window.removeEventListener('heysSyncCompleted', phaseAHandler);
+                                                    // Fallback: если Phase A не запускалась (delta fast-path
+                                                    // на повторном входе) — финализируем сейчас.
+                                                    finalize();
+                                                });
+                                        } else {
+                                            try { U.lsSet('heys_client_current', targetClientId); } catch (_) { }
+                                            window.removeEventListener('heysSyncCompleted', phaseAHandler);
+                                            finalize();
+                                        }
                                     }
                                     return res;
                                 },

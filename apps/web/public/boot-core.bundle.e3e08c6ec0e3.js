@@ -25639,58 +25639,79 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
         }
 
         if (!usedPrefetch) {
-          while (true) {
+          // Helper: одна страница + per-page retry на 502 (та же логика что и раньше).
+          // ORDER BY k.asc обеспечивает детерминированный mapping offset→row при
+          // параллельных запросах (PG без ORDER BY не гарантирует стабильность).
+          const fetchPage = async (offset) => {
             const filters = { 'eq.client_id': client_id };
-            // 🚀 Delta: добавляем фильтр updated_at > since
-            if (deltaSince) {
-              filters['gt.updated_at'] = deltaSince;
-            }
-
-            const { data: pageData, error: pageError } = await YandexAPI.rest('client_kv_store', {
+            if (deltaSince) filters['gt.updated_at'] = deltaSince;
+            const reqOpts = {
               select: 'k,v,updated_at',
               filters,
+              order: 'k.asc',
               limit: PAGE_SIZE,
-              offset: pageOffset
-            });
-
+              offset
+            };
+            let res = await YandexAPI.rest('client_kv_store', reqOpts);
             // 🔧 v63 FIX #10: per-page retry — single retry after 2s on server error.
-            // Covers 502 cold start on specific page without aborting entire sync.
-            if (pageError && !pageError.isNetworkFailure) {
-              logCritical(`⚠️ [SYNC] Page offset=${pageOffset} failed: ${pageError.message}, retrying in 2s`);
+            if (res.error && !res.error.isNetworkFailure) {
+              logCritical(`⚠️ [SYNC] Page offset=${offset} failed: ${res.error.message}, retrying in 2s`);
               await new Promise(r => setTimeout(r, 2000));
-              const retry = await YandexAPI.rest('client_kv_store', {
-                select: 'k,v,updated_at',
-                filters,
-                limit: PAGE_SIZE,
-                offset: pageOffset
-              });
-              if (retry.error) {
-                fetchError = retry.error;
-                break;
-              }
-              const retryRows = retry.data || [];
-              allData = allData.concat(retryRows);
-              paginatedFetchPages += 1;
-              if (retryRows.length < PAGE_SIZE) break;
-              pageOffset += PAGE_SIZE;
-              continue;
+              res = await YandexAPI.rest('client_kv_store', reqOpts);
             }
+            return res;
+          };
 
-            if (pageError) {
-              fetchError = pageError;
-              break;
-            }
-
-            const rows = pageData || [];
-            allData = allData.concat(rows);
+          // 🚀 Stage 2: параллельная пагинация. Раньше 4 страницы по ~250 записей
+          // тянулись последовательно (4 RTT). Теперь:
+          //   1) Первая страница sequential — отделяет «маленьких» клиентов
+          //      (1 страница) от «больших» без лишних запросов.
+          //   2) Если первая страница full — fan-out по FAN_OUT страниц параллельно.
+          //   3) Останавливаемся на первой неполной странице или ошибке.
+          // Для 778 записей это 1 + 1 = 2 RTT вместо 4. Под VPN ~−1с к full sync.
+          const FAN_OUT = 4;
+          const firstRes = await fetchPage(0);
+          if (firstRes.error) {
+            fetchError = firstRes.error;
+          } else {
+            const firstRows = firstRes.data || [];
+            allData = allData.concat(firstRows);
             paginatedFetchPages += 1;
             if (isDebugSync()) {
-              logCritical(`🔍 [SYNC PAGINATED] page offset=${pageOffset}, rows=${rows.length}, total=${allData.length}`);
+              logCritical(`🔍 [SYNC PAGINATED] page offset=0, rows=${firstRows.length}, total=${allData.length}`);
             }
-
-            // Если получили меньше PAGE_SIZE — это последняя страница
-            if (rows.length < PAGE_SIZE) break;
-            pageOffset += PAGE_SIZE;
+            if (firstRows.length >= PAGE_SIZE) {
+              let nextOffset = PAGE_SIZE;
+              let done = false;
+              while (!done) {
+                const offsets = [];
+                for (let i = 0; i < FAN_OUT; i++) offsets.push(nextOffset + i * PAGE_SIZE);
+                const results = await Promise.all(offsets.map(fetchPage));
+                for (let i = 0; i < results.length; i++) {
+                  const r = results[i];
+                  if (r.error) {
+                    fetchError = r.error;
+                    done = true;
+                    break;
+                  }
+                  const rows = r.data || [];
+                  allData = allData.concat(rows);
+                  paginatedFetchPages += 1;
+                  if (isDebugSync()) {
+                    logCritical(`🔍 [SYNC PAGINATED] page offset=${offsets[i]}, rows=${rows.length}, total=${allData.length}`);
+                  }
+                  // Останавливаемся на первой неполной странице.
+                  // Остальные параллельные запросы из этой пачки уже отработали —
+                  // их данные могут быть лишними (если там были записи), но не теряются:
+                  // сервер вернул, мы их concat'нули, просто следующая итерация не пойдёт.
+                  if (rows.length < PAGE_SIZE) {
+                    done = true;
+                    break;
+                  }
+                }
+                if (!done) nextOffset += FAN_OUT * PAGE_SIZE;
+              }
+            }
           }
         }
 
