@@ -2431,8 +2431,26 @@
                 setAdviceTrigger('tab_open');
             };
 
+            // Re-check that heys_advice_settings actually landed in LS.
+            // Bootstrap completes BEFORE HOT-sync brings advice_settings, so
+            // the first non-phaseA `heysSyncCompleted` event may still see
+            // settings absent — keep listening for the next event.
+            const adviceSettingsLanded = () => {
+                try {
+                    if (HEYSRef.store?.get) {
+                        const fromStore = HEYSRef.store.get('heys_advice_settings', null);
+                        if (fromStore !== null) return true;
+                    }
+                    return localStorage.getItem('heys_advice_settings') !== null;
+                } catch (_) { return false; }
+            };
+
             const handlePhaseB = (e) => {
                 if (e && e.detail && e.detail.phaseA) return; // Phase A has no heys_advice_settings
+                if (!adviceSettingsLanded()) {
+                    console.info('[HEYS.advice] 🛡️ cold-start guard: settings still missing, waiting for next sync');
+                    return;
+                }
                 // 100ms buffer so setToastsEnabled from the sibling heysSyncCompleted
                 // listener has time to commit before advicePrimary effect evaluates it
                 setTimeout(fireTabOpen, 100);
