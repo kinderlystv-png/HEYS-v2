@@ -25474,13 +25474,42 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
             initLocalData();
             setStatus('online');
 
+            // 🚀 Stage 2: dismiss gate as soon as Phase A finishes (5 critical keys, 1 RPC).
+            // Под VPN полный пагинированный sync занимает 5–10с; ждать его перед показом
+            // приложения — главная UX-боль. Phase A отдаёт всё нужное для рендера сегодня
+            // и профиля за один запрос (~300-800мс), остальное догружается в фоне.
+            // Если Phase A не сработает (delta fast-path при повторных заходах), fallback
+            // в `.then()` дисмиссит гейт после полного sync.
+            let gateDismissed = false;
+            let initFinalized = false;
+            const phaseAHandler = (e) => {
+                if (gateDismissed) return;
+                if (e && e.detail && e.detail.phaseA && e.detail.clientId === pinAuthClient) {
+                    gateDismissed = true;
+                    devLog('[App] ⚡ Gate dismiss on Phase A');
+                    __heysDismissGate();
+                    // Так же снимаем флаг инициализации — React начнёт рендерить
+                    // приложение, имея 5 критичных ключей в LS. Полный sync продолжит
+                    // обновлять данные в фоне.
+                    if (!initFinalized) {
+                        initFinalized = true;
+                        setIsInitializing(false);
+                    }
+                }
+            };
+            window.addEventListener('heysSyncCompleted', phaseAHandler);
+
             // Синхронизируем с сервером
             // Событие heysSyncCompleted отправляется ВНУТРИ syncClientViaRPC после загрузки данных
             cloudRef.syncClient(pinAuthClient)
                 .then(() => {
                     devLog('[App] ✅ PIN-сессия восстановлена');
-                    // v12: Сессия валидна — убираем гейт
-                    __heysDismissGate();
+                    if (!gateDismissed) {
+                        // Phase A не запускалась (delta fast-path / sync skipped) —
+                        // дисмиссим сейчас по результатам полного sync.
+                        gateDismissed = true;
+                        __heysDismissGate();
+                    }
                 })
                 .catch((err) => {
                     devWarn('[App] ❌ Ошибка восстановления PIN-сессии:', err);
@@ -25496,16 +25525,24 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                             removeGlobalValue('heys_session_token');
                         }
                         setClientId(null);
+                        gateDismissed = true; // не дисмиссить гейт после reshow
                     } else {
                         // Временная сетевая/серверная ошибка — сохраняем локальную PIN-сессию
                         devWarn('[App] 🌩️ Temporary PIN restore failure — keeping local session cache');
                         initLocalData();
                         setStatus('offline');
-                        __heysDismissGate();
+                        if (!gateDismissed) {
+                            gateDismissed = true;
+                            __heysDismissGate();
+                        }
                     }
                 })
                 .finally(() => {
-                    setIsInitializing(false);
+                    window.removeEventListener('heysSyncCompleted', phaseAHandler);
+                    if (!initFinalized) {
+                        initFinalized = true;
+                        setIsInitializing(false);
+                    }
                 });
         } else {
             console.info('[HEYS.entry] ➡️ Branch: no session (show login)');
