@@ -25960,6 +25960,38 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                         console.info('[MorningCheckin] ℹ️ isInitializing=true но профиль заполнен — продолжаем');
                     }
 
+                    // 🛡️ Final safety net: даже если isProfileIncomplete=true, ещё раз
+                    // проверяем scoped LS напрямую (с decompression). Если там есть
+                    // реальные данные профиля — abort и не показываем wizard. Это
+                    // предотвращает кратковременный flash wizard'а когда первый
+                    // heysSyncCompleted срабатывает раньше чем lsGet/store видит
+                    // только что записанный Phase A профиль (memory cache stale или
+                    // race с currentClientId).
+                    if (isProfileIncomplete) {
+                        try {
+                            const cidFinal = clientIdRef.current || eventClientId || (window.HEYS && window.HEYS.currentClientId) || '';
+                            if (cidFinal) {
+                                let scopedRaw = localStorage.getItem(`heys_${cidFinal}_profile`);
+                                if (scopedRaw) {
+                                    if (typeof scopedRaw === 'string' && scopedRaw.startsWith('¤Z¤') && HEYS.store?.decompress) {
+                                        try { scopedRaw = HEYS.store.decompress(scopedRaw.slice(3)); } catch (_) { }
+                                    }
+                                    let scoped = null;
+                                    try { scoped = JSON.parse(scopedRaw); } catch (_) { }
+                                    if (scoped && (scoped.firstName || scoped.birthDate || scoped.weight)) {
+                                        console.warn('[MorningCheckin] 🛡️ FINAL SAFETY: aborting wizard — scoped LS has profile data despite isProfileIncomplete=true', {
+                                            cid: String(cidFinal).slice(0, 8),
+                                            scopedFirstName: scoped.firstName,
+                                            scopedWeight: scoped.weight,
+                                            scopedProfileCompleted: !!scoped.profileCompleted
+                                        });
+                                        return; // НЕ показывать wizard
+                                    }
+                                }
+                            }
+                        } catch (_) { }
+                    }
+
                     // Проверяем что clientId из события совпадает с текущим в localStorage
                     const lsClientId = HEYS.utils?.getCurrentClientId?.() || '';
                     if (eventClientId !== lsClientId) {
