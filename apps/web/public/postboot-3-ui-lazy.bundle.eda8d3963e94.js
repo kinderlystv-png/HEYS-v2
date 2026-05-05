@@ -21255,6 +21255,11 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
   // ЭКСПОРТ
   // ============================================================
 
+  // Module-level guard: isProfileIncomplete вызывается из 5 call site'ов
+  // (gate_flow, morning_checkin, onboarding и др.) — auto-set профиля
+  // должен сработать только один раз за сессию, иначе uploads дублируются.
+  let _profileCompletedAutoSetThisSession = false;
+
   // Проверка: нужно ли показывать profile-шаги
   function isProfileIncomplete(profile) {
     // Защита от null/undefined
@@ -21272,6 +21277,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     // значениями — считаем профиль готовым и проставляем `profileCompleted: true`
     // в LS, чтобы при следующих загрузках сразу попадали в branch выше.
     // Закрывает state-drift когда флаг был потерян, но данные актуальны.
+    // Module-level dedup: isProfileIncomplete вызывается из ~5 call site'ов
+    // во время boot — пишем в LS/облако только один раз за сессию.
     try {
       const fn = String(profile.firstName || '').trim();
       const hasName = fn.length > 0 && fn !== '?';
@@ -21280,17 +21287,20 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       const hasNonDefaultWeight = profile.weight > 0 && profile.weight !== 70;
       const hasNonDefaultHeight = profile.height > 0 && profile.height !== 175;
       if (hasName && hasBirthDate && hasGender && (hasNonDefaultWeight || hasNonDefaultHeight)) {
-        try {
-          profile.profileCompleted = true;
-          if (window.HEYS?.store?.set) {
-            window.HEYS.store.set('heys_profile', profile);
-          } else {
-            localStorage.setItem('heys_profile', JSON.stringify(profile));
-          }
-          console.warn('[ProfileSteps] auto-set profileCompleted=true for filled profile', {
-            firstName: fn, weight: profile.weight, height: profile.height
-          });
-        } catch (_) { }
+        if (!_profileCompletedAutoSetThisSession) {
+          _profileCompletedAutoSetThisSession = true;
+          try {
+            profile.profileCompleted = true;
+            if (window.HEYS?.store?.set) {
+              window.HEYS.store.set('heys_profile', profile);
+            } else {
+              localStorage.setItem('heys_profile', JSON.stringify(profile));
+            }
+            console.warn('[ProfileSteps] auto-set profileCompleted=true for filled profile', {
+              firstName: fn, weight: profile.weight, height: profile.height
+            });
+          } catch (_) { }
+        }
         localStorage.removeItem('heys_registration_in_progress');
         return false;
       }

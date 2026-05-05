@@ -3389,8 +3389,8 @@
                             date,
                             setDay,
                             isCurrentMeal,
-                            buttonText: 'Добавить 1 продукт',
-                            buttonIcon: '⚡',
+                            buttonText: '⚡ Добавить 1 продукт',
+                            buttonIcon: '',
                             buttonClassName: 'aps-open-btn--quick',
                             highlightCurrent: false,
                             ariaLabel: 'Добавить 1 продукт'
@@ -3485,8 +3485,8 @@
                                 date,
                                 setDay,
                                 isCurrentMeal,
-                                buttonText: 'Добавить 1 продукт',
-                                buttonIcon: '⚡',
+                                buttonText: '⚡ Добавить 1 продукт',
+                                buttonIcon: '',
                                 buttonClassName: 'aps-open-btn--quick',
                                 highlightCurrent: false,
                                 ariaLabel: 'Добавить 1 продукт'
