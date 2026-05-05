@@ -25848,6 +25848,25 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
 (function () {
     const HEYS = window.HEYS = window.HEYS || {};
 
+    // Inline дубликат readProfileForceRawScoped из heys_morning_checkin_v1.js.
+    // Тот файл загружается лениво (postboot-3-ui-lazy), а handler ниже фаирится
+    // с раннего boot-event'а. Когда handler срабатывает, lazy-helper может ещё
+    // не существовать → handler упадёт на stale cache. Эта inline-копия гарантирует
+    // что helper всегда доступен в boot-app фазе.
+    function readProfileForceRawScopedInline(clientId) {
+        if (!clientId) return null;
+        let raw = null;
+        try { raw = localStorage.getItem(`heys_${clientId}_profile`); } catch (_) { return null; }
+        if (!raw) {
+            try { raw = localStorage.getItem('heys_profile'); } catch (_) { return null; }
+            if (!raw) return null;
+        }
+        if (typeof raw === 'string' && raw.startsWith('¤Z¤') && window.HEYS?.store?.decompress) {
+            try { raw = window.HEYS.store.decompress(raw.slice(3)); } catch (_) { return null; }
+        }
+        try { return JSON.parse(raw); } catch (_) { return null; }
+    }
+
     const useMorningCheckinSync = ({ React, isInitializing, clientId }) => {
         const [showMorningCheckin, setShowMorningCheckin] = React.useState(false);
 
@@ -25898,9 +25917,11 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                     // показываем чек-ин ДАЖЕ во время инициализации!
                     // Force-raw read минуя Store.get memory cache — закрывает race
                     // под VPN когда «третий» heysSyncCompleted срабатывает с устаревшим cache.
+                    // Используем inline-копию (lazy postboot ещё может быть не загружен).
                     const U = HEYS.utils || {};
                     const cidForRead = clientIdRef.current || eventClientId || (window.HEYS && window.HEYS.currentClientId) || '';
-                    const profile = (HEYS.MorningCheckinUtils?.readProfileForceRawScoped?.(cidForRead))
+                    const profile = readProfileForceRawScopedInline(cidForRead)
+                        || (HEYS.MorningCheckinUtils?.readProfileForceRawScoped?.(cidForRead))
                         || (U.lsGet ? U.lsGet('heys_profile', {}) : {})
                         || {};
                     const isProfileIncomplete = HEYS.ProfileSteps?.isProfileIncomplete?.(profile);
@@ -25954,7 +25975,19 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                             if (HEYS.shouldShowMorningCheckin) {
                                 const shouldShow = HEYS.shouldShowMorningCheckin();
                                 if (window.HEYS?.ui?.suppressMorningCheckin) return;
-                                setShowMorningCheckin((prev) => (prev === shouldShow ? prev : shouldShow));
+                                // Final raw guard: если scoped LS уже содержит реальный
+                                // профиль, форсим shouldShow=false независимо от того что
+                                // вернул shouldShowMorningCheckin (защита от запуска
+                                // postboot-ready event'а раньше Phase A под VPN).
+                                let safeShow = shouldShow;
+                                if (shouldShow === true) {
+                                    const cidGuard = clientIdRef.current || eventClientId || (window.HEYS && window.HEYS.currentClientId) || '';
+                                    const scoped = readProfileForceRawScopedInline(cidGuard);
+                                    if (scoped && (scoped.firstName || scoped.birthDate || scoped.weight)) {
+                                        safeShow = false;
+                                    }
+                                }
+                                setShowMorningCheckin((prev) => (prev === safeShow ? prev : safeShow));
                             }
                         };
                         window.addEventListener('heys-morning-checkin-ready', onModuleReady, { once: true });
