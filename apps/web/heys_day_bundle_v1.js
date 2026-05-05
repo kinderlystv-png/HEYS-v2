@@ -4931,7 +4931,17 @@
         variant: 'fill',
         row: 1,
         className: 'confirm-modal-btn--multi-continue'
-      }
+      },
+      // 🆕 «Ещё N продуктов» — без промежуточной summary-модалки
+      ...[2, 3, 4].map((n) => ({
+        key: `add-${n}`,
+        label: `ещё ${n}`,
+        value: `add-${n}`,
+        style: 'primary',
+        variant: 'outline',
+        row: 2,
+        className: 'confirm-modal-btn--repeat'
+      }))
     ];
 
     const mealItems = (currentMeal.items || []).map((item) => {
@@ -5069,6 +5079,14 @@
     if (modalResult === 'add-more' && onAddMore) {
       onAddMore(currentDay);
     }
+
+    // 🆕 add-2 / add-3 / add-4 → autoRepeat
+    if (typeof modalResult === 'string' && /^add-(\d+)$/.test(modalResult) && onAddMore) {
+      const repeatCount = parseInt(modalResult.slice(4), 10);
+      if (Number.isFinite(repeatCount) && repeatCount > 1) {
+        onAddMore(currentDay, repeatCount);
+      }
+    }
   }
 
   HEYS.dayAddProductSummary = HEYS.dayAddProductSummary || {};
@@ -5083,6 +5101,7 @@
     setDay,
     isCurrentMeal = false,
     multiProductMode = false,
+    autoRepeatCount = 0, // 🆕 «Подряд N продуктов» — open AddProductStep с автоповтором без summary
     buttonText = 'Добавить еще продукт',
     buttonIcon = '🔍',
     buttonClassName = '',
@@ -5212,6 +5231,7 @@
       };
 
       let activeMultiProductMode = multiProductMode;
+      let activeAutoRepeatActive = (typeof autoRepeatCount === 'number' && autoRepeatCount > 1);
       // Tracks the day snapshot that was passed to the last openAddModal call.
       // handleAdd uses this as the base when building updatedDayForSummary so it
       // always includes all products added in previous iterations (the React-closure
@@ -5229,6 +5249,12 @@
         activeMultiProductMode = nextMultiProductMode;
         lastOpenedDay = latestDay;
 
+        const nextAutoRepeatCount = typeof override.autoRepeatCount === 'number'
+          ? override.autoRepeatCount
+          : autoRepeatCount;
+
+        activeAutoRepeatActive = (typeof nextAutoRepeatCount === 'number' && nextAutoRepeatCount > 1);
+
         if (window.HEYS?.AddProductStep?.show) {
           window.HEYS.AddProductStep.show({
             mealIndex: mi,
@@ -5237,6 +5263,7 @@
             day: latestDay,
             dateKey: date,
             multiProductMode: nextMultiProductMode,
+            autoRepeatCount: nextAutoRepeatCount,
             onAdd: handleAdd,
             onAddPhoto: handleAddPhoto,
             onNewProduct: handleNewProduct
@@ -5516,6 +5543,11 @@
           } catch (e) { }
         }
 
+        // 🆕 autoRepeat: молчаливое повторение N раз — пропускаем summary, AddProductStep сам делает goToStep(0)
+        if (activeAutoRepeatActive) {
+          return;
+        }
+
         if (activeMultiProductMode && HEYS.dayAddProductSummary?.show) {
           // Build updated day with the just-added item for the summary modal.
           // Multiple fallback sources: lastOpenedDay tracks what openAddModal
@@ -5554,7 +5586,10 @@
                 getProductFromItem,
                 per100,
                 scale,
-                onAddMore: (updatedDay) => openAddModal({ day: updatedDay }),
+                onAddMore: (updatedDay, autoRepeatCount) => openAddModal({
+                  day: updatedDay,
+                  autoRepeatCount: autoRepeatCount || 0
+                }),
                 onAddLast: (updatedDay) => openAddModal({ day: updatedDay, multiProductMode: false })
               });
             }, 100);
@@ -5563,7 +5598,7 @@
       };
 
       openAddModal();
-    }, [mi, date, day, setDay, getLatestDay, getLatestProducts, multiProductMode]);
+    }, [mi, date, day, setDay, getLatestDay, getLatestProducts, multiProductMode, autoRepeatCount]);
 
     return React.createElement('button', {
       className: 'aps-open-btn'
@@ -6427,19 +6462,37 @@
             ),
             React.createElement('div', { className: 'row desktop-add-product', style: { justifyContent: 'space-between', alignItems: 'center' } },
                 React.createElement('div', { className: 'section-title' }, 'Добавить продукт'),
-                React.createElement('div', { className: 'aps-open-buttons' },
-                    React.createElement(MealAddProduct, {
-                        mi: mealIndex,
-                        products,
-                        date,
-                        setDay,
-                        isCurrentMeal,
-                        buttonText: 'Быстро добавить 1 продукт',
-                        buttonIcon: '⚡',
-                        buttonClassName: 'aps-open-btn--quick',
-                        highlightCurrent: false,
-                        ariaLabel: 'Быстро добавить 1 продукт'
-                    }),
+                React.createElement('div', { className: 'aps-open-buttons aps-open-buttons--column' },
+                    React.createElement('div', { className: 'aps-open-row-quick' },
+                        React.createElement(MealAddProduct, {
+                            mi: mealIndex,
+                            products,
+                            date,
+                            setDay,
+                            isCurrentMeal,
+                            buttonText: '⚡ Добавить 1 продукт',
+                            buttonIcon: '',
+                            buttonClassName: 'aps-open-btn--quick',
+                            highlightCurrent: false,
+                            ariaLabel: 'Добавить 1 продукт'
+                        }),
+                        // 🆕 Кнопки «Подряд 2/3/4» — справа от «Добавить 1 продукт», минимальной ширины
+                        ...[2, 3, 4].map(n => React.createElement(MealAddProduct, {
+                            key: `repeat-${n}`,
+                            mi: mealIndex,
+                            products,
+                            date,
+                            setDay,
+                            isCurrentMeal,
+                            multiProductMode: true,
+                            autoRepeatCount: n,
+                            buttonText: String(n),
+                            buttonIcon: '',
+                            buttonClassName: 'aps-open-btn--repeat',
+                            highlightCurrent: false,
+                            ariaLabel: `Добавить ${n} продукта подряд без промежуточной модалки`
+                        }))
+                    ),
                     React.createElement(MealAddProduct, {
                         mi: mealIndex,
                         products,
@@ -6506,18 +6559,36 @@
                         ),
                     ),
                     React.createElement('div', { className: 'aps-open-buttons' },
-                        React.createElement(MealAddProduct, {
-                            mi: mealIndex,
-                            products,
-                            date,
-                            setDay,
-                            isCurrentMeal,
-                            buttonText: 'Быстро добавить 1 продукт',
-                            buttonIcon: '⚡',
-                            buttonClassName: 'aps-open-btn--quick',
-                            highlightCurrent: false,
-                            ariaLabel: 'Быстро добавить 1 продукт'
-                        }),
+                        React.createElement('div', { className: 'aps-open-row-quick' },
+                            React.createElement(MealAddProduct, {
+                                mi: mealIndex,
+                                products,
+                                date,
+                                setDay,
+                                isCurrentMeal,
+                                buttonText: '⚡ Добавить 1 продукт',
+                                buttonIcon: '',
+                                buttonClassName: 'aps-open-btn--quick',
+                                highlightCurrent: false,
+                                ariaLabel: 'Добавить 1 продукт'
+                            }),
+                            // 🆕 Кнопки «Подряд 2/3/4» — справа от «Добавить 1 продукт», минимальной ширины
+                            ...[2, 3, 4].map(n => React.createElement(MealAddProduct, {
+                                key: `repeat-${n}`,
+                                mi: mealIndex,
+                                products,
+                                date,
+                                setDay,
+                                isCurrentMeal,
+                                multiProductMode: true,
+                                autoRepeatCount: n,
+                                buttonText: String(n),
+                                buttonIcon: '',
+                                buttonClassName: 'aps-open-btn--repeat',
+                                highlightCurrent: false,
+                                ariaLabel: `Добавить ${n} продукта подряд без промежуточной модалки`
+                            }))
+                        ),
                         React.createElement(MealAddProduct, {
                             mi: mealIndex,
                             products,
@@ -9199,12 +9270,13 @@
                             const mealName = savedMealName || `приём ${mealIndex + 1}`;
 
                             // Функция открытия модалки добавления продукта
-                            const openAddProductModal = (targetMealIndex, multiProductMode, dayOverride) => {
+                            const openAddProductModal = (targetMealIndex, multiProductMode, dayOverride, autoRepeatCount) => {
                                 if (!window.HEYS?.AddProductStep?.show) return;
 
                                 window.HEYS.AddProductStep.show({
                                     mealIndex: targetMealIndex,
                                     multiProductMode: multiProductMode,
+                                    autoRepeatCount: autoRepeatCount || 0, // 🆕 «Подряд N продуктов»
                                     products: products,
                                     day: dayOverride || HEYS.Day?.getDay?.() || day,
                                     dateKey: date,
@@ -9303,6 +9375,11 @@
                                             if (history[productId].length > 20) history[productId].shift();
                                             lsSet('heys_grams_history', history);
                                         } catch (e) { }
+                                        // 🆕 autoRepeat: молчаливое повторение N раз — пропускаем summary, AddProductStep сам делает goToStep(0)
+                                        if (autoRepeatCount && autoRepeatCount > 1) {
+                                            if (scrollToDiaryHeading) scrollToDiaryHeading();
+                                            return;
+                                        }
                                         if (multiProductMode && HEYS.dayAddProductSummary?.show) {
                                             // Build updated day inline: setDay is async and
                                             // HEYS.Day.getDay() (dayRef.current) won't reflect
@@ -9335,7 +9412,7 @@
                                                         getProductFromItem,
                                                         per100,
                                                         scale,
-                                                        onAddMore: (updatedDay) => openAddProductModal(addMealIndex, true, updatedDay),
+                                                        onAddMore: (updatedDay, autoRepeatCount) => openAddProductModal(addMealIndex, true, updatedDay, autoRepeatCount || 0),
                                                         onAddLast: (updatedDay) => openAddProductModal(addMealIndex, false, updatedDay),
                                                     });
                                                 }, 100);
@@ -9369,7 +9446,7 @@
                                         margin: '8px 0'
                                     }
                                 },
-                                    // Кнопка "Быстро добавить 1 продукт"
+                                    // Кнопка "Быстро добавить 1 продукт" — синий primary fill (как в summary)
                                     React.createElement('button', {
                                         className: 'flow-selection-btn flow-selection-btn--quick',
                                         style: {
@@ -9377,16 +9454,16 @@
                                             alignItems: 'center',
                                             gap: '12px',
                                             padding: '14px 16px',
-                                            border: '1px solid #e2e8f0',
+                                            border: 'none',
                                             borderRadius: '12px',
-                                            background: '#fff',
+                                            background: '#3b82f6',
+                                            color: '#ffffff',
                                             cursor: 'pointer',
                                             textAlign: 'left',
                                             transition: 'all 0.15s ease'
                                         },
                                         onClick: () => {
                                             window.HEYS.ConfirmModal.hide();
-                                            // Lazy-вычисляем актуальный индекс на момент клика
                                             const actualIdx = findMealIndex();
                                             if (actualIdx >= 0) {
                                                 setTimeout(() => openAddProductModal(actualIdx, false), 100);
@@ -9400,14 +9477,14 @@
                                             style: { flex: 1 }
                                         },
                                             React.createElement('div', {
-                                                style: { fontWeight: '600', color: '#1e293b', fontSize: '15px' }
+                                                style: { fontWeight: '700', color: '#ffffff', fontSize: '15px' }
                                             }, 'Быстро добавить 1 продукт'),
                                             React.createElement('div', {
-                                                style: { fontSize: '12px', color: '#64748b', marginTop: '2px' }
+                                                style: { fontSize: '12px', color: 'rgba(255,255,255,0.85)', marginTop: '2px' }
                                             }, 'Выбрать продукт и сразу закрыть')
                                         )
                                     ),
-                                    // Кнопка "Добавить несколько продуктов"
+                                    // Кнопка "Добавить несколько продуктов" — зелёный success fill (как в summary)
                                     React.createElement('button', {
                                         className: 'flow-selection-btn flow-selection-btn--multi',
                                         style: {
@@ -9415,16 +9492,16 @@
                                             alignItems: 'center',
                                             gap: '12px',
                                             padding: '14px 16px',
-                                            border: '2px solid #3b82f6',
+                                            border: 'none',
                                             borderRadius: '12px',
-                                            background: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)',
+                                            background: '#22c55e',
+                                            color: '#ffffff',
                                             cursor: 'pointer',
                                             textAlign: 'left',
                                             transition: 'all 0.15s ease'
                                         },
                                         onClick: () => {
                                             window.HEYS.ConfirmModal.hide();
-                                            // Lazy-вычисляем актуальный индекс на момент клика
                                             const actualIdx = findMealIndex();
                                             if (actualIdx >= 0) {
                                                 setTimeout(() => openAddProductModal(actualIdx, true), 100);
@@ -9438,12 +9515,43 @@
                                             style: { flex: 1 }
                                         },
                                             React.createElement('div', {
-                                                style: { fontWeight: '600', color: '#1e40af', fontSize: '15px' }
+                                                style: { fontWeight: '700', color: '#ffffff', fontSize: '15px' }
                                             }, 'Добавить несколько продуктов'),
                                             React.createElement('div', {
-                                                style: { fontSize: '12px', color: '#3b82f6', marginTop: '2px' }
+                                                style: { fontSize: '12px', color: 'rgba(255,255,255,0.9)', marginTop: '2px' }
                                             }, 'Формировать приём пошагово')
                                         )
+                                    ),
+                                    // 🆕 Кнопки «Добавить 2/3/4» — без промежуточной summary-модалки
+                                    React.createElement('div', {
+                                        style: { display: 'flex', gap: '8px', marginTop: '4px' }
+                                    },
+                                        [2, 3, 4].map(n => React.createElement('button', {
+                                            key: `repeat-${n}`,
+                                            className: 'flow-selection-btn flow-selection-btn--repeat',
+                                            style: {
+                                                flex: 1,
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                padding: '12px 8px',
+                                                border: '1px solid #86efac',
+                                                borderRadius: '12px',
+                                                background: '#dcfce7',
+                                                color: '#14532d',
+                                                fontSize: '15px',
+                                                fontWeight: '700',
+                                                cursor: 'pointer',
+                                                transition: 'all 0.15s ease'
+                                            },
+                                            onClick: () => {
+                                                window.HEYS.ConfirmModal.hide();
+                                                const actualIdx = findMealIndex();
+                                                if (actualIdx >= 0) {
+                                                    setTimeout(() => openAddProductModal(actualIdx, true, undefined, n), 100);
+                                                }
+                                            }
+                                        }, `Добавить ${n}`))
                                     )
                                 ),
                                 // Скрываем стандартную кнопку confirm — используем кастомные внутри text
