@@ -24531,6 +24531,26 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
    * @param {function} onClose - Вызывается при закрытии крестиком (отложить на потом)
    */
   function MorningCheckin({ onComplete, onClose }) {
+    // 🛡️ Render-time guard: если scoped LS содержит готовый профиль
+    // (profileCompleted=true), wizard был открыт ошибочно из-за race
+    // в shouldShowMorningCheckin. Закрываем себя через onClose() сразу
+    // на mount — flash максимум 1 frame.
+    if (window.React && typeof window.React.useEffect === 'function') {
+      window.React.useEffect(function () {
+        try {
+          var cid = (window.HEYS && window.HEYS.currentClientId) || '';
+          var helper = window.HEYS && window.HEYS.MorningCheckinUtils && window.HEYS.MorningCheckinUtils.readProfileForceRawScoped;
+          if (!cid || typeof helper !== 'function') return;
+          var scoped = helper(cid);
+          if (scoped && scoped.profileCompleted === true) {
+            console.warn('[MorningCheckin] 🛡️ render-time guard: profileCompleted=true в scoped LS → auto-close wizard');
+            if (typeof onClose === 'function') onClose();
+          }
+        } catch (_) { }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+      }, []);
+    }
+
     // Если StepModal доступен — используем его
     if (HEYS.StepModal && HEYS.StepModal.Component) {
       const profile = readStoredValue('heys_profile', {});
