@@ -439,7 +439,31 @@
 
   function RationTab(props) {
     const { setProducts } = props;
-    const products = Array.isArray(props.products) ? props.products : [];
+    // 🛡️ Включаем stamp-recovered продукты в personal-таблицу.
+    // По архитектуре orphan-recovery (heys_day_utils.js:1346) такие продукты не пишутся
+    // в heys_products/overlay (чтобы не загрязнять neutrient aggregation), а живут
+    // в side-cache `HEYS.orphanProducts._stampResolutionCache`. Без этого юзер не видит
+    // в личной базе те продукты, которые реально использовал в днях (включая custom).
+    const [_stampVer, _setStampVer] = React.useState(0);
+    React.useEffect(() => {
+      const refresh = () => _setStampVer(v => v + 1);
+      window.addEventListener('heys:orphans-recovered', refresh);
+      return () => window.removeEventListener('heys:orphans-recovered', refresh);
+    }, []);
+    const products = (() => {
+      const arr = Array.isArray(props.products) ? props.products : [];
+      try {
+        const cache = window.HEYS?.orphanProducts?._stampResolutionCache;
+        if (!(cache instanceof Map) || cache.size === 0) return arr;
+        const ids = new Set(arr.filter(p => p && p.id != null).map(p => String(p.id)));
+        const extras = [];
+        for (const p of cache.values()) {
+          if (p && p.id != null && !ids.has(String(p.id))) extras.push(p);
+        }
+        return extras.length > 0 ? arr.concat(extras) : arr;
+      } catch (_) { /* noop */ }
+      return arr;
+    })();
 
     // Сохранять продукты в облако и localStorage при каждом изменении (через HEYS.utils для namespace)
     React.useEffect(() => {
@@ -4768,6 +4792,59 @@
       // Phase β: dual-write moved to interceptSetItem for universal coverage
       // (catches self-heal, best-keyspace fallback, hot-sync, and any future
       // direct legacy writers, not just setAll). See heys_storage_supabase_v1.js.
+
+      // 🛡️ FIX: dual-write user-добавленных продуктов в overlay v2.
+      // setAll пишет только в legacy `heys_products`, но overlay v2 — это canonical
+      // source для cloud-sync (он уезжает в `heys_products_overlay_v2` в БД и
+      // читается для merged-view). Без явного upsert новые custom-продукты не
+      // попадают в облачный overlay и не видны на других устройствах.
+      try {
+        const userActionSources = [
+          'harm-select-add', 'harm-select-update',
+          'button-restore-orphans',
+          'manual-add', 'add-from-shared',
+          'orphan-recovery'
+        ];
+        if (
+          Array.isArray(arr) &&
+          userActionSources.indexOf(source) >= 0 &&
+          HEYS.OverlayStore &&
+          typeof HEYS.OverlayStore.upsertRow === 'function' &&
+          typeof HEYS.OverlayStore.readRaw === 'function'
+        ) {
+          const existing = HEYS.OverlayStore.readRaw() || [];
+          const existingIds = new Set(existing.filter(r => r && r.id != null).map(r => String(r.id)));
+          let added = 0;
+          for (const p of arr) {
+            if (!p || p.id == null) continue;
+            if (existingIds.has(String(p.id))) continue;
+            // Новый row для overlay: Type B (custom) если нет shared_origin_id, иначе Type A.
+            const sid = p.shared_origin_id ? String(p.shared_origin_id) : null;
+            if (sid) {
+              HEYS.OverlayStore.upsertRow({
+                id: p.id,
+                shared_origin_id: sid,
+                fingerprint: p.fingerprint || null,
+                overrides: {},
+                in_my_list: true,
+                user_modified: !!p.user_modified,
+              });
+            } else {
+              HEYS.OverlayStore.upsertRow(Object.assign({}, p, {
+                _custom: true,
+                in_my_list: true,
+                user_modified: p.user_modified !== false,
+              }));
+            }
+            added++;
+          }
+          if (added > 0) {
+            console.info('[HEYS.products] setAll → overlay upsert', { source, added });
+          }
+        }
+      } catch (e) {
+        console.warn('[HEYS.products] overlay upsert from setAll failed (non-fatal):', e && e.message);
+      }
     },
     watch: (fn) => { if (HEYS.store && HEYS.store.watch) return HEYS.store.watch('heys_products', fn); return () => { }; },
 

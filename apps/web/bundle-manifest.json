@@ -5,7 +5,7 @@
     "sourceFingerprint": "c5964d0405b0",
     "fileCount": 36,
     "size": 1664941,
-    "builtAt": "2026-05-06T11:01:16.758Z"
+    "builtAt": "2026-05-06T11:40:40.617Z"
   },
   "boot-calc": {
     "file": "boot-calc.bundle.3635778fdf6c.js",
@@ -13,7 +13,7 @@
     "sourceFingerprint": "4b14895fc386",
     "fileCount": 19,
     "size": 1162562,
-    "builtAt": "2026-05-06T11:01:16.893Z"
+    "builtAt": "2026-05-06T11:40:40.760Z"
   },
   "boot-day": {
     "file": "boot-day.bundle.8d80b6cb2c09.js",
@@ -29,7 +29,7 @@
     "sourceFingerprint": "9652dfde3ffb",
     "fileCount": 52,
     "size": 1424187,
-    "builtAt": "2026-05-06T11:40:02.865Z"
+    "builtAt": "2026-05-06T11:40:41.060Z"
   },
   "boot-init": {
     "file": "boot-init.bundle.c687b8274f01.js",

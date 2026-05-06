@@ -968,26 +968,64 @@
               if (hasData) foundWithData++;
               if (inBase) alreadyInBase++;
 
-              if (itemName && !inBase && hasData) {
+              // 🛡️ Источник данных для восстановления:
+              //   1) сам item (stamp, kcal100 != null) — основной путь;
+              //   2) _stampResolutionCache (auto-recovery side cache) по pid — fallback
+              //      для item'ов без инлайна нутриентов (quick-add chain и т.п.);
+              //   3) shared catalog по name match — последний fallback.
+              let dataSource = null;
+              let recoverySource = 'orphan_stamp';
+              if (itemName && !inBase) {
+                if (hasData) {
+                  dataSource = item;
+                } else {
+                  try {
+                    const cache = HEYS.orphanProducts && HEYS.orphanProducts._stampResolutionCache;
+                    if (cache instanceof Map && pid != null) {
+                      const cached = cache.get(String(pid));
+                      if (cached && cached.kcal100 != null) {
+                        dataSource = cached;
+                        recoverySource = 'orphan_stamp_cache';
+                      }
+                    }
+                  } catch (_) { /* noop */ }
+                  if (!dataSource) {
+                    try {
+                      const sharedCache = (HEYS.cloud && typeof HEYS.cloud.getCachedSharedProducts === 'function')
+                        ? HEYS.cloud.getCachedSharedProducts() : [];
+                      if (Array.isArray(sharedCache) && sharedCache.length > 0) {
+                        const sharedMatch = sharedCache.find(p =>
+                          p && String(p.name || '').trim().toLowerCase() === itemNameLower
+                        );
+                        if (sharedMatch && sharedMatch.kcal100 != null) {
+                          dataSource = sharedMatch;
+                          recoverySource = 'orphan_shared';
+                        }
+                      }
+                    } catch (_) { /* noop */ }
+                  }
+                }
+              }
+              if (dataSource) {
                 const restoredProduct = {
                   id: pid || ('restored_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8)),
                   name: itemName,
-                  kcal100: item.kcal100,
-                  protein100: item.protein100 || 0,
-                  fat100: item.fat100 || 0,
-                  carbs100: item.carbs100 || 0,
-                  simple100: item.simple100 || 0,
-                  complex100: item.complex100 || 0,
-                  badFat100: item.badFat100 || 0,
-                  goodFat100: item.goodFat100 || 0,
-                  trans100: item.trans100 || 0,
-                  fiber100: item.fiber100 || 0,
-                  gi: item.gi || 50,
-                  harm: item.harm ?? item.harmScore ?? 0,
+                  kcal100: dataSource.kcal100,
+                  protein100: dataSource.protein100 || 0,
+                  fat100: dataSource.fat100 || 0,
+                  carbs100: dataSource.carbs100 || 0,
+                  simple100: dataSource.simple100 || 0,
+                  complex100: dataSource.complex100 || 0,
+                  badFat100: dataSource.badFat100 || 0,
+                  goodFat100: dataSource.goodFat100 || 0,
+                  trans100: dataSource.trans100 || 0,
+                  fiber100: dataSource.fiber100 || 0,
+                  gi: dataSource.gi || 50,
+                  harm: dataSource.harm ?? dataSource.harmScore ?? 0,
                   restoredAt: Date.now(),
-                  restoredFrom: 'orphan_stamp'
+                  restoredFrom: recoverySource
                 };
-                copySnapshotFields(item, restoredProduct);
+                copySnapshotFields(dataSource, restoredProduct);
                 const enriched = enrichProductMaybe(restoredProduct);
                 productsMap.set(itemNameLower, enriched);
                 if (enriched.id != null) productsById.set(String(enriched.id), enriched);

@@ -631,6 +631,34 @@
                 Overlay.writeRaw(result.rows);
                 const merged = Overlay.toMergedView(sharedById) || [];
                 const verify = Overlay.verifyMigration(flat, merged);
+                // 🛡️ Race-guard: если merged пуст при non-empty flat — это почти всегда
+                // race-condition (store-scope ещё не переключился на клиента, либо shared
+                // cache не успел инициализироваться). Откат overlay до [] делает только хуже:
+                // UI получает 0 продуктов. Оставляем 150 свежих rows, не стэмпуем success —
+                // на следующем boot migrate повторится в нормальном контексте и пройдёт.
+                if (!verify.ok && Array.isArray(merged) && merged.length === 0 && flat.length > 0) {
+                    try {
+                        window.__diag_overlay = { errors: verify.errors, totalErrors: verify.totalErrors, pre: flat, post: merged, reason: 'race-empty-merged-keeping-overlay' };
+                    } catch (_) { /* noop */ }
+                    console.warn('[HEYS.products] overlay migration verifier: merged view is empty (likely store-context race). Keeping new overlay rows, deferring success stamp — will retry on heysSyncCompleted/heys:shared-products-updated.');
+                    // НЕ откатываем, НЕ стэмпуем success — overlay остаётся с result.rows.
+                    // 🛡️ Дополнительно: подписываемся на cloud-sync завершение чтобы перезапустить
+                    // migration когда shared cache / overlay v2 наконец придут (важно для VPN/slow-net).
+                    try {
+                        if (!window.__overlayMigrationRetryArmed) {
+                            window.__overlayMigrationRetryArmed = true;
+                            const retry = () => {
+                                window.removeEventListener('heysSyncCompleted', retry);
+                                window.removeEventListener('heys:shared-products-updated', retry);
+                                window.__overlayMigrationRetryArmed = false;
+                                try { runOverlayMigrationOnce(cid); } catch (_) { /* noop */ }
+                            };
+                            window.addEventListener('heysSyncCompleted', retry, { once: true });
+                            window.addEventListener('heys:shared-products-updated', retry, { once: true });
+                        }
+                    } catch (_) { /* noop */ }
+                    return;
+                }
                 if (!verify.ok) {
                     // Roll back to previous overlay state — DO NOT clear to [].
                     // Empty overlay would cause UI to show no products when flag is on.
