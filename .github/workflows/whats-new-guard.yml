@@ -1,8 +1,6 @@
 name: What's New Guard
 
 on:
-  push:
-    branches: [main]
   pull_request:
     branches: [main]
 
