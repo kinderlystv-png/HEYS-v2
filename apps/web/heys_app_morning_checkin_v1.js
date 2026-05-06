@@ -15,8 +15,12 @@
             try { raw = localStorage.getItem('heys_profile'); } catch (_) { return null; }
             if (!raw) return null;
         }
-        if (typeof raw === 'string' && raw.startsWith('¤Z¤') && window.HEYS?.store?.decompress) {
-            try { raw = window.HEYS.store.decompress(raw.slice(3)); } catch (_) { return null; }
+        // Store.decompress сам проверяет префикс ¤Z¤ и обрабатывает оба случая
+        // (сжатую строку и обычный JSON). Передавать сюда обрезанную строку нельзя —
+        // тогда внутри decompress отвалится JSON.parse и вернётся null.
+        const decompressFn = window.HEYS?.store?.decompress;
+        if (decompressFn) {
+            try { return decompressFn(raw); } catch (_) { return null; }
         }
         try { return JSON.parse(raw); } catch (_) { return null; }
     }
@@ -129,19 +133,11 @@
                             if (HEYS.shouldShowMorningCheckin) {
                                 const shouldShow = HEYS.shouldShowMorningCheckin();
                                 if (window.HEYS?.ui?.suppressMorningCheckin) return;
-                                // Final raw guard: если scoped LS уже содержит реальный
-                                // профиль, форсим shouldShow=false независимо от того что
-                                // вернул shouldShowMorningCheckin (защита от запуска
-                                // postboot-ready event'а раньше Phase A под VPN).
-                                let safeShow = shouldShow;
-                                if (shouldShow === true) {
-                                    const cidGuard = clientIdRef.current || eventClientId || (window.HEYS && window.HEYS.currentClientId) || '';
-                                    const scoped = readProfileForceRawScopedInline(cidGuard);
-                                    if (scoped && (scoped.firstName || scoped.birthDate || scoped.weight)) {
-                                        safeShow = false;
-                                    }
-                                }
-                                setShowMorningCheckin((prev) => (prev === safeShow ? prev : safeShow));
+                                // shouldShowMorningCheckin уже использует readProfileForceRawScoped
+                                // внутри, поэтому дополнительная проверка по firstName/birthDate/weight
+                                // была не нужна и ломала ежедневный флоу для completed-профилей
+                                // (например, когда профиль полный, но утренний вес не введён).
+                                setShowMorningCheckin((prev) => (prev === shouldShow ? prev : shouldShow));
                             }
                         };
                         window.addEventListener('heys-morning-checkin-ready', onModuleReady, { once: true });

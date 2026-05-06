@@ -75,8 +75,12 @@
       try { raw = localStorage.getItem('heys_profile'); } catch (_) { return null; }
       if (!raw) return null;
     }
-    if (typeof raw === 'string' && raw.startsWith('¤Z¤') && global.HEYS?.store?.decompress) {
-      try { raw = global.HEYS.store.decompress(raw.slice(3)); } catch (_) { return null; }
+    // Store.decompress сам проверяет префикс ¤Z¤ и обрабатывает оба случая
+    // (сжатую строку и обычный JSON). Передавать сюда обрезанную строку нельзя —
+    // тогда внутри decompress отвалится JSON.parse и вернётся null.
+    const decompressFn = global.HEYS?.store?.decompress;
+    if (decompressFn) {
+      try { return decompressFn(raw); } catch (_) { return null; }
     }
     try { return JSON.parse(raw); } catch (_) { return null; }
   }
@@ -724,10 +728,15 @@
    * @param {function} onClose - Вызывается при закрытии крестиком (отложить на потом)
    */
   function MorningCheckin({ onComplete, onClose }) {
-    // 🛡️ Render-time guard: если scoped LS содержит готовый профиль
-    // (profileCompleted=true), wizard был открыт ошибочно из-за race
-    // в shouldShowMorningCheckin. Закрываем себя через onClose() сразу
-    // на mount — flash максимум 1 frame.
+    // 🛡️ Render-time guard: backstop под cold-start VPN race, когда
+    // shouldShowMorningCheckin вернул true на устаревшем (incomplete) профиле,
+    // а scoped LS уже содержит profileCompleted=true. В этом случае повторный
+    // вызов shouldShowMorningCheckin со свежими данными вернёт false, и мы
+    // закроем визард на следующем коммите React.
+    //
+    // ВАЖНО: для completed-профиля визард легитимно открывается ради дневного
+    // флоу (например, утренний вес ещё не введён). В этом случае повторный
+    // shouldShow всё равно вернёт true — не закрываем.
     if (window.React && typeof window.React.useEffect === 'function') {
       window.React.useEffect(function () {
         try {
@@ -735,10 +744,13 @@
           var helper = window.HEYS && window.HEYS.MorningCheckinUtils && window.HEYS.MorningCheckinUtils.readProfileForceRawScoped;
           if (!cid || typeof helper !== 'function') return;
           var scoped = helper(cid);
-          if (scoped && scoped.profileCompleted === true) {
-            console.warn('[MorningCheckin] 🛡️ render-time guard: profileCompleted=true в scoped LS → auto-close wizard');
-            if (typeof onClose === 'function') onClose();
-          }
+          if (!scoped || scoped.profileCompleted !== true) return;
+          var stillNeeded = typeof window.HEYS.shouldShowMorningCheckin === 'function'
+            ? window.HEYS.shouldShowMorningCheckin()
+            : false;
+          if (stillNeeded) return;
+          console.warn('[MorningCheckin] 🛡️ render-time guard: profileCompleted=true и shouldShow=false (stale-data race) → auto-close wizard');
+          if (typeof onClose === 'function') onClose();
         } catch (_) { }
         // eslint-disable-next-line react-hooks/exhaustive-deps
       }, []);
