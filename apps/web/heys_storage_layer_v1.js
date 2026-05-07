@@ -1344,9 +1344,51 @@
     });
   }
 
-  // 🔧 Экспорт compress/decompress для использования в cloud sync
+  // 🔧 Экспорт compress/decompress для использования в cloud sync.
+  //
+  // ⚠️ ВАЖНО про decompress: функция принимает ПОЛНУЮ строку, включая префикс
+  // '¤Z¤'. Если вы передадите `raw.slice(3)` (только тело), она не распознает
+  // префикс, попытается JSON.parse сжатые байты, упадёт и вернёт null. Это
+  // была причина 14 одинаковых багов по всему проекту (см. readSafe ниже —
+  // в большинстве кейсов лучше использовать его).
   Store.decompress = decompress;
   Store.compress = compress;
   Store.compressProductsWire = compressProductsWire;
+
+  /**
+   * Безопасное чтение LS-значения с уже выполненной декомпрессией.
+   *
+   * Заменяет inline-копии `readStoredValue` (~10 файлов), у каждой из которых
+   * исторически была одна и та же ошибка `decompress(value.slice(3))`.
+   *
+   * Алгоритм:
+   *   1. Store.get(key, fallback) — обычный путь (с memory cache + scoping).
+   *   2. Если результат — сырая строка с префиксом ¤Z¤ (редко, но бывает на
+   *      раннем boot или при сбое cache), пропускаем через decompress.
+   *   3. Если результат — обычная JSON-строка, парсим.
+   *   4. null/undefined → fallback.
+   *
+   * @param {string} key
+   * @param {*} fallback — возвращается, если ключ пуст или парсинг не удался
+   */
+  Store.readSafe = function readSafe(key, fallback = null) {
+    let value;
+    try {
+      value = Store.get ? Store.get(key, fallback) : null;
+    } catch (_) {
+      return fallback;
+    }
+    if (value == null) return fallback;
+    if (typeof value !== 'string') return value;
+    if (value.startsWith('¤Z¤')) {
+      try {
+        const decompressed = decompress(value);
+        return decompressed == null ? fallback : decompressed;
+      } catch (_) {
+        return fallback;
+      }
+    }
+    try { return JSON.parse(value); } catch (_) { return value; }
+  };
 
 })(window);

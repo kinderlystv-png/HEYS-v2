@@ -4391,8 +4391,11 @@
           if (!raw) continue;
           let parsed = null;
           try {
+            // Store.decompress сама обрабатывает префикс ¤Z¤. Передавать
+            // обрезанную строку нельзя — внутри JSON.parse падает и функция
+            // тихо возвращает null → день пропускается из подсчёта ачивок.
             parsed = raw.startsWith('¤Z¤') && HEYS.store?.decompress
-              ? HEYS.store.decompress(raw.slice(3))
+              ? HEYS.store.decompress(raw)
               : JSON.parse(raw);
           } catch (e) {
             continue;
@@ -4425,7 +4428,7 @@
           let parsed = null;
           try {
             parsed = raw.startsWith('¤Z¤') && HEYS.store?.decompress
-              ? HEYS.store.decompress(raw.slice(3))
+              ? HEYS.store.decompress(raw)
               : JSON.parse(raw);
           } catch (e) {
             continue;

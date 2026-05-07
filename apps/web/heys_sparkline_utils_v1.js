@@ -259,7 +259,12 @@
           this._cache.set(key, null);
           return null;
         }
-        const parsed = raw.startsWith('¤Z¤') ? JSON.parse(raw.substring(3)) : JSON.parse(raw);
+        // JSON.parse(raw.substring(3)) ломается на сжатых ¤Z¤ данных — паттерны
+        // декомпрессии не применяются. Store.decompress сама обрабатывает оба
+        // случая (сжатый и обычный JSON).
+        const parsed = window.HEYS?.store?.decompress
+          ? window.HEYS.store.decompress(raw)
+          : JSON.parse(raw);
         this._cache.set(key, parsed);
         return parsed;
       } catch (e) {

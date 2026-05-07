@@ -852,35 +852,11 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
   const measurements = new Map();
 
   const readStoredValue = (key, fallback = null) => {
-    let value;
-    if (HEYS.store?.get) {
-      value = HEYS.store.get(key, fallback);
-    } else if (HEYS.utils?.lsGet) {
-      value = HEYS.utils.lsGet(key, fallback);
-    } else {
-      try {
-        value = localStorage.getItem(key);
-      } catch (e) {
-        return fallback;
-      }
-    }
-
-    if (value == null) return fallback;
-
-    if (typeof value === 'string') {
-      if (value.startsWith('¤Z¤') && HEYS.store?.decompress) {
-        try {
-          value = HEYS.store.decompress(value.slice(3));
-        } catch (e) { }
-      }
-      try {
-        return JSON.parse(value);
-      } catch (e) {
-        return value;
-      }
-    }
-
-    return value;
+    if (HEYS.store?.readSafe) return HEYS.store.readSafe(key, fallback);
+    try {
+      const v = HEYS.utils?.lsGet?.(key, fallback);
+      return v == null ? fallback : v;
+    } catch (_) { return fallback; }
   };
 
   const writeStoredValue = (key, value) => {
@@ -5294,35 +5270,11 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
   };
 
   const readStoredValue = (key, fallback = null) => {
-    let value;
-    if (HEYS.store?.get) {
-      value = HEYS.store.get(key, fallback);
-    } else if (HEYS.utils?.lsGet) {
-      value = HEYS.utils.lsGet(key, fallback);
-    } else {
-      try {
-        value = localStorage.getItem(key);
-      } catch (e) {
-        return fallback;
-      }
-    }
-
-    if (value == null) return fallback;
-
-    if (typeof value === 'string') {
-      if (value.startsWith('¤Z¤') && HEYS.store?.decompress) {
-        try {
-          value = HEYS.store.decompress(value.slice(3));
-        } catch (e) { }
-      }
-      try {
-        return JSON.parse(value);
-      } catch (e) {
-        return value;
-      }
-    }
-
-    return value;
+    if (HEYS.store?.readSafe) return HEYS.store.readSafe(key, fallback);
+    try {
+      const v = HEYS.utils?.lsGet?.(key, fallback);
+      return v == null ? fallback : v;
+    } catch (_) { return fallback; }
   };
 
   const writeStoredValue = (key, value) => {
@@ -14205,11 +14157,29 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
         return { ...existing, ...next };
       };
 
-      // Проверяем по shared_origin_id (если уже клонировали)
-      if (sharedProduct.id) {
-        const existingByOrigin = products.find(p => p.shared_origin_id === sharedProduct.id);
+      // Проверяем по shared_origin_id (если уже клонировали).
+      // В overlay mode читаем через readRaw() — не зависит от shared cache,
+      // поэтому корректен даже когда getMergedView() ещё null при boot.
+      {
+        let existingByOrigin = null;
+        const _ovOn = HEYS.flags && typeof HEYS.flags.isEnabled === 'function'
+          && HEYS.flags.isEnabled('overlay_products_v2');
+        if (_ovOn && HEYS.OverlayStore && typeof HEYS.OverlayStore.readRaw === 'function'
+            && sharedProduct.id) {
+          const _raw = HEYS.OverlayStore.readRaw();
+          const _rawMatch = Array.isArray(_raw) && _raw.find(
+            r => r && !r._custom && String(r.shared_origin_id) === String(sharedProduct.id)
+          );
+          if (_rawMatch) {
+            // Подтягиваем merged-версию из products если доступна (для merge-логики),
+            // иначе используем raw row напрямую.
+            existingByOrigin = products.find(p => p.id === _rawMatch.id) || _rawMatch;
+          }
+        }
+        if (!existingByOrigin && sharedProduct.id) {
+          existingByOrigin = products.find(p => p.shared_origin_id === sharedProduct.id);
+        }
         if (existingByOrigin) {
-          // 🔇 v4.7.1: Лог отключён
           return mergeMissingFromShared(existingByOrigin);
         }
       }
@@ -14304,6 +14274,32 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
      * @returns {{original: number, deduplicated: number, removed: number}} Статистика
      */
     deduplicate: () => {
+      const overlayOn = HEYS.flags && HEYS.flags.isEnabled && HEYS.flags.isEnabled('overlay_products_v2');
+      if (overlayOn) {
+        // In overlay mode: dedup TypeA rows by shared_origin_id inside the overlay store.
+        // (Cannot dedup via getAll/setAll — that would inflate legacy with shared catalog entries.)
+        if (!HEYS.OverlayStore || typeof HEYS.OverlayStore.readRaw !== 'function') {
+          return { original: 0, deduplicated: 0, removed: 0 };
+        }
+        const overlayRows = HEYS.OverlayStore.readRaw();
+        if (!Array.isArray(overlayRows)) return { original: 0, deduplicated: 0, removed: 0 };
+        const seenSO = new Set();
+        const deduped = overlayRows.filter(r => {
+          if (!r) return false;
+          if (r._custom === true) return true; // TypeB: keep all
+          const k = String(r.shared_origin_id != null ? r.shared_origin_id : (r.id != null ? r.id : ''));
+          if (!k || seenSO.has(k)) return false;
+          seenSO.add(k);
+          return true;
+        });
+        const removed = overlayRows.length - deduped.length;
+        if (removed > 0) {
+          HEYS.OverlayStore.writeRaw(deduped);
+          console.warn('[HEYS.products] deduplicate: removed', removed, 'TypeA dups',
+            { before: overlayRows.length, after: deduped.length });
+        }
+        return { original: overlayRows.length, deduplicated: deduped.length, removed };
+      }
       const products = HEYS.products.getAll();
       const original = products.length;
 
@@ -17364,36 +17360,11 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
     const { log, err } = getLogger();
 
     const readStoredValue = (key, fallback = null) => {
-      let value;
-      if (HEYS.store?.get) {
-        value = HEYS.store.get(key, fallback);
-      } else if (HEYS.utils?.lsGet) {
-        value = HEYS.utils.lsGet(key, fallback);
-      } else {
-        try {
-          value = localStorage.getItem(key);
-        } catch {
-          return fallback;
-        }
-      }
-
-      if (value == null) return fallback;
-
-      if (typeof value === 'string') {
-        if (value.startsWith('¤Z¤') && HEYS.store?.decompress) {
-          try {
-            value = HEYS.store.decompress(value.slice(3));
-          } catch {
-          }
-        }
-        try {
-          return JSON.parse(value);
-        } catch {
-          return value;
-        }
-      }
-
-      return value;
+      if (HEYS.store?.readSafe) return HEYS.store.readSafe(key, fallback);
+      try {
+        const v = HEYS.utils?.lsGet?.(key, fallback);
+        return v == null ? fallback : v;
+      } catch (_) { return fallback; }
     };
 
     const toNum = (v) => {
@@ -20033,17 +20004,58 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
       }
       _productsRetryScheduled = false;
       try {
-        const scopedKey = `heys_${client_id}_products`;
-        const raw = global.localStorage && global.localStorage.getItem(scopedKey);
-        if (!raw) return;
+        // Phase ε: scoped legacy `heys_${cid}_products` is "frozen" under
+        // overlay-mode — applyForegroundHotSyncValue (~:10689) explicitly skips
+        // writing it back from cloud, and anti-shrink (~:10773) blocks
+        // cloud→local overwrite. Reading raw scoped LS here can pick up a
+        // stale, larger snapshot from a prior session and push it to cloud
+        // — contradicting "cloud copy is no longer being pushed by us".
+        // Prefer canonical merged view via HEYS.products.getAll() when ready;
+        // fall back to scoped LS only when getAll is unavailable (early boot).
         let value = null;
+        let source = 'unknown';
         try {
-          value = HEYS && HEYS.store && typeof HEYS.store.decompress === 'function'
-            ? HEYS.store.decompress(raw)
-            : JSON.parse(raw);
-        } catch (_) { return; }
+          if (HEYS && HEYS.products && typeof HEYS.products.getAll === 'function') {
+            const canonical = HEYS.products.getAll();
+            if (Array.isArray(canonical) && canonical.length > 0) {
+              value = canonical;
+              source = 'getAll';
+            }
+          }
+        } catch (_) { /* fall through to LS */ }
+        if (!Array.isArray(value) || value.length === 0) {
+          const scopedKey = `heys_${client_id}_products`;
+          const raw = global.localStorage && global.localStorage.getItem(scopedKey);
+          if (!raw) return;
+          try {
+            value = HEYS && HEYS.store && typeof HEYS.store.decompress === 'function'
+              ? HEYS.store.decompress(raw)
+              : JSON.parse(raw);
+          } catch (_) { return; }
+          source = 'ls-scoped';
+        }
         if (!Array.isArray(value) || value.length === 0) return;
-        try { logCritical(`🔁 [PRODUCTS RETRY] Re-pushing products after windows closed: ${value.length} items`); } catch (_) {}
+
+        // Anti-grow guard: when value came from raw scoped LS (early-boot
+        // fallback), compare against canonical merged view if it became
+        // available. Refuse pushing dramatically inflated payloads — those
+        // are the symptom of a poisoned scoped LS from a previous session.
+        if (source === 'ls-scoped') {
+          try {
+            if (HEYS && HEYS.products && typeof HEYS.products.getAll === 'function') {
+              const canonical = HEYS.products.getAll();
+              const canonicalLen = Array.isArray(canonical) ? canonical.length : null;
+              if (canonicalLen != null && canonicalLen > 0
+                  && value.length > canonicalLen * 1.3
+                  && value.length - canonicalLen > 30) {
+                logCritical(`⛔ [PRODUCTS RETRY] BLOCKED grow: ls=${value.length} canonical=${canonicalLen} source=ls-scoped`);
+                return;
+              }
+            }
+          } catch (_) { /* anti-grow best-effort */ }
+        }
+
+        try { logCritical(`🔁 [PRODUCTS RETRY] Re-pushing products after windows closed: ${value.length} items source=${source}`); } catch (_) {}
         cloud.saveClientKey(client_id, 'heys_products', value);
       } catch (_) { /* best-effort */ }
     };
@@ -23158,6 +23170,48 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
             }
           }
         } catch (_) { /* noop */ }
+        // ── Overlay self-heal guard ──────────────────────────────────────────────
+        // Blocks ALL paths (YANDEX RESTORE, HOT-sync, bootstrapClientSync paginated)
+        // from overwriting a freshly self-healed overlay with stale/dirty cloud data.
+        // Marker 'heys_overlay_self_healed_at' = '<healedCount>:<timestamp>' is
+        // written by migration overlayBigger branch after TypeA dedup. TTL: 5 min.
+        try {
+          const _kStr = String(k || '');
+          if (_kStr.endsWith('_products_overlay_v2') || _kStr === 'heys_products_overlay_v2') {
+            const _rawMarker = typeof global.localStorage.getItem === 'function'
+              ? global.localStorage.getItem('heys_overlay_self_healed_at') : null;
+            if (_rawMarker) {
+              const _mParts = _rawMarker.split(':');
+              const _healedCount = parseInt(_mParts[0], 10);
+              const _healedAt = parseInt(_mParts[1], 10);
+              if (!isNaN(_healedCount) && _healedCount > 0 && !isNaN(_healedAt)
+                  && (Date.now() - _healedAt) < 300000 /* 5 min */) {
+                let _incomingCount = 0;
+                try {
+                  let _arr = null;
+                  if (typeof v === 'string') {
+                    if (v.startsWith('¤Z¤') && global.HEYS && global.HEYS.store
+                        && typeof global.HEYS.store.decompress === 'function') {
+                      _arr = global.HEYS.store.decompress(v);
+                    } else {
+                      _arr = JSON.parse(v);
+                    }
+                  } else if (Array.isArray(v)) {
+                    _arr = v;
+                  }
+                  if (Array.isArray(_arr)) _incomingCount = _arr.length;
+                } catch (_e2) { /* noop */ }
+                if (_incomingCount > _healedCount) {
+                  if (typeof logCritical === 'function') {
+                    logCritical(`⛔ [OVERLAY GUARD] Blocked dirty restore: incoming=${_incomingCount} > healed=${_healedCount}, key=…${_kStr.slice(-36)}`);
+                  }
+                  return; // Silently drop the write — local healed state wins
+                }
+              }
+            }
+          }
+        } catch (_e) { /* noop — never crash setItem */ }
+        // ────────────────────────────────────────────────────────────────────────
         // (verbose ls.setItem logging removed for prod; HOT-sync BLOCK + setAll BLOCKED still warn)
         // Используем безопасную запись с обработкой QuotaExceeded
         if (!safeSetItem(k, v)) {
@@ -24747,12 +24801,16 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
       muteMirror = false;
       scheduleCloudGarbageCleanup(clientId, _cloudGarbage, 'yandex-sync');
 
-      // 🧹 Если профиль уже заполнен — очищаем флаг регистрации
+      // 🧹 Если профиль уже заполнен — очищаем флаг регистрации.
+      // Голый JSON.parse падает на сжатых данных (Store.set добавляет префикс ¤Z¤),
+      // поэтому используем decompress: он сам обрабатывает оба случая.
       try {
         const profileKey = `heys_${clientId}_profile`;
         const rawProfile = ls.getItem(profileKey);
         if (rawProfile) {
-          const parsedProfile = JSON.parse(rawProfile);
+          const parsedProfile = global.HEYS?.store?.decompress
+            ? global.HEYS.store.decompress(rawProfile)
+            : JSON.parse(rawProfile);
           if (parsedProfile?.profileCompleted === true) {
             localStorage.removeItem('heys_registration_in_progress');
           }
@@ -26769,6 +26827,22 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
               if (key.includes('_products_overlay_v2') && !key.includes('_products_pre_overlay_')) {
                 try {
                   if (Array.isArray(row.v)) {
+                    // Skip pull if overlay was recently self-healed to a smaller count.
+                    // Prevents dirty cloud data from overwriting the healed LS value while
+                    // the cloud upload is still in flight (upload drains async, may take a few boots).
+                    try {
+                      const _healMarker = global.localStorage.getItem('heys_overlay_self_healed_at');
+                      if (_healMarker) {
+                        const _parts = _healMarker.split(':');
+                        const _healedCount = parseInt(_parts[0], 10);
+                        const _healedAt = parseInt(_parts[1], 10);
+                        const _healFresh = (Date.now() - _healedAt) < 300000; // 5 min
+                        if (_healFresh && _healedCount > 0 && _healedCount < row.v.length) {
+                          logCritical(`⏭️ [OVERLAY-V2 PULL] Skipped: local self-healed to ${_healedCount}, cloud=${row.v.length} (stale)`);
+                          return;
+                        }
+                      }
+                    } catch (_) { /* noop */ }
                     ls.setItem(key, JSON.stringify(row.v));
                     logCritical(`✅ [OVERLAY-V2 PULL] Saved ${row.v.length} rows to LS: ${key.slice(-50)}`);
                   }
@@ -27088,11 +27162,17 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
                   if (global.HEYS?.store?.get) {
                     productsForMigration = global.HEYS.store.get('heys_products', []);
                   }
-                  // Fallback: читаем из localStorage по scoped key
+                  // Fallback: читаем из localStorage по scoped key.
+                  // Используем decompress — голый JSON.parse молча падает на
+                  // сжатых ¤Z¤ данных и миграция нутриентов пропускается.
                   if (!productsForMigration || productsForMigration.length === 0) {
                     const scopedProductsKey = key.replace(/dayv2_.*/, 'products');
                     const rawProducts = ls.getItem(scopedProductsKey);
-                    if (rawProducts) productsForMigration = JSON.parse(rawProducts);
+                    if (rawProducts) {
+                      productsForMigration = global.HEYS?.store?.decompress
+                        ? global.HEYS.store.decompress(rawProducts)
+                        : JSON.parse(rawProducts);
+                    }
                   }
                 } catch (e) { productsForMigration = []; }
 
@@ -35213,10 +35293,52 @@ NOVA: 1-4
     });
   }
 
-  // 🔧 Экспорт compress/decompress для использования в cloud sync
+  // 🔧 Экспорт compress/decompress для использования в cloud sync.
+  //
+  // ⚠️ ВАЖНО про decompress: функция принимает ПОЛНУЮ строку, включая префикс
+  // '¤Z¤'. Если вы передадите `raw.slice(3)` (только тело), она не распознает
+  // префикс, попытается JSON.parse сжатые байты, упадёт и вернёт null. Это
+  // была причина 14 одинаковых багов по всему проекту (см. readSafe ниже —
+  // в большинстве кейсов лучше использовать его).
   Store.decompress = decompress;
   Store.compress = compress;
   Store.compressProductsWire = compressProductsWire;
+
+  /**
+   * Безопасное чтение LS-значения с уже выполненной декомпрессией.
+   *
+   * Заменяет inline-копии `readStoredValue` (~10 файлов), у каждой из которых
+   * исторически была одна и та же ошибка `decompress(value.slice(3))`.
+   *
+   * Алгоритм:
+   *   1. Store.get(key, fallback) — обычный путь (с memory cache + scoping).
+   *   2. Если результат — сырая строка с префиксом ¤Z¤ (редко, но бывает на
+   *      раннем boot или при сбое cache), пропускаем через decompress.
+   *   3. Если результат — обычная JSON-строка, парсим.
+   *   4. null/undefined → fallback.
+   *
+   * @param {string} key
+   * @param {*} fallback — возвращается, если ключ пуст или парсинг не удался
+   */
+  Store.readSafe = function readSafe(key, fallback = null) {
+    let value;
+    try {
+      value = Store.get ? Store.get(key, fallback) : null;
+    } catch (_) {
+      return fallback;
+    }
+    if (value == null) return fallback;
+    if (typeof value !== 'string') return value;
+    if (value.startsWith('¤Z¤')) {
+      try {
+        const decompressed = decompress(value);
+        return decompressed == null ? fallback : decompressed;
+      } catch (_) {
+        return fallback;
+      }
+    }
+    try { return JSON.parse(value); } catch (_) { return value; }
+  };
 
 })(window);
 
@@ -36830,7 +36952,14 @@ NOVA: 1-4
   function upsertRow(row) {
     if (!row || row.id == null) return false;
     const rows = readRaw();
-    const idx = rows.findIndex(r => r && String(r.id) === String(row.id));
+    const idx = rows.findIndex(r => {
+      if (!r) return false;
+      if (String(r.id) === String(row.id)) return true;
+      // TypeA dedup: same shared_origin_id = same product, merge in-place
+      if (!row._custom && row.shared_origin_id && r.shared_origin_id)
+        return String(r.shared_origin_id) === String(row.shared_origin_id);
+      return false;
+    });
     if (idx >= 0) rows[idx] = Object.assign({}, rows[idx], row);
     else rows.push(row);
     return writeRaw(rows);

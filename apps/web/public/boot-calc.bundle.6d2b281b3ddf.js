@@ -2240,7 +2240,12 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
           this._cache.set(key, null);
           return null;
         }
-        const parsed = raw.startsWith('¤Z¤') ? JSON.parse(raw.substring(3)) : JSON.parse(raw);
+        // JSON.parse(raw.substring(3)) ломается на сжатых ¤Z¤ данных — паттерны
+        // декомпрессии не применяются. Store.decompress сама обрабатывает оба
+        // случая (сжатый и обычный JSON).
+        const parsed = window.HEYS?.store?.decompress
+          ? window.HEYS.store.decompress(raw)
+          : JSON.parse(raw);
         this._cache.set(key, parsed);
         return parsed;
       } catch (e) {
@@ -8845,6 +8850,11 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
      * @param {Object} options - Опции
      * @param {boolean} options.verbose - Подробный лог (default: false)
      * @param {boolean} options.tryShared - Пытаться восстановить из shared_products (default: true)
+     * @param {string} [options.clientId] - Если задан, dayv2-сканирование ограничено
+     *   ключами `heys_${clientId}_dayv2_*` (+ legacy `heys_dayv2_*`). По умолчанию
+     *   берётся из cloud.getCurrentClientId() / utils.getCurrentClientId().
+     *   В кураторской сессии в LS могут лежать dayv2 нескольких клиентов —
+     *   без фильтра recovery собирает stamps из ЧУЖИХ дней.
      * @returns {Promise<{recovered: number, fromStamp: number, fromShared: number, missing: string[]}>}
      */
     async autoRecoverOnLoad(options = {}) {
@@ -8852,6 +8862,10 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
       // ~100-500ms window between initial render and recovery setAll.
       try { HEYS.orphanProducts._recoveryInProgress = true; } catch (_) { /* noop */ }
       const { verbose = false, tryShared = true } = options;
+      const scopeClientId = options.clientId
+        || (global.HEYS?.cloud?.getCurrentClientId?.())
+        || (global.HEYS?.utils?.getCurrentClientId?.())
+        || null;
       const U = HEYS.utils || {};
       const lsGet = U.lsGet || ((k, d) => {
         try { return JSON.parse(localStorage.getItem(k)) || d; } catch { return d; }
@@ -8889,7 +8903,23 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
       // the scheduler's onmessage, causing an 8+ second 'message' handler violation.
       await new Promise(function(r) { setTimeout(r, 0); });
 
-      const keys = Object.keys(localStorage).filter(k => k.includes('_dayv2_'));
+      // Scope dayv2-keys to current client. Without this, в кураторской сессии
+      // recovery видит `heys_${otherClient}_dayv2_*` и нагребает stamps из чужих
+      // дней → раздувает heys_products чужими продуктами. Legacy `heys_dayv2_*`
+      // (без префикса clientId) трактуем как принадлежащие активному клиенту —
+      // безопасно для PIN/одиночных сессий и совместимо с pre-scope storage.
+      const scopedDayv2Prefix = scopeClientId ? `heys_${scopeClientId}_dayv2_` : null;
+      const allDayv2Keys = Object.keys(localStorage).filter(k => k.includes('_dayv2_'));
+      const keys = scopedDayv2Prefix
+        ? allDayv2Keys.filter(k => k.startsWith(scopedDayv2Prefix) || k.startsWith('heys_dayv2_'))
+        : allDayv2Keys;
+      const _scannedScopedCount = scopedDayv2Prefix
+        ? keys.filter(k => k.startsWith(scopedDayv2Prefix)).length
+        : 0;
+      const _scannedLegacyCount = keys.filter(k => k.startsWith('heys_dayv2_')).length;
+      const _skippedForeignCount = scopedDayv2Prefix
+        ? Math.max(0, allDayv2Keys.length - keys.length)
+        : 0;
       const missingProducts = new Map(); // product_id or name => { item, dateStr, hasStamp }
 
       for (let _ki = 0; _ki < keys.length; _ki++) {
@@ -9096,6 +9126,13 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
             sharedRecovered: sharedRec.length,
             stillMissing: stillMissing.length,
             skippedDeleted,
+            scannedKeys: {
+              total: keys.length,
+              scoped: _scannedScopedCount,
+              legacy: _scannedLegacyCount,
+              skippedForeign: _skippedForeignCount,
+              clientId: scopeClientId ? String(scopeClientId).slice(0, 8) : '(none)',
+            },
             // Always include first-3 names of each bucket — quickly diagnose "что именно".
             stampNames: stampRec.slice(0, 8).map(p => p.name),
             sharedNames: sharedRec.slice(0, 8).map(p => p.name),

@@ -40,26 +40,13 @@
             tokenRef.current = token;
 
             var readStoredValue = function (key, fallback) {
-                try {
-                    var value;
-                    if (window.HEYS && window.HEYS.store && window.HEYS.store.get) {
-                        value = window.HEYS.store.get(key, fallback);
-                    } else if (U && U.lsGet) {
-                        value = U.lsGet(key, fallback);
-                    } else {
-                        value = localStorage.getItem(key);
-                    }
-                    if (value == null) return fallback;
-                    if (typeof value === 'string') {
-                        if (value.startsWith('¤Z¤') && window.HEYS && window.HEYS.store && window.HEYS.store.decompress) {
-                            try { value = window.HEYS.store.decompress(value.slice(3)); } catch (e) { }
-                        }
-                        try { return JSON.parse(value); } catch (e) { return value; }
-                    }
-                    return value;
-                } catch (e) {
-                    return fallback;
+                if (window.HEYS && window.HEYS.store && window.HEYS.store.readSafe) {
+                    return window.HEYS.store.readSafe(key, fallback);
                 }
+                try {
+                    var v = U && U.lsGet ? U.lsGet(key, fallback) : fallback;
+                    return v == null ? fallback : v;
+                } catch (e) { return fallback; }
             };
 
             // Early-out for clearly not-ready states — no timer needed

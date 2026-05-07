@@ -21325,7 +21325,10 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       const rawLegacy = localStorage.getItem('heys_profile');
 
       if (currentClientId && scopedKey && !rawScoped && rawLegacy) {
-        const legacyProfile = JSON.parse(rawLegacy);
+        // Store.decompress сам обрабатывает префикс ¤Z¤ и обычный JSON.
+        // Голый JSON.parse падает на сжатых данных — миграция тогда не срабатывает.
+        const decompressFn = window.HEYS?.store?.decompress;
+        const legacyProfile = decompressFn ? decompressFn(rawLegacy) : JSON.parse(rawLegacy);
         const hasLegacyData = legacyProfile && (
           legacyProfile.profileCompleted === true ||
           legacyProfile.firstName ||
@@ -21364,11 +21367,15 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
         // 🔧 FIX: Если scoped профиль существует и содержит данные — сбросить флаг регистрации
         if (rawScoped) {
+          // Store.decompress сам обрабатывает префикс ¤Z¤ и обычный JSON. Голый
+          // JSON.parse на сжатой строке падает в catch и оставляет scopedProfile
+          // undefined → registration-флаг застревает навсегда.
+          const decompressFn = window.HEYS?.store?.decompress;
           let scopedProfile;
           try {
-            scopedProfile = JSON.parse(rawScoped);
+            scopedProfile = decompressFn ? decompressFn(rawScoped) : JSON.parse(rawScoped);
           } catch (e) {
-            // JSON parse error — продолжаем с null
+            // parse error — продолжаем с null
           }
           const hasRealData = scopedProfile && (
             scopedProfile.profileCompleted === true ||
@@ -21430,35 +21437,11 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
   const { lsGet, lsSet } = HEYS.StepModal?.utils || {};
 
   const readStoredValue = (key, fallback = null) => {
-    let value;
-    if (HEYS.store?.get) {
-      value = HEYS.store.get(key, fallback);
-    } else if (lsGet) {
-      value = lsGet(key, fallback);
-    } else if (HEYS.utils?.lsGet) {
-      value = HEYS.utils.lsGet(key, fallback);
-    } else {
-      try {
-        value = localStorage.getItem(key);
-      } catch { return fallback; }
-    }
-
-    if (value == null) return fallback;
-
-    if (typeof value === 'string') {
-      if (value.startsWith('¤Z¤') && HEYS.store?.decompress) {
-        try {
-          value = HEYS.store.decompress(value.slice(3));
-        } catch { }
-      }
-      try {
-        return JSON.parse(value);
-      } catch {
-        return value;
-      }
-    }
-
-    return value;
+    if (HEYS.store?.readSafe) return HEYS.store.readSafe(key, fallback);
+    try {
+      const v = (lsGet || HEYS.utils?.lsGet)?.(key, fallback);
+      return v == null ? fallback : v;
+    } catch (_) { return fallback; }
   };
 
   // Fallback если StepModal ещё не загружен
@@ -23833,38 +23816,12 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
   }
 
   function readStoredValue(key, fallback = null) {
-    let value;
-
-    if (HEYS.store?.get) {
-      value = HEYS.store.get(key, fallback);
-    } else if (HEYS.utils?.lsGet) {
-      value = HEYS.utils.lsGet(key, fallback);
-    } else {
-      try {
-        value = localStorage.getItem(key);
-      } catch {
-        return fallback;
-      }
-    }
-
-    if (value == null) return fallback;
-
-    if (typeof value === 'string') {
-      if (value.startsWith('¤Z¤') && HEYS.store?.decompress) {
-        try {
-          value = HEYS.store.decompress(value.slice(3));
-        } catch (_) {
-          // Ignore compressed payload parse errors
-        }
-      }
-      try {
-        return JSON.parse(value);
-      } catch (_) {
-        return value;
-      }
-    }
-
-    return value;
+    if (HEYS.store?.readSafe) return HEYS.store.readSafe(key, fallback);
+    // Минимальный fallback на случай вызова до загрузки storage layer.
+    try {
+      const v = HEYS.utils?.lsGet?.(key, fallback);
+      return v == null ? fallback : v;
+    } catch (_) { return fallback; }
   }
 
   // 🔧 Force-raw профиль из scoped LS, минуя HEYS.store memory cache.

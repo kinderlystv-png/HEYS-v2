@@ -14803,6 +14803,19 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                 if (recoveryScheduled || cancelled) return;
                 if (!window.HEYS.orphanProducts?.autoRecoverOnLoad) return;
 
+                // 🛡️ Curator gate: в кураторской сессии в LS лежат dayv2 нескольких
+                // клиентов одновременно (см. _otherCount в storage_supabase). Даже с
+                // scoping-fix в autoRecoverOnLoad самый безопасный режим — не запускать
+                // автоматический recovery под куратором, чтобы не было путей косвенного
+                // отравления legacy heys_products. Manual "restore-orphans" в UI
+                // остаётся доступной для явного запуска. Overlay migration всё ещё
+                // нужно триггернуть — у неё своя логика и idempotency-гейт.
+                if (window.HEYS?.bootstrap?.isCuratorSession?.() === true) {
+                    try { runOverlayMigrationOnce(clientId); } catch (_) { /* noop */ }
+                    try { console.info('[HEYS.products] orphan-recovery skipped: curator session'); } catch (_) {}
+                    return;
+                }
+
                 if (clientId && recoveryRunCache.has(clientId)) {
                     // Recovery already ran this session — but migration may still need to fire
                     // (e.g., recovery's first run failed, OR migration trigger missed).
@@ -14874,7 +14887,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                 // unless aborted (then aborted gate wins).
                 // CURRENT_MIGRATION_VERSION bumps when migrate() logic changes (e.g. fingerprint
                 // fallback added). On version mismatch we re-run regardless of TTL.
-                const CURRENT_MIGRATION_VERSION = 2; // v2: fingerprint/name fallback to shared
+                const CURRENT_MIGRATION_VERSION = 4; // v4: self-heal dedup TypeA overlay rows when overlay > legacy
                 const ABORT_KEY = 'heys_overlay_migration_aborted';
                 const TS_KEY = 'heys_overlay_migrated_at';
                 const STATUS_KEY = 'heys_overlay_migration_status';
@@ -14934,17 +14947,72 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                 // This protects against an incognito-style flow where cloud restore lands BOTH
                 // legacy (older, smaller) and overlay v2 (newer, full) — migration must not
                 // clobber overlay with stale legacy.
+                //
+                // EXCEPTION (top-up migration): if legacy is dramatically larger than overlay
+                // (e.g. cloud overlay row was truncated / partial, but legacy contains the
+                // full set), we MUST repopulate overlay from legacy to keep getAll() in sync
+                // with the user's actual cloud base. Without this, UI shows e.g. 11 products
+                // when cloud has 150. Existing custom rows are preserved further below right
+                // before writeRaw — anything not present in migrate's result is appended back.
+                let _topUp = false;
+                let _forceRebuild = false;
                 try {
                     const existingOverlay = Overlay.readRaw() || [];
                     const existingCustom = existingOverlay.filter(r => r && r._custom).length;
                     const overlayBigger = existingOverlay.length > flat.length;
-                    if (existingCustom > 0 || overlayBigger) {
-                        console.info('[HEYS.products] migration skipped: existing overlay larger or has custom rows', {
+                    const legacyMuchLarger =
+                        flat.length > existingOverlay.length * 1.5
+                        && (flat.length - existingOverlay.length) > 20;
+                    // Defensive: если overlay значительно ПРЕВОСХОДИТ legacy (>2×), это
+                    // практически всегда «отравление» — orphan-recovery в старых релизах
+                    // подкачивала stamps как Type B custom rows через safeSetProducts →
+                    // interceptSetItem → ID-merge rescue, и overlay накапливался без потолка.
+                    // Cloud's legacy heys_products остаётся authoritative (150) — пере-собираем
+                    // НАЧИСТО (без preserve safety net, иначе тащим назад 200+ отравленных custom).
+                    const overlayMuchBigger = existingOverlay.length > flat.length * 2;
+                    if (overlayMuchBigger) {
+                        _topUp = true;
+                        _forceRebuild = true;
+                        console.warn('[HEYS.products] migration FORCE-REBUILD: overlay much larger than legacy — likely poisoned, rebuilding from legacy', {
                             existingLen: existingOverlay.length,
                             existingCustom,
                             legacyLen: flat.length,
                         });
-                        // Stamp success markers so we don't retry every reload.
+                    } else if (overlayBigger) {
+                        // Self-heal: orphan-recovery in old releases could accumulate
+                        // hundreds of duplicate TypeA rows (same shared_origin_id repeated
+                        // across boots). Dedup TypeA by shared_origin_id in place so the
+                        // clean version is written to cloud on this boot's HOT-sync upload.
+                        try {
+                            const seenSO = new Set();
+                            const healedOverlay = existingOverlay.filter(r => {
+                                if (r?._custom === true) return true;
+                                const k = String(r?.shared_origin_id ?? r?.id ?? '');
+                                if (!k || seenSO.has(k)) return false;
+                                seenSO.add(k);
+                                return true;
+                            });
+                            if (healedOverlay.length < existingOverlay.length) {
+                                console.warn('[HEYS.products] migration self-heal: deduped overlay TypeA rows', {
+                                    before: existingOverlay.length,
+                                    after: healedOverlay.length,
+                                    existingCustom,
+                                    legacyLen: flat.length,
+                                });
+                                Overlay.writeRaw(healedOverlay);
+                                // Mark LS so OVERLAY-V2 PULL skips restoring dirty cloud data
+                                // while the upload is still in flight (upload may take a few boots).
+                                try { localStorage.setItem('heys_overlay_self_healed_at', healedOverlay.length + ':' + Date.now()); } catch (_) { /* noop */ }
+                                // Queue cloud upload (writeRaw bypasses interceptSetItem).
+                                try { cloud.saveClientKey(cid, 'heys_products_overlay_v2', healedOverlay); } catch (_) { /* noop */ }
+                            } else {
+                                console.info('[HEYS.products] migration skipped: overlay larger than legacy', {
+                                    existingLen: existingOverlay.length,
+                                    existingCustom,
+                                    legacyLen: flat.length,
+                                });
+                            }
+                        } catch (_) { /* noop */ }
                         try {
                             localStorage.setItem(TS_KEY, String(Date.now()));
                             localStorage.setItem(STATUS_KEY, 'success');
@@ -14952,6 +15020,28 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                             localStorage.removeItem(ABORT_KEY);
                         } catch (_) { /* noop */ }
                         return;
+                    }
+                    if (!_topUp && existingCustom > 0 && !legacyMuchLarger) {
+                        console.info('[HEYS.products] migration skipped: existing overlay has custom rows (no top-up needed)', {
+                            existingLen: existingOverlay.length,
+                            existingCustom,
+                            legacyLen: flat.length,
+                        });
+                        try {
+                            localStorage.setItem(TS_KEY, String(Date.now()));
+                            localStorage.setItem(STATUS_KEY, 'success');
+                            localStorage.setItem(VERSION_KEY, String(CURRENT_MIGRATION_VERSION));
+                            localStorage.removeItem(ABORT_KEY);
+                        } catch (_) { /* noop */ }
+                        return;
+                    }
+                    if (existingCustom > 0 && legacyMuchLarger) {
+                        _topUp = true;
+                        console.info('[HEYS.products] migration TOP-UP: legacy >> overlay, repopulating from legacy', {
+                            existingLen: existingOverlay.length,
+                            existingCustom,
+                            legacyLen: flat.length,
+                        });
                     }
                 } catch (_) { /* noop */ }
 
@@ -15015,7 +15105,24 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                 // Verifier: id-set parity + nutrient field parity.
                 // Capture previous overlay state BEFORE writing new rows — for safe rollback.
                 const previousOverlayRows = Overlay.readRaw();
-                Overlay.writeRaw(result.rows);
+
+                // Top-up safety net: preserve any pre-existing _custom rows whose id is
+                // missing from migrate's output. In normal migrations legacy already
+                // contains every product (custom rows roundtrip via setAll), so this is
+                // a no-op. In the top-up path (overlay was partial), it covers the edge
+                // case where a custom row exists only in overlay and not in legacy yet.
+                let rowsToWrite = result.rows;
+                if (_topUp && !_forceRebuild && Array.isArray(previousOverlayRows) && previousOverlayRows.length > 0) {
+                    const newIds = new Set(result.rows.map(r => String(r?.id || '')));
+                    const preservedCustom = previousOverlayRows.filter(r =>
+                        r && r._custom === true && r.id != null && !newIds.has(String(r.id))
+                    );
+                    if (preservedCustom.length > 0) {
+                        rowsToWrite = result.rows.concat(preservedCustom);
+                        console.info('[HEYS.products] migration TOP-UP: preserved', preservedCustom.length, 'pre-existing custom row(s) absent from legacy');
+                    }
+                }
+                Overlay.writeRaw(rowsToWrite);
                 const merged = Overlay.toMergedView(sharedById) || [];
                 const verify = Overlay.verifyMigration(flat, merged);
                 // 🛡️ Race-guard: если merged пуст при non-empty flat — это почти всегда
@@ -27738,26 +27845,13 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
             tokenRef.current = token;
 
             var readStoredValue = function (key, fallback) {
-                try {
-                    var value;
-                    if (window.HEYS && window.HEYS.store && window.HEYS.store.get) {
-                        value = window.HEYS.store.get(key, fallback);
-                    } else if (U && U.lsGet) {
-                        value = U.lsGet(key, fallback);
-                    } else {
-                        value = localStorage.getItem(key);
-                    }
-                    if (value == null) return fallback;
-                    if (typeof value === 'string') {
-                        if (value.startsWith('¤Z¤') && window.HEYS && window.HEYS.store && window.HEYS.store.decompress) {
-                            try { value = window.HEYS.store.decompress(value.slice(3)); } catch (e) { }
-                        }
-                        try { return JSON.parse(value); } catch (e) { return value; }
-                    }
-                    return value;
-                } catch (e) {
-                    return fallback;
+                if (window.HEYS && window.HEYS.store && window.HEYS.store.readSafe) {
+                    return window.HEYS.store.readSafe(key, fallback);
                 }
+                try {
+                    var v = U && U.lsGet ? U.lsGet(key, fallback) : fallback;
+                    return v == null ? fallback : v;
+                } catch (e) { return fallback; }
             };
 
             // Early-out for clearly not-ready states — no timer needed
@@ -27870,35 +27964,11 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
     HEYS.AppDerivedState = HEYS.AppDerivedState || {};
 
     const readStoredValue = (key, fallback = null) => {
-        let value;
-        if (HEYS.store?.get) {
-            value = HEYS.store.get(key, fallback);
-        } else if (HEYS.utils?.lsGet) {
-            value = HEYS.utils.lsGet(key, fallback);
-        } else {
-            try {
-                value = localStorage.getItem(key);
-            } catch (e) {
-                return fallback;
-            }
-        }
-
-        if (value == null) return fallback;
-
-        if (typeof value === 'string') {
-            if (value.startsWith('¤Z¤') && HEYS.store?.decompress) {
-                try {
-                    value = HEYS.store.decompress(value.slice(3));
-                } catch (e) { }
-            }
-            try {
-                return JSON.parse(value);
-            } catch (e) {
-                return value;
-            }
-        }
-
-        return value;
+        if (HEYS.store?.readSafe) return HEYS.store.readSafe(key, fallback);
+        try {
+            const v = HEYS.utils?.lsGet?.(key, fallback);
+            return v == null ? fallback : v;
+        } catch (_) { return fallback; }
     };
 
     HEYS.AppDerivedState.useAppDerivedState = function ({
@@ -28786,35 +28856,11 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
             const cloud = HEYS.cloud || {};
 
             const readStoredValue = (key, fallback = null) => {
-                let value;
-                if (HEYS.store?.get) {
-                    value = HEYS.store.get(key, fallback);
-                } else if (HEYS.utils?.lsGet) {
-                    value = HEYS.utils.lsGet(key, fallback);
-                } else {
-                    try {
-                        value = localStorage.getItem(key);
-                    } catch (e) {
-                        return fallback;
-                    }
-                }
-
-                if (value == null) return fallback;
-
-                if (typeof value === 'string') {
-                    if (value.startsWith('¤Z¤') && HEYS.store?.decompress) {
-                        try {
-                            value = HEYS.store.decompress(value.slice(3));
-                        } catch (e) { }
-                    }
-                    try {
-                        return JSON.parse(value);
-                    } catch (e) {
-                        return value;
-                    }
-                }
-
-                return value;
+                if (HEYS.store?.readSafe) return HEYS.store.readSafe(key, fallback);
+                try {
+                    const v = HEYS.utils?.lsGet?.(key, fallback);
+                    return v == null ? fallback : v;
+                } catch (_) { return fallback; }
             };
 
             const fallbackUseAppCoreState = ({ React: HookReact, AppHooks: HookAppHooks, cloud: hookCloud, U: hookU }) => {

@@ -1621,7 +1621,10 @@
       const rawLegacy = localStorage.getItem('heys_profile');
 
       if (currentClientId && scopedKey && !rawScoped && rawLegacy) {
-        const legacyProfile = JSON.parse(rawLegacy);
+        // Store.decompress сам обрабатывает префикс ¤Z¤ и обычный JSON.
+        // Голый JSON.parse падает на сжатых данных — миграция тогда не срабатывает.
+        const decompressFn = window.HEYS?.store?.decompress;
+        const legacyProfile = decompressFn ? decompressFn(rawLegacy) : JSON.parse(rawLegacy);
         const hasLegacyData = legacyProfile && (
           legacyProfile.profileCompleted === true ||
           legacyProfile.firstName ||
@@ -1660,11 +1663,15 @@
 
         // 🔧 FIX: Если scoped профиль существует и содержит данные — сбросить флаг регистрации
         if (rawScoped) {
+          // Store.decompress сам обрабатывает префикс ¤Z¤ и обычный JSON. Голый
+          // JSON.parse на сжатой строке падает в catch и оставляет scopedProfile
+          // undefined → registration-флаг застревает навсегда.
+          const decompressFn = window.HEYS?.store?.decompress;
           let scopedProfile;
           try {
-            scopedProfile = JSON.parse(rawScoped);
+            scopedProfile = decompressFn ? decompressFn(rawScoped) : JSON.parse(rawScoped);
           } catch (e) {
-            // JSON parse error — продолжаем с null
+            // parse error — продолжаем с null
           }
           const hasRealData = scopedProfile && (
             scopedProfile.profileCompleted === true ||

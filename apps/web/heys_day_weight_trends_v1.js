@@ -42,7 +42,11 @@
           try {
             const raw = localStorage.getItem(scopedKey);
             if (raw) {
-              dayData = raw.startsWith('¤Z¤') ? JSON.parse(raw.substring(3)) : JSON.parse(raw);
+              // JSON.parse(raw.substring(3)) ломается на сжатых ¤Z¤ данных —
+              // паттерны декомпрессии не применяются. Store.decompress сама
+              // обрабатывает оба случая (сжатый и обычный JSON).
+              const Store = window.HEYS?.store;
+              dayData = Store?.decompress ? Store.decompress(raw) : JSON.parse(raw);
             }
           } catch (e) { }
 
@@ -153,7 +157,8 @@
           try {
             const raw = localStorage.getItem(scopedKey);
             if (!raw) return null;
-            const dayData = raw.startsWith('¤Z¤') ? JSON.parse(raw.substring(3)) : JSON.parse(raw);
+            const Store = window.HEYS?.store;
+            const dayData = Store?.decompress ? Store.decompress(raw) : JSON.parse(raw);
             if (dayData?.weightMorning > 0) {
               const cycleDayValue = dayData.cycleDay || null;
               const retentionInfo = H.Cycle?.getWaterRetentionInfo?.(cycleDayValue) || { hasRetention: false };
@@ -315,7 +320,9 @@
           try {
             const raw = localStorage.getItem(scopedKey);
             if (!raw) return def;
-            return raw.startsWith('¤Z¤') ? JSON.parse(raw.substring(3)) : JSON.parse(raw);
+            const Store = window.HEYS?.store;
+            const parsed = Store?.decompress ? Store.decompress(raw) : JSON.parse(raw);
+            return parsed == null ? def : parsed;
           } catch (e) { return def; }
         };
 

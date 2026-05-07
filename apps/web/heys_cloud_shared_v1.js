@@ -21,36 +21,11 @@
     const { log, err } = getLogger();
 
     const readStoredValue = (key, fallback = null) => {
-      let value;
-      if (HEYS.store?.get) {
-        value = HEYS.store.get(key, fallback);
-      } else if (HEYS.utils?.lsGet) {
-        value = HEYS.utils.lsGet(key, fallback);
-      } else {
-        try {
-          value = localStorage.getItem(key);
-        } catch {
-          return fallback;
-        }
-      }
-
-      if (value == null) return fallback;
-
-      if (typeof value === 'string') {
-        if (value.startsWith('¤Z¤') && HEYS.store?.decompress) {
-          try {
-            value = HEYS.store.decompress(value.slice(3));
-          } catch {
-          }
-        }
-        try {
-          return JSON.parse(value);
-        } catch {
-          return value;
-        }
-      }
-
-      return value;
+      if (HEYS.store?.readSafe) return HEYS.store.readSafe(key, fallback);
+      try {
+        const v = HEYS.utils?.lsGet?.(key, fallback);
+        return v == null ? fallback : v;
+      } catch (_) { return fallback; }
     };
 
     const toNum = (v) => {
