@@ -270,7 +270,14 @@
   function upsertRow(row) {
     if (!row || row.id == null) return false;
     const rows = readRaw();
-    const idx = rows.findIndex(r => r && String(r.id) === String(row.id));
+    const idx = rows.findIndex(r => {
+      if (!r) return false;
+      if (String(r.id) === String(row.id)) return true;
+      // TypeA dedup: same shared_origin_id = same product, merge in-place
+      if (!row._custom && row.shared_origin_id && r.shared_origin_id)
+        return String(r.shared_origin_id) === String(row.shared_origin_id);
+      return false;
+    });
     if (idx >= 0) rows[idx] = Object.assign({}, rows[idx], row);
     else rows.push(row);
     return writeRaw(rows);

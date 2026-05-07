@@ -4911,11 +4911,29 @@
         return { ...existing, ...next };
       };
 
-      // Проверяем по shared_origin_id (если уже клонировали)
-      if (sharedProduct.id) {
-        const existingByOrigin = products.find(p => p.shared_origin_id === sharedProduct.id);
+      // Проверяем по shared_origin_id (если уже клонировали).
+      // В overlay mode читаем через readRaw() — не зависит от shared cache,
+      // поэтому корректен даже когда getMergedView() ещё null при boot.
+      {
+        let existingByOrigin = null;
+        const _ovOn = HEYS.flags && typeof HEYS.flags.isEnabled === 'function'
+          && HEYS.flags.isEnabled('overlay_products_v2');
+        if (_ovOn && HEYS.OverlayStore && typeof HEYS.OverlayStore.readRaw === 'function'
+            && sharedProduct.id) {
+          const _raw = HEYS.OverlayStore.readRaw();
+          const _rawMatch = Array.isArray(_raw) && _raw.find(
+            r => r && !r._custom && String(r.shared_origin_id) === String(sharedProduct.id)
+          );
+          if (_rawMatch) {
+            // Подтягиваем merged-версию из products если доступна (для merge-логики),
+            // иначе используем raw row напрямую.
+            existingByOrigin = products.find(p => p.id === _rawMatch.id) || _rawMatch;
+          }
+        }
+        if (!existingByOrigin && sharedProduct.id) {
+          existingByOrigin = products.find(p => p.shared_origin_id === sharedProduct.id);
+        }
         if (existingByOrigin) {
-          // 🔇 v4.7.1: Лог отключён
           return mergeMissingFromShared(existingByOrigin);
         }
       }
@@ -5010,6 +5028,32 @@
      * @returns {{original: number, deduplicated: number, removed: number}} Статистика
      */
     deduplicate: () => {
+      const overlayOn = HEYS.flags && HEYS.flags.isEnabled && HEYS.flags.isEnabled('overlay_products_v2');
+      if (overlayOn) {
+        // In overlay mode: dedup TypeA rows by shared_origin_id inside the overlay store.
+        // (Cannot dedup via getAll/setAll — that would inflate legacy with shared catalog entries.)
+        if (!HEYS.OverlayStore || typeof HEYS.OverlayStore.readRaw !== 'function') {
+          return { original: 0, deduplicated: 0, removed: 0 };
+        }
+        const overlayRows = HEYS.OverlayStore.readRaw();
+        if (!Array.isArray(overlayRows)) return { original: 0, deduplicated: 0, removed: 0 };
+        const seenSO = new Set();
+        const deduped = overlayRows.filter(r => {
+          if (!r) return false;
+          if (r._custom === true) return true; // TypeB: keep all
+          const k = String(r.shared_origin_id != null ? r.shared_origin_id : (r.id != null ? r.id : ''));
+          if (!k || seenSO.has(k)) return false;
+          seenSO.add(k);
+          return true;
+        });
+        const removed = overlayRows.length - deduped.length;
+        if (removed > 0) {
+          HEYS.OverlayStore.writeRaw(deduped);
+          console.warn('[HEYS.products] deduplicate: removed', removed, 'TypeA dups',
+            { before: overlayRows.length, after: deduped.length });
+        }
+        return { original: overlayRows.length, deduplicated: deduped.length, removed };
+      }
       const products = HEYS.products.getAll();
       const original = products.length;
 
