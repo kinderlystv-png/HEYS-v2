@@ -2032,11 +2032,21 @@
     if (data.profile && HEYS.utils?.lsSet) {
       HEYS.utils.lsSet('heys_profile', data.profile);
       imported.profile = true;
+      try {
+        window.dispatchEvent(new CustomEvent('heys:profile-updated', {
+          detail: { source: 'platform-apis-import' }
+        }));
+      } catch (_) {}
     }
 
     if (data.norms && HEYS.utils?.lsSet) {
       HEYS.utils.lsSet('heys_norms', data.norms);
       imported.norms = true;
+      try {
+        window.dispatchEvent(new CustomEvent('heys:norms-updated', {
+          detail: { source: 'platform-apis-import' }
+        }));
+      } catch (_) {}
     }
 
     if (data.products?.length && HEYS.products?.setAll) {

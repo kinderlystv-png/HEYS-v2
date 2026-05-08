@@ -536,6 +536,24 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
             return () => window.removeEventListener('heys:profile-updated', handleProfileUpdate);
         }, []);
 
+        // Подписка на пульсовые зоны: внешний writer (cloud HOT-sync) меняет LS,
+        // рефрешим React state. Без этого 1000мс debounced auto-save затрёт
+        // внешние изменения старым стейтом (тот же класс бага, что был у
+        // supplements profile clobber). Норми обрабатываются в HEYS_NormsCard.
+        React.useEffect(() => {
+            const handleZonesUpdate = () => {
+                const incoming = lsGet('heys_hr_zones', null);
+                if (!incoming) return;
+                setZones(prev => {
+                    const prevTs = (prev && prev.updatedAt) || 0;
+                    const newTs = (incoming && incoming.updatedAt) || 0;
+                    return prevTs > newTs ? prev : incoming;
+                });
+            };
+            window.addEventListener('heys:hr-zones-updated', handleZonesUpdate);
+            return () => window.removeEventListener('heys:hr-zones-updated', handleZonesUpdate);
+        }, []);
+
         // Состояние "идёт ввод" для индикации
         const [profilePending, setProfilePending] = React.useState(false);
         const [zonesPending, setZonesPending] = React.useState(false);
@@ -2184,6 +2202,23 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
             return () => clearTimeout(timer);
         }, [norms]);
 
+        // Подписка на heys:norms-updated: внешний writer (wizard / cloud HOT-sync /
+        // platform-apis import) меняет LS, рефрешим React state. Без этого 300мс
+        // debounced auto-save затрёт внешние изменения старым стейтом.
+        React.useEffect(() => {
+            const handleNormsUpdate = () => {
+                const incoming = lsGet('heys_norms', null);
+                if (!incoming) return;
+                setNorms(prev => {
+                    const prevTs = (prev && prev.updatedAt) || 0;
+                    const newTs = (incoming && incoming.updatedAt) || 0;
+                    return prevTs > newTs ? prev : incoming;
+                });
+            };
+            window.addEventListener('heys:norms-updated', handleNormsUpdate);
+            return () => window.removeEventListener('heys:norms-updated', handleNormsUpdate);
+        }, []);
+
         // Перезагрузка норм при смене клиента (как в данных дня)
         React.useEffect(() => {
             let cancelled = false;
@@ -2920,6 +2955,24 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
 
       window.addEventListener('heys:profile-updated', handleProfileUpdate);
       return () => window.removeEventListener('heys:profile-updated', handleProfileUpdate);
+    }, []);
+
+    // Подписка на пульсовые зоны: внешний writer (cloud HOT-sync) меняет LS,
+    // рефрешим React state. Без этого 1000мс debounced auto-save затрёт внешние
+    // изменения (тот же класс бага, что был у supplements profile clobber).
+    // Норми обрабатываются в HEYS_NormsCard (отдельный компонент со своим стейтом).
+    React.useEffect(() => {
+      const handleZonesUpdate = () => {
+        const incoming = readStoredValue('heys_hr_zones', null);
+        if (!incoming) return;
+        setZones(prev => {
+          const prevTs = (prev && prev.updatedAt) || 0;
+          const newTs = (incoming && incoming.updatedAt) || 0;
+          return prevTs > newTs ? prev : incoming;
+        });
+      };
+      window.addEventListener('heys:hr-zones-updated', handleZonesUpdate);
+      return () => window.removeEventListener('heys:hr-zones-updated', handleZonesUpdate);
     }, []);
 
     // Состояние "идёт ввод" для индикации
@@ -4768,6 +4821,24 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
       }, 300);
       return () => clearTimeout(timer);
     }, [norms]);
+
+    // Подписка на heys:norms-updated: внешний writer (wizard / cloud HOT-sync /
+    // platform-apis import) меняет LS, рефрешим React state. Без этого 300мс
+    // debounced auto-save затрёт внешние изменения старым стейтом (тот же
+    // класс бага, что был у supplements profile clobber).
+    React.useEffect(() => {
+      const handleNormsUpdate = () => {
+        const incoming = readStoredValue('heys_norms', null);
+        if (!incoming) return;
+        setNorms(prev => {
+          const prevTs = (prev && prev.updatedAt) || 0;
+          const newTs = (incoming && incoming.updatedAt) || 0;
+          return prevTs > newTs ? prev : incoming;
+        });
+      };
+      window.addEventListener('heys:norms-updated', handleNormsUpdate);
+      return () => window.removeEventListener('heys:norms-updated', handleNormsUpdate);
+    }, []);
 
     // Перезагрузка норм при смене клиента (как в данных дня)
     React.useEffect(() => {

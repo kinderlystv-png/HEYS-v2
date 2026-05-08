@@ -3861,11 +3861,21 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
     if (data.profile && HEYS.utils?.lsSet) {
       HEYS.utils.lsSet('heys_profile', data.profile);
       imported.profile = true;
+      try {
+        window.dispatchEvent(new CustomEvent('heys:profile-updated', {
+          detail: { source: 'platform-apis-import' }
+        }));
+      } catch (_) {}
     }
 
     if (data.norms && HEYS.utils?.lsSet) {
       HEYS.utils.lsSet('heys_norms', data.norms);
       imported.norms = true;
+      try {
+        window.dispatchEvent(new CustomEvent('heys:norms-updated', {
+          detail: { source: 'platform-apis-import' }
+        }));
+      } catch (_) {}
     }
 
     if (data.products?.length && HEYS.products?.setAll) {
@@ -30049,9 +30059,27 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
   }
 
   function dispatchForegroundHotSyncProfileEvents(clientId, baseKey, previousValue, nextValue, source) {
-    if (baseKey !== 'heys_profile' || typeof window === 'undefined' || !window.dispatchEvent) {
+    if (typeof window === 'undefined' || !window.dispatchEvent) return;
+
+    // heys_norms — fire heys:norms-updated so UserTab refreshes its React state
+    // and its 300ms debounced auto-save doesn't clobber the freshly-synced cloud
+    // value (same class of bug as supplements profile clobber).
+    if (baseKey === 'heys_norms') {
+      window.dispatchEvent(new CustomEvent('heys:norms-updated', {
+        detail: { clientId, source: source || 'hot-sync' }
+      }));
       return;
     }
+
+    // heys_hr_zones — same pattern.
+    if (baseKey === 'heys_hr_zones') {
+      window.dispatchEvent(new CustomEvent('heys:hr-zones-updated', {
+        detail: { clientId, source: source || 'hot-sync' }
+      }));
+      return;
+    }
+
+    if (baseKey !== 'heys_profile') return;
 
     const changedFields = getChangedTopLevelKeys(previousValue, nextValue);
     const detail = {

@@ -1005,6 +1005,11 @@
         updatedProfile.age
       );
       lsSet('heys_norms', { ...norms, updatedAt: Date.now() });
+      try {
+        window.dispatchEvent(new CustomEvent('heys:norms-updated', {
+          detail: { source: 'wizard-save' }
+        }));
+      } catch (_) {}
 
       // Записываем вес в данные дня (weightMorning), чтобы check-in не спрашивал повторно
       const todayKey = new Date().toISOString().slice(0, 10);
@@ -1137,6 +1142,11 @@
       updatedProfile.age
     );
     lsSet('heys_norms', { ...norms, updatedAt: Date.now() });
+    try {
+      window.dispatchEvent(new CustomEvent('heys:norms-updated', {
+        detail: { source: 'wizard-skip' }
+      }));
+    } catch (_) {}
 
     // ⚠️ v1.15 FIX: Инвалидируем кэш HEYS.store.memory
     // т.к. lsSet пишет в localStorage напрямую, но tryStartOnboardingTour читает из HEYS.store (который кэширует)
