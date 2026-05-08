@@ -200,11 +200,11 @@
         className: 'confirm-modal',
         onClick: e => e.stopPropagation()
       },
-        // Иконка
-        React.createElement('div', { className: 'confirm-modal-icon' }, modal.icon),
+        // Иконка (опускается при icon='' / null — для компактных модалок)
+        modal.icon ? React.createElement('div', { className: 'confirm-modal-icon' }, modal.icon) : null,
 
-        // Заголовок
-        React.createElement('div', { className: 'confirm-modal-title' }, modal.title),
+        // Заголовок (опускается при title='' / null)
+        modal.title ? React.createElement('div', { className: 'confirm-modal-title' }, modal.title) : null,
 
         // Текст
         modal.text && React.createElement('div', { className: 'confirm-modal-text' }, modal.text),

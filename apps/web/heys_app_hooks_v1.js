@@ -659,7 +659,7 @@
 
     /** PIN + API proxy: later full-screen lock and "slow internet" hint (extra hop, dev-friendly). */
     const getPinProxySyncOverlayDelaysMs = () => {
-        const DEFAULT_LOCK_MS = 2000;
+        const DEFAULT_LOCK_MS = 3000;
         const DEFAULT_HINT_MS = 5000;
         const PIN_PROXY_LOCK_MS = 4500;
         const PIN_PROXY_HINT_MS = 10000;

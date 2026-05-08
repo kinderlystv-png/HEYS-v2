@@ -36979,7 +36979,21 @@ NOVA: 1-4
         })
       : [];
 
-    const merged = deduped.concat(pendingLocalCustoms);
+    // 3b. Pending-local TypeA: строки добавленные локально, ещё не подтверждённые cloud.
+    // Защита от race: migration пишет TypeA в LS → debounce 2s → HOT-sync успевает
+    // прийти с пустым cloud (0 TypeA) → merged = 0 → overlay затирается.
+    const incomingSO = new Set(deduped.filter(function (r) { return r && !r._custom && r.shared_origin_id != null; }).map(function (r) { return String(r.shared_origin_id); }));
+    const pendingLocalTypeA = Array.isArray(current)
+      ? current.filter(function (r) {
+          if (!r || r._custom || r.shared_origin_id == null) return false;
+          if (incomingSO.has(String(r.shared_origin_id))) return false;
+          if (_tombIds && r.id != null && _tombIds.has(String(r.id))) return false;
+          if (_tombNames && r.name && _tombNames.has(String(r.name).trim().toLowerCase())) return false;
+          return true;
+        })
+      : [];
+
+    const merged = deduped.concat(pendingLocalCustoms).concat(pendingLocalTypeA);
 
     // 4. skipCloudSync — данные ИЗ cloud, не отправляем обратно.
     writeRaw(merged, { skipCloudSync: true });
@@ -36990,6 +37004,7 @@ NOVA: 1-4
         incomingLen: incomingRows.length,
         deduped: deduped.length,
         pendingLocalCustoms: pendingLocalCustoms.length,
+        pendingLocalTypeA: pendingLocalTypeA.length,
         finalLen: merged.length,
       });
     } catch (_) { /* noop */ }
@@ -36999,6 +37014,7 @@ NOVA: 1-4
       before: Array.isArray(current) ? current.length : 0,
       after: merged.length,
       pendingCustoms: pendingLocalCustoms.length,
+      pendingLocalTypeA: pendingLocalTypeA.length,
     };
   }
 
@@ -37200,17 +37216,6 @@ NOVA: 1-4
         global.localStorage.setItem('heys_overlay_health', JSON.stringify(health));
       } catch (_) { /* noop */ }
       console.info('[HEYS.products] overlay health', health);
-
-      // First-flip toast — show once per user per device.
-      const NOTIFIED_KEY = 'heys_overlay_user_notified';
-      if (global.localStorage.getItem(NOTIFIED_KEY) !== 'true') {
-        try {
-          if (HEYS.Toast?.success) {
-            HEYS.Toast.success('Данные нутриентов восстановлены — статистика iron/calcium теперь точнее.');
-          }
-          global.localStorage.setItem(NOTIFIED_KEY, 'true');
-        } catch (_) { /* noop */ }
-      }
     } catch (e) {
       console.warn('[HEYS.products] health write failed (non-fatal):', e && e.message);
     }
@@ -37356,7 +37361,7 @@ NOVA: 1-4
       if (sharedRow) {
         const overrides = {};
         for (const f of NUTRIENT_FIELDS) {
-          if (p[f] !== undefined && !_eqLoose(p[f], sharedRow[f])) overrides[f] = p[f];
+          if (p[f] != null && !_eqLoose(p[f], sharedRow[f])) overrides[f] = p[f];
         }
         // Preserve local name if it differs (esp. on fallback link by normalized name —
         // legacy "Молоко 2,5" matches shared "Молоко 2,5%" but display should keep local).

@@ -2995,6 +2995,8 @@
         onChangeWellbeing,
         onChangeStress,
         onRemoveMeal,
+        onCopyMeal,
+        onRepeatYesterday,
         openEditGramsModal,
         openTimeEditor,
         openMoodEditor,
@@ -3080,6 +3082,25 @@
         const mealKcal = Math.round(totals.kcal || 0);
         const isStale = isMealStale(meal);
         const isCurrentMeal = displayIndex === 0 && !isStale;
+
+        // «Повторить как вчера» — загружаем данные только для пустых приёмов на сегодня
+        const isToday = date === ((HEYS.utils && HEYS.utils.getTodayStr && HEYS.utils.getTodayStr()) || '');
+        const isEmpty = (meal.items || []).length === 0;
+        const canRepeatYesterday = isToday && isEmpty && typeof onRepeatYesterday === 'function';
+
+        const [yesterdayMeal, setYesterdayMeal] = React.useState(null);
+        React.useEffect(() => {
+            if (!canRepeatYesterday) { setYesterdayMeal(null); return; }
+            try {
+                const parts = date.split('-');
+                const d = new Date(+parts[0], +parts[1] - 1, +parts[2]);
+                d.setDate(d.getDate() - 1);
+                const yStr = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+                const yDay = (U.lsGet || (() => null))(_scopedDayKey(yStr), null);
+                const yMeal = yDay && yDay.meals ? findYesterdayEquivalent(meal, yDay.meals) : null;
+                setYesterdayMeal((yMeal && (yMeal.items || []).length > 0) ? yMeal : null);
+            } catch (e) { setYesterdayMeal(null); }
+        }, [canRepeatYesterday, meal.name, meal.mealType, meal.time, date]);
 
         const mealActivityContext = React.useMemo(() => {
             if (!HEYS.InsulinWave?.calculateActivityContext) return null;
@@ -3464,6 +3485,48 @@
                 ),
             )),
             React.createElement('div', { className: 'mobile-products-list' },
+                canRepeatYesterday && yesterdayMeal && React.createElement('div', {
+                    className: 'repeat-yesterday-suggestion',
+                    style: {
+                        margin: '0 0 10px',
+                        borderRadius: '12px',
+                        border: '1px solid var(--border, #e2e8f0)',
+                        background: 'var(--card, #fff)',
+                        overflow: 'hidden',
+                    },
+                },
+                    React.createElement('button', {
+                        type: 'button',
+                        onClick: () => onRepeatYesterday(mealIndex, yesterdayMeal),
+                        style: {
+                            width: '100%', display: 'flex', alignItems: 'center', gap: '8px',
+                            padding: '10px 14px 8px', background: 'transparent', border: 'none',
+                            cursor: 'pointer', textAlign: 'left',
+                        },
+                    },
+                        React.createElement('span', { style: { fontSize: '14px' } }, '↩'),
+                        React.createElement('span', { style: { flex: '1 1 auto', minWidth: 0, fontSize: '13px', fontWeight: 600, color: 'var(--acc, #3b82f6)' } },
+                            `Повторить вчерашний «${yesterdayMeal.name || 'Приём'}»`),
+                    ),
+                    React.createElement('div', {
+                        style: { padding: '0 14px 10px', display: 'flex', flexDirection: 'column', gap: '2px' },
+                    },
+                        (yesterdayMeal.items || []).slice(0, 4).map((it, idx) => {
+                            const g = Number(it.grams) || 0;
+                            const kcal = Math.round(((Number(it.kcal100) || 0) * g) / 100);
+                            return React.createElement('div', {
+                                key: it.id || idx,
+                                style: { display: 'flex', gap: '6px', fontSize: '12px', color: 'var(--muted, #94a3b8)' },
+                            },
+                                React.createElement('span', { style: { flex: '1 1 auto', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, it.name || '—'),
+                                React.createElement('span', { style: { flexShrink: 0, fontVariantNumeric: 'tabular-nums' } }, `${g}г · ${kcal}к`),
+                            );
+                        }),
+                        (yesterdayMeal.items || []).length > 4 && React.createElement('div', {
+                            style: { fontSize: '11px', color: 'var(--muted, #94a3b8)', fontStyle: 'italic' },
+                        }, `и ещё ${(yesterdayMeal.items || []).length - 4} продукта(ов)`),
+                    ),
+                ),
                 React.createElement('div', { className: 'mpc-toggle-add-row' + ((meal.items || []).length === 0 ? ' single' : '') },
                     (meal.items || []).length > 0 && React.createElement('div', {
                         className: 'mpc-products-toggle' + (isExpanded ? ' expanded' : ''),
@@ -4607,6 +4670,29 @@
                         }, optimizerRecsCount),
                         React.createElement('span', { style: { fontSize: '10px', opacity: 0.7, marginLeft: '2px' } }, optimizerPopupOpen ? '▴' : '▾'),
                     ),
+                    typeof onCopyMeal === 'function' && React.createElement('button', {
+                        className: 'meal-copy-btn',
+                        onClick: () => onCopyMeal(mealIndex),
+                        title: 'Копировать приём (или часть продуктов)',
+                        disabled: !((meal.items || []).length),
+                        style: {
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            padding: '4px 8px',
+                            borderRadius: '12px',
+                            border: 'none',
+                            background: '#e0f2fe',
+                            color: '#1d4ed8',
+                            fontSize: '12px',
+                            fontWeight: 600,
+                            cursor: (meal.items || []).length ? 'pointer' : 'not-allowed',
+                            opacity: (meal.items || []).length ? 1 : 0.4,
+                            flexShrink: 0,
+                            marginRight: '4px',
+                            transition: 'transform 0.15s, background 0.15s',
+                        },
+                    }, '📋 Копировать'),
                     React.createElement('button', {
                         className: 'meal-delete-btn',
                         onClick: () => onRemoveMeal(mealIndex),
@@ -4902,6 +4988,8 @@
             changeMealWellbeing,
             changeMealStress,
             removeMeal,
+            openCopyMealModal,
+            repeatYesterdayMeal,
             openEditGramsModal,
             openTimeEditor,
             openMoodEditor,
@@ -5023,6 +5111,8 @@
                     onChangeWellbeing: changeMealWellbeing,
                     onChangeStress: changeMealStress,
                     onRemoveMeal: removeMeal,
+                    onCopyMeal: openCopyMealModal,
+                    onRepeatYesterday: repeatYesterdayMeal,
                     openEditGramsModal,
                     openTimeEditor,
                     openMoodEditor,
@@ -5094,6 +5184,8 @@
             changeMealWellbeing,
             changeMealStress,
             removeMeal,
+            openCopyMealModal,
+            repeatYesterdayMeal,
             openEditGramsModal,
             openTimeEditor,
             openMoodEditor,
@@ -5224,6 +5316,8 @@
                 changeMealWellbeing,
                 changeMealStress,
                 removeMeal,
+                openCopyMealModal,
+                repeatYesterdayMeal,
                 openEditGramsModal,
                 openTimeEditor,
                 openMoodEditor,
@@ -5316,6 +5410,8 @@
             hasMoreMeals,
             removeItem,
             removeMeal,
+            openCopyMealModal,
+            repeatYesterdayMeal,
             loadMoreMeals,
             setShowAllLoadedMeals,
             setDay,
@@ -6016,6 +6112,52 @@
 
             return timeB - timeA;
         });
+    }
+
+    function cloneItemsFromMeal(meal, itemIds, gramsOverrides) {
+        const idsSet = new Set(itemIds);
+        const go = gramsOverrides || {};
+        return ((meal && meal.items) || [])
+            .filter((it) => idsSet.has(it.id))
+            .map((it) => {
+                const g = Object.prototype.hasOwnProperty.call(go, it.id) ? go[it.id] : it.grams;
+                return { ...it, id: uid('it_'), grams: g };
+            });
+    }
+
+    function findYesterdayEquivalent(todayMeal, yesterdayMeals) {
+        if (!yesterdayMeals || !yesterdayMeals.length) return null;
+        const withItems = yesterdayMeals.filter(m => m && (m.items || []).length > 0);
+        if (!withItems.length) return null;
+        if (todayMeal && todayMeal.mealType) {
+            const m = withItems.find(ym => ym.mealType === todayMeal.mealType);
+            if (m) return m;
+        }
+        if (todayMeal && todayMeal.name) {
+            const name = todayMeal.name.toLowerCase().trim();
+            const m = withItems.find(ym => ym.name && ym.name.toLowerCase().trim() === name);
+            if (m) return m;
+        }
+        const toMins = (U && U.timeToMinutes) || ((t) => {
+            if (!t) return null;
+            const p = t.split(':');
+            return p.length >= 2 ? +p[0] * 60 + +p[1] : null;
+        });
+        if (todayMeal && todayMeal.time) {
+            const todayMins = toMins(todayMeal.time);
+            if (todayMins !== null) {
+                let best = null;
+                let bestDiff = Infinity;
+                withItems.forEach(ym => {
+                    const ymMins = toMins(ym.time);
+                    if (ymMins === null) return;
+                    const diff = Math.abs(ymMins - todayMins);
+                    if (diff < bestDiff) { bestDiff = diff; best = ym; }
+                });
+                if (best && bestDiff <= 120) return best;
+            }
+        }
+        return null;
     }
 
     function createMealHandlers(deps) {
@@ -6805,6 +6947,196 @@
             });
         }, [haptic, setDay, markUndoWindow, persistDayData, recalculateOrphanProducts, runUndoableDayMutation, emitPlannerReplanRequest]);
 
+        const repeatYesterdayMeal = React.useCallback((mealIndex, yMeal) => {
+            if (!yMeal || !(yMeal.items || []).length) return;
+            if (HEYS.Paywall && !HEYS.Paywall.canWriteSync()) {
+                HEYS.Paywall.showBlockedToast?.('Копирование продуктов недоступно');
+                return;
+            }
+            const cloned = (yMeal.items || []).map(it => ({ ...it, id: uid('it_') }));
+            markUndoWindow(3000);
+            setDay(prevDay => {
+                const newMeals = (prevDay.meals || []).map((m, i) =>
+                    i === mealIndex ? { ...m, items: [...(m.items || []), ...cloned] } : m
+                );
+                const updated = { ...prevDay, meals: newMeals, updatedAt: Date.now() };
+                persistDayData(updated, 'repeat_yesterday_meal');
+                return updated;
+            });
+            HEYS.Toast?.success?.(`Повторено: ${cloned.length} продуктов из вчера`);
+        }, [setDay, markUndoWindow, persistDayData]);
+
+        // Helpers для копирования в произвольную дату (today, обычно)
+        const navigateAndScrollToMeal = React.useCallback((targetDate, mealId) => {
+            const setSel = window.__heysSetSelectedDate;
+            if (typeof setSel === 'function' && targetDate && targetDate !== date) {
+                try { setSel(targetDate); } catch (e) { /* ignore */ }
+            }
+            // Retry scroll до 6 раз с интервалом 250ms — даём React отрендерить переход на новую дату.
+            let tries = 0;
+            const tryScroll = () => {
+                tries += 1;
+                const target = mealId && document.querySelector(`[data-meal-id="${mealId}"]`);
+                if (target && typeof target.scrollIntoView === 'function') {
+                    target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                } else if (tries < 6) {
+                    setTimeout(tryScroll, 250);
+                }
+            };
+            setTimeout(tryScroll, 200);
+        }, [date]);
+
+        const copyItemsToMeal = React.useCallback((srcMealIndex, itemIds, dstMealIndex, targetDate, gramsMap) => {
+            if (HEYS.Paywall && !HEYS.Paywall.canWriteSync()) {
+                HEYS.Paywall.showBlockedToast('Копирование продуктов недоступно');
+                return;
+            }
+            const tgtDate = targetDate || date;
+            const src = dayRef.current?.meals?.[srcMealIndex];
+            const cloned = cloneItemsFromMeal(src, itemIds, gramsMap);
+            if (cloned.length === 0) return;
+
+            const writeIntoTarget = (existingDay) => {
+                const meals = existingDay?.meals || [];
+                if (!meals[dstMealIndex]) return null;
+                const newMeals = meals.map((m, i) =>
+                    i === dstMealIndex
+                        ? { ...m, items: [...(m.items || []), ...cloned] }
+                        : m,
+                );
+                return { ...(existingDay || {}), date: tgtDate, meals: newMeals, updatedAt: Date.now() };
+            };
+
+            let dstMealId = null;
+
+            if (tgtDate === date) {
+                // Same-day copy — обновляем React state + LS через стандартный путь
+                markUndoWindow(3000);
+                setDay((prevDay) => {
+                    const updated = writeIntoTarget(prevDay);
+                    if (!updated) return prevDay;
+                    persistDayData(updated, 'copy_items_to_meal');
+                    dstMealId = updated.meals[dstMealIndex]?.id || null;
+                    return updated;
+                });
+            } else {
+                // Cross-day copy — пишем в LS целевого дня; React state открытого дня НЕ трогаем
+                const tgtKey = _scopedDayKey(tgtDate);
+                const existing = lsGet(tgtKey, null) || { date: tgtDate, meals: [] };
+                const updated = writeIntoTarget(existing);
+                if (!updated) {
+                    HEYS.Toast?.error?.('Целевой приём не найден');
+                    return;
+                }
+                try {
+                    lsSet(tgtKey, updated);
+                } catch (e) {
+                    trackError(e, { source: 'day/_meals.js', action: 'copy_items_cross_day' });
+                }
+                dstMealId = updated.meals[dstMealIndex]?.id || null;
+                window.dispatchEvent(new CustomEvent('heys:day-updated', { detail: { date: tgtDate, source: 'copy_meal' } }));
+            }
+
+            HEYS.Toast?.success?.(`Скопировано: ${itemIds.length}`);
+            navigateAndScrollToMeal(tgtDate, dstMealId);
+        }, [setDay, markUndoWindow, persistDayData, date, navigateAndScrollToMeal]);
+
+        const openCopyMealModal = React.useCallback((srcMealIndex) => {
+            const meal = dayRef.current?.meals?.[srcMealIndex];
+            if (!meal || !(meal.items || []).length) {
+                HEYS.Toast?.info?.('Приём пуст — нечего копировать');
+                return;
+            }
+            if (!HEYS.CopyMealModal || !HEYS.CopyMealModal.show) {
+                console.error('[copyMeal] HEYS.CopyMealModal not available');
+                return;
+            }
+
+            // Целевой день = всегда сегодня
+            const todayStr = (HEYS.utils && HEYS.utils.getTodayStr && HEYS.utils.getTodayStr())
+                || new Date().toISOString().slice(0, 10);
+            const sourceDate = date;
+            const targetDay = (todayStr === date)
+                ? dayRef.current
+                : (lsGet(_scopedDayKey(todayStr), null) || { date: todayStr, meals: [] });
+            const targetMeals = (targetDay && targetDay.meals) || [];
+
+            HEYS.CopyMealModal.show({
+                sourceMeal: meal,
+                sourceMealIndex: srcMealIndex,
+                sourceDate,
+                targetDate: todayStr,
+                targetMeals,
+                onCopyToExisting: (itemIds, dstIdx, gramsMap) => {
+                    copyItemsToMeal(srcMealIndex, itemIds, dstIdx, todayStr, gramsMap);
+                },
+                onCopyToNew: (itemIds, gramsMap) => {
+                    // Snapshot ДО открытия wizard — фиксирует source.items на момент клика
+                    const cloned = cloneItemsFromMeal(meal, itemIds, gramsMap);
+                    if (cloned.length === 0) return;
+
+                    const completeWithItems = (newMealRaw) => {
+                        const newMeal = { ...newMealRaw, items: cloned };
+
+                        if (todayStr === date) {
+                            // Today открыт: используем стандартный setDay
+                            markUndoWindow(3000);
+                            setDay((prevDay) => {
+                                const newMeals = sortMealsByTime([...(prevDay.meals || []), newMeal]);
+                                const updated = { ...prevDay, meals: newMeals, updatedAt: Date.now() };
+                                persistDayData(updated, 'copy_items_to_new_meal');
+                                return updated;
+                            });
+                        } else {
+                            // Today не открыт: пишем в LS today's dayv2 напрямую
+                            const tgtKey = _scopedDayKey(todayStr);
+                            const existing = lsGet(tgtKey, null) || { date: todayStr, meals: [] };
+                            const newMeals = sortMealsByTime([...(existing.meals || []), newMeal]);
+                            const updated = { ...existing, date: todayStr, meals: newMeals, updatedAt: Date.now() };
+                            try {
+                                lsSet(tgtKey, updated);
+                            } catch (e) {
+                                trackError(e, { source: 'day/_meals.js', action: 'copy_to_new_cross_day' });
+                            }
+                            window.dispatchEvent(new CustomEvent('heys:day-updated', { detail: { date: todayStr, source: 'copy_meal_new' } }));
+                        }
+
+                        HEYS.Toast?.success?.(`Создан приём, скопировано: ${cloned.length}`);
+                        window.dispatchEvent(new CustomEvent('heysMealAdded', { detail: { meal: newMeal } }));
+                        navigateAndScrollToMeal(todayStr, newMeal.id);
+                    };
+
+                    // 100ms — даём CopyMealModal закрыться (visual smoothness перед открытием MealStep)
+                    setTimeout(() => {
+                        if (isMobile && HEYS.MealStep && HEYS.MealStep.showAddMeal) {
+                            HEYS.MealStep.showAddMeal({
+                                dateKey: todayStr,
+                                meals: targetMeals,
+                                pIndex,
+                                getProductFromItem,
+                                trainings: targetDay?.trainings || [],
+                                deficitPct: Number(targetDay?.deficitPct ?? prof?.deficitPctTarget ?? 0),
+                                prof,
+                                dayData: targetDay,
+                                onComplete: completeWithItems,
+                            });
+                        } else {
+                            // Desktop fallback: silent create по паттерну addMeal desktop-ветки
+                            completeWithItems({
+                                id: uid('m_'),
+                                name: 'Приём',
+                                time: '',
+                                mood: '',
+                                wellbeing: '',
+                                stress: '',
+                                items: [],
+                            });
+                        }
+                    }, 100);
+                },
+            });
+        }, [date, pIndex, getProductFromItem, prof, isMobile, copyItemsToMeal, setDay, markUndoWindow, persistDayData, navigateAndScrollToMeal]);
+
         const removePhoto = React.useCallback(async (mi, photoId, options = {}) => {
             const sourceMeal = dayRef.current.meals?.[mi];
             if (!sourceMeal) return false;
@@ -6917,6 +7249,9 @@
             updateMealTime,
             removeMeal,
             addProductToMeal,
+            copyItemsToMeal,
+            openCopyMealModal,
+            repeatYesterdayMeal,
             setGrams,
             removeItem,
             removePhoto,

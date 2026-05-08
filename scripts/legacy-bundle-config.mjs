@@ -268,6 +268,7 @@ export const LEGACY_BUNDLES = {
         'heys_steps_v1.js',
         'heys_add_product_step_v1.js',
         'heys_confirm_modal_v1.js',
+        'heys_day_copy_meal_modal_v1.js',
         'heys_predictive_insights_v1.js',
         'heys_phenotype_v1.js',
         'heys_metabolic_intelligence_v1.js',

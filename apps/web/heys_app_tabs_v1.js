@@ -576,42 +576,59 @@
                 // Now: if overlay LS is non-empty, trust it and skip migration.
                 // First-time fresh-LS (existingOverlay=0) still goes through migrate to
                 // bootstrap from legacy (legitimate one-time conversion).
+                //
+                // Exception: if overlay has 0 TypeA rows but legacy has many products,
+                // orphan-recovery populated the overlay before migration could run.
+                // Fall through to migrate so TypeA links get created (migration merges
+                // result with existing TypeB customs via writeRaw).
                 try {
                     const existingOverlay = Overlay.readRaw() || [];
                     if (existingOverlay.length > 0) {
                         const existingCustom = existingOverlay.filter(r => r && r._custom).length;
-                        // Self-heal in-place: dedup TypeA by shared_origin_id (no migrate, no
-                        // cloud-shaped repopulation). Saves users with already-poisoned overlay.
-                        const seenSO = new Set();
-                        const healedOverlay = existingOverlay.filter(r => {
-                            if (r?._custom === true) return true;
-                            const k = String(r?.shared_origin_id ?? r?.id ?? '');
-                            if (!k || seenSO.has(k)) return false;
-                            seenSO.add(k);
-                            return true;
-                        });
-                        if (healedOverlay.length < existingOverlay.length) {
-                            Overlay.writeRaw(healedOverlay);
-                            console.warn('[HEYS.products] migration self-heal: deduped overlay TypeA rows', {
-                                before: existingOverlay.length,
-                                after: healedOverlay.length,
-                                existingCustom,
-                                legacyLen: flat.length,
-                            });
-                        } else {
-                            console.info('[HEYS.products] migration skipped: overlay non-empty, cloud-canonical', {
+                        const existingTypeA = existingOverlay.filter(r => r && !r._custom && r.shared_origin_id).length;
+                        // If orphan-recovery ran first and overlay is all TypeB with no TypeA,
+                        // and legacy has real products to migrate — run migration anyway.
+                        if (existingTypeA === 0 && flat.length > 10) {
+                            console.info('[HEYS.products] migration: overlay is TypeB-only, falling through to create TypeA links', {
                                 existingLen: existingOverlay.length,
                                 existingCustom,
                                 legacyLen: flat.length,
                             });
+                            // fall through to migrate()
+                        } else {
+                            // Self-heal in-place: dedup TypeA by shared_origin_id (no migrate, no
+                            // cloud-shaped repopulation). Saves users with already-poisoned overlay.
+                            const seenSO = new Set();
+                            const healedOverlay = existingOverlay.filter(r => {
+                                if (r?._custom === true) return true;
+                                const k = String(r?.shared_origin_id ?? r?.id ?? '');
+                                if (!k || seenSO.has(k)) return false;
+                                seenSO.add(k);
+                                return true;
+                            });
+                            if (healedOverlay.length < existingOverlay.length) {
+                                Overlay.writeRaw(healedOverlay);
+                                console.warn('[HEYS.products] migration self-heal: deduped overlay TypeA rows', {
+                                    before: existingOverlay.length,
+                                    after: healedOverlay.length,
+                                    existingCustom,
+                                    legacyLen: flat.length,
+                                });
+                            } else {
+                                console.info('[HEYS.products] migration skipped: overlay non-empty, cloud-canonical', {
+                                    existingLen: existingOverlay.length,
+                                    existingCustom,
+                                    legacyLen: flat.length,
+                                });
+                            }
+                            try {
+                                localStorage.setItem(TS_KEY, String(Date.now()));
+                                localStorage.setItem(STATUS_KEY, 'success');
+                                localStorage.setItem(VERSION_KEY, String(CURRENT_MIGRATION_VERSION));
+                                localStorage.removeItem(ABORT_KEY);
+                            } catch (_) { /* noop */ }
+                            return;
                         }
-                        try {
-                            localStorage.setItem(TS_KEY, String(Date.now()));
-                            localStorage.setItem(STATUS_KEY, 'success');
-                            localStorage.setItem(VERSION_KEY, String(CURRENT_MIGRATION_VERSION));
-                            localStorage.removeItem(ABORT_KEY);
-                        } catch (_) { /* noop */ }
-                        return;
                     }
                 } catch (_) { /* noop */ }
 

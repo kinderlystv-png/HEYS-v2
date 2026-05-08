@@ -16,8 +16,20 @@
     };
 
     HEYS.AppDateState.useDateSelectionState = function ({ React }) {
-        const { useState } = React;
+        const { useState, useEffect } = React;
         const [selectedDate, setSelectedDate] = useState(getTodayISO());
+
+        // Expose setter globally so deep modules (e.g. CopyMealModal flow) can navigate to a date
+        // without prop drilling. Setter from useState is stable, so effect runs once on mount.
+        useEffect(() => {
+            window.__heysSetSelectedDate = setSelectedDate;
+            return () => {
+                if (window.__heysSetSelectedDate === setSelectedDate) {
+                    delete window.__heysSetSelectedDate;
+                }
+            };
+        }, []);
+
         return { todayISO: getTodayISO, selectedDate, setSelectedDate };
     };
 
