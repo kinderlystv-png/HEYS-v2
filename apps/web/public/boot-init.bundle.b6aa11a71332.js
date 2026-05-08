@@ -6342,7 +6342,19 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
    * Безопасное получение профиля
    */
   function getProfileSafe() {
-    return readStoredValue('heys_profile', {});
+    // 1. Scoped read via Store (e.g., heys_ccfe6ea3_profile)
+    const profile = readStoredValue('heys_profile', null);
+    if (profile && typeof profile === 'object' && Object.keys(profile).length > 0) return profile;
+    // 2. Fallback: some clients have {} in scoped key (past decompress bug);
+    //    their actual profile is in the unscoped 'heys_profile' key.
+    //    Direct localStorage read bypasses Store.get scoping.
+    try {
+      const raw = localStorage.getItem('heys_profile');
+      if (!raw) return {};
+      const fn = HEYS?.store?.decompress;
+      const parsed = fn ? fn(raw) : JSON.parse(raw);
+      return (parsed && typeof parsed === 'object' && Object.keys(parsed).length > 0) ? parsed : {};
+    } catch (_) { return {}; }
   }
 
   function getSupplementsCurrentClientId() {
@@ -9584,6 +9596,22 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     }
   } catch (e) {
     // no-op
+  }
+
+  // Bridge: when an external source (HOT-sync, cloud) writes plannedSupplements
+  // to the profile, force the DayTab to re-render so supplements card refreshes.
+  // Without this, the card shows "не настроены" until the user navigates away
+  // and back (timing race between bootstrap and first render).
+  if (typeof window !== 'undefined') {
+    window.addEventListener('heys:supplements-updated', function _supplementsProfileBridge(ev) {
+      var detail = (ev && ev.detail) || {};
+      // Skip our own writes to avoid loops
+      if (detail.source === 'supplements-profile-save') return;
+      var today = new Date().toISOString().slice(0, 10);
+      window.dispatchEvent(new CustomEvent('heys:day-updated', {
+        detail: { date: today, source: 'supplements-profile-loaded', forceReload: false }
+      }));
+    });
   }
 
   // Verbose init log removed

@@ -9,20 +9,21 @@
     // что helper всегда доступен в boot-app фазе.
     function readProfileForceRawScopedInline(clientId) {
         if (!clientId) return null;
-        let raw = null;
-        try { raw = localStorage.getItem(`heys_${clientId}_profile`); } catch (_) { return null; }
-        if (!raw) {
-            try { raw = localStorage.getItem('heys_profile'); } catch (_) { return null; }
+        const tryDecompress = (raw) => {
             if (!raw) return null;
+            const fn = window.HEYS?.store?.decompress;
+            try { return fn ? fn(raw) : JSON.parse(raw); } catch (_) { return null; }
+        };
+        // Scoped → legacy fallback. Считаем валидным только профиль с хотя бы
+        // одним полем. Пустой объект {} в scoped LS встречается у клиентов
+        // унаследовавших stale state от прошлых багов; в этом случае legacy
+        // heys_profile содержит реальные данные (cloud audit подтвердил).
+        let parsed = tryDecompress(localStorage.getItem(`heys_${clientId}_profile`));
+        if (parsed && typeof parsed === 'object' && Object.keys(parsed).length > 0) {
+            return parsed;
         }
-        // Store.decompress сам проверяет префикс ¤Z¤ и обрабатывает оба случая
-        // (сжатую строку и обычный JSON). Передавать сюда обрезанную строку нельзя —
-        // тогда внутри decompress отвалится JSON.parse и вернётся null.
-        const decompressFn = window.HEYS?.store?.decompress;
-        if (decompressFn) {
-            try { return decompressFn(raw); } catch (_) { return null; }
-        }
-        try { return JSON.parse(raw); } catch (_) { return null; }
+        parsed = tryDecompress(localStorage.getItem('heys_profile'));
+        return (parsed && typeof parsed === 'object' && Object.keys(parsed).length > 0) ? parsed : null;
     }
 
     const useMorningCheckinSync = ({ React, isInitializing, clientId }) => {
