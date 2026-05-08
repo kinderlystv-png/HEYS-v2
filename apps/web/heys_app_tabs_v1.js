@@ -423,7 +423,17 @@
                 // отравления legacy heys_products. Manual "restore-orphans" в UI
                 // остаётся доступной для явного запуска. Overlay migration всё ещё
                 // нужно триггернуть — у неё своя логика и idempotency-гейт.
-                if (window.HEYS?.bootstrap?.isCuratorSession?.() === true) {
+                //
+                // 🔧 fix 2026-05-08: реальный экспорт — HEYS.auth.isCuratorSession
+                // (или window.isCuratorSession как fallback). Раньше код искал
+                // window.HEYS.bootstrap.isCuratorSession (lowercase), которого нет
+                // (есть HEYS.Bootstrap c capital B), поэтому гейт не срабатывал.
+                const _isCurator =
+                    (typeof window.HEYS?.auth?.isCuratorSession === 'function' && window.HEYS.auth.isCuratorSession())
+                    || (typeof window.HEYS?.Bootstrap?.isCuratorSession === 'function' && window.HEYS.Bootstrap.isCuratorSession())
+                    || (typeof window.isCuratorSession === 'function' && window.isCuratorSession())
+                    || false;
+                if (_isCurator === true) {
                     try { runOverlayMigrationOnce(clientId); } catch (_) { /* noop */ }
                     try { console.info('[HEYS.products] orphan-recovery skipped: curator session'); } catch (_) {}
                     return;

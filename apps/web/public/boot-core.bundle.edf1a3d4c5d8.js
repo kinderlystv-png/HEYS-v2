@@ -37287,7 +37287,33 @@ NOVA: 1-4
         typeB++;
       }
     }
-    return { ok: true, rows: out, typeA, typeB, typeAByFallback, idGenerated };
+
+    // Dedup TypeA by shared_origin_id. Происходит когда legacy `heys_products`
+    // содержит два продукта с одинаковым name (после name-fallback они оба
+    // получают одинаковый shared_origin_id) — без dedup на выходе мы пишем в
+    // overlay два TypeA row с одним shared_origin_id и разными UUID. Это
+    // главный источник «дубликатов после migrate». TypeB (custom) сохраняем
+    // как есть — у них нет shared_origin_id и они уникальны по id.
+    const _seenSO = new Set();
+    let _typeADupsRemoved = 0;
+    const dedupedOut = [];
+    for (const r of out) {
+      if (r && r._custom !== true && r.shared_origin_id) {
+        const k = String(r.shared_origin_id);
+        if (_seenSO.has(k)) { _typeADupsRemoved++; continue; }
+        _seenSO.add(k);
+      }
+      dedupedOut.push(r);
+    }
+    return {
+      ok: true,
+      rows: dedupedOut,
+      typeA: typeA - _typeADupsRemoved,
+      typeB,
+      typeAByFallback,
+      typeADupsRemoved: _typeADupsRemoved,
+      idGenerated,
+    };
   }
 
   // ─────────────────────────────────────────────────────────────────────
