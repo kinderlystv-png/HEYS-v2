@@ -57,8 +57,56 @@ reader is **`HEYS.OverlayStore` merged view** (file
   Phase ε.
 - **Migration** (one-shot, idempotent via `heys_overlay_migrated_at` +
   `heys_overlay_migration_version`): runs in `runOverlayMigrationOnce`
-  (heys_app_tabs_v1.js) after orphan-recovery. v2 logic links by
-  fingerprint→name fallback when `shared_origin_id` missing.
+  (heys_app_tabs_v1.js) after orphan-recovery. v4 logic links by
+  fingerprint→name fallback when `shared_origin_id` missing; `overlayBigger`
+  branch self-heals TypeA duplicates by `shared_origin_id` and stamps
+  `heys_overlay_self_healed_at`.
+
+### Sync architecture (post-2026-05 cleanup)
+
+The previous flow had multiple cloud→LS entry points (paginated bootstrap,
+HOT-sync, YANDEX RESTORE) each writing overlay rows directly with `ls.setItem`.
+Combined with `upsertRow` deduping only by `id` (not `shared_origin_id`) and
+`addFromShared` checking duplicates via `getAll()` (which returns `[]` while
+shared cache is loading), the boot-time `autoRecoverOnLoad` race produced 3-5
+TypeA duplicates per shared product on every boot.
+
+Current architecture:
+
+- **Single cloud entry point**:
+  `HEYS.OverlayStore.applyCloudSnapshot(rows, opts)`. Dedupes incoming TypeA by
+  `shared_origin_id`, filters tombstones (`heys_deleted_ids` by id+name),
+  preserves pending-local TypeB customs not yet propagated to cloud, then writes
+  via `writeRaw(merged, { skipCloudSync: true })`. Returns
+  `{ applied, before, after, pendingCustoms }`.
+- **`upsertRow` dedupes TypeA by `shared_origin_id`** (not just by id) — stops
+  duplicate accumulation at the source.
+- **`addFromShared` checks via `readRaw()`** — independent of shared cache
+  readiness, eliminates the race.
+- **`writeRaw(rows, opts)` auto-syncs to cloud** (debounced 2s) for any local
+  mutation (upsertRow, addFromShared, removeRow, migration). Pass
+  `opts.skipCloudSync: true` for restore paths to avoid cloud → LS → cloud
+  round-trips.
+- **HOT-sync includes `heys_products_overlay_v2`** in `CLIENT_SPECIFIC_KEYS`
+  (`heys_storage_supabase_v1.js:128`). Without this, deletions on one device
+  never propagated to others until next full bootstrap.
+- **`applyForegroundHotSyncValue`** has a dedicated overlay branch (~`:10791`)
+  that routes overlay-key payloads through `applyCloudSnapshot`, not the legacy
+  `heys_products` bridge.
+- **BroadcastChannel cross-tab** (`heys_products_overlay_v2` channel) now
+  carries `clientId` in messages. Receivers ignore writes from foreign clients —
+  prevents curator-tab + PIN-tab interference in the same browser.
+
+Boot order:
+`shared catalog ready → applyCloudSnapshot from cloud → orphan recovery (only TypeB customs from diary, gated by curator session — curator sessions skip recovery to avoid cross-client stamp pollution from foreign dayv2 keys)`.
+
+#### Temporary patch (will be removed once stable):
+
+`OVERLAY GUARD` in `interceptSetItem` (`heys_storage_supabase_v1.js:3866`)
+blocks all incoming overlay writes that exceed the recently-self-healed count
+(5min TTL via `heys_overlay_self_healed_at`). Belt-and-suspenders defence in
+case dirty cloud data arrives while self-heal upload is still draining. Plan
+removes it after several rollout cycles confirm clean state.
 
 ### Diagnostics
 
@@ -74,14 +122,23 @@ reader is **`HEYS.OverlayStore` merged view** (file
 
 ### Critical files
 
-- `apps/web/heys_products_overlay_v1.js` — OverlayStore, migrate(), verifier,
-  diagnostics, BroadcastChannel cross-tab.
+- `apps/web/heys_products_overlay_v1.js` — OverlayStore: `readRaw`, `writeRaw`
+  (auto-sync + skipCloudSync), `applyCloudSnapshot` (canonical cloud entry),
+  `upsertRow` (TypeA dedup by shared_origin_id), BroadcastChannel cross-tab
+  (clientId-isolated), migrate(), verifier, diagnostics.
 - `apps/web/heys_core_v12.js` — `installOverlayWrapper` (getAll/getById flag
-  gate), `setAll` callsite still entry point for legacy writes.
+  gate), `addFromShared` (readRaw check, race-free), `deduplicate` (overlay
+  mode), `RationTab` subtab content gate
+  (`!isCurator || activeSubtab===personal`).
 - `apps/web/heys_storage_supabase_v1.js` — `cloud.getSharedIndex()`,
-  `interceptSetItem` universal dual-write hook, HOT-sync anti-shrink for
-  products.
-- `apps/web/heys_app_tabs_v1.js` — `runOverlayMigrationOnce` boot trigger.
+  `interceptSetItem` universal dual-write hook + temporary OVERLAY GUARD,
+  `applyForegroundHotSyncValue` overlay branch (→ applyCloudSnapshot), bootstrap
+  paginated overlay path (→ applyCloudSnapshot), `CLIENT_SPECIFIC_KEYS` includes
+  overlay key, products retry uses canonical getAll.
+- `apps/web/heys_app_tabs_v1.js` — `runOverlayMigrationOnce` boot trigger,
+  curator-session orphan-recovery gate, migration v4 self-heal dedup.
+- `apps/web/heys_day_utils.js` — `autoRecoverOnLoad` scopes dayv2 scan to
+  current clientId (curator session safety).
 - `scripts/lint-shared-cache-writes.mjs` — pre-commit gate ensuring
   `_sharedProductsCache =` always pairs with `_invalidateSharedIndex()`.
 
