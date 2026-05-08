@@ -267,6 +267,77 @@ was a **double race condition**:
 
 Both fixes are needed together — fixing only one leaves the other path open.
 
+## Morning-checkin wizard / scoped profile race (post-2026-05-08)
+
+`shouldShowMorningCheckin` (heys_morning_checkin_v1.js ~600) у давних клиентов
+на холодной загрузке мог открывать **регистрационный визард** на долю секунды,
+хотя профиль в облаке полный.
+
+**Корень проблемы — race в наполнении scoped LS:** на ранней стадии boot'а ключ
+`heys_${clientId}_profile` содержит ТОЛЬКО subscription-секцию профиля
+(`subscription_status`, `trial_started_at`, `trial_ends_at`,
+`subscription_ends_at` — 4 поля, ~171 байт), ДО того как Phase A / full-sync
+принесут полный профиль (12 полей, ~1192 байт с `firstName`, `age`, `weight`,
+`height`, `profileCompleted: true`). `shouldShowMorningCheckin` срабатывает в
+этом окне → `isProfileIncomplete` возвращает true → wizard открывается.
+
+**Кто пишет subscription-only snapshot — пока неизвестно**: stack trace в
+`cloud.saveClientKey` пустой, значит запись идёт мимо canonical save-path —
+вероятно через `interceptSetItem` mirror logic или subscription/trial init. Это
+open question для отдельного аудита, но фикс работает независимо.
+
+**Защита (3 слоя):**
+
+1. **`readProfileForceRawScoped`**
+   ([heys_morning_checkin_v1.js:44](apps/web/heys_morning_checkin_v1.js#L44)) и
+   inline-копия в
+   [heys_app_morning_checkin_v1.js:10](apps/web/heys_app_morning_checkin_v1.js#L10)
+   используют `isProfileShape()` критерий —
+   `(p.age || p.weight || p.height || p.firstName || p.profileCompleted === true)`
+   — идентичный HOT-sync guard в `cloud.saveClientKey` ~9893. Subscription-only
+   возвращается как `null`, fallback на legacy `heys_profile`.
+
+2. **`shouldShowMorningCheckin` defer-guard**
+   ([heys_morning_checkin_v1.js:590](apps/web/heys_morning_checkin_v1.js#L590)).
+   Если scoped LS имеет subscription-маркеры но НЕ имеет personal-маркеров,
+   возвращаем `false` (sync in progress) — wizard НЕ открывается. Time-based
+   ограничение **8 секунд** от `cloud._syncCompletedAt`: для **новых клиентов**
+   без cloud-профиля subscription-only состояние permanent → после 8s defer не
+   блокирует, wizard legitimately открывается для регистрации. Лог при
+   срабатывании:
+   `[MorningCheckin] 🛡️ partial subscription-only profile — sync in progress, deferring wizard`.
+
+3. **Phase A / full-sync / delta-light guards** в `heys_storage_supabase_v1.js`
+   (~6397, ~6700, ~8174). Не клобберим валидный local профиль пустым `{}` из
+   cloud при синке — симметрично с уже существующим guard в
+   `cloud.saveClientKey` (~9893). Лог:
+   `🛡️ [PHASE A]/[DELTA LIGHT]/[FULL SYNC] BLOCKED empty profile from cloud`.
+
+### Critical files (morning-checkin race)
+
+- `apps/web/heys_morning_checkin_v1.js` — `readProfileForceRawScoped`
+  (isProfileShape), `shouldShowMorningCheckin` (defer-guard).
+- `apps/web/heys_app_morning_checkin_v1.js` — `readProfileForceRawScopedInline`
+  (та же logic, для boot-app phase когда lazy postboot ещё не загружен).
+- `apps/web/heys_storage_supabase_v1.js` — Phase A guard, full-sync guards,
+  существующий `isValidProfile` guard в `cloud.saveClientKey` ~9893.
+- `apps/web/heys_storage_layer_v1.js` — `Store.readSafe` helper (commit
+  `87215fa6`), используется в новых call site'ах.
+
+### Diagnostics
+
+- Если симптом возвращается — диагностика в `readProfileForceRawScoped` через
+  `console.error('[MorningCheckin] readProfileForceRawScoped DIAG', ...)`
+  (закомментирована в коде; раскомментировать при отладке) покажет точный размер
+  scoped/legacy raw, parsed keys, hasFields. По полям видно стадию race'а:
+  `scopedKeys: 4` subscription-only / `scopedKeys: 12` полный.
+- Cloud profile audit:
+  `psql ... -c "SELECT k, v::text, updated_at FROM client_kv_store WHERE client_id='<uuid>' AND k LIKE '%profile%';"`
+  — убедиться что в облаке полный профиль (cloud — source of truth).
+- Cleanup poisoned scoped LS:
+  `localStorage.removeItem(\`heys\_${HEYS.currentClientId}\_profile\`);
+  location.reload();`
+
 ## Debugging the day-write pipeline
 
 The app ships with a sequenced trace channel `[HEYS.day-trace]` covering the
